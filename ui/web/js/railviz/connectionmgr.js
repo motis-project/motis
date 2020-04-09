@@ -73,9 +73,22 @@ RailViz.ConnectionManager = (function () {
       return;
     }
     console.log('Received connection trip data after', duration, 'ms');
-    RailViz.Preprocessing.preprocess(data);
+    // RailViz.Preprocessing.preprocess(data);
+
 
     for (let train of data.trains) {
+      // preprocess train
+      {
+        train.route_index = train.route_index || 0;
+        train.segment_index = train.segment_index || 0;
+        train.clasz = train.clasz || 0;
+        train.trip.forEach(trip => { trip.train_nr = trip.train_nr || 0 });
+        const route = data.routes[train.route_index];
+        const segment = route.segments[train.segment_index];
+        train.departureStation = data.stations.find(s => s.id == segment.from_station_id);
+        train.arrivalStation = data.stations.find(s => s.id == segment.to_station_id);
+      }
+
       const segmentId = trainSegmentId(train.route_index, train.segment_index);
       const segment = data.routes[train.route_index].segments[train.segment_index];
       for (let trip of train.trip) {
@@ -136,10 +149,8 @@ RailViz.ConnectionManager = (function () {
           walkSegments.set(walkKey, w);
         }
         w.connectionIds.push(connection.id);
-        if (!w.polyine && walk.polyline) {
-          w.polyline = convertPolyline({
-            coordinates: walk.polyline
-          });
+        if (!w.polyline && walk.polyline) {
+          w.polyline = walk.polyline;
         }
       });
     });
@@ -206,14 +217,12 @@ RailViz.ConnectionManager = (function () {
   function handlePPRResponse(w, data) {
     if (data.routes.length === 0 || data.routes[0].routes.length === 0) {
       console.log("ppr didn't find routes for:", w);
-      w.polyline = convertPolyline({
-        coordinates: [
+      w.polyline = [
           w.walk.departureStation.pos.lat,
           w.walk.departureStation.pos.lng,
           w.walk.arrivalStation.pos.lat,
           w.walk.arrivalStation.pos.lng
-        ]
-      });
+      ];
       return;
     }
     let routes = data.routes[0].routes;
@@ -230,7 +239,7 @@ RailViz.ConnectionManager = (function () {
       }
     });
     const route = routes[0];
-    w.polyline = convertPolyline(route.path);
+    w.polyline = route.path;
     w.pprRoute = route;
     pprCache.set(walkId(w.walk), {
       polyline: w.polyline,
@@ -240,7 +249,7 @@ RailViz.ConnectionManager = (function () {
   }
 
   function handleOSRMResponse(w, data) {
-    w.polyline = convertPolyline(data.polyline);
+    w.polyline = data.polyline;
     w.osrmRoute = data;
     osrmCache.set(walkId(w.walk), {
       polyline: w.polyline,
@@ -272,11 +281,6 @@ RailViz.ConnectionManager = (function () {
       target_time: trip.target_time,
       line_id: trip.line_id
     });
-  }
-
-  function convertPolyline(p) {
-    RailViz.Preprocessing.convertPolyline(p);
-    return p.coordinates;
   }
 
   function dataIsComplete() {
