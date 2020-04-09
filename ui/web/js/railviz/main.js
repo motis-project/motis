@@ -266,7 +266,7 @@ RailViz.Main = (function () {
           elmPorts.showTripDetails.send(pickedTrain.trip[0]);
         }
       } else if (pickedStation) {
-        elmPorts.showStationDetails.send(pickedStation.id);
+        elmPorts.showStationDetails.send("" + pickedStation.id);
       }
       if (button == 0) {
         elmPorts.mapCloseContextMenu.send(null);

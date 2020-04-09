@@ -268,6 +268,8 @@ function initPorts(app, apiEndpoint) {
 
     map_fg.on('load', () => {
       map_fg.addLayer(new RailVizCustomLayer());
+
+      RailViz.Connections.init(map_fg, "station");
     });
 
     map_fg.on('dragend', () => RailViz.Main.dragEnd());
