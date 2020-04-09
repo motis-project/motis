@@ -19,7 +19,6 @@ RailViz.Render = (function () {
 
   var routesEnabled = false;
   var trainsEnabled = true;
-  var connectionsEnabled = true;
 
   function init(mouseEventHandler) {
     setData(null);
@@ -43,13 +42,11 @@ RailViz.Render = (function () {
   }
 
   function setConnections(trainSegments, walkSegments, lowestConnId) {
-    RailViz.Connections.init(trainSegments, walkSegments, lowestConnId);
-    forceDraw = true;
+    RailViz.Connections.setData(trainSegments, walkSegments, lowestConnId);
   }
 
   function highlightConnections(ids) {
     RailViz.Connections.highlightConnections(ids);
-    forceDraw = true;
   }
 
   function colorRouteSegments() {
@@ -104,8 +101,7 @@ RailViz.Render = (function () {
   }
 
   function setConnectionsEnabled(b) {
-    forceDraw = b != connectionsEnabled;
-    connectionsEnabled = b;
+    RailViz.Connections.setEnabled(b);
   }
 
   function addAdditionalStation(station) {
@@ -203,7 +199,6 @@ RailViz.Render = (function () {
 
     RailViz.Routes.setup(gl);
     RailViz.Trains.setup(gl);
-    RailViz.Connections.setup(gl);
 
     lastFrame = null;
     forceDraw = true;
@@ -260,9 +255,6 @@ RailViz.Render = (function () {
 
       if (routesEnabled) {
         RailViz.Routes.render(gl, matrix, zoom, pixelRatio, isOffscreen);
-      }
-      if (connectionsEnabled) {
-        RailViz.Connections.render(gl, matrix, zoom, pixelRatio, isOffscreen);
       }
       if (trainsEnabled) {
         RailViz.Trains.render(gl, matrix, zoom, pixelRatio, isOffscreen);
@@ -354,13 +346,12 @@ RailViz.Render = (function () {
     const pickedTrain =
       pickedTrainIndex != null ? data.trains[pickedTrainIndex] : null;
 
-    const station = map
-      .queryRenderedFeatures([mouseX, mouseY])
-      .find(e => e.sourceLayer == 'station');
+    const features = map.queryRenderedFeatures([mouseX, mouseY]);
 
+    const station = features.find(e => e.sourceLayer == 'station');
     const pickedStation = station !== undefined ? {id: station.id, name: station.properties.name } : null;
 
-    const pickedConnectionSegment = RailViz.Connections.getPickedSegment(pickId);
+    const pickedConnectionSegment = RailViz.Connections.getPickedSegment(features);
 
     // if (pickId && eventType != 'mouseout') {
     //   canvas.style.cursor = 'pointer';
