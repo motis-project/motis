@@ -71,7 +71,7 @@ WebGL.Util = (function() {
   function createTextureFromCanvas(gl, draw) {
     var texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    // gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
 
     var level = 0;
     var size = 256;

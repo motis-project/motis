@@ -3,10 +3,11 @@ var RailViz = RailViz || {};
 RailViz.Render = (function () {
 
   var data;
-  var mapInfo;
   var timeOffset = 0;
-  var canvas;
-  var gl;
+
+  var map = null;
+  var gl = null;
+
   var rafRequest;
   var offscreen = {};
   var mouseHandler;
@@ -15,29 +16,16 @@ RailViz.Render = (function () {
   var lastFrame;
   var targetFrameTime = null;
   var forceDraw = true;
+
+  var routesEnabled = false;
   var trainsEnabled = true;
   var connectionsEnabled = true;
 
-  function init(c, mouseEventHandler) {
+  function init(mouseEventHandler) {
     setData(null);
     setConnections(null, null);
-    setMapInfo({zoom: 14, scale: 1, pixelBounds: {north: 0, west: 0}});
 
-    canvas = c;
-    mouseHandler = mouseEventHandler || function () {
-    };
-
-    // https://www.khronos.org/webgl/wiki/HandlingContextLost
-    canvas.addEventListener('webglcontextlost', contextLost, false);
-    canvas.addEventListener('webglcontextrestored', contextRestored, false);
-
-    const mouseEvents = ['mousedown', 'mouseup', 'mousemove', 'mouseout'];
-
-    mouseEvents.forEach(
-      eventType => canvas.addEventListener(
-        eventType, event => handleMouseEvent(eventType, event)));
-
-    setup();
+    mouseHandler = mouseEventHandler || (() => {});
   }
 
   function setData(newData) {
@@ -49,7 +37,6 @@ RailViz.Render = (function () {
       footpaths: []
     };
 
-    RailViz.Stations.init(data.stations);
     RailViz.Routes.init(data.routes, data.routeVertexCount, data.footpaths);
     RailViz.Trains.init(data.trains, data.routes);
     forceDraw = true;
@@ -90,23 +77,30 @@ RailViz.Render = (function () {
           additionalStations = true;
         }
       });
-      if (additionalStations) {
-        RailViz.Stations.init(data.stations);
-      }
+      // if (additionalStations) {
+      //   RailViz.Stations.init(data.stations);
+      // }
     }
     filter.trains.forEach(
       train => train.sections.forEach(
         section => highlightSection(train, section)));
-    filter.interchangeStations.forEach(
-      RailViz.Stations.highlightInterchangeStation);
-    filter.intermediateStations.forEach(
-      RailViz.Stations.highlightIntermediateStation);
+
+    // XXX
+    // filter.interchangeStations.forEach(
+    //   RailViz.Stations.highlightInterchangeStation);
+    // filter.intermediateStations.forEach(
+    //   RailViz.Stations.highlightIntermediateStation);
     forceDraw = true;
   }
 
   function setTrainsEnabled(b) {
     forceDraw = b != trainsEnabled;
     trainsEnabled = b;
+  }
+
+  function setRoutesEnabled(b) {
+    forceDraw = b != routesEnabled;
+    routesEnabled = b;
   }
 
   function setConnectionsEnabled(b) {
@@ -181,11 +175,6 @@ RailViz.Render = (function () {
     forceDraw = true;
   }
 
-  function setMapInfo(newMapInfo) {
-    mapInfo = newMapInfo;
-    forceDraw = true;
-  }
-
   function setTimeOffset(newTimeOffset) {
     timeOffset = newTimeOffset;
     forceDraw = true;
@@ -204,66 +193,53 @@ RailViz.Render = (function () {
     }
   }
 
-  function setup() {
-    gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (!gl) {
-      console.log('Could not initialize WebGL!');
-      return;
-    }
-
-    const hasAA = gl.getContextAttributes().antialias;
-    const aaSamples = gl.getParameter(gl.SAMPLES);
-    if (!hasAA || aaSamples == 0) {
-      pixelRatio = Math.max(2, pixelRatio);
-    }
+  function setup(_map, _gl) {
+    map = _map;
+    gl = _gl;
 
     offscreen = {};
 
-    RailViz.Stations.setup(gl);
+    gl.getExtension("OES_element_index_uint");
+
     RailViz.Routes.setup(gl);
     RailViz.Trains.setup(gl);
     RailViz.Connections.setup(gl);
 
     lastFrame = null;
     forceDraw = true;
-    rafRequest = requestAnimationFrame(render);
+    rafRequest = requestAnimationFrame(maybe_render);
   }
 
-  function render(timestamp) {
-    const sizeChanged =
-      WebGL.Util.resizeCanvasToDisplaySize(canvas, pixelRatio);
+  function stop() {
+    cancelAnimationFrame(rafRequest);
+  }
 
-    if (targetFrameTime != null && lastFrame != null && !sizeChanged &&
-      !forceDraw) {
+  function maybe_render(timestamp) {
+    if (targetFrameTime != null && lastFrame != null && !forceDraw) {
       const frameTime = performance.now() - lastFrame;
       if (frameTime < targetFrameTime) {
-        rafRequest = requestAnimationFrame(render);
+        rafRequest = requestAnimationFrame(maybe_render);
         return;
       }
     }
     forceDraw = false;
 
-    var perspective = mat4.create();
-    mat4.ortho(
-      perspective, 0, gl.canvas.clientWidth, gl.canvas.clientHeight, 0, -1,
-      1);
-    mat4.scale(
-      perspective, perspective,
-      [mapInfo.scale, mapInfo.scale, mapInfo.scale]);
-    mat4.translate(perspective, perspective, [
-      -(mapInfo.pixelBounds.west / mapInfo.scale),
-      -(mapInfo.pixelBounds.north / mapInfo.scale), 0
-    ]);
+    if(map != null) {
+      map.triggerRepaint();
+    }
+  }
 
-    var zoom = Math.max(minZoom, mapInfo.zoom);
-
+  function prerender(gl, matrix) {
     var time = timeOffset + (Date.now() / 1000);
-
-    createOffscreenBuffer();
-
     if (trainsEnabled) {
       RailViz.Trains.preRender(gl, time);
     }
+  }
+
+  function render(gl, matrix, zoom) {
+    createOffscreenBuffer();
+
+    zoom = Math.max(minZoom, zoom);
 
     for (var i = 0; i <= 1; i++) {
       var isOffscreen = i == 0;
@@ -276,23 +252,25 @@ RailViz.Render = (function () {
       // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       gl.blendFuncSeparate(
         gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT);
 
-      if (trainsEnabled) {
-        RailViz.Routes.render(gl, perspective, zoom, pixelRatio, isOffscreen);
+      if(isOffscreen) {
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT);
+      }
+
+      if (routesEnabled) {
+        RailViz.Routes.render(gl, matrix, zoom, pixelRatio, isOffscreen);
       }
       if (connectionsEnabled) {
-        RailViz.Connections.render(gl, perspective, zoom, pixelRatio, isOffscreen);
+        RailViz.Connections.render(gl, matrix, zoom, pixelRatio, isOffscreen);
       }
       if (trainsEnabled) {
-        RailViz.Stations.render(gl, perspective, zoom, pixelRatio, isOffscreen);
-        RailViz.Trains.render(gl, perspective, zoom, pixelRatio, isOffscreen);
+        RailViz.Trains.render(gl, matrix, zoom, pixelRatio, isOffscreen);
       }
     }
 
     lastFrame = performance.now();
-    rafRequest = requestAnimationFrame(render);
+    rafRequest = requestAnimationFrame(maybe_render);
   }
 
   function createOffscreenBuffer() {
@@ -357,18 +335,12 @@ RailViz.Render = (function () {
     return pixels;
   }
 
-  function contextLost(event) {
-    event.preventDefault();
-    cancelAnimationFrame(rafRequest);
-    console.log('WebGL context lost');
-  }
-
-  function contextRestored(event) {
-    console.log('WebGL context restored');
-    setup();
-  }
-
   function handleMouseEvent(eventType, event) {
+    if(!map) {
+      return;
+    }
+    const canvas = map.getCanvas();
+
     const mouseX = (event.pageX - canvas.offsetLeft);
     const mouseY = (event.pageY - canvas.offsetTop);
     const pickingX = mouseX * pixelRatio;
@@ -379,13 +351,16 @@ RailViz.Render = (function () {
     const pickId = RailViz.Picking.colorToPickId(offscreenPixel);
 
     const pickedTrainIndex = RailViz.Trains.getPickedTrainIndex(pickId);
-    const pickedStationIndex = RailViz.Stations.getPickedStationIndex(pickId);
-    const pickedConnectionSegment = RailViz.Connections.getPickedSegment(pickId);
-
     const pickedTrain =
       pickedTrainIndex != null ? data.trains[pickedTrainIndex] : null;
-    const pickedStation =
-      pickedStationIndex != null ? data.stations[pickedStationIndex] : null;
+
+    const station = map
+      .queryRenderedFeatures([mouseX, mouseY])
+      .find(e => e.sourceLayer == 'station');
+
+    const pickedStation = station !== undefined ? {id: station.id, name: station.properties.name } : null;
+
+    const pickedConnectionSegment = RailViz.Connections.getPickedSegment(pickId);
 
     // if (pickId && eventType != 'mouseout') {
     //   canvas.style.cursor = 'pointer';
@@ -398,18 +373,22 @@ RailViz.Render = (function () {
 
   return {
     init: init,
+    setup: setup,
+    stop: stop,
     setData: setData,
     setConnections: setConnections,
     highlightConnections: highlightConnections,
-    setMapInfo: setMapInfo,
     setTimeOffset: setTimeOffset,
+    prerender: prerender,
     render: render,
     colorRouteSegments: colorRouteSegments,
     setMinZoom: setMinZoom,
     setConnectionFilter: setConnectionFilter,
     setTargetFps: setTargetFps,
+    setRoutesEnabled: setRoutesEnabled,
     setTrainsEnabled: setTrainsEnabled,
-    setConnectionsEnabled: setConnectionsEnabled
+    setConnectionsEnabled: setConnectionsEnabled,
+    handleMouseEvent: handleMouseEvent
   };
 
 })();

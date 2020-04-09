@@ -365,30 +365,15 @@ mapId =
 view : Localization -> String -> Model -> Html Msg
 view locale permalink model =
     div [ class "map-container" ]
-        [ div [ class "inner-map-container" ]
-            [ div [ id mapId ]
-                [ Html.canvas
-                    [ classList
-                        [ "railviz-overlay" => True
-                        , "leaflet-zoom-animated" => True
-                        , "train-hover"
-                            => (isJust model.hoveredTrain
-                                    || isJust model.hoveredStation
-                                    || isJust model.hoveredConnectionSegment
-                                    || isJust model.hoveredWalkSegment
-                               )
-                        ]
-                    ]
-                    []
-                ]
-            , railVizTooltip locale model
-            , div [ class "map-bottom-overlay" ]
-                [ trainModePickerView locale model
-                , simulationTimeOverlay locale permalink model
-                ]
-            , errorOverlay locale model
-            , contextMenu locale model
+        [ div [ id ( mapId ++  "-background" ) ] []
+        , div [ id ( mapId ++  "-foreground" ) ] []
+        , railVizTooltip locale model
+        , div [ class "map-bottom-overlay" ]
+            [ trainModePickerView locale model
+            , simulationTimeOverlay locale permalink model
             ]
+        , errorOverlay locale model
+        , contextMenu locale model
         ]
 
 

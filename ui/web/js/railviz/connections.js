@@ -183,7 +183,7 @@ RailViz.Connections = (function () {
     // -height because y axis is flipped in webgl (-1 is at the bottom)
     gl.uniform2f(u_resolution, gl.canvas.width, -gl.canvas.height);
     gl.uniformMatrix4fv(u_perspective, false, perspective);
-    gl.uniform1f(u_width, 4.0 * pixelRatio);
+    gl.uniform1f(u_width, 4.0 * pixelRatio * 2048.0); // XXX
     gl.uniform1i(u_offscreen, isOffscreen);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementArrayBuffer);

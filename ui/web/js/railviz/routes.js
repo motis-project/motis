@@ -153,7 +153,7 @@ RailViz.Routes = (function () {
     // -height because y axis is flipped in webgl (-1 is at the bottom)
     gl.uniform2f(u_resolution, gl.canvas.width, -gl.canvas.height);
     gl.uniformMatrix4fv(u_perspective, false, perspective);
-    gl.uniform1f(u_width, (zoom > 8 ? 4.0 : 2.0) * pixelRatio);
+    gl.uniform1f(u_width, (zoom > 8 ? 4.0 : 2.0) * pixelRatio * 2048.0); // XXX
     gl.uniform1i(u_useHighlighting, useHighlighting);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementArrayBuffer);
