@@ -2,7 +2,6 @@ var RailViz = RailViz || {};
 
 RailViz.ConnectionManager = (function () {
 
-  let map = null;
   let connections = [];
   let connectionIdToIdx = new Map();
   let tripToConnections = new Map();
@@ -14,9 +13,8 @@ RailViz.ConnectionManager = (function () {
   let osrmCache = new Map();
   let pprCache = new Map();
 
-  function setConnections(conns, mapRef, lowestId) {
+  function setConnections(conns, lowestId) {
     console.log('setConnections:', conns);
-    map = mapRef;
     connections = conns;
     lowestConnId = lowestId;
     connectionIdToIdx.clear();

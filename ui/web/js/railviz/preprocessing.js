@@ -34,7 +34,8 @@ RailViz.Preprocessing = (function () {
   }
 
   function preprocessStation(station) {
-    var pos = geoToWorldCoords(station.pos.lat, station.pos.lng);
+    var pos = mapboxgl.MercatorCoordinate
+                      .fromLngLat([station.pos.lng, station.pos.lat]);
     station.pos.x = pos.x;
     station.pos.y = pos.y;
   }
@@ -63,7 +64,8 @@ RailViz.Preprocessing = (function () {
     let converted = [];
     let j = 0;
     for (let i = 0; i < coords.length - 1; i += 2) {
-      const wc = geoToWorldCoords(coords[i], coords[i + 1]);
+      const wc = mapboxgl.MercatorCoordinate
+                         .fromLngLat({lng: coords[i+1], lat: coords[i]});
       if (j == 0 || wc.x != converted[j - 2] || wc.y != converted[j - 1]) {
         converted[j] = wc.x;
         converted[j + 1] = wc.y;
@@ -93,27 +95,9 @@ RailViz.Preprocessing = (function () {
     }
   }
 
-  const initialResolution = 2 * Math.PI * 6378137 / 256;
-  const originShift = Math.PI * 6378137;
-
-  function geoToWorldCoords(lat, lng) {
-    const mx = lng * originShift / 180;
-    const my1 =
-      Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180);
-    const my = my1 * originShift / 180;
-    const x = (mx + originShift) / initialResolution;
-    const y = 256 - ((my + originShift) / initialResolution);
-
-    return {
-      x: x,
-      y: y
-    };
-  }
-
   return {
     preprocess: preprocess,
     convertPolyline: convertPolyline,
-    geoToWorldCoords: geoToWorldCoords,
     prepareWalk: prepareWalk
   };
 
