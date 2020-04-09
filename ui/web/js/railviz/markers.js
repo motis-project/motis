@@ -18,26 +18,26 @@ RailViz.Markers = (function () {
         destinationText = l.destination;
 
         if (startMarker) {
-            startMarker.setTooltipContent(startText);
+            startMarker.getElement().setAttribute("title", startText);
         }
         if (destinationMarker) {
-            destinationMarker.setTooltipContent(destinationText);
+            destinationMarker.getElement().setAttribute("title", destinationText);
         }
     }
 
     function setMarkers(settings) {
         if (startMarker) {
             if (settings.start) {
-                startMarker.setLatLng(
-                    L.latLng(settings.start.lat, settings.start.lng));
+                startMarker.setLngLat([settings.start.lng, settings.start.lat]);
             } else if (visible) {
                 startMarker.remove();
                 startMarker = null;
             }
         } else {
             if (settings.start) {
-                startMarker = L.marker(
-                    L.latLng(settings.start.lat, settings.start.lng)).bindTooltip(startText);
+                startMarker = new mapboxgl.Marker()
+                    .setLngLat([settings.start.lng, settings.start.lat]);
+                startMarker.getElement().setAttribute("title", startText);
                 if (visible) {
                     startMarker.addTo(map);
                 }
@@ -46,16 +46,16 @@ RailViz.Markers = (function () {
 
         if (destinationMarker) {
             if (settings.destination) {
-                destinationMarker.setLatLng(
-                    L.latLng(settings.destination.lat, settings.destination.lng));
+                destinationMarker.setLngLat([settings.destination.lng, settings.destination.lat]);
             } else if (visible) {
                 destinationMarker.remove();
                 destinationMarker = null;
             }
         } else {
             if (settings.destination) {
-                destinationMarker = L.marker(
-                    L.latLng(settings.destination.lat, settings.destination.lng)).bindTooltip(destinationText);
+                destinationMarker = new mapboxgl.Marker()
+                    .setLngLat([settings.destination.lng, settings.destination.lat]);
+                destinationMarker.getElement().setAttribute("title", destinationText);
                 if (visible) {
                     destinationMarker.addTo(map);
                 }

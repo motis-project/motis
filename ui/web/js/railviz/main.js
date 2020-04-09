@@ -32,15 +32,14 @@ RailViz.Main = (function () {
 
   const FILTERED_MIN_ZOOM = 14;
 
-  function init(canvas, endpoint, ports) {
+  function init(endpoint, ports) {
     apiEndpoint = endpoint;
     elmPorts = ports;
-    RailViz.Render.init(canvas, handleMouseEvent);
+    RailViz.Render.init(handleMouseEvent);
   }
 
   function mapUpdate(newMapInfo) {
     mapInfo = newMapInfo;
-    RailViz.Render.setMapInfo(mapInfo);
     setupFpsLimiter();
     debouncedSendTrainsRequest();
   }
@@ -71,9 +70,8 @@ RailViz.Main = (function () {
 
   function setConnections(opt) {
     const conns = opt.connections;
-    const map = window.elmMaps[opt.mapId];
     const lowestId = opt.lowestId;
-    RailViz.ConnectionManager.setConnections(conns, map, lowestId);
+    RailViz.ConnectionManager.setConnections(conns, lowestId);
   }
 
   function highlightConnections(ids) {
@@ -231,6 +229,7 @@ RailViz.Main = (function () {
     RailViz.Render.setMinZoom(0);
     RailViz.Render.setConnectionsEnabled(true);
     RailViz.Render.setTrainsEnabled(trainsEnabled);
+    RailViz.Render.setRoutesEnabled(false);
   }
 
   function showFilteredData() {
@@ -241,6 +240,7 @@ RailViz.Main = (function () {
     RailViz.Render.colorRouteSegments();
     RailViz.Render.setConnectionsEnabled(false);
     RailViz.Render.setTrainsEnabled(true);
+    RailViz.Render.setRoutesEnabled(true);
     RailViz.Main.highlightConnections([]);
   }
 
