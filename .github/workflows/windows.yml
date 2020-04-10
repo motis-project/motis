@@ -41,7 +41,7 @@ jobs:
           7z a motis-${{ github.ref }}-windows.zip motis.exe path-prepare.exe osrm-extract.exe osrm-contract.exe at-example.exe
 
       - name: Upload Distribution
-        if: matrix.mode == "Release"
+        if: matrix.mode == 'Release'
         uses: actions/upload-artifact@v1
         with:
           name: motis-${{ github.ref }}-windows.zip
