@@ -2,7 +2,6 @@
 
 ![Linux Build](https://github.com/motis-project/motis/workflows/Linux%20Build/badge.svg)
 ![Windows Build](https://github.com/motis-project/motis/workflows/Windows%20Build/badge.svg)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/motis-project/motis)
 
 MOTIS stands for **M**ulti **O**bjective **T**ravel **I**nformation **S**ystem.
 
