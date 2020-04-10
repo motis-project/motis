@@ -1,0 +1,48 @@
+name: Windows Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        mode: [Debug, Release]
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: microsoft/setup-msbuild@v1.0.0
+
+    - name: CMake
+      run: cmake -G "Visual Studio 16 2019" -A x64 -S . -B build
+
+    - name: Build
+      run: cmake --build build --config ${{ matrix.mode }} --target motis path-prepare ppr-preprocess osrm-extract osrm-contract at-example
+
+    - name: Run Tests
+      run: build\${{ matrix.mode }}\motis-test
+
+    - name: Run Integration Tests
+      run: build\${{ matrix.mode }}\motis-itest
+
+    - name: Create Distribution
+      if: matrix.mode == Release
+      run: |
+        mv build/motis.exe .
+        mv build/path-prepare.exe .
+        mv build/deps/osrm-backend/osrm-extract.exe .
+        mv build/deps/osrm-backend/osrm-contract.exe .
+        mv build/deps/address-typeahead/at-example.exe .
+        7z a motis-${{ github.ref }}-windows.zip motis.exe path-prepare.exe osrm-extract.exe osrm-contract.exe at-example.exe
+
+    - name: Upload Distribution
+      if: matrix.mode == Release
+      uses: actions/upload-artifact@v1
+      with:
+        name: motis-${{ github.ref }}-windows.zip
+        path: motis-${{ github.ref }}-windows.zip
