@@ -1,0 +1,9 @@
+namespace motis;
+
+enum TimestampReason : byte {
+  SCHEDULE,
+  REPAIR,
+  IS,
+  PROPAGATION,
+  FORECAST
+}

@@ -1,0 +1,6 @@
+ICE  0 A 0  ICE       2   ICE
+IC   1 B 0  IC        2   IC
+RE   3 C 0  RE        0 N RE
+RB   3 C 0  RB        0 N RB
+S    4 C 0  S         0 N S
+BUS  5 C 0  BUS       0 N BUS

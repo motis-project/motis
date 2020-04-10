@@ -1,0 +1,24 @@
+include "base/Position.fbs";
+
+namespace motis.osrm;
+
+// JSON Example:
+// --
+// {
+//   "destination": {
+//     "type": "Module",
+//     "target": "/osrm/via"
+//   },
+//   "content_type": "OSRMViaRouteRequest",
+//   "content": {
+//     "profile": "car",
+//     "waypoints": [
+//       { "lat": 49.87738029, "lng": 8.64555359 },
+//       { "lat": 50.11485439, "lng": 8.65791321 }
+//      ]
+//   }
+// }
+table OSRMViaRouteRequest {
+  profile: string;
+  waypoints: [motis.Position];
+}

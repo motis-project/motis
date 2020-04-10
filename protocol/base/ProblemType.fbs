@@ -1,0 +1,7 @@
+namespace motis;
+
+enum ProblemType : byte {
+  NO_PROBLEM,
+  INTERCHANGE_TIME_VIOLATED,
+  CANCELED_TRAIN
+}

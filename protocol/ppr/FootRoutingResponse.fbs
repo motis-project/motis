@@ -1,0 +1,11 @@
+include "ppr/Route.fbs";
+
+namespace motis.ppr;
+
+table Routes {
+  routes: [Route];
+}
+
+table FootRoutingResponse {
+  routes: [Routes]; // for each destination from the request
+}

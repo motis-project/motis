@@ -1,0 +1,19 @@
+namespace motis.guesser;
+
+// JSON example:
+// --
+// {
+//   "destination": {
+//     "type": "Module",
+//     "target": "/guesser"
+//   },
+//   "content_type": "StationGuesserRequest",
+//   "content": {
+//     "input": "Darmst",
+//     "guess_count": 10
+//   }
+// }
+table StationGuesserRequest {
+  guess_count:ushort=8;
+  input:string;
+}

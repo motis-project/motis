@@ -1,0 +1,134 @@
+include "base/EventType.fbs";
+include "base/Connection.fbs";
+
+namespace motis.ris;
+
+// ----------------------------------------------------------------------------
+// Common
+// ----------------------------------------------------------------------------
+table Event {
+  station_id:string;
+  service_num:uint;
+  line_id:string;
+  type:EventType;
+  schedule_time:ulong;
+}
+
+enum IdEventType : byte {Schedule, Additional}
+
+table IdEvent {
+  station_id:string;
+  service_num:uint;
+  schedule_time:ulong;
+  trip_type:IdEventType;
+}
+
+// ----------------------------------------------------------------------------
+// Train centered Messages
+// ----------------------------------------------------------------------------
+table CancelMessage {
+  trip_id:IdEvent;
+  events:[Event];
+}
+
+table UpdatedEvent {
+  base:Event;
+  updated_time:ulong;
+}
+
+enum DelayType : byte {Is, Forecast} // Ist and IstProg
+table DelayMessage {
+  trip_id:IdEvent;
+  type:DelayType;
+  events:[UpdatedEvent];
+}
+
+table AdditionalEvent {
+  base:Event;
+  category:string;
+  track:string;  // optional
+}
+
+table AdditionMessage {
+  trip_id:IdEvent;
+  events:[AdditionalEvent];
+}
+
+enum RerouteStatus : byte {Normal, UmlNeu}
+table ReroutedEvent {
+  base:AdditionalEvent;
+  status:RerouteStatus;
+}
+
+table RerouteMessage {
+  trip_id:IdEvent;
+  cancelled_events:[Event];
+  new_events:[ReroutedEvent];
+}
+
+table UpdatedTrack{
+  base:Event;
+  updated_track:string;
+}
+
+table TrackMessage {
+  trip_id:IdEvent;
+  events:[UpdatedTrack];
+}
+
+table FreeTextMessage {
+  trip_id:IdEvent;
+  events:[Event];
+  free_text:FreeText;
+}
+
+// ----------------------------------------------------------------------------
+// Connection Event Messages
+// ----------------------------------------------------------------------------
+table ConnectionDecision {
+  trip_id:IdEvent;
+  base:Event;
+  hold:bool;
+}
+
+table ConnectionDecisionMessage { // Anschluss
+  from_trip_id:IdEvent;
+  from:Event;
+  to:[ConnectionDecision];
+}
+
+table ConnectionAssessment {
+  trip_id:IdEvent;
+  base:Event;
+  assessment:int;
+}
+
+table ConnectionAssessmentMessage { // Anschlussbewertung
+  from_trip_id:IdEvent;
+  from:Event;
+  to:[ConnectionAssessment];
+}
+
+// ----------------------------------------------------------------------------
+// Connection Envelope
+// ----------------------------------------------------------------------------
+
+union MessageUnion {
+  DelayMessage,
+  CancelMessage,
+  AdditionMessage,
+  RerouteMessage,
+  ConnectionDecisionMessage,
+  ConnectionAssessmentMessage,
+  TrackMessage,
+  FreeTextMessage
+}
+
+table Message {
+  earliest:long;
+  latest:long;
+  timestamp:long;
+  content:MessageUnion;
+}
+
+root_type Message;

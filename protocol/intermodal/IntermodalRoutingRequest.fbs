@@ -1,0 +1,123 @@
+include "base/Interval.fbs";
+include "base/Position.fbs";
+
+include "routing/RoutingRequest.fbs";
+
+include "ppr/SearchOptions.fbs";
+
+namespace motis.intermodal;
+
+table InputPosition {
+  lat: double;
+  lng: double;
+}
+
+// ----------------------------------------------------------------------------
+// Intermodal Start
+// ----------------------------------------------------------------------------
+
+table IntermodalOntripStart {
+  position: motis.Position;
+  departure_time: long;
+}
+
+table IntermodalPretripStart {
+  position: motis.Position;
+  interval: motis.Interval;
+  min_connection_count:uint;
+  extend_interval_earlier:bool;
+  extend_interval_later:bool;
+}
+
+union IntermodalStart {
+  IntermodalOntripStart,
+  IntermodalPretripStart,
+  routing.OntripTrainStart,
+  routing.OntripStationStart,
+  routing.PretripStart
+}
+
+// ----------------------------------------------------------------------------
+// Intermodal Destination
+// ----------------------------------------------------------------------------
+
+union IntermodalDestination {
+  routing.InputStation,
+  InputPosition
+}
+
+// ----------------------------------------------------------------------------
+// Intermodal Mode
+// ----------------------------------------------------------------------------
+
+table Foot {
+  max_duration: int;
+}
+
+table Bike {
+  max_duration: int;
+}
+
+table Car {
+  max_duration: int;
+}
+
+table FootPPR {
+  search_options: ppr.SearchOptions;
+}
+
+table CarParking {
+  max_car_duration: int;
+  ppr_search_options: ppr.SearchOptions;
+}
+
+union Mode {
+  Foot,
+  Bike,
+  Car,
+  FootPPR,
+  CarParking
+}
+
+table ModeWrapper {
+  mode: Mode;
+}
+
+// ----------------------------------------------------------------------------
+
+
+// JSON Example:
+// --
+// {
+//   "destination": {
+//     "type": "Module",
+//     "target": "/intermodal"
+//   },
+//   "content_type": "IntermodalRoutingRequest",
+//   "content": {
+//     "start_type": "IntermodalOntripStart",
+//     "start": {
+//       "position": { "lat": 49.8780915, "lng": 8.6546392},
+//       "departure_time": 1476095400
+//     },
+//     "start_modes": [{
+//       "mode_type": "Foot",
+//       "mode": { "max_duration": 900 }
+//     }],
+//     "destination_type": "InputPosition",
+//     "destination": { "lat": 50.1095955, "lng": 8.6692976},
+//     "destination_modes":  [{
+//       "mode_type": "Foot",
+//       "mode": { "max_duration": 900 }
+//     }],
+//     "search_type": "SingleCriterion"
+//   }
+// }
+table IntermodalRoutingRequest {
+  start: IntermodalStart;
+  start_modes: [ModeWrapper];
+  destination: IntermodalDestination;
+  destination_modes: [ModeWrapper];
+  search_type: routing.SearchType;
+  search_dir: routing.SearchDir;
+}

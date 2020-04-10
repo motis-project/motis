@@ -1,0 +1,23 @@
+namespace motis;
+
+table HTTPHeader {
+  name : string;
+  value : string;
+}
+
+enum HTTPMethod : byte { GET, POST, PUT, DELETE, OPTIONS }
+
+enum HTTPStatus : byte { OK, INTERNAL_SERVER_ERROR }
+
+table HTTPRequest {
+  method:HTTPMethod;
+  path:string;
+  headers:[HTTPHeader];
+  content:string;
+}
+
+table HTTPResponse {
+  status:HTTPStatus;
+  headers:[HTTPHeader];
+  content:string;
+}

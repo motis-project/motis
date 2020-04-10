@@ -1,0 +1,13 @@
+include "base/Position.fbs";
+include "osrm/OSRMViaRouteResponse.fbs";
+include "ppr/Route.fbs";
+include "parking/Parking.fbs";
+
+namespace motis.parking;
+
+table ParkingEdgeResponse {
+  parking: Parking;
+  car: motis.osrm.OSRMViaRouteResponse;
+  walk: motis.ppr.Route;
+  uses_car: bool;
+}

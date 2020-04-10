@@ -1,0 +1,2 @@
+feed_publisher_name,feed_publisher_url,feed_lang,feed_start_date,feed_end_date,feed_version
+"SBB","http://www.sbb.ch/","DE","20181209","20191214","20190625"

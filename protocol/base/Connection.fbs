@@ -1,0 +1,92 @@
+include "base/Station.fbs";
+include "base/TripId.fbs";
+include "base/TimestampReason.fbs";
+include "base/ConnectionStatus.fbs";
+include "base/ProblemType.fbs";
+
+namespace motis;
+
+table EventInfo {
+  time:ulong;
+  schedule_time:ulong;
+  track:string;
+  schedule_track:string;
+  valid:bool;
+  reason:TimestampReason;
+}
+
+table Stop {
+  station:motis.Station;
+  arrival:EventInfo;
+  departure:EventInfo;
+  exit:bool;
+  enter:bool;
+}
+
+struct Range {
+  from:short;
+  to:short;
+}
+
+table Transport {
+  range:Range;
+  category_name:string;
+  category_id:uint;
+  clasz:uint;
+  train_nr:uint;
+  line_id:string;
+  name:string;
+  provider:string;
+  direction:string;
+}
+
+/* walk and mumo */
+table Walk {
+  range:Range;
+  mumo_id:int;
+  price:uint;
+  accessibility:uint;
+  mumo_type:string;
+}
+
+union Move { Transport, Walk }
+
+table MoveWrapper {
+  move:Move;
+}
+
+table Attribute {
+  range:Range;
+  code:string;
+  text:string;
+}
+
+table Trip {
+  range:Range;
+  id:TripId;
+  debug:string;
+}
+
+table FreeText {
+  range:Range;
+  code:int;
+  text:string;
+  type:string;
+}
+
+table Problem{
+  range:Range;
+  type:ProblemType;
+}
+
+table Connection {
+  stops:[Stop];
+  transports:[MoveWrapper];
+  trips:[Trip];
+  attributes:[Attribute];
+  free_texts:[FreeText];
+  problems:[Problem];
+  night_penalty:ushort;
+  db_costs:ushort;
+  status:ConnectionStatus;
+}

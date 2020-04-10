@@ -1,0 +1,11 @@
+include "base/Station.fbs";
+
+namespace motis.lookup;
+
+table LookupMetaStationResponse {
+  equivalent:[motis.Station];
+}
+
+table LookupBatchMetaStationResponse {
+  responses:[LookupMetaStationResponse];
+}

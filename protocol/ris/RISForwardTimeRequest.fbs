@@ -1,0 +1,17 @@
+namespace motis.ris;
+
+/// Forward the realtime message stream to the given time, i.e. load and process
+/// all messages with a release time up to (and including) the given timestamp.
+// JSON example:
+// --
+// {
+//   "content_type": "RISForwardTimeRequest",
+//   "content": {
+//     "new_time": 1439935200
+//   }
+// }
+table RISForwardTimeRequest {
+  /// Unix timestamp - all messages with a release time up to and including
+  /// this timestamp are loaded and processed.
+  new_time:ulong;
+}

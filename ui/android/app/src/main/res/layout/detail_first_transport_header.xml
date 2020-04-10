@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="25dp"
+    android:orientation="horizontal"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin">
+
+    <TextView
+        android:id="@+id/detail_first_transport_name"
+        style="@style/JourneySection"
+        android:background="@drawable/rounded_corner_primary"
+        android:drawableStart="@drawable/ic_directions_bus_black_24dp" />
+
+    <View
+        android:layout_width="wrap_content"
+        android:layout_height="1dp"
+        android:layout_gravity="center_vertical"
+        android:layout_marginLeft="4dp"
+        android:layout_marginRight="4dp"
+        android:layout_weight="1"
+        android:background="@color/grey_200" />
+
+    <TextView
+        android:id="@+id/detail_first_transport_track"
+        style="@style/Track" />
+
+</LinearLayout>

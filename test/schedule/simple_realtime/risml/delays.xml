@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<Paket TOut="20151124110000000">
+  <ListNachricht>
+    <Nachricht>
+      <Ist>
+        <Service IdBfEvaNr="8000261" IdZeit="20151124115400" IdZNr="628" Zielzeit="20151124172600">
+          <ListZug>
+            <Zug Nr="628">
+              <ListZE>
+                <ZE Typ="Ab">
+                  <Bf EvaNr="8000010" Name="Aschaffenburg"/>
+                  <Zeit Soll="20151124143600" Ist="20151124143700"/>
+                </ZE>
+                <ZE Typ="Ab">
+                  <Bf EvaNr="8070003" Name="Frankfurt(M) Flughafen"/>
+                  <Zeit Soll="20151124152500" Ist="20151124153000"/>
+                </ZE>
+              </ListZE>
+            </Zug>
+          </ListZug>
+        </Service>
+      </Ist>
+    </Nachricht>
+    <Nachricht>
+      <IstProg>
+        <Service IdBfEvaNr="8000261" IdZeit="20151124115400" IdZNr="628" Zielzeit="20151124172600">
+          <ListZug>
+            <Zug Nr="628">
+              <ListZE>
+                <ZE Typ="An">
+                  <Bf EvaNr="8000105" Name="Frankfurt(Main)Hbf"/>
+                  <Zeit Soll="20151124150400" Prog="20151124150500"/>
+                </ZE>
+                <ZE Typ="An">
+                  <Bf EvaNr="8073368" Name="Köln Messe/Deutz Gl.1"/>
+                  <Zeit Soll="20151124161400" Prog="20151124161900"/>
+                </ZE>
+              </ListZE>
+            </Zug>
+          </ListZug>
+        </Service>
+      </IstProg>
+    </Nachricht>
+  </ListNachricht>
+</Paket>

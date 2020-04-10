@@ -1,0 +1,27 @@
+include "base/Interval.fbs";
+
+namespace motis.lookup;
+
+enum TableType : byte { BOTH, ONLY_ARRIVALS, ONLY_DEPARTURES }
+
+// JSON example
+// --
+// {
+//   "destination": {
+//     "type": "Module",
+//     "target": "/lookup/station_events"
+//   },
+//   "content_type": "LookupStationEventsRequest",
+//   "content": {
+//     "station_id": "8000105",
+//     "interval": {
+//       "begin": 1448371800,
+//       "end": 1448375400
+//     }
+//   }
+// }
+table LookupStationEventsRequest {
+  station_id:string;
+  interval:Interval;
+  type: TableType = BOTH;
+}

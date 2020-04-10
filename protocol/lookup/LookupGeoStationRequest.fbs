@@ -1,0 +1,54 @@
+include "base/Position.fbs";
+
+namespace motis.lookup;
+
+// JSON example:
+// --
+// {
+//   "destination": {
+//     "type": "Module",
+//     "target": "/lookup/geo_station"
+//   },
+//   "content_type": "LookupGeoStationRequest",
+//   "content": {
+//     "pos": {
+//       "lat": 49.8774869,
+//       "lng": 8.6546632
+//     },
+//     "min_radius": 250.00,
+//     "max_radius": 500.00
+//   }
+// }
+table LookupGeoStationRequest {
+  pos:Position;
+  min_radius: double = 0;
+  max_radius: double;
+}
+
+// JSON example:
+// --
+// {
+//   "destination": {
+//     "type": "Module",
+//     "target": "/lookup/geo_station_batch"
+//   },
+//   "content_type": "LookupBatchGeoStationRequest",
+//   "content": {
+//     "coordinates": [
+//       {
+//         "lat": 49.8774869,
+//         "lng": 8.6546632,
+//         "min_radius": 250.00,
+//         "max_radius": 500.00
+//       }, {
+//         "lat": 49.835668,
+//         "lng": 9.144335,
+//         "min_radius": 250.00,
+//         "max_radius": 500.00
+//       }
+//     ]
+//   }
+// }
+table LookupBatchGeoStationRequest {
+  requests:[LookupGeoStationRequest];
+}

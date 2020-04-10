@@ -1,0 +1,37 @@
+include "base/Position.fbs";
+include "base/Polyline.fbs";
+include "base/TripId.fbs";
+include "base/Station.fbs";
+include "base/TimestampReason.fbs";
+
+namespace motis.railviz;
+
+table Train {
+  names: [string];
+  clasz: int;
+  d_time: int;
+  a_time: int;
+  sched_d_time: int;
+  sched_a_time: int;
+  d_time_reason: motis.TimestampReason;
+  a_time_reason: motis.TimestampReason;
+  route_index: int;
+  segment_index: int;
+  trip: [TripId];
+}
+
+table Segment {
+  from_station_id: string;
+  to_station_id: string;
+  coordinates: Polyline;
+}
+
+table Route {
+  segments: [Segment];
+}
+
+table RailVizTrainsResponse {
+  trains: [Train];
+  routes: [Route];
+  stations: [Station];
+}

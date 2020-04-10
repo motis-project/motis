@@ -1,0 +1,15 @@
+include "base/Position.fbs";
+
+namespace motis.path;
+
+table Box {
+  station_id_a: string;
+  station_id_b: string;
+
+  north_east: Position;
+  south_west: Position;
+}
+
+table PathBoxesResponse {
+  boxes: [Box];
+}

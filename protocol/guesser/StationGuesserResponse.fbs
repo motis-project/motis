@@ -1,0 +1,7 @@
+include "base/Station.fbs";
+
+namespace motis.guesser;
+
+table StationGuesserResponse {
+  guesses:[motis.Station];
+}

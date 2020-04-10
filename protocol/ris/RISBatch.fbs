@@ -1,0 +1,13 @@
+include "ris/RISMessage.fbs";
+
+namespace motis.ris;
+
+table MessageHolder {
+  message:[ubyte] (nested_flatbuffer: "Message");
+}
+
+table RISBatch {
+  messages:[MessageHolder] (required);
+}
+
+root_type RISBatch;

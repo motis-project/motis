@@ -1,0 +1,16 @@
+include "base/Station.fbs";
+include "base/EventType.fbs";
+include "base/TripInfo.fbs";
+
+namespace motis.railviz;
+
+table Event {
+  trips: [TripInfo];
+  type: motis.EventType;
+  event: motis.EventInfo;
+}
+
+table RailVizStationResponse {
+  station:motis.Station;
+  events:[Event];
+}

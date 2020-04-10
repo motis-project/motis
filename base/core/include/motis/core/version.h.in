@@ -1,0 +1,25 @@
+#pragma once
+
+#include <sstream>
+#include <string>
+
+#define MOTIS_GIT_REF "@motis_git_ref@"
+#define MOTIS_GIT_TAG "@motis_git_tag@"
+#define MOTIS_GIT_BRANCH "@motis_git_branch@"
+#define MOBILE_UI_URL @motis_gui_address@
+
+namespace motis {
+
+static std::string short_version() {
+  return MOTIS_GIT_TAG;
+}
+
+static std::string long_version() {
+  std::stringstream ss;
+  ss << MOTIS_GIT_TAG
+     <<" (git-ref: " << MOTIS_GIT_REF
+     << " on " << MOTIS_GIT_BRANCH << ")";
+  return ss.str();
+}
+
+}  // namespace motis

@@ -1,0 +1,91 @@
+include "base/Position.fbs";
+include "base/Polyline.fbs";
+
+namespace motis.ppr;
+
+enum EdgeType : ubyte { CONNECTION, STREET, FOOTWAY, CROSSING, ELEVATOR }
+
+enum CrossingType : ubyte { NONE, GENERATED, UNMARKED, MARKED, ISLAND, SIGNALS }
+
+enum StreetType : ubyte {
+  NONE,
+  // edge_type = FOOTWAY
+  TRACK,
+  FOOTWAY,
+  PATH,
+  CYCLEWAY,
+  BRIDLEWAY,
+  STAIRS,
+  ESCALATOR,
+  MOVING_WALKWAY,
+  // edge_type = STREET
+  SERVICE,
+  PEDESTRIAN,
+  LIVING,
+  RESIDENTIAL,
+  UNCLASSIFIED,
+  TERTIARY,
+  SECONDARY,
+  PRIMARY,
+  // railway
+  RAIL,
+  TRAM
+}
+
+enum TriState : ubyte { UNKNOWN, NO, YES }
+
+table Edge {
+  distance: double;
+  duration: double;
+  accessibility: double;
+  path: Polyline;
+  name: string;
+  osm_way_id: long;
+  edge_type: EdgeType;
+  street_type: StreetType;
+  crossing_type: CrossingType;
+  elevation_up: int;
+  elevation_down: int;
+  incline_up: bool;
+  handrail: TriState;
+}
+
+enum RouteStepType : ubyte {
+  INVALID,
+  STREET,
+  FOOTWAY,
+  CROSSING,
+  ELEVATOR
+}
+
+table RouteStep {
+  step_type: RouteStepType;
+  street_name: string;
+  street_type: StreetType;
+  crossing_type: CrossingType;
+  distance: double;
+  duration: double;
+  accessibility: double;
+  path: Polyline;
+  elevation_up: int;
+  elevation_down: int;
+  incline_up: bool;
+  handrail: TriState;
+}
+
+table Route {
+  distance: double;
+  duration: ushort;
+  duration_exact: double;
+  duration_division: double;
+  accessibility: ushort;
+  accessibility_exact: double;
+  accessibility_division: double;
+  start: Position;
+  destination: Position;
+  steps: [RouteStep];
+  edges: [Edge];
+  path: Polyline;
+  elevation_up: int;
+  elevation_down: int;
+}

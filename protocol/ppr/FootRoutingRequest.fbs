@@ -1,0 +1,19 @@
+include "base/Position.fbs";
+include "ppr/SearchOptions.fbs";
+
+namespace motis.ppr;
+
+enum SearchDirection : byte {
+  Forward,
+  Backward
+}
+
+table FootRoutingRequest {
+  start: Position;
+  destinations: [Position];
+  search_options: SearchOptions;
+  search_direction: SearchDirection;
+  include_steps: bool;
+  include_edges: bool;
+  include_path: bool;
+}

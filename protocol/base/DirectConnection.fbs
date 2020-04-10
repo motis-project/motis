@@ -1,0 +1,7 @@
+namespace motis;
+
+table DirectConnection {
+  duration:uint;
+  accessibility:uint;
+  mumo_type:string;
+}

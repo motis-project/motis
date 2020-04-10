@@ -1,0 +1,80 @@
+[address-typeahead]
+  url=git@github.com:motis-project/address-typeahead.git
+  branch=master
+  commit=9be6fceb50807923e90767b2d773f5880ffe043a
+[cista]
+  url=git@github.com:felixguendling/cista.git
+  branch=master
+  commit=97e4cd2d3fa2d520a9688f3eeeddfc7ded9c4d11
+[conf]
+  url=git@github.com:motis-project/conf.git
+  branch=master
+  commit=7897a6cd02ad9a47ff1c36722354e3638fb17000
+[ctx]
+  url=git@github.com:motis-project/ctx.git
+  branch=master
+  commit=1544132325c5fc11feb645e1df5455a58ccad5d1
+[flatbuffers]
+  url=git@github.com:motis-project/flatbuffers.git
+  branch=master
+  commit=8687e555d89e3dfdae4cf473ce4516d0f009107e
+[fmt]
+  url=git@github.com:motis-project/fmt.git
+  branch=master
+  commit=6117fab8ab38a9b7d9ec26bf0fbfc06d0e27a375
+[geo]
+  url=git@github.com:motis-project/geo.git
+  branch=master
+  commit=60ae688fcb68859478b4742705c9b59cf20984c8
+[googletest]
+  url=git@github.com:motis-project/googletest.git
+  branch=motis
+  commit=337308e8f74d7020c9b21544561e759bbfb01abf
+[lmdb]
+  url=git@github.com:motis-project/lmdb.git
+  branch=master
+  commit=39d8127e5697b1323a67e61c3ad8f087384c7429
+[miniz]
+  url=git@github.com:motis-project/miniz.git
+  branch=master
+  commit=963ce1d7c8f1bd6a32be73b450ff5360f5c5e7cb
+[net]
+  url=git@github.com:motis-project/net.git
+  branch=master
+  commit=ca08edddd8d2e7ad2ad1a53ede4d111b96733e17
+[osrm-backend]
+  url=git@github.com:motis-project/osrm-backend.git
+  branch=master
+  commit=a0f0d1bda52cd69dc28522c1b64d8c31cebcf361
+[ppr]
+  url=git@github.com:motis-project/ppr.git
+  branch=master
+  commit=d2a51d7733c825cc8f8536f0e3a6a5d76bf333cd
+[pugixml]
+  url=git@github.com:motis-project/pugixml.git
+  branch=master
+  commit=60175e80e2f5e97e027ac78f7e14c5acc009ce50
+[rapidjson]
+  url=git@github.com:motis-project/rapidjson.git
+  branch=github
+  commit=e7a1ac95c7840c6f4351abead02b1f7a02874197
+[tar]
+  url=git@github.com:motis-project/tar.git
+  branch=master
+  commit=07933726984e3c190d5c3a6f11cefb1a8c9fa902
+[tiles]
+  url=git@github.com:motis-project/tiles.git
+  branch=master
+  commit=ac80506caf33f079470002de66e67885118ebe87
+[utl]
+  url=git@github.com:motis-project/utl.git
+  branch=master
+  commit=4f6963e369852bd48e376f4c93a2eb2956b460b0
+[protobuf]
+  url=git@github.com:motis-project/protobuf.git
+  branch=master
+  commit=6c862f86b72e4ca9df0491f636c3ad3524bbee53
+[date]
+  url=git@github.com:motis-project/date.git
+  branch=master
+  commit=26547cd210f93fb34ac961c19e179daa3857e6a8

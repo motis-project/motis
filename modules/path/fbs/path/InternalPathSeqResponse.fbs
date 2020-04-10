@@ -1,0 +1,21 @@
+namespace motis.path;
+
+table InternalPathSourceInfo {
+  segment_idx: int;
+  from_idx: int;
+  to_idx: int;
+  type: string;
+}
+
+table InternalSegment {
+  coords: string;
+  mask: string;
+  osm_node_ids: [long];
+}
+
+table InternalPathSeqResponse {
+  station_ids: [string];
+  classes: [uint];
+  segments: [InternalSegment];
+  infos: [InternalPathSourceInfo];
+}

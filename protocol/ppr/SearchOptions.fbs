@@ -1,0 +1,6 @@
+namespace motis.ppr;
+
+table SearchOptions {
+  profile: string;
+  duration_limit: double; // s
+}

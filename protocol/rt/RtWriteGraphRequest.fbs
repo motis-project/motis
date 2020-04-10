@@ -1,0 +1,14 @@
+namespace motis.rt;
+
+// Write the current state including real time information to disk.
+// JSON example:
+// --
+// {
+//   "destination": { "target": "/rt/dump" },
+//   "content_type": "RtWriteGraphRequest",
+//   "content": { "path": "./graph.bin" }
+// }
+table RtWriteGraphRequest {
+  // Path on disk to write to.
+  path:string;
+}

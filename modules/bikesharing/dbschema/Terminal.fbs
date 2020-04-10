@@ -1,0 +1,27 @@
+namespace motis.bikesharing;
+
+table Availability {
+  average: double;
+  median: double;
+  minimum: double;
+  q90: double;
+  percent_reliable: double;
+}
+
+table CloseLocation {
+  id: string;
+  duration: int; // seconds
+}
+
+table Terminal {
+  id:string;
+  lat: double;
+  lng: double;
+  name: string;
+
+  availability: [Availability]; // one for each hour in the week
+  attached: [CloseLocation];
+  reachable: [CloseLocation];
+}
+
+root_type Terminal;

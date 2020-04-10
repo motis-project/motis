@@ -1,0 +1,9 @@
+include "base/TripId.fbs";
+include "base/Connection.fbs";
+
+namespace motis;
+
+table TripInfo {
+  id: motis.TripId;
+  transport: motis.Transport;
+}

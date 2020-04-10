@@ -1,0 +1,7 @@
+include "base/Position.fbs";
+
+namespace motis.parking;
+
+table ParkingLookupRequest {
+  id: int;
+}

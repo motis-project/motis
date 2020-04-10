@@ -1,0 +1,8 @@
+include "Station.fbs";
+
+namespace motis.loader;
+
+table MetaStation {
+  station: Station;
+  equivalent: [Station];
+}

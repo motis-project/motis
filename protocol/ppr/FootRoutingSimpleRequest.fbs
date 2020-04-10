@@ -1,0 +1,11 @@
+include "base/Position.fbs";
+
+namespace motis.ppr;
+
+table FootRoutingSimpleRequest {
+  start: Position;
+  destination: Position;
+  include_steps: bool;
+  include_path: bool;
+  max_duration: int;
+}

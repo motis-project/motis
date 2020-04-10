@@ -1,0 +1,17 @@
+namespace motis.lookup;
+
+// JSON example:
+// --
+// {
+//   "content_type": "LookupMetaStationRequest",
+//   "content": {
+//     "station_id": "8000105"
+//   }
+// }
+table LookupMetaStationRequest {
+  station_id:string;
+}
+
+table LookupBatchMetaStationRequest {
+  requests:[LookupMetaStationRequest];
+}

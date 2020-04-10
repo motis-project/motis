@@ -1,0 +1,8 @@
+include "base/Position.fbs";
+
+namespace motis.parking;
+
+table ParkingGeoRequest {
+  pos: motis.Position;
+  radius: double;
+}

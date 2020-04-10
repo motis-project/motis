@@ -1,0 +1,58 @@
+<resources>
+    <string name="app_name">MOTIS</string>
+    <string name="search">Verbindungssuche</string>
+    <string name="app_label">App Label</string>
+    <string name="search_hint">hint</string>
+    <string name="arrival">Ankunft</string>
+    <string name="departure">Abfahrt</string>
+    <string name="arrival_short">Ank.</string>
+    <string name="departure_short">Abf.</string>
+
+    <string name="transfer">%d Umstieg</string>
+    <string name="transfers">%d Umstiege</string>
+    <string name="track">Gleis %s</string>
+
+    <!-- Fahrt 3 Stationen (1h 2min) -->
+    <string name="detail_transport_stops_summary">Fahrt %1$d %2$s %3$s</string>
+    <string name="detail_transport_stops_summary_no_stopover">Fahrt ohne Zwischenhalt %s</string>
+    <string name="detail_transport_stops_summary_duration">(%s)</string>
+    <string name="stop">Station</string>
+    <string name="stops">Stationen</string>
+
+    <!-- Walks -->
+    <string name="detail_walk_summary">Fußweg %1$s</string>
+    <string name="detail_walk_summary_duration">(%s)</string>
+
+    <!-- Interchange: Ank. Gl. 6, 3min Umstieg -->
+    <string name="interchange">%s Umstieg</string>
+    <string name="track_short">Gl.</string>
+
+    <string name="walk">%s Laufweg</string>
+
+    <string name="name">Keine </string>
+
+    <string name="title_activity_journey_detail">Detailansicht</string>
+    <string name="query_not_valid">Bitte geben Sie Start und Ziel an.</string>
+    <string name="server_error">Die Anfrage konnte nicht bearbeitet werden</string>
+    <string name="empty_response">Keine Verbindungen in diesem Zeitraum</string>
+    <string name="schedule_range">Auskunft von %1$s bis %2$s möglich</string>
+    <string name="routing_error">Zeitraum nicht im Fahrplan</string>
+    <string name="crash_toast_text">Crash Report!</string>
+    <string name="connections">Gespeicherte Verbindungen</string>
+    <string name="connection_saved">Verbindung gespeichert</string>
+    <string name="delete">Löschen</string>
+    <string name="duration">Dauer:</string>
+    <string name="date">Datum:</string>
+    <string name="arrival_short_colon">An:</string>
+    <string name="departure_short_colon">Ab:</string>
+    <string name="nach">Nach:</string>
+    <string name="from">Von:</string>
+
+    <string name="start">Start</string>
+    <string name="destination">Ziel</string>
+    <string name="ppr_empty_response">Keine Routen gefunden</string>
+    <string name="title_activity_route_map">Route</string>
+    <string name="ppr_tab">Fußgängerrouting</string>
+    <string name="intermodal_tab">Intermodale Verbindungssuche</string>
+    <string name="fast_switch">Schnelle Suche</string>
+</resources>

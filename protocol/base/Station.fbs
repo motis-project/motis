@@ -1,0 +1,9 @@
+include "base/Position.fbs";
+
+namespace motis;
+
+table Station {
+  id: string;
+  name: string;
+  pos: Position;
+}

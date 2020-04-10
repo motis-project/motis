@@ -1,0 +1,11 @@
+include "base/Station.fbs";
+
+namespace motis.lookup;
+
+table LookupGeoStationResponse {
+  stations:[motis.Station];
+}
+
+table LookupBatchGeoStationResponse {
+  responses:[LookupGeoStationResponse];
+}

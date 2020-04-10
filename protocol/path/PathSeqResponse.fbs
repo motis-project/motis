@@ -1,0 +1,24 @@
+namespace motis.path;
+
+table PathSourceInfo {
+	segment_idx: int;
+	from_idx: int;
+	to_idx: int;
+	type: string;
+}
+
+table Segment {
+  coordinates: [double];
+  osm_node_ids: [long];
+}
+
+table PathSeqResponse {
+  station_ids: [string];
+  classes: [uint];
+  segments: [Segment];
+  sourceInfos:  [PathSourceInfo];
+}
+
+table MultiPathSeqResponse {
+  sequences: [PathSeqResponse];
+}

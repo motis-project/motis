@@ -1,0 +1,7 @@
+namespace motis.lookup;
+
+table LookupScheduleInfoResponse {
+  name:string;
+  begin:ulong;
+  end:ulong;
+}

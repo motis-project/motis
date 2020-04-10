@@ -1,0 +1,336 @@
+cmake_minimum_required(VERSION 3.16)
+project(motis C CXX ASM)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+option(MOTIS_AVX "enable AVX functions" ON)
+
+option(MOTIS_CUDA "enable CUDA functions" OFF)
+if (MOTIS_CUDA)
+  set(MOTIS_CUDA_ARCH "-gencode arch=compute_75,code=sm_75 -gencode arch=compute_61,code=sm_61")
+  if (MSVC)
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${MOTIS_CUDA_ARCH} -lcudadevrt")
+  else()
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${MOTIS_CUDA_ARCH} --compiler-options -static")
+  endif()
+  enable_language(CUDA)
+endif()
+
+option(MOTIS_LINT "enable lint (clang-tidy) target" OFF)
+option(MOTIS_COV "enable coverage (coverage) target" OFF)
+
+add_library(motis-generated INTERFACE)
+target_include_directories(motis-generated INTERFACE ${CMAKE_BINARY_DIR}/generated)
+
+set(USE_OPENMP OFF CACHE BOOL openmp FORCE)
+
+
+################################
+# MOTIS Version
+################################
+execute_process(
+  COMMAND git rev-parse --abbrev-ref HEAD
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  OUTPUT_VARIABLE motis_git_branch
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+  COMMAND git --no-pager log -1 --format=%h
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  OUTPUT_VARIABLE motis_git_ref
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+  COMMAND git describe --always --tags --dirty=-dirty
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  OUTPUT_VARIABLE motis_git_tag
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+configure_file (
+  "base/core/include/motis/core/version.h.in"
+  "${CMAKE_BINARY_DIR}/generated/version.h"
+)
+
+
+################################
+# Dependencies
+################################
+if (MSVC)
+  set(Boost_USE_STATIC_LIBS ON)
+  set(Boost_USE_MULTITHREADED ON)
+  set(Boost_USE_STATIC_RUNTIME ON)
+endif()
+find_package(Boost 1.70.0 REQUIRED COMPONENTS system filesystem regex program_options thread)
+find_package(Threads)
+
+link_directories(${Boost_LIBRARY_DIRS})
+include_directories(SYSTEM ${Boost_INCLUDE_DIR})
+
+include(cmake/pkg.cmake)
+
+
+################################
+# Basic Compiler Flags
+################################
+if (NOT MSVC)
+  set(MOTIS_CXX_FLAGS -std=c++17 -Wall -Wextra -Wno-sign-compare)
+  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -Wno-maybe-uninitialized -Wno-unused-but-set-parameter)
+  endif()
+  if (MOTIS_COV)
+    set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} --coverage)
+    set(CMAKE_EXE_LINKER_FLAGS  ${CMAKE_EXE_LINKER_FLAGS} --coverage)
+  endif()
+endif()
+
+# Quickfix for GCC 7
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive -Wno-implicit-fallthrough")
+endif()
+
+# Quickfix for MSVC
+if (MSVC)
+  set(MOTIS_COMPILE_DEFINITIONS
+    BOOST_THREAD_USE_LIB
+    WIN32_LEAN_AND_MEAN
+    _HAS_AUTO_PTR_ETC
+    _USE_MATH_DEFINES
+    NOMINMAX
+    ${MOTIS_COMPILE_DEFINITIONS})
+endif()
+
+# MOTIS Compile Definitions
+if (MOTIS_CUDA)
+  set(MOTIS_COMPILE_DEFINITIONS MOTIS_CUDA ${MOTIS_COMPILE_DEFINITIONS})
+endif()
+if (MOTIS_AVX)
+  set(MOTIS_COMPILE_DEFINITIONS MOTIS_AVX ${MOTIS_COMPILE_DEFINITIONS})
+  if (MSVC)
+    set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} /arch:AVX)
+  else()
+    set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -mavx)
+  endif()
+endif()
+
+
+################################
+# Linter
+################################
+option(MOTIS_LINT "Run clang-tidy with the compiler." OFF)
+if(MOTIS_LINT)
+  # clang-tidy will be run on all targets defined hereafter
+  include(cmake/clang-tidy.cmake)
+endif()
+
+################################
+# MOTIS
+################################
+add_subdirectory(base/data EXCLUDE_FROM_ALL)
+add_subdirectory(base/core EXCLUDE_FROM_ALL)
+add_subdirectory(base/loader EXCLUDE_FROM_ALL)
+add_subdirectory(base/module EXCLUDE_FROM_ALL)
+
+file(GLOB all-modules RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/modules ${CMAKE_CURRENT_SOURCE_DIR}/modules/*)
+list(REMOVE_ITEM all-modules ".DS_Store")
+string(REPLACE ";" " " modules-option "${all-modules}")
+set(MODULES ${modules-option} CACHE STRING "Modules to load")
+
+if(MODULES STREQUAL "all")
+  set(modules ${all-modules})
+else()
+  string(REPLACE " " ";" modules "${MODULES}")
+endif()
+
+set(module-targets "")
+set(module-test-files "")
+foreach(module ${modules})
+  add_subdirectory(modules/${module})
+  list(APPEND module-targets "motis-${module}")
+  list(APPEND module-test-files "modules/${module}/*_test.cc")
+  list(APPEND module-itest-files "modules/${module}/*_itest.cc")
+endforeach(module)
+
+add_subdirectory(base/bootstrap EXCLUDE_FROM_ALL)
+add_subdirectory(base/launcher)
+
+
+################################
+# Tests
+################################
+configure_file (
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/test_dir.h.in
+  ${CMAKE_BINARY_DIR}/generated/test_dir.h
+)
+file(GLOB_RECURSE motis-test-files test/src/*.cc)
+file(GLOB_RECURSE motis-modules-test-files ${module-test-files})
+file(GLOB_RECURSE motis-base-test-files base/*_test.cc)
+file(GLOB_RECURSE motis-loader-test-files base/loader/*_test.cc)
+set_source_files_properties(${motis-loader-test-files} PROPERTIES COMPILE_DEFINITIONS FLATBUFFERS_64=1)
+add_executable(motis-test EXCLUDE_FROM_ALL
+  ${motis-test-files}
+  ${motis-modules-test-files}
+  ${motis-base-test-files}
+)
+target_include_directories(motis-test PRIVATE test/include)
+if (MSVC)
+  target_compile_features(motis-test PUBLIC cxx_std_20)
+endif()
+
+list(FIND modules "path" MOTIS_PATH_MODULE_ENABLE)
+if(${MOTIS_PATH_MODULE_ENABLE} GREATER -1)
+  set(motis-test-extra-dependencies "motis-path-prepare")
+endif()
+
+target_compile_options(motis-test PRIVATE ${MOTIS_CXX_FLAGS})
+target_compile_definitions(motis-test PRIVATE ${MOTIS_COMPILE_DEFINITIONS})
+target_link_libraries(motis-test
+  ${module-targets}
+  ${motis-test-extra-dependencies}
+  motis-bootstrap
+  motis-core
+  motis-loader
+  motis-module
+  conf
+  ianatzdb-res
+  ${Boost_LIBRARIES}
+)
+target_link_libraries(motis-test gtest gtest_main)
+
+
+################################
+# Integration Tests
+################################
+configure_file (
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/test_dir.h.in
+  ${CMAKE_BINARY_DIR}/generated/test_dir.h
+)
+file(GLOB_RECURSE motis-modules-itest-files ${module-itest-files})
+file(GLOB_RECURSE motis-base-itest-files base/*_itest.cc)
+
+add_executable(motis-itest EXCLUDE_FROM_ALL
+  ${motis-test-files}
+  ${motis-modules-itest-files}
+  ${motis-base-itest-files})
+target_include_directories(motis-itest PRIVATE test/include)
+if (MSVC)
+  target_compile_features(motis-itest PUBLIC cxx_std_20)
+endif()
+target_compile_options(motis-itest PRIVATE ${MOTIS_CXX_FLAGS})
+target_compile_definitions(motis-itest PRIVATE ${MOTIS_COMPILE_DEFINITIONS})
+target_link_libraries(motis-itest
+  ${module-targets}
+  motis-bootstrap
+  motis-core
+  motis-loader
+  motis-module
+  conf
+  ianatzdb-res
+  ${Boost_LIBRARIES}
+)
+target_link_libraries(motis-itest gtest gtest_main)
+set_target_properties(motis-itest PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "--gtest_filter=\"ris_gtfsrt_cancel_message_itest_t0.before_cancel\"")
+
+
+################################
+# Lint (oclint)
+################################
+add_custom_target(oclint
+  find
+    ./modules/routing/ ./modules/guesser/ ./modules/osrm/ ./base/
+    -type f
+    -name "*.cc"
+    ! -name "*test*"
+    -print0
+    |
+    xargs
+      -0
+      oclint
+        -enable-global-analysis
+        -p ${CMAKE_CURRENT_BINARY_DIR}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMENT "Running oclint"
+  VERBATIM
+)
+add_dependencies(oclint motis motis-test motis-itest)
+if (TARGET motis-eval)
+  add_dependencies(oclint motis-eval)
+endif()
+
+
+################################
+# clang-format check
+################################
+find_program(CLANG_FORMAT_COMMAND NAMES clang-format clang-format-9)
+add_custom_target(format-check
+  COMMAND find
+      ${CMAKE_CURRENT_SOURCE_DIR}/base
+      ${CMAKE_CURRENT_SOURCE_DIR}/modules
+      ${CMAKE_CURRENT_SOURCE_DIR}/test
+    -type f
+    (
+    -name "*.cc"
+    -o
+    -name "*.h"
+    )
+    -print0
+  | xargs -0 ${CLANG_FORMAT_COMMAND} -i
+  COMMAND git status --porcelain
+  COMMAND git status --porcelain | xargs -I {} -0 test -z \"{}\"
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMENT "Checking source code formatting"
+  VERBATIM
+)
+
+
+################################
+# coverage report
+################################
+if (MOTIS_COV)
+  set(LCOV_OPTS "")
+  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    set(LCOV_OPTS "--gcov-tool=${CMAKE_CURRENT_SOURCE_DIR}/tools/llvm-gcov.sh")
+  endif()
+
+  add_custom_target(coverage
+    # clean previous files
+    rm -rf ./combined_coverage ./motis-test_coverage ./motis-itest_coverage
+    COMMAND rm -f combined-test.info motis-test.info motis-itest.info
+    COMMAND find . -name "*.gcda" -delete
+
+    # combined (motis-test + motis-itest)
+    COMMAND lcov --base-directory . --directory . --zerocounters -q
+    COMMAND ./motis-test
+    COMMAND ./motis-itest
+    COMMAND lcov ${LCOV_OPTS} --base-directory . --directory . -c -o combined-test.info
+    COMMAND lcov --remove combined-test.info "/usr*" -o combined-test.info
+    COMMAND lcov --remove combined-test.info "/external_lib*" -o combined-test.info
+    COMMAND lcov --remove combined-test.info "/test/*" -o combined-test.info
+    COMMAND genhtml -o combined_coverage -t "motis-test + motis-itest" --num-spaces 4 combined-test.info
+
+    # only motis-test
+    COMMAND lcov --base-directory . --directory . --zerocounters -q
+    COMMAND ./motis-test
+    COMMAND lcov ${LCOV_OPTS} --base-directory . --directory . -c -o motis-test.info
+    COMMAND lcov --remove motis-test.info "/usr*" -o motis-test.info
+    COMMAND lcov --remove motis-test.info "/external_lib*" -o motis-test.info
+    COMMAND lcov --remove motis-test.info "/test/*" -o motis-test.info
+    COMMAND genhtml -o motis-test_coverage -t "motis-test" --num-spaces 4 motis-test.info
+
+    # only motis-itest
+    COMMAND lcov --base-directory . --directory . --zerocounters -q
+    COMMAND ./motis-itest
+    COMMAND lcov ${LCOV_OPTS} --base-directory . --directory . -c -o motis-itest.info
+    COMMAND lcov --remove motis-itest.info "/usr*" -o motis-itest.info
+    COMMAND lcov --remove motis-itest.info "/external_lib*" -o motis-itest.info
+    COMMAND lcov --remove motis-itest.info "/test/*" -o motis-itest.info
+    COMMAND genhtml -o motis-itest_coverage -t "motis-itest" --num-spaces 4 motis-itest.info
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Generating coverage report"
+    VERBATIM
+  )
+  add_dependencies(coverage motis-test motis-itest)
+endif()

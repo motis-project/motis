@@ -1,0 +1,14 @@
+include "Timezone.fbs";
+
+namespace motis.loader;
+
+table Station {
+  id : string;
+  name : string;
+  lat : double;
+  lng : double;
+  interchange_time : int;
+  external_ids : [string];
+  timezone : Timezone;
+  timezone_name : string;
+}

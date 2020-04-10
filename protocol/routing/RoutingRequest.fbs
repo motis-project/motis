@@ -1,0 +1,123 @@
+include "base/Interval.fbs";
+include "base/Station.fbs";
+include "base/TripId.fbs";
+
+namespace motis.routing;
+
+table InputStation {
+  id:string;  // guessed from the name if empty
+  name:string;
+}
+
+
+// ----------------------------------------------------------------------------
+// Edges
+// ----------------------------------------------------------------------------
+table MumoEdge {
+  from_station_id:string;
+  to_station_id:string;
+  duration:ushort;
+  price:ushort;
+  accessibility:ushort;
+  mumo_id:int;
+}
+
+table PeriodicMumoEdge {
+  edge:MumoEdge;
+  interval:motis.Interval;  // minutes after midnight
+}
+
+table TimeDependentMumoEdge {
+  edge:MumoEdge;
+  interval:motis.Interval;
+}
+
+table HotelEdge {
+  edge:MumoEdge;
+  earliest_checkout_time:ushort;
+  min_stay_duration:ushort;
+}
+
+union AdditionalEdge {
+  MumoEdge,
+  PeriodicMumoEdge,
+  TimeDependentMumoEdge,
+  HotelEdge
+}
+
+table AdditionalEdgeWrapper {
+  additional_edge:AdditionalEdge;
+}
+
+// ----------------------------------------------------------------------------
+// Start
+// ----------------------------------------------------------------------------
+table OntripTrainStart {
+  trip:TripId;
+  station:InputStation;
+  arrival_time:long;
+}
+
+table OntripStationStart {
+  station:InputStation;
+  departure_time:long;
+}
+
+
+table PretripStart {
+  station:InputStation;
+  interval:motis.Interval;
+  min_connection_count:uint;
+  extend_interval_earlier:bool;
+  extend_interval_later:bool;
+}
+
+union Start {
+  OntripTrainStart,
+  OntripStationStart,
+  PretripStart
+}
+
+// ----------------------------------------------------------------------------
+// Via
+// ----------------------------------------------------------------------------
+table Via {
+  station:InputStation;
+  stay_duration:uint;
+}
+
+// ----------------------------------------------------------------------------
+// Search Type
+// ----------------------------------------------------------------------------
+enum SearchType : byte {
+  Default,
+  SingleCriterion,
+  SingleCriterionNoIntercity,
+  LateConnections,
+  LateConnectionsTest,
+  Accessibility,
+  DefaultPrice,
+  DefaultPriceRegional
+}
+
+// ----------------------------------------------------------------------------
+// Search Type
+// ----------------------------------------------------------------------------
+enum SearchDir : byte {
+  Forward,  // given time = departure time
+  Backward  // given time = arrival time
+}
+
+// ----------------------------------------------------------------------------
+
+table RoutingRequest {
+  start:Start;
+  destination:InputStation;
+  search_type:SearchType;
+  search_dir:SearchDir;
+  via:[Via];
+  additional_edges:[AdditionalEdgeWrapper];
+  use_start_metas: bool = true;
+  use_dest_metas: bool = true;
+  use_start_footpaths: bool = true;
+}

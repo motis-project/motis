@@ -1,0 +1,11 @@
+namespace motis.loader;
+
+table AttributeInfo {
+  code : string;
+  text : string;
+}
+
+table Attribute {
+  info: AttributeInfo;
+  traffic_days : string;
+}

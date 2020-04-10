@@ -1,0 +1,11 @@
+#pragma once
+
+@module-includes@
+
+namespace motis {
+namespace bootstrap {
+
+${module-map}
+
+}  // namespace launcher
+}  // namespace motis

@@ -1,0 +1,6 @@
+namespace motis.ris;
+
+// Deletes messages from the database older or equally old as 'until'.
+table RISPurgeRequest {
+  until:ulong;
+}

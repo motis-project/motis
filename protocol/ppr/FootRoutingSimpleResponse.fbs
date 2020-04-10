@@ -1,0 +1,7 @@
+include "ppr/Route.fbs";
+
+namespace motis.ppr;
+
+table FootRoutingSimpleResponse {
+  routes: [Route];
+}

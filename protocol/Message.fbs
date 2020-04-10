@@ -1,0 +1,235 @@
+include "address/AddressRequest.fbs";
+include "address/AddressResponse.fbs";
+include "bikesharing/BikesharingGeoTerminalsRequest.fbs";
+include "bikesharing/BikesharingGeoTerminalsResponse.fbs";
+include "bikesharing/BikesharingRequest.fbs";
+include "bikesharing/BikesharingResponse.fbs";
+include "guesser/StationGuesserRequest.fbs";
+include "guesser/StationGuesserResponse.fbs";
+include "intermodal/IntermodalRoutingRequest.fbs";
+include "lookup/LookupGeoStationIdRequest.fbs";
+include "lookup/LookupGeoStationRequest.fbs";
+include "lookup/LookupGeoStationResponse.fbs";
+include "lookup/LookupScheduleInfoResponse.fbs";
+include "lookup/LookupStationEventsRequest.fbs";
+include "lookup/LookupStationEventsResponse.fbs";
+include "lookup/LookupMetaStationRequest.fbs";
+include "lookup/LookupMetaStationResponse.fbs";
+include "lookup/LookupIdTrainRequest.fbs";
+include "lookup/LookupIdTrainResponse.fbs";
+include "path/PathBoxesResponse.fbs";
+include "path/PathByTripIdRequest.fbs";
+include "path/PathSeqResponse.fbs";
+include "path/PathByStationSeqRequest.fbs";
+include "path/PathByTileFeatureRequest.fbs";
+include "railviz/RailVizTrainsRequest.fbs";
+include "railviz/RailVizTrainsResponse.fbs";
+include "railviz/RailVizTripsRequest.fbs";
+include "railviz/RailVizStationRequest.fbs";
+include "railviz/RailVizStationResponse.fbs";
+include "railviz/RailVizTripGuessRequest.fbs";
+include "railviz/RailVizTripGuessResponse.fbs";
+include "osrm/OSRMOneToManyRequest.fbs";
+include "osrm/OSRMOneToManyResponse.fbs";
+include "osrm/OSRMViaRouteRequest.fbs";
+include "osrm/OSRMViaRouteResponse.fbs";
+include "osrm/OSRMSmoothViaRouteRequest.fbs";
+include "osrm/OSRMSmoothViaRouteResponse.fbs";
+include "reliability/ReliabilityRatingResponse.fbs";
+include "reliability/ReliableRoutingRequest.fbs";
+include "reliability/ReliableRoutingResponse.fbs";
+include "ris/RISMessage.fbs";
+include "ris/RISBatch.fbs";
+include "ris/RISForwardTimeRequest.fbs";
+include "ris/RISPurgeRequest.fbs";
+include "ris/RISGTFSRTMapping.fbs";
+include "routing/RoutingRequest.fbs";
+include "routing/RoutingResponse.fbs";
+include "rt/RtUpdate.fbs";
+include "rt/RtWriteGraphRequest.fbs";
+include "ppr/FootRoutingRequest.fbs";
+include "ppr/FootRoutingResponse.fbs";
+include "ppr/FootRoutingSimpleRequest.fbs";
+include "ppr/FootRoutingSimpleResponse.fbs";
+include "ppr/FootRoutingProfilesResponse.fbs";
+include "revise/ReviseRequest.fbs";
+include "revise/ReviseResponse.fbs";
+include "tripbased/TripBasedTripDebugRequest.fbs";
+include "tripbased/TripBasedTripDebugResponse.fbs";
+include "parking/ParkingGeoRequest.fbs";
+include "parking/ParkingGeoResponse.fbs";
+include "parking/ParkingLookupRequest.fbs";
+include "parking/ParkingLookupResponse.fbs";
+include "parking/ParkingEdgeRequest.fbs";
+include "parking/ParkingEdgeResponse.fbs";
+include "parking/ParkingEdgesRequest.fbs";
+include "parking/ParkingEdgesResponse.fbs";
+
+include "HTTPMessage.fbs";
+
+namespace motis;
+
+// JSON example:
+// --
+// {
+//   "content_type": "MotisError",
+//   "content": {
+//     "error_code": 1,
+//     "category": "motis::access",
+//     "reason": "module: there is no module capable of handling the message"
+//   }
+// }
+table MotisError {
+  error_code:ushort;
+  category:string;
+  reason:string;
+}
+
+// JSON example:
+// --
+// {
+//   "content_type": "MotisSuccess",
+//   "content": {
+//   }
+// }
+table MotisSuccess {
+}
+
+// JSON example:
+// --
+// {
+//   "content_type": "MotisNoMessage",
+//   "content": {
+//   }
+// }
+table MotisNoMessage {
+}
+
+table ApiDescription {
+  methods:[string];
+}
+
+union MsgContent {
+  motis.ApiDescription,
+  motis.Connection,
+  motis.MotisNoMessage,
+  motis.MotisError,
+  motis.MotisSuccess,
+  motis.HTTPRequest,
+  motis.HTTPResponse,
+  motis.TripId,
+  motis.bikesharing.BikesharingRequest,
+  motis.bikesharing.BikesharingResponse,
+  motis.bikesharing.BikesharingGeoTerminalsRequest,
+  motis.bikesharing.BikesharingGeoTerminalsResponse,
+  motis.guesser.StationGuesserRequest,
+  motis.guesser.StationGuesserResponse,
+  motis.intermodal.IntermodalRoutingRequest,
+  motis.lookup.LookupGeoStationIdRequest,
+  motis.lookup.LookupGeoStationRequest,
+  motis.lookup.LookupGeoStationResponse,
+  motis.lookup.LookupBatchGeoStationRequest,
+  motis.lookup.LookupBatchGeoStationResponse,
+  motis.lookup.LookupStationEventsRequest,
+  motis.lookup.LookupStationEventsResponse,
+  motis.lookup.LookupScheduleInfoResponse,
+  motis.lookup.LookupMetaStationRequest,
+  motis.lookup.LookupMetaStationResponse,
+  motis.lookup.LookupBatchMetaStationRequest,
+  motis.lookup.LookupBatchMetaStationResponse,
+  motis.lookup.LookupIdTrainRequest,
+  motis.lookup.LookupIdTrainResponse,
+  motis.path.PathBoxesResponse,
+  motis.path.PathByTripIdRequest,
+  motis.path.PathSeqResponse,
+  motis.path.PathByStationSeqRequest,
+  motis.railviz.RailVizTrainsRequest,
+  motis.railviz.RailVizTrainsResponse,
+  motis.railviz.RailVizTripsRequest,
+  motis.railviz.RailVizStationRequest,
+  motis.railviz.RailVizStationResponse,
+  motis.osrm.OSRMOneToManyRequest,
+  motis.osrm.OSRMOneToManyResponse,
+  motis.osrm.OSRMViaRouteRequest,
+  motis.osrm.OSRMViaRouteResponse,
+  motis.osrm.OSRMSmoothViaRouteRequest,
+  motis.osrm.OSRMSmoothViaRouteResponse,
+  motis.reliability.ReliableRoutingRequest,
+  motis.reliability.ReliableRoutingResponse,
+  motis.reliability.ReliabilityRatingResponse,
+  motis.ris.RISBatch,
+  motis.ris.UpdatedEvent,
+  motis.ris.Event,
+  motis.ris.Message,
+  motis.ris.RISGTFSRTMapping,
+  motis.ris.RISForwardTimeRequest,
+  motis.routing.RoutingRequest,
+  motis.routing.RoutingResponse,
+  motis.rt.RtEventInfo,
+  motis.rt.RtDelayUpdate,
+  motis.rt.RtCancelUpdate,
+  motis.rt.RtTrackUpdate,
+  motis.rt.RtFreeTextUpdate,
+  motis.rt.RtRerouteUpdate,
+  motis.rt.RtUpdate,
+  motis.rt.RtUpdates,
+  motis.rt.RtWriteGraphRequest,
+  motis.railviz.RailVizTripGuessRequest,
+  motis.railviz.RailVizTripGuessResponse,
+  motis.address.AddressRequest,
+  motis.address.AddressResponse,
+  motis.ris.RISPurgeRequest,
+  motis.ppr.FootRoutingRequest,
+  motis.ppr.FootRoutingResponse,
+  motis.ppr.FootRoutingSimpleRequest,
+  motis.ppr.FootRoutingSimpleResponse,
+  motis.revise.ReviseRequest,
+  motis.revise.ReviseResponse,
+  motis.tripbased.TripBasedTripDebugRequest,
+  motis.tripbased.TripBasedTripDebugResponse,
+  motis.parking.ParkingGeoRequest,
+  motis.parking.ParkingGeoResponse,
+  motis.parking.ParkingLookupRequest,
+  motis.parking.ParkingLookupResponse,
+  motis.parking.ParkingEdgeRequest,
+  motis.parking.ParkingEdgeResponse,
+  motis.parking.ParkingEdgesRequest,
+  motis.parking.ParkingEdgesResponse,
+  motis.path.PathByTileFeatureRequest,
+  motis.path.MultiPathSeqResponse,
+  motis.ppr.FootRoutingProfilesResponse
+}
+
+// Destination Examples:
+//
+// Request departure+arrival table for a station
+// {
+//   "type": "Module",
+//   "target": "/lookup/station/8000068/2016-03-02T16:47",
+// }
+//
+// Store a user connection
+// {
+//   "type": "Module",
+//   "target": "/user/connection",
+// }
+//
+// Get alternatives for stored connection
+// {
+//   "type": "Module",
+//   "target": "/user/connection/123456/alternatives",
+// }
+enum DestinationType : byte { Module, Topic }
+
+table Destination {
+  type:DestinationType;
+  target:string;
+}
+
+table Message {
+  destination:Destination;
+  content:MsgContent;
+  id:int = 0;
+}
+
+root_type Message;

@@ -1,0 +1,21 @@
+include "base/TripId.fbs";
+
+namespace motis.path;
+
+// JSON example
+// --
+// {
+//   "destination": {
+//     "type": "Module",
+//     "target": "/path/id_train"
+//   },
+//   "content_type": "PathByTripIdRequest",
+//   "content": {
+//     "trip_id": // XXX
+//   }
+// }
+table PathByTripIdRequest {
+  trip_id: TripId;
+  zoom_level: byte = -1;
+  debug_info: bool = false;
+}

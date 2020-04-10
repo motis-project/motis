@@ -1,0 +1,9 @@
+include "base/Polyline.fbs";
+
+namespace motis.osrm;
+
+table OSRMSmoothViaRouteResponse {
+  time:int;
+  distance:double;
+  segments: [Polyline];
+}

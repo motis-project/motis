@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingBottom="20dp"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:paddingTop="20dp">
+
+    <ImageView
+        android:id="@+id/guess_icon"
+        android:layout_width="27dp"
+        android:layout_height="27dp"
+        android:layout_marginTop="1dp"
+        android:scaleType="fitXY"
+        android:src="@drawable/ic_place_black_24dp"
+        android:tint="@color/colorPrimary" />
+
+    <TextView
+        android:id="@+id/guess_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:ellipsize="end"
+        android:gravity="center_vertical"
+        android:maxLines="2"
+        android:paddingLeft="25dp"
+        android:textColor="@color/color_back_semitransparent"
+        android:textSize="15sp" />
+
+</LinearLayout>

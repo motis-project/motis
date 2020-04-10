@@ -1,0 +1,6 @@
+namespace motis;
+
+struct Interval {
+  begin: long;  // inclusive
+  end: long;  // exclusive (to-the-minute accuracy!)
+}

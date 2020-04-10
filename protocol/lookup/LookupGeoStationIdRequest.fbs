@@ -1,0 +1,17 @@
+namespace motis.lookup;
+
+// JSON example:
+// --
+// {
+//   "content_type": "LookupGeoStationIdRequest",
+//   "content": {
+//     "station_id": "8000105",
+//     "min_radius": 250.00,
+//     "max_radius": 500.00
+//   }
+// }
+table LookupGeoStationIdRequest {
+  station_id: string;
+  min_radius: double = 0;
+  max_radius: double;
+}

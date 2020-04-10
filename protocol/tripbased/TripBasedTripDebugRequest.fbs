@@ -1,0 +1,21 @@
+include "base/TripId.fbs";
+
+namespace motis.tripbased;
+
+table ExpandedTripId {
+  index: uint;
+}
+
+union TripSelector {
+  TripId,
+  ExpandedTripId
+}
+
+table TripSelectorWrapper {
+  selector: TripSelector;
+}
+
+table TripBasedTripDebugRequest {
+  trips: [TripSelectorWrapper];
+  stations: [string];
+}

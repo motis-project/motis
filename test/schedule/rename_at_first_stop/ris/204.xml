@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<Paket Version="1.2" SpezVer="1" TOut="20160128233905769" KNr="683276060">
+  <ListNachricht>
+    <Nachricht>
+      <Ist>
+        <Service Id="33566887432" IdZGattung="S" IdZGattungInt="s" IdBf="MER" IdBfEvaNr="8001825" IdZeit="20160128231800" IdZNr="8012" ZielBfCode="MPE" ZielBfEvaNr="8004775" Zielzeit="20160129004700" IdVerwaltung="07" SourceZNr="EFZ" IdLinie="2">
+          <ListZug>
+            <Zug Nr="8012" Gattung="S" GattungInt="s" Linie="2" Name="S 8012" Verwaltung="07">
+              <ListZE>
+                <ZE Typ="An">
+                  <Bf Code="MPO" EvaNr="8004854" Name="Poing"/>
+                  <Zeit Soll="20160128234000" Ist="20160128234000"/>
+                </ZE>
+              </ListZE>
+            </Zug>
+          </ListZug>
+        </Service>
+      </Ist>
+      <ListQuelle>
+        <Quelle Sender="ZENTRAL" Typ="IstProg" KNr="21033" TIn="20160128233905133" TOutSnd="20160128233905075"/>
+        <Quelle Sender="10.35.205.140:7213/13" Typ="UIC 102" TIn="20160128233904" Esc="mue120jvll"/>
+      </ListQuelle>
+    </Nachricht>
+  </ListNachricht>
+</Paket>
+

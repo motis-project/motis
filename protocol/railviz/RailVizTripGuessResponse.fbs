@@ -1,0 +1,13 @@
+include "base/TripInfo.fbs";
+include "base/Station.fbs";
+
+namespace motis.railviz;
+
+table Trip {
+  first_station: motis.Station;
+  trip_info: motis.TripInfo;
+}
+
+table RailVizTripGuessResponse {
+  trips: [Trip];
+}

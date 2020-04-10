@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<Paket TOut="20151124110000000">
+  <ListNachricht>
+    <Nachricht>
+      <Ausfall>
+        <Service IdBfEvaNr="0000001" IdZeit="20151124101000" IdLinie="381" IdZNr="1" Zielzeit="20151124140000">
+          <ListZug>
+            <Zug Nr="1" Linie="381">
+              <ListZE>
+                <ZE Typ="Ab" Status="Ausf">
+                  <Bf EvaNr="0000003" Name="3"/>
+                  <Zeit Soll="20151124121000"/>
+                  <Gleis Soll=""/>
+                </ZE>
+                <ZE Typ="An" Status="Ausf">
+                  <Bf EvaNr="0000004" Name="4"/>
+                  <Zeit Soll="20151124130000"/>
+                  <Gleis Soll=""/>
+                </ZE>
+                <ZE Typ="Ab" Status="Ausf">
+                  <Bf EvaNr="0000004" Name="4"/>
+                  <Zeit Soll="20151124131000"/>
+                  <Gleis Soll=""/>
+                </ZE>
+                <ZE Typ="An" Status="Ausf">
+                  <Bf EvaNr="0000005" Name="5"/>
+                  <Zeit Soll="20151124140000"/>
+                  <Gleis Soll=""/>
+                </ZE>
+              </ListZE>
+            </Zug>
+          </ListZug>
+        </Service>
+      </Ausfall>
+      <ListQuelle/>
+    </Nachricht>
+  </ListNachricht>
+</Paket>

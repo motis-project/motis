@@ -1,0 +1,13 @@
+include "base/TripId.fbs";
+
+namespace motis.ris;
+
+table GTFSID {
+  id:string;
+  day:ulong;
+  trip:TripId;
+}
+
+table RISGTFSRTMapping {
+  ids:[GTFSID];
+}

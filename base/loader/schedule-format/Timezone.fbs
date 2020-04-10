@@ -1,0 +1,14 @@
+namespace motis.loader;
+
+table Season {
+  offset : int;
+  day_idx_first_day : int;
+  day_idx_last_day : int;
+  minutes_after_midnight_first_day: int;
+  minutes_after_midnight_last_day : int;
+}
+
+table Timezone {
+  general_offset: int;
+  season: Season;
+}

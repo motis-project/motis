@@ -1,0 +1,11 @@
+namespace motis.railviz;
+
+enum Direction : byte { LATER, EARLIER, BOTH }
+
+table RailVizStationRequest {
+  station_id: string;
+  time: ulong;
+  event_count: uint;
+  direction: Direction;
+  by_schedule_time: bool;
+}

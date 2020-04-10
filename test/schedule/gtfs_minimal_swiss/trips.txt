@@ -1,0 +1,7 @@
+﻿route_id,service_id,trip_id,trip_headsign,trip_short_name,direction_id
+"1-1-A-j19-1","TA+b002o","7.TA.1-1-A-j19-1.7.H","Aarau","13710","0"
+"1-1-A-j19-1","TA+b00ao","22.TA.1-1-A-j19-1.22.R","Brugg AG","31237","1"
+"1-1-j19-1","TA+b020b","13.TA.1-1-j19-1.13.H","Genève-Aéroport","704","0"
+"9-1-A-j19-1","TA+b06u1","1.TA.9-1-A-j19-1.1.H","Genève","30837","0"
+"59-100-j19-1","TA+b002o","94.TA.59-100-j19-1.90.H","Martigny","30745","0"
+"59-100-j19-1","TA+b003e","95.TA.59-100-j19-1.91.H","Sion","30743","0"

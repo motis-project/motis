@@ -1,0 +1,5 @@
+namespace motis;
+
+table Polyline {
+  coordinates: [double];
+}

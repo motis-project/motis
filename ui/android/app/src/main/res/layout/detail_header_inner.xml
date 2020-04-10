@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/detail_header_inner"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/colorPrimary"
+    android:orientation="vertical"
+    android:paddingBottom="10dp"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:paddingTop="4dp"
+    tools:showIn="@layout/detail_header">
+
+    <TableLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/detail_dep_schedule_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:freezesText="true"
+                android:textColor="@color/primary_text_color"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/detail_dep_station"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="1"
+                android:layout_marginLeft="9dp"
+                android:ellipsize="end"
+                android:freezesText="true"
+                android:textColor="@color/primary_text_color" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/detail_arr_schedule_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:freezesText="true"
+                android:textColor="@color/primary_text_color"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/detail_arr_station"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="1"
+                android:layout_marginLeft="9dp"
+                android:ellipsize="end"
+                android:freezesText="true"
+                android:textColor="@color/primary_text_color" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="1"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal"
+                android:paddingStart="9dp">
+
+                <TextView
+                    android:id="@+id/detail_travel_duration"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clickable="false"
+                    android:drawablePadding="4dp"
+                    android:drawableStart="@drawable/ic_schedule_white_14dp"
+                    android:freezesText="true"
+                    android:textColor="@color/primary_text_color"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/detail_number_of_transfers"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="24dp"
+                    android:drawablePadding="4dp"
+                    android:drawableStart="@drawable/ic_transfer_within_a_station_white_14dp"
+                    android:freezesText="true"
+                    android:textColor="@color/primary_text_color"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+        </TableRow>
+
+    </TableLayout>
+
+</LinearLayout>

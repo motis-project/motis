@@ -1,0 +1,15 @@
+include "base/EventType.fbs";
+
+namespace motis;
+
+table TripId {
+  // primary
+  station_id:string;
+  train_nr:uint;
+  time:long;
+
+  // secondary
+  target_station_id:string;
+  target_time:long;
+  line_id:string;
+}

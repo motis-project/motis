@@ -1,0 +1,28 @@
+include "base/Position.fbs";
+include "base/Station.fbs";
+include "base/Statistics.fbs";
+include "parking/Parking.fbs";
+
+namespace motis.parking;
+
+table ParkingEdgeCosts {
+  station: Station;
+  car_duration: ushort; // min
+  car_distance: double;
+  foot_duration: ushort; // min
+  foot_distance: double;
+  foot_accessibility: ushort;
+  total_duration: ushort; // min
+}
+
+table ParkingEdge {
+  parking: Parking;
+  uses_car: bool;
+  outward_costs: [ParkingEdgeCosts];
+  return_costs: [ParkingEdgeCosts];
+}
+
+table ParkingEdgesResponse {
+  edges: [ParkingEdge];
+  stats: Statistics;
+}

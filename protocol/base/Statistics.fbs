@@ -1,0 +1,11 @@
+namespace motis;
+
+table Statistics {
+  category: string (key);
+  entries: [StatisticsEntry];
+}
+
+table StatisticsEntry {
+  name: string (key);
+  value: ulong;
+}

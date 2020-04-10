@@ -1,0 +1,13 @@
+namespace motis.bikesharing;
+
+table TerminalLocation {
+  id: string;
+  lat: double;
+  lng: double;
+}
+
+table Summary {
+  terminals: [TerminalLocation];
+}
+
+root_type Summary;

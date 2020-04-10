@@ -1,0 +1,12 @@
+namespace motis.address;
+
+// JSON Example:
+// --
+// {
+//   "destination": { "target": "/address"},
+//   "content_type": "AddressRequest",
+//   "content": { "input": "Darmstadt" }
+// }
+table AddressRequest {
+  input:string;
+}

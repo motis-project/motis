@@ -1,0 +1,22 @@
+include "base/Position.fbs";
+include "ppr/SearchOptions.fbs";
+
+namespace motis.parking;
+
+enum ParkingEdgeDirection : byte {
+  Outward, // start -> parking [car], parking -> destination [foot]
+  Return   // start -> parking [foot], parking -> destination [car]
+}
+
+table ParkingEdgeRequest {
+  id: int; // parking id
+  start: motis.Position;
+  destination: motis.Position;
+  direction: ParkingEdgeDirection;
+  ppr_search_options: motis.ppr.SearchOptions;
+  duration: uint;
+  accessibility: uint;
+  include_steps: bool;
+  include_edges: bool;
+  include_path: bool;
+}

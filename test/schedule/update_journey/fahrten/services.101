@@ -1,0 +1,29 @@
+*Z 35345 admin_                                           %
+*A VE 8002059 8000068 000000                              %
+*G abc 8002059 8000068                                    %
+8002059 Frankfurt(M)Stresemann       01500                %
+8002047 Frankfurt-Louisa      01501  01502                %
+8004246 Neu Isenburg          01504  01505                %
+8001236 Dreieich-Buchschlag   01507  01508                %
+8003526 Langen-Flugsicherung  01510  01510                %
+8003523 Langen(Hess)          01512  01512                %
+8001672 Egelsbach             01515  01515                %
+8001864 Erzhausen             01516  01517                %
+8006528 Darmstadt-Wixhausen   01519  01519                %
+8001378 Darmstadt-Arheilgen   01521  01522                %
+8000068 Darmstadt Hbf         01525                       %
+*Z 02371 admin_                                           %
+*A VE 8000105 8000156 000000                              %
+*G abc 8000105 8000156                                     
+8000105 Frankfurt(Main)Hbf           01520                 
+8000068 Darmstadt Hbf         01535  01537                 
+8000031 Bensheim              01548  01550                 
+8000377 Weinheim(Bergstr)     01558  01600                 
+8000156 Heidelberg Hbf        01612                        
+*Z 35547 admin_                                            
+*A VE 8002042 8098105 000000                               
+*G abc 8002042 8098105                                     
+8002042 Frankfurt(Main)West          01500                 
+8079632 Frankfurt(Main)Messe  01502  01502                 
+8006690 Frankfurt(M)Gallus    01503  01504                 
+8098105 Frankfurt Hbf (tief)  01506                        

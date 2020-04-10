@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".query.guesser.GuesserActivity">
+
+    <android.support.design.widget.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:background="@color/colorPrimary"
+        android:paddingBottom="10dp"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:paddingTop="10dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:weightSum="1">
+
+            <ImageButton
+                android:id="@+id/backButton"
+                android:layout_width="27dp"
+                android:layout_height="27dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:scaleType="fitXY"
+                android:src="@drawable/ic_arrow_back_black_24dp"
+                android:tint="@android:color/white" />
+
+            <EditText
+                android:id="@+id/searchInput"
+                android:layout_width="0dp"
+                android:layout_height="27dp"
+                android:layout_weight="1.00"
+                android:background="@android:color/transparent"
+                android:gravity="center_vertical"
+                android:hint="Station"
+                android:paddingLeft="25dp"
+                android:textColor="@android:color/white"
+                android:textColorHint="@color/color_white_semitransparent"
+                android:textCursorDrawable="@drawable/color_cursor"
+                android:textAppearance="@android:style/TextAppearance.SearchResult.Title"
+                android:singleLine="true" />
+
+            <ImageButton
+                android:id="@+id/clearButton"
+                android:layout_width="27dp"
+                android:layout_height="27dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:scaleType="fitXY"
+                android:src="@drawable/ic_close_black_24dp"
+                android:tint="@android:color/white" />
+        </LinearLayout>
+    </android.support.design.widget.AppBarLayout>
+
+    <ListView
+        android:id="@+id/suggestionslist"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:dividerHeight="0dp"
+        android:divider="@null">
+    </ListView>
+
+</LinearLayout>

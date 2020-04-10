@@ -1,0 +1,92 @@
+include "base/TripId.fbs";
+include "base/Station.fbs";
+
+namespace motis.tripbased;
+
+table TripBasedTripId {
+  expanded_trip_id: uint;
+  motis_trip_id: TripId;
+}
+
+table LineDebugInfo {
+  id: uint;
+  first_trip: uint;
+  last_trip: uint;
+  stop_count: uint;
+}
+
+table TransportDebugInfo {
+  category_name: string;
+  category_id: uint;
+  clasz: uint;
+  train_nr: uint;
+  original_train_nr: uint;
+  line_id: string;
+  name: string;
+  provider: string;
+  direction: string;
+}
+
+table TransferDebugInfo {
+  from_trip: TripBasedTripId;
+  to_trip: TripBasedTripId;
+  from_stop_index: uint;
+  to_stop_index: uint;
+  arrival_time: ulong;
+  departure_time: ulong;
+  from_station: Station;
+  to_station: Station;
+}
+
+table LineAtStopDebugInfo {
+  line: LineDebugInfo;
+  stop_index: uint;
+}
+
+table FootpathDebugInfo {
+  from: Station;
+  to: Station;
+  duration: uint;
+}
+
+table StopDebugInfo {
+  station: Station;
+  arrival_time: ulong;
+  departure_time: ulong;
+  in_allowed: bool;
+  out_allowed: bool;
+  transfers: [TransferDebugInfo];
+  reverse_transfers: [TransferDebugInfo];
+  lines_at_stop: [LineAtStopDebugInfo];
+  footpaths: [FootpathDebugInfo];
+  reverse_footpaths: [FootpathDebugInfo];
+  station_transfer_time: int;
+  arrival_transports: [TransportDebugInfo];
+  departure_transports: [TransportDebugInfo];
+}
+
+table TripDebugInfo {
+  id: TripBasedTripId;
+  line: LineDebugInfo;
+  stops: [StopDebugInfo];
+}
+
+table TripAtStopDebugInfo {
+  trip: TripBasedTripId;
+  stop_index: uint;
+  arrival_time: ulong;
+  departure_time: ulong;
+  in_allowed: bool;
+  out_allowed: bool;
+  arrival_transports: [TransportDebugInfo];
+  departure_transports: [TransportDebugInfo];
+}
+
+table StationDebugInfo {
+  station: Station;
+  lines_at_stop: [LineAtStopDebugInfo];
+  footpaths: [FootpathDebugInfo];
+  reverse_footpaths: [FootpathDebugInfo];
+  station_transfer_time: int;
+  trips_at_stop: [TripAtStopDebugInfo];
+}

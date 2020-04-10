@@ -1,0 +1,7 @@
+include "base/Connection.fbs";
+
+namespace motis.revise;
+
+table ReviseResponse {
+  connections: [motis.Connection];
+}

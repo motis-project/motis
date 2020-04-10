@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="25dp"
+    android:orientation="horizontal"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin">
+
+    <TextView
+        style="@style/JourneySection"
+        android:id="@+id/detail_transport_header_transport_name"
+        android:background="@drawable/rounded_corner_accent"
+        android:drawableStart="@drawable/ic_directions_railway_black_24dp"
+        android:freezesText="true"/>
+
+    <View
+        android:layout_width="wrap_content"
+        android:layout_height="1dp"
+        android:layout_gravity="center_vertical"
+        android:layout_marginLeft="4dp"
+        android:layout_weight="1"
+        android:background="@color/grey_200"/>
+
+    <TextView
+        android:id="@+id/detail_transport_header_interchange"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:fontFamily="sans-serif-light"
+        android:freezesText="true"
+        android:paddingEnd="4dp"
+        android:paddingStart="4dp"
+        android:textColor="@color/abc_secondary_text_material_light"
+        android:textSize="12sp"/>
+
+    <View
+        android:layout_width="wrap_content"
+        android:layout_height="1dp"
+        android:layout_gravity="center_vertical"
+        android:layout_marginRight="4dp"
+        android:layout_weight="1"
+        android:background="@color/grey_200"/>
+
+    <TextView
+        android:id="@+id/detail_transport_header_track"
+        style="@style/Track"/>
+
+</LinearLayout>

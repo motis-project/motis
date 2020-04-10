@@ -1,0 +1,10 @@
+namespace motis.ppr;
+
+table FootRoutingProfileInfo {
+  name: string (key);
+  walking_speed: double; // m/s
+}
+
+table FootRoutingProfilesResponse {
+  profiles: [FootRoutingProfileInfo];
+}

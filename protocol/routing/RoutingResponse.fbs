@@ -1,0 +1,13 @@
+include "base/Connection.fbs";
+include "base/DirectConnection.fbs";
+include "base/Statistics.fbs";
+
+namespace motis.routing;
+
+table RoutingResponse {
+  statistics:[Statistics];
+  connections:[motis.Connection];
+  interval_begin:ulong;
+  interval_end:ulong;
+  direct_connections:[motis.DirectConnection];
+}

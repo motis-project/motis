@@ -1,0 +1,8 @@
+namespace motis;
+
+enum ConnectionStatus : byte {
+  OK,
+  INTERCHANGE_INVALID,
+  TRAIN_HAS_BEEN_CANCELED,
+  INVALID
+}

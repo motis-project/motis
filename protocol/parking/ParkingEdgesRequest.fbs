@@ -1,0 +1,15 @@
+include "base/Position.fbs";
+include "base/Station.fbs";
+include "ppr/SearchOptions.fbs";
+
+namespace motis.parking;
+
+table ParkingEdgesRequest {
+  pos: Position;
+  max_car_duration: int;
+  ppr_search_options: motis.ppr.SearchOptions;
+  filtered_stations: [Station];
+  include_outward: bool;
+  include_return: bool;
+  include_without_car: bool;
+}

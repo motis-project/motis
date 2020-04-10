@@ -1,0 +1,9 @@
+include "Station.fbs";
+
+namespace motis.loader;
+
+table Footpath {
+  from : Station;
+  to : Station;
+  duration : uint;
+}

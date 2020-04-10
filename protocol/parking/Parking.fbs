@@ -1,0 +1,9 @@
+include "base/Position.fbs";
+
+namespace motis.parking;
+
+table Parking {
+  id: int;
+  pos: motis.Position;
+  fee: bool;
+}

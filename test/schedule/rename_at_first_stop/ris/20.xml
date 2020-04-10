@@ -1,0 +1,35 @@
+<Paket Version="1.2" SpezVer="1" TOut="20160128043410976" KNr="675487828">
+  <ListNachricht>
+    <Nachricht>
+      <Anschlussbewertung>
+        <ZE Typ="Ziel">
+          <Bf EvaNr="8004168"/>
+          <ListAnschl>
+            <Anschl Bewertung="2">
+              <ZE Typ="Start">
+                <Bf EvaNr="8004168"/>
+                <Service Id="29016893923" IdBfEvaNr="8004168" IdTyp="Start" IdVerwaltung="07" IdZGattung="S" IdZGattungInt="s" IdZNr="6915" IdZeit="20160128043300" SourceZNR="EFZ" ZielBfEvaNr="8000262" Zielzeit="20160128052600">
+                  <ListZug/>
+                </Service>
+                <Zeit Ist="" Prog="" Soll="20160128043300"/>
+                <Zug Gattung="S" GattungInt="s" Nr="6915" Verwaltung="07">
+                  <ListZE/>
+                </Zug>
+              </ZE>
+            </Anschl>
+          </ListAnschl>
+          <Service Id="28936613291" IdBfEvaNr="8000261" IdTyp="Ziel" IdVerwaltung="07" IdZGattung="S" IdZGattungInt="s" IdZNr="6902" IdZeit="20160128034400" SourceZNR="EFZ" ZielBfEvaNr="8004168" Zielzeit="20160128042600">
+            <ListZug/>
+          </Service>
+          <Zeit Ist="" Prog="" Soll="20160128042600"/>
+          <Zug Gattung="S" GattungInt="s" Nr="6902" Verwaltung="07">
+            <ListZE/>
+          </Zug>
+        </ZE>
+      </Anschlussbewertung>
+      <ListQuelle>
+        <Quelle Sender="RSL" Typ="Anschlussbewertung" KNr="16012804341000000" TIn="20160128043410910" TOutSnd="20160128043410000"/>
+      </ListQuelle>
+    </Nachricht>
+  </ListNachricht>
+</Paket>

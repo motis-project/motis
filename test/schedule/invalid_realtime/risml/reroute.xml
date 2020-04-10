@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<Paket TOut="20151124101000000">
+  <ListNachricht>
+    <Nachricht>
+      <IstProg>
+        <Service IdBfEvaNr="0000001" IdZeit="20151124101000" IdZNr="1" IdLinie="381" Zielzeit="20151124140000">
+          <ListZug>
+            <Zug Nr="1" Linie="381">
+              <ListZE>
+                <ZE Typ="An">
+                  <Bf EvaNr="0000002" Name="2"/>
+                  <Zeit Soll="20151124110000" Prog="20151124110500"/>
+                </ZE>
+                <ZE Typ="Ab">
+                  <Bf EvaNr="0000002" Name="2"/>
+                  <Zeit Soll="20151124111000" Prog="20151124111200"/>
+                </ZE>
+                <ZE Typ="An">
+                  <Bf EvaNr="0000003" Name="3"/>
+                  <Zeit Soll="20151124120000" Prog="20151124120200"/>
+                </ZE>
+                <ZE Typ="Ab">
+                  <Bf EvaNr="0000003" Name="3"/>
+                  <Zeit Soll="20151124121000" Prog="20151124121200"/>
+                </ZE>
+                <ZE Typ="An">
+                  <Bf EvaNr="0000004" Name="4"/>
+                  <Zeit Soll="20151124130000" Prog="20151124130500"/>
+                </ZE>
+                <ZE Typ="Ab">
+                  <Bf EvaNr="0000004" Name="4"/>
+                  <Zeit Soll="20151124131000" Prog="20151124131200"/>
+                </ZE>
+                <ZE Typ="An">
+                  <Bf EvaNr="0000005" Name="5"/>
+                  <Zeit Soll="20151124140000" Prog="20151124140500"/>
+                </ZE>
+              </ListZE>
+            </Zug>
+          </ListZug>
+        </Service>
+      </IstProg>
+    </Nachricht>
+    <Nachricht>
+      <Umleitung>
+        <Service IdBfEvaNr="0000001" IdZeit="20151124101000" IdZNr="1" IdLinie="381" Zielzeit="20151124140000">
+          <ListZug>
+            <Zug Nr="1" Linie="381">
+              <ListZE>
+                <ZE Typ="An" Status="UmlAusf">
+                  <Bf EvaNr="0000002" Name="2"/>
+                  <Zeit Soll="20151124110000"/>
+                </ZE>
+                <ZE Typ="Ab" Status="UmlAusf">
+                  <Bf EvaNr="0000002" Name="2"/>
+                  <Zeit Soll="20151124111000"/>
+                </ZE>
+              </ListZE>
+            </Zug>
+          </ListZug>
+        </Service>
+      </Umleitung>
+    </Nachricht>
+    <Nachricht>
+      <Umleitung>
+        <Service IdBfEvaNr="0000001" IdZeit="20151124101000" IdZNr="1" IdLinie="381" Zielzeit="20151124140000">
+          <ListZug>
+            <Zug Nr="1" Linie="381">
+              <ListZE>
+                <ZE Typ="Ab" Status="UmlAusf">
+                  <Bf EvaNr="0000001" Name="1"/>
+                  <Zeit Soll="20151124101000"/>
+                </ZE>
+                <ZE Typ="An" Status="UmlAusf">
+                  <Bf EvaNr="0000003" Name="3"/>
+                  <Zeit Soll="20151124120000"/>
+                </ZE>
+                <ZE Typ="Ab" Status="UmlAusf">
+                  <Bf EvaNr="0000003" Name="3"/>
+                  <Zeit Soll="20151124121000"/>
+                </ZE>
+                <ZE Typ="An" Status="UmlAusf">
+                  <Bf EvaNr="0000005" Name="5"/>
+                  <Zeit Soll="20151124140000"/>
+                </ZE>
+              </ListZE>
+            </Zug>
+          </ListZug>
+          <ListUml>
+            <Uml>
+              <ListZug>
+                <Zug Nr="1" Gattung="IC" Linie="381">
+                  <ListZE>
+                    <ZE Typ="An" RegSta="Normal">
+                      <Bf EvaNr="0000002" Name="2"/>
+                      <Zeit Soll="20151124110000"/>
+                      <Gleis Soll="9"/>
+                    </ZE>
+                    <ZE Typ="Ab" RegSta="Normal">
+                      <Bf EvaNr="0000002" Name="2"/>
+                      <Zeit Soll="20151124111000"/>
+                      <Gleis Soll="9"/>
+                    </ZE>
+                    <ZE Typ="Ab" RegSta="UmlNeu">
+                      <Bf EvaNr="0000005" Name="5"/>
+                      <Zeit Soll="20151124091000"/>
+                      <Gleis Soll="9"/>
+                    </ZE>
+                    <ZE Typ="An" RegSta="UmlNeu">
+                      <Bf EvaNr="0000001" Name="1"/>
+                      <Zeit Soll="20151124150000"/>
+                      <Gleis Soll="9"/>
+                    </ZE>
+                  </ListZE>
+                </Zug>
+              </ListZug>
+            </Uml>
+          </ListUml>
+        </Service>
+      </Umleitung>
+    </Nachricht>
+  </ListNachricht>
+</Paket>

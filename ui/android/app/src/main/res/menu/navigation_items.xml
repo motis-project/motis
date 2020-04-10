@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <group
+        android:id="@+id/nav_server_grp"
+        android:checkableBehavior="none">
+        <item
+            android:id="@+id/nav_fast_switch"
+            android:title="@string/fast_switch"
+            app:actionLayout="@layout/switch_item" />
+    </group>
+
+    <group
+        android:id="@+id/nav_main_grp"
+        android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_search"
+            android:title="@string/search" />
+        <item
+            android:id="@+id/nav_intermodal"
+            android:title="@string/intermodal_tab" />
+        <!--
+        <item
+            android:id="@+id/nav_connections"
+            android:title="@string/connections" />
+        -->
+        <item
+            android:id="@+id/nav_ppr"
+            android:title="@string/ppr_tab" />
+    </group>
+</menu>

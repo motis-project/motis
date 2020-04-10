@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<Paket Version="1.2" SpezVer="1" TOut="2015112421000000">
+  <ListNachricht>
+    <Nachricht>
+      <Zusatzzug>
+        <Service IdBfEvaNr="0000001" IdZeit="20151124220000" IdZNr="77" Zielzeit="20151124230000">
+          <ListZug>
+            <Zug Nr="77" Gattung="ICE">
+              <ListZE>
+                <ZE Typ="Start">
+                  <Bf EvaNr="0000001" Name="1"/>
+                  <Zeit Soll="20151124220000"/>
+                  <Gleis Soll="7a"/>
+                </ZE>
+                <ZE Typ="An">
+                  <Bf EvaNr="0000003" Name="3"/>
+                  <Zeit Soll="20151124222500"/>
+                  <Gleis Soll="2"/>
+                </ZE>
+                <ZE Typ="Ab">
+                  <Bf EvaNr="0000003" Name="3"/>
+                  <Zeit Soll="20151124223000"/>
+                  <Gleis Soll="2"/>
+                </ZE>
+                <ZE Typ="Ziel">
+                  <Bf EvaNr="0000004" Name="4"/>
+                  <Zeit Soll="20151124230000"/>
+                  <Gleis Soll="5"/>
+                </ZE>
+              </ListZE>
+            </Zug>
+          </ListZug>
+          <ListZusZug/>
+        </Service>
+      </Zusatzzug>
+      <ListQuelle/>
+    </Nachricht>
+  </ListNachricht>
+</Paket>

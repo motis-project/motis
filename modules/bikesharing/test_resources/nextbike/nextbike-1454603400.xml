@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<markers>
+  <country country="DE">
+    <city>
+      <place uid="1" lat="49.8780247" lng="8.6545839" name="Darmstadt Algo" bikes="3" spot="1" />
+      <place uid="2" lat="49.875768" lng="8.6578002" name="Darmstadt Mensa" bikes="5+" spot="1" />
+      <place uid="3" lat="49.8725581" lng="8.6317004" name="Darmstadt HBF East" bikes="0" spot="1" />
+      <place uid="4" lat="49.8722315" lng="8.6282539" name="Darmstadt HBF West" bikes="0" spot="1" />
+      <place uid="5" lat="50.1264361" lng="8.6706536" name="FFM Westend 1" bikes="0" spot="1" />
+      <place uid="6" lat="50.1287342" lng="8.6652648" name="FFM Westend 2" bikes="0" spot="1" />
+      <place uid="7" lat="50.1051248" lng="8.6621403" name="FFM HBF South" bikes="1" spot="1" />
+      <place uid="8" lat="50.1076098" lng="8.661005" name="FFM HBF North" bikes="1" spot="1" />
+    </city>
+  </country>
+</markers>

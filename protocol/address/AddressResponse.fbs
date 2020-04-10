@@ -1,0 +1,19 @@
+include "base/Position.fbs";
+
+namespace motis.address;
+
+table Region {
+  name:string;
+  admin_level:uint;
+}
+
+table Address {
+  pos:Position;
+  name:string;
+  type:string;
+  regions:[Region];
+}
+
+table AddressResponse {
+  guesses:[Address];
+}

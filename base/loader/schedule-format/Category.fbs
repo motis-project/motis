@@ -1,0 +1,6 @@
+namespace motis.loader;
+
+table Category {
+  name: string;
+  output_rule: ubyte;
+}

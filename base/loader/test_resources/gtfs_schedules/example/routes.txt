@@ -1,0 +1,2 @@
+route_id,route_short_name,route_long_name,route_desc,route_type
+A,17,Mission,"The ""A"" route travels from lower Mission to Downtown.",3

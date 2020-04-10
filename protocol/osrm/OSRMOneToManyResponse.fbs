@@ -1,0 +1,10 @@
+namespace motis.osrm;
+
+struct Cost {
+  duration:double;
+  distance:double;
+}
+
+table OSRMOneToManyResponse {
+  costs:[Cost];
+}

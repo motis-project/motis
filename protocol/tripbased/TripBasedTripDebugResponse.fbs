@@ -1,0 +1,8 @@
+include "tripbased/TripBasedDebugInfo.fbs";
+
+namespace motis.tripbased;
+
+table TripBasedTripDebugResponse {
+  trips: [TripDebugInfo];
+  stations: [StationDebugInfo];
+}

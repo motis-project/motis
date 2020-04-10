@@ -1,0 +1,29 @@
+include "base/Position.fbs";
+
+namespace motis.osrm;
+
+// JSON Example:
+// --
+// {
+//   "destination": {
+//     "type": "Module",
+//     "target": "/osrm/smooth_via"
+//   },
+//   "content_type": "OSRMSmoothViaRouteRequest",
+//   "content": {
+//     "profile": "car",
+//     "waypoints": [
+//       {"positions": [{ "lat": 49.87738029, "lng": 8.64555359 }]},
+//       {"positions": [{ "lat": 50.11485439, "lng": 8.65791321 }]}
+//      ]
+//   }
+// }
+
+table Waypoint {
+  positions: [motis.Position];
+}
+
+table OSRMSmoothViaRouteRequest {
+  profile: string;
+  waypoints: [Waypoint];
+}

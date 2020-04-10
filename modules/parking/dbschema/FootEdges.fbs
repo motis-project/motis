@@ -1,0 +1,18 @@
+namespace motis.parking;
+
+table FootEdge {
+  station_id: string;
+  station_distance: double;
+  duration: ushort;
+  accessibility: ushort;
+  distance: double;
+}
+
+table FootEdges {
+  parking_id: int;
+  search_profile: string;
+  outward_edges: [FootEdge];
+  return_edges: [FootEdge];
+}
+
+root_type FootEdges;

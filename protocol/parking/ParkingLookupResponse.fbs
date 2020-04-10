@@ -1,0 +1,7 @@
+include "parking/Parking.fbs";
+
+namespace motis.parking;
+
+table ParkingLookupResponse {
+  parking: Parking;
+}

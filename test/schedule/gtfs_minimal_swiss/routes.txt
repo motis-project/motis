@@ -1,0 +1,5 @@
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+"1-1-A-j19-1","11","1","","S-Bahn","400"
+"1-1-j19-1","11","1","","Intercity","102"
+"9-1-A-j19-1","11","1","","RegioExpress","106"
+"59-100-j19-1","11","100","","InterRegio","103"
