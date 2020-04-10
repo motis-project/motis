@@ -13,7 +13,7 @@
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
-  commit=1544132325c5fc11feb645e1df5455a58ccad5d1
+  commit=30b05eca8745173e4a7e4f40695f119a8484a708
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=master
