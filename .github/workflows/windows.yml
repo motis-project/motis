@@ -19,7 +19,7 @@ jobs:
       - uses: microsoft/setup-msbuild@v1.0.0
 
       - name: Install Intel TBB
-        run: choco install tbb
+        run: choco install tbb -y
 
       - name: CMake
         run: cmake -G "Visual Studio 16 2019" -A x64 -S . -B build -DUSE_TBB=On
