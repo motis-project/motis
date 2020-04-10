@@ -56,7 +56,7 @@ jobs:
       - name: Build
         run: |
           ccache -z
-          cmake --build build --target motis path-prepare ppr-preprocess osrm-extract osrm-contract at-example
+          cmake --build build --target motis motis-test motis-itest path-prepare ppr-preprocess osrm-extract osrm-contract at-example
           ccache -s
 
       - name: Run Tests
