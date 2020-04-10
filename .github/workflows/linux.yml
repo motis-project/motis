@@ -73,7 +73,7 @@ jobs:
         run: ./build/motis-itest
 
       - name: Create Distribution
-        if: matrix.mode == "Release"
+        if: matrix.mode == 'Release'
         run: |
           strip build/motis
           strip build/path-prepare
