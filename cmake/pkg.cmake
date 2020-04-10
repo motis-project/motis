@@ -1,9 +1,9 @@
 if(NOT IS_DIRECTORY "${CMAKE_SOURCE_DIR}/deps")
   set(pkg-bin "${CMAKE_BINARY_DIR}/dl/pkg")
   if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-    set(pkg-url "pkg?job=linux-release")
+    set(pkg-url "pkg")
   elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    set(pkg-url "pkg.exe?job=windows-release")
+    set(pkg-url "pkg.exe")
   else()
     message(STATUS "Not downloading pkg tool. Using pkg from PATH.")
     set(pkg-bin "pkg")
@@ -11,8 +11,8 @@ if(NOT IS_DIRECTORY "${CMAKE_SOURCE_DIR}/deps")
 
   if (pkg-url)
     if (NOT EXISTS ${pkg-bin})
-      message(STATUS "Downloading pkg binary.")
-      file(DOWNLOAD "https://git.motis-project.de/dl/pkg/-/jobs/artifacts/master/raw/build/${pkg-url}" ${pkg-bin})
+      message(STATUS "Downloading pkg binary from https://github.com/motis-project/pkg/releases/latest/download/${pkg-url}")
+      file(DOWNLOAD "https://github.com/motis-project/pkg/releases/latest/download/${pkg-url}" ${pkg-bin})
       if (UNIX)
         execute_process(COMMAND chmod +x ${pkg-bin})
       endif()
@@ -21,9 +21,9 @@ if(NOT IS_DIRECTORY "${CMAKE_SOURCE_DIR}/deps")
     endif()
   endif()
 
-  message(STATUS "${pkg-bin} -l")
+  message(STATUS "${pkg-bin} -l -h")
   execute_process(
-    COMMAND ${pkg-bin} -l
+    COMMAND ${pkg-bin} -l -h
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   )
 endif()
