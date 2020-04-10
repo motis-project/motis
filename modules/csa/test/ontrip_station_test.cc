@@ -55,7 +55,6 @@ TEST_P(csa_ontrip_station, simple_fwd) {  // NOLINT
           .Union(),
       std::get<TARGET>(GetParam()));
   auto const msg = call(make_msg(fbb));
-  // std::cout << msg->to_json() << std::endl;
   auto const res = motis_content(RoutingResponse, msg);
   auto const journeys = message_to_journeys(res);
 
@@ -106,7 +105,6 @@ TEST_P(csa_ontrip_station, simple_bwd) {  // NOLINT
           .Union(),
       std::get<TARGET>(GetParam()));
   auto const msg = call(make_msg(fbb));
-  //  std::cout << msg->to_json() << std::endl;
   auto const res = motis_content(RoutingResponse, msg);
   auto const journeys = message_to_journeys(res);
 
@@ -154,7 +152,6 @@ TEST_P(csa_ontrip_station, interchange_fwd) {  // NOLINT
           .Union(),
       std::get<TARGET>(GetParam()));
   auto const msg = call(make_msg(fbb));
-  std::cout << msg->to_json() << std::endl;
   auto const res = motis_content(RoutingResponse, msg);
   auto const journeys = message_to_journeys(res);
 }
