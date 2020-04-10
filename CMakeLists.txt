@@ -124,6 +124,7 @@ endif()
 option(MOTIS_LINT "Run clang-tidy with the compiler." OFF)
 if(MOTIS_LINT)
   # clang-tidy will be run on all targets defined hereafter
+  set(MOTIS_SCHEDULE_MODE "raw")
   include(cmake/clang-tidy.cmake)
 endif()
 
