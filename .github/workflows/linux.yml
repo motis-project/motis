@@ -12,15 +12,16 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Format files
-      run: find test include -type f -not -name catch.hpp -a \( -name "*.cc" -o -name "*.h" \) -print0 | xargs -0 clang-format-9 -i
+      - name: Format files
+        run: find base modules test -type f -a \( -name "*.cc" -o -name "*.h" \) -print0 | xargs -0 clang-format-9 -i
 
-    - name: Check for differences
-      run: |
-        git status --porcelain
-        git status --porcelain | xargs -I {} -0 test -z \"{}\"
+      - name: Check for differences
+        run: |
+          git status --porcelain
+          git status --porcelain | xargs -I {} -0 test -z \"{}\"
+
   build:
     runs-on: ubuntu-latest
     container:
@@ -31,64 +32,64 @@ jobs:
         mode: [Debug, Release]
         lint: [On, Off]
         exclude:
-        - mode: Release
-          cxx: clang-9-san
-        - mode: Release
-          lint: On
-        - cxx: gcc-9
-          lint: On
-        - cxx: clang-9-san
-          lint: On
+          - mode: Release
+            cxx: clang-9-san
+          - mode: Release
+            lint: On
+          - cxx: gcc-9
+            lint: On
+          - cxx: clang-9-san
+            lint: On
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_NOHASHDIR: true
 
     steps:
 
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Download dependencies
-      run: pkg -l -h
+      - name: Download dependencies
+        run: pkg -l -h
 
-    - name: Cache
-      uses: actions/cache@v1.1.2
-      with:
-        path: ${{ github.workspace }}/.ccache
-        key: ccache-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+      - name: Cache
+        uses: actions/cache@v1.1.2
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
 
-    - name: CMake
-      run: cmake-ccache-${{ matrix.cxx }} -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DUTL_LINT=${{ matrix.lint }}
+      - name: CMake
+        run: cmake-ccache-${{ matrix.cxx }} -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DUTL_LINT=${{ matrix.lint }}
 
-    - name: Build
-      run: |
-        ccache -z
-        cmake --build build --target motis path-prepare ppr-preprocess osrm-extract osrm-contract at-example
-        ccache -s
+      - name: Build
+        run: |
+          ccache -z
+          cmake --build build --target motis path-prepare ppr-preprocess osrm-extract osrm-contract at-example
+          ccache -s
 
-    - name: Run Tests
-      run: ./build/motis-test
+      - name: Run Tests
+        run: ./build/motis-test
 
-    - name: Run Integration Tests
-      run: ./build/motis-itest
+      - name: Run Integration Tests
+        run: ./build/motis-itest
 
-    - name: Create Distribution
-      if: matrix.mode == Release
-      run: |
-        strip build/motis
-        strip build/path-prepare
-        strip build/deps/osrm-backend/osrm-extract
-        strip build/deps/osrm-backend/osrm-contract
-        strip build/deps/address-typeahead/at-example
-        mv build/motis .
-        mv build/path-prepare .
-        mv build/deps/osrm-backend/osrm-extract .
-        mv build/deps/osrm-backend/osrm-contract .
-        mv build/deps/address-typeahead/at-example .
-        zip -9 motis-${{ github.ref }}.zip motis path-prepare osrm-extract osrm-contract at-example
+      - name: Create Distribution
+        if: matrix.mode == "Release"
+        run: |
+          strip build/motis
+          strip build/path-prepare
+          strip build/deps/osrm-backend/osrm-extract
+          strip build/deps/osrm-backend/osrm-contract
+          strip build/deps/address-typeahead/at-example
+          mv build/motis .
+          mv build/path-prepare .
+          mv build/deps/osrm-backend/osrm-extract .
+          mv build/deps/osrm-backend/osrm-contract .
+          mv build/deps/address-typeahead/at-example .
+          zip -9 motis-${{ github.ref }}.zip motis path-prepare osrm-extract osrm-contract at-example
 
-    - name: Upload Distribution
-      if: matrix.mode == Release
-      uses: actions/upload-artifact@v1
-      with:
-        name: motis-${{ github.ref }}.zip
-        path: motis-${{ github.ref }}.zip
+      - name: Upload Distribution
+        if: matrix.mode == "Release"
+        uses: actions/upload-artifact@v1
+        with:
+          name: motis-${{ github.ref }}.zip
+          path: motis-${{ github.ref }}.zip
