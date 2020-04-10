@@ -22,7 +22,7 @@ jobs:
         run: cmake -G "Visual Studio 16 2019" -A x64 -S . -B build
 
       - name: Build
-        run: cmake --build build --config ${{ matrix.mode }} --target motis motis-test motis-itest path-prepare ppr-preprocess osrm-extract osrm-contract at-example
+        run: cmake --build build --config ${{ matrix.mode }} --target motis motis-test motis-itest path-prepare deps/ppr/ppr-preprocess deps/osrm-backend/osrm-extract deps/osrm-backend/osrm-contract deps/address-typeahead/at-example
 
       - name: Run Tests
         run: build\${{ matrix.mode }}\motis-test
