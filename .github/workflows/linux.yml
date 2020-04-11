@@ -46,7 +46,7 @@ jobs:
           key: ccache-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
 
       - name: CMake
-        run: cmake-ccache-${{ matrix.cxx }} -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DMOTIS_LINT=${{ matrix.lint }}
+        run: cmake-ccache-${{ matrix.cxx }} -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DMOTIS_LINT=${{ matrix.lint }} -DCTX_ASAN=`if [ "${{ matrix.cxx }}" = "clang-9-san" ]; then echo "On"; else echo "Off"; fi`
 
       - name: Build
         run: |
