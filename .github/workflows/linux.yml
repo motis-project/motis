@@ -39,9 +39,6 @@ jobs:
 
       - uses: actions/checkout@v2
 
-      - name: Download dependencies
-        run: pkg -l -h
-
       - name: Cache
         uses: actions/cache@v1.1.2
         with:
