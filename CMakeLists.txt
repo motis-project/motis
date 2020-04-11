@@ -55,12 +55,12 @@ configure_file (
   "${CMAKE_BINARY_DIR}/generated/version.h"
 )
 
+add_definitions(/DBOOST_ASIO_DISABLE_CONCEPTS=1)  # fixes issue with Boost 1.72.0
 
 ################################
 # Dependencies
 ################################
 if (MSVC)
-  add_definitions(/DBOOST_ASIO_DISABLE_CONCEPTS=1)  # fixes issue with Boost 1.72.0
   set(Boost_USE_STATIC_LIBS ON)
   set(Boost_USE_MULTITHREADED ON)
   set(Boost_USE_STATIC_RUNTIME ON)
