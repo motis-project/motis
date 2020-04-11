@@ -23,7 +23,7 @@ jobs:
           git status --porcelain | xargs -I {} -0 test -z \"{}\"
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     container:
       image: motisproject/cpp-build:latest
     strategy:
