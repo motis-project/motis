@@ -85,11 +85,11 @@ jobs:
           mv build/deps/osrm-backend/osrm-extract .
           mv build/deps/osrm-backend/osrm-contract .
           mv build/deps/address-typeahead/at-example .
-          zip -9 motis-${{ github.ref }}.zip motis path-prepare osrm-extract osrm-contract at-example
+          zip -9 motis-${{ github.sha }}-linux.zip motis path-prepare osrm-extract osrm-contract at-example
 
       - name: Upload Distribution
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
         uses: actions/upload-artifact@v1
         with:
-          name: motis-${{ github.ref }}.zip
-          path: motis-${{ github.ref }}.zip
+          name: motis-${{ github.sha }}-linux.zip
+          path: motis-${{ github.sha }}-linux.zip
