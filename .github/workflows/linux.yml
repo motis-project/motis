@@ -8,7 +8,7 @@ on:
 
 jobs:
   formatting:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux]
 
     steps:
 
@@ -23,7 +23,7 @@ jobs:
           git status --porcelain | xargs -I {} -0 test -z \"{}\"
 
   build:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux]
     strategy:
       matrix:
         cxx: [gcc-9, clang-9, clang-9-san]
