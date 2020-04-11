@@ -24,8 +24,6 @@ jobs:
 
   build:
     runs-on: self-hosted
-    container:
-      image: motisproject/cpp-build:latest
     strategy:
       matrix:
         cxx: [gcc-9, clang-9, clang-9-san]
