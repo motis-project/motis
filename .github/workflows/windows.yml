@@ -25,19 +25,19 @@ jobs:
         run: cmake --build build --config ${{ matrix.mode }} --target motis motis-test motis-itest path-prepare deps/ppr/ppr-preprocess deps/osrm-backend/osrm-extract deps/osrm-backend/osrm-contract deps/address-typeahead/at-example
 
       - name: Run Tests
-        run: build\${{ matrix.mode }}\motis-test
+        run: .\build\${{ matrix.mode }}\motis-test.exe
 
       - name: Run Integration Tests
-        run: build\${{ matrix.mode }}\motis-itest
+        run: .\build\${{ matrix.mode }}\motis-itest.exe
 
       - name: Create Distribution
         if: matrix.mode == 'Release'
         run: |
-          move build/motis.exe .
-          move build/path-prepare.exe .
-          move build/deps/osrm-backend/osrm-extract.exe .
-          move build/deps/osrm-backend/osrm-contract.exe .
-          move build/deps/address-typeahead/at-example.exe .
+          move build\${{ matrix.mode }}\motis.exe .
+          move build\${{ matrix.mode }}\path-prepare.exe .
+          move build\${{ matrix.mode }}\deps\osrm-backend\osrm-extract.exe .
+          move build\${{ matrix.mode }}\deps\osrm-backend\osrm-contract.exe .
+          move build\${{ matrix.mode }}\deps\address-typeahead\at-example.exe .
           "C:\Program Files\7-Zip\7z.exe" a motis-${{ github.ref }}-windows.zip motis.exe path-prepare.exe osrm-extract.exe osrm-contract.exe at-example.exe
 
       - name: Upload Distribution
