@@ -33,16 +33,16 @@ jobs:
       - name: Create Distribution
         if: matrix.mode == 'Release'
         run: |
-          move build\${{ matrix.mode }}\motis.exe .
-          move build\${{ matrix.mode }}\path-prepare.exe .
-          move build\${{ matrix.mode }}\deps\osrm-backend\osrm-extract.exe .
-          move build\${{ matrix.mode }}\deps\osrm-backend\osrm-contract.exe .
-          move build\${{ matrix.mode }}\deps\address-typeahead\at-example.exe .
-          "C:\Program Files\7-Zip\7z.exe" a motis-${{ github.ref }}-windows.zip motis.exe path-prepare.exe osrm-extract.exe osrm-contract.exe at-example.exe
+          move build\Release\motis.exe .
+          move build\Release\path-prepare.exe .
+          move build\deps\osrm-backend\Release\osrm-extract.exe .
+          move build\deps\osrm-backend\Release\osrm-contract.exe .
+          move build\deps\address-typeahead\Release\at-example.exe .
+          "C:\Program Files\7-Zip\7z.exe" a motis-${{ github.sha }}-windows.zip motis.exe path-prepare.exe osrm-extract.exe osrm-contract.exe at-example.exe
 
       - name: Upload Distribution
         if: matrix.mode == 'Release'
         uses: actions/upload-artifact@v1
         with:
-          name: motis-${{ github.ref }}-windows.zip
-          path: motis-${{ github.ref }}-windows.zip
+          name: motis-${{ github.sha }}-windows.zip
+          path: motis-${{ github.sha }}-windows.zip
