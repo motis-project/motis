@@ -96,8 +96,6 @@ waiting_time_rules load_waiting_time_rules(
   for (size_t i = 0; i < category_ptrs.size(); i++) {
     rules.family_to_wtr_category_[i] =
         rules.waiting_time_category(category_ptrs[i]->name_);
-    std::cout << i << " (" << category_ptrs[i]->name_ << ") => "
-              << rules.waiting_time_category(category_ptrs[i]->name_) << "\n";
   }
 
   return rules;

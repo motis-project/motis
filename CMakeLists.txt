@@ -60,6 +60,7 @@ configure_file (
 # Dependencies
 ################################
 if (MSVC)
+  add_definitions(/DBOOST_ASIO_DISABLE_CONCEPTS=1)  # fixes issue with Boost 1.72.0
   set(Boost_USE_STATIC_LIBS ON)
   set(Boost_USE_MULTITHREADED ON)
   set(Boost_USE_STATIC_RUNTIME ON)
@@ -123,6 +124,8 @@ endif()
 option(MOTIS_LINT "Run clang-tidy with the compiler." OFF)
 if(MOTIS_LINT)
   # clang-tidy will be run on all targets defined hereafter
+  set(MOTIS_SCHEDULE_MODE "raw")
+  add_definitions(-DMOTIS_LINT=1)
   include(cmake/clang-tidy.cmake)
 endif()
 
