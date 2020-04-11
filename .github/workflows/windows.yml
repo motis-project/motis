@@ -38,7 +38,7 @@ jobs:
           move build/deps/osrm-backend/osrm-extract.exe .
           move build/deps/osrm-backend/osrm-contract.exe .
           move build/deps/address-typeahead/at-example.exe .
-          7z a motis-${{ github.ref }}-windows.zip motis.exe path-prepare.exe osrm-extract.exe osrm-contract.exe at-example.exe
+          "C:\Program Files\7-Zip\7z.exe" a motis-${{ github.ref }}-windows.zip motis.exe path-prepare.exe osrm-extract.exe osrm-contract.exe at-example.exe
 
       - name: Upload Distribution
         if: matrix.mode == 'Release'
