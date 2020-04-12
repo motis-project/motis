@@ -22,16 +22,14 @@ jobs:
       - uses: actions/checkout@v2
       - uses: seanmiddleditch/gha-setup-ninja@master
 
-      - name: Setup Build Tools
-        run: |
-          Install-module posh-vs -Force
-          Install-PoshVs
-
-      - name: CMake
-        run: cmake -GNinja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }}
-
       - name: Build
-        run: cmake --build build --target motis motis-test motis-itest path-prepare ppr-preprocess osrm-extract osrm-contract at-example
+        run: |
+          $devShell = &"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find **\Microsoft.VisualStudio.DevShell.dll
+          $installPath = &"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationpath
+          Import-Module $devShell
+          Enter-VsDevShell -VsInstallPath $installPath -SkipAutomaticLocation -DevCmdArguments "-arch=amd64"
+          cmake -GNinja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }}
+          cmake --build build --target motis motis-test motis-itest path-prepare ppr-preprocess osrm-extract osrm-contract at-example
 
       - name: Run Tests
         run: .\build\motis-test.exe
