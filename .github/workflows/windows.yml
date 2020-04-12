@@ -39,7 +39,7 @@ jobs:
           move build\deps\osrm-backend\Release\osrm-contract.exe .
           move build\deps\address-typeahead\Release\at-example.exe .
           move build\deps\ppr\Release\ppr-preprocess.exe .
-          "C:\Program Files\7-Zip\7z.exe" a motis-${{ github.sha }}-windows.zip motis.exe path-prepare.exe osrm-extract.exe osrm-contract.exe at-example.exe ppr-preprocess.exe
+          & "${Env:ProgramFiles}\7-Zip\7z.exe" a motis-${{ github.sha }}-windows.zip motis.exe path-prepare.exe osrm-extract.exe osrm-contract.exe at-example.exe ppr-preprocess.exe
 
       - name: Upload Distribution
         if: matrix.mode == 'Release'
