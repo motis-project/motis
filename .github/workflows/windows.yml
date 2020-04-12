@@ -14,35 +14,52 @@ jobs:
       matrix:
         mode: [Debug, Release]
 
+    env:
+      CXX: cl
+      CC: cl
+
     steps:
       - uses: actions/checkout@v2
-      - uses: microsoft/setup-msbuild@v1.0.0
-
-      - name: CMake
-        run: cmake -G "Visual Studio 16 2019" -A x64 -S . -B build
+      - uses: seanmiddleditch/gha-setup-ninja@master
+      - uses: lukka/get-cmake@v3.17.1
 
       - name: Build
-        run: cmake --build build --config ${{ matrix.mode }} --target motis motis-test motis-itest path-prepare deps/ppr/ppr-preprocess deps/osrm-backend/osrm-extract deps/osrm-backend/osrm-contract deps/address-typeahead/at-example
+        run: |
+          $devShell = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find **\Microsoft.VisualStudio.DevShell.dll
+          $installPath = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationpath
+          Import-Module $devShell
+          Enter-VsDevShell -VsInstallPath $installPath -SkipAutomaticLocation -DevCmdArguments "-arch=amd64"
+          cmake -GNinja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }}
+          cmake --build build --target motis motis-test motis-itest path-prepare ppr-preprocess osrm-extract osrm-contract parking-prepare at-example motis-eval motis-intermodal-eval
+
+      - name: Run Test Mode
+        run: >
+          motis --mode test
+          --dataset.path base/loader/test_resources/hrd_schedules/single-ice
+          --dataset.begin 20151111
+          --dataset.write_serialized false
 
       - name: Run Tests
-        run: build\${{ matrix.mode }}\motis-test
+        run: .\build\motis-test.exe
 
       - name: Run Integration Tests
-        run: build\${{ matrix.mode }}\motis-itest
+        run: .\build\motis-itest.exe
 
       - name: Create Distribution
         if: matrix.mode == 'Release'
-        run: |
-          move build/motis.exe .
-          move build/path-prepare.exe .
-          move build/deps/osrm-backend/osrm-extract.exe .
-          move build/deps/osrm-backend/osrm-contract.exe .
-          move build/deps/address-typeahead/at-example.exe .
-          "C:\Program Files\7-Zip\7z.exe" a motis-${{ github.ref }}-windows.zip motis.exe path-prepare.exe osrm-extract.exe osrm-contract.exe at-example.exe
+        run: >
+          7z a motis-${{ github.sha }}-windows.zip
+          .\build\motis.exe
+          .\build\path-prepare.exe
+          .\build\parking-prepare.exe
+          .\build\deps\osrm-backend\osrm-extract.exe
+          .\build\deps\osrm-backend\osrm-contract.exe
+          .\build\deps\address-typeahead\at-example.exe
+          .\build\deps\ppr\ppr-preprocess.exe
 
       - name: Upload Distribution
         if: matrix.mode == 'Release'
         uses: actions/upload-artifact@v1
         with:
-          name: motis-${{ github.ref }}-windows.zip
-          path: motis-${{ github.ref }}-windows.zip
+          name: motis-${{ github.sha }}-windows.zip
+          path: motis-${{ github.sha }}-windows.zip
