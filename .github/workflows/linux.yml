@@ -54,7 +54,7 @@ jobs:
           key: ccache-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
 
       - name: CMake
-        run: >
+        run: |
           cmake-ccache-${{ matrix.cxx }}
             -G Ninja -S . -B build
             -DCMAKE_BUILD_TYPE=${{ matrix.mode }}
