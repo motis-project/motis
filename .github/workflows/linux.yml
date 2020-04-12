@@ -60,7 +60,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ matrix.mode }} \
             -DMOTIS_LINT=${{ matrix.lint }} \
             -DCTX_ASAN=`if [ "${{ matrix.cxx }}" = "clang-9-san" ]; then echo "On"; else echo "Off"; fi` \
-            -DCTX_VALGRIND=`if [ "${{ matrix.cxx }}" = "gcc-9" && "${{ matrix.mode }}" = "Debug" ]; then echo "On"; else echo "Off"; fi`
+            -DCTX_VALGRIND=`if [ "${{ matrix.cxx }}" = "gcc-9" ] && [ "${{ matrix.mode }}" = "Debug" ]; then echo "On"; else echo "Off"; fi`
 
       - name: Build
         run: |
