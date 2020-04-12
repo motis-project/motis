@@ -14,31 +14,40 @@ jobs:
       matrix:
         mode: [Debug, Release]
 
+    env:
+      CXX: cl
+      CC: cl
+
     steps:
       - uses: actions/checkout@v2
-      - uses: microsoft/setup-msbuild@v1.0.0
+      - uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Setup Build Tools
+        run: |
+          Install-module posh-vs -Force
+          Install-PoshVs
 
       - name: CMake
-        run: cmake -G "Visual Studio 16 2019" -A x64 -S . -B build
+        run: cmake -GNinja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }}
 
       - name: Build
-        run: cmake --build build --config ${{ matrix.mode }} --target motis motis-test motis-itest path-prepare deps/ppr/ppr-preprocess deps/osrm-backend/osrm-extract deps/osrm-backend/osrm-contract deps/address-typeahead/at-example
+        run: cmake --build build --target motis motis-test motis-itest path-prepare ppr-preprocess osrm-extract osrm-contract at-example
 
       - name: Run Tests
-        run: .\build\${{ matrix.mode }}\motis-test.exe
+        run: .\build\motis-test.exe
 
       - name: Run Integration Tests
-        run: .\build\${{ matrix.mode }}\motis-itest.exe
+        run: .\build\motis-itest.exe
 
       - name: Create Distribution
         if: matrix.mode == 'Release'
         run: |
-          move build\Release\motis.exe .
-          move build\Release\path-prepare.exe .
-          move build\deps\osrm-backend\Release\osrm-extract.exe .
-          move build\deps\osrm-backend\Release\osrm-contract.exe .
-          move build\deps\address-typeahead\Release\at-example.exe .
-          move build\deps\ppr\Release\ppr-preprocess.exe .
+          move .\build\motis.exe .
+          move .\build\path-prepare.exe .
+          move .\build\deps\osrm-backend\osrm-extract.exe .
+          move .\build\deps\osrm-backend\osrm-contract.exe .
+          move .\build\deps\address-typeahead\at-example.exe .
+          move .\build\deps\ppr\ppr-preprocess.exe .
           & "${Env:ProgramFiles}\7-Zip\7z.exe" a motis-${{ github.sha }}-windows.zip motis.exe path-prepare.exe osrm-extract.exe osrm-contract.exe at-example.exe ppr-preprocess.exe
 
       - name: Upload Distribution
