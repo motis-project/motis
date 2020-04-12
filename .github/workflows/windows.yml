@@ -41,14 +41,14 @@ jobs:
 
       - name: Create Distribution
         if: matrix.mode == 'Release'
-        run: |
-          move .\build\motis.exe .
-          move .\build\path-prepare.exe .
-          move .\build\deps\osrm-backend\osrm-extract.exe .
-          move .\build\deps\osrm-backend\osrm-contract.exe .
-          move .\build\deps\address-typeahead\at-example.exe .
-          move .\build\deps\ppr\ppr-preprocess.exe .
-          & "${Env:ProgramFiles}\7-Zip\7z.exe" a motis-${{ github.sha }}-windows.zip motis.exe path-prepare.exe osrm-extract.exe osrm-contract.exe at-example.exe ppr-preprocess.exe
+        run: >
+          7z a motis-${{ github.sha }}-windows.zip
+          .\build\motis.exe
+          .\build\path-prepare.exe
+          .\build\deps\osrm-backend\osrm-extract.exe
+          .\build\deps\osrm-backend\osrm-contract.exe
+          .\build\deps\address-typeahead\at-example.exe
+          .\build\deps\ppr\ppr-preprocess.exe
 
       - name: Upload Distribution
         if: matrix.mode == 'Release'
