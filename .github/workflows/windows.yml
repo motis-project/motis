@@ -25,10 +25,10 @@ jobs:
         run: cmake --build build --config ${{ matrix.mode }} --target motis motis-test motis-itest path-prepare deps/ppr/ppr-preprocess deps/osrm-backend/osrm-extract deps/osrm-backend/osrm-contract deps/address-typeahead/at-example
 
       - name: Run Tests
-        run: build\${{ matrix.mode }}\motis-test.exe
+        run: .\build\${{ matrix.mode }}\motis-test.exe
 
       - name: Run Integration Tests
-        run: build\${{ matrix.mode }}\motis-itest.exe
+        run: .\build\${{ matrix.mode }}\motis-itest.exe
 
       - name: Create Distribution
         if: matrix.mode == 'Release'
