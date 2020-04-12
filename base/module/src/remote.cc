@@ -47,11 +47,16 @@ struct remote::impl : std::enable_shared_from_this<impl> {
       return;
     }
 
-    namespace p = std::placeholders;
-    ws_ = std::make_unique<net::wss_client>(ios_, ctx_, host_, port_);
-    ws_->on_fail(std::bind(&impl::on_fail, shared_from_this(), p::_1));
-    ws_->on_msg(std::bind(&impl::on_msg, shared_from_this(), p::_1, p::_2));
-    ws_->run(std::bind(&impl::on_connect, shared_from_this(), p::_1));
+       ws_ = std::make_unique<net::wss_client>(ios_, ctx_, host_, port_);
+    ws_->on_fail(
+        [self = shared_from_this()](boost::system::error_code const& ec) {
+          self->on_fail(ec);
+        });
+    ws_->on_msg(
+        [self = shared_from_this()](std::string const& raw, bool binary) {
+          self->on_msg(raw, binary);
+        });
+    ws_->run([self = shared_from_this()](auto&& cb) { self->on_connect(cb); });
   }
 
   void on_fail(boost::system::error_code ec) {
@@ -85,8 +90,9 @@ struct remote::impl : std::enable_shared_from_this<impl> {
         methods_ = reg_.register_remote_ops(
             utl::to_vec(*motis_content(ApiDescription, msg)->methods(),
                         [](auto&& s) { return s->str(); }),
-            ios_.wrap(std::bind(&impl::send, this, std::placeholders::_1,
-                                std::placeholders::_2)));
+            ios_.wrap([this](msg_ptr const& msg, callback cb) {
+              send(msg, std::move(cb));
+            }));
 
         if (on_register_) {
           on_register_();
@@ -188,12 +194,12 @@ remote::remote(registry& reg, boost::asio::io_service& ios,  //
     : impl_{std::make_shared<impl>(reg, ios, host, port, on_register,
                                    on_unregister)} {}
 
-void remote::send(msg_ptr const& msg, callback cb) {
+void remote::send(msg_ptr const& msg, callback cb) const {
   impl_->send(msg, std::move(cb));
 }
 
-void remote::stop() { impl_->stop(); }
+void remote::stop() const { impl_->stop(); }
 
-void remote::start() { impl_->start(); }
+void remote::start() const { impl_->start(); }
 
 }  // namespace motis::module

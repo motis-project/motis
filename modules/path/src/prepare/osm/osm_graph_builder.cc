@@ -196,7 +196,7 @@ void osm_graph_builder::add_component(std::vector<osm_way> const& osm_ways) {
       auto* curr_node = make_way_node(lb, ub);
       auto curr_offset = lb->phantom_.offset_;
 
-      size_t path_idx;
+      size_t path_idx = 0;
       if (lb->eq_from_) {
         utl::verify(curr_offset > 0, "have edge_phantom for start");
         path_idx = make_path(way, prev_offset, curr_offset, prev_coord,

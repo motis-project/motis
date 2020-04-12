@@ -62,15 +62,15 @@ time get_event_time(std::time_t const schedule_begin, int day_idx,
   } else if (stop_tz != nullptr || provider_tz != nullptr) {
     try {
       try {
-        date::time_zone const* tz;
-        tz = date::locate_zone(stop_tz != nullptr ? stop_tz : provider_tz);
+        date::time_zone const* zone =
+            date::locate_zone(stop_tz != nullptr ? stop_tz : provider_tz);
         auto const zero =
             date::sys_seconds(std::chrono::seconds(schedule_begin));
         auto const abs_zoned_time = date::zoned_time<std::chrono::seconds>(
-            tz, date::local_seconds(std::chrono::seconds(
-                    schedule_begin +
-                    (day_idx + SCHEDULE_OFFSET_DAYS) * MINUTES_A_DAY * 60 +
-                    local_time * 60)));
+            zone, date::local_seconds(std::chrono::seconds(
+                      schedule_begin +
+                      (day_idx + SCHEDULE_OFFSET_DAYS) * MINUTES_A_DAY * 60 +
+                      local_time * 60)));
         return std::chrono::duration_cast<std::chrono::minutes>(
                    abs_zoned_time.get_sys_time() - zero)
             .count();

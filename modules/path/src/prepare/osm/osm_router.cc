@@ -132,10 +132,10 @@ struct osm_graph_dijkstra {
     return result;
   }
 
-  inline size_t& dist(size_t const node_idx) {
+  inline size_t& dist(size_t const node_idx) const {
     return (*dists_)[node_idx - node_idx_offset_];
   }
-  inline osm_edge const*& edge(size_t const node_idx) {
+  inline osm_edge const*& edge(size_t const node_idx) const {
     return (*edges_)[node_idx - node_idx_offset_];
   }
 

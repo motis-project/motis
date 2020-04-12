@@ -48,20 +48,7 @@ struct route_section {
            outgoing_route_edge_index_ != -1;
   }
 
-  edge* get_route_edge() {
-    if (outgoing_route_edge_index_ == -1) {
-      return nullptr;
-    }
-
-    assert(outgoing_route_edge_index_ >= 0);
-    assert(static_cast<unsigned>(outgoing_route_edge_index_) <
-           from_route_node_->edges_.size());
-    assert(from_route_node_->edges_[outgoing_route_edge_index_].type() ==
-           edge::ROUTE_EDGE);
-    return &from_route_node_->edges_[outgoing_route_edge_index_];
-  }
-
-  const edge* get_route_edge() const {
+  edge* get_route_edge() const {
     if (outgoing_route_edge_index_ == -1) {
       return nullptr;
     }

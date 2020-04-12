@@ -34,15 +34,15 @@ struct db_builder {
   db_builder(db_builder&&) noexcept = delete;  // NOLINT
   db_builder& operator=(db_builder&&) noexcept = delete;  // NOLINT
 
-  void store_stations(std::vector<station> const&);
+  void store_stations(std::vector<station> const&) const;
 
   void add_seq(size_t seq_idx, resolved_station_seq const&,
-               std::vector<processed_segment> const&);
+               std::vector<processed_segment> const&) const;
 
   void add_tile_feature(geo::polyline const&, std::vector<seq_seg> const&,
-                        std::vector<uint32_t> const& classes);
+                        std::vector<uint32_t> const& classes) const;
 
-  void finish();
+  void finish() const;
 
   struct impl;
   std::unique_ptr<impl> impl_;

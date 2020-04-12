@@ -113,7 +113,7 @@ bool check(int id, std::vector<msg_ptr> const& msgs,
 
   check_journeys(0, ref);
 
-  for (auto i = 1ul; i < file_count; ++i) {
+  for (auto i = 1UL; i < file_count; ++i) {
     auto const r = message_to_journeys(res[i]);
     if (r.size() != ref_cons) {
       fail(i) << "Expected " << ref_cons << " connections, has " << r.size()
@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
   while (!done) {
     read.clear();
     done = true;
-    for (auto i = 0ul; i < file_count; ++i) {
+    for (auto i = 0UL; i < file_count; ++i) {
       auto& in = in_files[i];
       if (in.peek() != EOF && !in.eof()) {
         std::string line;
@@ -238,7 +238,7 @@ int main(int argc, char** argv) {
     for (auto const& id : read) {
       std::vector<msg_ptr> msgs;
       msgs.reserve(file_count);
-      for (auto i = 0ul; i < file_count; ++i) {
+      for (auto i = 0UL; i < file_count; ++i) {
         auto const& q = queued_msgs[i];
         auto it = q.find(id);
         if (it == end(q)) {
@@ -274,7 +274,7 @@ int main(int argc, char** argv) {
               << " messages are missing in some results:" << std::endl;
     for (auto const& id : unmatched_msgs) {
       std::cout << " query id " << id << " missing in:";
-      for (auto file_idx = 0ul; file_idx < file_count; ++file_idx) {
+      for (auto file_idx = 0UL; file_idx < file_count; ++file_idx) {
         const auto& q = queued_msgs[file_idx];
         if (q.find(id) == end(q)) {
           std::cout << " " << filenames[file_idx];
@@ -289,7 +289,7 @@ int main(int argc, char** argv) {
             << msg_count << std::endl;
   std::cout << "Mismatches by file:" << std::endl;
   std::cout << "  " << filenames[0] << ": Used as reference" << std::endl;
-  for (auto i = 1ul; i < filenames.size(); ++i) {
+  for (auto i = 1UL; i < filenames.size(); ++i) {
     std::cout << "  " << filenames[i] << ": " << file_errors[i] << std::endl;
   }
 

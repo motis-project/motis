@@ -59,7 +59,7 @@ inline std::string time(time_t const t) {
 }
 
 inline std::string time() {
-  time_t now;
+  time_t now = 0;
   std::time(&now);
   return time(now);
 }

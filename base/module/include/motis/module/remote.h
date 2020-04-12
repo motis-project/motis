@@ -17,9 +17,9 @@ struct remote : std::enable_shared_from_this<remote> {
          std::function<void()> const& on_register = nullptr,
          std::function<void()> const& on_unregister = nullptr);
 
-  void send(msg_ptr const&, callback);
-  void stop();
-  void start();
+  void send(msg_ptr const&, callback) const;
+  void stop() const;
+  void start() const;
 
   struct impl;
   std::shared_ptr<impl> impl_;

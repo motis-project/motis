@@ -101,7 +101,7 @@ std::vector<resolved_station_seq> read_from_fbs(std::string const& fname) {
   size_t buffer_offset = 0;
   size_t vector_offset = 0;
   while (true) {
-    uint32_t size;
+    uint32_t size = 0;
     std::memcpy(&size, mmap.ptr() + buffer_offset, sizeof(uint32_t));
     buffer_offset += sizeof(uint32_t);
 

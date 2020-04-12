@@ -15,7 +15,7 @@ struct source_spec {
   source_spec(int64_t id, category c, type t)
       : id_(id), category_(c), type_(t) {}
 
-  std::string type_str() {
+  std::string type_str() const {
     switch (type_) {
       case type::RELATION: return "RELATION";
       case type::OSRM_ROUTE: return "OSRM_ROUTE";

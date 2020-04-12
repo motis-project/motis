@@ -182,22 +182,22 @@ TEST(fws_multimap_test, nested_multimap_simple) {
 
   /*
   std::cout << "\n\n== base index ==" << std::endl;
-  for (auto i = 0ul; i < base.index_.size(); ++i) {
+  for (auto i = 0UL; i < base.index_.size(); ++i) {
     std::cout << std::setw(2) << i << ": " << base.index_[i] << std::endl;
   }
 
   std::cout << "\n\n== base data ==" << std::endl;
-  for (auto i = 0ul; i < base.data_.size(); ++i) {
+  for (auto i = 0UL; i < base.data_.size(); ++i) {
     std::cout << std::setw(2) << i << ": " << base.data_[i] << std::endl;
   }
 
   std::cout << "\n\n== nested index ==" << std::endl;
-  for (auto i = 0ul; i < nested.index_.size(); ++i) {
+  for (auto i = 0UL; i < nested.index_.size(); ++i) {
     std::cout << std::setw(2) << i << ": " << nested.index_[i] << std::endl;
   }
 
   std::cout << "\n\n== nested data ==" << std::endl;
-  for (auto i = 0ul; i < nested.data_.size(); ++i) {
+  for (auto i = 0UL; i < nested.data_.size(); ++i) {
     std::cout << std::setw(2) << i << ": " << nested.data_[i] << std::endl;
   }
   */
