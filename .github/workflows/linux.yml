@@ -28,12 +28,20 @@ jobs:
       matrix:
         cxx: [gcc-9, clang-9, clang-9-san]
         mode: [Debug, Release]
+        lint: [Off, On]
         exclude:
-          - mode: Release
-            cxx: clang-9-san
+        - mode: Release
+          cxx: clang-9-san
+        - mode: Release
+          lint: On
+        - cxx: gcc-9
+          lint: On
+        - cxx: clang-9-san
+          lint: On
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_NOHASHDIR: true
+      UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
 
     steps:
 
@@ -46,12 +54,18 @@ jobs:
           key: ccache-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
 
       - name: CMake
-        run: cmake-ccache-${{ matrix.cxx }} -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DMOTIS_LINT=${{ matrix.lint }} -DCTX_ASAN=`if [ "${{ matrix.cxx }}" = "clang-9-san" ]; then echo "On"; else echo "Off"; fi`
+        run: >
+          cmake-ccache-${{ matrix.cxx }}
+            -G Ninja -S . -B build
+            -DCMAKE_BUILD_TYPE=${{ matrix.mode }}
+            -DMOTIS_LINT=${{ matrix.lint }}
+            -DCTX_ASAN=`if [ "${{ matrix.cxx }}" = "clang-9-san" ]; then echo "On"; else echo "Off"; fi`
+            -DCTX_VALGRIND=`if [ "${{ matrix.cxx }}" = "gcc-9" && "${{ matrix.mode }}" = "Debug" ]; then echo "On"; else echo "Off"; fi`
 
       - name: Build
         run: |
           ccache -z
-          cmake --build build --target motis motis-test motis-itest path-prepare ppr-preprocess osrm-extract osrm-contract at-example
+          cmake --build build --target motis motis-test motis-itest path-prepare parking-prepare ppr-preprocess osrm-extract osrm-contract at-example motis-eval motis-intermodal-eval
           ccache -s
 
       - name: Run Tests
@@ -60,20 +74,46 @@ jobs:
       - name: Run Integration Tests
         run: ./build/motis-itest
 
-      - name: Create Distribution
+      # ==== VALGRIND ====
+      - name: Run Test Mode Valgrind
+        if: matrix.mode == 'Debug' && matrix.cxx == 'gcc-9'
+        run: >
+          valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full
+            ./motis --mode test
+              --dataset.path base/loader/test_resources/hrd_schedules/single-ice
+              --dataset.begin 20151111
+              --dataset.write_serialized false
+              --ris.db_max_size 1048576
+              --bikesharing.db_max_size 1048576
+
+      - name: Run Tests Valgrind
+        if: matrix.mode == 'Debug' && matrix.cxx == 'gcc-9'
+        run: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./build/motis-test
+
+      - name: Run Integration Tests Valgrind
+        if: matrix.mode == 'Debug' && matrix.cxx == 'gcc-9'
+        run: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./build/motis-itest
+
+      # ==== DISTRIBUTION ====
+      - name: Strip Executables
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
         run: |
           strip build/motis
           strip build/path-prepare
+          strip build/parking-prepare
           strip build/deps/osrm-backend/osrm-extract
           strip build/deps/osrm-backend/osrm-contract
           strip build/deps/address-typeahead/at-example
-          mv build/motis .
-          mv build/path-prepare .
-          mv build/deps/osrm-backend/osrm-extract .
-          mv build/deps/osrm-backend/osrm-contract .
-          mv build/deps/address-typeahead/at-example .
-          zip -9 motis-${{ github.sha }}-linux.zip motis path-prepare osrm-extract osrm-contract at-example
+
+      - name: Create Distribution
+        if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
+        run: >
+          p7zip a motis-${{ github.sha }}-linux.zip
+            build/motis build/path-prepare
+            build/parking-prepare
+            build/deps/osrm-backend/osrm-extract
+            build/deps/osrm-backend/osrm-contract
+            build/deps/address-typeahead/at-example
 
       - name: Upload Distribution
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
