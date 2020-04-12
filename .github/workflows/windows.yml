@@ -32,6 +32,13 @@ jobs:
           cmake -GNinja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }}
           cmake --build build --target motis motis-test motis-itest path-prepare ppr-preprocess osrm-extract osrm-contract parking-prepare at-example motis-eval motis-intermodal-eval
 
+      - name: Run Test Mode
+        run: >
+          motis --mode test
+          --dataset.path ../base/loader/test_resources/hrd_schedules/single-ice
+          --dataset.begin 20151111
+          --dataset.write_serialized false
+
       - name: Run Tests
         run: .\build\motis-test.exe
 
