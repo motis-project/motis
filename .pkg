@@ -21,7 +21,7 @@
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=master
-  commit=8687e555d89e3dfdae4cf473ce4516d0f009107e
+  commit=e1a92eb53b8914171a5eb53bcca840f9eb3bf0a1
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
@@ -49,7 +49,7 @@
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=master
-  commit=4bc701b92a252edd19453a464ad780280359fb59
+  commit=b3f98632a612796e35d55f1986f640d1f8ab023f
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
