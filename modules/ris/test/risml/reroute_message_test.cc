@@ -166,7 +166,6 @@ char const* reroute_fixture_only_new = R"(
 )";
 
 TEST(ris_reroute_message, message_only_new) {
-  risml_parser parse{};
   auto const messages = risml_parser::parse(reroute_fixture_only_new);
   ASSERT_EQ(1, messages.size());
 
