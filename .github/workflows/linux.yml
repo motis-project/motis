@@ -45,11 +45,17 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Cache
+      - name: ccache Cache
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/.ccache
           key: ccache-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+
+      - name: Dependencies Cache
+        uses: actions/cache@v1.1.2
+        with:
+          path: ${{ github.workspace }}/deps
+          key: deps-${{ hashFiles('.pkg') }}
 
       - name: CMake
         run: |
