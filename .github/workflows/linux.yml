@@ -11,7 +11,6 @@ jobs:
     runs-on: [self-hosted, linux]
 
     steps:
-
       - uses: actions/checkout@v2
 
       - name: Format files
@@ -44,7 +43,6 @@ jobs:
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
 
     steps:
-
       - uses: actions/checkout@v2
 
       - name: Cache
@@ -67,6 +65,13 @@ jobs:
           ccache -z
           cmake --build build --target motis motis-test motis-itest path-prepare parking-prepare ppr-preprocess osrm-extract osrm-contract at-example motis-eval motis-intermodal-eval
           ccache -s
+
+      - name: Run Test Mode 
+        run: |
+          ./motis --mode test \
+            --dataset.path ../base/loader/test_resources/hrd_schedules/single-ice \
+            --dataset.begin 20151111 \
+            --dataset.write_serialized false
 
       - name: Run Tests
         run: ./build/motis-test
