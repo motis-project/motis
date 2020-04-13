@@ -162,8 +162,8 @@ struct ris::impl {
     auto const content = motis_content(HTTPRequest, msg)->content();
     auto& sched = get_schedule();
     publisher pub;
-    auto risml_fn = [this](std::string_view s,
-                           std::function<void(ris_message &&)> const& cb) {
+    auto risml_fn = [](std::string_view s,
+                       std::function<void(ris_message &&)> const& cb) {
       risml::risml_parser::to_ris_message(s, cb);
     };
 

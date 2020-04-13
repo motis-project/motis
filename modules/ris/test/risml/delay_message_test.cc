@@ -106,7 +106,6 @@ constexpr auto ist_fixture_2 = R"(
 )";
 
 TEST(ris_delay_message, ist_message_2) {
-  risml_parser parse{};
   auto const messages = risml_parser::parse(ist_fixture_2);
   ASSERT_EQ(1, messages.size());
 
@@ -171,7 +170,6 @@ constexpr auto ist_fixture_3 = R"(
 )";
 
 TEST(ris_delay_message, ist_message_3) {
-  risml_parser parse{};
   auto const messages = risml_parser::parse(ist_fixture_3);
   ASSERT_EQ(1, messages.size());
 
@@ -251,7 +249,6 @@ EventType get_type(std::vector<ris_message> const& messages) {
 }
 
 TEST(ris_delay_message, train_event_type) {
-  risml_parser parse{};
   auto start_msg = type_fixture("Start");
   auto start = risml_parser::parse(start_msg.c_str());
   ASSERT_EQ(EventType_DEP, get_type(start));
@@ -310,7 +307,6 @@ constexpr auto ist_prog_fixture_1 = R"(
 )";
 
 TEST(ris_delay_message, ist_prog_message_1) {
-  risml_parser parse{};
   auto const messages = risml_parser::parse(ist_prog_fixture_1);
   ASSERT_EQ(1, messages.size());
 

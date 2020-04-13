@@ -142,8 +142,7 @@ char const* addition_fixture_2 = R"(
 )";
 
 TEST(ris_addition_message, message_2) {
-  motis::ris::risml::risml_parser parse{};
-  auto const messages = parse.parse(addition_fixture_2);
+  auto const messages = risml_parser::parse(addition_fixture_2);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
