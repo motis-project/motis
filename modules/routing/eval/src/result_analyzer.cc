@@ -91,8 +91,8 @@ void print_category(category& cat, uint64_t count, bool compact, int top) {
                 << " Q(50): " << std::setw(22)
                 << quantile(stat.values_, 0.5).value_;
 
-      auto const from =
-          std::max(0LL, static_cast<uint64_t>(stat.values_.size()) - top);
+      auto const from = std::max(
+          uint64_t{}, static_cast<uint64_t>(stat.values_.size()) - top);
       for (int i = from; i != stat.values_.size(); ++i) {
         auto const i_rev = stat.values_.size() - (i - from) - 1;
         std::cout << "(v=" << stat.values_[i_rev].value_
