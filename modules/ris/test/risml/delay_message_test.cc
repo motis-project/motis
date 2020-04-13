@@ -39,8 +39,7 @@ constexpr auto ist_fixture_1 = R"(
 )";
 
 TEST(ris_delay_message, ist_message_1) {
-  ris::risml::risml_parser parse{};
-  auto const messages = parse.parse(ist_fixture_1);
+  auto const messages = risml_parser::parse(ist_fixture_1);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
@@ -107,8 +106,8 @@ constexpr auto ist_fixture_2 = R"(
 )";
 
 TEST(ris_delay_message, ist_message_2) {
-  ris::risml::risml_parser parse{};
-  auto const messages = parse.parse(ist_fixture_2);
+  risml_parser parse{};
+  auto const messages = risml_parser::parse(ist_fixture_2);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
@@ -172,8 +171,8 @@ constexpr auto ist_fixture_3 = R"(
 )";
 
 TEST(ris_delay_message, ist_message_3) {
-  ris::risml::risml_parser parse{};
-  auto const messages = parse.parse(ist_fixture_3);
+  risml_parser parse{};
+  auto const messages = risml_parser::parse(ist_fixture_3);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
@@ -252,26 +251,26 @@ EventType get_type(std::vector<ris_message> const& messages) {
 }
 
 TEST(ris_delay_message, train_event_type) {
-  ris::risml::risml_parser parse{};
+  risml_parser parse{};
   auto start_msg = type_fixture("Start");
-  auto start = parse.parse(start_msg.c_str());
+  auto start = risml_parser::parse(start_msg.c_str());
   ASSERT_EQ(EventType_DEP, get_type(start));
 
   auto ab_msg = type_fixture("Ab");
-  auto ab = parse.parse(ab_msg.c_str());
+  auto ab = risml_parser::parse(ab_msg.c_str());
   ASSERT_EQ(EventType_DEP, get_type(ab));
 
   auto an_msg = type_fixture("An");
-  auto an = parse.parse(an_msg.c_str());
+  auto an = risml_parser::parse(an_msg.c_str());
   ASSERT_EQ(EventType_ARR, get_type(an));
 
   auto ziel_msg = type_fixture("Ziel");
-  auto ziel = parse.parse(ziel_msg.c_str());
+  auto ziel = risml_parser::parse(ziel_msg.c_str());
   ASSERT_EQ(EventType_ARR, get_type(ziel));
 
   // "Durch" events are ignored
   auto pass_msg = type_fixture("Durch");
-  auto pass = parse.parse(pass_msg.c_str());
+  auto pass = risml_parser::parse(pass_msg.c_str());
   auto content = GetMessage(pass[0].data())->content();
   auto delay_message = reinterpret_cast<DelayMessage const*>(content);
   EXPECT_EQ(0, delay_message->events()->size());
@@ -311,8 +310,8 @@ constexpr auto ist_prog_fixture_1 = R"(
 )";
 
 TEST(ris_delay_message, ist_prog_message_1) {
-  ris::risml::risml_parser parse{};
-  auto const messages = parse.parse(ist_prog_fixture_1);
+  risml_parser parse{};
+  auto const messages = risml_parser::parse(ist_prog_fixture_1);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
@@ -379,8 +378,7 @@ constexpr auto ist_prog_fixture_2 = R"--((
 ))--";
 
 TEST(ris_delay_message, ist_prog_message_2) {
-  ris::risml::risml_parser parse{};
-  auto const messages = parse.parse(ist_prog_fixture_2);
+  auto const messages = risml_parser::parse(ist_prog_fixture_2);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];

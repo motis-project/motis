@@ -175,7 +175,7 @@ private:
       auto const allowed = Dir == search_dir::FWD
                                ? data_.in_allowed_[line][stop_idx]
                                : data_.out_allowed_[line][stop_idx];
-      if (!allowed) {
+      if (allowed == 0U) {
         continue;
       }
       if ((Dir == search_dir::FWD &&
@@ -226,7 +226,7 @@ private:
       auto const allowed = Dir == search_dir::FWD
                                ? data_.out_allowed_[line][stop_idx]
                                : data_.in_allowed_[line][stop_idx];
-      if (!allowed) {
+      if (allowed == 0U) {
         continue;
       }
       destination_arrivals_[line].emplace_back(line, stop_idx, fp);

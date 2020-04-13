@@ -13,7 +13,6 @@
 #include "motis/module/context/get_schedule.h"
 #include "motis/protocol/Message_generated.h"
 
-namespace p = std::placeholders;
 using namespace flatbuffers;
 using namespace motis::module;
 using motis::logging::info;
@@ -69,7 +68,7 @@ void guesser::init(motis::module::registry& reg) {
   }
 
   guesser_ = std::make_unique<guess::guesser>(stations);
-  reg.register_op("/guesser", std::bind(&guesser::guess, this, p::_1));
+  reg.register_op("/guesser", [this](msg_ptr const& m) { return guess(m); });
 }
 
 msg_ptr guesser::guess(msg_ptr const& msg) {

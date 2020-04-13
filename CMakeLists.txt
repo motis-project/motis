@@ -72,6 +72,7 @@ link_directories(${Boost_LIBRARY_DIRS})
 include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 
 include(cmake/pkg.cmake)
+add_subdirectory(modules/ris/gtfsrtpb)
 
 
 ################################

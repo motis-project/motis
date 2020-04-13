@@ -29,10 +29,10 @@ struct motis_instance_test : public ::testing::Test {
     return instance_->run(fn);
   }
 
-  module::msg_ptr call(std::string const& target);
-  module::msg_ptr call(module::msg_ptr const&);
-  void publish(std::string const& target);
-  void publish(module::msg_ptr const&);
+  module::msg_ptr call(std::string const& target) const;
+  module::msg_ptr call(module::msg_ptr const&) const;
+  void publish(std::string const& target) const;
+  void publish(module::msg_ptr const&) const;
 
   static std::function<module::msg_ptr(module::msg_ptr const&)> msg_sink(
       std::vector<module::msg_ptr>*);

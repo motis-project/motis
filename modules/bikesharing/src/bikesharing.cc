@@ -28,7 +28,7 @@ bikesharing::bikesharing() : module("Bikesharing Options", "bikesharing") {
 bikesharing::~bikesharing() = default;
 
 void bikesharing::init(motis::module::registry& reg) {
-  reg.subscribe("/init", std::bind(&bikesharing::init_module, this));
+  reg.subscribe("/init", [this] { init_module(); });
   reg.register_op("/bikesharing/search",
                   [this](msg_ptr const& req) { return search(req); });
   reg.register_op("/bikesharing/geo_terminals",

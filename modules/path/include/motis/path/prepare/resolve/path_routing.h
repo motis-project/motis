@@ -16,7 +16,8 @@ struct path_routing {
   path_routing(path_routing&&) noexcept;
   path_routing& operator=(path_routing&&) noexcept;
 
-  std::vector<routing_strategy*> const& strategies_for(source_spec::category) const;
+  std::vector<routing_strategy*> const& strategies_for(
+      source_spec::category) const;
   routing_strategy* get_stub_strategy() const;
 
   struct strategies;

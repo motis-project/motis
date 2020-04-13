@@ -22,7 +22,7 @@ struct zip_reader {
   zip_reader(zip_reader const&) = delete;
   zip_reader& operator=(zip_reader const&) = delete;
 
-  std::optional<std::string_view> read();
+  std::optional<std::string_view> read() const;
   float progress() const;
 
   struct impl;

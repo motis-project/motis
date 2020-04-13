@@ -3,7 +3,6 @@
 #include "motis/test/motis_instance_test.h"
 #include "../hrd/paths.h"
 
-namespace fbs = flatbuffers;
 using namespace motis;
 using namespace motis::test;
 using namespace motis::module;

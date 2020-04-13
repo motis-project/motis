@@ -47,7 +47,7 @@ struct remote::impl : std::enable_shared_from_this<impl> {
       return;
     }
 
-       ws_ = std::make_unique<net::wss_client>(ios_, ctx_, host_, port_);
+    ws_ = std::make_unique<net::wss_client>(ios_, ctx_, host_, port_);
     ws_->on_fail(
         [self = shared_from_this()](boost::system::error_code const& ec) {
           self->on_fail(ec);

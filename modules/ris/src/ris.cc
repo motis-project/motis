@@ -140,7 +140,7 @@ struct ris::impl {
     }
   }
 
-  void read_gtfs_trip_ids() {
+  void read_gtfs_trip_ids() const {
     auto& sched = get_schedule();
     auto const trips = utl::file{gtfs_trip_ids_path_.c_str(), "r"}.content();
     auto const trips_msg = make_msg(trips.data(), trips.size());
@@ -164,7 +164,7 @@ struct ris::impl {
     publisher pub;
     auto risml_fn = [this](std::string_view s,
                            std::function<void(ris_message &&)> const& cb) {
-      risml_parser_.to_ris_message(s, cb);
+      risml::risml_parser::to_ris_message(s, cb);
     };
 
     write_to_db(zip_reader{content->c_str(), content->size()}, risml_fn, pub);
@@ -317,7 +317,7 @@ private:
       auto ptr = msgs.data();
       auto const end = ptr + msgs.size();
       while (ptr < end) {
-        size_type size;
+        size_type size = 0;
         std::memcpy(&size, ptr, SIZE_TYPE_SIZE);
         ptr += SIZE_TYPE_SIZE;
 
@@ -633,14 +633,14 @@ void ris::init(motis::module::registry& r) {
         fbb.create_and_finish(
             MsgContent_RISGTFSRTMapping,
             CreateRISGTFSRTMapping(
-                fbb, fbb.CreateVector(utl::to_vec(
-                         sched.gtfs_trip_ids_,
-                         [&](mcd::pair<gtfs_trip_id, ptr<trip>> const& id) {
-                           return CreateGTFSID(
-                               fbb, fbb.CreateString(id.first.trip_id_),
-                               id.first.start_date_,
-                               to_fbs(sched, fbb, id.second));
-                         })))
+                fbb,
+                fbb.CreateVector(utl::to_vec(
+                    sched.gtfs_trip_ids_,
+                    [&](mcd::pair<gtfs_trip_id, ptr<trip const>> const& id) {
+                      return CreateGTFSID(
+                          fbb, fbb.CreateString(id.first.trip_id_),
+                          id.first.start_date_, to_fbs(sched, fbb, id.second));
+                    })))
                 .Union());
         auto const msg = make_msg(fbb);
         utl::file{"gtfs_trips.raw", "w"}.write(msg->data(), msg->size());

@@ -56,6 +56,7 @@ Checks: "*,\
 -google-readability-braces-around-statements,\
 -hicpp-braces-around-statements,\
 -readability-braces-around-statements,\
+-google-readability-avoid-underscore-in-googletest-name,\
 -readability-misleading-indentation"
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^${RELATIVE_SOURCE_DIR}(base|modules|test)/'

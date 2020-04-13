@@ -44,8 +44,7 @@ char const* connection_decision_fixture_1 = R"(
 )";
 
 TEST(DISABLED_ris_connection_decision_message, message_1) {
-  ris::risml::risml_parser parse{};
-  auto const messages = parse.parse(connection_decision_fixture_1);
+  auto const messages = risml_parser::parse(connection_decision_fixture_1);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
@@ -127,8 +126,7 @@ char const* connection_decision_fixture_2 = R"(
 )";
 
 TEST(DISABLED_ris_connection_decision_message, message_2) {
-  ris::risml::risml_parser parse{};
-  auto const messages = parse.parse(connection_decision_fixture_2);
+  auto const messages = risml_parser::parse(connection_decision_fixture_2);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];

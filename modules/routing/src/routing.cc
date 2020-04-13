@@ -28,7 +28,6 @@
 // 64MB default start size
 constexpr auto LABEL_STORE_START_SIZE = 64 * 1024 * 1024;
 
-namespace p = std::placeholders;
 using namespace motis::logging;
 using namespace motis::module;
 
@@ -39,7 +38,8 @@ routing::routing() : module("Routing", "routing") {}
 routing::~routing() = default;
 
 void routing::init(motis::module::registry& reg) {
-  reg.register_op("/routing", std::bind(&routing::route, this, p::_1));
+  reg.register_op("/routing",
+                  [this](msg_ptr const& msg) { return route(msg); });
   reg.register_op("/trip_to_connection", &routing::trip_to_connection);
 }
 

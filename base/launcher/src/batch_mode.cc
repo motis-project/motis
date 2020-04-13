@@ -12,7 +12,6 @@
 #include "motis/module/message.h"
 
 using namespace motis::module;
-namespace p = std::placeholders;
 
 namespace motis::launcher {
 
@@ -67,9 +66,11 @@ private:
       next = next_query();
       if (next) {
         ++in_flight_;
-        receiver_.on_msg(next, ios_.wrap(std::bind(&query_injector::on_response,
-                                                   this, shared_from_this(),
-                                                   next->id(), p::_1, p::_2)));
+        receiver_.on_msg(next,
+                         ios_.wrap([self = shared_from_this(), id = next->id()](
+                                       msg_ptr const& res, std::error_code ec) {
+                           self->on_response(self, id, res, ec);
+                         }));
       } else {
         if (in_flight_ == 0) {
           ios_.stop();

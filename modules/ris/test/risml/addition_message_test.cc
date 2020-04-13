@@ -42,8 +42,7 @@ char const* addition_fixture_1 = R"(
 )";
 
 TEST(ris_addition_message, message_1) {
-  risml_parser parse{};
-  auto const messages = parse.parse(addition_fixture_1);
+  auto const messages = risml_parser::parse(addition_fixture_1);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];

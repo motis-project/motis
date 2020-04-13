@@ -189,7 +189,7 @@ int random_station_id(std::vector<station_node const*> const& station_nodes,
   auto first = std::next(begin(station_nodes), 2);
   auto last = end(station_nodes);
 
-  station_node const* s;
+  station_node const* s = nullptr;
   do {
     s = *rand_in(first, last);
   } while (!has_events(*s, motis_interval_start, motis_interval_end));
@@ -205,7 +205,7 @@ std::pair<std::string, std::string> random_station_ids(
     schedule const& sched,
     std::vector<station_node const*> const& station_nodes,
     time_t interval_start, time_t interval_end) {
-  station const *from, *to;
+  station const *from = nullptr, *to = nullptr;
   auto motis_interval_start = unix_to_motistime(sched, interval_start);
   auto motis_interval_end = unix_to_motistime(sched, interval_end);
   if (motis_interval_start == INVALID_TIME ||

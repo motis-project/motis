@@ -64,11 +64,10 @@ mcd::hash_map<std::pair<int, int>, geo::box> bounding_boxes(schedule const& s) {
 }
 
 void railviz::init(motis::module::registry& reg) {
-  namespace p = std::placeholders;
   reg.register_op("/railviz/get_trip_guesses", &railviz::get_trip_guesses);
   reg.register_op("/railviz/get_station", &railviz::get_station);
   reg.register_op("/railviz/get_trains",
-                  std::bind(&railviz::get_trains, this, p::_1));
+                  [this](msg_ptr const& msg) { return get_trains(msg); });
   reg.register_op("/railviz/get_trips", &railviz::get_trips);
 
   reg.subscribe("/init", [this]() {

@@ -174,10 +174,10 @@ inline hash_t sha1(std::string_view const& src) {
 
   // Store hash in result pointer, and make sure we get in in the correct order
   // on both endian models.
-  for (auto hash_byte = 20U; --hash_byte >= 0U;) {
-    hash[hash_byte] =
-        (result[hash_byte >> 2U] >> (((3U - hash_byte) & 0x3U) << 3U)) & 0xffU;
-    if (hash_byte == 0U) {
+  for (auto hash_byte = 20; --hash_byte >= 0;) {
+    auto hb = static_cast<unsigned>(hash_byte);
+    hash[hb] = (result[hb >> 2U] >> (((3U - hb) & 0x3U) << 3U)) & 0xffU;
+    if (hb == 0U) {
       break;
     }
   }
@@ -190,10 +190,11 @@ inline std::string to_hex_str(hash_t const& hash) {
 
   std::string hexstring;
   hexstring.resize(40);
-  for (auto hash_byte = 20U; --hash_byte >= 0U;) {
-    hexstring[hash_byte << 1U] = hexDigits[(hash[hash_byte] >> 4U) & 0xfU];
-    hexstring[(hash_byte << 1U) + 1U] = hexDigits[hash[hash_byte] & 0xfU];
-    if (hash_byte == 0U) {
+  for (auto hash_byte = 20; --hash_byte >= 0;) {
+    auto const hb = static_cast<unsigned>(hash_byte);
+    hexstring[hb << 1U] = hexDigits[(hash[hb] >> 4U) & 0xfU];
+    hexstring[(hb << 1U) + 1U] = hexDigits[hash[hb] & 0xfU];
+    if (hb == 0U) {
       break;
     }
   }

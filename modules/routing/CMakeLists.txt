@@ -24,7 +24,7 @@ include_directories(eval/include)
 file(GLOB_RECURSE motis-generator-files eval/src/query_generator.cc)
 add_executable(motis-generator EXCLUDE_FROM_ALL ${motis-generator-files})
 target_compile_features(motis-generator PUBLIC cxx_std_17)
-target_link_libraries(motis-generator motis-bootstrap motis-core conf ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(motis-generator motis-bootstrap motis-core conf ${CMAKE_THREAD_LIBS_INIT} ianatzdb-res)
 target_compile_options(motis-generator PRIVATE ${MOTIS_CXX_FLAGS})
 set_target_properties(motis-generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
@@ -60,14 +60,14 @@ file(GLOB_RECURSE motis-print-journey-files eval/src/print.cc)
 add_executable(motis-print-journey EXCLUDE_FROM_ALL ${motis-print-journey-files})
 target_compile_features(motis-print-journey PUBLIC cxx_std_17)
 target_link_libraries(motis-print-journey
-        ${CMAKE_THREAD_LIBS_INIT}
-        ${Boost_THREAD_LIBRARY}
-        ${Boost_SYSTEM_LIBRARY}
-        ${Boost_FILESYSTEM_LIBRARY}
-        ${Boost_PROGRAM_OPTIONS_LIBRARY}
-        motis-module
-        motis-core
-        )
+  ${CMAKE_THREAD_LIBS_INIT}
+  ${Boost_THREAD_LIBRARY}
+  ${Boost_SYSTEM_LIBRARY}
+  ${Boost_FILESYSTEM_LIBRARY}
+  ${Boost_PROGRAM_OPTIONS_LIBRARY}
+  motis-module
+  motis-core
+)
 target_compile_options(motis-print-journey PRIVATE ${MOTIS_CXX_FLAGS})
 set_target_properties(motis-print-journey PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 

@@ -88,7 +88,9 @@ zip_reader::zip_reader(char const* ptr, size_t size)
 
 zip_reader::~zip_reader() = default;
 
-std::optional<std::string_view> zip_reader::read() { return impl_->read(); }
+std::optional<std::string_view> zip_reader::read() const {
+  return impl_->read();
+}
 
 float zip_reader::progress() const { return impl_->progress(); }
 

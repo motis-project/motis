@@ -34,10 +34,10 @@ struct database {
   bool is_initialized() const;
 
   persistable_terminal get(std::string const& id) const;
-  void put(std::vector<persistable_terminal> const& terminals);
+  void put(std::vector<persistable_terminal> const& terminals) const;
 
   bikesharing_summary get_summary() const;
-  void put_summary(bikesharing_summary const& summary);
+  void put_summary(bikesharing_summary const& summary) const;
 
   struct database_impl;
   std::unique_ptr<database_impl> impl_;

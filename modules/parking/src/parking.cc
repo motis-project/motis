@@ -331,15 +331,14 @@ void parking::init(motis::module::registry& reg) {
     impl_ =
         std::make_unique<impl>(parking_file_, footedges_db_file_, db_max_size_);
 
-    reg.register_op("/parking/geo", std::bind(&impl::geo_lookup, impl_.get(),
-                                              std::placeholders::_1));
-    reg.register_op("/parking/lookup", std::bind(&impl::id_lookup, impl_.get(),
-                                                 std::placeholders::_1));
-    reg.register_op("/parking/edge", std::bind(&impl::parking_edge, impl_.get(),
-                                               std::placeholders::_1));
+    reg.register_op("/parking/geo",
+                    [this](auto&& m) { return impl_->geo_lookup(m); });
+    reg.register_op("/parking/lookup",
+                    [this](auto&& m) { return impl_->id_lookup(m); });
+    reg.register_op("/parking/edge",
+                    [this](auto&& m) { return impl_->parking_edge(m); });
     reg.register_op("/parking/edges",
-                    std::bind(&impl::parking_edges_req, impl_.get(),
-                              std::placeholders::_1));
+                    [this](auto&& m) { return impl_->parking_edges_req(m); });
     reg.subscribe("/init", [this]() { impl_->update_ppr_profiles(); });
   } catch (std::exception const& e) {
     LOG(logging::warn) << "parking module not initialized (" << e.what() << ")";

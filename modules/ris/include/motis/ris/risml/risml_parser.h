@@ -11,9 +11,9 @@ namespace motis::ris::risml {
 
 struct risml_parser {
 
-  void to_ris_message(std::string_view,
-                      std::function<void(ris_message&&)> const&);
-  std::vector<ris_message> parse(std::string_view);
+  static void to_ris_message(std::string_view,
+                             std::function<void(ris_message&&)> const&);
+  static std::vector<ris_message> parse(std::string_view);
 
   risml_parser() = default;
   ~risml_parser() = default;
