@@ -23,6 +23,12 @@ jobs:
       - uses: seanmiddleditch/gha-setup-ninja@master
       - uses: lukka/get-cmake@v3.17.1
 
+      - name: Dependencies Cache
+        uses: actions/cache@v1.1.2
+        with:
+          path: ${{ github.workspace }}/deps
+          key: deps-${{ hashFiles('.pkg') }}
+
       - name: Build
         run: |
           $devShell = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find **\Microsoft.VisualStudio.DevShell.dll
