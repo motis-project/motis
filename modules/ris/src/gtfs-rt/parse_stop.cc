@@ -62,7 +62,10 @@ void update_stop_idx(stop_context& current_stop, schedule& sched,
   // 1. best case is the number is consecutive
   // 2. if not it may be consecutive in parts
   // 3. or it might be just randomly increasing
-  if (has_sequ && current_stop.seq_no_ + 1 == stop_time_upd.stop_sequence() &&
+  if (has_sequ &&
+      current_stop.seq_no_ !=
+          std::numeric_limits<decltype(current_stop.seq_no_)>::max() &&
+      current_stop.seq_no_ + 1 == stop_time_upd.stop_sequence() &&
       current_stop.idx_ != std::numeric_limits<int>::max()) {
     // nicely consecutive
     current_stop.seq_no_ = stop_time_upd.stop_sequence();
