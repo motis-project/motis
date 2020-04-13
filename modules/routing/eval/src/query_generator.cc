@@ -37,9 +37,9 @@ struct generator_settings : public conf::configuration {
     param(target_, "target", "message target");
   }
 
-  generator_settings(generator_settings const&) = default;
+  generator_settings(generator_settings const&) = delete;
   generator_settings(generator_settings&&) = default;
-  generator_settings& operator=(generator_settings const&) = default;
+  generator_settings& operator=(generator_settings const&) = delete;
   generator_settings& operator=(generator_settings&&) = default;
 
   ~generator_settings() override = default;
