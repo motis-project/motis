@@ -52,6 +52,7 @@ jobs:
         run: .\build\motis-itest.exe
 
       - name: Compile Web Interface
+        if: matrix.mode == 'Release'
         run: |
           cd .\ui\web
           npm install -g elm@0.18.0
