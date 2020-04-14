@@ -51,12 +51,16 @@ jobs:
       - name: Run Integration Tests
         run: .\build\motis-itest.exe
 
+      - uses: bahmutov/npm-install@v1
+        with:
+          working-directory: ui/web
+
       - name: Compile Web Interface
         if: matrix.mode == 'Release'
         run: |
           cd .\ui\web
-          npm install -g elm@0.18.0
-          elm-make --yes src\Main.elm --output elm.js
+          npm install
+          ./node_modules/elm/binwrappers/elm-make --yes src/Main.elm --output elm.js
 
       - name: Create Distribution
         if: matrix.mode == 'Release'
