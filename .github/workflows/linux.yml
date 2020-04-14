@@ -85,7 +85,7 @@ jobs:
 
       # ==== VALGRIND ====
       - name: Run Test Mode Valgrind
-        if: matrix.mode == 'Debug' && matrix.lint == 'Off' && matrix.cxx != 'clang-9-san'
+        if: matrix.mode == 'Debug' && matrix.cxx == 'gcc-9'
         run: >
           valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full \
             ./build/motis --mode test \
@@ -96,11 +96,11 @@ jobs:
               --bikesharing.db_max_size 1048576
 
       - name: Run Tests Valgrind
-        if: matrix.mode == 'Debug' && matrix.lint == 'Off' && matrix.cxx != 'clang-9-san'
+        if: matrix.mode == 'Debug' && matrix.cxx == 'gcc-9'
         run: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./build/motis-test
 
       - name: Run Integration Tests Valgrind
-        if: matrix.mode == 'Debug' && matrix.lint == 'Off' && matrix.cxx != 'clang-9-san'
+        if: matrix.mode == 'Debug' && matrix.cxx == 'gcc-9'
         run: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./build/motis-itest
 
       # ==== DISTRIBUTION ====
