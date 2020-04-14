@@ -119,11 +119,11 @@ jobs:
       - name: Create Distribution
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
         run: >
-          7zr a motis-${{ github.sha }}-linux.zip
-            build/motis build/path-prepare
-            build/parking-prepare
-            build/deps/osrm-backend/osrm-extract
-            build/deps/osrm-backend/osrm-contract
+          7zr a motis-${{ github.sha }}-linux.zip \
+            build/motis build/path-prepare \
+            build/parking-prepare \
+            build/deps/osrm-backend/osrm-extract \
+            build/deps/osrm-backend/osrm-contract \
             build/deps/address-typeahead/at-example
 
       - name: Upload Distribution
