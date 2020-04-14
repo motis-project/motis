@@ -126,16 +126,17 @@ jobs:
 
       - name: Create Distribution
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
-        run: >
-          tar -c -j --transform 's/.*\///g' -f motis-${{ github.sha }}-linux.tar.bz2 \
-            build/motis \
-            build/path-prepare \
-            build/parking-prepare \
-            build/deps/osrm-backend/osrm-extract \
-            build/deps/osrm-backend/osrm-contract \
-            build/deps/address-typeahead/at-example \
-            deps/osrm-backend/profiles \
-            ui/web
+        run: |
+          mkdir motis
+          mv ui/web motis
+          mv build/motis motis
+          mv build/path-prepare motis
+          mv build/parking-prepare motis
+          mv build/deps/osrm-backend/osrm-extract motis
+          mv build/deps/osrm-backend/osrm-contract motis
+          mv build/deps/address-typeahead/at-example motis
+          mv deps/osrm-backend/profiles motis
+          tar cjf motis-${{ github.sha }}-linux.tar.bz2 motis
 
       - name: Upload Distribution
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
