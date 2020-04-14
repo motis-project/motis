@@ -52,6 +52,7 @@ jobs:
         run: .\build\motis-itest.exe
 
       - uses: bahmutov/npm-install@v1
+        if: matrix.mode == 'Release'
         with:
           working-directory: ui/web
 
@@ -59,7 +60,8 @@ jobs:
         if: matrix.mode == 'Release'
         run: |
           cd .\ui\web
-          ./node_modules/elm/binwrappers/elm-make --yes src/Main.elm --output elm.js
+          .\node_modules\elm\binwrappers\elm-make --yes src\Main.elm --output elm.js
+          Remove-Item -Recurse -Force .\node_modules
 
       - name: Create Distribution
         if: matrix.mode == 'Release'
