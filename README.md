@@ -137,6 +137,12 @@ Feel free to contribute in any area you like (new features, improvments, documen
 By making a pull-request you agree to license your contribution under the MIT and Apache 2.0 license as described below.
 
 
+# Alternatives
+
+  - [OpenTripPlanner](https://www.opentripplanner.org/)
+  - [navitia.io](https://github.com/CanalTP/navitia)
+
+
 # License
 
 MOTIS can be licensed under the terms of the MIT license or under the terms of the Apache License, Version 2.0.
