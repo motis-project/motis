@@ -85,7 +85,7 @@ jobs:
 
       # ==== VALGRIND ====
       - name: Run Test Mode Valgrind
-        if: matrix.mode == 'Debug' && matrix.cxx == 'gcc-9'
+        if: matrix.mode == 'Debug' && matrix.lint == 'Off'
         run: >
           valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full \
             ./build/motis --mode test \
