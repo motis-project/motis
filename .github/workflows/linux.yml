@@ -116,6 +116,13 @@ jobs:
           strip build/deps/osrm-backend/osrm-contract
           strip build/deps/address-typeahead/at-example
 
+      - name: Compile Web Interface
+        if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
+        run: |
+          cd ./ui/web
+          npm install -g elm@0.18.0
+          elm-make --yes src/Main.elm --output elm.js
+
       - name: Create Distribution
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
         run: >
@@ -127,6 +134,7 @@ jobs:
             build/deps/osrm-backend/osrm-contract \
             build/deps/address-typeahead/at-example \
             deps/osrm-backend/profiles
+            ui/web
 
       - name: Upload Distribution
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
