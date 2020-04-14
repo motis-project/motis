@@ -126,7 +126,7 @@ jobs:
       - name: Create Distribution
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
         run: >
-          7zr a motis-${{ github.sha }}-linux.zip \
+          tar -c -j --transform 's/.*\///g' -f motis-${{ github.sha }}-linux.zip \
             build/motis \
             build/path-prepare \
             build/parking-prepare \
