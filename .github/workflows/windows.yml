@@ -51,7 +51,7 @@ jobs:
       - name: Run Integration Tests
         run: .\build\motis-itest.exe
 
-      - uses: motis-project/npm-install@master
+      - uses: bahmutov/npm-install@v1
         if: matrix.mode == 'Release'
         with:
           working-directory: ui/web
