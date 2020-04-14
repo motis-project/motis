@@ -116,14 +116,11 @@ jobs:
           strip build/deps/osrm-backend/osrm-contract
           strip build/deps/address-typeahead/at-example
 
-      - uses: bahmutov/npm-install@v1
-        with:
-          working-directory: ui/web
-
       - name: Compile Web Interface
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
         run: |
           cd ./ui/web
+          npm install
           ./node_modules/elm/binwrappers/elm-make --yes src/Main.elm --output elm.js
 
       - name: Create Distribution
