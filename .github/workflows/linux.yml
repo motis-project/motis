@@ -9,7 +9,6 @@ on:
 jobs:
   formatting:
     runs-on: [self-hosted, linux]
-
     steps:
       - uses: actions/checkout@v2
 
@@ -41,7 +40,6 @@ jobs:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_NOHASHDIR: true
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
-
     steps:
       - uses: actions/checkout@v2
 
