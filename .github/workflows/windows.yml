@@ -51,6 +51,12 @@ jobs:
       - name: Run Integration Tests
         run: .\build\motis-itest.exe
 
+      - name: Compile Web Interface
+        run: |
+          cd .\ui\web
+          npm install -g elm@0.18.0
+          elm-make --yes src\Main.elm --output elm.js
+
       - name: Create Distribution
         if: matrix.mode == 'Release'
         run: >
@@ -63,6 +69,7 @@ jobs:
           .\build\deps\address-typeahead\at-example.exe
           .\build\deps\ppr\ppr-preprocess.exe
           .\deps\osrm-backend\profiles
+          .\ui\web
 
       - name: Upload Distribution
         if: matrix.mode == 'Release'
