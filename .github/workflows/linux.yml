@@ -122,6 +122,7 @@ jobs:
           cd ./ui/web
           npm install
           ./node_modules/elm/binwrappers/elm-make --yes src/Main.elm --output elm.js
+          rm -rf node_modules
 
       - name: Create Distribution
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
@@ -133,7 +134,7 @@ jobs:
             build/deps/osrm-backend/osrm-extract \
             build/deps/osrm-backend/osrm-contract \
             build/deps/address-typeahead/at-example \
-            deps/osrm-backend/profiles
+            deps/osrm-backend/profiles \
             ui/web
 
       - name: Upload Distribution
