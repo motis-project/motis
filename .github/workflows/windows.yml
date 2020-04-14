@@ -59,7 +59,6 @@ jobs:
         if: matrix.mode == 'Release'
         run: |
           cd .\ui\web
-          npm install
           ./node_modules/elm/binwrappers/elm-make --yes src/Main.elm --output elm.js
 
       - name: Create Distribution
