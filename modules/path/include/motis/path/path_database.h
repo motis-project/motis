@@ -19,7 +19,7 @@ namespace motis::path {
 struct path_database {
   path_database(std::string const& path, bool read_only)
       : read_only_{read_only} {
-    env_.set_mapsize(32UL * 1024 * 1024 * 1024);
+    env_.set_mapsize(static_cast<mdb_size_t>(32) * 1024 * 1024 * 1024);
     env_.set_maxdbs(8);
 
     auto open_flags = lmdb::env_open_flags::NOSUBDIR;
