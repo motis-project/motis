@@ -60,7 +60,8 @@ jobs:
         if: matrix.mode == 'Release'
         run: |
           cd .\ui\web
-          .\node_modules\elm\binwrappers\elm-make --yes src\Main.elm --output elm.js
+          move .\node_modules\elm\binwrappers\elm-make .\elm-make
+          elm-make --yes src\Main.elm --output elm.js
           Remove-Item -Recurse -Force .\node_modules
 
       - name: Create Distribution
