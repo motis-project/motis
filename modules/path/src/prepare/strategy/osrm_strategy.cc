@@ -234,7 +234,7 @@ struct osrm_strategy::impl {
         utl::to_vec(get(route, "geometry").get<Array>().values,
                     [](auto&& e) { return e.template get<Number>().value; }));
 
-    static_assert(sizeof(long long) == 8);
+    static_assert(sizeof(long long) == 8);  // NOLINT
     auto osm_node_ids =
         utl::to_vec(get(route, "osm_node_ids").get<Array>().values,
                     [](auto&& e) -> int64_t {
