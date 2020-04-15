@@ -599,7 +599,7 @@ struct tripbased::impl {
     });
   }
 
-  msg_ptr debug(msg_ptr const& msg) {
+  msg_ptr debug(msg_ptr const& msg) const {
     auto const req = motis_content(TripBasedTripDebugRequest, msg);
     auto const& sched = get_schedule();
 
@@ -638,10 +638,10 @@ tripbased::~tripbased() = default;
 void tripbased::init(motis::module::registry& reg) {
   try {
     impl_ = std::make_unique<impl>(data_file_);
-    reg.register_op("/tripbased", std::bind(&impl::route, impl_.get(),
-                                            std::placeholders::_1));
-    reg.register_op("/tripbased/debug", std::bind(&impl::debug, impl_.get(),
-                                                  std::placeholders::_1));
+    reg.register_op("/tripbased",
+                    [this](msg_ptr const& m) { return impl_->route(m); });
+    reg.register_op("/tripbased/debug",
+                    [this](msg_ptr const& m) { return impl_->debug(m); });
     reg.subscribe("/init", [this]() { impl_->init_module(); });
   } catch (std::exception const& e) {
     LOG(logging::warn) << "tripbased module not initialized (" << e.what()

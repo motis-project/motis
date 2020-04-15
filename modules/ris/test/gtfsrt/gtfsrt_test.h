@@ -24,7 +24,7 @@ inline std::string json_to_protobuf(std::string msg_json) {
 
 class gtfsrt_test : public ::testing::Test {
 protected:
-  gtfsrt_test(loader::loader_options const&);
+  gtfsrt_test(loader::loader_options);
 
   void SetUp() override;
 

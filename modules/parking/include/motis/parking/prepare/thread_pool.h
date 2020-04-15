@@ -16,7 +16,7 @@ struct thread_pool {
         work_(std::make_unique<boost::asio::io_service::work>(ios_)),
         threads_(num_threads) {
     for (auto& t : threads_) {
-      t = std::thread(boost::bind(&boost::asio::io_service::run, &ios_));
+      t = std::thread([&] { ios_.run(); });
     }
   }
 

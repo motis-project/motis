@@ -28,7 +28,7 @@ target_link_libraries(motis-intermodal-generator
   motis-core
   motis-intermodal
   conf
-  )
+  ianatzdb-res)
 target_compile_options(motis-intermodal-generator PRIVATE ${MOTIS_CXX_FLAGS})
 set_target_properties(motis-intermodal-generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
@@ -42,7 +42,8 @@ target_link_libraries(motis-intermodal-comparator
   motis-core
   motis-intermodal
   motis-bootstrap
-  conf)
+  conf
+  ianatzdb-res)
 target_compile_options(motis-intermodal-comparator PRIVATE ${MOTIS_CXX_FLAGS})
 set_target_properties(motis-intermodal-comparator PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 

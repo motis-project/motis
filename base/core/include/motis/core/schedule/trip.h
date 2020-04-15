@@ -25,7 +25,7 @@ struct primary_trip_id {
 
   friend bool operator<(primary_trip_id const& lhs,
                         primary_trip_id const& rhs) {
-    uint64_t a, b;
+    uint64_t a = 0, b = 0;
     std::memcpy(&a, &lhs, sizeof(a));
     std::memcpy(&b, &rhs, sizeof(b));
     return a < b;
@@ -33,7 +33,7 @@ struct primary_trip_id {
 
   friend bool operator==(primary_trip_id const& lhs,
                          primary_trip_id const& rhs) {
-    uint64_t a, b;
+    uint64_t a = 0, b = 0;
     std::memcpy(&a, &lhs, sizeof(a));
     std::memcpy(&b, &rhs, sizeof(b));
     return a == b;

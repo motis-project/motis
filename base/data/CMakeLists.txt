@@ -1,7 +1,9 @@
 project(motis)
 cmake_minimum_required(VERSION 3.10)
 
-set(MOTIS_SCHEDULE_MODE "offset" CACHE STRING "Pointer type for schedule data structures")
+if (NOT MOTIS_SCHEDULE_MODE STREQUAL "raw")
+  set(MOTIS_SCHEDULE_MODE "offset" CACHE STRING "Pointer type for schedule data structures")
+endif()
 
 add_library(motis-data INTERFACE)
 target_compile_features(motis-data INTERFACE cxx_std_17)

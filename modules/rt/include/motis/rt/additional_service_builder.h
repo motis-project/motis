@@ -131,7 +131,7 @@ struct additional_service_builder {
     node* prev_route_node = nullptr;
     for (auto const& s : sections) {
       light_connection l{};
-      station_node *from_station, *to_station;
+      station_node *from_station = nullptr, *to_station = nullptr;
       std::tie(l, from_station, to_station) = s;
 
       auto const from_station_transfer_time =
@@ -201,7 +201,7 @@ struct additional_service_builder {
     return trp;
   }
 
-  status verify_trip_id(trip const* trp, ris::IdEvent const* id_ev) {
+  status verify_trip_id(trip const* trp, ris::IdEvent const* id_ev) const {
     auto const id_station = find_station(sched_, id_ev->station_id()->str());
     auto const id_event_time =
         unix_to_motistime(sched_, id_ev->schedule_time());

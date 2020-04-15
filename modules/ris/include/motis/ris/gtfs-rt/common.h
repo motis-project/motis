@@ -30,7 +30,7 @@ struct evt {
   evt& operator=(evt&&) = default;
   ~evt() = default;
 
-  inline void verify_times(schedule& sched) {
+  inline void verify_times(schedule& sched) const {
     verify_timestamp(sched, orig_sched_time_);
     if (new_sched_time_ > 0) {
       verify_timestamp(sched, new_sched_time_);

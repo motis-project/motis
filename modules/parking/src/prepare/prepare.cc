@@ -48,8 +48,8 @@ struct prepare_settings : public conf::configuration {
   std::string footedges_db_file_{"parking_footedges.db"};
   std::string ppr_graph_{"routing-graph.ppr"};
   std::vector<std::string> ppr_profiles_;
-  std::size_t edge_rtree_max_size_{1024ul * 1024 * 1024 * 3};
-  std::size_t area_rtree_max_size_{1024ul * 1024 * 1024};
+  std::size_t edge_rtree_max_size_{1024UL * 1024 * 1024 * 3};
+  std::size_t area_rtree_max_size_{1024UL * 1024 * 1024};
   bool lock_rtrees_{false};
   int max_walk_duration_{10};
   unsigned threads_{std::thread::hardware_concurrency()};

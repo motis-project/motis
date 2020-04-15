@@ -44,19 +44,19 @@ motis_instance_test::motis_instance_test(
   instance_->init_modules(modules);
 }
 
-msg_ptr motis_instance_test::call(msg_ptr const& msg) {
+msg_ptr motis_instance_test::call(msg_ptr const& msg) const {
   return instance_->call(msg);
 }
 
-void motis_instance_test::publish(msg_ptr const& msg) {
+void motis_instance_test::publish(msg_ptr const& msg) const {
   instance_->publish(msg);
 }
 
-msg_ptr motis_instance_test::call(std::string const& target) {
+msg_ptr motis_instance_test::call(std::string const& target) const {
   return call(make_no_msg(target));
 }
 
-void motis_instance_test::publish(std::string const& target) {
+void motis_instance_test::publish(std::string const& target) const {
   publish(make_no_msg(target));
 }
 

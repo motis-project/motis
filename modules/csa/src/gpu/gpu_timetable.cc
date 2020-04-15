@@ -69,7 +69,6 @@ gpu_timetable& gpu_timetable::operator=(gpu_timetable&&) noexcept {
   return *this;
 }
 gpu_timetable::gpu_timetable(csa_timetable&) {}
-gpu_timetable::~gpu_timetable() = default;
 
 }  // namespace motis::csa
 

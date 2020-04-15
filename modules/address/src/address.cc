@@ -31,7 +31,7 @@ struct address::impl {
   }
 
   std::pair<std::string, std::vector<address_typeahead::index_t>> guess(
-      std::string const& str) {
+      std::string const& str) const {
     auto ss = std::stringstream{str};
     auto sub_strings = std::vector<std::string>{};
     auto buf = std::string{};
@@ -60,7 +60,7 @@ struct address::impl {
     return {house_number, t_->complete(sub_strings, options)};
   }
 
-  msg_ptr get_guesses(msg_ptr const& msg) {
+  msg_ptr get_guesses(msg_ptr const& msg) const {
     std::string house_number;
     std::vector<address_typeahead::index_t> guess_indices;
     std::tie(house_number, guess_indices) =
@@ -125,8 +125,9 @@ void address::init(motis::module::registry& reg) {
     address_typeahead::typeahead t(context);
 
     impl_ = std::make_unique<impl>(db_path_);
-    reg.register_op("/address", std::bind(&impl::get_guesses, impl_.get(),
-                                          std::placeholders::_1));
+    reg.register_op("/address", [this](msg_ptr const& msg) {
+      return impl_->get_guesses(msg);
+    });
   } catch (std::exception const& e) {
     LOG(logging::warn) << "address module not initialized (" << e.what() << ")";
   }

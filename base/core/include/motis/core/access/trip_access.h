@@ -17,6 +17,6 @@ trip const* get_trip(schedule const& sched, extern_trip const& e_trp);
 
 trip const* find_trip(schedule const& sched, primary_trip_id id);
 
-trip* get_trip(schedule&, std::string const& trip_id, std::time_t const);
+trip const* get_trip(schedule&, std::string const& trip_id, std::time_t);
 
 }  // namespace motis

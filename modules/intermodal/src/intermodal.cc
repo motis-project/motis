@@ -66,11 +66,10 @@ std::vector<Offset<Connection>> revise_connections(
           .Union(),
       "/revise");
   auto const res = motis_call(make_msg(rmc))->val();
-  auto const result =
-      utl::to_vec(*motis_content(ReviseResponse, res)->connections(),
-                  [&mc](Connection const* con) {
-                    return motis_copy_table(Connection, mc, con);
-                  });
+  auto result = utl::to_vec(*motis_content(ReviseResponse, res)->connections(),
+                            [&mc](Connection const* con) {
+                              return motis_copy_table(Connection, mc, con);
+                            });
   MOTIS_STOP_TIMING(revise_timing);
   stats.revise_duration_ =
       static_cast<uint64_t>(MOTIS_TIMING_MS(revise_timing));

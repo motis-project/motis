@@ -5,7 +5,7 @@
 
 namespace boost::gregorian {
 class date;
-}
+}  // namespace boost::gregorian
 
 namespace motis {
 

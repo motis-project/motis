@@ -35,7 +35,7 @@ struct file {
   file(file&&) = delete;
   file& operator=(file&&) = delete;
 
-  std::size_t size() {
+  std::size_t size() const {
     auto const err = std::fseek(f_, 0, SEEK_END);
     utl::verify(err == 0, "fseek to SEEK_END error");
     auto const size = std::ftell(f_);
@@ -43,19 +43,19 @@ struct file {
     return static_cast<std::size_t>(size);
   }
 
-  void write(void const* buf, std::size_t size) {
+  void write(void const* buf, std::size_t size) const {
     auto const bytes_written = std::fwrite(buf, 1, size, f_);
     utl::verify(bytes_written == size, "file write error");
   }
 
-  void read(void* buf, std::size_t offset, std::size_t size) {
+  void read(void* buf, std::size_t offset, std::size_t size) const {
     auto const err = std::fseek(f_, offset, SEEK_SET);
     utl::verify(err == 0, "fseek error");
     auto const bytes_read = std::fread(buf, 1, size, f_);
     utl::verify(bytes_read == size, "file read error");
   }
 
-  explicit operator FILE*() { return f_; }
+  explicit operator FILE*() const { return f_; }
 
   FILE* f_;
 };

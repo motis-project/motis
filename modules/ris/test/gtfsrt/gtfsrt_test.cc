@@ -1,13 +1,15 @@
 #include "gtfsrt_test.h"
 
+#include <utility>
+
 #include "motis/loader/loader.h"
 #include "motis/ris/gtfs-rt/gtfsrt_parser.h"
 #include "motis/ris/ris_message.h"
 
 namespace motis::ris::gtfsrt {
 
-gtfsrt_test::gtfsrt_test(loader::loader_options const& options)
-    : opts_{options} {}
+gtfsrt_test::gtfsrt_test(loader::loader_options options)
+    : opts_{std::move(options)} {}
 
 void gtfsrt_test::SetUp() { sched_ = load_schedule(opts_); }
 

@@ -45,7 +45,7 @@ path_routing::path_routing(path_routing&&) noexcept = default;
 path_routing& path_routing::operator=(path_routing&&) noexcept = default;
 
 std::vector<routing_strategy*> const& path_routing::strategies_for(
-    source_spec::category const cat) {
+    source_spec::category const cat) const {
 
   switch (cat) {
     case source_spec::category::RAILWAY: return strategies_->rail_strategies_;
@@ -56,7 +56,7 @@ std::vector<routing_strategy*> const& path_routing::strategies_for(
   }
 }
 
-routing_strategy* path_routing::get_stub_strategy() {
+routing_strategy* path_routing::get_stub_strategy() const {
   return strategies_->stub_strategy_.get();
 }
 

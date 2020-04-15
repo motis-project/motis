@@ -128,7 +128,7 @@ persistable_terminal database::get(std::string const& id) const {
   return impl_->get(id);
 }
 
-void database::put(std::vector<persistable_terminal> const& terminals) {
+void database::put(std::vector<persistable_terminal> const& terminals) const {
   impl_->put(terminals);
 }
 
@@ -136,7 +136,7 @@ bikesharing_summary database::get_summary() const {
   return impl_->get_summary();
 }
 
-void database::put_summary(bikesharing_summary const& summary) {
+void database::put_summary(bikesharing_summary const& summary) const {
   impl_->put_summary(summary);
 }
 

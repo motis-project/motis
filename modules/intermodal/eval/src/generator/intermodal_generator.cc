@@ -212,7 +212,7 @@ int random_station_id(std::vector<station_node const*> const& station_nodes,
   auto first = std::next(begin(station_nodes), 2);
   auto last = end(station_nodes);
 
-  station_node const* s;
+  station_node const* s = nullptr;
   do {
     s = *rand_in(first, last);
   } while (!has_events(*s, motis_interval_start, motis_interval_end));
@@ -223,7 +223,7 @@ std::pair<station const*, station const*> random_stations(
     schedule const& sched,
     std::vector<station_node const*> const& station_nodes,
     time_t interval_start, time_t interval_end) {
-  station const *from, *to;
+  station const *from = nullptr, *to = nullptr;
   auto motis_interval_start = unix_to_motistime(sched, interval_start);
   auto motis_interval_end = unix_to_motistime(sched, interval_end);
   if (motis_interval_start == INVALID_TIME ||
@@ -336,7 +336,7 @@ int main(int argc, char const** argv) {
     }
 
     std::vector<double> sizes(stations.size());
-    for (auto i = 0u; i < stations.size(); ++i) {
+    for (auto i = 0U; i < stations.size(); ++i) {
       auto& factor = sizes[i];
       auto const& events = stations[i]->dep_class_events_;
       for (unsigned j = 0; i < events.size(); ++j) {
@@ -350,7 +350,7 @@ int main(int argc, char const** argv) {
               });
 
     auto const n = std::min(static_cast<size_t>(num_stations), stations.size());
-    for (auto i = 0u; i < n; ++i) {
+    for (auto i = 0U; i < n; ++i) {
       station_nodes.push_back(
           sched.station_nodes_.at(stations[i]->index_).get());
     }

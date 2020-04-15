@@ -40,7 +40,7 @@ struct path_database {
     return txn.dbi_open("motis-path-data", flags);
   }
 
-  std::string get(std::string const& k) {
+  std::string get(std::string const& k) const {
     auto ret = try_get(k);
     if (!ret) {
       throw std::system_error(error::not_found);
@@ -48,7 +48,7 @@ struct path_database {
     return *ret;
   }
 
-  std::optional<std::string> try_get(std::string const& k) {
+  std::optional<std::string> try_get(std::string const& k) const {
     auto txn = handle_->make_txn();
     auto db = data_dbi(txn);
 

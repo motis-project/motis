@@ -71,7 +71,7 @@ private:
     parkings_.emplace_back(++id_, geo::latlng(coord.y, coord.x), fee);
   }
 
-  inline bool access_allowed(osmium::TagList const& tags) {
+  static inline bool access_allowed(osmium::TagList const& tags) {
     auto const access = tags["access"];
     if (access == nullptr) {
       return true;

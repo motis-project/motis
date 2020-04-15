@@ -36,7 +36,7 @@ public:
     return FloatCoordinate{FloatLongitude{lng}, FloatLatitude{lat}};
   }
 
-  msg_ptr one_to_many(OSRMOneToManyRequest const* req) {
+  msg_ptr one_to_many(OSRMOneToManyRequest const* req) const {
     MultiTargetParameters params;
     params.forward = req->direction() == Direction_Forward;
 
@@ -70,7 +70,7 @@ public:
     return make_msg(fbb);
   }
 
-  msg_ptr via(OSRMViaRouteRequest const* req) {
+  msg_ptr via(OSRMViaRouteRequest const* req) const {
     RouteParameters params;
     params.geometries = RouteParameters::GeometriesType::CoordVec1D;
     params.overview = RouteParameters::OverviewType::Full;
@@ -107,7 +107,7 @@ public:
     return make_msg(mc);
   }
 
-  msg_ptr smooth_via(OSRMSmoothViaRouteRequest const* req) {
+  msg_ptr smooth_via(OSRMSmoothViaRouteRequest const* req) const {
     SmoothViaParameters params;
 
     for (auto const& waypoint : *req->waypoints()) {

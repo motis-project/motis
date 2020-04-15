@@ -16,7 +16,7 @@ namespace motis::ris::gtfsrt {
 class gtfsrt_additional_test : public gtfsrt_test {
 public:
   gtfsrt_additional_test() : gtfsrt_test(dataset_opt){};
-  void check_addition_message(ris_message const&);
+  static void check_addition_message(ris_message const&);
 };
 
 void gtfsrt_additional_test::check_addition_message(

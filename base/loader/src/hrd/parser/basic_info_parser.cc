@@ -29,7 +29,7 @@ std::tuple<int, int, int> yyyymmdd(cstr ddmmyyyy) {
 }
 
 time_t str_to_unixtime(cstr s) {
-  int year, month, day;
+  int year = 0, month = 0, day = 0;
   std::tie(year, month, day) = yyyymmdd(s);
   return to_unix_time(year, month, day);
 }
@@ -54,7 +54,7 @@ Interval parse_interval(loaded_file const& basic_info_file) {
 }
 
 boost::gregorian::date get_first_schedule_date(loaded_file const& lf) {
-  int year, month, day;
+  int year = 0, month = 0, day = 0;
   std::tie(year, month, day) = yyyymmdd(mask_dates(lf.content()).first);
   return boost::gregorian::date(year, month, day);
 }

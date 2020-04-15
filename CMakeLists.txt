@@ -55,6 +55,7 @@ configure_file (
   "${CMAKE_BINARY_DIR}/generated/version.h"
 )
 
+add_definitions(/DBOOST_ASIO_DISABLE_CONCEPTS=1)  # fixes issue with Boost 1.72.0
 
 ################################
 # Dependencies
@@ -71,6 +72,7 @@ link_directories(${Boost_LIBRARY_DIRS})
 include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 
 include(cmake/pkg.cmake)
+add_subdirectory(modules/ris/gtfsrtpb)
 
 
 ################################
@@ -123,6 +125,8 @@ endif()
 option(MOTIS_LINT "Run clang-tidy with the compiler." OFF)
 if(MOTIS_LINT)
   # clang-tidy will be run on all targets defined hereafter
+  set(MOTIS_SCHEDULE_MODE "raw")
+  add_definitions(-DMOTIS_LINT=1)
   include(cmake/clang-tidy.cmake)
 endif()
 

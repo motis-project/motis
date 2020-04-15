@@ -544,7 +544,7 @@ light_connection graph_builder::section_to_connection(
   con_.con_info_ = get_or_create_connection_info(services, dep_day_index);
 
   // Build light connection.
-  time dep_motis_time, arr_motis_time;
+  time dep_motis_time = 0, arr_motis_time = 0;
   auto const section_timezone = section->provider() == nullptr
                                     ? nullptr
                                     : section->provider()->timezone_name();

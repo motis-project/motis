@@ -76,7 +76,7 @@ struct db_builder::impl {
     layer_names.store(*db_->handle_, feature_inserter_->txn_);
   }
 
-  void store_stations(std::vector<station> const& stations) {
+  void store_stations(std::vector<station> const& stations) const {
     for (auto const& s : stations) {
       if (std::none_of(begin(s.categories_), end(s.categories_),
                        [](auto cls) { return cls < 9; })) {
@@ -259,7 +259,7 @@ struct db_builder::impl {
     db_put(kBoxesKey, make_msg(mc)->to_string());
   }
 
-  void db_put(std::string const& k, std::string const& v) {
+  void db_put(std::string const& k, std::string const& v) const {
     auto& txn = feature_inserter_->txn_;
     auto dbi = db_->data_dbi(txn);
     txn.put(dbi, k, v);
@@ -290,22 +290,22 @@ db_builder::db_builder(std::string const& fname)
     : impl_{std::make_unique<impl>(fname)} {}
 db_builder::~db_builder() = default;
 
-void db_builder::store_stations(std::vector<station> const& stations) {
+void db_builder::store_stations(std::vector<station> const& stations) const {
   impl_->store_stations(stations);
 }
 
 void db_builder::add_seq(
     size_t seq_idx, resolved_station_seq const& resolved_sequences,
-    std::vector<processed_segment> const& processed_segments) {
+    std::vector<processed_segment> const& processed_segments) const {
   impl_->add_seq(seq_idx, resolved_sequences, processed_segments);
 }
 
 void db_builder::add_tile_feature(geo::polyline const& polyline,
                                   std::vector<seq_seg> const& seq_segs,
-                                  std::vector<uint32_t> const& classes) {
+                                  std::vector<uint32_t> const& classes) const {
   impl_->add_tile_feature(polyline, seq_segs, classes);
 }
 
-void db_builder::finish() { impl_->finish(); }
+void db_builder::finish() const { impl_->finish(); }
 
 }  // namespace motis::path

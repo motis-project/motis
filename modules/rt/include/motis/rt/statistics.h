@@ -80,7 +80,7 @@ struct statistics {
     return o;
   }
 
-  void print() { std::cout << *this << "\n"; }
+  void print() const { std::cout << *this << "\n"; }
 
   void log_sched_time_mismatch(int diff) {
     if (diff != 0) {

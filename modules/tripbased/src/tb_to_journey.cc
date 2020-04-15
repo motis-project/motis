@@ -87,7 +87,7 @@ parse_tb_journey(schedule const& sched, tb_journey const& tbj) {
   }
 
   auto const& last_edge = tbj.edges_.back();
-  unsigned last_stop;
+  auto last_stop = 0U;
   if (last_edge.is_connection()) {
     auto const trp = sched.expanded_trips_.data_[last_edge.trip_];
     assert(trp != nullptr);

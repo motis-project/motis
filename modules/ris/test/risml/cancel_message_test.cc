@@ -47,8 +47,7 @@ char const* cancel_fixture_1 = R"(
 )";
 
 TEST(ris_cancel_message, message_1) {
-  ris::risml::risml_parser parse{};
-  auto const messages = parse.parse(cancel_fixture_1);
+  auto const messages = risml_parser::parse(cancel_fixture_1);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
@@ -125,8 +124,7 @@ char const* cancel_fixture_2 = R"(
 )";
 
 TEST(ris_ausfall_message, message_2) {
-  ris::risml::risml_parser parse{};
-  auto const messages = parse.parse(cancel_fixture_2);
+  auto const messages = risml_parser::parse(cancel_fixture_2);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];

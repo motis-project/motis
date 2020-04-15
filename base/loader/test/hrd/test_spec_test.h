@@ -17,8 +17,8 @@ struct test_spec {
   test_spec(boost::filesystem::path const& root, char const* filename)
       : lf_(root / filename) {}
 
-  std::vector<specification> get_specs();
-  std::vector<hrd_service> get_hrd_services(config const&);
+  std::vector<specification> get_specs() const;
+  std::vector<hrd_service> get_hrd_services(config const&) const;
   loaded_file lf_;
 };
 

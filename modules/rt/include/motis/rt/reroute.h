@@ -17,7 +17,6 @@
 
 namespace motis::rt {
 
-
 struct schedule_event {
   schedule_event(primary_trip_id trp_id, uint32_t station_idx,
                  motis::time schedule_time, event_type ev_type)

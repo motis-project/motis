@@ -41,15 +41,16 @@ struct web_server::impl {
 #endif
               std::string const& log_path, std::string const& static_path,
               boost::system::error_code& ec) {
-    namespace p = std::placeholders;
-
 #if defined(NET_TLS)
     load_server_certificate(ctx_, cert_path, priv_key_path, dh_path);
 #endif
 
-    server_.on_http_request(
-        std::bind(&impl::on_http_request, this, p::_1, p::_2));
-    server_.on_ws_msg(std::bind(&impl::on_ws_msg, this, p::_1, p::_2, p::_3));
+    server_.on_http_request([this](net::web_server::http_req_t const& req,
+                                   net::web_server::http_res_cb_t const& cb,
+                                   bool) { on_http_request(req, cb); });
+    server_.on_ws_msg(
+        [this](net::ws_session_ptr const& session, std::string const& msg,
+               net::ws_msg_type type) { on_ws_msg(session, msg, type); });
     server_.set_timeout(std::chrono::seconds(120));
     server_.init(host, port, ec);
     log_path_ = log_path;

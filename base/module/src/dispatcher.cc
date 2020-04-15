@@ -37,7 +37,8 @@ std::vector<future> dispatcher::publish(msg_ptr const& msg,
     utl::verify(ctx::current_op<ctx_data>() == nullptr ||
                     ctx::current_op<ctx_data>()->data_.access_ >= op.access_,
                 "match the access permissions of parent or be root operation");
-    return post_work(data, std::bind(op.fn_, msg), id);
+    return post_work(
+        data, [&] { return op.fn_(msg); }, id);
   });
 }
 

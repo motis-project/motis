@@ -63,7 +63,7 @@ struct pareto_dijkstra {
       }
 
       // get best label
-      Label* label;
+      Label* label = nullptr;
       if (!equals_.empty()) {
         label = equals_.back();
         equals_.pop_back();

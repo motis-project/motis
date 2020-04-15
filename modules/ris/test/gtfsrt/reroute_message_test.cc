@@ -16,7 +16,7 @@ class gtfsrt_reroute_test : public gtfsrt_test {
 public:
   gtfsrt_reroute_test() : gtfsrt_test(dataset_opt){};
 
-  void check_reroute_event(ris_message const&);
+  static void check_reroute_event(ris_message const&);
 };
 
 constexpr auto const TIMEZONE_OFFSET = -7200;

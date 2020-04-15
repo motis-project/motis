@@ -16,7 +16,7 @@
 
 namespace motis {
 struct schedule;
-}
+}  // namespace motis
 
 namespace motis::ris::gtfsrt {
 struct knowledge_context;

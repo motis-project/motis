@@ -57,7 +57,7 @@ void csa::init(motis::module::registry& reg) {
 csa_timetable const* csa::get_timetable() const { return timetable_.get(); }
 
 motis::module::msg_ptr csa::route(motis::module::msg_ptr const& msg,
-                                  implementation_type impl_type) {
+                                  implementation_type impl_type) const {
   auto const req = motis_content(RoutingRequest, msg);
   auto const& sched = get_schedule();
   auto const response = run_csa_search(

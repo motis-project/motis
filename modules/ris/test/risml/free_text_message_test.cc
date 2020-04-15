@@ -79,8 +79,7 @@ char const* free_text_fixture_2 = R"(<?xml version="1.0"?>
 )";
 
 TEST(ris_free_text_message, DISABLED_free_text_test) {
-  ris::risml::risml_parser parse{};
-  auto const messages = parse.parse(free_text_fixture_1);
+  auto const messages = risml_parser::parse(free_text_fixture_1);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
@@ -120,8 +119,7 @@ TEST(ris_free_text_message, DISABLED_free_text_test) {
 }
 
 TEST(ris_free_text_message, DISABLED_free_text_test2) {
-  ris::risml::risml_parser parse{};
-  auto const messages = parse.parse(free_text_fixture_2);
+  auto const messages = risml_parser::parse(free_text_fixture_2);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];

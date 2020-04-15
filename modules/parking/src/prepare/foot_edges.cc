@@ -77,7 +77,7 @@ void compute_edges(
 
       assert(fwd_result.routes_.size() == parking_stations.size());
       assert(bwd_result.routes_.size() == parking_stations.size());
-      for (auto station_idx = 0u; station_idx < parking_stations.size();
+      for (auto station_idx = 0U; station_idx < parking_stations.size();
            ++station_idx) {
         auto const fwd_routes = fwd_result.routes_[station_idx];
         auto const bwd_routes = bwd_result.routes_[station_idx];
@@ -132,7 +132,7 @@ void compute_foot_edges(
 
   thread_pool pool{static_cast<unsigned>(std::max(1, threads))};
 
-  auto progress = 0ul;
+  auto progress = 0UL;
   auto max = park.parkings_.size();
   std::mutex progress_mutex;
   std::vector<unsigned> stations_per_parking;
