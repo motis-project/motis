@@ -133,6 +133,7 @@ jobs:
           mv build/deps/osrm-backend/osrm-extract motis
           mv build/deps/osrm-backend/osrm-contract motis
           mv build/deps/address-typeahead/at-example motis
+          mv build/deps/ppr/ppr-preprocess motis
           mv deps/osrm-backend/profiles motis
           tar cjf motis-${{ github.sha }}-linux.tar.bz2 motis
 
