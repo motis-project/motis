@@ -7,7 +7,7 @@ on:
     branches: [ master ]
   release:
     types:
-      - created
+      - published
 
 jobs:
   formatting:
@@ -149,7 +149,7 @@ jobs:
 
       # ==== RELEASE ====
       - name: Upload Release
-        if: github.event.action == 'created' && matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
+        if: github.event.action == 'published' && matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
