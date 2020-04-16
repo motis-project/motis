@@ -97,7 +97,9 @@ struct db_builder::impl {
                         tiles::kMaxZoomLevel};
 
       f.meta_.emplace_back("name", tiles::encode_string(s.name_));
-      f.meta_.emplace_back("classes", tiles::encode_string(std::to_string(cls_to_bits(s.categories_))));
+      f.meta_.emplace_back(
+          "classes",
+          tiles::encode_string(std::to_string(cls_to_bits(s.categories_))));
 
       f.geometry_ = tiles::fixed_point{
           {tiles::latlng_to_fixed({s.pos_.lat_, s.pos_.lng_})}};
@@ -182,7 +184,8 @@ struct db_builder::impl {
     f.layer_ = path_layer_id_;
     f.zoom_levels_ = {cls_to_min_zoom_level(classes), tiles::kMaxZoomLevel};
 
-    f.meta_.emplace_back("classes", tiles::encode_string(std::to_string(cls_to_bits(classes))));
+    f.meta_.emplace_back(
+        "classes", tiles::encode_string(std::to_string(cls_to_bits(classes))));
 
     tiles::fixed_polyline polyline;
     polyline.emplace_back();
