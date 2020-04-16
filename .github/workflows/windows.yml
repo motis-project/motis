@@ -67,7 +67,7 @@ jobs:
       - name: Create Distribution
         if: matrix.mode == 'Release'
         run: >
-          7z a motis-${{ github.sha }}-windows.zip
+          7z a motis-windows.zip
           .\build\motis.exe
           .\build\path-prepare.exe
           .\build\parking-prepare.exe
@@ -82,5 +82,17 @@ jobs:
         if: matrix.mode == 'Release'
         uses: actions/upload-artifact@v1
         with:
-          name: motis-${{ github.sha }}-windows.zip
-          path: motis-${{ github.sha }}-windows.zip
+          name: motis-windows
+          path: motis-windows.zip
+
+      # ==== RELEASE ====
+      - name: Upload Release
+        if: github.event.action == 'created'
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./motis-windows.zip
+          asset_name: motis-windows
+          asset_content_type: application/zip
