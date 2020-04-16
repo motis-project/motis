@@ -72,8 +72,13 @@
   commit=e05f1ce0bd4a3cad4c532317444bf136f291e6bd
 [tiles]
   url=git@github.com:motis-project/tiles.git
+<<<<<<< HEAD
   branch=master
   commit=41b646cd3ca0b647de6648b8f49ec98496e225b6
+=======
+  branch=pristine
+  commit=5339819e14bad8e3a4ae83adcbeb7bb73f6ae2ce
+>>>>>>> update dependencies
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
