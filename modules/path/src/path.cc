@@ -10,10 +10,10 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
-#include "tiles/db/get_tile.h"
 #include "tiles/fixed/convert.h"
 #include "tiles/fixed/fixed_geometry.h"
 #include "tiles/fixed/io/deserialize.h"
+#include "tiles/get_tile.h"
 #include "tiles/parse_tile_url.h"
 
 #include "motis/core/common/logging.h"
@@ -59,7 +59,7 @@ void path::init(registry& r) {
   try {
     data_->db_ = make_path_database(database_path_, true, false);
 
-    data_->render_ctx_ = tiles::make_render_ctx(*data_->db_->handle_);
+    data_->render_ctx_ = tiles::make_render_ctx(*data_->db_->db_handle_);
 
     if (auto buf = data_->db_->try_get(kIndexKey)) {
       data_->index_ = std::make_unique<path_index>(*buf);
@@ -227,7 +227,8 @@ msg_ptr path::path_tiles(msg_ptr const& msg) const {
 
   tiles::null_perf_counter pc;
   auto rendered_tile =
-      tiles::get_tile(*data_->db_->handle_, data_->render_ctx_, *tile, pc);
+      tiles::get_tile(*data_->db_->db_handle_, *data_->db_->pack_handle_,
+                      data_->render_ctx_, *tile, pc);
 
   message_creator mc;
   std::vector<Offset<HTTPHeader>> headers;

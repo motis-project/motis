@@ -49,7 +49,7 @@
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=master
-  commit=c06d48d86f8533bf2e1435279bd54a84de5dde4e
+  commit=b3f98632a612796e35d55f1986f640d1f8ab023f
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
@@ -73,7 +73,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=8f5f196b6cac0208cad7516f4180930b309361bf
+  commit=5339819e14bad8e3a4ae83adcbeb7bb73f6ae2ce
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
