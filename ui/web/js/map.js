@@ -177,7 +177,7 @@ class RailVizCustomLayer {
   }
 };
 
-function initPorts(app, apiEndpoint) {
+function initPorts(app, apiEndpoint, tilesEndpoint) {
   app.ports.mapInit.subscribe(function(id) {
     var mapSettings = localStorage.getItem("motis.map");
     if (mapSettings) {
@@ -191,22 +191,7 @@ function initPorts(app, apiEndpoint) {
     // use two maps until resolved: https://github.com/mapbox/mapbox-gl-js/issues/8159
     var map_bg = new mapboxgl.Map({
       container: `${id}-background`,
-      style: {
-        "version": 8,
-        "sources": {
-          "raster": {
-            "type": "raster",
-            "tiles": ["https://tiles.motis-project.de/osm_light/{z}/{x}/{y}.png?token=862bdec137edd4e88029304609458291f0ec760b668c5816ccdd83d0beae76a4"],
-            "tileSize": 256,
-            "maxzoom": 18
-          }
-        },
-        "layers": [{
-            "id": "raster",
-            "type": "raster",
-            "source": "raster"
-        }]
-      },
+      style: backgroundMapStyle(tilesEndpoint),
       zoom: zoom,
       center: [lng, lat],
       antialias: true
