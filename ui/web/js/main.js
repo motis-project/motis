@@ -26,6 +26,11 @@ function initApp() {
     }
   }
 
+  var tilesEndpoint = apiEndpoint;
+  if(!tilesEndpoint.startsWith('http')) {
+    tilesEndpoint = window.location.origin + tilesEndpoint
+  }
+
   var simulationTime = null;
   var timeParam = params['time'] || null;
   if (timeParam) {
@@ -52,7 +57,7 @@ function initApp() {
 
   window.elmMaps = {};
 
-  initPorts(app, apiEndpoint);
+  initPorts(app, apiEndpoint, tilesEndpoint);
   handleDrop(document.getElementById('app-container'));
   app.ports.localStorageSet.subscribe(function(kv) {
     localStorageSet(kv[0], kv[1]);
