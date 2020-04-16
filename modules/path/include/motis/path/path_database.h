@@ -9,6 +9,7 @@
 
 #include "tiles/db/clear_database.h"
 #include "tiles/db/tile_database.h"
+#include "tiles/db/pack_file.h"
 
 #include "utl/verify.h"
 
@@ -28,9 +29,10 @@ struct path_database {
     }
 
     env_.open(path.c_str(), open_flags);
-    handle_ = std::make_unique<tiles::tile_db_handle>(env_);
+    db_handle_ = std::make_unique<tiles::tile_db_handle>(env_);
+    pack_handle_ = std::make_unique<tiles::pack_handle>(path.c_str());
 
-    auto txn = handle_->make_txn();
+    auto txn = db_handle_->make_txn();
     data_dbi(txn, lmdb::dbi_flags::CREATE);
     txn.commit();
   }
@@ -49,7 +51,7 @@ struct path_database {
   }
 
   std::optional<std::string> try_get(std::string const& k) const {
-    auto txn = handle_->make_txn();
+    auto txn = db_handle_->make_txn();
     auto db = data_dbi(txn);
 
     auto ret = txn.get(db, k);
@@ -60,7 +62,8 @@ struct path_database {
   }
 
   lmdb::env env_;
-  std::unique_ptr<tiles::tile_db_handle> handle_;
+  std::unique_ptr<tiles::tile_db_handle> db_handle_;
+  std::unique_ptr<tiles::pack_handle> pack_handle_;
 
   bool read_only_;
 };
@@ -72,14 +75,16 @@ inline std::unique_ptr<path_database> make_path_database(
   auto db = std::make_unique<path_database>(fname, read_only);
 
   if (truncate) {
-    auto txn = db->handle_->make_txn();
+    auto txn = db->db_handle_->make_txn();
 
     auto data_dbi = db->data_dbi(txn);
     txn.dbi_clear(data_dbi);
 
-    tiles::clear_database(*db->handle_, txn);
+    tiles::clear_database(*db->db_handle_, txn);
 
     txn.commit();
+
+    db->pack_handle_->resize(0);
   }
 
   return db;

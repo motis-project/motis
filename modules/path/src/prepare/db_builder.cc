@@ -12,7 +12,8 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
-#include "tiles/db/feature_inserter.h"
+#include "tiles/db/feature_inserter_mt.h"
+#include "tiles/db/layer_names.h"
 #include "tiles/db/prepare_tiles.h"
 #include "tiles/db/tile_database.h"
 #include "tiles/feature/feature.h"
@@ -68,12 +69,17 @@ uint64_t cls_to_bits(Classes const& c) {
 struct db_builder::impl {
   explicit impl(std::string const& fname)
       : db_(make_path_database(fname, false, true)),
-        feature_inserter_{std::make_unique<tiles::feature_inserter>(
-            *db_->handle_, &tiles::tile_db_handle::features_dbi)} {
+        feature_inserter_{std::make_unique<tiles::feature_inserter_mt>(
+            tiles::dbi_handle{*db_->db_handle_,
+                              db_->db_handle_->features_dbi_opener()},
+            *db_->pack_handle_)} {
     tiles::layer_names_builder layer_names;
     station_layer_id_ = layer_names.get_layer_idx("station");
     path_layer_id_ = layer_names.get_layer_idx("path");
-    layer_names.store(*db_->handle_, feature_inserter_->txn_);
+
+    auto txn = db_->db_handle_->make_txn();
+    layer_names.store(*db_->db_handle_, txn);
+    txn.commit();
   }
 
   void store_stations(std::vector<station> const& stations) const {
@@ -90,9 +96,8 @@ struct db_builder::impl {
       f.zoom_levels_ = {cls_to_min_zoom_level(s.categories_),
                         tiles::kMaxZoomLevel};
 
-      // TODO (sebastian) std::variant metadata
-      f.meta_["name"] = s.name_;
-      f.meta_["classes"] = std::to_string(cls_to_bits(s.categories_));
+      f.meta_.emplace_back("name", tiles::encode_string(s.name_));
+      f.meta_.emplace_back("classes", tiles::encode_string(std::to_string(cls_to_bits(s.categories_))));
 
       f.geometry_ = tiles::fixed_point{
           {tiles::latlng_to_fixed({s.pos_.lat_, s.pos_.lng_})}};
@@ -177,8 +182,7 @@ struct db_builder::impl {
     f.layer_ = path_layer_id_;
     f.zoom_levels_ = {cls_to_min_zoom_level(classes), tiles::kMaxZoomLevel};
 
-    // TODO (sebastian) std::variant metadata
-    f.meta_["classes"] = std::to_string(cls_to_bits(classes));
+    f.meta_.emplace_back("classes", tiles::encode_string(std::to_string(cls_to_bits(classes))));
 
     tiles::fixed_polyline polyline;
     polyline.emplace_back();
@@ -203,8 +207,8 @@ struct db_builder::impl {
     }
     {
       motis::logging::scoped_timer timer("tiles: prepare");
-      flush_inserter();
-      tiles::prepare_tiles(*db_->handle_, 10);
+      feature_inserter_.reset(nullptr);
+      tiles::prepare_tiles(*db_->db_handle_, *db_->pack_handle_, 10);
     }
   }
 
@@ -260,22 +264,16 @@ struct db_builder::impl {
   }
 
   void db_put(std::string const& k, std::string const& v) const {
-    auto& txn = feature_inserter_->txn_;
+    auto txn = db_->db_handle_->make_txn();
     auto dbi = db_->data_dbi(txn);
     txn.put(dbi, k, v);
-  }
-
-  void flush_inserter() {
-    if (feature_inserter_) {
-      std::unique_ptr<tiles::feature_inserter> none;
-      std::swap(feature_inserter_, none);
-    }
+    txn.commit();
   }
 
   std::mutex m_;
 
   std::unique_ptr<path_database> db_;
-  std::unique_ptr<tiles::feature_inserter> feature_inserter_;
+  std::unique_ptr<tiles::feature_inserter_mt> feature_inserter_;
 
   size_t station_layer_id_;
   size_t path_layer_id_;
