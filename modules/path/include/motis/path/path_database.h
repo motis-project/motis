@@ -8,8 +8,8 @@
 #include "lmdb/lmdb.hpp"
 
 #include "tiles/db/clear_database.h"
-#include "tiles/db/tile_database.h"
 #include "tiles/db/pack_file.h"
+#include "tiles/db/tile_database.h"
 
 #include "utl/verify.h"
 
