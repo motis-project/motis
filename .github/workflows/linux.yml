@@ -148,8 +148,8 @@ jobs:
           path: motis-linux.tar.bz2
 
       # ==== RELEASE ====
-      - name: Upload release asset
-        if: github.event.action == 'created'
+      - name: Upload Release
+        if: github.event.action == 'created' && matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
