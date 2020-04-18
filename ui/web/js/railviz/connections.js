@@ -165,12 +165,15 @@ RailViz.Connections = (function () {
 
     let highlightColors = new Map();
     connectionIds.forEach(cid => {
-      connectionToSegments.get(cid).forEach(sid =>
-        getOrCreate(highlightColors, sid, () => {
-          const color = segmentToConnections
-                          .get(sid).reduce((acc, c) => connectionIds.includes(c) ? Math.min(acc, c) : acc, cid);
-          return colors[(color - lowestConnId) % colors.length];
-        }));
+      const sids = connectionToSegments.get(cid)
+      if(sids) {
+        sids.forEach(sid =>
+          getOrCreate(highlightColors, sid, () => {
+            const color = segmentToConnections
+                            .get(sid).reduce((acc, c) => connectionIds.includes(c) ? Math.min(acc, c) : acc, cid);
+            return colors[(color - lowestConnId) % colors.length];
+          }));
+      }
     });
 
     highlightColors.forEach((c, sid) => map.setFeatureState({"source": "railviz-connections", "id": sid},
