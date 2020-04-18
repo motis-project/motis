@@ -265,10 +265,10 @@ struct osrm_strategy::impl {
   mcd::hash_map<std::string, std::vector<node_ref>> stations_to_refs_;
 };  // namespace path
 
-osrm_strategy::osrm_strategy(std::string label, strategy_id_t strategy_id,
+osrm_strategy::osrm_strategy(strategy_id_t strategy_id, source_spec spec,
                              std::vector<station> const& stations,
                              std::string const& osrm_path)
-    : routing_strategy(std::move(label), strategy_id),
+    : routing_strategy(strategy_id, spec),
       impl_(std::make_unique<osrm_strategy::impl>(strategy_id, stations,
                                                   osrm_path)) {}
 osrm_strategy::~osrm_strategy() = default;

@@ -47,6 +47,7 @@
 #include "motis/path/constants.h"
 #include "motis/path/path_database.h"
 #include "motis/path/path_index.h"
+#include "motis/path/prepare/source_spec.h"
 
 #include "motis/path/fbs/InternalPathSeqResponse_generated.h"
 
@@ -267,9 +268,11 @@ Offset<PathSeqResponse> write_response(message_creator& mc,
   auto source_infos = std::vector<Offset<PathSourceInfo>>{};
   if (zoom_level == -1 && debug_info) {
     source_infos = utl::to_vec(*resp->infos(), [&mc](auto const& info) {
-      return CreatePathSourceInfo(mc, info->segment_idx(), info->from_idx(),
-                                  info->to_idx(),
-                                  mc.CreateString(info->type()->c_str()));
+      return CreatePathSourceInfo(
+          mc, info->segment_idx(), info->from_idx(), info->to_idx(),
+          mc.CreateString(source_spec{source_spec::category{info->category()},
+                                      source_spec::router{info->router()}}
+                              .str()));
     });
   }
 

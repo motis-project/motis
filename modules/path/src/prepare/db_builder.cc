@@ -135,7 +135,11 @@ struct db_builder::impl {
     std::vector<Offset<InternalPathSourceInfo>> fbs_info;
     for (auto const& info : seq.sequence_infos_) {
       fbs_info.push_back(CreateInternalPathSourceInfo(
-          mc, info.idx_, info.from_, info.to_, mc.CreateString(info.type_)));
+          mc, info.idx_, info.from_, info.to_,
+          static_cast<std::underlying_type_t<source_spec::category>>(
+              info.source_spec_.category_),
+          static_cast<std::underlying_type_t<source_spec::router>>(
+              info.source_spec_.router_)));
     }
 
     mc.Finish(CreateInternalPathSeqResponse(

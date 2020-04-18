@@ -148,7 +148,7 @@ struct plan_executor {
               ? stub_strategy_
               : pp_.part_tasks_.at(edge->part_task_idx_).key_.strategy_;
       infos.emplace_back(station_idx, size_before, path.size(),
-                         s->source_spec().type_str());  // XXX
+                         s->source_spec_);
     }
 
     for (auto& path : paths) {

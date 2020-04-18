@@ -4,7 +4,8 @@ table InternalPathSourceInfo {
   segment_idx: int;
   from_idx: int;
   to_idx: int;
-  type: string;
+  category: ubyte;
+  router: ubyte;
 }
 
 table InternalSegment {
