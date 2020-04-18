@@ -37,3 +37,5 @@ pkg
 /.clang-tidy
 callgrind.out.*
 *.callgrind
+/.clangd
+/compile_commands.json
