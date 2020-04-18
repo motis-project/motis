@@ -18,13 +18,22 @@ jobs:
         mode: [Debug, Release]
 
     env:
-      CXX: cl
-      CC: cl
+      CXX: cl.exe
+      CC: cl.exe
+      BUILDCACHE_COMPRESS: true # uses LZ4 by default
+      BUILDCACHE_ACCURACY: SLOPPY # not suitable for coverage/debugging
+      BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
 
     steps:
       - uses: actions/checkout@v2
       - uses: seanmiddleditch/gha-setup-ninja@master
       - uses: lukka/get-cmake@v3.17.1
+
+      - name: buildcache Cache
+        uses: actions/cache@v1.1.2
+        with:
+          path: ${{ github.workspace }}/.buildcache
+          key: buildcache-windows-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2

@@ -40,17 +40,18 @@ jobs:
           - cxx: clang-9-san
             lint: On
     env:
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_NOHASHDIR: true
+      BUILDCACHE_COMPRESS: true # uses LZ4 by default
+      BUILDCACHE_ACCURACY: SLOPPY # not suitable for coverage/debugging
+      BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
     steps:
       - uses: actions/checkout@v2
 
-      - name: ccache Cache
+      - name: buildcache Cache
         uses: actions/cache@v1.1.2
         with:
-          path: ${{ github.workspace }}/.ccache
-          key: ccache-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          path: ${{ github.workspace }}/.buildcache
+          key: ccache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
