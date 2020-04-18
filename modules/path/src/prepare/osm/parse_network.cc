@@ -74,14 +74,16 @@ std::vector<osm_way> parse_network(std::string const& osm_file,
 }
 
 std::vector<osm_way> parse_rail(std::string const& osm_file) {
-  std::string rail{"rail"};
+  std::vector<std::string> included_railway{"rail", "light_rail", "narrow_gauge"};
   std::string yes{"yes"};
   std::vector<std::string> excluded_usages{"industrial", "military", "test",
                                            "tourism"};
   std::vector<std::string> excluded_services{"yard", "spur"};  // , "siding"
 
   return parse_network(osm_file, [&](auto&& way) {
-    if (rail != way.get_value_by_key("railway", "")) {
+    auto const railway = way.get_value_by_key("railway", "");
+    if (std::none_of(begin(included_railway), end(included_railway),
+                     [&](auto&& r) { return r == railway; })) {
       return false;
     }
 
