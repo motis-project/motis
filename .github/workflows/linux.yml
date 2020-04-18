@@ -51,7 +51,7 @@ jobs:
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: ccache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          key: buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
@@ -61,7 +61,7 @@ jobs:
 
       - name: CMake
         run: |
-          cmake-ccache-${{ matrix.cxx }} \
+          cmake-${{ matrix.cxx }} \
             -G Ninja -S . -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.mode }} \
             -DMOTIS_LINT=${{ matrix.lint }} \
