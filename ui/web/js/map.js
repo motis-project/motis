@@ -205,6 +205,16 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
       antialias: true,
     });
 
+    map_bg.addImage('shield', ... RailViz.Textures.createShield({
+      fill: "hsl(0, 0%, 96%)",
+      stroke: "hsl(0, 0%, 80%)"
+    }));
+
+    map_bg.addImage('hexshield', ... RailViz.Textures.createHexShield({
+      fill: "hsl(0, 0%, 99%)",
+      stroke: "hsl(0, 0%, 75%)"
+    }));
+
     const empty = {
       version: 8,
       name: "Empty",

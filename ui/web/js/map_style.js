@@ -17,10 +17,10 @@ var backgroundMapStyle = function(tilesEndpoint) {
       return [
         "let",
         "base", ["match", ["get", "highway"],
-          "motorway", 3,
-          ["trunk", "motorway_link"], 2.75,
-          ["primary", "trunk_link"], 2.5,
-          ["secondary", "aeroway"], 2.25,
+          "motorway", 2.5,
+          ["trunk", "motorway_link"], 2.3,
+          ["primary", "trunk_link"], 2.2,
+          ["secondary", "aeroway"], 2.1,
           ["primary_link", "secondary_link", "tertiary", "tertiary_link"], 1.75,
           ["residential", "unclassified"], 1.5,
         0.75],
@@ -140,7 +140,7 @@ var backgroundMapStyle = function(tilesEndpoint) {
                 "line-cap": "round",
               },
               "paint": {
-                "line-color": "hsl(0, 0%, 98%)",
+                "line-color": "hsl(0, 0%, 97%)",
                 "line-opacity": ["match", ["get", "highway"],
                   ["footway", "track", "steps", "cycleway", "path"], 0.66,
                   1],
@@ -201,20 +201,28 @@ var backgroundMapStyle = function(tilesEndpoint) {
               "source": "osm",
               "source-layer": "road",
               "minzoom": 6,
-              "filter": ["any", ["==", ["get", "highway"], "motorway"],
-                                ["==", ["get", "highway"], "trunk"],
-                                ["==", ["get", "highway"], "secondary"],
-                                [">", ["zoom"], 11]],
+              "filter": ["all", ["has", "ref"],
+                                ["any", ["==", ["get", "highway"], "motorway"],
+                                        ["==", ["get", "highway"], "trunk"],
+                                        ["==", ["get", "highway"], "primary"],
+                                        ["==", ["get", "highway"], "secondary"],
+                                        [">", ["zoom"], 11]]],
               "layout": {
                 "symbol-placement": "line",
                 "text-field": ["get", "ref"],
                 "text-font": ["Noto Sans Display Regular"],
-                "text-size": 10,
-                "text-rotation-alignment": "viewport"
+                "text-size": ["case", ["==", ["get", "highway"], "motorway"], 11, 10],
+                "text-justify": "center",
+                "text-rotation-alignment": "viewport",
+                "text-pitch-alignment": "viewport",
+                "icon-image": ["case", ["==", ["get", "highway"], "motorway"], "hexshield",
+                                       "shield"],
+                "icon-text-fit": "both",
+                "icon-text-fit-padding": [0, 1, 0, 1],
+                "icon-rotation-alignment": "viewport",
+                "icon-pitch-alignment": "viewport"
               },
               "paint": {
-                "text-halo-width": 10,
-                "text-halo-color": "white",
                 "text-color": "#333333"
               }
           }, {
