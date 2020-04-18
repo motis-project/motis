@@ -34,7 +34,7 @@ jobs:
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-win-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          key: buildcache-wnds-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
