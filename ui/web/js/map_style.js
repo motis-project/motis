@@ -13,6 +13,27 @@ var backgroundMapStyle = function(tilesEndpoint) {
     const building = "hsla(0, 0%, 70%, 35%)";
     const building_outline = "hsla(0, 0%, 70%, 45%)";
     
+    const roadLineWidth = (add) => {
+      return [
+        "let",
+        "base", ["match", ["get", "highway"],
+          "motorway", 3,
+          ["trunk", "motorway_link"], 2.75,
+          ["primary", "trunk_link"], 2.5,
+          ["secondary", "aeroway"], 2.25,
+          ["primary_link", "secondary_link", "tertiary", "tertiary_link"], 1.75,
+          ["residential", "unclassified"], 1.5,
+        0.75],
+        ["interpolate", ["linear"], ["zoom"],
+          5,  ["+", ["*", ["var", "base"], 0.1], add],
+          9,  ["+", ["*", ["var", "base"], 0.4], add],
+          12, ["+", ["*", ["var", "base"], 1 * 1.25], add],
+          16, ["+", ["*", ["var", "base"], 4 * 1.5], add],
+          20, ["+", ["*", ["var", "base"], 8 * 1.5], add]
+        ]
+      ];
+    };
+
     return {
       "version": 8,
       "sources": {
@@ -100,7 +121,7 @@ var backgroundMapStyle = function(tilesEndpoint) {
               "filter": [
                 "!in",
                 "highway",
-                "footway", "track", "steps", "cycleway", "path", "unclassified"
+                "footway", "track", "steps", "cycleway", "path",
               ],
               "layout": {
                 "line-cap": "round",
@@ -108,23 +129,7 @@ var backgroundMapStyle = function(tilesEndpoint) {
               "paint": {
                 "line-color": "hsl(0, 0%, 70%)",
                 "line-opacity": 0.5,
-                "line-width": [
-                  "let",
-                  "base", ["match", ["get", "highway"],
-                    "motorway", 4,
-                    ["trunk", "motorway_link"], 3.5,
-                    ["primary", "secondary", "aeroway", "trunk_link"], 3,
-                    ["primary_link", "secondary_link", "tertiary", "tertiary_link"], 1.75,
-                    "residential", 1.5,
-                  0.75],
-                  ["interpolate", ["linear"], ["zoom"],
-                    5,  ["+", ["*", ["var", "base"], 0.1], 1],
-                    9,  ["+", ["*", ["var", "base"], 0.4], 1],
-                    12, ["+", ["*", ["var", "base"], 1 * 1.25], 1],
-                    16, ["+", ["*", ["var", "base"], 4 * 1.5], 1],
-                    20, ["+", ["*", ["var", "base"], 8 * 1.5], 1]
-                  ]
-                ]
+                "line-width": roadLineWidth(1)
               }
           }, {
               "id": "road",
@@ -137,25 +142,9 @@ var backgroundMapStyle = function(tilesEndpoint) {
               "paint": {
                 "line-color": "hsl(0, 0%, 98%)",
                 "line-opacity": ["match", ["get", "highway"],
-                  ["footway", "track", "steps", "cycleway", "path", "unclassified"], 0.66,
+                  ["footway", "track", "steps", "cycleway", "path"], 0.66,
                   1],
-                "line-width": [
-                  "let",
-                  "base", ["match", ["get", "highway"],
-                    "motorway", 4,
-                    ["trunk", "motorway_link"], 3.5,
-                    ["primary", "secondary", "aeroway", "trunk_link"], 3,
-                    ["primary_link", "secondary_link", "tertiary", "tertiary_link"], 1.75,
-                    "residential", 1.5,
-                  0.75],
-                  ["interpolate", ["linear"], ["zoom"],
-                    5,  ["*", ["var", "base"], 0.1],
-                    9,  ["*", ["var", "base"], 0.4],
-                    12, ["*", ["var", "base"], 1 * 1.25],
-                    16, ["*", ["var", "base"], 4 * 1.5],
-                    20, ["*", ["var", "base"], 8 * 1.5]
-                  ]
-                ]
+                  "line-width": roadLineWidth(0)
               }
           }, {
               "id": "rail_old",
@@ -206,66 +195,66 @@ var backgroundMapStyle = function(tilesEndpoint) {
                   "fill-color": building,
                   "fill-outline-color": building_outline
               }
-          // }, {
-          //     "id": "road-ref-shield",
-          //     "type": "symbol",
-          //     "source": "osm",
-          //     "source-layer": "road",
-          //     "minzoom": 6,
-          //     "filter": ["any", ["==", ["get", "highway"], "motorway"],
-          //                       ["==", ["get", "highway"], "trunk"],
-          //                       ["==", ["get", "highway"], "secondary"],
-          //                       [">", ["zoom"], 11]],
-          //     "layout": {
-          //       "symbol-placement": "line",
-          //       "text-field": ["get", "ref"],
-          //       "text-font": ["Noto Sans Display Regular"],
-          //       "text-size": 10,
-          //       "text-rotation-alignment": "viewport"
-          //     },
-          //     "paint": {
-          //       "text-halo-width": 10,
-          //       "text-halo-color": "white",
-          //       "text-color": "#333333"
-          //     }
-          // }, {
-          //     "id": "road-name-text",
-          //     "type": "symbol",
-          //     "source": "osm",
-          //     "source-layer": "road",
-          //     "minzoom": 15,
-          //     "layout": {
-          //       "symbol-placement": "line",
-          //       "text-field": ["get", "name"],
-          //       "text-font": ["Noto Sans Display Regular"],
-          //       "text-size": 10,
-          //     },
-          //     "paint": {
-          //       "text-halo-width": 11,
-          //       "text-halo-color": "white",
-          //       "text-color": "#333333"
-          //     }
-          // }, {
-          //     "id": "towns",
-          //     "type": "symbol",
-          //     "source": "osm",
-          //     "source-layer": "cities",
-          //     "filter": ["all", 
-          //         ["!=", ["get", "place"], "city"],
-          //         ["any", [">=", ["zoom"], 11], 
-          //                 [">", ["coalesce", ["get", "population"], 0], 10000]]
-          //       ],
-          //     "layout": {
-          //       "symbol-sort-key": ["-", ["coalesce", ["get", "population"], 0]],
-          //       "text-field": ["get", "name"],
-          //       "text-font": ["Noto Sans Display Regular"],
-          //       "text-size": 12
-          //     },
-          //     "paint": {
-          //       "text-halo-width": 1,
-          //       "text-halo-color": "white",
-          //       "text-color": "hsl(0, 0%, 30%)"
-          //     }
+          }, {
+              "id": "road-ref-shield",
+              "type": "symbol",
+              "source": "osm",
+              "source-layer": "road",
+              "minzoom": 6,
+              "filter": ["any", ["==", ["get", "highway"], "motorway"],
+                                ["==", ["get", "highway"], "trunk"],
+                                ["==", ["get", "highway"], "secondary"],
+                                [">", ["zoom"], 11]],
+              "layout": {
+                "symbol-placement": "line",
+                "text-field": ["get", "ref"],
+                "text-font": ["Noto Sans Display Regular"],
+                "text-size": 10,
+                "text-rotation-alignment": "viewport"
+              },
+              "paint": {
+                "text-halo-width": 10,
+                "text-halo-color": "white",
+                "text-color": "#333333"
+              }
+          }, {
+              "id": "road-name-text",
+              "type": "symbol",
+              "source": "osm",
+              "source-layer": "road",
+              "minzoom": 14,
+              "layout": {
+                "symbol-placement": "line",
+                "text-field": ["get", "name"],
+                "text-font": ["Noto Sans Display Regular"],
+                "text-size": 10,
+              },
+              "paint": {
+                "text-halo-width": 11,
+                "text-halo-color": "white",
+                "text-color": "#333333"
+              }
+          }, {
+              "id": "towns",
+              "type": "symbol",
+              "source": "osm",
+              "source-layer": "cities",
+              "filter": ["all", 
+                  ["!=", ["get", "place"], "city"],
+                  ["any", [">=", ["zoom"], 11], 
+                          [">", ["coalesce", ["get", "population"], 0], 10000]]
+                ],
+              "layout": {
+                "symbol-sort-key": ["-", ["coalesce", ["get", "population"], 0]],
+                "text-field": ["get", "name"],
+                "text-font": ["Noto Sans Display Regular"],
+                "text-size": 12
+              },
+              "paint": {
+                "text-halo-width": 1,
+                "text-halo-color": "white",
+                "text-color": "hsl(0, 0%, 30%)"
+              }
           }, {
               "id": "cities",
               "type": "symbol",
@@ -285,30 +274,6 @@ var backgroundMapStyle = function(tilesEndpoint) {
                 "text-halo-color": "white",
                 "text-color": "hsl(0, 0%, 20%)"
               }
-          // }, {
-          //    "id": "tiles_debug_info_bound",
-          //    "type": "line",
-          //    "source": "osm",
-          //    "source-layer": "tiles_debug_info",
-          //    "paint": {
-          //      "line-color": "magenta",
-          //      "line-width": 1
-          //    }
-          // }, {
-          //     "id": "tiles_debug_info_name",
-          //     "type": "symbol",
-          //     "source": "osm",
-          //     "source-layer": "tiles_debug_info",
-          //     "layout": {
-          //       "text-field": ["get", "tile_id"],
-          //       "text-font": ["Noto Sans Display Bold"],
-          //       "text-size": 16,
-          //     },
-          //     "paint": {
-          //       "text-halo-width": 2,
-          //       "text-halo-color": "white",
-          //       "text-color": "hsl(0, 0%, 20%)"
-          //     }
           }
       ]
     };

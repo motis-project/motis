@@ -94,6 +94,7 @@ class RailVizCustomLayer {
 
   onAdd(map, gl) {
     this.map = map;
+    this.zoomRounded = Math.floor(this.map.getZoom() * 4) / 4;
     RailViz.Render.setup(map, gl);
 
     const mouseEvents = ['mousedown', 'mouseup', 'mousemove', 'mouseout'];
@@ -133,6 +134,13 @@ class RailVizCustomLayer {
     var rect = this.map.getCanvas().getBoundingClientRect();
     var center = this.map.getCenter();
     var zoom = Math.round(this.map.getZoom());
+
+    var zoomRounded = Math.floor(this.map.getZoom() * 4) / 4;
+    if(zoomRounded != this.zoomRounded) {
+      console.log(zoomRounded);
+      this.zoomRounded = zoomRounded;
+    }
+
     var geoBounds = this.map.getBounds();
     // var railVizBounds = L.latLngBounds(
     //     this._map.unproject(pixelBounds.subtract(size)),
@@ -192,9 +200,9 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
     var map_bg = new mapboxgl.Map({
       container: `${id}-background`,
       style: backgroundMapStyle(tilesEndpoint),
-      zoom: zoom,
+      zoom: zoom, minZoom: 2, maxZoom: 20,
       center: [lng, lat],
-      antialias: true
+      antialias: true,
     });
 
     const empty = {
@@ -242,7 +250,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
 
     var map_fg = new mapboxgl.Map({
       container: `${id}-foreground`,
-      zoom: zoom,
+      zoom: zoom, minZoom: 2, maxZoom: 20,
       center: [lng, lat],
       style: empty,
       antialias: true
