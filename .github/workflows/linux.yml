@@ -70,9 +70,9 @@ jobs:
 
       - name: Build
         run: |
-          ccache -z
+          ./build/bin/buildcache -z
           cmake --build build --target motis motis-test motis-itest path-prepare parking-prepare ppr-preprocess osrm-extract osrm-contract at-example motis-eval motis-intermodal-eval
-          ccache -s
+          ./build/bin/buildcache -s
 
       - name: Run Test Mode
         run: |
