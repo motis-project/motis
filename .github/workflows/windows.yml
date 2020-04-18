@@ -20,7 +20,7 @@ jobs:
     env:
       CXX: cl.exe
       CC: cl.exe
-      BUILDCACHE_COMPRESS: true # uses LZ4 by default
+      BUILDCACHE_COMPRESS: true
       BUILDCACHE_ACCURACY: SLOPPY # not suitable for coverage/debugging
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
 

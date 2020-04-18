@@ -40,7 +40,7 @@ jobs:
           - cxx: clang-9-san
             lint: On
     env:
-      BUILDCACHE_COMPRESS: true # uses LZ4 by default
+      BUILDCACHE_COMPRESS: true
       BUILDCACHE_ACCURACY: SLOPPY # not suitable for coverage/debugging
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
