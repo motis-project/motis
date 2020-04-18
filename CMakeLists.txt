@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(motis C CXX ASM)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+include(cmake/buildcache.cmake)
+
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 option(MOTIS_AVX "enable AVX functions" ON)

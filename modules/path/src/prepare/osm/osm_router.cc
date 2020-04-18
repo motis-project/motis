@@ -121,7 +121,7 @@ struct osm_graph_dijkstra {
     }
   }
 
-  std::vector<osm_edge const*> get_edges(size_t const goal) {
+  std::vector<osm_edge const*> get_edges(size_t const goal) const {
     std::vector<osm_edge const*> result;
     auto curr_edge = edge(goal);
     while (curr_edge != nullptr) {
