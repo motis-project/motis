@@ -21,11 +21,10 @@ namespace ml = motis::logging;
 namespace motis::path {
 
 struct osm_strategy : public routing_strategy {
-  osm_strategy(std::string label, strategy_id_t const id,
+  osm_strategy(strategy_id_t strategy_id, source_spec spec,
                station_index const& station_idx,
-               std::vector<std::vector<osm_way>> const& components,
-               source_spec::type type)
-      : routing_strategy(std::move(label), id), type_(type) {
+               std::vector<std::vector<osm_way>> const& components)
+      : routing_strategy(strategy_id, spec) {
     osm_graph_builder{graph_, station_idx}.build_graph(components);
     print_osm_graph_stats(graph_);
 
@@ -39,7 +38,7 @@ struct osm_strategy : public routing_strategy {
         },
         [&](auto lb, auto ub) {
           auto refs = utl::to_vec(lb, ub, [&](auto const& link) {
-            return node_ref{this->strategy_id(), link.node_idx_,
+            return node_ref{this->strategy_id_, link.node_idx_,
                             graph_.nodes_[link.node_idx_]->pos_,
                             link.distance_};
           });
@@ -97,7 +96,8 @@ struct osm_strategy : public routing_strategy {
     for (auto i = 0UL; i < from.size(); ++i) {
       auto dists = shortest_path_distances(contracted_, from[i].id_, to_ids);
 
-      auto const factor = type_ == source_spec::type::RELATION ? 0.5 : 1;
+      auto const factor =
+          source_spec_.router_ == source_spec::router::OSM_REL ? 0.5 : 1;
       for (auto j = 0UL; j < to.size(); ++j) {
         mat(i, j) = dists.at(j) * factor;
       }
@@ -145,9 +145,9 @@ struct osm_strategy : public routing_strategy {
   }
 
   osm_path get_path(node_ref const& from, node_ref const& to) const override {
-    utl::verify(from.strategy_id_ == strategy_id(),
+    utl::verify(from.strategy_id_ == strategy_id_,
                 "osm bad 'from' strategy_id");
-    utl::verify(to.strategy_id_ == strategy_id(), "osm bad 'to' strategy_id");
+    utl::verify(to.strategy_id_ == strategy_id_, "osm bad 'to' strategy_id");
 
     if (from.id_ == to.id_) {
       auto const& node = graph_.nodes_.at(from.id_);
@@ -172,7 +172,6 @@ struct osm_strategy : public routing_strategy {
     return result;
   }
 
-  source_spec::type type_;
   osm_graph graph_, contracted_;
 
   std::vector<node_ref> unknown_station_refs_;

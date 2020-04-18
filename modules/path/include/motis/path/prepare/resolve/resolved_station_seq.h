@@ -4,18 +4,16 @@
 #include <vector>
 
 #include "motis/path/prepare/osm_path.h"
+#include "motis/path/prepare/source_spec.h"
 
 namespace motis::path {
 
 struct sequence_info {
-  sequence_info(size_t const idx, size_t const from, size_t const to,
-                std::string type)
-      : idx_(idx), from_(from), to_(to), type_(std::move(type)) {}
+  sequence_info(size_t idx, size_t from, size_t to, source_spec spec)
+      : idx_(idx), from_(from), to_(to), source_spec_(spec) {}
 
-  size_t idx_;
-  size_t from_;
-  size_t to_;
-  std::string type_;
+  size_t idx_, from_, to_;
+  source_spec source_spec_;
 };
 
 struct resolved_station_seq {

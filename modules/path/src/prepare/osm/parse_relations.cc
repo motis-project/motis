@@ -63,7 +63,7 @@ std::vector<std::vector<osm_way>> parse_relations(
       }
 
       auto cat =
-          is_rail ? source_spec::category::RAILWAY
+          is_rail ? source_spec::category::RAIL
                   : is_bus ? source_spec::category::BUS
                            : is_sub ? source_spec::category::SUBWAY
                                     : is_tram ? source_spec::category::TRAM

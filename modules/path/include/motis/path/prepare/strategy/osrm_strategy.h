@@ -8,7 +8,7 @@
 namespace motis::path {
 
 struct osrm_strategy : public routing_strategy {
-  osrm_strategy(std::string label, strategy_id_t,  //
+  osrm_strategy(strategy_id_t, source_spec,  //
                 std::vector<station> const&, std::string const& osrm_path);
   ~osrm_strategy() override;
 

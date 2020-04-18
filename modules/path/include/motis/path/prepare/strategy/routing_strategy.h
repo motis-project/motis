@@ -99,8 +99,8 @@ struct routing_result_matrix {
 };
 
 struct routing_strategy {
-  explicit routing_strategy(std::string label, strategy_id_t const strategy_id)
-      : label_{std::move(label)}, strategy_id_{strategy_id} {}  // source spec?!
+  routing_strategy(strategy_id_t strategy_id, source_spec spec)
+      : strategy_id_{strategy_id}, source_spec_{spec} {}
   virtual ~routing_strategy() = default;
 
   routing_strategy(routing_strategy const&) noexcept = delete;
@@ -117,15 +117,8 @@ struct routing_strategy {
 
   virtual osm_path get_path(node_ref const& from, node_ref const& to) const = 0;
 
-  std::string const& label() const { return label_; }
-  strategy_id_t strategy_id() const { return strategy_id_; }
-  struct source_spec source_spec() const {  // NOLINT
-    return {};  // TODO (sebastian) ???
-  }
-
-private:
-  std::string label_;
   strategy_id_t strategy_id_;
+  source_spec source_spec_;
 };
 
 }  // namespace motis::path

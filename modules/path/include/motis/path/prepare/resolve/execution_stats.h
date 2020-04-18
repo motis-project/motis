@@ -72,7 +72,7 @@ struct execution_stats {
 
     format_headline(out);
     for (auto& [key, v] : main_part_timings_) {
-      fmt::format_to(out, "[PART] {:>9} {} ", key.strategy_->label(),
+      fmt::format_to(out, "[PART] {:>9} {} ", key.strategy_->source_spec_.str(),
                      key.between_stations_ ? 'B' : 'W');
       format_timing_summary(out, v);
     }
@@ -88,7 +88,7 @@ struct execution_stats {
     }
     format_headline(out);
     for (auto& [key, v] : main_path_timings_) {
-      fmt::format_to(out, "[PATH] {:>9} {} ", key.strategy_->label(),
+      fmt::format_to(out, "[PATH] {:>9} {} ", key.strategy_->source_spec_.str(),
                      key.between_stations_ ? 'B' : 'W');
       format_timing_summary(out, v);
     }
