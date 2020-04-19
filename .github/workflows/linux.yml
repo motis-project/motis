@@ -40,17 +40,19 @@ jobs:
           - cxx: clang-9-san
             lint: On
     env:
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_NOHASHDIR: true
+      BUILDCACHE_COMPRESS: true
+      BUILDCACHE_ACCURACY: SLOPPY
+      BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
+      BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
     steps:
       - uses: actions/checkout@v2
 
-      - name: ccache Cache
+      - name: buildcache Cache
         uses: actions/cache@v1.1.2
         with:
-          path: ${{ github.workspace }}/.ccache
-          key: ccache-${{ matrix.cxx }}-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          path: ${{ github.workspace }}/.buildcache
+          key: buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
@@ -60,7 +62,7 @@ jobs:
 
       - name: CMake
         run: |
-          cmake-ccache-${{ matrix.cxx }} \
+          cmake-${{ matrix.cxx }} \
             -G Ninja -S . -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.mode }} \
             -DMOTIS_LINT=${{ matrix.lint }} \
@@ -69,9 +71,9 @@ jobs:
 
       - name: Build
         run: |
-          ccache -z
+          ./build/bin/buildcache -z
           cmake --build build --target motis motis-test motis-itest path-prepare parking-prepare ppr-preprocess osrm-extract osrm-contract at-example motis-eval motis-intermodal-eval
-          ccache -s
+          ./build/bin/buildcache -s
 
       - name: Run Test Mode
         run: |

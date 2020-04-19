@@ -18,13 +18,23 @@ jobs:
         mode: [Debug, Release]
 
     env:
-      CXX: cl
-      CC: cl
+      CXX: cl.exe
+      CC: cl.exe
+      BUILDCACHE_COMPRESS: true
+      BUILDCACHE_ACCURACY: SLOPPY # not suitable for coverage/debugging
+      BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
+      BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
 
     steps:
       - uses: actions/checkout@v2
       - uses: seanmiddleditch/gha-setup-ninja@master
       - uses: lukka/get-cmake@v3.17.1
+
+      - name: buildcache Cache
+        uses: actions/cache@v1.1.2
+        with:
+          path: ${{ github.workspace }}/.buildcache
+          key: buildcache-wnds-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
@@ -39,11 +49,14 @@ jobs:
           Import-Module $devShell
           Enter-VsDevShell -VsInstallPath $installPath -SkipAutomaticLocation -DevCmdArguments "-arch=amd64"
           cmake -GNinja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }}
+          .\build\bin\buildcache.exe -z
           cmake --build build --target motis motis-test motis-itest path-prepare ppr-preprocess osrm-extract osrm-contract parking-prepare at-example motis-eval motis-intermodal-eval
+          .\build\bin\buildcache.exe -s
 
       - name: Run Test Mode
         run: >
-          .\build\motis --mode test
+          .\build\motis
+          --mode test
           --dataset.path base/loader/test_resources/hrd_schedules/single-ice
           --dataset.begin 20151111
           --dataset.write_serialized false

@@ -20,9 +20,9 @@ if (pkg-url)
   endif()
 endif()
 
-message(STATUS "${pkg-bin} -l -h")
+message(STATUS "${pkg-bin} -l -h -f")
 execute_process(
-  COMMAND ${pkg-bin} -l -h
+  COMMAND ${pkg-bin} -l -h -f
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 
