@@ -8,9 +8,9 @@ MOTIS stands for **M**ulti **O**bjective **T**ravel **I**nformation **S**ystem.
 The core features are:
 
   - **Intermodal Routing**: computing optimal journeys mixing public transit, sharing mobility, walking, etc. in sensible ways. [Read more.](https://motis-project.de/docs/features/routing.html)
-  - **Real Time Support**: considering delays, train cancellations, additional services, reroutings, track changes, etc. [Read more.](https://motis-project.de/docs/features/realtime.html#real-time-support).
-  - **Visualization**: view vehicle movements in real-time. [Try it out!](https://demo.motis-project.de/public/).
-  - **JSON API**: the backend provides a JSON API via HTTP. [Documentation](https://motis-project.de/docs/api/).
+  - **Real Time Support**: considering delays, train cancellations, additional services, reroutings, track changes, etc. [Read more.](https://motis-project.de/docs/features/realtime.html#real-time-support)
+  - **Visualization**: view vehicle movements in real-time. [Try it out!](https://demo.motis-project.de/public/)
+  - **JSON API**: the backend provides a JSON API via HTTP. [Documentation](https://motis-project.de/docs/api/)
   
 More detailed information can be found at [motis-project.de](https://motis-project.de).
 
