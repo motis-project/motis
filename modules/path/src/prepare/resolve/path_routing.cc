@@ -119,7 +119,8 @@ path_routing make_path_routing(station_index const& station_idx,
   path_routing r;
 
   r.strategies_->stub_ = std::make_unique<stub_strategy>(
-      id++, source_spec{source_spec::category::MULTI, source_spec::router::STUB},
+      id++,
+      source_spec{source_spec::category::MULTI, source_spec::router::STUB},
       station_idx.stations_);
 
   r.strategies_->osrm_ = std::make_unique<osrm_strategy>(
