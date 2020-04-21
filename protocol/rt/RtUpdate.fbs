@@ -6,44 +6,45 @@ include "base/Connection.fbs";
 namespace motis.rt;
 
 table RtEventInfo {
-  trip:motis.TripId;
-  station_id:string;
-  schedule_time:long;
-  event_type:motis.EventType;
+  station_id: string;
+  schedule_time: long;
+  event_type: motis.EventType;
+}
+
+table UpdatedRtEventInfo {
+  base: RtEventInfo;
+  updated_time: long;
+  reason: TimestampReason;
 }
 
 table RtDelayUpdate {
-  event:RtEventInfo;
-  updated_time:long;
-  reason:TimestampReason;
-}
-
-table RtCancelUpdate {
-  event:RtEventInfo;
-  canceled:bool;
-}
-
-table RtTrackUpdate {
-  event:RtEventInfo;
-  updated_track:string;
-}
-
-table RtFreeTextUpdate {
-  event:RtEventInfo;
-  free_text:FreeText;
+  trip: motis.TripId;
+  events: [UpdatedRtEventInfo];
 }
 
 table RtRerouteUpdate {
-  event:RtEventInfo; 
-  deleted:bool;
+  trip: motis.TripId;
+  old_route: [RtEventInfo];
+  new_route: [RtEventInfo];
+}
+
+table RtTrackUpdate {
+  trip: motis.TripId;
+  event: RtEventInfo;
+  updated_track: string;
+}
+
+table RtFreeTextUpdate {
+  trip: motis.TripId;
+  event: RtEventInfo;
+  free_text: FreeText;
 }
 
 union Content {
   RtDelayUpdate,
-  RtCancelUpdate,
+  RtRerouteUpdate,
   RtTrackUpdate,
-  RtFreeTextUpdate,
-  RtRerouteUpdate
+  RtFreeTextUpdate
 }
 
 table RtUpdate{
