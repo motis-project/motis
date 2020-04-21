@@ -102,6 +102,9 @@ RailViz.Connections = (function () {
 
     if(newWalkSegments) {
       walkSegments.forEach(ws => {
+          if(ws.error) {
+           return;
+          }
           const converted = convertCoordinates(ws.polyline.coordinates); // wat
           if(converted.length > 0) {
             data.features.push({

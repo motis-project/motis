@@ -73,8 +73,6 @@ RailViz.ConnectionManager = (function () {
       return;
     }
     console.log('Received connection trip data after', duration, 'ms');
-    // RailViz.Preprocessing.preprocess(data);
-
 
     for (let train of data.trains) {
       // preprocess train
@@ -144,6 +142,7 @@ RailViz.ConnectionManager = (function () {
             walk: walk,
             connectionIds: [],
             polyline: null,
+            error: false,
             color: connection.id - lowestConnId
           };
           walkSegments.set(walkKey, w);
@@ -193,7 +192,11 @@ RailViz.ConnectionManager = (function () {
         RailViz.Main.getApiEndPoint() + '?connectionWalk;' + w.routerType, request,
         (response, callId, duration) =>
           walkDataReceived(w, response, callId, duration),
-        RailViz.Main.handleApiError);
+        (response) => {
+          w.error = true;
+          showConnections();
+          RailViz.Main.handleApiError(response)
+        });
     }
   }
 
@@ -288,7 +291,7 @@ RailViz.ConnectionManager = (function () {
       return false;
     }
     for (let w of walkSegments.values()) {
-      if (!w.polyline) {
+      if (!w.polyline && !w.error) {
         return false;
       }
     }
