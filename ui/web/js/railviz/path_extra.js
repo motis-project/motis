@@ -4,7 +4,6 @@ RailViz.Path = RailViz.Path || {};
 RailViz.Path.Extra = (function () {
   let map = null;
   let data = null;
-  let enabled = true;
 
   function init(_map, beforeId) {
     map = _map;
@@ -35,8 +34,6 @@ RailViz.Path.Extra = (function () {
         "line-width": 2.5
       }
     }, beforeId);
-
-    setEnabled(enabled);
   }
 
   function setData(newData) {
