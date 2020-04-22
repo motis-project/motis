@@ -14,6 +14,7 @@ RailViz.Preprocessing = (function () {
   }
 
   function preprocessSegment(segment) {
+    segment.rawCoordinates = segment.coordinates.coordinates;
     convertPolyline(segment.coordinates);
     const coords = segment.coordinates.coordinates;
     const n_subsegments = (coords.length / 2) - 1;

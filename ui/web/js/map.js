@@ -272,6 +272,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
     map_fg.on('load', () => {
       map_fg.addLayer(new RailVizCustomLayer());
 
+      RailViz.Path.Extra.init(map_fg, "station");
       RailViz.Connections.init(map_fg, "station");
     });
 
