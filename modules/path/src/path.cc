@@ -270,9 +270,12 @@ Offset<PathSeqResponse> write_response(message_creator& mc,
     source_infos = utl::to_vec(*resp->infos(), [&mc](auto const& info) {
       return CreatePathSourceInfo(
           mc, info->segment_idx(), info->from_idx(), info->to_idx(),
-          mc.CreateString(source_spec{source_spec::category{info->category()},
-                                      source_spec::router{info->router()}}
-                              .str()));
+          mc.CreateString(
+              source_spec{source_spec::category{info->category()},
+                          source_spec::router{info->router()}}
+                  .str()
+                  .append("/")
+                  .append(std::to_string(info->between_stations()))));
     });
   }
 

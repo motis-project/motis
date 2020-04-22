@@ -9,10 +9,16 @@
 namespace motis::path {
 
 struct sequence_info {
-  sequence_info(size_t idx, size_t from, size_t to, source_spec spec)
-      : idx_(idx), from_(from), to_(to), source_spec_(spec) {}
+  sequence_info(size_t idx, size_t from, size_t to, bool between_stations,
+                source_spec spec)
+      : idx_{idx},
+        from_{from},
+        to_{to},
+        between_stations_{between_stations},
+        source_spec_{spec} {}
 
   size_t idx_, from_, to_;
+  bool between_stations_;
   source_spec source_spec_;
 };
 

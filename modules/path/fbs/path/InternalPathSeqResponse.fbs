@@ -4,6 +4,7 @@ table InternalPathSourceInfo {
   segment_idx: int;
   from_idx: int;
   to_idx: int;
+  between_stations: bool;
   category: ubyte;
   router: ubyte;
 }

@@ -236,11 +236,12 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
           "source-layer": "path",
           "layout": {
             "line-join": "round",
-            "line-cap": "round"
+            "line-cap": "round",
+            "line-sort-key": ["case", ["get", "stub"], 0, 1]
           },
           "paint": {
-            "line-color": "hsl(0, 0, 30%)",
-            "line-width": 4
+            "line-color": ["case", ["get", "stub"], "#777777", "#666666"],
+            "line-width": ["case", ["get", "stub"], 2.5, 4]
           }
         }, {
           "id": "station",
@@ -249,10 +250,9 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
           "source-layer": "station",
           "paint": {
             "circle-color": "white",
-            "circle-radius": 2.5,
-            "circle-stroke-color": "black",
+            "circle-radius": 2.25,
+            "circle-stroke-color": "#333333",
             "circle-stroke-width": 2
-
           }
         }
       ]

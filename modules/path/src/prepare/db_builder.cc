@@ -135,7 +135,7 @@ struct db_builder::impl {
     std::vector<Offset<InternalPathSourceInfo>> fbs_info;
     for (auto const& info : seq.sequence_infos_) {
       fbs_info.push_back(CreateInternalPathSourceInfo(
-          mc, info.idx_, info.from_, info.to_,
+          mc, info.idx_, info.from_, info.to_, info.between_stations_,
           static_cast<std::underlying_type_t<source_spec::category>>(
               info.source_spec_.category_),
           static_cast<std::underlying_type_t<source_spec::router>>(
@@ -178,7 +178,7 @@ struct db_builder::impl {
 
   void add_tile_feature(geo::polyline const& line,
                         std::vector<seq_seg> const& seq_segs,
-                        std::vector<uint32_t> const& classes) {
+                        std::vector<uint32_t> const& classes, bool is_stub) {
     if (std::none_of(begin(classes), end(classes),
                      [](auto cls) { return cls < 9; })) {
       return;
@@ -190,6 +190,7 @@ struct db_builder::impl {
 
     f.meta_.emplace_back(
         "classes", tiles::encode_string(std::to_string(cls_to_bits(classes))));
+    f.meta_.emplace_back("stub", tiles::encode_bool(is_stub));
 
     tiles::fixed_polyline polyline;
     polyline.emplace_back();
@@ -307,8 +308,9 @@ void db_builder::add_seq(
 
 void db_builder::add_tile_feature(geo::polyline const& polyline,
                                   std::vector<seq_seg> const& seq_segs,
-                                  std::vector<uint32_t> const& classes) const {
-  impl_->add_tile_feature(polyline, seq_segs, classes);
+                                  std::vector<uint32_t> const& classes,
+                                  bool is_stub) const {
+  impl_->add_tile_feature(polyline, seq_segs, classes, is_stub);
 }
 
 void db_builder::finish() const { impl_->finish(); }
