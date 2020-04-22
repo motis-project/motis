@@ -24,6 +24,7 @@ table Segment {
   from_station_id: string;
   to_station_id: string;
   coordinates: Polyline;
+  extra: bool;
 }
 
 table Route {

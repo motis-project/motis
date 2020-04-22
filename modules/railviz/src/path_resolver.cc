@@ -35,7 +35,8 @@ std::vector<std::vector<double>> path_resolver::get_trip_path(trip const* trp) {
   });
 }
 
-std::vector<double> path_resolver::get_segment_path(edge const* e) {
+std::pair<bool, std::vector<double>> path_resolver::get_segment_path(
+    edge const* e) {
   utl::verify(!e->empty(), "non-empty route edge needed");
 
   return utl::get_or_create(edge_cache_, e, [&]() {
@@ -56,12 +57,13 @@ std::vector<double> path_resolver::get_segment_path(edge const* e) {
           get_trip_path(trp).at(std::distance(begin(*trp->edges_), it));
       utl::verify(segment.size() >= 4, "no empty segments allowed");
 
-      return segment;
+      return std::make_pair(false, std::move(segment));
     } catch (std::exception const& ex) {
       auto const& from = *sched_.stations_[e->from_->get_station()->id_];
       auto const& to = *sched_.stations_[e->to_->get_station()->id_];
-      return std::vector<double>(
-          {from.width_, from.length_, to.width_, to.length_});
+      return std::make_pair(
+          true, std::vector<double>(
+                    {from.width_, from.length_, to.width_, to.length_}));
     }
   });
 }

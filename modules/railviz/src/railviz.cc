@@ -290,9 +290,10 @@ std::vector<Offset<Train>> events_to_trains(
     return fbb.CreateVector(utl::to_vec(edges, [&](trip::route_edge const& e) {
       auto const& from = *sched.stations_[e->from_->get_station()->id_];
       auto const& to = *sched.stations_[e->to_->get_station()->id_];
+      auto const& [extra, coordinates] = pr.get_segment_path(e);
       return CreateSegment(
           fbb, fbb.CreateString(from.eva_nr_), fbb.CreateString(to.eva_nr_),
-          CreatePolyline(fbb, fbb.CreateVector(pr.get_segment_path(e))));
+          CreatePolyline(fbb, fbb.CreateVector(coordinates)), extra);
     }));
   };
 

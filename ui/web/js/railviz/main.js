@@ -225,6 +225,7 @@ RailViz.Main = (function () {
 
   function showFullData() {
     showingFilteredData = false;
+    RailViz.Path.Extra.setData(fullData);
     RailViz.Render.setData(fullData);
     RailViz.Render.setMinZoom(0);
     RailViz.Render.setConnectionsEnabled(true);
@@ -234,6 +235,7 @@ RailViz.Main = (function () {
 
   function showFilteredData() {
     showingFilteredData = true;
+    RailViz.Path.Extra.setData(filteredData);
     RailViz.Render.setData(filteredData);
     RailViz.Render.setMinZoom(FILTERED_MIN_ZOOM);
     RailViz.Render.setConnectionFilter(connectionFilter);
