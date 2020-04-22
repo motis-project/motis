@@ -8,75 +8,80 @@ RailViz.Path.Extra = (function () {
   function init(_map, beforeId) {
     map = _map;
 
-    map.addSource('railviz-paths-extra', {
-      "type": "geojson",
-      "promoteId": "id",
-      "data": {
+    map.addSource("railviz-path-extra", {
+      type: "geojson",
+      promoteId: "id",
+      data: {
         type: "FeatureCollection",
-        features: []
-      }
+        features: [],
+      },
     });
 
-    if(data !== null) {
-      map.getSource("railviz-paths-extra").setData(data);
+    if (data !== null) {
+      map.getSource("railviz-path-extra").setData(data);
     }
 
-    map.addLayer({
-      "id": "railviz-paths-extra-line",
-      "type": "line",
-      "source": "railviz-paths-extra",
-      "layout": {
-        "line-join": "round",
-        "line-cap": "round"
+    map.addLayer(
+      {
+        id: "railviz-path-extra-line",
+        type: "line",
+        source: "railviz-path-extra",
+        layout: {
+          "line-join": "round",
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": "#888888",
+          "line-width": 2.5,
+        },
       },
-      "paint": {
-        "line-color": "#888888",
-        "line-width": 2.5
-      }
-    }, beforeId);
+      beforeId
+    );
   }
 
   function setData(newData) {
-    if(!newData) {
+    if (!newData) {
       return;
     }
 
     data = {
       type: "FeatureCollection",
-      features: []
+      features: [],
     };
 
-    newData.routes.forEach(route => {
-      route.segments.forEach(segment => {
-        if(segment.extra) {
+    newData.routes.forEach((route) => {
+      route.segments.forEach((segment) => {
+        if (segment.extra) {
           const converted = convertCoordinates(segment.rawCoordinates);
-          if(converted.length > 0) {
+          if (converted.length > 0) {
             data.features.push({
               type: "Feature",
               properties: {},
               geometry: {
                 type: "LineString",
-                coordinates: converted
-              }
+                coordinates: converted,
+              },
             });
           }
         }
       });
     });
 
-    if(map !== null) {
-      map.getSource("railviz-paths-extra").setData(data);
+    if (map !== null) {
+      map.getSource("railviz-path-extra").setData(data);
     }
   }
 
   function convertCoordinates(src) {
     let converted = [];
     for (let i = 0; i < src.length - 1; i += 2) {
-      const ll = [src[i+1], src[i]];
-      if (converted.length == 0 ||
-        ll[0] != converted[converted.length-1][0] ||
-        ll[1] != converted[converted.length-1][1]) {
-          converted.push(ll);
+      const ll = [src[i + 1], src[i]];
+      if (
+        converted.length == 0 ||
+        ll[0] != converted[converted.length - 1][0] ||
+        ll[1] != converted[converted.length - 1][1]
+      ) {
+        converted.push(ll);
       }
     }
     return converted;
@@ -84,6 +89,6 @@ RailViz.Path.Extra = (function () {
 
   return {
     init: init,
-    setData: setData
-  }
+    setData: setData,
+  };
 })();
