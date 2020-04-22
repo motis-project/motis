@@ -226,6 +226,7 @@ RailViz.Main = (function () {
   function showFullData() {
     showingFilteredData = false;
     RailViz.Path.Extra.setData(fullData);
+    RailViz.Path.Trips.setEnabled(false);
     RailViz.Render.setData(fullData);
     RailViz.Render.setMinZoom(0);
     RailViz.Render.setConnectionsEnabled(true);
@@ -235,11 +236,11 @@ RailViz.Main = (function () {
 
   function showFilteredData() {
     showingFilteredData = true;
-    RailViz.Path.Extra.setData(filteredData);
+    RailViz.Path.Trips.setData(filteredData, filteredTripIds);
+    RailViz.Path.Trips.setEnabled(true);
     RailViz.Render.setData(filteredData);
     RailViz.Render.setMinZoom(FILTERED_MIN_ZOOM);
     RailViz.Render.setConnectionFilter(connectionFilter);
-    RailViz.Render.colorRouteSegments();
     RailViz.Render.setConnectionsEnabled(false);
     RailViz.Render.setTrainsEnabled(true);
     RailViz.Render.setRoutesEnabled(true);

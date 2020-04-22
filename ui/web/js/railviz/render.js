@@ -17,7 +17,6 @@ RailViz.Render = (function () {
   var targetFrameTime = null;
   var forceDraw = true;
 
-  var routesEnabled = false;
   var trainsEnabled = true;
 
   function init(mouseEventHandler) {
@@ -36,7 +35,6 @@ RailViz.Render = (function () {
       footpaths: []
     };
 
-    RailViz.Routes.init(data.routes, data.routeVertexCount, data.footpaths);
     RailViz.Trains.init(data.trains, data.routes);
     forceDraw = true;
   }
@@ -49,15 +47,6 @@ RailViz.Render = (function () {
     RailViz.Connections.highlightConnections(ids);
   }
 
-  function colorRouteSegments() {
-    const categoryColors = RailViz.Trains.categoryColors;
-    data.trains.forEach(
-      train => RailViz.Routes.colorSegment(
-        train.route_index, train.segment_index,
-        categoryColors[train.clasz]));
-    forceDraw = true;
-  }
-
   function setConnectionFilter(filter) {
     if (!filter) {
       return;
@@ -65,7 +54,6 @@ RailViz.Render = (function () {
     if (filter.walks && filter.walks.length > 0) {
       data.footpaths = filter.walks;
       data.footpaths.forEach(adjustFootpathCoords);
-      RailViz.Routes.init(data.routes, data.routeVertexCount, data.footpaths);
       let additionalStations = false;
       data.footpaths.forEach(footpath => {
         const addedFrom = addAdditionalStation(footpath.departureStation);
@@ -96,8 +84,7 @@ RailViz.Render = (function () {
   }
 
   function setRoutesEnabled(b) {
-    forceDraw = b != routesEnabled;
-    routesEnabled = b;
+    console.log("TOGGLE ROUTES ENABLED!!!")
   }
 
   function setConnectionsEnabled(b) {
@@ -155,22 +142,7 @@ RailViz.Render = (function () {
     }
     forceDraw = true;
   }
-
-  function highlightSection(train, section) {
-    const matchingTrains = data.trains.filter(
-      t => t.sched_d_time == section.scheduledDepartureTime / 1000 &&
-        t.sched_a_time == section.scheduledArrivalTime / 1000 &&
-        data.routes[t.route_index]
-          .segments[t.segment_index]
-          .from_station_id == section.departureStation.id &&
-        data.routes[t.route_index]
-          .segments[t.segment_index]
-          .to_station_id == section.arrivalStation.id);
-    matchingTrains.forEach(
-      t => RailViz.Routes.highlightSegment(t.route_index, t.segment_index));
-    forceDraw = true;
-  }
-
+  
   function setTimeOffset(newTimeOffset) {
     timeOffset = newTimeOffset;
     forceDraw = true;
@@ -196,8 +168,6 @@ RailViz.Render = (function () {
     offscreen = {};
 
     gl.getExtension("OES_element_index_uint");
-
-    RailViz.Routes.setup(gl);
     RailViz.Trains.setup(gl);
 
     lastFrame = null;
@@ -253,9 +223,6 @@ RailViz.Render = (function () {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT);
       }
 
-      if (routesEnabled) {
-        RailViz.Routes.render(gl, matrix, zoom, pixelRatio, isOffscreen);
-      }
       if (trainsEnabled) {
         RailViz.Trains.render(gl, matrix, zoom, pixelRatio, isOffscreen);
       }
@@ -372,7 +339,6 @@ RailViz.Render = (function () {
     setTimeOffset: setTimeOffset,
     prerender: prerender,
     render: render,
-    colorRouteSegments: colorRouteSegments,
     setMinZoom: setMinZoom,
     setConnectionFilter: setConnectionFilter,
     setTargetFps: setTargetFps,
