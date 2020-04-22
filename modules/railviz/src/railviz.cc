@@ -74,6 +74,14 @@ void railviz::init(motis::module::registry& reg) {
     auto const& s = get_sched();
     train_retriever_ = std::make_unique<train_retriever>(s, bounding_boxes(s));
   });
+
+  reg.subscribe("/rt/update", [this](msg_ptr const& msg) {
+    using rt::RtUpdates;
+    if (train_retriever_) {
+      train_retriever_->update(motis_content(RtUpdates, msg));
+    }
+    return nullptr;
+  });
 }
 
 msg_ptr railviz::get_trip_guesses(msg_ptr const& msg) {
