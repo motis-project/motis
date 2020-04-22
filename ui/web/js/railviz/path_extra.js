@@ -37,6 +37,10 @@ RailViz.Path.Extra = (function () {
   }
 
   function setData(newData) {
+    if(!newData) {
+      return;
+    }
+
     data = {
       type: "FeatureCollection",
       features: []
