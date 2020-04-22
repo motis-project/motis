@@ -10,7 +10,6 @@ struct source_spec {
   enum class category : uint8_t { UNKNOWN, MULTI, BUS, TRAM, SUBWAY, RAIL };
   enum class router : uint8_t { STUB, OSRM, OSM_NET, OSM_REL };
 
-  source_spec() = default;
   source_spec(category c, router r) : category_(c), router_(r) {}
 
   std::string category_str() const {

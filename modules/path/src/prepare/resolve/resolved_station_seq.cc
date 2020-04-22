@@ -59,7 +59,7 @@ void write_to_fbs(std::vector<resolved_station_seq> const& sequences,
       std::vector<Offset<InternalPathSourceInfo>> fbs_info;
       for (auto const& info : seq.sequence_infos_) {
         fbs_info.push_back(CreateInternalPathSourceInfo(
-            fbb, info.idx_, info.from_, info.to_,
+            fbb, info.idx_, info.from_, info.to_, info.between_stations_,
             static_cast<std::underlying_type_t<source_spec::category>>(
                 info.source_spec_.category_),
             static_cast<std::underlying_type_t<source_spec::router>>(
@@ -151,6 +151,7 @@ std::vector<resolved_station_seq> read_from_fbs(std::string const& fname) {
           utl::to_vec(*cached_seq->infos(), [](auto const* info) {
             return sequence_info(
                 info->segment_idx(), info->from_idx(), info->to_idx(),
+                info->between_stations(),
                 source_spec{source_spec::category{info->category()},
                             source_spec::router{info->router()}});
           });

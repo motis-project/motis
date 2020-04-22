@@ -17,6 +17,11 @@ struct seq_seg {
            std::tie(b.sequence_, b.segment_);
   }
 
+  friend bool operator!=(seq_seg const& a, seq_seg const& b) {
+    return std::tie(a.sequence_, a.segment_) !=
+           std::tie(b.sequence_, b.segment_);
+  }
+
   friend bool operator<(seq_seg const& a, seq_seg const& b) {
     return std::tie(a.sequence_, a.segment_) <
            std::tie(b.sequence_, b.segment_);
@@ -40,7 +45,8 @@ struct db_builder {
                std::vector<processed_segment> const&) const;
 
   void add_tile_feature(geo::polyline const&, std::vector<seq_seg> const&,
-                        std::vector<uint32_t> const& classes) const;
+                        std::vector<uint32_t> const& classes,
+                        bool is_stub) const;
 
   void finish() const;
 

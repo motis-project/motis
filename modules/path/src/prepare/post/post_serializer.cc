@@ -160,6 +160,22 @@ void serialize_tiles(post_graph& graph, db_builder& builder) {
   ml::scoped_timer timer("post_serializer: serialize_tiles");
   color_to_seq_seg_index index{graph};
 
+  std::vector<seq_seg> stub_seq_seqs;
+  for (auto seq_idx = 0ULL; seq_idx < graph.originals_.size(); ++seq_idx) {
+    auto const& seq = graph.originals_[seq_idx];
+    for (auto const& info : seq.sequence_infos_) {
+      if (info.source_spec_.router_ == source_spec::router::STUB &&
+          info.between_stations_ &&
+          (stub_seq_seqs.empty() ||
+           stub_seq_seqs.back() != seq_seg{static_cast<uint32_t>(seq_idx),
+                                           static_cast<uint32_t>(info.idx_)})) {
+        stub_seq_seqs.emplace_back(seq_idx, info.idx_);
+      }
+    }
+  }
+  LOG(ml::info) << "found " << stub_seq_seqs.size()
+                << " stub segments between stations.";
+
   for (auto const& ap : graph.atomic_paths_) {
     auto polyline =
         utl::to_vec(ap->path_, [](auto const& node) { return node->id_.pos_; });
@@ -174,7 +190,14 @@ void serialize_tiles(post_graph& graph, db_builder& builder) {
     auto classes = index.get_classes(seq_segs);
     utl::erase_duplicates(classes);
 
-    builder.add_tile_feature(polyline, seq_segs, classes);
+    auto const is_stub =
+        std::any_of(begin(seq_segs), end(seq_segs), [&](auto const& ss) {
+          auto const it =
+              std::lower_bound(begin(stub_seq_seqs), end(stub_seq_seqs), ss);
+          return it != end(stub_seq_seqs) && *it == ss;
+        });
+
+    builder.add_tile_feature(polyline, seq_segs, classes, is_stub);
   }
 
   for (auto const& pair : graph.atomic_pairs_) {
@@ -194,7 +217,14 @@ void serialize_tiles(post_graph& graph, db_builder& builder) {
     auto classes = index.get_classes(seq_segs);
     utl::erase_duplicates(classes);
 
-    builder.add_tile_feature(polyline, seq_segs, classes);
+    auto const is_stub =
+        std::any_of(begin(seq_segs), end(seq_segs), [&](auto const& ss) {
+          auto const it =
+              std::lower_bound(begin(stub_seq_seqs), end(stub_seq_seqs), ss);
+          return it != end(stub_seq_seqs) && *it == ss;
+        });
+
+    builder.add_tile_feature(polyline, seq_segs, classes, is_stub);
   }
 }
 
