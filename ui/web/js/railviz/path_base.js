@@ -28,8 +28,16 @@ RailViz.Path.Base = (function () {
         "line-sort-key": ["case", ["get", "stub"], 0, 1],
       },
       paint: {
-        "line-color": ["case", ["get", "stub"], "#777777", "#666666"],
-        "line-width": ["case", ["get", "stub"], 2.5, 4],
+        "line-color": ["case",
+                        ["get", "stub"], "hsl(0, 0, 70%)",
+                        ["<", ["get", "min_class"], 6], "hsl(0, 0, 30%)",
+                        ["<", ["get", "min_class"], 8], "hsl(0, 0, 40%)",
+                        "hsl(0, 0, 50%)"],
+        "line-width": ["case",
+                        ["get", "stub"], 2,
+                        ["<", ["get", "min_class"], 6], 4,
+                        ["<", ["get", "min_class"], 8], 3.25,
+                        2.5],
       },
     });
 
