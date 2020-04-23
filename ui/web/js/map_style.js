@@ -282,7 +282,48 @@ var backgroundMapStyle = function(tilesEndpoint) {
                 "text-halo-color": "white",
                 "text-color": "hsl(0, 0%, 20%)"
               }
+          }, {
+            "id": "region",
+            "type": "symbol",
+            "source": "osm",
+            "source-layer": "region",
+            "maxzoom": 11,
+            "filter": ["!=", ["get", "place"], "country"],
+            "layout": {
+              "symbol-sort-key": ["-", ["coalesce", ["get", "population"], 0]],
+              "text-field": ["get", "name"],
+              "text-font": ["Noto Sans Display Italic"],
+              "text-size": ["interpolate", ["linear"], ["zoom"],
+                            6, 16,
+                            9, 18],
+            },
+            "paint": {
+              "text-halo-width": 2,
+              "text-halo-color": "white",
+              "text-color": "hsl(0, 0%, 20%)"
+            }
+        }, {
+          "id": "country",
+          "type": "symbol",
+          "source": "osm",
+          "source-layer": "region",
+          "maxzoom": 8,
+          "filter": ["==", ["get", "place"], "country"],
+          "layout": {
+            "symbol-sort-key": ["-", ["coalesce", ["get", "population"], 0]],
+            "text-field": ["get", "name"],
+            "text-font": ["Noto Sans Display Italic"],
+            "text-size": ["interpolate", ["linear"], ["zoom"],
+                            3, 12,
+                            8, 18],
+          },
+          "paint": {
+            "text-halo-width": 2,
+            "text-halo-color": "white",
+            "text-color": "hsl(0, 0%, 20%)"
           }
+      }
+
       ]
     };
 }
