@@ -77,8 +77,7 @@ std::vector<osm_way> parse_rail(std::string const& osm_file) {
   std::vector<std::string> included_railway{"rail", "light_rail",
                                             "narrow_gauge"};
   std::string yes{"yes"};
-  std::vector<std::string> excluded_usages{"industrial", "military", "test",
-                                           "tourism"};
+  std::vector<std::string> excluded_usages{"industrial", "military", "test"};
   std::vector<std::string> excluded_services{"yard", "spur"};  // , "siding"
 
   return parse_network(osm_file, [&](auto&& way) {
