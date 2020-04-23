@@ -34,7 +34,7 @@ struct train_retriever {
 
   void update(rt::RtUpdates const*);
   std::vector<ev_key> trains(time from, time to, unsigned max_count,
-                             geo::box const& area);
+                             geo::box const& area, int zoom_level);
 
 private:
   std::shared_mutex mutable mutex_;

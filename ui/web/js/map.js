@@ -145,7 +145,7 @@ class RailVizCustomLayer {
   updateViewport() {
     var rect = this.map.getCanvas().getBoundingClientRect();
     var center = this.map.getCenter();
-    var zoom = Math.round(this.map.getZoom());
+    var zoom = Math.floor(this.map.getZoom());
 
     var zoomRounded = Math.floor(this.map.getZoom() * 4) / 4;
     if (zoomRounded != this.zoomRounded) {

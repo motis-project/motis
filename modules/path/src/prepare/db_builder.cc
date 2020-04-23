@@ -42,7 +42,7 @@ using seq_info =
     std::tuple<std::vector<std::string>, std::vector<uint32_t>, int>;
 
 template <typename Classes>
-uint64_t cls_to_min_zoom_level(Classes const& c) {
+uint64_t min_cls_to_min_zoom_level(Classes const& c) {
   auto it = std::min_element(begin(c), end(c));
   utl::verify(it != end(c), "classes container empty");
 
@@ -50,10 +50,10 @@ uint64_t cls_to_min_zoom_level(Classes const& c) {
     return 4UL;
   } else if (*it < 6) {
     return 6UL;
-  } else if (*it < 7) {
-    return 8UL;
-  } else {
+  } else if (*it < 8) {
     return 9UL;
+  } else {
+    return 10UL;
   }
 }
 
@@ -98,7 +98,7 @@ struct db_builder::impl {
       auto cstr = utl::cstr(s.id_.c_str());
       utl::parse_arg(cstr, f.id_, 0);
       f.layer_ = station_layer_id_;
-      f.zoom_levels_ = {cls_to_min_zoom_level(s.categories_),
+      f.zoom_levels_ = {min_cls_to_min_zoom_level(s.categories_),
                         tiles::kMaxZoomLevel};
 
       f.meta_.emplace_back("name", tiles::encode_string(s.name_));
@@ -193,7 +193,7 @@ struct db_builder::impl {
 
     tiles::feature f;
     f.layer_ = path_layer_id_;
-    f.zoom_levels_ = {cls_to_min_zoom_level(classes), tiles::kMaxZoomLevel};
+    f.zoom_levels_ = {min_cls_to_min_zoom_level(classes), tiles::kMaxZoomLevel};
 
     f.meta_.emplace_back(
         "classes", tiles::encode_string(std::to_string(cls_to_bits(classes))));

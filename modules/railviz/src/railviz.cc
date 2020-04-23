@@ -381,11 +381,12 @@ msg_ptr railviz::get_trains(msg_ptr const& msg) const {
 
   auto const fbs_trains = events_to_trains(
       sched, fbb, pr,
-      train_retriever_->trains(
-          unix_to_motistime(sched, req->start_time()),
-          unix_to_motistime(sched, req->end_time()), req->max_trains(),
-          {{req->corner1()->lat(), req->corner1()->lng()},
-           {req->corner2()->lat(), req->corner2()->lng()}}),
+      train_retriever_->trains(unix_to_motistime(sched, req->start_time()),
+                               unix_to_motistime(sched, req->end_time()),
+                               req->max_trains(),
+                               {{req->corner1()->lat(), req->corner1()->lng()},
+                                {req->corner2()->lat(), req->corner2()->lng()}},
+                               req->zoom_level()),
       routes, fbs_routes, route_edges);
 
   fbb.create_and_finish(

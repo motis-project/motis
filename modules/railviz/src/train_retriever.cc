@@ -203,12 +203,29 @@ void train_retriever::update(rt::RtUpdates const* updates) {
   }
 }
 
+int cls_to_min_zoom_level(int c) {
+  if (c < 3) {
+    return 4;
+  } else if (c < 6) {
+    return 6;
+  } else if (c < 8) {
+    return 9;
+  } else {
+    return 10;
+  }
+}
+
 std::vector<ev_key> train_retriever::trains(time const from, time const to,
                                             unsigned const max_count,
-                                            geo::box const& area) {
+                                            geo::box const& area,
+                                            int zoom_level) {
   std::shared_lock lock(mutex_);
   std::vector<ev_key> connections;
   for (auto clasz = 0U; clasz < RELEVANT_CLASSES; ++clasz) {
+    if (zoom_level < cls_to_min_zoom_level(clasz)) {
+      goto end;
+    }
+
     for (auto const& e : edge_index_[clasz]->edges(area)) {
       for (auto i = 0U; i < e->m_.route_edge_.conns_.size(); ++i) {
         auto const& con = e->m_.route_edge_.conns_[i];
