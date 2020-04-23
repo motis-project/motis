@@ -12,18 +12,29 @@ RailViz.Path.Detail = (function () {
   let data = null;
   let enabled = true;
 
-  const colors = [
-    "#9c27b0",
-    "#e91e63",
-    "#1a237e",
-    "#f44336",
-    "#f44336",
-    "#4caf50",
-    "#3f51b5",
-    "#ff9800",
-    "#ff9800",
-    "#9e9e9e",
+  const hslValues = [
+    [291, 64, 42], // #9c27b0,
+    [340, 82, 52], // #e91e63,
+    [235, 66, 30], // #1a237e,
+    [4, 90, 58], // #f44336,
+    [4, 90, 58], // #f44336,
+    [122, 39, 49], // #4caf50,
+    [231, 48, 48], // #3f51b5,
+    [36, 100, 50], // #ff9800,
+    [36, 100, 50], // #ff9800,
+    [0, 0, 62], // #9e9e9e,
   ];
+
+  const colors = hslValues.flatMap((c, i) => [
+    i,
+    `hsl(${c[0]}, ${c[1]}%, ${c[2]}%)`,
+  ]);
+  const mutedColors = hslValues.flatMap((c, i) => [
+    i,
+    `hsl(${c[0]}, ${Math.round(c[1] * 0.66)}%, ${Math.round(c[2] * 1.33)}%)`,
+  ]);
+
+  console.log(colors);
 
   function init(_map, beforeId) {
     map = _map;
@@ -48,9 +59,15 @@ RailViz.Path.Detail = (function () {
         layout: {
           "line-join": "round",
           "line-cap": "round",
+          "line-sort-key": ["case", ["get", "highlight"], 1, 0],
         },
         paint: {
-          "line-color": ["get", "color"],
+          "line-color": [
+            "case",
+            ["get", "highlight"],
+            ["match", ["get", "clasz"], ...colors, "#222222"],
+            ["match", ["get", "clasz"], ...mutedColors, "#222222"],
+          ],
           "line-width": ["case", ["get", "highlight"], 4.1, 2.6],
         },
         filter: ["==", "$type", "LineString"],
@@ -87,7 +104,6 @@ RailViz.Path.Detail = (function () {
       features: [],
     };
 
-
     trips.routes.forEach((route, route_idx) => {
       route.segments.forEach((segment, segment_idx) => {
         const coords = RailViz.Preprocessing.toLatLngs(segment.rawCoordinates);
@@ -123,7 +139,7 @@ RailViz.Path.Detail = (function () {
           type: "Feature",
           properties: {
             highlight: !!segment.highlight,
-            color: colors[segment.clasz],
+            clasz: segment.clasz,
           },
           geometry: {
             type: "LineString",
@@ -162,7 +178,6 @@ RailViz.Path.Detail = (function () {
         type: "Feature",
         properties: {
           highlight: true,
-          color: "#222222",
         },
         geometry: {
           type: "LineString",
