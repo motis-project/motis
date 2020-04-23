@@ -34,8 +34,6 @@ RailViz.Path.Detail = (function () {
     `hsl(${c[0]}, ${Math.round(c[1] * 0.66)}%, ${Math.round(c[2] * 1.33)}%)`,
   ]);
 
-  console.log(colors);
-
   function init(_map, beforeId) {
     map = _map;
 
