@@ -82,6 +82,11 @@ struct db_builder::impl {
     txn.commit();
   }
 
+  ~impl() {
+    utl::verify(db_cache_size_ == 0 && db_cache_.empty(),
+                "db_builder: cache is not empty in dtor");
+  }
+
   void store_stations(std::vector<station> const& stations) const {
     for (auto const& s : stations) {
       if (std::none_of(begin(s.categories_), end(s.categories_),
@@ -161,6 +166,8 @@ struct db_builder::impl {
 
     db_put(std::to_string(seq_idx), internal_resp.to_string());
     seq_infos_.emplace_back(seq.station_ids_, seq.classes_, seq_idx);
+
+    db_flush_maybe();
   }
 
   void update_boxes(std::vector<std::string> const& station_ids,
@@ -214,6 +221,7 @@ struct db_builder::impl {
       motis::logging::scoped_timer timer("finish index and boxes");
       finish_index();
       finish_boxes();
+      db_flush_maybe(0);
     }
     {
       motis::logging::scoped_timer timer("tiles: prepare");
@@ -273,11 +281,24 @@ struct db_builder::impl {
     db_put(kBoxesKey, make_msg(mc)->to_string());
   }
 
-  void db_put(std::string const& k, std::string const& v) const {
+  void db_put(std::string k, std::string v) {
+    db_cache_size_ += v.size();
+    db_cache_.emplace_back(std::move(k), std::move(v));
+  }
+
+  void db_flush_maybe(size_t min_cache_size = 128ULL * 1024 * 1024) {
+    if (db_cache_size_ < min_cache_size) {
+      return;
+    }
     auto txn = db_->db_handle_->make_txn();
     auto dbi = db_->data_dbi(txn);
-    txn.put(dbi, k, v);
+    for (auto const& [k, v] : db_cache_) {
+      txn.put(dbi, k, v);
+    }
     txn.commit();
+
+    db_cache_size_ = 0;
+    db_cache_.clear();
   }
 
   std::mutex m_;
@@ -290,6 +311,9 @@ struct db_builder::impl {
 
   std::vector<seq_info> seq_infos_;
   std::vector<std::vector<seq_seg>> seq_segs_;
+
+  size_t db_cache_size_{0};
+  std::vector<std::pair<std::string, std::string>> db_cache_;
 
   mcd::hash_map<std::pair<std::string, std::string>, geo::box> boxes_;
 };
