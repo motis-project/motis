@@ -3,7 +3,6 @@ port module Port exposing
     , handleRailVizError
     , localStorageSet
     , setPPRSearchOptions
-    , setRailVizFilter
     , setRoutingResponses
     , setSimulationTime
     , setTimeOffset
@@ -26,9 +25,6 @@ port showStationDetails : (String -> msg) -> Sub msg
 
 
 port showTripDetails : (TripId -> msg) -> Sub msg
-
-
-port setRailVizFilter : Maybe (List TripId) -> Cmd msg
 
 
 port setTimeOffset : Float -> Cmd msg

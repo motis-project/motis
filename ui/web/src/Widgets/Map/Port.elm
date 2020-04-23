@@ -9,7 +9,6 @@ port module Widgets.Map.Port exposing
     , MapPixelBounds
     , MapTooltip
     , RVConnection
-    , RVConnectionFilter
     , RVConnectionSection
     , RVConnectionSegment
     , RVConnectionSegmentInfo
@@ -18,13 +17,14 @@ port module Widgets.Map.Port exposing
     , RVConnectionTrain
     , RVConnectionWalk
     , RVConnections
+    , RVDetailFilter
     , RVTrain
     , mapCloseContextMenu
     , mapFitBounds
     , mapFlyTo
     , mapHighlightConnections
     , mapInit
-    , mapSetConnectionFilter
+    , mapSetDetailFilter
     , mapSetConnections
     , mapSetLocale
     , mapSetMarkers
@@ -136,11 +136,10 @@ type alias MapFitBounds =
     }
 
 
-type alias RVConnectionFilter =
+type alias RVDetailFilter =
     { trains : List RVConnectionTrain
     , walks : List RVConnectionWalk
-    , interchangeStations : List String
-    , intermediateStations : List String
+    , interchangeStations : List Station
     }
 
 
@@ -216,7 +215,7 @@ port mapUseTrainClassColors : Bool -> Cmd msg
 port mapShowTrains : Bool -> Cmd msg
 
 
-port mapSetConnectionFilter : RVConnectionFilter -> Cmd msg
+port mapSetDetailFilter : Maybe RVDetailFilter -> Cmd msg
 
 
 port mapUpdateWalks : List RVConnectionWalk -> Cmd msg

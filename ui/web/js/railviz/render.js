@@ -21,7 +21,6 @@ RailViz.Render = (function () {
 
   function init(mouseEventHandler) {
     setData(null);
-    setConnections(null, null);
 
     mouseHandler = mouseEventHandler || (() => {});
   }
@@ -39,110 +38,11 @@ RailViz.Render = (function () {
     forceDraw = true;
   }
 
-  function setConnections(trainSegments, walkSegments, lowestConnId) {
-    RailViz.Connections.setData(trainSegments, walkSegments, lowestConnId);
-  }
-
-  function highlightConnections(ids) {
-    RailViz.Connections.highlightConnections(ids);
-  }
-
-  function setConnectionFilter(filter) {
-    if (!filter) {
-      return;
-    }
-    if (filter.walks && filter.walks.length > 0) {
-      data.footpaths = filter.walks;
-      data.footpaths.forEach(adjustFootpathCoords);
-      let additionalStations = false;
-      data.footpaths.forEach(footpath => {
-        const addedFrom = addAdditionalStation(footpath.departureStation);
-        const addedTo = addAdditionalStation(footpath.arrivalStation);
-        if (addedFrom || addedTo) {
-          additionalStations = true;
-        }
-      });
-      // if (additionalStations) {
-      //   RailViz.Stations.init(data.stations);
-      // }
-    }
-    filter.trains.forEach(
-      train => train.sections.forEach(
-        section => highlightSection(train, section)));
-
-    // XXX
-    // filter.interchangeStations.forEach(
-    //   RailViz.Stations.highlightInterchangeStation);
-    // filter.intermediateStations.forEach(
-    //   RailViz.Stations.highlightIntermediateStation);
-    forceDraw = true;
-  }
-
   function setTrainsEnabled(b) {
     forceDraw = b != trainsEnabled;
     trainsEnabled = b;
   }
 
-  function setRoutesEnabled(b) {
-    console.log("TOGGLE ROUTES ENABLED!!!")
-  }
-
-  function setConnectionsEnabled(b) {
-    RailViz.Connections.setEnabled(b);
-  }
-
-  function addAdditionalStation(station) {
-    const existingStation = data.stations.some(s => s.id == station.id);
-    if (!existingStation) {
-      data.stations.push(station);
-      forceDraw = true;
-      return true;
-    }
-    return false;
-  }
-
-  function adjustFootpathCoords(footpath) {
-    const replace = !footpath.polyline;
-    const from_station_id = footpath.from_station_id;
-    const to_station_id = footpath.to_station_id;
-    const startSegments = data.routes.reduce(
-      (acc, r) => acc.concat(
-        r.segments.filter(seg => seg.to_station_id == from_station_id)),
-      []);
-    const coords = footpath.coordinates.coordinates;
-    if (startSegments.length == 1) {
-      const fromCoords = startSegments[0].coordinates.coordinates;
-      const x = fromCoords[fromCoords.length - 2];
-      const y = fromCoords[fromCoords.length - 1];
-      if (replace) {
-        coords[0] = x;
-        coords[1] = y;
-      } else {
-        if (coords[0] != x || coords[1] != y) {
-          coords.unshift(x, y);
-        }
-      }
-    }
-    const endSegments = data.routes.reduce(
-      (acc, r) => acc.concat(
-        r.segments.filter(seg => seg.from_station_id == to_station_id)),
-      []);
-    if (endSegments.length == 1) {
-      const toCoords = endSegments[0].coordinates.coordinates;
-      const x = toCoords[0];
-      const y = toCoords[1];
-      if (replace) {
-        coords[2] = x;
-        coords[3] = y;
-      } else {
-        if (coords[coords.length - 2] != x || coords[coords.length - 1] != y) {
-          coords.push(x, y);
-        }
-      }
-    }
-    forceDraw = true;
-  }
-  
   function setTimeOffset(newTimeOffset) {
     timeOffset = newTimeOffset;
     forceDraw = true;
@@ -315,10 +215,10 @@ RailViz.Render = (function () {
 
     const features = map.queryRenderedFeatures([mouseX, mouseY]);
 
-    const station = features.find(e => e.sourceLayer == 'station');
+    const station = features.find(e => e.layer.id.endsWith('-stations'));
     const pickedStation = station !== undefined ? {id: station.id, name: station.properties.name } : null;
 
-    const pickedConnectionSegment = RailViz.Connections.getPickedSegment(features);
+    const pickedConnectionSegment = RailViz.Path.Connections.getPickedSegment(features);
 
     // if (pickId && eventType != 'mouseout') {
     //   canvas.style.cursor = 'pointer';
@@ -334,17 +234,12 @@ RailViz.Render = (function () {
     setup: setup,
     stop: stop,
     setData: setData,
-    setConnections: setConnections,
-    highlightConnections: highlightConnections,
     setTimeOffset: setTimeOffset,
     prerender: prerender,
     render: render,
     setMinZoom: setMinZoom,
-    setConnectionFilter: setConnectionFilter,
     setTargetFps: setTargetFps,
-    setRoutesEnabled: setRoutesEnabled,
     setTrainsEnabled: setTrainsEnabled,
-    setConnectionsEnabled: setConnectionsEnabled,
     handleMouseEvent: handleMouseEvent
   };
 

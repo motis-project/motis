@@ -35,6 +35,7 @@ RailViz.Preprocessing = (function () {
   }
 
   function preprocessStation(station) {
+    station.rawPos = station.pos;
     var pos = mapboxgl.MercatorCoordinate
                       .fromLngLat([station.pos.lng, station.pos.lat]);
     station.pos.x = pos.x;
@@ -96,10 +97,26 @@ RailViz.Preprocessing = (function () {
     }
   }
 
+  function toLatLngs(src) {
+    let converted = [];
+    for (let i = 0; i < src.length - 1; i += 2) {
+      const ll = [src[i + 1], src[i]];
+      if (
+        converted.length == 0 ||
+        ll[0] != converted[converted.length - 1][0] ||
+        ll[1] != converted[converted.length - 1][1]
+      ) {
+        converted.push(ll);
+      }
+    }
+    return converted;
+  }
+
   return {
     preprocess: preprocess,
     convertPolyline: convertPolyline,
-    prepareWalk: prepareWalk
+    prepareWalk: prepareWalk,
+    toLatLngs: toLatLngs
   };
 
 })();

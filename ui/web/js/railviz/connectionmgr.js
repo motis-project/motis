@@ -300,7 +300,7 @@ RailViz.ConnectionManager = (function () {
 
   function showConnections() {
     if (dataIsComplete()) {
-      RailViz.Render.setConnections(trainSegments, walkSegments, lowestConnId);
+      RailViz.Path.Connections.setData(trainSegments, walkSegments, lowestConnId);
     } else {
     }
   }
