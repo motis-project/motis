@@ -30,7 +30,6 @@ module Main exposing
     , setFullTripConnection
     , setFullTripError
     , setPPRWalkRoute
-    , setRailVizFilter
     , setWalkRoute
     , simTimePickerView
     , stationConfig
@@ -86,7 +85,7 @@ import Util.Date exposing (combineDateTime, unixTime)
 import Util.List exposing ((!!))
 import Widgets.ConnectionDetails as ConnectionDetails
 import Widgets.Connections as Connections
-import Widgets.Map.ConnectionDetails as MapConnectionDetails
+import Widgets.Map.Details as MapDetails
 import Widgets.Map.RailViz as RailViz
 import Widgets.Routing as Routing
 import Widgets.SimTimePicker as SimTimePicker
@@ -660,10 +659,9 @@ update msg model =
                         , overlayVisible = True
                     }
 
-                ( model2, cmd1 ) =
-                    setRailVizFilter model1 Nothing
+                cmd1 = MapDetails.setDetailFilter Nothing
             in
-            model2
+            model1
                 ! [ cmd1
                   , Task.attempt noop (Dom.focus "trip-search-trainnr-input")
                   ]
@@ -782,11 +780,8 @@ selectConnection model idx =
             let
                 trips =
                     journeyTrips j
-
-                ( model_, cmds ) =
-                    setRailVizFilter model (Just trips)
             in
-            { model_
+            { model
                 | connectionDetails =
                     Maybe.map (ConnectionDetails.init False False Nothing) (Just journey)
                 , routing = newRouting
@@ -795,13 +790,12 @@ selectConnection model idx =
                 , stationEvents = Nothing
                 , subView = Nothing
             }
-                ! [ MapConnectionDetails.setConnectionFilter j
+                ! [ MapDetails.setDetailFilter ( Just j )
                   , requestWalkRoutes model.apiEndpoint
                         (Routing.getStartSearchProfile model.routing)
                         (Routing.getDestinationSearchProfile model.routing)
                         j
                         idx
-                  , cmds
                   ]
 
         Nothing ->
@@ -903,7 +897,7 @@ setWalkRoute model journeyIdx walk response updateAll =
                 Just journeyIdx ->
                     if journeyComplete then
                         journey
-                            |> Maybe.map MapConnectionDetails.updateWalks
+                            |> Maybe.map MapDetails.updateWalks
                             |> Maybe.withDefault Cmd.none
 
                     else
@@ -1012,18 +1006,14 @@ setFullTripConnection model tripId connection =
 
                 Nothing ->
                     ConnectionDetails.init True True (Just tripId) (Just tripJourney) ! []
-
-        ( model_, cmds ) =
-            setRailVizFilter model (Just [ tripId ])
     in
-    { model_
+    { model
         | tripDetails = Just tripDetails
         , subView = Just TripDetailsView
     }
-        ! [ MapConnectionDetails.setConnectionFilter tripJourney
+        ! [ MapDetails.setDetailFilter ( Just tripJourney )
           , Task.attempt noop <| Scroll.toTop "sub-overlay-content"
           , Task.attempt noop <| Scroll.toTop "sub-connection-journey"
-          , cmds
           ]
 
 
@@ -1035,7 +1025,7 @@ setFullTripError model tripId error =
                 ( tripDetails, _ ) =
                     ConnectionDetails.update (ConnectionDetails.SetApiError error) td
             in
-            setRailVizFilter { model | tripDetails = Just tripDetails } Nothing
+            model ! [ MapDetails.setDetailFilter Nothing ]
 
         Nothing ->
             model ! []
@@ -1455,10 +1445,9 @@ routeToMsg route =
 closeSelectedConnection : Model -> ( Model, Cmd Msg )
 closeSelectedConnection model =
     let
-        ( model_, cmds ) =
-            setRailVizFilter model Nothing
+        cmds = MapDetails.setDetailFilter Nothing
     in
-    { model_
+    { model
         | connectionDetails = Nothing
         , selectedConnectionIdx = Nothing
         , tripDetails = Nothing
@@ -1473,21 +1462,15 @@ closeSelectedConnection model =
 closeSubOverlay : Model -> ( Model, Cmd Msg )
 closeSubOverlay model =
     let
-        ( model_, cmds ) =
-            setRailVizFilter model Nothing
+        cmds = MapDetails.setDetailFilter Nothing
     in
-    ( { model_
+    ( { model
         | tripDetails = Nothing
         , stationEvents = Nothing
         , subView = Nothing
       }
     , cmds
     )
-
-
-setRailVizFilter : Model -> Maybe (List TripId) -> ( Model, Cmd Msg )
-setRailVizFilter model filterTrips =
-    model ! [ Port.setRailVizFilter filterTrips ]
 
 
 journeyTrips : Journey -> List TripId

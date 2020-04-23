@@ -1,14 +1,20 @@
 var RailViz = RailViz || {};
 RailViz.Path = RailViz.Path || {};
 
+/**
+ * Extra paths which are not in the prepared vector tiles
+ *  - cause: additional trains, reroutings
+ *  - otherwise the trains "fly" without corresponding line
+ */
 RailViz.Path.Extra = (function () {
   let map = null;
   let data = null;
+  let enabled = true;
 
   function init(_map, beforeId) {
     map = _map;
 
-    map.addSource("railviz-path-extra", {
+    map.addSource("railviz-extra", {
       type: "geojson",
       promoteId: "id",
       data: {
@@ -18,14 +24,14 @@ RailViz.Path.Extra = (function () {
     });
 
     if (data !== null) {
-      map.getSource("railviz-path-extra").setData(data);
+      map.getSource("railviz-extra").setData(data);
     }
 
     map.addLayer(
       {
-        id: "railviz-path-extra-line",
+        id: "railviz-extra-line",
         type: "line",
-        source: "railviz-path-extra",
+        source: "railviz-extra",
         layout: {
           "line-join": "round",
           "line-cap": "round",
@@ -37,6 +43,8 @@ RailViz.Path.Extra = (function () {
       },
       beforeId
     );
+
+    setEnabled(enabled);
   }
 
   function setData(newData) {
@@ -51,44 +59,44 @@ RailViz.Path.Extra = (function () {
 
     newData.routes.forEach((route) => {
       route.segments.forEach((segment) => {
-        if (segment.extra) {
-          const converted = convertCoordinates(segment.rawCoordinates);
-          if (converted.length > 0) {
-            data.features.push({
-              type: "Feature",
-              properties: {},
-              geometry: {
-                type: "LineString",
-                coordinates: converted,
-              },
-            });
-          }
+        if (!segment.extra) {
+          return;
         }
+
+        const coords = RailViz.Preprocessing.toLatLngs(segment.rawCoordinates);
+        if (coords.length == 0) {
+          return;
+        }
+        data.features.push({
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: coords,
+          },
+        });
       });
     });
 
     if (map !== null) {
-      map.getSource("railviz-path-extra").setData(data);
+      map.getSource("railviz-extra").setData(data);
     }
   }
 
-  function convertCoordinates(src) {
-    let converted = [];
-    for (let i = 0; i < src.length - 1; i += 2) {
-      const ll = [src[i + 1], src[i]];
-      if (
-        converted.length == 0 ||
-        ll[0] != converted[converted.length - 1][0] ||
-        ll[1] != converted[converted.length - 1][1]
-      ) {
-        converted.push(ll);
+  function setEnabled(b) {
+    if (map !== null) {
+      if (b) {
+        map.setLayoutProperty("railviz-extra-line", "visibility", "visible");
+      } else {
+        map.setLayoutProperty("railviz-extra-line", "visibility", "none");
       }
     }
-    return converted;
+    enabled = b;
   }
 
   return {
     init: init,
     setData: setData,
+    setEnabled: setEnabled,
   };
 })();

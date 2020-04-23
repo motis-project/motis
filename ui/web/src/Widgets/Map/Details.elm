@@ -1,5 +1,5 @@
-module Widgets.Map.ConnectionDetails exposing
-    ( setConnectionFilter
+module Widgets.Map.Details exposing
+    ( setDetailFilter
     , updateWalks
     )
 
@@ -11,16 +11,21 @@ import Widgets.Map.Port exposing (..)
 import Widgets.Map.RailViz exposing (buildRVTrain, buildRVWalk, mapId)
 
 
-setConnectionFilter : Journey -> Cmd msg
-setConnectionFilter journey =
-    let
-        ( connectionFilter, bounds ) =
-            buildConnectionFilter journey
-    in
-    Cmd.batch
-        [ mapSetConnectionFilter connectionFilter
-        , mapFitBounds bounds
-        ]
+setDetailFilter : Maybe Journey -> Cmd msg
+setDetailFilter journey =
+    case journey of
+        Just journey ->
+            let
+                ( detailFilter, bounds ) =
+                    buildDetailFilter journey
+            in
+            Cmd.batch
+                [ mapSetDetailFilter ( Just detailFilter ) 
+                , mapFitBounds bounds
+                ]
+
+        Nothing ->
+            mapSetDetailFilter Nothing
 
 
 updateWalks : Journey -> Cmd msg
@@ -30,8 +35,8 @@ updateWalks journey =
         |> mapUpdateWalks
 
 
-buildConnectionFilter : Journey -> ( RVConnectionFilter, MapFitBounds )
-buildConnectionFilter journey =
+buildDetailFilter : Journey -> ( RVDetailFilter, MapFitBounds )
+buildDetailFilter journey =
     let
         interchangeStops =
             List.concatMap
@@ -44,16 +49,11 @@ buildConnectionFilter journey =
             List.concatMap (\walk -> [ walk.from, walk.to ]) journey.walks
 
         interchangeStations =
-            List.map (.station >> .id) (interchangeStops ++ walkStops)
-                |> List.Extra.unique
+            List.map .station (interchangeStops ++ walkStops)
+                |> List.Extra.uniqueBy .id
 
         intermediateStops =
             List.concatMap (\train -> dropEnd 1 (List.drop 1 train.stops)) journey.trains
-
-        intermediateStations =
-            List.map (.station >> .id) intermediateStops
-                |> List.Extra.unique
-                |> List.filter (\station -> not (List.member station interchangeStations))
 
         bounds =
             (interchangeStops ++ intermediateStops ++ walkStops)
@@ -64,7 +64,6 @@ buildConnectionFilter journey =
     ( { trains = List.map buildRVTrain journey.trains
       , walks = List.map buildRVWalk journey.walks
       , interchangeStations = interchangeStations
-      , intermediateStations = intermediateStations
       }
     , { mapId = mapId
       , coords = bounds
