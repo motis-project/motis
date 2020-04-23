@@ -98,7 +98,7 @@ RailViz.Main = (function () {
   function makeTrainsRequest() {
     var bounds = mapInfo.railVizBounds;
     return RailViz.API.makeTrainsRequest(
-      Math.min(mapInfo.zoom + 2, 18),
+      Math.min(mapInfo.zoom, 18),
       {
         lat: bounds.north,
         lng: bounds.west,
