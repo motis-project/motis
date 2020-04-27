@@ -112,8 +112,7 @@ deTranslations =
         , trackAbbr = "Gl."
         }
     , railViz =
-        { trainMode = "Züge anzeigen"
-        , noTrains = "Keine"
+        { noTrains = "Keine Züge"
         , delayColors = "Nach Verspätung"
         , classColors = "Nach Kategorie"
         , simActive = "Simulationsmodus aktiv"

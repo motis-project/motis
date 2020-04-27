@@ -93,8 +93,7 @@ type alias Translations =
         , trackAbbr : String
         }
     , railViz :
-        { trainMode : String
-        , noTrains : String
+        { noTrains : String
         , delayColors : String
         , classColors : String
         , simActive : String

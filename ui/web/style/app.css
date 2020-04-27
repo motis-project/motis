@@ -264,7 +264,7 @@
   bottom: 15px;
   right: 0px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-end;
 }
 
