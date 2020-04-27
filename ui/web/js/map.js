@@ -277,8 +277,8 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
       app.ports.mapShowContextMenu.send({
         mouseX: Math.round(e.point.x),
         mouseY: Math.round(e.point.y),
-        lat: e.lngLat.lat,
-        lng: e.lngLat.lng,
+        lat: Math.round(e.lngLat.lat * 1e6) * 1e-6,
+        lng: Math.round(e.lngLat.lng * 1e6) * 1e-6,
       });
     });
 
