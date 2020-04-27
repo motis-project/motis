@@ -249,7 +249,10 @@ RailViz.Render = (function () {
     const station = features.find((e) => e.layer.id.endsWith("-stations"));
     const pickedStation =
       station !== undefined
-        ? { id: station.id, name: station.properties.name }
+        ? {
+            id: station.id !== undefined ? station.id : station.properties.id,
+            name: station.properties.name,
+          }
         : null;
 
     const pickedConnectionSegment = RailViz.Path.Connections.getPickedSegment(
