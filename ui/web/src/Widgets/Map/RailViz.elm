@@ -369,8 +369,8 @@ view locale permalink model =
         , div [ id ( mapId ++  "-foreground" ) ] []
         , railVizTooltip locale model
         , div [ class "map-bottom-overlay" ]
-            [ trainModePickerView locale model
-            , simulationTimeOverlay locale permalink model
+            [ simulationTimeOverlay locale permalink model
+            , trainModePickerView locale model
             ]
         , errorOverlay locale model
         , contextMenu locale model
@@ -596,8 +596,7 @@ simulationTimeOverlay locale permalink model =
 trainModePickerView : Localization -> Model -> Html Msg
 trainModePickerView locale model =
     div [ class "train-color-picker-overlay" ]
-        [ div [] [ text (locale.t.railViz.trainMode ++ ":") ]
-        , div []
+        [ div []
             [ input
                 [ type_ "radio"
                 , id "train-color-picker-none"

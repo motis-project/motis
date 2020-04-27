@@ -280,7 +280,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
       });
     });
 
-    const padding = { top: 36, right: 24, bottom: 16, left: 624 };
+    const padding = { top: 96, right: 32, bottom: 96, left: 640 };
 
     app.ports.mapFlyTo.subscribe(function (opt) {
       var map = window.elmMaps[opt.mapId];
