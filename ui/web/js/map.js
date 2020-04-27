@@ -254,7 +254,8 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
       },
       antialias: true,
       attributionControl: true,
-      customAttribution: '<a href="https://www.openstreetmap.org/">© OpenStreetMap contributors</a>'
+      customAttribution:
+        '<a href="https://www.openstreetmap.org/">© OpenStreetMap contributors</a>',
     });
     window.elmMaps[id] = map_fg;
 
