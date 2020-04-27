@@ -32,6 +32,8 @@ using namespace motis;
 using namespace motis::loader;
 using namespace motis::path;
 
+namespace motis::path {  // namespace motis::path
+
 struct prepare_settings : public conf::configuration {
   prepare_settings() : configuration("Prepare Options", "") {
     param(schedule_, "schedule", "/path/to/rohdaten");
@@ -54,7 +56,57 @@ struct prepare_settings : public conf::configuration {
   std::string seq_cache_file_{"seq_cache.fbs"};
 };
 
+<<<<<<< HEAD
 int main(int argc, char const** argv) {
+=======
+void filter_sequences(std::vector<std::string> const& filters,
+                      std::vector<station_seq>& sequences) {
+  ml::scoped_timer timer("filter station sequences");
+  for (auto const& filter : filters) {
+    std::vector<std::string> tokens;
+    boost::split(tokens, filter, boost::is_any_of(":"));
+    utl::verify(tokens.size() == 2, "unexpected filter");
+
+    if (tokens[0] == "id") {
+      utl::erase_if(sequences, [&tokens](auto const& seq) {
+        return std::none_of(
+            begin(seq.station_ids_), end(seq.station_ids_),
+            [&tokens](auto const& id) { return id == tokens[1]; });
+      });
+    } else if (tokens[0] == "seq") {
+      std::vector<std::string> ids;
+      boost::split(ids, tokens[1], boost::is_any_of("."));
+      utl::erase_if(sequences, [&ids](auto const& seq) {
+        return ids != seq.station_ids_;
+      });
+    } else if (tokens[0] == "extent") {
+      utl::verify(fs::is_regular_file(tokens[1]), "cannot find extent polygon");
+      auto const extent_polygon = geo::read_poly_file(tokens[1]);
+      utl::erase_if(sequences, [&](auto const& seq) {
+        return std::any_of(begin(seq.coordinates_), end(seq.coordinates_),
+                           [&](auto const& coord) {
+                             return !geo::within(coord, extent_polygon);
+                           });
+      });
+    } else if (tokens[0] == "limit") {
+      size_t const count = std::stoul(tokens[1]);
+      sequences.resize(std::min(count, sequences.size()));
+    } else if (tokens[0] == "cat") {
+      auto cat = std::stoi(tokens[1]);
+      utl::erase_if(sequences, [&](auto const& seq) {
+        return seq.categories_.find(cat) == end(seq.categories_);
+      });
+      for (auto& seq : sequences) {
+        seq.categories_ = {cat};
+      }
+    } else {
+      LOG(ml::info) << "unknown filter: " << tokens[0];
+    }
+  }
+}
+
+int run_path_prepare(int argc, char const** argv) {
+>>>>>>> path: top-level error handling path-prepare
   prepare_settings opt;
 
   try {
@@ -121,4 +173,19 @@ int main(int argc, char const** argv) {
   builder.finish();
 
   std::cout << std::endl;
+  return 0;
+}
+
+}  // namespace motis::path
+
+int main(int argc, char const** argv) {
+  try {
+    return motis::path::run_path_prepare(argc, argv);
+  } catch (std::exception const& e) {
+    LOG(ml::emrg) << "exception caught: " << e.what();
+    return 1;
+  } catch (...) {
+    LOG(ml::emrg) << "unknown exception caught";
+    return 1;
+  }
 }
