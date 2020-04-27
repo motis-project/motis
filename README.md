@@ -21,7 +21,7 @@ The system can consume schedule timetables in the [GTFS](https://developers.goog
 # Documentation
 
   - [Installation and Setup](https://motis-project.de/docs/install)
-  - [API Documentation](https://motis-project.de/api/)
+  - [API Documentation](https://motis-project.de/docs/api/)
   - Developer Setup:
     - [Windows Developer Setup](https://github.com/motis-project/motis/wiki/Windows-Developer-Setup)
     - [Linux Developer Setup](https://github.com/motis-project/motis/wiki/Linux-Developer-Setup)
