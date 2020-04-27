@@ -171,6 +171,9 @@
   height: 100%;
   z-index: 0;
 }
+.mapboxgl-canvas-container.mapboxgl-interactive {
+  cursor: default;
+}
 
 .railviz-overlay.train-hover {
   cursor: pointer;

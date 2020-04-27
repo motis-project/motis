@@ -220,11 +220,11 @@ RailViz.Render = (function () {
 
     const pickedConnectionSegment = RailViz.Path.Connections.getPickedSegment(features);
 
-    // if (pickId && eventType != 'mouseout') {
-    //   canvas.style.cursor = 'pointer';
-    // } else {
-    //   canvas.style.cursor = 'default';
-    // }
+    if ((pickId || pickedStation) && eventType != 'mouseout') {
+      canvas.style.cursor = 'pointer';
+    } else {
+      canvas.style.cursor = 'default';
+    }
 
     mouseHandler(eventType, button, mouseX, mouseY, pickedTrain, pickedStation, pickedConnectionSegment);
   }
