@@ -287,9 +287,13 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
     app.ports.mapFlyTo.subscribe(function (opt) {
       var map = window.elmMaps[opt.mapId];
 
+      const camOptions = opt.animate
+        ? { maxZoom: 12, padding }
+        : { maxZoom: 12 };
+
       const options = map.cameraForBounds(
         new mapboxgl.LngLatBounds([opt.lng, opt.lat], [opt.lng, opt.lat]),
-        { maxZoom: 12, padding }
+        camOptions
       );
       if (opt.zoom) {
         options.zoom = opt.zoom;
