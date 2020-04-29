@@ -1,0 +1,7 @@
+namespace motis.import;
+
+table OSMEvent {
+  path: string;
+  hash: ulong;
+  size: ulong;
+}

@@ -98,7 +98,6 @@ int main(int argc, char const** argv) {
         return 1;
       }
     }
-
   } catch (std::exception const& e) {
     std::cout << "\ninitialization error: " << e.what() << "\n";
     return 1;

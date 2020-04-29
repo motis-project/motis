@@ -31,6 +31,7 @@ struct module : public conf::configuration {
 
   void set_context(motis::schedule& schedule) { schedule_ = &schedule; }
 
+  virtual void import(registry&) {}
   virtual void init(registry&) {}
 
 protected:

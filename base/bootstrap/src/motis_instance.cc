@@ -21,6 +21,13 @@ using namespace motis::logging;
 
 namespace motis::bootstrap {
 
+bool is_module_active(std::vector<std::string> const& yes,
+                      std::vector<std::string> const& no,
+                      std::string const& module) {
+  return std::find(begin(yes), end(yes), module) != end(yes) &&
+         std::find(begin(no), end(no), module) == end(no);
+}
+
 motis_instance::motis_instance() : controller(build_modules()) {}
 
 void motis_instance::stop_remotes() {
@@ -52,14 +59,32 @@ void motis_instance::init_schedule(
   sched_ = schedule_.get();
 }
 
+void motis_instance::import(std::vector<std::string> const& modules,
+                            std::vector<std::string> const& exclude_modules,
+                            std::vector<std::string> const& import_paths) {
+  for (auto const& module : modules_) {
+    if (is_module_active(modules, exclude_modules, module->name())) {
+      module->import(registry_);
+    }
+  }
+
+  for (auto const& path : import_paths) {
+    message_creator fbb;
+    fbb.create_and_finish(
+        MsgContent_FileEvent,
+        motis::import::CreateFileEvent(fbb, fbb.CreateString(path)).Union(),
+        "/import", DestinationType_Topic);
+    publish(make_msg(fbb), 1);
+  }
+
+  registry_.reset();
+}
+
 void motis_instance::init_modules(
     std::vector<std::string> const& modules,
     std::vector<std::string> const& exclude_modules, unsigned num_threads) {
   for (auto const& module : modules_) {
-    if (std::find(begin(modules), end(modules), module->name()) ==
-            end(modules) ||
-        std::find(begin(exclude_modules), end(exclude_modules),
-                  module->name()) != end(exclude_modules)) {
+    if (!is_module_active(modules, exclude_modules, module->name())) {
       continue;
     }
 

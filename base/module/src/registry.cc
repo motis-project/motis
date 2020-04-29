@@ -83,4 +83,10 @@ std::optional<op> registry::get_operation(std::string const& prefix) {
   }
 }
 
+void registry::reset() {
+  operations_.clear();
+  topic_subscriptions_.clear();
+  remote_operations_.clear();
+}
+
 }  // namespace motis::module

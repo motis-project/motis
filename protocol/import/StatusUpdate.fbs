@@ -1,0 +1,10 @@
+namespace motis.import;
+
+enum Status : byte { WAITING, RUNNING, FINISHED }
+
+table StatusUpdate {
+  name: string;
+  waiting_for: [string];
+  status: Status;
+  progress: ubyte;
+}

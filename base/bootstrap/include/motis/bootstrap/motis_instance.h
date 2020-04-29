@@ -39,7 +39,10 @@ struct motis_instance : public motis::module::controller {
   std::vector<motis::module::module*> modules() const;
   std::vector<std::string> module_names() const;
 
-  void init_schedule(motis::loader::loader_options const& dataset_opt);
+  void import(std::vector<std::string> const& modules,
+              std::vector<std::string> const& exclude_modules,
+              std::vector<std::string> const& import_paths);
+  void init_schedule(motis::loader::loader_options const&);
   void init_modules(std::vector<std::string> const& modules,
                     std::vector<std::string> const& exclude_modules = {},
                     unsigned num_threads = std::thread::hardware_concurrency());

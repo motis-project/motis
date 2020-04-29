@@ -4,8 +4,16 @@
 
 #include "boost/filesystem.hpp"
 
+#include "tbb/task_scheduler_init.h"
+
+#include "contractor/contractor.hpp"
+#include "contractor/contractor_config.hpp"
+#include "extractor/extractor.hpp"
+#include "extractor/extractor_config.hpp"
+
 #include "motis/core/common/logging.h"
 #include "motis/module/context/motis_parallel_for.h"
+#include "motis/module/event_collector.h"
 
 #include "motis/osrm/error.h"
 #include "motis/osrm/router.h"
@@ -23,6 +31,39 @@ osrm::osrm() : module("OSRM Options", "osrm") {
 }
 
 osrm::~osrm() = default;
+
+void osrm::import(motis::module::registry& reg) {
+  for (auto const& p : profiles_) {
+    event_collector{
+        "osrm-" + boost::filesystem::path{p}.stem().generic_string(), reg,
+        [&](std::map<MsgContent, msg_ptr> const& dependencies) {
+          using import::OSMEvent;
+          auto const osm =
+              motis_content(OSMEvent, dependencies.at(MsgContent_OSMEvent));
+
+          using namespace ::osrm::extractor;
+          ExtractorConfig extr_conf;
+          extr_conf.profile_path = p;
+          extr_conf.requested_num_threads = std::thread::hardware_concurrency();
+          extr_conf.generate_edge_lookup = false;
+          extr_conf.small_component_size = 1000;
+          extr_conf.input_path = osm->path()->str();
+          extr_conf.UseDefaultOutputNames();
+          Extractor{extr_conf}.run();
+
+          using namespace ::osrm::contractor;
+          ContractorConfig contr_conf;
+          contr_conf.requested_num_threads =
+              std::thread::hardware_concurrency();
+          contr_conf.core_factor = 1.0;
+          contr_conf.use_cached_priority = false;
+          contr_conf.osrm_input_path = extr_conf.output_file_name;
+          tbb::task_scheduler_init init(contr_conf.requested_num_threads);
+          Contractor{contr_conf}.Run();
+        }}
+        .listen(MsgContent_OSMEvent);
+  }
+}
 
 void osrm::init(motis::module::registry& reg) {
   reg.subscribe("/init", [this] { init_async(); });
