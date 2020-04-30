@@ -7,6 +7,8 @@
 #include <future>
 #include <thread>
 
+#include "boost/filesystem/path.hpp"
+
 #include "ctx/future.h"
 
 #include "motis/core/common/logging.h"
@@ -61,9 +63,32 @@ void motis_instance::init_schedule(
 
 void motis_instance::import(std::vector<std::string> const& modules,
                             std::vector<std::string> const& exclude_modules,
-                            std::vector<std::string> const& import_paths) {
+                            std::vector<std::string> const& import_paths,
+                            std::string const& data_directory) {
+  registry_.subscribe("/import", [&](msg_ptr const& msg) -> msg_ptr {
+    if (msg->get()->content_type() != MsgContent_FileEvent) {
+      return nullptr;
+    }
+
+    using motis::import::FileEvent;
+    auto const path = motis_content(FileEvent, msg)->path()->str();
+    auto const name = boost::filesystem::path{path}.filename().generic_string();
+    if (name.substr(name.size() - 8) != ".osm.pbf") {
+      return nullptr;
+    }
+
+    message_creator fbb;
+    fbb.create_and_finish(
+        MsgContent_OSMEvent,
+        motis::import::CreateOSMEvent(fbb, fbb.CreateString(path)).Union(),
+        "/import", DestinationType_Topic);
+    ctx::await_all(motis_publish(make_msg(fbb)));
+    return nullptr;
+  });
+
   for (auto const& module : modules_) {
     if (is_module_active(modules, exclude_modules, module->name())) {
+      module->set_data_directory(data_directory);
       module->import(registry_);
     }
   }
@@ -74,10 +99,10 @@ void motis_instance::import(std::vector<std::string> const& modules,
         MsgContent_FileEvent,
         motis::import::CreateFileEvent(fbb, fbb.CreateString(path)).Union(),
         "/import", DestinationType_Topic);
-    publish(make_msg(fbb), 1);
+    publish(make_msg(fbb));
   }
 
-  registry_.reset();
+  // registry_.reset();
 }
 
 void motis_instance::init_modules(

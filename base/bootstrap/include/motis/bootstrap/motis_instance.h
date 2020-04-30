@@ -41,7 +41,8 @@ struct motis_instance : public motis::module::controller {
 
   void import(std::vector<std::string> const& modules,
               std::vector<std::string> const& exclude_modules,
-              std::vector<std::string> const& import_paths);
+              std::vector<std::string> const& import_paths,
+              std::string const& data_directory);
   void init_schedule(motis::loader::loader_options const&);
   void init_modules(std::vector<std::string> const& modules,
                     std::vector<std::string> const& exclude_modules = {},

@@ -26,20 +26,29 @@ namespace fs = boost::filesystem;
 namespace motis::osrm {
 
 osrm::osrm() : module("OSRM Options", "osrm") {
-  param(datasets_, "dataset",
-        ".osrm file (multiple datasets accessible by folder name)");
+  param(profiles_, "profiles", "lua profile paths");
 }
 
 osrm::~osrm() = default;
 
 void osrm::import(motis::module::registry& reg) {
   for (auto const& p : profiles_) {
-    event_collector{
-        "osrm-" + boost::filesystem::path{p}.stem().generic_string(), reg,
-        [&](std::map<MsgContent, msg_ptr> const& dependencies) {
+    auto const profile_name =
+        boost::filesystem::path{p}.stem().generic_string();
+    std::make_shared<event_collector>(
+        "osrm-" + profile_name, reg,
+        [this, profile_name, p, data_dir = get_data_directory()](
+            std::map<MsgContent, msg_ptr> const& dependencies) {
           using import::OSMEvent;
           auto const osm =
               motis_content(OSMEvent, dependencies.at(MsgContent_OSMEvent));
+
+          auto const osm_stem = fs::path{fs::path{osm->path()->str()}.stem()}
+                                    .stem()
+                                    .generic_string();
+
+          auto const dir = data_dir / "osrm" / profile_name;
+          fs::create_directories(dir);
 
           using namespace ::osrm::extractor;
           ExtractorConfig extr_conf;
@@ -48,7 +57,7 @@ void osrm::import(motis::module::registry& reg) {
           extr_conf.generate_edge_lookup = false;
           extr_conf.small_component_size = 1000;
           extr_conf.input_path = osm->path()->str();
-          extr_conf.UseDefaultOutputNames();
+          extr_conf.UseDefaultOutputNames((dir / osm_stem).generic_string());
           Extractor{extr_conf}.run();
 
           using namespace ::osrm::contractor;
@@ -58,10 +67,13 @@ void osrm::import(motis::module::registry& reg) {
           contr_conf.core_factor = 1.0;
           contr_conf.use_cached_priority = false;
           contr_conf.osrm_input_path = extr_conf.output_file_name;
+          contr_conf.UseDefaultOutputNames();
           tbb::task_scheduler_init init(contr_conf.requested_num_threads);
           Contractor{contr_conf}.Run();
-        }}
-        .listen(MsgContent_OSMEvent);
+
+          datasets_.emplace_back(extr_conf.output_file_name);
+        })
+        ->listen(MsgContent_OSMEvent);
   }
 }
 

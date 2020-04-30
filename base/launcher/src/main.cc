@@ -35,6 +35,15 @@ using namespace motis::module;
 using namespace motis::logging;
 using namespace motis;
 
+struct import_settings : conf::configuration {
+  import_settings() : configuration("Import Options", "import") {
+    param(import_paths_, "paths", "input paths to process");
+    param(data_directory_, "data_dir", "directory for preprocessing output");
+  }
+  std::vector<std::string> import_paths_;
+  std::string data_directory_{"data"};
+};
+
 int main(int argc, char const** argv) {
   motis_instance instance;
 
@@ -42,6 +51,7 @@ int main(int argc, char const** argv) {
 
   server_settings server_opt;
   dataset_settings dataset_opt;
+  import_settings import_opt;
   dataset_opt.write_serialized_ = true;
   dataset_opt.adjust_footpaths_ = true;
 
@@ -49,8 +59,9 @@ int main(int argc, char const** argv) {
   remote_settings remote_opt;
   launcher_settings launcher_opt;
 
-  std::vector<conf::configuration*> confs = {
-      &server_opt, &dataset_opt, &module_opt, &remote_opt, &launcher_opt};
+  std::vector<conf::configuration*> confs = {&server_opt,  &import_opt,
+                                             &dataset_opt, &module_opt,
+                                             &remote_opt,  &launcher_opt};
   for (auto const& module : instance.modules()) {
     confs.push_back(module);
   }
@@ -80,6 +91,8 @@ int main(int argc, char const** argv) {
   }
 
   try {
+    instance.import(module_opt.modules_, module_opt.exclude_modules_,
+                    import_opt.import_paths_, import_opt.data_directory_);
     instance.init_schedule(dataset_opt);
     instance.init_modules(module_opt.modules_, module_opt.exclude_modules_,
                           launcher_opt.num_threads_);
