@@ -99,7 +99,7 @@ void motis_instance::import(std::vector<std::string> const& modules,
         MsgContent_FileEvent,
         motis::import::CreateFileEvent(fbb, fbb.CreateString(path)).Union(),
         "/import", DestinationType_Topic);
-    publish(make_msg(fbb));
+    publish(make_msg(fbb), 1);
   }
 
   // registry_.reset();
