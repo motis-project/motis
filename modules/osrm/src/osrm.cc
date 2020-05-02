@@ -4,6 +4,8 @@
 
 #include "boost/filesystem.hpp"
 
+#include "cista/reflection/comparable.h"
+
 #include "contractor/contractor.hpp"
 #include "contractor/contractor_config.hpp"
 #include "extractor/extractor.hpp"
@@ -12,6 +14,7 @@
 #include "motis/core/common/logging.h"
 #include "motis/module/context/motis_parallel_for.h"
 #include "motis/module/event_collector.h"
+#include "motis/module/ini_io.h"
 
 #include "motis/osrm/error.h"
 #include "motis/osrm/router.h"
@@ -22,6 +25,13 @@ using namespace motis::logging;
 namespace fs = boost::filesystem;
 
 namespace motis::osrm {
+
+struct import_state {
+  CISTA_COMPARABLE()
+  named<std::string, MOTIS_NAME("path")> path_;
+  named<cista::hash_t, MOTIS_NAME("hash")> hash_;
+  named<size_t, MOTIS_NAME("size")> size_;
+};
 
 osrm::osrm() : module("OSRM Options", "osrm") {
   param(profiles_, "profiles", "lua profile paths");
@@ -38,8 +48,13 @@ void osrm::import(motis::module::registry& reg) {
         [this, profile_name, p, data_dir = get_data_directory()](
             std::map<MsgContent, msg_ptr> const& dependencies) {
           using import::OSMEvent;
+          using namespace ::osrm::extractor;
+          using namespace ::osrm::contractor;
+
           auto const osm =
               motis_content(OSMEvent, dependencies.at(MsgContent_OSMEvent));
+          auto const state =
+              import_state{osm->path()->str(), osm->hash(), osm->size()};
 
           auto const osm_stem = fs::path{fs::path{osm->path()->str()}.stem()}
                                     .stem()
@@ -48,7 +63,6 @@ void osrm::import(motis::module::registry& reg) {
           auto const dir = data_dir / "osrm" / profile_name;
           fs::create_directories(dir);
 
-          using namespace ::osrm::extractor;
           ExtractorConfig extr_conf;
           extr_conf.profile_path = p;
           extr_conf.requested_num_threads = std::thread::hardware_concurrency();
@@ -56,17 +70,20 @@ void osrm::import(motis::module::registry& reg) {
           extr_conf.small_component_size = 1000;
           extr_conf.input_path = osm->path()->str();
           extr_conf.UseDefaultOutputNames((dir / osm_stem).generic_string());
-          Extractor{extr_conf}.run();
+          if (read_ini<import_state>(dir / "import.ini") != state) {
+            Extractor{extr_conf}.run();
 
-          using namespace ::osrm::contractor;
-          ContractorConfig contr_conf;
-          contr_conf.requested_num_threads =
-              std::thread::hardware_concurrency();
-          contr_conf.core_factor = 1.0;
-          contr_conf.use_cached_priority = false;
-          contr_conf.osrm_input_path = extr_conf.output_file_name;
-          contr_conf.UseDefaultOutputNames();
-          Contractor{contr_conf}.Run();
+            ContractorConfig contr_conf;
+            contr_conf.requested_num_threads =
+                std::thread::hardware_concurrency();
+            contr_conf.core_factor = 1.0;
+            contr_conf.use_cached_priority = false;
+            contr_conf.osrm_input_path = extr_conf.output_file_name;
+            contr_conf.UseDefaultOutputNames();
+            Contractor{contr_conf}.Run();
+
+            write_ini(dir / "import.ini", state);
+          }
 
           datasets_.emplace_back(extr_conf.output_file_name);
         })

@@ -7,7 +7,10 @@
 #include <future>
 #include <thread>
 
-#include "boost/filesystem/path.hpp"
+#include "boost/filesystem.hpp"
+
+#include "cista/hash.h"
+#include "cista/mmap.h"
 
 #include "ctx/future.h"
 
@@ -77,11 +80,17 @@ void motis_instance::import(std::vector<std::string> const& modules,
       return nullptr;
     }
 
+    cista::mmap m(path.c_str(), cista::mmap::protection::READ);
+    auto const hash = cista::hash(std::string_view{
+        reinterpret_cast<char const*>(m.begin()),
+        std::max(static_cast<size_t>(50 * 1024 * 1024), m.size())});
+
     message_creator fbb;
-    fbb.create_and_finish(
-        MsgContent_OSMEvent,
-        motis::import::CreateOSMEvent(fbb, fbb.CreateString(path)).Union(),
-        "/import", DestinationType_Topic);
+    fbb.create_and_finish(MsgContent_OSMEvent,
+                          motis::import::CreateOSMEvent(
+                              fbb, fbb.CreateString(path), hash, m.size())
+                              .Union(),
+                          "/import", DestinationType_Topic);
     ctx::await_all(motis_publish(make_msg(fbb)));
     return nullptr;
   });
