@@ -16,10 +16,10 @@ struct event_collector : std::enable_shared_from_this<event_collector> {
 
   event_collector(std::string name, registry& reg, import_op_t op);
 
-  void listen(MsgContent const msg);
+  void listen(MsgContent msg);
 
 private:
-  void update_status(motis::import::Status, uint8_t const progress = 0U);
+  void update_status(motis::import::Status, uint8_t progress = 0U);
 
   std::string module_name_;
   registry& reg_;
