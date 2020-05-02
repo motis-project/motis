@@ -102,7 +102,7 @@ void motis_instance::import(std::vector<std::string> const& modules,
     publish(make_msg(fbb), 1);
   }
 
-  // registry_.reset();
+  registry_.reset();
 }
 
 void motis_instance::init_modules(

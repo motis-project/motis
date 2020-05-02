@@ -4,8 +4,6 @@
 
 #include "boost/filesystem.hpp"
 
-#include "tbb/task_scheduler_init.h"
-
 #include "contractor/contractor.hpp"
 #include "contractor/contractor_config.hpp"
 #include "extractor/extractor.hpp"
@@ -68,7 +66,6 @@ void osrm::import(motis::module::registry& reg) {
           contr_conf.use_cached_priority = false;
           contr_conf.osrm_input_path = extr_conf.output_file_name;
           contr_conf.UseDefaultOutputNames();
-          tbb::task_scheduler_init init(contr_conf.requested_num_threads);
           Contractor{contr_conf}.Run();
 
           datasets_.emplace_back(extr_conf.output_file_name);
