@@ -14,9 +14,9 @@
 
 namespace motis::module {
 
-template <char const* str>
+template <char const* Str>
 struct named_name {
-  static constexpr auto const name_ = str;
+  static constexpr auto const name = Str;
 };
 #define MOTIS_NAME(str) motis::module::named_name<STRING_LITERAL(str)>
 
@@ -24,17 +24,17 @@ template <typename T, typename... Tags>
 struct named : Tags... {
   using value_type = T;
   named() = default;
-  named(T param) : t(param) {}
-  operator T() { return t; }
+  named(T param) : t_(param) {}  // NOLINT
+  operator T() { return t_; }  // NOLINT
   bool operator==(named const& o) const { return val() == o.val(); }
-  T const& val() const { return t; }
-  T& val() { return t; }
-  T t{};
+  T const& val() const { return t_; }
+  T& val() { return t_; }
+  T t_{};
 };
 
 template <typename T>
 constexpr auto get_name(T) {
-  return T::name_;
+  return T::name;
 }
 
 template <typename T>
