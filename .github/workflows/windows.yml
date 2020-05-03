@@ -80,6 +80,12 @@ jobs:
           elm-make --yes src\Main.elm --output elm.js
           Remove-Item -Recurse -Force .\node_modules
 
+      - name: Move Profiles
+        if: matrix.mode == 'Release'
+        run: |
+          move .\deps\osrm-backend\profiles .\osrm-profiles
+          move .\deps\ppr\profiles .\ppr-profiles
+
       - name: Create Distribution
         if: matrix.mode == 'Release'
         run: >
@@ -91,7 +97,8 @@ jobs:
           .\build\deps\osrm-backend\osrm-contract.exe
           .\build\deps\address-typeahead\at-example.exe
           .\build\deps\ppr\ppr-preprocess.exe
-          .\deps\osrm-backend\profiles
+          .\osrm-profiles
+          .\ppr-profiles
           .\ui\web
 
       - name: Upload Distribution

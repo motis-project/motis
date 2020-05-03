@@ -139,7 +139,8 @@ jobs:
           mv build/deps/osrm-backend/osrm-contract motis
           mv build/deps/address-typeahead/at-example motis
           mv build/deps/ppr/ppr-preprocess motis
-          mv deps/osrm-backend/profiles motis
+          mv deps/osrm-backend/profiles motis/osrm-profiles
+          mv deps/ppr/profiles motis/ppr-profiles
           tar cjf motis-linux.tar.bz2 motis
 
       - name: Upload Distribution
