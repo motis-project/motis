@@ -15,39 +15,46 @@ void event_collector::update_status(motis::import::Status const status,
       MsgContent_StatusUpdate,
       motis::import::CreateStatusUpdate(
           fbb, fbb.CreateString(module_name_),
-          fbb.CreateVector(utl::to_vec(waiting_for_,
-                                       [&](MsgContent msg_type) {
-                                         return fbb.CreateString(
-                                             EnumNameMsgContent(msg_type));
-                                       })),
+          fbb.CreateVector(utl::to_vec(
+              waiting_for_, [&](auto&& w) { return fbb.CreateString(w); })),
           status, progress)
           .Union(),
       "/import", DestinationType_Topic);
   ctx::await_all(motis_publish(make_msg(fbb)));
 }
 
-void event_collector::listen(MsgContent const msg_type) {
-  waiting_for_.emplace(msg_type);
-  reg_.subscribe(
-      "/import",
-      [&, msg_type, self = shared_from_this()](msg_ptr const& msg) -> msg_ptr {
-        if (msg->get()->content_type() != msg_type) {
-          return nullptr;  // Not the right message type.
-        }
+void event_collector::require(std::string name,
+                              std::function<bool(msg_ptr)> matcher) {
+  auto const matcher_it =
+      matchers_.emplace(dependency_matcher{name, std::move(matcher)});
+  waiting_for_.emplace(name);
+  reg_.subscribe("/import",
+                 [&, matcher_it = matcher_it.first, name,
+                  self = shared_from_this()](msg_ptr const& msg) -> msg_ptr {
+                   // Dummy message asking for initial status.
+                   // Send "waiting for" dependencies list.
+                   if (msg->get()->content_type() == MsgContent_MotisSuccess) {
+                     update_status(motis::import::Status_WAITING);
+                     return nullptr;
+                   }
 
-        dependencies_[msg_type] = msg;
-        waiting_for_.erase(msg_type);
-        if (!waiting_for_.empty()) {
-          return nullptr;  // Still waiting for a message.
-        }
+                   if (!(matcher_it->matcher_fn_)(msg)) {
+                     return nullptr;  // Not the right message type.
+                   }
 
-        // All messages arrived -> start.
-        update_status(motis::import::Status_RUNNING);
-        op_(dependencies_);
-        update_status(motis::import::Status_FINISHED);
+                   dependencies_[name] = msg;
+                   waiting_for_.erase(name);
+                   if (!waiting_for_.empty()) {
+                     return nullptr;  // Still waiting for a message.
+                   }
 
-        return nullptr;
-      });
+                   // All messages arrived -> start.
+                   update_status(motis::import::Status_RUNNING);
+                   op_(dependencies_);
+                   update_status(motis::import::Status_FINISHED);
+
+                   return nullptr;
+                 });
 }
 
 }  // namespace motis::module

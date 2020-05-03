@@ -12,6 +12,7 @@
 #include "extractor/extractor_config.hpp"
 
 #include "motis/core/common/logging.h"
+#include "motis/module/clog_redirect.h"
 #include "motis/module/context/motis_parallel_for.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
@@ -46,13 +47,12 @@ void osrm::import(motis::module::registry& reg) {
     std::make_shared<event_collector>(
         "osrm-" + profile_name, reg,
         [this, profile_name, p, data_dir = get_data_directory()](
-            std::map<MsgContent, msg_ptr> const& dependencies) {
+            std::map<std::string, msg_ptr> const& dependencies) {
           using import::OSMEvent;
           using namespace ::osrm::extractor;
           using namespace ::osrm::contractor;
 
-          auto const osm =
-              motis_content(OSMEvent, dependencies.at(MsgContent_OSMEvent));
+          auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
           auto const state =
               import_state{osm->path()->str(), osm->hash(), osm->size()};
 
@@ -71,6 +71,9 @@ void osrm::import(motis::module::registry& reg) {
           extr_conf.input_path = osm->path()->str();
           extr_conf.UseDefaultOutputNames((dir / osm_stem).generic_string());
           if (read_ini<import_state>(dir / "import.ini") != state) {
+            log_streambuf redirect{"osrm-" + profile_name,
+                                   (dir / "log.txt").generic_string().c_str()};
+
             Extractor{extr_conf}.run();
 
             ContractorConfig contr_conf;
@@ -87,7 +90,9 @@ void osrm::import(motis::module::registry& reg) {
 
           datasets_.emplace_back(extr_conf.output_file_name);
         })
-        ->listen(MsgContent_OSMEvent);
+        ->require("OSM", [](msg_ptr const& msg) {
+          return msg->get()->content_type() == MsgContent_OSMEvent;
+        });
   }
 }
 

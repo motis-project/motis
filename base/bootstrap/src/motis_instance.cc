@@ -5,7 +5,13 @@
 #include <atomic>
 #include <exception>
 #include <future>
+#include <iostream>
 #include <thread>
+
+#if defined(_MSC_VER)
+#include <io.h>
+#include <windows.h>
+#endif
 
 #include "boost/filesystem.hpp"
 
@@ -25,6 +31,53 @@ using namespace motis::module;
 using namespace motis::logging;
 
 namespace motis::bootstrap {
+
+#ifdef _MSC_VER
+
+void move(int x, int y) {
+  auto hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+  if (!hStdout) return;
+
+  CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
+  GetConsoleScreenBufferInfo(hStdout, &csbiInfo);
+
+  COORD cursor;
+
+  cursor.X = csbiInfo.dwCursorPosition.X + x;
+  cursor.Y = csbiInfo.dwCursorPosition.Y + y;
+  SetConsoleCursorPosition(hStdout, cursor);
+}
+
+void move_cursor_up(int lines) {
+  if (lines != 0) {
+    move(0, -lines);
+  }
+}
+
+#else
+
+void move_cursor_up(int lines) {
+  if (lines != 0) {
+    std::cout << "\x1b[" << lines << "A";
+  }
+}
+
+void clear_line() {
+  auto const empty =
+      "          "
+      "          "
+      "          "
+      "          "
+      "          "
+      "          "
+      "          "
+      "          "
+      "          "
+      "          ";
+  std::cout << empty << "\r";
+}
+
+#endif
 
 bool is_module_active(std::vector<std::string> const& yes,
                       std::vector<std::string> const& no,
@@ -95,6 +148,66 @@ void motis_instance::import(std::vector<std::string> const& modules,
     return nullptr;
   });
 
+  struct state {
+    std::vector<std::string> dependencies;
+    import::Status status;
+    int progress;
+  };
+  std::map<std::string, state> status;
+  auto last_print_height = 0U;
+  auto const print_status = [&]() {
+    move_cursor_up(last_print_height);
+    for (auto const& [name, s] : status) {
+      clear_line();
+      std::cout << std::setw(20) << std::setfill(' ') << std::right << name
+                << ": ";
+      switch (s.status) {
+        case import::Status_WAITING:
+          std::cout << "WAITING, dependencies: ";
+          for (auto const& dep : s.dependencies) {
+            std::cout << dep << " ";
+          }
+          break;
+        case import::Status_FINISHED: std::cout << "DONE"; break;
+        case import::Status_RUNNING:
+          std::cout << "[";
+          constexpr auto const WIDTH = 55U;
+          bool end = false;
+          for (auto i = 0U; i < 55U; ++i) {
+            auto const scaled = static_cast<int>(i * 100.0 / WIDTH);
+            std::cout << (scaled < s.progress
+                              ? '='
+                              : !end && scaled >= s.progress ? '>' : ' ');
+            end = scaled >= s.progress;
+          }
+          std::cout << "] " << s.progress << "%";
+          break;
+      }
+      std::cout << "\n";
+    }
+    last_print_height = status.size();
+  };
+
+  registry_.subscribe("/import", [&](msg_ptr const& msg) -> msg_ptr {
+    if (msg->get()->content_type() != MsgContent_StatusUpdate) {
+      return nullptr;
+    }
+
+    using import::StatusUpdate;
+    auto const upd = motis_content(StatusUpdate, msg);
+
+    auto& s = status[upd->name()->str()];
+    s.status = upd->status();
+    s.dependencies =
+        utl::to_vec(*upd->waiting_for(), [](auto&& e) { return e->str(); });
+    s.progress = upd->progress();
+
+    print_status();
+
+    return nullptr;
+  });
+
+  std::cout << "\nImport:\n";
   for (auto const& module : modules_) {
     if (is_module_active(modules, exclude_modules, module->name())) {
       module->set_data_directory(data_directory);
@@ -102,6 +215,10 @@ void motis_instance::import(std::vector<std::string> const& modules,
     }
   }
 
+  // Dummy message asking for initial dependencies of every job.
+  publish(make_success_msg("/import"), 1);
+
+  logging::log::enabled_ = false;
   for (auto const& path : import_paths) {
     message_creator fbb;
     fbb.create_and_finish(
@@ -110,6 +227,7 @@ void motis_instance::import(std::vector<std::string> const& modules,
         "/import", DestinationType_Topic);
     publish(make_msg(fbb), 1);
   }
+  logging::log::enabled_ = true;
 
   registry_.reset();
 }

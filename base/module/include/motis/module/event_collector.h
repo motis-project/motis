@@ -11,12 +11,30 @@
 namespace motis::module {
 
 struct event_collector : std::enable_shared_from_this<event_collector> {
-  using dependencies_map_t = std::map<MsgContent, msg_ptr>;
+  struct dependency_matcher {
+    dependency_matcher() = default;
+    dependency_matcher& operator=(dependency_matcher const&) = delete;
+    dependency_matcher(dependency_matcher const&) = delete;
+    dependency_matcher& operator=(dependency_matcher&&) = default;
+    dependency_matcher(dependency_matcher&&) = default;
+    ~dependency_matcher() = default;
+
+    bool operator<(dependency_matcher const& o) const {
+      return name_ < o.name_;
+    }
+    bool operator==(dependency_matcher const& o) const {
+      return name_ == o.name_;
+    }
+
+    std::string name_;
+    std::function<bool(msg_ptr)> matcher_fn_;
+  };
+  using dependencies_map_t = std::map<std::string, msg_ptr>;
   using import_op_t = std::function<void(dependencies_map_t const&)>;
 
   event_collector(std::string name, registry& reg, import_op_t op);
 
-  void listen(MsgContent msg);
+  void require(std::string name, std::function<bool(msg_ptr)>);
 
 private:
   void update_status(motis::import::Status, uint8_t progress = 0U);
@@ -25,7 +43,8 @@ private:
   registry& reg_;
   import_op_t op_;
   dependencies_map_t dependencies_;
-  std::set<MsgContent> waiting_for_;
+  std::set<std::string> waiting_for_;
+  std::set<dependency_matcher> matchers_;
 };
 
 }  // namespace motis::module
