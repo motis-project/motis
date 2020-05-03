@@ -15,9 +15,9 @@ database::database(std::string const& path, std::size_t const max_size,
                    bool read_only) {
   env_.set_maxdbs(1);
   env_.set_mapsize(max_size);
-  auto flags = lmdb::env_open_flags::NOSUBDIR;
+  auto flags = lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOSYNC;
   if (read_only) {
-    flags = flags | lmdb::env_open_flags ::NOLOCK | lmdb::env_open_flags::NOTLS;
+    flags = flags | lmdb::env_open_flags::NOLOCK | lmdb::env_open_flags::NOTLS;
   }
   if ((path != "-" && fs::exists(path)) || !read_only) {
     env_.open(path.c_str(), flags);
