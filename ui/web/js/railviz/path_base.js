@@ -65,6 +65,7 @@ RailViz.Path.Base = (function () {
         "circle-radius": 2.25,
         "circle-stroke-color": "#333333",
         "circle-stroke-width": 2,
+        "circle-pitch-alignment": "map",
       },
     });
 

@@ -1,226 +1,534 @@
 var RailViz = RailViz || {};
 
-RailViz.Trains = (function() {
+glMatrix.setMatrixArrayType(Float64Array);
+
+RailViz.Trains = (function () {
   const vertexShader = `
-        attribute vec4 a_startPos;
-        attribute vec4 a_endPos;
-        attribute float a_angle;
-        attribute float a_progress;
+        attribute float a_vertex;
+
+        attribute highp vec4 a_startPos;
+        attribute highp vec4 a_endPos;
+        attribute highp float a_angle;
+        attribute highp float a_progress;
+
         attribute vec4 a_delayColor;
         attribute vec4 a_categoryColor;
         attribute vec4 a_pickColor;
-        
-        uniform mat4 u_perspective;
-        uniform float u_zoom;
+
+        uniform highp mat4 u_perspective;
+        uniform highp float u_radius;
+
         uniform bool u_useCategoryColor;
-        
+        uniform bool u_offscreen;
+
+        varying vec2 v_texCoord;
         varying vec4 v_color;
-        varying vec4 v_pickColor;
-        varying mat3 v_texTransform;
 
         void main() {
-            if (a_progress < 0.0) {
-                gl_Position = vec4(-2.0, -2.0, 0.0, 1.0);
-            } else {
-                vec4 startPrj = u_perspective * a_startPos;
-                vec4 endPrj = u_perspective * a_endPos;
-                gl_Position = mix(startPrj, endPrj, a_progress);
-            }
+          // interpolate coordinates of current subsegment
+          vec4 pc = mix(a_startPos, a_endPos, a_progress);
 
-            gl_PointSize = u_zoom * 4.0;
-            v_color = u_useCategoryColor ? a_categoryColor : a_delayColor;
-            v_pickColor = a_pickColor;
+          // move vertices from center to corners and assign texture coordinates
+          vec4 pv = pc;
+          if(a_vertex == 0.0 || a_vertex == 2.0) {
+            pv.x += u_radius;
+            v_texCoord.s = 1.0;
+          } else {
+            pv.x -= u_radius;
+          }
+          if(a_vertex == 0.0 || a_vertex == 1.0) {
+            pv.y += u_radius;
+            v_texCoord.t = 1.0;
+          } else {
+            pv.y -= u_radius;
+          }
 
-            float c = cos(a_angle);
-            float s = sin(a_angle);
+          // compute rotation matrix
+          float c = cos(-a_angle);
+          float s = sin(-a_angle);
+          mat4 rotate = mat4(
+             c, s, 0, 0,
+             -s, c, 0, 0,
+             0, 0, 1, 0,
+            pc.x - pc.x * c + pc.y * s, pc.y - pc.x * s - pc.y * c, 0, 1
+          );
 
-            v_texTransform = mat3(
-              c, s, 0,
-              -s, c, 0,
-              -0.5 * c + 0.5 * s + 0.5, -0.5 * s - 0.5 * c + 0.5, 1
-            );
+          // project: mercator -> rotate -> perspective -> screen
+          gl_Position =  u_perspective * rotate * pv;
+
+          // determine color
+          if (u_offscreen) {
+            v_color = a_pickColor;
+          } else if(u_useCategoryColor) {
+            v_color = a_categoryColor;
+          } else {
+            v_color = a_delayColor;
+          }
         }
     `;
 
   const fragmentShader = `
         precision mediump float;
-        
-        uniform bool u_offscreen;
-        uniform sampler2D u_texture;
-        
-        varying vec4 v_color;
-        varying vec4 v_pickColor;
-        varying mat3 v_texTransform;
 
-        const vec4 transparent = vec4(0.0, 0.0, 0.0, 0.0);
-        
+        uniform bool u_offscreen;
+        uniform highp sampler2D u_texture;
+
+        varying vec2 v_texCoord;
+        varying vec4 v_color;
+
         void main() {
-            vec2 rotated = (v_texTransform * vec3(gl_PointCoord, 1.0)).xy;
-            vec4 tex = texture2D(u_texture, rotated);
-            if (u_offscreen) {
-                gl_FragColor = tex.a == 0.0 ? transparent : v_pickColor;
-            } else {
-                gl_FragColor = v_color * tex;
-            }
+          gl_FragColor = texture2D(u_texture, v_texCoord);
+          if(u_offscreen) {
+            gl_FragColor = gl_FragColor.a == 0.0 ? vec4(0, 0, 0, 0) : v_color;
+          } else {
+            gl_FragColor = v_color * gl_FragColor;
+          }
         }
     `;
 
-  var trains = [];
-  var routes = [];
-  var useCategoryColor = true;
-  var positionBuffer = null;
-  var progressBuffer = null;
-  var colorBuffer = null;
-  var elementArrayBuffer = null;
-  var positionData = null;
-  var positionBufferInitialized = false;
-  var positionBufferUpdated = false;
-  var progressBufferInitialized = false;
-  var colorBufferInitialized = false;
-  var texture = null;
-  var filteredIndices = null;
-  var isFiltered = false;
-  var filterBufferInitialized = false;
-  var totalFrames = 0;
-  var updatedBufferFrames = 0;
-  var program;
-  var a_startPos;
-  var a_endPos;
-  var a_angle;
-  var a_progress;
-  var a_delayColor;
-  var a_categoryColor;
-  var a_pickColor;
-  var u_perspective;
-  var u_zoom;
-  var u_useCategoryColor;
-  var u_offscreen;
-  var u_texture;
+  class VertexAttributes {
+    constructor(gl, program) {
+      this.a_vertex = gl.getAttribLocation(program, "a_vertex");
+      this.buffer = gl.createBuffer();
 
-  const PICKING_BASE = 0;
+      this.trainCount = null;
+      this.bufferDirty = false;
+    }
 
-  const categoryColors = [
-    [0x9c, 0x27, 0xb0], [0xe9, 0x1e, 0x63], [0x1a, 0x23, 0x7e],
-    [0xf4, 0x43, 0x36], [0xf4, 0x43, 0x36], [0x4c, 0xaf, 0x50],
-    [0x3f, 0x51, 0xb5], [0xff, 0x98, 0x00], [0xff, 0x98, 0x00],
-    [0x9e, 0x9e, 0x9e]
-  ];
+    setData(trains) {
+      this.trainCount = trains.length;
+      this.bufferDirty = true;
+    }
 
-  function init(newTrains, newRoutes) {
-    trains = newTrains || [];
-    routes = newRoutes || [];
-    positionData = null;
-    positionBufferInitialized = false;
-    progressBufferInitialized = false;
-    colorBufferInitialized = false;
-    isFiltered = false;
-    filterBufferInitialized = false;
-    filteredIndices = null;
+    update(gl) {
+      if (!this.bufferDirty || !this.trainCount) {
+        return;
+      }
+
+      let data = new Uint8Array(trains.length * 6);
+      for (let i = 0; i < trains.length; ++i) {
+        data[i * 6 + 0] = 0; // south east
+        data[i * 6 + 1] = 1; // north east
+        data[i * 6 + 2] = 2; // south west
+        data[i * 6 + 3] = 1; // north east
+        data[i * 6 + 4] = 2; // south west
+        data[i * 6 + 5] = 3; // north west
+      }
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+      this.bufferDirty = false;
+    }
+
+    enable(gl, ext) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+      gl.enableVertexAttribArray(this.a_vertex);
+      gl.vertexAttribPointer(this.a_vertex, 1, gl.UNSIGNED_BYTE, false, 0, 0);
+      ext.vertexAttribDivisorANGLE(this.a_vertex, 0);
+    }
+
+    disable(gl) {
+      gl.disableVertexAttribArray(this.a_vertex);
+    }
   }
 
-  function setUseCategoryColor(useCategory) {
-    useCategoryColor = useCategory;
+  class PositionAttributes {
+    constructor(gl, program) {
+      this.a_startPos = gl.getAttribLocation(program, "a_startPos");
+      this.a_endPos = gl.getAttribLocation(program, "a_endPos");
+      this.a_angle = gl.getAttribLocation(program, "a_angle");
+      this.a_progress = gl.getAttribLocation(program, "a_progress");
+
+      this.positionBuffer = gl.createBuffer();
+      this.progressBuffer = gl.createBuffer();
+
+      this.positionData = null;
+      this.progressData = null;
+      this.anchor = null;
+    }
+
+    setData(trains, routes) {
+      this.trains = trains;
+      this.routes = routes;
+
+      this.positionData = null;
+      this.progressData = null;
+      this.anchor = null;
+    }
+
+    update(gl, time) {
+      if (this.anchor == null) {
+        // first update after setData() was called
+        this.anchor = this.computeAnchor();
+
+        this.positionData = new Float32Array(this.trains.length * 5);
+        this.progressData = new Float32Array(this.trains.length);
+        for (var i = 0; i < this.trains.length; i++) {
+          this.updateTrain(i, time);
+          this.writePositionToBuffer(i);
+          this.writeProgressToBuffer(i);
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, this.positionData, gl.DYNAMIC_DRAW);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.progressBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, this.progressData, gl.DYNAMIC_DRAW);
+      } else {
+        // simulation continues: only the time has changed
+        let uploadPositions = false;
+        for (var i = 0; i < this.trains.length; i++) {
+          if (this.updateTrain(i, time)) {
+            this.writePositionToBuffer(i);
+            uploadPositions = true;
+          }
+          this.writeProgressToBuffer(i);
+        }
+
+        if (uploadPositions) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.positionData);
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.progressBuffer);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.progressData);
+      }
+    }
+
+    computeAnchor() {
+      let x = 0;
+      let y = 0;
+      this.trains.forEach((t) => {
+        x += t.departureStation.pos.x;
+        y += t.departureStation.pos.y;
+        x += t.arrivalStation.pos.x;
+        y += t.arrivalStation.pos.y;
+      });
+      return {
+        x: x / (2 * this.trains.length),
+        y: y / (2 * this.trains.length),
+      };
+    }
+
+    getAnchor() {
+      return vec3.fromValues(this.anchor.x, this.anchor.y, 0);
+    }
+
+    updateTrain(trainIndex, time) {
+      let updated = false;
+      let train = this.trains[trainIndex];
+      if (time < train.d_time || time > train.a_time) {
+        updated = train.currentSubSegmentIndex != null;
+        train.currentSubSegmentIndex = null;
+        train.currentSubSegmentProgress = null;
+      } else {
+        const progress = (time - train.d_time) / (train.a_time - train.d_time);
+        const segment = this.routes[train.route_index].segments[
+          train.segment_index
+        ];
+        const totalPosition = progress * segment.totalLength;
+        if (train.currentSubSegmentIndex != null) {
+          const subOffset =
+            segment.subSegmentOffsets[train.currentSubSegmentIndex];
+          const subLen =
+            segment.subSegmentLengths[train.currentSubSegmentIndex];
+          if (
+            totalPosition >= subOffset &&
+            totalPosition <= subOffset + subLen
+          ) {
+            train.currentSubSegmentProgress =
+              (totalPosition - subOffset) / subLen;
+            return false;
+          }
+        }
+        for (
+          let i = train.currentSubSegmentIndex || 0;
+          i < segment.subSegmentOffsets.length;
+          i++
+        ) {
+          const subOffset = segment.subSegmentOffsets[i];
+          const subLen = segment.subSegmentLengths[i];
+          if (
+            totalPosition >= subOffset &&
+            totalPosition <= subOffset + subLen
+          ) {
+            updated = train.currentSubSegmentIndex !== i;
+            train.currentSubSegmentIndex = i;
+            train.currentSubSegmentProgress =
+              (totalPosition - subOffset) / subLen;
+            break;
+          }
+        }
+      }
+      return updated;
+    }
+
+    writePositionToBuffer(trainIndex) {
+      const train = this.trains[trainIndex];
+      const subSegmentIndex = train.currentSubSegmentIndex;
+      const offset = trainIndex * 5;
+      if (subSegmentIndex != null) {
+        const segment = routes[train.route_index].segments[train.segment_index];
+        const polyline = segment.coordinates.coordinates;
+        const polyOffset = subSegmentIndex * 2;
+
+        const x0 = polyline[polyOffset],
+          y0 = polyline[polyOffset + 1],
+          x1 = polyline[polyOffset + 2],
+          y1 = polyline[polyOffset + 3];
+        const angle = -Math.atan2(y1 - y0, x1 - x0);
+
+        // Move coordinates to the anchor: This seems to be enough to fix
+        // noticable precision problems on higher zoom levels.
+        this.positionData[offset + 0] = x0 - this.anchor.x; // a_startPos
+        this.positionData[offset + 1] = y0 - this.anchor.y; // a_startPos
+        this.positionData[offset + 2] = x1 - this.anchor.x; // a_endPos
+        this.positionData[offset + 3] = y1 - this.anchor.y; // a_endPos
+        this.positionData[offset + 4] = angle; // a_angle
+      } else {
+        this.positionData[offset + 0] = -100; // a_startPos
+        this.positionData[offset + 1] = -100; // a_startPos
+        this.positionData[offset + 2] = -100; // a_endPos
+        this.positionData[offset + 3] = -100; // a_endPos
+        this.positionData[offset + 4] = 0; // a_angle
+      }
+    }
+
+    writeProgressToBuffer(trainIndex) {
+      const train = trains[trainIndex];
+      if (train.currentSubSegmentProgress != null) {
+        this.progressData[trainIndex] = train.currentSubSegmentProgress;
+      } else {
+        this.progressData[trainIndex] = -1.0;
+      }
+    }
+
+    enable(gl, ext) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+      gl.enableVertexAttribArray(this.a_startPos);
+      gl.vertexAttribPointer(this.a_startPos, 2, gl.FLOAT, false, 20, 0);
+      ext.vertexAttribDivisorANGLE(this.a_startPos, 1);
+      gl.enableVertexAttribArray(this.a_endPos);
+      gl.vertexAttribPointer(this.a_endPos, 2, gl.FLOAT, false, 20, 8);
+      ext.vertexAttribDivisorANGLE(this.a_endPos, 1);
+      gl.enableVertexAttribArray(this.a_angle);
+      gl.vertexAttribPointer(this.a_angle, 1, gl.FLOAT, false, 20, 16);
+      ext.vertexAttribDivisorANGLE(this.a_angle, 1);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.progressBuffer);
+      gl.enableVertexAttribArray(this.a_progress);
+      gl.vertexAttribPointer(this.a_progress, 1, gl.FLOAT, false, 0, 0);
+      ext.vertexAttribDivisorANGLE(this.a_progress, 1);
+    }
+
+    disable(gl) {
+      gl.disableVertexAttribArray(this.a_progress);
+
+      gl.disableVertexAttribArray(this.a_angle);
+      gl.disableVertexAttribArray(this.a_endPos);
+      gl.disableVertexAttribArray(this.a_startPos);
+    }
   }
+
+  class ColorAttributes {
+    categoryColors = [
+      [0x9c, 0x27, 0xb0],
+      [0xe9, 0x1e, 0x63],
+      [0x1a, 0x23, 0x7e],
+      [0xf4, 0x43, 0x36],
+      [0xf4, 0x43, 0x36],
+      [0x4c, 0xaf, 0x50],
+      [0x3f, 0x51, 0xb5],
+      [0xff, 0x98, 0x00],
+      [0xff, 0x98, 0x00],
+      [0x9e, 0x9e, 0x9e],
+    ];
+
+    constructor(gl, program) {
+      this.a_delayColor = gl.getAttribLocation(program, "a_delayColor");
+      this.a_categoryColor = gl.getAttribLocation(program, "a_categoryColor");
+      this.a_pickColor = gl.getAttribLocation(program, "a_pickColor");
+
+      this.buffer = gl.createBuffer();
+
+      this.trains = null;
+      this.bufferDirty = false;
+    }
+
+    setData(trains) {
+      this.trains = trains;
+      this.bufferDirty = true;
+    }
+
+    update(gl) {
+      if (!this.bufferDirty || !this.trains) {
+        return;
+      }
+
+      let data = new Uint8Array(this.trains.length * 12);
+      for (let i = 0; i < this.trains.length; ++i) {
+        const train = this.trains[i];
+        const offset = i * 12;
+
+        const delayColor = this.getDelayColor(train);
+        data[offset + 0] = delayColor[0]; // a_delayColor
+        data[offset + 1] = delayColor[1]; // a_delayColor
+        data[offset + 2] = delayColor[2]; // a_delayColor
+
+        const categoryColor = this.categoryColors[train.clasz];
+        data[offset + 4] = categoryColor[0]; // a_categoryColor
+        data[offset + 5] = categoryColor[1]; // a_categoryColor
+        data[offset + 6] = categoryColor[2]; // a_categoryColor
+
+        const pickColor = this.trainIndexToPickColor(i);
+        data[offset + 8] = pickColor[0]; // a_pickColor
+        data[offset + 9] = pickColor[1]; // a_pickColor
+        data[offset + 10] = pickColor[2]; // a_pickColor
+      }
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+      this.bufferDirty = false;
+    }
+
+    getDelayColor(train) {
+      const delay = (train.d_time - train.sched_d_time) / 60;
+      if (delay <= 3) {
+        return [69, 209, 74];
+      } else if (delay <= 5) {
+        return [255, 237, 0];
+      } else if (delay <= 10) {
+        return [255, 102, 0];
+      } else if (delay <= 15) {
+        return [255, 48, 71];
+      } else {
+        return [163, 0, 10];
+      }
+    }
+
+    trainIndexToPickColor(i) {
+      return [i & 255, (i >>> 8) & 255, (i >>> 16) & 255];
+    }
+
+    pickColorToTrainIndex(color) {
+      if (!color || color[3] === 0) {
+        return null;
+      }
+      const index = color[0] + (color[1] << 8) + (color[2] << 16);
+      if (index >= 0 && index < this.trains.length) {
+        return index;
+      }
+      return null;
+    }
+
+    // prettier-ignore
+    enable(gl, ext) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+      gl.enableVertexAttribArray(this.a_delayColor);
+      gl.vertexAttribPointer(this.a_delayColor, 3, gl.UNSIGNED_BYTE, true, 12, 0);
+      ext.vertexAttribDivisorANGLE(this.a_delayColor, 1);
+      gl.enableVertexAttribArray(this.a_categoryColor);
+      gl.vertexAttribPointer(this.a_categoryColor, 3, gl.UNSIGNED_BYTE, true, 12, 4);
+      ext.vertexAttribDivisorANGLE(this.a_categoryColor, 1);
+      gl.enableVertexAttribArray(this.a_pickColor);
+      gl.vertexAttribPointer(this.a_pickColor, 3, gl.UNSIGNED_BYTE, true, 12, 8);
+      ext.vertexAttribDivisorANGLE(this.a_pickColor, 1);
+    }
+
+    disable(gl) {
+      gl.disableVertexAttribArray(this.a_pickColor);
+      gl.disableVertexAttribArray(this.a_categoryColor);
+      gl.disableVertexAttribArray(this.a_delayColor);
+    }
+  }
+
+  let trains = [];
+  let routes = [];
+
+  let ext = null;
+  let texture = null;
+
+  let initialized = false;
+  let vertexAttributes = null;
+  let positionAttributes = null;
+  let colorAttributes = null;
+
+  let useCategoryColor = true;
+
+  let u_perspective = null;
+  let u_radius = null;
+  let u_useCategoryColor = null;
+  let u_offscreen = null;
+  let u_texture = null;
 
   function setup(gl) {
     const vshader = WebGL.Util.createShader(gl, gl.VERTEX_SHADER, vertexShader);
-    const fshader =
-        WebGL.Util.createShader(gl, gl.FRAGMENT_SHADER, fragmentShader);
+    const fshader = WebGL.Util.createShader(
+      gl,
+      gl.FRAGMENT_SHADER,
+      fragmentShader
+    );
     program = WebGL.Util.createProgram(gl, vshader, fshader);
     gl.deleteShader(vshader);
     gl.deleteShader(fshader);
 
-    a_startPos = gl.getAttribLocation(program, 'a_startPos');
-    a_endPos = gl.getAttribLocation(program, 'a_endPos');
-    a_angle = gl.getAttribLocation(program, 'a_angle');
-    a_progress = gl.getAttribLocation(program, 'a_progress');
-    a_delayColor = gl.getAttribLocation(program, 'a_delayColor');
-    a_categoryColor = gl.getAttribLocation(program, 'a_categoryColor');
-    a_pickColor = gl.getAttribLocation(program, 'a_pickColor');
-    u_perspective = gl.getUniformLocation(program, 'u_perspective');
-    u_zoom = gl.getUniformLocation(program, 'u_zoom');
-    u_useCategoryColor = gl.getUniformLocation(program, 'u_useCategoryColor');
-    u_offscreen = gl.getUniformLocation(program, 'u_offscreen');
-    u_texture = gl.getUniformLocation(program, 'u_texture');
+    ext = gl.getExtension("ANGLE_instanced_arrays");
 
-    positionBuffer = gl.createBuffer();
-    progressBuffer = gl.createBuffer();
-    colorBuffer = gl.createBuffer();
+    initialized = false;
+    vertexAttributes = new VertexAttributes(gl, program);
+    positionAttributes = new PositionAttributes(gl, program);
+    colorAttributes = new ColorAttributes(gl, program);
 
-    texture =
-        WebGL.Util.createTextureFromCanvas(gl, RailViz.Textures.createTrain());
+    u_perspective = gl.getUniformLocation(program, "u_perspective");
+    u_radius = gl.getUniformLocation(program, "u_radius");
+    u_useCategoryColor = gl.getUniformLocation(program, "u_useCategoryColor");
+    u_offscreen = gl.getUniformLocation(program, "u_offscreen");
+    u_texture = gl.getUniformLocation(program, "u_texture");
 
-    positionBufferInitialized = false;
-    progressBufferInitialized = false;
-    colorBufferInitialized = false;
-    filterBufferInitialized = false;
+    // prettier-ignore
+    texture = WebGL.Util.createTextureFromCanvas(
+      gl,RailViz.Textures.createTrain());
+  }
+
+  function setData(newTrains, newRoutes) {
+    trains = newTrains || [];
+    routes = newRoutes || [];
+    initialized = false;
   }
 
   function preRender(gl, time) {
-    if (!positionData) {
-      fillPositionBuffer();
+    if (!initialized) {
+      initialized = true;
+      vertexAttributes.setData(trains);
+      positionAttributes.setData(trains, routes);
+      colorAttributes.setData(trains);
     }
-
-    positionBufferUpdated = false;
-    trains.forEach(
-        (train, trainIndex) =>
-            updateCurrentSubSegment(train, trainIndex, time));
 
     gl.useProgram(program);
-    totalFrames++;
-    if (!positionBufferInitialized) {
-      initAndUploadPositionBuffer(gl);
-      updatedBufferFrames++;
-    } else if (positionBufferUpdated) {
-      uploadUpdatedPositionBuffer(gl);
-      updatedBufferFrames++;
-    }
-    fillProgressBuffer(gl);
-    if (!colorBufferInitialized) {
-      fillColorBuffer(gl);
-    }
 
-    // if (totalFrames % 300 == 0) {
-    //   console.log(
-    //       'position buffer uploaded:', updatedBufferFrames, '/', totalFrames,
-    //       '=', (updatedBufferFrames / totalFrames * 100), '% of all frames');
-    // }
-
-    if (isFiltered && !filterBufferInitialized) {
-      setupElementArrayBuffer(gl);
-    }
+    vertexAttributes.update(gl);
+    positionAttributes.update(gl, time);
+    colorAttributes.update(gl);
   }
 
-  function render(gl, perspective, zoom, pixelRatio, isOffscreen) {
-    var trainCount = isFiltered ? filteredIndices.length : trains.length;
-    if (trainCount == 0) {
+  function render(gl, perspective, zoom, scale, isOffscreen) {
+    if (trains.length == 0) {
       return;
     }
 
     gl.useProgram(program);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.enableVertexAttribArray(a_startPos);
-    gl.vertexAttribPointer(a_startPos, 2, gl.FLOAT, false, 20, 0);
-    gl.enableVertexAttribArray(a_endPos);
-    gl.vertexAttribPointer(a_endPos, 2, gl.FLOAT, false, 20, 8);
-    gl.enableVertexAttribArray(a_angle);
-    gl.vertexAttribPointer(a_angle, 1, gl.FLOAT, false, 20, 16);
+    vertexAttributes.enable(gl, ext);
+    positionAttributes.enable(gl, ext);
+    colorAttributes.enable(gl, ext);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, progressBuffer);
-    gl.enableVertexAttribArray(a_progress);
-    gl.vertexAttribPointer(a_progress, 1, gl.FLOAT, false, 0, 0);
+    let p2 = mat4.create();
+    mat4.fromTranslation(p2, positionAttributes.getAnchor());
+    mat4.multiply(p2, perspective, p2);
+    gl.uniformMatrix4fv(u_perspective, false, p2);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.enableVertexAttribArray(a_delayColor);
-    gl.vertexAttribPointer(a_delayColor, 3, gl.UNSIGNED_BYTE, true, 12, 0);
-    gl.enableVertexAttribArray(a_categoryColor);
-    gl.vertexAttribPointer(a_categoryColor, 3, gl.UNSIGNED_BYTE, true, 12, 4);
-    gl.enableVertexAttribArray(a_pickColor);
-    gl.vertexAttribPointer(a_pickColor, 3, gl.UNSIGNED_BYTE, true, 12, 8);
+    // size of a pixel in mapboxgl mercator units
+    const px_size = 1 / (512 * Math.pow(2, zoom)); // magic number YAY
+    gl.uniform1f(u_radius, 32.0 * Math.min(1.0, scale / 10) * px_size);
 
-    gl.uniformMatrix4fv(u_perspective, false, perspective);
-    gl.uniform1f(u_zoom, zoom * pixelRatio);
     gl.uniform1i(u_offscreen, isOffscreen);
     gl.uniform1i(u_useCategoryColor, useCategoryColor);
 
@@ -228,216 +536,27 @@ RailViz.Trains = (function() {
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.uniform1i(u_texture, 0);
 
-    if (isFiltered) {
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementArrayBuffer);
-      gl.drawElements(gl.POINTS, trainCount, gl.UNSIGNED_SHORT, 0);
-    } else {
-      gl.drawArrays(gl.POINTS, 0, trainCount);
-    }
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, trains.length);
 
-    gl.disableVertexAttribArray(a_pickColor);
-    gl.disableVertexAttribArray(a_categoryColor);
-    gl.disableVertexAttribArray(a_delayColor);
-    gl.disableVertexAttribArray(a_angle);
-    gl.disableVertexAttribArray(a_endPos);
-    gl.disableVertexAttribArray(a_startPos);
+    colorAttributes.disable(gl);
+    positionAttributes.disable(gl);
+    vertexAttributes.disable(gl);
   }
 
-  function initAndUploadPositionBuffer(gl) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, positionData, gl.DYNAMIC_DRAW);
-    positionBufferInitialized = true;
+  function setUseCategoryColor(useCategory) {
+    useCategoryColor = useCategory;
   }
 
-  function uploadUpdatedPositionBuffer(gl) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferSubData(gl.ARRAY_BUFFER, 0, positionData);
-  }
-
-  function fillPositionBuffer() {
-    positionData = new Float32Array(trains.length * 5);
-    for (var i = 0; i < trains.length; i++) {
-      updatePositionBuffer(i);
-    }
-    positionBufferUpdated = true;
-  }
-
-  function updatePositionBuffer(trainIndex) {
-    const train = trains[trainIndex];
-    const subSegmentIndex = train.currentSubSegmentIndex;
-    const base = trainIndex * 5;
-    if (subSegmentIndex != null) {
-      const segment = routes[train.route_index].segments[train.segment_index];
-      const polyline = segment.coordinates.coordinates;
-      const polyOffset = subSegmentIndex * 2;
-
-      const x0 = polyline[polyOffset], y0 = polyline[polyOffset + 1],
-            x1 = polyline[polyOffset + 2], y1 = polyline[polyOffset + 3];
-      const angle = -Math.atan2(y1 - y0, x1 - x0);
-
-      // a_startPos
-      positionData[base] = x0;
-      positionData[base + 1] = y0;
-      // a_endPos
-      positionData[base + 2] = x1;
-      positionData[base + 3] = y1;
-      // a_angle
-      positionData[base + 4] = angle;
-    } else {
-      // a_startPos
-      positionData[base] = -100;
-      positionData[base + 1] = -100;
-      // a_endPos
-      positionData[base + 2] = -100;
-      positionData[base + 3] = -100;
-      // a_angle
-      positionData[base + 4] = 0;
-    }
-    positionBufferUpdated = true;
-  }
-
-  function fillProgressBuffer(gl) {
-    var data = new Float32Array(trains.length);
-    for (var i = 0; i < trains.length; i++) {
-      const train = trains[i];
-      if (train.currentSubSegmentProgress != null) {
-        data[i] = train.currentSubSegmentProgress;
-      } else {
-        data[i] = -1.0;
-      }
-    }
-    gl.bindBuffer(gl.ARRAY_BUFFER, progressBuffer);
-    if (progressBufferInitialized) {
-      gl.bufferSubData(gl.ARRAY_BUFFER, 0, data);
-    } else {
-      gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
-      progressBufferInitialized = true;
-    }
-  }
-
-  function updateCurrentSubSegment(train, trainIndex, time) {
-    let updated = false;
-    if (time < train.d_time || time > train.a_time) {
-      updated = (train.currentSubSegmentIndex != null);
-      train.currentSubSegmentIndex = null;
-      train.currentSubSegmentProgress = null;
-    } else {
-      const progress = (time - train.d_time) / (train.a_time - train.d_time);
-      const segment = routes[train.route_index].segments[train.segment_index];
-      const totalPosition = progress * segment.totalLength;
-      if (train.currentSubSegmentIndex != null) {
-        const subOffset =
-            segment.subSegmentOffsets[train.currentSubSegmentIndex];
-        const subLen = segment.subSegmentLengths[train.currentSubSegmentIndex];
-        if (totalPosition >= subOffset &&
-            totalPosition <= (subOffset + subLen)) {
-          train.currentSubSegmentProgress =
-              (totalPosition - subOffset) / subLen;
-          return;
-        }
-      }
-      for (let i = train.currentSubSegmentIndex || 0;
-           i < segment.subSegmentOffsets.length; i++) {
-        const subOffset = segment.subSegmentOffsets[i];
-        const subLen = segment.subSegmentLengths[i];
-        if (totalPosition >= subOffset &&
-            totalPosition <= (subOffset + subLen)) {
-          updated = (train.currentSubSegmentIndex !== i);
-          train.currentSubSegmentIndex = i;
-          train.currentSubSegmentProgress =
-              (totalPosition - subOffset) / subLen;
-          break;
-        }
-      }
-    }
-    if (updated) {
-      updatePositionBuffer(trainIndex);
-    }
-  }
-
-  function fillColorBuffer(gl) {
-    var data = new Uint8Array(trains.length * 12);
-    for (var i = 0; i < trains.length; i++) {
-      const train = trains[i];
-      const base = i * 12;
-      const pickColor = RailViz.Picking.pickIdToColor(PICKING_BASE + i);
-
-      // a_delayColor
-      setDelayColor(train, data, base);
-
-      // a_categoryColor
-      const categoryColor = categoryColors[train.clasz];
-      data[base + 4] = categoryColor[0];
-      data[base + 5] = categoryColor[1];
-      data[base + 6] = categoryColor[2];
-
-      // a_pickColor
-      data[base + 8] = pickColor[0];
-      data[base + 9] = pickColor[1];
-      data[base + 10] = pickColor[2];
-    }
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-    colorBufferInitialized = true;
-  }
-
-  const colDelay3Min = [69, 209, 74];
-  const colDelay5Min = [255, 237, 0];
-  const colDelay10Min = [255, 102, 0];
-  const colDelay15Min = [255, 48, 71];
-  const colDelayMax = [163, 0, 10];
-
-  function setDelayColor(train, data, offset) {
-    const delay = (train.d_time - train.sched_d_time) / 60;
-    let color;
-    if (delay <= 3) {
-      color = colDelay3Min;
-    } else if (delay <= 5) {
-      color = colDelay5Min;
-    } else if (delay <= 10) {
-      color = colDelay10Min;
-    } else if (delay <= 15) {
-      color = colDelay15Min;
-    } else {
-      color = colDelayMax;
-    }
-    data[offset] = color[0];
-    data[offset + 1] = color[1];
-    data[offset + 2] = color[2];
-  }
-
-  function setFilteredIndices(indices) {
-    filteredIndices = indices;
-    isFiltered = indices != null;
-    filterBufferInitialized = false;
-  }
-
-  function setupElementArrayBuffer(gl) {
-    if (!elementArrayBuffer || !gl.isBuffer(elementArrayBuffer)) {
-      elementArrayBuffer = gl.createBuffer();
-    }
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementArrayBuffer);
-    gl.bufferData(
-        gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(filteredIndices),
-        gl.STATIC_DRAW);
-    filterBufferInitialized = true;
-  }
-
-  function getPickedTrainIndex(pickId) {
-    if (pickId != null) {
-      const index = pickId - PICKING_BASE;
-      if (index >= 0 && index < trains.length) {
-        return index;
-      }
-    }
-    return null;
+  function getPickedTrainIndex(color) {
+    return colorAttributes.pickColorToTrainIndex(color);
   }
 
   return {
-    init: init, setup: setup, render: render, preRender: preRender,
-        setFilteredIndices: setFilteredIndices,
-        getPickedTrainIndex: getPickedTrainIndex,
-        setUseCategoryColor: setUseCategoryColor, categoryColors: categoryColors
-  }
+    setup: setup,
+    setData: setData,
+    preRender: preRender,
+    render: render,
+    getPickedTrainIndex: getPickedTrainIndex,
+    setUseCategoryColor: setUseCategoryColor,
+  };
 })();

@@ -245,10 +245,6 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
       center: [lng, lat],
       style: {
         version: 8,
-        name: "Empty",
-        metadata: {
-          "mapbox:autocomposite": true,
-        },
         sources: {},
         layers: [],
       },

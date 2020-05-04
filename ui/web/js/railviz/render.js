@@ -33,7 +33,7 @@ RailViz.Render = (function () {
       footpaths: [],
     };
 
-    RailViz.Trains.init(data.trains, data.routes);
+    RailViz.Trains.setData(data.trains, data.routes);
     forceDraw = true;
   }
 
@@ -103,7 +103,7 @@ RailViz.Render = (function () {
   function render(gl, matrix, zoom) {
     createOffscreenBuffer();
 
-    zoom = Math.max(minZoom, zoom);
+    let scale = Math.max(minZoom, zoom) * pixelRatio;
 
     for (var i = 0; i <= 1; i++) {
       var isOffscreen = i == 0;
@@ -115,13 +115,13 @@ RailViz.Render = (function () {
       gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
       gl.enable(gl.BLEND);
       gl.disable(gl.DEPTH_TEST);
-      // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      gl.blendFuncSeparate(
-        gl.SRC_ALPHA,
-        gl.ONE_MINUS_SRC_ALPHA,
-        gl.ONE,
-        gl.ONE_MINUS_SRC_ALPHA
-      );
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      // gl.blendFuncSeparate(
+      //   gl.SRC_ALPHA,
+      //   gl.ONE_MINUS_SRC_ALPHA,
+      //   gl.ONE,
+      //   gl.ONE_MINUS_SRC_ALPHA
+      // );
 
       if (isOffscreen) {
         gl.clearColor(0, 0, 0, 0);
@@ -129,7 +129,7 @@ RailViz.Render = (function () {
       }
 
       if (trainsEnabled) {
-        RailViz.Trains.render(gl, matrix, zoom, pixelRatio, isOffscreen);
+        RailViz.Trains.render(gl, matrix, zoom, scale, isOffscreen);
       }
     }
 
@@ -237,10 +237,8 @@ RailViz.Render = (function () {
     const pickingY = mouseY * pixelRatio;
     const button = event.button;
 
-    const offscreenPixel = readOffscreenPixel(pickingX, pickingY);
-    const pickId = RailViz.Picking.colorToPickId(offscreenPixel);
-
-    const pickedTrainIndex = RailViz.Trains.getPickedTrainIndex(pickId);
+    const offscreenColor = readOffscreenPixel(pickingX, pickingY);
+    const pickedTrainIndex = RailViz.Trains.getPickedTrainIndex(offscreenColor);
     const pickedTrain =
       pickedTrainIndex != null ? data.trains[pickedTrainIndex] : null;
 
@@ -259,7 +257,7 @@ RailViz.Render = (function () {
       features
     );
 
-    if ((pickId || pickedStation) && eventType != "mouseout") {
+    if ((pickedTrain || pickedStation) && eventType != "mouseout") {
       canvas.style.cursor = "pointer";
     } else {
       canvas.style.cursor = "default";
