@@ -23,7 +23,7 @@ void event_collector::update_status(motis::import::Status const status,
   ctx::await_all(motis_publish(make_msg(fbb)));
 }
 
-void event_collector::require(std::string name,
+void event_collector::require(std::string const& name,
                               std::function<bool(msg_ptr)> matcher) {
   auto const matcher_it =
       matchers_.emplace(dependency_matcher{name, std::move(matcher)});

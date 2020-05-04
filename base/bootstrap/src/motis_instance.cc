@@ -62,6 +62,8 @@ void move_cursor_up(int lines) {
   }
 }
 
+#endif
+
 void clear_line() {
   auto const empty =
       "          "
@@ -76,8 +78,6 @@ void clear_line() {
       "          ";
   std::cout << empty << "\r";
 }
-
-#endif
 
 bool is_module_active(std::vector<std::string> const& yes,
                       std::vector<std::string> const& no,
@@ -149,9 +149,9 @@ void motis_instance::import(std::vector<std::string> const& modules,
   });
 
   struct state {
-    std::vector<std::string> dependencies;
-    import::Status status;
-    int progress;
+    std::vector<std::string> dependencies_;
+    import::Status status_{import::Status::Status_WAITING};
+    int progress_{0U};
   };
   std::map<std::string, state> status;
   auto last_print_height = 0U;
@@ -161,10 +161,10 @@ void motis_instance::import(std::vector<std::string> const& modules,
       clear_line();
       std::cout << std::setw(20) << std::setfill(' ') << std::right << name
                 << ": ";
-      switch (s.status) {
+      switch (s.status_) {
         case import::Status_WAITING:
           std::cout << "WAITING, dependencies: ";
-          for (auto const& dep : s.dependencies) {
+          for (auto const& dep : s.dependencies_) {
             std::cout << dep << " ";
           }
           break;
@@ -175,12 +175,12 @@ void motis_instance::import(std::vector<std::string> const& modules,
           bool end = false;
           for (auto i = 0U; i < 55U; ++i) {
             auto const scaled = static_cast<int>(i * 100.0 / WIDTH);
-            std::cout << (scaled < s.progress
+            std::cout << (scaled < s.progress_
                               ? '='
-                              : !end && scaled >= s.progress ? '>' : ' ');
-            end = scaled >= s.progress;
+                              : !end && scaled >= s.progress_ ? '>' : ' ');
+            end = scaled >= s.progress_;
           }
-          std::cout << "] " << s.progress << "%";
+          std::cout << "] " << s.progress_ << "%";
           break;
       }
       std::cout << "\n";
@@ -197,17 +197,17 @@ void motis_instance::import(std::vector<std::string> const& modules,
     auto const upd = motis_content(StatusUpdate, msg);
 
     auto& s = status[upd->name()->str()];
-    s.status = upd->status();
-    s.dependencies =
+    s.status_ = upd->status();
+    s.dependencies_ =
         utl::to_vec(*upd->waiting_for(), [](auto&& e) { return e->str(); });
-    s.progress = upd->progress();
+    s.progress_ = upd->progress();
 
     print_status();
 
     return nullptr;
   });
 
-  std::cout << "\nImport:\n";
+  std::cout << "\nImport:\n\n";
   for (auto const& module : modules_) {
     if (is_module_active(modules, exclude_modules, module->name())) {
       module->set_data_directory(data_directory);

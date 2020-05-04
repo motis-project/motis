@@ -26,7 +26,7 @@ struct log_streambuf : public std::streambuf {
 
   ~log_streambuf() override { std::clog.rdbuf(backup_); }
 
-  virtual int_type overflow(int_type c = traits_type::eof()) {
+  int_type overflow(int_type c = traits_type::eof()) override {  // NOLINT
     static constexpr auto const PROGRESS_MARKER = '\0';
     if (traits_type::to_char_type(c) == PROGRESS_MARKER) {
       percent_active_ = !percent_active_;
