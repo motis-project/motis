@@ -18,12 +18,12 @@ struct railviz_get_trains_test : public motis_instance_test {
 
   static msg_ptr get_trains(geo::coord const c1, geo::coord const c2,  //
                             time_t const min, time_t const max) {
-    Position const corner1(c1.lat_, c1.lng_);
-    Position const corner2(c2.lat_, c2.lng_);
+    Position const p1(c1.lat_, c1.lng_);
+    Position const p2(c2.lat_, c2.lng_);
     message_creator fbb;
     fbb.create_and_finish(
         MsgContent_RailVizTrainsRequest,
-        CreateRailVizTrainsRequest(fbb, 18, &corner1, &corner2, min, max, 100)
+        CreateRailVizTrainsRequest(fbb, 16, 18, &p1, &p2, min, max, 100)
             .Union(),
         "/railviz/get_trains");
     return make_msg(fbb);

@@ -377,7 +377,7 @@ msg_ptr railviz::get_trains(msg_ptr const& msg) const {
   std::map<int, int> routes;
   std::vector<Offset<Route>> fbs_routes;
   std::vector<std::set<trip::route_edge>> route_edges;
-  path_resolver pr(sched, req->zoom_level());
+  path_resolver pr(sched, req->zoom_geo());
 
   auto const fbs_trains = events_to_trains(
       sched, fbb, pr,
@@ -386,7 +386,7 @@ msg_ptr railviz::get_trains(msg_ptr const& msg) const {
                                req->max_trains(),
                                {{req->corner1()->lat(), req->corner1()->lng()},
                                 {req->corner2()->lat(), req->corner2()->lng()}},
-                               req->zoom_level()),
+                               req->zoom_bounds()),
       routes, fbs_routes, route_edges);
 
   fbb.create_and_finish(
