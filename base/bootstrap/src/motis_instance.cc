@@ -196,11 +196,9 @@ void motis_instance::import(std::vector<std::string> const& modules,
     using import::StatusUpdate;
     auto const upd = motis_content(StatusUpdate, msg);
 
-    auto& s = status[upd->name()->str()];
-    s.status_ = upd->status();
-    s.dependencies_ =
-        utl::to_vec(*upd->waiting_for(), [](auto&& e) { return e->str(); });
-    s.progress_ = upd->progress();
+    status[upd->name()->str()] = {
+        utl::to_vec(*upd->waiting_for(), [](auto&& e) { return e->str(); }),
+        upd->status(), upd->progress()};
 
     print_status();
 

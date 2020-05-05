@@ -16,8 +16,6 @@ struct revise : public motis::module::module {
   revise(revise&&) = delete;
   revise& operator=(revise&&) = delete;
 
-  std::string name() const override { return "revise"; }
-
   void init(motis::module::registry&) override;
 
 private:

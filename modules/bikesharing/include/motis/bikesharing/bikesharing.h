@@ -20,7 +20,6 @@ struct bikesharing : public motis::module::module {
   bikesharing(bikesharing&&) = delete;
   bikesharing& operator=(bikesharing&&) = delete;
 
-  std::string name() const override { return "bikesharing"; }
   void init(motis::module::registry&) override;
 
 private:

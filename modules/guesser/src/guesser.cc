@@ -29,6 +29,8 @@ std::string trim(std::string const& s) {
   }
 }
 
+guesser::guesser() : : module("Guesser Options", "guesser") {}
+
 void guesser::init(motis::module::registry& reg) {
   auto& sched = synced_sched<RO>().sched();
 

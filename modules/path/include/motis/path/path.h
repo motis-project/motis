@@ -17,7 +17,6 @@ struct path : public motis::module::module {
   path(path&&) = delete;
   path& operator=(path&&) = delete;
 
-  std::string name() const override { return "path"; }
   void init(motis::module::registry&) override;
 
 private:
