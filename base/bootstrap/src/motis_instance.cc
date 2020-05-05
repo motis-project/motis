@@ -1,5 +1,6 @@
 #include "motis/bootstrap/motis_instance.h"
 
+#include <motis/loader/gtfs/gtfs_parser.h>
 #include <chrono>
 #include <algorithm>
 #include <atomic>
@@ -23,61 +24,16 @@
 #include "motis/core/common/logging.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
+#include "motis/bootstrap/import_status.h"
 #include "motis/loader/loader.h"
 
 #include "modules.h"
 
 using namespace motis::module;
 using namespace motis::logging;
+namespace fs = boost::filesystem;
 
 namespace motis::bootstrap {
-
-#ifdef _MSC_VER
-
-void move(int x, int y) {
-  auto hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-  if (!hStdout) return;
-
-  CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
-  GetConsoleScreenBufferInfo(hStdout, &csbiInfo);
-
-  COORD cursor;
-
-  cursor.X = csbiInfo.dwCursorPosition.X + x;
-  cursor.Y = csbiInfo.dwCursorPosition.Y + y;
-  SetConsoleCursorPosition(hStdout, cursor);
-}
-
-void move_cursor_up(int lines) {
-  if (lines != 0) {
-    move(0, -lines);
-  }
-}
-
-#else
-
-void move_cursor_up(int lines) {
-  if (lines != 0) {
-    std::cout << "\x1b[" << lines << "A";
-  }
-}
-
-#endif
-
-void clear_line() {
-  auto const empty =
-      "          "
-      "          "
-      "          "
-      "          "
-      "          "
-      "          "
-      "          "
-      "          "
-      "          "
-      "          ";
-  std::cout << empty << "\r";
-}
 
 bool is_module_active(std::vector<std::string> const& yes,
                       std::vector<std::string> const& no,
@@ -128,7 +84,7 @@ void motis_instance::import(std::vector<std::string> const& modules,
 
     using motis::import::FileEvent;
     auto const path = motis_content(FileEvent, msg)->path()->str();
-    auto const name = boost::filesystem::path{path}.filename().generic_string();
+    auto const name = fs::path{path}.filename().generic_string();
     if (name.substr(name.size() - 8) != ".osm.pbf") {
       return nullptr;
     }
@@ -144,68 +100,32 @@ void motis_instance::import(std::vector<std::string> const& modules,
                               fbb, fbb.CreateString(path), hash, m.size())
                               .Union(),
                           "/import", DestinationType_Topic);
-    ctx::await_all(motis_publish(make_msg(fbb)));
+    motis_publish(make_msg(fbb));
     return nullptr;
   });
 
-  struct state {
-    std::vector<std::string> dependencies_;
-    import::Status status_{import::Status::Status_WAITING};
-    int progress_{0U};
-  };
-  std::map<std::string, state> status;
-  auto last_print_height = 0U;
-  auto const print_status = [&]() {
-    move_cursor_up(last_print_height);
-    for (auto const& [name, s] : status) {
-      clear_line();
-      std::cout << std::setw(20) << std::setfill(' ') << std::right << name
-                << ": ";
-      switch (s.status_) {
-        case import::Status_WAITING:
-          std::cout << "WAITING, dependencies: ";
-          for (auto const& dep : s.dependencies_) {
-            std::cout << dep << " ";
-          }
-          break;
-        case import::Status_FINISHED: std::cout << "DONE"; break;
-        case import::Status_RUNNING:
-          std::cout << "[";
-          constexpr auto const WIDTH = 55U;
-          bool end = false;
-          for (auto i = 0U; i < 55U; ++i) {
-            auto const scaled = static_cast<int>(i * 100.0 / WIDTH);
-            std::cout << (scaled < s.progress_
-                              ? '='
-                              : !end && scaled >= s.progress_ ? '>' : ' ');
-            end = scaled >= s.progress_;
-          }
-          std::cout << "] " << s.progress_ << "%";
-          break;
-      }
-      std::cout << "\n";
-    }
-    last_print_height = status.size();
-  };
-
   registry_.subscribe("/import", [&](msg_ptr const& msg) -> msg_ptr {
-    if (msg->get()->content_type() != MsgContent_StatusUpdate) {
+    if (msg->get()->content_type() != MsgContent_FileEvent) {
       return nullptr;
     }
 
-    using import::StatusUpdate;
-    auto const upd = motis_content(StatusUpdate, msg);
+    using motis::import::FileEvent;
+    auto const path = motis_content(FileEvent, msg)->path()->str();
+    if (fs::is_directory(path)) {
+      // TODO(felix) check if it is a GTFS/HRD dataset using loader utils
+      return nullptr;
+    }
+  });
 
-    status[upd->name()->str()] = {
-        utl::to_vec(*upd->waiting_for(), [](auto&& e) { return e->str(); }),
-        upd->status(), upd->progress()};
+  import_status status;
 
-    print_status();
-
+  registry_.subscribe("/import", [&](msg_ptr const& msg) -> msg_ptr {
+    if (status.update(msg)) {
+      status.print();
+    }
     return nullptr;
   });
 
-  std::cout << "\nImport:\n\n";
   for (auto const& module : modules_) {
     if (is_module_active(modules, exclude_modules, module->name())) {
       module->set_data_directory(data_directory);
@@ -213,7 +133,7 @@ void motis_instance::import(std::vector<std::string> const& modules,
     }
   }
 
-  // Dummy message asking for initial dependencies of every job.
+  std::cout << "\nImport:\n\n";
   publish(make_success_msg("/import"), 1);
 
   logging::log::enabled_ = false;
