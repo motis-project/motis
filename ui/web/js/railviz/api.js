@@ -12,7 +12,8 @@ RailViz.API = (function () {
       },
       content_type: 'RailVizTrainsRequest',
       content: {
-        zoom_level: zoom_level,
+        zoom_bounds: zoom_level,
+        zoom_geo: zoom_level + 2,
         corner1: corner1,
         corner2: corner2,
         start_time: Math.floor(startTime),
