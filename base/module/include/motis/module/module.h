@@ -28,10 +28,10 @@ struct module : public conf::configuration {
 
   ~module() override = default;
 
-  virtual std::string name() const { return prefix(); }
+  virtual std::string module_name() const;
 
-  void set_data_directory(std::string const& d) { data_directory_ = d; }
-  void set_context(motis::schedule& schedule) { schedule_ = &schedule; }
+  void set_data_directory(std::string const& d);
+  void set_context(motis::schedule& schedule);
 
   virtual void import(registry&) {}
   virtual void init(registry&) {}
@@ -42,9 +42,7 @@ protected:
     return synced_schedule<A>(*schedule_);
   }
 
-  boost::filesystem::path const& get_data_directory() const {
-    return data_directory_;
-  }
+  boost::filesystem::path const& get_data_directory() const;
 
 private:
   boost::filesystem::path data_directory_;

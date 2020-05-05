@@ -20,7 +20,6 @@ public:
   osrm(osrm&&) = delete;
   osrm& operator=(osrm&&) = delete;
 
-  std::string name() const override { return "osrm"; }
   void import(motis::module::registry&) override;
   void init(motis::module::registry&) override;
   void init_async();
