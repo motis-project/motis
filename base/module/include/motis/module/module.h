@@ -28,6 +28,8 @@ struct module : public conf::configuration {
 
   ~module() override = default;
 
+  std::string const& module_name() const { return prefix(); }
+
   void set_data_directory(std::string const& d);
   void set_context(motis::schedule& schedule);
 

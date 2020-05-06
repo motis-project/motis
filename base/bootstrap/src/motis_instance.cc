@@ -1,29 +1,16 @@
 #include "motis/bootstrap/motis_instance.h"
 
-#include <motis/loader/gtfs/gtfs_parser.h>
-#include <chrono>
 #include <algorithm>
-#include <atomic>
 #include <exception>
-#include <future>
 #include <iostream>
-#include <thread>
-
-#if defined(_MSC_VER)
-#include <io.h>
-#include <windows.h>
-#endif
 
 #include "boost/filesystem.hpp"
-
-#include "cista/hash.h"
-#include "cista/mmap.h"
-
-#include "ctx/future.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
+#include "motis/bootstrap/import_osm.h"
+#include "motis/bootstrap/import_schedule.h"
 #include "motis/bootstrap/import_status.h"
 #include "motis/loader/loader.h"
 
@@ -62,7 +49,7 @@ std::vector<motis::module::module*> motis_instance::modules() const {
 std::vector<std::string> motis_instance::module_names() const {
   std::vector<std::string> s;
   for (auto const& module : modules_) {
-    s.push_back(module->name());
+    s.push_back(module->module_name());
   }
   return s;
 }
@@ -77,46 +64,8 @@ void motis_instance::import(std::vector<std::string> const& modules,
                             std::vector<std::string> const& exclude_modules,
                             std::vector<std::string> const& import_paths,
                             std::string const& data_directory) {
-  registry_.subscribe("/import", [&](msg_ptr const& msg) -> msg_ptr {
-    if (msg->get()->content_type() != MsgContent_FileEvent) {
-      return nullptr;
-    }
-
-    using motis::import::FileEvent;
-    auto const path = motis_content(FileEvent, msg)->path()->str();
-    auto const name = fs::path{path}.filename().generic_string();
-    if (name.substr(name.size() - 8) != ".osm.pbf") {
-      return nullptr;
-    }
-    cista::mmap m(path.c_str(), cista::mmap::protection::READ);
-    auto const hash = cista::hash(std::string_view{
-        reinterpret_cast<char const*>(m.begin()),
-        std::max(static_cast<size_t>(50 * 1024 * 1024), m.size())});
-
-    message_creator fbb;
-    fbb.create_and_finish(MsgContent_OSMEvent,
-                          motis::import::CreateOSMEvent(
-                              fbb, fbb.CreateString(path), hash, m.size())
-                              .Union(),
-                          "/import", DestinationType_Topic);
-    motis_publish(make_msg(fbb));
-    return nullptr;
-  });
-
-  registry_.subscribe("/import", [&](msg_ptr const& msg) -> msg_ptr {
-    if (msg->get()->content_type() != MsgContent_FileEvent) {
-      return nullptr;
-    }
-
-    using motis::import::FileEvent;
-    auto const path = motis_content(FileEvent, msg)->path()->str();
-    if (fs::is_directory(path)) {
-      // TODO(felix) check if it is a GTFS/HRD dataset using loader utils
-      return nullptr;
-    }
-
-    return nullptr;
-  });
+  registry_.subscribe("/import", import_osm);
+  registry_.subscribe("/import", import_schedule);
 
   import_status status;
 
@@ -128,7 +77,7 @@ void motis_instance::import(std::vector<std::string> const& modules,
   });
 
   for (auto const& module : modules_) {
-    if (is_module_active(modules, exclude_modules, module->name())) {
+    if (is_module_active(modules, exclude_modules, module->module_name())) {
       module->set_data_directory(data_directory);
       module->import(registry_);
     }
@@ -155,7 +104,7 @@ void motis_instance::init_modules(
     std::vector<std::string> const& modules,
     std::vector<std::string> const& exclude_modules, unsigned num_threads) {
   for (auto const& module : modules_) {
-    if (!is_module_active(modules, exclude_modules, module->name())) {
+    if (!is_module_active(modules, exclude_modules, module->prefix())) {
       continue;
     }
 
@@ -163,11 +112,11 @@ void motis_instance::init_modules(
       module->set_context(*schedule_);
       module->init(registry_);
     } catch (std::exception const& e) {
-      LOG(emrg) << "module " << module->name()
+      LOG(emrg) << "module " << module->module_name()
                 << ": unhandled init error: " << e.what();
       throw;
     } catch (...) {
-      LOG(emrg) << "module " << module->name()
+      LOG(emrg) << "module " << module->module_name()
                 << "unhandled unknown init error";
       throw;
     }
