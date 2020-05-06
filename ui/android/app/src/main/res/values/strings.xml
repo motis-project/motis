@@ -55,4 +55,7 @@
     <string name="ppr_tab">Fußgängerrouting</string>
     <string name="intermodal_tab">Intermodale Verbindungssuche</string>
     <string name="fast_switch">Schnelle Suche</string>
+
+    <string name="navigation_drawer_open">Navigation öffnen</string>
+    <string name="navigation_drawer_close">Navigation schließen</string>
 </resources>

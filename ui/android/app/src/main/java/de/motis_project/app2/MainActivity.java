@@ -5,9 +5,12 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBar;
+import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
@@ -24,7 +27,7 @@ import de.motis_project.app2.ppr.PPRFragment;
 import de.motis_project.app2.query.QueryFragment;
 import de.motis_project.app2.saved.SavedConnectionsFragment;
 
-public class MainActivity extends FragmentActivity {
+public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
 
@@ -36,6 +39,9 @@ public class MainActivity extends FragmentActivity {
 
     @BindView(R.id.navigation)
     NavigationView navigationView;
+
+    @BindView(R.id.main_toolbar)
+    Toolbar mainToolbar;
 
     Switch fastSwitch;
 
@@ -53,9 +59,22 @@ public class MainActivity extends FragmentActivity {
         Log.i(TAG, "onCreate");
         ButterKnife.bind(this);
 
+        setSupportActionBar(mainToolbar);
+        if (mainToolbar != null) {
+            mainToolbar.setTitleTextColor(getResources().getColor(R.color.md_white));
+        }
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null && drawerLayout != null) {
+            ActionBarDrawerToggle drawerToggle = new ActionBarDrawerToggle(this, drawerLayout,
+                mainToolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+            drawerLayout.addDrawerListener(drawerToggle);
+            drawerToggle.syncState();
+            drawerToggle.getDrawerArrowDrawable().setColor(getResources().getColor(R.color.md_white));
+        }
+
         fastSwitch = (Switch) ((RelativeLayout) navigationView.getMenu()
-                .findItem(R.id.nav_fast_switch).getActionView())
-                .getChildAt(0);
+            .findItem(R.id.nav_fast_switch).getActionView())
+            .getChildAt(0);
         fastSwitch.setChecked(!Status.get().usingRtServer(this));
         fastSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             boolean useRt = !isChecked;
@@ -96,6 +115,7 @@ public class MainActivity extends FragmentActivity {
                     queryFragment = new QueryFragment();
                 }
                 selectedFragment = queryFragment;
+                setTitle(getResources().getString(R.string.search));
                 break;
             /*
             case R.id.nav_connections:
@@ -110,12 +130,14 @@ public class MainActivity extends FragmentActivity {
                     pprFragment = new PPRFragment();
                 }
                 selectedFragment = pprFragment;
+                setTitle(getResources().getString(R.string.ppr_tab));
                 break;
             case R.id.nav_intermodal:
                 if (intermodalFragment == null) {
                     intermodalFragment = new IntermodalFragment();
                 }
                 selectedFragment = intermodalFragment;
+                setTitle(getResources().getString(R.string.intermodal_tab));
                 break;
             case R.id.nav_fast_switch:
                 fastSwitch.toggle();
@@ -126,8 +148,8 @@ public class MainActivity extends FragmentActivity {
         }
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager.beginTransaction()
-                .replace(R.id.content_frame, selectedFragment)
-                .commit();
+            .replace(R.id.content_frame, selectedFragment)
+            .commit();
         return true;
     }
 
