@@ -88,7 +88,6 @@ void motis_instance::import(std::vector<std::string> const& modules,
     if (name.substr(name.size() - 8) != ".osm.pbf") {
       return nullptr;
     }
-
     cista::mmap m(path.c_str(), cista::mmap::protection::READ);
     auto const hash = cista::hash(std::string_view{
         reinterpret_cast<char const*>(m.begin()),
@@ -115,6 +114,8 @@ void motis_instance::import(std::vector<std::string> const& modules,
       // TODO(felix) check if it is a GTFS/HRD dataset using loader utils
       return nullptr;
     }
+
+    return nullptr;
   });
 
   import_status status;
