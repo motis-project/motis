@@ -41,12 +41,14 @@ struct db_builder {
 
   void store_stations(std::vector<station> const&) const;
 
-  void add_seq(size_t seq_idx, resolved_station_seq const&,
-               std::vector<processed_segment> const&) const;
+  std::pair<uint64_t, uint64_t> add_feature(
+      geo::polyline const&, std::vector<seq_seg> const&,
+      std::vector<uint32_t> const& classes, bool is_stub) const;
 
-  void add_tile_feature(geo::polyline const&, std::vector<seq_seg> const&,
-                        std::vector<uint32_t> const& classes,
-                        bool is_stub) const;
+  void add_seq(size_t seq_idx, resolved_station_seq const&,
+               std::vector<geo::box> const& boxes,
+               std::vector<std::vector<int64_t>> const& feature_ids,
+               std::vector<std::vector<uint64_t>> const& hints_rle) const;
 
   void finish() const;
 

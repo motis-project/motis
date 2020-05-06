@@ -1,0 +1,12 @@
+namespace motis.path;
+
+table InternalDbSegment {
+  features: [long]; // negative means reversed path
+  hints_rle: [ulong]; // run-length encoding: even=hints odd=repeats
+}
+
+table InternalDbSequence {
+  station_ids: [string];
+  classes: [uint];
+  segments: [InternalDbSegment];
+}

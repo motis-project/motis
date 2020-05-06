@@ -29,7 +29,7 @@
 #include "motis/path/constants.h"
 #include "motis/path/path_database.h"
 
-#include "motis/path/fbs/InternalPathSeqResponse_generated.h"
+#include "motis/path/fbs/InternalDbSequence_generated.h"
 #include "motis/path/fbs/PathIndex_generated.h"
 #include "motis/protocol/PathSeqResponse_generated.h"
 
@@ -80,6 +80,8 @@ struct db_builder::impl {
     auto txn = db_->db_handle_->make_txn();
     layer_names.store(*db_->db_handle_, txn);
     txn.commit();
+
+    seq_segs_.emplace_back();  // dont use id zero (-0 == 0)
   }
 
   ~impl() {
@@ -113,83 +115,13 @@ struct db_builder::impl {
     }
   }
 
-  using internal_response =
-      typed_flatbuffer<motis::path::InternalPathSeqResponse>;
-
-  static internal_response serialize_seq(
-      resolved_station_seq const& seq,
-      std::vector<processed_segment> const& processed) {
-    message_creator mc;
-    auto const fbs_stations = utl::to_vec(
-        seq.station_ids_, [&](auto const& id) { return mc.CreateString(id); });
-
-    auto fbs_segments = utl::to_vec(processed, [&](auto const& proc) {
-      tiles::fixed_polyline polyline;
-      polyline.emplace_back();
-      polyline.back().reserve(proc.polyline_.size());
-      for (auto const& pos : proc.polyline_) {
-        polyline.back().emplace_back(tiles::latlng_to_fixed(pos));
-      }
-
-      return CreateInternalSegment(
-          mc, mc.CreateString(tiles::serialize(polyline)),
-          mc.CreateString(geo::serialize_simplify_mask(proc.mask_)),
-          mc.CreateVector(proc.osm_ids_));
-    });
-
-    std::vector<Offset<InternalPathSourceInfo>> fbs_info;
-    for (auto const& info : seq.sequence_infos_) {
-      fbs_info.push_back(CreateInternalPathSourceInfo(
-          mc, info.idx_, info.from_, info.to_, info.between_stations_,
-          static_cast<std::underlying_type_t<source_spec::category>>(
-              info.source_spec_.category_),
-          static_cast<std::underlying_type_t<source_spec::router>>(
-              info.source_spec_.router_)));
-    }
-
-    mc.Finish(CreateInternalPathSeqResponse(
-        mc, mc.CreateVector(fbs_stations), mc.CreateVector(seq.classes_),
-        mc.CreateVector(fbs_segments), mc.CreateVector(fbs_info)));
-
-    return internal_response{std::move(mc)};
-  }
-
-  void add_seq(size_t seq_idx, resolved_station_seq const& seq,
-               std::vector<processed_segment> const& processed) {
-    auto const& boxes = utl::to_vec(
-        seq.paths_, [](auto const& path) { return geo::box{path.polyline_}; });
-
-    auto internal_resp = serialize_seq(seq, processed);
-
-    std::lock_guard<std::mutex> lock(m_);
-    update_boxes(seq.station_ids_, boxes);
-
-    db_put(std::to_string(seq_idx), internal_resp.to_string());
-    seq_infos_.emplace_back(seq.station_ids_, seq.classes_, seq_idx);
-
-    db_flush_maybe();
-  }
-
-  void update_boxes(std::vector<std::string> const& station_ids,
-                    std::vector<geo::box> const& boxes) {
-    for (auto i = 0UL; i < boxes.size(); ++i) {
-      auto key = (station_ids[i] < station_ids[i + 1])
-                     ? std::make_pair(station_ids[i], station_ids[i + 1])
-                     : std::make_pair(station_ids[i + 1], station_ids[i]);
-
-      utl::get_or_create(boxes_, key, [] {
-        return geo::box{};
-      }).extend(boxes[i]);
-    }
-  }
-
-  void add_tile_feature(geo::polyline const& line,
-                        std::vector<seq_seg> const& seq_segs,
-                        std::vector<uint32_t> const& classes, bool is_stub) {
-    if (!classes.empty() && std::none_of(begin(classes), end(classes),
-                                         [](auto c) { return c < 9; })) {
-      return;
-    }
+  std::pair<uint64_t, uint64_t> add_feature(
+      geo::polyline const& line, std::vector<seq_seg> const& seq_segs,
+      std::vector<uint32_t> const& classes, bool is_stub) {
+    // if (!classes.empty() && std::none_of(begin(classes), end(classes),
+    //                                      [](auto c) { return c < 9; })) {
+    //   return;
+    // }
 
     tiles::feature f;
     f.layer_ = path_layer_id_;
@@ -213,7 +145,58 @@ struct db_builder::impl {
     f.id_ = seq_segs_.size();
     seq_segs_.push_back(seq_segs);
 
-    feature_inserter_->insert(f);
+    auto const tile = feature_inserter_->insert(f);
+    return {f.id_, tiles::make_tile_key(tile)};
+  }
+
+  void add_seq(size_t seq_idx, resolved_station_seq const& seq,
+               std::vector<geo::box> const& boxes,
+               std::vector<std::vector<int64_t>> const& feature_ids,
+               std::vector<std::vector<uint64_t>> const& hints_rle) {
+    utl::verify(boxes.size() + 1 == seq.station_ids_.size() &&
+                    feature_ids.size() + 1 == seq.station_ids_.size() &&
+                    hints_rle.size() + 1 == seq.station_ids_.size(),
+                "add_seq: size mismatch");
+
+    message_creator mc;
+    {
+      auto const fbs_stations =
+          utl::to_vec(seq.station_ids_,
+                      [&](auto const& id) { return mc.CreateString(id); });
+
+      std::vector<Offset<InternalDbSegment>> fbs_segments;
+      for (auto i = 0UL; i < feature_ids.size(); ++i) {
+        fbs_segments.emplace_back(
+            CreateInternalDbSegment(mc, mc.CreateVector(feature_ids[i]),
+                                    mc.CreateVector(hints_rle[i])));
+      }
+
+      mc.Finish(CreateInternalDbSequence(mc, mc.CreateVector(fbs_stations),
+                                         mc.CreateVector(seq.classes_),
+                                         mc.CreateVector(fbs_segments)));
+    }
+
+    std::lock_guard<std::mutex> lock(m_);
+    update_boxes(seq.station_ids_, boxes);
+
+    db_put(std::to_string(seq_idx),
+           typed_flatbuffer<InternalDbSequence>{std::move(mc)}.to_string());
+    seq_infos_.emplace_back(seq.station_ids_, seq.classes_, seq_idx);
+
+    db_flush_maybe();
+  }
+
+  void update_boxes(std::vector<std::string> const& station_ids,
+                    std::vector<geo::box> const& boxes) {
+    for (auto i = 0UL; i < boxes.size(); ++i) {
+      auto key = (station_ids[i] < station_ids[i + 1])
+                     ? std::make_pair(station_ids[i], station_ids[i + 1])
+                     : std::make_pair(station_ids[i + 1], station_ids[i]);
+
+      utl::get_or_create(boxes_, key, [] {
+        return geo::box{};
+      }).extend(boxes[i]);
+    }
   }
 
   void finish() {
@@ -326,17 +309,18 @@ void db_builder::store_stations(std::vector<station> const& stations) const {
   impl_->store_stations(stations);
 }
 
-void db_builder::add_seq(
-    size_t seq_idx, resolved_station_seq const& resolved_sequences,
-    std::vector<processed_segment> const& processed_segments) const {
-  impl_->add_seq(seq_idx, resolved_sequences, processed_segments);
+std::pair<uint64_t, uint64_t> db_builder::add_feature(
+    geo::polyline const& polyline, std::vector<seq_seg> const& seq_segs,
+    std::vector<uint32_t> const& classes, bool is_stub) const {
+  return impl_->add_feature(polyline, seq_segs, classes, is_stub);
 }
 
-void db_builder::add_tile_feature(geo::polyline const& polyline,
-                                  std::vector<seq_seg> const& seq_segs,
-                                  std::vector<uint32_t> const& classes,
-                                  bool is_stub) const {
-  impl_->add_tile_feature(polyline, seq_segs, classes, is_stub);
+void db_builder::add_seq(
+    size_t seq_idx, resolved_station_seq const& resolved_sequences,
+    std::vector<geo::box> const& boxes,
+    std::vector<std::vector<int64_t>> const& feature_ids,
+    std::vector<std::vector<uint64_t>> const& hints_rle) const {
+  impl_->add_seq(seq_idx, resolved_sequences, boxes, feature_ids, hints_rle);
 }
 
 void db_builder::finish() const { impl_->finish(); }

@@ -49,11 +49,10 @@
 #include "motis/path/path_index.h"
 #include "motis/path/prepare/source_spec.h"
 
-#include "motis/path/fbs/InternalPathSeqResponse_generated.h"
+#include "motis/path/fbs/InternalDbSequence_generated.h"
 
 using namespace flatbuffers;
 using namespace motis::module;
-using namespace motis::osrm;
 using namespace motis::access;
 using namespace motis::logging;
 
@@ -68,6 +67,109 @@ struct import_state {
 };
 
 struct path::data {
+  msg_ptr get_response(std::string const& index,
+                       int const zoom_level = -1) const {
+    message_creator mc;
+    mc.create_and_finish(MsgContent_PathSeqResponse,
+                         reconstruct_sequence(mc, index, zoom_level).Union());
+    return make_msg(mc);
+  }
+
+  Offset<PathSeqResponse> reconstruct_sequence(
+      message_creator& mc, std::string index, int const zoom_level = -1) const {
+
+    auto const buf = db_->get(index);
+    auto const* ptr = flatbuffers::GetRoot<InternalDbSequence>(buf.data());
+
+    auto const station_ids = utl::to_vec(
+        *ptr->station_ids(),
+        [&mc](auto const& e) { return mc.CreateString(e->c_str()); });
+    auto const classes = utl::to_vec(*ptr->classes());
+
+    auto txn = db_->db_handle_->make_txn();
+    auto features_dbi = db_->db_handle_->features_dbi(txn);
+    auto features_cursor = lmdb::cursor{txn, features_dbi};
+
+    std::vector<Offset<Segment>> fbs_segments;
+    for (auto const* segment : *ptr->segments()) {
+      utl::verify(segment->hints_rle()->size() % 2 == 0, "invalid rle");
+      size_t feature_idx = 0;
+
+      std::vector<double> coordinates;
+      std::vector<int64_t> osm_node_ids;
+      auto const append_coord = [&](auto const& p) {
+        auto const ll = tiles::fixed_to_latlng(p);
+        if (coordinates.empty() ||
+            (coordinates[coordinates.size() - 2] != ll.lat_ &&
+             coordinates[coordinates.size() - 1] != ll.lng_)) {
+          coordinates.push_back(ll.lat_);
+          coordinates.push_back(ll.lng_);
+          osm_node_ids.push_back(-1);
+        }
+      };
+
+      // TODO this is the most naive way to implement this query!
+      for (auto i = 0ULL; i < segment->hints_rle()->size(); i += 2) {
+        auto const tile = tiles::tile_key_to_tile(segment->hints_rle()->Get(i));
+
+        tiles::pack_records_foreach(
+            features_cursor, tile, [&](auto, auto pack_record) {
+              for (auto j = 0ULL; j < segment->hints_rle()->Get(i + 1); ++j) {
+                tiles::unpack_features(
+                    db_->pack_handle_->get(pack_record),
+                    [&](auto const& feature_str) {
+                      auto const feature = deserialize_feature(
+                          feature_str, render_ctx_.metadata_decoder_,
+                          tiles::fixed_box{
+                              {tiles::kInvalidBoxHint, tiles::kInvalidBoxHint},
+                              {tiles::kInvalidBoxHint, tiles::kInvalidBoxHint}},
+                          zoom_level < 0 ? tiles::kInvalidZoomLevel
+                                         : zoom_level);
+
+                      utl::verify(feature.has_value(), "deserialize failed");
+
+                      if (feature->id_ !=
+                          std::abs(segment->features()->Get(feature_idx))) {
+                        return;
+                      }
+
+                      auto const& l =
+                          mpark::get<tiles::fixed_polyline>(feature->geometry_);
+                      utl::verify(l.size() == 1 && l.front().size() > 1,
+                                  "invalid line geometry");
+
+                      if (feature_idx < 0) {
+                        std::for_each(std::rbegin(l.front()),
+                                      std::rend(l.front()), append_coord);
+                      } else {
+                        std::for_each(std::begin(l.front()),
+                                      std::end(l.front()), append_coord);
+                      }
+                    });
+                ++feature_idx;
+              }
+            });
+      }
+
+      utl::verify(coordinates.size() >= 2, "empty coordinates");
+      if (coordinates.size() == 2) {
+        coordinates.push_back(coordinates[0]);
+        coordinates.push_back(coordinates[1]);
+        osm_node_ids.push_back(-1);
+      }
+
+      // TODO handle empty segments -> invent something based on station id
+
+      fbs_segments.emplace_back(CreateSegment(mc, mc.CreateVector(coordinates),
+                                              mc.CreateVector(osm_node_ids)));
+    }
+
+    return CreatePathSeqResponse(
+        mc, mc.CreateVector(station_ids), mc.CreateVector(classes),
+        mc.CreateVector(fbs_segments),
+        mc.CreateVector(std::vector<Offset<PathSourceInfo>>{}));
+  }
+
   std::unique_ptr<path_database> db_;
   std::unique_ptr<path_index> index_;
 
@@ -168,23 +270,34 @@ void path::init(registry& r) {
   }
 
   // used by: railviz
-  r.register_op("/path/boxes", [this](msg_ptr const&) { return boxes(); });
+  r.register_op("/path/boxes", [this](msg_ptr const&) {
+    verify_path_database_available();
+    return boxes();
+  });
 
   // used by: railviz, sim, legacydebugger
-  r.register_op("/path/by_trip_id",
-                [this](msg_ptr const& m) { return by_trip_id(m); });
+  r.register_op("/path/by_trip_id", [this](msg_ptr const& m) {
+    verify_path_database_available();
+    return by_trip_id(m);
+  });
 
   // used by: sim, legacydebugger
-  r.register_op("/path/by_station_seq",
-                [this](msg_ptr const& m) { return by_station_seq(m); });
+  r.register_op("/path/by_station_seq", [this](msg_ptr const& m) {
+    verify_path_database_available();
+    return by_station_seq(m);
+  });
 
   // used by: debugger
-  r.register_op("/path/by_tile_feature",
-                [this](msg_ptr const& m) { return by_tile_feature(m); });
+  r.register_op("/path/by_tile_feature", [this](msg_ptr const& m) {
+    verify_path_database_available();
+    return by_tile_feature(m);
+  });
 
   // used by: debugger
-  r.register_op("/path/tiles",
-                [this](msg_ptr const& m) { return path_tiles(m); });
+  r.register_op("/path/tiles", [this](msg_ptr const& m) {
+    verify_path_database_available();
+    return path_tiles(m);
+  });
 }
 
 void path::verify_path_database_available() const {
@@ -194,24 +307,21 @@ void path::verify_path_database_available() const {
 }
 
 msg_ptr path::boxes() const {
-  verify_path_database_available();
   auto const boxes = data_->db_->get(kBoxesKey);
   return make_msg(boxes.data(), boxes.size());
 };
 
 msg_ptr path::by_station_seq(msg_ptr const& msg) const {
-  verify_path_database_available();
   auto req = motis_content(PathByStationSeqRequest, msg);
 
-  return get_response(
+  return data_->get_response(
       data_->index_->find({utl::to_vec(*req->station_ids(),
                                        [](auto const& s) { return s->str(); }),
                            req->clasz()}),
-      req->zoom_level(), req->debug_info());
+      req->zoom_level());
 }
 
 msg_ptr path::by_trip_id(msg_ptr const& msg) const {
-  verify_path_database_available();
   auto const& req = motis_content(PathByTripIdRequest, msg);
   auto const& sched = get_schedule();
   auto const& trp = from_fbs(sched, req->trip_id());
@@ -227,75 +337,18 @@ msg_ptr path::by_trip_id(msg_ptr const& msg) const {
       });
   utl::verify(clasz_it != end(s), "invalid trip");
 
-  return get_response(data_->index_->find({seq, (*clasz_it).fcon().clasz_}),
-                      req->zoom_level(), req->debug_info());
-}
-
-Offset<PathSeqResponse> write_response(message_creator& mc,
-                                       InternalPathSeqResponse const* resp,
-                                       int const zoom_level = -1,
-                                       bool const debug_info = true) {
-  auto const station_ids =
-      utl::to_vec(*resp->station_ids(),
-                  [&mc](auto const& e) { return mc.CreateString(e->c_str()); });
-  auto const classes = utl::to_vec(*resp->classes());
-
-  auto const segments = utl::to_vec(*resp->segments(), [&](auto const& seg) {
-    auto fixed_geo = mpark::get<tiles::fixed_polyline>(
-        tiles::deserialize(seg->coords()->str()));
-    utl::verify(fixed_geo.size() == 1, "invaild geometry");
-    auto& fixed_line = fixed_geo[0];
-
-    if (zoom_level != -1) {
-      utl::verify(zoom_level <= 20 && zoom_level > -1, "invalid zoom level");
-      geo::apply_simplify_mask(seg->mask()->str(), zoom_level, fixed_line);
-    }
-
-    auto serialized_polyline =
-        geo::serialize(utl::to_vec(fixed_line, [](auto const& pos) {
-          return tiles::fixed_to_latlng(pos);
-        }));
-
-    if (zoom_level == -1) {
-      return CreateSegment(mc, mc.CreateVector(serialized_polyline),
-                           mc.CreateVector(utl::to_vec(*seg->osm_node_ids())));
-    } else {
-      return CreateSegment(mc, mc.CreateVector(serialized_polyline),
-                           mc.CreateVector(std::vector<int64_t>{}));
-    }
-  });
-
-  auto source_infos = std::vector<Offset<PathSourceInfo>>{};
-  if (zoom_level == -1 && debug_info) {
-    source_infos = utl::to_vec(*resp->infos(), [&mc](auto const& info) {
-      return CreatePathSourceInfo(
-          mc, info->segment_idx(), info->from_idx(), info->to_idx(),
-          mc.CreateString(
-              source_spec{source_spec::category{info->category()},
-                          source_spec::router{info->router()}}
-                  .str()
-                  .append("/")
-                  .append(std::to_string(info->between_stations()))));
-    });
-  }
-
-  return CreatePathSeqResponse(
-      mc, mc.CreateVector(station_ids), mc.CreateVector(classes),
-      mc.CreateVector(segments), mc.CreateVector(source_infos));
+  return data_->get_response(
+      data_->index_->find({seq, (*clasz_it).fcon().clasz_}), req->zoom_level());
 }
 
 msg_ptr path::by_tile_feature(msg_ptr const& msg) const {
-  verify_path_database_available();
   auto const& req = motis_content(PathByTileFeatureRequest, msg);
 
   message_creator mc;
   std::vector<Offset<PathSeqResponse>> responses;
   for (auto const& [seq, seg] : data_->index_->tile_features_.at(req->ref())) {
-    auto buf = data_->db_->get(std::to_string(seq));
-    auto original_buf = typed_flatbuffer<motis::path::InternalPathSeqResponse>(
-        buf.size(), buf.c_str());
-
-    responses.emplace_back(write_response(mc, original_buf.get()));
+    responses.emplace_back(
+        data_->reconstruct_sequence(mc, std::to_string(seq)));
   }
 
   mc.create_and_finish(
@@ -304,24 +357,7 @@ msg_ptr path::by_tile_feature(msg_ptr const& msg) const {
   return make_msg(mc);
 }
 
-msg_ptr path::get_response(std::string const& index, int const zoom_level,
-                           bool const debug_info) const {
-  verify_path_database_available();
-  auto buf = data_->db_->get(index);
-  auto original_buf = typed_flatbuffer<motis::path::InternalPathSeqResponse>(
-      buf.size(), buf.c_str());
-  auto original = original_buf.get();
-
-  message_creator mc;
-  mc.create_and_finish(
-      MsgContent_PathSeqResponse,
-      write_response(mc, original, zoom_level, debug_info).Union());
-  return make_msg(mc);
-}
-
 msg_ptr path::path_tiles(msg_ptr const& msg) const {
-  verify_path_database_available();
-
   auto tile = tiles::parse_tile_url(msg->get()->destination()->target()->str());
   if (!tile) {
     throw std::system_error(error::invalid_request);
