@@ -5,8 +5,8 @@
 
 #include "cista/hashing.h"
 
+#include "geo/box.h"
 #include "geo/polyline.h"
-#include "geo/simplify_mask.h"
 
 #include "motis/core/common/hash_helper.h"
 
@@ -21,20 +21,12 @@ constexpr auto const kInvalidColor = std::numeric_limits<color_t>::max();
 struct post_graph_node;
 
 struct post_segment_id {
-  post_segment_id(post_graph_node* start, color_t color)
-      : start_{start}, color_{color}, max_color_{color} {}
+  post_segment_id(post_graph_node* start, color_t color, color_t max_color)
+      : start_{start}, color_{color}, max_color_{max_color} {}
 
   post_graph_node* start_;
   color_t color_;
   color_t max_color_;
-};
-
-struct processed_segment {
-  processed_segment() : mask_(geo::kSimplifyZoomLevels) {}
-
-  geo::polyline polyline_;
-  std::vector<int64_t> osm_ids_;
-  geo::simplify_mask_t mask_;
 };
 
 struct post_node_id {
@@ -75,10 +67,12 @@ struct atomic_path {
       : path_(std::move(path)), from_(from), to_(to) {}
 
   std::vector<post_graph_node*> path_;
-  geo::simplify_mask_t mask_;
 
   post_graph_node* from_;
   post_graph_node* to_;
+
+  uint64_t id_{0}, hint_{0};
+  geo::box box_{};
 };
 
 struct post_graph_edge {
@@ -89,7 +83,6 @@ struct post_graph_edge {
         atomic_path_forward_(true) {}
 
   post_graph_node* other_;
-  // std::set<color_t> colors_;
   std::vector<color_t> colors_;
 
   atomic_path* atomic_path_ = nullptr;
@@ -151,8 +144,6 @@ struct post_graph {
   // mem
   std::vector<std::unique_ptr<post_graph_node>> nodes_;
   std::vector<std::unique_ptr<atomic_path>> atomic_paths_;
-
-  std::vector<std::pair<post_graph_node*, post_graph_node*>> atomic_pairs_;
 };
 
 }  // namespace motis::path
