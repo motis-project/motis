@@ -18,7 +18,6 @@
 
 using namespace motis::module;
 using namespace motis::logging;
-namespace fs = boost::filesystem;
 
 namespace motis::bootstrap {
 
