@@ -54,7 +54,7 @@ waiting_time_rules load_waiting_time_rules(
         waiting_times.emplace_back(entry);
       }
     } catch (std::exception const& e) {
-      std::cout << boost::filesystem::current_path() << "\n";
+      std::clog << boost::filesystem::current_path() << "\n";
       LOG(error) << "exception reading wzr matrix file " << wzr_matrix_path
                  << ": " << e.what();
       utl::verify(false, "unable to open wzr matrix file {}", wzr_matrix_path);

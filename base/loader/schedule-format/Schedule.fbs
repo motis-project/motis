@@ -19,6 +19,7 @@ table Schedule {
   rule_services: [RuleService];
   meta_stations: [MetaStation];
   name: string;
+  hash: ulong;
 }
 
 root_type Schedule;

@@ -1,6 +1,6 @@
 #include "motis/bootstrap/import_osm.h"
 
-#include "boost/filesystem/path.hpp"
+#include "boost/filesystem.hpp"
 
 #include "cista/hash.h"
 #include "cista/mmap.h"
@@ -21,13 +21,15 @@ motis::module::msg_ptr import_osm(motis::module::msg_ptr const& msg) {
   using motis::import::FileEvent;
   auto const path = motis_content(FileEvent, msg)->path()->str();
   auto const name = fs::path{path}.filename().generic_string();
-  if (name.substr(name.size() - 8) != ".osm.pbf") {
+  if (!fs::is_regular_file(path) || name.length() < 8 ||
+      name.substr(name.size() - std::min(size_t{8U}, name.size())) !=
+          ".osm.pbf") {
     return nullptr;
   }
   cista::mmap m(path.c_str(), cista::mmap::protection::READ);
   auto const hash = cista::hash(std::string_view{
       reinterpret_cast<char const*>(m.begin()),
-      std::max(static_cast<size_t>(50 * 1024 * 1024), m.size())});
+      std::min(static_cast<size_t>(50 * 1024 * 1024), m.size())});
 
   message_creator fbb;
   fbb.create_and_finish(
@@ -35,7 +37,7 @@ motis::module::msg_ptr import_osm(motis::module::msg_ptr const& msg) {
       motis::import::CreateOSMEvent(fbb, fbb.CreateString(path), hash, m.size())
           .Union(),
       "/import", DestinationType_Topic);
-  motis_publish(make_msg(fbb));
+  ctx::await_all(motis_publish(make_msg(fbb)));
   return nullptr;
 }
 

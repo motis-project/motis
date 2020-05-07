@@ -9,6 +9,7 @@ include "guesser/StationGuesserResponse.fbs";
 include "import/StatusUpdate.fbs";
 include "import/FileEvent.fbs";
 include "import/OSMEvent.fbs";
+include "import/ScheduleEvent.fbs";
 include "intermodal/IntermodalRoutingRequest.fbs";
 include "lookup/LookupGeoStationIdRequest.fbs";
 include "lookup/LookupGeoStationRequest.fbs";
@@ -203,7 +204,8 @@ union MsgContent {
   motis.ppr.FootRoutingProfilesResponse,
   motis.import.StatusUpdate,
   motis.import.FileEvent,
-  motis.import.OSMEvent
+  motis.import.OSMEvent,
+  motis.import.ScheduleEvent
 }
 
 // Destination Examples:

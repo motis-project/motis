@@ -35,16 +35,16 @@ struct log {
 
   template <typename T>
   friend log&& operator<<(log&& l, T&& t) {
-    if (enabled_) {
-      std::cout << std::forward<T&&>(t);
-    }
+    //    if (enabled_) {
+    std::clog << std::forward<T&&>(t);
+    //    }
     return std::move(l);
   }
 
   ~log() {
-    if (enabled_) {
-      std::cout << std::endl;
-    }
+    //    if (enabled_) {
+    std::clog << std::endl;
+    //    }
   }
 
   std::unique_lock<std::mutex> lock_;

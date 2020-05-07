@@ -78,9 +78,9 @@ schedule_ptr load_schedule(loader_options const& opt,
     }
 
     for (auto const& parser : parsers()) {
-      std::cout << "missing files:\n";
+      std::clog << "missing files:\n";
       for (auto const& file : parser->missing_files(opt.dataset_)) {
-        std::cout << "  " << file << "\n";
+        std::clog << "  " << file << "\n";
       }
     }
     throw std::runtime_error("no parser was applicable");

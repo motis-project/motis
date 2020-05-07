@@ -3,6 +3,9 @@
 #include "utl/enumerate.h"
 #include "utl/erase.h"
 
+#include "cista/hash.h"
+#include "cista/mmap.h"
+
 #include "motis/core/common/logging.h"
 
 #include "motis/schedule-format/Schedule_generated.h"
@@ -40,6 +43,20 @@ using namespace flatbuffers64;
 using namespace utl;
 using namespace motis::logging;
 namespace fs = boost::filesystem;
+
+cista::hash_t hash(fs::path const& hrd_root) {
+  for (auto const& c : configs) {
+    auto const basic_data_path = hrd_root / c.core_data_ / c.files(BASIC_DATA);
+    if (fs::is_regular_file(basic_data_path)) {
+      cista::mmap m(basic_data_path.generic_string().c_str(),
+                    cista::mmap::protection::READ);
+      return cista::hash(std::string_view{
+          reinterpret_cast<char const*>(m.begin()),
+          std::min(static_cast<size_t>(50 * 1024 * 1024), m.size())});
+    }
+  }
+  return 0U;
+}
 
 bool hrd_parser::applicable(fs::path const& path) {
   return std::any_of(begin(configs), end(configs),
@@ -253,12 +270,12 @@ void hrd_parser::parse(fs::path const& hrd_root, FlatBufferBuilder& fbb,
   auto schedule_name = parse_schedule_name(basic_data_file);
   auto footpaths = create_footpaths(metas.footpaths_, stb, fbb);
   auto metastations = create_meta_stations(metas.meta_stations_, stb, fbb);
-  fbb.Finish(CreateSchedule(fbb,
-                            fbb.CreateVectorOfSortedTables(&sb.fbs_services_),
-                            fbb.CreateVector(values(stb.fbs_stations_)),
-                            fbb.CreateVector(values(rb.routes_)), &interval,
-                            footpaths, fbb.CreateVector(rsb.fbs_rule_services_),
-                            metastations, fbb.CreateString(schedule_name)));
+  fbb.Finish(
+      CreateSchedule(fbb, fbb.CreateVectorOfSortedTables(&sb.fbs_services_),
+                     fbb.CreateVector(values(stb.fbs_stations_)),
+                     fbb.CreateVector(values(rb.routes_)), &interval, footpaths,
+                     fbb.CreateVector(rsb.fbs_rule_services_), metastations,
+                     fbb.CreateString(schedule_name), hash(hrd_root)));
 }
 
 }  // namespace motis::loader::hrd

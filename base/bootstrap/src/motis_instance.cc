@@ -21,13 +21,6 @@ using namespace motis::logging;
 
 namespace motis::bootstrap {
 
-bool is_module_active(std::vector<std::string> const& yes,
-                      std::vector<std::string> const& no,
-                      std::string const& module) {
-  return std::find(begin(yes), end(yes), module) != end(yes) &&
-         std::find(begin(no), end(no), module) == end(no);
-}
-
 motis_instance::motis_instance() : controller(build_modules()) {}
 
 void motis_instance::stop_remotes() {
@@ -53,18 +46,13 @@ std::vector<std::string> motis_instance::module_names() const {
   return s;
 }
 
-void motis_instance::init_schedule(
-    motis::loader::loader_options const& dataset_opt) {
-  schedule_ = loader::load_schedule(dataset_opt, schedule_buf_);
-  sched_ = schedule_.get();
-}
-
-void motis_instance::import(std::vector<std::string> const& modules,
-                            std::vector<std::string> const& exclude_modules,
-                            std::vector<std::string> const& import_paths,
-                            std::string const& data_directory) {
+void motis_instance::import(module_settings const& module_opt,
+                            loader::loader_options const& dataset_opt,
+                            import_settings const& import_opt) {
   registry_.subscribe("/import", import_osm);
-  registry_.subscribe("/import", import_schedule);
+  registry_.subscribe("/import", [&](msg_ptr const& msg) {
+    return import_schedule(import_opt, module_opt, dataset_opt, msg, *this);
+  });
 
   import_status status;
 
@@ -76,17 +64,14 @@ void motis_instance::import(std::vector<std::string> const& modules,
   });
 
   for (auto const& module : modules_) {
-    if (is_module_active(modules, exclude_modules, module->module_name())) {
-      module->set_data_directory(data_directory);
+    if (module_opt.is_module_active(module->module_name())) {
+      module->set_data_directory(import_opt.data_directory_);
       module->import(registry_);
     }
   }
 
-  std::cout << "\nImport:\n\n";
   publish(make_success_msg("/import"), 1);
-
-  logging::log::enabled_ = false;
-  for (auto const& path : import_paths) {
+  for (auto const& path : import_opt.import_paths_) {
     message_creator fbb;
     fbb.create_and_finish(
         MsgContent_FileEvent,
@@ -94,16 +79,18 @@ void motis_instance::import(std::vector<std::string> const& modules,
         "/import", DestinationType_Topic);
     publish(make_msg(fbb), 1);
   }
-  logging::log::enabled_ = true;
 
   registry_.reset();
+
+  if (sched_ == nullptr) {
+    throw std::runtime_error{"schedule not initialized"};
+  }
 }
 
-void motis_instance::init_modules(
-    std::vector<std::string> const& modules,
-    std::vector<std::string> const& exclude_modules, unsigned num_threads) {
+void motis_instance::init_modules(module_settings const& module_opt,
+                                  unsigned num_threads) {
   for (auto const& module : modules_) {
-    if (!is_module_active(modules, exclude_modules, module->prefix())) {
+    if (!module_opt.is_module_active(module->prefix())) {
       continue;
     }
 

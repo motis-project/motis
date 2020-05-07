@@ -35,13 +35,14 @@ motis_instance_test::motis_instance_test(
   parser.read_command_line_args(modules_cmdline_opt_patched);
 
   try {
-    instance_->init_schedule(dataset_opt);
+    instance_->import(module_settings{modules}, dataset_opt,
+                      import_settings{{dataset_opt.dataset_}});
   } catch (loader::parser_error const& e) {
     LOG(logging::error) << "unable to parse schedule, problem at "
                         << e.filename_copy_ << ":" << e.line_number_;
     throw;
   }
-  instance_->init_modules(modules);
+  instance_->init_modules(module_settings{modules});
 }
 
 msg_ptr motis_instance_test::call(msg_ptr const& msg) const {

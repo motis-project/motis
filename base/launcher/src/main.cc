@@ -19,6 +19,7 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/bootstrap/dataset_settings.h"
+#include "motis/bootstrap/import_settings.h"
 #include "motis/bootstrap/module_settings.h"
 #include "motis/bootstrap/motis_instance.h"
 #include "motis/bootstrap/remote_settings.h"
@@ -34,15 +35,6 @@ using namespace motis::launcher;
 using namespace motis::module;
 using namespace motis::logging;
 using namespace motis;
-
-struct import_settings : conf::configuration {
-  import_settings() : configuration("Import Options", "import") {
-    param(import_paths_, "paths", "input paths to process");
-    param(data_directory_, "data_dir", "directory for preprocessing output");
-  }
-  std::vector<std::string> import_paths_;
-  std::string data_directory_{"data"};
-};
 
 int main(int argc, char const** argv) {
   motis_instance instance;
@@ -91,11 +83,8 @@ int main(int argc, char const** argv) {
   }
 
   try {
-    instance.import(module_opt.modules_, module_opt.exclude_modules_,
-                    import_opt.import_paths_, import_opt.data_directory_);
-    instance.init_schedule(dataset_opt);
-    instance.init_modules(module_opt.modules_, module_opt.exclude_modules_,
-                          launcher_opt.num_threads_);
+    instance.import(module_opt, dataset_opt, import_opt);
+    instance.init_modules(module_opt, launcher_opt.num_threads_);
     instance.init_remotes(remote_opt.get_remotes());
 
     if (launcher_opt.mode_ == launcher_settings::motis_mode_t::SERVER) {

@@ -854,6 +854,7 @@ schedule_ptr build_graph(Schedule const* serialized,
     calc_footpaths(*sched);
   }
 
+  sched->hash_ = serialized->hash();
   sched->route_count_ = builder.next_route_index_;
   sched->node_count_ = builder.next_node_id_;
   sched->transfers_lower_bounds_fwd_ = build_interchange_graph(
