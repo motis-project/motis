@@ -21,7 +21,7 @@ struct import_status {
   bool update(motis::module::msg_ptr const&);
   void print();
 
-  unsigned last_print_height_;
+  unsigned last_print_height_{0U};
   std::map<std::string, state> status_;
 };
 
