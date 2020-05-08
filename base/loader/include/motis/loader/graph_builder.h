@@ -131,7 +131,7 @@ using route_lcs = mcd::vector<mcd::vector<light_connection>>;
 
 struct graph_builder {
   graph_builder(schedule& sched, Interval const* schedule_interval,
-                loader_options const&);
+                loader_options const&, unsigned progress_offset = 0U);
 
   void add_dummy_node(std::string const& name);
 
@@ -227,6 +227,7 @@ struct graph_builder {
 
   bool check_trip(trip const* trp);
 
+  unsigned progress_offset_;
   unsigned lcon_count_;
   unsigned next_route_index_;
   unsigned next_node_id_;

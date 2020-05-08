@@ -15,6 +15,7 @@ struct state {
   std::vector<std::string> dependencies_;
   import::Status status_{import::Status::Status_WAITING};
   int progress_{0U};
+  std::string error_;
 };
 
 struct import_status {

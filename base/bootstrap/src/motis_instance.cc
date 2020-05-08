@@ -9,6 +9,7 @@
 #include "motis/core/common/logging.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
+#include "motis/module/event_collector.h"
 #include "motis/bootstrap/import_osm.h"
 #include "motis/bootstrap/import_schedule.h"
 #include "motis/bootstrap/import_status.h"
@@ -18,6 +19,7 @@
 
 using namespace motis::module;
 using namespace motis::logging;
+namespace fs = boost::filesystem;
 
 namespace motis::bootstrap {
 
@@ -49,19 +51,45 @@ std::vector<std::string> motis_instance::module_names() const {
 void motis_instance::import(module_settings const& module_opt,
                             loader::loader_options const& dataset_opt,
                             import_settings const& import_opt) {
-  registry_.subscribe("/import", import_osm);
-  registry_.subscribe("/import", [&](msg_ptr const& msg) {
-    return import_schedule(import_opt, module_opt, dataset_opt, msg, *this);
-  });
-
   import_status status;
-
   registry_.subscribe("/import", [&](msg_ptr const& msg) -> msg_ptr {
     if (status.update(msg)) {
       status.print();
     }
     return nullptr;
   });
+
+  registry_.subscribe("/import", import_osm);
+
+  std::make_shared<event_collector>(
+      import_opt.data_directory_, "schedule", registry_,
+      [&](std::map<std::string, msg_ptr> const& dependencies) {
+        import_schedule(module_opt, dataset_opt, dependencies.at("SCHEDULE"),
+                        *this);
+      })
+      ->require("SCHEDULE", [](msg_ptr const& msg) {
+        if (msg->get()->content_type() != MsgContent_FileEvent) {
+          return false;
+        }
+
+        using import::FileEvent;
+        auto const path =
+            fs::path{motis_content(FileEvent, msg)->path()->str()};
+        for (auto const& parser : loader::parsers()) {
+          if (parser->applicable(path)) {
+            return true;
+          }
+        }
+
+        for (auto const& parser : loader::parsers()) {
+          std::clog << "missing files:\n";
+          for (auto const& file : parser->missing_files(path)) {
+            std::clog << "  " << file << "\n";
+          }
+        }
+
+        return false;
+      });
 
   for (auto const& module : modules_) {
     if (module_opt.is_module_active(module->module_name())) {

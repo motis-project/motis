@@ -80,7 +80,7 @@ struct ts_rule : public service_rule {
       auto min_time_diff = 1440;
 
       for (auto const& s2 : participants_2_) {
-        auto const s2_stop_index = s2->first_stop_index_at(eva_num_);
+        auto const s2_stop_index = s2->get_first_stop_index_at(eva_num_);
         auto const s2_traffic_days =
             s2->traffic_days_at_stop(s2_stop_index, event_type::DEP);
 

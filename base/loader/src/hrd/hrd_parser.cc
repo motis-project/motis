@@ -142,12 +142,30 @@ void parse_and_build_services(
     std::function<void(hrd_service const&)> const& service_builder_fun,
     config const& c) {
   std::vector<fs::path> files;
-  collect_files(hrd_root / c.fplan_, files);
+  auto const total_bytes = collect_files(hrd_root / c.fplan_, files);
+
+  auto total_bytes_consumed = uint64_t{0U};
+  auto prev_progress = 0U;
+  auto progress_update = [&](std::size_t const file_bytes_consumed) mutable {
+    auto const curr_progress =
+        static_cast<int>(80.0 * ((total_bytes_consumed + file_bytes_consumed) /
+                                 static_cast<float>(total_bytes)));
+    if (curr_progress != prev_progress) {
+      prev_progress = curr_progress;
+      std::clog << '\0' << curr_progress << '\0';
+    }
+  };
+
   for (auto const& [i, file] : utl::enumerate(files)) {
-    schedule_data.emplace_back(std::make_unique<loaded_file>(file));
+    auto const& loaded =
+        schedule_data.emplace_back(std::make_unique<loaded_file>(file));
     LOG(info) << "parsing " << i << "/" << files.size() << " "
               << schedule_data.back()->name();
-    for_each_service(*schedule_data.back(), bitfields, service_builder_fun, c);
+
+    auto const file_size = fs::file_size(file);
+    for_each_service(*loaded, bitfields, service_builder_fun, progress_update,
+                     c);
+    total_bytes_consumed += file_size;
   }
 }
 

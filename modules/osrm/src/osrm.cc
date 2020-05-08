@@ -45,7 +45,7 @@ void osrm::import(motis::module::registry& reg) {
     auto const profile_name =
         boost::filesystem::path{p}.stem().generic_string();
     std::make_shared<event_collector>(
-        "osrm-" + profile_name, reg,
+        get_data_directory().generic_string(), "osrm-" + profile_name, reg,
         [this, profile_name, p, data_dir = get_data_directory()](
             std::map<std::string, msg_ptr> const& dependencies) {
           using import::OSMEvent;
@@ -74,9 +74,6 @@ void osrm::import(motis::module::registry& reg) {
           extr_conf.input_path = osm->path()->str();
           extr_conf.UseDefaultOutputNames((dir / osm_stem).generic_string());
           if (read_ini<import_state>(dir / "import.ini") != state) {
-            log_streambuf redirect{"osrm-" + profile_name,
-                                   (dir / "log.txt").generic_string().c_str()};
-
             Extractor{extr_conf}.run();
 
             ContractorConfig contr_conf;

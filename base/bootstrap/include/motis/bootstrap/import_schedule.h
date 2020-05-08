@@ -8,8 +8,7 @@
 
 namespace motis::bootstrap {
 
-motis::module::msg_ptr import_schedule(import_settings const&,
-                                       module_settings const&,
+motis::module::msg_ptr import_schedule(module_settings const&,
                                        loader::loader_options const&,
                                        motis::module::msg_ptr const&,
                                        motis_instance&);

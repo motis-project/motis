@@ -9,6 +9,7 @@ namespace motis::loader {
 
 struct Schedule;  // NOLINT
 
-schedule_ptr build_graph(Schedule const* serialized, loader_options const&);
+schedule_ptr build_graph(Schedule const* serialized, loader_options const&,
+                         unsigned progress_offset = 0U);
 
 }  // namespace motis::loader

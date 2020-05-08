@@ -98,7 +98,7 @@ inline int yyyymmdd_day(int yyyymmdd) { return yyyymmdd % 100; }
 void write_schedule(flatbuffers64::FlatBufferBuilder& b,
                     boost::filesystem::path const& path);
 
-void collect_files(boost::filesystem::path const& root,
-                   std::vector<boost::filesystem::path>& files);
+std::size_t collect_files(boost::filesystem::path const& root,
+                          std::vector<boost::filesystem::path>& files);
 
 }  // namespace motis::loader

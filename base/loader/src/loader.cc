@@ -69,7 +69,8 @@ schedule_ptr load_schedule(loader_options const& opt,
           utl::file(binary_schedule_file.string().c_str(), "w+")
               .write(builder.GetBufferPointer(), builder.GetSize());
         }
-        auto sched = build_graph(GetSchedule(builder.GetBufferPointer()), opt);
+        auto sched =
+            build_graph(GetSchedule(builder.GetBufferPointer()), opt, 80);
         if (opt.write_graph_) {
           write_graph(serialized_file_path, *sched);
         }

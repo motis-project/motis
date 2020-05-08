@@ -64,7 +64,7 @@ bool import_status::update(motis::module::msg_ptr const& msg) {
     auto const upd = motis_content(StatusUpdate, msg);
     auto const new_state = state{
         utl::to_vec(*upd->waiting_for(), [](auto&& e) { return e->str(); }),
-        upd->status(), upd->progress()};
+        upd->status(), upd->progress(), upd->error()->str()};
     auto& curr_state = status_[upd->name()->str()];
     if (new_state != curr_state) {
       curr_state = new_state;
@@ -81,6 +81,7 @@ void import_status::print() {
     std::cout << std::setw(20) << std::setfill(' ') << std::right << name
               << ": ";
     switch (s.status_) {
+      case import::Status_ERROR: std::cout << "ERROR: " << s.error_; break;
       case import::Status_WAITING:
         std::cout << "WAITING, dependencies: ";
         for (auto const& dep : s.dependencies_) {

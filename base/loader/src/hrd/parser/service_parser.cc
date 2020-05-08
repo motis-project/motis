@@ -18,9 +18,12 @@ using namespace motis::logging;
 namespace motis::loader::hrd {
 
 void parse_specification(loaded_file const& file,
-                         std::function<void(specification const&)> builder) {
+                         std::function<void(specification const&)> builder,
+                         std::function<void(std::size_t)> bytes_consumed) {
   specification spec;
   for_each_line_numbered(file.content(), [&](cstr line, int line_number) {
+    bytes_consumed(line.c_str() - file.content().c_str());
+
     bool finished = spec.read_line(line, file.name(), line_number);
 
     if (!finished) {
@@ -67,19 +70,23 @@ void expand_and_consume(
 void for_each_service(loaded_file const& file,
                       std::map<int, bitfield> const& bitfields,
                       std::function<void(hrd_service const&)> consumer,
+                      std::function<void(std::size_t)> bytes_consumed,
                       config const& c) {
-  parse_specification(file, [&](specification const& spec) {
-    try {
-      expand_and_consume(hrd_service(spec, c), bitfields, consumer);
-    } catch (parser_error const& e) {
-      LOG(error) << "skipping bad service at " << e.filename_ << ":"
-                 << e.line_number_;
-    } catch (std::runtime_error const& e) {
-      LOG(error) << "skipping bad service at " << spec.filename_ << ":"
-                 << spec.line_number_from_ << "-" << spec.line_number_to_
-                 << ": " << e.what();
-    }
-  });
+  parse_specification(
+      file,
+      [&](specification const& spec) {
+        try {
+          expand_and_consume(hrd_service(spec, c), bitfields, consumer);
+        } catch (parser_error const& e) {
+          LOG(error) << "skipping bad service at " << e.filename_ << ":"
+                     << e.line_number_;
+        } catch (std::runtime_error const& e) {
+          LOG(error) << "skipping bad service at " << spec.filename_ << ":"
+                     << spec.line_number_from_ << "-" << spec.line_number_to_
+                     << ": " << e.what();
+        }
+      },
+      std::move(bytes_consumed));
 }
 
 }  // namespace motis::loader::hrd

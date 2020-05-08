@@ -32,13 +32,15 @@ struct event_collector : std::enable_shared_from_this<event_collector> {
   using dependencies_map_t = std::map<std::string, msg_ptr>;
   using import_op_t = std::function<void(dependencies_map_t const&)>;
 
-  event_collector(std::string name, registry& reg, import_op_t op);
+  event_collector(std::string data_dir, std::string name, registry& reg,
+                  import_op_t op);
 
   void require(std::string const& name, std::function<bool(msg_ptr)>);
 
 private:
   void update_status(motis::import::Status, uint8_t progress = 0U);
 
+  std::string data_dir_;
   std::string module_name_;
   registry& reg_;
   import_op_t op_;

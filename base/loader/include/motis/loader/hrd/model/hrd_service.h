@@ -94,14 +94,22 @@ struct hrd_service {
     return ids;
   }
 
-  inline int first_stop_index_at(int eva_num) const {
+  inline int find_first_stop_at(int eva_num) const {
     for (auto i = 0UL; i < stops_.size(); ++i) {
       if (stops_[i].eva_num_ == eva_num) {
         return i;
       }
     }
-    throw std::runtime_error(
-        "hrd_service::first_stop_index_at: stop not found");
+    return NOT_SET;
+  }
+
+  inline int get_first_stop_index_at(int eva_num) const {
+    if (auto const idx = find_first_stop_at(eva_num); idx == NOT_SET) {
+      throw std::runtime_error(
+          "hrd_service::get_first_stop_index_at: stop not found");
+    } else {
+      return idx;
+    }
   }
 
   inline int event_time(int stop_index, event_type evt) const {
