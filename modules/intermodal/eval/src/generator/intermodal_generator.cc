@@ -314,7 +314,8 @@ int main(int argc, char const** argv) {
   std::ofstream out_bwd(generator_opt.target_file_bwd_);
 
   motis_instance instance;
-  instance.init_schedule(dataset_opt);
+  instance.import(module_settings{}, dataset_opt,
+                  import_settings({dataset_opt.dataset_}));
 
   auto const& sched = *instance.schedule_;
   search_interval_generator interval_gen(

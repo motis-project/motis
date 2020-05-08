@@ -61,7 +61,8 @@ protected:
       data_.emplace_back(services_file);
       for_each_service(
           data_.back(), bb.hrd_bitfields_,
-          [&](hrd_service const& s) { rsb_.add_service(s); }, hrd_5_00_8);
+          [&](hrd_service const& s) { rsb_.add_service(s); },
+          [](std::size_t) {}, hrd_5_00_8);
     }
     rsb_.resolve_rule_services();
 
