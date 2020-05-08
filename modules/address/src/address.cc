@@ -5,15 +5,19 @@
 #include <regex>
 #include <sstream>
 
+#include "boost/filesystem.hpp"
+
 #include "cereal/archives/binary.hpp"
 
 #include "utl/to_vec.h"
 
 #include "address-typeahead/common.h"
+#include "address-typeahead/extract.h"
 #include "address-typeahead/serialization.h"
 #include "address-typeahead/typeahead.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/module/event_collector.h"
 
 using namespace motis::module;
 using namespace address_typeahead;
@@ -105,15 +109,34 @@ struct address::impl {
   std::unique_ptr<address_typeahead::typeahead> t_;
 };
 
-address::address() : module("Address Typeahead", "address") {
-  param(db_path_, "db", "address typeahead database path");
-}
+address::address() : module("Address Typeahead", "address") {}
 
 address::~address() = default;
 
+std::string address::db_file() const {
+  return (get_data_directory() / "address" / "address_db.raw").generic_string();
+}
+
+void address::import(motis::module::registry& reg) {
+  std::make_shared<event_collector>(
+      get_data_directory().generic_string(), "address", reg,
+      [this, data_dir = get_data_directory()](
+          std::map<std::string, msg_ptr> const& dependencies) {
+        using import::OSMEvent;
+        boost::filesystem::create_directories(get_data_directory() / "address");
+        std::ofstream out(db_file().c_str(), std::ios::binary);
+        address_typeahead::extract(
+            motis_content(OSMEvent, dependencies.at("OSM"))->path()->str(),
+            out);
+      })
+      ->require("OSM", [](msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_OSMEvent;
+      });
+}
+
 void address::init(motis::module::registry& reg) {
   try {
-    auto in = std::ifstream(db_path_, std::ios::binary);
+    auto in = std::ifstream(db_file(), std::ios::binary);
     in.exceptions(std::ios_base::failbit);
 
     address_typeahead::typeahead_context context;
@@ -124,7 +147,7 @@ void address::init(motis::module::registry& reg) {
 
     address_typeahead::typeahead t(context);
 
-    impl_ = std::make_unique<impl>(db_path_);
+    impl_ = std::make_unique<impl>(db_file());
     reg.register_op("/address", [this](msg_ptr const& msg) {
       return impl_->get_guesses(msg);
     });

@@ -8,7 +8,6 @@
 #include "motis/loader/loader.h"
 
 namespace fs = boost::filesystem;
-using motis::module::log_streambuf;
 
 namespace motis::bootstrap {
 
