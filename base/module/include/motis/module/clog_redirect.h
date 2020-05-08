@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined(ERROR)
+#undef ERROR
+#endif
+
 #include <fstream>
 #include <streambuf>
 
