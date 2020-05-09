@@ -35,9 +35,21 @@ time_t str_to_unixtime(cstr s) {
 }
 
 std::pair<cstr, cstr> mask_dates(cstr str) {
-  auto from_line = get_line(str);
+  cstr from_line, to_line;
+
+  from_line = get_line(str).substr(0, size(10));
+  while (from_line.starts_with("%")) {
+    skip_line(str);
+    from_line = get_line(str).substr(0, size(10));
+  }
+
   skip_line(str);
-  auto to_line = get_line(str);
+
+  to_line = get_line(str).substr(0, size(10));
+  while (to_line.starts_with("%")) {
+    skip_line(str);
+    to_line = get_line(str).substr(0, size(10));
+  }
 
   verify_line_format(from_line);
   verify_line_format(to_line);
