@@ -44,9 +44,11 @@ void event_collector::require(std::string const& name,
        self = shared_from_this()](msg_ptr const& msg) -> msg_ptr {
         auto const logs_path = fs::path{data_dir_} / "log";
         fs::create_directories(logs_path);
+        /*
         log_streambuf redirect{
             module_name_,
             (logs_path / (module_name_ + ".txt")).generic_string().c_str()};
+        */
 
         // Dummy message asking for initial status.
         // Send "waiting for" dependencies list.
