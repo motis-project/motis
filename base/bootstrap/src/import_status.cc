@@ -92,11 +92,9 @@ void import_status::print() {
       case import::Status_RUNNING:
         std::cout << "[";
         constexpr auto const WIDTH = 55U;
-        bool end = false;
         for (auto i = 0U; i < 55U; ++i) {
           auto const scaled = static_cast<int>(i * 100.0 / WIDTH);
           std::cout << (scaled <= s.progress_ ? '\xDB' : ' ');
-          end = scaled >= s.progress_;
         }
         std::cout << "] " << s.progress_ << "%";
         break;
