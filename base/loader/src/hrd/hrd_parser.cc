@@ -142,7 +142,8 @@ void parse_and_build_services(
     std::function<void(hrd_service const&)> const& service_builder_fun,
     config const& c) {
   std::vector<fs::path> files;
-  auto const total_bytes = collect_files(hrd_root / c.fplan_, files);
+  auto const total_bytes =
+      collect_files(hrd_root / c.fplan_, c.fplan_file_extension_, files);
 
   auto total_bytes_consumed = uint64_t{0U};
   auto prev_progress = 0U;

@@ -99,6 +99,7 @@ void write_schedule(flatbuffers64::FlatBufferBuilder& b,
                     boost::filesystem::path const& path);
 
 std::size_t collect_files(boost::filesystem::path const& root,
+                          std::string const& file_extension,
                           std::vector<boost::filesystem::path>& files);
 
 }  // namespace motis::loader
