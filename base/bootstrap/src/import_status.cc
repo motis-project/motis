@@ -95,9 +95,7 @@ void import_status::print() {
         bool end = false;
         for (auto i = 0U; i < 55U; ++i) {
           auto const scaled = static_cast<int>(i * 100.0 / WIDTH);
-          std::cout << (scaled < s.progress_
-                            ? '='
-                            : !end && scaled >= s.progress_ ? '>' : ' ');
+          std::cout << (scaled <= s.progress_ ? '\xDB' : ' ');
           end = scaled >= s.progress_;
         }
         std::cout << "] " << s.progress_ << "%";

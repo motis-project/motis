@@ -18,11 +18,19 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
+#include "motis/module/ini_io.h"
 
 using namespace motis::module;
 using namespace address_typeahead;
 
 namespace motis::address {
+
+struct import_state {
+  CISTA_COMPARABLE()
+  named<std::string, MOTIS_NAME("path")> path_;
+  named<cista::hash_t, MOTIS_NAME("hash")> hash_;
+  named<size_t, MOTIS_NAME("size")> size_;
+};
 
 struct address::impl {
   explicit impl(std::string const& path) {
@@ -122,11 +130,22 @@ void address::import(motis::module::registry& reg) {
       get_data_directory().generic_string(), "address", reg,
       [this](std::map<std::string, msg_ptr> const& dependencies) {
         using import::OSMEvent;
-        boost::filesystem::create_directories(get_data_directory() / "address");
-        std::ofstream out(db_file().c_str(), std::ios::binary);
-        address_typeahead::extract(
-            motis_content(OSMEvent, dependencies.at("OSM"))->path()->str(),
-            out);
+
+        auto const dir = get_data_directory() / "address";
+        auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
+        auto const state =
+            import_state{boost::filesystem::path{osm->path()->str()}
+                             .lexically_relative(get_data_directory())
+                             .generic_string(),
+                         osm->hash(), osm->size()};
+
+        if (read_ini<import_state>(dir / "import.ini") != state) {
+          boost::filesystem::create_directories(dir);
+          std::ofstream out(db_file().c_str(), std::ios::binary);
+          address_typeahead::extract(osm->path()->str(), out);
+          write_ini(dir / "import.ini", state);
+        }
+
         import_successful_ = true;
       })
       ->require("OSM", [](msg_ptr const& msg) {

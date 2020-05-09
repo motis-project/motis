@@ -100,6 +100,10 @@ void motis_instance::import(module_settings const& module_opt,
 
   publish(make_success_msg("/import"), 1);
   for (auto const& path : import_opt.import_paths_) {
+    if (!fs::exists(path)) {
+      LOG(warn) << "file does not exist, skipping: " << path;
+      continue;
+    }
     message_creator fbb;
     fbb.create_and_finish(
         MsgContent_FileEvent,

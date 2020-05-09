@@ -26,15 +26,21 @@ motis::module::msg_ptr import_osm(motis::module::msg_ptr const& msg) {
           ".osm.pbf") {
     return nullptr;
   }
-  cista::mmap m(path.c_str(), cista::mmap::protection::READ);
-  auto const hash = cista::hash(std::string_view{
-      reinterpret_cast<char const*>(m.begin()),
-      std::min(static_cast<size_t>(50 * 1024 * 1024), m.size())});
+
+  auto hash = cista::hash_t{};
+  auto size = std::size_t{};
+  {
+    cista::mmap m(path.c_str(), cista::mmap::protection::READ);
+    hash = cista::hash(std::string_view{
+        reinterpret_cast<char const*>(m.begin()),
+        std::min(static_cast<size_t>(50 * 1024 * 1024), m.size())});
+    size = m.size();
+  }
 
   message_creator fbb;
   fbb.create_and_finish(
       MsgContent_OSMEvent,
-      motis::import::CreateOSMEvent(fbb, fbb.CreateString(path), hash, m.size())
+      motis::import::CreateOSMEvent(fbb, fbb.CreateString(path), hash, size)
           .Union(),
       "/import", DestinationType_Topic);
   ctx::await_all(motis_publish(make_msg(fbb)));
