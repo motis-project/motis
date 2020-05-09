@@ -24,6 +24,8 @@ public:
   void init(motis::module::registry&) override;
   void init_async();
 
+  bool import_successful() const override;
+
 private:
   router const* get_router(std::string const& profile);
 

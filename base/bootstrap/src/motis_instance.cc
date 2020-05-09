@@ -122,6 +122,11 @@ void motis_instance::init_modules(module_settings const& module_opt,
       continue;
     }
 
+    if (!module->import_successful()) {
+      LOG(info) << module->module_name() << ": import was not successful";
+      continue;
+    }
+
     try {
       module->set_context(*schedule_);
       module->init(registry_);

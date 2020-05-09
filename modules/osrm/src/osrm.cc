@@ -96,6 +96,10 @@ void osrm::import(motis::module::registry& reg) {
   }
 }
 
+bool osrm::import_successful() const {
+  return datasets_.size() == profiles_.size();
+}
+
 void osrm::init(motis::module::registry& reg) {
   reg.subscribe("/init", [this] { init_async(); });
   reg.register_op("/osrm/one_to_many", [this](msg_ptr const& msg) {

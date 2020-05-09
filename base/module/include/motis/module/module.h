@@ -36,6 +36,8 @@ struct module : public conf::configuration {
   virtual void import(registry&) {}
   virtual void init(registry&) {}
 
+  virtual bool import_successful() const { return true; }
+
 protected:
   template <schedule_access A>
   synced_schedule<A> synced_sched() {

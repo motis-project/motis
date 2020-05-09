@@ -120,14 +120,14 @@ std::string address::db_file() const {
 void address::import(motis::module::registry& reg) {
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "address", reg,
-      [this, data_dir = get_data_directory()](
-          std::map<std::string, msg_ptr> const& dependencies) {
+      [this](std::map<std::string, msg_ptr> const& dependencies) {
         using import::OSMEvent;
         boost::filesystem::create_directories(get_data_directory() / "address");
         std::ofstream out(db_file().c_str(), std::ios::binary);
         address_typeahead::extract(
             motis_content(OSMEvent, dependencies.at("OSM"))->path()->str(),
             out);
+        import_successful_ = true;
       })
       ->require("OSM", [](msg_ptr const& msg) {
         return msg->get()->content_type() == MsgContent_OSMEvent;
@@ -135,25 +135,21 @@ void address::import(motis::module::registry& reg) {
 }
 
 void address::init(motis::module::registry& reg) {
-  try {
-    auto in = std::ifstream(db_file(), std::ios::binary);
-    in.exceptions(std::ios_base::failbit);
+  auto in = std::ifstream(db_file(), std::ios::binary);
+  in.exceptions(std::ios_base::failbit);
 
-    address_typeahead::typeahead_context context;
-    {
-      cereal::BinaryInputArchive ia(in);
-      ia(context);
-    }
-
-    address_typeahead::typeahead t(context);
-
-    impl_ = std::make_unique<impl>(db_file());
-    reg.register_op("/address", [this](msg_ptr const& msg) {
-      return impl_->get_guesses(msg);
-    });
-  } catch (std::exception const& e) {
-    LOG(logging::warn) << "address module not initialized (" << e.what() << ")";
+  address_typeahead::typeahead_context context;
+  {
+    cereal::BinaryInputArchive ia(in);
+    ia(context);
   }
+
+  address_typeahead::typeahead t(context);
+
+  impl_ = std::make_unique<impl>(db_file());
+  reg.register_op("/address", [this](msg_ptr const& msg) {
+    return impl_->get_guesses(msg);
+  });
 }
 
 }  // namespace motis::address
