@@ -13,6 +13,8 @@ namespace motis::bootstrap {
 
 #ifdef _MSC_VER
 
+constexpr auto const BAR = '\xDB';
+
 void move(int x, int y) {
   auto hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
   if (!hStdout) return;
@@ -34,6 +36,8 @@ void move_cursor_up(int lines) {
 }
 
 #else
+
+constexpr auto const BAR = '■';
 
 void move_cursor_up(int lines) {
   if (lines != 0) {
@@ -75,7 +79,6 @@ bool import_status::update(motis::module::msg_ptr const& msg) {
 }
 
 void import_status::print() {
-  return; // TODO(felix) remove line
   move_cursor_up(last_print_height_);
   for (auto const& [name, s] : status_) {
     clear_line();
@@ -95,7 +98,7 @@ void import_status::print() {
         constexpr auto const WIDTH = 55U;
         for (auto i = 0U; i < 55U; ++i) {
           auto const scaled = static_cast<int>(i * 100.0 / WIDTH);
-          std::cout << (scaled <= s.progress_ ? '\xDB' : ' ');
+          std::cout << (scaled <= s.progress_ ? BAR : ' ');
         }
         std::cout << "] " << s.progress_ << "%";
         break;
