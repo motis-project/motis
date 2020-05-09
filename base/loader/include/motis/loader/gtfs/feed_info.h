@@ -1,7 +1,6 @@
 #pragma once
 
 #include <map>
-#include <memory>
 #include <string>
 
 #include "motis/loader/loaded_file.h"
@@ -11,7 +10,6 @@ namespace loader {
 namespace gtfs {
 
 struct feed {
-
   feed(std::string publisher_name, std::string version)
       : publisher_name_(std::move(publisher_name)),
         version_(std::move(version)) {}
@@ -20,7 +18,7 @@ struct feed {
   std::string version_;
 };
 
-using feed_map = std::map<std::string, std::unique_ptr<feed>>;
+using feed_map = std::map<std::string, feed>;
 
 feed_map read_feed_publisher(loaded_file);
 
