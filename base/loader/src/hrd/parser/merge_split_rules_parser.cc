@@ -175,8 +175,11 @@ void parse_merge_split_service_rules(
       return;
     }
 
-    auto it =
-        hrd_bitfields.find(parse<int>(line.substr(c.merge_spl_.bitfield_)));
+    auto const bitfield_idx =
+        c.merge_spl_.bitfield_.from == -1
+            ? 0
+            : parse<int>(line.substr(c.merge_spl_.bitfield_));
+    auto it = hrd_bitfields.find(bitfield_idx);
     utl::verify(it != std::end(hrd_bitfields), "missing bitfield: {}:{}",
                 file.name(), line_number);
 

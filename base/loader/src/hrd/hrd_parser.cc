@@ -65,7 +65,7 @@ bool hrd_parser::applicable(fs::path const& path) {
 
 bool hrd_parser::applicable(fs::path const& path, config const& c) {
   auto const core_data_root = path / c.core_data_;
-  return std::all_of(
+  auto const core_data_files_available = std::all_of(
       begin(c.required_files_), end(c.required_files_),
       [&core_data_root](std::vector<std::string> const& alternatives) {
         if (alternatives.empty()) {
@@ -78,6 +78,15 @@ bool hrd_parser::applicable(fs::path const& path, config const& c) {
                      fs::is_regular_file(core_data_root / filename);
             });
       });
+  auto const services_available =
+      fs::is_regular_file(path / c.fplan_) ||
+      (fs::is_directory(path / c.fplan_) &&
+       (c.fplan_file_extension_.empty() ||
+        std::any_of(fs::directory_iterator{path / c.fplan_},
+                    fs::directory_iterator{}, [&](auto&& f) {
+                      return f.path().extension() == c.fplan_file_extension_;
+                    })));
+  return core_data_files_available && services_available;
 }
 
 std::vector<std::string> hrd_parser::missing_files(
@@ -131,8 +140,8 @@ loaded_file load(fs::path const& root, filename_key k,
                            return fs::is_regular_file(root / filename);
                          });
   utl::verify(it != end(required_files[k]),
-              "unable to load non-regular file(s): filename_key={}",
-              static_cast<int>(k));
+              "unable to load non-regular file(s): filename={}",
+              required_files[k].at(0));
   return loaded_file(root / *it);
 }
 
@@ -191,7 +200,7 @@ void delete_f_equivalences(
 
 void hrd_parser::parse(fs::path const& hrd_root, FlatBufferBuilder& fbb) {
   for (auto const& c : configs) {
-    if (fs::is_regular_file(hrd_root / c.core_data_ / c.files(BASIC_DATA))) {
+    if (applicable(hrd_root, c)) {
       return parse(hrd_root, fbb, c);
     } else {
       LOG(info) << (hrd_root / c.core_data_ / c.files(BASIC_DATA))

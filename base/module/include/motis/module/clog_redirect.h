@@ -16,7 +16,7 @@ struct log_streambuf : public std::streambuf {
   explicit log_streambuf(std::string name, char const* log_file_path)
       : name_{std::move(name)}, backup_clog_{std::clog.rdbuf()} {
     sink_.exceptions(std::ios_base::badbit | std::ios_base::failbit);
-    sink_.open(log_file_path);
+    sink_.open(log_file_path, std::ios_base::app);
     std::clog.rdbuf(this);
   }
 
