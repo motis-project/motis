@@ -17,13 +17,14 @@ constexpr auto const BAR = "\xDB";
 
 void move(int x, int y) {
   auto hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-  if (!hStdout) return;
+  if (!hStdout) {
+    return;
+  }
 
   CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
   GetConsoleScreenBufferInfo(hStdout, &csbiInfo);
 
   COORD cursor;
-
   cursor.X = csbiInfo.dwCursorPosition.X + x;
   cursor.Y = csbiInfo.dwCursorPosition.Y + y;
   SetConsoleCursorPosition(hStdout, cursor);

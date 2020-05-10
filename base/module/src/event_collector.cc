@@ -4,6 +4,7 @@
 
 #include "utl/verify.h"
 
+#include "motis/core/common/logging.h"
 #include "motis/module/clog_redirect.h"
 #include "motis/module/context/motis_publish.h"
 
@@ -44,7 +45,7 @@ void event_collector::require(std::string const& name,
        self = shared_from_this()](msg_ptr const& msg) -> msg_ptr {
         auto const logs_path = fs::path{data_dir_} / "log";
         fs::create_directories(logs_path);
-        log_streambuf redirect{
+        clog_redirect redirect{
             module_name_,
             (logs_path / (module_name_ + ".txt")).generic_string().c_str()};
 
@@ -55,8 +56,20 @@ void event_collector::require(std::string const& name,
           return nullptr;
         }
 
+        // Check message type.
         if (!(matcher_it->matcher_fn_)(msg)) {
-          return nullptr;  // Not the right message type.
+          return nullptr;
+        }
+
+        // Prevent double execution.
+        if (executed_) {
+          LOG(logging::info) << "prevented double execution";
+          LOG(logging::info) << "previous import events\n";
+          for (auto const& [k, v] : dependencies_) {
+            LOG(logging::info) << k << ": " << v->to_json(true);
+          }
+          LOG(logging::info) << "new import event: " << msg->to_json(true);
+          return nullptr;
         }
 
         dependencies_[name] = msg;
@@ -68,6 +81,7 @@ void event_collector::require(std::string const& name,
         // All messages arrived -> start.
         update_status(motis::import::Status_RUNNING);
         try {
+          executed_ = true;
           op_(dependencies_);
           update_status(motis::import::Status_FINISHED);
         } catch (std::exception const& e) {

@@ -6,6 +6,8 @@
 
 #include "boost/filesystem.hpp"
 
+#include "utl/verify.h"
+
 #include "motis/core/common/logging.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
@@ -96,6 +98,13 @@ void motis_instance::import(module_settings const& module_opt,
       module->set_data_directory(import_opt.data_directory_);
       module->import(registry_);
     }
+  }
+
+  for (auto const& p : import_opt.import_paths_) {
+    utl::verify(
+        fs::path{p}.parent_path() == fs::path{import_opt.data_directory_},
+        R"(import path "{}" has to be inside data directory "{}")", p,
+        import_opt.data_directory_);
   }
 
   publish(make_success_msg("/import"), 1);

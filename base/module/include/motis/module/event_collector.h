@@ -47,6 +47,7 @@ private:
   dependencies_map_t dependencies_;
   std::set<std::string> waiting_for_;
   std::set<dependency_matcher> matchers_;
+  bool executed_{false};
 };
 
 }  // namespace motis::module
