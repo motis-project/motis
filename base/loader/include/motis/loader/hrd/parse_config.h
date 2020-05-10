@@ -1,6 +1,7 @@
 #pragma once
 
 #include <climits>
+#include <limits>
 #include <vector>
 
 #include "boost/filesystem/path.hpp"
@@ -651,7 +652,7 @@ const config hrd_5_20_avv = {
     INIT(.merge_spl_,
          {
              INIT(.line_length_, 50),
-             INIT(.bitfield_, {-1, -1}),
+             INIT(.bitfield_, {std::numeric_limits<size_t>::max(), 0U}),
              INIT(.key1_nr_, {16, 5}),
              INIT(.key1_admin_, {22, 6}),
              INIT(.key2_nr_, {29, 5}),

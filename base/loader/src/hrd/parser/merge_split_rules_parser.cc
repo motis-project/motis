@@ -176,7 +176,7 @@ void parse_merge_split_service_rules(
     }
 
     auto const bitfield_idx =
-        c.merge_spl_.bitfield_.from == -1
+        c.merge_spl_.bitfield_.from == std::numeric_limits<size_t>::max()
             ? 0
             : parse<int>(line.substr(c.merge_spl_.bitfield_));
     auto it = hrd_bitfields.find(bitfield_idx);
