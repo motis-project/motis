@@ -133,11 +133,8 @@ void address::import(motis::module::registry& reg) {
 
         auto const dir = get_data_directory() / "address";
         auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
-        auto const state =
-            import_state{boost::filesystem::path{osm->path()->str()}
-                             .lexically_relative(get_data_directory())
-                             .generic_string(),
-                         osm->hash(), osm->size()};
+        auto const state = import_state{data_path(osm->path()->str()),
+                                        osm->hash(), osm->size()};
 
         if (read_ini<import_state>(dir / "import.ini") != state) {
           boost::filesystem::create_directories(dir);
