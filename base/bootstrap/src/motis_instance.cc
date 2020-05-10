@@ -100,13 +100,6 @@ void motis_instance::import(module_settings const& module_opt,
     }
   }
 
-  for (auto const& p : import_opt.import_paths_) {
-    utl::verify(
-        fs::path{p}.parent_path() == fs::path{import_opt.data_directory_},
-        R"(import path "{}" has to be inside data directory "{}")", p,
-        import_opt.data_directory_);
-  }
-
   publish(make_success_msg("/import"), 1);
   for (auto const& path : import_opt.import_paths_) {
     if (!fs::exists(path)) {

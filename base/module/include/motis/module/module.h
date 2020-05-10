@@ -30,7 +30,8 @@ struct module : public conf::configuration {
 
   std::string const& module_name() const { return prefix(); }
 
-  void set_data_directory(std::string const& d);
+  std::string data_path(boost::filesystem::path const&);
+  void set_data_directory(std::string const&);
   void set_context(motis::schedule& schedule);
 
   virtual void import(registry&) {}

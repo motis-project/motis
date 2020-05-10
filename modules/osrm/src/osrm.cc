@@ -53,11 +53,8 @@ void osrm::import(motis::module::registry& reg) {
           using namespace ::osrm::contractor;
 
           auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
-          auto const state =
-              import_state{boost::filesystem::path{osm->path()->str()}
-                               .lexically_relative(get_data_directory())
-                               .generic_string(),
-                           osm->hash(), osm->size()};
+          auto const state = import_state{data_path(osm->path()->str()),
+                                          osm->hash(), osm->size()};
 
           auto const osm_stem = fs::path{fs::path{osm->path()->str()}.stem()}
                                     .stem()
