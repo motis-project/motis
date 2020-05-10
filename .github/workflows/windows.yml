@@ -35,12 +35,14 @@ jobs:
         with:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-wnds-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          restore-keys: buildcache-wnds-${{ matrix.mode }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/deps
           key: deps-${{ hashFiles('.pkg') }}
+          restore-keys: deps-
 
       - name: Build
         run: |

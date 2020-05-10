@@ -53,12 +53,14 @@ jobs:
         with:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          restore-keys: buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/deps
           key: deps-${{ hashFiles('.pkg') }}
+          restore-keys: deps-
 
       - name: CMake
         run: |
