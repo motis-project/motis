@@ -707,7 +707,7 @@ const config hrd_5_20_avv = {
     INIT(.track_, {INIT(.prov_nr_, {0, 5})}),
     INIT(.track_rul_,
          {
-             INIT(.min_line_length_, 34),
+             INIT(.min_line_length_, 22),
              INIT(.eva_num_, {0, 7}),
              INIT(.train_num_, {8, 5}),
              INIT(.train_admin_, {14, 6}),
@@ -778,7 +778,7 @@ const config hrd_5_20_avv = {
                             {/* min ct csv */}}),
     INIT(.core_data_, "."),
     INIT(.fplan_, "."),
-    INIT(.fplan_file_extension_, "LIN"),
+    INIT(.fplan_file_extension_, ".LIN"),
 };
 
 const std::vector<config> configs = {hrd_5_00_8, hrd_5_20_26, hrd_5_20_39,
