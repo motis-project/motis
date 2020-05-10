@@ -80,6 +80,9 @@ bool import_status::update(motis::module::msg_ptr const& msg) {
 }
 
 void import_status::print() {
+  if (silent_) {
+    return;
+  }
   move_cursor_up(last_print_height_);
   for (auto const& [name, s] : status_) {
     clear_line();

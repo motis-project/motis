@@ -24,6 +24,7 @@ struct import_status {
 
   unsigned last_print_height_{0U};
   std::map<std::string, state> status_;
+  bool silent_{false};
 };
 
 }  // namespace motis::bootstrap

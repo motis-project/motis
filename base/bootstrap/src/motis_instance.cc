@@ -52,8 +52,10 @@ std::vector<std::string> motis_instance::module_names() const {
 
 void motis_instance::import(module_settings const& module_opt,
                             loader::loader_options const& dataset_opt,
-                            import_settings const& import_opt) {
+                            import_settings const& import_opt,
+                            bool const silent) {
   import_status status;
+  status.silent_ = silent;
   registry_.subscribe("/import", [&](msg_ptr const& msg) -> msg_ptr {
     if (status.update(msg)) {
       status.print();

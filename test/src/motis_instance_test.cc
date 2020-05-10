@@ -36,7 +36,7 @@ motis_instance_test::motis_instance_test(
 
   try {
     instance_->import(module_settings{modules}, dataset_opt,
-                      import_settings{{dataset_opt.dataset_}});
+                      import_settings{{dataset_opt.dataset_}}, true);
   } catch (loader::parser_error const& e) {
     LOG(logging::error) << "unable to parse schedule, problem at "
                         << e.filename_copy_ << ":" << e.line_number_;
