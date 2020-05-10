@@ -8,6 +8,7 @@
 
 #include "motis/loader/parser_error.h"
 
+#include "motis/module/clog_redirect.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/message.h"
@@ -35,6 +36,7 @@ motis_instance_test::motis_instance_test(
   parser.read_command_line_args(modules_cmdline_opt_patched);
 
   try {
+    clog_redirect::disable();
     instance_->import(module_settings{modules}, dataset_opt,
                       import_settings{{dataset_opt.dataset_}}, true);
   } catch (loader::parser_error const& e) {

@@ -1,9 +1,5 @@
 #pragma once
 
-#if defined(ERROR)
-#undef ERROR
-#endif
-
 #include <fstream>
 #include <streambuf>
 
@@ -22,18 +18,21 @@ struct clog_redirect : public std::streambuf {
 
   int_type overflow(int_type c = traits_type::eof()) override;  // NOLINT
 
+  static void disable();
+
 private:
   enum class output_state {
     NORMAL,
     MODE_SELECT,
     PERCENT,
-    ERROR
+    ERR
   } state_{output_state::NORMAL};
   int percent_{0};
   std::ofstream sink_;
   std::string name_;
   std::streambuf* backup_clog_;
   std::string error_;
+  static bool disabled_;
 };
 
 }  // namespace motis::module

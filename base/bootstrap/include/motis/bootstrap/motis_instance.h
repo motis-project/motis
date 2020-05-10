@@ -42,7 +42,7 @@ struct motis_instance : public motis::module::controller {
   std::vector<std::string> module_names() const;
 
   void import(module_settings const&, loader::loader_options const&,
-              import_settings const&, bool const silent = false);
+              import_settings const&, bool silent = false);
   void init_modules(module_settings const&,
                     unsigned num_threads = std::thread::hardware_concurrency());
   void init_remotes(
