@@ -52,8 +52,11 @@ jobs:
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
-          restore-keys: buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}
+          key: buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          restore-keys: |
+            buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-${{ hashFiles('.pkg') }}-
+            buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
