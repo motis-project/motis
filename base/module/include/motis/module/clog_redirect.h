@@ -16,7 +16,7 @@ struct clog_redirect : public std::streambuf {
 
   ~clog_redirect() override;
 
-  int_type overflow(int_type c = traits_type::eof()) override;  // NOLINT
+  int_type overflow(int_type) override;
 
   static void disable();
 
