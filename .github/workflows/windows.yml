@@ -53,6 +53,7 @@ jobs:
           cmake --build build --target motis motis-test motis-itest path-prepare ppr-preprocess osrm-extract osrm-contract parking-prepare at-example motis-eval motis-intermodal-eval
           .\build\bin\buildcache.exe -s
 
+      # ==== TESTS ====
       - name: Run Test Mode
         run: >
           .\build\motis
@@ -67,6 +68,7 @@ jobs:
       - name: Run Integration Tests
         run: .\build\motis-itest.exe
 
+      # ==== DISTRIBUTION ====
       - uses: bahmutov/npm-install@v1
         if: matrix.mode == 'Release'
         with:
@@ -76,8 +78,7 @@ jobs:
         if: matrix.mode == 'Release'
         run: |
           cd .\ui\web
-          move .\node_modules\elm\binwrappers\elm-make .\elm-make
-          elm-make --yes src\Main.elm --output elm.js
+          .\node_modules\elm\Elm-Platform\0.18.0\.cabal-sandbox\bin\elm-make.exe --yes .\src\Main.elm --output elm.js
           Remove-Item -Recurse -Force .\node_modules
 
       - name: Create Distribution
