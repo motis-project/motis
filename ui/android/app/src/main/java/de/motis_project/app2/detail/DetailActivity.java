@@ -31,7 +31,6 @@ public class DetailActivity extends AppCompatActivity implements DetailClickHand
     public static final String SHOW_SAVE_ACTION = "SHOW_SAVE_ACTION";
 
     private ConnectionWrapper con;
-    private boolean showSaveAction = true;
     private HashSet<JourneyUtil.Section> expandedSections = new HashSet<>();
     private PprSearchOptions pprSearchOptions;
 
@@ -59,11 +58,6 @@ public class DetailActivity extends AppCompatActivity implements DetailClickHand
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Bundle extras = getIntent().getExtras();
-        if (extras != null) {
-            showSaveAction = extras.getBoolean(SHOW_SAVE_ACTION, true);
-        }
-
         requestWindowFeature(Window.FEATURE_ACTION_BAR);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.detail);
@@ -100,17 +94,6 @@ public class DetailActivity extends AppCompatActivity implements DetailClickHand
             case android.R.id.home:
                 finish();
                 return true;
-            case R.id.detail_save_connection:
-                if (con != null) {
-                    try {
-                        CopyConnection.copyConnection(con.getConnection());
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    System.out.println("CON == NULL!");
-                }
-                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -136,26 +119,7 @@ public class DetailActivity extends AppCompatActivity implements DetailClickHand
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.journey_detail_toolbar, menu);
-        if (!showSaveAction) {
-            MenuItem saveItem = menu.findItem(R.id.detail_save_connection);
-            if (saveItem.isVisible()) {
-                saveItem.setVisible(false);
-                invalidateOptionsMenu();
-            }
-        }
         return super.onCreateOptionsMenu(menu);
-    }
-
-    @Override
-    public boolean onPrepareOptionsMenu(Menu menu) {
-        if (showSaveAction) {
-            menu.findItem(R.id.detail_save_connection).setOnMenuItemClickListener(e -> {
-                Status.get().getSavedConnectionsDb().add(CopyConnection.copyConnection(con.getConnection()));
-                Toast.makeText(this, connectionSaved, Toast.LENGTH_SHORT).show();
-                return true;
-            });
-        }
-        return super.onPrepareOptionsMenu(menu);
     }
 
     @Override

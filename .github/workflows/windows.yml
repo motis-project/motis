@@ -34,12 +34,14 @@ jobs:
         with:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-wnds-${{ matrix.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          restore-keys: buildcache-wnds-${{ matrix.mode }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/deps
           key: deps-${{ hashFiles('.pkg') }}
+          restore-keys: deps-
 
       - name: Build
         run: |
@@ -81,6 +83,12 @@ jobs:
           .\node_modules\elm\Elm-Platform\0.18.0\.cabal-sandbox\bin\elm-make.exe --yes .\src\Main.elm --output elm.js
           Remove-Item -Recurse -Force .\node_modules
 
+      - name: Move Profiles
+        if: matrix.mode == 'Release'
+        run: |
+          move .\deps\osrm-backend\profiles .\osrm-profiles
+          move .\deps\ppr\profiles .\ppr-profiles
+
       - name: Create Distribution
         if: matrix.mode == 'Release'
         run: >
@@ -89,7 +97,8 @@ jobs:
           .\build\path-prepare.exe
           .\build\parking-prepare.exe
           .\build\deps\ppr\ppr-preprocess.exe
-          .\deps\osrm-backend\profiles
+          .\osrm-profiles
+          .\ppr-profiles
           .\ui\web
 
       - name: Upload Distribution
