@@ -56,7 +56,7 @@ protected:
     // load services and create rule services
     rsb_ = rule_service_builder(rs);
     std::vector<path> services_files;
-    collect_files(fahrten, services_files);
+    collect_files(fahrten, "", services_files);
     for (auto const& services_file : services_files) {
       data_.emplace_back(services_file);
       for_each_service(
