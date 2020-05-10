@@ -46,6 +46,7 @@
 
 #include "motis/path/constants.h"
 #include "motis/path/path_database.h"
+#include "motis/path/path_database_query.h"
 #include "motis/path/path_index.h"
 #include "motis/path/prepare/source_spec.h"
 
@@ -67,8 +68,7 @@ struct import_state {
 };
 
 struct path::data {
-  msg_ptr get_response(std::string const& index,
-                       int const zoom_level = -1) const {
+  msg_ptr get_response(size_t index, int const zoom_level = -1) const {
     message_creator mc;
     mc.create_and_finish(MsgContent_PathSeqResponse,
                          reconstruct_sequence(mc, index, zoom_level).Union());
@@ -76,98 +76,11 @@ struct path::data {
   }
 
   Offset<PathSeqResponse> reconstruct_sequence(
-      message_creator& mc, std::string index, int const zoom_level = -1) const {
-
-    auto const buf = db_->get(index);
-    auto const* ptr = flatbuffers::GetRoot<InternalDbSequence>(buf.data());
-
-    auto const station_ids = utl::to_vec(
-        *ptr->station_ids(),
-        [&mc](auto const& e) { return mc.CreateString(e->c_str()); });
-    auto const classes = utl::to_vec(*ptr->classes());
-
-    auto txn = db_->db_handle_->make_txn();
-    auto features_dbi = db_->db_handle_->features_dbi(txn);
-    auto features_cursor = lmdb::cursor{txn, features_dbi};
-
-    std::vector<Offset<Segment>> fbs_segments;
-    for (auto const* segment : *ptr->segments()) {
-      utl::verify(segment->hints_rle()->size() % 2 == 0, "invalid rle");
-      size_t feature_idx = 0;
-
-      std::vector<double> coordinates;
-      std::vector<int64_t> osm_node_ids;
-      auto const append_coord = [&](auto const& p) {
-        auto const ll = tiles::fixed_to_latlng(p);
-        if (coordinates.empty() ||
-            (coordinates[coordinates.size() - 2] != ll.lat_ &&
-             coordinates[coordinates.size() - 1] != ll.lng_)) {
-          coordinates.push_back(ll.lat_);
-          coordinates.push_back(ll.lng_);
-          osm_node_ids.push_back(-1);
-        }
-      };
-
-      // TODO this is the most naive way to implement this query!
-      for (auto i = 0ULL; i < segment->hints_rle()->size(); i += 2) {
-        auto const tile = tiles::tile_key_to_tile(segment->hints_rle()->Get(i));
-
-        tiles::pack_records_foreach(
-            features_cursor, tile, [&](auto, auto pack_record) {
-              for (auto j = 0ULL; j < segment->hints_rle()->Get(i + 1); ++j) {
-                tiles::unpack_features(
-                    db_->pack_handle_->get(pack_record),
-                    [&](auto const& feature_str) {
-                      auto const feature = deserialize_feature(
-                          feature_str, render_ctx_.metadata_decoder_,
-                          tiles::fixed_box{
-                              {tiles::kInvalidBoxHint, tiles::kInvalidBoxHint},
-                              {tiles::kInvalidBoxHint, tiles::kInvalidBoxHint}},
-                          zoom_level < 0 ? tiles::kInvalidZoomLevel
-                                         : zoom_level);
-
-                      utl::verify(feature.has_value(), "deserialize failed");
-
-                      if (feature->id_ !=
-                          std::abs(segment->features()->Get(feature_idx))) {
-                        return;
-                      }
-
-                      auto const& l =
-                          mpark::get<tiles::fixed_polyline>(feature->geometry_);
-                      utl::verify(l.size() == 1 && l.front().size() > 1,
-                                  "invalid line geometry");
-
-                      if (feature_idx < 0) {
-                        std::for_each(std::rbegin(l.front()),
-                                      std::rend(l.front()), append_coord);
-                      } else {
-                        std::for_each(std::begin(l.front()),
-                                      std::end(l.front()), append_coord);
-                      }
-                    });
-                ++feature_idx;
-              }
-            });
-      }
-
-      utl::verify(coordinates.size() >= 2, "empty coordinates");
-      if (coordinates.size() == 2) {
-        coordinates.push_back(coordinates[0]);
-        coordinates.push_back(coordinates[1]);
-        osm_node_ids.push_back(-1);
-      }
-
-      // TODO handle empty segments -> invent something based on station id
-
-      fbs_segments.emplace_back(CreateSegment(mc, mc.CreateVector(coordinates),
-                                              mc.CreateVector(osm_node_ids)));
-    }
-
-    return CreatePathSeqResponse(
-        mc, mc.CreateVector(station_ids), mc.CreateVector(classes),
-        mc.CreateVector(fbs_segments),
-        mc.CreateVector(std::vector<Offset<PathSourceInfo>>{}));
+      message_creator& mc, size_t index, int const zoom_level = -1) const {
+    path_database_query q{zoom_level};
+    q.add_sequence(index);
+    q.execute(*db_, render_ctx_);
+    return q.write_sequence(mc, *db_, index);
   }
 
   std::unique_ptr<path_database> db_;
@@ -347,8 +260,8 @@ msg_ptr path::by_tile_feature(msg_ptr const& msg) const {
   message_creator mc;
   std::vector<Offset<PathSeqResponse>> responses;
   for (auto const& [seq, seg] : data_->index_->tile_features_.at(req->ref())) {
-    responses.emplace_back(
-        data_->reconstruct_sequence(mc, std::to_string(seq)));
+    // TODO update this for the batch query
+    responses.emplace_back(data_->reconstruct_sequence(mc, seq));
   }
 
   mc.create_and_finish(

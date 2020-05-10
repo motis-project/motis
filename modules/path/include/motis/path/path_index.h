@@ -63,12 +63,12 @@ struct path_index {
         });
   }
 
-  std::string find(seq_key const& k) const {
+  size_t find(seq_key const& k) const {
     auto const it = seq_map_.find(k);
     if (it == end(seq_map_)) {
       throw std::system_error(error::unknown_sequence);
     }
-    return std::to_string(it->second);
+    return it->second;
   }
 
   struct segment_info {
