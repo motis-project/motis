@@ -28,6 +28,7 @@
 
 #include "motis/path/constants.h"
 #include "motis/path/path_database.h"
+#include "motis/path/prepare/db_tiles_packer.h"
 
 #include "motis/path/fbs/InternalDbSequence_generated.h"
 #include "motis/path/fbs/PathIndex_generated.h"
@@ -166,9 +167,12 @@ struct db_builder::impl {
 
       std::vector<Offset<InternalDbSegment>> fbs_segments;
       for (auto i = 0UL; i < feature_ids.size(); ++i) {
-        fbs_segments.emplace_back(
-            CreateInternalDbSegment(mc, mc.CreateVector(feature_ids[i]),
-                                    mc.CreateVector(hints_rle[i])));
+        auto const& original = seq.paths_.at(i).polyline_;
+        utl::verify(!original.empty(), "add_seq: empty original polyline");
+
+        fbs_segments.emplace_back(CreateInternalDbSegment(
+            mc, mc.CreateVector(feature_ids[i]), mc.CreateVector(hints_rle[i]),
+            original.front().lat_, original.front().lng_));
       }
 
       mc.Finish(CreateInternalDbSequence(mc, mc.CreateVector(fbs_stations),
@@ -206,9 +210,20 @@ struct db_builder::impl {
       finish_boxes();
       db_flush_maybe(0);
     }
+    feature_inserter_.reset(nullptr);
+    {
+      motis::logging::scoped_timer timer("tiles: pack");
+      auto const metadata_coder = make_shared_metadata_coder(*db_->db_handle_);
+      pack_features(*db_->db_handle_, *db_->pack_handle_,
+                    [&](auto const tile, auto const& packs) {
+                      db_tiles_packer p{tile, metadata_coder, path_layer_id_};
+                      p.pack_features(packs);
+                      p.make_index();
+                      return p.packer_.buf_;
+                    });
+    }
     {
       motis::logging::scoped_timer timer("tiles: prepare");
-      feature_inserter_.reset(nullptr);
       tiles::prepare_tiles(*db_->db_handle_, *db_->pack_handle_, 10);
     }
   }

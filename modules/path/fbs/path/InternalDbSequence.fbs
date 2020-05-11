@@ -3,6 +3,9 @@ namespace motis.path;
 table InternalDbSegment {
   features: [long]; // negative means reversed path
   hints_rle: [ulong]; // run-length encoding: even=hints odd=repeats
+
+  fallback_lat: double; // used if features is empty
+  fallback_lng: double; // used if features is empty
 }
 
 table InternalDbSequence {

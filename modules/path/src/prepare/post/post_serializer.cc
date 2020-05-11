@@ -10,49 +10,12 @@
 
 #include "motis/path/prepare/db_builder.h"
 #include "motis/path/prepare/osm_path.h"
+#include "motis/path/prepare/post/color_to_seq_seg_index.h"
 #include "motis/path/prepare/post/post_graph.h"
 
 namespace ml = motis::logging;
 
 namespace motis::path {
-
-struct color_to_seq_seg_index {
-  explicit color_to_seq_seg_index(post_graph const& graph) : graph_{graph} {
-    for (auto i = 0UL; i < graph.segment_ids_.size(); ++i) {
-      auto const& seg_ids = graph.segment_ids_.at(i);
-      for (auto j = 0UL; j < seg_ids.size(); ++j) {
-        color_to_seq_segs_.emplace_back(
-            seg_ids.at(j).max_color_,
-            seq_seg{static_cast<uint32_t>(i), static_cast<uint32_t>(j)});
-      }
-    }
-    std::sort(
-        begin(color_to_seq_segs_), end(color_to_seq_segs_),
-        [](auto const& lhs, auto const& rhs) { return lhs.first < rhs.first; });
-  }
-
-  std::vector<seq_seg> decode_colors(std::vector<color_t> const& cs) const {
-    return utl::to_vec(cs, [&](auto const& color) {
-      auto const it = std::lower_bound(
-          begin(color_to_seq_segs_), end(color_to_seq_segs_), color,
-          [](auto const& lhs, auto const& rhs) { return lhs.first < rhs; });
-      utl::verify(it != end(color_to_seq_segs_), "could not find seq_seg");
-      return it->second;
-    });
-  }
-
-  std::vector<uint32_t> get_classes(
-      std::vector<seq_seg> const& seq_segs) const {
-    std::vector<uint32_t> classes;
-    for (auto const& seq_seg : seq_segs) {
-      utl::concat(classes, graph_.originals_.at(seq_seg.sequence_).classes_);
-    }
-    return classes;
-  }
-
-  post_graph const& graph_;
-  std::vector<std::pair<color_t, seq_seg>> color_to_seq_segs_;
-};
 
 void serialize_geometry(post_graph& graph, db_builder& builder) {
   ml::scoped_timer timer("post_serializer: serialize_geometry");
@@ -78,15 +41,7 @@ void serialize_geometry(post_graph& graph, db_builder& builder) {
     auto polyline =
         utl::to_vec(ap->path_, [](auto const& node) { return node->id_.pos_; });
 
-    utl::verify(ap->path_.size() >= 2, "illformed atomic path (size = %zu)",
-                ap->path_.size());
-    auto edge = ap->path_.at(0)->find_edge_to(ap->path_.at(1));
-    utl::verify(edge != nullptr, "missing edge in atomic path");
-
-    auto seq_segs = index.decode_colors(edge->colors_);
-    utl::erase_duplicates(seq_segs);
-    auto classes = index.get_classes(seq_segs);
-    utl::erase_duplicates(classes);
+    auto const& [seq_segs, classes] = index.resolve_atomic_path(*ap);
 
     auto const is_stub =
         std::any_of(begin(seq_segs), end(seq_segs), [&](auto const& ss) {

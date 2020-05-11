@@ -19,7 +19,7 @@ struct path_database_query {
     uint64_t response_id_{std::numeric_limits<uint64_t>::max()};
     uint64_t include_count_{0};
     uint32_t min_clasz_{std::numeric_limits<uint32_t>::max()};
-    bool is_resoved_{false};
+    bool is_resolved_{false};
     tiles::fixed_geometry geometry_;
   };
 
@@ -41,7 +41,7 @@ struct path_database_query {
 
   void execute(path_database const&, tiles::render_ctx const&);
   void resolve_sequences_and_build_subqueries(lmdb::cursor&);
-  void execute_subquery(tiles::tile_index_t, subquery&,  //
+  void execute_subquery(tiles::tile_index_t, subquery&, size_t layer_idx,  //
                         lmdb::cursor&, tiles::pack_handle const&,
                         tiles::render_ctx const&);
 
