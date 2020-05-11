@@ -119,10 +119,10 @@ msg_ptr make_no_msg(std::string const& target, int id) {
   return make_msg(b);
 }
 
-msg_ptr make_success_msg(int id) {
+msg_ptr make_success_msg(std::string const& target, int id) {
   message_creator b;
   b.create_and_finish(MsgContent_MotisSuccess, CreateMotisSuccess(b).Union(),
-                      "", DestinationType_Module, id);
+                      target, DestinationType_Module, id);
   return make_msg(b);
 }
 

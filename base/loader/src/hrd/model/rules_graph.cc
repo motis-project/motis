@@ -43,17 +43,17 @@ rule_node::rule_node(service_node* s1, service_node* s2,
   switch (rule_.type_) {
     case RuleType_MERGE_SPLIT:
       rule_.s1_traffic_days_offset_ = s1->service_->traffic_days_offset_at_stop(
-          s1->service_->first_stop_index_at(rule_info.eva_num_1_),
+          s1->service_->get_first_stop_index_at(rule_info.eva_num_1_),
           event_type::DEP);
       rule_.s2_traffic_days_offset_ = s2->service_->traffic_days_offset_at_stop(
-          s2->service_->first_stop_index_at(rule_info.eva_num_1_),
+          s2->service_->get_first_stop_index_at(rule_info.eva_num_1_),
           event_type::DEP);
       break;
     case RuleType_THROUGH:
       rule_.s1_traffic_days_offset_ = s1->service_->traffic_days_offset_at_stop(
           s1->service_->stops_.size() - 1, event_type::ARR);
       rule_.s2_traffic_days_offset_ = s2->service_->traffic_days_offset_at_stop(
-          s2->service_->first_stop_index_at(rule_info.eva_num_1_),
+          s2->service_->get_first_stop_index_at(rule_info.eva_num_1_),
           event_type::DEP);
       break;
     default: throw std::runtime_error("unknown rule type");

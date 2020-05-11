@@ -20,15 +20,23 @@ void write_schedule(FlatBufferBuilder& b, fs::path const& path) {
   f.write(b.GetBufferPointer(), b.GetSize());
 }
 
-void collect_files(fs::path const& root, std::vector<fs::path>& files) {
+std::size_t collect_files(fs::path const& root,
+                          std::string const& file_extension,
+                          std::vector<fs::path>& files) {
   if (!fs::is_directory(root)) {
     files.emplace_back(root);
+    return fs::file_size(root);
   } else {
+    auto size_sum = std::size_t{0U};
     for (auto const& entry : fs::recursive_directory_iterator(root)) {
-      if (fs::is_regular(entry.path())) {
+      if (fs::is_regular(entry.path()) &&
+          (file_extension.empty() ||
+           entry.path().extension() == file_extension)) {
         files.push_back(entry.path());
+        size_sum += fs::file_size(entry.path());
       }
     }
+    return size_sum;
   }
 }
 

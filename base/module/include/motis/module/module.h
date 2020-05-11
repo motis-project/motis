@@ -5,6 +5,7 @@
 
 #include "boost/asio/io_service.hpp"
 #include "boost/asio/strand.hpp"
+#include "boost/filesystem/path.hpp"
 
 #include "conf/configuration.h"
 
@@ -27,11 +28,16 @@ struct module : public conf::configuration {
 
   ~module() override = default;
 
-  virtual std::string name() const { return prefix(); }
+  std::string const& module_name() const { return prefix(); }
 
-  void set_context(motis::schedule& schedule) { schedule_ = &schedule; }
+  std::string data_path(boost::filesystem::path const&);
+  void set_data_directory(std::string const&);
+  void set_context(motis::schedule& schedule);
 
+  virtual void import(registry&) {}
   virtual void init(registry&) {}
+
+  virtual bool import_successful() const { return true; }
 
 protected:
   template <schedule_access A>
@@ -39,7 +45,10 @@ protected:
     return synced_schedule<A>(*schedule_);
   }
 
+  boost::filesystem::path const& get_data_directory() const;
+
 private:
+  boost::filesystem::path data_directory_;
   motis::schedule* schedule_ = nullptr;
 };
 

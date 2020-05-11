@@ -24,21 +24,21 @@ public:
   expand_trips_test() : loader_graph_builder_test("mss-ts", "20150325", 3) {}
 
   void print_trip(trip const* trp) {
-    std::cout << "trip: ((" << trp->id_.primary_.station_id_ << ", "
+    std::clog << "trip: ((" << trp->id_.primary_.station_id_ << ", "
               << trp->id_.primary_.train_nr_ << ", " << trp->id_.primary_.time_
               << "), (" << trp->id_.secondary_.target_station_id_ << ", "
               << trp->id_.secondary_.target_time_ << ", "
               << trp->id_.secondary_.line_id_ << "))" << std::endl;
-    std::cout << "  " << trp->edges_->size()
+    std::clog << "  " << trp->edges_->size()
               << " edges, lcon_idx=" << trp->lcon_idx_ << std::endl;
-    std::cout << "  stops: ";
+    std::clog << "  stops: ";
     for (auto const& stop : stops(trp)) {
-      std::cout << stop.get_station(*sched_).name_ << " ";
+      std::clog << stop.get_station(*sched_).name_ << " ";
     }
-    std::cout << std::endl;
+    std::clog << std::endl;
     for (auto const& sec : sections(trp)) {
       auto con_info = sec.lcon().full_con_->con_info_;
-      std::cout << "  section " << sec.index() << ": "
+      std::clog << "  section " << sec.index() << ": "
                 << sec.from_station(*sched_).name_ << " "
                 << format_time(sec.lcon().d_time_) << " -> "
                 << sec.to_station(*sched_).name_ << " "
@@ -46,12 +46,12 @@ public:
                 << " train_nr=" << con_info->train_nr_;
       con_info = con_info->merged_with_;
       while (con_info != nullptr) {
-        std::cout << " merged_with=" << con_info->train_nr_;
+        std::clog << " merged_with=" << con_info->train_nr_;
         con_info = con_info->merged_with_;
       }
-      std::cout << std::endl;
+      std::clog << std::endl;
     }
-    std::cout << "\n\n";
+    std::clog << "\n\n";
   }
 
   int trip_count(std::vector<station const*> stations) {

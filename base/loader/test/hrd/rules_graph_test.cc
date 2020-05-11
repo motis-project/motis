@@ -56,12 +56,13 @@ protected:
     // load services and create rule services
     rsb_ = rule_service_builder(rs);
     std::vector<path> services_files;
-    collect_files(fahrten, services_files);
+    collect_files(fahrten, "", services_files);
     for (auto const& services_file : services_files) {
       data_.emplace_back(services_file);
       for_each_service(
           data_.back(), bb.hrd_bitfields_,
-          [&](hrd_service const& s) { rsb_.add_service(s); }, hrd_5_00_8);
+          [&](hrd_service const& s) { rsb_.add_service(s); },
+          [](std::size_t) {}, hrd_5_00_8);
     }
     rsb_.resolve_rule_services();
 

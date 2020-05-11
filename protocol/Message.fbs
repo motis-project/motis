@@ -6,6 +6,10 @@ include "bikesharing/BikesharingRequest.fbs";
 include "bikesharing/BikesharingResponse.fbs";
 include "guesser/StationGuesserRequest.fbs";
 include "guesser/StationGuesserResponse.fbs";
+include "import/StatusUpdate.fbs";
+include "import/FileEvent.fbs";
+include "import/OSMEvent.fbs";
+include "import/ScheduleEvent.fbs";
 include "intermodal/IntermodalRoutingRequest.fbs";
 include "lookup/LookupGeoStationIdRequest.fbs";
 include "lookup/LookupGeoStationRequest.fbs";
@@ -197,7 +201,11 @@ union MsgContent {
   motis.parking.ParkingEdgesResponse,
   motis.path.PathByTileFeatureRequest,
   motis.path.MultiPathSeqResponse,
-  motis.ppr.FootRoutingProfilesResponse
+  motis.ppr.FootRoutingProfilesResponse,
+  motis.import.StatusUpdate,
+  motis.import.FileEvent,
+  motis.import.OSMEvent,
+  motis.import.ScheduleEvent
 }
 
 // Destination Examples:

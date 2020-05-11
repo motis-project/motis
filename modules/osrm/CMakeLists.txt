@@ -11,7 +11,12 @@ target_compile_features(motis-osrm PUBLIC cxx_std_17)
 target_link_libraries(motis-osrm
   ${Boost_PROGRAM_OPTIONS_LIBRARY}
   ${Boost_SYSTEM_LIBRARY}
+  ${Boost_FILESYSTEM_LIBRARY}
+  tbb_static
+  cista
   osrm
+  osrm_contract
+  osrm_extract
   motis-module
 )
 

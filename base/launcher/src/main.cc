@@ -19,6 +19,7 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/bootstrap/dataset_settings.h"
+#include "motis/bootstrap/import_settings.h"
 #include "motis/bootstrap/module_settings.h"
 #include "motis/bootstrap/motis_instance.h"
 #include "motis/bootstrap/remote_settings.h"
@@ -42,6 +43,7 @@ int main(int argc, char const** argv) {
 
   server_settings server_opt;
   dataset_settings dataset_opt;
+  import_settings import_opt;
   dataset_opt.write_serialized_ = true;
   dataset_opt.adjust_footpaths_ = true;
 
@@ -49,8 +51,9 @@ int main(int argc, char const** argv) {
   remote_settings remote_opt;
   launcher_settings launcher_opt;
 
-  std::vector<conf::configuration*> confs = {
-      &server_opt, &dataset_opt, &module_opt, &remote_opt, &launcher_opt};
+  std::vector<conf::configuration*> confs = {&server_opt,  &import_opt,
+                                             &dataset_opt, &module_opt,
+                                             &remote_opt,  &launcher_opt};
   for (auto const& module : instance.modules()) {
     confs.push_back(module);
   }
@@ -80,9 +83,8 @@ int main(int argc, char const** argv) {
   }
 
   try {
-    instance.init_schedule(dataset_opt);
-    instance.init_modules(module_opt.modules_, module_opt.exclude_modules_,
-                          launcher_opt.num_threads_);
+    instance.import(module_opt, dataset_opt, import_opt);
+    instance.init_modules(module_opt, launcher_opt.num_threads_);
     instance.init_remotes(remote_opt.get_remotes());
 
     if (launcher_opt.mode_ == launcher_settings::motis_mode_t::SERVER) {
@@ -98,7 +100,6 @@ int main(int argc, char const** argv) {
         return 1;
       }
     }
-
   } catch (std::exception const& e) {
     std::cout << "\ninitialization error: " << e.what() << "\n";
     return 1;

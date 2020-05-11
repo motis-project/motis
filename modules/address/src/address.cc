@@ -5,20 +5,32 @@
 #include <regex>
 #include <sstream>
 
+#include "boost/filesystem.hpp"
+
 #include "cereal/archives/binary.hpp"
 
 #include "utl/to_vec.h"
 
 #include "address-typeahead/common.h"
+#include "address-typeahead/extract.h"
 #include "address-typeahead/serialization.h"
 #include "address-typeahead/typeahead.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/module/event_collector.h"
+#include "motis/module/ini_io.h"
 
 using namespace motis::module;
 using namespace address_typeahead;
 
 namespace motis::address {
+
+struct import_state {
+  CISTA_COMPARABLE()
+  named<std::string, MOTIS_NAME("path")> path_;
+  named<cista::hash_t, MOTIS_NAME("hash")> hash_;
+  named<size_t, MOTIS_NAME("size")> size_;
+};
 
 struct address::impl {
   explicit impl(std::string const& path) {
@@ -105,32 +117,55 @@ struct address::impl {
   std::unique_ptr<address_typeahead::typeahead> t_;
 };
 
-address::address() : module("Address Typeahead", "address") {
-  param(db_path_, "db", "address typeahead database path");
-}
+address::address() : module("Address Typeahead", "address") {}
 
 address::~address() = default;
 
+std::string address::db_file() const {
+  return (get_data_directory() / "address" / "address_db.raw").generic_string();
+}
+
+void address::import(motis::module::registry& reg) {
+  std::make_shared<event_collector>(
+      get_data_directory().generic_string(), "address", reg,
+      [this](std::map<std::string, msg_ptr> const& dependencies) {
+        using import::OSMEvent;
+
+        auto const dir = get_data_directory() / "address";
+        auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
+        auto const state = import_state{data_path(osm->path()->str()),
+                                        osm->hash(), osm->size()};
+
+        if (read_ini<import_state>(dir / "import.ini") != state) {
+          boost::filesystem::create_directories(dir);
+          std::ofstream out(db_file().c_str(), std::ios::binary);
+          address_typeahead::extract(osm->path()->str(), out);
+          write_ini(dir / "import.ini", state);
+        }
+
+        import_successful_ = true;
+      })
+      ->require("OSM", [](msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_OSMEvent;
+      });
+}
+
 void address::init(motis::module::registry& reg) {
-  try {
-    auto in = std::ifstream(db_path_, std::ios::binary);
-    in.exceptions(std::ios_base::failbit);
+  auto in = std::ifstream(db_file(), std::ios::binary);
+  in.exceptions(std::ios_base::failbit);
 
-    address_typeahead::typeahead_context context;
-    {
-      cereal::BinaryInputArchive ia(in);
-      ia(context);
-    }
-
-    address_typeahead::typeahead t(context);
-
-    impl_ = std::make_unique<impl>(db_path_);
-    reg.register_op("/address", [this](msg_ptr const& msg) {
-      return impl_->get_guesses(msg);
-    });
-  } catch (std::exception const& e) {
-    LOG(logging::warn) << "address module not initialized (" << e.what() << ")";
+  address_typeahead::typeahead_context context;
+  {
+    cereal::BinaryInputArchive ia(in);
+    ia(context);
   }
+
+  address_typeahead::typeahead t(context);
+
+  impl_ = std::make_unique<impl>(db_file());
+  reg.register_op("/address", [this](msg_ptr const& msg) {
+    return impl_->get_guesses(msg);
+  });
 }
 
 }  // namespace motis::address

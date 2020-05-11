@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, windows]
+    runs-on: windows-latest
 
     strategy:
       matrix:
@@ -28,14 +28,16 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: seanmiddleditch/gha-setup-ninja@master
-      - uses: lukka/get-cmake@v3.17.1
 
       - name: buildcache Cache
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-wnds-${{ matrix.mode }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
-          restore-keys: buildcache-wnds-${{ matrix.mode }}-
+          key: buildcache-wnds-${{ matrix.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          restore-keys: |
+            buildcache-wnds-${{ matrix.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}
+            buildcache-wnds-${{ matrix.mode }}-${{ hashFiles('.pkg') }}-
+            buildcache-wnds-${{ matrix.mode }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
@@ -46,20 +48,22 @@ jobs:
 
       - name: Build
         run: |
+          $env:BOOST_ROOT = $env:BOOST_ROOT_1_72_0
           $devShell = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find **\Microsoft.VisualStudio.DevShell.dll
           $installPath = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationpath
           Import-Module $devShell
           Enter-VsDevShell -VsInstallPath $installPath -SkipAutomaticLocation -DevCmdArguments "-arch=amd64"
           cmake -GNinja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }}
           .\build\bin\buildcache.exe -z
-          cmake --build build --target motis motis-test motis-itest path-prepare ppr-preprocess osrm-extract osrm-contract parking-prepare at-example motis-eval motis-intermodal-eval
+          cmake --build build --target motis motis-test motis-itest path-prepare ppr-preprocess parking-prepare motis-eval motis-intermodal-eval
           .\build\bin\buildcache.exe -s
 
+      # ==== TESTS ====
       - name: Run Test Mode
         run: >
           .\build\motis
           --mode test
-          --dataset.path base/loader/test_resources/hrd_schedules/single-ice
+          --import.paths base/loader/test_resources/hrd_schedules/single-ice
           --dataset.begin 20151111
           --dataset.write_serialized false
 
@@ -69,6 +73,7 @@ jobs:
       - name: Run Integration Tests
         run: .\build\motis-itest.exe
 
+      # ==== DISTRIBUTION ====
       - uses: bahmutov/npm-install@v1
         if: matrix.mode == 'Release'
         with:
@@ -78,8 +83,7 @@ jobs:
         if: matrix.mode == 'Release'
         run: |
           cd .\ui\web
-          move .\node_modules\elm\binwrappers\elm-make .\elm-make
-          elm-make --yes src\Main.elm --output elm.js
+          .\node_modules\elm\Elm-Platform\0.18.0\.cabal-sandbox\bin\elm-make.exe --yes .\src\Main.elm --output elm.js
           Remove-Item -Recurse -Force .\node_modules
 
       - name: Move Profiles
@@ -95,9 +99,6 @@ jobs:
           .\build\motis.exe
           .\build\path-prepare.exe
           .\build\parking-prepare.exe
-          .\build\deps\osrm-backend\osrm-extract.exe
-          .\build\deps\osrm-backend\osrm-contract.exe
-          .\build\deps\address-typeahead\at-example.exe
           .\build\deps\ppr\ppr-preprocess.exe
           .\osrm-profiles
           .\ppr-profiles

@@ -69,7 +69,8 @@ schedule_ptr load_schedule(loader_options const& opt,
           utl::file(binary_schedule_file.string().c_str(), "w+")
               .write(builder.GetBufferPointer(), builder.GetSize());
         }
-        auto sched = build_graph(GetSchedule(builder.GetBufferPointer()), opt);
+        auto sched =
+            build_graph(GetSchedule(builder.GetBufferPointer()), opt, 80);
         if (opt.write_graph_) {
           write_graph(serialized_file_path, *sched);
         }
@@ -78,9 +79,9 @@ schedule_ptr load_schedule(loader_options const& opt,
     }
 
     for (auto const& parser : parsers()) {
-      std::cout << "missing files:\n";
+      std::clog << "missing files:\n";
       for (auto const& file : parser->missing_files(opt.dataset_)) {
-        std::cout << "  " << file << "\n";
+        std::clog << "  " << file << "\n";
       }
     }
     throw std::runtime_error("no parser was applicable");

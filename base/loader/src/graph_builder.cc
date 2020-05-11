@@ -35,9 +35,23 @@ char const* c_str(flatbuffers64::String const* str) {
   return str == nullptr ? nullptr : str->c_str();
 }
 
+std::string format_date(time_t const t, char const* format = "%Y-%m-%d") {
+  struct tm time {};
+#ifdef _MSC_VER
+  gmtime_s(&time, &t);
+#else
+  gmtime_r(&t, &time);
+#endif
+  std::stringstream ss;
+  ss << std::put_time(&time, format);
+  return ss.str();
+}
+
 graph_builder::graph_builder(schedule& sched, Interval const* schedule_interval,
-                             loader_options const& opt)
-    : lcon_count_(0),
+                             loader_options const& opt,
+                             unsigned progress_offset)
+    : progress_offset_(progress_offset),
+      lcon_count_(0),
       next_route_index_(0),
       next_node_id_(0),
       sched_(sched),
@@ -51,11 +65,16 @@ graph_builder::graph_builder(schedule& sched, Interval const* schedule_interval,
       apply_rules_(opt.apply_rules_),
       adjust_footpaths_(opt.adjust_footpaths_),
       expand_trips_(opt.expand_trips_) {
-  if (sched.schedule_end_ <= sched.schedule_begin_ ||
-      schedule_interval->from() >= static_cast<uint64_t>(sched.schedule_end_) ||
-      schedule_interval->to() <= static_cast<uint64_t>(sched.schedule_begin_)) {
-    throw std::runtime_error("schedule out of bounds");
-  }
+  utl::verify(sched.schedule_end_ > sched.schedule_begin_ &&
+                  schedule_interval->from() <=
+                      static_cast<uint64_t>(sched.schedule_end_) &&
+                  schedule_interval->to() >=
+                      static_cast<uint64_t>(sched.schedule_begin_),
+              "schedule (from={}, to={}) out of interval (from={}, to={})",
+              format_date(schedule_interval->from()),
+              format_date(schedule_interval->to()),
+              format_date(sched.schedule_begin_),
+              format_date(sched.schedule_end_));
 }
 
 void graph_builder::add_dummy_node(std::string const& name) {
@@ -262,6 +281,8 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
                      return lhs->route() < rhs->route();
                    });
 
+  auto prev_progress = 0U;
+
   auto it = begin(sorted);
   mcd::vector<Service const*> route_services;
   while (it != end(sorted)) {
@@ -278,6 +299,16 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
     }
 
     route_services.clear();
+
+    auto const progress = static_cast<int>(
+        progress_offset_ +
+        (100.0 - progress_offset_) *
+            static_cast<float>(std::distance(begin(sorted), it)) /
+            sorted.size());
+    if (progress != prev_progress) {
+      prev_progress = progress;
+      std::clog << '\0' << progress << '\0';
+    }
   }
 }
 
@@ -815,8 +846,8 @@ route_section graph_builder::add_route_section(
   return section;
 }
 
-schedule_ptr build_graph(Schedule const* serialized,
-                         loader_options const& opt) {
+schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
+                         unsigned progress_offset) {
   scoped_timer timer("building graph");
 
   LOG(info) << "schedule: " << serialized->name()->str();
@@ -829,7 +860,7 @@ schedule_ptr build_graph(Schedule const* serialized,
     sched->name_ = serialized->name()->str();
   }
 
-  graph_builder builder(*sched, serialized->interval(), opt);
+  graph_builder builder(*sched, serialized->interval(), opt, progress_offset);
   builder.add_stations(serialized->stations());
   if (serialized->meta_stations() != nullptr) {
     builder.link_meta_stations(serialized->meta_stations());
@@ -854,6 +885,7 @@ schedule_ptr build_graph(Schedule const* serialized,
     calc_footpaths(*sched);
   }
 
+  sched->hash_ = serialized->hash();
   sched->route_count_ = builder.next_route_index_;
   sched->node_count_ = builder.next_node_id_;
   sched->transfers_lower_bounds_fwd_ = build_interchange_graph(

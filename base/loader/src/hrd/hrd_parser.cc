@@ -3,6 +3,9 @@
 #include "utl/enumerate.h"
 #include "utl/erase.h"
 
+#include "cista/hash.h"
+#include "cista/mmap.h"
+
 #include "motis/core/common/logging.h"
 
 #include "motis/schedule-format/Schedule_generated.h"
@@ -41,6 +44,20 @@ using namespace utl;
 using namespace motis::logging;
 namespace fs = boost::filesystem;
 
+cista::hash_t hash(fs::path const& hrd_root) {
+  for (auto const& c : configs) {
+    auto const basic_data_path = hrd_root / c.core_data_ / c.files(BASIC_DATA);
+    if (fs::is_regular_file(basic_data_path)) {
+      cista::mmap m(basic_data_path.generic_string().c_str(),
+                    cista::mmap::protection::READ);
+      return cista::hash(std::string_view{
+          reinterpret_cast<char const*>(m.begin()),
+          std::min(static_cast<size_t>(50 * 1024 * 1024), m.size())});
+    }
+  }
+  return 0U;
+}
+
 bool hrd_parser::applicable(fs::path const& path) {
   return std::any_of(begin(configs), end(configs),
                      [&](const config& c) { return applicable(path, c); });
@@ -48,7 +65,7 @@ bool hrd_parser::applicable(fs::path const& path) {
 
 bool hrd_parser::applicable(fs::path const& path, config const& c) {
   auto const core_data_root = path / c.core_data_;
-  return std::all_of(
+  auto const core_data_files_available = std::all_of(
       begin(c.required_files_), end(c.required_files_),
       [&core_data_root](std::vector<std::string> const& alternatives) {
         if (alternatives.empty()) {
@@ -61,6 +78,15 @@ bool hrd_parser::applicable(fs::path const& path, config const& c) {
                      fs::is_regular_file(core_data_root / filename);
             });
       });
+  auto const services_available =
+      fs::is_regular_file(path / c.fplan_) ||
+      (fs::is_directory(path / c.fplan_) &&
+       (c.fplan_file_extension_.empty() ||
+        std::any_of(fs::directory_iterator{path / c.fplan_},
+                    fs::directory_iterator{}, [&](auto&& f) {
+                      return f.path().extension() == c.fplan_file_extension_;
+                    })));
+  return core_data_files_available && services_available;
 }
 
 std::vector<std::string> hrd_parser::missing_files(
@@ -114,8 +140,8 @@ loaded_file load(fs::path const& root, filename_key k,
                            return fs::is_regular_file(root / filename);
                          });
   utl::verify(it != end(required_files[k]),
-              "unable to load non-regular file(s): filename_key={}",
-              static_cast<int>(k));
+              "unable to load non-regular file(s): filename={}",
+              required_files[k].at(0));
   return loaded_file(root / *it);
 }
 
@@ -125,12 +151,31 @@ void parse_and_build_services(
     std::function<void(hrd_service const&)> const& service_builder_fun,
     config const& c) {
   std::vector<fs::path> files;
-  collect_files(hrd_root / c.fplan_, files);
+  auto const total_bytes =
+      collect_files(hrd_root / c.fplan_, c.fplan_file_extension_, files);
+
+  auto total_bytes_consumed = uint64_t{0U};
+  auto prev_progress = 0U;
+  auto progress_update = [&](std::size_t const file_bytes_consumed) mutable {
+    auto const curr_progress =
+        static_cast<int>(80.0 * ((total_bytes_consumed + file_bytes_consumed) /
+                                 static_cast<float>(total_bytes)));
+    if (curr_progress != prev_progress) {
+      prev_progress = curr_progress;
+      std::clog << '\0' << curr_progress << '\0';
+    }
+  };
+
   for (auto const& [i, file] : utl::enumerate(files)) {
-    schedule_data.emplace_back(std::make_unique<loaded_file>(file));
+    auto const& loaded =
+        schedule_data.emplace_back(std::make_unique<loaded_file>(file));
     LOG(info) << "parsing " << i << "/" << files.size() << " "
               << schedule_data.back()->name();
-    for_each_service(*schedule_data.back(), bitfields, service_builder_fun, c);
+
+    auto const file_size = fs::file_size(file);
+    for_each_service(*loaded, bitfields, service_builder_fun, progress_update,
+                     c);
+    total_bytes_consumed += file_size;
   }
 }
 
@@ -155,7 +200,7 @@ void delete_f_equivalences(
 
 void hrd_parser::parse(fs::path const& hrd_root, FlatBufferBuilder& fbb) {
   for (auto const& c : configs) {
-    if (fs::is_regular_file(hrd_root / c.core_data_ / c.files(BASIC_DATA))) {
+    if (applicable(hrd_root, c)) {
       return parse(hrd_root, fbb, c);
     } else {
       LOG(info) << (hrd_root / c.core_data_ / c.files(BASIC_DATA))
@@ -253,12 +298,12 @@ void hrd_parser::parse(fs::path const& hrd_root, FlatBufferBuilder& fbb,
   auto schedule_name = parse_schedule_name(basic_data_file);
   auto footpaths = create_footpaths(metas.footpaths_, stb, fbb);
   auto metastations = create_meta_stations(metas.meta_stations_, stb, fbb);
-  fbb.Finish(CreateSchedule(fbb,
-                            fbb.CreateVectorOfSortedTables(&sb.fbs_services_),
-                            fbb.CreateVector(values(stb.fbs_stations_)),
-                            fbb.CreateVector(values(rb.routes_)), &interval,
-                            footpaths, fbb.CreateVector(rsb.fbs_rule_services_),
-                            metastations, fbb.CreateString(schedule_name)));
+  fbb.Finish(
+      CreateSchedule(fbb, fbb.CreateVectorOfSortedTables(&sb.fbs_services_),
+                     fbb.CreateVector(values(stb.fbs_stations_)),
+                     fbb.CreateVector(values(rb.routes_)), &interval, footpaths,
+                     fbb.CreateVector(rsb.fbs_rule_services_), metastations,
+                     fbb.CreateString(schedule_name), hash(hrd_root)));
 }
 
 }  // namespace motis::loader::hrd

@@ -19,8 +19,6 @@ struct rt : public motis::module::module {
   rt(rt&&) = delete;
   rt& operator=(rt&&) = delete;
 
-  std::string name() const override { return "rt"; }
-
   void init(motis::module::registry&) override;
 
 private:

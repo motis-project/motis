@@ -12,10 +12,13 @@
 
 namespace motis::loader::hrd {
 
-void parse_specification(loaded_file const&,
-                         std::function<void(specification const&)>);
+void parse_specification(
+    loaded_file const&, std::function<void(specification const&)>,
+    std::function<void(std::size_t)> bytes_consumed = [](std::size_t) {});
 
 void for_each_service(loaded_file const&, std::map<int, bitfield> const&,
-                      std::function<void(hrd_service const&)>, config const&);
+                      std::function<void(hrd_service const&)>,
+                      std::function<void(std::size_t)> bytes_consumed,
+                      config const&);
 
 }  // namespace motis::loader::hrd

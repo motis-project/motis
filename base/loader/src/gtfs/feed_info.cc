@@ -22,8 +22,8 @@ feed_map read_feed_publisher(loaded_file file) {
   feed_map feeds;
   for (auto const& f : read<gtfs_feed_publisher>(file.content(), columns)) {
     feeds.emplace(get<feed_publisher_name>(f).to_str(),
-                  std::make_unique<feed>(get<feed_publisher_name>(f).to_str(),
-                                         get<feed_version>(f).to_str()));
+                  feed{get<feed_publisher_name>(f).to_str(),
+                       get<feed_version>(f).to_str()});
   }
 
   return feeds;

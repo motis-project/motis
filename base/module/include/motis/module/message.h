@@ -47,7 +47,7 @@ msg_ptr make_msg(message_creator& builder);
 msg_ptr make_msg(void const* buf, size_t len);
 
 msg_ptr make_no_msg(std::string const& target = "", int id = 1);
-msg_ptr make_success_msg(int id = 1);
+msg_ptr make_success_msg(std::string const& target = "", int id = 1);
 msg_ptr make_error_msg(std::error_code const&, int id = 1);
 msg_ptr make_unknown_error_msg(std::string const& reason, int id = 1);
 

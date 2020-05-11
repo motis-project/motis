@@ -34,10 +34,11 @@ struct mss_rule : public service_rule {
   int applies(hrd_service const& s) const override {
     // Check for non-empty intersection.
     try {
-      if ((s.traffic_days_at_stop(s.first_stop_index_at(eva_num_begin_),
-                                  event_type::DEP) &
-           mask_)
-              .none()) {
+      auto const stop_idx = s.find_first_stop_at(eva_num_begin_);
+      if (stop_idx == hrd_service::NOT_SET) {
+        return 0;
+      }
+      if ((s.traffic_days_at_stop(stop_idx, event_type::DEP) & mask_).none()) {
         return 0;
       }
     } catch (std::runtime_error&) {
@@ -131,7 +132,7 @@ struct mss_rule : public service_rule {
     std::set<std::pair<hrd_service*, hrd_service*>> combinations;
     for (auto s1 : participants_) {
       auto const s1_traffic_days = s1->traffic_days_at_stop(
-          s1->first_stop_index_at(eva_num_begin_), event_type::DEP);
+          s1->get_first_stop_index_at(eva_num_begin_), event_type::DEP);
       for (auto s2 : participants_) {
         if (s1 == s2 ||
             combinations.find(std::make_pair(s2, s1)) != end(combinations)) {
@@ -140,7 +141,7 @@ struct mss_rule : public service_rule {
         combinations.emplace(s1, s2);
 
         auto const s2_traffic_days = s2->traffic_days_at_stop(
-            s2->first_stop_index_at(eva_num_begin_), event_type::DEP);
+            s2->get_first_stop_index_at(eva_num_begin_), event_type::DEP);
         auto const intersection = s1_traffic_days & s2_traffic_days & mask_;
         if (intersection.any() &&
             all_ms_events_exist(s1, s2, eva_num_begin_, eva_num_end_)) {
@@ -174,8 +175,11 @@ void parse_merge_split_service_rules(
       return;
     }
 
-    auto it =
-        hrd_bitfields.find(parse<int>(line.substr(c.merge_spl_.bitfield_)));
+    auto const bitfield_idx =
+        c.merge_spl_.bitfield_.from == std::numeric_limits<size_t>::max()
+            ? 0
+            : parse<int>(line.substr(c.merge_spl_.bitfield_));
+    auto it = hrd_bitfields.find(bitfield_idx);
     utl::verify(it != std::end(hrd_bitfields), "missing bitfield: {}:{}",
                 file.name(), line_number);
 

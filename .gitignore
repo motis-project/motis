@@ -2,6 +2,7 @@
 /.vscode
 /.vs
 /out
+/data
 CMakeSettings.json
 .settings
 .cproject
@@ -34,3 +35,5 @@ config.ini
 /deps
 pkg
 /.clang-tidy
+callgrind.out.*
+*.callgrind

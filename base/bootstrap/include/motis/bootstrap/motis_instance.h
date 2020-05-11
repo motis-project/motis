@@ -15,6 +15,8 @@
 #include "motis/module/message.h"
 #include "motis/module/module.h"
 #include "motis/module/remote.h"
+#include "motis/bootstrap/import_settings.h"
+#include "motis/bootstrap/module_settings.h"
 #include "motis/loader/loader_options.h"
 
 namespace motis::bootstrap {
@@ -36,12 +38,12 @@ struct motis_instance : public motis::module::controller {
     on_remotes_registered_ = std::move(fn);
   }
 
-  std::vector<motis::module::module*> modules() const;
+  std::vector<module::module*> modules() const;
   std::vector<std::string> module_names() const;
 
-  void init_schedule(motis::loader::loader_options const& dataset_opt);
-  void init_modules(std::vector<std::string> const& modules,
-                    std::vector<std::string> const& exclude_modules = {},
+  void import(module_settings const&, loader::loader_options const&,
+              import_settings const&, bool silent = false);
+  void init_modules(module_settings const&,
                     unsigned num_threads = std::thread::hardware_concurrency());
   void init_remotes(
       std::vector<std::pair<std::string, std::string>> const& remotes);

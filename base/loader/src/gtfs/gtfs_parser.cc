@@ -12,6 +12,9 @@
 #include "utl/pipes/transform.h"
 #include "utl/pipes/vec.h"
 
+#include "cista/hash.h"
+#include "cista/mmap.h"
+
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/loader/gtfs/agency.h"
@@ -35,9 +38,28 @@ using std::get;
 
 namespace motis::loader::gtfs {
 
-auto const required_files = {AGENCY_FILE,   STOPS_FILE,      ROUTES_FILE,
-                             TRIPS_FILE,    STOP_TIMES_FILE, TRANSFERS_FILE,
-                             FEED_INFO_FILE};
+auto const required_files = {AGENCY_FILE, STOPS_FILE,      ROUTES_FILE,
+                             TRIPS_FILE,  STOP_TIMES_FILE, TRANSFERS_FILE};
+
+cista::hash_t hash(fs::path const& path) {
+  auto hash = cista::BASE_HASH;
+  auto const hash_file = [&](fs::path const& p) {
+    cista::mmap m(p.generic_string().c_str(), cista::mmap::protection::READ);
+    hash = cista::hash_combine(
+        cista::hash(std::string_view{
+            reinterpret_cast<char const*>(m.begin()),
+            std::min(static_cast<size_t>(50 * 1024 * 1024), m.size())}),
+        hash);
+  };
+
+  for (auto const& file_name : required_files) {
+    hash_file(path / file_name);
+  }
+  hash_file(path / CALENDAR_FILE);
+  hash_file(path / CALENDAR_DATES_FILE);
+
+  return hash;
+}
 
 bool gtfs_parser::applicable(fs::path const& path) {
   for (auto const& file_name : required_files) {
@@ -76,7 +98,10 @@ std::time_t to_unix_time(boost::gregorian::date const& date) {
 }
 
 void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
-  auto const load = [&](char const* file) { return loaded_file(root / file); };
+  auto const load = [&](char const* file) {
+    return fs::is_regular_file(root / file) ? loaded_file{root / file}
+                                            : loaded_file{};
+  };
   auto const feeds = read_feed_publisher(load(FEED_INFO_FILE));
   auto const agencies = read_agencies(load(AGENCY_FILE));
   auto const stops = read_stops(load(STOPS_FILE));
@@ -170,7 +195,14 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
                 CreateSection(
                     fbb, get_or_create_category(t->route_->desc_),
                     get_or_create_provider(t->route_->agency_),
-                    std::stoi(t->short_name_),
+                    !t->short_name_.empty() &&
+                            std::all_of(begin(t->short_name_),
+                                        end(t->short_name_),
+                                        [](auto&& c) -> bool {
+                                          return std::isdigit(c);
+                                        })
+                        ? std::stoi(t->short_name_)
+                        : 0,
                     get_or_create_str(t->route_->short_name_),
                     fbb.CreateVector(std::vector<Offset<Attribute>>()),
                     CreateDirection(fbb, 0, get_or_create_str(t->headsign_))),
@@ -205,17 +237,16 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
 
   auto const dataset_name = std::accumulate(
       begin(feeds), end(feeds), std::string("GTFS"),
-      [&](std::string v, std::pair<std::string const,
-                                   std::unique_ptr<feed>> const& feed_pair) {
-        return std::move(v) + " - " + feed_pair.second->publisher_name_ + " (" +
-               feed_pair.second->version_ + ")";
+      [&](std::string v, std::pair<std::string const, feed> const& feed_pair) {
+        return std::move(v) + " - " + feed_pair.second.publisher_name_ + " (" +
+               feed_pair.second.version_ + ")";
       });
 
   fbb.Finish(CreateSchedule(
       fbb, output_services, fbb.CreateVector(values(fbs_stations)),
       fbb.CreateVector(values(fbs_routes)), &interval, footpaths,
       fbb.CreateVector(std::vector<Offset<RuleService>>()), 0,
-      fbb.CreateString(dataset_name)));
+      fbb.CreateString(dataset_name), hash(root)));
 }
 
 }  // namespace motis::loader::gtfs

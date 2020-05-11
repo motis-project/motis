@@ -10,8 +10,7 @@
 namespace motis::guesser {
 
 struct guesser : public motis::module::module {
-  std::string name() const override { return "guesser"; }
-
+  guesser();
   void init(motis::module::registry&) override;
 
 private:

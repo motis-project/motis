@@ -45,6 +45,8 @@ struct registry {
 
   std::optional<op> get_operation(std::string const& prefix);
 
+  void reset();
+
   schedule* sched_{nullptr};
   std::map<std::string, op> operations_;
   std::map<std::string, std::vector<op>> topic_subscriptions_;

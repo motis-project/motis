@@ -2,6 +2,8 @@
 
 #include <ctime>
 
+#include "cista/hash.h"
+
 #include "motis/hash_map.h"
 #include "motis/hash_set.h"
 #include "motis/memory.h"
@@ -28,6 +30,7 @@ struct schedule {
   std::time_t last_event_schedule_time_{std::numeric_limits<time_t>::min()};
   std::time_t schedule_begin_{0}, schedule_end_{0};
   mcd::string name_;
+  cista::hash_t hash_{0U};
 
   mcd::vector<station_ptr> stations_;
   mcd::hash_map<mcd::string, ptr<station>> eva_to_station_;

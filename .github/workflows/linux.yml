@@ -52,8 +52,11 @@ jobs:
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
-          restore-keys: buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}
+          key: buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          restore-keys: |
+            buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-${{ hashFiles('.pkg') }}-
+            buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
@@ -77,10 +80,11 @@ jobs:
           cmake --build build --target motis motis-test motis-itest path-prepare parking-prepare ppr-preprocess osrm-extract osrm-contract at-example motis-eval motis-intermodal-eval
           ./build/bin/buildcache -s
 
+      # ==== TESTS ====
       - name: Run Test Mode
         run: |
           ./build/motis --mode test \
-            --dataset.path base/loader/test_resources/hrd_schedules/single-ice \
+            --import.paths base/loader/test_resources/hrd_schedules/single-ice \
             --dataset.begin 20151111 \
             --dataset.write_serialized false
 
@@ -96,7 +100,7 @@ jobs:
         run: >
           valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full \
             ./build/motis --mode test \
-              --dataset.path base/loader/test_resources/hrd_schedules/single-ice \
+              --import.paths base/loader/test_resources/hrd_schedules/single-ice \
               --dataset.begin 20151111 \
               --dataset.write_serialized false \
               --ris.db_max_size 1048576 \

@@ -13,7 +13,7 @@ void registry::register_op(std::string const& name, op_fn_t fn,
                            ctx::access_t const access) {
   auto const call = [fn_rec = std::move(fn),
                      name](msg_ptr const& m) -> msg_ptr {
-    logging::scoped_timer t{name};
+    //    logging::scoped_timer t{name};
     return fn_rec(m);
   };
   if (!operations_.emplace(name, op{std::move(call), access}).second) {
@@ -25,7 +25,7 @@ void registry::subscribe(std::string const& topic, op_fn_t fn,
                          ctx::access_t const access) {
   topic_subscriptions_[topic].emplace_back(
       [fn_rec = std::move(fn), topic](msg_ptr const& m) -> msg_ptr {
-        logging::scoped_timer t{topic};
+        //        logging::scoped_timer t{topic};
         return fn_rec(m);
       },
       access);
@@ -81,6 +81,12 @@ std::optional<op> registry::get_operation(std::string const& prefix) {
   } else {
     return std::nullopt;
   }
+}
+
+void registry::reset() {
+  operations_.clear();
+  topic_subscriptions_.clear();
+  remote_operations_.clear();
 }
 
 }  // namespace motis::module

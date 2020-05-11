@@ -20,14 +20,17 @@ public:
   osrm(osrm&&) = delete;
   osrm& operator=(osrm&&) = delete;
 
-  std::string name() const override { return "osrm"; }
+  void import(motis::module::registry&) override;
   void init(motis::module::registry&) override;
   void init_async();
+
+  bool import_successful() const override;
 
 private:
   router const* get_router(std::string const& profile);
 
   std::vector<std::string> datasets_;
+  std::vector<std::string> profiles_;
   std::map<std::string, std::unique_ptr<router>> routers_;
 };
 

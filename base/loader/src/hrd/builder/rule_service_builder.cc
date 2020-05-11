@@ -100,7 +100,7 @@ int get_waiting_time(rule_node const* rn) {
   auto const arr = rn->s1_->service_->stops_.back().arr_.time_ % 1440;
   auto const dep =
       rn->s2_->service_->event_time(
-          rn->s2_->service_->first_stop_index_at(rn->rule_.eva_num_2_),
+          rn->s2_->service_->get_first_stop_index_at(rn->rule_.eva_num_2_),
           event_type::DEP) %
           1440 +
       (rn->rule_.day_switch_ ? 1440 : 0);
