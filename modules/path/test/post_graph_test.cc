@@ -4,6 +4,7 @@
 #include "utl/to_vec.h"
 
 #include "motis/path/prepare/post/build_post_graph.h"
+#include "motis/path/prepare/post/color_to_seq_seg_index.h"
 #include "motis/path/prepare/post/post_graph.h"
 #include "motis/path/prepare/post/post_processor.h"
 #include "motis/path/prepare/post/post_serializer.h"
@@ -19,11 +20,11 @@ namespace mp = motis::path;
     EXPECT_EQ(a, rpp.first->to_->id_.osm_id_);   \
   }
 
-mp::resolved_station_seq make_resolved_seq(
-    std::vector<std::vector<int64_t>> paths) {
+mp::resolved_station_seq make_resolved_cls_seq(
+    std::vector<uint32_t> classes, std::vector<std::vector<int64_t>> paths) {
   return mp::resolved_station_seq{
       utl::repeat_n(std::string{}, paths.size() + 1),
-      {0},
+      classes,
       utl::to_vec(paths,
                   [](auto const& p) -> mp::osm_path {
                     return {utl::to_vec(p,
@@ -33,6 +34,11 @@ mp::resolved_station_seq make_resolved_seq(
                             p};
                   }),
       {}};
+}
+
+mp::resolved_station_seq make_resolved_seq(
+    std::vector<std::vector<int64_t>> paths) {
+  return make_resolved_cls_seq({0}, paths);
 }
 
 TEST(post_graph, simple) {
@@ -367,4 +373,21 @@ TEST(post_graph, invalid_path) {
     auto const rp = mp::reconstruct_path(g.segment_ids_.at(0).at(0));
     ASSERT_EQ(0, rp.size());
   }
+}
+
+TEST(post_graph, revese_path_min_class) {
+  auto g = mp::build_post_graph({make_resolved_cls_seq({4, 5}, {{0, 1, 2}}),
+                                 make_resolved_cls_seq({3}, {{2, 1, 0}})});
+
+  mp::post_process(g);
+  ASSERT_EQ(1, g.atomic_paths_.size());
+
+  auto const& ap = *g.atomic_paths_.front();
+
+  mp::color_to_seq_seg_index index{g};
+
+  auto const& [seq_segs, classes] = index.resolve_atomic_path(ap);
+
+  EXPECT_EQ((std::vector<mp::seq_seg>{{0, 0}, {1, 0}}), seq_segs);
+  EXPECT_EQ((std::vector<uint32_t>{3, 4, 5}), classes);
 }
