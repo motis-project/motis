@@ -15,8 +15,8 @@ struct event_collector : std::enable_shared_from_this<event_collector> {
     dependency_matcher() = default;
     dependency_matcher& operator=(dependency_matcher const&) = delete;
     dependency_matcher(dependency_matcher const&) = delete;
-    dependency_matcher& operator=(dependency_matcher&&) = default;
-    dependency_matcher(dependency_matcher&&) = default;
+    dependency_matcher& operator=(dependency_matcher&&) noexcept = default;
+    dependency_matcher(dependency_matcher&&) noexcept = default;
     ~dependency_matcher() = default;
 
     bool operator<(dependency_matcher const& o) const {

@@ -138,7 +138,7 @@ void address::import(motis::module::registry& reg) {
 
         if (read_ini<import_state>(dir / "import.ini") != state) {
           boost::filesystem::create_directories(dir);
-          std::ofstream out(db_file().c_str(), std::ios::binary);
+          std::ofstream out{db_file().c_str(), std::ios::binary};
           address_typeahead::extract(osm->path()->str(), out);
           write_ini(dir / "import.ini", state);
         }
@@ -156,11 +156,11 @@ void address::init(motis::module::registry& reg) {
 
   address_typeahead::typeahead_context context;
   {
-    cereal::BinaryInputArchive ia(in);
+    cereal::BinaryInputArchive ia{in};
     ia(context);
   }
 
-  address_typeahead::typeahead t(context);
+  address_typeahead::typeahead t{context};
 
   impl_ = std::make_unique<impl>(db_file());
   reg.register_op("/address", [this](msg_ptr const& msg) {

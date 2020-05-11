@@ -1,5 +1,6 @@
 #include "motis/bootstrap/import_osm.h"
 
+#include "boost/algorithm/string/predicate.hpp"
 #include "boost/filesystem.hpp"
 
 #include "cista/hash.h"
@@ -13,7 +14,7 @@ using motis::module::msg_ptr;
 
 namespace motis::bootstrap {
 
-motis::module::msg_ptr import_osm(motis::module::msg_ptr const& msg) {
+msg_ptr import_osm(msg_ptr const& msg) {
   if (msg->get()->content_type() != MsgContent_FileEvent) {
     return nullptr;
   }
@@ -21,16 +22,14 @@ motis::module::msg_ptr import_osm(motis::module::msg_ptr const& msg) {
   using motis::import::FileEvent;
   auto const path = motis_content(FileEvent, msg)->path()->str();
   auto const name = fs::path{path}.filename().generic_string();
-  if (!fs::is_regular_file(path) || name.length() < 8 ||
-      name.substr(name.size() - std::min(size_t{8U}, name.size())) !=
-          ".osm.pbf") {
+  if (!fs::is_regular_file(path) || !boost::ends_with(name, ".osm.pbf")) {
     return nullptr;
   }
 
   auto hash = cista::hash_t{};
   auto size = std::size_t{};
   {
-    cista::mmap m(path.c_str(), cista::mmap::protection::READ);
+    cista::mmap m{path.c_str(), cista::mmap::protection::READ};
     hash = cista::hash(std::string_view{
         reinterpret_cast<char const*>(m.begin()),
         std::min(static_cast<size_t>(50 * 1024 * 1024), m.size())});

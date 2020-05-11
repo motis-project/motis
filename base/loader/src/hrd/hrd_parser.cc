@@ -48,8 +48,8 @@ cista::hash_t hash(fs::path const& hrd_root) {
   for (auto const& c : configs) {
     auto const basic_data_path = hrd_root / c.core_data_ / c.files(BASIC_DATA);
     if (fs::is_regular_file(basic_data_path)) {
-      cista::mmap m(basic_data_path.generic_string().c_str(),
-                    cista::mmap::protection::READ);
+      cista::mmap m{basic_data_path.generic_string().c_str(),
+                    cista::mmap::protection::READ};
       return cista::hash(std::string_view{
           reinterpret_cast<char const*>(m.begin()),
           std::min(static_cast<size_t>(50 * 1024 * 1024), m.size())});
@@ -157,9 +157,9 @@ void parse_and_build_services(
   auto total_bytes_consumed = uint64_t{0U};
   auto prev_progress = 0U;
   auto progress_update = [&](std::size_t const file_bytes_consumed) mutable {
-    auto const curr_progress =
-        static_cast<int>(80.0 * ((total_bytes_consumed + file_bytes_consumed) /
-                                 static_cast<float>(total_bytes)));
+    auto const curr_progress = static_cast<unsigned>(
+        80.0 * ((total_bytes_consumed + file_bytes_consumed) /
+                static_cast<float>(total_bytes)));
     if (curr_progress != prev_progress) {
       prev_progress = curr_progress;
       std::clog << '\0' << curr_progress << '\0';
@@ -172,10 +172,9 @@ void parse_and_build_services(
     LOG(info) << "parsing " << i << "/" << files.size() << " "
               << schedule_data.back()->name();
 
-    auto const file_size = fs::file_size(file);
     for_each_service(*loaded, bitfields, service_builder_fun, progress_update,
                      c);
-    total_bytes_consumed += file_size;
+    total_bytes_consumed += fs::file_size(file);
   }
 }
 

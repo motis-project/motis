@@ -10,7 +10,6 @@ struct clog_redirect : public std::streambuf {
 
   clog_redirect(clog_redirect const&) = delete;
   clog_redirect(clog_redirect&&) = delete;
-
   clog_redirect& operator=(clog_redirect const&) = delete;
   clog_redirect& operator=(clog_redirect&&) = delete;
 
