@@ -11,15 +11,15 @@ namespace fs = boost::filesystem;
 
 namespace motis::bootstrap {
 
-motis::module::msg_ptr import_schedule(
-    module_settings const& module_opt,
-    loader::loader_options const& dataset_opt,
-    motis::module::msg_ptr const& msg, motis_instance& instance) {
+module::msg_ptr import_schedule(module_settings const& module_opt,
+                                loader::loader_options const& dataset_opt,
+                                module::msg_ptr const& msg,
+                                motis_instance& instance) {
   if (msg->get()->content_type() != MsgContent_FileEvent) {
     return nullptr;
   }
 
-  using motis::import::FileEvent;
+  using import::FileEvent;
   auto const path = fs::path{motis_content(FileEvent, msg)->path()->str()};
   if (!fs::is_directory(path)) {
     return nullptr;
@@ -38,10 +38,10 @@ motis::module::msg_ptr import_schedule(
     module->set_context(*instance.schedule_);
   }
 
-  motis::module::message_creator fbb;
+  module::message_creator fbb;
   fbb.create_and_finish(
       MsgContent_ScheduleEvent,
-      motis::import::CreateScheduleEvent(
+      import::CreateScheduleEvent(
           fbb,
           fbb.CreateString((fs::path{path} / "schedule.raw").generic_string()),
           instance.sched_->hash_)

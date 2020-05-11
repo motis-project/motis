@@ -9,8 +9,7 @@
 
 namespace motis::bootstrap {
 
-class module_settings : public conf::configuration {
-public:
+struct module_settings : public conf::configuration {
   explicit module_settings(std::vector<std::string> modules = {})
       : conf::configuration("Module Settings"), modules_{std::move(modules)} {
     param(modules_, "modules", "List of modules to load");

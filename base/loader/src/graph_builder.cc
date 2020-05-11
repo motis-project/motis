@@ -8,6 +8,8 @@
 #include "utl/get_or_create.h"
 #include "utl/to_vec.h"
 
+#include "date/date.h"
+
 #include "utl/parser/cstr.h"
 
 #include "motis/core/common/constants.h"
@@ -36,35 +38,25 @@ char const* c_str(flatbuffers64::String const* str) {
 }
 
 std::string format_date(time_t const t, char const* format = "%Y-%m-%d") {
-  struct tm time {};
-#ifdef _MSC_VER
-  gmtime_s(&time, &t);
-#else
-  gmtime_r(&t, &time);
-#endif
-  std::stringstream ss;
-  ss << std::put_time(&time, format);
-  return ss.str();
+  return date::format(
+      format, std::chrono::system_clock::time_point{std::chrono::seconds{t}});
 }
 
 graph_builder::graph_builder(schedule& sched, Interval const* schedule_interval,
                              loader_options const& opt,
                              unsigned progress_offset)
-    : progress_offset_(progress_offset),
-      lcon_count_(0),
-      next_route_index_(0),
-      next_node_id_(0),
-      sched_(sched),
-      first_day_(
+    : progress_offset_{progress_offset},
+      sched_{sched},
+      first_day_{
           static_cast<int>((sched.schedule_begin_ - schedule_interval->from()) /
-                           (MINUTES_A_DAY * 60))),
-      last_day_(
+                           (MINUTES_A_DAY * 60))},
+      last_day_{
           static_cast<int>((sched.schedule_end_ - schedule_interval->from()) /
                                (MINUTES_A_DAY * 60) -
-                           1)),
-      apply_rules_(opt.apply_rules_),
-      adjust_footpaths_(opt.adjust_footpaths_),
-      expand_trips_(opt.expand_trips_) {
+                           1)},
+      apply_rules_{opt.apply_rules_},
+      adjust_footpaths_{opt.adjust_footpaths_},
+      expand_trips_{opt.expand_trips_} {
   utl::verify(sched.schedule_end_ > sched.schedule_begin_ &&
                   schedule_interval->from() <=
                       static_cast<uint64_t>(sched.schedule_end_) &&

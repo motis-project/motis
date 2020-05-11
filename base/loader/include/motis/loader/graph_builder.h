@@ -227,10 +227,10 @@ struct graph_builder {
 
   bool check_trip(trip const* trp);
 
-  unsigned progress_offset_;
-  unsigned lcon_count_;
-  unsigned next_route_index_;
-  unsigned next_node_id_;
+  unsigned progress_offset_{0U};
+  unsigned lcon_count_{0U};
+  unsigned next_route_index_{0U};
+  unsigned next_node_id_{0U};
   std::map<Category const*, int> categories_;
   std::map<std::string, int> tracks_;
   std::map<AttributeInfo const*, attribute*> attributes_;
@@ -249,14 +249,14 @@ struct graph_builder {
       connections_;
   mcd::hash_map<flatbuffers64::String const*, mcd::string*> filenames_;
   schedule& sched_;
-  int first_day_, last_day_;
-  bool apply_rules_;
-  bool adjust_footpaths_;
-  bool expand_trips_;
+  int first_day_{0}, last_day_{0};
+  bool apply_rules_{false};
+  bool adjust_footpaths_{false};
+  bool expand_trips_{false};
 
   connection_info con_info_;
   connection con_;
-  std::size_t broken_trips_{};
+  std::size_t broken_trips_{0U};
 };
 
 }  // namespace motis::loader

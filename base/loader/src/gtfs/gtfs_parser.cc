@@ -44,7 +44,7 @@ auto const required_files = {AGENCY_FILE, STOPS_FILE,      ROUTES_FILE,
 cista::hash_t hash(fs::path const& path) {
   auto hash = cista::BASE_HASH;
   auto const hash_file = [&](fs::path const& p) {
-    cista::mmap m(p.generic_string().c_str(), cista::mmap::protection::READ);
+    cista::mmap m{p.generic_string().c_str(), cista::mmap::protection::READ};
     hash = cista::hash_combine(
         cista::hash(std::string_view{
             reinterpret_cast<char const*>(m.begin()),
@@ -235,12 +235,13 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
         })  //
       | utl::vec());
 
-  auto const dataset_name = std::accumulate(
-      begin(feeds), end(feeds), std::string("GTFS"),
-      [&](std::string v, std::pair<std::string const, feed> const& feed_pair) {
-        return std::move(v) + " - " + feed_pair.second.publisher_name_ + " (" +
-               feed_pair.second.version_ + ")";
-      });
+  auto const dataset_name =
+      std::accumulate(begin(feeds), end(feeds), std::string("GTFS"),
+                      [&](std::string const& v,
+                          std::pair<std::string const, feed> const& feed_pair) {
+                        return v + " - " + feed_pair.second.publisher_name_ +
+                               " (" + feed_pair.second.version_ + ")";
+                      });
 
   fbb.Finish(CreateSchedule(
       fbb, output_services, fbb.CreateVector(values(fbs_stations)),
