@@ -1,0 +1,12 @@
+include "base/Polyline.fbs";
+
+namespace motis.path;
+
+table PolylineIndices {
+  indices: [long];
+}
+
+table PathByTripIdBatchResponse {
+  segments: [PolylineIndices];
+  polylines: [Polyline];
+}

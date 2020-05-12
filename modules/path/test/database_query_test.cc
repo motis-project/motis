@@ -16,8 +16,9 @@
 #include "motis/path/path_database_query.h"
 #include "motis/path/prepare/db_builder.h"
 
-namespace mp = motis::path;
-namespace mm = motis::module;
+namespace m = motis;
+namespace mp = m::path;
+namespace mm = m::module;
 
 namespace geo {
 void PrintTo(latlng const& ll, std::ostream* os) {
@@ -45,7 +46,7 @@ struct path_database_query_test : public ::testing::Test {
 
   std::string db_fname() const { return db_fname_ + ".mdb"; }
 
-  static constexpr auto const xFactor = 128;
+  static constexpr auto const xFactor = 1024;
 
   static geo::latlng fixed_x_to_latlng(tiles::fixed_coord_t x) {
     return tiles::fixed_to_latlng(tiles::fixed_xy{x * xFactor, 0ul});
@@ -56,6 +57,11 @@ struct path_database_query_test : public ::testing::Test {
     return tiles::fixed_to_latlng(  // deserialize from db
         tiles::latlng_to_fixed(  // serialize for db
             tiles::fixed_to_latlng(tiles::fixed_xy{x * xFactor, 0ul})));
+  }
+
+  static std::vector<geo::latlng> fixed_x_to_line_db(
+      std::vector<tiles::fixed_coord_t> xs) {
+    return utl::to_vec(xs, [](auto x) { return fixed_x_to_latlng_db(x); });
   }
 
   static geo::latlng get_nth_coord(flatbuffers::Vector<double> const* vec,
@@ -106,19 +112,54 @@ struct path_database_query_test : public ::testing::Test {
     builder.add_seq(idx, seq, boxes, feature_ids, hints_rle);
   }
 
-  static std::pair<mm::msg_ptr, motis::path::PathSeqResponse const*>
-  get_response(mp::path_database const& db, mp::path_database_query& q,
-               size_t const index) {
+  static std::pair<mm::msg_ptr, mp::PathSeqResponse const*> get_response(
+      mp::path_database const& db, mp::path_database_query& q,
+      size_t const index) {
     mm::message_creator mc;
-    mc.create_and_finish(motis::MsgContent_PathSeqResponse,
+    mc.create_and_finish(m::MsgContent_PathSeqResponse,
                          q.write_sequence(mc, db, index).Union());
     auto msg = mm::make_msg(mc);
 
-    using motis::MsgContent_PathSeqResponse;
-    using motis::path::PathSeqResponse;
-    auto const* resp = motis_content(PathSeqResponse, msg);
+    using m::MsgContent_PathSeqResponse;
+    using mp::PathSeqResponse;
+    return std::make_pair(std::move(msg), motis_content(PathSeqResponse, msg));
+  }
 
-    return std::make_pair(std::move(msg), resp);
+  static std::pair<mm::msg_ptr, mp::PathByTripIdBatchResponse const*> get_batch(
+      mp::path_database_query& q) {
+    mm::message_creator mc;
+    mc.create_and_finish(m::MsgContent_PathByTripIdBatchResponse,
+                         q.write_batch(mc).Union());
+    auto msg = mm::make_msg(mc);
+
+    using m::MsgContent_PathByTripIdBatchResponse;
+    using mp::PathByTripIdBatchResponse;
+    return std::make_pair(std::move(msg),
+                          motis_content(PathByTripIdBatchResponse, msg));
+  }
+
+  static long get_batch_path(int const line,
+                             mp::PathByTripIdBatchResponse const* resp,
+                             std::vector<geo::latlng> const& p0) {
+    auto const pred = [&](auto const* p) {
+      if (p->coordinates()->size() != p0.size() * 2) {
+        return false;
+      }
+      for (auto i = 0ULL; i < p0.size(); ++i) {
+        if (!(p0[i] == get_nth_coord(p->coordinates(), i))) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    auto begin = std::begin(*resp->polylines());
+    auto end = std::end(*resp->polylines());
+    auto it = std::find_if(begin, end, pred);
+    utl::verify(it != end, "get_batch_path: path missing (line {})", line);
+    utl::verify(std::none_of(std::next(it), end, pred),
+                "get_batch_path: path duplicate (line {}", line);
+    return std::distance(begin, it);
   }
 
   std::string db_fname_;
@@ -261,8 +302,8 @@ TEST_F(path_database_query_test, empty_segments) {
   {
     auto const* coordinates = resp->segments()->Get(0)->coordinates();
     ASSERT_EQ(4, coordinates->size());
-    EXPECT_EQ(fixed_x_to_latlng(11), get_nth_coord(coordinates, 0));
-    EXPECT_EQ(fixed_x_to_latlng(11), get_nth_coord(coordinates, 1));
+    EXPECT_EQ(fixed_x_to_latlng_db(11), get_nth_coord(coordinates, 0));
+    EXPECT_EQ(fixed_x_to_latlng_db(11), get_nth_coord(coordinates, 1));
   }
   {
     auto const* coordinates = resp->segments()->Get(1)->coordinates();
@@ -270,4 +311,260 @@ TEST_F(path_database_query_test, empty_segments) {
     EXPECT_EQ(fixed_x_to_latlng_db(2), get_nth_coord(coordinates, 0));
     EXPECT_EQ(fixed_x_to_latlng_db(3), get_nth_coord(coordinates, 1));
   }
+}
+
+TEST_F(path_database_query_test, batch_base) {
+  auto builder = std::make_unique<mp::db_builder>(db_fname());
+
+  auto [id1, h1] = add_feature(*builder, {0, 1});
+  auto [id2, h2] = add_feature(*builder, {2, 3});
+  auto [id3, h3] = add_feature(*builder, {4, 5});
+
+  add_seq(*builder, 0UL, {{id1}, {id2}}, {{h1}, {h2}});
+  add_seq(*builder, 1UL, {{-id2}, {id3}}, {{h2}, {h3}});
+  add_seq(*builder, 2UL, {{-id2}}, {{h2}});
+
+  builder->finish();
+  builder.reset();
+
+  auto db = mp::make_path_database(db_fname(), true);
+  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
+
+  mp::path_database_query q;
+  q.add_sequence(0UL);
+  q.add_sequence(1UL);
+  q.add_sequence(2UL);
+  EXPECT_EQ(3, q.sequences_.size());
+
+  q.execute(*db, render_ctx);
+  EXPECT_EQ(1, q.subqueries_.size());
+
+  auto const& [msg, resp] = get_batch(q);
+
+  ASSERT_EQ(3, resp->polylines()->size());
+  auto const p1 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({0, 1}));
+  auto const p2 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({3, 2}));
+  EXPECT_EQ(0, p2);  // reused first -> lower index, shorter json
+  auto const p3 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({4, 5}));
+
+  ASSERT_EQ(5, resp->segments()->size());
+
+  ASSERT_EQ(1, resp->segments()->Get(0)->indices()->size());
+  EXPECT_EQ(p1, resp->segments()->Get(0)->indices()->Get(0));
+
+  ASSERT_EQ(1, resp->segments()->Get(1)->indices()->size());
+  EXPECT_EQ(-p2, resp->segments()->Get(1)->indices()->Get(0));
+
+  ASSERT_EQ(1, resp->segments()->Get(2)->indices()->size());
+  EXPECT_EQ(p2, resp->segments()->Get(2)->indices()->Get(0));
+
+  ASSERT_EQ(1, resp->segments()->Get(3)->indices()->size());
+  EXPECT_EQ(p3, resp->segments()->Get(3)->indices()->Get(0));
+
+  ASSERT_EQ(1, resp->segments()->Get(4)->indices()->size());
+  EXPECT_EQ(p2, resp->segments()->Get(4)->indices()->Get(0));
+}
+
+TEST_F(path_database_query_test, batch_empty) {
+  auto builder = std::make_unique<mp::db_builder>(db_fname());
+
+  auto [id1, h1] = add_feature(*builder, {0, 1});
+
+  add_seq(*builder, 0UL, {{-id1}, {}}, {{h1}, {}}, {11, 12});
+
+  builder->finish();
+  builder.reset();
+
+  auto db = mp::make_path_database(db_fname(), true);
+  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
+
+  mp::path_database_query q;
+  q.add_sequence(0UL);
+  EXPECT_EQ(1, q.sequences_.size());
+
+  q.execute(*db, render_ctx);
+  EXPECT_EQ(1, q.subqueries_.size());
+
+  auto const& [msg, resp] = get_batch(q);
+
+  ASSERT_EQ(2, resp->polylines()->size());
+  auto const p1 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({1, 0}));
+  auto const p2 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({12, 12}));
+
+  ASSERT_EQ(2, resp->segments()->size());
+
+  ASSERT_EQ(1, resp->segments()->Get(0)->indices()->size());
+  EXPECT_EQ(p1, resp->segments()->Get(0)->indices()->Get(0));
+
+  ASSERT_EQ(1, resp->segments()->Get(1)->indices()->size());
+  EXPECT_EQ(p2, resp->segments()->Get(1)->indices()->Get(0));
+}
+
+TEST_F(path_database_query_test, batch_concat) {
+  auto builder = std::make_unique<mp::db_builder>(db_fname());
+
+  auto [id1, h1] = add_feature(*builder, {0, 1});
+  auto [id2, h2] = add_feature(*builder, {2, 3});
+  auto [id3, h3] = add_feature(*builder, {4, 5});
+  auto [id4, h4] = add_feature(*builder, {6, 7});
+  auto [id5, h5] = add_feature(*builder, {8, 9});
+  auto [id6, h6] = add_feature(*builder, {10, 11});
+  auto [id7, h7] = add_feature(*builder, {12, 13});
+  auto [id8, h8] = add_feature(*builder, {14, 15});
+
+  add_seq(*builder, 0UL, {{id1, id2}}, {{h1, h2}});  // fwd + fwd
+  add_seq(*builder, 1UL, {{id3, -id4}}, {{h3, h4}});  // fwd + bwd
+  add_seq(*builder, 2UL, {{-id5, id6}}, {{h5, h6}});  // bwd + fwd
+  add_seq(*builder, 3UL, {{-id7, -id8}}, {{h7, h8}});  // bwd + bwd
+
+  builder->finish();
+  builder.reset();
+
+  auto db = mp::make_path_database(db_fname(), true);
+  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
+
+  mp::path_database_query q;
+  q.add_sequence(0UL);
+  q.add_sequence(1UL);
+  q.add_sequence(2UL);
+  q.add_sequence(3UL);
+  EXPECT_EQ(4, q.sequences_.size());
+
+  q.execute(*db, render_ctx);
+  EXPECT_EQ(1, q.subqueries_.size());
+
+  auto const& [msg, resp] = get_batch(q);
+
+  ASSERT_EQ(4, resp->polylines()->size());
+  auto const p0 =
+      get_batch_path(__LINE__, resp, fixed_x_to_line_db({0, 1, 2, 3}));
+  auto const p1 =
+      get_batch_path(__LINE__, resp, fixed_x_to_line_db({4, 5, 7, 6}));
+  auto const p2 =
+      get_batch_path(__LINE__, resp, fixed_x_to_line_db({9, 8, 10, 11}));
+  auto const p3 =
+      get_batch_path(__LINE__, resp, fixed_x_to_line_db({13, 12, 15, 14}));
+
+  ASSERT_EQ(4, resp->segments()->size());
+
+  ASSERT_EQ(1, resp->segments()->Get(0)->indices()->size());
+  EXPECT_EQ(p0, resp->segments()->Get(0)->indices()->Get(0));
+
+  ASSERT_EQ(1, resp->segments()->Get(1)->indices()->size());
+  EXPECT_EQ(p1, resp->segments()->Get(1)->indices()->Get(0));
+
+  ASSERT_EQ(1, resp->segments()->Get(2)->indices()->size());
+  EXPECT_EQ(p2, resp->segments()->Get(2)->indices()->Get(0));
+
+  ASSERT_EQ(1, resp->segments()->Get(3)->indices()->size());
+  EXPECT_EQ(p3, resp->segments()->Get(3)->indices()->Get(0));
+}
+
+TEST_F(path_database_query_test, batch_reverse_single) {
+  auto builder = std::make_unique<mp::db_builder>(db_fname());
+
+  auto [id1, h1] = add_feature(*builder, {0, 1});
+
+  add_seq(*builder, 0UL, {{-id1}}, {{h1}});
+
+  builder->finish();
+  builder.reset();
+
+  auto db = mp::make_path_database(db_fname(), true);
+  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
+
+  mp::path_database_query q;
+  q.add_sequence(0UL);
+  EXPECT_EQ(1, q.sequences_.size());
+
+  q.execute(*db, render_ctx);
+  EXPECT_EQ(1, q.subqueries_.size());
+
+  auto const& [msg, resp] = get_batch(q);
+
+  ASSERT_EQ(1, resp->polylines()->size());
+  auto const p0 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({1, 0}));
+
+  ASSERT_EQ(1, resp->segments()->size());
+
+  ASSERT_EQ(1, resp->segments()->Get(0)->indices()->size());
+  EXPECT_EQ(p0, resp->segments()->Get(0)->indices()->Get(0));
+}
+
+TEST_F(path_database_query_test, batch_partial_sequence) {
+  auto builder = std::make_unique<mp::db_builder>(db_fname());
+
+  auto [id1, h1] = add_feature(*builder, {0, 1});
+  auto [id2, h2] = add_feature(*builder, {2, 3});
+  auto [id3, h3] = add_feature(*builder, {4, 5});
+
+  add_seq(*builder, 0UL, {{id1}, {id2}, {id3}}, {{h1}, {h2}, {h3}});
+
+  builder->finish();
+  builder.reset();
+
+  auto db = mp::make_path_database(db_fname(), true);
+  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
+
+  mp::path_database_query q;
+  q.add_sequence(0UL, {1, 2});
+  q.add_sequence(0UL, {0});
+  EXPECT_EQ(2, q.sequences_.size());
+
+  q.execute(*db, render_ctx);
+  EXPECT_EQ(1, q.subqueries_.size());
+
+  auto const& [msg, resp] = get_batch(q);
+
+  ASSERT_EQ(3, resp->polylines()->size());
+  auto const p0 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({0, 1}));
+  auto const p1 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({2, 3}));
+  auto const p2 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({4, 5}));
+
+  ASSERT_EQ(3, resp->segments()->size());
+
+  ASSERT_EQ(1, resp->segments()->Get(0)->indices()->size());
+  EXPECT_EQ(p1, resp->segments()->Get(0)->indices()->Get(0));
+
+  ASSERT_EQ(1, resp->segments()->Get(1)->indices()->size());
+  EXPECT_EQ(p2, resp->segments()->Get(1)->indices()->Get(0));
+
+  ASSERT_EQ(1, resp->segments()->Get(2)->indices()->size());
+  EXPECT_EQ(p0, resp->segments()->Get(2)->indices()->Get(0));
+}
+
+TEST_F(path_database_query_test, batch_extra) {
+  auto builder = std::make_unique<mp::db_builder>(db_fname());
+
+  auto [id1, h1] = add_feature(*builder, {0, 1});
+
+  add_seq(*builder, 0UL, {{id1}}, {{h1}});
+
+  builder->finish();
+  builder.reset();
+
+  auto db = mp::make_path_database(db_fname(), true);
+  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
+
+  mp::path_database_query q;
+  q.add_extra({{fixed_x_to_latlng(10), fixed_x_to_latlng(11)},
+               {fixed_x_to_latlng(12), fixed_x_to_latlng(13)}});
+  EXPECT_EQ(1, q.sequences_.size());
+
+  q.execute(*db, render_ctx);
+  EXPECT_EQ(0, q.subqueries_.size());
+
+  auto const& [msg, resp] = get_batch(q);
+
+  ASSERT_EQ(2, resp->polylines()->size());
+  auto const p0 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({10, 11}));
+  auto const p1 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({12, 13}));
+
+  ASSERT_EQ(2, resp->segments()->size());
+
+  ASSERT_EQ(1, resp->segments()->Get(0)->indices()->size());
+  EXPECT_EQ(p0, resp->segments()->Get(0)->indices()->Get(0));
+
+  ASSERT_EQ(1, resp->segments()->Get(1)->indices()->size());
+  EXPECT_EQ(p1, resp->segments()->Get(1)->indices()->Get(0));
 }
