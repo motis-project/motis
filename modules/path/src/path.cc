@@ -53,8 +53,8 @@
 #include "motis/path/fbs/InternalDbSequence_generated.h"
 
 using namespace flatbuffers;
-using namespace motis::module;
 using namespace motis::access;
+using namespace motis::module;
 using namespace motis::logging;
 
 namespace motis::path {
@@ -68,6 +68,22 @@ struct import_state {
 };
 
 struct path::data {
+  size_t trip_to_index(schedule const& sched, trip const* trp) const {
+    auto const seq =
+        utl::to_vec(access::stops(trp), [&sched](auto const& stop) {
+          return stop.get_station(sched).eva_nr_.str();
+        });
+
+    auto const s = sections(trp);
+    auto const clasz_it = std::min_element(
+        begin(s), end(s), [](auto const& lhs, auto const& rhs) {
+          return lhs.fcon().clasz_ < rhs.fcon().clasz_;
+        });
+    utl::verify(clasz_it != end(s), "invalid trip");
+
+    return index_->find({seq, (*clasz_it).fcon().clasz_});
+  }
+
   msg_ptr get_response(size_t index, int const zoom_level = -1) const {
     message_creator mc;
     mc.create_and_finish(MsgContent_PathSeqResponse,
@@ -200,6 +216,12 @@ void path::init(registry& r) {
     return by_station_seq(m);
   });
 
+  // used by: railviz
+  r.register_op("/path/by_trip_id_batch", [this](msg_ptr const& m) {
+    verify_path_database_available();
+    return by_trip_id_batch(m);
+  });
+
   // used by: debugger
   r.register_op("/path/by_tile_feature", [this](msg_ptr const& m) {
     verify_path_database_available();
@@ -237,22 +259,49 @@ msg_ptr path::by_station_seq(msg_ptr const& msg) const {
 msg_ptr path::by_trip_id(msg_ptr const& msg) const {
   auto const& req = motis_content(PathByTripIdRequest, msg);
   auto const& sched = get_schedule();
-  auto const& trp = from_fbs(sched, req->trip_id());
-
-  auto const seq = utl::to_vec(access::stops(trp), [&sched](auto const& stop) {
-    return stop.get_station(sched).eva_nr_.str();
-  });
-
-  auto const s = sections(trp);
-  auto const clasz_it =
-      std::min_element(begin(s), end(s), [](auto const& lhs, auto const& rhs) {
-        return lhs.fcon().clasz_ < rhs.fcon().clasz_;
-      });
-  utl::verify(clasz_it != end(s), "invalid trip");
-
   return data_->get_response(
-      data_->index_->find({seq, (*clasz_it).fcon().clasz_}), req->zoom_level());
+      data_->trip_to_index(sched, from_fbs(sched, req->trip_id())),
+      req->zoom_level());
 }
+
+msg_ptr path::by_trip_id_batch(msg_ptr const& msg) const {
+  auto const& req = motis_content(PathByTripIdBatchRequest, msg);
+  auto const& sched = get_schedule();
+
+  path_database_query q{req->zoom_level()};
+
+  for (auto const* trp_segment : *req->trip_segments()) {
+    auto const* trp = from_fbs(sched, trp_segment->trip_id());
+    auto segments = utl::to_vec(*trp_segment->segments(),
+                                [](auto s) -> size_t { return s; });
+
+    try {
+      auto index = data_->trip_to_index(sched, trp);
+      q.add_sequence(index, std::move(segments));
+    } catch (std::system_error) {
+      std::vector<geo::polyline> extra;
+      size_t i = 0;
+      for (auto const& s : sections(trp)) {
+        if (segments.empty() ||
+            std::find(begin(segments), end(segments), i) != end(segments)) {
+          auto const& from = s.from_station(sched);
+          auto const& to = s.to_station(sched);
+          extra.emplace_back(geo::polyline{geo::latlng{from.lat(), from.lng()},
+                                           geo::latlng{to.lat(), to.lng()}});
+        }
+        ++i;
+      }
+      q.add_extra(std::move(extra));
+    }
+  }
+
+  q.execute(*data_->db_, data_->render_ctx_);
+
+  message_creator mc;
+  mc.create_and_finish(MsgContent_PathByTripIdBatchResponse,
+                       q.write_batch(mc).Union());
+  return make_msg(mc);
+}  // namespace motis::path
 
 msg_ptr path::by_tile_feature(msg_ptr const& msg) const {
   auto const& req = motis_content(PathByTileFeatureRequest, msg);

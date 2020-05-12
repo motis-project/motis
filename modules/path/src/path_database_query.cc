@@ -18,8 +18,31 @@ using namespace flatbuffers;
 
 namespace motis::path {
 
-void path_database_query::add_sequence(size_t const index) {
-  sequences_.push_back({index, {}});
+void path_database_query::add_sequence(size_t const index,
+                                       std::vector<size_t> segment_indices) {
+  sequences_.emplace_back(index, std::move(segment_indices));
+}
+
+void path_database_query::add_extra(std::vector<geo::polyline> extra) {
+  resolvable_sequence rs{kExtraSequenceIndex, {}};
+  for (auto const& line : extra) {
+    auto rf = std::make_unique<resolvable_feature>();
+    rf->is_resolved_ = true;
+    rf->fwd_use_count_ = 1;
+
+    tiles::fixed_polyline polyline;
+    polyline.emplace_back();
+    polyline.back().reserve(line.size());
+    for (auto const& pos : line) {
+      polyline.back().emplace_back(tiles::latlng_to_fixed(pos));
+    }
+    rf->geometry_ = polyline;
+
+    rs.segment_features_.emplace_back();
+    rs.segment_features_.back().emplace_back(
+        true, extras_.emplace_back(std::move(rf)).get());
+  }
+  sequences_.emplace_back(std::move(rs));
 }
 
 void path_database_query::execute(path_database const& db,
@@ -49,8 +72,12 @@ void path_database_query::execute(path_database const& db,
 
 void path_database_query::resolve_sequences_and_build_subqueries(
     lmdb::cursor& cursor) {
-  for (auto& [index, segment_features] : sequences_) {
-    auto ret = cursor.get(lmdb::cursor_op::SET, std::to_string(index));
+  for (auto& rs : sequences_) {
+    if (rs.index_ == kExtraSequenceIndex) {
+      continue;
+    }
+
+    auto ret = cursor.get(lmdb::cursor_op::SET, std::to_string(rs.index_));
     utl::verify(ret.has_value(), "path_database_query: {} not found :E", index);
     auto const* ptr =
         flatbuffers::GetRoot<InternalDbSequence>(ret->second.data());
@@ -60,8 +87,25 @@ void path_database_query::resolve_sequences_and_build_subqueries(
     auto const min_clasz = *std::min_element(std::begin(*ptr->classes()),
                                              std::end(*ptr->classes()));
 
-    for (auto const* segment : *ptr->segments()) {
-      segment_features.emplace_back();
+    auto const add_segment = [&](auto const* segment) {
+      rs.segment_features_.emplace_back();
+
+      if (segment->features()->size() == 0) {
+        auto fallback = std::make_unique<resolvable_feature>();
+        fallback->feature_id_ = std::numeric_limits<uint64_t>::max();
+        fallback->fwd_use_count_ = 1;
+        fallback->is_resolved_ = true;
+
+        tiles::fixed_polyline geo;
+        geo.emplace_back();
+        geo.back().push_back(tiles::latlng_to_fixed(
+            {segment->fallback_lat(), segment->fallback_lng()}));
+        fallback->geometry_ = std::move(geo);
+
+        rs.segment_features_.back().emplace_back(
+            true, extras_.emplace_back(std::move(fallback)).get());
+        return;
+      }
 
       utl::verify(segment->hints_rle()->size() % 2 == 0, "invalid rle");
       size_t k = 0;
@@ -79,9 +123,15 @@ void path_database_query::resolve_sequences_and_build_subqueries(
               });
 
           resolvable->min_clasz_ = std::min(resolvable->min_clasz_, min_clasz);
-          ++resolvable->include_count_;
 
-          segment_features.back().emplace_back(feature_id >= 0, resolvable);
+          auto const is_fwd = feature_id >= 0;
+          if (is_fwd) {
+            ++resolvable->fwd_use_count_;
+          } else {
+            ++resolvable->bwd_use_count_;
+          }
+
+          rs.segment_features_.back().emplace_back(is_fwd, resolvable);
 
           ++k;
         }
@@ -89,6 +139,18 @@ void path_database_query::resolve_sequences_and_build_subqueries(
 
       utl::verify(k == segment->features()->size(),
                   "path_database_query: features/hint_rle missmatch");
+    };
+
+    if (rs.segment_indices_.empty()) {
+      for (auto const* segment : *ptr->segments()) {
+        add_segment(segment);
+      }
+    } else {
+      for (auto const segment_index : rs.segment_indices_) {
+        utl::verify(segment_index < ptr->segments()->size(),
+                    "path_database_query: invalid segment_index");
+        add_segment(ptr->segments()->Get(segment_index));
+      }
     }
   }
 }
@@ -272,12 +334,54 @@ void path_database_query::execute_subquery(
   });
 }
 
+struct polyline_builder {
+  void append(bool is_fwd, resolvable_feature* rf) {
+    auto const& l = mpark::get<tiles::fixed_polyline>(rf->geometry_);
+    utl::verify(rf->feature_id_ == std::numeric_limits<uint64_t>::max() ||
+                    (l.size() == 1 && l.front().size() > 1),
+                "polyline_builder: invalid line geometry");
+
+    auto const append = [&](auto const& p) {
+      auto const ll = tiles::fixed_to_latlng(p);
+      if (coords_.empty() || coords_[coords_.size() - 2] != ll.lat_ ||
+          coords_[coords_.size() - 1] != ll.lng_) {
+        coords_.push_back(ll.lat_);
+        coords_.push_back(ll.lng_);
+      }
+    };
+
+    if (is_fwd) {
+      std::for_each(std::begin(l.front()), std::end(l.front()), append);
+    } else {
+      std::for_each(std::rbegin(l.front()), std::rend(l.front()), append);
+    }
+  }
+
+  [[nodiscard]] bool empty() const { return coords_.empty(); }
+  void clear() { coords_.clear(); }
+
+  void finish() {
+    if (coords_.size() == 2) {  // was a fallback segment
+      coords_.push_back(coords_[0]);
+      coords_.push_back(coords_[1]);
+    }
+
+    utl::verify(coords_.size() >= 4,
+                "polyline_builder: invaild polyline size: {}", coords_.size());
+  }
+
+  std::vector<double> coords_;
+};
+
 Offset<PathSeqResponse> path_database_query::write_sequence(
     module::message_creator& mc, path_database const& db, size_t const index) {
   auto const it =
       std::find_if(begin(sequences_), end(sequences_),
                    [&](auto const& rs) { return rs.index_ == index; });
   utl::verify(it != end(sequences_), "path_database_query: write unknown seq");
+
+  utl::verify(it->segment_indices_.empty(),
+              "path_database_query: partial sequence export not implemented!");
 
   auto txn = db.db_handle_->make_txn();
   auto dbi = path_database::data_dbi(txn);
@@ -292,52 +396,22 @@ Offset<PathSeqResponse> path_database_query::write_sequence(
                   [&mc](auto const& e) { return mc.CreateString(e->c_str()); });
   auto const classes = utl::to_vec(*ptr->classes());
 
+  polyline_builder pb;
   std::vector<Offset<Segment>> fbs_segments;
   for (auto const& [i, s_features] : utl::enumerate(it->segment_features_)) {
-    std::vector<double> coordinates;
-    auto const append = [&](auto const& p) {
-      auto const ll = tiles::fixed_to_latlng(p);
-      if (coordinates.empty() ||
-          coordinates[coordinates.size() - 2] != ll.lat_ ||
-          coordinates[coordinates.size() - 1] != ll.lng_) {
-        coordinates.push_back(ll.lat_);
-        coordinates.push_back(ll.lng_);
-      }
-    };
-
-    for (auto const& [is_fwd, resolvable] : s_features) {
-      utl::verify(resolvable->is_resolved_,
+    pb.clear();
+    for (auto const& [is_fwd, rf] : s_features) {
+      utl::verify(rf->is_resolved_,
                   "path_database_query: have unresolved feature! {} {}",
-                  resolvable->feature_id_, resolvable->min_clasz_);
+                  rf->feature_id_, rf->min_clasz_);
 
-      auto const& l = mpark::get<tiles::fixed_polyline>(resolvable->geometry_);
-      utl::verify(l.size() == 1 && l.front().size() > 1,
-                  "invalid line geometry");
-      if (is_fwd) {
-        std::for_each(std::begin(l.front()), std::end(l.front()), append);
-      } else {
-        std::for_each(std::rbegin(l.front()), std::rend(l.front()), append);
-      }
+      pb.append(is_fwd, rf);
     }
+    pb.finish();
 
-    if (coordinates.empty()) {
-      coordinates.push_back(ptr->segments()->Get(i)->fallback_lat());
-      coordinates.push_back(ptr->segments()->Get(i)->fallback_lng());
-      coordinates.push_back(ptr->segments()->Get(i)->fallback_lat());
-      coordinates.push_back(ptr->segments()->Get(i)->fallback_lng());
-    }
+    auto osm_node_ids = utl::repeat_n(int64_t{-1}, pb.coords_.size() / 2);
 
-    auto osm_node_ids = utl::repeat_n(int64_t{-1}, coordinates.size() / 2);
-
-    utl::verify(coordinates.size() >= 4, "empty coordinates {}",
-                coordinates.size());
-    if (coordinates.size() == 2) {
-      coordinates.push_back(coordinates[0]);
-      coordinates.push_back(coordinates[1]);
-      osm_node_ids.push_back(-1);
-    }
-
-    fbs_segments.emplace_back(CreateSegment(mc, mc.CreateVector(coordinates),
+    fbs_segments.emplace_back(CreateSegment(mc, mc.CreateVector(pb.coords_),
                                             mc.CreateVector(osm_node_ids)));
   }
 
@@ -347,9 +421,75 @@ Offset<PathSeqResponse> path_database_query::write_sequence(
       mc.CreateVector(std::vector<Offset<PathSourceInfo>>{}));
 }
 
-Offset<PathSeqResponse> path_database_query::write_batch(
-    module::message_creator&) {
-  return {};
+Offset<PathByTripIdBatchResponse> path_database_query::write_batch(
+    module::message_creator& mc) {
+  std::vector<Offset<PolylineIndices>> fbs_segments;
+  std::vector<Offset<Polyline>> fbs_polylines;
+
+  polyline_builder pb;
+  auto const finish_polyline = [&] {
+    pb.finish();
+    auto const index = fbs_polylines.size();
+    fbs_polylines.emplace_back(CreatePolyline(mc, mc.CreateVector(pb.coords_)));
+    pb.clear();
+    return index;
+  };
+
+  {  // write multi-used polylines first
+    std::vector<resolvable_feature*> multi_use;
+    for (auto const& [idx, subquery] : subqueries_) {
+      for (auto const& rf : subquery.mem_) {
+        if (rf->use_count() > 1) {
+          multi_use.emplace_back(rf.get());
+        }
+      }
+    }
+    std::sort(begin(multi_use), end(multi_use),
+              [](auto const* lhs, auto const* rhs) {
+                auto const lhs_count = lhs->use_count();
+                auto const rhs_count = rhs->use_count();
+                return std::tie(lhs_count, lhs->feature_id_) <
+                       std::tie(rhs_count, rhs->feature_id_);
+              });
+    for (auto it = rbegin(multi_use); it != rend(multi_use); ++it) {
+      (**it).is_reversed_ = (**it).bwd_use_count_ > (**it).fwd_use_count_;
+      pb.append(!(**it).is_reversed_, *it);
+      (**it).response_id_ = finish_polyline();
+    }
+  }
+
+  // write segments (and single-used polylines)
+  for (auto const& sequence : sequences_) {
+    for (auto const& segment : sequence.segment_features_) {
+      std::vector<int64_t> indices;
+      for (auto const& [is_fwd, rf] : segment) {
+        if (rf->response_id_ != kInvalidResponseId) {
+          if (!pb.empty()) {
+            indices.push_back(finish_polyline());
+          }
+
+          // if segment requirement and feature state dont match -> negate id
+          indices.push_back(static_cast<int64_t>(rf->response_id_) *
+                            ((is_fwd != rf->is_reversed_) ? -1 : 1));
+        } else {
+          utl::verify(rf->use_count() == 1, "multi use slipped through");
+          utl::verify(!rf->is_reversed_, "have reversed single use");
+
+          pb.append(is_fwd, rf);
+        }
+      }
+
+      if (!pb.empty()) {
+        indices.push_back(finish_polyline());
+      }
+
+      fbs_segments.emplace_back(
+          CreatePolylineIndices(mc, mc.CreateVector(indices)));
+    }
+  }
+
+  return CreatePathByTripIdBatchResponse(mc, mc.CreateVector(fbs_segments),
+                                         mc.CreateVector(fbs_polylines));
 }
 
 }  // namespace motis::path

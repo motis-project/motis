@@ -30,6 +30,7 @@ private:
 
   motis::module::msg_ptr by_station_seq(motis::module::msg_ptr const&) const;
   motis::module::msg_ptr by_trip_id(motis::module::msg_ptr const&) const;
+  motis::module::msg_ptr by_trip_id_batch(motis::module::msg_ptr const&) const;
   motis::module::msg_ptr by_tile_feature(motis::module::msg_ptr const&) const;
 
   motis::module::msg_ptr path_tiles(motis::module::msg_ptr const&) const;
