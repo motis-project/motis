@@ -341,10 +341,12 @@ TEST_F(path_database_query_test, batch_base) {
 
   auto const& [msg, resp] = get_batch(q);
 
-  ASSERT_EQ(3, resp->polylines()->size());
+  ASSERT_EQ(4, resp->polylines()->size());
+  EXPECT_EQ(0, resp->polylines()->Get(0)->coordinates()->size());
+
   auto const p1 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({0, 1}));
   auto const p2 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({3, 2}));
-  EXPECT_EQ(0, p2);  // reused first -> lower index, shorter json
+  EXPECT_EQ(1, p2);  // reused first -> lower index, shorter json
   auto const p3 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({4, 5}));
 
   ASSERT_EQ(5, resp->segments()->size());
@@ -387,7 +389,9 @@ TEST_F(path_database_query_test, batch_empty) {
 
   auto const& [msg, resp] = get_batch(q);
 
-  ASSERT_EQ(2, resp->polylines()->size());
+  ASSERT_EQ(3, resp->polylines()->size());
+  EXPECT_EQ(0, resp->polylines()->Get(0)->coordinates()->size());
+
   auto const p1 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({1, 0}));
   auto const p2 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({12, 12}));
 
@@ -435,7 +439,9 @@ TEST_F(path_database_query_test, batch_concat) {
 
   auto const& [msg, resp] = get_batch(q);
 
-  ASSERT_EQ(4, resp->polylines()->size());
+  ASSERT_EQ(5, resp->polylines()->size());
+  EXPECT_EQ(0, resp->polylines()->Get(0)->coordinates()->size());
+
   auto const p0 =
       get_batch_path(__LINE__, resp, fixed_x_to_line_db({0, 1, 2, 3}));
   auto const p1 =
@@ -482,7 +488,8 @@ TEST_F(path_database_query_test, batch_reverse_single) {
 
   auto const& [msg, resp] = get_batch(q);
 
-  ASSERT_EQ(1, resp->polylines()->size());
+  ASSERT_EQ(2, resp->polylines()->size());
+  EXPECT_EQ(0, resp->polylines()->Get(0)->coordinates()->size());
   auto const p0 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({1, 0}));
 
   ASSERT_EQ(1, resp->segments()->size());
@@ -516,7 +523,8 @@ TEST_F(path_database_query_test, batch_partial_sequence) {
 
   auto const& [msg, resp] = get_batch(q);
 
-  ASSERT_EQ(3, resp->polylines()->size());
+  ASSERT_EQ(4, resp->polylines()->size());
+  EXPECT_EQ(0, resp->polylines()->Get(0)->coordinates()->size());
   auto const p0 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({0, 1}));
   auto const p1 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({2, 3}));
   auto const p2 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({4, 5}));
@@ -556,7 +564,8 @@ TEST_F(path_database_query_test, batch_extra) {
 
   auto const& [msg, resp] = get_batch(q);
 
-  ASSERT_EQ(2, resp->polylines()->size());
+  ASSERT_EQ(3, resp->polylines()->size());
+  EXPECT_EQ(0, resp->polylines()->Get(0)->coordinates()->size());
   auto const p0 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({10, 11}));
   auto const p1 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({12, 13}));
 

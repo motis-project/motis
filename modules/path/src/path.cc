@@ -301,7 +301,7 @@ msg_ptr path::by_trip_id_batch(msg_ptr const& msg) const {
   mc.create_and_finish(MsgContent_PathByTripIdBatchResponse,
                        q.write_batch(mc).Union());
   return make_msg(mc);
-}  // namespace motis::path
+}
 
 msg_ptr path::by_tile_feature(msg_ptr const& msg) const {
   auto const& req = motis_content(PathByTileFeatureRequest, msg);
