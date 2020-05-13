@@ -77,7 +77,7 @@ jobs:
       - name: Build
         run: |
           ./build/bin/buildcache -z
-          cmake --build build --target motis motis-test motis-itest path-prepare parking-prepare ppr-preprocess osrm-extract osrm-contract at-example motis-eval motis-intermodal-eval
+          cmake --build build --target motis motis-test motis-itest path-prepare parking-prepare ppr-preprocess motis-eval motis-intermodal-eval
           ./build/bin/buildcache -s
 
       # ==== TESTS ====
@@ -121,9 +121,7 @@ jobs:
           strip build/motis
           strip build/path-prepare
           strip build/parking-prepare
-          strip build/deps/osrm-backend/osrm-extract
-          strip build/deps/osrm-backend/osrm-contract
-          strip build/deps/address-typeahead/at-example
+          strip build/deps/ppr/ppr-preprocess motis
 
       - name: Compile Web Interface
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
@@ -141,9 +139,6 @@ jobs:
           mv build/motis motis
           mv build/path-prepare motis
           mv build/parking-prepare motis
-          mv build/deps/osrm-backend/osrm-extract motis
-          mv build/deps/osrm-backend/osrm-contract motis
-          mv build/deps/address-typeahead/at-example motis
           mv build/deps/ppr/ppr-preprocess motis
           mv deps/osrm-backend/profiles motis/osrm-profiles
           mv deps/ppr/profiles motis/ppr-profiles
