@@ -3,10 +3,15 @@
 #include <fstream>
 #include <streambuf>
 
+#include "motis/module/ctx_data.h"
+#include "motis/module/dispatcher.h"
+#include "motis/module/progress_listener.h"
+
 namespace motis::module {
 
 struct clog_redirect : public std::streambuf {
-  clog_redirect(std::string name, char const* log_file_path);
+  clog_redirect(progress_listener&, std::string name,
+                char const* log_file_path);
 
   clog_redirect(clog_redirect const&) = delete;
   clog_redirect(clog_redirect&&) = delete;
@@ -20,6 +25,9 @@ struct clog_redirect : public std::streambuf {
   static void disable();
 
 private:
+  void update_error(std::string const& error);
+  void update_progress(int progress);
+
   enum class output_state {
     NORMAL,
     MODE_SELECT,
@@ -31,6 +39,7 @@ private:
   std::string name_;
   std::streambuf* backup_clog_;
   std::string error_;
+  progress_listener& progress_listener_;
   static bool disabled_;
 };
 

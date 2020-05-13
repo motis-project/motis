@@ -12,12 +12,14 @@ namespace fs = boost::filesystem;
 
 namespace motis::module {
 
-event_collector::event_collector(std::string data_dir, std::string name,
+event_collector::event_collector(progress_listener& progress_listener,
+                                 std::string data_dir, std::string name,
                                  registry& reg, import_op_t op)
     : data_dir_{std::move(data_dir)},
       module_name_{std::move(name)},
       reg_{reg},
-      op_{std::move(op)} {}
+      op_{std::move(op)},
+      progress_listener_{progress_listener} {}
 
 void event_collector::update_status(motis::import::Status const status,
                                     uint8_t const progress) {
@@ -46,7 +48,7 @@ void event_collector::require(std::string const& name,
         auto const logs_path = fs::path{data_dir_} / "log";
         fs::create_directories(logs_path);
         clog_redirect redirect{
-            module_name_,
+            progress_listener_, module_name_,
             (logs_path / (module_name_ + ".txt")).generic_string().c_str()};
 
         // Dummy message asking for initial status.

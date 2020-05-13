@@ -66,7 +66,7 @@ void motis_instance::import(module_settings const& module_opt,
   registry_.subscribe("/import", import_osm);
 
   std::make_shared<event_collector>(
-      import_opt.data_directory_, "schedule", registry_,
+      status, import_opt.data_directory_, "schedule", registry_,
       [&](std::map<std::string, msg_ptr> const& dependencies) {
         import_schedule(module_opt, dataset_opt, dependencies.at("SCHEDULE"),
                         *this);
@@ -98,7 +98,7 @@ void motis_instance::import(module_settings const& module_opt,
   for (auto const& module : modules_) {
     if (module_opt.is_module_active(module->module_name())) {
       module->set_data_directory(import_opt.data_directory_);
-      module->import(registry_);
+      module->import(status, registry_);
     }
   }
 

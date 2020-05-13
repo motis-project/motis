@@ -20,7 +20,8 @@ public:
   osrm(osrm&&) = delete;
   osrm& operator=(osrm&&) = delete;
 
-  void import(motis::module::registry&) override;
+  void import(motis::module::progress_listener&,
+              motis::module::registry&) override;
   void init(motis::module::registry&) override;
   void init_async();
 

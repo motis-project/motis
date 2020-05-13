@@ -63,18 +63,44 @@ void clear_line() {
   std::cout << empty << "\r";
 }
 
+void import_status::update_progress(std::string const& task_name,
+                                    unsigned int progress) {
+  auto s = status_[task_name];
+  s.status_ = import::Status_RUNNING;
+  s.progress_ = progress;
+  if (update(task_name, s)) {
+    print();
+  }
+}
+
+void import_status::report_error(const std::string& task_name,
+                                 const std::string& what) {
+  auto s = status_[task_name];
+  s.status_ = import::Status_ERROR;
+  s.error_ = what;
+  if (update(task_name, s)) {
+    print();
+  }
+}
+
+bool import_status::update(std::string const& task_name,
+                           state const& new_state) {
+  auto& old_state = status_[task_name];
+  if (old_state != new_state) {
+    old_state = new_state;
+    return true;
+  }
+  return false;
+}
+
 bool import_status::update(motis::module::msg_ptr const& msg) {
   if (msg->get()->content_type() == MsgContent_StatusUpdate) {
     using import::StatusUpdate;
     auto const upd = motis_content(StatusUpdate, msg);
-    auto const new_state = state{
-        utl::to_vec(*upd->waiting_for(), [](auto&& e) { return e->str(); }),
-        upd->status(), upd->progress(), upd->error()->str()};
-    auto& curr_state = status_[upd->name()->str()];
-    if (new_state != curr_state) {
-      curr_state = new_state;
-      return true;
-    }
+    return update(
+        upd->name()->str(),
+        {utl::to_vec(*upd->waiting_for(), [](auto&& e) { return e->str(); }),
+         upd->status(), upd->progress(), upd->error()->str()});
   }
   return false;
 }

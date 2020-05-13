@@ -125,9 +125,10 @@ std::string address::db_file() const {
   return (get_data_directory() / "address" / "address_db.raw").generic_string();
 }
 
-void address::import(motis::module::registry& reg) {
+void address::import(progress_listener& progress_listener,
+                     motis::module::registry& reg) {
   std::make_shared<event_collector>(
-      get_data_directory().generic_string(), "address", reg,
+      progress_listener, get_data_directory().generic_string(), "address", reg,
       [this](std::map<std::string, msg_ptr> const& dependencies) {
         using import::OSMEvent;
 

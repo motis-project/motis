@@ -5,39 +5,15 @@
 
 namespace motis::module {
 
-void update_error(std::string const& name, std::string const& error) {
-  message_creator fbb;
-  fbb.create_and_finish(
-      MsgContent_StatusUpdate,
-      motis::import::CreateStatusUpdate(
-          fbb, fbb.CreateString(name),
-          fbb.CreateVector(
-              std::vector<flatbuffers::Offset<flatbuffers::String>>{}),
-          motis::import::Status::Status_ERROR, fbb.CreateString(error), 0)
-          .Union(),
-      "/import", DestinationType_Topic);
-  ctx::await_all(motis_publish(make_msg(fbb)));
-}
-
-void update_progress(std::string const& name, int const progress) {
-  message_creator fbb;
-  fbb.create_and_finish(
-      MsgContent_StatusUpdate,
-      motis::import::CreateStatusUpdate(
-          fbb, fbb.CreateString(name),
-          fbb.CreateVector(
-              std::vector<flatbuffers::Offset<flatbuffers::String>>{}),
-          motis::import::Status::Status_RUNNING, fbb.CreateString(""), progress)
-          .Union(),
-      "/import", DestinationType_Topic);
-  ctx::await_all(motis_publish(make_msg(fbb)));
-}
-
-clog_redirect::clog_redirect(std::string name, char const* log_file_path)
-    : name_{std::move(name)}, backup_clog_{std::clog.rdbuf()} {
+clog_redirect::clog_redirect(progress_listener& progress_listener,
+                             std::string name, char const* log_file_path)
+    : name_{std::move(name)},
+      backup_clog_{std::clog.rdbuf()},
+      progress_listener_{progress_listener} {
   if (disabled_) {
     return;
   }
+
   sink_.exceptions(std::ios_base::badbit | std::ios_base::failbit);
   sink_.open(log_file_path, std::ios_base::app);
   std::clog.rdbuf(this);
@@ -75,7 +51,7 @@ clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
 
     case output_state::PERCENT:
       if (traits_type::to_char_type(c) == PROGRESS_MARKER) {
-        update_progress(name_, percent_);
+        update_progress(percent_);
         state_ = output_state::NORMAL;
       } else {
         percent_ *= 10;
@@ -85,7 +61,7 @@ clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
 
     case output_state::ERR:
       if (traits_type::to_char_type(c) == PROGRESS_MARKER) {
-        update_error(name_, error_);
+        update_error(error_);
         error_.clear();
         state_ = output_state::NORMAL;
       } else {
@@ -95,6 +71,14 @@ clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
 
     default: return c;
   }
+}
+
+void clog_redirect::update_error(std::string const& error) {
+  progress_listener_.report_error(name_, error);
+}
+
+void clog_redirect::update_progress(int const progress) {
+  progress_listener_.update_progress(name_, progress);
 }
 
 void clog_redirect::disable() { disabled_ = true; }
