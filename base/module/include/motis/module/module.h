@@ -10,8 +10,8 @@
 #include "conf/configuration.h"
 
 #include "motis/core/schedule/synced_schedule.h"
-
 #include "motis/module/message.h"
+#include "motis/module/progress_listener.h"
 #include "motis/module/registry.h"
 
 namespace motis::module {
@@ -34,7 +34,7 @@ struct module : public conf::configuration {
   void set_data_directory(std::string const&);
   void set_context(motis::schedule& schedule);
 
-  virtual void import(registry&) {}
+  virtual void import(progress_listener&, registry&) {}
   virtual void init(registry&) {}
 
   virtual bool import_successful() const { return true; }

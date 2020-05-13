@@ -5,12 +5,11 @@
 
 namespace motis::module {
 
-clog_redirect::clog_redirect(std::string name, char const* log_file_path)
+clog_redirect::clog_redirect(progress_listener& progress_listener,
+                             std::string name, char const* log_file_path)
     : name_{std::move(name)},
       backup_clog_{std::clog.rdbuf()},
-      dispatcher_{ctx::current_op<ctx_data>()->data_.dispatcher_},
-      op_id_{ctx::current_op<ctx_data>()->id_.index},
-      op_data_{ctx::current_op<ctx_data>()->data_} {
+      progress_listener_{progress_listener} {
   if (disabled_) {
     return;
   }
@@ -74,38 +73,12 @@ clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
   }
 }
 
-void clog_redirect::publish(msg_ptr const& msg) {
-  auto id = ctx::op_id(CTX_LOCATION);
-  id.parent_index = op_id_;
-  ctx::await_all(dispatcher_->publish(msg, op_data_, id));
-}
-
 void clog_redirect::update_error(std::string const& error) {
-  message_creator fbb;
-  fbb.create_and_finish(
-      MsgContent_StatusUpdate,
-      motis::import::CreateStatusUpdate(
-          fbb, fbb.CreateString(name_),
-          fbb.CreateVector(
-              std::vector<flatbuffers::Offset<flatbuffers::String>>{}),
-          motis::import::Status::Status_ERROR, fbb.CreateString(error), 0)
-          .Union(),
-      "/import", DestinationType_Topic);
-  publish(make_msg(fbb));
+  progress_listener_.report_error(name_, error);
 }
 
 void clog_redirect::update_progress(int const progress) {
-  message_creator fbb;
-  fbb.create_and_finish(
-      MsgContent_StatusUpdate,
-      motis::import::CreateStatusUpdate(
-          fbb, fbb.CreateString(name_),
-          fbb.CreateVector(
-              std::vector<flatbuffers::Offset<flatbuffers::String>>{}),
-          motis::import::Status::Status_RUNNING, fbb.CreateString(""), progress)
-          .Union(),
-      "/import", DestinationType_Topic);
-  publish(make_msg(fbb));
+  progress_listener_.update_progress(name_, progress);
 }
 
 void clog_redirect::disable() { disabled_ = true; }
