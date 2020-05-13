@@ -426,6 +426,10 @@ Offset<PathByTripIdBatchResponse> path_database_query::write_batch(
   std::vector<Offset<PolylineIndices>> fbs_segments;
   std::vector<Offset<Polyline>> fbs_polylines;
 
+  // "disallow" id zero -> cant be marked reversed (-0 == 0)
+  fbs_polylines.emplace_back(
+      CreatePolyline(mc, mc.CreateVector(std::vector<double>{})));
+
   polyline_builder pb;
   auto const finish_polyline = [&] {
     pb.finish();
@@ -470,7 +474,7 @@ Offset<PathByTripIdBatchResponse> path_database_query::write_batch(
 
           // if segment requirement and feature state dont match -> negate id
           indices.push_back(static_cast<int64_t>(rf->response_id_) *
-                            ((is_fwd != rf->is_reversed_) ? -1 : 1));
+                            ((is_fwd != rf->is_reversed_) ? 1 : -1));
         } else {
           utl::verify(rf->use_count() == 1, "multi use slipped through");
           utl::verify(!rf->is_reversed_, "have reversed single use");
