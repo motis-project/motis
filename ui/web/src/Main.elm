@@ -997,7 +997,23 @@ setFullTripConnection model tripId connection =
             toJourney connection
 
         tripJourney =
-            { journey | isSingleCompleteTrip = True }
+            { journey
+                | isSingleCompleteTrip = True
+                , trains = journey.trains |> List.map (\t -> { t | trip = Just tripId })
+                , moves =
+                    journey.moves
+                        |> List.map
+                            (\m ->
+                                case m of
+                                    Data.Journey.Types.TrainMove t ->
+                                        Data.Journey.Types.TrainMove { t | trip = Just tripId }
+
+                                    Data.Journey.Types.WalkMove w ->
+                                        Data.Journey.Types.WalkMove w
+                            )
+            }
+
+
 
         ( tripDetails, _ ) =
             case model.tripDetails of
