@@ -8,7 +8,7 @@ namespace motis::module {
 
 void module::set_data_directory(std::string const& d) { data_directory_ = d; }
 
-void module::set_context(motis::schedule& schedule) { schedule_ = &schedule; }
+void module::set_shared_data(shared_data& d) { shared_data_ = &d; }
 
 std::string module::data_path(fs::path const& p) {
   return p.parent_path() == data_directory_

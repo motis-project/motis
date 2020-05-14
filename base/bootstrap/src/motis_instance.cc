@@ -25,7 +25,11 @@ namespace fs = boost::filesystem;
 
 namespace motis::bootstrap {
 
-motis_instance::motis_instance() : controller(build_modules()) {}
+motis_instance::motis_instance() : controller(build_modules()) {
+  for (auto& m : modules_) {
+    m->set_shared_data(&shared_data_);
+  }
+}
 
 void motis_instance::stop_remotes() {
   for (auto const& r : remotes_) {
@@ -136,7 +140,6 @@ void motis_instance::init_modules(module_settings const& module_opt,
     }
 
     try {
-      module->set_context(*schedule_);
       module->init(registry_);
     } catch (std::exception const& e) {
       LOG(emrg) << "module " << module->module_name()

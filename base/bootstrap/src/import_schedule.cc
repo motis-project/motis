@@ -27,16 +27,11 @@ module::msg_ptr import_schedule(module_settings const& module_opt,
 
   auto dataset_opt_cpy = dataset_opt;
   dataset_opt_cpy.dataset_ = path.generic_string();
-  instance.schedule_ =
-      loader::load_schedule(dataset_opt_cpy, instance.schedule_buf_);
-  instance.sched_ = instance.schedule_.get();
 
-  for (auto const& module : instance.modules_) {
-    if (!module_opt.is_module_active(module->prefix())) {
-      continue;
-    }
-    module->set_context(*instance.schedule_);
-  }
+  cista::memory_holder memory;
+  auto sched = loader::load_schedule(dataset_opt_cpy, memory);
+  instance.shared_data_.emplace_data(
+      "schedule", schedule_data{std::move(memory), std::move(sched)});
 
   module::message_creator fbb;
   fbb.create_and_finish(

@@ -3,6 +3,7 @@
 #include <ctime>
 
 #include "cista/hash.h"
+#include "cista/memory_holder.h"
 
 #include "motis/hash_map.h"
 #include "motis/hash_set.h"
@@ -75,5 +76,10 @@ struct schedule {
 };
 
 using schedule_ptr = mcd::unique_ptr<schedule>;
+
+struct schedule_data {
+  cista::memory_holder schedule_buf_;
+  schedule_ptr schedule_;
+};
 
 }  // namespace motis

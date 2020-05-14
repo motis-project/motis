@@ -6,7 +6,6 @@
 #include <thread>
 #include <vector>
 
-#include "cista/memory_holder.h"
 
 #include "boost/asio/io_service.hpp"
 
@@ -60,8 +59,7 @@ struct motis_instance : public motis::module::controller {
   void publish(module::msg_ptr const&,
                unsigned num_threads = std::thread::hardware_concurrency());
 
-  cista::memory_holder schedule_buf_;
-  schedule_ptr schedule_;
+  module::shared_data shared_data_;
   std::vector<std::shared_ptr<motis::module::remote>> remotes_;
   std::function<void()> on_remotes_registered_;
   unsigned connected_remotes_{0};
