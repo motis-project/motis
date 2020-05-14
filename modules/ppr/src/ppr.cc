@@ -40,6 +40,8 @@ struct import_state {
   named<std::string, MOTIS_NAME("osm_path")> osm_path_;
   named<cista::hash_t, MOTIS_NAME("osm_hash")> osm_hash_;
   named<size_t, MOTIS_NAME("osm_size")> osm_size_;
+  named<std::string, MOTIS_NAME("dem_path")> dem_path_;
+  named<cista::hash_t, MOTIS_NAME("dem_hash")> dem_hash_;
 };
 
 location to_location(Position const* pos) {
@@ -254,6 +256,7 @@ private:
 };
 
 ppr::ppr() : module("Foot Routing", "ppr") {
+  param(use_dem_, "import.use_dem", "Use elevation data");
   param(profile_files_, "profile", "Search profile");
   param(edge_rtree_max_size_, "edge-rtree-max-size",
         "Maximum size for edge r-tree file");
@@ -271,21 +274,33 @@ void ppr::import(progress_listener& progress_listener, registry& reg) {
       progress_listener, get_data_directory().generic_string(), "ppr", reg,
       [this](std::map<std::string, msg_ptr> const& dependencies) {
         using import::OSMEvent;
+        using import::DEMEvent;
 
         auto const dir = get_data_directory() / "ppr";
         auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
         auto const osm_path = data_path(osm->path()->str());
-        auto const state = import_state{osm_path, osm->hash(), osm->size()};
 
+        auto dem_path = std::string{};
+        auto dem_hash = cista::hash_t{};
+        if (use_dem_) {
+          auto const dem = motis_content(DEMEvent, dependencies.at("DEM"));
+          dem_path = data_path(dem->path()->str());
+          dem_hash = dem->hash();
+        }
+
+        auto const state = import_state{osm_path, osm->hash(), osm->size(),
+                                        dem_path, dem_hash};
         if (read_ini<import_state>(dir / "import.ini") != state) {
           fs::create_directories(dir);
 
           pp::options opt;
           opt.osm_file_ = osm_path;
           opt.graph_file_ = graph_file();
+          if (use_dem_) {
+            opt.dem_files_ = {dem_path};
+          }
 
           pp::logging log;
-          //          pp::default_logging default_log{log};
           log.out_ = &std::clog;
           log.total_progress_updates_only_ = true;
 
@@ -323,6 +338,11 @@ void ppr::import(progress_listener& progress_listener, registry& reg) {
   collector->require("OSM", [](msg_ptr const& msg) {
     return msg->get()->content_type() == MsgContent_OSMEvent;
   });
+  if (use_dem_) {
+    collector->require("DEM", [](msg_ptr const& msg) {
+      return msg->get()->content_type() == MsgContent_DEMEvent;
+    });
+  }
 }
 
 void ppr::init(motis::module::registry& reg) {

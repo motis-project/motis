@@ -1,0 +1,6 @@
+namespace motis.import;
+
+table DEMEvent {
+  path: string;
+  hash: ulong;
+}

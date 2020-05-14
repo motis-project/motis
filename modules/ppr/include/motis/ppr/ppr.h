@@ -23,7 +23,6 @@ struct ppr : public motis::module::module {
   bool import_successful() const override { return import_successful_; }
 
 private:
-  std::string graph_file_{"routing-graph.ppr"};
   std::string graph_file() const;
 
   std::vector<std::string> profile_files_;
@@ -32,6 +31,8 @@ private:
   bool lock_rtrees_{false};
   bool prefetch_rtrees_{true};
   bool verify_graph_{false};
+
+  bool use_dem_{false};
 
   struct impl;
   std::unique_ptr<impl> impl_;
