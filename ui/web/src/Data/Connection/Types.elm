@@ -25,7 +25,7 @@ module Data.Connection.Types exposing
     , interchanges
     , transportCategories
     , transportsForRange
-    , tripIdForTransport
+    , tripsForRange
     )
 
 import Date exposing (Date)
@@ -205,13 +205,20 @@ transportsForRange connection from to =
         |> List.sortBy (\t -> -(t.range.to - t.range.from))
 
 
-tripIdForTransport : Connection -> TransportInfo -> Maybe TripId
-tripIdForTransport connection transport =
-    connection.trips
-        |> List.filter (\t -> t.range.from == transport.range.from)
-        |> List.sortBy (.range >> .to)
-        |> last
-        |> Maybe.map .id
+tripsForRange : Connection -> Int -> Int -> List TripId
+tripsForRange connection from to =
+    let
+        checkTrip : Trip -> Maybe Trip
+        checkTrip trip =
+            if trip.range.from < to && trip.range.to > from then
+                Just trip
+
+            else
+                Nothing
+    in
+    List.filterMap checkTrip connection.trips
+        |> List.sortBy (\t -> (t.range.from, -t.range.to, t.id.train_nr))
+        |> List.map .id
 
 
 transportCategories : Connection -> Set String
