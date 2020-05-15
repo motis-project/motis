@@ -375,7 +375,7 @@ void parking::import(progress_listener& progress_listener, registry& reg) {
   auto collector = std::make_shared<event_collector>(
       progress_listener, get_data_directory().generic_string(), "parking", reg,
       [this](std::map<std::string, msg_ptr> const& dependencies) {
-        using namespace parking::prepare;
+        using namespace ::motis::parking::prepare;
         using import::OSMEvent;
         using import::PPREvent;
 

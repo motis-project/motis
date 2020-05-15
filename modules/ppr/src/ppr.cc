@@ -378,7 +378,7 @@ void ppr::import(progress_listener& progress_listener, registry& reg) {
                   profiles_hash)
                   .Union(),
               "/import", DestinationType_Topic);
-          ctx::await_all(motis_publish(make_msg(fbb)));
+          motis_publish(make_msg(fbb));
         }
       });
   collector->require("OSM", [](msg_ptr const& msg) {
