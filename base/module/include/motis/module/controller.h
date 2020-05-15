@@ -25,7 +25,7 @@ struct controller : public dispatcher, public registry {
     std::exception_ptr eptr;
 
     access == ctx::access_t::READ ? enqueue_read_io(
-                                        ctx_data(access, this, sched_),
+                                        ctx_data(access, this, &shared_data_),
                                         [&]() {
                                           try {
                                             result = f();
@@ -35,7 +35,7 @@ struct controller : public dispatcher, public registry {
                                         },
                                         ctx::op_id(CTX_LOCATION))
                                   : enqueue_write_io(
-                                        ctx_data(access, this, sched_),
+                                        ctx_data(access, this, &shared_data_),
                                         [&]() {
                                           try {
                                             result = f();
@@ -60,7 +60,7 @@ struct controller : public dispatcher, public registry {
     std::exception_ptr eptr;
 
     access == ctx::access_t::READ ? enqueue_read_io(
-                                        ctx_data(access, this, sched_),
+                                        ctx_data(access, this, &shared_data_),
                                         [&]() {
                                           try {
                                             f();
@@ -70,7 +70,7 @@ struct controller : public dispatcher, public registry {
                                         },
                                         ctx::op_id(CTX_LOCATION))
                                   : enqueue_write_io(
-                                        ctx_data(access, this, sched_),
+                                        ctx_data(access, this, &shared_data_),
                                         [&]() {
                                           try {
                                             f();

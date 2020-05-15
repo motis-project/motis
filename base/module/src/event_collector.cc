@@ -2,6 +2,7 @@
 
 #include "boost/filesystem.hpp"
 
+#include "utl/to_vec.h"
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"

@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 
+#include "motis/core/schedule/schedule_data_key.h"
 #include "motis/core/access/trip_access.h"
 #include "motis/rt/separate_trip.h"
 #include "motis/test/motis_instance_test.h"
@@ -28,8 +29,10 @@ TEST_F(rt_trip_separation_test, simple) {
   EXPECT_EQ(t1_d1->edges_->at(0).get_edge(), t1_d2->edges_->at(0).get_edge());
   EXPECT_EQ(t2_d1->edges_->at(0).get_edge(), t2_d2->edges_->at(0).get_edge());
 
-  seperate_trip(*instance_->sched_, ev_key{t1_d1->edges_->at(0).get_edge(),
-                                           t1_d1->lcon_idx_, event_type::DEP});
+  seperate_trip(
+      *instance_->shared_data_.get<schedule_data>(SCHEDULE_DATA_KEY).schedule_,
+      ev_key{t1_d1->edges_->at(0).get_edge(), t1_d1->lcon_idx_,
+             event_type::DEP});
 
   EXPECT_NE(t1_d1->edges_->at(0).get_edge(), t1_d2->edges_->at(0).get_edge());
   EXPECT_NE(t2_d1->edges_->at(0).get_edge(), t2_d2->edges_->at(0).get_edge());

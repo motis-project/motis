@@ -2,6 +2,7 @@
 
 #include "ctx/ctx.h"
 
+#include "motis/core/schedule/schedule_data_key.h"
 #include "motis/module/ctx_data.h"
 #include "motis/module/dispatcher.h"
 
@@ -11,9 +12,7 @@ struct schedule;
 
 namespace module {
 
-inline schedule& get_schedule() {
-  return *ctx::current_op<ctx_data>()->data_.dispatcher_->registry_.sched_;
-}
+schedule& get_schedule();
 
 }  // namespace module
 }  // namespace motis

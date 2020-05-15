@@ -9,6 +9,7 @@
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/schedule/schedule_data_key.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/event_collector.h"
@@ -26,7 +27,11 @@ namespace fs = boost::filesystem;
 
 namespace motis::bootstrap {
 
-motis_instance::motis_instance() : controller(build_modules()) {}
+motis_instance::motis_instance() : controller{build_modules()} {
+  for (auto& m : modules_) {
+    m->set_shared_data(&shared_data_);
+  }
+}
 
 void motis_instance::stop_remotes() {
   for (auto const& r : remotes_) {
@@ -51,6 +56,10 @@ std::vector<std::string> motis_instance::module_names() const {
   return s;
 }
 
+schedule const& motis_instance::sched() const {
+  return *shared_data_.get<schedule_data>(SCHEDULE_DATA_KEY).schedule_;
+}
+
 void motis_instance::import(module_settings const& module_opt,
                             loader::loader_options const& dataset_opt,
                             import_settings const& import_opt,
@@ -70,8 +79,7 @@ void motis_instance::import(module_settings const& module_opt,
   std::make_shared<event_collector>(
       status, import_opt.data_directory_, "schedule", registry_,
       [&](std::map<std::string, msg_ptr> const& dependencies) {
-        import_schedule(module_opt, dataset_opt, dependencies.at("SCHEDULE"),
-                        *this);
+        import_schedule(dataset_opt, dependencies.at("SCHEDULE"), *this);
       })
       ->require("SCHEDULE", [](msg_ptr const& msg) {
         if (msg->get()->content_type() != MsgContent_FileEvent) {
@@ -120,9 +128,7 @@ void motis_instance::import(module_settings const& module_opt,
 
   registry_.reset();
 
-  if (sched_ == nullptr) {
-    throw std::runtime_error{"schedule not initialized"};
-  }
+  utl::verify(shared_data_.includes(SCHEDULE_DATA_KEY), "schedule not loaded");
 }
 
 void motis_instance::init_modules(module_settings const& module_opt,
@@ -138,7 +144,6 @@ void motis_instance::init_modules(module_settings const& module_opt,
     }
 
     try {
-      module->set_context(*schedule_);
       module->init(registry_);
     } catch (std::exception const& e) {
       LOG(emrg) << "module " << module->module_name()

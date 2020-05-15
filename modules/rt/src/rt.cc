@@ -20,7 +20,8 @@ rt::~rt() = default;
 
 void rt::init(motis::module::registry& reg) {
   handler_ = std::make_unique<rt_handler>(
-      synced_sched<RW>().sched(), validate_graph_, validate_constant_graph_);
+      *get_shared_data_mutable<schedule_data>(SCHEDULE_DATA_KEY).schedule_,
+      validate_graph_, validate_constant_graph_);
 
   reg.subscribe(
       "/ris/messages",

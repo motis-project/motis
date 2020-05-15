@@ -71,7 +71,7 @@ void railviz::init(motis::module::registry& reg) {
   reg.register_op("/railviz/get_trips", &railviz::get_trips);
 
   reg.subscribe("/init", [this]() {
-    auto const& s = synced_sched<RO>().sched();
+    auto const& s = get_sched();
     train_retriever_ = std::make_unique<train_retriever>(s, bounding_boxes(s));
   });
 }

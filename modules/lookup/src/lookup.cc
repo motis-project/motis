@@ -19,9 +19,9 @@ lookup::lookup() : module("Lookup", "lookup") {}
 lookup::~lookup() = default;
 
 void lookup::init(registry& r) {
-  auto& sched = synced_sched<RO>().sched();
+  auto const& s = get_sched();
   station_geo_index_ = std::make_unique<geo::point_rtree>(
-      geo::make_point_rtree(sched.stations_, [](auto const& s) {
+      geo::make_point_rtree(s.stations_, [](auto const& s) {
         return geo::latlng{s->lat(), s->lng()};
       }));
 

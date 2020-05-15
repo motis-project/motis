@@ -17,6 +17,7 @@
 #include "ppr/serialization/reader.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/schedule/time.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 

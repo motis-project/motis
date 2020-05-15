@@ -12,6 +12,7 @@
 #include "motis/module/module.h"
 #include "motis/module/receiver.h"
 #include "motis/module/registry.h"
+#include "motis/module/shared_data.h"
 
 namespace motis::module {
 
@@ -60,6 +61,7 @@ struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
   bool queue_no_target_msgs_{false};
   std::queue<std::pair<msg_ptr, callback>> no_target_msg_queue_;
   std::vector<std::unique_ptr<module>> modules_;
+  shared_data shared_data_;
 };
 
 }  // namespace motis::module

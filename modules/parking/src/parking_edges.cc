@@ -4,6 +4,8 @@
 #include <iostream>
 #include <mutex>
 
+#include "utl/to_vec.h"
+
 #include "ppr/routing/search_profile.h"
 
 #include "motis/core/common/timing.h"
