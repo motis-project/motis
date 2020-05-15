@@ -283,7 +283,7 @@ void ppr::import(progress_listener& progress_listener, registry& reg) {
 
         auto const dir = get_data_directory() / "ppr";
         auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
-        auto const osm_path = data_path(osm->path()->str());
+        auto const osm_path = osm->path()->str();
 
         auto dem_path = std::string{};
         auto dem_hash = cista::hash_t{};
@@ -293,8 +293,9 @@ void ppr::import(progress_listener& progress_listener, registry& reg) {
           dem_hash = dem->hash();
         }
 
-        auto const state = import_state{osm_path, osm->hash(), osm->size(),
-                                        dem_path, dem_hash};
+        auto const state =
+            import_state{data_path(osm_path), osm->hash(), osm->size(),
+                         data_path(dem_path), dem_hash};
         if (read_ini<import_state>(dir / "import.ini") != state) {
           fs::create_directories(dir);
 
