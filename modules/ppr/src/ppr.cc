@@ -4,9 +4,12 @@
 #include <limits>
 #include <map>
 
+#include "boost/filesystem.hpp"
+
 #include "utl/to_vec.h"
 
 #include "ppr/common/verify.h"
+#include "ppr/preprocessing/preprocessing.h"
 #include "ppr/profiles/parse_search_profile.h"
 #include "ppr/routing/route_steps.h"
 #include "ppr/routing/search.h"
@@ -15,6 +18,9 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/time.h"
+#include "motis/module/event_collector.h"
+#include "motis/module/ini_io.h"
+
 #include "motis/ppr/error.h"
 #include "motis/ppr/profiles.h"
 
@@ -25,7 +31,19 @@ using namespace ppr::routing;
 using namespace ppr::serialization;
 using namespace flatbuffers;
 
+namespace fs = boost::filesystem;
+namespace pp = ::ppr::preprocessing;
+
 namespace motis::ppr {
+
+struct import_state {
+  CISTA_COMPARABLE()
+  named<std::string, MOTIS_NAME("osm_path")> osm_path_;
+  named<cista::hash_t, MOTIS_NAME("osm_hash")> osm_hash_;
+  named<size_t, MOTIS_NAME("osm_size")> osm_size_;
+  named<std::string, MOTIS_NAME("dem_path")> dem_path_;
+  named<cista::hash_t, MOTIS_NAME("dem_hash")> dem_hash_;
+};
 
 location to_location(Position const* pos) {
   return make_location(pos->lng(), pos->lat());
@@ -239,7 +257,7 @@ private:
 };
 
 ppr::ppr() : module("Foot Routing", "ppr") {
-  param(graph_file_, "graph", "ppr routing graph path");
+  param(use_dem_, "import.use_dem", "Use elevation data");
   param(profile_files_, "profile", "Search profile");
   param(edge_rtree_max_size_, "edge-rtree-max-size",
         "Maximum size for edge r-tree file");
@@ -252,6 +270,82 @@ ppr::ppr() : module("Foot Routing", "ppr") {
 
 ppr::~ppr() = default;
 
+void ppr::import(progress_listener& progress_listener, registry& reg) {
+  auto const collector = std::make_shared<event_collector>(
+      progress_listener, get_data_directory().generic_string(), "ppr", reg,
+      [this](std::map<std::string, msg_ptr> const& dependencies) {
+        using import::OSMEvent;
+        using import::DEMEvent;
+
+        auto const dir = get_data_directory() / "ppr";
+        auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
+        auto const osm_path = data_path(osm->path()->str());
+
+        auto dem_path = std::string{};
+        auto dem_hash = cista::hash_t{};
+        if (use_dem_) {
+          auto const dem = motis_content(DEMEvent, dependencies.at("DEM"));
+          dem_path = data_path(dem->path()->str());
+          dem_hash = dem->hash();
+        }
+
+        auto const state = import_state{osm_path, osm->hash(), osm->size(),
+                                        dem_path, dem_hash};
+        if (read_ini<import_state>(dir / "import.ini") != state) {
+          fs::create_directories(dir);
+
+          pp::options opt;
+          opt.osm_file_ = osm_path;
+          opt.graph_file_ = graph_file();
+          if (use_dem_) {
+            opt.dem_files_ = {dem_path};
+          }
+
+          pp::logging log;
+          log.out_ = &std::clog;
+          log.total_progress_updates_only_ = true;
+
+          log.step_started_ = [](pp::logging const& log,
+                                 pp::step_info const& step) {
+            std::clog << "Step " << (log.current_step() + 1) << "/"
+                      << log.step_count() << ": " << step.name() << ": Starting"
+                      << std::endl;
+          };
+
+          log.step_progress_ = [](pp::logging const& log,
+                                  pp::step_info const&) {
+            std::clog << '\0' << static_cast<int>(log.total_progress() * 100)
+                      << '\0';
+          };
+
+          log.step_finished_ = [](pp::logging const& log,
+                                  pp::step_info const& step) {
+            std::clog << "Step " << (log.current_step() + 1) << "/"
+                      << log.step_count() << ": " << step.name()
+                      << ": Finished in " << static_cast<int>(step.duration_)
+                      << "ms" << std::endl;
+          };
+
+          auto const result = pp::create_routing_data(opt, log);
+          import_successful_ = result.successful();
+
+          if (import_successful_) {
+            write_ini(dir / "import.ini", state);
+          } else {
+            std::clog << '\0' << 'E' << result.error_msg_ << '\0';
+          }
+        }
+      });
+  collector->require("OSM", [](msg_ptr const& msg) {
+    return msg->get()->content_type() == MsgContent_OSMEvent;
+  });
+  if (use_dem_) {
+    collector->require("DEM", [](msg_ptr const& msg) {
+      return msg->get()->content_type() == MsgContent_DEMEvent;
+    });
+  }
+}
+
 void ppr::init(motis::module::registry& reg) {
   rtree_options rtree_opt = lock_rtrees_
                                 ? rtree_options::LOCK
@@ -259,7 +353,7 @@ void ppr::init(motis::module::registry& reg) {
                                                     : rtree_options::DEFAULT);
 
   try {
-    impl_ = std::make_unique<impl>(graph_file_, profile_files_,
+    impl_ = std::make_unique<impl>(graph_file(), profile_files_,
                                    edge_rtree_max_size_, area_rtree_max_size_,
                                    rtree_opt, verify_graph_);
     reg.register_op("/ppr/route",
@@ -269,6 +363,10 @@ void ppr::init(motis::module::registry& reg) {
   } catch (std::exception const& e) {
     LOG(logging::error) << "ppr module not initialized (" << e.what() << ")";
   }
+}
+
+std::string ppr::graph_file() const {
+  return (get_data_directory() / "ppr" / "routing_graph.ppr").generic_string();
 }
 
 }  // namespace motis::ppr

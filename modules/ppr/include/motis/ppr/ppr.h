@@ -16,10 +16,15 @@ struct ppr : public motis::module::module {
   ppr(ppr&&) = delete;
   ppr& operator=(ppr&&) = delete;
 
+  void import(motis::module::progress_listener&,
+              motis::module::registry& reg) override;
   void init(motis::module::registry&) override;
 
+  bool import_successful() const override { return import_successful_; }
+
 private:
-  std::string graph_file_{"routing-graph.ppr"};
+  std::string graph_file() const;
+
   std::vector<std::string> profile_files_;
   std::size_t edge_rtree_max_size_{1024UL * 1024 * 1024 * 3};
   std::size_t area_rtree_max_size_{1024UL * 1024 * 1024};
@@ -27,8 +32,11 @@ private:
   bool prefetch_rtrees_{true};
   bool verify_graph_{false};
 
+  bool use_dem_{false};
+
   struct impl;
   std::unique_ptr<impl> impl_;
+  bool import_successful_{false};
 };
 
 }  // namespace motis::ppr

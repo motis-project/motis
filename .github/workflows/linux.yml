@@ -121,7 +121,7 @@ jobs:
           strip build/motis
           strip build/path-prepare
           strip build/parking-prepare
-          strip build/deps/ppr/ppr-preprocess motis
+          strip build/deps/ppr/ppr-preprocess
 
       - name: Compile Web Interface
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'

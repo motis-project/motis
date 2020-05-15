@@ -11,6 +11,7 @@ target_link_libraries(motis-ppr
   ${Boost_PROGRAM_OPTIONS_LIBRARY}
   ${Boost_SYSTEM_LIBRARY}
   ppr-routing
+  ppr-preprocessing
   ppr-profiles
   motis-module
   motis-core
