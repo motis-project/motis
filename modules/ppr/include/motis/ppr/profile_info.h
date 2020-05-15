@@ -13,8 +13,8 @@ namespace motis::ppr {
 struct profile_info {
   ::ppr::routing::search_profile profile_;
   boost::filesystem::path file_path_;
-  cista::hash_t file_hash_;
-  std::size_t file_size_;
+  cista::hash_t file_hash_{};
+  std::size_t file_size_{};
 };
 
 }  // namespace motis::ppr
