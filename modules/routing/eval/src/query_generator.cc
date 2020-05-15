@@ -267,7 +267,7 @@ int main(int argc, char const** argv) {
   instance.import(module_settings{}, dataset_opt,
                   import_settings({dataset_opt.dataset_}));
 
-  auto const& sched = *instance.schedule_;
+  auto const& sched = instance.sched();
   search_interval_generator interval_gen(
       sched.schedule_begin_ + SCHEDULE_OFFSET_MINUTES * 60,
       sched.schedule_end_);
