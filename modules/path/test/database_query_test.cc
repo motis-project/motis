@@ -14,6 +14,7 @@
 
 #include "motis/path/path_database.h"
 #include "motis/path/path_database_query.h"
+#include "motis/path/polyline_format.h"
 #include "motis/path/prepare/db_builder.h"
 
 namespace m = motis;
@@ -142,11 +143,13 @@ struct path_database_query_test : public ::testing::Test {
                              mp::PathByTripIdBatchResponse const* resp,
                              std::vector<geo::latlng> const& p0) {
     auto const pred = [&](auto const* p) {
-      if (p->coordinates()->size() != p0.size() * 2) {
+      auto const decoded =
+          mp::decode_polyline(std::string_view{p->data(), p->size()});
+      if (decoded.size() != p0.size()) {
         return false;
       }
       for (auto i = 0ULL; i < p0.size(); ++i) {
-        if (!(p0[i] == get_nth_coord(p->coordinates(), i))) {
+        if (!(p0[i] == decoded[i])) {
           return false;
         }
       }
@@ -343,7 +346,7 @@ TEST_F(path_database_query_test, batch_base) {
 
   EXPECT_EQ(0, resp->extras()->size());
   ASSERT_EQ(4, resp->polylines()->size());
-  EXPECT_EQ(0, resp->polylines()->Get(0)->coordinates()->size());
+  EXPECT_EQ(0, resp->polylines()->Get(0)->size());
 
   auto const p1 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({0, 1}));
   auto const p2 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({3, 2}));
@@ -392,7 +395,7 @@ TEST_F(path_database_query_test, batch_empty) {
 
   EXPECT_EQ(0, resp->extras()->size());
   ASSERT_EQ(3, resp->polylines()->size());
-  EXPECT_EQ(0, resp->polylines()->Get(0)->coordinates()->size());
+  EXPECT_EQ(0, resp->polylines()->Get(0)->size());
 
   auto const p1 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({1, 0}));
   auto const p2 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({12, 12}));
@@ -443,7 +446,7 @@ TEST_F(path_database_query_test, batch_concat) {
 
   EXPECT_EQ(0, resp->extras()->size());
   ASSERT_EQ(5, resp->polylines()->size());
-  EXPECT_EQ(0, resp->polylines()->Get(0)->coordinates()->size());
+  EXPECT_EQ(0, resp->polylines()->Get(0)->size());
 
   auto const p0 =
       get_batch_path(__LINE__, resp, fixed_x_to_line_db({0, 1, 2, 3}));
@@ -492,7 +495,7 @@ TEST_F(path_database_query_test, batch_reverse_single) {
   auto const& [msg, resp] = get_batch(q);
 
   ASSERT_EQ(2, resp->polylines()->size());
-  EXPECT_EQ(0, resp->polylines()->Get(0)->coordinates()->size());
+  EXPECT_EQ(0, resp->polylines()->Get(0)->size());
   auto const p0 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({1, 0}));
 
   ASSERT_EQ(1, resp->segments()->size());
@@ -528,7 +531,7 @@ TEST_F(path_database_query_test, batch_partial_sequence) {
 
   EXPECT_EQ(0, resp->extras()->size());
   ASSERT_EQ(4, resp->polylines()->size());
-  EXPECT_EQ(0, resp->polylines()->Get(0)->coordinates()->size());
+  EXPECT_EQ(0, resp->polylines()->Get(0)->size());
   auto const p0 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({0, 1}));
   auto const p1 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({2, 3}));
   auto const p2 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({4, 5}));
@@ -569,7 +572,7 @@ TEST_F(path_database_query_test, batch_extra) {
   auto const& [msg, resp] = get_batch(q);
 
   ASSERT_EQ(3, resp->polylines()->size());
-  EXPECT_EQ(0, resp->polylines()->Get(0)->coordinates()->size());
+  EXPECT_EQ(0, resp->polylines()->Get(0)->size());
   auto const p0 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({10, 11}));
   auto const p1 = get_batch_path(__LINE__, resp, fixed_x_to_line_db({12, 13}));
 

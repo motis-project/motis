@@ -13,6 +13,7 @@
 #include "utl/verify.h"
 
 #include "motis/path/constants.h"
+#include "motis/path/polyline_builder.h"
 
 using namespace flatbuffers;
 
@@ -335,51 +336,6 @@ void path_database_query::execute_subquery(
   });
 }
 
-struct polyline_builder {
-  void append(bool is_fwd, resolvable_feature* rf) {
-    is_extra_ = is_extra_ || rf->is_extra_;
-
-    auto const& l = mpark::get<tiles::fixed_polyline>(rf->geometry_);
-    utl::verify(rf->feature_id_ == std::numeric_limits<uint64_t>::max() ||
-                    (l.size() == 1 && l.front().size() > 1),
-                "polyline_builder: invalid line geometry");
-
-    auto const append = [&](auto const& p) {
-      auto const ll = tiles::fixed_to_latlng(p);
-      if (coords_.empty() || coords_[coords_.size() - 2] != ll.lat_ ||
-          coords_[coords_.size() - 1] != ll.lng_) {
-        coords_.push_back(ll.lat_);
-        coords_.push_back(ll.lng_);
-      }
-    };
-
-    if (is_fwd) {
-      std::for_each(std::begin(l.front()), std::end(l.front()), append);
-    } else {
-      std::for_each(std::rbegin(l.front()), std::rend(l.front()), append);
-    }
-  }
-
-  [[nodiscard]] bool empty() const { return coords_.empty(); }
-  void clear() {
-    is_extra_ = false;
-    coords_.clear();
-  }
-
-  void finish() {
-    if (coords_.size() == 2) {  // was a fallback segment
-      coords_.push_back(coords_[0]);
-      coords_.push_back(coords_[1]);
-    }
-
-    utl::verify(coords_.size() >= 4,
-                "polyline_builder: invaild polyline size: {}", coords_.size());
-  }
-
-  bool is_extra_{false};
-  std::vector<double> coords_;
-};
-
 Offset<PathSeqResponse> path_database_query::write_sequence(
     module::message_creator& mc, path_database const& db, size_t const index) {
   auto const it =
@@ -403,7 +359,7 @@ Offset<PathSeqResponse> path_database_query::write_sequence(
                   [&mc](auto const& e) { return mc.CreateString(e->c_str()); });
   auto const classes = utl::to_vec(*ptr->classes());
 
-  polyline_builder pb;
+  double_polyline_builder pb;
   std::vector<Offset<Segment>> fbs_segments;
   for (auto const& [i, s_features] : utl::enumerate(it->segment_features_)) {
     pb.clear();
@@ -431,18 +387,17 @@ Offset<PathSeqResponse> path_database_query::write_sequence(
 Offset<PathByTripIdBatchResponse> path_database_query::write_batch(
     module::message_creator& mc) {
   std::vector<Offset<PolylineIndices>> fbs_segments;
-  std::vector<Offset<Polyline>> fbs_polylines;
+  std::vector<Offset<String>> fbs_polylines;
   std::vector<size_t> fbs_extras;
 
   // "disallow" id zero -> cant be marked reversed (-0 == 0)
-  fbs_polylines.emplace_back(
-      CreatePolyline(mc, mc.CreateVector(std::vector<double>{})));
+  fbs_polylines.emplace_back(mc.CreateString(std::string{}));
 
-  polyline_builder pb;
+  google_polyline_builder pb;
   auto const finish_polyline = [&] {
     pb.finish();
     auto const index = fbs_polylines.size();
-    fbs_polylines.emplace_back(CreatePolyline(mc, mc.CreateVector(pb.coords_)));
+    fbs_polylines.emplace_back(mc.CreateString(pb.enc_.buf_));
     if (pb.is_extra_) {
       fbs_extras.push_back(index);
     }
