@@ -28,6 +28,7 @@ void path_database_query::add_extra(std::vector<geo::polyline> extra) {
   for (auto const& line : extra) {
     auto rf = std::make_unique<resolvable_feature>();
     rf->is_resolved_ = true;
+    rf->is_extra_ = true;
     rf->fwd_use_count_ = 1;
 
     tiles::fixed_polyline polyline;
@@ -336,6 +337,8 @@ void path_database_query::execute_subquery(
 
 struct polyline_builder {
   void append(bool is_fwd, resolvable_feature* rf) {
+    is_extra_ = is_extra_ || rf->is_extra_;
+
     auto const& l = mpark::get<tiles::fixed_polyline>(rf->geometry_);
     utl::verify(rf->feature_id_ == std::numeric_limits<uint64_t>::max() ||
                     (l.size() == 1 && l.front().size() > 1),
@@ -358,7 +361,10 @@ struct polyline_builder {
   }
 
   [[nodiscard]] bool empty() const { return coords_.empty(); }
-  void clear() { coords_.clear(); }
+  void clear() {
+    is_extra_ = false;
+    coords_.clear();
+  }
 
   void finish() {
     if (coords_.size() == 2) {  // was a fallback segment
@@ -370,6 +376,7 @@ struct polyline_builder {
                 "polyline_builder: invaild polyline size: {}", coords_.size());
   }
 
+  bool is_extra_{false};
   std::vector<double> coords_;
 };
 
@@ -425,6 +432,7 @@ Offset<PathByTripIdBatchResponse> path_database_query::write_batch(
     module::message_creator& mc) {
   std::vector<Offset<PolylineIndices>> fbs_segments;
   std::vector<Offset<Polyline>> fbs_polylines;
+  std::vector<size_t> fbs_extras;
 
   // "disallow" id zero -> cant be marked reversed (-0 == 0)
   fbs_polylines.emplace_back(
@@ -435,6 +443,9 @@ Offset<PathByTripIdBatchResponse> path_database_query::write_batch(
     pb.finish();
     auto const index = fbs_polylines.size();
     fbs_polylines.emplace_back(CreatePolyline(mc, mc.CreateVector(pb.coords_)));
+    if (pb.is_extra_) {
+      fbs_extras.push_back(index);
+    }
     pb.clear();
     return index;
   };
@@ -493,7 +504,8 @@ Offset<PathByTripIdBatchResponse> path_database_query::write_batch(
   }
 
   return CreatePathByTripIdBatchResponse(mc, mc.CreateVector(fbs_segments),
-                                         mc.CreateVector(fbs_polylines));
+                                         mc.CreateVector(fbs_polylines),
+                                         mc.CreateVector(fbs_extras));
 }
 
 }  // namespace motis::path

@@ -31,6 +31,7 @@ struct path_database_query {
     uint32_t min_clasz_{std::numeric_limits<uint32_t>::max()};
     bool is_resolved_{false};
     bool is_reversed_{false};
+    bool is_extra_{false};
     tiles::fixed_geometry geometry_;
   };
 
