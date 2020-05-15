@@ -181,13 +181,12 @@ TEST_F(path_database_query_test, simple) {
   builder.reset();
 
   auto db = mp::make_path_database(db_fname(), true);
-  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
 
   mp::path_database_query q;
   q.add_sequence(0UL);
   EXPECT_EQ(1, q.sequences_.size());
 
-  q.execute(*db, render_ctx);
+  q.execute(*db);
   EXPECT_EQ(1, q.subqueries_.size());
 
   auto const& [msg, resp] = get_response(*db, q, 0UL);
@@ -214,13 +213,12 @@ TEST_F(path_database_query_test, two_features_in_segment) {
   builder.reset();
 
   auto db = mp::make_path_database(db_fname(), true);
-  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
 
   mp::path_database_query q;
   q.add_sequence(0UL);
   EXPECT_EQ(1, q.sequences_.size());
 
-  q.execute(*db, render_ctx);
+  q.execute(*db);
   EXPECT_EQ(1, q.subqueries_.size());
 
   auto const& [msg, resp] = get_response(*db, q, 0UL);
@@ -250,13 +248,12 @@ TEST_F(path_database_query_test, two_segments) {
   builder.reset();
 
   auto db = mp::make_path_database(db_fname(), true);
-  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
 
   mp::path_database_query q;
   q.add_sequence(0UL);
   EXPECT_EQ(1, q.sequences_.size());
 
-  q.execute(*db, render_ctx);
+  q.execute(*db);
   EXPECT_EQ(1, q.subqueries_.size());
 
   auto const& [msg, resp] = get_response(*db, q, 0UL);
@@ -293,13 +290,12 @@ TEST_F(path_database_query_test, empty_segments) {
   builder.reset();
 
   auto db = mp::make_path_database(db_fname(), true);
-  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
 
   mp::path_database_query q;
   q.add_sequence(0UL);
   EXPECT_EQ(1, q.sequences_.size());
 
-  q.execute(*db, render_ctx);
+  q.execute(*db);
   EXPECT_EQ(1, q.subqueries_.size());
 
   auto const& [msg, resp] = get_response(*db, q, 0UL);
@@ -333,15 +329,14 @@ TEST_F(path_database_query_test, batch_base) {
   builder.reset();
 
   auto db = mp::make_path_database(db_fname(), true);
-  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
 
-  mp::path_database_query q;
+  mp::path_database_query q{20};
   q.add_sequence(0UL);
   q.add_sequence(1UL);
   q.add_sequence(2UL);
   EXPECT_EQ(3, q.sequences_.size());
 
-  q.execute(*db, render_ctx);
+  q.execute(*db);
   EXPECT_EQ(1, q.subqueries_.size());
 
   auto const& [msg, resp] = get_batch(q);
@@ -384,13 +379,12 @@ TEST_F(path_database_query_test, batch_empty) {
   builder.reset();
 
   auto db = mp::make_path_database(db_fname(), true);
-  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
 
   mp::path_database_query q;
   q.add_sequence(0UL);
   EXPECT_EQ(1, q.sequences_.size());
 
-  q.execute(*db, render_ctx);
+  q.execute(*db);
   EXPECT_EQ(1, q.subqueries_.size());
 
   auto const& [msg, resp] = get_batch(q);
@@ -432,7 +426,6 @@ TEST_F(path_database_query_test, batch_concat) {
   builder.reset();
 
   auto db = mp::make_path_database(db_fname(), true);
-  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
 
   mp::path_database_query q;
   q.add_sequence(0UL);
@@ -441,7 +434,7 @@ TEST_F(path_database_query_test, batch_concat) {
   q.add_sequence(3UL);
   EXPECT_EQ(4, q.sequences_.size());
 
-  q.execute(*db, render_ctx);
+  q.execute(*db);
   EXPECT_EQ(1, q.subqueries_.size());
 
   auto const& [msg, resp] = get_batch(q);
@@ -485,13 +478,12 @@ TEST_F(path_database_query_test, batch_reverse_single) {
   builder.reset();
 
   auto db = mp::make_path_database(db_fname(), true);
-  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
 
   mp::path_database_query q;
   q.add_sequence(0UL);
   EXPECT_EQ(1, q.sequences_.size());
 
-  q.execute(*db, render_ctx);
+  q.execute(*db);
   EXPECT_EQ(1, q.subqueries_.size());
 
   auto const& [msg, resp] = get_batch(q);
@@ -519,14 +511,13 @@ TEST_F(path_database_query_test, batch_partial_sequence) {
   builder.reset();
 
   auto db = mp::make_path_database(db_fname(), true);
-  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
 
   mp::path_database_query q;
   q.add_sequence(0UL, {1, 2});
   q.add_sequence(0UL, {0});
   EXPECT_EQ(2, q.sequences_.size());
 
-  q.execute(*db, render_ctx);
+  q.execute(*db);
   EXPECT_EQ(1, q.subqueries_.size());
 
   auto const& [msg, resp] = get_batch(q);
@@ -561,14 +552,13 @@ TEST_F(path_database_query_test, batch_extra) {
   builder.reset();
 
   auto db = mp::make_path_database(db_fname(), true);
-  auto const render_ctx = tiles::make_render_ctx(*db->db_handle_);
 
   mp::path_database_query q;
   q.add_extra({{fixed_x_to_latlng(10), fixed_x_to_latlng(11)},
                {fixed_x_to_latlng(12), fixed_x_to_latlng(13)}});
   EXPECT_EQ(1, q.sequences_.size());
 
-  q.execute(*db, render_ctx);
+  q.execute(*db);
   EXPECT_EQ(0, q.subqueries_.size());
 
   auto const& [msg, resp] = get_batch(q);

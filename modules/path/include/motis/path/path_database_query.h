@@ -56,11 +56,10 @@ struct path_database_query {
   void add_sequence(size_t index, std::vector<size_t> segment_indices = {});
   void add_extra(std::vector<geo::polyline>);
 
-  void execute(path_database const&, tiles::render_ctx const&);
+  void execute(path_database const&);
   void resolve_sequences_and_build_subqueries(lmdb::cursor&);
-  void execute_subquery(tiles::tile_index_t, subquery&, size_t layer_idx,  //
-                        lmdb::cursor&, tiles::pack_handle const&,
-                        tiles::render_ctx const&);
+  void execute_subquery(tiles::tile_index_t, subquery&, lmdb::cursor&,
+                        tiles::pack_handle const&);
 
   flatbuffers::Offset<PathSeqResponse> write_sequence(module::message_creator&,
                                                       path_database const&,
@@ -76,13 +75,11 @@ struct path_database_query {
   std::vector<std::unique_ptr<resolvable_feature>> extras_;
 };
 
-inline module::msg_ptr get_response(path_database const& db,
-                                    tiles::render_ctx const& render_ctx,
-                                    size_t const index,
+inline module::msg_ptr get_response(path_database const& db, size_t const index,
                                     int const zoom_level = -1) {
   path_database_query query{zoom_level};
   query.add_sequence(index);
-  query.execute(db, render_ctx);
+  query.execute(db);
 
   module::message_creator mc;
   mc.create_and_finish(MsgContent_PathSeqResponse,

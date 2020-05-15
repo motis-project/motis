@@ -3,6 +3,7 @@
 #include "tiles/db/tile_index.h"
 #include "tiles/fixed/convert.h"
 #include "tiles/fixed/fixed_geometry.h"
+#include "tiles/fixed/io/deserialize.h"
 #include "tiles/get_tile.h"
 
 #include "utl/enumerate.h"
@@ -16,6 +17,7 @@
 #include "motis/path/polyline_builder.h"
 
 using namespace flatbuffers;
+namespace pz = protozero;
 
 namespace motis::path {
 
@@ -47,8 +49,7 @@ void path_database_query::add_extra(std::vector<geo::polyline> extra) {
   sequences_.emplace_back(std::move(rs));
 }
 
-void path_database_query::execute(path_database const& db,
-                                  tiles::render_ctx const& render_ctx) {
+void path_database_query::execute(path_database const& db) {
   auto txn = db.db_handle_->make_txn();
   {
     auto dbi = path_database::data_dbi(txn);
@@ -56,18 +57,10 @@ void path_database_query::execute(path_database const& db,
     resolve_sequences_and_build_subqueries(cursor);
   }
   {
-    auto const layer_it = std::find(begin(render_ctx.layer_names_),
-                                    end(render_ctx.layer_names_), "path");
-    utl::verify(layer_it != end(render_ctx.layer_names_),
-                "path_database_query::missing path layer");
-    auto const layer_idx =
-        std::distance(begin(render_ctx.layer_names_), layer_it);
-
     auto dbi = db.db_handle_->features_dbi(txn);
     auto cursor = lmdb::cursor{txn, dbi};
     for (auto& [hint, subquery] : subqueries_) {
-      execute_subquery(hint, subquery, layer_idx, cursor, *db.pack_handle_,
-                       render_ctx);
+      execute_subquery(hint, subquery, cursor, *db.pack_handle_);
     }
   }
 }
@@ -292,9 +285,8 @@ void unpack_features(
 }
 
 void path_database_query::execute_subquery(
-    tiles::tile_index_t const hint, subquery& q, size_t const layer_idx,
-    lmdb::cursor& cursor, tiles::pack_handle const& pack_handle,
-    tiles::render_ctx const& render_ctx) {
+    tiles::tile_index_t const hint, subquery& q, lmdb::cursor& cursor,
+    tiles::pack_handle const& pack_handle) {
   std::sort(begin(q.mem_), end(q.mem_), [](auto const& lhs, auto const& rhs) {
     return std::tie(lhs->min_clasz_, lhs->feature_id_) <
            std::tie(rhs->min_clasz_, rhs->feature_id_);
@@ -317,20 +309,28 @@ void path_database_query::execute_subquery(
   tiles::pack_records_foreach(cursor, tile, [&](auto, auto pack_record) {
     unpack_features(
         pack_handle.get(pack_record), query_clasz_bounds,
-        [&](resolvable_feature* rf, std::string_view const feature_str) {
-          // TODO deserialize _only geometry_
-          auto const feature = deserialize_feature(
-              feature_str, render_ctx.metadata_decoder_,
-              tiles::fixed_box{
-                  {tiles::kInvalidBoxHint, tiles::kInvalidBoxHint},
-                  {tiles::kInvalidBoxHint, tiles::kInvalidBoxHint}},
-              tiles::kInvalidZoomLevel);
-          // zoom_level_ < 0 ? tiles::kInvalidZoomLevel : zoom_level_);
-
-          utl::verify(feature.has_value(), "deserialize failed");
-          utl::verify(feature->layer_ == layer_idx, "wrong layer");
-
-          rf->geometry_ = std::move(feature->geometry_);
+        [&](resolvable_feature* rf, std::string_view const str) {
+          std::vector<std::string_view> simplify_masks;
+          pz::pbf_message<tiles::tags::Feature> msg{str.data(), str.size()};
+          while (msg.next()) {
+            switch (msg.tag()) {
+              case tiles::tags::Feature::repeated_string_simplify_masks:
+                simplify_masks.emplace_back(msg.get_view());
+                break;
+              case tiles::tags::Feature::required_FixedGeometry_geometry:
+                if (zoom_level_ > 0 && !simplify_masks.empty()) {
+                  rf->geometry_ = tiles::deserialize(
+                      msg.get_view(), std::move(simplify_masks), zoom_level_);
+                } else {
+                  rf->geometry_ = tiles::deserialize(msg.get_view());
+                }
+                break;
+              default: msg.skip();
+            }
+          }
+          utl::verify(
+              mpark::holds_alternative<tiles::fixed_polyline>(rf->geometry_),
+              "deserialize failed");
           rf->is_resolved_ = true;
         });
   });

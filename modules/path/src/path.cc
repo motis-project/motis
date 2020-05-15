@@ -95,7 +95,7 @@ struct path::data {
       message_creator& mc, size_t index, int const zoom_level = -1) const {
     path_database_query q{zoom_level};
     q.add_sequence(index);
-    q.execute(*db_, render_ctx_);
+    q.execute(*db_);
     return q.write_sequence(mc, *db_, index);
   }
 
@@ -295,7 +295,7 @@ msg_ptr path::by_trip_id_batch(msg_ptr const& msg) const {
     }
   }
 
-  q.execute(*data_->db_, data_->render_ctx_);
+  q.execute(*data_->db_);
 
   message_creator mc;
   mc.create_and_finish(MsgContent_PathByTripIdBatchResponse,
