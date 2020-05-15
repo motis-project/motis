@@ -27,7 +27,7 @@ namespace fs = boost::filesystem;
 
 namespace motis::bootstrap {
 
-motis_instance::motis_instance() : controller(build_modules()) {
+motis_instance::motis_instance() : controller{build_modules()} {
   for (auto& m : modules_) {
     m->set_shared_data(&shared_data_);
   }
@@ -128,9 +128,7 @@ void motis_instance::import(module_settings const& module_opt,
 
   registry_.reset();
 
-  if (!shared_data_.includes(SCHEDULE_DATA_KEY)) {
-    throw std::runtime_error{"schedule not initialized"};
-  }
+  utl::verify(shared_data_.includes(SCHEDULE_DATA_KEY), "schedule not loaded");
 }
 
 void motis_instance::init_modules(module_settings const& module_opt,

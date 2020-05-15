@@ -17,6 +17,7 @@ type_erased& type_erased::operator=(type_erased&& o) noexcept {
 type_erased::~type_erased() {
   if (el_ != nullptr) {
     dtor_(el_);
+    el_ = nullptr;
   }
 }
 

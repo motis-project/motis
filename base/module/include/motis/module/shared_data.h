@@ -2,6 +2,8 @@
 
 #include <any>
 
+#include "utl/verify.h"
+
 #include "motis/hash_map.h"
 #include "motis/string.h"
 
@@ -50,6 +52,7 @@ struct shared_data {
 
   template <typename T>
   void emplace_data(std::string_view const name, T t) {
+    utl::verify(!includes(name), "{} already in shared data", name);
     data_.emplace(name, std::forward<T>(t));
   }
 
