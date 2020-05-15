@@ -37,8 +37,8 @@ void event_collector::update_status(motis::import::Status const status,
   ctx::await_all(motis_publish(make_msg(fbb)));
 }
 
-void event_collector::require(std::string const& name,
-                              std::function<bool(msg_ptr)> matcher) {
+event_collector* event_collector::require(
+    std::string const& name, std::function<bool(msg_ptr)> matcher) {
   auto const matcher_it =
       matchers_.emplace(dependency_matcher{name, std::move(matcher)});
   waiting_for_.emplace(name);
@@ -93,6 +93,7 @@ void event_collector::require(std::string const& name,
 
         return nullptr;
       });
+  return this;
 }
 
 }  // namespace motis::module

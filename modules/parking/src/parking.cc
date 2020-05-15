@@ -372,7 +372,7 @@ std::string parking::stations_per_parking_file() const {
 }
 
 void parking::import(progress_listener& progress_listener, registry& reg) {
-  auto collector = std::make_shared<event_collector>(
+  std::make_shared<event_collector>(
       progress_listener, get_data_directory().generic_string(), "parking", reg,
       [this](std::map<std::string, msg_ptr> const& dependencies) {
         using namespace ::motis::parking::prepare;
@@ -425,16 +425,18 @@ void parking::import(progress_listener& progress_listener, registry& reg) {
         }
 
         import_successful_ = true;
+      })
+      ->require("OSM",
+                [](msg_ptr const& msg) {
+                  return msg->get()->content_type() == MsgContent_OSMEvent;
+                })
+      ->require("SCHEDULE",
+                [](msg_ptr const& msg) {
+                  return msg->get()->content_type() == MsgContent_ScheduleEvent;
+                })
+      ->require("PPR", [](msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_PPREvent;
       });
-  collector->require("OSM", [](msg_ptr const& msg) {
-    return msg->get()->content_type() == MsgContent_OSMEvent;
-  });
-  collector->require("SCHEDULE", [](msg_ptr const& msg) {
-    return msg->get()->content_type() == MsgContent_ScheduleEvent;
-  });
-  collector->require("PPR", [](msg_ptr const& msg) {
-    return msg->get()->content_type() == MsgContent_PPREvent;
-  });
 }
 
 void parking::init(motis::module::registry& reg) {
