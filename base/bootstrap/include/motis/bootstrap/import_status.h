@@ -17,6 +17,7 @@ struct state {
   import::Status status_{import::Status::Status_WAITING};
   int progress_{0U};
   std::string error_;
+  std::string current_task_;
 };
 
 struct import_status : public module::progress_listener {
@@ -27,6 +28,8 @@ struct import_status : public module::progress_listener {
                        unsigned progress) override;
   void report_error(std::string const& task_name,
                     std::string const& what) override;
+  void report_current_task(std::string const& task_name,
+                           std::string const& status) override;
 
   bool silent_{false};
 

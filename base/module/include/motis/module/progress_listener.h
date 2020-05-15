@@ -5,10 +5,11 @@
 namespace motis::module {
 
 struct progress_listener {
-  virtual void update_progress(std::string const& task_name,
-                               unsigned progress) = 0;
-  virtual void report_error(std::string const& task_name,
+  virtual void update_progress(std::string const& name, unsigned progress) = 0;
+  virtual void report_error(std::string const& name,
                             std::string const& what) = 0;
+  virtual void report_current_task(std::string const& name,
+                                   std::string const& task) = 0;
 };
 
 }  // namespace motis::module

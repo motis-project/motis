@@ -7,5 +7,6 @@ table StatusUpdate {
   waiting_for: [string];
   status: Status;
   error: string;
+  current_task: string;
   progress: ubyte;
 }
