@@ -36,7 +36,8 @@ struct event_collector : std::enable_shared_from_this<event_collector> {
   event_collector(progress_listener&, std::string data_dir, std::string name,
                   registry& reg, import_op_t op);
 
-  void require(std::string const& name, std::function<bool(msg_ptr)>);
+  event_collector* require(std::string const& name,
+                           std::function<bool(msg_ptr)>);
 
 private:
   void update_status(motis::import::Status, uint8_t progress = 0U);

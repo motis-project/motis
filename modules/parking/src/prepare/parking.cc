@@ -102,14 +102,14 @@ bool extract_parkings(std::string const& osm_file,
   osmium::area::MultipolygonManager<osmium::area::Assembler> mp_manager{
       assembler_config};
 
-  std::cout << "Pass 1..." << std::endl;
+  std::clog << "Extract Parkings: Pass 1..." << std::endl;
   osmium::relations::read_relations(input_file, mp_manager);
 
   index_type index;
   location_handler_type location_handler{index};
   parking_handler data_handler{parking_file, parkings};
 
-  std::cout << "Pass 2..." << std::endl;
+  std::clog << "Extract Parkings: Pass 2..." << std::endl;
   osmium::io::Reader reader{input_file, osmium::io::read_meta::no};
   osmium::apply(reader, location_handler, data_handler,
                 mp_manager.handler(

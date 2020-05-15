@@ -1,0 +1,16 @@
+namespace motis.import;
+
+table PPRProfile {
+  name: string;
+  path: string;
+  hash: ulong;
+  size: ulong;
+}
+
+table PPREvent {
+  graph_path: string;
+  graph_hash: ulong;
+  graph_size: ulong;
+  profiles: [PPRProfile];
+  profiles_hash: ulong;
+}

@@ -11,6 +11,7 @@ include "import/FileEvent.fbs";
 include "import/OSMEvent.fbs";
 include "import/DEMEvent.fbs";
 include "import/ScheduleEvent.fbs";
+include "import/PPREvent.fbs";
 include "intermodal/IntermodalRoutingRequest.fbs";
 include "lookup/LookupGeoStationIdRequest.fbs";
 include "lookup/LookupGeoStationRequest.fbs";
@@ -207,7 +208,8 @@ union MsgContent {
   motis.import.FileEvent,
   motis.import.OSMEvent,
   motis.import.ScheduleEvent,
-  motis.import.DEMEvent
+  motis.import.DEMEvent,
+  motis.import.PPREvent
 }
 
 // Destination Examples:
