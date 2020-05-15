@@ -9,11 +9,7 @@
 #include "motis/module/message.h"
 #include "motis/module/receiver.h"
 
-namespace motis {
-
-struct schedule;
-
-namespace module {
+namespace motis::module {
 
 using void_op_fn_t = std::function<void()>;
 using op_fn_t = std::function<msg_ptr(msg_ptr const&)>;
@@ -47,7 +43,6 @@ struct registry {
 
   void reset();
 
-  schedule* sched_{nullptr};
   std::map<std::string, op> operations_;
   std::map<std::string, std::vector<op>> topic_subscriptions_;
 
@@ -55,5 +50,4 @@ struct registry {
   std::map<std::string, remote_op_fn_t> remote_operations_;
 };
 
-}  // namespace module
-}  // namespace motis
+}  // namespace motis::module

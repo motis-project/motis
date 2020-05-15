@@ -14,6 +14,7 @@
 #include "ppr/serialization/reader.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/schedule/time.h"
 #include "motis/ppr/error.h"
 #include "motis/ppr/profiles.h"
 

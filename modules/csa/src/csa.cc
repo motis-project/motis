@@ -28,7 +28,7 @@ csa::~csa() = default;
 
 void csa::init(motis::module::registry& reg) {
   timetable_ =
-      build_csa_timetable(*reg.sched_, bridge_zero_duration_connections_,
+      build_csa_timetable(get_sched(), bridge_zero_duration_connections_,
                           add_footpath_connections_);
   reg.register_op("/csa", [&](msg_ptr const& msg) {
 #ifdef MOTIS_AVX

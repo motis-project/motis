@@ -12,7 +12,7 @@
 
 namespace motis {
 
-trip const* get_trip(schedule& sched, std::string const& trip_id,
+trip const* get_trip(schedule const& sched, std::string const& trip_id,
                      std::time_t const date) {
   if (auto it = sched.gtfs_trip_ids_.find({trip_id, date});
       it == end(sched.gtfs_trip_ids_) || it->first.trip_id_ != trip_id ||

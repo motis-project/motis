@@ -3,6 +3,7 @@
 #include "boost/filesystem.hpp"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/schedule/schedule_data_key.h"
 #include "motis/module/clog_redirect.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/loader/loader.h"
@@ -11,8 +12,7 @@ namespace fs = boost::filesystem;
 
 namespace motis::bootstrap {
 
-module::msg_ptr import_schedule(module_settings const& module_opt,
-                                loader::loader_options const& dataset_opt,
+module::msg_ptr import_schedule(loader::loader_options const& dataset_opt,
                                 module::msg_ptr const& msg,
                                 motis_instance& instance) {
   if (msg->get()->content_type() != MsgContent_FileEvent) {
@@ -31,7 +31,7 @@ module::msg_ptr import_schedule(module_settings const& module_opt,
   cista::memory_holder memory;
   auto sched = loader::load_schedule(dataset_opt_cpy, memory);
   instance.shared_data_.emplace_data(
-      "schedule", schedule_data{std::move(memory), std::move(sched)});
+      SCHEDULE_DATA_KEY, schedule_data{std::move(memory), std::move(sched)});
 
   module::message_creator fbb;
   fbb.create_and_finish(
@@ -39,7 +39,7 @@ module::msg_ptr import_schedule(module_settings const& module_opt,
       import::CreateScheduleEvent(
           fbb,
           fbb.CreateString((fs::path{path} / "schedule.raw").generic_string()),
-          instance.sched_->hash_)
+          instance.sched().hash_)
           .Union(),
       "/import", DestinationType_Topic);
   ctx::await_all(motis_publish(make_msg(fbb)));

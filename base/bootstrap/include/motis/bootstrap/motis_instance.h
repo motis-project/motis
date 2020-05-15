@@ -6,7 +6,6 @@
 #include <thread>
 #include <vector>
 
-
 #include "boost/asio/io_service.hpp"
 
 #include "motis/core/schedule/schedule.h"
@@ -18,7 +17,11 @@
 #include "motis/bootstrap/module_settings.h"
 #include "motis/loader/loader_options.h"
 
-namespace motis::bootstrap {
+namespace motis {
+
+struct sched;
+
+namespace bootstrap {
 
 struct motis_instance : public motis::module::controller {
   motis_instance();
@@ -39,6 +42,7 @@ struct motis_instance : public motis::module::controller {
 
   std::vector<module::module*> modules() const;
   std::vector<std::string> module_names() const;
+  schedule const& sched() const;
 
   void import(module_settings const&, loader::loader_options const&,
               import_settings const&, bool silent = false);
@@ -59,12 +63,10 @@ struct motis_instance : public motis::module::controller {
   void publish(module::msg_ptr const&,
                unsigned num_threads = std::thread::hardware_concurrency());
 
-  module::shared_data shared_data_;
   std::vector<std::shared_ptr<motis::module::remote>> remotes_;
   std::function<void()> on_remotes_registered_;
   unsigned connected_remotes_{0};
 };
 
-using motis_instance_ptr = std::unique_ptr<motis_instance>;
-
-}  // namespace motis::bootstrap
+}  // namespace bootstrap
+}  // namespace motis

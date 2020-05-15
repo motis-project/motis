@@ -14,7 +14,11 @@
 #include "motis/module/registry.h"
 #include "motis/module/shared_data.h"
 
-namespace motis::module {
+namespace motis {
+
+struct schedule;
+
+namespace module {
 
 struct module : public conf::configuration {
   explicit module(std::string name = "", std::string prefix = "")
@@ -40,8 +44,15 @@ struct module : public conf::configuration {
   virtual bool import_successful() const { return true; }
 
 protected:
+  schedule const& get_sched() const;
+
   template <typename T>
-  T& get_shared_data(std::string_view const s) {
+  T const& get_shared_data(std::string_view const s) const {
+    return shared_data_->get<T>(s);
+  }
+
+  template <typename T>
+  T& get_shared_data_mutable(std::string_view const s) {
     return shared_data_->get<T>(s);
   }
 
@@ -52,4 +63,5 @@ private:
   shared_data* shared_data_{nullptr};
 };
 
-}  // namespace motis::module
+}  // namespace module
+}  // namespace motis

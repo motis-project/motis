@@ -98,7 +98,7 @@ void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
   }
 
   enqueue(
-      data != nullptr ? *data : ctx_data{access, this, registry_.sched_},
+      data != nullptr ? *data : ctx_data{access, this, &shared_data_},
       [this, id, cb, msg]() {
         try {
           if (auto const op = registry_.get_operation(id.name)) {

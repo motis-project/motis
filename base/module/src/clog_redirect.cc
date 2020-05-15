@@ -1,5 +1,7 @@
 #include "motis/module/clog_redirect.h"
 
+#include <iostream>
+
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/message.h"
 

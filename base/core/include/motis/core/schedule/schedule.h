@@ -27,6 +27,13 @@
 namespace motis {
 
 struct schedule {
+  schedule() = default;
+  schedule(schedule&&) = delete;
+  schedule(schedule const&) = delete;
+  schedule& operator=(schedule&&) = delete;
+  schedule& operator=(schedule const&) = delete;
+  ~schedule() = default;
+
   std::time_t first_event_schedule_time_{std::numeric_limits<time_t>::max()};
   std::time_t last_event_schedule_time_{std::numeric_limits<time_t>::min()};
   std::time_t schedule_begin_{0}, schedule_end_{0};
@@ -78,6 +85,8 @@ struct schedule {
 using schedule_ptr = mcd::unique_ptr<schedule>;
 
 struct schedule_data {
+  schedule_data(cista::memory_holder&& buf, schedule_ptr&& sched)
+      : schedule_buf_{std::move(buf)}, schedule_{std::move(sched)} {}
   cista::memory_holder schedule_buf_;
   schedule_ptr schedule_;
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -37,7 +38,7 @@ struct motis_instance_test : public ::testing::Test {
   static std::function<module::msg_ptr(module::msg_ptr const&)> msg_sink(
       std::vector<module::msg_ptr>*);
 
-  schedule const& sched() const { return *instance_->sched_; }
+  schedule const& sched() const { return instance_->sched(); }
 
   std::time_t unix_time(int hhmm, int day_idx = 0,
                         int timezone_offset = DEFAULT_TIMEZONE_OFFSET) const {
@@ -55,7 +56,7 @@ struct motis_instance_test : public ::testing::Test {
     return *reinterpret_cast<Module*>(it->get());
   }
 
-  bootstrap::motis_instance_ptr instance_;
+  std::unique_ptr<bootstrap::motis_instance> instance_;
 };
 
 }  // namespace motis::test

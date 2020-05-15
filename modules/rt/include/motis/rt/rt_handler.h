@@ -7,6 +7,7 @@
 
 #include "motis/module/message.h"
 
+#include "motis/core/schedule/schedule.h"
 #include "motis/rt/delay_propagator.h"
 #include "motis/rt/reroute.h"
 #include "motis/rt/statistics.h"
