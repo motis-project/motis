@@ -17,11 +17,7 @@
 #include "motis/bootstrap/module_settings.h"
 #include "motis/loader/loader_options.h"
 
-namespace motis {
-
-struct sched;
-
-namespace bootstrap {
+namespace motis::bootstrap {
 
 struct motis_instance : public motis::module::controller {
   motis_instance();
@@ -68,5 +64,4 @@ struct motis_instance : public motis::module::controller {
   unsigned connected_remotes_{0};
 };
 
-}  // namespace bootstrap
-}  // namespace motis
+}  // namespace motis::bootstrap
