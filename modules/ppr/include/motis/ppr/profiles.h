@@ -7,9 +7,12 @@
 
 #include "boost/filesystem.hpp"
 
+#include "cista/hash.h"
+
 #include "ppr/profiles/parse_search_profile.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/ppr/profile_info.h"
 
 namespace motis::ppr {
 
@@ -33,7 +36,9 @@ inline void read_profile_file(boost::filesystem::path const& profile_file,
   }
   auto const name = profile_file.stem().string();
   auto const content = read_file(profile_file.string());
-  profiles[name] = ::ppr::profiles::parse_search_profile(content);
+  profiles[name] =
+      profile_info{::ppr::profiles::parse_search_profile(content), profile_file,
+                   cista::hash(content), content.size()};
   LOG(motis::logging::info) << "ppr profile loaded: " << name;
 }
 

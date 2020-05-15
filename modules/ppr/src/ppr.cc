@@ -6,6 +6,9 @@
 
 #include "boost/filesystem.hpp"
 
+#include "cista/hash.h"
+#include "cista/mmap.h"
+
 #include "utl/to_vec.h"
 
 #include "ppr/common/verify.h"
@@ -18,6 +21,7 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/time.h"
+#include "motis/module/context/motis_publish.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
@@ -126,10 +130,11 @@ Offset<Routes> write_routes(FlatBufferBuilder& fbb,
 
 struct ppr::impl {
   explicit impl(std::string const& rg_path,
-                std::vector<std::string> const& profile_files,
+                std::map<std::string, profile_info>& profiles,
                 std::size_t edge_rtree_max_size,
                 std::size_t area_rtree_max_size, rtree_options rtree_opt,
-                bool verify_routing_graph) {
+                bool verify_routing_graph)
+      : profiles_{profiles} {
     {
       scoped_timer timer("loading ppr routing graph");
       read_routing_graph(rg_, rg_path);
@@ -145,7 +150,6 @@ struct ppr::impl {
         throw std::runtime_error("invalid ppr routing graph");
       }
     }
-    read_profile_files(profile_files, profiles_);
   }
 
   msg_ptr route(msg_ptr const& msg) {
@@ -162,7 +166,7 @@ struct ppr::impl {
   msg_ptr get_profiles() {
     message_creator fbb;
     auto profiles = utl::to_vec(profiles_, [&](auto const& e) {
-      auto const& p = e.second;
+      auto const& p = e.second.profile_;
       return CreateFootRoutingProfileInfo(fbb, fbb.CreateString(e.first),
                                           p.walking_speed_);
     });
@@ -244,7 +248,7 @@ private:
     auto const name = opt->profile()->str();
     auto const it = profiles_.find(name);
     if (it != end(profiles_)) {
-      profile = it->second;
+      profile = it->second.profile_;
     } else if (!name.empty() && name != "default") {
       throw std::system_error(error::profile_not_available);
     }
@@ -253,7 +257,7 @@ private:
   }
 
   routing_graph rg_;
-  std::map<std::string, ::ppr::routing::search_profile> profiles_;
+  std::map<std::string, profile_info>& profiles_;
 };
 
 ppr::ppr() : module("Foot Routing", "ppr") {
@@ -334,6 +338,47 @@ void ppr::import(progress_listener& progress_listener, registry& reg) {
           } else {
             std::clog << '\0' << 'E' << result.error_msg_ << '\0';
           }
+        } else {
+          import_successful_ = true;
+        }
+
+        if (import_successful_) {
+          std::clog << '\0' << 100 << '\0';
+          auto graph_hash = cista::hash_t{};
+          auto graph_size = std::size_t{};
+          {
+            cista::mmap m{graph_file().c_str(), cista::mmap::protection::READ};
+            graph_hash = cista::hash(std::string_view{
+                reinterpret_cast<char const*>(m.begin()),
+                std::min(static_cast<std::size_t>(50 * 1024 * 1024),
+                         m.size())});
+            graph_size = m.size();
+          }
+
+          read_profile_files(profile_files_, profiles_);
+          auto profiles_hash = cista::BASE_HASH;
+          for (auto const& p : profiles_) {
+            profiles_hash =
+                cista::hash_combine(profiles_hash, p.second.file_hash_);
+          }
+
+          message_creator fbb;
+          fbb.create_and_finish(
+              MsgContent_PPREvent,
+              motis::import::CreatePPREvent(
+                  fbb, fbb.CreateString(graph_file()), graph_hash, graph_size,
+                  fbb.CreateVector(utl::to_vec(
+                      profiles_,
+                      [&](auto const& p) {
+                        return motis::import::CreatePPRProfile(
+                            fbb, fbb.CreateString(p.first),
+                            fbb.CreateString(p.second.file_path_.string()),
+                            p.second.file_hash_, p.second.file_size_);
+                      })),
+                  profiles_hash)
+                  .Union(),
+              "/import", DestinationType_Topic);
+          ctx::await_all(motis_publish(make_msg(fbb)));
         }
       });
   collector->require("OSM", [](msg_ptr const& msg) {
@@ -353,9 +398,9 @@ void ppr::init(motis::module::registry& reg) {
                                                     : rtree_options::DEFAULT);
 
   try {
-    impl_ = std::make_unique<impl>(graph_file(), profile_files_,
-                                   edge_rtree_max_size_, area_rtree_max_size_,
-                                   rtree_opt, verify_graph_);
+    impl_ =
+        std::make_unique<impl>(graph_file(), profiles_, edge_rtree_max_size_,
+                               area_rtree_max_size_, rtree_opt, verify_graph_);
     reg.register_op("/ppr/route",
                     [this](msg_ptr const& msg) { return impl_->route(msg); });
     reg.register_op("/ppr/profiles",

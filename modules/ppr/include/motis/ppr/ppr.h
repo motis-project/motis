@@ -1,8 +1,12 @@
 #pragma once
 
+#include <map>
+#include <string>
 #include <vector>
 
 #include "motis/module/module.h"
+
+#include "motis/ppr/profile_info.h"
 
 namespace motis::ppr {
 
@@ -21,6 +25,8 @@ struct ppr : public motis::module::module {
   void init(motis::module::registry&) override;
 
   bool import_successful() const override { return import_successful_; }
+
+  std::map<std::string, profile_info> profiles_;
 
 private:
   std::string graph_file() const;
