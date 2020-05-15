@@ -1,7 +1,11 @@
 #include <cmath>
 #include <limits>
+#include <map>
+#include <string>
 
 #include "motis/parking/parking.h"
+
+#include "boost/filesystem.hpp"
 
 #include "utl/get_or_create.h"
 #include "utl/to_vec.h"
@@ -13,6 +17,8 @@
 #include "motis/core/statistics/statistics.h"
 #include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
+#include "motis/module/event_collector.h"
+#include "motis/module/ini_io.h"
 
 #include "motis/parking/database.h"
 #include "motis/parking/error.h"
@@ -20,6 +26,11 @@
 #include "motis/parking/parking_edges.h"
 #include "motis/parking/parkings.h"
 #include "motis/parking/ppr_profiles.h"
+#include "motis/parking/prepare/foot_edges.h"
+#include "motis/parking/prepare/parking.h"
+#include "motis/parking/prepare/stations.h"
+#include "motis/ppr/ppr.h"
+#include "motis/ppr/profiles.h"
 
 using namespace motis::module;
 using namespace motis::logging;
@@ -27,7 +38,21 @@ using namespace motis::osrm;
 using namespace motis::ppr;
 using namespace flatbuffers;
 
+namespace fs = boost::filesystem;
+
 namespace motis::parking {
+
+struct import_state {
+  CISTA_COMPARABLE()
+  named<std::string, MOTIS_NAME("osm_path")> osm_path_;
+  named<cista::hash_t, MOTIS_NAME("osm_hash")> osm_hash_;
+  named<size_t, MOTIS_NAME("osm_size")> osm_size_;
+  named<std::string, MOTIS_NAME("ppr_graph_path")> ppr_graph_path_;
+  named<cista::hash_t, MOTIS_NAME("ppr_graph_hash")> ppr_graph_hash_;
+  named<size_t, MOTIS_NAME("ppr_graph_size")> ppr_graph_size_;
+  named<cista::hash_t, MOTIS_NAME("ppr_profiles_hash")> ppr_profiles_hash_;
+  named<int, MOTIS_NAME("max_walk_duration")> max_walk_duration_;
+};
 
 inline geo::latlng to_latlng(Position const* pos) {
   return {pos->lat(), pos->lng()};
@@ -319,17 +344,103 @@ private:
 };
 
 parking::parking() : module("Parking", "parking") {
-  param(parking_file_, "parking", "/path/to/parking.txt");
-  param(footedges_db_file_, "db", "/path/to/parking_footedges.db");
   param(db_max_size_, "db_max_size", "virtual memory map size");
+  param(max_walk_duration_, "max_walk_duration", "max walk duration (minutes)");
+  param(edge_rtree_max_size_, "import.edge_rtree_max_size",
+        "Maximum size for ppr edge r-tree file");
+  param(area_rtree_max_size_, "import.area_rtree_max_size",
+        "Maximum size for ppr area r-tree file");
+  param(lock_rtrees_, "import.lock_rtrees", "Lock ppr r-trees in memory");
 }
 
 parking::~parking() = default;
 
+fs::path parking::module_data_dir() const {
+  return get_data_directory() / "parking";
+}
+
+std::string parking::parking_file() const {
+  return (module_data_dir() / "parking.txt").generic_string();
+}
+
+std::string parking::footedges_db_file() const {
+  return (module_data_dir() / "parking_footedges.db").generic_string();
+}
+
+std::string parking::stations_per_parking_file() const {
+  return (module_data_dir() / "stations_per_parking.txt").generic_string();
+}
+
+void parking::import(progress_listener& progress_listener, registry& reg) {
+  auto collector = std::make_shared<event_collector>(
+      progress_listener, get_data_directory().generic_string(), "parking", reg,
+      [this](std::map<std::string, msg_ptr> const& dependencies) {
+        using namespace parking::prepare;
+        using import::OSMEvent;
+        using import::PPREvent;
+
+        auto const dir = get_data_directory() / "parking";
+        auto const osm_ev = motis_content(OSMEvent, dependencies.at("OSM"));
+        auto const ppr_ev = motis_content(PPREvent, dependencies.at("PPR"));
+        auto const state = import_state{data_path(osm_ev->path()->str()),
+                                        osm_ev->hash(),
+                                        osm_ev->size(),
+                                        data_path(ppr_ev->graph_path()->str()),
+                                        ppr_ev->graph_hash(),
+                                        ppr_ev->graph_size(),
+                                        ppr_ev->profiles_hash(),
+                                        max_walk_duration_};
+
+        if (read_ini<import_state>(dir / "import.ini") != state) {
+          fs::create_directories(dir);
+
+          auto ppr_profiles =
+              std::map<std::string, ::motis::ppr::profile_info>{};
+          ::motis::ppr::read_profile_files(
+              utl::to_vec(*ppr_ev->profiles(),
+                          [](auto const& p) { return p->path()->str(); }),
+              ppr_profiles);
+          for (auto& p : ppr_profiles) {
+            p.second.profile_.duration_limit_ = max_walk_duration_ * 60;
+          }
+
+          std::vector<motis::parking::parking_lot> parking_data;
+          if (!extract_parkings(osm_ev->path()->str(), parking_file(),
+                                parking_data)) {
+            std::clog << '\0' << 'E' << "Parking data extraction failed"
+                      << '\0';
+            return;
+          }
+
+          auto park = parkings{std::move(parking_data)};
+          auto st = stations{get_schedule()};
+
+          compute_foot_edges(st, park, footedges_db_file(),
+                             ppr_ev->graph_path()->str(), edge_rtree_max_size_,
+                             area_rtree_max_size_, lock_rtrees_, ppr_profiles,
+                             std::thread::hardware_concurrency(),
+                             stations_per_parking_file());
+
+          write_ini(dir / "import.ini", state);
+        }
+
+        import_successful_ = true;
+      });
+  collector->require("OSM", [](msg_ptr const& msg) {
+    return msg->get()->content_type() == MsgContent_OSMEvent;
+  });
+  collector->require("SCHEDULE", [](msg_ptr const& msg) {
+    return msg->get()->content_type() == MsgContent_ScheduleEvent;
+  });
+  collector->require("PPR", [](msg_ptr const& msg) {
+    return msg->get()->content_type() == MsgContent_PPREvent;
+  });
+}
+
 void parking::init(motis::module::registry& reg) {
   try {
-    impl_ =
-        std::make_unique<impl>(parking_file_, footedges_db_file_, db_max_size_);
+    impl_ = std::make_unique<impl>(parking_file(), footedges_db_file(),
+                                   db_max_size_);
 
     reg.register_op("/parking/geo",
                     [this](auto&& m) { return impl_->geo_lookup(m); });

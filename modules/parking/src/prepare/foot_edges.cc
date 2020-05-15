@@ -42,20 +42,20 @@ inline uint16_t get_accessibility(route const& r) {
 
 void compute_edges(
     database& db, routing_graph const& rg, stations const& st,
-    std::map<std::string, ppr::routing::search_profile> const& ppr_profiles,
+    std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
     parking_lot const& p, std::size_t progress, std::size_t max,
     std::mutex& progress_mutex, std::vector<unsigned>& stations_per_parking) {
   if (progress % 100 == 0) {
     std::lock_guard<std::mutex> guard{progress_mutex};
-    std::cout << "Computing foot edges: " << progress << "/" << max << " ["
-              << std::fixed << std::setprecision(2)
-              << (100.0 * static_cast<double>(progress) / max) << "%]..."
-              << std::endl;
+    std::clog << '\0'
+              << static_cast<int>(static_cast<double>(progress) / max * 100.0)
+              << '\0';
   }
 
   auto const work_idx = progress - 1;
 
-  for (auto const& [profile_name, profile] : ppr_profiles) {
+  for (auto const& [profile_name, pi] : ppr_profiles) {
+    auto const& profile = pi.profile_;
     FlatBufferBuilder fbb;
     std::vector<Offset<FootEdge>> outward_edges;
     std::vector<Offset<FootEdge>> return_edges;
@@ -111,8 +111,9 @@ void compute_foot_edges(
     std::string const& footedges_db_file, std::string const& ppr_graph,
     std::size_t edge_rtree_max_size, std::size_t area_rtree_max_size,
     bool lock_rtrees,
-    std::map<std::string, ppr::routing::search_profile> const& ppr_profiles,
-    int threads) {
+    std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
+    int threads, std::string const& stations_per_parking_file) {
+  std::clog << "Computing foot edges..." << std::endl;
   database db{footedges_db_file,
               static_cast<std::size_t>(1024) * 1024 * 1024 * 512, false};
 
@@ -137,6 +138,8 @@ void compute_foot_edges(
   std::mutex progress_mutex;
   std::vector<unsigned> stations_per_parking;
   stations_per_parking.resize(max);
+  std::clog << "Precomputing foot edges for " << max << " parkings..."
+            << std::endl;
   for (auto const& p : park.parkings_) {
     ++progress;
     pool.post([&, progress, max]() {
@@ -145,9 +148,10 @@ void compute_foot_edges(
     });
   }
   pool.join();
+  std::clog << "Foot edges precomputed." << std::endl;
 
   {
-    std::ofstream f("stations_per_parking.txt");
+    std::ofstream f(stations_per_parking_file);
     for (auto const n : stations_per_parking) {
       f << n << "\n";
     }

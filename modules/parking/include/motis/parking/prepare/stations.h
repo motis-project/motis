@@ -8,6 +8,8 @@
 #include "geo/latlng.h"
 #include "geo/point_rtree.h"
 
+#include "motis/core/schedule/schedule.h"
+
 namespace motis::parking::prepare {
 
 struct station {
@@ -19,7 +21,7 @@ struct station {
 };
 
 struct stations {
-  explicit stations(std::string const& schedule_path);
+  explicit stations(schedule const& sched);
 
   std::vector<std::pair<station, double>> get_in_radius(
       geo::latlng const& center, double radius) const;
