@@ -144,12 +144,14 @@ struct path_database_query_test : public ::testing::Test {
                              std::vector<geo::latlng> const& p0) {
     auto const pred = [&](auto const* p) {
       auto const decoded =
-          mp::decode_polyline(std::string_view{p->data(), p->size()});
+          mp::decode_polyline<6>(std::string_view{p->data(), p->size()});
+
       if (decoded.size() != p0.size()) {
         return false;
       }
       for (auto i = 0ULL; i < p0.size(); ++i) {
-        if (!(p0[i] == decoded[i])) {
+        if (std::abs(p0[i].lat_ - decoded[i].lat_) > 1e-6 ||
+            std::abs(p0[i].lng_ - decoded[i].lng_) > 1e-6) {
           return false;
         }
       }
