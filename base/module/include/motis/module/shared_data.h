@@ -11,7 +11,7 @@ struct type_erased {
   type_erased() = default;
 
   template <typename T>
-  type_erased(T&& el)
+  type_erased(T&& el)  // NOLINT
       : el_{new T{std::forward<T>(el)}}, dtor_{[](void* e) {
           delete reinterpret_cast<T*>(e);
         }} {
@@ -58,7 +58,7 @@ struct shared_data {
   }
 
   template <typename T>
-  T const& get(std::string_view const name) const {
+  T const& get(std::string_view name) const {
     return *data_.at(name).get<T>();
   }
 
