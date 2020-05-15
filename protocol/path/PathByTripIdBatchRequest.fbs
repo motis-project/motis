@@ -9,5 +9,5 @@ table TripIdSegments {
 
 table PathByTripIdBatchRequest {
   trip_segments: [TripIdSegments];
-  zoom_level: byte = -1;
+  zoom_level: int = -1;
 }
