@@ -858,11 +858,11 @@ schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
     builder.link_meta_stations(serialized->meta_stations());
   }
 
-  std::clog << '\0' << 'S' << "loading services" << '\0';
+  std::clog << '\0' << 'S' << "Build Services" << '\0';
   builder.add_services(serialized->services());
   if (opt.apply_rules_) {
     scoped_timer timer("rule services");
-    std::clog << '\0' << 'S' << "loading rule services" << '\0';
+    std::clog << '\0' << 'S' << "Build Rule Services" << '\0';
     build_rule_routes(builder, serialized->rule_services());
   }
 

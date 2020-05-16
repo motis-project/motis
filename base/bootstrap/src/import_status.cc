@@ -128,7 +128,7 @@ void import_status::print() {
           auto const scaled = static_cast<int>(i * 100.0 / WIDTH);
           std::cout << (scaled <= s.progress_ ? BAR : " ");
         }
-        std::cout << " ] " << std::setw(2) << s.progress_ << "%";
+        std::cout << " ] " << std::setw(3) << s.progress_ << "%";
         if (!s.current_task_.empty()) {
           std::cout << " | " << s.current_task_;
         }

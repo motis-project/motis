@@ -405,7 +405,7 @@ void parking::import(progress_listener& progress_listener, registry& reg) {
           }
 
           std::vector<motis::parking::parking_lot> parking_data;
-          std::clog << '\0' << 'S' << "extract parkings" << '\0';
+          std::clog << '\0' << 'S' << "Extract Parkings" << '\0';
           if (!extract_parkings(osm_ev->path()->str(), parking_file(),
                                 parking_data)) {
             std::clog << '\0' << 'E' << "Parking data extraction failed"
@@ -416,7 +416,7 @@ void parking::import(progress_listener& progress_listener, registry& reg) {
           auto park = parkings{std::move(parking_data)};
           auto st = stations{get_schedule()};
 
-          std::clog << '\0' << 'S' << "compute foot edges" << '\0';
+          std::clog << '\0' << 'S' << "Compute Foot Edges" << '\0';
           compute_foot_edges(st, park, footedges_db_file(),
                              ppr_ev->graph_path()->str(), edge_rtree_max_size_,
                              area_rtree_max_size_, lock_rtrees_, ppr_profiles,
