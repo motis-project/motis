@@ -66,7 +66,7 @@ clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
       if (traits_type::to_char_type(c) == PROGRESS_MARKER) {
         state_ == output_state::ERR
             ? progress_listener_.report_error(name_, buf_)
-            : progress_listener_.report_current_task(name_, buf_);
+            : progress_listener_.report_step(name_, buf_);
         buf_.clear();
         state_ = output_state::NORMAL;
       } else {

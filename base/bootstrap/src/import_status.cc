@@ -70,11 +70,11 @@ void import_status::report_error(const std::string& name,
   }
 }
 
-void import_status::report_current_task(const std::string& name,
-                                        const std::string& task) {
+void import_status::report_step(const std::string& name,
+                                const std::string& step) {
   auto s = status_[name];
   s.status_ = import::Status_RUNNING;
-  s.current_task_ = task;
+  s.current_task_ = step;
   if (update(name, s)) {
     print();
   }
