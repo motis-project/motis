@@ -55,7 +55,7 @@ jobs:
           Enter-VsDevShell -VsInstallPath $installPath -SkipAutomaticLocation -DevCmdArguments "-arch=amd64"
           cmake -GNinja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }}
           .\build\bin\buildcache.exe -z
-          cmake --build build --target motis motis-test motis-itest path-prepare motis-eval motis-intermodal-eval
+          cmake --build build --target motis motis-test motis-itest motis-eval motis-intermodal-eval
           .\build\bin\buildcache.exe -s
 
       # ==== TESTS ====
@@ -97,7 +97,6 @@ jobs:
         run: >
           7z a motis-windows.zip
           .\build\motis.exe
-          .\build\path-prepare.exe
           .\osrm-profiles
           .\ppr-profiles
           .\ui\web
