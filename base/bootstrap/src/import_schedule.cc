@@ -42,7 +42,7 @@ module::msg_ptr import_schedule(loader::loader_options const& dataset_opt,
           instance.sched().hash_)
           .Union(),
       "/import", DestinationType_Topic);
-  ctx::await_all(motis_publish(make_msg(fbb)));
+  motis_publish(make_msg(fbb));
 
   return nullptr;
 }

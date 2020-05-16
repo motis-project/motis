@@ -120,7 +120,7 @@ TEST_F(intermodal_itest, forward) {
                    ->c_str());
 
   ASSERT_EQ(Move_Walk, transports->Get(0)->move_type());
-  ASSERT_STREQ("bike",
+  ASSERT_STREQ("bicycle",
                reinterpret_cast<motis::Walk const*>(transports->Get(2)->move())
                    ->mumo_type()
                    ->c_str());

@@ -14,6 +14,7 @@
 #include "motis/core/common/logging.h"
 #include "motis/module/clog_redirect.h"
 #include "motis/module/context/motis_parallel_for.h"
+#include "motis/module/context/motis_publish.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
@@ -40,16 +41,14 @@ osrm::osrm() : module("OSRM Options", "osrm") {
 
 osrm::~osrm() = default;
 
-void osrm::import(progress_listener& progress_listener,
-                  motis::module::registry& reg) {
+void osrm::import(progress_listener& pl, motis::module::registry& reg) {
   for (auto const& p : profiles_) {
     auto const profile_name =
         boost::filesystem::path{p}.stem().generic_string();
     std::make_shared<event_collector>(
-        progress_listener, get_data_directory().generic_string(),
-        "osrm-" + profile_name, reg,
-        [this, profile_name, p, data_dir = get_data_directory()](
-            std::map<std::string, msg_ptr> const& dependencies) {
+        pl, get_data_directory().generic_string(), "osrm-" + profile_name, reg,
+        [this, profile_name,
+         p](std::map<std::string, msg_ptr> const& dependencies) {
           using import::OSMEvent;
           using namespace ::osrm::extractor;
           using namespace ::osrm::contractor;
@@ -62,7 +61,7 @@ void osrm::import(progress_listener& progress_listener,
                                     .stem()
                                     .generic_string();
 
-          auto const dir = data_dir / "osrm" / profile_name;
+          auto const dir = get_data_directory() / "osrm" / profile_name;
           fs::create_directories(dir);
 
           ExtractorConfig extr_conf;
@@ -88,6 +87,16 @@ void osrm::import(progress_listener& progress_listener,
           }
 
           datasets_.emplace_back(extr_conf.output_file_name);
+
+          message_creator fbb;
+          fbb.create_and_finish(
+              MsgContent_OSRMEvent,
+              motis::import::CreateOSRMEvent(
+                  fbb, fbb.CreateString(extr_conf.output_file_name),
+                  fbb.CreateString(profile_name))
+                  .Union(),
+              "/import", DestinationType_Topic);
+          motis_publish(make_msg(fbb));
         })
         ->require("OSM", [](msg_ptr const& msg) {
           return msg->get()->content_type() == MsgContent_OSMEvent;

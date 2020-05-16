@@ -77,7 +77,7 @@ jobs:
       - name: Build
         run: |
           ./build/bin/buildcache -z
-          cmake --build build --target motis motis-test motis-itest path-prepare motis-eval motis-intermodal-eval
+          cmake --build build --target motis motis-test motis-itest motis-eval motis-intermodal-eval
           ./build/bin/buildcache -s
 
       # ==== TESTS ====
@@ -115,11 +115,9 @@ jobs:
         run: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./build/motis-itest
 
       # ==== DISTRIBUTION ====
-      - name: Strip Executables
+      - name: Strip Executable
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
-        run: |
-          strip build/motis
-          strip build/path-prepare
+        run: strip build/motis
 
       - name: Compile Web Interface
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
@@ -135,7 +133,6 @@ jobs:
           mkdir motis
           mv ui/web motis
           mv build/motis motis
-          mv build/path-prepare motis
           mv deps/osrm-backend/profiles motis/osrm-profiles
           mv deps/ppr/profiles motis/ppr-profiles
           tar cjf motis-linux.tar.bz2 motis

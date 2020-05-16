@@ -3,6 +3,8 @@
 #include <memory>
 #include <regex>
 
+#include "boost/filesystem.hpp"
+
 #include "geo/polyline.h"
 #include "geo/simplify_mask.h"
 #include "geo/tile.h"
@@ -27,6 +29,20 @@
 #include "motis/core/conv/trip_conv.h"
 #include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
+#include "motis/module/event_collector.h"
+#include "motis/module/ini_io.h"
+
+#include "motis/path/prepare/db_builder.h"
+#include "motis/path/prepare/filter_sequences.h"
+#include "motis/path/prepare/post/build_post_graph.h"
+#include "motis/path/prepare/post/post_graph.h"
+#include "motis/path/prepare/post/post_processor.h"
+#include "motis/path/prepare/post/post_serializer.h"
+#include "motis/path/prepare/resolve/path_routing.h"
+#include "motis/path/prepare/resolve/resolve_sequences.h"
+#include "motis/path/prepare/schedule/schedule_wrapper.h"
+#include "motis/path/prepare/schedule/stations.h"
+#include "motis/path/prepare/schedule/stop_positions.h"
 
 #include "motis/path/constants.h"
 #include "motis/path/path_database.h"
@@ -42,6 +58,14 @@ using namespace motis::logging;
 
 namespace motis::path {
 
+struct import_state {
+  CISTA_COMPARABLE()
+  named<std::string, MOTIS_NAME("osm_path")> osm_path_;
+  named<cista::hash_t, MOTIS_NAME("osm_hash")> osm_hash_;
+  named<size_t, MOTIS_NAME("osm_size")> osm_size_;
+  named<cista::hash_t, MOTIS_NAME("schedule_hash")> schedule_hash_;
+};
+
 struct path::data {
   std::unique_ptr<path_database> db_;
   std::unique_ptr<path_index> index_;
@@ -49,15 +73,87 @@ struct path::data {
   tiles::render_ctx render_ctx_;
 };
 
-path::path() : module("Path", "path"), data_{std::make_unique<path::data>()} {
-  param(database_path_, "db", "/path/to/pathdb.mdb");
-}
+path::path() : module("Path", "path"), data_{std::make_unique<path::data>()} {}
 
 path::~path() = default;
 
+void path::import(progress_listener& pl, registry& reg) {
+  std::make_shared<event_collector>(
+      pl, get_data_directory().generic_string(), "path", reg,
+      [this](std::map<std::string, msg_ptr> const& dependencies) {
+        using import::ScheduleEvent;
+        using import::OSMEvent;
+        using import::OSRMEvent;
+        auto const schedule =
+            motis_content(ScheduleEvent, dependencies.at("SCHEDULE"));
+        auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
+        auto const osrm = motis_content(OSRMEvent, dependencies.at("OSRM"));
+
+        auto const dir = get_data_directory() / "path";
+        boost::filesystem::create_directories(dir);
+
+        auto const state =
+            import_state{data_path(osm->path()->str()), osm->hash(),
+                         osm->size(), schedule->hash()};
+        if (read_ini<import_state>(dir / "import.ini") == state) {
+          import_successful_ = true;
+          return;
+        }
+
+        auto sequences = schedule_wrapper{schedule->raw_file()->str()}
+                             .load_station_sequences();
+
+        auto stations = collect_stations(sequences);
+        find_stop_positions(osm->path()->str(), schedule->raw_file()->str(),
+                            stations);
+        filter_sequences(std::vector<std::string>{}, sequences);
+        auto const station_idx =
+            make_station_index(sequences, std::move(stations));
+
+        std::vector<resolved_station_seq> resolved_seqs;
+        LOG(info) << "processing " << sequences.size()
+                  << " station sequences with " << station_idx.stations_.size()
+                  << " unique stations.";
+
+        auto routing = make_path_routing(station_idx, osm->path()->str(),
+                                         osrm->path()->str());
+
+        resolved_seqs = resolve_sequences(sequences, routing);
+
+        LOG(info) << "post-processing " << resolved_seqs.size()
+                  << " station sequences";
+
+        auto post_graph = build_post_graph(std::move(resolved_seqs));
+        post_process(post_graph);
+
+        db_builder builder((dir / "pathdb.mdb").generic_string());
+        builder.store_stations(station_idx.stations_);
+        serialize_post_graph(post_graph, builder);
+        builder.finish();
+
+        write_ini(dir / "import.ini", state);
+        import_successful_ = true;
+      })
+      ->require("OSM",
+                [](msg_ptr const& msg) {
+                  return msg->get()->content_type() == MsgContent_OSMEvent;
+                })
+      ->require("SCHEDULE",
+                [](msg_ptr const& msg) {
+                  return msg->get()->content_type() == MsgContent_ScheduleEvent;
+                })
+      ->require("OSRM", [](msg_ptr const& msg) {
+        using import::OSRMEvent;
+        return msg->get()->content_type() == MsgContent_OSRMEvent &&
+               motis_content(OSRMEvent, msg)->profile()->str() == "bus";
+      });
+}
+
 void path::init(registry& r) {
   try {
-    data_->db_ = make_path_database(database_path_, true, false);
+    data_->db_ = make_path_database(
+        (get_data_directory() / "path" / "pathdb.mdb").generic_string(), true,
+        false);
 
     data_->render_ctx_ = tiles::make_render_ctx(*data_->db_->handle_);
 

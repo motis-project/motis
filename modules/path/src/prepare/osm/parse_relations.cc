@@ -134,7 +134,7 @@ std::vector<std::vector<osm_way>> parse_relations(
     for (auto& way : rel) {
       for (auto& node : way->nodes_) {
         if (!node->resolved_) {
-          std::cout << "missing node" << node->id_ << std::endl;
+          std::clog << "missing node" << node->id_ << std::endl;
         }
       }
     }

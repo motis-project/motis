@@ -20,12 +20,12 @@ inline void print_seq_graph(std::vector<part_task> const& part_tasks,
     nodes[node->station_idx_].push_back(node.get());
   }
 
-  std::cout << "\n\n";
+  std::clog << "\n\n";
   for (auto i = 0UL; i < nodes.size(); ++i) {
-    std::cout << "station: " << i << " / " << seq.station_ids_.at(i) << " / "
+    std::clog << "station: " << i << " / " << seq.station_ids_.at(i) << " / "
               << seq.station_names_.at(i) << "\n";
     for (auto const& node : nodes[i]) {
-      std::cout << "  " << node->idx_ << " @ " << node->ref_.strategy_id_
+      std::clog << "  " << node->idx_ << " @ " << node->ref_.strategy_id_
                 << " -> ";
       for (auto const& edge : node->edges_) {
         auto strategy_id =
@@ -33,10 +33,10 @@ inline void print_seq_graph(std::vector<part_task> const& part_tasks,
                 ? 0
                 : part_tasks[edge.part_task_idx_].key_.strategy_->strategy_id();
 
-        fmt::print(std::cout, "{}:{}|{}:{:.1e} ", edge.to_->ref_.strategy_id_,
+        fmt::print(std::clog, "{}:{}|{}:{:.1e} ", edge.to_->ref_.strategy_id_,
                    edge.to_->idx_, strategy_id, edge.weight());
       }
-      std::cout << "\n";
+      std::clog << "\n";
     }
   }
 }

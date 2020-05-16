@@ -77,6 +77,7 @@ event_collector* event_collector::require(
 
         dependencies_[name] = msg;
         waiting_for_.erase(name);
+        update_status(motis::import::Status_WAITING);
         if (!waiting_for_.empty()) {
           return nullptr;  // Still waiting for a message.
         }

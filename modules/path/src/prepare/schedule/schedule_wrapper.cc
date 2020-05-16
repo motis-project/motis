@@ -16,7 +16,7 @@ using namespace motis::loader;
 namespace motis::path {
 
 schedule_wrapper::schedule_wrapper(std::string const& schedule_path) {
-  auto sched_file = fs::path(schedule_path) / "schedule.raw";
+  auto sched_file = fs::path(schedule_path);
   if (!fs::is_regular_file(sched_file)) {
     throw std::runtime_error("cannot open schedule.raw");
   }
