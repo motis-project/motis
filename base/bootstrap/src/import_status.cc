@@ -36,9 +36,17 @@ void move_cursor_up(int lines) {
   }
 }
 
+void set_vt100_mode() {
+  auto hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+  SetConsoleMode(hStdout,
+                 ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+}
+
 #else
 
 constexpr auto const BAR = "■";
+
+void set_vt100_mode() {}
 
 void move_cursor_up(int lines) {
   if (lines != 0) {
@@ -107,6 +115,7 @@ void import_status::print() {
   if (silent_) {
     return;
   }
+  set_vt100_mode();
   move_cursor_up(last_print_height_);
   for (auto const& [name, s] : status_) {
     clear_line();
