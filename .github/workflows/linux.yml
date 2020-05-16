@@ -115,11 +115,9 @@ jobs:
         run: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./build/motis-itest
 
       # ==== DISTRIBUTION ====
-      - name: Strip Executables
+      - name: Strip Executable
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
-        run: |
-          strip build/motis
-          strip build/path-prepare
+        run: strip build/motis
 
       - name: Compile Web Interface
         if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
