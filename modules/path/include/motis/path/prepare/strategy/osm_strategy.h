@@ -20,6 +20,7 @@ namespace ml = motis::logging;
 
 namespace motis::path {
 
+// TODO: penalize sharp "Z"-Style turns in rail networks
 struct osm_strategy : public routing_strategy {
   osm_strategy(strategy_id_t strategy_id, source_spec spec,
                station_index const& station_idx,
