@@ -52,6 +52,7 @@ struct import_state {
   named<size_t, MOTIS_NAME("ppr_graph_size")> ppr_graph_size_;
   named<cista::hash_t, MOTIS_NAME("ppr_profiles_hash")> ppr_profiles_hash_;
   named<int, MOTIS_NAME("max_walk_duration")> max_walk_duration_;
+  named<cista::hash_t, MOTIS_NAME("schedule_hash")> schedule_hash_;
 };
 
 inline geo::latlng to_latlng(Position const* pos) {
@@ -389,7 +390,8 @@ void parking::import(progress_listener& progress_listener, registry& reg) {
                                         ppr_ev->graph_hash(),
                                         ppr_ev->graph_size(),
                                         ppr_ev->profiles_hash(),
-                                        max_walk_duration_};
+                                        max_walk_duration_,
+                                        get_schedule().hash_};
 
         if (read_ini<import_state>(dir / "import.ini") != state) {
           fs::create_directories(dir);
