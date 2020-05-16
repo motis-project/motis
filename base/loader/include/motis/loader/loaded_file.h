@@ -9,54 +9,37 @@
 namespace motis::loader {
 
 struct loaded_file {
-  loaded_file() = default;
+  loaded_file();
 
-  loaded_file(char const* filename, char const* str)
-      : name_(filename), buf_(str) {}
+  loaded_file(char const* filename, char const* str, bool convert_utf8 = false);
 
-  loaded_file(char const* filename, utl::buffer&& buf)
-      : name_(filename), buf_(std::move(buf)) {}
+  loaded_file(char const* filename, std::string&& buf,
+              bool convert_utf8 = false);
 
-  explicit loaded_file(boost::filesystem::path const& p)
-      : name_(p.filename().string()),
-        buf_(utl::file(p.string().c_str(), "r").content()){};
+  explicit loaded_file(boost::filesystem::path const& p,
+                       bool convert_utf8 = false);
 
   loaded_file(loaded_file const&) = delete;
 
-  loaded_file(loaded_file&& o) noexcept {
-    name_ = std::move(o.name_);
-    buf_ = std::move(o.buf_);
-  }
+  loaded_file(loaded_file&& o) noexcept;
 
-  ~loaded_file() = default;
+  ~loaded_file();
 
   loaded_file& operator=(loaded_file const&) = delete;
 
-  loaded_file& operator=(loaded_file&& o) noexcept {
-    name_ = std::move(o.name_);
-    buf_ = std::move(o.buf_);
-    return *this;
-  }
+  loaded_file& operator=(loaded_file&& o) noexcept;
 
-  char const* name() const { return name_.c_str(); }
+  char const* name() const;
 
-  utl::cstr content() const {
-    auto const offset = contains_utf8_bom() ? 3 : 0;
-    return {reinterpret_cast<char const*>(buf_.data() + offset),
-            buf_.size() - offset};
-  }
+  utl::cstr content() const;
 
-  bool empty() const { return buf_.size() == 0U; }
+  bool empty() const;
 
 private:
-  bool contains_utf8_bom() const {
-    return buf_.size() >= 3 && (static_cast<int>(buf_.data()[0]) == 239 &&
-                                static_cast<int>(buf_.data()[1]) == 187 &&
-                                static_cast<int>(buf_.data()[2]) == 191);
-  }
+  bool contains_utf8_bom() const;
 
   std::string name_;
-  utl::buffer buf_;
+  std::string buf_;
 };
 
 }  // namespace motis::loader
