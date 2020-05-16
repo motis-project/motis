@@ -21,6 +21,8 @@ struct path : public motis::module::module {
               motis::module::registry&) override;
   void init(motis::module::registry&) override;
 
+  bool import_successful() const override { return import_successful_; }
+
 private:
   void verify_path_database_available() const;
 
@@ -37,6 +39,7 @@ private:
 
   struct data;
   std::unique_ptr<data> data_;
+  bool import_successful_{false};
 };
 
 }  // namespace motis::path

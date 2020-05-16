@@ -96,6 +96,7 @@ void path::import(progress_listener& pl, registry& reg) {
             import_state{data_path(osm->path()->str()), osm->hash(),
                          osm->size(), schedule->hash()};
         if (read_ini<import_state>(dir / "import.ini") == state) {
+          import_successful_ = true;
           return;
         }
 
@@ -131,6 +132,7 @@ void path::import(progress_listener& pl, registry& reg) {
         builder.finish();
 
         write_ini(dir / "import.ini", state);
+        import_successful_ = true;
       })
       ->require("OSM",
                 [](msg_ptr const& msg) {
