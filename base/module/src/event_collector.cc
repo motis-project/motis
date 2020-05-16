@@ -31,7 +31,7 @@ void event_collector::update_status(motis::import::Status const status,
           fbb, fbb.CreateString(module_name_),
           fbb.CreateVector(utl::to_vec(
               waiting_for_, [&](auto&& w) { return fbb.CreateString(w); })),
-          status, fbb.CreateString(""), progress)
+          status, fbb.CreateString(""), fbb.CreateString(""), progress)
           .Union(),
       "/import", DestinationType_Topic);
   ctx::await_all(motis_publish(make_msg(fbb)));

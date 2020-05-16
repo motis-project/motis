@@ -315,6 +315,7 @@ void ppr::import(progress_listener& progress_listener, registry& reg) {
             std::clog << "Step " << (log.current_step() + 1) << "/"
                       << log.step_count() << ": " << step.name() << ": Starting"
                       << std::endl;
+            std::clog << '\0' << 'S' << step.name() << '\0';
           };
 
           log.step_progress_ = [](pp::logging const& log,

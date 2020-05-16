@@ -25,20 +25,18 @@ struct clog_redirect : public std::streambuf {
   static void disable();
 
 private:
-  void update_error(std::string const& error);
-  void update_progress(int progress);
-
   enum class output_state {
     NORMAL,
     MODE_SELECT,
     PERCENT,
-    ERR
+    ERR,
+    STATUS
   } state_{output_state::NORMAL};
   int percent_{0};
   std::ofstream sink_;
   std::string name_;
   std::streambuf* backup_clog_;
-  std::string error_;
+  std::string buf_;
   progress_listener& progress_listener_;
   static bool disabled_;
 };

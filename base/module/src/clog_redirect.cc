@@ -41,19 +41,19 @@ clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
       }
 
     case output_state::MODE_SELECT:
-      if (traits_type::to_char_type(c) == PROGRESS_MARKER) {
-        state_ = output_state::NORMAL;
-      } else if (traits_type::to_char_type(c) == 'E') {
-        state_ = output_state::ERR;
-      } else {
-        state_ = output_state::PERCENT;
-        percent_ = traits_type::to_char_type(c) - '0';
+      switch (traits_type::to_char_type(c)) {
+        case PROGRESS_MARKER: state_ = output_state::NORMAL; break;
+        case 'E': state_ = output_state::ERR; break;
+        case 'S': state_ = output_state::STATUS; break;
+        default:
+          state_ = output_state::PERCENT;
+          percent_ = traits_type::to_char_type(c) - '0';
       }
       return c;
 
     case output_state::PERCENT:
       if (traits_type::to_char_type(c) == PROGRESS_MARKER) {
-        update_progress(percent_);
+        progress_listener_.update_progress(name_, percent_);
         state_ = output_state::NORMAL;
       } else {
         percent_ *= 10;
@@ -62,25 +62,20 @@ clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
       return c;
 
     case output_state::ERR:
+    case output_state::STATUS:
       if (traits_type::to_char_type(c) == PROGRESS_MARKER) {
-        update_error(error_);
-        error_.clear();
+        state_ == output_state::ERR
+            ? progress_listener_.report_error(name_, buf_)
+            : progress_listener_.report_step(name_, buf_);
+        buf_.clear();
         state_ = output_state::NORMAL;
       } else {
-        error_ += traits_type::to_char_type(c);
+        buf_ += traits_type::to_char_type(c);
       }
       return c;
 
     default: return c;
   }
-}
-
-void clog_redirect::update_error(std::string const& error) {
-  progress_listener_.report_error(name_, error);
-}
-
-void clog_redirect::update_progress(int const progress) {
-  progress_listener_.update_progress(name_, progress);
 }
 
 void clog_redirect::disable() { disabled_ = true; }

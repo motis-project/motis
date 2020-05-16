@@ -270,6 +270,7 @@ void hrd_parser::parse(fs::path const& hrd_root, FlatBufferBuilder& fbb,
   rule_service_builder rsb(rules);
 
   // parse and build services
+  std::clog << '\0' << 'S' << "Parse Services" << '\0';
   std::vector<std::unique_ptr<loaded_file>> schedule_data;
   parse_and_build_services(
       hrd_root, bb.hrd_bitfields_, schedule_data,
@@ -281,6 +282,7 @@ void hrd_parser::parse(fs::path const& hrd_root, FlatBufferBuilder& fbb,
       c);
 
   // compute and build rule services
+  std::clog << '\0' << 'S' << "Generate Rule Services" << '\0';
   rsb.resolve_rule_services();
   rsb.create_rule_services(
       [&](hrd_service const& s, bool is_rule_service, FlatBufferBuilder& fbb) {

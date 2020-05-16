@@ -36,9 +36,17 @@ void move_cursor_up(int lines) {
   }
 }
 
+void set_vt100_mode() {
+  auto hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+  SetConsoleMode(hStdout,
+                 ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+}
+
 #else
 
 constexpr auto const BAR = "■";
+
+void set_vt100_mode() {}
 
 void move_cursor_up(int lines) {
   if (lines != 0) {
@@ -48,37 +56,34 @@ void move_cursor_up(int lines) {
 
 #endif
 
-void clear_line() {
-  auto const empty =
-      "          "
-      "          "
-      "          "
-      "          "
-      "          "
-      "          "
-      "          "
-      "          "
-      "          "
-      "          ";
-  std::cout << empty << "\r";
-}
+void clear_line() { std::cout << "\x1b[K"; }
 
-void import_status::update_progress(std::string const& task_name,
+void import_status::update_progress(std::string const& name,
                                     unsigned int progress) {
-  auto s = status_[task_name];
+  auto s = status_[name];
   s.status_ = import::Status_RUNNING;
   s.progress_ = progress;
-  if (update(task_name, s)) {
+  if (update(name, s)) {
     print();
   }
 }
 
-void import_status::report_error(const std::string& task_name,
+void import_status::report_error(const std::string& name,
                                  const std::string& what) {
-  auto s = status_[task_name];
+  auto s = status_[name];
   s.status_ = import::Status_ERROR;
   s.error_ = what;
-  if (update(task_name, s)) {
+  if (update(name, s)) {
+    print();
+  }
+}
+
+void import_status::report_step(const std::string& name,
+                                const std::string& step) {
+  auto s = status_[name];
+  s.status_ = import::Status_RUNNING;
+  s.current_task_ = step;
+  if (update(name, s)) {
     print();
   }
 }
@@ -100,7 +105,8 @@ bool import_status::update(motis::module::msg_ptr const& msg) {
     return update(
         upd->name()->str(),
         {utl::to_vec(*upd->waiting_for(), [](auto&& e) { return e->str(); }),
-         upd->status(), upd->progress(), upd->error()->str()});
+         upd->status(), upd->progress(), upd->error()->str(),
+         upd->current_task()->str()});
   }
   return false;
 }
@@ -109,10 +115,11 @@ void import_status::print() {
   if (silent_) {
     return;
   }
+  set_vt100_mode();
   move_cursor_up(last_print_height_);
   for (auto const& [name, s] : status_) {
     clear_line();
-    std::cout << std::setw(20) << std::setfill(' ') << std::right << name
+    std::cout << std::setw(12) << std::setfill(' ') << std::right << name
               << ": ";
     switch (s.status_) {
       case import::Status_ERROR: std::cout << "ERROR: " << s.error_; break;
@@ -130,7 +137,10 @@ void import_status::print() {
           auto const scaled = static_cast<int>(i * 100.0 / WIDTH);
           std::cout << (scaled <= s.progress_ ? BAR : " ");
         }
-        std::cout << "] " << s.progress_ << "%";
+        std::cout << " ] " << std::setw(3) << s.progress_ << "%";
+        if (!s.current_task_.empty()) {
+          std::cout << " | " << s.current_task_;
+        }
         break;
     }
     std::cout << "\n";

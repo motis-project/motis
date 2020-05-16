@@ -17,16 +17,16 @@ struct state {
   import::Status status_{import::Status::Status_WAITING};
   int progress_{0U};
   std::string error_;
+  std::string current_task_;
 };
 
 struct import_status : public module::progress_listener {
   bool update(motis::module::msg_ptr const&);
   void print();
 
-  void update_progress(std::string const& task_name,
-                       unsigned progress) override;
-  void report_error(std::string const& task_name,
-                    std::string const& what) override;
+  void update_progress(std::string const& name, unsigned progress) override;
+  void report_error(std::string const& name, std::string const& what) override;
+  void report_step(std::string const& name, std::string const& step) override;
 
   bool silent_{false};
 
