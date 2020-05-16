@@ -154,7 +154,7 @@ std::vector<resolved_station_seq> read_from_fbs(std::string const& fname) {
     }
   });
 
-  std::cout << result.size() << std::endl;
+  std::clog << result.size() << std::endl;
 
   return result;
 }

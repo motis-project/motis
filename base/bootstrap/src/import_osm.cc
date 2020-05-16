@@ -42,7 +42,7 @@ msg_ptr import_osm(msg_ptr const& msg) {
       motis::import::CreateOSMEvent(fbb, fbb.CreateString(path), hash, size)
           .Union(),
       "/import", DestinationType_Topic);
-  ctx::await_all(motis_publish(make_msg(fbb)));
+  motis_publish(make_msg(fbb));
   return nullptr;
 }
 

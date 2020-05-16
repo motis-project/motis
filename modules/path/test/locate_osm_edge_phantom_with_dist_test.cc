@@ -29,7 +29,7 @@ TEST(locate_osm_edge_phantom_with_dist, hamburg) {
 
   mp::osm_edge_phantom_with_dist p{{0, 0, south, north}, 0};
   mp::located_osm_edge_phantom_with_dist obj{p, nullptr, station_pos};
-  std::cout.precision(11);
+  std::clog.precision(11);
   obj.locate();
 
   ASSERT_FALSE(obj.eq_from_);

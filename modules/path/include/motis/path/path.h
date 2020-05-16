@@ -17,6 +17,8 @@ struct path : public motis::module::module {
   path(path&&) = delete;
   path& operator=(path&&) = delete;
 
+  void import(motis::module::progress_listener&,
+              motis::module::registry&) override;
   void init(motis::module::registry&) override;
 
 private:
@@ -32,8 +34,6 @@ private:
                                       int zoom_level, bool debug_info) const;
 
   motis::module::msg_ptr path_tiles(motis::module::msg_ptr const&) const;
-
-  std::string database_path_{"./pathdb.mdb"};
 
   struct data;
   std::unique_ptr<data> data_;

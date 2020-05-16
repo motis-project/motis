@@ -34,7 +34,7 @@ bool is_stop_positions_cache_available(std::string const& osm_file,
   auto const buf = utl::file{kStopPositionsCacheFile, "r"}.content();
   auto const* cache = GetStopPositionCache(buf.buf_);
 
-  auto sched_file = fs::path(sched_path) / "schedule.raw";
+  auto sched_file = fs::path(sched_path);
   return cache->osm_file()->mod_date() == fs::last_write_time(osm_file) &&
          cache->osm_file()->file_size() == fs::file_size(osm_file) &&
          cache->sched_file()->mod_date() == fs::last_write_time(sched_file) &&
@@ -87,7 +87,7 @@ void prepare_stop_positions_cache(std::string const& osm_file,
             pos, [](auto const& p) { return Position(p.lat_, p.lng_); }))));
   }
 
-  auto sched_file = fs::path(sched_path) / "schedule.raw";
+  auto sched_file = fs::path(sched_path);
   fbb.Finish(CreateStopPositionCache(
       fbb,
       CreateFileID(fbb, fs::last_write_time(osm_file), fs::file_size(osm_file)),

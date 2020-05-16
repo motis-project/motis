@@ -77,7 +77,7 @@ struct osm_graph_contractor {
 
     while (!queue.empty()) {
       if (++ops_ % 100000 == 0) {
-        std::cout << ops_ << std::endl;
+        std::clog << ops_ << std::endl;
       }
 
       auto const node_idx = queue.front();

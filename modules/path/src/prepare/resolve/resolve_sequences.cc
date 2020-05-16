@@ -257,7 +257,12 @@ struct plan_executor {
         std::count_if(begin(result_caches_), end(result_caches_),
                       [](auto const& r) { return r != nullptr; });
 
-    std::cout << "resolve_sequences [" << microsecond_fmt{t_curr} << " | est. "
+    std::clog << '\0'
+              << static_cast<unsigned>(100.0 *
+                                       static_cast<float>(curr_part_task) /
+                                       pp_.part_task_queue_.size())
+              << '\0';
+    std::clog << "resolve_sequences [" << microsecond_fmt{t_curr} << " | est. "
               << microsecond_fmt{t_est} << "] ("  //
               << std::setw(7) << curr_part_task << "/"  //
               << std::setw(7) << pp_.part_task_queue_.size() << ") "

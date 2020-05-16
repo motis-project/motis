@@ -93,7 +93,7 @@ struct execution_stats {
       format_timing_summary(out, v);
     }
 
-    std::cout << fmt::to_string(out) << std::endl;
+    std::clog << fmt::to_string(out) << std::endl;
   }
 
   static void format_headline(fmt::memory_buffer& out) {

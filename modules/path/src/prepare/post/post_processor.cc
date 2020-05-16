@@ -32,7 +32,7 @@ void mark_essentials(post_graph& graph) {
       if (pair.second > 2) {
         // TODO(sebastian) check these!!
 
-        // std::cout << "color cycle: " << pair.second << std::endl;
+        // std::clog << "color cycle: " << pair.second << std::endl;
         // for (auto const color : pair.first) {
         //   print_post_colors(graph, color);
         // }

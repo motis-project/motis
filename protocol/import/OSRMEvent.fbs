@@ -1,0 +1,6 @@
+namespace motis.import;
+
+table OSRMEvent {
+  path: string;
+  profile: string;
+}
