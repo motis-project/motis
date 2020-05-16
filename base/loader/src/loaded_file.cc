@@ -87,7 +87,7 @@ utl::cstr loaded_file::content() const {
           buf_.size() - offset};
 }
 
-bool loaded_file::empty() const { return buf_.size() == 0U; }
+bool loaded_file::empty() const { return buf_.empty(); }
 
 bool loaded_file::contains_utf8_bom() const {
   auto const data =
