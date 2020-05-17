@@ -5,6 +5,7 @@
 
 #include "utl/parser/csv.h"
 
+#include "motis/core/common/logging.h"
 #include "motis/loader/util.h"
 
 using namespace utl;
@@ -165,6 +166,8 @@ static const column_mapping<gtfs_route> columns = {
      "route_desc", "route_type"}};
 
 route_map read_routes(loaded_file file, agency_map const& agencies) {
+  motis::logging::scoped_timer timer{"read routes"};
+
   route_map routes;
   for (auto const& r : read<gtfs_route>(file.content(), columns)) {
     auto agency_it = agencies.find(get<agency_id>(r).to_str());

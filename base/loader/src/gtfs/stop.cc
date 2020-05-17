@@ -6,6 +6,7 @@
 
 #include "utl/parser/csv.h"
 
+#include "motis/core/common/logging.h"
 #include "motis/loader/gtfs/common.h"
 #include "motis/loader/util.h"
 
@@ -21,6 +22,8 @@ static const column_mapping<gtfs_stop> columns = {
     {"stop_id", "stop_name", "stop_timezone", "stop_lat", "stop_lon"}};
 
 stop_map read_stops(loaded_file file) {
+  motis::logging::scoped_timer timer{"read stops"};
+
   stop_map stops;
   for (auto const& s : read<gtfs_stop>(file.content(), columns)) {
     // load the swiss dataset without track information

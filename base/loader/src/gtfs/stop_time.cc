@@ -3,9 +3,12 @@
 #include <algorithm>
 #include <tuple>
 
+#include "utl/enumerate.h"
 #include "utl/parser/arg_parser.h"
 #include "utl/parser/csv.h"
 
+#include "motis/core/common/logging.h"
+#include "motis/core/common/projection.h"
 #include "motis/loader/gtfs/common.h"
 #include "motis/loader/util.h"
 
@@ -51,11 +54,17 @@ int hhmm_to_min(cstr s) {
 
 void read_stop_times(loaded_file const& file, trip_map& trips,
                      stop_map const& stops) {
+  motis::logging::scoped_timer timer{"read stop times"};
+  std::clog << '\0' << 'S' << "Parse Stop Times" << '\0';
+
   std::string last_trip_id;
   trip* last_trip = nullptr;
 
-  for (auto const& s :
-       read<gtfs_stop_time>(file.content(), stop_time_columns)) {
+  auto const p = projection{0.2, 0.4};
+  auto const entries = read<gtfs_stop_time>(file.content(), stop_time_columns);
+  for (auto const& [i, s] : utl::enumerate(entries)) {
+    std::clog << '\0' << p(i / static_cast<float>(entries.size())) << '\0';
+
     trip* t = nullptr;
     auto t_id = get<trip_id>(s).to_str();
     if (last_trip != nullptr && t_id == last_trip_id) {

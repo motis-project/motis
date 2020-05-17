@@ -25,7 +25,7 @@ feed_map read_feed_publisher(loaded_file file) {
                   feed{get<feed_publisher_name>(f).to_str(),
                        get<feed_version>(f).to_str()});
   }
-
   return feeds;
 }
+
 }  // namespace motis::loader::gtfs

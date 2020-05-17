@@ -2,6 +2,8 @@
 
 #include "boost/date_time/gregorian/gregorian.hpp"
 
+#include "motis/core/common/logging.h"
+
 namespace greg = boost::gregorian;
 
 namespace motis::loader::gtfs {
@@ -55,6 +57,8 @@ void add_exception(greg::date const& start, calendar_date const& exception,
 services traffic_days(
     std::map<std::string, calendar> const& base,
     std::map<std::string, std::vector<calendar_date>> const& exceptions) {
+  motis::logging::scoped_timer timer{"traffic days"};
+
   services s;
   s.first_day_ = bound_date(base, true);
   s.last_day_ = bound_date(base, false);
