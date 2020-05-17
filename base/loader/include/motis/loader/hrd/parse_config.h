@@ -149,6 +149,8 @@ struct config {
   boost::filesystem::path fplan_;
   std::string fplan_file_extension_;
 
+  bool convert_utf8_;
+
   const char* files(filename_key k, int index = 0) const {
     return required_files_[k][index].c_str();
   }
@@ -312,6 +314,7 @@ const config hrd_5_00_8 = {
     INIT(.core_data_, "stamm"),
     INIT(.fplan_, "fahrten"),
     INIT(.fplan_file_extension_, ""),
+    INIT(.convert_utf8_, false),
 };
 
 const config hrd_5_20_26 = {
@@ -468,6 +471,7 @@ const config hrd_5_20_26 = {
     INIT(.core_data_, "stamm"),
     INIT(.fplan_, "fahrten"),
     INIT(.fplan_file_extension_, ""),
+    INIT(.convert_utf8_, false),
 };
 
 const config hrd_5_20_39 = {
@@ -624,6 +628,7 @@ const config hrd_5_20_39 = {
     INIT(.core_data_, "."),
     INIT(.fplan_, "FPLAN"),
     INIT(.fplan_file_extension_, ""),
+    INIT(.convert_utf8_, true),
 };
 
 const config hrd_5_20_avv = {
@@ -780,6 +785,7 @@ const config hrd_5_20_avv = {
     INIT(.core_data_, "."),
     INIT(.fplan_, "."),
     INIT(.fplan_file_extension_, ".LIN"),
+    INIT(.convert_utf8_, false),
 };
 
 const std::vector<config> configs = {hrd_5_00_8, hrd_5_20_26, hrd_5_20_39,

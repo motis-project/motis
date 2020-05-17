@@ -8,9 +8,9 @@
 #include <string>
 
 #ifdef _MSC_VER
-#define gmt(a, b) gmtime_s(b, a)
+#define MOTIS_GMT(a, b) gmtime_s(b, a)
 #else
-#define gmt(a, b) gmtime_r(a, b)
+#define MOTIS_GMT(a, b) gmtime_r(a, b)
 #endif
 
 #define FILE_NAME \
@@ -54,7 +54,7 @@ static const char* const str[]{"emrg", "alrt", "crit", "erro",
 inline std::string time(time_t const t) {
   char buf[sizeof "2011-10-08t07:07:09z-0430"];
   struct tm result {};
-  gmt(&t, &result);
+  MOTIS_GMT(&t, &result);
   strftime(static_cast<char*>(buf), sizeof buf, "%FT%TZ%z", &result);
   return buf;
 }
