@@ -3,8 +3,11 @@
 #include <algorithm>
 #include <tuple>
 
+#include "utl/enumerate.h"
 #include "utl/parser/csv.h"
 
+#include "motis/core/common/logging.h"
+#include "motis/core/common/projection.h"
 #include "motis/loader/util.h"
 
 using namespace utl;
@@ -19,9 +22,14 @@ static const column_mapping<gtfs_trip> columns = {
 
 trip_map read_trips(loaded_file file, route_map const& routes,
                     services const& services) {
+  motis::logging::scoped_timer timer{"read trips"};
+
   trip_map trips;
   auto line = 1U;
-  for (auto const& t : read<gtfs_trip>(file.content(), columns)) {
+  auto const p = projection{0.05, 0.2};
+  auto const entries = read<gtfs_trip>(file.content(), columns);
+  for (auto const& [i, t] : utl::enumerate(entries)) {
+    std::clog << '\0' << p(i / static_cast<float>(entries.size())) << '\0';
     trips.emplace(
         get<trip_id>(t).to_str(),
         std::make_unique<trip>(

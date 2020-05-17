@@ -17,6 +17,7 @@
 
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
+#include "motis/core/common/projection.h"
 #include "motis/loader/gtfs/agency.h"
 #include "motis/loader/gtfs/calendar.h"
 #include "motis/loader/gtfs/calendar_date.h"
@@ -98,6 +99,8 @@ std::time_t to_unix_time(boost::gregorian::date const& date) {
 }
 
 void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
+  motis::logging::scoped_timer global_timer{"gtfs parser"};
+
   auto const load = [&](char const* file) {
     return fs::is_regular_file(root / file) ? loaded_file{root / file}
                                             : loaded_file{};
@@ -157,12 +160,18 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
                               [&]() { return fbb.CreateString(s); });
   };
 
+  motis::logging::scoped_timer export_timer{"export"};
+  auto const p = projection{0.4, 0.8};
+  std::clog << '\0' << 'S' << "Export schedule.raw" << '\0';
   auto const interval =
       Interval{static_cast<uint64_t>(to_unix_time(services.first_day_)),
                static_cast<uint64_t>(to_unix_time(services.last_day_))};
+  auto i = 0.0;
   auto const output_services = fbb.CreateVector(utl::to_vec(
       begin(trips), end(trips),
       [&](std::pair<std::string const, std::unique_ptr<trip>> const& entry) {
+        std::clog << '\0' << p((i += 1.) / trips.size()) << '\0';
+
         auto const& t = entry.second;
         auto const stop_seq = t->stops();
         return CreateService(

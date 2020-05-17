@@ -1,7 +1,10 @@
 #include "motis/loader/gtfs/calendar_date.h"
 
+#include "utl/enumerate.h"
 #include "utl/parser/csv.h"
 
+#include "motis/core/common/logging.h"
+#include "motis/core/common/projection.h"
 #include "motis/loader/util.h"
 
 using namespace utl;
@@ -27,9 +30,14 @@ calendar_date read_date(gtfs_calendar_date const& gtfs_date) {
 
 std::map<std::string, std::vector<calendar_date>> read_calendar_date(
     loaded_file f) {
+  motis::logging::scoped_timer timer{"calendar dates"};
+  std::clog << '\0' << 'S' << "Parse Calendar Dates" << '\0';
+  auto const p = projection{0.0, 0.05};
+
   std::map<std::string, std::vector<calendar_date>> services;
-  for (auto const& d :
-       read<gtfs_calendar_date>(f.content(), calendar_columns)) {
+  auto const entries = read<gtfs_calendar_date>(f.content(), calendar_columns);
+  for (auto const& [i, d] : utl::enumerate(entries)) {
+    std::clog << '\0' << p(i / static_cast<float>(entries.size())) << '\0';
     services[get<service_id>(d).to_str()].push_back(read_date(d));
   }
   return services;
