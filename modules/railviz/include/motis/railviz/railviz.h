@@ -20,9 +20,10 @@ struct railviz : public motis::module::module {
 
 private:
   static motis::module::msg_ptr get_trip_guesses(motis::module::msg_ptr const&);
+  static motis::module::msg_ptr get_station(motis::module::msg_ptr const&);
+
   motis::module::msg_ptr get_trains(motis::module::msg_ptr const&) const;
   static motis::module::msg_ptr get_trips(motis::module::msg_ptr const&);
-  static motis::module::msg_ptr get_station(motis::module::msg_ptr const&);
 
   std::unique_ptr<train_retriever> train_retriever_;
 };

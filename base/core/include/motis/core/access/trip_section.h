@@ -4,8 +4,7 @@
 
 namespace motis::access {
 
-class trip_section {
-public:
+struct trip_section {
   trip_section(trip const* t, int index);
 
   int index() const;
@@ -21,7 +20,9 @@ public:
   uint32_t from_station_id() const;
   uint32_t to_station_id() const;
 
-private:
+  ev_key ev_key_from() const;
+  ev_key ev_key_to() const;
+
   trip const* trip_;
   int index_;
   edge const* edge_;

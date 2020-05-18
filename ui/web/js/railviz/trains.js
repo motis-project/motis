@@ -147,9 +147,8 @@ RailViz.Trains = (function () {
       this.anchor = null;
     }
 
-    setData(trains, routes) {
+    setData(trains) {
       this.trains = trains;
-      this.routes = routes;
 
       this.positionData = null;
       this.progressData = null;
@@ -197,11 +196,12 @@ RailViz.Trains = (function () {
       let x = 0;
       let y = 0;
       this.trains.forEach((t) => {
-        x += t.departureStation.pos.x;
-        y += t.departureStation.pos.y;
-        x += t.arrivalStation.pos.x;
-        y += t.arrivalStation.pos.y;
+        const first = t.firstMercatorCoordinate();
+        const last = t.lastMercatorCoordinate();
+        x += first.x + last.x;
+        y += first.y + last.y;
       });
+
       return {
         x: x / (2 * this.trains.length),
         y: y / (2 * this.trains.length),
@@ -213,67 +213,15 @@ RailViz.Trains = (function () {
     }
 
     updateTrain(trainIndex, time) {
-      let updated = false;
-      let train = this.trains[trainIndex];
-      if (time < train.d_time || time > train.a_time) {
-        updated = train.currentSubSegmentIndex != null;
-        train.currentSubSegmentIndex = null;
-        train.currentSubSegmentProgress = null;
-      } else {
-        const progress = (time - train.d_time) / (train.a_time - train.d_time);
-        const segment = this.routes[train.route_index].segments[
-          train.segment_index
-        ];
-        const totalPosition = progress * segment.totalLength;
-        if (train.currentSubSegmentIndex != null) {
-          const subOffset =
-            segment.subSegmentOffsets[train.currentSubSegmentIndex];
-          const subLen =
-            segment.subSegmentLengths[train.currentSubSegmentIndex];
-          if (
-            totalPosition >= subOffset &&
-            totalPosition <= subOffset + subLen
-          ) {
-            train.currentSubSegmentProgress =
-              (totalPosition - subOffset) / subLen;
-            return false;
-          }
-        }
-        for (
-          let i = train.currentSubSegmentIndex || 0;
-          i < segment.subSegmentOffsets.length;
-          i++
-        ) {
-          const subOffset = segment.subSegmentOffsets[i];
-          const subLen = segment.subSegmentLengths[i];
-          if (
-            totalPosition >= subOffset &&
-            totalPosition <= subOffset + subLen
-          ) {
-            updated = train.currentSubSegmentIndex !== i;
-            train.currentSubSegmentIndex = i;
-            train.currentSubSegmentProgress =
-              (totalPosition - subOffset) / subLen;
-            break;
-          }
-        }
-      }
-      return updated;
+      return this.trains[trainIndex].updatePosition(time);
     }
 
     writePositionToBuffer(trainIndex) {
-      const train = this.trains[trainIndex];
-      const subSegmentIndex = train.currentSubSegmentIndex;
-      const offset = trainIndex * 5;
-      if (subSegmentIndex != null) {
-        const segment = routes[train.route_index].segments[train.segment_index];
-        const polyline = segment.coordinates.coordinates;
-        const polyOffset = subSegmentIndex * 2;
+      const mercLine = this.trains[trainIndex].getMercatorLine();
 
-        const x0 = polyline[polyOffset],
-          y0 = polyline[polyOffset + 1],
-          x1 = polyline[polyOffset + 2],
-          y1 = polyline[polyOffset + 3];
+      const offset = trainIndex * 5;
+      if (mercLine != null) {
+        const [x0, y0, x1, y1] = mercLine;
         const angle = -Math.atan2(y1 - y0, x1 - x0);
 
         // Move coordinates to the anchor: This seems to be enough to fix
@@ -283,6 +231,7 @@ RailViz.Trains = (function () {
         this.positionData[offset + 2] = x1 - this.anchor.x; // a_endPos
         this.positionData[offset + 3] = y1 - this.anchor.y; // a_endPos
         this.positionData[offset + 4] = angle; // a_angle
+
       } else {
         this.positionData[offset + 0] = -100; // a_startPos
         this.positionData[offset + 1] = -100; // a_startPos
@@ -294,8 +243,8 @@ RailViz.Trains = (function () {
 
     writeProgressToBuffer(trainIndex) {
       const train = trains[trainIndex];
-      if (train.currentSubSegmentProgress != null) {
-        this.progressData[trainIndex] = train.currentSubSegmentProgress;
+      if (train.currProgress != null) {
+        this.progressData[trainIndex] = train.currProgress;
       } else {
         this.progressData[trainIndex] = -1.0;
       }
@@ -441,7 +390,6 @@ RailViz.Trains = (function () {
   }
 
   let trains = [];
-  let routes = [];
 
   let ext = null;
   let texture = null;
@@ -488,9 +436,8 @@ RailViz.Trains = (function () {
       gl,RailViz.Textures.createTrain());
   }
 
-  function setData(newTrains, newRoutes) {
+  function setData(newTrains) {
     trains = newTrains || [];
-    routes = newRoutes || [];
     initialized = false;
   }
 
@@ -498,7 +445,7 @@ RailViz.Trains = (function () {
     if (!initialized) {
       initialized = true;
       vertexAttributes.setData(trains);
-      positionAttributes.setData(trains, routes);
+      positionAttributes.setData(trains);
       colorAttributes.setData(trains);
     }
 

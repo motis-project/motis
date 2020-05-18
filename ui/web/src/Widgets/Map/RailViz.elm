@@ -57,7 +57,7 @@ type alias Model =
     , mouseY : Int
     , hoveredTrain : Maybe RVTrain
     , hoveredStation : Maybe String
-    , hoveredConnectionSegment : Maybe RVConnectionSegment
+    , hoveredTripSegments : Maybe (List RVConnectionSegmentTrip)
     , hoveredWalkSegment : Maybe RVConnectionSegmentWalk
     , trainMode : TrainMode
     , apiError : Maybe ApiError
@@ -86,7 +86,7 @@ init remoteAddress =
     , mouseY = 0
     , hoveredTrain = Nothing
     , hoveredStation = Nothing
-    , hoveredConnectionSegment = Nothing
+    , hoveredTripSegments = Nothing
     , hoveredWalkSegment = Nothing
     , trainMode = ClassColors
     , apiError = Nothing
@@ -149,7 +149,7 @@ update msg model =
                 , mouseY = tt.mouseY
                 , hoveredTrain = tt.hoveredTrain
                 , hoveredStation = tt.hoveredStation
-                , hoveredConnectionSegment = tt.hoveredConnectionSegment
+                , hoveredTripSegments = tt.hoveredTripSegments
                 , hoveredWalkSegment = tt.hoveredWalkSegment
             }
                 ! []

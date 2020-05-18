@@ -33,7 +33,7 @@ RailViz.Render = (function () {
       footpaths: [],
     };
 
-    RailViz.Trains.setData(data.trains, data.routes);
+    RailViz.Trains.setData(data.trains);
     forceDraw = true;
   }
 
@@ -253,7 +253,7 @@ RailViz.Render = (function () {
           }
         : null;
 
-    const pickedConnectionSegment = RailViz.Path.Connections.getPickedSegment(
+    const pickedConnections = RailViz.Path.Connections.getPickedConnections(
       features
     );
 
@@ -270,7 +270,7 @@ RailViz.Render = (function () {
       mouseY,
       pickedTrain,
       pickedStation,
-      pickedConnectionSegment
+      pickedConnections
     );
   }
 

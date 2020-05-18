@@ -22,8 +22,8 @@ RailViz.Main = (function () {
     y: -1,
     pickedTrain: null,
     pickedStation: null,
-    pickedConnectionSegment: null,
-    highlightedConnections: [],
+    pickedConnection: null,
+    highlightedConnections: []
   };
 
   var debouncedSendTrainsRequest = debounce(sendTrainsRequest, 200);
@@ -72,7 +72,7 @@ RailViz.Main = (function () {
 
     let updated = false;
     walks.forEach((walk) => {
-      RailViz.Preprocessing.prepareWalk(walk);
+      RailViz.Model.prepareWalk(walk);
       const existingWalk = detailFilter.walks.find((w) => isSameWalk(w, walk));
       if (existingWalk) {
         existingWalk.polyline = walk.polyline;
@@ -166,13 +166,14 @@ RailViz.Main = (function () {
     if (callId != lastRequest) {
       return;
     }
-    RailViz.Preprocessing.preprocess(data);
+    RailViz.Model.preprocess(data);
     if (onlyFilteredTrips) {
       detailTrips = data;
       if (detailFilter) {
         showDetailData();
       }
     } else {
+      data.stations = null;
       fullData = data;
       if (!detailFilter) {
         showFullData();
@@ -273,7 +274,7 @@ RailViz.Main = (function () {
     y,
     pickedTrain,
     pickedStation,
-    pickedConnectionSegment
+    pickedConnection
   ) {
     if (eventType == "mouseup") {
       if (dragEndTime != null && Date.now() - dragEndTime < 100) {
@@ -292,7 +293,7 @@ RailViz.Main = (function () {
       }
     } else {
       if (eventType != "mouseout") {
-        setTooltip(x, y, pickedTrain, pickedStation, pickedConnectionSegment);
+        setTooltip(x, y, pickedTrain, pickedStation, pickedConnection);
       } else {
         setTooltip(-1, -1, null, null, null);
       }
@@ -303,19 +304,13 @@ RailViz.Main = (function () {
     dragEndTime = Date.now();
   }
 
-  function setTooltip(
-    x,
-    y,
-    pickedTrain,
-    pickedStation,
-    pickedConnectionSegment
-  ) {
+  function setTooltip(x, y, pickedTrain, pickedStation, pickedConnection) {
     if (
       hoverInfo.x == x &&
       hoverInfo.y == y &&
       hoverInfo.pickedTrain == pickedTrain &&
       hoverInfo.pickedStation == pickedStation &&
-      hoverInfo.pickedConnectionSegment == pickedConnectionSegment
+      hoverInfo.pickedConnection == pickedConnection
     ) {
       return;
     }
@@ -324,7 +319,7 @@ RailViz.Main = (function () {
     hoverInfo.y = y;
     hoverInfo.pickedTrain = pickedTrain;
     hoverInfo.pickedStation = pickedStation;
-    hoverInfo.pickedConnectionSegment = pickedConnectionSegment;
+    hoverInfo.pickedConnection = pickedConnection;
 
     var rvTrain = null;
     if (pickedTrain) {
@@ -340,33 +335,39 @@ RailViz.Main = (function () {
         hasArrivalDelayInfo: !!(
           pickedTrain.a_time_reason && pickedTrain.a_time_reason != "SCHEDULE"
         ),
-        departureStation: pickedTrain.departureStation.name,
-        arrivalStation: pickedTrain.arrivalStation.name,
+        departureStation: pickedTrain.dStation.name,
+        arrivalStation: pickedTrain.aStation.name,
       };
     }
     var rvStation = pickedStation && pickedStation.name;
 
-    let connectionSegment = null;
-    let walkSegment = null;
+    let hoveredTripSegments = null;
+    let hoveredWalkSegment = null;
 
     let highlightedConnections = [];
-    if (pickedConnectionSegment) {
-      console.log("pickedConnectionSegment:", pickedConnectionSegment);
-      if (pickedConnectionSegment.walk) {
-        walkSegment = pickedConnectionSegment;
-        highlightedConnections = walkSegment.connectionIds;
-      } else {
-        connectionSegment = pickedConnectionSegment;
-        highlightedConnections = Array.from(
-          new Set(
-            [].concat.apply(
-              [],
-              connectionSegment.trips.map((trip) => trip.connectionIds)
-            )
-          )
+
+    if (pickedConnection) {
+      if (Array.isArray(pickedConnection)) {
+        hoveredTripSegments = pickedConnection.map((pc) => {
+          return {
+            connectionIds: pc.connectionIds,
+            trip: pc.trip,
+            d_station_id: pc.d_station_id,
+            a_station_id: pc.a_station_id,
+          };
+        });
+
+        let idSet = new Set();
+        pickedConnection.forEach((pc) =>
+          pc.connectionIds.forEach((id) => idSet.add(id))
         );
+        highlightedConnections.push(...idSet);
+      } else {
+        hoveredWalkSegment = pickedConnection;
+        highlightedConnections = pickedConnection.connectionIds;
       }
     }
+
     if (!deepEqual(highlightedConnections, hoverInfo.highlightedConnections)) {
       hoverInfo.highlightedConnections = highlightedConnections;
       RailViz.Main.highlightConnections(highlightedConnections);
@@ -377,8 +378,8 @@ RailViz.Main = (function () {
       mouseY: y,
       hoveredTrain: rvTrain,
       hoveredStation: rvStation,
-      hoveredConnectionSegment: connectionSegment,
-      hoveredWalkSegment: walkSegment,
+      hoveredTripSegments: hoveredTripSegments,
+      hoveredWalkSegment: hoveredWalkSegment,
     });
   }
 

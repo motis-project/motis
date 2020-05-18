@@ -27,23 +27,9 @@ RailViz.Path.Connections = (function () {
   let data = null;
   let enabled = true;
 
-  let lowestConnId = 0;
-  let trainSegments = [];
-  let walkSegments = [];
-
-  let connectionToSegments = new Map();
-  let segmentToConnections = new Map();
-
-  let stationsData = null;
-
-  function getOrCreate(map, k, fn) {
-    let v = map.get(k);
-    if (v === undefined) {
-      v = fn();
-      map.set(k, v);
-    }
-    return v;
-  }
+  let connections = null;
+  let tripData = null;
+  let walkData = null;
 
   function init(_map, beforeId) {
     map = _map;
@@ -69,6 +55,7 @@ RailViz.Path.Connections = (function () {
         layout: {
           "line-join": "round",
           "line-cap": "round",
+          "line-sort-key": ["get", "sortKey"],
         },
         paint: {
           "line-color": [
@@ -87,109 +74,69 @@ RailViz.Path.Connections = (function () {
       beforeId
     );
 
-    map.addSource("railviz-connections-stations", {
-      type: "geojson",
-      promoteId: "id",
-      data: {
-        type: "FeatureCollection",
-        features: [],
-      },
-    });
-
-    if (stationsData != null) {
-      map.getSource("railviz-connections-stations").setData(stationsData);
-    }
-
-    map.addLayer({
-      id: "railviz-connections-stations",
-      type: "circle",
-      source: "railviz-connections-stations",
-      paint: {
-        "circle-color": "magenta",
-        "circle-radius": 2.25,
-        "circle-stroke-color": "#333333",
-        "circle-stroke-width": 2,
-      },
-    });
-
     setEnabled(enabled);
   }
 
-  function setData(newTrainSegments, newWalkSegments, newLowestConnId) {
+  function minCIdToColor(minCId) {
+    const c = minCId % colors.length;
+    return colors[c < 0 ? colors.length + c : c];
+  }
+
+  function setData(_connections, _tripData, _walkData) {
     data = {
       type: "FeatureCollection",
       features: [],
     };
 
-    lowestConnId = newLowestConnId;
-    trainSegments = newTrainSegments
-      ? Array.from(newTrainSegments.values())
-      : [];
-    walkSegments = newWalkSegments ? Array.from(newWalkSegments.values()) : [];
+    connections = _connections;
+    tripData = _tripData;
+    walkData = _walkData;
 
-    connectionToSegments.clear();
-    segmentToConnections.clear();
-
-    let segment_id = 0;
-    if (newTrainSegments) {
-      trainSegments.forEach((ts) => {
-        const line = RailViz.Preprocessing.toLatLngs(
-          ts.segment.coordinates.coordinates
-        );
-        if (line.length > 0) {
-          data.features.push({
-            type: "Feature",
-            properties: {
-              id: segment_id,
-              color: colors[ts.color % colors.length],
-            },
-            geometry: {
-              type: "LineString",
-              coordinates: line,
-            },
-          });
-
-          ts.trips.forEach((t) =>
-            t.connectionIds.forEach((c) =>
-              getOrCreate(connectionToSegments, c, Array).push(segment_id)
-            )
-          );
-          segmentToConnections.set(
-            segment_id,
-            ts.trips.flatMap((t) => t.connectionIds)
-          );
+    if (tripData) {
+      tripData.polylines.forEach((p, i) => {
+        if (!p.trains) {
+          return; // not part of any visible connection segment
         }
 
-        segment_id++;
+        data.features.push({
+          type: "Feature",
+          properties: {
+            id: i,
+            trip: true,
+            sortKey: p.minCId > 0 ? -p.minCId : p.minCId + 1e9,
+            color: minCIdToColor(p.minCId),
+          },
+          geometry: {
+            type: "LineString",
+            coordinates: flipped(p.coordinates), // from polyline.js
+          },
+        });
       });
     }
 
-    if (newWalkSegments) {
-      walkSegments.forEach((ws) => {
-        if (ws.error) {
+    if (walkData) {
+      walkData.forEach((w) => {
+        if (w.error) {
           return;
         }
-        const line = RailViz.Preprocessing.toLatLngs(ws.polyline.coordinates);
-        if (line.length > 0) {
-          data.features.push({
-            type: "Feature",
-            properties: {
-              id: segment_id,
-              color: colors[ws.color % colors.length],
-            },
-            geometry: {
-              type: "LineString",
-              coordinates: line,
-            },
-          });
-
-          ws.connectionIds.forEach((c) =>
-            getOrCreate(connectionToSegments, c, Array).push(segment_id)
-          );
-          segmentToConnections.set(segment_id, ws.connectionIds);
+        const coords = RailViz.Model.doublesToLngLats(w.polyline.coordinates);
+        if (coords.length == 0) {
+          return;
         }
 
-        segment_id++;
+        data.features.push({
+          type: "Feature",
+          properties: {
+            id: 1e9 + w.id,
+            trip: false,
+            sortKey: w.minCId > 0 ? -w.minCId : w.minCId + 1e9,
+            color: minCIdToColor(w.minCId),
+          },
+          geometry: {
+            type: "LineString",
+            coordinates: coords,
+          },
+        });
       });
     }
 
@@ -200,15 +147,11 @@ RailViz.Path.Connections = (function () {
 
   function setEnabled(b) {
     if (map !== null) {
-      if (b) {
-        map.setLayoutProperty(
-          "railviz-connections-line",
-          "visibility",
-          "visible"
-        );
-      } else {
-        map.setLayoutProperty("railviz-connections-line", "visibility", "none");
-      }
+      map.setLayoutProperty(
+        "railviz-connections-line",
+        "visibility",
+        b ? "visible" : "none"
+      );
     }
     enabled = b;
   }
@@ -223,46 +166,49 @@ RailViz.Path.Connections = (function () {
       return;
     }
 
-    let highlightColors = new Map();
+    let minCIds = new Map(); // feature id -> minCid
     connectionIds.forEach((cid) => {
-      const sids = connectionToSegments.get(cid);
-      if (sids) {
-        sids.forEach((sid) =>
-          getOrCreate(highlightColors, sid, () => {
-            const color = segmentToConnections
-              .get(sid)
-              .reduce(
-                (acc, c) =>
-                  connectionIds.includes(c) ? Math.min(acc, c) : acc,
-                cid
-              );
-            return colors[(color - lowestConnId) % colors.length];
-          })
-        );
+      const c = connections.find((c) => c.id == cid);
+      if (c === undefined) {
+        return; // catch racing condition on "later" click
       }
-    });
 
-    highlightColors.forEach((c, sid) =>
+      c.resolved.forEach((t) => {
+        t.indices.forEach((i) => {
+          let curr = minCIds.get(Math.abs(i));
+          let next = RailViz.ConnectionManager.cIdCombine(curr, c.id);
+          if (curr != next) {
+            minCIds.set(Math.abs(i), next);
+          }
+        });
+      });
+
+      c.walks.forEach((w) => {
+        let curr = minCIds.get(1e9 + w.id);
+        let next = RailViz.ConnectionManager.cIdCombine(curr, c.id);
+        if (curr != next) {
+          minCIds.set(1e9 + w.id, next);
+        }
+      });
+    });
+    minCIds.forEach((minCId, id) => {
       map.setFeatureState(
-        { source: "railviz-connections", id: sid },
-        { highlight: true, color: c }
-      )
-    );
+        { source: "railviz-connections", id: id },
+        { highlight: true, color: minCIdToColor(minCId) }
+      );
+    });
   }
 
-  function getPickedSegment(features) {
+  function getPickedConnections(features) {
     const f = features.find((e) => e.layer.id == "railviz-connections-line");
     if (f === undefined) {
       return null;
     }
 
-    if (f.id >= 0 && f.id < trainSegments.length) {
-      return trainSegments[f.id];
-    } else if (
-      f.id >= trainSegments.length &&
-      f.id <= trainSegments.length + walkSegments.length
-    ) {
-      return walkSegments[f.id - trainSegments.length];
+    if (f.properties.trip) {
+      return tripData.polylines[f.id].trains;
+    } else {
+      return walkData[f.id - 1e9];
     }
   }
 
@@ -270,7 +216,7 @@ RailViz.Path.Connections = (function () {
     init: init,
     setData: setData,
     setEnabled: setEnabled,
-    getPickedSegment: getPickedSegment,
+    getPickedConnections: getPickedConnections,
     highlightConnections: highlightConnections,
   };
 })();

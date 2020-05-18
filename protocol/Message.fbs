@@ -25,10 +25,12 @@ include "lookup/LookupMetaStationResponse.fbs";
 include "lookup/LookupIdTrainRequest.fbs";
 include "lookup/LookupIdTrainResponse.fbs";
 include "path/PathBoxesResponse.fbs";
-include "path/PathByTripIdRequest.fbs";
-include "path/PathSeqResponse.fbs";
 include "path/PathByStationSeqRequest.fbs";
+include "path/PathByTripIdRequest.fbs";
+include "path/PathByTripIdBatchRequest.fbs";
+include "path/PathByTripIdBatchResponse.fbs";
 include "path/PathByTileFeatureRequest.fbs";
+include "path/PathSeqResponse.fbs";
 include "railviz/RailVizTrainsRequest.fbs";
 include "railviz/RailVizTrainsResponse.fbs";
 include "railviz/RailVizTripsRequest.fbs";
@@ -210,7 +212,9 @@ union MsgContent {
   motis.import.ScheduleEvent,
   motis.import.DEMEvent,
   motis.import.PPREvent,
-  motis.import.OSRMEvent
+  motis.import.OSRMEvent,
+  motis.path.PathByTripIdBatchRequest,
+  motis.path.PathByTripIdBatchResponse
 }
 
 // Destination Examples:

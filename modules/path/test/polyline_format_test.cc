@@ -11,7 +11,6 @@ TEST(path_polyline_format_test, google_coord) {
   enc.push_difference(-179.9832104 * mp::polyline_encoder<>::kPrecision);
   EXPECT_EQ("`~oia@", enc.buf_);
 
-
   auto const line = mp::decode_polyline("`~oia@");
   ASSERT_EQ(1, line.size());
   EXPECT_EQ(-179.98321, line[0].lat_);

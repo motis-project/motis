@@ -10,8 +10,6 @@ port module Widgets.Map.Port exposing
     , MapTooltip
     , RVConnection
     , RVConnectionSection
-    , RVConnectionSegment
-    , RVConnectionSegmentInfo
     , RVConnectionSegmentTrip
     , RVConnectionSegmentWalk
     , RVConnectionTrain
@@ -71,7 +69,7 @@ type alias MapTooltip =
     , mouseY : Int
     , hoveredTrain : Maybe RVTrain
     , hoveredStation : Maybe String
-    , hoveredConnectionSegment : Maybe RVConnectionSegment
+    , hoveredTripSegments : Maybe (List RVConnectionSegmentTrip)
     , hoveredWalkSegment : Maybe RVConnectionSegmentWalk
     }
 
@@ -97,23 +95,12 @@ type alias RVTrain =
     }
 
 
-type alias RVConnectionSegment =
-    { trips : List RVConnectionSegmentTrip
-    , segment : RVConnectionSegmentInfo
-    }
-
-
 type alias RVConnectionSegmentTrip =
     { connectionIds : List Int
-    , trip : TripId
+    , trip : List TripId
+    , d_station_id : String
+    , a_station_id : String
     }
-
-
-type alias RVConnectionSegmentInfo =
-    { from_station_id : String
-    , to_station_id : String
-    }
-
 
 type alias RVConnectionSegmentWalk =
     { connectionIds : List Int
