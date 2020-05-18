@@ -57,24 +57,14 @@ RailViz.Path.Extra = (function () {
       features: [],
     };
 
-    newData.routes.forEach((route) => {
-      route.segments.forEach((segment) => {
-        if (!segment.extra) {
-          return;
-        }
-
-        const coords = RailViz.Preprocessing.toLatLngs(segment.rawCoordinates);
-        if (coords.length == 0) {
-          return;
-        }
-        data.features.push({
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "LineString",
-            coordinates: coords,
-          },
-        });
+    newData.extras.forEach((e) => {
+      data.features.push({
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: flipped(newData.polylines[e].coordinates), // polyline.js
+        },
       });
     });
 

@@ -48,7 +48,7 @@ import Widgets.Helpers.ApiErrorUtil exposing (errorText)
 import Widgets.Helpers.ConnectionUtil exposing (..)
 import Widgets.JourneyTransportGraph as JourneyTransportGraph
 import Widgets.LoadingSpinner as LoadingSpinner
-import Widgets.Map.Port exposing (MapTooltip, RVConnectionSegment, RVConnectionSegmentWalk, mapSetTooltip)
+import Widgets.Map.Port exposing (MapTooltip, RVConnectionSegmentTrip, RVConnectionSegmentWalk, mapSetTooltip)
 import Widgets.Map.RailViz as RailViz
 
 
@@ -75,7 +75,7 @@ type alias Model =
     , fromName : Maybe String
     , toName : Maybe String
     , lastRequestId : Int
-    , hoveredConnectionSegment : Maybe RVConnectionSegment
+    , hoveredTripSegments : Maybe ( List RVConnectionSegmentTrip )
     , hoveredWalkSegment : Maybe RVConnectionSegmentWalk
     }
 
@@ -113,7 +113,7 @@ init remoteAddress =
     , fromName = Nothing
     , toName = Nothing
     , lastRequestId = 0
-    , hoveredConnectionSegment = Nothing
+    , hoveredTripSegments = Nothing
     , hoveredWalkSegment = Nothing
     }
 
@@ -329,7 +329,7 @@ update msg model =
 
         MapSetTooltip tt ->
             { model
-                | hoveredConnectionSegment = tt.hoveredConnectionSegment
+                | hoveredTripSegments = tt.hoveredTripSegments
                 , hoveredWalkSegment = tt.hoveredWalkSegment
             }
                 ! []
@@ -761,7 +761,7 @@ connectionsWithDateHeaders config locale model =
             ( "connection-" ++ toString idx
             , connectionView config
                 locale
-                ( model.hoveredConnectionSegment, model.hoveredWalkSegment )
+                ( model.hoveredTripSegments, model.hoveredWalkSegment )
                 model.labels
                 idx
                 (List.member idx model.newJourneys)
@@ -789,14 +789,14 @@ connectionsWithDateHeaders config locale model =
 connectionView :
     Config msg
     -> Localization
-    -> ( Maybe RVConnectionSegment, Maybe RVConnectionSegmentWalk )
+    -> ( Maybe (List RVConnectionSegmentTrip), Maybe RVConnectionSegmentWalk )
     -> List String
     -> Int
     -> Bool
     -> LabeledJourney
     -> JourneyTransportGraph.Model
     -> Html msg
-connectionView (Config { internalMsg, selectMsg }) locale ( hoveredTrip, hoveredWalk ) allLabels idx new labeledJourney jtg =
+connectionView (Config { internalMsg, selectMsg }) locale ( hoveredTrips, hoveredWalk ) allLabels idx new labeledJourney jtg =
     let
         j =
             labeledJourney.journey
@@ -809,10 +809,10 @@ connectionView (Config { internalMsg, selectMsg }) locale ( hoveredTrip, hovered
                 text ""
 
         isHighlighted =
-            journeyIsHighlighted idx hoveredTrip hoveredWalk
+            journeyIsHighlighted idx hoveredTrips hoveredWalk
 
         useHighlighting =
-            isJust hoveredTrip || isJust hoveredWalk
+            isJust hoveredTrips || isJust hoveredWalk
 
         isFaded =
             not isHighlighted && useHighlighting
@@ -846,7 +846,7 @@ connectionView (Config { internalMsg, selectMsg }) locale ( hoveredTrip, hovered
                 [ div [] [ text (Maybe.map durationText (Connection.duration j.connection) |> Maybe.withDefault "?") ] ]
             , div [ class "pure-u-16-24 connection-trains" ]
                 [ Html.map (\m -> internalMsg (JTGUpdate idx m)) <|
-                    JourneyTransportGraph.view locale ( useHighlighting, hoveredTrip, hoveredWalk ) jtg
+                    JourneyTransportGraph.view locale ( useHighlighting, hoveredTrips, hoveredWalk ) jtg
                 ]
             ]
         ]
@@ -981,18 +981,18 @@ extendIntervalButton direction (Config { internalMsg }) locale model =
         ]
 
 
-journeyIsHighlighted : Int -> Maybe RVConnectionSegment -> Maybe RVConnectionSegmentWalk -> Bool
-journeyIsHighlighted idx mbTripSeg mbWalkSeg =
+journeyIsHighlighted : Int -> Maybe ( List RVConnectionSegmentTrip ) -> Maybe RVConnectionSegmentWalk -> Bool
+journeyIsHighlighted idx mbTripSegs mbWalkSeg =
     let
         checkTrip tripSeg =
-            tripSeg.trips
+            tripSeg
                 |> List.any (\t -> List.member idx t.connectionIds)
 
         checkWalk walkSeg =
             List.member idx walkSeg.connectionIds
 
         containsTrip =
-            mbTripSeg
+            mbTripSegs
                 |> Maybe.map checkTrip
                 |> Maybe.withDefault False
 

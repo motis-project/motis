@@ -24,7 +24,7 @@ import Util.Core exposing ((=>))
 import Util.DateFormat exposing (formatTime)
 import Util.List exposing (last)
 import Widgets.Helpers.ConnectionUtil exposing (..)
-import Widgets.Map.Port exposing (RVConnectionSegment, RVConnectionSegmentWalk, RVConnectionWalk)
+import Widgets.Map.Port exposing (RVConnectionSegmentTrip, RVConnectionSegmentWalk, RVConnectionWalk)
 
 
 
@@ -116,28 +116,28 @@ hideTooltips model =
 -- VIEW
 
 
-view : Localization -> ( Bool, Maybe RVConnectionSegment, Maybe RVConnectionSegmentWalk ) -> Model -> Html Msg
+view : Localization -> ( Bool, Maybe (List RVConnectionSegmentTrip), Maybe RVConnectionSegmentWalk ) -> Model -> Html Msg
 view locale highlighting model =
     Html.Lazy.lazy3 graphView locale highlighting model
 
 
-graphView : Localization -> ( Bool, Maybe RVConnectionSegment, Maybe RVConnectionSegmentWalk ) -> Model -> Html Msg
-graphView locale ( useHighlighting, hoveredTrip, hoveredWalk ) model =
+graphView : Localization -> ( Bool, Maybe ( List RVConnectionSegmentTrip), Maybe RVConnectionSegmentWalk ) -> Model -> Html Msg
+graphView locale ( useHighlighting, hoveredTrips, hoveredWalk ) model =
     div
         [ Html.Attributes.classList
             [ "transport-graph" => True
             , "highlighting" => useHighlighting
             ]
         ]
-        (transportsView locale ( useHighlighting, hoveredTrip, hoveredWalk ) model)
+        (transportsView locale ( useHighlighting, hoveredTrips, hoveredWalk ) model)
 
 
 transportsView :
     Localization
-    -> ( Bool, Maybe RVConnectionSegment, Maybe RVConnectionSegmentWalk )
+    -> ( Bool, Maybe ( List RVConnectionSegmentTrip ), Maybe RVConnectionSegmentWalk )
     -> Model
     -> List (Html Msg)
-transportsView locale ( useHighlighting, hoveredTrip, hoveredWalk ) model =
+transportsView locale ( useHighlighting, hoveredTrips, hoveredWalk ) model =
     let
         isHovered displayPart =
             case model.hover of
@@ -145,7 +145,7 @@ transportsView locale ( useHighlighting, hoveredTrip, hoveredWalk ) model =
                     hoveredPart == displayPart
 
                 Nothing ->
-                    isPartHighlighted hoveredTrip hoveredWalk displayPart.part
+                    isPartHighlighted hoveredTrips hoveredWalk displayPart.part
 
         renderedParts =
             List.map
@@ -164,11 +164,12 @@ transportsView locale ( useHighlighting, hoveredTrip, hoveredWalk ) model =
         ++ List.map Tuple.second renderedParts
 
 
-isPartHighlighted : Maybe RVConnectionSegment -> Maybe RVConnectionSegmentWalk -> Part -> Bool
-isPartHighlighted hoveredTrip hoveredWalk part =
-    case ( hoveredTrip, part.train ) of
-        ( Just seg, Just train ) ->
-            isMatchingTrain seg train
+isPartHighlighted : Maybe (List RVConnectionSegmentTrip ) -> Maybe RVConnectionSegmentWalk -> Part -> Bool
+isPartHighlighted hoveredTrips hoveredWalk part =
+    case ( hoveredTrips, part.train ) of
+        ( Just segments, Just train ) ->
+            segments
+                |> List.any (\seg -> isMatchingTrain seg train)
 
         _ ->
             case ( hoveredWalk, part.walk ) of
@@ -179,12 +180,12 @@ isPartHighlighted hoveredTrip hoveredWalk part =
                     False
 
 
-isMatchingTrain : RVConnectionSegment -> Train -> Bool
+isMatchingTrain : RVConnectionSegmentTrip -> Train -> Bool
 isMatchingTrain seg train =
     let
         checkTrip trip =
-            seg.trips
-                |> List.any (\t -> t.trip == trip)
+            seg.trip
+                |> List.any (\t -> t == trip)
 
         containsStop stationId =
             train.stops
@@ -192,8 +193,8 @@ isMatchingTrain seg train =
 
         checkStations r =
             r
-                && containsStop seg.segment.from_station_id
-                && containsStop seg.segment.to_station_id
+                && containsStop seg.d_station_id
+                && containsStop seg.a_station_id
     in
     train.trip
         |> Maybe.map checkTrip

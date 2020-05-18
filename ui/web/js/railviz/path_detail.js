@@ -102,48 +102,40 @@ RailViz.Path.Detail = (function () {
       features: [],
     };
 
-    trips.routes.forEach((route, route_idx) => {
-      route.segments.forEach((segment, segment_idx) => {
-        const coords = RailViz.Preprocessing.toLatLngs(segment.rawCoordinates);
-        if (coords.length == 0) {
-          return;
-        }
-        segment.highlight = false;
-        segment.clasz = colors.length - 1;
-
-        trips.trains.forEach((train) => {
-          if (
-            train.route_index != route_idx ||
-            train.segment_index != segment_idx
-          ) {
-            return;
-          }
-
-          segment.clasz = Math.min(segment.clasz, train.clasz);
-          segment.highlight |= train.trip.some((this_trp) =>
-            filter.trains.some(
-              (filter_train) =>
-                deepEqual(filter_train.trip, this_trp) &&
-                filter_train.sections.some(
-                  (filter_sec) =>
-                    filter_sec.departureStation.id == segment.from_station_id &&
-                    filter_sec.arrivalStation.id == segment.to_station_id
-                )
+    trips.trains.forEach((t) => {
+      t.highlight = t.trip.some((this_trp) =>
+        filter.trains.some(
+          (filter_train) =>
+            deepEqual(filter_train.trip, this_trp) &&
+            filter_train.sections.some(
+              (filter_sec) =>
+                filter_sec.departureStation.id == t.d_station_id &&
+                filter_sec.arrivalStation.id == t.a_station_id
             )
-          );
-        });
+        )
+      );
 
-        data.features.push({
-          type: "Feature",
-          properties: {
-            highlight: !!segment.highlight,
-            clasz: segment.clasz,
-          },
-          geometry: {
-            type: "LineString",
-            coordinates: coords,
-          },
-        });
+      t.polylines.forEach((p) => {
+        p.polyline.clasz = Math.min(p.polyline.clasz || 9, t.clasz);
+        p.polyline.highlight |= t.highlight;
+      });
+    });
+
+    trips.polylines.forEach((p) => {
+      if(!p.coordinates) {
+        return;
+      }
+
+      data.features.push({
+        type: "Feature",
+        properties: {
+          highlight: !!p.highlight,
+          clasz: p.clasz,
+        },
+        geometry: {
+          type: "LineString",
+          coordinates: flipped(p.coordinates), // from polyline.js
+        },
       });
     });
 
@@ -206,55 +198,39 @@ RailViz.Path.Detail = (function () {
 
   function loadAdjustedWalk(walk, trips) {
     const replace = !walk.polyline;
-    const from_station_id = walk.departureStation.id;
-    const to_station_id = walk.arrivalStation.id;
-    const startSegments = trips.routes.reduce(
-      (acc, r) =>
-        acc.concat(
-          r.segments.filter(
-            (seg) => seg.to_station_id == from_station_id && seg.highlight
-          )
-        ),
-      []
-    );
-    const coords = walk.polyline || [];
-    if (startSegments.length == 1) {
-      const fromCoords = startSegments[0].rawCoordinates;
-      const x = fromCoords[fromCoords.length - 2];
-      const y = fromCoords[fromCoords.length - 1];
-      if (replace) {
-        coords[0] = x;
-        coords[1] = y;
-      } else {
-        if (coords[0] != x || coords[1] != y) {
-          coords.unshift(x, y);
-        }
+    const wp = walk.polyline || [];
+
+    // train_arrival -> walk_departure
+    const walk_d_station_id = walk.departureStation.id;
+    const trainArrivalCoords = trips.trains.reduce((acc, t) => {
+      if (t.a_station_id == walk_d_station_id && t.highlight) {
+        acc.push(t.lastCoordinate());
       }
-    }
-    const endSegments = trips.routes.reduce(
-      (acc, r) =>
-        acc.concat(
-          r.segments.filter(
-            (seg) => seg.from_station_id == to_station_id && seg.highlight
-          )
-        ),
-      []
-    );
-    if (endSegments.length == 1) {
-      const toCoords = endSegments[0].rawCoordinates;
-      const x = toCoords[0];
-      const y = toCoords[1];
-      if (replace) {
-        coords[2] = x;
-        coords[3] = y;
-      } else {
-        if (coords[coords.length - 2] != x || coords[coords.length - 1] != y) {
-          coords.push(x, y);
-        }
+      return acc;
+    }, []);
+    if (trainArrivalCoords.length == 1) {
+      const [lat, lng] = trainArrivalCoords[0];
+      if (replace || wp[0] != lat || wp[1] != lng) {
+        wp.unshift(lat, lng);
       }
     }
 
-    return RailViz.Preprocessing.toLatLngs(coords);
+    // walk_arrival -> train_departure
+    const walk_a_station_id = walk.arrivalStation.id;
+    const trainDepartureCoords = trips.trains.reduce((acc, t) => {
+      if (t.d_station_id == walk_a_station_id && t.highlight) {
+        acc.push(t.firstCoordinate());
+      }
+      return acc;
+    }, []);
+    if (trainDepartureCoords.length == 1) {
+      const [lat, lng] = trainDepartureCoords[0];
+      if (replace || wp[wp.length - 2] != lat || wp[wp.length - 1] != lng) {
+        wp.push(lat, lng);
+      }
+    }
+
+    return RailViz.Model.doublesToLngLats(wp);
   }
 
   function setEnabled(b) {
