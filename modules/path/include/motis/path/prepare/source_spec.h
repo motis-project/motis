@@ -59,6 +59,10 @@ void foreach_path_category(std::set<int> const& motis_categories, Fun&& fun) {
     }
   }
 
+  if (motis_categories.empty()) {
+    unknown_cat.push_back(9U);
+  }
+
   if (!railway_cat.empty()) {
     fun(source_spec::category::RAIL, railway_cat);
   }
