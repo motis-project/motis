@@ -12,7 +12,7 @@ clog_redirect::clog_redirect(progress_listener& progress_listener,
     : name_{std::move(name)},
       backup_clog_{std::clog.rdbuf()},
       progress_listener_{progress_listener} {
-  if (disabled_) {
+  if (!enabled_) {
     return;
   }
 
@@ -22,12 +22,18 @@ clog_redirect::clog_redirect(progress_listener& progress_listener,
 }
 
 clog_redirect::~clog_redirect() {
-  if (!disabled_) {
+  if (enabled_) {
     std::clog.rdbuf(backup_clog_);
   }
 }
 
 clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
+  auto const read_double = [this] {
+    auto val = std::stof(buf_);
+    buf_.clear();
+    return val;
+  };
+
   static constexpr auto const PROGRESS_MARKER = '\0';
   switch (state_) {
     case output_state::NORMAL:
@@ -45,19 +51,19 @@ clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
         case PROGRESS_MARKER: state_ = output_state::NORMAL; break;
         case 'E': state_ = output_state::ERR; break;
         case 'S': state_ = output_state::STATUS; break;
+        case 'B': state_ = output_state::BOUND_OUTPUT_LOW; break;
         default:
           state_ = output_state::PERCENT;
-          percent_ = traits_type::to_char_type(c) - '0';
+          buf_ += traits_type::to_char_type(c);
       }
       return c;
 
     case output_state::PERCENT:
       if (traits_type::to_char_type(c) == PROGRESS_MARKER) {
-        progress_listener_.update_progress(name_, percent_);
+        progress_listener_.update_progress(name_, read_double());
         state_ = output_state::NORMAL;
       } else {
-        percent_ *= 10;
-        percent_ += traits_type::to_char_type(c) - '0';
+        buf_ += traits_type::to_char_type(c);
       }
       return c;
 
@@ -74,12 +80,43 @@ clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
       }
       return c;
 
+    case output_state::BOUND_OUTPUT_LOW:
+      if (traits_type::to_char_type(c) == ' ') {
+        output_low_ = read_double();
+        state_ = output_state::BOUND_OUTPUT_HIGH;
+      } else {
+        buf_ += traits_type::to_char_type(c);
+      }
+      return c;
+    case output_state::BOUND_OUTPUT_HIGH:
+      switch (traits_type::to_char_type(c)) {
+        case ' ':
+          output_high_ = read_double();
+          state_ = output_state::BOUND_INPUT_HIGH;
+          break;
+        case PROGRESS_MARKER:
+          progress_listener_.set_progress_bounds(name_, output_low_,
+                                                 read_double());
+          break;
+        default: buf_ += traits_type::to_char_type(c);
+      }
+      return c;
+    case output_state::BOUND_INPUT_HIGH:
+      if (traits_type::to_char_type(c) == PROGRESS_MARKER) {
+        progress_listener_.set_progress_bounds(name_, output_low_, output_high_,
+                                               read_double());
+        state_ = output_state::NORMAL;
+      } else {
+        buf_ += traits_type::to_char_type(c);
+      }
+      return c;
+
     default: return c;
   }
 }
 
-void clog_redirect::disable() { disabled_ = true; }
+void clog_redirect::set_enabled(bool const enabled) { enabled_ = enabled; }
 
-bool clog_redirect::disabled_ = false;
+bool clog_redirect::enabled_ = true;
 
 }  // namespace motis::module

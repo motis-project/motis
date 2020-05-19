@@ -8,7 +8,6 @@
 #include "utl/parser/csv.h"
 
 #include "motis/core/common/logging.h"
-#include "motis/core/common/projection.h"
 #include "motis/loader/gtfs/common.h"
 #include "motis/loader/util.h"
 
@@ -60,10 +59,10 @@ void read_stop_times(loaded_file const& file, trip_map& trips,
   std::string last_trip_id;
   trip* last_trip = nullptr;
 
-  auto const p = projection{0.2, 0.4};
   auto const entries = read<gtfs_stop_time>(file.content(), stop_time_columns);
+  motis::logging::clog_set_progress_bounds(20, 40, entries.size());
   for (auto const& [i, s] : utl::enumerate(entries)) {
-    std::clog << '\0' << p(i / static_cast<float>(entries.size())) << '\0';
+    motis::logging::clog_update_progress_int(i, 10000);
 
     trip* t = nullptr;
     auto t_id = get<trip_id>(s).to_str();

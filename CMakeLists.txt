@@ -221,7 +221,7 @@ target_link_libraries(motis-test
   ianatzdb-res
   ${Boost_LIBRARIES}
 )
-target_link_libraries(motis-test gtest gtest_main)
+target_link_libraries(motis-test gmock gtest gtest_main)
 
 
 ################################

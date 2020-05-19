@@ -22,7 +22,7 @@ struct clog_redirect : public std::streambuf {
 
   int_type overflow(int_type) override;
 
-  static void disable();
+  static void set_enabled(bool);
 
 private:
   enum class output_state {
@@ -30,15 +30,18 @@ private:
     MODE_SELECT,
     PERCENT,
     ERR,
-    STATUS
+    STATUS,
+    BOUND_OUTPUT_LOW,
+    BOUND_OUTPUT_HIGH,
+    BOUND_INPUT_HIGH
   } state_{output_state::NORMAL};
-  int percent_{0};
+  double output_low_{0.}, output_high_{0.};
   std::ofstream sink_;
   std::string name_;
   std::streambuf* backup_clog_;
   std::string buf_;
   progress_listener& progress_listener_;
-  static bool disabled_;
+  static bool enabled_;
 };
 
 }  // namespace motis::module

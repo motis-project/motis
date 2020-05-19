@@ -36,7 +36,7 @@ motis_instance_test::motis_instance_test(
   parser.read_command_line_args(modules_cmdline_opt_patched);
 
   try {
-    clog_redirect::disable();
+    clog_redirect::set_enabled(false);
     instance_->import(module_settings{modules}, dataset_opt,
                       import_settings{{dataset_opt.dataset_}}, true);
   } catch (loader::parser_error const& e) {

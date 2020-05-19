@@ -7,7 +7,6 @@
 #include "utl/parser/csv.h"
 
 #include "motis/core/common/logging.h"
-#include "motis/core/common/projection.h"
 #include "motis/loader/util.h"
 
 using namespace utl;
@@ -26,10 +25,11 @@ trip_map read_trips(loaded_file file, route_map const& routes,
 
   trip_map trips;
   auto line = 1U;
-  auto const p = projection{0.05, 0.2};
   auto const entries = read<gtfs_trip>(file.content(), columns);
+  motis::logging::clog_set_progress_bounds(5, 20, entries.size());
   for (auto const& [i, t] : utl::enumerate(entries)) {
-    std::clog << '\0' << p(i / static_cast<float>(entries.size())) << '\0';
+    motis::logging::clog_update_progress_int(i, 10000);
+
     trips.emplace(
         get<trip_id>(t).to_str(),
         std::make_unique<trip>(
