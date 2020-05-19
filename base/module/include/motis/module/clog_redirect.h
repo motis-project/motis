@@ -35,7 +35,7 @@ private:
     BOUND_OUTPUT_HIGH,
     BOUND_INPUT_HIGH
   } state_{output_state::NORMAL};
-  double output_low_{0.}, output_high_{0.};
+  float output_low_{0.f}, output_high_{0.f};
   std::ofstream sink_;
   std::string name_;
   std::streambuf* backup_clog_;

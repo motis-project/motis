@@ -61,8 +61,8 @@ void move_cursor_up(int lines) {
 void clear_line() { std::cout << "\x1b[K"; }
 
 void import_status::set_progress_bounds(std::string const& name,  //
-                                        double output_low, double output_high,
-                                        double input_high) {
+                                        float output_low, float output_high,
+                                        float input_high) {
   auto s = status_[name];
   s.output_low_ = output_low;
   s.output_high_ = output_high;
@@ -72,13 +72,13 @@ void import_status::set_progress_bounds(std::string const& name,  //
   }
 }
 
-void import_status::update_progress(std::string const& name, double progress) {
+void import_status::update_progress(std::string const& name, float progress) {
   auto s = status_[name];
   s.status_ = import::Status_RUNNING;
   s.progress_ =
       std::clamp(std::round(s.output_low_ + (s.output_high_ - s.output_low_) *
                                                 (progress / s.input_high_)),
-                 0., 100.);
+                 0.f, 100.f);
 
   if (update(name, s)) {
     print();
@@ -122,7 +122,7 @@ bool import_status::update(motis::module::msg_ptr const& msg) {
     return update(
         upd->name()->str(),
         {utl::to_vec(*upd->waiting_for(), [](auto&& e) { return e->str(); }),
-         upd->status(), upd->progress(), 0., 100., 100., upd->error()->str(),
+         upd->status(), upd->progress(), 0.f, 100.f, 100.f, upd->error()->str(),
          upd->current_task()->str()});
   }
   return false;

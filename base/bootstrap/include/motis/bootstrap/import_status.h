@@ -15,7 +15,8 @@ struct state {
   CISTA_COMPARABLE()
   std::vector<std::string> dependencies_;
   import::Status status_{import::Status::Status_WAITING};
-  double progress_{0.}, output_low_{0.}, output_high_{100.}, input_high_{100.};
+  float progress_{0.f}, output_low_{0.f}, output_high_{100.f},
+      input_high_{100.f};
   std::string error_;
   std::string current_task_;
 };
@@ -24,9 +25,9 @@ struct import_status : public module::progress_listener {
   bool update(motis::module::msg_ptr const&);
   void print();
 
-  void set_progress_bounds(std::string const& name, double output_low,
-                           double output_high, double input_high) override;
-  void update_progress(std::string const& name, double progress) override;
+  void set_progress_bounds(std::string const& name, float output_low,
+                           float output_high, float input_high) override;
+  void update_progress(std::string const& name, float progress) override;
 
   void report_error(std::string const& name, std::string const& what) override;
   void report_step(std::string const& name, std::string const& step) override;

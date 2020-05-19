@@ -8,15 +8,15 @@ namespace t = testing;
 
 struct progress_listener_mock : public mm::progress_listener {
   MOCK_METHOD(void, set_progress_bounds,
-              (std::string const& name, double output_low, double output_high,
-               double input_high),
+              (std::string const& name, float output_low, float output_high,
+               float input_high),
               (override));
-  MOCK_METHOD(void, update_progress, (std::string const& name, double progress),
+  MOCK_METHOD(void, update_progress, (std::string const& name, float progress),
               (override));
   MOCK_METHOD(void, report_error,
               (std::string const& name, std::string const& what), (override));
   MOCK_METHOD(void, report_step,
-              (std::string const& name, std::string const& task), (override));
+              (std::string const& name, std::string const& step), (override));
 };
 
 #ifdef _MSC_VER
