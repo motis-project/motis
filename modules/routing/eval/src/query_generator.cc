@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <random>
@@ -27,14 +28,17 @@ using namespace motis::routing;
 struct generator_settings : public conf::configuration {
   generator_settings() : configuration("Generator Settings") {
     param(query_count_, "query_count", "number of queries to generate");
-    param(target_files_fwd_, "target_file_fwd",
-          "file(s) to write generated departure time queries to");
-    param(target_files_bwd_, "target_file_bwd",
-          "file(s) to write generated arrival time queries to");
+    param(target_file_fwd_, "target_file_fwd",
+          "file(s) to write generated departure time queries to. ${target} is "
+          "replaced by the target url");
+    param(target_file_bwd_, "target_file_bwd",
+          "file(s) to write generated arrival time queries to. ${target} is "
+          "replaced by the target url");
     param(large_stations_, "large_stations",
           "use only large stations as start/destination");
     param(query_type_, "query_type", "query type: pretrip|ontrip_station");
-    param(targets_, "targets", "message target urls");
+    param(targets_, "targets",
+          "message target urls. for every url query files will be generated");
   }
 
   generator_settings(generator_settings const&) = delete;
@@ -55,8 +59,8 @@ struct generator_settings : public conf::configuration {
   }
 
   int query_count_{1000};
-  std::vector<std::string> target_files_fwd_{"queries_fwd.txt"};
-  std::vector<std::string> target_files_bwd_{"queries_bwd.txt"};
+  std::string target_file_fwd_{"queries-fwd-${target}.txt"};
+  std::string target_file_bwd_{"queries-bwd-${target}.txt"};
   bool large_stations_{false};
   std::string query_type_{"pretrip"};
   std::vector<std::string> targets_{"/routing"};
@@ -237,6 +241,26 @@ std::pair<std::string, std::string> random_station_ids(
   return {from->eva_nr_.str(), to->eva_nr_.str()};
 }
 
+std::string replace_target_escape(std::string const& str,
+                                  std::string const& target) {
+  std::string const target_escape = "${target}";
+  auto const esc_pos = str.find(target_escape);
+  if (esc_pos == std::string::npos) {
+    return str;
+  }
+
+  auto clean_target = target;
+  if (clean_target.starts_with('/')) {
+    clean_target.erase(clean_target.begin());
+  }
+  std::replace(clean_target.begin(), clean_target.end(), '/', '_');
+
+  auto target_str = str;
+  target_str.replace(esc_pos, target_escape.size(), clean_target);
+
+  return target_str;
+}
+
 int main(int argc, char const** argv) {
   generator_settings generator_opt;
   dataset_settings dataset_opt;
@@ -259,12 +283,6 @@ int main(int argc, char const** argv) {
   std::cout << "\n\tQuery Generator\n\n";
   parser.print_unrecognized(std::cout);
   parser.print_used(std::cout);
-
-  utl::verify(
-      generator_opt.targets_.size() == generator_opt.target_files_fwd_.size() &&
-          generator_opt.targets_.size() ==
-              generator_opt.target_files_bwd_.size(),
-      "please provide as many filenames as targets");
 
   motis_instance instance;
   instance.import(module_settings{}, dataset_opt,
@@ -308,14 +326,17 @@ int main(int argc, char const** argv) {
         });
   }
 
-  std::map<std::string, std::ofstream> filename_to_ofstream;
+  std::vector<std::ofstream> fwd_ofstreams;
+  std::vector<std::ofstream> bwd_ofstreams;
 
-  for (auto const& filename : generator_opt.target_files_fwd_) {
-    filename_to_ofstream[filename] = std::ofstream(filename);
-  }
+  for (auto const& target : generator_opt.targets_) {
+    auto const& fwd_fn =
+        replace_target_escape(generator_opt.target_file_fwd_, target);
+    auto const& bwd_fn =
+        replace_target_escape(generator_opt.target_file_bwd_, target);
 
-  for (auto const& filename : generator_opt.target_files_bwd_) {
-    filename_to_ofstream[filename] = std::ofstream(filename);
+    fwd_ofstreams.emplace_back(fwd_fn);
+    bwd_ofstreams.emplace_back(bwd_fn);
   }
 
   auto const start_type = generator_opt.get_start_type();
@@ -326,11 +347,8 @@ int main(int argc, char const** argv) {
 
     for (auto f_idx = 0; f_idx < generator_opt.targets_.size(); ++f_idx) {
       auto const& target = generator_opt.targets_[f_idx];
-      auto const& fwd_fn = generator_opt.target_files_fwd_[f_idx];
-      auto const& bwd_fn = generator_opt.target_files_bwd_[f_idx];
-
-      auto& out_fwd = filename_to_ofstream[fwd_fn];
-      auto& out_bwd = filename_to_ofstream[bwd_fn];
+      auto& out_fwd = fwd_ofstreams[f_idx];
+      auto& out_bwd = bwd_ofstreams[f_idx];
 
       out_fwd << query(target, start_type, i, interval.first, interval.second,
                        evas.first, evas.second, SearchDir_Forward)
@@ -341,7 +359,13 @@ int main(int argc, char const** argv) {
     }
   }
 
-  for (auto& [fn, ofstream] : filename_to_ofstream) {
+  for (auto& ofstream : fwd_ofstreams) {
     ofstream.flush();
   }
+
+  for (auto& ofstream : bwd_ofstreams) {
+    ofstream.flush();
+  }
+
+  return 0;
 }
