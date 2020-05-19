@@ -28,7 +28,7 @@ clog_redirect::~clog_redirect() {
 }
 
 clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
-  auto const read_double = [this] {
+  auto const consume_double = [this] {
     auto val = std::stof(buf_);
     buf_.clear();
     return val;
@@ -60,7 +60,7 @@ clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
 
     case output_state::PERCENT:
       if (traits_type::to_char_type(c) == PROGRESS_MARKER) {
-        progress_listener_.update_progress(name_, read_double());
+        progress_listener_.update_progress(name_, consume_double());
         state_ = output_state::NORMAL;
       } else {
         buf_ += traits_type::to_char_type(c);
@@ -82,7 +82,7 @@ clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
 
     case output_state::BOUND_OUTPUT_LOW:
       if (traits_type::to_char_type(c) == ' ') {
-        output_low_ = read_double();
+        output_low_ = consume_double();
         state_ = output_state::BOUND_OUTPUT_HIGH;
       } else {
         buf_ += traits_type::to_char_type(c);
@@ -91,12 +91,12 @@ clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
     case output_state::BOUND_OUTPUT_HIGH:
       switch (traits_type::to_char_type(c)) {
         case ' ':
-          output_high_ = read_double();
+          output_high_ = consume_double();
           state_ = output_state::BOUND_INPUT_HIGH;
           break;
         case PROGRESS_MARKER:
           progress_listener_.set_progress_bounds(name_, output_low_,
-                                                 read_double(), 100.);
+                                                 consume_double(), 100.);
           break;
         default: buf_ += traits_type::to_char_type(c);
       }
@@ -104,7 +104,7 @@ clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
     case output_state::BOUND_INPUT_HIGH:
       if (traits_type::to_char_type(c) == PROGRESS_MARKER) {
         progress_listener_.set_progress_bounds(name_, output_low_, output_high_,
-                                               read_double());
+                                               consume_double());
         state_ = output_state::NORMAL;
       } else {
         buf_ += traits_type::to_char_type(c);

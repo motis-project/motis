@@ -106,17 +106,9 @@ struct manual_timer final {
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
-inline void clog_set_progress_bounds(double output_low = 0.,
-                                     double output_high = 100.,
-                                     double input_high = 100.) {
-  std::clog << '\0' << 'B' << output_low << " " << output_high << " "
-            << input_high << '\0';
-}
+void clog_import_step(std::string const& name, double output_low = 0.,
+                      double output_high = 100., double input_high = 100.);
 
-inline void clog_update_progress_int(size_t progress, size_t rate_limit = 1) {
-  if (progress % rate_limit == 0) {
-    std::clog << '\0' << progress << '\0';
-  }
-}
+void clog_import_progress(size_t progress, size_t rate_limit = 1);
 
 }  // namespace motis::logging

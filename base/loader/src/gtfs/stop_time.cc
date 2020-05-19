@@ -54,16 +54,13 @@ int hhmm_to_min(cstr s) {
 void read_stop_times(loaded_file const& file, trip_map& trips,
                      stop_map const& stops) {
   motis::logging::scoped_timer timer{"read stop times"};
-  std::clog << '\0' << 'S' << "Parse Stop Times" << '\0';
-
   std::string last_trip_id;
   trip* last_trip = nullptr;
 
   auto const entries = read<gtfs_stop_time>(file.content(), stop_time_columns);
-  motis::logging::clog_set_progress_bounds(20, 40, entries.size());
+  motis::logging::clog_import_step("Parse Stop Times", 20, 40, entries.size());
   for (auto const& [i, s] : utl::enumerate(entries)) {
-    motis::logging::clog_update_progress_int(i, 10000);
-
+    motis::logging::clog_import_progress(i, 10000);
     trip* t = nullptr;
     auto t_id = get<trip_id>(s).to_str();
     if (last_trip != nullptr && t_id == last_trip_id) {

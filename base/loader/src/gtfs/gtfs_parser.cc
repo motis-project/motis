@@ -160,16 +160,15 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   };
 
   motis::logging::scoped_timer export_timer{"export"};
-  std::clog << '\0' << 'S' << "Export schedule.raw" << '\0';
-  motis::logging::clog_set_progress_bounds(40, 80, trips.size());
+  motis::logging::clog_import_step("Export schedule.raw", 40, 80, trips.size());
   auto const interval =
       Interval{static_cast<uint64_t>(to_unix_time(services.first_day_)),
                static_cast<uint64_t>(to_unix_time(services.last_day_))};
-  size_t i{0U};
+  auto i = size_t{0U};
   auto const output_services = fbb.CreateVector(utl::to_vec(
       begin(trips), end(trips),
       [&](std::pair<std::string const, std::unique_ptr<trip>> const& entry) {
-        motis::logging::clog_update_progress_int(i++, 100000);
+        motis::logging::clog_import_progress(i++, 100000);
 
         auto const& t = entry.second;
         auto const stop_seq = t->stops();
@@ -256,8 +255,6 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
       fbb.CreateVector(values(fbs_routes)), &interval, footpaths,
       fbb.CreateVector(std::vector<Offset<RuleService>>()), 0,
       fbb.CreateString(dataset_name), hash(root)));
-
-  motis::logging::clog_set_progress_bounds();
 }
 
 }  // namespace motis::loader::gtfs

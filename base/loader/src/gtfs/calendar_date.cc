@@ -30,14 +30,12 @@ calendar_date read_date(gtfs_calendar_date const& gtfs_date) {
 std::map<std::string, std::vector<calendar_date>> read_calendar_date(
     loaded_file f) {
   motis::logging::scoped_timer timer{"calendar dates"};
-  std::clog << '\0' << 'S' << "Parse Calendar Dates" << '\0';
-
   std::map<std::string, std::vector<calendar_date>> services;
   auto const entries = read<gtfs_calendar_date>(f.content(), calendar_columns);
-  motis::logging::clog_set_progress_bounds(0, 5, entries.size());
+  motis::logging::clog_import_step("Parse Calendar Dates", 0, 5,
+                                   entries.size());
   for (auto const& [i, d] : utl::enumerate(entries)) {
-    motis::logging::clog_update_progress_int(i, 10000);
-
+    motis::logging::clog_import_progress(i, 10000);
     services[get<service_id>(d).to_str()].push_back(read_date(d));
   }
   return services;
