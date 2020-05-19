@@ -19,6 +19,8 @@ struct rt_handler {
                       bool validate_constant_graph);
 
   motis::module::msg_ptr update(motis::module::msg_ptr const&);
+  motis::module::msg_ptr single(motis::module::msg_ptr const&);
+  void update(schedule&, motis::ris::Message const*);
   motis::module::msg_ptr flush(motis::module::msg_ptr const&);
 
 private:
