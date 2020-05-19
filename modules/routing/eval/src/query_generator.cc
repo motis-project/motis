@@ -27,14 +27,14 @@ using namespace motis::routing;
 struct generator_settings : public conf::configuration {
   generator_settings() : configuration("Generator Settings") {
     param(query_count_, "query_count", "number of queries to generate");
-    param(target_file_fwd_, "target_file_fwd",
-          "file to write generated departure time queries to");
-    param(target_file_bwd_, "target_file_bwd",
-          "file to write generated arrival time queries to");
+    param(target_files_fwd_, "target_file_fwd",
+          "file(s) to write generated departure time queries to");
+    param(target_files_bwd_, "target_file_bwd",
+          "file(s) to write generated arrival time queries to");
     param(large_stations_, "large_stations",
           "use only large stations as start/destination");
     param(query_type_, "query_type", "query type: pretrip|ontrip_station");
-    param(target_, "target", "message target");
+    param(targets_, "targets", "message target urls");
   }
 
   generator_settings(generator_settings const&) = delete;
@@ -55,11 +55,11 @@ struct generator_settings : public conf::configuration {
   }
 
   int query_count_{1000};
-  std::string target_file_fwd_{"queries_fwd.txt"};
-  std::string target_file_bwd_{"queries_bwd.txt"};
+  std::vector<std::string> target_files_fwd_{"queries_fwd.txt"};
+  std::vector<std::string> target_files_bwd_{"queries_bwd.txt"};
   bool large_stations_{false};
   std::string query_type_{"pretrip"};
-  std::string target_{"/routing"};
+  std::vector<std::string> targets_{"/routing"};
 };
 
 struct search_interval_generator {
@@ -260,8 +260,11 @@ int main(int argc, char const** argv) {
   parser.print_unrecognized(std::cout);
   parser.print_used(std::cout);
 
-  std::ofstream out_fwd(generator_opt.target_file_fwd_);
-  std::ofstream out_bwd(generator_opt.target_file_bwd_);
+  utl::verify(
+      generator_opt.targets_.size() == generator_opt.target_files_fwd_.size() &&
+          generator_opt.targets_.size() ==
+              generator_opt.target_files_bwd_.size(),
+      "please provide as many filenames as targets");
 
   motis_instance instance;
   instance.import(module_settings{}, dataset_opt,
@@ -305,20 +308,40 @@ int main(int argc, char const** argv) {
         });
   }
 
+  std::map<std::string, std::ofstream> filename_to_ofstream;
+
+  for (auto const& filename : generator_opt.target_files_fwd_) {
+    filename_to_ofstream[filename] = std::ofstream(filename);
+  }
+
+  for (auto const& filename : generator_opt.target_files_bwd_) {
+    filename_to_ofstream[filename] = std::ofstream(filename);
+  }
+
   auto const start_type = generator_opt.get_start_type();
   for (int i = 1; i <= generator_opt.query_count_; ++i) {
     auto interval = interval_gen.random_interval();
     auto evas = random_station_ids(sched, station_nodes, interval.first,
                                    interval.second);
-    out_fwd << query(generator_opt.target_, start_type, i, interval.first,
-                     interval.second, evas.first, evas.second,
-                     SearchDir_Forward)
-            << "\n";
-    out_bwd << query(generator_opt.target_, start_type, i, interval.first,
-                     interval.second, evas.first, evas.second,
-                     SearchDir_Backward)
-            << "\n";
+
+    for (auto f_idx = 0; f_idx < generator_opt.targets_.size(); ++f_idx) {
+      auto const& target = generator_opt.targets_[f_idx];
+      auto const& fwd_fn = generator_opt.target_files_fwd_[f_idx];
+      auto const& bwd_fn = generator_opt.target_files_bwd_[f_idx];
+
+      auto& out_fwd = filename_to_ofstream[fwd_fn];
+      auto& out_bwd = filename_to_ofstream[bwd_fn];
+
+      out_fwd << query(target, start_type, i, interval.first, interval.second,
+                       evas.first, evas.second, SearchDir_Forward)
+              << "\n";
+      out_bwd << query(target, start_type, i, interval.first, interval.second,
+                       evas.first, evas.second, SearchDir_Backward)
+              << "\n";
+    }
   }
-  out_fwd.flush();
-  out_bwd.flush();
+
+  for (auto& [fn, ofstream] : filename_to_ofstream) {
+    ofstream.flush();
+  }
 }
