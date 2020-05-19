@@ -96,7 +96,7 @@ clog_redirect::int_type clog_redirect::overflow(clog_redirect::int_type c) {
           break;
         case PROGRESS_MARKER:
           progress_listener_.set_progress_bounds(name_, output_low_,
-                                                 consume_float(), 100.f);
+                                                 consume_float(), 100.F);
           break;
         default: buf_ += traits_type::to_char_type(c);
       }

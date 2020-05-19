@@ -78,7 +78,7 @@ void import_status::update_progress(std::string const& name, float progress) {
   s.progress_ =
       std::clamp(std::round(s.output_low_ + (s.output_high_ - s.output_low_) *
                                                 (progress / s.input_high_)),
-                 0.f, 100.f);
+                 0.F, 100.F);
 
   if (update(name, s)) {
     print();
@@ -122,7 +122,7 @@ bool import_status::update(motis::module::msg_ptr const& msg) {
     return update(
         upd->name()->str(),
         {utl::to_vec(*upd->waiting_for(), [](auto&& e) { return e->str(); }),
-         upd->status(), upd->progress(), 0.f, 100.f, 100.f, upd->error()->str(),
+         upd->status(), upd->progress(), 0.F, 100.F, 100.F, upd->error()->str(),
          upd->current_task()->str()});
   }
   return false;

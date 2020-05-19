@@ -51,7 +51,7 @@ enum log_level { emrg, alrt, crit, error, warn, notice, info, debug };
 static const char* const str[]{"emrg", "alrt", "crit", "erro",
                                "warn", "note", "info", "debg"};
 
-std::string time(time_t const t);
+std::string time(time_t);
 std::string time();
 
 struct scoped_timer final {

@@ -15,8 +15,8 @@ struct state {
   CISTA_COMPARABLE()
   std::vector<std::string> dependencies_;
   import::Status status_{import::Status::Status_WAITING};
-  float progress_{0.f}, output_low_{0.f}, output_high_{100.f},
-      input_high_{100.f};
+  float progress_{0.F}, output_low_{0.F}, output_high_{100.F},
+      input_high_{100.F};
   std::string error_;
   std::string current_task_;
 };
