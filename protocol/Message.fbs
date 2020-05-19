@@ -13,6 +13,7 @@ include "import/DEMEvent.fbs";
 include "import/OSRMEvent.fbs";
 include "import/PPREvent.fbs";
 include "import/ScheduleEvent.fbs";
+include "import/CoastlineEvent.fbs";
 include "intermodal/IntermodalRoutingRequest.fbs";
 include "lookup/LookupGeoStationIdRequest.fbs";
 include "lookup/LookupGeoStationRequest.fbs";
@@ -214,7 +215,8 @@ union MsgContent {
   motis.import.PPREvent,
   motis.import.OSRMEvent,
   motis.path.PathByTripIdBatchRequest,
-  motis.path.PathByTripIdBatchResponse
+  motis.path.PathByTripIdBatchResponse,
+  motis.import.CoastlineEvent
 }
 
 // Destination Examples:
