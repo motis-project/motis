@@ -1,0 +1,7 @@
+namespace motis.import;
+
+table CoastlineEvent {
+  path: string;
+  hash: ulong;
+  size: ulong;
+}

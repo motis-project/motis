@@ -13,8 +13,12 @@ target_link_libraries(motis-tiles
   motis-module
   lmdb
   tiles
+  tiles-import-library
   web-server
   pbf_sdf_fonts_res
   pbf_sdf_fonts_res-res
 )
 target_compile_options(motis-tiles PRIVATE ${MOTIS_CXX_FLAGS})
+
+set_property(TARGET motis-tiles tiles tiles-import-library
+             APPEND PROPERTY COMPILE_DEFINITIONS MOTIS_IMPORT_PROGRESS_FORMAT=1)

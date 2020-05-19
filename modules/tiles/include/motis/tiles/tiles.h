@@ -14,9 +14,14 @@ struct tiles : public motis::module::module {
   tiles(tiles&&) = delete;
   tiles& operator=(tiles&&) = delete;
 
+  void import(motis::module::progress_listener&,
+              motis::module::registry& reg) override;
   void init(motis::module::registry&) override;
 
-  std::string database_path_;
+  bool import_successful() const override;
+
+  bool use_coastline_{false};
+  std::string profile_path_;
 
   struct data;
   std::unique_ptr<data> data_;
