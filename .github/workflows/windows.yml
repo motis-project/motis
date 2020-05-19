@@ -89,8 +89,8 @@ jobs:
       - name: Move Profiles
         if: matrix.mode == 'Release'
         run: |
-          xcopy /s .\deps\osrm-backend\profiles .\osrm-profiles
-          xcopy /s .\deps\ppr\profiles .\ppr-profiles
+          echo d | xcopy /s .\deps\osrm-backend\profiles .\osrm-profiles
+          echo d | xcopy /s .\deps\ppr\profiles .\ppr-profiles
 
       - name: Create Distribution
         if: matrix.mode == 'Release'
