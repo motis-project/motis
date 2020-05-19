@@ -133,8 +133,8 @@ jobs:
           mkdir motis
           mv ui/web motis
           mv build/motis motis
-          mv deps/osrm-backend/profiles motis/osrm-profiles
-          mv deps/ppr/profiles motis/ppr-profiles
+          cp -r deps/osrm-backend/profiles motis/osrm-profiles
+          cp -r deps/ppr/profiles motis/ppr-profiles
           tar cjf motis-linux.tar.bz2 motis
 
       - name: Upload Distribution
