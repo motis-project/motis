@@ -88,181 +88,186 @@ msg_ptr rt_handler::update(msg_ptr const& msg) {
 
   auto& s = module::get_schedule();
   for (auto const& m : *motis_content(RISBatch, msg)->messages()) {
-    auto const& nested = m->message_nested_root();
-    stats_.count_message(nested->content_type());
+    update(s, m->message_nested_root());
+  }
+  return nullptr;
+}
 
-    auto c = nested->content();
-    try {
-      switch (nested->content_type()) {
-        case ris::MessageUnion_DelayMessage: {
-          auto const msg = reinterpret_cast<ris::DelayMessage const*>(c);
-          stats_.total_updates_ += msg->events()->size();
+msg_ptr rt_handler::single(msg_ptr const& msg) {
+  using ris::Message;
+  update(module::get_schedule(), motis_content(Message, msg));
+  flush(nullptr);
+  return nullptr;
+}
 
-          auto const reason = (msg->type() == ris::DelayType_Is)
-                                  ? timestamp_reason::IS
-                                  : timestamp_reason::FORECAST;
+void rt_handler::update(schedule& s, motis::ris::Message const* m) {
+  stats_.count_message(nested->content_type());
+  auto c = nested->content();
+  try {
+    switch (nested->content_type()) {
+      case ris::MessageUnion_DelayMessage: {
+        auto const msg = reinterpret_cast<ris::DelayMessage const*>(c);
+        stats_.total_updates_ += msg->events()->size();
 
-          auto const resolved = resolve_events(
-              stats_, s, msg->trip_id(),
-              utl::to_vec(*msg->events(), [](ris::UpdatedEvent const* ev) {
-                return ev->base();
-              }));
+        auto const reason = (msg->type() == ris::DelayType_Is)
+                                ? timestamp_reason::IS
+                                : timestamp_reason::FORECAST;
 
-          for (auto i = 0UL; i < resolved.size(); ++i) {
-            auto const& resolved_ev = resolved[i];
-            if (!resolved_ev) {
-              ++stats_.unresolved_events_;
-              continue;
-            }
+        auto const resolved = resolve_events(
+            stats_, s, msg->trip_id(),
+            utl::to_vec(*msg->events(), [](ris::UpdatedEvent const* ev) {
+              return ev->base();
+            }));
 
-            auto const upd_time =
-                unix_to_motistime(s, msg->events()->Get(i)->updated_time());
-            if (upd_time == INVALID_TIME) {
-              ++stats_.update_time_out_of_schedule_;
-              continue;
-            }
-
-            propagator_.add_delay(*resolved_ev, reason, upd_time);
-            ++stats_.found_updates_;
-          }
-
-          break;
-        }
-
-        case ris::MessageUnion_AdditionMessage: {
-          auto result = additional_service_builder(s).build_additional_train(
-              reinterpret_cast<ris::AdditionMessage const*>(c));
-          stats_.count_additional(result);
-          break;
-        }
-
-        case ris::MessageUnion_CancelMessage: {
-          auto const msg = reinterpret_cast<ris::CancelMessage const*>(c);
-
-          propagate();
-
-          std::vector<ev_key> cancelled_evs;
-          auto const result =
-              reroute(stats_, s, cancelled_delays_, cancelled_evs,
-                      msg->trip_id(), utl::to_vec(*msg->events()), {});
-
-          if (result.first == reroute_result::OK) {
-            for (auto const& e : *result.second->edges_) {
-              propagator_.add_delay(ev_key{e, 0, event_type::DEP});
-              propagator_.add_delay(ev_key{e, 0, event_type::ARR});
-            }
-            for (auto const& e : cancelled_evs) {
-              propagator_.add_canceled(e);
-            }
-          }
-
-          break;
-        }
-
-        case ris::MessageUnion_RerouteMessage: {
-          auto const msg = reinterpret_cast<ris::RerouteMessage const*>(c);
-
-          propagate();
-
-          std::vector<ev_key> cancelled_evs;
-          auto const result =
-              reroute(stats_, s, cancelled_delays_, cancelled_evs,
-                      msg->trip_id(), utl::to_vec(*msg->cancelled_events()),
-                      utl::to_vec(*msg->new_events()));
-
-          stats_.count_reroute(result.first);
-
-          if (result.first == reroute_result::OK) {
-            for (auto const& e : *result.second->edges_) {
-              propagator_.add_delay(ev_key{e, 0, event_type::DEP});
-              propagator_.add_delay(ev_key{e, 0, event_type::ARR});
-            }
-            for (auto const& e : cancelled_evs) {
-              propagator_.add_canceled(e);
-            }
-          }
-
-          break;
-        }
-
-        case ris::MessageUnion_TrackMessage: {
-          auto const msg = reinterpret_cast<ris::TrackMessage const*>(c);
-
-          stats_.total_evs_ += msg->events()->size();
-
-          auto const resolved = resolve_events(
-              stats_, s, msg->trip_id(),
-              utl::to_vec(*msg->events(), [](ris::UpdatedTrack const* ev) {
-                return ev->base();
-              }));
-
-          for (auto i = 0UL; i < resolved.size(); ++i) {
-            auto const& k = resolved[i];
-            if (!k) {
-              continue;
-            }
-
-            if (auto const it = s.graph_to_track_index_.find(*k);
-                it == s.graph_to_track_index_.end()) {
-              s.graph_to_track_index_[*k] =
-                  k->ev_type_ == event_type::ARR
-                      ? k->lcon()->full_con_->a_track_
-                      : k->lcon()->full_con_->d_track_;
-            }
-
-            auto const ev = msg->events()->Get(i);
-
-            track_events_.emplace_back(track_info{
-                *k, ev->updated_track()->str(),
-                unix_to_motistime(sched_, ev->base()->schedule_time())});
-
-            auto fcon = *k->lcon()->full_con_;
-            (k->ev_type_ == event_type::ARR ? fcon.a_track_ : fcon.d_track_) =
-                get_track(s, ev->updated_track()->str());
-
-            const_cast<light_connection*>(k->lcon())->full_con_ =  // NOLINT
-                s.full_connections_
-                    .emplace_back(mcd::make_unique<connection>(fcon))
-                    .get();
-          }
-          break;
-        }
-
-        case ris::MessageUnion_FreeTextMessage: {
-          auto const msg = reinterpret_cast<ris::FreeTextMessage const*>(c);
-          stats_.total_evs_ += msg->events()->size();
-          auto const [trp, resolved] = resolve_events_and_trip(
-              stats_, s, msg->trip_id(),
-              utl::to_vec(*msg->events(),
-                          [](ris::Event const* ev) { return ev; }));
-          if (trp == nullptr) {
+        for (auto i = 0UL; i < resolved.size(); ++i) {
+          auto const& resolved_ev = resolved[i];
+          if (!resolved_ev) {
+            ++stats_.unresolved_events_;
             continue;
           }
-          auto const events = utl::all(resolved)  //
-                              | utl::remove_if([](auto&& k) { return !k; })  //
-                              | utl::transform([](auto&& k) { return *k; })  //
-                              | utl::vec();
-          auto const ft = free_text{msg->free_text()->code(),
-                                    msg->free_text()->text()->str(),
-                                    msg->free_text()->type()->str()};
-          for (auto const& k : events) {
-            s.graph_to_free_texts_[k].emplace(ft);
+
+          auto const upd_time =
+              unix_to_motistime(s, msg->events()->Get(i)->updated_time());
+          if (upd_time == INVALID_TIME) {
+            ++stats_.update_time_out_of_schedule_;
+            continue;
           }
-          free_text_events_.emplace_back(free_texts{trp, ft, events});
-          break;
+
+          propagator_.add_delay(*resolved_ev, reason, upd_time);
+          ++stats_.found_updates_;
         }
 
-        default: break;
+        break;
       }
-    } catch (std::exception const& e) {
-      printf("rt::on_message: UNEXPECTED ERROR: %s\n", e.what());
-      continue;
-    } catch (...) {
-      continue;
-    }
-  }
 
-  return nullptr;
+      case ris::MessageUnion_AdditionMessage: {
+        auto result = additional_service_builder(s).build_additional_train(
+            reinterpret_cast<ris::AdditionMessage const*>(c));
+        stats_.count_additional(result);
+        break;
+      }
+
+      case ris::MessageUnion_CancelMessage: {
+        auto const msg = reinterpret_cast<ris::CancelMessage const*>(c);
+
+        propagate();
+
+        std::vector<ev_key> cancelled_evs;
+        auto const result =
+            reroute(stats_, s, cancelled_delays_, cancelled_evs, msg->trip_id(),
+                    utl::to_vec(*msg->events()), {});
+
+        if (result.first == reroute_result::OK) {
+          for (auto const& e : *result.second->edges_) {
+            propagator_.add_delay(ev_key{e, 0, event_type::DEP});
+            propagator_.add_delay(ev_key{e, 0, event_type::ARR});
+          }
+          for (auto const& e : cancelled_evs) {
+            propagator_.add_canceled(e);
+          }
+        }
+
+        break;
+      }
+
+      case ris::MessageUnion_RerouteMessage: {
+        auto const msg = reinterpret_cast<ris::RerouteMessage const*>(c);
+
+        propagate();
+
+        std::vector<ev_key> cancelled_evs;
+        auto const result =
+            reroute(stats_, s, cancelled_delays_, cancelled_evs, msg->trip_id(),
+                    utl::to_vec(*msg->cancelled_events()),
+                    utl::to_vec(*msg->new_events()));
+
+        stats_.count_reroute(result.first);
+
+        if (result.first == reroute_result::OK) {
+          for (auto const& e : *result.second->edges_) {
+            propagator_.add_delay(ev_key{e, 0, event_type::DEP});
+            propagator_.add_delay(ev_key{e, 0, event_type::ARR});
+          }
+          for (auto const& e : cancelled_evs) {
+            propagator_.add_canceled(e);
+          }
+        }
+
+        break;
+      }
+
+      case ris::MessageUnion_TrackMessage: {
+        auto const msg = reinterpret_cast<ris::TrackMessage const*>(c);
+
+        stats_.total_evs_ += msg->events()->size();
+
+        auto const resolved = resolve_events(
+            stats_, s, msg->trip_id(),
+            utl::to_vec(*msg->events(), [](ris::UpdatedTrack const* ev) {
+              return ev->base();
+            }));
+
+        for (auto i = 0UL; i < resolved.size(); ++i) {
+          auto const& k = resolved[i];
+          if (!k) {
+            continue;
+          }
+
+          if (auto const it = s.graph_to_track_index_.find(*k);
+              it == s.graph_to_track_index_.end()) {
+            s.graph_to_track_index_[*k] = k->ev_type_ == event_type::ARR
+                                              ? k->lcon()->full_con_->a_track_
+                                              : k->lcon()->full_con_->d_track_;
+          }
+
+          auto const ev = msg->events()->Get(i);
+
+          track_events_.emplace_back(track_info{
+              *k, ev->updated_track()->str(),
+              unix_to_motistime(sched_, ev->base()->schedule_time())});
+
+          auto fcon = *k->lcon()->full_con_;
+          (k->ev_type_ == event_type::ARR ? fcon.a_track_ : fcon.d_track_) =
+              get_track(s, ev->updated_track()->str());
+
+          const_cast<light_connection*>(k->lcon())->full_con_ =  // NOLINT
+              s.full_connections_
+                  .emplace_back(mcd::make_unique<connection>(fcon))
+                  .get();
+        }
+        break;
+      }
+
+      case ris::MessageUnion_FreeTextMessage: {
+        auto const msg = reinterpret_cast<ris::FreeTextMessage const*>(c);
+        stats_.total_evs_ += msg->events()->size();
+        auto const [trp, resolved] = resolve_events_and_trip(
+            stats_, s, msg->trip_id(),
+            utl::to_vec(*msg->events(),
+                        [](ris::Event const* ev) { return ev; }));
+        if (trp == nullptr) {
+          continue;
+        }
+        auto const events = utl::all(resolved)  //
+                            | utl::remove_if([](auto&& k) { return !k; })  //
+                            | utl::transform([](auto&& k) { return *k; })  //
+                            | utl::vec();
+        auto const ft =
+            free_text{msg->free_text()->code(), msg->free_text()->text()->str(),
+                      msg->free_text()->type()->str()};
+        for (auto const& k : events) {
+          s.graph_to_free_texts_[k].emplace(ft);
+        }
+        free_text_events_.emplace_back(free_texts{trp, ft, events});
+        break;
+      }
+
+      default: break;
+    }
+  } catch (std::exception const& e) {
+    printf("rt::on_message: UNEXPECTED ERROR: %s\n", e.what());
+  } catch (...) {
+  }
 }
 
 msg_ptr get_rt_updates(motis::module::message_creator& fbb,
