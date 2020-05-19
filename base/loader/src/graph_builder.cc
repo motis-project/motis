@@ -852,6 +852,7 @@ schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
     sched->name_ = serialized->name()->str();
   }
 
+  clog_import_step("build graph", progress_offset);
   graph_builder builder(*sched, serialized->interval(), opt, progress_offset);
   builder.add_stations(serialized->stations());
   if (serialized->meta_stations() != nullptr) {

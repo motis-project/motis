@@ -27,9 +27,16 @@ void rt::init(motis::module::registry& reg) {
       "/ris/messages",
       [&](motis::module::msg_ptr const& msg) { return handler_->update(msg); },
       ctx::access_t::WRITE);
+  reg.register_op(
+      "/rt/single",
+      [&](motis::module::msg_ptr const& msg) { return handler_->single(msg); },
+      ctx::access_t::WRITE);
   reg.subscribe(
       "/ris/system_time_changed",
-      [&](motis::module::msg_ptr const& msg) { return handler_->flush(msg); },
+      [&](motis::module::msg_ptr const& msg) {
+        handler_->flush(msg);
+        return nullptr;
+      },
       ctx::access_t::WRITE);
   reg.register_op("/rt/dump", [&](motis::module::msg_ptr const& msg) {
     auto const m = motis_content(RtWriteGraphRequest, msg);

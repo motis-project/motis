@@ -4,6 +4,8 @@
 #include "windows.h"
 #endif
 
+#include <cmath>
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 
@@ -58,18 +60,33 @@ void move_cursor_up(int lines) {
 
 void clear_line() { std::cout << "\x1b[K"; }
 
-void import_status::update_progress(std::string const& name,
-                                    unsigned int progress) {
+void import_status::set_progress_bounds(std::string const& name,  //
+                                        float output_low, float output_high,
+                                        float input_high) {
   auto s = status_[name];
-  s.status_ = import::Status_RUNNING;
-  s.progress_ = progress;
+  s.output_low_ = output_low;
+  s.output_high_ = output_high;
+  s.input_high_ = input_high;
   if (update(name, s)) {
     print();
   }
 }
 
-void import_status::report_error(const std::string& name,
-                                 const std::string& what) {
+void import_status::update_progress(std::string const& name, float progress) {
+  auto s = status_[name];
+  s.status_ = import::Status_RUNNING;
+  s.progress_ =
+      std::clamp(std::round(s.output_low_ + (s.output_high_ - s.output_low_) *
+                                                (progress / s.input_high_)),
+                 0.F, 100.F);
+
+  if (update(name, s)) {
+    print();
+  }
+}
+
+void import_status::report_error(std::string const& name,
+                                 std::string const& what) {
   auto s = status_[name];
   s.status_ = import::Status_ERROR;
   s.error_ = what;
@@ -78,8 +95,8 @@ void import_status::report_error(const std::string& name,
   }
 }
 
-void import_status::report_step(const std::string& name,
-                                const std::string& step) {
+void import_status::report_step(std::string const& name,
+                                std::string const& step) {
   auto s = status_[name];
   s.status_ = import::Status_RUNNING;
   s.current_task_ = step;
@@ -105,7 +122,7 @@ bool import_status::update(motis::module::msg_ptr const& msg) {
     return update(
         upd->name()->str(),
         {utl::to_vec(*upd->waiting_for(), [](auto&& e) { return e->str(); }),
-         upd->status(), upd->progress(), upd->error()->str(),
+         upd->status(), upd->progress(), 0.F, 100.F, 100.F, upd->error()->str(),
          upd->current_task()->str()});
   }
   return false;
