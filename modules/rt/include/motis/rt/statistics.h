@@ -160,8 +160,19 @@ struct statistics {
     }
   }
 
-  void resolve_events(std::vector<boost::optional<ev_key>> const&) {}
-  // void count_reroute(reroute_result const) {}
+  bool sanity_check_fails() const {
+    return (ev_invalid_time_ + ev_station_not_found_ + ev_trp_not_found_ +
+            additional_not_found_ + unresolved_events_ +
+            update_time_out_of_schedule_ + trip_station_not_found_ +
+            trip_time_not_found_ + trip_primary_not_found_ +
+            trip_primary_0_not_found_ + reroute_trip_not_found_ +
+            reroute_event_count_mismatch_ + reroute_station_mismatch_ +
+            reroute_event_order_mismatch_ +
+            reroute_rule_service_not_supported_ + additional_err_count_ +
+            additional_err_order_ + additional_err_station_ +
+            additional_err_time_ + additional_decreasing_ev_time_ +
+            additional_station_mismatch_ + canceled_trp_not_found_) != 0;
+  }
 
   unsigned delay_msgs_ = 0;
   unsigned cancel_msgs_ = 0;
