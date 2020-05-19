@@ -24,9 +24,8 @@ struct import_status : public module::progress_listener {
   bool update(motis::module::msg_ptr const&);
   void print();
 
-  void set_progress_bounds(std::string const& name, double output_low = 0,
-                           double output_high = 100,
-                           double input_high = 100.) override;
+  void set_progress_bounds(std::string const& name, double output_low,
+                           double output_high, double input_high) override;
   void update_progress(std::string const& name, double progress) override;
 
   void report_error(std::string const& name, std::string const& what) override;

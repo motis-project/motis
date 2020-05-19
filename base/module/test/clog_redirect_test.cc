@@ -7,8 +7,6 @@ namespace mm = motis::module;
 namespace t = testing;
 
 struct progress_listener_mock : public mm::progress_listener {
-  virtual ~progress_listener_mock() override = default;
-
   MOCK_METHOD(void, set_progress_bounds,
               (std::string const& name, double output_low, double output_high,
                double input_high),
