@@ -101,10 +101,10 @@ msg_ptr rt_handler::single(msg_ptr const& msg) {
 }
 
 void rt_handler::update(schedule& s, motis::ris::Message const* m) {
-  stats_.count_message(nested->content_type());
-  auto c = nested->content();
+  stats_.count_message(m->content_type());
+  auto c = m->content();
   try {
-    switch (nested->content_type()) {
+    switch (m->content_type()) {
       case ris::MessageUnion_DelayMessage: {
         auto const msg = reinterpret_cast<ris::DelayMessage const*>(c);
         stats_.total_updates_ += msg->events()->size();
@@ -246,7 +246,7 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
             utl::to_vec(*msg->events(),
                         [](ris::Event const* ev) { return ev; }));
         if (trp == nullptr) {
-          continue;
+          return;
         }
         auto const events = utl::all(resolved)  //
                             | utl::remove_if([](auto&& k) { return !k; })  //
