@@ -231,7 +231,6 @@ RailViz.Trains = (function () {
         this.positionData[offset + 2] = x1 - this.anchor.x; // a_endPos
         this.positionData[offset + 3] = y1 - this.anchor.y; // a_endPos
         this.positionData[offset + 4] = angle; // a_angle
-
       } else {
         this.positionData[offset + 0] = -100; // a_startPos
         this.positionData[offset + 1] = -100; // a_startPos
@@ -456,7 +455,7 @@ RailViz.Trains = (function () {
     colorAttributes.update(gl);
   }
 
-  function render(gl, perspective, zoom, scale, isOffscreen) {
+  function render(gl, perspective, zoom, pre_scale, isOffscreen) {
     if (trains.length == 0) {
       return;
     }
@@ -474,7 +473,10 @@ RailViz.Trains = (function () {
 
     // size of a pixel in mapboxgl mercator units
     const px_size = 1 / (512 * Math.pow(2, zoom)); // magic number YAY
-    gl.uniform1f(u_radius, 32.0 * Math.min(1.0, scale / 10) * px_size);
+    gl.uniform1f(
+      u_radius,
+      32.0 * pre_scale * px_size * RailViz.Style.interpolateTrainScale(zoom)
+    );
 
     gl.uniform1i(u_offscreen, isOffscreen);
     gl.uniform1i(u_useCategoryColor, useCategoryColor);

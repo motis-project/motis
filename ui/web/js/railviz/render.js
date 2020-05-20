@@ -103,7 +103,7 @@ RailViz.Render = (function () {
   function render(gl, matrix, zoom) {
     createOffscreenBuffer();
 
-    let scale = Math.max(minZoom, zoom) * pixelRatio;
+    let pre_scale = Math.min(1.0, Math.max(minZoom, zoom) * pixelRatio / 10);
 
     for (var i = 0; i <= 1; i++) {
       var isOffscreen = i == 0;
@@ -129,7 +129,7 @@ RailViz.Render = (function () {
       }
 
       if (trainsEnabled) {
-        RailViz.Trains.render(gl, matrix, zoom, scale, isOffscreen);
+        RailViz.Trains.render(gl, matrix, zoom, pre_scale, isOffscreen);
       }
     }
 
