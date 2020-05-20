@@ -41,7 +41,7 @@
 [miniz]
   url=git@github.com:motis-project/miniz.git
   branch=master
-  commit=ddafe51dcd2a4df95fc74c7401bc68f04ab4bebd
+  commit=eeb7e4c1f6a3966dc8fb071eb5fb193000044688
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
