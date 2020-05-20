@@ -7,10 +7,10 @@ RailViz.Style = (function () {
   function lineColor() {
     // prettier-ignore
     return ["case",
-      ["get", "stub"],                "hsl(0, 0, 70%)", 
-      ["<", ["get", "min_class"], 6], "hsl(0, 0, 30%)",
-      ["<", ["get", "min_class"], 8], "hsl(0, 0, 40%)",
-      /* default */                   "hsl(0, 0, 50%)",
+      ["coalesce", ["get", "stub"], true], "hsl(0, 0, 70%)",
+      ["<", ["get", "min_class"], 6],      "hsl(0, 0, 30%)",
+      ["<", ["get", "min_class"], 8],      "hsl(0, 0, 40%)",
+      /* default */                        "hsl(0, 0, 50%)",
     ];
   }
 
@@ -18,10 +18,10 @@ RailViz.Style = (function () {
     // prettier-ignore
     return  ["let",
       "w", ["case",
-              ["get", "stub"],                2,
-              ["<", ["get", "min_class"], 6], 4,
-              ["<", ["get", "min_class"], 8], 3.25,
-              /* default */                   2.5,
+              ["coalesce", ["get", "stub"], true], 2,
+              ["<", ["get", "min_class"], 6],      4,
+              ["<", ["get", "min_class"], 8],      3.25,
+              /* default */                        2.5,
             ],
       ["interpolate", ["linear"], ["zoom"],
         6,  ["*", ["var", "w"], .5],
