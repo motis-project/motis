@@ -143,11 +143,13 @@ class RailVizCustomLayer {
   }
 
   updateViewport() {
-    var rect = this.map.getCanvas().getBoundingClientRect();
-    var center = this.map.getCenter();
-    var zoom = Math.floor(this.map.getZoom());
+    const rect = this.map.getCanvas().getBoundingClientRect();
+    const center = this.map.getCenter();
+    const zoom = Math.floor(this.map.getZoom());
+    const bearing = this.map.getBearing();
+    const pitch = this.map.getPitch();
 
-    var zoomRounded = Math.floor(this.map.getZoom() * 4) / 4;
+    const zoomRounded = Math.floor(this.map.getZoom() * 4) / 4;
     if (zoomRounded != this.zoomRounded) {
       console.log(zoomRounded);
       this.zoomRounded = zoomRounded;
@@ -195,6 +197,8 @@ class RailVizCustomLayer {
         lat: center.lat,
         lng: center.lng,
         zoom: zoom,
+        bearing: bearing,
+        pitch: pitch,
       })
     );
   }
@@ -209,6 +213,8 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
     var lat = (mapSettings && mapSettings.lat) || 47.3684854; // 49.8728;
     var lng = (mapSettings && mapSettings.lng) || 8.5102601; // 8.6512;
     var zoom = (mapSettings && mapSettings.zoom) || 10;
+    var bearing = (mapSettings && mapSettings.bearing) || 0;
+    var pitch = (mapSettings && mapSettings.pitch) || 0;
 
     // use two maps until resolved: https://github.com/mapbox/mapbox-gl-js/issues/8159
     var map_bg = new mapboxgl.Map({
@@ -218,6 +224,8 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
       minZoom: 2,
       maxZoom: 20,
       center: [lng, lat],
+      bearing: bearing,
+      pitch: pitch,
       antialias: true,
     });
 
@@ -243,6 +251,8 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
       minZoom: 2,
       maxZoom: 20,
       center: [lng, lat],
+      bearing: bearing,
+      pitch: pitch,
       style: {
         version: 8,
         sources: {},
@@ -285,8 +295,8 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
       var map = window.elmMaps[opt.mapId];
 
       const camOptions = opt.animate
-        ? { maxZoom: 12, padding }
-        : { maxZoom: 12 };
+        ? { maxZoom: 12, bearing: 0, padding }
+        : { maxZoom: 12, bearing: 0 };
 
       const options = map.cameraForBounds(
         new mapboxgl.LngLatBounds([opt.lng, opt.lat], [opt.lng, opt.lat]),
@@ -295,6 +305,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
       if (opt.zoom) {
         options.zoom = opt.zoom;
       }
+      options.pitch = 0;
 
       if (opt.animate) {
         map.flyTo(options);
@@ -309,7 +320,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
         new mapboxgl.LngLatBounds()
       );
       if (!bounds.isEmpty()) {
-        window.elmMaps[opt.mapId].fitBounds(bounds, { padding });
+        window.elmMaps[opt.mapId].fitBounds(bounds, { padding, pitch: 0 });
       }
     });
 
@@ -320,7 +331,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
         new mapboxgl.LngLatBounds()
       );
       if (!bounds.isEmpty()) {
-        window.elmMaps[opt.mapId].fitBounds(bounds, { padding });
+        window.elmMaps[opt.mapId].fitBounds(bounds, { padding, pitch: 0 });
       }
     });
 
