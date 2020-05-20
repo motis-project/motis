@@ -53,7 +53,10 @@ struct thread_pool {
   }
 
   ~thread_pool() {
-    stop_ = true;
+    {
+      std::unique_lock<std::mutex> lk(mutex_);
+      stop_ = true;
+    }
     cv_.notify_all();
     std::for_each(begin(threads_), end(threads_), [](auto& t) { t.join(); });
   }
@@ -68,9 +71,14 @@ struct thread_pool {
       return;
     }
 
-    counter_ = 0;
-    job_count_ = job_count;
-    fn_ = fn;
+    {
+      std::unique_lock<std::mutex> lk(mutex_);
+      utl::verify(threads_active_ == 0,
+                  "thread_pool::execute: some threads already active");
+      counter_ = 0;
+      job_count_ = job_count;
+      fn_ = fn;
+    }
 
     cv_.notify_all();
 
