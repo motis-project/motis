@@ -278,7 +278,7 @@ msg_ptr path::by_trip_id_batch(msg_ptr const& msg) const {
     try {
       auto index = data_->trip_to_index(sched, trp);
       q.add_sequence(index, std::move(segments));
-    } catch (std::system_error) {
+    } catch (std::system_error const&) {
       std::vector<geo::polyline> extra;
       size_t i = 0;
       for (auto const& s : sections(trp)) {
