@@ -43,11 +43,11 @@ struct import_state {
   mm::named<bool, MOTIS_NAME("profile_hash")> profile_hash_;
   mm::named<std::string, MOTIS_NAME("osm_path")> osm_path_;
   mm::named<c::hash_t, MOTIS_NAME("osm_hash")> osm_hash_;
-  mm::named<size_t, MOTIS_NAME("osm_size")> osm_size_;
+  mm::named<uint64_t, MOTIS_NAME("osm_size")> osm_size_;
   mm::named<bool, MOTIS_NAME("use_coastline")> use_coastline_;
   mm::named<std::string, MOTIS_NAME("coastline_path")> coastline_path_;
   mm::named<c::hash_t, MOTIS_NAME("coastline_hash")> coastline_hash_;
-  mm::named<size_t, MOTIS_NAME("coastline_size")> coastline_size_;
+  mm::named<uint64_t, MOTIS_NAME("coastline_size")> coastline_size_;
 };
 
 struct tiles::data {
