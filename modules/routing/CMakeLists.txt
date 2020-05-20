@@ -23,7 +23,7 @@ include_directories(eval/include)
 
 file(GLOB_RECURSE motis-generator-files eval/src/query_generator.cc)
 add_executable(motis-generator EXCLUDE_FROM_ALL ${motis-generator-files})
-target_compile_features(motis-generator PUBLIC cxx_std_17)
+target_compile_features(motis-generator PUBLIC cxx_std_20)
 target_link_libraries(motis-generator motis-bootstrap motis-core conf ${CMAKE_THREAD_LIBS_INIT} ianatzdb-res)
 target_compile_options(motis-generator PRIVATE ${MOTIS_CXX_FLAGS})
 set_target_properties(motis-generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
