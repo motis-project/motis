@@ -29,11 +29,11 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=60ae688fcb68859478b4742705c9b59cf20984c8
+  commit=ae9aeed6688442b9651df0c44dbd3751fe510394
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
-  commit=337308e8f74d7020c9b21544561e759bbfb01abf
+  commit=dda79b36b4324f81f3d4a0a67d56351ee9dd0c8a
 [lmdb]
   url=git@github.com:motis-project/lmdb.git
   branch=master
