@@ -73,7 +73,8 @@ void path_database_query::resolve_sequences_and_build_subqueries(
     }
 
     auto ret = cursor.get(lmdb::cursor_op::SET, std::to_string(rs.index_));
-    utl::verify(ret.has_value(), "path_database_query: {} not found :E", index);
+    utl::verify(ret.has_value(), "path_database_query: {} not found :E",
+                rs.index_);
     auto const* ptr =
         flatbuffers::GetRoot<InternalDbSequence>(ret->second.data());
 
