@@ -32,26 +32,8 @@ RailViz.Path.Base = (function () {
         ],
       },
       paint: {
-        "line-color": [
-          "case",
-          ["get", "stub"],
-          "hsl(0, 0, 70%)",
-          ["<", ["get", "min_class"], 6],
-          "hsl(0, 0, 30%)",
-          ["<", ["get", "min_class"], 8],
-          "hsl(0, 0, 40%)",
-          "hsl(0, 0, 50%)",
-        ],
-        "line-width": [
-          "case",
-          ["get", "stub"],
-          2,
-          ["<", ["get", "min_class"], 6],
-          4,
-          ["<", ["get", "min_class"], 8],
-          3.25,
-          2.5,
-        ],
+        "line-color": RailViz.Style.lineColor(),
+        "line-width": RailViz.Style.lineWidth(),
       },
     });
 
@@ -62,7 +44,7 @@ RailViz.Path.Base = (function () {
       "source-layer": "station",
       paint: {
         "circle-color": "white",
-        "circle-radius": 2.25,
+        "circle-radius": RailViz.Style.stationCircleRadius(),
         "circle-stroke-color": "#333333",
         "circle-stroke-width": 2,
         "circle-pitch-alignment": "map",

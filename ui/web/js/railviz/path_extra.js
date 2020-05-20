@@ -37,8 +37,8 @@ RailViz.Path.Extra = (function () {
           "line-cap": "round",
         },
         paint: {
-          "line-color": "#888888",
-          "line-width": 2.5,
+          "line-color": RailViz.Style.lineColor(),
+          "line-width": RailViz.Style.lineWidth(),
         },
       },
       beforeId
