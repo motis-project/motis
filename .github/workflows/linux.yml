@@ -143,7 +143,7 @@ jobs:
             -DCMAKE_CXX_EXE_LINKER_FLAGS="${{ matrix.config.ldflags }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} \
             -DMOTIS_LINT=${{ matrix.config.lint }} \
-            -DCTX_ASAN=${{ matrix.config.cc == 'clang-9' }} \
+            -DCTX_ASAN=${{ contains(matrix.config.cxxflags, '-fsanitize=address') }} \
             -DCTX_VALGRIND=${{ matrix.config.cc == 'gcc-9' && matrix.config.mode == 'Debug' }}
 
       - name: Build
