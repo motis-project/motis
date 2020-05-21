@@ -96,6 +96,40 @@ jobs:
           key: deps-${{ hashFiles('.pkg') }}
           restore-keys: deps-
 
+      - name: libc++ Boost Cache
+        uses: actions/cache@v1
+        id: libcxxboostcache
+        if: contains(matrix.config.cxxflags, 'libc++')
+        with:
+          path: boost_1_72_0
+          key: boost_1_72_0
+
+      # ==== BOOST FOR LIBCXX ====
+      - name: Boost for libc++
+        if: contains(matrix.config.cxxflags, 'libc++') && steps.libcxxboostcache.outputs.cache-hit != 'true'
+        run: |
+          echo "using clang : 9 : /usr/bin/clang++-9 ;" > $HOME/user-config.jam
+          wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.bz2
+          tar xf boost_1_72_0.tar.bz2
+          cd boost_1_72_0
+          ./bootstrap.sh
+          ./b2 -j6 \
+            link=static threading=multi variant=release \
+            toolset=clang-9 cxxflags="-stdlib=libc++" \
+            --with-system \
+            --with-filesystem \
+            --with-iostreams \
+            --with-program_options \
+            --with-thread \
+            --with-date_time \
+            --with-regex \
+            --with-serialization \
+            -s NO_BZIP2=1
+
+      - name: Set BOOST_ROOT
+        if: contains(matrix.config.cxxflags, 'libc++')
+        run: echo "::set-env name=BOOST_ROOT::`pwd`/boost_1_72_0"
+
       # ==== BUILD ====
       - name: CMake
         run: |
