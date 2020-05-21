@@ -24,21 +24,36 @@ jobs:
           git status --porcelain | xargs -I {} -0 test -z \"{}\"
 
   build:
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        cxx: [gcc-9, clang-9, clang-9-san]
-        mode: [Debug, Release]
-        lint: [Off, On]
-        exclude:
-          - mode: Release
-            cxx: clang-9-san
-          - mode: Release
-            lint: On
-          - cxx: gcc-9
-            lint: On
-          - cxx: clang-9-san
-            lint: On
+        config:
+        - name: GCC 9 Release
+          cxx: g++-9
+          cc: gcc-9
+          mode: Release
+        - name: GCC 9 Debug
+          cxx: g++-9
+          cc: gcc-9
+          mode: Debug
+        - name: Clang 9 Release
+          cxx: clang++-9
+          cc: clang-9
+          mode: Release
+          cxxflags: -stdlib=libc++
+          ldflags: -lc++abi
+        - name: Clang Tidy
+          cxx: clang++-9
+          cc: clang-9
+          mode: Debug
+          lint: true
+        - key: Clang 9 Sanitizer
+          cxx: clang++-9
+          cc: clang-9
+          mode: Debug
+          cflags: -fsanitize=address,undefined -fno-omit-frame-pointer
+          cxxflags: -fsanitize=address,undefined -fno-omit-frame-pointer -stdlib=libc++
+          ldflags: -lc++abi
     env:
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_ACCURACY: SLOPPY
@@ -47,16 +62,25 @@ jobs:
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
     steps:
       - uses: actions/checkout@v2
+      - uses: seanmiddleditch/gha-setup-ninja@master
 
+      # ==== INSTALL ====
+      - name: Install
+        if: matrix.config.cc == 'clang-9'
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: sudo apt-get install -y --no-install-recommends libc++-9-dev libc++abi-9-dev
+
+      # ==== CACHING ====
       - name: buildcache Cache
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
-            buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
-            buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-${{ hashFiles('.pkg') }}-
-            buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-
+            buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-
+            buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ matrix.config.lint }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
@@ -65,14 +89,21 @@ jobs:
           key: deps-${{ hashFiles('.pkg') }}
           restore-keys: deps-
 
+      # ==== BUILD ====
       - name: CMake
         run: |
           cmake-${{ matrix.cxx }} \
             -G Ninja -S . -B build \
-            -DCMAKE_BUILD_TYPE=${{ matrix.mode }} \
-            -DMOTIS_LINT=${{ matrix.lint }} \
-            -DCTX_ASAN=`if [ "${{ matrix.cxx }}" = "clang-9-san" ]; then echo "On"; else echo "Off"; fi` \
-            -DCTX_VALGRIND=`if [ "${{ matrix.cxx }}" = "gcc-9" ] && [ "${{ matrix.mode }}" = "Debug" ]; then echo "On"; else echo "Off"; fi`
+            -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
+            -DCMAKE_C_FLAGS="${{ matrix.config.cflags }}" \
+            -DCMAKE_CXX_FLAGS="${{ matrix.config.cxxflags }}" \
+            -DCMAKE_CXX_LINKER_FLAGS=${{ matrix.config.ldflags }}" \
+            -DCMAKE_CXX_EXE_LINKER_FLAGS="${{ matrix.config.ldflags }} \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} \
+            -DMOTIS_LINT=${{ matrix.config.lint }} \
+            -DCTX_ASAN=${{ matrix.config.cxx == 'clang-9' }} \
+            -DCTX_VALGRIND=${{ matrix.config.cc == 'gcc-9' && matrix.config.mode == 'Debug' }}
 
       - name: Build
         run: |
