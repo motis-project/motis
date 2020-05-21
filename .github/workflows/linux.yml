@@ -55,6 +55,7 @@ jobs:
           cxxflags: -fsanitize=address,undefined -fno-omit-frame-pointer -stdlib=libc++
           ldflags: -lc++abi
     env:
+      BOOST_ROOT: /usr/local/share/boost/1.72.0
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_ACCURACY: SLOPPY
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
