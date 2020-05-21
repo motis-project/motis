@@ -66,11 +66,17 @@ jobs:
       - uses: seanmiddleditch/gha-setup-ninja@master
 
       # ==== INSTALL ====
-      - name: Install
+      - name: Install LLVM
         if: matrix.config.cc == 'clang-9'
         env:
           DEBIAN_FRONTEND: noninteractive
         run: sudo apt-get install -y --no-install-recommends libc++-9-dev libc++abi-9-dev clang-tidy-9
+
+      - name: Install Valgrind
+        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-9'
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: sudo apt-get install -y --no-install-recommends valgrind
 
       # ==== CACHING ====
       - name: buildcache Cache
@@ -127,12 +133,6 @@ jobs:
         run: ./build/motis-itest
 
       # ==== VALGRIND ====
-      - name: Install Valgrind
-        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-9'
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: sudo apt-get install -y --no-install-recommends valgrind
-
       - name: Run Test Mode Valgrind
         if: matrix.mode == 'Debug' && matrix.config.cc == 'gcc-9'
         run: >
