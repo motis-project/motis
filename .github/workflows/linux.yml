@@ -76,7 +76,7 @@ jobs:
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-linux-${{ matrix.cxx }}-${{ matrix.mode }}-${{ matrix.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          key: buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
             buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
             buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-
@@ -92,7 +92,7 @@ jobs:
       # ==== BUILD ====
       - name: CMake
         run: |
-          cmake-${{ matrix.cxx }} \
+          cmake \
             -G Ninja -S . -B build \
             -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
             -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
@@ -102,7 +102,7 @@ jobs:
             -DCMAKE_CXX_EXE_LINKER_FLAGS="${{ matrix.config.ldflags }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} \
             -DMOTIS_LINT=${{ matrix.config.lint }} \
-            -DCTX_ASAN=${{ matrix.config.cxx == 'clang-9' }} \
+            -DCTX_ASAN=${{ matrix.config.cc == 'clang-9' }} \
             -DCTX_VALGRIND=${{ matrix.config.cc == 'gcc-9' && matrix.config.mode == 'Debug' }}
 
       - name: Build
@@ -127,7 +127,7 @@ jobs:
 
       # ==== VALGRIND ====
       - name: Run Test Mode Valgrind
-        if: matrix.mode == 'Debug' && matrix.cxx == 'gcc-9'
+        if: matrix.mode == 'Debug' && matrix.config.cc == 'gcc-9'
         run: >
           valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full \
             ./build/motis --mode test \
@@ -138,20 +138,20 @@ jobs:
               --bikesharing.db_max_size 1048576
 
       - name: Run Tests Valgrind
-        if: matrix.mode == 'Debug' && matrix.cxx == 'gcc-9'
+        if: matrix.mode == 'Debug' && matrix.config.cc == 'gcc-9'
         run: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./build/motis-test
 
       - name: Run Integration Tests Valgrind
-        if: matrix.mode == 'Debug' && matrix.cxx == 'gcc-9'
+        if: matrix.mode == 'Debug' && matrix.config.cc == 'gcc-9'
         run: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./build/motis-itest
 
       # ==== DISTRIBUTION ====
       - name: Strip Executable
-        if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
+        if: matrix.mode == 'Release' && matrix.config.cc == 'gcc-9'
         run: strip build/motis
 
       - name: Compile Web Interface
-        if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
+        if: matrix.mode == 'Release' && matrix.config.cc == 'gcc-9'
         run: |
           cd ./ui/web
           npm install
@@ -159,7 +159,7 @@ jobs:
           rm -rf node_modules
 
       - name: Create Distribution
-        if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
+        if: matrix.mode == 'Release' && matrix.config.cc == 'gcc-9'
         run: |
           mkdir motis
           mv ui/web motis
@@ -169,7 +169,7 @@ jobs:
           tar cjf motis-linux.tar.bz2 motis
 
       - name: Upload Distribution
-        if: matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
+        if: matrix.mode == 'Release' && matrix.config.cc == 'gcc-9'
         uses: actions/upload-artifact@v1
         with:
           name: motis-linux
@@ -177,7 +177,7 @@ jobs:
 
       # ==== RELEASE ====
       - name: Upload Release
-        if: github.event.action == 'published' && matrix.mode == 'Release' && matrix.cxx == 'gcc-9'
+        if: github.event.action == 'published' && matrix.mode == 'Release' && matrix.config.cc == 'gcc-9'
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
