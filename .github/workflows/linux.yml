@@ -70,7 +70,7 @@ jobs:
         if: matrix.config.cc == 'clang-9'
         env:
           DEBIAN_FRONTEND: noninteractive
-        run: sudo apt-get install -y --no-install-recommends libc++-9-dev libc++abi-9-dev
+        run: sudo apt-get install -y --no-install-recommends libc++-9-dev libc++abi-9-dev clang-tidy-9
 
       # ==== CACHING ====
       - name: buildcache Cache
