@@ -4,7 +4,6 @@
 
 #include "motis/core/access/station_access.h"
 
-#include "motis/railviz/geo.h"
 #include "motis/railviz/train_retriever.h"
 
 #include "./schedule.h"
@@ -27,9 +26,9 @@ TEST_F(railviz_train_retriever_test, simple_result_ok) {
   auto const t_max = unix_to_motistime(s, unix_time(1220));
 
   train_retriever tr{s, {}};
-  auto const result =
-      tr.trains(t_min, t_max, 100,
-                geo::box{{50.322747, 9.0133358}, {50.322747, 9.0133358}}, 18);
+  auto const result = tr.trains(
+      t_min, t_max, 100,
+      geo::make_box({{50.322747, 9.0133358}, {50.322747, 9.0133358}}), 18);
 
   EXPECT_EQ(4U, result.size());
   for (auto const& dep : result) {

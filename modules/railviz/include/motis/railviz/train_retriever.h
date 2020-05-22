@@ -3,12 +3,12 @@
 #include <shared_mutex>
 #include <vector>
 
+#include "geo/box.h"
+
 #include "motis/hash_map.h"
 
 #include "motis/core/schedule/event.h"
 #include "motis/core/schedule/time.h"
-
-#include "motis/railviz/geo.h"
 
 #include "motis/protocol/PathBoxesResponse_generated.h"
 #include "motis/protocol/RtUpdate_generated.h"
