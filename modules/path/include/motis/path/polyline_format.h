@@ -56,7 +56,7 @@ struct polyline_encoder {
   }
 
   void push_difference(int64_t diff) {
-    auto tmp = diff << 1;
+    auto tmp = static_cast<int64_t>(static_cast<uint64_t>(diff) << 1);
     if (diff < 0) {
       tmp = ~tmp;
     }
