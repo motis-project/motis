@@ -78,6 +78,8 @@ init remoteAddress =
         , geoBounds = { north = 0, west = 0, south = 0, east = 0 }
         , railVizBounds = { north = 0, west = 0, south = 0, east = 0 }
         , center = { lat = 0, lng = 0 }
+        , bearing = 0
+        , pitch = 0
         }
     , time = 0
     , systemTime = 0
@@ -198,13 +200,15 @@ update msg model =
             { model | contextMenuVisible = False } ! []
 
 
-flyTo : Position -> Maybe Float -> Bool -> Cmd msg
-flyTo pos zoom animate =
+flyTo : Position -> Maybe Float -> Maybe Float -> Maybe Float -> Bool -> Cmd msg
+flyTo pos zoom bearing pitch animate =
     mapFlyTo
         { mapId = mapId
         , lat = pos.lat
         , lng = pos.lng
         , zoom = zoom
+        , bearing = bearing
+        , pitch = pitch
         , animate = animate
         }
 
@@ -232,8 +236,14 @@ getMapPermalink model =
 
         zoom =
             model.mapInfo.zoom
+
+        bearing =
+            model.mapInfo.bearing
+
+        pitch =
+            model.mapInfo.pitch
     in
-    toUrl (RailVizPermalink pos.lat pos.lng zoom simDate)
+    toUrl (RailVizPermalink pos.lat pos.lng zoom bearing pitch simDate)
 
 
 getContextMenuPosition : Model -> Position

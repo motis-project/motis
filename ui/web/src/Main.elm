@@ -247,7 +247,7 @@ type Msg
     | TripSearchUpdate TripSearch.Msg
     | ShowTripSearch
     | ToggleTripSearch
-    | HandleRailVizPermalink Float Float Float Date
+    | HandleRailVizPermalink Float Float Float Float Float Date
     | SimTimePickerUpdate SimTimePicker.Msg
     | OSRMError Int JourneyWalk ApiError
     | OSRMResponse Int JourneyWalk OSRMViaRouteResponse
@@ -595,10 +595,10 @@ update msg model =
                                     Navigation.newUrl (toUrl (StationEvents station.id))
 
                                 Just (Typeahead.AddressSuggestion address) ->
-                                    RailViz.flyTo address.pos Nothing True
+                                    RailViz.flyTo address.pos Nothing Nothing Nothing True
 
                                 Just (Typeahead.PositionSuggestion pos) ->
-                                    RailViz.flyTo pos Nothing True
+                                    RailViz.flyTo pos Nothing Nothing Nothing True
 
                                 Nothing ->
                                     Cmd.none
@@ -674,7 +674,7 @@ update msg model =
                 _ ->
                     update (NavigateTo TripSearchRoute) model
 
-        HandleRailVizPermalink lat lng zoom date ->
+        HandleRailVizPermalink lat lng zoom bearing pitch date ->
             let
                 ( model1, cmd1 ) =
                     closeSelectedConnection { model | overlayVisible = False }
@@ -686,7 +686,7 @@ update msg model =
                     { lat = lat, lng = lng }
 
                 cmd3 =
-                    RailViz.flyTo pos (Just zoom) False
+                    RailViz.flyTo pos (Just zoom) (Just bearing) (Just pitch) False
             in
             model2 ! [ cmd1, cmd2, cmd3 ]
 
@@ -1454,8 +1454,8 @@ routeToMsg route =
         TripSearchRoute ->
             ShowTripSearch
 
-        RailVizPermalink lat lng zoom date ->
-            HandleRailVizPermalink lat lng zoom date
+        RailVizPermalink lat lng zoom bearing pitch date ->
+            HandleRailVizPermalink lat lng zoom bearing pitch date
 
 
 closeSelectedConnection : Model -> ( Model, Cmd Msg )

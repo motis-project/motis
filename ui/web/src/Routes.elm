@@ -21,7 +21,7 @@ type Route
     | StationEventsAt String Date
     | SimulationTime Date
     | TripSearchRoute
-    | RailVizPermalink Float Float Float Date
+    | RailVizPermalink Float Float Float Float Float Date
 
 
 urlParser : Parser (Route -> a) a
@@ -34,7 +34,7 @@ urlParser =
         , map StationEventsAt (s "station" </> string </> date)
         , map SimulationTime (s "time" </> date)
         , map TripSearchRoute (s "trips")
-        , map RailVizPermalink (s "railviz" </> float </> float </> float </> date)
+        , map RailVizPermalink (s "railviz" </> float </> float </> float </> float </> float </> date)
         ]
 
 
@@ -106,8 +106,14 @@ toUrl route =
         TripSearchRoute ->
             "#/trips/"
 
-        RailVizPermalink lat lng zoom date ->
-            "#/railviz/" ++ toString lat ++ "/" ++ toString lng ++ "/" ++ toString zoom ++ "/" ++ toString (unixTime date)
+        RailVizPermalink lat lng zoom bearing pitch date ->
+            "#/railviz/"
+                ++ toString lat ++ "/"
+                ++ toString lng ++ "/"
+                ++ toString zoom ++ "/"
+                ++ toString bearing ++ "/"
+                ++ toString pitch ++ "/"
+                ++ toString (unixTime date)
 
 
 tripDetailsRoute : TripId -> Route
