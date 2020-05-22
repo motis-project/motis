@@ -38,7 +38,7 @@ mp::resolved_station_seq make_resolved_cls_seq(
 }
 
 mp::resolved_station_seq make_resolved_seq(
-    std::vector<std::vector<int64_t>> paths) {
+    std::vector<std::vector<int64_t>> const& paths) {
   return make_resolved_cls_seq({0}, paths);
 }
 
