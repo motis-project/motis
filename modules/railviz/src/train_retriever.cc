@@ -4,10 +4,9 @@
 #include <set>
 #include <vector>
 
-#include "boost/geometry/geometries/box.hpp"
-#include "boost/geometry/geometries/point.hpp"
-#include "boost/geometry/geometries/segment.hpp"
 #include "boost/geometry/index/rtree.hpp"
+
+#include "geo/detail/register_box.h"
 
 #include "utl/get_or_create.h"
 
@@ -20,31 +19,18 @@
 namespace bg = boost::geometry;
 namespace bgi = boost::geometry::index;
 
-using coordinate_system = bg::cs::spherical_equatorial<bg::degree>;
-using spherical_point = bg::model::point<double, 2, coordinate_system>;
-using box = bg::model::box<spherical_point>;
-using value = std::pair<box, std::pair<int, int>>;
+using value = std::pair<geo::box, std::pair<int, int>>;
 using rtree = bgi::rtree<value, bgi::quadratic<16>>;
 
 namespace motis::railviz {
-
-spherical_point to_point(geo::coord const c) {
-  return spherical_point{c.lng_, c.lat_};
-}
-
-box bounding_box(spherical_point const c1, spherical_point const c2) {
-  box b{};
-  bg::envelope(bg::model::segment<spherical_point>{c1, c2}, b);
-  return b;
-}
 
 bool is_relevant(edge const& e, int clasz) {
   return !e.empty() && e.m_.route_edge_.conns_[0].full_con_->clasz_ == clasz;
 }
 
-spherical_point station_coords(schedule const& sched, unsigned station_idx) {
+geo::latlng station_coords(schedule const& sched, unsigned station_idx) {
   auto const& station = sched.stations_[station_idx];
-  return spherical_point(station->length_, station->width_);
+  return geo::latlng{station->lat(), station->lng()};
 }
 
 struct edge_geo_index {
@@ -57,8 +43,7 @@ struct edge_geo_index {
 
   std::vector<edge const*> edges(geo::box const& b) const {
     std::vector<value> result_n;
-    auto const bounds = bounding_box(to_point(b.first), to_point(b.second));
-    tree_.query(bgi::intersects(bounds), std::back_inserter(result_n));
+    tree_.query(bgi::intersects(b), std::back_inserter(result_n));
 
     std::vector<edge const*> edges;
     for (auto const& result_pair : result_n) {
@@ -105,10 +90,9 @@ std::unique_ptr<edge_geo_index> make_edge_rtree(
     auto const it = boxes.find(stations);
     no_match += (it == end(boxes) ? 1 : 0);
     return it == end(boxes)
-               ? bounding_box(station_coords(sched, stations.first),
-                              station_coords(sched, stations.second))
-               : bounding_box(to_point(it->second.first),
-                              to_point(it->second.second));
+               ? geo::make_box({station_coords(sched, stations.first),
+                                station_coords(sched, stations.second)})
+               : it->second;
   };
 
   auto const add_edges_of_route_node = [&](node const* route_node) {
@@ -192,8 +176,8 @@ void train_retriever::update(rt::RtUpdates const* updates) {
       }
 
       new_values.at(clasz).emplace_back(
-          bounding_box(station_coords(sched, station_pair.first),
-                       station_coords(sched, station_pair.second)),
+          geo::make_box({station_coords(sched, station_pair.first),
+                         station_coords(sched, station_pair.second)}),
           station_pair);
     }
   }

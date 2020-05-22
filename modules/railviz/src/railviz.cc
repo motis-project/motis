@@ -45,6 +45,12 @@ railviz::~railviz() = default;
 mcd::hash_map<std::pair<int, int>, geo::box> bounding_boxes(schedule const& s) {
   mcd::hash_map<std::pair<int, int>, geo::box> boxes;
 
+  auto const from_fbs = [](path::Box const* b) {
+    return geo::make_box(
+        {geo::latlng{b->south_west()->lat(), b->south_west()->lng()},
+         geo::latlng{b->north_east()->lat(), b->north_east()->lng()}});
+  };
+
   try {
     using path::PathBoxesResponse;
     auto const res = motis_call(make_no_msg("/path/boxes"))->val();
@@ -56,7 +62,7 @@ mcd::hash_map<std::pair<int, int>, geo::box> bounding_boxes(schedule const& s) {
       }
       boxes[{std::min(it_a->second->index_, it_b->second->index_),
              std::max(it_a->second->index_, it_b->second->index_)}] =
-          geo::from_fbs(box);
+          from_fbs(box);
     }
   } catch (std::system_error const& e) {
     LOG(logging::warn) << "bounding box request failed: " << e.what();
@@ -295,8 +301,9 @@ msg_ptr railviz::get_trains(msg_ptr const& msg) const {
   trains_response_builder trb{sched, req->zoom_geo()};
   for (auto const& ev : train_retriever_->trains(
            t_start, t_end, req->max_trains(),
-           {{req->corner1()->lat(), req->corner1()->lng()},
-            {req->corner2()->lat(), req->corner2()->lng()}},
+           geo::make_box(
+               {geo::latlng{req->corner1()->lat(), req->corner1()->lng()},
+                geo::latlng{req->corner2()->lat(), req->corner2()->lng()}}),
            req->zoom_bounds())) {
     trb.add_ev_key(ev);
   }
