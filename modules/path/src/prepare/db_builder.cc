@@ -85,6 +85,11 @@ struct db_builder::impl {
     seq_segs_.emplace_back();  // dont use id zero (-0 == 0)
   }
 
+  impl(impl const&) = delete;
+  impl& operator=(impl const&) = delete;
+  impl(impl&&) = delete;
+  impl& operator=(impl&&) = delete;
+
   ~impl() {
     utl::verify(db_cache_size_ == 0 && db_cache_.empty(),
                 "db_builder: cache is not empty in dtor");

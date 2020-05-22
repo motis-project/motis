@@ -26,7 +26,7 @@ void path_database_query::add_sequence(size_t const index,
   sequences_.emplace_back(index, std::move(segment_indices));
 }
 
-void path_database_query::add_extra(std::vector<geo::polyline> extra) {
+void path_database_query::add_extra(std::vector<geo::polyline> const& extra) {
   resolvable_sequence rs{kExtraSequenceIndex, {}};
   for (auto const& line : extra) {
     auto rf = std::make_unique<resolvable_feature>();
@@ -322,8 +322,11 @@ void path_database_query::execute_subquery(
                 break;
               case tiles::tags::Feature::required_FixedGeometry_geometry:
                 if (zoom_level_ > 0 && !simplify_masks.empty()) {
+                  std::vector<std::string_view> simplify_masks_tmp;
+                  std::swap(simplify_masks, simplify_masks_tmp);
                   rf->geometry_ = tiles::deserialize(
-                      msg.get_view(), std::move(simplify_masks), zoom_level_);
+                      msg.get_view(), std::move(simplify_masks_tmp),
+                      zoom_level_);
                 } else {
                   rf->geometry_ = tiles::deserialize(msg.get_view());
                 }

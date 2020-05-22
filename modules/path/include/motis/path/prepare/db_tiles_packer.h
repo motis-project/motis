@@ -22,7 +22,7 @@ struct db_tiles_packer : public tiles::quadtree_feature_packer {
 
   uint32_t serialize_and_append_span(
       tiles::quadtree_feature_packer::quadtree_feature_it begin,
-      tiles::quadtree_feature_packer::quadtree_feature_it end) {
+      tiles::quadtree_feature_packer::quadtree_feature_it end) override {
     uint32_t offset = packer_.buf_.size();
     for (auto it = begin; it != end; ++it) {
       auto const& f = it->feature_;

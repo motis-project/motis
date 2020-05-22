@@ -16,7 +16,7 @@ struct trains_response_builder {
   [[nodiscard]] module::msg_ptr resolve_paths();
 
   [[nodiscard]] flatbuffers::Offset<Train> write_railviz_train(
-      module::message_creator&, trip const*, size_t const section_index,
+      module::message_creator&, trip const*, size_t section_index,
       flatbuffers::Vector<int64_t> const* polyline_indices);
 
   [[nodiscard]] module::msg_ptr finish();

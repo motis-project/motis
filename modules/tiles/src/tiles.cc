@@ -51,7 +51,7 @@ struct import_state {
 };
 
 struct tiles::data {
-  data(std::string const& path)
+  explicit data(std::string const& path)
       : db_env_{::tiles::make_tile_database(path.c_str())},
         db_handle_{db_env_},
         render_ctx_{::tiles::make_render_ctx(db_handle_)},
@@ -205,6 +205,6 @@ void tiles::init(mm::registry& reg) {
   });
 }
 
-bool tiles::import_successful() const { return data_.get() != nullptr; }
+bool tiles::import_successful() const { return data_ != nullptr; }
 
 }  // namespace motis::tiles

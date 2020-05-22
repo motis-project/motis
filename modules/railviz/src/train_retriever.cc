@@ -16,7 +16,6 @@
 #include "motis/core/conv/trip_conv.h"
 #include "motis/module/context/get_schedule.h"
 
-namespace bg = boost::geometry;
 namespace bgi = boost::geometry::index;
 
 using value = std::pair<geo::box, std::pair<int, int>>;
@@ -137,7 +136,8 @@ std::unique_ptr<edge_geo_index> make_edge_rtree(
 constexpr auto const RELEVANT_CLASSES = NUM_CLASSES - 1;
 
 train_retriever::train_retriever(
-    schedule const& sched, mcd::hash_map<std::pair<int, int>, geo::box> boxes) {
+    schedule const& sched,
+    mcd::hash_map<std::pair<int, int>, geo::box> const& boxes) {
   edge_index_.resize(RELEVANT_CLASSES);
   for (auto clasz = 0U; clasz < RELEVANT_CLASSES; ++clasz) {
     edge_index_[clasz] = make_edge_rtree(sched, clasz, boxes);
