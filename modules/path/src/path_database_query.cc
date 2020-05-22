@@ -75,8 +75,10 @@ void path_database_query::resolve_sequences_and_build_subqueries(
     auto ret = cursor.get(lmdb::cursor_op::SET, std::to_string(rs.index_));
     utl::verify(ret.has_value(), "path_database_query: {} not found :E",
                 rs.index_);
-    auto const* ptr =
-        flatbuffers::GetRoot<InternalDbSequence>(ret->second.data());
+
+    auto const buf = typed_flatbuffer<InternalDbSequence>(ret->second.size(),
+                                                          ret->second.data());
+    auto const* ptr = buf.get();
 
     utl::verify(ptr->classes()->size() != 0,
                 "path_database_query: have empty classes");
@@ -353,7 +355,9 @@ Offset<PathSeqResponse> path_database_query::write_sequence(
   auto ret = txn.get(dbi, std::to_string(index));
   utl::verify(ret.has_value(), "path_database_query: {} not found :W", index);
 
-  auto const* ptr = flatbuffers::GetRoot<InternalDbSequence>(ret->data());
+  auto const buf =
+      typed_flatbuffer<InternalDbSequence>(ret->size(), ret->data());
+  auto const* ptr = buf.get();
 
   auto const station_ids =
       utl::to_vec(*ptr->station_ids(),
