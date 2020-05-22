@@ -123,7 +123,8 @@ struct path_database_query_test : public ::testing::Test {
 
     using m::MsgContent_PathSeqResponse;
     using mp::PathSeqResponse;
-    return std::make_pair(std::move(msg), motis_content(PathSeqResponse, msg));
+    auto const* resp = motis_content(PathSeqResponse, msg);
+    return std::make_pair(std::move(msg), resp);
   }
 
   static std::pair<mm::msg_ptr, mp::PathByTripIdBatchResponse const*> get_batch(
@@ -135,8 +136,8 @@ struct path_database_query_test : public ::testing::Test {
 
     using m::MsgContent_PathByTripIdBatchResponse;
     using mp::PathByTripIdBatchResponse;
-    return std::make_pair(std::move(msg),
-                          motis_content(PathByTripIdBatchResponse, msg));
+    auto const* resp = motis_content(PathByTripIdBatchResponse, msg);
+    return std::make_pair(std::move(msg), resp);
   }
 
   static long get_batch_path(int const line,
