@@ -103,9 +103,7 @@ void construct_atomic_path(post_graph& graph, post_graph_node* start_node,
   } else {
     graph.atomic_paths_.push_back(
         std::make_unique<atomic_path>(path, start_node, node));
-    auto* ap = graph.atomic_paths_.back().get();
-
-    start_edge->atomic_path_ = std::move(ap);
+    start_edge->atomic_path_ = graph.atomic_paths_.back().get();
     start_edge->atomic_path_forward_ = true;
   }
 }

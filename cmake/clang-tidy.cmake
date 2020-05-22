@@ -4,10 +4,16 @@ endif()
 
 file(RELATIVE_PATH RELATIVE_SOURCE_DIR ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR})
 
-find_program(CLANG_TIDY_COMMAND NAMES clang-tidy clang-tidy-9)
+if(MOTIS_CLANG_TIDY_COMMAND)
+  set(CLANG_TIDY_COMMAND "${MOTIS_CLANG_TIDY_COMMAND}")
+else()
+  find_program(CLANG_TIDY_COMMAND NAMES clang-tidy clang-tidy-9)
+endif()
+
 if(NOT CLANG_TIDY_COMMAND)
   message(FATAL_ERROR "CMake_RUN_CLANG_TIDY is ON but clang-tidy is not found!")
 endif()
+
 set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
 
 file(SHA1 ${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy.in clang_tidy_sha1)

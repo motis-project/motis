@@ -54,7 +54,7 @@ struct path_database_query {
       : zoom_level_{zoom_level} {}
 
   void add_sequence(size_t index, std::vector<size_t> segment_indices = {});
-  void add_extra(std::vector<geo::polyline>);
+  void add_extra(std::vector<geo::polyline> const&);
 
   void execute(path_database const&);
   void resolve_sequences_and_build_subqueries(lmdb::cursor&);

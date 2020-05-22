@@ -23,7 +23,7 @@ struct edge_geo_index;
 
 struct train_retriever {
   train_retriever(schedule const& s,
-                  mcd::hash_map<std::pair<int, int>, geo::box>);
+                  mcd::hash_map<std::pair<int, int>, geo::box> const&);
   ~train_retriever();
 
   train_retriever(train_retriever const&) = delete;

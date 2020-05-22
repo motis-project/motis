@@ -291,7 +291,7 @@ msg_ptr path::by_trip_id_batch(msg_ptr const& msg) const {
         }
         ++i;
       }
-      q.add_extra(std::move(extra));
+      q.add_extra(extra);
     }
   }
 
@@ -309,7 +309,7 @@ msg_ptr path::by_tile_feature(msg_ptr const& msg) const {
   message_creator mc;
   std::vector<Offset<PathSeqResponse>> responses;
   for (auto const& [seq, seg] : data_->index_->tile_features_.at(req->ref())) {
-    // TODO update this for the batch query
+    // TODO(sebastian) update this for the batch query
     responses.emplace_back(data_->reconstruct_sequence(mc, seq));
   }
 
