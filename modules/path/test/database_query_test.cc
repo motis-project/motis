@@ -22,6 +22,7 @@ namespace mp = m::path;
 namespace mm = m::module;
 
 namespace geo {
+// NOLINTNEXTLINE
 void PrintTo(latlng const& ll, std::ostream* os) {
   auto old_p = os->precision();
   os->precision(11);
