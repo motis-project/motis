@@ -40,7 +40,7 @@ namespace motis::tiles {
 
 struct import_state {
   CISTA_COMPARABLE()
-  mm::named<bool, MOTIS_NAME("profile_hash")> profile_hash_;
+  mm::named<c::hash_t, MOTIS_NAME("profile_hash")> profile_hash_;
   mm::named<std::string, MOTIS_NAME("osm_path")> osm_path_;
   mm::named<c::hash_t, MOTIS_NAME("osm_hash")> osm_hash_;
   mm::named<uint64_t, MOTIS_NAME("osm_size")> osm_size_;
