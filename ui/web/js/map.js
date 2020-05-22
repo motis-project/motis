@@ -186,6 +186,8 @@ class RailVizCustomLayer {
         lat: center.lat,
         lng: center.lng,
       },
+      bearing: bearing,
+      pitch: pitch
     };
 
     app.ports.mapUpdate.send(mapInfo);
@@ -295,8 +297,8 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
       var map = window.elmMaps[opt.mapId];
 
       const camOptions = opt.animate
-        ? { maxZoom: 12, bearing: 0, padding }
-        : { maxZoom: 12, bearing: 0 };
+        ? { maxZoom: 12, padding }
+        : { maxZoom: 12 };
 
       const options = map.cameraForBounds(
         new mapboxgl.LngLatBounds([opt.lng, opt.lat], [opt.lng, opt.lat]),
@@ -305,7 +307,8 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
       if (opt.zoom) {
         options.zoom = opt.zoom;
       }
-      options.pitch = 0;
+      options.pitch = opt.pitch ? opt.pitch : 0;
+      options.bearing = opt.bearing ? opt.bearing : 0
 
       if (opt.animate) {
         map.flyTo(options);

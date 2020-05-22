@@ -45,6 +45,8 @@ type alias MapInfo =
     , geoBounds : MapGeoBounds
     , railVizBounds : MapGeoBounds
     , center : Position
+    , bearing : Float
+    , pitch : Float
     }
 
 
@@ -113,6 +115,8 @@ type alias MapFlyLocation =
     , lat : Float
     , lng : Float
     , zoom : Maybe Float
+    , bearing : Maybe Float
+    , pitch : Maybe Float
     , animate : Bool
     }
 
