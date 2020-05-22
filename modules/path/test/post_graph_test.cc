@@ -11,17 +11,18 @@
 
 namespace mp = motis::path;
 
-#define CHECK_AP(rpp, a, b)                      \
-  if (rpp.second) {                              \
-    EXPECT_EQ(a, rpp.first->from_->id_.osm_id_); \
-    EXPECT_EQ(b, rpp.first->to_->id_.osm_id_);   \
-  } else {                                       \
-    EXPECT_EQ(b, rpp.first->from_->id_.osm_id_); \
-    EXPECT_EQ(a, rpp.first->to_->id_.osm_id_);   \
+#define CHECK_AP(rpp, a, b)                          \
+  if ((rpp).second) {                                \
+    EXPECT_EQ((a), (rpp).first->from_->id_.osm_id_); \
+    EXPECT_EQ((b), (rpp).first->to_->id_.osm_id_);   \
+  } else {                                           \
+    EXPECT_EQ((b), (rpp).first->from_->id_.osm_id_); \
+    EXPECT_EQ((a), (rpp).first->to_->id_.osm_id_);   \
   }
 
 mp::resolved_station_seq make_resolved_cls_seq(
-    std::vector<uint32_t> classes, std::vector<std::vector<int64_t>> paths) {
+    std::vector<uint32_t> const& classes,
+    std::vector<std::vector<int64_t>> const& paths) {
   return mp::resolved_station_seq{
       utl::repeat_n(std::string{}, paths.size() + 1),
       classes,

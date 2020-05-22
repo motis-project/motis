@@ -50,18 +50,18 @@ struct path_database_query_test : public ::testing::Test {
   static constexpr auto const xFactor = 1024;
 
   static geo::latlng fixed_x_to_latlng(tiles::fixed_coord_t x) {
-    return tiles::fixed_to_latlng(tiles::fixed_xy{x * xFactor, 0ul});
+    return tiles::fixed_to_latlng(tiles::fixed_xy{x * xFactor, 0UL});
   }
 
   // simulates rounding/floating point errors which occur during a db roundtrip
   static geo::latlng fixed_x_to_latlng_db(tiles::fixed_coord_t x) {
     return tiles::fixed_to_latlng(  // deserialize from db
         tiles::latlng_to_fixed(  // serialize for db
-            tiles::fixed_to_latlng(tiles::fixed_xy{x * xFactor, 0ul})));
+            tiles::fixed_to_latlng(tiles::fixed_xy{x * xFactor, 0UL})));
   }
 
   static std::vector<geo::latlng> fixed_x_to_line_db(
-      std::vector<tiles::fixed_coord_t> xs) {
+      std::vector<tiles::fixed_coord_t> const& xs) {
     return utl::to_vec(xs, [](auto x) { return fixed_x_to_latlng_db(x); });
   }
 
@@ -73,23 +73,24 @@ struct path_database_query_test : public ::testing::Test {
   }
 
   static std::pair<int64_t, uint64_t> add_feature(
-      mp::db_builder& builder, std::vector<tiles::fixed_coord_t> geometry) {
+      mp::db_builder& builder,
+      std::vector<tiles::fixed_coord_t> const& geometry) {
     auto const line =
         utl::to_vec(geometry, [](auto x) { return fixed_x_to_latlng(x); });
     return builder.add_feature(line, {}, {0}, false);
   }
 
   static void add_seq(mp::db_builder& builder, size_t idx,
-                      std::vector<std::vector<int64_t>> feature_ids,
-                      std::vector<std::vector<uint64_t>> hints) {
+                      std::vector<std::vector<int64_t>> const& feature_ids,
+                      std::vector<std::vector<uint64_t>> const& hints) {
     add_seq(builder, idx, feature_ids, hints,
             utl::repeat_n<tiles::fixed_coord_t>(0, feature_ids.size()));
   }
 
   static void add_seq(mp::db_builder& builder, size_t idx,
-                      std::vector<std::vector<int64_t>> feature_ids,
-                      std::vector<std::vector<uint64_t>> hints,
-                      std::vector<tiles::fixed_coord_t> fallbacks) {
+                      std::vector<std::vector<int64_t>> const& feature_ids,
+                      std::vector<std::vector<uint64_t>> const& hints,
+                      std::vector<tiles::fixed_coord_t> const& fallbacks) {
     auto hints_rle = utl::to_vec(hints, [&](auto const& h) {
       std::vector<uint64_t> rle;
       utl::equal_ranges_linear(
@@ -140,9 +141,9 @@ struct path_database_query_test : public ::testing::Test {
     return std::make_pair(std::move(msg), resp);
   }
 
-  static long get_batch_path(int const line,
-                             mp::PathByTripIdBatchResponse const* resp,
-                             std::vector<geo::latlng> const& p0) {
+  static ptrdiff_t get_batch_path(int const line,
+                                  mp::PathByTripIdBatchResponse const* resp,
+                                  std::vector<geo::latlng> const& p0) {
     auto const pred = [&](auto const* p) {
       auto const decoded =
           mp::decode_polyline<6>(std::string_view{p->data(), p->size()});
