@@ -8,5 +8,5 @@ table StatusUpdate {
   status: Status;
   error: string;
   current_task: string;
-  progress: ubyte;
+  progress: float;
 }

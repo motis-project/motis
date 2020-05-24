@@ -23,7 +23,7 @@ event_collector::event_collector(progress_listener& progress_listener,
       progress_listener_{progress_listener} {}
 
 void event_collector::update_status(motis::import::Status const status,
-                                    uint8_t const progress) {
+                                    double const progress) {
   message_creator fbb;
   fbb.create_and_finish(
       MsgContent_StatusUpdate,

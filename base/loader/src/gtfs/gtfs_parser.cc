@@ -17,7 +17,6 @@
 
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
-#include "motis/core/common/projection.h"
 #include "motis/loader/gtfs/agency.h"
 #include "motis/loader/gtfs/calendar.h"
 #include "motis/loader/gtfs/calendar_date.h"
@@ -181,12 +180,12 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   };
 
   motis::logging::scoped_timer export_timer{"export"};
-  auto const p = projection{0.4, 0.8};
-  std::clog << '\0' << 'S' << "Export schedule.raw" << '\0';
+  motis::logging::clog_import_step("Export schedule.raw", 40, 80, trips.size());
   auto const interval =
       Interval{static_cast<uint64_t>(to_unix_time(services.first_day_)),
                static_cast<uint64_t>(to_unix_time(services.last_day_))};
-  auto i = 0.0;
+
+  auto i = size_t{0U};
   auto const output_services = fbb.CreateVector(
       utl::all(trips)  //
       | utl::remove_if([](auto const& trp) {
@@ -199,7 +198,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
         })  //
       |
       utl::transform([&](auto const& entry) {
-        std::clog << '\0' << p((i += 1.) / trips.size()) << '\0';
+        motis::logging::clog_import_progress(i++, 100000);
 
         auto const& t = entry.second;
         auto const stop_seq = t->stops();

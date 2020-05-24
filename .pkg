@@ -9,7 +9,7 @@
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
-  commit=7897a6cd02ad9a47ff1c36722354e3638fb17000
+  commit=045a78e9a9d08145f49b90d2886b541404442235
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -29,11 +29,11 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=60ae688fcb68859478b4742705c9b59cf20984c8
+  commit=ae9aeed6688442b9651df0c44dbd3751fe510394
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
-  commit=337308e8f74d7020c9b21544561e759bbfb01abf
+  commit=dda79b36b4324f81f3d4a0a67d56351ee9dd0c8a
 [lmdb]
   url=git@github.com:motis-project/lmdb.git
   branch=master
@@ -77,4 +77,4 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=aa6ea0a16affc47e8515fefcf1f4365e22b95ed7
+  commit=33e126b2d93a4fc0d8ee07b61ff34362df8bc87d

@@ -40,7 +40,7 @@ struct event_collector : std::enable_shared_from_this<event_collector> {
                            std::function<bool(msg_ptr)>);
 
 private:
-  void update_status(motis::import::Status, uint8_t progress = 0U);
+  void update_status(motis::import::Status, double progress = 0.);
 
   std::string data_dir_;
   std::string module_name_;

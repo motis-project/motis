@@ -6,7 +6,7 @@ include_directories(include)
 file(GLOB_RECURSE motis-csa-files src/*.cc)
 add_library(motis-csa STATIC ${motis-csa-files})
 target_include_directories(motis-csa PUBLIC include)
-target_compile_features(motis-csa PUBLIC cxx_std_20)
+target_compile_features(motis-csa PUBLIC cxx_std_17)
 target_link_libraries(motis-csa
   ${Boost_PROGRAM_OPTIONS_LIBRARY}
   ${Boost_SYSTEM_LIBRARY}

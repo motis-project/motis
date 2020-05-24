@@ -51,59 +51,32 @@ enum log_level { emrg, alrt, crit, error, warn, notice, info, debug };
 static const char* const str[]{"emrg", "alrt", "crit", "erro",
                                "warn", "note", "info", "debg"};
 
-inline std::string time(time_t const t) {
-  char buf[sizeof "2011-10-08t07:07:09z-0430"];
-  struct tm result {};
-  MOTIS_GMT(&t, &result);
-  strftime(static_cast<char*>(buf), sizeof buf, "%FT%TZ%z", &result);
-  return buf;
-}
-
-inline std::string time() {
-  time_t now = 0;
-  std::time(&now);
-  return time(now);
-}
+std::string time(time_t);
+std::string time();
 
 struct scoped_timer final {
-  explicit scoped_timer(std::string name)
-      : name_(std::move(name)), start_(std::chrono::steady_clock::now()) {
-    LOG(info) << "[" << name_ << "] starting";
-  }
-
+  explicit scoped_timer(std::string name);
   scoped_timer(scoped_timer const&) = delete;
   scoped_timer(scoped_timer&&) = delete;
   scoped_timer& operator=(scoped_timer const&) = delete;
   scoped_timer& operator=(scoped_timer&&) = delete;
-
-  ~scoped_timer() {
-    using namespace std::chrono;
-    auto stop = steady_clock::now();
-    double t = duration_cast<microseconds>(stop - start_).count() / 1000.0;
-    LOG(info) << "[" << name_ << "] finished"
-              << " (" << t << "ms)";
-  }
+  ~scoped_timer();
 
   std::string name_;
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
 struct manual_timer final {
-  explicit manual_timer(std::string name)
-      : name_(std::move(name)), start_(std::chrono::steady_clock::now()) {
-    LOG(info) << "[" << name_ << "] starting";
-  }
-
-  void stop_and_print() {
-    using namespace std::chrono;
-    auto stop = steady_clock::now();
-    double t = duration_cast<microseconds>(stop - start_).count() / 1000.0;
-    LOG(info) << "[" << name_ << "] finished"
-              << " (" << t << "ms)";
-  }
+  explicit manual_timer(std::string name);
+  void stop_and_print();
 
   std::string name_;
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
+
+void clog_import_step(std::string const& step, float output_low = 0.,
+                      float output_high = 100., float input_high = 100.);
+
+void clog_import_progress(size_t progress, size_t rate_limit = 1);
 
 }  // namespace motis::logging
