@@ -2,6 +2,7 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 
 #include "motis/loader/loaded_file.h"
@@ -21,6 +22,7 @@ struct stop {
   std::string name_;
   double lat_, lng_;
   std::string timezone_;
+  std::set<stop*> same_name_;
 };
 
 using stop_map = std::map<std::string, std::unique_ptr<stop>>;

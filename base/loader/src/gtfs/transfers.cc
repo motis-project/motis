@@ -29,7 +29,6 @@ std::map<stop_pair, transfer> read_transfers(loaded_file f,
   for (auto const& t : read<gtfs_transfer>(f.content(), columns)) {
     if (parse_stop_id(get<from_stop_id>(t).to_str()) !=
         parse_stop_id(get<to_stop_id>(t).to_str())) {
-
       stop_pair key = std::make_pair(
           stops.at(parse_stop_id(get<from_stop_id>(t).to_str())).get(),
           stops.at(parse_stop_id(get<to_stop_id>(t).to_str())).get());

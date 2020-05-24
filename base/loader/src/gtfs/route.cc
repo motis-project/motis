@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <tuple>
 
+#include "utl/enumerate.h"
 #include "utl/parser/csv.h"
 
 #include "motis/core/common/logging.h"
@@ -152,6 +153,14 @@ std::map<unsigned, std::string> route::s_types_ = {
     // clang-format on
 };
 
+std::optional<std::string> route::category() const {
+  if (auto const it = s_types_.find(type_); it != end(s_types_)) {
+    return it->second;
+  } else {
+    return std::nullopt;
+  }
+}
+
 using gtfs_route = std::tuple<cstr, cstr, cstr, cstr, cstr, int>;
 enum {
   route_id,
@@ -169,10 +178,15 @@ route_map read_routes(loaded_file file, agency_map const& agencies) {
   motis::logging::scoped_timer timer{"read routes"};
 
   route_map routes;
-  for (auto const& r : read<gtfs_route>(file.content(), columns)) {
+  auto const entries = read<gtfs_route>(file.content(), columns);
+  for (auto const& [i, r] : utl::enumerate(entries)) {
     auto agency_it = agencies.find(get<agency_id>(r).to_str());
     auto agency_ptr =
         agency_it == end(agencies) ? nullptr : agency_it->second.get();
+    if (agency_ptr == nullptr) {
+      LOG(logging::warn) << "agency \"" << get<agency_id>(r).view()
+                         << "\" not found (line=" << i << ")";
+    }
     routes.emplace(
         get<route_id>(r).to_str(),
         std::make_unique<route>(

@@ -2,6 +2,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "motis/loader/gtfs/agency.h"
@@ -21,6 +22,8 @@ public:
         type_(type) {}
 
   static std::map<unsigned, std::string> s_types_;
+
+  std::optional<std::string> category() const;
 
   agency const* agency_;
   std::string id_;

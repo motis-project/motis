@@ -63,6 +63,7 @@ inline mcd::hash_map<mcd::string, uint8_t> class_mapping() {
     // street-car
     { "Tram", 7 },
     { "STR", 7 },
+    { "Str", 7 },
     { "T", 7 },
 
     // bus

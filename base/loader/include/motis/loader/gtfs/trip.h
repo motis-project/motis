@@ -42,7 +42,7 @@ struct trip {
         short_name_(std::move(short_name)),
         line_(line) {}
 
-  stop_seq stops() {
+  stop_seq stops() const {
     return utl::to_vec(begin(stop_times_), end(stop_times_),
                        [](flat_map<stop_time>::entry_t const& e) {
                          return std::make_tuple(e.second.stop_,

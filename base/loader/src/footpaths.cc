@@ -2,6 +2,7 @@
 
 #include <stack>
 
+#include "utl/enumerate.h"
 #include "utl/equal_ranges_linear.h"
 #include "utl/parallel_for.h"
 #include "utl/verify.h"
@@ -22,6 +23,15 @@ using component_vec = std::vector<std::pair<uint32_t, uint32_t>>;
 using component_it = component_vec::iterator;
 using component_range = std::pair<component_it, component_it>;
 
+std::string to_str(std::vector<footpath> const& footpaths) {
+  std::stringstream s;
+  for (auto const& [i, fp] : utl::enumerate(footpaths)) {
+    s << (i == 0 ? "" : ", ") << fp.from_station_ << "-" << fp.to_station_
+      << "-" << fp.duration_ << "min";
+  }
+  return s.str();
+}
+
 footgraph get_footpath_graph(
     mcd::vector<station_node_ptr> const& station_nodes) {
   return utl::to_vec(station_nodes, [](auto const& station_node) {
@@ -39,10 +49,7 @@ footgraph get_footpath_graph(
         }
       }
 
-      std::sort(begin(fps), end(fps), [](auto const& a, auto const& b) {
-        return std::tie(a.from_station_, a.to_station_, a.duration_) <
-               std::tie(b.from_station_, b.to_station_, b.duration_);
-      });
+      std::sort(begin(fps), end(fps));
     }
     return fps;
   });
@@ -71,7 +78,7 @@ inline void floyd_warshall_serial(matrix& mat) {
   }
 }
 
-inline std::vector<std::pair<uint32_t, uint32_t>> find_components(
+std::vector<std::pair<uint32_t, uint32_t>> find_components(
     footgraph const& fgraph) {
   std::vector<std::pair<uint32_t, uint32_t>> components(fgraph.size());
   std::generate(begin(components), end(components), [i = 0UL]() mutable {
@@ -117,14 +124,21 @@ void process_component(component_it const lb, component_it const ub,
     auto idx_b = std::next(lb)->second;
 
     if (!fgraph[idx_a].empty()) {
-      utl::verify(fgraph[idx_a].size() == 1, "invalid size (a)");
+      utl::verify_silent(
+          fgraph[idx_a].size() == 1,
+          "invalid size (a): idx_a={}, size={}, data=[{}], idx_b={}, size={}",
+          idx_a, fgraph[idx_a].size(), to_str(fgraph[idx_a]), idx_b,
+          fgraph[idx_b].size(), to_str(fgraph[idx_b]));
       sched.stations_[idx_a]->outgoing_footpaths_.push_back(
           fgraph[idx_a].front());
       sched.stations_[idx_b]->incoming_footpaths_.push_back(
           fgraph[idx_a].front());
     }
     if (!fgraph[idx_b].empty()) {
-      utl::verify(fgraph[idx_b].size() == 1, "invalid size (b)");
+      utl::verify_silent(
+          fgraph[idx_b].size() == 1,
+          "invalid size (a): idx_a={}, size={}, idx_b={}, size={}", idx_a,
+          fgraph[idx_a].size(), idx_b, fgraph[idx_b].size());
       sched.stations_[idx_b]->outgoing_footpaths_.push_back(
           fgraph[idx_b].front());
       sched.stations_[idx_a]->incoming_footpaths_.push_back(
@@ -182,9 +196,22 @@ void calc_footpaths(schedule& sched) {
       [](auto const& a, auto const& b) { return a.first == b.first; },
       [&](auto lb, auto ub) { ranges.emplace_back(lb, ub); });
 
-  utl::parallel_for(ranges, [&](auto const& range) {
-    process_component(range.first, range.second, fgraph, sched);
-  });
+  auto const errors = utl::parallel_for(
+      ranges,
+      [&](auto const& range) {
+        process_component(range.first, range.second, fgraph, sched);
+      },
+      utl::parallel_error_strategy::CONTINUE_EXEC);
+  if (!errors.empty()) {
+    for (auto const& [idx, ex] : errors) {
+      try {
+        std::rethrow_exception(ex);
+      } catch (std::exception const& e) {
+        LOG(logging::error)
+            << "foopath error: " << idx << " (" << e.what() << ")";
+      }
+    }
+  }
 }
 
 }  // namespace motis::loader

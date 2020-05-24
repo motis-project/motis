@@ -112,7 +112,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   auto const calendar = read_calendar(load(CALENDAR_FILE));
   auto const dates = read_calendar_date(load(CALENDAR_DATES_FILE));
   auto const services = traffic_days(calendar, dates);
-  auto const transfers = read_transfers(load(TRANSFERS_FILE), stops);
+  auto transfers = read_transfers(load(TRANSFERS_FILE), stops);
   auto trips = read_trips(load(TRIPS_FILE), routes, services);
   read_stop_times(load(STOP_TIMES_FILE), trips, stops);
 
@@ -132,22 +132,34 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
     });
   };
 
-  auto get_or_create_category = [&](std::string desc) {
-    static auto const short_tags =
-        std::map<std::string, std::string>{{"RegioExpress", "RE"},
-                                           {"Regionalzug", "RZ"},
-                                           {"InterRegio", "IR"},
-                                           {"Intercity", "IC"}};
-    if (auto it = short_tags.find(desc); it != end(short_tags)) {
-      desc = it->second;
+  auto get_or_create_category = [&](route const* r) {
+    if (auto const cat = r->category(); cat.has_value()) {
+      return utl::get_or_create(fbs_categories, *cat, [&]() {
+        return CreateCategory(fbb, fbb.CreateString(*cat), 0);
+      });
+    } else {
+      auto desc = r->desc_;
+      static auto const short_tags =
+          std::map<std::string, std::string>{{"RegioExpress", "RE"},
+                                             {"Regionalzug", "RZ"},
+                                             {"InterRegio", "IR"},
+                                             {"Intercity", "IC"}};
+      if (auto it = short_tags.find(desc); it != end(short_tags)) {
+        desc = it->second;
+      }
+      return utl::get_or_create(fbs_categories, desc, [&]() {
+        return CreateCategory(fbb, fbb.CreateString(desc), 0);
+      });
     }
-    return utl::get_or_create(fbs_categories, desc, [&]() {
-      return CreateCategory(fbb, fbb.CreateString(desc), 0);
-    });
   };
 
   auto get_or_create_provider = [&](agency const* a) {
     return utl::get_or_create(fbs_providers, a, [&]() {
+      if (a == nullptr) {
+        auto const name = fbb.CreateString("UNKNOWN_AGENCY");
+        return CreateProvider(fbb, name, name, name, 0);
+      }
+
       auto const name = fbb.CreateString(a->name_);
       return CreateProvider(
           fbb, fbb.CreateString(a->id_), name, name,
@@ -160,6 +172,14 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
                               [&]() { return fbb.CreateString(s); });
   };
 
+  auto get_or_create_direction = [&](trip const* t) {
+    if (!t->headsign_.empty()) {
+      return get_or_create_str(t->headsign_);
+    } else {
+      return get_or_create_str(std::get<0>(t->stops().back())->name_);
+    }
+  };
+
   motis::logging::scoped_timer export_timer{"export"};
   auto const p = projection{0.4, 0.8};
   std::clog << '\0' << 'S' << "Export schedule.raw" << '\0';
@@ -167,9 +187,18 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
       Interval{static_cast<uint64_t>(to_unix_time(services.first_day_)),
                static_cast<uint64_t>(to_unix_time(services.last_day_))};
   auto i = 0.0;
-  auto const output_services = fbb.CreateVector(utl::to_vec(
-      begin(trips), end(trips),
-      [&](std::pair<std::string const, std::unique_ptr<trip>> const& entry) {
+  auto const output_services = fbb.CreateVector(
+      utl::all(trips)  //
+      | utl::remove_if([](auto const& trp) {
+          auto const stop_count = trp.second->stops().size();
+          if (stop_count < 2) {
+            LOG(warn) << "invalid trip " << trp.first << ": "
+                      << trp.second->stops().size() << " stops";
+          }
+          return stop_count < 2;
+        })  //
+      |
+      utl::transform([&](auto const& entry) {
         std::clog << '\0' << p((i += 1.) / trips.size()) << '\0';
 
         auto const& t = entry.second;
@@ -202,7 +231,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
             fbb.CreateString(serialize_bitset(*t->service_)),
             fbb.CreateVector(repeat_n(
                 CreateSection(
-                    fbb, get_or_create_category(t->route_->desc_),
+                    fbb, get_or_create_category(t->route_),
                     get_or_create_provider(t->route_->agency_),
                     !t->short_name_.empty() &&
                             std::all_of(begin(t->short_name_),
@@ -214,7 +243,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
                         : 0,
                     get_or_create_str(t->route_->short_name_),
                     fbb.CreateVector(std::vector<Offset<Attribute>>()),
-                    CreateDirection(fbb, 0, get_or_create_str(t->headsign_))),
+                    CreateDirection(fbb, 0, get_or_create_direction(t.get()))),
                 stop_seq.size() - 1)),
             0,
             fbb.CreateVector(utl::all(t->stop_times_)  //
@@ -230,19 +259,8 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
             CreateServiceDebugInfo(fbb, fbb.CreateString(""),
                                    entry.second->line_, entry.second->line_),
             false, 0, get_or_create_str(entry.first));  // Trip ID
-      }));
-
-  auto const footpaths = fbb.CreateVector(
-      utl::all(transfers)  //
-      | utl::remove_if([](std::pair<stop_pair, transfer>&& t) {
-          return t.second.type_ != transfer::TIMED_TRANSFER;
-        })  //
-      | utl::transform([&](std::pair<stop_pair, transfer>&& t) {
-          return CreateFootpath(fbb, get_or_create_stop(t.first.first),
-                                get_or_create_stop(t.first.second),
-                                t.second.minutes_);
-        })  //
-      | utl::vec());
+      }) |
+      utl::vec());
 
   auto const dataset_name =
       std::accumulate(begin(feeds), end(feeds), std::string("GTFS"),
@@ -252,11 +270,50 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
                                " (" + feed_pair.second.version_ + ")";
                       });
 
+  auto footpaths =
+      utl::all(transfers)  //
+      | utl::remove_if([](std::pair<stop_pair, transfer>&& t) {
+          return t.second.type_ != transfer::TIMED_TRANSFER;
+        })  //
+      | utl::transform([&](std::pair<stop_pair, transfer>&& t) {
+          return CreateFootpath(fbb, get_or_create_stop(t.first.first),
+                                get_or_create_stop(t.first.second),
+                                t.second.minutes_);
+        })  //
+      | utl::vec();
+
+  auto const generate_transfer = [&](stop_pair const& stops) {
+    if (transfers.find(stops) == end(transfers)) {
+      footpaths.emplace_back(
+          CreateFootpath(fbb, get_or_create_stop(stops.first),
+                         get_or_create_stop(stops.second), 2));
+      transfers.emplace(stops, transfer{2, transfer::GENERATED});
+    }
+  };
+  auto const meta_stations =
+      utl::all(stops)  //
+      | utl::remove_if(
+            [](auto const& s) { return s.second->same_name_.empty(); })  //
+      | utl::transform([&](auto const& s) {
+          stop const* this_stop = s.second.get();
+          return CreateMetaStation(
+              fbb, get_or_create_stop(this_stop),
+              fbb.CreateVector(
+                  utl::to_vec(this_stop->same_name_, [&](auto const* eq) {
+                    generate_transfer(std::make_pair(this_stop, eq));
+                    generate_transfer(std::make_pair(eq, this_stop));
+                    return get_or_create_stop(eq);
+                  })));
+        })  //
+      | utl::vec();
+
   fbb.Finish(CreateSchedule(
       fbb, output_services, fbb.CreateVector(values(fbs_stations)),
-      fbb.CreateVector(values(fbs_routes)), &interval, footpaths,
-      fbb.CreateVector(std::vector<Offset<RuleService>>()), 0,
-      fbb.CreateString(dataset_name), hash(root)));
+      fbb.CreateVector(values(fbs_routes)), &interval,
+      fbb.CreateVector(footpaths),
+      fbb.CreateVector(std::vector<Offset<RuleService>>()),
+      fbb.CreateVector(meta_stations), fbb.CreateString(dataset_name),
+      hash(root)));
 }
 
 }  // namespace motis::loader::gtfs
