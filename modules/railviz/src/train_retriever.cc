@@ -12,9 +12,9 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/schedule.h"
+#include "motis/core/access/bfs.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
-#include "motis/module/context/get_schedule.h"
 
 namespace bgi = boost::geometry::index;
 
@@ -137,7 +137,8 @@ constexpr auto const RELEVANT_CLASSES = NUM_CLASSES - 1;
 
 train_retriever::train_retriever(
     schedule const& sched,
-    mcd::hash_map<std::pair<int, int>, geo::box> const& boxes) {
+    mcd::hash_map<std::pair<int, int>, geo::box> const& boxes)
+    : sched_{sched} {
   edge_index_.resize(RELEVANT_CLASSES);
   for (auto clasz = 0U; clasz < RELEVANT_CLASSES; ++clasz) {
     edge_index_[clasz] = make_edge_rtree(sched, clasz, boxes);
@@ -148,8 +149,6 @@ train_retriever::~train_retriever() = default;
 
 void train_retriever::update(rt::RtUpdates const* updates) {
   std::unique_lock lock(mutex_);
-
-  auto const& sched = module::get_schedule();
 
   std::vector<std::vector<value>> new_values;
   new_values.resize(RELEVANT_CLASSES);
@@ -162,8 +161,7 @@ void train_retriever::update(rt::RtUpdates const* updates) {
     auto const reroute_update =
         reinterpret_cast<rt::RtRerouteUpdate const*>(update->content());
     for (auto const& section :
-         access::sections(from_fbs(sched, reroute_update->trip()))) {
-
+         access::sections(from_fbs(sched_, reroute_update->trip()))) {
       std::pair<int, int> const station_pair(
           std::min(section.from_station_id(), section.to_station_id()),
           std::max(section.from_station_id(), section.to_station_id()));
@@ -176,8 +174,8 @@ void train_retriever::update(rt::RtUpdates const* updates) {
       }
 
       new_values.at(clasz).emplace_back(
-          geo::make_box({station_coords(sched, station_pair.first),
-                         station_coords(sched, station_pair.second)}),
+          geo::make_box({station_coords(sched_, station_pair.first),
+                         station_coords(sched_, station_pair.second)}),
           station_pair);
     }
   }
@@ -187,43 +185,110 @@ void train_retriever::update(rt::RtUpdates const* updates) {
   }
 }
 
-int cls_to_min_zoom_level(int c) {
-  if (c < 3) {
-    return 4;
-  } else if (c < 6) {
-    return 6;
-  } else if (c < 8) {
-    return 9;
-  } else {
-    return 10;
-  }
+bool should_display(int clasz, int zoom_level, float distance = 0.F) {
+  return clasz < 3  //
+         || (clasz < 6 && zoom_level >= 4)  //
+         || (clasz < 7 && zoom_level >= 6)  //
+         || (clasz >= 7 && zoom_level == 10 && distance >= 10'000.F)  //
+         || zoom_level > 10;
 }
 
-std::vector<ev_key> train_retriever::trains(time const from, time const to,
-                                            unsigned const max_count,
-                                            geo::box const& area,
-                                            int zoom_level) {
+std::vector<train> train_retriever::trains(time const start_time,
+                                           time const end_time,
+                                           unsigned const max_count,
+                                           geo::box const& area,
+                                           int zoom_level) {
+  mcd::hash_map<node const*, float> route_distances;
+  auto const get_or_create_route_distance = [&](ev_key const& k) {
+    auto const it =
+        route_distances.find(cista::ptr_cast(k.route_edge_.route_node_));
+    if (it != end(route_distances)) {
+      return it->second;
+    }
+
+    auto const route_edges = route_bfs(k, bfs_direction::BOTH, false);
+
+    geo::box b;
+    for (auto const& re : route_edges) {
+      auto const* e = re.get_edge();
+
+      auto const& s_dep = sched_.stations_.at(e->from_->get_station()->id_);
+      b.extend({s_dep->lat(), s_dep->lng()});
+
+      auto const& s_arr = sched_.stations_.at(e->to_->get_station()->id_);
+      b.extend({s_arr->lat(), s_arr->lng()});
+    }
+
+    float const distance = geo::distance(b.min_, b.max_);
+    for (auto const& re : route_edges) {
+      route_distances[cista::ptr_cast(re.route_node_)] = distance;
+    }
+    return distance;
+  };
+
+  constexpr auto const kBusClasz = 8;
+
   std::shared_lock lock(mutex_);
-  std::vector<ev_key> connections;
-  for (auto clasz = 0U; clasz < RELEVANT_CLASSES; ++clasz) {
-    if (zoom_level < cls_to_min_zoom_level(clasz)) {
-      goto end;
+  std::vector<train> trains;
+  for (auto clasz = 0U; clasz < kBusClasz; ++clasz) {
+    if (!should_display(clasz, zoom_level)) {
+      continue;
     }
 
     for (auto const& e : edge_index_[clasz]->edges(area)) {
       for (auto i = 0U; i < e->m_.route_edge_.conns_.size(); ++i) {
-        auto const& con = e->m_.route_edge_.conns_[i];
-        if (con.a_time_ >= from && con.d_time_ <= to && (con.valid_ != 0U)) {
-          connections.emplace_back(ev_key{e, i, event_type::DEP});
-          if (connections.size() >= max_count) {
-            goto end;
-          }
+        auto const& c = e->m_.route_edge_.conns_[i];
+        if (c.valid_ == 0U || c.a_time_ < start_time || c.d_time_ > end_time) {
+          continue;
+        }
+
+        auto const k = ev_key{e, i, event_type::DEP};
+        float const distance = get_or_create_route_distance(k);
+        trains.emplace_back(train{k, distance});
+
+        if (trains.size() >= max_count) {
+          goto max_count_reached;
         }
       }
     }
   }
-end:
-  return connections;
+
+  if (should_display(kBusClasz, zoom_level,
+                     std::numeric_limits<float>::infinity())) {
+    std::vector<train> busses;
+    for (auto const& e : edge_index_[kBusClasz]->edges(area)) {
+      for (auto i = 0U; i < e->m_.route_edge_.conns_.size(); ++i) {
+        auto const& c = e->m_.route_edge_.conns_[i];
+        if (c.valid_ == 0U || c.a_time_ < start_time || c.d_time_ > end_time) {
+          continue;
+        }
+
+        auto const k = ev_key{e, i, event_type::DEP};
+        auto const distance = get_or_create_route_distance(k);
+        if (!should_display(kBusClasz, zoom_level, distance)) {
+          continue;
+        }
+
+        busses.push_back({k, distance});
+      }
+    }
+
+    // .distance DESC, .key ASC
+    std::sort(begin(busses), end(busses), [](auto const& lhs, auto const& rhs) {
+      return std::tie(rhs.route_distance_, lhs.key_) <
+             std::tie(lhs.route_distance_, rhs.key_);
+    });
+
+    for (auto const& b : busses) {
+      if (trains.size() >= max_count) {
+        goto max_count_reached;
+      }
+      trains.push_back(b);
+    }
+  }
+
+max_count_reached:
+  return trains;
 }
 
 }  // namespace motis::railviz
