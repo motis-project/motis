@@ -33,11 +33,37 @@ RailViz.Style = (function () {
 
   function stationCircleRadius() {
     // prettier-ignore
-    return ["interpolate", ["linear"], ["zoom"],
-      6,  .75,
-      8,  1.25,
-      10, 2.25,
-      20, 4,
+    return  ["let",
+      "w", ["case",
+            ["<", ["get", "min_class"], 6],      1,
+            ["<", ["get", "min_class"], 7],      0.9,
+            ["<", ["get", "min_class"], 9],      0.7,
+            /* default */                        0.5,
+          ],
+      ["interpolate", ["linear"], ["zoom"],
+        6,  ["*", ["var", "w"], .75],
+        8,  ["*", ["var", "w"], 1.25],
+        10, ["*", ["var", "w"], 2.25],
+        20, ["*", ["var", "w"], 4],
+      ]
+    ];
+  }
+
+  function stationCircleWidth() {
+    // prettier-ignore
+    return  ["let",
+      "w", ["case",
+            ["<", ["get", "min_class"], 6],      2,
+            ["<", ["get", "min_class"], 7],      1.5,
+            ["<", ["get", "min_class"], 9],      1,
+            /* default */                        0.5,
+          ],
+      ["interpolate", ["linear"], ["zoom"],
+        6,  ["*", ["var", "w"], 0.66],
+        8,  ["*", ["var", "w"], 0.9],
+        10, ["*", ["var", "w"], 1],
+        20, ["*", ["var", "w"], 2],
+      ]
     ];
   }
 
@@ -48,13 +74,19 @@ RailViz.Style = (function () {
     if (z < 6) {
       return 0.5;
     } else if (z < 8) {
-      return interpolate(6, 8 , .5, .8);
+      return interpolate(6, 8, 0.5, 0.8);
     } else if (z < 10) {
-      return interpolate(8, 10, .8, 1);
+      return interpolate(8, 10, 0.8, 1);
     } else {
       return 1;
     }
   }
 
-  return { lineColor, lineWidth, stationCircleRadius, interpolateTrainScale };
+  return {
+    lineColor,
+    lineWidth,
+    stationCircleRadius,
+    interpolateTrainScale,
+    stationCircleWidth,
+  };
 })();
