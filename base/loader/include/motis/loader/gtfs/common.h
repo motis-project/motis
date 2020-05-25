@@ -2,12 +2,8 @@
 
 #include <string>
 
-namespace motis {
-namespace loader {
-namespace gtfs {
+namespace motis::loader::gtfs {
 
-std::string parse_stop_id(std::string const&);
+std::string parse_stop_id(bool shorten_stop_ids, std::string const&);
 
-}  // end namespace gtfs
-}  // end namespace loader
-}  // end namespace motis
+}  // namespace motis::loader::gtfs

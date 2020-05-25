@@ -8,6 +8,7 @@
 
 namespace motis::loader::gtfs {
 
-void read_stop_times(loaded_file const&, trip_map&, stop_map const&);
+void read_stop_times(loaded_file const&, trip_map&, stop_map const&,
+                     bool shorten_stop_ids);
 
 }  // namespace motis::loader::gtfs

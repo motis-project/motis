@@ -11,7 +11,8 @@ using namespace motis::loader;
 using namespace motis::loader::gtfs;
 
 TEST(loader_gtfs_stop, read_stations_example_data) {
-  auto stops = read_stops(loaded_file{SCHEDULES / "example" / STOPS_FILE});
+  auto stops =
+      read_stops(loaded_file{SCHEDULES / "example" / STOPS_FILE}, false);
 
   EXPECT_EQ(8, stops.size());
 
@@ -35,7 +36,8 @@ TEST(loader_gtfs_stop, read_stations_example_data) {
 }
 
 TEST(loader_gtfs_stop, read_stations_berlin_data) {
-  auto stops = read_stops(loaded_file{SCHEDULES / "berlin" / STOPS_FILE});
+  auto stops =
+      read_stops(loaded_file{SCHEDULES / "berlin" / STOPS_FILE}, false);
 
   EXPECT_EQ(3, stops.size());
 

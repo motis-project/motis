@@ -112,7 +112,7 @@ void collect_events(trip_update_context& update_ctx,
 }
 
 void collect_additional_events(
-    trip_update_context& update_ctx,
+    schedule const& sched, trip_update_context& update_ctx,
     std::unique_ptr<knowledge_context> const& knowledge) {
   // additional trip updates always contain all stops
   auto trip_update = update_ctx.trip_update_;
@@ -122,7 +122,7 @@ void collect_additional_events(
   auto stop_count = 0;
 
   for (auto const& stu : trip_update.stop_time_update()) {
-    auto stop_id = parse_stop_id(stu.stop_id());
+    auto stop_id = parse_stop_id(sched, stu.stop_id());
 
     if (known_skips != nullptr) {
       update_ctx.is_stop_skip_new_.resize(stop_count + 1);
@@ -428,7 +428,7 @@ void handle_trip_update(
 
   if (update_ctx.is_new_addition_ ||
       (update_ctx.is_addition_ && !update_ctx.is_addition_skip_allowed_)) {
-    collect_additional_events(update_ctx, knowledge);
+    collect_additional_events(sched, update_ctx, knowledge);
   } else if (update_ctx.is_canceled_) {
     collect_canceled_events(update_ctx, knowledge);
   } else {

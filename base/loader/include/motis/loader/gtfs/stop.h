@@ -27,6 +27,6 @@ struct stop {
 
 using stop_map = std::map<std::string, std::unique_ptr<stop>>;
 
-stop_map read_stops(loaded_file);
+stop_map read_stops(loaded_file, bool shorten_stop_ids);
 
 }  // namespace motis::loader::gtfs

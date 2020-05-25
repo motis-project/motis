@@ -16,9 +16,10 @@ stop_pair t(stop_map const& stops, std::string const& s1,
 }
 
 TEST(loader_gtfs_transfer, read_transfers_example_data) {
-  auto stops = read_stops(loaded_file{SCHEDULES / "example" / STOPS_FILE});
+  auto stops =
+      read_stops(loaded_file{SCHEDULES / "example" / STOPS_FILE}, false);
   auto transfers = read_transfers(
-      loaded_file{SCHEDULES / "example" / TRANSFERS_FILE}, stops);
+      loaded_file{SCHEDULES / "example" / TRANSFERS_FILE}, stops, false);
 
   EXPECT_EQ(2, transfers.size());
 

@@ -1,19 +1,12 @@
 #include "motis/loader/loader.h"
 
-#include <fstream>
-#include <istream>
 #include <memory>
 #include <ostream>
 #include <vector>
 
-#include "cista/serialization.h"
-#include "cista/targets/file.h"
-
 #include "boost/filesystem.hpp"
 
 #include "flatbuffers/flatbuffers.h"
-
-#include "cista/mmap.h"
 
 #include "utl/parser/file.h"
 #include "utl/verify.h"
@@ -64,7 +57,7 @@ schedule_ptr load_schedule(loader_options const& opt,
     for (auto const& parser : parsers()) {
       if (parser->applicable(opt.dataset_)) {
         FlatBufferBuilder builder;
-        parser->parse(opt.dataset_, builder);
+        parser->parse(opt, opt.dataset_, builder);
         if (opt.write_serialized_) {
           utl::file(binary_schedule_file.string().c_str(), "w+")
               .write(builder.GetBufferPointer(), builder.GetSize());

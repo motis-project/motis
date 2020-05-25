@@ -52,7 +52,7 @@ int hhmm_to_min(cstr s) {
 }
 
 void read_stop_times(loaded_file const& file, trip_map& trips,
-                     stop_map const& stops) {
+                     stop_map const& stops, bool const shorten_stop_ids) {
   motis::logging::scoped_timer timer{"read stop times"};
   std::string last_trip_id;
   trip* last_trip = nullptr;
@@ -73,8 +73,8 @@ void read_stop_times(loaded_file const& file, trip_map& trips,
 
     t->stop_times_.emplace(
         get<stop_sequence>(s),  // index
-        stops.at(parse_stop_id(get<stop_id>(s).to_str()))
-            .get(),  // constructor arguments
+        stops.at(parse_stop_id(shorten_stop_ids, get<stop_id>(s).to_str()))
+            .get(),
         get<stop_headsign>(s).to_str(),  //
         hhmm_to_min(get<arrival_time>(s)), get<drop_off_type>(s) == 0,
         hhmm_to_min(get<departure_time>(s)), get<pickup_type>(s) == 0);

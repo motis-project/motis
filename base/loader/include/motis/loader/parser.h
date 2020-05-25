@@ -7,6 +7,8 @@
 
 #include "flatbuffers/flatbuffers.h"
 
+#include "motis/loader/loader_options.h"
+
 namespace flatbuffers64 {
 class FlatBufferBuilder;  // NOLINT(readability-identifier-naming)
 }  // namespace flatbuffers64
@@ -26,7 +28,7 @@ struct format_parser {
   virtual bool applicable(boost::filesystem::path const&) = 0;
   virtual std::vector<std::string> missing_files(
       boost::filesystem::path const&) const = 0;
-  virtual void parse(boost::filesystem::path const&,
+  virtual void parse(loader_options const&, boost::filesystem::path const&,
                      flatbuffers64::FlatBufferBuilder&) = 0;
 };
 

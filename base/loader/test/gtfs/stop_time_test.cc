@@ -21,9 +21,10 @@ TEST(loader_gtfs_route, read_stop_times_example_data) {
   auto services = traffic_days(calendar, dates);
   auto trips = read_trips(loaded_file{SCHEDULES / "example" / TRIPS_FILE},
                           routes, services);
-  auto stops = read_stops(loaded_file{SCHEDULES / "example" / STOPS_FILE});
+  auto stops =
+      read_stops(loaded_file{SCHEDULES / "example" / STOPS_FILE}, false);
   read_stop_times(loaded_file{SCHEDULES / "example" / STOP_TIMES_FILE}, trips,
-                  stops);
+                  stops, false);
 
   auto awe1_it = trips.find("AWE1");
   ASSERT_NE(end(trips), awe1_it);

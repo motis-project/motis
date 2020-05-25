@@ -31,7 +31,7 @@ struct stop_context {
 
 int get_stop_edge_idx(int, event_type);
 
-std::string parse_stop_id(std::string const&);
+std::string parse_stop_id(schedule const&, std::string const&);
 
 }  // namespace ris::gtfsrt
 }  // namespace motis

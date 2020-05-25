@@ -27,6 +27,7 @@ struct loader_options {
   std::string graph_path_{"default"};
   std::string wzr_classes_path_{""};
   std::string wzr_matrix_path_{""};
+  bool gtfs_shorten_stop_ids_{false};
 };
 
 }  // namespace motis::loader

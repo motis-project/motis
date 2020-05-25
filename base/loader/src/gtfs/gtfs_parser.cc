@@ -97,7 +97,8 @@ std::time_t to_unix_time(boost::gregorian::date const& date) {
   return (boost::posix_time::ptime(date) - epoch).total_seconds();
 }
 
-void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
+void gtfs_parser::parse(loader_options const& opt, fs::path const& root,
+                        FlatBufferBuilder& fbb) {
   motis::logging::scoped_timer global_timer{"gtfs parser"};
 
   auto const load = [&](char const* file) {
@@ -106,14 +107,16 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   };
   auto const feeds = read_feed_publisher(load(FEED_INFO_FILE));
   auto const agencies = read_agencies(load(AGENCY_FILE));
-  auto const stops = read_stops(load(STOPS_FILE));
+  auto const stops = read_stops(load(STOPS_FILE), opt.gtfs_shorten_stop_ids_);
   auto const routes = read_routes(load(ROUTES_FILE), agencies);
   auto const calendar = read_calendar(load(CALENDAR_FILE));
   auto const dates = read_calendar_date(load(CALENDAR_DATES_FILE));
   auto const services = traffic_days(calendar, dates);
-  auto transfers = read_transfers(load(TRANSFERS_FILE), stops);
+  auto transfers =
+      read_transfers(load(TRANSFERS_FILE), stops, opt.gtfs_shorten_stop_ids_);
   auto trips = read_trips(load(TRIPS_FILE), routes, services);
-  read_stop_times(load(STOP_TIMES_FILE), trips, stops);
+  read_stop_times(load(STOP_TIMES_FILE), trips, stops,
+                  opt.gtfs_shorten_stop_ids_);
 
   std::map<std::string, Offset<Category>> fbs_categories;
   std::map<agency const*, Offset<Provider>> fbs_providers;
@@ -313,8 +316,9 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
       fbb.CreateVector(std::vector<Offset<RuleService>>()),
       fbb.CreateVector(meta_stations), fbb.CreateString(dataset_name),
       hash(root),
-      fbb.CreateVector(CreateParserOption(
-          fbb, fbb.CreateString("shorten_stop_id"), fbb.CreateString("1")))));
+      fbb.CreateVector(std::vector<Offset<ParserOption>>{CreateParserOption(
+          fbb, fbb.CreateString("gtfs_shorten_stop_ids"),
+          fbb.CreateString(opt.gtfs_shorten_stop_ids_ ? "1" : "0"))})));
 }
 
 }  // namespace motis::loader::gtfs

@@ -38,6 +38,8 @@ struct dataset_settings : public conf::configuration,
     param(wzr_matrix_path_, "wzr_classes_path",
           "waiting time rules class mapping");
     param(wzr_classes_path_, "wzr_matrix_path", "waiting time matrix");
+    param(gtfs_shorten_stop_ids_, "gtfs_shorten_stop_ids",
+          "unify stops by removing everything after the first \":\"");
   }
 };
 

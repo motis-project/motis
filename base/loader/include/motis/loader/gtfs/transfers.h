@@ -27,6 +27,7 @@ struct transfer {
 };
 
 using stop_pair = std::pair<stop const*, stop const*>;
-std::map<stop_pair, transfer> read_transfers(loaded_file, stop_map const&);
+std::map<stop_pair, transfer> read_transfers(loaded_file, stop_map const&,
+                                             bool shorten_stop_ids);
 
 }  // namespace motis::loader::gtfs

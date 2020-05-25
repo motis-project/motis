@@ -880,6 +880,12 @@ schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
     calc_footpaths(*sched);
   }
 
+  if (serialized->parser_options() != nullptr) {
+    for (auto const& opt : *serialized->parser_options()) {
+      sched->parser_options_[opt->key()->str()] = opt->value()->str();
+    }
+  }
+
   sched->hash_ = serialized->hash();
   sched->route_count_ = builder.next_route_index_;
   sched->node_count_ = builder.next_node_id_;
