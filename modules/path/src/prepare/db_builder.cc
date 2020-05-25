@@ -114,6 +114,10 @@ struct db_builder::impl {
           "classes",
           tiles::encode_string(std::to_string(cls_to_bits(s.categories_))));
 
+      utl::verify(!s.categories_.empty(), "have station without category");
+      f.meta_.emplace_back("min_class",
+                           tiles::encode_integer(*begin(s.categories_)));
+
       f.geometry_ = tiles::fixed_point{
           {tiles::latlng_to_fixed({s.pos_.lat_, s.pos_.lng_})}};
 

@@ -46,7 +46,7 @@ RailViz.Path.Base = (function () {
         "circle-color": "white",
         "circle-radius": RailViz.Style.stationCircleRadius(),
         "circle-stroke-color": "#333333",
-        "circle-stroke-width": 2,
+        "circle-stroke-width": RailViz.Style.stationCircleWidth(),
         "circle-pitch-alignment": "map",
       },
     });
