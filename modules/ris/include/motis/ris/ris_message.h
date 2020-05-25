@@ -9,6 +9,10 @@
 
 #include "motis/core/common/typed_flatbuffer.h"
 
+#ifdef GetMessage
+#undef GetMessage
+#endif
+
 namespace motis::ris {
 
 struct ris_message : typed_flatbuffer<Message> {
