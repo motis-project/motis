@@ -12,6 +12,8 @@ struct raptor_result_gen {
   raptor_result_gen() = delete;
   raptor_result_gen(raptor_result_gen const&) = delete;
   raptor_result_gen& operator=(raptor_result_gen const&) = delete;
+  raptor_result_gen(raptor_result_gen const&&) = delete;
+  raptor_result_gen& operator=(raptor_result_gen const&&) = delete;
 
   explicit raptor_result_gen(station_id const stop_count)
       : stop_count_(stop_count) {
@@ -38,7 +40,7 @@ private:
 };
 
 time* alloc_result_memory(size_t const size_in_bytes) {
-  return (time*)malloc(size_in_bytes);
+  return (time*)(malloc(size_in_bytes));
 }
 
 void free_result_memory(time* result) { free(result); }

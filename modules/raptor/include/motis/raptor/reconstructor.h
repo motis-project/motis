@@ -6,8 +6,7 @@
 #include "motis/routing/output/to_journey.h"
 #include "motis/routing/output/transport.h"
 
-namespace motis {
-namespace raptor {
+namespace motis::raptor {
 
 using namespace motis::routing::output;
 
@@ -57,7 +56,7 @@ struct intermediate_journey {
         route.index_to_stop_times_ + (trip * route.stop_count_);
 
     // Add the stops in backwards fashion, reverse the stop vector at the end
-    for (int16_t s_offset = static_cast<int16_t>(exit_offset); s_offset >= 0;
+    for (auto s_offset = static_cast<int16_t>(exit_offset); s_offset >= 0;
          --s_offset) {
       auto const rsi = route.index_to_route_stops_ + s_offset;
       auto const s_id = timetable.route_stops_[rsi];
@@ -183,7 +182,7 @@ struct reconstructor {
     bool ends_with_footpath_ = false;
   };
 
-  std::string to_string(candidate const& c) {
+  static std::string to_string(candidate const& c) {
     return "Dep: " + std::to_string(c.departure_) +
            " Arr: " + std::to_string(c.arrival_) +
            " Transfers: " + std::to_string(c.transfers_);
@@ -210,14 +209,14 @@ struct reconstructor {
   //   return c.arrival_ < motis_arrival && c.transfers_ <= get_transfers(j);
   // }
 
-  bool dominates(intermediate_journey const& ij, candidate const& c) {
+  static bool dominates(intermediate_journey const& ij, candidate const& c) {
     return (ij.get_arrival() <= c.arrival_ && ij.transfers_ <= c.transfers_);
     // return false;
     // return (j.get_arrival() <= c.arrival_ && j.get_transfers() <=
     // c.transfers_);
   }
 
-  bool dominates(candidate const& c, intermediate_journey const& ij) {
+  static bool dominates(candidate const& c, intermediate_journey const& ij) {
     return (c.arrival_ < ij.get_arrival() && c.transfers_ <= ij.transfers_);
     // return false;
     // return c.arrival_ < j.get_arrival() && c.transfers_ <= j.get_transfers();
@@ -503,8 +502,8 @@ struct reconstructor {
     return invalid<station_id>;
   }
 
-  station_id const source_;
-  station_id const target_;
+  station_id source_;
+  station_id target_;
 
   schedule const& sched_;
   raptor_schedule const& raptor_sched_;
@@ -514,5 +513,4 @@ private:
   std::vector<intermediate_journey> journeys_;
 };
 
-}  // namespace raptor
-}  // namespace motis
+}  // namespace motis::raptor

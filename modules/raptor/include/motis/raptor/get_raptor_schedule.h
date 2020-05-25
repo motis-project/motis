@@ -12,8 +12,6 @@ struct transformable_footpath {
                          time const duration)
       : from_(from), to_(to), duration_(duration) {}
 
-  transformable_footpath(motis::footpath const& f)
-      : from_(f.from_station_), to_(f.to_station_), duration_(f.duration_) {}
   station_id from_;
   station_id to_;
   time duration_;
@@ -24,9 +22,9 @@ struct transformable_stop {
   std::vector<transformable_footpath> incoming_footpaths_;
   std::vector<route_id> stop_routes_;
   std::vector<station_id> equivalent_;
-  time transfer_time_;
-  std::string eva_;
-  unsigned motis_station_index_;
+  time transfer_time_{invalid<time>};
+  std::string eva_{""};
+  unsigned motis_station_index_{invalid<unsigned>};
 };
 
 struct raptor_lcon {
@@ -57,7 +55,7 @@ struct transformable_trip {
 struct transformable_route {
   std::vector<transformable_trip> trips_;
   std::vector<station_id> route_stops_;
-  time stand_time_;
+  time stand_time_{invalid<time>};
 };
 
 struct transformable_timetable {

@@ -3,11 +3,10 @@
 #include "motis/raptor/mark_store.h"
 #include "motis/raptor/print_raptor.h"
 
-namespace motis {
-namespace raptor {
+namespace motis::raptor {
 
-inline void set_upper_bounds(std::vector<std::vector<time>>& arrivals,
-                             uint8_t round_k) {
+[[maybe_unused]] inline void set_upper_bounds(
+    std::vector<std::vector<time>>& arrivals, uint8_t round_k) {
   std::memcpy(arrivals[round_k].data(), arrivals[round_k - 1].data(),
               arrivals[round_k].size() * sizeof(time));
 }
@@ -239,5 +238,4 @@ inline void invoke_cpu_raptor(raptor_query const& query, raptor_statistics&) {
   }
 }
 
-}  // namespace raptor
-}  // namespace motis
+}  // namespace motis::raptor

@@ -17,7 +17,7 @@ base_query get_base_query(RoutingRequest const* routing_request,
 
   auto const destination_station = routing_request->destination();
   auto const target_eva = destination_station->id()->str();
-  std::string start_eva = "";
+  std::string start_eva;
 
   switch (routing_request->start_type()) {
     case Start::Start_PretripStart: {

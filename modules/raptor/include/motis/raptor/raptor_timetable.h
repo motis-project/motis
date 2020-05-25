@@ -9,8 +9,7 @@
 
 #include "motis/core/schedule/connection.h"
 
-namespace motis {
-namespace raptor {
+namespace motis::raptor {
 
 using time = int16_t;
 using time8 = int8_t;
@@ -118,6 +117,11 @@ struct raptor_incoming_footpath {
 struct raptor_timetable {
   raptor_timetable() = default;
   raptor_timetable(raptor_timetable const&) = default;
+
+  raptor_timetable& operator=(raptor_timetable const&) = delete;
+  raptor_timetable(raptor_timetable&&) = delete;
+  raptor_timetable& operator=(raptor_timetable const&&) = delete;
+
   ~raptor_timetable() = default;
 
   std::vector<raptor_stop> stops_;
@@ -154,6 +158,12 @@ struct raptor_schedule {
   raptor_schedule() = default;
   raptor_schedule(raptor_schedule const&) = delete;
 
+  raptor_schedule& operator=(raptor_schedule const&) = delete;
+  raptor_schedule(raptor_schedule&&) = delete;
+  raptor_schedule& operator=(raptor_schedule const&&) = delete;
+
+  ~raptor_schedule() = default;
+
   std::unordered_map<std::string, station_id> eva_to_raptor_id_;
   std::vector<std::string> raptor_id_to_eva_;
   std::vector<unsigned> station_id_to_index_;
@@ -174,5 +184,4 @@ struct raptor_schedule {
   std::vector<std::vector<raptor_footpath>> initialization_footpaths_;
 };
 
-}  // namespace raptor
-}  // namespace motis
+}  // namespace motis::raptor

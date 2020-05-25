@@ -5,10 +5,7 @@ namespace motis::raptor {
 using mark_index = uint32_t;
 
 struct cpu_mark_store {
-  cpu_mark_store() = delete;
-  cpu_mark_store(cpu_mark_store const&) = delete;
-
-  cpu_mark_store(mark_index const size) : marks_(size, false) {}
+  explicit cpu_mark_store(mark_index const size) : marks_(size, false) {}
 
   void mark(mark_index const index) { marks_[index] = true; }
   bool marked(mark_index const index) const { return marks_[index]; }
