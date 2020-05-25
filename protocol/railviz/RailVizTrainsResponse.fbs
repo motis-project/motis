@@ -8,6 +8,7 @@ namespace motis.railviz;
 table Train {
   names: [string];
   clasz: int;
+  route_distance: float;
   d_station_id: string;
   a_station_id: string;
   d_time: int;

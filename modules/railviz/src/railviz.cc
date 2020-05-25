@@ -295,17 +295,17 @@ msg_ptr railviz::get_trains(msg_ptr const& msg) const {
   auto const req = motis_content(RailVizTrainsRequest, msg);
   auto const& sched = get_schedule();
 
-  auto const t_start = unix_to_motistime(sched, req->start_time());
-  auto const t_end = unix_to_motistime(sched, req->end_time());
+  auto const start_time = unix_to_motistime(sched, req->start_time());
+  auto const end_time = unix_to_motistime(sched, req->end_time());
 
   trains_response_builder trb{sched, req->zoom_geo()};
   for (auto const& ev : train_retriever_->trains(
-           t_start, t_end, req->max_trains(),
+           start_time, end_time, req->max_trains(),
            geo::make_box(
                {geo::latlng{req->corner1()->lat(), req->corner1()->lng()},
                 geo::latlng{req->corner2()->lat(), req->corner2()->lng()}}),
            req->zoom_bounds())) {
-    trb.add_ev_key(ev);
+    trb.add_train(ev);
   }
   return trb.finish();
 }

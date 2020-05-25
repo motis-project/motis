@@ -51,7 +51,7 @@ uint64_t min_cls_to_min_zoom_level(Classes const& c) {
     return 4UL;
   } else if (*it < 6) {
     return 6UL;
-  } else if (*it < 8) {
+  } else if (*it < 7) {
     return 9UL;
   } else {
     return 10UL;

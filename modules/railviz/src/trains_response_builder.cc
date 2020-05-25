@@ -27,20 +27,20 @@ namespace motis::railviz {
 
 void trains_response_builder::add_train_full(ev_key k) {
   for (auto const& e : route_bfs(k, bfs_direction::BOTH, false)) {
-    add_ev_key(ev_key{e, k.lcon_idx_, event_type::DEP});
+    add_train(train{ev_key{e, k.lcon_idx_, event_type::DEP}, 0.});
   }
 }
 
-void trains_response_builder::add_ev_key(ev_key k) {
-  auto const& trp = sched_.merged_trips_.at(k.lcon()->trips_)->at(0);
+void trains_response_builder::add_train(train t) {
+  auto const& trp = sched_.merged_trips_.at(t.key_.lcon()->trips_)->at(0);
 
   auto const it = std::find_if(
       sections::begin(trp), sections::end(trp),
-      [&](auto const& s) { return s.edge_ == k.route_edge_.get_edge(); });
+      [&](auto const& s) { return s.edge_ == t.key_.route_edge_.get_edge(); });
   utl::verify(it != sections::end(trp),
               "trains_response_builder: missing edge");
 
-  queries_.emplace_back(trp, std::distance(sections::begin(trp), it));
+  queries_.emplace_back(query{trp, std::distance(sections::begin(trp), it), t});
 }
 
 msg_ptr trains_response_builder::resolve_paths() {
@@ -50,12 +50,13 @@ msg_ptr trains_response_builder::resolve_paths() {
   std::vector<Offset<path::TripIdSegments>> trip_segments;
   utl::equal_ranges_linear(
       queries_,
-      [](auto const& lhs, auto const& rhs) { return lhs.first == rhs.first; },
+      [](auto const& lhs, auto const& rhs) { return lhs.trp_ == rhs.trp_; },
       [&](auto lb, auto ub) {
         trip_segments.emplace_back(path::CreateTripIdSegments(
-            mc, to_fbs(sched_, mc, lb->first),
-            mc.CreateVector(utl::to_vec(
-                lb, ub, [](auto const& q) -> uint32_t { return q.second; }))));
+            mc, to_fbs(sched_, mc, lb->trp_),
+            mc.CreateVector(utl::to_vec(lb, ub, [](auto const& q) -> uint32_t {
+              return q.section_index_;
+            }))));
       });
 
   mc.create_and_finish(MsgContent_PathByTripIdBatchRequest,
@@ -68,12 +69,12 @@ msg_ptr trains_response_builder::resolve_paths() {
 }
 
 Offset<Train> trains_response_builder::write_railviz_train(
-    message_creator& mc, trip const* trp, size_t const section_index,
+    message_creator& mc, query const& q,
     flatbuffers::Vector<int64_t> const* polyline_indices) {
-  utl::verify(
-      std::distance(sections::begin(trp), sections::end(trp)) > section_index,
-      "trains_response_builder: invakud section idx");
-  auto const s = std::next(sections::begin(trp), section_index);
+  utl::verify(std::distance(sections::begin(q.trp_), sections::end(q.trp_)) >
+                  q.section_index_,
+              "trains_response_builder: invakud section idx");
+  auto const s = std::next(sections::begin(q.trp_), q.section_index_);
   auto const dep = (*s).ev_key_from();
   auto const arr = (*s).ev_key_to();
 
@@ -98,6 +99,7 @@ Offset<Train> trains_response_builder::write_railviz_train(
 
   return CreateTrain(
       mc, mc.CreateVector(service_names), dep.lcon()->full_con_->clasz_,
+      q.train_.route_distance_,
       mc.CreateString(sched_.stations_.at(dep_station_idx)->eva_nr_),
       mc.CreateString(sched_.stations_.at(arr_station_idx)->eva_nr_),
       motis_to_unixtime(sched_, dep.get_time()),
@@ -123,10 +125,8 @@ msg_ptr trains_response_builder::finish() {
   utl::verify(queries_.size() == resp->segments()->size(),
               "trains_response_builder: path response size mismatch");
   for (auto i = 0ULL; i < queries_.size(); ++i) {
-    auto const& query = queries_[i];
-    auto const* segment = resp->segments()->Get(i);
-    trains.emplace_back(
-        write_railviz_train(mc, query.first, query.second, segment->indices()));
+    trains.emplace_back(write_railviz_train(
+        mc, queries_[i], resp->segments()->Get(i)->indices()));
   }
 
   utl::erase_duplicates(station_indices_);

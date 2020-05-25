@@ -278,16 +278,16 @@ RailViz.Trains = (function () {
 
   class ColorAttributes {
     categoryColors = [
-      [0x9c, 0x27, 0xb0],
-      [0xe9, 0x1e, 0x63],
-      [0x1a, 0x23, 0x7e],
-      [0xf4, 0x43, 0x36],
-      [0xf4, 0x43, 0x36],
-      [0x4c, 0xaf, 0x50],
-      [0x3f, 0x51, 0xb5],
-      [0xff, 0x98, 0x00],
-      [0xff, 0x98, 0x00],
-      [0x9e, 0x9e, 0x9e],
+      [0x9c, 0x27, 0xb0], // 0
+      [0xe9, 0x1e, 0x63], // 1
+      [0x1a, 0x23, 0x7e], // 2
+      [0xf4, 0x43, 0x36], // 3
+      [0xf4, 0x43, 0x36], // 4
+      [0x4c, 0xaf, 0x50], // 5
+      [0x3f, 0x51, 0xb5], // 6
+      [0xff, 0x78, 0x00], // 7 : long-distance busses
+      [0xff, 0x98, 0x00], // 8 : short-distance busses
+      [0x9e, 0x9e, 0x9e], // 9
     ];
 
     constructor(gl, program) {
@@ -321,7 +321,7 @@ RailViz.Trains = (function () {
         data[offset + 1] = delayColor[1]; // a_delayColor
         data[offset + 2] = delayColor[2]; // a_delayColor
 
-        const categoryColor = this.categoryColors[train.clasz];
+        const categoryColor = this.getCategoryColor(train);
         data[offset + 4] = categoryColor[0]; // a_categoryColor
         data[offset + 5] = categoryColor[1]; // a_categoryColor
         data[offset + 6] = categoryColor[2]; // a_categoryColor
@@ -335,6 +335,18 @@ RailViz.Trains = (function () {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
       gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
       this.bufferDirty = false;
+    }
+
+    getCategoryColor(train) {
+      if (train.clasz == 7 || train.clasz == 8) {
+        if (train.route_distance > 10_000) {
+          return this.categoryColors[7];
+        } else {
+          return this.categoryColors[8];
+        }
+      } else {
+        return this.categoryColors[train.clasz];
+      }
     }
 
     getDelayColor(train) {

@@ -161,7 +161,11 @@ RailViz.Model = (function () {
     data.polylines = data.polylines.map(preprocessPolyline);
     data.trains = data.trains.map((t) => new Train(t, data));
 
-    data.trains.sort((lhs, rhs) => rhs.clasz - lhs.clasz);
+    data.trains.sort((lhs, rhs) =>
+      rhs.clasz != lhs.clasz
+        ? rhs.clasz - lhs.clasz
+        : (rhs.route_distance_ || 0) - (lhs.route_distance_ || 0)
+    );
   }
 
   function preprocessStation(s) {
