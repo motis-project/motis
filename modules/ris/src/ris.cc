@@ -26,8 +26,13 @@
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
 #include "motis/ris/gtfs-rt/gtfsrt_parser.h"
+#include "motis/ris/ris_message.h"
 #include "motis/ris/risml/risml_parser.h"
 #include "motis/ris/zip_reader.h"
+
+#ifdef GetMessage
+#undef GetMessage
+#endif
 
 namespace fs = boost::filesystem;
 namespace db = lmdb;

@@ -5,6 +5,10 @@
 
 #include "./gtfsrt_test.h"
 
+#ifdef GetMessage
+#undef GetMessage
+#endif
+
 using namespace motis;
 using namespace motis::test;
 using motis::test::schedule::gtfs_minimal_swiss::dataset_opt;
