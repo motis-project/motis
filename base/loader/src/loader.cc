@@ -33,6 +33,14 @@ std::vector<std::unique_ptr<format_parser>> parsers() {
   return p;
 }
 
+bool get_gtfs_shorten_trip_ids(Schedule const* serialized) {
+  auto const it = std::find(std::begin(*serialized->parser_options()),
+                            std::end(*serialized->parser_options()),
+                            "gtfs_shorten_stop_ids");
+  return it != std::end(*serialized->parser_options()) &&
+         it->value()->str() == "1";
+}
+
 schedule_ptr load_schedule(loader_options const& opt,
                            cista::memory_holder& schedule_buf) {
   scoped_timer time("loading schedule");
@@ -48,6 +56,12 @@ schedule_ptr load_schedule(loader_options const& opt,
 
   if (fs::is_regular_file(binary_schedule_file)) {
     auto buf = file(binary_schedule_file.string().c_str(), "r").content();
+    utl::verify(get_gtfs_shorten_trip_ids(GetSchedule(buf.buf_)) ==
+                    opt.gtfs_shorten_stop_ids_,
+                "invalid setting: gtfs_shorten_trip_ids={} in schedule.raw != "
+                "gtfs_shorten_trip_ids={} in loader settings",
+                get_gtfs_shorten_trip_ids(GetSchedule(buf.buf_)),
+                opt.gtfs_shorten_stop_ids_);
     auto sched = build_graph(GetSchedule(buf.buf_), opt);
     if (opt.write_graph_) {
       write_graph(serialized_file_path, *sched);
