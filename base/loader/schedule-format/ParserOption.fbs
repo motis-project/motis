@@ -1,0 +1,6 @@
+namespace motis.loader;
+
+table ParserOption {
+  key: string;
+  value: string;
+}

@@ -14,11 +14,7 @@ int get_stop_edge_idx(const int stop_idx, const event_type type) {
   return type == event_type::DEP ? stop_idx : stop_idx - 1;
 }
 
-std::string parse_stop_id(std::string const& stop_id) {
-  auto colon_idx = stop_id.find_first_of(':');
-  return colon_idx != std::string::npos ? stop_id.substr(0, colon_idx)
-                                        : stop_id;
-}
+std::string parse_stop_id(std::string const& stop_id) { return stop_id; }
 
 int get_future_stop_idx(trip const& trip, schedule& sched,
                         const int last_stop_idx, std::string const& stop_id) {

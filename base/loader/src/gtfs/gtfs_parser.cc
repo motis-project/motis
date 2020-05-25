@@ -312,7 +312,9 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
       fbb.CreateVector(footpaths),
       fbb.CreateVector(std::vector<Offset<RuleService>>()),
       fbb.CreateVector(meta_stations), fbb.CreateString(dataset_name),
-      hash(root)));
+      hash(root),
+      fbb.CreateVector(CreateParserOption(
+          fbb, fbb.CreateString("shorten_stop_id"), fbb.CreateString("1")))));
 }
 
 }  // namespace motis::loader::gtfs

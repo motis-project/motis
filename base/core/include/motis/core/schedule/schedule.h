@@ -80,6 +80,8 @@ struct schedule {
   mcd::hash_map<ev_key, mcd::vector<ev_key>> trains_wait_for_;
 
   fws_multimap<ptr<trip>> expanded_trips_;
+
+  mcd::hash_map<mcd::string, mcd::string> parser_options_;
 };
 
 using schedule_ptr = mcd::unique_ptr<schedule>;

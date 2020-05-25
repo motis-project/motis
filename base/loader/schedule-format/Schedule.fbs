@@ -7,6 +7,7 @@ include "Interval.fbs";
 include "Footpath.fbs";
 include "RuleService.fbs";
 include "MetaStation.fbs";
+include "ParserOption.fbs";
 
 namespace motis.loader;
 
@@ -20,6 +21,7 @@ table Schedule {
   meta_stations: [MetaStation];
   name: string;
   hash: ulong;
+  parser_options: [ParserOption];
 }
 
 root_type Schedule;
