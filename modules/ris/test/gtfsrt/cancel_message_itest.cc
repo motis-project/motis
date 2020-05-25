@@ -25,8 +25,8 @@ struct ris_gtfsrt_cancel_message_itest_t0 : public gtfsrt_itest {
 
 TEST_F(ris_gtfsrt_cancel_message_itest_t0, before_cancel) {
   auto const trip =
-      get_trip(sched(), "8503000", 0, 1561597200 + TIMEZONE_OFFSET, "8502113",
-               1561600800 + TIMEZONE_OFFSET, "1");
+      get_trip(sched(), "8503000:0:41/42", 0, 1561597200 + TIMEZONE_OFFSET,
+               "8502113:0:4", 1561600800 + TIMEZONE_OFFSET, "1");
 
   ASSERT_NE(nullptr, trip);
   auto const lcon_idx = trip->lcon_idx_;
@@ -44,8 +44,8 @@ struct ris_gtfsrt_cancel_message_itest_t1 : public gtfsrt_itest {
 
 TEST_F(ris_gtfsrt_cancel_message_itest_t1, after_cancel) {
   auto const trip =
-      get_trip(sched(), "8503000", 0, 1561597200 + TIMEZONE_OFFSET, "8502113",
-               1561600800 + TIMEZONE_OFFSET, "1");
+      get_trip(sched(), "8503000:0:41/42", 0, 1561597200 + TIMEZONE_OFFSET,
+               "8502113:0:4", 1561600800 + TIMEZONE_OFFSET, "1");
 
   ASSERT_NE(nullptr, trip);
   auto const lcon_idx = trip->lcon_idx_;

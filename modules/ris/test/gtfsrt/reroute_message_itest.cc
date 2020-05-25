@@ -41,17 +41,17 @@ TEST_F(ris_gtfsrt_reroute_message_itest_t0,
 
   EXPECT_EQ(4, trip_events.size());
   EXPECT_EQ(motis_time(1561612200) + TIMEZONE_OFFSET,
-            trip_events.at("8501300").dep_);  // seq 2
+            trip_events.at("8501300:0:3").dep_);  // seq 2
   EXPECT_EQ(motis_time(1561612800) + TIMEZONE_OFFSET,
-            trip_events.at("8501400").arr_);  // seq 3
+            trip_events.at("8501400:0:1").arr_);  // seq 3
   EXPECT_EQ(motis_time(1561612860) + TIMEZONE_OFFSET,
-            trip_events.at("8501400").dep_);  // seq 3
+            trip_events.at("8501400:0:1").dep_);  // seq 3
   EXPECT_EQ(motis_time(1561613220) + TIMEZONE_OFFSET,
-            trip_events.at("8501402").arr_);  // seq 4
+            trip_events.at("8501402:0:1").arr_);  // seq 4
   EXPECT_EQ(motis_time(1561613280) + TIMEZONE_OFFSET,
-            trip_events.at("8501402").dep_);  // seq 4
+            trip_events.at("8501402:0:1").dep_);  // seq 4
   EXPECT_EQ(motis_time(1561614180) + TIMEZONE_OFFSET,
-            trip_events.at("8501500").arr_);  // seq 6
+            trip_events.at("8501500:0:2").arr_);  // seq 6
 
   auto trp_skip_delay = get_trip(sched(), "13.TA.1-1-j19-1.13.H", 1561593600);
 
@@ -60,17 +60,17 @@ TEST_F(ris_gtfsrt_reroute_message_itest_t0,
 
   EXPECT_EQ(8, trip_events.size());
   EXPECT_EQ(motis_time(1561614000) + TIMEZONE_OFFSET,
-            trip_events.at("8502119").dep_);  // seq 2
+            trip_events.at("8502119:0:3").dep_);  // seq 2
   EXPECT_EQ(motis_time(1561614360) + TIMEZONE_OFFSET,
-            trip_events.at("8502113").arr_);  // seq 3
+            trip_events.at("8502113:0:4").arr_);  // seq 3
   EXPECT_EQ(motis_time(1561614480) + TIMEZONE_OFFSET,
-            trip_events.at("8502113").dep_);  // seq 3
+            trip_events.at("8502113:0:4").dep_);  // seq 3
   EXPECT_EQ(motis_time(1561615020) + TIMEZONE_OFFSET,
-            trip_events.at("8500218").arr_);  // seq 4
+            trip_events.at("8500218:0:8").arr_);  // seq 4
   EXPECT_EQ(motis_time(1561615440) + TIMEZONE_OFFSET,
-            trip_events.at("8500218").dep_);  // seq 4
+            trip_events.at("8500218:0:8").dep_);  // seq 4
   EXPECT_EQ(motis_time(1561617000) + TIMEZONE_OFFSET,
-            trip_events.at("8507000").arr_);  // seq 6
+            trip_events.at("8507000:0:5").arr_);  // seq 6
 }
 
 struct ris_gtfsrt_reroute_message_itest_t1 : public gtfsrt_itest {
@@ -90,17 +90,17 @@ TEST_F(ris_gtfsrt_reroute_message_itest_t1,
 
   EXPECT_EQ(4, trip_events.size());
   EXPECT_EQ(motis_time(1561612200) + TIMEZONE_OFFSET,
-            trip_events.at("8501300").dep_);  // seq 2
+            trip_events.at("8501300:0:3").dep_);  // seq 2
   EXPECT_EQ(motis_time(1561612800) + TIMEZONE_OFFSET,
-            trip_events.at("8501400").arr_);  // seq 3
+            trip_events.at("8501400:0:1").arr_);  // seq 3
   EXPECT_EQ(motis_time(1561612860) + TIMEZONE_OFFSET,
-            trip_events.at("8501400").dep_);  // seq 3
+            trip_events.at("8501400:0:1").dep_);  // seq 3
   EXPECT_EQ(motis_time(1561613220) + TIMEZONE_OFFSET,
-            trip_events.at("8501402").arr_);  // seq 4
+            trip_events.at("8501402:0:1").arr_);  // seq 4
   EXPECT_EQ(motis_time(1561613280) + TIMEZONE_OFFSET,
-            trip_events.at("8501402").dep_);  // seq 4
+            trip_events.at("8501402:0:1").dep_);  // seq 4
   EXPECT_EQ(motis_time(1561614180) + TIMEZONE_OFFSET,
-            trip_events.at("8501500").arr_);  // seq 6
+            trip_events.at("8501500:0:2").arr_);  // seq 6
 
   // expecting to also skip seq-no 6
   auto trp_skip_delay = get_trip(sched(), "13.TA.1-1-j19-1.13.H", 1561593600);
@@ -110,11 +110,11 @@ TEST_F(ris_gtfsrt_reroute_message_itest_t1,
 
   EXPECT_EQ(7, trip_events.size());
   EXPECT_EQ(motis_time(1561614000) + TIMEZONE_OFFSET,
-            trip_events.at("8502119").dep_);  // seq 2
+            trip_events.at("8502119:0:3").dep_);  // seq 2
   EXPECT_EQ(motis_time(1561614360) + TIMEZONE_OFFSET,
-            trip_events.at("8502113").arr_);  // seq 3
+            trip_events.at("8502113:0:4").arr_);  // seq 3
   EXPECT_EQ(motis_time(1561614480) + TIMEZONE_OFFSET,
-            trip_events.at("8502113").dep_);  // seq 3
+            trip_events.at("8502113:0:4").dep_);  // seq 3
   EXPECT_EQ(motis_time(1561615020) + TIMEZONE_OFFSET,
-            trip_events.at("8500218").arr_);  // seq 4
+            trip_events.at("8500218:0:8").arr_);  // seq 4
 }

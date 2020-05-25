@@ -7,13 +7,9 @@
 #include "utl/parser/csv.h"
 
 #include "motis/core/common/logging.h"
-#include "motis/loader/gtfs/common.h"
-#include "motis/loader/util.h"
 #include "motis/hash_map.h"
-#include "motis/string.h"
 
 using namespace utl;
-using namespace flatbuffers64;
 using std::get;
 
 namespace motis::loader::gtfs {
@@ -30,7 +26,7 @@ stop_map read_stops(loaded_file file) {
   mcd::hash_map<std::string, std::vector<stop*>> equal_names;
   for (auto const& s : read<gtfs_stop>(file.content(), columns)) {
     // load the swiss dataset without track information
-    auto id = parse_stop_id(get<stop_id>(s).to_str());
+    auto id = get<stop_id>(s).to_str();
     if (auto const it = stops.find(id); it == end(stops)) {
       auto const new_stop =
           stops

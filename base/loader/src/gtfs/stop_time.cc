@@ -8,7 +8,6 @@
 #include "utl/parser/csv.h"
 
 #include "motis/core/common/logging.h"
-#include "motis/loader/gtfs/common.h"
 #include "motis/loader/util.h"
 
 using std::get;
@@ -72,9 +71,7 @@ void read_stop_times(loaded_file const& file, trip_map& trips,
     }
 
     t->stop_times_.emplace(
-        get<stop_sequence>(s),  // index
-        stops.at(parse_stop_id(get<stop_id>(s).to_str()))
-            .get(),  // constructor arguments
+        get<stop_sequence>(s), stops.at(get<stop_id>(s).to_str()).get(),
         get<stop_headsign>(s).to_str(),  //
         hhmm_to_min(get<arrival_time>(s)), get<drop_off_type>(s) == 0,
         hhmm_to_min(get<departure_time>(s)), get<pickup_type>(s) == 0);
