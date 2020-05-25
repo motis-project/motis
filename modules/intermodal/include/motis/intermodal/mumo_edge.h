@@ -20,7 +20,7 @@ inline int to_int(mumo_type const type) {
 }
 
 inline std::string to_string(mumo_type const type) {
-  static char const* strs[] = {"foot", "bicycle", "car", "car_parking"};
+  static char const* strs[] = {"foot", "bike", "car", "car_parking"};
   return strs[to_int(type)];  // NOLINT
 }
 
