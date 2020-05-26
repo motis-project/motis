@@ -8,6 +8,7 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
+#include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 
 namespace fs = boost::filesystem;
@@ -209,12 +210,21 @@ bool read_data(tb_data& data, std::string const& filename,
 
   if (sched.schedule_begin_ != static_cast<std::time_t>(h.schedule_begin_) ||
       sched.schedule_end_ != static_cast<std::time_t>(h.schedule_end_)) {
-    LOG(info) << "trip-based data file contains different schedule range";
+    LOG(info) << "trip-based data file contains different schedule range: "
+                 "schedule=["
+              << format_unixtime(sched.schedule_begin_, "%Y-%m-%d") << " - "
+              << format_unixtime(sched.schedule_end_, "%Y-%m-%d")
+              << "], serialized=["
+              << format_unixtime(h.schedule_begin_, "%Y-%m-%d") << ", "
+              << format_unixtime(h.schedule_end_, "%Y-%m-%d") << "]";
     return false;
   }
 
   if (sched.expanded_trips_.data_size() != h.trip_count_) {
-    LOG(info) << "trip-based data file contains different number of trips";
+    LOG(info)
+        << "trip-based data file contains different number of trips: schedule="
+        << sched.expanded_trips_.data_size()
+        << ", serialized=" << h.trip_count_;
     return false;
   }
 
