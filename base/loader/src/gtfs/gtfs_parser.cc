@@ -116,21 +116,38 @@ void fix_stop_positions(trip_map& trips) {
   for (auto const& [id, t] : trips) {
     auto const stops = t->stop_times_.to_vector();
     for (auto const [a, b, c] : utl::nwise<3>(stops)) {
+      auto const logical_a_b = is_logical(a, b);
+      auto const logical_b_c = is_logical(b, c);
+
+      stop* corrected = nullptr;
+      geo::latlng before;
+
       if ((b.stop_->coord_.lat_ < 0.1 && b.stop_->coord_.lng_ < 0.1) ||
-          (!is_logical(a, b) && !is_logical(b, c))) {
-        auto const new_coord = geo::latlng{
+          (!logical_a_b && !logical_b_c)) {
+        corrected = b.stop_;
+        before = b.stop_->coord_;
+        b.stop_->coord_ = geo::latlng{
             a.stop_->coord_.lat_ +
                 0.5 * (c.stop_->coord_.lat_ - a.stop_->coord_.lat_),
             a.stop_->coord_.lng_ +
                 0.5 * (c.stop_->coord_.lng_ - a.stop_->coord_.lng_)};
-        LOG(logging::warn) << "adjusting stop position from ("
-                           << b.stop_->coord_.lat_ << ", "
-                           << b.stop_->coord_.lng_ << ") to (" << new_coord.lat_
-                           << ", " << new_coord.lng_
-                           << "): sanity check failed for trip \"" << id
-                           << "\" (pred=" << a.stop_->id_
-                           << ", succ=" << c.stop_->id_ << ")";
-        b.stop_->coord_ = new_coord;
+      } else if (!logical_a_b && logical_b_c) {
+        corrected = a.stop_;
+        before = b.stop_->coord_;
+        a.stop_->coord_ = b.stop_->coord_;
+      } else if (logical_a_b && !logical_b_c) {
+        corrected = c.stop_;
+        before = b.stop_->coord_;
+        c.stop_->coord_ = b.stop_->coord_;
+      }
+
+      if (corrected != nullptr) {
+        LOG(warn) << "adjusting stop position from (" << before.lat_ << ", "
+                  << before.lng_ << ") to (" << corrected->coord_.lat_ << ", "
+                  << corrected->coord_.lng_
+                  << "): sanity check failed for trip \"" << id << "\", stop_id"
+                  << corrected->id_ << " (a=" << a.stop_->id_
+                  << ", b=" << b.stop_->id_ << ", c=" << c.stop_->id_ << ")";
       }
     }
   }
