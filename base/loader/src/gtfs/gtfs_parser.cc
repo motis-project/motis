@@ -351,13 +351,13 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   auto const meta_stations =
       utl::all(stops)  //
       | utl::remove_if(
-            [](auto const& s) { return s.second->same_name_.empty(); })  //
+            [](auto const& s) { return s.second->get_metas().empty(); })  //
       | utl::transform([&](auto const& s) {
-          stop const* this_stop = s.second.get();
+          stop* this_stop = s.second.get();
           return CreateMetaStation(
               fbb, get_or_create_stop(this_stop),
               fbb.CreateVector(
-                  utl::to_vec(this_stop->same_name_, [&](auto const* eq) {
+                  utl::to_vec(this_stop->get_metas(), [&](auto const* eq) {
                     generate_transfer(std::make_pair(this_stop, eq));
                     generate_transfer(std::make_pair(eq, this_stop));
                     return get_or_create_stop(eq);
