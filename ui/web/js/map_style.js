@@ -1,16 +1,16 @@
 var backgroundMapStyle = function (tilesEndpoint) {
-  const water_overview = "hsl(0, 0%, 70%)";
-  const water = "hsl(0, 0%, 70%)";
+  const water_overview = "#D1D1D1";
+  const water = "#D1D1D1";
 
   const rail_overvew = "hsl(0, 0%, 65%)";
   const rail = "hsl(0, 0%, 50%)";
 
   const pedestrian = "hsl(0, 0%, 90%)";
 
-  const sport = "hsla(0, 0%, 70%, 35%)";
+  const sport = "#D5D5D5";
   const sport_outline = "hsla(0, 0%, 70%, 45%)";
 
-  const building = "hsla(0, 0%, 70%, 35%)";
+  const building = "#D5D5D5";
   const building_outline = "hsla(0, 0%, 70%, 45%)";
 
   const roadLineWidth = (add) => {
@@ -66,7 +66,7 @@ var backgroundMapStyle = function (tilesEndpoint) {
       {
         id: "background",
         type: "background",
-        paint: { "background-color": "#dddddd" },
+        paint: { "background-color": "#eeeeee" },
       },
       {
         id: "coastline",
@@ -191,7 +191,7 @@ var backgroundMapStyle = function (tilesEndpoint) {
           "line-cap": "round",
         },
         paint: {
-          "line-color": "hsl(0, 0%, 70%)",
+          "line-color": "#FFF",
           "line-opacity": 0.5,
           "line-width": roadLineWidth(1),
         },
@@ -205,7 +205,7 @@ var backgroundMapStyle = function (tilesEndpoint) {
           "line-cap": "round",
         },
         paint: {
-          "line-color": "hsl(0, 0%, 97%)",
+          "line-color": "#FFF",
           "line-opacity": [
             "match",
             ["get", "highway"],

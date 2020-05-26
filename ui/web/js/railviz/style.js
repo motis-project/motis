@@ -7,10 +7,10 @@ RailViz.Style = (function () {
   function lineColor() {
     // prettier-ignore
     return ["case",
-      ["coalesce", ["get", "stub"], true], "hsl(0, 0, 70%)",
-      ["<", ["get", "min_class"], 6],      "hsl(0, 0, 30%)",
-      ["<", ["get", "min_class"], 8],      "hsl(0, 0, 40%)",
-      /* default */                        "hsl(0, 0, 50%)",
+      ["coalesce", ["get", "stub"], true], "#DDDDDD",
+      ["<", ["get", "min_class"], 6],      "#666666",
+      ["<", ["get", "min_class"], 8],      "#999999",
+      /* default */                        "#AAAAAA",
     ];
   }
 
@@ -19,9 +19,9 @@ RailViz.Style = (function () {
     return  ["let",
       "w", ["case",
               ["coalesce", ["get", "stub"], true], 2,
-              ["<", ["get", "min_class"], 6],      4,
-              ["<", ["get", "min_class"], 8],      3.25,
-              /* default */                        2.5,
+              ["<", ["get", "min_class"], 6],      3.5,
+              ["<", ["get", "min_class"], 8],      3.0,
+              /* default */                        2.0,
             ],
       ["interpolate", ["linear"], ["zoom"],
         6,  ["*", ["var", "w"], .5],
@@ -53,10 +53,10 @@ RailViz.Style = (function () {
     // prettier-ignore
     return  ["let",
       "w", ["case",
-            ["<", ["get", "min_class"], 6],      2,
-            ["<", ["get", "min_class"], 7],      1.5,
-            ["<", ["get", "min_class"], 9],      1,
-            /* default */                        0.5,
+            ["<", ["get", "min_class"], 6],      1.3,
+            ["<", ["get", "min_class"], 7],      1.0,
+            ["<", ["get", "min_class"], 9],      0.7,
+            /* default */                        0.4,
           ],
       ["interpolate", ["linear"], ["zoom"],
         6,  ["*", ["var", "w"], 0.66],
