@@ -44,6 +44,18 @@ std::set<stop*> stop::get_metas() {
     }
   }
 
+  for (auto it = begin(done); it != end(done);) {
+    auto* meta = *it;
+    auto const is_parent = parents_.find(meta) != end(parents_);
+    auto const is_child = children_.find(meta) != end(children_);
+    auto const distance = geo::distance(meta->coord_, coord_);
+    if ((distance > 500 && !is_parent && !is_child) || distance > 2000) {
+      it = done.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
   return done;
 }
 
@@ -65,10 +77,10 @@ stop_map read_stops(loaded_file file) {
 
     if (!get<parent_station>(s).trim().empty()) {
       auto const parent =
-          utl::get_or_create(stops, get<parent_station>(s).to_str(), []() {
-            return std::make_unique<stop>();
-          }).get();
-      parent->id_ = get<parent_station>(s).to_str();
+          utl::get_or_create(stops, get<parent_station>(s).trim().to_str(),
+                             []() { return std::make_unique<stop>(); })
+              .get();
+      parent->id_ = get<parent_station>(s).trim().to_str();
       parent->children_.emplace(new_stop);
       new_stop->parents_.emplace(parent);
     }
