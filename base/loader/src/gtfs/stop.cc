@@ -63,11 +63,12 @@ stop_map read_stops(loaded_file file) {
     new_stop->coord_ = {get<stop_lat>(s), get<stop_lon>(s)};
     new_stop->timezone_ = get<stop_timezone>(s).to_str();
 
-    if (!get<parent_station>(s).empty()) {
+    if (!get<parent_station>(s).trim().empty()) {
       auto const parent =
           utl::get_or_create(stops, get<parent_station>(s).to_str(), []() {
             return std::make_unique<stop>();
           }).get();
+      parent->id_ = get<parent_station>(s).to_str();
       parent->children_.emplace(new_stop);
       new_stop->parents_.emplace(parent);
     }
