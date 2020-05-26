@@ -212,11 +212,13 @@ bool read_data(tb_data& data, std::string const& filename,
       sched.schedule_end_ != static_cast<std::time_t>(h.schedule_end_)) {
     LOG(info) << "trip-based data file contains different schedule range: "
                  "schedule=["
-              << format_unixtime(sched.schedule_begin_, "%Y-%m-%d") << " - "
-              << format_unixtime(sched.schedule_end_, "%Y-%m-%d")
-              << "], serialized=["
-              << format_unixtime(h.schedule_begin_, "%Y-%m-%d") << ", "
-              << format_unixtime(h.schedule_end_, "%Y-%m-%d") << "]";
+              << format_unixtime(sched.schedule_begin_) << " ("
+              << sched.schedule_begin_ << ") - "
+              << format_unixtime(sched.schedule_end_) << " ("
+              << sched.schedule_end_ << ")], serialized=["
+              << format_unixtime(h.schedule_begin_) << " (" << h.schedule_begin_
+              << "), " << format_unixtime(h.schedule_end_) << " ("
+              << h.schedule_end_ << ")]";
     return false;
   }
 
