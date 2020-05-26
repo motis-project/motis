@@ -15,10 +15,12 @@
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/core/journey/print_journey.h"
 #include "motis/module/message.h"
+#include "motis/eval/is_terminal.h"
 
 using namespace motis;
 using namespace motis::module;
 using namespace motis::routing;
+using namespace motis::eval;
 using namespace flatbuffers;
 
 namespace fs = boost::filesystem;
@@ -48,6 +50,10 @@ int main(int argc, char** argv) {
       po::command_line_parser(argc, argv).options(desc).positional(pod).run(),
       vm);
   po::notify(vm);
+
+  if (!help && files.empty() && !is_terminal(stdin)) {
+    files.emplace_back("-");
+  }
 
   if (help || files.empty()) {
     std::cout << desc << std::endl;
