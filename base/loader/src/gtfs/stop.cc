@@ -22,8 +22,6 @@ static const column_mapping<gtfs_stop> columns = {
      "stop_lon"}};
 
 std::set<stop*> stop::get_metas() {
-  std::set<stop*> metas;
-
   std::set<stop*> todo, done;
   todo.emplace(this);
   todo.insert(begin(same_name_), end(same_name_));
