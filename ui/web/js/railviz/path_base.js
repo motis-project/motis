@@ -45,7 +45,7 @@ RailViz.Path.Base = (function () {
       paint: {
         "circle-color": "white",
         "circle-radius": RailViz.Style.stationCircleRadius(),
-        "circle-stroke-color": "#333333",
+        "circle-stroke-color": "#666666",
         "circle-stroke-width": RailViz.Style.stationCircleWidth(),
         "circle-pitch-alignment": "map",
       },
