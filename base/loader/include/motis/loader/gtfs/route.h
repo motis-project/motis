@@ -5,13 +5,20 @@
 #include <optional>
 #include <string>
 
+#include "cista/reflection/comparable.h"
+
 #include "motis/loader/gtfs/agency.h"
 #include "motis/loader/loaded_file.h"
 
 namespace motis::loader::gtfs {
 
-class route {
-public:
+struct category {
+  CISTA_COMPARABLE()
+  std::string name_;
+  unsigned output_rule_{2};
+};
+
+struct route {
   route(agency const* agency, std::string id, std::string short_name,
         std::string long_name, std::string route_desc, int type)
       : agency_(agency),
@@ -21,9 +28,9 @@ public:
         desc_{std::move(route_desc)},
         type_(type) {}
 
-  static std::map<unsigned, std::string> s_types_;
+  static std::map<unsigned, category> s_types_;
 
-  std::optional<std::string> category() const;
+  std::optional<category> get_category() const;
 
   agency const* agency_;
   std::string id_;

@@ -118,12 +118,19 @@ void fix_stop_positions(trip_map& trips) {
     for (auto const [a, b, c] : utl::nwise<3>(stops)) {
       if ((b.stop_->coord_.lat_ < 0.1 && b.stop_->coord_.lng_ < 0.1) ||
           (!is_logical(a, b) && !is_logical(b, c))) {
-        b.stop_->coord_.lat_ =
+        auto const new_coord = geo::latlng{
             a.stop_->coord_.lat_ +
-            0.5 * (c.stop_->coord_.lat_ - a.stop_->coord_.lat_);
-        b.stop_->coord_.lng_ =
+                0.5 * (c.stop_->coord_.lat_ - a.stop_->coord_.lat_),
             a.stop_->coord_.lng_ +
-            0.5 * (c.stop_->coord_.lng_ - a.stop_->coord_.lng_);
+                0.5 * (c.stop_->coord_.lng_ - a.stop_->coord_.lng_)};
+        LOG(logging::warn) << "adjusting stop position from ("
+                           << b.stop_->coord_.lat_ << ", "
+                           << b.stop_->coord_.lng_ << ") to (" << new_coord.lat_
+                           << ", " << new_coord.lng_
+                           << "): sanity check failed for trip \"" << id
+                           << "\" (pred=" << a.stop_->id_
+                           << ", succ=" << c.stop_->id_ << ")";
+        b.stop_->coord_ = new_coord;
       }
     }
   }
@@ -148,7 +155,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   read_stop_times(load(STOP_TIMES_FILE), trips, stops);
   fix_stop_positions(trips);
 
-  std::map<std::string, Offset<Category>> fbs_categories;
+  std::map<category, Offset<Category>> fbs_categories;
   std::map<agency const*, Offset<Provider>> fbs_providers;
   std::map<std::string, Offset<String>> fbs_strings;
   std::map<stop const*, Offset<Station>> fbs_stations;
@@ -166,9 +173,10 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   };
 
   auto get_or_create_category = [&](route const* r) {
-    if (auto const cat = r->category(); cat.has_value()) {
+    if (auto const cat = r->get_category(); cat.has_value()) {
       return utl::get_or_create(fbs_categories, *cat, [&]() {
-        return CreateCategory(fbb, fbb.CreateString(*cat), 0);
+        return CreateCategory(fbb, fbb.CreateString(cat->name_),
+                              cat->output_rule_);
       });
     } else {
       auto desc = r->desc_;
@@ -180,7 +188,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
       if (auto it = short_tags.find(desc); it != end(short_tags)) {
         desc = it->second;
       }
-      return utl::get_or_create(fbs_categories, desc, [&]() {
+      return utl::get_or_create(fbs_categories, category{desc, 0}, [&]() {
         return CreateCategory(fbb, fbb.CreateString(desc), 0);
       });
     }
