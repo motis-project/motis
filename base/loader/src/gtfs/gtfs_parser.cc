@@ -6,6 +6,7 @@
 #include "boost/filesystem.hpp"
 
 #include "utl/get_or_create.h"
+#include "utl/pairwise.h"
 #include "utl/pipes/accumulate.h"
 #include "utl/pipes/all.h"
 #include "utl/pipes/remove_if.h"
@@ -15,8 +16,11 @@
 #include "cista/hash.h"
 #include "cista/mmap.h"
 
+#include "geo/latlng.h"
+
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
+#include "motis/core/schedule/time.h"
 #include "motis/loader/gtfs/agency.h"
 #include "motis/loader/gtfs/calendar.h"
 #include "motis/loader/gtfs/calendar_date.h"
@@ -97,6 +101,34 @@ std::time_t to_unix_time(boost::gregorian::date const& date) {
   return (boost::posix_time::ptime(date) - epoch).total_seconds();
 }
 
+void fix_stop_positions(trip_map& trips) {
+  auto const is_logical = [](stop_time const& a, stop_time const& b) {
+    constexpr auto const SLACK_BUFFER = 5;
+    auto const dist_in_m = geo::distance(a.stop_->coord_, b.stop_->coord_);
+    if (dist_in_m <= 1.0) {
+      return true;
+    }
+    auto const time_diff_in_min = b.arr_.time_ - a.dep_.time_ + SLACK_BUFFER;
+    auto const speed_in_kmh = (dist_in_m / 1000.0) / (time_diff_in_min / 60.0);
+    return speed_in_kmh < 350;
+  };
+
+  for (auto const& [id, t] : trips) {
+    auto const stops = t->stop_times_.to_vector();
+    for (auto const [a, b, c] : utl::nwise<3>(stops)) {
+      if ((b.stop_->coord_.lat_ < 0.1 && b.stop_->coord_.lng_ < 0.1) ||
+          (!is_logical(a, b) && !is_logical(b, c))) {
+        b.stop_->coord_.lat_ =
+            a.stop_->coord_.lat_ +
+            0.5 * (c.stop_->coord_.lat_ - a.stop_->coord_.lat_);
+        b.stop_->coord_.lng_ =
+            a.stop_->coord_.lng_ +
+            0.5 * (c.stop_->coord_.lng_ - a.stop_->coord_.lng_);
+      }
+    }
+  }
+}
+
 void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   motis::logging::scoped_timer global_timer{"gtfs parser"};
 
@@ -114,6 +146,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   auto transfers = read_transfers(load(TRANSFERS_FILE), stops);
   auto trips = read_trips(load(TRIPS_FILE), routes, services);
   read_stop_times(load(STOP_TIMES_FILE), trips, stops);
+  fix_stop_positions(trips);
 
   std::map<std::string, Offset<Category>> fbs_categories;
   std::map<agency const*, Offset<Provider>> fbs_providers;
@@ -125,8 +158,9 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   auto get_or_create_stop = [&](stop const* s) {
     return utl::get_or_create(fbs_stations, s, [&]() {
       return CreateStation(
-          fbb, fbb.CreateString(s->id_), fbb.CreateString(s->name_), s->lat_,
-          s->lng_, 2, fbb.CreateVector(std::vector<Offset<String>>()), 0,
+          fbb, fbb.CreateString(s->id_), fbb.CreateString(s->name_),
+          s->coord_.lat_, s->coord_.lng_, 2,
+          fbb.CreateVector(std::vector<Offset<String>>()), 0,
           s->timezone_.empty() ? 0 : fbb.CreateString(s->timezone_));
     });
   };

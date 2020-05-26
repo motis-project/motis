@@ -13,7 +13,7 @@ namespace motis::loader::gtfs {
 
 struct stop_time {
   stop_time() = default;
-  stop_time(stop const* s, std::string headsign, int arr_time, bool out_allowed,
+  stop_time(stop* s, std::string headsign, int arr_time, bool out_allowed,
             int dep_time, bool in_allowed)
       : stop_(s),
         headsign_(std::move(headsign)),
@@ -25,13 +25,13 @@ struct stop_time {
     bool in_out_allowed_{false};
   };
 
-  stop const* stop_{nullptr};
+  stop* stop_{nullptr};
   std::string headsign_;
   ev arr_, dep_;
 };
 
 struct trip {
-  using stop_identity = std::tuple<stop const*, bool, bool>;
+  using stop_identity = std::tuple<stop*, bool, bool>;
   using stop_seq = std::vector<stop_identity>;
 
   trip(route const* route, bitfield const* service, std::string headsign,

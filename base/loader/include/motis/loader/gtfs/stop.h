@@ -5,6 +5,8 @@
 #include <set>
 #include <string>
 
+#include "geo/latlng.h"
+
 #include "motis/loader/loaded_file.h"
 
 namespace motis::loader::gtfs {
@@ -12,15 +14,14 @@ namespace motis::loader::gtfs {
 struct stop {
   stop(std::string id, std::string name, double lat, double lng,
        std::string timezone)
-      : id_(std::move(id)),
-        name_(std::move(name)),
-        lat_(lat),
-        lng_(lng),
+      : id_{std::move(id)},
+        name_{std::move(name)},
+        coord_{lat, lng},
         timezone_{std::move(timezone)} {}
 
   std::string id_;
   std::string name_;
-  double lat_, lng_;
+  geo::latlng coord_;
   std::string timezone_;
   std::set<stop*> same_name_;
 };

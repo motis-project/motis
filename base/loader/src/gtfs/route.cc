@@ -25,7 +25,7 @@ std::map<unsigned, std::string> route::s_types_ = {
   { 5, "Str"},
   { 6, "Gondola, Suspended cable car"},
   { 7, "Funicular"},
-  { 100, "Zug" },
+  { 100, "Railway Service" },
   { 101, "High Speed Rail" },
   { 102, "Long Distance Trains" },
   { 103, "Inter Regional Rail" },
