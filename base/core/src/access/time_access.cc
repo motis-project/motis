@@ -41,8 +41,11 @@ std::time_t motis_to_unixtime(schedule const& sched, time t) {
 }
 
 time unix_to_motistime(schedule const& sched, std::time_t t) {
-  verify_timestamp(sched, t);
-  return unix_to_motistime(sched.schedule_begin_, t);
+  auto const mt = unix_to_motistime(sched.schedule_begin_, t);
+  if (mt == INVALID_TIME) {
+    throw std::system_error(motis::access::error::timestamp_not_in_schedule);
+  }
+  return mt;
 }
 
 time motis_time(int const hhmm, int const day_idx, int const timezone_offset) {
