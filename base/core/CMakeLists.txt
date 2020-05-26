@@ -9,6 +9,7 @@ target_compile_definitions(motis-core PUBLIC ${MOTIS_COMPILE_DEFINITIONS})
 target_compile_options(motis-core PUBLIC ${MOTIS_CXX_FLAGS})
 target_link_libraries(motis-core
   utl
+  date
   motis-data
   motis-loader
   motis-module
