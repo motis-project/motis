@@ -62,11 +62,7 @@ shortTransportName transport =
 
 longTransportNameWithoutIcon : TransportInfo -> String
 longTransportNameWithoutIcon transport =
-    if useLineId transport.class then
-        transport.category_name ++ " " ++ transport.line_id
-
-    else
-        transport.name
+    transport.name
 
 
 trainIcon : Int -> String
