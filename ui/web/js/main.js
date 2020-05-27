@@ -17,7 +17,6 @@
 
   Promise.all([mapConfigPromise, windowLoadPromise]).then((promises) => {
     const mapConfig = promises[0].content;
-    console.log(mapConfig);
 
     let tilesEndpoint = mapConfig.tiles_redirect;
     if (!tilesEndpoint) {
