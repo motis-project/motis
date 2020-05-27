@@ -48,8 +48,9 @@ std::set<stop*> stop::get_metas() {
     auto* meta = *it;
     auto const is_parent = parents_.find(meta) != end(parents_);
     auto const is_child = children_.find(meta) != end(children_);
-    auto const distance = geo::distance(meta->coord_, coord_);
-    if ((distance > 500 && !is_parent && !is_child) || distance > 2000) {
+    auto const distance_in_m = geo::distance(meta->coord_, coord_);
+    if ((distance_in_m > 500 && !is_parent && !is_child) ||
+        distance_in_m > 2000) {
       it = done.erase(it);
     } else {
       ++it;

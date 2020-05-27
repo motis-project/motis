@@ -133,11 +133,11 @@ void fix_stop_positions(trip_map& trips) {
                 0.5 * (c.stop_->coord_.lng_ - a.stop_->coord_.lng_)};
       } else if (!logical_a_b && logical_b_c) {
         corrected = a.stop_;
-        before = b.stop_->coord_;
+        before = a.stop_->coord_;
         a.stop_->coord_ = b.stop_->coord_;
       } else if (logical_a_b && !logical_b_c) {
         corrected = c.stop_;
-        before = b.stop_->coord_;
+        before = c.stop_->coord_;
         c.stop_->coord_ = b.stop_->coord_;
       }
 
@@ -145,9 +145,13 @@ void fix_stop_positions(trip_map& trips) {
         LOG(warn) << "adjusting stop position from (" << before.lat_ << ", "
                   << before.lng_ << ") to (" << corrected->coord_.lat_ << ", "
                   << corrected->coord_.lng_
-                  << "): sanity check failed for trip \"" << id << "\", stop_id"
-                  << corrected->id_ << " (a=" << a.stop_->id_
-                  << ", b=" << b.stop_->id_ << ", c=" << c.stop_->id_ << ")";
+                  << "): sanity check failed for trip \"" << id
+                  << "\", stop_id=" << corrected->id_ << " (a=" << a.stop_->id_
+                  << ", b=" << b.stop_->id_ << ", c=" << c.stop_->id_
+                  << "): " << a.stop_->coord_.lat_ << ","
+                  << a.stop_->coord_.lng_ << " -> " << b.stop_->coord_.lat_
+                  << "," << b.stop_->coord_.lng_ << " -> "
+                  << c.stop_->coord_.lat_ << "," << c.stop_->coord_.lng_;
       }
     }
   }
