@@ -110,7 +110,7 @@ void tiles::import(mm::progress_listener& progress_listener,
 
           auto const db_fname = dir / "tiles.mdb";
 
-          ml::clog_import_step("clear database");
+          ml::clog_import_step("Clear Database");
           ::tiles::clear_database(path);
           ::tiles::clear_pack_file(path.c_str());
 
@@ -124,20 +124,19 @@ void tiles::import(mm::progress_listener& progress_listener,
                 pack_handle};
 
             if (use_coastline_) {
-              ml::clog_import_step("clear database", 0, 20);
-              std::clog << '\0' << 'S' << "load coastline" << '\0';
+              ml::clog_import_step("Load Coastline", 0, 20);
               ::tiles::load_coastlines(db_handle, inserter, coastline_path);
             }
 
-            ml::clog_import_step("load features", 20, 70);
+            ml::clog_import_step("Load Features", 20, 70);
             ::tiles::load_osm(db_handle, inserter, osm_path,
                               profile_path.string());
           }
 
-          ml::clog_import_step("pack features", 70, 90);
+          ml::clog_import_step("Pack Features", 70, 90);
           ::tiles::pack_features(db_handle, pack_handle);
 
-          ml::clog_import_step("prepare tiles", 90, 100, 11);
+          ml::clog_import_step("Prepare Tiles", 90, 100, 11);
           ::tiles::prepare_tiles(db_handle, pack_handle, 10);
         }
 
