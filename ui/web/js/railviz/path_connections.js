@@ -168,6 +168,9 @@ RailViz.Path.Connections = (function () {
 
     let minCIds = new Map(); // feature id -> minCid
     connectionIds.forEach((cid) => {
+      if(connections === null) {
+        return; // catch racing condition during initial load
+      }
       const c = connections.find((c) => c.id == cid);
       if (c === undefined) {
         return; // catch racing condition on "later" click
