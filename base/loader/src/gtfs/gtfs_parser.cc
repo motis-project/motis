@@ -197,7 +197,8 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
     if (auto const cat = r->get_category(); cat.has_value()) {
       return utl::get_or_create(fbs_categories, *cat, [&]() {
         auto name = cat->name_;
-        if (cat->output_rule_ &
+        if ((cat->output_rule_ &
+             category::output::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY) ==
             category::output::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY) {
           name = r->short_name_;
         }
