@@ -32,13 +32,13 @@ std::set<stop*> stop::get_metas() {
     done.emplace(next);
 
     for (auto const& p : next->parents_) {
-      if (done.find(p) == end(todo)) {
+      if (done.find(p) == end(done)) {
         todo.emplace(p);
       }
     }
 
     for (auto const& p : next->children_) {
-      if (done.find(p) == end(todo)) {
+      if (done.find(p) == end(done)) {
         todo.emplace(p);
       }
     }
