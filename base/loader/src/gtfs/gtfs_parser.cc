@@ -341,7 +341,8 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   auto footpaths =
       utl::all(transfers)  //
       | utl::remove_if([](std::pair<stop_pair, transfer>&& t) {
-          return t.second.type_ != transfer::TIMED_TRANSFER;
+          return t.second.type_ != transfer::TIMED_TRANSFER ||
+                 t.first.first == t.first.second;
         })  //
       | utl::transform([&](std::pair<stop_pair, transfer>&& t) {
           return CreateFootpath(fbb, get_or_create_stop(t.first.first),
@@ -351,7 +352,8 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
       | utl::vec();
 
   auto const generate_transfer = [&](stop_pair const& stops) {
-    if (transfers.find(stops) == end(transfers)) {
+    if (stops.first != stops.second &&
+        transfers.find(stops) == end(transfers)) {
       footpaths.emplace_back(
           CreateFootpath(fbb, get_or_create_stop(stops.first),
                          get_or_create_stop(stops.second), 2));
