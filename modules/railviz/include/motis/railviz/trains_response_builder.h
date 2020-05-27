@@ -20,8 +20,8 @@ struct trains_response_builder {
   trains_response_builder(schedule const& sched, int zoom_level)
       : sched_{sched}, zoom_level_{zoom_level} {}
 
-  void add_train_full(ev_key k);
-  void add_train(train k);
+  void add_train_full(ev_key);
+  void add_train(train);
 
   [[nodiscard]] module::msg_ptr resolve_paths();
 
