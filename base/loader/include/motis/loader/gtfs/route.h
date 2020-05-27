@@ -13,8 +13,17 @@
 namespace motis::loader::gtfs {
 
 struct category {
-  CISTA_COMPARABLE()
-  std::string name_;
+  enum output {
+    PRINT_CATEGORY_AND_ID = 0b0000U,
+    PRINT_CATEGORY = 0b0001U,
+    PRINT_ID = 0b0010U,
+    FORCE_PROVIDER_INSTEAD_OF_CATEGORY = 0b0100U,
+    FORCE_TRAIN_NUMBER_INSTEAD_OF_LINE_ID = 0b1000U,
+    ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY = 0b10000U,
+    BASE = 0b1111U,
+  };
+
+  CISTA_COMPARABLE() std::string name_;
   unsigned output_rule_{2};
 };
 

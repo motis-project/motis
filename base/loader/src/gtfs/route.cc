@@ -26,11 +26,11 @@ std::map<unsigned, category> route::s_types_ = {
   { 6, category{"Gondola, Suspended cable car"}},
   { 7, category{"Funicular"}},
   { 100, category{"Railway Service" }},
-  { 101, category{"High Speed Rail" }},
-  { 102, category{"Long Distance Trains" }},
-  { 103, category{"Inter Regional Rail" }},
-  { 104, category{"Car Transport Rail" }},
-  { 105, category{"Sleeper Rail" }},
+  { 101, category{"High Speed Rail", category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY }},
+  { 100, category{"Long Distance Trains", category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY }},
+  { 103, category{"Inter Regional Rail", category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY}},
+  { 104, category{"Car Transport Rail", category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY }},
+  { 105, category{"Sleeper Rail", category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY }},
   { 106, category{"Regional Rail" }},
   { 107, category{"Tourist Railway" }},
   { 108, category{"Rail Shuttle (Within Complex)" }},
@@ -61,31 +61,31 @@ std::map<unsigned, category> route::s_types_ = {
   { 404, category{"U" }},
   { 500, category{"Metro" }},
   { 600, category{"U" }},
-  { 700, category{"Bus", 0 }},
-  { 701, category{"Bus", 0 }},
-  { 702, category{"Bus", 0 }},
-  { 703, category{"Bus", 0 }},
-  { 704, category{"Bus", 0 }},
-  { 705, category{"Bus", 0 }},
-  { 706, category{"Bus", 0 }},
-  { 707, category{"Bus", 0 }},
-  { 708, category{"Bus", 0 }},
-  { 709, category{"Bus", 0 }},
-  { 710, category{"Bus", 0 }},
-  { 711, category{"Bus", 0 }},
-  { 712, category{"Bus", 0 }},
-  { 713, category{"Bus", 0 }},
-  { 714, category{"Bus", 0 }},
-  { 715, category{"Bus", 0 }},
-  { 716, category{"Bus", 0 }},
-  { 800, category{"Bus", 0 }},
-  { 900, category{"Str", 0 }},
-  { 901, category{"Str", 0 }},
-  { 902, category{"Str", 0 }},
-  { 903, category{"Str", 0 }},
-  { 904, category{"Str", 0 }},
-  { 905, category{"Str", 0 }},
-  { 906, category{"Str", 0 }},
+  { 700, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 701, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 702, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 703, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 704, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 705, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 706, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 707, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 708, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 709, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 710, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 711, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 712, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 713, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 714, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 715, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 716, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 800, category{"Bus", category::output::PRINT_CATEGORY_AND_ID }},
+  { 900, category{"Str", category::output::PRINT_CATEGORY_AND_ID }},
+  { 901, category{"Str", category::output::PRINT_CATEGORY_AND_ID }},
+  { 902, category{"Str", category::output::PRINT_CATEGORY_AND_ID }},
+  { 903, category{"Str", category::output::PRINT_CATEGORY_AND_ID }},
+  { 904, category{"Str", category::output::PRINT_CATEGORY_AND_ID }},
+  { 905, category{"Str", category::output::PRINT_CATEGORY_AND_ID }},
+  { 906, category{"Str", category::output::PRINT_CATEGORY_AND_ID }},
   { 1000, category{"Water Transport" }},
   { 1001, category{"International Car Ferry" }},
   { 1002, category{"National Car Ferry" }},
@@ -123,7 +123,7 @@ std::map<unsigned, category> route::s_types_ = {
   { 1112, category{"Schengen-Area Air" }},
   { 1113, category{"Airship" }},
   { 1114, category{"All Airs" }},
-  { 1200, category{"Ferry", 0 }},
+  { 1200, category{"Ferry", category::output::PRINT_CATEGORY_AND_ID }},
   { 1300, category{"Telecabin" }},
   { 1301, category{"Telecabin" }},
   { 1302, category{"Cable Car" }},
@@ -159,7 +159,7 @@ std::optional<category> route::get_category() const {
   } else {
     return std::nullopt;
   }
-}  // namespace motis::loader::gtfs
+}
 
 using gtfs_route = std::tuple<cstr, cstr, cstr, cstr, cstr, int>;
 enum {
@@ -180,8 +180,8 @@ route_map read_routes(loaded_file file, agency_map const& agencies) {
   route_map routes;
   auto const entries = read<gtfs_route>(file.content(), columns);
   for (auto const& [i, r] : utl::enumerate(entries)) {
-    auto agency_it = agencies.find(get<agency_id>(r).to_str());
-    auto agency_ptr =
+    auto const agency_it = agencies.find(get<agency_id>(r).to_str());
+    auto const agency_ptr =
         agency_it == end(agencies) ? nullptr : agency_it->second.get();
     if (agency_ptr == nullptr) {
       LOG(logging::warn) << "agency \"" << get<agency_id>(r).view()

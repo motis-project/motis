@@ -160,7 +160,7 @@ void import_status::print() {
         }
         break;
     }
-    std::cout << "\n";
+    std::cout << std::endl;
   }
   last_print_height_ = status_.size();
 }
