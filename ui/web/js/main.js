@@ -30,6 +30,9 @@ function initApp() {
   if(!tilesEndpoint.startsWith('http')) {
     tilesEndpoint = window.location.origin + tilesEndpoint
   }
+  if(!tilesEndpoint.endsWith('/')) {
+    tilesEndpoint = tilesEndpoint + '/';
+  }
 
   var simulationTime = null;
   var timeParam = params['time'] || null;
