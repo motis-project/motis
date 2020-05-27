@@ -619,6 +619,12 @@ void graph_builder::add_footpaths(Vector<Offset<Footpath>> const* footpaths) {
     auto const& from_station = *sched_.stations_.at(from_node->id_);
     auto const& to_station = *sched_.stations_.at(to_node->id_);
 
+    if (from_node == to_node) {
+      LOG(warn) << "Footpath loop at station " << from_station.eva_nr_
+                << " ignored";
+      continue;
+    }
+
     if (adjust_footpaths_) {
       uint32_t max_transfer_time =
           std::max(from_station.transfer_time_, to_station.transfer_time_);
