@@ -230,7 +230,6 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
       pitch: pitch,
       antialias: true,
     });
-    map_bg.showTileBoundaries = true;
 
     map_bg.addImage(
       "shield",
