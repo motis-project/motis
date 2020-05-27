@@ -1,7 +1,8 @@
 #pragma once
 
+#include "geo/polyline_format.h"
+
 #include "motis/path/path_database_query.h"
-#include "motis/path/polyline_format.h"
 
 namespace motis::path {
 
@@ -94,7 +95,7 @@ struct google_polyline_builder {
 
   bool is_extra_{false};
   size_t count_{0};
-  polyline_encoder<6> enc_;
+  geo::polyline_encoder<6> enc_;
 };
 
 }  // namespace motis::path

@@ -14,8 +14,8 @@
 
 #include "motis/path/path_database.h"
 #include "motis/path/path_database_query.h"
-#include "motis/path/polyline_format.h"
 #include "motis/path/prepare/db_builder.h"
+#include "geo/polyline_format.h"
 
 namespace m = motis;
 namespace mp = m::path;
@@ -147,7 +147,7 @@ struct path_database_query_test : public ::testing::Test {
                                   std::vector<geo::latlng> const& p0) {
     auto const pred = [&](auto const* p) {
       auto const decoded =
-          mp::decode_polyline<6>(std::string_view{p->data(), p->size()});
+          geo::decode_polyline<6>(std::string_view{p->data(), p->size()});
 
       if (decoded.size() != p0.size()) {
         return false;

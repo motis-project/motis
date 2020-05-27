@@ -1,5 +1,9 @@
 #include "motis/railviz/trains_response_builder.h"
 
+#include <numeric>
+
+#include "geo/polyline_format.h"
+
 #include "utl/concat.h"
 #include "utl/equal_ranges_linear.h"
 #include "utl/erase_duplicates.h"
@@ -65,7 +69,52 @@ msg_ptr trains_response_builder::resolve_paths() {
                            .Union(),
                        "/path/by_trip_id_batch");
 
-  return motis_call(make_msg(mc))->val();
+  try {
+    return motis_call(make_msg(mc))->val();
+  } catch (std::exception const&) {
+    message_creator mc;
+
+    geo::polyline_encoder<6> enc;
+    std::vector<Offset<String>> fbs_polylines;
+    fbs_polylines.emplace_back(mc.CreateString(std::string{}));
+    mcd::hash_map<std::pair<uint32_t, uint32_t>, size_t> indices;
+
+    auto const fbs_segments = utl::to_vec(queries_, [&](auto const& q) {
+      utl::verify(std::distance(sections::begin(q.trp_),
+                                sections::end(q.trp_)) > q.section_index_,
+                  "trains_response_builder: invakud section idx");
+      auto const s = std::next(sections::begin(q.trp_), q.section_index_);
+      auto const s_min = std::min((*s).from_station_id(), (*s).to_station_id());
+      auto const s_max = std::max((*s).from_station_id(), (*s).to_station_id());
+
+      int64_t idx =
+          utl::get_or_create(indices, std::make_pair(s_min, s_max), [&] {
+            enc.push({sched_.stations_[s_min]->lat(),
+                      sched_.stations_[s_min]->lng()});
+            enc.push({sched_.stations_[s_max]->lat(),
+                      sched_.stations_[s_max]->lng()});
+            fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
+            enc.reset();
+            return fbs_polylines.size() - 1;
+          });
+
+      if (s_min != (*s).from_station_id()) {
+        idx *= -1;
+      }
+      return path::CreatePolylineIndices(mc, mc.CreateVector(&idx, 1));
+    });
+
+    std::vector<uint64_t> fbs_extras(fbs_polylines.size() - 1);
+    std::iota(begin(fbs_extras), end(fbs_extras), 1);
+
+    mc.create_and_finish(
+        MsgContent_PathByTripIdBatchResponse,
+        CreatePathByTripIdBatchResponse(mc, mc.CreateVector(fbs_segments),
+                                        mc.CreateVector(fbs_polylines),
+                                        mc.CreateVector(fbs_extras))
+            .Union());
+    return make_msg(mc);
+  }
 }
 
 Offset<Train> trains_response_builder::write_railviz_train(
