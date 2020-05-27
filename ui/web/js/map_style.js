@@ -57,11 +57,11 @@ var backgroundMapStyle = function (tilesEndpoint) {
     sources: {
       osm: {
         type: "vector",
-        tiles: [`${tilesEndpoint}tiles/{z}/{x}/{y}.mvt`],
+        tiles: [`${tilesEndpoint}{z}/{x}/{y}.mvt`],
         maxzoom: 20,
       },
     },
-    glyphs: `${tilesEndpoint}tiles/glyphs/{fontstack}/{range}.pbf`,
+    glyphs: `${tilesEndpoint}glyphs/{fontstack}/{range}.pbf`,
     layers: [
       {
         id: "background",

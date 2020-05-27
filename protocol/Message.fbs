@@ -32,6 +32,7 @@ include "path/PathByTripIdBatchRequest.fbs";
 include "path/PathByTripIdBatchResponse.fbs";
 include "path/PathByTileFeatureRequest.fbs";
 include "path/PathSeqResponse.fbs";
+include "railviz/RailVizMapConfigResponse.fbs";
 include "railviz/RailVizTrainsRequest.fbs";
 include "railviz/RailVizTrainsResponse.fbs";
 include "railviz/RailVizTripsRequest.fbs";
@@ -216,7 +217,8 @@ union MsgContent {
   motis.import.OSRMEvent,
   motis.path.PathByTripIdBatchRequest,
   motis.path.PathByTripIdBatchResponse,
-  motis.import.CoastlineEvent
+  motis.import.CoastlineEvent,
+  motis.railviz.RailVizMapConfigResponse
 }
 
 // Destination Examples:

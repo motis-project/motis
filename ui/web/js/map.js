@@ -187,7 +187,7 @@ class RailVizCustomLayer {
         lng: center.lng,
       },
       bearing: bearing,
-      pitch: pitch
+      pitch: pitch,
     };
 
     app.ports.mapUpdate.send(mapInfo);
@@ -206,17 +206,17 @@ class RailVizCustomLayer {
   }
 }
 
-function initPorts(app, apiEndpoint, tilesEndpoint) {
+function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
   app.ports.mapInit.subscribe(function (id) {
-    var mapSettings = localStorage.getItem("motis.map");
-    if (mapSettings) {
-      mapSettings = JSON.parse(mapSettings);
+    let settings = localStorage.getItem("motis.map");
+    if (settings) {
+      settings = JSON.parse(settings);
     }
-    var lat = (mapSettings && mapSettings.lat) || 47.3684854; // 49.8728;
-    var lng = (mapSettings && mapSettings.lng) || 8.5102601; // 8.6512;
-    var zoom = (mapSettings && mapSettings.zoom) || 10;
-    var bearing = (mapSettings && mapSettings.bearing) || 0;
-    var pitch = (mapSettings && mapSettings.pitch) || 0;
+    var lat = (settings && settings.lat) || initialPermalink.lat;
+    var lng = (settings && settings.lng) || initialPermalink.lng;
+    var zoom = (settings && settings.zoom) || initialPermalink.zoom;
+    var bearing = (settings && settings.bearing) || initialPermalink.bearing;
+    var pitch = (settings && settings.pitch) || initialPermalink.pitch;
 
     // use two maps until resolved: https://github.com/mapbox/mapbox-gl-js/issues/8159
     var map_bg = new mapboxgl.Map({
@@ -230,6 +230,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
       pitch: pitch,
       antialias: true,
     });
+    map_bg.showTileBoundaries = true;
 
     map_bg.addImage(
       "shield",
@@ -270,7 +271,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
     syncMaps(map_bg, map_fg);
 
     map_fg.on("load", () => {
-      RailViz.Path.Base.init(map_fg, tilesEndpoint);
+      RailViz.Path.Base.init(map_fg, apiEndpoint);
 
       map_fg.addLayer(new RailVizCustomLayer());
 
@@ -308,7 +309,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint) {
         options.zoom = opt.zoom;
       }
       options.pitch = opt.pitch ? opt.pitch : 0;
-      options.bearing = opt.bearing ? opt.bearing : 0
+      options.bearing = opt.bearing ? opt.bearing : 0;
 
       if (opt.animate) {
         map.flyTo(options);

@@ -1,10 +1,11 @@
 #include "motis/railviz/railviz.h"
 
-#include "utl/concat.h"
-#include "utl/get_or_create.h"
+#include "utl/erase_if.h"
 #include "utl/to_vec.h"
-
 #include "utl/verify.h"
+
+#include "tiles/fixed/convert.h"
+#include "tiles/fixed/fixed_geometry.h"
 
 #include "motis/hash_map.h"
 
@@ -38,7 +39,12 @@ constexpr auto const MAX_ZOOM = 20U;
 
 namespace motis::railviz {
 
-railviz::railviz() : module("RailViz", "railviz") {}
+railviz::railviz() : module("RailViz", "railviz") {
+  param(initial_permalink_, "initial_permalink",
+        "prefix of: /lat/lng/zoom/bearing/pitch/timestamp");
+  param(tiles_redirect_, "tiles_redirect",
+        "http://url.to/tiles/server (empty: use this MOTIS instance)");
+}
 
 railviz::~railviz() = default;
 
@@ -71,7 +77,51 @@ mcd::hash_map<std::pair<int, int>, geo::box> bounding_boxes(schedule const& s) {
   return boxes;
 }
 
+// est. rationale: cut off 20% outliers each and assume 2x2 tiles are on screen
+std::string estimate_initial_permalink(schedule const& sched) {
+  auto const get_quantiles = [](std::vector<double> coords) {
+    utl::erase_if(coords, [](auto const c) { return c == 0.; });
+    if (coords.empty()) {
+      return std::make_pair(0., 0.);
+    }
+    if (coords.size() < 10) {
+      return std::make_pair(coords.front(), coords.back());
+    }
+
+    std::sort(begin(coords), end(coords));
+    constexpr auto const kQuantile = .8;
+    return std::make_pair(coords.at(coords.size() * (1 - kQuantile)),
+                          coords.at(coords.size() * (kQuantile)));
+  };
+
+  auto const [lat_min, lat_max] = get_quantiles(
+      utl::to_vec(sched.stations_, [](auto const& s) { return s->lat(); }));
+  auto const [lng_min, lng_max] = get_quantiles(
+      utl::to_vec(sched.stations_, [](auto const& s) { return s->lng(); }));
+
+  auto const fixed0 = tiles::latlng_to_fixed({lat_min, lng_min});
+  auto const fixed1 = tiles::latlng_to_fixed({lat_max, lng_max});
+
+  auto const center = tiles::fixed_to_latlng(
+      {(fixed0.x() + fixed1.x()) / 2, (fixed0.y() + fixed1.y()) / 2});
+
+  auto const d = std::max(std::abs(fixed0.x() - fixed1.x()),
+                          std::abs(fixed0.y() - fixed1.y()));
+
+  auto zoom = int{0};
+  for (; zoom < (tiles::kMaxZoomLevel - 1); ++zoom) {
+    if (((tiles::kTileSize * 2ULL) *
+         (1ULL << (tiles::kMaxZoomLevel - (zoom + 1)))) < d) {
+      break;
+    }
+  }
+
+  return fmt::format("/{:.7}/{:.7}/{}", center.lat_, center.lng_, zoom);
+}
+
 void railviz::init(motis::module::registry& reg) {
+  reg.register_op("/railviz/map_config",
+                  [this](auto const& msg) { return get_map_config(msg); });
   reg.register_op("/railviz/get_trip_guesses", &railviz::get_trip_guesses);
   reg.register_op("/railviz/get_station", &railviz::get_station);
   reg.register_op("/railviz/get_trains",
@@ -81,6 +131,11 @@ void railviz::init(motis::module::registry& reg) {
   reg.subscribe("/init", [this]() {
     auto const& s = get_sched();
     train_retriever_ = std::make_unique<train_retriever>(s, bounding_boxes(s));
+
+    if (initial_permalink_.empty()) {
+      initial_permalink_ = estimate_initial_permalink(s);
+      LOG(logging::info) << "est. initial_permalink: " << initial_permalink_;
+    }
   });
 
   reg.subscribe("/rt/update", [this](msg_ptr const& msg) {
@@ -90,6 +145,16 @@ void railviz::init(motis::module::registry& reg) {
     }
     return nullptr;
   });
+}
+
+msg_ptr railviz::get_map_config(msg_ptr const&) {
+  message_creator mc;
+  mc.create_and_finish(
+      MsgContent_RailVizMapConfigResponse,
+      CreateRailVizMapConfigResponse(mc, mc.CreateString(initial_permalink_),
+                                     mc.CreateString(tiles_redirect_))
+          .Union());
+  return make_msg(mc);
 }
 
 msg_ptr railviz::get_trip_guesses(msg_ptr const& msg) {
