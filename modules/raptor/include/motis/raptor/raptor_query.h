@@ -18,7 +18,7 @@ struct additional_start {
 
 auto inline get_add_starts(
     raptor_schedule const& raptor_sched,
-    raptor_timetable const&,  // TODO IMPLEMENT START FOOT
+    raptor_timetable const&,  // TODO(julian) IMPLEMENT START FOOT
     station_id const source, bool const use_start_footpaths,
     bool const use_meta_starts) {
   std::vector<additional_start> add_starts;
@@ -65,6 +65,9 @@ struct base_query {
 struct raptor_query : base_query {
   raptor_query() = delete;
   raptor_query(raptor_query const&) = delete;
+  raptor_query(raptor_query const&&) = delete;
+  raptor_query operator=(raptor_query const&) = delete;
+  raptor_query operator=(raptor_query const&&) = delete;
 
   raptor_query(base_query const& bq, raptor_schedule const& raptor_sched,
                raptor_timetable const& tt, bool const use_start_footpaths,
@@ -77,6 +80,8 @@ struct raptor_query : base_query {
     add_starts_ = get_add_starts(raptor_sched, tt, source_, use_start_footpaths,
                                  use_start_metas);
   }
+
+  ~raptor_query() = default;
 
   raptor_timetable const& tt_;
   std::vector<additional_start> add_starts_;

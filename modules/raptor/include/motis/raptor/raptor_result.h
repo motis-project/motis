@@ -4,15 +4,27 @@
 
 namespace motis::raptor {
 
-typedef time* (*AllocResultMemoryFun)(size_t const);
-typedef void (*FreeResultMemoryFun)(time*);
+inline time* alloc_result_memory(size_t const size_in_bytes) {
+  return new time[size_in_bytes];
+}
 
-template <AllocResultMemoryFun Alloc, FreeResultMemoryFun Free>
+inline void delete_result_memory(const time* result) { delete[] result; }
+
+// time* alloc_pinned_memory(size_t const) {
+//  time* result = nullptr;
+//  cudaMallocHost(&result, size_in_bytes);
+//  return result;
+//}
+
+// void free_pinned_memory(time*) { cudaFreeHost(result); }
+
+template <decltype(alloc_result_memory) Alloc,
+          decltype(delete_result_memory) Free>
 struct raptor_result_gen {
   raptor_result_gen() = delete;
   raptor_result_gen(raptor_result_gen const&) = delete;
-  raptor_result_gen& operator=(raptor_result_gen const&) = delete;
   raptor_result_gen(raptor_result_gen const&&) = delete;
+  raptor_result_gen& operator=(raptor_result_gen const&) = delete;
   raptor_result_gen& operator=(raptor_result_gen const&&) = delete;
 
   explicit raptor_result_gen(station_id const stop_count)
@@ -39,22 +51,8 @@ private:
   time* result_;
 };
 
-time* alloc_result_memory(size_t const size_in_bytes) {
-  return (time*)(malloc(size_in_bytes));
-}
-
-void free_result_memory(time* result) { free(result); }
-
 using raptor_result =
-    raptor_result_gen<alloc_result_memory, free_result_memory>;
-
-// time* alloc_pinned_memory(size_t const) {
-//  time* result = nullptr;
-//  cudaMallocHost(&result, size_in_bytes);
-//  return result;
-//}
-
-// void free_pinned_memory(time*) { cudaFreeHost(result); }
+    raptor_result_gen<alloc_result_memory, delete_result_memory>;
 
 // using raptor_result_pinned =
 //    raptor_result_gen<alloc_pinned_memory, free_pinned_memory>;

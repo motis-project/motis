@@ -160,12 +160,12 @@ void add_footpaths(schedule const& sched, std::vector<transformable_stop>& s) {
 
     std::transform(std::begin(motis_station->outgoing_footpaths_),
                    std::end(motis_station->outgoing_footpaths_),
-                   std::begin(raptor_station.footpaths_),
+                   std::back_inserter(raptor_station.footpaths_),
                    motis_fp_to_transformable);
 
     std::transform(std::begin(motis_station->incoming_footpaths_),
                    std::end(motis_station->incoming_footpaths_),
-                   std::begin(raptor_station.incoming_footpaths_),
+                   std::back_inserter(raptor_station.incoming_footpaths_),
                    motis_fp_to_transformable);
   }
 }

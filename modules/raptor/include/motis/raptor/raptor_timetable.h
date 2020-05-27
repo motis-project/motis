@@ -41,15 +41,17 @@ using transfers = uint8_t;
 using earliest_arrivals = std::vector<time>;
 
 template <typename T>
-constexpr T min_value = std::numeric_limits<T>::min();
+inline constexpr T min_value = std::numeric_limits<T>::min();
+
 template <typename T>
-constexpr T max_value = std::numeric_limits<T>::max();
+inline constexpr T max_value = std::numeric_limits<T>::max();
+
 template <typename T>
-constexpr T invalid = max_value<T>;
+inline constexpr T invalid = max_value<T>;
 // Template specializations in raptor_timetable.cc
 
 template <typename T>
-constexpr auto valid(T const& value) {
+inline constexpr auto valid(T const& value) {
   return value != invalid<T>;
 }
 

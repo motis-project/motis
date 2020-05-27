@@ -191,7 +191,7 @@ inline void invoke_cpu_raptor(raptor_query const& query, raptor_statistics&) {
   }
   std::cout << "source time begin: " << query.source_time_begin_ << '\n';
 
-  auto& result = *query.result_.get();
+  auto& result = *query.result_;
   earliest_arrivals ea(tt.stop_count(), invalid<time>);
 
   cpu_mark_store station_marks(tt.stop_count());

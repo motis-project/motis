@@ -29,9 +29,9 @@ private:
   motis::module::msg_ptr route_generic(motis::module::msg_ptr const&,
                                        RaptorFun const&);
 
-  motis::module::msg_ptr make_response(std::vector<journey> const&,
-                                       motis::routing::RoutingRequest const*,
-                                       raptor_statistics const&);
+  static motis::module::msg_ptr make_response(
+      std::vector<journey> const&, motis::routing::RoutingRequest const*,
+      raptor_statistics const&);
 
   std::unique_ptr<raptor_schedule> raptor_sched_;
   std::unique_ptr<raptor_timetable> timetable_;
