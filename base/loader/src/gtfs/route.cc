@@ -26,13 +26,17 @@ std::map<unsigned, category> route::s_types_ = {
     {7, category{"Funicular"}},
     {100, category{"Railway Service"}},
     {101, category{/* "Long Distance Trains" hack for DELFI */ "ICE",
-                   category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY}},
+                   category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY |
+                       category::FORCE_TRAIN_NUMBER_INSTEAD_OF_LINE_ID}},
     {102, category{/* "Long Distance Trains" hack for DELFI */ "IC",
-                   category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY}},
+                   category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY |
+                       category::FORCE_TRAIN_NUMBER_INSTEAD_OF_LINE_ID}},
     {103, category{"Inter Regional Rail",
-                   category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY}},
+                   category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY |
+                       category::FORCE_TRAIN_NUMBER_INSTEAD_OF_LINE_ID}},
     {104, category{"Car Transport Rail",
-                   category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY}},
+                   category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY |
+                       category::FORCE_TRAIN_NUMBER_INSTEAD_OF_LINE_ID}},
     {105,
      category{"Sleeper Rail", category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY}},
     {106, category{"Regional Rail"}},
