@@ -174,7 +174,7 @@ station_node* graph_builder::get_station_node(Station const* station) const {
 }
 
 full_trip_id graph_builder::get_full_trip_id(Service const* s, int day,
-                                             int section_idx) const {
+                                             int section_idx) {
   auto const& stops = s->route()->stations();
   auto const dep_station = stops->Get(section_idx);
   auto const arr_station = stops->Get(stops->size() - 1);
@@ -184,7 +184,7 @@ full_trip_id graph_builder::get_full_trip_id(Service const* s, int day,
   auto const dep_tz = sched_.stations_[dep_station_idx]->timez_;
   auto const provider_first_section = s->sections()->Get(0)->provider();
   auto const dep_time = get_adjusted_event_time(
-      sched_.schedule_begin_, day - first_day_,
+      tz_cache_, sched_.schedule_begin_, day - first_day_,
       s->times()->Get(section_idx * 2 + 1), dep_tz,
       c_str(dep_station->timezone_name()),
       provider_first_section == nullptr
@@ -195,7 +195,7 @@ full_trip_id graph_builder::get_full_trip_id(Service const* s, int day,
   auto const provider_last_section =
       s->sections()->Get(s->sections()->size() - 1)->provider();
   auto const arr_time = get_adjusted_event_time(
-      sched_.schedule_begin_, day - first_day_,
+      tz_cache_, sched_.schedule_begin_, day - first_day_,
       s->times()->Get(s->times()->size() - 2), arr_tz,
       c_str(arr_station->timezone_name()),
       provider_last_section == nullptr
@@ -572,8 +572,8 @@ light_connection graph_builder::section_to_connection(
                                     ? nullptr
                                     : section->provider()->timezone_name();
   std::tie(dep_motis_time, arr_motis_time) = get_event_times(
-      sched_.schedule_begin_, day - first_day_, prev_arr, dep_time, arr_time,
-      from.timez_, c_str(from_station->timezone_name()),
+      tz_cache_, sched_.schedule_begin_, day - first_day_, prev_arr, dep_time,
+      arr_time, from.timez_, c_str(from_station->timezone_name()),
       c_str(section_timezone), to.timez_, c_str(to_station->timezone_name()),
       c_str(section_timezone), adjusted);
 
@@ -858,18 +858,17 @@ schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
     sched->name_ = serialized->name()->str();
   }
 
-  clog_import_step("build graph", progress_offset);
+  clog_import_step("Build Graph", progress_offset, 90);
   graph_builder builder(*sched, serialized->interval(), opt, progress_offset);
   builder.add_stations(serialized->stations());
   if (serialized->meta_stations() != nullptr) {
     builder.link_meta_stations(serialized->meta_stations());
   }
 
-  std::clog << '\0' << 'S' << "Build Services" << '\0';
   builder.add_services(serialized->services());
   if (opt.apply_rules_) {
     scoped_timer timer("rule services");
-    std::clog << '\0' << 'S' << "Build Rule Services" << '\0';
+    clog_import_step("Rule Services", 90, 92);
     build_rule_routes(builder, serialized->rule_services());
   }
 
@@ -877,26 +876,38 @@ schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
     sched->expanded_trips_.finish_map();
   }
 
+  clog_import_step("Footpaths", 92, 93);
   builder.add_footpaths(serialized->footpaths());
 
+  clog_import_step("Connect Reverse", 93, 94);
   builder.connect_reverse();
+
+  clog_import_step("Sort Trips", 94, 95);
   builder.sort_trips();
 
   if (opt.expand_footpaths_) {
+    clog_import_step("Expand Footpaths", 95, 96);
     calc_footpaths(*sched);
   }
 
   sched->hash_ = serialized->hash();
   sched->route_count_ = builder.next_route_index_;
   sched->node_count_ = builder.next_node_id_;
+
+  clog_import_step("Lower Bounds", 96, 100);
   sched->transfers_lower_bounds_fwd_ = build_interchange_graph(
       sched->station_nodes_, sched->route_count_, search_dir::FWD);
+  clog_import_progress(25);
   sched->transfers_lower_bounds_bwd_ = build_interchange_graph(
       sched->station_nodes_, sched->route_count_, search_dir::BWD);
+  clog_import_progress(50);
   sched->travel_time_lower_bounds_fwd_ =
       build_station_graph(sched->station_nodes_, search_dir::FWD);
+  clog_import_progress(75);
   sched->travel_time_lower_bounds_bwd_ =
       build_station_graph(sched->station_nodes_, search_dir::BWD);
+  clog_import_progress(100);
+
   sched->waiting_time_rules_ = load_waiting_time_rules(
       opt.wzr_classes_path_, opt.wzr_matrix_path_, sched->categories_);
   sched->schedule_begin_ -= SCHEDULE_OFFSET_MINUTES * 60;
