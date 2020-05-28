@@ -58,12 +58,12 @@ inline std::vector<journey> bw_search(
 }
 
 template <typename RaptorFun, typename Query>
-inline std::vector<journey> raptor(Query& q, raptor_statistics& stats,
-                                   schedule const& sched,
-                                   raptor_schedule const& raptor_sched,
-                                   raptor_timetable const& timetable,
-                                   raptor_timetable const& backward_timetable,
-                                   RaptorFun const& raptor_search) {
+inline std::vector<journey> raptor_gen(
+    Query& q, raptor_statistics& stats, schedule const& sched,
+    raptor_schedule const& raptor_sched, raptor_timetable const& timetable,
+    raptor_timetable const& backward_timetable,
+    RaptorFun const& raptor_search) {
+
   if (!q.forward_) {
     return bw_search(q, stats, sched, raptor_sched, timetable,
                      backward_timetable, raptor_search);
@@ -123,8 +123,9 @@ inline std::vector<journey> cpu_raptor(raptor_query& q,
                                        raptor_schedule const& raptor_sched,
                                        raptor_timetable const& tt,
                                        raptor_timetable const& btt) {
-  return raptor(q, stats, sched, raptor_sched, tt, btt,
-                [&](raptor_query& q) { return invoke_cpu_raptor(q, stats); });
+  return raptor_gen(
+      q, stats, sched, raptor_sched, tt, btt,
+      [&](raptor_query& q) { return invoke_cpu_raptor(q, stats); });
 }
 
 }  // namespace motis::raptor

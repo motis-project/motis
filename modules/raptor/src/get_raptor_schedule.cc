@@ -375,7 +375,8 @@ std::unique_ptr<raptor_schedule> transformable_to_schedule(
     raptor_sched->transfer_times_.push_back(s.transfer_time_);
     raptor_sched->raptor_id_to_eva_.push_back(s.eva_);
     raptor_sched->eva_to_raptor_id_.emplace(
-        s.eva_, raptor_sched->eva_to_raptor_id_.size());
+        s.eva_,
+        static_cast<station_id>(raptor_sched->eva_to_raptor_id_.size()));
 
     // set equivalent meta stations
     for (auto const equi_s_id : s.equivalent_) {
