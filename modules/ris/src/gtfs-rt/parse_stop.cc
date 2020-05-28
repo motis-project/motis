@@ -74,7 +74,7 @@ void update_stop_idx(stop_context& current_stop, schedule& sched,
 
       current_stop.idx_ = current_stop.idx_ + 1;
       if (has_stop) {
-        current_stop.station_id_ = parse_stop_id(stop_time_upd.stop_id());
+        current_stop.station_id_ = stop_time_upd.stop_id();
       } else if (has_sequ && current_stop.idx_ >= 0) {
         current_stop.station_id_ = access::trip_stop{&trip, current_stop.idx_}
                                        .get_station(sched)
@@ -93,14 +93,13 @@ void update_stop_idx(stop_context& current_stop, schedule& sched,
     // 2. the numbers increase not consecutively along the route
     // whichever situation does not matter a search is required
     if (has_stop) {
-      auto const stop_id = parse_stop_id(stop_time_upd.stop_id());
-      current_stop.station_id_ = stop_id;
+      current_stop.station_id_ = stop_time_upd.stop_id();
       current_stop.seq_no_ = has_sequ ? stop_time_upd.stop_sequence()
                                       : std::numeric_limits<int>::max();
       if (!has_sequ || stop_skips == nullptr ||
           !stop_skips->is_skipped(current_stop.seq_no_)) {
-        current_stop.idx_ =
-            get_future_stop_idx(trip, sched, current_stop.idx_, stop_id);
+        current_stop.idx_ = get_future_stop_idx(trip, sched, current_stop.idx_,
+                                                stop_time_upd.stop_id());
       } else {
         current_stop.is_skip_known_ = true;
       }

@@ -28,28 +28,35 @@ struct ris_gtfsrt_addition_message_itest_t0 : public gtfsrt_itest {
 
 TEST_F(ris_gtfsrt_addition_message_itest_t0,
        check_initial_addition_train_handling_at_t0) {
-  auto trp_added_delay = get_trip(sched(), "8501026", 0, 1561597920, "8503000",
-                                  1561600800, "9-1-A-j19-1");
+  auto trp_added_delay = get_trip(sched(), "8501026:0:2", 0, 1561597920,
+                                  "8503000:0:14", 1561600800, "9-1-A-j19-1");
 
   EXPECT_EQ(2, trp_added_delay->edges_->size());
   auto trip_events = get_trip_event_info(sched(), trp_added_delay);
   EXPECT_EQ(3, trip_events.size());
 
-  EXPECT_EQ(motis_time(1561597920), trip_events.at("8501026").dep_);  // seq 1
-  EXPECT_EQ(motis_time(1561599120), trip_events.at("8501008").arr_);  // seq 2
-  EXPECT_EQ(motis_time(1561599300), trip_events.at("8501008").dep_);  // seq 2
-  EXPECT_EQ(motis_time(1561600740), trip_events.at("8503000").arr_);  // seq 3
+  EXPECT_EQ(motis_time(1561597920),
+            trip_events.at("8501026:0:2").dep_);  // seq 1
+  EXPECT_EQ(motis_time(1561599120),
+            trip_events.at("8501008:0:2").arr_);  // seq 2
+  EXPECT_EQ(motis_time(1561599300),
+            trip_events.at("8501008:0:2").dep_);  // seq 2
+  EXPECT_EQ(motis_time(1561600740),
+            trip_events.at("8503000:0:14").arr_);  // seq 3
 
-  auto trp_added_skip = get_trip(sched(), "8501008", 0, 1561597920, "8501500",
-                                 1561602000, "9-1-A-j19-2");
+  auto trp_added_skip = get_trip(sched(), "8501008:0:2", 0, 1561597920,
+                                 "8501500:0:3", 1561602000, "9-1-A-j19-2");
 
   EXPECT_EQ(2, trp_added_skip->edges_->size());
   trip_events = get_trip_event_info(sched(), trp_added_skip);
   EXPECT_EQ(3, trip_events.size());
 
-  EXPECT_EQ(motis_time(1561597920), trip_events.at("8501008").dep_);  // seq 1
-  EXPECT_EQ(motis_time(1561599120), trip_events.at("8501026").arr_);  // seq 2
-  EXPECT_EQ(motis_time(1561599180), trip_events.at("8501026").dep_);  // seq 2
+  EXPECT_EQ(motis_time(1561597920),
+            trip_events.at("8501008:0:2").dep_);  // seq 1
+  EXPECT_EQ(motis_time(1561599120),
+            trip_events.at("8501026:0:2").arr_);  // seq 2
+  EXPECT_EQ(motis_time(1561599180),
+            trip_events.at("8501026:0:2").dep_);  // seq 2
   // EXPECT_EQ(motis_time(1561601880), trip_events.at("8501500").arr_);  // seq
   // 4
 }
@@ -63,26 +70,31 @@ struct ris_gtfsrt_addition_message_itest_t1 : public gtfsrt_itest {
 
 TEST_F(ris_gtfsrt_addition_message_itest_t1,
        check_addition_train_handling_at_t1) {
-  auto trp_added_delay = get_trip(sched(), "8501026", 0, 1561597920, "8503000",
-                                  1561600800, "9-1-A-j19-1");
+  auto trp_added_delay = get_trip(sched(), "8501026:0:2", 0, 1561597920,
+                                  "8503000:0:14", 1561600800, "9-1-A-j19-1");
 
   EXPECT_EQ(2, trp_added_delay->edges_->size());
   auto trip_events = get_trip_event_info(sched(), trp_added_delay);
   EXPECT_EQ(3, trip_events.size());
 
-  EXPECT_EQ(motis_time(1561597920), trip_events.at("8501026").dep_);  // seq 1
-  EXPECT_EQ(motis_time(1561599240), trip_events.at("8501008").arr_);  // seq 2
+  EXPECT_EQ(motis_time(1561597920),
+            trip_events.at("8501026:0:2").dep_);  // seq 1
+  EXPECT_EQ(motis_time(1561599240),
+            trip_events.at("8501008:0:2").arr_);  // seq 2
   // EXPECT_EQ(motis_time(1561599420), trip_events.at("8501008").dep_);  // seq
   // 2 - propagated time
-  EXPECT_EQ(motis_time(1561600740), trip_events.at("8503000").arr_);  // seq 3
+  EXPECT_EQ(motis_time(1561600740),
+            trip_events.at("8503000:0:14").arr_);  // seq 3
 
-  auto trp_added_skip = get_trip(sched(), "8501008", 0, 1561597920, "8501500",
-                                 1561602000, "9-1-A-j19-2");
+  auto trp_added_skip = get_trip(sched(), "8501008:0:2", 0, 1561597920,
+                                 "8501500:0:3", 1561602000, "9-1-A-j19-2");
 
   EXPECT_EQ(1, trp_added_skip->edges_->size());
   trip_events = get_trip_event_info(sched(), trp_added_skip);
   EXPECT_EQ(2, trip_events.size());
 
-  EXPECT_EQ(motis_time(1561597920), trip_events.at("8501008").dep_);  // seq 1
-  EXPECT_EQ(motis_time(1561599120), trip_events.at("8501026").arr_);  // seq 2
+  EXPECT_EQ(motis_time(1561597920),
+            trip_events.at("8501008:0:2").dep_);  // seq 1
+  EXPECT_EQ(motis_time(1561599120),
+            trip_events.at("8501026:0:2").arr_);  // seq 2
 }

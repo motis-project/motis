@@ -26,8 +26,13 @@
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
 #include "motis/ris/gtfs-rt/gtfsrt_parser.h"
+#include "motis/ris/ris_message.h"
 #include "motis/ris/risml/risml_parser.h"
 #include "motis/ris/zip_reader.h"
+
+#ifdef GetMessage
+#undef GetMessage
+#endif
 
 namespace fs = boost::filesystem;
 namespace db = lmdb;
@@ -637,9 +642,30 @@ void ris::init(motis::module::registry& r) {
                 fbb.CreateVector(utl::to_vec(
                     sched.gtfs_trip_ids_,
                     [&](mcd::pair<gtfs_trip_id, ptr<trip const>> const& id) {
+                      // SBB HRD data uses eva numbers
+                      // GTFS uses ${eva number}:0:${track}
+                      // To use SBB GTFS station indices in HRD:
+                      // -> cut and export the eva number (the part until ':')
+                      auto const cut = [](std::string const& s) {
+                        auto const i = s.find_first_of(':');
+                        return i != std::string::npos ? s.substr(0, i) : s;
+                      };
+                      auto const& p = id.second->id_.primary_;
+                      auto const& s = id.second->id_.secondary_;
                       return CreateGTFSID(
                           fbb, fbb.CreateString(id.first.trip_id_),
-                          id.first.start_date_, to_fbs(sched, fbb, id.second));
+                          id.first.start_date_,
+                          CreateTripId(
+                              fbb,
+                              fbb.CreateString(
+                                  cut(sched.stations_.at(p.station_id_)
+                                          ->eva_nr_.str())),
+                              p.train_nr_, motis_to_unixtime(sched, p.time_),
+                              fbb.CreateString(
+                                  cut(sched.stations_.at(s.target_station_id_)
+                                          ->eva_nr_.str())),
+                              motis_to_unixtime(sched, s.target_time_),
+                              fbb.CreateString(s.line_id_)));
                     })))
                 .Union());
         auto const msg = make_msg(fbb);

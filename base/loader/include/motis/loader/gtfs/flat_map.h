@@ -22,8 +22,7 @@ struct flat_map {
   };
 
   std::vector<T> to_vector() {
-    return to_vec(begin(elements_), end(elements_),
-                  [](entry_t const& el) { return el.second; });
+    return utl::to_vec(elements_, [](entry_t const& el) { return el.second; });
   }
 
   template <typename... Args>
@@ -41,6 +40,11 @@ struct flat_map {
     }
     return it->second;
   }
+
+  T& front() { return elements_[0]; }
+  T& back() { return elements_[elements_.size() - 1]; }
+  T const& front() const { return elements_[0]; }
+  T const& back() const { return elements_[elements_.size() - 1]; }
 
   iterator begin() { return elements_.begin(); }
   iterator end() { return elements_.end(); }

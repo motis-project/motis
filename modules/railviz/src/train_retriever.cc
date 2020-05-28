@@ -6,7 +6,7 @@
 
 namespace motis::railviz {
 
-constexpr auto const RELEVANT_CLASSES = NUM_CLASSES - 1;
+constexpr auto const RELEVANT_CLASSES = NUM_CLASSES;
 
 train_retriever::train_retriever(
     schedule const& s,
