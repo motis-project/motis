@@ -198,7 +198,10 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
       if ((cat->output_rule_ &
            category::output::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY) ==
           category::output::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY) {
-        cat->name_ = r->short_name_;
+        auto const is_number =
+            std::all_of(begin(r->short_name_), end(r->short_name_),
+                        [](auto c) { return std::isdigit(c); });
+        cat->name_ = is_number ? cat->name_ : r->short_name_;
       }
       return utl::get_or_create(fbs_categories, *cat, [&]() {
         return CreateCategory(fbb, fbb.CreateString(cat->name_),
