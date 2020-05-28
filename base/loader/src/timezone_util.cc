@@ -5,6 +5,7 @@
 
 #include "flatbuffers/flatbuffers.h"
 
+#include "utl/get_or_create.h"
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
@@ -14,6 +15,17 @@
 using namespace motis::logging;
 
 namespace motis::loader {
+
+timezone_name_idx tz_cache::lookup_name(std::string_view timezone_name) {
+  if (prev_name_ == timezone_name) {
+    return prev_name_idx_;
+  } else {
+    prev_name_ = timezone_name;
+    return prev_name_idx_ =
+               utl::get_or_create(timezone_name_idx_, timezone_name,
+                                  [&]() { return timezone_name_idx_.size(); });
+  }
+}
 
 int day_idx(int day_idx_schedule_first_day, int day_idx_schedule_last_day,
             int day_idx_season_event_day) {
@@ -54,32 +66,38 @@ timezone create_timezone(int general_offset, int season_offset,
   return {general_offset, {season_offset, season_begin, season_end}};
 }
 
-time get_event_time(std::time_t const schedule_begin, int day_idx,
-                    int local_time, timezone const* tz, char const* stop_tz,
-                    char const* provider_tz) {
+time get_event_time(tz_cache& cache, std::time_t const schedule_begin,
+                    int day_idx, int local_time, timezone const* tz,
+                    char const* stop_tz, char const* provider_tz) {
   if (tz != nullptr) {
     return tz->to_motis_time(day_idx, local_time);
   } else if (stop_tz != nullptr || provider_tz != nullptr) {
     try {
-      try {
-        date::time_zone const* zone =
-            date::locate_zone(stop_tz != nullptr ? stop_tz : provider_tz);
-        auto const zero =
-            date::sys_seconds(std::chrono::seconds(schedule_begin));
-        auto const abs_zoned_time = date::zoned_time<std::chrono::seconds>(
-            zone, date::local_seconds(std::chrono::seconds(
-                      schedule_begin +
-                      (day_idx + SCHEDULE_OFFSET_DAYS) * MINUTES_A_DAY * 60 +
-                      local_time * 60)));
-        return std::chrono::duration_cast<std::chrono::minutes>(
-                   abs_zoned_time.get_sys_time() - zero)
-            .count();
-      } catch (std::exception const& e) {
-        LOG(error)
-            << "timezone conversion error (link binary with ianatzdb-res?): "
-            << e.what();
-        return to_motis_time(day_idx, local_time);
-      }
+      auto const tz = stop_tz != nullptr ? stop_tz : provider_tz;
+      return utl::get_or_create(
+          cache.cache_,
+          tz_cache_key{cache.lookup_name(tz), static_cast<uint8_t>(day_idx),
+                       static_cast<time>(local_time)},
+          [&]() {
+            date::time_zone const* zone = date::locate_zone(tz);
+            auto const zero =
+                date::sys_seconds(std::chrono::seconds(schedule_begin));
+            auto const abs_zoned_time = date::zoned_time<std::chrono::seconds>(
+                zone,
+                date::local_seconds(std::chrono::seconds(
+                    schedule_begin +
+                    (day_idx + SCHEDULE_OFFSET_DAYS) * MINUTES_A_DAY * 60 +
+                    local_time * 60)));
+            return static_cast<time>(
+                std::chrono::duration_cast<std::chrono::minutes>(
+                    abs_zoned_time.get_sys_time() - zero)
+                    .count());
+          });
+    } catch (std::exception const& e) {
+      LOG(error)
+          << "timezone conversion error (link binary with ianatzdb-res?): "
+          << e.what();
+      return to_motis_time(day_idx, local_time);
     } catch (...) {
       return to_motis_time(day_idx, local_time);
     }
@@ -88,22 +106,24 @@ time get_event_time(std::time_t const schedule_begin, int day_idx,
   }
 }
 
-time get_adjusted_event_time(std::time_t const schedule_begin, int day_idx,
-                             int local_time, timezone const* tz,
+time get_adjusted_event_time(tz_cache& cache, std::time_t const schedule_begin,
+                             int day_idx, int local_time, timezone const* tz,
                              char const* stop_tz, char const* provider_tz) {
-  auto const t = get_event_time(schedule_begin, day_idx, local_time, tz,
+  auto const t = get_event_time(cache, schedule_begin, day_idx, local_time, tz,
                                 stop_tz, provider_tz);
   if (t != INVALID_TIME) {
     return t;
   }
 
-  auto const adjusted = get_event_time(
-      schedule_begin, day_idx, local_time + kAdjust, tz, stop_tz, provider_tz);
+  auto const adjusted =
+      get_event_time(cache, schedule_begin, day_idx, local_time + kAdjust, tz,
+                     stop_tz, provider_tz);
   utl::verify(adjusted != INVALID_TIME, "adjusted needs to be valid");
   return adjusted;
 }
 
-std::pair<time, time> get_event_times(std::time_t const schedule_begin,
+std::pair<time, time> get_event_times(tz_cache& cache,
+                                      std::time_t const schedule_begin,
                                       int day_idx,  //
                                       int prev_arr_motis_time,
                                       int curr_dep_local_time,
@@ -119,18 +139,18 @@ std::pair<time, time> get_event_times(std::time_t const schedule_begin,
   auto const total_offset = offset + kAdjust;
   auto const prev_adjusted = adjusted;
 
-  auto dep_motis_time =
-      get_event_time(schedule_begin, day_idx, curr_dep_local_time + offset,
-                     tz_dep, dep_stop_tz, dep_provider_tz);
-  auto arr_motis_time =
-      get_event_time(schedule_begin, day_idx, curr_arr_local_time + offset,
-                     tz_arr, arr_stop_tz, arr_provider_tz);
+  auto dep_motis_time = get_event_time(cache, schedule_begin, day_idx,
+                                       curr_dep_local_time + offset, tz_dep,
+                                       dep_stop_tz, dep_provider_tz);
+  auto arr_motis_time = get_event_time(cache, schedule_begin, day_idx,
+                                       curr_arr_local_time + offset, tz_arr,
+                                       arr_stop_tz, arr_provider_tz);
 
   if (prev_arr_motis_time > dep_motis_time || dep_motis_time == INVALID_TIME) {
-    dep_motis_time = get_event_time(schedule_begin, day_idx,
+    dep_motis_time = get_event_time(cache, schedule_begin, day_idx,
                                     curr_dep_local_time + total_offset, tz_dep,
                                     dep_stop_tz, dep_provider_tz);
-    arr_motis_time = get_event_time(schedule_begin, day_idx,
+    arr_motis_time = get_event_time(cache, schedule_begin, day_idx,
                                     curr_arr_local_time + total_offset, tz_arr,
                                     arr_stop_tz, arr_provider_tz);
     adjusted = true;
@@ -138,7 +158,7 @@ std::pair<time, time> get_event_times(std::time_t const schedule_begin,
   }
 
   if (arr_motis_time == INVALID_TIME) {
-    arr_motis_time = get_event_time(schedule_begin, day_idx,
+    arr_motis_time = get_event_time(cache, schedule_begin, day_idx,
                                     curr_arr_local_time + total_offset, tz_arr,
                                     arr_stop_tz, arr_provider_tz);
     adjusted = true;
@@ -146,7 +166,7 @@ std::pair<time, time> get_event_times(std::time_t const schedule_begin,
   }
 
   if (dep_motis_time == INVALID_TIME) {
-    dep_motis_time = get_event_time(schedule_begin, day_idx,
+    dep_motis_time = get_event_time(cache, schedule_begin, day_idx,
                                     curr_dep_local_time + total_offset, tz_dep,
                                     dep_stop_tz, dep_provider_tz);
     adjusted = true;
@@ -154,7 +174,7 @@ std::pair<time, time> get_event_times(std::time_t const schedule_begin,
   }
 
   if (arr_motis_time < dep_motis_time) {
-    arr_motis_time = get_event_time(schedule_begin, day_idx,
+    arr_motis_time = get_event_time(cache, schedule_begin, day_idx,
                                     curr_arr_local_time + total_offset, tz_arr,
                                     arr_stop_tz, arr_provider_tz);
     adjusted = true;

@@ -67,6 +67,7 @@ void import_status::set_progress_bounds(std::string const& name,  //
   s.output_low_ = output_low;
   s.output_high_ = output_high;
   s.input_high_ = input_high;
+  s.progress_ = output_low;
   if (update(name, s)) {
     print();
   }

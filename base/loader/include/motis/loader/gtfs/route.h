@@ -23,8 +23,9 @@ struct category {
     BASE = 0b1111U,
   };
 
-  CISTA_COMPARABLE() std::string name_;
-  unsigned output_rule_{2};
+  CISTA_COMPARABLE()
+  std::string name_;
+  unsigned output_rule_{PRINT_ID};
 };
 
 struct route {
