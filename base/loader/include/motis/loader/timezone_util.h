@@ -19,15 +19,15 @@ using timezone_name_idx = uint8_t;
 
 struct tz_cache_key {
   CISTA_COMPARABLE()
-  timezone_name_idx tz_;
-  uint8_t day_idx_;
-  time minutes_after_midnight_;
+  timezone_name_idx tz_{0U};
+  uint8_t day_idx_{0U};
+  time minutes_after_midnight_{0U};
 };
 
 struct tz_cache {
   timezone_name_idx lookup_name(std::string_view timezone_name);
   std::string prev_name_;
-  timezone_name_idx prev_name_idx_;
+  timezone_name_idx prev_name_idx_{0U};
   mcd::hash_map<std::string, timezone_name_idx> timezone_name_idx_;
   mcd::hash_map<tz_cache_key, time> cache_;
 };
