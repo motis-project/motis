@@ -194,15 +194,14 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   };
 
   auto get_or_create_category = [&](route const* r) {
-    if (auto const cat = r->get_category(); cat.has_value()) {
+    if (auto cat = r->get_category(); cat.has_value()) {
+      if ((cat->output_rule_ &
+           category::output::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY) ==
+          category::output::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY) {
+        cat->name_ = r->short_name_;
+      }
       return utl::get_or_create(fbs_categories, *cat, [&]() {
-        auto name = cat->name_;
-        if ((cat->output_rule_ &
-             category::output::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY) ==
-            category::output::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY) {
-          name = r->short_name_;
-        }
-        return CreateCategory(fbb, fbb.CreateString(name),
+        return CreateCategory(fbb, fbb.CreateString(cat->name_),
                               cat->output_rule_ & category::output::BASE);
       });
     } else {
