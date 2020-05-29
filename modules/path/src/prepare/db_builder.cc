@@ -156,7 +156,7 @@ struct db_builder::impl {
     seq_segs_.push_back(seq_segs);
 
     auto const tile = feature_inserter_->insert(f);
-    return {f.id_, tiles::make_tile_key(tile)};
+    return {f.id_, tiles::tile_to_key(tile)};
   }
 
   void add_seq(size_t seq_idx, resolved_station_seq const& seq,

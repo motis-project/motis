@@ -58,7 +58,7 @@ struct path_database_query {
 
   void execute(path_database const&);
   void resolve_sequences_and_build_subqueries(lmdb::cursor&);
-  void execute_subquery(tiles::tile_index_t, subquery&, lmdb::cursor&,
+  void execute_subquery(tiles::tile_key_t, subquery&, lmdb::cursor&,
                         tiles::pack_handle const&);
 
   flatbuffers::Offset<PathSeqResponse> write_sequence(module::message_creator&,
@@ -71,7 +71,7 @@ struct path_database_query {
   int zoom_level_;
 
   std::vector<resolvable_sequence> sequences_;
-  mcd::hash_map<tiles::tile_index_t, subquery> subqueries_;
+  mcd::hash_map<tiles::tile_key_t, subquery> subqueries_;
   std::vector<std::unique_ptr<resolvable_feature>> extras_;
 };
 

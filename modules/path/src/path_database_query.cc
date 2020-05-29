@@ -288,7 +288,7 @@ void unpack_features(
 }
 
 void path_database_query::execute_subquery(
-    tiles::tile_index_t const hint, subquery& q, lmdb::cursor& cursor,
+    tiles::tile_key_t const hint, subquery& q, lmdb::cursor& cursor,
     tiles::pack_handle const& pack_handle) {
   std::sort(begin(q.mem_), end(q.mem_), [](auto const& lhs, auto const& rhs) {
     return std::tie(lhs->min_clasz_, lhs->feature_id_) <
@@ -308,7 +308,7 @@ void path_database_query::execute_subquery(
             std::make_pair(&*lb, &*lb + std::distance(lb, ub));
       });
 
-  auto const tile = tiles::tile_key_to_tile(hint);
+  auto const tile = tiles::key_to_tile(hint);
   tiles::pack_records_foreach(cursor, tile, [&](auto, auto pack_record) {
     unpack_features(
         pack_handle.get(pack_record), query_clasz_bounds,
