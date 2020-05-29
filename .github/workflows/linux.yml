@@ -84,11 +84,11 @@ jobs:
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-linux-${{ toJson(matrix.config) }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          key: buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ matrix.config.cxxflags }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
-            buildcache-linux-${{ toJson(matrix.config) }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
-            buildcache-linux-${{ toJson(matrix.config) }}-${{ hashFiles('.pkg') }}-
-            buildcache-linux-${{ toJson(matrix.config) }}-
+            buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ matrix.config.cxxflags }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ matrix.config.cxxflags }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-
+            buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ matrix.config.cxxflags }}-${{ matrix.config.lint }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
