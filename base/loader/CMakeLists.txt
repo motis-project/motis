@@ -27,6 +27,7 @@ target_link_libraries(motis-loader
   flatbuffers64
   motis-core
   date
+  geo
   tz
 )
 target_compile_options(motis-loader PRIVATE ${MOTIS_CXX_FLAGS})

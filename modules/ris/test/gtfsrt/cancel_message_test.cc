@@ -55,34 +55,34 @@ TEST_F(gtfsrt_cancel_test, simple_cancel) {
   auto inner_msg = reinterpret_cast<CancelMessage const*>(outer_msg->content());
 
   auto id = inner_msg->trip_id();
-  EXPECT_STREQ("8503000", id->station_id()->c_str());
+  EXPECT_STREQ("8503000:0:41/42", id->station_id()->c_str());
   EXPECT_EQ(1561597200 + TIMEZONE_OFFSET, id->schedule_time());
 
   auto events = inner_msg->events();
   ASSERT_EQ(34, events->size());
 
   auto e0 = events->Get(0);
-  EXPECT_STREQ("8503000", e0->station_id()->c_str());
+  EXPECT_STREQ("8503000:0:41/42", e0->station_id()->c_str());
   EXPECT_EQ(EventType_DEP, e0->type());
   EXPECT_EQ(1561597200 + TIMEZONE_OFFSET, e0->schedule_time());
 
   auto e1 = events->Get(1);
-  EXPECT_STREQ("8503020", e1->station_id()->c_str());
+  EXPECT_STREQ("8503020:0:4", e1->station_id()->c_str());
   EXPECT_EQ(EventType_ARR, e1->type());
   EXPECT_EQ(1561597320 + TIMEZONE_OFFSET, e1->schedule_time());
 
   auto e2 = events->Get(2);
-  EXPECT_STREQ("8503020", e2->station_id()->c_str());
+  EXPECT_STREQ("8503020:0:4", e2->station_id()->c_str());
   EXPECT_EQ(EventType_DEP, e2->type());
   EXPECT_EQ(1561597320 + TIMEZONE_OFFSET, e2->schedule_time());
 
   auto e32 = events->Get(32);
-  EXPECT_STREQ("8502114", e32->station_id()->c_str());
+  EXPECT_STREQ("8502114:0:1", e32->station_id()->c_str());
   EXPECT_EQ(EventType_DEP, e32->type());
   EXPECT_EQ(1561600500 + TIMEZONE_OFFSET, e32->schedule_time());
 
   auto e33 = events->Get(33);
-  EXPECT_STREQ("8502113", e33->station_id()->c_str());
+  EXPECT_STREQ("8502113:0:4", e33->station_id()->c_str());
   EXPECT_EQ(EventType_ARR, e33->type());
   EXPECT_EQ(1561600800 + TIMEZONE_OFFSET, e33->schedule_time());
 }

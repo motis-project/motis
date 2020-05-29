@@ -81,7 +81,7 @@ TEST_F(gtfsrt_delay_test, simple_delay) {
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
   auto id = inner_msg->trip_id();
-  EXPECT_STREQ("8502113", id->station_id()->c_str());
+  EXPECT_STREQ("8502113:0:1", id->station_id()->c_str());
   EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, id->schedule_time());
   EXPECT_EQ(DelayType_Is, inner_msg->type());
 
@@ -89,25 +89,25 @@ TEST_F(gtfsrt_delay_test, simple_delay) {
   ASSERT_EQ(4, events->size());
 
   auto e0 = events->Get(0);
-  EXPECT_STREQ("8502113", e0->base()->station_id()->c_str());
+  EXPECT_STREQ("8502113:0:1", e0->base()->station_id()->c_str());
   EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, e0->base()->schedule_time());
   EXPECT_EQ(EventType_DEP, e0->base()->type());
   EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, e0->updated_time());
 
   auto e1 = events->Get(1);
-  EXPECT_STREQ("8502247", e1->base()->station_id()->c_str());
+  EXPECT_STREQ("8502247:0:5", e1->base()->station_id()->c_str());
   EXPECT_EQ(1561598520 + TIMEZONE_OFFSET, e1->base()->schedule_time());
   EXPECT_EQ(EventType_ARR, e1->base()->type());
   EXPECT_EQ(1561598460 + TIMEZONE_OFFSET, e1->updated_time());
 
   auto e2 = events->Get(2);
-  EXPECT_STREQ("8502247", e2->base()->station_id()->c_str());
+  EXPECT_STREQ("8502247:0:5", e2->base()->station_id()->c_str());
   EXPECT_EQ(1561598520 + TIMEZONE_OFFSET, e2->base()->schedule_time());
   EXPECT_EQ(EventType_DEP, e2->base()->type());
   EXPECT_EQ(1561598520 + TIMEZONE_OFFSET, e2->updated_time());
 
   auto e3 = events->Get(3);
-  EXPECT_STREQ("8500309", e3->base()->station_id()->c_str());
+  EXPECT_STREQ("8500309:0:5", e3->base()->station_id()->c_str());
   EXPECT_EQ(1561598940 + TIMEZONE_OFFSET, e3->base()->schedule_time());
   EXPECT_EQ(EventType_ARR, e3->base()->type());
   EXPECT_EQ(1561598700 + TIMEZONE_OFFSET, e3->updated_time());
@@ -175,7 +175,7 @@ TEST_F(gtfsrt_delay_test, simple_delay2) {
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
   auto id = inner_msg->trip_id();
-  EXPECT_STREQ("8502113", id->station_id()->c_str());
+  EXPECT_STREQ("8502113:0:1", id->station_id()->c_str());
   EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, id->schedule_time());
   EXPECT_EQ(DelayType_Is, inner_msg->type());
 
@@ -183,25 +183,25 @@ TEST_F(gtfsrt_delay_test, simple_delay2) {
   ASSERT_EQ(4, events->size());
 
   auto e0 = events->Get(0);
-  EXPECT_STREQ("8502113", e0->base()->station_id()->c_str());
+  EXPECT_STREQ("8502113:0:1", e0->base()->station_id()->c_str());
   EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, e0->base()->schedule_time());
   EXPECT_EQ(EventType_DEP, e0->base()->type());
   EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, e0->updated_time());
 
   auto e1 = events->Get(1);
-  EXPECT_STREQ("8502247", e1->base()->station_id()->c_str());
+  EXPECT_STREQ("8502247:0:5", e1->base()->station_id()->c_str());
   EXPECT_EQ(1561598520 + TIMEZONE_OFFSET, e1->base()->schedule_time());
   EXPECT_EQ(EventType_ARR, e1->base()->type());
   EXPECT_EQ(1561598460 + TIMEZONE_OFFSET, e1->updated_time());
 
   auto e2 = events->Get(2);
-  EXPECT_STREQ("8502247", e2->base()->station_id()->c_str());
+  EXPECT_STREQ("8502247:0:5", e2->base()->station_id()->c_str());
   EXPECT_EQ(1561598520 + TIMEZONE_OFFSET, e2->base()->schedule_time());
   EXPECT_EQ(EventType_DEP, e2->base()->type());
   EXPECT_EQ(1561598700 + TIMEZONE_OFFSET, e2->updated_time());
 
   auto e3 = events->Get(3);
-  EXPECT_STREQ("8500309", e3->base()->station_id()->c_str());
+  EXPECT_STREQ("8500309:0:5", e3->base()->station_id()->c_str());
   EXPECT_EQ(1561598940 + TIMEZONE_OFFSET, e3->base()->schedule_time());
   EXPECT_EQ(EventType_ARR, e3->base()->type());
   EXPECT_EQ(1561599240 + TIMEZONE_OFFSET, e3->updated_time());

@@ -3,6 +3,10 @@
 #include "flatbuffers/flatbuffers.h"
 #include "flatbuffers/reflection.h"
 
+#ifdef GetMessage
+#undef GetMessage
+#endif
+
 #include "motis/protocol/Message_generated.h"
 
 #include "motis/core/common/typed_flatbuffer.h"

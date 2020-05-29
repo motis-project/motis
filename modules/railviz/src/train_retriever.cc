@@ -133,7 +133,7 @@ std::unique_ptr<edge_geo_index> make_edge_rtree(
                                           std::move(included_station_pairs));
 }
 
-constexpr auto const RELEVANT_CLASSES = NUM_CLASSES - 1;
+constexpr auto const RELEVANT_CLASSES = NUM_CLASSES;
 
 train_retriever::train_retriever(
     schedule const& sched,

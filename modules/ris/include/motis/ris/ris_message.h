@@ -5,6 +5,10 @@
 
 #include "flatbuffers/flatbuffers.h"
 
+#ifdef GetMessage
+#undef GetMessage
+#endif
+
 #include "motis/protocol/RISMessage_generated.h"
 
 #include "motis/core/common/typed_flatbuffer.h"

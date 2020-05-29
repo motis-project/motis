@@ -24,6 +24,7 @@
 
 #include "motis/loader/bitfield.h"
 #include "motis/loader/loader_options.h"
+#include "motis/loader/timezone_util.h"
 
 #include "motis/schedule-format/Schedule_generated.h"
 
@@ -146,8 +147,7 @@ struct graph_builder {
 
   station_node* get_station_node(Station const* station) const;
 
-  full_trip_id get_full_trip_id(Service const* s, int day,
-                                int section_idx = 0) const;
+  full_trip_id get_full_trip_id(Service const* s, int day, int section_idx = 0);
 
   merged_trips_idx create_merged_trips(Service const* s, int day_idx);
 
@@ -231,6 +231,7 @@ struct graph_builder {
   unsigned lcon_count_{0U};
   unsigned next_route_index_{0U};
   unsigned next_node_id_{0U};
+  tz_cache tz_cache_;
   std::map<Category const*, int> categories_;
   std::map<std::string, int> tracks_;
   std::map<AttributeInfo const*, attribute*> attributes_;

@@ -15,7 +15,8 @@ struct transfer {
     RECOMMENDED_TRANSFER,
     TIMED_TRANSFER,
     MIN_TRANSFER_TIME,
-    NOT_POSSIBLE
+    NOT_POSSIBLE,
+    GENERATED
   };
 
   transfer() = default;

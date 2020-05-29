@@ -1,11 +1,13 @@
 #include "gtest/gtest.h"
 
-#include "motis/loader/loader.h"
-#include "motis/ris/gtfs-rt/gtfsrt_parser.h"
 #include "motis/ris/ris_message.h"
 #include "motis/test/schedule/gtfs_minimal_swiss.h"
 
 #include "./gtfsrt_test.h"
+
+#ifdef GetMessage
+#undef GetMessage
+#endif
 
 using namespace motis;
 using namespace motis::test;
@@ -31,29 +33,29 @@ void gtfsrt_additional_test::check_addition_message(
       reinterpret_cast<AdditionMessage const*>(outer_msg->content());
 
   auto id = inner_msg->trip_id();
-  EXPECT_STREQ("8501026", id->station_id()->c_str());
+  EXPECT_STREQ("8501026:0:2", id->station_id()->c_str());
   EXPECT_EQ(1561597920, id->schedule_time());
 
   auto events = inner_msg->events();
   ASSERT_EQ(4, events->size());
 
   auto e0 = events->Get(0)->base();
-  EXPECT_STREQ("8501026", e0->station_id()->c_str());
+  EXPECT_STREQ("8501026:0:2", e0->station_id()->c_str());
   EXPECT_EQ(1561597920, e0->schedule_time());
   EXPECT_EQ(EventType_DEP, e0->type());
 
   auto e1 = events->Get(1)->base();
-  EXPECT_STREQ("8501008", e1->station_id()->c_str());
+  EXPECT_STREQ("8501008:0:2", e1->station_id()->c_str());
   EXPECT_EQ(1561599120, e1->schedule_time());
   EXPECT_EQ(EventType_ARR, e1->type());
 
   auto e2 = events->Get(2)->base();
-  EXPECT_STREQ("8501008", e2->station_id()->c_str());
+  EXPECT_STREQ("8501008:0:2", e2->station_id()->c_str());
   EXPECT_EQ(1561599300, e2->schedule_time());
   EXPECT_EQ(EventType_DEP, e2->type());
 
   auto e3 = events->Get(3)->base();
-  EXPECT_STREQ("8503000", e3->station_id()->c_str());
+  EXPECT_STREQ("8503000:0:14", e3->station_id()->c_str());
   EXPECT_EQ(1561600800, e3->schedule_time());
   EXPECT_EQ(EventType_ARR, e3->type());
 }
@@ -175,7 +177,7 @@ TEST_F(gtfsrt_additional_test, receive_additional_and_delay) {
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
   auto id = inner_msg->trip_id();
-  EXPECT_STREQ("8501026", id->station_id()->c_str());
+  EXPECT_STREQ("8501026:0:2", id->station_id()->c_str());
   EXPECT_EQ(1561597920, id->schedule_time());
   EXPECT_EQ(DelayType_Is, inner_msg->type());
 
@@ -183,19 +185,19 @@ TEST_F(gtfsrt_additional_test, receive_additional_and_delay) {
   ASSERT_EQ(3, events->size());
 
   auto e0 = events->Get(0)->base();
-  EXPECT_STREQ("8501008", e0->station_id()->c_str());
+  EXPECT_STREQ("8501008:0:2", e0->station_id()->c_str());
   EXPECT_EQ(1561599120, e0->schedule_time());
   EXPECT_EQ(EventType_ARR, e0->type());
   EXPECT_EQ(1561599120, events->Get(0)->updated_time());
 
   auto e1 = events->Get(1)->base();
-  EXPECT_STREQ("8501008", e1->station_id()->c_str());
+  EXPECT_STREQ("8501008:0:2", e1->station_id()->c_str());
   EXPECT_EQ(1561599300, e1->schedule_time());
   EXPECT_EQ(EventType_DEP, e1->type());
   EXPECT_EQ(1561599180, events->Get(1)->updated_time());
 
   auto e2 = events->Get(2)->base();
-  EXPECT_STREQ("8503000", e2->station_id()->c_str());
+  EXPECT_STREQ("8503000:0:14", e2->station_id()->c_str());
   EXPECT_EQ(1561600800, e2->schedule_time());
   EXPECT_EQ(EventType_ARR, e2->type());
   EXPECT_EQ(1561600800, events->Get(2)->updated_time());
@@ -275,19 +277,19 @@ TEST_F(gtfsrt_additional_test, receive_addition_delay_reroute) {
       reinterpret_cast<AdditionMessage const*>(outer_addition->content());
 
   auto id = inner_addition->trip_id();
-  EXPECT_STREQ("8501008", id->station_id()->c_str());
+  EXPECT_STREQ("8501008:0:2", id->station_id()->c_str());
   EXPECT_EQ(1561599300, id->schedule_time());
 
   auto addition_events = inner_addition->events();
   ASSERT_EQ(2, addition_events->size());
 
   auto e0 = addition_events->Get(0)->base();
-  EXPECT_STREQ("8501008", e0->station_id()->c_str());
+  EXPECT_STREQ("8501008:0:2", e0->station_id()->c_str());
   EXPECT_EQ(1561599300, e0->schedule_time());
   EXPECT_EQ(EventType_DEP, e0->type());
 
   auto e1 = addition_events->Get(1)->base();
-  EXPECT_STREQ("8503000", e1->station_id()->c_str());
+  EXPECT_STREQ("8503000:0:14", e1->station_id()->c_str());
   EXPECT_EQ(1561600800, e1->schedule_time());
   EXPECT_EQ(EventType_ARR, e1->type());
 
@@ -303,20 +305,20 @@ TEST_F(gtfsrt_additional_test, receive_addition_delay_reroute) {
       reinterpret_cast<DelayMessage const*>(outer_delay->content());
 
   id = inner_addition->trip_id();
-  EXPECT_STREQ("8501008", id->station_id()->c_str());
+  EXPECT_STREQ("8501008:0:2", id->station_id()->c_str());
   EXPECT_EQ(1561599300, id->schedule_time());
 
   auto delay_events = inner_delay->events();
   ASSERT_EQ(2, delay_events->size());
 
   e0 = delay_events->Get(0)->base();
-  EXPECT_STREQ("8501008", e0->station_id()->c_str());
+  EXPECT_STREQ("8501008:0:2", e0->station_id()->c_str());
   EXPECT_EQ(1561599300, e0->schedule_time());
   EXPECT_EQ(1561599180, delay_events->Get(0)->updated_time());
   EXPECT_EQ(EventType_DEP, e0->type());
 
   e1 = delay_events->Get(1)->base();
-  EXPECT_STREQ("8503000", e1->station_id()->c_str());
+  EXPECT_STREQ("8503000:0:14", e1->station_id()->c_str());
   EXPECT_EQ(1561600800, e1->schedule_time());
   EXPECT_EQ(1561600800, delay_events->Get(1)->updated_time());
   EXPECT_EQ(EventType_ARR, e1->type());

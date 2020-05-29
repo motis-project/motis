@@ -6,7 +6,6 @@
 #include "utl/parser/csv.h"
 
 #include "motis/core/common/logging.h"
-#include "motis/loader/gtfs/common.h"
 #include "motis/loader/util.h"
 
 using namespace utl;
@@ -24,17 +23,12 @@ static const column_mapping<gtfs_transfer> columns = {
 std::map<stop_pair, transfer> read_transfers(loaded_file f,
                                              stop_map const& stops) {
   motis::logging::scoped_timer timer{"read transfers"};
-
   std::map<stop_pair, transfer> transfers;
   for (auto const& t : read<gtfs_transfer>(f.content(), columns)) {
-    if (parse_stop_id(get<from_stop_id>(t).to_str()) !=
-        parse_stop_id(get<to_stop_id>(t).to_str())) {
-
-      stop_pair key = std::make_pair(
-          stops.at(parse_stop_id(get<from_stop_id>(t).to_str())).get(),
-          stops.at(parse_stop_id(get<to_stop_id>(t).to_str())).get());
+    if (get<from_stop_id>(t).to_str() != get<to_stop_id>(t).to_str()) {
       transfers.insert(std::make_pair(
-          key,
+          std::pair{stops.at(get<from_stop_id>(t).to_str()).get(),
+                    stops.at(get<to_stop_id>(t).to_str()).get()},
           transfer(get<min_transfer_time>(t) / 60, get<transfer_type>(t))));
     }
   }
