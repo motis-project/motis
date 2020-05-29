@@ -17,6 +17,7 @@
 #include "cista/mmap.h"
 
 #include "geo/latlng.h"
+#include "geo/point_rtree.h"
 
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
@@ -113,32 +114,44 @@ void fix_stop_positions(trip_map& trips) {
     return speed_in_kmh < 350;
   };
 
+  auto const is_strange = [](stop_time const& s) {
+    return std::abs(s.stop_->coord_.lat_) < 5 &&
+           std::abs(s.stop_->coord_.lng_) < 5;
+  };
+
   for (auto const& [id, t] : trips) {
     auto const stops = t->stop_times_.to_vector();
     for (auto const [a, b, c] : utl::nwise<3>(stops)) {
       auto const logical_a_b = is_logical(a, b);
       auto const logical_b_c = is_logical(b, c);
+      auto const logical_a_c = is_logical(a, c);
 
       stop* corrected = nullptr;
       geo::latlng before;
+      auto const correct = [&](stop_time const& s,
+                               geo::latlng const& new_coord) {
+        corrected = s.stop_;
+        before = s.stop_->coord_;
+        s.stop_->coord_ = new_coord;
+      };
 
-      if ((b.stop_->coord_.lat_ < 0.1 && b.stop_->coord_.lng_ < 0.1) ||
-          (!logical_a_b && !logical_b_c)) {
-        corrected = b.stop_;
-        before = b.stop_->coord_;
-        b.stop_->coord_ = geo::latlng{
-            a.stop_->coord_.lat_ +
-                0.5 * (c.stop_->coord_.lat_ - a.stop_->coord_.lat_),
-            a.stop_->coord_.lng_ +
-                0.5 * (c.stop_->coord_.lng_ - a.stop_->coord_.lng_)};
-      } else if (!logical_a_b && logical_b_c) {
-        corrected = a.stop_;
-        before = a.stop_->coord_;
-        a.stop_->coord_ = b.stop_->coord_;
-      } else if (logical_a_b && !logical_b_c) {
-        corrected = c.stop_;
-        before = c.stop_->coord_;
-        c.stop_->coord_ = b.stop_->coord_;
+      if (!logical_a_b && !logical_b_c && logical_a_c && !is_strange(a) &&
+          !is_strange(c)) {
+        correct(b, geo::latlng{
+                       a.stop_->coord_.lat_ +
+                           0.5 * (c.stop_->coord_.lat_ - a.stop_->coord_.lat_),
+                       a.stop_->coord_.lng_ + 0.5 * (c.stop_->coord_.lng_ -
+                                                     a.stop_->coord_.lng_)});
+      } else if (!logical_a_b && logical_b_c && !is_strange(b)) {
+        correct(a, b.stop_->coord_);
+      } else if (logical_a_b && !logical_b_c && !is_strange(b)) {
+        correct(c, b.stop_->coord_);
+      } else if (is_strange(a) && (!is_strange(b) || !is_strange(c))) {
+        correct(a, !is_strange(b) ? c.stop_->coord_ : b.stop_->coord_);
+      } else if (is_strange(b) && (!is_strange(a) || !is_strange(c))) {
+        correct(b, !is_strange(a) ? a.stop_->coord_ : c.stop_->coord_);
+      } else if (is_strange(c) && (!is_strange(a) || !is_strange(b))) {
+        correct(c, !is_strange(a) ? a.stop_->coord_ : b.stop_->coord_);
       }
 
       if (corrected != nullptr) {
@@ -353,6 +366,10 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
         })  //
       | utl::vec();
 
+  auto const stop_vec =
+      utl::to_vec(stops, [](auto const& s) { return s.second.get(); });
+  auto const stop_rtree =
+      geo::make_point_rtree(stop_vec, [](auto const& s) { return s->coord_; });
   auto const generate_transfer = [&](stop_pair const& stops) {
     if (stops.first != stops.second &&
         transfers.find(stops) == end(transfers)) {
@@ -364,19 +381,22 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   };
   auto const meta_stations =
       utl::all(stops)  //
-      | utl::remove_if(
-            [](auto const& s) { return s.second->get_metas().empty(); })  //
       | utl::transform([&](auto const& s) {
-          stop* this_stop = s.second.get();
-          return CreateMetaStation(
-              fbb, get_or_create_stop(this_stop),
-              fbb.CreateVector(
-                  utl::to_vec(this_stop->get_metas(), [&](auto const* eq) {
-                    generate_transfer(std::make_pair(this_stop, eq));
-                    generate_transfer(std::make_pair(eq, this_stop));
-                    return get_or_create_stop(eq);
-                  })));
+          return std::make_pair(s.second.get(),
+                                s.second->get_metas(stop_vec, stop_rtree));
         })  //
+      | utl::remove_if([](auto const& s) { return s.second.empty(); })  //
+      |
+      utl::transform([&](auto const& s_metas) {
+        auto const& [this_stop, metas] = s_metas;
+        return CreateMetaStation(fbb, get_or_create_stop(this_stop),
+                                 fbb.CreateVector(utl::to_vec(
+                                     metas, [&, s = this_stop](auto const* eq) {
+                                       generate_transfer(std::make_pair(s, eq));
+                                       generate_transfer(std::make_pair(eq, s));
+                                       return get_or_create_stop(eq);
+                                     })));
+      })  //
       | utl::vec();
 
   fbb.Finish(CreateSchedule(

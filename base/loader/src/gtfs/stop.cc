@@ -21,10 +21,14 @@ static const column_mapping<gtfs_stop> columns = {
     {"stop_id", "stop_name", "stop_timezone", "parent_station", "stop_lat",
      "stop_lon"}};
 
-std::set<stop*> stop::get_metas() {
+std::set<stop*> stop::get_metas(std::vector<stop*> const& stops,
+                                geo::point_rtree const& stop_rtree) {
   std::set<stop*> todo, done;
   todo.emplace(this);
   todo.insert(begin(same_name_), end(same_name_));
+  for (auto const& idx : stop_rtree.in_radius(coord_, 100)) {
+    todo.insert(stops[idx]);
+  }
 
   while (!todo.empty()) {
     auto const next = *todo.begin();
