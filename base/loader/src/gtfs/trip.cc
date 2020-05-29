@@ -26,7 +26,7 @@ trip_map read_trips(loaded_file file, route_map const& routes,
   trip_map trips;
   auto line = 1U;
   auto const entries = read<gtfs_trip>(file.content(), columns);
-  motis::logging::clog_import_step("read trips", 5, 20, entries.size());
+  motis::logging::clog_import_step("Trips", 5, 20, entries.size());
   for (auto const& [i, t] : utl::enumerate(entries)) {
     motis::logging::clog_import_progress(i, 10000);
     trips.emplace(

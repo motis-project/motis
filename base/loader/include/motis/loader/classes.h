@@ -9,12 +9,15 @@ inline mcd::hash_map<mcd::string, uint8_t> class_mapping() {
   // clang-format off
   return {
     // high speed
+    { "High Speed Rail", 0},
     { "ICE", 0},
     { "THA", 0},
     { "TGV", 0},
     { "RJ", 0},
 
     // long range
+    {"Long Distance Trains", 1},
+    {"Inter Regional Rail", 1},
     {"Eurocity", 1},
     { "EC", 1 },
     { "IC", 1 },
@@ -26,8 +29,10 @@ inline mcd::hash_map<mcd::string, uint8_t> class_mapping() {
     { "Intercity", 1},
 
     // night trains
+    { "Sleeper Rail", 2},
     { "CNL", 2 },
     { "EN", 2 },
+    { "Car Transport Rail", 2},
     { "AZ", 2 },
 
     // fast local trains
@@ -42,6 +47,10 @@ inline mcd::hash_map<mcd::string, uint8_t> class_mapping() {
     { "RegioExpress", 3},
 
     // local trains
+    { "Regional Rail", 4 },
+    { "Railway Service", 4 },
+    { "Tourist Railway", 4 },
+    { "Rail Shuttle (Within Complex)", 4 },
     { "DPN", 4 },
     { "R", 4 },
     { "DPF", 4 },
@@ -66,6 +75,7 @@ inline mcd::hash_map<mcd::string, uint8_t> class_mapping() {
     // street-car
     { "Tram", 7 },
     { "STR", 7 },
+    { "Str", 7 },
     { "T", 7 },
 
     // bus

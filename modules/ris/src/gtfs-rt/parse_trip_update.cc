@@ -122,15 +122,13 @@ void collect_additional_events(
   auto stop_count = 0;
 
   for (auto const& stu : trip_update.stop_time_update()) {
-    auto stop_id = parse_stop_id(stu.stop_id());
-
     if (known_skips != nullptr) {
       update_ctx.is_stop_skip_new_.resize(stop_count + 1);
     }
 
     evt base;
     base.line_id_ = line_id;
-    base.stop_id_ = stop_id;
+    base.stop_id_ = stu.stop_id();
     base.seq_no_ = stu.stop_sequence();
     // all stops need to be given to create the trip
     base.stop_idx_ = stop_count;
