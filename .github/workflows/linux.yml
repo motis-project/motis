@@ -51,7 +51,7 @@ jobs:
           - key: Clang 9 Sanitizer
             cxx: clang++-9
             cc: clang-9
-            mode: Debug
+            mode: Release
             cflags: -fsanitize=address,undefined -fno-omit-frame-pointer
             cxxflags: -fsanitize=address,undefined -fno-omit-frame-pointer -stdlib=libc++
             ldflags: -lc++abi
