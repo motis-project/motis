@@ -19,40 +19,50 @@ using namespace motis::intermodal;
 
 namespace motis::intermodal {
 
-std::pair<std::string, double> get_ppr_settings(
-    Vector<Offset<ModeWrapper>> const* modes) {
-  std::string profile;
-  double duration = 0;
+struct ppr_settings {
+  std::string profile_;
+  double max_duration_{};  // seconds
+  double max_distance_{};  // meters
+};
+
+inline double get_max_distance(std::string const& profile, double duration,
+                               ppr_profiles const& profiles) {
+  return profiles.get_walking_speed(profile) * duration;
+}
+
+ppr_settings get_ppr_settings(Vector<Offset<ModeWrapper>> const* modes,
+                              ppr_profiles const& profiles) {
+  auto settings = ppr_settings{};
 
   for (auto const& m : *modes) {
     if (m->mode_type() == Mode_FootPPR) {
       auto const options =
           reinterpret_cast<FootPPR const*>(m->mode())->search_options();
-      profile = options->profile()->str();
-      duration = options->duration_limit();
+      settings.profile_ = options->profile()->str();
+      settings.max_duration_ = options->duration_limit();
+      settings.max_distance_ =
+          get_max_distance(settings.profile_, settings.max_duration_, profiles);
     }
   }
 
-  return {profile, duration};
+  return settings;
 }
 
-std::pair<std::string, double> get_direct_ppr_profile(
-    IntermodalRoutingRequest const* req) {
-  auto const [start_profile, start_duration] =  // NOLINT
-      get_ppr_settings(req->start_modes());
-  auto const [dest_profile, dest_duration] =  // NOLINT
-      get_ppr_settings(req->destination_modes());
+ppr_settings get_direct_ppr_settings(IntermodalRoutingRequest const* req,
+                                     ppr_profiles const& profiles) {
+  auto const start_settings = get_ppr_settings(req->start_modes(), profiles);
+  auto const dest_settings =
+      get_ppr_settings(req->destination_modes(), profiles);
 
-  auto const total_duration = start_duration + dest_duration;
-  auto const profile =
-      req->search_dir() == SearchDir_Forward ? start_profile : dest_profile;
+  auto const& profile = req->search_dir() == SearchDir_Forward
+                            ? start_settings.profile_
+                            : dest_settings.profile_;
+  auto const max_duration =
+      start_settings.max_duration_ + dest_settings.max_duration_;
+  auto const max_distance =
+      max_duration > 0 ? get_max_distance(profile, max_duration, profiles) : 0;
 
-  return {profile, total_duration};
-}
-
-inline double get_max_distance(std::string const& profile, double duration,
-                               ppr_profiles const& profiles) {
-  return profiles.get_walking_speed(profile) * duration;
+  return {profile, max_duration, max_distance};
 }
 
 msg_ptr make_direct_ppr_request(geo::latlng const& start,
@@ -81,8 +91,8 @@ msg_ptr make_direct_ppr_request(geo::latlng const& start,
 }
 
 struct osrm_settings {
-  int max_duration_{};
-  double max_distance_{};
+  int max_duration_{};  // seconds
+  double max_distance_{};  // meters
 };
 
 inline osrm_settings operator+(osrm_settings const& lhs,
@@ -159,14 +169,13 @@ std::vector<direct_connection> get_direct_connections(
   auto direct = std::vector<direct_connection>{};
   auto const beeline = distance(q_start.pos_, q_dest.pos_);
 
-  auto const [ppr_profile, ppr_duration] =
-      get_direct_ppr_profile(req);  // NOLINT
-  if (ppr_duration > 0 &&
-      beeline <= get_max_distance(ppr_profile, ppr_duration, profiles)) {
-    auto const ppr_msg = motis_call(make_direct_ppr_request(
-                                        q_start.pos_, q_dest.pos_, ppr_profile,
-                                        ppr_duration, req->search_dir()))
-                             ->val();
+  auto const ppr_settings = get_direct_ppr_settings(req, profiles);
+  if (ppr_settings.max_duration_ > 0 && beeline <= ppr_settings.max_distance_) {
+    auto const ppr_msg =
+        motis_call(make_direct_ppr_request(
+                       q_start.pos_, q_dest.pos_, ppr_settings.profile_,
+                       ppr_settings.max_duration_, req->search_dir()))
+            ->val();
     auto const ppr_resp = motis_content(FootRoutingResponse, ppr_msg);
     auto const routes = ppr_resp->routes();
     if (routes->size() == 1) {
