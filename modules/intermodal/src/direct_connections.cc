@@ -18,7 +18,6 @@ using namespace motis::routing;
 using namespace motis::ppr;
 using namespace motis::module;
 using namespace motis::osrm;
-using namespace motis::intermodal;
 
 namespace motis::intermodal {
 
