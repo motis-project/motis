@@ -129,15 +129,7 @@ function getQueryParameters() {
 }
 
 function getApiEndpoint(params) {
-  let productionMode = window.location.protocol === "https:";
-  let apiPathPrefix = productionMode ? "motis/" : "";
-  let defaultHost = window.location.hostname;
-  let defaultPort = productionMode ? "443" : "8080";
-  let urlBase = window.location.href;
-  if (!urlBase.endsWith("/")) {
-    urlBase += "/";
-  }
-  let apiEndpoint = urlBase + apiPathPrefix;
+  let apiEndpoint = String(window.location);
   let motisParam = params["motis"] || null;
   if (motisParam) {
     if (/^[0-9]+$/.test(motisParam)) {
@@ -179,8 +171,8 @@ function parseTimestamp(value) {
 }
 
 function parseInitialPermalink(str) {
-  const parts = str.split("/");
-  // fallback: Darmstadt (?!)
+  const parts = str ? str.split("/") : [];
+  // fallback: Darmstadt
   return {
     lat: parseFloat(parts[1]) || 49.8728,
     lng: parseFloat(parts[2]) || 8.6512,
