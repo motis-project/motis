@@ -88,7 +88,7 @@ void tiles::import(mm::progress_listener& progress_listener,
 
         using import::OSMEvent;
         auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
-        auto const osm_path = data_path(osm->path()->str());
+        auto const osm_path = osm->path()->str();
 
         auto coastline_path = std::string{};
         auto coastline_hash = c::hash_t{};
@@ -97,14 +97,15 @@ void tiles::import(mm::progress_listener& progress_listener,
           using import::CoastlineEvent;
           auto const coastline =
               motis_content(CoastlineEvent, dependencies.at("COASTLINE"));
-          coastline_path = data_path(coastline->path()->str());
+          coastline_path = coastline->path()->str();
           coastline_hash = coastline->hash();
           coastline_size = coastline->size();
         }
 
         auto const state = import_state{
-            profile_hash,   osm_path,       osm->hash(),    osm->size(),
-            use_coastline_, coastline_path, coastline_hash, coastline_size};
+            profile_hash,   data_path(osm_path), osm->hash(),
+            osm->size(),    use_coastline_,      data_path(coastline_path),
+            coastline_hash, coastline_size};
         if (mm::read_ini<import_state>(dir / "import.ini") != state) {
           fs::create_directories(dir);
 
