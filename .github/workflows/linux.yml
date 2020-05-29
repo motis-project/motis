@@ -51,7 +51,7 @@ jobs:
           - key: Clang 9 Sanitizer
             cxx: clang++-9
             cc: clang-9
-            mode: Debug
+            mode: Release
             cflags: -fsanitize=address,undefined -fno-omit-frame-pointer
             cxxflags: -fsanitize=address,undefined -fno-omit-frame-pointer -stdlib=libc++
             ldflags: -lc++abi
@@ -84,11 +84,11 @@ jobs:
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          key: buildcache-linux-${{ toJson(matrix.config) }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
-            buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
-            buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-
-            buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ matrix.config.lint }}-
+            buildcache-linux-${{ toJson(matrix.config) }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-linux-${{ toJson(matrix.config) }}-${{ hashFiles('.pkg') }}-
+            buildcache-linux-${{ toJson(matrix.config) }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
