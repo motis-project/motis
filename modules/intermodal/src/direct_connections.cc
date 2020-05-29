@@ -1,12 +1,15 @@
 #include "motis/intermodal/direct_connections.h"
 
 #include <algorithm>
+#include <mutex>
 #include <utility>
 
 #include "utl/erase_if.h"
 #include "utl/verify.h"
 
 #include "ppr/routing/search_profile.h"
+
+#include "motis/module/context/motis_spawn.h"
 
 using namespace geo;
 using namespace flatbuffers;
@@ -101,13 +104,13 @@ inline osrm_settings operator+(osrm_settings const& lhs,
           lhs.max_distance_ + rhs.max_distance_};
 }
 
-template <Mode mode>
+template <Mode ModeType>
 osrm_settings get_osrm_settings(Vector<Offset<ModeWrapper>> const* modes) {
   auto settings = osrm_settings{};
 
   for (auto const& m : *modes) {
-    if (m->mode_type() == mode) {
-      switch (mode) {
+    if (m->mode_type() == ModeType) {
+      switch (ModeType) {
         case Mode_Bike: {
           settings.max_duration_ =
               reinterpret_cast<Bike const*>(m->mode())->max_duration();
@@ -136,10 +139,10 @@ osrm_settings get_osrm_settings(Vector<Offset<ModeWrapper>> const* modes) {
   return settings;
 }
 
-template <Mode mode>
+template <Mode ModeType>
 osrm_settings get_direct_osrm_settings(IntermodalRoutingRequest const* req) {
-  return get_osrm_settings<mode>(req->start_modes()) +
-         get_osrm_settings<mode>(req->destination_modes());
+  return get_osrm_settings<ModeType>(req->start_modes()) +
+         get_osrm_settings<ModeType>(req->destination_modes());
 }
 
 msg_ptr make_direct_osrm_request(geo::latlng const& start,
@@ -169,59 +172,72 @@ std::vector<direct_connection> get_direct_connections(
   auto direct = std::vector<direct_connection>{};
   auto const beeline = distance(q_start.pos_, q_dest.pos_);
 
+  auto direct_mutex = std::mutex{};
+  auto futures = std::vector<ctx::future_ptr<ctx_data, void>>{};
+
   auto const ppr_settings = get_direct_ppr_settings(req, profiles);
   if (ppr_settings.max_duration_ > 0 && beeline <= ppr_settings.max_distance_) {
-    auto const ppr_msg =
-        motis_call(make_direct_ppr_request(
-                       q_start.pos_, q_dest.pos_, ppr_settings.profile_,
-                       ppr_settings.max_duration_, req->search_dir()))
-            ->val();
-    auto const ppr_resp = motis_content(FootRoutingResponse, ppr_msg);
-    auto const routes = ppr_resp->routes();
-    if (routes->size() == 1) {
-      for (auto const& route : *routes->Get(0)->routes()) {
-        direct.emplace_back(mumo_type::FOOT, route->duration(),
-                            route->accessibility());
+    futures.emplace_back(spawn_job_void([&]() {
+      auto const ppr_msg =
+          motis_call(make_direct_ppr_request(
+                         q_start.pos_, q_dest.pos_, ppr_settings.profile_,
+                         ppr_settings.max_duration_, req->search_dir()))
+              ->val();
+      auto const ppr_resp = motis_content(FootRoutingResponse, ppr_msg);
+      auto const routes = ppr_resp->routes();
+      if (routes->size() == 1) {
+        std::lock_guard guard{direct_mutex};
+        for (auto const& route : *routes->Get(0)->routes()) {
+          direct.emplace_back(mumo_type::FOOT, route->duration(),
+                              route->accessibility());
+        }
       }
-    }
+    }));
   }
 
   auto const osrm_bike_settings = get_direct_osrm_settings<Mode_Bike>(req);
   if (osrm_bike_settings.max_duration_ > 0 &&
       beeline <= osrm_bike_settings.max_distance_) {
-    auto const osrm_msg =
-        motis_call(make_direct_osrm_request(q_start.pos_, q_dest.pos_,
-                                            to_string(mumo_type::BIKE),
-                                            req->search_dir()))
-            ->val();
-    auto const osrm_resp = motis_content(OSRMOneToManyResponse, osrm_msg);
-    utl::verify(osrm_resp->costs()->size() == 1,
-                "direct connetions: invalid osrm response");
-    auto const duration =
-        static_cast<unsigned>(osrm_resp->costs()->Get(0)->duration());
-    if (duration <= osrm_bike_settings.max_duration_) {
-      direct.emplace_back(mumo_type::BIKE, duration / 60, 0);
-    }
+    futures.emplace_back(spawn_job_void([&]() {
+      auto const osrm_msg =
+          motis_call(make_direct_osrm_request(q_start.pos_, q_dest.pos_,
+                                              to_string(mumo_type::BIKE),
+                                              req->search_dir()))
+              ->val();
+      auto const osrm_resp = motis_content(OSRMOneToManyResponse, osrm_msg);
+      utl::verify(osrm_resp->costs()->size() == 1,
+                  "direct connetions: invalid osrm response");
+      auto const duration =
+          static_cast<unsigned>(osrm_resp->costs()->Get(0)->duration());
+      if (duration <= osrm_bike_settings.max_duration_) {
+        std::lock_guard guard{direct_mutex};
+        direct.emplace_back(mumo_type::BIKE, duration / 60, 0);
+      }
+    }));
   }
 
   auto const osrm_car_settings = get_direct_osrm_settings<Mode_Car>(req);
   if (osrm_car_settings.max_duration_ > 0 &&
       beeline <= osrm_car_settings.max_distance_) {
-    auto const osrm_msg =
-        motis_call(make_direct_osrm_request(q_start.pos_, q_dest.pos_,
-                                            to_string(mumo_type::CAR),
-                                            req->search_dir()))
-            ->val();
-    auto const osrm_resp = motis_content(OSRMOneToManyResponse, osrm_msg);
-    utl::verify(osrm_resp->costs()->size() == 1,
-                "direct connetions: invalid osrm response");
-    auto const duration =
-        static_cast<unsigned>(osrm_resp->costs()->Get(0)->duration());
-    if (duration <= osrm_bike_settings.max_duration_) {
-      direct.emplace_back(mumo_type::CAR, duration / 60, 0);
-    }
+    futures.emplace_back(spawn_job_void([&]() {
+      auto const osrm_msg =
+          motis_call(make_direct_osrm_request(q_start.pos_, q_dest.pos_,
+                                              to_string(mumo_type::CAR),
+                                              req->search_dir()))
+              ->val();
+      auto const osrm_resp = motis_content(OSRMOneToManyResponse, osrm_msg);
+      utl::verify(osrm_resp->costs()->size() == 1,
+                  "direct connetions: invalid osrm response");
+      auto const duration =
+          static_cast<unsigned>(osrm_resp->costs()->Get(0)->duration());
+      if (duration <= osrm_bike_settings.max_duration_) {
+        std::lock_guard guard{direct_mutex};
+        direct.emplace_back(mumo_type::CAR, duration / 60, 0);
+      }
+    }));
   }
 
+  ctx::await_all(futures);
   return direct;
 }
 
