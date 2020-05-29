@@ -386,16 +386,17 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
                                 s.second->get_metas(stop_vec, stop_rtree));
         })  //
       | utl::remove_if([](auto const& s) { return s.second.empty(); })  //
-      | utl::transform([&](auto const& s_metas) {
-          auto const& [this_stop, metas] = s_metas;
-          return CreateMetaStation(
-              fbb, get_or_create_stop(this_stop),
-              fbb.CreateVector(utl::to_vec(metas, [&](auto const* eq) {
-                generate_transfer(std::make_pair(this_stop, eq));
-                generate_transfer(std::make_pair(eq, this_stop));
-                return get_or_create_stop(eq);
-              })));
-        })  //
+      |
+      utl::transform([&](auto const& s_metas) {
+        auto const& [this_stop, metas] = s_metas;
+        return CreateMetaStation(fbb, get_or_create_stop(this_stop),
+                                 fbb.CreateVector(utl::to_vec(
+                                     metas, [&, s = this_stop](auto const* eq) {
+                                       generate_transfer(std::make_pair(s, eq));
+                                       generate_transfer(std::make_pair(eq, s));
+                                       return get_or_create_stop(eq);
+                                     })));
+      })  //
       | utl::vec();
 
   fbb.Finish(CreateSchedule(
