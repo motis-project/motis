@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "utl/erase_if.h"
+#include "utl/struct/comparable.h"
 #include "utl/verify.h"
 
 #include "ppr/routing/search_profile.h"
@@ -93,6 +94,7 @@ msg_ptr make_direct_ppr_request(geo::latlng const& start,
 }
 
 struct osrm_settings {
+  MAKE_COMPARABLE()
   int max_duration_{};  // seconds
   double max_distance_{};  // meters
 };
@@ -122,6 +124,13 @@ osrm_settings get_osrm_settings(Vector<Offset<ModeWrapper>> const* modes) {
           settings.max_distance_ = settings.max_duration_ * CAR_SPEED;
           break;
         }
+        case Mode_CarParking: {
+          settings.max_duration_ =
+              reinterpret_cast<CarParking const*>(m->mode())
+                  ->max_car_duration();
+          settings.max_distance_ = settings.max_duration_ * CAR_SPEED;
+          break;
+        }
         case Mode_Foot: {
           settings.max_duration_ =
               reinterpret_cast<Foot const*>(m->mode())->max_duration();
@@ -142,6 +151,17 @@ template <Mode ModeType>
 osrm_settings get_direct_osrm_settings(IntermodalRoutingRequest const* req) {
   return get_osrm_settings<ModeType>(req->start_modes()) +
          get_osrm_settings<ModeType>(req->destination_modes());
+}
+
+osrm_settings get_direct_osrm_car_settings(
+    IntermodalRoutingRequest const* req) {
+  auto const start_settings =
+      std::max(get_osrm_settings<Mode_Car>(req->start_modes()),
+               get_osrm_settings<Mode_CarParking>(req->start_modes()));
+  auto const dest_settings =
+      std::max(get_osrm_settings<Mode_Car>(req->destination_modes()),
+               get_osrm_settings<Mode_CarParking>(req->destination_modes()));
+  return start_settings + dest_settings;
 }
 
 msg_ptr make_direct_osrm_request(geo::latlng const& start,
@@ -215,7 +235,7 @@ std::vector<direct_connection> get_direct_connections(
     }));
   }
 
-  auto const osrm_car_settings = get_direct_osrm_settings<Mode_Car>(req);
+  auto const osrm_car_settings = get_direct_osrm_car_settings(req);
   if (osrm_car_settings.max_duration_ > 0 &&
       beeline <= osrm_car_settings.max_distance_) {
     futures.emplace_back(spawn_job_void([&]() {
