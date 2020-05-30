@@ -38,7 +38,7 @@ inline std::vector<journey> bw_search(
   }
   id_to_eva.close();
 
-  reconstructor reconstructor(q, sched, raptor_sched, backward_timetable);
+  reconstructor reconstructor(sched, raptor_sched, backward_timetable);
 
   print_station_arrivals(q.target_, *q.result_);
   std::cout << "Query Source: " << q.source_ << '\n';
@@ -50,7 +50,7 @@ inline std::vector<journey> bw_search(
 
   print_station_arrivals(255818, *q.result_);
   print_station_arrivals(255870, *q.result_);
-  reconstructor.add(q.source_time_begin_, *q.result_, q.forward_);
+  reconstructor.add(q);
 
   // print_station_arrivals(q.target_, *q.result_);
 
@@ -69,7 +69,7 @@ inline std::vector<journey> raptor_gen(
                      backward_timetable, raptor_search);
   }
 
-  reconstructor reconstructor(q, sched, raptor_sched, timetable);
+  reconstructor reconstructor(sched, raptor_sched, timetable);
 
   // We have a ontrip query, just a single raptor query is needed
   if (q.source_time_begin_ == q.source_time_end_) {
@@ -80,7 +80,7 @@ inline std::vector<journey> raptor_gen(
     stats.raptor_time_ = MOTIS_GET_TIMING_MS(raptor_time);
 
     MOTIS_START_TIMING(rec_timing);
-    reconstructor.add(q.source_time_begin_, *q.result_, q.forward_);
+    reconstructor.add(q);
     stats.rec_time_ = MOTIS_GET_TIMING_US(rec_timing);
 
     return reconstructor.get_journeys();
@@ -98,7 +98,7 @@ inline std::vector<journey> raptor_gen(
   stats.raptor_time_ += MOTIS_GET_TIMING_US(plus_one_time);
 
   MOTIS_START_TIMING(plus_one_rec_time);
-  reconstructor.add(q.source_time_begin_, *q.result_, q.forward_);
+  reconstructor.add(q);
   stats.rec_time_ += MOTIS_GET_TIMING_US(plus_one_rec_time);
 
   for (auto dep_it = upper; dep_it != lower; --dep_it) {
@@ -110,7 +110,7 @@ inline std::vector<journey> raptor_gen(
     stats.raptor_time_ += MOTIS_GET_TIMING_US(raptor_time);
 
     MOTIS_START_TIMING(rec_timing);
-    reconstructor.add(q.source_time_begin_, *q.result_, q.forward_);
+    reconstructor.add(q);
     stats.rec_time_ += MOTIS_GET_TIMING_US(rec_timing);
   }
 
