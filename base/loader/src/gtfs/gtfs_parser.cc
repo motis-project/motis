@@ -301,13 +301,13 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
                       fbb.CreateVector(utl::to_vec(
                           begin(stop_seq), end(stop_seq),
                           [](trip::stop_identity const& s) {
-                            return static_cast<uint8_t>(std::get<1>(s) ? 1u
+                            return static_cast<uint8_t>(std::get<2>(s) ? 1u
                                                                        : 0u);
                           })),
                       fbb.CreateVector(utl::to_vec(
                           begin(stop_seq), end(stop_seq),
                           [](trip::stop_identity const& s) {
-                            return static_cast<uint8_t>(std::get<2>(s) ? 1u
+                            return static_cast<uint8_t>(std::get<1>(s) ? 1u
                                                                        : 0u);
                           })));
                 }),
@@ -339,8 +339,8 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
                                    },
                                    std::vector<int>())),
             0,
-            CreateServiceDebugInfo(fbb, fbb.CreateString(""),
-                                   entry.second->line_, entry.second->line_),
+            CreateServiceDebugInfo(fbb, fbb.CreateString(entry.first), t->line_,
+                                   t->line_),
             false, 0, get_or_create_str(entry.first));  // Trip ID
       }) |
       utl::vec());
