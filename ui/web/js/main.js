@@ -129,7 +129,7 @@ function getQueryParameters() {
 }
 
 function getApiEndpoint(params) {
-  let apiEndpoint = String(window.location);
+  let apiEndpoint = String(window.location.origin + window.location.pathname);
   let motisParam = params["motis"] || null;
   if (motisParam) {
     if (/^[0-9]+$/.test(motisParam)) {
