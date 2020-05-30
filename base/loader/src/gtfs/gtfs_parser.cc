@@ -339,8 +339,8 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
                                    },
                                    std::vector<int>())),
             0,
-            CreateServiceDebugInfo(fbb, fbb.CreateString(""),
-                                   entry.second->line_, entry.second->line_),
+            CreateServiceDebugInfo(fbb, fbb.CreateString(entry.first), t->line_,
+                                   t->line_),
             false, 0, get_or_create_str(entry.first));  // Trip ID
       }) |
       utl::vec());
