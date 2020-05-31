@@ -18,9 +18,9 @@ void verify_timestamp(schedule const& sched, time_t t) {
   if (t < sched.schedule_begin_ || t >= external_schedule_end(sched)) {
     auto const schedule_begin = external_schedule_begin(sched);
     auto const schedule_end = external_schedule_end(sched);
-    LOG(logging::error) << "timestamp not in schedule: " << format_unixtime(t)
-                        << " [" << format_unixtime(schedule_begin) << ", "
-                        << format_unixtime(schedule_end) << "]";
+    LOG(logging::error) << "timestamp not in schedule: " << format_unix_time(t)
+                        << " [" << format_unix_time(schedule_begin) << ", "
+                        << format_unix_time(schedule_end) << "]";
     throw std::system_error(motis::access::error::timestamp_not_in_schedule);
   }
 }
@@ -29,9 +29,9 @@ void verify_external_timestamp(schedule const& sched, time_t t) {
   if (t < external_schedule_begin(sched) || t >= external_schedule_end(sched)) {
     auto const schedule_begin = external_schedule_begin(sched);
     auto const schedule_end = external_schedule_end(sched);
-    LOG(logging::error) << "timestamp not in schedule: " << format_unixtime(t)
-                        << " [" << format_unixtime(schedule_begin) << ", "
-                        << format_unixtime(schedule_end) << "]";
+    LOG(logging::error) << "timestamp not in schedule: " << format_unix_time(t)
+                        << " [" << format_unix_time(schedule_begin) << ", "
+                        << format_unix_time(schedule_end) << "]";
     throw std::system_error(motis::access::error::timestamp_not_in_schedule);
   }
 }

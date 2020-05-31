@@ -28,9 +28,18 @@ int hhmm_to_min(int const hhmm) {
   }
 }
 
-std::string format_unixtime(time_t const t, char const* format) {
+std::string format_unix_time(time_t const t, char const* format) {
   return date::format(
       format, std::chrono::system_clock::time_point{std::chrono::seconds{t}});
+}
+
+time_t parse_unix_time(std::string_view s, char const* format) {
+  date::local_time<std::chrono::system_clock::duration> tp;
+  std::stringstream ss;
+  ss << s;
+  ss >> date::parse(format, tp);
+  return std::chrono::duration_cast<std::chrono::seconds>(tp.time_since_epoch())
+      .count();
 }
 
 }  // namespace motis

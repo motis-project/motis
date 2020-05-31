@@ -4,9 +4,15 @@
 #include <tuple>
 
 #include "utl/enumerate.h"
+#include "utl/get_or_create.h"
+#include "utl/pairwise.h"
 #include "utl/parser/csv.h"
+#include "utl/pipes.h"
+#include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/schedule/time.h"
 #include "motis/loader/util.h"
 
 using namespace utl;
@@ -14,30 +20,120 @@ using std::get;
 
 namespace motis::loader::gtfs {
 
-enum { route_id, service_id, trip_id, trip_headsign, trip_short_name };
-using gtfs_trip = std::tuple<cstr, cstr, cstr, cstr, cstr>;
-static const column_mapping<gtfs_trip> columns = {
-    {"route_id", "service_id", "trip_id", "trip_headsign", "trip_short_name"}};
+void block::sort_and_check_trips() {
+  std::sort(begin(trips_), end(trips_), [](trip const* a, trip const* b) {
+    return a->stop_times_.front().dep_.time_ <
+           b->stop_times_.front().dep_.time_;
+  });
+  for (auto const& [a, b] : utl::pairwise(trips_)) {
+    auto const prev_arr = a->stop_times_.back().arr_.time_;
+    auto const succ_dep = a->stop_times_.front().dep_.time_;
+    utl::verify(prev_arr <= succ_dep,
+                "[arrival={} of trip={}] > [departure={}, trip={}]",
+                format_time(prev_arr), a->id_, format_time(succ_dep), b->id_);
+  }
+}
 
-trip_map read_trips(loaded_file file, route_map const& routes,
-                    services const& services) {
+std::vector<std::pair<std::vector<trip*>, bitfield> > block::rule_services() {
+  auto const trips = utl::to_vec(trips_, [](trip* trp) {
+    return std::pair{trp, *trp->service_};
+  });
+  utl::verify(!trips.empty(), "empty block not allowed");
+
+  for (auto from_idx = 0U; from_idx < trips_.size() - 1; ++from_idx) {
+    for (auto to_idx = from_idx + 1; to_idx < trips_.size(); ++to_idx) {
+      auto const range_from_it = std::next(begin(trips_), from_idx);
+      auto const range_to_it = std::next(begin(trips_), to_idx);
+
+      auto const pairwise = utl::nwise_range<2, decltype(range_from_it)>{
+          range_from_it, range_to_it};
+      auto const test = std::all_of(begin(pairwise), end(pairwise),
+                                    [](auto const& trip_pair) {});
+
+      auto const range_bitfield_intersection =
+          utl::range{range_from_it, range_to_it}  //
+          | utl::accumulate(
+                [](auto&& acc, trip* trp) { return acc & trp->service_; },
+                create_uniform_bitfield<BIT_COUNT>('1'));
+
+      if (range_bitfield_intersection.none()) {
+        break;
+      }
+    }
+  }
+}
+
+stop_time::stop_time(stop* s, std::string headsign, int arr_time,
+                     bool out_allowed, int dep_time, bool in_allowed)
+    : stop_{s},
+      headsign_{std::move(headsign)},
+      arr_{arr_time, out_allowed},
+      dep_{dep_time, in_allowed} {}
+
+trip::trip(route const* route, bitfield const* service, block* blk,
+           std::string id, std::string headsign, std::string short_name,
+           unsigned line)
+    : route_(route),
+      service_(service),
+      block_{blk},
+      id_{std::move(id)},
+      headsign_(std::move(headsign)),
+      short_name_(std::move(short_name)),
+      line_(line) {}
+
+trip::stop_seq trip::stops() const {
+  return utl::to_vec(begin(stop_times_), end(stop_times_),
+                     [](flat_map<stop_time>::entry_t const& e) {
+                       return std::make_tuple(e.second.stop_,
+                                              e.second.arr_.in_out_allowed_,
+                                              e.second.dep_.in_out_allowed_);
+                     });
+}
+
+enum {
+  route_id,
+  service_id,
+  trip_id,
+  trip_headsign,
+  trip_short_name,
+  block_id
+};
+using gtfs_trip = std::tuple<cstr, cstr, cstr, cstr, cstr, cstr>;
+static const column_mapping<gtfs_trip> columns = {
+    {"route_id", "service_id", "trip_id", "trip_headsign", "trip_short_name",
+     "block_id"}};
+
+std::pair<trip_map, block_map> read_trips(loaded_file file,
+                                          route_map const& routes,
+                                          services const& services) {
   motis::logging::scoped_timer timer{"read trips"};
 
-  trip_map trips;
-  auto line = 1U;
+  std::pair<trip_map, block_map> ret;
+  auto& [trips, blocks] = ret;
   auto const entries = read<gtfs_trip>(file.content(), columns);
   motis::logging::clog_import_step("Trips", 5, 20, entries.size());
   for (auto const& [i, t] : utl::enumerate(entries)) {
     motis::logging::clog_import_progress(i, 10000);
-    trips.emplace(
-        get<trip_id>(t).to_str(),
-        std::make_unique<trip>(
-            routes.at(get<route_id>(t).to_str()).get(),
-            services.traffic_days_.at(get<service_id>(t).to_str()).get(),
-            get<trip_headsign>(t).to_str(), get<trip_short_name>(t).to_str(),
-            ++line));
+    auto const blk =
+        get<block_id>(t).trim().empty()
+            ? nullptr
+            : utl::get_or_create(blocks, get<block_id>(t).trim().to_str(),
+                                 []() { return std::make_unique<block>(); })
+                  .get();
+    auto const trp =
+        trips
+            .emplace(get<trip_id>(t).to_str(),
+                     std::make_unique<trip>(
+                         routes.at(get<route_id>(t).to_str()).get(),
+                         services.traffic_days_.at(get<service_id>(t).to_str())
+                             .get(),
+                         blk, get<trip_id>(t).to_str(),
+                         get<trip_headsign>(t).to_str(),
+                         get<trip_short_name>(t).to_str(), i + 1))
+            .first->second.get();
+    blk->trips_.emplace_back(trp);
   }
-  return trips;
+  return ret;
 }
 
 }  // namespace motis::loader::gtfs

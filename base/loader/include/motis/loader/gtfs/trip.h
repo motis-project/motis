@@ -2,6 +2,8 @@
 
 #include <map>
 #include <string>
+#include <tuple>
+#include <vector>
 
 #include "motis/loader/gtfs/flat_map.h"
 #include "motis/loader/gtfs/route.h"
@@ -11,14 +13,19 @@
 
 namespace motis::loader::gtfs {
 
+struct trip;
+
+struct block {
+  void sort_and_check_trips();
+  std::vector<std::pair<std::vector<trip*>, bitfield>> rule_services();
+  std::vector<trip*> trips_;
+};
+
+using block_map = std::map<std::string, std::unique_ptr<block>>;
+
 struct stop_time {
-  stop_time() = default;
-  stop_time(stop* s, std::string headsign, int arr_time, bool out_allowed,
-            int dep_time, bool in_allowed)
-      : stop_(s),
-        headsign_(std::move(headsign)),
-        arr_({arr_time, out_allowed}),
-        dep_({dep_time, in_allowed}) {}
+  stop_time(stop*, std::string headsign, int arr_time, bool out_allowed,
+            int dep_time, bool in_allowed);
 
   struct ev {
     int time_{0};
@@ -34,25 +41,15 @@ struct trip {
   using stop_identity = std::tuple<stop*, bool, bool>;
   using stop_seq = std::vector<stop_identity>;
 
-  trip(route const* route, bitfield const* service, std::string headsign,
-       std::string short_name, unsigned line)
-      : route_(route),
-        service_(service),
-        headsign_(std::move(headsign)),
-        short_name_(std::move(short_name)),
-        line_(line) {}
+  trip(route const*, bitfield const*, block*, std::string id,
+       std::string headsign, std::string short_name, unsigned line);
 
-  stop_seq stops() const {
-    return utl::to_vec(begin(stop_times_), end(stop_times_),
-                       [](flat_map<stop_time>::entry_t const& e) {
-                         return std::make_tuple(e.second.stop_,
-                                                e.second.arr_.in_out_allowed_,
-                                                e.second.dep_.in_out_allowed_);
-                       });
-  }
+  stop_seq stops() const;
 
   route const* route_;
   bitfield const* service_;
+  block* block_;
+  std::string id_;
   std::string headsign_;
   std::string short_name_;
   flat_map<stop_time> stop_times_;
@@ -61,6 +58,7 @@ struct trip {
 
 using trip_map = std::map<std::string, std::unique_ptr<trip>>;
 
-trip_map read_trips(loaded_file, route_map const&, services const&);
+std::pair<trip_map, block_map> read_trips(loaded_file, route_map const&,
+                                          services const&);
 
 }  // namespace motis::loader::gtfs

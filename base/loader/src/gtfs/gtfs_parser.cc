@@ -185,7 +185,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   auto const dates = read_calendar_date(load(CALENDAR_DATES_FILE));
   auto const services = traffic_days(calendar, dates);
   auto transfers = read_transfers(load(TRANSFERS_FILE), stops);
-  auto trips = read_trips(load(TRIPS_FILE), routes, services);
+  auto [trips, blocks] = read_trips(load(TRIPS_FILE), routes, services);
   read_stop_times(load(STOP_TIMES_FILE), trips, stops);
   fix_stop_positions(trips);
 
