@@ -20,47 +20,54 @@ using std::get;
 
 namespace motis::loader::gtfs {
 
-void block::sort_and_check_trips() {
+struct rule_trip {
+  trip* trip_;
+  bitfield traffic_days_;
+};
+
+void build_rule_services_rec(
+    std::vector<rule_trip>::iterator current_it,
+    std::vector<rule_trip>::iterator end, std::vector<trip*> trips,
+    bitfield const& intersection,
+    std::vector<std::pair<std::vector<trip*>, bitfield>>& combinations) {
+  trips.emplace_back(current_it->trip_);
+
+  for (auto it = std::next(current_it); it != end; ++it) {
+    auto& [succ_trp, succ_traffic_days] = *it;
+
+    if (current_it->trip_->stop_times_.back().stop_ !=
+        succ_trp->stop_times_.front().stop_) {
+      continue;  // prev last stop != next first stop
+    }
+
+    auto const new_intersection = intersection & succ_traffic_days;
+    if (new_intersection.none()) {
+      continue;  // no common traffic days
+    }
+
+    current_it->traffic_days_ &= ~new_intersection;
+    build_rule_services_rec(it, end, trips, new_intersection, combinations);
+  }
+
+  if (current_it->traffic_days_.any()) {
+    combinations.emplace_back(trips, current_it->traffic_days_);
+  }
+}
+
+std::vector<std::pair<std::vector<trip*>, bitfield>> block::rule_services() {
+  utl::verify(!trips_.empty(), "empty block not allowed");
   std::sort(begin(trips_), end(trips_), [](trip const* a, trip const* b) {
     return a->stop_times_.front().dep_.time_ <
            b->stop_times_.front().dep_.time_;
   });
-  for (auto const& [a, b] : utl::pairwise(trips_)) {
-    auto const prev_arr = a->stop_times_.back().arr_.time_;
-    auto const succ_dep = a->stop_times_.front().dep_.time_;
-    utl::verify(prev_arr <= succ_dep,
-                "[arrival={} of trip={}] > [departure={}, trip={}]",
-                format_time(prev_arr), a->id_, format_time(succ_dep), b->id_);
-  }
-}
-
-std::vector<std::pair<std::vector<trip*>, bitfield> > block::rule_services() {
-  auto const trips = utl::to_vec(trips_, [](trip* trp) {
-    return std::pair{trp, *trp->service_};
+  auto trips = utl::to_vec(trips_, [](auto&& t) {
+    return rule_trip{t, *t->service_};
   });
-  utl::verify(!trips.empty(), "empty block not allowed");
-
-  for (auto from_idx = 0U; from_idx < trips_.size() - 1; ++from_idx) {
-    for (auto to_idx = from_idx + 1; to_idx < trips_.size(); ++to_idx) {
-      auto const range_from_it = std::next(begin(trips_), from_idx);
-      auto const range_to_it = std::next(begin(trips_), to_idx);
-
-      auto const pairwise = utl::nwise_range<2, decltype(range_from_it)>{
-          range_from_it, range_to_it};
-      auto const test = std::all_of(begin(pairwise), end(pairwise),
-                                    [](auto const& trip_pair) {});
-
-      auto const range_bitfield_intersection =
-          utl::range{range_from_it, range_to_it}  //
-          | utl::accumulate(
-                [](auto&& acc, trip* trp) { return acc & trp->service_; },
-                create_uniform_bitfield<BIT_COUNT>('1'));
-
-      if (range_bitfield_intersection.none()) {
-        break;
-      }
-    }
-  }
+  std::vector<std::pair<std::vector<trip*>, bitfield>> combinations;
+  build_rule_services_rec(begin(trips), end(trips), std::vector<trip*>{},
+                          create_uniform_bitfield<BIT_COUNT>('1'),
+                          combinations);
+  return combinations;
 }
 
 stop_time::stop_time(stop* s, std::string headsign, int arr_time,
@@ -131,7 +138,9 @@ std::pair<trip_map, block_map> read_trips(loaded_file file,
                          get<trip_headsign>(t).to_str(),
                          get<trip_short_name>(t).to_str(), i + 1))
             .first->second.get();
-    blk->trips_.emplace_back(trp);
+    if (blk != nullptr) {
+      blk->trips_.emplace_back(trp);
+    }
   }
   return ret;
 }

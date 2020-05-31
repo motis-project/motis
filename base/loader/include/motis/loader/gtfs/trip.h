@@ -16,7 +16,6 @@ namespace motis::loader::gtfs {
 struct trip;
 
 struct block {
-  void sort_and_check_trips();
   std::vector<std::pair<std::vector<trip*>, bitfield>> rule_services();
   std::vector<trip*> trips_;
 };

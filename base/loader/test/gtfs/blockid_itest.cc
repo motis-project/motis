@@ -75,7 +75,7 @@ struct loader_graph_builder_gtfs_block_id : public motis_instance_test {
 };
 
 TEST_F(loader_graph_builder_gtfs_block_id, search) {
-  auto res = routing_query("S1", "S2", "2006-07-02 01:00 Europe/Berlin");
+  auto res = routing_query("S1", "S3", "2006-07-02 01:00 Europe/Berlin");
   auto connections = motis_content(RoutingResponse, res)->connections();
 
   ASSERT_EQ(1, connections->size());
