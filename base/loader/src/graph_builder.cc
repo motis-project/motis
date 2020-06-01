@@ -273,8 +273,6 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
                      return lhs->route() < rhs->route();
                    });
 
-  auto prev_progress = 0U;
-
   auto it = begin(sorted);
   mcd::vector<Service const*> route_services;
   clog_import_step("Build Services", progress_offset_, 90, sorted.size());
