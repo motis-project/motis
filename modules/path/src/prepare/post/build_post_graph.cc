@@ -76,6 +76,14 @@ struct post_graph_builder {
 
     std::vector<post_segment_id> segment_ids;
     for (auto const& path : seq.paths_) {
+      // path empty or a self loop
+      if (path.size() == 0 ||
+          (get_node_idx({path.osm_node_ids_.front(), path.polyline_.front()}) ==
+           get_node_idx({path.osm_node_ids_.back(), path.polyline_.back()}))) {
+        segment_ids.emplace_back();
+        continue;
+      }
+
       edges.clear();
       auto const base_color = color;
 
@@ -124,7 +132,7 @@ struct post_graph_builder {
       }
 
       if (edges.empty()) {
-        segment_ids.emplace_back(nullptr, kInvalidColor, kInvalidColor);
+        segment_ids.emplace_back();
         continue;
       }
 
@@ -158,6 +166,7 @@ struct post_graph_builder {
 
       auto const final_color = base_color + color_offset;
       segment_ids.emplace_back(graph_.nodes_.at(edges.front().from_idx_).get(),
+                               graph_.nodes_.at(edges.back().to_idx_).get(),
                                base_color, final_color);
 
       // increment color for the next segment

@@ -21,12 +21,20 @@ constexpr auto const kInvalidColor = std::numeric_limits<color_t>::max();
 struct post_graph_node;
 
 struct post_segment_id {
-  post_segment_id(post_graph_node* start, color_t color, color_t max_color)
-      : start_{start}, color_{color}, max_color_{max_color} {}
+  post_segment_id()
+      : front_{nullptr},
+        back_{nullptr},
+        color_{kInvalidColor},
+        max_color_{kInvalidColor} {}
 
-  post_graph_node* start_;
-  color_t color_;
-  color_t max_color_;
+  post_segment_id(post_graph_node* front, post_graph_node* back,  //
+                  color_t color, color_t max_color)
+      : front_{front}, back_{back}, color_{color}, max_color_{max_color} {}
+
+  [[nodiscard]] bool valid() const { return front_ != nullptr; }
+
+  post_graph_node *front_, *back_;
+  color_t color_, max_color_;
 };
 
 struct post_node_id {

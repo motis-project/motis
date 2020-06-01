@@ -346,6 +346,84 @@ TEST(post_graph, self_loop_long) {
   }
 }
 
+TEST(post_graph, self_loop_short_suffix) {
+  // makes no sense, should still work
+  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 2, 1}})});
+
+  ASSERT_EQ(3, g.nodes_.size());
+  ASSERT_EQ(1, g.segment_ids_.size());
+  ASSERT_EQ(1, g.segment_ids_.at(0).size());
+
+  mp::post_process(g);
+
+  {
+    auto const rp = mp::reconstruct_path(g.segment_ids_.at(0).at(0));
+    ASSERT_EQ(3, rp.size());
+
+    EXPECT_EQ(2, rp.at(0).first->path_.size());
+    CHECK_AP(rp.at(0), 0, 1);
+
+    EXPECT_EQ(2, rp.at(1).first->path_.size());
+    CHECK_AP(rp.at(1), 1, 2);
+
+    EXPECT_EQ(2, rp.at(2).first->path_.size());
+    CHECK_AP(rp.at(2), 2, 1);
+  }
+}
+
+TEST(post_graph, self_loop_long_suffix) {
+  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 2, 3, 1}})});
+
+  ASSERT_EQ(4, g.nodes_.size());
+  ASSERT_EQ(1, g.segment_ids_.size());
+  ASSERT_EQ(1, g.segment_ids_.at(0).size());
+
+  mp::post_process(g);
+
+  {
+    auto const rp = mp::reconstruct_path(g.segment_ids_.at(0).at(0));
+    ASSERT_EQ(2, rp.size());
+
+    EXPECT_EQ(2, rp.at(0).first->path_.size());
+    CHECK_AP(rp.at(0), 0, 1);
+
+    EXPECT_EQ(4, rp.at(1).first->path_.size());
+    CHECK_AP(rp.at(1), 1, 1);
+  }
+}
+
+TEST(post_graph, self_loop_full_short) {
+  // makes no sense, should still work
+  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 0}})});
+
+  ASSERT_EQ(2, g.nodes_.size());
+  ASSERT_EQ(1, g.segment_ids_.size());
+  ASSERT_EQ(1, g.segment_ids_.at(0).size());
+
+  mp::post_process(g);
+
+  {
+    auto const rp = mp::reconstruct_path(g.segment_ids_.at(0).at(0));
+    ASSERT_EQ(0, rp.size());
+  }
+}
+
+TEST(post_graph, self_loop_start_long) {
+  // makes no sense, should still work
+  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 2, 0}})});
+
+  ASSERT_EQ(3, g.nodes_.size());
+  ASSERT_EQ(1, g.segment_ids_.size());
+  ASSERT_EQ(1, g.segment_ids_.at(0).size());
+
+  mp::post_process(g);
+
+  {
+    auto const rp = mp::reconstruct_path(g.segment_ids_.at(0).at(0));
+    ASSERT_EQ(0, rp.size());
+  }
+}
+
 TEST(post_graph, no_path) {
   auto g = mp::build_post_graph({make_resolved_seq({{0, 0}})});
 

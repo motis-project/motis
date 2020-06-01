@@ -12,7 +12,7 @@ struct color_to_seq_seg_index {
   explicit color_to_seq_seg_index(post_graph const& graph) : graph_{graph} {
     for (auto const& [i, sequence] : utl::enumerate(graph.segment_ids_)) {
       for (auto const& [j, segment] : utl::enumerate(sequence)) {
-        if (segment.start_ == nullptr) {
+        if (!segment.valid()) {
           continue;
         }
 

@@ -60,17 +60,23 @@ void serialize_geometry(post_graph& graph, db_builder& builder) {
 }
 
 std::vector<std::pair<atomic_path*, bool>> reconstruct_path(
-    post_segment_id const& segment_id) {
+    post_segment_id const& segment_id, size_t const sanity_check_limit) {
   std::vector<std::pair<atomic_path*, bool>> paths;
 
-  auto* node = segment_id.start_;
+  auto* node = segment_id.front_;
   auto color = segment_id.color_;
 
   if (node == nullptr) {
     return {};
   }
 
-  while (true) {
+  for (auto i = 0ULL;; ++i) {
+    if (i > sanity_check_limit) {
+      LOG(logging::warn)
+          << "reconstruct_path: sanity_check_limit reached, abort.";
+      return {};
+    }
+
     post_graph_edge* edge = nullptr;
     if (color < segment_id.max_color_) {
       edge = node->find_out_edge(color + 1);
@@ -79,6 +85,11 @@ std::vector<std::pair<atomic_path*, bool>> reconstruct_path(
     if (edge != nullptr) {
       ++color;
     } else {
+      // we are at back and have no color increment -> finish
+      if (node == segment_id.back_) {
+        break;
+      }
+
       edge = node->find_out_edge(color);
     }
 
@@ -105,13 +116,15 @@ void reconstruct_and_serialize_seqs(post_graph const& graph,
   ml::scoped_timer timer("post_serializer: serialize_seqs");
 
   utl::parallel_for_run(graph.originals_.size(), [&](auto const i) {
-    auto const seq = graph.originals_[i];
+    auto const& seq = graph.originals_.at(i);
+    auto const& ids = graph.segment_ids_.at(i);
 
     std::vector<geo::box> boxes;
     std::vector<std::vector<int64_t>> feature_ids;
     std::vector<std::vector<uint64_t>> hints_rle;
-    for (auto const& id : graph.segment_ids_[i]) {
-      auto const atomic_paths = reconstruct_path(id);
+    for (auto j = 0ULL; j < seq.paths_.size(); ++j) {
+      auto const atomic_paths =
+          reconstruct_path(ids.at(j), seq.paths_.at(j).size());
 
       boxes.emplace_back();
       for (auto const& ap : atomic_paths) {
