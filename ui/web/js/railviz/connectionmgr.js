@@ -3,7 +3,7 @@ var RailViz = RailViz || {};
 RailViz.ConnectionManager = (function () {
   let connections = [];
   let tripData = null;
-  let walkData = null;
+  let walkData = [];
 
   let lastTripsRequest = null;
   let tripsComplete = false;
@@ -14,7 +14,7 @@ RailViz.ConnectionManager = (function () {
     console.log("setConnections:", conns);
     connections = conns;
     tripData = null;
-    walkData = null;
+    walkData = [];
     tripsComplete = false;
     requestTrips();
     requestWalks();
