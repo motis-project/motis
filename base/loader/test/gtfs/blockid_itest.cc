@@ -72,7 +72,7 @@ struct loader_graph_builder_gtfs_block_id : public motis_instance_test {
     return call(make_msg(fbb));
   }
 
-  void expect_no_transfers(Connection const* con) {
+  static void expect_no_transfers(Connection const* con) {
     for (unsigned i = 0; i < con->stops()->size() - 2; ++i) {
       EXPECT_FALSE(con->stops()->Get(i)->exit());
     }
