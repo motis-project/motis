@@ -1,98 +1,116 @@
 var RailViz = RailViz || {};
 
 RailViz.Markers = (function () {
+  let markerSettings = {};
+  let startText = "";
+  let destinationText = "";
 
-    var startMarker = null;
-    var destinationMarker = null;
-    var visible = true;
-    var map;
-    var startText = "";
-    var destinationText = "";
+  let startMarker = null;
+  let destinationMarker = null;
+  let visible = true;
+  let map;
 
-    function init(mapRef) {
-        map = mapRef;
+  function init(mapRef) {
+    map = mapRef;
+  }
+
+  function setLocale(l) {
+    startText = l.start;
+    destinationText = l.destination;
+    updateMarkers();
+
+    if (startMarker) {
+      startMarker.getElement().setAttribute("title", startText);
     }
-
-    function setLocale(l) {
-        startText = l.start;
-        destinationText = l.destination;
-
-        if (startMarker) {
-            startMarker.getElement().setAttribute("title", startText);
-        }
-        if (destinationMarker) {
-            destinationMarker.getElement().setAttribute("title", destinationText);
-        }
+    if (destinationMarker) {
+      destinationMarker.getElement().setAttribute("title", destinationText);
     }
+  }
 
-    function setMarkers(settings) {
-        if (startMarker) {
-            if (settings.start) {
-                startMarker.setLngLat([settings.start.lng, settings.start.lat]);
-            } else if (visible) {
-                startMarker.remove();
-                startMarker = null;
-            }
-        } else {
-            if (settings.start) {
-                startMarker = new mapboxgl.Marker()
-                    .setLngLat([settings.start.lng, settings.start.lat]);
-                startMarker.getElement().setAttribute("title", startText);
-                if (visible) {
-                    startMarker.addTo(map);
-                }
-            }
-        }
+  function setMarkers(settings) {
+    markerSettings = settings;
+    updateMarkers();
+  }
 
-        if (destinationMarker) {
-            if (settings.destination) {
-                destinationMarker.setLngLat([settings.destination.lng, settings.destination.lat]);
-            } else if (visible) {
-                destinationMarker.remove();
-                destinationMarker = null;
-            }
-        } else {
-            if (settings.destination) {
-                destinationMarker = new mapboxgl.Marker()
-                    .setLngLat([settings.destination.lng, settings.destination.lat]);
-                destinationMarker.getElement().setAttribute("title", destinationText);
-                if (visible) {
-                    destinationMarker.addTo(map);
-                }
-            }
-        }
+  function updateMarkers() {
+    console.log("updateMarkers");
+
+    startMarker = updateMarker(
+      startMarker,
+      markerSettings.startPosition,
+      startText,
+      markerSettings.startName,
+      "url(img/marker_origin.png)",
+      visible
+    );
+
+    destinationMarker = updateMarker(
+      destinationMarker,
+      markerSettings.destinationPosition,
+      destinationText,
+      markerSettings.destinationName,
+      "url(img/marker_destination.png)",
+      visible
+    );
+  }
+
+  function updateMarker(m, pos, text, name, img, visible) {
+    if (m) {
+      if (!visible || !pos) {
+        m.remove();
+        m = null;
+      } else {
+        m.setLngLat([pos.lng, pos.lat]);
+        m.getElement().setAttribute("title", `${text || ""}: ${name}`);
+      }
+    } else if (pos) {
+      let el = document.createElement("div");
+      el.style.display = "block";
+      el.style.width = "32px";
+      el.style.height = "48px";
+      el.style.backgroundImage = img;
+
+      m = new mapboxgl.Marker(el, {
+        anchor: "bottom",
+        offset: [0, 7],
+      }).setLngLat([pos.lng, pos.lat]);
+      m.getElement().setAttribute("title", `${text || ""}: ${name}`);
+      if (visible) {
+        m.addTo(map);
+      }
     }
+    return m;
+  }
 
-    function show() {
-        if (!visible) {
-            visible = true;
-            if (startMarker) {
-                startMarker.addTo(map);
-            }
-            if (destinationMarker) {
-                destinationMarker.addTo(map);
-            }
-        }
+  function show() {
+    if (!visible) {
+      visible = true;
+      if (startMarker) {
+        startMarker.addTo(map);
+      }
+      if (destinationMarker) {
+        destinationMarker.addTo(map);
+      }
     }
+  }
 
-    function hide() {
-        if (visible) {
-            visible = false;
-            if (startMarker) {
-                startMarker.remove();
-            }
-            if (destinationMarker) {
-                destinationMarker.remove();
-            }
-        }
+  function hide() {
+    if (visible) {
+      visible = false;
+      if (startMarker) {
+        startMarker.remove();
+      }
+      if (destinationMarker) {
+        destinationMarker.remove();
+      }
     }
+  }
 
-    return {
-        init: init,
-        setLocale: setLocale,
-        setMarkers: setMarkers,
-        show: show,
-        hide: hide
-    };
-
+  return {
+    init: init,
+    setLocale: setLocale,
+    setMarkers: setMarkers,
+    show: show,
+    hide: hide,
+  };
 })();

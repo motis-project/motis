@@ -530,15 +530,24 @@ checkTypeaheadUpdate msg ( model, cmds ) =
 setMapMarkers : Model -> Cmd msg
 setMapMarkers model =
     let
-        start =
+        startPosition =
             Typeahead.getSelectedSuggestion model.fromLocation
                 |> Maybe.map Typeahead.getSuggestionPosition
 
-        destination =
+        destinationPosition =
             Typeahead.getSelectedSuggestion model.toLocation
                 |> Maybe.map Typeahead.getSuggestionPosition
+
+        startName =
+            Typeahead.getSelectedSuggestion model.fromLocation
+                |> Maybe.map Typeahead.getSuggestionName
+
+        destinationName =
+            Typeahead.getSelectedSuggestion model.toLocation
+                |> Maybe.map Typeahead.getSuggestionName
+
     in
-    RailViz.setMapMarkers start destination
+    RailViz.setMapMarkers startPosition destinationPosition startName destinationName
 
 
 debounceCfg : Debounce.Config Model Msg

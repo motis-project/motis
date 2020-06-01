@@ -159,8 +159,10 @@ type alias RVConnectionWalk =
 
 
 type alias MapMarkerSettings =
-    { start : Maybe Position
-    , destination : Maybe Position
+    { startPosition : Maybe Position
+    , destinationPosition : Maybe Position
+    , startName : Maybe String
+    , destinationName : Maybe String
     }
 
 

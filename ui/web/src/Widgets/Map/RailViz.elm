@@ -251,11 +251,13 @@ getContextMenuPosition model =
     { lat = model.contextMenuLat, lng = model.contextMenuLng }
 
 
-setMapMarkers : Maybe Position -> Maybe Position -> Cmd msg
-setMapMarkers start destination =
+setMapMarkers : Maybe Position -> Maybe Position -> Maybe String -> Maybe String -> Cmd msg
+setMapMarkers startPosition destinationPosition startName destinationName =
     mapSetMarkers
-        { start = start
-        , destination = destination
+        { startPosition = startPosition
+        , destinationPosition = destinationPosition
+        , startName = startName
+        , destinationName = destinationName
         }
 
 
