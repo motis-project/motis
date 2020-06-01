@@ -42,7 +42,7 @@ auto routing_request_gtfs_block_id = R"({
 struct loader_graph_builder_gtfs_block_id : public motis_instance_test {
   loader_graph_builder_gtfs_block_id(std::string schedule_begin)
       : motis_instance_test({(gtfs::SCHEDULES / "block_id").generic_string(),
-                             schedule_begin, 1},
+                             std::move(schedule_begin), 1},
                             {"routing"}) {}
 
   msg_ptr routing_query(std::string_view const& from,
