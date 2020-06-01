@@ -23,6 +23,7 @@ struct block {
 using block_map = std::map<std::string, std::unique_ptr<block>>;
 
 struct stop_time {
+  stop_time();
   stop_time(stop*, std::string headsign, int arr_time, bool out_allowed,
             int dep_time, bool in_allowed);
 

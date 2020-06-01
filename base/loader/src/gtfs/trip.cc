@@ -1,6 +1,7 @@
 #include "motis/loader/gtfs/trip.h"
 
 #include <algorithm>
+#include <queue>
 #include <tuple>
 
 #include "utl/enumerate.h"
@@ -25,35 +26,6 @@ struct rule_trip {
   bitfield traffic_days_;
 };
 
-void build_rule_services_rec(
-    std::vector<rule_trip>::iterator current_it,
-    std::vector<rule_trip>::iterator end, std::vector<trip*> trips,
-    bitfield const& intersection,
-    std::vector<std::pair<std::vector<trip*>, bitfield>>& combinations) {
-  trips.emplace_back(current_it->trip_);
-
-  for (auto it = std::next(current_it); it != end; ++it) {
-    auto& [succ_trp, succ_traffic_days] = *it;
-
-    if (current_it->trip_->stop_times_.back().stop_ !=
-        succ_trp->stop_times_.front().stop_) {
-      continue;  // prev last stop != next first stop
-    }
-
-    auto const new_intersection = intersection & succ_traffic_days;
-    if (new_intersection.none()) {
-      continue;  // no common traffic days
-    }
-
-    current_it->traffic_days_ &= ~new_intersection;
-    build_rule_services_rec(it, end, trips, new_intersection, combinations);
-  }
-
-  if (current_it->traffic_days_.any()) {
-    combinations.emplace_back(trips, current_it->traffic_days_);
-  }
-}
-
 std::vector<std::pair<std::vector<trip*>, bitfield>> block::rule_services() {
   utl::verify(!trips_.empty(), "empty block not allowed");
   std::sort(begin(trips_), end(trips_), [](trip const* a, trip const* b) {
@@ -63,12 +35,51 @@ std::vector<std::pair<std::vector<trip*>, bitfield>> block::rule_services() {
   auto trips = utl::to_vec(trips_, [](auto&& t) {
     return rule_trip{t, *t->service_};
   });
+
+  struct queue_entry {
+    std::vector<rule_trip>::iterator current_it_;
+    std::vector<trip*> collected_trips_;
+    bitfield intersection_;
+  };
+
+  std::queue<queue_entry> q;
+  for (auto it = begin(trips); it != end(trips); ++it) {
+    q.emplace(queue_entry{it, std::vector<trip*>{},
+                          create_uniform_bitfield<BIT_COUNT>('1')});
+  }
+
   std::vector<std::pair<std::vector<trip*>, bitfield>> combinations;
-  build_rule_services_rec(begin(trips), end(trips), std::vector<trip*>{},
-                          create_uniform_bitfield<BIT_COUNT>('1'),
-                          combinations);
+  while (!q.empty()) {
+    auto next = q.front();
+    q.pop();
+
+    auto& [current_it, collected_trips, intersection] = next;
+    collected_trips.emplace_back(current_it->trip_);
+    for (auto succ_it = std::next(current_it); succ_it != end(trips);
+         ++succ_it) {
+      if (current_it->trip_->stop_times_.back().stop_ !=
+          succ_it->trip_->stop_times_.front().stop_) {
+        continue;  // prev last stop != next first stop
+      }
+
+      auto const new_intersection = intersection & succ_it->traffic_days_;
+      if (new_intersection.none()) {
+        continue;  // no common traffic days
+      }
+
+      current_it->traffic_days_ &= ~new_intersection;
+      q.emplace(queue_entry{succ_it, collected_trips, new_intersection});
+    }
+
+    if (current_it->traffic_days_.any()) {
+      combinations.emplace_back(collected_trips, current_it->traffic_days_);
+    }
+  }
+
   return combinations;
 }
+
+stop_time::stop_time() = default;
 
 stop_time::stop_time(stop* s, std::string headsign, int arr_time,
                      bool out_allowed, int dep_time, bool in_allowed)

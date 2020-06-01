@@ -277,6 +277,7 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
 
   auto it = begin(sorted);
   mcd::vector<Service const*> route_services;
+  clog_import_step("Build Services", progress_offset_, 90, sorted.size());
   while (it != end(sorted)) {
     auto route = (*it)->route();
     do {
@@ -292,15 +293,8 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
 
     route_services.clear();
 
-    auto const progress = static_cast<int>(
-        progress_offset_ +
-        (100.0 - progress_offset_) *
-            static_cast<float>(std::distance(begin(sorted), it)) /
-            sorted.size());
-    if (progress != prev_progress) {
-      prev_progress = progress;
-      std::clog << '\0' << progress << '\0';
-    }
+    motis::logging::clog_import_progress(std::distance(begin(sorted), it),
+                                         1000);
   }
 }
 
@@ -858,7 +852,6 @@ schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
     sched->name_ = serialized->name()->str();
   }
 
-  clog_import_step("Build Graph", progress_offset, 90);
   graph_builder builder(*sched, serialized->interval(), opt, progress_offset);
   builder.add_stations(serialized->stations());
   if (serialized->meta_stations() != nullptr) {

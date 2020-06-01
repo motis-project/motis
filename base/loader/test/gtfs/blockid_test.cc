@@ -17,7 +17,7 @@ TEST(loader_gtfs_block_id, trips) {
       {(gtfs::SCHEDULES / "block_id").generic_string(), "20060701", 31});
   for (auto const& t : sched->gtfs_trip_ids_) {
     std::cout << t.first.trip_id_ << ", "
-              << format_unixtime(t.first.start_date_, "%Y-%m-%d") << "\n";
+              << format_unix_time(t.first.start_date_, "%Y-%m-%d") << "\n";
   }
   std::cout << sched->trips_.size() << "\n";
   std::cout << sched->expanded_trips_.data_size() << "\n";

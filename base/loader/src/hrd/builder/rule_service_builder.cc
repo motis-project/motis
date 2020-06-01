@@ -179,7 +179,9 @@ void create_rule_service(
   std::map<hrd_service const*, Offset<Service>> services;
   for (auto const& s : rs.services_) {
     auto const* service = s.service_.get();
-    services[service] = sbf(std::cref(*service), true, std::ref(fbb));
+    utl::get_or_create(services, service, [&] {
+      return sbf(std::cref(*service), true, std::ref(fbb));
+    });
   }
 
   std::vector<Offset<Rule>> fbb_rules;

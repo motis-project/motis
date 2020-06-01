@@ -270,11 +270,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
       Interval{static_cast<uint64_t>(to_unix_time(services.first_day_)),
                static_cast<uint64_t>(to_unix_time(services.last_day_))};
 
-  auto i = size_t{0U};
-  auto const create_service =
-      [&](trip const* t) -> flatbuffers64::Offset<Service> {
-    motis::logging::clog_import_progress(i++, 100000);
-
+  auto const create_service = [&](trip const* t) {
     auto const stop_seq = t->stops();
     return CreateService(
         fbb,
@@ -331,9 +327,11 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
         get_or_create_str(t->id_));
   };
 
+  auto i = size_t{0U};
   auto const output_services =
       fbb.CreateVector(utl::all(trips)  //
-                       | utl::remove_if([](auto const& entry) {
+                       | utl::remove_if([&](auto const& entry) {
+                           motis::logging::clog_import_progress(i++, 100000);
                            auto const stop_count = entry.second->stops().size();
                            if (stop_count < 2) {
                              LOG(warn)
@@ -351,21 +349,28 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   utl::all(blocks)  //
       | utl::remove_if(
             [](auto const& blk) { return blk.second->trips_.size() < 2; })  //
-      | utl::for_each([&](auto const& blk) {
-          auto const rules = blk.second->rule_services();
-          for (auto const& [trips, traffic_days] : rules) {
-            std::vector<flatbuffers64::Offset<Rule>> rules;
-            for (auto const& [a, b] : utl::pairwise(trips)) {
-              auto const transition_stop =
-                  get_or_create_stop(a->stop_times_.back().stop_);
-              rules.emplace_back(CreateRule(
-                  fbb, RuleType_THROUGH, create_service(a), create_service(b),
-                  transition_stop, transition_stop, 0, 0, false));
-            }
-            rule_services.emplace_back(
-                CreateRuleService(fbb, fbb.CreateVector(rules)));
+      |
+      utl::for_each([&](auto const& blk) {
+        for (auto const& [trips, traffic_days] : blk.second->rule_services()) {
+          std::vector<flatbuffers64::Offset<Rule>> rules;
+          std::map<trip*, flatbuffers64::Offset<Service>> services;
+          for (auto const& p : utl::pairwise(trips)) {
+            auto const& a = get<0>(p);
+            auto const& b = get<1>(p);
+            auto const transition_stop =
+                get_or_create_stop(a->stop_times_.back().stop_);
+            rules.emplace_back(
+                CreateRule(fbb, RuleType_THROUGH,
+                           utl::get_or_create(
+                               services, a, [&] { return create_service(a); }),
+                           utl::get_or_create(
+                               services, b, [&] { return create_service(b); }),
+                           transition_stop, transition_stop, 0, 0, false));
           }
-        });
+          rule_services.emplace_back(
+              CreateRuleService(fbb, fbb.CreateVector(rules)));
+        }
+      });
 
   auto const dataset_name =
       std::accumulate(begin(feeds), end(feeds), std::string("GTFS"),
