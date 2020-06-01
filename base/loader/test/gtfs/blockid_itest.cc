@@ -12,33 +12,6 @@ using namespace motis::module;
 using namespace motis::loader;
 using motis::routing::RoutingResponse;
 
-auto routing_request_gtfs_block_id = R"({
-  "destination": {
-    "type": "Module",
-    "target": "/routing"
-  },
-  "content_type": "RoutingRequest",
-  "content": {
-    "start_type": "PretripStart",
-    "start": {
-      "station": {
-        "name": "",
-        "id": "0000002"
-      },
-      "interval": {
-        "begin": 1448323200,
-        "end": 1448336800
-      }
-    },
-    "destination": {
-      "name": "",
-      "id": "0000009"
-    },
-    "additional_edges": [],
-    "via": []
-  }
-})";
-
 struct loader_graph_builder_gtfs_block_id : public motis_instance_test {
   loader_graph_builder_gtfs_block_id(std::string schedule_begin)
       : motis_instance_test({(gtfs::SCHEDULES / "block_id").generic_string(),
