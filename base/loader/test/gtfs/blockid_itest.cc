@@ -64,10 +64,9 @@ struct loader_graph_builder_gtfs_block_id : public motis_instance_test {
             routing::CreateInputStation(fbb, fbb.CreateString(to),
                                         fbb.CreateString("")),
             routing::SearchType_Default, routing::SearchDir_Forward,
-            fbb.CreateVector(std::vector<flatbuffers::Offset<routing::Via>>{}),
+            fbb.CreateVector(std::vector<fbs::Offset<routing::Via>>{}),
             fbb.CreateVector(
-                std::vector<
-                    flatbuffers::Offset<routing::AdditionalEdgeWrapper>>{}))
+                std::vector<fbs::Offset<routing::AdditionalEdgeWrapper>>{}))
             .Union(),
         "/routing");
     return call(make_msg(fbb));
