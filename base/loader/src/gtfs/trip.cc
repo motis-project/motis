@@ -44,8 +44,7 @@ std::vector<std::pair<std::vector<trip*>, bitfield>> block::rule_services() {
 
   std::queue<queue_entry> q;
   for (auto it = begin(trips); it != end(trips); ++it) {
-    q.emplace(queue_entry{it, std::vector<trip*>{},
-                          create_uniform_bitfield<BIT_COUNT>('1')});
+    q.emplace(queue_entry{it, std::vector<trip*>{}, it->traffic_days_});
   }
 
   std::vector<std::pair<std::vector<trip*>, bitfield>> combinations;
