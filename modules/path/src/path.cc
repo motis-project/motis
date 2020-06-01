@@ -32,23 +32,13 @@
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
-#include "motis/path/prepare/db_builder.h"
-#include "motis/path/prepare/filter_sequences.h"
-#include "motis/path/prepare/post/build_post_graph.h"
-#include "motis/path/prepare/post/post_graph.h"
-#include "motis/path/prepare/post/post_processor.h"
-#include "motis/path/prepare/post/post_serializer.h"
-#include "motis/path/prepare/resolve/path_routing.h"
-#include "motis/path/prepare/resolve/resolve_sequences.h"
-#include "motis/path/prepare/schedule/schedule_wrapper.h"
-#include "motis/path/prepare/schedule/stations.h"
-#include "motis/path/prepare/schedule/stop_positions.h"
-
 #include "motis/path/constants.h"
 #include "motis/path/path_database.h"
 #include "motis/path/path_database_query.h"
 #include "motis/path/path_index.h"
 #include "motis/path/prepare/source_spec.h"
+
+#include "motis/path/prepare/prepare.h"
 
 #include "motis/path/fbs/InternalDbSequence_generated.h"
 
@@ -132,36 +122,12 @@ void path::import(progress_listener& pl, registry& reg) {
           return;
         }
 
-        auto sequences = schedule_wrapper{schedule->raw_file()->str()}
-                             .load_station_sequences();
-
-        auto stations = collect_stations(sequences);
-        find_stop_positions(osm->path()->str(), schedule->raw_file()->str(),
-                            stations);
-        filter_sequences(std::vector<std::string>{}, sequences);
-        auto const station_idx =
-            make_station_index(sequences, std::move(stations));
-
-        std::vector<resolved_station_seq> resolved_seqs;
-        LOG(info) << "processing " << sequences.size()
-                  << " station sequences with " << station_idx.stations_.size()
-                  << " unique stations.";
-
-        auto routing = make_path_routing(station_idx, osm->path()->str(),
-                                         osrm->path()->str());
-
-        resolved_seqs = resolve_sequences(sequences, routing);
-
-        LOG(info) << "post-processing " << resolved_seqs.size()
-                  << " station sequences";
-
-        auto post_graph = build_post_graph(std::move(resolved_seqs));
-        post_process(post_graph);
-
-        db_builder builder((dir / "pathdb.mdb").generic_string());
-        builder.store_stations(station_idx.stations_);
-        serialize_post_graph(post_graph, builder);
-        builder.finish();
+        prepare_settings opt;
+        opt.schedule_ = schedule->raw_file()->str();
+        opt.osm_ = osm->path()->str();
+        opt.osrm_ = osrm->path()->str();
+        opt.out_ = (dir / "pathdb.mdb").generic_string();
+        prepare(opt);
 
         write_ini(dir / "import.ini", state);
         import_successful_ = true;
