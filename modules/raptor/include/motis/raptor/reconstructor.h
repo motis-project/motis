@@ -226,13 +226,14 @@ struct reconstructor {
             std::begin(candidates), std::end(candidates),
             [&](auto const& other_c) { return other_c.dominates(c); });
 
+        dominated |=
+            std::any_of(std::begin(journeys_), std::end(journeys_),
+                        [&](auto const& j) { return dominates(j, c); });
+
         if (!dominated) {
           // Remove earlier candidates which are dominated by the new candidate
-          candidates.erase(
-              std::remove_if(
-                  std::begin(candidates), std::end(candidates),
-                  [&](auto const& other_c) { return c.dominates(other_c); }),
-              std::end(candidates));
+          erase_if(candidates,
+                   [&](auto const& other_c) { return c.dominates(other_c); });
 
           candidates.push_back(c);
         }
