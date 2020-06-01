@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <limits>
+#include <vector>
 
 namespace motis::path {
 
