@@ -76,11 +76,6 @@ std::vector<std::pair<std::vector<trip*>, bitfield>> block::rule_services() {
             traffic_days);
       }
     }
-
-    if (start_it->traffic_days_.any()) {
-      combinations.emplace_back(std::vector<trip*>{start_it->trip_},
-                                start_it->traffic_days_);
-    }
   }
 
   return combinations;
