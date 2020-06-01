@@ -67,28 +67,20 @@ inline void init_arrivals(raptor_result& result, raptor_query const& q,
 inline void update_route(raptor_timetable const& tt, route_id const r_id,
                          time const* const prev_arrivals,
                          time* const current_round, earliest_arrivals& ea,
-                         cpu_mark_store& station_marks) {
+                         cpu_mark_store& station_marks,
+                         time const max_traveltime) {
   auto const& route = tt.routes_[r_id];
 
   trip_count earliest_trip_id = invalid<trip_count>;
   for (station_id r_stop_offset = 0; r_stop_offset < route.stop_count_;
        ++r_stop_offset) {
-    // route_id debug_route = 126932;
-    // if (r_id == debug_route) {
-    //   std::cout << "stop offset: " << r_stop_offset << '\n';
-    // }
 
     if (!valid(earliest_trip_id)) {
       earliest_trip_id =
           get_earliest_trip(tt, route, prev_arrivals, r_stop_offset);
-      // if (r_id == debug_route) std::cout << "continued\n";
       continue;
     }
 
-    // if (r_id == debug_route) std::cout << "have a valid trip id: " <<
-    // earliest_trip_id << '\n';
-
-    // auto const stop_id = tt.route_stops[r_id][r_stop_offset];
     auto const stop_id =
         tt.route_stops_[route.index_to_route_stops_ + r_stop_offset];
     auto const current_stop_time_idx = route.index_to_stop_times_ +
@@ -101,20 +93,10 @@ inline void update_route(raptor_timetable const& tt, route_id const r_id,
     // and not earliest arrivals
     auto const min = std::min(current_round[stop_id], ea[stop_id]);
 
-    // if (r_id == 80433) {
-    //   std::cout << "current round[stop_id]: " << current_round[stop_id] <<
-    //   '\n'; std::cout << "earliest arrival: " << ea[stop_id] << '\n';
-    //   std::cout << "stop time arrival: " << stop_time.arrival_ << '\n';
-    // }
-
     if (stop_time.arrival_ < min) {
       station_marks.mark(stop_id);
       current_round[stop_id] = stop_time.arrival_;
       ea[stop_id] = stop_time.arrival_;
-
-      // if (stop_id == 260544 && stop_time.arrival_ == 7983) {
-      //   std::cout << "Written 8042 to 255846 from route: " << r_id << '\n';
-      // }
     }
 
     // check if we could catch an earlier trip
@@ -132,19 +114,6 @@ inline void update_footpaths(raptor_timetable const& tt, time* current_round,
                              cpu_mark_store& station_marks) {
 
   for (station_id stop_id = 0; stop_id < tt.stop_count(); ++stop_id) {
-    // for (auto const& footpath : tt.footpaths_[stop_id]) {
-    //   if (!valid(ea[stop_id])) { continue; }
-
-    //   time const new_arrival = ea[stop_id] + footpath.duration_;
-    //   time to_earliest_arrival = ea[footpath.to_];
-    //   time to_arrival = current_round[footpath.to_];
-
-    //   auto const min = std::min(to_arrival, to_earliest_arrival);
-    //   if (new_arrival < min) {
-    //     station_marks.mark(footpath.to_);
-    //     current_round[footpath.to_] = new_arrival;
-    //   }
-    // }
 
     auto index_into_transfers = tt.stops_[stop_id].index_to_transfers_;
     auto next_index_into_transfers = tt.stops_[stop_id + 1].index_to_transfers_;
@@ -174,8 +143,6 @@ inline void update_footpaths(raptor_timetable const& tt, time* current_round,
       if (new_arrival < min) {
         station_marks.mark(footpath.to_);
         current_round[footpath.to_] = new_arrival;
-        // if (new_arrival == 7983 && footpath.to_ == 260544) std::cout <<
-        // "written 8458 to 255712 with footpath from: " << stop_id << '\n';
       }
     }
   }
@@ -183,13 +150,6 @@ inline void update_footpaths(raptor_timetable const& tt, time* current_round,
 
 inline void invoke_cpu_raptor(raptor_query const& query, raptor_statistics&) {
   auto const& tt = query.tt_;
-
-  std::cout << "source: " << query.source_ << '\n';
-  for (auto const add_start : query.add_starts_) {
-    std::cout << "Add start from: " << add_start.s_id_
-              << " offset: " << add_start.offset_ << '\n';
-  }
-  std::cout << "source time begin: " << query.source_time_begin_ << '\n';
 
   auto& result = *query.result_;
   earliest_arrivals ea(tt.stop_count(), invalid<time>);
