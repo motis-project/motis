@@ -1,7 +1,7 @@
 #include "motis/loader/gtfs/trip.h"
 
 #include <algorithm>
-#include <queue>
+#include <stack>
 #include <tuple>
 
 #include "utl/enumerate.h"
@@ -21,57 +21,65 @@ using std::get;
 
 namespace motis::loader::gtfs {
 
-struct rule_trip {
-  trip* trip_;
-  bitfield traffic_days_;
-};
-
 std::vector<std::pair<std::vector<trip*>, bitfield>> block::rule_services() {
   utl::verify(!trips_.empty(), "empty block not allowed");
   std::sort(begin(trips_), end(trips_), [](trip const* a, trip const* b) {
     return a->stop_times_.front().dep_.time_ <
            b->stop_times_.front().dep_.time_;
   });
-  auto trips = utl::to_vec(trips_, [](auto&& t) {
+
+  struct rule_trip {
+    trip* trip_;
+    bitfield traffic_days_;
+  };
+  auto rule_trips = utl::to_vec(trips_, [](auto&& t) {
     return rule_trip{t, *t->service_};
   });
 
   struct queue_entry {
     std::vector<rule_trip>::iterator current_it_;
-    std::vector<trip*> collected_trips_;
-    bitfield intersection_;
+    std::vector<std::vector<rule_trip>::iterator> collected_trips_;
+    bitfield traffic_days_;
   };
 
-  std::queue<queue_entry> q;
-  for (auto it = begin(trips); it != end(trips); ++it) {
-    q.emplace(queue_entry{it, std::vector<trip*>{}, it->traffic_days_});
-  }
-
   std::vector<std::pair<std::vector<trip*>, bitfield>> combinations;
-  while (!q.empty()) {
-    auto next = q.front();
-    q.pop();
+  for (auto start_it = begin(rule_trips); start_it != end(rule_trips);
+       ++start_it) {
+    std::stack<queue_entry> q;
+    q.emplace(queue_entry{start_it, {}, start_it->traffic_days_});
+    while (!q.empty()) {
+      auto next = q.top();
+      q.pop();
 
-    auto& [current_it, collected_trips, intersection] = next;
-    collected_trips.emplace_back(current_it->trip_);
-    for (auto succ_it = std::next(current_it); succ_it != end(trips);
-         ++succ_it) {
-      if (current_it->trip_->stop_times_.back().stop_ !=
-          succ_it->trip_->stop_times_.front().stop_) {
-        continue;  // prev last stop != next first stop
+      auto& [current_it, collected_trips, traffic_days] = next;
+      collected_trips.emplace_back(current_it);
+      for (auto succ_it = std::next(current_it); succ_it != end(rule_trips);
+           ++succ_it) {
+        if (current_it->trip_->stop_times_.back().stop_ !=
+            succ_it->trip_->stop_times_.front().stop_) {
+          continue;  // prev last stop != next first stop
+        }
+
+        auto const new_intersection = traffic_days & succ_it->traffic_days_;
+        traffic_days &= ~succ_it->traffic_days_;
+        if (new_intersection.any()) {
+          q.emplace(queue_entry{succ_it, collected_trips, new_intersection});
+        }
       }
 
-      auto const new_intersection = intersection & succ_it->traffic_days_;
-      if (new_intersection.none()) {
-        continue;  // no common traffic days
+      if (traffic_days.any()) {
+        for (auto& rt : collected_trips) {
+          rt->traffic_days_ &= ~traffic_days;
+        }
+        combinations.emplace_back(
+            utl::to_vec(collected_trips, [](auto&& rt) { return rt->trip_; }),
+            traffic_days);
       }
-
-      current_it->traffic_days_ &= ~new_intersection;
-      q.emplace(queue_entry{succ_it, collected_trips, new_intersection});
     }
 
-    if (current_it->traffic_days_.any()) {
-      combinations.emplace_back(collected_trips, current_it->traffic_days_);
+    if (start_it->traffic_days_.any()) {
+      combinations.emplace_back(std::vector<trip*>{start_it->trip_},
+                                start_it->traffic_days_);
     }
   }
 
