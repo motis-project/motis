@@ -59,8 +59,9 @@ constexpr raptor_round max_transfers = 6;
 constexpr raptor_round max_trips = max_transfers + 1;
 constexpr raptor_round max_raptor_round = max_trips + 1;
 
-// TODO(julian) implement
-constexpr time max_traveltime = 1440;
+// TODO(julian) Implemented in the reconstructor as a filter after search,
+// possible to create an enhancement w.r.t. runtime out of this?
+constexpr time max_travel_duration = 1440;
 
 struct raptor_stop {
   raptor_stop() = delete;

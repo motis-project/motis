@@ -22,6 +22,8 @@ struct intermediate_journey {
     return forward_ ? stops_.front().a_time_ : stops_.back().a_time_;
   }
 
+  time get_duration() const { return get_arrival() - get_departure(); }
+
   void add_footpath(station_id const to, time const a_time, time const d_time,
                     time const duration, raptor_schedule const& raptor_sched) {
     auto const motis_index = raptor_sched.station_id_to_index_[to];
@@ -272,6 +274,10 @@ struct reconstructor {
   }
 
   auto get_journeys() {
+    erase_if(journeys_, [&](auto const& ij) -> bool {
+      return ij.get_duration() > max_travel_duration;
+    });
+
     return to_vec(journeys_, [&](auto& ij) { return ij.to_journey(sched_); });
   }
 
