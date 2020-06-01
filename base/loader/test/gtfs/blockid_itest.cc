@@ -45,9 +45,9 @@ struct loader_graph_builder_gtfs_block_id : public motis_instance_test {
                              std::move(schedule_begin), 1},
                             {"routing"}) {}
 
-  msg_ptr routing_query(std::string_view const& from,
-                        std::string_view const& to,
-                        std::string_view start_time) {
+  static msg_ptr routing_query(std::string_view const& from,
+                               std::string_view const& to,
+                               std::string_view start_time) {
     auto const start_unix_time =
         parse_unix_time(start_time, "%Y-%m-%d %H:%M %Z");
     message_creator fbb;
