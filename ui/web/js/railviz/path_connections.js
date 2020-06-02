@@ -116,7 +116,7 @@ RailViz.Path.Connections = (function () {
 
     if (walkData) {
       walkData.forEach((w) => {
-        if (w.error) {
+        if (w.error || !w.polyline) {
           return;
         }
         const coords = RailViz.Model.doublesToLngLats(w.polyline.coordinates);
@@ -168,7 +168,7 @@ RailViz.Path.Connections = (function () {
 
     let minCIds = new Map(); // feature id -> minCid
     connectionIds.forEach((cid) => {
-      if(connections === null) {
+      if (connections === null) {
         return; // catch racing condition during initial load
       }
       const c = connections.find((c) => c.id == cid);

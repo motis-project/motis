@@ -207,12 +207,14 @@ RailViz.ConnectionManager = (function () {
   function handlePPRResponse(w, data) {
     if (data.routes.length === 0 || data.routes[0].routes.length === 0) {
       console.log("ppr didn't find routes for:", w);
-      w.polyline = [
-        w.walk.departureStation.pos.lat,
-        w.walk.departureStation.pos.lng,
-        w.walk.arrivalStation.pos.lat,
-        w.walk.arrivalStation.pos.lng,
-      ];
+      w.polyline = {
+        coordinates: [
+          w.walk.departureStation.pos.lat,
+          w.walk.departureStation.pos.lng,
+          w.walk.arrivalStation.pos.lat,
+          w.walk.arrivalStation.pos.lng,
+        ],
+      };
       return;
     }
     let routes = data.routes[0].routes;
