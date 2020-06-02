@@ -13,7 +13,7 @@ using namespace motis::loader;
 using motis::routing::RoutingResponse;
 
 struct loader_graph_builder_gtfs_block_id : public motis_instance_test {
-  loader_graph_builder_gtfs_block_id(std::string schedule_begin)
+  explicit loader_graph_builder_gtfs_block_id(std::string schedule_begin)
       : motis_instance_test({(gtfs::SCHEDULES / "block_id").generic_string(),
                              std::move(schedule_begin), 1},
                             {"routing"}) {}
