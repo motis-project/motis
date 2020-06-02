@@ -52,4 +52,9 @@ inline auto to_vec(Container& c, UnaryOperation&& op)
   return v;
 }
 
+template <typename Container, typename T>
+inline bool contains(Container const& c, T const& ele) {
+  return std::find(std::begin(c), std::end(c), ele) != std::end(c);
+}
+
 }  // namespace motis::raptor
