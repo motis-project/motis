@@ -228,7 +228,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
       center: [lng, lat],
       bearing: bearing,
       pitch: pitch,
-      antialias: true,
+      antialias: false,
     });
 
     map_bg.addImage(
@@ -260,7 +260,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
         sources: {},
         layers: [],
       },
-      antialias: true,
+      antialias: false,
       attributionControl: true,
       customAttribution:
         '<a href="https://www.openstreetmap.org/">© OpenStreetMap contributors</a>',
