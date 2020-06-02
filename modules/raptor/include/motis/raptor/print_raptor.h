@@ -134,6 +134,19 @@ template <typename Container>
   return routes;
 }
 
+template <typename Container>
+[[maybe_unused]] inline std::vector<route_id> get_routes_containing_evas(
+    Container const& evas, raptor_schedule const& raptor_sched,
+    raptor_timetable const& tt) {
+
+  std::vector<station_id> s_ids;
+  for (auto const& eva : evas) {
+    s_ids.push_back(raptor_sched.eva_to_raptor_id_.at(eva));
+  }
+
+  return get_routes_containing(s_ids, tt);
+}
+
 [[maybe_unused]] inline void print_route_arrivals(route_id const r_id,
                                                   raptor_timetable const& tt,
                                                   time const* const arrs) {
