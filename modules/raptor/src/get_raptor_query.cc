@@ -66,6 +66,11 @@ base_query get_base_query(RoutingRequest const* routing_request,
     q.source_time_end_ = -q.source_time_end_;
   }
 
+  // Don't use start meta stations in the ontrip case, because:
+  // do as the routing module does
+  q.use_start_metas_ =
+      routing_request->use_start_metas() &&
+      routing_request->start_type() != Start_OntripStationStart;
   q.use_dest_metas_ = routing_request->use_dest_metas();
 
   return q;

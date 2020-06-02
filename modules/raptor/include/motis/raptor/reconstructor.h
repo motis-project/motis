@@ -269,7 +269,8 @@ struct reconstructor {
         c.arrival_ += raptor_sched_.transfer_times_[c.target_];
       }
 
-      journeys_.push_back(reconstruct_journey(c, *q.result_, q.forward_));
+      journeys_.push_back(
+          reconstruct_journey(c, *q.result_, q.forward_, q.use_start_metas_));
     }
   }
 
@@ -297,7 +298,8 @@ struct reconstructor {
 
   intermediate_journey reconstruct_journey(candidate const c,
                                            raptor_result const& result,
-                                           bool const forward) {
+                                           bool const forward,
+                                           bool const use_start_metas) {
     intermediate_journey ij(c.transfers_, forward);
 
     auto arrival_station = c.target_;
@@ -343,8 +345,12 @@ struct reconstructor {
       station_arrival = result[result_idx - 1][arrival_station];
     }
 
-    if (arrival_station == c.source_) {
-      ij.add_start_station(c.source_, raptor_sched_, last_departure);
+    bool is_equivalent = use_start_metas &&
+                         contains(raptor_sched_.equivalent_stations_[c.source_],
+                                  arrival_station);
+
+    if (arrival_station == c.source_ || is_equivalent) {
+      ij.add_start_station(arrival_station, raptor_sched_, last_departure);
       return ij;
     }
 
@@ -371,6 +377,10 @@ struct reconstructor {
     };
 
     if (try_as_start(c.source_, arrival_station, last_departure)) {
+      return ij;
+    }
+
+    if (!use_start_metas) {
       return ij;
     }
 

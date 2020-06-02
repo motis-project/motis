@@ -47,10 +47,8 @@ inline Query raptor::get_query(
   auto const& tt = base_query.forward_ ? *timetable_ : *backward_timetable_;
 
   auto const use_start_footpaths = routing_request->use_start_footpaths();
-  auto const use_start_metas = routing_request->use_start_metas();
 
-  return Query(base_query, *raptor_sched_, tt, use_start_footpaths,
-               use_start_metas);
+  return Query(base_query, *raptor_sched_, tt, use_start_footpaths);
 }
 
 template <typename Query, typename RaptorFun>
