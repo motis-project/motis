@@ -67,8 +67,7 @@ inline void init_arrivals(raptor_result& result, raptor_query const& q,
 inline void update_route(raptor_timetable const& tt, route_id const r_id,
                          time const* const prev_arrivals,
                          time* const current_round, earliest_arrivals& ea,
-                         cpu_mark_store& station_marks,
-                         time const max_traveltime) {
+                         cpu_mark_store& station_marks) {
   auto const& route = tt.routes_[r_id];
 
   trip_count earliest_trip_id = invalid<trip_count>;
@@ -160,7 +159,7 @@ inline void invoke_cpu_raptor(raptor_query const& query, raptor_statistics&) {
   init_arrivals(result, query, station_marks);
 
   for (raptor_round round_k = 1; round_k < max_raptor_round; ++round_k) {
-    std::cout << "raptor round: " << std::to_string(round_k) << '\n';
+    // std::cout << "raptor round: " << std::to_string(round_k) << '\n';
     bool any_marked = false;
 
     for (auto s_id = 0; s_id < tt.stop_count(); ++s_id) {
