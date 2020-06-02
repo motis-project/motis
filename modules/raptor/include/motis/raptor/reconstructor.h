@@ -305,9 +305,9 @@ struct reconstructor {
     auto station_arrival = c.arrival_;
     for (auto result_idx = c.transfers_ + 1; result_idx > 0; --result_idx) {
 
-      std::cout << "result idx: " << result_idx << '\n';
-      std::cout << "last_departure: " << last_departure << "\n";
-      std::cout << "arrival station: " << arrival_station << '\n';
+      // std::cout << "result idx: " << result_idx << '\n';
+      // std::cout << "last_departure: " << last_departure << "\n";
+      // std::cout << "arrival station: " << arrival_station << '\n';
       // TODO(julian) possible to skip this if station arrival,
       // at index larger than last departure minus transfertime
       // same with footpath reachable stations
@@ -321,9 +321,6 @@ struct reconstructor {
       } else {
         for (auto const& inc_f :
              timetable_.incoming_footpaths_[arrival_station]) {
-          std::cout << "incoming footpath from: " << inc_f.from_
-                    << " to: " << arrival_station << '\n';
-
           auto const adjusted_arrival = station_arrival - inc_f.duration_;
           std::tie(previous_station, used_route, used_trip, stop_offset) =
               get_previous_station(inc_f.from_, adjusted_arrival, result_idx,
@@ -383,31 +380,8 @@ struct reconstructor {
       }
     }
 
-    // Add last footpath if necessary
-    // if (arrival_station != source_) {
-    //   for (auto const& inc_f :
-    //        timetable_.incoming_footpaths_[arrival_station]) {
-    //     if (inc_f.from_ != source_) { continue; }
-    //         ij.add_footpath(arrival_station, last_departure, last_departure,
-    //                         inc_f.duration_, raptor_sched_);
-
-    //         time const first_footpath_duration =
-    //             inc_f.duration_ + raptor_sched_.transfer_times_[source_];
-    //         ij.add_start_station(source_, raptor_sched_,
-    //                              last_departure - first_footpath_duration);
-    //         break;
-    //   }
-    // }
-
-    // return ij.to_journey(sched_);
     return ij;
   }
-
-  // bool try_as_start_station(station_id const start_station,
-  //                           station_id const to_station,
-  //                           time const last_departure,
-  //                           intermediate_journey& ij) {
-  // }
 
   std::tuple<station_id, route_id, trip_id, stop_offset> get_previous_station(
       station_id const arrival_station, time const stop_arrival,
@@ -444,7 +418,7 @@ struct reconstructor {
             r_id, arrival_trip, result, result_idx - 1, offset);
 
         if (valid(board_station)) {
-          std::cout << "found one\n";
+          // std::cout << "found one\n";
           return {board_station, r_id, arrival_trip, offset};
         }
       }
