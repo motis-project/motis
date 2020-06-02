@@ -176,7 +176,7 @@ RailViz.Path.Connections = (function () {
         return; // catch racing condition on "later" click
       }
 
-      c.resolved.forEach((t) => {
+      (c.resolved || []).forEach((t) => {
         t.indices.forEach((i) => {
           let curr = minCIds.get(Math.abs(i));
           let next = RailViz.ConnectionManager.cIdCombine(curr, c.id);
@@ -186,7 +186,7 @@ RailViz.Path.Connections = (function () {
         });
       });
 
-      c.walks.forEach((w) => {
+      (c.walks || []).forEach((w) => {
         let curr = minCIds.get(1e9 + w.id);
         let next = RailViz.ConnectionManager.cIdCombine(curr, c.id);
         if (curr != next) {
