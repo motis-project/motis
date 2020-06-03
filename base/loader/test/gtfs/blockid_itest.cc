@@ -95,48 +95,48 @@ struct loader_graph_builder_gtfs_block_id_saturday
 };
 
 TEST_F(loader_graph_builder_gtfs_block_id_once, search_s1_s8) {
-  auto res = routing_query("S1", "S8", "2006-07-02 01:00 Europe/Berlin");
+  auto res = routing_query("S1", "S8", "2006-07-02 23:00 Europe/Berlin");
   auto conns = motis_content(RoutingResponse, res)->connections();
   ASSERT_EQ(1, conns->size());
   expect_no_transfers(conns->Get(0));
 }
 
 TEST_F(loader_graph_builder_gtfs_block_id_once, search_s2_s1) {
-  auto res = routing_query("S2", "S1", "2006-07-02 01:00 Europe/Berlin");
+  auto res = routing_query("S2", "S1", "2006-07-02 23:00 Europe/Berlin");
   auto conns = motis_content(RoutingResponse, res)->connections();
   ASSERT_EQ(0, conns->size());
 }
 
 TEST_F(loader_graph_builder_gtfs_block_id_saturday, search_s2_s3) {
-  auto res = routing_query("S2", "S3", "2006-07-08 00:00 Europe/Berlin");
+  auto res = routing_query("S2", "S3", "2006-07-09 00:00 Europe/Berlin");
   auto conns = motis_content(RoutingResponse, res)->connections();
   ASSERT_EQ(1, conns->size());
   expect_no_transfers(conns->Get(0));
 }
 
 TEST_F(loader_graph_builder_gtfs_block_id_saturday, search_s2_s7) {
-  auto res = routing_query("S2", "S7", "2006-07-08 02:00 Europe/Berlin");
+  auto res = routing_query("S2", "S7", "2006-07-09 00:00 Europe/Berlin");
   auto conns = motis_content(RoutingResponse, res)->connections();
   ASSERT_EQ(1, conns->size());
   expect_no_transfers(conns->Get(0));
 }
 
 TEST_F(loader_graph_builder_gtfs_block_id_wednesday, search_s1_s4) {
-  auto res = routing_query("S1", "S4", "2006-07-05 01:00 Europe/Berlin");
+  auto res = routing_query("S1", "S4", "2006-07-05 23:00 Europe/Berlin");
   auto conns = motis_content(RoutingResponse, res)->connections();
   ASSERT_EQ(1, conns->size());
   expect_no_transfers(conns->Get(0));
 }
 
 TEST_F(loader_graph_builder_gtfs_block_id_thursday, search_s1_s5) {
-  auto res = routing_query("S1", "S5", "2006-07-06 01:00 Europe/Berlin");
+  auto res = routing_query("S1", "S5", "2006-07-06 23:00 Europe/Berlin");
   auto conns = motis_content(RoutingResponse, res)->connections();
   ASSERT_EQ(1, conns->size());
   expect_no_transfers(conns->Get(0));
 }
 
 TEST_F(loader_graph_builder_gtfs_block_id_friday, search_s1_s7) {
-  auto res = routing_query("S1", "S7", "2006-07-07 01:00 Europe/Berlin");
+  auto res = routing_query("S1", "S7", "2006-07-07 23:00 Europe/Berlin");
   auto conns = motis_content(RoutingResponse, res)->connections();
   ASSERT_EQ(1, conns->size());
   expect_no_transfers(conns->Get(0));
