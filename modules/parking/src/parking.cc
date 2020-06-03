@@ -1,13 +1,14 @@
+#include "motis/parking/parking.h"
+
 #include <cmath>
 #include <limits>
 #include <map>
 #include <string>
 
-#include "motis/parking/parking.h"
-
 #include "boost/filesystem.hpp"
 
 #include "utl/get_or_create.h"
+#include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 
 #include "motis/core/common/logging.h"
@@ -407,18 +408,18 @@ void parking::import(registry& reg) {
           }
 
           std::vector<motis::parking::parking_lot> parking_data;
-          std::clog << '\0' << 'S' << "Extract Parkings" << '\0';
-          if (!extract_parkings(osm_ev->path()->str(), parking_file(),
-                                parking_data)) {
-            std::clog << '\0' << 'E' << "Parking data extraction failed"
-                      << '\0';
-            return;
-          }
+
+          auto& progress_tracker = utl::get_active_progress_tracker();
+          progress_tracker.status("Extract Parkings");
+
+          utl::verify(extract_parkings(osm_ev->path()->str(), parking_file(),
+                                       parking_data),
+                      "Parking data extraction failed");
 
           auto park = parkings{std::move(parking_data)};
           auto st = stations{get_schedule()};
 
-          std::clog << '\0' << 'S' << "Compute Foot Edges" << '\0';
+          progress_tracker.status("Compute Foot Edges");
           compute_foot_edges(st, park, footedges_db_file(),
                              ppr_ev->graph_path()->str(), edge_rtree_max_size_,
                              area_rtree_max_size_, lock_rtrees_, ppr_profiles,
