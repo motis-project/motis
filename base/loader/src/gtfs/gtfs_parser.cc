@@ -361,8 +361,6 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
       for (auto const& p : utl::pairwise(trips)) {
         auto const& a = get<0>(p);
         auto const& b = get<1>(p);
-        auto const a_last_arr = a->stop_times_.back().arr_.time_;
-        auto const b_first_dep = b->stop_times_.front().dep_.time_;
         auto const transition_stop =
             get_or_create_stop(a->stop_times_.back().stop_);
         rules.emplace_back(CreateRule(
@@ -373,8 +371,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
             utl::get_or_create(
                 services, b,
                 [&] { return create_service(b, traffic_day, true); }),
-            transition_stop, transition_stop, a_last_arr / 1440,
-            b_first_dep / 1440, a_last_arr % 1440 > b_first_dep % 1440));
+            transition_stop, transition_stop));
       }
       rule_services.emplace_back(
           CreateRuleService(fbb, fbb.CreateVector(rules)));
