@@ -372,9 +372,9 @@ std::string parking::stations_per_parking_file() const {
   return (module_data_dir() / "stations_per_parking.txt").generic_string();
 }
 
-void parking::import(progress_listener& progress_listener, registry& reg) {
+void parking::import(registry& reg) {
   std::make_shared<event_collector>(
-      progress_listener, get_data_directory().generic_string(), "parking", reg,
+      get_data_directory().generic_string(), "parking", reg,
       [this](std::map<std::string, msg_ptr> const& dependencies) {
         using namespace ::motis::parking::prepare;
         using import::OSMEvent;

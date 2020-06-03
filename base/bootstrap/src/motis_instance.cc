@@ -6,6 +6,8 @@
 
 #include "boost/filesystem.hpp"
 
+#include "utl/progress_tracker.h"
+#include "utl/raii.h"
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
@@ -16,7 +18,6 @@
 #include "motis/bootstrap/import_dem.h"
 #include "motis/bootstrap/import_osm.h"
 #include "motis/bootstrap/import_schedule.h"
-#include "motis/bootstrap/import_status.h"
 #include "motis/loader/loader.h"
 
 #include "modules.h"
@@ -64,20 +65,17 @@ void motis_instance::import(module_settings const& module_opt,
                             loader::loader_options const& dataset_opt,
                             import_settings const& import_opt,
                             bool const silent) {
-  import_status status;
-  status.silent_ = silent;
-  registry_.subscribe("/import", [&](msg_ptr const& msg) -> msg_ptr {
-    if (status.update(msg)) {
-      status.print();
-    }
-    return nullptr;
-  });
+  auto& progress = utl::get_global_progress_trackers();
+  auto const reset_silent = utl::make_raii(
+      progress.silent_,
+      [&](auto const old_silent) { progress.silent_ = old_silent; });
+  progress.silent_ = silent;
 
   registry_.subscribe("/import", import_osm);
   registry_.subscribe("/import", import_dem);
 
   std::make_shared<event_collector>(
-      status, import_opt.data_directory_, "schedule", registry_,
+      import_opt.data_directory_, "schedule", registry_,
       [&](std::map<std::string, msg_ptr> const& dependencies) {
         import_schedule(dataset_opt, dependencies.at("SCHEDULE"), *this);
       })
@@ -108,7 +106,7 @@ void motis_instance::import(module_settings const& module_opt,
   for (auto const& module : modules_) {
     if (module_opt.is_module_active(module->module_name())) {
       module->set_data_directory(import_opt.data_directory_);
-      module->import(status, registry_);
+      module->import(registry_);
     }
   }
 

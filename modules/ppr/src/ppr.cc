@@ -274,9 +274,9 @@ ppr::ppr() : module("Foot Routing", "ppr") {
 
 ppr::~ppr() = default;
 
-void ppr::import(progress_listener& progress_listener, registry& reg) {
+void ppr::import(registry& reg) {
   auto const collector = std::make_shared<event_collector>(
-      progress_listener, get_data_directory().generic_string(), "ppr", reg,
+      get_data_directory().generic_string(), "ppr", reg,
       [this](std::map<std::string, msg_ptr> const& dependencies) {
         using import::OSMEvent;
         using import::DEMEvent;

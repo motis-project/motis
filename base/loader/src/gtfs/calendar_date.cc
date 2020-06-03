@@ -2,6 +2,7 @@
 
 #include "utl/enumerate.h"
 #include "utl/parser/csv.h"
+#include "utl/progress_tracker.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/loader/util.h"
@@ -32,10 +33,12 @@ std::map<std::string, std::vector<calendar_date>> read_calendar_date(
   motis::logging::scoped_timer timer{"calendar dates"};
   std::map<std::string, std::vector<calendar_date>> services;
   auto const entries = read<gtfs_calendar_date>(f.content(), calendar_columns);
-  motis::logging::clog_import_step("Parse Calendar Dates", 0, 5,
-                                   entries.size());
-  for (auto const& [i, d] : utl::enumerate(entries)) {
-    motis::logging::clog_import_progress(i, 10000);
+  auto& progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker.msg("Parse Calendar Dates")
+      .out_bounds(0.F, 5.F)
+      .in_high(entries.size());
+  for (auto const& d : entries) {
+    progress_tracker.increment();
     services[get<service_id>(d).to_str()].push_back(read_date(d));
   }
   return services;

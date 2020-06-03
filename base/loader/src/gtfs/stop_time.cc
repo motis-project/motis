@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <tuple>
 
-#include "utl/enumerate.h"
 #include "utl/parser/arg_parser.h"
 #include "utl/parser/csv.h"
+#include "utl/progress_tracker.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/loader/util.h"
@@ -57,9 +57,13 @@ void read_stop_times(loaded_file const& file, trip_map& trips,
   trip* last_trip = nullptr;
 
   auto const entries = read<gtfs_stop_time>(file.content(), stop_time_columns);
-  motis::logging::clog_import_step("Parse Stop Times", 20, 40, entries.size());
-  for (auto const& [i, s] : utl::enumerate(entries)) {
-    motis::logging::clog_import_progress(i, 10000);
+
+  auto& progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker.msg("Parse Stop Times")
+      .out_bounds(20.F, 40.F)
+      .in_high(entries.size());
+  for (auto const& s : entries) {
+    progress_tracker.increment();
     trip* t = nullptr;
     auto t_id = get<trip_id>(s).to_str();
     if (last_trip != nullptr && t_id == last_trip_id) {

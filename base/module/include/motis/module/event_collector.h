@@ -5,8 +5,9 @@
 #include <map>
 #include <string>
 
+#include "utl/progress_tracker.h"
+
 #include "motis/module/message.h"
-#include "motis/module/progress_listener.h"
 #include "motis/module/registry.h"
 
 namespace motis::module {
@@ -33,15 +34,13 @@ struct event_collector : std::enable_shared_from_this<event_collector> {
   using dependencies_map_t = std::map<std::string, msg_ptr>;
   using import_op_t = std::function<void(dependencies_map_t const&)>;
 
-  event_collector(progress_listener&, std::string data_dir, std::string name,
-                  registry& reg, import_op_t op);
+  event_collector(std::string data_dir, std::string module_name, registry& reg,
+                  import_op_t op);
 
   event_collector* require(std::string const& name,
                            std::function<bool(msg_ptr)>);
 
 private:
-  void update_status(motis::import::Status, double progress = 0.);
-
   std::string data_dir_;
   std::string module_name_;
   registry& reg_;
@@ -49,8 +48,8 @@ private:
   dependencies_map_t dependencies_;
   std::set<std::string> waiting_for_;
   std::set<dependency_matcher> matchers_;
-  progress_listener& progress_listener_;
   bool executed_{false};
+  utl::progress_tracker& progress_tracker_;
 };
 
 }  // namespace motis::module

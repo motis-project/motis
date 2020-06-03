@@ -77,9 +77,9 @@ path::path() : module("Path", "path"), data_{std::make_unique<path::data>()} {}
 
 path::~path() = default;
 
-void path::import(progress_listener& pl, registry& reg) {
+void path::import(registry& reg) {
   std::make_shared<event_collector>(
-      pl, get_data_directory().generic_string(), "path", reg,
+      get_data_directory().generic_string(), "path", reg,
       [this](std::map<std::string, msg_ptr> const& dependencies) {
         using import::ScheduleEvent;
         using import::OSMEvent;

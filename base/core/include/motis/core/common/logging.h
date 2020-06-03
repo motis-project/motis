@@ -74,9 +74,4 @@ struct manual_timer final {
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
-void clog_import_step(std::string const& step, float output_low = 0.,
-                      float output_high = 100., float input_high = 100.);
-
-void clog_import_progress(size_t progress, size_t rate_limit = 1);
-
 }  // namespace motis::logging

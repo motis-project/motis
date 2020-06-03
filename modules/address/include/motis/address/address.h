@@ -14,8 +14,7 @@ struct address : public motis::module::module {
   address(address&&) = delete;
   address& operator=(address&&) = delete;
 
-  void import(motis::module::progress_listener&,
-              motis::module::registry&) override;
+  void import(motis::module::registry&) override;
   void init(motis::module::registry&) override;
 
   bool import_successful() const override { return import_successful_; }
