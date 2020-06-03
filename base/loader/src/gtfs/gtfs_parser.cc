@@ -184,9 +184,9 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   auto const routes = read_routes(load(ROUTES_FILE), agencies);
   auto const calendar = read_calendar(load(CALENDAR_FILE));
   auto const dates = read_calendar_date(load(CALENDAR_DATES_FILE));
-  auto const services = traffic_days(calendar, dates);
+  auto const traffic_days = merge_traffic_days(calendar, dates);
   auto transfers = read_transfers(load(TRANSFERS_FILE), stops);
-  auto [trips, blocks] = read_trips(load(TRIPS_FILE), routes, services);
+  auto [trips, blocks] = read_trips(load(TRIPS_FILE), routes, traffic_days);
   read_stop_times(load(STOP_TIMES_FILE), trips, stops);
   fix_stop_positions(trips);
 
@@ -260,15 +260,15 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
     if (!t->headsign_.empty()) {
       return get_or_create_str(t->headsign_);
     } else {
-      return get_or_create_str(std::get<0>(t->stops().back())->name_);
+      return get_or_create_str(t->stops().back().stop_->name_);
     }
   };
 
   motis::logging::scoped_timer export_timer{"export"};
   motis::logging::clog_import_step("Export schedule.raw", 40, 80, trips.size());
   auto const interval =
-      Interval{static_cast<uint64_t>(to_unix_time(services.first_day_)),
-               static_cast<uint64_t>(to_unix_time(services.last_day_))};
+      Interval{static_cast<uint64_t>(to_unix_time(traffic_days.first_day_)),
+               static_cast<uint64_t>(to_unix_time(traffic_days.last_day_))};
 
   auto const create_service = [&](trip const* t, bitfield const& traffic_days,
                                   bool const is_rule_service_participant) {
@@ -283,16 +283,16 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
                   fbb.CreateVector(
                       utl::to_vec(stop_seq,
                                   [&](trip::stop_identity const& s) {
-                                    return get_or_create_stop(std::get<0>(s));
+                                    return get_or_create_stop(s.stop_);
                                   })),
                   fbb.CreateVector(utl::to_vec(
                       stop_seq,
                       [](trip::stop_identity const& s) {
-                        return static_cast<uint8_t>(std::get<2>(s) ? 1u : 0u);
+                        return static_cast<uint8_t>(s.in_allowed_ ? 1u : 0u);
                       })),
                   fbb.CreateVector(
                       utl::to_vec(stop_seq, [](trip::stop_identity const& s) {
-                        return static_cast<uint8_t>(std::get<1>(s) ? 1u : 0u);
+                        return static_cast<uint8_t>(s.out_allowed_ ? 1u : 0u);
                       })));
             }),
         fbb.CreateString(serialize_bitset(traffic_days)),

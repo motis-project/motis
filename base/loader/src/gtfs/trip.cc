@@ -102,12 +102,12 @@ trip::trip(route const* route, bitfield const* service, block* blk,
       line_(line) {}
 
 trip::stop_seq trip::stops() const {
-  return utl::to_vec(begin(stop_times_), end(stop_times_),
-                     [](flat_map<stop_time>::entry_t const& e) {
-                       return std::make_tuple(e.second.stop_,
-                                              e.second.arr_.in_out_allowed_,
-                                              e.second.dep_.in_out_allowed_);
-                     });
+  return utl::to_vec(
+      begin(stop_times_), end(stop_times_),
+      [](flat_map<stop_time>::entry_t const& e) -> stop_identity {
+        return {e.second.stop_, e.second.arr_.in_out_allowed_,
+                e.second.dep_.in_out_allowed_};
+      });
 }
 
 enum {
@@ -125,7 +125,7 @@ static const column_mapping<gtfs_trip> columns = {
 
 std::pair<trip_map, block_map> read_trips(loaded_file file,
                                           route_map const& routes,
-                                          services const& services) {
+                                          traffic_days const& services) {
   motis::logging::scoped_timer timer{"read trips"};
 
   std::pair<trip_map, block_map> ret;
