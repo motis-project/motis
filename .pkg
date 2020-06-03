@@ -1,7 +1,7 @@
 [address-typeahead]
   url=git@github.com:motis-project/address-typeahead.git
   branch=master
-  commit=7d4b514b16179854ed52ef9ebcc28a3c6f6ab7d5
+  commit=e29ddb7aaa2ec48df063c840aa0147077268d523
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -77,4 +77,4 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=683cfb91510e29f8218d7c34dea2eaa0809f8a34
+  commit=085c6d22901a8b97102a9aa163114f489341fdb8
