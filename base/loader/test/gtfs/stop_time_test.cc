@@ -18,9 +18,9 @@ TEST(loader_gtfs_route, read_stop_times_example_data) {
       loaded_file{SCHEDULES / "example" / CALENDAR_DATES_FILE});
   auto calendar =
       read_calendar(loaded_file{SCHEDULES / "example" / CALENDAR_FILE});
-  auto services = traffic_days(calendar, dates);
-  auto trips = read_trips(loaded_file{SCHEDULES / "example" / TRIPS_FILE},
-                          routes, services);
+  auto traffic_days = merge_traffic_days(calendar, dates);
+  auto [trips, blocks] = read_trips(
+      loaded_file{SCHEDULES / "example" / TRIPS_FILE}, routes, traffic_days);
   auto stops = read_stops(loaded_file{SCHEDULES / "example" / STOPS_FILE});
   read_stop_times(loaded_file{SCHEDULES / "example" / STOP_TIMES_FILE}, trips,
                   stops);

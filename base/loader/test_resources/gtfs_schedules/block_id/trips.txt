@@ -1,0 +1,7 @@
+route_id,service_id,trip_id,trip_headsign,block_id
+A,T1_DAYS,T1,Trip 1,1
+A,T2_DAYS,T2,Trip 2,1
+A,T3_DAYS,T3,Trip 3,1
+A,T4_DAYS,T4,Trip 4,1
+A,T5_DAYS,T5,Trip 5,1
+A,T6_DAYS,T6,Trip 6,1

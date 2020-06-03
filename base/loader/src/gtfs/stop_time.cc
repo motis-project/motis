@@ -70,11 +70,16 @@ void read_stop_times(loaded_file const& file, trip_map& trips,
       last_trip = t;
     }
 
-    t->stop_times_.emplace(
-        get<stop_sequence>(s), stops.at(get<stop_id>(s).to_str()).get(),
-        get<stop_headsign>(s).to_str(),  //
-        hhmm_to_min(get<arrival_time>(s)), get<drop_off_type>(s) == 0,
-        hhmm_to_min(get<departure_time>(s)), get<pickup_type>(s) == 0);
+    try {
+      t->stop_times_.emplace(
+          get<stop_sequence>(s), stops.at(get<stop_id>(s).to_str()).get(),
+          get<stop_headsign>(s).to_str(),  //
+          hhmm_to_min(get<arrival_time>(s)), get<drop_off_type>(s) == 0,
+          hhmm_to_min(get<departure_time>(s)), get<pickup_type>(s) == 0);
+    } catch (...) {
+      LOG(logging::warn) << "unkown stop " << get<stop_id>(s).to_str() << " at "
+                         << file.name() << ":" << i;
+    }
   }
 }
 

@@ -165,8 +165,8 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
         << j.trips_[i].from_ << " -> " << std::left << std::setw(2)
         << j.trips_[i].to_ << " {" << std::setw(7) << trp.station_id_ << ", "
         << std::right << std::setw(6) << trp.train_nr_ << ", "
-        << format_unixtime(trp.time_) << "} -> {" << std::setw(7)
-        << trp.target_station_id_ << ", " << format_unixtime(trp.target_time_)
+        << format_unix_time(trp.time_) << "} -> {" << std::setw(7)
+        << trp.target_station_id_ << ", " << format_unix_time(trp.target_time_)
         << "}, line_id=" << trp.line_id_ << "\n       #/trip/"
         << trp.station_id_ << "/" << trp.train_nr_ << "/" << trp.time_ << "/"
         << trp.target_station_id_ << "/" << trp.target_time_ << "/"

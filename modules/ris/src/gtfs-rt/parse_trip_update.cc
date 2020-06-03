@@ -5,6 +5,8 @@
 #include "boost/date_time/gregorian/gregorian_types.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
 
+#include "utl/verify.h"
+
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/event.h"
@@ -398,6 +400,9 @@ void initialize_update_context(
   } else {
     return;
   }
+
+  utl::verify(update_ctx.trip_ != nullptr,
+              "GTFS trip update: unkown trip \"{}\"", update_ctx.trip_id_);
 
   update_ctx.is_stop_skip_new_.resize(
       (update_ctx.is_new_addition_ ||

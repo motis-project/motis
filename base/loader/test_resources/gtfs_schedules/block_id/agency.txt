@@ -1,0 +1,2 @@
+agency_id,agency_name,agency_url,agency_timezone,agency_phone,agency_lang
+FunBus,The Fun Bus,http://www.thefunbus.org,Europe/Berlin,(310) 555-0222,en

@@ -1,0 +1,6 @@
+service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+T1_DAYS,0,1,1,1,1,0,0,20060701,20060731
+T2_DAYS,0,1,0,1,0,1,0,20060701,20060731
+T3_DAYS,0,0,1,0,0,0,0,20060701,20060731
+T4_DAYS,0,0,0,1,0,0,0,20060701,20060731
+T5_DAYS,0,0,0,0,1,1,0,20060701,20060731

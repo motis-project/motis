@@ -9,6 +9,7 @@
 #include "utl/pairwise.h"
 #include "utl/pipes/accumulate.h"
 #include "utl/pipes/all.h"
+#include "utl/pipes/for_each.h"
 #include "utl/pipes/remove_if.h"
 #include "utl/pipes/transform.h"
 #include "utl/pipes/vec.h"
@@ -183,9 +184,9 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   auto const routes = read_routes(load(ROUTES_FILE), agencies);
   auto const calendar = read_calendar(load(CALENDAR_FILE));
   auto const dates = read_calendar_date(load(CALENDAR_DATES_FILE));
-  auto const services = traffic_days(calendar, dates);
+  auto const traffic_days = merge_traffic_days(calendar, dates);
   auto transfers = read_transfers(load(TRANSFERS_FILE), stops);
-  auto trips = read_trips(load(TRIPS_FILE), routes, services);
+  auto [trips, blocks] = read_trips(load(TRIPS_FILE), routes, traffic_days);
   read_stop_times(load(STOP_TIMES_FILE), trips, stops);
   fix_stop_positions(trips);
 
@@ -259,91 +260,123 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
     if (!t->headsign_.empty()) {
       return get_or_create_str(t->headsign_);
     } else {
-      return get_or_create_str(std::get<0>(t->stops().back())->name_);
+      return get_or_create_str(t->stops().back().stop_->name_);
     }
   };
 
   motis::logging::scoped_timer export_timer{"export"};
   motis::logging::clog_import_step("Export schedule.raw", 40, 80, trips.size());
   auto const interval =
-      Interval{static_cast<uint64_t>(to_unix_time(services.first_day_)),
-               static_cast<uint64_t>(to_unix_time(services.last_day_))};
+      Interval{static_cast<uint64_t>(to_unix_time(traffic_days.first_day_)),
+               static_cast<uint64_t>(to_unix_time(traffic_days.last_day_))};
+
+  auto const create_service = [&](trip const* t, bitfield const& traffic_days,
+                                  bool const is_rule_service_participant) {
+    auto const stop_seq = t->stops();
+    return CreateService(
+        fbb,
+        utl::get_or_create(
+            fbs_routes, stop_seq,
+            [&]() {
+              return CreateRoute(
+                  fbb,  //
+                  fbb.CreateVector(
+                      utl::to_vec(stop_seq,
+                                  [&](trip::stop_identity const& s) {
+                                    return get_or_create_stop(s.stop_);
+                                  })),
+                  fbb.CreateVector(utl::to_vec(
+                      stop_seq,
+                      [](trip::stop_identity const& s) {
+                        return static_cast<uint8_t>(s.in_allowed_ ? 1u : 0u);
+                      })),
+                  fbb.CreateVector(
+                      utl::to_vec(stop_seq, [](trip::stop_identity const& s) {
+                        return static_cast<uint8_t>(s.out_allowed_ ? 1u : 0u);
+                      })));
+            }),
+        fbb.CreateString(serialize_bitset(traffic_days)),
+        fbb.CreateVector(repeat_n(
+            CreateSection(
+                fbb, get_or_create_category(t->route_),
+                get_or_create_provider(t->route_->agency_),
+                !t->short_name_.empty() &&
+                        std::all_of(
+                            begin(t->short_name_), end(t->short_name_),
+                            [](auto&& c) -> bool { return std::isdigit(c); })
+                    ? std::stoi(t->short_name_)
+                    : 0,
+                get_or_create_str(t->route_->short_name_),
+                fbb.CreateVector(std::vector<Offset<Attribute>>()),
+                CreateDirection(fbb, 0, get_or_create_direction(t))),
+            stop_seq.size() - 1)),
+        0,
+        fbb.CreateVector(utl::all(t->stop_times_)  //
+                         | utl::accumulate(
+                               [&](std::vector<int>&& times,
+                                   flat_map<stop_time>::entry_t const& st) {
+                                 times.emplace_back(st.second.arr_.time_);
+                                 times.emplace_back(st.second.dep_.time_);
+                                 return std::move(times);
+                               },
+                               std::vector<int>())),
+        0,
+        CreateServiceDebugInfo(fbb, get_or_create_str(t->id_), t->line_,
+                               t->line_),
+        is_rule_service_participant, 0, get_or_create_str(t->id_));
+  };
 
   auto i = size_t{0U};
-  auto const output_services = fbb.CreateVector(
+  auto output_services =
       utl::all(trips)  //
-      | utl::remove_if([](auto const& trp) {
-          auto const stop_count = trp.second->stops().size();
+      | utl::remove_if([&](auto const& entry) {
+          motis::logging::clog_import_progress(i++, 100000);
+          auto const stop_count = entry.second->stops().size();
           if (stop_count < 2) {
-            LOG(warn) << "invalid trip " << trp.first << ": "
-                      << trp.second->stops().size() << " stops";
+            LOG(warn) << "invalid trip " << entry.first << ": "
+                      << entry.second->stops().size() << " stops";
           }
           return stop_count < 2;
         })  //
-      |
-      utl::transform([&](auto const& entry) {
-        motis::logging::clog_import_progress(i++, 100000);
+      | utl::transform([&](auto const& entry) {
+          auto const t = entry.second.get();
+          return create_service(
+              entry.second.get(), *t->service_,
+              t->block_ != nullptr && t->block_->trips_.size() > 2);  //
+        })  //
+      | utl::vec();
 
-        auto const& t = entry.second;
-        auto const stop_seq = t->stops();
-        return CreateService(
-            fbb,
+  std::vector<flatbuffers64::Offset<RuleService>> rule_services;
+  for (auto const& blk : blocks) {
+    for (auto const& [trips, traffic_days] : blk.second->rule_services()) {
+      if (trips.size() == 1) {
+        output_services.emplace_back(
+            create_service(trips.front(), traffic_days, false));
+        continue;
+      }
+
+      std::vector<flatbuffers64::Offset<Rule>> rules;
+      std::map<trip*, flatbuffers64::Offset<Service>> services;
+      auto const traffic_day = traffic_days;
+      for (auto const& p : utl::pairwise(trips)) {
+        auto const& a = get<0>(p);
+        auto const& b = get<1>(p);
+        auto const transition_stop =
+            get_or_create_stop(a->stop_times_.back().stop_);
+        rules.emplace_back(CreateRule(
+            fbb, RuleType_THROUGH,
             utl::get_or_create(
-                fbs_routes, stop_seq,
-                [&]() {
-                  return CreateRoute(
-                      fbb,  //
-                      fbb.CreateVector(utl::to_vec(
-                          begin(stop_seq), end(stop_seq),
-                          [&](trip::stop_identity const& s) {
-                            return get_or_create_stop(std::get<0>(s));
-                          })),
-                      fbb.CreateVector(utl::to_vec(
-                          begin(stop_seq), end(stop_seq),
-                          [](trip::stop_identity const& s) {
-                            return static_cast<uint8_t>(std::get<2>(s) ? 1u
-                                                                       : 0u);
-                          })),
-                      fbb.CreateVector(utl::to_vec(
-                          begin(stop_seq), end(stop_seq),
-                          [](trip::stop_identity const& s) {
-                            return static_cast<uint8_t>(std::get<1>(s) ? 1u
-                                                                       : 0u);
-                          })));
-                }),
-            fbb.CreateString(serialize_bitset(*t->service_)),
-            fbb.CreateVector(repeat_n(
-                CreateSection(
-                    fbb, get_or_create_category(t->route_),
-                    get_or_create_provider(t->route_->agency_),
-                    !t->short_name_.empty() &&
-                            std::all_of(begin(t->short_name_),
-                                        end(t->short_name_),
-                                        [](auto&& c) -> bool {
-                                          return std::isdigit(c);
-                                        })
-                        ? std::stoi(t->short_name_)
-                        : 0,
-                    get_or_create_str(t->route_->short_name_),
-                    fbb.CreateVector(std::vector<Offset<Attribute>>()),
-                    CreateDirection(fbb, 0, get_or_create_direction(t.get()))),
-                stop_seq.size() - 1)),
-            0,
-            fbb.CreateVector(utl::all(t->stop_times_)  //
-                             | utl::accumulate(
-                                   [&](std::vector<int>&& times,
-                                       flat_map<stop_time>::entry_t const& st) {
-                                     times.emplace_back(st.second.arr_.time_);
-                                     times.emplace_back(st.second.dep_.time_);
-                                     return std::move(times);
-                                   },
-                                   std::vector<int>())),
-            0,
-            CreateServiceDebugInfo(fbb, fbb.CreateString(entry.first), t->line_,
-                                   t->line_),
-            false, 0, get_or_create_str(entry.first));  // Trip ID
-      }) |
-      utl::vec());
+                services, a,
+                [&] { return create_service(a, traffic_day, true); }),
+            utl::get_or_create(
+                services, b,
+                [&] { return create_service(b, traffic_day, true); }),
+            transition_stop, transition_stop));
+      }
+      rule_services.emplace_back(
+          CreateRuleService(fbb, fbb.CreateVector(rules)));
+    }
+  }
 
   auto const dataset_name =
       std::accumulate(begin(feeds), end(feeds), std::string("GTFS"),
@@ -399,13 +432,13 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
       })  //
       | utl::vec();
 
-  fbb.Finish(CreateSchedule(
-      fbb, output_services, fbb.CreateVector(values(fbs_stations)),
-      fbb.CreateVector(values(fbs_routes)), &interval,
-      fbb.CreateVector(footpaths),
-      fbb.CreateVector(std::vector<Offset<RuleService>>()),
-      fbb.CreateVector(meta_stations), fbb.CreateString(dataset_name),
-      hash(root)));
+  fbb.Finish(CreateSchedule(fbb, fbb.CreateVector(output_services),
+                            fbb.CreateVector(values(fbs_stations)),
+                            fbb.CreateVector(values(fbs_routes)), &interval,
+                            fbb.CreateVector(footpaths),
+                            fbb.CreateVector(rule_services),
+                            fbb.CreateVector(meta_stations),
+                            fbb.CreateString(dataset_name), hash(root)));
 }
 
 }  // namespace motis::loader::gtfs
