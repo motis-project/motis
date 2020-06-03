@@ -854,7 +854,7 @@ schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
 
   auto& progress_tracker = utl::get_active_progress_tracker();
 
-  progress_tracker.msg("Build Graph").out_bounds(progress_offset, 90);
+  progress_tracker.status("Build Graph").out_bounds(progress_offset, 90);
   graph_builder builder(*sched, serialized->interval(), opt, progress_offset);
   builder.add_stations(serialized->stations());
   if (serialized->meta_stations() != nullptr) {
@@ -864,7 +864,7 @@ schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
   builder.add_services(serialized->services());
   if (opt.apply_rules_) {
     scoped_timer timer("rule services");
-    progress_tracker.msg("Rule Services").out_bounds(90, 92);
+    progress_tracker.status("Rule Services").out_bounds(90, 92);
     build_rule_routes(builder, serialized->rule_services());
   }
 
@@ -872,17 +872,17 @@ schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
     sched->expanded_trips_.finish_map();
   }
 
-  progress_tracker.msg("Footpaths").out_bounds(92, 93);
+  progress_tracker.status("Footpaths").out_bounds(92, 93);
   builder.add_footpaths(serialized->footpaths());
 
-  progress_tracker.msg("Connect Reverse").out_bounds(93, 94);
+  progress_tracker.status("Connect Reverse").out_bounds(93, 94);
   builder.connect_reverse();
 
-  progress_tracker.msg("Sort Trips").out_bounds(94, 95);
+  progress_tracker.status("Sort Trips").out_bounds(94, 95);
   builder.sort_trips();
 
   if (opt.expand_footpaths_) {
-    progress_tracker.msg("Expand Footpaths").out_bounds(95, 96);
+    progress_tracker.status("Expand Footpaths").out_bounds(95, 96);
     calc_footpaths(*sched);
   }
 
@@ -890,7 +890,7 @@ schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
   sched->route_count_ = builder.next_route_index_;
   sched->node_count_ = builder.next_node_id_;
 
-  progress_tracker.msg("Lower Bounds").out_bounds(96, 100).in_high(4);
+  progress_tracker.status("Lower Bounds").out_bounds(96, 100).in_high(4);
   sched->transfers_lower_bounds_fwd_ = build_interchange_graph(
       sched->station_nodes_, sched->route_count_, search_dir::FWD);
   progress_tracker.increment();

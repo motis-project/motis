@@ -267,7 +267,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
 
   motis::logging::scoped_timer export_timer{"export"};
   auto& progress_tracker = utl::get_active_progress_tracker();
-  progress_tracker.msg("Export schedule.raw")
+  progress_tracker.status("Export schedule.raw")
       .out_bounds(40.F, 80.F)
       .in_high(trips.size());
   auto const interval =

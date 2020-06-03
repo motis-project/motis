@@ -59,7 +59,7 @@ void read_stop_times(loaded_file const& file, trip_map& trips,
   auto const entries = read<gtfs_stop_time>(file.content(), stop_time_columns);
 
   auto& progress_tracker = utl::get_active_progress_tracker();
-  progress_tracker.msg("Parse Stop Times")
+  progress_tracker.status("Parse Stop Times")
       .out_bounds(20.F, 40.F)
       .in_high(entries.size());
   for (auto const& s : entries) {
