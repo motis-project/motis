@@ -21,7 +21,7 @@ TEST(loader_gtfs_trip, read_trips_example_data) {
       loaded_file{SCHEDULES / "example" / CALENDAR_DATES_FILE});
   auto calendar =
       read_calendar(loaded_file{SCHEDULES / "example" / CALENDAR_FILE});
-  auto services = traffic_days(calendar, dates);
+  auto services = merge_traffic_days(calendar, dates);
   auto [trips, blocks] = read_trips(
       loaded_file{SCHEDULES / "example" / TRIPS_FILE}, routes, services);
 
@@ -40,7 +40,7 @@ TEST(loader_gtfs_trip, read_trips_berlin_data) {
       loaded_file{SCHEDULES / "berlin" / CALENDAR_DATES_FILE});
   auto calendar =
       read_calendar(loaded_file{SCHEDULES / "berlin" / CALENDAR_FILE});
-  auto services = traffic_days(calendar, dates);
+  auto services = merge_traffic_days(calendar, dates);
   auto [trips, blocks] = read_trips(
       loaded_file{SCHEDULES / "berlin" / TRIPS_FILE}, routes, services);
 
