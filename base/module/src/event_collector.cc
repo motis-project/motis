@@ -43,8 +43,7 @@ event_collector* event_collector::require(
         // Dummy message asking for initial status.
         // Send "waiting for" dependencies list.
         if (msg->get()->content_type() == MsgContent_MotisSuccess) {
-          progress_tracker_.status(
-              fmt::format("WAITING: {}", fmt::join(waiting_for_, ",")));
+          progress_tracker_.status(fmt::format("WAITING: {}", waiting_for_));
           return nullptr;
         }
 
