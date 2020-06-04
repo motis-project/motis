@@ -1,7 +1,8 @@
 #pragma once
 
+#include "utl/thread_pool.h"
+
 #include "motis/path/prepare/osm_util.h"
-#include "motis/path/prepare/resolve/thread_pool.h"
 
 namespace motis::path {
 
@@ -40,7 +41,7 @@ void resolve_node_locations(std::string const& osm_file, Map& pending_nodes) {
 
 template <typename Map>
 void resolve_node_locations(std::string const& osm_file, Map& pending_nodes,
-                            thread_pool& tp) {
+                            utl::thread_pool& tp) {
   std::vector<std::pair<int64_t, geo::latlng>> buffer;
   auto const flush_buffer = [&] {
     tp.execute(buffer.size(), [&](auto i) {

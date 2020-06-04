@@ -125,7 +125,7 @@ std::vector<std::vector<osm_way>> parse_relations(
 
   {
     ml::scoped_timer t("parse_relations|read nodes");
-    thread_pool tp;
+    utl::thread_pool tp;
     resolve_node_locations(osm_file, pending_nodes, tp);
   }
 

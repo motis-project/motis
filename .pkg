@@ -77,4 +77,4 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=085c6d22901a8b97102a9aa163114f489341fdb8
+  commit=8ccc9be49342148ae2f1a54d8433492210001f22

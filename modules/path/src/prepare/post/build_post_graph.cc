@@ -4,11 +4,10 @@
 
 #include "utl/erase_duplicates.h"
 #include "utl/parallel_for.h"
+#include "utl/thread_pool.h"
 #include "utl/to_vec.h"
 
 #include "motis/core/common/logging.h"
-
-#include "motis/path/prepare/resolve/thread_pool.h"
 
 namespace ml = motis::logging;
 
@@ -43,7 +42,7 @@ struct post_graph_builder {
     ml::scoped_timer t{"build_post_graph|make_edges"};
 
     thread_local std::vector<color_t> node_max_colors;  // node -> max color
-    thread_pool tp{
+    utl::thread_pool tp{
         [&] { node_max_colors.resize(node_ids_.size(), kInvalidColor); },
         [&] { node_max_colors = std::vector<color_t>(); }};
 
