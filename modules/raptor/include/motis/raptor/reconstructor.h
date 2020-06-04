@@ -345,49 +345,65 @@ struct reconstructor {
       station_arrival = result[result_idx - 1][arrival_station];
     }
 
-    bool is_equivalent = use_start_metas &&
-                         contains(raptor_sched_.equivalent_stations_[c.source_],
-                                  arrival_station);
+    bool can_be_start = false;
+    if (!use_start_metas) {
+      can_be_start = arrival_station == c.source_;
+    } else {
+      can_be_start = contains(raptor_sched_.equivalent_stations_[c.source_],
+                              arrival_station);
+    }
 
-    if (arrival_station == c.source_ || is_equivalent) {
+    if (can_be_start) {
       ij.add_start_station(arrival_station, raptor_sched_, last_departure);
       return ij;
     }
 
-    // We need to look for the start station
-    auto const try_as_start = [&](station_id const start_station,
-                                  station_id const to_station,
-                                  time const last_departure) -> bool {
-      for (auto const& inc_f : timetable_.incoming_footpaths_[to_station]) {
-        if (inc_f.from_ != start_station) {
+    auto const get_start_departure = [&](station_id const start_station) {
+      for (auto const& f : timetable_.incoming_footpaths_[arrival_station]) {
+        if (f.from_ != start_station) {
           continue;
         }
 
-        ij.add_footpath(to_station, last_departure, last_departure,
-                        inc_f.duration_, raptor_sched_);
-
         time const first_footpath_duration =
-            inc_f.duration_ + raptor_sched_.transfer_times_[start_station];
-        ij.add_start_station(start_station, raptor_sched_,
-                             last_departure - first_footpath_duration);
-        return true;
+            f.duration_ + raptor_sched_.transfer_times_[start_station];
+
+        return static_cast<time>(last_departure - first_footpath_duration);
       }
 
-      return false;
+      return invalid<time>;
     };
 
-    if (try_as_start(c.source_, arrival_station, last_departure)) {
-      return ij;
-    }
+    auto const add_start_with_footpath = [&](station_id const start_station) {
+      for (auto const& f : timetable_.incoming_footpaths_[arrival_station]) {
+        if (f.from_ != start_station) {
+          continue;
+        }
+
+        ij.add_footpath(arrival_station, last_departure, last_departure,
+                        f.duration_, raptor_sched_);
+
+        time const first_footpath_duration =
+            f.duration_ + raptor_sched_.transfer_times_[start_station];
+        ij.add_start_station(start_station, raptor_sched_,
+                             last_departure - first_footpath_duration);
+      }
+    };
+
+    // If we use start meta stations we need to search for the best one
+    // We need to search for the start meta station with the best departure time
+    // The best departure time is the latest one
 
     if (!use_start_metas) {
-      return ij;
-    }
+      add_start_with_footpath(c.source_);
+    } else {
+      auto const& equivalents = raptor_sched_.equivalent_stations_[c.source_];
+      auto const best_station = *std::max_element(
+          std::begin(equivalents), std::end(equivalents),
+          [&](auto const& s1, auto const& s2) -> bool {
+            return get_start_departure(s1) < get_start_departure(s2);
+          });
 
-    for (auto const equi_s : raptor_sched_.equivalent_stations_[c.source_]) {
-      if (try_as_start(equi_s, arrival_station, last_departure)) {
-        return ij;
-      }
+      add_start_with_footpath(best_station);
     }
 
     return ij;

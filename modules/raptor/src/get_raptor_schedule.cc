@@ -62,7 +62,6 @@ time get_stand_time(transformable_route const& route) {
 
 void init_stops(schedule const& sched, std::vector<transformable_stop>& tss) {
   for (auto s_id = 0; s_id < sched.stations_.size(); ++s_id) {
-    // auto& s = ttt.stations_[s_id];
     auto& s = tss[s_id];
     auto const& s_ptr = sched.stations_[s_id];
 
@@ -70,6 +69,7 @@ void init_stops(schedule const& sched, std::vector<transformable_stop>& tss) {
     s.transfer_time_ = s_ptr->transfer_time_;
     s.eva_ = s_ptr->eva_nr_;
 
+    s.equivalent_.push_back(s_id);
     for (auto equi_ptr : s_ptr->equivalent_) {
       if (equi_ptr->index_ == s_id) {
         continue;

@@ -172,6 +172,7 @@ struct raptor_schedule {
   std::vector<unsigned> station_id_to_index_;
   std::vector<time> transfer_times_;
 
+  // contains the station_id itself as first element
   std::vector<std::vector<station_id>> equivalent_stations_;
 
   // for every station the departure events of the station
