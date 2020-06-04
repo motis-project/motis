@@ -275,11 +275,12 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
                    });
 
   auto& progress_tracker = utl::get_active_progress_tracker();
-  progress_tracker.in_high(sorted.size());
+  progress_tracker.status("Build Services")
+      .out_bounds(progress_offset_, 90)
+      .in_high(sorted.size());
 
   auto it = begin(sorted);
   mcd::vector<Service const*> route_services;
-  clog_import_step("Build Services", progress_offset_, 90, sorted.size());
   while (it != end(sorted)) {
     auto route = (*it)->route();
     do {

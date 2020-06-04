@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <tuple>
 
+#include "utl/enumerate.h"
 #include "utl/parser/arg_parser.h"
 #include "utl/parser/csv.h"
 #include "utl/progress_tracker.h"
@@ -62,8 +63,8 @@ void read_stop_times(loaded_file const& file, trip_map& trips,
   progress_tracker.status("Parse Stop Times")
       .out_bounds(20.F, 40.F)
       .in_high(entries.size());
-  for (auto const& s : entries) {
-    progress_tracker.increment();
+  for (auto const& [i, s] : utl::enumerate(entries)) {
+    progress_tracker.update(i);
     trip* t = nullptr;
     auto t_id = get<trip_id>(s).to_str();
     if (last_trip != nullptr && t_id == last_trip_id) {

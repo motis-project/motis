@@ -4,6 +4,7 @@
 #include <stack>
 #include <tuple>
 
+#include "utl/enumerate.h"
 #include "utl/get_or_create.h"
 #include "utl/pairwise.h"
 #include "utl/parser/csv.h"
@@ -135,8 +136,8 @@ std::pair<trip_map, block_map> read_trips(loaded_file file,
   auto& progress_tracker = utl::get_active_progress_tracker();
   progress_tracker.status("Trips").out_bounds(5.F, 20.F).in_high(
       entries.size());
-  for (auto const& t : entries) {
-    progress_tracker.increment();
+  for (auto const& [i, t] : utl::enumerate(entries)) {
+    progress_tracker.update(i);
     auto const blk =
         get<block_id>(t).trim().empty()
             ? nullptr
