@@ -314,13 +314,13 @@ void path_database_query::execute_subquery(
         pack_handle.get(pack_record), query_clasz_bounds,
         [&](resolvable_feature* rf, std::string_view const str) {
           std::vector<std::string_view> simplify_masks;
-          pz::pbf_message<tiles::tags::Feature> msg{str.data(), str.size()};
+          pz::pbf_message<tiles::tags::feature> msg{str.data(), str.size()};
           while (msg.next()) {
             switch (msg.tag()) {
-              case tiles::tags::Feature::repeated_string_simplify_masks:
+              case tiles::tags::feature::repeated_string_simplify_masks:
                 simplify_masks.emplace_back(msg.get_view());
                 break;
-              case tiles::tags::Feature::required_FixedGeometry_geometry:
+              case tiles::tags::feature::required_fixed_geometry_geometry:
                 if (zoom_level_ > 0 && !simplify_masks.empty()) {
                   std::vector<std::string_view> simplify_masks_tmp;
                   std::swap(simplify_masks, simplify_masks_tmp);

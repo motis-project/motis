@@ -20,6 +20,7 @@
 #include "tiles/parse_tile_url.h"
 #include "tiles/perf_counter.h"
 
+#include "utl/progress_tracker.h"
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
@@ -70,10 +71,9 @@ tiles::tiles() : mm::module("Tiles", "tiles") {
 
 tiles::~tiles() = default;
 
-void tiles::import(mm::progress_listener& progress_listener,
-                   mm::registry& reg) {
+void tiles::import(mm::registry& reg) {
   auto const collector = std::make_shared<mm::event_collector>(
-      progress_listener, get_data_directory().generic_string(), "tiles", reg,
+      get_data_directory().generic_string(), "tiles", reg,
       [this](std::map<std::string, mm::msg_ptr> const& dependencies) {
         auto const profile_path = fs::path{profile_path_};
 
@@ -108,10 +108,11 @@ void tiles::import(mm::progress_listener& progress_listener,
             coastline_hash, coastline_size};
         if (mm::read_ini<import_state>(dir / "import.ini") != state) {
           fs::create_directories(dir);
+          auto& progress_tracker = utl::get_active_progress_tracker();
 
           auto const db_fname = dir / "tiles.mdb";
 
-          ml::clog_import_step("Clear Database");
+          progress_tracker.status("Clear Database");
           ::tiles::clear_database(path);
           ::tiles::clear_pack_file(path.c_str());
 
@@ -125,19 +126,19 @@ void tiles::import(mm::progress_listener& progress_listener,
                 pack_handle};
 
             if (use_coastline_) {
-              ml::clog_import_step("Load Coastline", 0, 20);
+              progress_tracker.status("Load Coastlines").out_bounds(0, 20);
               ::tiles::load_coastlines(db_handle, inserter, coastline_path);
             }
 
-            ml::clog_import_step("Load Features", 20, 70);
+            progress_tracker.status("Load Features").out_bounds(20, 70);
             ::tiles::load_osm(db_handle, inserter, osm_path,
-                              profile_path.string());
+                              profile_path.string(), dir.generic_string());
           }
 
-          ml::clog_import_step("Pack Features", 70, 90);
+          progress_tracker.status("Pack Features").out_bounds(70, 90);
           ::tiles::pack_features(db_handle, pack_handle);
 
-          ml::clog_import_step("Prepare Tiles", 90, 100, 11);
+          progress_tracker.status("Prepare Tiles").out_bounds(90, 100);
           ::tiles::prepare_tiles(db_handle, pack_handle, 10);
         }
 

@@ -21,4 +21,4 @@ target_link_libraries(motis-tiles
 target_compile_options(motis-tiles PRIVATE ${MOTIS_CXX_FLAGS})
 
 set_property(TARGET motis-tiles tiles tiles-import-library
-             APPEND PROPERTY COMPILE_DEFINITIONS MOTIS_IMPORT_PROGRESS_FORMAT=1)
+             APPEND PROPERTY COMPILE_DEFINITIONS TILES_GLOBAL_PROGRESS_TRACKER=1)
