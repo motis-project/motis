@@ -178,6 +178,11 @@ struct raptor_schedule {
   // and the stations reachable by foot
   std::vector<std::vector<time>> departure_events_;
 
+  // for every station the departure events of the station
+  // and the stations reachable by foot
+  // for all meta stations
+  std::vector<std::vector<time>> departure_events_with_metas_;
+
   // uses the same indexing scheme as the stop times vector in the timetable,
   // but the first entry for every trip is a nullptr!
   // since #stop_times(trip) = #lcons(trip) + 1

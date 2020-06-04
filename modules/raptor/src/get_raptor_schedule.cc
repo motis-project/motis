@@ -399,6 +399,18 @@ std::unique_ptr<raptor_schedule> transformable_to_schedule(
     sort_and_unique(raptor_sched->departure_events_[s_id]);
   }
 
+  // create departure events with meta stations included
+  raptor_sched->departure_events_with_metas_ = raptor_sched->departure_events_;
+
+  for (auto s_id = 0; s_id < ttt.stations_.size(); ++s_id) {
+    auto const s = ttt.stations_[s_id];
+    for (auto const equi_s_id : s.equivalent_) {
+      append_vector(raptor_sched->departure_events_with_metas_[s_id],
+                    raptor_sched->departure_events_[equi_s_id]);
+    }
+    sort_and_unique(raptor_sched->departure_events_with_metas_[s_id]);
+  }
+
   // Loop over the routes
   for (auto const& r : ttt.routes_) {
     for (auto const& t : r.trips_) {
