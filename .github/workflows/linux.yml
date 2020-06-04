@@ -208,6 +208,7 @@ jobs:
           mv build/motis motis
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
           cp -r deps/ppr/profiles motis/ppr-profiles
+          cp -r deps/tiles/profile motis/tiles-profiles
           tar cjf motis-linux.tar.bz2 motis
 
       - name: Upload Distribution
