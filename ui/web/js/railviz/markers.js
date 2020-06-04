@@ -33,8 +33,6 @@ RailViz.Markers = (function () {
   }
 
   function updateMarkers() {
-    console.log("updateMarkers");
-
     startMarker = updateMarker(
       startMarker,
       markerSettings.startPosition,
