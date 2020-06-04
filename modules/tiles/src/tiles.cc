@@ -23,7 +23,6 @@
 #include "utl/progress_tracker.h"
 #include "utl/verify.h"
 
-#include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
@@ -33,7 +32,6 @@
 
 namespace c = cista;
 namespace mm = motis::module;
-namespace ml = motis::logging;
 namespace fb = flatbuffers;
 namespace fs = boost::filesystem;
 
