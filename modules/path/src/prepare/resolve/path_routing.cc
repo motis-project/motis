@@ -92,11 +92,13 @@ std::vector<std::vector<osm_way>> load_or_parse(std::string const& fname,
 
 path_routing make_path_routing(station_index const& station_idx,
                                std::string const& osm_path,
-                               std::string const& osrm_path) {
+                               std::string const& osrm_path,
+                               std::string const& tmp_path) {
   strategy_id_t id = 0;
 
   auto const load_osm_rel = [&](source_spec::category const cat) {
-    auto const fname = relation_cache_name(cat);
+    auto const fname =
+        (fs::path{tmp_path} / relation_cache_name(cat)).generic_string();
     auto const components =
         load_or_parse(fname, [&] { return parse_relations(osm_path, cat); });
 
@@ -106,7 +108,8 @@ path_routing make_path_routing(station_index const& station_idx,
         components);
   };
   auto const load_osm_net = [&](source_spec::category const cat) {
-    auto const fname = network_cache_name(cat);
+    auto const fname =
+        (fs::path{tmp_path} / network_cache_name(cat)).generic_string();
     auto const components =
         load_or_parse(fname, [&] { return parse_network(osm_path, cat); });
 

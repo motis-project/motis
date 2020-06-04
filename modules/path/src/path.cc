@@ -127,6 +127,7 @@ void path::import(registry& reg) {
         opt.osm_ = osm->path()->str();
         opt.osrm_ = osrm->path()->str();
         opt.out_ = (dir / "pathdb.mdb").generic_string();
+        opt.tmp_ = dir.generic_string();
         prepare(opt);
 
         write_ini(dir / "import.ini", state);

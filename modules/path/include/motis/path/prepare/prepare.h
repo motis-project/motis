@@ -32,6 +32,7 @@ struct prepare_settings : public conf::configuration {
     param(osm_, "osm", "/path/to/germany-latest.osm.pbf");
     param(osrm_, "osrm", "path/to/osrm/files");
     param(out_, "out", "/path/to/db.mdb");
+    param(tmp_, "tmp", "/path/to/tmp/directory");
     param(filter_, "filter", "filter station sequences");
     param(seq_cache_task_, "seq_cache_task", "{ignore, load, dump}");
     param(seq_cache_file_, "seq_cache_file", "/path/to/seq_cache.fbs");
@@ -41,6 +42,7 @@ struct prepare_settings : public conf::configuration {
   std::string osm_{"germany-latest.osm.pbf"};
   std::string osrm_{"osrm"};
   std::string out_{"./pathdb.mdb"};
+  std::string tmp_{"."};
 
   std::vector<std::string> filter_;
 
@@ -121,7 +123,8 @@ inline void prepare(prepare_settings const& opt) {
                        << " station sequences with "
                        << station_idx.stations_.size() << " unique stations.";
 
-    auto routing = make_path_routing(station_idx, opt.osm_, opt.osrm_);
+    auto routing =
+        make_path_routing(station_idx, opt.osm_, opt.osrm_, opt.tmp_);
 
     resolved_seqs = resolve_sequences(sequences, routing);
 
