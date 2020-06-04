@@ -20,8 +20,7 @@ struct ppr : public motis::module::module {
   ppr(ppr&&) = delete;
   ppr& operator=(ppr&&) = delete;
 
-  void import(motis::module::progress_listener&,
-              motis::module::registry& reg) override;
+  void import(motis::module::registry& reg) override;
   void init(motis::module::registry&) override;
 
   bool import_successful() const override { return import_successful_; }

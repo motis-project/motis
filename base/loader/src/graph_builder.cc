@@ -6,6 +6,7 @@
 #include <numeric>
 
 #include "utl/get_or_create.h"
+#include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 
 #include "date/date.h"
@@ -273,9 +274,13 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
                      return lhs->route() < rhs->route();
                    });
 
+  auto& progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker.status("Build Services")
+      .out_bounds(progress_offset_, 90)
+      .in_high(sorted.size());
+
   auto it = begin(sorted);
   mcd::vector<Service const*> route_services;
-  clog_import_step("Build Services", progress_offset_, 90, sorted.size());
   while (it != end(sorted)) {
     auto route = (*it)->route();
     do {
@@ -290,9 +295,7 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
     }
 
     route_services.clear();
-
-    motis::logging::clog_import_progress(std::distance(begin(sorted), it),
-                                         1000);
+    progress_tracker.update(std::distance(begin(sorted), it));
   }
 }
 
@@ -850,6 +853,9 @@ schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
     sched->name_ = serialized->name()->str();
   }
 
+  auto& progress_tracker = utl::get_active_progress_tracker();
+
+  progress_tracker.status("Build Graph").out_bounds(progress_offset, 90);
   graph_builder builder(*sched, serialized->interval(), opt, progress_offset);
   builder.add_stations(serialized->stations());
   if (serialized->meta_stations() != nullptr) {
@@ -859,7 +865,7 @@ schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
   builder.add_services(serialized->services());
   if (opt.apply_rules_) {
     scoped_timer timer("rule services");
-    clog_import_step("Rule Services", 90, 92);
+    progress_tracker.status("Rule Services").out_bounds(90, 92);
     build_rule_routes(builder, serialized->rule_services());
   }
 
@@ -867,17 +873,17 @@ schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
     sched->expanded_trips_.finish_map();
   }
 
-  clog_import_step("Footpaths", 92, 93);
+  progress_tracker.status("Footpaths").out_bounds(92, 93);
   builder.add_footpaths(serialized->footpaths());
 
-  clog_import_step("Connect Reverse", 93, 94);
+  progress_tracker.status("Connect Reverse").out_bounds(93, 94);
   builder.connect_reverse();
 
-  clog_import_step("Sort Trips", 94, 95);
+  progress_tracker.status("Sort Trips").out_bounds(94, 95);
   builder.sort_trips();
 
   if (opt.expand_footpaths_) {
-    clog_import_step("Expand Footpaths", 95, 96);
+    progress_tracker.status("Expand Footpaths").out_bounds(95, 96);
     calc_footpaths(*sched);
   }
 
@@ -885,19 +891,19 @@ schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
   sched->route_count_ = builder.next_route_index_;
   sched->node_count_ = builder.next_node_id_;
 
-  clog_import_step("Lower Bounds", 96, 100);
+  progress_tracker.status("Lower Bounds").out_bounds(96, 100).in_high(4);
   sched->transfers_lower_bounds_fwd_ = build_interchange_graph(
       sched->station_nodes_, sched->route_count_, search_dir::FWD);
-  clog_import_progress(25);
+  progress_tracker.increment();
   sched->transfers_lower_bounds_bwd_ = build_interchange_graph(
       sched->station_nodes_, sched->route_count_, search_dir::BWD);
-  clog_import_progress(50);
+  progress_tracker.increment();
   sched->travel_time_lower_bounds_fwd_ =
       build_station_graph(sched->station_nodes_, search_dir::FWD);
-  clog_import_progress(75);
+  progress_tracker.increment();
   sched->travel_time_lower_bounds_bwd_ =
       build_station_graph(sched->station_nodes_, search_dir::BWD);
-  clog_import_progress(100);
+  progress_tracker.increment();
 
   sched->waiting_time_rules_ = load_waiting_time_rules(
       opt.wzr_classes_path_, opt.wzr_matrix_path_, sched->categories_);

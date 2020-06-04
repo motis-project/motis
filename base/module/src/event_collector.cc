@@ -2,6 +2,8 @@
 
 #include "boost/filesystem.hpp"
 
+#include "fmt/ranges.h"
+
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
@@ -13,28 +15,15 @@ namespace fs = boost::filesystem;
 
 namespace motis::module {
 
-event_collector::event_collector(progress_listener& progress_listener,
-                                 std::string data_dir, std::string name,
+event_collector::event_collector(std::string data_dir, std::string module_name,
                                  registry& reg, import_op_t op)
     : data_dir_{std::move(data_dir)},
-      module_name_{std::move(name)},
+      module_name_{std::move(module_name)},
       reg_{reg},
       op_{std::move(op)},
-      progress_listener_{progress_listener} {}
-
-void event_collector::update_status(motis::import::Status const status,
-                                    double const progress) {
-  message_creator fbb;
-  fbb.create_and_finish(
-      MsgContent_StatusUpdate,
-      motis::import::CreateStatusUpdate(
-          fbb, fbb.CreateString(module_name_),
-          fbb.CreateVector(utl::to_vec(
-              waiting_for_, [&](auto&& w) { return fbb.CreateString(w); })),
-          status, fbb.CreateString(""), fbb.CreateString(""), progress)
-          .Union(),
-      "/import", DestinationType_Topic);
-  ctx::await_all(motis_publish(make_msg(fbb)));
+      progress_tracker_{
+          utl::get_global_progress_trackers().get_tracker(module_name_)} {
+  progress_tracker_.status("WAITING").show_progress(false);
 }
 
 event_collector* event_collector::require(
@@ -49,13 +38,12 @@ event_collector* event_collector::require(
         auto const logs_path = fs::path{data_dir_} / "log";
         fs::create_directories(logs_path);
         clog_redirect redirect{
-            progress_listener_, module_name_,
             (logs_path / (module_name_ + ".txt")).generic_string().c_str()};
 
         // Dummy message asking for initial status.
         // Send "waiting for" dependencies list.
         if (msg->get()->content_type() == MsgContent_MotisSuccess) {
-          update_status(motis::import::Status_WAITING);
+          progress_tracker_.status(fmt::format("WAITING: {}", waiting_for_));
           return nullptr;
         }
 
@@ -77,19 +65,25 @@ event_collector* event_collector::require(
 
         dependencies_[name] = msg;
         waiting_for_.erase(name);
-        update_status(motis::import::Status_WAITING);
         if (!waiting_for_.empty()) {
+          progress_tracker_.status(fmt::format("WAITING: {}", waiting_for_));
           return nullptr;  // Still waiting for a message.
         }
 
         // All messages arrived -> start.
-        update_status(motis::import::Status_RUNNING);
+        activate_progress_tracker(progress_tracker_)
+            .status("RUNNING")
+            .show_progress(true);
         try {
           executed_ = true;
           op_(dependencies_);
-          update_status(motis::import::Status_FINISHED);
+          progress_tracker_.status("FINISHED").show_progress(false);
         } catch (std::exception const& e) {
-          std::clog << '\0' << 'E' << e.what() << '\0';
+          progress_tracker_.status(fmt::format("ERROR: {}", e.what()))
+              .show_progress(false);
+        } catch (...) {
+          progress_tracker_.status("ERROR: UNKNOWN EXCEPTION")
+              .show_progress(false);
         }
 
         return nullptr;

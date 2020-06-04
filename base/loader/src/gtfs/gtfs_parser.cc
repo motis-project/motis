@@ -13,6 +13,7 @@
 #include "utl/pipes/remove_if.h"
 #include "utl/pipes/transform.h"
 #include "utl/pipes/vec.h"
+#include "utl/progress_tracker.h"
 
 #include "cista/hash.h"
 #include "cista/mmap.h"
@@ -265,7 +266,10 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   };
 
   motis::logging::scoped_timer export_timer{"export"};
-  motis::logging::clog_import_step("Export schedule.raw", 40, 80, trips.size());
+  auto& progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker.status("Export schedule.raw")
+      .out_bounds(40.F, 80.F)
+      .in_high(trips.size());
   auto const interval =
       Interval{static_cast<uint64_t>(to_unix_time(traffic_days.first_day_)),
                static_cast<uint64_t>(to_unix_time(traffic_days.last_day_))};
@@ -326,11 +330,10 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
         is_rule_service_participant, 0, get_or_create_str(t->id_));
   };
 
-  auto i = size_t{0U};
   auto output_services =
       utl::all(trips)  //
       | utl::remove_if([&](auto const& entry) {
-          motis::logging::clog_import_progress(i++, 100000);
+          progress_tracker.increment();
           auto const stop_count = entry.second->stops().size();
           if (stop_count < 2) {
             LOG(warn) << "invalid trip " << entry.first << ": "

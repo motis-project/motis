@@ -9,6 +9,7 @@
 #include "cista/hash.h"
 #include "cista/mmap.h"
 
+#include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 
 #include "ppr/common/verify.h"
@@ -274,9 +275,9 @@ ppr::ppr() : module("Foot Routing", "ppr") {
 
 ppr::~ppr() = default;
 
-void ppr::import(progress_listener& progress_listener, registry& reg) {
+void ppr::import(registry& reg) {
   auto const collector = std::make_shared<event_collector>(
-      progress_listener, get_data_directory().generic_string(), "ppr", reg,
+      get_data_directory().generic_string(), "ppr", reg,
       [this](std::map<std::string, msg_ptr> const& dependencies) {
         using import::OSMEvent;
         using import::DEMEvent;
@@ -292,6 +293,8 @@ void ppr::import(progress_listener& progress_listener, registry& reg) {
           dem_path = data_path(dem->path()->str());
           dem_hash = dem->hash();
         }
+
+        auto& progress_tracker = utl::get_active_progress_tracker();
 
         auto const state =
             import_state{data_path(osm_path), osm->hash(), osm->size(),
@@ -310,18 +313,18 @@ void ppr::import(progress_listener& progress_listener, registry& reg) {
           log.out_ = &std::clog;
           log.total_progress_updates_only_ = true;
 
-          log.step_started_ = [](pp::logging const& log,
-                                 pp::step_info const& step) {
+          log.step_started_ = [&progress_tracker](pp::logging const& log,
+                                                  pp::step_info const& step) {
             std::clog << "Step " << (log.current_step() + 1) << "/"
                       << log.step_count() << ": " << step.name() << ": Starting"
                       << std::endl;
-            std::clog << '\0' << 'S' << step.name() << '\0';
+            progress_tracker.status(step.name());
           };
 
-          log.step_progress_ = [](pp::logging const& log,
-                                  pp::step_info const&) {
-            std::clog << '\0' << static_cast<int>(log.total_progress() * 100)
-                      << '\0';
+          log.step_progress_ = [&progress_tracker](pp::logging const& log,
+                                                   pp::step_info const&) {
+            progress_tracker.update(
+                static_cast<int>(log.total_progress() * 100));
           };
 
           log.step_finished_ = [](pp::logging const& log,
@@ -333,55 +336,46 @@ void ppr::import(progress_listener& progress_listener, registry& reg) {
           };
 
           auto const result = pp::create_routing_data(opt, log);
-          import_successful_ = result.successful();
+          utl::verify(result.successful(), result.error_msg_);
+          write_ini(dir / "import.ini", state);
+        }
+        import_successful_ = true;
 
-          if (import_successful_) {
-            write_ini(dir / "import.ini", state);
-          } else {
-            std::clog << '\0' << 'E' << result.error_msg_ << '\0';
-          }
-        } else {
-          import_successful_ = true;
+        progress_tracker.update(100);
+        auto graph_hash = cista::hash_t{};
+        auto graph_size = std::size_t{};
+        {
+          cista::mmap m{graph_file().c_str(), cista::mmap::protection::READ};
+          graph_hash = cista::hash(std::string_view{
+              reinterpret_cast<char const*>(m.begin()),
+              std::min(static_cast<std::size_t>(50 * 1024 * 1024), m.size())});
+          graph_size = m.size();
         }
 
-        if (import_successful_) {
-          std::clog << '\0' << 100 << '\0';
-          auto graph_hash = cista::hash_t{};
-          auto graph_size = std::size_t{};
-          {
-            cista::mmap m{graph_file().c_str(), cista::mmap::protection::READ};
-            graph_hash = cista::hash(std::string_view{
-                reinterpret_cast<char const*>(m.begin()),
-                std::min(static_cast<std::size_t>(50 * 1024 * 1024),
-                         m.size())});
-            graph_size = m.size();
-          }
-
-          read_profile_files(profile_files_, profiles_);
-          auto profiles_hash = cista::BASE_HASH;
-          for (auto const& p : profiles_) {
-            profiles_hash =
-                cista::hash_combine(profiles_hash, p.second.file_hash_);
-          }
-
-          message_creator fbb;
-          fbb.create_and_finish(
-              MsgContent_PPREvent,
-              motis::import::CreatePPREvent(
-                  fbb, fbb.CreateString(graph_file()), graph_hash, graph_size,
-                  fbb.CreateVector(utl::to_vec(
-                      profiles_,
-                      [&](auto const& p) {
-                        return motis::import::CreatePPRProfile(
-                            fbb, fbb.CreateString(p.first),
-                            fbb.CreateString(p.second.file_path_.string()),
-                            p.second.file_hash_, p.second.file_size_);
-                      })),
-                  profiles_hash)
-                  .Union(),
-              "/import", DestinationType_Topic);
-          motis_publish(make_msg(fbb));
+        read_profile_files(profile_files_, profiles_);
+        auto profiles_hash = cista::BASE_HASH;
+        for (auto const& p : profiles_) {
+          profiles_hash =
+              cista::hash_combine(profiles_hash, p.second.file_hash_);
         }
+
+        message_creator fbb;
+        fbb.create_and_finish(
+            MsgContent_PPREvent,
+            motis::import::CreatePPREvent(
+                fbb, fbb.CreateString(graph_file()), graph_hash, graph_size,
+                fbb.CreateVector(utl::to_vec(
+                    profiles_,
+                    [&](auto const& p) {
+                      return motis::import::CreatePPRProfile(
+                          fbb, fbb.CreateString(p.first),
+                          fbb.CreateString(p.second.file_path_.string()),
+                          p.second.file_hash_, p.second.file_size_);
+                    })),
+                profiles_hash)
+                .Union(),
+            "/import", DestinationType_Topic);
+        motis_publish(make_msg(fbb));
       });
   collector->require("OSM", [](msg_ptr const& msg) {
     return msg->get()->content_type() == MsgContent_OSMEvent;

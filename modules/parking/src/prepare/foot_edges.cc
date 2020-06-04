@@ -6,6 +6,8 @@
 #include <mutex>
 #include <string>
 
+#include "utl/enumerate.h"
+#include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 
 #include "ppr/routing/search.h"
@@ -43,17 +45,8 @@ inline uint16_t get_accessibility(route const& r) {
 void compute_edges(
     database& db, routing_graph const& rg, stations const& st,
     std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
-    parking_lot const& p, std::size_t progress, std::size_t max,
-    std::mutex& progress_mutex, std::vector<unsigned>& stations_per_parking) {
-  if (progress % 100 == 0) {
-    std::lock_guard<std::mutex> guard{progress_mutex};
-    std::clog << '\0'
-              << static_cast<int>(static_cast<double>(progress) / max * 100.0)
-              << '\0';
-  }
-
-  auto const work_idx = progress - 1;
-
+    parking_lot const& p, std::vector<unsigned>& stations_per_parking,
+    size_t work_idx) {
   for (auto const& [profile_name, pi] : ppr_profiles) {
     auto const& profile = pi.profile_;
     FlatBufferBuilder fbb;
@@ -133,18 +126,18 @@ void compute_foot_edges(
 
   thread_pool pool{static_cast<unsigned>(std::max(1, threads))};
 
-  auto progress = 0UL;
   auto max = park.parkings_.size();
-  std::mutex progress_mutex;
   std::vector<unsigned> stations_per_parking;
   stations_per_parking.resize(max);
   std::clog << "Precomputing foot edges for " << max << " parkings..."
             << std::endl;
-  for (auto const& p : park.parkings_) {
-    ++progress;
-    pool.post([&, progress, max]() {
-      compute_edges(db, rg, st, ppr_profiles, p, progress, max, progress_mutex,
-                    stations_per_parking);
+
+  auto& progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker.reset_bounds().in_high(max);
+  for (auto const& [i, p] : utl::enumerate(park.parkings_)) {
+    pool.post([&, i = i, &p = p] {
+      progress_tracker.increment();
+      compute_edges(db, rg, st, ppr_profiles, p, stations_per_parking, i);
     });
   }
   pool.join();

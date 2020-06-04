@@ -9,6 +9,7 @@
 #include "utl/pairwise.h"
 #include "utl/parser/csv.h"
 #include "utl/pipes.h"
+#include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
@@ -131,9 +132,12 @@ std::pair<trip_map, block_map> read_trips(loaded_file file,
   std::pair<trip_map, block_map> ret;
   auto& [trips, blocks] = ret;
   auto const entries = read<gtfs_trip>(file.content(), columns);
-  motis::logging::clog_import_step("Trips", 5, 20, entries.size());
+
+  auto& progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker.status("Trips").out_bounds(5.F, 20.F).in_high(
+      entries.size());
   for (auto const& [i, t] : utl::enumerate(entries)) {
-    motis::logging::clog_import_progress(i, 10000);
+    progress_tracker.update(i);
     auto const blk =
         get<block_id>(t).trim().empty()
             ? nullptr
