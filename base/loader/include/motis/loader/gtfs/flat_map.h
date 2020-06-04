@@ -41,10 +41,10 @@ struct flat_map {
     return it->second;
   }
 
-  T& front() { return elements_[0]; }
-  T& back() { return elements_[elements_.size() - 1]; }
-  T const& front() const { return elements_[0]; }
-  T const& back() const { return elements_[elements_.size() - 1]; }
+  T& front() { return elements_[0].second; }
+  T& back() { return elements_[elements_.size() - 1].second; }
+  T const& front() const { return elements_[0].second; }
+  T const& back() const { return elements_[elements_.size() - 1].second; }
 
   iterator begin() { return elements_.begin(); }
   iterator end() { return elements_.end(); }

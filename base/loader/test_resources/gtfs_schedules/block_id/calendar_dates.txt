@@ -1,0 +1,4 @@
+service_id,date,exception_type
+T1_DAYS,20060702,1
+T3_DAYS,20060702,1
+T6_DAYS,20060702,1

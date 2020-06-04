@@ -1,0 +1,9 @@
+stop_id,stop_name,stop_desc,stop_lat,stop_lon,stop_url,location_type,parent_station
+S1,STOP 1,First Stop,49.880015,8.664131,,,
+S2,STOP 2,Second Stop,49.878166,8.661501,,,
+S3,STOP 3,Third Stop,49.875208,8.658878,,,
+S4,STOP 4,Forth Stop,49.872985,8.655666,,,
+S5,STOP 5,Fifth Stop,49.872714,8.650961,,,
+S6,STOP 6,Sixth Stop,49.871787,8.643587,,,
+S7,STOP 7,Seventh Stop,49.870769,8.636022,,,
+S8,STOP 8,Eighth Stop,49.872501,8.628313,,,

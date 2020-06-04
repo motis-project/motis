@@ -21,9 +21,9 @@ TEST(loader_gtfs_trip, read_trips_example_data) {
       loaded_file{SCHEDULES / "example" / CALENDAR_DATES_FILE});
   auto calendar =
       read_calendar(loaded_file{SCHEDULES / "example" / CALENDAR_FILE});
-  auto services = traffic_days(calendar, dates);
-  auto trips = read_trips(loaded_file{SCHEDULES / "example" / TRIPS_FILE},
-                          routes, services);
+  auto services = merge_traffic_days(calendar, dates);
+  auto [trips, blocks] = read_trips(
+      loaded_file{SCHEDULES / "example" / TRIPS_FILE}, routes, services);
 
   EXPECT_EQ(2, trips.size());
   EXPECT_NE(end(trips), trips.find("AWE1"));
@@ -40,9 +40,9 @@ TEST(loader_gtfs_trip, read_trips_berlin_data) {
       loaded_file{SCHEDULES / "berlin" / CALENDAR_DATES_FILE});
   auto calendar =
       read_calendar(loaded_file{SCHEDULES / "berlin" / CALENDAR_FILE});
-  auto services = traffic_days(calendar, dates);
-  auto trips = read_trips(loaded_file{SCHEDULES / "berlin" / TRIPS_FILE},
-                          routes, services);
+  auto services = merge_traffic_days(calendar, dates);
+  auto [trips, blocks] = read_trips(
+      loaded_file{SCHEDULES / "berlin" / TRIPS_FILE}, routes, services);
 
   EXPECT_EQ(3, trips.size());
 

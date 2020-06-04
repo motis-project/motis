@@ -16,8 +16,7 @@ struct parking : public motis::module::module {
   parking(parking&&) = delete;
   parking& operator=(parking&&) = delete;
 
-  void import(motis::module::progress_listener&,
-              motis::module::registry& reg) override;
+  void import(motis::module::registry& reg) override;
   void init(motis::module::registry&) override;
 
   bool import_successful() const override { return import_successful_; }

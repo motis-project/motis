@@ -37,6 +37,7 @@ target_link_libraries(motis-module
   conf
   wss-client
   cista
+  utl
   ${Boost_THREAD_LIBRARY}
 )
 target_compile_options(motis-module PRIVATE ${MOTIS_CXX_FLAGS})

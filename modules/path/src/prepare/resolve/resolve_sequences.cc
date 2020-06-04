@@ -6,6 +6,7 @@
 #include "boost/algorithm/string/join.hpp"
 
 #include "utl/parallel_for.h"
+#include "utl/progress_tracker.h"
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
@@ -33,13 +34,13 @@ struct result_cache {
 };
 
 struct plan_executor {
-  explicit plan_executor(processing_plan pp,
-                         routing_strategy const* stub_strategy)
+  plan_executor(processing_plan pp, routing_strategy const* stub_strategy)
       : pp_{std::move(pp)},
         stub_strategy_{stub_strategy},
         open_seq_task_deps_(pp_.seq_tasks_.size()),
         open_part_task_deps_(pp_.part_tasks_.size()),
-        result_caches_(pp_.part_tasks_.size()) {
+        result_caches_(pp_.part_tasks_.size()),
+        progress_tracker_{utl::get_active_progress_tracker()} {
     for (auto i = 0UL; i < pp_.seq_tasks_.size(); ++i) {
       open_seq_task_deps_[i] = pp_.seq_tasks_[i].part_dependencies_.size();
     }
@@ -51,6 +52,10 @@ struct plan_executor {
   void execute() {
     ml::scoped_timer t{"resolve_sequences"};
     start_ = sc::steady_clock::now();
+
+    progress_tracker_.status("Resolve Sequences")
+        .reset_bounds()
+        .in_high(pp_.part_task_queue_.size());
 
     utl::parallel_for_run(
         pp_.part_task_queue_.size(), [&](auto const queue_idx) {
@@ -258,11 +263,8 @@ struct plan_executor {
         std::count_if(begin(result_caches_), end(result_caches_),
                       [](auto const& r) { return r != nullptr; });
 
-    std::clog << '\0'
-              << static_cast<unsigned>(100.0 *
-                                       static_cast<float>(curr_part_task) /
-                                       pp_.part_task_queue_.size())
-              << '\0';
+    progress_tracker_.update(curr_part_task);
+
     std::clog << "resolve_sequences [" << microsecond_fmt{t_curr} << " | est. "
               << microsecond_fmt{t_est} << "] ("  //
               << std::setw(7) << curr_part_task << "/"  //
@@ -303,6 +305,7 @@ struct plan_executor {
 
   sc::time_point<sc::steady_clock> start_;
   execution_stats stats_;
+  utl::progress_tracker& progress_tracker_;
 };
 
 std::vector<resolved_station_seq> resolve_sequences(

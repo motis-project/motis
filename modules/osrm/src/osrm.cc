@@ -41,12 +41,12 @@ osrm::osrm() : module("OSRM Options", "osrm") {
 
 osrm::~osrm() = default;
 
-void osrm::import(progress_listener& pl, motis::module::registry& reg) {
+void osrm::import(motis::module::registry& reg) {
   for (auto const& p : profiles_) {
     auto const profile_name =
         boost::filesystem::path{p}.stem().generic_string();
     std::make_shared<event_collector>(
-        pl, get_data_directory().generic_string(), "osrm-" + profile_name, reg,
+        get_data_directory().generic_string(), "osrm-" + profile_name, reg,
         [this, profile_name,
          p](std::map<std::string, msg_ptr> const& dependencies) {
           using import::OSMEvent;

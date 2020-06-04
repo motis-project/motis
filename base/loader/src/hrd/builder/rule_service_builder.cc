@@ -36,12 +36,11 @@ void try_apply_rules(std::vector<std::unique_ptr<hrd_service>>& origin_services,
                      std::pair<hrd_service const*, hrd_service*>& s,
                      std::vector<std::shared_ptr<service_rule>>& rules) {
   for (auto& r : rules) {
-    int info = r->applies(*s.first);
-    if (info != 0) {
+    if (auto const info = r->applies(*s.first); info != 0) {
       if (s.first->num_repetitions_ == 0) {
         r->add(get_or_create(origin_services, s), info);
       } else {
-        LOG(warn) << "suspicious service rule participant: "
+        LOG(warn) << "suspicious repeated service rule participant: "
                   << s.first->origin_.filename_ << " ["
                   << s.first->origin_.line_number_from_ << ","
                   << s.first->origin_.line_number_to_ << "]";
@@ -56,8 +55,7 @@ bool rule_service_builder::add_service(hrd_service const& s) {
   copied_service.second = nullptr;  // pointer to the copy if we need it
 
   for (auto const& id : s.get_ids()) {
-    auto it = input_rules_.find(id);
-    if (it != end(input_rules_)) {
+    if (auto it = input_rules_.find(id); it != end(input_rules_)) {
       try_apply_rules(origin_services_, copied_service, it->second);
     }
   }
@@ -181,7 +179,9 @@ void create_rule_service(
   std::map<hrd_service const*, Offset<Service>> services;
   for (auto const& s : rs.services_) {
     auto const* service = s.service_.get();
-    services[service] = sbf(std::cref(*service), true, std::ref(fbb));
+    utl::get_or_create(services, service, [&] {
+      return sbf(std::cref(*service), true, std::ref(fbb));
+    });
   }
 
   std::vector<Offset<Rule>> fbb_rules;

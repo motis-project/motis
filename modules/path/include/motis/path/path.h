@@ -17,8 +17,7 @@ struct path : public motis::module::module {
   path(path&&) = delete;
   path& operator=(path&&) = delete;
 
-  void import(motis::module::progress_listener&,
-              motis::module::registry&) override;
+  void import(motis::module::registry&) override;
   void init(motis::module::registry&) override;
 
   bool import_successful() const override { return import_successful_; }

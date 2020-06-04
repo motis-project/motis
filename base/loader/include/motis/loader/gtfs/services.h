@@ -12,12 +12,13 @@
 
 namespace motis::loader::gtfs {
 
-struct services {
+struct traffic_days {
   boost::gregorian::date first_day_, last_day_;
   std::map<std::string, std::unique_ptr<bitfield>> traffic_days_;
 };
 
-services traffic_days(std::map<std::string, calendar> const&,
-                      std::map<std::string, std::vector<calendar_date>> const&);
+traffic_days merge_traffic_days(
+    std::map<std::string, calendar> const&,
+    std::map<std::string, std::vector<calendar_date>> const&);
 
 }  // namespace motis::loader::gtfs

@@ -54,12 +54,12 @@ void add_exception(greg::date const& start, calendar_date const& exception,
   b.set(day_idx, exception.type_ == calendar_date::ADD);
 }
 
-services traffic_days(
+traffic_days merge_traffic_days(
     std::map<std::string, calendar> const& base,
     std::map<std::string, std::vector<calendar_date>> const& exceptions) {
   motis::logging::scoped_timer timer{"traffic days"};
 
-  services s;
+  traffic_days s;
   s.first_day_ = bound_date(base, true);
   s.last_day_ = bound_date(base, false);
 

@@ -20,7 +20,7 @@ struct direct_connection {
       : type_(type), duration_(duration), accessibility_(accessibility) {}
 
   mumo_type type_{mumo_type::FOOT};
-  unsigned duration_{};
+  unsigned duration_{};  // minutes
   unsigned accessibility_{};
 };
 

@@ -36,7 +36,7 @@ TEST(loader_gtfs_traffic_days, read_traffic_days_example_data) {
       loaded_file{SCHEDULES / "example" / CALENDAR_DATES_FILE});
   auto calendar =
       read_calendar(loaded_file{SCHEDULES / "example" / CALENDAR_FILE});
-  auto services = traffic_days(calendar, dates);
+  auto traffic_days = merge_traffic_days(calendar, dates);
 
   std::string we_bit_str = "1111000110000011000001100000110";
   std::string wd_bit_str = "0000111001111100111110011111001";
@@ -45,9 +45,9 @@ TEST(loader_gtfs_traffic_days, read_traffic_days_example_data) {
   bitfield we_traffic_days(we_bit_str);
   bitfield wd_traffic_days(wd_bit_str);
 
-  EXPECT_EQ(boost::gregorian::date(2006, 7, 1), services.first_day_);
-  EXPECT_EQ(boost::gregorian::date(2006, 7, 31), services.last_day_);
+  EXPECT_EQ(boost::gregorian::date(2006, 7, 1), traffic_days.first_day_);
+  EXPECT_EQ(boost::gregorian::date(2006, 7, 31), traffic_days.last_day_);
 
-  EXPECT_EQ(we_traffic_days, *services.traffic_days_["WE"]);
-  EXPECT_EQ(wd_traffic_days, *services.traffic_days_["WD"]);
+  EXPECT_EQ(we_traffic_days, *traffic_days.traffic_days_["WE"]);
+  EXPECT_EQ(wd_traffic_days, *traffic_days.traffic_days_["WD"]);
 }
