@@ -3,6 +3,7 @@
 #include "boost/filesystem.hpp"
 
 #include "utl/equal_ranges_linear.h"
+#include "utl/progress_tracker.h"
 #include "utl/repeat_n.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
@@ -38,9 +39,15 @@ struct path_database_query_test : public ::testing::Test {
     db_fname_ =
         boost::filesystem::unique_path("pathdb_test_%%%%-%%%%-%%%%-%%%%")
             .string();
+
+    utl::get_global_progress_trackers().silent_ = true;
+    utl::activate_progress_tracker("query_test");
   }
 
   void TearDown() override {
+    utl::get_global_progress_trackers().clear();
+    utl::get_global_progress_trackers().silent_ = false;
+
     boost::filesystem::remove(db_fname_ + ".mdb");
     boost::filesystem::remove(db_fname_ + ".mdb-lock");
     boost::filesystem::remove(db_fname_ + ".pck");
