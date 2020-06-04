@@ -2,6 +2,7 @@
 
 #include "utl/enumerate.h"
 #include "utl/erase.h"
+#include "utl/progress_tracker.h"
 
 #include "cista/hash.h"
 #include "cista/mmap.h"
@@ -153,16 +154,14 @@ void parse_and_build_services(
   auto const total_bytes =
       collect_files(hrd_root / c.fplan_, c.fplan_file_extension_, files);
 
-  auto total_bytes_consumed = uint64_t{0U};
-  auto prev_progress = 0U;
-  auto progress_update = [&](std::size_t const file_bytes_consumed) mutable {
-    auto const curr_progress = static_cast<unsigned>(
-        80.0 * ((total_bytes_consumed + file_bytes_consumed) /
-                static_cast<float>(total_bytes)));
-    if (curr_progress != prev_progress) {
-      prev_progress = curr_progress;
-      std::clog << '\0' << curr_progress << '\0';
-    }
+  auto& progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker.status("Parse HRD Services")
+      .out_bounds(0.F, 80.F)
+      .in_high(total_bytes);
+
+  auto total_consumed = size_t{0ULL};
+  auto const progress_update = [&](std::size_t const file_consumed) {
+    progress_tracker.update(total_consumed + file_consumed);
   };
 
   for (auto const& [i, file] : utl::enumerate(files)) {
@@ -173,7 +172,7 @@ void parse_and_build_services(
 
     for_each_service(*loaded, bitfields, service_builder_fun, progress_update,
                      c);
-    total_bytes_consumed += fs::file_size(file);
+    total_consumed += fs::file_size(file);
   }
 }
 

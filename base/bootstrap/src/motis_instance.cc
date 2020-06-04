@@ -94,7 +94,7 @@ void motis_instance::import(module_settings const& module_opt,
         }
 
         for (auto const& parser : loader::parsers()) {
-          std::clog << "missing files:\n";
+          std::clog << "missing files in " << path << ":\n";
           for (auto const& file : parser->missing_files(path)) {
             std::clog << "  " << file << "\n";
           }
