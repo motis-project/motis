@@ -186,9 +186,9 @@ void train_retriever::update(rt::RtUpdates const* updates) {
 }
 
 bool should_display(int clasz, int zoom_level, float distance = 0.F) {
-  return clasz < 3  //
-         || (clasz < 6 && zoom_level >= 4)  //
-         || (clasz < 7 && zoom_level >= 6)  //
+  return (clasz < 3 && zoom_level >= 4)  //
+         || (clasz < 6 && zoom_level >= 5)  //
+         || (clasz < 7 && zoom_level >= 8)  //
          || (clasz >= 7 && zoom_level == 10 && distance >= 10'000.F)  //
          || zoom_level > 10;
 }
@@ -227,14 +227,11 @@ std::vector<train> train_retriever::trains(time const start_time,
   };
 
   constexpr auto const kBusClasz = 8;
+  constexpr auto const kOtherClasz = 9;
 
   std::shared_lock lock(mutex_);
   std::vector<train> trains;
-  for (auto clasz = 0U; clasz < kBusClasz; ++clasz) {
-    if (!should_display(clasz, zoom_level)) {
-      continue;
-    }
-
+  auto get_trains = [&](auto const clasz) {
     for (auto const& e : edge_index_[clasz]->edges(area)) {
       for (auto i = 0U; i < e->m_.route_edge_.conns_.size(); ++i) {
         auto const& c = e->m_.route_edge_.conns_[i];
@@ -247,9 +244,20 @@ std::vector<train> train_retriever::trains(time const start_time,
         trains.emplace_back(train{k, distance});
 
         if (trains.size() >= max_count) {
-          goto max_count_reached;
+          return true;
         }
       }
+    }
+    return false;
+  };
+
+  for (auto clasz = 0U; clasz < kBusClasz; ++clasz) {
+    if (!should_display(clasz, zoom_level)) {
+      continue;
+    }
+
+    if (get_trains(clasz)) {
+      return trains;
     }
   }
 
@@ -281,13 +289,16 @@ std::vector<train> train_retriever::trains(time const start_time,
 
     for (auto const& b : busses) {
       if (trains.size() >= max_count) {
-        goto max_count_reached;
+        return trains;
       }
       trains.push_back(b);
     }
   }
 
-max_count_reached:
+  if (should_display(kOtherClasz, zoom_level)) {
+    get_trains(kOtherClasz);
+  }
+
   return trains;
 }
 

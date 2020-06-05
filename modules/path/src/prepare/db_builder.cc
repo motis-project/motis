@@ -44,16 +44,19 @@ using seq_info =
 
 template <typename Classes>
 uint64_t min_cls_to_min_zoom_level(Classes const& c) {
-  auto it = std::min_element(begin(c), end(c));
-  utl::verify(it != end(c), "classes container empty");
+  auto const it = std::min_element(begin(c), end(c));
+
+  if (it == end(c)) {
+    return 10ULL;
+  }
 
   if (*it < 3) {
     return 4UL;
   } else if (*it < 6) {
-    return 6UL;
+    return 5UL;
   } else if (*it < 7) {
-    return 9UL;
-  } else {
+    return 8UL;
+  } else {  // *it >= 7
     return 10UL;
   }
 }
@@ -97,11 +100,6 @@ struct db_builder::impl {
 
   void store_stations(std::vector<station> const& stations) const {
     for (auto const& s : stations) {
-      if (std::none_of(begin(s.categories_), end(s.categories_),
-                       [](auto cls) { return cls < 9; })) {
-        continue;
-      }
-
       tiles::feature f;
       auto cstr = utl::cstr(s.id_.c_str());
       utl::parse_arg(cstr, f.id_, 0);
@@ -114,9 +112,9 @@ struct db_builder::impl {
           "classes",
           tiles::encode_string(std::to_string(cls_to_bits(s.categories_))));
 
-      utl::verify(!s.categories_.empty(), "have station without category");
-      f.meta_.emplace_back("min_class",
-                           tiles::encode_integer(*begin(s.categories_)));
+      f.meta_.emplace_back(
+          "min_class", tiles::encode_integer(
+                           !s.categories_.empty() ? *begin(s.categories_) : 9));
 
       f.geometry_ = tiles::fixed_point{
           {tiles::latlng_to_fixed({s.pos_.lat_, s.pos_.lng_})}};
@@ -128,19 +126,17 @@ struct db_builder::impl {
   std::pair<uint64_t, uint64_t> add_feature(
       geo::polyline const& line, std::vector<seq_seg> const& seq_segs,
       std::vector<uint32_t> const& classes, bool is_stub) {
-    // if (!classes.empty() && std::none_of(begin(classes), end(classes),
-    //                                      [](auto c) { return c < 9; })) {
-    //   return;
-    // }
-
     tiles::feature f;
     f.layer_ = path_layer_id_;
     f.zoom_levels_ = {min_cls_to_min_zoom_level(classes), tiles::kMaxZoomLevel};
 
     f.meta_.emplace_back(
         "classes", tiles::encode_string(std::to_string(cls_to_bits(classes))));
-    f.meta_.emplace_back("min_class", tiles::encode_integer(*std::min_element(
-                                          begin(classes), end(classes))));
+    f.meta_.emplace_back(
+        "min_class",
+        tiles::encode_integer(
+            !classes.empty() ? *std::min_element(begin(classes), end(classes))
+                             : 9));
     f.meta_.emplace_back("stub", tiles::encode_bool(is_stub));
 
     tiles::fixed_polyline polyline;
