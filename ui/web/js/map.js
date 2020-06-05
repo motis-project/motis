@@ -105,15 +105,6 @@ class RailVizCustomLayer {
     this.zoomRounded = Math.floor(this.map.getZoom() * 4) / 4;
     RailViz.Render.setup(map, gl);
 
-    const mouseEvents = ["mousedown", "mouseup", "mousemove", "mouseout"];
-    mouseEvents.forEach((eventType) =>
-      map
-        .getCanvas()
-        .addEventListener(eventType, (event) =>
-          RailViz.Render.handleMouseEvent(eventType, event)
-        )
-    );
-
     // does not seem to work properly: https://github.com/mapbox/mapbox-gl-js/issues/9516
     map.on("webglcontextlost", () => {
       RailViz.Render.stop();
@@ -279,7 +270,9 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
       RailViz.Path.Connections.init(map_fg, "railviz-base-stations");
     });
 
-    map_fg.on("dragend", () => RailViz.Main.dragEnd());
+    ["click", "mousemove", "mouseout"].forEach((t) =>
+      map_fg.on(t, (e) => RailViz.Render.handleMouseEvent(t, e.originalEvent))
+    );
 
     map_fg.on("contextmenu", (e) => {
       console.log("Context menu:", e);

@@ -9,7 +9,6 @@ RailViz.Main = (function () {
   var detailFilter = null;
   var fullData, detailTrips;
   var showingDetailData = false;
-  var dragEndTime = null;
   var lastTrainsRequest = null;
   var lastTripsRequest = null;
   var useFpsLimiter = true;
@@ -23,7 +22,7 @@ RailViz.Main = (function () {
     pickedTrain: null,
     pickedStation: null,
     pickedConnection: null,
-    highlightedConnections: []
+    highlightedConnections: [],
   };
 
   var debouncedSendTrainsRequest = debounce(sendTrainsRequest, 200);
@@ -276,11 +275,7 @@ RailViz.Main = (function () {
     pickedStation,
     pickedConnection
   ) {
-    if (eventType == "mouseup") {
-      if (dragEndTime != null && Date.now() - dragEndTime < 100) {
-        // ignore mouse up events immediately after drag end
-        return;
-      }
+    if (eventType == "click") {
       if (pickedTrain) {
         if (pickedTrain.trip && pickedTrain.trip.length > 0) {
           elmPorts.showTripDetails.send(pickedTrain.trip[0]);
@@ -298,10 +293,6 @@ RailViz.Main = (function () {
         setTooltip(-1, -1, null, null, null);
       }
     }
-  }
-
-  function dragEnd() {
-    dragEndTime = Date.now();
   }
 
   function setTooltip(x, y, pickedTrain, pickedStation, pickedConnection) {
@@ -409,7 +400,6 @@ RailViz.Main = (function () {
     setDetailWalks: setDetailWalks,
     setConnections: setConnections,
     highlightConnections: highlightConnections,
-    dragEnd: dragEnd,
     setUseFpsLimiter: setUseFpsLimiter,
     showTrains: showTrains,
     setPPRSearchOptions: setPPRSearchOptions,
