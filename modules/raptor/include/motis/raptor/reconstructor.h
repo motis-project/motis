@@ -63,7 +63,7 @@ struct intermediate_journey {
       auto const tt = raptor_sched.transfer_times_[s_id];
       auto const a_time = stop_time.arrival_ - tt;
 
-      if (s_id == from && d_time != 0) {
+      if (s_id == from && valid(d_time)) {
         return d_time;
       }
 
