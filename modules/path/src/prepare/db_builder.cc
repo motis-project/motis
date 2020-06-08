@@ -43,18 +43,19 @@ using seq_info =
     std::tuple<std::vector<std::string>, std::vector<uint32_t>, int>;
 
 template <typename Classes>
-uint64_t min_cls_to_min_zoom_level(Classes const& c) {
-  auto const it = std::min_element(begin(c), end(c));
-
-  if (it == end(c)) {
-    return 10ULL;
+int get_min_clasz(Classes const& c) {
+  if (c.empty()) {
+    return 9;
   }
+  return *std::min_element(begin(c), end(c));
+}
 
-  if (*it < 3) {
+uint64_t min_clasz_to_min_zoom_level(int const min_clasz) {
+  if (min_clasz < 3) {
     return 4UL;
-  } else if (*it < 6) {
+  } else if (min_clasz < 6) {
     return 5UL;
-  } else if (*it < 7) {
+  } else if (min_clasz < 7) {
     return 8UL;
   } else {  // *it >= 7
     return 10UL;
@@ -62,12 +63,12 @@ uint64_t min_cls_to_min_zoom_level(Classes const& c) {
 }
 
 template <typename Classes>
-uint64_t cls_to_bits(Classes const& c) {
+std::string cls_to_bits_str(Classes const& c) {
   uint64_t class_bits = 0;
   for (auto const& cls : c) {
     class_bits |= 1UL << static_cast<size_t>(cls);
   }
-  return class_bits;
+  return std::to_string(class_bits);
 }
 
 struct db_builder::impl {
@@ -98,23 +99,22 @@ struct db_builder::impl {
                 "db_builder: cache is not empty in dtor");
   }
 
-  void store_stations(std::vector<station> const& stations) const {
+  void store_stations(std::vector<station> const& stations) {
     for (auto const& s : stations) {
+      auto const min_clasz = get_min_clasz(s.categories_);
+
       tiles::feature f;
-      auto cstr = utl::cstr(s.id_.c_str());
-      utl::parse_arg(cstr, f.id_, 0);
+      f.id_ = station_feature_id_++;
       f.layer_ = station_layer_id_;
-      f.zoom_levels_ = {min_cls_to_min_zoom_level(s.categories_),
+      f.zoom_levels_ = {min_clasz_to_min_zoom_level(min_clasz),
                         tiles::kMaxZoomLevel};
 
       f.meta_.emplace_back("name", tiles::encode_string(s.name_));
+      f.meta_.emplace_back("id", tiles::encode_string(s.id_));
       f.meta_.emplace_back(
-          "classes",
-          tiles::encode_string(std::to_string(cls_to_bits(s.categories_))));
+          "classes", tiles::encode_string(cls_to_bits_str(s.categories_)));
 
-      f.meta_.emplace_back(
-          "min_class", tiles::encode_integer(
-                           !s.categories_.empty() ? *begin(s.categories_) : 9));
+      f.meta_.emplace_back("min_class", tiles::encode_integer(min_clasz));
 
       f.geometry_ = tiles::fixed_point{
           {tiles::latlng_to_fixed({s.pos_.lat_, s.pos_.lng_})}};
@@ -126,17 +126,16 @@ struct db_builder::impl {
   std::pair<uint64_t, uint64_t> add_feature(
       geo::polyline const& line, std::vector<seq_seg> const& seq_segs,
       std::vector<uint32_t> const& classes, bool is_stub) {
+    auto const min_clasz = get_min_clasz(classes);
+
     tiles::feature f;
     f.layer_ = path_layer_id_;
-    f.zoom_levels_ = {min_cls_to_min_zoom_level(classes), tiles::kMaxZoomLevel};
+    f.zoom_levels_ = {min_clasz_to_min_zoom_level(min_clasz),
+                      tiles::kMaxZoomLevel};
 
-    f.meta_.emplace_back(
-        "classes", tiles::encode_string(std::to_string(cls_to_bits(classes))));
-    f.meta_.emplace_back(
-        "min_class",
-        tiles::encode_integer(
-            !classes.empty() ? *std::min_element(begin(classes), end(classes))
-                             : 9));
+    f.meta_.emplace_back("classes",
+                         tiles::encode_string(cls_to_bits_str(classes)));
+    f.meta_.emplace_back("min_class", tiles::encode_integer(min_clasz));
     f.meta_.emplace_back("stub", tiles::encode_bool(is_stub));
 
     tiles::fixed_polyline polyline;
@@ -312,6 +311,7 @@ struct db_builder::impl {
   size_t station_layer_id_;
   size_t path_layer_id_;
 
+  size_t station_feature_id_{0};
   std::vector<seq_info> seq_infos_;
   std::vector<std::vector<seq_seg>> seq_segs_;
 

@@ -248,7 +248,7 @@ RailViz.Render = (function () {
     const pickedStation =
       station !== undefined
         ? {
-            id: station.id !== undefined ? station.id : station.properties.id,
+            id: station.properties.id,
             name: station.properties.name,
           }
         : null;
