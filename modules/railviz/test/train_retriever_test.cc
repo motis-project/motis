@@ -35,7 +35,7 @@ TEST_F(railviz_train_retriever_test, simple_result_ok) {
 
   train_retriever tr{s, {}};
   auto const result = tr.trains(
-      t_min, t_max, 100,
+      t_min, t_max, 100, 0,
       geo::make_box({{50.322747, 9.0133358}, {50.322747, 9.0133358}}), 18);
 
   EXPECT_EQ(4U, result.size());

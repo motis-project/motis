@@ -34,8 +34,9 @@ struct train_retriever {
   train_retriever& operator=(train_retriever&&) = delete;
 
   void update(rt::RtUpdates const*);
-  std::vector<train> trains(time start_time, time end_time, unsigned max_count,
-                            geo::box const& area, int zoom_level);
+  std::vector<train> trains(time start_time, time end_time, int max_count,
+                            int last_count, geo::box const& area,
+                            int zoom_level);
 
 private:
   schedule const& sched_;

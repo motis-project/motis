@@ -10,4 +10,5 @@ table RailVizTrainsRequest {
   start_time: ulong;
   end_time: ulong;
   max_trains: uint;
+  last_trains: uint;
 }

@@ -10,6 +10,7 @@ RailViz.Main = (function () {
   var fullData, detailTrips;
   var showingDetailData = false;
   var lastTrainsRequest = null;
+  var lastTrainsCount = 0;
   var lastTripsRequest = null;
   var useFpsLimiter = true;
   var trainsEnabled = true;
@@ -108,7 +109,8 @@ RailViz.Main = (function () {
       },
       timeOffset + Date.now() / 1000,
       timeOffset + Date.now() / 1000 + 120,
-      1000
+      2500,
+      lastTrainsCount
     );
   }
 
@@ -172,6 +174,7 @@ RailViz.Main = (function () {
         showDetailData();
       }
     } else {
+      lastTrainsCount = (data.trains || []).length
       data.stations = null;
       fullData = data;
       if (!detailFilter) {

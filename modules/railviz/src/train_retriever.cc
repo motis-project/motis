@@ -8,7 +8,9 @@
 
 #include "geo/detail/register_box.h"
 
+#include "utl/concat.h"
 #include "utl/get_or_create.h"
+#include "utl/raii.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/schedule.h"
@@ -193,11 +195,15 @@ bool should_display(int clasz, int zoom_level, float distance = 0.F) {
          || zoom_level > 10;
 }
 
-std::vector<train> train_retriever::trains(time const start_time,
-                                           time const end_time,
-                                           unsigned const max_count,
-                                           geo::box const& area,
-                                           int zoom_level) {
+std::vector<train> train_retriever::trains(
+    time const start_time, time const end_time, int const max_count,
+    int const last_count, geo::box const& area, int const zoom_level) {
+  constexpr auto const kTolerance = .1F;
+  auto const limit = (last_count > max_count ||
+                      std::abs(last_count - max_count) < max_count * kTolerance)
+                         ? std::min(last_count, max_count) * (1. + kTolerance)
+                         : max_count;
+
   mcd::hash_map<node const*, float> route_distances;
   auto const get_or_create_route_distance = [&](ev_key const& k) {
     auto const it =
@@ -226,12 +232,7 @@ std::vector<train> train_retriever::trains(time const start_time,
     return distance;
   };
 
-  constexpr auto const kBusClasz = 8;
-  constexpr auto const kOtherClasz = 9;
-
-  std::shared_lock lock(mutex_);
-  std::vector<train> trains;
-  auto get_trains = [&](auto const clasz) {
+  auto const foreach_train = [&](auto const clasz, auto&& fn) {
     for (auto const& e : edge_index_[clasz]->edges(area)) {
       for (auto i = 0U; i < e->m_.route_edge_.conns_.size(); ++i) {
         auto const& c = e->m_.route_edge_.conns_[i];
@@ -241,65 +242,75 @@ std::vector<train> train_retriever::trains(time const start_time,
 
         auto const k = ev_key{e, i, event_type::DEP};
         float const distance = get_or_create_route_distance(k);
-        trains.emplace_back(train{k, distance});
+        fn(train{k, distance});
+      }
+    }
+  };
 
-        if (trains.size() >= max_count) {
-          return true;
-        }
+  auto const concat_and_check_limit = [&](auto& trains, auto& other) {
+    auto const cleanup = utl::make_finally([&] { other.clear(); });
+
+    if (trains.empty()) {
+      std::swap(trains, other);  // "concat"
+
+      if (trains.size() > limit) {
+        std::sort(begin(trains), end(trains));
+        trains.resize(std::min(trains.size(), static_cast<size_t>(limit)));
+        return true;
+      }
+    } else {
+      if (trains.size() + other.size() > limit) {
+        return true;
+      } else {
+        utl::concat(trains, other);
       }
     }
     return false;
   };
 
-  for (auto clasz = 0U; clasz < kBusClasz; ++clasz) {
+  std::shared_lock lock(mutex_);
+  std::vector<train> result_trains;
+  std::vector<train> clasz_trains;
+  for (auto clasz = 0U; clasz < MOTIS_STR; ++clasz) {
     if (!should_display(clasz, zoom_level)) {
       continue;
     }
 
-    if (get_trains(clasz)) {
-      return trains;
+    foreach_train(clasz, [&](auto const& t) { clasz_trains.push_back(t); });
+
+    if (concat_and_check_limit(result_trains, clasz_trains)) {
+      return result_trains;
     }
   }
 
-  if (should_display(kBusClasz, zoom_level,
-                     std::numeric_limits<float>::infinity())) {
-    std::vector<train> busses;
-    for (auto const& e : edge_index_[kBusClasz]->edges(area)) {
-      for (auto i = 0U; i < e->m_.route_edge_.conns_.size(); ++i) {
-        auto const& c = e->m_.route_edge_.conns_[i];
-        if (c.valid_ == 0U || c.a_time_ < start_time || c.d_time_ > end_time) {
-          continue;
-        }
-
-        auto const k = ev_key{e, i, event_type::DEP};
-        auto const distance = get_or_create_route_distance(k);
-        if (!should_display(kBusClasz, zoom_level, distance)) {
-          continue;
-        }
-
-        busses.push_back({k, distance});
+  {
+    constexpr auto const kLongDistance = 10'000.;
+    std::vector<train> clasz_trains_long_distance;
+    for (auto const clasz : {MOTIS_STR, MOTIS_BUS}) {
+      if (should_display(clasz, zoom_level,
+                         std::numeric_limits<float>::infinity())) {
+        foreach_train(clasz, [&](auto const& t) {
+          if (t.route_distance_ > kLongDistance) {
+            clasz_trains_long_distance.push_back(t);
+          } else {
+            clasz_trains.push_back(t);
+          }
+        });
       }
     }
 
-    // .distance DESC, .key ASC
-    std::sort(begin(busses), end(busses), [](auto const& lhs, auto const& rhs) {
-      return std::tie(rhs.route_distance_, lhs.key_) <
-             std::tie(lhs.route_distance_, rhs.key_);
-    });
-
-    for (auto const& b : busses) {
-      if (trains.size() >= max_count) {
-        return trains;
-      }
-      trains.push_back(b);
+    if (concat_and_check_limit(result_trains, clasz_trains_long_distance) ||
+        concat_and_check_limit(result_trains, clasz_trains)) {
+      return result_trains;
     }
   }
 
-  if (should_display(kOtherClasz, zoom_level)) {
-    get_trains(kOtherClasz);
+  if (should_display(MOTIS_X, zoom_level)) {
+    foreach_train(MOTIS_X, [&](auto const& t) { clasz_trains.push_back(t); });
+    concat_and_check_limit(result_trains, clasz_trains);
   }
 
-  return trains;
+  return result_trains;
 }
 
 }  // namespace motis::railviz

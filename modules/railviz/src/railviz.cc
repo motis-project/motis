@@ -365,7 +365,7 @@ msg_ptr railviz::get_trains(msg_ptr const& msg) const {
 
   trains_response_builder trb{sched, req->zoom_geo()};
   for (auto const& ev : train_retriever_->trains(
-           start_time, end_time, req->max_trains(),
+           start_time, end_time, req->max_trains(), req->last_trains(),
            geo::make_box(
                {geo::latlng{req->corner1()->lat(), req->corner1()->lng()},
                 geo::latlng{req->corner2()->lat(), req->corner2()->lng()}}),
