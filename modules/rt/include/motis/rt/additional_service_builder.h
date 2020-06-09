@@ -38,9 +38,9 @@ struct additional_service_builder {
     DECREASING_TIME
   };
 
-  explicit additional_service_builder(schedule& sched,
-                                      update_msg_builder& update_builder)
-      : sched_(sched), update_builder_(update_builder) {}
+  additional_service_builder(schedule& sched,
+                             update_msg_builder& update_builder)
+      : sched_{sched}, update_builder_{update_builder} {}
 
   status check_events(
       flatbuffers::Vector<flatbuffers::Offset<ris::AdditionalEvent>> const*
