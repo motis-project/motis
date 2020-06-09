@@ -284,7 +284,11 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
   while (it != end(sorted)) {
     auto route = (*it)->route();
     do {
-      if (!apply_rules_ || !(*it)->rule_participant()) {
+      auto clasz_it = sched_.classes_.find(
+          (*it)->sections()->Get(0)->category()->name()->str());
+      auto const clasz =
+          (clasz_it == end(sched_.classes_)) ? 9 : clasz_it->second;
+      if (clasz <= 3 && (!apply_rules_ || !(*it)->rule_participant())) {
         route_services.push_back(*it);
       }
       ++it;
