@@ -204,9 +204,8 @@ void path::init(registry& r) {
 }
 
 void path::verify_path_database_available() const {
-  if (!data_->db_ || !data_->index_) {
-    throw std::system_error(error::database_not_available);
-  }
+  utl::verify_ex(data_->db_ && data_->index_,
+                 std::system_error{error::database_not_available});
 }
 
 msg_ptr path::boxes() const {
@@ -289,9 +288,7 @@ msg_ptr path::by_tile_feature(msg_ptr const& msg) const {
 
 msg_ptr path::path_tiles(msg_ptr const& msg) const {
   auto tile = tiles::parse_tile_url(msg->get()->destination()->target()->str());
-  if (!tile) {
-    throw std::system_error(error::invalid_request);
-  }
+  utl::verify_ex(tile.has_value(), std::system_error{error::invalid_request});
 
   tiles::null_perf_counter pc;
   auto rendered_tile =

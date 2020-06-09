@@ -60,10 +60,7 @@ struct seq_graph_dijkstra {
   }
 
   size_t get_best_goal() const {
-    if (graph_.goals_.empty()) {
-      throw std::runtime_error("INVALID GRAPH?!");  // XXX
-    }
-
+    utl::verify(!graph_.goals_.empty(), "get_best_goal: INVALID_GRAPH");
     return *std::min_element(begin(graph_.goals_), end(graph_.goals_),
                              [&, this](auto const& lhs, auto const& rhs) {
                                return this->get_distance(lhs) <

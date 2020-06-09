@@ -7,6 +7,7 @@
 
 #include "utl/erase_duplicates.h"
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "motis/core/common/typed_flatbuffer.h"
 
@@ -65,9 +66,8 @@ struct path_index {
 
   size_t find(seq_key const& k) const {
     auto const it = seq_map_.find(k);
-    if (it == end(seq_map_)) {
-      throw std::system_error(error::unknown_sequence);
-    }
+    utl::verify_ex(it != end(seq_map_),
+                   std::system_error{error::unknown_sequence});
     return it->second;
   }
 

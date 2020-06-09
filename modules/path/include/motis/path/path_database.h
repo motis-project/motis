@@ -44,9 +44,7 @@ struct path_database {
 
   std::string get(std::string const& k) const {
     auto ret = try_get(k);
-    if (!ret) {
-      throw std::system_error(error::not_found);
-    }
+    utl::verify_ex(ret.has_value(), std::system_error{error::not_found});
     return *ret;
   }
 
