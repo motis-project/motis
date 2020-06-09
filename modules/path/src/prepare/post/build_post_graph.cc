@@ -41,15 +41,19 @@ struct post_graph_builder {
   void make_edges() {
     ml::scoped_timer t{"build_post_graph|make_edges"};
 
-    thread_local std::vector<color_t> node_max_colors;  // node -> max color
+    // node -> max color
+    thread_local std::unique_ptr<std::vector<color_t>> node_max_colors;
     utl::thread_pool tp{
-        [&] { node_max_colors.resize(node_ids_.size(), kInvalidColor); },
-        [&] { node_max_colors = std::vector<color_t>(); }};
+        [&] {
+          node_max_colors = std::make_unique<std::vector<color_t>>();
+          node_max_colors->resize(node_ids_.size(), kInvalidColor);
+        },
+        [&] { node_max_colors.reset(); }};
 
     graph_.segment_ids_.resize(graph_.originals_.size());
     tp.execute(graph_.originals_.size(), [this](auto const i) {
       graph_.segment_ids_.at(i) =
-          append_seq(graph_.originals_.at(i), node_max_colors);
+          append_seq(graph_.originals_.at(i), *node_max_colors);
     });
 
     tp.execute(graph_.nodes_.size(), [this](auto const i) {
