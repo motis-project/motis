@@ -19,7 +19,7 @@ using motis::test::schedule::simple_realtime::dataset_opt;
 struct tripbased_ontrip_station : public motis_instance_test {
   tripbased_ontrip_station()
       : motis::test::motis_instance_test(dataset_opt, {"tripbased"},
-                                         {"--tripbased.data_file=-"}) {}
+                                         {"--tripbased.use_data_file=false"}) {}
 };
 
 TEST_F(tripbased_ontrip_station, simple_fwd) {
