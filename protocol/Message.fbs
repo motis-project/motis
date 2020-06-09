@@ -6,9 +6,10 @@ include "bikesharing/BikesharingRequest.fbs";
 include "bikesharing/BikesharingResponse.fbs";
 include "guesser/StationGuesserRequest.fbs";
 include "guesser/StationGuesserResponse.fbs";
+include "import/CoastlineEvent.fbs";
+include "import/DEMEvent.fbs";
 include "import/FileEvent.fbs";
 include "import/OSMEvent.fbs";
-include "import/DEMEvent.fbs";
 include "import/OSRMEvent.fbs";
 include "import/PPREvent.fbs";
 include "import/ScheduleEvent.fbs";
@@ -16,60 +17,60 @@ include "intermodal/IntermodalRoutingRequest.fbs";
 include "lookup/LookupGeoStationIdRequest.fbs";
 include "lookup/LookupGeoStationRequest.fbs";
 include "lookup/LookupGeoStationResponse.fbs";
+include "lookup/LookupIdTrainRequest.fbs";
+include "lookup/LookupIdTrainResponse.fbs";
+include "lookup/LookupMetaStationRequest.fbs";
+include "lookup/LookupMetaStationResponse.fbs";
 include "lookup/LookupScheduleInfoResponse.fbs";
 include "lookup/LookupStationEventsRequest.fbs";
 include "lookup/LookupStationEventsResponse.fbs";
-include "lookup/LookupMetaStationRequest.fbs";
-include "lookup/LookupMetaStationResponse.fbs";
-include "lookup/LookupIdTrainRequest.fbs";
-include "lookup/LookupIdTrainResponse.fbs";
-include "path/PathBoxesResponse.fbs";
-include "path/PathByTripIdRequest.fbs";
-include "path/PathSeqResponse.fbs";
-include "path/PathByStationSeqRequest.fbs";
-include "path/PathByTileFeatureRequest.fbs";
-include "railviz/RailVizTrainsRequest.fbs";
-include "railviz/RailVizTrainsResponse.fbs";
-include "railviz/RailVizTripsRequest.fbs";
-include "railviz/RailVizStationRequest.fbs";
-include "railviz/RailVizStationResponse.fbs";
-include "railviz/RailVizTripGuessRequest.fbs";
-include "railviz/RailVizTripGuessResponse.fbs";
 include "osrm/OSRMOneToManyRequest.fbs";
 include "osrm/OSRMOneToManyResponse.fbs";
-include "osrm/OSRMViaRouteRequest.fbs";
-include "osrm/OSRMViaRouteResponse.fbs";
 include "osrm/OSRMSmoothViaRouteRequest.fbs";
 include "osrm/OSRMSmoothViaRouteResponse.fbs";
-include "reliability/ReliabilityRatingResponse.fbs";
-include "reliability/ReliableRoutingRequest.fbs";
-include "reliability/ReliableRoutingResponse.fbs";
-include "ris/RISMessage.fbs";
-include "ris/RISBatch.fbs";
-include "ris/RISForwardTimeRequest.fbs";
-include "ris/RISPurgeRequest.fbs";
-include "ris/RISGTFSRTMapping.fbs";
-include "routing/RoutingRequest.fbs";
-include "routing/RoutingResponse.fbs";
-include "rt/RtUpdate.fbs";
-include "rt/RtWriteGraphRequest.fbs";
-include "ppr/FootRoutingRequest.fbs";
-include "ppr/FootRoutingResponse.fbs";
-include "ppr/FootRoutingSimpleRequest.fbs";
-include "ppr/FootRoutingSimpleResponse.fbs";
-include "ppr/FootRoutingProfilesResponse.fbs";
-include "revise/ReviseRequest.fbs";
-include "revise/ReviseResponse.fbs";
-include "tripbased/TripBasedTripDebugRequest.fbs";
-include "tripbased/TripBasedTripDebugResponse.fbs";
-include "parking/ParkingGeoRequest.fbs";
-include "parking/ParkingGeoResponse.fbs";
-include "parking/ParkingLookupRequest.fbs";
-include "parking/ParkingLookupResponse.fbs";
+include "osrm/OSRMViaRouteRequest.fbs";
+include "osrm/OSRMViaRouteResponse.fbs";
 include "parking/ParkingEdgeRequest.fbs";
 include "parking/ParkingEdgeResponse.fbs";
 include "parking/ParkingEdgesRequest.fbs";
 include "parking/ParkingEdgesResponse.fbs";
+include "parking/ParkingGeoRequest.fbs";
+include "parking/ParkingGeoResponse.fbs";
+include "parking/ParkingLookupRequest.fbs";
+include "parking/ParkingLookupResponse.fbs";
+include "path/PathBoxesResponse.fbs";
+include "path/PathByStationSeqRequest.fbs";
+include "path/PathByTileFeatureRequest.fbs";
+include "path/PathByTripIdBatchRequest.fbs";
+include "path/PathByTripIdBatchResponse.fbs";
+include "path/PathByTripIdRequest.fbs";
+include "path/PathSeqResponse.fbs";
+include "ppr/FootRoutingProfilesResponse.fbs";
+include "ppr/FootRoutingRequest.fbs";
+include "ppr/FootRoutingResponse.fbs";
+include "ppr/FootRoutingSimpleRequest.fbs";
+include "ppr/FootRoutingSimpleResponse.fbs";
+include "railviz/RailVizMapConfigResponse.fbs";
+include "railviz/RailVizStationRequest.fbs";
+include "railviz/RailVizStationResponse.fbs";
+include "railviz/RailVizTrainsRequest.fbs";
+include "railviz/RailVizTrainsResponse.fbs";
+include "railviz/RailVizTripGuessRequest.fbs";
+include "railviz/RailVizTripGuessResponse.fbs";
+include "railviz/RailVizTripsRequest.fbs";
+include "revise/ReviseRequest.fbs";
+include "revise/ReviseResponse.fbs";
+include "ris/RISBatch.fbs";
+include "ris/RISForwardTimeRequest.fbs";
+include "ris/RISGTFSRTMapping.fbs";
+include "ris/RISMessage.fbs";
+include "ris/RISPurgeRequest.fbs";
+include "routing/RoutingRequest.fbs";
+include "routing/RoutingResponse.fbs";
+include "rt/RtUpdate.fbs";
+include "rt/RtWriteGraphRequest.fbs";
+include "tripbased/TripBasedTripDebugRequest.fbs";
+include "tripbased/TripBasedTripDebugResponse.fbs";
 
 include "HTTPMessage.fbs";
 
@@ -116,100 +117,100 @@ table ApiDescription {
 }
 
 union MsgContent {
-  motis.ApiDescription,
-  motis.Connection,
-  motis.MotisNoMessage,
-  motis.MotisError,
-  motis.MotisSuccess,
-  motis.HTTPRequest,
-  motis.HTTPResponse,
-  motis.TripId,
-  motis.bikesharing.BikesharingRequest,
-  motis.bikesharing.BikesharingResponse,
-  motis.bikesharing.BikesharingGeoTerminalsRequest,
-  motis.bikesharing.BikesharingGeoTerminalsResponse,
-  motis.guesser.StationGuesserRequest,
-  motis.guesser.StationGuesserResponse,
-  motis.intermodal.IntermodalRoutingRequest,
-  motis.lookup.LookupGeoStationIdRequest,
-  motis.lookup.LookupGeoStationRequest,
-  motis.lookup.LookupGeoStationResponse,
-  motis.lookup.LookupBatchGeoStationRequest,
-  motis.lookup.LookupBatchGeoStationResponse,
-  motis.lookup.LookupStationEventsRequest,
-  motis.lookup.LookupStationEventsResponse,
-  motis.lookup.LookupScheduleInfoResponse,
-  motis.lookup.LookupMetaStationRequest,
-  motis.lookup.LookupMetaStationResponse,
-  motis.lookup.LookupBatchMetaStationRequest,
-  motis.lookup.LookupBatchMetaStationResponse,
-  motis.lookup.LookupIdTrainRequest,
-  motis.lookup.LookupIdTrainResponse,
-  motis.path.PathBoxesResponse,
-  motis.path.PathByTripIdRequest,
-  motis.path.PathSeqResponse,
-  motis.path.PathByStationSeqRequest,
-  motis.railviz.RailVizTrainsRequest,
-  motis.railviz.RailVizTrainsResponse,
-  motis.railviz.RailVizTripsRequest,
-  motis.railviz.RailVizStationRequest,
-  motis.railviz.RailVizStationResponse,
-  motis.osrm.OSRMOneToManyRequest,
-  motis.osrm.OSRMOneToManyResponse,
-  motis.osrm.OSRMViaRouteRequest,
-  motis.osrm.OSRMViaRouteResponse,
-  motis.osrm.OSRMSmoothViaRouteRequest,
-  motis.osrm.OSRMSmoothViaRouteResponse,
-  motis.reliability.ReliableRoutingRequest,
-  motis.reliability.ReliableRoutingResponse,
-  motis.reliability.ReliabilityRatingResponse,
-  motis.ris.RISBatch,
-  motis.ris.UpdatedEvent,
-  motis.ris.Event,
-  motis.ris.Message,
-  motis.ris.RISGTFSRTMapping,
-  motis.ris.RISForwardTimeRequest,
-  motis.routing.RoutingRequest,
-  motis.routing.RoutingResponse,
-  motis.rt.RtEventInfo,
-  motis.rt.RtDelayUpdate,
-  motis.rt.RtCancelUpdate,
-  motis.rt.RtTrackUpdate,
-  motis.rt.RtFreeTextUpdate,
-  motis.rt.RtRerouteUpdate,
-  motis.rt.RtUpdate,
-  motis.rt.RtUpdates,
-  motis.rt.RtWriteGraphRequest,
-  motis.railviz.RailVizTripGuessRequest,
-  motis.railviz.RailVizTripGuessResponse,
-  motis.address.AddressRequest,
-  motis.address.AddressResponse,
-  motis.ris.RISPurgeRequest,
-  motis.ppr.FootRoutingRequest,
-  motis.ppr.FootRoutingResponse,
-  motis.ppr.FootRoutingSimpleRequest,
-  motis.ppr.FootRoutingSimpleResponse,
-  motis.revise.ReviseRequest,
-  motis.revise.ReviseResponse,
-  motis.tripbased.TripBasedTripDebugRequest,
-  motis.tripbased.TripBasedTripDebugResponse,
-  motis.parking.ParkingGeoRequest,
-  motis.parking.ParkingGeoResponse,
-  motis.parking.ParkingLookupRequest,
-  motis.parking.ParkingLookupResponse,
-  motis.parking.ParkingEdgeRequest,
-  motis.parking.ParkingEdgeResponse,
-  motis.parking.ParkingEdgesRequest,
-  motis.parking.ParkingEdgesResponse,
-  motis.path.PathByTileFeatureRequest,
-  motis.path.MultiPathSeqResponse,
-  motis.ppr.FootRoutingProfilesResponse,
-  motis.import.FileEvent,
-  motis.import.OSMEvent,
-  motis.import.ScheduleEvent,
-  motis.import.DEMEvent,
-  motis.import.PPREvent,
-  motis.import.OSRMEvent
+  motis.MotisNoMessage                                                    = 001,
+  motis.MotisError                                                        = 002,
+  motis.MotisSuccess                                                      = 003,
+  motis.HTTPRequest                                                       = 004,
+  motis.HTTPResponse                                                      = 005,
+  motis.ApiDescription                                                    = 006,
+  motis.import.FileEvent                                                  = 007,
+  motis.import.OSMEvent                                                   = 008,
+  motis.import.ScheduleEvent                                              = 009,
+  motis.import.DEMEvent                                                   = 010,
+  motis.import.PPREvent                                                   = 011,
+  motis.import.OSRMEvent                                                  = 012,
+  motis.import.CoastlineEvent                                             = 013,
+  motis.Connection                                                        = 014,
+  motis.TripId                                                            = 015,
+  motis.address.AddressRequest                                            = 016,
+  motis.address.AddressResponse                                           = 017,
+  motis.bikesharing.BikesharingRequest                                    = 018,
+  motis.bikesharing.BikesharingResponse                                   = 019,
+  motis.bikesharing.BikesharingGeoTerminalsRequest                        = 020,
+  motis.bikesharing.BikesharingGeoTerminalsResponse                       = 022,
+  motis.guesser.StationGuesserRequest                                     = 023,
+  motis.guesser.StationGuesserResponse                                    = 024,
+  motis.intermodal.IntermodalRoutingRequest                               = 025,
+  motis.lookup.LookupGeoStationIdRequest                                  = 026,
+  motis.lookup.LookupGeoStationRequest                                    = 027,
+  motis.lookup.LookupGeoStationResponse                                   = 028,
+  motis.lookup.LookupBatchGeoStationRequest                               = 029,
+  motis.lookup.LookupBatchGeoStationResponse                              = 030,
+  motis.lookup.LookupStationEventsRequest                                 = 031,
+  motis.lookup.LookupStationEventsResponse                                = 032,
+  motis.lookup.LookupScheduleInfoResponse                                 = 033,
+  motis.lookup.LookupMetaStationRequest                                   = 034,
+  motis.lookup.LookupMetaStationResponse                                  = 035,
+  motis.lookup.LookupBatchMetaStationRequest                              = 036,
+  motis.lookup.LookupBatchMetaStationResponse                             = 037,
+  motis.lookup.LookupIdTrainRequest                                       = 038,
+  motis.lookup.LookupIdTrainResponse                                      = 039, 
+  motis.osrm.OSRMOneToManyRequest                                         = 040,
+  motis.osrm.OSRMOneToManyResponse                                        = 041,
+  motis.osrm.OSRMViaRouteRequest                                          = 042,
+  motis.osrm.OSRMViaRouteResponse                                         = 043,
+  motis.osrm.OSRMSmoothViaRouteRequest                                    = 044,
+  motis.osrm.OSRMSmoothViaRouteResponse                                   = 045,
+  motis.parking.ParkingGeoRequest                                         = 046,
+  motis.parking.ParkingGeoResponse                                        = 047,
+  motis.parking.ParkingLookupRequest                                      = 048,
+  motis.parking.ParkingLookupResponse                                     = 049,
+  motis.parking.ParkingEdgeRequest                                        = 050,
+  motis.parking.ParkingEdgeResponse                                       = 051,
+  motis.parking.ParkingEdgesRequest                                       = 052,
+  motis.parking.ParkingEdgesResponse                                      = 053,
+  motis.path.PathBoxesResponse                                            = 054,
+  motis.path.PathByTripIdRequest                                          = 055,
+  motis.path.PathSeqResponse                                              = 056,
+  motis.path.PathByStationSeqRequest                                      = 057,
+  motis.path.PathByTileFeatureRequest                                     = 058,
+  motis.path.MultiPathSeqResponse                                         = 059,
+  motis.path.PathByTripIdBatchRequest                                     = 060,
+  motis.path.PathByTripIdBatchResponse                                    = 061,
+  motis.ppr.FootRoutingRequest                                            = 062,
+  motis.ppr.FootRoutingResponse                                           = 063,
+  motis.ppr.FootRoutingSimpleRequest                                      = 064,
+  motis.ppr.FootRoutingSimpleResponse                                     = 065,
+  motis.ppr.FootRoutingProfilesResponse                                   = 066,
+  motis.railviz.RailVizMapConfigResponse                                  = 067,
+  motis.railviz.RailVizTrainsRequest                                      = 068,
+  motis.railviz.RailVizTrainsResponse                                     = 069,
+  motis.railviz.RailVizTripsRequest                                       = 070,
+  motis.railviz.RailVizStationRequest                                     = 071,
+  motis.railviz.RailVizStationResponse                                    = 072,
+  motis.railviz.RailVizTripGuessRequest                                   = 073,
+  motis.railviz.RailVizTripGuessResponse                                  = 074,
+  motis.revise.ReviseRequest                                              = 075,
+  motis.revise.ReviseResponse                                             = 076,
+  motis.ris.RISBatch                                                      = 077,
+  motis.ris.UpdatedEvent                                                  = 078,
+  motis.ris.Event                                                         = 079,
+  motis.ris.Message                                                       = 080,
+  motis.ris.RISGTFSRTMapping                                              = 081,
+  motis.ris.RISForwardTimeRequest                                         = 082,
+  motis.ris.RISPurgeRequest                                               = 083,
+  motis.routing.RoutingRequest                                            = 084,
+  motis.routing.RoutingResponse                                           = 085,
+  motis.rt.RtEventInfo                                                    = 086,
+  motis.rt.RtDelayUpdate                                                  = 087,
+  motis.rt.RtTrackUpdate                                                  = 088,
+  motis.rt.RtFreeTextUpdate                                               = 089,
+  motis.rt.RtRerouteUpdate                                                = 090,
+  motis.rt.RtUpdate                                                       = 091,
+  motis.rt.RtUpdates                                                      = 092,
+  motis.rt.RtWriteGraphRequest                                            = 093,
+  motis.tripbased.TripBasedTripDebugRequest                               = 094,
+  motis.tripbased.TripBasedTripDebugResponse                              = 095
 }
 
 // Destination Examples:

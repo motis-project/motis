@@ -29,7 +29,7 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=ae9aeed6688442b9651df0c44dbd3751fe510394
+  commit=92019571ceafb4e6016ecccbf9127cc673017038
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
@@ -41,7 +41,7 @@
 [miniz]
   url=git@github.com:motis-project/miniz.git
   branch=master
-  commit=ddafe51dcd2a4df95fc74c7401bc68f04ab4bebd
+  commit=1edbdece9d71dc65c6ff405572ee37cbdcef7af4
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
@@ -72,9 +72,9 @@
   commit=e05f1ce0bd4a3cad4c532317444bf136f291e6bd
 [tiles]
   url=git@github.com:motis-project/tiles.git
-  branch=master
-  commit=41b646cd3ca0b647de6648b8f49ec98496e225b6
+  branch=pristine
+  commit=13f8393163014b9a8145f762df1bfbaa93f7dc69
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=085c6d22901a8b97102a9aa163114f489341fdb8
+  commit=8ccc9be49342148ae2f1a54d8433492210001f22

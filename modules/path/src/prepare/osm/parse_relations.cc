@@ -63,7 +63,7 @@ std::vector<std::vector<osm_way>> parse_relations(
       }
 
       auto cat =
-          is_rail ? source_spec::category::RAILWAY
+          is_rail ? source_spec::category::RAIL
                   : is_bus ? source_spec::category::BUS
                            : is_sub ? source_spec::category::SUBWAY
                                     : is_tram ? source_spec::category::TRAM
@@ -125,7 +125,7 @@ std::vector<std::vector<osm_way>> parse_relations(
 
   {
     ml::scoped_timer t("parse_relations|read nodes");
-    thread_pool tp;
+    utl::thread_pool tp;
     resolve_node_locations(osm_file, pending_nodes, tp);
   }
 

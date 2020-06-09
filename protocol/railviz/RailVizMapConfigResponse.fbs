@@ -1,0 +1,6 @@
+namespace motis.railviz;
+
+table RailVizMapConfigResponse {
+  initial_permalink: string;
+  tiles_redirect: string;
+}

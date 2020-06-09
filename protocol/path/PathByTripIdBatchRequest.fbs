@@ -1,0 +1,13 @@
+include "base/TripId.fbs";
+
+namespace motis.path;
+
+table TripIdSegments {
+  trip_id: TripId;
+  segments: [uint];
+}
+
+table PathByTripIdBatchRequest {
+  trip_segments: [TripIdSegments];
+  zoom_level: int = -1;
+}

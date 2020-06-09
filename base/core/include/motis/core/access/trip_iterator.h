@@ -94,11 +94,16 @@ struct sections {
 
   explicit sections(trip const* t) : t_(t) {}
 
-  iterator begin() const { return {t_, 0}; }
-  iterator end() const { return {t_, static_cast<int>(t_->edges_->size())}; }
+  iterator begin() const { return begin(t_); }
+  iterator end() const { return end(t_); }
 
-  friend iterator begin(sections const& s) { return s.begin(); }
-  friend iterator end(sections const& s) { return s.end(); }
+  friend iterator begin(sections const& s) { return begin(s.t_); }
+  friend iterator end(sections const& s) { return end(s.t_); }
+
+  static iterator begin(trip const* t) { return {t, 0}; }
+  static iterator end(trip const* t) {
+    return {t, static_cast<int>(t->edges_->size())};
+  }
 
   trip const* t_;
 };
@@ -108,13 +113,16 @@ struct stops {
 
   explicit stops(trip const* t) : t_(t) {}
 
-  iterator begin() const { return {t_, 0}; }
-  iterator end() const {
-    return {t_, static_cast<int>(t_->edges_->size()) + 1};
-  }
+  iterator begin() const { return begin(t_); }
+  iterator end() const { return end(t_); }
 
-  friend iterator begin(stops const& s) { return s.begin(); }
-  friend iterator end(stops const& s) { return s.end(); }
+  friend iterator begin(stops const& s) { return begin(s.t_); }
+  friend iterator end(stops const& s) { return end(s.t_); }
+
+  static iterator begin(trip const* t) { return {t, 0}; }
+  static iterator end(trip const* t) {
+    return {t, static_cast<int>(t->edges_->size()) + 1};
+  }
 
   trip const* t_;
 };

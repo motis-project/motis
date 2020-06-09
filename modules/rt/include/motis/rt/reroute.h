@@ -13,6 +13,7 @@
 #include "motis/rt/incoming_edges.h"
 #include "motis/rt/reroute_result.h"
 #include "motis/rt/update_constant_graph.h"
+#include "motis/rt/update_msg_builder.h"
 #include "motis/rt/validate_graph.h"
 
 namespace motis::rt {
@@ -358,7 +359,8 @@ inline std::pair<reroute_result, trip const*> reroute(
     std::map<schedule_event, delay_info*>& cancelled_delays,
     std::vector<ev_key>& cancelled_evs, ris::IdEvent const* trip_id,
     std::vector<ris::Event const*> const& cancelled,
-    std::vector<ris::ReroutedEvent const*> const& additional) {
+    std::vector<ris::ReroutedEvent const*> const& additional,
+    update_msg_builder& update_builder) {
   auto const trp = const_cast<trip*>(  // NOLINT
       find_trip_fuzzy(stats, sched, trip_id));
   if (trp == nullptr) {
@@ -405,6 +407,8 @@ inline std::pair<reroute_result, trip const*> reroute(
   update_trip(sched, trp, trip_edges);
   store_cancelled_delays(sched, trp, del_evs, cancelled_delays, cancelled_evs);
   disable_trip(*old_trip, old_lcon_idx);
+
+  update_builder.add_reroute(trp, *old_trip, old_lcon_idx);
 
   return {reroute_result::OK, trp};
 }

@@ -2,8 +2,6 @@
 
 #include "motis/test/motis_instance_test.h"
 
-#include "motis/railviz/geo.h"
-
 #include "./schedule.h"
 
 using namespace flatbuffers;

@@ -3,6 +3,7 @@
 #include <map>
 
 #include "utl/erase_duplicates.h"
+#include "utl/join.h"
 #include "utl/parallel_for.h"
 #include "utl/to_vec.h"
 
@@ -20,27 +21,47 @@ void mark_essentials(post_graph& graph) {
   ml::scoped_timer timer("post_processor|mark_essentials");
   utl::parallel_for_run(graph.nodes_.size(), [&](auto const i) {
     auto& node = graph.nodes_.at(i);
+
+    std::set<color_t> pre_marked = node->essential_;
     std::map<std::vector<color_t>, size_t> degrees;
-    for (auto const& inc : node->inc_) {
-      ++degrees[inc.colors_];
-    }
-    for (auto const& out : node->out_) {
-      ++degrees[out.colors_];
-    }
 
-    for (auto const& pair : degrees) {
-      if (pair.second > 2) {
-        // TODO(sebastian) check these!!
+    auto const edge_cmp = [](auto const& a, auto const& b) {
+      return a.other_->id_ < b.other_->id_;
+    };
+    std::sort(begin(node->out_), end(node->out_), edge_cmp);
+    std::sort(begin(node->inc_), end(node->inc_), edge_cmp);
+    utl::full_join(
+        node->out_, node->inc_, edge_cmp,
+        [&degrees](auto lb_out, auto ub_out, auto lb_inc, auto ub_inc) {
+          utl::verify(std::distance(lb_out, ub_out) == 1, "duplicate edge (1)");
+          utl::verify(std::distance(lb_inc, ub_inc) == 1, "duplicate edge (2)");
 
-        // std::clog << "color cycle: " << pair.second << std::endl;
-        // for (auto const color : pair.first) {
-        //   print_post_colors(graph, color);
-        // }
-      }
-      // verify(pair.second <= 2, "color cycle detected!");
+          // _all_ color between a pair of nodes count together
+          std::vector<color_t> colors;
+          utl::concat(colors, lb_out->colors_);
+          utl::concat(colors, lb_inc->colors_);
+          utl::erase_duplicates(colors);  // sort ...
 
-      if (pair.second != 2) {
-        node->essential_.insert(begin(pair.first), end(pair.first));
+          ++degrees[colors];
+        },
+        [&degrees](auto lb_out, auto ub_out) {
+          utl::verify(std::distance(lb_out, ub_out) == 1, "duplicate edge (3)");
+          ++degrees[lb_out->colors_];
+        },
+        [&degrees](auto lb_inc, auto ub_inc) {
+          utl::verify(std::distance(lb_inc, ub_inc) == 1, "duplicate edge (4)");
+          ++degrees[lb_inc->colors_];
+        });
+
+    for (auto const& [colors, degree] : degrees) {
+      utl::verify(degree <= 2, "color cycle detected!");
+
+      auto const has_pre_marked = std::any_of(
+          begin(colors), end(colors),
+          [&](auto c) { return pre_marked.find(c) != end(pre_marked); });
+
+      if (degree != 2 || has_pre_marked) {
+        node->essential_.insert(begin(colors), end(colors));
       }
     }
   });
@@ -55,6 +76,9 @@ void construct_atomic_path(post_graph& graph, post_graph_node* start_node,
   auto node = start_edge->other_;
   while (true) {
     path.push_back(node);
+    if (node->is_essential_for(*edge)) {
+      break;
+    }
 
     edge = node->find_out_edge(start_edge->colors_);
     if (edge == nullptr) {
@@ -62,19 +86,13 @@ void construct_atomic_path(post_graph& graph, post_graph_node* start_node,
     }
 
     node = edge->other_;
-    if (node->is_essential_for(*edge)) {
-      path.push_back(node);
-      break;
-    }
   }
 
-  if (path.size() == 2) {
-    graph.atomic_pairs_.emplace_back(std::min(path[0], path[1]),
-                                     std::max(path[0], path[1]));
-    return;
-  } else if (path.size() < 2) {
-    return;  // cant optimize this
-  }
+  utl::verify(path.size() >= 2, "construct_atomic_path: missing path");
+
+  utl::verify(path.back()->is_essential_for(*start_edge),
+              "non essential end point found");
+  utl::verify(path.back() == node, "bad endpoint");
 
   auto rev_edge = node->find_edge_to(path[path.size() - 2]);
   if (rev_edge != nullptr && rev_edge->atomic_path_ != nullptr &&
@@ -85,9 +103,7 @@ void construct_atomic_path(post_graph& graph, post_graph_node* start_node,
   } else {
     graph.atomic_paths_.push_back(
         std::make_unique<atomic_path>(path, start_node, node));
-    auto* ap = graph.atomic_paths_.back().get();
-
-    start_edge->atomic_path_ = ap;
+    start_edge->atomic_path_ = graph.atomic_paths_.back().get();
     start_edge->atomic_path_forward_ = true;
   }
 }
@@ -110,28 +126,11 @@ void find_atomic_paths(post_graph& graph) {
   }
 }
 
-void simplify_atomic_paths(post_graph& graph) {
-  ml::scoped_timer timer("post_processor|simplify_atomic_paths");
-
-  // XX parallel for
-  for (auto& ap : graph.atomic_paths_) {
-    auto polyline =
-        utl::to_vec(ap->path_, [](auto const& node) { return node->id_.pos_; });
-    ap->mask_ = make_simplify_mask(polyline, 8);
-  }
-}
-
 void post_process(post_graph& graph) {
-  // print_post_graph(graph);
-
   mark_essentials(graph);
   find_atomic_paths(graph);
-  simplify_atomic_paths(graph);
 
-  utl::erase_duplicates(graph.atomic_pairs_);
-
-  LOG(ml::info) << "postprocessed " << graph.atomic_paths_.size()
-                << " paths and " << graph.atomic_pairs_.size() << " pairs";
+  LOG(ml::info) << "postprocessed " << graph.atomic_paths_.size() << " paths";
 }
 
 }  // namespace motis::path

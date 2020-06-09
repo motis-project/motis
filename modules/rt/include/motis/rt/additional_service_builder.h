@@ -18,6 +18,7 @@
 #include "motis/rt/connection_builder.h"
 #include "motis/rt/incoming_edges.h"
 #include "motis/rt/update_constant_graph.h"
+#include "motis/rt/update_msg_builder.h"
 
 #include "motis/protocol/RISMessage_generated.h"
 
@@ -37,7 +38,9 @@ struct additional_service_builder {
     DECREASING_TIME
   };
 
-  explicit additional_service_builder(schedule& sched) : sched_(sched) {}
+  additional_service_builder(schedule& sched,
+                             update_msg_builder& update_builder)
+      : sched_{sched}, update_builder_{update_builder} {}
 
   status check_events(
       flatbuffers::Vector<flatbuffers::Offset<ris::AdditionalEvent>> const*
@@ -230,10 +233,13 @@ struct additional_service_builder {
     patch_incoming_edges(incoming);
     auto const trp = update_trips(route);
 
+    update_builder_.add_reroute(trp, {}, 0);
+
     return verify_trip_id(trp, msg->trip_id());
   }
 
   schedule& sched_;
+  update_msg_builder& update_builder_;
   std::map<connection_info, connection_info const*> con_infos_;
 };
 

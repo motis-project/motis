@@ -57,7 +57,7 @@ type alias Model =
     , mouseY : Int
     , hoveredTrain : Maybe RVTrain
     , hoveredStation : Maybe String
-    , hoveredConnectionSegment : Maybe RVConnectionSegment
+    , hoveredTripSegments : Maybe (List RVConnectionSegmentTrip)
     , hoveredWalkSegment : Maybe RVConnectionSegmentWalk
     , trainMode : TrainMode
     , apiError : Maybe ApiError
@@ -78,6 +78,8 @@ init remoteAddress =
         , geoBounds = { north = 0, west = 0, south = 0, east = 0 }
         , railVizBounds = { north = 0, west = 0, south = 0, east = 0 }
         , center = { lat = 0, lng = 0 }
+        , bearing = 0
+        , pitch = 0
         }
     , time = 0
     , systemTime = 0
@@ -86,7 +88,7 @@ init remoteAddress =
     , mouseY = 0
     , hoveredTrain = Nothing
     , hoveredStation = Nothing
-    , hoveredConnectionSegment = Nothing
+    , hoveredTripSegments = Nothing
     , hoveredWalkSegment = Nothing
     , trainMode = ClassColors
     , apiError = Nothing
@@ -149,7 +151,7 @@ update msg model =
                 , mouseY = tt.mouseY
                 , hoveredTrain = tt.hoveredTrain
                 , hoveredStation = tt.hoveredStation
-                , hoveredConnectionSegment = tt.hoveredConnectionSegment
+                , hoveredTripSegments = tt.hoveredTripSegments
                 , hoveredWalkSegment = tt.hoveredWalkSegment
             }
                 ! []
@@ -198,13 +200,15 @@ update msg model =
             { model | contextMenuVisible = False } ! []
 
 
-flyTo : Position -> Maybe Float -> Bool -> Cmd msg
-flyTo pos zoom animate =
+flyTo : Position -> Maybe Float -> Maybe Float -> Maybe Float -> Bool -> Cmd msg
+flyTo pos zoom bearing pitch animate =
     mapFlyTo
         { mapId = mapId
         , lat = pos.lat
         , lng = pos.lng
         , zoom = zoom
+        , bearing = bearing
+        , pitch = pitch
         , animate = animate
         }
 
@@ -232,8 +236,14 @@ getMapPermalink model =
 
         zoom =
             model.mapInfo.zoom
+
+        bearing =
+            model.mapInfo.bearing
+
+        pitch =
+            model.mapInfo.pitch
     in
-    toUrl (RailVizPermalink pos.lat pos.lng zoom simDate)
+    toUrl (RailVizPermalink pos.lat pos.lng zoom bearing pitch simDate)
 
 
 getContextMenuPosition : Model -> Position
@@ -241,11 +251,13 @@ getContextMenuPosition model =
     { lat = model.contextMenuLat, lng = model.contextMenuLng }
 
 
-setMapMarkers : Maybe Position -> Maybe Position -> Cmd msg
-setMapMarkers start destination =
+setMapMarkers : Maybe Position -> Maybe Position -> Maybe String -> Maybe String -> Cmd msg
+setMapMarkers startPosition destinationPosition startName destinationName =
     mapSetMarkers
-        { start = start
-        , destination = destination
+        { startPosition = startPosition
+        , destinationPosition = destinationPosition
+        , startName = startName
+        , destinationName = destinationName
         }
 
 
@@ -365,30 +377,15 @@ mapId =
 view : Localization -> String -> Model -> Html Msg
 view locale permalink model =
     div [ class "map-container" ]
-        [ div [ class "inner-map-container" ]
-            [ div [ id mapId ]
-                [ Html.canvas
-                    [ classList
-                        [ "railviz-overlay" => True
-                        , "leaflet-zoom-animated" => True
-                        , "train-hover"
-                            => (isJust model.hoveredTrain
-                                    || isJust model.hoveredStation
-                                    || isJust model.hoveredConnectionSegment
-                                    || isJust model.hoveredWalkSegment
-                               )
-                        ]
-                    ]
-                    []
-                ]
-            , railVizTooltip locale model
-            , div [ class "map-bottom-overlay" ]
-                [ trainModePickerView locale model
-                , simulationTimeOverlay locale permalink model
-                ]
-            , errorOverlay locale model
-            , contextMenu locale model
+        [ div [ id ( mapId ++  "-background" ) ] []
+        , div [ id ( mapId ++  "-foreground" ) ] []
+        , railVizTooltip locale model
+        , div [ class "map-bottom-overlay" ]
+            [ simulationTimeOverlay locale permalink model
+            , trainModePickerView locale model
             ]
+        , errorOverlay locale model
+        , contextMenu locale model
         ]
 
 
@@ -611,8 +608,7 @@ simulationTimeOverlay locale permalink model =
 trainModePickerView : Localization -> Model -> Html Msg
 trainModePickerView locale model =
     div [ class "train-color-picker-overlay" ]
-        [ div [] [ text (locale.t.railViz.trainMode ++ ":") ]
-        , div []
+        [ div []
             [ input
                 [ type_ "radio"
                 , id "train-color-picker-none"

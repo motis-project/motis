@@ -40,4 +40,12 @@ uint32_t trip_section::to_station_id() const {
   return edge_->to_->get_station()->id_;
 }
 
+ev_key trip_section::ev_key_from() const {
+  return ev_key{trip_->edges_->at(index_), trip_->lcon_idx_, event_type::DEP};
+}
+
+ev_key trip_section::ev_key_to() const {
+  return ev_key{trip_->edges_->at(index_), trip_->lcon_idx_, event_type::ARR};
+}
+
 }  // namespace motis::access

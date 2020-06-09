@@ -91,6 +91,7 @@ jobs:
         run: |
           echo d | xcopy /s .\deps\osrm-backend\profiles .\osrm-profiles
           echo d | xcopy /s .\deps\ppr\profiles .\ppr-profiles
+          echo d | xcopy /s .\deps\tiles\profile .\tiles-profiles
 
       - name: Create Distribution
         if: matrix.mode == 'Release'
@@ -99,6 +100,7 @@ jobs:
           .\build\motis.exe
           .\osrm-profiles
           .\ppr-profiles
+          .\tiles-profiles
           .\ui\web
 
       - name: Upload Distribution

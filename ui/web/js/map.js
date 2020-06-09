@@ -1,244 +1,356 @@
-var CanvasOverlay = L.Layer.extend({
-  initialize: function() {
-    L.setOptions(this, {});
-  },
+// moveToMapPosition and syncMaps take from mapbox-gl-sync-move
+// see : https://github.com/mapbox/mapbox-gl-sync-move
+//
+// Copyright (c) 2016, Mapbox
+//
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+// OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-  onAdd: function(map) {
-    map._panes.overlayPane.appendChild(this._el);
+function moveToMapPosition(master, clones) {
+  var center = master.getCenter();
+  var zoom = master.getZoom();
+  var bearing = master.getBearing();
+  var pitch = master.getPitch();
 
-    setTimeout(
-      function() {
-        this._updateSize();
-      }.bind(this),
-      100
+  clones.forEach(function (clone) {
+    clone.jumpTo({
+      center: center,
+      zoom: zoom,
+      bearing: bearing,
+      pitch: pitch,
+    });
+  });
+}
+
+// Sync movements of two maps.
+//
+// All interactions that result in movement end up firing
+// a "move" event. The trick here, though, is to
+// ensure that movements don't cycle from one map
+// to the other and back again, because such a cycle
+// - could cause an infinite loop
+// - prematurely halts prolonged movements like
+//   double-click zooming, box-zooming, and flying
+function syncMaps() {
+  var maps;
+  var argLen = arguments.length;
+  if (argLen === 1) {
+    maps = arguments[0];
+  } else {
+    maps = [];
+    for (var i = 0; i < argLen; i++) {
+      maps.push(arguments[i]);
+    }
+  }
+
+  // Create all the movement functions, because if they're created every time
+  // they wouldn't be the same and couldn't be removed.
+  var fns = [];
+  maps.forEach(function (map, index) {
+    fns[index] = sync.bind(
+      null,
+      map,
+      maps.filter(function (o, i) {
+        return i !== index;
+      })
     );
-  },
+  });
 
-  onRemove: function(map) {
-    map.getPanes().overlayPane.removeChild(this._el);
-  },
+  function on() {
+    maps.forEach(function (map, index) {
+      map.on("move", fns[index]);
+    });
+  }
 
-  getEvents: function() {
-    var events = {
-      dragend: this._dragEnd,
-      move: this._updatePosition,
-      moveend: this._updatePosition,
-      resize: this._updateSize,
-      zoom: this._zoom,
-      zoomend: this._zoomEnd,
-      contextmenu: this._contextMenu
-    };
+  function off() {
+    maps.forEach(function (map, index) {
+      map.off("move", fns[index]);
+    });
+  }
 
-    if (this._zoomAnimated) {
-      events.zoomanim = this._animateZoom;
+  // When one map moves, we turn off the movement listeners
+  // on all the maps, move it, then turn the listeners on again
+  function sync(master, clones) {
+    off();
+    moveToMapPosition(master, clones);
+    on();
+  }
+
+  on();
+  return function () {
+    off();
+    fns = [];
+  };
+}
+
+// ---------------------------------------------------------------------------
+
+class RailVizCustomLayer {
+  constructor() {
+    this.id = "railviz_custom_layer";
+    this.type = "custom";
+  }
+
+  onAdd(map, gl) {
+    this.map = map;
+    this.zoomRounded = Math.floor(this.map.getZoom() * 4) / 4;
+    RailViz.Render.setup(map, gl);
+
+    // does not seem to work properly: https://github.com/mapbox/mapbox-gl-js/issues/9516
+    map.on("webglcontextlost", () => {
+      RailViz.Render.stop();
+    });
+    map.on("webglcontextrestored", () => {
+      map.triggerRepaint();
+      RailViz.Render.setup(map, gl);
+    });
+
+    this.updateViewportListener = () => this.updateViewport();
+    map.on("moveend", this.updateViewportListener);
+
+    this.updateViewport();
+  }
+
+  onRemove(map, gl) {
+    map.off("moveend", this.updateViewportListener);
+    RailViz.Render.stop();
+  }
+
+  prerender(gl, matrix) {
+    RailViz.Render.prerender(gl, matrix, this.map.getZoom());
+  }
+
+  render(gl, matrix) {
+    RailViz.Render.render(gl, matrix, this.map.getZoom());
+  }
+
+  updateViewport() {
+    const rect = this.map.getCanvas().getBoundingClientRect();
+    const center = this.map.getCenter();
+    const zoom = Math.floor(this.map.getZoom());
+    const bearing = this.map.getBearing();
+    const pitch = this.map.getPitch();
+
+    const zoomRounded = Math.floor(this.map.getZoom() * 4) / 4;
+    if (zoomRounded != this.zoomRounded) {
+      console.log(zoomRounded);
+      this.zoomRounded = zoomRounded;
     }
 
-    return events;
-  },
-
-  _animateZoom: function(e) {
-    this._updateTransform(e.center, e.zoom);
-  },
-
-  _zoom: function() {
-    this._updateTransform(this._map.getCenter(), this._map.getZoom());
-  },
-
-  _zoomEnd: function() {
-    this._update();
-  },
-
-  _dragEnd: function() {
-    RailViz.Main.dragEnd();
-    this._updatePosition();
-  },
-
-  _updateTransform: function(center, zoom) {
-    var scale = this._map.getZoomScale(zoom),
-      position = L.DomUtil.getPosition(this._el),
-      viewHalf = this._map.getSize().multiplyBy(0.5),
-      currentCenterPoint = this._map.project(this._map.getCenter(), zoom),
-      destCenterPoint = this._map.project(center, zoom),
-      centerOffset = destCenterPoint.subtract(currentCenterPoint),
-      topLeftOffset = viewHalf
-        .multiplyBy(-scale)
-        .add(position)
-        .add(viewHalf)
-        .subtract(centerOffset);
-    L.DomUtil.setTransform(this._el, topLeftOffset, scale);
-  },
-
-  _update: function() {
-    var pixelBounds = this._map.getPixelBounds().min;
-    var geoBounds = this._map.getBounds();
-    var size = this._map.getSize();
-    var center = this._map.getCenter();
+    var geoBounds = this.map.getBounds();
     // var railVizBounds = L.latLngBounds(
     //     this._map.unproject(pixelBounds.subtract(size)),
     //     this._map.unproject(pixelBounds.add(size).add(size)));
     var railVizBounds = geoBounds;
 
-    var zoom = Math.round(this._map.getZoom());
     var mapInfo = {
       scale: Math.pow(2, zoom),
       zoom: zoom,
       pixelBounds: {
-        north: pixelBounds.y,
-        west: pixelBounds.x,
-        width: size.x,
-        height: size.y
+        north: rect.top,
+        west: rect.left,
+        width: rect.width,
+        height: rect.height,
       },
       geoBounds: {
         north: geoBounds.getNorth(),
         west: geoBounds.getWest(),
         south: geoBounds.getSouth(),
-        east: geoBounds.getEast()
+        east: geoBounds.getEast(),
       },
       railVizBounds: {
         north: railVizBounds.getNorth(),
         west: railVizBounds.getWest(),
         south: railVizBounds.getSouth(),
-        east: railVizBounds.getEast()
+        east: railVizBounds.getEast(),
       },
       center: {
         lat: center.lat,
-        lng: center.lng
-      }
+        lng: center.lng,
+      },
+      bearing: bearing,
+      pitch: pitch,
     };
 
     app.ports.mapUpdate.send(mapInfo);
     RailViz.Main.mapUpdate(mapInfo);
-    app.ports.mapCloseContextMenu.send(null);
 
-    var mapSettings = {
-      lat: center.lat,
-      lng: center.lng,
-      zoom: zoom
-    };
-    localStorageSet("motis.map", JSON.stringify(mapSettings));
-  },
-
-  _updateSize: function() {
-    var size = this._map.getSize();
-    this._el.style.width = size.x + "px";
-    this._el.style.height = size.y + "px";
-    this._updatePosition();
-  },
-
-  _updatePosition: function() {
-    this._update();
-    var pos = this._map.containerPointToLayerPoint([0, 0]);
-    L.DomUtil.setPosition(this._el, pos);
-  },
-
-  _contextMenu: function(e) {
-    console.log("Context menu:", e);
-    app.ports.mapShowContextMenu.send({
-      mouseX: Math.round(e.containerPoint.x),
-      mouseY: Math.round(e.containerPoint.y),
-      lat: e.latlng.lat,
-      lng: e.latlng.lng
-    });
-  }
-});
-
-function initPorts(app, apiEndpoint) {
-  app.ports.mapInit.subscribe(function(id) {
-    var mapSettings = localStorage.getItem("motis.map");
-    if (mapSettings) {
-      mapSettings = JSON.parse(mapSettings);
-    }
-    var lat = (mapSettings && mapSettings.lat) || 49.8728;
-    var lng = (mapSettings && mapSettings.lng) || 8.6512;
-    var zoom = (mapSettings && mapSettings.zoom) || 14;
-
-    var map = L.map("map", {
-      zoomControl: false
-    }).setView([lat, lng], zoom);
-
-    L.tileLayer(
-      "https://tiles.motis-project.de/osm_light/{z}/{x}/{y}.png?token={accessToken}",
-      {
-        attribution: "Map data &copy; OpenStreetMap contributors, CC-BY-SA",
-        maxZoom: 18,
-        maxNativeZoom: 18,
-        accessToken:
-          "862bdec137edd4e88029304609458291f0ec760b668c5816ccdd83d0beae76a4"
-      }
-    ).addTo(map);
-
-    L.control
-      .zoom({
-        position: "topright"
+    localStorageSet(
+      "motis.map",
+      JSON.stringify({
+        lat: center.lat,
+        lng: center.lng,
+        zoom: zoom,
+        bearing: bearing,
+        pitch: pitch,
       })
-      .addTo(map);
-
-    window.elmMaps[id] = map;
-
-    var c = new CanvasOverlay();
-    c._el = map.getContainer().querySelector(".railviz-overlay");
-    map.addLayer(c);
-
-    RailViz.Main.init(c._el, apiEndpoint, app.ports);
-
-    RailViz.Markers.init(map);
-    app.ports.mapSetMarkers.subscribe(RailViz.Markers.setMarkers);
-  });
-
-  app.ports.setRailVizFilter.subscribe(RailViz.Main.setTripFilter);
-  app.ports.mapSetConnectionFilter.subscribe(RailViz.Main.setConnectionFilter);
-  app.ports.mapSetConnections.subscribe(RailViz.Main.setConnections);
-  app.ports.mapHighlightConnections.subscribe(
-    RailViz.Main.highlightConnections
-  );
-  app.ports.mapUpdateWalks.subscribe(RailViz.Main.updateWalks);
-  app.ports.setTimeOffset.subscribe(RailViz.Main.setTimeOffset);
-  app.ports.setPPRSearchOptions.subscribe(RailViz.Main.setPPRSearchOptions);
-
-  app.ports.mapFlyTo.subscribe(function(opt) {
-    var map = window.elmMaps[opt.mapId];
-    var center = L.latLng(opt.lat, opt.lng);
-    var options = {
-      animate: opt.animate
-    };
-    if (opt.zoom) {
-      map.flyTo(center, opt.zoom, options);
-    } else {
-      Object.assign(options, {
-        paddingTopLeft: [600, 0],
-        maxZoom: 16
-      });
-      map.flyToBounds(L.latLngBounds([center]), options);
-    }
-  });
-
-  const fitBounds = function(map, coords) {
-    if (coords.length > 0) {
-      map.fitBounds(L.latLngBounds(coords), {
-        paddingTopLeft: [600, 0]
-      });
-    }
-  };
-
-  app.ports.mapFitBounds.subscribe(function(opt) {
-    const map = window.elmMaps[opt.mapId];
-    fitBounds(map, opt.coords);
-  });
-
-  app.ports.mapSetConnections.subscribe(function(opt) {
-    const map = window.elmMaps[opt.mapId];
-    const coords = [].concat.apply(
-      [],
-      opt.connections.map(conn =>
-        conn.stations.map(s => [s.pos.lat, s.pos.lng])
-      )
     );
-    fitBounds(map, coords);
-  });
+  }
+}
 
-  app.ports.mapUseTrainClassColors.subscribe(
-    RailViz.Trains.setUseCategoryColor
-  );
-  app.ports.mapShowTrains.subscribe(RailViz.Main.showTrains);
-  app.ports.mapSetLocale.subscribe(RailViz.Markers.setLocale);
+function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
+  app.ports.mapInit.subscribe(function (id) {
+    let settings = localStorage.getItem("motis.map");
+    if (settings) {
+      settings = JSON.parse(settings);
+    }
+    var lat = (settings && settings.lat) || initialPermalink.lat;
+    var lng = (settings && settings.lng) || initialPermalink.lng;
+    var zoom = (settings && settings.zoom) || initialPermalink.zoom;
+    var bearing = (settings && settings.bearing) || initialPermalink.bearing;
+    var pitch = (settings && settings.pitch) || initialPermalink.pitch;
+
+    // use two maps until resolved: https://github.com/mapbox/mapbox-gl-js/issues/8159
+    var map_bg = new mapboxgl.Map({
+      container: `${id}-background`,
+      style: backgroundMapStyle(tilesEndpoint),
+      zoom: zoom,
+      minZoom: 2,
+      maxZoom: 20,
+      center: [lng, lat],
+      bearing: bearing,
+      pitch: pitch,
+      antialias: false,
+    });
+
+    map_bg.addImage(
+      "shield",
+      ...RailViz.Textures.createShield({
+        fill: "hsl(0, 0%, 96%)",
+        stroke: "hsl(0, 0%, 80%)",
+      })
+    );
+
+    map_bg.addImage(
+      "hexshield",
+      ...RailViz.Textures.createHexShield({
+        fill: "hsl(0, 0%, 99%)",
+        stroke: "hsl(0, 0%, 75%)",
+      })
+    );
+
+    var map_fg = new mapboxgl.Map({
+      container: `${id}-foreground`,
+      zoom: zoom,
+      minZoom: 2,
+      maxZoom: 20,
+      center: [lng, lat],
+      bearing: bearing,
+      pitch: pitch,
+      style: {
+        version: 8,
+        sources: {},
+        layers: [],
+      },
+      antialias: false,
+      attributionControl: true,
+      customAttribution:
+        '<a href="https://www.openstreetmap.org/">© OpenStreetMap contributors</a>',
+    });
+    window.elmMaps[id] = map_fg;
+
+    syncMaps(map_bg, map_fg);
+
+    map_fg.on("load", () => {
+      RailViz.Path.Base.init(map_fg, apiEndpoint);
+
+      map_fg.addLayer(new RailVizCustomLayer());
+
+      RailViz.Path.Extra.init(map_fg, "railviz-base-stations");
+      RailViz.Path.Detail.init(map_fg, "railviz-base-stations");
+      RailViz.Path.Connections.init(map_fg, "railviz-base-stations");
+    });
+
+    ["click", "mousemove", "mouseout"].forEach((t) =>
+      map_fg.on(t, (e) => RailViz.Render.handleMouseEvent(t, e.originalEvent))
+    );
+
+    map_fg.on("contextmenu", (e) => {
+      console.log("Context menu:", e);
+      app.ports.mapShowContextMenu.send({
+        mouseX: Math.round(e.point.x),
+        mouseY: Math.round(e.point.y),
+        lat: Math.round(e.lngLat.lat * 1e6) * 1e-6,
+        lng: Math.round(e.lngLat.lng * 1e6) * 1e-6,
+      });
+    });
+
+    const padding = { top: 96, right: 32, bottom: 96, left: 640 };
+
+    app.ports.mapFlyTo.subscribe(function (opt) {
+      var map = window.elmMaps[opt.mapId];
+
+      const camOptions = opt.animate
+        ? { maxZoom: 12, padding }
+        : { maxZoom: 12 };
+
+      const options = map.cameraForBounds(
+        new mapboxgl.LngLatBounds([opt.lng, opt.lat], [opt.lng, opt.lat]),
+        camOptions
+      );
+      if (opt.zoom) {
+        options.zoom = opt.zoom;
+      }
+      options.pitch = opt.pitch ? opt.pitch : 0;
+      options.bearing = opt.bearing ? opt.bearing : 0;
+
+      if (opt.animate) {
+        map.flyTo(options);
+      } else {
+        map.jumpTo(options);
+      }
+    });
+
+    app.ports.mapFitBounds.subscribe(function (opt) {
+      const bounds = opt.coords.reduce(
+        (b, c) => b.extend([c[1], c[0]]),
+        new mapboxgl.LngLatBounds()
+      );
+      if (!bounds.isEmpty()) {
+        window.elmMaps[opt.mapId].fitBounds(bounds, { padding, pitch: 0 });
+      }
+    });
+
+    app.ports.mapSetConnections.subscribe(function (opt) {
+      const bounds = opt.connections.reduce(
+        (b, conn) =>
+          conn.stations.reduce((sb, s) => sb.extend([s.pos.lng, s.pos.lat]), b),
+        new mapboxgl.LngLatBounds()
+      );
+      if (!bounds.isEmpty()) {
+        window.elmMaps[opt.mapId].fitBounds(bounds, { padding, pitch: 0 });
+      }
+    });
+
+    RailViz.Main.init(apiEndpoint, app.ports);
+
+    RailViz.Markers.init(map_fg);
+    app.ports.mapSetMarkers.subscribe(RailViz.Markers.setMarkers);
+
+    app.ports.mapSetDetailFilter.subscribe(RailViz.Main.setDetailFilter);
+    app.ports.mapUpdateWalks.subscribe(RailViz.Main.setDetailWalks);
+
+    app.ports.mapSetConnections.subscribe(RailViz.Main.setConnections);
+    app.ports.mapHighlightConnections.subscribe(
+      RailViz.Main.highlightConnections
+    );
+
+    app.ports.setTimeOffset.subscribe(RailViz.Main.setTimeOffset);
+    app.ports.setPPRSearchOptions.subscribe(RailViz.Main.setPPRSearchOptions);
+
+    app.ports.mapUseTrainClassColors.subscribe(
+      RailViz.Trains.setUseCategoryColor
+    );
+    app.ports.mapShowTrains.subscribe(RailViz.Main.showTrains);
+    app.ports.mapSetLocale.subscribe(RailViz.Markers.setLocale);
+  });
 }

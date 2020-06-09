@@ -15,6 +15,7 @@
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/event_collector.h"
+#include "motis/bootstrap/import_coastline.h"
 #include "motis/bootstrap/import_dem.h"
 #include "motis/bootstrap/import_osm.h"
 #include "motis/bootstrap/import_schedule.h"
@@ -73,6 +74,7 @@ void motis_instance::import(module_settings const& module_opt,
 
   registry_.subscribe("/import", import_osm);
   registry_.subscribe("/import", import_dem);
+  registry_.subscribe("/import", import_coastline);
 
   std::make_shared<event_collector>(
       import_opt.data_directory_, "schedule", registry_,

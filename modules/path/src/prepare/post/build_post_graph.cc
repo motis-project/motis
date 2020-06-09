@@ -4,11 +4,10 @@
 
 #include "utl/erase_duplicates.h"
 #include "utl/parallel_for.h"
+#include "utl/thread_pool.h"
 #include "utl/to_vec.h"
 
 #include "motis/core/common/logging.h"
-
-#include "motis/path/prepare/resolve/thread_pool.h"
 
 namespace ml = motis::logging;
 
@@ -42,15 +41,19 @@ struct post_graph_builder {
   void make_edges() {
     ml::scoped_timer t{"build_post_graph|make_edges"};
 
-    thread_local std::vector<color_t> node_max_colors;  // node -> max color
-    thread_pool tp{
-        [&] { node_max_colors.resize(node_ids_.size(), kInvalidColor); },
-        [&] { node_max_colors = std::vector<color_t>(); }};
+    // node -> max color
+    thread_local std::unique_ptr<std::vector<color_t>> node_max_colors;
+    utl::thread_pool tp{
+        [&] {
+          node_max_colors = std::make_unique<std::vector<color_t>>();
+          node_max_colors->resize(node_ids_.size(), kInvalidColor);
+        },
+        [&] { node_max_colors.reset(); }};
 
     graph_.segment_ids_.resize(graph_.originals_.size());
     tp.execute(graph_.originals_.size(), [this](auto const i) {
       graph_.segment_ids_.at(i) =
-          append_seq(graph_.originals_.at(i), node_max_colors);
+          append_seq(graph_.originals_.at(i), *node_max_colors);
     });
 
     tp.execute(graph_.nodes_.size(), [this](auto const i) {
@@ -68,38 +71,115 @@ struct post_graph_builder {
       resolved_station_seq const& seq, std::vector<color_t>& node_max_colors) {
     auto color = next_seq_color();
 
+    struct edge_color {
+      size_t from_idx_, to_idx_;
+      color_t color_;
+    };
+    std::vector<edge_color> edges;
+
     std::vector<post_segment_id> segment_ids;
     for (auto const& path : seq.paths_) {
-      post_graph_node* prev = nullptr;
-      size_t prev_idx = 0;
+      // path empty or a self loop
+      if (path.size() == 0 ||
+          (get_node_idx({path.osm_node_ids_.front(), path.polyline_.front()}) ==
+           get_node_idx({path.osm_node_ids_.back(), path.polyline_.back()}))) {
+        segment_ids.emplace_back();
+        continue;
+      }
 
-      for (auto i = 0UL; i < path.size(); ++i) {
+      edges.clear();
+      auto const base_color = color;
+
+      size_t prev_idx = 0;
+      for (auto i = 0ULL; i < path.size(); ++i) {
         auto const curr_idx =
             get_node_idx({path.osm_node_ids_[i], path.polyline_[i]});
-        auto* curr = graph_.nodes_.at(curr_idx).get();
 
-        if (prev == nullptr) {
-          segment_ids.emplace_back(curr, color);
-        } else if (curr != prev) {
-          if (node_max_colors[curr_idx] == color) {
-            ++color;  // prevent color cycles
-          }
-
-          std::scoped_lock lock(node_mutex_[curr_idx], node_mutex_[prev_idx]);
-          add_color(curr->inc_, prev, color);
-          add_color(prev->out_, curr, color);
+        if (i == 0ULL) {  // first node
+          node_max_colors[curr_idx] = color;
+          prev_idx = curr_idx;
+          continue;
         }
 
-        node_max_colors[curr_idx] = color;
-        node_max_colors[prev_idx] = color;
+        if (curr_idx == prev_idx) {  // no progress
+          continue;
+        }
 
-        prev = curr;
+        if (node_max_colors[curr_idx] == color) {  // self-loop detected
+          // increment color for edges inside the loop
+          ++color;
+
+          // re-color all edges inside the loop
+          for (auto it = std::rbegin(edges); it != std::rend(edges); ++it) {
+            it->color_ = color;
+            node_max_colors[it->to_idx_] = color;
+
+            if (it->from_idx_ == curr_idx) {
+              break;
+            }
+          }
+
+          // add loop closing edge
+          edges.push_back({prev_idx, curr_idx, color});
+          node_max_colors[curr_idx] = color;
+
+          // increment color for edges after the loop
+          ++color;
+        } else {  // no loop
+          edges.push_back({prev_idx, curr_idx, color});
+          node_max_colors[curr_idx] = color;
+          node_max_colors[prev_idx] = color;
+        }
+
         prev_idx = curr_idx;
       }
 
-      segment_ids.back().max_color_ = color;
-      ++color;
+      if (edges.empty()) {
+        segment_ids.emplace_back();
+        continue;
+      }
+
+      utl::verify(edges.back().color_ <
+                      base_color + std::numeric_limits<uint16_t>::max(),
+                  "append_seq: too many color increments!");
+
+      auto color_offset = 0;
+      for (auto i = 0ULL; i < edges.size(); ++i) {
+        auto const increment_color =
+            i != 0 && edges[i].color_ != edges[i - 1].color_;
+
+        if (increment_color) {
+          ++color_offset;  // ensure two adjacent edges differ by max 1
+        }
+
+        auto const current_color = base_color + color_offset;
+
+        auto const& edge = edges[i];
+        std::scoped_lock lock(node_mutex_[edge.from_idx_],
+                              node_mutex_[edge.to_idx_]);
+
+        auto* from = graph_.nodes_.at(edge.from_idx_).get();
+        auto* to = graph_.nodes_.at(edge.to_idx_).get();
+
+        add_color(from->out_, to, current_color);
+        add_color(to->inc_, from, current_color);
+
+        // pre-mark essentials as long as the cycle start is obvious
+        if (increment_color) {
+          from->essential_.insert(current_color);  // current color
+          from->essential_.insert(current_color - 1);  // prev color
+        }
+      }
+
+      auto const final_color = base_color + color_offset;
+      segment_ids.emplace_back(graph_.nodes_.at(edges.front().from_idx_).get(),
+                               graph_.nodes_.at(edges.back().to_idx_).get(),
+                               base_color, final_color);
+
+      // increment color for the next segment
+      color = final_color + 1;
     }
+
     return segment_ids;
   }
 

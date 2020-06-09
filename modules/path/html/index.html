@@ -155,9 +155,4 @@ let filterRandom = () => {
   }
   map.setFilter('path', ['in', 'path_idx'].concat(arr));
 }
-
-let filterClass = cls => {
-  map.setFilter('path', ['bit', 'classes', cls]);
-  map.setFilter('station', ['bit', 'classes', cls]);
-}
 </script>

@@ -140,6 +140,7 @@ jobs:
             -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
             -DCMAKE_C_FLAGS="${{ matrix.config.cflags }}" \
             -DCMAKE_CXX_FLAGS="${{ matrix.config.cxxflags }}" \
+            -DCMAKE_CXX_FLAGS_DEBUG="" \
             -DCMAKE_CXX_LINKER_FLAGS=${{ matrix.config.ldflags }}" \
             -DCMAKE_CXX_EXE_LINKER_FLAGS="${{ matrix.config.ldflags }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} \
@@ -208,6 +209,7 @@ jobs:
           mv build/motis motis
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
           cp -r deps/ppr/profiles motis/ppr-profiles
+          cp -r deps/tiles/profile motis/tiles-profiles
           tar cjf motis-linux.tar.bz2 motis
 
       - name: Upload Distribution

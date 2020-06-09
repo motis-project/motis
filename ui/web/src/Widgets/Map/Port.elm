@@ -9,22 +9,20 @@ port module Widgets.Map.Port exposing
     , MapPixelBounds
     , MapTooltip
     , RVConnection
-    , RVConnectionFilter
     , RVConnectionSection
-    , RVConnectionSegment
-    , RVConnectionSegmentInfo
     , RVConnectionSegmentTrip
     , RVConnectionSegmentWalk
     , RVConnectionTrain
     , RVConnectionWalk
     , RVConnections
+    , RVDetailFilter
     , RVTrain
     , mapCloseContextMenu
     , mapFitBounds
     , mapFlyTo
     , mapHighlightConnections
     , mapInit
-    , mapSetConnectionFilter
+    , mapSetDetailFilter
     , mapSetConnections
     , mapSetLocale
     , mapSetMarkers
@@ -47,6 +45,8 @@ type alias MapInfo =
     , geoBounds : MapGeoBounds
     , railVizBounds : MapGeoBounds
     , center : Position
+    , bearing : Float
+    , pitch : Float
     }
 
 
@@ -71,7 +71,7 @@ type alias MapTooltip =
     , mouseY : Int
     , hoveredTrain : Maybe RVTrain
     , hoveredStation : Maybe String
-    , hoveredConnectionSegment : Maybe RVConnectionSegment
+    , hoveredTripSegments : Maybe (List RVConnectionSegmentTrip)
     , hoveredWalkSegment : Maybe RVConnectionSegmentWalk
     }
 
@@ -97,23 +97,12 @@ type alias RVTrain =
     }
 
 
-type alias RVConnectionSegment =
-    { trips : List RVConnectionSegmentTrip
-    , segment : RVConnectionSegmentInfo
-    }
-
-
 type alias RVConnectionSegmentTrip =
     { connectionIds : List Int
-    , trip : TripId
+    , trip : List TripId
+    , d_station_id : String
+    , a_station_id : String
     }
-
-
-type alias RVConnectionSegmentInfo =
-    { from_station_id : String
-    , to_station_id : String
-    }
-
 
 type alias RVConnectionSegmentWalk =
     { connectionIds : List Int
@@ -126,6 +115,8 @@ type alias MapFlyLocation =
     , lat : Float
     , lng : Float
     , zoom : Maybe Float
+    , bearing : Maybe Float
+    , pitch : Maybe Float
     , animate : Bool
     }
 
@@ -136,11 +127,10 @@ type alias MapFitBounds =
     }
 
 
-type alias RVConnectionFilter =
+type alias RVDetailFilter =
     { trains : List RVConnectionTrain
     , walks : List RVConnectionWalk
-    , interchangeStations : List String
-    , intermediateStations : List String
+    , interchangeStations : List Station
     }
 
 
@@ -169,8 +159,10 @@ type alias RVConnectionWalk =
 
 
 type alias MapMarkerSettings =
-    { start : Maybe Position
-    , destination : Maybe Position
+    { startPosition : Maybe Position
+    , destinationPosition : Maybe Position
+    , startName : Maybe String
+    , destinationName : Maybe String
     }
 
 
@@ -216,7 +208,7 @@ port mapUseTrainClassColors : Bool -> Cmd msg
 port mapShowTrains : Bool -> Cmd msg
 
 
-port mapSetConnectionFilter : RVConnectionFilter -> Cmd msg
+port mapSetDetailFilter : Maybe RVDetailFilter -> Cmd msg
 
 
 port mapUpdateWalks : List RVConnectionWalk -> Cmd msg

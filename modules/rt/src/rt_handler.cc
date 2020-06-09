@@ -16,7 +16,6 @@
 #include "motis/rt/event_resolver.h"
 #include "motis/rt/reroute.h"
 #include "motis/rt/separate_trip.h"
-#include "motis/rt/shifted_nodes_msg_builder.h"
 #include "motis/rt/trip_correction.h"
 #include "motis/rt/update_constant_graph.h"
 #include "motis/rt/validate_constant_graph.h"
@@ -28,59 +27,11 @@ using namespace motis::logging;
 
 namespace motis::rt {
 
-namespace {
-
-void add_free_text_nodes(flatbuffers::FlatBufferBuilder& fbb,
-                         schedule const& sched, trip const* trp,
-                         free_text const& ft, std::vector<ev_key> const& events,
-                         std::vector<flatbuffers::Offset<RtUpdate>>& updates) {
-  auto const trip = to_fbs(sched, fbb, trp);
-  auto const r = Range{0, 0};
-  auto const free_text =
-      CreateFreeText(fbb, &r, ft.code_, fbb.CreateString(ft.text_),
-                     fbb.CreateString(ft.type_));
-  for (auto const& k : events) {
-    updates.emplace_back(CreateRtUpdate(
-        fbb, Content_RtFreeTextUpdate,
-        CreateRtFreeTextUpdate(
-            fbb,
-            CreateRtEventInfo(
-                fbb, trip,
-                fbb.CreateString(
-                    sched.stations_.at(k.get_station_idx())->eva_nr_),
-                motis_to_unixtime(
-                    sched, k ? get_schedule_time(sched, k) : INVALID_TIME),
-                to_fbs(k.ev_type_)),
-            free_text)
-            .Union()));
-  }
-}
-
-void add_track_nodes(flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
-                     ev_key const& k, std::string const& track,
-                     motis::time const schedule_time,
-                     std::vector<flatbuffers::Offset<RtUpdate>>& updates) {
-  auto const trip =
-      to_fbs(sched, fbb, sched.merged_trips_[k.lcon()->trips_]->at(0));
-  updates.emplace_back(CreateRtUpdate(
-      fbb, Content_RtTrackUpdate,
-      CreateRtTrackUpdate(
-          fbb,
-          CreateRtEventInfo(
-              fbb, trip,
-              fbb.CreateString(
-                  sched.stations_.at(k.get_station_idx())->eva_nr_),
-              motis_to_unixtime(sched, schedule_time), to_fbs(k.ev_type_)),
-          fbb.CreateString(track))
-          .Union()));
-}
-
-}  // namespace
-
 rt_handler::rt_handler(schedule& sched, bool validate_graph,
                        bool validate_constant_graph)
     : sched_(sched),
       propagator_(sched),
+      update_builder_(sched),
       validate_graph_(validate_graph),
       validate_constant_graph_(validate_constant_graph) {}
 
@@ -146,8 +97,9 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
     }
 
     case ris::MessageUnion_AdditionMessage: {
-      auto result = additional_service_builder(s).build_additional_train(
-          reinterpret_cast<ris::AdditionMessage const*>(c));
+      auto result = additional_service_builder(s, update_builder_)
+                        .build_additional_train(
+                            reinterpret_cast<ris::AdditionMessage const*>(c));
       stats_.count_additional(result);
       break;
     }
@@ -160,7 +112,7 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
       std::vector<ev_key> cancelled_evs;
       auto const result =
           reroute(stats_, s, cancelled_delays_, cancelled_evs, msg->trip_id(),
-                  utl::to_vec(*msg->events()), {});
+                  utl::to_vec(*msg->events()), {}, update_builder_);
 
       if (result.first == reroute_result::OK) {
         for (auto const& e : *result.second->edges_) {
@@ -184,7 +136,7 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
       auto const result =
           reroute(stats_, s, cancelled_delays_, cancelled_evs, msg->trip_id(),
                   utl::to_vec(*msg->cancelled_events()),
-                  utl::to_vec(*msg->new_events()));
+                  utl::to_vec(*msg->new_events()), update_builder_);
 
       stats_.count_reroute(result.first);
 
@@ -268,14 +220,6 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
   }
 }
 
-msg_ptr get_rt_updates(motis::module::message_creator& fbb,
-                       std::vector<flatbuffers::Offset<RtUpdate>>& updates) {
-  fbb.create_and_finish(MsgContent_RtUpdates,
-                        CreateRtUpdates(fbb, fbb.CreateVector(updates)).Union(),
-                        "/rt/update", DestinationType_Topic);
-  return make_msg(fbb);
-}
-
 void rt_handler::propagate() {
   MOTIS_FINALLY([this]() { propagator_.reset(); });
 
@@ -283,9 +227,6 @@ void rt_handler::propagate() {
 
   std::set<trip const*> trips_to_correct;
   std::set<trip::route_edge> updated_route_edges;
-  motis::module::message_creator fbb;
-  std::vector<flatbuffers::Offset<RtUpdate>> updates;
-  shifted_nodes_msg_builder shifted_nodes(fbb, sched_);
   for (auto const& di : propagator_.events()) {
     auto const& k = di->get_ev_key();
     auto const t = di->get_current_time();
@@ -310,14 +251,14 @@ void rt_handler::propagate() {
       updated_route_edges.insert(updated_k.route_edge_);
     }
 
-    shifted_nodes.add(di);
+    update_builder_.add_delay(di);
   }
 
   for (auto const& trp : trips_to_correct) {
     assert(trp->lcon_idx_ == 0 &&
            trp->edges_->front()->m_.route_edge_.conns_.size() == 1);
     for (auto const& di : trip_corrector(sched_, trp).fix_times()) {
-      shifted_nodes.add(di);
+      update_builder_.add_delay(di);
       updated_route_edges.insert(di->get_ev_key().route_edge_);
     }
   }
@@ -327,25 +268,21 @@ void rt_handler::propagate() {
   }
 
   stats_.propagated_updates_ = propagator_.events().size();
-  stats_.graph_updates_ = shifted_nodes.size();
-
-  // delays
-  shifted_nodes.finish(updates);
+  stats_.graph_updates_ = update_builder_.delay_count();
 
   // tracks
   for (auto const& t : track_events_) {
-    add_track_nodes(fbb, sched_, t.event_, t.track_, t.schedule_time_, updates);
+    update_builder_.add_track_nodes(t.event_, t.track_, t.schedule_time_);
   }
 
   // free_texts
   for (auto const& f : free_text_events_) {
-    add_free_text_nodes(fbb, sched_, f.trp_, f.ft_, f.events_, updates);
+    update_builder_.add_free_text_nodes(f.trp_, f.ft_, f.events_);
   }
 
-  ctx::await_all(motis_publish(get_rt_updates(fbb, updates)));
+  ctx::await_all(motis_publish(update_builder_.finish()));
 
-  fbb.Clear();
-  updates.clear();
+  update_builder_.reset();
 }
 
 msg_ptr rt_handler::flush(msg_ptr const&) {
@@ -355,6 +292,7 @@ msg_ptr rt_handler::flush(msg_ptr const&) {
     stats_.print();
     stats_ = statistics();
     propagator_.reset();
+    update_builder_.reset();
     track_events_.clear();
     free_text_events_.clear();
   });

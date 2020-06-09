@@ -163,7 +163,7 @@
   height: 100vh;
 }
 
-#map {
+#map-foreground, #map-background {
   position: absolute;
   top: 0;
   left: 0;
@@ -171,9 +171,8 @@
   height: 100%;
   z-index: 0;
 }
-
-.railviz-overlay {
-  z-index: 1;
+.mapboxgl-canvas-container.mapboxgl-interactive {
+  cursor: default;
 }
 
 .railviz-overlay.train-hover {
@@ -265,10 +264,10 @@
 
 .map-bottom-overlay {
   position: absolute;
-  bottom: 15px;
+  bottom: 20px;
   right: 0px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-end;
 }
 

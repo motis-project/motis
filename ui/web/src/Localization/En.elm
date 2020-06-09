@@ -111,8 +111,7 @@ enTranslations =
         , trackAbbr = "Tr."
         }
     , railViz =
-        { trainMode = "Show trains"
-        , noTrains = "None"
+        { noTrains = "No trains"
         , delayColors = "By delay"
         , classColors = "By category"
         , simActive = "Simulation mode active"

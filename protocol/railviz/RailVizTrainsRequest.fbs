@@ -3,10 +3,12 @@ include "base/Position.fbs";
 namespace motis.railviz;
 
 table RailVizTrainsRequest {
-  zoom_level: int;
+  zoom_bounds: int;
+  zoom_geo: int;
   corner1: motis.Position;
   corner2: motis.Position;
   start_time: ulong;
   end_time: ulong;
   max_trains: uint;
+  last_trains: uint;
 }

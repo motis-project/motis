@@ -124,8 +124,8 @@ groupTrains connection =
                             transportsForRange connection start_idx end_idx
 
                         trip =
-                            List.head transports
-                                |> Maybe.andThen (tripIdForTransport connection)
+                            tripsForRange connection start_idx end_idx
+                                |> List.head
                     in
                     { train
                         | transports = transports

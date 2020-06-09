@@ -4,7 +4,7 @@ RailViz.API = (function () {
 
   var lastCallId = 0;
 
-  function makeTrainsRequest(zoom_level, corner1, corner2, startTime, endTime, maxTrains) {
+  function makeTrainsRequest(zoom_level, corner1, corner2, startTime, endTime, maxTrains, lastTrains) {
     return {
       destination: {
         type: 'Module',
@@ -12,12 +12,14 @@ RailViz.API = (function () {
       },
       content_type: 'RailVizTrainsRequest',
       content: {
-        zoom_level: zoom_level,
+        zoom_bounds: zoom_level,
+        zoom_geo: zoom_level + 2,
         corner1: corner1,
         corner2: corner2,
         start_time: Math.floor(startTime),
         end_time: Math.ceil(endTime),
-        max_trains: maxTrains
+        max_trains: maxTrains,
+        last_trains: lastTrains
       }
     };
   }

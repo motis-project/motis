@@ -31,7 +31,7 @@ inline void print_seq_graph(std::vector<part_task> const& part_tasks,
         auto strategy_id =
             edge.part_task_idx_ == kInvalidPartTask
                 ? 0
-                : part_tasks[edge.part_task_idx_].key_.strategy_->strategy_id();
+                : part_tasks[edge.part_task_idx_].key_.strategy_->strategy_id_;
 
         fmt::print(std::clog, "{}:{}|{}:{:.1e} ", edge.to_->ref_.strategy_id_,
                    edge.to_->idx_, strategy_id, edge.weight());

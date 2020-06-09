@@ -1,0 +1,11 @@
+namespace motis.path;
+
+table PolylineIndices {
+  indices: [long];
+}
+
+table PathByTripIdBatchResponse {
+  segments: [PolylineIndices];
+  polylines: [string];
+  extras: [ulong];
+}

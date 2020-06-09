@@ -29,10 +29,8 @@ private:
 
   motis::module::msg_ptr by_station_seq(motis::module::msg_ptr const&) const;
   motis::module::msg_ptr by_trip_id(motis::module::msg_ptr const&) const;
+  motis::module::msg_ptr by_trip_id_batch(motis::module::msg_ptr const&) const;
   motis::module::msg_ptr by_tile_feature(motis::module::msg_ptr const&) const;
-
-  motis::module::msg_ptr get_response(std::string const&,  //
-                                      int zoom_level, bool debug_info) const;
 
   motis::module::msg_ptr path_tiles(motis::module::msg_ptr const&) const;
 
