@@ -16,7 +16,6 @@ struct db_tiles_packer : public tiles::quadtree_feature_packer {
                   size_t layer_id)
       : tiles::quadtree_feature_packer{root, metadata_coder},
         layer_id_{layer_id} {
-
     packer_.register_segment(kPathIndexId);
   }
 
@@ -54,14 +53,14 @@ struct db_tiles_packer : public tiles::quadtree_feature_packer {
                        std::tie(rhs.min_clasz_, rhs.id_);
               });
 
-    std::vector<uint32_t> feature_counts(kNumMotisClasses, 0U);
+    std::vector<uint32_t> feature_counts(NUM_CLASSES, 0U);
     utl::equal_ranges_linear(
         serialized_features_,
         [](auto const& lhs, auto const& rhs) {
           return lhs.min_clasz_ == rhs.min_clasz_;
         },
         [&](auto lb, auto ub) {
-          utl::verify(lb->min_clasz_ < kNumMotisClasses,
+          utl::verify(lb->min_clasz_ < NUM_CLASSES,
                       "db_tiles_packer: min_clasz to big");
           feature_counts[lb->min_clasz_] = std::distance(lb, ub);
         });

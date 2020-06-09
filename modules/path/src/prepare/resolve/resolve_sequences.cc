@@ -171,7 +171,7 @@ struct plan_executor {
                 "station_ids / paths size mismatch ({} != {})",
                 task.seq_->station_ids_.size(), paths.size() + 1);
 
-    std::lock_guard<std::mutex> lock(resolved_seq_mutex_);
+    auto const lock = std::lock_guard{resolved_seq_mutex_};
     resolved_seq_.emplace_back(task.seq_->station_ids_, task.motis_categories_,
                                std::move(paths), std::move(infos));
   }
@@ -204,7 +204,7 @@ struct plan_executor {
       }
 
       auto& cache = result_caches_.at(part_task_idx);
-      std::unique_lock<std::mutex> lock(cache->mutex_, std::defer_lock);
+      auto lock = std::unique_lock{cache->mutex_, std::defer_lock};
       if (!maybe_defer) {
         lock.lock();
       } else if (!lock.try_lock()) {

@@ -135,6 +135,10 @@ struct post_graph_builder {
         continue;
       }
 
+      utl::verify(edges.back().color_ <
+                      base_color + std::numeric_limits<uint16_t>::max(),
+                  "append_seq: too many color increments!");
+
       auto color_offset = 0;
       for (auto i = 0ULL; i < edges.size(); ++i) {
         auto const increment_color =

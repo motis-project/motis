@@ -71,7 +71,7 @@ void osm_graph_builder::add_component(std::vector<osm_way> const& osm_ways) {
   auto const& n_phantoms = phantoms.first;
   auto const& e_phantoms = phantoms.second;
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  auto const lock = std::lock_guard{mutex_};
   auto component = graph_.components_++;
 
   mcd::hash_map<osm_idx_t, osm_node*> node_map;

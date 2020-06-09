@@ -1,5 +1,7 @@
 #pragma once
 
+#include "cista/reflection/comparable.h"
+
 #include "geo/polyline.h"
 
 #include "motis/path/prepare/osm_path.h"
@@ -9,25 +11,9 @@
 namespace motis::path {
 
 struct seq_seg {
-  seq_seg(uint32_t sequence, uint32_t segment)
-      : sequence_(sequence), segment_(segment) {}
+  CISTA_COMPARABLE();
 
-  friend bool operator==(seq_seg const& a, seq_seg const& b) {
-    return std::tie(a.sequence_, a.segment_) ==
-           std::tie(b.sequence_, b.segment_);
-  }
-
-  friend bool operator!=(seq_seg const& a, seq_seg const& b) {
-    return std::tie(a.sequence_, a.segment_) !=
-           std::tie(b.sequence_, b.segment_);
-  }
-
-  friend bool operator<(seq_seg const& a, seq_seg const& b) {
-    return std::tie(a.sequence_, a.segment_) <
-           std::tie(b.sequence_, b.segment_);
-  }
-
-  uint32_t sequence_, segment_;
+  uint32_t sequence_{}, segment_{};
 };
 
 struct db_builder {

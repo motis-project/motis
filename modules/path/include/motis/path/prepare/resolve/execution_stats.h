@@ -50,22 +50,22 @@ struct seq_timing {
 
 struct execution_stats {
   void add_part_timing(strategy_timing t) {
-    std::lock_guard<std::mutex> lock(buffer_mutex_);
+    auto const lock = std::lock_guard{buffer_mutex_};
     part_timings_buffer_.push_back(t);
   }
 
   void add_path_timing(strategy_timing t) {
-    std::lock_guard<std::mutex> lock(buffer_mutex_);
+    auto const lock = std::lock_guard{buffer_mutex_};
     path_timings_buffer_.push_back(t);
   }
 
   void add_seq_timing(seq_timing t) {
-    std::lock_guard<std::mutex> lock(buffer_mutex_);
+    auto const lock = std::lock_guard{buffer_mutex_};
     seq_timings_buffer_.push_back(t);
   }
 
   void dump_stats() {
-    std::lock_guard<std::mutex> lock(main_mutex_);
+    auto const lock = std::lock_guard{main_mutex_};
     read_buffers();
 
     fmt::memory_buffer out;
@@ -160,7 +160,7 @@ struct execution_stats {
 
 private:
   void read_buffers() {
-    std::lock_guard<std::mutex> lock{buffer_mutex_};
+    auto const lock = std::lock_guard{buffer_mutex_};
     auto const read_strategy_buffer = [&](auto& buf, auto& map) {
       std::sort(begin(buf), end(buf),
                 [](auto const& a, auto const& b) { return a.key_ < b.key_; });

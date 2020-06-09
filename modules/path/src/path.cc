@@ -59,19 +59,20 @@ struct import_state {
 
 struct path::data {
   size_t trip_to_index(schedule const& sched, trip const* trp) const {
-    auto const seq =
-        utl::to_vec(access::stops(trp), [&sched](auto const& stop) {
-          return stop.get_station(sched).eva_nr_.str();
-        });
+    utl::verify(sections::begin(trp) != sections::end(trp),
+                "trip_to_index: invalid trip");
 
-    auto const s = sections(trp);
-    auto const clasz_it = std::min_element(
-        begin(s), end(s), [](auto const& lhs, auto const& rhs) {
-          return lhs.fcon().clasz_ < rhs.fcon().clasz_;
-        });
-    utl::verify(clasz_it != end(s), "invalid trip");
-
-    return index_->find({seq, (*clasz_it).fcon().clasz_});
+    return index_->find(
+        {utl::to_vec(access::stops(trp),
+                     [&sched](auto const& stop) {
+                       return stop.get_station(sched).eva_nr_.str();
+                     }),
+         (*std::min_element(sections::begin(trp), sections::end(trp),
+                            [](auto const& lhs, auto const& rhs) {
+                              return lhs.fcon().clasz_ < rhs.fcon().clasz_;
+                            }))
+             .fcon()
+             .clasz_});
   }
 
   msg_ptr get_response(size_t index, int const zoom_level = -1) const {

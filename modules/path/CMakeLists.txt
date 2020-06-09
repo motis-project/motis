@@ -28,7 +28,6 @@ file(GLOB_RECURSE motis-path-files
   src/path_database_query.cc
 )
 
-file(GLOB_RECURSE motis-path-files ${motis-path-files})
 add_library(motis-path STATIC ${motis-path-files})
 target_include_directories(motis-path PUBLIC include)
 target_compile_features(motis-path PUBLIC cxx_std_17)

@@ -121,7 +121,7 @@ struct osrm_strategy::impl {
             utl::concat(nodes_dists, extra_nodes);
           }
 
-          std::lock_guard<std::mutex> lock(m);
+          auto const lock = std::lock_guard{m};
           node_counts.push_back(node_count);
           stations_to_nodes_[station.id_] =
               utl::to_vec(nodes_dists, [&](auto const& node_with_dist) {

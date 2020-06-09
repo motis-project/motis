@@ -7,7 +7,8 @@
 namespace motis::path {
 
 struct double_polyline_builder {
-  void append(bool is_fwd, path_database_query::resolvable_feature* rf) {
+  void append(bool const is_fwd,
+              path_database_query::resolvable_feature const* rf) {
     is_extra_ = is_extra_ || rf->is_extra_;
 
     auto const& l = mpark::get<tiles::fixed_polyline>(rf->geometry_);
@@ -32,6 +33,7 @@ struct double_polyline_builder {
   }
 
   [[nodiscard]] bool empty() const { return coords_.empty(); }
+
   void clear() {
     is_extra_ = false;
     coords_.clear();
@@ -53,7 +55,8 @@ struct double_polyline_builder {
 };
 
 struct google_polyline_builder {
-  void append(bool is_fwd, path_database_query::resolvable_feature* rf) {
+  void append(bool const is_fwd,
+              path_database_query::resolvable_feature const* rf) {
     is_extra_ = is_extra_ || rf->is_extra_;
 
     auto const& l = mpark::get<tiles::fixed_polyline>(rf->geometry_);
@@ -89,7 +92,7 @@ struct google_polyline_builder {
       ++count_;
     }
 
-    utl::verify(count_ >= 2, "google_polyline_builder: invaild polyline {}",
+    utl::verify(count_ >= 2, "google_polyline_builder: invalid polyline {}",
                 count_);
   }
 

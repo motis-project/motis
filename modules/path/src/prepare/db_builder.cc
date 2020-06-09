@@ -24,6 +24,7 @@
 #include "motis/hash_map.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/schedule/connection.h"
 #include "motis/module/message.h"
 
 #include "motis/path/constants.h"
@@ -62,15 +63,6 @@ uint64_t min_clasz_to_min_zoom_level(int const min_clasz) {
   }
 }
 
-template <typename Classes>
-std::string cls_to_bits_str(Classes const& c) {
-  uint64_t class_bits = 0;
-  for (auto const& cls : c) {
-    class_bits |= 1UL << static_cast<size_t>(cls);
-  }
-  return std::to_string(class_bits);
-}
-
 struct db_builder::impl {
   explicit impl(std::string const& fname)
       : db_(make_path_database(fname, false, true)),
@@ -91,8 +83,8 @@ struct db_builder::impl {
 
   impl(impl const&) = delete;
   impl& operator=(impl const&) = delete;
-  impl(impl&&) = delete;
-  impl& operator=(impl&&) = delete;
+  impl(impl&&) noexcept = delete;
+  impl& operator=(impl&&) noexcept = delete;
 
   ~impl() {
     utl::verify(db_cache_size_ == 0 && db_cache_.empty(),
@@ -109,11 +101,8 @@ struct db_builder::impl {
       f.zoom_levels_ = {min_clasz_to_min_zoom_level(min_clasz),
                         tiles::kMaxZoomLevel};
 
-      f.meta_.emplace_back("name", tiles::encode_string(s.name_));
       f.meta_.emplace_back("id", tiles::encode_string(s.id_));
-      f.meta_.emplace_back(
-          "classes", tiles::encode_string(cls_to_bits_str(s.categories_)));
-
+      f.meta_.emplace_back("name", tiles::encode_string(s.name_));
       f.meta_.emplace_back("min_class", tiles::encode_integer(min_clasz));
 
       f.geometry_ = tiles::fixed_point{
@@ -133,8 +122,6 @@ struct db_builder::impl {
     f.zoom_levels_ = {min_clasz_to_min_zoom_level(min_clasz),
                       tiles::kMaxZoomLevel};
 
-    f.meta_.emplace_back("classes",
-                         tiles::encode_string(cls_to_bits_str(classes)));
     f.meta_.emplace_back("min_class", tiles::encode_integer(min_clasz));
     f.meta_.emplace_back("stub", tiles::encode_bool(is_stub));
 
@@ -146,7 +133,7 @@ struct db_builder::impl {
     }
     f.geometry_ = polyline;
 
-    std::lock_guard<std::mutex> lock(m_);
+    auto const lock = std::lock_guard{m_};
     f.id_ = seq_segs_.size();
     seq_segs_.push_back(seq_segs);
 
@@ -184,7 +171,7 @@ struct db_builder::impl {
                                          mc.CreateVector(fbs_segments)));
     }
 
-    std::lock_guard<std::mutex> lock(m_);
+    auto const lock = std::lock_guard{m_};
     update_boxes(seq.station_ids_, boxes);
 
     db_put(std::to_string(seq_idx),

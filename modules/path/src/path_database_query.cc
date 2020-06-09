@@ -13,6 +13,8 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
+#include "motis/core/schedule/connection.h"
+
 #include "motis/path/constants.h"
 #include "motis/path/polyline_builder.h"
 
@@ -213,7 +215,7 @@ void unpack_features(
   auto const idx_offset = tiles::find_segment_offset(pack, kPathIndexId);
   utl::verify(idx_offset.has_value(), "path_database_query: index missing!");
 
-  constexpr auto const kHeaderSize = kNumMotisClasses * sizeof(uint32_t);
+  constexpr auto const kHeaderSize = NUM_CLASSES * sizeof(uint32_t);
   auto const header_base = pack.data() + *idx_offset;
   auto const indices_base = header_base + kHeaderSize;
   auto const pack_end = pack.data() + pack.size();
@@ -222,7 +224,7 @@ void unpack_features(
   std::vector<std::pair<feature_it_t, feature_it_t>> index_clasz_bounds;
 
   size_t index = 0;
-  for (auto i = 0; i < kNumMotisClasses; ++i) {
+  for (auto i = 0; i < NUM_CLASSES; ++i) {
     auto const feature_count = tiles::read_nth<uint32_t>(header_base, i);
     index_clasz_bounds.emplace_back(
         feature_it_t{indices_base, index},
@@ -235,7 +237,7 @@ void unpack_features(
   // - contains only unresolved features
   // - contains only features with min_clasz >= (current) clasz
   std::vector<resolvable_feature*> active_queries;
-  for (int clasz = kNumMotisClasses - 1; clasz >= 0; --clasz) {
+  for (int clasz = NUM_CLASSES - 1; clasz >= 0; --clasz) {
     {  // add new features from this zoomlevel
       auto const& [lb, ub] = query_clasz_bounds[clasz];
       if (lb != nullptr || lb != ub) {  // any new elements
@@ -296,14 +298,14 @@ void path_database_query::execute_subquery(
   });
 
   std::vector<std::pair<resolvable_feature_ptr, resolvable_feature_ptr>>
-      query_clasz_bounds(kNumMotisClasses, {nullptr, nullptr});
+      query_clasz_bounds(NUM_CLASSES, {nullptr, nullptr});
   utl::equal_ranges_linear(
       q.mem_,
       [](auto const& lhs, auto const& rhs) {
         return lhs->min_clasz_ == rhs->min_clasz_;
       },
       [&](auto lb, auto ub) {
-        utl::verify((**lb).min_clasz_ < kNumMotisClasses, "invalid min_clasz");
+        utl::verify((**lb).min_clasz_ < NUM_CLASSES, "invalid min_clasz");
         query_clasz_bounds[(**lb).min_clasz_] =
             std::make_pair(&*lb, &*lb + std::distance(lb, ub));
       });
@@ -469,6 +471,18 @@ Offset<PathByTripIdBatchResponse> path_database_query::write_batch(
   return CreatePathByTripIdBatchResponse(mc, mc.CreateVector(fbs_segments),
                                          mc.CreateVector(fbs_polylines),
                                          mc.CreateVector(fbs_extras));
+}
+
+module::msg_ptr get_response(path_database const& db, size_t const index,
+                             int const zoom_level) {
+  path_database_query query{zoom_level};
+  query.add_sequence(index);
+  query.execute(db);
+
+  module::message_creator mc;
+  mc.create_and_finish(MsgContent_PathSeqResponse,
+                       query.write_sequence(mc, db, index).Union());
+  return make_msg(mc);
 }
 
 }  // namespace motis::path

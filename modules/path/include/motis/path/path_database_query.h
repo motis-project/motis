@@ -75,16 +75,7 @@ struct path_database_query {
   std::vector<std::unique_ptr<resolvable_feature>> extras_;
 };
 
-inline module::msg_ptr get_response(path_database const& db, size_t const index,
-                                    int const zoom_level = -1) {
-  path_database_query query{zoom_level};
-  query.add_sequence(index);
-  query.execute(db);
-
-  module::message_creator mc;
-  mc.create_and_finish(MsgContent_PathSeqResponse,
-                       query.write_sequence(mc, db, index).Union());
-  return make_msg(mc);
-}
+module::msg_ptr get_response(path_database const&, size_t index,
+                             int zoom_level = -1);
 
 }  // namespace motis::path
