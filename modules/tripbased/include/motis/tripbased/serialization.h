@@ -59,7 +59,10 @@ struct header {
 
 void write_data(tb_data const& data, std::string const& filename,
                 schedule const& sched);
-bool read_data(tb_data& data, std::string const& filename,
-               schedule const& sched);
+
+bool data_okay_for_schedule(std::string const& filename, schedule const& sched);
+
+std::unique_ptr<tb_data> read_data(std::string const& filename,
+                                   schedule const& sched);
 
 }  // namespace motis::tripbased::serialization
