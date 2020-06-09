@@ -6,6 +6,7 @@
 
 #include "boost/filesystem.hpp"
 
+#include "utl/pipes.h"
 #include "utl/progress_tracker.h"
 #include "utl/raii.h"
 #include "utl/verify.h"
@@ -131,13 +132,14 @@ void motis_instance::import(module_settings const& module_opt,
   utl::verify(shared_data_.includes(SCHEDULE_DATA_KEY), "schedule not loaded");
 
   if (import_opt.require_successful_) {
-    std::vector<std::string> unsuccessful_imports;
-    for (auto const& module : modules_) {
-      if (module_opt.is_module_active(module->module_name()) &&
-          !module->import_successful()) {
-        unsuccessful_imports.push_back(module->module_name());
-      }
-    }
+    auto const unsuccessful_imports =
+        utl::all(modules_)  //
+        | utl::remove_if([&](auto&& m) {
+            return !module_opt.is_module_active(m->module_name()) ||
+                   m->import_successful();
+          })  //
+        | utl::transform([&](auto&& m) { return m->module_name(); })  //
+        | utl::vec();
     utl::verify(unsuccessful_imports.empty(),
                 "some imports were not successful: {}", unsuccessful_imports);
   }
