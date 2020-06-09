@@ -22,7 +22,7 @@ struct rt : public motis::module::module {
   void init(motis::module::registry&) override;
 
 private:
-  bool validate_graph_{true};
+  bool validate_graph_{false};
   bool validate_constant_graph_{false};
 
   std::unique_ptr<rt_handler> handler_;
