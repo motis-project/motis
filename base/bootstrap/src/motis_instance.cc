@@ -129,6 +129,18 @@ void motis_instance::import(module_settings const& module_opt,
   registry_.reset();
 
   utl::verify(shared_data_.includes(SCHEDULE_DATA_KEY), "schedule not loaded");
+
+  if (import_opt.require_successful_) {
+    std::vector<std::string> unsuccessful_imports;
+    for (auto const& module : modules_) {
+      if (module_opt.is_module_active(module->module_name()) &&
+          !module->import_successful()) {
+        unsuccessful_imports.push_back(module->module_name());
+      }
+    }
+    utl::verify(unsuccessful_imports.empty(),
+                "some imports were not successful: {}", unsuccessful_imports);
+  }
 }
 
 void motis_instance::init_modules(module_settings const& module_opt,
