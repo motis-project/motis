@@ -87,20 +87,20 @@ msg_ptr trains_response_builder::resolve_paths() {
       auto const s_min = std::min((*s).from_station_id(), (*s).to_station_id());
       auto const s_max = std::max((*s).from_station_id(), (*s).to_station_id());
 
-      int64_t idx =
-          utl::get_or_create(indices, std::make_pair(s_min, s_max), [&] {
-            enc.push({sched_.stations_[s_min]->lat(),
-                      sched_.stations_[s_min]->lng()});
-            enc.push({sched_.stations_[s_max]->lat(),
-                      sched_.stations_[s_max]->lng()});
-            fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
-            enc.reset();
-            return fbs_polylines.size() - 1;
-          });
+      auto const idx =
+          static_cast<int64_t>(utl::get_or_create(
+              indices, std::make_pair(s_min, s_max),
+              [&] {
+                enc.push({sched_.stations_[s_min]->lat(),
+                          sched_.stations_[s_min]->lng()});
+                enc.push({sched_.stations_[s_max]->lat(),
+                          sched_.stations_[s_max]->lng()});
+                fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
+                enc.reset();
+                return fbs_polylines.size() - 1;
+              })) *
+          ((s_min != (*s).from_station_id()) ? -1 : 1);
 
-      if (s_min != (*s).from_station_id()) {
-        idx *= -1;
-      }
       return path::CreatePolylineIndices(mc, mc.CreateVector(&idx, 1));
     });
 

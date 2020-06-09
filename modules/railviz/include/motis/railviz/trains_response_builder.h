@@ -23,13 +23,13 @@ struct trains_response_builder {
   void add_train_full(ev_key);
   void add_train(train);
 
-  [[nodiscard]] module::msg_ptr resolve_paths();
+  module::msg_ptr resolve_paths();
 
-  [[nodiscard]] flatbuffers::Offset<Train> write_railviz_train(
+  flatbuffers::Offset<Train> write_railviz_train(
       module::message_creator&, query const&,
       flatbuffers::Vector<int64_t> const* polyline_indices);
 
-  [[nodiscard]] module::msg_ptr finish();
+  module::msg_ptr finish();
 
   schedule const& sched_;
   int zoom_level_;
