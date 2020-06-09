@@ -33,11 +33,11 @@ jobs:
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-wnds1-${{ matrix.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          key: buildcache-wnds-${{ matrix.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
-            buildcache-wnds1-${{ matrix.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}
-            buildcache-wnds1-${{ matrix.mode }}-${{ hashFiles('.pkg') }}-
-            buildcache-wnds1-${{ matrix.mode }}-
+            buildcache-wnds-${{ matrix.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}
+            buildcache-wnds-${{ matrix.mode }}-${{ hashFiles('.pkg') }}-
+            buildcache-wnds-${{ matrix.mode }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
