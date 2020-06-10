@@ -20,30 +20,39 @@ module::msg_ptr import_schedule(loader::loader_options const& dataset_opt,
   }
 
   using import::FileEvent;
-  auto const path = fs::path{motis_content(FileEvent, msg)->path()->str()};
-  if (!fs::is_directory(path)) {
-    return nullptr;
+  for (auto const* p : *motis_content(FileEvent, msg)->paths()) {
+    auto const& path = fs::path{p->str()};
+    if (!fs::is_directory(path)) {
+      continue;
+    }
+
+    auto dataset_opt_cpy = dataset_opt;
+    dataset_opt_cpy.dataset_ = path.generic_string();
+
+    try {
+      cista::memory_holder memory;
+      auto sched = loader::load_schedule(dataset_opt_cpy, memory);
+      instance.shared_data_.emplace_data(
+          SCHEDULE_DATA_KEY,
+          schedule_data{std::move(memory), std::move(sched)});
+
+      module::message_creator fbb;
+      fbb.create_and_finish(
+          MsgContent_ScheduleEvent,
+          import::CreateScheduleEvent(
+              fbb,
+              fbb.CreateString(
+                  (fs::path{path} / "schedule.raw").generic_string()),
+              instance.sched().hash_)
+              .Union(),
+          "/import", DestinationType_Topic);
+      motis_publish(make_msg(fbb));
+
+    } catch (std::exception const&) {
+      continue;
+    }
+    break;
   }
-
-  auto dataset_opt_cpy = dataset_opt;
-  dataset_opt_cpy.dataset_ = path.generic_string();
-
-  cista::memory_holder memory;
-  auto sched = loader::load_schedule(dataset_opt_cpy, memory);
-  instance.shared_data_.emplace_data(
-      SCHEDULE_DATA_KEY, schedule_data{std::move(memory), std::move(sched)});
-
-  module::message_creator fbb;
-  fbb.create_and_finish(
-      MsgContent_ScheduleEvent,
-      import::CreateScheduleEvent(
-          fbb,
-          fbb.CreateString((fs::path{path} / "schedule.raw").generic_string()),
-          instance.sched().hash_)
-          .Union(),
-      "/import", DestinationType_Topic);
-  motis_publish(make_msg(fbb));
-
   return nullptr;
 }
 

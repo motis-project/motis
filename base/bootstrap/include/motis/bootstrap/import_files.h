@@ -4,6 +4,6 @@
 
 namespace motis::bootstrap {
 
-motis::module::msg_ptr import_osm(motis::module::msg_ptr const&);
+motis::module::msg_ptr import_files(motis::module::msg_ptr const&);
 
 }  // namespace motis::bootstrap
