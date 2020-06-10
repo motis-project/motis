@@ -398,7 +398,7 @@ Offset<PathByTripIdBatchResponse> path_database_query::write_batch(
     module::message_creator& mc) {
   std::vector<Offset<PolylineIndices>> fbs_segments;
   std::vector<Offset<String>> fbs_polylines;
-  std::vector<size_t> fbs_extras;
+  std::vector<uint64_t> fbs_extras;
 
   // "disallow" id zero -> cant be marked reversed (-0 == 0)
   fbs_polylines.emplace_back(mc.CreateString(std::string{}));
