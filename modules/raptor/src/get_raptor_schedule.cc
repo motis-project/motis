@@ -99,12 +99,10 @@ void init_stop_routes(transformable_timetable& ttt) {
 void init_routes(schedule const& sched, std::vector<transformable_route>& rs) {
   using namespace motis::access;
 
-  // ttt.routes_.resize(sched.expanded_trips_.index_size() - 1);
   rs.resize(sched.expanded_trips_.index_size() - 1);
 
   route_id r_id = 0;
   for (auto const route_trips : sched.expanded_trips_) {
-    // auto& t_route = ttt.routes_[r_id];
     auto& t_route = rs[r_id];
 
     t_route.trips_.resize(route_trips.size());

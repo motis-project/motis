@@ -198,6 +198,11 @@ struct reconstructor {
     return (c.arrival_ < ij.get_arrival() && c.transfers_ <= ij.transfers_);
   }
 
+  [[maybe_unused]] static void print_c(std::ostream& out, candidate const& c) {
+    out << "Candidate: " << c.departure_ << " " << c.arrival_ << " : "
+        << std::to_string(c.transfers_) << '\n';
+  }
+
   std::vector<candidate> get_candidates(raptor_query const& q) {
     auto const& result = *q.result_;
 
@@ -251,11 +256,6 @@ struct reconstructor {
     }
 
     return candidates;
-  }
-
-  [[maybe_unused]] static void print_c(std::ostream& out, candidate const& c) {
-    out << "Candidate: " << c.departure_ << " " << c.arrival_ << " : "
-        << std::to_string(c.transfers_) << '\n';
   }
 
   void add(raptor_query const& q) {
