@@ -183,19 +183,7 @@ void read_fws_multimap(file& f, fws_multimap_offset const& off,
   read_array(f, off.data_, map.data_);
 }
 
-bool read_data(tb_data& data, std::string const& filename,
-               schedule const& sched) {
-  if (!fs::exists(filename)) {
-    LOG(info) << "trip-based data file not found";
-    return false;
-  }
-  file f(filename.c_str(), "rb");
-  if (f.size() < sizeof(header)) {
-    LOG(info) << "trip-based data file does not contain header";
-    return false;
-  }
-  header h{};
-  f.read(&h, 0, sizeof(header));
+bool data_okay_for_schedule(header const& h, schedule const& sched) {
   if (h.version_ != CURRENT_VERSION) {
     LOG(info) << "trip-based data file is old version (" << h.version_
               << "), expected " << CURRENT_VERSION;
@@ -230,28 +218,61 @@ bool read_data(tb_data& data, std::string const& filename,
     return false;
   }
 
-  data.trip_count_ = h.trip_count_;
-  data.line_count_ = h.line_count_;
-
-  read_array(f, h.line_to_first_trip_, data.line_to_first_trip_);
-  read_array(f, h.line_to_last_trip_, data.line_to_last_trip_);
-  read_array(f, h.trip_to_line_, data.trip_to_line_);
-  read_array(f, h.line_stop_count_, data.line_stop_count_);
-
-  read_fws_multimap(f, h.footpaths_, data.footpaths_);
-  read_fws_multimap(f, h.reverse_footpaths_, data.reverse_footpaths_);
-  read_fws_multimap(f, h.lines_at_stop_, data.lines_at_stop_);
-  read_fws_multimap(f, h.stops_on_line_, data.stops_on_line_);
-
-  read_fws_multimap(f, h.arrival_times_, data.arrival_times_);
-  read_array(f, h.departure_times_data_, data.departure_times_.data_);
-  read_fws_multimap(f, h.transfers_, data.transfers_);
-  read_fws_multimap(f, h.reverse_transfers_, data.reverse_transfers_);
-
-  read_fws_multimap(f, h.in_allowed_, data.in_allowed_);
-  read_array(f, h.out_allowed_data_, data.out_allowed_.data_);
-
   return true;
+}
+
+bool data_okay_for_schedule(std::string const& filename,
+                            schedule const& sched) {
+  if (!fs::exists(filename)) {
+    LOG(info) << "trip-based data file not found";
+    return false;
+  }
+  file f(filename.c_str(), "rb");
+  if (f.size() < sizeof(header)) {
+    LOG(info) << "trip-based data file does not contain header";
+    return false;
+  }
+  header h{};
+  f.read(&h, 0, sizeof(header));
+  return data_okay_for_schedule(h, sched);
+}
+
+std::unique_ptr<tb_data> read_data(std::string const& filename,
+                                   schedule const& sched) {
+  utl::verify(fs::exists(filename), "read_data: does not exist: {}", filename);
+
+  file f(filename.c_str(), "rb");
+  utl::verify(f.size() >= sizeof(header),
+              "trip-based data file does not contain header");
+
+  header h{};
+  f.read(&h, 0, sizeof(header));
+  utl::verify(data_okay_for_schedule(h, sched), "trip-based data file ist");
+
+  auto data = std::make_unique<tb_data>();
+
+  data->trip_count_ = h.trip_count_;
+  data->line_count_ = h.line_count_;
+
+  read_array(f, h.line_to_first_trip_, data->line_to_first_trip_);
+  read_array(f, h.line_to_last_trip_, data->line_to_last_trip_);
+  read_array(f, h.trip_to_line_, data->trip_to_line_);
+  read_array(f, h.line_stop_count_, data->line_stop_count_);
+
+  read_fws_multimap(f, h.footpaths_, data->footpaths_);
+  read_fws_multimap(f, h.reverse_footpaths_, data->reverse_footpaths_);
+  read_fws_multimap(f, h.lines_at_stop_, data->lines_at_stop_);
+  read_fws_multimap(f, h.stops_on_line_, data->stops_on_line_);
+
+  read_fws_multimap(f, h.arrival_times_, data->arrival_times_);
+  read_array(f, h.departure_times_data_, data->departure_times_.data_);
+  read_fws_multimap(f, h.transfers_, data->transfers_);
+  read_fws_multimap(f, h.reverse_transfers_, data->reverse_transfers_);
+
+  read_fws_multimap(f, h.in_allowed_, data->in_allowed_);
+  read_array(f, h.out_allowed_data_, data->out_allowed_.data_);
+
+  return data;
 }
 
 }  // namespace motis::tripbased::serialization

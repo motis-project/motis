@@ -9,6 +9,10 @@
 #include <utility>
 #include <vector>
 
+#include "boost/filesystem.hpp"
+
+#include "utl/progress_tracker.h"
+#include "utl/raii.h"
 #include "utl/to_vec.h"
 
 #include "motis/tripbased/data.h"
@@ -33,6 +37,8 @@
 #include "motis/core/statistics/statistics.h"
 #include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
+#include "motis/module/event_collector.h"
+#include "motis/module/ini_io.h"
 
 using namespace motis::module;
 using namespace motis::logging;
@@ -233,12 +239,7 @@ void add_result(std::vector<tb_journey>& results, tb_journey const& tbj,
 }
 
 struct tripbased::impl {
-  explicit impl(std::string data_file) : data_file_(std::move(data_file)) {}
-
-  void init_module() {
-    LOG(info) << "initializing trip-based data...";
-    tb_data_ = load_or_build_data(get_schedule(), data_file_);
-  }
+  explicit impl(std::unique_ptr<tb_data> data) : tb_data_{std::move(data)} {}
 
   msg_ptr route(msg_ptr const& msg) {
     MOTIS_START_TIMING(total_timing);
@@ -623,31 +624,79 @@ struct tripbased::impl {
     return make_msg(fbb);
   }
 
-  std::string data_file_;
   std::unique_ptr<tb_data> tb_data_;
 };
 
+struct import_state {
+  CISTA_COMPARABLE()
+  named<cista::hash_t, MOTIS_NAME("schedule_hash")> schedule_hash_;
+};
+
 tripbased::tripbased() : module("Trip-Based Routing Options", "tripbased") {
-  param(data_file_, "data_file",
-        "trip-based data file (will be created if it does not exist, "
-        "disabled if empty)");
+  param(use_data_file_, "use_data_file",
+        "create a data_file to speed up subsequent loading");
 }
 
 tripbased::~tripbased() = default;
 
+void tripbased::import(motis::module::registry& reg) {
+  std::make_shared<event_collector>(
+      get_data_directory().generic_string(), "tripbased", reg,
+      [this](std::map<std::string, msg_ptr> const& dependencies) {
+        using import::ScheduleEvent;
+        auto const schedule =
+            motis_content(ScheduleEvent, dependencies.at("SCHEDULE"));
+
+        if (!use_data_file_) {
+          import_successful_ = true;
+          return;
+        }
+
+        auto const dir = get_data_directory() / "tripbased";
+        boost::filesystem::create_directories(dir);
+        auto const filename = dir / "tripbased.bin";
+
+        auto const state = import_state{schedule->hash()};
+
+        auto const& sched = get_schedule();
+        update_data_file(sched, filename.generic_string(),
+                         read_ini<import_state>(dir / "import.ini") != state);
+
+        import_successful_ = true;
+        write_ini(dir / "import.ini", state);
+      })
+      ->require("SCHEDULE", [](msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_ScheduleEvent;
+      });
+}
+
 void tripbased::init(motis::module::registry& reg) {
   try {
-    impl_ = std::make_unique<impl>(data_file_);
+    if (use_data_file_) {
+      auto const filename =
+          get_data_directory() / "tripbased" / "tripbased.bin";
+      impl_ = std::make_unique<impl>(
+          load_data(get_sched(), filename.generic_string()));
+    } else {
+      auto& p = utl::get_global_progress_trackers();
+      auto const reset_silent =
+          utl::make_raii(p.silent_, [&](auto const s) { p.silent_ = s; });
+      p.silent_ = true;
+      impl_ = std::make_unique<impl>(build_data(get_sched()));
+    }
+
     reg.register_op("/tripbased",
                     [this](msg_ptr const& m) { return impl_->route(m); });
     reg.register_op("/tripbased/debug",
                     [this](msg_ptr const& m) { return impl_->debug(m); });
-    reg.subscribe("/init", [this]() { impl_->init_module(); });
+
   } catch (std::exception const& e) {
     LOG(logging::warn) << "tripbased module not initialized (" << e.what()
                        << ")";
   }
 }
+
+bool tripbased::import_successful() const { return import_successful_; }
 
 tb_data const* tripbased::get_data() const {
   if (impl_) {

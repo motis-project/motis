@@ -21,7 +21,7 @@ struct tripbased_rules_test : public motis_instance_test {
             loader::loader_options{
                 "base/loader/test_resources/hrd_schedules/mss-ts", "20150329",
                 3},
-            {"tripbased"}, {"--tripbased.data_file=-"}) {}
+            {"tripbased"}, {"--tripbased.use_data_file=false"}) {}
 };
 
 TEST_F(tripbased_rules_test, simple_fwd) {
