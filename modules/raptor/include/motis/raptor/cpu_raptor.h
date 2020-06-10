@@ -95,6 +95,22 @@ inline void update_route(raptor_timetable const& tt, route_id const r_id,
     if (stop_time.arrival_ < min) {
       station_marks.mark(stop_id);
       current_round[stop_id] = stop_time.arrival_;
+    }
+
+    /*
+     * The reason for the split in the update process for the current_round
+     * and the earliest arrivals is that we might have some results in
+     * current_round from former runs of the algorithm, but the earliest
+     * arrivals start at invalid<time> every run.
+     *
+     * Therefore, we need to set the earliest arrival independently from
+     * the results in current round.
+     *
+     * We cannot carry over the earliest arrivals from former runs, since
+     * then we would skip on updates to the curren_round results.
+     */
+
+    if (stop_time.arrival_ < ea[stop_id]) {
       ea[stop_id] = stop_time.arrival_;
     }
 
