@@ -61,6 +61,7 @@ constexpr raptor_round max_raptor_round = max_trips + 1;
 
 // TODO(julian) Implemented in the reconstructor as a filter after search,
 // possible to create an enhancement w.r.t. runtime out of this?
+// especially with long timetables (multiple weeks)
 constexpr time max_travel_duration = 1440;
 
 struct raptor_stop {
@@ -134,11 +135,6 @@ struct raptor_timetable {
   std::vector<stop_time> stop_times_;
   std::vector<station_id> route_stops_;
   std::vector<route_id> stop_routes_;
-
-  // TODO(julian) implement
-  // Needed for initialization
-  // duration of the footpaths INCLUDE transfer time from the departure station
-  // std::vector<std::vector<raptor_footpath>> initialization_footpaths_;
 
   // Needed for the reconstruction
   // duration REDUCED by the transfer times from the departure station
