@@ -247,12 +247,10 @@ struct reconstructor {
       }
     };
 
-    add_candidates(q.target_);
-
-    if (q.use_dest_metas_) {
-      for (auto equivalent : raptor_sched_.equivalent_stations_[q.target_]) {
-        add_candidates(equivalent);
-      }
+    if (!q.use_dest_metas_) {
+      add_candidates(q.target_);
+    } else {
+      for_each(raptor_sched_.equivalent_stations_[q.target_], add_candidates);
     }
 
     return candidates;
