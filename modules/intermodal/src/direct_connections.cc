@@ -249,7 +249,7 @@ std::vector<direct_connection> get_direct_connections(
                   "direct connetions: invalid osrm response");
       auto const duration =
           static_cast<unsigned>(osrm_resp->costs()->Get(0)->duration());
-      if (duration <= osrm_bike_settings.max_duration_) {
+      if (duration <= osrm_car_settings.max_duration_) {
         std::lock_guard guard{direct_mutex};
         direct.emplace_back(mumo_type::CAR, duration / 60, 0);
       }
