@@ -67,7 +67,7 @@ schedule_ptr load_schedule(loader_options const& opt,
         FlatBufferBuilder builder;
         parser->parse(opt.dataset_, builder);
         if (opt.write_serialized_) {
-          utl::get_active_progress_tracker().status("Write Schedule File");
+          utl::get_active_progress_tracker()->status("Write Schedule File");
           utl::file(binary_schedule_file.string().c_str(), "w+")
               .write(builder.GetBufferPointer(), builder.GetSize());
         }

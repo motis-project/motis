@@ -294,7 +294,7 @@ void ppr::import(registry& reg) {
           dem_hash = dem->hash();
         }
 
-        auto& progress_tracker = utl::get_active_progress_tracker();
+        auto progress_tracker = utl::get_active_progress_tracker();
 
         auto const state =
             import_state{data_path(osm_path), osm->hash(), osm->size(),
@@ -318,12 +318,12 @@ void ppr::import(registry& reg) {
             std::clog << "Step " << (log.current_step() + 1) << "/"
                       << log.step_count() << ": " << step.name() << ": Starting"
                       << std::endl;
-            progress_tracker.status(step.name());
+            progress_tracker->status(step.name());
           };
 
           log.step_progress_ = [&progress_tracker](pp::logging const& log,
                                                    pp::step_info const&) {
-            progress_tracker.update(
+            progress_tracker->update(
                 static_cast<int>(log.total_progress() * 100));
           };
 
@@ -341,7 +341,7 @@ void ppr::import(registry& reg) {
         }
         import_successful_ = true;
 
-        progress_tracker.update(100);
+        progress_tracker->update(100);
         auto graph_hash = cista::hash_t{};
         auto graph_size = std::size_t{};
         {

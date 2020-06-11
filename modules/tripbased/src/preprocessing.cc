@@ -105,7 +105,7 @@ struct preprocessing {
     std::vector<std::vector<std::pair<line_id, stop_idx_t>>> lines_at_stop;
     lines_at_stop.resize(stop_count);
 
-    progress_tracker_.status("Init: Routes");
+    progress_tracker_->status("Init: Routes");
     for (auto route_idx = 0UL; route_idx < line_count; ++route_idx) {
       auto const& route_trips = sched_.expanded_trips_[route_idx];
       utl::verify(!route_trips.empty(), "empty route");
@@ -173,7 +173,7 @@ struct preprocessing {
       }
     }
 
-    progress_tracker_.status("Init: Lines at Stop");
+    progress_tracker_->status("Init: Lines at Stop");
     for (auto const& lines : lines_at_stop) {
       for (auto const& [line, stop_idx] : lines) {
         utl::verify(stop_idx < data_.line_stop_count_[line],
@@ -183,7 +183,7 @@ struct preprocessing {
       data_.lines_at_stop_.finish_key();
     }
 
-    progress_tracker_.status("Init: Station Nodes");
+    progress_tracker_->status("Init: Station Nodes");
     for (auto const& st : sched_.station_nodes_) {
       for (auto const& fp : sched_.stations_[st->id_]->outgoing_footpaths_) {
         data_.footpaths_.emplace_back(fp);
@@ -256,7 +256,7 @@ struct preprocessing {
   }
 
   void precompute_transfers() {
-    progress_tracker_.status("Transfers: FWD").out_bounds(0.F, 50.F);
+    progress_tracker_->status("Transfers: FWD").out_bounds(0.F, 50.F);
 
     scoped_timer timer{"trip-based preprocessing: precompute transfers"};
     auto const prev_locale =
@@ -294,7 +294,7 @@ struct preprocessing {
   }
 
   void precompute_reverse_transfers() {
-    progress_tracker_.status("Transfers: BWD").out_bounds(50.F, 100.F);
+    progress_tracker_->status("Transfers: BWD").out_bounds(50.F, 100.F);
 
     scoped_timer timer{
         "trip-based preprocessing: precompute reverse transfers"};
@@ -604,7 +604,7 @@ private:
       auto const percentage =
           static_cast<int>(std::round(100.0 * static_cast<double>(trip + 1) /
                                       static_cast<double>(data_.trip_count_)));
-      progress_tracker_.update(percentage);
+      progress_tracker_->update(percentage);
       LOG(info) << percentage << "% - " << (trip + 1) << "/"
                 << data_.trip_count_ << " trips... " << transfer_count
                 << " transfers, " << (uturns_ + no_improvements_)
@@ -711,7 +711,7 @@ private:
 
   schedule const& sched_;
   tb_data& data_;
-  utl::progress_tracker& progress_tracker_;
+  utl::progress_tracker_ptr progress_tracker_;
   std::atomic<uint64_t> uturns_{0};
   std::atomic<uint64_t> no_improvements_{0};
   std::mutex transfers_mutex_;
