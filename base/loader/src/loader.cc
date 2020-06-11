@@ -54,6 +54,9 @@ schedule_ptr load_schedule(loader_options const& opt,
     return read_graph(serialized_file_path, schedule_buf, opt.read_graph_mmap_);
   }
 
+  // ensure there is an active progress tracker (e.g. for test cases)
+  utl::get_active_progress_tracker_or_activate("schedule");
+
   if (fs::is_regular_file(binary_schedule_file)) {
     auto buf = file(binary_schedule_file.string().c_str(), "r").content();
     auto sched = build_graph(GetSchedule(buf.buf_), opt);
