@@ -21,7 +21,7 @@ struct tripbased_pretrip : public motis_instance_test {
       : motis::test::motis_instance_test(
             loader::loader_options{"modules/tripbased/test_resources/schedule",
                                    "20151121"},
-            {"tripbased"}, {"--tripbased.data_file=-"}) {}
+            {"tripbased"}, {"--tripbased.use_data_file=false"}) {}
 
   bool has_journey(std::vector<journey> const& journeys, int const departure,
                    int const arrival) {

@@ -17,12 +17,17 @@ struct tripbased : public motis::module::module {
   tripbased(tripbased&&) = delete;
   tripbased& operator=(tripbased&&) = delete;
 
+  void import(motis::module::registry&) override;
   void init(motis::module::registry&) override;
+
+  bool import_successful() const override;
 
   tb_data const* get_data() const;
 
 private:
-  std::string data_file_{"trip_based.bin"};
+  bool use_data_file_{true};
+
+  bool import_successful_{false};
 
   struct impl;
   std::unique_ptr<impl> impl_;

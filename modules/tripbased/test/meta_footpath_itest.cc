@@ -24,7 +24,7 @@ namespace motis::routing {
 struct tripbased_meta_footpath : public motis_instance_test {
   tripbased_meta_footpath()
       : motis::test::motis_instance_test(dataset_opt, {"tripbased"},
-                                         {"--tripbased.data_file=-"}) {}
+                                         {"--tripbased.use_data_file=false"}) {}
 
   msg_ptr routing_request_meta() const {
     auto const interval = Interval(unix_time(1300), unix_time(1400));

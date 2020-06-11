@@ -8,6 +8,7 @@
 #include <thread>
 #include <utility>
 
+#include "utl/progress_tracker.h"
 #include "utl/verify.h"
 #include "utl/zip.h"
 
@@ -75,7 +76,10 @@ bool is_out_allowed(node const* route_node) {
 
 struct preprocessing {
   preprocessing(schedule const& sched, tb_data& data)
-      : sched_(sched), data_(data) {}
+      : sched_(sched),
+        data_(data),
+        progress_tracker_{
+            utl::get_active_progress_tracker_or_activate("tripbased")} {}
 
   void init() {
     scoped_timer timer{"trip-based preprocessing: init"};
@@ -101,6 +105,7 @@ struct preprocessing {
     std::vector<std::vector<std::pair<line_id, stop_idx_t>>> lines_at_stop;
     lines_at_stop.resize(stop_count);
 
+    progress_tracker_.status("Init: Routes");
     for (auto route_idx = 0UL; route_idx < line_count; ++route_idx) {
       auto const& route_trips = sched_.expanded_trips_[route_idx];
       utl::verify(!route_trips.empty(), "empty route");
@@ -168,6 +173,7 @@ struct preprocessing {
       }
     }
 
+    progress_tracker_.status("Init: Lines at Stop");
     for (auto const& lines : lines_at_stop) {
       for (auto const& [line, stop_idx] : lines) {
         utl::verify(stop_idx < data_.line_stop_count_[line],
@@ -177,6 +183,7 @@ struct preprocessing {
       data_.lines_at_stop_.finish_key();
     }
 
+    progress_tracker_.status("Init: Station Nodes");
     for (auto const& st : sched_.station_nodes_) {
       for (auto const& fp : sched_.stations_[st->id_]->outgoing_footpaths_) {
         data_.footpaths_.emplace_back(fp);
@@ -249,6 +256,8 @@ struct preprocessing {
   }
 
   void precompute_transfers() {
+    progress_tracker_.status("Transfers: FWD").out_bounds(0.F, 50.F);
+
     scoped_timer timer{"trip-based preprocessing: precompute transfers"};
     auto const prev_locale =
         std::cout.imbue(std::locale(std::locale::classic(), new thousands_sep));
@@ -285,6 +294,8 @@ struct preprocessing {
   }
 
   void precompute_reverse_transfers() {
+    progress_tracker_.status("Transfers: BWD").out_bounds(50.F, 100.F);
+
     scoped_timer timer{
         "trip-based preprocessing: precompute reverse transfers"};
     expected_trip_id_ = 0;
@@ -593,6 +604,7 @@ private:
       auto const percentage =
           static_cast<int>(std::round(100.0 * static_cast<double>(trip + 1) /
                                       static_cast<double>(data_.trip_count_)));
+      progress_tracker_.update(percentage);
       LOG(info) << percentage << "% - " << (trip + 1) << "/"
                 << data_.trip_count_ << " trips... " << transfer_count
                 << " transfers, " << (uturns_ + no_improvements_)
@@ -699,6 +711,7 @@ private:
 
   schedule const& sched_;
   tb_data& data_;
+  utl::progress_tracker& progress_tracker_;
   std::atomic<uint64_t> uturns_{0};
   std::atomic<uint64_t> no_improvements_{0};
   std::mutex transfers_mutex_;
@@ -724,31 +737,33 @@ std::unique_ptr<tb_data> build_data(schedule const& sched) {
   return data;
 }
 
-std::unique_ptr<tb_data> load_or_build_data(schedule const& sched,
-                                            std::string const& filename) {
-  std::unique_ptr<tb_data> data{};
-  if (!filename.empty() && fs::exists(filename)) {
+std::unique_ptr<tb_data> load_data(schedule const& sched,
+                                   std::string const& filename) {
+  utl::verify(!filename.empty(), "update_data_file: filename empty");
+  utl::verify(fs::exists(filename), "update_data_file: file does not exist {}",
+              filename);
+  return serialization::read_data(filename, sched);
+}
+
+void update_data_file(schedule const& sched, std::string const& filename,
+                      bool const force_update) {
+  utl::verify(!filename.empty(), "update_data_file: filename empty");
+
+  if (!force_update && fs::exists(filename)) {
     LOG(info) << "loading trip-based data from file " << filename;
     scoped_timer load_timer{"trip-based deserialization"};
-    data = std::make_unique<tb_data>();
-    if (serialization::read_data(*data, filename, sched)) {
-      return data;
+    if (serialization::data_okay_for_schedule(filename, sched)) {
+      return;
     } else {
-      LOG(info) << "could not load existing trip-based data from file "
-                << filename;
-      data.reset(nullptr);
+      LOG(info) << "existing trip-based data is not okay: " << filename;
     }
   }
 
   LOG(info) << "calculating trip-based data...";
-  data = build_data(sched);
-  if (!filename.empty() && filename != "-") {
-    LOG(info) << "writing trip-based data to file " << filename;
-    scoped_timer write_timer{"trip-based serialization"};
-    serialization::write_data(*data, filename, sched);
-  }
-
-  return data;
+  auto data = build_data(sched);
+  LOG(info) << "writing trip-based data to file " << filename;
+  scoped_timer write_timer{"trip-based serialization"};
+  serialization::write_data(*data, filename, sched);
 }
 
 }  // namespace motis::tripbased
