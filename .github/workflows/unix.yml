@@ -267,7 +267,7 @@ jobs:
 
       # ==== RELEASE ====
       - name: Upload Release
-        if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-9' || matrix.config.os == 'macos-latest')
+        if: github.event.action == 'published' && matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-9' || matrix.config.os == 'macos-latest')
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
