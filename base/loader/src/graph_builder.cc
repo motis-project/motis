@@ -5,6 +5,7 @@
 #include <functional>
 #include <numeric>
 
+#include "utl/enumerate.h"
 #include "utl/get_or_create.h"
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
@@ -21,12 +22,14 @@
 #include "motis/core/schedule/price.h"
 #include "motis/core/access/time_access.h"
 #include "motis/core/access/trip_iterator.h"
+
+#include "motis/loader/build_footpaths.h"
 #include "motis/loader/build_graph.h"
+#include "motis/loader/build_stations.h"
 #include "motis/loader/classes.h"
-#include "motis/loader/footpaths.h"
+#include "motis/loader/interval_util.h"
 #include "motis/loader/rule_route_builder.h"
 #include "motis/loader/rule_service_graph_builder.h"
-#include "motis/loader/timezone_util.h"
 #include "motis/loader/util.h"
 #include "motis/loader/wzr_loader.h"
 
@@ -39,149 +42,20 @@ char const* c_str(flatbuffers64::String const* str) {
   return str == nullptr ? nullptr : str->c_str();
 }
 
-std::string format_date(time_t const t, char const* format = "%Y-%m-%d") {
-  return date::format(
-      format, std::chrono::system_clock::time_point{std::chrono::seconds{t}});
-}
-
-graph_builder::graph_builder(schedule& sched, Interval const* schedule_interval,
-                             loader_options const& opt,
+graph_builder::graph_builder(schedule& sched, loader_options const& opt,
                              unsigned progress_offset)
     : progress_offset_{progress_offset},
       sched_{sched},
-      first_day_{
-          static_cast<int>((sched.schedule_begin_ - schedule_interval->from()) /
-                           (MINUTES_A_DAY * 60))},
-      last_day_{
-          static_cast<int>((sched.schedule_end_ - schedule_interval->from()) /
-                               (MINUTES_A_DAY * 60) -
-                           1)},
       apply_rules_{opt.apply_rules_},
-      adjust_footpaths_{opt.adjust_footpaths_},
-      expand_trips_{opt.expand_trips_} {
-  utl::verify(sched.schedule_end_ > sched.schedule_begin_ &&
-                  schedule_interval->from() <=
-                      static_cast<uint64_t>(sched.schedule_end_) &&
-                  schedule_interval->to() >=
-                      static_cast<uint64_t>(sched.schedule_begin_),
-              "schedule (from={}, to={}) out of interval (from={}, to={})",
-              format_date(schedule_interval->from()),
-              format_date(schedule_interval->to()),
-              format_date(sched.schedule_begin_),
-              format_date(sched.schedule_end_));
-}
-
-void graph_builder::add_dummy_node(std::string const& name) {
-  auto const station_idx = sched_.station_nodes_.size();
-  auto s = mcd::make_unique<station>(
-      make_station(station_idx, 0.0, 0.0, 0, name, name, nullptr));
-  sched_.eva_to_station_.emplace(name, s.get());
-  sched_.stations_.emplace_back(std::move(s));
-  sched_.station_nodes_.emplace_back(
-      mcd::make_unique<station_node>(make_station_node(station_idx)));
-}
-
-void graph_builder::add_stations(Vector<Offset<Station>> const* stations) {
-  // Add dummy stations.
-  add_dummy_node(STATION_START);
-  add_dummy_node(STATION_END);
-  add_dummy_node(STATION_VIA0);
-  add_dummy_node(STATION_VIA1);
-  add_dummy_node(STATION_VIA2);
-  add_dummy_node(STATION_VIA3);
-  add_dummy_node(STATION_VIA4);
-  add_dummy_node(STATION_VIA5);
-  add_dummy_node(STATION_VIA6);
-  add_dummy_node(STATION_VIA7);
-  add_dummy_node(STATION_VIA8);
-  add_dummy_node(STATION_VIA9);
-
-  // Add schedule stations.
-  auto const dummy_station_count = sched_.station_nodes_.size();
-  for (auto i = flatbuffers64::uoffset_t{}; i < stations->size(); ++i) {
-    auto const& input_station = stations->Get(i);
-    auto const station_index = i + dummy_station_count;
-
-    // Create station node.
-    auto node_ptr = mcd::make_unique<station_node>(
-        make_station_node(static_cast<unsigned int>(station_index)));
-    stations_[input_station] = node_ptr.get();
-    sched_.station_nodes_.emplace_back(std::move(node_ptr));
-
-    // Create station object.
-    auto s = mcd::make_unique<station>();
-    s->index_ = station_index;
-    s->name_ = input_station->name()->str();
-    s->width_ = input_station->lat();
-    s->length_ = input_station->lng();
-    s->eva_nr_ = input_station->id()->str();
-    s->transfer_time_ = std::max(2, input_station->interchange_time());
-    s->timez_ = input_station->timezone() != nullptr
-                    ? get_or_create_timezone(input_station->timezone())
-                    : nullptr;
-    s->equivalent_.push_back(s.get());
-    sched_.eva_to_station_.emplace(input_station->id()->str(), s.get());
-
-    // Store DS100.
-    if (input_station->external_ids() != nullptr) {
-      for (auto const& ds100 : *input_station->external_ids()) {
-        sched_.ds100_to_station_.emplace(ds100->str(), s.get());
-      }
-    }
-
-    sched_.stations_.emplace_back(std::move(s));
-  }
-
-  // First regular node id:
-  // first id after station node ids
-  next_node_id_ = sched_.stations_.size();
-}
-
-void graph_builder::link_meta_stations(
-    Vector<Offset<MetaStation>> const* meta_stations) {
-  for (auto const& meta : *meta_stations) {
-    auto& station = sched_.eva_to_station_.at(meta->station()->id()->str());
-    for (auto const& fbs_equivalent : *meta->equivalent()) {
-      auto& equivalent = *sched_.stations_[stations_[fbs_equivalent]->id_];
-      if (station->index_ != equivalent.index_) {
-        station->equivalent_.push_back(&equivalent);
-      }
-    }
-  }
-}
-
-timezone const* graph_builder::get_or_create_timezone(
-    Timezone const* input_timez) {
-  return utl::get_or_create(timezones_, input_timez, [&]() {
-    auto const tz =
-        input_timez->season() != nullptr
-            ? create_timezone(
-                  input_timez->general_offset(),
-                  input_timez->season()->offset(),  //
-                  first_day_, last_day_,
-                  input_timez->season()->day_idx_first_day(),
-                  input_timez->season()->day_idx_last_day(),
-                  input_timez->season()->minutes_after_midnight_first_day(),
-                  input_timez->season()->minutes_after_midnight_last_day())
-            : timezone{input_timez->general_offset()};
-    sched_.timezones_.emplace_back(mcd::make_unique<timezone>(tz));
-    return sched_.timezones_.back().get();
-  });
-}
-
-station_node* graph_builder::get_station_node(Station const* station) const {
-  auto it = stations_.find(station);
-  utl::verify(it != end(stations_), "station not found");
-  return it->second;
-}
+      expand_trips_{opt.expand_trips_} {}
 
 full_trip_id graph_builder::get_full_trip_id(Service const* s, int day,
                                              int section_idx) {
   auto const& stops = s->route()->stations();
   auto const dep_station = stops->Get(section_idx);
   auto const arr_station = stops->Get(stops->size() - 1);
-  auto const dep_station_idx = get_station_node(dep_station)->id_;
-  auto const arr_station_idx = get_station_node(arr_station)->id_;
+  auto const dep_station_idx = stations_.at(dep_station)->id_;
+  auto const arr_station_idx = stations_.at(arr_station)->id_;
 
   auto const dep_tz = sched_.stations_[dep_station_idx]->timez_;
   auto const provider_first_section = s->sections()->Get(0)->provider();
@@ -333,7 +207,6 @@ void graph_builder::add_route_services(
     auto const first_day_offset =
         s->times()->Get(s->times()->size() - 2) / 1440;
     auto const first_day = std::max(0, first_day_ - first_day_offset);
-
     for (int day = first_day; day <= last_day_; ++day) {
       if (!traffic_days.test(day)) {
         continue;
@@ -597,59 +470,6 @@ light_connection graph_builder::section_to_connection(
       trips);
 }
 
-void graph_builder::add_footpaths(Vector<Offset<Footpath>> const* footpaths) {
-  auto skipped = 0U;
-  for (auto const& footpath : *footpaths) {
-    auto const from_node_it = stations_.find(footpath->from());
-    auto const to_node_it = stations_.find(footpath->to());
-
-    utl::verify(
-        from_node_it != end(stations_), "footpath from node not found {} [{}]",
-        footpath->from()->name()->c_str(), footpath->from()->id()->c_str());
-    utl::verify(to_node_it != end(stations_),
-                "footpath to node not found {} [{}]",
-                footpath->to()->name()->c_str(), footpath->to()->id()->c_str());
-
-    auto duration = footpath->duration();
-    auto const from_node = from_node_it->second;
-    auto const to_node = to_node_it->second;
-    auto const& from_station = *sched_.stations_.at(from_node->id_);
-    auto const& to_station = *sched_.stations_.at(to_node->id_);
-
-    if (from_node == to_node) {
-      LOG(warn) << "Footpath loop at station " << from_station.eva_nr_
-                << " ignored";
-      continue;
-    }
-
-    if (adjust_footpaths_) {
-      uint32_t max_transfer_time =
-          std::max(from_station.transfer_time_, to_station.transfer_time_);
-
-      duration = std::max(max_transfer_time, footpath->duration());
-
-      auto const distance = get_distance(from_station, to_station) * 1000;
-      auto const max_distance_adjust = duration * 60 * WALK_SPEED;
-      auto const max_distance = 2 * duration * 60 * WALK_SPEED;
-
-      if (distance > max_distance) {
-        continue;
-      } else if (distance > max_distance_adjust) {
-        duration = std::round(distance / (60 * WALK_SPEED));
-      }
-
-      if (duration > 15) {
-        continue;
-      }
-    }
-
-    next_node_id_ = from_node->add_foot_edge(
-        next_node_id_, make_fwd_edge(from_node, to_node, duration));
-  }
-  LOG(info) << "Skipped " << skipped
-            << " footpaths connecting stations with no events";
-}
-
 void graph_builder::connect_reverse() {
   for (auto& station_node : sched_.station_nodes_) {
     for (auto& station_edge : station_node->edges_) {
@@ -819,7 +639,7 @@ route_section graph_builder::add_route_section(
     section.from_route_node_ = from_route_node;
   } else {
     section.from_route_node_ = build_route_node(
-        route_index, next_node_id_++, from_station_node,
+        route_index, sched_.node_count_++, from_station_node,
         sched_.stations_[from_station_node->id_]->transfer_time_,
         from_in_allowed, from_out_allowed);
   }
@@ -828,7 +648,7 @@ route_section graph_builder::add_route_section(
     section.to_route_node_ = to_route_node;
   } else {
     section.to_route_node_ =
-        build_route_node(route_index, next_node_id_++, to_station_node,
+        build_route_node(route_index, sched_.node_count_++, to_station_node,
                          sched_.stations_[to_station_node->id_]->transfer_time_,
                          to_in_allowed, to_out_allowed);
   }
@@ -841,36 +661,46 @@ route_section graph_builder::add_route_section(
   return section;
 }
 
-schedule_ptr build_graph(std::vector<Schedule const*> fbs_schedule,
+schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
                          loader_options const& opt, unsigned progress_offset) {
-  utl::verify(fbs_schedule.size() == 1, "multiple schedules not implemented");
-  auto serialized = fbs_schedule.front();
+  utl::verify(!fbs_schedules.empty(), "build_graph: no schedules");
 
   scoped_timer timer("building graph");
-  LOG(info) << "schedule: " << serialized->name()->str();
+  for (auto const* fbs_schedule : fbs_schedules) {
+    LOG(info) << "schedule: " << fbs_schedule->name()->str();
+  }
 
-  schedule_ptr sched(new schedule());
+  auto sched = schedule_ptr{new schedule()};
+  // auto sched = mcd::make_unique<schedule>();
   sched->classes_ = class_mapping();
   std::tie(sched->schedule_begin_, sched->schedule_end_) = opt.interval();
 
-  if (serialized->name() != nullptr) {
-    sched->name_ = serialized->name()->str();
+  for (auto const& [index, fbs_schedule] : utl::enumerate(fbs_schedules)) {
+    sched->names_.push_back(
+        fbs_schedule->name() != nullptr
+            ? fbs_schedule->name()->str()
+            : std::string{"unknown-"}.append(std::to_string(index)));
   }
 
   auto progress_tracker = utl::get_active_progress_tracker();
 
   progress_tracker->status("Build Graph").out_bounds(progress_offset, 90);
-  graph_builder builder(*sched, serialized->interval(), opt, progress_offset);
-  builder.add_stations(serialized->stations());
-  if (serialized->meta_stations() != nullptr) {
-    builder.link_meta_stations(serialized->meta_stations());
-  }
+  graph_builder builder{*sched, opt, progress_offset};
 
-  builder.add_services(serialized->services());
-  if (opt.apply_rules_) {
-    scoped_timer timer("rule services");
-    progress_tracker->status("Rule Services").out_bounds(90, 92);
-    build_rule_routes(builder, serialized->rule_services());
+  progress_tracker->status("Add Stations").out_bounds(92, 93);
+  builder.stations_ = build_stations(*sched, fbs_schedules);
+
+  progress_tracker->status("Add Services").out_bounds(92, 93);
+  for (auto const* fbs_schedule : fbs_schedules) {
+    std::tie(builder.first_day_, builder.last_day_) =
+        first_last_days(*sched, fbs_schedule->interval());
+
+    builder.add_services(fbs_schedule->services());
+    if (opt.apply_rules_) {
+      scoped_timer timer("rule services");
+      progress_tracker->status("Rule Services").out_bounds(90, 92);
+      build_rule_routes(builder, fbs_schedule->rule_services());
+    }
   }
 
   if (opt.expand_trips_) {
@@ -878,7 +708,7 @@ schedule_ptr build_graph(std::vector<Schedule const*> fbs_schedule,
   }
 
   progress_tracker->status("Footpaths").out_bounds(92, 93);
-  builder.add_footpaths(serialized->footpaths());
+  build_footpaths(*sched, opt, builder.stations_, fbs_schedules);
 
   progress_tracker->status("Connect Reverse").out_bounds(93, 94);
   builder.connect_reverse();
@@ -886,14 +716,13 @@ schedule_ptr build_graph(std::vector<Schedule const*> fbs_schedule,
   progress_tracker->status("Sort Trips").out_bounds(94, 95);
   builder.sort_trips();
 
-  if (opt.expand_footpaths_) {
-    progress_tracker->status("Expand Footpaths").out_bounds(95, 96);
-    calc_footpaths(*sched);
+  auto hash = cista::BASE_HASH;
+  for (auto const* fbs_schedule : fbs_schedules) {
+    hash = cista::hash_combine(hash, fbs_schedule->hash());
   }
+  sched->hash_ = hash;
 
-  sched->hash_ = serialized->hash();
   sched->route_count_ = builder.next_route_index_;
-  sched->node_count_ = builder.next_node_id_;
 
   progress_tracker->status("Lower Bounds").out_bounds(96, 100).in_high(4);
   sched->transfers_lower_bounds_fwd_ = build_interchange_graph(

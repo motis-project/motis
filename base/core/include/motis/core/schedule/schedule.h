@@ -37,7 +37,7 @@ struct schedule {
   std::time_t first_event_schedule_time_{std::numeric_limits<time_t>::max()};
   std::time_t last_event_schedule_time_{std::numeric_limits<time_t>::min()};
   std::time_t schedule_begin_{0}, schedule_end_{0};
-  mcd::string name_;
+  mcd::vector<mcd::string> names_;
   cista::hash_t hash_{0U};
 
   mcd::vector<station_ptr> stations_;
@@ -49,7 +49,7 @@ struct schedule {
   constant_graph travel_time_lower_bounds_bwd_;
   constant_graph transfers_lower_bounds_fwd_;
   constant_graph transfers_lower_bounds_bwd_;
-  uint32_t node_count_{0U};
+  node_id_t node_count_{0U};
   uint32_t route_count_{0U};
   mcd::vector<station_node_ptr> station_nodes_;
   mcd::vector<ptr<node>> route_index_to_first_route_node_;

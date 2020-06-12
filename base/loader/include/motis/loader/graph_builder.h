@@ -131,21 +131,8 @@ using route = mcd::vector<route_section>;
 using route_lcs = mcd::vector<mcd::vector<light_connection>>;
 
 struct graph_builder {
-  graph_builder(schedule& sched, Interval const* schedule_interval,
-                loader_options const&, unsigned progress_offset = 0U);
-
-  void add_dummy_node(std::string const& name);
-
-  void add_stations(
-      flatbuffers64::Vector<flatbuffers64::Offset<Station>> const* stations);
-
-  void link_meta_stations(
-      flatbuffers64::Vector<flatbuffers64::Offset<MetaStation>> const*
-          meta_stations);
-
-  timezone const* get_or_create_timezone(Timezone const* input_timez);
-
-  station_node* get_station_node(Station const* station) const;
+  graph_builder(schedule&, loader_options const&,
+                unsigned progress_offset = 0U);
 
   full_trip_id get_full_trip_id(Service const* s, int day, int section_idx = 0);
 
@@ -188,9 +175,6 @@ struct graph_builder {
       merged_trips_idx trips, std::array<participant, 16> const& services,
       int day, time prev_arr, bool& adjusted);
 
-  void add_footpaths(
-      flatbuffers64::Vector<flatbuffers64::Offset<Footpath>> const* footpaths);
-
   void connect_reverse();
 
   void sort_connections();
@@ -230,7 +214,6 @@ struct graph_builder {
   unsigned progress_offset_{0U};
   unsigned lcon_count_{0U};
   unsigned next_route_index_{0U};
-  unsigned next_node_id_{0U};
   tz_cache tz_cache_;
   std::map<Category const*, int> categories_;
   std::map<std::string, int> tracks_;
@@ -238,7 +221,6 @@ struct graph_builder {
   std::map<flatbuffers64::String const*, mcd::string const*> directions_;
   std::map<Provider const*, provider const*> providers_;
   mcd::hash_map<Station const*, station_node*> stations_;
-  std::map<Timezone const*, timezone const*> timezones_;
   mcd::hash_map<flatbuffers64::String const*, bitfield> bitfields_;
   mcd::hash_set<connection_info*,
                 deep_ptr_hash<cista::hashing<connection_info>, connection_info>,
@@ -252,7 +234,6 @@ struct graph_builder {
   schedule& sched_;
   int first_day_{0}, last_day_{0};
   bool apply_rules_{false};
-  bool adjust_footpaths_{false};
   bool expand_trips_{false};
 
   connection_info con_info_;

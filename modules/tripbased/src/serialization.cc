@@ -5,6 +5,7 @@
 
 #include "boost/filesystem.hpp"
 
+#include "utl/enumerate.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
@@ -61,6 +62,17 @@ struct file {
   FILE* f_;
 };
 
+std::string serialize_schedule_names(schedule const& sched) {
+  std::stringstream ss;
+  for (auto const& [i, name] : utl::enumerate(sched.names_)) {
+    if (i != 0) {
+      ss << "\n";
+    }
+    ss << name;
+  }
+  return ss.str();
+}
+
 template <typename T>
 void set_array_offset(uint64_t& current_offset, array_offset& off,
                       mcd::vector<T> const& data) {
@@ -108,11 +120,14 @@ void write_data(tb_data const& data, std::string const& filename,
 
   header h{};
   h.version_ = CURRENT_VERSION;
-  if (!sched.name_.empty() && sched.name_.size() < sizeof(h.schedule_name_)) {
-    std::strncpy(h.schedule_name_, sched.name_.data(),
-                 std::min(static_cast<size_t>(sched.name_.size()),
-                          sizeof(h.schedule_name_)));
+  auto const& schedule_name = serialize_schedule_names(sched);
+  if (schedule_name.size() > sizeof(h.schedule_name_)) {
+    LOG(warn) << "tripbased: serialized schedule name to long";
   }
+  std::strncpy(h.schedule_name_, schedule_name.data(),
+               std::min(static_cast<size_t>(schedule_name.size()),
+                        sizeof(h.schedule_name_)));
+
   h.schedule_begin_ = static_cast<int64_t>(sched.schedule_begin_);
   h.schedule_end_ = static_cast<int64_t>(sched.schedule_end_);
   h.trip_count_ = data.trip_count_;
@@ -190,7 +205,8 @@ bool data_okay_for_schedule(header const& h, schedule const& sched) {
     return false;
   }
 
-  if (sched.name_ != h.schedule_name_) {
+  auto const& schedule_name = serialize_schedule_names(sched);
+  if (schedule_name != h.schedule_name_) {
     LOG(info) << "trip-based data file contains data for different schedule: "
               << h.schedule_name_;
     return false;

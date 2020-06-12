@@ -38,8 +38,8 @@ TEST_F(lookup_meta_station_test, meta_station) {
   auto const msg = call(make_msg(kMetaStationRequest));
   auto const resp = motis_content(LookupMetaStationResponse, msg);
   ASSERT_EQ(2, resp->equivalent()->size());
-  EXPECT_EQ("8073368", resp->equivalent()->Get(0)->id()->str());
-  EXPECT_EQ("8003368", resp->equivalent()->Get(1)->id()->str());
+  EXPECT_EQ("8003368", resp->equivalent()->Get(0)->id()->str());
+  EXPECT_EQ("8073368", resp->equivalent()->Get(1)->id()->str());
 }
 
 }  // namespace motis::lookup

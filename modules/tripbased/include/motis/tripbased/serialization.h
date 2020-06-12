@@ -30,7 +30,7 @@ struct fws_multimap_offset {
 struct header {
   uint64_t version_{};
 
-  char schedule_name_[256]{};
+  char schedule_name_[1024]{};
   int64_t schedule_begin_{};
   int64_t schedule_end_{};
 

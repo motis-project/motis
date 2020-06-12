@@ -18,6 +18,8 @@ struct node;
 
 using station_node = node;
 
+using node_id_t = uint32_t;
+
 struct node {
   bool is_station_node() const { return station_node_ == nullptr; }
   bool is_route_node() const { return route_ != -1; }
@@ -83,62 +85,19 @@ struct node {
     }
   }
 
-  int add_foot_node(int node_id) {
-    if (!foot_node_) {
-      foot_node_ = mcd::make_unique<node>();
-      foot_node_->station_node_ = this;
-      foot_node_->id_ = node_id++;
-      for_each_route_node([&](auto&& route_node) {
-        // check whether it is allowed to transfer at the route-node
-        // we do this by checking, whether it has an edge to the station
-        for (auto const& edge : route_node->edges_) {
-          if (edge.get_destination() == this &&
-              edge.type() != edge::INVALID_EDGE) {
-            // the foot-edge may only be used
-            // if a train was used beforewards when
-            // trying to use it from a route node
-            route_node->edges_.push_back(make_after_train_fwd_edge(
-                route_node, foot_node_.get(), 0, true));
-            break;
-          }
-        }
-      });
-      for (auto const& edge : edges_) {
-        if (edge.get_destination()->is_route_node() &&
-            edge.type() != edge::INVALID_EDGE) {
-          foot_node_->edges_.emplace_back(
-              make_after_train_bwd_edge(foot_node_.get(), edge.to_, 0, true));
-        }
-      }
-      edges_.emplace_back(make_fwd_edge(this, foot_node_.get()));
-      foot_node_->edges_.emplace_back(make_bwd_edge(foot_node_.get(), this));
-    }
-    return node_id;
-  }
-
-  int add_foot_edge(int node_id, edge fe) {
-    node_id = add_foot_node(node_id);
-    node_id = fe.to_->get_station()->add_foot_node(node_id);
-    fe.from_ = foot_node_.get();
-    foot_node_->edges_.emplace_back(fe);
-    edges_.emplace_back(
-        make_bwd_edge(this, fe.to_->get_station()->foot_node_.get(),
-                      fe.m_.foot_edge_.time_cost_, fe.m_.foot_edge_.transfer_));
-    return node_id;
-  }
-
   mcd::indexed_vector<edge> edges_;
   mcd::vector<ptr<edge>> incoming_edges_;
   ptr<station_node> station_node_{nullptr};
   int32_t route_{-1};
-  uint32_t id_{0};
+  node_id_t id_{0};
 
   // Station Node Properties
   mcd::unique_ptr<node> foot_node_;
   mcd::vector<mcd::unique_ptr<node>> route_nodes_;
 };
 
-inline node make_node(node* station_node, int node_id, int32_t route = -1) {
+inline node make_node(node* station_node, node_id_t const node_id,
+                      int32_t const route = -1) {
   node n;
   n.station_node_ = station_node;
   n.id_ = node_id;
@@ -146,7 +105,7 @@ inline node make_node(node* station_node, int node_id, int32_t route = -1) {
   return n;
 }
 
-inline station_node make_station_node(unsigned id) {
+inline station_node make_station_node(node_id_t const id) {
   return make_node(nullptr, id);
 }
 
