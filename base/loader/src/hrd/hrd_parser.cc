@@ -154,14 +154,14 @@ void parse_and_build_services(
   auto const total_bytes =
       collect_files(hrd_root / c.fplan_, c.fplan_file_extension_, files);
 
-  auto& progress_tracker = utl::get_active_progress_tracker();
-  progress_tracker.status("Parse HRD Services")
+  auto progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker->status("Parse HRD Services")
       .out_bounds(0.F, 80.F)
       .in_high(total_bytes);
 
   auto total_consumed = size_t{0ULL};
   auto const progress_update = [&](std::size_t const file_consumed) {
-    progress_tracker.update(total_consumed + file_consumed);
+    progress_tracker->update(total_consumed + file_consumed);
   };
 
   for (auto const& [i, file] : utl::enumerate(files)) {
@@ -268,7 +268,7 @@ void hrd_parser::parse(fs::path const& hrd_root, FlatBufferBuilder& fbb,
       c);
 
   // compute and build rule services
-  utl::get_active_progress_tracker().status("Generate Rule Services");
+  utl::get_active_progress_tracker()->status("Generate Rule Services");
   rsb.resolve_rule_services();
   rsb.create_rule_services(
       [&](hrd_service const& s, bool is_rule_service, FlatBufferBuilder& fbb) {

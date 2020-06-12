@@ -409,8 +409,8 @@ void parking::import(registry& reg) {
 
           std::vector<motis::parking::parking_lot> parking_data;
 
-          auto& progress_tracker = utl::get_active_progress_tracker();
-          progress_tracker.status("Extract Parkings");
+          auto progress_tracker = utl::get_active_progress_tracker();
+          progress_tracker->status("Extract Parkings");
 
           utl::verify(extract_parkings(osm_ev->path()->str(), parking_file(),
                                        parking_data),
@@ -419,7 +419,7 @@ void parking::import(registry& reg) {
           auto park = parkings{std::move(parking_data)};
           auto st = stations{get_schedule()};
 
-          progress_tracker.status("Compute Foot Edges");
+          progress_tracker->status("Compute Foot Edges");
           compute_foot_edges(st, park, footedges_db_file(),
                              ppr_ev->graph_path()->str(), edge_rtree_max_size_,
                              area_rtree_max_size_, lock_rtrees_, ppr_profiles,

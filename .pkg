@@ -1,7 +1,7 @@
 [address-typeahead]
   url=git@github.com:motis-project/address-typeahead.git
   branch=master
-  commit=108d77c0f0bf5c30bfde892f24f05550e5b3e2dc
+  commit=f047113b0197d413663d78b0c40129d467d628a0
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -49,7 +49,7 @@
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
-  commit=a03c1568503fb12830ca8f34c2a357739635d75a
+  commit=2a68bf1242aab63ad6dc96b5c15eb064ac8e55a9
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
@@ -77,4 +77,4 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=8ccc9be49342148ae2f1a54d8433492210001f22
+  commit=55c1f939c12aa3f9b0279761766a6bf980be6e01

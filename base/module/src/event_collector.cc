@@ -23,7 +23,7 @@ event_collector::event_collector(std::string data_dir, std::string module_name,
       op_{std::move(op)},
       progress_tracker_{
           utl::get_global_progress_trackers().get_tracker(module_name_)} {
-  progress_tracker_.status("WAITING").show_progress(false);
+  progress_tracker_->status("WAITING").show_progress(false);
 }
 
 event_collector* event_collector::require(
@@ -43,7 +43,7 @@ event_collector* event_collector::require(
         // Dummy message asking for initial status.
         // Send "waiting for" dependencies list.
         if (msg->get()->content_type() == MsgContent_MotisSuccess) {
-          progress_tracker_.status(fmt::format("WAITING: {}", waiting_for_));
+          progress_tracker_->status(fmt::format("WAITING: {}", waiting_for_));
           return nullptr;
         }
 
@@ -66,23 +66,22 @@ event_collector* event_collector::require(
         dependencies_[name] = msg;
         waiting_for_.erase(name);
         if (!waiting_for_.empty()) {
-          progress_tracker_.status(fmt::format("WAITING: {}", waiting_for_));
+          progress_tracker_->status(fmt::format("WAITING: {}", waiting_for_));
           return nullptr;  // Still waiting for a message.
         }
 
         // All messages arrived -> start.
-        activate_progress_tracker(progress_tracker_)
-            .status("RUNNING")
-            .show_progress(true);
+        activate_progress_tracker(progress_tracker_);
+        progress_tracker_->status("RUNNING").show_progress(true);
         try {
           executed_ = true;
           op_(dependencies_);
-          progress_tracker_.status("FINISHED").show_progress(false);
+          progress_tracker_->status("FINISHED").show_progress(false);
         } catch (std::exception const& e) {
-          progress_tracker_.status(fmt::format("ERROR: {}", e.what()))
+          progress_tracker_->status(fmt::format("ERROR: {}", e.what()))
               .show_progress(false);
         } catch (...) {
-          progress_tracker_.status("ERROR: UNKNOWN EXCEPTION")
+          progress_tracker_->status("ERROR: UNKNOWN EXCEPTION")
               .show_progress(false);
         }
 

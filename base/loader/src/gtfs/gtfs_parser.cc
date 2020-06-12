@@ -266,8 +266,8 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   };
 
   motis::logging::scoped_timer export_timer{"export"};
-  auto& progress_tracker = utl::get_active_progress_tracker();
-  progress_tracker.status("Export schedule.raw")
+  auto progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker->status("Export schedule.raw")
       .out_bounds(40.F, 80.F)
       .in_high(trips.size());
   auto const interval =
@@ -333,7 +333,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   auto output_services =
       utl::all(trips)  //
       | utl::remove_if([&](auto const& entry) {
-          progress_tracker.increment();
+          progress_tracker->increment();
           auto const stop_count = entry.second->stops().size();
           if (stop_count < 2) {
             LOG(warn) << "invalid trip " << entry.first << ": "

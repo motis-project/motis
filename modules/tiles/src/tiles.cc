@@ -106,11 +106,11 @@ void tiles::import(mm::registry& reg) {
             coastline_hash, coastline_size};
         if (mm::read_ini<import_state>(dir / "import.ini") != state) {
           fs::create_directories(dir);
-          auto& progress_tracker = utl::get_active_progress_tracker();
+          auto progress_tracker = utl::get_active_progress_tracker();
 
           auto const db_fname = dir / "tiles.mdb";
 
-          progress_tracker.status("Clear Database");
+          progress_tracker->status("Clear Database");
           ::tiles::clear_database(path);
           ::tiles::clear_pack_file(path.c_str());
 
@@ -124,19 +124,19 @@ void tiles::import(mm::registry& reg) {
                 pack_handle};
 
             if (use_coastline_) {
-              progress_tracker.status("Load Coastlines").out_bounds(0, 20);
+              progress_tracker->status("Load Coastlines").out_bounds(0, 20);
               ::tiles::load_coastlines(db_handle, inserter, coastline_path);
             }
 
-            progress_tracker.status("Load Features").out_bounds(20, 70);
+            progress_tracker->status("Load Features").out_bounds(20, 70);
             ::tiles::load_osm(db_handle, inserter, osm_path,
                               profile_path.string(), dir.generic_string());
           }
 
-          progress_tracker.status("Pack Features").out_bounds(70, 90);
+          progress_tracker->status("Pack Features").out_bounds(70, 90);
           ::tiles::pack_features(db_handle, pack_handle);
 
-          progress_tracker.status("Prepare Tiles").out_bounds(90, 100);
+          progress_tracker->status("Prepare Tiles").out_bounds(90, 100);
           ::tiles::prepare_tiles(db_handle, pack_handle, 10);
         }
 
