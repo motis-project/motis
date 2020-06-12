@@ -22,6 +22,9 @@ if (APPLE)
 
   # Allow deprecated auto_ptr (e.g. in luabind)
   add_definitions(-D_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
+
+  # Silence linking warnings.
+  add_compile_options(-fvisibility-inlines-hidden -fvisibility=hidden)
 endif()
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
