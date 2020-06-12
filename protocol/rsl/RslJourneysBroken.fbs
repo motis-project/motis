@@ -24,7 +24,8 @@ table RslJourney {
 }
 
 table RslPassengerGroup {
-  id: long;
+  id: ulong;
+  sub_id: ulong;
   passenger_count: uint;
   planned_journey: RslJourney;
 }

@@ -46,7 +46,8 @@ Offset<RslJourney> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
 Offset<RslPassengerGroup> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
                                  passenger_group const& pg) {
   return CreateRslPassengerGroup(
-      fbb, 0, pg.passengers_, to_fbs(sched, fbb, pg.compact_planned_journey_));
+      fbb, pg.id_, pg.sub_id_, pg.passengers_,
+      to_fbs(sched, fbb, pg.compact_planned_journey_));
 }
 
 Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
