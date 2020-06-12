@@ -263,7 +263,7 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           name: motis-linux
-          path: motis-linux.tar.bz2
+          path: motis-${{ matrix.config.os }}.tar.bz2
 
       # ==== RELEASE ====
       - name: Upload Release
