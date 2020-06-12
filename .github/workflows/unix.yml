@@ -128,7 +128,7 @@ jobs:
       - name: Boost for libc++
         if: contains(matrix.config.cxxflags, 'libc++') && !contains(matrix.config.cxxflags, '-fsanitize=address') && steps.libcxxboostcache.outputs.cache-hit != 'true'
         run: |
-          echo "using clang : 9 : /usr/bin/clang++-9 ;" > $HOME/user-config.jam
+          echo "using clang : 9 : ${{ matrix.config.cxx }} ;" > $HOME/user-config.jam
           wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.bz2
           tar xf boost_1_72_0.tar.bz2
           cd boost_1_72_0
@@ -149,7 +149,7 @@ jobs:
       - name: Boost for libc++ asan
         if: contains(matrix.config.cxxflags, 'libc++') && contains(matrix.config.cxxflags, '-fsanitize=address') && steps.libcxxboostasancache.outputs.cache-hit != 'true'
         run: |
-          echo "using clang : 9 : /usr/bin/clang++-9 ;" > $HOME/user-config.jam
+          echo "using clang : 9 : /usr/bin/${{ matrix.config.cxx }} ;" > $HOME/user-config.jam
           wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.bz2
           tar xf boost_1_72_0.tar.bz2
           mv boost_1_72_0 boost_1_72_0_asan
