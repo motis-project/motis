@@ -26,8 +26,13 @@ TEST(core_late_connections, time_off) {
 class core_hotel_edges : public test::motis_instance_test {
 protected:
   core_hotel_edges()
-      : test::motis_instance_test({"test/schedule/schedule_hotels/", "20151019",
-                                   2, false, false, false, true},
+      : test::motis_instance_test({{"test/schedule/schedule_hotels/"},
+                                   "20151019",
+                                   2,
+                                   false,
+                                   false,
+                                   false,
+                                   true},
                                   {""}) {}
 };
 

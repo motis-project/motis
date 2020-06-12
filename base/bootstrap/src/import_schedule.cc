@@ -2,58 +2,92 @@
 
 #include "boost/filesystem.hpp"
 
+#include "utl/pipes.h"
+
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/schedule_data_key.h"
 #include "motis/module/clog_redirect.h"
 #include "motis/module/context/motis_publish.h"
+#include "motis/module/event_collector.h"
+#include "motis/module/message.h"
+#include "motis/bootstrap/import_settings.h"
 #include "motis/loader/loader.h"
 
 namespace fs = boost::filesystem;
+namespace mm = motis::module;
 
 namespace motis::bootstrap {
 
-module::msg_ptr import_schedule(loader::loader_options const& dataset_opt,
-                                module::msg_ptr const& msg,
-                                motis_instance& instance) {
-  if (msg->get()->content_type() != MsgContent_FileEvent) {
-    return nullptr;
-  }
+void register_import_schedule(motis_instance& instance,
+                              loader::loader_options const& dataset_opt,
+                              std::string data_dir) {
+  std::make_shared<mm::event_collector>(
+      data_dir, "schedule", instance,
+      [&, dataset_opt](std::map<std::string, mm::msg_ptr> const& dependencies) {
+        auto const& msg = dependencies.at("SCHEDULE");
 
-  using import::FileEvent;
-  for (auto const* p : *motis_content(FileEvent, msg)->paths()) {
-    auto const& path = fs::path{p->str()};
-    if (!fs::is_directory(path)) {
-      continue;
-    }
+        auto const parsers = loader::parsers();
+        using import::FileEvent;
+        auto dataset_opt_cpy = dataset_opt;
+        dataset_opt_cpy.dataset_ =
+            utl::all(*motis_content(FileEvent, msg)->paths())  //
+            | utl::transform([](auto&& p) { return p->str(); })  //
+            | utl::remove_if([&](auto&& p) {
+                return std::none_of(
+                    begin(parsers), end(parsers),
+                    [&](auto const& parser) { return parser->applicable(p); });
+              })  //
+            | utl::vec();
+        utl::verify(!dataset_opt_cpy.dataset_.empty(),
+                    "import_schedule: dataset_opt.dataset_.empty()");
 
-    auto dataset_opt_cpy = dataset_opt;
-    dataset_opt_cpy.dataset_ = path.generic_string();
+        cista::memory_holder memory;
+        auto sched = loader::load_schedule(dataset_opt_cpy, memory);
+        instance.shared_data_.emplace_data(
+            SCHEDULE_DATA_KEY,
+            schedule_data{std::move(memory), std::move(sched)});
 
-    try {
-      cista::memory_holder memory;
-      auto sched = loader::load_schedule(dataset_opt_cpy, memory);
-      instance.shared_data_.emplace_data(
-          SCHEDULE_DATA_KEY,
-          schedule_data{std::move(memory), std::move(sched)});
+        module::message_creator fbb;
+        fbb.create_and_finish(
+            MsgContent_ScheduleEvent,
+            import::CreateScheduleEvent(
+                fbb,
+                fbb.CreateString(
+                    ""),  // TODO
+                          // (fs::path{p} / "schedule.raw").generic_string()),
+                instance.sched().hash_)
+                .Union(),
+            "/import", DestinationType_Topic);
+        motis_publish(make_msg(fbb));
+        return nullptr;
+      })
+      ->require("SCHEDULE", [](mm::msg_ptr const& msg) {
+        if (msg->get()->content_type() != MsgContent_FileEvent) {
+          return false;
+        }
 
-      module::message_creator fbb;
-      fbb.create_and_finish(
-          MsgContent_ScheduleEvent,
-          import::CreateScheduleEvent(
-              fbb,
-              fbb.CreateString(
-                  (fs::path{path} / "schedule.raw").generic_string()),
-              instance.sched().hash_)
-              .Union(),
-          "/import", DestinationType_Topic);
-      motis_publish(make_msg(fbb));
+        auto any_applicable = false;
+        using import::FileEvent;
+        auto const parsers = loader::parsers();
+        for (auto const* p : *motis_content(FileEvent, msg)->paths()) {
+          auto const& path = p->str();
+          auto const applicable = std::any_of(
+              begin(parsers), end(parsers),
+              [&](auto const& parser) { return parser->applicable(path); });
 
-    } catch (std::exception const&) {
-      continue;
-    }
-    break;
-  }
-  return nullptr;
+          if (!applicable) {
+            std::clog << "import_schedule: no parser for " << path << "\n";
+            for (auto const& parser : parsers) {
+              std::clog << "missing files:\n";
+              for (auto const& file : parser->missing_files(path)) {
+                std::clog << "  " << file << "\n";
+              }
+            }
+          }
+          any_applicable = any_applicable || applicable;
+        }
+        return any_applicable;
+      });
 }
 
 }  // namespace motis::bootstrap

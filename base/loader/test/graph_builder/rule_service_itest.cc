@@ -80,7 +80,7 @@ std::vector<int> trip_train_nrs_at(
 struct loader_graph_builder_rule_service : public motis_instance_test {
   loader_graph_builder_rule_service()
       : motis_instance_test(
-            {(hrd::SCHEDULES / "mss-ts").generic_string(), "20151124"},
+            {{(hrd::SCHEDULES / "mss-ts").generic_string()}, "20151124"},
             {"routing"}) {}
 };
 
@@ -88,7 +88,7 @@ struct loader_graph_builder_rule_service_standalone
     : public motis_instance_test {
   loader_graph_builder_rule_service_standalone()
       : motis_instance_test(
-            {(hrd::SCHEDULES / "mss-ts-standalone").generic_string(),
+            {{(hrd::SCHEDULES / "mss-ts-standalone").generic_string()},
              "20160518"},
             {"routing"}) {}
 };

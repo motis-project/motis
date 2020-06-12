@@ -6,10 +6,11 @@ namespace motis {
 
 template <typename T>
 struct typed_flatbuffer {
-  explicit typed_flatbuffer(flatbuffers::FlatBufferBuilder&& fbb)
+  explicit typed_flatbuffer(FLATBUFFERS_NAMESPACE::FlatBufferBuilder&& fbb)
       : buffer_size_(fbb.GetSize()), buffer_(fbb.ReleaseBufferPointer()) {}
 
-  typed_flatbuffer(size_t buffer_size, flatbuffers::unique_ptr_t buffer)
+  typed_flatbuffer(size_t buffer_size,
+                   FLATBUFFERS_NAMESPACE::unique_ptr_t buffer)
       : buffer_size_(buffer_size), buffer_(std::move(buffer)) {}
 
   explicit typed_flatbuffer(size_t buffer_size)
@@ -43,14 +44,16 @@ struct typed_flatbuffer {
   uint8_t const* data() const { return buffer_.get(); }
   size_t size() const { return buffer_size_; }
 
-  T* get() const { return flatbuffers::GetMutableRoot<T>(buffer_.get()); };
+  T* get() const {
+    return FLATBUFFERS_NAMESPACE::GetMutableRoot<T>(buffer_.get());
+  };
 
   std::string to_string() const {
     return {reinterpret_cast<char const*>(data()), size()};
   }
 
   size_t buffer_size_;
-  flatbuffers::unique_ptr_t buffer_;
+  FLATBUFFERS_NAMESPACE::unique_ptr_t buffer_;
 };
 
 }  // namespace motis

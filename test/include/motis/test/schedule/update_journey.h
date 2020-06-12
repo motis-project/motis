@@ -10,7 +10,7 @@
 
 namespace motis::test::schedule::update_journey {
 
-static loader::loader_options dataset_opt{"test/schedule/update_journey",
+static loader::loader_options dataset_opt{{"test/schedule/update_journey"},
                                           "20161124"};
 
 motis::module::msg_ptr get_free_text_ris_msg(

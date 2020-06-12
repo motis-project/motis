@@ -8,6 +8,7 @@
 #include "utl/get_or_create.h"
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "date/date.h"
 
@@ -840,10 +841,12 @@ route_section graph_builder::add_route_section(
   return section;
 }
 
-schedule_ptr build_graph(Schedule const* serialized, loader_options const& opt,
-                         unsigned progress_offset) {
-  scoped_timer timer("building graph");
+schedule_ptr build_graph(std::vector<Schedule const*> fbs_schedule,
+                         loader_options const& opt, unsigned progress_offset) {
+  utl::verify(fbs_schedule.size() == 1, "multiple schedules not implemented");
+  auto serialized = fbs_schedule.front();
 
+  scoped_timer timer("building graph");
   LOG(info) << "schedule: " << serialized->name()->str();
 
   schedule_ptr sched(new schedule());

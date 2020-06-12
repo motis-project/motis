@@ -10,7 +10,7 @@ struct schedule;
 namespace test::schedule::gtfs_minimal_swiss {
 
 static loader::loader_options dataset_opt{
-    .dataset_ = "test/schedule/gtfs_minimal_swiss",
+    .dataset_ = {"test/schedule/gtfs_minimal_swiss"},
     .schedule_begin_ = "20190625",
     .num_days_ = 6,
     .apply_rules_ = false};

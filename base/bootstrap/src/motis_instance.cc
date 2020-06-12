@@ -15,7 +15,6 @@
 #include "motis/core/schedule/schedule_data_key.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
-#include "motis/module/event_collector.h"
 #include "motis/bootstrap/import_files.h"
 #include "motis/bootstrap/import_schedule.h"
 #include "motis/loader/loader.h"
@@ -68,35 +67,7 @@ void motis_instance::import(module_settings const& module_opt,
   auto bars = utl::global_progress_bars{silent};
 
   registry_.subscribe("/import", import_files);
-
-  std::make_shared<event_collector>(
-      import_opt.data_directory_, "schedule", registry_,
-      [&](std::map<std::string, msg_ptr> const& dependencies) {
-        import_schedule(dataset_opt, dependencies.at("SCHEDULE"), *this);
-      })
-      ->require("SCHEDULE", [](msg_ptr const& msg) {
-        if (msg->get()->content_type() != MsgContent_FileEvent) {
-          return false;
-        }
-
-        using import::FileEvent;
-        for (auto const* p : *motis_content(FileEvent, msg)->paths()) {
-          auto const path = fs::path{p->str()};
-          for (auto const& parser : loader::parsers()) {
-            if (parser->applicable(path)) {
-              return true;
-            }
-          }
-
-          for (auto const& parser : loader::parsers()) {
-            std::clog << "missing files in " << path << ":\n";
-            for (auto const& file : parser->missing_files(path)) {
-              std::clog << "  " << file << "\n";
-            }
-          }
-        }
-        return false;
-      });
+  register_import_schedule(*this, dataset_opt, import_opt.data_directory_);
 
   for (auto const& module : modules_) {
     if (module_opt.is_module_active(module->module_name())) {
@@ -105,6 +76,7 @@ void motis_instance::import(module_settings const& module_opt,
     }
   }
 
+  // Dummy message to trigger initial progress updates.
   publish(make_success_msg("/import"), 1);
 
   message_creator fbb;

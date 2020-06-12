@@ -3,6 +3,7 @@
 #include <ctime>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "motis/core/schedule/time.h"
 
@@ -12,7 +13,7 @@ struct loader_options {
   std::pair<std::time_t, std::time_t> interval() const;
   std::string graph_path() const;
 
-  std::string dataset_{"rohdaten"};
+  std::vector<std::string> dataset_{"rohdaten"};
   std::string schedule_begin_{"TODAY"};
   int num_days_{2};
   bool write_serialized_{false};
