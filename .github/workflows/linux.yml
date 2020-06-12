@@ -100,14 +100,22 @@ jobs:
       - name: libc++ Boost Cache
         uses: actions/cache@v1
         id: libcxxboostcache
-        if: contains(matrix.config.cxxflags, 'libc++')
+        if: contains(matrix.config.cxxflags, 'libc++') && !contains(matrix.config.cxxflags, '-fsanitize=address')
         with:
           path: boost_1_72_0
           key: boost_1_72_0
 
+      - name: libc++ Boost asan Cache
+        uses: actions/cache@v1
+        id: libcxxboostasancache
+        if: contains(matrix.config.cxxflags, 'libc++') && contains(matrix.config.cxxflags, '-fsanitize=address')
+        with:
+          path: boost_1_72_0_asan
+          key: boost_1_72_0_asan
+
       # ==== BOOST FOR LIBCXX ====
       - name: Boost for libc++
-        if: contains(matrix.config.cxxflags, 'libc++') && steps.libcxxboostcache.outputs.cache-hit != 'true'
+        if: contains(matrix.config.cxxflags, 'libc++') && !contains(matrix.config.cxxflags, '-fsanitize=address') && steps.libcxxboostcache.outputs.cache-hit != 'true'
         run: |
           echo "using clang : 9 : /usr/bin/clang++-9 ;" > $HOME/user-config.jam
           wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.bz2
@@ -127,9 +135,35 @@ jobs:
             --with-serialization \
             -s NO_BZIP2=1
 
+      - name: Boost for libc++ asan
+        if: contains(matrix.config.cxxflags, 'libc++') && contains(matrix.config.cxxflags, '-fsanitize=address') && steps.libcxxboostasancache.outputs.cache-hit != 'true'
+        run: |
+          echo "using clang : 9 : /usr/bin/clang++-9 ;" > $HOME/user-config.jam
+          wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.bz2
+          tar xf boost_1_72_0.tar.bz2
+          mv boost_1_72_0 boost_1_72_0_asan
+          cd boost_1_72_0_asan
+          ./bootstrap.sh
+          ./b2 -j6 \
+            link=static threading=multi variant=release \
+            toolset=clang-9 cxxflags="-fsanitize=address,undefined -fno-omit-frame-pointer -stdlib=libc++" \
+            --with-system \
+            --with-filesystem \
+            --with-iostreams \
+            --with-program_options \
+            --with-thread \
+            --with-date_time \
+            --with-regex \
+            --with-serialization \
+            -s NO_BZIP2=1
+
       - name: Set BOOST_ROOT
-        if: contains(matrix.config.cxxflags, 'libc++')
+        if: contains(matrix.config.cxxflags, 'libc++') && !contains(matrix.config.cxxflags, '-fsanitize=address')
         run: echo "::set-env name=BOOST_ROOT::`pwd`/boost_1_72_0"
+
+      - name: Set BOOST_ROOT asan
+        if: contains(matrix.config.cxxflags, 'libc++') && contains(matrix.config.cxxflags, '-fsanitize=address')
+        run: echo "::set-env name=BOOST_ROOT::`pwd`/boost_1_72_0_asan"
 
       # ==== BUILD ====
       - name: CMake
@@ -160,7 +194,8 @@ jobs:
           ./build/motis --mode test \
             --import.paths base/loader/test_resources/hrd_schedules/single-ice \
             --dataset.begin 20151111 \
-            --dataset.write_serialized false
+            --dataset.write_serialized false \
+            --exclude_modules address osrm parking path ppr tiles
 
       - name: Run Tests
         run: ./build/motis-test
