@@ -113,7 +113,7 @@ jobs:
         id: libcxxboostcache
         if: contains(matrix.config.cxxflags, 'libc++') && !contains(matrix.config.cxxflags, '-fsanitize=address')
         with:
-          path: boost_1_72_0-${{ matrix.config.os }}
+          path: boost_1_72_0
           key: boost_1_72_0-${{ matrix.config.os }}
 
       - name: libc++ Boost asan Cache
@@ -122,7 +122,7 @@ jobs:
         if: contains(matrix.config.cxxflags, 'libc++') && contains(matrix.config.cxxflags, '-fsanitize=address')
         with:
           path: boost_1_72_0_asan
-          key: boost_1_72_0_asan
+          key: boost_1_72_0_asan-${{ matrix.config.os }}
 
       # ==== BOOST FOR LIBCXX ====
       - name: Boost for libc++
