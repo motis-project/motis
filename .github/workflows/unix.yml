@@ -1,4 +1,4 @@
-name: Linux Build
+name: Unix Build
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   formatting:
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
@@ -23,24 +23,33 @@ jobs:
           git status --porcelain
           git status --porcelain | xargs -I {} -0 test -z \"{}\"
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.config.os }}
     strategy:
       matrix:
         config:
+          - name: Mac OS X
+            cxx: clang++
+            cc: clang
+            mode: Release
+            cxxflags: -stdlib=libc++
+            os: 'macos-latest'
           - name: GCC 9 Release
             cxx: g++-9
             cc: gcc-9
             mode: Release
+            os: 'ubuntu-latest'
           - name: GCC 9 Debug
             cxx: g++-9
             cc: gcc-9
             mode: Debug
+            os: 'ubuntu-latest'
           - name: Clang 9 Release
             cxx: clang++-9
             cc: clang-9
             mode: Release
             cxxflags: -stdlib=libc++
             ldflags: -lc++abi
+            os: 'ubuntu-latest'
           - name: Clang Tidy
             cxx: clang++-9
             cc: clang-9
@@ -48,6 +57,7 @@ jobs:
             cxxflags: -stdlib=libc++
             ldflags: -lc++abi
             lint: true
+            os: 'ubuntu-latest'
           - key: Clang 9 Sanitizer
             cxx: clang++-9
             cc: clang-9
@@ -55,6 +65,7 @@ jobs:
             cflags: -fsanitize=address,undefined -fno-omit-frame-pointer
             cxxflags: -fsanitize=address,undefined -fno-omit-frame-pointer -stdlib=libc++
             ldflags: -lc++abi
+            os: 'ubuntu-latest'
     env:
       BOOST_ROOT: /usr/local/share/boost/1.72.0
       BUILDCACHE_COMPRESS: true
@@ -68,7 +79,7 @@ jobs:
 
       # ==== INSTALL ====
       - name: Install LLVM
-        if: matrix.config.cc == 'clang-9'
+        if: matrix.config.os != 'macos-latest' && matrix.config.cc == 'clang-9'
         env:
           DEBIAN_FRONTEND: noninteractive
         run: sudo apt-get install -y --no-install-recommends libc++-9-dev libc++abi-9-dev clang-tidy-9
@@ -84,11 +95,11 @@ jobs:
         uses: actions/cache@v1.1.2
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ contains(matrix.config.cxxflags, 'sanitize') }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          key: buildcache-${{ matrix.config.os }}-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ contains(matrix.config.cxxflags, 'sanitize') }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
-            buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ contains(matrix.config.cxxflags, 'sanitize') }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
-            buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ contains(matrix.config.cxxflags, 'sanitize') }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-
-            buildcache-linux-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ contains(matrix.config.cxxflags, 'sanitize') }}-${{ matrix.config.lint }}-
+            buildcache-${{ matrix.config.os }}-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ contains(matrix.config.cxxflags, 'sanitize') }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-${{ matrix.config.os }}-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ contains(matrix.config.cxxflags, 'sanitize') }}-${{ matrix.config.lint }}-${{ hashFiles('.pkg') }}-
+            buildcache-${{ matrix.config.os }}-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ contains(matrix.config.cxxflags, 'sanitize') }}-${{ matrix.config.lint }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
@@ -103,7 +114,7 @@ jobs:
         if: contains(matrix.config.cxxflags, 'libc++') && !contains(matrix.config.cxxflags, '-fsanitize=address')
         with:
           path: boost_1_72_0
-          key: boost_1_72_0
+          key: boost_1_72_0-${{ matrix.config.os }}
 
       - name: libc++ Boost asan Cache
         uses: actions/cache@v1
@@ -111,13 +122,13 @@ jobs:
         if: contains(matrix.config.cxxflags, 'libc++') && contains(matrix.config.cxxflags, '-fsanitize=address')
         with:
           path: boost_1_72_0_asan
-          key: boost_1_72_0_asan
+          key: boost_1_72_0_asan-${{ matrix.config.os }}
 
       # ==== BOOST FOR LIBCXX ====
       - name: Boost for libc++
         if: contains(matrix.config.cxxflags, 'libc++') && !contains(matrix.config.cxxflags, '-fsanitize=address') && steps.libcxxboostcache.outputs.cache-hit != 'true'
         run: |
-          echo "using clang : 9 : /usr/bin/clang++-9 ;" > $HOME/user-config.jam
+          echo "using clang : 9 : ${{ matrix.config.cxx }} ;" > $HOME/user-config.jam
           wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.bz2
           tar xf boost_1_72_0.tar.bz2
           cd boost_1_72_0
@@ -138,7 +149,7 @@ jobs:
       - name: Boost for libc++ asan
         if: contains(matrix.config.cxxflags, 'libc++') && contains(matrix.config.cxxflags, '-fsanitize=address') && steps.libcxxboostasancache.outputs.cache-hit != 'true'
         run: |
-          echo "using clang : 9 : /usr/bin/clang++-9 ;" > $HOME/user-config.jam
+          echo "using clang : 9 : /usr/bin/${{ matrix.config.cxx }} ;" > $HOME/user-config.jam
           wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.bz2
           tar xf boost_1_72_0.tar.bz2
           mv boost_1_72_0 boost_1_72_0_asan
@@ -225,11 +236,11 @@ jobs:
 
       # ==== DISTRIBUTION ====
       - name: Strip Executable
-        if: matrix.config.mode == 'Release' && matrix.config.cc == 'gcc-9'
+        if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-9' || matrix.config.os == 'macos-latest')
         run: strip build/motis
 
       - name: Compile Web Interface
-        if: matrix.config.mode == 'Release' && matrix.config.cc == 'gcc-9'
+        if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-9' || matrix.config.os == 'macos-latest')
         run: |
           cd ./ui/web
           npm install
@@ -237,7 +248,7 @@ jobs:
           rm -rf node_modules
 
       - name: Create Distribution
-        if: matrix.config.mode == 'Release' && matrix.config.cc == 'gcc-9'
+        if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-9' || matrix.config.os == 'macos-latest')
         run: |
           mkdir motis
           mv ui/web motis
@@ -245,23 +256,23 @@ jobs:
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
           cp -r deps/ppr/profiles motis/ppr-profiles
           cp -r deps/tiles/profile motis/tiles-profiles
-          tar cjf motis-linux.tar.bz2 motis
+          tar cjf motis-${{ matrix.config.os }}.tar.bz2 motis
 
       - name: Upload Distribution
-        if: matrix.config.mode == 'Release' && matrix.config.cc == 'gcc-9'
+        if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-9' || matrix.config.os == 'macos-latest')
         uses: actions/upload-artifact@v1
         with:
-          name: motis-linux
-          path: motis-linux.tar.bz2
+          name: motis-${{ matrix.config.os }}
+          path: motis-${{ matrix.config.os }}.tar.bz2
 
       # ==== RELEASE ====
       - name: Upload Release
-        if: github.event.action == 'published' && matrix.config.mode == 'Release' && matrix.config.cc == 'gcc-9'
+        if: github.event.action == 'published' && matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-9' || matrix.config.os == 'macos-latest')
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./motis-linux.tar.bz2
-          asset_name: motis-linux.tar.bz2
+          asset_path: ./motis-${{ matrix.config.os }}.tar.bz2
+          asset_name: motis-${{ matrix.config.os }}.tar.bz2
           asset_content_type: application/x-tar
