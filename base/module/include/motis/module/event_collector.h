@@ -49,7 +49,7 @@ private:
   std::set<std::string> waiting_for_;
   std::set<dependency_matcher> matchers_;
   bool executed_{false};
-  utl::progress_tracker& progress_tracker_;
+  utl::progress_tracker_ptr progress_tracker_;
 };
 
 }  // namespace motis::module

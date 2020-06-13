@@ -678,10 +678,6 @@ void tripbased::init(motis::module::registry& reg) {
       impl_ = std::make_unique<impl>(
           load_data(get_sched(), filename.generic_string()));
     } else {
-      auto& p = utl::get_global_progress_trackers();
-      auto const reset_silent =
-          utl::make_raii(p.silent_, [&](auto const s) { p.silent_ = s; });
-      p.silent_ = true;
       impl_ = std::make_unique<impl>(build_data(get_sched()));
     }
 

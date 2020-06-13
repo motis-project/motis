@@ -67,11 +67,7 @@ void motis_instance::import(module_settings const& module_opt,
                             loader::loader_options const& dataset_opt,
                             import_settings const& import_opt,
                             bool const silent) {
-  auto& progress = utl::get_global_progress_trackers();
-  auto const reset_silent = utl::make_raii(
-      progress.silent_,
-      [&](auto const old_silent) { progress.silent_ = old_silent; });
-  progress.silent_ = silent;
+  auto bars = utl::global_progress_bars{silent};
 
   registry_.subscribe("/import", import_osm);
   registry_.subscribe("/import", import_dem);

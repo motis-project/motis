@@ -33,12 +33,12 @@ std::map<std::string, std::vector<calendar_date>> read_calendar_date(
   motis::logging::scoped_timer timer{"calendar dates"};
   std::map<std::string, std::vector<calendar_date>> services;
   auto const entries = read<gtfs_calendar_date>(f.content(), calendar_columns);
-  auto& progress_tracker = utl::get_active_progress_tracker();
-  progress_tracker.status("Parse Calendar Dates")
+  auto progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker->status("Parse Calendar Dates")
       .out_bounds(0.F, 5.F)
       .in_high(entries.size());
   for (auto const& d : entries) {
-    progress_tracker.increment();
+    progress_tracker->increment();
     services[get<service_id>(d).to_str()].push_back(read_date(d));
   }
   return services;

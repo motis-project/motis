@@ -132,11 +132,11 @@ void compute_foot_edges(
   std::clog << "Precomputing foot edges for " << max << " parkings..."
             << std::endl;
 
-  auto& progress_tracker = utl::get_active_progress_tracker();
-  progress_tracker.reset_bounds().in_high(max);
+  auto progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker->reset_bounds().in_high(max);
   for (auto const& [i, p] : utl::enumerate(park.parkings_)) {
     pool.post([&, i = i, &p = p] {
-      progress_tracker.increment();
+      progress_tracker->increment();
       compute_edges(db, rg, st, ppr_profiles, p, stations_per_parking, i);
     });
   }

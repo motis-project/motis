@@ -53,7 +53,7 @@ struct plan_executor {
     ml::scoped_timer t{"resolve_sequences"};
     start_ = sc::steady_clock::now();
 
-    progress_tracker_.status("Resolve Sequences")
+    progress_tracker_->status("Resolve Sequences")
         .reset_bounds()
         .in_high(pp_.part_task_queue_.size());
 
@@ -263,7 +263,7 @@ struct plan_executor {
         std::count_if(begin(result_caches_), end(result_caches_),
                       [](auto const& r) { return r != nullptr; });
 
-    progress_tracker_.update(curr_part_task);
+    progress_tracker_->update(curr_part_task);
 
     std::clog << "resolve_sequences [" << microsecond_fmt{t_curr} << " | est. "
               << microsecond_fmt{t_est} << "] ("  //
@@ -305,7 +305,7 @@ struct plan_executor {
 
   sc::time_point<sc::steady_clock> start_;
   execution_stats stats_;
-  utl::progress_tracker& progress_tracker_;
+  utl::progress_tracker_ptr progress_tracker_;
 };
 
 std::vector<resolved_station_seq> resolve_sequences(
