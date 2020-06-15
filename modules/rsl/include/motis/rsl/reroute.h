@@ -45,7 +45,7 @@ inline std::ostream& operator<<(std::ostream& o, diff_op const op) {
   return o;
 }
 
-std::vector<trip_ev_key> to_trip_ev_keys(trip_data const& td);
+std::vector<trip_ev_key> to_trip_ev_keys(trip_data const& td, graph const& g);
 
 std::vector<trip_ev_key> to_trip_ev_keys(
     schedule const& sched,

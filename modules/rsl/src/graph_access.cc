@@ -83,9 +83,9 @@ trip_data* get_or_add_trip(schedule const& sched, rsl_data& data,
 
 void add_interchange_edges(event_node const* evn,
                            std::vector<edge*>& updated_interchange_edges,
-                           system_statistics& system_stats) {
+                           graph const& g, system_statistics& system_stats) {
   if (evn->type_ == event_type::ARR) {
-    return utl::all(evn->out_edges_)  //
+    return utl::all(evn->outgoing_edges(g))  //
            | utl::transform([](auto&& e) { return e.get(); })  //
            | utl::remove_if([](auto&& e) {
                return e->type_ != edge_type::INTERCHANGE;
@@ -96,7 +96,7 @@ void add_interchange_edges(event_node const* evn,
              });
   } else /*if (evn->type_ == event_type::DEP)*/ {
     assert(evn->type_ == event_type::DEP);
-    return utl::all(evn->in_edges_)  //
+    return utl::all(evn->incoming_edges(g))  //
            | utl::remove_if([](auto&& e) {
                return e->type_ != edge_type::INTERCHANGE;
              })  //
@@ -124,23 +124,22 @@ void update_event_times(schedule const& sched, graph& g,
     auto const schedule_time =
         unix_to_motistime(sched, ue->base()->schedule_time());
     for (auto te : trip_edges->second->edges_) {
+      auto const from = te->from(g);
+      auto const to = te->to(g);
       if (ue->base()->event_type() == EventType_DEP &&
-          te->from_->type_ == event_type::DEP &&
-          te->from_->station_ == station_id &&
-          te->from_->schedule_time_ == schedule_time) {
+          from->type_ == event_type::DEP && from->station_ == station_id &&
+          from->schedule_time_ == schedule_time) {
         ++system_stats.update_event_times_dep_updated_;
-        te->from_->time_ =
+        from->time_ =
             unix_to_motistime(sched.schedule_begin_, ue->updated_time());
-        add_interchange_edges(te->from_, updated_interchange_edges,
-                              system_stats);
+        add_interchange_edges(from, updated_interchange_edges, g, system_stats);
       } else if (ue->base()->event_type() == EventType_ARR &&
-                 te->to_->type_ == event_type::ARR &&
-                 te->to_->station_ == station_id &&
-                 te->to_->schedule_time_ == schedule_time) {
+                 to->type_ == event_type::ARR && to->station_ == station_id &&
+                 to->schedule_time_ == schedule_time) {
         ++system_stats.update_event_times_arr_updated_;
-        te->to_->time_ =
+        to->time_ =
             unix_to_motistime(sched.schedule_begin_, ue->updated_time());
-        add_interchange_edges(te->to_, updated_interchange_edges, system_stats);
+        add_interchange_edges(to, updated_interchange_edges, g, system_stats);
       }
     }
   }
@@ -193,11 +192,11 @@ void update_trip_route(schedule const& sched, rsl_data& data,
               << ", valid=" << en->valid_ << "\n";
   };
   for (auto const te : td->second->edges_) {
-    print_node(te->from_);
+    print_node(te->from(data.graph_);
     std::cout << "    | " << te->type_ << " passengers=" << te->passengers_
               << ", groups=" << te->rsl_connection_info_.section_infos_.size()
               << "\n";
-    print_node(te->to_);
+    print_node(te->to(data.graph_));
     std::cout << "\n";
   }
 
@@ -287,7 +286,7 @@ void update_trip_route(schedule const& sched, rsl_data& data,
   }
   */
 
-  auto const current_teks = to_trip_ev_keys(*td->second);
+  auto const current_teks = to_trip_ev_keys(*td->second, data.graph_);
   auto const new_teks = to_trip_ev_keys(sched, *ru->new_route());
 
   /*

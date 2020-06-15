@@ -21,12 +21,12 @@ trip_ev_key to_trip_ev_key(event_node* n) {
   return {n->station_, n->schedule_time_, n->type_, n};
 }
 
-std::vector<trip_ev_key> to_trip_ev_keys(trip_data const& td) {
+std::vector<trip_ev_key> to_trip_ev_keys(trip_data const& td, graph const& g) {
   std::vector<trip_ev_key> teks;
   teks.reserve(td.edges_.size() * 2);
   for (auto const e : td.edges_) {
-    teks.emplace_back(to_trip_ev_key(e->from_));
-    teks.emplace_back(to_trip_ev_key(e->to_));
+    teks.emplace_back(to_trip_ev_key(e->from(g)));
+    teks.emplace_back(to_trip_ev_key(e->to(g)));
   }
   return teks;
 }
@@ -79,11 +79,12 @@ start:
   return diff;
 }
 
-edge* get_connecting_edge(event_node const* from, event_node const* to) {
+edge* get_connecting_edge(event_node const* from, event_node const* to,
+                          graph const& g) {
   if (from == nullptr || to == nullptr) {
     return nullptr;
   }
-  for (auto const& e : from->out_edges_) {
+  for (auto const& e : from->outgoing_edges(g)) {
     if (e->to_ == to) {
       return e.get();
     }
@@ -92,7 +93,7 @@ edge* get_connecting_edge(event_node const* from, event_node const* to) {
 }
 
 edge* connect_nodes(event_node* from, event_node* to, trip const* trp,
-                    std::uint16_t capacity) {
+                    std::uint16_t capacity, graph const& g) {
   if (from == nullptr || to == nullptr) {
     return nullptr;
   }
@@ -100,7 +101,7 @@ edge* connect_nodes(event_node* from, event_node* to, trip const* trp,
       (from->type_ == event_type::DEP && to->type_ == event_type::ARR) ||
           (from->type_ == event_type::ARR && to->type_ == event_type::DEP),
       "invalid event sequence");
-  if (auto e = get_connecting_edge(from, to); e != nullptr) {
+  if (auto e = get_connecting_edge(from, to, g); e != nullptr) {
     return e;
   }
   auto const type =
@@ -154,7 +155,7 @@ std::set<passenger_group*> collect_passenger_groups(trip_data& td) {
 }
 
 bool update_passenger_group(trip_data& td, extern_trip const& et,
-                            passenger_group* pg) {
+                            passenger_group* pg, graph const& g) {
   static constexpr auto const INVALID_INDEX =
       std::numeric_limits<std::size_t>::max();
   for (auto const& leg : pg->compact_planned_journey_.legs_) {
@@ -162,11 +163,13 @@ bool update_passenger_group(trip_data& td, extern_trip const& et,
       auto enter_index = INVALID_INDEX;
       auto exit_index = INVALID_INDEX;
       for (auto const [idx, e] : utl::enumerate(td.edges_)) {
-        if (e->from_->station_ == leg.enter_station_id_ &&
-            e->from_->schedule_time_ == leg.enter_time_) {
+        auto const from = e->from(g);
+        auto const to = e->to(g);
+        if (from->station_ == leg.enter_station_id_ &&
+            from->schedule_time_ == leg.enter_time_) {
           enter_index = idx;
-        } else if (e->to_->station_ == leg.exit_station_id_ &&
-                   e->to_->schedule_time_ == leg.exit_time_) {
+        } else if (to->station_ == leg.exit_station_id_ &&
+                   to->schedule_time_ == leg.exit_time_) {
           exit_index = idx;
           break;
         }
@@ -205,21 +208,25 @@ void apply_reroute(rsl_data& data, schedule const& sched, trip const* trp,
     /*
     std::cout << "  " << op << " " << tek;
     if (tek.node_ != nullptr) {
-      std::cout << " edges: " << tek.node_->in_edges_.size() << " in, "
-                << tek.node_->out_edges_.size() << " out";
+      std::cout << " edges: " << tek.node_->incoming_edges(data.graph_).size()
+                << " in, " << tek.node_->outgoing_edges(data.graph_).size()
+                << " out";
     }
     std::cout << "\n";
     if (tek.node_ != nullptr) {
-      for (auto const& e : tek.node_->out_edges_) {
+      for (auto const& e : tek.node_->outgoing_edges(data.graph_)) {
         if (e->type_ == edge_type::INTERCHANGE) {
-          std::cout << "      outgoing interchange: valid=" << e->is_valid()
-                    << " to station=" << e->to_->station_ << "\n";
+          std::cout << "      outgoing interchange: valid="
+                    << e->is_valid(data.graph_)
+                    << " to station=" << e->to(data.graph_)->station_ << "\n";
         }
       }
-      for (auto const& e : tek.node_->in_edges_) {
+      for (auto const& e : tek.node_->incoming_edges(data.graph_)) {
         if (e->type_ == edge_type::INTERCHANGE) {
-          std::cout << "      incoming interchange: valid=" << e->is_valid()
-                    << " from station=" << e->from_->station_ << "\n";
+          std::cout << "      incoming interchange: valid="
+                    << e->is_valid(data.graph_)
+                    << " from station=" << e->from(data.graph_)->station_
+                    << "\n";
         }
       }
     }
@@ -248,7 +255,7 @@ void apply_reroute(rsl_data& data, schedule const& sched, trip const* trp,
 
   std::vector<edge*> new_edges;
   for (auto const& [from, to] : utl::pairwise(new_nodes)) {
-    auto e = connect_nodes(from, to, trp, capacity);
+    auto e = connect_nodes(from, to, trp, capacity, data.graph_);
     new_edges.emplace_back(e);
   }
   td.edges_ = new_edges;
@@ -256,7 +263,7 @@ void apply_reroute(rsl_data& data, schedule const& sched, trip const* trp,
             std::back_inserter(td.canceled_nodes_));
 
   for (auto pg : affected_passenger_groups) {
-    update_passenger_group(td, et, pg);
+    update_passenger_group(td, et, pg, data.graph_);
   }
 
   /*
@@ -265,11 +272,11 @@ void apply_reroute(rsl_data& data, schedule const& sched, trip const* trp,
   */
 
   for (auto const n : removed_nodes) {
-    for (auto const& e : n->out_edges_) {
+    for (auto const& e : n->outgoing_edges(data.graph_)) {
       if (e->type_ == edge_type::INTERCHANGE) {
         /*
         std::cout << "--> outgoing interchange broken (to.valid="
-                  << e->to_->is_valid()
+                  << e->to(data.graph_)->is_valid()
                   << "): " << e->rsl_connection_info_.section_infos_.size()
                   << " passenger groups = " << e->passengers_
                   << " passengers\n";
@@ -277,11 +284,11 @@ void apply_reroute(rsl_data& data, schedule const& sched, trip const* trp,
         updated_interchange_edges.emplace_back(e.get());
       }
     }
-    for (auto const& e : n->in_edges_) {
+    for (auto const& e : n->incoming_edges(data.graph_)) {
       if (e->type_ == edge_type::INTERCHANGE) {
         /*
         std::cout << "--> incoming interchange broken (from.valid="
-                  << e->from_->is_valid()
+                  << e->from(data.graph_)->is_valid()
                   << "):" << e->rsl_connection_info_.section_infos_.size()
                   << " passenger groups = " << e->passengers_
                   << " passengers\n";
@@ -292,22 +299,22 @@ void apply_reroute(rsl_data& data, schedule const& sched, trip const* trp,
   }
 
   for (auto const n : reactivated_nodes) {
-    for (auto const& e : n->out_edges_) {
+    for (auto const& e : n->outgoing_edges(data.graph_)) {
       if (e->type_ == edge_type::INTERCHANGE) {
         /*
         std::cout << "outgoing interchange reactivated? (to.valid="
-                  << e->to_->is_valid() << ") => valid=" << e->is_valid()
-                  << "\n";
+                  << e->to(data.graph_)->is_valid()
+                  << ") => valid=" << e->is_valid() << "\n";
         */
         updated_interchange_edges.emplace_back(e.get());
       }
     }
-    for (auto const& e : n->in_edges_) {
+    for (auto const& e : n->incoming_edges(data.graph_)) {
       if (e->type_ == edge_type::INTERCHANGE) {
         /*
         std::cout << "incoming interchange reactivated? (from.valid="
-                  << e->from_->is_valid() << ") => valid=" << e->is_valid()
-                  << "\n";
+                  << e->from(data.graph_)->is_valid()
+                  << ") => valid=" << e->is_valid() << "\n";
         */
         updated_interchange_edges.emplace_back(e);
       }

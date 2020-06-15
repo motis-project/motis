@@ -10,6 +10,6 @@
 namespace motis::rsl {
 
 void update_load(passenger_group* pg, reachability_info const& reachability,
-                 passenger_localization const& localization);
+                 passenger_localization const& localization, graph const& g);
 
 }  // namespace motis::rsl

@@ -19,10 +19,26 @@
 namespace motis::rsl {
 
 struct edge;
+struct graph;
 
 struct event_node {
   inline bool is_valid() const { return valid_; }
   inline bool is_canceled() const { return !valid_; }
+
+  inline std::vector<std::unique_ptr<edge>>& outgoing_edges(graph const&) {
+    return out_edges_;
+  }
+
+  inline std::vector<std::unique_ptr<edge>> const& outgoing_edges(
+      graph const&) const {
+    return out_edges_;
+  }
+
+  inline std::vector<edge*>& incoming_edges(graph const&) { return in_edges_; }
+
+  inline std::vector<edge*> const& incoming_edges(graph const&) const {
+    return in_edges_;
+  }
 
   time time_{INVALID_TIME};
   time schedule_time_{INVALID_TIME};
@@ -46,14 +62,19 @@ inline std::ostream& operator<<(std::ostream& out, edge_type const et) {
 }
 
 struct edge {
-  inline bool is_valid() const { return from_->is_valid() && to_->is_valid(); }
-  inline bool is_canceled() const {
-    return from_->is_canceled() || to_->is_canceled();
+  inline bool is_valid(graph const& g) const {
+    return from(g)->is_valid() && to(g)->is_valid();
+  }
+  inline bool is_canceled(graph const& g) const {
+    return from(g)->is_canceled() || to(g)->is_canceled();
   }
 
   inline std::uint16_t passengers_over_capacity() const {
     return passengers_ > capacity_ ? passengers_ - capacity_ : 0U;
   }
+
+  inline event_node* from(graph const&) const { return from_; }
+  inline event_node* to(graph const&) const { return to_; }
 
   event_node* from_{};
   event_node* to_{};

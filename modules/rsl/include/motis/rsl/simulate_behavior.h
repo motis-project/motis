@@ -45,8 +45,9 @@ void simulate_behavior(schedule const& sched, rsl_data& data,
       auto in_trip = false;
       for (auto e : te->edges_) {
         if (!in_trip) {
-          if (e->from_->station_ == leg.enter_station_id_ &&
-              e->from_->schedule_time_ == leg.enter_time_) {
+          auto const from = e->from(data.graph_);
+          if (from->station_ == leg.enter_station_id_ &&
+              from->schedule_time_ == leg.enter_time_) {
             in_trip = true;
           }
         }
@@ -56,8 +57,9 @@ void simulate_behavior(schedule const& sched, rsl_data& data,
           if (e->passengers_ > e->capacity_) {
             sim_result.edges_over_capacity_.insert(e);
           }
-          if (e->to_->station_ == leg.exit_station_id_ &&
-              e->to_->schedule_time_ == leg.exit_time_) {
+          auto const to = e->to(data.graph_);
+          if (to->station_ == leg.exit_station_id_ &&
+              to->schedule_time_ == leg.exit_time_) {
             break;
           }
         }

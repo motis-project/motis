@@ -139,8 +139,8 @@ void rsl::load_journeys() {
   std::uint64_t interchange_edge_count = 0;
   std::uint64_t wait_edge_count = 0;
   for (auto const& n : data_.graph_.nodes_) {
-    edge_count += n->out_edges_.size();
-    for (auto const& e : n->out_edges_) {
+    edge_count += n->outgoing_edges(data_.graph_).size();
+    for (auto const& e : n->outgoing_edges(data_.graph_)) {
       switch (e->type_) {
         case edge_type::TRIP: ++trip_edge_count; break;
         case edge_type::INTERCHANGE: ++interchange_edge_count; break;
@@ -153,7 +153,7 @@ void rsl::load_journeys() {
   std::set<trip const*> trips;
   for (auto const& n : data_.graph_.nodes_) {
     stations.insert(n->station_);
-    for (auto const& e : n->out_edges_) {
+    for (auto const& e : n->outgoing_edges(data_.graph_)) {
       if (e->trip_ != nullptr) {
         trips.insert(e->trip_);
       }
@@ -199,10 +199,11 @@ void check_broken_interchanges(
     if (ice->type_ != edge_type::INTERCHANGE) {
       continue;
     }
-    auto const ic =
-        static_cast<int>(ice->to_->time_) - static_cast<int>(ice->from_->time_);
-    if (ice->is_canceled() ||
-        (ice->from_->station_ != 0 && ice->to_->station_ != 0 &&
+    auto const from = ice->from(data.graph_);
+    auto const to = ice->to(data.graph_);
+    auto const ic = static_cast<int>(to->time_) - static_cast<int>(from->time_);
+    if (ice->is_canceled(data.graph_) ||
+        (from->station_ != 0 && to->station_ != 0 &&
          ic < ice->transfer_time_)) {
       if (ice->broken_) {
         continue;
@@ -338,7 +339,7 @@ void rsl::rt_updates_applied() {
       pg->ok_ = reachability.ok_;
 
       auto const localization = localize(sched, reachability, search_time);
-      update_load(pg, reachability, localization);
+      update_load(pg, reachability, localization, data_.graph_);
 
       if (reachability.ok_) {
         ++ok_groups;

@@ -303,7 +303,8 @@ void write_cpg(Writer& w, schedule const& sched,
 
 template <typename Writer>
 void write_simulation_result(Writer& w, schedule const& sched,
-                             simulation_result const& sim_result) {
+                             simulation_result const& sim_result,
+                             graph const& g) {
   w.StartObject();
 
   w.Key("over_capacity");
@@ -341,10 +342,10 @@ void write_simulation_result(Writer& w, schedule const& sched,
       w.Uint(sim_result.additional_passengers_.at(e));
 
       w.Key("from");
-      write_station(w, sched, e->from_->station_);
+      write_station(w, sched, e->from(g)->station_);
 
       w.Key("to");
-      write_station(w, sched, e->to_->station_);
+      write_station(w, sched, e->to(g)->station_);
 
       w.EndObject();
     }
@@ -358,7 +359,7 @@ void write_simulation_result(Writer& w, schedule const& sched,
 }
 
 void log_output::write_broken_connection(
-    schedule const& sched, rsl_data const& /*data*/,
+    schedule const& sched, rsl_data const& data,
     std::map<unsigned, std::vector<combined_passenger_group>> const&
         combined_groups,
     simulation_result const& sim_result) {
@@ -383,7 +384,7 @@ void log_output::write_broken_connection(
   w.EndArray();
 
   w.Key("sim_result");
-  write_simulation_result(w, sched, sim_result);
+  write_simulation_result(w, sched, sim_result, data.graph_);
 
   w.EndObject();
 

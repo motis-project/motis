@@ -88,7 +88,7 @@ Offset<RslCombinedPassengerGroup> to_fbs(schedule const& sched,
 }
 
 Offset<RslSimResult> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
-                            simulation_result const& res) {
+                            simulation_result const& res, graph const& g) {
   auto const trip_with_edges_to_fbs = [&](trip const* trp,
                                           std::vector<edge*> const& edges) {
     std::vector<Offset<RslEdgeOverCapacity>> fb_edges;
@@ -98,8 +98,8 @@ Offset<RslSimResult> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
       }
       fb_edges.emplace_back(CreateRslEdgeOverCapacity(
           fbb, e->passengers_, e->capacity_, res.additional_passengers_.at(e),
-          to_fbs(fbb, *sched.stations_[e->from_->station_]),
-          to_fbs(fbb, *sched.stations_[e->to_->station_])));
+          to_fbs(fbb, *sched.stations_[e->from(g)->station_]),
+          to_fbs(fbb, *sched.stations_[e->to(g)->station_])));
     }
     return CreateRslTripOverCapacity(fbb, to_fbs(sched, fbb, trp),
                                      fbb.CreateVector(fb_edges));
@@ -130,7 +130,7 @@ msg_ptr make_journeys_broken_msg(
   mc.create_and_finish(
       MsgContent_RslJourneysBroken,
       CreateRslJourneysBroken(mc, sched.system_time_, mc.CreateVector(fb_cpgs),
-                              to_fbs(sched, mc, sim_result))
+                              to_fbs(sched, mc, sim_result, data.graph_))
           .Union(),
       "/rsl/journeys_broken");
   return make_msg(mc);

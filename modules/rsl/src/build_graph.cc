@@ -17,9 +17,9 @@ std::uint64_t initial_over_capacity{0};
 namespace {
 
 void add_interchange(event_node* from, event_node* to, passenger_group* grp,
-                     duration transfer_time) {
-  for (auto& e : from->out_edges_) {  // TODO(pablo): performance
-    if (e->type_ == edge_type::INTERCHANGE && e->to_ == to &&
+                     duration transfer_time, graph const& g) {
+  for (auto& e : from->outgoing_edges(g)) {  // TODO(pablo): performance
+    if (e->type_ == edge_type::INTERCHANGE && e->to(g) == to &&
         e->transfer_time_ == transfer_time) {
       e->rsl_connection_info_.section_infos_.emplace_back(grp);
       e->passengers_ += grp->passengers_;
@@ -64,14 +64,15 @@ void add_passenger_group_to_graph(schedule const& sched, rsl_data& data,
     last_trip = nullptr;
     for (auto e : te->edges_) {
       if (!in_trip) {
-        if (e->from_->station_ == leg.enter_station_id_ &&
-            e->from_->schedule_time_ == leg.enter_time_) {
+        auto const from = e->from(data.graph_);
+        if (from->station_ == leg.enter_station_id_ &&
+            from->schedule_time_ == leg.enter_time_) {
           in_trip = true;
           if (exit_node == nullptr) {
             exit_node = &te->enter_exit_node_;
           }
           auto const transfer_time = get_transfer_duration(leg.enter_transfer_);
-          add_interchange(exit_node, e->from_, &grp, transfer_time);
+          add_interchange(exit_node, from, &grp, transfer_time, data.graph_);
         }
       }
       if (in_trip) {
@@ -88,9 +89,10 @@ void add_passenger_group_to_graph(schedule const& sched, rsl_data& data,
                     */
         }
         grp.edges_.emplace_back(e);
-        if (e->to_->station_ == leg.exit_station_id_ &&
-            e->to_->schedule_time_ == leg.exit_time_) {
-          exit_node = e->to_;
+        auto const to = e->to(data.graph_);
+        if (to->station_ == leg.exit_station_id_ &&
+            to->schedule_time_ == leg.exit_time_) {
+          exit_node = to;
           last_trip = te;
           break;
         }
@@ -99,7 +101,8 @@ void add_passenger_group_to_graph(schedule const& sched, rsl_data& data,
   }
 
   if (exit_node != nullptr && last_trip != nullptr) {
-    add_interchange(exit_node, &last_trip->enter_exit_node_, &grp, 0);
+    add_interchange(exit_node, &last_trip->enter_exit_node_, &grp, 0,
+                    data.graph_);
   }
 }
 

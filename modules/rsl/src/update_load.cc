@@ -8,7 +8,7 @@
 namespace motis::rsl {
 
 void update_load(passenger_group* pg, reachability_info const& reachability,
-                 passenger_localization const& localization) {
+                 passenger_localization const& localization, graph const& g) {
   auto disabled_edges = pg->edges_;
   pg->edges_.clear();
 
@@ -28,14 +28,15 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
           rt.valid_exit() ? rt.exit_edge_idx_ : rt.td_->edges_.size() - 1;
       for (auto i = rt.enter_edge_idx_; i <= exit_idx; ++i) {
         auto e = rt.td_->edges_[i];
-        if (e->from_->time_ > localization.arrival_time_) {
+        if (e->from(g)->time_ > localization.arrival_time_) {
           break;
         }
         utl::erase(disabled_edges, e);
         pg->edges_.emplace_back(e);
         add_passenger_group_to_edge(e, pg);
-        if (e->to_->station_ == localization.at_station_->index_ &&
-            e->to_->time_ == localization.arrival_time_) {
+        auto const to = e->to(g);
+        if (to->station_ == localization.at_station_->index_ &&
+            to->time_ == localization.arrival_time_) {
           break;
         }
       }
