@@ -34,6 +34,7 @@ inline mcd::hash_map<mcd::string, uint8_t> class_mapping() {
     { "EN", 2 },
     { "Car Transport Rail", 2},
     { "AZ", 2 },
+    { "NJ", 2 },
 
     // fast local trains
     { "IRE", 3 },

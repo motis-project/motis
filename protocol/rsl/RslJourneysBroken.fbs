@@ -1,0 +1,86 @@
+include "base/Station.fbs";
+include "base/TripId.fbs";
+
+namespace motis.rsl;
+
+enum RslTransferType : byte { NONE, SAME_STATION, FOOTPATH }
+
+table RslTransferInfo {
+  type: RslTransferType;
+  duration: uint;
+}
+
+table RslJourneyLeg {
+  trip: motis.TripId;
+  enter_station: motis.Station;
+  exit_station: motis.Station;
+  enter_time: ulong;
+  exit_time: ulong;
+  enter_transfer: RslTransferInfo;
+}
+
+table RslJourney {
+  legs: [RslJourneyLeg];
+}
+
+table RslPassengerGroup {
+  id: long;
+  passenger_count: uint;
+  planned_journey: RslJourney;
+}
+
+table RslAtStation {
+  station: motis.Station;
+  arrival_time: ulong;
+}
+
+table RslInTrip {
+  trip: motis.TripId;
+  next_station: motis.Station;
+  arrival_time: ulong;
+}
+
+union RslPassengerLocalization { RslAtStation, RslInTrip }
+
+table RslAlternative {
+  journey: RslJourney;
+  arrival_time: ulong;
+  duration: uint;
+  transfers: uint;
+}
+
+table RslCombinedPassengerGroup {
+  passenger_count: uint;
+  localization: RslPassengerLocalization;
+  destination_station: motis.Station;
+  groups: [RslPassengerGroup];
+  alternatives: [RslAlternative];
+}
+
+table RslEdgeOverCapacity {
+  passengers: uint;
+  capacity: uint;
+  additional: uint;
+  from: motis.Station;
+  to: motis.Station;
+}
+
+table RslTripOverCapacity {
+  trip: motis.TripId;
+  edges: [RslEdgeOverCapacity];
+}
+
+table RslSimResult {
+  over_capacity: bool;
+  edge_count_over_capacity: ulong;
+  total_passenger_over_capacity: ulong;
+  trips_over_capacity: [RslTripOverCapacity];
+}
+
+
+
+table RslJourneysBroken {
+  system_time: long;
+  combined_groups: [RslCombinedPassengerGroup];
+  sim_result: RslSimResult;
+}

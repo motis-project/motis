@@ -62,10 +62,6 @@ int main(int argc, char const** argv) {
     conf::options_parser parser(confs);
     parser.read_command_line_args(argc, argv, false);
 
-    if (!launcher_opt.init_.empty()) {
-      launcher_opt.mode_ = launcher_settings::motis_mode_t::INIT;
-    }
-
     if (parser.help()) {
       std::cout << "\n\tMOTIS v" << short_version() << "\n\n";
       parser.print_help(std::cout);
@@ -76,6 +72,11 @@ int main(int argc, char const** argv) {
     }
 
     parser.read_configuration_file(false);
+
+    if (!launcher_opt.init_.empty()) {
+      launcher_opt.mode_ = launcher_settings::motis_mode_t::INIT;
+    }
+
     parser.print_used(std::cout);
   } catch (std::exception const& e) {
     std::cout << "options error: " << e.what() << "\n";
