@@ -115,16 +115,6 @@ void rsl::init(motis::module::registry& reg) {
 void rsl::load_journeys() {
   auto const& sched = get_schedule();
 
-  LOG(info) << "schedule_begin=" << sched.schedule_begin_ << " ("
-            << format_unix_time(sched.schedule_begin_) << ")";
-  LOG(info) << "first_event_schedule_time_=" << sched.first_event_schedule_time_
-            << " (" << format_unix_time(sched.first_event_schedule_time_)
-            << ")";
-  LOG(info) << "schedule_end=" << sched.schedule_end_ << " ("
-            << format_unix_time(sched.schedule_end_) << ")";
-  LOG(info) << "last_event_schedule_time_=" << sched.last_event_schedule_time_
-            << " (" << format_unix_time(sched.last_event_schedule_time_) << ")";
-
   auto const journey_path = fs::path{journey_file_};
   if (!fs::exists(journey_path)) {
     LOG(warn) << "journey file not found: " << journey_file_;
