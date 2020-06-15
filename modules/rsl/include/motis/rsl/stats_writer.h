@@ -12,6 +12,11 @@ struct stats_writer {
   explicit stats_writer(std::string const& filename);
   ~stats_writer();
 
+  stats_writer(stats_writer const&) = delete;
+  stats_writer& operator=(stats_writer const&) = delete;
+  stats_writer(stats_writer&&) = delete;
+  stats_writer& operator=(stats_writer&&) = delete;
+
   void write_tick(tick_statistics const& ts);
   void flush();
 

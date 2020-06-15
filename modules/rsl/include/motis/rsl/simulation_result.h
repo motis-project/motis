@@ -27,7 +27,7 @@ struct simulation_result {
   std::set<trip const*> trips_over_capacity() const {
     std::set<trip const*> trips;
     for (auto const e : edges_over_capacity_) {
-      trips.insert(e->trip_);
+      trips.insert(e->trip());
     }
     return trips;
   }
@@ -36,7 +36,7 @@ struct simulation_result {
   trips_over_capacity_with_edges() const {
     mcd::hash_map<trip const*, std::vector<edge*>> edges_by_trip;
     for (auto const e : edges_over_capacity_) {
-      edges_by_trip[e->trip_].push_back(e);
+      edges_by_trip[e->trip()].push_back(e);
     }
     return edges_by_trip;
   }

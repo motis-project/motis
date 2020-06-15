@@ -54,8 +54,7 @@ reachability_info get_reachability(rsl_data const& data, schedule const& sched,
         if (to->station_ == leg.exit_station_id_ &&
             to->schedule_time_ == leg.exit_time_) {
           station_arrival_time = to->time_;
-          auto const station_ic_time =
-              sched.stations_[to->station_]->transfer_time_;
+          auto const station_ic_time = to->get_station(sched).transfer_time_;
           // TODO(pablo): footpaths
           auto& rt = reachability.reachable_trips_.back();
           rt.exit_real_time_ = station_arrival_time;

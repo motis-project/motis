@@ -98,8 +98,8 @@ Offset<RslSimResult> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
       }
       fb_edges.emplace_back(CreateRslEdgeOverCapacity(
           fbb, e->passengers_, e->capacity_, res.additional_passengers_.at(e),
-          to_fbs(fbb, *sched.stations_[e->from(g)->station_]),
-          to_fbs(fbb, *sched.stations_[e->to(g)->station_])));
+          to_fbs(fbb, e->from(g)->get_station(sched)),
+          to_fbs(fbb, e->to(g)->get_station(sched))));
     }
     return CreateRslTripOverCapacity(fbb, to_fbs(sched, fbb, trp),
                                      fbb.CreateVector(fb_edges));

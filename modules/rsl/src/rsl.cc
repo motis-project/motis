@@ -154,8 +154,8 @@ void rsl::load_journeys() {
   for (auto const& n : data_.graph_.nodes_) {
     stations.insert(n->station_);
     for (auto const& e : n->outgoing_edges(data_.graph_)) {
-      if (e->trip_ != nullptr) {
-        trips.insert(e->trip_);
+      if (e->trip() != nullptr) {
+        trips.insert(e->trip());
       }
     }
   }
@@ -204,7 +204,7 @@ void check_broken_interchanges(
     auto const ic = static_cast<int>(to->time_) - static_cast<int>(from->time_);
     if (ice->is_canceled(data.graph_) ||
         (from->station_ != 0 && to->station_ != 0 &&
-         ic < ice->transfer_time_)) {
+         ic < ice->transfer_time())) {
       if (ice->broken_) {
         continue;
       }

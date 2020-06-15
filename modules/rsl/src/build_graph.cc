@@ -20,7 +20,7 @@ void add_interchange(event_node* from, event_node* to, passenger_group* grp,
                      duration transfer_time, graph const& g) {
   for (auto& e : from->outgoing_edges(g)) {  // TODO(pablo): performance
     if (e->type_ == edge_type::INTERCHANGE && e->to(g) == to &&
-        e->transfer_time_ == transfer_time) {
+        e->transfer_time() == transfer_time) {
       e->rsl_connection_info_.section_infos_.emplace_back(grp);
       e->passengers_ += grp->passengers_;
       grp->edges_.emplace_back(e.get());
@@ -84,7 +84,7 @@ void add_passenger_group_to_graph(schedule const& sched, rsl_data& data,
           std::cout << "edge over capacity: " << e->passengers_ << "/"
                     << e->capacity_ << ": "
                     << e->rsl_connection_info_.section_infos_.size()
-                    << " passenger groups, trip: " << e->trip_->dbg_.str()
+                    << " passenger groups, trip: " << e->trip()->dbg_.str()
                     << std::endl;
                     */
         }
