@@ -5,6 +5,23 @@
 
 namespace motis::rsl {
 
+struct system_statistics {
+  std::uint64_t total_broken_interchanges_{};
+  std::uint64_t total_affected_passengers_{};
+  std::uint64_t delay_updates_{};
+  std::uint64_t reroute_updates_{};
+  std::uint64_t groups_ok_count_{};
+  std::uint64_t groups_broken_count_{};
+
+  std::uint64_t update_event_times_trip_edges_found_{};
+  std::uint64_t update_event_times_dep_updated_{};
+  std::uint64_t update_event_times_arr_updated_{};
+  std::uint64_t total_updated_interchange_edges_{};
+
+  std::uint64_t update_trip_route_count_{};
+  std::uint64_t update_trip_route_trip_edges_found_{};
+};
+
 struct tick_statistics {
   std::uint64_t system_time_{};
 

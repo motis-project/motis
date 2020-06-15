@@ -8,6 +8,7 @@
 #include "motis/module/message.h"
 
 #include "motis/rsl/rsl_data.h"
+#include "motis/rsl/statistics.h"
 
 namespace motis::rsl {
 
@@ -16,11 +17,13 @@ trip_data* get_or_add_trip(schedule const& sched, rsl_data& data,
 
 void update_event_times(schedule const& sched, graph& g,
                         motis::rt::RtDelayUpdate const* du,
-                        std::vector<edge*>& updated_interchange_edges);
+                        std::vector<edge*>& updated_interchange_edges,
+                        system_statistics& system_stats);
 
 void update_trip_route(schedule const& sched, rsl_data& data,
                        motis::rt::RtRerouteUpdate const* ru,
-                       std::vector<edge*>& updated_interchange_edges);
+                       std::vector<edge*>& updated_interchange_edges,
+                       system_statistics& system_stats);
 
 inline edge* add_edge(edge const& e) {
   auto edge_ptr =
@@ -31,17 +34,5 @@ inline edge* add_edge(edge const& e) {
 
 void add_passenger_group_to_edge(edge* e, passenger_group* pg);
 void remove_passenger_group_from_edge(edge* e, passenger_group* pg);
-
-extern std::uint64_t update_event_times_count;
-extern std::uint64_t update_event_times_trip_found;
-extern std::uint64_t update_event_times_trip_edges_found;
-extern std::uint64_t update_event_times_dep_updated;
-extern std::uint64_t update_event_times_arr_updated;
-
-extern std::uint64_t total_updated_interchange_edges;
-
-extern std::uint64_t update_trip_route_count;
-extern std::uint64_t update_trip_route_trip_found;
-extern std::uint64_t update_trip_route_trip_edges_found;
 
 }  // namespace motis::rsl

@@ -199,14 +199,10 @@ void rsl::load_capacity_file() {
                            data_.capacity_map_.size());
 }
 
-std::uint64_t total_broken_interchanges{0};
-std::uint64_t total_affected_passengers{0};
-std::uint64_t delay_updates{0};
-std::uint64_t reroute_updates{0};
-
 void check_broken_interchanges(
     rsl_data& data, schedule const& /*sched*/,
-    std::vector<edge*> const& updated_interchange_edges) {
+    std::vector<edge*> const& updated_interchange_edges,
+    system_statistics& system_stats) {
   static std::set<edge*> broken_interchanges;
   static std::set<passenger_group*> affected_passenger_groups;
   for (auto& ice : updated_interchange_edges) {
@@ -223,11 +219,11 @@ void check_broken_interchanges(
       }
       ice->broken_ = true;
       if (broken_interchanges.insert(ice).second) {
-        ++total_broken_interchanges;
+        ++system_stats.total_broken_interchanges_;
       }
       for (auto& psi : ice->rsl_connection_info_.section_infos_) {
         if (affected_passenger_groups.insert(psi.group_).second) {
-          total_affected_passengers += psi.group_->passengers_;
+          system_stats.total_affected_passengers_ += psi.group_->passengers_;
           psi.group_->ok_ = false;
         }
         data.groups_affected_by_last_update_.insert(psi.group_);
@@ -259,10 +255,11 @@ msg_ptr rsl::rt_update(msg_ptr const& msg) {
   for (auto const& u : *update->updates()) {
     switch (u->content_type()) {
       case Content_RtDelayUpdate: {
-        ++delay_updates;
+        ++system_stats_.delay_updates_;
         ++tick_stats_.rt_delay_updates_;
         auto const du = reinterpret_cast<RtDelayUpdate const*>(u->content());
-        update_event_times(sched, data_.graph_, du, updated_interchange_edges);
+        update_event_times(sched, data_.graph_, du, updated_interchange_edges,
+                           system_stats_);
         tick_stats_.rt_delay_event_updates_ += du->events()->size();
         for (auto const& uei : *du->events()) {
           switch (uei->reason()) {
@@ -284,10 +281,11 @@ msg_ptr rsl::rt_update(msg_ptr const& msg) {
         break;
       }
       case Content_RtRerouteUpdate: {
-        ++reroute_updates;
+        ++system_stats_.reroute_updates_;
         ++tick_stats_.rt_reroute_updates_;
         auto const ru = reinterpret_cast<RtRerouteUpdate const*>(u->content());
-        update_trip_route(sched, data_, ru, updated_interchange_edges);
+        update_trip_route(sched, data_, ru, updated_interchange_edges,
+                          system_stats_);
         break;
       }
       case Content_RtTrackUpdate: {
@@ -301,7 +299,8 @@ msg_ptr rsl::rt_update(msg_ptr const& msg) {
       default: break;
     }
   }
-  check_broken_interchanges(data_, sched, updated_interchange_edges);
+  check_broken_interchanges(data_, sched, updated_interchange_edges,
+                            system_stats_);
   /*
   LOG(info) << fmt::format(
       "D: {:n} msg, {:n} t.e.f., {:n} dep up, "
@@ -315,9 +314,6 @@ msg_ptr rsl::rt_update(msg_ptr const& msg) {
   */
   return {};
 }
-
-std::uint64_t groups_ok_count{0};
-std::uint64_t groups_broken_count{0};
 
 void rsl::rt_updates_applied() {
   auto const& sched = get_schedule();
@@ -356,11 +352,11 @@ void rsl::rt_updates_applied() {
 
       if (reachability.ok_) {
         ++ok_groups;
-        ++groups_ok_count;
+        ++system_stats_.groups_ok_count_;
         continue;
       }
       ++broken_groups;
-      ++groups_broken_count;
+      ++system_stats_.groups_broken_count_;
       broken_passengers += pg->passengers_;
 
       auto& destination_groups = combined_groups[destination_station_id];
@@ -471,8 +467,8 @@ void rsl::rt_updates_applied() {
   tick_stats_.broken_passengers_ = broken_passengers;
   tick_stats_.combined_groups_ = combined_groups.size();
   tick_stats_.combined_groups_size_ = combined_group_count;
-  tick_stats_.total_ok_groups_ = groups_ok_count;
-  tick_stats_.total_broken_groups_ = groups_broken_count;
+  tick_stats_.total_ok_groups_ = system_stats_.groups_ok_count_;
+  tick_stats_.total_broken_groups_ = system_stats_.groups_broken_count_;
 
   LOG(info) << "affected by last rt update: "
             << data_.groups_affected_by_last_update_.size()
@@ -486,8 +482,8 @@ void rsl::rt_updates_applied() {
   LOG(info) << "passenger groups: " << ok_groups << " ok, " << broken_groups
             << " broken - passengers affected by broken groups: "
             << broken_passengers;
-  LOG(info) << "groups: " << groups_ok_count << " ok + " << groups_broken_count
-            << " broken";
+  LOG(info) << "groups: " << system_stats_.groups_ok_count_ << " ok + "
+            << system_stats_.groups_broken_count_ << " broken";
 
   for (auto const& pg : data_.graph_.passenger_groups_) {
     if (pg->ok_) {

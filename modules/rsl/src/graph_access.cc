@@ -81,14 +81,9 @@ trip_data* get_or_add_trip(schedule const& sched, rsl_data& data,
       .get();
 }
 
-std::uint64_t update_event_times_trip_edges_found{0};
-std::uint64_t update_event_times_dep_updated{0};
-std::uint64_t update_event_times_arr_updated{0};
-
-std::uint64_t total_updated_interchange_edges{0};
-
 void add_interchange_edges(event_node const* evn,
-                           std::vector<edge*>& updated_interchange_edges) {
+                           std::vector<edge*>& updated_interchange_edges,
+                           system_statistics& system_stats) {
   if (evn->type_ == event_type::ARR) {
     return utl::all(evn->out_edges_)  //
            | utl::transform([](auto&& e) { return e.get(); })  //
@@ -96,7 +91,7 @@ void add_interchange_edges(event_node const* evn,
                return e->type_ != edge_type::INTERCHANGE;
              })  //
            | utl::for_each([&](auto&& e) {
-               ++total_updated_interchange_edges;
+               ++system_stats.total_updated_interchange_edges_;
                updated_interchange_edges.push_back(e);
              });
   } else /*if (evn->type_ == event_type::DEP)*/ {
@@ -106,7 +101,7 @@ void add_interchange_edges(event_node const* evn,
                return e->type_ != edge_type::INTERCHANGE;
              })  //
            | utl::for_each([&](auto&& e) {
-               ++total_updated_interchange_edges;
+               ++system_stats.total_updated_interchange_edges_;
                updated_interchange_edges.push_back(e);
              });
   }
@@ -114,14 +109,15 @@ void add_interchange_edges(event_node const* evn,
 
 void update_event_times(schedule const& sched, graph& g,
                         RtDelayUpdate const* du,
-                        std::vector<edge*>& updated_interchange_edges) {
+                        std::vector<edge*>& updated_interchange_edges,
+                        system_statistics& system_stats) {
   auto const trp = from_fbs(sched, du->trip());
   auto const et = to_extern_trip(sched, trp);
   auto trip_edges = g.trip_data_.find(et);
   if (trip_edges == end(g.trip_data_)) {
     return;
   }
-  ++update_event_times_trip_edges_found;
+  ++system_stats.update_event_times_trip_edges_found_;
   for (auto const& ue : *du->events()) {
     auto const station_id =
         get_station(sched, ue->base()->station_id()->str())->index_;
@@ -132,37 +128,36 @@ void update_event_times(schedule const& sched, graph& g,
           te->from_->type_ == event_type::DEP &&
           te->from_->station_ == station_id &&
           te->from_->schedule_time_ == schedule_time) {
-        ++update_event_times_dep_updated;
+        ++system_stats.update_event_times_dep_updated_;
         te->from_->time_ =
             unix_to_motistime(sched.schedule_begin_, ue->updated_time());
-        add_interchange_edges(te->from_, updated_interchange_edges);
+        add_interchange_edges(te->from_, updated_interchange_edges,
+                              system_stats);
       } else if (ue->base()->event_type() == EventType_ARR &&
                  te->to_->type_ == event_type::ARR &&
                  te->to_->station_ == station_id &&
                  te->to_->schedule_time_ == schedule_time) {
-        ++update_event_times_arr_updated;
+        ++system_stats.update_event_times_arr_updated_;
         te->to_->time_ =
             unix_to_motistime(sched.schedule_begin_, ue->updated_time());
-        add_interchange_edges(te->to_, updated_interchange_edges);
+        add_interchange_edges(te->to_, updated_interchange_edges, system_stats);
       }
     }
   }
 }
 
-std::uint64_t update_trip_route_count{0};
-std::uint64_t update_trip_route_trip_edges_found{0};
-
 void update_trip_route(schedule const& sched, rsl_data& data,
                        RtRerouteUpdate const* ru,
-                       std::vector<edge*>& updated_interchange_edges) {
-  ++update_trip_route_count;
+                       std::vector<edge*>& updated_interchange_edges,
+                       system_statistics& system_stats) {
+  ++system_stats.update_trip_route_count_;
   auto const trp = from_fbs(sched, ru->trip());
   auto const et = to_extern_trip(sched, trp);
   auto td = data.graph_.trip_data_.find(et);
   if (td == end(data.graph_.trip_data_)) {
     return;
   }
-  ++update_trip_route_trip_edges_found;
+  ++system_stats.update_trip_route_trip_edges_found_;
 
   /*
   std::cout << "### begin reroute ###\n"

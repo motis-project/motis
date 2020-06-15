@@ -42,6 +42,7 @@ private:
 
   rsl_data data_;
   std::unique_ptr<output::log_output> log_output_;
+  system_statistics system_stats_;
   tick_statistics tick_stats_;
   std::unique_ptr<stats_writer> stats_writer_;
 };
