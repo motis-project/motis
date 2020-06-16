@@ -57,9 +57,10 @@ protected:
 
   boost::filesystem::path const& get_data_directory() const;
 
+  shared_data* shared_data_{nullptr};
+
 private:
   boost::filesystem::path data_directory_;
-  shared_data* shared_data_{nullptr};
 };
 
 }  // namespace module
