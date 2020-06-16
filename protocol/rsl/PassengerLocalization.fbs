@@ -1,0 +1,17 @@
+include "base/Station.fbs";
+include "base/TripId.fbs";
+
+namespace motis.rsl;
+
+table PassengerAtStation {
+  station: motis.Station;
+  arrival_time: ulong;
+}
+
+table PassengerInTrip {
+  trip: motis.TripId;
+  next_station: motis.Station;
+  arrival_time: ulong;
+}
+
+union PassengerLocalization { PassengerAtStation, PassengerInTrip }

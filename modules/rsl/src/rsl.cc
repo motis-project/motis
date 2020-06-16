@@ -30,6 +30,7 @@
 #include "motis/rsl/localization.h"
 #include "motis/rsl/measures/measures.h"
 #include "motis/rsl/messages.h"
+#include "motis/rsl/monitoring_event.h"
 #include "motis/rsl/output/output.h"
 #include "motis/rsl/reachability.h"
 #include "motis/rsl/rsl_data.h"
@@ -334,6 +335,9 @@ void rsl::rt_updates_applied() {
   auto broken_passengers = 0ULL;
   {
     scoped_timer timer{"update affected passenger groups"};
+    message_creator mc;
+    std::vector<flatbuffers::Offset<MonitoringEvent>> fbs_events;
+
     for (auto const pg : data_.groups_affected_by_last_update_) {
       auto const destination_station_id =
           pg->compact_planned_journey_.destination_station_id();
@@ -343,6 +347,12 @@ void rsl::rt_updates_applied() {
 
       auto const localization = localize(sched, reachability, search_time);
       update_load(pg, reachability, localization, data_.graph_);
+
+      auto const event_type = reachability.ok_
+                                  ? monitoring_event_type::NO_PROBLEM
+                                  : monitoring_event_type::TRANSFER_BROKEN;
+      fbs_events.emplace_back(
+          to_fbs(sched, mc, monitoring_event{event_type, *pg, localization}));
 
       if (reachability.ok_) {
         ++ok_groups;
@@ -365,6 +375,12 @@ void rsl::rt_updates_applied() {
         cpg->groups_.push_back(pg);
       }
     }
+
+    mc.create_and_finish(
+        MsgContent_MonitoringUpdate,
+        CreateMonitoringUpdate(mc, mc.CreateVector(fbs_events)).Union(),
+        "/rsl/monitoring_update");
+    ctx::await_all(motis_publish(make_msg(mc)));
   }
 
   auto routing_requests = 0ULL;
@@ -443,8 +459,8 @@ void rsl::rt_updates_applied() {
                                            sim_result);
       log_output_->flush();
 
-      ctx::await_all(motis_publish(
-          make_journeys_broken_msg(sched, data_, combined_groups, sim_result)));
+      ctx::await_all(motis_publish(make_passenger_forecast_msg(
+          sched, data_, combined_groups, sim_result)));
     }
 
     revert_simulated_behavior(sim_result);

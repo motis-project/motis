@@ -1,0 +1,10 @@
+include "rsl/CompactJourney.fbs";
+
+namespace motis.rsl;
+
+table PassengerGroup {
+  id: ulong;
+  sub_id: ulong;
+  passenger_count: uint;
+  planned_journey: CompactJourney;
+}

@@ -1,0 +1,20 @@
+include "rsl/PassengerGroup.fbs";
+include "rsl/PassengerLocalization.fbs";
+
+namespace motis.rsl;
+
+enum MonitoringEventType : byte {
+  NO_PROBLEM,
+  TRANSFER_BROKEN,
+  MAJOR_DELAY_EXPECTED,
+}
+
+table MonitoringEvent {
+  type: MonitoringEventType;
+  group: PassengerGroup;
+  localization: PassengerLocalization;
+}
+
+table MonitoringUpdate {
+  events: [MonitoringEvent];
+}

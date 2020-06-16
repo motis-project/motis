@@ -71,7 +71,8 @@ include "rt/RtUpdate.fbs";
 include "rt/RtWriteGraphRequest.fbs";
 include "tripbased/TripBasedTripDebugRequest.fbs";
 include "tripbased/TripBasedTripDebugResponse.fbs";
-include "rsl/RslJourneysBroken.fbs";
+include "rsl/MonitoringUpdate.fbs";
+include "rsl/PassengerForecast.fbs";
 
 include "HTTPMessage.fbs";
 
@@ -212,7 +213,8 @@ union MsgContent {
   motis.rt.RtWriteGraphRequest                                            = 093,
   motis.tripbased.TripBasedTripDebugRequest                               = 094,
   motis.tripbased.TripBasedTripDebugResponse                              = 095,
-  motis.rsl.RslJourneysBroken                                             = 096
+  motis.rsl.MonitoringUpdate                                              = 096,
+  motis.rsl.PassengerForecast                                             = 097
 }
 
 // Destination Examples:
