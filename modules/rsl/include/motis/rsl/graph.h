@@ -38,9 +38,9 @@ struct event_node {
   inline time current_time() const { return time_; }
   inline time schedule_time() const { return schedule_time_; }
   inline event_type type() const { return type_; }
-  inline std::uint32_t station_index() const { return station_; }
+  inline std::uint32_t station_idx() const { return station_; }
   inline station const& get_station(schedule const& sched) {
-    return *sched.stations_[station_index()];
+    return *sched.stations_[station_idx()];
   }
 
   time time_{INVALID_TIME};
