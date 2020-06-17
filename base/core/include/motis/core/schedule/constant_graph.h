@@ -48,9 +48,11 @@ inline constant_graph build_station_graph(
     };
 
     for (auto const& inner_station_edge : sn.edges_) {
-      for (auto const& e : inner_station_edge.to_->edges_) {
-        if (e.to_->get_station() != &sn) {
-          update_min(e.to_->get_station()->id_, e.get_minimum_cost());
+      if (inner_station_edge.to_->get_station() == &sn) {
+        for (auto const& e : inner_station_edge.to_->edges_) {
+          if (e.to_->get_station() != &sn) {
+            update_min(e.to_->get_station()->id_, e.get_minimum_cost());
+          }
         }
       }
     }
@@ -114,7 +116,7 @@ inline constant_graph build_interchange_graph(
   auto add_station_edges = [&g, route_offset,
                             add_edge](station_node const* sn) {
     for (auto const& e : sn->edges_) {
-      if (e.to_->is_foot_node()) {
+      if (e.to_->is_foot_node() && e.to_->get_station() == sn) {
         for (auto const& fe : e.to_->edges_) {
           if (fe.to_->is_station_node()) {
             g[fe.to_->id_].emplace_back(sn->id_, false);
