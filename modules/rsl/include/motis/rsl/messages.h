@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "motis/core/schedule/schedule.h"
@@ -34,8 +35,8 @@ flatbuffers::Offset<MonitoringEvent> to_fbs(schedule const& sched,
 
 motis::module::msg_ptr make_passenger_forecast_msg(
     schedule const& sched, rsl_data const& data,
-    std::map<unsigned, std::vector<combined_passenger_group>> const&
-        combined_groups,
+    std::vector<std::pair<combined_passenger_group*,
+                          std::vector<std::uint16_t>>> const& cpg_allocations,
     simulation_result const& sim_result);
 
 }  // namespace motis::rsl

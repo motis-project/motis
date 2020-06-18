@@ -1,5 +1,8 @@
 #include "motis/rsl/messages.h"
 
+#include <cassert>
+#include <algorithm>
+
 #include "utl/to_vec.h"
 
 #include "motis/core/conv/station_conv.h"
@@ -104,23 +107,38 @@ Offset<PassengerForecastResult> to_fbs(schedule const& sched,
           })));
 }
 
+Offset<CompactJourney> get_forecast_journey(
+    schedule const& sched, FlatBufferBuilder& fbb,
+    combined_passenger_group const& cpg,
+    std::vector<std::uint16_t> const& allocations) {
+  // TODO(pablo): temp solution
+  assert(allocations.size() == cpg.alternatives_.size());
+  if (cpg.alternatives_.empty()) {
+    return to_fbs(sched, fbb, compact_journey{{}});
+  }
+  auto const max_alt =
+      std::distance(begin(allocations),
+                    std::max_element(begin(allocations), end(allocations)));
+  return to_fbs(sched, fbb, cpg.alternatives_[max_alt].compact_journey_);
+}
+
 msg_ptr make_passenger_forecast_msg(
     schedule const& sched, rsl_data const& data,
-    std::map<unsigned, std::vector<combined_passenger_group>> const&
-        combined_groups,
+    std::vector<std::pair<combined_passenger_group*,
+                          std::vector<std::uint16_t>>> const& cpg_allocations,
     simulation_result const& sim_result) {
   message_creator mc;
   std::vector<Offset<PassengerGroupForecast>> fb_groups;
-  for (auto const& [destination_station_id, cpgs] : combined_groups) {
-    (void)destination_station_id;
-    for (auto const& cpg : cpgs) {
-      auto const loc_type = fbs_localization_type(cpg.localization_);
-      auto const loc = to_fbs(sched, mc, cpg.localization_);
-      for (auto const& grp : cpg.groups_) {
-        // TODO(pablo): forecast_journey
-        fb_groups.emplace_back(CreatePassengerGroupForecast(
-            mc, to_fbs(sched, mc, *grp), loc_type, loc, 0));
-      }
+
+  for (auto const& [cpg, allocations] : cpg_allocations) {
+
+    auto const loc_type = fbs_localization_type(cpg->localization_);
+    auto const loc = to_fbs(sched, mc, cpg->localization_);
+    auto const forecast_journey =
+        get_forecast_journey(sched, mc, *cpg, allocations);
+    for (auto const& grp : cpg->groups_) {
+      fb_groups.emplace_back(CreatePassengerGroupForecast(
+          mc, to_fbs(sched, mc, *grp), loc_type, loc, forecast_journey));
     }
   }
   mc.create_and_finish(

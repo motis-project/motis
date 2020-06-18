@@ -14,14 +14,14 @@
 namespace motis::rsl {
 
 template <typename PassengerBehavior>
-void simulate_behavior(schedule const& sched, rsl_data& data,
-                       combined_passenger_group const& cpg,
-                       std::vector<measures::please_use> const& announcements,
-                       PassengerBehavior& pb, simulation_result& sim_result) {
+std::vector<std::uint16_t> simulate_behavior(
+    schedule const& sched, rsl_data& data, combined_passenger_group const& cpg,
+    std::vector<measures::please_use> const& announcements,
+    PassengerBehavior& pb, simulation_result& sim_result) {
   if (cpg.alternatives_.empty()) {
     LOG(logging::warn) << "no alternatives found for passenger group with "
                        << cpg.passengers_ << " passengers";
-    return;
+    return {};
   }
   auto allocation = std::vector<std::uint16_t>(cpg.alternatives_.size());
   for (auto const grp : cpg.groups_) {
@@ -66,6 +66,8 @@ void simulate_behavior(schedule const& sched, rsl_data& data,
       }
     }
   }
+
+  return allocation;
 }
 
 void revert_simulated_behavior(simulation_result& sim_result);

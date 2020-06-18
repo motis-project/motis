@@ -4,6 +4,7 @@
 #include <map>
 #include <numeric>
 #include <set>
+#include <utility>
 
 #include "boost/filesystem.hpp"
 
@@ -425,9 +426,13 @@ void rsl::rt_updates_applied() {
         behavior::distribution::best_only{}, behavior::post::round{});
     auto announcements = std::vector<measures::please_use>{};
     auto sim_result = simulation_result{};
+    auto cpg_allocations = std::vector<
+        std::pair<combined_passenger_group*, std::vector<std::uint16_t>>>{};
     for (auto& cgs : combined_groups) {
       for (auto& cpg : cgs.second) {
-        simulate_behavior(sched, data_, cpg, announcements, pb, sim_result);
+        auto const allocations =
+            simulate_behavior(sched, data_, cpg, announcements, pb, sim_result);
+        cpg_allocations.emplace_back(&cpg, std::move(allocations));
       }
     }
 
@@ -460,7 +465,7 @@ void rsl::rt_updates_applied() {
       log_output_->flush();
 
       ctx::await_all(motis_publish(make_passenger_forecast_msg(
-          sched, data_, combined_groups, sim_result)));
+          sched, data_, cpg_allocations, sim_result)));
     }
 
     revert_simulated_behavior(sim_result);
