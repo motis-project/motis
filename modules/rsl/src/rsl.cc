@@ -353,7 +353,9 @@ void rsl::rt_updates_applied() {
                                   ? monitoring_event_type::NO_PROBLEM
                                   : monitoring_event_type::TRANSFER_BROKEN;
       fbs_events.emplace_back(
-          to_fbs(sched, mc, monitoring_event{event_type, *pg, localization}));
+          to_fbs(sched, mc,
+                 monitoring_event{event_type, *pg, localization,
+                                  reachability.status_}));
 
       if (reachability.ok_) {
         ++ok_groups;

@@ -129,10 +129,11 @@ PassengerLocalization fbs_localization_type(passenger_localization const& loc) {
 }
 Offset<MonitoringEvent> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
                                monitoring_event const& me) {
-  return CreateMonitoringEvent(fbb, static_cast<MonitoringEventType>(me.type_),
-                               to_fbs(sched, fbb, me.group_),
-                               fbs_localization_type(me.localization_),
-                               to_fbs(sched, fbb, me.localization_));
+  return CreateMonitoringEvent(
+      fbb, static_cast<MonitoringEventType>(me.type_),
+      to_fbs(sched, fbb, me.group_), fbs_localization_type(me.localization_),
+      to_fbs(sched, fbb, me.localization_),
+      static_cast<ReachabilityStatus>(me.reachability_status_));
 }
 
 Offset<PassengerForecastResult> to_fbs(schedule const& sched,
