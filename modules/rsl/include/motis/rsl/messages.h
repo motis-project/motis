@@ -35,7 +35,7 @@ flatbuffers::Offset<void> to_fbs(schedule const& sched,
                                  passenger_localization const& loc);
 
 passenger_localization from_fbs(schedule const& sched,
-                                PassengerLocalization const loc_type,
+                                PassengerLocalization loc_type,
                                 void const* loc_ptr);
 
 flatbuffers::Offset<MonitoringEvent> to_fbs(schedule const& sched,

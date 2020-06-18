@@ -430,9 +430,9 @@ void rsl::rt_updates_applied() {
         std::pair<combined_passenger_group*, std::vector<std::uint16_t>>>{};
     for (auto& cgs : combined_groups) {
       for (auto& cpg : cgs.second) {
-        auto const allocations =
-            simulate_behavior(sched, data_, cpg, announcements, pb, sim_result);
-        cpg_allocations.emplace_back(&cpg, std::move(allocations));
+        cpg_allocations.emplace_back(
+            &cpg, simulate_behavior(sched, data_, cpg, announcements, pb,
+                                    sim_result));
       }
     }
 
