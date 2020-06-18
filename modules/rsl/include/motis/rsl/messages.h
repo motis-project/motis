@@ -21,13 +21,22 @@ flatbuffers::Offset<CompactJourney> to_fbs(schedule const& sched,
                                            flatbuffers::FlatBufferBuilder& fbb,
                                            compact_journey const& cj);
 
+compact_journey from_fbs(schedule const& sched, CompactJourney const* cj);
+
 flatbuffers::Offset<PassengerGroup> to_fbs(schedule const& sched,
                                            flatbuffers::FlatBufferBuilder& fbb,
                                            passenger_group const& pg);
 
+// TODO(pablo): to be replaced with group lookup by id
+passenger_group from_fbs(schedule const& sched, PassengerGroup const* pg);
+
 flatbuffers::Offset<void> to_fbs(schedule const& sched,
                                  flatbuffers::FlatBufferBuilder& fbb,
                                  passenger_localization const& loc);
+
+passenger_localization from_fbs(schedule const& sched,
+                                PassengerLocalization const loc_type,
+                                void const* loc_ptr);
 
 flatbuffers::Offset<MonitoringEvent> to_fbs(schedule const& sched,
                                             flatbuffers::FlatBufferBuilder& fbb,

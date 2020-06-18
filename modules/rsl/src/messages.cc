@@ -4,7 +4,9 @@
 #include <algorithm>
 
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
+#include "motis/core/access/station_access.h"
 #include "motis/core/conv/station_conv.h"
 #include "motis/core/conv/trip_conv.h"
 
@@ -27,6 +29,18 @@ Offset<TransferInfo> to_fbs(FlatBufferBuilder& fbb,
   }
 }
 
+std::optional<transfer_info> from_fbs(TransferInfo const* ti) {
+  switch (ti->type()) {
+    case TransferType_SAME_STATION:
+      return transfer_info{static_cast<duration>(ti->duration()),
+                           transfer_info::type::SAME_STATION};
+    case TransferType_FOOTPATH:
+      return transfer_info{static_cast<duration>(ti->duration()),
+                           transfer_info::type::FOOTPATH};
+    default: return {};
+  }
+}
+
 Offset<CompactJourneyLeg> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
                                  journey_leg const& leg) {
   return CreateCompactJourneyLeg(
@@ -38,6 +52,15 @@ Offset<CompactJourneyLeg> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
       to_fbs(fbb, leg.enter_transfer_));
 }
 
+journey_leg from_fbs(schedule const& sched, CompactJourneyLeg const* leg) {
+  return {to_extern_trip(leg->trip()),
+          get_station(sched, leg->enter_station()->id()->str())->index_,
+          get_station(sched, leg->exit_station()->id()->str())->index_,
+          unix_to_motistime(sched, leg->enter_time()),
+          unix_to_motistime(sched, leg->exit_time()),
+          from_fbs(leg->enter_transfer())};
+}
+
 Offset<CompactJourney> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
                               compact_journey const& cj) {
   return CreateCompactJourney(
@@ -46,10 +69,24 @@ Offset<CompactJourney> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
       })));
 }
 
+compact_journey from_fbs(schedule const& sched, CompactJourney const* cj) {
+  return {utl::to_vec(*cj->legs(),
+                      [&](auto const& leg) { return from_fbs(sched, leg); })};
+}
+
 Offset<PassengerGroup> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
                               passenger_group const& pg) {
   return CreatePassengerGroup(fbb, pg.id_, pg.sub_id_, pg.passengers_,
                               to_fbs(sched, fbb, pg.compact_planned_journey_));
+}
+
+passenger_group from_fbs(schedule const& sched, PassengerGroup const* pg) {
+  return {from_fbs(sched, pg->planned_journey()),
+          static_cast<std::uint16_t>(pg->passenger_count()),
+          pg->id(),
+          pg->sub_id(),
+          true,
+          {}};
 }
 
 Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
@@ -63,6 +100,26 @@ Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
     return CreatePassengerAtStation(fbb, to_fbs(fbb, *loc.at_station_),
                                     motis_to_unixtime(sched, loc.arrival_time_))
         .Union();
+  }
+}
+
+passenger_localization from_fbs(schedule const& sched,
+                                PassengerLocalization const loc_type,
+                                void const* loc_ptr) {
+  switch (loc_type) {
+    case PassengerLocalization_PassengerInTrip: {
+      auto const loc = reinterpret_cast<PassengerInTrip const*>(loc_ptr);
+      return {from_fbs(sched, loc->trip()),
+              get_station(sched, loc->next_station()->id()->str()),
+              unix_to_motistime(sched, loc->arrival_time())};
+    }
+    case PassengerLocalization_PassengerAtStation: {
+      auto const loc = reinterpret_cast<PassengerAtStation const*>(loc_ptr);
+      return {nullptr, get_station(sched, loc->station()->id()->str()),
+              unix_to_motistime(sched, loc->arrival_time())};
+    }
+    default:
+      throw utl::fail("invalid passenger localization type: {}", loc_type);
   }
 }
 
