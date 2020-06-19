@@ -657,8 +657,7 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
     LOG(info) << "schedule: " << fbs_schedule->name()->str();
   }
 
-  auto sched = schedule_ptr{new schedule()};
-  // auto sched = mcd::make_unique<schedule>();
+  auto sched = mcd::make_unique<schedule>();
   sched->classes_ = class_mapping();
   std::tie(sched->schedule_begin_, sched->schedule_end_) = opt.interval();
 
