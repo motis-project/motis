@@ -145,8 +145,6 @@ struct graph_builder {
 
   void index_first_route_node(route const& r);
 
-  void add_route_services(mcd::vector<Service const*> const& services);
-
   void add_route_services(
       mcd::vector<std::pair<Service const*, bitfield>> const& services);
 

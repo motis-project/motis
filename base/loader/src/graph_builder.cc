@@ -166,7 +166,9 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
     } while (it != end(sorted) && route == (*it)->route());
 
     if (!route_services.empty()) {
-      add_route_services(route_services);
+      add_route_services(mcd::to_vec(route_services, [&](Service const* s) {
+        return std::make_pair(s, get_or_create_bitfield(s->traffic_days()));
+      }));
     }
 
     route_services.clear();
@@ -185,23 +187,7 @@ void graph_builder::index_first_route_node(route const& r) {
 }
 
 void graph_builder::add_route_services(
-    mcd::vector<Service const*> const& services) {
-  if (services.empty()) {
-    return;
-  }
-  add_route_services(
-      mcd::to_vec(begin(services), end(services), [&](Service const* service) {
-        return std::make_pair(service,
-                              get_or_create_bitfield(service->traffic_days()));
-      }));
-}
-
-void graph_builder::add_route_services(
     mcd::vector<std::pair<Service const*, bitfield>> const& services) {
-  if (services.empty()) {
-    return;
-  }
-
   mcd::vector<route_lcs> alt_routes;
   for (auto const& [s, traffic_days] : services) {
     auto const first_day_offset =
