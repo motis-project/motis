@@ -309,6 +309,9 @@ msg_ptr rt_handler::flush(msg_ptr const&) {
     validate_constant_graph(sched_);
   }
 
+  ctx::await_all(
+      motis_publish(motis::module::make_no_msg("/rt/graph_updated")));
+
   if (stats_.sanity_check_fails()) {
     return motis::module::make_error_msg(error::sanity_check_failed);
   } else {
