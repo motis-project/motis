@@ -52,7 +52,8 @@ struct stations_builder {
     s->name_ = fbs_station->name()->str();
     s->width_ = fbs_station->lat();
     s->length_ = fbs_station->lng();
-    s->eva_nr_ = fbs_station->id()->str();
+    s->eva_nr_ = std::string{sched_.prefixes_[source_schedule]} +
+                 fbs_station->id()->str();
     s->transfer_time_ = std::max(2, fbs_station->interchange_time());
     s->timez_ = fbs_station->timezone() != nullptr
                     ? get_or_create_timezone(fbs_station->timezone())
@@ -67,7 +68,11 @@ struct stations_builder {
       }
     }
 
-    sched_.eva_to_station_.emplace(fbs_station->id()->str(), s.get());
+    utl::verify(
+        sched_.eva_to_station_.find(s->eva_nr_) == end(sched_.eva_to_station_),
+        "add_station: have non-unique station_id: {}", s->eva_nr_);
+
+    sched_.eva_to_station_.emplace(s->eva_nr_, s.get());
     sched_.stations_.emplace_back(std::move(s));
   }
 

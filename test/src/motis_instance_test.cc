@@ -4,6 +4,10 @@
 
 #include "conf/options_parser.h"
 
+#include "fmt/format.h"
+
+#include "utl/zip.h"
+
 #include "motis/core/common/logging.h"
 
 #include "motis/loader/parser_error.h"
@@ -36,8 +40,18 @@ motis_instance_test::motis_instance_test(
   parser.read_command_line_args(modules_cmdline_opt_patched);
 
   import_settings import_opt;
-  for (auto const& dataset : dataset_opt.dataset_) {
-    import_opt.import_paths_.push_back(std::string{"schedule:"} + dataset);
+  if (!dataset_opt.prefix_.empty()) {
+    for (auto const& [prefix, dataset] :
+         utl::zip(dataset_opt.prefix_, dataset_opt.dataset_)) {
+      import_opt.import_paths_.push_back(
+          fmt::format("schedule[{}]:{}", prefix, dataset));
+      std::cout << import_opt.import_paths_.back() << std::endl;
+    }
+
+  } else {
+    for (auto const& dataset : dataset_opt.dataset_) {
+      import_opt.import_paths_.push_back(fmt::format("schedule:{}", dataset));
+    }
   }
 
   try {

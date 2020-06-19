@@ -37,6 +37,7 @@ struct schedule {
   std::time_t first_event_schedule_time_{std::numeric_limits<time_t>::max()};
   std::time_t last_event_schedule_time_{std::numeric_limits<time_t>::min()};
   std::time_t schedule_begin_{0}, schedule_end_{0};
+  mcd::vector<mcd::string> prefixes_;
   mcd::vector<mcd::string> names_;
   cista::hash_t hash_{0U};
 

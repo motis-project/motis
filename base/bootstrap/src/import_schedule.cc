@@ -29,17 +29,20 @@ void register_import_schedule(motis_instance& instance,
         auto const parsers = loader::parsers();
         using import::FileEvent;
         auto dataset_opt_cpy = dataset_opt;
-        dataset_opt_cpy.dataset_ =
-            utl::all(*motis_content(FileEvent, msg)->paths())  //
-            | utl::remove_if(
-                  [](auto&& p) { return p->tag()->str() != "schedule"; })  //
-            | utl::transform([](auto&& p) { return p->path()->str(); })  //
-            | utl::remove_if([&](auto&& p) {
-                return std::none_of(
-                    begin(parsers), end(parsers),
-                    [&](auto const& parser) { return parser->applicable(p); });
-              })  //
-            | utl::vec();
+        dataset_opt_cpy.dataset_.clear();
+        dataset_opt_cpy.prefix_.clear();
+
+        for (auto const* p : *motis_content(FileEvent, msg)->paths()) {
+          if (p->tag()->str() == "schedule" &&
+              std::any_of(begin(parsers), end(parsers),
+                          [&](auto const& parser) {
+                            return parser->applicable(p->path()->str());
+                          })) {
+            dataset_opt_cpy.dataset_.emplace_back(p->path()->str());
+            dataset_opt_cpy.prefix_.emplace_back(p->options()->str());
+          }
+        }
+
         utl::verify(!dataset_opt_cpy.dataset_.empty(),
                     "import_schedule: dataset_opt.dataset_.empty()");
 

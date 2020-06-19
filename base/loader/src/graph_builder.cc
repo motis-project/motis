@@ -682,6 +682,18 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
             : std::string{"unknown-"}.append(std::to_string(index)));
   }
 
+  if (fbs_schedules.size() == 1 && opt.prefix_.empty()) {
+    sched->prefixes_.emplace_back();  // dont force prefix for single
+  } else {
+    utl::verify(
+        std::set<std::string>{begin(opt.prefix_), end(opt.prefix_)}.size() ==
+            fbs_schedules.size(),
+        "graph_builder: some prefixes are missing or non-unique");
+    sched->prefixes_ = mcd::to_vec(
+        opt.prefix_,
+        [](auto const& s) -> mcd::string { return s.empty() ? s : s + "_"; });
+  }
+
   auto progress_tracker = utl::get_active_progress_tracker();
 
   progress_tracker->status("Build Graph").out_bounds(progress_offset, 90);
