@@ -196,7 +196,7 @@ struct graph_builder {
       int day,
       flatbuffers64::Vector<flatbuffers64::Offset<Track>> const* tracks);
 
-  void write_trip_info(route&);
+  void write_trip_info(route const&);
 
   mcd::unique_ptr<route> create_route(Route const* r, route_lcs const& lcons,
                                       unsigned route_index);

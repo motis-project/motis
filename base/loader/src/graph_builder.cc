@@ -570,14 +570,15 @@ int graph_builder::get_or_create_track(int day,
   }
 }
 
-void graph_builder::write_trip_info(route& r) {
-  auto const edges = mcd::to_vec(begin(r), end(r), [](route_section& s) {
-    return trip::route_edge(s.get_route_edge());
-  });
-
-  sched_.trip_edges_.emplace_back(
-      mcd::make_unique<mcd::vector<trip::route_edge>>(edges));
-  auto edges_ptr = sched_.trip_edges_.back().get();
+void graph_builder::write_trip_info(route const& r) {
+  auto edges_ptr =
+      sched_.trip_edges_
+          .emplace_back(mcd::make_unique<mcd::vector<trip::route_edge>>(
+              mcd::to_vec(r,
+                          [](route_section const& s) {
+                            return trip::route_edge{s.get_route_edge()};
+                          })))
+          .get();
 
   auto& lcons = edges_ptr->front().get_edge()->m_.route_edge_.conns_;
   for (auto lcon_idx = lcon_idx_t{}; lcon_idx < lcons.size(); ++lcon_idx) {
