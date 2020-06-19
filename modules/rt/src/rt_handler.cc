@@ -28,12 +28,13 @@ using namespace motis::logging;
 namespace motis::rt {
 
 rt_handler::rt_handler(schedule& sched, bool validate_graph,
-                       bool validate_constant_graph)
+                       bool validate_constant_graph, bool print_stats)
     : sched_(sched),
       propagator_(sched),
       update_builder_(sched),
       validate_graph_(validate_graph),
-      validate_constant_graph_(validate_constant_graph) {}
+      validate_constant_graph_(validate_constant_graph),
+      print_stats_(print_stats) {}
 
 msg_ptr rt_handler::update(msg_ptr const& msg) {
   using ris::RISBatch;
@@ -289,7 +290,9 @@ msg_ptr rt_handler::flush(msg_ptr const&) {
   scoped_timer t("flush");
 
   MOTIS_FINALLY([this]() {
-    stats_.print();
+    if (print_stats_) {
+      stats_.print();
+    }
     stats_ = statistics();
     propagator_.reset();
     update_builder_.reset();
