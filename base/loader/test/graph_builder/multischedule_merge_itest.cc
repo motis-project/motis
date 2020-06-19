@@ -11,18 +11,18 @@ using namespace motis::module;
 using namespace motis::loader;
 using motis::routing::RoutingResponse;
 
-struct multischedule_test : public motis_instance_test {
-  multischedule_test()
+struct multischedule_merge_test : public motis_instance_test {
+  multischedule_merge_test()
       : motis_instance_test(
             loader_options{
                 .dataset_ = {(hrd::SCHEDULES / "single-ice").generic_string(),
                              (hrd::SCHEDULES / "single-bus").generic_string()},
                 .schedule_begin_ = "20151004",
-                .prefix_ = {{"ice"}, {"bus"}}},
+                .dataset_prefix_ = {{"ice"}, {"bus"}}},
             {"routing"}) {}
 };
 
-TEST_F(multischedule_test, stations) {
+TEST_F(multischedule_merge_test, stations) {
   {  // some stations from "single-ice"
     EXPECT_NE(nullptr, find_station(sched(), "ice_8000261"));  // München Hbf
     EXPECT_NE(nullptr, find_station(sched(), "ice_8011102"));  // Gesundbrunnen
@@ -35,7 +35,7 @@ TEST_F(multischedule_test, stations) {
   }
 }
 
-TEST_F(multischedule_test, search) {
+TEST_F(multischedule_merge_test, search) {
   {  // search in "single-ice" München -> Berlin
     auto res = call(make_msg(R"({
       "content_type": "RoutingRequest",

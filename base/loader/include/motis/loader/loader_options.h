@@ -29,7 +29,7 @@ struct loader_options {
   std::string wzr_classes_path_{""};
   std::string wzr_matrix_path_{""};
 
-  std::vector<std::string> prefix_{};
+  std::vector<std::string> dataset_prefix_{};
 };
 
 }  // namespace motis::loader

@@ -40,9 +40,9 @@ motis_instance_test::motis_instance_test(
   parser.read_command_line_args(modules_cmdline_opt_patched);
 
   import_settings import_opt;
-  if (!dataset_opt.prefix_.empty()) {
+  if (!dataset_opt.dataset_prefix_.empty()) {
     for (auto const& [prefix, dataset] :
-         utl::zip(dataset_opt.prefix_, dataset_opt.dataset_)) {
+         utl::zip(dataset_opt.dataset_prefix_, dataset_opt.dataset_)) {
       import_opt.import_paths_.push_back(
           fmt::format("schedule[{}]:{}", prefix, dataset));
       std::cout << import_opt.import_paths_.back() << std::endl;

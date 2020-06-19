@@ -30,7 +30,7 @@ void register_import_schedule(motis_instance& instance,
         using import::FileEvent;
         auto dataset_opt_cpy = dataset_opt;
         dataset_opt_cpy.dataset_.clear();
-        dataset_opt_cpy.prefix_.clear();
+        dataset_opt_cpy.dataset_prefix_.clear();
 
         for (auto const* p : *motis_content(FileEvent, msg)->paths()) {
           if (p->tag()->str() == "schedule" &&
@@ -39,7 +39,7 @@ void register_import_schedule(motis_instance& instance,
                             return parser->applicable(p->path()->str());
                           })) {
             dataset_opt_cpy.dataset_.emplace_back(p->path()->str());
-            dataset_opt_cpy.prefix_.emplace_back(p->options()->str());
+            dataset_opt_cpy.dataset_prefix_.emplace_back(p->options()->str());
           }
         }
 
