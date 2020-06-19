@@ -1,6 +1,7 @@
 #include "motis/loader/build_footpaths.h"
 
 #include <stack>
+#include <optional>
 
 #include "geo/point_rtree.h"
 
