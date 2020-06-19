@@ -31,7 +31,9 @@ void register_import_schedule(motis_instance& instance,
         auto dataset_opt_cpy = dataset_opt;
         dataset_opt_cpy.dataset_ =
             utl::all(*motis_content(FileEvent, msg)->paths())  //
-            | utl::transform([](auto&& p) { return p->str(); })  //
+            | utl::remove_if(
+                  [](auto&& p) { return p->tag()->str() != "schedule"; })  //
+            | utl::transform([](auto&& p) { return p->path()->str(); })  //
             | utl::remove_if([&](auto&& p) {
                 return std::none_of(
                     begin(parsers), end(parsers),
@@ -70,7 +72,10 @@ void register_import_schedule(motis_instance& instance,
         using import::FileEvent;
         auto const parsers = loader::parsers();
         for (auto const* p : *motis_content(FileEvent, msg)->paths()) {
-          auto const& path = p->str();
+          if (p->tag()->str() != "schedule") {
+            continue;
+          }
+          auto const& path = p->path()->str();
           auto const applicable = std::any_of(
               begin(parsers), end(parsers),
               [&](auto const& parser) { return parser->applicable(path); });

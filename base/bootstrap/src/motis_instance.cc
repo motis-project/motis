@@ -66,7 +66,7 @@ void motis_instance::import(module_settings const& module_opt,
                             bool const silent) {
   auto bars = utl::global_progress_bars{silent};
 
-  registry_.subscribe("/import", import_files);
+  register_import_files(*this);
   register_import_schedule(*this, dataset_opt, import_opt.data_directory_);
 
   for (auto const& module : modules_) {
@@ -79,21 +79,8 @@ void motis_instance::import(module_settings const& module_opt,
   // Dummy message to trigger initial progress updates.
   publish(make_success_msg("/import"), 1);
 
-  message_creator fbb;
-  std::vector<flatbuffers::Offset<flatbuffers::String>> import_paths;
-  for (auto const& path : import_opt.import_paths_) {
-    if (!fs::exists(path)) {
-      LOG(warn) << "file does not exist, skipping: " << path;
-      continue;
-    }
-    import_paths.push_back(fbb.CreateString(path));
-  }
-  fbb.create_and_finish(
-      MsgContent_FileEvent,
-      motis::import::CreateFileEvent(fbb, fbb.CreateVector(import_paths))
-          .Union(),
-      "/import", DestinationType_Topic);
-  publish(make_msg(fbb), 1);
+  // Paths as actual trigger for import processing.
+  publish(make_file_event(import_opt.import_paths_), 1);
 
   registry_.reset();
 

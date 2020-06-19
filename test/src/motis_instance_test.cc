@@ -35,10 +35,14 @@ motis_instance_test::motis_instance_test(
   conf::options_parser parser(confs);
   parser.read_command_line_args(modules_cmdline_opt_patched);
 
+  import_settings import_opt;
+  for (auto const& dataset : dataset_opt.dataset_) {
+    import_opt.import_paths_.push_back(std::string{"schedule:"} + dataset);
+  }
+
   try {
     clog_redirect::set_enabled(false);
-    instance_->import(module_settings{modules}, dataset_opt,
-                      import_settings{{dataset_opt.dataset_}}, true);
+    instance_->import(module_settings{modules}, dataset_opt, import_opt, true);
   } catch (loader::parser_error const& e) {
     LOG(logging::error) << "unable to parse schedule, problem at "
                         << e.filename_copy_ << ":" << e.line_number_;
