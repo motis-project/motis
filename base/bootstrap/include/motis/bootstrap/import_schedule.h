@@ -6,6 +6,6 @@
 namespace motis::bootstrap {
 
 void register_import_schedule(motis_instance&, loader::loader_options const&,
-                              std::string data_dir);
+                              std::string const& data_dir);
 
 }  // namespace motis::bootstrap

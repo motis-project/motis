@@ -20,7 +20,7 @@ namespace motis::bootstrap {
 
 void register_import_schedule(motis_instance& instance,
                               loader::loader_options const& dataset_opt,
-                              std::string data_dir) {
+                              std::string const& data_dir) {
   std::make_shared<mm::event_collector>(
       data_dir, "schedule", instance,
       [&, dataset_opt](std::map<std::string, mm::msg_ptr> const& dependencies) {
