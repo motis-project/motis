@@ -143,6 +143,11 @@ struct graph_builder {
   void add_services(
       flatbuffers64::Vector<flatbuffers64::Offset<Service>> const* services);
 
+  bool has_duplicate(Service const*, mcd::vector<light_connection> const&);
+
+  bool are_duplicates(Service const*, mcd::vector<light_connection> const&,
+                      trip const*);
+
   void index_first_route_node(route const& r);
 
   void add_route_services(

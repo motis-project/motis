@@ -201,14 +201,21 @@ void graph_builder::add_route_services(
       time prev_arr = 0;
       bool adjusted = false;
       mcd::vector<light_connection> lcons;
-      auto t = create_merged_trips(s, day);
+      auto const merged_trips_idx = sched_.merged_trips_.size();
       for (unsigned section_idx = 0; section_idx < s->sections()->size();
            ++section_idx) {
-        lcons.push_back(section_to_connection(
-            t, {{participant{s, section_idx}}}, day, prev_arr, adjusted));
+        lcons.push_back(section_to_connection(merged_trips_idx,
+                                              {{participant{s, section_idx}}},
+                                              day, prev_arr, adjusted));
         prev_arr = lcons.back().a_time_;
       }
 
+      if (has_duplicate(s, lcons)) {
+        continue;
+      }
+
+      utl::verify(merged_trips_idx == create_merged_trips(s, day),
+                  "unexpected merged_trips_idx");
       add_to_routes(alt_routes, lcons);
     }
   }
@@ -226,6 +233,76 @@ void graph_builder::add_route_services(
       add_expanded_trips(*r);
     }
   }
+}
+
+bool graph_builder::has_duplicate(Service const* service,
+                                  mcd::vector<light_connection> const& lcons) {
+  auto const& first_station = sched_.stations_.at(
+      stations_.at(service->route()->stations()->Get(0))->id_);
+  for (auto const& eq : first_station->equivalent_) {
+    if (eq->source_schedule_ == first_station->source_schedule_) {
+      continue;  // Ignore duplicates from same schedule.
+    }
+
+    for (auto const& route_node :
+         sched_.station_nodes_[eq->index_]->route_nodes_) {
+      for (auto const& route_edge : route_node->edges_) {
+        if (route_edge.type() != edge::ROUTE_EDGE) {
+          continue;
+        }
+
+        for (auto* lc = route_edge.get_connection(lcons.front().d_time_);
+             lc != nullptr && lc->d_time_ == lcons.front().d_time_;
+             lc = route_edge.get_next_valid_lcon(lc)) {
+          for (auto const& trp : *sched_.merged_trips_[lc->trips_]) {
+            if (are_duplicates(service, lcons, trp)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+bool graph_builder::are_duplicates(Service const* service_a,
+                                   mcd::vector<light_connection> const& lcons_a,
+                                   trip const* trp_b) {
+  auto const* stations_a = service_a->route()->stations();
+  auto const stops_b = access::stops{trp_b};
+  auto const stop_count_b = std::distance(begin(stops_b), end(stops_b));
+
+  if (stations_a->size() != stop_count_b) {
+    return false;
+  }
+
+  auto const are_equivalent = [&](Station const* st_a, station const& s_b) {
+    auto const& s_a = sched_.stations_.at(stations_.at(st_a)->id_);
+    return s_a->source_schedule_ != s_b.source_schedule_ &&
+           std::any_of(
+               begin(s_a->equivalent_), end(s_a->equivalent_),
+               [&](auto const& eq_a) { return eq_a->index_ == s_b.index_; });
+  };
+
+  auto const& last_stop_b = *std::next(begin(stops_b), stop_count_b - 1);
+  if (lcons_a.back().a_time_ != last_stop_b.arr_lcon().a_time_ ||
+      !are_equivalent(stations_a->Get(stations_a->size() - 1),
+                      last_stop_b.get_station(sched_))) {
+    return false;
+  }
+
+  for (auto [i_a, it_b] = std::tuple{1ULL, std::next(begin(stops_b))};
+       std::next(it_b) != end(stops_b); ++i_a, ++it_b) {
+    if (lcons_a[i_a - 1].a_time_ != (*it_b).arr_lcon().a_time_ ||
+        lcons_a[i_a].d_time_ != (*it_b).dep_lcon().d_time_ ||
+        !are_equivalent(stations_a->Get(i_a), (*it_b).get_station(sched_))) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 void graph_builder::add_expanded_trips(route const& r) {
