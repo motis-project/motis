@@ -14,8 +14,8 @@ struct osm_graph_builder {
   osm_graph_builder(osm_graph& graph, station_index const& station_idx)
       : graph_{graph}, station_idx_{station_idx} {}
 
-  void build_graph(std::vector<std::vector<osm_way>> const&);
-  void add_component(std::vector<osm_way> const&);
+  void build_graph(mcd::vector<mcd::vector<osm_way>> const&);
+  void add_component(mcd::vector<osm_way> const&);
 
   std::mutex mutex_;
 

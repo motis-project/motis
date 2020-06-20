@@ -22,23 +22,23 @@ namespace mp = motis::path;
 
 mp::resolved_station_seq make_resolved_cls_seq(
     std::vector<uint32_t> const& classes,
-    std::vector<std::vector<int64_t>> const& paths) {
+    mcd::vector<mcd::vector<int64_t>> const& paths) {
   return mp::resolved_station_seq{
       utl::repeat_n(std::string{}, paths.size() + 1),
       classes,
       utl::to_vec(paths,
                   [](auto const& p) -> mp::osm_path {
-                    return {utl::to_vec(p,
-                                        [](double e) {
-                                          return geo::latlng{e, e};
-                                        }),
+                    return {mcd ::to_vec(p,
+                                           [](double e) {
+                                             return geo::latlng{e, e};
+                                           }),
                             p};
                   }),
       {}};
 }
 
 mp::resolved_station_seq make_resolved_seq(
-    std::vector<std::vector<int64_t>> const& paths) {
+    mcd::vector<mcd::vector<int64_t>> const& paths) {
   return make_resolved_cls_seq({0}, paths);
 }
 

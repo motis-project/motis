@@ -6,6 +6,7 @@
 #include "utl/equal_ranges_linear.h"
 #include "utl/erase_duplicates.h"
 #include "utl/get_or_create.h"
+#include "utl/pairwise.h"
 #include "utl/parallel_for.h"
 #include "utl/repeat_n.h"
 #include "utl/to_vec.h"
@@ -30,7 +31,7 @@ using station_idx_t = size_t;
 using offset_t = size_t;
 
 void osm_graph_builder::build_graph(
-    std::vector<std::vector<osm_way>> const& components) {
+    mcd::vector<mcd::vector<osm_way>> const& components) {
   utl::parallel_for("add_component", components, 1000,
                     [this](auto const& c) { add_component(c); });
 
@@ -53,7 +54,7 @@ void osm_graph_builder::build_graph(
       });
 }
 
-void osm_graph_builder::add_component(std::vector<osm_way> const& osm_ways) {
+void osm_graph_builder::add_component(mcd::vector<osm_way> const& osm_ways) {
   geo::box component_box;
   for (auto const& way : osm_ways) {
     for (auto const& pos : way.path_.polyline_) {
@@ -147,7 +148,11 @@ void osm_graph_builder::add_component(std::vector<osm_way> const& osm_ways) {
 
   auto const make_edges = [this](auto from, auto to, auto const path_idx,
                                  bool oneway) {
-    auto const dist = geo::length(graph_.paths_[path_idx].polyline_);
+    auto dist = 0.;
+    for (auto const& [a, b] :
+         utl::pairwise(graph_.paths_[path_idx].polyline_)) {
+      dist += geo::distance(a, b);
+    }
 
     from->edges_.emplace_back(path_idx, true, dist, from, to);
     if (!oneway) {
@@ -188,7 +193,7 @@ void osm_graph_builder::add_component(std::vector<osm_way> const& osm_ways) {
   for (auto i = 0UL; i < osm_ways.size(); ++i) {
     auto const& way = osm_ways[i];
 
-    auto prev_node = make_osm_node(way.from_, way.path_.polyline_.front());
+    auto prev_node = make_osm_node(way.from(), way.path_.polyline_.front());
     auto prev_offset = 0;
     std::optional<geo::latlng> prev_coord;  // coord was "invented" by phantom
 
@@ -224,7 +229,7 @@ void osm_graph_builder::add_component(std::vector<osm_way> const& osm_ways) {
 
     auto const path_idx = make_path(way, prev_offset, way.path_.size() - 1,
                                     prev_coord, std::optional<geo::latlng>{});
-    auto curr_node = make_osm_node(way.to_, way.path_.polyline_.back());
+    auto curr_node = make_osm_node(way.to(), way.path_.polyline_.back());
 
     make_edges(prev_node, curr_node, path_idx, way.oneway_);
   }

@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "motis/path/prepare/osm/osm_data.h"
 #include "motis/path/prepare/schedule/stations.h"
 #include "motis/path/prepare/strategy/routing_strategy.h"
 
@@ -24,9 +25,7 @@ struct path_routing {
   std::unique_ptr<strategies> strategies_;
 };
 
-path_routing make_path_routing(station_index const&,
-                               std::string const& osm_path,
-                               std::string const& osrm_path,
-                               std::string const& tmp_path);
+path_routing make_path_routing(station_index const&, osm_data const&,
+                               std::string osrm_path);
 
 }  // namespace motis::path

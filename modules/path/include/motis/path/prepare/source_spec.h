@@ -4,13 +4,16 @@
 #include <string>
 #include <vector>
 
+#include "cista/hash.h"
+#include "cista/reflection/comparable.h"
+
 namespace motis::path {
 
 struct source_spec {
+  CISTA_COMPARABLE();
+
   enum class category : uint8_t { UNKNOWN, MULTI, BUS, TRAM, SUBWAY, RAIL };
   enum class router : uint8_t { STUB, OSRM, OSM_NET, OSM_REL };
-
-  source_spec(category c, router r) : category_(c), router_(r) {}
 
   std::string category_str() const {
     switch (category_) {
@@ -36,6 +39,13 @@ struct source_spec {
 
   std::string str() const {
     return category_str().append("/").append(router_str());
+  }
+
+  size_t hash() const {
+    return cista::hash_combine(
+        cista::BASE_HASH,
+        static_cast<typename std::underlying_type_t<category>>(category_),
+        static_cast<typename std::underlying_type_t<router>>(router_));
   }
 
   category category_;

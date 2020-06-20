@@ -230,16 +230,21 @@ struct osrm_strategy::impl {
                 "no path found in osrm_strategy");
 
     auto& route = get(all_routes, 0U);
-    auto polyline = geo::deserialize(
-        utl::to_vec(get(route, "geometry").get<Array>().values,
-                    [](auto&& e) { return e.template get<Number>().value; }));
+
+    auto const& osrm_polyline = get(route, "geometry").get<Array>().values;
+    mcd::vector<geo::latlng> polyline;
+    polyline.reserve(osrm_polyline.size() / 2);
+    for (auto i = 0u; i < osrm_polyline.size(); i += 2) {
+      polyline.emplace_back(osrm_polyline[i].template get<Number>().value,
+                            osrm_polyline[i + 1].template get<Number>().value);
+    }
 
     static_assert(sizeof(long long) == 8);  // NOLINT
     auto osm_node_ids =
-        utl::to_vec(get(route, "osm_node_ids").get<Array>().values,
-                    [](auto&& e) -> int64_t {
-                      return std::stoll(e.template get<String>().value);
-                    });
+        mcd::to_vec(get(route, "osm_node_ids").get<Array>().values,
+                   [](auto&& e) -> int64_t {
+                     return std::stoll(e.template get<String>().value);
+                   });
 
     utl::verify(!osm_node_ids.empty(), "osrm_strategy: empty osm_node_ids");
 

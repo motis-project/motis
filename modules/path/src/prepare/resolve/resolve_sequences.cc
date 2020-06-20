@@ -160,11 +160,7 @@ struct plan_executor {
     for (auto& path : paths) {
       path.unique();
       utl::verify(path.size() != 0, "resolve_sequences: empty path");
-
-      if (path.size() == 1) {
-        path.polyline_.push_back(path.polyline_.back());
-        path.osm_node_ids_.push_back(path.osm_node_ids_.back());
-      }
+      path.ensure_line();
     }
 
     utl::verify(task.seq_->station_ids_.size() == paths.size() + 1,
