@@ -45,7 +45,6 @@ motis_instance_test::motis_instance_test(
          utl::zip(dataset_opt.dataset_prefix_, dataset_opt.dataset_)) {
       import_opt.import_paths_.push_back(
           fmt::format("schedule[{}]:{}", prefix, dataset));
-      std::cout << import_opt.import_paths_.back() << std::endl;
     }
 
   } else {
