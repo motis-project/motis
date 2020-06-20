@@ -3,7 +3,7 @@
 #include <optional>
 #include <stack>
 
-#include "geo/point_rtree.h"
+#include "geo/latlng.h"
 
 #include "utl/enumerate.h"
 #include "utl/equal_ranges_linear.h"
@@ -23,7 +23,6 @@ namespace ml = motis::logging;
 namespace motis::loader {
 
 constexpr auto const kAdjustedMaxDuration = 15;  // [minutes]
-constexpr auto const kLinkNearbyMaxDistance = 300;  // [m];
 
 constexpr auto kNoComponent = std::numeric_limits<uint32_t>::max();
 
@@ -78,8 +77,8 @@ struct footpath_builder {
         duration = *adjusted_duration;
       }
 
-      add_foot_edge_pair(from_station.get(), to_station.get(),  //
-                         from_node, to_node, duration);
+      from_station->equivalent_.emplace_back(to_station.get());
+      add_foot_edge_pair(from_node, to_node, duration);
     }
     LOG(ml::info) << "Skipped " << skipped
                   << " footpaths connecting stations with no events";
@@ -103,11 +102,8 @@ struct footpath_builder {
     return {duration};
   }
 
-  void add_foot_edge_pair(station* from_station, station* to_station,
-                          station_node* from_sn, station_node* to_sn,
+  void add_foot_edge_pair(station_node* from_sn, station_node* to_sn,
                           uint16_t const duration) {
-    from_station->equivalent_.emplace_back(to_station);
-
     auto* from_fn = get_or_create_foot_node(from_sn);
     auto* to_fn = get_or_create_foot_node(to_sn);
 
@@ -163,44 +159,25 @@ struct footpath_builder {
     return sn->foot_node_.get();
   }
 
-  void link_nearby_stations() {
-    auto const station_rtree =
-        geo::make_point_rtree(sched_.stations_, [](auto const& s) {
-          return geo::latlng{s->lat(), s->lng()};
-        });
+  void equivalences_to_footpaths() {
+    for (auto const& from_s : sched_.stations_) {
+      auto* from_sn = sched_.station_nodes_.at(from_s->index_).get();
 
-    for (auto const& [from_idx, from_station] :
-         utl::enumerate(sched_.stations_)) {
-      auto* from_sn = sched_.station_nodes_.at(from_idx).get();
-      if (from_station->source_schedule_ == NO_SOURCE_SCHEDULE) {
-        continue;  // no dummy stations
-      }
-
-      for (auto const& [distance, to_idx] :
-           station_rtree.in_radius_with_distance(
-               geo::latlng{from_station->lat(), from_station->lng()},
-               kLinkNearbyMaxDistance)) {
-        if (from_idx == to_idx) {
-          continue;
+      for (auto const& to_s : from_s->equivalent_) {
+        if (from_s->source_schedule_ == to_s->source_schedule_) {
+          continue;  // no footpaths for schedule-defined meta stations
         }
 
-        auto& to_station = sched_.stations_.at(to_idx);
-        auto* to_sn = sched_.station_nodes_.at(to_idx).get();
-        if (to_station->source_schedule_ == NO_SOURCE_SCHEDULE) {
-          continue;  // no dummy stations
-        }
+        auto* to_sn = sched_.station_nodes_.at(to_s->index_).get();
 
-        if (from_station->source_schedule_ == to_station->source_schedule_) {
-          continue;  // don't shortcut yourself
-        }
-
+        auto const distance =
+            geo::distance(geo::latlng{from_s->lat(), from_s->lng()},
+                          geo::latlng{to_s->lat(), to_s->lng()});
         auto const duration =
-            std::max({from_station->transfer_time_, to_station->transfer_time_,
+            std::max({from_s->transfer_time_, to_s->transfer_time_,
                       static_cast<int32_t>(std::round(
                           static_cast<double>(distance) / (60 * WALK_SPEED)))});
-
-        add_foot_edge_pair(from_station.get(), to_station.get(),  //
-                           from_sn, to_sn, duration);
+        add_foot_edge_pair(from_sn, to_sn, duration);
       }
     }
   }
@@ -396,10 +373,7 @@ void build_footpaths(
     b.add_footpaths(fbs_schedule->footpaths());
   }
 
-  if (opt.expand_footpaths_) {
-    b.link_nearby_stations();
-  }
-
+  b.equivalences_to_footpaths();
   b.make_station_equivalents_unique();
 
   if (opt.expand_footpaths_) {

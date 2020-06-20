@@ -1,5 +1,7 @@
 #include "motis/loader/build_stations.h"
 
+#include "geo/point_rtree.h"
+
 #include "utl/enumerate.h"
 #include "utl/get_or_create.h"
 #include "utl/verify.h"
@@ -16,6 +18,8 @@
 namespace f = flatbuffers64;
 
 namespace motis::loader {
+
+constexpr auto const kLinkNearbyMaxDistance = 300;  // [m];
 
 struct stations_builder {
   explicit stations_builder(schedule& sched) : sched_{sched} {}
@@ -108,6 +112,39 @@ struct stations_builder {
     }
   }
 
+  void link_nearby_stations() {
+    auto const station_rtree =
+        geo::make_point_rtree(sched_.stations_, [](auto const& s) {
+          return geo::latlng{s->lat(), s->lng()};
+        });
+
+    for (auto const& [from_idx, from_station] :
+         utl::enumerate(sched_.stations_)) {
+      if (from_station->source_schedule_ == NO_SOURCE_SCHEDULE) {
+        continue;  // no dummy stations
+      }
+
+      for (auto const& to_idx : station_rtree.in_radius(
+               geo::latlng{from_station->lat(), from_station->lng()},
+               kLinkNearbyMaxDistance)) {
+        if (from_idx == to_idx) {
+          continue;
+        }
+
+        auto& to_station = sched_.stations_.at(to_idx);
+        if (to_station->source_schedule_ == NO_SOURCE_SCHEDULE) {
+          continue;  // no dummy stations
+        }
+
+        if (from_station->source_schedule_ == to_station->source_schedule_) {
+          continue;  // don't shortcut yourself
+        }
+
+        from_station->equivalent_.push_back(to_station.get());
+      }
+    }
+  }
+
   schedule& sched_;
   int first_day_{0}, last_day_{0};
   mcd::hash_map<Station const*, station_node*> station_nodes_;
@@ -144,6 +181,10 @@ mcd::hash_map<Station const*, station_node*> build_stations(
     if (fbs_schedule->meta_stations() != nullptr) {
       b.link_meta_stations(fbs_schedule->meta_stations());
     }
+  }
+
+  if (fbs_schedules.size() > 1) {
+    b.link_nearby_stations();
   }
 
   sched.node_count_ = sched.station_nodes_.size();
