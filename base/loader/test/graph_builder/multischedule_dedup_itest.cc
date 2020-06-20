@@ -9,7 +9,6 @@ using namespace motis;
 using namespace motis::test;
 using namespace motis::module;
 using namespace motis::loader;
-using motis::routing::RoutingResponse;
 
 struct multischedule_dedup_test : public motis_instance_test {
   multischedule_dedup_test()
