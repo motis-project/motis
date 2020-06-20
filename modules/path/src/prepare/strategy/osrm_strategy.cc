@@ -242,9 +242,9 @@ struct osrm_strategy::impl {
     static_assert(sizeof(long long) == 8);  // NOLINT
     auto osm_node_ids =
         mcd::to_vec(get(route, "osm_node_ids").get<Array>().values,
-                   [](auto&& e) -> int64_t {
-                     return std::stoll(e.template get<String>().value);
-                   });
+                    [](auto&& e) -> int64_t {
+                      return std::stoll(e.template get<String>().value);
+                    });
 
     utl::verify(!osm_node_ids.empty(), "osrm_strategy: empty osm_node_ids");
 

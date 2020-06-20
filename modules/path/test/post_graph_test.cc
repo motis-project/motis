@@ -29,9 +29,9 @@ mp::resolved_station_seq make_resolved_cls_seq(
       utl::to_vec(paths,
                   [](auto const& p) -> mp::osm_path {
                     return {mcd ::to_vec(p,
-                                           [](double e) {
-                                             return geo::latlng{e, e};
-                                           }),
+                                         [](double e) {
+                                           return geo::latlng{e, e};
+                                         }),
                             p};
                   }),
       {}};
