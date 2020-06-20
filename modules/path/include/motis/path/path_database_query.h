@@ -9,6 +9,7 @@
 
 #include "motis/module/message.h"
 
+#include "motis/path/definitions.h"
 #include "motis/path/path_database.h"
 
 #include "motis/path/fbs/InternalDbSequence_generated.h"
@@ -28,7 +29,7 @@ struct path_database_query {
     uint64_t response_id_{kInvalidResponseId};
     uint32_t fwd_use_count_{0};
     uint32_t bwd_use_count_{0};
-    uint32_t min_clasz_{std::numeric_limits<uint32_t>::max()};
+    motis_clasz_t min_clasz_{std::numeric_limits<motis_clasz_t>::max()};
     bool is_resolved_{false};
     bool is_reversed_{false};
     bool is_extra_{false};

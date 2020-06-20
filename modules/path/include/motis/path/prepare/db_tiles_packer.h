@@ -2,7 +2,7 @@
 
 #include "tiles/db/feature_pack_quadtree.h"
 
-#include "motis/path/constants.h"
+#include "motis/path/definitions.h"
 
 namespace motis::path {
 

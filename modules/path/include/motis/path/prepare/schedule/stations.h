@@ -1,19 +1,12 @@
 #pragma once
 
-#include <map>
-#include <set>
 #include <string>
 #include <vector>
 
 #include "geo/latlng.h"
 #include "geo/point_rtree.h"
 
-#include "utl/erase_duplicates.h"
-#include "utl/erase_if.h"
-#include "utl/get_or_create.h"
-#include "utl/to_vec.h"
-#include "utl/verify.h"
-
+#include "motis/path/definitions.h"
 #include "motis/path/prepare/osm/osm_data.h"
 #include "motis/path/prepare/schedule/station_sequences.h"
 
@@ -36,7 +29,7 @@ struct station {
   std::string id_;
 
   std::string name_;
-  std::set<int> categories_;
+  std::set<motis_clasz_t> classes_;
 
   geo::latlng pos_;
   std::vector<geo::latlng> stop_positions_;

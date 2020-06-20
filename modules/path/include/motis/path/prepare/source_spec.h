@@ -7,6 +7,8 @@
 #include "cista/hash.h"
 #include "cista/reflection/comparable.h"
 
+#include "motis/path/definitions.h"
+
 namespace motis::path {
 
 struct source_spec {
@@ -53,23 +55,23 @@ struct source_spec {
 };
 
 template <typename Fun>
-void foreach_path_category(std::set<int> const& motis_categories, Fun&& fun) {
-  std::vector<uint32_t> railway_cat, unknown_cat;
-  for (auto const& category : motis_categories) {
-    if (category == 8) {
-      fun(source_spec::category::BUS, std::vector<uint32_t>{8});
-    } else if (category == 7) {
-      fun(source_spec::category::TRAM, std::vector<uint32_t>{7});
-    } else if (category == 6) {
-      fun(source_spec::category::SUBWAY, std::vector<uint32_t>{6});
-    } else if (category < 6) {
-      railway_cat.push_back(category);
+void foreach_path_category(std::set<motis_clasz_t> const& classes, Fun&& fun) {
+  std::vector<motis_clasz_t> railway_cat, unknown_cat;
+  for (auto const& clasz : classes) {
+    if (clasz == 8) {
+      fun(source_spec::category::BUS, std::vector<motis_clasz_t>{8});
+    } else if (clasz == 7) {
+      fun(source_spec::category::TRAM, std::vector<motis_clasz_t>{7});
+    } else if (clasz == 6) {
+      fun(source_spec::category::SUBWAY, std::vector<motis_clasz_t>{6});
+    } else if (clasz < 6) {
+      railway_cat.push_back(clasz);
     } else {
-      unknown_cat.push_back(category);
+      unknown_cat.push_back(clasz);
     }
   }
 
-  if (motis_categories.empty()) {
+  if (classes.empty()) {
     unknown_cat.push_back(9U);
   }
 

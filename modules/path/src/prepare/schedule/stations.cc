@@ -1,5 +1,8 @@
 #include "motis/path/prepare/schedule/stations.h"
 
+#include "utl/get_or_create.h"
+#include "utl/to_vec.h"
+
 namespace motis::path {
 
 station_index collect_stations(std::vector<station_seq> const& seqs) {
@@ -12,7 +15,7 @@ station_index collect_stations(std::vector<station_seq> const& seqs) {
         return station{seq.station_ids_[i],  //
                        seq.station_names_[i],  //
                        seq.coordinates_[i]};
-      }).categories_.insert(begin(seq.categories_), end(seq.categories_));
+      }).classes_.insert(begin(seq.classes_), end(seq.classes_));
     }
   }
 

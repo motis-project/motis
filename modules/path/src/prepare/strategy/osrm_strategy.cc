@@ -16,6 +16,7 @@
 #include "geo/latlng.h"
 
 #include "utl/concat.h"
+#include "utl/erase_duplicates.h"
 #include "utl/erase_if.h"
 #include "utl/parallel_for.h"
 #include "utl/repeat_n.h"

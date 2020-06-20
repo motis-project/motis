@@ -21,7 +21,7 @@ namespace mp = motis::path;
   }
 
 mp::resolved_station_seq make_resolved_cls_seq(
-    std::vector<uint32_t> const& classes,
+    std::vector<mp::motis_clasz_t> const& classes,
     mcd::vector<mcd::vector<int64_t>> const& paths) {
   return mp::resolved_station_seq{
       utl::repeat_n(std::string{}, paths.size() + 1),
@@ -468,5 +468,5 @@ TEST(post_graph, revese_path_min_class) {
   auto const& [seq_segs, classes] = index.resolve_atomic_path(ap);
 
   EXPECT_EQ((std::vector<mp::seq_seg>{{0, 0}, {1, 0}}), seq_segs);
-  EXPECT_EQ((std::vector<uint32_t>{3, 4, 5}), classes);
+  EXPECT_EQ((std::vector<mp::motis_clasz_t>{3, 4, 5}), classes);
 }

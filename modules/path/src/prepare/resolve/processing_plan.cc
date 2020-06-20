@@ -5,6 +5,7 @@
 #include "geo/box.h"
 #include "geo/latlng.h"
 
+#include "utl/get_or_create.h"
 #include "utl/to_vec.h"
 
 #include "motis/hash_map.h"
@@ -25,8 +26,8 @@ processing_plan make_processing_plan(
   {
     mcd::hash_map<part_task_key, size_t> part_task_map;
     for (auto const& seq : sequences) {
-      foreach_path_category(seq.categories_, [&](auto const& path_cat,
-                                                 auto motis_cats) {
+      foreach_path_category(seq.classes_, [&](auto const& path_cat,
+                                              auto motis_cats) {
         auto s_task_idx = pp.seq_tasks_.size();
         auto& s_task = pp.seq_tasks_.emplace_back(&seq, std::move(motis_cats));
 

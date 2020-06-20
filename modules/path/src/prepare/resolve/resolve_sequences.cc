@@ -5,8 +5,10 @@
 
 #include "boost/algorithm/string/join.hpp"
 
+#include "utl/get_or_create.h"
 #include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
+#include "utl/to_vec.h"
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
@@ -132,7 +134,7 @@ struct plan_executor {
     auto stop_sr = sc::steady_clock::now();
 
     stats_.add_seq_timing(
-        {*task.seq_->categories_.begin(),
+        {*task.seq_->classes_.begin(),
          sc::duration_cast<sc::microseconds>(stop_sg - start_sg).count(),
          sc::duration_cast<sc::microseconds>(stop_sr - start_sr).count()});
 
@@ -168,7 +170,7 @@ struct plan_executor {
                 task.seq_->station_ids_.size(), paths.size() + 1);
 
     auto const lock = std::lock_guard{resolved_seq_mutex_};
-    resolved_seq_.emplace_back(task.seq_->station_ids_, task.motis_categories_,
+    resolved_seq_.emplace_back(task.seq_->station_ids_, task.classes_,
                                std::move(paths), std::move(infos));
   }
 

@@ -10,6 +10,7 @@
 
 #include "geo/polygon.h"
 
+#include "utl/erase_if.h"
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
@@ -64,12 +65,12 @@ inline void filter_sequences(std::vector<std::string> const& filters,
       size_t const count = std::stoul(tokens[1]);
       sequences.resize(std::min(count, sequences.size()));
     } else if (tokens[0] == "cat") {
-      auto cat = std::stoi(tokens[1]);
+      auto clasz = static_cast<motis_clasz_t>(std::stoi(tokens[1]));
       utl::erase_if(sequences, [&](auto const& seq) {
-        return seq.categories_.find(cat) == end(seq.categories_);
+        return seq.classes_.find(clasz) == end(seq.classes_);
       });
       for (auto& seq : sequences) {
-        seq.categories_ = {cat};
+        seq.classes_ = {clasz};
       }
     } else {
       LOG(ml::info) << "unknown filter: " << tokens[0];

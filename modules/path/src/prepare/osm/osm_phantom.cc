@@ -8,6 +8,8 @@
 #include "geo/detail/register_latlng.h"
 #include "geo/point_rtree.h"
 
+#include "utl/erase_duplicates.h"
+#include "utl/get_or_create.h"
 #include "utl/pairwise.h"
 #include "utl/to_vec.h"
 

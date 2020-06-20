@@ -132,8 +132,8 @@ std::vector<resolved_station_seq> read_from_fbs(std::string const& fname) {
       resolved_station_seq seq;
       seq.station_ids_ = utl::to_vec(*cached_seq->station_ids(),
                                      [](auto const* id) { return id->str(); });
-      seq.classes_ = std::vector<uint32_t>(std::begin(*cached_seq->classes()),
-                                           std::end(*cached_seq->classes()));
+      seq.classes_ = std::vector<motis_clasz_t>(
+          std::begin(*cached_seq->classes()), std::end(*cached_seq->classes()));
       seq.paths_ = utl::to_vec(*cached_seq->segments(), [](auto const* seg) {
         osm_path path;
 
