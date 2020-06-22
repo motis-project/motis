@@ -383,7 +383,7 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
     progress_tracker->status("Load OSM / Locations");
     std::vector<std::pair<o::object_id_type, o::Location*>> locations;
     auto const collect_ways = [&](raw_way& w) {
-      w.locations_.reserve(w.node_ids_.size());
+      w.locations_.resize(w.node_ids_.size());
       for (auto i = 0ULL; i < w.node_ids_.size(); ++i) {
         locations.emplace_back(w.node_ids_[i], &w.locations_[i]);
       }
