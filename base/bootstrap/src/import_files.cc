@@ -24,14 +24,14 @@ namespace mm = motis::module;
 namespace motis::bootstrap {
 
 mm::msg_ptr make_file_event(std::vector<std::string> const& import_paths) {
-  std::regex re{R"(^(\w+)(?:\[(.*?)\])?:(.*)$)"};
+  std::regex re{R"(^(\w+)(?:\-(.*?))?:(.*)$)"};
 
   mm::message_creator mc;
   std::vector<flatbuffers::Offset<mi::ImportPath>> fbs_paths;
   for (auto const& import_path : import_paths) {
     std::smatch m;
     utl::verify(std::regex_match(import_path, m, re) && m.size() == 4,
-                "import_path does not match tag[options]:path : {}",
+                "import_path does not match tag-options:path : {}",
                 import_path);
 
     utl::verify(fs::exists(m.str(3)), "file does not exist: {}", m.str(3));
