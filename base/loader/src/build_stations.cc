@@ -101,12 +101,13 @@ struct stations_builder {
   void link_meta_stations(
       f::Vector<f::Offset<MetaStation>> const* meta_stations) {
     for (auto const& meta : *meta_stations) {
-      auto& station = sched_.eva_to_station_.at(meta->station()->id()->str());
+      auto& station =
+          *sched_.stations_[station_nodes_.at(meta->station())->id_];
       for (auto const& fbs_equivalent : *meta->equivalent()) {
         auto& equivalent =
-            *sched_.stations_[station_nodes_[fbs_equivalent]->id_];
-        if (station->index_ != equivalent.index_) {
-          station->equivalent_.push_back(&equivalent);
+            *sched_.stations_[station_nodes_.at(fbs_equivalent)->id_];
+        if (station.index_ != equivalent.index_) {
+          station.equivalent_.push_back(&equivalent);
         }
       }
     }
