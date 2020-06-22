@@ -202,8 +202,12 @@ struct db_builder::impl {
       db_flush_maybe(0);
     }
     feature_inserter_.reset(nullptr);
+
+    auto progress_tracker = utl::get_active_progress_tracker();
     {
       motis::logging::scoped_timer timer("tiles: pack");
+      progress_tracker->status("Pack Database").out_bounds(90, 95);
+
       auto const metadata_coder = make_shared_metadata_coder(*db_->db_handle_);
       pack_features(*db_->db_handle_, *db_->pack_handle_,
                     [&](auto const tile, auto const& packs) {
@@ -215,6 +219,8 @@ struct db_builder::impl {
     }
     {
       motis::logging::scoped_timer timer("tiles: prepare");
+      progress_tracker->status("Prepare Tiles").out_bounds(95, 100);
+
       tiles::prepare_tiles(*db_->db_handle_, *db_->pack_handle_, 10);
     }
   }

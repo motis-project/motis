@@ -110,9 +110,11 @@ void prepare(prepare_settings const& opt) {
   cachable_step osm_cache{opt.osm_cache_task_};
   cachable_step seq_cache{opt.seq_cache_task_};
 
+  auto progress_tracker = utl::get_active_progress_tracker();
+
+  progress_tracker->status("Load Station Sequences").out_bounds(0, 5);
   auto sequences = schedule_wrapper{opt.schedule_}.load_station_sequences();
   filter_sequences(opt.filter_, sequences);
-
   auto stations = collect_stations(sequences);
 
   cista::memory_holder osm_data_mem;
@@ -134,19 +136,24 @@ void prepare(prepare_settings const& opt) {
                       << " plattforms, " << osm_data_ptr->profiles_.size()
                       << " profiles";
 
+        progress_tracker->status("Load Station Sequences");
         annotate_stop_positions(*osm_data_ptr, stations);
 
         LOG(ml::info) << "processing " << sequences.size()
                       << " station sequences with " << stations.stations_.size()
                       << " unique stations.";
 
+        progress_tracker->status("Make Path Routing");
         auto routing = make_path_routing(stations, *osm_data_ptr, opt.osrm_);
+
+        progress_tracker->status("Resolve Sequences").out_bounds(25, 90);
         return resolve_sequences(sequences, routing);
       });
 
   LOG(ml::info) << "post-processing " << resolved_seqs.size()
                 << " station sequences";
 
+  progress_tracker->status("Post Processing");
   auto post_graph = build_post_graph(std::move(resolved_seqs));
   post_process(post_graph);
 

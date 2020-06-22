@@ -355,7 +355,9 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
       tiles::hybrid_node_idx_builder node_idx_builder{node_idx};
 
       oio::Reader reader{input_file, oeb::node | oeb::relation};
-      progress_tracker->status("Load OSM / Pass 1").in_high(reader.file_size());
+      progress_tracker->status("Load OSM / Pass 1")
+          .out_bounds(5, 15)
+          .in_high(reader.file_size());
       while (auto buffer = reader.read()) {
         progress_tracker->update(reader.offset());
         o::apply(buffer, node_idx_builder, stop_positions, plattforms,  //
@@ -367,7 +369,9 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
     }
     {
       oio::Reader reader{input_file, oeb::way};
-      progress_tracker->status("Load OSM / Pass 2").in_high(reader.file_size());
+      progress_tracker->status("Load OSM / Pass 2")
+          .out_bounds(15, 25)
+          .in_high(reader.file_size());
       while (auto buffer = reader.read()) {
         progress_tracker->update(reader.offset());
         o::apply(buffer, plattforms,  //

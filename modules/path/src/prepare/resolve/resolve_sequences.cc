@@ -54,10 +54,7 @@ struct plan_executor {
   void execute() {
     ml::scoped_timer t{"resolve_sequences"};
     start_ = sc::steady_clock::now();
-
-    progress_tracker_->status("Resolve Sequences")
-        .reset_bounds()
-        .in_high(pp_.part_task_queue_.size());
+    progress_tracker_->in_high(pp_.part_task_queue_.size());
 
     utl::parallel_for_run(
         pp_.part_task_queue_.size(), [&](auto const queue_idx) {
