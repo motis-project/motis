@@ -52,7 +52,7 @@ std::vector<std::string> pick_files(mm::msg_ptr const& msg,
                                     std::string const& tag) {
   using mi::FileEvent;
   return utl::all(*motis_content(FileEvent, msg)->paths())  //
-         | utl::remove_if([&](auto&& p) { return p->tag()->str() == tag; })  //
+         | utl::remove_if([&](auto&& p) { return p->tag()->str() != tag; })  //
          | utl::transform([](auto&& p) { return p->path()->str(); })  //
          | utl::remove_if([](auto&& p) { return !fs::is_regular_file(p); })  //
          | utl::vec();
