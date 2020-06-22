@@ -8,9 +8,6 @@
 #include "motis/path/prepare/strategy/osrm_strategy.h"
 #include "motis/path/prepare/strategy/stub_strategy.h"
 
-namespace fs = boost::filesystem;
-namespace ml = motis::logging;
-
 namespace motis::path {
 
 struct path_routing::strategies {
@@ -44,7 +41,7 @@ routing_strategy* path_routing::get_stub_strategy() const {
 
 path_routing make_path_routing(station_index const& station_idx,
                                osm_data const& osm_data,
-                               std::string osrm_path) {
+                               std::string const& osrm_path) {
   using category = source_spec::category;
   using router = source_spec::router;
 

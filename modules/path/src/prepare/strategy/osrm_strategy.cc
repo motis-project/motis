@@ -104,8 +104,8 @@ struct osrm_strategy::impl {
             std::vector<PhantomNodeWithDistance> extra_nodes;
             for (auto& node_with_dist : nodes_dists) {
               auto& pn = node_with_dist.phantom_node;
-              if (pn.reverse_segment_id.enabled != 0u &&
-                  pn.forward_segment_id.enabled != 0u) {
+              if (pn.reverse_segment_id.enabled != 0U &&
+                  pn.forward_segment_id.enabled != 0U) {
                 pn.forward_segment_id.enabled = 0;
                 pn.reverse_segment_id.enabled = 0;
 
@@ -235,7 +235,7 @@ struct osrm_strategy::impl {
     auto const& osrm_polyline = get(route, "geometry").get<Array>().values;
     mcd::vector<geo::latlng> polyline;
     polyline.reserve(osrm_polyline.size() / 2);
-    for (auto i = 0u; i < osrm_polyline.size(); i += 2) {
+    for (auto i = 0U; i < osrm_polyline.size(); i += 2) {
       polyline.emplace_back(osrm_polyline[i].template get<Number>().value,
                             osrm_polyline[i + 1].template get<Number>().value);
     }

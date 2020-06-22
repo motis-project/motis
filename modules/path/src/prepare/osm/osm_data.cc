@@ -29,16 +29,9 @@
 #include "motis/path/prepare/osm/osm_way.h"
 
 namespace o = osmium;
-namespace oa = osmium::area;
 namespace oio = osmium::io;
-namespace orel = osmium::relations;
 namespace oh = osmium::handler;
-namespace om = osmium::memory;
 namespace oeb = osmium::osm_entity_bits;
-
-namespace ml = motis::logging;
-
-namespace fs = boost::filesystem;
 
 namespace motis::path {
 
@@ -295,9 +288,9 @@ struct plattform_handler : public oh::Handler, relation_way_base {
 
       double lat_sum{0};
       double lng_sum{0};
-      for (auto i = 0ULL; i < all.size(); ++i) {
-        lat_sum += all[i].second.lat();
-        lng_sum += all[i].second.lon();
+      for (auto const& [id, loc] : all) {
+        lat_sum += loc.lat();
+        lng_sum += loc.lon();
       }
 
       return geo::latlng{lat_sum / all.size(), lng_sum / all.size()};
@@ -371,7 +364,7 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
     progress_tracker->status("Load OSM / Locations");
     std::vector<std::pair<o::object_id_type, o::Location*>> locations;
     auto const collect_ways = [&](raw_way& w) {
-      w.locations_.resize(w.node_ids_.size());
+      w.locations_.reserve(w.node_ids_.size());
       for (auto i = 0ULL; i < w.node_ids_.size(); ++i) {
         locations.emplace_back(w.node_ids_[i], &w.locations_[i]);
       }

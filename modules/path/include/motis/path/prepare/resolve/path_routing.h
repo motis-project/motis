@@ -26,6 +26,6 @@ struct path_routing {
 };
 
 path_routing make_path_routing(station_index const&, osm_data const&,
-                               std::string osrm_path);
+                               std::string const& osrm_path);
 
 }  // namespace motis::path
