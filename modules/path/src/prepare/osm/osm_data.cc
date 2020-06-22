@@ -38,10 +38,10 @@ namespace motis::path {
 constexpr auto const CISTA_MODE =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_VERSION;
 
-std::string const str_platform = "platform";
-std::string const str_stop_position = "stop_position";
-std::string const str_stop = "stop";
-std::string const str_yes = "yes";
+auto const str_platform = std::string_view{"platform"};
+auto const str_stop_position = std::string_view{"stop_position"};
+auto const str_stop = std::string_view{"stop"};
+auto const str_yes = std::string_view{"yes"};
 
 struct raw_way {
   explicit raw_way(o::object_id_type id) : id_{id}, oneway_{false} {}
