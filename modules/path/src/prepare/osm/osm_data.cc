@@ -86,9 +86,11 @@ mcd::vector<osm_way> make_osm_ways(std::vector<raw_way> const& raw_ways) {
 
   mcd::vector<osm_way> osm_ways;
   for (auto const& way : raw_ways) {
-    if (way.node_ids_.size() < 2) {
+    if (way.node_ids_.size() < 2 || way.locations_.empty()) {
       continue;
     }
+    utl::verify(way.node_ids_.size() == way.locations_.size(),
+                "way not resolved!");
 
     auto from = begin(way.node_ids_);
     while (true) {
@@ -192,12 +194,16 @@ struct relation_handler : public oh::Handler, relation_way_base {
   }
 
   mcd::vector<mcd::vector<osm_way>> finalize() {
-    return mcd::to_vec(relations_, [](auto const& way_ptrs) {
+    mcd::vector<mcd::vector<osm_way>> result;
+    for (auto const& way_ptrs : relations_) {
       auto osm_ways = make_osm_ways(
           utl::to_vec(way_ptrs, [](auto const& ptr) { return *ptr; }));
-      aggregate_osm_ways(osm_ways);
-      return osm_ways;
-    });
+      if (!osm_ways.empty()) {
+        aggregate_osm_ways(osm_ways);
+        result.emplace_back(std::move(osm_ways));
+      }
+    }
+    return result;
   }
 
   std::vector<std::string> allowed_routes_;
@@ -273,28 +279,37 @@ struct plattform_handler : public oh::Handler, relation_way_base {
     }
   }
 
-  mcd::vector<geo::latlng> finalize() {
-    std::vector<std::pair<o::object_id_type, o::Location>> all;
-    return mcd::to_vec(relations_, [&](auto const& rel) {
-      for (auto const& w : rel) {
+  mcd::vector<geo::latlng> finalize() const {
+    mcd::vector<geo::latlng> result;
+    for (auto const& ways : relations_) {
+      std::vector<std::pair<o::object_id_type, o::Location>> coords;
+      for (auto const& w : ways) {
+        if (w->locations_.empty()) {
+          continue;
+        }
         for (auto const& [id, l] : utl::zip(w->node_ids_, w->locations_)) {
-          all.emplace_back(id, l);
+          coords.emplace_back(id, l);
         }
       }
 
+      if (coords.empty()) {
+        continue;
+      }
+
       utl::erase_duplicates(
-          all, [](auto const& a, auto const& b) { return a.first < b.first; },
+          coords,
+          [](auto const& a, auto const& b) { return a.first < b.first; },
           [](auto const& a, auto const& b) { return a.first == b.first; });
 
       double lat_sum{0};
       double lng_sum{0};
-      for (auto const& [id, loc] : all) {
+      for (auto const& [id, loc] : coords) {
         lat_sum += loc.lat();
         lng_sum += loc.lon();
       }
-
-      return geo::latlng{lat_sum / all.size(), lng_sum / all.size()};
-    });
+      result.emplace_back(lat_sum / coords.size(), lng_sum / coords.size());
+    }
+    return result;
   }
 };
 
