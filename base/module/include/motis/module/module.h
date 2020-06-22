@@ -55,12 +55,16 @@ protected:
     return shared_data_->get<T>(s);
   }
 
-  boost::filesystem::path const& get_data_directory() const;
+  template <typename T>
+  void add_shared_data(std::string_view const s, T&& data) {
+    shared_data_->emplace_data(s, std::forward<T>(data));
+  }
 
-  shared_data* shared_data_{nullptr};
+  boost::filesystem::path const& get_data_directory() const;
 
 private:
   boost::filesystem::path data_directory_;
+  shared_data* shared_data_{nullptr};
 };
 
 }  // namespace module

@@ -66,7 +66,7 @@ void rsl::init(motis::module::registry& reg) {
   log_output_ = std::make_unique<output::log_output>(log_file_);
   stats_writer_ = std::make_unique<stats_writer>(stats_file_);
 
-  shared_data_->emplace_data(RSL_DATA_KEY, &data_);
+  add_shared_data(RSL_DATA_KEY, &data_);
 
   reg.subscribe("/init", [&]() { load_journeys(); });
   reg.register_op("/rsl/load_journeys", [&](msg_ptr const&) -> msg_ptr {
