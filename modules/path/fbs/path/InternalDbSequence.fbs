@@ -10,6 +10,6 @@ table InternalDbSegment {
 
 table InternalDbSequence {
   station_ids: [string];
-  classes: [uint];
+  classes: [ubyte];
   segments: [InternalDbSegment];
 }

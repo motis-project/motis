@@ -7,7 +7,7 @@ table PathIndex {
 
 table PathSeqInfo {
   station_ids: [string];
-  classes: [uint];
+  classes: [ubyte];
   sequence: uint;
 }
 

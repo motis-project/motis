@@ -27,7 +27,7 @@
 #include "motis/core/schedule/connection.h"
 #include "motis/module/message.h"
 
-#include "motis/path/constants.h"
+#include "motis/path/definitions.h"
 #include "motis/path/path_database.h"
 #include "motis/path/prepare/db_tiles_packer.h"
 
@@ -41,17 +41,17 @@ using namespace motis::module;
 namespace motis::path {
 
 using seq_info =
-    std::tuple<std::vector<std::string>, std::vector<uint32_t>, int>;
+    std::tuple<std::vector<std::string>, std::vector<motis_clasz_t>, int>;
 
 template <typename Classes>
-int get_min_clasz(Classes const& c) {
+motis_clasz_t get_min_clasz(Classes const& c) {
   if (c.empty()) {
     return 9;
   }
   return *std::min_element(begin(c), end(c));
 }
 
-uint64_t min_clasz_to_min_zoom_level(int const min_clasz) {
+uint64_t min_clasz_to_min_zoom_level(motis_clasz_t const min_clasz) {
   if (min_clasz < 3) {
     return 4UL;
   } else if (min_clasz < 6) {
@@ -93,7 +93,7 @@ struct db_builder::impl {
 
   void store_stations(std::vector<station> const& stations) {
     for (auto const& s : stations) {
-      auto const min_clasz = get_min_clasz(s.categories_);
+      auto const min_clasz = get_min_clasz(s.classes_);
 
       tiles::feature f;
       f.id_ = station_feature_id_++;
@@ -114,7 +114,7 @@ struct db_builder::impl {
 
   std::pair<uint64_t, uint64_t> add_feature(
       geo::polyline const& line, std::vector<seq_seg> const& seq_segs,
-      std::vector<uint32_t> const& classes, bool is_stub) {
+      std::vector<motis_clasz_t> const& classes, bool is_stub) {
     auto const min_clasz = get_min_clasz(classes);
 
     tiles::feature f;
@@ -202,8 +202,12 @@ struct db_builder::impl {
       db_flush_maybe(0);
     }
     feature_inserter_.reset(nullptr);
+
+    auto progress_tracker = utl::get_active_progress_tracker();
     {
       motis::logging::scoped_timer timer("tiles: pack");
+      progress_tracker->status("Pack Database").out_bounds(90, 95);
+
       auto const metadata_coder = make_shared_metadata_coder(*db_->db_handle_);
       pack_features(*db_->db_handle_, *db_->pack_handle_,
                     [&](auto const tile, auto const& packs) {
@@ -215,6 +219,8 @@ struct db_builder::impl {
     }
     {
       motis::logging::scoped_timer timer("tiles: prepare");
+      progress_tracker->status("Prepare Tiles").out_bounds(95, 100);
+
       tiles::prepare_tiles(*db_->db_handle_, *db_->pack_handle_, 10);
     }
   }
@@ -318,7 +324,7 @@ void db_builder::store_stations(std::vector<station> const& stations) const {
 
 std::pair<uint64_t, uint64_t> db_builder::add_feature(
     geo::polyline const& polyline, std::vector<seq_seg> const& seq_segs,
-    std::vector<uint32_t> const& classes, bool is_stub) const {
+    std::vector<motis_clasz_t> const& classes, bool is_stub) const {
   return impl_->add_feature(polyline, seq_segs, classes, is_stub);
 }
 

@@ -55,7 +55,7 @@ std::vector<station_seq> load_station_sequences(
     for (auto const& section : *service->sections()) {
       auto it = mapping.find(section->category()->name()->str());
       if (it != end(mapping)) {
-        seq.categories_.emplace(it->second);
+        seq.classes_.emplace(it->second);
       }
     }
   }
@@ -73,7 +73,7 @@ std::vector<station_seq> load_station_sequences(
         auto elem = *lb;
 
         for (auto it = std::next(lb); it != ub; ++it) {
-          elem.categories_.insert(begin(it->categories_), end(it->categories_));
+          elem.classes_.insert(begin(it->classes_), end(it->classes_));
         }
 
         result.emplace_back(elem);

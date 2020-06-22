@@ -17,7 +17,7 @@ table InternalSegment {
 
 table InternalPathSeqResponse {
   station_ids: [string];
-  classes: [uint];
+  classes: [ubyte];
   segments: [InternalSegment];
   infos: [InternalPathSourceInfo];
 }

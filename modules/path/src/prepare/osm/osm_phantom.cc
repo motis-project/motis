@@ -8,6 +8,8 @@
 #include "geo/detail/register_latlng.h"
 #include "geo/point_rtree.h"
 
+#include "utl/erase_duplicates.h"
+#include "utl/get_or_create.h"
 #include "utl/pairwise.h"
 #include "utl/to_vec.h"
 
@@ -98,7 +100,7 @@ inline bool dominated_with_tiebreaker(osm_edge_phantom_with_dist const& self,
 }
 
 struct osm_phantom_index {
-  explicit osm_phantom_index(std::vector<osm_way> const& osm_ways) {
+  explicit osm_phantom_index(mcd::vector<osm_way> const& osm_ways) {
     mcd::hash_map<int64_t, osm_node_phantom> node_phantoms;
 
     for (auto i = 0UL; i < osm_ways.size(); ++i) {
@@ -111,8 +113,8 @@ struct osm_phantom_index {
         });
         phantom.way_idx_.push_back(i);
       };
-      make_node_phantom(osm_ways[i].from_, polyline.front());
-      make_node_phantom(osm_ways[i].to_, polyline.back());
+      make_node_phantom(osm_ways[i].from(), polyline.front());
+      make_node_phantom(osm_ways[i].to(), polyline.back());
 
       auto j = 0;
       for (auto const& [from, to] : utl::pairwise(polyline)) {
@@ -183,7 +185,7 @@ std::pair<std::vector<std::pair<osm_node_phantom_with_dist, station const*>>,
           std::vector<located_osm_edge_phantom_with_dist>>
 make_phantoms(station_index const& station_idx,
               std::vector<size_t> const& matched_stations,
-              std::vector<osm_way> const& osm_ways) {
+              mcd::vector<osm_way> const& osm_ways) {
   std::vector<std::pair<osm_node_phantom_with_dist, station const*>> n_phantoms;
   std::vector<located_osm_edge_phantom_with_dist> e_phantoms;
 

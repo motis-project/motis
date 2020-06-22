@@ -24,13 +24,13 @@ namespace motis::path {
 struct osm_strategy : public routing_strategy {
   osm_strategy(strategy_id_t strategy_id, source_spec spec,
                station_index const& station_idx,
-               std::vector<std::vector<osm_way>> const& components)
+               mcd::vector<mcd::vector<osm_way>> const& components)
       : routing_strategy(strategy_id, spec) {
     osm_graph_builder{graph_, station_idx}.build_graph(components);
-    print_osm_graph_stats(graph_);
+    print_osm_graph_stats(spec, graph_);
 
     contracted_ = contract_graph(graph_);
-    print_osm_graph_stats(contracted_);
+    print_osm_graph_stats(spec, contracted_);
 
     utl::equal_ranges_linear(
         graph_.node_station_links_,

@@ -53,7 +53,9 @@ void write_to_fbs(std::vector<resolved_station_seq> const& sequences,
 
         return CreateInternalSegment(
             fbb, fbb.CreateString(tiles::serialize(polyline)),
-            fbb.CreateString(""), fbb.CreateVector(path.osm_node_ids_));
+            fbb.CreateString(""),
+            fbb.CreateVector(path.osm_node_ids_.data(),
+                             path.osm_node_ids_.size()));
       });
 
       std::vector<Offset<InternalPathSourceInfo>> fbs_info;
@@ -130,18 +132,18 @@ std::vector<resolved_station_seq> read_from_fbs(std::string const& fname) {
       resolved_station_seq seq;
       seq.station_ids_ = utl::to_vec(*cached_seq->station_ids(),
                                      [](auto const* id) { return id->str(); });
-      seq.classes_ = std::vector<uint32_t>(std::begin(*cached_seq->classes()),
-                                           std::end(*cached_seq->classes()));
+      seq.classes_ = std::vector<motis_clasz_t>(
+          std::begin(*cached_seq->classes()), std::end(*cached_seq->classes()));
       seq.paths_ = utl::to_vec(*cached_seq->segments(), [](auto const* seg) {
         osm_path path;
 
         auto geometry = tiles::deserialize(seg->coords()->str());
         auto const& polyline = mpark::get<tiles::fixed_polyline>(geometry);
         utl::verify(polyline.size() == 1, "invalid polyline");
-        path.polyline_ = utl::to_vec(polyline.front(), [](auto const& c) {
+        path.polyline_ = mcd::to_vec(polyline.front(), [](auto const& c) {
           return tiles::fixed_to_latlng(c);
         });
-        path.osm_node_ids_ = std::vector<int64_t>(
+        path.osm_node_ids_ = mcd::vector<int64_t>(
             std::begin(*seg->osm_node_ids()), std::end(*seg->osm_node_ids()));
         path.verify_path();
         return path;

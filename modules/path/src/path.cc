@@ -32,7 +32,7 @@
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
-#include "motis/path/constants.h"
+#include "motis/path/definitions.h"
 #include "motis/path/path_database.h"
 #include "motis/path/path_database_query.h"
 #include "motis/path/path_index.h"

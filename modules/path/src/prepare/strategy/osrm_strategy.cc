@@ -16,6 +16,7 @@
 #include "geo/latlng.h"
 
 #include "utl/concat.h"
+#include "utl/erase_duplicates.h"
 #include "utl/erase_if.h"
 #include "utl/parallel_for.h"
 #include "utl/repeat_n.h"
@@ -103,8 +104,8 @@ struct osrm_strategy::impl {
             std::vector<PhantomNodeWithDistance> extra_nodes;
             for (auto& node_with_dist : nodes_dists) {
               auto& pn = node_with_dist.phantom_node;
-              if (pn.reverse_segment_id.enabled != 0u &&
-                  pn.forward_segment_id.enabled != 0u) {
+              if (pn.reverse_segment_id.enabled != 0U &&
+                  pn.forward_segment_id.enabled != 0U) {
                 pn.forward_segment_id.enabled = 0;
                 pn.reverse_segment_id.enabled = 0;
 
@@ -230,13 +231,18 @@ struct osrm_strategy::impl {
                 "no path found in osrm_strategy");
 
     auto& route = get(all_routes, 0U);
-    auto polyline = geo::deserialize(
-        utl::to_vec(get(route, "geometry").get<Array>().values,
-                    [](auto&& e) { return e.template get<Number>().value; }));
+
+    auto const& osrm_polyline = get(route, "geometry").get<Array>().values;
+    mcd::vector<geo::latlng> polyline;
+    polyline.reserve(osrm_polyline.size() / 2);
+    for (auto i = 0U; i < osrm_polyline.size(); i += 2) {
+      polyline.emplace_back(osrm_polyline[i].template get<Number>().value,
+                            osrm_polyline[i + 1].template get<Number>().value);
+    }
 
     static_assert(sizeof(long long) == 8);  // NOLINT
     auto osm_node_ids =
-        utl::to_vec(get(route, "osm_node_ids").get<Array>().values,
+        mcd::to_vec(get(route, "osm_node_ids").get<Array>().values,
                     [](auto&& e) -> int64_t {
                       return std::stoll(e.template get<String>().value);
                     });

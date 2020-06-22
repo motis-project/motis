@@ -16,6 +16,7 @@
 #include "motis/core/common/logging.h"
 
 #include "motis/path/prepare/osm_path.h"
+#include "motis/path/prepare/source_spec.h"
 
 namespace motis::path {
 
@@ -80,9 +81,10 @@ struct osm_edge {
   osm_node const* to_;
 };
 
-inline void print_osm_graph_stats(osm_graph const& graph) {
+inline void print_osm_graph_stats(source_spec const& source_spec,
+                                  osm_graph const& graph) {
   namespace ml = motis::logging;
-  LOG(ml::info) << "osm graph stats";
+  LOG(ml::info) << "osm graph stats " << source_spec.str();
 
   auto const node_count = std::count_if(begin(graph.nodes_), end(graph.nodes_),
                                         [](auto const& n) { return !!n; });

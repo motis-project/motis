@@ -7,23 +7,23 @@
 
 namespace mp = motis::path;
 
-std::vector<mp::osm_way> make_ways(std::vector<std::vector<int64_t>> const& in,
+mcd::vector<mp::osm_way> make_ways(mcd::vector<mcd::vector<int64_t>> const& in,
                                    bool oneway = false) {
-  return utl::to_vec(in, [&](auto const& ids) {
+  return mcd ::to_vec(in, [&](auto const& ids) {
     utl::verify(ids.size() >= 2, "make_ways: invalid input");
 
     mp::osm_path path{ids.size()};
     path.osm_node_ids_ = ids;
     path.polyline_.resize(ids.size());
 
-    return mp::osm_way{ids.front(), ids.back(), 0, std::move(path), oneway};
+    return mp::osm_way{{0}, oneway, std::move(path)};
   });
 }
 
-#define COUNT_WAY(vec, from, to)                           \
-  (std::count_if(begin(vec), end(vec), [](auto const& e) { \
-    return (e.from_ == (from) && e.to_ == (to)) ||         \
-           (e.from_ == (to) && e.to_ == (from));           \
+#define COUNT_WAY(vec, from_expected, to_expected)                     \
+  (std::count_if(begin(vec), end(vec), [](auto const& e) {             \
+    return (e.from() == (from_expected) && e.to() == (to_expected)) || \
+           (e.from() == (to_expected) && e.to() == (from_expected));   \
   }))
 
 TEST(aggregate_osm_ways, pairwise) {

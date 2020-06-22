@@ -25,7 +25,7 @@ struct sequence_info {
 struct resolved_station_seq {
   resolved_station_seq() = default;
   resolved_station_seq(std::vector<std::string> station_ids,
-                       std::vector<uint32_t> classes,
+                       std::vector<motis_clasz_t> classes,
                        std::vector<osm_path> paths,
                        std::vector<sequence_info> sequence_infos)
       : station_ids_{std::move(station_ids)},
@@ -34,7 +34,7 @@ struct resolved_station_seq {
         sequence_infos_{std::move(sequence_infos)} {}
 
   std::vector<std::string> station_ids_;
-  std::vector<uint32_t> classes_;
+  std::vector<motis_clasz_t> classes_;
   std::vector<osm_path> paths_;
   std::vector<sequence_info> sequence_infos_;
 };

@@ -11,27 +11,27 @@
 
 namespace motis::path {
 
-void aggregate_osm_ways(std::vector<osm_way>& osm_ways) {
+void aggregate_osm_ways(mcd::vector<osm_way>& osm_ways) {
   mcd::hash_map<int64_t, size_t> degrees;
   for (auto const& way : osm_ways) {
     utl::verify(way.is_valid(), "initially all ways must be valid!");
-    degrees[way.from_] += 1;
-    degrees[way.to_] += 1;
+    degrees[way.from()] += 1;
+    degrees[way.to()] += 1;
   }
 
   for (auto it = begin(osm_ways); it != end(osm_ways); ++it) {
-    if (!it->is_valid() || it->from_ == it->to_) {
+    if (!it->is_valid() || it->from() == it->to()) {
       continue;
     }
-    while (degrees[it->from_] == 2) {
-      if (it->from_ == it->to_) {
+    while (degrees[it->from()] == 2) {
+      if (it->from() == it->to()) {
         break;  // cycle detected
       }
 
       auto other_it =
           std::find_if(std::next(it), end(osm_ways), [&](auto const& other) {
             return other.is_valid() &&
-                   (it->from_ == other.from_ || it->from_ == other.to_);
+                   (it->from() == other.from() || it->from() == other.to());
           });
 
       if (other_it == end(osm_ways)) {
@@ -43,16 +43,13 @@ void aggregate_osm_ways(std::vector<osm_way>& osm_ways) {
         break;
       }
 
-      if (it->from_ == other_it->to_) {
+      if (it->from() == other_it->to()) {
         //  --(other)--> X --(this)-->
-        it->from_ = other_it->from_;
       } else {
         //  <--(other)-- X --(this)-->
         if (it->oneway_) {
           break;  // conflicting oneway directions
         }
-
-        it->from_ = other_it->to_;
 
         other_it->path_.reverse();
       }
@@ -64,19 +61,19 @@ void aggregate_osm_ways(std::vector<osm_way>& osm_ways) {
       other_it->invalidate();
     }
 
-    if (it->from_ == it->to_) {
+    if (it->from() == it->to()) {
       continue;  // cycle detected
     }
 
-    while (degrees[it->to_] == 2) {
-      if (it->from_ == it->to_) {
+    while (degrees[it->to()] == 2) {
+      if (it->from() == it->to()) {
         break;  // cycle detected
       }
 
       auto other_it =
           std::find_if(std::next(it), end(osm_ways), [&](auto const& other) {
             return other.is_valid() &&
-                   (it->to_ == other.from_ || it->to_ == other.to_);
+                   (it->to() == other.from() || it->to() == other.to());
           });
 
       if (other_it == end(osm_ways)) {
@@ -88,16 +85,13 @@ void aggregate_osm_ways(std::vector<osm_way>& osm_ways) {
         break;
       }
 
-      if (it->to_ == other_it->from_) {
+      if (it->to() == other_it->from()) {
         // --(this)--> X --(other)-->
-        it->to_ = other_it->to_;
       } else {
         // --(this)--> X <--(other)--
         if (it->oneway_) {
           break;  // conflicting oneway directions
         }
-
-        it->to_ = other_it->from_;
 
         other_it->path_.reverse();
       }

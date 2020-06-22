@@ -7,8 +7,8 @@ void osm_path::unique() {
     return;
   }
 
-  geo::polyline tmp_polyline{polyline_.front()};
-  std::vector<int64_t> tmp_osm_node_ids{osm_node_ids_.front()};
+  mcd::vector<geo::latlng> tmp_polyline{polyline_.front()};
+  mcd::vector<int64_t> tmp_osm_node_ids{osm_node_ids_.front()};
 
   for (auto i = 1UL; i < size(); ++i) {
     if (osm_node_ids_[i] == kPathUnknownNodeId &&
@@ -78,6 +78,18 @@ void osm_path::remove_loops() {
     osm_node_ids_.erase(begin(osm_node_ids_) + loop_begin,
                         begin(osm_node_ids_) + loop_end);
   }
+}
+
+void osm_path::ensure_line() {
+  if (size() > 1) {
+    return;
+  }
+
+  auto coord = polyline_.back();
+  polyline_.push_back(coord);
+
+  auto node_id = osm_node_ids_.back();
+  osm_node_ids_.push_back(node_id);
 }
 
 }  // namespace motis::path

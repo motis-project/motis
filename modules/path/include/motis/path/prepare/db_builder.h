@@ -29,7 +29,7 @@ struct db_builder {
 
   std::pair<uint64_t, uint64_t> add_feature(
       geo::polyline const&, std::vector<seq_seg> const&,
-      std::vector<uint32_t> const& classes, bool is_stub) const;
+      std::vector<motis_clasz_t> const& classes, bool is_stub) const;
 
   void add_seq(size_t seq_idx, resolved_station_seq const&,
                std::vector<geo::box> const& boxes,

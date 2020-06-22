@@ -5,11 +5,17 @@
 #include <ostream>
 #include <vector>
 
+#include "cista/serialization.h"
+
 #include "geo/polyline.h"
 
 #include "utl/concat.h"
 #include "utl/repeat_n.h"
 #include "utl/verify.h"
+
+#include "motis/vector.h"
+
+#include "motis/path/prepare/cista_util.h"
 
 namespace motis::path {
 
@@ -23,14 +29,15 @@ struct osm_path {
     osm_node_ids_.reserve(size);
   }
 
-  osm_path(geo::polyline polyline, std::vector<int64_t> osm_node_ids)
+  osm_path(mcd::vector<geo::latlng> polyline, mcd::vector<int64_t> osm_node_ids)
       : polyline_(std::move(polyline)), osm_node_ids_(std::move(osm_node_ids)) {
     verify_path();
   }
 
-  explicit osm_path(geo::polyline polyline)
+  explicit osm_path(mcd::vector<geo::latlng> polyline)
       : polyline_(std::move(polyline)),
-        osm_node_ids_(utl::repeat_n(kPathUnknownNodeId, polyline_.size())) {}
+        osm_node_ids_(utl::repeat_n<int64_t, mcd::vector<int64_t>>(
+            kPathUnknownNodeId, polyline_.size())) {}
 
   void append(osm_path const& other) {
     utl::concat(polyline_, other.polyline_);
@@ -86,6 +93,7 @@ struct osm_path {
 
   void unique();
   void remove_loops();
+  void ensure_line();
 
   size_t size() const { return polyline_.size(); }
 
@@ -109,8 +117,27 @@ struct osm_path {
     return os;
   }
 
-  geo::polyline polyline_;
-  std::vector<int64_t> osm_node_ids_;
+  mcd::vector<geo::latlng> polyline_;
+  mcd::vector<int64_t> osm_node_ids_;
 };
+
+inline cista::hash_t type_hash(osm_path const& el, cista::hash_t h,
+                               std::map<cista::hash_t, unsigned>& done) {
+  return cista::hash_combine(cista::type_hash(el.polyline_, h, done),
+                             cista::type_hash(el.osm_node_ids_, h, done));
+}
+
+template <typename Ctx>
+inline void serialize(Ctx& c, osm_path const* p, cista::offset_t const offset) {
+  cista::serialize(c, &p->polyline_, offset + offsetof(osm_path, polyline_));
+  cista::serialize(c, &p->osm_node_ids_,
+                   offset + offsetof(osm_path, osm_node_ids_));
+}
+
+template <typename Ctx>
+inline void deserialize(Ctx const& c, osm_path* p) {
+  cista::deserialize(c, &p->polyline_);
+  cista::deserialize(c, &p->osm_node_ids_);
+}
 
 }  // namespace motis::path
