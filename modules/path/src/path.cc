@@ -71,7 +71,9 @@ void path::import(registry& reg) {
         }
 
         prepare_settings opt;
-        opt.schedule_ = schedule->raw_file()->str();
+        utl::verify(schedule->raw_files()->size() == 1,
+                    "path needs exactly one schedule.raw (WIP)");
+        opt.schedule_ = schedule->raw_files()->Get(0)->str();
         opt.osm_ = osm->path()->str();
         opt.osrm_ = osrm->path()->str();
         opt.out_ = (dir / "pathdb.mdb").generic_string();
