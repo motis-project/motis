@@ -131,8 +131,7 @@ using route = mcd::vector<route_section>;
 using route_lcs = mcd::vector<mcd::vector<light_connection>>;
 
 struct graph_builder {
-  graph_builder(schedule&, loader_options const&,
-                unsigned progress_offset = 0U);
+  graph_builder(schedule&, loader_options const&);
 
   full_trip_id get_full_trip_id(Service const* s, int day, int section_idx = 0);
 
@@ -214,7 +213,6 @@ struct graph_builder {
 
   bool check_trip(trip const* trp);
 
-  unsigned progress_offset_{0U};
   unsigned lcon_count_{0U};
   unsigned next_route_index_{0U};
   tz_cache tz_cache_;

@@ -346,7 +346,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   motis::logging::scoped_timer export_timer{"export"};
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->status("Export schedule.raw")
-      .out_bounds(40.F, 80.F)
+      .out_bounds(60.F, 100.F)
       .in_high(trips.size());
   auto const interval =
       Interval{static_cast<uint64_t>(to_unix_time(traffic_days.first_day_)),

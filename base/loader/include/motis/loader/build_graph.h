@@ -11,6 +11,6 @@ namespace motis::loader {
 struct Schedule;  // NOLINT
 
 schedule_ptr build_graph(std::vector<Schedule const*> const&,
-                         loader_options const&, unsigned progress_offset = 0U);
+                         loader_options const&);
 
 }  // namespace motis::loader

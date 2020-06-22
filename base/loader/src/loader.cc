@@ -16,6 +16,7 @@
 
 #include "cista/mmap.h"
 
+#include "utl/enumerate.h"
 #include "utl/parser/file.h"
 #include "utl/progress_tracker.h"
 #include "utl/verify.h"
@@ -60,34 +61,61 @@ schedule_ptr load_schedule(loader_options const& opt,
   }
 
   utl::verify(!opt.dataset_.empty(), "load_schedule: opt.dataset_.empty()");
-  auto const mem =
-      utl::to_vec(opt.dataset_, [&](auto const& path) -> dataset_mem_t {
-        auto const binary_schedule_file = fs::path(path) / SCHEDULE_FILE;
-        if (fs::is_regular_file(binary_schedule_file)) {
-          return cista::mmap{binary_schedule_file.generic_string().c_str(),
-                             cista::mmap::protection::READ};
-        }
+  utl::verify(opt.dataset_.size() == 1 ||
+                  opt.dataset_.size() == opt.dataset_prefix_.size(),
+              "load_schedule: dataset/prefix size mismatch");
 
-        for (auto const& parser : parsers()) {
-          if (parser->applicable(path)) {
-            flatbuffers64::FlatBufferBuilder builder;
-            parser->parse(path, builder);
-            if (opt.write_serialized_) {
-              utl::file(binary_schedule_file.string().c_str(), "w+")
-                  .write(builder.GetBufferPointer(), builder.GetSize());
-            }
-            return typed_flatbuffer<Schedule>{std::move(builder)};
-          }
-        }
+  std::vector<dataset_mem_t> mem;
+  mem.reserve(opt.dataset_.size());
+  for (auto const& [i, path] : utl::enumerate(opt.dataset_)) {
+    auto const binary_schedule_file = fs::path(path) / SCHEDULE_FILE;
+    if (fs::is_regular_file(binary_schedule_file)) {
+      mem.emplace_back(
+          cista::mmap{binary_schedule_file.generic_string().c_str(),
+                      cista::mmap::protection::READ});
+      continue;
+    }
 
-        for (auto const& parser : parsers()) {
-          std::clog << "missing files:\n";
-          for (auto const& file : parser->missing_files(path)) {
-            std::clog << "  " << file << "\n";
-          }
+    auto const all_parsers = parsers();
+    auto const it = std::find_if(
+        begin(all_parsers), end(all_parsers),
+        [& p = path](auto const& parser) { return parser->applicable(p); });
+
+    if (it == end(all_parsers)) {
+      for (auto const& parser : parsers()) {
+        std::clog << "missing files:\n";
+        for (auto const& file : parser->missing_files(path)) {
+          std::clog << "  " << file << "\n";
         }
-        throw utl::fail("no parser for dataset {}", path);
-      });
+      }
+      throw utl::fail("no parser for dataset {}", path);
+    }
+
+    auto progress_tracker = utl::activate_progress_tracker(
+        opt.dataset_prefix_.empty() || opt.dataset_prefix_[i].empty()
+            ? std::string{"parse {}", i}
+            : fmt::format("parse {}", opt.dataset_prefix_[i]));
+
+    flatbuffers64::FlatBufferBuilder builder;
+    try {
+      (**it).parse(path, builder);
+      progress_tracker->status("FINISHED").show_progress(false);
+    } catch (std::exception const& e) {
+      progress_tracker->status(fmt::format("ERROR: {}", e.what()))
+          .show_progress(false);
+      throw;
+    } catch (...) {
+      progress_tracker->status("ERROR: UNKNOWN EXCEPTION").show_progress(false);
+      throw;
+    }
+
+    if (opt.write_serialized_) {
+      utl::file(binary_schedule_file.string().c_str(), "w+")
+          .write(builder.GetBufferPointer(), builder.GetSize());
+    }
+
+    mem.emplace_back(typed_flatbuffer<Schedule>{std::move(builder)});
+  }
 
   auto const datasets = utl::to_vec(mem, [&](dataset_mem_t const& v) {
     return std::visit(
@@ -100,6 +128,7 @@ schedule_ptr load_schedule(loader_options const& opt,
         v);
   });
 
+  utl::activate_progress_tracker("schedule");
   auto sched = build_graph(datasets, opt);
   if (opt.write_graph_) {
     write_graph(graph_path, *sched);

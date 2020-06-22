@@ -42,10 +42,8 @@ char const* c_str(flatbuffers64::String const* str) {
   return str == nullptr ? nullptr : str->c_str();
 }
 
-graph_builder::graph_builder(schedule& sched, loader_options const& opt,
-                             unsigned progress_offset)
-    : progress_offset_{progress_offset},
-      sched_{sched},
+graph_builder::graph_builder(schedule& sched, loader_options const& opt)
+    : sched_{sched},
       apply_rules_{opt.apply_rules_},
       expand_trips_{opt.expand_trips_} {}
 
@@ -150,9 +148,7 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
                    });
 
   auto progress_tracker = utl::get_active_progress_tracker();
-  progress_tracker->status("Build Services")
-      .out_bounds(progress_offset_, 90)
-      .in_high(sorted.size());
+  progress_tracker->in_high(sorted.size());
 
   auto it = begin(sorted);
   mcd::vector<Service const*> route_services;
@@ -726,7 +722,7 @@ route_section graph_builder::add_route_section(
 }
 
 schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
-                         loader_options const& opt, unsigned progress_offset) {
+                         loader_options const& opt) {
   utl::verify(!fbs_schedules.empty(), "build_graph: no schedules");
 
   scoped_timer timer("building graph");
@@ -758,22 +754,27 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
   }
 
   auto progress_tracker = utl::get_active_progress_tracker();
+  graph_builder builder{*sched, opt};
 
-  progress_tracker->status("Build Graph").out_bounds(progress_offset, 90);
-  graph_builder builder{*sched, opt, progress_offset};
-
-  progress_tracker->status("Add Stations").out_bounds(92, 93);
+  progress_tracker->status("Add Stations").out_bounds(0, 5);
   builder.stations_ = build_stations(*sched, fbs_schedules);
 
-  progress_tracker->status("Add Services").out_bounds(92, 93);
-  for (auto const* fbs_schedule : fbs_schedules) {
+  for (auto const& [i, fbs_schedule] : utl::enumerate(fbs_schedules)) {
+    auto const dataset_prefix =
+        opt.dataset_prefix_.empty() ? "" : opt.dataset_prefix_[i];
+    auto const out_low = 5.F + (80.F / fbs_schedules.size()) * i;
+    auto const out_high = 5.F + (80.F / fbs_schedules.size()) * (i + 1);
+    auto const out_mid = out_low + (out_high - out_low) * .9F;
+    progress_tracker->status(fmt::format("Add Services {}", dataset_prefix))
+        .out_bounds(out_low, out_mid);
+
     std::tie(builder.first_day_, builder.last_day_) =
         first_last_days(*sched, fbs_schedule->interval());
-
     builder.add_services(fbs_schedule->services());
     if (opt.apply_rules_) {
       scoped_timer timer("rule services");
-      progress_tracker->status("Rule Services").out_bounds(90, 92);
+      progress_tracker->status(fmt::format("Rule Services {}", dataset_prefix))
+          .out_bounds(out_mid, out_high);
       build_rule_routes(builder, fbs_schedule->rule_services());
     }
   }
@@ -782,13 +783,13 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
     sched->expanded_trips_.finish_map();
   }
 
-  progress_tracker->status("Footpaths").out_bounds(92, 93);
+  progress_tracker->status("Footpaths").out_bounds(85, 90);
   build_footpaths(*sched, opt, builder.stations_, fbs_schedules);
 
-  progress_tracker->status("Connect Reverse").out_bounds(93, 94);
+  progress_tracker->status("Connect Reverse").out_bounds(90, 93);
   builder.connect_reverse();
 
-  progress_tracker->status("Sort Trips").out_bounds(94, 95);
+  progress_tracker->status("Sort Trips").out_bounds(93, 95);
   builder.sort_trips();
 
   auto hash = cista::BASE_HASH;
