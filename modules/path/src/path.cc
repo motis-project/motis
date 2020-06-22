@@ -71,9 +71,10 @@ void path::import(registry& reg) {
         }
 
         prepare_settings opt;
-        utl::verify(schedule->raw_files()->size() == 1,
-                    "path needs exactly one schedule.raw (WIP)");
-        opt.schedule_ = schedule->raw_files()->Get(0)->str();
+        opt.schedules_ = utl::to_vec(*schedule->raw_files(),
+                                     [](auto const& s) { return s->str(); });
+        opt.prefixes_ = utl::to_vec(*schedule->prefixes(),
+                                    [](auto const& s) { return s->str(); });
         opt.osm_ = osm->path()->str();
         opt.osrm_ = osrm->path()->str();
         opt.out_ = (dir / "pathdb.mdb").generic_string();

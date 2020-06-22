@@ -796,6 +796,9 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
   for (auto const* fbs_schedule : fbs_schedules) {
     hash = cista::hash_combine(hash, fbs_schedule->hash());
   }
+  for (auto const& prefix : sched->prefixes_) {
+    hash = cista::hash(prefix, hash);
+  }
   sched->hash_ = hash;
 
   sched->route_count_ = builder.next_route_index_;

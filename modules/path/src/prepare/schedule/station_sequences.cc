@@ -8,6 +8,8 @@
 
 #include "cista/serialization.h"
 
+#include "fmt/format.h"
+
 #include "geo/box.h"
 
 #include "utl/concat.h"
@@ -33,7 +35,7 @@ constexpr auto const CISTA_MODE =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_VERSION;
 
 mcd::vector<station_seq> load_station_sequences(
-    motis::loader::Schedule const* sched) {
+    motis::loader::Schedule const* sched, std::string const& prefix) {
   scoped_timer timer("loading station sequences");
 
   auto const& mapping = loader::class_mapping();
@@ -44,7 +46,10 @@ mcd::vector<station_seq> load_station_sequences(
     auto& seq = utl::get_or_create(seqs, service->route(), [&] {
       station_seq seq;
       for (auto const& station : *service->route()->stations()) {
-        seq.station_ids_.emplace_back(station->id()->str());
+        seq.station_ids_.emplace_back(
+            prefix.empty()
+                ? station->id()->str()
+                : fmt::format("{}_{}", prefix, station->id()->str()));
         seq.station_names_.emplace_back(station->name()->str());
 
         // broken data is broken
@@ -79,24 +84,23 @@ mcd::vector<station_seq> load_station_sequences(
       utl::to_vec(seqs, [](auto const& pair) { return pair.second; });
 
   mcd::vector<station_seq> result;
-  utl::equal_ranges(
-      sequences,
-      [](auto const& lhs, auto const& rhs) {
-        return lhs.station_ids_ < rhs.station_ids_;
-      },
-      [&](auto const& lb, auto const& ub) {
-        auto& elem = *lb;
+  utl::equal_ranges(sequences,
+                    [](auto const& lhs, auto const& rhs) {
+                      return lhs.station_ids_ < rhs.station_ids_;
+                    },
+                    [&](auto const& lb, auto const& ub) {
+                      auto& elem = *lb;
 
-        for (auto it = std::next(lb); it != ub; ++it) {
-          utl::concat(elem.classes_, it->classes_);
-        }
-        utl::erase_duplicates(elem.classes_);
-        if (elem.classes_.empty()) {
-          elem.classes_.emplace_back(service_class::OTHER);
-        }
+                      for (auto it = std::next(lb); it != ub; ++it) {
+                        utl::concat(elem.classes_, it->classes_);
+                      }
+                      utl::erase_duplicates(elem.classes_);
+                      if (elem.classes_.empty()) {
+                        elem.classes_.emplace_back(service_class::OTHER);
+                      }
 
-        result.emplace_back(elem);
-      });
+                      result.emplace_back(elem);
+                    });
 
   LOG(motis::logging::info) << result.size() << " station sequences "
                             << "(was: " << sequences.size() << ")";

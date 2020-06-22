@@ -45,7 +45,8 @@ struct station_seq {
   float distance_{0};
 };
 
-mcd::vector<station_seq> load_station_sequences(motis::loader::Schedule const*);
+mcd::vector<station_seq> load_station_sequences(motis::loader::Schedule const*,
+                                                std::string const& prefix);
 
 mcd::unique_ptr<mcd::vector<station_seq>> read_station_sequences(
     std::string const& fname, cista::memory_holder&);
