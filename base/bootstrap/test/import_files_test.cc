@@ -16,7 +16,7 @@ TEST(import_files, make_file_event) {
   }
   {
     auto const msg =
-        mb::make_file_event({"schedule[asd]:test/schedule/simple_realtime"});
+        mb::make_file_event({"schedule-asd:test/schedule/simple_realtime"});
     auto const* fe = motis_content(FileEvent, msg);
 
     ASSERT_EQ(1, fe->paths()->size());

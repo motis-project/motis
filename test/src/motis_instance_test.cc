@@ -44,7 +44,7 @@ motis_instance_test::motis_instance_test(
     for (auto const& [prefix, dataset] :
          utl::zip(dataset_opt.dataset_prefix_, dataset_opt.dataset_)) {
       import_opt.import_paths_.push_back(
-          fmt::format("schedule[{}]:{}", prefix, dataset));
+          fmt::format("schedule-{}:{}", prefix, dataset));
     }
 
   } else {
