@@ -5,8 +5,10 @@
 
 #include "boost/algorithm/string/join.hpp"
 
+#include "utl/get_or_create.h"
 #include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
+#include "utl/to_vec.h"
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
@@ -52,10 +54,7 @@ struct plan_executor {
   void execute() {
     ml::scoped_timer t{"resolve_sequences"};
     start_ = sc::steady_clock::now();
-
-    progress_tracker_->status("Resolve Sequences")
-        .reset_bounds()
-        .in_high(pp_.part_task_queue_.size());
+    progress_tracker_->in_high(pp_.part_task_queue_.size());
 
     utl::parallel_for_run(
         pp_.part_task_queue_.size(), [&](auto const queue_idx) {
@@ -132,7 +131,7 @@ struct plan_executor {
     auto stop_sr = sc::steady_clock::now();
 
     stats_.add_seq_timing(
-        {*task.seq_->categories_.begin(),
+        {*task.seq_->classes_.begin(),
          sc::duration_cast<sc::microseconds>(stop_sg - start_sg).count(),
          sc::duration_cast<sc::microseconds>(stop_sr - start_sr).count()});
 
@@ -160,11 +159,7 @@ struct plan_executor {
     for (auto& path : paths) {
       path.unique();
       utl::verify(path.size() != 0, "resolve_sequences: empty path");
-
-      if (path.size() == 1) {
-        path.polyline_.push_back(path.polyline_.back());
-        path.osm_node_ids_.push_back(path.osm_node_ids_.back());
-      }
+      path.ensure_line();
     }
 
     utl::verify(task.seq_->station_ids_.size() == paths.size() + 1,
@@ -172,7 +167,7 @@ struct plan_executor {
                 task.seq_->station_ids_.size(), paths.size() + 1);
 
     auto const lock = std::lock_guard{resolved_seq_mutex_};
-    resolved_seq_.emplace_back(task.seq_->station_ids_, task.motis_categories_,
+    resolved_seq_.emplace_back(task.seq_->station_ids_, task.classes_,
                                std::move(paths), std::move(infos));
   }
 

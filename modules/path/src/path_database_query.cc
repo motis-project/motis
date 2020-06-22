@@ -15,7 +15,7 @@
 
 #include "motis/core/schedule/connection.h"
 
-#include "motis/path/constants.h"
+#include "motis/path/definitions.h"
 #include "motis/path/polyline_builder.h"
 
 using namespace flatbuffers;

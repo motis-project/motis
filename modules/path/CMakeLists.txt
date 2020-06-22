@@ -66,6 +66,7 @@ target_link_libraries(motis-path-prepare
   osmium
   protozero
   tiles
+  tiles-import-library
   lmdb
   cista
   ${Boost_FILESYSTEM}
@@ -79,7 +80,7 @@ target_link_libraries(motis-path motis-path-prepare)
 ################################
 # path-prepare executable
 ################################
-file(GLOB_RECURSE motis-path-prepare-main-files src/prepare.cc)
+file(GLOB_RECURSE motis-path-prepare-main-files src/prepare_main.cc)
 
 add_executable(path-prepare EXCLUDE_FROM_ALL ${motis-path-prepare-main-files})
 target_compile_features(path-prepare PUBLIC cxx_std_17)

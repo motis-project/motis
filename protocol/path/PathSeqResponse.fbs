@@ -14,7 +14,7 @@ table Segment {
 
 table PathSeqResponse {
   station_ids: [string];
-  classes: [uint];
+  classes: [ubyte];
   segments: [Segment];
   sourceInfos:  [PathSourceInfo];
 }

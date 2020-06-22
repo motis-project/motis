@@ -40,10 +40,10 @@ struct strategy_timing {
 };
 
 struct seq_timing {
-  seq_timing(int min_cat, int64_t graph_mys, int64_t route_mys)
-      : min_cat_{min_cat}, graph_mys_{graph_mys}, route_mys_{route_mys} {}
+  seq_timing(motis_clasz_t min_clasz, int64_t graph_mys, int64_t route_mys)
+      : min_clasz_{min_clasz}, graph_mys_{graph_mys}, route_mys_{route_mys} {}
 
-  int min_cat_;
+  motis_clasz_t min_clasz_;
   int64_t graph_mys_;
   int64_t route_mys_;
 };
@@ -180,15 +180,18 @@ private:
     read_strategy_buffer(part_timings_buffer_, main_part_timings_);
     read_strategy_buffer(path_timings_buffer_, main_path_timings_);
 
-    std::sort(
-        begin(seq_timings_buffer_), end(seq_timings_buffer_),
-        [](auto const& a, auto const& b) { return a.min_cat_ < b.min_cat_; });
+    std::sort(begin(seq_timings_buffer_), end(seq_timings_buffer_),
+              [](auto const& a, auto const& b) {
+                return a.min_clasz_ < b.min_clasz_;
+              });
     utl::equal_ranges_linear(
         seq_timings_buffer_,
-        [](auto const& a, auto const& b) { return a.min_cat_ == b.min_cat_; },
+        [](auto const& a, auto const& b) {
+          return a.min_clasz_ == b.min_clasz_;
+        },
         [&](auto lb, auto ub) {
-          auto& graph_vec = seq_graph_timings_[lb->min_cat_];
-          auto& route_vec = seq_route_timings_[lb->min_cat_];
+          auto& graph_vec = seq_graph_timings_[lb->min_clasz_];
+          auto& route_vec = seq_route_timings_[lb->min_clasz_];
           for (auto it = lb; it != ub; ++it) {
             graph_vec.push_back(it->graph_mys_);
             route_vec.push_back(it->route_mys_);

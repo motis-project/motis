@@ -7,6 +7,8 @@
 
 #include "geo/latlng.h"
 
+#include "motis/path/definitions.h"
+
 namespace motis {
 
 namespace loader {
@@ -32,7 +34,7 @@ struct station_seq {
   std::vector<std::string> station_names_;
   std::vector<geo::latlng> coordinates_;
 
-  std::set<int> categories_;
+  std::set<motis_clasz_t> classes_;
 };
 
 std::vector<station_seq> load_station_sequences(motis::loader::Schedule const*);

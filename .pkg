@@ -5,7 +5,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=474dc26ce5adc74afa01a2f18a62a19803cfbbb4
+  commit=81898913aa1c678da1b59eb1e3f94343d41828e1
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
@@ -17,7 +17,7 @@
 [date]
   url=git@github.com:motis-project/date.git
   branch=master
-  commit=6aabc45d3af74ee479a508be8ae337217a8a0298
+  commit=6de941079a68b29753c430fb19c3b110c8499c97
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=motis
@@ -77,4 +77,4 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=55c1f939c12aa3f9b0279761766a6bf980be6e01
+  commit=ea7ccb92f3700895d127b5f83f7f5382a8f88819

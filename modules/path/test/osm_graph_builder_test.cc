@@ -7,7 +7,8 @@
 namespace mp = motis::path;
 
 TEST(osm_graph_builder, at_way_node) {
-  mp::station_index stations{{{"1", "test", {49.8678310, 8.6781722}}}};
+  auto stations =
+      mp::make_station_index({{"1", "test", {49.8678310, 8.6781722}}});
 
   mp::osm_graph graph;
   mp::osm_graph_builder builder(graph, stations);
@@ -21,7 +22,7 @@ TEST(osm_graph_builder, at_way_node) {
                         {49.8682487, 8.6778950},  // 5
                     },
                     {0L, 1L, 2L, 3L, 4L, 5L}};
-  builder.add_component({mp::osm_way{0, 5, 0, path, true}});
+  builder.add_component({mp::osm_way{{0}, true, path}});
 
   ASSERT_EQ(3, graph.nodes_.size());
 
@@ -43,7 +44,8 @@ TEST(osm_graph_builder, at_way_node) {
 }
 
 TEST(osm_graph_builder, between_way_nodes) {
-  mp::station_index stations{{{"1", "test", {49.86780008585, 8.678289949893}}}};
+  auto stations =
+      mp::make_station_index({{"1", "test", {49.86780008585, 8.678289949893}}});
 
   mp::osm_graph graph;
   mp::osm_graph_builder builder(graph, stations);
@@ -57,7 +59,7 @@ TEST(osm_graph_builder, between_way_nodes) {
                         {49.8682487, 8.6778950},  // 5
                     },
                     {0L, 1L, 2L, 3L, 4L, 5L}};
-  builder.add_component({mp::osm_way{0, 5, 0, path, true}});
+  builder.add_component({mp::osm_way{{0}, true, path}});
 
   ASSERT_EQ(3, graph.nodes_.size());
 

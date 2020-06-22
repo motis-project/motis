@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include "utl/to_vec.h"
+
 #include "motis/path/prepare/schedule/station_sequences.h"
 #include "motis/path/prepare/seq/seq_graph.h"
 #include "motis/path/prepare/strategy/routing_strategy.h"

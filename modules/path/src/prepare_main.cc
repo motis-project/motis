@@ -2,6 +2,8 @@
 
 #include "conf/options_parser.h"
 
+#include "utl/progress_tracker.h"
+
 #include "motis/core/common/logging.h"
 #include "motis/path/prepare/prepare.h"
 
@@ -35,6 +37,7 @@ int main(int argc, char const** argv) {
       return 1;
     }
 
+    utl::activate_progress_tracker("path");
     mp::prepare(opt);
     return 0;
 

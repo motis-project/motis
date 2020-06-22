@@ -67,6 +67,6 @@ std::pair<std::vector<std::pair<osm_node_phantom_with_dist, station const*>>,
           std::vector<located_osm_edge_phantom_with_dist>>
 make_phantoms(station_index const& station_idx,
               std::vector<size_t> const& matched_stations,
-              std::vector<osm_way> const& osm_ways);
+              mcd::vector<osm_way> const& osm_ways);
 
 }  // namespace motis::path
