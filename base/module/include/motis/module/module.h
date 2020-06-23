@@ -55,6 +55,11 @@ protected:
     return shared_data_->get<T>(s);
   }
 
+  template <typename T>
+  void add_shared_data(std::string_view const s, T&& data) {
+    shared_data_->emplace_data(s, std::forward<T>(data));
+  }
+
   boost::filesystem::path const& get_data_directory() const;
 
 private:
