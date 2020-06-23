@@ -21,6 +21,8 @@
 using namespace flatbuffers;
 namespace pz = protozero;
 
+namespace mm = motis::module;
+
 namespace motis::path {
 
 void path_database_query::add_sequence(size_t const index,
@@ -345,7 +347,7 @@ void path_database_query::execute_subquery(
 }
 
 Offset<PathSeqResponse> path_database_query::write_sequence(
-    module::message_creator& mc, path_database const& db, size_t const index) {
+    mm::message_creator& mc, path_database const& db, size_t const index) {
   auto const it =
       std::find_if(begin(sequences_), end(sequences_),
                    [&](auto const& rs) { return rs.index_ == index; });
@@ -395,11 +397,25 @@ Offset<PathSeqResponse> path_database_query::write_sequence(
 }
 
 Offset<PathByTripIdBatchResponse> path_database_query::write_batch(
-    module::message_creator& mc) {
-  std::vector<Offset<PolylineIndices>> fbs_segments;
+    mm::message_creator& mc) {
+  std::vector<std::vector<int64_t>> fbs_segments;
   std::vector<Offset<String>> fbs_polylines;
   std::vector<uint64_t> fbs_extras;
+  write_batch(mc, fbs_segments, fbs_polylines, fbs_extras);
+  return CreatePathByTripIdBatchResponse(
+      mc,
+      mc.CreateVector(utl::to_vec(fbs_segments,
+                                  [&](auto const& indices) {
+                                    return CreatePolylineIndices(
+                                        mc, mc.CreateVector(indices));
+                                  })),
+      mc.CreateVector(fbs_polylines), mc.CreateVector(fbs_extras));
+};
 
+void path_database_query::write_batch(
+    mm::message_creator& mc, std::vector<std::vector<int64_t>>& fbs_segments,
+    std::vector<Offset<String>>& fbs_polylines,
+    std::vector<uint64_t>& fbs_extras) {
   // "disallow" id zero -> cant be marked reversed (-0 == 0)
   fbs_polylines.emplace_back(mc.CreateString(std::string{}));
 
@@ -463,23 +479,18 @@ Offset<PathByTripIdBatchResponse> path_database_query::write_batch(
         indices.push_back(finish_polyline());
       }
 
-      fbs_segments.emplace_back(
-          CreatePolylineIndices(mc, mc.CreateVector(indices)));
+      fbs_segments.emplace_back(std::move(indices));
     }
   }
-
-  return CreatePathByTripIdBatchResponse(mc, mc.CreateVector(fbs_segments),
-                                         mc.CreateVector(fbs_polylines),
-                                         mc.CreateVector(fbs_extras));
 }
 
-module::msg_ptr get_response(path_database const& db, size_t const index,
-                             int const zoom_level) {
+mm::msg_ptr get_response(path_database const& db, size_t const index,
+                         int const zoom_level) {
   path_database_query query{zoom_level};
   query.add_sequence(index);
   query.execute(db);
 
-  module::message_creator mc;
+  mm::message_creator mc;
   mc.create_and_finish(MsgContent_PathSeqResponse,
                        query.write_sequence(mc, db, index).Union());
   return make_msg(mc);

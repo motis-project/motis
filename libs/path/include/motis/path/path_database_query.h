@@ -69,6 +69,12 @@ struct path_database_query {
   flatbuffers::Offset<PathByTripIdBatchResponse> write_batch(
       module::message_creator&);
 
+  void write_batch(
+      module::message_creator& mc,
+      std::vector<std::vector<int64_t>>& fbs_segments,
+      std::vector<flatbuffers::Offset<flatbuffers::String>>& fbs_polylines,
+      std::vector<uint64_t>& fbs_extras);
+
   int zoom_level_;
 
   std::vector<resolvable_sequence> sequences_;
