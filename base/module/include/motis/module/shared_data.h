@@ -74,6 +74,12 @@ struct shared_data {
     return *it->second.get<T>();
   }
 
+  template <typename T>
+  T const* find(std::string_view const name) const {
+    auto const it = data_.find(name);
+    return it != end(data_) ? it->second.get<T>() : nullptr;
+  }
+
 private:
   mcd::hash_map<mcd::string, type_erased> data_;
 };
