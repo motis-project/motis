@@ -50,6 +50,10 @@ waiting_time_rules load_waiting_time_rules(
       in.exceptions(std::ifstream::failbit | std::ifstream::badbit);
       in.open(wzr_matrix_path.c_str());
       while (!in.eof() && in.peek() != EOF) {
+        if (in.peek() == '\n' || in.peek() == '\r') {
+          in.get();
+          continue;
+        }
         in >> entry;
         waiting_times.emplace_back(entry);
       }
