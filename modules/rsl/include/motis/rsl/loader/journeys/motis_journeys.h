@@ -9,7 +9,7 @@
 
 namespace motis::rsl::loader::journeys {
 
-void load_journeys(schedule const& sched, rsl_data& primary_ref,
-                   std::string const& secondary_ref);
+void load_journeys(schedule const& sched, rsl_data& data,
+                   std::string const& journey_file);
 
 }  // namespace motis::rsl::loader::journeys

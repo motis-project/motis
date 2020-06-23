@@ -127,6 +127,7 @@ PassengerLocalization fbs_localization_type(passenger_localization const& loc) {
   return loc.in_trip() ? PassengerLocalization_PassengerInTrip
                        : PassengerLocalization_PassengerAtStation;
 }
+
 Offset<MonitoringEvent> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
                                monitoring_event const& me) {
   return CreateMonitoringEvent(
