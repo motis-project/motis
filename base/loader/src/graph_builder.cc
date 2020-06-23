@@ -249,7 +249,7 @@ bool graph_builder::has_duplicate(Service const* service,
 
         for (auto* lc = route_edge.get_connection(lcons.front().d_time_);
              lc != nullptr && lc->d_time_ == lcons.front().d_time_;
-             lc = route_edge.get_next_valid_lcon(lc)) {
+             lc = route_edge.get_next_valid_lcon(lc, 1U)) {
           for (auto const& trp : *sched_.merged_trips_[lc->trips_]) {
             if (are_duplicates(service, lcons, trp)) {
               return true;
