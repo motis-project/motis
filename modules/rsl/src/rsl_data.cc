@@ -1,5 +1,3 @@
-#pragma once
-
 #include "motis/rsl/rsl_data.h"
 
 namespace motis::rsl {
