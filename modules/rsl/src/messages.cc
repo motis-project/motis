@@ -74,19 +74,19 @@ compact_journey from_fbs(schedule const& sched, CompactJourney const* cj) {
                       [&](auto const& leg) { return from_fbs(sched, leg); })};
 }
 
-Offset<PassengerGroup> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
-                              passenger_group const& pg) {
-  return CreatePassengerGroup(fbb, pg.id_, pg.sub_id_, pg.passengers_,
-                              to_fbs(sched, fbb, pg.compact_planned_journey_));
+Offset<DataSource> to_fbs(FlatBufferBuilder& fbb, data_source const& ds) {
+  return CreateDataSource(fbb, ds.primary_ref_, ds.secondary_ref_);
 }
 
-passenger_group from_fbs(schedule const& sched, PassengerGroup const* pg) {
-  return {from_fbs(sched, pg->planned_journey()),
-          static_cast<std::uint16_t>(pg->passenger_count()),
-          pg->id(),
-          pg->sub_id(),
-          true,
-          {}};
+data_source from_fbs(DataSource const* ds) {
+  return {ds->primary_ref(), ds->secondary_ref()};
+}
+
+Offset<PassengerGroup> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
+                              passenger_group const& pg) {
+  return CreatePassengerGroup(fbb, pg.id_, to_fbs(fbb, pg.source_),
+                              pg.passengers_,
+                              to_fbs(sched, fbb, pg.compact_planned_journey_));
 }
 
 Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,

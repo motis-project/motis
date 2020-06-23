@@ -17,11 +17,14 @@ namespace motis::rsl::loader::journeys {
 
 void load_journeys(schedule const& sched, rsl_data& data,
                    std::string const& journey_file) {
-  auto add_journey = [&](journey const& j, std::uint64_t id = 0,
-                         std::uint64_t sub_id = 0) {
+  auto add_journey = [&](journey const& j, std::uint64_t primary_ref = 0,
+                         std::uint64_t secondary_ref = 0) {
+    auto const id =
+        static_cast<std::uint64_t>(data.graph_.passenger_groups_.size());
     data.graph_.passenger_groups_.emplace_back(
         std::make_unique<passenger_group>(
-            passenger_group{to_compact_journey(j, sched), 1, id, sub_id}));
+            passenger_group{to_compact_journey(j, sched), 1, id,
+                            data_source{primary_ref, secondary_ref}}));
   };
 
   auto line_nr = 0ULL;

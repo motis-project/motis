@@ -2,9 +2,14 @@ include "rsl/CompactJourney.fbs";
 
 namespace motis.rsl;
 
+table DataSource {
+  primary_ref: ulong;
+  secondary_ref: ulong;
+}
+
 table PassengerGroup {
   id: ulong;
-  sub_id: ulong;
+  source: DataSource;
   passenger_count: uint;
   planned_journey: CompactJourney;
 }

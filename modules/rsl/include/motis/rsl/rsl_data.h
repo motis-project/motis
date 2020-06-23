@@ -10,6 +10,8 @@
 namespace motis::rsl {
 
 struct rsl_data {
+  passenger_group const& get_passenger_group(std::uint64_t id) const;
+
   graph graph_;
 
   std::set<passenger_group*> groups_affected_by_last_update_;

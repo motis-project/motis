@@ -27,9 +27,6 @@ flatbuffers::Offset<PassengerGroup> to_fbs(schedule const& sched,
                                            flatbuffers::FlatBufferBuilder& fbb,
                                            passenger_group const& pg);
 
-// TODO(pablo): to be replaced with group lookup by id
-passenger_group from_fbs(schedule const& sched, PassengerGroup const* pg);
-
 flatbuffers::Offset<void> to_fbs(schedule const& sched,
                                  flatbuffers::FlatBufferBuilder& fbb,
                                  passenger_localization const& loc);

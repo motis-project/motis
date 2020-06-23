@@ -56,8 +56,9 @@ void add_passenger_group_to_graph(schedule const& sched, rsl_data& data,
     try {
       te = get_or_add_trip(sched, data, leg.trip_);
     } catch (std::system_error const& e) {
-      std::cerr << "  passenger group " << grp.id_ << "." << grp.sub_id_
-                << std::endl;
+      std::cerr << "could not add trip for passenger group " << grp.id_
+                << " (source=" << grp.source_.primary_ref_ << "."
+                << grp.source_.secondary_ref_ << ")" << std::endl;
       throw e;
     }
     auto in_trip = false;
