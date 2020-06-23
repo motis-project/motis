@@ -23,8 +23,6 @@ struct path : public motis::module::module {
   bool import_successful() const override { return import_successful_; }
 
 private:
-  void verify_path_database_available() const;
-
   motis::module::msg_ptr boxes() const;
 
   motis::module::msg_ptr by_station_seq(motis::module::msg_ptr const&) const;
@@ -34,8 +32,6 @@ private:
 
   motis::module::msg_ptr path_tiles(motis::module::msg_ptr const&) const;
 
-  struct data;
-  std::unique_ptr<data> data_;
   bool import_successful_{false};
 };
 

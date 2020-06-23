@@ -23,9 +23,7 @@ build_flatbuffers(
 ################################
 # path library
 ################################
-file(GLOB_RECURSE motis-libpath-files
-  src/path_database_query.cc
-)
+file(GLOB_RECURSE motis-libpath-files src/*.cc)
 
 add_library(motis-libpath STATIC ${motis-libpath-files})
 target_include_directories(motis-libpath PUBLIC include)
