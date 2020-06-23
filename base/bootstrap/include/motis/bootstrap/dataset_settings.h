@@ -35,9 +35,9 @@ struct dataset_settings : public conf::configuration,
     param(planned_transfer_delta_, "planned_transfer_delta",
           "Max. difference between feeder arrival and connector departure for "
           "waiting time rules (minutes)");
-    param(wzr_matrix_path_, "wzr_classes_path",
+    param(wzr_classes_path_, "wzr_classes_path",
           "waiting time rules class mapping");
-    param(wzr_classes_path_, "wzr_matrix_path", "waiting time matrix");
+    param(wzr_matrix_path_, "wzr_matrix_path", "waiting time matrix");
   }
 };
 
