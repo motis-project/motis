@@ -174,6 +174,8 @@ else()
   string(REPLACE " " ";" modules "${MODULES}")
 endif()
 
+add_subdirectory(libs)
+
 set(module-targets "")
 set(module-test-files "")
 foreach(module ${modules})
