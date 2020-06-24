@@ -61,6 +61,7 @@ struct shared_data {
   }
 
   template <typename T>
+  // NOLINTNEXTLINE(readability-avoid-const-params-in-decls)
   T const& get(std::string_view const name) const {
     auto const it = data_.find(name);
     utl::verify(it != end(data_), "{} not in shared_data", name);
