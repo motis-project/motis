@@ -171,6 +171,10 @@ jobs:
             --with-serialization \
             -s NO_BZIP2=1
 
+      - name: Set BOOST_ROOT for GCC 9
+        if: matrix.config.cxx == 'g++-9'
+        run: echo "::set-env name=BOOST_ROOT::$BOOST_ROOT_1_72_0"
+
       - name: Set BOOST_ROOT
         if: contains(matrix.config.cxxflags, 'libc++') && !contains(matrix.config.cxxflags, '-fsanitize=address')
         run: echo "::set-env name=BOOST_ROOT::`pwd`/boost_1_72_0"
