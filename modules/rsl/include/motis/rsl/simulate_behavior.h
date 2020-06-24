@@ -40,31 +40,14 @@ std::vector<std::uint16_t> simulate_behavior(
     }
     auto const& alternative = cpg.alternatives_[i];
 
-    for (auto const& leg : alternative.compact_journey_.legs_) {
-      auto te = get_or_add_trip(sched, data, leg.trip_);
-      auto in_trip = false;
-      for (auto e : te->edges_) {
-        if (!in_trip) {
-          auto const from = e->from(data.graph_);
-          if (from->station_ == leg.enter_station_id_ &&
-              from->schedule_time_ == leg.enter_time_) {
-            in_trip = true;
-          }
-        }
-        if (in_trip) {
-          e->passengers_ += additional;
-          sim_result.additional_passengers_[e] += additional;
-          if (e->passengers_ > e->capacity_) {
-            sim_result.edges_over_capacity_.insert(e);
-          }
-          auto const to = e->to(data.graph_);
-          if (to->station_ == leg.exit_station_id_ &&
-              to->schedule_time_ == leg.exit_time_) {
-            break;
-          }
-        }
-      }
-    }
+    for_each_edge(sched, data, alternative.compact_journey_,
+                  [&](journey_leg const&, edge* e) {
+                    e->passengers_ += additional;
+                    sim_result.additional_passengers_[e] += additional;
+                    if (e->passengers_ > e->capacity_) {
+                      sim_result.edges_over_capacity_.insert(e);
+                    }
+                  });
   }
 
   return allocation;

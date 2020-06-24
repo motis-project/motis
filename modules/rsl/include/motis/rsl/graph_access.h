@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <vector>
 
 #include "motis/core/schedule/schedule.h"
@@ -34,5 +35,13 @@ inline edge* add_edge(edge const& e) {
 
 void add_passenger_group_to_edge(edge* e, passenger_group* pg);
 void remove_passenger_group_from_edge(edge* e, passenger_group* pg);
+
+void for_each_trip(
+    schedule const& sched, rsl_data& data, compact_journey const& journey,
+    std::function<void(journey_leg const&, trip_data const*)> const& fn);
+
+void for_each_edge(schedule const& sched, rsl_data& data,
+                   compact_journey const& journey,
+                   std::function<void(journey_leg const&, edge*)> const& fn);
 
 }  // namespace motis::rsl

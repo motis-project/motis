@@ -333,4 +333,38 @@ void remove_passenger_group_from_edge(edge* e, passenger_group* pg) {
   }
 }
 
+void for_each_trip(
+    schedule const& sched, rsl_data& data, compact_journey const& journey,
+    std::function<void(journey_leg const&, trip_data const*)> const& fn) {
+  for (auto const& leg : journey.legs_) {
+    fn(leg, get_or_add_trip(sched, data, leg.trip_));
+  }
+}
+
+void for_each_edge(schedule const& sched, rsl_data& data,
+                   compact_journey const& journey,
+                   std::function<void(journey_leg const&, edge*)> const& fn) {
+  for_each_trip(sched, data, journey,
+                [&](journey_leg const& leg, trip_data const* td) {
+                  auto in_trip = false;
+                  for (auto e : td->edges_) {
+                    if (!in_trip) {
+                      auto const from = e->from(data.graph_);
+                      if (from->station_ == leg.enter_station_id_ &&
+                          from->schedule_time_ == leg.enter_time_) {
+                        in_trip = true;
+                      }
+                    }
+                    if (in_trip) {
+                      fn(leg, e);
+                      auto const to = e->to(data.graph_);
+                      if (to->station_ == leg.exit_station_id_ &&
+                          to->schedule_time_ == leg.exit_time_) {
+                        break;
+                      }
+                    }
+                  }
+                });
+}
+
 }  // namespace motis::rsl
