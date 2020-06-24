@@ -85,9 +85,9 @@ add_definitions(/DBOOST_ASIO_DISABLE_CONCEPTS=1)  # fixes issue with Boost 1.72.
 ################################
 # Dependencies
 ################################
+set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_MULTITHREADED ON)
 if (MSVC)
-  set(Boost_USE_STATIC_LIBS ON)
-  set(Boost_USE_MULTITHREADED ON)
   set(Boost_USE_STATIC_RUNTIME ON)
 endif()
 find_package(Boost 1.70.0 REQUIRED COMPONENTS system filesystem regex program_options thread)
