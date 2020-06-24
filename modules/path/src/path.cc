@@ -23,6 +23,7 @@
 #include "motis/module/ini_io.h"
 
 #include "motis/path/definitions.h"
+#include "motis/path/error.h"
 #include "motis/path/path_data.h"
 #include "motis/path/path_database_query.h"
 

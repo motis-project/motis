@@ -17,19 +17,8 @@ enum error_code_t {
 
 class error_category_impl : public std::error_category {
 public:
-  const char* name() const noexcept override { return "motis::path"; }
-
-  std::string message(int ev) const noexcept override {
-    switch (ev) {
-      case error::ok: return "path: no error";
-      case error::database_error: return "path: database error";
-      case error::not_found: return "path: not found";
-      case error::unknown_sequence: return "path: unknown sequence";
-      case error::database_not_available: return "path: database not available";
-      case error::invalid_request: return "path: invalid request";
-      default: return "path: unkown error";
-    }
-  }
+  const char* name() const noexcept override;
+  std::string message(int ev) const noexcept override;
 };
 
 inline const std::error_category& error_category() {
@@ -38,9 +27,7 @@ inline const std::error_category& error_category() {
 }
 
 namespace error {
-inline std::error_code make_error_code(error_code_t e) noexcept {
-  return std::error_code(static_cast<int>(e), error_category());
-}
+std::error_code make_error_code(error_code_t e) noexcept;
 }  // namespace error
 
 }  // namespace motis::path
