@@ -7,7 +7,7 @@
 #include "cista/hash.h"
 #include "cista/reflection/comparable.h"
 
-#include "motis/path/definitions.h"
+#include "motis/core/schedule/connection.h"
 
 namespace motis::path {
 
@@ -55,31 +55,37 @@ struct source_spec {
 };
 
 template <typename Fun>
-void foreach_path_category(std::set<motis_clasz_t> const& classes, Fun&& fun) {
-  std::vector<motis_clasz_t> railway_cat, unknown_cat;
+void foreach_path_category(std::set<service_class> const& classes, Fun&& fun) {
+  // TODO add classes: AIR COACH SHIP
+  std::vector<service_class> railway_classes, other_classes;
   for (auto const& clasz : classes) {
-    if (clasz == 8) {
-      fun(source_spec::category::BUS, std::vector<motis_clasz_t>{8});
-    } else if (clasz == 7) {
-      fun(source_spec::category::TRAM, std::vector<motis_clasz_t>{7});
-    } else if (clasz == 6) {
-      fun(source_spec::category::SUBWAY, std::vector<motis_clasz_t>{6});
-    } else if (clasz < 6) {
-      railway_cat.push_back(clasz);
+    if (clasz == service_class::BUS) {
+      fun(source_spec::category::BUS,
+          std::vector<service_class>{service_class::BUS});
+    } else if (clasz == service_class::STR) {
+      fun(source_spec::category::TRAM,
+          std::vector<service_class>{service_class::STR});
+    } else if (clasz == service_class::U) {
+      fun(source_spec::category::SUBWAY,
+          std::vector<service_class>{service_class::U});
+    } else if (clasz == service_class::ICE || clasz == service_class::IC ||
+               clasz == service_class::N || clasz == service_class::RE ||
+               clasz == service_class::RB || clasz == service_class::S) {
+      railway_classes.push_back(clasz);
     } else {
-      unknown_cat.push_back(clasz);
+      other_classes.push_back(clasz);
     }
   }
 
   if (classes.empty()) {
-    unknown_cat.push_back(9U);
+    other_classes.push_back(service_class::OTHER);
   }
 
-  if (!railway_cat.empty()) {
-    fun(source_spec::category::RAIL, railway_cat);
+  if (!railway_classes.empty()) {
+    fun(source_spec::category::RAIL, railway_classes);
   }
-  if (!unknown_cat.empty()) {
-    fun(source_spec::category::UNKNOWN, unknown_cat);
+  if (!other_classes.empty()) {
+    fun(source_spec::category::UNKNOWN, other_classes);
   }
 }
 

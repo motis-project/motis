@@ -21,7 +21,7 @@ namespace mp = motis::path;
   }
 
 mp::resolved_station_seq make_resolved_cls_seq(
-    std::vector<mp::motis_clasz_t> const& classes,
+    std::vector<motis::service_class> const& classes,
     mcd::vector<mcd::vector<int64_t>> const& paths) {
   return mp::resolved_station_seq{
       utl::repeat_n(std::string{}, paths.size() + 1),
@@ -39,7 +39,7 @@ mp::resolved_station_seq make_resolved_cls_seq(
 
 mp::resolved_station_seq make_resolved_seq(
     mcd::vector<mcd::vector<int64_t>> const& paths) {
-  return make_resolved_cls_seq({0}, paths);
+  return make_resolved_cls_seq({motis::service_class::OTHER}, paths);
 }
 
 TEST(post_graph, simple) {
@@ -454,9 +454,11 @@ TEST(post_graph, invalid_path) {
   }
 }
 
-TEST(post_graph, revese_path_min_class) {
-  auto g = mp::build_post_graph({make_resolved_cls_seq({4, 5}, {{0, 1, 2}}),
-                                 make_resolved_cls_seq({3}, {{2, 1, 0}})});
+TEST(post_graph, reverse_path_min_class) {
+  auto g = mp::build_post_graph(
+      {make_resolved_cls_seq(
+           {motis::service_class::RE, motis::service_class::RB}, {{0, 1, 2}}),
+       make_resolved_cls_seq({motis::service_class::S}, {{2, 1, 0}})});
 
   mp::post_process(g);
   ASSERT_EQ(1, g.atomic_paths_.size());
@@ -468,5 +470,8 @@ TEST(post_graph, revese_path_min_class) {
   auto const& [seq_segs, classes] = index.resolve_atomic_path(ap);
 
   EXPECT_EQ((std::vector<mp::seq_seg>{{0, 0}, {1, 0}}), seq_segs);
-  EXPECT_EQ((std::vector<mp::motis_clasz_t>{3, 4, 5}), classes);
+  EXPECT_EQ((std::vector<motis::service_class>{motis::service_class::RE,
+                                               motis::service_class::RB,
+                                               motis::service_class::S}),
+            classes);
 }

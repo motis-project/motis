@@ -22,7 +22,8 @@ struct station {
   uint32_t index_{0};
   double length_{0.0}, width_{0.0};
   int32_t transfer_time_{0};
-  mcd::array<uint64_t, 10> arr_class_events_{{0}}, dep_class_events_{{0}};
+  mcd::array<uint64_t, static_cast<service_class_t>(service_class::NUM_CLASSES)>
+      arr_class_events_{{0}}, dep_class_events_{{0}};
   mcd::string eva_nr_;
   cista::indexed<mcd::string> name_;
   ptr<timezone const> timez_{nullptr};

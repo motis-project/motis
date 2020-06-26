@@ -20,7 +20,7 @@ inline void print_post_colors(post_graph const& graph, color_t const color) {
       std::clog << std::endl;
 
       for (auto const& cls : graph.originals_.at(i).classes_) {
-        std::clog << cls << ",";
+        std::clog << static_cast<service_class_t>(cls) << ",";
       }
       std::clog << std::endl;
     }

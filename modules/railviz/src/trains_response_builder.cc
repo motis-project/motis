@@ -149,7 +149,8 @@ Offset<Train> trains_response_builder::write_railviz_train(
                   [&](trip const* trp) { return to_fbs(sched_, mc_, trp); });
 
   return CreateTrain(
-      mc_, mc_.CreateVector(service_names), dep.lcon()->full_con_->clasz_,
+      mc_, mc_.CreateVector(service_names),
+      static_cast<service_class_t>(dep.lcon()->full_con_->clasz_),
       q.train_.route_distance_,
       mc_.CreateString(sched_.stations_.at(dep_station_idx)->eva_nr_),
       mc_.CreateString(sched_.stations_.at(arr_station_idx)->eva_nr_),

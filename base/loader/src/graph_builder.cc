@@ -555,7 +555,8 @@ light_connection graph_builder::section_to_connection(
 
   // Build full connection.
   auto clasz_it = sched_.classes_.find(section->category()->name()->str());
-  con_.clasz_ = (clasz_it == end(sched_.classes_)) ? 9 : clasz_it->second;
+  con_.clasz_ = (clasz_it == end(sched_.classes_)) ? service_class::OTHER
+                                                   : clasz_it->second;
   con_.price_ = get_distance(from, to) * get_price_per_km(con_.clasz_);
   con_.d_track_ = get_or_create_track(dep_day_index, dep_platf);
   con_.a_track_ = get_or_create_track(arr_day_index, arr_platf);
@@ -573,8 +574,8 @@ light_connection graph_builder::section_to_connection(
       c_str(section_timezone), adjusted);
 
   // Count events.
-  ++from.dep_class_events_.at(con_.clasz_);
-  ++to.arr_class_events_.at(con_.clasz_);
+  ++from.dep_class_events_.at(static_cast<service_class_t>(con_.clasz_));
+  ++to.arr_class_events_.at(static_cast<service_class_t>(con_.clasz_));
 
   // Track first event.
   sched_.first_event_schedule_time_ = std::min(

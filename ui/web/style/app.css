@@ -1243,108 +1243,145 @@ fieldset > legend {
 .train-class-0,
 .train-class-0 .train-color-border,
 .train-detail.train-class-0 .stop::before {
-  color: #9c27b0;
-}
-
-.train-detail.train-class-0 .past .timeline:not(.bg),
-.train-detail.train-class-0 .timeline.progress,
-.train-detail.train-class-0 .stop.past::before {
-  color: #c47dd0;
-}
-
-.train-class-1,
-.train-class-1 .train-color-border,
-.train-detail.train-class-1 .stop::before {
-  color: #e91e63;
+  color: #90a4ae;
 }
 
 .train-detail.train-class-1 .past .timeline:not(.bg),
 .train-detail.train-class-1 .timeline.progress,
 .train-detail.train-class-1 .stop.past::before {
-  color: #f278a1;
+  color: #bcc8ce;
+}
+
+.train-class-1,
+.train-class-1 .train-color-border,
+.train-detail.train-class-1 .stop::before {
+  color: #9c27b0;
+}
+
+.train-detail.train-class-1 .past .timeline:not(.bg),
+.train-detail.train-class-1 .timeline.progress,
+.train-detail.train-class-1 .stop.past::before {
+  color: #c47dd0;
 }
 
 .train-class-2,
 .train-class-2 .train-color-border,
 .train-detail.train-class-2 .stop::before {
-  color: #1a237e;
+  color: #e91e63;
 }
 
 .train-detail.train-class-2 .past .timeline:not(.bg),
 .train-detail.train-class-2 .timeline.progress,
 .train-detail.train-class-2 .stop.past::before {
-  color: #767bb2;
+  color: #f278a1;
 }
 
 .train-class-3,
-.train-class-4,
 .train-class-3 .train-color-border,
-.train-class-4 .train-color-border,
-.train-detail.train-class-3 .stop::before,
-.train-detail.train-class-4 .stop::before {
-  color: #f44336;
+.train-detail.train-class-3 .stop::before {
+  color: #9ccc65;
 }
 
 .train-detail.train-class-3 .past .timeline:not(.bg),
-.train-detail.train-class-4 .past .timeline:not(.bg),
 .train-detail.train-class-3 .timeline.progress,
+.train-detail.train-class-3 .stop.past::before {
+  color: #c3e0a2;
+}
+
+.train-class-4,
+.train-class-4 .train-color-border,
+.train-detail.train-class-4 .stop::before {
+  color: #1a237e;
+}
+
+.train-detail.train-class-4 .past .timeline:not(.bg),
 .train-detail.train-class-4 .timeline.progress,
-.train-detail.train-class-3 .stop.past::before,
 .train-detail.train-class-4 .stop.past::before {
-  color: #f88e86;
+  color: #767bb2;
 }
 
 .train-class-5,
+.train-class-6,
 .train-class-5 .train-color-border,
-.train-detail.train-class-5 .stop::before {
-  color: #4caf50;
+.train-class-6 .train-color-border,
+.train-detail.train-class-5 .stop::before,
+.train-detail.train-class-6 .stop::before {
+  color: #f44336;
 }
 
 .train-detail.train-class-5 .past .timeline:not(.bg),
-.train-detail.train-class-5 .timeline.progress,
-.train-detail.train-class-5 .stop.past::before {
-  color: #94cf96;
-}
-
-.train-class-6,
-.train-class-6 .train-color-border,
-.train-detail.train-class-6 .stop::before {
-  color: #3f51b5;
-}
-
 .train-detail.train-class-6 .past .timeline:not(.bg),
+.train-detail.train-class-5 .timeline.progress,
 .train-detail.train-class-6 .timeline.progress,
+.train-detail.train-class-5 .stop.past::before,
 .train-detail.train-class-6 .stop.past::before {
-  color: #8c97d3;
+  color: #f88e86;
 }
 
 .train-class-7,
-.train-class-8,
 .train-class-7 .train-color-border,
-.train-class-8 .train-color-border,
-.train-detail.train-class-7 .stop::before,
-.train-detail.train-class-8 .stop::before {
-  color: #ff9800;
+.train-detail.train-class-7 .stop::before {
+  color: #4caf50;
 }
 
 .train-detail.train-class-7 .past .timeline:not(.bg),
-.train-detail.train-class-8 .past .timeline:not(.bg),
 .train-detail.train-class-7 .timeline.progress,
+.train-detail.train-class-7 .stop.past::before {
+  color: #94cf96;
+}
+
+.train-class-8,
+.train-class-8 .train-color-border,
+.train-detail.train-class-8 .stop::before {
+  color: #3f51b5;
+}
+
+.train-detail.train-class-8 .past .timeline:not(.bg),
 .train-detail.train-class-8 .timeline.progress,
-.train-detail.train-class-7 .stop.past::before,
 .train-detail.train-class-8 .stop.past::before {
-  color: #ffc166;
+  color: #8c97d3;
 }
 
 .train-class-9,
+.train-class-10,
 .train-class-9 .train-color-border,
-.train-detail.train-class-9 .stop::before {
-  color: #9e9e9e;
+.train-class-10 .train-color-border,
+.train-detail.train-class-9 .stop::before,
+.train-detail.train-class-10 .stop::before {
+  color: #ff9800;
 }
 
 .train-detail.train-class-9 .past .timeline:not(.bg),
+.train-detail.train-class-10 .past .timeline:not(.bg),
 .train-detail.train-class-9 .timeline.progress,
-.train-detail.train-class-9 .stop.past::before {
+.train-detail.train-class-10 .timeline.progress,
+.train-detail.train-class-9 .stop.past::before,
+.train-detail.train-class-10 .stop.past::before {
+  color: #ffc166;
+}
+
+.train-class-11,
+.train-class-11 .train-color-border,
+.train-detail.train-class-11 .stop::before {
+  color: #00acc1;
+}
+
+.train-detail.train-class-11 .past .timeline:not(.bg),
+.train-detail.train-class-11 .timeline.progress,
+.train-detail.train-class-11 .stop.past::before {
+  color: #99dde6;
+}
+
+
+.train-class-12,
+.train-class-12 .train-color-border,
+.train-detail.train-class-12 .stop::before {
+  color: #9e9e9e;
+}
+
+.train-detail.train-class-12 .past .timeline:not(.bg),
+.train-detail.train-class-12 .timeline.progress,
+.train-detail.train-class-12 .stop.past::before {
   color: #c5c5c5;
 }
 

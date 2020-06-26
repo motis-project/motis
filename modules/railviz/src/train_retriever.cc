@@ -25,7 +25,7 @@ using rtree = bgi::rtree<value, bgi::quadratic<16>>;
 
 namespace motis::railviz {
 
-bool is_relevant(edge const& e, int clasz) {
+bool is_relevant(edge const& e, service_class clasz) {
   return !e.empty() && e.m_.route_edge_.conns_[0].full_con_->clasz_ == clasz;
 }
 
@@ -35,7 +35,7 @@ geo::latlng station_coords(schedule const& sched, unsigned station_idx) {
 }
 
 struct edge_geo_index {
-  edge_geo_index(schedule const& sched, int clasz, rtree tree,
+  edge_geo_index(schedule const& sched, service_class clasz, rtree tree,
                  mcd::hash_set<std::pair<int, int>> included_station_pairs)
       : sched_{sched},
         clasz_{clasz},
@@ -75,13 +75,13 @@ struct edge_geo_index {
   }
 
   schedule const& sched_;
-  int clasz_;
+  service_class clasz_;
   rtree tree_;
   mcd::hash_set<std::pair<int, int>> included_station_pairs_;
 };
 
 std::unique_ptr<edge_geo_index> make_edge_rtree(
-    schedule const& sched, int clasz,
+    schedule const& sched, service_class clasz,
     mcd::hash_map<std::pair<int, int>, geo::box> const& boxes) {
   std::vector<value> entries;
   mcd::hash_set<std::pair<int, int>> included_station_pairs;
@@ -126,7 +126,7 @@ std::unique_ptr<edge_geo_index> make_edge_rtree(
   }
 
   if (no_match != 0) {
-    LOG(logging::warn) << "clasz " << clasz
+    LOG(logging::warn) << "clasz " << static_cast<service_class_t>(clasz)
                        << ": station pairs without tbbox: " << no_match << "/"
                        << entries.size();
   }
@@ -135,7 +135,8 @@ std::unique_ptr<edge_geo_index> make_edge_rtree(
                                           std::move(included_station_pairs));
 }
 
-constexpr auto const RELEVANT_CLASSES = NUM_CLASSES;
+constexpr auto const RELEVANT_CLASSES =
+    static_cast<service_class_t>(service_class::NUM_CLASSES);
 
 train_retriever::train_retriever(
     schedule const& sched,
@@ -143,7 +144,8 @@ train_retriever::train_retriever(
     : sched_{sched} {
   edge_index_.resize(RELEVANT_CLASSES);
   for (auto clasz = 0U; clasz < RELEVANT_CLASSES; ++clasz) {
-    edge_index_[clasz] = make_edge_rtree(sched, clasz, boxes);
+    edge_index_[clasz] =
+        make_edge_rtree(sched, static_cast<service_class>(clasz), boxes);
   }
 }
 
@@ -169,16 +171,17 @@ void train_retriever::update(rt::RtUpdates const* updates) {
           std::max(section.from_station_id(), section.to_station_id()));
 
       auto const clasz = section.fcon().clasz_;
-      if (!edge_index_.at(clasz)
+      if (!edge_index_.at(static_cast<service_class_t>(clasz))
                ->included_station_pairs_.insert(station_pair)
                .second) {
         continue;
       }
 
-      new_values.at(clasz).emplace_back(
-          geo::make_box({station_coords(sched_, station_pair.first),
-                         station_coords(sched_, station_pair.second)}),
-          station_pair);
+      new_values.at(static_cast<service_class_t>(clasz))
+          .emplace_back(
+              geo::make_box({station_coords(sched_, station_pair.first),
+                             station_coords(sched_, station_pair.second)}),
+              station_pair);
     }
   }
 
@@ -187,11 +190,13 @@ void train_retriever::update(rt::RtUpdates const* updates) {
   }
 }
 
-bool should_display(int clasz, int zoom_level, float distance = 0.F) {
-  return (clasz < 3 && zoom_level >= 4)  //
-         || (clasz < 6 && zoom_level >= 5)  //
-         || (clasz < 7 && zoom_level >= 8)  //
-         || (clasz >= 7 && zoom_level == 10 && distance >= 10'000.F)  //
+bool should_display(service_class clasz, int zoom_level, float distance = 0.F) {
+  // TODO move this to header
+  return (clasz < service_class::RE && zoom_level >= 4)  //
+         || (clasz < service_class::STR && zoom_level >= 5)  //
+         || (clasz < service_class::BUS && zoom_level >= 8)  //
+         || (clasz >= service_class::BUS && zoom_level == 10 &&
+             distance >= 10'000.F)  //
          || zoom_level > 10;
 }
 
@@ -232,8 +237,9 @@ std::vector<train> train_retriever::trains(
     return distance;
   };
 
-  auto const foreach_train = [&](auto const clasz, auto&& fn) {
-    for (auto const& e : edge_index_[clasz]->edges(area)) {
+  auto const foreach_train = [&](service_class const clasz, auto&& fn) {
+    for (auto const& e :
+         edge_index_[static_cast<service_class_t>(clasz)]->edges(area)) {
       for (auto i = 0U; i < e->m_.route_edge_.conns_.size(); ++i) {
         auto const& c = e->m_.route_edge_.conns_[i];
         if (c.valid_ == 0U || c.a_time_ < start_time || c.d_time_ > end_time) {
@@ -271,7 +277,7 @@ std::vector<train> train_retriever::trains(
   std::shared_lock lock(mutex_);
   std::vector<train> result_trains;
   std::vector<train> clasz_trains;
-  for (auto clasz = 0U; clasz < MOTIS_STR; ++clasz) {
+  for (auto clasz = service_class::AIR; clasz < service_class::STR; ++clasz) {
     if (!should_display(clasz, zoom_level)) {
       continue;
     }
@@ -286,7 +292,7 @@ std::vector<train> train_retriever::trains(
   {
     constexpr auto const kLongDistance = 10'000.;
     std::vector<train> clasz_trains_long_distance;
-    for (auto const clasz : {MOTIS_STR, MOTIS_BUS}) {
+    for (auto const clasz : {service_class::STR, service_class::BUS}) {
       if (should_display(clasz, zoom_level,
                          std::numeric_limits<float>::infinity())) {
         foreach_train(clasz, [&](auto const& t) {
@@ -305,9 +311,16 @@ std::vector<train> train_retriever::trains(
     }
   }
 
-  if (should_display(MOTIS_X, zoom_level)) {
-    foreach_train(MOTIS_X, [&](auto const& t) { clasz_trains.push_back(t); });
-    concat_and_check_limit(result_trains, clasz_trains);
+  for (auto const clasz : {service_class::SHIP, service_class::OTHER}) {
+    if (!should_display(clasz, zoom_level)) {
+      continue;
+    }
+
+    foreach_train(clasz, [&](auto const& t) { clasz_trains.push_back(t); });
+
+    if (concat_and_check_limit(result_trains, clasz_trains)) {
+      return result_trains;
+    }
   }
 
   return result_trains;

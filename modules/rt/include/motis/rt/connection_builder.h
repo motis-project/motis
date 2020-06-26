@@ -51,10 +51,10 @@ inline size_t get_track(schedule& sched, std::string const& track_name) {
   }
 }
 
-inline int get_clasz(mcd::string const& category) {
+inline service_class get_clasz(mcd::string const& category) {
   static auto const clasz_map = loader::class_mapping();
   auto const it = clasz_map.find(category);
-  return it == end(clasz_map) ? 9 : it->second;
+  return it == end(clasz_map) ? service_class::OTHER : it->second;
 }
 
 inline connection* get_full_con(schedule& sched,

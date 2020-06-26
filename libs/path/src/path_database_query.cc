@@ -13,8 +13,6 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
-#include "motis/core/schedule/connection.h"
-
 #include "motis/path/definitions.h"
 #include "motis/path/polyline_builder.h"
 
@@ -86,8 +84,8 @@ void path_database_query::resolve_sequences_and_build_subqueries(
 
     utl::verify(ptr->classes()->size() != 0,
                 "path_database_query: have empty classes");
-    auto const min_clasz = *std::min_element(std::begin(*ptr->classes()),
-                                             std::end(*ptr->classes()));
+    auto const min_clasz = static_cast<service_class>(*std::min_element(
+        std::begin(*ptr->classes()), std::end(*ptr->classes())));
 
     auto const add_segment = [&](auto const* segment) {
       rs.segment_features_.emplace_back();
@@ -125,7 +123,6 @@ void path_database_query::resolve_sequences_and_build_subqueries(
               });
 
           resolvable->min_clasz_ = std::min(resolvable->min_clasz_, min_clasz);
-
           auto const is_fwd = feature_id >= 0;
           if (is_fwd) {
             ++resolvable->fwd_use_count_;
@@ -217,7 +214,9 @@ void unpack_features(
   auto const idx_offset = tiles::find_segment_offset(pack, kPathIndexId);
   utl::verify(idx_offset.has_value(), "path_database_query: index missing!");
 
-  constexpr auto const kHeaderSize = NUM_CLASSES * sizeof(uint32_t);
+  constexpr auto const kHeaderSize =
+      static_cast<service_class_t>(service_class::NUM_CLASSES) *
+      sizeof(uint32_t);
   auto const header_base = pack.data() + *idx_offset;
   auto const indices_base = header_base + kHeaderSize;
   auto const pack_end = pack.data() + pack.size();
@@ -226,7 +225,8 @@ void unpack_features(
   std::vector<std::pair<feature_it_t, feature_it_t>> index_clasz_bounds;
 
   size_t index = 0;
-  for (auto i = 0; i < NUM_CLASSES; ++i) {
+  for (auto i = 0; i < static_cast<service_class_t>(service_class::NUM_CLASSES);
+       ++i) {
     auto const feature_count = tiles::read_nth<uint32_t>(header_base, i);
     index_clasz_bounds.emplace_back(
         feature_it_t{indices_base, index},
@@ -239,7 +239,8 @@ void unpack_features(
   // - contains only unresolved features
   // - contains only features with min_clasz >= (current) clasz
   std::vector<resolvable_feature*> active_queries;
-  for (int clasz = NUM_CLASSES - 1; clasz >= 0; --clasz) {
+  for (int clasz = static_cast<service_class_t>(service_class::NUM_CLASSES) - 1;
+       clasz >= 0; --clasz) {
     {  // add new features from this zoomlevel
       auto const& [lb, ub] = query_clasz_bounds[clasz];
       if (lb != nullptr || lb != ub) {  // any new elements
@@ -300,15 +301,18 @@ void path_database_query::execute_subquery(
   });
 
   std::vector<std::pair<resolvable_feature_ptr, resolvable_feature_ptr>>
-      query_clasz_bounds(NUM_CLASSES, {nullptr, nullptr});
+      query_clasz_bounds(
+          static_cast<service_class_t>(service_class::NUM_CLASSES),
+          {nullptr, nullptr});
   utl::equal_ranges_linear(
       q.mem_,
       [](auto const& lhs, auto const& rhs) {
         return lhs->min_clasz_ == rhs->min_clasz_;
       },
       [&](auto lb, auto ub) {
-        utl::verify((**lb).min_clasz_ < NUM_CLASSES, "invalid min_clasz");
-        query_clasz_bounds[(**lb).min_clasz_] =
+        utl::verify((**lb).min_clasz_ < service_class::NUM_CLASSES,
+                    "invalid min_clasz");
+        query_clasz_bounds[static_cast<service_class_t>((**lb).min_clasz_)] =
             std::make_pair(&*lb, &*lb + std::distance(lb, ub));
       });
 

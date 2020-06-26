@@ -29,7 +29,7 @@ struct color_to_seq_seg_index {
         [](auto const& lhs, auto const& rhs) { return lhs.first < rhs.first; });
   }
 
-  std::pair<std::vector<seq_seg>, std::vector<motis_clasz_t>>
+  std::pair<std::vector<seq_seg>, std::vector<service_class>>
   resolve_atomic_path(atomic_path const& ap) const {
     auto const& p = ap.path_;
     utl::verify(p.size() >= 2, "illformed atomic path (size = {})", p.size());
@@ -62,9 +62,9 @@ struct color_to_seq_seg_index {
     });
   }
 
-  std::vector<motis_clasz_t> get_classes(
+  std::vector<service_class> get_classes(
       std::vector<seq_seg> const& seq_segs) const {
-    std::vector<motis_clasz_t> classes;
+    std::vector<service_class> classes;
     for (auto const& seq_seg : seq_segs) {
       utl::concat(classes, graph_.originals_.at(seq_seg.sequence_).classes_);
     }

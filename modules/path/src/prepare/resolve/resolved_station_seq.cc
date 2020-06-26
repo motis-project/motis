@@ -69,7 +69,10 @@ void write_to_fbs(std::vector<resolved_station_seq> const& sequences,
       }
 
       vec.emplace_back(CreateInternalPathSeqResponse(
-          fbb, fbb.CreateVector(fbs_stations), fbb.CreateVector(seq.classes_),
+          fbb, fbb.CreateVector(fbs_stations),
+          fbb.CreateVector(utl::to_vec(
+              seq.classes_,
+              [](auto const& c) { return static_cast<service_class_t>(c); })),
           fbb.CreateVector(fbs_segments), fbb.CreateVector(fbs_info)));
     }
 
@@ -132,8 +135,9 @@ std::vector<resolved_station_seq> read_from_fbs(std::string const& fname) {
       resolved_station_seq seq;
       seq.station_ids_ = utl::to_vec(*cached_seq->station_ids(),
                                      [](auto const* id) { return id->str(); });
-      seq.classes_ = std::vector<motis_clasz_t>(
-          std::begin(*cached_seq->classes()), std::end(*cached_seq->classes()));
+      seq.classes_ = utl::to_vec(*cached_seq->classes(), [](auto const& c) {
+        return static_cast<service_class>(c);
+      });
       seq.paths_ = utl::to_vec(*cached_seq->segments(), [](auto const* seg) {
         osm_path path;
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "utl/verify.h"
+
 #include "motis/core/schedule/connection.h"
 #include "motis/core/schedule/station.h"
 
@@ -11,22 +13,27 @@
 
 namespace motis {
 
-inline int get_price_per_km(int clasz) {
+inline int get_price_per_km(service_class const clasz) {
   switch (clasz) {
-    case MOTIS_ICE: return 22;
+    case service_class::AIR: return 25;
 
-    case MOTIS_N:
-    case MOTIS_IC:
-    case MOTIS_X: return 18;
+    case service_class::ICE: return 22;
 
-    case MOTIS_RE:
-    case MOTIS_RB:
-    case MOTIS_S:
-    case MOTIS_U:
-    case MOTIS_STR:
-    case MOTIS_BUS: return 15;
+    case service_class::N:
+    case service_class::IC:
+    case service_class::SHIP:
+    case service_class::OTHER: return 18;
 
-    default: return 0;
+    case service_class::RE:
+    case service_class::RB:
+    case service_class::S:
+    case service_class::U:
+    case service_class::STR:
+    case service_class::BUS: return 15;
+
+    case service_class::COACH: return 12;
+
+    default: throw utl::fail("unknown service class: {} ", clasz);
   }
 }
 

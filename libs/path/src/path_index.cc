@@ -18,7 +18,7 @@ path_index::path_index(index_t const index) {
                                  [](auto const& id) { return id->str(); });
     utl::verify(!seq.empty(), "empty sequence!");
     for (auto const& clasz : *entry->classes()) {
-      seq_map_.insert({{seq, clasz}, entry->sequence()});
+      seq_map_.insert({{seq, service_class{clasz}}, entry->sequence()});
     }
   }
 
@@ -29,7 +29,8 @@ path_index::path_index(index_t const index) {
     seq_keys_.at(seq->sequence()) =
         seq_info{utl::to_vec(*seq->station_ids(),
                              [](auto const& str) { return str->str(); }),
-                 {seq->classes()->begin(), seq->classes()->end()}};
+                 utl::to_vec(*seq->classes(),
+                             [](auto const& c) { return service_class{c}; })};
   }
 
   tile_features_ =
@@ -52,7 +53,7 @@ std::vector<path_index::segment_info> path_index::get_segments(
     size_t const ref) const {
   utl::verify(ref < tile_features_.size(), "invalid ref");
 
-  std::map<std::pair<std::string, std::string>, std::set<class_t>> acc;
+  std::map<std::pair<std::string, std::string>, std::set<service_class>> acc;
   for (auto const& pair : tile_features_[ref]) {
     utl::verify(pair.first < seq_keys_.size(), "invalid feature");
     auto const& key = seq_keys_[pair.first];
@@ -66,7 +67,7 @@ std::vector<path_index::segment_info> path_index::get_segments(
   return utl::to_vec(acc, [](auto const& pair) {
     return segment_info{
         pair.first.first, pair.first.second,
-        std::vector<class_t>{begin(pair.second), end(pair.second)}};
+        std::vector<service_class>{begin(pair.second), end(pair.second)}};
   });
 }
 

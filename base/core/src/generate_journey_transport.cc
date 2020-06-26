@@ -25,7 +25,9 @@ journey::transport generate_journey_transport(
     cat_name = sched.categories_[con_info->family_]->name_;
 
     auto clasz_it = sched.classes_.find(cat_name);
-    clasz = clasz_it == end(sched.classes_) ? 9 : clasz_it->second;
+    clasz = static_cast<service_class_t>(clasz_it == end(sched.classes_)
+                                             ? service_class::OTHER
+                                             : clasz_it->second);
 
     line_identifier = con_info->line_identifier_;
 

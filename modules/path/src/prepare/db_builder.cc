@@ -41,24 +41,25 @@ using namespace motis::module;
 namespace motis::path {
 
 using seq_info =
-    std::tuple<std::vector<std::string>, std::vector<motis_clasz_t>, int>;
+    std::tuple<std::vector<std::string>, std::vector<service_class>, int>;
 
 template <typename Classes>
-motis_clasz_t get_min_clasz(Classes const& c) {
+service_class get_min_clasz(Classes const& c) {
   if (c.empty()) {
-    return 9;
+    return service_class::OTHER;
   }
   return *std::min_element(begin(c), end(c));
 }
 
-uint64_t min_clasz_to_min_zoom_level(motis_clasz_t const min_clasz) {
-  if (min_clasz < 3) {
+uint64_t min_clasz_to_min_zoom_level(service_class const min_clasz) {
+  // TODO FIXME
+  if (min_clasz < service_class::RE) {
     return 4UL;
-  } else if (min_clasz < 6) {
+  } else if (min_clasz < service_class::STR) {
     return 5UL;
-  } else if (min_clasz < 7) {
+  } else if (min_clasz < service_class::BUS) {
     return 8UL;
-  } else {  // *it >= 7
+  } else {
     return 10UL;
   }
 }
@@ -103,7 +104,9 @@ struct db_builder::impl {
 
       f.meta_.emplace_back("id", tiles::encode_string(s.id_));
       f.meta_.emplace_back("name", tiles::encode_string(s.name_));
-      f.meta_.emplace_back("min_class", tiles::encode_integer(min_clasz));
+      f.meta_.emplace_back(
+          "min_class",
+          tiles::encode_integer(static_cast<service_class_t>(min_clasz)));
 
       f.geometry_ = tiles::fixed_point{
           {tiles::latlng_to_fixed({s.pos_.lat_, s.pos_.lng_})}};
@@ -114,7 +117,7 @@ struct db_builder::impl {
 
   std::pair<uint64_t, uint64_t> add_feature(
       geo::polyline const& line, std::vector<seq_seg> const& seq_segs,
-      std::vector<motis_clasz_t> const& classes, bool is_stub) {
+      std::vector<service_class> const& classes, bool is_stub) {
     auto const min_clasz = get_min_clasz(classes);
 
     tiles::feature f;
@@ -122,7 +125,9 @@ struct db_builder::impl {
     f.zoom_levels_ = {min_clasz_to_min_zoom_level(min_clasz),
                       tiles::kMaxZoomLevel};
 
-    f.meta_.emplace_back("min_class", tiles::encode_integer(min_clasz));
+    f.meta_.emplace_back(
+        "min_class",
+        tiles::encode_integer(static_cast<service_class_t>(min_clasz)));
     f.meta_.emplace_back("stub", tiles::encode_bool(is_stub));
 
     tiles::fixed_polyline polyline;
@@ -166,9 +171,12 @@ struct db_builder::impl {
             original.front().lat_, original.front().lng_));
       }
 
-      mc.Finish(CreateInternalDbSequence(mc, mc.CreateVector(fbs_stations),
-                                         mc.CreateVector(seq.classes_),
-                                         mc.CreateVector(fbs_segments)));
+      mc.Finish(CreateInternalDbSequence(
+          mc, mc.CreateVector(fbs_stations),
+          mc.CreateVector(utl::to_vec(
+              seq.classes_,
+              [](auto const& c) { return static_cast<service_class_t>(c); })),
+          mc.CreateVector(fbs_segments)));
     }
 
     auto const lock = std::lock_guard{m_};
@@ -234,7 +242,9 @@ struct db_builder::impl {
           utl::to_vec(std::get<0>(info), [&mc](auto const& station_id) {
             return mc.CreateSharedString(station_id);
           });
-      auto const& fbs_classes = std::get<1>(info);
+      auto const& fbs_classes = utl::to_vec(
+          std::get<1>(info),
+          [](auto const& c) { return static_cast<service_class_t>(c); });
       return CreatePathSeqInfo(mc, mc.CreateVector(fbs_station_ids),
                                mc.CreateVector(fbs_classes), std::get<2>(info));
     });
@@ -324,7 +334,7 @@ void db_builder::store_stations(std::vector<station> const& stations) const {
 
 std::pair<uint64_t, uint64_t> db_builder::add_feature(
     geo::polyline const& polyline, std::vector<seq_seg> const& seq_segs,
-    std::vector<motis_clasz_t> const& classes, bool is_stub) const {
+    std::vector<service_class> const& classes, bool is_stub) const {
   return impl_->add_feature(polyline, seq_segs, classes, is_stub);
 }
 
