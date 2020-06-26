@@ -42,7 +42,7 @@ public class TransportTargetStation implements DetailViewHolder {
 
         Connection con = conWrapper.getConnection();
         Transport transport = JourneyUtil.getTransport(con, section);
-        long clasz = (transport != null) ? transport.clasz() : 10;
+        long clasz = (transport != null) ? transport.clasz() : JourneyUtil.WALK_CLASS;
         JourneyUtil.setBackgroundColor(inflater.getContext(), line, clasz);
 
         stop = con.stops(section.to);

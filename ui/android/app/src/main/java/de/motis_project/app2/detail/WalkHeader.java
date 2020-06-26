@@ -29,9 +29,8 @@ public class WalkHeader implements DetailViewHolder {
         ButterKnife.bind(this, layout);
 
         Context context = inflater.getContext();
-        long clasz = 10;
-        JourneyUtil.tintBackground(context, walkName, clasz);
-        JourneyUtil.setIcon(context, walkName, clasz);
+        JourneyUtil.tintBackground(context, walkName, JourneyUtil.WALK_CLASS);
+        JourneyUtil.setIcon(context, walkName, JourneyUtil.WALK_CLASS);
     }
 
     @Override
