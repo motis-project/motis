@@ -11,6 +11,7 @@
 #include "utl/parser/arg_parser.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
+#include "utl/zip.h"
 
 #include "tiles/db/feature_inserter_mt.h"
 #include "tiles/db/layer_names.h"
@@ -22,6 +23,7 @@
 #include "tiles/fixed/io/serialize.h"
 
 #include "motis/hash_map.h"
+#include "motis/hash_set.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/connection.h"
@@ -29,6 +31,7 @@
 
 #include "motis/path/definitions.h"
 #include "motis/path/path_database.h"
+#include "motis/path/path_zoom_level.h"
 #include "motis/path/prepare/db_tiles_packer.h"
 
 #include "motis/path/fbs/InternalDbSequence_generated.h"
@@ -41,7 +44,7 @@ using namespace motis::module;
 namespace motis::path {
 
 using seq_info =
-    std::tuple<std::vector<std::string>, std::vector<service_class>, int>;
+    std::tuple<mcd::vector<mcd::string>, mcd::vector<service_class>, int>;
 
 template <typename Classes>
 service_class get_min_clasz(Classes const& c) {
@@ -49,19 +52,6 @@ service_class get_min_clasz(Classes const& c) {
     return service_class::OTHER;
   }
   return *std::min_element(begin(c), end(c));
-}
-
-uint64_t min_clasz_to_min_zoom_level(service_class const min_clasz) {
-  // TODO FIXME
-  if (min_clasz < service_class::RE) {
-    return 4UL;
-  } else if (min_clasz < service_class::STR) {
-    return 5UL;
-  } else if (min_clasz < service_class::BUS) {
-    return 8UL;
-  } else {
-    return 10UL;
-  }
 }
 
 struct db_builder::impl {
@@ -92,24 +82,48 @@ struct db_builder::impl {
                 "db_builder: cache is not empty in dtor");
   }
 
-  void store_stations(std::vector<station> const& stations) {
-    for (auto const& s : stations) {
-      auto const min_clasz = get_min_clasz(s.classes_);
+  void store_stations(mcd::vector<station_seq> const& sequences) {
+    struct station_info {
+      mcd::string name_;
+      geo::latlng pos_;
+      int min_z_{tiles::kMaxZoomLevel};
+      service_class min_clasz_{service_class::OTHER};
+    };
 
+    mcd::hash_map<mcd::string, station_info> station_infos;
+    for (auto const& seq : sequences) {
+      auto const min_z = std::accumulate(
+          begin(seq.classes_), end(seq.classes_), min_zoom_level(),
+          [&](auto z, auto c) {
+            return std::min(z, min_zoom_level(c, seq.distance_));
+          });
+      auto const min_clasz = get_min_clasz(seq.classes_);
+
+      for (auto const& [id, name, pos] :
+           utl::zip(seq.station_ids_, seq.station_names_, seq.coordinates_)) {
+        auto const& [it, new_elem] = station_infos.emplace(
+            id, station_info{name, pos, min_z, min_clasz});
+        if (!new_elem) {
+          it->second.min_z_ = std::max(it->second.min_z_, min_z);
+          it->second.min_clasz_ = std::min(it->second.min_clasz_, min_clasz);
+        }
+      }
+    }
+
+    for (auto const& [id, info] : station_infos) {
       tiles::feature f;
       f.id_ = station_feature_id_++;
       f.layer_ = station_layer_id_;
-      f.zoom_levels_ = {min_clasz_to_min_zoom_level(min_clasz),
-                        tiles::kMaxZoomLevel};
+      f.zoom_levels_ = {info.min_z_, tiles::kMaxZoomLevel};
 
-      f.meta_.emplace_back("id", tiles::encode_string(s.id_));
-      f.meta_.emplace_back("name", tiles::encode_string(s.name_));
+      f.meta_.emplace_back("id", tiles::encode_string(id));
+      f.meta_.emplace_back("name", tiles::encode_string(info.name_));
       f.meta_.emplace_back(
           "min_class",
-          tiles::encode_integer(static_cast<service_class_t>(min_clasz)));
+          tiles::encode_integer(static_cast<service_class_t>(info.min_clasz_)));
 
       f.geometry_ = tiles::fixed_point{
-          {tiles::latlng_to_fixed({s.pos_.lat_, s.pos_.lng_})}};
+          {tiles::latlng_to_fixed({info.pos_.lat_, info.pos_.lng_})}};
 
       feature_inserter_->insert(f);
     }
@@ -117,13 +131,17 @@ struct db_builder::impl {
 
   std::pair<uint64_t, uint64_t> add_feature(
       geo::polyline const& line, std::vector<seq_seg> const& seq_segs,
-      std::vector<service_class> const& classes, bool is_stub) {
+      mcd::vector<service_class> const& classes, bool const is_stub,
+      float const distance) {
+    auto const min_z = std::accumulate(
+        begin(classes), end(classes), min_zoom_level(), [&](auto z, auto c) {
+          return std::min(z, min_zoom_level(c, distance));
+        });
     auto const min_clasz = get_min_clasz(classes);
 
     tiles::feature f;
     f.layer_ = path_layer_id_;
-    f.zoom_levels_ = {min_clasz_to_min_zoom_level(min_clasz),
-                      tiles::kMaxZoomLevel};
+    f.zoom_levels_ = {min_z, tiles::kMaxZoomLevel};
 
     f.meta_.emplace_back(
         "min_class",
@@ -146,7 +164,7 @@ struct db_builder::impl {
     return {f.id_, tiles::tile_to_key(tile)};
   }
 
-  void add_seq(size_t seq_idx, resolved_station_seq const& seq,
+  void add_seq(size_t seq_idx, station_seq const& seq,
                std::vector<geo::box> const& boxes,
                std::vector<std::vector<int64_t>> const& feature_ids,
                std::vector<std::vector<uint64_t>> const& hints_rle) {
@@ -189,7 +207,7 @@ struct db_builder::impl {
     db_flush_maybe();
   }
 
-  void update_boxes(std::vector<std::string> const& station_ids,
+  void update_boxes(mcd::vector<mcd::string> const& station_ids,
                     std::vector<geo::box> const& boxes) {
     for (auto i = 0UL; i < boxes.size(); ++i) {
       auto key = (station_ids[i] < station_ids[i + 1])
@@ -240,7 +258,7 @@ struct db_builder::impl {
     auto const fbs_seq_infos = utl::to_vec(seq_infos_, [&mc](auto const& info) {
       auto const fbs_station_ids =
           utl::to_vec(std::get<0>(info), [&mc](auto const& station_id) {
-            return mc.CreateSharedString(station_id);
+            return mc.CreateSharedString(station_id.data(), station_id.size());
           });
       auto const& fbs_classes = utl::to_vec(
           std::get<1>(info),
@@ -278,8 +296,12 @@ struct db_builder::impl {
                                                 pair.second.min_.lng_};
 
                       return CreateBox(
-                          mc, mc.CreateSharedString(pair.first.first),
-                          mc.CreateSharedString(pair.first.second), &ne, &sw);
+                          mc,
+                          mc.CreateSharedString(pair.first.first.data(),
+                                                pair.first.first.size()),
+                          mc.CreateSharedString(pair.first.second.data(),
+                                                pair.first.second.size()),
+                          &ne, &sw);
                     })))
             .Union());
 
@@ -321,25 +343,27 @@ struct db_builder::impl {
   size_t db_cache_size_{0};
   std::vector<std::pair<std::string, std::string>> db_cache_;
 
-  mcd::hash_map<std::pair<std::string, std::string>, geo::box> boxes_;
+  mcd::hash_map<std::pair<mcd::string, mcd::string>, geo::box> boxes_;
 };
 
 db_builder::db_builder(std::string const& fname)
     : impl_{std::make_unique<impl>(fname)} {}
 db_builder::~db_builder() = default;
 
-void db_builder::store_stations(std::vector<station> const& stations) const {
-  impl_->store_stations(stations);
+void db_builder::store_stations(
+    mcd::vector<station_seq> const& sequences) const {
+  impl_->store_stations(sequences);
 }
 
 std::pair<uint64_t, uint64_t> db_builder::add_feature(
     geo::polyline const& polyline, std::vector<seq_seg> const& seq_segs,
-    std::vector<service_class> const& classes, bool is_stub) const {
-  return impl_->add_feature(polyline, seq_segs, classes, is_stub);
+    mcd::vector<service_class> const& classes, bool is_stub,
+    float const distance) const {
+  return impl_->add_feature(polyline, seq_segs, classes, is_stub, distance);
 }
 
 void db_builder::add_seq(
-    size_t seq_idx, resolved_station_seq const& resolved_sequences,
+    size_t seq_idx, station_seq const& resolved_sequences,
     std::vector<geo::box> const& boxes,
     std::vector<std::vector<int64_t>> const& feature_ids,
     std::vector<std::vector<uint64_t>> const& hints_rle) const {

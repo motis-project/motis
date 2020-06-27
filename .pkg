@@ -73,7 +73,11 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=pristine
+<<<<<<< HEAD
   commit=bdfe5db516546ba1fdd4e9f7d88303981a35c3db
+=======
+  commit=7f0e60f8b15c88b4ef1dca0cb6c737dea2f697f6
+>>>>>>> path: path_zoom_level and switch from flatbuffers to cista for seq cache
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master

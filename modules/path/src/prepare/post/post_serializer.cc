@@ -22,8 +22,8 @@ void serialize_geometry(post_graph& graph, db_builder& builder) {
   color_to_seq_seg_index index{graph};
 
   std::vector<seq_seg> stub_seq_seqs;
-  for (auto seq_idx = 0ULL; seq_idx < graph.originals_.size(); ++seq_idx) {
-    auto const& seq = graph.originals_[seq_idx];
+  for (auto seq_idx = 0ULL; seq_idx < graph.originals_->size(); ++seq_idx) {
+    auto const& seq = graph.originals_->at(seq_idx);
     for (auto const& info : seq.sequence_infos_) {
       auto const ss = seq_seg{static_cast<uint32_t>(seq_idx),
                               static_cast<uint32_t>(info.idx_)};
@@ -50,8 +50,15 @@ void serialize_geometry(post_graph& graph, db_builder& builder) {
           return it != end(stub_seq_seqs) && *it == ss;
         });
 
+    utl::verify(!seq_segs.empty(), "post_serializer: abandoned feature");
+    auto distance = -std::numeric_limits<float>::infinity();
+    for (auto const& seq_seg : seq_segs) {
+      distance =
+          std::max(distance, graph.originals_->at(seq_seg.sequence_).distance_);
+    }
+
     std::tie(ap->id_, ap->hint_) =
-        builder.add_feature(polyline, seq_segs, classes, is_stub);
+        builder.add_feature(polyline, seq_segs, classes, is_stub, distance);
 
     for (auto const& n : ap->path_) {
       ap->box_.extend(n->id_.pos_);
@@ -111,12 +118,12 @@ std::vector<std::pair<atomic_path*, bool>> reconstruct_path(
 
 void reconstruct_and_serialize_seqs(post_graph const& graph,
                                     db_builder& builder) {
-  utl::verify(graph.originals_.size() == graph.segment_ids_.size(),
+  utl::verify(graph.originals_->size() == graph.segment_ids_.size(),
               "size mismatch");
   ml::scoped_timer timer("post_serializer: serialize_seqs");
 
-  utl::parallel_for_run(graph.originals_.size(), [&](auto const i) {
-    auto const& seq = graph.originals_.at(i);
+  utl::parallel_for_run(graph.originals_->size(), [&](auto const i) {
+    auto const& seq = graph.originals_->at(i);
     auto const& ids = graph.segment_ids_.at(i);
 
     std::vector<geo::box> boxes;

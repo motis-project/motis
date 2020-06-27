@@ -14,13 +14,13 @@ namespace ml = motis::logging;
 namespace motis::path {
 
 struct post_graph_builder {
-  explicit post_graph_builder(std::vector<resolved_station_seq> seq)
+  explicit post_graph_builder(mcd::unique_ptr<mcd::vector<station_seq>> seq)
       : graph_{std::move(seq)}, color_(0) {}
 
   void make_nodes() {
     ml::scoped_timer t{"build_post_graph|make_nodes"};
 
-    for (auto const& seq : graph_.originals_) {
+    for (auto const& seq : *graph_.originals_) {
       for (auto const& path : seq.paths_) {
         for (auto i = 0UL; i < path.size(); ++i) {
           node_ids_.emplace_back(path.osm_node_ids_[i], path.polyline_[i]);
@@ -50,10 +50,10 @@ struct post_graph_builder {
         },
         [&] { node_max_colors.reset(); }};
 
-    graph_.segment_ids_.resize(graph_.originals_.size());
-    tp.execute(graph_.originals_.size(), [this](auto const i) {
+    graph_.segment_ids_.resize(graph_.originals_->size());
+    tp.execute(graph_.originals_->size(), [this](auto const i) {
       graph_.segment_ids_.at(i) =
-          append_seq(graph_.originals_.at(i), *node_max_colors);
+          append_seq(graph_.originals_->at(i), *node_max_colors);
     });
 
     tp.execute(graph_.nodes_.size(), [this](auto const i) {
@@ -68,7 +68,7 @@ struct post_graph_builder {
   }
 
   std::vector<post_segment_id> append_seq(
-      resolved_station_seq const& seq, std::vector<color_t>& node_max_colors) {
+      station_seq const& seq, std::vector<color_t>& node_max_colors) {
     auto color = next_seq_color();
 
     struct edge_color {
@@ -227,7 +227,7 @@ void check_out_colors(post_graph const& graph) {
   });
 }
 
-post_graph build_post_graph(std::vector<resolved_station_seq> seq) {
+post_graph build_post_graph(mcd::unique_ptr<mcd::vector<station_seq>> seq) {
   ml::scoped_timer t{"build_post_graph"};
 
   post_graph_builder builder{std::move(seq)};

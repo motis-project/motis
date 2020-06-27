@@ -55,19 +55,20 @@ struct source_spec {
 };
 
 template <typename Fun>
-void foreach_path_category(std::set<service_class> const& classes, Fun&& fun) {
+void foreach_path_category(mcd::vector<service_class> const& classes,
+                           Fun&& fun) {
   // TODO add classes: AIR COACH SHIP
-  std::vector<service_class> railway_classes, other_classes;
+  mcd::vector<service_class> railway_classes, other_classes;
   for (auto const& clasz : classes) {
     if (clasz == service_class::BUS) {
       fun(source_spec::category::BUS,
-          std::vector<service_class>{service_class::BUS});
+          mcd::vector<service_class>{service_class::BUS});
     } else if (clasz == service_class::STR) {
       fun(source_spec::category::TRAM,
-          std::vector<service_class>{service_class::STR});
+          mcd::vector<service_class>{service_class::STR});
     } else if (clasz == service_class::U) {
       fun(source_spec::category::SUBWAY,
-          std::vector<service_class>{service_class::U});
+          mcd::vector<service_class>{service_class::U});
     } else if (clasz == service_class::ICE || clasz == service_class::IC ||
                clasz == service_class::N || clasz == service_class::RE ||
                clasz == service_class::RB || clasz == service_class::S) {

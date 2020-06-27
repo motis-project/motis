@@ -18,6 +18,8 @@
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
 
+#include "motis/path/path_zoom_level.h"
+
 namespace bgi = boost::geometry::index;
 
 using value = std::pair<geo::box, std::pair<int, int>>;
@@ -190,16 +192,6 @@ void train_retriever::update(rt::RtUpdates const* updates) {
   }
 }
 
-bool should_display(service_class clasz, int zoom_level, float distance = 0.F) {
-  // TODO move this to header
-  return (clasz < service_class::RE && zoom_level >= 4)  //
-         || (clasz < service_class::STR && zoom_level >= 5)  //
-         || (clasz < service_class::BUS && zoom_level >= 8)  //
-         || (clasz >= service_class::BUS && zoom_level == 10 &&
-             distance >= 10'000.F)  //
-         || zoom_level > 10;
-}
-
 std::vector<train> train_retriever::trains(
     time const start_time, time const end_time, int const max_count,
     int const last_count, geo::box const& area, int const zoom_level) {
@@ -278,7 +270,7 @@ std::vector<train> train_retriever::trains(
   std::vector<train> result_trains;
   std::vector<train> clasz_trains;
   for (auto clasz = service_class::AIR; clasz < service_class::STR; ++clasz) {
-    if (!should_display(clasz, zoom_level)) {
+    if (!path::should_display(clasz, zoom_level)) {
       continue;
     }
 
@@ -293,8 +285,8 @@ std::vector<train> train_retriever::trains(
     constexpr auto const kLongDistance = 10'000.;
     std::vector<train> clasz_trains_long_distance;
     for (auto const clasz : {service_class::STR, service_class::BUS}) {
-      if (should_display(clasz, zoom_level,
-                         std::numeric_limits<float>::infinity())) {
+      if (path::should_display(clasz, zoom_level,
+                               std::numeric_limits<float>::infinity())) {
         foreach_train(clasz, [&](auto const& t) {
           if (t.route_distance_ > kLongDistance) {
             clasz_trains_long_distance.push_back(t);
@@ -312,7 +304,7 @@ std::vector<train> train_retriever::trains(
   }
 
   for (auto const clasz : {service_class::SHIP, service_class::OTHER}) {
-    if (!should_display(clasz, zoom_level)) {
+    if (!path::should_display(clasz, zoom_level)) {
       continue;
     }
 
