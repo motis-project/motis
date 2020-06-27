@@ -14,17 +14,26 @@ namespace motis::path {
 struct source_spec {
   CISTA_COMPARABLE();
 
-  enum class category : uint8_t { UNKNOWN, MULTI, BUS, TRAM, SUBWAY, RAIL };
+  enum class category : uint8_t {
+    UNKNOWN,
+    MULTI,
+    BUS,
+    TRAM,
+    SUBWAY,
+    RAIL,
+    SHIP
+  };
   enum class router : uint8_t { STUB, OSRM, OSM_NET, OSM_REL };
 
   std::string category_str() const {
     switch (category_) {
-      case category::UNKNOWN: return "UNKNOWN";  // MOTIS "class 9"
+      case category::UNKNOWN: return "UNKNOWN";  // MOTIS "class 12"
       case category::MULTI: return "MULTI";  // PATH: stub/osrm strategy
       case category::BUS: return "BUS";
       case category::TRAM: return "TRAM";
       case category::SUBWAY: return "SUBWAY";
       case category::RAIL: return "RAIL";
+      case category::SHIP: return "SHIP";
       default: return "INVALID";
     }
   }
@@ -57,10 +66,13 @@ struct source_spec {
 template <typename Fun>
 void foreach_path_category(mcd::vector<service_class> const& classes,
                            Fun&& fun) {
-  // TODO add classes: AIR COACH SHIP
+  // TODO add classes: AIR COACH
   mcd::vector<service_class> railway_classes, other_classes;
   for (auto const& clasz : classes) {
-    if (clasz == service_class::BUS) {
+    if (clasz == service_class::SHIP) {
+      fun(source_spec::category::SHIP,
+          mcd::vector<service_class>{service_class::SHIP});
+    } else if (clasz == service_class::BUS) {
       fun(source_spec::category::BUS,
           mcd::vector<service_class>{service_class::BUS});
     } else if (clasz == service_class::STR) {

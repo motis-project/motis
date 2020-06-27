@@ -38,6 +38,7 @@ namespace motis::path {
 constexpr auto const CISTA_MODE =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_VERSION;
 
+auto const str_ferry = std::string_view{"ferry"};
 auto const str_platform = std::string_view{"platform"};
 auto const str_stop_position = std::string_view{"stop_position"};
 auto const str_stop = std::string_view{"stop"};
@@ -344,6 +345,12 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
   auto net_tram = network_handler{
       [&](auto const& w) { return match_any(w, "railway", tram_incl); }};
 
+  std::vector<std::string> waterway_incl{"river", "canal"};
+  auto net_ship = network_handler{[&](auto const& w) {
+    return str_ferry == w.get_value_by_key("route", "") ||
+           match_any(w, "waterway", waterway_incl);
+  }};
+
   auto stop_positions = stop_position_handler{};
   auto plattforms = plattform_handler{};
 
@@ -376,7 +383,7 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
         progress_tracker->update(reader.offset());
         o::apply(buffer, plattforms,  //
                  rel_rail, rel_sub, rel_tram, rel_bus,  //
-                 net_rail, net_sub, net_tram);
+                 net_rail, net_sub, net_tram, net_ship);
       }
     }
 
@@ -402,6 +409,7 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
     std::for_each(begin(net_rail.ways_), end(net_rail.ways_), collect);
     std::for_each(begin(net_sub.ways_), end(net_sub.ways_), collect);
     std::for_each(begin(net_tram.ways_), end(net_tram.ways_), collect);
+    std::for_each(begin(net_ship.ways_), end(net_ship.ways_), collect);
 
     std::sort(begin(locations), end(locations));
 
@@ -425,6 +433,7 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
   data->profiles_[{category::RAIL, router::OSM_NET}] = net_rail.finalize();
   data->profiles_[{category::SUBWAY, router::OSM_NET}] = net_sub.finalize();
   data->profiles_[{category::TRAM, router::OSM_NET}] = net_tram.finalize();
+  data->profiles_[{category::SHIP, router::OSM_NET}] = net_ship.finalize();
   return data;
 }
 
