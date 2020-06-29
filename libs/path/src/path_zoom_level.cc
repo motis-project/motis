@@ -39,7 +39,7 @@ int min_zoom_level(service_class const clasz, float const distance) {
         return 10;
       }
 
-    case service_class::OTHER: return 10;
+    case service_class::OTHER: return 11;
     default:
       throw utl::fail("unknown service_class {}",
                       static_cast<service_class_t>(clasz));
