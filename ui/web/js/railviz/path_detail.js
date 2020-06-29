@@ -120,7 +120,7 @@ RailViz.Path.Detail = (function () {
       );
 
       t.polylines.forEach((p) => {
-        p.polyline.clasz = Math.min(p.polyline.clasz || 11, t.clasz);
+        p.polyline.clasz = Math.min(p.polyline.clasz || 12, t.clasz);
         p.polyline.highlight |= t.highlight;
       });
     });
