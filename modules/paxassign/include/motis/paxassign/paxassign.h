@@ -8,11 +8,6 @@
 
 #include "motis/module/module.h"
 
-#include "motis/rsl/output/output.h"
-#include "motis/rsl/rsl_data.h"
-#include "motis/rsl/statistics.h"
-#include "motis/rsl/stats_writer.h"
-
 namespace motis::paxassign {
 
 struct paxassign : public motis::module::module {

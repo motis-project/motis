@@ -12,6 +12,7 @@ target_link_libraries(motis-paxassign
   ${Boost_SYSTEM_LIBRARY}
   motis-module
   motis-core
-  motis-rsl
+  motis-paxmon
+  motis-paxforecast
 )
 target_compile_options(motis-paxassign PRIVATE ${MOTIS_CXX_FLAGS})

@@ -2,13 +2,15 @@
 
 #include "motis/core/common/logging.h"
 
-#include "motis/rsl/graph_access.h"
-#include "motis/rsl/messages.h"
-#include "motis/rsl/rsl_data_key.h"
+#include "motis/paxforecast/messages.h"
+#include "motis/paxmon/data_key.h"
+#include "motis/paxmon/graph_access.h"
+#include "motis/paxmon/messages.h"
 
 using namespace motis::module;
 using namespace motis::logging;
-using namespace motis::rsl;
+using namespace motis::paxmon;
+using namespace motis::paxforecast;
 
 namespace motis::paxassign {
 
@@ -17,7 +19,7 @@ paxassign::paxassign() : module("Passenger Assignment", "paxassign") {}
 paxassign::~paxassign() = default;
 
 void paxassign::init(motis::module::registry& reg) {
-  reg.subscribe("/rsl/passenger_forecast", [&](msg_ptr const& msg) {
+  reg.subscribe("/paxforecast/passenger_forecast", [&](msg_ptr const& msg) {
     on_forecast(msg);
     return nullptr;
   });
@@ -25,7 +27,7 @@ void paxassign::init(motis::module::registry& reg) {
 
 void paxassign::on_forecast(const motis::module::msg_ptr& msg) {
   auto const& sched = get_sched();
-  auto& data = *get_shared_data<rsl_data*>(RSL_DATA_KEY);
+  auto& data = *get_shared_data<paxmon_data*>(motis::paxmon::DATA_KEY);
 
   auto const forecast = motis_content(PassengerForecast, msg);
 
@@ -50,7 +52,7 @@ void paxassign::on_forecast(const motis::module::msg_ptr& msg) {
 
     auto edges_over_capacity = 0;
     for_each_edge(sched, data, forecast_journey,
-                  [&](journey_leg const&, motis::rsl::edge* e) {
+                  [&](journey_leg const&, motis::paxmon::edge* e) {
                     if (e->passengers() > e->capacity()) {
                       ++edges_over_capacity;
                     }
