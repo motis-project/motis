@@ -56,18 +56,29 @@ struct shared_data {
     data_.emplace(name, std::forward<T>(t));
   }
 
-  bool includes(std::string_view const s) const {
-    return data_.find(s) != end(data_);
+  bool includes(std::string_view const name) const {
+    return data_.find(name) != end(data_);
   }
 
   template <typename T>
-  T const& get(std::string_view name) const {
-    return *data_.at(name).get<T>();
+  // NOLINTNEXTLINE(readability-avoid-const-params-in-decls)
+  T const& get(std::string_view const name) const {
+    auto const it = data_.find(name);
+    utl::verify(it != end(data_), "{} not in shared_data", name);
+    return *it->second.get<T>();
   }
 
   template <typename T>
   T& get(std::string_view const name) {
-    return *data_.at(name).get<T>();
+    auto const it = data_.find(name);
+    utl::verify(it != end(data_), "{} not in shared_data", name);
+    return *it->second.get<T>();
+  }
+
+  template <typename T>
+  T const* find(std::string_view const name) const {
+    auto const it = data_.find(name);
+    return it != end(data_) ? it->second.get<T>() : nullptr;
   }
 
 private:

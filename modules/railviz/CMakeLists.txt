@@ -12,6 +12,7 @@ target_link_libraries(motis-railviz
   ${Boost_SYSTEM_LIBRARY}
   motis-module
   motis-core
+  motis-libpath
   tiles
   geo
 )

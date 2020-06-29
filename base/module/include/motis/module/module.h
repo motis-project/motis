@@ -56,6 +56,11 @@ protected:
   }
 
   template <typename T>
+  T const* find_shared_data(std::string_view const s) const {
+    return shared_data_->find<T>(s);
+  }
+
+  template <typename T>
   void add_shared_data(std::string_view const s, T&& data) {
     shared_data_->emplace_data(s, std::forward<T>(data));
   }

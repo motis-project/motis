@@ -29,7 +29,7 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=92019571ceafb4e6016ecccbf9127cc673017038
+  commit=65d49b97822216bddae6131210c6899edbfb9bb8
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
@@ -73,7 +73,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=pristine
-  commit=8717bdc43d25280239d08f0549a5f4658dba68b4
+  commit=bdfe5db516546ba1fdd4e9f7d88303981a35c3db
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master

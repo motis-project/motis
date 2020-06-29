@@ -110,7 +110,11 @@ int main(int argc, char const** argv) {
     try {
       instance.call(launcher_opt.init_, launcher_opt.num_threads_);
       return 0;
+    } catch (std::exception const& e) {
+      std::cout << "\ninit error: " << e.what() << "\n";
+      return 1;
     } catch (...) {
+      std::cout << "\ninit error\n";
       return 1;
     }
   }
