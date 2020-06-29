@@ -22,6 +22,8 @@
 
 #include "motis/module/context/motis_call.h"
 
+#include "motis/path/path_database_query.h"
+
 using namespace motis::access;
 using namespace motis::logging;
 using namespace motis::module;
@@ -47,79 +49,79 @@ void trains_response_builder::add_train(train t) {
   queries_.emplace_back(query{trp, std::distance(sections::begin(trp), it), t});
 }
 
-msg_ptr trains_response_builder::resolve_paths() {
+void trains_response_builder::resolve_paths() {
   utl::erase_duplicates(queries_);  // this sorts!
 
-  message_creator mc;
-  std::vector<Offset<path::TripIdSegments>> trip_segments;
+  if (path_data_ == nullptr) {
+    resolve_paths_fallback();
+  }
+
+  path::path_database_query path_query{zoom_level_};
   utl::equal_ranges_linear(
       queries_,
       [](auto const& lhs, auto const& rhs) { return lhs.trp_ == rhs.trp_; },
       [&](auto lb, auto ub) {
-        trip_segments.emplace_back(path::CreateTripIdSegments(
-            mc, to_fbs(sched_, mc, lb->trp_),
-            mc.CreateVector(utl::to_vec(lb, ub, [](auto const& q) -> uint32_t {
-              return q.section_index_;
-            }))));
+        try {
+          path_query.add_sequence(
+              path_data_->trip_to_index(sched_, lb->trp_),
+              utl::to_vec(lb, ub, [](auto const& q) -> size_t {
+                return q.section_index_;
+              }));
+        } catch (std::system_error const&) {
+          std::vector<geo::polyline> extra;
+          for (auto it = lb; it != ub; ++it) {
+            auto const& sec =
+                *std::next(sections::begin(it->trp_), it->section_index_);
+            auto const& s_dep = sec.from_station(sched_);
+            auto const& s_arr = sec.to_station(sched_);
+
+            geo::polyline stub;
+            stub.emplace_back(s_dep.lat(), s_dep.lng());
+            stub.emplace_back(s_arr.lat(), s_arr.lng());
+            extra.emplace_back(std::move(stub));
+          }
+          path_query.add_extra(extra);
+        }
       });
+  path_query.execute(*path_data_->db_);
+  path_query.write_batch(mc_, fbs_segments_, fbs_polylines_, fbs_extras_);
+}
 
-  mc.create_and_finish(MsgContent_PathByTripIdBatchRequest,
-                       CreatePathByTripIdBatchRequest(
-                           mc, mc.CreateVector(trip_segments), zoom_level_)
-                           .Union(),
-                       "/path/by_trip_id_batch");
+void trains_response_builder::resolve_paths_fallback() {
+  geo::polyline_encoder<6> enc;
+  fbs_polylines_.emplace_back(mc_.CreateString(std::string{}));  // no zero
 
-  try {
-    return motis_call(make_msg(mc))->val();
-  } catch (std::exception const&) {
-    message_creator mc;
+  fbs_segments_ = utl::to_vec(queries_, [&](auto const& q) {
+    utl::verify(std::distance(sections::begin(q.trp_), sections::end(q.trp_)) >
+                    q.section_index_,
+                "trains_response_builder: invakud section idx");
+    auto const s = std::next(sections::begin(q.trp_), q.section_index_);
+    auto const s_min = std::min((*s).from_station_id(), (*s).to_station_id());
+    auto const s_max = std::max((*s).from_station_id(), (*s).to_station_id());
 
-    geo::polyline_encoder<6> enc;
-    std::vector<Offset<String>> fbs_polylines;
-    fbs_polylines.emplace_back(mc.CreateString(std::string{}));
-    mcd::hash_map<std::pair<uint32_t, uint32_t>, size_t> indices;
+    std::vector<int64_t> indices;
+    indices.push_back(static_cast<int64_t>(utl::get_or_create(
+                          fallback_indices_, std::make_pair(s_min, s_max),
+                          [&] {
+                            enc.push({sched_.stations_[s_min]->lat(),
+                                      sched_.stations_[s_min]->lng()});
+                            enc.push({sched_.stations_[s_max]->lat(),
+                                      sched_.stations_[s_max]->lng()});
+                            fbs_polylines_.emplace_back(
+                                mc_.CreateString(enc.buf_));
+                            enc.reset();
+                            return fbs_polylines_.size() - 1;
+                          })) *
+                      ((s_min != (*s).from_station_id()) ? -1 : 1));
+    return indices;
+  });
 
-    auto const fbs_segments = utl::to_vec(queries_, [&](auto const& q) {
-      utl::verify(std::distance(sections::begin(q.trp_),
-                                sections::end(q.trp_)) > q.section_index_,
-                  "trains_response_builder: invakud section idx");
-      auto const s = std::next(sections::begin(q.trp_), q.section_index_);
-      auto const s_min = std::min((*s).from_station_id(), (*s).to_station_id());
-      auto const s_max = std::max((*s).from_station_id(), (*s).to_station_id());
-
-      auto const idx =
-          static_cast<int64_t>(utl::get_or_create(
-              indices, std::make_pair(s_min, s_max),
-              [&] {
-                enc.push({sched_.stations_[s_min]->lat(),
-                          sched_.stations_[s_min]->lng()});
-                enc.push({sched_.stations_[s_max]->lat(),
-                          sched_.stations_[s_max]->lng()});
-                fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
-                enc.reset();
-                return fbs_polylines.size() - 1;
-              })) *
-          ((s_min != (*s).from_station_id()) ? -1 : 1);
-
-      return path::CreatePolylineIndices(mc, mc.CreateVector(&idx, 1));
-    });
-
-    std::vector<uint64_t> fbs_extras(fbs_polylines.size() - 1);
-    std::iota(begin(fbs_extras), end(fbs_extras), 1);
-
-    mc.create_and_finish(
-        MsgContent_PathByTripIdBatchResponse,
-        CreatePathByTripIdBatchResponse(mc, mc.CreateVector(fbs_segments),
-                                        mc.CreateVector(fbs_polylines),
-                                        mc.CreateVector(fbs_extras))
-            .Union());
-    return make_msg(mc);
-  }
+  fbs_extras_.resize(fbs_polylines_.size() - 1);
+  std::iota(begin(fbs_extras_), end(fbs_extras_), 1);
 }
 
 Offset<Train> trains_response_builder::write_railviz_train(
-    message_creator& mc, query const& q,
-    flatbuffers::Vector<int64_t> const* polyline_indices) {
+    query const& q, std::vector<int64_t> const& polyline_indices) {
   utl::verify(std::distance(sections::begin(q.trp_), sections::end(q.trp_)) >
                   q.section_index_,
               "trains_response_builder: invakud section idx");
@@ -138,63 +140,51 @@ Offset<Train> trains_response_builder::write_railviz_train(
   std::vector<Offset<String>> service_names;
   auto c_info = dep.lcon()->full_con_->con_info_;
   while (c_info != nullptr) {
-    service_names.push_back(mc.CreateString(get_service_name(sched_, c_info)));
+    service_names.push_back(mc_.CreateString(get_service_name(sched_, c_info)));
     c_info = c_info->merged_with_;
   }
 
   auto const trips =
       utl::to_vec(*sched_.merged_trips_[dep.lcon()->trips_],
-                  [&](trip const* trp) { return to_fbs(sched_, mc, trp); });
+                  [&](trip const* trp) { return to_fbs(sched_, mc_, trp); });
 
   return CreateTrain(
-      mc, mc.CreateVector(service_names), dep.lcon()->full_con_->clasz_,
+      mc_, mc_.CreateVector(service_names), dep.lcon()->full_con_->clasz_,
       q.train_.route_distance_,
-      mc.CreateString(sched_.stations_.at(dep_station_idx)->eva_nr_),
-      mc.CreateString(sched_.stations_.at(arr_station_idx)->eva_nr_),
+      mc_.CreateString(sched_.stations_.at(dep_station_idx)->eva_nr_),
+      mc_.CreateString(sched_.stations_.at(arr_station_idx)->eva_nr_),
       motis_to_unixtime(sched_, dep.get_time()),
       motis_to_unixtime(sched_, arr.get_time()),
       motis_to_unixtime(sched_, dep_di.get_schedule_time()),
       motis_to_unixtime(sched_, arr_di.get_schedule_time()),
       to_fbs(dep_di.get_reason()), to_fbs(arr_di.get_reason()),
-      mc.CreateVector(trips),
-      mc.CreateVector<int64_t>(polyline_indices->data(),
-                               polyline_indices->size()));
+      mc_.CreateVector(trips), mc_.CreateVector(polyline_indices));
 }
 
 msg_ptr trains_response_builder::finish() {
-  auto const resolved_paths = resolve_paths();
-  using motis::path::PathByTripIdBatchResponse;
-  auto const* resp = motis_content(PathByTripIdBatchResponse, resolved_paths);
-
-  message_creator mc;
+  resolve_paths();
 
   std::vector<Offset<Train>> trains;
   trains.reserve(queries_.size());
 
-  utl::verify(queries_.size() == resp->segments()->size(),
-              "trains_response_builder: path response size mismatch");
+  utl::verify(queries_.size() == fbs_segments_.size(),
+              "trains_response_builder: query segment size mismatch mismatch");
   for (auto i = 0ULL; i < queries_.size(); ++i) {
-    trains.emplace_back(write_railviz_train(
-        mc, queries_[i], resp->segments()->Get(i)->indices()));
+    trains.emplace_back(write_railviz_train(queries_[i], fbs_segments_[i]));
   }
 
   utl::erase_duplicates(station_indices_);
   auto const stations = utl::to_vec(station_indices_, [&](auto s) {
-    return to_fbs(mc, *sched_.stations_.at(s));
+    return to_fbs(mc_, *sched_.stations_.at(s));
   });
 
-  auto const polylines = utl::to_vec(*resp->polylines(), [&](auto const* p) {
-    return mc.CreateString(p->data(), p->size());
-  });
-
-  mc.create_and_finish(
+  mc_.create_and_finish(
       MsgContent_RailVizTrainsResponse,
       CreateRailVizTrainsResponse(
-          mc, mc.CreateVector(stations), mc.CreateVector(trains),
-          mc.CreateVector(polylines),
-          mc.CreateVector(resp->extras()->data(), resp->extras()->size()))
+          mc_, mc_.CreateVector(stations), mc_.CreateVector(trains),
+          mc_.CreateVector(fbs_polylines_), mc_.CreateVector(fbs_extras_))
           .Union());
-  return make_msg(mc);
+  return make_msg(mc_);
 }
 
 }  // namespace motis::railviz
