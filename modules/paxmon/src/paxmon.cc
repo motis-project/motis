@@ -145,8 +145,8 @@ void paxmon::load_journeys() {
   for (auto const& n : data_.graph_.nodes_) {
     stations.insert(n->station_);
     for (auto const& e : n->outgoing_edges(data_.graph_)) {
-      if (e->trip() != nullptr) {
-        trips.insert(e->trip());
+      if (e->get_trip() != nullptr) {
+        trips.insert(e->get_trip());
       }
     }
   }

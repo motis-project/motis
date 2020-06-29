@@ -42,14 +42,15 @@ std::vector<std::uint16_t> simulate_behavior(
     }
     auto const& alternative = cpg.alternatives_[i];
 
-    for_each_edge(sched, data, alternative.compact_journey_,
-                  [&](journey_leg const&, motis::paxmon::edge* e) {
-                    e->passengers_ += additional;
-                    sim_result.additional_passengers_[e] += additional;
-                    if (e->passengers_ > e->capacity_) {
-                      sim_result.edges_over_capacity_.insert(e);
-                    }
-                  });
+    for_each_edge(
+        sched, data, alternative.compact_journey_,
+        [&](motis::paxmon::journey_leg const&, motis::paxmon::edge* e) {
+          e->passengers_ += additional;
+          sim_result.additional_passengers_[e] += additional;
+          if (e->passengers_ > e->capacity_) {
+            sim_result.edges_over_capacity_.insert(e);
+          }
+        });
   }
 
   return allocation;

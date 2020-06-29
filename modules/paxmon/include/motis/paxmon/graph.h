@@ -80,12 +80,12 @@ struct edge {
   inline event_node* to(graph const&) const { return to_; }
 
   inline edge_type type() const { return type_; }
-  inline trip const* trip() const { return trip_; }
+  inline trip const* get_trip() const { return trip_; }
   inline duration transfer_time() const { return transfer_time_; }
   inline std::uint64_t capacity() const { return capacity_; }
   inline std::uint64_t passengers() const { return passengers_; }
   inline bool is_broken() const { return broken_; }
-  inline pax_connection_info const& pax_connection_info() const {
+  inline pax_connection_info const& get_pax_connection_info() const {
     return pax_connection_info_;
   }
 
