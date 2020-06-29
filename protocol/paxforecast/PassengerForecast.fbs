@@ -1,0 +1,35 @@
+include "paxmon/PassengerGroup.fbs";
+include "paxmon/PassengerLocalization.fbs";
+
+namespace motis.paxforecast;
+
+table PassengerGroupForecast {
+  group: motis.paxmon.PassengerGroup;
+  localization: motis.paxmon.PassengerLocalization;
+  forecast_journey: motis.paxmon.CompactJourney;
+}
+
+table EdgeOverCapacity {
+  passengers: uint;
+  capacity: uint;
+  additional: uint;
+  from: motis.Station;
+  to: motis.Station;
+}
+
+table TripOverCapacity {
+  trip: motis.TripId;
+  edges: [EdgeOverCapacity];
+}
+
+table PassengerForecastResult {
+  over_capacity: bool;
+  edge_count_over_capacity: ulong;
+  total_passenger_over_capacity: ulong;
+  trips_over_capacity: [TripOverCapacity];
+}
+
+table PassengerForecast {
+  groups: [PassengerGroupForecast];
+  sim_result: PassengerForecastResult;
+}

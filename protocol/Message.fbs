@@ -71,8 +71,8 @@ include "rt/RtUpdate.fbs";
 include "rt/RtWriteGraphRequest.fbs";
 include "tripbased/TripBasedTripDebugRequest.fbs";
 include "tripbased/TripBasedTripDebugResponse.fbs";
-include "rsl/MonitoringUpdate.fbs";
-include "rsl/PassengerForecast.fbs";
+include "paxmon/MonitoringUpdate.fbs";
+include "paxforecast/PassengerForecast.fbs";
 
 include "HTTPMessage.fbs";
 
@@ -156,7 +156,7 @@ union MsgContent {
   motis.lookup.LookupBatchMetaStationRequest                              = 036,
   motis.lookup.LookupBatchMetaStationResponse                             = 037,
   motis.lookup.LookupIdTrainRequest                                       = 038,
-  motis.lookup.LookupIdTrainResponse                                      = 039, 
+  motis.lookup.LookupIdTrainResponse                                      = 039,
   motis.osrm.OSRMOneToManyRequest                                         = 040,
   motis.osrm.OSRMOneToManyResponse                                        = 041,
   motis.osrm.OSRMViaRouteRequest                                          = 042,
@@ -213,8 +213,8 @@ union MsgContent {
   motis.rt.RtWriteGraphRequest                                            = 093,
   motis.tripbased.TripBasedTripDebugRequest                               = 094,
   motis.tripbased.TripBasedTripDebugResponse                              = 095,
-  motis.rsl.MonitoringUpdate                                              = 096,
-  motis.rsl.PassengerForecast                                             = 097
+  motis.paxmon.MonitoringUpdate                                           = 096,
+  motis.paxforecast.PassengerForecast                                     = 097
 }
 
 // Destination Examples:
