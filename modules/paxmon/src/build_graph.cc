@@ -81,13 +81,6 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
         e->pax_connection_info_.section_infos_.emplace_back(&grp);
         if (e->passengers_ > e->capacity_) {
           ++initial_over_capacity;
-          /*
-          std::cout << "edge over capacity: " << e->passengers_ << "/"
-                    << e->capacity_ << ": "
-                    << e->pax_connection_info_.section_infos_.size()
-                    << " passenger groups, trip: " << e->trip()->dbg_.str()
-                    << std::endl;
-                    */
         }
         grp.edges_.emplace_back(e);
         auto const to = e->to(data.graph_);

@@ -229,10 +229,6 @@ msg_ptr paxmon::rt_update(msg_ptr const& msg) {
 
   tick_stats_.rt_updates_ += update->updates()->size();
 
-  /*
-  LOG(info) << fmt::format("received {:n} rt updates",
-                           update->updates()->size());
-  */
   std::vector<edge*> updated_interchange_edges;
   for (auto const& u : *update->updates()) {
     switch (u->content_type()) {
@@ -283,17 +279,6 @@ msg_ptr paxmon::rt_update(msg_ptr const& msg) {
   }
   check_broken_interchanges(data_, sched, updated_interchange_edges,
                             system_stats_);
-  /*
-  LOG(info) << fmt::format(
-      "D: {:n} msg, {:n} t.e.f., {:n} dep up, "
-      "{:n} arr up -- R: {:n} msg, {:n} t.e.f. -- {:n}/{:n} up ice, "
-      "{:n} b.t., {:n} passengers",
-      delay_updates, update_event_times_trip_edges_found,
-      update_event_times_dep_updated, update_event_times_arr_updated,
-      reroute_updates, update_trip_route_trip_edges_found,
-      updated_interchange_edges.size(), total_updated_interchange_edges,
-      total_broken_interchanges, total_affected_passengers);
-  */
   return {};
 }
 

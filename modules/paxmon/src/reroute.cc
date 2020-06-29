@@ -191,11 +191,6 @@ void apply_reroute(paxmon_data& data, schedule const& sched, trip const* trp,
                    std::vector<trip_ev_key> const& old_route,
                    std::vector<trip_ev_key> const& new_route,
                    std::vector<edge*>& updated_interchange_edges) {
-  /*
-  std::cout << "apply_reroute: " << old_route.size() << " old events, "
-            << new_route.size() << " new events\n";
-  */
-
   auto const capacity = guess_trip_capacity(sched, data, trp);
   auto const affected_passenger_groups = collect_passenger_groups(td);
   auto diff = diff_route(old_route, new_route);
@@ -205,33 +200,6 @@ void apply_reroute(paxmon_data& data, schedule const& sched, trip const* trp,
   std::set<event_node*> reactivated_nodes;
 
   for (auto const& [op, tek] : diff) {
-    /*
-    std::cout << "  " << op << " " << tek;
-    if (tek.node_ != nullptr) {
-      std::cout << " edges: " << tek.node_->incoming_edges(data.graph_).size()
-                << " in, " << tek.node_->outgoing_edges(data.graph_).size()
-                << " out";
-    }
-    std::cout << "\n";
-    if (tek.node_ != nullptr) {
-      for (auto const& e : tek.node_->outgoing_edges(data.graph_)) {
-        if (e->type_ == edge_type::INTERCHANGE) {
-          std::cout << "      outgoing interchange: valid="
-                    << e->is_valid(data.graph_)
-                    << " to station=" << e->to(data.graph_)->station_ << "\n";
-        }
-      }
-      for (auto const& e : tek.node_->incoming_edges(data.graph_)) {
-        if (e->type_ == edge_type::INTERCHANGE) {
-          std::cout << "      incoming interchange: valid="
-                    << e->is_valid(data.graph_)
-                    << " from station=" << e->from(data.graph_)->station_
-                    << "\n";
-        }
-      }
-    }
-    */
-
     switch (op) {
       case diff_op::KEEP: {
         new_nodes.emplace_back(tek.node_);
@@ -266,33 +234,14 @@ void apply_reroute(paxmon_data& data, schedule const& sched, trip const* trp,
     update_passenger_group(td, et, pg, data.graph_);
   }
 
-  /*
-  std::cout << "=== " << removed_nodes.size() << " removed nodes, "
-            << reactivated_nodes.size() << " reactivated nodes ===\n";
-  */
-
   for (auto const n : removed_nodes) {
     for (auto const& e : n->outgoing_edges(data.graph_)) {
       if (e->type_ == edge_type::INTERCHANGE) {
-        /*
-        std::cout << "--> outgoing interchange broken (to.valid="
-                  << e->to(data.graph_)->is_valid()
-                  << "): " << e->pax_connection_info_.section_infos_.size()
-                  << " passenger groups = " << e->passengers_
-                  << " passengers\n";
-        */
         updated_interchange_edges.emplace_back(e.get());
       }
     }
     for (auto const& e : n->incoming_edges(data.graph_)) {
       if (e->type_ == edge_type::INTERCHANGE) {
-        /*
-        std::cout << "--> incoming interchange broken (from.valid="
-                  << e->from(data.graph_)->is_valid()
-                  << "):" << e->pax_connection_info_.section_infos_.size()
-                  << " passenger groups = " << e->passengers_
-                  << " passengers\n";
-        */
         updated_interchange_edges.emplace_back(e);
       }
     }
@@ -301,21 +250,11 @@ void apply_reroute(paxmon_data& data, schedule const& sched, trip const* trp,
   for (auto const n : reactivated_nodes) {
     for (auto const& e : n->outgoing_edges(data.graph_)) {
       if (e->type_ == edge_type::INTERCHANGE) {
-        /*
-        std::cout << "outgoing interchange reactivated? (to.valid="
-                  << e->to(data.graph_)->is_valid()
-                  << ") => valid=" << e->is_valid() << "\n";
-        */
         updated_interchange_edges.emplace_back(e.get());
       }
     }
     for (auto const& e : n->incoming_edges(data.graph_)) {
       if (e->type_ == edge_type::INTERCHANGE) {
-        /*
-        std::cout << "incoming interchange reactivated? (from.valid="
-                  << e->from(data.graph_)->is_valid()
-                  << ") => valid=" << e->is_valid() << "\n";
-        */
         updated_interchange_edges.emplace_back(e);
       }
     }
