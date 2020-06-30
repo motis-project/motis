@@ -27,7 +27,7 @@ int min_zoom_level(service_class const clasz, float const distance) {
 
     // short distance
     case service_class::STR: [[fallthrough]];
-    case service_class::BUS: return distance > 10'000.F ? 8 : 10;
+    case service_class::BUS: return distance > 10'000.F ? 10 : 11;
 
     // ship can be anything
     case service_class::SHIP:
