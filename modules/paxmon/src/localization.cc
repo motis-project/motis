@@ -18,7 +18,7 @@ passenger_localization localize(schedule const& sched,
     if (tripit->valid_exit() && localization_time > tripit->exit_real_time_) {
       // passenger has already exited this trip
       return {nullptr, sched.stations_[tripit->leg_->exit_station_id_].get(),
-              tripit->exit_real_time_};
+              tripit->exit_real_time_, false};
     }
     // passenger is currently in this trip
     auto sections = access::sections(tripit->trp_);
@@ -33,15 +33,15 @@ passenger_localization localize(schedule const& sched,
     auto const current_section = *lb;
     return {tripit->trp_,
             sched.stations_[current_section.to_station_id()].get(),
-            current_section.lcon().a_time_};
+            current_section.lcon().a_time_, false};
   }
   // passenger has not yet entered any trips
   if (!reachability.reachable_interchange_stations_.empty()) {
-    // passenger is at the initial station
+    // passenger is at the first station
     auto const& reachable_station =
         reachability.reachable_interchange_stations_.front();
     return {nullptr, sched.stations_[reachable_station.station_].get(),
-            reachable_station.real_time_};
+            reachable_station.real_time_, true};
   }
   // shouldn't happen
   return {};

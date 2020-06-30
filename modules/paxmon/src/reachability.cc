@@ -29,9 +29,9 @@ reachability_info get_reachability(paxmon_data const& data,
     for (auto [edge_idx, e] : utl::enumerate(td->edges_)) {
       if (!in_trip) {
         auto const from = e->from(data.graph_);
-        if (from->station_ == leg.enter_station_id_ &&
-            from->schedule_time_ == leg.enter_time_) {
-          auto required_arrival_time_at_station = from->time_;
+        if (from->station_idx() == leg.enter_station_id_ &&
+            from->schedule_time() == leg.enter_time_) {
+          auto required_arrival_time_at_station = from->current_time();
           if (leg.enter_transfer_) {
             required_arrival_time_at_station -= leg.enter_transfer_->duration_;
           }
@@ -41,30 +41,26 @@ reachability_info get_reachability(paxmon_data const& data,
           }
           in_trip = true;
           reachability.reachable_trips_.emplace_back(reachable_trip{
-              get_trip(sched, leg.trip_), td, &leg, from->time_, INVALID_TIME,
-              edge_idx, reachable_trip::INVALID_INDEX});
+              get_trip(sched, leg.trip_), td, &leg, from->current_time(),
+              INVALID_TIME, edge_idx, reachable_trip::INVALID_INDEX});
           entry_ok = true;
         }
       }
       if (in_trip) {
         auto const to = e->to(data.graph_);
-        if (to->schedule_time_ > leg.exit_time_) {
+        if (to->schedule_time() > leg.exit_time_) {
           ok = false;
           break;
         }
-        if (to->station_ == leg.exit_station_id_ &&
-            to->schedule_time_ == leg.exit_time_) {
-          station_arrival_time = to->time_;
-          auto const station_ic_time = to->get_station(sched).transfer_time_;
-          // TODO(pablo): footpaths
+        if (to->station_idx() == leg.exit_station_id_ &&
+            to->schedule_time() == leg.exit_time_) {
+          station_arrival_time = to->current_time();
           auto& rt = reachability.reachable_trips_.back();
           rt.exit_real_time_ = station_arrival_time;
           rt.exit_edge_idx_ = edge_idx;
           reachability.reachable_interchange_stations_.emplace_back(
-              reachable_station{
-                  to->station_,
-                  static_cast<time>(to->schedule_time_ + station_ic_time),
-                  static_cast<time>(station_arrival_time + station_ic_time)});
+              reachable_station{to->station_, to->schedule_time_,
+                                station_arrival_time});
           exit_ok = true;
           break;
         }

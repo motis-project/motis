@@ -6,6 +6,7 @@ namespace motis.paxmon;
 table PassengerAtStation {
   station: motis.Station;
   arrival_time: ulong;
+  first_station: bool;
 }
 
 table PassengerInTrip {

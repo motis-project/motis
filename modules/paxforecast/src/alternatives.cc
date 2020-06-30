@@ -101,10 +101,14 @@ std::vector<alternative> find_alternatives(
         sched, localization.in_trip_, localization.at_station_->index_,
         localization.arrival_time_, destination_station_id);
   } else {
-    // TODO(pablo): interchange time - initial station vs. interchange station
-    query_msg = ontrip_station_query(sched, localization.at_station_->index_,
-                                     localization.arrival_time_,
-                                     destination_station_id);
+    auto const interchange_time =
+        localization.first_station_
+            ? 0
+            : sched.stations_.at(localization.at_station_->index_)
+                  ->transfer_time_;
+    query_msg = ontrip_station_query(
+        sched, localization.at_station_->index_,
+        localization.arrival_time_ + interchange_time, destination_station_id);
   }
 
   auto const response_msg = motis_call(query_msg)->val();
