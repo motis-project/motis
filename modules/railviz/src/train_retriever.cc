@@ -269,46 +269,18 @@ std::vector<train> train_retriever::trains(
   std::shared_lock lock(mutex_);
   std::vector<train> result_trains;
   std::vector<train> clasz_trains;
-  for (auto clasz = service_class::AIR; clasz < service_class::STR; ++clasz) {
-    if (!path::should_display(clasz, zoom_level)) {
+  for (auto clasz = service_class::AIR; clasz < service_class::NUM_CLASSES;
+       ++clasz) {
+    if (!path::should_display(clasz, zoom_level,
+                              std::numeric_limits<float>::infinity())) {
       continue;
     }
 
-    foreach_train(clasz, [&](auto const& t) { clasz_trains.push_back(t); });
-
-    if (concat_and_check_limit(result_trains, clasz_trains)) {
-      return result_trains;
-    }
-  }
-
-  {
-    constexpr auto const kLongDistance = 10'000.;
-    std::vector<train> clasz_trains_long_distance;
-    for (auto const clasz : {service_class::STR, service_class::BUS}) {
-      if (path::should_display(clasz, zoom_level,
-                               std::numeric_limits<float>::infinity())) {
-        foreach_train(clasz, [&](auto const& t) {
-          if (t.route_distance_ > kLongDistance) {
-            clasz_trains_long_distance.push_back(t);
-          } else {
-            clasz_trains.push_back(t);
-          }
-        });
+    foreach_train(clasz, [&](auto const& t) {
+      if (path::should_display(clasz, zoom_level, t.route_distance_)) {
+        clasz_trains.push_back(t);
       }
-    }
-
-    if (concat_and_check_limit(result_trains, clasz_trains_long_distance) ||
-        concat_and_check_limit(result_trains, clasz_trains)) {
-      return result_trains;
-    }
-  }
-
-  for (auto const clasz : {service_class::SHIP, service_class::OTHER}) {
-    if (!path::should_display(clasz, zoom_level)) {
-      continue;
-    }
-
-    foreach_train(clasz, [&](auto const& t) { clasz_trains.push_back(t); });
+    });
 
     if (concat_and_check_limit(result_trains, clasz_trains)) {
       return result_trains;
