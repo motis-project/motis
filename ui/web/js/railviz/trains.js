@@ -341,11 +341,11 @@ RailViz.Trains = (function () {
     }
 
     getCategoryColor(train) {
-      if (train.clasz == 7 || train.clasz == 8) {
+      if (train.clasz == 9 || train.clasz == 10) {
         if (train.route_distance > 10_000) {
-          return this.categoryColors[7];
+          return this.categoryColors[9];
         } else {
-          return this.categoryColors[8];
+          return this.categoryColors[10];
         }
       } else {
         return this.categoryColors[train.clasz];
