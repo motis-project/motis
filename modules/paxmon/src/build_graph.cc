@@ -18,7 +18,7 @@ namespace {
 
 void add_interchange(event_node* from, event_node* to, passenger_group* grp,
                      duration transfer_time, graph const& g) {
-  for (auto& e : from->outgoing_edges(g)) {  // TODO(pablo): performance
+  for (auto& e : from->outgoing_edges(g)) {
     if (e->type_ == edge_type::INTERCHANGE && e->to(g) == to &&
         e->transfer_time() == transfer_time) {
       e->pax_connection_info_.section_infos_.emplace_back(grp);
@@ -27,16 +27,8 @@ void add_interchange(event_node* from, event_node* to, passenger_group* grp,
       return;
     }
   }
-  auto const new_edge = add_edge(edge{from,
-                                      to,
-                                      edge_type::INTERCHANGE,
-                                      nullptr,
-                                      transfer_time,
-                                      0,
-                                      grp->passengers_,
-                                      false,
-                                      {{pax_section_info{grp}}}});
-  grp->edges_.emplace_back(new_edge);
+  grp->edges_.emplace_back(add_edge(make_interchange_edge(
+      from, to, transfer_time, grp->passengers_, {{pax_section_info{grp}}})));
 }
 
 inline duration get_transfer_duration(std::optional<transfer_info> const& ti) {

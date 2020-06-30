@@ -53,18 +53,11 @@ std::vector<edge*> add_trip(schedule const& sched, paxmon_data& data,
                             {}}))
                         .get();
     auto const capacity = get_capacity(sched, data.capacity_map_, lc);
-    edges.emplace_back(add_edge(edge{
-        dep_node, arr_node, edge_type::TRIP, trp, 0, capacity, 0, false, {}}));
+    edges.emplace_back(add_edge(
+        make_trip_edge(dep_node, arr_node, edge_type::TRIP, trp, capacity)));
     if (prev_node != nullptr) {
-      add_edge(edge{prev_node,
-                    dep_node,
-                    edge_type::WAIT,
-                    trp,
-                    0,
-                    capacity,
-                    0,
-                    false,
-                    {}});
+      add_edge(
+          make_trip_edge(prev_node, dep_node, edge_type::WAIT, trp, capacity));
     }
     prev_node = arr_node;
   }
@@ -208,16 +201,16 @@ void for_each_edge(schedule const& sched, paxmon_data& data,
                   for (auto e : td->edges_) {
                     if (!in_trip) {
                       auto const from = e->from(data.graph_);
-                      if (from->station_ == leg.enter_station_id_ &&
-                          from->schedule_time_ == leg.enter_time_) {
+                      if (from->station_idx() == leg.enter_station_id_ &&
+                          from->schedule_time() == leg.enter_time_) {
                         in_trip = true;
                       }
                     }
                     if (in_trip) {
                       fn(leg, e);
                       auto const to = e->to(data.graph_);
-                      if (to->station_ == leg.exit_station_id_ &&
-                          to->schedule_time_ == leg.exit_time_) {
+                      if (to->station_idx() == leg.exit_station_id_ &&
+                          to->schedule_time() == leg.exit_time_) {
                         break;
                       }
                     }

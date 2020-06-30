@@ -33,6 +33,20 @@ inline edge* add_edge(edge const& e) {
   return edge_ptr;
 }
 
+inline edge make_trip_edge(event_node* from, event_node* to, edge_type type,
+                           trip const* trp, std::uint16_t capacity) {
+  return edge{from, to, type, false, 0, capacity, 0, trp, {}};
+}
+
+inline edge make_interchange_edge(event_node* from, event_node* to,
+                                  duration transfer_time,
+                                  std::uint16_t passengers,
+                                  pax_connection_info&& ci) {
+  return edge{
+      from,       to,      edge_type::INTERCHANGE, false, transfer_time, 0,
+      passengers, nullptr, std::move(ci)};
+}
+
 void add_passenger_group_to_edge(edge* e, passenger_group* pg);
 void remove_passenger_group_from_edge(edge* e, passenger_group* pg);
 

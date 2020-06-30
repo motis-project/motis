@@ -71,6 +71,10 @@ struct edge {
   inline bool is_canceled(graph const& g) const {
     return from(g)->is_canceled() || to(g)->is_canceled();
   }
+  inline bool is_trip() const { return type() != edge_type::INTERCHANGE; }
+  inline bool is_interchange() const {
+    return type() == edge_type::INTERCHANGE;
+  }
 
   inline std::uint16_t passengers_over_capacity() const {
     return passengers_ > capacity_ ? passengers_ - capacity_ : 0U;
@@ -92,11 +96,11 @@ struct edge {
   event_node* from_{};
   event_node* to_{};
   edge_type type_{};
-  struct trip const* trip_{};  // TODO(pablo): union trip/transfer_time
+  bool broken_{false};
   duration transfer_time_{};
   std::uint16_t capacity_{};
   std::uint16_t passengers_{};
-  bool broken_{false};
+  struct trip const* trip_{};
   struct pax_connection_info pax_connection_info_;
 };
 

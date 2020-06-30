@@ -12,7 +12,7 @@
 namespace motis::paxmon {
 
 struct journey_leg {
-  motis::extern_trip trip_;  // TODO(pablo): full_trip_id ?
+  motis::extern_trip trip_;
   unsigned enter_station_id_;
   unsigned exit_station_id_;
   motis::time enter_time_;
