@@ -18,6 +18,7 @@ inline mcd::hash_map<mcd::string, service_class> class_mapping() {
       {"THA", service_class::ICE},
       {"TGV", service_class::ICE},
       {"RJ", service_class::ICE},
+      {"RJX", service_class::ICE},
 
       // long range rail
       {"Long Distance Trains", service_class::IC},
@@ -28,7 +29,6 @@ inline mcd::hash_map<mcd::string, service_class> class_mapping() {
       {"EX", service_class::IC},
       {"EXT", service_class::IC},
       {"D", service_class::IC},
-      {"IR", service_class::IC},
       {"InterRegio", service_class::IC},
       {"Intercity", service_class::IC},
 
@@ -41,17 +41,20 @@ inline mcd::hash_map<mcd::string, service_class> class_mapping() {
       {"EN", service_class::N},
       {"Car Transport Rail", service_class::N},
       {"AZ", service_class::N},
+      {"NJ", service_class::N},  // Night Jet
 
       // fast local trains
-      {"IRE", service_class::RE},
-      {"REX", service_class::RE},
       {"RE", service_class::RE},
+      {"REX", service_class::RE},
       {"IR", service_class::RE},
+      {"IRE", service_class::RE},
       {"X", service_class::RE},
       {"DPX", service_class::RE},
       {"E", service_class::RE},
       {"Sp", service_class::RE},
       {"RegioExpress", service_class::RE},
+      {"TER", service_class::RE},  // Transport express regional
+      {"TE2", service_class::RE},  // Transport express regional
 
       // local trains
       {"Railway Service", service_class::RB},
@@ -66,6 +69,8 @@ inline mcd::hash_map<mcd::string, service_class> class_mapping() {
       {"Regionalzug", service_class::RB},
       {"RZ", service_class::RB},
       {"CC", service_class::RB},  // narrow-gauge mountain train
+      {"PE", service_class::RB},  // Panorama Express
+      {"T", service_class::RB},
 
       // metro
       {"S", service_class::S},
@@ -73,6 +78,7 @@ inline mcd::hash_map<mcd::string, service_class> class_mapping() {
       {"SB", service_class::S},
       {"Metro", service_class::S},
       {"Schnelles Nachtnetz", service_class::S},
+      {"SN", service_class::S},  // S-Bahn Nachtlinie
 
       // subway
       {"U", service_class::U},
@@ -109,6 +115,7 @@ inline mcd::hash_map<mcd::string, service_class> class_mapping() {
       {"RFB", service_class::OTHER},
       {"RT", service_class::OTHER},
       {"GB", service_class::OTHER},  // ski lift / "funicular"?
+      {"PB", service_class::OTHER},  // also a ski lift(?)
       {"FUN", service_class::OTHER},  // "funicular"
       {"Drahtseilbahn", service_class::OTHER},
       {"Standseilbahn", service_class::OTHER},
