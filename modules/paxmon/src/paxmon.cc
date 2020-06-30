@@ -121,10 +121,7 @@ void paxmon::load_journeys() {
     return;
   }
 
-  {
-    scoped_timer build_graph_timer{"build paxmon graph from journeys"};
-    build_graph_from_journeys(sched, data_);
-  }
+  auto build_stats = build_graph_from_journeys(sched, data_);
 
   std::uint64_t edge_count = 0;
   std::uint64_t trip_edge_count = 0;
@@ -167,7 +164,7 @@ void paxmon::load_journeys() {
   LOG(info) << fmt::format("{:n} stations", stations.size());
   LOG(info) << fmt::format("{:n} trips", trips.size());
   LOG(info) << fmt::format("{:n} edges over capacity initially",
-                           initial_over_capacity);
+                           build_stats.initial_over_capacity_);
 }
 
 void paxmon::load_capacity_file() {

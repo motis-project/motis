@@ -6,8 +6,12 @@
 
 namespace motis::paxmon {
 
-extern std::uint64_t initial_over_capacity;
+struct build_graph_stats {
+  std::uint64_t initial_over_capacity_{};
+  std::uint64_t groups_not_added_{};
+};
 
-void build_graph_from_journeys(schedule const& sched, paxmon_data& data);
+build_graph_stats build_graph_from_journeys(schedule const& sched,
+                                            paxmon_data& data);
 
 }  // namespace motis::paxmon

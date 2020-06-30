@@ -12,8 +12,6 @@ using namespace motis::logging;
 
 namespace motis::paxmon {
 
-std::uint64_t initial_over_capacity{0};
-
 namespace {
 
 void add_interchange(event_node* from, event_node* to, passenger_group* grp,
@@ -36,7 +34,8 @@ inline duration get_transfer_duration(std::optional<transfer_info> const& ti) {
 }
 
 void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
-                                  passenger_group& grp) {
+                                  passenger_group& grp,
+                                  build_graph_stats& stats) {
   event_node* exit_node = nullptr;
   trip_data* last_trip = nullptr;
 
@@ -72,7 +71,7 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
         e->passengers_ += grp.passengers_;
         e->pax_connection_info_.section_infos_.emplace_back(&grp);
         if (e->passengers_ > e->capacity_) {
-          ++initial_over_capacity;
+          ++stats.initial_over_capacity_;
         }
         grp.edges_.emplace_back(e);
         auto const to = e->to(data.graph_);
@@ -94,22 +93,29 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
 
 };  // namespace
 
-void build_graph_from_journeys(schedule const& sched, paxmon_data& data) {
-  auto errors = 0ULL;
+build_graph_stats build_graph_from_journeys(schedule const& sched,
+                                            paxmon_data& data) {
+  scoped_timer build_graph_timer{"build paxmon graph from journeys"};
+
+  auto stats = build_graph_stats{};
   for (auto& pg : data.graph_.passenger_groups_) {
     try {
-      add_passenger_group_to_graph(sched, data, *pg);
+      add_passenger_group_to_graph(sched, data, *pg, stats);
     } catch (std::system_error const& e) {
       LOG(motis::logging::error)
           << "could not add passenger group: " << e.what();
-      ++errors;
-      // throw e;
+      ++stats.groups_not_added_;
     }
   }
-  if (errors != 0) {
+  if (stats.groups_not_added_ != 0) {
     LOG(motis::logging::error)
-        << "could not add " << errors << " passenger groups";
+        << "could not add " << stats.groups_not_added_ << " passenger groups";
   }
+  if (stats.initial_over_capacity_ != 0) {
+    LOG(motis::logging::error)
+        << stats.initial_over_capacity_ << " edges over capacity initially";
+  }
+  return stats;
 }
 
 }  // namespace motis::paxmon
