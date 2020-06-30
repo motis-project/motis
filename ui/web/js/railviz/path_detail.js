@@ -129,7 +129,6 @@ RailViz.Path.Detail = (function () {
       if (!p.coordinates) {
         return;
       }
-      console.log("clasz", p.clasz)
       data.features.push({
         type: "Feature",
         properties: {
