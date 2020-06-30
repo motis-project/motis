@@ -41,7 +41,8 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
   param(capacity_file_, "capacity", "train capacities");
   param(stats_file_, "stats", "statistics file");
   param(start_time_, "start_time", "evaluation start time");
-  param(end_time_, "end_time", "evaluation  end time");
+  param(end_time_, "end_time", "evaluation end time");
+  param(time_step_, "time_step", "evaluation time step (seconds)");
 }
 
 paxmon::~paxmon() = default;
@@ -89,7 +90,7 @@ void paxmon::init(motis::module::registry& reg) {
         LOG(info) << "paxmon: start time: " << format_unix_time(start_time_)
                   << ", end time: " << format_unix_time(end_time_);
 
-        for (auto t = start_time_; t <= end_time_; t += 60) {
+        for (auto t = start_time_; t <= end_time_; t += time_step_) {
           forward(t);
         }
 
