@@ -29,11 +29,15 @@ Offset<PassengerForecastResult> to_fbs(schedule const& sched,
           if (e->type_ != edge_type::TRIP) {
             continue;
           }
+          auto const from = e->from(g);
+          auto const to = e->to(g);
           fb_edges.emplace_back(CreateEdgeOverCapacity(
               fbb, e->passengers_, e->capacity_,
               res.additional_passengers_.at(e),
-              to_fbs(fbb, e->from(g)->get_station(sched)),
-              to_fbs(fbb, e->to(g)->get_station(sched))));
+              to_fbs(fbb, from->get_station(sched)),
+              to_fbs(fbb, to->get_station(sched)),
+              motis_to_unixtime(sched, from->schedule_time()),
+              motis_to_unixtime(sched, to->schedule_time())));
         }
         return CreateTripOverCapacity(fbb, to_fbs(sched, fbb, trp),
                                       fbb.CreateVector(fb_edges));
