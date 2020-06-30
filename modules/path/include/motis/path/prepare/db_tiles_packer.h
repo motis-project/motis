@@ -66,7 +66,7 @@ struct db_tiles_packer : public tiles::quadtree_feature_packer {
               std::distance(lb, ub);
         });
 
-    packer_.upate_segment_offset(kPathIndexId, packer_.buf_.size());
+    packer_.update_segment_offset(kPathIndexId, packer_.buf_.size());
     for (auto const count : feature_counts) {
       tiles::append<uint32_t>(packer_.buf_, count);
     }
