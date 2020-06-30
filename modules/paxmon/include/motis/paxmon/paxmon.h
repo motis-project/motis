@@ -37,6 +37,7 @@ private:
   std::string stats_file_{"paxmon_stats.csv"};
   conf::holder<std::time_t> start_time_{};
   conf::holder<std::time_t> end_time_{};
+  int time_step_{60};
 
   paxmon_data data_;
   system_statistics system_stats_;
