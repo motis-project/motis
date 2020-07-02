@@ -38,9 +38,8 @@ std::uint32_t get_station_idx(schedule const& sched, std::string_view id) {
   } else if (auto const it = sched.ds100_to_station_.find(id);
              it != end(sched.ds100_to_station_)) {
     return it->second->index_;
-  } else {
-    return 0;
   }
+  return 0;
 }
 
 };  // namespace
