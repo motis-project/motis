@@ -7,26 +7,26 @@ namespace motis::path {
 int min_zoom_level(service_class const clasz, float const distance) {
   switch (clasz) {
     // long distance
-    case service_class::AIR: [[fallthrough]];
+    case service_class::AIR:
     case service_class::COACH:
       if (distance < 50'000.F) {
         return 8;  // typically long distance, maby also quite short
       }
       [[fallthrough]];
-    case service_class::ICE: [[fallthrough]];
-    case service_class::IC: [[fallthrough]];
+    case service_class::ICE:
+    case service_class::IC:
     case service_class::N: return 4;
 
     // regional distance
-    case service_class::RE: [[fallthrough]];
-    case service_class::RB: [[fallthrough]];
+    case service_class::RE:
+    case service_class::RB:
     case service_class::S: return 5;
 
     // metro distance
     case service_class::U: return 6;
 
     // short distance
-    case service_class::STR: [[fallthrough]];
+    case service_class::STR:
     case service_class::BUS: return distance > 10'000.F ? 10 : 11;
 
     // ship can be anything
