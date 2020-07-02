@@ -6,6 +6,8 @@
 
 #include "boost/geometry/index/rtree.hpp"
 
+#include "fmt/core.h"
+
 #include "geo/detail/register_box.h"
 
 #include "utl/concat.h"
@@ -128,9 +130,9 @@ std::unique_ptr<edge_geo_index> make_edge_rtree(
   }
 
   if (no_match != 0) {
-    LOG(logging::warn) << "clasz " << static_cast<service_class_t>(clasz)
-                       << ": station pairs without tbbox: " << no_match << "/"
-                       << entries.size();
+    LOG(logging::warn) << fmt::format(
+        "clasz {} : stations without tbbox {} / {}", clasz, no_match,
+        entries.size());
   }
 
   return std::make_unique<edge_geo_index>(sched, clasz, rtree{entries},
