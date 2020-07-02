@@ -66,15 +66,13 @@ struct source_spec {
 template <typename Fun>
 void foreach_path_category(mcd::vector<service_class> const& classes,
                            Fun&& fun) {
-  // TODO add classes: AIR COACH
-  mcd::vector<service_class> railway_classes, other_classes;
+  mcd::vector<service_class> railway_classes, bus_classes, other_classes;
   for (auto const& clasz : classes) {
     if (clasz == service_class::SHIP) {
       fun(source_spec::category::SHIP,
           mcd::vector<service_class>{service_class::SHIP});
-    } else if (clasz == service_class::BUS) {
-      fun(source_spec::category::BUS,
-          mcd::vector<service_class>{service_class::BUS});
+    } else if (clasz == service_class::BUS || clasz == service_class::COACH) {
+      bus_classes.push_back(clasz);
     } else if (clasz == service_class::STR) {
       fun(source_spec::category::TRAM,
           mcd::vector<service_class>{service_class::STR});
@@ -86,7 +84,7 @@ void foreach_path_category(mcd::vector<service_class> const& classes,
                clasz == service_class::RB || clasz == service_class::S) {
       railway_classes.push_back(clasz);
     } else {
-      other_classes.push_back(clasz);
+      other_classes.push_back(clasz);  // also: AIR
     }
   }
 
@@ -96,6 +94,9 @@ void foreach_path_category(mcd::vector<service_class> const& classes,
 
   if (!railway_classes.empty()) {
     fun(source_spec::category::RAIL, railway_classes);
+  }
+  if (!bus_classes.empty()) {
+    fun(source_spec::category::BUS, bus_classes);
   }
   if (!other_classes.empty()) {
     fun(source_spec::category::UNKNOWN, other_classes);
