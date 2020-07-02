@@ -426,14 +426,20 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
   auto data = mcd::make_unique<osm_data>();
   data->stop_positions_ = std::move(stop_positions.coordinates_);
   data->plattforms_ = plattforms.finalize();
-  data->profiles_[{category::RAIL, router::OSM_REL}] = rel_rail.finalize();
-  data->profiles_[{category::SUBWAY, router::OSM_REL}] = rel_sub.finalize();
-  data->profiles_[{category::TRAM, router::OSM_REL}] = rel_tram.finalize();
-  data->profiles_[{category::BUS, router::OSM_REL}] = rel_bus.finalize();
-  data->profiles_[{category::RAIL, router::OSM_NET}] = net_rail.finalize();
-  data->profiles_[{category::SUBWAY, router::OSM_NET}] = net_sub.finalize();
-  data->profiles_[{category::TRAM, router::OSM_NET}] = net_tram.finalize();
-  data->profiles_[{category::SHIP, router::OSM_NET}] = net_ship.finalize();
+
+  auto const finalize = [&](source_spec const ss, auto& handler) {
+    progress_tracker->status(fmt::format("Load OSM / Finalize {}", ss.str()));
+    data->profiles_[ss] = handler.finalize();
+  };
+
+  finalize({category::RAIL, router::OSM_REL}, rel_rail);
+  finalize({category::SUBWAY, router::OSM_REL}, rel_sub);
+  finalize({category::TRAM, router::OSM_REL}, rel_tram);
+  finalize({category::BUS, router::OSM_REL}, rel_bus);
+  finalize({category::RAIL, router::OSM_NET}, net_rail);
+  finalize({category::SUBWAY, router::OSM_NET}, net_sub);
+  finalize({category::TRAM, router::OSM_NET}, net_tram);
+  finalize({category::SHIP, router::OSM_NET}, net_ship);
   return data;
 }
 
