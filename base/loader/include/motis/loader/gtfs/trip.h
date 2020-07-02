@@ -53,6 +53,9 @@ struct trip {
 
   stop_seq stops() const;
 
+  int avg_speed() const;
+  int distance() const;
+
   route const* route_;
   bitfield const* service_;
   block* block_;

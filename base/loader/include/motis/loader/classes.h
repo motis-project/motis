@@ -33,6 +33,7 @@ inline mcd::hash_map<mcd::string, service_class> class_mapping() {
       {"Intercity", service_class::IC},
 
       // long range bus
+      {"Coach", service_class::COACH},
       {"EXB", service_class::COACH},  // long-distance bus
 
       // night trains
