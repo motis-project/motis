@@ -59,7 +59,7 @@ struct connection {
   ptr<connection_info const> con_info_{nullptr};
   uint16_t price_{0U};
   uint16_t d_track_{0U}, a_track_{0U};
-  service_class clasz_{0U};
+  service_class clasz_{service_class::AIR}; // service_class 0
 };
 
 struct light_connection {
