@@ -115,6 +115,8 @@ mcd::unique_ptr<mcd::vector<station_seq>> read_station_sequences(
       std::get<cista::buf<cista::mmap>>(mem));
 #elif defined(MOTIS_SCHEDULE_MODE_RAW) || defined(CLANG_TIDY)
   mem = cista::file(fname.c_str(), "r").content();
+  // suppress clang-tidy false positive
+  // NOLINTNEXTLINE
   ptr.el_ = cista::deserialize<mcd::vector<station_seq>, CISTA_MODE>(
       std::get<cista::buffer>(mem));
 #else
