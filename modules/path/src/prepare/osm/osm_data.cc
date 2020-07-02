@@ -200,8 +200,7 @@ struct relation_handler : public oh::Handler, relation_way_base {
       auto osm_ways = make_osm_ways(
           utl::to_vec(way_ptrs, [](auto const& ptr) { return *ptr; }));
       if (!osm_ways.empty()) {
-        aggregate_osm_ways(osm_ways);
-        result.emplace_back(std::move(osm_ways));
+        result.emplace_back(aggregate_osm_ways(std::move(osm_ways)));
       }
     }
     return result;
@@ -224,9 +223,7 @@ struct network_handler : public oh::Handler {
   }
 
   mcd::vector<mcd::vector<osm_way>> finalize() {
-    auto osm_ways = make_osm_ways(ways_);
-    aggregate_osm_ways(osm_ways);
-    return {std::move(osm_ways)};
+    return {aggregate_osm_ways(make_osm_ways(ways_))};
   }
 
   Fn fn_;

@@ -28,106 +28,106 @@ mcd::vector<mp::osm_way> make_ways(mcd::vector<mcd::vector<int64_t>> const& in,
 
 TEST(aggregate_osm_ways, pairwise) {
   {
-    auto ways = make_ways({{0, 1}, {2, 3}});
-    mp::aggregate_osm_ways(ways);
-    ASSERT_EQ(make_ways({{0, 1}, {2, 3}}), ways);
+    auto input = make_ways({{0, 1}, {2, 3}});
+    auto output = mp::aggregate_osm_ways(input);
+    ASSERT_EQ(make_ways({{0, 1}, {2, 3}}), output);
   }
 
   {
-    auto ways = make_ways({{0, 1}, {1, 2}});
-    mp::aggregate_osm_ways(ways);
-    ASSERT_EQ(1, ways.size());
-    EXPECT_EQ(1, COUNT_WAY(ways, 0, 2));
+    auto input = make_ways({{0, 1}, {1, 2}});
+    auto output = mp::aggregate_osm_ways(input);
+    ASSERT_EQ(1, output.size());
+    EXPECT_EQ(1, COUNT_WAY(output, 0, 2));
   }
 
   {
-    auto ways = make_ways({{0, 1}, {2, 1}});
-    mp::aggregate_osm_ways(ways);
-    ASSERT_EQ(1, ways.size());
-    EXPECT_EQ(1, COUNT_WAY(ways, 0, 2));
+    auto input = make_ways({{0, 1}, {2, 1}});
+    auto output = mp::aggregate_osm_ways(input);
+    ASSERT_EQ(1, output.size());
+    EXPECT_EQ(1, COUNT_WAY(output, 0, 2));
   }
 
   {
-    auto ways = make_ways({{1, 0}, {1, 2}});
-    mp::aggregate_osm_ways(ways);
-    ASSERT_EQ(1, ways.size());
-    EXPECT_EQ(1, COUNT_WAY(ways, 0, 2));
+    auto input = make_ways({{1, 0}, {1, 2}});
+    auto output = mp::aggregate_osm_ways(input);
+    ASSERT_EQ(1, output.size());
+    EXPECT_EQ(1, COUNT_WAY(output, 0, 2));
   }
 
   {
-    auto ways = make_ways({{1, 0}, {2, 1}});
-    mp::aggregate_osm_ways(ways);
-    ASSERT_EQ(1, ways.size());
-    EXPECT_EQ(1, COUNT_WAY(ways, 0, 2));
+    auto input = make_ways({{1, 0}, {2, 1}});
+    auto output = mp::aggregate_osm_ways(input);
+    ASSERT_EQ(1, output.size());
+    EXPECT_EQ(1, COUNT_WAY(output, 0, 2));
   }
 }
 
 TEST(aggregate_osm_ways, pairwise_oneway) {
   {
-    auto ways = make_ways({{0, 1}, {1, 2}}, true);
-    mp::aggregate_osm_ways(ways);
-    ASSERT_EQ(1, ways.size());
-    EXPECT_EQ(1, COUNT_WAY(ways, 0, 2));
+    auto input = make_ways({{0, 1}, {1, 2}}, true);
+    auto output = mp::aggregate_osm_ways(input);
+    ASSERT_EQ(1, output.size());
+    EXPECT_EQ(1, COUNT_WAY(output, 0, 2));
   }
 
   {
-    auto ways = make_ways({{0, 1}, {2, 1}}, true);
-    mp::aggregate_osm_ways(ways);
-    ASSERT_EQ(2, ways.size());
-    EXPECT_EQ(1, COUNT_WAY(ways, 0, 1));
-    EXPECT_EQ(1, COUNT_WAY(ways, 2, 1));
+    auto input = make_ways({{0, 1}, {2, 1}}, true);
+    auto output = mp::aggregate_osm_ways(input);
+    ASSERT_EQ(2, output.size());
+    EXPECT_EQ(1, COUNT_WAY(output, 0, 1));
+    EXPECT_EQ(1, COUNT_WAY(output, 2, 1));
   }
 
   {
-    auto ways = make_ways({{1, 0}, {1, 2}}, true);
-    mp::aggregate_osm_ways(ways);
-    ASSERT_EQ(2, ways.size());
-    EXPECT_EQ(1, COUNT_WAY(ways, 1, 0));
-    EXPECT_EQ(1, COUNT_WAY(ways, 1, 2));
+    auto input = make_ways({{1, 0}, {1, 2}}, true);
+    auto output = mp::aggregate_osm_ways(input);
+    ASSERT_EQ(2, output.size());
+    EXPECT_EQ(1, COUNT_WAY(output, 1, 0));
+    EXPECT_EQ(1, COUNT_WAY(output, 1, 2));
   }
 
   {
-    auto ways = make_ways({{1, 0}, {2, 1}}, true);
-    mp::aggregate_osm_ways(ways);
-    ASSERT_EQ(1, ways.size());
-    EXPECT_EQ(1, COUNT_WAY(ways, 0, 2));
+    auto input = make_ways({{1, 0}, {2, 1}}, true);
+    auto output = mp::aggregate_osm_ways(input);
+    ASSERT_EQ(1, output.size());
+    EXPECT_EQ(1, COUNT_WAY(output, 0, 2));
   }
 }
 
 TEST(aggregate_osm_ways, three_star) {
   {
-    auto ways = make_ways({{0, 3}, {1, 3}, {2, 3}});
-    mp::aggregate_osm_ways(ways);
-    ASSERT_EQ(3, ways.size());
-    EXPECT_EQ(1, COUNT_WAY(ways, 0, 3));
-    EXPECT_EQ(1, COUNT_WAY(ways, 1, 3));
-    EXPECT_EQ(1, COUNT_WAY(ways, 2, 3));
+    auto input = make_ways({{0, 3}, {1, 3}, {2, 3}});
+    auto output = mp::aggregate_osm_ways(input);
+    ASSERT_EQ(3, output.size());
+    EXPECT_EQ(1, COUNT_WAY(output, 0, 3));
+    EXPECT_EQ(1, COUNT_WAY(output, 1, 3));
+    EXPECT_EQ(1, COUNT_WAY(output, 2, 3));
   }
 
   {
-    auto ways = make_ways({{0, 3}, {1, 3}, {2, 3}, {2, 4}});
-    mp::aggregate_osm_ways(ways);
-    ASSERT_EQ(3, ways.size());
-    EXPECT_EQ(1, COUNT_WAY(ways, 0, 3));
-    EXPECT_EQ(1, COUNT_WAY(ways, 1, 3));
-    EXPECT_EQ(1, COUNT_WAY(ways, 4, 3));
+    auto input = make_ways({{0, 3}, {1, 3}, {2, 3}, {2, 4}});
+    auto output = mp::aggregate_osm_ways(input);
+    ASSERT_EQ(3, output.size());
+    EXPECT_EQ(1, COUNT_WAY(output, 0, 3));
+    EXPECT_EQ(1, COUNT_WAY(output, 1, 3));
+    EXPECT_EQ(1, COUNT_WAY(output, 4, 3));
   }
 }
 
 TEST(aggregate_osm_ways, loop) {
   {
-    auto ways = make_ways({{1, 0},  //
-                           {2, 1},  //
-                           {3, 2},  // loop part 1
-                           {3, 2},  // loop part 2
-                           {4, 2},  //
-                           {5, 4},  //
-                           {5, 6}});
-    mp::aggregate_osm_ways(ways);
+    auto input = make_ways({{1, 0},  //
+                            {2, 1},  //
+                            {3, 2},  // loop part 1
+                            {3, 2},  // loop part 2
+                            {4, 2},  //
+                            {5, 4},  //
+                            {5, 6}});
+    auto output = mp::aggregate_osm_ways(input);
 
-    ASSERT_EQ(3, ways.size());
-    EXPECT_EQ(1, COUNT_WAY(ways, 0, 2));
-    EXPECT_EQ(1, COUNT_WAY(ways, 2, 2));  // the loop
-    EXPECT_EQ(1, COUNT_WAY(ways, 2, 6));
+    ASSERT_EQ(3, output.size());
+    EXPECT_EQ(1, COUNT_WAY(output, 0, 2));
+    EXPECT_EQ(1, COUNT_WAY(output, 2, 2));  // the loop
+    EXPECT_EQ(1, COUNT_WAY(output, 2, 6));
   }
 }
