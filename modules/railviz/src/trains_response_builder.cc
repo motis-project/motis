@@ -53,7 +53,7 @@ void trains_response_builder::resolve_paths() {
   utl::erase_duplicates(queries_);  // this sorts!
 
   if (path_data_ == nullptr) {
-    resolve_paths_fallback();
+    return resolve_paths_fallback();
   }
 
   path::path_database_query path_query{zoom_level_};
