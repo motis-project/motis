@@ -52,7 +52,9 @@ std::vector<edge*> add_trip(schedule const& sched, paxmon_data& data,
                             {},
                             {}}))
                         .get();
-    auto const capacity = get_capacity(sched, data.capacity_map_, lc);
+    auto const capacity =
+        get_capacity(sched, lc, data.trip_capacity_map_,
+                     data.category_capacity_map_, data.default_capacity_);
     edges.emplace_back(add_edge(
         make_trip_edge(dep_node, arr_node, edge_type::TRIP, trp, capacity)));
     if (prev_node != nullptr) {

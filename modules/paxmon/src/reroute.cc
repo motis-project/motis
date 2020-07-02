@@ -134,7 +134,9 @@ std::uint16_t guess_trip_capacity(schedule const& sched, paxmon_data& data,
                                   trip const* trp) {
   auto const sections = access::sections(trp);
   if (begin(sections) != end(sections)) {
-    return get_capacity(sched, data.capacity_map_, (*begin(sections)).lcon());
+    return get_capacity(sched, (*begin(sections)).lcon(),
+                        data.trip_capacity_map_, data.category_capacity_map_,
+                        data.default_capacity_);
   } else {
     return 0;
   }

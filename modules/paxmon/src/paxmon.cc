@@ -38,11 +38,12 @@ namespace motis::paxmon {
 
 paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
   param(journey_file_, "journeys", "routing responses");
-  param(capacity_file_, "capacity", "train capacities");
+  param(capacity_files_, "capacity", "train capacities");
   param(stats_file_, "stats", "statistics file");
   param(start_time_, "start_time", "evaluation start time");
   param(end_time_, "end_time", "evaluation end time");
   param(time_step_, "time_step", "evaluation time step (seconds)");
+  param(data_.default_capacity_, "default_capacity", "default capacity");
 }
 
 paxmon::~paxmon() = default;
@@ -54,10 +55,9 @@ void paxmon::init(motis::module::registry& reg) {
 
   add_shared_data(DATA_KEY, &data_);
 
-  reg.subscribe("/init", [&]() { load_journeys(); });
-  reg.register_op("/paxmon/load_journeys", [&](msg_ptr const&) -> msg_ptr {
+  reg.subscribe("/init", [&]() {
+    load_capacity_files();
     load_journeys();
-    return {};
   });
   reg.register_op("/paxmon/flush", [&](msg_ptr const&) -> msg_ptr {
     stats_writer_->flush();
@@ -99,8 +99,6 @@ void paxmon::init(motis::module::registry& reg) {
         return {};
       },
       ctx::access_t::WRITE);
-
-  load_capacity_file();
 }
 
 void paxmon::load_journeys() {
@@ -167,15 +165,25 @@ void paxmon::load_journeys() {
                            build_stats.initial_over_capacity_);
 }
 
-void paxmon::load_capacity_file() {
-  auto const capacity_path = fs::path{capacity_file_};
-  if (!fs::exists(capacity_path)) {
-    LOG(warn) << "capacity file not found: " << capacity_file_;
-    return;
+void paxmon::load_capacity_files() {
+  auto const& sched = get_schedule();
+  auto total_entries = 0ULL;
+  for (auto const& file : capacity_files_) {
+    auto const capacity_path = fs::path{file};
+    if (!fs::exists(capacity_path)) {
+      LOG(warn) << "capacity file not found: " << file;
+      continue;
+    }
+    auto const entries_loaded = load_capacities(
+        sched, file, data_.trip_capacity_map_, data_.category_capacity_map_);
+    total_entries += entries_loaded;
+    LOG(info) << fmt::format("loaded {:n} capacity entries from {}",
+                             entries_loaded, file);
   }
-  data_.capacity_map_ = load_capacities(capacity_file_);
-  LOG(info) << fmt::format("loaded capacity data for {:n} trains",
-                           data_.capacity_map_.size());
+  if (total_entries == 0) {
+    LOG(warn) << "no capacity data loaded, using default capacity of "
+              << data_.default_capacity_ << " for all trains";
+  }
 }
 
 void check_broken_interchanges(

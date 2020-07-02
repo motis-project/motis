@@ -28,12 +28,12 @@ struct paxmon : public motis::module::module {
 
 private:
   void load_journeys();
-  void load_capacity_file();
+  void load_capacity_files();
   motis::module::msg_ptr rt_update(motis::module::msg_ptr const& msg);
   void rt_updates_applied();
 
   std::string journey_file_{"paxmon_journeys.txt"};
-  std::string capacity_file_{};
+  std::vector<std::string> capacity_files_{};
   std::string stats_file_{"paxmon_stats.csv"};
   conf::holder<std::time_t> start_time_{};
   conf::holder<std::time_t> end_time_{};
