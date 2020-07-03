@@ -91,6 +91,10 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
     }
   }
 
+  if (combined_groups.empty()) {
+    return;
+  }
+
   auto routing_requests = 0ULL;
   auto alternatives_found = 0ULL;
 
@@ -169,16 +173,16 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
       }
     }
 
-    if (!combined_groups.empty()) {
-      log_output_->write_broken_connection(sched, data, combined_groups,
-                                           sim_result);
-      log_output_->flush();
+    log_output_->write_broken_connection(sched, data, combined_groups,
+                                         sim_result);
+    log_output_->flush();
 
-      ctx::await_all(motis_publish(make_passenger_forecast_msg(
-          sched, data, cpg_allocations, sim_result)));
-    }
+    auto const forecast_msg =
+        make_passenger_forecast_msg(sched, data, cpg_allocations, sim_result);
 
     revert_simulated_behavior(sim_result);
+
+    ctx::await_all(motis_publish(forecast_msg));
   }
 }
 
