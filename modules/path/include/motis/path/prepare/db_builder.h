@@ -25,13 +25,14 @@ struct db_builder {
   db_builder(db_builder&&) noexcept = delete;  // NOLINT
   db_builder& operator=(db_builder&&) noexcept = delete;  // NOLINT
 
-  void store_stations(std::vector<station> const&) const;
+  void store_stations(mcd::vector<station_seq> const&) const;
 
   std::pair<uint64_t, uint64_t> add_feature(
       geo::polyline const&, std::vector<seq_seg> const&,
-      std::vector<motis_clasz_t> const& classes, bool is_stub) const;
+      mcd::vector<service_class> const& classes, bool is_stub,
+      float distance) const;
 
-  void add_seq(size_t seq_idx, resolved_station_seq const&,
+  void add_seq(size_t seq_idx, station_seq const&,
                std::vector<geo::box> const& boxes,
                std::vector<std::vector<int64_t>> const& feature_ids,
                std::vector<std::vector<uint64_t>> const& hints_rle) const;

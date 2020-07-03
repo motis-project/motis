@@ -2,13 +2,12 @@
 
 #include "tiles/db/feature_pack_quadtree.h"
 
-#include "motis/path/definitions.h"
-
 namespace motis::path {
 
 struct db_tiles_packer : public tiles::quadtree_feature_packer {
   struct serialized_feature {
-    uint32_t id_, offset_, min_clasz_;
+    uint32_t id_, offset_;
+    service_class min_clasz_;
   };
 
   db_tiles_packer(geo::tile root,
@@ -36,7 +35,7 @@ struct db_tiles_packer : public tiles::quadtree_feature_packer {
         serialized_features_.push_back(
             {static_cast<uint32_t>(f.id_),
              static_cast<uint32_t>(packer_.buf_.size()),
-             static_cast<uint32_t>(
+             static_cast<service_class>(
                  tiles::read<int64_t>(it->value_.data(), 1))});
       }
 
@@ -53,19 +52,21 @@ struct db_tiles_packer : public tiles::quadtree_feature_packer {
                        std::tie(rhs.min_clasz_, rhs.id_);
               });
 
-    std::vector<uint32_t> feature_counts(NUM_CLASSES, 0U);
+    std::vector<uint32_t> feature_counts(
+        static_cast<service_class_t>(service_class::NUM_CLASSES), 0U);
     utl::equal_ranges_linear(
         serialized_features_,
         [](auto const& lhs, auto const& rhs) {
           return lhs.min_clasz_ == rhs.min_clasz_;
         },
         [&](auto lb, auto ub) {
-          utl::verify(lb->min_clasz_ < NUM_CLASSES,
+          utl::verify(lb->min_clasz_ < service_class::NUM_CLASSES,
                       "db_tiles_packer: min_clasz to big");
-          feature_counts[lb->min_clasz_] = std::distance(lb, ub);
+          feature_counts[static_cast<service_class_t>(lb->min_clasz_)] =
+              std::distance(lb, ub);
         });
 
-    packer_.upate_segment_offset(kPathIndexId, packer_.buf_.size());
+    packer_.update_segment_offset(kPathIndexId, packer_.buf_.size());
     for (auto const count : feature_counts) {
       tiles::append<uint32_t>(packer_.buf_, count);
     }

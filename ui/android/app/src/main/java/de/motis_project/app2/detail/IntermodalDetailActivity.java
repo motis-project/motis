@@ -264,14 +264,14 @@ public class IntermodalDetailActivity extends AppCompatActivity
         for (JourneyUtil.Section section : sections) {
             MoveWrapper m = JourneyUtil.getMove(c, section);
             if (prevSection != null && prevSection.to != section.from) {
-                addTransportPolyline(c.stops(prevSection.to), c.stops(section.from), 10, boundsBuilder);
+                addTransportPolyline(c.stops(prevSection.to), c.stops(section.from), JourneyUtil.WALK_CLASS, boundsBuilder);
             }
             if (m.moveType() == Move.Transport) {
                 Transport t = JourneyUtil.getTransport(m);
                 addTransportPolyline(c.stops(section.from), c.stops(section.to), t.clasz(), boundsBuilder);
             } else if (m.moveType() == Move.Walk) {
 //                Walk w = JourneyUtil.getWalk(m);
-                addTransportPolyline(c.stops(section.from), c.stops(section.to), 10, boundsBuilder);
+                addTransportPolyline(c.stops(section.from), c.stops(section.to), JourneyUtil.WALK_CLASS, boundsBuilder);
             }
             prevSection = section;
         }
@@ -305,7 +305,7 @@ public class IntermodalDetailActivity extends AppCompatActivity
         }
         return map.addPolyline(new PolylineOptions()
                 .addAll(path)
-                .color(JourneyUtil.getColor(this, 10))
+                .color(JourneyUtil.getColor(this, JourneyUtil.WALK_CLASS))
                 .width(20));
     }
 

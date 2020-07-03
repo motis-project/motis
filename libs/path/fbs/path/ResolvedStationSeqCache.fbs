@@ -1,9 +1,0 @@
-include "InternalPathSeqResponse.fbs";
-
-namespace motis.path;
-
-table ResolvedStationSeqCache {
-  sequences: [InternalPathSeqResponse];
-}
-
-root_type ResolvedStationSeqCache;

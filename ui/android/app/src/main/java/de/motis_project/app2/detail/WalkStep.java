@@ -40,8 +40,8 @@ public class WalkStep implements DetailViewHolder {
         ButterKnife.bind(this, layout);
 
         Context context = inflater.getContext();
-        JourneyUtil.setBackgroundColor(context, line, 10);
-        JourneyUtil.tintBackground(context, bullet, 10);
+        JourneyUtil.setBackgroundColor(context, line, JourneyUtil.WALK_CLASS);
+        JourneyUtil.tintBackground(context, bullet, JourneyUtil.WALK_CLASS);
 
         stopTime.setText(TimeUtil.formatTime(time));
         stopTime.setCompoundDrawablesWithIntrinsicBounds(0, 0, stepInfo.getIcon(), 0);

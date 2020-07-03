@@ -69,7 +69,7 @@ trainIcon : Int -> String
 trainIcon class =
     case class of
         0 ->
-            "train"
+            "plane"
 
         1 ->
             "train"
@@ -78,19 +78,28 @@ trainIcon class =
             "train"
 
         3 ->
-            "train"
+            "bus"
 
         4 ->
             "train"
 
         5 ->
-            "sbahn"
+            "train"
 
         6 ->
-            "ubahn"
+            "train"
 
         7 ->
+            "sbahn"
+
+        8 ->
+            "ubahn"
+
+        9 ->
             "tram"
+
+        11 ->
+            "ship"
 
         _ ->
             "bus"

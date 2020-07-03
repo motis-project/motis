@@ -12,17 +12,21 @@ RailViz.Path.Detail = (function () {
   let data = null;
   let enabled = true;
 
+  // prettier-ignore
   const hslValues = [
-    [291, 64, 42], // #9c27b0,
-    [340, 82, 52], // #e91e63,
-    [235, 66, 30], // #1a237e,
-    [4, 90, 58], // #f44336,
-    [4, 90, 58], // #f44336,
-    [122, 39, 49], // #4caf50,
-    [231, 48, 48], // #3f51b5,
-    [36, 100, 50], // #ff9800,
-    [36, 100, 50], // #ff9800,
-    [0, 0, 62], // #9e9e9e,
+    [200, 16, 62], //  0 : AIR   : #90a4ae
+    [291, 64, 42], //  1 : ICE   : #9c27b0
+    [340, 82, 52], //  2 : IC    : #e91e63
+    [88, 50, 60],  //  3 : COACH : #9ccc65
+    [235, 66, 30], //  4 : N     : #1a237e
+    [4, 90, 58],   //  5 : RE    : #f44336
+    [4, 90, 58],   //  6 : RB    : #f44336
+    [122, 39, 49], //  7 : S     : #4caf50
+    [231, 48, 48], //  8 : U     : #3f51b5
+    [36, 100, 50], //  9 : STR   : #ff9800
+    [36, 100, 50], // 10 : BUS   : #ff9800
+    [187,100, 38], // 11 : SHIP  : #00acc1
+    [0, 0, 62],    // 12 : OTHER : #9e9e9e
   ];
 
   const colors = hslValues.flatMap((c, i) => [
@@ -116,16 +120,15 @@ RailViz.Path.Detail = (function () {
       );
 
       t.polylines.forEach((p) => {
-        p.polyline.clasz = Math.min(p.polyline.clasz || 9, t.clasz);
+        p.polyline.clasz = Math.min(p.polyline.clasz || 12, t.clasz);
         p.polyline.highlight |= t.highlight;
       });
     });
 
     trips.polylines.forEach((p) => {
-      if(!p.coordinates) {
+      if (!p.coordinates) {
         return;
       }
-
       data.features.push({
         type: "Feature",
         properties: {

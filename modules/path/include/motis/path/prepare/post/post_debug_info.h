@@ -14,13 +14,13 @@ inline void print_post_colors(post_graph const& graph, color_t const color) {
         continue;
       }
 
-      for (auto const& sid : graph.originals_.at(i).station_ids_) {
+      for (auto const& sid : graph.originals_->at(i).station_ids_) {
         std::clog << sid << ".";
       }
       std::clog << std::endl;
 
-      for (auto const& cls : graph.originals_.at(i).classes_) {
-        std::clog << cls << ",";
+      for (auto const& cls : graph.originals_->at(i).classes_) {
+        std::clog << static_cast<service_class_t>(cls) << ",";
       }
       std::clog << std::endl;
     }

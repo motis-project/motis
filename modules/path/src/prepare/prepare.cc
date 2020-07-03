@@ -25,6 +25,7 @@
 #include "motis/path/prepare/resolve/path_routing.h"
 #include "motis/path/prepare/resolve/resolve_sequences.h"
 #include "motis/path/prepare/schedule/schedule_wrapper.h"
+#include "motis/path/prepare/schedule/station_sequences.h"
 #include "motis/path/prepare/schedule/stations.h"
 
 namespace ml = motis::logging;
@@ -32,7 +33,7 @@ namespace ml = motis::logging;
 namespace motis::path {
 
 inline void filter_sequences(std::vector<std::string> const& filters,
-                             std::vector<station_seq>& sequences) {
+                             mcd::vector<station_seq>& sequences) {
   ml::scoped_timer timer("filter station sequences");
   for (auto const& filter : filters) {
     std::vector<std::string> tokens;
@@ -49,7 +50,8 @@ inline void filter_sequences(std::vector<std::string> const& filters,
       std::vector<std::string> ids;
       boost::split(ids, tokens[1], boost::is_any_of("."));
       utl::erase_if(sequences, [&ids](auto const& seq) {
-        return ids != seq.station_ids_;
+        return !std::equal(begin(ids), end(ids), begin(seq.station_ids_),
+                           end(seq.station_ids_));
       });
     } else if (tokens[0] == "extent") {
       utl::verify(boost::filesystem::is_regular_file(tokens[1]),
@@ -62,12 +64,13 @@ inline void filter_sequences(std::vector<std::string> const& filters,
                            });
       });
     } else if (tokens[0] == "limit") {
-      size_t const count = std::stoul(tokens[1]);
-      sequences.resize(std::min(count, sequences.size()));
+      sequences.resize(std::min(static_cast<size_t>(std::stoul(tokens[1])),
+                                static_cast<size_t>(sequences.size())));
     } else if (tokens[0] == "cat") {
-      auto clasz = static_cast<motis_clasz_t>(std::stoi(tokens[1]));
+      auto clasz = static_cast<service_class>(std::stoi(tokens[1]));
       utl::erase_if(sequences, [&](auto const& seq) {
-        return seq.classes_.find(clasz) == end(seq.classes_);
+        return std::find(begin(seq.classes_), end(seq.classes_), clasz) ==
+               end(seq.classes_);
       });
       for (auto& seq : sequences) {
         seq.classes_ = {clasz};
@@ -112,11 +115,6 @@ void prepare(prepare_settings const& opt) {
 
   auto progress_tracker = utl::get_active_progress_tracker();
 
-  progress_tracker->status("Load Station Sequences").out_bounds(0, 5);
-  auto sequences = schedule_wrapper{opt.schedule_}.load_station_sequences();
-  filter_sequences(opt.filter_, sequences);
-  auto stations = collect_stations(sequences);
-
   cista::memory_holder osm_data_mem;
   mcd::unique_ptr<osm_data> osm_data_ptr;
   auto const load_osm_data = [&] {
@@ -126,17 +124,24 @@ void prepare(prepare_settings const& opt) {
         [&] { return parse_osm(opt.osm_); });
   };
 
+  cista::memory_holder seq_mem;
   auto resolved_seqs = seq_cache.get(
-      [&] { return read_from_fbs(opt.seq_cache_file_); },
-      [&](auto const& rs) { write_to_fbs(rs, opt.seq_cache_file_); },
+      [&] { return read_station_sequences(opt.seq_cache_file_, seq_mem); },
+      [&](auto const& rs) { write_station_sequences(opt.seq_cache_file_, rs); },
       [&] {
+        progress_tracker->status("Load Station Sequences").out_bounds(0, 5);
+        auto sequences =
+            schedule_wrapper{opt.schedule_}.load_station_sequences();
+        filter_sequences(opt.filter_, sequences);
+
         load_osm_data();  // load only if resolve_sequences runs!
         LOG(ml::info) << "OSM DATA: " << osm_data_ptr->stop_positions_.size()
                       << " stop positions, " << osm_data_ptr->plattforms_.size()
                       << " plattforms, " << osm_data_ptr->profiles_.size()
                       << " profiles";
 
-        progress_tracker->status("Load Station Sequences");
+        progress_tracker->status("Prepare Stations");
+        auto stations = collect_stations(sequences);
         annotate_stop_positions(*osm_data_ptr, stations);
 
         LOG(ml::info) << "processing " << sequences.size()
@@ -147,10 +152,11 @@ void prepare(prepare_settings const& opt) {
         auto routing = make_path_routing(stations, *osm_data_ptr, opt.osrm_);
 
         progress_tracker->status("Resolve Sequences").out_bounds(25, 90);
-        return resolve_sequences(sequences, routing);
+        return mcd::make_unique<mcd::vector<station_seq>>(
+            resolve_sequences(sequences, routing));
       });
 
-  LOG(ml::info) << "post-processing " << resolved_seqs.size()
+  LOG(ml::info) << "post-processing " << resolved_seqs->size()
                 << " station sequences";
 
   progress_tracker->status("Post Processing");
@@ -158,7 +164,7 @@ void prepare(prepare_settings const& opt) {
   post_process(post_graph);
 
   db_builder builder(opt.out_);
-  builder.store_stations(stations.stations_);
+  builder.store_stations(*post_graph.originals_);
   serialize_post_graph(post_graph, builder);
   builder.finish();
 }

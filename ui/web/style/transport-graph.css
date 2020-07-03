@@ -76,109 +76,45 @@
   align-items: center;
 }
 
-.transport-graph .train-class-0 circle {
-  fill: #9c27b0;
-}
+.transport-graph .train-class-0 circle { fill: #90a4ae; }   /* AIR   */
+.transport-graph .train-class-1 circle { fill: #9c27b0; }   /* ICE   */
+.transport-graph .train-class-2 circle { fill: #e91e63; }   /* IC    */
+.transport-graph .train-class-3 circle { fill: #9ccc65; }   /* COACH */
+.transport-graph .train-class-4 circle { fill: #1a237e; }   /* N     */
+.transport-graph .train-class-5 circle,                       /* RE    */
+.transport-graph .train-class-6 circle { fill: #f44336; }   /* RB    */
+.transport-graph .train-class-7 circle { fill: #4caf50; }   /* S     */
+.transport-graph .train-class-8 circle { fill: #3f51b5; }   /* U     */
+.transport-graph .train-class-9 circle,                       /* STR   */
+.transport-graph .train-class-10 circle { fill: #ff9800; }  /* BUS   */
+.transport-graph .train-class-11 circle { fill: #00acc1; }  /* SHIP  */
+.transport-graph .train-class-12 circle { fill: #9e9e9e; }  /* OTHER */
 
-.transport-graph .train-class-1 circle {
-  fill: #e91e63;
-}
+.transport-graph .train-class-walk circle { fill: #333; }
+.transport-graph .train-class-bike circle { fill: #333; }
+.transport-graph .train-class-car circle { fill: #333; }
 
-.transport-graph .train-class-2 circle {
-  fill: #1a237e;
-}
+.transport-graph .train-class-0 line { stroke: #90a4ae; }   /* AIR   */
+.transport-graph .train-class-1 line { stroke: #9c27b0; }   /* ICE   */
+.transport-graph .train-class-2 line { stroke: #e91e63; }   /* IC    */
+.transport-graph .train-class-3 line { stroke: #9ccc65; }   /* COACH */
+.transport-graph .train-class-4 line { stroke: #1a237e; }   /* N     */
+.transport-graph .train-class-5 line,                       /* RE    */
+.transport-graph .train-class-6 line { stroke: #f44336; }   /* RB    */
+.transport-graph .train-class-7 line { stroke: #4caf50; }   /* S     */
+.transport-graph .train-class-8 line { stroke: #3f51b5; }   /* U     */
+.transport-graph .train-class-9 line,                       /* STR   */
+.transport-graph .train-class-10 line { stroke: #ff9800; }  /* BUS   */
+.transport-graph .train-class-11 line { stroke: #00acc1; }  /* SHIP  */
+.transport-graph .train-class-12 line { stroke: #9e9e9e; }  /* OTHER */
 
-.transport-graph .train-class-3 circle,
-.transport-graph .train-class-4 circle {
-  fill: #f44336;
-}
+.transport-graph .train-class-walk line { stroke: #333;}
+.transport-graph .train-class-bike line { stroke: #333;}
+.transport-graph .train-class-car line { stroke: #333;}
 
-.transport-graph .train-class-5 circle {
-  fill: #4caf50;
-}
-
-.transport-graph .train-class-6 circle {
-  fill: #3f51b5;
-}
-
-.transport-graph .train-class-7 circle,
-.transport-graph .train-class-8 circle {
-  fill: #ff9800;
-}
-
-.transport-graph .train-class-9 circle {
-  fill: #9e9e9e;
-}
-
-.transport-graph .train-class-walk circle {
-  fill: #333;
-}
-
-.transport-graph .train-class-bike circle {
-  fill: #333;
-}
-
-.transport-graph .train-class-car circle {
-  fill: #333;
-}
-
-.transport-graph .train-class-0 line {
-  stroke: #9c27b0;
-}
-
-.transport-graph .train-class-1 line {
-  stroke: #e91e63;
-}
-
-.transport-graph .train-class-2 line {
-  stroke: #1a237e;
-}
-
-.transport-graph .train-class-3 line,
-.transport-graph .train-class-4 line {
-  stroke: #f44336;
-}
-
-.transport-graph .train-class-5 line {
-  stroke: #4caf50;
-}
-
-.transport-graph .train-class-6 line {
-  stroke: #3f51b5;
-}
-
-.transport-graph .train-class-7 line,
-.transport-graph .train-class-8 line {
-  stroke: #ff9800;
-}
-
-.transport-graph .train-class-9 line {
-  stroke: #9e9e9e;
-}
-
-.transport-graph .train-class-walk line {
-  stroke: #333;
-}
-
-.transport-graph .train-class-bike line {
-  stroke: #333;
-}
-
-.transport-graph .train-class-car line {
-  stroke: #333;
-}
-
-.transport-graph .train-class-walk.acc-0 .train-icon {
-  fill: #00ff00;
-}
-
-.transport-graph .train-class-walk.acc-1 .train-icon {
-  fill: #ffff00;
-}
-
-.transport-graph .train-class-walk.acc-2 .train-icon {
-  fill: #ff4a54;
-}
+.transport-graph .train-class-walk.acc-0 .train-icon { fill: #00ff00; }
+.transport-graph .train-class-walk.acc-1 .train-icon { fill: #ffff00; }
+.transport-graph .train-class-walk.acc-2 .train-icon { fill: #ff4a54; }
 
 .transport-graph .part.highlighted {
 
