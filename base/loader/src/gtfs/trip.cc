@@ -24,6 +24,10 @@ namespace motis::loader::gtfs {
 
 std::vector<std::pair<std::vector<trip*>, bitfield>> block::rule_services() {
   utl::verify(!trips_.empty(), "empty block not allowed");
+  utl::verify(
+      std::none_of(begin(trips_), end(trips_),
+                   [](trip const* t) { return t->stop_times_.empty(); }),
+      "invalid trip with no stop times");
   std::sort(begin(trips_), end(trips_), [](trip const* a, trip const* b) {
     return a->stop_times_.front().dep_.time_ <
            b->stop_times_.front().dep_.time_;
