@@ -130,8 +130,6 @@ int trip::avg_speed() const {
     travel_distance += geo::distance(dep.stop_->coord_, arr.stop_->coord_);
   }
 
-  std::clog << travel_distance << " " << travel_time << std::endl;
-
   return travel_time > 0 ? (travel_distance / 1000.) / (travel_time / 60.) : 0;
 }
 

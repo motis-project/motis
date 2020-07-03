@@ -214,7 +214,6 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
       if ((cat->output_rule_ & category::output::BASIC_ROUTE_TYPE) ==
           category::output::BASIC_ROUTE_TYPE) {
         if (cat->name_ == "DPN") {
-          std::clog << t->avg_speed() << std::endl;
           if (t->avg_speed() > 100) {
             cat->name_ = "High Speed Rail";
           } else if (t->distance() > 400) {
