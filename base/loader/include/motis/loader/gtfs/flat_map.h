@@ -21,6 +21,9 @@ struct flat_map {
     }
   };
 
+  size_t size() const { return elements_.size(); }
+  bool empty() const { return elements_.empty(); }
+
   std::vector<T> to_vector() {
     return utl::to_vec(elements_, [](entry_t const& el) { return el.second; });
   }
