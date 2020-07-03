@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <random>
 
 #include "motis/paxmon/passenger_group.h"
@@ -24,7 +25,7 @@ struct fixed_acceptance {
       auto const recommended_index = recommended.value();
       for (auto i = 0ULL; i < alternatives.size(); ++i) {
         if (i != recommended_index) {
-          scores[i] = 0.0;
+          scores[i] = std::numeric_limits<double>::max();
         }
       }
     }
