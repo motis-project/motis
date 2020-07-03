@@ -210,9 +210,10 @@ struct db_builder::impl {
   void update_boxes(mcd::vector<mcd::string> const& station_ids,
                     std::vector<geo::box> const& boxes) {
     for (auto i = 0UL; i < boxes.size(); ++i) {
-      auto key = (station_ids[i] < station_ids[i + 1])
-                     ? std::make_pair(station_ids[i], station_ids[i + 1])
-                     : std::make_pair(station_ids[i + 1], station_ids[i]);
+      auto key =
+          (station_ids[i] < station_ids[i + 1])
+              ? std::pair{station_ids[i].str(), station_ids[i + 1].str()}
+              : std::pair{station_ids[i + 1].str(), station_ids[i].str()};
 
       utl::get_or_create(boxes_, key, [] {
         return geo::box{};
@@ -343,7 +344,7 @@ struct db_builder::impl {
   size_t db_cache_size_{0};
   std::vector<std::pair<std::string, std::string>> db_cache_;
 
-  mcd::hash_map<std::pair<mcd::string, mcd::string>, geo::box> boxes_;
+  mcd::hash_map<std::pair<std::string, std::string>, geo::box> boxes_;
 };
 
 db_builder::db_builder(std::string const& fname)
