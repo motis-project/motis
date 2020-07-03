@@ -15,8 +15,10 @@ using namespace motis::logging;
 
 namespace motis::paxmon::loader::journeys {
 
-void load_journeys(schedule const& sched, paxmon_data& data,
-                   std::string const& journey_file) {
+std::size_t load_journeys(schedule const& sched, paxmon_data& data,
+                          std::string const& journey_file) {
+  std::size_t journey_count = 0;
+
   auto add_journey = [&](journey const& j, std::uint64_t primary_ref = 0,
                          std::uint64_t secondary_ref = 0) {
     auto const id =
@@ -25,6 +27,7 @@ void load_journeys(schedule const& sched, paxmon_data& data,
         std::make_unique<passenger_group>(
             passenger_group{to_compact_journey(j, sched), 1, id,
                             data_source{primary_ref, secondary_ref}}));
+    ++journey_count;
   };
 
   auto line_nr = 0ULL;
@@ -55,6 +58,8 @@ void load_journeys(schedule const& sched, paxmon_data& data,
           << "invalid message: " << e.what() << ": line " << line_nr;
     }
   });
+
+  return journey_count;
 }
 
 }  // namespace motis::paxmon::loader::journeys

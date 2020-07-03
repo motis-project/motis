@@ -20,6 +20,7 @@
 #include "motis/paxmon/build_graph.h"
 #include "motis/paxmon/data_key.h"
 #include "motis/paxmon/graph_access.h"
+#include "motis/paxmon/loader/csv/csv_journeys.h"
 #include "motis/paxmon/loader/journeys/motis_journeys.h"
 #include "motis/paxmon/localization.h"
 #include "motis/paxmon/messages.h"
@@ -37,7 +38,7 @@ using namespace motis::rt;
 namespace motis::paxmon {
 
 paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
-  param(journey_file_, "journeys", "routing responses");
+  param(journey_files_, "journeys", "csv journeys or routing responses");
   param(capacity_files_, "capacity", "train capacities");
   param(stats_file_, "stats", "statistics file");
   param(start_time_, "start_time", "evaluation start time");
@@ -101,22 +102,38 @@ void paxmon::init(motis::module::registry& reg) {
       ctx::access_t::WRITE);
 }
 
+std::size_t paxmon::load_journeys(std::string const& file) {
+  auto const journey_path = fs::path{file};
+  if (!fs::exists(journey_path)) {
+    LOG(warn) << "journey file not found: " << file;
+    return 0;
+  }
+  auto const& sched = get_schedule();
+  std::size_t loaded = 0;
+  if (journey_path.extension() == ".txt") {
+    scoped_timer journey_timer{"load motis journeys"};
+    loaded = loader::journeys::load_journeys(sched, data_, file);
+  } else if (journey_path.extension() == ".csv") {
+    scoped_timer journey_timer{"load csv journeys"};
+    loaded = loader::csv::load_journeys(sched, data_, file);
+  } else {
+    LOG(logging::error) << "paxmon: unknown journey file type: " << file;
+  }
+  LOG(loaded != 0 ? info : warn)
+      << "loaded " << loaded << " journeys from " << file;
+  return loaded;
+}
+
 void paxmon::load_journeys() {
   auto const& sched = get_schedule();
 
-  auto const journey_path = fs::path{journey_file_};
-  if (!fs::exists(journey_path)) {
-    LOG(warn) << "journey file not found: " << journey_file_;
+  if (journey_files_.empty()) {
+    LOG(warn) << "paxmon: no journey files specified";
     return;
   }
-  if (journey_path.extension() == ".txt") {
-    scoped_timer journey_timer{"load motis journeys"};
-    LOG(info) << "paxmon: loading motis journeys from file: " << journey_file_;
-    loader::journeys::load_journeys(sched, data_, journey_file_);
-  } else {
-    LOG(logging::error) << "paxmon: unknown journey file type: "
-                        << journey_file_;
-    return;
+
+  for (auto const& file : journey_files_) {
+    load_journeys(file);
   }
 
   auto build_stats = build_graph_from_journeys(sched, data_);

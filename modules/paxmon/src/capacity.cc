@@ -14,7 +14,10 @@
 #include "motis/core/common/logging.h"
 #include "motis/core/access/station_access.h"
 
+#include "motis/paxmon/util/get_station_idx.h"
+
 using namespace motis::logging;
+using namespace motis::paxmon::util;
 
 namespace motis::paxmon {
 
@@ -29,18 +32,6 @@ struct row {
   utl::csv_col<std::time_t, UTL_NAME("arrival")> arrival_;
   utl::csv_col<std::uint16_t, UTL_NAME("seats")> seats_;
 };
-
-std::uint32_t get_station_idx(schedule const& sched, std::string_view id) {
-  if (id.empty()) {
-    return 0;
-  } else if (auto const st = find_station(sched, id); st != nullptr) {
-    return st->index_;
-  } else if (auto const it = sched.ds100_to_station_.find(id);
-             it != end(sched.ds100_to_station_)) {
-    return it->second->index_;
-  }
-  return 0;
-}
 
 };  // namespace
 
@@ -57,9 +48,9 @@ std::size_t load_capacities(schedule const& sched,
       | utl::for_each([&](auto&& row) {
           if (row.train_nr_ != 0) {
             auto const from_station_idx =
-                get_station_idx(sched, row.from_.val().view());
+                get_station_idx(sched, row.from_.val().view()).value_or(0);
             auto const to_station_idx =
-                get_station_idx(sched, row.to_.val().view());
+                get_station_idx(sched, row.to_.val().view()).value_or(0);
             time departure = row.departure_.val() != 0
                                  ? unix_to_motistime(sched.schedule_begin_,
                                                      row.departure_.val())
