@@ -83,8 +83,11 @@ struct path_database_query_test : public ::testing::Test {
       std::vector<tiles::fixed_coord_t> const& geometry) {
     auto const line =
         utl::to_vec(geometry, [](auto x) { return fixed_x_to_latlng(x); });
-    return builder.add_feature(line, {}, {motis::service_class::OTHER}, false,
-                               0.);
+
+    // don't inline this: MSVC miscompiles(?!) in release mode
+    mcd::vector<m::service_class> classes;
+    classes.push_back(m::service_class::OTHER);
+    return builder.add_feature(line, {}, classes, false, 0.);
   }
 
   static void add_seq(mp::db_builder& builder, size_t idx,
