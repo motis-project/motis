@@ -19,19 +19,28 @@ namespace motis {
 
 constexpr auto kMaxValidTrainNr = 99999;
 
-enum {
-  MOTIS_ICE = 0,
-  MOTIS_IC = 1,
-  MOTIS_N = 2,
-  MOTIS_RE = 3,
-  MOTIS_RB = 4,
-  MOTIS_S = 5,
-  MOTIS_U = 6,
-  MOTIS_STR = 7,
-  MOTIS_BUS = 8,
-  MOTIS_X = 9,
+using service_class_t = uint8_t;
+
+enum class service_class : service_class_t {
+  AIR = 0,
+  ICE = 1,
+  IC = 2,
+  COACH = 3,
+  N = 4,
+  RE = 5,
+  RB = 6,
+  S = 7,
+  U = 8,
+  STR = 9,
+  BUS = 10,
+  SHIP = 11,
+  OTHER = 12,
   NUM_CLASSES
 };
+
+inline service_class& operator++(service_class& c) {
+  return c = static_cast<service_class>(static_cast<service_class_t>(c) + 1);
+}
 
 struct connection_info {
   CISTA_COMPARABLE();
@@ -50,7 +59,7 @@ struct connection {
   ptr<connection_info const> con_info_{nullptr};
   uint16_t price_{0U};
   uint16_t d_track_{0U}, a_track_{0U};
-  uint8_t clasz_{0U};
+  service_class clasz_{service_class::AIR};  // service_class 0
 };
 
 struct light_connection {

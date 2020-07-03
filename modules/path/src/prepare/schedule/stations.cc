@@ -3,17 +3,19 @@
 #include "utl/get_or_create.h"
 #include "utl/to_vec.h"
 
+#include "motis/hash_map.h"
+
 namespace motis::path {
 
-station_index collect_stations(std::vector<station_seq> const& seqs) {
-  std::map<std::string, station> stations;
+station_index collect_stations(mcd::vector<station_seq> const& seqs) {
+  mcd::hash_map<mcd::string, station> stations;
   for (auto const& seq : seqs) {
     utl::verify(seq.station_ids_.size() == seq.coordinates_.size(),
                 "invalid seq!");
     for (auto i = 0ULL; i < seq.station_ids_.size(); ++i) {
       utl::get_or_create(stations, seq.station_ids_[i], [&] {
-        return station{seq.station_ids_[i],  //
-                       seq.station_names_[i],  //
+        return station{seq.station_ids_[i].str(),  //
+                       seq.station_names_[i].str(),  //
                        seq.coordinates_[i]};
       }).classes_.insert(begin(seq.classes_), end(seq.classes_));
     }

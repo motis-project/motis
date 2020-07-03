@@ -278,16 +278,19 @@ RailViz.Trains = (function () {
 
   class ColorAttributes {
     categoryColors = [
-      [0x9c, 0x27, 0xb0], // 0
-      [0xe9, 0x1e, 0x63], // 1
-      [0x1a, 0x23, 0x7e], // 2
-      [0xf4, 0x43, 0x36], // 3
-      [0xf4, 0x43, 0x36], // 4
-      [0x4c, 0xaf, 0x50], // 5
-      [0x3f, 0x51, 0xb5], // 6
-      [0xf5, 0x7c, 0x00], // 7 : long-distance busses
-      [0xff, 0x98, 0x00], // 8 : short-distance busses
-      [0x9e, 0x9e, 0x9e], // 9
+      [0x90, 0xa4, 0xae], //  0 : AIR
+      [0x9c, 0x27, 0xb0], //  1 : ICE
+      [0xe9, 0x1e, 0x63], //  2 : IC
+      [0x9c, 0xcc, 0x65], //  3 : COACH
+      [0x1a, 0x23, 0x7e], //  4 : N
+      [0xf4, 0x43, 0x36], //  5 : RE
+      [0xf4, 0x43, 0x36], //  6 : RB
+      [0x4c, 0xaf, 0x50], //  7 : S
+      [0x3f, 0x51, 0xb5], //  8 : U
+      [0xf5, 0x7c, 0x00], //  9 : long-distance busses + str
+      [0xff, 0x98, 0x00], // 10 : short-distance busses + str
+      [0x00, 0xac, 0xc1], // 11 : SHIP
+      [0x9e, 0x9e, 0x9e], // 12 : OTHER
     ];
 
     constructor(gl, program) {
@@ -338,11 +341,11 @@ RailViz.Trains = (function () {
     }
 
     getCategoryColor(train) {
-      if (train.clasz == 7 || train.clasz == 8) {
+      if (train.clasz == 9 || train.clasz == 10) {
         if (train.route_distance > 10_000) {
-          return this.categoryColors[7];
+          return this.categoryColors[9];
         } else {
-          return this.categoryColors[8];
+          return this.categoryColors[10];
         }
       } else {
         return this.categoryColors[train.clasz];

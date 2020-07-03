@@ -40,10 +40,10 @@ struct strategy_timing {
 };
 
 struct seq_timing {
-  seq_timing(motis_clasz_t min_clasz, int64_t graph_mys, int64_t route_mys)
+  seq_timing(service_class min_clasz, int64_t graph_mys, int64_t route_mys)
       : min_clasz_{min_clasz}, graph_mys_{graph_mys}, route_mys_{route_mys} {}
 
-  motis_clasz_t min_clasz_;
+  service_class min_clasz_;
   int64_t graph_mys_;
   int64_t route_mys_;
 };
@@ -190,8 +190,10 @@ private:
           return a.min_clasz_ == b.min_clasz_;
         },
         [&](auto lb, auto ub) {
-          auto& graph_vec = seq_graph_timings_[lb->min_clasz_];
-          auto& route_vec = seq_route_timings_[lb->min_clasz_];
+          auto& graph_vec =
+              seq_graph_timings_[static_cast<service_class_t>(lb->min_clasz_)];
+          auto& route_vec =
+              seq_route_timings_[static_cast<service_class_t>(lb->min_clasz_)];
           for (auto it = lb; it != ub; ++it) {
             graph_vec.push_back(it->graph_mys_);
             route_vec.push_back(it->route_mys_);

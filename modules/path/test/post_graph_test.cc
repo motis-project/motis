@@ -20,13 +20,18 @@ namespace mp = motis::path;
     EXPECT_EQ((a), (rpp).first->to_->id_.osm_id_);   \
   }
 
-mp::resolved_station_seq make_resolved_cls_seq(
-    std::vector<mp::motis_clasz_t> const& classes,
+mp::station_seq make_resolved_cls_seq(
+    mcd::vector<motis::service_class> const& classes,
     mcd::vector<mcd::vector<int64_t>> const& paths) {
-  return mp::resolved_station_seq{
-      utl::repeat_n(std::string{}, paths.size() + 1),
+  return mp::station_seq{
+      utl::repeat_n<mcd::string, mcd::vector<mcd::string>>(mcd::string{},
+                                                           paths.size() + 1),
+      utl::repeat_n<mcd::string, mcd::vector<mcd::string>>(mcd::string{},
+                                                           paths.size() + 1),
+      utl::repeat_n<geo::latlng, mcd::vector<geo::latlng>>(geo::latlng{},
+                                                           paths.size() + 1),
       classes,
-      utl::to_vec(paths,
+      mcd::to_vec(paths,
                   [](auto const& p) -> mp::osm_path {
                     return {mcd ::to_vec(p,
                                          [](double e) {
@@ -34,16 +39,19 @@ mp::resolved_station_seq make_resolved_cls_seq(
                                          }),
                             p};
                   }),
-      {}};
+      {},
+      0.F};
 }
 
-mp::resolved_station_seq make_resolved_seq(
+mp::station_seq make_resolved_seq(
     mcd::vector<mcd::vector<int64_t>> const& paths) {
-  return make_resolved_cls_seq({0}, paths);
+  return make_resolved_cls_seq({motis::service_class::OTHER}, paths);
 }
 
 TEST(post_graph, simple) {
-  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 2}, {2, 3, 4, 5}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{
+          make_resolved_seq({{0, 1, 2}, {2, 3, 4, 5}})}));
 
   ASSERT_EQ(6, g.nodes_.size());
   ASSERT_EQ(1, g.segment_ids_.size());
@@ -68,8 +76,9 @@ TEST(post_graph, simple) {
 }
 
 TEST(post_graph, split_fwd) {
-  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 2, 3}}),
-                                 make_resolved_seq({{0, 1, 2, 4, 5}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{0, 1, 2, 3}}),
+                                   make_resolved_seq({{0, 1, 2, 4, 5}})}));
 
   ASSERT_EQ(6, g.nodes_.size());
   ASSERT_EQ(2, g.segment_ids_.size());
@@ -101,8 +110,9 @@ TEST(post_graph, split_fwd) {
 }
 
 TEST(post_graph, split_bwd) {
-  auto g = mp::build_post_graph(
-      {make_resolved_seq({{2, 1, 0}}), make_resolved_seq({{3, 1, 0}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{2, 1, 0}}),
+                                   make_resolved_seq({{3, 1, 0}})}));
 
   ASSERT_EQ(4, g.nodes_.size());
   ASSERT_EQ(2, g.segment_ids_.size());
@@ -134,8 +144,9 @@ TEST(post_graph, split_bwd) {
 }
 
 TEST(post_graph, reverse) {
-  auto g = mp::build_post_graph(
-      {make_resolved_seq({{0, 1, 2}}), make_resolved_seq({{2, 1, 0}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{0, 1, 2}}),
+                                   make_resolved_seq({{2, 1, 0}})}));
 
   ASSERT_EQ(3, g.nodes_.size());
   ASSERT_EQ(2, g.segment_ids_.size());
@@ -161,8 +172,9 @@ TEST(post_graph, reverse) {
 }
 
 TEST(post_graph, reverse_partial) {
-  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 2, 3, 4, 5, 6}}),
-                                 make_resolved_seq({{7, 4, 3, 2, 8}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{0, 1, 2, 3, 4, 5, 6}}),
+                                   make_resolved_seq({{7, 4, 3, 2, 8}})}));
 
   ASSERT_EQ(9, g.nodes_.size());
   ASSERT_EQ(2, g.segment_ids_.size());
@@ -200,8 +212,9 @@ TEST(post_graph, reverse_partial) {
 }
 
 TEST(post_graph, inside) {
-  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 2, 3, 4, 5, 6}}),
-                                 make_resolved_seq({{2, 3, 4}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{0, 1, 2, 3, 4, 5, 6}}),
+                                   make_resolved_seq({{2, 3, 4}})}));
 
   ASSERT_EQ(7, g.nodes_.size());
   ASSERT_EQ(2, g.segment_ids_.size());
@@ -233,8 +246,9 @@ TEST(post_graph, inside) {
 }
 
 TEST(post_graph, inside_reverse) {
-  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 2, 3, 4, 5, 6}}),
-                                 make_resolved_seq({{4, 3, 2}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{0, 1, 2, 3, 4, 5, 6}}),
+                                   make_resolved_seq({{4, 3, 2}})}));
 
   ASSERT_EQ(7, g.nodes_.size());
   ASSERT_EQ(2, g.segment_ids_.size());
@@ -266,8 +280,9 @@ TEST(post_graph, inside_reverse) {
 }
 
 TEST(post_graph, cross) {
-  auto g = mp::build_post_graph(
-      {make_resolved_seq({{0, 1, 2}}), make_resolved_seq({{3, 1, 4}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{0, 1, 2}}),
+                                   make_resolved_seq({{3, 1, 4}})}));
 
   ASSERT_EQ(5, g.nodes_.size());
   ASSERT_EQ(2, g.segment_ids_.size());
@@ -296,7 +311,8 @@ TEST(post_graph, self_loop_short) {
   // actually, this does not make that much sense in reality:
   // on the map 1 - 2 - 1 would just be a spike
   // -> adjacent nodes are connected by direct liness
-  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 2, 1, 3}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{0, 1, 2, 1, 3}})}));
 
   ASSERT_EQ(4, g.nodes_.size());
   ASSERT_EQ(1, g.segment_ids_.size());
@@ -323,7 +339,8 @@ TEST(post_graph, self_loop_short) {
 }
 
 TEST(post_graph, self_loop_long) {
-  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 2, 3, 1, 4}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{0, 1, 2, 3, 1, 4}})}));
 
   ASSERT_EQ(5, g.nodes_.size());
   ASSERT_EQ(1, g.segment_ids_.size());
@@ -348,7 +365,8 @@ TEST(post_graph, self_loop_long) {
 
 TEST(post_graph, self_loop_short_suffix) {
   // makes no sense, should still work
-  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 2, 1}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{0, 1, 2, 1}})}));
 
   ASSERT_EQ(3, g.nodes_.size());
   ASSERT_EQ(1, g.segment_ids_.size());
@@ -372,7 +390,8 @@ TEST(post_graph, self_loop_short_suffix) {
 }
 
 TEST(post_graph, self_loop_long_suffix) {
-  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 2, 3, 1}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{0, 1, 2, 3, 1}})}));
 
   ASSERT_EQ(4, g.nodes_.size());
   ASSERT_EQ(1, g.segment_ids_.size());
@@ -394,7 +413,8 @@ TEST(post_graph, self_loop_long_suffix) {
 
 TEST(post_graph, self_loop_full_short) {
   // makes no sense, should still work
-  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 0}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{0, 1, 0}})}));
 
   ASSERT_EQ(2, g.nodes_.size());
   ASSERT_EQ(1, g.segment_ids_.size());
@@ -410,7 +430,8 @@ TEST(post_graph, self_loop_full_short) {
 
 TEST(post_graph, self_loop_start_long) {
   // makes no sense, should still work
-  auto g = mp::build_post_graph({make_resolved_seq({{0, 1, 2, 0}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{0, 1, 2, 0}})}));
 
   ASSERT_EQ(3, g.nodes_.size());
   ASSERT_EQ(1, g.segment_ids_.size());
@@ -425,7 +446,8 @@ TEST(post_graph, self_loop_start_long) {
 }
 
 TEST(post_graph, no_path) {
-  auto g = mp::build_post_graph({make_resolved_seq({{0, 0}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{0, 0}})}));
 
   ASSERT_EQ(1, g.nodes_.size());
   ASSERT_EQ(1, g.segment_ids_.size());
@@ -440,7 +462,8 @@ TEST(post_graph, no_path) {
 }
 
 TEST(post_graph, invalid_path) {
-  auto g = mp::build_post_graph({make_resolved_seq({{}})});
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{make_resolved_seq({{}})}));
 
   ASSERT_EQ(0, g.nodes_.size());
   ASSERT_EQ(1, g.segment_ids_.size());
@@ -454,9 +477,13 @@ TEST(post_graph, invalid_path) {
   }
 }
 
-TEST(post_graph, revese_path_min_class) {
-  auto g = mp::build_post_graph({make_resolved_cls_seq({4, 5}, {{0, 1, 2}}),
-                                 make_resolved_cls_seq({3}, {{2, 1, 0}})});
+TEST(post_graph, reverse_path_min_class) {
+  auto g = mp::build_post_graph(mcd::make_unique<mcd::vector<mp::station_seq>>(
+      mcd::vector<mp::station_seq>{
+          make_resolved_cls_seq(
+              {motis::service_class::RE, motis::service_class::RB},
+              {{0, 1, 2}}),
+          make_resolved_cls_seq({motis::service_class::S}, {{2, 1, 0}})}));
 
   mp::post_process(g);
   ASSERT_EQ(1, g.atomic_paths_.size());
@@ -468,5 +495,8 @@ TEST(post_graph, revese_path_min_class) {
   auto const& [seq_segs, classes] = index.resolve_atomic_path(ap);
 
   EXPECT_EQ((std::vector<mp::seq_seg>{{0, 0}, {1, 0}}), seq_segs);
-  EXPECT_EQ((std::vector<mp::motis_clasz_t>{3, 4, 5}), classes);
+  EXPECT_EQ((mcd::vector<motis::service_class>{motis::service_class::RE,
+                                               motis::service_class::RB,
+                                               motis::service_class::S}),
+            classes);
 }

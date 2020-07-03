@@ -23,37 +23,46 @@ import motis.Walk;
 
 public class JourneyUtil {
     public static final LongSparseArray<Integer> colors = new LongSparseArray<>();
+    public static final int WALK_CLASS = 13;
 
     static {
-        colors.put(0, R.color.md_purple500);
-        colors.put(1, R.color.md_pink500);
-        colors.put(2, R.color.md_indigo900);
-        colors.put(3, R.color.md_red500);
-        colors.put(4, R.color.md_red500);
-        colors.put(5, R.color.md_green500);
-        colors.put(6, R.color.md_indigo500);
-        colors.put(7, R.color.md_orange500);
-        colors.put(8, R.color.md_orange500);
-        colors.put(9, R.color.md_grey500);
-        colors.put(10, R.color.md_grey800);
+        colors.put(0, R.color.class_air);
+        colors.put(1, R.color.class_ice);
+        colors.put(2, R.color.class_ic);
+        colors.put(3, R.color.class_coach);
+        colors.put(4, R.color.class_n);
+        colors.put(5, R.color.class_re);
+        colors.put(6, R.color.class_rb);
+        colors.put(7, R.color.class_s);
+        colors.put(8, R.color.class_u);
+        colors.put(9, R.color.class_str);
+        colors.put(10, R.color.class_bus);
+        colors.put(11, R.color.class_ship);
+        colors.put(12, R.color.class_other);
+        colors.put(WALK_CLASS, R.color.class_walk);
     }
 
     public static final LongSparseArray<Integer> icons = new LongSparseArray<>();
 
     static {
-        icons.put(0, R.drawable.ic_directions_railway_black_24dp);
+        icons.put(0, R.drawable.ic_baseline_flight_24);
         icons.put(1, R.drawable.ic_directions_railway_black_24dp);
         icons.put(2, R.drawable.ic_directions_railway_black_24dp);
-        icons.put(3, R.drawable.ic_directions_railway_black_24dp);
+        icons.put(3, R.drawable.ic_directions_bus_black_24dp);
         icons.put(4, R.drawable.ic_directions_railway_black_24dp);
-        icons.put(5, R.drawable.sbahn);
-        icons.put(6, R.drawable.ubahn);
-        icons.put(7, R.drawable.tram);
-        icons.put(10, R.drawable.walk);
+        icons.put(5, R.drawable.ic_directions_railway_black_24dp);
+        icons.put(6, R.drawable.ic_directions_railway_black_24dp);
+        icons.put(7, R.drawable.sbahn);
+        icons.put(8, R.drawable.ubahn);
+        icons.put(9, R.drawable.tram);
+        icons.put(10, R.drawable.ic_directions_bus_black_24dp);
+        icons.put(11, R.drawable.ic_baseline_directions_boat_24);
+        icons.put(12, R.drawable.ic_directions_bus_black_24dp);
+        icons.put(WALK_CLASS, R.drawable.walk);
     }
 
     public static int getColor(Context c, long clasz) {
-        int id = colors.get(clasz, R.color.grey_200);
+        int id = colors.get(clasz, R.color.class_other);
         return ContextCompat.getColor(c, id);
     }
 
@@ -117,7 +126,7 @@ public class JourneyUtil {
         public DisplayTransport(Walk w) {
             longName = "";
             shortName = "";
-            clasz = 10;
+            clasz = JourneyUtil.WALK_CLASS;
         }
 
         private static String getShortName(Transport t) {

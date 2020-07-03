@@ -5,6 +5,7 @@
 #include <tuple>
 #include <vector>
 
+#include "motis/core/schedule/connection.h"
 #include "motis/core/schedule/footpath.h"
 #include "motis/core/schedule/time.h"
 
@@ -28,7 +29,7 @@ struct csa_connection {
   csa_connection(uint32_t from_station, uint32_t to_station,
                  motis::time departure, motis::time arrival, uint16_t price,
                  uint32_t trip, con_idx_t trip_con_idx, bool from_in_allowed,
-                 bool to_out_allowed, uint8_t clasz,
+                 bool to_out_allowed, service_class clasz,
                  light_connection const* light_con)
       : from_station_(from_station),
         to_station_(to_station),
@@ -54,7 +55,7 @@ struct csa_connection {
   con_idx_t trip_con_idx_{0};
   bool from_in_allowed_{false};
   bool to_out_allowed_{false};
-  uint8_t clasz_{};
+  service_class clasz_{service_class::OTHER};
   light_connection const* light_con_{nullptr};
 };
 

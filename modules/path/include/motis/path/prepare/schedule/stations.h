@@ -6,7 +6,6 @@
 #include "geo/latlng.h"
 #include "geo/point_rtree.h"
 
-#include "motis/path/definitions.h"
 #include "motis/path/prepare/osm/osm_data.h"
 #include "motis/path/prepare/schedule/station_sequences.h"
 
@@ -29,7 +28,7 @@ struct station {
   std::string id_;
 
   std::string name_;
-  std::set<motis_clasz_t> classes_;
+  std::set<service_class> classes_;
 
   geo::latlng pos_;
   std::vector<geo::latlng> stop_positions_;
@@ -40,7 +39,7 @@ struct station_index {
   geo::point_rtree index_;
 };
 
-station_index collect_stations(std::vector<station_seq> const&);
+station_index collect_stations(mcd::vector<station_seq> const&);
 station_index make_station_index(std::vector<station>);
 
 void annotate_stop_positions(osm_data const&, station_index&);

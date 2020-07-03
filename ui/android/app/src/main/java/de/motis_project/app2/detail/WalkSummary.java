@@ -60,7 +60,7 @@ public class WalkSummary implements DetailViewHolder {
         layout = inflater.inflate(R.layout.detail_walk_summary, parent, false);
         ButterKnife.bind(this, layout);
 
-        JourneyUtil.setBackgroundColor(inflater.getContext(), line, 10);
+        JourneyUtil.setBackgroundColor(inflater.getContext(), line, JourneyUtil.WALK_CLASS);
 
         long dep = con.stops(section.from).departure().scheduleTime();
         long arr = con.stops(section.to).arrival().scheduleTime();

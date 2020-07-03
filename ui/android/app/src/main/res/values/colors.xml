@@ -81,4 +81,19 @@
     <color name="md_indigo900">#1a237e</color>
 
     <color name="black_alpha_40">#66000000</color>
+
+    <color name="class_air">#90a4ae</color>
+    <color name="class_ice">@color/md_purple500</color>
+    <color name="class_ic">@color/md_pink500</color>
+    <color name="class_coach">#9ccc65</color>
+    <color name="class_n">@color/md_indigo900</color>
+    <color name="class_re">@color/md_red500</color>
+    <color name="class_rb">@color/md_red500</color>
+    <color name="class_s">@color/md_green500</color>
+    <color name="class_u">@color/md_indigo500</color>
+    <color name="class_str">@color/md_orange500</color>
+    <color name="class_bus">@color/md_orange500</color>
+    <color name="class_ship">#00acc1</color>
+    <color name="class_other">@color/md_grey500</color>
+    <color name="class_walk">@color/grey_200</color>
 </resources>

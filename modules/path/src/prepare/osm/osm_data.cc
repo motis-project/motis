@@ -38,6 +38,7 @@ namespace motis::path {
 constexpr auto const CISTA_MODE =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_VERSION;
 
+auto const str_ferry = std::string_view{"ferry"};
 auto const str_platform = std::string_view{"platform"};
 auto const str_stop_position = std::string_view{"stop_position"};
 auto const str_stop = std::string_view{"stop"};
@@ -199,8 +200,7 @@ struct relation_handler : public oh::Handler, relation_way_base {
       auto osm_ways = make_osm_ways(
           utl::to_vec(way_ptrs, [](auto const& ptr) { return *ptr; }));
       if (!osm_ways.empty()) {
-        aggregate_osm_ways(osm_ways);
-        result.emplace_back(std::move(osm_ways));
+        result.emplace_back(aggregate_osm_ways(std::move(osm_ways)));
       }
     }
     return result;
@@ -223,9 +223,7 @@ struct network_handler : public oh::Handler {
   }
 
   mcd::vector<mcd::vector<osm_way>> finalize() {
-    auto osm_ways = make_osm_ways(ways_);
-    aggregate_osm_ways(osm_ways);
-    return {std::move(osm_ways)};
+    return {aggregate_osm_ways(make_osm_ways(ways_))};
   }
 
   Fn fn_;
@@ -344,6 +342,12 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
   auto net_tram = network_handler{
       [&](auto const& w) { return match_any(w, "railway", tram_incl); }};
 
+  std::vector<std::string> waterway_incl{"river", "canal"};
+  auto net_ship = network_handler{[&](auto const& w) {
+    return str_ferry == w.get_value_by_key("route", "") ||
+           match_any(w, "waterway", waterway_incl);
+  }};
+
   auto stop_positions = stop_position_handler{};
   auto plattforms = plattform_handler{};
 
@@ -376,7 +380,7 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
         progress_tracker->update(reader.offset());
         o::apply(buffer, plattforms,  //
                  rel_rail, rel_sub, rel_tram, rel_bus,  //
-                 net_rail, net_sub, net_tram);
+                 net_rail, net_sub, net_tram, net_ship);
       }
     }
 
@@ -402,6 +406,7 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
     std::for_each(begin(net_rail.ways_), end(net_rail.ways_), collect);
     std::for_each(begin(net_sub.ways_), end(net_sub.ways_), collect);
     std::for_each(begin(net_tram.ways_), end(net_tram.ways_), collect);
+    std::for_each(begin(net_ship.ways_), end(net_ship.ways_), collect);
 
     std::sort(begin(locations), end(locations));
 
@@ -418,13 +423,20 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
   auto data = mcd::make_unique<osm_data>();
   data->stop_positions_ = std::move(stop_positions.coordinates_);
   data->plattforms_ = plattforms.finalize();
-  data->profiles_[{category::RAIL, router::OSM_REL}] = rel_rail.finalize();
-  data->profiles_[{category::SUBWAY, router::OSM_REL}] = rel_sub.finalize();
-  data->profiles_[{category::TRAM, router::OSM_REL}] = rel_tram.finalize();
-  data->profiles_[{category::BUS, router::OSM_REL}] = rel_bus.finalize();
-  data->profiles_[{category::RAIL, router::OSM_NET}] = net_rail.finalize();
-  data->profiles_[{category::SUBWAY, router::OSM_NET}] = net_sub.finalize();
-  data->profiles_[{category::TRAM, router::OSM_NET}] = net_tram.finalize();
+
+  auto const finalize = [&](source_spec const ss, auto& handler) {
+    progress_tracker->status(fmt::format("Load OSM / Finalize {}", ss.str()));
+    data->profiles_[ss] = handler.finalize();
+  };
+
+  finalize({category::RAIL, router::OSM_REL}, rel_rail);
+  finalize({category::SUBWAY, router::OSM_REL}, rel_sub);
+  finalize({category::TRAM, router::OSM_REL}, rel_tram);
+  finalize({category::BUS, router::OSM_REL}, rel_bus);
+  finalize({category::RAIL, router::OSM_NET}, net_rail);
+  finalize({category::SUBWAY, router::OSM_NET}, net_sub);
+  finalize({category::TRAM, router::OSM_NET}, net_tram);
+  finalize({category::SHIP, router::OSM_NET}, net_ship);
   return data;
 }
 

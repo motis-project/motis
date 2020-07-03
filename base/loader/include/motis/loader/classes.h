@@ -3,116 +3,127 @@
 #include "motis/hash_map.h"
 #include "motis/string.h"
 
+#include "motis/core/schedule/connection.h"
+
 namespace motis::loader {
 
-inline mcd::hash_map<mcd::string, uint8_t> class_mapping() {
-  // clang-format off
+inline mcd::hash_map<mcd::string, service_class> class_mapping() {
   return {
-    // high speed
-    { "High Speed Rail", 0},
-    { "ICE", 0},
-    { "THA", 0},
-    { "TGV", 0},
-    { "RJ", 0},
+      // planes
+      {"Flug", service_class::AIR},
 
-    // long range
-    {"Long Distance Trains", 1},
-    {"Inter Regional Rail", 1},
-    {"Eurocity", 1},
-    { "EC", 1 },
-    { "IC", 1 },
-    { "EX", 1 },
-    { "EXT", 1 },
-    { "D", 1 },
-    { "IR", 1},
-    { "InterRegio", 1},
-    { "Intercity", 1},
+      // high speed
+      {"High Speed Rail", service_class::ICE},
+      {"ICE", service_class::ICE},
+      {"THA", service_class::ICE},
+      {"TGV", service_class::ICE},
+      {"RJ", service_class::ICE},
+      {"RJX", service_class::ICE},
 
-    // night trains
-    { "Sleeper Rail", 2},
-    { "CNL", 2 },
-    { "EN", 2 },
-    { "Car Transport Rail", 2},
-    { "AZ", 2 },
-    { "NJ", 2 },
+      // long range rail
+      {"Long Distance Trains", service_class::IC},
+      {"Inter Regional Rail", service_class::IC},
+      {"Eurocity", service_class::IC},
+      {"EC", service_class::IC},
+      {"IC", service_class::IC},
+      {"EX", service_class::IC},
+      {"EXT", service_class::IC},
+      {"D", service_class::IC},
+      {"InterRegio", service_class::IC},
+      {"Intercity", service_class::IC},
 
-    // fast local trains
-    { "IRE", 3 },
-    { "REX", 3 },
-    { "RE", 3 },
-    { "IR", 3 },
-    { "X", 3 },
-    { "DPX", 3 },
-    { "E", 3 },
-    { "Sp", 3 },
-    { "RegioExpress", 3},
+      // long range bus
+      {"Coach", service_class::COACH},
+      {"EXB", service_class::COACH},  // long-distance bus
 
-    // local trains
-    { "Regional Rail", 4 },
-    { "Railway Service", 4 },
-    { "Tourist Railway", 4 },
-    { "Rail Shuttle (Within Complex)", 4 },
-    { "DPN", 4 },
-    { "R", 4 },
-    { "DPF", 4 },
-    { "RB", 4 },
-    { "Os", 4 },
-    { "Regionalzug", 4 },
-    { "RZ", 4 },
-    { "CC", 4}, // narrow-gauge mountain train
+      // night trains
+      {"Sleeper Rail", service_class::N},
+      {"CNL", service_class::N},
+      {"EN", service_class::N},
+      {"Car Transport Rail", service_class::N},
+      {"AZ", service_class::N},
+      {"NJ", service_class::N},  // Night Jet
 
-    // metro
-    { "S", 5 },
-    { "S-Bahn", 5},
-    { "SB", 5 },
-    { "Metro", 5 },
-    { "Schnelles Nachtnetz", 5},
+      // fast local trains
+      {"RE", service_class::RE},
+      {"REX", service_class::RE},
+      {"IR", service_class::RE},
+      {"IRE", service_class::RE},
+      {"X", service_class::RE},
+      {"DPX", service_class::RE},
+      {"E", service_class::RE},
+      {"Sp", service_class::RE},
+      {"RegioExpress", service_class::RE},
+      {"TER", service_class::RE},  // Transport express regional
+      {"TE2", service_class::RE},  // Transport express regional
 
-    // subway
-    { "U", 6 },
-    { "STB", 6 },
-    { "M", 6 },  // subway in Lausanne
+      // local trains
+      {"Railway Service", service_class::RB},
+      {"Regional Rail", service_class::RB},
+      {"Tourist Railway", service_class::RB},
+      {"Rail Shuttle (Within Complex)", service_class::RB},
+      {"DPN", service_class::RB},
+      {"R", service_class::RB},
+      {"DPF", service_class::RB},
+      {"RB", service_class::RB},
+      {"Os", service_class::RB},
+      {"Regionalzug", service_class::RB},
+      {"RZ", service_class::RB},
+      {"CC", service_class::RB},  // narrow-gauge mountain train
+      {"PE", service_class::RB},  // Panorama Express
+      {"T", service_class::RB},
 
-    // street-car
-    { "Tram", 7 },
-    { "STR", 7 },
-    { "Str", 7 },
-    { "T", 7 },
+      // metro
+      {"S", service_class::S},
+      {"S-Bahn", service_class::S},
+      {"SB", service_class::S},
+      {"Metro", service_class::S},
+      {"Schnelles Nachtnetz", service_class::S},
+      {"SN", service_class::S},  // S-Bahn Nachtlinie
 
-    // bus
-    { "Bus", 8 },
-    { "B", 8 },
-    { "BN", 8 },
-    { "BP", 8 },
-    { "CAR", 8 },
-    { "EXB", 8 }, // long-distance bus
-    { "KB", 8 },
+      // subway
+      {"U", service_class::U},
+      {"STB", service_class::U},
+      {"M", service_class::U},  // subway in Lausanne
 
-    // other
-    { "Flug", 9 },
-    { "Schiff", 9 },
-    { "ZahnR", 9 },
-    { "Schw-B", 9 },
-    { "Fähre", 9 },
-    { "BAT", 9 }, // "bateau"
-    { "KAT", 9 },
-    { "EZ", 9 },
-    { "ALT", 9 },
-    { "AST", 9 },
-    { "RFB", 9 },
-    { "RT", 9 },
-    {"Drahtseilbahn", 9},
-    { "GB", 9 }, // ski lift?
-    {"Standseilbahn", 9},
-    {"FUN", 9}, // "funicular"
-    {"GB", 9}, // "funicular"
-    {"Sesselbahn", 9},
-    {"Taxi", 9},
-    {"Aufzug", 9},
-    {"ASC", 9}, // some elevator in Bern
-    {"Schiff", 9}
+      // street-car
+      {"Tram", service_class::STR},
+      {"STR", service_class::STR},
+      {"Str", service_class::STR},
+      {"T", service_class::STR},
+
+      // bus
+      {"Bus", service_class::BUS},
+      {"B", service_class::BUS},
+      {"BN", service_class::BUS},
+      {"BP", service_class::BUS},
+      {"CAR", service_class::BUS},
+      {"KB", service_class::BUS},
+
+      // ship
+      {"Schiff", service_class::SHIP},
+      {"Fähre", service_class::SHIP},
+      {"BAT", service_class::SHIP},  // "bateau"
+      {"KAT", service_class::SHIP},
+
+      // other
+      {"ZahnR", service_class::OTHER},
+      {"Schw-B", service_class::OTHER},
+      {"EZ", service_class::OTHER},
+      {"Taxi", service_class::OTHER},
+      {"ALT", service_class::OTHER},  // "Anruflinientaxi"
+      {"AST", service_class::OTHER},  // "Anrufsammeltaxi"
+      {"RFB", service_class::OTHER},
+      {"RT", service_class::OTHER},
+      {"GB", service_class::OTHER},  // ski lift / "funicular"?
+      {"PB", service_class::OTHER},  // also a ski lift(?)
+      {"FUN", service_class::OTHER},  // "funicular"
+      {"Drahtseilbahn", service_class::OTHER},
+      {"Standseilbahn", service_class::OTHER},
+      {"Sesselbahn", service_class::OTHER},
+      {"Aufzug", service_class::OTHER},
+      {"ASC", service_class::OTHER}  // some elevator in Bern
   };
-  // clang-format on
 }
 
 }  // namespace motis::loader

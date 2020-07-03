@@ -151,9 +151,10 @@ msg_ptr path::by_station_seq(msg_ptr const& msg) const {
   auto req = motis_content(PathByStationSeqRequest, msg);
 
   return data.get_response(
-      data.index_->find({utl::to_vec(*req->station_ids(),
-                                     [](auto const& s) { return s->str(); }),
-                         req->clasz()}),
+      data.index_->find(
+          {utl::to_vec(*req->station_ids(),
+                       [](auto const& s) { return s->str(); }),
+           service_class{static_cast<service_class>(req->clasz())}}),
       req->zoom_level());
 }
 

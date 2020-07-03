@@ -83,7 +83,11 @@ struct path_database_query_test : public ::testing::Test {
       std::vector<tiles::fixed_coord_t> const& geometry) {
     auto const line =
         utl::to_vec(geometry, [](auto x) { return fixed_x_to_latlng(x); });
-    return builder.add_feature(line, {}, {0}, false);
+
+    // don't inline this: MSVC miscompiles(?!) in release mode
+    mcd::vector<m::service_class> classes;
+    classes.push_back(m::service_class::OTHER);
+    return builder.add_feature(line, {}, classes, false, 0.);
   }
 
   static void add_seq(mp::db_builder& builder, size_t idx,
@@ -108,10 +112,11 @@ struct path_database_query_test : public ::testing::Test {
       return rle;
     });
 
-    mp::resolved_station_seq seq;
-    seq.station_ids_ = utl::repeat_n(std::string{}, feature_ids.size() + 1);
-    seq.classes_ = {0};
-    seq.paths_ = utl::to_vec(fallbacks, [](tiles::fixed_coord_t x) {
+    mp::station_seq seq;
+    seq.station_ids_ = utl::repeat_n<mcd::string, mcd::vector<mcd::string>>(
+        mcd::string{}, feature_ids.size() + 1);
+    seq.classes_ = {motis::service_class::OTHER};
+    seq.paths_ = mcd::to_vec(fallbacks, [](tiles::fixed_coord_t x) {
       return mp::osm_path{{fixed_x_to_latlng(x)}, {-1}};
     });
 

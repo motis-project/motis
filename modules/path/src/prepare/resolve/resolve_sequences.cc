@@ -135,8 +135,8 @@ struct plan_executor {
          sc::duration_cast<sc::microseconds>(stop_sg - start_sg).count(),
          sc::duration_cast<sc::microseconds>(stop_sr - start_sr).count()});
 
-    std::vector<sequence_info> infos;
-    std::vector<osm_path> paths{task.seq_->station_ids_.size() - 1};
+    mcd::vector<sequence_info> infos;
+    mcd::vector<osm_path> paths{task.seq_->station_ids_.size() - 1};
     for (auto const& [edge, new_path] : resolve_sequence(shortest_path)) {
       auto station_idx = edge->from_->station_idx_;
       if (station_idx == paths.size()) {
@@ -167,8 +167,12 @@ struct plan_executor {
                 task.seq_->station_ids_.size(), paths.size() + 1);
 
     auto const lock = std::lock_guard{resolved_seq_mutex_};
-    resolved_seq_.emplace_back(task.seq_->station_ids_, task.classes_,
-                               std::move(paths), std::move(infos));
+
+    auto cpy = *task.seq_;
+    cpy.classes_ = task.classes_;  // maybe subset!
+    cpy.paths_ = std::move(paths);
+    cpy.sequence_infos_ = std::move(infos);
+    resolved_seq_.emplace_back(std::move(cpy));
   }
 
   seq_graph build_seq_graph(seq_task const& task) {
@@ -296,15 +300,15 @@ struct plan_executor {
   std::vector<std::unique_ptr<result_cache>> result_caches_;
 
   std::mutex resolved_seq_mutex_;
-  std::vector<resolved_station_seq> resolved_seq_;
+  mcd::vector<station_seq> resolved_seq_;
 
   sc::time_point<sc::steady_clock> start_;
   execution_stats stats_;
   utl::progress_tracker_ptr progress_tracker_;
 };
 
-std::vector<resolved_station_seq> resolve_sequences(
-    std::vector<station_seq> const& sequences, path_routing& routing) {
+mcd::vector<station_seq> resolve_sequences(
+    mcd::vector<station_seq> const& sequences, path_routing& routing) {
   plan_executor executor{make_processing_plan(routing, sequences),
                          routing.get_stub_strategy()};
   executor.execute();

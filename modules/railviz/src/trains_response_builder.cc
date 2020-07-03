@@ -53,7 +53,7 @@ void trains_response_builder::resolve_paths() {
   utl::erase_duplicates(queries_);  // this sorts!
 
   if (path_data_ == nullptr) {
-    resolve_paths_fallback();
+    return resolve_paths_fallback();
   }
 
   path::path_database_query path_query{zoom_level_};
@@ -149,7 +149,8 @@ Offset<Train> trains_response_builder::write_railviz_train(
                   [&](trip const* trp) { return to_fbs(sched_, mc_, trp); });
 
   return CreateTrain(
-      mc_, mc_.CreateVector(service_names), dep.lcon()->full_con_->clasz_,
+      mc_, mc_.CreateVector(service_names),
+      static_cast<service_class_t>(dep.lcon()->full_con_->clasz_),
       q.train_.route_distance_,
       mc_.CreateString(sched_.stations_.at(dep_station_idx)->eva_nr_),
       mc_.CreateString(sched_.stations_.at(arr_station_idx)->eva_nr_),

@@ -114,8 +114,8 @@ std::uint16_t get_capacity(schedule const& sched, light_connection const& lc,
         sched.categories_[lc.full_con_->con_info_->family_]->name_;
     if (auto const it = category_map.find(category); it != end(category_map)) {
       return it->second;
-    } else if (auto const it =
-                   category_map.find(std::to_string(lc.full_con_->clasz_));
+    } else if (auto const it = category_map.find(std::to_string(
+                   static_cast<service_class_t>(lc.full_con_->clasz_)));
                it != end(category_map)) {
       return it->second;
     }

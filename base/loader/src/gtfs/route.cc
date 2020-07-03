@@ -16,14 +16,18 @@ namespace motis::loader::gtfs {
 
 // Source: https://groups.google.com/d/msg/gtfs-changes/keT5rTPS7Y0/71uMz2l6ke0J
 std::map<unsigned, category> route::s_types_ = {
-    {0, category{"Str"}},
-    {1, category{"U"}},
-    {2, category{"DPN"}},
-    {3, category{"Bus", category::output::PRINT_CATEGORY_AND_ID}},
-    {4, category{"Ferry", category::output::PRINT_CATEGORY_AND_ID}},
-    {5, category{"Str", category::output::PRINT_CATEGORY_AND_ID}},
-    {6, category{"Gondola, Suspended cable car"}},
-    {7, category{"Funicular"}},
+    {0, category{"Str", category::PRINT_ID | category::BASIC_ROUTE_TYPE}},
+    {1, category{"U", category::PRINT_ID | category::BASIC_ROUTE_TYPE}},
+    {2, category{"DPN", category::PRINT_ID | category::BASIC_ROUTE_TYPE}},
+    {3, category{"Bus", category::output::PRINT_CATEGORY_AND_ID |
+                            category::BASIC_ROUTE_TYPE}},
+    {4, category{"Ferry", category::output::PRINT_CATEGORY_AND_ID |
+                              category::BASIC_ROUTE_TYPE}},
+    {5, category{"Str", category::output::PRINT_CATEGORY_AND_ID |
+                            category::BASIC_ROUTE_TYPE}},
+    {6, category{"Gondola, Suspended cable car",
+                 category::PRINT_ID | category::BASIC_ROUTE_TYPE}},
+    {7, category{"Funicular", category::PRINT_ID | category::BASIC_ROUTE_TYPE}},
     {100, category{"Railway Service"}},
     {101, category{/* "Long Distance Trains" hack for DELFI */ "ICE",
                    category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY |

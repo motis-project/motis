@@ -19,10 +19,10 @@ struct osm_way {
   int64_t to() const { return path_.osm_node_ids_.back(); }
 
   mcd::vector<int64_t> ids_;
-  bool oneway_;
+  bool oneway_{false};
   osm_path path_;
 };
 
-void aggregate_osm_ways(mcd::vector<osm_way>& osm_ways);
+mcd::vector<osm_way> aggregate_osm_ways(mcd::vector<osm_way> osm_ways);
 
 }  // namespace motis::path

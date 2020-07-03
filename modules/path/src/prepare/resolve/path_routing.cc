@@ -13,11 +13,11 @@ namespace motis::path {
 struct path_routing::strategies {
   std::unique_ptr<stub_strategy> stub_;
   std::unique_ptr<osrm_strategy> osrm_;
-  std::unique_ptr<osm_strategy> net_rail_, net_sub_, net_tram_;
+  std::unique_ptr<osm_strategy> net_rail_, net_sub_, net_tram_, net_ship_;
   std::unique_ptr<osm_strategy> rel_rail_, rel_sub_, rel_tram_, rel_bus_;
 
   std::vector<routing_strategy*> rail_strategies_, tram_strategies_,
-      subway_strategies_, bus_strategies_;
+      subway_strategies_, bus_strategies_, ship_strategies_;
 };
 
 path_routing::path_routing()
@@ -31,6 +31,7 @@ std::vector<routing_strategy*> const& path_routing::strategies_for(
     case source_spec::category::TRAM: return strategies_->tram_strategies_;
     case source_spec::category::SUBWAY: return strategies_->subway_strategies_;
     case source_spec::category::RAIL: return strategies_->rail_strategies_;
+    case source_spec::category::SHIP: return strategies_->ship_strategies_;
     default: throw utl::fail("no strategies for this category");
   }
 }
@@ -64,6 +65,7 @@ path_routing make_path_routing(station_index const& station_idx,
   s.net_rail_ = make_osm_strategy({category::RAIL, router::OSM_NET});
   s.net_sub_ = make_osm_strategy({category::SUBWAY, router::OSM_NET});
   s.net_tram_ = make_osm_strategy({category::TRAM, router::OSM_NET});
+  s.net_ship_ = make_osm_strategy({category::SHIP, router::OSM_NET});
 
   s.rel_rail_ = make_osm_strategy({category::RAIL, router::OSM_REL});
   s.rel_sub_ = make_osm_strategy({category::SUBWAY, router::OSM_REL});
@@ -74,6 +76,7 @@ path_routing make_path_routing(station_index const& station_idx,
   s.subway_strategies_ = {s.rel_sub_.get(), s.net_sub_.get()};
   s.tram_strategies_ = {s.rel_tram_.get(), s.net_tram_.get(), s.osrm_.get()};
   s.rail_strategies_ = {s.rel_rail_.get(), s.net_rail_.get()};
+  s.ship_strategies_ = {s.net_ship_.get()};
 
   return r;
 }

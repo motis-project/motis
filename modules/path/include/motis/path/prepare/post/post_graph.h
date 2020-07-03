@@ -11,7 +11,7 @@
 #include "motis/core/common/hash_helper.h"
 
 #include "motis/path/prepare/osm_path.h"
-#include "motis/path/prepare/resolve/resolved_station_seq.h"
+#include "motis/path/prepare/schedule/station_sequences.h"
 
 namespace motis::path {
 
@@ -134,7 +134,7 @@ struct post_graph_node {
 
 struct post_graph {
   post_graph() = default;
-  explicit post_graph(std::vector<resolved_station_seq> originals)
+  explicit post_graph(mcd::unique_ptr<mcd::vector<station_seq>> originals)
       : originals_{std::move(originals)} {}
 
   ~post_graph() = default;
@@ -146,7 +146,7 @@ struct post_graph {
   post_graph& operator=(post_graph&&) noexcept = default;  // NOLINT
 
   // parallel vectors!
-  std::vector<resolved_station_seq> originals_;
+  mcd::unique_ptr<mcd::vector<station_seq>> originals_;
   std::vector<std::vector<post_segment_id>> segment_ids_;
 
   // mem

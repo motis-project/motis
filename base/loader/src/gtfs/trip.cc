@@ -1,6 +1,7 @@
 #include "motis/loader/gtfs/trip.h"
 
 #include <algorithm>
+#include <numeric>
 #include <stack>
 #include <tuple>
 
@@ -24,6 +25,10 @@ namespace motis::loader::gtfs {
 
 std::vector<std::pair<std::vector<trip*>, bitfield>> block::rule_services() {
   utl::verify(!trips_.empty(), "empty block not allowed");
+  utl::verify(
+      std::none_of(begin(trips_), end(trips_),
+                   [](trip const* t) { return t->stop_times_.empty(); }),
+      "invalid trip with no stop times");
   std::sort(begin(trips_), end(trips_), [](trip const* a, trip const* b) {
     return a->stop_times_.front().dep_.time_ <
            b->stop_times_.front().dep_.time_;
@@ -109,6 +114,35 @@ trip::stop_seq trip::stops() const {
         return {e.second.stop_, e.second.arr_.in_out_allowed_,
                 e.second.dep_.in_out_allowed_};
       });
+}
+
+int trip::avg_speed() const {
+  int travel_time = 0.;  // minutes
+  double travel_distance = 0.;  // meters
+
+  for (auto const& [dep_entry, arr_entry] : utl::pairwise(stop_times_)) {
+    auto const& dep = dep_entry.second;
+    auto const& arr = arr_entry.second;
+    if (dep.stop_->timezone_ != arr.stop_->timezone_) {
+      continue;
+    }
+    if (arr.arr_.time_ < dep.dep_.time_) {
+      continue;
+    }
+
+    travel_time += arr.arr_.time_ - dep.dep_.time_;
+    travel_distance += geo::distance(dep.stop_->coord_, arr.stop_->coord_);
+  }
+
+  return travel_time > 0 ? (travel_distance / 1000.) / (travel_time / 60.) : 0;
+}
+
+int trip::distance() const {
+  geo::box box;
+  for (auto const& [_, stop_time] : stop_times_) {
+    box.extend(stop_time.stop_->coord_);
+  }
+  return geo::distance(box.min_, box.max_) / 1000;
 }
 
 enum {

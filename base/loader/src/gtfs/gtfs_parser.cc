@@ -208,8 +208,22 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
     });
   };
 
-  auto get_or_create_category = [&](route const* r) {
+  auto get_or_create_category = [&](trip const* t) {
+    auto const* r = t->route_;
     if (auto cat = r->get_category(); cat.has_value()) {
+      if ((cat->output_rule_ & category::output::BASIC_ROUTE_TYPE) ==
+          category::output::BASIC_ROUTE_TYPE) {
+        if (cat->name_ == "DPN") {
+          if (t->avg_speed() > 100) {
+            cat->name_ = "High Speed Rail";
+          } else if (t->distance() > 400) {
+            cat->name_ = "Long Distance Trains";
+          }
+        } else if (cat->name_ == "Bus" && t->distance() > 100) {
+          cat->name_ = "Coach";
+        }
+      }
+
       if ((cat->output_rule_ &
            category::output::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY) ==
           category::output::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY) {
@@ -302,7 +316,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
         fbb.CreateString(serialize_bitset(traffic_days)),
         fbb.CreateVector(repeat_n(
             CreateSection(
-                fbb, get_or_create_category(t->route_),
+                fbb, get_or_create_category(t),
                 get_or_create_provider(t->route_->agency_),
                 !t->short_name_.empty() &&
                         std::all_of(

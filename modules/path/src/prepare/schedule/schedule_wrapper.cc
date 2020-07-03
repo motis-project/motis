@@ -24,7 +24,7 @@ schedule_wrapper::schedule_wrapper(std::string const& schedule_path) {
   schedule_buffer_ = utl::file(sched_file.string().c_str(), "r").content();
 }
 
-std::vector<station_seq> schedule_wrapper::load_station_sequences() const {
+mcd::vector<station_seq> schedule_wrapper::load_station_sequences() const {
   return motis::path::load_station_sequences(
       GetSchedule(schedule_buffer_.buf_));
 }

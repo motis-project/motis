@@ -6,6 +6,10 @@
 #include <random>
 #include <vector>
 
+#include "cista/serialization.h"
+
+#include "geo/box.h"
+
 #include "utl/concat.h"
 #include "utl/equal_ranges.h"
 #include "utl/erase_duplicates.h"
@@ -16,6 +20,7 @@
 
 #include "motis/loader/classes.h"
 
+#include "motis/path/prepare/cista_util.h"
 #include "motis/path/prepare/fbs/use_64bit_flatbuffers.h"
 
 #include "motis/schedule-format/Schedule_generated.h"
@@ -24,7 +29,10 @@ using namespace motis::logging;
 
 namespace motis::path {
 
-std::vector<station_seq> load_station_sequences(
+constexpr auto const CISTA_MODE =
+    cista::mode::WITH_INTEGRITY | cista::mode::WITH_VERSION;
+
+mcd::vector<station_seq> load_station_sequences(
     motis::loader::Schedule const* sched) {
   scoped_timer timer("loading station sequences");
 
@@ -49,13 +57,20 @@ std::vector<station_seq> load_station_sequences(
           seq.coordinates_.emplace_back(station->lat(), station->lng());
         }
       }
+
+      geo::box box;
+      for (auto const& c : seq.coordinates_) {
+        box.extend(c);
+      }
+      seq.distance_ = geo::distance(box.min_, box.max_);
+
       return seq;
     });
 
     for (auto const& section : *service->sections()) {
       auto it = mapping.find(section->category()->name()->str());
       if (it != end(mapping)) {
-        seq.classes_.emplace(it->second);
+        seq.classes_.push_back(it->second);
       }
     }
   }
@@ -63,17 +78,21 @@ std::vector<station_seq> load_station_sequences(
   auto sequences =
       utl::to_vec(seqs, [](auto const& pair) { return pair.second; });
 
-  std::vector<station_seq> result;
+  mcd::vector<station_seq> result;
   utl::equal_ranges(
       sequences,
       [](auto const& lhs, auto const& rhs) {
         return lhs.station_ids_ < rhs.station_ids_;
       },
       [&](auto const& lb, auto const& ub) {
-        auto elem = *lb;
+        auto& elem = *lb;
 
         for (auto it = std::next(lb); it != ub; ++it) {
-          elem.classes_.insert(begin(it->classes_), end(it->classes_));
+          utl::concat(elem.classes_, it->classes_);
+        }
+        utl::erase_duplicates(elem.classes_);
+        if (elem.classes_.empty()) {
+          elem.classes_.emplace_back(service_class::OTHER);
         }
 
         result.emplace_back(elem);
@@ -83,6 +102,35 @@ std::vector<station_seq> load_station_sequences(
                             << "(was: " << sequences.size() << ")";
 
   return result;
+}
+
+mcd::unique_ptr<mcd::vector<station_seq>> read_station_sequences(
+    std::string const& fname, cista::memory_holder& mem) {
+  mcd::unique_ptr<mcd::vector<station_seq>> ptr;
+  ptr.self_allocated_ = false;
+#if defined(MOTIS_SCHEDULE_MODE_OFFSET) && !defined(CLANG_TIDY)
+  mem = cista::buf<cista::mmap>(
+      cista::mmap{fname.c_str(), cista::mmap::protection::READ});
+  ptr.el_ = cista::deserialize<mcd::vector<station_seq>, CISTA_MODE>(
+      std::get<cista::buf<cista::mmap>>(mem));
+#elif defined(MOTIS_SCHEDULE_MODE_RAW) || defined(CLANG_TIDY)
+  mem = cista::file(fname.c_str(), "r").content();
+  // suppress clang-tidy false positive
+  // NOLINTNEXTLINE
+  ptr.el_ = cista::deserialize<mcd::vector<station_seq>, CISTA_MODE>(
+      std::get<cista::buffer>(mem));
+#else
+#error "no ptr mode specified"
+#endif
+  return ptr;
+}
+
+void write_station_sequences(
+    std::string const& fname,
+    mcd::unique_ptr<mcd::vector<station_seq>> const& data) {
+  auto writer = cista::buf<cista::mmap>(
+      cista::mmap{fname.c_str(), cista::mmap::protection::WRITE});
+  cista::serialize<CISTA_MODE>(writer, *data);
 }
 
 }  // namespace motis::path

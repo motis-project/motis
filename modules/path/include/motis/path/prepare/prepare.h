@@ -30,7 +30,7 @@ struct prepare_settings : public conf::configuration {
   std::string osm_cache_file_{"osm_cache.bin"};
 
   std::string seq_cache_task_{"ignore"};
-  std::string seq_cache_file_{"seq_cache.fbs"};
+  std::string seq_cache_file_{"seq_cache.bin"};
 };
 
 void prepare(prepare_settings const&);

@@ -52,7 +52,7 @@ public class FinalArrival implements DetailViewHolder {
         Connection con = conWrapper.getConnection();
         Context context = inflater.getContext();
         Transport transport = JourneyUtil.getTransport(con, section);
-        long clasz = (transport != null) ? transport.clasz() : 10;
+        long clasz = (transport != null) ? transport.clasz() : JourneyUtil.WALK_CLASS;
         JourneyUtil.setBackgroundColor(context, line, clasz);
         JourneyUtil.tintBackground(context, bullet, clasz);
 
