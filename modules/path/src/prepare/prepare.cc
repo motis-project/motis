@@ -150,7 +150,8 @@ void prepare(prepare_settings const& opt) {
                       << " unique stations.";
 
         progress_tracker->status("Make Path Routing");
-        auto routing = make_path_routing(stations, *osm_data_ptr, opt.osrm_);
+        auto routing =
+            make_path_routing(sequences, stations, *osm_data_ptr, opt.osrm_);
 
         progress_tracker->status("Resolve Sequences").out_bounds(25, 90);
         return mcd::make_unique<mcd::vector<station_seq>>(

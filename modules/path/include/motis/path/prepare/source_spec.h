@@ -63,9 +63,8 @@ struct source_spec {
   router router_;
 };
 
-template <typename Fun>
-void foreach_path_category(mcd::vector<service_class> const& classes,
-                           Fun&& fun) {
+template <typename Container, typename Fun>
+void foreach_path_category(Container const& classes, Fun&& fun) {
   mcd::vector<service_class> railway_classes, bus_classes, other_classes;
   for (auto const& clasz : classes) {
     if (clasz == service_class::SHIP) {
