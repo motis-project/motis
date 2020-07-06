@@ -104,7 +104,7 @@ struct db_builder::impl {
         auto const& [it, new_elem] = station_infos.emplace(
             id, station_info{name, pos, min_z, min_clasz});
         if (!new_elem) {
-          it->second.min_z_ = std::max(it->second.min_z_, min_z);
+          it->second.min_z_ = std::min(it->second.min_z_, min_z);
           it->second.min_clasz_ = std::min(it->second.min_clasz_, min_clasz);
         }
       }
