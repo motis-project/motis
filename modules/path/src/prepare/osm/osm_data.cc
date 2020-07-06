@@ -38,7 +38,6 @@ namespace motis::path {
 constexpr auto const CISTA_MODE =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_VERSION;
 
-auto const str_ferry = std::string_view{"ferry"};
 auto const str_platform = std::string_view{"platform"};
 auto const str_stop_position = std::string_view{"stop_position"};
 auto const str_stop = std::string_view{"stop"};
@@ -343,9 +342,10 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
       [&](auto const& w) { return match_any(w, "railway", tram_incl); }};
 
   std::vector<std::string> waterway_incl{"river", "canal"};
+  std::vector<std::string> waterway_incl_route{"ferry", "boat"};
   auto net_ship = network_handler{[&](auto const& w) {
-    return str_ferry == w.get_value_by_key("route", "") ||
-           match_any(w, "waterway", waterway_incl);
+    return match_any(w, "waterway", waterway_incl) ||
+           match_any(w, "route", waterway_incl_route);
   }};
 
   auto stop_positions = stop_position_handler{};
