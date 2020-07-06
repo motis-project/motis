@@ -44,6 +44,10 @@ struct flat_map {
     return it->second;
   }
 
+  iterator erase(const_iterator first, const_iterator last) {
+    return elements_.erase(first, last);
+  }
+
   T& front() { return elements_[0].second; }
   T& back() { return elements_[elements_.size() - 1].second; }
   T const& front() const { return elements_[0].second; }
