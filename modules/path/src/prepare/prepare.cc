@@ -133,6 +133,7 @@ void prepare(prepare_settings const& opt) {
         auto sequences =
             schedule_wrapper{opt.schedule_}.load_station_sequences();
         filter_sequences(opt.filter_, sequences);
+        utl::verify(!sequences.empty(), "sequences empty (nothing to do)!");
 
         load_osm_data();  // load only if resolve_sequences runs!
         LOG(ml::info) << "OSM DATA: " << osm_data_ptr->stop_positions_.size()
