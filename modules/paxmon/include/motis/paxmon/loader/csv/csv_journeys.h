@@ -11,6 +11,7 @@
 namespace motis::paxmon::loader::csv {
 
 std::size_t load_journeys(schedule const& sched, paxmon_data& data,
-                          std::string const& journey_file);
+                          std::string const& journey_file,
+                          std::string const& match_log_file);
 
 }  // namespace motis::paxmon::loader::csv

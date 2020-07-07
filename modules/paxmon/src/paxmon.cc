@@ -41,6 +41,7 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
   param(journey_files_, "journeys", "csv journeys or routing responses");
   param(capacity_files_, "capacity", "train capacities");
   param(stats_file_, "stats", "statistics file");
+  param(match_log_file_, "match_log", "journey match log file");
   param(start_time_, "start_time", "evaluation start time");
   param(end_time_, "end_time", "evaluation end time");
   param(time_step_, "time_step", "evaluation time step (seconds)");
@@ -115,7 +116,7 @@ std::size_t paxmon::load_journeys(std::string const& file) {
     loaded = loader::journeys::load_journeys(sched, data_, file);
   } else if (journey_path.extension() == ".csv") {
     scoped_timer journey_timer{"load csv journeys"};
-    loaded = loader::csv::load_journeys(sched, data_, file);
+    loaded = loader::csv::load_journeys(sched, data_, file, match_log_file_);
   } else {
     LOG(logging::error) << "paxmon: unknown journey file type: " << file;
   }

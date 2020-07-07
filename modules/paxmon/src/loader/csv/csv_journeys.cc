@@ -2,9 +2,12 @@
 
 #include <cstdlib>
 #include <algorithm>
+#include <fstream>
 #include <optional>
 #include <regex>
 #include <utility>
+
+#include "fmt/ostream.h"
 
 #include "utl/parser/buf_reader.h"
 #include "utl/parser/csv_range.h"
@@ -23,6 +26,18 @@
 using namespace motis::logging;
 using namespace motis::paxmon::util;
 
+namespace std {
+inline std::ostream& operator<<(
+    std::ostream& out,
+    std::optional<std::pair<std::uint64_t, std::uint64_t>> const& id) {
+  if (id) {
+    return out << id->first << "." << id->second;
+  } else {
+    return out << "-";
+  }
+}
+}  // namespace std
+
 namespace motis::paxmon::loader::csv {
 
 struct row {
@@ -38,9 +53,20 @@ struct row {
   utl::csv_col<std::uint16_t, UTL_NAME("passengers")> passengers_;
 };
 
+std::uint32_t get_train_nr(light_connection const* lc, std::uint32_t expected) {
+  auto ci = lc->full_con_->con_info_;
+  auto const first_train_nr = ci->train_nr_;
+  for (; ci != nullptr; ci = ci->merged_with_) {
+    if (ci->train_nr_ == expected) {
+      return expected;
+    }
+  }
+  return first_train_nr;
+}
+
 trip* find_trip(schedule const& sched, std::uint32_t from_station_idx,
                 std::uint32_t to_station_idx, time enter_time, time exit_time,
-                std::uint32_t /*train_nr*/) {
+                std::uint32_t train_nr) {
   auto const from_station = sched.station_nodes_.at(from_station_idx).get();
   trip* trp_found = nullptr;
   from_station->for_each_route_node([&](node const* route_node) {
@@ -48,14 +74,21 @@ trip* find_trip(schedule const& sched, std::uint32_t from_station_idx,
       if (e.type() != ::motis::edge::ROUTE_EDGE) {
         continue;
       }
-      if (auto lc = e.get_connection(enter_time);
-          lc != nullptr && lc->d_time_ == enter_time) {
+      auto const& conns = e.m_.route_edge_.conns_;
+      for (auto lc = std::lower_bound(begin(conns), end(conns),
+                                      light_connection{enter_time});
+           lc != end(conns) && lc->d_time_ == enter_time; lc = std::next(lc)) {
+        auto const current_train_nr = get_train_nr(lc, train_nr);
         for (auto trp : *sched.merged_trips_[lc->trips_]) {
           for (auto const& stop : access::stops(trp)) {
             if (stop.get_station_id() == to_station_idx && stop.has_arrival() &&
                 stop.arr_lcon().a_time_ == exit_time) {
-              trp_found = trp;
-              return;
+              if (current_train_nr == train_nr) {
+                trp_found = trp;
+                return;
+              } else if (trp_found == nullptr) {
+                trp_found = trp;
+              }
             }
           }
         }
@@ -63,6 +96,85 @@ trip* find_trip(schedule const& sched, std::uint32_t from_station_idx,
     }
   });
   return trp_found;
+}
+
+void debug_trip_match(schedule const& sched, std::uint32_t from_station_idx,
+                      std::uint32_t to_station_idx, time enter_time,
+                      time exit_time, std::uint32_t train_nr,
+                      std::string_view category, std::ofstream& match_log,
+                      duration max_time_diff = 60) {
+  auto const from_station = sched.station_nodes_.at(from_station_idx).get();
+  auto const earliest_dep = enter_time > max_time_diff
+                                ? static_cast<time>(enter_time - max_time_diff)
+                                : static_cast<time>(0);
+  auto const latest_dep = static_cast<time>(enter_time + max_time_diff);
+  auto const expected_travel_time = static_cast<int>(exit_time - enter_time);
+  match_log << "  stations: " << sched.stations_[from_station_idx]->name_
+            << " => " << sched.stations_[to_station_idx]->name_ << "\n";
+  match_log << "  possible matching trips with departure in ["
+            << format_time(earliest_dep) << ", " << format_time(latest_dep)
+            << "], expected travel_time=" << expected_travel_time << ":\n";
+  from_station->for_each_route_node([&](node const* route_node) {
+    for (auto const& e : route_node->edges_) {
+      if (e.type() != ::motis::edge::ROUTE_EDGE) {
+        continue;
+      }
+      auto const& conns = e.m_.route_edge_.conns_;
+      for (auto lc = std::lower_bound(begin(conns), end(conns),
+                                      light_connection{earliest_dep});
+           lc != end(conns); lc = std::next(lc)) {
+        if (lc->d_time_ > latest_dep) {
+          break;
+        }
+        if (lc->valid_ == 0) {
+          continue;
+        }
+        auto const current_train_nr = get_train_nr(lc, train_nr);
+        auto found_one = false;
+
+        for (auto trp : *sched.merged_trips_[lc->trips_]) {
+          for (auto const& stop : access::stops(trp)) {
+            if (stop.get_station_id() == to_station_idx && stop.has_arrival()) {
+              auto const arrival_time = stop.arr_lcon().a_time_;
+              auto const travel_time =
+                  static_cast<int>(arrival_time) - lc->d_time_;
+              if (travel_time < 0) {
+                continue;
+              }
+              if (!found_one) {
+                found_one = true;
+                auto const& current_category =
+                    sched.categories_[lc->full_con_->con_info_->family_]->name_;
+                fmt::print(
+                    match_log,
+                    "    dep={} [{:+3}], train_nr={:6} [{}], "
+                    "category={:6} [{}] =>",
+                    format_time(lc->d_time_),
+                    static_cast<int>(lc->d_time_) -
+                        static_cast<int>(enter_time),
+                    current_train_nr, current_train_nr == train_nr ? "✓" : "✗",
+                    current_category, current_category == category ? "✓" : "✗");
+              } else {
+                match_log << " |";
+              }
+              fmt::print(
+                  match_log,
+                  " arr={} [{:+3}], trip_train_nr={:6} [{}], tt={:3} [{:+3}]",
+                  format_time(arrival_time),
+                  static_cast<int>(arrival_time) - static_cast<int>(exit_time),
+                  trp->id_.primary_.get_train_nr(),
+                  trp->id_.primary_.get_train_nr() == train_nr ? "✓" : "✗",
+                  travel_time, travel_time - expected_travel_time);
+            }
+          }
+        }
+        if (found_one) {
+          match_log << "\n";
+        }
+      }
+    }
+  });
+  match_log << "\n";
 }
 
 std::optional<time> get_footpath_duration(schedule const& sched,
@@ -103,11 +215,21 @@ std::optional<transfer_info> get_transfer_info(
 }
 
 std::size_t load_journeys(schedule const& sched, paxmon_data& data,
-                          std::string const& journey_file) {
+                          std::string const& journey_file,
+                          std::string const& match_log_file) {
   std::size_t journey_count = 0;
   auto error_count = 0ULL;
+  auto trip_not_found_count = 0ULL;
+  auto station_not_found_count = 0ULL;
+  auto invalid_timestamp_count = 0ULL;
+
   auto buf = utl::file(journey_file.data(), "r").content();
   auto const file_content = utl::cstr{buf.data(), buf.size()};
+
+  std::ofstream match_log;
+  if (!match_log_file.empty()) {
+    match_log.open(match_log_file);
+  }
 
   auto current_id = std::optional<std::pair<std::uint64_t, std::uint64_t>>{};
   auto current_journey = compact_journey{};
@@ -154,9 +276,32 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
             unix_to_motistime(sched.schedule_begin_, row.enter_.val());
         auto const exit_time =
             unix_to_motistime(sched.schedule_begin_, row.exit_.val());
-        if (!from_station_idx || !to_station_idx ||
-            enter_time == INVALID_TIME || exit_time == INVALID_TIME) {
+        if (!from_station_idx || !to_station_idx) {
           current_invalid = true;
+          ++station_not_found_count;
+          if (!from_station_idx) {
+            match_log << "[" << current_id
+                      << "] Station not found: " << row.from_.val().view()
+                      << "\n";
+          }
+          if (!to_station_idx) {
+            match_log << "[" << current_id
+                      << "] Station not found: " << row.to_.val().view()
+                      << "\n";
+          }
+          return;
+        }
+        if (enter_time == INVALID_TIME || exit_time == INVALID_TIME) {
+          current_invalid = true;
+          ++invalid_timestamp_count;
+          if (enter_time == INVALID_TIME) {
+            match_log << "[" << current_id << "] Invalid enter timestamp: "
+                      << format_unix_time(row.enter_.val()) << "\n";
+          }
+          if (exit_time == INVALID_TIME) {
+            match_log << "[" << current_id << "] Invalid exit timestamp: "
+                      << format_unix_time(row.exit_.val()) << "\n";
+          }
           return;
         }
         auto const trp =
@@ -164,6 +309,22 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
                       enter_time, exit_time, row.train_nr_.val());
         if (trp == nullptr) {
           current_invalid = true;
+          ++trip_not_found_count;
+
+          if (match_log) {
+            fmt::print(match_log,
+                       "[{}] Trip not found: from={:7}, to={:7}, enter={}, "
+                       "exit={}, train_nr={:6}, category={:6}, leg={}\n",
+                       current_id, row.from_.val().view(), row.to_.val().view(),
+                       format_unix_time(row.enter_.val()),
+                       format_unix_time(row.exit_.val()), row.train_nr_.val(),
+                       row.category_.val().view(),
+                       current_journey.legs_.size());
+            debug_trip_match(sched, from_station_idx.value(),
+                             to_station_idx.value(), enter_time, exit_time,
+                             row.train_nr_.val(), row.category_.val().view(),
+                             match_log);
+          }
           return;
         }
         auto enter_transfer = get_transfer_info(
@@ -177,6 +338,9 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
 
   if (error_count > 0) {
     LOG(warn) << "could not load " << error_count << " journeys";
+    LOG(warn) << station_not_found_count << " stations not found";
+    LOG(warn) << trip_not_found_count << " trips not found";
+    LOG(warn) << invalid_timestamp_count << " invalid timestamps";
   }
 
   return journey_count;

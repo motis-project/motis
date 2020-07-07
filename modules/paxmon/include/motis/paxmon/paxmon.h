@@ -37,6 +37,7 @@ private:
   std::vector<std::string> journey_files_;
   std::vector<std::string> capacity_files_;
   std::string stats_file_{"paxmon_stats.csv"};
+  std::string match_log_file_{};
   conf::holder<std::time_t> start_time_{};
   conf::holder<std::time_t> end_time_{};
   int time_step_{60};
