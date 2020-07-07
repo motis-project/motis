@@ -120,8 +120,9 @@ void enum_trip_candidates(schedule const& sched, std::uint32_t from_station_idx,
                           duration max_time_diff,
                           std::function<bool(trip_candidate&&)> const& cb) {
   auto const from_station = sched.station_nodes_.at(from_station_idx).get();
-  auto const [earliest_dep, latest_dep] =
-      get_interval(enter_time, max_time_diff);
+  auto const dep_interval = get_interval(enter_time, max_time_diff);
+  auto const earliest_dep = dep_interval.first;
+  auto const latest_dep = dep_interval.second;
   auto const expected_travel_time = static_cast<int>(exit_time - enter_time);
   auto keep_going = true;
   from_station->for_each_route_node([&](node const* route_node) {
