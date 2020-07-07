@@ -9,23 +9,20 @@
 #include "geo/point_rtree.h"
 
 #include "utl/erase_duplicates.h"
+#include "utl/erase_if.h"
 #include "utl/get_or_create.h"
 #include "utl/pairwise.h"
 #include "utl/to_vec.h"
 
 #include "motis/hash_map.h"
 
+#include "motis/path/prepare/osm/osm_constants.h"
 #include "motis/path/prepare/osm/segment_rtree.h"
 
 namespace motis::path {
 
-constexpr auto kMatchRadius = 50;
-constexpr auto kMatchRadiusNoResult = 100;
-// constexpr auto kMatchRadius = 150; // was 50, not enough for large Stations?
-constexpr auto kStopMatchRadius = 20;
-
 // following http://www.movable-type.co.uk/scripts/latlong.html
-void located_osm_edge_phantom_with_dist::locate() {
+void osm_edge_phantom_match::locate() {
   using std::acos;
   using std::asin;
   using std::atan2;
@@ -83,16 +80,16 @@ inline bool way_idx_match(size_t const val, std::vector<size_t> const& vec) {
   return way_idx_match(vec, val);
 }
 
-inline bool dominated_with_tiebreaker(osm_node_phantom_with_dist const& self,
-                                      osm_edge_phantom_with_dist const& other) {
+inline bool dominated_with_tiebreaker(osm_node_phantom_match const& self,
+                                      osm_edge_phantom_match const& other) {
   if (std::fabs(self.distance_ - other.distance_) < .1) {
     return false;  // self=node -> undominated by other=edge
   }
   return other.distance_ < self.distance_;
 }
 
-inline bool dominated_with_tiebreaker(osm_edge_phantom_with_dist const& self,
-                                      osm_node_phantom_with_dist const& other) {
+inline bool dominated_with_tiebreaker(osm_edge_phantom_match const& self,
+                                      osm_node_phantom_match const& other) {
   if (std::fabs(self.distance_ - other.distance_) < .1) {
     return true;  // self=edge -> dominated by other=node
   }
@@ -132,29 +129,32 @@ struct osm_phantom_index {
         edge_phantoms_, [](auto const& p) { return p.segment_; });
   }
 
-  std::pair<std::vector<osm_node_phantom_with_dist>,
-            std::vector<osm_edge_phantom_with_dist>>
-  get_osm_phantoms(geo::latlng const& pos, double const radius) const {
+  std::pair<std::vector<osm_node_phantom_match>,
+            std::vector<osm_edge_phantom_match>>
+  get_osm_phantoms(station const* station, geo::latlng const& pos,
+                   double const radius) const {
     auto const nodes = utl::to_vec(
         node_phantom_rtree_.in_radius(pos, radius), [&](auto const& idx) {
-          return osm_node_phantom_with_dist(
-              node_phantoms_[idx],
-              geo::distance(pos, node_phantoms_[idx].pos_));
+          return osm_node_phantom_match{
+              .phantom_ = node_phantoms_[idx],
+              .distance_ = geo::distance(pos, node_phantoms_[idx].pos_),
+              .station_ = station};
         });
 
     std::set<size_t> ways;
-    std::vector<osm_edge_phantom_with_dist> edges;
+    std::vector<osm_edge_phantom_match> edges;
 
     auto const intersecting_edge_phantoms =
         edge_phantom_rtree_.intersects_radius_with_distance(pos, radius);
     for (auto const& [dist, idx] : intersecting_edge_phantoms) {
       auto const& phantom = edge_phantoms_[idx];
-      if (ways.find(phantom.way_idx_) != end(ways)) {
+      if (ways.insert(phantom.way_idx_).second == false) {
         continue;  // rtree: already sorted by distance
       }
-
-      ways.insert(phantom.way_idx_);
-      edges.emplace_back(osm_edge_phantom_with_dist(phantom, dist));
+      edges.push_back({.phantom_ = phantom,
+                       .distance_ = dist,
+                       .station_ = station,
+                       .station_pos_ = pos});
     }
 
     // retain only of no neighbor is better
@@ -181,65 +181,82 @@ struct osm_phantom_index {
   segment_rtree edge_phantom_rtree_;
 };
 
-std::pair<std::vector<std::pair<osm_node_phantom_with_dist, station const*>>,
-          std::vector<located_osm_edge_phantom_with_dist>>
+std::pair<std::vector<osm_node_phantom_match>,
+          std::vector<osm_edge_phantom_match>>
 make_phantoms(station_index const& station_idx,
               std::vector<size_t> const& matched_stations,
               mcd::vector<osm_way> const& osm_ways) {
-  std::vector<std::pair<osm_node_phantom_with_dist, station const*>> n_phantoms;
-  std::vector<located_osm_edge_phantom_with_dist> e_phantoms;
-
-  auto const collect_phantoms = [&](auto& vec, auto& phantoms, auto&&... args) {
-    for (auto&& p : phantoms) {
-      vec.emplace_back(std::move(p), std::forward<decltype(args)>(args)...);
-    }
-  };
+  std::vector<osm_node_phantom_match> n_matches;
+  std::vector<osm_edge_phantom_match> e_matches;
 
   osm_phantom_index phantom_idx{osm_ways};
   for (auto const& i : matched_stations) {
     auto const& station = station_idx.stations_[i];
 
-    auto [np, ep] = phantom_idx.get_osm_phantoms(station.pos_, kMatchRadius);
-    collect_phantoms(n_phantoms, np, &station);
-    collect_phantoms(e_phantoms, ep, &station, station.pos_);
+    auto [np, ep] = phantom_idx.get_osm_phantoms(&station, station.pos_,
+                                                 kStationMatchDistance);
+    utl::concat(n_matches, np);
+    utl::concat(e_matches, ep);
 
     bool have_phantoms = !np.empty() || !ep.empty();
 
     for (auto const& stop_position : station.stop_positions_) {
-      auto [snp, sep] =
-          phantom_idx.get_osm_phantoms(stop_position, kStopMatchRadius);
-      collect_phantoms(n_phantoms, snp, &station);
-      collect_phantoms(e_phantoms, sep, &station, stop_position);
+      auto [snp, sep] = phantom_idx.get_osm_phantoms(&station, stop_position,
+                                                     kStopMatchDistance);
+      utl::concat(n_matches, snp);
+      utl::concat(e_matches, sep);
 
       have_phantoms |= !snp.empty() || !sep.empty();
     }
 
+    // fallback if nothing has matched: search with large radius and take
+    // everything close to the nearest match
     if (!have_phantoms) {
-      auto [npnr, epnr] =
-          phantom_idx.get_osm_phantoms(station.pos_, kMatchRadiusNoResult);
-      collect_phantoms(n_phantoms, npnr, &station);
-      collect_phantoms(e_phantoms, epnr, &station, station.pos_);
+      auto [fbnp, fbep] = phantom_idx.get_osm_phantoms(&station, station.pos_,
+                                                       kMaxMatchDistance);
+      std::for_each(begin(fbep), end(fbep), [](auto& p) { p.locate(); });
+
+      std::vector<std::pair<double, geo::latlng>> nearest_matches;
+      if (!fbnp.empty()) {
+        nearest_matches.push_back({fbnp[0].distance_, fbnp[0].phantom_.pos_});
+      }
+      if (!fbep.empty()) {
+        nearest_matches.push_back({fbep[0].distance_, fbep[0].pos_});
+      }
+      if (!nearest_matches.empty()) {
+        std::sort(begin(nearest_matches), end(nearest_matches));
+        auto const& nearest = nearest_matches[0].second;
+        utl::erase_if(fbnp, [&](auto const& n) {
+          return geo::distance(nearest, n.phantom_.pos_) > kStopMatchDistance;
+        });
+        utl::erase_if(fbep, [&](auto const& e) {
+          return geo::distance(nearest, e.pos_) > kStopMatchDistance;
+        });
+      }
+
+      utl::concat(n_matches, fbnp);
+      utl::concat(e_matches, fbep);
     }
   }
 
   utl::erase_duplicates(
-      n_phantoms,
+      n_matches,
       [](auto const& a, auto const& b) {
-        auto const& pa = a.first.phantom_;
-        auto const& pb = b.first.phantom_;
-        return std::tie(pa.id_, pa.pos_, a.second, a.first.distance_) <
-               std::tie(pb.id_, pb.pos_, b.second, b.first.distance_);
+        auto const& pa = a.phantom_;
+        auto const& pb = b.phantom_;
+        return std::tie(pa.id_, pa.pos_, a.station_, a.distance_) <
+               std::tie(pb.id_, pb.pos_, b.station_, b.distance_);
       },
       [](auto const& a, auto const& b) {
-        auto const& pa = a.first.phantom_;
-        auto const& pb = b.first.phantom_;
-        return std::tie(pa.id_, pa.pos_, a.second) ==
-               std::tie(pb.id_, pb.pos_, b.second);
+        auto const& pa = a.phantom_;
+        auto const& pb = b.phantom_;
+        return std::tie(pa.id_, pa.pos_, a.station_) ==
+               std::tie(pb.id_, pb.pos_, b.station_);
       });
 
   // keep "closes" phantom node between different station_pos
   utl::erase_duplicates(
-      e_phantoms,
+      e_matches,
       [](auto const& a, auto const& b) {
         auto const& pa = a.phantom_;
         auto const& pb = b.phantom_;
@@ -256,16 +273,14 @@ make_phantoms(station_index const& station_idx,
       });
 
   // sort for consumption during graph insertion
-  std::for_each(begin(e_phantoms), end(e_phantoms),
-                [](auto& p) { p.locate(); });
-  std::sort(begin(e_phantoms), end(e_phantoms),
-            [](auto const& a, auto const& b) {
-              auto const& pa = a.phantom_;
-              auto const& pb = b.phantom_;
-              return std::tie(pa.way_idx_, pa.offset_, a.along_track_dist_) <
-                     std::tie(pb.way_idx_, pb.offset_, b.along_track_dist_);
-            });
-  return std::make_pair(std::move(n_phantoms), std::move(e_phantoms));
+  std::for_each(begin(e_matches), end(e_matches), [](auto& p) { p.locate(); });
+  std::sort(begin(e_matches), end(e_matches), [](auto const& a, auto const& b) {
+    auto const& pa = a.phantom_;
+    auto const& pb = b.phantom_;
+    return std::tie(pa.way_idx_, pa.offset_, a.along_track_dist_) <
+           std::tie(pb.way_idx_, pb.offset_, b.along_track_dist_);
+  });
+  return std::make_pair(std::move(n_matches), std::move(e_matches));
 }
 
 }  // namespace motis::path

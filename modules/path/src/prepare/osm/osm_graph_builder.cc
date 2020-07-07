@@ -16,14 +16,13 @@
 
 #include "motis/core/common/logging.h"
 
+#include "motis/path/prepare/osm/osm_constants.h"
 #include "motis/path/prepare/osm/osm_phantom.h"
 
 using namespace motis::logging;
 using namespace geo;
 
 namespace motis::path {
-
-constexpr auto kMaxDistanceHeuristic = 1000;
 
 using osm_idx_t = int64_t;
 using node_idx_t = size_t;
@@ -61,7 +60,7 @@ void osm_graph_builder::add_component(mcd::vector<osm_way> const& osm_ways) {
       component_box.extend(pos);
     }
   }
-  component_box.extend(kMaxDistanceHeuristic);
+  component_box.extend(kMaxMatchDistance);
 
   auto const matched_stations = station_idx_.index_.within(component_box);
   if (matched_stations.empty()) {
@@ -94,10 +93,10 @@ void osm_graph_builder::add_component(mcd::vector<osm_way> const& osm_ways) {
       std::vector<std::pair<std::string, double>> links;
       for (auto it = std::lower_bound(begin(n_phantoms), end(n_phantoms), id,
                                       [](auto const&lhs, auto const&rhs) {
-                                        return lhs.first.phantom_.id_ < rhs;
+                                        return lhs.phantom_.id_ < rhs;
                                       });
-           it != end(n_phantoms) && it->first.phantom_.id_ == id; ++it) {
-        links.emplace_back(it->second->id_, it->first.distance_);
+           it != end(n_phantoms) && it->phantom_.id_ == id; ++it) {
+        links.emplace_back(it->station_->id_, it->distance_);
       }
       make_station_links(node_idx, links);
 

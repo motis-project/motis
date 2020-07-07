@@ -35,9 +35,7 @@ struct node_station_link {
 };
 
 struct osm_graph {
-  osm_graph() : components_(0) {}
-
-  size_t components_;
+  size_t components_{0ULL};
   std::vector<std::unique_ptr<osm_node>> nodes_;
   std::vector<osm_path> paths_;
 
