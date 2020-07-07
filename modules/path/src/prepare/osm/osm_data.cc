@@ -36,6 +36,8 @@ namespace oeb = osmium::osm_entity_bits;
 
 namespace motis::path {
 
+constexpr auto const kInvalidNodeId = std::numeric_limits<int64_t>::max();
+
 constexpr auto const CISTA_MODE =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_VERSION;
 
@@ -272,7 +274,6 @@ struct stop_position_handler : public oh::Handler {
 
   void collect(
       std::vector<std::pair<o::object_id_type, o::Location*>>& locations) {
-    constexpr auto const kInvalidNodeId = std::numeric_limits<int64_t>::max();
     auto const id_less = [](auto&& a, auto&& b) { return a.id_ < b.id_; };
     auto const id_eq = [](auto&& a, auto&& b) { return a.id_ == b.id_; };
 
@@ -299,8 +300,14 @@ struct stop_position_handler : public oh::Handler {
 
   mcd::vector<osm_stop_position> finalize() {
     for (auto const& [sp, l] : utl::zip(stop_positions_, locations_)) {
-      sp.pos_ = geo::latlng{l.lat(), l.lon()};
+      if (l.valid()) {
+        sp.pos_ = geo::latlng{l.lat(), l.lon()};
+      } else {
+        sp.id_ = kInvalidNodeId;
+      }
     }
+    utl::erase_if(stop_positions_,
+                  [](auto&& sp) { return sp.id_ == kInvalidNodeId; });
     std::sort(begin(stop_positions_), end(stop_positions_),
               [](auto&& lhs, auto&& rhs) { return lhs.name_ < rhs.name_; });
     return std::move(stop_positions_);
