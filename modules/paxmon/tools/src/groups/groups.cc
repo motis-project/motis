@@ -7,6 +7,8 @@
 
 #include "boost/filesystem.hpp"
 
+#include "fmt/core.h"
+
 #include "conf/configuration.h"
 #include "conf/options_parser.h"
 
@@ -203,10 +205,10 @@ int main(int argc, char const** argv) {
       });
   process_journey();
 
-  std::cout << "Input: " << total_input_groups << " groups, " << total_input_pax
-            << " passengers\n";
-  std::cout << "Output: " << total_output_groups << " groups, "
-            << total_output_pax << " passengers\n";
+  fmt::print("Input:  {:10} groups {:10} passengers\n", total_input_groups,
+             total_input_pax);
+  fmt::print("Output: {:10} groups {:10} passengers\n", total_output_groups,
+             total_output_pax);
 
   return 0;
 }
