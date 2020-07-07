@@ -103,7 +103,6 @@ inline mcd::hash_map<mcd::string, service_class> class_mapping() {
       {"RZ", service_class::RB},
       {"CC", service_class::RB},  // narrow-gauge mountain train
       {"PE", service_class::RB},  // Panorama Express
-      {"T", service_class::RB},
 
       // metro
       {"S", service_class::S},
