@@ -13,6 +13,7 @@
 
 #include "utl/equal_ranges_linear.h"
 #include "utl/erase_duplicates.h"
+#include "utl/erase_if.h"
 #include "utl/get_or_create.h"
 #include "utl/pipes.h"
 #include "utl/progress_tracker.h"
@@ -40,6 +41,7 @@ constexpr auto const CISTA_MODE =
 
 auto const str_platform = std::string_view{"platform"};
 auto const str_stop_position = std::string_view{"stop_position"};
+auto const str_stop_area = std::string_view{"stop_area"};
 auto const str_stop = std::string_view{"stop"};
 auto const str_yes = std::string_view{"yes"};
 
@@ -244,15 +246,68 @@ bool match_none(o::Way const& way, char const* key,
 }
 
 struct stop_position_handler : public oh::Handler {
-  void node(o::Node const& n) {
-    if (str_stop_position != n.get_value_by_key("public_transport", "") ||
-        str_yes != n.get_value_by_key("bus", "")) {
+  void relation(o::Relation const& r) {
+    if (str_stop_area != r.get_value_by_key("public_transport", "")) {
       return;
     }
-    coordinates_.emplace_back(n.location().lat(), n.location().lon());
+
+    for (auto const& m : r.members()) {
+      if (m.type() != o::item_type::node || str_stop != m.role()) {
+        continue;
+      }
+
+      stop_positions_.emplace_back(mcd::string{r.get_value_by_key("name", "")},
+                                   m.ref(), geo::latlng{});
+    }
   }
 
-  mcd::vector<geo::latlng> coordinates_;
+  void node(o::Node const& n) {
+    if (str_stop_position != n.get_value_by_key("public_transport", "")) {
+      return;
+    }
+
+    stop_positions_.emplace_back(mcd::string{n.get_value_by_key("name", "")},
+                                 n.id(), geo::latlng{});
+  }
+
+  void collect(
+      std::vector<std::pair<o::object_id_type, o::Location*>>& locations) {
+    constexpr auto const kInvalidNodeId = std::numeric_limits<int64_t>::max();
+    auto const id_less = [](auto&& a, auto&& b) { return a.id_ < b.id_; };
+    auto const id_eq = [](auto&& a, auto&& b) { return a.id_ == b.id_; };
+
+    std::sort(begin(stop_positions_), end(stop_positions_), id_less);
+    utl::equal_ranges_linear(stop_positions_, id_eq, [](auto lb, auto ub) {
+      auto const have_named =
+          std::any_of(lb, ub, [](auto&& sp) { return !sp.name_.empty(); });
+
+      for (auto it = lb; it != ub && std::next(it) != ub; ++it) {
+        if ((have_named && it->name_.empty()) ||
+            (it->name_ == std::next(it)->name_)) {
+          it->id_ = kInvalidNodeId;
+        }
+      }
+    });
+    utl::erase_if(stop_positions_,
+                  [](auto&& sp) { return sp.id_ == kInvalidNodeId; });
+
+    locations_.resize(stop_positions_.size());
+    for (auto const& [sp, l] : utl::zip(stop_positions_, locations_)) {
+      locations.emplace_back(sp.id_, &l);
+    }
+  }
+
+  mcd::vector<osm_stop_position> finalize() {
+    for (auto const& [sp, l] : utl::zip(stop_positions_, locations_)) {
+      sp.pos_ = geo::latlng{l.lat(), l.lon()};
+    }
+    std::sort(begin(stop_positions_), end(stop_positions_),
+              [](auto&& lhs, auto&& rhs) { return lhs.name_ < rhs.name_; });
+    return std::move(stop_positions_);
+  }
+
+  mcd::vector<osm_stop_position> stop_positions_;
+  std::vector<o::Location> locations_;
 };
 
 struct plattform_handler : public oh::Handler, relation_way_base {
@@ -396,6 +451,8 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
         overloaded{[&](raw_way& w) { collect_ways(w); },
                    [&](std::unique_ptr<raw_way>& w) { collect_ways(*w); }};
 
+    stop_positions.collect(locations);
+
     std::for_each(begin(plattforms.mem_), end(plattforms.mem_), collect);
 
     std::for_each(begin(rel_rail.mem_), end(rel_rail.mem_), collect);
@@ -421,7 +478,7 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
   using category = source_spec::category;
   using router = source_spec::router;
   auto data = mcd::make_unique<osm_data>();
-  data->stop_positions_ = std::move(stop_positions.coordinates_);
+  data->stop_positions_ = stop_positions.finalize();
   data->plattforms_ = plattforms.finalize();
 
   auto const finalize = [&](source_spec const ss, auto& handler) {

@@ -39,9 +39,6 @@ struct station_index {
   geo::point_rtree index_;
 };
 
-station_index collect_stations(mcd::vector<station_seq> const&);
-station_index make_station_index(std::vector<station>);
-
-void annotate_stop_positions(osm_data const&, station_index&);
+station_index load_stations(mcd::vector<station_seq> const&, osm_data const&);
 
 }  // namespace motis::path

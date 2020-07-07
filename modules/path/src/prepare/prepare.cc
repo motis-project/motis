@@ -142,8 +142,7 @@ void prepare(prepare_settings const& opt) {
                       << " profiles";
 
         progress_tracker->status("Prepare Stations");
-        auto stations = collect_stations(sequences);
-        annotate_stop_positions(*osm_data_ptr, stations);
+        auto stations = load_stations(sequences, *osm_data_ptr);
 
         LOG(ml::info) << "processing " << sequences.size()
                       << " station sequences with " << stations.stations_.size()
