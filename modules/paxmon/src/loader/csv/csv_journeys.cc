@@ -29,17 +29,20 @@
 using namespace motis::logging;
 using namespace motis::paxmon::util;
 
-namespace std {
-inline std::ostream& operator<<(
-    std::ostream& out,
-    std::optional<std::pair<std::uint64_t, std::uint64_t>> const& id) {
-  if (id) {
-    return out << id->first << "." << id->second;
-  } else {
-    return out << "-";
+template <>
+struct fmt::formatter<std::optional<std::pair<std::uint64_t, std::uint64_t>>>
+    : formatter<string_view> {
+  template <typename FormatContext>
+  auto format(std::optional<std::pair<std::uint64_t, std::uint64_t>> const& id,
+              FormatContext& ctx) {
+    if (id) {
+      return formatter<string_view>::format(
+          fmt::format("{}.{}", id->first, id->second), ctx);
+    } else {
+      return formatter<string_view>::format("-", ctx);
+    }
   }
-}
-}  // namespace std
+};
 
 namespace motis::paxmon::loader::csv {
 
@@ -57,7 +60,7 @@ struct row {
 };
 
 struct trip_candidate {
-  operator bool() const { return trp_ != nullptr; }
+  explicit operator bool() const { return trp_ != nullptr; }
 
   bool is_perfect_match() const {
     return trp_ != nullptr && enter_diff_ == 0 && exit_diff_ == 0 &&
@@ -182,7 +185,7 @@ trip_candidate get_best_trip_candidate(schedule const& sched,
                        exit_time, train_nr, max_time_diff,
                        [&](trip_candidate&& candidate) {
                          if (candidate.is_better_than(best)) {
-                           best = std::move(candidate);
+                           best = candidate;
                          }
                          return !best.is_perfect_match();
                        });
@@ -338,28 +341,26 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
         if (!from_station_idx || !to_station_idx) {
           current_invalid = true;
           ++station_not_found_count;
-          if (!from_station_idx) {
-            match_log << "[" << current_id
-                      << "] Station not found: " << row.from_.val().view()
-                      << "\n";
+          if (!from_station_idx && match_log) {
+            fmt::print(match_log, "[{}] Station not found: {}\n", current_id,
+                       row.from_.val().view());
           }
-          if (!to_station_idx) {
-            match_log << "[" << current_id
-                      << "] Station not found: " << row.to_.val().view()
-                      << "\n";
+          if (!to_station_idx && match_log) {
+            fmt::print(match_log, "[{}] Station not found: {}\n", current_id,
+                       row.to_.val().view());
           }
           return;
         }
         if (enter_time == INVALID_TIME || exit_time == INVALID_TIME) {
           current_invalid = true;
           ++invalid_timestamp_count;
-          if (enter_time == INVALID_TIME) {
-            match_log << "[" << current_id << "] Invalid enter timestamp: "
-                      << format_unix_time(row.enter_.val()) << "\n";
+          if (enter_time == INVALID_TIME && match_log) {
+            fmt::print(match_log, "[{}] Invalid enter timestamp: {}\n",
+                       current_id, format_unix_time(row.enter_.val()));
           }
-          if (exit_time == INVALID_TIME) {
-            match_log << "[" << current_id << "] Invalid exit timestamp: "
-                      << format_unix_time(row.exit_.val()) << "\n";
+          if (exit_time == INVALID_TIME && match_log) {
+            fmt::print(match_log, "[{}] Invalid exit timestamp: {}\n",
+                       current_id, format_unix_time(row.exit_.val()));
           }
           return;
         }
