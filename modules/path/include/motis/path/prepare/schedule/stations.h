@@ -40,5 +40,6 @@ struct station_index {
 };
 
 station_index load_stations(mcd::vector<station_seq> const&, osm_data const&);
+station_index make_station_index(std::vector<station>);
 
 }  // namespace motis::path
