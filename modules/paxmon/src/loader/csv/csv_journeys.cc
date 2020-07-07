@@ -64,30 +64,98 @@ std::uint32_t get_train_nr(light_connection const* lc, std::uint32_t expected) {
   return first_train_nr;
 }
 
-trip* find_trip(schedule const& sched, std::uint32_t from_station_idx,
-                std::uint32_t to_station_idx, time enter_time, time exit_time,
-                std::uint32_t train_nr) {
+struct trip_candidate {
+  operator bool() const { return trp_ != nullptr; }
+
+  bool is_perfect_match() const {
+    return trp_ != nullptr && enter_diff_ == 0 && exit_diff_ == 0 &&
+           train_nr_match_;
+  }
+
+  bool is_better_than(trip_candidate const& other) const {
+    if (!other) {
+      return true;
+    }
+    if (train_nr_match_ && !other.train_nr_match_) {
+      return true;
+    } else if (!train_nr_match_ && other.train_nr_match_) {
+      return false;
+    }
+    if (std::abs(travel_time_diff_) < std::abs(other.travel_time_diff_)) {
+      return true;
+    }
+    return time_diff_cost() < other.time_diff_cost();
+  }
+
+  int time_diff_cost() const {
+    return enter_diff_ * enter_diff_ + exit_diff_ * exit_diff_;
+  }
+
+  trip* trp_{};
+  time enter_time_{INVALID_TIME};
+  time exit_time_{INVALID_TIME};
+  std::uint32_t train_nr_{};
+  bool train_nr_match_{};
+  int enter_diff_{};
+  int exit_diff_{};
+  int travel_time_diff_{};
+};
+
+trip_candidate get_best_trip_candidate(schedule const& sched,
+                                       std::uint32_t from_station_idx,
+                                       std::uint32_t to_station_idx,
+                                       time enter_time, time exit_time,
+                                       std::uint32_t train_nr,
+                                       duration max_time_diff) {
+  auto best = trip_candidate{};
   auto const from_station = sched.station_nodes_.at(from_station_idx).get();
-  trip* trp_found = nullptr;
+  auto const earliest_dep = enter_time > max_time_diff
+                                ? static_cast<time>(enter_time - max_time_diff)
+                                : static_cast<time>(0);
+  auto const latest_dep = static_cast<time>(enter_time + max_time_diff);
+  auto const expected_travel_time = static_cast<int>(exit_time - enter_time);
   from_station->for_each_route_node([&](node const* route_node) {
+    if (best.is_perfect_match()) {
+      return;
+    }
     for (auto const& e : route_node->edges_) {
       if (e.type() != ::motis::edge::ROUTE_EDGE) {
         continue;
       }
       auto const& conns = e.m_.route_edge_.conns_;
       for (auto lc = std::lower_bound(begin(conns), end(conns),
-                                      light_connection{enter_time});
-           lc != end(conns) && lc->d_time_ == enter_time; lc = std::next(lc)) {
+                                      light_connection{earliest_dep});
+           lc != end(conns) && lc->d_time_ <= latest_dep; lc = std::next(lc)) {
+        if (lc->valid_ == 0) {
+          continue;
+        }
         auto const current_train_nr = get_train_nr(lc, train_nr);
+        auto const enter_diff = static_cast<int>(lc->d_time_) - enter_time;
+
         for (auto trp : *sched.merged_trips_[lc->trips_]) {
           for (auto const& stop : access::stops(trp)) {
-            if (stop.get_station_id() == to_station_idx && stop.has_arrival() &&
-                stop.arr_lcon().a_time_ == exit_time) {
-              if (current_train_nr == train_nr) {
-                trp_found = trp;
-                return;
-              } else if (trp_found == nullptr) {
-                trp_found = trp;
+            if (stop.get_station_id() == to_station_idx && stop.has_arrival()) {
+              auto const arrival_time = stop.arr_lcon().a_time_;
+              auto const exit_diff = static_cast<int>(arrival_time) - exit_time;
+              auto const travel_time =
+                  static_cast<int>(arrival_time) - lc->d_time_;
+              if (travel_time < 0 || std::abs(exit_diff) > max_time_diff) {
+                continue;
+              }
+              auto const current_candidate =
+                  trip_candidate{trp,
+                                 lc->d_time_,
+                                 arrival_time,
+                                 current_train_nr,
+                                 current_train_nr == train_nr,
+                                 enter_diff,
+                                 exit_diff,
+                                 expected_travel_time - travel_time};
+              if (current_candidate.is_better_than(best)) {
+                best = current_candidate;
+                if (best.is_perfect_match()) {
+                  return;
+                }
               }
             }
           }
@@ -95,7 +163,16 @@ trip* find_trip(schedule const& sched, std::uint32_t from_station_idx,
       }
     }
   });
-  return trp_found;
+  return best;
+}
+
+trip* find_trip(schedule const& sched, std::uint32_t from_station_idx,
+                std::uint32_t to_station_idx, time enter_time, time exit_time,
+                std::uint32_t train_nr, duration max_time_diff) {
+  auto const best_candidate =
+      get_best_trip_candidate(sched, from_station_idx, to_station_idx,
+                              enter_time, exit_time, train_nr, max_time_diff);
+  return best_candidate.trp_;
 }
 
 void debug_trip_match(schedule const& sched, std::uint32_t from_station_idx,
@@ -122,10 +199,7 @@ void debug_trip_match(schedule const& sched, std::uint32_t from_station_idx,
       auto const& conns = e.m_.route_edge_.conns_;
       for (auto lc = std::lower_bound(begin(conns), end(conns),
                                       light_connection{earliest_dep});
-           lc != end(conns); lc = std::next(lc)) {
-        if (lc->d_time_ > latest_dep) {
-          break;
-        }
+           lc != end(conns) && lc->d_time_ <= latest_dep; lc = std::next(lc)) {
         if (lc->valid_ == 0) {
           continue;
         }
@@ -216,7 +290,8 @@ std::optional<transfer_info> get_transfer_info(
 
 std::size_t load_journeys(schedule const& sched, paxmon_data& data,
                           std::string const& journey_file,
-                          std::string const& match_log_file) {
+                          std::string const& match_log_file,
+                          duration const match_tolerance) {
   std::size_t journey_count = 0;
   auto error_count = 0ULL;
   auto trip_not_found_count = 0ULL;
@@ -304,9 +379,9 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
           }
           return;
         }
-        auto const trp =
-            find_trip(sched, from_station_idx.value(), to_station_idx.value(),
-                      enter_time, exit_time, row.train_nr_.val());
+        auto const trp = find_trip(
+            sched, from_station_idx.value(), to_station_idx.value(), enter_time,
+            exit_time, row.train_nr_.val(), match_tolerance);
         if (trp == nullptr) {
           current_invalid = true;
           ++trip_not_found_count;
