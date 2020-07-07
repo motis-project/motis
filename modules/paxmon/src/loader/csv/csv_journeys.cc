@@ -24,6 +24,7 @@
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
 
+#include "motis/paxmon/loader/csv/row.h"
 #include "motis/paxmon/util/get_station_idx.h"
 
 using namespace motis::logging;
@@ -45,19 +46,6 @@ struct fmt::formatter<std::optional<std::pair<std::uint64_t, std::uint64_t>>>
 };
 
 namespace motis::paxmon::loader::csv {
-
-struct row {
-  utl::csv_col<std::uint64_t, UTL_NAME("id")> id_;
-  utl::csv_col<std::uint64_t, UTL_NAME("secondary_id")> secondary_id_;
-  utl::csv_col<utl::cstr, UTL_NAME("leg_type")> leg_type_;
-  utl::csv_col<utl::cstr, UTL_NAME("from")> from_;
-  utl::csv_col<utl::cstr, UTL_NAME("to")> to_;
-  utl::csv_col<std::time_t, UTL_NAME("enter")> enter_;
-  utl::csv_col<std::time_t, UTL_NAME("exit")> exit_;
-  utl::csv_col<utl::cstr, UTL_NAME("category")> category_;
-  utl::csv_col<std::uint32_t, UTL_NAME("train_nr")> train_nr_;
-  utl::csv_col<std::uint16_t, UTL_NAME("passengers")> passengers_;
-};
 
 struct trip_candidate {
   explicit operator bool() const { return trp_ != nullptr; }

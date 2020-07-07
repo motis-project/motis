@@ -2,6 +2,8 @@
 
 #include <fstream>
 #include <iomanip>
+#include <string>
+#include <string_view>
 
 namespace motis::paxmon {
 
@@ -30,7 +32,17 @@ struct csv_writer {
     return *this;
   }
 
-  csv_writer& operator<<(char const* str) { return *this << std::string(str); }
+  csv_writer& operator<<(std::string_view str) {
+    start_col();
+    ofs_ << std::quoted(str, '"', '"');
+    return *this;
+  }
+
+  csv_writer& operator<<(char const* str) {
+    start_col();
+    ofs_ << std::quoted(str, '"', '"');
+    return *this;
+  }
 
   csv_writer& operator<<(end_row_t const&) {
     end_row();
