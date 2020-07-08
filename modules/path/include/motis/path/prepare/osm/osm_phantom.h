@@ -15,7 +15,7 @@ struct osm_node_phantom {
       : id_{id}, pos_{pos} {}
 
   std::vector<size_t> way_idx_;
-  int64_t id_ = 0;
+  int64_t id_{0};
   geo::latlng pos_;
 };
 
@@ -32,7 +32,7 @@ struct osm_node_phantom_match {
   osm_node_phantom phantom_;
 
   double distance_{std::numeric_limits<double>::infinity()};
-  station const* station_;
+  station const* station_{nullptr};
 };
 
 struct osm_edge_phantom_match {
@@ -41,7 +41,7 @@ struct osm_edge_phantom_match {
   osm_edge_phantom phantom_;
 
   double distance_{std::numeric_limits<double>::infinity()};
-  station const* station_;
+  station const* station_{nullptr};
   geo::latlng station_pos_;  // maybe station itself or stop position
 
   geo::latlng pos_{};

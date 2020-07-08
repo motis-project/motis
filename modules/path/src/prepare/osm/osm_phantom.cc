@@ -214,10 +214,10 @@ make_phantoms(station_index const& station_idx,
 
       std::vector<std::pair<double, geo::latlng>> nearest_matches;
       if (!fbnp.empty()) {
-        nearest_matches.push_back({fbnp[0].distance_, fbnp[0].phantom_.pos_});
+        nearest_matches.emplace_back(fbnp[0].distance_, fbnp[0].phantom_.pos_);
       }
       if (!fbep.empty()) {
-        nearest_matches.push_back({fbep[0].distance_, fbep[0].pos_});
+        nearest_matches.emplace_back(fbep[0].distance_, fbep[0].pos_);
       }
       if (!nearest_matches.empty()) {
         std::sort(begin(nearest_matches), end(nearest_matches));

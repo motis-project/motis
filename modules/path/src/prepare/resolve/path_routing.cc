@@ -50,7 +50,7 @@ path_routing make_path_routing(mcd::vector<station_seq> const& sequences,
   using router = source_spec::router;
 
   std::array<bool, static_cast<service_class_t>(service_class::NUM_CLASSES)>
-      active_classes_acc;
+      active_classes_acc{};
   active_classes_acc.fill(false);
   for (auto const& seq : sequences) {
     for (auto const clasz : seq.classes_) {

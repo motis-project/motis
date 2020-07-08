@@ -549,8 +549,9 @@ mcd::unique_ptr<osm_data> read_osm_data(std::string const& fname,
       std::get<cista::buf<cista::mmap>>(mem));
 #elif defined(MOTIS_SCHEDULE_MODE_RAW) || defined(CLANG_TIDY)
   mem = cista::file(fname.c_str(), "r").content();
-  ptr.el_ =
-      cista::deserialize<osm_data, CISTA_MODE>(std::get<cista::buffer>(mem));
+  // NOLINTNEXTLINE
+  ptr.el_ = cista::deserialize<osm_data, CISTA_MODE>(
+      std::get<cista::buffer>(mem));  //
 #else
 #error "no ptr mode specified"
 #endif
