@@ -53,6 +53,17 @@ station_index load_stations(mcd::vector<station_seq> const& sequences,
 
   // add to all stations, which have no linked station that is closer
   auto const annotate_stop_positions = [&](auto lb, auto ub) {
+    if (std::any_of(lb, ub, [](auto const& sp) {
+          return sp.has_category(source_spec::category::BUS);
+        })) {
+      for (auto it = lb; it != ub; ++it) {
+        for (auto const& idx : index.index_.in_radius(it->pos_, 100)) {
+          index.stations_.at(idx).stop_positions_.emplace_back(*it);
+        }
+      }
+      return;
+    }
+
     std::map<size_t, double> distances;
     auto const update_distance = [&](auto const idx, auto const distance) {
       auto& stored_distance = utl::get_or_create(distances, idx, [] {
@@ -98,7 +109,7 @@ station_index load_stations(mcd::vector<station_seq> const& sequences,
       }
 
       for (auto it = lb; it != ub; ++it) {
-        index.stations_.at(self.first).stop_positions_.push_back(it->pos_);
+        index.stations_.at(self.first).stop_positions_.push_back(*it);
       }
     }
   };
@@ -121,5 +132,4 @@ station_index load_stations(mcd::vector<station_seq> const& sequences,
 
   return index;
 }
-
 }  // namespace motis::path

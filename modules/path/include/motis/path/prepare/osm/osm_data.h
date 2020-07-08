@@ -15,6 +15,8 @@
 namespace motis::path {
 
 struct osm_stop_position {
+  bool has_category(source_spec::category) const;
+
   mcd::string name_;
   mcd::vector<source_spec::category> categories_;
   int64_t id_;

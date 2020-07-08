@@ -201,8 +201,8 @@ make_phantoms(station_index const& station_idx,
     bool have_phantoms = !np.empty() || !ep.empty();
 
     for (auto const& stop_position : station.stop_positions_) {
-      auto [snp, sep] = phantom_idx.get_osm_phantoms(&station, stop_position,
-                                                     kStopMatchDistance);
+      auto [snp, sep] = phantom_idx.get_osm_phantoms(
+          &station, stop_position.pos_, kStopMatchDistance);
       utl::concat(n_matches, snp);
       utl::concat(e_matches, sep);
 

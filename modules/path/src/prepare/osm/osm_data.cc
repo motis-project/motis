@@ -55,6 +55,11 @@ constexpr std::initializer_list<std::pair<char const*, source_spec::category>>
                    {"tram", source_spec::category::TRAM},
                    {"ferry", source_spec::category::SHIP}};
 
+bool osm_stop_position::has_category(source_spec::category const cat) const {
+  return std::find(begin(categories_), end(categories_), cat) !=
+         end(categories_);
+}
+
 struct raw_way {
   explicit raw_way(o::object_id_type id) : id_{id}, oneway_{false} {}
 

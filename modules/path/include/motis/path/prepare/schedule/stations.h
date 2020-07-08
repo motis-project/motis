@@ -31,7 +31,7 @@ struct station {
   std::set<service_class> classes_;
 
   geo::latlng pos_;
-  std::vector<geo::latlng> stop_positions_;
+  std::vector<osm_stop_position> stop_positions_;
 };
 
 struct station_index {
