@@ -8,7 +8,7 @@
 #include "motis/hash_map.h"
 #include "motis/hash_set.h"
 
-#include "motis/path/prepare/osm/osm_constants.h"
+#include "motis/path/prepare/tuning_parameters.h"
 
 namespace motis::path {
 

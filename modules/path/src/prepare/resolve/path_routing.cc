@@ -80,14 +80,18 @@ path_routing make_path_routing(mcd::vector<station_seq> const& sequences,
     return ptr.get();
   };
 
-  auto const init_osm = [&](std::unique_ptr<osm_strategy>& ptr,
-                            source_spec const ss) {
+  auto const init_osm2 = [&](std::unique_ptr<osm_strategy>& ptr,
+                             source_spec const input, source_spec const graph) {
     if (ptr == nullptr) {
-      LOG(ml::info) << id << " : load osm_strategy" << ss.str();
-      ptr = std::make_unique<osm_strategy>(id++, ss, station_idx,
-                                           osm_data.profiles_.at(ss));
+      LOG(ml::info) << id << " : load osm_strategy " << graph.str();
+      ptr = std::make_unique<osm_strategy>(id++, graph, station_idx,
+                                           osm_data.profiles_.at(input));
     }
     return ptr.get();
+  };
+  auto const init_osm = [&](std::unique_ptr<osm_strategy>& ptr,
+                            source_spec const ss) {
+    return init_osm2(ptr, ss, ss);
   };
 
   foreach_path_category(active_classes, [&](auto const cat, auto const&) {
@@ -100,22 +104,26 @@ path_routing make_path_routing(mcd::vector<station_seq> const& sequences,
       case source_spec::category::TRAM:
         s.tram_strategies_ = {
             init_osm(s.rel_tram_, {category::TRAM, router::OSM_REL}),
-            init_osm(s.net_tram_, {category::TRAM, router::OSM_NET}),
+            init_osm2(s.net_tram_, {category::MULTI, router::OSM_NET},
+                      {category::TRAM, router::OSM_NET}),
             init_osrm(s.osrm_)};
         break;
       case source_spec::category::SUBWAY:
         s.subway_strategies_ = {
             init_osm(s.rel_sub_, {category::SUBWAY, router::OSM_REL}),
-            init_osm(s.net_sub_, {category::SUBWAY, router::OSM_NET})};
+            init_osm2(s.net_sub_, {category::MULTI, router::OSM_NET},
+                      {category::SUBWAY, router::OSM_NET})};
         break;
       case source_spec::category::RAIL:
         s.rail_strategies_ = {
             init_osm(s.rel_rail_, {category::RAIL, router::OSM_REL}),
-            init_osm(s.net_rail_, {category::RAIL, router::OSM_NET})};
+            init_osm2(s.net_rail_, {category::MULTI, router::OSM_NET},
+                      {category::RAIL, router::OSM_NET})};
         break;
       case source_spec::category::SHIP:
-        s.ship_strategies_ = {
-            init_osm(s.net_ship_, {category::SHIP, router::OSM_NET})};
+        s.ship_strategies_ = {init_osm2(s.net_ship_,
+                                        {category::MULTI, router::OSM_NET},
+                                        {category::SHIP, router::OSM_NET})};
         break;
       case source_spec::category::UNKNOWN: break;
       default: throw utl::fail("no strategies for this category");

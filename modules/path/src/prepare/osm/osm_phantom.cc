@@ -16,8 +16,8 @@
 
 #include "motis/hash_map.h"
 
-#include "motis/path/prepare/osm/osm_constants.h"
 #include "motis/path/prepare/osm/segment_rtree.h"
+#include "motis/path/prepare/tuning_parameters.h"
 
 namespace motis::path {
 

@@ -16,7 +16,11 @@ TEST(osm_graph_builder, at_way_node) {
       mp::make_station_index({{"1", "test", {49.8678310, 8.6781722}}});
 
   mp::osm_graph graph;
-  mp::osm_graph_builder builder(graph, stations);
+  mp::osm_graph_builder builder(
+      graph,
+      mp::source_spec{mp::source_spec::category::UNKNOWN,
+                      mp::source_spec::router::OSM_REL},
+      stations);
 
   mp::osm_path path{{
                         {49.8675940, 8.6785566},  // 0
@@ -27,7 +31,7 @@ TEST(osm_graph_builder, at_way_node) {
                         {49.8682487, 8.6778950},  // 5
                     },
                     {0L, 1L, 2L, 3L, 4L, 5L}};
-  builder.add_component({mp::osm_way{{0}, true, path}});
+  builder.add_component({mp::osm_way{{0}, mp::source_bits::ONEWAY, path}});
 
   ASSERT_EQ(3, graph.nodes_.size());
 
@@ -53,7 +57,11 @@ TEST(osm_graph_builder, between_way_nodes) {
       mp::make_station_index({{"1", "test", {49.86780008585, 8.678289949893}}});
 
   mp::osm_graph graph;
-  mp::osm_graph_builder builder(graph, stations);
+  mp::osm_graph_builder builder(
+      graph,
+      mp::source_spec{mp::source_spec::category::UNKNOWN,
+                      mp::source_spec::router::OSM_REL},
+      stations);
 
   mp::osm_path path{{
                         {49.8675940, 8.6785566},  // 0
@@ -64,7 +72,7 @@ TEST(osm_graph_builder, between_way_nodes) {
                         {49.8682487, 8.6778950},  // 5
                     },
                     {0L, 1L, 2L, 3L, 4L, 5L}};
-  builder.add_component({mp::osm_way{{0}, true, path}});
+  builder.add_component({mp::osm_way{{0}, mp::source_bits::ONEWAY, path}});
 
   ASSERT_EQ(3, graph.nodes_.size());
 
@@ -104,7 +112,11 @@ TEST(osm_graph_builder, heusenstamm) {
        {"5", "d-bahnhof", {50.007974000000, 8.785091000000}}});
 
   mp::osm_graph graph;
-  mp::osm_graph_builder builder(graph, stations);
+  mp::osm_graph_builder builder(
+      graph,
+      mp::source_spec{mp::source_spec::category::UNKNOWN,
+                      mp::source_spec::router::OSM_REL},
+      stations);
 
   {
     auto const csv_nodes = utl::read_file<csv_node>(

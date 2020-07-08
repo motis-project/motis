@@ -16,8 +16,8 @@
 
 #include "motis/core/common/logging.h"
 
-#include "motis/path/prepare/osm/osm_constants.h"
 #include "motis/path/prepare/osm/osm_phantom.h"
+#include "motis/path/prepare/tuning_parameters.h"
 
 using namespace motis::logging;
 using namespace geo;
@@ -146,15 +146,20 @@ void osm_graph_builder::add_component(mcd::vector<osm_way> const& osm_ways) {
   };
 
   auto const make_edges = [this](auto from, auto to, auto const path_idx,
-                                 bool oneway) {
+                                 source_bits const sb) {
     auto dist = 0.;
     for (auto const& [a, b] :
          utl::pairwise(graph_.paths_[path_idx].polyline_)) {
       dist += geo::distance(a, b);
     }
 
+    dist *= get_penalty_factor(sb);
+    if (dist == std::numeric_limits<double>::infinity()) {
+      return;
+    }
+
     from->edges_.emplace_back(path_idx, true, dist, from, to);
-    if (!oneway) {
+    if ((sb & source_bits::ONEWAY) != source_bits::ONEWAY) {
       to->edges_.emplace_back(path_idx, false, dist, to, from);
     }
   };
@@ -220,7 +225,7 @@ void osm_graph_builder::add_component(mcd::vector<osm_way> const& osm_ways) {
         prev_coord = {lb->pos_};
       }
 
-      make_edges(prev_node, curr_node, path_idx, way.oneway_);
+      make_edges(prev_node, curr_node, path_idx, way.source_bits_);
 
       prev_node = curr_node;
       prev_offset = curr_offset;
@@ -230,7 +235,53 @@ void osm_graph_builder::add_component(mcd::vector<osm_way> const& osm_ways) {
                                     prev_coord, std::optional<geo::latlng>{});
     auto curr_node = make_osm_node(way.to(), way.path_.polyline_.back());
 
-    make_edges(prev_node, curr_node, path_idx, way.oneway_);
+    make_edges(prev_node, curr_node, path_idx, way.source_bits_);
+  }
+}
+
+double osm_graph_builder::get_penalty_factor(source_bits const sb) const {
+  return 1.;
+
+  if (source_spec_.router_ == source_spec::router::OSM_REL) {
+    return 1.;
+  }
+
+  if (source_spec_.category_ == source_spec::category::SHIP &&
+      (sb & source_bits::SHIP) != source_bits::SHIP) {
+    return std::numeric_limits<double>::infinity();
+  }
+
+  auto const unlikely_penalty =
+      (sb & source_bits::UNLIKELY) == source_bits::UNLIKELY
+          ? kUnlikelyPenaltyFactor
+          : 1.;
+  auto const very_unlikely_penalty =
+      (sb & source_bits::VERY_UNLIKELY) == source_bits::VERY_UNLIKELY
+          ? kVeryUnlikelyPenaltyFactor
+          : 1.;
+  auto const extra_penalty = std::max(unlikely_penalty, very_unlikely_penalty);
+
+  auto const match = [&](auto const expected_cat, auto const expected_sb) {
+    return source_spec_.category_ == expected_cat &&
+           (sb & expected_sb) == expected_sb;
+  };
+
+  if (source_spec_.category_ == source_spec::category::UNKNOWN ||
+      source_spec_.category_ == source_spec::category::MULTI ||
+      source_spec_.category_ == source_spec::category::SHIP ||
+      match(source_spec::category::BUS, source_bits::BUS) ||
+      match(source_spec::category::TRAM, source_bits::TRAM) ||
+      match(source_spec::category::RAIL, source_bits::RAIL) ||
+      match(source_spec::category::SUBWAY, source_bits::SUBWAY)) {
+    return extra_penalty;
+  } else if (match(source_spec::category::BUS, source_bits::TRAM) ||
+             match(source_spec::category::TRAM, source_bits::BUS) ||
+             match(source_spec::category::TRAM, source_bits::LIGHT_RAIL) ||
+             match(source_spec::category::RAIL, source_bits::LIGHT_RAIL) ||
+             match(source_spec::category::SUBWAY, source_bits::LIGHT_RAIL)) {
+    return kMinorMismatchPenaltyFactor * extra_penalty;
+  } else {
+    return kMajorMismatchPenaltyFactor * extra_penalty;
   }
 }
 
