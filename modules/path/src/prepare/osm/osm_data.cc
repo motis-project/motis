@@ -47,6 +47,14 @@ auto const str_stop_area = std::string_view{"stop_area"};
 auto const str_stop = std::string_view{"stop"};
 auto const str_yes = std::string_view{"yes"};
 
+constexpr std::initializer_list<std::pair<char const*, source_spec::category>>
+    kOsmToCategory{{"bus", source_spec::category::BUS},
+                   {"train", source_spec::category::RAIL},
+                   {"light_rail", source_spec::category::RAIL},
+                   {"subway", source_spec::category::SUBWAY},
+                   {"tram", source_spec::category::TRAM},
+                   {"ferry", source_spec::category::SHIP}};
+
 struct raw_way {
   explicit raw_way(o::object_id_type id) : id_{id}, oneway_{false} {}
 
@@ -259,7 +267,7 @@ struct stop_position_handler : public oh::Handler {
       }
 
       stop_positions_.emplace_back(mcd::string{r.get_value_by_key("name", "")},
-                                   m.ref(), geo::latlng{});
+                                   read_categories(r), m.ref(), geo::latlng{});
     }
   }
 
@@ -269,7 +277,18 @@ struct stop_position_handler : public oh::Handler {
     }
 
     stop_positions_.emplace_back(mcd::string{n.get_value_by_key("name", "")},
-                                 n.id(), geo::latlng{});
+                                 read_categories(n), n.id(), geo::latlng{});
+  }
+
+  template <typename Object>
+  mcd::vector<source_spec::category> read_categories(Object const& object) {
+    mcd::vector<source_spec::category> result;
+    for (auto const& [key, cat] : kOsmToCategory) {
+      if (str_yes == object.get_value_by_key(key, "")) {
+        result.emplace_back(cat);
+      }
+    }
+    return result;
   }
 
   void collect(
@@ -279,6 +298,16 @@ struct stop_position_handler : public oh::Handler {
 
     std::sort(begin(stop_positions_), end(stop_positions_), id_less);
     utl::equal_ranges_linear(stop_positions_, id_eq, [](auto lb, auto ub) {
+      // collect all categories
+      for (auto it = std::next(lb); it != ub; ++it) {
+        utl::concat(lb->categories_, it->categories_);
+      }
+      utl::erase_duplicates(lb->categories_);
+      for (auto it = std::next(lb); it != ub; ++it) {
+        it->categories_ = lb->categories_;
+      }
+
+      // keep the named versions (if any)
       auto const have_named =
           std::any_of(lb, ub, [](auto&& sp) { return !sp.name_.empty(); });
 

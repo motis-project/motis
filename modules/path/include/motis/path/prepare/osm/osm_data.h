@@ -16,6 +16,7 @@ namespace motis::path {
 
 struct osm_stop_position {
   mcd::string name_;
+  mcd::vector<source_spec::category> categories_;
   int64_t id_;
   geo::latlng pos_;
 };
