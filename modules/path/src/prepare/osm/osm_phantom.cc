@@ -136,9 +136,8 @@ struct osm_phantom_index {
     auto const nodes = utl::to_vec(
         node_phantom_rtree_.in_radius(pos, radius), [&](auto const& idx) {
           return osm_node_phantom_match{
-              .phantom_ = node_phantoms_[idx],
-              .distance_ = geo::distance(pos, node_phantoms_[idx].pos_),
-              .station_ = station};
+              node_phantoms_[idx], geo::distance(pos, node_phantoms_[idx].pos_),
+              station};
         });
 
     std::set<size_t> ways;
@@ -151,10 +150,7 @@ struct osm_phantom_index {
       if (ways.insert(phantom.way_idx_).second == false) {
         continue;  // rtree: already sorted by distance
       }
-      edges.push_back({.phantom_ = phantom,
-                       .distance_ = dist,
-                       .station_ = station,
-                       .station_pos_ = pos});
+      edges.push_back(osm_edge_phantom_match{phantom, dist, station, pos});
     }
 
     // retain only of no neighbor is better
