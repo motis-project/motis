@@ -21,10 +21,13 @@
 #include "motis/paxmon/csv_writer.h"
 #include "motis/paxmon/loader/csv/row.h"
 
+#include "motis/paxmon/tools/groups/group_generator.h"
+
 using namespace motis::paxmon;
+using namespace motis::paxmon::tools::groups;
 namespace fs = boost::filesystem;
 
-struct groups_options : public conf::configuration {
+struct group_settings : public conf::configuration {
   enum class mode_t { REPLACE, SPLIT };
 
   friend std::istream& operator>>(std::istream& in, mode_t& mode) {
@@ -48,7 +51,7 @@ struct groups_options : public conf::configuration {
     return out;
   }
 
-  groups_options() : configuration{"Group Options"} {
+  group_settings() : configuration{"Group Settings"} {
     param(in_path_, "in,i", "Input file");
     param(out_path_, "out,o", "Output file");
     param(mode_, "mode",
@@ -67,14 +70,14 @@ struct groups_options : public conf::configuration {
   mode_t mode_{mode_t::REPLACE};
 
   double group_size_mean_{1.5};
-  double group_size_stddev_{5.0};
+  double group_size_stddev_{3.0};
 
   double group_count_mean_{2.0};
   double group_count_stddev_{10.0};
 };
 
 int main(int argc, char const** argv) {
-  groups_options opt;
+  group_settings opt;
 
   try {
     conf::options_parser parser{{&opt}};
@@ -100,23 +103,8 @@ int main(int argc, char const** argv) {
     return 1;
   }
 
-  auto rng = std::mt19937{std::random_device{}()};
-  auto group_size_dist =
-      std::normal_distribution{opt.group_size_mean_, opt.group_size_stddev_};
-  auto group_count_dist =
-      std::normal_distribution{opt.group_count_mean_, opt.group_count_stddev_};
-
-  auto const get_group_size = [&](std::uint16_t max_size = 100) {
-    return std::min(
-        max_size,
-        std::max(static_cast<std::uint16_t>(1),
-                 static_cast<std::uint16_t>(std::round(group_size_dist(rng)))));
-  };
-
-  auto const get_group_count = [&]() {
-    return static_cast<std::uint64_t>(
-        std::max(1.0, std::round(group_count_dist(rng))));
-  };
+  group_generator group_gen{opt.group_size_mean_, opt.group_size_stddev_,
+                            opt.group_count_mean_, opt.group_count_stddev_};
 
   auto buf = utl::file(opt.in_path_.data(), "r").content();
   auto const file_content = utl::cstr{buf.data(), buf.size()};
@@ -168,23 +156,24 @@ int main(int argc, char const** argv) {
     }
 
     switch (opt.mode_) {
-      case groups_options::mode_t::SPLIT: {
+      case group_settings::mode_t::SPLIT: {
 
         auto distributed = 0U;
         auto secondary_id = 0ULL;
         while (distributed < input_pax) {
-          auto const group_size = get_group_size(input_pax - distributed);
+          auto const group_size =
+              group_gen.get_group_size(input_pax - distributed);
           ++secondary_id;
           distributed += group_size;
           write_journey(secondary_id, group_size);
         }
         break;
       }
-      case groups_options::mode_t::REPLACE: {
-        auto const group_count = get_group_count();
+      case group_settings::mode_t::REPLACE: {
+        auto const group_count = group_gen.get_group_count();
         for (auto secondary_id = 1ULL; secondary_id <= group_count;
              ++secondary_id) {
-          write_journey(secondary_id, get_group_size());
+          write_journey(secondary_id, group_gen.get_group_size());
         }
         break;
       }

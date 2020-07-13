@@ -41,3 +41,29 @@ target_link_libraries(motis-pax-convert
 )
 target_compile_options(motis-pax-convert PRIVATE ${MOTIS_CXX_FLAGS})
 set_target_properties(motis-pax-convert PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+
+file(GLOB_RECURSE motis-pax-generator-files
+  tools/src/generator/*.cc
+  tools/src/convert/journey_converter.cc
+)
+add_executable(motis-pax-generator EXCLUDE_FROM_ALL ${motis-pax-generator-files})
+target_compile_features(motis-pax-generator PUBLIC cxx_std_17)
+target_include_directories(motis-pax-generator PUBLIC tools/include)
+target_link_libraries(motis-pax-generator
+  ${CMAKE_THREAD_LIBS_INIT}
+  conf
+  ianatzdb-res
+  motis-core
+  motis-bootstrap
+  motis-module
+  motis-paxmon
+)
+target_compile_options(motis-pax-generator PRIVATE ${MOTIS_CXX_FLAGS})
+set_target_properties(motis-pax-generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+
+add_custom_target(motis-pax-tools)
+add_dependencies(motis-pax-tools
+  motis-pax-groups
+  motis-pax-convert
+  motis-pax-generator
+)

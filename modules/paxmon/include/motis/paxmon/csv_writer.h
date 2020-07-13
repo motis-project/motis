@@ -56,6 +56,12 @@ struct csv_writer {
 
   void flush() { ofs_.flush(); }
 
+  void enable_exceptions() {
+    ofs_.exceptions(std::ofstream::failbit | std::ofstream::badbit);
+  }
+
+  std::ofstream& stream() { return ofs_; }
+
 private:
   void start_col() {
     if (first_col_) {
