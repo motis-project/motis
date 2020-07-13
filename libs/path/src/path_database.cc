@@ -58,7 +58,9 @@ std::unique_ptr<path_database> make_path_database(std::string const& fname,
                                                   bool const truncate) {
   utl::verify(!(read_only && truncate),
               "make_path_database: either truncate or read_only");
-  fs::create_directories(fs::path(fname).parent_path());
+  if (auto p = fs::path(fname); p.has_parent_path()) {
+    fs::create_directories(p.parent_path());
+  }
   auto db = std::make_unique<path_database>(fname, read_only);
 
   if (truncate) {
