@@ -153,10 +153,12 @@ void osm_graph_builder::add_component(mcd::vector<osm_way> const& osm_ways) {
       dist += geo::distance(a, b);
     }
 
-    dist *= get_penalty_factor(sb);
-    if (dist == std::numeric_limits<double>::infinity()) {
+    auto const penalty_factor = get_penalty_factor(sb);
+    if (penalty_factor == std::numeric_limits<double>::infinity()) {
       return;
     }
+
+    dist *= penalty_factor;
 
     from->edges_.emplace_back(path_idx, true, dist, from, to);
     if ((sb & source_bits::ONEWAY) != source_bits::ONEWAY) {
