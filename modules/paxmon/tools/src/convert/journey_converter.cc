@@ -35,7 +35,6 @@ void for_each_leg(journey const& j,
       if (jt == nullptr) {
         throw std::runtime_error{"invalid journey: trip not found"};
       }
-      std::optional<transfer_info> transfer;
       if (exit_stop_idx && *exit_stop_idx != stop_idx) {
         foot_cb(j.stops_.at(*exit_stop_idx), stop);
       }

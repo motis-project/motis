@@ -17,8 +17,6 @@
 #include "motis/paxmon/tools/generator/query_generator.h"
 #include "motis/paxmon/tools/groups/group_generator.h"
 
-#include "version.h"
-
 using namespace motis;
 using namespace motis::bootstrap;
 using namespace motis::module;
@@ -96,7 +94,7 @@ private:
     ++routing_queries_;
     instance_.on_msg(request_msg,
                      instance_.runner_.ios().wrap(
-                         [&](msg_ptr const& response_msg, std::error_code ec) {
+                         [&](msg_ptr const& response_msg, std::error_code) {
                            --in_flight_;
                            pax_generated_ += handle_response(response_msg);
                            generate_next();
@@ -170,7 +168,6 @@ int main(int argc, char const** argv) {
     parser.print_help(std::cout);
     return 0;
   } else if (parser.version()) {
-    std::cout << "Version: " << long_version() << "\n";
     return 0;
   }
 
