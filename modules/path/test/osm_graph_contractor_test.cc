@@ -24,6 +24,11 @@ void add_edge2(mp::osm_graph& graph, size_t from, size_t to, size_t dist) {
   add_edge(graph, to, from, dist);
 }
 
+void set_single_component(mp::osm_graph& graph) {
+  graph.components_ = 1ULL;
+  graph.component_offsets_ = {{0ULL, graph.nodes_.size()}};
+}
+
 std::vector<mp::osm_graph_dist> get_distances(mp::osm_graph const& graph) {
   mp::osm_graph_contractor contractor{graph};
   contractor.contract();
@@ -36,14 +41,20 @@ TEST(osm_graph_contractor, unconnected) {
 
   {
     add_node(graph, 0);
+    set_single_component(graph);
+
     ASSERT_TRUE(get_distances(graph).empty());
   }
   {
     add_node(graph, 1, true);
+    set_single_component(graph);
+
     ASSERT_TRUE(get_distances(graph).empty());
   }
   {
     add_node(graph, 2, true);
+    set_single_component(graph);
+
     ASSERT_TRUE(get_distances(graph).empty());
   }
 }
@@ -54,6 +65,7 @@ TEST(osm_graph_contractor, direct) {
   add_node(graph, 0, true);
   add_node(graph, 1, true);
   add_edge(graph, 0, 1, 10);
+  set_single_component(graph);
 
   {
     auto const result = get_distances(graph);
@@ -62,6 +74,8 @@ TEST(osm_graph_contractor, direct) {
   }
 
   add_edge(graph, 1, 0, 5);
+  set_single_component(graph);
+
   {
     auto const result = get_distances(graph);
     ASSERT_EQ(2, result.size());
@@ -78,6 +92,7 @@ TEST(osm_graph_contractor, single) {
   add_node(graph, 2, true);
   add_edge(graph, 0, 1, 5);
   add_edge(graph, 1, 2, 3);
+  set_single_component(graph);
 
   {
     auto const result = get_distances(graph);
@@ -86,6 +101,8 @@ TEST(osm_graph_contractor, single) {
   }
 
   add_edge(graph, 0, 2, 10);
+  set_single_component(graph);
+
   {
     auto const result = get_distances(graph);
     ASSERT_EQ(1, result.size());
@@ -93,6 +110,8 @@ TEST(osm_graph_contractor, single) {
   }
 
   add_edge(graph, 0, 2, 5);
+  set_single_component(graph);
+
   {
     auto const result = get_distances(graph);
     ASSERT_EQ(1, result.size());
@@ -120,6 +139,7 @@ TEST(osm_graph_contractor, two_terminals_complex) {
   add_edge(graph, 4, 5, 1);  // *
   add_edge(graph, 4, 6, 3);
   add_edge(graph, 5, 6, 1);  // *
+  set_single_component(graph);
 
   {
     auto const result = get_distances(graph);
@@ -141,6 +161,7 @@ TEST(osm_graph_contractor, tree_terminals_asymetric_star) {
   add_edge(graph, 1, 3, 7);
   add_edge(graph, 3, 1, 6);
   add_edge(graph, 2, 3, 10);
+  set_single_component(graph);
 
   {
     auto const result = get_distances(graph);
@@ -185,6 +206,7 @@ TEST(osm_graph_contractor, four_terminals_single_railroad) {
 
   add_edge2(graph, 8, 9, 1);
   add_edge2(graph, 9, 10, 1);
+  set_single_component(graph);
 
   {
     auto const result = get_distances(graph);
