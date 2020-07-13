@@ -5,6 +5,8 @@
 #include "conf/configuration.h"
 #include "conf/options_parser.h"
 
+#include "utl/progress_tracker.h"
+
 #include "motis/bootstrap/dataset_settings.h"
 #include "motis/bootstrap/import_settings.h"
 #include "motis/bootstrap/module_settings.h"
@@ -65,6 +67,8 @@ struct journey_generator {
   }
 
   void run() {
+    progress_tracker_ = utl::activate_progress_tracker("Journeys");
+    progress_tracker_->in_high(generator_opt_.pax_count_);
     instance_.runner_.ios().post([&]() {
       for (auto i = 0U; i < generator_opt_.num_threads_ * 2; ++i) {
         if (!generate_next()) {
@@ -73,6 +77,7 @@ struct journey_generator {
       }
     });
     instance_.runner_.run(generator_opt_.num_threads_, false);
+    progress_tracker_->status("FINISHED").show_progress(false);
   }
 
   unsigned generated_pax_count() const { return pax_generated_; }
@@ -97,6 +102,7 @@ private:
                          [&](msg_ptr const& response_msg, std::error_code) {
                            --in_flight_;
                            pax_generated_ += handle_response(response_msg);
+                           progress_tracker_->update(pax_generated_);
                            generate_next();
                          }));
     return true;
@@ -134,6 +140,7 @@ private:
   unsigned different_journeys_{};
   std::uint64_t next_primary_id_{1};
   journey_converter converter_;
+  utl::progress_tracker_ptr progress_tracker_;
 };
 
 int main(int argc, char const** argv) {
@@ -210,7 +217,10 @@ int main(int argc, char const** argv) {
       generator_opt.group_size_mean_, generator_opt.group_size_stddev_,
       generator_opt.group_count_mean_, generator_opt.group_count_stddev_};
   journey_generator journey_gen{instance, generator_opt, group_gen};
-  journey_gen.run();
+  {
+    auto bars = utl::global_progress_bars{};
+    journey_gen.run();
+  }
 
   std::cout << "\nGenerated " << journey_gen.generated_group_count()
             << " groups, " << journey_gen.generated_pax_count()
