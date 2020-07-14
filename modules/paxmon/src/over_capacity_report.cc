@@ -26,7 +26,7 @@ std::set<std::string> get_service_names(schedule const& sched,
   return names;
 }
 
-std::set<std::uint32_t> get_train_nrs(schedule const& sched, trip const* trp) {
+std::set<std::uint32_t> get_train_nrs(trip const* trp) {
   std::set<std::uint32_t> train_nrs;
   for (auto const& section : motis::access::sections(trp)) {
     for (connection_info const* ci = section.fcon().con_info_; ci != nullptr;
@@ -80,7 +80,7 @@ void write_over_capacity_report(paxmon_data const& data, schedule const& sched,
         "Trip: train_nr={:6} line_id={:6}  train_nrs={:<30}  service_names={}\n"
         "From: {:16}    {:8} {:50}\nTo:   {:16}    {:8} {:50}\n{:->148}\n",
         trp->id_.primary_.train_nr_, trp->id_.secondary_.line_id_,
-        fmt::join(get_train_nrs(sched, trp), ", "),
+        fmt::join(get_train_nrs(trp), ", "),
         fmt::join(get_service_names(sched, trp), ", "),
         format_unix_time(motis_to_unixtime(sched.schedule_begin_,
                                            trp->id_.primary_.get_time())),
