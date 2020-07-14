@@ -83,10 +83,11 @@ std::size_t load_capacities(schedule const& sched,
   return entry_count;
 }
 
-std::uint16_t get_capacity(schedule const& sched, light_connection const& lc,
-                           trip_capacity_map_t const& trip_map,
-                           category_capacity_map_t const& category_map,
-                           std::uint16_t default_capacity) {
+std::pair<std::uint16_t, capacity_source> get_capacity(
+    schedule const& sched, light_connection const& lc,
+    trip_capacity_map_t const& trip_map,
+    category_capacity_map_t const& category_map,
+    std::uint16_t default_capacity) {
   auto seats = 0;
 
   for (auto const& trp : *sched.merged_trips_.at(lc.trips_)) {
@@ -97,7 +98,7 @@ std::uint16_t get_capacity(schedule const& sched, light_connection const& lc,
                                  trp->id_.secondary_.target_time_};
     if (auto const lb = trip_map.lower_bound(tid); lb != end(trip_map)) {
       if (lb->first == tid) {
-        return lb->second;
+        return {lb->second, capacity_source::TRIP_EXACT};
       } else if (lb->first.train_nr_ == train_nr) {
         seats = lb->second;
       } else if (auto const prev = std::prev(lb);
@@ -108,18 +109,18 @@ std::uint16_t get_capacity(schedule const& sched, light_connection const& lc,
   }
 
   if (seats != 0) {
-    return seats;
+    return {seats, capacity_source::TRAIN_NR};
   } else {
     auto const& category =
         sched.categories_[lc.full_con_->con_info_->family_]->name_;
     if (auto const it = category_map.find(category); it != end(category_map)) {
-      return it->second;
+      return {it->second, capacity_source::CATEGORY};
     } else if (auto const it = category_map.find(std::to_string(
                    static_cast<service_class_t>(lc.full_con_->clasz_)));
                it != end(category_map)) {
-      return it->second;
+      return {it->second, capacity_source::CLASZ};
     }
-    return default_capacity;
+    return {default_capacity, capacity_source::DEFAULT};
   }
 }
 

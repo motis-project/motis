@@ -47,7 +47,7 @@ std::vector<std::uint16_t> simulate_behavior(
         [&](motis::paxmon::journey_leg const&, motis::paxmon::edge* e) {
           e->passengers_ += additional;
           sim_result.additional_passengers_[e] += additional;
-          if (e->passengers_ > e->capacity_) {
+          if (e->passengers() > e->capacity()) {
             sim_result.edges_over_capacity_.insert(e);
           }
         });

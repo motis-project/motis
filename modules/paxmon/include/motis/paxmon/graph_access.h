@@ -34,8 +34,8 @@ inline edge* add_edge(edge const& e) {
 }
 
 inline edge make_trip_edge(event_node* from, event_node* to, edge_type type,
-                           trip const* trp, std::uint16_t capacity) {
-  return edge{from, to, type, false, 0, capacity, 0, trp, {}};
+                           trip const* trp, std::uint16_t encoded_capacity) {
+  return edge{from, to, type, false, 0, encoded_capacity, 0, trp, {}};
 }
 
 inline edge make_interchange_edge(event_node* from, event_node* to,

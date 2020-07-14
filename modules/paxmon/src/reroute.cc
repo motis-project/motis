@@ -93,7 +93,7 @@ edge* get_connecting_edge(event_node const* from, event_node const* to,
 }
 
 edge* connect_nodes(event_node* from, event_node* to, trip const* trp,
-                    std::uint16_t capacity, graph const& g) {
+                    std::uint16_t encoded_capacity, graph const& g) {
   if (from == nullptr || to == nullptr) {
     return nullptr;
   }
@@ -106,7 +106,7 @@ edge* connect_nodes(event_node* from, event_node* to, trip const* trp,
   }
   auto const type =
       from->type_ == event_type::DEP ? edge_type::TRIP : edge_type::WAIT;
-  return add_edge(make_trip_edge(from, to, type, trp, capacity));
+  return add_edge(make_trip_edge(from, to, type, trp, encoded_capacity));
 }
 
 event_node* get_or_insert_node(graph& g, trip_data& td, trip_ev_key const tek,
@@ -130,15 +130,15 @@ event_node* get_or_insert_node(graph& g, trip_data& td, trip_ev_key const tek,
       .get();
 }
 
-std::uint16_t guess_trip_capacity(schedule const& sched, paxmon_data& data,
-                                  trip const* trp) {
+std::pair<std::uint16_t, capacity_source> guess_trip_capacity(
+    schedule const& sched, paxmon_data& data, trip const* trp) {
   auto const sections = access::sections(trp);
   if (begin(sections) != end(sections)) {
     return get_capacity(sched, (*begin(sections)).lcon(),
                         data.trip_capacity_map_, data.category_capacity_map_,
                         data.default_capacity_);
   } else {
-    return 0;
+    return {0, capacity_source::DEFAULT};
   }
 }
 
@@ -193,7 +193,8 @@ void apply_reroute(paxmon_data& data, schedule const& sched, trip const* trp,
                    std::vector<trip_ev_key> const& old_route,
                    std::vector<trip_ev_key> const& new_route,
                    std::vector<edge*>& updated_interchange_edges) {
-  auto const capacity = guess_trip_capacity(sched, data, trp);
+  auto const encoded_capacity =
+      encode_capacity(guess_trip_capacity(sched, data, trp));
   auto const affected_passenger_groups = collect_passenger_groups(td);
   auto diff = diff_route(old_route, new_route);
 
@@ -225,7 +226,7 @@ void apply_reroute(paxmon_data& data, schedule const& sched, trip const* trp,
 
   std::vector<edge*> new_edges;
   for (auto const& [from, to] : utl::pairwise(new_nodes)) {
-    auto e = connect_nodes(from, to, trp, capacity, data.graph_);
+    auto e = connect_nodes(from, to, trp, encoded_capacity, data.graph_);
     new_edges.emplace_back(e);
   }
   td.edges_ = new_edges;

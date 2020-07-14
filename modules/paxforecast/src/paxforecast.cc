@@ -165,9 +165,9 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
         std::cout << "trip over capacity: " << get_service_name(sched, ci)
                   << " (tn=" << ci->train_nr_ << "):";
         for (auto const e : edges) {
-          std::cout << " " << e->passengers_ << "[+"
+          std::cout << " " << e->passengers() << "[+"
                     << sim_result.additional_passengers_[e] << "]/"
-                    << e->capacity_;
+                    << e->capacity();
         }
         std::cout << "\n";
       }

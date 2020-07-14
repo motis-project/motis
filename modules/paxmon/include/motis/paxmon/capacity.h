@@ -12,6 +12,8 @@
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/schedule/time.h"
 
+#include "motis/paxmon/capacity_data.h"
+
 namespace motis::paxmon {
 
 struct cap_trip_id {
@@ -32,9 +34,10 @@ std::size_t load_capacities(schedule const& sched,
                             trip_capacity_map_t& trip_map,
                             category_capacity_map_t& category_map);
 
-std::uint16_t get_capacity(schedule const& sched, light_connection const& lc,
-                           trip_capacity_map_t const& trip_map,
-                           category_capacity_map_t const& category_map,
-                           std::uint16_t default_capacity);
+std::pair<std::uint16_t, capacity_source> get_capacity(
+    schedule const& sched, light_connection const& lc,
+    trip_capacity_map_t const& trip_map,
+    category_capacity_map_t const& category_map,
+    std::uint16_t default_capacity);
 
 }  // namespace motis::paxmon

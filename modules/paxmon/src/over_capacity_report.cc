@@ -37,6 +37,17 @@ std::set<std::uint32_t> get_train_nrs(schedule const& sched, trip const* trp) {
   return train_nrs;
 }
 
+std::string_view capacity_source_str(capacity_source const src) {
+  switch (src) {
+    case capacity_source::TRIP_EXACT: return "trip";
+    case capacity_source::TRAIN_NR: return "train_nr";
+    case capacity_source::CATEGORY: return "category";
+    case capacity_source::CLASZ: return "clasz";
+    case capacity_source::DEFAULT: return "default";
+  }
+  return "???";
+}
+
 void write_over_capacity_report(paxmon_data const& data, schedule const& sched,
                                 std::string const& filename) {
   std::ofstream out{filename};
@@ -87,8 +98,9 @@ void write_over_capacity_report(paxmon_data const& data, schedule const& sched,
       auto const percentage = static_cast<double>(passengers) /
                               static_cast<double>(capacity) * 100.0;
       fmt::print(
-          out, "  {:4}/{:4} [{:+4} {:3.0f}%] | {:8} {:50} => {:8} {:50}\n",
-          passengers, capacity, additional, percentage, from_station.eva_nr_,
+          out, "{:4}/{:4} [{:+4} {:3.0f}%] [{:8}] | {:8} {:50} => {:8} {:50}\n",
+          passengers, capacity, additional, percentage,
+          capacity_source_str(e->capacity_source()), from_station.eva_nr_,
           from_station.name_, to_station.eva_nr_, to_station.name_);
     }
 

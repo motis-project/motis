@@ -14,6 +14,7 @@
 #include "motis/core/schedule/trip.h"
 #include "motis/core/journey/extern_trip.h"
 
+#include "motis/paxmon/capacity_data.h"
 #include "motis/paxmon/passenger_group.h"
 #include "motis/paxmon/pax_connection_info.h"
 
@@ -77,7 +78,9 @@ struct edge {
   }
 
   inline std::uint16_t passengers_over_capacity() const {
-    return passengers_ > capacity_ ? passengers_ - capacity_ : 0U;
+    auto const pax = passengers();
+    auto const cap = capacity();
+    return pax > cap ? pax - cap : 0U;
   }
 
   inline event_node* from(graph const&) const { return from_; }
@@ -86,9 +89,19 @@ struct edge {
   inline edge_type type() const { return type_; }
   inline trip const* get_trip() const { return trip_; }
   inline duration transfer_time() const { return transfer_time_; }
-  inline std::uint64_t capacity() const { return capacity_; }
+
+  inline std::uint64_t capacity() const {
+    return get_capacity(encoded_capacity_);
+  }
+
+  inline capacity_source capacity_source() const {
+    return get_capacity_source(encoded_capacity_);
+  }
+
   inline std::uint64_t passengers() const { return passengers_; }
+
   inline bool is_broken() const { return broken_; }
+
   inline pax_connection_info const& get_pax_connection_info() const {
     return pax_connection_info_;
   }
@@ -98,7 +111,7 @@ struct edge {
   edge_type type_{};
   bool broken_{false};
   duration transfer_time_{};
-  std::uint16_t capacity_{};
+  std::uint16_t encoded_capacity_{};
   std::uint16_t passengers_{};
   struct trip const* trip_{};
   struct pax_connection_info pax_connection_info_;

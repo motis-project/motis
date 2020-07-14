@@ -70,7 +70,7 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
       if (in_trip) {
         e->passengers_ += grp.passengers_;
         e->pax_connection_info_.section_infos_.emplace_back(&grp);
-        if (e->passengers_ > e->capacity_) {
+        if (e->passengers() > e->capacity()) {
           ++stats.initial_over_capacity_;
         }
         grp.edges_.emplace_back(e);

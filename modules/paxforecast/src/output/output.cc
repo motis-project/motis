@@ -334,10 +334,10 @@ void write_simulation_result(Writer& w, schedule const& sched,
       w.StartObject();
 
       w.Key("passengers");
-      w.Uint(e->passengers_);
+      w.Uint(e->passengers());
 
       w.Key("capacity");
-      w.Uint(e->capacity_);
+      w.Uint(e->capacity());
 
       w.Key("additional");
       w.Uint(sim_result.additional_passengers_.at(e));

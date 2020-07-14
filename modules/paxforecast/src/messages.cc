@@ -32,7 +32,7 @@ Offset<PassengerForecastResult> to_fbs(schedule const& sched,
           auto const from = e->from(g);
           auto const to = e->to(g);
           fb_edges.emplace_back(CreateEdgeOverCapacity(
-              fbb, e->passengers_, e->capacity_,
+              fbb, e->passengers(), e->capacity(),
               res.additional_passengers_.at(e),
               to_fbs(fbb, from->get_station(sched)),
               to_fbs(fbb, to->get_station(sched)),
