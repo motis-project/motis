@@ -34,6 +34,7 @@ private:
   void load_capacity_files();
   motis::module::msg_ptr rt_update(motis::module::msg_ptr const& msg);
   void rt_updates_applied();
+  void print_graph_stats();
 
   std::vector<std::string> journey_files_;
   std::vector<std::string> capacity_files_;

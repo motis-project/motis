@@ -140,50 +140,8 @@ void paxmon::load_journeys() {
     load_journeys(file);
   }
 
-  auto build_stats = build_graph_from_journeys(sched, data_);
-
-  std::uint64_t edge_count = 0;
-  std::uint64_t trip_edge_count = 0;
-  std::uint64_t interchange_edge_count = 0;
-  std::uint64_t wait_edge_count = 0;
-  for (auto const& n : data_.graph_.nodes_) {
-    edge_count += n->outgoing_edges(data_.graph_).size();
-    for (auto const& e : n->outgoing_edges(data_.graph_)) {
-      switch (e->type_) {
-        case edge_type::TRIP: ++trip_edge_count; break;
-        case edge_type::INTERCHANGE: ++interchange_edge_count; break;
-        case edge_type::WAIT: ++wait_edge_count; break;
-      }
-    }
-  }
-
-  std::set<std::uint32_t> stations;
-  std::set<trip const*> trips;
-  for (auto const& n : data_.graph_.nodes_) {
-    stations.insert(n->station_);
-    for (auto const& e : n->outgoing_edges(data_.graph_)) {
-      if (e->get_trip() != nullptr) {
-        trips.insert(e->get_trip());
-      }
-    }
-  }
-  auto total_passenger_count = 0ULL;
-  for (auto const& pg : data_.graph_.passenger_groups_) {
-    total_passenger_count += pg->passengers_;
-  }
-
-  LOG(info) << fmt::format("{:n} passenger groups",
-                           data_.graph_.passenger_groups_.size());
-  LOG(info) << fmt::format("{:n} total passengers", total_passenger_count);
-  LOG(info) << fmt::format("{:n} graph nodes", data_.graph_.nodes_.size());
-  LOG(info) << fmt::format("{:n} trips", data_.graph_.trip_data_.size());
-  LOG(info) << fmt::format(
-      "{:n} edges: {:n} trip + {:n} interchange + {:n} wait", edge_count,
-      trip_edge_count, interchange_edge_count, wait_edge_count);
-  LOG(info) << fmt::format("{:n} stations", stations.size());
-  LOG(info) << fmt::format("{:n} trips", trips.size());
-  LOG(info) << fmt::format("{:n} edges over capacity initially",
-                           build_stats.initial_over_capacity_);
+  build_graph_from_journeys(sched, data_);
+  print_graph_stats();
 }
 
 void paxmon::load_capacity_files() {
@@ -397,6 +355,29 @@ void paxmon::rt_updates_applied() {
   stats_writer_->write_tick(tick_stats_);
   stats_writer_->flush();
   tick_stats_ = {};
+}
+
+void paxmon::print_graph_stats() {
+  auto const graph_stats = calc_graph_statistics(data_);
+
+  LOG(info) << fmt::format("{:n} passenger groups, {:n} passengers",
+                           graph_stats.passenger_groups_,
+                           graph_stats.passengers_);
+  LOG(info) << fmt::format("{:n} graph nodes ({:n} canceled)",
+                           graph_stats.nodes_, graph_stats.canceled_nodes_);
+  LOG(info) << fmt::format(
+      "{:n} graph edges ({:n} canceled): {:n} trip + {:n} interchange + {:n} "
+      "wait",
+      graph_stats.edges_, graph_stats.canceled_edges_, graph_stats.trip_edges_,
+      graph_stats.interchange_edges_, graph_stats.wait_edges_);
+  LOG(info) << fmt::format("{:n} stations", graph_stats.stations_);
+  LOG(info) << fmt::format("{:n} trips", graph_stats.trips_);
+  LOG(info) << fmt::format("over capacity: {:n} trips, {:n} edges",
+                           graph_stats.trips_over_capacity_,
+                           graph_stats.edges_over_capacity_);
+  LOG(info) << fmt::format("broken: {:n} interchange edges, {:n} groups",
+                           graph_stats.broken_edges_,
+                           graph_stats.broken_passenger_groups_);
 }
 
 }  // namespace motis::paxmon

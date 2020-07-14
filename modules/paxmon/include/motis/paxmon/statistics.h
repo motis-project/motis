@@ -56,4 +56,26 @@ struct tick_statistics {
   std::uint64_t tracked_broken_groups_{};
 };
 
+struct graph_statistics {
+  std::uint64_t passenger_groups_{};
+  std::uint64_t passengers_{};
+  std::uint64_t nodes_{};
+  std::uint64_t canceled_nodes_{};
+  std::uint64_t edges_{};
+  std::uint64_t trip_edges_{};
+  std::uint64_t interchange_edges_{};
+  std::uint64_t wait_edges_{};
+  std::uint64_t canceled_edges_{};
+  std::uint64_t broken_edges_{};
+  std::uint64_t trips_{};
+  std::uint64_t stations_{};
+  std::uint64_t edges_over_capacity_{};
+  std::uint64_t trips_over_capacity_{};
+  std::uint64_t broken_passenger_groups_{};
+};
+
+struct paxmon_data;
+
+graph_statistics calc_graph_statistics(paxmon_data const& data);
+
 }  // namespace motis::paxmon
