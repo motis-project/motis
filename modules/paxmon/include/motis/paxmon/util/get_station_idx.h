@@ -17,6 +17,12 @@ inline std::optional<std::uint32_t> get_station_idx(schedule const& sched,
   } else if (auto const it = sched.ds100_to_station_.find(id);
              it != end(sched.ds100_to_station_)) {
     return it->second->index_;
+  } else if (auto const space = id.find(' '); space != std::string_view::npos) {
+    auto const prefix = id.substr(0, space);
+    if (auto const it = sched.ds100_to_station_.find(prefix);
+        it != end(sched.ds100_to_station_)) {
+      return it->second->index_;
+    }
   }
   return {};
 }

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <ctime>
 #include <iterator>
+#include <set>
 #include <string>
 
 #include "utl/parser/buf_reader.h"
@@ -43,6 +44,8 @@ std::size_t load_capacities(schedule const& sched,
   auto const file_content = utl::cstr{buf.data(), buf.size()};
   auto entry_count = 0ULL;
 
+  std::set<std::string> stations_not_found;
+
   utl::line_range<utl::buf_reader>{file_content}  //
       | utl::csv<row>()  //
       | utl::for_each([&](auto&& row) {
@@ -61,10 +64,10 @@ std::size_t load_capacities(schedule const& sched,
                                : 0;
 
             if (row.from_.val() && from_station_idx == 0) {
-              LOG(warn) << "station not found: " << row.from_.val().view();
+              stations_not_found.insert(row.from_.val().to_str());
             }
             if (row.to_.val() && to_station_idx == 0) {
-              LOG(warn) << "station not found: " << row.to_.val().view();
+              stations_not_found.insert(row.to_.val().to_str());
             }
             if (departure == INVALID_TIME || arrival == INVALID_TIME) {
               return;
@@ -79,6 +82,10 @@ std::size_t load_capacities(schedule const& sched,
             ++entry_count;
           }
         });
+
+  if (!stations_not_found.empty()) {
+    LOG(warn) << stations_not_found.size() << " stations not found";
+  }
 
   return entry_count;
 }
