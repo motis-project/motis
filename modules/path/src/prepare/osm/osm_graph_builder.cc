@@ -4,6 +4,8 @@
 
 #include "boost/range/irange.hpp"
 
+#include "geo/xyz.h"
+
 #include "utl/concat.h"
 #include "utl/equal_ranges_linear.h"
 #include "utl/erase_duplicates.h"
@@ -179,7 +181,8 @@ void osm_graph_builder::add_component(
     auto dist = 0.;
     for (auto const& [a, b] :
          utl::pairwise(graph_.paths_[path_idx].polyline_)) {
-      dist += geo::distance(a, b);
+      // dist via xyz coordinates for consistency with a-star heuristic
+      dist += geo::haversine_distance(geo::xyz{a}, geo::xyz{b});
     }
 
     auto const penalty_factor = get_penalty_factor(sb);

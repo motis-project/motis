@@ -2,32 +2,9 @@
 
 #include "motis/path/prepare/osm/osm_graph_contractor.h"
 
+#include "./osm_graph_utils.h"
+
 namespace mp = motis::path;
-
-void add_node(mp::osm_graph& graph, size_t idx, bool terminal = false) {
-  utl::verify(graph.nodes_.size() == idx, "add_node: node idx mismatch");
-  graph.nodes_.emplace_back(
-      std::make_unique<mp::osm_node>(idx, 0, 0, geo::latlng{}));
-  if (terminal) {
-    graph.node_station_links_.emplace_back("foo", idx, 42);
-  }
-}
-
-void add_edge(mp::osm_graph& graph, size_t from, size_t to, size_t dist) {
-  auto* from_node = graph.nodes_[from].get();
-  auto* to_node = graph.nodes_[to].get();
-  from_node->edges_.emplace_back(0, true, dist, from_node, to_node);
-}
-
-void add_edge2(mp::osm_graph& graph, size_t from, size_t to, size_t dist) {
-  add_edge(graph, from, to, dist);
-  add_edge(graph, to, from, dist);
-}
-
-void set_single_component(mp::osm_graph& graph) {
-  graph.components_ = 1ULL;
-  graph.component_offsets_ = {{0ULL, graph.nodes_.size()}};
-}
 
 std::vector<mp::osm_graph_dist> get_distances(mp::osm_graph const& graph) {
   mp::osm_graph_contractor contractor{graph};

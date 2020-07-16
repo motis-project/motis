@@ -20,15 +20,15 @@ struct clearable_priority_queue
 
 struct osm_graph_dijkstra_label {
   osm_graph_dijkstra_label(size_t const idx, size_t const dist,
-                           osm_edge const* edge)
-      : idx_(idx), dist_(dist), edge_(edge) {}
+                           size_t const heuristic_dist, osm_edge const* edge)
+      : idx_{idx}, dist_{dist}, heuristic_dist_{heuristic_dist}, edge_{edge} {}
 
   friend bool operator>(osm_graph_dijkstra_label const& a,
                         osm_graph_dijkstra_label const& b) {
-    return a.dist_ > b.dist_;
+    return a.heuristic_dist_ > b.heuristic_dist_;
   }
 
-  size_t idx_, dist_;
+  size_t idx_, dist_, heuristic_dist_;
   osm_edge const* edge_;
 };
 
@@ -90,8 +90,26 @@ struct osm_graph_dijkstra {
     }
 
     if (!open_goals_.empty()) {
+      // initialize heuristic goal
+      double lat_acc = 0.;
+      double lng_acc = 0.;
+      for (auto const& g : open_goals_) {
+        lat_acc += graph_.nodes_[g]->pos_.lat_;
+        lng_acc += graph_.nodes_[g]->pos_.lng_;
+      }
+
+      goal_center_ = geo::latlng{lat_acc / open_goals_.size(),
+                                 lng_acc / open_goals_.size()};
+      for (auto const& g : open_goals_) {
+        goal_radius_ = std::max(
+            goal_radius_, static_cast<size_t>(std::ceil(geo::haversine_distance(
+                              goal_center_, graph_.nodes_[g]->xyz_))));
+      }
+
+      // initial label
       dist(initial) = 0;
-      pq_->push(osm_graph_dijkstra_label{initial, 0, nullptr});
+      pq_->push(osm_graph_dijkstra_label{
+          initial, 0, heuristic_distance(initial, 0), nullptr});
     }
   }
 
@@ -115,7 +133,8 @@ struct osm_graph_dijkstra {
         if (new_dist < limit_ && new_dist < dist(to_idx)) {
           dist(to_idx) = new_dist;
           edge(to_idx) = &curr_edge;
-          pq_->push({to_idx, new_dist, &curr_edge});
+          pq_->push({to_idx, new_dist, heuristic_distance(to_idx, new_dist),
+                     &curr_edge});
         }
       }
     }
@@ -139,6 +158,14 @@ struct osm_graph_dijkstra {
     return (*edges_)[node_idx - node_idx_offset_];
   }
 
+  inline size_t heuristic_distance(size_t const node_idx,
+                                   size_t const initial_dist) const {
+    auto const node_goal_dist = std::ceil(
+        geo::haversine_distance(goal_center_, graph_.nodes_[node_idx]->xyz_));
+    return initial_dist +
+           (node_goal_dist > goal_radius_ ? node_goal_dist - goal_radius_ : 0);
+  }
+
   osm_graph const& graph_;
   size_t node_idx_offset_;
 
@@ -148,7 +175,10 @@ struct osm_graph_dijkstra {
 
   std::vector<size_t> open_goals_;
 
-  size_t limit_ = 10;
+  geo::xyz goal_center_{};
+  size_t goal_radius_{0};
+
+  size_t limit_{10};
 };
 
 std::vector<std::vector<osm_edge const*>> shortest_paths(
