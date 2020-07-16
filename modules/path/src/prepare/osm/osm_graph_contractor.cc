@@ -261,7 +261,7 @@ std::vector<osm_graph_dist> osm_graph_contractor::collect_distances() {
   std::vector<osm_graph_dist> distances;
   for (auto i = 0UL; i < nodes_.size(); ++i) {
     auto const& cn = nodes_.at(i);
-    if (!cn) {
+    if (cn->cluster_id_ == kInvalidClusterId) {
       continue;
     }
     for (auto const& e : cn->out_edges_) {

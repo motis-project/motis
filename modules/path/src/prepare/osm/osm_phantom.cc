@@ -231,7 +231,7 @@ osm_phantom_builder::match_osm_phantoms(station const* station,
 void osm_phantom_builder::append_phantoms(
     std::vector<osm_node_phantom_match> const& n_phantoms,
     std::vector<osm_edge_phantom_match> const& e_phantoms) {
-  if (n_phantoms.empty() && e_phantoms_.empty()) {
+  if (n_phantoms.empty() && e_phantoms.empty()) {
     return;
   }
 
