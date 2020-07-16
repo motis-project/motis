@@ -15,6 +15,16 @@ struct osm_graph_dist {
   size_t from_, to_, dist_{0UL};
 };
 
+using contract_cluster_id_t = size_t;
+using contract_node_idx_t = size_t;
+using contract_distance_t = size_t;
+
+constexpr auto const kNoClusterId =
+    std::numeric_limits<contract_cluster_id_t>::max();
+
+constexpr auto const kInvalidClusterId =
+    std::numeric_limits<contract_cluster_id_t>::max() - 1;
+
 struct osm_graph_contractor {
   struct contract_edge {
     contract_edge(size_t node_idx, size_t dist)
@@ -24,12 +34,14 @@ struct osm_graph_contractor {
   };
 
   struct contract_node {
-    bool is_terminal_ = false;
+    bool is_terminal_{false};
     std::vector<contract_edge> out_edges_, inc_edges_;
+
+    std::atomic<contract_cluster_id_t> cluster_id_{kNoClusterId};
   };
 
   struct contract_task {
-    size_t offset_, node_count_;
+    size_t offset_, node_count_, task_id_, task_count_;
   };
 
   explicit osm_graph_contractor(osm_graph const&);
@@ -45,8 +57,6 @@ struct osm_graph_contractor {
   osm_graph const& graph_;
   size_t ops_{0};
 
-  // parallel vectors
-  std::vector<std::mutex> mutex_;
   std::vector<std::unique_ptr<contract_node>> nodes_;
 };
 
