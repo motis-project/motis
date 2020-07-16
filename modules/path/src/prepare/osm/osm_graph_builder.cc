@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "boost/range/irange.hpp"
+
 #include "utl/concat.h"
 #include "utl/equal_ranges_linear.h"
 #include "utl/erase_duplicates.h"
@@ -16,7 +18,6 @@
 
 #include "motis/core/common/logging.h"
 
-#include "motis/path/prepare/osm/osm_phantom.h"
 #include "motis/path/prepare/tuning_parameters.h"
 
 using namespace motis::logging;
@@ -31,8 +32,36 @@ using offset_t = size_t;
 
 void osm_graph_builder::build_graph(
     mcd::vector<mcd::vector<osm_way>> const& components) {
-  utl::parallel_for("add_component", components, 1000,
-                    [this](auto const& c) { add_component(c); });
+  if (components.size() == 1) {
+    if (osm_phantom_builder pb{station_idx_, components[0]};
+        !pb.matched_stations_.empty()) {
+      auto const& matched_stations = pb.matched_stations_;
+
+      auto const task_count =
+          std::min<size_t>(std::max<size_t>(matched_stations.size() / 1000, 1),
+                           2 * std::thread::hardware_concurrency());
+      auto const batch_size = matched_stations.size() / task_count;
+      utl::verify(batch_size != 0, "osm_graph_builder: empty batch size");
+
+      utl::parallel_for(boost::irange(task_count), [&](auto const batch_idx) {
+        auto const lb = batch_idx * batch_size;
+        auto const ub = (batch_idx + 1 != task_count)
+                            ? (batch_idx + 1) * batch_size
+                            : matched_stations.size();
+        for (auto i = lb; i < ub; ++i) {
+          pb.build_osm_phantoms(matched_stations[i]);
+        }
+      });
+      pb.finalize();
+
+      if (pb.n_phantoms_.size() + pb.e_phantoms_.size() > 0) {
+        add_component(components[0], pb.n_phantoms_, pb.e_phantoms_);
+      }
+    }
+  } else {
+    utl::parallel_for("add_component", components, 1000,
+                      [this](auto const& c) { add_component(c); });
+  }
 
   std::sort(begin(graph_.node_station_links_), end(graph_.node_station_links_),
             [](auto const& lhs, auto const& rhs) {
@@ -54,23 +83,23 @@ void osm_graph_builder::build_graph(
 }
 
 void osm_graph_builder::add_component(mcd::vector<osm_way> const& osm_ways) {
-  geo::box component_box;
-  for (auto const& way : osm_ways) {
-    for (auto const& pos : way.path_.polyline_) {
-      component_box.extend(pos);
+  if (osm_phantom_builder pb{station_idx_, osm_ways};
+      !pb.matched_stations_.empty()) {
+    for (auto const* station : pb.matched_stations_) {
+      pb.build_osm_phantoms(station);
+    }
+    pb.finalize();
+
+    if (pb.n_phantoms_.size() + pb.e_phantoms_.size() > 0) {
+      add_component(osm_ways, pb.n_phantoms_, pb.e_phantoms_);
     }
   }
-  component_box.extend(kMaxMatchDistance);
+}
 
-  auto const matched_stations = station_idx_.index_.within(component_box);
-  if (matched_stations.empty()) {
-    return;
-  }
-
-  auto const phantoms = make_phantoms(station_idx_, matched_stations, osm_ways);
-  auto const& n_phantoms = phantoms.first;
-  auto const& e_phantoms = phantoms.second;
-
+void osm_graph_builder::add_component(
+    mcd::vector<osm_way> const& osm_ways,
+    std::vector<osm_node_phantom_match> const& n_phantoms,
+    std::vector<osm_edge_phantom_match> const& e_phantoms) {
   auto const lock = std::lock_guard{mutex_};
   auto component = graph_.components_++;
 

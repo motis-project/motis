@@ -5,6 +5,7 @@
 #include "geo/latlng.h"
 
 #include "motis/path/prepare/osm/osm_way.h"
+#include "motis/path/prepare/osm/segment_rtree.h"
 #include "motis/path/prepare/schedule/stations.h"
 
 namespace motis::path {
@@ -49,10 +50,37 @@ struct osm_edge_phantom_match {
   bool eq_from_{false}, eq_to_{false};
 };
 
+struct osm_phantom_builder {
+  osm_phantom_builder(station_index const&, mcd::vector<osm_way> const&);
+
+  void build_osm_phantoms(station const*);
+
+  std::pair<std::vector<osm_node_phantom_match>,
+            std::vector<osm_edge_phantom_match>>
+  match_osm_phantoms(station const*, geo::latlng const&,
+                     double const radius) const;
+
+  void append_phantoms(std::vector<osm_node_phantom_match> const&,
+                       std::vector<osm_edge_phantom_match> const&);
+
+  void finalize();
+
+  station_index const& station_idx_;
+  std::vector<station const*> matched_stations_;
+
+  std::vector<osm_node_phantom> node_phantoms_;
+  geo::point_rtree node_phantom_rtree_;
+
+  std::vector<osm_edge_phantom> edge_phantoms_;
+  segment_rtree edge_phantom_rtree_;
+
+  std::mutex mutex_;
+  std::vector<osm_node_phantom_match> n_phantoms_;
+  std::vector<osm_edge_phantom_match> e_phantoms_;
+};
+
 std::pair<std::vector<osm_node_phantom_match>,
           std::vector<osm_edge_phantom_match>>
-make_phantoms(station_index const& station_idx,
-              std::vector<size_t> const& matched_stations,
-              mcd::vector<osm_way> const& osm_ways);
+make_phantoms(station_index const&, mcd::vector<osm_way> const&);
 
 }  // namespace motis::path

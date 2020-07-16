@@ -96,147 +96,153 @@ inline bool dominated_with_tiebreaker(osm_edge_phantom_match const& self,
   return other.distance_ < self.distance_;
 }
 
-struct osm_phantom_index {
-  explicit osm_phantom_index(mcd::vector<osm_way> const& osm_ways) {
-    mcd::hash_map<int64_t, osm_node_phantom> node_phantoms;
-
-    for (auto i = 0UL; i < osm_ways.size(); ++i) {
-      auto const& polyline = osm_ways[i].path_.polyline_;
-      utl::verify(polyline.size() > 1, "rail: polyline too short");
-
-      auto const make_node_phantom = [&](auto const id, auto const pos) {
-        auto& phantom = utl::get_or_create(node_phantoms, id, [&] {
-          return osm_node_phantom{id, pos};
-        });
-        phantom.way_idx_.push_back(i);
-      };
-      make_node_phantom(osm_ways[i].from(), polyline.front());
-      make_node_phantom(osm_ways[i].to(), polyline.back());
-
-      auto j = 0;
-      for (auto const& [from, to] : utl::pairwise(polyline)) {
-        edge_phantoms_.emplace_back(i, j++, from, to);
+osm_phantom_builder::osm_phantom_builder(station_index const& station_idx,
+                                         mcd::vector<osm_way> const& osm_ways)
+    : station_idx_{station_idx} {
+  {
+    geo::box component_box;
+    for (auto const& way : osm_ways) {
+      for (auto const& pos : way.path_.polyline_) {
+        component_box.extend(pos);
       }
     }
+    component_box.extend(kMaxMatchDistance);
 
-    node_phantoms_ = utl::to_vec(node_phantoms,
-                                 [](auto const& pair) { return pair.second; });
-
-    node_phantom_rtree_ = geo::make_point_rtree(
-        node_phantoms_, [](auto const& p) { return p.pos_; });
-
-    edge_phantom_rtree_ = make_segment_rtree(
-        edge_phantoms_, [](auto const& p) { return p.segment_; });
+    matched_stations_ = utl::to_vec(
+        station_idx_.index_.within(component_box),
+        [&](auto const& idx) { return &station_idx_.stations_[idx]; });
   }
 
-  std::pair<std::vector<osm_node_phantom_match>,
-            std::vector<osm_edge_phantom_match>>
-  get_osm_phantoms(station const* station, geo::latlng const& pos,
-                   double const radius) const {
-    auto const nodes = utl::to_vec(
-        node_phantom_rtree_.in_radius(pos, radius), [&](auto const& idx) {
-          return osm_node_phantom_match{
-              node_phantoms_[idx], geo::distance(pos, node_phantoms_[idx].pos_),
-              station};
-        });
+  mcd::hash_map<int64_t, osm_node_phantom> node_phantoms;
+  for (auto i = 0UL; i < osm_ways.size(); ++i) {
+    auto const& polyline = osm_ways[i].path_.polyline_;
+    utl::verify(polyline.size() > 1, "rail: polyline too short");
 
-    std::set<size_t> ways;
-    std::vector<osm_edge_phantom_match> edges;
-
-    auto const intersecting_edge_phantoms =
-        edge_phantom_rtree_.intersects_radius_with_distance(pos, radius);
-    for (auto const& [dist, idx] : intersecting_edge_phantoms) {
-      auto const& phantom = edge_phantoms_[idx];
-      if (ways.insert(phantom.way_idx_).second == false) {
-        continue;  // rtree: already sorted by distance
-      }
-      edges.push_back(osm_edge_phantom_match{phantom, dist, station, pos});
-    }
-
-    // retain only of no neighbor is better
-    auto const filter = [](auto const& subjects, auto const& others) {
-      typename std::decay<decltype(subjects)>::type result;
-      std::copy_if(
-          begin(subjects), end(subjects), std::back_inserter(result),
-          [&others](auto const& s) {
-            return std::none_of(begin(others), end(others), [&s](auto const o) {
-              return way_idx_match(o.phantom_.way_idx_, s.phantom_.way_idx_) &&
-                     dominated_with_tiebreaker(s, o);
-            });
-          });
-      return result;
+    auto const make_node_phantom = [&](auto const id, auto const pos) {
+      auto& phantom = utl::get_or_create(node_phantoms, id, [&] {
+        return osm_node_phantom{id, pos};
+      });
+      phantom.way_idx_.push_back(i);
     };
+    make_node_phantom(osm_ways[i].from(), polyline.front());
+    make_node_phantom(osm_ways[i].to(), polyline.back());
 
-    return {filter(nodes, edges), filter(edges, nodes)};
+    auto j = 0;
+    for (auto const& [from, to] : utl::pairwise(polyline)) {
+      edge_phantoms_.emplace_back(i, j++, from, to);
+    }
   }
 
-  std::vector<osm_node_phantom> node_phantoms_;
-  geo::point_rtree node_phantom_rtree_;
+  node_phantoms_ =
+      utl::to_vec(node_phantoms, [](auto const& pair) { return pair.second; });
 
-  std::vector<osm_edge_phantom> edge_phantoms_;
-  segment_rtree edge_phantom_rtree_;
-};
+  node_phantom_rtree_ = geo::make_point_rtree(
+      node_phantoms_, [](auto const& p) { return p.pos_; });
+
+  edge_phantom_rtree_ = make_segment_rtree(
+      edge_phantoms_, [](auto const& p) { return p.segment_; });
+}
+
+void osm_phantom_builder::build_osm_phantoms(station const* station) {
+  auto [np, ep] =
+      match_osm_phantoms(station, station->pos_, kStationMatchDistance);
+  append_phantoms(np, ep);
+
+  bool have_phantoms = !np.empty() || !ep.empty();
+
+  for (auto const& stop_position : station->stop_positions_) {
+    auto [snp, sep] =
+        match_osm_phantoms(station, stop_position.pos_, kStopMatchDistance);
+    append_phantoms(snp, sep);
+    have_phantoms |= !snp.empty() || !sep.empty();
+  }
+
+  // fallback if nothing has matched: search with large radius and take
+  // everything close to the nearest match
+  if (!have_phantoms) {
+    auto [fbnp, fbep] =
+        match_osm_phantoms(station, station->pos_, kMaxMatchDistance);
+    std::for_each(begin(fbep), end(fbep), [](auto& p) { p.locate(); });
+
+    std::vector<std::pair<double, geo::latlng>> nearest_matches;
+    if (!fbnp.empty()) {
+      nearest_matches.emplace_back(fbnp[0].distance_, fbnp[0].phantom_.pos_);
+    }
+    if (!fbep.empty()) {
+      nearest_matches.emplace_back(fbep[0].distance_, fbep[0].pos_);
+    }
+    if (!nearest_matches.empty()) {
+      std::sort(begin(nearest_matches), end(nearest_matches));
+      auto const& nearest = nearest_matches[0].second;
+      utl::erase_if(fbnp, [&](auto const& n) {
+        return geo::distance(nearest, n.phantom_.pos_) > kStopMatchDistance;
+      });
+      utl::erase_if(fbep, [&](auto const& e) {
+        return geo::distance(nearest, e.pos_) > kStopMatchDistance;
+      });
+    }
+
+    append_phantoms(fbnp, fbep);
+  }
+}
 
 std::pair<std::vector<osm_node_phantom_match>,
           std::vector<osm_edge_phantom_match>>
-make_phantoms(station_index const& station_idx,
-              std::vector<size_t> const& matched_stations,
-              mcd::vector<osm_way> const& osm_ways) {
-  std::vector<osm_node_phantom_match> n_matches;
-  std::vector<osm_edge_phantom_match> e_matches;
+osm_phantom_builder::match_osm_phantoms(station const* station,
+                                        geo::latlng const& pos,
+                                        double const radius) const {
+  auto const nodes = utl::to_vec(
+      node_phantom_rtree_.in_radius(pos, radius), [&](auto const& idx) {
+        return osm_node_phantom_match{
+            node_phantoms_[idx], geo::distance(pos, node_phantoms_[idx].pos_),
+            station};
+      });
 
-  osm_phantom_index phantom_idx{osm_ways};
-  for (auto const& i : matched_stations) {
-    auto const& station = station_idx.stations_[i];
+  std::set<size_t> ways;
+  std::vector<osm_edge_phantom_match> edges;
 
-    auto [np, ep] = phantom_idx.get_osm_phantoms(&station, station.pos_,
-                                                 kStationMatchDistance);
-    utl::concat(n_matches, np);
-    utl::concat(e_matches, ep);
-
-    bool have_phantoms = !np.empty() || !ep.empty();
-
-    for (auto const& stop_position : station.stop_positions_) {
-      auto [snp, sep] = phantom_idx.get_osm_phantoms(
-          &station, stop_position.pos_, kStopMatchDistance);
-      utl::concat(n_matches, snp);
-      utl::concat(e_matches, sep);
-
-      have_phantoms |= !snp.empty() || !sep.empty();
+  auto const intersecting_edge_phantoms =
+      edge_phantom_rtree_.intersects_radius_with_distance(pos, radius);
+  for (auto const& [dist, idx] : intersecting_edge_phantoms) {
+    auto const& phantom = edge_phantoms_[idx];
+    if (ways.insert(phantom.way_idx_).second == false) {
+      continue;  // rtree: already sorted by distance
     }
-
-    // fallback if nothing has matched: search with large radius and take
-    // everything close to the nearest match
-    if (!have_phantoms) {
-      auto [fbnp, fbep] = phantom_idx.get_osm_phantoms(&station, station.pos_,
-                                                       kMaxMatchDistance);
-      std::for_each(begin(fbep), end(fbep), [](auto& p) { p.locate(); });
-
-      std::vector<std::pair<double, geo::latlng>> nearest_matches;
-      if (!fbnp.empty()) {
-        nearest_matches.emplace_back(fbnp[0].distance_, fbnp[0].phantom_.pos_);
-      }
-      if (!fbep.empty()) {
-        nearest_matches.emplace_back(fbep[0].distance_, fbep[0].pos_);
-      }
-      if (!nearest_matches.empty()) {
-        std::sort(begin(nearest_matches), end(nearest_matches));
-        auto const& nearest = nearest_matches[0].second;
-        utl::erase_if(fbnp, [&](auto const& n) {
-          return geo::distance(nearest, n.phantom_.pos_) > kStopMatchDistance;
-        });
-        utl::erase_if(fbep, [&](auto const& e) {
-          return geo::distance(nearest, e.pos_) > kStopMatchDistance;
-        });
-      }
-
-      utl::concat(n_matches, fbnp);
-      utl::concat(e_matches, fbep);
-    }
+    edges.push_back(osm_edge_phantom_match{phantom, dist, station, pos});
   }
 
+  // retain only of no neighbor is better
+  auto const filter = [](auto const& subjects, auto const& others) {
+    typename std::decay<decltype(subjects)>::type result;
+    std::copy_if(
+        begin(subjects), end(subjects), std::back_inserter(result),
+        [&others](auto const& s) {
+          return std::none_of(begin(others), end(others), [&s](auto const o) {
+            return way_idx_match(o.phantom_.way_idx_, s.phantom_.way_idx_) &&
+                   dominated_with_tiebreaker(s, o);
+          });
+        });
+    return result;
+  };
+
+  return {filter(nodes, edges), filter(edges, nodes)};
+}
+
+void osm_phantom_builder::append_phantoms(
+    std::vector<osm_node_phantom_match> const& n_phantoms,
+    std::vector<osm_edge_phantom_match> const& e_phantoms) {
+  if (n_phantoms.empty() && e_phantoms_.empty()) {
+    return;
+  }
+
+  std::lock_guard lock{mutex_};
+  utl::concat(n_phantoms_, n_phantoms);
+  utl::concat(e_phantoms_, e_phantoms);
+}
+
+void osm_phantom_builder::finalize() {
   utl::erase_duplicates(
-      n_matches,
+      n_phantoms_,
       [](auto const& a, auto const& b) {
         auto const& pa = a.phantom_;
         auto const& pb = b.phantom_;
@@ -252,7 +258,7 @@ make_phantoms(station_index const& station_idx,
 
   // keep "closes" phantom node between different station_pos
   utl::erase_duplicates(
-      e_matches,
+      e_phantoms_,
       [](auto const& a, auto const& b) {
         auto const& pa = a.phantom_;
         auto const& pb = b.phantom_;
@@ -269,14 +275,15 @@ make_phantoms(station_index const& station_idx,
       });
 
   // sort for consumption during graph insertion
-  std::for_each(begin(e_matches), end(e_matches), [](auto& p) { p.locate(); });
-  std::sort(begin(e_matches), end(e_matches), [](auto const& a, auto const& b) {
-    auto const& pa = a.phantom_;
-    auto const& pb = b.phantom_;
-    return std::tie(pa.way_idx_, pa.offset_, a.along_track_dist_) <
-           std::tie(pb.way_idx_, pb.offset_, b.along_track_dist_);
-  });
-  return std::make_pair(std::move(n_matches), std::move(e_matches));
+  std::for_each(begin(e_phantoms_), end(e_phantoms_),
+                [](auto& p) { p.locate(); });
+  std::sort(begin(e_phantoms_), end(e_phantoms_),
+            [](auto const& a, auto const& b) {
+              auto const& pa = a.phantom_;
+              auto const& pb = b.phantom_;
+              return std::tie(pa.way_idx_, pa.offset_, a.along_track_dist_) <
+                     std::tie(pb.way_idx_, pb.offset_, b.along_track_dist_);
+            });
 }
 
 }  // namespace motis::path
