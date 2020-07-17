@@ -88,7 +88,7 @@ struct raw_way {
   std::vector<o::Location> locations_;
 };
 
-mcd::vector<osm_way> make_osm_ways(std::vector<raw_way> const& raw_ways) {
+mcd::vector<osm_way> collect_osm_ways(std::vector<raw_way> const& raw_ways) {
   std::vector<o::object_id_type> in_multiple_ways;
   {
     std::vector<o::object_id_type> node_ids;
@@ -135,6 +135,74 @@ mcd::vector<osm_way> make_osm_ways(std::vector<raw_way> const& raw_ways) {
     }
   }
   return osm_ways;
+}
+
+void extract_components(mcd::vector<osm_way>&& all_osm_ways,
+                        mcd::vector<mcd::vector<osm_way>>& osm_ways) {
+  constexpr auto const kInvalidComponent = std::numeric_limits<int64_t>::max();
+  struct component_edge {
+    std::vector<int64_t> others_;
+    int64_t component_id_{kInvalidComponent};
+  };
+
+  mcd::hash_map<int64_t, component_edge> edges;
+  for (auto const& w : all_osm_ways) {
+    edges[w.from()].others_.push_back(w.to());
+    edges[w.to()].others_.push_back(w.from());
+  }
+
+  std::stack<int64_t> stack;  // invariant: stack is empty
+  for (auto& [n, n_edge] : edges) {
+    if (n_edge.component_id_ != kInvalidComponent) {
+      continue;
+    }
+
+    stack.emplace(n);
+    while (!stack.empty()) {
+      auto j = stack.top();
+      stack.pop();
+
+      auto& edge = edges.at(j);
+      if (edge.component_id_ == n) {
+        continue;
+      }
+
+      edge.component_id_ = n;
+      for (auto const& o : edge.others_) {
+        if (o != n) {
+          stack.push(o);
+        }
+      }
+    }
+
+    utl::verify(stack.empty(), "osm_data/extract_components: stack not empty");
+  }
+
+  auto pairs = utl::to_vec(all_osm_ways, [&](auto const& w) {
+    return std::pair{edges.at(w.from()).component_id_, &w};
+  });
+
+  std::sort(begin(pairs), end(pairs));
+  utl::equal_ranges_linear(
+      pairs,
+      [](auto const& lhs, auto const& rhs) { return lhs.first == rhs.first; },
+      [&](auto lb, auto ub) {
+        osm_ways.emplace_back();
+        osm_ways.back().reserve(std::distance(lb, ub));
+        for (auto it = lb; it != ub; ++it) {
+          osm_ways.back().emplace_back(std::move(*it->second));
+        }
+      });
+}
+
+void make_osm_ways(std::vector<raw_way> const& raw_ways,
+                   mcd::vector<mcd::vector<osm_way>>& osm_ways) {
+  auto all_osm_ways = collect_osm_ways(raw_ways);
+  if (all_osm_ways.empty()) {
+    return;
+  }
+
+  extract_components(aggregate_osm_ways(std::move(all_osm_ways)), osm_ways);
 }
 
 struct relation_way_base {
@@ -221,11 +289,8 @@ struct relation_handler : public oh::Handler, relation_way_base {
   mcd::vector<mcd::vector<osm_way>> finalize() {
     mcd::vector<mcd::vector<osm_way>> result;
     for (auto const& way_ptrs : relations_) {
-      auto osm_ways = make_osm_ways(
-          utl::to_vec(way_ptrs, [](auto const& ptr) { return *ptr; }));
-      if (!osm_ways.empty()) {
-        result.emplace_back(aggregate_osm_ways(std::move(osm_ways)));
-      }
+      make_osm_ways(utl::to_vec(way_ptrs, [](auto const& ptr) { return *ptr; }),
+                    result);
     }
     return result;
   }
@@ -250,7 +315,9 @@ struct network_handler : public oh::Handler {
   }
 
   mcd::vector<mcd::vector<osm_way>> finalize() {
-    return {aggregate_osm_ways(make_osm_ways(ways_))};
+    mcd::vector<mcd::vector<osm_way>> result;
+    make_osm_ways(ways_, result);
+    return result;
   }
 
   Fn fn_;
