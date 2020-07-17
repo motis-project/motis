@@ -205,6 +205,7 @@ mcd::vector<osm_way> aggregate_geometry(std::vector<way_handle>& way_handles) {
         if (curr->geometry_ != nullptr) {
           auto const skip = joined_geo.path_.size() == 0 ? 0 : 1;
           auto const& curr_geo = *curr->geometry_;
+          utl::concat(joined_geo.ids_, curr_geo.ids_);
 
           if (curr->reversed_) {
             std::reverse_copy(begin(curr_geo.path_.polyline_),
@@ -235,6 +236,7 @@ mcd::vector<osm_way> aggregate_geometry(std::vector<way_handle>& way_handles) {
         }
       }
 
+      utl::erase_duplicates(joined_geo.ids_);
       result.emplace_back(std::move(joined_geo));
     }
   }
