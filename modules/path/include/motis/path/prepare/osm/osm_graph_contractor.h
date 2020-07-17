@@ -13,7 +13,7 @@ namespace motis::path {
 struct osm_graph_dist {
   CISTA_COMPARABLE()
   CISTA_PRINTABLE(osm_graph_dist)
-  size_t from_, to_, dist_{0UL};
+  size_t from_{0UL}, to_{0UL}, dist_{0UL};
 };
 
 using contract_cluster_id_t = size_t;
