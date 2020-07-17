@@ -53,6 +53,7 @@ struct csa_search {
                                      ? start_time_ + initial_duration
                                      : start_time_ - initial_duration;
     start_times_[station.id_] = station_arrival;
+    arrival_time_[station.id_][0] = station_arrival;
     stats_.start_count_++;
     expand_footpaths(station, station_arrival,
                      _mm_setr_epi16(static_cast<int16_t>(
