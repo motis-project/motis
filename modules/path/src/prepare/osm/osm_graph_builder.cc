@@ -34,8 +34,19 @@ using offset_t = size_t;
 
 void osm_graph_builder::build_graph(
     mcd::vector<mcd::vector<osm_way>> const& components) {
-  if (components.size() == 1) {
-    if (osm_phantom_builder pb{station_idx_, components[0]};
+  constexpr auto const kSmallComponentLimit = 10000;
+  utl::parallel_for("add small component", components, 1000,
+                    [this](auto const& c) {
+                      if (c.size() < kSmallComponentLimit) {
+                        add_component(c);
+                      }
+                    });
+  LOG(info) << "add large components";
+  for (auto const& c : components) {
+    if (c.size() < kSmallComponentLimit) {
+      continue;
+    }
+    if (osm_phantom_builder pb{station_idx_, c};
         !pb.matched_stations_.empty()) {
       auto const& matched_stations = pb.matched_stations_;
 
@@ -57,12 +68,9 @@ void osm_graph_builder::build_graph(
       pb.finalize();
 
       if (pb.n_phantoms_.size() + pb.e_phantoms_.size() > 0) {
-        add_component(components[0], pb.n_phantoms_, pb.e_phantoms_);
+        add_component(c, pb.n_phantoms_, pb.e_phantoms_);
       }
     }
-  } else {
-    utl::parallel_for("add_component", components, 1000,
-                      [this](auto const& c) { add_component(c); });
   }
 
   std::sort(begin(graph_.node_station_links_), end(graph_.node_station_links_),
