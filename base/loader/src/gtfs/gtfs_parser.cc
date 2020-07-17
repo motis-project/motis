@@ -2,11 +2,14 @@
 
 #include <numeric>
 
+#include "boost/algorithm/string.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/filesystem.hpp"
 
+#include "utl/erase_if.h"
 #include "utl/get_or_create.h"
 #include "utl/pairwise.h"
+#include "utl/parser/cstr.h"
 #include "utl/pipes/accumulate.h"
 #include "utl/pipes/all.h"
 #include "utl/pipes/for_each.h"
@@ -21,6 +24,7 @@
 #include "geo/latlng.h"
 #include "geo/point_rtree.h"
 
+#include "motis/core/common/constants.h"
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/time.h"
@@ -172,6 +176,65 @@ void fix_stop_positions(trip_map& trips) {
   }
 }
 
+void fix_flixtrain_transfers(trip_map& trips,
+                             std::map<stop_pair, transfer>& transfers) {
+  for (auto const& id_prefix : {"FLIXBUS:FLX", "FLIXBUS:K"}) {
+    for (auto it = trips.lower_bound(id_prefix);
+         it != end(trips) && boost::starts_with(it->first, id_prefix); ++it) {
+      for (auto const& [dep_entry, arr_entry] :
+           utl::pairwise(it->second->stop_times_)) {
+        auto& dep = dep_entry.second;
+        auto& arr = arr_entry.second;
+
+        if (dep.stop_ == nullptr) {
+          continue;  // already gone
+        }
+
+        auto const& dep_name = dep.stop_->name_;
+        auto const& arr_name = arr.stop_->name_;
+        if (utl::get_until(utl::cstr{dep_name}, ',') !=
+            utl::get_until(utl::cstr{arr_name}, ',')) {
+          continue;  // different towns
+        }
+
+        // normal case: bus stop after train stop
+        auto const arr_duplicate =
+            static_cast<bool>(boost::ifind_first(dep_name, "train")) &&
+            !static_cast<bool>(boost::ifind_first(arr_name, "train")) &&
+            dep.dep_.time_ == arr.arr_.time_ &&
+            arr.arr_.time_ == arr.dep_.time_;
+
+        // may happen on last stop: train stop after bus_stop
+        auto const dep_duplicate =
+            !static_cast<bool>(boost::ifind_first(dep_name, "train")) &&
+            static_cast<bool>(boost::ifind_first(arr_name, "train")) &&
+            dep.dep_.time_ == arr.arr_.time_ &&
+            dep.arr_.time_ == dep.dep_.time_;
+
+        if (arr_duplicate || dep_duplicate) {
+          auto dur = static_cast<int>(
+              geo::distance(dep.stop_->coord_, arr.stop_->coord_) / WALK_SPEED /
+              60);
+          transfers.insert(
+              {{dep.stop_, arr.stop_}, {dur, transfer::GENERATED}});
+          transfers.insert(
+              {{arr.stop_, dep.stop_}, {dur, transfer::GENERATED}});
+        }
+
+        if (arr_duplicate) {
+          arr.stop_ = nullptr;
+        }
+        if (dep_duplicate) {
+          dep.stop_ = nullptr;
+        }
+      }
+
+      utl::erase_if(it->second->stop_times_,
+                    [](auto const& s) { return s.second.stop_ == nullptr; });
+    }
+  }
+}
+
 void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   motis::logging::scoped_timer global_timer{"gtfs parser"};
 
@@ -190,6 +253,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   auto [trips, blocks] = read_trips(load(TRIPS_FILE), routes, traffic_days);
   read_stop_times(load(STOP_TIMES_FILE), trips, stops);
   fix_stop_positions(trips);
+  fix_flixtrain_transfers(trips, transfers);
 
   std::map<category, Offset<Category>> fbs_categories;
   std::map<agency const*, Offset<Provider>> fbs_providers;
