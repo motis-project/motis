@@ -204,26 +204,26 @@ struct contract_cluster {
                            end(edges), [](auto const& lhs, auto const& rhs) {
                              return lhs.node_idx_ < rhs.node_idx_;
                            });
-        utl::equal_ranges_linear(edges,
-                                 [](auto const& lhs, auto const& rhs) {
-                                   return lhs.node_idx_ == rhs.node_idx_;
-                                 },
-                                 [&](auto lb, auto ub) {
-                                   if (std::distance(lb, ub) == 1) {
-                                     return;
-                                   }
+        utl::equal_ranges_linear(
+            edges,
+            [](auto const& lhs, auto const& rhs) {
+              return lhs.node_idx_ == rhs.node_idx_;
+            },
+            [&](auto lb, auto ub) {
+              if (std::distance(lb, ub) == 1) {
+                return;
+              }
 
-                                   auto const min_it = std::min_element(
-                                       lb, ub,
-                                       [](auto const& lhs, auto const& rhs) {
-                                         return lhs.dist_ < rhs.dist_;
-                                       });
-                                   for (auto it = lb; it != ub; ++it) {
-                                     if (it != min_it) {
-                                       it->dist_ = kInvalidDistance;
-                                     }
-                                   }
-                                 });
+              auto const min_it = std::min_element(
+                  lb, ub, [](auto const& lhs, auto const& rhs) {
+                    return lhs.dist_ < rhs.dist_;
+                  });
+              for (auto it = lb; it != ub; ++it) {
+                if (it != min_it) {
+                  it->dist_ = kInvalidDistance;
+                }
+              }
+            });
         utl::erase_if(
             edges, [](auto const& e) { return e.dist_ == kInvalidDistance; });
       };
