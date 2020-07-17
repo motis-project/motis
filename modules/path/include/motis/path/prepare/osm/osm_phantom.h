@@ -58,8 +58,7 @@ struct osm_phantom_builder {
 
   std::pair<std::vector<osm_node_phantom_match>,
             std::vector<osm_edge_phantom_match>>
-  match_osm_phantoms(station const*, geo::latlng const&,
-                     double const radius) const;
+  match_osm_phantoms(station const*, geo::latlng const&, double radius) const;
 
   void append_phantoms(std::vector<osm_node_phantom_match> const&,
                        std::vector<osm_edge_phantom_match> const&);

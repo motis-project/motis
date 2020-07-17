@@ -199,7 +199,7 @@ struct contract_cluster {
         }
       }
 
-      auto const finalize = [](auto& edges, auto const old_edge_count) {
+      auto const finalize = [&](auto& edges, auto const old_edge_count) {
         std::inplace_merge(begin(edges), begin(edges) + old_edge_count,
                            end(edges), [](auto const& lhs, auto const& rhs) {
                              return lhs.node_idx_ < rhs.node_idx_;
@@ -225,7 +225,7 @@ struct contract_cluster {
               }
             });
         utl::erase_if(
-            edges, [](auto const& e) { return e.dist_ == kInvalidDistance; });
+            edges, [&](auto const& e) { return e.dist_ == kInvalidDistance; });
       };
 
       finalize(out_edges, old_out_edge_count);
