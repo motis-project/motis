@@ -34,6 +34,8 @@ namespace oio = osmium::io;
 namespace oh = osmium::handler;
 namespace oeb = osmium::osm_entity_bits;
 
+namespace ml = motis::logging;
+
 namespace motis::path {
 
 constexpr auto const kInvalidNodeId = std::numeric_limits<int64_t>::max();
@@ -487,6 +489,10 @@ struct plattform_handler : public oh::Handler, relation_way_base {
 mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
   logging::scoped_timer timer("parse_osm");
   auto progress_tracker = utl::get_active_progress_tracker();
+  auto const update_status = [&](auto const& status) {
+    progress_tracker->status(status);
+    LOG(ml::info) << status;
+  };
 
   auto rel_rail = relation_handler{{"railway", "train"}};
   auto rel_sub = relation_handler{{"light_rail", "subway"}};
@@ -578,7 +584,7 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
       }
     }
 
-    progress_tracker->status("Load OSM / Locations");
+    update_status("Load OSM / Locations");
     std::vector<std::pair<o::object_id_type, o::Location*>> locations;
     auto const collect_ways = [&](raw_way& w) {
       w.locations_.resize(w.node_ids_.size());
@@ -603,6 +609,7 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
 
     std::sort(begin(locations), end(locations));
 
+    update_status("Load OSM / get_coords");
     get_coords(node_idx, locations);
     for (auto const& [id, l] : locations) {
       l->set_x(l->x() - tiles::hybrid_node_idx::x_offset);
@@ -610,7 +617,7 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
     }
   }
 
-  progress_tracker->status("Load OSM / Finalize");
+  update_status("Load OSM / Finalize");
   using category = source_spec::category;
   using router = source_spec::router;
   auto data = mcd::make_unique<osm_data>();
@@ -618,7 +625,7 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
   data->plattforms_ = plattforms.finalize();
 
   auto const finalize = [&](source_spec const ss, auto& handler) {
-    progress_tracker->status(fmt::format("Load OSM / Finalize {}", ss.str()));
+    update_status(fmt::format("Load OSM / Finalize {}", ss.str()));
     data->profiles_[ss] = handler.finalize();
   };
 
