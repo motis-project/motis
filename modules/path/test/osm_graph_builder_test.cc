@@ -151,3 +151,24 @@ TEST(osm_graph_builder, heusenstamm) {
     EXPECT_EQ(6, station_links.size());
   }
 }
+
+TEST(osm_graph_builder, dornach) {
+  auto stations = mp::make_station_index({{"0", "0", {47.48581, 7.606187}}});
+
+  mp::osm_path path{{
+                        {47.4881248, 7.6091958},
+                        {47.4880832, 7.6092541},
+                        {47.4880828, 7.6092546},
+                        {47.4880214, 7.6093681},
+                    },
+                    {1796922120, 7502748777, 304541648, 304541645}};
+
+  mp::osm_graph graph;
+  mp::osm_graph_builder builder(
+      graph,
+      mp::source_spec{mp::source_spec::category::UNKNOWN,
+                      mp::source_spec::router::OSM_REL},
+      stations);
+  builder.add_component({mp::osm_way{{0}, mp::source_bits::NO_SOURCE, path}});
+  EXPECT_EQ(1, graph.components_);
+}

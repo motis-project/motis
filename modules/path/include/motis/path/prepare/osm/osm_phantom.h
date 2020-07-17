@@ -66,6 +66,8 @@ struct osm_phantom_builder {
   void finalize();
 
   station_index const& station_idx_;
+  mcd::vector<osm_way> const& osm_ways_;
+
   std::vector<station const*> matched_stations_;
 
   std::vector<osm_node_phantom> node_phantoms_;

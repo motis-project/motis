@@ -247,7 +247,7 @@ void osm_graph_builder::add_component(
         prev_coord = {};
 
       } else if (lb->eq_to_) {
-        utl::verify(curr_offset < way.path_.size() - 1,
+        utl::verify(curr_offset < way.path_.size() - 2,
                     "have edge_phantom for end");
         path_idx = make_path(way, prev_offset, ++curr_offset, prev_coord,
                              std::optional<geo::latlng>{});
@@ -265,6 +265,7 @@ void osm_graph_builder::add_component(
       prev_offset = curr_offset;
     });
 
+    utl::verify(prev_offset < way.path_.size() - 1, "prev_offset reached end!");
     auto const path_idx = make_path(way, prev_offset, way.path_.size() - 1,
                                     prev_coord, std::optional<geo::latlng>{});
     auto curr_node = make_osm_node(way.to(), way.path_.polyline_.back());

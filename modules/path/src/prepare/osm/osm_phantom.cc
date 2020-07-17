@@ -13,6 +13,7 @@
 #include "utl/get_or_create.h"
 #include "utl/pairwise.h"
 #include "utl/to_vec.h"
+#include "utl/visit.h"
 
 #include "motis/hash_map.h"
 
@@ -72,33 +73,9 @@ void osm_edge_phantom_match::locate() {
   }
 }
 
-inline bool way_idx_match(std::vector<size_t> const& vec, size_t const val) {
-  return std::find(begin(vec), end(vec), val) != end(vec);
-}
-
-inline bool way_idx_match(size_t const val, std::vector<size_t> const& vec) {
-  return way_idx_match(vec, val);
-}
-
-inline bool dominated_with_tiebreaker(osm_node_phantom_match const& self,
-                                      osm_edge_phantom_match const& other) {
-  if (std::fabs(self.distance_ - other.distance_) < .1) {
-    return false;  // self=node -> undominated by other=edge
-  }
-  return other.distance_ < self.distance_;
-}
-
-inline bool dominated_with_tiebreaker(osm_edge_phantom_match const& self,
-                                      osm_node_phantom_match const& other) {
-  if (std::fabs(self.distance_ - other.distance_) < .1) {
-    return true;  // self=edge -> dominated by other=node
-  }
-  return other.distance_ < self.distance_;
-}
-
 osm_phantom_builder::osm_phantom_builder(station_index const& station_idx,
                                          mcd::vector<osm_way> const& osm_ways)
-    : station_idx_{station_idx} {
+    : station_idx_{station_idx}, osm_ways_{osm_ways} {
   {
     geo::box component_box;
     for (auto const& way : osm_ways) {
@@ -135,6 +112,8 @@ osm_phantom_builder::osm_phantom_builder(station_index const& station_idx,
 
   node_phantoms_ =
       utl::to_vec(node_phantoms, [](auto const& pair) { return pair.second; });
+  std::sort(begin(node_phantoms_), end(node_phantoms_),
+            [](auto const& lhs, auto const& rhs) { return lhs.id_ < rhs.id_; });
 
   node_phantom_rtree_ = geo::make_point_rtree(
       node_phantoms_, [](auto const& p) { return p.pos_; });
@@ -162,7 +141,6 @@ void osm_phantom_builder::build_osm_phantoms(station const* station) {
   if (!have_phantoms) {
     auto [fbnp, fbep] =
         match_osm_phantoms(station, station->pos_, kMaxMatchDistance);
-    std::for_each(begin(fbep), end(fbep), [](auto& p) { p.locate(); });
 
     std::vector<std::pair<double, geo::latlng>> nearest_matches;
     if (!fbnp.empty()) {
@@ -191,16 +169,33 @@ std::pair<std::vector<osm_node_phantom_match>,
 osm_phantom_builder::match_osm_phantoms(station const* station,
                                         geo::latlng const& pos,
                                         double const radius) const {
-  auto const nodes = utl::to_vec(
+  // find node phantoms
+  auto n_matches = utl::to_vec(
       node_phantom_rtree_.in_radius(pos, radius), [&](auto const& idx) {
         return osm_node_phantom_match{
             node_phantoms_[idx], geo::distance(pos, node_phantoms_[idx].pos_),
             station};
       });
 
-  std::set<size_t> ways;
-  std::vector<osm_edge_phantom_match> edges;
+  auto const add_n_match = [&](auto const id) {
+    if (std::find_if(begin(n_matches), end(n_matches), [&](auto const& m) {
+          return m.phantom_.id_ == id;
+        }) != end(n_matches)) {
+      return;
+    }
 
+    auto const it = std::lower_bound(
+        begin(node_phantoms_), end(node_phantoms_), id,
+        [](auto const& lhs, auto const& rhs) { return lhs.id_ < rhs; });
+    utl::verify(it != end(node_phantoms_) && it->id_ == id,
+                "match_osm_phantoms: missing node phantom");
+    n_matches.push_back(
+        osm_node_phantom_match{*it, geo::distance(pos, it->pos_), station});
+  };
+
+  // find edge phantoms
+  std::set<size_t> ways;
+  std::vector<osm_edge_phantom_match> e_matches;
   auto const intersecting_edge_phantoms =
       edge_phantom_rtree_.intersects_radius_with_distance(pos, radius);
   for (auto const& [dist, idx] : intersecting_edge_phantoms) {
@@ -208,16 +203,67 @@ osm_phantom_builder::match_osm_phantoms(station const* station,
     if (ways.insert(phantom.way_idx_).second == false) {
       continue;  // rtree: already sorted by distance
     }
-    edges.push_back(osm_edge_phantom_match{phantom, dist, station, pos});
+
+    auto em = osm_edge_phantom_match{phantom, dist, station, pos};
+    em.locate();
+
+    // ensure the node match exists for edge matches at/near both ends
+    auto const& osm_way = osm_ways_.at(em.phantom_.way_idx_);
+    if (em.eq_from_ && em.phantom_.offset_ == 0) {
+      add_n_match(osm_way.from());
+    } else if (em.eq_to_ && em.phantom_.offset_ == osm_way.path_.size() - 2) {
+      add_n_match(osm_way.to());
+    }
+
+    e_matches.emplace_back(std::move(em));
   }
 
-  // retain only of no neighbor is better
-  auto const filter = [](auto const& subjects, auto const& others) {
+  // keep only the closest match of graph-adjacent phantom nodes
+  auto const way_idx_match =
+      overloaded{[&](std::vector<size_t> const& vec, size_t const val) {
+                   return std::find(begin(vec), end(vec), val) != end(vec);
+                 },
+                 [&](size_t const val, std::vector<size_t> const& vec) {
+                   return std::find(begin(vec), end(vec), val) != end(vec);
+                 }};
+
+  auto const dominated_with_tiebreaker = overloaded{
+      [&](osm_node_phantom_match const& self,
+          osm_edge_phantom_match const& other) {
+        auto const& osm_way = osm_ways_.at(other.phantom_.way_idx_);
+        if ((other.eq_from_ && other.phantom_.offset_ == 0 &&
+             self.phantom_.id_ == osm_way.from()) ||
+            (other.eq_to_ &&
+             other.phantom_.offset_ == osm_way.path_.size() - 2 &&
+             self.phantom_.id_ == osm_way.to())) {
+          return false;  // self=node -> undominated by corresponding 'end' edge
+        }
+        if (std::fabs(self.distance_ - other.distance_) < .1) {
+          return false;  // self=node -> undominated by other=edge
+        }
+        return other.distance_ < self.distance_;
+      },
+      [&](osm_edge_phantom_match const& self,
+          osm_node_phantom_match const& other) {
+        auto const& osm_way = osm_ways_.at(self.phantom_.way_idx_);
+        if ((self.eq_from_ && self.phantom_.offset_ == 0 &&
+             other.phantom_.id_ == osm_way.from()) ||
+            (self.eq_to_ && self.phantom_.offset_ == osm_way.path_.size() - 2 &&
+             other.phantom_.id_ == osm_way.to())) {
+          return true;  // self='end' edge -> dominated by corresponding node
+        }
+        if (std::fabs(self.distance_ - other.distance_) < .1) {
+          return true;  // self=edge -> dominated by other=node
+        }
+        return other.distance_ < self.distance_;
+      }};
+
+  auto const filter = [&](auto const& subjects, auto const& others) {
     typename std::decay<decltype(subjects)>::type result;
     std::copy_if(
         begin(subjects), end(subjects), std::back_inserter(result),
-        [&others](auto const& s) {
-          return std::none_of(begin(others), end(others), [&s](auto const o) {
+        [&](auto const& s) {
+          return std::none_of(begin(others), end(others), [&](auto const& o) {
             return way_idx_match(o.phantom_.way_idx_, s.phantom_.way_idx_) &&
                    dominated_with_tiebreaker(s, o);
           });
@@ -225,7 +271,7 @@ osm_phantom_builder::match_osm_phantoms(station const* station,
     return result;
   };
 
-  return {filter(nodes, edges), filter(edges, nodes)};
+  return {filter(n_matches, e_matches), filter(e_matches, n_matches)};
 }
 
 void osm_phantom_builder::append_phantoms(
@@ -275,8 +321,6 @@ void osm_phantom_builder::finalize() {
       });
 
   // sort for consumption during graph insertion
-  std::for_each(begin(e_phantoms_), end(e_phantoms_),
-                [](auto& p) { p.locate(); });
   std::sort(begin(e_phantoms_), end(e_phantoms_),
             [](auto const& a, auto const& b) {
               auto const& pa = a.phantom_;
