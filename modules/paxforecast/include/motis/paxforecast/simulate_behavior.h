@@ -1,11 +1,12 @@
 #pragma once
 
-#include "motis/core/common/logging.h"
+#include <map>
+
+#include "utl/zip.h"
+
 #include "motis/core/schedule/schedule.h"
-#include "motis/hash_map.h"
 
 #include "motis/paxmon/graph_access.h"
-#include "motis/paxmon/loader/journeys/to_compact_journey.h"
 #include "motis/paxmon/paxmon_data.h"
 
 #include "motis/paxforecast/behavior/passenger_behavior.h"
@@ -15,47 +16,52 @@
 namespace motis::paxforecast {
 
 template <typename PassengerBehavior>
-std::vector<std::uint16_t> simulate_behavior(
+inline simulation_result simulate_behavior(
     schedule const& sched, motis::paxmon::paxmon_data& data,
-    combined_passenger_group const& cpg,
+    std::map<unsigned, std::vector<combined_passenger_group>> const&
+        combined_groups,
     std::vector<measures::please_use> const& announcements,
-    PassengerBehavior& pb, simulation_result& sim_result) {
-  if (cpg.alternatives_.empty()) {
-    LOG(logging::warn) << "no alternatives found for passenger group with "
-                       << cpg.passengers_ << " passengers";
-    return {};
-  }
-  auto allocation = std::vector<std::uint16_t>(cpg.alternatives_.size());
-  for (auto const grp : cpg.groups_) {
-    auto const grp_allocation =
-        pb.pick_routes(*grp, cpg.alternatives_, announcements);
-    assert(grp_allocation.size() == allocation.size());
-    for (auto i = 0; i < grp_allocation.size(); ++i) {
-      allocation[i] += grp_allocation[i];
-    }
-  }
+    PassengerBehavior& pb) {
+  simulation_result result;
 
-  for (auto i = 0; i < cpg.alternatives_.size(); ++i) {
-    auto const additional = allocation[i];
-    if (additional == 0) {
-      continue;
-    }
-    auto const& alternative = cpg.alternatives_[i];
-
+  auto const add_group_to_alternative = [&](passenger_group const& grp,
+                                            alternative const& alt,
+                                            float const probability) {
+    auto const total_probability = grp.probability_ * probability;
     for_each_edge(
-        sched, data, alternative.compact_journey_,
-        [&](motis::paxmon::journey_leg const&, motis::paxmon::edge* e) {
-          e->passengers_ += additional;
-          sim_result.additional_passengers_[e] += additional;
-          if (e->passengers() > e->capacity()) {
-            sim_result.edges_over_capacity_.insert(e);
-          }
+        sched, data, alt.compact_journey_,
+        [&](motis::paxmon::journey_leg const&, motis::paxmon::edge const* e) {
+          result.additional_groups_[e].emplace_back(&grp, total_probability);
         });
+  };
+
+  auto const simulate_group =
+      [&](passenger_group const& grp,
+          std::vector<alternative> const& alternatives,
+          motis::paxmon::passenger_localization const& localization) {
+        auto const allocation =
+            pb.pick_routes(grp, alternatives, announcements);
+        auto& group_result = result.group_results_[&grp];
+        group_result.localization_ = &localization;
+        for (auto const& [alt, probability] :
+             utl::zip(alternatives, allocation)) {
+          group_result.alternatives_.emplace_back(&alt, probability);
+          if (probability == 0.0) {
+            continue;
+          }
+          add_group_to_alternative(grp, alt, probability);
+        }
+      };
+
+  for (auto const& cpgs : combined_groups) {
+    for (auto const& cpg : cpgs.second) {
+      for (auto const& grp : cpg.groups_) {
+        simulate_group(*grp, cpg.alternatives_, cpg.localization_);
+      }
+    }
   }
 
-  return allocation;
+  return result;
 }
-
-void revert_simulated_behavior(simulation_result& sim_result);
 
 }  // namespace motis::paxforecast

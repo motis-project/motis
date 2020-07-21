@@ -149,7 +149,6 @@ std::set<passenger_group*> collect_passenger_groups(trip_data& td) {
       if (psi.valid_) {
         affected_passenger_groups.insert(psi.group_);
         psi.valid_ = false;
-        te->passengers_ -= psi.group_->passengers_;
       }
     }
   }

@@ -3,17 +3,14 @@
 #include <algorithm>
 #include <map>
 #include <numeric>
-#include <utility>
 
-#include "fmt/format.h"
-
+#include "utl/to_vec.h"
 #include "utl/verify.h"
 
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/access/service_access.h"
 #include "motis/module/context/get_schedule.h"
-#include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
 #include "motis/module/message.h"
@@ -28,7 +25,7 @@
 #include "motis/paxforecast/combined_passenger_group.h"
 #include "motis/paxforecast/measures/measures.h"
 #include "motis/paxforecast/messages.h"
-#include "motis/paxforecast/output/output.h"
+#include "motis/paxforecast/over_capacity_info.h"
 #include "motis/paxforecast/simulate_behavior.h"
 
 using namespace motis::module;
@@ -40,15 +37,13 @@ using namespace motis::paxmon;
 namespace motis::paxforecast {
 
 paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
-  param(log_file_, "log", "output file");
+  param(probabilites_, "probability", "over capacity probabilities");
 }
 
 paxforecast::~paxforecast() = default;
 
 void paxforecast::init(motis::module::registry& reg) {
   LOG(info) << "passenger forecast module loaded";
-
-  log_output_ = std::make_unique<output::log_output>(log_file_);
 
   reg.subscribe("/paxmon/monitoring_update", [&](msg_ptr const& msg) {
     on_monitoring_event(msg);
@@ -132,58 +127,23 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   LOG(info) << "alternatives: " << routing_requests << " routing requests => "
             << alternatives_found << " alternatives";
 
-  {
-    scoped_timer sim_behavior_timer{"simulate behavior"};
-    auto pb = behavior::passenger_behavior(
-        behavior::score::weighted{1.0, 0.0},
-        behavior::influence::fixed_acceptance{0.75},
-        behavior::distribution::best_only{}, behavior::post::round{});
-    auto announcements = std::vector<measures::please_use>{};
-    auto sim_result = simulation_result{};
-    auto cpg_allocations = std::vector<
-        std::pair<combined_passenger_group*, std::vector<std::uint16_t>>>{};
-    for (auto& cgs : combined_groups) {
-      for (auto& cpg : cgs.second) {
-        cpg_allocations.emplace_back(
-            &cpg,
-            simulate_behavior(sched, data, cpg, announcements, pb, sim_result));
-      }
-    }
+  auto pb =
+      behavior::passenger_behavior(behavior::score::weighted{1.0, 10.0},
+                                   behavior::distribution::proportional{},
+                                   behavior::influence::fixed_acceptance{0.75});
+  auto const announcements = std::vector<measures::please_use>{};
+  auto const sim_result =
+      simulate_behavior(sched, data, combined_groups, announcements, pb);
 
-    if (sim_result.is_over_capacity()) {
-      auto const trips_over_capacity =
-          sim_result.trips_over_capacity_with_edges();
-      std::cout << "problem detected: " << sim_result.edge_count_over_capacity()
-                << " edges over capacity ("
-                << sim_result.total_passengers_over_capacity()
-                << " passengers), " << trips_over_capacity.size()
-                << " trips over capacity\n";
-      for (auto const& [trp, edges] : trips_over_capacity) {
-        auto const ci = trp->edges_->front()
-                            ->m_.route_edge_.conns_.at(trp->lcon_idx_)
-                            .full_con_->con_info_;
-        std::cout << "trip over capacity: " << get_service_name(sched, ci)
-                  << " (tn=" << ci->train_nr_ << "):";
-        for (auto const e : edges) {
-          std::cout << " " << e->passengers() << "[+"
-                    << sim_result.additional_passengers_[e] << "]/"
-                    << e->capacity();
-        }
-        std::cout << "\n";
-      }
-    }
+  auto const over_capacity_infos =
+      utl::to_vec(probabilites_, [&](auto const probability) {
+        return calc_over_capacity(sim_result, probability);
+      });
 
-    log_output_->write_broken_connection(sched, data, combined_groups,
-                                         sim_result);
-    log_output_->flush();
+  auto const forecast_msg =
+      make_passenger_forecast_msg(sched, data, sim_result, over_capacity_infos);
 
-    auto const forecast_msg =
-        make_passenger_forecast_msg(sched, data, cpg_allocations, sim_result);
-
-    revert_simulated_behavior(sim_result);
-
-    ctx::await_all(motis_publish(forecast_msg));
-  }
+  ctx::await_all(motis_publish(forecast_msg));
 }
 
 }  // namespace motis::paxforecast

@@ -294,9 +294,10 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
             static_cast<std::uint64_t>(data.graph_.passenger_groups_.size());
         data.graph_.passenger_groups_.emplace_back(
             std::make_unique<passenger_group>(
-                passenger_group{current_journey, current_passengers, id,
+                passenger_group{current_journey, id,
                                 data_source{current_id.value().first,
-                                            current_id.value().second}}));
+                                            current_id.value().second},
+                                current_passengers}));
       } else {
         ++error_count;
       }

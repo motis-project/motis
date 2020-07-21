@@ -9,11 +9,11 @@
 namespace motis::paxforecast::behavior::influence {
 
 struct none {
-  inline void update_scores(
+  inline void update_probabilities(
       motis::paxmon::passenger_group const& /*grp*/,
       std::vector<alternative> const& /*alternatives*/,
       std::vector<measures::please_use> const& /*announcements*/,
-      std::vector<double>& /*scores*/) {}
+      std::vector<float>& /*probabilities*/) {}
 };
 
 }  // namespace motis::paxforecast::behavior::influence

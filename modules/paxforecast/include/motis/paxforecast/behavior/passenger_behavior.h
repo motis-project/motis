@@ -11,39 +11,33 @@
 
 namespace motis::paxforecast::behavior {
 
-template <typename Score, typename Influence, typename Distribution,
-          typename Postprocessing>
+template <typename Score, typename Distribution, typename Influence>
 struct passenger_behavior {
-  using out_assignment_t = typename Postprocessing::out_assignment_t;
-
-  passenger_behavior(Score&& score, Influence&& influence,
-                     Distribution&& distribution,
-                     Postprocessing&& postprocessing)
+  passenger_behavior(Score&& score, Distribution&& distribution,
+                     Influence&& influence)
       : score_(std::move(score)),
-        influence_(std::move(influence)),
         distribution_(std::move(distribution)),
-        postprocessing_(std::move(postprocessing)) {}
+        influence_(std::move(influence)) {}
 
-  std::vector<out_assignment_t> pick_routes(
+  std::vector<float> pick_routes(
       motis::paxmon::passenger_group const& grp,
       std::vector<alternative> const& alternatives,
       std::vector<measures::please_use> const& announcements) {
     if (alternatives.empty()) {
       return {};
     }
-    auto scores = utl::to_vec(alternatives, [&](alternative const& alt) {
+    auto const scores = utl::to_vec(alternatives, [&](alternative const& alt) {
       return score_.get_score(alt);
     });
-    influence_.update_scores(grp, alternatives, announcements, scores);
-    auto const real_assignments =
-        distribution_.distribute(grp.passengers_, scores);
-    return postprocessing_.postprocess(real_assignments, grp.passengers_);
+    auto probabilities = distribution_.get_probabilities(scores);
+    influence_.update_probabilities(grp, alternatives, announcements,
+                                    probabilities);
+    return probabilities;
   }
 
   Score score_;
-  Influence influence_;
   Distribution distribution_;
-  Postprocessing postprocessing_;
+  Influence influence_;
 };
 
 }  // namespace motis::paxforecast::behavior

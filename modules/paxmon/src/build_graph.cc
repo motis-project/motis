@@ -20,13 +20,12 @@ void add_interchange(event_node* from, event_node* to, passenger_group* grp,
     if (e->type_ == edge_type::INTERCHANGE && e->to(g) == to &&
         e->transfer_time() == transfer_time) {
       e->pax_connection_info_.section_infos_.emplace_back(grp);
-      e->passengers_ += grp->passengers_;
       grp->edges_.emplace_back(e.get());
       return;
     }
   }
   grp->edges_.emplace_back(add_edge(make_interchange_edge(
-      from, to, transfer_time, grp->passengers_, {{pax_section_info{grp}}})));
+      from, to, transfer_time, {{pax_section_info{grp}}})));
 }
 
 inline duration get_transfer_duration(std::optional<transfer_info> const& ti) {
@@ -68,7 +67,6 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
         }
       }
       if (in_trip) {
-        e->passengers_ += grp.passengers_;
         e->pax_connection_info_.section_infos_.emplace_back(&grp);
         if (e->passengers() > e->capacity()) {
           ++stats.initial_over_capacity_;

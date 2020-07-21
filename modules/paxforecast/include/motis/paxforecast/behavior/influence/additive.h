@@ -1,6 +1,6 @@
 #pragma once
 
-#include <limits>
+#include <algorithm>
 
 #include "motis/paxmon/passenger_group.h"
 
@@ -10,10 +10,7 @@
 
 namespace motis::paxforecast::behavior::influence {
 
-struct fixed_acceptance {
-  explicit fixed_acceptance(float acceptance_rate)
-      : acceptance_rate_(acceptance_rate) {}
-
+struct additive {
   void update_probabilities(
       motis::paxmon::passenger_group const& grp,
       std::vector<alternative> const& alternatives,
@@ -24,23 +21,23 @@ struct fixed_acceptance {
       return;
     }
     auto const recommended_index = recommended.value();
-    if (probabilities[recommended_index] == 1.0f) {
+    auto const old_probability = probabilities[recommended_index];
+    if (old_probability == 1.0f) {
       return;
     }
-    auto const other_probabilities_sum =
-        1.0f - probabilities[recommended_index];
-
-    auto const other_acceptance_rate = 1.0f - acceptance_rate_;
-    probabilities[recommended_index] = acceptance_rate_;
+    auto const new_probability =
+        std::min(1.0f, old_probability + recommended_boost_);
+    probabilities[recommended_index] = new_probability;
+    auto const other_factor =
+        (1.0f - new_probability) / (1.0f - old_probability);
     for (auto i = 0ULL; i < alternatives.size(); ++i) {
       if (i != recommended_index) {
-        probabilities[i] =
-            probabilities[i] / other_probabilities_sum * other_acceptance_rate;
+        probabilities[i] *= other_factor;
       }
     }
   }
 
-  float acceptance_rate_;
+  float recommended_boost_{0.0};
 };
 
 }  // namespace motis::paxforecast::behavior::influence

@@ -77,7 +77,8 @@ void write_over_capacity_report(paxmon_data const& data, schedule const& sched,
         sched.stations_.at(trp->id_.secondary_.target_station_id_);
     fmt::print(
         out,
-        "Trip: train_nr={:6} line_id={:6}  train_nrs={:<30}  service_names={}\n"
+        "Trip: train_nr={:<6} line_id={:<6}  train_nrs={:<30}  "
+        "service_names={}\n"
         "From: {:16}    {:8} {:50}\nTo:   {:16}    {:8} {:50}\n{:->148}\n",
         trp->id_.primary_.train_nr_, trp->id_.secondary_.line_id_,
         fmt::join(get_train_nrs(trp), ", "),

@@ -25,8 +25,8 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
         static_cast<std::uint64_t>(data.graph_.passenger_groups_.size());
     data.graph_.passenger_groups_.emplace_back(
         std::make_unique<passenger_group>(
-            passenger_group{to_compact_journey(j, sched), 1, id,
-                            data_source{primary_ref, secondary_ref}}));
+            passenger_group{to_compact_journey(j, sched), id,
+                            data_source{primary_ref, secondary_ref}, 1}));
     ++journey_count;
   };
 

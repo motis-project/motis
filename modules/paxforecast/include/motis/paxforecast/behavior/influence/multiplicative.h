@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "motis/paxmon/passenger_group.h"
 
 #include "motis/paxforecast/alternatives.h"
@@ -9,25 +11,33 @@
 namespace motis::paxforecast::behavior::influence {
 
 struct multiplicative {
-  void update_scores(motis::paxmon::passenger_group const& grp,
-                     std::vector<alternative> const& alternatives,
-                     std::vector<measures::please_use> const& announcements,
-                     std::vector<double>& scores) {
+  void update_probabilities(
+      motis::paxmon::passenger_group const& grp,
+      std::vector<alternative> const& alternatives,
+      std::vector<measures::please_use> const& announcements,
+      std::vector<float>& probabilities) {
     auto const recommended = get_recommended_alternative(grp, announcements);
-    if (recommended) {
-      auto const recommended_index = recommended.value();
-      for (auto i = 0ULL; i < alternatives.size(); ++i) {
-        if (i == recommended_index) {
-          scores[i] *= recommended_factor_;
-        } else {
-          scores[i] *= not_recommended_factor_;
-        }
+    if (!recommended) {
+      return;
+    }
+    auto const recommended_index = recommended.value();
+    auto const old_probability = probabilities[recommended_index];
+    if (old_probability == 0.0f || old_probability == 1.0f) {
+      return;
+    }
+    auto const new_probability =
+        std::min(1.0f, old_probability * recommended_factor_);
+    probabilities[recommended_index] = new_probability;
+    auto const other_factor =
+        (1.0f - new_probability) / (1.0f - old_probability);
+    for (auto i = 0ULL; i < alternatives.size(); ++i) {
+      if (i != recommended_index) {
+        probabilities[i] *= other_factor;
       }
     }
   }
 
-  double recommended_factor_{1.0};
-  double not_recommended_factor_{1.0};
+  float recommended_factor_{1.0};
 };
 
 }  // namespace motis::paxforecast::behavior::influence

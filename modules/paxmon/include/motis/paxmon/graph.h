@@ -90,7 +90,7 @@ struct edge {
   inline trip const* get_trip() const { return trip_; }
   inline duration transfer_time() const { return transfer_time_; }
 
-  inline std::uint64_t capacity() const {
+  inline std::uint16_t capacity() const {
     return get_capacity(encoded_capacity_);
   }
 
@@ -98,7 +98,15 @@ struct edge {
     return get_capacity_source(encoded_capacity_);
   }
 
-  inline std::uint64_t passengers() const { return passengers_; }
+  inline std::uint16_t passengers(float probability = 1.0) const {
+    std::uint16_t count = 0;
+    for (auto const& si : pax_connection_info_.section_infos_) {
+      if (si.valid_ && si.group_->probability_ >= probability) {
+        count += si.group_->passengers_;
+      }
+    }
+    return count;
+  }
 
   inline bool is_broken() const { return broken_; }
 
@@ -112,7 +120,6 @@ struct edge {
   bool broken_{false};
   duration transfer_time_{};
   std::uint16_t encoded_capacity_{};
-  std::uint16_t passengers_{};
   struct trip const* trip_{};
   struct pax_connection_info pax_connection_info_;
 };

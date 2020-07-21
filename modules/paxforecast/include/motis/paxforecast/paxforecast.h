@@ -8,8 +8,6 @@
 
 #include "motis/module/module.h"
 
-#include "motis/paxforecast/output/output.h"
-
 namespace motis::paxforecast {
 
 struct paxforecast : public motis::module::module {
@@ -27,9 +25,7 @@ struct paxforecast : public motis::module::module {
 private:
   void on_monitoring_event(motis::module::msg_ptr const& msg);
 
-  std::string log_file_{"paxforecast_log.jsonl"};
-
-  std::unique_ptr<output::log_output> log_output_;
+  std::vector<float> probabilites_{0.5, 0.9};
 };
 
 }  // namespace motis::paxforecast

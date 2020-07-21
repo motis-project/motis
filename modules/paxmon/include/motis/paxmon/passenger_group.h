@@ -18,10 +18,11 @@ struct data_source {
 
 struct passenger_group {
   compact_journey compact_planned_journey_;
-  std::uint16_t passengers_{};
   std::uint64_t id_{};
   data_source source_{};
+  std::uint16_t passengers_{1};
   bool ok_{true};
+  float probability_{1.0};
   std::vector<edge*> edges_{};
 };
 

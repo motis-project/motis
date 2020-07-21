@@ -165,13 +165,11 @@ void add_passenger_group_to_edge(edge* e, passenger_group* pg) {
     if (psi.group_ == pg) {
       if (!psi.valid_) {
         psi.valid_ = true;
-        e->passengers_ += psi.group_->passengers_;
       }
       return;
     }
   }
   e->pax_connection_info_.section_infos_.emplace_back(pg);
-  e->passengers_ += pg->passengers_;
 }
 
 void remove_passenger_group_from_edge(edge* e, passenger_group* pg) {
@@ -179,7 +177,6 @@ void remove_passenger_group_from_edge(edge* e, passenger_group* pg) {
     if (psi.group_ == pg) {
       if (psi.valid_) {
         psi.valid_ = false;
-        e->passengers_ -= psi.group_->passengers_;
       }
       return;
     }
