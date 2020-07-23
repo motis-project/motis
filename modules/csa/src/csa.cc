@@ -43,7 +43,7 @@ void csa::init(motis::module::registry& reg) {
 
 #ifdef MOTIS_AVX
   reg.register_op("/csa/cpu/sse", [&](msg_ptr const& msg) {
-    return route(msg, implementation_type::CPU);
+    return route(msg, implementation_type::CPU_SSE);
   });
 #endif
 
