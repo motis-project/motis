@@ -42,7 +42,9 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
   param(journey_files_, "journeys", "csv journeys or routing responses");
   param(capacity_files_, "capacity", "train capacities");
   param(stats_file_, "stats", "statistics file");
-  param(match_log_file_, "match_log", "journey match log file");
+  param(capacity_match_log_file_, "capacity_match_log",
+        "capacity match log file");
+  param(journey_match_log_file_, "journey_match_log", "journey match log file");
   param(initial_over_capacity_report_file_, "over_capacity_report",
         "initial over capacity report file");
   param(start_time_, "start_time", "evaluation start time");
@@ -142,8 +144,8 @@ std::size_t paxmon::load_journeys(std::string const& file) {
     loaded = loader::journeys::load_journeys(sched, data_, file);
   } else if (journey_path.extension() == ".csv") {
     scoped_timer journey_timer{"load csv journeys"};
-    loaded = loader::csv::load_journeys(sched, data_, file, match_log_file_,
-                                        match_tolerance_);
+    loaded = loader::csv::load_journeys(
+        sched, data_, file, journey_match_log_file_, match_tolerance_);
   } else {
     LOG(logging::error) << "paxmon: unknown journey file type: " << file;
   }
@@ -184,8 +186,9 @@ void paxmon::load_capacity_files() {
       LOG(warn) << "capacity file not found: " << file;
       continue;
     }
-    auto const entries_loaded = load_capacities(
-        sched, file, data_.trip_capacity_map_, data_.category_capacity_map_);
+    auto const entries_loaded =
+        load_capacities(sched, file, data_.trip_capacity_map_,
+                        data_.category_capacity_map_, capacity_match_log_file_);
     total_entries += entries_loaded;
     LOG(info) << fmt::format("loaded {:n} capacity entries from {}",
                              entries_loaded, file);

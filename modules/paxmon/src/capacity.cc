@@ -2,9 +2,11 @@
 
 #include <cstdint>
 #include <ctime>
+#include <fstream>
 #include <iterator>
 #include <set>
 #include <string>
+#include <utility>
 
 #include "utl/parser/buf_reader.h"
 #include "utl/parser/csv_range.h"
@@ -28,7 +30,9 @@ struct row {
   utl::csv_col<std::uint32_t, UTL_NAME("train_nr")> train_nr_;
   utl::csv_col<utl::cstr, UTL_NAME("category")> category_;
   utl::csv_col<utl::cstr, UTL_NAME("from")> from_;
+  utl::csv_col<utl::cstr, UTL_NAME("from_name")> from_name_;
   utl::csv_col<utl::cstr, UTL_NAME("to")> to_;
+  utl::csv_col<utl::cstr, UTL_NAME("to_name")> to_name_;
   utl::csv_col<std::time_t, UTL_NAME("departure")> departure_;
   utl::csv_col<std::time_t, UTL_NAME("arrival")> arrival_;
   utl::csv_col<std::uint16_t, UTL_NAME("seats")> seats_;
@@ -39,12 +43,13 @@ struct row {
 std::size_t load_capacities(schedule const& sched,
                             std::string const& capacity_file,
                             trip_capacity_map_t& trip_map,
-                            category_capacity_map_t& category_map) {
+                            category_capacity_map_t& category_map,
+                            std::string const& match_log_file) {
   auto buf = utl::file(capacity_file.data(), "r").content();
   auto const file_content = utl::cstr{buf.data(), buf.size()};
   auto entry_count = 0ULL;
 
-  std::set<std::string> stations_not_found;
+  std::set<std::pair<std::string, std::string>> stations_not_found;
 
   utl::line_range<utl::buf_reader>{file_content}  //
       | utl::csv<row>()  //
@@ -64,10 +69,12 @@ std::size_t load_capacities(schedule const& sched,
                                : 0;
 
             if (row.from_.val() && from_station_idx == 0) {
-              stations_not_found.insert(row.from_.val().to_str());
+              stations_not_found.insert(std::make_pair(
+                  row.from_.val().to_str(), row.from_name_.val().to_str()));
             }
             if (row.to_.val() && to_station_idx == 0) {
-              stations_not_found.insert(row.to_.val().to_str());
+              stations_not_found.insert(std::make_pair(
+                  row.to_.val().to_str(), row.to_name_.val().to_str()));
             }
             if (departure == INVALID_TIME || arrival == INVALID_TIME) {
               return;
@@ -85,6 +92,14 @@ std::size_t load_capacities(schedule const& sched,
 
   if (!stations_not_found.empty()) {
     LOG(warn) << stations_not_found.size() << " stations not found";
+    if (!match_log_file.empty()) {
+      std::ofstream ml{match_log_file};
+      ml << "stations not found:\n";
+      for (auto const& [id, name] : stations_not_found) {
+        ml << id << ": " << name << "\n";
+      }
+      LOG(warn) << "capacity match log report written to: " << match_log_file;
+    }
   }
 
   return entry_count;
