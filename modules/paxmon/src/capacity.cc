@@ -1,9 +1,12 @@
 #include "motis/paxmon/capacity.h"
 
+#include <charconv>
 #include <cstdint>
 #include <ctime>
 #include <fstream>
+#include <functional>
 #include <iterator>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -110,40 +113,67 @@ std::pair<std::uint16_t, capacity_source> get_capacity(
     trip_capacity_map_t const& trip_map,
     category_capacity_map_t const& category_map,
     std::uint16_t default_capacity) {
-  auto seats = 0;
+  std::pair<std::uint16_t, capacity_source> result = {
+      0, capacity_source::TRAIN_NR};
 
-  for (auto const& trp : *sched.merged_trips_.at(lc.trips_)) {
-    auto const train_nr = trp->id_.primary_.get_train_nr();
-    auto const tid = cap_trip_id{train_nr, trp->id_.primary_.get_station_id(),
-                                 trp->id_.secondary_.target_station_id_,
-                                 trp->id_.primary_.get_time(),
-                                 trp->id_.secondary_.target_time_};
-    if (auto const lb = trip_map.lower_bound(tid); lb != end(trip_map)) {
-      if (lb->first == tid) {
-        return {lb->second, capacity_source::TRIP_EXACT};
-      } else if (lb->first.train_nr_ == train_nr) {
-        seats = lb->second;
-      } else if (auto const prev = std::prev(lb);
-                 prev != end(trip_map) && prev->first.train_nr_ == train_nr) {
-        seats = prev->second;
+  auto const find_by_trip = [&](std::function<std::optional<std::uint32_t>(
+                                    trip const*)> const& get_train_nr) {
+    for (auto const& trp : *sched.merged_trips_.at(lc.trips_)) {
+      auto const maybe_trainr_nr = get_train_nr(trp);
+      if (!maybe_trainr_nr) {
+        continue;
+      }
+      auto const train_nr = maybe_trainr_nr.value();
+      auto const tid = cap_trip_id{train_nr, trp->id_.primary_.get_station_id(),
+                                   trp->id_.secondary_.target_station_id_,
+                                   trp->id_.primary_.get_time(),
+                                   trp->id_.secondary_.target_time_};
+      if (auto const lb = trip_map.lower_bound(tid); lb != end(trip_map)) {
+        if (lb->first == tid) {
+          result = {lb->second, capacity_source::TRIP_EXACT};
+          return;
+        } else if (lb->first.train_nr_ == train_nr) {
+          result.first = lb->second;
+        } else if (auto const prev = std::prev(lb);
+                   prev != end(trip_map) && prev->first.train_nr_ == train_nr) {
+          result.first = prev->second;
+        }
       }
     }
+  };
+
+  find_by_trip(
+      [](trip const* trp) { return trp->id_.primary_.get_train_nr(); });
+  if (result.first != 0) {
+    return result;
   }
 
-  if (seats != 0) {
-    return {seats, capacity_source::TRAIN_NR};
-  } else {
-    auto const& category =
-        sched.categories_[lc.full_con_->con_info_->family_]->name_;
-    if (auto const it = category_map.find(category); it != end(category_map)) {
-      return {it->second, capacity_source::CATEGORY};
-    } else if (auto const it = category_map.find(std::to_string(
-                   static_cast<service_class_t>(lc.full_con_->clasz_)));
-               it != end(category_map)) {
-      return {it->second, capacity_source::CLASZ};
+  find_by_trip([](trip const* trp) -> std::optional<std::uint32_t> {
+    auto const& line_id = trp->id_.secondary_.line_id_;
+    std::uint32_t line_nr = 0;
+    auto const result = std::from_chars(
+        line_id.data(), line_id.data() + line_id.size(), line_nr);
+    if (result.ec == std::errc{} &&
+        result.ptr == line_id.data() + line_id.size()) {
+      return {line_nr};
+    } else {
+      return {};
     }
-    return {default_capacity, capacity_source::DEFAULT};
+  });
+  if (result.first != 0) {
+    return result;
   }
+
+  auto const& category =
+      sched.categories_[lc.full_con_->con_info_->family_]->name_;
+  if (auto const it = category_map.find(category); it != end(category_map)) {
+    return {it->second, capacity_source::CATEGORY};
+  } else if (auto const it = category_map.find(std::to_string(
+                 static_cast<service_class_t>(lc.full_con_->clasz_)));
+             it != end(category_map)) {
+    return {it->second, capacity_source::CLASZ};
+  }
+  return {default_capacity, capacity_source::DEFAULT};
 }
 
 }  // namespace motis::paxmon
