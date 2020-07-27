@@ -17,6 +17,7 @@
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/message.h"
 
+#include "motis/paxmon/broken_interchanges_report.h"
 #include "motis/paxmon/build_graph.h"
 #include "motis/paxmon/data_key.h"
 #include "motis/paxmon/graph_access.h"
@@ -47,6 +48,8 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
   param(journey_match_log_file_, "journey_match_log", "journey match log file");
   param(initial_over_capacity_report_file_, "over_capacity_report",
         "initial over capacity report file");
+  param(initial_broken_report_file_, "broken_report",
+        "initial broken interchanges report file");
   param(start_time_, "start_time", "evaluation start time");
   param(end_time_, "end_time", "evaluation end time");
   param(time_step_, "time_step", "evaluation time step (seconds)");
@@ -174,6 +177,9 @@ void paxmon::load_journeys() {
       !initial_over_capacity_report_file_.empty()) {
     write_over_capacity_report(data_, sched,
                                initial_over_capacity_report_file_);
+  }
+  if (!initial_broken_report_file_.empty()) {
+    write_broken_interchanges_report(data_, sched, initial_broken_report_file_);
   }
 }
 

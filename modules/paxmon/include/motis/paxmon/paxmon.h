@@ -41,6 +41,7 @@ private:
   std::string capacity_match_log_file_{};
   std::string journey_match_log_file_{};
   std::string initial_over_capacity_report_file_{};
+  std::string initial_broken_report_file_{};
   conf::holder<std::time_t> start_time_{};
   conf::holder<std::time_t> end_time_{};
   int time_step_{60};
