@@ -271,7 +271,9 @@ osm_phantom_builder::match_osm_phantoms(station const* station,
     return result;
   };
 
-  return {filter(n_matches, e_matches), filter(e_matches, n_matches)};
+  auto n_result = filter(n_matches, e_matches);
+  auto e_result = filter(e_matches, n_matches);
+  return std::pair{std::move(n_result), std::move(e_result)};
 }
 
 void osm_phantom_builder::append_phantoms(
