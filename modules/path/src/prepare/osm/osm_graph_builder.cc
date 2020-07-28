@@ -36,7 +36,7 @@ void osm_graph_builder::build_graph(
     mcd::vector<mcd::vector<osm_way>> const& components) {
   constexpr auto const kSmallComponentLimit = 10000;
   utl::parallel_for("add small component", components, 1000,
-                    [this](auto const& c) {
+                    [&](auto const& c) {
                       if (c.size() < kSmallComponentLimit) {
                         add_component(c);
                       }
