@@ -1,5 +1,7 @@
 #include "motis/path/prepare/osm/osm_data.h"
 
+#include <stack>
+
 #include "boost/filesystem.hpp"
 
 #include "cista/serialization.h"
