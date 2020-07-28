@@ -141,13 +141,14 @@ mcd::vector<osm_way> collect_osm_ways(std::vector<raw_way> const& raw_ways) {
   return osm_ways;
 }
 
+constexpr auto const kOSMInvalidComponent = std::numeric_limits<int64_t>::max();
+
 void extract_components(mcd::vector<osm_way>&& all_osm_ways,
                         mcd::vector<mcd::vector<osm_way>>& osm_ways) {
-  constexpr auto const kInvalidComponent = std::numeric_limits<int64_t>::max();
   struct component_edge {
     component_edge() = default;
     std::vector<int64_t> others_;
-    int64_t component_id_{kInvalidComponent};
+    int64_t component_id_{kOSMInvalidComponent};
   };
 
   mcd::hash_map<int64_t, component_edge> edges;
@@ -158,7 +159,7 @@ void extract_components(mcd::vector<osm_way>&& all_osm_ways,
 
   std::stack<int64_t> stack;  // invariant: stack is empty
   for (auto& [n, n_edge] : edges) {
-    if (n_edge.component_id_ != kInvalidComponent) {
+    if (n_edge.component_id_ != kOSMInvalidComponent) {
       continue;
     }
 
