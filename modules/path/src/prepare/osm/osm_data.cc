@@ -145,6 +145,7 @@ void extract_components(mcd::vector<osm_way>&& all_osm_ways,
                         mcd::vector<mcd::vector<osm_way>>& osm_ways) {
   constexpr auto const kInvalidComponent = std::numeric_limits<int64_t>::max();
   struct component_edge {
+    component_edge() = default;
     std::vector<int64_t> others_;
     int64_t component_id_{kInvalidComponent};
   };
