@@ -84,23 +84,24 @@ mcd::vector<station_seq> load_station_sequences(
       utl::to_vec(seqs, [](auto const& pair) { return pair.second; });
 
   mcd::vector<station_seq> result;
-  utl::equal_ranges(sequences,
-                    [](auto const& lhs, auto const& rhs) {
-                      return lhs.station_ids_ < rhs.station_ids_;
-                    },
-                    [&](auto const& lb, auto const& ub) {
-                      auto& elem = *lb;
+  utl::equal_ranges(
+      sequences,
+      [](auto const& lhs, auto const& rhs) {
+        return lhs.station_ids_ < rhs.station_ids_;
+      },
+      [&](auto const& lb, auto const& ub) {
+        auto& elem = *lb;
 
-                      for (auto it = std::next(lb); it != ub; ++it) {
-                        utl::concat(elem.classes_, it->classes_);
-                      }
-                      utl::erase_duplicates(elem.classes_);
-                      if (elem.classes_.empty()) {
-                        elem.classes_.emplace_back(service_class::OTHER);
-                      }
+        for (auto it = std::next(lb); it != ub; ++it) {
+          utl::concat(elem.classes_, it->classes_);
+        }
+        utl::erase_duplicates(elem.classes_);
+        if (elem.classes_.empty()) {
+          elem.classes_.emplace_back(service_class::OTHER);
+        }
 
-                      result.emplace_back(elem);
-                    });
+        result.emplace_back(elem);
+      });
 
   LOG(motis::logging::info) << result.size() << " station sequences "
                             << "(was: " << sequences.size() << ")";
