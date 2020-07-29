@@ -14,8 +14,17 @@
 
 namespace motis::path {
 
+struct osm_stop_position {
+  bool has_category(source_spec::category) const;
+
+  mcd::string name_;
+  mcd::vector<source_spec::category> categories_;
+  int64_t id_;
+  geo::latlng pos_;
+};
+
 struct osm_data {
-  mcd::vector<geo::latlng> stop_positions_;
+  mcd::vector<osm_stop_position> stop_positions_;
   mcd::vector<geo::latlng> plattforms_;
   mcd::hash_map<source_spec, mcd::vector<mcd::vector<osm_way>>> profiles_;
 };

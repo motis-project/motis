@@ -72,23 +72,25 @@ struct execution_stats {
 
     format_headline(out);
     for (auto& [key, v] : main_part_timings_) {
-      fmt::format_to(out, "[PART] {:>9} {} ", key.strategy_->source_spec_.str(),
+      fmt::format_to(out, "[PART] {:>14} {} ",
+                     key.strategy_->source_spec_.str(),
                      key.between_stations_ ? 'B' : 'W');
       format_timing_summary(out, v);
     }
     format_headline(out);
     for (auto& [min_cat, v] : seq_graph_timings_) {
-      fmt::format_to(out, "[SEQ|GRAPH] cat {:>2} ", min_cat);
+      fmt::format_to(out, "[SEQ|GRAPH] cat {:>7} ", min_cat);
       format_timing_summary(out, v);
     }
     format_headline(out);
     for (auto& [min_cat, v] : seq_route_timings_) {
-      fmt::format_to(out, "[SEQ|ROUTE] cat {:>2} ", min_cat);
+      fmt::format_to(out, "[SEQ|ROUTE] cat {:>7} ", min_cat);
       format_timing_summary(out, v);
     }
     format_headline(out);
     for (auto& [key, v] : main_path_timings_) {
-      fmt::format_to(out, "[PATH] {:>9} {} ", key.strategy_->source_spec_.str(),
+      fmt::format_to(out, "[PATH] {:>14} {} ",
+                     key.strategy_->source_spec_.str(),
                      key.between_stations_ ? 'B' : 'W');
       format_timing_summary(out, v);
     }
@@ -97,7 +99,7 @@ struct execution_stats {
   }
 
   static void format_headline(fmt::memory_buffer& out) {
-    fmt::format_to(out, "{:18} | {:8} | {:9} | {:9} | {:9} | {:9} | {:9}\n",
+    fmt::format_to(out, "{:23} | {:8} | {:9} | {:9} | {:9} | {:9} | {:9}\n",
                    "task", "count", "sum", "avg", "sd", "q50", "q95");
   }
 

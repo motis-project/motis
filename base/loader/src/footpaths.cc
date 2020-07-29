@@ -7,6 +7,7 @@
 #include "utl/parallel_for.h"
 #include "utl/verify.h"
 
+#include "motis/core/common/floyd_warshall.h"
 #include "motis/core/common/logging.h"
 
 namespace ml = motis::logging;
@@ -53,29 +54,6 @@ footgraph get_footpath_graph(
     }
     return fps;
   });
-}
-
-struct matrix {
-  matrix(size_t count, time value)
-      : count_(count), data_(count * count, value) {}
-
-  size_t size() const { return count_; }
-  time& operator()(size_t i, size_t j) { return data_[i * count_ + j]; }
-
-  size_t count_;
-  std::vector<time> data_;
-};
-
-inline void floyd_warshall_serial(matrix& mat) {
-  for (auto k = 0UL; k < mat.size(); ++k) {
-    for (auto i = 0UL; i < mat.size(); ++i) {
-      for (auto j = 0UL; j < mat.size(); ++j) {
-        if (mat(i, j) > mat(i, k) + mat(k, j)) {
-          mat(i, j) = mat(i, k) + mat(k, j);
-        }
-      }
-    }
-  }
 }
 
 std::vector<std::pair<uint32_t, uint32_t>> find_components(
@@ -149,7 +127,7 @@ void process_component(component_it const lb, component_it const ub,
   utl::verify(size > 2, "invalid size");
 
   constexpr auto const kInvalidTime = std::numeric_limits<motis::time>::max();
-  matrix mat(size, kInvalidTime);
+  auto mat = make_flat_matrix<motis::time>(size, kInvalidTime);
 
   for (auto i = 0; i < size; ++i) {
     auto it = lb;
@@ -162,7 +140,7 @@ void process_component(component_it const lb, component_it const ub,
     }
   }
 
-  floyd_warshall_serial(mat);
+  floyd_warshall(mat);
 
   for (auto i = 0; i < size; ++i) {
     for (auto j = 0; j < size; ++j) {

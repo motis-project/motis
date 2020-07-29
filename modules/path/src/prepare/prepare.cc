@@ -36,38 +36,38 @@ inline void filter_sequences(std::vector<std::string> const& filters,
                              mcd::vector<station_seq>& sequences) {
   ml::scoped_timer timer("filter station sequences");
   for (auto const& filter : filters) {
-    std::vector<std::string> tokens;
-    boost::split(tokens, filter, boost::is_any_of(":"));
-    utl::verify(tokens.size() == 2, "unexpected filter");
+    auto const pos = filter.find_first_of(':');
+    utl::verify(pos != std::string::npos, "unexpected filter");
+    auto const key = filter.substr(0, pos);
+    auto const value = filter.substr(pos + 1);
 
-    if (tokens[0] == "id") {
-      utl::erase_if(sequences, [&tokens](auto const& seq) {
-        return std::none_of(
-            begin(seq.station_ids_), end(seq.station_ids_),
-            [&tokens](auto const& id) { return id == tokens[1]; });
+    if (key == "id") {
+      utl::erase_if(sequences, [&](auto const& seq) {
+        return std::none_of(begin(seq.station_ids_), end(seq.station_ids_),
+                            [&](auto const& id) { return id == value; });
       });
-    } else if (tokens[0] == "seq") {
+    } else if (key == "seq") {
       std::vector<std::string> ids;
-      boost::split(ids, tokens[1], boost::is_any_of("."));
+      boost::split(ids, value, boost::is_any_of("."));
       utl::erase_if(sequences, [&ids](auto const& seq) {
         return !std::equal(begin(ids), end(ids), begin(seq.station_ids_),
                            end(seq.station_ids_));
       });
-    } else if (tokens[0] == "extent") {
-      utl::verify(boost::filesystem::is_regular_file(tokens[1]),
+    } else if (key == "extent") {
+      utl::verify(boost::filesystem::is_regular_file(value),
                   "cannot find extent polygon");
-      auto const extent_polygon = geo::read_poly_file(tokens[1]);
+      auto const extent_polygon = geo::read_poly_file(value);
       utl::erase_if(sequences, [&](auto const& seq) {
         return std::any_of(begin(seq.coordinates_), end(seq.coordinates_),
                            [&](auto const& coord) {
                              return !geo::within(coord, extent_polygon);
                            });
       });
-    } else if (tokens[0] == "limit") {
-      sequences.resize(std::min(static_cast<size_t>(std::stoul(tokens[1])),
+    } else if (key == "limit") {
+      sequences.resize(std::min(static_cast<size_t>(std::stoul(value)),
                                 static_cast<size_t>(sequences.size())));
-    } else if (tokens[0] == "cat") {
-      auto clasz = static_cast<service_class>(std::stoi(tokens[1]));
+    } else if (key == "cat") {
+      auto clasz = static_cast<service_class>(std::stoi(value));
       utl::erase_if(sequences, [&](auto const& seq) {
         return std::find(begin(seq.classes_), end(seq.classes_), clasz) ==
                end(seq.classes_);
@@ -76,7 +76,7 @@ inline void filter_sequences(std::vector<std::string> const& filters,
         seq.classes_ = {clasz};
       }
     } else {
-      LOG(ml::info) << "unknown filter: " << tokens[0];
+      LOG(ml::info) << "unknown filter: " << key;
     }
   }
 }
@@ -133,6 +133,7 @@ void prepare(prepare_settings const& opt) {
         auto sequences =
             schedule_wrapper{opt.schedule_}.load_station_sequences();
         filter_sequences(opt.filter_, sequences);
+        utl::verify(!sequences.empty(), "sequences empty (nothing to do)!");
 
         load_osm_data();  // load only if resolve_sequences runs!
         LOG(ml::info) << "OSM DATA: " << osm_data_ptr->stop_positions_.size()
@@ -141,15 +142,15 @@ void prepare(prepare_settings const& opt) {
                       << " profiles";
 
         progress_tracker->status("Prepare Stations");
-        auto stations = collect_stations(sequences);
-        annotate_stop_positions(*osm_data_ptr, stations);
+        auto stations = load_stations(sequences, *osm_data_ptr);
 
         LOG(ml::info) << "processing " << sequences.size()
                       << " station sequences with " << stations.stations_.size()
                       << " unique stations.";
 
         progress_tracker->status("Make Path Routing");
-        auto routing = make_path_routing(stations, *osm_data_ptr, opt.osrm_);
+        auto routing =
+            make_path_routing(sequences, stations, *osm_data_ptr, opt.osrm_);
 
         progress_tracker->status("Resolve Sequences").out_bounds(25, 90);
         return mcd::make_unique<mcd::vector<station_seq>>(

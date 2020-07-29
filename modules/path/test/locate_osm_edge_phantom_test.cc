@@ -9,8 +9,8 @@ TEST(locate_osm_edge_phantom_with_dist, lueneburg) {
   geo::latlng south{53.2484046, 10.4197946};  // south
   geo::latlng station_pos{53.249700, 10.419106};  // western / middle
 
-  mp::osm_edge_phantom_with_dist p{{0, 0, north, south}, 0};
-  mp::located_osm_edge_phantom_with_dist obj{p, nullptr, station_pos};
+  mp::osm_edge_phantom_match obj{mp::osm_edge_phantom{0, 0, north, south}, 0,
+                                 nullptr, station_pos};
   obj.locate();
 
   ASSERT_FALSE(obj.eq_from_);
@@ -27,8 +27,8 @@ TEST(locate_osm_edge_phantom_with_dist, hamburg) {
   geo::latlng south{53.5525599, 10.0061187};  // south
   geo::latlng station_pos{53.552736, 10.006909};  // eastern / northern
 
-  mp::osm_edge_phantom_with_dist p{{0, 0, south, north}, 0};
-  mp::located_osm_edge_phantom_with_dist obj{p, nullptr, station_pos};
+  mp::osm_edge_phantom_match obj{mp::osm_edge_phantom{0, 0, south, north}, 0,
+                                 nullptr, station_pos};
   std::clog.precision(11);
   obj.locate();
 

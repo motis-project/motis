@@ -2,6 +2,10 @@
 
 #include <algorithm>
 
+#include "boost/range/irange.hpp"
+
+#include "geo/xyz.h"
+
 #include "utl/concat.h"
 #include "utl/equal_ranges_linear.h"
 #include "utl/erase_duplicates.h"
@@ -16,14 +20,12 @@
 
 #include "motis/core/common/logging.h"
 
-#include "motis/path/prepare/osm/osm_phantom.h"
+#include "motis/path/prepare/tuning_parameters.h"
 
 using namespace motis::logging;
 using namespace geo;
 
 namespace motis::path {
-
-constexpr auto kMaxDistanceHeuristic = 1000;
 
 using osm_idx_t = int64_t;
 using node_idx_t = size_t;
@@ -32,8 +34,44 @@ using offset_t = size_t;
 
 void osm_graph_builder::build_graph(
     mcd::vector<mcd::vector<osm_way>> const& components) {
-  utl::parallel_for("add_component", components, 1000,
-                    [this](auto const& c) { add_component(c); });
+  constexpr auto const kSmallComponentLimit = 10000;
+  utl::parallel_for("add small component", components, 1000,
+                    [&](auto const& c) {
+                      if (c.size() < kSmallComponentLimit) {
+                        add_component(c);
+                      }
+                    });
+  LOG(info) << "add large components";
+  for (auto const& c : components) {
+    if (c.size() < kSmallComponentLimit) {
+      continue;
+    }
+    if (osm_phantom_builder pb{station_idx_, c};
+        !pb.matched_stations_.empty()) {
+      auto const& matched_stations = pb.matched_stations_;
+
+      auto const task_count =
+          std::min<size_t>(std::max<size_t>(matched_stations.size() / 1000, 1),
+                           2 * std::thread::hardware_concurrency());
+      auto const batch_size = matched_stations.size() / task_count;
+      utl::verify(batch_size != 0, "osm_graph_builder: empty batch size");
+
+      utl::parallel_for(boost::irange(task_count), [&](auto const batch_idx) {
+        auto const lb = batch_idx * batch_size;
+        auto const ub = (batch_idx + 1 != task_count)
+                            ? (batch_idx + 1) * batch_size
+                            : matched_stations.size();
+        for (auto i = lb; i < ub; ++i) {
+          pb.build_osm_phantoms(matched_stations[i]);
+        }
+      });
+      pb.finalize();
+
+      if (pb.n_phantoms_.size() + pb.e_phantoms_.size() > 0) {
+        add_component(c, pb.n_phantoms_, pb.e_phantoms_);
+      }
+    }
+  }
 
   std::sort(begin(graph_.node_station_links_), end(graph_.node_station_links_),
             [](auto const& lhs, auto const& rhs) {
@@ -55,23 +93,23 @@ void osm_graph_builder::build_graph(
 }
 
 void osm_graph_builder::add_component(mcd::vector<osm_way> const& osm_ways) {
-  geo::box component_box;
-  for (auto const& way : osm_ways) {
-    for (auto const& pos : way.path_.polyline_) {
-      component_box.extend(pos);
+  if (osm_phantom_builder pb{station_idx_, osm_ways};
+      !pb.matched_stations_.empty()) {
+    for (auto const* station : pb.matched_stations_) {
+      pb.build_osm_phantoms(station);
+    }
+    pb.finalize();
+
+    if (pb.n_phantoms_.size() + pb.e_phantoms_.size() > 0) {
+      add_component(osm_ways, pb.n_phantoms_, pb.e_phantoms_);
     }
   }
-  component_box.extend(kMaxDistanceHeuristic);
+}
 
-  auto const matched_stations = station_idx_.index_.within(component_box);
-  if (matched_stations.empty()) {
-    return;
-  }
-
-  auto const phantoms = make_phantoms(station_idx_, matched_stations, osm_ways);
-  auto const& n_phantoms = phantoms.first;
-  auto const& e_phantoms = phantoms.second;
-
+void osm_graph_builder::add_component(
+    mcd::vector<osm_way> const& osm_ways,
+    std::vector<osm_node_phantom_match> const& n_phantoms,
+    std::vector<osm_edge_phantom_match> const& e_phantoms) {
   auto const lock = std::lock_guard{mutex_};
   auto component = graph_.components_++;
 
@@ -94,10 +132,10 @@ void osm_graph_builder::add_component(mcd::vector<osm_way> const& osm_ways) {
       std::vector<std::pair<std::string, double>> links;
       for (auto it = std::lower_bound(begin(n_phantoms), end(n_phantoms), id,
                                       [](auto const&lhs, auto const&rhs) {
-                                        return lhs.first.phantom_.id_ < rhs;
+                                        return lhs.phantom_.id_ < rhs;
                                       });
-           it != end(n_phantoms) && it->first.phantom_.id_ == id; ++it) {
-        links.emplace_back(it->second->id_, it->first.distance_);
+           it != end(n_phantoms) && it->phantom_.id_ == id; ++it) {
+        links.emplace_back(it->station_->id_, it->distance_);
       }
       make_station_links(node_idx, links);
 
@@ -147,15 +185,23 @@ void osm_graph_builder::add_component(mcd::vector<osm_way> const& osm_ways) {
   };
 
   auto const make_edges = [this](auto from, auto to, auto const path_idx,
-                                 bool oneway) {
+                                 source_bits const sb) {
     auto dist = 0.;
     for (auto const& [a, b] :
          utl::pairwise(graph_.paths_[path_idx].polyline_)) {
-      dist += geo::distance(a, b);
+      // dist via xyz coordinates for consistency with a-star heuristic
+      dist += geo::haversine_distance(geo::xyz{a}, geo::xyz{b});
     }
 
+    auto const penalty_factor = get_penalty_factor(sb);
+    if (penalty_factor == std::numeric_limits<double>::infinity()) {
+      return;
+    }
+
+    dist *= penalty_factor;
+
     from->edges_.emplace_back(path_idx, true, dist, from, to);
-    if (!oneway) {
+    if ((sb & source_bits::ONEWAY) != source_bits::ONEWAY) {
       to->edges_.emplace_back(path_idx, false, dist, to, from);
     }
   };
@@ -209,7 +255,7 @@ void osm_graph_builder::add_component(mcd::vector<osm_way> const& osm_ways) {
         prev_coord = {};
 
       } else if (lb->eq_to_) {
-        utl::verify(curr_offset < way.path_.size() - 1,
+        utl::verify(curr_offset < way.path_.size() - 2,
                     "have edge_phantom for end");
         path_idx = make_path(way, prev_offset, ++curr_offset, prev_coord,
                              std::optional<geo::latlng>{});
@@ -221,17 +267,64 @@ void osm_graph_builder::add_component(mcd::vector<osm_way> const& osm_ways) {
         prev_coord = {lb->pos_};
       }
 
-      make_edges(prev_node, curr_node, path_idx, way.oneway_);
+      make_edges(prev_node, curr_node, path_idx, way.source_bits_);
 
       prev_node = curr_node;
       prev_offset = curr_offset;
     });
 
+    utl::verify(prev_offset < way.path_.size() - 1, "prev_offset reached end!");
     auto const path_idx = make_path(way, prev_offset, way.path_.size() - 1,
                                     prev_coord, std::optional<geo::latlng>{});
     auto curr_node = make_osm_node(way.to(), way.path_.polyline_.back());
 
-    make_edges(prev_node, curr_node, path_idx, way.oneway_);
+    make_edges(prev_node, curr_node, path_idx, way.source_bits_);
+  }
+}
+
+double osm_graph_builder::get_penalty_factor(source_bits const sb) const {
+  return 1.;
+
+  if (source_spec_.router_ == source_spec::router::OSM_REL) {
+    return 1.;
+  }
+
+  if (source_spec_.category_ == source_spec::category::SHIP &&
+      (sb & source_bits::SHIP) != source_bits::SHIP) {
+    return std::numeric_limits<double>::infinity();
+  }
+
+  auto const unlikely_penalty =
+      (sb & source_bits::UNLIKELY) == source_bits::UNLIKELY
+          ? kUnlikelyPenaltyFactor
+          : 1.;
+  auto const very_unlikely_penalty =
+      (sb & source_bits::VERY_UNLIKELY) == source_bits::VERY_UNLIKELY
+          ? kVeryUnlikelyPenaltyFactor
+          : 1.;
+  auto const extra_penalty = std::max(unlikely_penalty, very_unlikely_penalty);
+
+  auto const match = [&](auto const expected_cat, auto const expected_sb) {
+    return source_spec_.category_ == expected_cat &&
+           (sb & expected_sb) == expected_sb;
+  };
+
+  if (source_spec_.category_ == source_spec::category::UNKNOWN ||
+      source_spec_.category_ == source_spec::category::MULTI ||
+      source_spec_.category_ == source_spec::category::SHIP ||
+      match(source_spec::category::BUS, source_bits::BUS) ||
+      match(source_spec::category::TRAM, source_bits::TRAM) ||
+      match(source_spec::category::RAIL, source_bits::RAIL) ||
+      match(source_spec::category::SUBWAY, source_bits::SUBWAY)) {
+    return extra_penalty;
+  } else if (match(source_spec::category::BUS, source_bits::TRAM) ||
+             match(source_spec::category::TRAM, source_bits::BUS) ||
+             match(source_spec::category::TRAM, source_bits::LIGHT_RAIL) ||
+             match(source_spec::category::RAIL, source_bits::LIGHT_RAIL) ||
+             match(source_spec::category::SUBWAY, source_bits::LIGHT_RAIL)) {
+    return kMinorMismatchPenaltyFactor * extra_penalty;
+  } else {
+    return kMajorMismatchPenaltyFactor * extra_penalty;
   }
 }
 

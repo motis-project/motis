@@ -24,7 +24,7 @@ struct way {
   osm_way* geometry_{nullptr};
 
   bool reversed_{false};
-  bool oneway_{false};
+  source_bits source_bits_{source_bits::NO_SOURCE};
 };
 
 constexpr auto const kInvalidId = std::numeric_limits<int64_t>::max();
@@ -37,7 +37,7 @@ std::vector<way_handle> make_way_handles(mcd::vector<osm_way>& ways) {
     wh->from_ = w.from();
     wh->to_ = w.to();
     wh->geometry_ = &w;
-    wh->oneway_ = w.oneway_;
+    wh->source_bits_ = w.source_bits_;
     way_handles.emplace_back(std::move(wh));
   }
   return way_handles;
@@ -121,8 +121,8 @@ void join_ways(std::vector<way_handle>& handles) {
       if (*other == nullptr) {
         break;  // other alreay moved if join already discarded
       }
-      if ((**it).oneway_ != (**other).oneway_) {
-        break;  // dont join oneway with twoway
+      if ((**it).source_bits_ != (**other).source_bits_) {
+        break;  // dont join from different sources (also oneway/twoway)
       }
       if ((**other).from_ == (**other).to_) {
         break;  // other is a "blossom"
@@ -130,12 +130,13 @@ void join_ways(std::vector<way_handle>& handles) {
 
       auto joined = std::make_unique<way>();
       joined->to_ = (**it).to_;
-      joined->oneway_ = (**it).oneway_;
+      joined->source_bits_ = (**it).source_bits_;
 
       if ((**it).from_ == (**other).to_) {  //  --(other)--> X --(this)-->
         joined->from_ = (**other).from_;
       } else {  //  <--(other)-- X --(this)-->
-        if ((**it).oneway_) {
+        if (((**it).source_bits_ & source_bits::ONEWAY) ==
+            source_bits::ONEWAY) {
           break;  // dont join conflicting oneway directions
         }
         joined->from_ = (**other).to_;
@@ -155,8 +156,8 @@ void join_ways(std::vector<way_handle>& handles) {
       if (*other == nullptr) {
         break;  // other alreay moved if join already discarded
       }
-      if ((**it).oneway_ != (**other).oneway_) {
-        break;  // dont join oneway with twoway
+      if ((**it).source_bits_ != (**other).source_bits_) {
+        break;  // dont join from different sources (also oneway/twoway)
       }
       if ((**other).from_ == (**other).to_) {
         break;  // other is a "blossom"
@@ -164,12 +165,13 @@ void join_ways(std::vector<way_handle>& handles) {
 
       auto joined = std::make_unique<way>();
       joined->from_ = (**it).from_;
-      joined->oneway_ = (**it).oneway_;
+      joined->source_bits_ = (**it).source_bits_;
 
       if ((**it).to_ == (**other).from_) {  // --(this)--> X --(other)-->
         joined->to_ = (**other).to_;
       } else {  // --(this)--> X <--(other)--
-        if ((**it).oneway_) {
+        if (((**it).source_bits_ & source_bits::ONEWAY) ==
+            source_bits::ONEWAY) {
           break;  // conflicting oneway directions
         }
         joined->to_ = (**other).from_;
@@ -192,7 +194,7 @@ mcd::vector<osm_way> aggregate_geometry(std::vector<way_handle>& way_handles) {
       result.emplace_back(std::move(*wh->geometry_));
     } else {  // join result;
       osm_way joined_geo;
-      joined_geo.oneway_ = wh->oneway_;
+      joined_geo.source_bits_ = wh->source_bits_;
 
       std::stack<way_handle> stack;
       stack.emplace(std::move(wh));
@@ -203,6 +205,7 @@ mcd::vector<osm_way> aggregate_geometry(std::vector<way_handle>& way_handles) {
         if (curr->geometry_ != nullptr) {
           auto const skip = joined_geo.path_.size() == 0 ? 0 : 1;
           auto const& curr_geo = *curr->geometry_;
+          utl::concat(joined_geo.ids_, curr_geo.ids_);
 
           if (curr->reversed_) {
             std::reverse_copy(begin(curr_geo.path_.polyline_),
@@ -233,6 +236,7 @@ mcd::vector<osm_way> aggregate_geometry(std::vector<way_handle>& way_handles) {
         }
       }
 
+      utl::erase_duplicates(joined_geo.ids_);
       result.emplace_back(std::move(joined_geo));
     }
   }
