@@ -13,7 +13,6 @@
 #include "utl/get_or_create.h"
 #include "utl/pairwise.h"
 #include "utl/to_vec.h"
-#include "utl/visit.h"
 
 #include "motis/hash_map.h"
 
@@ -164,6 +163,46 @@ void osm_phantom_builder::build_osm_phantoms(station const* station) {
   }
 }
 
+bool way_idx_match(std::vector<size_t> const& vec, size_t const val) {
+  return std::find(begin(vec), end(vec), val) != end(vec);
+}
+
+bool way_idx_match(size_t const val, std::vector<size_t> const& vec) {
+  return way_idx_match(vec, val);
+}
+
+bool dominated_with_tiebreaker(mcd::vector<osm_way> const& osm_ways,
+                               osm_node_phantom_match const& self,
+                               osm_edge_phantom_match const& other) {
+  auto const& osm_way = osm_ways.at(other.phantom_.way_idx_);
+  if ((other.eq_from_ && other.phantom_.offset_ == 0 &&
+       self.phantom_.id_ == osm_way.from()) ||
+      (other.eq_to_ && other.phantom_.offset_ == osm_way.path_.size() - 2 &&
+       self.phantom_.id_ == osm_way.to())) {
+    return false;  // self=node -> undominated by corresponding 'end' edge
+  }
+  if (std::fabs(self.distance_ - other.distance_) < .1) {
+    return false;  // self=node -> undominated by other=edge
+  }
+  return other.distance_ < self.distance_;
+};
+
+bool dominated_with_tiebreaker(mcd::vector<osm_way> const& osm_ways,
+                               osm_edge_phantom_match const& self,
+                               osm_node_phantom_match const& other) {
+  auto const& osm_way = osm_ways.at(self.phantom_.way_idx_);
+  if ((self.eq_from_ && self.phantom_.offset_ == 0 &&
+       other.phantom_.id_ == osm_way.from()) ||
+      (self.eq_to_ && self.phantom_.offset_ == osm_way.path_.size() - 2 &&
+       other.phantom_.id_ == osm_way.to())) {
+    return true;  // self='end' edge -> dominated by corresponding node
+  }
+  if (std::fabs(self.distance_ - other.distance_) < .1) {
+    return true;  // self=edge -> dominated by other=node
+  }
+  return other.distance_ < self.distance_;
+}
+
 std::pair<std::vector<osm_node_phantom_match>,
           std::vector<osm_edge_phantom_match>>
 osm_phantom_builder::match_osm_phantoms(station const* station,
@@ -219,45 +258,6 @@ osm_phantom_builder::match_osm_phantoms(station const* station,
   }
 
   // keep only the closest match of graph-adjacent phantom nodes
-  auto const way_idx_match =
-      overloaded{[&](std::vector<size_t> const& vec, size_t const val) {
-                   return std::find(begin(vec), end(vec), val) != end(vec);
-                 },
-                 [&](size_t const val, std::vector<size_t> const& vec) {
-                   return std::find(begin(vec), end(vec), val) != end(vec);
-                 }};
-
-  auto const dominated_with_tiebreaker = overloaded{
-      [&](osm_node_phantom_match const& self,
-          osm_edge_phantom_match const& other) {
-        auto const& osm_way = osm_ways_.at(other.phantom_.way_idx_);
-        if ((other.eq_from_ && other.phantom_.offset_ == 0 &&
-             self.phantom_.id_ == osm_way.from()) ||
-            (other.eq_to_ &&
-             other.phantom_.offset_ == osm_way.path_.size() - 2 &&
-             self.phantom_.id_ == osm_way.to())) {
-          return false;  // self=node -> undominated by corresponding 'end' edge
-        }
-        if (std::fabs(self.distance_ - other.distance_) < .1) {
-          return false;  // self=node -> undominated by other=edge
-        }
-        return other.distance_ < self.distance_;
-      },
-      [&](osm_edge_phantom_match const& self,
-          osm_node_phantom_match const& other) {
-        auto const& osm_way = osm_ways_.at(self.phantom_.way_idx_);
-        if ((self.eq_from_ && self.phantom_.offset_ == 0 &&
-             other.phantom_.id_ == osm_way.from()) ||
-            (self.eq_to_ && self.phantom_.offset_ == osm_way.path_.size() - 2 &&
-             other.phantom_.id_ == osm_way.to())) {
-          return true;  // self='end' edge -> dominated by corresponding node
-        }
-        if (std::fabs(self.distance_ - other.distance_) < .1) {
-          return true;  // self=edge -> dominated by other=node
-        }
-        return other.distance_ < self.distance_;
-      }};
-
   auto const filter = [&](auto const& subjects, auto const& others) {
     typename std::decay<decltype(subjects)>::type result;
     std::copy_if(
@@ -265,15 +265,13 @@ osm_phantom_builder::match_osm_phantoms(station const* station,
         [&](auto const& s) {
           return std::none_of(begin(others), end(others), [&](auto const& o) {
             return way_idx_match(o.phantom_.way_idx_, s.phantom_.way_idx_) &&
-                   dominated_with_tiebreaker(s, o);
+                   dominated_with_tiebreaker(osm_ways_, s, o);
           });
         });
     return result;
   };
 
-  auto n_result = filter(n_matches, e_matches);
-  auto e_result = filter(e_matches, n_matches);
-  return std::pair{std::move(n_result), std::move(e_result)};
+  return {filter(n_matches, e_matches), filter(e_matches, n_matches)};
 }
 
 void osm_phantom_builder::append_phantoms(
