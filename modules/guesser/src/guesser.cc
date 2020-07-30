@@ -50,7 +50,12 @@ void guesser::init(motis::module::registry& reg) {
     auto const& s = *sched.stations_[i];
     float factor = 0;
     for (auto i = 0UL; i < s.dep_class_events_.size(); ++i) {
-      factor += std::pow(10, (9 - i) / 3) * s.dep_class_events_.at(i);
+      factor +=
+          std::pow(
+              10,
+              (static_cast<service_class_t>(service_class::NUM_CLASSES) - i) /
+                  3) *
+          s.dep_class_events_.at(i);
     }
     return std::make_pair(s.name_.str(), factor);
   });
