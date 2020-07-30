@@ -6,7 +6,8 @@ namespace motis::path {
 
 struct prepare_settings : public conf::configuration {
   prepare_settings() : configuration("Prepare Options", "") {
-    param(schedule_, "schedule", "/path/to/rohdaten");
+    param(schedules_, "schedules", "/path/to/rohdaten");
+    param(prefixes_, "prefixes", "/path/to/rohdaten");
     param(osm_, "osm", "/path/to/germany-latest.osm.pbf");
     param(osrm_, "osrm", "path/to/osrm/files");
     param(out_, "out", "/path/to/db.mdb");
@@ -18,7 +19,8 @@ struct prepare_settings : public conf::configuration {
     param(seq_cache_file_, "seq_cache_file", "/path/to/seq_cache.fbs");
   }
 
-  std::string schedule_{"rohdaten"};
+  std::vector<std::string> schedules_{"rohdaten"};
+  std::vector<std::string> prefixes_{};
   std::string osm_{"germany-latest.osm.pbf"};
   std::string osrm_{"osrm"};
   std::string out_{"./pathdb.mdb"};

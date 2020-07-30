@@ -19,8 +19,8 @@ using namespace motis::test;
 struct tripbased_pretrip : public motis_instance_test {
   tripbased_pretrip()
       : motis::test::motis_instance_test(
-            loader::loader_options{"modules/tripbased/test_resources/schedule",
-                                   "20151121"},
+            loader::loader_options{
+                {"modules/tripbased/test_resources/schedule"}, "20151121"},
             {"tripbased"}, {"--tripbased.use_data_file=false"}) {}
 
   bool has_journey(std::vector<journey> const& journeys, int const departure,

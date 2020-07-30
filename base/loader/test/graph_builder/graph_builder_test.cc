@@ -16,8 +16,10 @@ loader_graph_builder_test::loader_graph_builder_test(std::string schedule_name,
       num_days_(num_days) {}
 
 void loader_graph_builder_test::SetUp() {
-  sched_ = load_schedule(loader_options{
-      (hrd::SCHEDULES / schedule_name_).string(), schedule_begin_, num_days_});
+  sched_ =
+      load_schedule(loader_options{{(hrd::SCHEDULES / schedule_name_).string()},
+                                   schedule_begin_,
+                                   num_days_});
 }
 
 edge const* loader_graph_builder_test::get_route_edge(node const* route_node) {

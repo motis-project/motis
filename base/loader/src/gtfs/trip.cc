@@ -168,7 +168,7 @@ std::pair<trip_map, block_map> read_trips(loaded_file file,
   auto const entries = read<gtfs_trip>(file.content(), columns);
 
   auto progress_tracker = utl::get_active_progress_tracker();
-  progress_tracker->status("Trips").out_bounds(5.F, 20.F).in_high(
+  progress_tracker->status("Trips").out_bounds(5.F, 25.F).in_high(
       entries.size());
   for (auto const& [i, t] : utl::enumerate(entries)) {
     progress_tracker->update(i);

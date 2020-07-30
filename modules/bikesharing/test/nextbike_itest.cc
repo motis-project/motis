@@ -81,8 +81,13 @@ class bikesharing_nextbike_itest : public test::motis_instance_test {
 public:
   bikesharing_nextbike_itest()
       : test::motis_instance_test(
-            {"modules/bikesharing/test_resources/schedule", "20150112", 2,
-             false, false, false, true},
+            {{"modules/bikesharing/test_resources/schedule"},
+             "20150112",
+             2,
+             false,
+             false,
+             false,
+             true},
             {"lookup", "bikesharing"},
             {"--bikesharing.nextbike_path=modules/"
              "bikesharing/test_resources/nextbike",

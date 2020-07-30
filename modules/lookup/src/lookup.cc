@@ -1,5 +1,7 @@
 #include "motis/lookup/lookup.h"
 
+#include "utl/enumerate.h"
+
 #include "motis/core/access/time_access.h"
 
 #include "motis/module/context/get_schedule.h"
@@ -131,10 +133,19 @@ msg_ptr lookup::lookup_meta_stations(msg_ptr const& msg) {
 
 msg_ptr lookup::lookup_schedule_info() {
   auto const& sched = get_schedule();
+
+  std::stringstream ss;
+  for (auto const& [i, name] : utl::enumerate(sched.names_)) {
+    if (i != 0) {
+      ss << "\n";
+    }
+    ss << name;
+  }
+
   message_creator b;
   b.create_and_finish(
       MsgContent_LookupScheduleInfoResponse,
-      CreateLookupScheduleInfoResponse(b, b.CreateString(sched.name_),
+      CreateLookupScheduleInfoResponse(b, b.CreateString(ss.str()),
                                        external_schedule_begin(sched),
                                        external_schedule_end(sched))
           .Union());

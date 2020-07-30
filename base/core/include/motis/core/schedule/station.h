@@ -15,6 +15,8 @@
 
 namespace motis {
 
+constexpr auto const NO_SOURCE_SCHEDULE = std::numeric_limits<uint32_t>::max();
+
 struct station {
   double lat() const { return width_; }
   double lng() const { return length_; }
@@ -30,21 +32,8 @@ struct station {
   mcd::vector<ptr<station>> equivalent_;
   mcd::vector<footpath> outgoing_footpaths_;
   mcd::vector<footpath> incoming_footpaths_;
+  uint32_t source_schedule_{NO_SOURCE_SCHEDULE};
 };
-
-inline station make_station(unsigned index, double length, double width,
-                            int transfer_time, mcd::string eva_nr,
-                            mcd::string name, timezone const* timez) {
-  station s{};
-  s.index_ = index;
-  s.length_ = length;
-  s.width_ = width;
-  s.transfer_time_ = transfer_time;
-  s.eva_nr_ = std::move(eva_nr);
-  s.name_ = std::move(name);
-  s.timez_ = timez;
-  return s;
-}
 
 using station_ptr = mcd::unique_ptr<station>;
 

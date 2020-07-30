@@ -346,7 +346,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   motis::logging::scoped_timer export_timer{"export"};
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->status("Export schedule.raw")
-      .out_bounds(40.F, 80.F)
+      .out_bounds(60.F, 100.F)
       .in_high(trips.size());
   auto const interval =
       Interval{static_cast<uint64_t>(to_unix_time(traffic_days.first_day_)),
@@ -354,6 +354,19 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
 
   auto const create_service = [&](trip const* t, bitfield const& traffic_days,
                                   bool const is_rule_service_participant) {
+    auto const is_train_number = [](auto const& s) {
+      return !s.empty() && std::all_of(begin(s), end(s), [](auto&& c) -> bool {
+        return std::isdigit(c);
+      });
+    };
+
+    int train_nr = 0;
+    if (is_train_number(t->short_name_)) {
+      train_nr = std::stoi(t->short_name_);
+    } else if (is_train_number(t->headsign_)) {
+      train_nr = std::stoi(t->headsign_);
+    }
+
     auto const stop_seq = t->stops();
     return CreateService(
         fbb,
@@ -379,18 +392,11 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
             }),
         fbb.CreateString(serialize_bitset(traffic_days)),
         fbb.CreateVector(repeat_n(
-            CreateSection(
-                fbb, get_or_create_category(t),
-                get_or_create_provider(t->route_->agency_),
-                !t->short_name_.empty() &&
-                        std::all_of(
-                            begin(t->short_name_), end(t->short_name_),
-                            [](auto&& c) -> bool { return std::isdigit(c); })
-                    ? std::stoi(t->short_name_)
-                    : 0,
-                get_or_create_str(t->route_->short_name_),
-                fbb.CreateVector(std::vector<Offset<Attribute>>()),
-                CreateDirection(fbb, 0, get_or_create_direction(t))),
+            CreateSection(fbb, get_or_create_category(t),
+                          get_or_create_provider(t->route_->agency_), train_nr,
+                          get_or_create_str(t->route_->short_name_),
+                          fbb.CreateVector(std::vector<Offset<Attribute>>()),
+                          CreateDirection(fbb, 0, get_or_create_direction(t))),
             stop_seq.size() - 1)),
         0,
         fbb.CreateVector(utl::all(t->stop_times_)  //

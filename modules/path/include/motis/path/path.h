@@ -32,6 +32,7 @@ private:
 
   motis::module::msg_ptr path_tiles(motis::module::msg_ptr const&) const;
 
+  std::vector<std::string> use_cache_;
   bool import_successful_{false};
 };
 

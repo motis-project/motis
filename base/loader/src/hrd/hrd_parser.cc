@@ -156,7 +156,7 @@ void parse_and_build_services(
 
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->status("Parse HRD Services")
-      .out_bounds(0.F, 80.F)
+      .out_bounds(0.F, 100.F)
       .in_high(total_bytes);
 
   auto total_consumed = size_t{0ULL};

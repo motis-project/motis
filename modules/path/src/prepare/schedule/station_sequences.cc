@@ -8,6 +8,8 @@
 
 #include "cista/serialization.h"
 
+#include "fmt/format.h"
+
 #include "geo/box.h"
 
 #include "utl/concat.h"
@@ -33,7 +35,7 @@ constexpr auto const CISTA_MODE =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_VERSION;
 
 mcd::vector<station_seq> load_station_sequences(
-    motis::loader::Schedule const* sched) {
+    motis::loader::Schedule const* sched, std::string const& prefix) {
   scoped_timer timer("loading station sequences");
 
   auto const& mapping = loader::class_mapping();
@@ -44,7 +46,10 @@ mcd::vector<station_seq> load_station_sequences(
     auto& seq = utl::get_or_create(seqs, service->route(), [&] {
       station_seq seq;
       for (auto const& station : *service->route()->stations()) {
-        seq.station_ids_.emplace_back(station->id()->str());
+        seq.station_ids_.emplace_back(
+            prefix.empty()
+                ? station->id()->str()
+                : fmt::format("{}_{}", prefix, station->id()->str()));
         seq.station_names_.emplace_back(station->name()->str());
 
         // broken data is broken

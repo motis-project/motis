@@ -64,7 +64,7 @@ jobs:
         run: >
           .\build\motis
           --mode test
-          --import.paths base/loader/test_resources/hrd_schedules/single-ice
+          --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice
           --dataset.begin 20151004
           --dataset.write_serialized false
           --exclude_modules address osrm parking path ppr tiles

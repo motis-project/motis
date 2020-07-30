@@ -10,8 +10,10 @@
 
 #include "geo/polygon.h"
 
+#include "utl/concat.h"
 #include "utl/erase_if.h"
 #include "utl/verify.h"
+#include "utl/zip.h"
 
 #include "motis/core/common/logging.h"
 
@@ -28,6 +30,7 @@
 #include "motis/path/prepare/schedule/station_sequences.h"
 #include "motis/path/prepare/schedule/stations.h"
 
+namespace fs = boost::filesystem;
 namespace ml = motis::logging;
 
 namespace motis::path {
@@ -82,36 +85,39 @@ inline void filter_sequences(std::vector<std::string> const& filters,
 }
 
 struct cachable_step {
-  explicit cachable_step(std::string const& task) : task_{task} {
-    utl::verify(task_ == "ignore" || task_ == "load" || task_ == "dump",
+  explicit cachable_step(std::string const& fname, std::string const& task)
+      : fname_{fname}, task_{task} {
+    utl::verify(task_ == "ignore" || task_ == "load" || task_ == "dump" ||
+                    task_ == "use",
                 "cachable_step: invalid task {}", task_);
   }
 
   template <typename LoadFn, typename DumpFn, typename ComputeFn>
   auto get(LoadFn&& load, DumpFn&& dump, ComputeFn&& compute)
       -> decltype(compute()) {
-    if (task_ == "load") {
-      return load();
+    if (task_ == "load" || (task_ == "use" && fs::is_regular_file(fname_))) {
+      return load(fname_);
     } else {
       auto value = compute();
-      if (task_ == "dump") {
-        dump(value);
+      if (task_ == "dump" || task_ == "use") {
+        dump(fname_, value);
       }
       return value;
     }
   }
 
+  std::string const& fname_;
   std::string const& task_;
 };
 
 void prepare(prepare_settings const& opt) {
-  utl::verify(boost::filesystem::is_regular_file(opt.osrm_),
+  utl::verify(fs::is_regular_file(opt.osrm_),
               "cannot find osrm dataset: [path={}]", opt.osrm_);
-  utl::verify(boost::filesystem::is_regular_file(opt.osm_),
+  utl::verify(fs::is_regular_file(opt.osm_),
               "cannot find osm dataset: [path={}]", opt.osm_);
 
-  cachable_step osm_cache{opt.osm_cache_task_};
-  cachable_step seq_cache{opt.seq_cache_task_};
+  cachable_step osm_cache{opt.osm_cache_file_, opt.osm_cache_task_};
+  cachable_step seq_cache{opt.seq_cache_file_, opt.seq_cache_task_};
 
   auto progress_tracker = utl::get_active_progress_tracker();
 
@@ -119,19 +125,29 @@ void prepare(prepare_settings const& opt) {
   mcd::unique_ptr<osm_data> osm_data_ptr;
   auto const load_osm_data = [&] {
     osm_data_ptr = osm_cache.get(
-        [&] { return read_osm_data(opt.osm_cache_file_, osm_data_mem); },
-        [&](auto const& d) { return write_osm_data(opt.osm_cache_file_, d); },
+        [&](auto const& f) { return read_osm_data(f, osm_data_mem); },
+        [&](auto const& f, auto const& dat) { return write_osm_data(f, dat); },
         [&] { return parse_osm(opt.osm_); });
   };
 
   cista::memory_holder seq_mem;
   auto resolved_seqs = seq_cache.get(
-      [&] { return read_station_sequences(opt.seq_cache_file_, seq_mem); },
-      [&](auto const& rs) { write_station_sequences(opt.seq_cache_file_, rs); },
+      [&](auto const& f) { return read_station_sequences(f, seq_mem); },
+      [&](auto const& f, auto const& rs) { write_station_sequences(f, rs); },
       [&] {
         progress_tracker->status("Load Station Sequences").out_bounds(0, 5);
-        auto sequences =
-            schedule_wrapper{opt.schedule_}.load_station_sequences();
+        mcd::vector<station_seq> sequences;
+        if (opt.schedules_.size() == 1 && opt.prefixes_.empty()) {
+          sequences =
+              schedule_wrapper{opt.schedules_[0]}.load_station_sequences("");
+        } else {
+          for (auto const& [sched, prefix] :
+               utl::zip(opt.schedules_, opt.prefixes_)) {
+            utl::concat(sequences,
+                        schedule_wrapper{sched}.load_station_sequences(prefix));
+          }
+        }
+
         filter_sequences(opt.filter_, sequences);
         utl::verify(!sequences.empty(), "sequences empty (nothing to do)!");
 

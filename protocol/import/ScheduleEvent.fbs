@@ -1,6 +1,7 @@
 namespace motis.import;
 
 table ScheduleEvent {
-  raw_file: string;
+  raw_files: [string];
+  prefixes: [string];
   hash: ulong;
 }

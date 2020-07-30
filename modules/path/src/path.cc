@@ -31,6 +31,7 @@
 
 using namespace flatbuffers;
 using namespace motis::module;
+using namespace motis::access;
 using namespace motis::logging;
 
 namespace motis::path {
@@ -43,7 +44,9 @@ struct import_state {
   named<cista::hash_t, MOTIS_NAME("schedule_hash")> schedule_hash_;
 };
 
-path::path() : module("Path", "path") {}
+path::path() : module("Path", "path") {
+  param(use_cache_, "use_cache", "caches to use during import {osm, seq}");
+}
 
 path::~path() = default;
 
@@ -71,11 +74,23 @@ void path::import(registry& reg) {
         }
 
         prepare_settings opt;
-        opt.schedule_ = schedule->raw_file()->str();
+        opt.schedules_ = utl::to_vec(*schedule->raw_files(),
+                                     [](auto const& s) { return s->str(); });
+        opt.prefixes_ = utl::to_vec(*schedule->prefixes(),
+                                    [](auto const& s) { return s->str(); });
         opt.osm_ = osm->path()->str();
         opt.osrm_ = osrm->path()->str();
         opt.out_ = (dir / "pathdb.mdb").generic_string();
         opt.tmp_ = dir.generic_string();
+        if (std::count(begin(use_cache_), end(use_cache_), "osm") != 0) {
+          opt.osm_cache_task_ = "use";
+          opt.osm_cache_file_ = (dir / "osm_cache.bin").generic_string();
+        }
+        if (std::count(begin(use_cache_), end(use_cache_), "seq") != 0) {
+          opt.seq_cache_task_ = "use";
+          opt.seq_cache_file_ = (dir / "seq_cache.fbs").generic_string();
+        }
+
         prepare(opt);
 
         write_ini(dir / "import.ini", state);
@@ -185,7 +200,7 @@ msg_ptr path::by_trip_id_batch(msg_ptr const& msg) const {
     } catch (std::system_error const&) {
       std::vector<geo::polyline> extra;
       size_t i = 0;
-      for (auto const& s : access::sections(trp)) {
+      for (auto const& s : sections(trp)) {
         if (segments.empty() ||
             std::find(begin(segments), end(segments), i) != end(segments)) {
           auto const& from = s.from_station(sched);
