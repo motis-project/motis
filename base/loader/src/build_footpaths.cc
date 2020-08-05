@@ -221,18 +221,16 @@ struct footpath_builder {
       }
 
       utl::erase_duplicates(
-          s->equivalent_, std::begin(s->equivalent_) + 1,
-          std::end(s->equivalent_),
+          s->equivalent_, begin(s->equivalent_) + 1, end(s->equivalent_),
           [](auto const& a, auto const& b) { return a->index_ < b->index_; },
           [](auto const& a, auto const& b) { return a->index_ == b->index_; });
 
-      s->equivalent_.erase(std::remove_if(std::begin(s->equivalent_) + 1,
-                                          std::end(s->equivalent_),
-                                          [&s](auto const& equivalent) {
-                                            return equivalent->index_ ==
-                                                   s->index_;
-                                          }),
-                           std::end(s->equivalent_));
+      s->equivalent_.erase(
+          std::remove_if(begin(s->equivalent_) + 1, end(s->equivalent_),
+                         [&s](auto const& equivalent) {
+                           return equivalent->index_ == s->index_;
+                         }),
+          end(s->equivalent_));
     }
   }
 
