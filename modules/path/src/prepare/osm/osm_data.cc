@@ -17,11 +17,11 @@
 #include "utl/erase_duplicates.h"
 #include "utl/erase_if.h"
 #include "utl/get_or_create.h"
+#include "utl/overloaded.h"
 #include "utl/pipes.h"
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
-#include "utl/visit.h"
 #include "utl/zip.h"
 
 #include "tiles/osm/hybrid_node_idx.h"
@@ -597,8 +597,8 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
       }
     };
     auto const collect =
-        overloaded{[&](raw_way& w) { collect_ways(w); },
-                   [&](std::unique_ptr<raw_way>& w) { collect_ways(*w); }};
+        utl::overloaded{[&](raw_way& w) { collect_ways(w); },
+                        [&](std::unique_ptr<raw_way>& w) { collect_ways(*w); }};
 
     stop_positions.collect(locations);
 

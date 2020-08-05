@@ -17,10 +17,10 @@
 #include "cista/mmap.h"
 
 #include "utl/enumerate.h"
+#include "utl/overloaded.h"
 #include "utl/parser/file.h"
 #include "utl/progress_tracker.h"
 #include "utl/verify.h"
-#include "utl/visit.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/common/typed_flatbuffer.h"
@@ -119,12 +119,11 @@ schedule_ptr load_schedule(loader_options const& opt,
 
   auto const datasets = utl::to_vec(mem, [&](dataset_mem_t const& v) {
     return std::visit(
-        overloaded{[](cista::mmap const& m) -> Schedule const* {
-                     return GetSchedule(m.data());
-                   },
-                   [](typed_flatbuffer<Schedule> const& m) -> Schedule const* {
-                     return m.get();
-                   }},
+        utl::overloaded{[](cista::mmap const& m) -> Schedule const* {
+                          return GetSchedule(m.data());
+                        },
+                        [](typed_flatbuffer<Schedule> const& m)
+                            -> Schedule const* { return m.get(); }},
         v);
   });
 
