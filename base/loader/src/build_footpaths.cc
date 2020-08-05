@@ -216,10 +216,23 @@ struct footpath_builder {
 
   void make_station_equivalents_unique() {
     for (auto& s : sched_.stations_) {
+      if (s->equivalent_.size() <= 1) {
+        continue;
+      }
+
       utl::erase_duplicates(
-          s->equivalent_,
+          s->equivalent_, std::begin(s->equivalent_) + 1,
+          std::end(s->equivalent_),
           [](auto const& a, auto const& b) { return a->index_ < b->index_; },
           [](auto const& a, auto const& b) { return a->index_ == b->index_; });
+
+      s->equivalent_.erase(std::remove_if(std::begin(s->equivalent_) + 1,
+                                          std::end(s->equivalent_),
+                                          [&s](auto const& equivalent) {
+                                            return equivalent->index_ ==
+                                                   s->index_;
+                                          }),
+                           std::end(s->equivalent_));
     }
   }
 
