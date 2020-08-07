@@ -37,14 +37,19 @@ struct flat_matrix {
   row operator[](int row_index) { return {*this, row_index}; }
   const_row operator[](int row_index) const { return {*this, row_index}; }
 
+  T& operator()(int const row_index, int const column_index) {
+    return entries_[column_count_ * row_index + column_index];
+  }
+
   uint32_t column_count_{0U};
   mcd::vector<T> entries_;
 };
 
 template <typename T>
-inline flat_matrix<T> make_flat_matrix(uint32_t const column_count) {
+inline flat_matrix<T> make_flat_matrix(uint32_t const column_count,
+                                       T const& init = T{}) {
   auto v = mcd::vector<T>{};
-  v.resize(column_count * column_count);
+  v.resize(column_count * column_count, init);
   return flat_matrix<T>{column_count, std::move(v)};
 }
 

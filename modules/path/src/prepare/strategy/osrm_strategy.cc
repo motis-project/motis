@@ -40,7 +40,8 @@ namespace ml = motis::logging;
 
 namespace motis::path {
 
-constexpr auto kMaxDistance = 100.0;  // large distance for SEV (was 15)
+constexpr auto kInitialMatchDistance = 10.0;
+constexpr auto kFallbackMatchDistance = 100.0;
 constexpr auto kMinNodes = 2;
 constexpr auto kMaxNodes = 5;
 
@@ -69,22 +70,42 @@ struct osrm_strategy::impl {
     utl::parallel_for(
         "process station", stations, 25000, [&, this](auto const& station) {
           std::vector<PhantomNodeWithDistance> nodes_dists;
-          auto const find_phantom_nodes = [&](auto const& pos,
-                                              auto const count) {
+          auto const find_phantom_nodes = [&](auto const& pos, auto const count,
+                                              auto const distance) {
             auto const node_dist =
                 osrm_data_facade_->NearestPhantomNodesFromBigComponent(
                     make_coord(pos), count);
             for (auto const& node_with_dist : node_dist) {
-              if (node_with_dist.distance <= kMaxDistance) {
+              if (node_with_dist.distance <= distance) {
                 nodes_dists.push_back(node_with_dist);
               }
             }
           };
 
-          auto count = station.stop_positions_.empty() ? kMaxNodes : kMinNodes;
-          find_phantom_nodes(station.pos_, count);
-          for (auto const& stop_position : station.stop_positions_) {
-            find_phantom_nodes(stop_position, count);
+          auto const count =
+              std::none_of(begin(station.stop_positions_),
+                           end(station.stop_positions_),
+                           [](auto const& sp) {
+                             return sp.categories_.empty() ||
+                                    sp.has_category(source_spec::category::BUS);
+                           })
+                  ? kMaxNodes
+                  : kMinNodes;
+
+          for (auto const distance :
+               {kInitialMatchDistance, kFallbackMatchDistance}) {
+            find_phantom_nodes(station.pos_, count, distance);
+            for (auto const& sp : station.stop_positions_) {
+              if (!sp.categories_.empty() &&
+                  !sp.has_category(source_spec::category::BUS)) {
+                continue;
+              }
+              find_phantom_nodes(sp.pos_, count, distance);
+            }
+
+            if (!nodes_dists.empty()) {
+              break;
+            }
           }
 
           utl::erase_duplicates(
@@ -269,7 +290,7 @@ struct osrm_strategy::impl {
   std::vector<PhantomNodeWithDistance> node_mem_;
   mcd::hash_map<std::string, std::vector<size_t>> stations_to_nodes_;
   mcd::hash_map<std::string, std::vector<node_ref>> stations_to_refs_;
-};  // namespace path
+};
 
 osrm_strategy::osrm_strategy(strategy_id_t strategy_id, source_spec spec,
                              std::vector<station> const& stations,

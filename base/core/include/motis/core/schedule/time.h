@@ -7,6 +7,7 @@
 #include <string>
 
 #define MINUTES_A_DAY 1440
+#define SECONDS_A_DAY 86400  // 24 * 60 * 60
 
 namespace motis {
 

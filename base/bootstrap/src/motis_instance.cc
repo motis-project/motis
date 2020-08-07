@@ -15,10 +15,7 @@
 #include "motis/core/schedule/schedule_data_key.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
-#include "motis/module/event_collector.h"
-#include "motis/bootstrap/import_coastline.h"
-#include "motis/bootstrap/import_dem.h"
-#include "motis/bootstrap/import_osm.h"
+#include "motis/bootstrap/import_files.h"
 #include "motis/bootstrap/import_schedule.h"
 #include "motis/loader/loader.h"
 
@@ -26,7 +23,6 @@
 
 using namespace motis::module;
 using namespace motis::logging;
-namespace fs = boost::filesystem;
 
 namespace motis::bootstrap {
 
@@ -69,38 +65,8 @@ void motis_instance::import(module_settings const& module_opt,
                             bool const silent) {
   auto bars = utl::global_progress_bars{silent};
 
-  registry_.subscribe("/import", import_osm);
-  registry_.subscribe("/import", import_dem);
-  registry_.subscribe("/import", import_coastline);
-
-  std::make_shared<event_collector>(
-      import_opt.data_directory_, "schedule", registry_,
-      [&](std::map<std::string, msg_ptr> const& dependencies) {
-        import_schedule(dataset_opt, dependencies.at("SCHEDULE"), *this);
-      })
-      ->require("SCHEDULE", [](msg_ptr const& msg) {
-        if (msg->get()->content_type() != MsgContent_FileEvent) {
-          return false;
-        }
-
-        using import::FileEvent;
-        auto const path =
-            fs::path{motis_content(FileEvent, msg)->path()->str()};
-        for (auto const& parser : loader::parsers()) {
-          if (parser->applicable(path)) {
-            return true;
-          }
-        }
-
-        for (auto const& parser : loader::parsers()) {
-          std::clog << "missing files in " << path << ":\n";
-          for (auto const& file : parser->missing_files(path)) {
-            std::clog << "  " << file << "\n";
-          }
-        }
-
-        return false;
-      });
+  register_import_files(*this);
+  register_import_schedule(*this, dataset_opt, import_opt.data_directory_);
 
   for (auto const& module : modules_) {
     if (module_opt.is_module_active(module->module_name())) {
@@ -109,19 +75,11 @@ void motis_instance::import(module_settings const& module_opt,
     }
   }
 
+  // Dummy message to trigger initial progress updates.
   publish(make_success_msg("/import"), 1);
-  for (auto const& path : import_opt.import_paths_) {
-    if (!fs::exists(path)) {
-      LOG(warn) << "file does not exist, skipping: " << path;
-      continue;
-    }
-    message_creator fbb;
-    fbb.create_and_finish(
-        MsgContent_FileEvent,
-        motis::import::CreateFileEvent(fbb, fbb.CreateString(path)).Union(),
-        "/import", DestinationType_Topic);
-    publish(make_msg(fbb), 1);
-  }
+
+  // Paths as actual trigger for import processing.
+  publish(make_file_event(import_opt.import_paths_), 1);
 
   registry_.reset();
 

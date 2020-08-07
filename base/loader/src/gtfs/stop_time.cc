@@ -61,7 +61,7 @@ void read_stop_times(loaded_file const& file, trip_map& trips,
 
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->status("Parse Stop Times")
-      .out_bounds(20.F, 40.F)
+      .out_bounds(25.F, 60.F)
       .in_high(entries.size());
   for (auto const& [i, s] : utl::enumerate(entries)) {
     progress_tracker->update(i);

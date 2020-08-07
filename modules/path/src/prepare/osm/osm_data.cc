@@ -1,5 +1,7 @@
 #include "motis/path/prepare/osm/osm_data.h"
 
+#include <stack>
+
 #include "boost/filesystem.hpp"
 
 #include "cista/serialization.h"
@@ -13,12 +15,13 @@
 
 #include "utl/equal_ranges_linear.h"
 #include "utl/erase_duplicates.h"
+#include "utl/erase_if.h"
 #include "utl/get_or_create.h"
+#include "utl/overloaded.h"
 #include "utl/pipes.h"
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
-#include "utl/visit.h"
 #include "utl/zip.h"
 
 #include "tiles/osm/hybrid_node_idx.h"
@@ -33,29 +36,48 @@ namespace oio = osmium::io;
 namespace oh = osmium::handler;
 namespace oeb = osmium::osm_entity_bits;
 
+namespace ml = motis::logging;
+
 namespace motis::path {
+
+constexpr auto const kInvalidNodeId = std::numeric_limits<int64_t>::max();
 
 constexpr auto const CISTA_MODE =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_VERSION;
 
-auto const str_ferry = std::string_view{"ferry"};
 auto const str_platform = std::string_view{"platform"};
+auto const str_disused = std::string_view{"disused"};
 auto const str_stop_position = std::string_view{"stop_position"};
+auto const str_stop_area = std::string_view{"stop_area"};
 auto const str_stop = std::string_view{"stop"};
 auto const str_yes = std::string_view{"yes"};
 
-struct raw_way {
-  explicit raw_way(o::object_id_type id) : id_{id}, oneway_{false} {}
+constexpr std::initializer_list<std::pair<char const*, source_spec::category>>
+    kOsmToCategory{{"bus", source_spec::category::BUS},
+                   {"train", source_spec::category::RAIL},
+                   {"light_rail", source_spec::category::RAIL},
+                   {"subway", source_spec::category::SUBWAY},
+                   {"tram", source_spec::category::TRAM},
+                   {"ferry", source_spec::category::SHIP}};
 
-  raw_way(o::object_id_type id, bool oneway,
+bool osm_stop_position::has_category(source_spec::category const cat) const {
+  return std::find(begin(categories_), end(categories_), cat) !=
+         end(categories_);
+}
+
+struct raw_way {
+  explicit raw_way(o::object_id_type id)
+      : id_{id}, source_bits_{source_bits::NO_SOURCE} {}
+
+  raw_way(o::object_id_type id, source_bits source_bits,
           std::vector<o::object_id_type> node_ids)
-      : id_{id}, oneway_{oneway}, node_ids_{std::move(node_ids)} {}
+      : id_{id}, source_bits_{source_bits}, node_ids_{std::move(node_ids)} {}
 
   osm_way extract(size_t const b, size_t const e) const {
     utl::verify(b != e, "extract empty way!");
     return osm_way{
         {id_},
-        oneway_,
+        source_bits_,
         osm_path{
             mcd::to_vec(begin(locations_) + b, begin(locations_) + e,
                         [](auto const& l) {
@@ -65,12 +87,12 @@ struct raw_way {
   }
 
   o::object_id_type id_;
-  bool oneway_;
+  source_bits source_bits_;
   std::vector<o::object_id_type> node_ids_;
   std::vector<o::Location> locations_;
 };
 
-mcd::vector<osm_way> make_osm_ways(std::vector<raw_way> const& raw_ways) {
+mcd::vector<osm_way> collect_osm_ways(std::vector<raw_way> const& raw_ways) {
   std::vector<o::object_id_type> in_multiple_ways;
   {
     std::vector<o::object_id_type> node_ids;
@@ -119,6 +141,76 @@ mcd::vector<osm_way> make_osm_ways(std::vector<raw_way> const& raw_ways) {
   return osm_ways;
 }
 
+constexpr auto const kOSMInvalidComponent = std::numeric_limits<int64_t>::max();
+
+void extract_components(mcd::vector<osm_way>&& all_osm_ways,
+                        mcd::vector<mcd::vector<osm_way>>& osm_ways) {
+  struct component_edge {
+    component_edge() = default;
+    std::vector<int64_t> others_;
+    int64_t component_id_{kOSMInvalidComponent};
+  };
+
+  mcd::hash_map<int64_t, component_edge> edges;
+  for (auto const& w : all_osm_ways) {
+    edges[w.from()].others_.push_back(w.to());
+    edges[w.to()].others_.push_back(w.from());
+  }
+
+  std::stack<int64_t> stack;  // invariant: stack is empty
+  for (auto& [n, n_edge] : edges) {
+    if (n_edge.component_id_ != kOSMInvalidComponent) {
+      continue;
+    }
+
+    stack.emplace(n);
+    while (!stack.empty()) {
+      auto j = stack.top();
+      stack.pop();
+
+      auto& edge = edges.at(j);
+      if (edge.component_id_ == n) {
+        continue;
+      }
+
+      edge.component_id_ = n;
+      for (auto const& o : edge.others_) {
+        if (o != n) {
+          stack.push(o);
+        }
+      }
+    }
+
+    utl::verify(stack.empty(), "osm_data/extract_components: stack not empty");
+  }
+
+  auto pairs = utl::to_vec(all_osm_ways, [&](auto const& w) {
+    return std::pair{edges.at(w.from()).component_id_, &w};
+  });
+
+  std::sort(begin(pairs), end(pairs));
+  utl::equal_ranges_linear(
+      pairs,
+      [](auto const& lhs, auto const& rhs) { return lhs.first == rhs.first; },
+      [&](auto lb, auto ub) {
+        osm_ways.emplace_back();
+        osm_ways.back().reserve(std::distance(lb, ub));
+        for (auto it = lb; it != ub; ++it) {
+          osm_ways.back().emplace_back(std::move(*it->second));
+        }
+      });
+}
+
+void make_osm_ways(std::vector<raw_way> const& raw_ways,
+                   mcd::vector<mcd::vector<osm_way>>& osm_ways) {
+  auto all_osm_ways = collect_osm_ways(raw_ways);
+  if (all_osm_ways.empty()) {
+    return;
+  }
+
+  extract_components(aggregate_osm_ways(std::move(all_osm_ways)), osm_ways);
+}
+
 struct relation_way_base {
   void add_relation(o::Relation const& r) {
     auto vec =
@@ -144,7 +236,10 @@ struct relation_way_base {
       return false;
     }
 
-    it->second->oneway_ = str_yes == w.get_value_by_key("oneway", "");
+    if (str_yes == w.get_value_by_key("oneway", "")) {
+      auto& sb = it->second->source_bits_;
+      sb = sb & source_bits::ONEWAY;
+    }
     it->second->node_ids_ =
         utl::to_vec(w.nodes(), [](auto const& n) { return n.ref(); });
     return true;
@@ -155,7 +250,10 @@ struct relation_way_base {
       return mem_.emplace_back(std::make_unique<raw_way>(w.id())).get();
     });
 
-    rw->oneway_ = str_yes == w.get_value_by_key("oneway", "");
+    if (str_yes == w.get_value_by_key("oneway", "")) {
+      auto& sb = rw->source_bits_;
+      sb = sb & source_bits::ONEWAY;
+    }
     rw->node_ids_ =
         utl::to_vec(w.nodes(), [](auto const& n) { return n.ref(); });
 
@@ -197,11 +295,8 @@ struct relation_handler : public oh::Handler, relation_way_base {
   mcd::vector<mcd::vector<osm_way>> finalize() {
     mcd::vector<mcd::vector<osm_way>> result;
     for (auto const& way_ptrs : relations_) {
-      auto osm_ways = make_osm_ways(
-          utl::to_vec(way_ptrs, [](auto const& ptr) { return *ptr; }));
-      if (!osm_ways.empty()) {
-        result.emplace_back(aggregate_osm_ways(std::move(osm_ways)));
-      }
+      make_osm_ways(utl::to_vec(way_ptrs, [](auto const& ptr) { return *ptr; }),
+                    result);
     }
     return result;
   }
@@ -215,15 +310,20 @@ struct network_handler : public oh::Handler {
   explicit network_handler(Fn fn) : fn_{std::move(fn)} {}
 
   void way(o::Way const& w) {
-    if (fn_(w)) {
+    if (source_bits sb = fn_(w); sb != source_bits::NO_SOURCE) {
+      if (str_yes == w.get_value_by_key("oneway", "")) {
+        sb = sb | source_bits::ONEWAY;
+      }
+
       ways_.emplace_back(
-          w.id(), str_yes == w.get_value_by_key("oneway", ""),
-          utl::to_vec(w.nodes(), [](auto const& n) { return n.ref(); }));
+          w.id(), sb, utl::to_vec(w.nodes(), [](auto&& n) { return n.ref(); }));
     }
   }
 
   mcd::vector<mcd::vector<osm_way>> finalize() {
-    return {aggregate_osm_ways(make_osm_ways(ways_))};
+    mcd::vector<mcd::vector<osm_way>> result;
+    make_osm_ways(ways_, result);
+    return result;
   }
 
   Fn fn_;
@@ -245,15 +345,94 @@ bool match_none(o::Way const& way, char const* key,
 }
 
 struct stop_position_handler : public oh::Handler {
-  void node(o::Node const& n) {
-    if (str_stop_position != n.get_value_by_key("public_transport", "") ||
-        str_yes != n.get_value_by_key("bus", "")) {
+  void relation(o::Relation const& r) {
+    if (str_stop_area != r.get_value_by_key("public_transport", "")) {
       return;
     }
-    coordinates_.emplace_back(n.location().lat(), n.location().lon());
+
+    for (auto const& m : r.members()) {
+      if (m.type() != o::item_type::node || str_stop != m.role()) {
+        continue;
+      }
+
+      stop_positions_.emplace_back(mcd::string{r.get_value_by_key("name", "")},
+                                   read_categories(r), m.ref(), geo::latlng{});
+    }
   }
 
-  mcd::vector<geo::latlng> coordinates_;
+  void node(o::Node const& n) {
+    if (str_stop_position != n.get_value_by_key("public_transport", "")) {
+      return;
+    }
+
+    stop_positions_.emplace_back(mcd::string{n.get_value_by_key("name", "")},
+                                 read_categories(n), n.id(), geo::latlng{});
+  }
+
+  template <typename Object>
+  mcd::vector<source_spec::category> read_categories(Object const& object) {
+    mcd::vector<source_spec::category> result;
+    for (auto const& [key, cat] : kOsmToCategory) {
+      if (str_yes == object.get_value_by_key(key, "")) {
+        result.emplace_back(cat);
+      }
+    }
+    return result;
+  }
+
+  void collect(
+      std::vector<std::pair<o::object_id_type, o::Location*>>& locations) {
+    auto const id_less = [](auto&& a, auto&& b) { return a.id_ < b.id_; };
+    auto const id_eq = [](auto&& a, auto&& b) { return a.id_ == b.id_; };
+
+    std::sort(begin(stop_positions_), end(stop_positions_), id_less);
+    utl::equal_ranges_linear(stop_positions_, id_eq, [](auto lb, auto ub) {
+      // collect all categories
+      for (auto it = std::next(lb); it != ub; ++it) {
+        utl::concat(lb->categories_, it->categories_);
+      }
+      utl::erase_duplicates(lb->categories_);
+      for (auto it = std::next(lb); it != ub; ++it) {
+        it->categories_ = lb->categories_;
+      }
+
+      // keep the named versions (if any)
+      auto const have_named =
+          std::any_of(lb, ub, [](auto&& sp) { return !sp.name_.empty(); });
+
+      for (auto it = lb; it != ub && std::next(it) != ub; ++it) {
+        if ((have_named && it->name_.empty()) ||
+            (it->name_ == std::next(it)->name_)) {
+          it->id_ = kInvalidNodeId;
+        }
+      }
+    });
+    utl::erase_if(stop_positions_,
+                  [](auto&& sp) { return sp.id_ == kInvalidNodeId; });
+
+    locations_.resize(stop_positions_.size());
+    for (auto const& [sp, l] : utl::zip(stop_positions_, locations_)) {
+      locations.emplace_back(sp.id_, &l);
+    }
+  }
+
+  mcd::vector<osm_stop_position> finalize() {
+    for (auto const& [sp, l] : utl::zip(stop_positions_, locations_)) {
+      if (l.valid()) {
+        sp.pos_ = geo::latlng{l.lat(), l.lon()};
+      } else {
+        sp.id_ = kInvalidNodeId;
+      }
+    }
+    utl::erase_if(stop_positions_,
+                  [](auto&& sp) { return sp.id_ == kInvalidNodeId; });
+    std::sort(begin(stop_positions_), end(stop_positions_),
+              [](auto&& lhs, auto&& rhs) { return lhs.name_ < rhs.name_; });
+    return std::move(stop_positions_);
+  }
+
+  mcd::vector<osm_stop_position> stop_positions_;
+  std::vector<o::Location> locations_;
 };
 
 struct plattform_handler : public oh::Handler, relation_way_base {
@@ -314,6 +493,10 @@ struct plattform_handler : public oh::Handler, relation_way_base {
 mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
   logging::scoped_timer timer("parse_osm");
   auto progress_tracker = utl::get_active_progress_tracker();
+  auto const update_status = [&](auto const& status) {
+    progress_tracker->status(status);
+    LOG(ml::info) << status;
+  };
 
   auto rel_rail = relation_handler{{"railway", "train"}};
   auto rel_sub = relation_handler{{"light_rail", "subway"}};
@@ -323,29 +506,51 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
   std::vector<std::string> rail_incl{"rail", "light_rail", "narrow_gauge"};
   std::vector<std::string> rail_excl_usage{"industrial", "military", "test"};
   std::vector<std::string> rail_excl_service{"yard", "spur"};
-  auto net_rail = network_handler{[&](auto const& w) {
-    return match_any(w, "railway", rail_incl) &&
-           match_none(w, "usage", rail_excl_usage) &&
-           match_none(w, "service", rail_excl_service) &&
-           str_yes != w.get_value_by_key("railway:preserved", "");
-  }};
 
   std::vector<std::string> subway_incl{"light_rail", "subway"};
   std::vector<std::string> subway_excl_usage{"industrial", "military", "test",
                                              "tourism"};
-  auto net_sub = network_handler{[&](auto const& w) {
-    return match_any(w, "railway", subway_incl) &&
-           match_none(w, "usage", subway_excl_usage);
-  }};
 
   std::vector<std::string> tram_incl{"tram"};
-  auto net_tram = network_handler{
-      [&](auto const& w) { return match_any(w, "railway", tram_incl); }};
 
   std::vector<std::string> waterway_incl{"river", "canal"};
-  auto net_ship = network_handler{[&](auto const& w) {
-    return str_ferry == w.get_value_by_key("route", "") ||
-           match_any(w, "waterway", waterway_incl);
+  std::vector<std::string> waterway_incl_route{"ferry", "boat"};
+
+  auto net = network_handler{[&](auto const& w) -> source_bits {
+    auto sb = source_bits::NO_SOURCE;
+    if (match_any(w, "railway", rail_incl)) {
+      sb = sb | source_bits::RAIL;
+
+      if (match_any(w, "usage", rail_excl_usage) ||
+          match_any(w, "service", rail_excl_service) ||
+          str_yes == w.get_value_by_key("railway:preserved", "")) {
+        sb = sb | source_bits::UNLIKELY;
+      }
+    }
+
+    if (match_any(w, "railway", subway_incl)) {
+      sb = sb | source_bits::SUBWAY;
+
+      if (match_none(w, "usage", subway_excl_usage)) {
+        sb = sb | source_bits::UNLIKELY;
+      }
+    }
+
+    if (match_any(w, "railway", tram_incl)) {
+      sb = sb | source_bits::TRAM;
+    }
+
+    if (str_disused == w.get_value_by_key("railway", "")) {
+      sb = sb | source_bits::RAIL;
+      sb = sb | source_bits::VERY_UNLIKELY;
+    }
+
+    if (match_any(w, "waterway", waterway_incl) ||
+        match_any(w, "route", waterway_incl_route)) {
+      sb = sb | source_bits::SHIP;
+    }
+
+    return sb;
   }};
 
   auto stop_positions = stop_position_handler{};
@@ -378,13 +583,12 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
           .in_high(reader.file_size());
       while (auto buffer = reader.read()) {
         progress_tracker->update(reader.offset());
-        o::apply(buffer, plattforms,  //
-                 rel_rail, rel_sub, rel_tram, rel_bus,  //
-                 net_rail, net_sub, net_tram, net_ship);
+        o::apply(buffer, plattforms, net,  //
+                 rel_rail, rel_sub, rel_tram, rel_bus);
       }
     }
 
-    progress_tracker->status("Load OSM / Locations");
+    update_status("Load OSM / Locations");
     std::vector<std::pair<o::object_id_type, o::Location*>> locations;
     auto const collect_ways = [&](raw_way& w) {
       w.locations_.resize(w.node_ids_.size());
@@ -393,8 +597,10 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
       }
     };
     auto const collect =
-        overloaded{[&](raw_way& w) { collect_ways(w); },
-                   [&](std::unique_ptr<raw_way>& w) { collect_ways(*w); }};
+        utl::overloaded{[&](raw_way& w) { collect_ways(w); },
+                        [&](std::unique_ptr<raw_way>& w) { collect_ways(*w); }};
+
+    stop_positions.collect(locations);
 
     std::for_each(begin(plattforms.mem_), end(plattforms.mem_), collect);
 
@@ -403,13 +609,11 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
     std::for_each(begin(rel_tram.mem_), end(rel_tram.mem_), collect);
     std::for_each(begin(rel_bus.mem_), end(rel_bus.mem_), collect);
 
-    std::for_each(begin(net_rail.ways_), end(net_rail.ways_), collect);
-    std::for_each(begin(net_sub.ways_), end(net_sub.ways_), collect);
-    std::for_each(begin(net_tram.ways_), end(net_tram.ways_), collect);
-    std::for_each(begin(net_ship.ways_), end(net_ship.ways_), collect);
+    std::for_each(begin(net.ways_), end(net.ways_), collect);
 
     std::sort(begin(locations), end(locations));
 
+    update_status("Load OSM / get_coords");
     get_coords(node_idx, locations);
     for (auto const& [id, l] : locations) {
       l->set_x(l->x() - tiles::hybrid_node_idx::x_offset);
@@ -417,15 +621,15 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
     }
   }
 
-  progress_tracker->status("Load OSM / Finalize");
+  update_status("Load OSM / Finalize");
   using category = source_spec::category;
   using router = source_spec::router;
   auto data = mcd::make_unique<osm_data>();
-  data->stop_positions_ = std::move(stop_positions.coordinates_);
+  data->stop_positions_ = stop_positions.finalize();
   data->plattforms_ = plattforms.finalize();
 
   auto const finalize = [&](source_spec const ss, auto& handler) {
-    progress_tracker->status(fmt::format("Load OSM / Finalize {}", ss.str()));
+    update_status(fmt::format("Load OSM / Finalize {}", ss.str()));
     data->profiles_[ss] = handler.finalize();
   };
 
@@ -433,10 +637,7 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
   finalize({category::SUBWAY, router::OSM_REL}, rel_sub);
   finalize({category::TRAM, router::OSM_REL}, rel_tram);
   finalize({category::BUS, router::OSM_REL}, rel_bus);
-  finalize({category::RAIL, router::OSM_NET}, net_rail);
-  finalize({category::SUBWAY, router::OSM_NET}, net_sub);
-  finalize({category::TRAM, router::OSM_NET}, net_tram);
-  finalize({category::SHIP, router::OSM_NET}, net_ship);
+  finalize({category::MULTI, router::OSM_NET}, net);
   return data;
 }
 
@@ -451,8 +652,9 @@ mcd::unique_ptr<osm_data> read_osm_data(std::string const& fname,
       std::get<cista::buf<cista::mmap>>(mem));
 #elif defined(MOTIS_SCHEDULE_MODE_RAW) || defined(CLANG_TIDY)
   mem = cista::file(fname.c_str(), "r").content();
-  ptr.el_ =
-      cista::deserialize<osm_data, CISTA_MODE>(std::get<cista::buffer>(mem));
+  // NOLINTNEXTLINE
+  ptr.el_ = cista::deserialize<osm_data, CISTA_MODE>(
+      std::get<cista::buffer>(mem));  //
 #else
 #error "no ptr mode specified"
 #endif

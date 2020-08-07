@@ -308,6 +308,8 @@ void ppr::import(registry& reg) {
           if (use_dem_) {
             opt.dem_files_ = {dem_path};
           }
+          opt.edge_rtree_max_size_ = edge_rtree_max_size_;
+          opt.area_rtree_max_size_ = area_rtree_max_size_;
 
           pp::logging log;
           log.out_ = &std::clog;

@@ -10,7 +10,7 @@ int min_zoom_level(service_class const clasz, float const distance) {
     case service_class::AIR:
     case service_class::COACH:
       if (distance < 50'000.F) {
-        return 8;  // typically long distance, maby also quite short
+        return 8;  // typically long distance, maybe also quite short
       }
       [[fallthrough]];
     case service_class::ICE:

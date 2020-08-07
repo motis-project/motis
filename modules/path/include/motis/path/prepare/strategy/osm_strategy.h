@@ -9,6 +9,8 @@
 
 #include "motis/hash_map.h"
 
+#include "motis/path/prepare/tuning_parameters.h"
+
 #include "motis/path/prepare/osm/osm_graph.h"
 #include "motis/path/prepare/osm/osm_graph_builder.h"
 #include "motis/path/prepare/osm/osm_graph_contractor.h"
@@ -26,7 +28,7 @@ struct osm_strategy : public routing_strategy {
                station_index const& station_idx,
                mcd::vector<mcd::vector<osm_way>> const& components)
       : routing_strategy(strategy_id, spec) {
-    osm_graph_builder{graph_, station_idx}.build_graph(components);
+    osm_graph_builder{graph_, spec, station_idx}.build_graph(components);
     print_osm_graph_stats(spec, graph_);
 
     contracted_ = contract_graph(graph_);
@@ -97,8 +99,9 @@ struct osm_strategy : public routing_strategy {
     for (auto i = 0UL; i < from.size(); ++i) {
       auto dists = shortest_path_distances(contracted_, from[i].id_, to_ids);
 
-      auto const factor =
-          source_spec_.router_ == source_spec::router::OSM_REL ? 0.5 : 1;
+      auto const factor = source_spec_.router_ == source_spec::router::OSM_REL
+                              ? kOsmRelationBonusFactor
+                              : 1;
       for (auto j = 0UL; j < to.size(); ++j) {
         mat(i, j) = dists.at(j) * factor;
       }

@@ -1,5 +1,11 @@
 namespace motis.import;
 
-table FileEvent {
+table ImportPath {
+  tag: string;
+  options: string;
   path: string;
+}
+
+table FileEvent {
+  paths: [ImportPath];
 }

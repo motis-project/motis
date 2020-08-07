@@ -112,156 +112,142 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
     auto station_id = first_route_node->get_station()->id_;
     auto station_eva = sched_->stations_[station_id]->eva_nr_;
 
-    EXPECT_TRUE(station_eva == "8000284" || station_eva == "8000261");
+    EXPECT_EQ("8000284", station_eva);
 
-    if (station_eva == "8000284") {
-      ASSERT_EQ(1, first_route_node->incoming_edges_.size());
-      ASSERT_EQ(2, first_route_node->edges_.size());
+    ASSERT_EQ(1, first_route_node->incoming_edges_.size());
+    ASSERT_EQ(2, first_route_node->edges_.size());
 
-      ASSERT_EQ(first_route_node->incoming_edges_[0]->from_,
-                first_route_node->get_station());
-      ASSERT_EQ(first_route_node->get_station(),
-                first_route_node[0].edges_[0].to_);
+    ASSERT_EQ(first_route_node->incoming_edges_[0]->from_,
+              first_route_node->get_station());
+    ASSERT_EQ(first_route_node->get_station(),
+              first_route_node[0].edges_[0].to_);
 
-      ASSERT_EQ(edge::ENTER_EDGE, first_route_node->incoming_edges_[0]->type());
-      ASSERT_EQ(edge::ROUTE_EDGE, first_route_node->edges_[1].type());
-      ASSERT_EQ(edge::EXIT_EDGE, first_route_node->edges_[0].type());
+    ASSERT_EQ(edge::ENTER_EDGE, first_route_node->incoming_edges_[0]->type());
+    ASSERT_EQ(edge::ROUTE_EDGE, first_route_node->edges_[1].type());
+    ASSERT_EQ(edge::EXIT_EDGE, first_route_node->edges_[0].type());
 
-      auto next_route_node = first_route_node->edges_[1].to_;
-      ASSERT_TRUE(next_route_node->is_route_node());
+    auto next_route_node = first_route_node->edges_[1].to_;
+    ASSERT_TRUE(next_route_node->is_route_node());
 
-      ASSERT_EQ(
-          "8000260",
-          sched_->stations_[next_route_node->get_station()->id_]->eva_nr_);
+    ASSERT_EQ("8000260",
+              sched_->stations_[next_route_node->get_station()->id_]->eva_nr_);
 
-      // [M]otis [T]ime [O]ffset (1*MINUTES_A_DAY - GMT+1)
-      auto const MTO = SCHEDULE_OFFSET_MINUTES - 60;
-      ASSERT_EQ(1, first_route_node->edges_[1].m_.route_edge_.conns_.size());
-      auto& lcon = first_route_node->edges_[1].m_.route_edge_.conns_;
-      ASSERT_EQ(19 * 60 + 3 + MTO, lcon[0].d_time_);
-      ASSERT_EQ(19 * 60 + 58 + MTO, lcon[0].a_time_);
+    // [M]otis [T]ime [O]ffset (1*MINUTES_A_DAY - GMT+1)
+    auto const MTO = SCHEDULE_OFFSET_MINUTES - 60;
+    ASSERT_EQ(1, first_route_node->edges_[1].m_.route_edge_.conns_.size());
+    auto& lcon = first_route_node->edges_[1].m_.route_edge_.conns_;
+    ASSERT_EQ(19 * 60 + 3 + MTO, lcon[0].d_time_);
+    ASSERT_EQ(19 * 60 + 58 + MTO, lcon[0].a_time_);
 
-      auto connections = get_connections(first_route_node, 19 * 60 + 3);
-      ASSERT_EQ(8, static_cast<int>(connections.size()));
+    auto connections = get_connections(first_route_node, 19 * 60 + 3);
+    ASSERT_EQ(8, static_cast<int>(connections.size()));
 
-      auto& stations = sched_->stations_;
-      EXPECT_EQ("8000284",
-                stations[get<1>(connections[0])->get_station()->id_]->eva_nr_);
-      EXPECT_EQ("8000260",
-                stations[get<1>(connections[1])->get_station()->id_]->eva_nr_);
-      EXPECT_EQ("8010101",
-                stations[get<1>(connections[2])->get_station()->id_]->eva_nr_);
-      EXPECT_EQ("8010240",
-                stations[get<1>(connections[3])->get_station()->id_]->eva_nr_);
-      EXPECT_EQ("8010205",
-                stations[get<1>(connections[4])->get_station()->id_]->eva_nr_);
-      EXPECT_EQ("8010222",
-                stations[get<1>(connections[5])->get_station()->id_]->eva_nr_);
-      EXPECT_EQ("8011113",
-                stations[get<1>(connections[6])->get_station()->id_]->eva_nr_);
-      EXPECT_EQ("8098160",
-                stations[get<1>(connections[7])->get_station()->id_]->eva_nr_);
-      EXPECT_EQ("8011102",
-                stations[get<2>(connections[7])->get_station()->id_]->eva_nr_);
+    auto& stations = sched_->stations_;
+    EXPECT_EQ("8000284",
+              stations[get<1>(connections[0])->get_station()->id_]->eva_nr_);
+    EXPECT_EQ("8000260",
+              stations[get<1>(connections[1])->get_station()->id_]->eva_nr_);
+    EXPECT_EQ("8010101",
+              stations[get<1>(connections[2])->get_station()->id_]->eva_nr_);
+    EXPECT_EQ("8010240",
+              stations[get<1>(connections[3])->get_station()->id_]->eva_nr_);
+    EXPECT_EQ("8010205",
+              stations[get<1>(connections[4])->get_station()->id_]->eva_nr_);
+    EXPECT_EQ("8010222",
+              stations[get<1>(connections[5])->get_station()->id_]->eva_nr_);
+    EXPECT_EQ("8011113",
+              stations[get<1>(connections[6])->get_station()->id_]->eva_nr_);
+    EXPECT_EQ("8098160",
+              stations[get<1>(connections[7])->get_station()->id_]->eva_nr_);
+    EXPECT_EQ("8011102",
+              stations[get<2>(connections[7])->get_station()->id_]->eva_nr_);
 
-      EXPECT_EQ(motis_time(1903), get<0>(connections[0])->d_time_);
-      EXPECT_EQ(motis_time(2000), get<0>(connections[1])->d_time_);
-      EXPECT_EQ(motis_time(2155), get<0>(connections[2])->d_time_);
-      EXPECT_EQ(motis_time(2234), get<0>(connections[3])->d_time_);
-      EXPECT_EQ(motis_time(2318), get<0>(connections[4])->d_time_);
-      EXPECT_EQ(motis_time(2349), get<0>(connections[5])->d_time_);
-      EXPECT_EQ(motis_time(2425), get<0>(connections[6])->d_time_);
-      EXPECT_EQ(motis_time(2433), get<0>(connections[7])->d_time_);
+    EXPECT_EQ(motis_time(1903), get<0>(connections[0])->d_time_);
+    EXPECT_EQ(motis_time(2000), get<0>(connections[1])->d_time_);
+    EXPECT_EQ(motis_time(2155), get<0>(connections[2])->d_time_);
+    EXPECT_EQ(motis_time(2234), get<0>(connections[3])->d_time_);
+    EXPECT_EQ(motis_time(2318), get<0>(connections[4])->d_time_);
+    EXPECT_EQ(motis_time(2349), get<0>(connections[5])->d_time_);
+    EXPECT_EQ(motis_time(2425), get<0>(connections[6])->d_time_);
+    EXPECT_EQ(motis_time(2433), get<0>(connections[7])->d_time_);
 
-      EXPECT_EQ(motis_time(1958), get<0>(connections[0])->a_time_);
-      EXPECT_EQ(motis_time(2153), get<0>(connections[1])->a_time_);
-      EXPECT_EQ(motis_time(2232), get<0>(connections[2])->a_time_);
-      EXPECT_EQ(motis_time(2308), get<0>(connections[3])->a_time_);
-      EXPECT_EQ(motis_time(2347), get<0>(connections[4])->a_time_);
-      EXPECT_EQ(motis_time(2423), get<0>(connections[5])->a_time_);
-      EXPECT_EQ(motis_time(2430), get<0>(connections[6])->a_time_);
-      EXPECT_EQ(motis_time(2438), get<0>(connections[7])->a_time_);
+    EXPECT_EQ(motis_time(1958), get<0>(connections[0])->a_time_);
+    EXPECT_EQ(motis_time(2153), get<0>(connections[1])->a_time_);
+    EXPECT_EQ(motis_time(2232), get<0>(connections[2])->a_time_);
+    EXPECT_EQ(motis_time(2308), get<0>(connections[3])->a_time_);
+    EXPECT_EQ(motis_time(2347), get<0>(connections[4])->a_time_);
+    EXPECT_EQ(motis_time(2423), get<0>(connections[5])->a_time_);
+    EXPECT_EQ(motis_time(2430), get<0>(connections[6])->a_time_);
+    EXPECT_EQ(motis_time(2438), get<0>(connections[7])->a_time_);
 
-      ASSERT_TRUE(std::all_of(
-          begin(connections), end(connections),
-          [&](std::tuple<light_connection const*, node const*,
-                         node const*> const& con) {
-            auto fc = std::get<0>(con)->full_con_;
-            return fc->con_info_->attributes_.size() == 1 &&
-                   fc->con_info_->train_nr_ == 1000 &&
-                   sched_->categories_[fc->con_info_->family_]->name_ == "ICE";
-          }));
+    ASSERT_TRUE(std::all_of(
+        begin(connections), end(connections),
+        [&](std::tuple<light_connection const*, node const*, node const*> const&
+                con) {
+          auto fc = std::get<0>(con)->full_con_;
+          return fc->con_info_->attributes_.size() == 1 &&
+                 fc->con_info_->train_nr_ == 1000 &&
+                 sched_->categories_[fc->con_info_->family_]->name_ == "ICE";
+        }));
 
-      for (auto const& c : connections) {
-        auto fc = std::get<0>(c)->full_con_;
-        ASSERT_EQ("---", fc->con_info_->provider_->short_name_);
-        ASSERT_EQ("DB AG", fc->con_info_->provider_->long_name_);
-        ASSERT_EQ("Deutsche Bahn AG", fc->con_info_->provider_->full_name_);
-      }
-
-      auto const& tracks = sched_->tracks_;
-      EXPECT_EQ("6", tracks[get<0>(connections[0])->full_con_->d_track_]);
-      EXPECT_EQ("", tracks[get<0>(connections[1])->full_con_->d_track_]);
-      EXPECT_EQ("", tracks[get<0>(connections[2])->full_con_->d_track_]);
-      EXPECT_EQ("1", tracks[get<0>(connections[3])->full_con_->d_track_]);
-      EXPECT_EQ("", tracks[get<0>(connections[4])->full_con_->d_track_]);
-      EXPECT_EQ("3", tracks[get<0>(connections[5])->full_con_->d_track_]);
-      EXPECT_EQ("8", tracks[get<0>(connections[6])->full_con_->d_track_]);
-      EXPECT_EQ("7", tracks[get<0>(connections[7])->full_con_->d_track_]);
-
-      EXPECT_EQ("", tracks[get<0>(connections[0])->full_con_->a_track_]);
-      EXPECT_EQ("", tracks[get<0>(connections[1])->full_con_->a_track_]);
-      EXPECT_EQ("1", tracks[get<0>(connections[2])->full_con_->a_track_]);
-      EXPECT_EQ("", tracks[get<0>(connections[3])->full_con_->a_track_]);
-      EXPECT_EQ("3", tracks[get<0>(connections[4])->full_con_->a_track_]);
-      EXPECT_EQ("8", tracks[get<0>(connections[5])->full_con_->a_track_]);
-      EXPECT_EQ("7", tracks[get<0>(connections[6])->full_con_->a_track_]);
-      EXPECT_EQ("6", tracks[get<0>(connections[7])->full_con_->a_track_]);
-
-      auto bt = get<0>(connections[0])->full_con_->con_info_->attributes_[0];
-      auto sn = get<0>(connections[4])->full_con_->con_info_->attributes_[0];
-      EXPECT_EQ("BT", bt->code_);
-      EXPECT_EQ("SN", sn->code_);
-      EXPECT_EQ("Bordbistro", bt->text_);
-      EXPECT_EQ("SnackPoint/Imbiss im Zug", sn->text_);
-
-      EXPECT_EQ(bt,
-                get<0>(connections[0])->full_con_->con_info_->attributes_[0]);
-      EXPECT_EQ(bt,
-                get<0>(connections[1])->full_con_->con_info_->attributes_[0]);
-      EXPECT_EQ(bt,
-                get<0>(connections[2])->full_con_->con_info_->attributes_[0]);
-      EXPECT_EQ(bt,
-                get<0>(connections[3])->full_con_->con_info_->attributes_[0]);
-      EXPECT_EQ(sn,
-                get<0>(connections[4])->full_con_->con_info_->attributes_[0]);
-      EXPECT_EQ(sn,
-                get<0>(connections[5])->full_con_->con_info_->attributes_[0]);
-      EXPECT_EQ(sn,
-                get<0>(connections[6])->full_con_->con_info_->attributes_[0]);
-      EXPECT_EQ(sn,
-                get<0>(connections[7])->full_con_->con_info_->attributes_[0]);
-
-      EXPECT_EQ(2, get<1>(connections[6])->incoming_edges_.size());
-      EXPECT_TRUE(std::any_of(
-          begin(get<1>(connections[6])->incoming_edges_),
-          end(get<1>(connections[6])->incoming_edges_), [&](edge const* e) {
-            return e->type() == edge::INVALID_EDGE &&
-                   e->from_ == get<1>(connections[6])->get_station();
-          }));
-      EXPECT_TRUE(std::any_of(
-          begin(get<1>(connections[6])->incoming_edges_),
-          end(get<1>(connections[6])->incoming_edges_),
-          [](edge const* e) { return e->type() == edge::ROUTE_EDGE; }));
-
-      EXPECT_TRUE(std::none_of(
-          begin(get<1>(connections[5])->incoming_edges_),
-          end(get<1>(connections[5])->incoming_edges_),
-          [](edge const* e) { return e->type() == edge::INVALID_EDGE; }));
-    } else {
-      auto connections = get_connections(first_route_node, 17 * 60 + 39);
-      ASSERT_EQ(0, connections.size());
+    for (auto const& c : connections) {
+      auto fc = std::get<0>(c)->full_con_;
+      ASSERT_EQ("---", fc->con_info_->provider_->short_name_);
+      ASSERT_EQ("DB AG", fc->con_info_->provider_->long_name_);
+      ASSERT_EQ("Deutsche Bahn AG", fc->con_info_->provider_->full_name_);
     }
+
+    auto const& tracks = sched_->tracks_;
+    EXPECT_EQ("6", tracks[get<0>(connections[0])->full_con_->d_track_]);
+    EXPECT_EQ("", tracks[get<0>(connections[1])->full_con_->d_track_]);
+    EXPECT_EQ("", tracks[get<0>(connections[2])->full_con_->d_track_]);
+    EXPECT_EQ("1", tracks[get<0>(connections[3])->full_con_->d_track_]);
+    EXPECT_EQ("", tracks[get<0>(connections[4])->full_con_->d_track_]);
+    EXPECT_EQ("3", tracks[get<0>(connections[5])->full_con_->d_track_]);
+    EXPECT_EQ("8", tracks[get<0>(connections[6])->full_con_->d_track_]);
+    EXPECT_EQ("7", tracks[get<0>(connections[7])->full_con_->d_track_]);
+
+    EXPECT_EQ("", tracks[get<0>(connections[0])->full_con_->a_track_]);
+    EXPECT_EQ("", tracks[get<0>(connections[1])->full_con_->a_track_]);
+    EXPECT_EQ("1", tracks[get<0>(connections[2])->full_con_->a_track_]);
+    EXPECT_EQ("", tracks[get<0>(connections[3])->full_con_->a_track_]);
+    EXPECT_EQ("3", tracks[get<0>(connections[4])->full_con_->a_track_]);
+    EXPECT_EQ("8", tracks[get<0>(connections[5])->full_con_->a_track_]);
+    EXPECT_EQ("7", tracks[get<0>(connections[6])->full_con_->a_track_]);
+    EXPECT_EQ("6", tracks[get<0>(connections[7])->full_con_->a_track_]);
+
+    auto bt = get<0>(connections[0])->full_con_->con_info_->attributes_[0];
+    auto sn = get<0>(connections[4])->full_con_->con_info_->attributes_[0];
+    EXPECT_EQ("BT", bt->code_);
+    EXPECT_EQ("SN", sn->code_);
+    EXPECT_EQ("Bordbistro", bt->text_);
+    EXPECT_EQ("SnackPoint/Imbiss im Zug", sn->text_);
+
+    EXPECT_EQ(bt, get<0>(connections[0])->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(bt, get<0>(connections[1])->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(bt, get<0>(connections[2])->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(bt, get<0>(connections[3])->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(sn, get<0>(connections[4])->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(sn, get<0>(connections[5])->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(sn, get<0>(connections[6])->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(sn, get<0>(connections[7])->full_con_->con_info_->attributes_[0]);
+
+    EXPECT_EQ(2, get<1>(connections[6])->incoming_edges_.size());
+    EXPECT_TRUE(std::any_of(
+        begin(get<1>(connections[6])->incoming_edges_),
+        end(get<1>(connections[6])->incoming_edges_), [&](edge const* e) {
+          return e->type() == edge::INVALID_EDGE &&
+                 e->from_ == get<1>(connections[6])->get_station();
+        }));
+    EXPECT_TRUE(std::any_of(
+        begin(get<1>(connections[6])->incoming_edges_),
+        end(get<1>(connections[6])->incoming_edges_),
+        [](edge const* e) { return e->type() == edge::ROUTE_EDGE; }));
+
+    EXPECT_TRUE(std::none_of(
+        begin(get<1>(connections[5])->incoming_edges_),
+        end(get<1>(connections[5])->incoming_edges_),
+        [](edge const* e) { return e->type() == edge::INVALID_EDGE; }));
   }
 }
 

@@ -25,7 +25,8 @@ struct path_routing {
   std::unique_ptr<strategies> strategies_;
 };
 
-path_routing make_path_routing(station_index const&, osm_data const&,
+path_routing make_path_routing(mcd::vector<station_seq> const&,
+                               station_index const&, osm_data const&,
                                std::string const& osrm_path);
 
 }  // namespace motis::path

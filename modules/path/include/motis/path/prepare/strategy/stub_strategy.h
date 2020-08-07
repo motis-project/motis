@@ -11,6 +11,7 @@
 #include "motis/vector.h"
 
 #include "motis/path/prepare/strategy/routing_strategy.h"
+#include "motis/path/prepare/tuning_parameters.h"
 
 namespace motis::path {
 
@@ -43,7 +44,8 @@ struct stub_strategy : public routing_strategy {
       std::vector<node_ref> const& to) const override {
     routing_result_matrix mat{from.size(), to.size()};
     mat.foreach ([&](auto const from_idx, auto const to_idx, auto& weight) {
-      weight = geo::distance(from[from_idx].coords_, to[to_idx].coords_) * 100;
+      weight = geo::distance(from[from_idx].coords_, to[to_idx].coords_) *
+               kStubStrategyPenaltyFactor;
     });
     return mat;
   }

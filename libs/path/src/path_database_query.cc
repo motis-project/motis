@@ -146,8 +146,9 @@ void path_database_query::resolve_sequences_and_build_subqueries(
       }
     } else {
       for (auto const segment_index : rs.segment_indices_) {
-        utl::verify(segment_index < ptr->segments()->size(),
-                    "path_database_query: invalid segment_index");
+        utl::verify(
+            segment_index < ptr->segments()->size(),
+            "path_database_query: invalid segment_index (non-unique trip id?)");
         add_segment(ptr->segments()->Get(segment_index));
       }
     }

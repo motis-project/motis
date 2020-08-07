@@ -16,6 +16,8 @@ struct dataset_settings : public conf::configuration,
                           public motis::loader::loader_options {
   dataset_settings() : configuration("Dataset Settings", "dataset") {
     param(dataset_, "path", "MOTIS Dataset root");
+    param(dataset_prefix_, "prefix",
+          "station id prefixes (one per path or empty).");
     param(graph_path_, "graph_path",
           "path to read&write the serialized graph from/to "
           "(\"default\": generated from settings)");

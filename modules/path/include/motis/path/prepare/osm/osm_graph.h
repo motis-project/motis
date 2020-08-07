@@ -8,6 +8,7 @@
 
 #include "geo/latlng.h"
 #include "geo/polyline.h"
+#include "geo/xyz.h"
 
 #include "utl/concat.h"
 #include "utl/erase_duplicates.h"
@@ -35,9 +36,7 @@ struct node_station_link {
 };
 
 struct osm_graph {
-  osm_graph() : components_(0) {}
-
-  size_t components_;
+  size_t components_{0ULL};
   std::vector<std::unique_ptr<osm_node>> nodes_;
   std::vector<osm_path> paths_;
 
@@ -48,15 +47,19 @@ struct osm_graph {
 };
 
 struct osm_node {
-  osm_node(size_t const idx, size_t const component_id, int64_t const osm_id,
-           geo::latlng pos)
-      : idx_(idx), component_id_(component_id), osm_id_(osm_id), pos_(pos) {}
+  osm_node(size_t idx, size_t component_id, int64_t osm_id, geo::latlng pos)
+      : idx_{idx},
+        component_id_{component_id},
+        osm_id_{osm_id},
+        pos_{pos},
+        xyz_{pos} {}
 
   size_t idx_;
   size_t component_id_;
 
   int64_t osm_id_;
   geo::latlng pos_;
+  geo::xyz xyz_;
 
   std::vector<osm_edge> edges_;
 };
@@ -64,18 +67,18 @@ struct osm_node {
 struct osm_edge {
   osm_edge(uint64_t polyline_idx, bool forward, size_t dist,
            osm_node const* from, osm_node const* to)
-      : polyline_idx_(polyline_idx),
-        forward_(static_cast<size_t>(forward)),
-        dist_(dist),
-        from_(from),
-        to_(to) {}
+      : polyline_idx_{polyline_idx},
+        forward_{static_cast<size_t>(forward)},
+        dist_{dist},
+        from_{from},
+        to_{to} {}
 
   bool is_forward() const { return forward_ != 0U; }
 
   uint64_t polyline_idx_ : 63;
   size_t forward_ : 1;
 
-  size_t dist_;
+  size_t dist_;  // xyz distance!
 
   osm_node const* from_;
   osm_node const* to_;

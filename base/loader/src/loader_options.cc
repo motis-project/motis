@@ -29,10 +29,9 @@ std::string loader_options::graph_path() const {
   if (graph_path_ == "default") {
     auto const [from, to] = interval();
     std::stringstream ss;
-    ss << dataset_ << "/graph_" << from << "-" << to << "af"
-       << adjust_footpaths_ << "ar" << apply_rules_ << "et" << expand_trips_
-       << "ef" << expand_footpaths_ << "ptd" << planned_transfer_delta_
-       << ".raw";
+    ss << "graph_" << from << "-" << to << "af" << adjust_footpaths_ << "ar"
+       << apply_rules_ << "et" << expand_trips_ << "ef" << expand_footpaths_
+       << "ptd" << planned_transfer_delta_ << ".raw";
     return ss.str();
   } else {
     return graph_path_;

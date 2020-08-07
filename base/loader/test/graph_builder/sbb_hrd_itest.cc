@@ -39,7 +39,7 @@ auto sbb_routing_request = R"({
 struct loader_sbb : public motis_instance_test {
   loader_sbb()
       : motis_instance_test(
-            {(hrd::SCHEDULES / "sbb").generic_string(), "20200330"},
+            {{(hrd::SCHEDULES / "sbb").generic_string()}, "20200330"},
             {"routing"}) {}
 };
 
