@@ -16,7 +16,7 @@ import de.motis_project.app2.saved.SavedConnectionsDataSource;
 
 public class Status {
     private static final boolean SERVER_SWITCH_AVAILABLE = false;
-    private static final String SERVER_URL_RT = "wss://demo.motis-project.de/public-ws/";
+    private static final String SERVER_URL_RT = "wss://europe.motis-project.de/ws/";
     private static final String SERVER_URL_SOLL = SERVER_URL_RT;
 
     // Android Emulator
