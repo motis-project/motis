@@ -1,5 +1,6 @@
 package de.motis_project.app2.query.guesser;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -24,11 +25,11 @@ public class FavoritesDataSource {
         static final String COL_SELECTED_COUNT = "priority";
 
         private static final String CREATE_LIST = ""
-                + "CREATE TABLE " + TABLE + "("
-                + COL_STATION_ID + " TEXT NOT NULL PRIMARY KEY,"
-                + COL_STATION_NAME + " TEXT NOT NULL,"
-                + COL_SELECTED_COUNT + " INTEGER NOT NULL DEFAULT 0"
-                + ")";
+            + "CREATE TABLE " + TABLE + "("
+            + COL_STATION_ID + " TEXT NOT NULL PRIMARY KEY,"
+            + COL_STATION_NAME + " TEXT NOT NULL,"
+            + COL_SELECTED_COUNT + " INTEGER NOT NULL DEFAULT 0"
+            + ")";
 
         Table(Context context) {
             super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -45,39 +46,42 @@ public class FavoritesDataSource {
     }
 
     private static final String SQL_GET_TOP = "" +
-            "SELECT * FROM " + Table.TABLE +
-            " WHERE " + Table.COL_STATION_NAME + " LIKE '%%%s%%'" +
-            " ORDER BY " + Table.COL_SELECTED_COUNT +
-            " DESC LIMIT 5";
+        "SELECT * FROM " + Table.TABLE +
+        " WHERE " + Table.COL_STATION_NAME + " LIKE ?" +
+        " ORDER BY " + Table.COL_SELECTED_COUNT +
+        " DESC LIMIT 5";
 
     private final SqlBrite sqlBrite;
     private final BriteDatabase db;
 
     public FavoritesDataSource(Context ctx) {
         sqlBrite = new SqlBrite.Builder()
-                .logger(message -> System.out.println("DATABASE message = [" + message + "]"))
-                .build();
+            .logger(message -> System.out.println("DATABASE message = [" + message + "]"))
+            .build();
         db = sqlBrite.wrapDatabaseHelper(new Table(ctx), Schedulers.io());
         db.setLoggingEnabled(true);
     }
 
     public void addOrIncrement(String eva, String stationName) {
         try (BriteDatabase.Transaction t = db.newTransaction()) {
+            ContentValues cv = new ContentValues();
+            cv.put(Table.COL_STATION_ID, eva);
+            cv.put(Table.COL_STATION_NAME, stationName);
+            cv.put(Table.COL_SELECTED_COUNT, 0);
+            db.insert(Table.TABLE, cv);
+            cv.clear();
             db.execute(
-                    "INSERT OR IGNORE INTO " + Table.TABLE +
-                            " VALUES ('" + eva + "', '" + stationName + "', 0)");
-            db.execute(
-                    "UPDATE " + Table.TABLE +
-                            " SET " + Table.COL_SELECTED_COUNT + " = " +
-                            Table.COL_SELECTED_COUNT + " + 1 " +
-                            " WHERE " + Table.COL_STATION_ID + " = " + eva);
+                "UPDATE " + Table.TABLE +
+                    " SET " + Table.COL_SELECTED_COUNT + " = " +
+                    Table.COL_SELECTED_COUNT + " + 1 " +
+                    " WHERE " + Table.COL_STATION_ID + " = ?", eva);
             t.markSuccessful();
         }
     }
 
     public Observable<List<StationGuess>> getFavorites(CharSequence queryString) {
-        String query = String.format(SQL_GET_TOP, queryString);
-        QueryObservable obs = db.createQuery(Table.TABLE, query);
+        QueryObservable obs = db.createQuery(Table.TABLE, SQL_GET_TOP,
+            "%" + queryString.toString().replace("%", "%%") + "%");
         return obs.mapToList(c -> {
             String eva = c.getString(c.getColumnIndex(Table.COL_STATION_ID));
             String name = c.getString(c.getColumnIndex(Table.COL_STATION_NAME));
