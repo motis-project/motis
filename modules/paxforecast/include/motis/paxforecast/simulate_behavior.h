@@ -24,19 +24,20 @@ inline simulation_result simulate_behavior(
     PassengerBehavior& pb) {
   simulation_result result;
 
-  auto const add_group_to_alternative = [&](passenger_group const& grp,
-                                            alternative const& alt,
-                                            float const probability) {
-    auto const total_probability = grp.probability_ * probability;
-    for_each_edge(
-        sched, data, alt.compact_journey_,
-        [&](motis::paxmon::journey_leg const&, motis::paxmon::edge const* e) {
-          result.additional_groups_[e].emplace_back(&grp, total_probability);
-        });
-  };
+  auto const add_group_to_alternative =
+      [&](motis::paxmon::passenger_group const& grp, alternative const& alt,
+          float const probability) {
+        auto const total_probability = grp.probability_ * probability;
+        for_each_edge(sched, data, alt.compact_journey_,
+                      [&](motis::paxmon::journey_leg const&,
+                          motis::paxmon::edge const* e) {
+                        result.additional_groups_[e].emplace_back(
+                            &grp, total_probability);
+                      });
+      };
 
   auto const simulate_group =
-      [&](passenger_group const& grp,
+      [&](motis::paxmon::passenger_group const& grp,
           std::vector<alternative> const& alternatives,
           motis::paxmon::passenger_localization const& localization) {
         auto const allocation =
