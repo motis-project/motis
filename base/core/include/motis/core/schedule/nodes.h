@@ -76,6 +76,25 @@ struct node {
       return station_node_;
     }
   }
+
+  bool is_in_allowed() const {
+    for (auto const& e : incoming_edges_) {
+      if (e->from_->is_station_node() && e->type() != edge::INVALID_EDGE) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool is_out_allowed() const {
+    for (auto const& e : edges_) {
+      if (e.to_->is_station_node() && e.type() != edge::INVALID_EDGE) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   template <typename Fn>
   void for_each_route_node(Fn&& f) const {
     for (auto& edge : edges_) {
