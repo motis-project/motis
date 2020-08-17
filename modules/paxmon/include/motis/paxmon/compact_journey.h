@@ -5,14 +5,14 @@
 #include <vector>
 
 #include "motis/core/schedule/time.h"
-#include "motis/core/journey/extern_trip.h"
+#include "motis/core/schedule/trip.h"
 
 #include "motis/paxmon/transfer_info.h"
 
 namespace motis::paxmon {
 
 struct journey_leg {
-  motis::extern_trip trip_;
+  trip const* trip_;
   unsigned enter_station_id_;
   unsigned exit_station_id_;
   motis::time enter_time_;

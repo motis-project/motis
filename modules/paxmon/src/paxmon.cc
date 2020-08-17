@@ -171,7 +171,7 @@ void paxmon::load_journeys() {
 
   build_graph_from_journeys(sched, data_);
 
-  auto const graph_stats = calc_graph_statistics(data_);
+  auto const graph_stats = calc_graph_statistics(sched, data_);
   print_graph_stats(graph_stats);
   if (graph_stats.trips_over_capacity_ > 0 &&
       !initial_over_capacity_report_file_.empty()) {

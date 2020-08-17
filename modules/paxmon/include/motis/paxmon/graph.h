@@ -6,12 +6,15 @@
 #include <unordered_map>
 #include <vector>
 
+#include "motis/data.h"
 #include "motis/hash_map.h"
+#include "motis/vector.h"
 
 #include "motis/core/schedule/event_type.h"
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/schedule/time.h"
 #include "motis/core/schedule/trip.h"
+#include "motis/core/schedule/trip_idx.h"
 #include "motis/core/journey/extern_trip.h"
 
 #include "motis/paxmon/capacity_data.h"
@@ -54,13 +57,14 @@ struct event_node {
   std::vector<edge*> in_edges_;
 };
 
-enum class edge_type : std::uint8_t { TRIP, INTERCHANGE, WAIT };
+enum class edge_type : std::uint8_t { TRIP, INTERCHANGE, WAIT, THROUGH };
 
 inline std::ostream& operator<<(std::ostream& out, edge_type const et) {
   switch (et) {
     case edge_type::TRIP: return out << "TRIP";
     case edge_type::INTERCHANGE: return out << "INTERCHANGE";
     case edge_type::WAIT: return out << "WAIT";
+    case edge_type::THROUGH: return out << "THROUGH";
   }
   return out;
 }
@@ -87,7 +91,13 @@ struct edge {
   inline event_node* to(graph const&) const { return to_; }
 
   inline edge_type type() const { return type_; }
-  inline trip const* get_trip() const { return trip_; }
+
+  inline merged_trips_idx get_merged_trips_idx() const { return trips_; }
+
+  inline mcd::vector<ptr<trip>> const& get_trips(schedule const& sched) const {
+    return *sched.merged_trips_.at(trips_);
+  }
+
   inline duration transfer_time() const { return transfer_time_; }
 
   inline std::uint16_t capacity() const {
@@ -120,7 +130,7 @@ struct edge {
   bool broken_{false};
   duration transfer_time_{};
   std::uint16_t encoded_capacity_{};
-  struct trip const* trip_{};
+  merged_trips_idx trips_{};
   struct pax_connection_info pax_connection_info_;
 };
 
@@ -132,7 +142,7 @@ struct trip_data {
 
 struct graph {
   std::vector<std::unique_ptr<event_node>> nodes_;
-  mcd::hash_map<extern_trip, std::unique_ptr<trip_data>> trip_data_;
+  mcd::hash_map<trip const*, std::unique_ptr<trip_data>> trip_data_;
   std::vector<std::unique_ptr<passenger_group>> passenger_groups_;
 };
 

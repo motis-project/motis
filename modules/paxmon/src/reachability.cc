@@ -41,8 +41,8 @@ reachability_info get_reachability(paxmon_data const& data,
           }
           in_trip = true;
           reachability.reachable_trips_.emplace_back(reachable_trip{
-              get_trip(sched, leg.trip_), td, &leg, from->current_time(),
-              INVALID_TIME, edge_idx, reachable_trip::INVALID_INDEX});
+              leg.trip_, td, &leg, from->current_time(), INVALID_TIME, edge_idx,
+              reachable_trip::INVALID_INDEX});
           entry_ok = true;
         }
       }

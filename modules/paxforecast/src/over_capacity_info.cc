@@ -17,7 +17,8 @@ std::uint16_t additional_passengers(
   return count;
 }
 
-over_capacity_info calc_over_capacity(simulation_result const& sim_result,
+over_capacity_info calc_over_capacity(schedule const& sched,
+                                      simulation_result const& sim_result,
                                       float probability) {
   over_capacity_info oci;
   oci.probability_ = probability;
@@ -34,7 +35,9 @@ over_capacity_info calc_over_capacity(simulation_result const& sim_result,
     if (total_pax > capacity) {
       oci.over_capacity_edges_[e] =
           edge_over_capacity_info{current_pax, additional_pax};
-      oci.over_capacity_trips_[e->get_trip()].emplace_back(e);
+      for (auto const& trp : e->get_trips(sched)) {
+        oci.over_capacity_trips_[trp].emplace_back(e);
+      }
     }
   }
 

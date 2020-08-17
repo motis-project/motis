@@ -62,7 +62,9 @@ void write_over_capacity_report(paxmon_data const& data, schedule const& sched,
       auto const passengers = e->passengers();
       auto const capacity = e->capacity();
       if (passengers > capacity) {
-        over_capacity[e->get_trip()].emplace_back(e.get());
+        for (auto const& trp : e->get_trips(sched)) {
+          over_capacity[trp].emplace_back(e.get());
+        }
       }
     }
   }

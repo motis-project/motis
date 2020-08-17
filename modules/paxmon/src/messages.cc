@@ -7,6 +7,7 @@
 #include "utl/verify.h"
 
 #include "motis/core/access/station_access.h"
+#include "motis/core/access/trip_access.h"
 #include "motis/core/conv/station_conv.h"
 #include "motis/core/conv/trip_conv.h"
 
@@ -44,7 +45,7 @@ std::optional<transfer_info> from_fbs(TransferInfo const* ti) {
 Offset<CompactJourneyLeg> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
                                  journey_leg const& leg) {
   return CreateCompactJourneyLeg(
-      fbb, to_fbs(fbb, leg.trip_),
+      fbb, to_fbs(fbb, to_extern_trip(sched, leg.trip_)),
       to_fbs(fbb, *sched.stations_[leg.enter_station_id_]),
       to_fbs(fbb, *sched.stations_[leg.exit_station_id_]),
       motis_to_unixtime(sched, leg.enter_time_),
@@ -53,7 +54,7 @@ Offset<CompactJourneyLeg> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
 }
 
 journey_leg from_fbs(schedule const& sched, CompactJourneyLeg const* leg) {
-  return {to_extern_trip(leg->trip()),
+  return {get_trip(sched, to_extern_trip(leg->trip())),
           get_station(sched, leg->enter_station()->id()->str())->index_,
           get_station(sched, leg->exit_station()->id()->str())->index_,
           unix_to_motistime(sched, leg->enter_time()),

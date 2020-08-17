@@ -4,7 +4,8 @@
 
 namespace motis::paxmon {
 
-graph_statistics calc_graph_statistics(paxmon_data const& data) {
+graph_statistics calc_graph_statistics(schedule const& sched,
+                                       paxmon_data const& data) {
   graph_statistics stats;
 
   stats.nodes_ = data.graph_.nodes_.size();
@@ -19,10 +20,12 @@ graph_statistics calc_graph_statistics(paxmon_data const& data) {
     stats.edges_ += n->outgoing_edges(data.graph_).size();
     for (auto const& e : n->outgoing_edges(data.graph_)) {
       switch (e->type_) {
-        case edge_type::TRIP:
+        case edge_type::TRIP: {
           ++stats.trip_edges_;
-          trips.insert(e->get_trip());
+          auto const& edge_trips = e->get_trips(sched);
+          trips.insert(begin(edge_trips), end(edge_trips));
           break;
+        }
         case edge_type::INTERCHANGE: ++stats.interchange_edges_; break;
         case edge_type::WAIT: ++stats.wait_edges_; break;
       }
@@ -30,7 +33,8 @@ graph_statistics calc_graph_statistics(paxmon_data const& data) {
         ++stats.canceled_edges_;
       } else if (e->is_trip() && e->passengers() > e->capacity()) {
         ++stats.edges_over_capacity_;
-        trips_over_capacity.insert(e->get_trip());
+        auto const& edge_trips = e->get_trips(sched);
+        trips_over_capacity.insert(begin(edge_trips), end(edge_trips));
       }
       if (e->is_broken()) {
         ++stats.broken_edges_;

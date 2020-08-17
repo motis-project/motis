@@ -137,7 +137,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
   auto const over_capacity_infos =
       utl::to_vec(probabilites_, [&](auto const probability) {
-        return calc_over_capacity(sim_result, probability);
+        return calc_over_capacity(sched, sim_result, probability);
       });
 
   auto const forecast_msg =

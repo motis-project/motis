@@ -11,7 +11,7 @@ compact_journey to_compact_journey(journey const& j, schedule const& sched) {
 
   for_each_trip(
       j, sched,
-      [&](extern_trip const& et, journey::stop const& from_stop,
+      [&](trip const* trp, journey::stop const& from_stop,
           journey::stop const& to_stop,
           std::optional<transfer_info> const& ti) {
         auto const from_station_id =
@@ -23,7 +23,7 @@ compact_journey to_compact_journey(journey const& j, schedule const& sched) {
         auto const exit_time = unix_to_motistime(
             sched.schedule_begin_, to_stop.arrival_.schedule_timestamp_);
 
-        cj.legs_.emplace_back(journey_leg{et, from_station_id, to_station_id,
+        cj.legs_.emplace_back(journey_leg{trp, from_station_id, to_station_id,
                                           enter_time, exit_time, ti});
       });
 

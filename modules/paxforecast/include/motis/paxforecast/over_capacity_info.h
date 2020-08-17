@@ -4,6 +4,8 @@
 
 #include "motis/hash_map.h"
 
+#include "motis/core/schedule/schedule.h"
+
 #include "motis/paxforecast/simulation_result.h"
 #include "motis/paxmon/graph.h"
 
@@ -22,7 +24,8 @@ struct over_capacity_info {
       over_capacity_trips_;
 };
 
-over_capacity_info calc_over_capacity(simulation_result const& sim_result,
+over_capacity_info calc_over_capacity(schedule const& sched,
+                                      simulation_result const& sim_result,
                                       float probability);
 
 }  // namespace motis::paxforecast

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <optional>
 #include <set>
 
 #include "utl/enumerate.h"
@@ -9,6 +10,7 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
+#include "motis/core/access/edge_access.h"
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/trip_iterator.h"
 
@@ -92,7 +94,8 @@ edge* get_connecting_edge(event_node const* from, event_node const* to,
   return nullptr;
 }
 
-edge* connect_nodes(event_node* from, event_node* to, trip const* trp,
+edge* connect_nodes(event_node* from, event_node* to,
+                    merged_trips_idx merged_trips,
                     std::uint16_t encoded_capacity, graph const& g) {
   if (from == nullptr || to == nullptr) {
     return nullptr;
@@ -106,7 +109,8 @@ edge* connect_nodes(event_node* from, event_node* to, trip const* trp,
   }
   auto const type =
       from->type_ == event_type::DEP ? edge_type::TRIP : edge_type::WAIT;
-  return add_edge(make_trip_edge(from, to, type, trp, encoded_capacity));
+  return add_edge(
+      make_trip_edge(from, to, type, merged_trips, encoded_capacity));
 }
 
 event_node* get_or_insert_node(graph& g, trip_data& td, trip_ev_key const tek,
@@ -155,12 +159,12 @@ std::set<passenger_group*> collect_passenger_groups(trip_data& td) {
   return affected_passenger_groups;
 }
 
-bool update_passenger_group(trip_data& td, extern_trip const& et,
-                            passenger_group* pg, graph const& g) {
+bool update_passenger_group(trip_data& td, trip const* trp, passenger_group* pg,
+                            graph const& g) {
   static constexpr auto const INVALID_INDEX =
       std::numeric_limits<std::size_t>::max();
   for (auto const& leg : pg->compact_planned_journey_.legs_) {
-    if (leg.trip_ == et) {
+    if (leg.trip_ == trp) {
       auto enter_index = INVALID_INDEX;
       auto exit_index = INVALID_INDEX;
       for (auto const [idx, e] : utl::enumerate(td.edges_)) {
@@ -187,9 +191,15 @@ bool update_passenger_group(trip_data& td, extern_trip const& et,
   return false;
 }
 
+std::optional<merged_trips_idx> get_merged_trips(trip const* trp) {
+  if (trp->edges_->empty()) {
+    return {};
+  }
+  return get_lcon(trp->edges_->front().get_edge(), trp->lcon_idx_).trips_;
+}
+
 void apply_reroute(paxmon_data& data, schedule const& sched, trip const* trp,
-                   extern_trip const& et, trip_data& td,
-                   std::vector<trip_ev_key> const& old_route,
+                   trip_data& td, std::vector<trip_ev_key> const& old_route,
                    std::vector<trip_ev_key> const& new_route,
                    std::vector<edge*>& updated_interchange_edges) {
   auto const encoded_capacity =
@@ -224,16 +234,20 @@ void apply_reroute(paxmon_data& data, schedule const& sched, trip const* trp,
   }
 
   std::vector<edge*> new_edges;
-  for (auto const& [from, to] : utl::pairwise(new_nodes)) {
-    auto e = connect_nodes(from, to, trp, encoded_capacity, data.graph_);
-    new_edges.emplace_back(e);
+  if (!new_nodes.empty()) {
+    auto const merged_trips = get_merged_trips(trp).value();
+    for (auto const& [from, to] : utl::pairwise(new_nodes)) {
+      auto e =
+          connect_nodes(from, to, merged_trips, encoded_capacity, data.graph_);
+      new_edges.emplace_back(e);
+    }
   }
   td.edges_ = new_edges;
   std::copy(begin(removed_nodes), end(removed_nodes),
             std::back_inserter(td.canceled_nodes_));
 
   for (auto pg : affected_passenger_groups) {
-    update_passenger_group(td, et, pg, data.graph_);
+    update_passenger_group(td, trp, pg, data.graph_);
   }
 
   for (auto const n : removed_nodes) {

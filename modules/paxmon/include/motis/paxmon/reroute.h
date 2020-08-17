@@ -53,8 +53,7 @@ std::vector<trip_ev_key> to_trip_ev_keys(
         events);
 
 void apply_reroute(paxmon_data& data, schedule const& sched, trip const* trp,
-                   extern_trip const& et, trip_data& td,
-                   std::vector<trip_ev_key> const& old_route,
+                   trip_data& td, std::vector<trip_ev_key> const& old_route,
                    std::vector<trip_ev_key> const& new_route,
                    std::vector<edge*>& updated_interchange_edges);
 

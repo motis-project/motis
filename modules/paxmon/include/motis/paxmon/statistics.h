@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "motis/core/schedule/schedule.h"
+
 namespace motis::paxmon {
 
 struct system_statistics {
@@ -76,6 +78,7 @@ struct graph_statistics {
 
 struct paxmon_data;
 
-graph_statistics calc_graph_statistics(paxmon_data const& data);
+graph_statistics calc_graph_statistics(schedule const& sched,
+                                       paxmon_data const& data);
 
 }  // namespace motis::paxmon

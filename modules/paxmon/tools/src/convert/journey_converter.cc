@@ -3,6 +3,7 @@
 #include <optional>
 
 #include "utl/enumerate.h"
+#include "utl/verify.h"
 
 #include "motis/paxmon/loader/journeys/journey_access.h"
 
@@ -11,12 +12,19 @@ namespace motis::paxmon::tools::convert {
 journey::transport const* get_journey_transport(journey const& j,
                                                 std::size_t enter_stop_idx,
                                                 std::size_t exit_stop_idx) {
+  journey::transport const* best_match = nullptr;
   for (auto const& t : j.transports_) {
-    if (t.from_ <= enter_stop_idx && t.to_ >= exit_stop_idx) {
-      return &t;
+    if (t.from_ >= exit_stop_idx || t.to_ <= enter_stop_idx) {
+      continue;
+    }
+    if (best_match == nullptr ||
+        (t.from_ == enter_stop_idx && best_match->from_ != enter_stop_idx) ||
+        ((t.from_ == enter_stop_idx) == (best_match->from_ == enter_stop_idx) &&
+         t.to_ > best_match->to_)) {
+      best_match = &t;
     }
   }
-  return nullptr;
+  return best_match;
 }
 
 void for_each_leg(journey const& j,
@@ -25,21 +33,26 @@ void for_each_leg(journey const& j,
                                      journey::transport const*)> const& trip_cb,
                   std::function<void(journey::stop const&,
                                      journey::stop const&)> const& foot_cb) {
-  std::optional<std::size_t> exit_stop_idx;
+  std::optional<std::size_t> enter_stop_idx, exit_stop_idx;
   for (auto const& [stop_idx, stop] : utl::enumerate(j.stops_)) {
     if (stop.exit_) {
       exit_stop_idx = stop_idx;
+      utl::verify(enter_stop_idx.has_value(),
+                  "invalid journey: exit stop without preceding enter stop");
+      auto const trip_segments =
+          get_journey_trip_segments(j, *enter_stop_idx, *exit_stop_idx);
+      for (auto const& jts : trip_segments) {
+        trip_cb(j.stops_.at(jts.from_), j.stops_.at(jts.to_),
+                jts.trip_->extern_trip_,
+                get_journey_transport(j, jts.from_, jts.to_));
+      }
+      enter_stop_idx.reset();
     }
     if (stop.enter_) {
-      auto const jt = get_journey_trip(j, stop_idx);
-      if (jt == nullptr) {
-        throw std::runtime_error{"invalid journey: trip not found"};
-      }
+      enter_stop_idx = stop_idx;
       if (exit_stop_idx && *exit_stop_idx != stop_idx) {
         foot_cb(j.stops_.at(*exit_stop_idx), stop);
       }
-      trip_cb(stop, j.stops_.at(jt->to_), jt->extern_trip_,
-              get_journey_transport(j, stop_idx, jt->to_));
       exit_stop_idx.reset();
     }
   }

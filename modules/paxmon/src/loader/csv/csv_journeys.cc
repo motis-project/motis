@@ -378,9 +378,9 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
         }
         auto enter_transfer = get_transfer_info(
             sched, current_journey, from_station_idx.value(), enter_time);
-        current_journey.legs_.emplace_back(journey_leg{
-            to_extern_trip(sched, trp), from_station_idx.value(),
-            to_station_idx.value(), enter_time, exit_time, enter_transfer});
+        current_journey.legs_.emplace_back(
+            journey_leg{trp, from_station_idx.value(), to_station_idx.value(),
+                        enter_time, exit_time, enter_transfer});
       });
 
   finish_journey();
