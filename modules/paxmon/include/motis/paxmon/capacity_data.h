@@ -10,7 +10,7 @@ enum class capacity_source : std::uint16_t {
   TRAIN_NR,
   CATEGORY,
   CLASZ,
-  DEFAULT
+  SPECIAL
 };
 
 inline constexpr std::uint16_t encode_capacity(std::uint16_t capacity,
@@ -38,10 +38,10 @@ inline constexpr std::pair<std::uint16_t, capacity_source> decode_capacity(
 
 constexpr const std::uint16_t UNKNOWN_CAPACITY = 0;
 constexpr const std::uint16_t UNKNOWN_ENCODED_CAPACITY =
-    encode_capacity(UNKNOWN_CAPACITY, capacity_source::DEFAULT);
+    encode_capacity(UNKNOWN_CAPACITY, capacity_source::SPECIAL);
 
 constexpr const std::uint16_t UNLIMITED_CAPACITY = 0x1FFF;
 constexpr const std::uint16_t UNLIMITED_ENCODED_CAPACITY =
-    encode_capacity(UNLIMITED_CAPACITY, capacity_source::DEFAULT);
+    encode_capacity(UNLIMITED_CAPACITY, capacity_source::SPECIAL);
 
 }  // namespace motis::paxmon

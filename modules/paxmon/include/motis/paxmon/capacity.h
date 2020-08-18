@@ -39,7 +39,6 @@ std::size_t load_capacities(schedule const& sched,
 std::pair<std::uint16_t, capacity_source> get_capacity(
     schedule const& sched, light_connection const& lc,
     trip_capacity_map_t const& trip_map,
-    category_capacity_map_t const& category_map,
-    std::uint16_t default_capacity);
+    category_capacity_map_t const& category_map);
 
 }  // namespace motis::paxmon

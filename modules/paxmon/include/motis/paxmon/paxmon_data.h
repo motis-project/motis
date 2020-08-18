@@ -17,7 +17,6 @@ struct paxmon_data {
   std::set<passenger_group*> groups_affected_by_last_update_;
   trip_capacity_map_t trip_capacity_map_;
   category_capacity_map_t category_capacity_map_;
-  std::uint16_t default_capacity_{60};
 };
 
 }  // namespace motis::paxmon

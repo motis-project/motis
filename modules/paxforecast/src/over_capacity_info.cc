@@ -24,7 +24,7 @@ over_capacity_info calc_over_capacity(schedule const& sched,
   oci.probability_ = probability;
 
   for (auto const& [e, additional_groups] : sim_result.additional_groups_) {
-    if (!e->is_trip()) {
+    if (!e->is_trip() || !e->has_capacity()) {
       continue;
     }
     auto const capacity = e->capacity();

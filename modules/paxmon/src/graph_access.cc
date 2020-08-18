@@ -124,7 +124,7 @@ struct rule_trip_adder {
     return utl::get_or_create(trip_edges_, &section.lcon(), [&]() {
       auto const encoded_capacity = encode_capacity(
           get_capacity(sched_, section.lcon(), data_.trip_capacity_map_,
-                       data_.category_capacity_map_, data_.default_capacity_));
+                       data_.category_capacity_map_));
       return add_edge(make_trip_edge(dep_node, arr_node, edge_type::TRIP,
                                      section.lcon().trips_, encoded_capacity));
     });

@@ -3,12 +3,14 @@
 #include <charconv>
 #include <cstdint>
 #include <ctime>
+#include <algorithm>
 #include <fstream>
 #include <functional>
 #include <iterator>
 #include <optional>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include "utl/parser/buf_reader.h"
@@ -108,72 +110,114 @@ std::size_t load_capacities(schedule const& sched,
   return entry_count;
 }
 
+std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
+    trip_capacity_map_t const& trip_map, trip const* trp,
+    std::uint32_t train_nr) {
+  auto const tid = cap_trip_id{train_nr, trp->id_.primary_.get_station_id(),
+                               trp->id_.secondary_.target_station_id_,
+                               trp->id_.primary_.get_time(),
+                               trp->id_.secondary_.target_time_};
+  if (auto const lb = trip_map.lower_bound(tid); lb != end(trip_map)) {
+    if (lb->first == tid) {
+      return {{lb->second, capacity_source::TRIP_EXACT}};
+    } else if (lb->first.train_nr_ == train_nr) {
+      return {{lb->second, capacity_source::TRAIN_NR}};
+    } else if (auto const prev = std::prev(lb);
+               prev != end(trip_map) && prev->first.train_nr_ == train_nr) {
+      return {{prev->second, capacity_source::TRAIN_NR}};
+    }
+  }
+  return {};
+}
+
+std::optional<std::uint32_t> get_line_nr(mcd::string const& line_id) {
+  std::uint32_t line_nr = 0;
+  auto const result =
+      std::from_chars(line_id.data(), line_id.data() + line_id.size(), line_nr);
+  if (result.ec == std::errc{} &&
+      result.ptr == line_id.data() + line_id.size()) {
+    return {line_nr};
+  } else {
+    return {};
+  }
+}
+
+std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
+    schedule const& sched, trip_capacity_map_t const& trip_map,
+    category_capacity_map_t const& category_map, trip const* trp,
+    connection_info const* ci, service_class const clasz) {
+
+  auto const trp_train_nr = trp->id_.primary_.get_train_nr();
+  if (auto const trip_capacity = get_trip_capacity(trip_map, trp, trp_train_nr);
+      trip_capacity) {
+    return trip_capacity;
+  }
+
+  if (ci->train_nr_ != trp_train_nr) {
+    if (auto const trip_capacity =
+            get_trip_capacity(trip_map, trp, ci->train_nr_);
+        trip_capacity) {
+      return trip_capacity;
+    }
+  }
+
+  auto const trp_line_nr = get_line_nr(trp->id_.secondary_.line_id_);
+  if (trp_line_nr && *trp_line_nr != trp_train_nr) {
+    if (auto const trip_capacity =
+            get_trip_capacity(trip_map, trp, *trp_line_nr);
+        trip_capacity) {
+      return trip_capacity;
+    }
+  }
+
+  auto const ci_line_nr = get_line_nr(ci->line_identifier_);
+  if (ci_line_nr && ci_line_nr != trp_line_nr && *ci_line_nr != trp_train_nr) {
+    if (auto const trip_capacity =
+            get_trip_capacity(trip_map, trp, *ci_line_nr);
+        trip_capacity) {
+      return trip_capacity;
+    }
+  }
+
+  auto const& category = sched.categories_[ci->family_]->name_;
+  if (auto const it = category_map.find(category); it != end(category_map)) {
+    return {{it->second, capacity_source::CATEGORY}};
+  } else if (auto const it = category_map.find(
+                 std::to_string(static_cast<service_class_t>(clasz)));
+             it != end(category_map)) {
+    return {{it->second, capacity_source::CLASZ}};
+  }
+
+  return {};
+}
+
 std::pair<std::uint16_t, capacity_source> get_capacity(
     schedule const& sched, light_connection const& lc,
     trip_capacity_map_t const& trip_map,
-    category_capacity_map_t const& category_map,
-    std::uint16_t default_capacity) {
-  std::pair<std::uint16_t, capacity_source> result = {
-      0, capacity_source::TRAIN_NR};
+    category_capacity_map_t const& category_map) {
+  std::uint16_t capacity = 0;
+  auto worst_source = capacity_source::TRIP_EXACT;
 
-  auto const find_by_trip = [&](std::function<std::optional<std::uint32_t>(
-                                    trip const*)> const& get_train_nr) {
-    for (auto const& trp : *sched.merged_trips_.at(lc.trips_)) {
-      auto const maybe_trainr_nr = get_train_nr(trp);
-      if (!maybe_trainr_nr) {
-        continue;
-      }
-      auto const train_nr = maybe_trainr_nr.value();
-      auto const tid = cap_trip_id{train_nr, trp->id_.primary_.get_station_id(),
-                                   trp->id_.secondary_.target_station_id_,
-                                   trp->id_.primary_.get_time(),
-                                   trp->id_.secondary_.target_time_};
-      if (auto const lb = trip_map.lower_bound(tid); lb != end(trip_map)) {
-        if (lb->first == tid) {
-          result = {lb->second, capacity_source::TRIP_EXACT};
-          return;
-        } else if (lb->first.train_nr_ == train_nr) {
-          result.first = lb->second;
-        } else if (auto const prev = std::prev(lb);
-                   prev != end(trip_map) && prev->first.train_nr_ == train_nr) {
-          result.first = prev->second;
-        }
-      }
-    }
-  };
+  auto ci = lc.full_con_->con_info_;
+  for (auto const& trp : *sched.merged_trips_.at(lc.trips_)) {
+    utl::verify(ci != nullptr, "get_capacity: missing connection_info");
 
-  find_by_trip(
-      [](trip const* trp) { return trp->id_.primary_.get_train_nr(); });
-  if (result.first != 0) {
-    return result;
-  }
-
-  find_by_trip([](trip const* trp) -> std::optional<std::uint32_t> {
-    auto const& line_id = trp->id_.secondary_.line_id_;
-    std::uint32_t line_nr = 0;
-    auto const result = std::from_chars(
-        line_id.data(), line_id.data() + line_id.size(), line_nr);
-    if (result.ec == std::errc{} &&
-        result.ptr == line_id.data() + line_id.size()) {
-      return {line_nr};
+    auto const trip_capacity = get_trip_capacity(sched, trip_map, category_map,
+                                                 trp, ci, lc.full_con_->clasz_);
+    if (trip_capacity.has_value()) {
+      capacity += trip_capacity->first;
+      worst_source = static_cast<capacity_source>(std::max(
+          static_cast<std::underlying_type_t<capacity_source>>(worst_source),
+          static_cast<std::underlying_type_t<capacity_source>>(
+              trip_capacity->second)));
     } else {
-      return {};
+      return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
     }
-  });
-  if (result.first != 0) {
-    return result;
+
+    ci = ci->merged_with_;
   }
 
-  auto const& category =
-      sched.categories_[lc.full_con_->con_info_->family_]->name_;
-  if (auto const it = category_map.find(category); it != end(category_map)) {
-    return {it->second, capacity_source::CATEGORY};
-  } else if (auto const it = category_map.find(std::to_string(
-                 static_cast<service_class_t>(lc.full_con_->clasz_)));
-             it != end(category_map)) {
-    return {it->second, capacity_source::CLASZ};
-  }
-  return {default_capacity, capacity_source::DEFAULT};
+  return {capacity, worst_source};
 }
 
 }  // namespace motis::paxmon

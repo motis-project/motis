@@ -108,6 +108,18 @@ struct edge {
     return get_capacity_source(encoded_capacity_);
   }
 
+  inline bool has_unlimited_capacity() const {
+    return encoded_capacity_ == UNLIMITED_ENCODED_CAPACITY;
+  }
+
+  inline bool has_unknown_capacity() const {
+    return encoded_capacity_ == UNKNOWN_ENCODED_CAPACITY;
+  }
+
+  inline bool has_capacity() const {
+    return !has_unknown_capacity() && !has_unlimited_capacity();
+  }
+
   inline std::uint16_t passengers(float probability = 1.0) const {
     std::uint16_t count = 0;
     for (auto const& si : pax_connection_info_.section_infos_) {

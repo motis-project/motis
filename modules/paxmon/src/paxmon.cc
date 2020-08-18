@@ -55,7 +55,6 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
   param(time_step_, "time_step", "evaluation time step (seconds)");
   param(match_tolerance_, "match_tolerance",
         "journey match time tolerance (minutes)");
-  param(data_.default_capacity_, "default_capacity", "default capacity");
 }
 
 paxmon::~paxmon() = default;
@@ -200,8 +199,8 @@ void paxmon::load_capacity_files() {
                              entries_loaded, file);
   }
   if (total_entries == 0) {
-    LOG(warn) << "no capacity data loaded, using default capacity of "
-              << data_.default_capacity_ << " for all trains";
+    LOG(warn)
+        << "no capacity data loaded, all trips will have unknown capacity";
   }
 }
 

@@ -139,10 +139,9 @@ std::pair<std::uint16_t, capacity_source> guess_trip_capacity(
   auto const sections = access::sections(trp);
   if (begin(sections) != end(sections)) {
     return get_capacity(sched, (*begin(sections)).lcon(),
-                        data.trip_capacity_map_, data.category_capacity_map_,
-                        data.default_capacity_);
+                        data.trip_capacity_map_, data.category_capacity_map_);
   } else {
-    return {0, capacity_source::DEFAULT};
+    return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
   }
 }
 

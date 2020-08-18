@@ -43,7 +43,7 @@ std::string_view capacity_source_str(capacity_source const src) {
     case capacity_source::TRAIN_NR: return "train_nr";
     case capacity_source::CATEGORY: return "category";
     case capacity_source::CLASZ: return "clasz";
-    case capacity_source::DEFAULT: return "default";
+    case capacity_source::SPECIAL: return "special";
   }
   return "???";
 }
@@ -61,7 +61,7 @@ void write_over_capacity_report(paxmon_data const& data, schedule const& sched,
       }
       auto const passengers = e->passengers();
       auto const capacity = e->capacity();
-      if (passengers > capacity) {
+      if (e->has_capacity() && passengers > capacity) {
         for (auto const& trp : e->get_trips(sched)) {
           over_capacity[trp].emplace_back(e.get());
         }
