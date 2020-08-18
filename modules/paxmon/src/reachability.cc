@@ -35,7 +35,8 @@ reachability_info get_reachability(paxmon_data const& data,
           if (leg.enter_transfer_) {
             required_arrival_time_at_station -= leg.enter_transfer_->duration_;
           }
-          if (station_arrival_time > required_arrival_time_at_station) {
+          if (station_arrival_time > required_arrival_time_at_station ||
+              from->is_canceled()) {
             ok = false;
             break;
           }
@@ -54,6 +55,10 @@ reachability_info get_reachability(paxmon_data const& data,
         }
         if (to->station_idx() == leg.exit_station_id_ &&
             to->schedule_time() == leg.exit_time_) {
+          if (to->is_canceled()) {
+            ok = false;
+            break;
+          }
           station_arrival_time = to->current_time();
           auto& rt = reachability.reachable_trips_.back();
           rt.exit_real_time_ = station_arrival_time;
