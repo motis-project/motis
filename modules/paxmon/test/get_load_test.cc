@@ -32,17 +32,37 @@ TEST(paxmon_get_load, only_one_certain) {
   auto const pci = mk_pci(pgs);
   auto const capacity = static_cast<std::uint16_t>(20);
 
-  ASSERT_EQ(get_base_load(pci), 10);
+  EXPECT_EQ(get_base_load(pci), 10);
 
   auto const pdf = get_load_pdf(pci);
-  ASSERT_EQ(pdf, (pdf_t{{10, 1.0f}}));
+  EXPECT_EQ(pdf, (pdf_t{{10, 1.0f}}));
+  EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.2f));
+  EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.5f));
+  EXPECT_FALSE(load_factor_possibly_ge(pdf, capacity, 1.0f));
+  EXPECT_FALSE(load_factor_possibly_ge(pdf, capacity, 1.5f));
+  EXPECT_FALSE(load_factor_possibly_ge(pdf, capacity, 2.0f));
   auto const lf_pdf = to_load_factor(pdf, capacity);
-  ASSERT_EQ(lf_pdf, (std::map<float, float>{{0.5f, 1.0f}}));
+  EXPECT_EQ(lf_pdf, (std::map<float, float>{{0.5f, 1.0f}}));
+  EXPECT_TRUE(load_factor_possibly_ge(lf_pdf, 0.2f));
+  EXPECT_TRUE(load_factor_possibly_ge(lf_pdf, 0.5f));
+  EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 1.0f));
+  EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 1.5f));
+  EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 2.0f));
 
   for (auto const& cdf : {get_cdf(pdf), get_load_cdf(pci)}) {
-    ASSERT_EQ(cdf, (cdf_t{{10, 1.0f}}));
+    EXPECT_EQ(cdf, (cdf_t{{10, 1.0f}}));
+    EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.2f));
+    EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.5f));
+    EXPECT_FALSE(load_factor_possibly_ge(cdf, capacity, 1.0f));
+    EXPECT_FALSE(load_factor_possibly_ge(cdf, capacity, 1.5f));
+    EXPECT_FALSE(load_factor_possibly_ge(cdf, capacity, 2.0f));
     auto const lf_cdf = to_load_factor(cdf, capacity);
-    ASSERT_EQ(lf_cdf, (std::map<float, float>{{0.5f, 1.0f}}));
+    EXPECT_EQ(lf_cdf, (std::map<float, float>{{0.5f, 1.0f}}));
+    EXPECT_TRUE(load_factor_possibly_ge(lf_cdf, 0.2f));
+    EXPECT_TRUE(load_factor_possibly_ge(lf_cdf, 0.5f));
+    EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 1.0f));
+    EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 1.5f));
+    EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 2.0f));
   }
 }
 
@@ -52,17 +72,37 @@ TEST(paxmon_get_load, only_multiple_certain) {
   auto const pci = mk_pci(pgs);
   auto const capacity = static_cast<std::uint16_t>(100);
 
-  ASSERT_EQ(get_base_load(pci), 60);
+  EXPECT_EQ(get_base_load(pci), 60);
 
   auto const pdf = get_load_pdf(pci);
-  ASSERT_EQ(pdf, (pdf_t{{60, 1.0f}}));
+  EXPECT_EQ(pdf, (pdf_t{{60, 1.0f}}));
+  EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.2f));
+  EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.5f));
+  EXPECT_FALSE(load_factor_possibly_ge(pdf, capacity, 1.0f));
+  EXPECT_FALSE(load_factor_possibly_ge(pdf, capacity, 1.5f));
+  EXPECT_FALSE(load_factor_possibly_ge(pdf, capacity, 2.0f));
   auto const lf_pdf = to_load_factor(pdf, capacity);
-  ASSERT_EQ(lf_pdf, (std::map<float, float>{{0.6f, 1.0f}}));
+  EXPECT_EQ(lf_pdf, (std::map<float, float>{{0.6f, 1.0f}}));
+  EXPECT_TRUE(load_factor_possibly_ge(lf_pdf, 0.2f));
+  EXPECT_TRUE(load_factor_possibly_ge(lf_pdf, 0.5f));
+  EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 1.0f));
+  EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 1.5f));
+  EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 2.0f));
 
   for (auto const& cdf : {get_cdf(pdf), get_load_cdf(pci)}) {
-    ASSERT_EQ(cdf, (cdf_t{{60, 1.0f}}));
+    EXPECT_EQ(cdf, (cdf_t{{60, 1.0f}}));
+    EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.2f));
+    EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.5f));
+    EXPECT_FALSE(load_factor_possibly_ge(cdf, capacity, 1.0f));
+    EXPECT_FALSE(load_factor_possibly_ge(cdf, capacity, 1.5f));
+    EXPECT_FALSE(load_factor_possibly_ge(cdf, capacity, 2.0f));
     auto const lf_cdf = to_load_factor(cdf, capacity);
-    ASSERT_EQ(lf_cdf, (std::map<float, float>{{0.6f, 1.0f}}));
+    EXPECT_EQ(lf_cdf, (std::map<float, float>{{0.6f, 1.0f}}));
+    EXPECT_TRUE(load_factor_possibly_ge(lf_cdf, 0.2f));
+    EXPECT_TRUE(load_factor_possibly_ge(lf_cdf, 0.5f));
+    EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 1.0f));
+    EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 1.5f));
+    EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 2.0f));
   }
 }
 
@@ -72,17 +112,37 @@ TEST(paxmon_get_load, two_groups) {
   auto const pci = mk_pci(pgs);
   auto const capacity = static_cast<std::uint16_t>(20);
 
-  ASSERT_EQ(get_base_load(pci), 10);
+  EXPECT_EQ(get_base_load(pci), 10);
 
   auto const pdf = get_load_pdf(pci);
-  ASSERT_EQ(pdf, (pdf_t{{10, 0.6f}, {30, 0.4f}}));
+  EXPECT_EQ(pdf, (pdf_t{{10, 0.6f}, {30, 0.4f}}));
+  EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.2f));
+  EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.5f));
+  EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 1.0f));
+  EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 1.5f));
+  EXPECT_FALSE(load_factor_possibly_ge(pdf, capacity, 2.0f));
   auto const lf_pdf = to_load_factor(pdf, capacity);
-  ASSERT_EQ(lf_pdf, (std::map<float, float>{{0.5f, 0.6f}, {1.5f, 0.4f}}));
+  EXPECT_EQ(lf_pdf, (std::map<float, float>{{0.5f, 0.6f}, {1.5f, 0.4f}}));
+  EXPECT_TRUE(load_factor_possibly_ge(lf_pdf, 0.2f));
+  EXPECT_TRUE(load_factor_possibly_ge(lf_pdf, 0.5f));
+  EXPECT_TRUE(load_factor_possibly_ge(lf_pdf, 1.0f));
+  EXPECT_TRUE(load_factor_possibly_ge(lf_pdf, 1.5f));
+  EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 2.0f));
 
   for (auto const& cdf : {get_cdf(pdf), get_load_cdf(pci)}) {
-    ASSERT_EQ(cdf, (cdf_t{{10, 0.6f}, {30, 1.0f}}));
+    EXPECT_EQ(cdf, (cdf_t{{10, 0.6f}, {30, 1.0f}}));
+    EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.2f));
+    EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.5f));
+    EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 1.0f));
+    EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 1.5f));
+    EXPECT_FALSE(load_factor_possibly_ge(cdf, capacity, 2.0f));
     auto const lf_cdf = to_load_factor(cdf, capacity);
-    ASSERT_EQ(lf_cdf, (std::map<float, float>{{0.5f, 0.6f}, {1.5f, 1.0f}}));
+    EXPECT_EQ(lf_cdf, (std::map<float, float>{{0.5f, 0.6f}, {1.5f, 1.0f}}));
+    EXPECT_TRUE(load_factor_possibly_ge(lf_cdf, 0.2f));
+    EXPECT_TRUE(load_factor_possibly_ge(lf_cdf, 0.5f));
+    EXPECT_TRUE(load_factor_possibly_ge(lf_cdf, 1.0f));
+    EXPECT_TRUE(load_factor_possibly_ge(lf_cdf, 1.5f));
+    EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 2.0f));
   }
 }
 

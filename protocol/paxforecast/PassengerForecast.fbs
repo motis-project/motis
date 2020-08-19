@@ -14,14 +14,18 @@ table PassengerGroupForecast {
   forecast_alternatives: [ForecastAlternative];
 }
 
-table EdgeOverCapacity {
+struct CdfEntry {
   passengers: uint;
-  capacity: uint;
-  additional: uint;
+  probability: float;
+}
+
+table EdgeOverCapacity {
   from: motis.Station;
   to: motis.Station;
   departure_schedule_time: ulong;
   arrival_schedule_time: ulong;
+  capacity: uint;
+  passenger_cdf: [CdfEntry];
 }
 
 table TripOverCapacity {
@@ -30,12 +34,11 @@ table TripOverCapacity {
 }
 
 table OverCapacityInfo {
-  probability: float;
   edge_count_over_capacity: ulong;
   trips_over_capacity: [TripOverCapacity];
 }
 
 table PassengerForecast {
   groups: [PassengerGroupForecast];
-  over_capacity: [OverCapacityInfo];
+  over_capacity: OverCapacityInfo;
 }

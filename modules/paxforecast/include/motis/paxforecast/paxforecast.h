@@ -24,8 +24,6 @@ struct paxforecast : public motis::module::module {
 
 private:
   void on_monitoring_event(motis::module::msg_ptr const& msg);
-
-  std::vector<float> probabilites_{0.5, 0.9};
 };
 
 }  // namespace motis::paxforecast

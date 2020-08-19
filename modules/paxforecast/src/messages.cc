@@ -28,23 +28,30 @@ Offset<PassengerGroupForecast> get_passenger_group_forecast(
           })));
 }
 
+Offset<Vector<CdfEntry const*>> cdf_to_fbs(FlatBufferBuilder& fbb,
+                                           cdf_t const& cdf) {
+  return fbb.CreateVectorOfStructs(utl::to_vec(cdf, [](auto const& e) {
+    return CdfEntry{e.first, e.second};
+  }));
+}
+
 Offset<EdgeOverCapacity> get_edge_over_capacity(
     FlatBufferBuilder& fbb, schedule const& sched, graph const& g,
     motis::paxmon::edge const& e, edge_over_capacity_info const& oci) {
   auto const from = e.from(g);
   auto const to = e.to(g);
-  return CreateEdgeOverCapacity(fbb, oci.current_pax_ + oci.additional_pax_,
-                                e.capacity(), oci.additional_pax_,
-                                to_fbs(fbb, from->get_station(sched)),
+  return CreateEdgeOverCapacity(fbb, to_fbs(fbb, from->get_station(sched)),
                                 to_fbs(fbb, to->get_station(sched)),
                                 motis_to_unixtime(sched, from->schedule_time()),
-                                motis_to_unixtime(sched, to->schedule_time()));
+                                motis_to_unixtime(sched, to->schedule_time()),
+                                e.capacity(),
+                                cdf_to_fbs(fbb, oci.forecast_cdf_));
 }
 
 Offset<OverCapacityInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
                                 graph const& g, over_capacity_info const& oci) {
   return CreateOverCapacityInfo(
-      fbb, oci.probability_, oci.over_capacity_edges_.size(),
+      fbb, oci.over_capacity_edges_.size(),
       fbb.CreateVector(
           utl::to_vec(oci.over_capacity_trips_, [&](auto const& entry) {
             return CreateTripOverCapacity(
@@ -56,26 +63,21 @@ Offset<OverCapacityInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
           })));
 }
 
-msg_ptr make_passenger_forecast_msg(
-    schedule const& sched, motis::paxmon::paxmon_data const& data,
-    simulation_result const& sim_result,
-    std::vector<over_capacity_info> const& over_capacity_infos) {
+msg_ptr make_passenger_forecast_msg(schedule const& sched,
+                                    motis::paxmon::paxmon_data const& data,
+                                    simulation_result const& sim_result,
+                                    over_capacity_info const& oci) {
   message_creator fbb;
   fbb.create_and_finish(
       MsgContent_PassengerForecast,
-      CreatePassengerForecast(
-          fbb,
-          fbb.CreateVector(utl::to_vec(sim_result.group_results_,
-                                       [&](auto const& entry) {
-                                         return get_passenger_group_forecast(
-                                             fbb, sched, *entry.first,
-                                             entry.second);
-                                       })),
-          fbb.CreateVector(utl::to_vec(over_capacity_infos,
-                                       [&](auto const& oci) {
-                                         return to_fbs(fbb, sched, data.graph_,
-                                                       oci);
-                                       })))
+      CreatePassengerForecast(fbb,
+                              fbb.CreateVector(utl::to_vec(
+                                  sim_result.group_results_,
+                                  [&](auto const& entry) {
+                                    return get_passenger_group_forecast(
+                                        fbb, sched, *entry.first, entry.second);
+                                  })),
+                              to_fbs(fbb, sched, data.graph_, oci))
           .Union(),
       "/paxforecast/passenger_forecast");
   return make_msg(fbb);

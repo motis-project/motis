@@ -36,9 +36,7 @@ using namespace motis::paxmon;
 
 namespace motis::paxforecast {
 
-paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
-  param(probabilites_, "probability", "over capacity probabilities");
-}
+paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {}
 
 paxforecast::~paxforecast() = default;
 
@@ -135,10 +133,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   auto const sim_result =
       simulate_behavior(sched, data, combined_groups, announcements, pb);
 
-  auto const over_capacity_infos =
-      utl::to_vec(probabilites_, [&](auto const probability) {
-        return calc_over_capacity(sched, sim_result, probability);
-      });
+  auto const over_capacity_infos = calc_over_capacity(sched, sim_result);
 
   auto const forecast_msg =
       make_passenger_forecast_msg(sched, data, sim_result, over_capacity_infos);
