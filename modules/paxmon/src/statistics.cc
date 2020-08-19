@@ -1,5 +1,6 @@
 #include "motis/paxmon/statistics.h"
 
+#include "motis/paxmon/get_load.h"
 #include "motis/paxmon/paxmon_data.h"
 
 namespace motis::paxmon {
@@ -31,7 +32,8 @@ graph_statistics calc_graph_statistics(schedule const& sched,
       }
       if (e->is_canceled(data.graph_)) {
         ++stats.canceled_edges_;
-      } else if (e->is_trip() && e->passengers() > e->capacity()) {
+      } else if (e->is_trip() && e->has_capacity() &&
+                 get_base_load(e->get_pax_connection_info()) > e->capacity()) {
         ++stats.edges_over_capacity_;
         auto const& edge_trips = e->get_trips(sched);
         trips_over_capacity.insert(begin(edge_trips), end(edge_trips));

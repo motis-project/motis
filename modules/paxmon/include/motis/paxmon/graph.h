@@ -81,12 +81,6 @@ struct edge {
     return type() == edge_type::INTERCHANGE;
   }
 
-  inline std::uint16_t passengers_over_capacity() const {
-    auto const pax = passengers();
-    auto const cap = capacity();
-    return pax > cap ? pax - cap : 0U;
-  }
-
   inline event_node* from(graph const&) const { return from_; }
   inline event_node* to(graph const&) const { return to_; }
 
@@ -118,16 +112,6 @@ struct edge {
 
   inline bool has_capacity() const {
     return !has_unknown_capacity() && !has_unlimited_capacity();
-  }
-
-  inline std::uint16_t passengers(float probability = 1.0) const {
-    std::uint16_t count = 0;
-    for (auto const& si : pax_connection_info_.section_infos_) {
-      if (si.valid_ && si.group_->probability_ >= probability) {
-        count += si.group_->passengers_;
-      }
-    }
-    return count;
   }
 
   inline bool is_broken() const { return broken_; }

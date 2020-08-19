@@ -1,5 +1,7 @@
 #include "motis/paxforecast/over_capacity_info.h"
 
+#include "motis/paxmon/get_load.h"
+
 using namespace motis::paxmon;
 
 namespace motis::paxforecast {
@@ -28,7 +30,8 @@ over_capacity_info calc_over_capacity(schedule const& sched,
       continue;
     }
     auto const capacity = e->capacity();
-    auto const current_pax = e->passengers(probability);
+    auto const current_pax =
+        get_base_load(e->get_pax_connection_info());  // TODO(pablo): update
     auto const additional_pax =
         additional_passengers(additional_groups, probability);
     auto const total_pax = current_pax + additional_pax;

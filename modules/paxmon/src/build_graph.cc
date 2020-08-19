@@ -68,9 +68,6 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
       }
       if (in_trip) {
         e->pax_connection_info_.section_infos_.emplace_back(&grp);
-        if (e->passengers() > e->capacity()) {
-          ++stats.initial_over_capacity_;
-        }
         grp.edges_.emplace_back(e);
         auto const to = e->to(data.graph_);
         if (to->station_ == leg.exit_station_id_ &&
@@ -108,10 +105,6 @@ build_graph_stats build_graph_from_journeys(schedule const& sched,
   if (stats.groups_not_added_ != 0) {
     LOG(motis::logging::error)
         << "could not add " << stats.groups_not_added_ << " passenger groups";
-  }
-  if (stats.initial_over_capacity_ != 0) {
-    LOG(motis::logging::error)
-        << stats.initial_over_capacity_ << " edges over capacity initially";
   }
   return stats;
 }

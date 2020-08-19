@@ -7,7 +7,6 @@
 namespace motis::paxmon {
 
 struct build_graph_stats {
-  std::uint64_t initial_over_capacity_{};
   std::uint64_t groups_not_added_{};
 };
 
