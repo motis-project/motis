@@ -66,7 +66,6 @@ struct reachability_info {
 };
 
 reachability_info get_reachability(paxmon_data const& data,
-                                   schedule const& sched,
                                    compact_journey const& j);
 
 }  // namespace motis::paxmon

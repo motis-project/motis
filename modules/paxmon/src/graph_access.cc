@@ -37,7 +37,6 @@ struct rule_trip_adder {
     std::vector<edge*> trip_edges;
     event_node* prev_node = nullptr;
     for (auto const& section : motis::access::sections(trp)) {
-      auto const& lc = section.lcon();
       auto dep_node = get_or_create_dep_node(section);
       auto arr_node = get_or_create_arr_node(section);
       trip_edges.emplace_back(

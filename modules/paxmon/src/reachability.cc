@@ -8,7 +8,6 @@
 namespace motis::paxmon {
 
 reachability_info get_reachability(paxmon_data const& data,
-                                   schedule const& sched,
                                    compact_journey const& j) {
   utl::verify(!j.legs_.empty(), "empty journey");
 

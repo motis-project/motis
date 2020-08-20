@@ -22,14 +22,14 @@ struct multiplicative {
     }
     auto const recommended_index = recommended.value();
     auto const old_probability = probabilities[recommended_index];
-    if (old_probability == 0.0f || old_probability == 1.0f) {
+    if (old_probability == 0.0F || old_probability == 1.0F) {
       return;
     }
     auto const new_probability =
-        std::min(1.0f, old_probability * recommended_factor_);
+        std::min(1.0F, old_probability * recommended_factor_);
     probabilities[recommended_index] = new_probability;
     auto const other_factor =
-        (1.0f - new_probability) / (1.0f - old_probability);
+        (1.0F - new_probability) / (1.0F - old_probability);
     for (auto i = 0ULL; i < alternatives.size(); ++i) {
       if (i != recommended_index) {
         probabilities[i] *= other_factor;

@@ -9,7 +9,6 @@
 namespace motis::paxmon {
 
 void write_broken_interchanges_report(paxmon_data const& data,
-                                      schedule const& sched,
                                       std::string const& filename);
 
 }  // namespace motis::paxmon

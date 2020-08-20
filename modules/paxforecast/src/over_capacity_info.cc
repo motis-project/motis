@@ -30,7 +30,7 @@ over_capacity_info calc_over_capacity(schedule const& sched,
     for (auto const& [grp, grp_probability] : additional_groups) {
       add_additional_group(pdf, grp->passengers_, grp_probability);
     }
-    if (load_factor_possibly_ge(pdf, capacity, 1.0f)) {
+    if (load_factor_possibly_ge(pdf, capacity, 1.0F)) {
       oci.over_capacity_edges_[e] = edge_over_capacity_info{get_cdf(pdf)};
       for (auto const& trp : e->get_trips(sched)) {
         oci.over_capacity_trips_[trp].emplace_back(e);

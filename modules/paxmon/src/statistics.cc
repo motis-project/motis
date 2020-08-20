@@ -20,7 +20,7 @@ graph_statistics calc_graph_statistics(schedule const& sched,
     }
     stats.edges_ += n->outgoing_edges(data.graph_).size();
     for (auto const& e : n->outgoing_edges(data.graph_)) {
-      switch (e->type_) {
+      switch (e->type()) {
         case edge_type::TRIP: {
           ++stats.trip_edges_;
           auto const& edge_trips = e->get_trips(sched);
@@ -29,6 +29,7 @@ graph_statistics calc_graph_statistics(schedule const& sched,
         }
         case edge_type::INTERCHANGE: ++stats.interchange_edges_; break;
         case edge_type::WAIT: ++stats.wait_edges_; break;
+        case edge_type::THROUGH: ++stats.through_edges_; break;
       }
       if (e->is_canceled(data.graph_)) {
         ++stats.canceled_edges_;

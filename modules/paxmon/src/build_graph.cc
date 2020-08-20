@@ -33,8 +33,7 @@ inline duration get_transfer_duration(std::optional<transfer_info> const& ti) {
 }
 
 void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
-                                  passenger_group& grp,
-                                  build_graph_stats& stats) {
+                                  passenger_group& grp) {
   event_node* exit_node = nullptr;
   trip_data* last_trip = nullptr;
 
@@ -95,7 +94,7 @@ build_graph_stats build_graph_from_journeys(schedule const& sched,
   auto stats = build_graph_stats{};
   for (auto& pg : data.graph_.passenger_groups_) {
     try {
-      add_passenger_group_to_graph(sched, data, *pg, stats);
+      add_passenger_group_to_graph(sched, data, *pg);
     } catch (std::system_error const& e) {
       LOG(motis::logging::error)
           << "could not add passenger group: " << e.what();

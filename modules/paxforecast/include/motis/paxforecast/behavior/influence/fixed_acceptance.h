@@ -24,13 +24,13 @@ struct fixed_acceptance {
       return;
     }
     auto const recommended_index = recommended.value();
-    if (probabilities[recommended_index] == 1.0f) {
+    if (probabilities[recommended_index] == 1.0F) {
       return;
     }
     auto const other_probabilities_sum =
-        1.0f - probabilities[recommended_index];
+        1.0F - probabilities[recommended_index];
 
-    auto const other_acceptance_rate = 1.0f - acceptance_rate_;
+    auto const other_acceptance_rate = 1.0F - acceptance_rate_;
     probabilities[recommended_index] = acceptance_rate_;
     for (auto i = 0ULL; i < alternatives.size(); ++i) {
       if (i != recommended_index) {

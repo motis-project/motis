@@ -120,9 +120,10 @@ void print_graph_stats(graph_statistics const& graph_stats) {
                            graph_stats.nodes_, graph_stats.canceled_nodes_);
   LOG(info) << fmt::format(
       "{:n} graph edges ({:n} canceled): {:n} trip + {:n} interchange + {:n} "
-      "wait",
+      "wait + {:n} through",
       graph_stats.edges_, graph_stats.canceled_edges_, graph_stats.trip_edges_,
-      graph_stats.interchange_edges_, graph_stats.wait_edges_);
+      graph_stats.interchange_edges_, graph_stats.wait_edges_,
+      graph_stats.through_edges_);
   LOG(info) << fmt::format("{:n} stations", graph_stats.stations_);
   LOG(info) << fmt::format("{:n} trips", graph_stats.trips_);
   LOG(info) << fmt::format("over capacity: {:n} trips, {:n} edges",
@@ -178,7 +179,7 @@ void paxmon::load_journeys() {
                                initial_over_capacity_report_file_);
   }
   if (!initial_broken_report_file_.empty()) {
-    write_broken_interchanges_report(data_, sched, initial_broken_report_file_);
+    write_broken_interchanges_report(data_, initial_broken_report_file_);
   }
 }
 
@@ -334,7 +335,7 @@ void paxmon::rt_updates_applied() {
 
     for (auto const pg : data_.groups_affected_by_last_update_) {
       auto const reachability =
-          get_reachability(data_, sched, pg->compact_planned_journey_);
+          get_reachability(data_, pg->compact_planned_journey_);
       pg->ok_ = reachability.ok_;
 
       auto const localization = localize(sched, reachability, search_time);
