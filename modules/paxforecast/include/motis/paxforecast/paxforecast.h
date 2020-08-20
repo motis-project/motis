@@ -1,5 +1,6 @@
 #pragma once
 
+#include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -24,6 +25,9 @@ struct paxforecast : public motis::module::module {
 
 private:
   void on_monitoring_event(motis::module::msg_ptr const& msg);
+
+  std::string forecast_filename_{};
+  std::ofstream forecast_file_;
 };
 
 }  // namespace motis::paxforecast

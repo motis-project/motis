@@ -36,12 +36,20 @@ using namespace motis::paxmon;
 
 namespace motis::paxforecast {
 
-paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {}
+paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
+  param(forecast_filename_, "forecast_results",
+        "output file for forecast messages");
+}
 
 paxforecast::~paxforecast() = default;
 
 void paxforecast::init(motis::module::registry& reg) {
   LOG(info) << "passenger forecast module loaded";
+
+  if (!forecast_filename_.empty()) {
+    forecast_file_.exceptions(std::ios_base::failbit | std::ios_base::badbit);
+    forecast_file_.open(forecast_filename_);
+  }
 
   reg.subscribe("/paxmon/monitoring_update", [&](msg_ptr const& msg) {
     on_monitoring_event(msg);
@@ -137,6 +145,10 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
   auto const forecast_msg =
       make_passenger_forecast_msg(sched, data, sim_result, over_capacity_infos);
+
+  if (forecast_file_.is_open()) {
+    forecast_file_ << forecast_msg->to_json(true) << std::endl;
+  }
 
   ctx::await_all(motis_publish(forecast_msg));
 }
