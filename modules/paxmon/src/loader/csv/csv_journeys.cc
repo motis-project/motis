@@ -277,20 +277,19 @@ std::optional<transfer_info> get_transfer_info(
     return {};
   }
   if (*prev_leg.to_station_idx_ == enter_station_idx) {
-    auto const journey_ic =
-        static_cast<duration>(enter_time - prev_leg.exit_time_);
     return transfer_info{
-        std::min(static_cast<duration>(
-                     sched.stations_[enter_station_idx]->transfer_time_),
-                 journey_ic),
+        static_cast<duration>(
+            sched.stations_[enter_station_idx]->transfer_time_),
         transfer_info::type::SAME_STATION};
   } else {
-    auto const walk_duration =
-        get_footpath_duration(sched, *prev_leg.to_station_idx_,
-                              enter_station_idx)
-            .value_or(enter_time - prev_leg.exit_time_);
-    return transfer_info{static_cast<duration>(walk_duration),
-                         transfer_info::type::FOOTPATH};
+    auto const walk_duration = get_footpath_duration(
+        sched, *prev_leg.to_station_idx_, enter_station_idx);
+    if (walk_duration) {
+      return transfer_info{static_cast<duration>(*walk_duration),
+                           transfer_info::type::FOOTPATH};
+    } else {
+      return {};
+    }
   }
 }
 
@@ -351,6 +350,7 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
   auto journeys_with_no_valid_legs = 0ULL;
   auto journeys_with_inexact_matches = 0ULL;
   auto journeys_with_missing_trips = 0ULL;
+  auto journeys_with_missing_transfers = 0ULL;
 
   auto buf = utl::file(journey_file.data(), "r").content();
   auto const file_content = utl::cstr{buf.data(), buf.size()};
@@ -381,7 +381,11 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
         std::all_of(std::next(begin(current_input_legs), start_idx),
                     std::next(begin(current_input_legs), end_idx),
                     [](auto const& leg) { return leg.trip_found(); });
-    if (all_trips_found) {
+    auto const missing_transfer_infos = std::any_of(
+        std::next(begin(current_input_legs), start_idx + 1),
+        std::next(begin(current_input_legs), end_idx),
+        [](auto const& leg) { return !leg.enter_transfer_.has_value(); });
+    if (all_trips_found && !missing_transfer_infos) {
       ++journey_count;
       auto const id =
           static_cast<std::uint64_t>(data.graph_.passenger_groups_.size());
@@ -390,6 +394,7 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
           utl::to_vec(std::next(begin(current_input_legs), start_idx),
                       std::next(begin(current_input_legs), end_idx),
                       [&](auto const& leg) { return leg.to_journey_leg(); });
+      current_journey.legs_.front().enter_transfer_ = {};
       data.graph_.passenger_groups_.emplace_back(
           std::make_unique<passenger_group>(passenger_group{
               current_journey, id,
@@ -397,7 +402,12 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
               current_passengers}));
     } else {
       // TODO(pablo): reroute
-      ++journeys_with_missing_trips;
+      if (!all_trips_found) {
+        ++journeys_with_missing_trips;
+      }
+      if (missing_transfer_infos) {
+        ++journeys_with_missing_transfers;
+      }
     }
   };
 
@@ -473,6 +483,8 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
   LOG(info) << journeys_with_inexact_matches
             << " journeys with inexact matches";
   LOG(info) << journeys_with_missing_trips << " journeys with missing trips";
+  LOG(info) << journeys_with_missing_transfers
+            << " journeys with missing transfers";
 
   return journey_count;
 }
