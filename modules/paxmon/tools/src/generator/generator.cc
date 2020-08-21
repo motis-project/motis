@@ -15,7 +15,7 @@
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/message_to_journeys.h"
 
-#include "motis/paxmon/tools/convert/journey_converter.h"
+#include "motis/paxmon/output/journey_converter.h"
 #include "motis/paxmon/tools/generator/query_generator.h"
 #include "motis/paxmon/tools/groups/group_generator.h"
 
@@ -24,7 +24,7 @@ using namespace motis::bootstrap;
 using namespace motis::module;
 using namespace motis::routing;
 using namespace motis::paxmon::tools::generator;
-using namespace motis::paxmon::tools::convert;
+using namespace motis::paxmon::output;
 using namespace motis::paxmon::tools::groups;
 
 struct generator_settings : public conf::configuration {

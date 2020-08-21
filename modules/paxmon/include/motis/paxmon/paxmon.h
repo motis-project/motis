@@ -49,6 +49,7 @@ private:
   conf::holder<std::time_t> end_time_{};
   int time_step_{60};
   std::uint16_t match_tolerance_{0};
+  bool reroute_unmatched_{false};
 
   paxmon_data data_;
   system_statistics system_stats_;

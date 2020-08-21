@@ -1,4 +1,4 @@
-#include "motis/paxmon/tools/convert/journey_converter.h"
+#include "motis/paxmon/output/journey_converter.h"
 
 #include <optional>
 
@@ -7,7 +7,7 @@
 
 #include "motis/paxmon/loader/journeys/journey_access.h"
 
-namespace motis::paxmon::tools::convert {
+namespace motis::paxmon::output {
 
 journey::transport const* get_journey_transport(journey const& j,
                                                 std::size_t enter_stop_idx,
@@ -99,4 +99,4 @@ void journey_converter::write_journey(const journey& j,
       });
 }
 
-}  // namespace motis::paxmon::tools::convert
+}  // namespace motis::paxmon::output

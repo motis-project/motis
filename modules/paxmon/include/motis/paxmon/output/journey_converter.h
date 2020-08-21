@@ -7,7 +7,7 @@
 
 #include "motis/paxmon/csv_writer.h"
 
-namespace motis::paxmon::tools::convert {
+namespace motis::paxmon::output {
 
 struct journey_converter {
   explicit journey_converter(std::string const& output_path);
@@ -25,4 +25,4 @@ void for_each_leg(journey const& j,
                   std::function<void(journey::stop const&,
                                      journey::stop const&)> const& foot_cb);
 
-}  // namespace motis::paxmon::tools::convert
+}  // namespace motis::paxmon::output

@@ -269,7 +269,7 @@ std::optional<time> get_footpath_duration(schedule const& sched,
 std::optional<transfer_info> get_transfer_info(
     schedule const& sched,
     std::vector<input_journey_leg> const& partial_journey,
-    std::uint32_t enter_station_idx, time enter_time) {
+    std::uint32_t enter_station_idx) {
   if (partial_journey.size() < 2) {
     return {};
   }
@@ -371,6 +371,8 @@ loader_result load_journeys(schedule const& sched, paxmon_data& data,
     if (start_idx == end_idx) {
       return;
     }
+    auto const source =
+        data_source{current_id.value().first, current_id.value().second};
     auto const inexact_time = std::any_of(
         std::next(begin(current_input_legs), start_idx),
         std::next(begin(current_input_legs), end_idx),
@@ -414,9 +416,7 @@ loader_result load_journeys(schedule const& sched, paxmon_data& data,
       current_journey.legs_.front().enter_transfer_ = {};
       data.graph_.passenger_groups_.emplace_back(
           std::make_unique<passenger_group>(passenger_group{
-              current_journey, id,
-              data_source{current_id.value().first, current_id.value().second},
-              current_passengers}));
+              current_journey, id, source, current_passengers}));
     } else {
       if (!all_trips_found) {
         ++journeys_with_missing_trips;
@@ -431,7 +431,7 @@ loader_result load_journeys(schedule const& sched, paxmon_data& data,
       auto const& last_leg = current_input_legs.at(end_idx - 1);
       result.unmatched_journeys_.emplace_back(unmatched_journey{
           first_leg.from_station_idx_.value(), last_leg.to_station_idx_.value(),
-          first_leg.enter_time_});
+          first_leg.enter_time_, source, current_passengers});
     }
   };
 
@@ -491,9 +491,8 @@ loader_result load_journeys(schedule const& sched, paxmon_data& data,
               sched, leg.from_station_idx_.value(), leg.to_station_idx_.value(),
               leg.enter_time_, leg.exit_time_, row.train_nr_.val(),
               match_tolerance);
-          leg.enter_transfer_ =
-              get_transfer_info(sched, current_input_legs,
-                                leg.from_station_idx_.value(), leg.enter_time_);
+          leg.enter_transfer_ = get_transfer_info(
+              sched, current_input_legs, leg.from_station_idx_.value());
         }
         write_match_log(match_log, sched, leg, current_id, row,
                         current_input_legs, debug_match_tolerance);

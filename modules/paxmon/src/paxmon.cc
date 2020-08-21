@@ -1,7 +1,7 @@
 #include "motis/paxmon/paxmon.h"
 
 #include <algorithm>
-#include <fstream>
+#include <memory>
 #include <numeric>
 #include <set>
 
@@ -9,10 +9,13 @@
 
 #include "fmt/format.h"
 
+#include "utl/to_vec.h"
 #include "utl/verify.h"
+#include "utl/zip.h"
 
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
+#include "motis/core/journey/message_to_journeys.h"
 #include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
@@ -27,6 +30,7 @@
 #include "motis/paxmon/localization.h"
 #include "motis/paxmon/messages.h"
 #include "motis/paxmon/monitoring_event.h"
+#include "motis/paxmon/output/journey_converter.h"
 #include "motis/paxmon/over_capacity_report.h"
 #include "motis/paxmon/reachability.h"
 #include "motis/paxmon/update_load.h"
@@ -51,8 +55,9 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
         "initial over capacity report file");
   param(initial_broken_report_file_, "broken_report",
         "initial broken interchanges report file");
+  param(reroute_unmatched_, "reroute_unmatched", "reroute unmatched journeys");
   param(initial_reroute_query_file_, "reroute_file",
-        "output file for initial reroute queries");
+        "output file for initial rerouted journeys");
   param(initial_reroute_router_, "reroute_router",
         "router for initial reroute queries");
   param(start_time_, "start_time", "evaluation start time");
@@ -204,19 +209,41 @@ void paxmon::load_journeys() {
   }
 
   {
-    std::ofstream reroute_file;
-    if (!initial_reroute_query_file_.empty()) {
-      reroute_file.exceptions(std::ios::failbit | std::ios::badbit);
-      reroute_file.open(initial_reroute_query_file_);
+    std::unique_ptr<output::journey_converter> converter;
+    if (reroute_unmatched_ && !initial_reroute_query_file_.empty()) {
+      converter = std::make_unique<output::journey_converter>(
+          initial_reroute_query_file_);
     }
     for (auto const& file : journey_files_) {
       auto const result = load_journeys(file);
-      if (reroute_file.is_open()) {
-        for (auto const& uj : result.unmatched_journeys_) {
-          reroute_file << initial_reroute_query(sched, uj,
-                                                initial_reroute_router_)
-                              ->to_json(true)
-                       << "\n";
+      if (reroute_unmatched_) {
+        scoped_timer timer{"reroute unmatched journeys"};
+        LOG(info) << "routing " << result.unmatched_journeys_.size()
+                  << " unmatched journeys using " << initial_reroute_router_
+                  << "...";
+        auto const futures =
+            utl::to_vec(result.unmatched_journeys_, [&](auto const& uj) {
+              return motis_call(
+                  initial_reroute_query(sched, uj, initial_reroute_router_));
+            });
+        ctx::await_all(futures);
+        LOG(info) << "adding replacement journeys...";
+        for (auto const& [uj, fut] :
+             utl::zip(result.unmatched_journeys_, futures)) {
+          auto const rr_msg = fut->val();
+          auto const rr = motis_content(RoutingResponse, rr_msg);
+          auto const journeys = message_to_journeys(rr);
+          if (journeys.empty()) {
+            continue;
+          }
+          // TODO(pablo): select journey(s)
+          if (converter) {
+            converter->write_journey(journeys.front(), uj.source_.primary_ref_,
+                                     uj.source_.secondary_ref_, uj.passengers_);
+          }
+          loader::journeys::load_journey(sched, data_, journeys.front(),
+                                         uj.source_, uj.passengers_,
+                                         group_source_flags::MATCH_REROUTED);
         }
       }
     }

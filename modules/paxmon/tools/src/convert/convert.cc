@@ -8,13 +8,13 @@
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/module/message.h"
 
-#include "motis/paxmon/tools/convert/journey_converter.h"
+#include "motis/paxmon/output/journey_converter.h"
 
 using namespace motis;
 using namespace motis::module;
 using namespace motis::routing;
 using namespace motis::paxmon;
-using namespace motis::paxmon::tools::convert;
+using namespace motis::paxmon::output;
 
 namespace fs = boost::filesystem;
 
