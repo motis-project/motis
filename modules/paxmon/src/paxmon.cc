@@ -1,6 +1,7 @@
 #include "motis/paxmon/paxmon.h"
 
 #include <algorithm>
+#include <fstream>
 #include <numeric>
 #include <set>
 
@@ -50,6 +51,10 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
         "initial over capacity report file");
   param(initial_broken_report_file_, "broken_report",
         "initial broken interchanges report file");
+  param(initial_reroute_query_file_, "reroute_file",
+        "output file for initial reroute queries");
+  param(initial_reroute_router_, "reroute_router",
+        "router for initial reroute queries");
   param(start_time_, "start_time", "evaluation start time");
   param(end_time_, "end_time", "evaluation end time");
   param(time_step_, "time_step", "evaluation time step (seconds)");
@@ -134,27 +139,60 @@ void print_graph_stats(graph_statistics const& graph_stats) {
                            graph_stats.broken_passenger_groups_);
 }
 
-std::size_t paxmon::load_journeys(std::string const& file) {
+loader::loader_result paxmon::load_journeys(std::string const& file) {
   auto const journey_path = fs::path{file};
   if (!fs::exists(journey_path)) {
     LOG(warn) << "journey file not found: " << file;
-    return 0;
+    return {};
   }
   auto const& sched = get_schedule();
-  std::size_t loaded = 0;
+  auto result = loader::loader_result{};
   if (journey_path.extension() == ".txt") {
     scoped_timer journey_timer{"load motis journeys"};
-    loaded = loader::journeys::load_journeys(sched, data_, file);
+    result = loader::journeys::load_journeys(sched, data_, file);
   } else if (journey_path.extension() == ".csv") {
     scoped_timer journey_timer{"load csv journeys"};
-    loaded = loader::csv::load_journeys(
+    result = loader::csv::load_journeys(
         sched, data_, file, journey_match_log_file_, match_tolerance_);
   } else {
     LOG(logging::error) << "paxmon: unknown journey file type: " << file;
   }
-  LOG(loaded != 0 ? info : warn)
-      << "loaded " << loaded << " journeys from " << file;
-  return loaded;
+  LOG(result.loaded_journeys_ != 0 ? info : warn)
+      << "loaded " << result.loaded_journeys_ << " journeys from " << file;
+  return result;
+}
+
+msg_ptr initial_reroute_query(schedule const& sched,
+                              loader::unmatched_journey const& uj,
+                              std::string const& router) {
+  message_creator fbb;
+  auto const planned_departure =
+      motis_to_unixtime(sched.schedule_begin_, uj.departure_time_);
+  auto const interval = Interval{planned_departure - 2 * 60 * 60,
+                                 planned_departure + 2 * 60 * 60};
+  auto const& start_station = sched.stations_.at(uj.start_station_idx_);
+  auto const& destination_station =
+      sched.stations_.at(uj.destination_station_idx_);
+  fbb.create_and_finish(
+      MsgContent_RoutingRequest,
+      CreateRoutingRequest(
+          fbb, Start_PretripStart,
+          CreatePretripStart(
+              fbb,
+              CreateInputStation(fbb, fbb.CreateString(start_station->eva_nr_),
+                                 fbb.CreateString(start_station->name_)),
+              &interval)
+              .Union(),
+          CreateInputStation(fbb,
+                             fbb.CreateString(destination_station->eva_nr_),
+                             fbb.CreateString(destination_station->name_)),
+          SearchType_Default, SearchDir_Forward,
+          fbb.CreateVector(std::vector<flatbuffers::Offset<Via>>{}),
+          fbb.CreateVector(
+              std::vector<flatbuffers::Offset<AdditionalEdgeWrapper>>{}))
+          .Union(),
+      router);
+  return make_msg(fbb);
 }
 
 void paxmon::load_journeys() {
@@ -165,8 +203,23 @@ void paxmon::load_journeys() {
     return;
   }
 
-  for (auto const& file : journey_files_) {
-    load_journeys(file);
+  {
+    std::ofstream reroute_file;
+    if (!initial_reroute_query_file_.empty()) {
+      reroute_file.exceptions(std::ios::failbit | std::ios::badbit);
+      reroute_file.open(initial_reroute_query_file_);
+    }
+    for (auto const& file : journey_files_) {
+      auto const result = load_journeys(file);
+      if (reroute_file.is_open()) {
+        for (auto const& uj : result.unmatched_journeys_) {
+          reroute_file << initial_reroute_query(sched, uj,
+                                                initial_reroute_router_)
+                              ->to_json(true)
+                       << "\n";
+        }
+      }
+    }
   }
 
   build_graph_from_journeys(sched, data_);

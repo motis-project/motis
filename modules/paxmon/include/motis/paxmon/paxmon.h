@@ -10,6 +10,7 @@
 
 #include "motis/module/module.h"
 
+#include "motis/paxmon/loader/loader_result.h"
 #include "motis/paxmon/paxmon_data.h"
 #include "motis/paxmon/statistics.h"
 #include "motis/paxmon/stats_writer.h"
@@ -30,7 +31,7 @@ struct paxmon : public motis::module::module {
 
 private:
   void load_journeys();
-  std::size_t load_journeys(std::string const& file);
+  loader::loader_result load_journeys(std::string const& file);
   void load_capacity_files();
   motis::module::msg_ptr rt_update(motis::module::msg_ptr const& msg);
   void rt_updates_applied();
@@ -42,6 +43,8 @@ private:
   std::string journey_match_log_file_{};
   std::string initial_over_capacity_report_file_{};
   std::string initial_broken_report_file_{};
+  std::string initial_reroute_query_file_{};
+  std::string initial_reroute_router_{"/tripbased"};
   conf::holder<std::time_t> start_time_{};
   conf::holder<std::time_t> end_time_{};
   int time_step_{60};

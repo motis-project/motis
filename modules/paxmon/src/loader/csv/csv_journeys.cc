@@ -341,12 +341,12 @@ void write_match_log(
   }
 }
 
-std::size_t load_journeys(schedule const& sched, paxmon_data& data,
-                          std::string const& journey_file,
-                          std::string const& match_log_file,
-                          duration const match_tolerance) {
+loader_result load_journeys(schedule const& sched, paxmon_data& data,
+                            std::string const& journey_file,
+                            std::string const& match_log_file,
+                            duration const match_tolerance) {
   auto const debug_match_tolerance = match_tolerance + 60;
-  std::size_t journey_count = 0ULL;
+  auto result = loader_result{};
   auto journeys_with_invalid_legs = 0ULL;
   auto journeys_with_no_valid_legs = 0ULL;
   auto journeys_with_inexact_matches = 0ULL;
@@ -403,7 +403,7 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
     }
 
     if (all_trips_found && !missing_transfer_infos && !invalid_transfer_times) {
-      ++journey_count;
+      ++result.loaded_journeys_;
       auto const id =
           static_cast<std::uint64_t>(data.graph_.passenger_groups_.size());
       auto current_journey = compact_journey{};
@@ -418,7 +418,6 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
               data_source{current_id.value().first, current_id.value().second},
               current_passengers}));
     } else {
-      // TODO(pablo): reroute
       if (!all_trips_found) {
         ++journeys_with_missing_trips;
       }
@@ -428,6 +427,11 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
       if (invalid_transfer_times) {
         ++journeys_with_invalid_transfer_times;
       }
+      auto const& first_leg = current_input_legs.at(start_idx);
+      auto const& last_leg = current_input_legs.at(end_idx - 1);
+      result.unmatched_journeys_.emplace_back(unmatched_journey{
+          first_leg.from_station_idx_.value(), last_leg.to_station_idx_.value(),
+          first_leg.enter_time_});
     }
   };
 
@@ -497,7 +501,7 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
 
   finish_journey();
 
-  LOG(info) << "loaded " << journey_count << " journeys";
+  LOG(info) << "loaded " << result.loaded_journeys_ << " journeys";
   LOG(info) << journeys_with_invalid_legs << " journeys with some invalid legs";
   LOG(info) << journeys_with_no_valid_legs << " journeys with no valid legs";
   LOG(info) << journeys_with_inexact_matches
@@ -507,8 +511,9 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
             << " journeys with missing transfers";
   LOG(info) << journeys_with_invalid_transfer_times
             << " journeys with invalid transfer times";
+  LOG(info) << result.unmatched_journeys_.size() << " unmatched journeys";
 
-  return journey_count;
+  return result;
 }
 
 }  // namespace motis::paxmon::loader::csv
