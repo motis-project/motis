@@ -13,6 +13,7 @@
 
 #include "fmt/ostream.h"
 
+#include "utl/nwise.h"
 #include "utl/parser/buf_reader.h"
 #include "utl/parser/csv_range.h"
 #include "utl/parser/file.h"
@@ -351,6 +352,7 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
   auto journeys_with_inexact_matches = 0ULL;
   auto journeys_with_missing_trips = 0ULL;
   auto journeys_with_missing_transfers = 0ULL;
+  auto journeys_with_invalid_transfer_times = 0ULL;
 
   auto buf = utl::file(journey_file.data(), "r").content();
   auto const file_content = utl::cstr{buf.data(), buf.size()};
@@ -381,11 +383,26 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
         std::all_of(std::next(begin(current_input_legs), start_idx),
                     std::next(begin(current_input_legs), end_idx),
                     [](auto const& leg) { return leg.trip_found(); });
+
     auto const missing_transfer_infos = std::any_of(
         std::next(begin(current_input_legs), start_idx + 1),
         std::next(begin(current_input_legs), end_idx),
         [](auto const& leg) { return !leg.enter_transfer_.has_value(); });
-    if (all_trips_found && !missing_transfer_infos) {
+
+    auto invalid_transfer_times = false;
+    if (!missing_transfer_infos) {
+      for (auto const& [l1, l2] :
+           utl::nwise_range<2, decltype(begin(current_input_legs))>{
+               std::next(begin(current_input_legs), start_idx),
+               std::next(begin(current_input_legs), end_idx)}) {
+        if (l2.enter_time_ < l1.exit_time_ ||
+            (l2.enter_time_ - l1.exit_time_) < l2.enter_transfer_->duration_) {
+          invalid_transfer_times = true;
+        }
+      }
+    }
+
+    if (all_trips_found && !missing_transfer_infos && !invalid_transfer_times) {
       ++journey_count;
       auto const id =
           static_cast<std::uint64_t>(data.graph_.passenger_groups_.size());
@@ -407,6 +424,9 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
       }
       if (missing_transfer_infos) {
         ++journeys_with_missing_transfers;
+      }
+      if (invalid_transfer_times) {
+        ++journeys_with_invalid_transfer_times;
       }
     }
   };
@@ -485,6 +505,8 @@ std::size_t load_journeys(schedule const& sched, paxmon_data& data,
   LOG(info) << journeys_with_missing_trips << " journeys with missing trips";
   LOG(info) << journeys_with_missing_transfers
             << " journeys with missing transfers";
+  LOG(info) << journeys_with_invalid_transfer_times
+            << " journeys with invalid transfer times";
 
   return journey_count;
 }
