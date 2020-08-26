@@ -40,11 +40,17 @@ table RtFreeTextUpdate {
   free_text: FreeText;
 }
 
+table RtStationAdded {
+  id: string;
+  name: string;
+}
+
 union Content {
   RtDelayUpdate,
   RtRerouteUpdate,
   RtTrackUpdate,
-  RtFreeTextUpdate
+  RtFreeTextUpdate,
+  RtStationAdded
 }
 
 table RtUpdate{

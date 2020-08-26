@@ -23,7 +23,8 @@ struct lower_bounds {
                    additional_transfers_edges)
       : travel_time_(travel_time_graph, goals, additional_travel_time_edges),
         transfers_(transfers_graph, goals, additional_transfers_edges,
-                   map_interchange_graph_node(sched.station_nodes_.size())) {}
+                   map_interchange_graph_node(sched.non_station_node_offset_)) {
+  }
 
   constant_graph_dijkstra<MAX_TRAVEL_TIME, map_station_graph_node> travel_time_;
   constant_graph_dijkstra<MAX_TRANSFERS, map_interchange_graph_node> transfers_;

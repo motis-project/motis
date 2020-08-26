@@ -13,9 +13,11 @@ namespace motis::rt {
 inline void validate_constant_graph(schedule const& sched) {
   motis::logging::manual_timer lb_update("calculating full lower bound graphs");
   auto const full_transfers_lower_bounds_fwd = build_interchange_graph(
-      sched.station_nodes_, sched.route_count_, search_dir::FWD);
+      sched.station_nodes_, sched.non_station_node_offset_, sched.route_count_,
+      search_dir::FWD);
   auto const full_transfers_lower_bounds_bwd = build_interchange_graph(
-      sched.station_nodes_, sched.route_count_, search_dir::BWD);
+      sched.station_nodes_, sched.non_station_node_offset_, sched.route_count_,
+      search_dir::BWD);
   auto const full_travel_time_lower_bounds_fwd =
       build_station_graph(sched.station_nodes_, search_dir::FWD);
   auto const full_travel_time_lower_bounds_bwd =

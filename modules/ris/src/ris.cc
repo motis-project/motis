@@ -1,13 +1,12 @@
 #include "motis/ris/ris.h"
 
-#include <motis/core/conv/trip_conv.h>
-#include <utl/parser/file.h>
 #include <atomic>
 #include <optional>
 
 #include "boost/filesystem.hpp"
 
 #include "utl/concat.h"
+#include "utl/parser/file.h"
 
 #include "conf/date_time.h"
 
@@ -20,12 +19,14 @@
 #include "lmdb/lmdb.hpp"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/access/time_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/print_trip.h"
 #include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
 #include "motis/ris/gtfs-rt/gtfsrt_parser.h"
+#include "motis/ris/ribasis/ribasis_parser.h"
 #include "motis/ris/ris_message.h"
 #include "motis/ris/risml/risml_parser.h"
 #include "motis/ris/zip_reader.h"
@@ -222,6 +223,7 @@ struct ris::impl {
   bool instant_forward_{false};
   risml::risml_parser risml_parser_;
   gtfsrt::gtfsrt_parser gtfsrt_parser_;
+  ribasis::ribasis_parser ribasis_parser_;
 
   impl() = default;
   ~impl() = default;
@@ -283,10 +285,16 @@ private:
 
   void forward(time_t const to) {
     auto const& sched = get_schedule();
-    auto const first_schedule_event_day = floor(
-        sched.first_event_schedule_time_, static_cast<time_t>(SECONDS_A_DAY));
-    auto const last_schedule_event_day = ceil(
-        sched.last_event_schedule_time_, static_cast<time_t>(SECONDS_A_DAY));
+    auto const first_schedule_event_day =
+        sched.first_event_schedule_time_ != std::numeric_limits<time_t>::max()
+            ? floor(sched.first_event_schedule_time_,
+                    static_cast<time_t>(SECONDS_A_DAY))
+            : external_schedule_begin(sched);
+    auto const last_schedule_event_day =
+        sched.last_event_schedule_time_ != std::numeric_limits<time_t>::min()
+            ? ceil(sched.last_event_schedule_time_,
+                   static_cast<time_t>(SECONDS_A_DAY))
+            : external_schedule_end(sched);
     auto const min_timestamp =
         get_min_timestamp(first_schedule_event_day, last_schedule_event_day);
     if (min_timestamp) {
@@ -306,7 +314,6 @@ private:
     auto bucket = c.get(db::cursor_op::SET_RANGE, from);
     auto batch_begin = bucket ? bucket->first : 0;
     publisher pub;
-    auto const& sched = get_schedule();
     while (true) {
       if (!bucket) {
         LOG(info) << "end of db reached";
@@ -332,9 +339,7 @@ private:
         utl::verify(ptr + size <= end, "ris: ptr + size > end");
 
         if (auto const msg = GetMessage(ptr);
-            msg->timestamp() <= to && msg->timestamp() >= from &&
-            msg->earliest() <= sched.last_event_schedule_time_ &&
-            msg->latest() >= sched.first_event_schedule_time_) {
+            msg->timestamp() <= to && msg->timestamp() >= from) {
           pub.add(reinterpret_cast<uint8_t const*>(ptr), size);
         }
 
@@ -377,7 +382,7 @@ private:
     return min != max ? std::make_optional(min) : std::nullopt;
   }
 
-  enum class file_type { NONE, ZST, ZIP, XML, PROTOBUF };
+  enum class file_type { NONE, ZST, ZIP, XML, PROTOBUF, JSON };
 
   static file_type get_file_type(fs::path const& p) {
     if (p.extension() == ".zst") {
@@ -388,6 +393,8 @@ private:
       return file_type::XML;
     } else if (p.extension() == ".pb") {
       return file_type::PROTOBUF;
+    } else if (p.extension() == ".json") {
+      return file_type::JSON;
     } else {
       return file_type::NONE;
     }
@@ -460,13 +467,20 @@ private:
     using tar_zst = tar_reader<zstd_reader>;
     auto const& cp = p.generic_string();
 
-    auto risml_fn = [this](std::string_view s,
-                           std::function<void(ris_message &&)> const& cb) {
+    auto const risml_fn = [this](
+                              std::string_view s,
+                              std::function<void(ris_message &&)> const& cb) {
       risml_parser_.to_ris_message(s, cb);
     };
-    auto gtfsrt_fn = [this](std::string_view s,
-                            std::function<void(ris_message &&)> const& cb) {
+    auto const gtfsrt_fn = [this](
+                               std::string_view s,
+                               std::function<void(ris_message &&)> const& cb) {
       gtfsrt_parser_.to_ris_message(s, cb);
+    };
+    auto const ribasis_fn = [this](
+                                std::string_view s,
+                                std::function<void(ris_message &&)> const& cb) {
+      ribasis_parser_.to_ris_message(s, cb);
     };
     try {
       switch (type) {
@@ -481,6 +495,9 @@ private:
           break;
         case file_type::PROTOBUF:
           write_to_db(file_reader(cp.c_str()), gtfsrt_fn, pub);
+          break;
+        case file_type::JSON:
+          write_to_db(file_reader(cp.c_str()), ribasis_fn, pub);
           break;
         default: assert(false);
       }

@@ -277,12 +277,12 @@ inline mcd::vector<trip::route_edge> build_route(
     auto const from_route_node =
         prev_route_node != nullptr
             ? prev_route_node
-            : build_route_node(sched, route_id, sched.node_count_++, s.from_,
+            : build_route_node(sched, route_id, sched.next_node_id_++, s.from_,
                                from_station_transfer_time,
                                s.dep_.in_out_.in_allowed_,
                                s.dep_.in_out_.out_allowed_, incoming);
     auto const to_route_node = build_route_node(
-        sched, route_id, sched.node_count_++, s.to_, to_station_transfer_time,
+        sched, route_id, sched.next_node_id_++, s.to_, to_station_transfer_time,
         s.arr_.in_out_.in_allowed_, s.arr_.in_out_.out_allowed_, incoming);
 
     from_route_node->edges_.push_back(

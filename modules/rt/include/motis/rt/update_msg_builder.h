@@ -24,6 +24,8 @@ struct update_msg_builder {
   void add_track_nodes(ev_key const& k, std::string const& track,
                        motis::time schedule_time);
 
+  void add_station(node_id_t station_idx);
+
   motis::module::msg_ptr finish();
 
   std::size_t delay_count() const { return delay_count_; }

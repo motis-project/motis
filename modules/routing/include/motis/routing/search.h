@@ -50,7 +50,7 @@ struct search {
     mcd::hash_map<unsigned, std::vector<simple_edge>>
         travel_time_lb_graph_edges;
     mcd::hash_map<unsigned, std::vector<simple_edge>> transfers_lb_graph_edges;
-    auto const route_offset = q.sched_->station_nodes_.size();
+    auto const route_offset = q.sched_->non_station_node_offset_;
     for (auto const& e : q.query_edges_) {
       auto const from_node = (Dir == search_dir::FWD) ? e.from_ : e.to_;
       auto const to_node = (Dir == search_dir::FWD) ? e.to_ : e.from_;
@@ -152,7 +152,7 @@ struct search {
     }
 
     pareto_dijkstra<Dir, Label, lower_bounds> pd(
-        q.sched_->node_count_, q.sched_->stations_.size(), is_goal,
+        q.sched_->next_node_id_, q.sched_->stations_.size(), is_goal,
         std::move(additional_edges), lbs, *q.mem_);
 
     auto const add_start_labels = [&](time interval_begin, time interval_end) {

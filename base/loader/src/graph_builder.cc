@@ -699,7 +699,7 @@ route_section graph_builder::add_route_section(
     section.from_route_node_ = from_route_node;
   } else {
     section.from_route_node_ = build_route_node(
-        route_index, sched_.node_count_++, from_station_node,
+        route_index, sched_.next_node_id_++, from_station_node,
         sched_.stations_[from_station_node->id_]->transfer_time_,
         from_in_allowed, from_out_allowed);
   }
@@ -708,7 +708,7 @@ route_section graph_builder::add_route_section(
     section.to_route_node_ = to_route_node;
   } else {
     section.to_route_node_ =
-        build_route_node(route_index, sched_.node_count_++, to_station_node,
+        build_route_node(route_index, sched_.next_node_id_++, to_station_node,
                          sched_.stations_[to_station_node->id_]->transfer_time_,
                          to_in_allowed, to_out_allowed);
   }
@@ -805,10 +805,12 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
 
   progress_tracker->status("Lower Bounds").out_bounds(96, 100).in_high(4);
   sched->transfers_lower_bounds_fwd_ = build_interchange_graph(
-      sched->station_nodes_, sched->route_count_, search_dir::FWD);
+      sched->station_nodes_, sched->non_station_node_offset_,
+      sched->route_count_, search_dir::FWD);
   progress_tracker->increment();
   sched->transfers_lower_bounds_bwd_ = build_interchange_graph(
-      sched->station_nodes_, sched->route_count_, search_dir::BWD);
+      sched->station_nodes_, sched->non_station_node_offset_,
+      sched->route_count_, search_dir::BWD);
   progress_tracker->increment();
   sched->travel_time_lower_bounds_fwd_ =
       build_station_graph(sched->station_nodes_, search_dir::FWD);
