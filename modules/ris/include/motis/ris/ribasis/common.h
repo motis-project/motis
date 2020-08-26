@@ -93,7 +93,7 @@ T get_parsed_number(rapidjson::Value const& obj, char const* key) {
 }
 
 inline std::time_t get_timestamp(rapidjson::Value const& obj, char const* key,
-                          char const* format = "%FT%T%Ez") {
+                                 char const* format = "%FT%T%Ez") {
   auto const s = get_str(obj, key);
   auto tp = date::sys_time<std::chrono::seconds>{};
   auto ss = std::stringstream{};
@@ -103,8 +103,9 @@ inline std::time_t get_timestamp(rapidjson::Value const& obj, char const* key,
   return tp.time_since_epoch().count();
 }
 
-inline std::time_t get_schedule_timestamp(context& ctx, rapidjson::Value const& obj,
-                                   char const* key) {
+inline std::time_t get_schedule_timestamp(context& ctx,
+                                          rapidjson::Value const& obj,
+                                          char const* key) {
   auto const ts = get_timestamp(obj, key);
   ctx.earliest_ = std::min(ctx.earliest_, ts);
   ctx.latest_ = std::max(ctx.latest_, ts);
