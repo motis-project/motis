@@ -56,24 +56,6 @@ void init_stop_to_connections(csa_timetable& tt) {
   }
 }
 
-bool is_in_allowed(node const* route_node) {
-  for (auto const& e : route_node->incoming_edges_) {
-    if (e->from_->is_station_node() && e->type() != edge::INVALID_EDGE) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool is_out_allowed(node const* route_node) {
-  for (auto const& e : route_node->edges_) {
-    if (e.to_->is_station_node() && e.type() != edge::INVALID_EDGE) {
-      return true;
-    }
-  }
-  return false;
-}
-
 std::vector<uint32_t> get_bucket_starts(
     std::vector<csa_connection>::const_iterator const it_begin,
     std::vector<csa_connection>::const_iterator const it_end,
@@ -159,11 +141,11 @@ trip_id get_connections_from_expanded_trips(
       auto const first_trip = route_trips[0];
       auto const in_allowed =
           utl::to_vec(stops(first_trip), [](trip_stop const& ts) {
-            return is_in_allowed(ts.get_route_node());
+            return ts.get_route_node()->is_in_allowed();
           });
       auto const out_allowed =
           utl::to_vec(stops(first_trip), [](trip_stop const& ts) {
-            return is_out_allowed(ts.get_route_node());
+            return ts.get_route_node()->is_out_allowed();
           });
 
       for (auto const& trp : route_trips) {

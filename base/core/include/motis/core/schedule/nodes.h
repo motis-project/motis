@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <vector>
@@ -76,6 +77,7 @@ struct node {
       return station_node_;
     }
   }
+
   template <typename Fn>
   void for_each_route_node(Fn&& f) const {
     for (auto& edge : edges_) {
@@ -83,6 +85,26 @@ struct node {
         f(edge.to_);
       }
     }
+  }
+
+  bool is_in_allowed() const {
+    assert(is_route_node());
+    for (auto const& e : incoming_edges_) {
+      if (e->from_ == station_node_ && e->type() != edge::INVALID_EDGE) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool is_out_allowed() const {
+    assert(in_route_node());
+    for (auto const& e : edges_) {
+      if (e.to_ == station_node_ && e.type() != edge::INVALID_EDGE) {
+        return true;
+      }
+    }
+    return false;
   }
 
   mcd::indexed_vector<edge> edges_;
