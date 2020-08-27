@@ -95,12 +95,13 @@ T get_parsed_number(rapidjson::Value const& obj, char const* key) {
 inline std::time_t get_timestamp(rapidjson::Value const& obj, char const* key,
                                  char const* format = "%FT%T%Ez") {
   auto const s = get_str(obj, key);
-  auto tp = date::sys_time<std::chrono::seconds>{};
+  auto tp = date::sys_time<std::chrono::nanoseconds>{};
   auto ss = std::stringstream{};
   ss << s;
   ss >> date::parse(format, tp);
   utl::verify(!ss.fail(), "could not parse timestamp ({}): {}", key, s);
-  return tp.time_since_epoch().count();
+  return std::chrono::duration_cast<std::chrono::seconds>(tp.time_since_epoch())
+      .count();
 }
 
 inline std::time_t get_schedule_timestamp(context& ctx,

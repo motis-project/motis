@@ -175,7 +175,7 @@ void ribasis_parser::to_ris_message(
     utl::verify(doc.IsObject(), "no root object");
     auto const& meta = get_obj(doc, "meta");
     auto const& data = get_obj(doc, "data");
-    auto const created_at = get_timestamp(meta, "created", "%FT%H:%M:%5S%Ez");
+    auto const created_at = get_timestamp(meta, "created", "%FT%H:%M:%S%Ez");
     auto ctx = context{created_at};
     auto const ext_trip_ref = get_str(data, "fahrtid");
     auto const trp_id = parse_trip_id(ctx, data);
