@@ -110,7 +110,7 @@ struct ris::impl {
       read_gtfs_trip_ids();
     }
 
-    if (clear_db_) {
+    if (clear_db_ && fs::exists(db_path_)) {
       LOG(info) << "clearing database path " << db_path_;
       fs::remove_all(db_path_);
     }
