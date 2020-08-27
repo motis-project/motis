@@ -44,8 +44,8 @@ Offset<FullTripId> parse_trip_id(context& ctx, rapidjson::Value const& data) {
   auto const start_si = parse_station(ctx, start_stop);
   auto const dest_si = parse_station(ctx, dest_stop);
 
-  auto const start_time = get_timestamp(rel, "startzeit");
-  auto const dest_time = get_timestamp(rel, "zielzeit");
+  auto const start_time = get_schedule_timestamp(ctx, rel, "startzeit");
+  auto const dest_time = get_schedule_timestamp(ctx, rel, "zielzeit");
 
   return CreateFullTripId(
       ctx.b_,
@@ -182,10 +182,6 @@ void ribasis_parser::to_ris_message(
     parse_lines(ctx, data);
     parse_providers(ctx, data);
     auto const sections_data = get_array(data, "allFahrtabschnitt");
-    if (sections_data.Empty()) {
-      // TODO(pablo): NYI
-      return;
-    }
     auto const sections = parse_sections(ctx, sections_data);
     auto const trip_msg = CreateFullTripMessage(
         ctx.b_, trp_id, ctx.b_.CreateString(ext_trip_ref), sections);
