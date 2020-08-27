@@ -152,12 +152,11 @@ Offset<TripSection> parse_section(context& ctx, rapidjson::Value const& sec) {
 }
 
 Offset<Vector<Offset<TripSection>>> parse_sections(
-    context& ctx, rapidjson::Value const& data) {
-  return ctx.b_.CreateVector(
-      utl::to_vec(get_array(data, "allFahrtabschnitt"), [&](auto const& sec) {
-        utl::verify(sec.IsObject(), "invalid allFahrtabschnitt entry");
-        return parse_section(ctx, sec);
-      }));
+    context& ctx, rapidjson::Value::ConstArray const& sections_data) {
+  return ctx.b_.CreateVector(utl::to_vec(sections_data, [&](auto const& sec) {
+    utl::verify(sec.IsObject(), "invalid allFahrtabschnitt entry");
+    return parse_section(ctx, sec);
+  }));
 }
 
 void ribasis_parser::to_ris_message(
@@ -182,12 +181,21 @@ void ribasis_parser::to_ris_message(
     parse_categories(ctx, data);
     parse_lines(ctx, data);
     parse_providers(ctx, data);
-    auto const sections = parse_sections(ctx, data);
+    auto const sections_data = get_array(data, "allFahrtabschnitt");
+    if (sections_data.Empty()) {
+      // TODO(pablo): NYI
+      return;
+    }
+    auto const sections = parse_sections(ctx, sections_data);
     auto const trip_msg = CreateFullTripMessage(
         ctx.b_, trp_id, ctx.b_.CreateString(ext_trip_ref), sections);
     ctx.b_.Finish(CreateMessage(ctx.b_, ctx.earliest_, ctx.latest_,
                                 ctx.timestamp_, MessageUnion_FullTripMessage,
                                 trip_msg.Union()));
+    utl::verify(ctx.earliest_ != std::numeric_limits<std::time_t>::max(),
+                "earliest not set");
+    utl::verify(ctx.latest_ != std::numeric_limits<std::time_t>::min(),
+                "latest not set");
     cb(ris_message{ctx.earliest_, ctx.latest_, ctx.timestamp_,
                    std::move(ctx.b_)});
   } catch (std::runtime_error const& e) {
