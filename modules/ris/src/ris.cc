@@ -3,6 +3,7 @@
 #include <atomic>
 #include <optional>
 
+#include "boost/algorithm/string/predicate.hpp"
 #include "boost/filesystem.hpp"
 
 #include "utl/concat.h"
@@ -167,7 +168,7 @@ struct ris::impl {
     auto const content = motis_content(HTTPRequest, msg)->content();
     auto& sched = get_schedule();
     publisher pub;
-    auto risml_fn = [](std::string_view s,
+    auto risml_fn = [](std::string_view s, std::string_view,
                        std::function<void(ris_message &&)> const& cb) {
       risml::risml_parser::to_ris_message(s, cb);
     };
@@ -468,27 +469,37 @@ private:
     auto const& cp = p.generic_string();
 
     auto const risml_fn = [this](
-                              std::string_view s,
+                              std::string_view s, std::string_view,
                               std::function<void(ris_message &&)> const& cb) {
       risml_parser_.to_ris_message(s, cb);
     };
     auto const gtfsrt_fn = [this](
-                               std::string_view s,
+                               std::string_view s, std::string_view,
                                std::function<void(ris_message &&)> const& cb) {
       gtfsrt_parser_.to_ris_message(s, cb);
     };
     auto const ribasis_fn = [this](
-                                std::string_view s,
+                                std::string_view s, std::string_view,
                                 std::function<void(ris_message &&)> const& cb) {
       ribasis_parser_.to_ris_message(s, cb);
+    };
+    auto const file_fn = [&](std::string_view s, std::string_view file_name,
+                             std::function<void(ris_message &&)> const& cb) {
+      if (boost::ends_with(file_name, ".xml")) {
+        return risml_fn(s, file_name, cb);
+      } else if (boost::ends_with(file_name, ".json")) {
+        return ribasis_fn(s, file_name, cb);
+      } else if (boost::ends_with(file_name, ".pb")) {
+        return gtfsrt_fn(s, file_name, cb);
+      }
     };
     try {
       switch (type) {
         case file_type::ZST:
-          write_to_db(tar_zst(zstd_reader(cp.c_str())), risml_fn, pub);
+          write_to_db(tar_zst(zstd_reader(cp.c_str())), file_fn, pub);
           break;
         case file_type::ZIP:
-          write_to_db(zip_reader(cp.c_str()), risml_fn, pub);
+          write_to_db(zip_reader(cp.c_str()), file_fn, pub);
           break;
         case file_type::XML:
           write_to_db(file_reader(cp.c_str()), risml_fn, pub);
@@ -574,7 +585,8 @@ private:
 
     std::optional<std::string_view> reader_content;
     while ((reader_content = reader.read())) {
-      parse(*reader_content, [&](ris_message&& m) { write(std::move(m)); });
+      parse(*reader_content, reader.current_file_name(),
+            [&](ris_message&& m) { write(std::move(m)); });
     }
 
     flush_to_db();
