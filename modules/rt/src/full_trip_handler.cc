@@ -38,9 +38,8 @@ inline timestamp_reason from_fbs(TimestampType const t) {
   switch (t) {
     case TimestampType_Schedule: return timestamp_reason::SCHEDULE;
     case TimestampType_Is: return timestamp_reason::IS;
+    case TimestampType_Unknown:  // TODO(pablo): ?
     case TimestampType_Forecast: return timestamp_reason::FORECAST;
-    case TimestampType_Unknown:
-      return timestamp_reason::FORECAST;  // TODO(pablo): ?
     default: return timestamp_reason::SCHEDULE;
   }
 }
@@ -66,7 +65,7 @@ struct full_trip_handler {
     }
 
     inline ev_key const& get_ev_key() const {
-      assert(!ev_key_.is_not_null());
+      assert(ev_key_.is_not_null());
       return ev_key_;
     }
   };
