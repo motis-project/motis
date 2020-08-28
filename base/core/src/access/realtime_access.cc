@@ -92,7 +92,7 @@ ev_key const& get_orig_ev_key(schedule const& sched, ev_key const& k) {
   }
 }
 
-int get_schedule_track(schedule const& sched, ev_key const& k) {
+uint16_t get_schedule_track(schedule const& sched, ev_key const& k) {
   auto it = sched.graph_to_track_index_.find(k);
   if (it == end(sched.graph_to_track_index_)) {
     auto const full_con = k.lcon()->full_con_;
