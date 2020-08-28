@@ -76,7 +76,7 @@ struct schedule {
   std::time_t system_time_{0U}, last_update_timestamp_{0U};
   mcd::vector<mcd::unique_ptr<delay_info>> delay_mem_;
   mcd::hash_map<ev_key, ptr<delay_info>> graph_to_delay_info_;
-  mcd::hash_map<ev_key, int32_t> graph_to_track_index_;
+  mcd::hash_map<ev_key, uint16_t> graph_to_schedule_track_index_;
   mcd::hash_map<ev_key, mcd::hash_set<free_text>> graph_to_free_texts_;
   mcd::hash_map<ev_key, mcd::vector<ev_key>> waits_for_trains_;
   mcd::hash_map<ev_key, mcd::vector<ev_key>> trains_wait_for_;

@@ -170,11 +170,11 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
           continue;
         }
 
-        if (auto const it = s.graph_to_track_index_.find(*k);
-            it == s.graph_to_track_index_.end()) {
-          s.graph_to_track_index_[*k] = k->ev_type_ == event_type::ARR
-                                            ? k->lcon()->full_con_->a_track_
-                                            : k->lcon()->full_con_->d_track_;
+        if (auto const it = s.graph_to_schedule_track_index_.find(*k);
+            it == s.graph_to_schedule_track_index_.end()) {
+          s.graph_to_schedule_track_index_[*k] =
+              k->ev_type_ == event_type::ARR ? k->lcon()->full_con_->a_track_
+                                             : k->lcon()->full_con_->d_track_;
         }
 
         auto const ev = msg->events()->Get(i);
