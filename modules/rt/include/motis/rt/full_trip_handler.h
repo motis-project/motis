@@ -25,6 +25,7 @@ struct full_trip_result {
   bool is_new_trip_{};
   bool is_reroute_{};
   unsigned delay_updates_{};
+  unsigned track_updates_{};
 };
 
 full_trip_result handle_full_trip_msg(statistics& stats, schedule& sched,

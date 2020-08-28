@@ -71,8 +71,14 @@ struct full_trip_handler {
   };
 
   struct section {
+    light_connection* lcon() const {
+      assert(lc_ != nullptr);
+      return lc_;
+    }
+
     event_info dep_;
     event_info arr_;
+    light_connection* lc_{};
   };
 
   full_trip_handler(statistics& stats, schedule& sched,
@@ -122,8 +128,8 @@ struct full_trip_handler {
 
     for (auto const& [msg_sec, cur_sec] :
          utl::zip(sections, existing_sections)) {
-      update_event(cur_sec.dep_, msg_sec.dep_);
-      update_event(cur_sec.arr_, msg_sec.arr_);
+      update_event(cur_sec.dep_, msg_sec.dep_, cur_sec.lcon());
+      update_event(cur_sec.arr_, msg_sec.arr_, cur_sec.lcon());
     }
   }
 
@@ -243,7 +249,8 @@ private:
            from_fbs(ts->arrival()->current_time_type()),
            get_track(sched_, view(ts->arrival()->schedule_track())),
            get_track(sched_, view(ts->arrival()->current_track())),
-           {}}};
+           {}},
+          nullptr};
     });
   }
 
@@ -265,7 +272,8 @@ private:
                ev_from},
               {sec.to_node()->get_station(), sec.to_node()->is_out_allowed(),
                di_to.get_schedule_time(), lc.a_time_, di_to.get_reason(),
-               get_schedule_track(sched_, ev_to), sec.fcon().a_track_, ev_to}};
+               get_schedule_track(sched_, ev_to), sec.fcon().a_track_, ev_to},
+              const_cast<light_connection*>(&lc)};  // NOLINT
         });
   }
 
@@ -390,14 +398,31 @@ private:
     return trp;
   }
 
-  void update_event(event_info const& cur_event, event_info const& msg_event) {
+  void update_event(event_info const& cur_event, event_info const& msg_event,
+                    light_connection* lc) {
+    auto const& evk = cur_event.get_ev_key();
     if (cur_event.time_updated(msg_event)) {
-      propagator_.add_delay(cur_event.get_ev_key(), msg_event.timestamp_reason_,
+      propagator_.add_delay(evk, msg_event.timestamp_reason_,
                             msg_event.current_time_);
       ++result_.delay_updates_;
     }
     if (cur_event.track_updated(msg_event)) {
-      // TODO(pablo): NYI
+      sched_.graph_to_schedule_track_index_.emplace(evk,
+                                                    msg_event.schedule_track_);
+      auto new_full_con = *lc->full_con_;
+      if (evk.is_departure()) {
+        new_full_con.d_track_ = msg_event.current_track_;
+      } else {
+        new_full_con.a_track_ = msg_event.current_track_;
+      }
+      lc->full_con_ =
+          sched_.full_connections_
+              .emplace_back(mcd::make_unique<connection>(new_full_con))
+              .get();
+      update_builder_.add_track_nodes(
+          evk, sched_.tracks_.at(msg_event.current_track_).str(),
+          msg_event.schedule_time_);
+      ++result_.track_updates_;
     }
   }
 
