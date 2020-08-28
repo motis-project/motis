@@ -111,6 +111,9 @@ struct full_trip_handler {
         return;  // NYI
       }
 
+      ++stats_.additional_msgs_;
+      ++stats_.additional_total_;
+
       auto incoming = std::vector<incoming_edge_patch>{};
       save_outgoing_edges(get_station_nodes(sections), incoming);
       auto const lcs = build_light_connections(sections);
@@ -124,12 +127,21 @@ struct full_trip_handler {
       update_builder_.add_reroute(result_.trp_, {}, 0);
 
       existing_sections = get_existing_sections(result_.trp_);
+
+      ++stats_.additional_ok_;
     }
 
     for (auto const& [msg_sec, cur_sec] :
          utl::zip(sections, existing_sections)) {
       update_event(cur_sec.dep_, msg_sec.dep_, cur_sec.lcon());
       update_event(cur_sec.arr_, msg_sec.arr_, cur_sec.lcon());
+    }
+
+    if (result_.delay_updates_ > 0) {
+      ++stats_.delay_msgs_;
+    }
+    if (result_.track_updates_ > 0) {
+      ++stats_.track_change_msgs_;
     }
   }
 
