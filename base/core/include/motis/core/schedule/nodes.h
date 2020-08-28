@@ -98,7 +98,7 @@ struct node {
   }
 
   bool is_out_allowed() const {
-    assert(in_route_node());
+    assert(is_route_node());
     for (auto const& e : edges_) {
       if (e.to_ == station_node_ && e.type() != edge::INVALID_EDGE) {
         return true;
