@@ -12,15 +12,15 @@ struct delay_info {
   inline time get_schedule_time() const { return schedule_time_; }
   inline time get_is_time() const { return is_time_; }
   inline time get_repair_time() const { return repair_time_; }
-  inline time get_forecast_time() const { return forecase_time_; }
+  inline time get_forecast_time() const { return forecast_time_; }
   inline time get_propagation_time() const { return propagation_time_; }
 
   inline void update(delay_info const& d) {
     if (schedule_time_ == 0) {
       *this = d;
     } else {
-      if (d.forecase_time_ != 0) {
-        forecase_time_ = d.forecase_time_;
+      if (d.forecast_time_ != 0) {
+        forecast_time_ = d.forecast_time_;
       }
       if (d.propagation_time_ != 0) {
         propagation_time_ = d.propagation_time_;
@@ -38,7 +38,7 @@ struct delay_info {
       case timestamp_reason::REPAIR: repair_time_ = t; break;
       case timestamp_reason::SCHEDULE: schedule_time_ = t; break;
       case timestamp_reason::IS: is_time_ = t; break;
-      case timestamp_reason::FORECAST: forecase_time_ = t; break;
+      case timestamp_reason::FORECAST: forecast_time_ = t; break;
       case timestamp_reason::PROPAGATION: propagation_time_ = t; break;
     }
 
@@ -55,7 +55,7 @@ struct delay_info {
       case timestamp_reason::IS: return is_time_;
       case timestamp_reason::SCHEDULE: return schedule_time_;
       case timestamp_reason::PROPAGATION: return propagation_time_;
-      case timestamp_reason::FORECAST: return forecase_time_;
+      case timestamp_reason::FORECAST: return forecast_time_;
       default: return schedule_time_;
     }
   }
@@ -77,7 +77,7 @@ struct delay_info {
     } else {
       auto const times = {
           std::make_pair(schedule_time_, timestamp_reason::SCHEDULE),
-          std::make_pair(forecase_time_, timestamp_reason::FORECAST),
+          std::make_pair(forecast_time_, timestamp_reason::FORECAST),
           std::make_pair(propagation_time_, timestamp_reason::PROPAGATION)};
       return std::max_element(begin(times), end(times))->second;
     }
@@ -90,7 +90,7 @@ struct delay_info {
 
   ev_key ev_, orig_ev_{ev_};
   time repair_time_{0U}, is_time_{0U};
-  time schedule_time_{ev_.get_time()}, forecase_time_{0U},
+  time schedule_time_{ev_.get_time()}, forecast_time_{0U},
       propagation_time_{0U};
 };
 
