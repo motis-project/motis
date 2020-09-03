@@ -15,6 +15,9 @@
 
 namespace motis::module {
 
+constexpr auto const DEFAULT_FBS_MAX_DEPTH = 64;
+constexpr auto const DEFAULT_FBS_MAX_TABLES = 1'000'000;
+
 class message_creator : public flatbuffers::FlatBufferBuilder {
 public:
   void create_and_finish(
@@ -46,9 +49,13 @@ struct message : public typed_flatbuffer<Message> {
 
 using msg_ptr = std::shared_ptr<message>;
 
-msg_ptr make_msg(std::string const& json, bool fix = false);
+msg_ptr make_msg(std::string const& json, bool fix = false,
+                 std::size_t fbs_max_depth = DEFAULT_FBS_MAX_DEPTH,
+                 std::size_t fbs_max_tables = DEFAULT_FBS_MAX_TABLES);
 msg_ptr make_msg(message_creator& builder);
-msg_ptr make_msg(void const* buf, size_t len);
+msg_ptr make_msg(void const* buf, size_t len,
+                 std::size_t fbs_max_depth = DEFAULT_FBS_MAX_DEPTH,
+                 std::size_t fbs_max_tables = DEFAULT_FBS_MAX_TABLES);
 
 msg_ptr make_no_msg(std::string const& target = "", int id = 1);
 msg_ptr make_success_msg(std::string const& target = "", int id = 1);
