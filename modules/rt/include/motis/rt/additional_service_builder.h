@@ -8,6 +8,7 @@
 
 #include "utl/get_or_create.h"
 
+#include "motis/core/schedule/build_platform_node.h"
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/time_access.h"
@@ -134,23 +135,42 @@ struct additional_service_builder {
     node* prev_route_node = nullptr;
     for (auto const& s : sections) {
       light_connection l{};
-      station_node *from_station = nullptr, *to_station = nullptr;
-      std::tie(l, from_station, to_station) = s;
+      station_node *from_station_node = nullptr, *to_station_node = nullptr;
+      std::tie(l, from_station_node, to_station_node) = s;
 
-      auto const from_station_transfer_time =
-          sched_.stations_.at(from_station->id_)->transfer_time_;
-      auto const to_station_transfer_time =
-          sched_.stations_.at(to_station->id_)->transfer_time_;
+      auto const from_station =
+          sched_.stations_.at(from_station_node->id_).get();
+      auto const to_station = sched_.stations_.at(to_station_node->id_).get();
+      auto const from_station_transfer_time = from_station->transfer_time_;
+      auto const to_station_transfer_time = to_station->transfer_time_;
 
       auto const from_route_node =
           prev_route_node != nullptr
               ? prev_route_node
               : build_route_node(sched_, route_id, sched_.node_count_++,
-                                 from_station, from_station_transfer_time, true,
-                                 true, incoming);
-      auto const to_route_node =
-          build_route_node(sched_, route_id, sched_.node_count_++, to_station,
-                           to_station_transfer_time, true, true, incoming);
+                                 from_station_node, from_station_transfer_time,
+                                 true, true, incoming);
+
+      auto const from_platform =
+          from_station->get_platform(l.full_con_->d_track_);
+      if (from_platform) {
+        auto const pn = add_platform_enter_edge(
+            sched_, from_route_node, from_station_node,
+            from_station->platform_transfer_time_, from_platform.value());
+        add_outgoing_edge(&pn->edges_.back(), incoming);
+      }
+
+      auto const to_route_node = build_route_node(
+          sched_, route_id, sched_.node_count_++, to_station_node,
+          to_station_transfer_time, true, true, incoming);
+
+      auto const to_platform = to_station->get_platform(l.full_con_->a_track_);
+      if (to_platform) {
+        add_platform_exit_edge(sched_, to_route_node, to_station_node,
+                               to_station->platform_transfer_time_,
+                               to_platform.value());
+        add_outgoing_edge(&to_route_node->edges_.back(), incoming);
+      }
 
       from_route_node->edges_.push_back(
           make_route_edge(from_route_node, to_route_node, {l}));

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <vector>
 
 #include "motis/hash_map.h"
@@ -12,6 +13,7 @@ struct Station;  // NOLINT
 struct Schedule;  // NOLINT
 
 mcd::hash_map<Station const*, station_node*> build_stations(
-    schedule&, std::vector<Schedule const*> const&);
+    schedule&, std::vector<Schedule const*> const&,
+    std::map<std::string, int>& tracks);
 
 }  // namespace motis::loader

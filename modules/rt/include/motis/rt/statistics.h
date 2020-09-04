@@ -77,6 +77,9 @@ struct statistics {
     o << "\ncanceled services\n";
     c("trip not found", s.canceled_trp_not_found_);
 
+    o << "\ntrack messages\n";
+    c("trip separated", s.track_separations_);
+
     return o;
   }
 
@@ -227,6 +230,8 @@ struct statistics {
   unsigned additional_station_mismatch_ = 0;
 
   unsigned canceled_trp_not_found_ = 0;
+
+  unsigned track_separations_ = 0;
 };
 
 }  // namespace motis::rt

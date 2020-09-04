@@ -122,6 +122,7 @@ struct footpath_builder {
 
     // Create the foot node.
     auto foot_node = mcd::make_unique<node>();
+    foot_node->type_ = node_type::FOOT_NODE;
     foot_node->station_node_ = sn;
     foot_node->id_ = sched_.node_count_++;
 

@@ -78,7 +78,7 @@ char const* free_text_fixture_2 = R"(<?xml version="1.0"?>
 </Paket>
 )";
 
-TEST(ris_free_text_message, DISABLED_free_text_test) {
+TEST(ris_free_text_message, free_text_test) {
   auto const messages = risml_parser::parse(free_text_fixture_1);
   ASSERT_EQ(1, messages.size());
 
@@ -118,7 +118,7 @@ TEST(ris_free_text_message, DISABLED_free_text_test) {
   EXPECT_EQ("Intern", free_text->type()->str());
 }
 
-TEST(ris_free_text_message, DISABLED_free_text_test2) {
+TEST(ris_free_text_message, free_text_test2) {
   auto const messages = risml_parser::parse(free_text_fixture_2);
   ASSERT_EQ(1, messages.size());
 
