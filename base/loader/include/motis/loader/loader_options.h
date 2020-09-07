@@ -24,6 +24,7 @@ struct loader_options {
   bool adjust_footpaths_{false};
   bool expand_trips_{true};
   bool expand_footpaths_{true};
+  bool use_platforms_{true};
   duration planned_transfer_delta_{30};
   std::string graph_path_{"default"};
   std::string wzr_classes_path_{""};

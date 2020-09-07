@@ -139,9 +139,7 @@ TEST_F(tripbased_platform_interchange_no_platforms_test, transfer_time) {
   EXPECT_EQ(4, st->platform_transfer_time_);
 }
 
-// TODO(pablo): enable
-TEST_F(tripbased_platform_interchange_no_platforms_test,
-       DISABLED_same_platform) {
+TEST_F(tripbased_platform_interchange_no_platforms_test, same_platform) {
   auto res = call(fwd_routing_request());
   auto journeys = message_to_journeys(motis_content(RoutingResponse, res));
 

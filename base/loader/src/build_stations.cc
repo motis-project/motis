@@ -42,7 +42,8 @@ struct stations_builder {
     sched_.stations_.emplace_back(std::move(s));
   }
 
-  void add_station(uint32_t const source_schedule, Station const* fbs_station) {
+  void add_station(uint32_t const source_schedule, Station const* fbs_station,
+                   bool const use_platforms) {
     auto const station_idx = sched_.station_nodes_.size();
 
     // Create station node.
@@ -71,7 +72,7 @@ struct stations_builder {
     s->equivalent_.push_back(s.get());
     s->source_schedule_ = source_schedule;
 
-    if (s->platform_transfer_time_ != 0 &&
+    if (use_platforms && s->platform_transfer_time_ != 0 &&
         s->platform_transfer_time_ != s->transfer_time_ &&
         fbs_station->platforms() != nullptr &&
         fbs_station->platforms()->size() > 0) {
@@ -187,7 +188,7 @@ struct stations_builder {
 
 mcd::hash_map<Station const*, station_node*> build_stations(
     schedule& sched, std::vector<Schedule const*> const& fbs_schedules,
-    std::map<std::string, int>& tracks) {
+    std::map<std::string, int>& tracks, bool const use_platforms) {
   stations_builder b{sched, tracks};
 
   // Add dummy stations.
@@ -210,7 +211,7 @@ mcd::hash_map<Station const*, station_node*> build_stations(
         first_last_days(sched, fbs_schedule->interval());
 
     for (auto const* fbs_station : *fbs_schedule->stations()) {
-      b.add_station(src_index, fbs_station);
+      b.add_station(src_index, fbs_station, use_platforms);
     }
 
     if (fbs_schedule->meta_stations() != nullptr) {

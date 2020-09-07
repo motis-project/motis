@@ -803,7 +803,8 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
   graph_builder builder{*sched, opt};
 
   progress_tracker->status("Add Stations").out_bounds(0, 5);
-  builder.stations_ = build_stations(*sched, fbs_schedules, builder.tracks_);
+  builder.stations_ = build_stations(*sched, fbs_schedules, builder.tracks_,
+                                     opt.use_platforms_);
 
   for (auto const& [i, fbs_schedule] : utl::enumerate(fbs_schedules)) {
     auto const dataset_prefix =

@@ -14,6 +14,6 @@ struct Schedule;  // NOLINT
 
 mcd::hash_map<Station const*, station_node*> build_stations(
     schedule&, std::vector<Schedule const*> const&,
-    std::map<std::string, int>& tracks);
+    std::map<std::string, int>& tracks, bool use_platforms);
 
 }  // namespace motis::loader

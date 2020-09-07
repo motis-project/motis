@@ -130,15 +130,13 @@ struct platform_interchange_no_platforms_test
       : platform_interchange_test_base(dataset_without_platforms_opt) {}
 };
 
-// TODO(pablo): enable
-TEST_F(platform_interchange_no_platforms_test, DISABLED_transfer_time) {
+TEST_F(platform_interchange_no_platforms_test, transfer_time) {
   auto const st = get_station(sched(), "0000003");
   EXPECT_EQ(8, st->transfer_time_);
   EXPECT_EQ(4, st->platform_transfer_time_);
 }
 
-// TODO(pablo): enable
-TEST_F(platform_interchange_no_platforms_test, DISABLED_same_platform) {
+TEST_F(platform_interchange_no_platforms_test, same_platform) {
   auto res = call(fwd_routing_request());
   auto journeys = message_to_journeys(motis_content(RoutingResponse, res));
 
