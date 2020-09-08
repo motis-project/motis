@@ -1,13 +1,14 @@
 #include "motis/ris/ris.h"
 
-#include <motis/core/conv/trip_conv.h>
-#include <utl/parser/file.h>
+#include <cstdint>
 #include <atomic>
+#include <limits>
 #include <optional>
 
 #include "boost/filesystem.hpp"
 
 #include "utl/concat.h"
+#include "utl/parser/file.h"
 
 #include "conf/date_time.h"
 
@@ -147,7 +148,9 @@ struct ris::impl {
   void read_gtfs_trip_ids() const {
     auto& sched = get_schedule();
     auto const trips = utl::file{gtfs_trip_ids_path_.c_str(), "r"}.content();
-    auto const trips_msg = make_msg(trips.data(), trips.size());
+    auto const trips_msg =
+        make_msg(trips.data(), trips.size(), DEFAULT_FBS_MAX_DEPTH,
+                 std::numeric_limits<std::uint32_t>::max());
     for (auto const& id : *motis_content(RISGTFSRTMapping, trips_msg)->ids()) {
       try {
         sched.gtfs_trip_ids_.emplace(

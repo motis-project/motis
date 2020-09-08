@@ -68,7 +68,9 @@ std::pair<const char**, size_t> message::get_fbs_definitions() {
   return std::make_pair(symbols, number_of_symbols);
 }
 
-msg_ptr make_msg(std::string const& json, bool const fix) {
+msg_ptr make_msg(std::string const& json, bool const fix,
+                 std::size_t const fbs_max_depth,
+                 std::size_t const fbs_max_tables) {
   if (json.empty()) {
     LOG(motis::logging::error) << "empty request";
     throw std::system_error(error::unable_to_parse_msg);
@@ -82,7 +84,8 @@ msg_ptr make_msg(std::string const& json, bool const fix) {
   }
 
   flatbuffers::Verifier verifier(json_parser->builder_.GetBufferPointer(),
-                                 json_parser->builder_.GetSize());
+                                 json_parser->builder_.GetSize(), fbs_max_depth,
+                                 fbs_max_tables);
   if (!VerifyMessageBuffer(verifier)) {
     throw std::system_error(error::malformed_msg);
   }
@@ -100,10 +103,12 @@ msg_ptr make_msg(message_creator& builder) {
   return std::make_shared<message>(len, std::move(mem));
 }
 
-msg_ptr make_msg(void const* buf, size_t len) {
+msg_ptr make_msg(void const* buf, size_t len, std::size_t const fbs_max_depth,
+                 std::size_t const fbs_max_tables) {
   auto msg = std::make_shared<message>(len, buf);
 
-  flatbuffers::Verifier verifier(msg->data(), msg->size());
+  flatbuffers::Verifier verifier(msg->data(), msg->size(), fbs_max_depth,
+                                 fbs_max_tables);
   if (!VerifyMessageBuffer(verifier)) {
     throw std::system_error(error::malformed_msg);
   }
