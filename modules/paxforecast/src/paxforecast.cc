@@ -23,9 +23,9 @@
 #include "motis/paxforecast/alternatives.h"
 #include "motis/paxforecast/behavior/behaviors.h"
 #include "motis/paxforecast/combined_passenger_group.h"
+#include "motis/paxforecast/load_forecast.h"
 #include "motis/paxforecast/measures/measures.h"
 #include "motis/paxforecast/messages.h"
-#include "motis/paxforecast/over_capacity_info.h"
 #include "motis/paxforecast/simulate_behavior.h"
 
 using namespace motis::module;
@@ -141,10 +141,9 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   auto const sim_result =
       simulate_behavior(sched, data, combined_groups, announcements, pb);
 
-  auto const over_capacity_infos = calc_over_capacity(sched, sim_result);
-
+  auto const lfc = calc_load_forecast(sched, data, sim_result);
   auto const forecast_msg =
-      make_passenger_forecast_msg(sched, data, sim_result, over_capacity_infos);
+      make_passenger_forecast_msg(sched, data, sim_result, lfc);
 
   if (forecast_file_.is_open()) {
     forecast_file_ << forecast_msg->to_json(true) << std::endl;

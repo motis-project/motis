@@ -19,26 +19,27 @@ struct CdfEntry {
   probability: float;
 }
 
-table EdgeOverCapacity {
+enum CapacityType : byte { Known, Unknown, Unlimited }
+
+table EdgeForecast {
   from: motis.Station;
   to: motis.Station;
   departure_schedule_time: ulong;
   arrival_schedule_time: ulong;
+  capacity_type: CapacityType;
   capacity: uint;
   passenger_cdf: [CdfEntry];
+  updated: bool;
+  possibly_over_capacity: bool;
 }
 
-table TripOverCapacity {
+table TripForecast {
   trip: motis.TripId;
-  edges: [EdgeOverCapacity];
-}
-
-table OverCapacityInfo {
-  edge_count_over_capacity: ulong;
-  trips_over_capacity: [TripOverCapacity];
+  edges: [EdgeForecast];
 }
 
 table PassengerForecast {
+  system_time: ulong;
   groups: [PassengerGroupForecast];
-  over_capacity: OverCapacityInfo;
+  trips: [TripForecast];
 }
