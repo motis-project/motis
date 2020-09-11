@@ -6,7 +6,7 @@
 #include "motis/paxforecast/behavior/util.h"
 #include "motis/paxforecast/measures/measures.h"
 
-namespace motis::paxforecast::behavior::influence {
+namespace motis::paxforecast::behavior::deterministic::influence {
 
 struct none {
   inline void update_probabilities(
@@ -16,4 +16,4 @@ struct none {
       std::vector<float>& /*probabilities*/) {}
 };
 
-}  // namespace motis::paxforecast::behavior::influence
+}  // namespace motis::paxforecast::behavior::deterministic::influence

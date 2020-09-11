@@ -6,7 +6,7 @@
 #include "utl/repeat_n.h"
 #include "utl/to_vec.h"
 
-namespace motis::paxforecast::behavior::distribution {
+namespace motis::paxforecast::behavior::deterministic::distribution {
 
 struct proportional {
   static std::vector<float> get_probabilities(
@@ -21,4 +21,4 @@ struct proportional {
   }
 };
 
-}  // namespace motis::paxforecast::behavior::distribution
+}  // namespace motis::paxforecast::behavior::deterministic::distribution

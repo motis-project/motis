@@ -8,7 +8,7 @@
 #include "motis/paxforecast/behavior/util.h"
 #include "motis/paxforecast/measures/measures.h"
 
-namespace motis::paxforecast::behavior::influence {
+namespace motis::paxforecast::behavior::deterministic::influence {
 
 struct fixed_acceptance {
   explicit fixed_acceptance(float acceptance_rate)
@@ -43,4 +43,4 @@ struct fixed_acceptance {
   float acceptance_rate_;
 };
 
-}  // namespace motis::paxforecast::behavior::influence
+}  // namespace motis::paxforecast::behavior::deterministic::influence

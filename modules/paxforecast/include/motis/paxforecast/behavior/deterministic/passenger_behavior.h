@@ -9,7 +9,7 @@
 #include "motis/paxforecast/alternatives.h"
 #include "motis/paxforecast/measures/measures.h"
 
-namespace motis::paxforecast::behavior {
+namespace motis::paxforecast::behavior::deterministic {
 
 template <typename Score, typename Distribution, typename Influence>
 struct passenger_behavior {
@@ -40,4 +40,4 @@ struct passenger_behavior {
   Influence influence_;
 };
 
-}  // namespace motis::paxforecast::behavior
+}  // namespace motis::paxforecast::behavior::deterministic

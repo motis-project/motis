@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <map>
 #include <numeric>
+#include <random>
 
 #include "utl/to_vec.h"
 #include "utl/verify.h"
@@ -21,7 +22,7 @@
 #include "motis/paxmon/paxmon_data.h"
 
 #include "motis/paxforecast/alternatives.h"
-#include "motis/paxforecast/behavior/behaviors.h"
+#include "motis/paxforecast/behavior/probabilistic/passenger_behavior.h"
 #include "motis/paxforecast/combined_passenger_group.h"
 #include "motis/paxforecast/load_forecast.h"
 #include "motis/paxforecast/measures/measures.h"
@@ -133,10 +134,10 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   LOG(info) << "alternatives: " << routing_requests << " routing requests => "
             << alternatives_found << " alternatives";
 
+  auto rnd_gen = std::mt19937{std::random_device{}()};
+  auto transfer_dist = std::normal_distribution{30.0F, 10.0F};
   auto pb =
-      behavior::passenger_behavior(behavior::score::weighted{1.0, 10.0},
-                                   behavior::distribution::proportional{},
-                                   behavior::influence::fixed_acceptance{0.75});
+      behavior::probabilistic::passenger_behavior{rnd_gen, transfer_dist, 1000};
   auto const announcements = std::vector<measures::please_use>{};
   auto const sim_result =
       simulate_behavior(sched, data, combined_groups, announcements, pb);

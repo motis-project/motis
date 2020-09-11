@@ -7,8 +7,6 @@
 #include "utl/enumerate.h"
 #include "utl/verify.h"
 
-#include "motis/paxforecast/behavior/passenger_behavior.h"
-
 namespace motis::paxforecast::behavior {
 
 inline std::optional<std::size_t> get_recommended_alternative(

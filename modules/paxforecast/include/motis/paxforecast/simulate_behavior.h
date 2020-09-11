@@ -9,7 +9,6 @@
 #include "motis/paxmon/graph_access.h"
 #include "motis/paxmon/paxmon_data.h"
 
-#include "motis/paxforecast/behavior/passenger_behavior.h"
 #include "motis/paxforecast/combined_passenger_group.h"
 #include "motis/paxforecast/simulation_result.h"
 

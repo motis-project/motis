@@ -2,7 +2,7 @@
 
 #include "motis/paxforecast/alternatives.h"
 
-namespace motis::paxforecast::behavior::score {
+namespace motis::paxforecast::behavior::deterministic::score {
 
 struct weighted {
   double get_score(alternative const& alt) const {
@@ -13,4 +13,4 @@ struct weighted {
   double transfers_{5.0};
 };
 
-}  // namespace motis::paxforecast::behavior::score
+}  // namespace motis::paxforecast::behavior::deterministic::score

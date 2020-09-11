@@ -8,9 +8,9 @@
 #include "motis/paxforecast/behavior/util.h"
 #include "motis/paxforecast/measures/measures.h"
 
-namespace motis::paxforecast::behavior::influence {
+namespace motis::paxforecast::behavior::deterministic::influence {
 
-struct additive {
+struct multiplicative {
   void update_probabilities(
       motis::paxmon::passenger_group const& grp,
       std::vector<alternative> const& alternatives,
@@ -22,11 +22,11 @@ struct additive {
     }
     auto const recommended_index = recommended.value();
     auto const old_probability = probabilities[recommended_index];
-    if (old_probability == 1.0F) {
+    if (old_probability == 0.0F || old_probability == 1.0F) {
       return;
     }
     auto const new_probability =
-        std::min(1.0F, old_probability + recommended_boost_);
+        std::min(1.0F, old_probability * recommended_factor_);
     probabilities[recommended_index] = new_probability;
     auto const other_factor =
         (1.0F - new_probability) / (1.0F - old_probability);
@@ -37,7 +37,7 @@ struct additive {
     }
   }
 
-  float recommended_boost_{0.0};
+  float recommended_factor_{1.0};
 };
 
-}  // namespace motis::paxforecast::behavior::influence
+}  // namespace motis::paxforecast::behavior::deterministic::influence
