@@ -20,9 +20,11 @@ void load_journey(schedule const& sched, paxmon_data& data, journey const& j,
                   group_source_flags source_flags) {
   auto const id =
       static_cast<std::uint64_t>(data.graph_.passenger_groups_.size());
+  auto const planned_arrival_time = unix_to_motistime(
+      sched.schedule_begin_, j.stops_.back().arrival_.schedule_timestamp_);
   data.graph_.passenger_groups_.emplace_back(std::make_unique<passenger_group>(
       passenger_group{to_compact_journey(j, sched), id, source, passengers,
-                      true, source_flags}));
+                      planned_arrival_time, source_flags, true}));
 }
 
 loader_result load_journeys(schedule const& sched, paxmon_data& data,

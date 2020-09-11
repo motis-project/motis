@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "motis/core/schedule/time.h"
 #include "motis/core/journey/journey.h"
 
 #include "motis/paxmon/compact_journey.h"
@@ -56,8 +57,9 @@ struct passenger_group {
   std::uint64_t id_{};
   data_source source_{};
   std::uint16_t passengers_{1};
-  bool ok_{true};
+  motis::time planned_arrival_time_{INVALID_TIME};
   group_source_flags source_flags_{group_source_flags::NONE};
+  bool ok_{true};
   float probability_{1.0};
   std::vector<edge*> edges_{};
 };

@@ -87,7 +87,8 @@ Offset<PassengerGroup> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
                               passenger_group const& pg) {
   return CreatePassengerGroup(
       fbb, pg.id_, to_fbs(fbb, pg.source_), pg.passengers_,
-      to_fbs(sched, fbb, pg.compact_planned_journey_), pg.probability_);
+      to_fbs(sched, fbb, pg.compact_planned_journey_), pg.probability_,
+      motis_to_unixtime(sched, pg.planned_arrival_time_));
 }
 
 Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,

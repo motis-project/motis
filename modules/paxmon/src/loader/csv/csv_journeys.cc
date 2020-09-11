@@ -414,9 +414,11 @@ loader_result load_journeys(schedule const& sched, paxmon_data& data,
                       std::next(begin(current_input_legs), end_idx),
                       [&](auto const& leg) { return leg.to_journey_leg(); });
       current_journey.legs_.front().enter_transfer_ = {};
+      auto const planned_arrival_time = current_journey.legs_.back().exit_time_;
       data.graph_.passenger_groups_.emplace_back(
-          std::make_unique<passenger_group>(passenger_group{
-              current_journey, id, source, current_passengers}));
+          std::make_unique<passenger_group>(
+              passenger_group{current_journey, id, source, current_passengers,
+                              planned_arrival_time, source_flags}));
     } else {
       if (!all_trips_found) {
         ++journeys_with_missing_trips;

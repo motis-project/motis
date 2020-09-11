@@ -65,6 +65,9 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
   param(time_step_, "time_step", "evaluation time step (seconds)");
   param(match_tolerance_, "match_tolerance",
         "journey match time tolerance (minutes)");
+  param(arrival_delay_threshold_, "arrival_delay_threshold",
+        "threshold for arrival delay at the destination (minutes, -1 to "
+        "disable)");
 }
 
 paxmon::~paxmon() = default;
@@ -288,7 +291,7 @@ void paxmon::load_capacity_files() {
 void check_broken_interchanges(
     paxmon_data& data, schedule const& /*sched*/,
     std::vector<edge*> const& updated_interchange_edges,
-    system_statistics& system_stats) {
+    system_statistics& system_stats, int arrival_delay_threshold) {
   static std::set<edge*> broken_interchanges;
   static std::set<passenger_group*> affected_passenger_groups;
   for (auto& ice : updated_interchange_edges) {
@@ -315,14 +318,23 @@ void check_broken_interchanges(
         }
         data.groups_affected_by_last_update_.insert(psi.group_);
       }
-    } else {
-      if (!ice->broken_) {
-        continue;
-      }
-      ice->broken_ = false;
+    } else if (ice->broken_) {
       // interchange valid again
+      ice->broken_ = false;
       for (auto& psi : ice->pax_connection_info_.section_infos_) {
         data.groups_affected_by_last_update_.insert(psi.group_);
+      }
+    } else if (arrival_delay_threshold < 0 && to->station_ == 0) {
+      // check for delayed arrival at destination
+      auto const estimated_arrival = static_cast<int>(from->schedule_time());
+      for (auto& psi : ice->pax_connection_info_.section_infos_) {
+        auto const estimated_delay =
+            estimated_arrival -
+            static_cast<int>(psi.group_->planned_arrival_time_);
+        if (psi.group_->planned_arrival_time_ != INVALID_TIME &&
+            estimated_delay >= arrival_delay_threshold) {
+          data.groups_affected_by_last_update_.insert(psi.group_);
+        }
       }
     }
   }
@@ -383,8 +395,26 @@ msg_ptr paxmon::rt_update(msg_ptr const& msg) {
     }
   }
   check_broken_interchanges(data_, sched, updated_interchange_edges,
-                            system_stats_);
+                            system_stats_, arrival_delay_threshold_);
   return {};
+}
+
+monitoring_event_type get_monitoring_event_type(
+    passenger_group const* pg, reachability_info const& reachability,
+    int const arrival_delay_threshold) {
+  if (!reachability.ok_) {
+    return monitoring_event_type::TRANSFER_BROKEN;
+  } else if (arrival_delay_threshold >= 0 &&
+             !reachability.reachable_trips_.empty() &&
+             pg->planned_arrival_time_ != INVALID_TIME &&
+             (static_cast<int>(
+                  reachability.reachable_trips_.back().exit_real_time_) -
+                  static_cast<int>(pg->planned_arrival_time_) >=
+              arrival_delay_threshold)) {
+    return monitoring_event_type::MAJOR_DELAY_EXPECTED;
+  } else {
+    return monitoring_event_type::NO_PROBLEM;
+  }
 }
 
 void paxmon::rt_updates_applied() {
@@ -421,9 +451,8 @@ void paxmon::rt_updates_applied() {
       auto const localization = localize(sched, reachability, search_time);
       update_load(pg, reachability, localization, data_.graph_);
 
-      auto const event_type = reachability.ok_
-                                  ? monitoring_event_type::NO_PROBLEM
-                                  : monitoring_event_type::TRANSFER_BROKEN;
+      auto const event_type =
+          get_monitoring_event_type(pg, reachability, arrival_delay_threshold_);
       fbs_events.emplace_back(
           to_fbs(sched, mc,
                  monitoring_event{event_type, *pg, localization,
