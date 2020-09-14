@@ -88,7 +88,25 @@ Offset<PassengerGroup> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
   return CreatePassengerGroup(
       fbb, pg.id_, to_fbs(fbb, pg.source_), pg.passengers_,
       to_fbs(sched, fbb, pg.compact_planned_journey_), pg.probability_,
-      motis_to_unixtime(sched, pg.planned_arrival_time_));
+      pg.planned_arrival_time_ != INVALID_TIME
+          ? motis_to_unixtime(sched, pg.planned_arrival_time_)
+          : 0,
+      static_cast<std::underlying_type_t<group_source_flags>>(
+          pg.source_flags_));
+}
+
+passenger_group from_fbs(schedule const& sched, PassengerGroup const* pg) {
+  return passenger_group{
+      from_fbs(sched, pg->planned_journey()),
+      pg->id(),
+      from_fbs(pg->source()),
+      static_cast<std::uint16_t>(pg->passenger_count()),
+      pg->planned_arrival_time() != 0
+          ? unix_to_motistime(sched.schedule_begin_, pg->planned_arrival_time())
+          : INVALID_TIME,
+      static_cast<group_source_flags>(pg->source_flags()),
+      true,
+      pg->probability()};
 }
 
 Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,

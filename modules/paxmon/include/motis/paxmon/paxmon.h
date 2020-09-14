@@ -35,6 +35,8 @@ private:
   void load_capacity_files();
   motis::module::msg_ptr rt_update(motis::module::msg_ptr const& msg);
   void rt_updates_applied();
+  motis::module::msg_ptr add_groups(motis::module::msg_ptr const& msg);
+  motis::module::msg_ptr remove_groups(motis::module::msg_ptr const& msg);
 
   std::vector<std::string> journey_files_;
   std::vector<std::string> capacity_files_;

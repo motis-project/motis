@@ -14,8 +14,8 @@ table CompactJourneyLeg {
   trip: motis.TripId;
   enter_station: motis.Station;
   exit_station: motis.Station;
-  enter_time: ulong;
-  exit_time: ulong;
+  enter_time: long;
+  exit_time: long;
   enter_transfer: TransferInfo;
 }
 

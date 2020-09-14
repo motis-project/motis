@@ -123,6 +123,14 @@ void paxmon::init(motis::module::registry& reg) {
         return {};
       },
       ctx::access_t::WRITE);
+
+  reg.register_op("/paxmon/add_groups", [&](msg_ptr const& msg) -> msg_ptr {
+    return add_groups(msg);
+  });
+
+  reg.register_op("/paxmon/remove_groups", [&](msg_ptr const& msg) -> msg_ptr {
+    return remove_groups(msg);
+  });
 }
 
 void print_graph_stats(graph_statistics const& graph_stats) {
@@ -494,6 +502,9 @@ void paxmon::rt_updates_applied() {
             << system_stats_.groups_broken_count_ << " broken";
 
   for (auto const& pg : data_.graph_.passenger_groups_) {
+    if (!pg) {
+      continue;
+    }
     if (pg->ok_) {
       ++tick_stats_.tracked_ok_groups_;
     } else {
@@ -504,6 +515,47 @@ void paxmon::rt_updates_applied() {
   stats_writer_->write_tick(tick_stats_);
   stats_writer_->flush();
   tick_stats_ = {};
+}
+
+msg_ptr paxmon::add_groups(msg_ptr const& msg) {
+  auto const& sched = get_schedule();
+  auto const req = motis_content(AddPassengerGroupsRequest, msg);
+
+  auto const added_groups = utl::to_vec(*req->groups(), [&](auto const pg_fbs) {
+    auto const id =
+        static_cast<std::uint64_t>(data_.graph_.passenger_groups_.size());
+    auto pg = data_.graph_.passenger_groups_
+                  .emplace_back(std::make_unique<passenger_group>(
+                      from_fbs(sched, pg_fbs)))
+                  .get();
+    pg->id_ = id;
+    add_passenger_group_to_graph(sched, data_, *pg);
+    return pg;
+  });
+
+  message_creator mc;
+  mc.create_and_finish(
+      MsgContent_AddPassengerGroupsResponse,
+      CreateAddPassengerGroupsResponse(
+          mc, mc.CreateVector(utl::to_vec(
+                  added_groups, [](auto const pg) { return pg->id_; })))
+          .Union());
+  return make_msg(mc);
+}
+
+msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
+  auto const req = motis_content(RemovePassengerGroupsRequest, msg);
+
+  for (auto const id : *req->ids()) {
+    auto& pg = data_.graph_.passenger_groups_.at(id);
+    if (pg == nullptr) {
+      continue;
+    }
+    remove_passenger_group_from_graph(pg.get());
+    pg.reset(nullptr);
+  }
+
+  return {};
 }
 
 }  // namespace motis::paxmon

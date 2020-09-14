@@ -1,0 +1,5 @@
+namespace motis.paxmon;
+
+table AddPassengerGroupsResponse {
+  ids: [ulong];
+}

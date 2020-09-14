@@ -74,11 +74,12 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
     if (event->type() == MonitoringEventType_NO_PROBLEM) {
       continue;
     }
-    auto const& pg = data.get_passenger_group(event->group()->id());
+    auto const pg = data.get_passenger_group(event->group()->id());
+    utl::verify(pg != nullptr, "monitored passenger group already removed");
     auto const localization =
         from_fbs(sched, event->localization_type(), event->localization());
     auto const destination_station_id =
-        pg.compact_planned_journey_.destination_station_id();
+        pg->compact_planned_journey_.destination_station_id();
 
     auto& destination_groups = combined_groups[destination_station_id];
     auto cpg = std::find_if(
@@ -86,10 +87,10 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
         [&](auto const& g) { return g.localization_ == localization; });
     if (cpg == end(destination_groups)) {
       destination_groups.emplace_back(combined_passenger_group{
-          destination_station_id, pg.passengers_, localization, {&pg}, {}});
+          destination_station_id, pg->passengers_, localization, {pg}, {}});
     } else {
-      cpg->passengers_ += pg.passengers_;
-      cpg->groups_.push_back(&pg);
+      cpg->passengers_ += pg->passengers_;
+      cpg->groups_.push_back(pg);
     }
   }
 

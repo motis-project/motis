@@ -10,7 +10,7 @@
 namespace motis::paxmon {
 
 struct paxmon_data {
-  passenger_group const& get_passenger_group(std::uint64_t id) const;
+  passenger_group const* get_passenger_group(std::uint64_t id) const;
 
   graph graph_;
 

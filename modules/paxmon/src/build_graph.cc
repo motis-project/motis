@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "utl/erase_if.h"
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
@@ -32,8 +33,11 @@ inline duration get_transfer_duration(std::optional<transfer_info> const& ti) {
   return ti.has_value() ? ti.value().duration_ : 0;
 }
 
+};  // namespace
+
 void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
                                   passenger_group& grp) {
+  utl::verify(grp.edges_.empty(), "group already added to graph");
   event_node* exit_node = nullptr;
   trip_data* last_trip = nullptr;
 
@@ -85,7 +89,12 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
   }
 }
 
-};  // namespace
+void remove_passenger_group_from_graph(passenger_group* pg) {
+  for (auto e : pg->edges_) {
+    utl::erase_if(e->pax_connection_info_.section_infos_,
+                  [&](auto const& psi) { return psi.group_ == pg; });
+  }
+}
 
 build_graph_stats build_graph_from_journeys(schedule const& sched,
                                             paxmon_data& data) {
@@ -93,6 +102,7 @@ build_graph_stats build_graph_from_journeys(schedule const& sched,
 
   auto stats = build_graph_stats{};
   for (auto& pg : data.graph_.passenger_groups_) {
+    utl::verify(pg != nullptr, "null passenger group");
     try {
       add_passenger_group_to_graph(sched, data, *pg);
     } catch (std::system_error const& e) {

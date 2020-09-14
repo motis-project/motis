@@ -14,4 +14,5 @@ table PassengerGroup {
   planned_journey: CompactJourney;
   probability: float;
   planned_arrival_time: ulong;
+  source_flags: ubyte;
 }

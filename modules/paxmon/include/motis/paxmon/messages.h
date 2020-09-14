@@ -25,6 +25,8 @@ flatbuffers::Offset<PassengerGroup> to_fbs(schedule const& sched,
                                            flatbuffers::FlatBufferBuilder& fbb,
                                            passenger_group const& pg);
 
+passenger_group from_fbs(schedule const& sched, PassengerGroup const* pg);
+
 PassengerLocalization fbs_localization_type(passenger_localization const& loc);
 
 flatbuffers::Offset<void> to_fbs(schedule const& sched,
