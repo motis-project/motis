@@ -12,10 +12,12 @@
 #include "motis/core/common/logging.h"
 #include "motis/core/access/service_access.h"
 #include "motis/module/context/get_schedule.h"
+#include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
 #include "motis/module/message.h"
 
+#include "motis/paxmon/compact_journey_util.h"
 #include "motis/paxmon/data_key.h"
 #include "motis/paxmon/messages.h"
 #include "motis/paxmon/monitoring_event.h"
@@ -58,6 +60,74 @@ void paxforecast::init(motis::module::registry& reg) {
   });
 }
 
+void update_tracked_groups(
+    schedule const& sched, simulation_result const& sim_result,
+    std::map<passenger_group const*, monitoring_event_type> const&
+        pg_event_types) {
+  using namespace flatbuffers;
+
+  message_creator add_groups_mc;
+  auto groups_to_remove = std::vector<std::uint64_t>{};
+  auto groups_to_add = std::vector<Offset<PassengerGroup>>{};
+  for (auto const& [pg, result] : sim_result.group_results_) {
+    if (result.alternatives_.empty()) {
+      // keep existing group (only reachable part)
+      continue;
+    }
+
+    auto const event_type = pg_event_types.at(pg);
+    auto const journey_prefix =
+        get_prefix(sched, pg->compact_planned_journey_, *result.localization_);
+
+    if (event_type == monitoring_event_type::MAJOR_DELAY_EXPECTED &&
+        result.alternatives_.size() == 1 &&
+        merge_journeys(journey_prefix,
+                       result.alternatives_.front().first->compact_journey_) ==
+            pg->compact_planned_journey_) {
+      // keep existing group (no alternatives found)
+      continue;
+    }
+
+    // remove existing group
+    groups_to_remove.emplace_back(pg->id_);
+
+    // add alternatives
+    for (auto const [alt, prob] : result.alternatives_) {
+      if (prob == 0.0) {
+        continue;
+      }
+      auto const new_journey =
+          merge_journeys(journey_prefix, alt->compact_journey_);
+      groups_to_add.emplace_back(to_fbs(
+          sched, add_groups_mc,
+          passenger_group{new_journey, 0, pg->source_, pg->passengers_,
+                          pg->planned_arrival_time_,
+                          pg->source_flags_ | group_source_flags::FORECAST,
+                          true, prob}));
+    }
+  }
+
+  message_creator remove_groups_mc;
+  remove_groups_mc.create_and_finish(
+      MsgContent_RemovePassengerGroupsRequest,
+      CreateRemovePassengerGroupsRequest(
+          remove_groups_mc, remove_groups_mc.CreateVector(groups_to_remove))
+          .Union(),
+      "/paxmon/remove_groups");
+  auto const remove_msg = make_msg(remove_groups_mc);
+
+  add_groups_mc.create_and_finish(
+      MsgContent_AddPassengerGroupsRequest,
+      CreateAddPassengerGroupsRequest(add_groups_mc,
+                                      add_groups_mc.CreateVector(groups_to_add))
+          .Union(),
+      "/paxmon/add_groups");
+  auto const add_msg = make_msg(add_groups_mc);
+
+  motis_call(remove_msg)->val();
+  motis_call(add_msg)->val();
+}
+
 void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   auto const& sched = get_schedule();
   auto& data = *get_shared_data<paxmon_data*>(motis::paxmon::DATA_KEY);
@@ -69,13 +139,20 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   utl::verify(current_time != INVALID_TIME, "invalid current system time");
 
   std::map<unsigned, std::vector<combined_passenger_group>> combined_groups;
+  std::map<passenger_group const*, monitoring_event_type> pg_event_types;
 
   for (auto const& event : *mon_update->events()) {
-    if (event->type() == MonitoringEventType_NO_PROBLEM) {
+    if (event->type() == MonitoringEventType_NO_PROBLEM ||
+        event->type() == MonitoringEventType_MAJOR_DELAY_EXPECTED) {
+      // TODO(pablo): major delay: group is still on all edges in the graph
       continue;
     }
     auto const pg = data.get_passenger_group(event->group()->id());
     utl::verify(pg != nullptr, "monitored passenger group already removed");
+    auto const inserted = pg_event_types.insert(
+        {pg, static_cast<monitoring_event_type>(event->type())});
+    utl::verify(inserted.second,
+                "multiple monitoring updates for passenger group");
     auto const localization =
         from_fbs(sched, event->localization_type(), event->localization());
     auto const destination_station_id =
@@ -152,6 +229,8 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   }
 
   ctx::await_all(motis_publish(forecast_msg));
+
+  update_tracked_groups(sched, sim_result, pg_event_types);
 }
 
 }  // namespace motis::paxforecast

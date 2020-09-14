@@ -44,6 +44,8 @@ struct reachable_trip {
   trip const* trp_{};
   trip_data* td_{};
   journey_leg const* leg_{};
+  time enter_schedule_time_{INVALID_TIME};
+  time exit_schedule_time_{INVALID_TIME};
   time enter_real_time_{INVALID_TIME};
   time exit_real_time_{INVALID_TIME};
   std::size_t enter_edge_idx_{INVALID_INDEX};

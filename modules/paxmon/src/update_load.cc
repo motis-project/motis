@@ -28,7 +28,7 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
           rt.valid_exit() ? rt.exit_edge_idx_ : rt.td_->edges_.size() - 1;
       for (auto i = rt.enter_edge_idx_; i <= exit_idx; ++i) {
         auto e = rt.td_->edges_[i];
-        if (e->from(g)->time_ > localization.arrival_time_) {
+        if (e->from(g)->time_ > localization.current_arrival_time_) {
           break;
         }
         utl::erase(disabled_edges, e);
@@ -36,7 +36,7 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
         add_passenger_group_to_edge(e, pg);
         auto const to = e->to(g);
         if (to->station_ == localization.at_station_->index_ &&
-            to->time_ == localization.arrival_time_) {
+            to->time_ == localization.current_arrival_time_) {
           break;
         }
       }

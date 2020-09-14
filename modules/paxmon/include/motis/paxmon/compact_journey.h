@@ -4,6 +4,8 @@
 #include <optional>
 #include <vector>
 
+#include "cista/reflection/comparable.h"
+
 #include "motis/core/schedule/time.h"
 #include "motis/core/schedule/trip.h"
 
@@ -12,6 +14,8 @@
 namespace motis::paxmon {
 
 struct journey_leg {
+  CISTA_COMPARABLE()
+
   trip const* trip_;
   unsigned enter_station_id_;
   unsigned exit_station_id_;
@@ -21,6 +25,8 @@ struct journey_leg {
 };
 
 struct compact_journey {
+  CISTA_COMPARABLE()
+
   std::vector<journey_leg> legs_;
 
   inline unsigned destination_station_id() const {

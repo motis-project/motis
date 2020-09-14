@@ -5,14 +5,16 @@ namespace motis.paxmon;
 
 table PassengerAtStation {
   station: motis.Station;
-  arrival_time: ulong;
+  schedule_arrival_time: long;
+  current_arrival_time: long;
   first_station: bool;
 }
 
 table PassengerInTrip {
   trip: motis.TripId;
   next_station: motis.Station;
-  arrival_time: ulong;
+  schedule_arrival_time: long;
+  current_arrival_time: long;
 }
 
 union PassengerLocalization { PassengerAtStation, PassengerInTrip }

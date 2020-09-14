@@ -99,7 +99,7 @@ std::vector<alternative> find_alternatives(
   if (localization.in_trip()) {
     query_msg = ontrip_train_query(
         sched, localization.in_trip_, localization.at_station_->index_,
-        localization.arrival_time_, destination_station_id);
+        localization.current_arrival_time_, destination_station_id);
   } else {
     auto const interchange_time =
         localization.first_station_
@@ -108,7 +108,8 @@ std::vector<alternative> find_alternatives(
                   ->transfer_time_;
     query_msg = ontrip_station_query(
         sched, localization.at_station_->index_,
-        localization.arrival_time_ + interchange_time, destination_station_id);
+        localization.current_arrival_time_ + interchange_time,
+        destination_station_id);
   }
 
   auto const response_msg = motis_call(query_msg)->val();
@@ -123,8 +124,8 @@ std::vector<alternative> find_alternatives(
   return utl::to_vec(alternatives, [&](journey const& j) {
     auto const arrival_time = unix_to_motistime(
         sched.schedule_begin_, j.stops_.back().arrival_.timestamp_);
-    auto const dur =
-        static_cast<duration>(arrival_time - localization.arrival_time_);
+    auto const dur = static_cast<duration>(arrival_time -
+                                           localization.current_arrival_time_);
     return alternative{j, to_compact_journey(j, sched), arrival_time, dur,
                        j.transfers_};
   });

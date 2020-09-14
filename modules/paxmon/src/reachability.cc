@@ -40,9 +40,10 @@ reachability_info get_reachability(paxmon_data const& data,
             break;
           }
           in_trip = true;
-          reachability.reachable_trips_.emplace_back(reachable_trip{
-              leg.trip_, td, &leg, from->current_time(), INVALID_TIME, edge_idx,
-              reachable_trip::INVALID_INDEX});
+          reachability.reachable_trips_.emplace_back(
+              reachable_trip{leg.trip_, td, &leg, from->schedule_time(),
+                             INVALID_TIME, from->current_time(), INVALID_TIME,
+                             edge_idx, reachable_trip::INVALID_INDEX});
           entry_ok = true;
         }
       }
@@ -61,6 +62,7 @@ reachability_info get_reachability(paxmon_data const& data,
           station_arrival_time = to->current_time();
           auto& rt = reachability.reachable_trips_.back();
           rt.exit_real_time_ = station_arrival_time;
+          rt.exit_schedule_time_ = to->schedule_time();
           rt.exit_edge_idx_ = edge_idx;
           reachability.reachable_interchange_stations_.emplace_back(
               reachable_station{to->station_, to->schedule_time_,

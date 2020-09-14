@@ -112,14 +112,18 @@ passenger_group from_fbs(schedule const& sched, PassengerGroup const* pg) {
 Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
                     passenger_localization const& loc) {
   if (loc.in_trip()) {
-    return CreatePassengerInTrip(fbb, to_fbs(sched, fbb, loc.in_trip_),
-                                 to_fbs(fbb, *loc.at_station_),
-                                 motis_to_unixtime(sched, loc.arrival_time_))
+    return CreatePassengerInTrip(
+               fbb, to_fbs(sched, fbb, loc.in_trip_),
+               to_fbs(fbb, *loc.at_station_),
+               motis_to_unixtime(sched, loc.schedule_arrival_time_),
+               motis_to_unixtime(sched, loc.current_arrival_time_))
         .Union();
   } else {
-    return CreatePassengerAtStation(fbb, to_fbs(fbb, *loc.at_station_),
-                                    motis_to_unixtime(sched, loc.arrival_time_),
-                                    loc.first_station_)
+    return CreatePassengerAtStation(
+               fbb, to_fbs(fbb, *loc.at_station_),
+               motis_to_unixtime(sched, loc.schedule_arrival_time_),
+               motis_to_unixtime(sched, loc.current_arrival_time_),
+               loc.first_station_)
         .Union();
   }
 }
@@ -132,12 +136,14 @@ passenger_localization from_fbs(schedule const& sched,
       auto const loc = reinterpret_cast<PassengerInTrip const*>(loc_ptr);
       return {from_fbs(sched, loc->trip()),
               get_station(sched, loc->next_station()->id()->str()),
-              unix_to_motistime(sched, loc->arrival_time()), false};
+              unix_to_motistime(sched, loc->schedule_arrival_time()),
+              unix_to_motistime(sched, loc->current_arrival_time()), false};
     }
     case PassengerLocalization_PassengerAtStation: {
       auto const loc = reinterpret_cast<PassengerAtStation const*>(loc_ptr);
       return {nullptr, get_station(sched, loc->station()->id()->str()),
-              unix_to_motistime(sched, loc->arrival_time()),
+              unix_to_motistime(sched, loc->schedule_arrival_time()),
+              unix_to_motistime(sched, loc->current_arrival_time()),
               loc->first_station()};
     }
     default:
