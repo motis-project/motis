@@ -8,6 +8,7 @@
 #include <string_view>
 #include <utility>
 
+#include "utl/erase_if.h"
 #include "utl/get_or_create.h"
 #include "utl/pipes.h"
 #include "utl/verify.h"
@@ -253,26 +254,12 @@ void update_trip_route(schedule const& sched, paxmon_data& data,
 }
 
 void add_passenger_group_to_edge(edge* e, passenger_group* pg) {
-  for (auto& psi : e->pax_connection_info_.section_infos_) {
-    if (psi.group_ == pg) {
-      if (!psi.valid_) {
-        psi.valid_ = true;
-      }
-      return;
-    }
-  }
   e->pax_connection_info_.section_infos_.emplace_back(pg);
 }
 
 void remove_passenger_group_from_edge(edge* e, passenger_group* pg) {
-  for (auto& psi : e->pax_connection_info_.section_infos_) {
-    if (psi.group_ == pg) {
-      if (psi.valid_) {
-        psi.valid_ = false;
-      }
-      return;
-    }
-  }
+  utl::erase_if(e->pax_connection_info_.section_infos_,
+                [&](auto const& psi) { return psi.group_ == pg; });
 }
 
 void for_each_trip(

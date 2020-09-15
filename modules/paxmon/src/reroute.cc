@@ -149,11 +149,9 @@ std::set<passenger_group*> collect_passenger_groups(trip_data& td) {
   std::set<passenger_group*> affected_passenger_groups;
   for (auto const& te : td.edges_) {
     for (auto& psi : te->pax_connection_info_.section_infos_) {
-      if (psi.valid_) {
-        affected_passenger_groups.insert(psi.group_);
-        psi.valid_ = false;
-      }
+      affected_passenger_groups.insert(psi.group_);
     }
+    te->pax_connection_info_.section_infos_.clear();
   }
   return affected_passenger_groups;
 }

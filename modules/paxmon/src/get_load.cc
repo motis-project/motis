@@ -5,7 +5,7 @@ namespace motis::paxmon {
 std::uint16_t get_base_load(pax_connection_info const& pci) {
   std::uint16_t load = 0;
   for (auto const& si : pci.section_infos_) {
-    if (si.valid_ && si.group_->probability_ == 1.0F) {
+    if (si.group_->probability_ == 1.0F) {
       load += si.group_->passengers_;
     }
   }
@@ -33,7 +33,7 @@ pdf_t get_load_pdf(pax_connection_info const& pci) {
   auto pdf = pdf_t{};
   pdf[base_load] = 1.0F;
   for (auto const& si : pci.section_infos_) {
-    if (si.valid_ && si.group_->probability_ != 1.0F) {
+    if (si.group_->probability_ != 1.0F) {
       convolve(pdf, si.group_);
     }
   }
