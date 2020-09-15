@@ -320,6 +320,9 @@ void check_broken_interchanges(
         ++system_stats.total_broken_interchanges_;
       }
       for (auto& psi : ice->pax_connection_info_.section_infos_) {
+        if (!psi.valid_) {
+          continue;
+        }
         if (affected_passenger_groups.insert(psi.group_).second) {
           system_stats.total_affected_passengers_ += psi.group_->passengers_;
           psi.group_->ok_ = false;
@@ -330,12 +333,18 @@ void check_broken_interchanges(
       // interchange valid again
       ice->broken_ = false;
       for (auto& psi : ice->pax_connection_info_.section_infos_) {
+        if (!psi.valid_) {
+          continue;
+        }
         data.groups_affected_by_last_update_.insert(psi.group_);
       }
     } else if (arrival_delay_threshold < 0 && to->station_ == 0) {
       // check for delayed arrival at destination
       auto const estimated_arrival = static_cast<int>(from->schedule_time());
       for (auto& psi : ice->pax_connection_info_.section_infos_) {
+        if (!psi.valid_) {
+          continue;
+        }
         auto const estimated_delay =
             estimated_arrival -
             static_cast<int>(psi.group_->planned_arrival_time_);
@@ -521,17 +530,20 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
   auto const& sched = get_schedule();
   auto const req = motis_content(AddPassengerGroupsRequest, msg);
 
-  auto const added_groups = utl::to_vec(*req->groups(), [&](auto const pg_fbs) {
-    auto const id =
-        static_cast<std::uint64_t>(data_.graph_.passenger_groups_.size());
-    auto pg = data_.graph_.passenger_groups_
-                  .emplace_back(std::make_unique<passenger_group>(
-                      from_fbs(sched, pg_fbs)))
-                  .get();
-    pg->id_ = id;
-    add_passenger_group_to_graph(sched, data_, *pg);
-    return pg;
-  });
+  auto const added_groups =
+      utl::to_vec(*req->groups(), [&](PassengerGroup const* pg_fbs) {
+        utl::verify(pg_fbs->planned_journey()->legs()->size() != 0,
+                    "trying to add empty passenger group");
+        auto const id =
+            static_cast<std::uint64_t>(data_.graph_.passenger_groups_.size());
+        auto pg = data_.graph_.passenger_groups_
+                      .emplace_back(std::make_unique<passenger_group>(
+                          from_fbs(sched, pg_fbs)))
+                      .get();
+        pg->id_ = id;
+        add_passenger_group_to_graph(sched, data_, *pg);
+        return pg;
+      });
 
   message_creator mc;
   mc.create_and_finish(

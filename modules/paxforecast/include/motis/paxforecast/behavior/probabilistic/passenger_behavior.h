@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <random>
 #include <vector>
 
@@ -39,7 +40,7 @@ struct passenger_behavior {
 private:
   inline void sample(std::vector<alternative> const& alternatives,
                      std::vector<float>& probabilities) {
-    auto best_score = 0.0F;
+    auto best_score = std::numeric_limits<float>::max();
     auto best_alternatives = std::vector<std::size_t>{};
     for (auto const& [idx, alt] : utl::enumerate(alternatives)) {
       auto const transfer_weight = static_cast<float>(transfer_dist_(gen_));

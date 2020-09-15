@@ -413,6 +413,7 @@ loader_result load_journeys(schedule const& sched, paxmon_data& data,
           utl::to_vec(std::next(begin(current_input_legs), start_idx),
                       std::next(begin(current_input_legs), end_idx),
                       [&](auto const& leg) { return leg.to_journey_leg(); });
+      utl::verify(!current_journey.legs_.empty(), "empty csv journey");
       current_journey.legs_.front().enter_transfer_ = {};
       auto const planned_arrival_time = current_journey.legs_.back().exit_time_;
       data.graph_.passenger_groups_.emplace_back(

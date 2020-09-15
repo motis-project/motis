@@ -1,5 +1,7 @@
 #include "motis/paxmon/loader/journeys/to_compact_journey.h"
 
+#include "utl/verify.h"
+
 #include "motis/core/access/station_access.h"
 
 #include "motis/paxmon/loader/journeys/journey_access.h"
@@ -26,6 +28,8 @@ compact_journey to_compact_journey(journey const& j, schedule const& sched) {
         cj.legs_.emplace_back(journey_leg{trp, from_station_id, to_station_id,
                                           enter_time, exit_time, ti});
       });
+
+  utl::verify(!cj.legs_.empty(), "to_compact_journey: empty journey");
 
   return cj;
 }
