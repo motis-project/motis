@@ -107,6 +107,9 @@ void update_tracked_groups(
     }
   }
 
+  LOG(info) << "update_tracked_groups: -" << groups_to_remove.size() << " +"
+            << groups_to_add.size();
+
   message_creator remove_groups_mc;
   remove_groups_mc.create_and_finish(
       MsgContent_RemovePassengerGroupsRequest,
@@ -175,6 +178,10 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
     return;
   }
 
+  LOG(info) << mon_update->events()->size() << " monitoring updates, "
+            << pg_event_types.size() << " groups, " << combined_groups.size()
+            << " combined groups";
+
   auto routing_requests = 0ULL;
   auto alternatives_found = 0ULL;
 
@@ -192,6 +199,8 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
             }));
       }
     }
+    LOG(info) << "find alternatives: " << routing_requests
+              << " routing requests...";
     ctx::await_all(futures);
   }
 
@@ -212,6 +221,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   LOG(info) << "alternatives: " << routing_requests << " routing requests => "
             << alternatives_found << " alternatives";
 
+  manual_timer sim_timer{"passenger behavior simulation"};
   auto rnd_gen = std::mt19937{std::random_device{}()};
   auto transfer_dist = std::normal_distribution{30.0F, 10.0F};
   auto pb =
@@ -219,10 +229,16 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   auto const announcements = std::vector<measures::please_use>{};
   auto const sim_result =
       simulate_behavior(sched, data, combined_groups, announcements, pb);
+  sim_timer.stop_and_print();
 
+  LOG(info) << "forecast: " << sim_result.additional_groups_.size()
+            << " edges affected";
+
+  manual_timer load_forecast_timer{"load forecast"};
   auto const lfc = calc_load_forecast(sched, data, sim_result);
   auto const forecast_msg =
       make_passenger_forecast_msg(sched, data, sim_result, lfc);
+  load_forecast_timer.stop_and_print();
 
   if (forecast_file_.is_open()) {
     forecast_file_ << forecast_msg->to_json(true) << std::endl;

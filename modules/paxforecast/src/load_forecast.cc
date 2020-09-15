@@ -1,9 +1,13 @@
 #include "motis/paxforecast/load_forecast.h"
 
+#include <mutex>
+
 #include "utl/to_vec.h"
 
 #include "motis/hash_map.h"
 #include "motis/hash_set.h"
+
+#include "motis/module/context/motis_parallel_for.h"
 
 using namespace motis::paxmon;
 
@@ -13,11 +17,14 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
                                  simulation_result const& sim_result) {
   mcd::hash_map<motis::paxmon::edge const*, edge_forecast> edges;
   mcd::hash_set<trip const*> trips;
+  std::mutex mutex;
 
-  for (auto const& [e, additional_groups] : sim_result.additional_groups_) {
+  motis_parallel_for(sim_result.additional_groups_, [&](auto const& entry) {
+    auto const e = entry.first;
     if (!e->is_trip()) {
-      continue;
+      return;
     }
+    auto const& additional_groups = entry.second;
     auto pdf = get_load_pdf(e->get_pax_connection_info());
     for (auto const& [grp, grp_probability] : additional_groups) {
       add_additional_group(pdf, grp->passengers_, grp_probability);
@@ -25,11 +32,13 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
     auto const cdf = get_cdf(pdf);
     auto const possibly_over_capacity =
         e->has_capacity() && load_factor_possibly_ge(pdf, e->capacity(), 1.0F);
+
+    std::lock_guard guard{mutex};
     edges.emplace(e, edge_forecast{e, cdf, true, possibly_over_capacity});
     for (auto const& trp : e->get_trips(sched)) {
       trips.emplace(trp);
     }
-  }
+  });
 
   load_forecast lfc;
   lfc.trips_ = utl::to_vec(trips, [&](auto const trp) {
