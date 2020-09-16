@@ -13,7 +13,7 @@ namespace motis::paxforecast {
 
 struct edge_forecast {
   motis::paxmon::edge const* edge_{};
-  motis::paxmon::cdf_t forecast_cdf_;
+  motis::paxmon::pax_cdf forecast_cdf_;
   bool updated_{};
   bool possibly_over_capacity_{};
 };

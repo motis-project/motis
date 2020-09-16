@@ -1,5 +1,6 @@
 #include "motis/paxforecast/messages.h"
 
+#include "utl/enumerate.h"
 #include "utl/to_vec.h"
 
 #include "motis/core/conv/station_conv.h"
@@ -29,10 +30,17 @@ Offset<PassengerGroupForecast> get_passenger_group_forecast(
 }
 
 Offset<Vector<CdfEntry const*>> cdf_to_fbs(FlatBufferBuilder& fbb,
-                                           cdf_t const& cdf) {
-  return fbb.CreateVectorOfStructs(utl::to_vec(cdf, [](auto const& e) {
-    return CdfEntry{e.first, e.second};
-  }));
+                                           pax_cdf const& cdf) {
+  auto entries = std::vector<CdfEntry>{};
+  entries.reserve(cdf.data_.size());
+  auto last_prob = 0.0F;
+  for (auto const& [pax, prob] : utl::enumerate(cdf.data_)) {
+    if (prob != last_prob) {
+      entries.emplace_back(pax, prob);
+      last_prob = prob;
+    }
+  }
+  return fbb.CreateVectorOfStructs(entries);
 }
 
 CapacityType get_capacity_type(motis::paxmon::edge const* e) {

@@ -1,7 +1,9 @@
 #include "gtest/gtest.h"
 
+#include <cstdint>
 #include <vector>
 
+#include "utl/enumerate.h"
 #include "utl/to_vec.h"
 
 #include "motis/paxmon/get_load.h"
@@ -26,6 +28,30 @@ inline pax_connection_info mk_pci(std::vector<passenger_group> const& pgs) {
   })};
 }
 
+inline pax_pdf make_pdf(std::map<std::uint16_t, float> const& m) {
+  auto pdf = pax_pdf{};
+  for (auto const& e : m) {
+    pdf.data_.resize(e.first + 1);
+    pdf.data_[e.first] = e.second;
+  }
+  return pdf;
+}
+
+inline pax_cdf make_cdf(std::map<std::uint16_t, float> const& m) {
+  auto cdf = pax_cdf{};
+  for (auto const& e : m) {
+    if (!cdf.data_.empty()) {
+      auto const last_val = cdf.data_.back();
+      auto const old_size = cdf.data_.size();
+      cdf.data_.resize(e.first + 1, last_val);
+    } else {
+      cdf.data_.resize(e.first + 1);
+    }
+    cdf.data_[e.first] = e.second;
+  }
+  return cdf;
+}
+
 }  // namespace
 
 TEST(paxmon_get_load, only_one_certain) {
@@ -36,7 +62,7 @@ TEST(paxmon_get_load, only_one_certain) {
   EXPECT_EQ(get_base_load(pci), 10);
 
   auto const pdf = get_load_pdf(pci);
-  EXPECT_EQ(pdf, (pdf_t{{10, 1.0F}}));
+  EXPECT_EQ(pdf, (make_pdf({{10, 1.0F}})));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.2F));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.5F));
   EXPECT_FALSE(load_factor_possibly_ge(pdf, capacity, 1.0F));
@@ -51,7 +77,7 @@ TEST(paxmon_get_load, only_one_certain) {
   EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 2.0F));
 
   for (auto const& cdf : {get_cdf(pdf), get_load_cdf(pci)}) {
-    EXPECT_EQ(cdf, (cdf_t{{10, 1.0F}}));
+    EXPECT_EQ(cdf, (make_cdf({{10, 1.0F}})));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.2F));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.5F));
     EXPECT_FALSE(load_factor_possibly_ge(cdf, capacity, 1.0F));
@@ -76,7 +102,7 @@ TEST(paxmon_get_load, only_multiple_certain) {
   EXPECT_EQ(get_base_load(pci), 60);
 
   auto const pdf = get_load_pdf(pci);
-  EXPECT_EQ(pdf, (pdf_t{{60, 1.0F}}));
+  EXPECT_EQ(pdf, (make_pdf({{60, 1.0F}})));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.2F));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.5F));
   EXPECT_FALSE(load_factor_possibly_ge(pdf, capacity, 1.0F));
@@ -91,7 +117,7 @@ TEST(paxmon_get_load, only_multiple_certain) {
   EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 2.0F));
 
   for (auto const& cdf : {get_cdf(pdf), get_load_cdf(pci)}) {
-    EXPECT_EQ(cdf, (cdf_t{{60, 1.0F}}));
+    EXPECT_EQ(cdf, (make_cdf({{60, 1.0F}})));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.2F));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.5F));
     EXPECT_FALSE(load_factor_possibly_ge(cdf, capacity, 1.0F));
@@ -116,7 +142,7 @@ TEST(paxmon_get_load, two_groups) {
   EXPECT_EQ(get_base_load(pci), 10);
 
   auto const pdf = get_load_pdf(pci);
-  EXPECT_EQ(pdf, (pdf_t{{10, 0.6F}, {30, 0.4F}}));
+  EXPECT_EQ(pdf, (make_pdf({{10, 0.6F}, {30, 0.4F}})));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.2F));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.5F));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 1.0F));
@@ -131,7 +157,7 @@ TEST(paxmon_get_load, two_groups) {
   EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 2.0F));
 
   for (auto const& cdf : {get_cdf(pdf), get_load_cdf(pci)}) {
-    EXPECT_EQ(cdf, (cdf_t{{10, 0.6F}, {30, 1.0F}}));
+    EXPECT_EQ(cdf, (make_cdf({{10, 0.6F}, {30, 1.0F}})));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.2F));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.5F));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 1.0F));

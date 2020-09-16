@@ -223,7 +223,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
   manual_timer sim_timer{"passenger behavior simulation"};
   auto rnd_gen = std::mt19937{std::random_device{}()};
-  auto transfer_dist = std::normal_distribution{30.0F, 10.0F};
+  auto transfer_dist = std::normal_distribution<float>{30.0F, 10.0F};
   auto pb =
       behavior::probabilistic::passenger_behavior{rnd_gen, transfer_dist, 1000};
   auto const announcements = std::vector<measures::please_use>{};
