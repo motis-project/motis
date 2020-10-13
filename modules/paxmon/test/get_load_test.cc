@@ -46,7 +46,6 @@ inline pax_cdf make_cdf(std::map<std::uint16_t, float> const& m) {
   for (auto const& e : m) {
     if (!cdf.data_.empty()) {
       auto const last_val = cdf.data_.back();
-      auto const old_size = cdf.data_.size();
       cdf.data_.resize(e.first + 1, last_val);
     } else {
       cdf.data_.resize(e.first + 1);
