@@ -55,9 +55,9 @@ jobs:
           Import-Module $devShell
           Enter-VsDevShell -VsInstallPath $installPath -SkipAutomaticLocation -DevCmdArguments "-arch=amd64"
           cmake -GNinja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }}
-          .\build\bin\buildcache.exe -z
+          .\build\buildcache\bin\buildcache.exe -z
           cmake --build build --target motis motis-test motis-itest motis-eval motis-intermodal-eval
-          .\build\bin\buildcache.exe -s
+          .\build\buildcache\bin\buildcache.exe -s
 
       # ==== TESTS ====
       - name: Run Test Mode
