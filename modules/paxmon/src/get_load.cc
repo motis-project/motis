@@ -1,7 +1,9 @@
 #include "motis/paxmon/get_load.h"
+#include "motis/paxmon/get_load_internal.h"
 
 #include <cassert>
 #include <algorithm>
+#include <numeric>
 
 #ifdef MOTIS_AVX
 #include <immintrin.h>
@@ -178,6 +180,59 @@ void add_additional_group(pax_pdf& pdf, std::uint16_t passengers,
                           float probability) {
   pdf.data_.resize(pdf.data_.size() + passengers);
   convolve_base(pdf, passengers, probability);
+}
+
+std::size_t get_max_new_pax(
+    std::vector<std::pair<passenger_group const*, float>> const&
+        additional_groups) {
+  return std::accumulate(
+      begin(additional_groups), end(additional_groups), 0ULL,
+      [](auto const sum, auto const& p) { return sum + p.first->passengers_; });
+}
+
+void add_additional_groups_base(
+    pax_pdf& pdf, std::vector<std::pair<passenger_group const*, float>> const&
+                      additional_groups) {
+  assert(!additional_groups.empty());
+  auto const max_new_pax = get_max_new_pax(additional_groups);
+  pdf.data_.resize(pdf.data_.size() + max_new_pax);
+  for (auto const& [grp, grp_probability] : additional_groups) {
+    convolve_base(pdf, grp->passengers_, grp_probability);
+  }
+}
+
+void add_additional_groups_avx(
+    pax_pdf& pdf, std::vector<std::pair<passenger_group const*, float>> const&
+                      additional_groups) {
+  assert(!additional_groups.empty());
+  auto const max_new_pax = get_max_new_pax(additional_groups);
+  auto const pdf_size = pdf.data_.size() + max_new_pax;
+  pdf.data_.resize(round_up<8>(pdf_size));
+  auto buf = std::vector<float>(pdf.data_.size() + 8);
+  auto limits = pax_limits{
+      std::min_element(begin(additional_groups), end(additional_groups),
+                       [](auto const& p1, auto const& p2) {
+                         return p1.first->passengers_ < p2.first->passengers_;
+                       })
+          ->first->passengers_,
+      0};
+  for (auto const& [grp, grp_probability] : additional_groups) {
+    convolve_avx(pdf, grp->passengers_, grp_probability, limits, buf);
+  }
+  pdf.data_.resize(pdf_size);
+}
+
+void add_additional_groups(
+    pax_pdf& pdf, std::vector<std::pair<passenger_group const*, float>> const&
+                      additional_groups) {
+  if (additional_groups.empty()) {
+    return;
+  }
+#if MOTIS_AVX
+  return add_additional_groups_avx(pdf, additional_groups);
+#else
+  return add_additional_groups_base(pdf, additional_groups);
+#endif
 }
 
 bool load_factor_possibly_ge(pax_pdf const& pdf, std::uint16_t capacity,

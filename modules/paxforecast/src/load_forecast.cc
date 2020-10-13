@@ -26,9 +26,7 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
     }
     auto const& additional_groups = entry.second;
     auto pdf = get_load_pdf(e->get_pax_connection_info());
-    for (auto const& [grp, grp_probability] : additional_groups) {
-      add_additional_group(pdf, grp->passengers_, grp_probability);
-    }
+    add_additional_groups(pdf, additional_groups);
     auto const cdf = get_cdf(pdf);
     auto const possibly_over_capacity =
         e->has_capacity() && load_factor_possibly_ge(cdf, e->capacity(), 1.0F);

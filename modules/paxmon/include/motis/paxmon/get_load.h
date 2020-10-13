@@ -1,11 +1,13 @@
 #pragma once
 
 #include <map>
+#include <utility>
 #include <vector>
 
 #include "cista/reflection/comparable.h"
 
 #include "motis/paxmon/graph.h"
+#include "motis/paxmon/passenger_group.h"
 
 namespace motis::paxmon {
 
@@ -40,19 +42,14 @@ pax_cdf get_load_cdf(pax_connection_info const& pci);
 lf_df_t to_load_factor(pax_pdf const& pdf, std::uint16_t capacity);
 lf_df_t to_load_factor(pax_cdf const& cdf, std::uint16_t capacity);
 
-void add_additional_group(pax_pdf& pdf, std::uint16_t passengers,
-                          float probability);
+void add_additional_groups(
+    pax_pdf& pdf, std::vector<std::pair<passenger_group const*, float>> const&
+                      additional_groups);
 
 bool load_factor_possibly_ge(pax_pdf const& pdf, std::uint16_t capacity,
                              float threshold);
 bool load_factor_possibly_ge(pax_cdf const& cdf, std::uint16_t capacity,
                              float threshold);
 bool load_factor_possibly_ge(lf_df_t const& lf_df, float threshold);
-
-// for testing:
-pax_pdf get_load_pdf_base(pax_connection_info const& pci);
-#ifdef MOTIS_AVX
-pax_pdf get_load_pdf_avx(pax_connection_info const& pci);
-#endif
 
 }  // namespace motis::paxmon

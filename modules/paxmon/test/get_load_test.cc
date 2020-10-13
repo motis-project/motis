@@ -10,6 +10,7 @@
 #include "utl/to_vec.h"
 
 #include "motis/paxmon/get_load.h"
+#include "motis/paxmon/get_load_internal.h"
 #include "motis/paxmon/passenger_group.h"
 #include "motis/paxmon/pax_connection_info.h"
 
@@ -181,6 +182,7 @@ TEST(paxmon_get_load, base_eq_avx) {
   auto gen = std::mt19937{std::random_device{}()};
   auto base_group_count_dist = std::uniform_int_distribution{0, 200};
   auto fc_group_count_dist = std::uniform_int_distribution{1, 1'000};
+  auto add_group_count_dist = std::uniform_int_distribution{1, 200};
   auto group_size_dist = std::normal_distribution<float>{1.5F, 3.0F};
   auto prob_dist = std::uniform_real_distribution<float>{0.0F, 1.0F};
 
@@ -203,8 +205,24 @@ TEST(paxmon_get_load, base_eq_avx) {
     }
 
     auto const pci = mk_pci(pgs);
-    auto const pdf_base = get_load_pdf_base(pci);
-    auto const pdf_avx = get_load_pdf_avx(pci);
+    auto pdf_base = get_load_pdf_base(pci);
+    auto pdf_avx = get_load_pdf_avx(pci);
+
+    ASSERT_THAT(pdf_avx.data_, Pointwise(FloatNear(1E-5F), pdf_base.data_));
+
+    auto add_pgs = std::vector<passenger_group>{};
+    auto add_grps = std::vector<std::pair<passenger_group const*, float>>{};
+    auto const add_group_count = add_group_count_dist(gen);
+    add_pgs.reserve(add_group_count);
+    add_grps.reserve(add_group_count);
+    for (auto grp = 0; grp < add_group_count; ++grp) {
+      auto const prob = prob_dist(gen);
+      auto const& pg = add_pgs.emplace_back(mk_pg(get_group_size(), prob));
+      add_grps.emplace_back(&pg, prob);
+    }
+
+    add_additional_groups_base(pdf_base, add_grps);
+    add_additional_groups_avx(pdf_avx, add_grps);
 
     ASSERT_THAT(pdf_avx.data_, Pointwise(FloatNear(1E-5F), pdf_base.data_));
   }
