@@ -190,7 +190,7 @@ TEST(paxmon_get_load, base_eq_avx) {
     return static_cast<std::uint16_t>(std::max(1.0F, group_size_dist(gen)));
   };
 
-  for (auto run = 0; run < 1000; ++run) {
+  for (auto run = 0; run < 100; ++run) {
     auto const base_group_count = base_group_count_dist(gen);
     auto const fc_group_count = fc_group_count_dist(gen);
     auto pgs = std::vector<passenger_group>{};
