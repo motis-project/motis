@@ -105,7 +105,7 @@ void write_over_capacity_report(paxmon_data const& data, schedule const& sched,
       fmt::print(
           out, "{:4}/{:4} [{:+4} {:3.0f}%] [{:8}] | {:8} {:50} => {:8} {:50}\n",
           passengers, capacity, additional, percentage,
-          capacity_source_str(e->capacity_source()), from_station.eva_nr_,
+          capacity_source_str(e->get_capacity_source()), from_station.eva_nr_,
           from_station.name_, to_station.eva_nr_, to_station.name_);
     }
 

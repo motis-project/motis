@@ -98,8 +98,8 @@ struct edge {
     return get_capacity(encoded_capacity_);
   }
 
-  inline capacity_source capacity_source() const {
-    return get_capacity_source(encoded_capacity_);
+  inline capacity_source get_capacity_source() const {
+    return ::motis::paxmon::get_capacity_source(encoded_capacity_);
   }
 
   inline bool has_unlimited_capacity() const {
