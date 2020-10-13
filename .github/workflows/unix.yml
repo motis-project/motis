@@ -202,9 +202,9 @@ jobs:
 
       - name: Build
         run: |
-          ./build/bin/buildcache -z
+          ./build/buildcache/bin/buildcache -z
           cmake --build build --target motis motis-test motis-itest motis-eval motis-intermodal-eval
-          ./build/bin/buildcache -s
+          ./build/buildcache/bin/buildcache -s
 
       # ==== TESTS ====
       - name: Run Test Mode
