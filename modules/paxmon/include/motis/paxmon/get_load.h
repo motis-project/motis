@@ -49,4 +49,10 @@ bool load_factor_possibly_ge(pax_cdf const& cdf, std::uint16_t capacity,
                              float threshold);
 bool load_factor_possibly_ge(lf_df_t const& lf_df, float threshold);
 
+// for testing:
+pax_pdf get_load_pdf_base(pax_connection_info const& pci);
+#ifdef MOTIS_AVX
+pax_pdf get_load_pdf_avx(pax_connection_info const& pci);
+#endif
+
 }  // namespace motis::paxmon

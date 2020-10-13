@@ -1,6 +1,9 @@
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include <cmath>
 #include <cstdint>
+#include <random>
 #include <vector>
 
 #include "utl/enumerate.h"
@@ -142,7 +145,7 @@ TEST(paxmon_get_load, two_groups) {
   EXPECT_EQ(get_base_load(pci), 10);
 
   auto const pdf = get_load_pdf(pci);
-  EXPECT_EQ(pdf, (make_pdf({{10, 0.6F}, {30, 0.4F}})));
+  EXPECT_EQ(pdf.data_, (make_pdf({{10, 0.6F}, {30, 0.4F}}).data_));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.2F));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.5F));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 1.0F));
@@ -172,5 +175,40 @@ TEST(paxmon_get_load, two_groups) {
     EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 2.0F));
   }
 }
+
+#ifdef MOTIS_AVX
+TEST(paxmon_get_load, base_eq_avx) {
+  auto gen = std::mt19937{std::random_device{}()};
+  auto base_group_count_dist = std::uniform_int_distribution{0, 200};
+  auto fc_group_count_dist = std::uniform_int_distribution{1, 1'000};
+  auto group_size_dist = std::normal_distribution<float>{1.5F, 3.0F};
+  auto prob_dist = std::uniform_real_distribution<float>{0.0F, 1.0F};
+
+  auto const get_group_size = [&]() {
+    return static_cast<std::uint16_t>(std::max(1.0F, group_size_dist(gen)));
+  };
+
+  for (auto run = 0; run < 1000; ++run) {
+    auto const base_group_count = base_group_count_dist(gen);
+    auto const fc_group_count = fc_group_count_dist(gen);
+    auto pgs = std::vector<passenger_group>{};
+    pgs.reserve(base_group_count + fc_group_count);
+
+    for (auto grp = 0; grp < base_group_count; ++grp) {
+      pgs.emplace_back(mk_pg(get_group_size(), 1.0F));
+    }
+
+    for (auto grp = 0; grp < fc_group_count; ++grp) {
+      pgs.emplace_back(mk_pg(get_group_size(), prob_dist(gen)));
+    }
+
+    auto const pci = mk_pci(pgs);
+    auto const pdf_base = get_load_pdf_base(pci);
+    auto const pdf_avx = get_load_pdf_avx(pci);
+
+    ASSERT_THAT(pdf_avx.data_, Pointwise(FloatNear(1E-5F), pdf_base.data_));
+  }
+}
+#endif
 
 }  // namespace motis::paxmon

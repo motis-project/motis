@@ -1,5 +1,12 @@
 #include "motis/paxmon/get_load.h"
 
+#include <cassert>
+#include <algorithm>
+
+#ifdef MOTIS_AVX
+#include <immintrin.h>
+#endif
+
 #include "utl/enumerate.h"
 #include "utl/verify.h"
 
@@ -27,8 +34,8 @@ std::uint16_t get_base_load(pax_connection_info const& pci) {
   return load;
 }
 
-inline void convolve(pax_pdf& pdf, std::uint16_t const grp_size,
-                     float grp_prob) {
+inline void convolve_base(pax_pdf& pdf, std::uint16_t const grp_size,
+                          float grp_prob) {
   auto old_pdf = pdf;
   auto const inv_grp_prob = 1.0F - grp_prob;
   for (auto& e : pdf.data_) {
@@ -44,21 +51,90 @@ inline void convolve(pax_pdf& pdf, std::uint16_t const grp_size,
   }
 }
 
-inline void convolve(pax_pdf& pdf, passenger_group const* grp) {
-  convolve(pdf, grp->passengers_, grp->probability_);
-}
-
-pax_pdf get_load_pdf(pax_connection_info const& pci) {
+pax_pdf get_load_pdf_base(pax_connection_info const& pci) {
   auto const limits = get_pax_limits(pci);
   auto pdf = pax_pdf{};
   pdf.data_.resize(limits.max_ + 1);
   pdf.data_[limits.min_] = 1.0F;
   for (auto const& si : pci.section_infos_) {
     if (si.group_->probability_ != 1.0F) {
-      convolve(pdf, si.group_);
+      convolve_base(pdf, si.group_->passengers_, si.group_->probability_);
     }
   }
   return pdf;
+}
+
+#ifdef MOTIS_AVX
+
+template <auto M, typename T>
+inline T round_up(T const val) {
+  auto const rem = val % M;
+  return rem == 0 ? val : val + M - rem;
+}
+
+template <auto M, typename T>
+inline T round_down(T const val) {
+  return val - val % M;
+}
+
+inline std::size_t get_start_offset(pax_limits const& limits,
+                                    std::uint16_t const grp_size) {
+  return round_down<8>(std::max(limits.min_, grp_size));
+}
+
+inline void convolve_avx(pax_pdf& pdf, std::uint16_t const grp_size,
+                         float grp_prob, pax_limits const& limits,
+                         std::vector<float>& buf) {
+  assert(pdf.data_.size() % 8 == 0);
+  assert(buf.size() == pdf.data_.size() + 8);
+
+  std::copy(begin(pdf.data_), end(pdf.data_), &buf[8]);
+
+  auto const m_grp_prob = _mm256_set1_ps(grp_prob);
+  auto const m_inv_grp_prob = _mm256_set1_ps(1.0F - grp_prob);
+  for (auto i = 0ULL; i < pdf.data_.size(); i += 8) {
+    auto data_ptr = &pdf.data_[i];
+    _mm256_storeu_ps(data_ptr,
+                     _mm256_mul_ps(_mm256_loadu_ps(data_ptr), m_inv_grp_prob));
+  }
+
+  auto const start_offset = get_start_offset(limits, grp_size);
+  auto const buf_offset = 8 - grp_size;
+  for (auto i = start_offset; i < pdf.data_.size(); i += 8) {
+    auto data_ptr = &pdf.data_[i];
+    _mm256_storeu_ps(data_ptr,
+                     _mm256_fmadd_ps(_mm256_loadu_ps(&buf[i + buf_offset]),
+                                     m_grp_prob, _mm256_loadu_ps(data_ptr)));
+  }
+}
+
+pax_pdf get_load_pdf_avx(pax_connection_info const& pci) {
+  auto const limits = get_pax_limits(pci);
+  auto pdf = pax_pdf{};
+  auto const pdf_size = limits.max_ + 1;
+  pdf.data_.resize(round_up<8>(pdf_size));
+  pdf.data_[limits.min_] = 1.0F;
+  auto buf = std::vector<float>(pdf.data_.size() + 8);
+
+  for (auto const& si : pci.section_infos_) {
+    if (si.group_->probability_ != 1.0F) {
+      convolve_avx(pdf, si.group_->passengers_, si.group_->probability_, limits,
+                   buf);
+    }
+  }
+
+  pdf.data_.resize(pdf_size);
+  return pdf;
+}
+
+#endif
+
+pax_pdf get_load_pdf(pax_connection_info const& pci) {
+#ifdef MOTIS_AVX
+  return get_load_pdf_avx(pci);
+#else
+  return get_load_pdf_base(pci);
+#endif
 }
 
 pax_cdf get_cdf(pax_pdf const& pdf) {
@@ -101,7 +177,7 @@ lf_df_t to_load_factor(pax_cdf const& cdf, std::uint16_t capacity) {
 void add_additional_group(pax_pdf& pdf, std::uint16_t passengers,
                           float probability) {
   pdf.data_.resize(pdf.data_.size() + passengers);
-  convolve(pdf, passengers, probability);
+  convolve_base(pdf, passengers, probability);
 }
 
 bool load_factor_possibly_ge(pax_pdf const& pdf, std::uint16_t capacity,
