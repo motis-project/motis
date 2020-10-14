@@ -176,7 +176,7 @@ TEST(paxmon_get_load, two_groups) {
   }
 }
 
-#ifdef MOTIS_AVX
+#ifdef MOTIS_AVX2
 TEST(paxmon_get_load, base_eq_avx) {
   auto gen = std::mt19937{std::random_device{}()};
   auto base_group_count_dist = std::uniform_int_distribution{0, 200};

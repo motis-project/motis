@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <numeric>
 
-#ifdef MOTIS_AVX
+#ifdef MOTIS_AVX2
 #include <immintrin.h>
 #endif
 
@@ -66,7 +66,7 @@ pax_pdf get_load_pdf_base(pax_connection_info const& pci) {
   return pdf;
 }
 
-#ifdef MOTIS_AVX
+#ifdef MOTIS_AVX2
 
 template <auto M, typename T>
 inline T round_up(T const val) {
@@ -132,7 +132,7 @@ pax_pdf get_load_pdf_avx(pax_connection_info const& pci) {
 #endif
 
 pax_pdf get_load_pdf(pax_connection_info const& pci) {
-#ifdef MOTIS_AVX
+#ifdef MOTIS_AVX2
   return get_load_pdf_avx(pci);
 #else
   return get_load_pdf_base(pci);
@@ -228,7 +228,7 @@ void add_additional_groups(
   if (additional_groups.empty()) {
     return;
   }
-#if MOTIS_AVX
+#if MOTIS_AVX2
   return add_additional_groups_avx(pdf, additional_groups);
 #else
   return add_additional_groups_base(pdf, additional_groups);
