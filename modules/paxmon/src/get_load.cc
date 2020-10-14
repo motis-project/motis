@@ -222,7 +222,7 @@ void add_additional_groups_avx(
   }
   pdf.data_.resize(pdf_size);
 }
-#endif MOTIS_AVX2
+#endif
 
 void add_additional_groups(
     pax_pdf& pdf, std::vector<std::pair<passenger_group const*, float>> const&
