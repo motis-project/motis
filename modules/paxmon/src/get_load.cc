@@ -36,6 +36,18 @@ std::uint16_t get_base_load(pax_connection_info const& pci) {
   return load;
 }
 
+std::uint16_t get_expected_load(pax_connection_info const& pci) {
+  std::uint16_t load = 0;
+  for (auto const& si : pci.section_infos_) {
+    if (((si.group_->source_flags_ & group_source_flags::FORECAST) !=
+         group_source_flags::FORECAST) &&
+        si.group_->probability_ == 1.0F) {
+      load += si.group_->passengers_;
+    }
+  }
+  return load;
+}
+
 inline void convolve_base(pax_pdf& pdf, std::uint16_t const grp_size,
                           float grp_prob) {
   auto old_pdf = pdf;

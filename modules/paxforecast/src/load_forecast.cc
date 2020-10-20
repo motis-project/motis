@@ -31,9 +31,11 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
     auto const cdf = get_cdf(pdf);
     auto const possibly_over_capacity =
         e->has_capacity() && load_factor_possibly_ge(cdf, e->capacity(), 1.0F);
+    auto const expected_pax = get_expected_load(e->get_pax_connection_info());
 
     std::lock_guard guard{mutex};
-    edges.emplace(e, edge_forecast{e, cdf, true, possibly_over_capacity});
+    edges.emplace(
+        e, edge_forecast{e, cdf, true, possibly_over_capacity, expected_pax});
     for (auto const& trp : e->get_trips(sched)) {
       trips.emplace(trp);
     }
@@ -54,7 +56,10 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
                   auto const possibly_over_capacity =
                       e->has_capacity() &&
                       load_factor_possibly_ge(cdf, e->capacity(), 1.0F);
-                  return edge_forecast{e, cdf, false, possibly_over_capacity};
+                  auto const expected_pax =
+                      get_expected_load(e->get_pax_connection_info());
+                  return edge_forecast{e, cdf, false, possibly_over_capacity,
+                                       expected_pax};
                 }
               })  //
             | utl::vec()};

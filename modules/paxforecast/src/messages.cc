@@ -63,7 +63,8 @@ Offset<EdgeForecast> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
                             motis_to_unixtime(sched, to->schedule_time()),
                             get_capacity_type(efc.edge_), efc.edge_->capacity(),
                             cdf_to_fbs(fbb, efc.forecast_cdf_), efc.updated_,
-                            efc.possibly_over_capacity_);
+                            efc.possibly_over_capacity_,
+                            efc.expected_passengers_);
 }
 
 Offset<TripForecast> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,

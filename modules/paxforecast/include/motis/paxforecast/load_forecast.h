@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 #include "motis/core/schedule/schedule.h"
@@ -16,6 +17,7 @@ struct edge_forecast {
   motis::paxmon::pax_cdf forecast_cdf_;
   bool updated_{};
   bool possibly_over_capacity_{};
+  std::uint16_t expected_passengers_{};
 };
 
 struct trip_forecast {

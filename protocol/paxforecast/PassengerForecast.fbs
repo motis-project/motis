@@ -31,6 +31,7 @@ table EdgeForecast {
   passenger_cdf: [CdfEntry];
   updated: bool;
   possibly_over_capacity: bool;
+  expected_passengers: uint;
 }
 
 table TripForecast {

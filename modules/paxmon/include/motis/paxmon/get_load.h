@@ -34,6 +34,7 @@ using lf_df_t = std::map<float, float>;
 
 pax_limits get_pax_limits(pax_connection_info const& pci);
 std::uint16_t get_base_load(pax_connection_info const& pci);
+std::uint16_t get_expected_load(pax_connection_info const& pci);
 
 pax_pdf get_load_pdf(pax_connection_info const& pci);
 pax_cdf get_cdf(pax_pdf const& pdf);
