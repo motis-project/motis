@@ -30,8 +30,10 @@ inline simulation_result simulate_behavior(
         for_each_edge(sched, data, alt.compact_journey_,
                       [&](motis::paxmon::journey_leg const&,
                           motis::paxmon::edge const* e) {
-                        result.additional_groups_[e].emplace_back(
-                            &grp, total_probability);
+                        if (e->is_trip()) {
+                          result.additional_groups_[e].emplace_back(
+                              &grp, total_probability);
+                        }
                       });
       };
 

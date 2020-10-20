@@ -2,6 +2,7 @@
 
 #include <mutex>
 
+#include "utl/pipes.h"
 #include "utl/to_vec.h"
 
 #include "motis/hash_map.h"
@@ -42,18 +43,21 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
   lfc.trips_ = utl::to_vec(trips, [&](auto const trp) {
     return trip_forecast{
         trp,
-        utl::to_vec(data.graph_.trip_data_.at(trp)->edges_, [&](auto const e) {
-          auto const it = edges.find(e);
-          if (it != end(edges)) {
-            return it->second;
-          } else {
-            auto const cdf = get_load_cdf(e->get_pax_connection_info());
-            auto const possibly_over_capacity =
-                e->has_capacity() &&
-                load_factor_possibly_ge(cdf, e->capacity(), 1.0F);
-            return edge_forecast{e, cdf, false, possibly_over_capacity};
-          }
-        })};
+        utl::all(data.graph_.trip_data_.at(trp)->edges_)  //
+            | utl::remove_if([](auto const e) { return !e->is_trip(); })  //
+            | utl::transform([&](auto const e) {
+                auto const it = edges.find(e);
+                if (it != end(edges)) {
+                  return it->second;
+                } else {
+                  auto const cdf = get_load_cdf(e->get_pax_connection_info());
+                  auto const possibly_over_capacity =
+                      e->has_capacity() &&
+                      load_factor_possibly_ge(cdf, e->capacity(), 1.0F);
+                  return edge_forecast{e, cdf, false, possibly_over_capacity};
+                }
+              })  //
+            | utl::vec()};
   });
 
   return lfc;

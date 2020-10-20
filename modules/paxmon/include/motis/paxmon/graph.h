@@ -73,13 +73,18 @@ struct edge {
   inline bool is_valid(graph const& g) const {
     return from(g)->is_valid() && to(g)->is_valid();
   }
+
   inline bool is_canceled(graph const& g) const {
     return from(g)->is_canceled() || to(g)->is_canceled();
   }
-  inline bool is_trip() const { return type() != edge_type::INTERCHANGE; }
+
+  inline bool is_trip() const { return type() == edge_type::TRIP; }
+
   inline bool is_interchange() const {
     return type() == edge_type::INTERCHANGE;
   }
+
+  inline bool is_wait() const { return type() == edge_type::WAIT; }
 
   inline event_node* from(graph const&) const { return from_; }
   inline event_node* to(graph const&) const { return to_; }
