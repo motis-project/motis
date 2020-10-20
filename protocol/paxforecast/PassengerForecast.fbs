@@ -21,6 +21,15 @@ struct CdfEntry {
 
 enum CapacityType : byte { Known, Unknown, Unlimited }
 
+table ServiceInfo {
+  name: string;
+  category: string;
+  train_nr: uint;
+  line: string;
+  provider: string;
+  clasz: ubyte;
+}
+
 table EdgeForecast {
   from: motis.Station;
   to: motis.Station;
@@ -36,6 +45,9 @@ table EdgeForecast {
 
 table TripForecast {
   trip: motis.TripId;
+  primary_station: motis.Station;
+  secondary_station: motis.Station;
+  service_infos: [ServiceInfo];
   edges: [EdgeForecast];
 }
 
