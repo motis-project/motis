@@ -8,9 +8,11 @@
 #include "motis/hash_map.h"
 #include "motis/hash_set.h"
 
+#include "motis/core/common/logging.h"
 #include "motis/module/context/motis_parallel_for.h"
 
 using namespace motis::paxmon;
+using namespace motis::logging;
 
 namespace motis::paxforecast {
 
@@ -20,9 +22,18 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
   mcd::hash_set<trip const*> trips;
   std::mutex mutex;
 
+  LOG(info) << "calc_load_forecast: " << sim_result.additional_groups_.size()
+            << " edges with additional groups";
+
+  auto edges_calculated = 0ULL;
+
   motis_parallel_for(sim_result.additional_groups_, [&](auto const& entry) {
     auto const e = entry.first;
     if (!e->is_trip()) {
+      return;
+    }
+    if (e->clasz_ != service_class::ICE && e->clasz_ != service_class::IC &&
+        e->clasz_ != service_class::OTHER) {
       return;
     }
     auto const& additional_groups = entry.second;
