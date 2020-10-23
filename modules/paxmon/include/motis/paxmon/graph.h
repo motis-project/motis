@@ -131,6 +131,7 @@ struct edge {
   bool broken_{false};
   duration transfer_time_{};
   std::uint16_t encoded_capacity_{};
+  service_class clasz_{service_class::OTHER};
   merged_trips_idx trips_{};
   struct pax_connection_info pax_connection_info_;
 };

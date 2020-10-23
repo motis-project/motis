@@ -39,8 +39,10 @@ inline edge* add_edge(edge const& e) {
 
 inline edge make_trip_edge(event_node* from, event_node* to, edge_type type,
                            merged_trips_idx merged_trips,
-                           std::uint16_t encoded_capacity) {
-  return edge{from, to, type, false, 0, encoded_capacity, merged_trips, {}};
+                           std::uint16_t encoded_capacity,
+                           service_class clasz) {
+  return edge{from,  to,           type, false, 0, encoded_capacity,
+              clasz, merged_trips, {}};
 }
 
 inline edge make_interchange_edge(event_node* from, event_node* to,
@@ -52,14 +54,21 @@ inline edge make_interchange_edge(event_node* from, event_node* to,
               false,
               transfer_time,
               UNLIMITED_ENCODED_CAPACITY,
+              service_class::OTHER,
               0,
               std::move(ci)};
 }
 
 inline edge make_through_edge(event_node* from, event_node* to) {
-  return edge{from,  to, edge_type::THROUGH,
-              false, 0,  UNLIMITED_ENCODED_CAPACITY,
-              0,     {}};
+  return edge{from,
+              to,
+              edge_type::THROUGH,
+              false,
+              0,
+              UNLIMITED_ENCODED_CAPACITY,
+              service_class::OTHER,
+              0,
+              {}};
 }
 
 void add_passenger_group_to_edge(edge* e, passenger_group* pg);

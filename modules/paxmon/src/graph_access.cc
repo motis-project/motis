@@ -126,7 +126,8 @@ struct rule_trip_adder {
           get_capacity(sched_, section.lcon(), data_.trip_capacity_map_,
                        data_.category_capacity_map_));
       return add_edge(make_trip_edge(dep_node, arr_node, edge_type::TRIP,
-                                     section.lcon().trips_, encoded_capacity));
+                                     section.lcon().trips_, encoded_capacity,
+                                     section.fcon().clasz_));
     });
   }
 
@@ -135,9 +136,9 @@ struct rule_trip_adder {
       event_node* dep_node) {
     return utl::get_or_create(
         wait_edges_, std::make_pair(prev_node, dep_node), [&]() {
-          return add_edge(make_trip_edge(prev_node, dep_node, edge_type::WAIT,
-                                         section.lcon().trips_,
-                                         UNLIMITED_ENCODED_CAPACITY));
+          return add_edge(make_trip_edge(
+              prev_node, dep_node, edge_type::WAIT, section.lcon().trips_,
+              UNLIMITED_ENCODED_CAPACITY, section.fcon().clasz_));
         });
   }
 

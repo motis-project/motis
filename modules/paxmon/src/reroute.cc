@@ -110,7 +110,8 @@ edge* connect_nodes(event_node* from, event_node* to,
   auto const type =
       from->type_ == event_type::DEP ? edge_type::TRIP : edge_type::WAIT;
   return add_edge(
-      make_trip_edge(from, to, type, merged_trips, encoded_capacity));
+      make_trip_edge(from, to, type, merged_trips, encoded_capacity,
+                     service_class::OTHER));  // TODO(pablo): service class
 }
 
 event_node* get_or_insert_node(graph& g, trip_data& td, trip_ev_key const tek,
