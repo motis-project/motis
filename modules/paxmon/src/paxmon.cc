@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <mutex>
 #include <numeric>
 #include <set>
 
@@ -18,6 +19,7 @@
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
+#include "motis/module/context/motis_parallel_for.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/message.h"
 
@@ -119,6 +121,8 @@ void paxmon::init(motis::module::registry& reg) {
         }
 
         motis_call(make_no_msg("/paxmon/flush"))->val();
+
+        LOG(info) << "paxmon: eval done";
 
         return {};
       },
@@ -453,30 +457,35 @@ void paxmon::rt_updates_applied() {
 
     LOG(info) << "groups affected by last update: "
               << data_.groups_affected_by_last_update_.size();
-    for (auto const pg : data_.groups_affected_by_last_update_) {
-      auto const reachability =
-          get_reachability(data_, pg->compact_planned_journey_);
-      pg->ok_ = reachability.ok_;
 
-      auto const localization = localize(sched, reachability, search_time);
-      update_load(pg, reachability, localization, data_.graph_);
+    std::mutex update_mutex;
+    motis_parallel_for(
+        data_.groups_affected_by_last_update_, [&](auto const& pg) {
+          auto const reachability =
+              get_reachability(data_, pg->compact_planned_journey_);
+          pg->ok_ = reachability.ok_;
 
-      auto const event_type =
-          get_monitoring_event_type(pg, reachability, arrival_delay_threshold_);
-      fbs_events.emplace_back(
-          to_fbs(sched, mc,
-                 monitoring_event{event_type, *pg, localization,
-                                  reachability.status_}));
+          auto const localization = localize(sched, reachability, search_time);
+          auto const event_type = get_monitoring_event_type(
+              pg, reachability, arrival_delay_threshold_);
 
-      if (reachability.ok_) {
-        ++ok_groups;
-        ++system_stats_.groups_ok_count_;
-        continue;
-      }
-      ++broken_groups;
-      ++system_stats_.groups_broken_count_;
-      broken_passengers += pg->passengers_;
-    }
+          std::lock_guard guard{update_mutex};
+          update_load(pg, reachability, localization, data_.graph_);
+
+          fbs_events.emplace_back(
+              to_fbs(sched, mc,
+                     monitoring_event{event_type, *pg, localization,
+                                      reachability.status_}));
+
+          if (reachability.ok_) {
+            ++ok_groups;
+            ++system_stats_.groups_ok_count_;
+            return;
+          }
+          ++broken_groups;
+          ++system_stats_.groups_broken_count_;
+          broken_passengers += pg->passengers_;
+        });
 
     mc.create_and_finish(
         MsgContent_MonitoringUpdate,
