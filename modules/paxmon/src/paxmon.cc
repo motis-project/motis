@@ -447,10 +447,12 @@ void paxmon::rt_updates_applied() {
   auto broken_groups = 0ULL;
   auto broken_passengers = 0ULL;
   {
-    scoped_timer timer{"update affected passenger groups"};
+    manual_timer timer{"update affected passenger groups"};
     message_creator mc;
     std::vector<flatbuffers::Offset<MonitoringEvent>> fbs_events;
 
+    LOG(info) << "groups affected by last update: "
+              << data_.groups_affected_by_last_update_.size();
     for (auto const pg : data_.groups_affected_by_last_update_) {
       auto const reachability =
           get_reachability(data_, pg->compact_planned_journey_);
@@ -480,6 +482,7 @@ void paxmon::rt_updates_applied() {
         MsgContent_MonitoringUpdate,
         CreateMonitoringUpdate(mc, mc.CreateVector(fbs_events)).Union(),
         "/paxmon/monitoring_update");
+    timer.stop_and_print();
     ctx::await_all(motis_publish(make_msg(mc)));
   }
 

@@ -236,16 +236,20 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
   manual_timer load_forecast_timer{"load forecast"};
   auto const lfc = calc_load_forecast(sched, data, sim_result);
+  load_forecast_timer.stop_and_print();
+  manual_timer load_forecast_msg_timer{"load forecast make msg"};
   auto const forecast_msg =
       make_passenger_forecast_msg(sched, data, sim_result, lfc);
-  load_forecast_timer.stop_and_print();
+  load_forecast_msg_timer.stop_and_print();
 
   if (forecast_file_.is_open()) {
+    scoped_timer load_forecast_msg_timer{"load forecast to json"};
     forecast_file_ << forecast_msg->to_json(true) << std::endl;
   }
 
   ctx::await_all(motis_publish(forecast_msg));
 
+  scoped_timer update_tracked_groups_timer{"update tracked groups"};
   update_tracked_groups(sched, sim_result, pg_event_types);
 }
 
