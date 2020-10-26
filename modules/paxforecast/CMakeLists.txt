@@ -13,5 +13,6 @@ target_link_libraries(motis-paxforecast
   motis-module
   motis-core
   motis-paxmon
+  lmdb
 )
 target_compile_options(motis-paxforecast PRIVATE ${MOTIS_CXX_FLAGS})

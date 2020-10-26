@@ -42,6 +42,8 @@ namespace motis::paxforecast {
 paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
   param(forecast_filename_, "forecast_results",
         "output file for forecast messages");
+  param(routing_cache_filename_, "routing_cache",
+        "optional cache file for routing queries");
 }
 
 paxforecast::~paxforecast() = default;
@@ -52,6 +54,10 @@ void paxforecast::init(motis::module::registry& reg) {
   if (!forecast_filename_.empty()) {
     forecast_file_.exceptions(std::ios_base::failbit | std::ios_base::badbit);
     forecast_file_.open(forecast_filename_);
+  }
+
+  if (!routing_cache_filename_.empty()) {
+    routing_cache_.open(routing_cache_filename_);
   }
 
   reg.subscribe("/paxmon/monitoring_update", [&](msg_ptr const& msg) {
@@ -192,16 +198,18 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
       auto const destination_station_id = cgs.first;
       for (auto& cpg : cgs.second) {
         ++routing_requests;
-        futures.emplace_back(
-            spawn_job_void([&sched, destination_station_id, &cpg] {
-              cpg.alternatives_ = find_alternatives(
-                  sched, destination_station_id, cpg.localization_);
-            }));
+        futures.emplace_back(spawn_job_void([this, &sched,
+                                             destination_station_id, &cpg] {
+          cpg.alternatives_ = find_alternatives(
+              sched, destination_station_id, cpg.localization_, routing_cache_);
+        }));
       }
     }
     LOG(info) << "find alternatives: " << routing_requests
-              << " routing requests...";
+              << " routing requests (using cache=" << routing_cache_.is_open()
+              << ")...";
     ctx::await_all(futures);
+    routing_cache_.sync();
   }
 
   {

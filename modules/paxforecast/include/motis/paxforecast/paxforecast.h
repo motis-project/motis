@@ -9,6 +9,8 @@
 
 #include "motis/module/module.h"
 
+#include "motis/paxforecast/routing_cache.h"
+
 namespace motis::paxforecast {
 
 struct paxforecast : public motis::module::module {
@@ -26,8 +28,10 @@ struct paxforecast : public motis::module::module {
 private:
   void on_monitoring_event(motis::module::msg_ptr const& msg);
 
-  std::string forecast_filename_{};
+  std::string forecast_filename_;
   std::ofstream forecast_file_;
+  std::string routing_cache_filename_;
+  routing_cache routing_cache_;
 };
 
 }  // namespace motis::paxforecast

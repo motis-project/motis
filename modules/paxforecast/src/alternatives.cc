@@ -1,7 +1,10 @@
 #include "motis/paxforecast/alternatives.h"
 
+#include <cstdint>
 #include <algorithm>
 #include <optional>
+
+#include "cista/serialization.h"
 
 #include "utl/to_vec.h"
 
@@ -89,12 +92,40 @@ msg_ptr ontrip_station_query(schedule const& sched,
   return make_msg(fbb);
 }
 
-}  // namespace
+struct cache_key_t {
+  std::uint64_t system_time_{};
+  time next_station_time_{};
+  bool ontrip_{};
+  mcd::string next_station_eva_{};
+  mcd::string dest_station_eva_{};
+  extern_trip trip_{};
+};
 
-std::vector<alternative> find_alternatives(
-    schedule const& sched, unsigned const destination_station_id,
-    passenger_localization const& localization) {
+cista::byte_buf get_cache_key(schedule const& sched,
+                              unsigned const destination_station_id,
+                              passenger_localization const& localization) {
+  auto key = cache_key_t{static_cast<std::uint64_t>(sched.system_time_),
+                         localization.current_arrival_time_,
+                         localization.in_trip(),
+                         localization.at_station_->eva_nr_,
+                         sched.stations_.at(destination_station_id)->eva_nr_,
+                         {}};
+  if (localization.in_trip()) {
+    key.trip_ = to_extern_trip(sched, localization.in_trip_);
+  } else {
+    auto const interchange_time =
+        localization.first_station_
+            ? 0
+            : sched.stations_.at(localization.at_station_->index_)
+                  ->transfer_time_;
+    key.next_station_time_ += interchange_time;
+  }
+  return cista::serialize(key);
+}
 
+msg_ptr send_routing_request(schedule const& sched,
+                             unsigned const destination_station_id,
+                             passenger_localization const& localization) {
   msg_ptr query_msg;
   if (localization.in_trip()) {
     query_msg = ontrip_train_query(
@@ -112,7 +143,37 @@ std::vector<alternative> find_alternatives(
         destination_station_id);
   }
 
-  auto const response_msg = motis_call(query_msg)->val();
+  return motis_call(query_msg)->val();
+}
+
+msg_ptr get_routing_response(schedule const& sched,
+                             unsigned const destination_station_id,
+                             passenger_localization const& localization,
+                             routing_cache& cache) {
+  if (cache.is_open()) {
+    auto const cache_key =
+        get_cache_key(sched, destination_station_id, localization);
+    auto const cache_key_view = std::string_view{
+        reinterpret_cast<char const*>(cache_key.data()), cache_key.size()};
+    auto msg = cache.get(cache_key_view);
+    if (!msg) {
+      msg = send_routing_request(sched, destination_station_id, localization);
+      cache.put(cache_key_view, msg);
+    }
+    return msg;
+  } else {
+    return send_routing_request(sched, destination_station_id, localization);
+  }
+}
+
+}  // namespace
+
+std::vector<alternative> find_alternatives(
+    schedule const& sched, unsigned const destination_station_id,
+    passenger_localization const& localization, routing_cache& cache) {
+
+  auto const response_msg =
+      get_routing_response(sched, destination_station_id, localization, cache);
   auto const response = motis_content(RoutingResponse, response_msg);
   auto alternatives = message_to_journeys(response);
   std::sort(
