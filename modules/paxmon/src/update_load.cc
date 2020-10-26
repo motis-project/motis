@@ -21,6 +21,7 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
         auto e = rt.td_->edges_[i];
         if (std::find(begin(disabled_edges), end(disabled_edges), e) !=
             end(disabled_edges)) {
+          auto guard = std::lock_guard{e->pax_connection_info_.mutex_};
           add_passenger_group_to_edge(e, pg);
         }
         utl::erase(disabled_edges, e);
@@ -38,6 +39,7 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
         }
         if (std::find(begin(disabled_edges), end(disabled_edges), e) !=
             end(disabled_edges)) {
+          auto guard = std::lock_guard{e->pax_connection_info_.mutex_};
           add_passenger_group_to_edge(e, pg);
         }
         utl::erase(disabled_edges, e);
@@ -52,6 +54,7 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
   }
 
   for (auto e : disabled_edges) {
+    auto guard = std::lock_guard{e->pax_connection_info_.mutex_};
     remove_passenger_group_from_edge(e, pg);
   }
 }

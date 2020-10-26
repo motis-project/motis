@@ -26,7 +26,7 @@ void add_interchange(event_node* from, event_node* to, passenger_group* grp,
     }
   }
   grp->edges_.emplace_back(add_edge(make_interchange_edge(
-      from, to, transfer_time, {{pax_section_info{grp}}})));
+      from, to, transfer_time, pax_connection_info{{pax_section_info{grp}}})));
 }
 
 inline duration get_transfer_duration(std::optional<transfer_info> const& ti) {

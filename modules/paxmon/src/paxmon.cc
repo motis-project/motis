@@ -456,7 +456,8 @@ void paxmon::rt_updates_applied() {
     std::vector<flatbuffers::Offset<MonitoringEvent>> fbs_events;
 
     LOG(info) << "groups affected by last update: "
-              << data_.groups_affected_by_last_update_.size();
+              << data_.groups_affected_by_last_update_.size()
+              << ", total groups: " << data_.graph_.passenger_groups_.size();
 
     std::mutex update_mutex;
     motis_parallel_for(
@@ -469,9 +470,9 @@ void paxmon::rt_updates_applied() {
           auto const event_type = get_monitoring_event_type(
               pg, reachability, arrival_delay_threshold_);
 
-          std::lock_guard guard{update_mutex};
           update_load(pg, reachability, localization, data_.graph_);
 
+          std::lock_guard guard{update_mutex};
           fbs_events.emplace_back(
               to_fbs(sched, mc,
                      monitoring_event{event_type, *pg, localization,
