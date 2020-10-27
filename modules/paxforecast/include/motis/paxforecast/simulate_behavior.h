@@ -51,10 +51,10 @@ inline simulation_result simulate_behavior(
         group_result.localization_ = &cpg.localization_;
         for (auto const& [alt, probability] :
              utl::zip(cpg.alternatives_, allocation)) {
-          group_result.alternatives_.emplace_back(&alt, probability);
-          if (probability == 0.0) {
+          if (probability < 0.01F) {
             continue;
           }
+          group_result.alternatives_.emplace_back(&alt, probability);
           add_group_to_alternative(*grp, alt, probability);
         }
       }
