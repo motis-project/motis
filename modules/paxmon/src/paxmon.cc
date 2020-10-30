@@ -70,6 +70,8 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
   param(arrival_delay_threshold_, "arrival_delay_threshold",
         "threshold for arrival delay at the destination (minutes, -1 to "
         "disable)");
+  param(check_graph_integrity_, "check_graph_integrity",
+        "check graph integrity after each update");
 }
 
 paxmon::~paxmon() = default;
@@ -276,6 +278,11 @@ void paxmon::load_journeys() {
   if (!initial_broken_report_file_.empty()) {
     write_broken_interchanges_report(data_, initial_broken_report_file_);
   }
+
+  if (check_graph_integrity_) {
+    utl::verify(check_graph_integrity(data_.graph_, sched),
+                "load_journeys: check_graph_integrity");
+  }
 }
 
 void paxmon::load_capacity_files() {
@@ -447,6 +454,11 @@ void paxmon::rt_updates_applied() {
   tick_stats_.affected_groups_ = data_.groups_affected_by_last_update_.size();
   tick_stats_.affected_passengers_ = affected_passenger_count;
 
+  if (check_graph_integrity_) {
+    utl::verify(check_graph_integrity(data_.graph_, sched),
+                "rt_updates_applied: check_graph_integrity (start)");
+  }
+
   auto ok_groups = 0ULL;
   auto broken_groups = 0ULL;
   auto broken_passengers = 0ULL;
@@ -493,6 +505,13 @@ void paxmon::rt_updates_applied() {
         CreateMonitoringUpdate(mc, mc.CreateVector(fbs_events)).Union(),
         "/paxmon/monitoring_update");
     timer.stop_and_print();
+
+    if (check_graph_integrity_) {
+      utl::verify(
+          check_graph_integrity(data_.graph_, sched),
+          "rt_updates_applied: check_graph_integrity (after load update)");
+    }
+
     ctx::await_all(motis_publish(make_msg(mc)));
   }
 
@@ -528,6 +547,11 @@ void paxmon::rt_updates_applied() {
   stats_writer_->write_tick(tick_stats_);
   stats_writer_->flush();
   tick_stats_ = {};
+
+  if (check_graph_integrity_) {
+    utl::verify(check_graph_integrity(data_.graph_, sched),
+                "rt_updates_applied: check_graph_integrity (end)");
+  }
 }
 
 msg_ptr paxmon::add_groups(msg_ptr const& msg) {
@@ -546,8 +570,16 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
                       .get();
         pg->id_ = id;
         add_passenger_group_to_graph(sched, data_, *pg);
+        // TODO(pablo): investigate
+        /*
         utl::verify(!pg->edges_.empty(),
                     "trying to add invalid passenger group");
+        */
+        if (pg->edges_.empty()) {
+          LOG(warn) << "trying to add invalid passenger group with "
+                    << pg_fbs->planned_journey()->legs()->size()
+                    << " journey legs";
+        }
         return pg;
       });
 
@@ -571,6 +603,11 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
     }
     remove_passenger_group_from_graph(pg.get());
     pg.reset(nullptr);
+  }
+
+  if (check_graph_integrity_) {
+    utl::verify(check_graph_integrity(data_.graph_, get_schedule()),
+                "rt_updates_applied: remove_groups (end)");
   }
 
   return {};

@@ -86,4 +86,6 @@ event_node* find_event_node(graph const& g, trip_data const& td,
                             std::uint32_t station_idx, event_type et,
                             time schedule_time);
 
+bool check_graph_integrity(graph const& g, schedule const& sched);
+
 }  // namespace motis::paxmon
