@@ -6,6 +6,7 @@
 
 #include "cista/serialization.h"
 
+#include "utl/erase_if.h"
 #include "utl/to_vec.h"
 
 #include "motis/core/common/logging.h"
@@ -176,6 +177,10 @@ std::vector<alternative> find_alternatives(
       get_routing_response(sched, destination_station_id, localization, cache);
   auto const response = motis_content(RoutingResponse, response_msg);
   auto alternatives = message_to_journeys(response);
+  // TODO(pablo): alternatives without trips?
+  utl::erase_if(alternatives, [](journey const& j) {
+    return j.stops_.empty() || j.trips_.empty();
+  });
   std::sort(
       begin(alternatives), end(alternatives),
       [](journey const& lhs, journey const& rhs) {
