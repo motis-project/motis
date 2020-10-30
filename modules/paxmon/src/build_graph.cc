@@ -20,7 +20,7 @@ void add_interchange(event_node* from, event_node* to, passenger_group* grp,
   for (auto& e : from->outgoing_edges(g)) {
     if (e->type_ == edge_type::INTERCHANGE && e->to(g) == to &&
         e->transfer_time() == transfer_time) {
-      e->pax_connection_info_.section_infos_.emplace_back(grp);
+      add_passenger_group_to_edge(e.get(), grp);
       grp->edges_.emplace_back(e.get());
       return;
     }
@@ -56,12 +56,15 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
     }
     auto in_trip = false;
     last_trip = nullptr;
+    auto enter_found = false;
+    auto exit_found = false;
     for (auto e : te->edges_) {
       if (!in_trip) {
         auto const from = e->from(data.graph_);
         if (from->station_ == leg.enter_station_id_ &&
             from->schedule_time_ == leg.enter_time_) {
           in_trip = true;
+          enter_found = true;
           if (exit_node == nullptr) {
             exit_node = &te->enter_exit_node_;
           }
@@ -70,16 +73,24 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
         }
       }
       if (in_trip) {
-        e->pax_connection_info_.section_infos_.emplace_back(&grp);
+        add_passenger_group_to_edge(e, &grp);
         grp.edges_.emplace_back(e);
         auto const to = e->to(data.graph_);
         if (to->station_ == leg.exit_station_id_ &&
             to->schedule_time_ == leg.exit_time_) {
           exit_node = to;
           last_trip = te;
+          exit_found = true;
           break;
         }
       }
+    }
+    if (!enter_found || !exit_found) {
+      for (auto e : grp.edges_) {
+        remove_passenger_group_from_edge(e, &grp);
+      }
+      grp.edges_.clear();
+      return;
     }
   }
 
@@ -87,13 +98,17 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
     add_interchange(exit_node, &last_trip->enter_exit_node_, &grp, 0,
                     data.graph_);
   }
+
+  utl::verify(!grp.edges_.empty(), "empty passenger group edges");
 }
 
 void remove_passenger_group_from_graph(passenger_group* pg) {
   for (auto e : pg->edges_) {
+    auto guard = std::lock_guard{e->pax_connection_info_.mutex_};
     utl::erase_if(e->pax_connection_info_.section_infos_,
                   [&](auto const& psi) { return psi.group_ == pg; });
   }
+  pg->edges_.clear();
 }
 
 build_graph_stats build_graph_from_journeys(schedule const& sched,
@@ -103,8 +118,13 @@ build_graph_stats build_graph_from_journeys(schedule const& sched,
   auto stats = build_graph_stats{};
   for (auto& pg : data.graph_.passenger_groups_) {
     utl::verify(pg != nullptr, "null passenger group");
+    utl::verify(!pg->compact_planned_journey_.legs_.empty(),
+                "empty passenger group");
     try {
       add_passenger_group_to_graph(sched, data, *pg);
+      if (pg->edges_.empty()) {
+        pg.reset(nullptr);
+      }
     } catch (std::system_error const& e) {
       LOG(motis::logging::error)
           << "could not add passenger group: " << e.what();
