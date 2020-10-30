@@ -109,8 +109,10 @@ edge* connect_nodes(event_node* from, event_node* to,
   }
   auto const type =
       from->type_ == event_type::DEP ? edge_type::TRIP : edge_type::WAIT;
+  auto const cap = from->type_ == event_type::DEP ? encoded_capacity
+                                                  : UNLIMITED_ENCODED_CAPACITY;
   return add_edge(
-      make_trip_edge(from, to, type, merged_trips, encoded_capacity,
+      make_trip_edge(from, to, type, merged_trips, cap,
                      service_class::OTHER));  // TODO(pablo): service class
 }
 
@@ -237,7 +239,9 @@ void apply_reroute(paxmon_data& data, schedule const& sched, trip const* trp,
     for (auto const& [from, to] : utl::pairwise(new_nodes)) {
       auto e =
           connect_nodes(from, to, merged_trips, encoded_capacity, data.graph_);
-      new_edges.emplace_back(e);
+      if (e->is_trip()) {
+        new_edges.emplace_back(e);
+      }
     }
   }
   td.edges_ = new_edges;
