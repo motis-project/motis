@@ -13,6 +13,16 @@ struct pax_section_info {
   passenger_group* group_{};
 };
 
+inline bool operator==(pax_section_info const& lhs,
+                       pax_section_info const& rhs) {
+  return lhs.group_ == rhs.group_;
+}
+
+inline bool operator!=(pax_section_info const& lhs,
+                       pax_section_info const& rhs) {
+  return lhs.group_ != rhs.group_;
+}
+
 struct pax_connection_info {
   pax_connection_info() = default;
 

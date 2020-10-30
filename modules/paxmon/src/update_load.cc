@@ -19,12 +19,13 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
       utl::verify(rt.valid_exit(), "update_load: invalid exit");
       for (auto i = rt.enter_edge_idx_; i <= rt.exit_edge_idx_; ++i) {
         auto e = rt.td_->edges_[i];
-        if (std::find(begin(disabled_edges), end(disabled_edges), e) !=
+        if (std::find(begin(disabled_edges), end(disabled_edges), e) ==
             end(disabled_edges)) {
           auto guard = std::lock_guard{e->pax_connection_info_.mutex_};
           add_passenger_group_to_edge(e, pg);
+        } else {
+          utl::erase(disabled_edges, e);
         }
-        utl::erase(disabled_edges, e);
         pg->edges_.emplace_back(e);
       }
     }
@@ -37,12 +38,13 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
         if (e->from(g)->time_ > localization.current_arrival_time_) {
           break;
         }
-        if (std::find(begin(disabled_edges), end(disabled_edges), e) !=
+        if (std::find(begin(disabled_edges), end(disabled_edges), e) ==
             end(disabled_edges)) {
           auto guard = std::lock_guard{e->pax_connection_info_.mutex_};
           add_passenger_group_to_edge(e, pg);
+        } else {
+          utl::erase(disabled_edges, e);
         }
-        utl::erase(disabled_edges, e);
         pg->edges_.emplace_back(e);
         auto const to = e->to(g);
         if (to->station_ == localization.at_station_->index_ &&

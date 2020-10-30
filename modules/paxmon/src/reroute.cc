@@ -6,6 +6,7 @@
 #include <set>
 
 #include "utl/enumerate.h"
+#include "utl/erase.h"
 #include "utl/pairwise.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
@@ -152,7 +153,9 @@ std::set<passenger_group*> collect_passenger_groups(trip_data& td) {
   std::set<passenger_group*> affected_passenger_groups;
   for (auto const& te : td.edges_) {
     for (auto& psi : te->pax_connection_info_.section_infos_) {
-      affected_passenger_groups.insert(psi.group_);
+      auto const pg = psi.group_;
+      affected_passenger_groups.insert(pg);
+      utl::erase(pg->edges_, te);
     }
     te->pax_connection_info_.section_infos_.clear();
   }
@@ -181,7 +184,9 @@ bool update_passenger_group(trip_data& td, trip const* trp, passenger_group* pg,
       }
       if (enter_index != INVALID_INDEX && exit_index != INVALID_INDEX) {
         for (auto idx = enter_index; idx <= exit_index; ++idx) {
-          add_passenger_group_to_edge(td.edges_[idx], pg);
+          auto e = td.edges_[idx];
+          add_passenger_group_to_edge(e, pg);
+          pg->edges_.emplace_back(e);
         }
         return true;
       }
