@@ -34,7 +34,9 @@ table EdgeForecast {
   from: motis.Station;
   to: motis.Station;
   departure_schedule_time: ulong;
+  departure_current_time: ulong;
   arrival_schedule_time: ulong;
+  arrival_current_time: ulong;
   capacity_type: CapacityType;
   capacity: uint;
   passenger_cdf: [CdfEntry];
