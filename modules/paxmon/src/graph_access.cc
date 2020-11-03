@@ -6,6 +6,7 @@
 #include <map>
 #include <set>
 #include <string_view>
+#include <tuple>
 #include <utility>
 
 #include "utl/erase_if.h"
@@ -27,6 +28,10 @@ namespace motis::paxmon {
 using namespace motis::rt;
 
 struct rule_trip_adder {
+  using rule_node_key =
+      std::tuple<uint32_t /* station_idx */, time /* schedule_time */,
+                 uint32_t /* merged_trips_idx */>;
+
   rule_trip_adder(schedule const& sched, paxmon_data& data)
       : sched_{sched}, data_{data} {}
 
@@ -86,36 +91,46 @@ struct rule_trip_adder {
 
   event_node* get_or_create_dep_node(
       motis::access::trip_section const& section) {
-    return utl::get_or_create(dep_nodes_, section.edge()->from_, [&]() {
-      return data_.graph_.nodes_
-          .emplace_back(std::make_unique<event_node>(event_node{
-              section.lcon().d_time_,
-              get_schedule_time(sched_, section.edge(),
-                                section.trip_->lcon_idx_, event_type::DEP),
-              event_type::DEP,
-              true,
-              section.from_station_id(),
-              {},
-              {}}))
-          .get();
-    });
+    auto const station_idx = section.from_station_id();
+    auto const schedule_time = get_schedule_time(
+        sched_, section.edge(), section.trip_->lcon_idx_, event_type::DEP);
+    auto const merged_trips_idx = section.lcon().trips_;
+    return utl::get_or_create(
+        dep_nodes_, rule_node_key{station_idx, schedule_time, merged_trips_idx},
+        [&]() {
+          return data_.graph_.nodes_
+              .emplace_back(std::make_unique<event_node>(
+                  event_node{section.lcon().d_time_,
+                             schedule_time,
+                             event_type::DEP,
+                             true,
+                             station_idx,
+                             {},
+                             {}}))
+              .get();
+        });
   }
 
   event_node* get_or_create_arr_node(
       motis::access::trip_section const& section) {
-    return utl::get_or_create(arr_nodes_, section.edge()->to_, [&]() {
-      return data_.graph_.nodes_
-          .emplace_back(std::make_unique<event_node>(event_node{
-              section.lcon().a_time_,
-              get_schedule_time(sched_, section.edge(),
-                                section.trip_->lcon_idx_, event_type::ARR),
-              event_type::ARR,
-              true,
-              section.to_station_id(),
-              {},
-              {}}))
-          .get();
-    });
+    auto const station_idx = section.to_station_id();
+    auto const schedule_time = get_schedule_time(
+        sched_, section.edge(), section.trip_->lcon_idx_, event_type::ARR);
+    auto const merged_trips_idx = section.lcon().trips_;
+    return utl::get_or_create(
+        arr_nodes_, rule_node_key{station_idx, schedule_time, merged_trips_idx},
+        [&]() {
+          return data_.graph_.nodes_
+              .emplace_back(std::make_unique<event_node>(
+                  event_node{section.lcon().a_time_,
+                             schedule_time,
+                             event_type::ARR,
+                             true,
+                             station_idx,
+                             {},
+                             {}}))
+              .get();
+        });
   }
 
   motis::paxmon::edge* get_or_create_trip_edge(
@@ -145,8 +160,8 @@ struct rule_trip_adder {
   schedule const& sched_;
   paxmon_data& data_;
   std::set<trip const*> trips_;
-  std::map<motis::node const*, motis::paxmon::event_node*> dep_nodes_;
-  std::map<motis::node const*, motis::paxmon::event_node*> arr_nodes_;
+  std::map<rule_node_key, motis::paxmon::event_node*> dep_nodes_;
+  std::map<rule_node_key, motis::paxmon::event_node*> arr_nodes_;
   std::map<motis::light_connection const*, motis::paxmon::edge*> trip_edges_;
   std::map<std::pair<event_node*, event_node*>, motis::paxmon::edge*>
       wait_edges_;
