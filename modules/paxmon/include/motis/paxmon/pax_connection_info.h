@@ -25,6 +25,7 @@ inline bool operator!=(pax_section_info const& lhs,
 
 struct pax_connection_info {
   pax_connection_info() = default;
+  ~pax_connection_info() = default;
 
   explicit pax_connection_info(std::vector<pax_section_info>&& psi)
       : section_infos_{std::move(psi)} {}
@@ -34,7 +35,9 @@ struct pax_connection_info {
       : section_infos_{std::move(pci.section_infos_)} {}
 
   pax_connection_info& operator=(pax_connection_info const& pci) {
-    section_infos_ = pci.section_infos_;
+    if (this != &pci) {
+      section_infos_ = pci.section_infos_;
+    }
     return *this;
   }
 
