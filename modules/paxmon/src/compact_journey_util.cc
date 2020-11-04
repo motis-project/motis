@@ -15,20 +15,24 @@ compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
   auto prefix = compact_journey{};
 
   for (auto const& leg : cj.legs_) {
-    if (leg.enter_time_ >= loc.schedule_arrival_time_) {
+    auto const sections = access::sections(leg.trip_);
+    auto const enter_section_it = std::find_if(
+        begin(sections), end(sections), [&](access::trip_section const& sec) {
+          return sec.from_station_id() == leg.enter_station_id_ &&
+                 get_schedule_time(sched, sec.ev_key_from()) == leg.enter_time_;
+        });
+    if (enter_section_it == end(sections) ||
+        (*enter_section_it).lcon().d_time_ > loc.current_arrival_time_) {
       break;
     }
+    auto const exit_section_it = std::find_if(
+        begin(sections), end(sections), [&](access::trip_section const& sec) {
+          return sec.to_station_id() == loc.at_station_->index_ &&
+                 get_schedule_time(sched, sec.ev_key_to()) ==
+                     loc.schedule_arrival_time_;
+        });
     auto& new_leg = prefix.legs_.emplace_back(leg);
-    if (new_leg.exit_time_ > loc.schedule_arrival_time_) {
-      auto const sections = access::sections(new_leg.trip_);
-      auto const exit_section_it = std::find_if(
-          begin(sections), end(sections), [&](access::trip_section const& sec) {
-            return sec.to_station_id() == loc.at_station_->index_ &&
-                   get_schedule_time(sched, sec.ev_key_to()) ==
-                       loc.schedule_arrival_time_;
-          });
-      utl::verify(exit_section_it != end(sections),
-                  "compact_journey_prefix: exit section not found");
+    if (exit_section_it != end(sections)) {
       auto const exit_section = *exit_section_it;
       new_leg.exit_station_id_ = exit_section.to_station_id();
       new_leg.exit_time_ = get_schedule_time(sched, exit_section.ev_key_to());
