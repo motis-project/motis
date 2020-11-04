@@ -53,6 +53,7 @@ private:
   std::uint16_t match_tolerance_{0};
   bool reroute_unmatched_{false};
   int arrival_delay_threshold_{20};
+  bool check_graph_times_{false};
   bool check_graph_integrity_{false};
 
   paxmon_data data_;

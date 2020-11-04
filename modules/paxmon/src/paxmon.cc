@@ -25,6 +25,7 @@
 
 #include "motis/paxmon/broken_interchanges_report.h"
 #include "motis/paxmon/build_graph.h"
+#include "motis/paxmon/checks.h"
 #include "motis/paxmon/data_key.h"
 #include "motis/paxmon/graph_access.h"
 #include "motis/paxmon/loader/csv/csv_journeys.h"
@@ -70,6 +71,8 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
   param(arrival_delay_threshold_, "arrival_delay_threshold",
         "threshold for arrival delay at the destination (minutes, -1 to "
         "disable)");
+  param(check_graph_times_, "check_graph_times",
+        "check graph timestamps after each update");
   param(check_graph_integrity_, "check_graph_integrity",
         "check graph integrity after each update");
 }
@@ -279,6 +282,10 @@ void paxmon::load_journeys() {
     write_broken_interchanges_report(data_, initial_broken_report_file_);
   }
 
+  if (check_graph_times_) {
+    utl::verify(check_graph_times(data_.graph_, sched),
+                "load_journeys: check_graph_times");
+  }
   if (check_graph_integrity_) {
     utl::verify(check_graph_integrity(data_.graph_, sched),
                 "load_journeys: check_graph_integrity");
@@ -454,6 +461,10 @@ void paxmon::rt_updates_applied() {
   tick_stats_.affected_groups_ = data_.groups_affected_by_last_update_.size();
   tick_stats_.affected_passengers_ = affected_passenger_count;
 
+  if (check_graph_times_) {
+    utl::verify(check_graph_times(data_.graph_, sched),
+                "rt_updates_applied: check_graph_times");
+  }
   if (check_graph_integrity_) {
     utl::verify(check_graph_integrity(data_.graph_, sched),
                 "rt_updates_applied: check_graph_integrity (start)");
