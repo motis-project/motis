@@ -581,16 +581,6 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
                       .get();
         pg->id_ = id;
         add_passenger_group_to_graph(sched, data_, *pg);
-        // TODO(pablo): investigate
-        /*
-        utl::verify(!pg->edges_.empty(),
-                    "trying to add invalid passenger group");
-        */
-        if (pg->edges_.empty()) {
-          LOG(warn) << "trying to add invalid passenger group with "
-                    << pg_fbs->planned_journey()->legs()->size()
-                    << " journey legs";
-        }
         return pg;
       });
 

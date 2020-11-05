@@ -7,6 +7,7 @@
 
 #include "motis/core/common/logging.h"
 
+#include "motis/paxmon/debug.h"
 #include "motis/paxmon/graph_access.h"
 
 using namespace motis::logging;
@@ -90,7 +91,25 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
         remove_passenger_group_from_edge(e, &grp);
       }
       grp.edges_.clear();
-      return;
+
+      std::cout << "add_passenger_group_to_graph: enter_found=" << enter_found
+                << ", exit_found=" << exit_found << "\n";
+
+      std::cout << "current leg:\n";
+      print_leg(sched, leg);
+
+      std::cout << "\ncurrent trip:\n";
+      print_trip_sections(data.graph_, sched, leg.trip_, te);
+
+      std::cout << "\ncompact planned journey:\n";
+      for (auto const& l : grp.compact_planned_journey_.legs_) {
+        print_leg(sched, l);
+      }
+
+      std::cout << "\n\n";
+
+      throw utl::fail(
+          "add_passenger_group_to_graph: trip enter/exit not found");
     }
   }
 
