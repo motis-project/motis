@@ -17,6 +17,10 @@ compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
                            passenger_localization const& loc) {
   auto prefix = compact_journey{};
 
+  if (loc.first_station_) {
+    return prefix;
+  }
+
   for (auto const& leg : cj.legs_) {
     auto const sections = access::sections(leg.trip_);
     auto const enter_section_it = std::find_if(
@@ -25,7 +29,7 @@ compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
                  get_schedule_time(sched, sec.ev_key_from()) == leg.enter_time_;
         });
     if (enter_section_it == end(sections) ||
-        (*enter_section_it).lcon().d_time_ > loc.current_arrival_time_) {
+        (*enter_section_it).lcon().d_time_ >= loc.current_arrival_time_) {
       break;
     }
     auto const exit_section_it = std::find_if(
