@@ -187,6 +187,7 @@ bool check_compact_journey(schedule const& sched, compact_journey const& cj,
       ok = false;
     }
     if (!l2.enter_transfer_) {
+      // TODO(pablo): support through edges
       std::cout << "!! missing leg enter transfer info\n";
       ok = false;
     }

@@ -80,6 +80,7 @@ compact_journey merge_journeys(schedule const& sched,
                           new_first_suffix_leg.enter_station_id_);
   }
 
+  /*
   if (!check_compact_journey(sched, merged)) {
     std::cout << "\nprefix journey:\n";
     for (auto const& leg : prefix.legs_) {
@@ -92,6 +93,7 @@ compact_journey merge_journeys(schedule const& sched,
 
     throw utl::fail("merge_journeys: invalid result");
   }
+  */
 
   return merged;
 }
