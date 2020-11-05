@@ -30,6 +30,7 @@
 
 #include "motis/paxmon/loader/csv/row.h"
 #include "motis/paxmon/util/get_station_idx.h"
+#include "motis/paxmon/util/interchange_time.h"
 
 using namespace motis::logging;
 using namespace motis::paxmon::util;
@@ -254,18 +255,6 @@ struct input_journey_leg {
   std::optional<transfer_info> enter_transfer_;
 };
 
-std::optional<time> get_footpath_duration(schedule const& sched,
-                                          std::uint32_t from_station_idx,
-                                          std::uint32_t to_station_idx) {
-  for (auto const& fp :
-       sched.stations_[from_station_idx]->outgoing_footpaths_) {
-    if (fp.to_station_ == to_station_idx) {
-      return {fp.duration_};
-    }
-  }
-  return {};
-}
-
 std::optional<transfer_info> get_transfer_info(
     schedule const& sched,
     std::vector<input_journey_leg> const& partial_journey,
@@ -277,21 +266,8 @@ std::optional<transfer_info> get_transfer_info(
   if (!prev_leg.to_station_idx_ || prev_leg.exit_time_ == INVALID_TIME) {
     return {};
   }
-  if (*prev_leg.to_station_idx_ == enter_station_idx) {
-    return transfer_info{
-        static_cast<duration>(
-            sched.stations_[enter_station_idx]->transfer_time_),
-        transfer_info::type::SAME_STATION};
-  } else {
-    auto const walk_duration = get_footpath_duration(
-        sched, *prev_leg.to_station_idx_, enter_station_idx);
-    if (walk_duration) {
-      return transfer_info{static_cast<duration>(*walk_duration),
-                           transfer_info::type::FOOTPATH};
-    } else {
-      return {};
-    }
-  }
+  return util::get_transfer_info(sched, prev_leg.to_station_idx_.value(),
+                                 enter_station_idx);
 }
 
 void write_match_log(

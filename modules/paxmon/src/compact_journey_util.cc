@@ -8,6 +8,9 @@
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/trip_iterator.h"
 
+#include "motis/paxmon/util/interchange_time.h"
+
+using namespace motis::paxmon::util;
 namespace motis::paxmon {
 
 compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
@@ -43,7 +46,8 @@ compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
   return prefix;
 }
 
-compact_journey merge_journeys(compact_journey const& prefix,
+compact_journey merge_journeys(schedule const& sched,
+                               compact_journey const& prefix,
                                compact_journey const& suffix) {
   if (prefix.legs_.empty()) {
     return suffix;
@@ -63,6 +67,10 @@ compact_journey merge_journeys(compact_journey const& prefix,
   } else {
     std::copy(begin(suffix.legs_), end(suffix.legs_),
               std::back_inserter(merged.legs_));
+    auto& new_first_suffix_leg = merged.legs_[prefix.legs_.size()];
+    new_first_suffix_leg.enter_transfer_ =
+        get_transfer_info(sched, last_prefix_leg.exit_station_id_,
+                          new_first_suffix_leg.enter_station_id_);
   }
   return merged;
 }

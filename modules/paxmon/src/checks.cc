@@ -5,6 +5,7 @@
 
 #include "fmt/core.h"
 
+#include "utl/pairwise.h"
 #include "utl/verify.h"
 
 #include "motis/core/access/realtime_access.h"
@@ -154,6 +155,52 @@ bool check_graph_times(graph const& g, schedule const& sched) {
   for (auto const& [trp, td] : g.trip_data_) {
     if (!check_trip_times(g, sched, trp, td.get())) {
       ok = false;
+    }
+  }
+
+  return ok;
+}
+
+bool check_compact_journey(schedule const& sched, compact_journey const& cj) {
+  auto ok = true;
+
+  if (cj.legs_.empty()) {
+    std::cout << "!! empty compact journey\n";
+    ok = false;
+  }
+
+  for (auto const& leg : cj.legs_) {
+    if (leg.enter_station_id_ == leg.exit_station_id_) {
+      std::cout << "!! useless journey leg: enter == exit\n";
+      ok = false;
+    }
+    if (leg.exit_time_ < leg.enter_time_) {
+      std::cout << "!! invalid journey leg: exit time < enter time\n";
+      ok = false;
+    }
+  }
+
+  for (auto const& [l1, l2] : utl::pairwise(cj.legs_)) {
+    if (l2.enter_time_ < l1.exit_time_) {
+      std::cout << "!! leg enter time < previous leg exit time\n";
+      ok = false;
+    }
+    if (!l2.enter_transfer_) {
+      std::cout << "!! missing leg enter transfer info\n";
+      ok = false;
+    }
+    if (l1.exit_station_id_ != l2.enter_station_id_ &&
+        (!l2.enter_transfer_ ||
+         l2.enter_transfer_->type_ == transfer_info::type::SAME_STATION)) {
+      std::cout << "!! leg enter station != previous leg exit station\n";
+      ok = false;
+    }
+  }
+
+  if (!ok) {
+    std::cout << "compact journey (errors above):\n";
+    for (auto const& leg : cj.legs_) {
+      print_leg(sched, leg);
     }
   }
 

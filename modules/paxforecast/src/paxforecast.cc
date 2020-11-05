@@ -87,7 +87,7 @@ void update_tracked_groups(
 
     if (event_type == monitoring_event_type::MAJOR_DELAY_EXPECTED &&
         result.alternatives_.size() == 1 &&
-        merge_journeys(journey_prefix,
+        merge_journeys(sched, journey_prefix,
                        result.alternatives_.front().first->compact_journey_) ==
             pg->compact_planned_journey_) {
       // keep existing group (no alternatives found)
@@ -103,7 +103,7 @@ void update_tracked_groups(
         continue;
       }
       auto const new_journey =
-          merge_journeys(journey_prefix, alt->compact_journey_);
+          merge_journeys(sched, journey_prefix, alt->compact_journey_);
       groups_to_add.emplace_back(to_fbs(
           sched, add_groups_mc,
           passenger_group{new_journey, 0, pg->source_, pg->passengers_,
