@@ -161,7 +161,8 @@ bool check_graph_times(graph const& g, schedule const& sched) {
   return ok;
 }
 
-bool check_compact_journey(schedule const& sched, compact_journey const& cj) {
+bool check_compact_journey(schedule const& sched, compact_journey const& cj,
+                           bool scheduled) {
   auto ok = true;
 
   if (cj.legs_.empty()) {
@@ -174,14 +175,14 @@ bool check_compact_journey(schedule const& sched, compact_journey const& cj) {
       std::cout << "!! useless journey leg: enter == exit\n";
       ok = false;
     }
-    if (leg.exit_time_ < leg.enter_time_) {
+    if (scheduled && leg.exit_time_ < leg.enter_time_) {
       std::cout << "!! invalid journey leg: exit time < enter time\n";
       ok = false;
     }
   }
 
   for (auto const& [l1, l2] : utl::pairwise(cj.legs_)) {
-    if (l2.enter_time_ < l1.exit_time_) {
+    if (scheduled && l2.enter_time_ < l1.exit_time_) {
       std::cout << "!! leg enter time < previous leg exit time\n";
       ok = false;
     }
