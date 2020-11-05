@@ -25,8 +25,6 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
   LOG(info) << "calc_load_forecast: " << sim_result.additional_groups_.size()
             << " edges with additional groups";
 
-  auto edges_calculated = 0ULL;
-
   motis_parallel_for(sim_result.additional_groups_, [&](auto const& entry) {
     auto const e = entry.first;
     if (!e->is_trip()) {
