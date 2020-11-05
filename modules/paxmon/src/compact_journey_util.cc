@@ -8,9 +8,12 @@
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/trip_iterator.h"
 
+#include "motis/paxmon/checks.h"
+#include "motis/paxmon/debug.h"
 #include "motis/paxmon/util/interchange_time.h"
 
 using namespace motis::paxmon::util;
+
 namespace motis::paxmon {
 
 compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
@@ -76,6 +79,20 @@ compact_journey merge_journeys(schedule const& sched,
         get_transfer_info(sched, last_prefix_leg.exit_station_id_,
                           new_first_suffix_leg.enter_station_id_);
   }
+
+  if (!check_compact_journey(sched, merged)) {
+    std::cout << "\nprefix journey:\n";
+    for (auto const& leg : prefix.legs_) {
+      print_leg(sched, leg);
+    }
+    std::cout << "\nsuffix journey:\n";
+    for (auto const& leg : suffix.legs_) {
+      print_leg(sched, leg);
+    }
+
+    throw utl::fail("merge_journeys: invalid result");
+  }
+
   return merged;
 }
 

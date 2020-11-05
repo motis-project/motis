@@ -19,6 +19,7 @@
 
 #include "motis/paxmon/compact_journey_util.h"
 #include "motis/paxmon/data_key.h"
+#include "motis/paxmon/debug.h"
 #include "motis/paxmon/messages.h"
 #include "motis/paxmon/monitoring_event.h"
 #include "motis/paxmon/paxmon_data.h"
@@ -102,8 +103,32 @@ void update_tracked_groups(
       if (prob == 0.0) {
         continue;
       }
-      auto const new_journey =
-          merge_journeys(sched, journey_prefix, alt->compact_journey_);
+
+      compact_journey new_journey;
+      try {
+        new_journey =
+            merge_journeys(sched, journey_prefix, alt->compact_journey_);
+      } catch (std::runtime_error const& e) {
+        std::cout << "\noriginal planned journey:\n";
+        for (auto const& leg : pg->compact_planned_journey_.legs_) {
+          print_leg(sched, leg);
+        }
+        std::cout << "\nlocalization: in_trip="
+                  << result.localization_->in_trip()
+                  << ", first_station=" << result.localization_->first_station_
+                  << ", station="
+                  << result.localization_->at_station_->name_.str()
+                  << ", schedule_arrival_time="
+                  << format_time(result.localization_->schedule_arrival_time_)
+                  << ", current_arrival_time="
+                  << format_time(result.localization_->current_arrival_time_)
+                  << "\n";
+        if (result.localization_->in_trip()) {
+          print_trip(result.localization_->in_trip_);
+        }
+        throw e;
+      }
+
       groups_to_add.emplace_back(to_fbs(
           sched, add_groups_mc,
           passenger_group{new_journey, 0, pg->source_, pg->passengers_,
