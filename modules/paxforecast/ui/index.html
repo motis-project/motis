@@ -68,12 +68,14 @@
   <div v-if="selectedTripData">
     <svg :view-box.camel="svgViewBox" style="height: 90vh; width: 100%;">
       <!-- Background -->
-      <rect x="0" y="0" :width="svgGraphWidth" :height="svgProbRegions.p100"
-            stroke="#DDD" fill="#FFCACA"/>
-      <rect x="0" :y="svgProbRegions.p100" :width="svgGraphWidth" :height="svgProbRegions.p80 - svgProbRegions.p100"
-            stroke="#DDD" fill="#FFF3CA"/>
-      <rect x="0" :y="svgProbRegions.p80" :width="svgGraphWidth" :height="200 - svgProbRegions.p80"
-            troke="#DDD" fill="#D4FFCA"/>
+      <g v-for="e in svgEdgeInfos">
+        <rect :x="e.x" :y="e.yRed" width="50" :height="e.hRed"
+              stroke="#DDD" fill="#FFCACA"/>
+        <rect :x="e.x" :y="e.yYellow" width="50" :height="e.hYellow"
+              stroke="#DDD" fill="#FFF3CA"/>
+        <rect :x="e.x" :y="e.yGreen" width="50" :height="e.hGreen"
+              stroke="#DDD" fill="#D4FFCA"/>
+      </g>
 
       <!-- Section dividers -->
       <path v-for="(path, index) in svgDividers" :d="path" :key="index" stroke="#DDD"/>
@@ -98,8 +100,10 @@
       <text :x="svgMidpointX" y="-5" text-anchor="middle" class="legend">{{ selectedTripName }}</text>
 
       <!-- Y Axis Labels (Load) -->
-      <text x="-2" :y="svgProbRegions.p100 + 4" text-anchor="end" class="legend">100%</text>
-      <text x="-2" :y="svgProbRegions.p80 + 4" text-anchor="end" class="legend">80%</text>
+      <text v-for="label in svgYLabels"
+            x="-2" :y="label.y + 4" text-anchor="end" class="legend">
+        {{ label.pax }}
+      </text>
 
       <!-- X Axis Labels (Stations) -->
       <text v-for="station in svgStations"

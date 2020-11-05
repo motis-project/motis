@@ -237,6 +237,11 @@ async function getForecastInfo(file, line) {
       .filter((ef) => ef.from.id != ef.to.id)
       .map(processEdgeForecast);
     const allEdgesHaveCapacity = arr.every((ef) => ef.capacity);
+    const maxCapacity = edges.reduce(
+      (max, ef) => (ef.capacity ? Math.max(max, ef.capacity) : max),
+      0
+    );
+    const maxPax = edges.reduce((max, ef) => Math.max(max, ef.max_pax), 0);
     const maxLoad = edges.reduce(
       (max, ef) =>
         ef.capacity ? Math.max(max, ef.max_pax / ef.capacity) : max,
@@ -249,6 +254,8 @@ async function getForecastInfo(file, line) {
       trip: currentTrip,
       edges,
       allEdgesHaveCapacity,
+      maxCapacity,
+      maxPax,
       maxLoad,
       primaryStation,
       secondaryStation,

@@ -50,6 +50,34 @@ const App = {
         (_, idx) => `M${(idx + 1) * 50} 0v200`
       );
     },
+    svgMaxPaxOrCap() {
+      return this.selectedTripData
+        ? Math.max(
+            this.selectedTripData.maxPax,
+            this.selectedTripData.maxCapacity
+          ) * 1.1
+        : 100;
+    },
+    svgEdgeInfos() {
+      if (!this.selectedTripData) {
+        return [];
+      }
+      const maxVal = this.svgMaxPaxOrCap;
+      return this.selectedTripData.edges.map((e, idx) => {
+        const y100 = 200 - Math.round((e.capacity / maxVal) * 200);
+        const y80 = 200 - Math.round(((e.capacity * 0.8) / maxVal) * 200);
+        return {
+          capacity: e.capacity,
+          x: idx * 50,
+          yRed: 0,
+          hRed: y100,
+          yYellow: y100,
+          hYellow: y80 - y100,
+          yGreen: y80,
+          hGreen: 200 - y80,
+        };
+      });
+    },
     svgOverCapProbs() {
       if (!this.selectedTripData) {
         return [];
@@ -70,19 +98,6 @@ const App = {
         };
       });
     },
-    svgProbRegions() {
-      let r = {
-        maxLoad: 100,
-        p100: 50,
-        p80: 80,
-      };
-      if (this.selectedTripData) {
-        r.maxLoad = Math.max(1.1, this.selectedTripData.maxLoad + 0.1);
-        r.p100 = 200 - Math.round(200 / r.maxLoad);
-        r.p80 = 200 - Math.round((0.8 * 200) / r.maxLoad);
-      }
-      return r;
-    },
     svgMedianPath() {
       return getSvgLinePath(this.selectedTripData, "q_50");
     },
@@ -93,13 +108,13 @@ const App = {
       let topPoints = [];
       let bottomPoints = [];
       if (this.selectedTripData && this.selectedTripData.allEdgesHaveCapacity) {
-        const maxLoad = this.svgProbRegions.maxLoad;
+        const maxVal = this.svgMaxPaxOrCap;
         let x = 0;
         for (const ef of this.selectedTripData.edges) {
-          const topLoad = ef.q_80 / ef.capacity;
-          const bottomLoad = ef.q_20 / ef.capacity;
-          const topY = 200 - Math.round((topLoad / maxLoad) * 200);
-          const bottomY = 200 - Math.round((bottomLoad / maxLoad) * 200);
+          const topLoad = ef.q_80;
+          const bottomLoad = ef.q_20;
+          const topY = 200 - Math.round((topLoad / maxVal) * 200);
+          const bottomY = 200 - Math.round((bottomLoad / maxVal) * 200);
           topPoints.push(`${x} ${topY}`);
           bottomPoints.unshift(`${x} ${bottomY}`);
           x += 50;
@@ -113,6 +128,21 @@ const App = {
       } else {
         return "";
       }
+    },
+    svgYLabels() {
+      if (!this.selectedTripData) {
+        return [];
+      }
+      const maxVal = this.svgMaxPaxOrCap;
+      const stepSize = maxVal >= 700 ? 100 : 50;
+      let labels = [];
+      for (let pax = stepSize; pax < maxVal; pax += stepSize) {
+        labels.push({
+          pax,
+          y: 200 - Math.round((pax / maxVal) * 200),
+        });
+      }
+      return labels;
     },
     svgStations() {
       if (!this.selectedTripData) {
@@ -157,11 +187,11 @@ const App = {
 function getSvgLinePath(td, prop) {
   let points = [];
   if (td && td.allEdgesHaveCapacity) {
-    const maxLoad = vm.svgProbRegions.maxLoad;
+    const maxVal = vm.svgMaxPaxOrCap;
     let x = 0;
     for (const ef of td.edges) {
-      const load = (ef[prop] || 0) / ef.capacity;
-      const y = 200 - Math.round((load / maxLoad) * 200);
+      const load = ef[prop] || 0;
+      const y = 200 - Math.round((load / maxVal) * 200);
       points.push(`${x} ${y}`);
       x += 50;
       points.push(`${x} ${y}`);
