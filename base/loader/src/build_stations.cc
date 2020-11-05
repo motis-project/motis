@@ -67,8 +67,10 @@ struct stations_builder {
 
     // Store DS100.
     if (fbs_station->external_ids() != nullptr) {
+      s->external_ids_.reserve(fbs_station->external_ids()->size());
       for (auto const& ds100 : *fbs_station->external_ids()) {
         sched_.ds100_to_station_.emplace(ds100->str(), s.get());
+        s->external_ids_.emplace_back(ds100->str());
       }
     }
 
