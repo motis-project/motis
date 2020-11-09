@@ -107,10 +107,10 @@
 
       <!-- X Axis Labels (Stations) -->
       <text v-for="station in svgStations"
-            :x="station.x" y="210"
-            text-anchor="middle" class="legend station">
-        {{ station.eva }}
-        <title>{{ station.name }}</title>
+            x="0" y="0" text-anchor="end" class="legend station"
+            :transform="`translate(${station.x} 210) rotate(-60 0 0)`">
+        {{ station.name }}
+        <title>{{ station.eva }}</title>
       </text>
     </svg>
   </div>

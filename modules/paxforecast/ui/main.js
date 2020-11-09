@@ -40,7 +40,7 @@ const App = {
       return this.svgGraphWidth / 2;
     },
     svgViewBox() {
-      return `-30 -15 ${50 + this.svgGraphWidth} 235`;
+      return `-100 -15 ${120 + this.svgGraphWidth} 335`;
     },
     svgDividers() {
       if (!this.selectedTripData) {
