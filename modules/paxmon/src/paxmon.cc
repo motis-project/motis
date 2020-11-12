@@ -143,23 +143,23 @@ void paxmon::init(motis::module::registry& reg) {
 }
 
 void print_graph_stats(graph_statistics const& graph_stats) {
-  LOG(info) << fmt::format("{:n} passenger groups, {:n} passengers",
+  LOG(info) << fmt::format("{:L} passenger groups, {:L} passengers",
                            graph_stats.passenger_groups_,
                            graph_stats.passengers_);
-  LOG(info) << fmt::format("{:n} graph nodes ({:n} canceled)",
+  LOG(info) << fmt::format("{:L} graph nodes ({:L} canceled)",
                            graph_stats.nodes_, graph_stats.canceled_nodes_);
   LOG(info) << fmt::format(
-      "{:n} graph edges ({:n} canceled): {:n} trip + {:n} interchange + {:n} "
-      "wait + {:n} through",
+      "{:L} graph edges ({:L} canceled): {:L} trip + {:L} interchange + {:L} "
+      "wait + {:L} through",
       graph_stats.edges_, graph_stats.canceled_edges_, graph_stats.trip_edges_,
       graph_stats.interchange_edges_, graph_stats.wait_edges_,
       graph_stats.through_edges_);
-  LOG(info) << fmt::format("{:n} stations", graph_stats.stations_);
-  LOG(info) << fmt::format("{:n} trips", graph_stats.trips_);
-  LOG(info) << fmt::format("over capacity: {:n} trips, {:n} edges",
+  LOG(info) << fmt::format("{:L} stations", graph_stats.stations_);
+  LOG(info) << fmt::format("{:L} trips", graph_stats.trips_);
+  LOG(info) << fmt::format("over capacity: {:L} trips, {:L} edges",
                            graph_stats.trips_over_capacity_,
                            graph_stats.edges_over_capacity_);
-  LOG(info) << fmt::format("broken: {:n} interchange edges, {:n} groups",
+  LOG(info) << fmt::format("broken: {:L} interchange edges, {:L} groups",
                            graph_stats.broken_edges_,
                            graph_stats.broken_passenger_groups_);
 }
@@ -305,7 +305,7 @@ void paxmon::load_capacity_files() {
         load_capacities(sched, file, data_.trip_capacity_map_,
                         data_.category_capacity_map_, capacity_match_log_file_);
     total_entries += entries_loaded;
-    LOG(info) << fmt::format("loaded {:n} capacity entries from {}",
+    LOG(info) << fmt::format("loaded {:L} capacity entries from {}",
                              entries_loaded, file);
   }
   if (total_entries == 0) {
