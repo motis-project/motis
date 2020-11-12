@@ -53,6 +53,9 @@ private:
   void build_rules_graph(RuleService const* rs) {
     std::map<Service const*, service_node*> service_to_node;
     for (auto const r : *rs->rules()) {
+      if (skip_rule(r)) {
+        continue;
+      }
       auto s1_node = utl::get_or_create(service_to_node, r->service1(), [&]() {
         return rg_.service_nodes_
             .emplace_back(std::make_unique<service_node>(
@@ -170,6 +173,12 @@ private:
   static inline bitfield shifted_bitfield(bitfield const& orig, int offset) {
     return offset > 0 ? orig << static_cast<std::size_t>(offset)
                       : orig >> static_cast<std::size_t>(-offset);
+  }
+
+  inline bool skip_rule(Rule const* rule) {
+    return gb_.no_local_transport_ &&
+           (gb_.skip_route(rule->service1()->route()) ||
+            gb_.skip_route(rule->service2()->route()));
   }
 
 public:

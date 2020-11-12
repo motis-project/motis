@@ -10,6 +10,7 @@
 
 #include "motis/core/schedule/schedule.h"
 
+#include "motis/loader/filter/local_stations.h"
 #include "motis/loader/interval_util.h"
 #include "motis/loader/timezone_util.h"
 
@@ -22,7 +23,8 @@ namespace motis::loader {
 constexpr auto const kLinkNearbyMaxDistance = 300;  // [m];
 
 struct stations_builder {
-  explicit stations_builder(schedule& sched) : sched_{sched} {}
+  explicit stations_builder(schedule& sched, bool no_local_stations)
+      : sched_{sched}, no_local_stations_{no_local_stations} {}
 
   void add_dummy_node(std::string const& name) {
     auto const station_idx = sched_.station_nodes_.size();
@@ -42,6 +44,10 @@ struct stations_builder {
   }
 
   void add_station(uint32_t const source_schedule, Station const* fbs_station) {
+    if (skip_station(fbs_station)) {
+      return;
+    }
+
     auto const station_idx = sched_.station_nodes_.size();
 
     // Create station node.
@@ -103,9 +109,15 @@ struct stations_builder {
   void link_meta_stations(
       f::Vector<f::Offset<MetaStation>> const* meta_stations) {
     for (auto const& meta : *meta_stations) {
+      if (skip_station(meta->station())) {
+        continue;
+      }
       auto& station =
           *sched_.stations_[station_nodes_.at(meta->station())->id_];
       for (auto const& fbs_equivalent : *meta->equivalent()) {
+        if (skip_station(fbs_equivalent)) {
+          continue;
+        }
         auto& equivalent =
             *sched_.stations_[station_nodes_.at(fbs_equivalent)->id_];
         if (station.index_ != equivalent.index_) {
@@ -148,15 +160,21 @@ struct stations_builder {
     }
   }
 
+  inline bool skip_station(Station const* station) {
+    return no_local_stations_ && is_local_station(station);
+  }
+
   schedule& sched_;
   int first_day_{0}, last_day_{0};
   mcd::hash_map<Station const*, station_node*> station_nodes_;
   mcd::hash_map<Timezone const*, timezone const*> timezones_;
+  bool no_local_stations_{false};
 };
 
 mcd::hash_map<Station const*, station_node*> build_stations(
-    schedule& sched, std::vector<Schedule const*> const& fbs_schedules) {
-  stations_builder b{sched};
+    schedule& sched, std::vector<Schedule const*> const& fbs_schedules,
+    bool no_local_stations) {
+  stations_builder b{sched, no_local_stations};
 
   // Add dummy stations.
   b.add_dummy_node(STATION_START);

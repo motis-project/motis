@@ -40,6 +40,8 @@ struct dataset_settings : public conf::configuration,
     param(wzr_classes_path_, "wzr_classes_path",
           "waiting time rules class mapping");
     param(wzr_matrix_path_, "wzr_matrix_path", "waiting time matrix");
+    param(no_local_transport_, "no_local_transport",
+          "don't load local transport");
   }
 };
 

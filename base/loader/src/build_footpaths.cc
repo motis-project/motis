@@ -14,6 +14,7 @@
 #include "motis/core/common/floyd_warshall.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/price.h"
+#include "motis/loader/filter/local_stations.h"
 
 #include "motis/schedule-format/Schedule_generated.h"
 
@@ -52,6 +53,10 @@ struct footpath_builder {
                     footpath->from()->id()->c_str());
         return it->second;
       };
+
+      if (skip_station(footpath->from()) || skip_station(footpath->to())) {
+        continue;
+      }
 
       auto duration = static_cast<int32_t>(footpath->duration());
       auto const from_node = get_station("from", footpath->from());
@@ -367,6 +372,10 @@ struct footpath_builder {
         << "-" << fp.duration_ << "min";
     }
     return s.str();
+  }
+
+  inline bool skip_station(Station const* station) {
+    return opt_.no_local_transport_ && is_local_station(station);
   }
 
   schedule& sched_;
