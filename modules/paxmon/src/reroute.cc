@@ -152,12 +152,11 @@ std::pair<std::uint16_t, capacity_source> guess_trip_capacity(
 std::set<passenger_group*> collect_passenger_groups(trip_data& td) {
   std::set<passenger_group*> affected_passenger_groups;
   for (auto const& te : td.edges_) {
-    for (auto& psi : te->pax_connection_info_.section_infos_) {
-      auto const pg = psi.group_;
+    for (auto pg : te->pax_connection_info_.groups_) {
       affected_passenger_groups.insert(pg);
       utl::erase(pg->edges_, te);
     }
-    te->pax_connection_info_.section_infos_.clear();
+    te->pax_connection_info_.groups_.clear();
   }
   return affected_passenger_groups;
 }

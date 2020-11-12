@@ -270,12 +270,11 @@ void update_trip_route(schedule const& sched, paxmon_data& data,
 }
 
 void add_passenger_group_to_edge(edge* e, passenger_group* pg) {
-  e->pax_connection_info_.section_infos_.emplace_back(pg);
+  e->pax_connection_info_.groups_.emplace(pg);
 }
 
 void remove_passenger_group_from_edge(edge* e, passenger_group* pg) {
-  utl::erase_if(e->pax_connection_info_.section_infos_,
-                [&](auto const& psi) { return psi.group_ == pg; });
+  e->pax_connection_info_.groups_.erase(pg);
 }
 
 void for_each_trip(

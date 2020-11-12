@@ -16,10 +16,10 @@ namespace motis::paxmon {
 
 pax_limits get_pax_limits(pax_connection_info const& pci) {
   auto limits = pax_limits{};
-  for (auto const& si : pci.section_infos_) {
-    auto const pax = si.group_->passengers_;
+  for (auto const grp : pci.groups_) {
+    auto const pax = grp->passengers_;
     limits.max_ += pax;
-    if (si.group_->probability_ == 1.0F) {
+    if (grp->probability_ == 1.0F) {
       limits.min_ += pax;
     }
   }
@@ -28,9 +28,9 @@ pax_limits get_pax_limits(pax_connection_info const& pci) {
 
 std::uint16_t get_base_load(pax_connection_info const& pci) {
   std::uint16_t load = 0;
-  for (auto const& si : pci.section_infos_) {
-    if (si.group_->probability_ == 1.0F) {
-      load += si.group_->passengers_;
+  for (auto const grp : pci.groups_) {
+    if (grp->probability_ == 1.0F) {
+      load += grp->passengers_;
     }
   }
   return load;
@@ -38,11 +38,11 @@ std::uint16_t get_base_load(pax_connection_info const& pci) {
 
 std::uint16_t get_expected_load(pax_connection_info const& pci) {
   std::uint16_t load = 0;
-  for (auto const& si : pci.section_infos_) {
-    if (((si.group_->source_flags_ & group_source_flags::FORECAST) !=
+  for (auto const grp : pci.groups_) {
+    if (((grp->source_flags_ & group_source_flags::FORECAST) !=
          group_source_flags::FORECAST) &&
-        si.group_->probability_ == 1.0F) {
-      load += si.group_->passengers_;
+        grp->probability_ == 1.0F) {
+      load += grp->passengers_;
     }
   }
   return load;
@@ -70,9 +70,9 @@ pax_pdf get_load_pdf_base(pax_connection_info const& pci) {
   auto pdf = pax_pdf{};
   pdf.data_.resize(limits.max_ + 1);
   pdf.data_[limits.min_] = 1.0F;
-  for (auto const& si : pci.section_infos_) {
-    if (si.group_->probability_ != 1.0F) {
-      convolve_base(pdf, si.group_->passengers_, si.group_->probability_);
+  for (auto const grp : pci.groups_) {
+    if (grp->probability_ != 1.0F) {
+      convolve_base(pdf, grp->passengers_, grp->probability_);
     }
   }
   return pdf;
@@ -130,10 +130,9 @@ pax_pdf get_load_pdf_avx(pax_connection_info const& pci) {
   pdf.data_[limits.min_] = 1.0F;
   auto buf = std::vector<float>(pdf.data_.size() + 8);
 
-  for (auto const& si : pci.section_infos_) {
-    if (si.group_->probability_ != 1.0F) {
-      convolve_avx(pdf, si.group_->passengers_, si.group_->probability_, limits,
-                   buf);
+  for (auto const grp : pci.groups_) {
+    if (grp->probability_ != 1.0F) {
+      convolve_avx(pdf, grp->passengers_, grp->probability_, limits, buf);
     }
   }
 

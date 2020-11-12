@@ -27,9 +27,10 @@ inline passenger_group mk_pg(std::uint16_t passengers, float probability) {
 }
 
 inline pax_connection_info mk_pci(std::vector<passenger_group> const& pgs) {
-  return pax_connection_info{utl::to_vec(pgs, [](auto const& pg) {
-    return pax_section_info{const_cast<passenger_group*>(&pg)};  // NOLINT
-  })};
+  auto const grp_ptrs = utl::to_vec(pgs, [](auto const& pg) {
+    return const_cast<passenger_group*>(&pg);  // NOLINT
+  });
+  return pax_connection_info(begin(grp_ptrs), end(grp_ptrs));
 }
 
 inline pax_pdf make_pdf(std::map<std::uint16_t, float> const& m) {

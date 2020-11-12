@@ -27,7 +27,7 @@ void add_interchange(event_node* from, event_node* to, passenger_group* grp,
     }
   }
   grp->edges_.emplace_back(add_edge(make_interchange_edge(
-      from, to, transfer_time, pax_connection_info{{pax_section_info{grp}}})));
+      from, to, transfer_time, pax_connection_info{grp})));
 }
 
 inline duration get_transfer_duration(std::optional<transfer_info> const& ti) {
@@ -124,8 +124,7 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
 void remove_passenger_group_from_graph(passenger_group* pg) {
   for (auto e : pg->edges_) {
     auto guard = std::lock_guard{e->pax_connection_info_.mutex_};
-    utl::erase_if(e->pax_connection_info_.section_infos_,
-                  [&](auto const& psi) { return psi.group_ == pg; });
+    remove_passenger_group_from_edge(e, pg);
   }
   pg->edges_.clear();
 }
