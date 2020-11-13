@@ -76,6 +76,41 @@ void update_tracked_groups(
   message_creator add_groups_mc;
   auto groups_to_remove = std::vector<std::uint64_t>{};
   auto groups_to_add = std::vector<Offset<PassengerGroup>>{};
+  auto remove_group_count = 0ULL;
+  auto add_group_count = 0ULL;
+
+  auto const send_remove_groups = [&]() {
+    if (groups_to_remove.empty()) {
+      return;
+    }
+    message_creator remove_groups_mc;
+    remove_groups_mc.create_and_finish(
+        MsgContent_RemovePassengerGroupsRequest,
+        CreateRemovePassengerGroupsRequest(
+            remove_groups_mc, remove_groups_mc.CreateVector(groups_to_remove))
+            .Union(),
+        "/paxmon/remove_groups");
+    auto const remove_msg = make_msg(remove_groups_mc);
+    motis_call(remove_msg)->val();
+    groups_to_remove.clear();
+  };
+
+  auto const send_add_groups = [&]() {
+    if (groups_to_add.empty()) {
+      return;
+    }
+    add_groups_mc.create_and_finish(
+        MsgContent_AddPassengerGroupsRequest,
+        CreateAddPassengerGroupsRequest(
+            add_groups_mc, add_groups_mc.CreateVector(groups_to_add))
+            .Union(),
+        "/paxmon/add_groups");
+    auto const add_msg = make_msg(add_groups_mc);
+    motis_call(add_msg)->val();
+    groups_to_add.clear();
+    add_groups_mc.Clear();
+  };
+
   for (auto const& [pg, result] : sim_result.group_results_) {
     if (result.alternatives_.empty()) {
       // keep existing group (only reachable part)
@@ -97,6 +132,7 @@ void update_tracked_groups(
 
     // remove existing group
     groups_to_remove.emplace_back(pg->id_);
+    ++remove_group_count;
 
     // add alternatives
     for (auto const [alt, prob] : result.alternatives_) {
@@ -135,31 +171,22 @@ void update_tracked_groups(
                           pg->planned_arrival_time_,
                           pg->source_flags_ | group_source_flags::FORECAST,
                           true, prob}));
+      ++add_group_count;
+    }
+
+    if (groups_to_remove.size() > 10'000) {
+      send_remove_groups();
+    }
+    if (groups_to_add.size() > 10'000) {
+      send_add_groups();
     }
   }
 
-  LOG(info) << "update_tracked_groups: -" << groups_to_remove.size() << " +"
-            << groups_to_add.size();
+  LOG(info) << "update_tracked_groups: -" << remove_group_count << " +"
+            << add_group_count;
 
-  message_creator remove_groups_mc;
-  remove_groups_mc.create_and_finish(
-      MsgContent_RemovePassengerGroupsRequest,
-      CreateRemovePassengerGroupsRequest(
-          remove_groups_mc, remove_groups_mc.CreateVector(groups_to_remove))
-          .Union(),
-      "/paxmon/remove_groups");
-  auto const remove_msg = make_msg(remove_groups_mc);
-
-  add_groups_mc.create_and_finish(
-      MsgContent_AddPassengerGroupsRequest,
-      CreateAddPassengerGroupsRequest(add_groups_mc,
-                                      add_groups_mc.CreateVector(groups_to_add))
-          .Union(),
-      "/paxmon/add_groups");
-  auto const add_msg = make_msg(add_groups_mc);
-
-  motis_call(remove_msg)->val();
-  motis_call(add_msg)->val();
+  send_remove_groups();
+  send_add_groups();
 }
 
 void paxforecast::on_monitoring_event(msg_ptr const& msg) {
