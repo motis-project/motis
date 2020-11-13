@@ -476,12 +476,26 @@ void paxmon::rt_updates_applied() {
     manual_timer timer{"update affected passenger groups"};
     message_creator mc;
     std::vector<flatbuffers::Offset<MonitoringEvent>> fbs_events;
+    std::vector<msg_ptr> messages;
 
     LOG(info) << "groups affected by last update: "
               << data_.groups_affected_by_last_update_.size()
               << ", total groups: " << data_.graph_.passenger_groups_.size();
 
     std::mutex update_mutex;
+    auto const make_monitoring_msg = [&]() {
+      if (fbs_events.empty()) {
+        return;
+      }
+      mc.create_and_finish(
+          MsgContent_MonitoringUpdate,
+          CreateMonitoringUpdate(mc, mc.CreateVector(fbs_events)).Union(),
+          "/paxmon/monitoring_update");
+      messages.emplace_back(make_msg(mc));
+      fbs_events.clear();
+      mc.Clear();
+    };
+
     motis_parallel_for(
         data_.groups_affected_by_last_update_, [&](auto const& pg) {
           auto const reachability =
@@ -499,6 +513,9 @@ void paxmon::rt_updates_applied() {
               to_fbs(sched, mc,
                      monitoring_event{event_type, *pg, localization,
                                       reachability.status_}));
+          if (fbs_events.size() > 10'000) {
+            make_monitoring_msg();
+          }
 
           if (reachability.ok_) {
             ++ok_groups;
@@ -510,10 +527,7 @@ void paxmon::rt_updates_applied() {
           broken_passengers += pg->passengers_;
         });
 
-    mc.create_and_finish(
-        MsgContent_MonitoringUpdate,
-        CreateMonitoringUpdate(mc, mc.CreateVector(fbs_events)).Union(),
-        "/paxmon/monitoring_update");
+    make_monitoring_msg();
     timer.stop_and_print();
 
     if (check_graph_integrity_) {
@@ -522,7 +536,10 @@ void paxmon::rt_updates_applied() {
           "rt_updates_applied: check_graph_integrity (after load update)");
     }
 
-    ctx::await_all(motis_publish(make_msg(mc)));
+    for (auto& msg : messages) {
+      ctx::await_all(motis_publish(msg));
+      msg.reset();
+    }
   }
 
   tick_stats_.ok_groups_ = ok_groups;
