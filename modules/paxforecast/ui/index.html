@@ -22,6 +22,12 @@
       fill: #333333;
     }
 
+    .time {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 8px;
+      fill: #333333;
+    }
+
     .spread {
       fill: #B2B5FE;
       stroke: #797EFF;
@@ -38,6 +44,18 @@
       stroke: #333;
       stroke-dasharray: 2;
       fill: none;
+    }
+
+    text.legend.station {
+      font-weight: bold;
+    }
+
+    text.time.current tspan {
+      fill: green;
+    }
+
+    text.time.current tspan.delayed {
+      fill: red;
     }
   </style>
 </head>
@@ -111,6 +129,36 @@
             :transform="`translate(${station.x} 210) rotate(-60 0 0)`">
         {{ station.name }}
         <title>{{ station.eva }}</title>
+      </text>
+
+      <!-- X Axis Labels (Schedule Times) -->
+      <text v-for="station in svgStations"
+            x="0" y="0" text-anchor="end" class="time schedule"
+            :transform="`translate(${station.x + 12} 210) rotate(-60 0 0)`">
+        <tspan v-if="station.arrivalScheduleTime">
+          {{ formatTime(station.arrivalScheduleTime) }}
+        </tspan>
+        <template v-if="station.arrivalScheduleTime && station.departureScheduleTime">
+          —
+        </template>
+        <tspan v-if="station.departureScheduleTime">
+          {{ formatTime(station.departureScheduleTime) }}
+        </tspan>
+      </text>
+
+      <!-- X Axis Labels (Current Times) -->
+      <text v-for="station in svgStations"
+            x="0" y="0" text-anchor="end" class="time current"
+            :transform="`translate(${station.x + 22} 210) rotate(-60 0 0)`">
+        <tspan v-if="station.arrivalCurrentTime" :class="{ delayed: station.arrivalDelayed }">
+          {{ formatTime(station.arrivalCurrentTime) }}
+        </tspan>
+        <template v-if="station.arrivalCurrentTime && station.departureCurrentTime">
+          —
+        </template>
+        <tspan v-if="station.departureCurrentTime" :class="{ delayed: station.departureDelayed }">
+          {{ formatTime(station.departureCurrentTime) }}
+        </tspan>
       </text>
     </svg>
   </div>

@@ -5,6 +5,10 @@ const dateTimeFormat = new Intl.DateTimeFormat(undefined, {
   timeStyle: "long",
 });
 
+const timeFormat = new Intl.DateTimeFormat(undefined, {
+  timeStyle: "short",
+});
+
 let tripData = [];
 
 const App = {
@@ -111,8 +115,8 @@ const App = {
         const maxVal = this.svgMaxPaxOrCap;
         let x = 0;
         for (const ef of this.selectedTripData.edges) {
-          const topLoad = ef.q_80;
-          const bottomLoad = ef.q_20;
+          const topLoad = ef.q_95;
+          const bottomLoad = ef.q_5;
           const topY = 200 - Math.round((topLoad / maxVal) * 200);
           const bottomY = 200 - Math.round((bottomLoad / maxVal) * 200);
           topPoints.push(`${x} ${topY}`);
@@ -148,13 +152,30 @@ const App = {
       if (!this.selectedTripData) {
         return [];
       }
-      return [this.selectedTripData.edges[0].from]
-        .concat(this.selectedTripData.edges.map((ef) => ef.to))
+      const edges = this.selectedTripData.edges;
+      return [edges[0].from]
+        .concat(edges.map((ef) => ef.to))
         .map((station, idx) => {
           return {
             x: idx * 50,
             eva: station.id,
             name: station.name,
+            arrivalScheduleTime:
+              idx > 0 ? edges[idx - 1].arrival_schedule_time : null,
+            arrivalCurrentTime:
+              idx > 0 ? edges[idx - 1].arrival_current_time : null,
+            arrivalDelayed:
+              idx > 0 &&
+              edges[idx - 1].arrival_current_time >
+                edges[idx - 1].arrival_schedule_time,
+            departureScheduleTime:
+              idx < edges.length ? edges[idx].departure_schedule_time : null,
+            departureCurrentTime:
+              idx < edges.length ? edges[idx].departure_current_time : null,
+            departureDelayed:
+              idx < edges.length &&
+              edges[idx].departure_current_time >
+                edges[idx].departure_schedule_time,
           };
         });
     },
@@ -162,6 +183,9 @@ const App = {
   methods: {
     formatDateTime(timestamp) {
       return dateTimeFormat.format(new Date(timestamp * 1000));
+    },
+    formatTime(timestamp) {
+      return timestamp ? timeFormat.format(new Date(timestamp * 1000)) : "";
     },
   },
   watch: {

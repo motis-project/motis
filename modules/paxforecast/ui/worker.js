@@ -157,6 +157,8 @@ function processEdgeForecast(ef) {
   ef.q_20 = paxQuantile(ef.passenger_cdf, 0.2);
   ef.q_50 = paxQuantile(ef.passenger_cdf, 0.5);
   ef.q_80 = paxQuantile(ef.passenger_cdf, 0.8);
+  ef.q_5 = paxQuantile(ef.passenger_cdf, 0.05);
+  ef.q_95 = paxQuantile(ef.passenger_cdf, 0.95);
   ef.max_pax =
     ef.passenger_cdf.length > 0
       ? ef.passenger_cdf[ef.passenger_cdf.length - 1].passengers
