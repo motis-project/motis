@@ -279,6 +279,9 @@ const App = {
   },
   watch: {
     selectedScenario(newScenario) {
+      if (this.scenarios.length === 0 || newScenario === "") {
+        return;
+      }
       const scenario = this.scenarios[parseInt(newScenario)];
       tripData = [];
       this.trips = [];
@@ -452,6 +455,11 @@ window.addEventListener("load", () => {
       alert("Multiple files are not supported");
       return;
     }
+    vm.scenarios = [];
+    vm.trips = [];
+    vm.selectedScenario = "";
+    vm.selectedTrip = "";
+    vm.selectedTripData = null;
     const file = files[0];
     worker.postMessage({ op: "loadFile", file: file });
   });
