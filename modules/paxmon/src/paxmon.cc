@@ -544,7 +544,6 @@ void paxmon::rt_updates_applied() {
           auto const event_type = get_monitoring_event_type(
               pg, reachability, arrival_delay_threshold_);
 
-
           MOTIS_START_TIMING(update_load);
           update_load(pg, reachability, localization, data_.graph_);
           MOTIS_STOP_TIMING(update_load);
@@ -652,6 +651,8 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
         add_passenger_group_to_graph(sched, data_, *pg);
         return pg;
       });
+
+  print_allocator_stats(data_.graph_);
 
   message_creator mc;
   mc.create_and_finish(

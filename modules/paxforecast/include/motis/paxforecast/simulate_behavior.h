@@ -19,7 +19,6 @@
 
 namespace motis::paxforecast {
 
-namespace {
 template <typename T>
 double avg(std::vector<T> const& data) {
   double mean = 0.;
@@ -32,7 +31,6 @@ double avg(std::vector<T> const& data) {
   mean /= static_cast<double>(data.size());
   return mean;
 }
-}  // namespace
 
 template <typename PassengerBehavior>
 inline simulation_result simulate_behavior(
