@@ -43,6 +43,37 @@ const App = {
         ? dateTimeFormat.format(new Date(td.line.systemTime * 1000))
         : "N/A";
     },
+    selectedSvgBaseFileName() {
+      const td = this.selectedTripData;
+      if (!td) {
+        return "forecast";
+      }
+      let parts = ["forecast"];
+      const systemTime = new Date(td.line.systemTime * 1000);
+      parts.push(
+        `${systemTime.getFullYear()}-${(
+          "00" +
+          (systemTime.getMonth() + 1)
+        ).slice(-2)}-${("00" + systemTime.getDate()).slice(-2)}`
+      );
+      parts.push(
+        `${("00" + systemTime.getHours()).slice(-2)}${(
+          "00" + systemTime.getMinutes()
+        ).slice(-2)}`
+      );
+      if (td.serviceInfos && td.serviceInfos.length > 0) {
+        for (const si of td.serviceInfos) {
+          if (si.line) {
+            parts.push(`${si.train_nr}-${si.category}-${si.line}`);
+          } else {
+            parts.push(`${si.train_nr}-${si.category}`);
+          }
+        }
+      } else {
+        parts.push(td.trip.train_nr);
+      }
+      return parts.join("_");
+    },
     svgGraphWidth() {
       return this.tripSectionCount * 50;
     },
@@ -220,6 +251,31 @@ const App = {
     formatTime(timestamp) {
       return timestamp ? timeFormat.format(new Date(timestamp * 1000)) : "";
     },
+    saveSvg() {
+      const svgBlob = getSvgBlob();
+      const url = URL.createObjectURL(svgBlob);
+      downloadBlob(url, this.selectedSvgBaseFileName + ".svg");
+    },
+    savePng() {
+      const svg = document.getElementById("forecastSvg");
+      const svgBlob = getSvgBlob();
+      const svgUrl = URL.createObjectURL(svgBlob);
+      const svgBB = svg.getBoundingClientRect();
+      const canvas = document.createElement("canvas");
+      canvas.width = svgBB.width * 2;
+      canvas.height = svgBB.height * 2;
+      const ctx = canvas.getContext("2d");
+      const img = new Image();
+      img.onload = () => {
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(svgUrl);
+        const pngUrl = canvas.toDataURL("image/png");
+        downloadBlob(pngUrl, this.selectedSvgBaseFileName + ".png");
+      };
+      img.src = svgUrl;
+    },
   },
   watch: {
     selectedScenario(newScenario) {
@@ -260,6 +316,23 @@ function getSvgLinePath(td, prop) {
   } else {
     return "";
   }
+}
+
+function getSvgBlob() {
+  const serializer = new XMLSerializer();
+  let source = serializer.serializeToString(
+    document.getElementById("forecastSvg")
+  );
+  const css = document.getElementById("svgStyle").outerHTML;
+  source = source.replace("<g", css + "<g");
+  return new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+}
+
+function downloadBlob(url, filename) {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
 }
 
 const app = Vue.createApp(App);

@@ -5,7 +5,7 @@
   <title>Passenger Forecast</title>
   <script src="https://unpkg.com/vue@next"></script>
 
-  <style type="text/css">
+  <style type="text/css" id="svgStyle">
     .over-cap-prob {
       font-family: Arial, Helvetica, sans-serif;
       font-size: 8px;
@@ -80,11 +80,21 @@
       </option>
     </select>
 
+    <button v-if="selectedTripData" @click="saveSvg">
+      Save as SVG
+    </button>
+
+    <button v-if="selectedTripData" @click="savePng">
+      Save as PNG
+    </button>
+
     <span>{{ loadingText }}</span>
   </div>
 
   <div v-if="selectedTripData">
-    <svg :view-box.camel="svgViewBox" style="height: 90vh; width: 100%; margin-top: 10px;">
+    <svg id="forecastSvg"
+      :view-box.camel="svgViewBox"
+      style="height: 90vh; width: 100%; margin-top: 10px;">
       <!-- Background -->
       <g v-for="e in svgEdgeInfos">
         <rect :x="e.x" :y="e.yRed" width="50" :height="e.hRed"
