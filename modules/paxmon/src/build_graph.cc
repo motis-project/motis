@@ -30,10 +30,6 @@ void add_interchange(event_node* from, event_node* to, passenger_group* grp,
       from, to, transfer_time, pax_connection_info{grp})));
 }
 
-inline duration get_transfer_duration(std::optional<transfer_info> const& ti) {
-  return ti.has_value() ? ti.value().duration_ : 0;
-}
-
 };  // namespace
 
 void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,

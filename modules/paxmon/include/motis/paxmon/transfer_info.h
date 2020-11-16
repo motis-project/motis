@@ -14,4 +14,8 @@ struct transfer_info {
   type type_{type::SAME_STATION};
 };
 
+inline duration get_transfer_duration(std::optional<transfer_info> const& ti) {
+  return ti.has_value() ? ti.value().duration_ : 0;
+}
+
 }  // namespace motis::paxmon
