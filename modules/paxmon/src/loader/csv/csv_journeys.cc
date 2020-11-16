@@ -393,7 +393,7 @@ loader_result load_journeys(schedule const& sched, paxmon_data& data,
       current_journey.legs_.front().enter_transfer_ = {};
       auto const planned_arrival_time = current_journey.legs_.back().exit_time_;
       data.graph_.passenger_groups_.emplace_back(
-          std::make_unique<passenger_group>(
+          data.graph_.passenger_group_allocator_.create(
               passenger_group{current_journey, id, source, current_passengers,
                               planned_arrival_time, source_flags}));
     } else {

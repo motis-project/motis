@@ -17,6 +17,7 @@
 #include "motis/core/schedule/trip_idx.h"
 #include "motis/core/journey/extern_trip.h"
 
+#include "motis/paxmon/allocator.h"
 #include "motis/paxmon/capacity_data.h"
 #include "motis/paxmon/passenger_group.h"
 #include "motis/paxmon/pax_connection_info.h"
@@ -145,7 +146,8 @@ struct trip_data {
 struct graph {
   std::vector<std::unique_ptr<event_node>> nodes_;
   mcd::hash_map<trip const*, std::unique_ptr<trip_data>> trip_data_;
-  std::vector<std::unique_ptr<passenger_group>> passenger_groups_;
+  std::vector<passenger_group*> passenger_groups_;
+  allocator<passenger_group> passenger_group_allocator_;
 };
 
 }  // namespace motis::paxmon

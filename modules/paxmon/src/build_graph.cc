@@ -137,7 +137,8 @@ build_graph_stats build_graph_from_journeys(schedule const& sched,
     try {
       add_passenger_group_to_graph(sched, data, *pg);
       if (pg->edges_.empty()) {
-        pg.reset(nullptr);
+        data.graph_.passenger_group_allocator_.release(pg);
+        pg = nullptr;
       }
     } catch (std::system_error const& e) {
       LOG(motis::logging::error)

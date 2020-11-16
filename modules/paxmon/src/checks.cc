@@ -62,7 +62,7 @@ bool check_graph_integrity(graph const& g, schedule const& sched) {
       continue;
     }
     for (auto const e : pg->edges_) {
-      if (e->pax_connection_info_.groups_.find(pg.get()) ==
+      if (e->pax_connection_info_.groups_.find(pg) ==
           e->pax_connection_info_.groups_.end()) {
         std::cout << "!! passenger group not on edge: id=" << pg->id_ << " @"
                   << e->type() << "\n";

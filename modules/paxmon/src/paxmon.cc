@@ -115,7 +115,8 @@ void paxmon::init(motis::module::registry& reg) {
           fbb.create_and_finish(MsgContent_RISForwardTimeRequest,
                                 CreateRISForwardTimeRequest(fbb, time).Union(),
                                 "/ris/forward");
-          LOG(info) << "paxmon: forwarding time to: " << format_unix_time(time);
+          LOG(info) << "paxmon: forwarding time to: " << format_unix_time(time)
+                    << " =========================================";
           motis_call(make_msg(fbb))->val();
         };
 
@@ -163,6 +164,19 @@ void print_graph_stats(graph_statistics const& graph_stats) {
   LOG(info) << fmt::format("broken: {:L} interchange edges, {:L} groups",
                            graph_stats.broken_edges_,
                            graph_stats.broken_passenger_groups_);
+}
+
+void print_allocator_stats(graph const& g) {
+  LOG(info) << fmt::format(
+      "passenger group allocator: {:L} groups, {:.2f} MiB currently allocated, "
+      "{:L} free list entries, {:L} total allocations, {:L} total "
+      "deallocations",
+      g.passenger_group_allocator_.elements_allocated(),
+      static_cast<double>(g.passenger_group_allocator_.bytes_allocated()) /
+          (1024.0 * 1024.0),
+      g.passenger_group_allocator_.free_list_size(),
+      g.passenger_group_allocator_.allocation_count(),
+      g.passenger_group_allocator_.release_count());
 }
 
 loader::loader_result paxmon::load_journeys(std::string const& file) {
@@ -274,6 +288,7 @@ void paxmon::load_journeys() {
 
   auto const graph_stats = calc_graph_statistics(sched, data_);
   print_graph_stats(graph_stats);
+  print_allocator_stats(data_.graph_);
   if (graph_stats.trips_over_capacity_ > 0 &&
       !initial_over_capacity_report_file_.empty()) {
     write_over_capacity_report(data_, sched,
@@ -482,6 +497,7 @@ void paxmon::rt_updates_applied() {
     LOG(info) << "groups affected by last update: "
               << data_.groups_affected_by_last_update_.size()
               << ", total groups: " << data_.graph_.passenger_groups_.size();
+    print_allocator_stats(data_.graph_);
 
     std::mutex update_mutex;
     auto total_reachability = 0ULL;
@@ -629,10 +645,9 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
                     "trying to add empty passenger group");
         auto const id =
             static_cast<std::uint64_t>(data_.graph_.passenger_groups_.size());
-        auto pg = data_.graph_.passenger_groups_
-                      .emplace_back(std::make_unique<passenger_group>(
-                          from_fbs(sched, pg_fbs)))
-                      .get();
+        auto pg = data_.graph_.passenger_groups_.emplace_back(
+            data_.graph_.passenger_group_allocator_.create(
+                from_fbs(sched, pg_fbs)));
         pg->id_ = id;
         add_passenger_group_to_graph(sched, data_, *pg);
         return pg;
@@ -656,9 +671,12 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
     if (pg == nullptr) {
       continue;
     }
-    remove_passenger_group_from_graph(pg.get());
-    pg.reset(nullptr);
+    remove_passenger_group_from_graph(pg);
+    data_.graph_.passenger_group_allocator_.release(pg);
+    pg = nullptr;
   }
+
+  print_allocator_stats(data_.graph_);
 
   if (check_graph_integrity_) {
     utl::verify(check_graph_integrity(data_.graph_, get_schedule()),
