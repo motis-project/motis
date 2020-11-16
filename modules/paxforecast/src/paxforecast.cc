@@ -5,6 +5,8 @@
 #include <numeric>
 #include <random>
 
+#include "fmt/format.h"
+
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
@@ -43,6 +45,8 @@ namespace motis::paxforecast {
 paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
   param(forecast_filename_, "forecast_results",
         "output file for forecast messages");
+  param(behavior_stats_filename_, "behavior_stats",
+        "output file for behavior statistics");
   param(routing_cache_filename_, "routing_cache",
         "optional cache file for routing queries");
 }
@@ -55,6 +59,15 @@ void paxforecast::init(motis::module::registry& reg) {
   if (!forecast_filename_.empty()) {
     forecast_file_.exceptions(std::ios_base::failbit | std::ios_base::badbit);
     forecast_file_.open(forecast_filename_);
+  }
+
+  if (!behavior_stats_filename_.empty()) {
+    behavior_stats_file_.exceptions(std::ios_base::failbit |
+                                    std::ios_base::badbit);
+    behavior_stats_file_.open(behavior_stats_filename_);
+    behavior_stats_file_ << "system_time,group_count,cpg_count,"
+                         << "found_alt_count_avg,picked_alt_count_avg,"
+                         << "best_alt_prob_avg,second_alt_prob_avg\n";
   }
 
   if (!routing_cache_filename_.empty()) {
@@ -293,6 +306,29 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
   LOG(info) << "forecast: " << sim_result.additional_groups_.size()
             << " edges affected";
+  LOG(info) << fmt::format(
+      "simulation average statistics: alternatives found: {:.2f}, alternatives "
+      "picked: {:.2f}, P(best): {:.2f}%, P(2nd best): {:.2f}% ({} groups, {} "
+      "combined)",
+      sim_result.stats_.found_alt_count_avg_,
+      sim_result.stats_.picked_alt_count_avg_,
+      sim_result.stats_.best_alt_prob_avg_ * 100,
+      sim_result.stats_.second_alt_prob_avg_ * 100,
+      sim_result.stats_.group_count_, sim_result.stats_.combined_group_count_);
+
+  if (behavior_stats_file_.is_open()) {
+    behavior_stats_file_ << "system_time,group_count,cpg_count,"
+                         << "found_alt_count_avg,picked_alt_count_avg,"
+                         << "best_alt_prob_avg,second_alt_prob_avg\n";
+    fmt::print(behavior_stats_file_, "{},{},{},{:.4f},{:.4f},{:.2f},{:.2f}\n",
+               static_cast<std::uint64_t>(sched.system_time_),
+               sim_result.stats_.group_count_,
+               sim_result.stats_.combined_group_count_,
+               sim_result.stats_.found_alt_count_avg_,
+               sim_result.stats_.picked_alt_count_avg_,
+               sim_result.stats_.best_alt_prob_avg_,
+               sim_result.stats_.second_alt_prob_avg_);
+  }
 
   manual_timer load_forecast_timer{"load forecast"};
   auto const lfc = calc_load_forecast(sched, data, sim_result);

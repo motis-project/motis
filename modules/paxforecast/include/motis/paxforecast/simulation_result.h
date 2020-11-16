@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <numeric>
 #include <set>
 #include <utility>
@@ -17,6 +18,15 @@ struct group_simulation_result {
   std::vector<std::pair<alternative const*, float>> alternatives_;
 };
 
+struct simulation_result_stats {
+  double found_alt_count_avg_{};
+  double picked_alt_count_avg_{};
+  double best_alt_prob_avg_{};
+  double second_alt_prob_avg_{};
+  std::uint64_t group_count_{};
+  std::uint64_t combined_group_count_{};
+};
+
 struct simulation_result {
   mcd::hash_map<
       motis::paxmon::edge const*,
@@ -24,6 +34,7 @@ struct simulation_result {
       additional_groups_;
   mcd::hash_map<motis::paxmon::passenger_group const*, group_simulation_result>
       group_results_;
+  simulation_result_stats stats_;
 };
 
 }  // namespace motis::paxforecast

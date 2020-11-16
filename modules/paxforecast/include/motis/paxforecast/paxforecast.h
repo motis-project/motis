@@ -30,6 +30,10 @@ private:
 
   std::string forecast_filename_;
   std::ofstream forecast_file_;
+
+  std::string behavior_stats_filename_;
+  std::ofstream behavior_stats_file_;
+
   std::string routing_cache_filename_;
   routing_cache routing_cache_;
 };
