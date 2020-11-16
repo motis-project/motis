@@ -24,8 +24,8 @@
 
     .time {
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 8px;
-      fill: #333333;
+      font-size: 6px;
+      fill: #777;
     }
 
     .spread {
@@ -46,16 +46,12 @@
       fill: none;
     }
 
-    text.legend.station {
-      font-weight: bold;
+    text.time.current {
+      fill: #008600;
     }
 
-    text.time.current tspan {
-      fill: green;
-    }
-
-    text.time.current tspan.delayed {
-      fill: red;
+    text.time.current.delayed {
+      fill: #d60000;
     }
   </style>
 </head>
@@ -84,7 +80,7 @@
   </div>
 
   <div v-if="selectedTripData">
-    <svg :view-box.camel="svgViewBox" style="height: 90vh; width: 100%;">
+    <svg :view-box.camel="svgViewBox" style="height: 90vh; width: 100%; margin-top: 10px;">
       <!-- Background -->
       <g v-for="e in svgEdgeInfos">
         <rect :x="e.x" :y="e.yRed" width="50" :height="e.hRed"
@@ -134,34 +130,32 @@
       </text>
 
       <!-- X Axis Labels (Schedule Times) -->
-      <text v-for="station in svgStations"
-            x="0" y="0" text-anchor="end" class="time schedule"
-            :transform="`translate(${station.x + 12} 210) rotate(-60 0 0)`">
-        <tspan v-if="station.arrivalScheduleTime">
+      <template v-for="station in svgStations">
+        <text v-if="station.arrivalScheduleTime && station.arrivalScheduleTime !== station.arrivalCurrentTime"
+          :x="station.x - 2" y="190" text-anchor="end"
+              class="time schedule">
           {{ formatTime(station.arrivalScheduleTime) }}
-        </tspan>
-        <template v-if="station.arrivalScheduleTime && station.departureScheduleTime">
-          —
-        </template>
-        <tspan v-if="station.departureScheduleTime">
+        </text>
+        <text v-if="station.departureScheduleTime && station.departureScheduleTime !== station.departureCurrentTime"
+              :x="station.x + 2" y="190" text-anchor="start"
+              class="time schedule">
           {{ formatTime(station.departureScheduleTime) }}
-        </tspan>
-      </text>
+        </text>
+      </template>
 
       <!-- X Axis Labels (Current Times) -->
-      <text v-for="station in svgStations"
-            x="0" y="0" text-anchor="end" class="time current"
-            :transform="`translate(${station.x + 22} 210) rotate(-60 0 0)`">
-        <tspan v-if="station.arrivalCurrentTime" :class="{ delayed: station.arrivalDelayed }">
+      <template v-for="station in svgStations">
+        <text v-if="station.arrivalCurrentTime"
+              :x="station.x - 2" y="198" text-anchor="end"
+              class="time current" :class="{ delayed: station.arrivalDelayed }">
           {{ formatTime(station.arrivalCurrentTime) }}
-        </tspan>
-        <template v-if="station.arrivalCurrentTime && station.departureCurrentTime">
-          —
-        </template>
-        <tspan v-if="station.departureCurrentTime" :class="{ delayed: station.departureDelayed }">
+        </text>
+        <text v-if="station.departureCurrentTime"
+              :x="station.x + 2" y="198" text-anchor="start"
+              class="time current" :class="{ delayed: station.departureDelayed }">
           {{ formatTime(station.departureCurrentTime) }}
-        </tspan>
-      </text>
+        </text>
+      </template>
     </svg>
   </div>
 </div>
