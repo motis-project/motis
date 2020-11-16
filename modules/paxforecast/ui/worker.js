@@ -302,7 +302,7 @@ async function getForecastInfo(file, line) {
   );
 }
 
-async function findInterestingTrips(file, lines, opt) {
+async function findMaxSpreadTrips(file, lines, opt) {
   const maxTrips = opt.maxTrips || 200;
   let mostInterestingTrips = [];
   let minSpread = 0;
@@ -323,7 +323,6 @@ async function findInterestingTrips(file, lines, opt) {
         return;
       }
       if (curSpread > minSpread) {
-        d.systemTime = line.systemTime;
         mostInterestingTrips.push(d);
         mostInterestingTrips.sort((a, b) => getSpread(b) - getSpread(a));
         if (mostInterestingTrips.length > maxTrips) {
@@ -339,6 +338,52 @@ async function findInterestingTrips(file, lines, opt) {
 
   for (const d of mostInterestingTrips) {
     postMessage(d);
+  }
+}
+
+async function findMaxLoadTrips(file, lines, opt) {
+  const threshold = opt.threshold || 2.0;
+  let trips = [];
+
+  for (const [lineIdx, line] of lines.entries()) {
+    postMessage({
+      op: "findInterestingTripsProgress",
+      progress: lineIdx,
+      size: lines.length,
+    });
+    await loadForecastLine(file, line, (d) => {
+      if (d.maxLoad >= threshold) {
+        trips.push(d);
+      }
+    });
+  }
+
+  const getTrainNr = (t) =>
+    t.serviceInfos?.[0]?.train_nr || t.trip.train_nr || 0;
+
+  trips.sort((a, b) => {
+    const tn = getTrainNr(a) - getTrainNr(b);
+    if (tn !== 0) {
+      return tn;
+    } else {
+      return a.line.systemTime - b.line.systemTime;
+    }
+  });
+
+  for (const d of trips) {
+    postMessage(d);
+  }
+}
+
+async function findInterestingTrips(file, lines, opt) {
+  switch (opt.attr) {
+    case "maxSpread":
+    case "maxRelSpread":
+      await findMaxSpreadTrips(file, lines, opt);
+      break;
+    case "maxLoad":
+      await findMaxLoadTrips(file, lines, opt);
+      break;
   }
   postMessage({ op: "findInterestingTripsDone" });
 }

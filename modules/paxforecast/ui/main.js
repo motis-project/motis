@@ -252,13 +252,23 @@ worker.addEventListener("message", (e) => {
         ...[100, 200, 500, 1000].map((maxTrips) => {
           return {
             name: `Top ${maxTrips} trips with biggest spread (abs)`,
-            msg: { op: "findInterestingTrips", maxTrips, attr: "maxSpread" },
+            msg: { op: "findInterestingTrips", attr: "maxSpread", maxTrips },
           };
         }),
         ...[100, 200, 500, 1000].map((maxTrips) => {
           return {
             name: `Top ${maxTrips} trips with biggest spread (rel)`,
-            msg: { op: "findInterestingTrips", maxTrips, attr: "maxRelSpread" },
+            msg: { op: "findInterestingTrips", attr: "maxRelSpread", maxTrips },
+          };
+        }),
+        ...[100, 150, 200, 250, 300].map((threshold) => {
+          return {
+            name: `Trips with max load >= ${threshold}%`,
+            msg: {
+              op: "findInterestingTrips",
+              attr: "maxLoad",
+              threshold: threshold / 100.0,
+            },
           };
         }),
         ...e.data.lines.map((line) => {
@@ -310,7 +320,7 @@ worker.addEventListener("message", (e) => {
       vm.trips = tripData.map((data) => {
         return {
           name:
-            timeFormat.format(new Date(data.systemTime * 1000)) +
+            timeFormat.format(new Date(data.line.systemTime * 1000)) +
             ": " +
             data.tripDisplayName,
           from: data.primaryStation?.name,
