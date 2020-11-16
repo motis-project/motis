@@ -115,7 +115,9 @@
       <rect x="0" y="0" :width="svgGraphWidth" height="200" stroke="#333333" fill="transparent"/>
 
       <!-- Title -->
-      <text :x="svgMidpointX" y="-5" text-anchor="middle" class="legend">{{ selectedTripName }}</text>
+      <text :x="svgMidpointX" y="-5" text-anchor="middle" class="legend">
+        {{ selectedTripName }}, Vorhersage vom {{ selectedScenarioTime }}
+      </text>
 
       <!-- Y Axis Labels (Load) -->
       <text v-for="label in svgYLabels"

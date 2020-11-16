@@ -37,6 +37,12 @@ const App = {
       }
       return name;
     },
+    selectedScenarioTime() {
+      const td = this.selectedTripData;
+      return td
+        ? dateTimeFormat.format(new Date(td.line.systemTime * 1000))
+        : "N/A";
+    },
     svgGraphWidth() {
       return this.tripSectionCount * 50;
     },
