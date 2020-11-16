@@ -67,7 +67,7 @@
     <select v-model="selectedScenario" :disabled="scenarios.length === 0">
       <option disabled value="">Select a scenario</option>
       <option v-for="(scenario, index) in scenarios" :value="index">
-        {{ formatDateTime(scenario.systemTime) }}
+        {{ scenario.name }}
       </option>
     </select>
 
@@ -79,8 +79,6 @@
         <template v-if="trip.from && trip.to">({{ trip.from }} - {{ trip.to }})</template>
       </option>
     </select>
-
-    <button @click="findInterestingTrips">Find interesting trips</button>
 
     <span>{{ loadingText }}</span>
   </div>

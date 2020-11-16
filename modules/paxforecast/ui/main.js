@@ -187,13 +187,6 @@ const App = {
     formatTime(timestamp) {
       return timestamp ? timeFormat.format(new Date(timestamp * 1000)) : "";
     },
-    findInterestingTrips() {
-      vm.loadingText = "Finding interesting trips...";
-      tripData = [];
-      this.trips = [];
-      this.selectedTrip = "";
-      worker.postMessage({ op: "findInterestingTrips" });
-    },
   },
   watch: {
     selectedScenario(newScenario) {
@@ -202,7 +195,7 @@ const App = {
       this.trips = [];
       this.selectedTrip = "";
       vm.loadingText = "Loading forecast info...";
-      worker.postMessage({ op: "getForecastInfo", line: Vue.toRaw(scenario) });
+      worker.postMessage(Vue.toRaw(scenario.msg));
     },
     selectedTrip(newTrip) {
       if (newTrip === "") {
@@ -249,7 +242,26 @@ worker.addEventListener("message", (e) => {
       break;
     }
     case "fileLoaded": {
-      vm.scenarios = e.data.lines;
+      vm.scenarios = [
+        ...[100, 200, 500, 1000].map((maxTrips) => {
+          return {
+            name: `Top ${maxTrips} trips with biggest spread (abs)`,
+            msg: { op: "findInterestingTrips", maxTrips, attr: "maxSpread" },
+          };
+        }),
+        ...[100, 200, 500, 1000].map((maxTrips) => {
+          return {
+            name: `Top ${maxTrips} trips with biggest spread (rel)`,
+            msg: { op: "findInterestingTrips", maxTrips, attr: "maxRelSpread" },
+          };
+        }),
+        ...e.data.lines.map((line) => {
+          return {
+            name: dateTimeFormat.format(new Date(line.systemTime * 1000)),
+            msg: { op: "getForecastInfo", line },
+          };
+        }),
+      ];
       vm.loadingText = "";
       break;
     }

@@ -257,6 +257,13 @@ async function loadForecastLine(file, line, dataCb, progressCb, doneCb) {
       (max, ef) => Math.max(max, ef.max_pax - ef.min_pax),
       0
     );
+    const maxRelSpread = edges.reduce(
+      (max, ef) =>
+        ef.capacity
+          ? Math.max(max, (ef.max_pax - ef.min_pax) / ef.capacity)
+          : max,
+      0
+    );
     if (dataCb) {
       dataCb({
         op: "tripForecast",
@@ -269,6 +276,7 @@ async function loadForecastLine(file, line, dataCb, progressCb, doneCb) {
         maxPax,
         maxLoad,
         maxSpread,
+        maxRelSpread,
         primaryStation,
         secondaryStation,
         serviceInfos,
@@ -294,11 +302,14 @@ async function getForecastInfo(file, line) {
   );
 }
 
-async function findInterestingTrips(file, lines) {
-  const maxTrips = 500;
+async function findInterestingTrips(file, lines, opt) {
+  const maxTrips = opt.maxTrips || 200;
   let mostInterestingTrips = [];
   let minSpread = 0;
   let maxSpread = 0;
+
+  const getSpread =
+    opt.attr === "maxRelSpread" ? (e) => e.maxRelSpread : (e) => e.maxSpread;
 
   for (const [lineIdx, line] of lines.entries()) {
     postMessage({
@@ -307,25 +318,26 @@ async function findInterestingTrips(file, lines) {
       size: lines.length,
     });
     await loadForecastLine(file, line, (d) => {
-      if (d.maxSpread === 0 || !d.allEdgesHaveCapacity) {
+      const curSpread = getSpread(d);
+      if (curSpread === 0 || !d.allEdgesHaveCapacity) {
         return;
       }
-      if (d.maxSpread > minSpread) {
+      if (curSpread > minSpread) {
         d.systemTime = line.systemTime;
         mostInterestingTrips.push(d);
-        mostInterestingTrips.sort((a, b) => b.maxSpread - a.maxSpread);
+        mostInterestingTrips.sort((a, b) => getSpread(b) - getSpread(a));
         if (mostInterestingTrips.length > maxTrips) {
           mostInterestingTrips.pop();
         }
-        minSpread =
-          mostInterestingTrips[mostInterestingTrips.length - 1].maxSpread;
-        maxSpread = mostInterestingTrips[0].maxSpread;
+        minSpread = getSpread(
+          mostInterestingTrips[mostInterestingTrips.length - 1]
+        );
+        maxSpread = getSpread(mostInterestingTrips[0]);
       }
     });
   }
 
   for (const d of mostInterestingTrips) {
-    console.log(d);
     postMessage(d);
   }
   postMessage({ op: "findInterestingTripsDone" });
@@ -338,6 +350,6 @@ addEventListener("message", (e) => {
     case "getForecastInfo":
       return getForecastInfo(loadedFile, e.data.line);
     case "findInterestingTrips":
-      return findInterestingTrips(loadedFile, loadedLines);
+      return findInterestingTrips(loadedFile, loadedLines, e.data);
   }
 });
