@@ -16,6 +16,7 @@
 
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
+#include "motis/core/common/timing.h"
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
@@ -483,6 +484,23 @@ void paxmon::rt_updates_applied() {
               << ", total groups: " << data_.graph_.passenger_groups_.size();
 
     std::mutex update_mutex;
+    auto total_reachability = 0ULL;
+    auto total_localization = 0ULL;
+    auto total_update_load = 0ULL;
+    auto total_fbs_events = 0ULL;
+
+    auto const print_timing = [&]() {
+      if (fbs_events.empty()) {
+        return;
+      }
+      LOG(info) << "update groups timing: reachability "
+                << (total_reachability / 1000) << "ms, localization "
+                << (total_localization / 1000) << "ms, update_load "
+                << (total_update_load / 1000) << "ms, fbs_events "
+                << (total_fbs_events / 1000) << "ms, " << fbs_events.size()
+                << " events";
+    };
+
     auto const make_monitoring_msg = [&]() {
       if (fbs_events.empty()) {
         return;
@@ -498,16 +516,24 @@ void paxmon::rt_updates_applied() {
 
     motis_parallel_for(
         data_.groups_affected_by_last_update_, [&](auto const& pg) {
+          MOTIS_START_TIMING(reachability);
           auto const reachability =
               get_reachability(data_, pg->compact_planned_journey_);
           pg->ok_ = reachability.ok_;
+          MOTIS_STOP_TIMING(reachability);
 
+          MOTIS_START_TIMING(localization);
           auto const localization = localize(sched, reachability, search_time);
+          MOTIS_STOP_TIMING(localization);
           auto const event_type = get_monitoring_event_type(
               pg, reachability, arrival_delay_threshold_);
 
-          update_load(pg, reachability, localization, data_.graph_);
 
+          MOTIS_START_TIMING(update_load);
+          update_load(pg, reachability, localization, data_.graph_);
+          MOTIS_STOP_TIMING(update_load);
+
+          MOTIS_START_TIMING(fbs_events);
           std::lock_guard guard{update_mutex};
           fbs_events.emplace_back(
               to_fbs(sched, mc,
@@ -515,6 +541,16 @@ void paxmon::rt_updates_applied() {
                                       reachability.status_}));
           if (fbs_events.size() > 10'000) {
             make_monitoring_msg();
+          }
+          MOTIS_STOP_TIMING(fbs_events);
+
+          total_reachability += MOTIS_TIMING_US(reachability);
+          total_localization += MOTIS_TIMING_US(localization);
+          total_update_load += MOTIS_TIMING_US(update_load);
+          total_fbs_events += MOTIS_TIMING_US(fbs_events);
+
+          if (fbs_events.size() % 10000 == 0) {
+            print_timing();
           }
 
           if (reachability.ok_) {
@@ -526,6 +562,8 @@ void paxmon::rt_updates_applied() {
           ++system_stats_.groups_broken_count_;
           broken_passengers += pg->passengers_;
         });
+
+    print_timing();
 
     make_monitoring_msg();
     timer.stop_and_print();
