@@ -1,6 +1,7 @@
 importScripts("lib/clarinet.js", "json_stream.js");
 
 let loadedFile;
+let loadedLines;
 
 async function* lineIterator(file, maxPrefixLen = 1024) {
   const stream = file.stream();
@@ -106,15 +107,15 @@ function extractSystemTime(linePrefix) {
 
 async function loadFile(file) {
   loadedFile = file;
-  let lines = [];
+  loadedLines = [];
 
   for await (const line of lineIterator(file)) {
     line.systemTime = extractSystemTime(line.linePrefix);
     delete line.linePrefix;
-    lines.push(line);
+    loadedLines.push(line);
   }
 
-  postMessage({ op: "fileLoaded", file, lines });
+  postMessage({ op: "fileLoaded", file, lines: loadedLines });
 }
 
 function probPaxLE(cdf, limit) {
@@ -159,6 +160,7 @@ function processEdgeForecast(ef) {
   ef.q_80 = paxQuantile(ef.passenger_cdf, 0.8);
   ef.q_5 = paxQuantile(ef.passenger_cdf, 0.05);
   ef.q_95 = paxQuantile(ef.passenger_cdf, 0.95);
+  ef.min_pax = ef.passenger_cdf.length > 0 ? ef.passenger_cdf[0].passengers : 0;
   ef.max_pax =
     ef.passenger_cdf.length > 0
       ? ef.passenger_cdf[ef.passenger_cdf.length - 1].passengers
@@ -176,24 +178,26 @@ function getTripDisplayName(trip, serviceInfos) {
   }
 }
 
-async function getForecastInfo(file, line) {
+async function loadForecastLine(file, line, dataCb, progressCb, doneCb) {
   const fileSlice = file.slice(line.begin, line.end, "application/json");
   const stream = new JSONStream();
   const progressUpdateStep = 64 * 1024;
   let lastProgressUpdate = 0;
 
-  stream.onprogress = (progress, size) => {
-    if (progress - lastProgressUpdate >= progressUpdateStep) {
-      postMessage({
-        op: "getForecastInfoProgress",
-        file,
-        line,
-        progress,
-        size,
-      });
-      lastProgressUpdate = progress;
-    }
-  };
+  if (progressCb) {
+    stream.onprogress = (progress, size) => {
+      if (progress - lastProgressUpdate >= progressUpdateStep) {
+        progressCb({
+          op: "getForecastInfoProgress",
+          file,
+          line,
+          progress,
+          size,
+        });
+        lastProgressUpdate = progress;
+      }
+    };
+  }
 
   stream.onkey = (key) => {
     const depth = stream.currentDepth();
@@ -249,26 +253,82 @@ async function getForecastInfo(file, line) {
         ef.capacity ? Math.max(max, ef.max_pax / ef.capacity) : max,
       0.0
     );
-    postMessage({
-      op: "tripForecast",
-      file,
-      line,
-      trip: currentTrip,
-      edges,
-      allEdgesHaveCapacity,
-      maxCapacity,
-      maxPax,
-      maxLoad,
-      primaryStation,
-      secondaryStation,
-      serviceInfos,
-      tripDisplayName: getTripDisplayName(currentTrip, serviceInfos),
-    });
+    const maxSpread = edges.reduce(
+      (max, ef) => Math.max(max, ef.max_pax - ef.min_pax),
+      0
+    );
+    if (dataCb) {
+      dataCb({
+        op: "tripForecast",
+        file,
+        line,
+        trip: currentTrip,
+        edges,
+        allEdgesHaveCapacity,
+        maxCapacity,
+        maxPax,
+        maxLoad,
+        maxSpread,
+        primaryStation,
+        secondaryStation,
+        serviceInfos,
+        tripDisplayName: getTripDisplayName(currentTrip, serviceInfos),
+      });
+    }
     currentTrip = null;
   };
 
   await stream.parseBlob(fileSlice);
-  postMessage({ op: "getForecastInfoDone", file, line });
+  if (doneCb) {
+    doneCb({ op: "getForecastInfoDone", file, line });
+  }
+}
+
+async function getForecastInfo(file, line) {
+  return await loadForecastLine(
+    file,
+    line,
+    postMessage,
+    postMessage,
+    postMessage
+  );
+}
+
+async function findInterestingTrips(file, lines) {
+  const maxTrips = 500;
+  let mostInterestingTrips = [];
+  let minSpread = 0;
+  let maxSpread = 0;
+
+  for (const [lineIdx, line] of lines.entries()) {
+    postMessage({
+      op: "findInterestingTripsProgress",
+      progress: lineIdx,
+      size: lines.length,
+    });
+    await loadForecastLine(file, line, (d) => {
+      if (d.maxSpread === 0 || !d.allEdgesHaveCapacity) {
+        return;
+      }
+      if (d.maxSpread > minSpread) {
+        d.systemTime = line.systemTime;
+        mostInterestingTrips.push(d);
+        mostInterestingTrips.sort((a, b) => b.maxSpread - a.maxSpread);
+        if (mostInterestingTrips.length > maxTrips) {
+          mostInterestingTrips.pop();
+        }
+        minSpread =
+          mostInterestingTrips[mostInterestingTrips.length - 1].maxSpread;
+        maxSpread = mostInterestingTrips[0].maxSpread;
+      }
+    });
+  }
+
+  for (const d of mostInterestingTrips) {
+    console.log(d);
+    postMessage(d);
+  }
+  postMessage({ op: "findInterestingTripsDone" });
 }
 
 addEventListener("message", (e) => {
@@ -277,5 +337,7 @@ addEventListener("message", (e) => {
       return loadFile(e.data.file);
     case "getForecastInfo":
       return getForecastInfo(loadedFile, e.data.line);
+    case "findInterestingTrips":
+      return findInterestingTrips(loadedFile, loadedLines);
   }
 });

@@ -187,6 +187,13 @@ const App = {
     formatTime(timestamp) {
       return timestamp ? timeFormat.format(new Date(timestamp * 1000)) : "";
     },
+    findInterestingTrips() {
+      vm.loadingText = "Finding interesting trips...";
+      tripData = [];
+      this.trips = [];
+      this.selectedTrip = "";
+      worker.postMessage({ op: "findInterestingTrips" });
+    },
   },
   watch: {
     selectedScenario(newScenario) {
@@ -267,6 +274,27 @@ worker.addEventListener("message", (e) => {
       vm.trips = tripData.map((data) => {
         return {
           name: data.tripDisplayName,
+          from: data.primaryStation?.name,
+          to: data.secondaryStation?.name,
+        };
+      });
+      break;
+    }
+    case "findInterestingTripsProgress": {
+      vm.loadingText = `Finding interesting trips... ${(
+        (e.data.progress / e.data.size) *
+        100
+      ).toFixed(0)}%`;
+      break;
+    }
+    case "findInterestingTripsDone": {
+      vm.loadingText = "";
+      vm.trips = tripData.map((data) => {
+        return {
+          name:
+            timeFormat.format(new Date(data.systemTime * 1000)) +
+            ": " +
+            data.tripDisplayName,
           from: data.primaryStation?.name,
           to: data.secondaryStation?.name,
         };
