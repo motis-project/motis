@@ -2,7 +2,8 @@
 
 #include <initializer_list>
 #include <mutex>
-#include <unordered_set>
+
+#include "motis/hash_set.h"
 
 #include "motis/paxmon/passenger_group.h"
 
@@ -16,7 +17,9 @@ struct pax_connection_info {
       : groups_{groups} {}
 
   template <typename InputIt>
-  pax_connection_info(InputIt first, InputIt last) : groups_(first, last) {}
+  pax_connection_info(InputIt first, InputIt last) {
+    groups_.insert(first, last);
+  }
 
   pax_connection_info(pax_connection_info const& pci) : groups_{pci.groups_} {}
 
@@ -35,7 +38,7 @@ struct pax_connection_info {
     return *this;
   }
 
-  std::unordered_set<passenger_group*> groups_;
+  mcd::hash_set<passenger_group*> groups_;
   std::mutex mutex_;
 };
 
