@@ -53,6 +53,10 @@
     text.time.current.delayed {
       fill: #d60000;
     }
+
+    .current-time-indicator {
+      fill: #777;
+    }
   </style>
 </head>
 <body>
@@ -156,6 +160,9 @@
           {{ formatTime(station.departureCurrentTime) }}
         </text>
       </template>
+
+      <!-- Current time indicator -->
+      <path :d="svgCurrentTimeIndicatorPath" class="current-time-indicator"/>
     </svg>
   </div>
 </div>

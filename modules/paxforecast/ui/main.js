@@ -185,6 +185,33 @@ const App = {
           };
         });
     },
+    svgCurrentTimePosition() {
+      const td = this.selectedTripData;
+      if (!td) {
+        return 0;
+      }
+      const edges = td.edges;
+      const currentTime = td.line.systemTime;
+      if (currentTime < edges[0].departure_current_time) {
+        return -5;
+      } else {
+        for (const [idx, e] of edges.entries()) {
+          const dep = e.departure_current_time;
+          const arr = e.arrival_current_time;
+          if (currentTime <= dep) {
+            return idx * 50;
+          } else if (currentTime <= arr) {
+            const sectionPos = (currentTime - dep) / (arr - dep);
+            return Math.round(idx * 50 + sectionPos * 50);
+          }
+        }
+      }
+      return edges.length * 50 + 5;
+    },
+    svgCurrentTimeIndicatorPath() {
+      const x = this.svgCurrentTimePosition;
+      return `M${x} 201 l2 4 l-4 0 z`;
+    },
   },
   methods: {
     formatDateTime(timestamp) {
