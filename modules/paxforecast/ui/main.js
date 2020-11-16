@@ -271,6 +271,10 @@ worker.addEventListener("message", (e) => {
             },
           };
         }),
+        {
+          name: "Trips with P(over capacity) != 0% or 100%",
+          msg: { op: "findInterestingTrips", attr: "uncertainOverCap" },
+        },
         ...e.data.lines.map((line) => {
           return {
             name: dateTimeFormat.format(new Date(line.systemTime * 1000)),
