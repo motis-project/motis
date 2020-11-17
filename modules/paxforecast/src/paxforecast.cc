@@ -317,17 +317,14 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
       sim_result.stats_.group_count_, sim_result.stats_.combined_group_count_);
 
   if (behavior_stats_file_.is_open()) {
-    behavior_stats_file_ << "system_time,group_count,cpg_count,"
-                         << "found_alt_count_avg,picked_alt_count_avg,"
-                         << "best_alt_prob_avg,second_alt_prob_avg\n";
     fmt::print(behavior_stats_file_, "{},{},{},{:.4f},{:.4f},{:.2f},{:.2f}\n",
                static_cast<std::uint64_t>(sched.system_time_),
                sim_result.stats_.group_count_,
                sim_result.stats_.combined_group_count_,
                sim_result.stats_.found_alt_count_avg_,
                sim_result.stats_.picked_alt_count_avg_,
-               sim_result.stats_.best_alt_prob_avg_,
-               sim_result.stats_.second_alt_prob_avg_);
+               sim_result.stats_.best_alt_prob_avg_ * 100,
+               sim_result.stats_.second_alt_prob_avg_ * 100);
   }
 
   manual_timer load_forecast_timer{"load forecast"};
