@@ -111,6 +111,8 @@
       style="height: 90vh; width: 100%; margin-top: 10px;">
       <!-- Background -->
       <g v-for="e in svgEdgeInfos">
+        <rect :x="e.x" :y="e.yDarkRed" width="50" :height="e.hDarkRed"
+              stroke="#DDD" fill="#f57a7a" v-if="e.hDarkRed > 0"/>
         <rect :x="e.x" :y="e.yRed" width="50" :height="e.hRed"
               stroke="#DDD" fill="#FFCACA"/>
         <rect :x="e.x" :y="e.yYellow" width="50" :height="e.hYellow"

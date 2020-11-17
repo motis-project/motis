@@ -105,13 +105,19 @@ const App = {
       }
       const maxVal = this.svgMaxPaxOrCap;
       return this.selectedTripData.edges.map((e, idx) => {
+        const over200 = maxVal >= e.capacity * 2;
+        const y200 = over200
+          ? 200 - Math.round(((e.capacity * 2.0) / maxVal) * 200)
+          : 0;
         const y100 = 200 - Math.round((e.capacity / maxVal) * 200);
         const y80 = 200 - Math.round(((e.capacity * 0.8) / maxVal) * 200);
         return {
           capacity: e.capacity,
           x: idx * 50,
-          yRed: 0,
-          hRed: y100,
+          yDarkRed: 0,
+          hDarkRed: y200,
+          yRed: y200,
+          hRed: y100 - y200,
           yYellow: y100,
           hYellow: y80 - y100,
           yGreen: y80,
