@@ -554,7 +554,7 @@ void paxmon::rt_updates_applied() {
               to_fbs(sched, mc,
                      monitoring_event{event_type, *pg, localization,
                                       reachability.status_}));
-          if (fbs_events.size() > 10'000) {
+          if (fbs_events.size() >= 10'000) {
             make_monitoring_msg();
           }
           MOTIS_STOP_TIMING(fbs_events);

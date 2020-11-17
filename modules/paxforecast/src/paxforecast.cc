@@ -187,10 +187,10 @@ void update_tracked_groups(
       ++add_group_count;
     }
 
-    if (groups_to_remove.size() > 10'000) {
+    if (groups_to_remove.size() >= 10'000) {
       send_remove_groups();
     }
-    if (groups_to_add.size() > 10'000) {
+    if (groups_to_add.size() >= 10'000) {
       send_add_groups();
     }
   }
