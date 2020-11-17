@@ -614,7 +614,7 @@ void paxmon::rt_updates_applied() {
             << system_stats_.groups_broken_count_ << " broken";
 
   for (auto const& pg : data_.graph_.passenger_groups_) {
-    if (!pg) {
+    if (pg == nullptr) {
       continue;
     }
     if (pg->ok_) {

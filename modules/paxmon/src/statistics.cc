@@ -50,7 +50,7 @@ graph_statistics calc_graph_statistics(schedule const& sched,
 
   stats.passenger_groups_ = data.graph_.passenger_groups_.size();
   for (auto const& pg : data.graph_.passenger_groups_) {
-    if (!pg) {
+    if (pg == nullptr) {
       continue;
     }
     stats.passengers_ += pg->passengers_;
