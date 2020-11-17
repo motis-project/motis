@@ -130,7 +130,7 @@ function probPaxLE(cdf, limit) {
 }
 
 function probPaxGT(cdf, limit) {
-  return 1.0 - probPaxLE(cdf, limit);
+  return Math.min(1.0, Math.max(0.0, 1.0 - probPaxLE(cdf, limit)));
 }
 
 function paxQuantile(cdf, q) {
