@@ -175,7 +175,8 @@ const App = {
         return [];
       }
       const maxVal = this.svgMaxPaxOrCap;
-      const stepSize = maxVal >= 700 ? 100 : 50;
+      const stepSize =
+        maxVal >= 3000 ? 500 : maxVal >= 1500 ? 200 : maxVal >= 700 ? 100 : 50;
       let labels = [];
       for (let pax = stepSize; pax < maxVal; pax += stepSize) {
         labels.push({
@@ -460,6 +461,7 @@ window.addEventListener("load", () => {
     vm.selectedScenario = "";
     vm.selectedTrip = "";
     vm.selectedTripData = null;
+    vm.loadingText = "Loading file...";
     const file = files[0];
     worker.postMessage({ op: "loadFile", file: file });
   });
