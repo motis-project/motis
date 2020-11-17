@@ -277,6 +277,26 @@ const App = {
       };
       img.src = svgUrl;
     },
+    showNextTrip(offset) {
+      if (this.trips.length === 0) {
+        return;
+      }
+      if (this.selectedTrip === "") {
+        this.selectedTrip = 0;
+        return;
+      }
+      this.selectedTrip += offset;
+    },
+    showNextScenario(offset) {
+      if (this.scenarios.length === 0) {
+        return;
+      }
+      if (this.selectedScenario === "") {
+        this.selectedScenario = 0;
+        return;
+      }
+      this.selectedScenario += offset;
+    },
   },
   watch: {
     selectedScenario(newScenario) {

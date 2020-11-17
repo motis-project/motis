@@ -71,6 +71,11 @@
       </option>
     </select>
 
+    <button :disabled="scenarios.length === 0 || selectedScenario === 0 || selectedScenario === ''"
+            @click="showNextScenario(-1)">←</button>
+    <button :disabled="scenarios.length === 0 || selectedScenario === scenarios.length - 1"
+            @click="showNextScenario(+1)">→</button>
+
     <label>Trip:</label>
     <select v-model="selectedTrip" :disabled="trips.length === 0">
       <option disabled value="">Select a trip (scenario has {{ trips.length }} trips)</option>
@@ -79,6 +84,11 @@
         <template v-if="trip.from && trip.to">({{ trip.from }} - {{ trip.to }})</template>
       </option>
     </select>
+
+    <button :disabled="trips.length === 0 || selectedTrip === 0 || selectedTrip === ''"
+            @click="showNextTrip(-1)">←</button>
+    <button :disabled="trips.length === 0 || selectedTrip === trips.length - 1"
+            @click="showNextTrip(+1)">→</button>
 
     <button v-if="selectedTripData" @click="saveSvg">
       Save as SVG
