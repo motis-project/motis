@@ -297,6 +297,26 @@ const App = {
       }
       this.selectedScenario += offset;
     },
+    findByTrainNr() {
+      const input = prompt("Train nr:", "");
+      if (!input) {
+        return;
+      }
+      const train_nr = parseInt(input);
+      if (!train_nr) {
+        return;
+      }
+      this.selectedScenario = "";
+      tripData = [];
+      this.trips = [];
+      this.selectedTrip = "";
+      vm.loadingText = "Finding trips...";
+      worker.postMessage({
+        op: "findInterestingTrips",
+        attr: "trainNr",
+        train_nr,
+      });
+    },
   },
   watch: {
     selectedScenario(newScenario) {

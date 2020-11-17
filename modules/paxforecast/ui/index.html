@@ -90,6 +90,10 @@
     <button :disabled="trips.length === 0 || selectedTrip === trips.length - 1"
             @click="showNextTrip(+1)">→</button>
 
+    <button :disabled="scenarios.length === 0" @click="findByTrainNr">
+      Find by train nr
+    </button>
+
     <button v-if="selectedTripData" @click="saveSvg">
       Save as SVG
     </button>

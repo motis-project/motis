@@ -355,6 +355,20 @@ function sortTripsByNrAndTime(trips) {
   });
 }
 
+function sortTripsByIdAndTime(trips) {
+  trips.sort((a, b) => {
+    const train_nr_diff = a.trip.train_nr - b.trip.train_nr;
+    if (train_nr_diff !== 0) {
+      return train_nr_diff;
+    }
+    const trip_time_diff = a.trip.time - b.trip.time;
+    if (trip_time_diff !== 0) {
+      return trip_time_diff;
+    }
+    return a.line.systemTime - b.line.systemTime;
+  });
+}
+
 async function findMaxLoadTrips(file, lines, opt) {
   const threshold = opt.threshold || 2.0;
   let trips = [];
@@ -406,6 +420,33 @@ async function findUncertainOverCapTrips(file, lines) {
   }
 }
 
+async function findByTrainNr(file, lines, opt) {
+  const train_nr = opt.train_nr;
+  let trips = [];
+
+  for (const [lineIdx, line] of lines.entries()) {
+    postMessage({
+      op: "findInterestingTripsProgress",
+      progress: lineIdx,
+      size: lines.length,
+    });
+    await loadForecastLine(file, line, (d) => {
+      for (const si of d.serviceInfos) {
+        if (si.train_nr === train_nr) {
+          trips.push(d);
+          break;
+        }
+      }
+    });
+  }
+
+  sortTripsByIdAndTime(trips);
+
+  for (const d of trips) {
+    postMessage(d);
+  }
+}
+
 async function findInterestingTrips(file, lines, opt) {
   switch (opt.attr) {
     case "maxSpread":
@@ -417,6 +458,9 @@ async function findInterestingTrips(file, lines, opt) {
       break;
     case "uncertainOverCap":
       await findUncertainOverCapTrips(file, lines);
+      break;
+    case "trainNr":
+      await findByTrainNr(file, lines, opt);
       break;
   }
   postMessage({ op: "findInterestingTripsDone" });
