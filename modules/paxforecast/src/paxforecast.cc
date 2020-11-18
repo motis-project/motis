@@ -49,6 +49,10 @@ paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
         "output file for behavior statistics");
   param(routing_cache_filename_, "routing_cache",
         "optional cache file for routing queries");
+  param(calc_load_forecast_, "calc_load_forecast",
+        "calculate load forecast (required for output/publish)");
+  param(publish_load_forecast_, "publish_load_forecast",
+        "publish load forecast");
 }
 
 paxforecast::~paxforecast() = default;
@@ -327,20 +331,24 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
                sim_result.stats_.second_alt_prob_avg_ * 100);
   }
 
-  manual_timer load_forecast_timer{"load forecast"};
-  auto const lfc = calc_load_forecast(sched, data, sim_result);
-  load_forecast_timer.stop_and_print();
-  manual_timer load_forecast_msg_timer{"load forecast make msg"};
-  auto const forecast_msg =
-      make_passenger_forecast_msg(sched, data, sim_result, lfc);
-  load_forecast_msg_timer.stop_and_print();
+  if (calc_load_forecast_) {
+    manual_timer load_forecast_timer{"load forecast"};
+    auto const lfc = calc_load_forecast(sched, data, sim_result);
+    load_forecast_timer.stop_and_print();
+    manual_timer load_forecast_msg_timer{"load forecast make msg"};
+    auto const forecast_msg =
+        make_passenger_forecast_msg(sched, data, sim_result, lfc);
+    load_forecast_msg_timer.stop_and_print();
 
-  if (forecast_file_.is_open()) {
-    scoped_timer load_forecast_msg_timer{"load forecast to json"};
-    forecast_file_ << forecast_msg->to_json(true) << std::endl;
+    if (forecast_file_.is_open()) {
+      scoped_timer load_forecast_msg_timer{"load forecast to json"};
+      forecast_file_ << forecast_msg->to_json(true) << std::endl;
+    }
+
+    if (publish_load_forecast_) {
+      ctx::await_all(motis_publish(forecast_msg));
+    }
   }
-
-  ctx::await_all(motis_publish(forecast_msg));
 
   scoped_timer update_tracked_groups_timer{"update tracked groups"};
   update_tracked_groups(sched, sim_result, pg_event_types);

@@ -36,6 +36,9 @@ private:
 
   std::string routing_cache_filename_;
   routing_cache routing_cache_;
+
+  bool calc_load_forecast_{true};
+  bool publish_load_forecast_{false};
 };
 
 }  // namespace motis::paxforecast
