@@ -34,7 +34,16 @@ void stats_writer::write_header() {
        << "total_broken_groups"
        //
        << "tracked_ok_groups"
-       << "tracked_broken_groups" << end_row;
+       << "tracked_broken_groups"
+       //
+       << "t_reachability"
+       << "t_localization"
+       << "t_update_load"
+       << "t_fbs_events"
+       << "t_publish"
+       << "t_rt_updates_applied_total"
+       //
+       << end_row;
 }
 
 void stats_writer::write_tick(const tick_statistics& ts) {
@@ -56,7 +65,14 @@ void stats_writer::write_tick(const tick_statistics& ts) {
        << ts.total_ok_groups_
        << ts.total_broken_groups_
        //
-       << ts.tracked_ok_groups_ << ts.tracked_broken_groups_ << end_row;
+       << ts.tracked_ok_groups_
+       << ts.tracked_broken_groups_
+       //
+       << ts.t_reachability_ << ts.t_localization_ << ts.t_update_load_
+       << ts.t_fbs_events_ << ts.t_publish_
+       << ts.t_rt_updates_applied_total_
+       //
+       << end_row;
 }
 
 void stats_writer::flush() { csv_.flush(); }

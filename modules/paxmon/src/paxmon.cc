@@ -459,6 +459,7 @@ monitoring_event_type get_monitoring_event_type(
 }
 
 void paxmon::rt_updates_applied() {
+  MOTIS_START_TIMING(total);
   auto const& sched = get_schedule();
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
@@ -589,10 +590,19 @@ void paxmon::rt_updates_applied() {
           "rt_updates_applied: check_graph_integrity (after load update)");
     }
 
+    MOTIS_START_TIMING(publish);
     for (auto& msg : messages) {
       ctx::await_all(motis_publish(msg));
       msg.reset();
     }
+    MOTIS_STOP_TIMING(publish);
+
+    tick_stats_.t_reachability_ = total_reachability / 1000;
+    tick_stats_.t_localization_ = total_localization / 1000;
+    tick_stats_.t_update_load_ = total_update_load / 1000;
+    tick_stats_.t_fbs_events_ = total_fbs_events / 1000;
+    tick_stats_.t_publish_ =
+        static_cast<std::uint64_t>(MOTIS_TIMING_MS(publish));
   }
 
   tick_stats_.ok_groups_ = ok_groups;
@@ -623,6 +633,10 @@ void paxmon::rt_updates_applied() {
       ++tick_stats_.tracked_broken_groups_;
     }
   }
+
+  MOTIS_STOP_TIMING(total);
+  tick_stats_.t_rt_updates_applied_total_ =
+      static_cast<std::uint64_t>(MOTIS_TIMING_MS(total));
 
   stats_writer_->write_tick(tick_stats_);
   stats_writer_->flush();
@@ -681,7 +695,7 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
 
   if (check_graph_integrity_) {
     utl::verify(check_graph_integrity(data_.graph_, get_schedule()),
-                "rt_updates_applied: remove_groups (end)");
+                "remove_groups (end)");
   }
 
   return {};

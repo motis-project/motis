@@ -56,6 +56,14 @@ struct tick_statistics {
   // tracking
   std::uint64_t tracked_ok_groups_{};
   std::uint64_t tracked_broken_groups_{};
+
+  // timing (ms)
+  std::uint64_t t_reachability_{};
+  std::uint64_t t_localization_{};
+  std::uint64_t t_update_load_{};
+  std::uint64_t t_fbs_events_{};
+  std::uint64_t t_publish_{};
+  std::uint64_t t_rt_updates_applied_total_{};
 };
 
 struct graph_statistics {
