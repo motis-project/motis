@@ -12,6 +12,7 @@
 
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
+#include "motis/core/common/timing.h"
 #include "motis/core/access/service_access.h"
 #include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
@@ -33,6 +34,7 @@
 #include "motis/paxforecast/measures/measures.h"
 #include "motis/paxforecast/messages.h"
 #include "motis/paxforecast/simulate_behavior.h"
+#include "motis/paxforecast/statistics.h"
 
 using namespace motis::module;
 using namespace motis::routing;
@@ -53,12 +55,15 @@ paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
         "calculate load forecast (required for output/publish)");
   param(publish_load_forecast_, "publish_load_forecast",
         "publish load forecast");
+  param(stats_file_, "stats", "statistics file");
 }
 
 paxforecast::~paxforecast() = default;
 
 void paxforecast::init(motis::module::registry& reg) {
   LOG(info) << "passenger forecast module loaded";
+
+  stats_writer_ = std::make_unique<stats_writer>(stats_file_);
 
   if (!forecast_filename_.empty()) {
     forecast_file_.exceptions(std::ios_base::failbit | std::ios_base::badbit);
@@ -87,7 +92,8 @@ void paxforecast::init(motis::module::registry& reg) {
 void update_tracked_groups(
     schedule const& sched, simulation_result const& sim_result,
     std::map<passenger_group const*, monitoring_event_type> const&
-        pg_event_types) {
+        pg_event_types,
+    tick_statistics& tick_stats) {
   using namespace flatbuffers;
 
   message_creator add_groups_mc;
@@ -201,13 +207,18 @@ void update_tracked_groups(
 
   LOG(info) << "update_tracked_groups: -" << remove_group_count << " +"
             << add_group_count;
+  tick_stats.added_groups_ = add_group_count;
+  tick_stats.removed_groups_ = remove_group_count;
 
   send_remove_groups();
   send_add_groups();
 }
 
 void paxforecast::on_monitoring_event(msg_ptr const& msg) {
+  tick_statistics tick_stats;
+  MOTIS_START_TIMING(total);
   auto const& sched = get_schedule();
+  tick_stats.system_time_ = sched.system_time_;
   auto& data = *get_shared_data<paxmon_data*>(motis::paxmon::DATA_KEY);
 
   auto const mon_update = motis_content(MonitoringUpdate, msg);
@@ -257,10 +268,15 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
             << pg_event_types.size() << " groups, " << combined_groups.size()
             << " combined groups";
 
+  tick_stats.monitoring_events_ = mon_update->events()->size();
+  tick_stats.groups_ = pg_event_types.size();
+  tick_stats.combined_groups_ = combined_groups.size();
+
   auto routing_requests = 0ULL;
   auto alternatives_found = 0ULL;
 
   {
+    MOTIS_START_TIMING(find_alternatives);
     scoped_timer alt_timer{"find alternatives"};
     std::vector<ctx::future_ptr<ctx_data, void>> futures;
     for (auto& cgs : combined_groups) {
@@ -279,9 +295,12 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
               << ")...";
     ctx::await_all(futures);
     routing_cache_.sync();
+    MOTIS_STOP_TIMING(find_alternatives);
+    tick_stats.t_find_alternatives_ = MOTIS_TIMING_MS(find_alternatives);
   }
 
   {
+    MOTIS_START_TIMING(add_alternatives);
     scoped_timer alt_trips_timer{"add alternatives to graph"};
     for (auto& cgs : combined_groups) {
       for (auto& cpg : cgs.second) {
@@ -293,11 +312,17 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
         }
       }
     }
+    MOTIS_STOP_TIMING(add_alternatives);
+    tick_stats.t_add_alternatives_ = MOTIS_TIMING_MS(add_alternatives);
   }
 
   LOG(info) << "alternatives: " << routing_requests << " routing requests => "
             << alternatives_found << " alternatives";
 
+  tick_stats.routing_requests_ = routing_requests;
+  tick_stats.alternatives_found_ = alternatives_found;
+
+  MOTIS_START_TIMING(passenger_behavior);
   manual_timer sim_timer{"passenger behavior simulation"};
   auto rnd_gen = std::mt19937{std::random_device{}()};
   auto transfer_dist = std::normal_distribution<float>{30.0F, 10.0F};
@@ -307,6 +332,8 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   auto const sim_result =
       simulate_behavior(sched, data, combined_groups, announcements, pb);
   sim_timer.stop_and_print();
+  MOTIS_STOP_TIMING(passenger_behavior);
+  tick_stats.t_passenger_behavior_ = MOTIS_TIMING_MS(passenger_behavior);
 
   LOG(info) << "forecast: " << sim_result.additional_groups_.size()
             << " edges affected";
@@ -332,26 +359,54 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   }
 
   if (calc_load_forecast_) {
+    MOTIS_START_TIMING(total_load_forecast);
+
+    MOTIS_START_TIMING(calc_load_forecast);
     manual_timer load_forecast_timer{"load forecast"};
     auto const lfc = calc_load_forecast(sched, data, sim_result);
     load_forecast_timer.stop_and_print();
+    MOTIS_STOP_TIMING(calc_load_forecast);
+    tick_stats.t_calc_load_forecast_ = MOTIS_TIMING_MS(calc_load_forecast);
+
+    MOTIS_START_TIMING(load_forecast_fbs);
     manual_timer load_forecast_msg_timer{"load forecast make msg"};
     auto const forecast_msg =
         make_passenger_forecast_msg(sched, data, sim_result, lfc);
     load_forecast_msg_timer.stop_and_print();
+    MOTIS_STOP_TIMING(load_forecast_fbs);
+    tick_stats.t_load_forecast_fbs_ = MOTIS_TIMING_MS(load_forecast_fbs);
 
+    MOTIS_START_TIMING(write_load_forecast);
     if (forecast_file_.is_open()) {
       scoped_timer load_forecast_msg_timer{"load forecast to json"};
       forecast_file_ << forecast_msg->to_json(true) << std::endl;
     }
+    MOTIS_STOP_TIMING(write_load_forecast);
+    tick_stats.t_write_load_forecast_ = MOTIS_TIMING_MS(write_load_forecast);
 
+    MOTIS_START_TIMING(publish_load_forecast);
     if (publish_load_forecast_) {
       ctx::await_all(motis_publish(forecast_msg));
     }
+    MOTIS_STOP_TIMING(publish_load_forecast);
+    tick_stats.t_publish_load_forecast_ =
+        MOTIS_TIMING_MS(publish_load_forecast);
+
+    MOTIS_STOP_TIMING(total_load_forecast);
+    tick_stats.t_total_load_forecast_ = MOTIS_TIMING_MS(total_load_forecast);
   }
 
+  MOTIS_START_TIMING(update_tracked_groups);
   scoped_timer update_tracked_groups_timer{"update tracked groups"};
-  update_tracked_groups(sched, sim_result, pg_event_types);
+  update_tracked_groups(sched, sim_result, pg_event_types, tick_stats);
+  MOTIS_STOP_TIMING(update_tracked_groups);
+  tick_stats.t_update_tracked_groups_ = MOTIS_TIMING_MS(update_tracked_groups);
+
+  MOTIS_STOP_TIMING(total);
+  tick_stats.t_total_ = MOTIS_TIMING_MS(total);
+
+  stats_writer_->write_tick(tick_stats);
+  stats_writer_->flush();
 }
 
 }  // namespace motis::paxforecast
