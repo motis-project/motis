@@ -95,6 +95,9 @@ TEST(paxmon_get_load, only_one_certain) {
     EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 1.5F));
     EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 2.0F));
   }
+
+  EXPECT_EQ(get_mean_load(pci), 10);
+  EXPECT_EQ(get_median_load(get_cdf(pdf)), 10);
 }
 
 TEST(paxmon_get_load, only_multiple_certain) {
@@ -135,6 +138,9 @@ TEST(paxmon_get_load, only_multiple_certain) {
     EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 1.5F));
     EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 2.0F));
   }
+
+  EXPECT_EQ(get_mean_load(pci), 60);
+  EXPECT_EQ(get_median_load(get_cdf(pdf)), 60);
 }
 
 TEST(paxmon_get_load, two_groups) {
@@ -175,6 +181,9 @@ TEST(paxmon_get_load, two_groups) {
     EXPECT_TRUE(load_factor_possibly_ge(lf_cdf, 1.5F));
     EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 2.0F));
   }
+
+  EXPECT_EQ(get_mean_load(pci), 18);
+  EXPECT_EQ(get_median_load(get_cdf(pdf)), 10);
 }
 
 #ifdef MOTIS_AVX2

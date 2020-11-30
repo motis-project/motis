@@ -40,6 +40,10 @@ pax_pdf get_load_pdf(pax_connection_info const& pci);
 pax_cdf get_cdf(pax_pdf const& pdf);
 pax_cdf get_load_cdf(pax_connection_info const& pci);
 
+std::uint16_t get_mean_load(pax_connection_info const& pci);
+std::uint16_t get_pax_quantile(pax_cdf const& cdf, float q);
+std::uint16_t get_median_load(pax_cdf const& cdf);
+
 lf_df_t to_load_factor(pax_pdf const& pdf, std::uint16_t capacity);
 lf_df_t to_load_factor(pax_cdf const& cdf, std::uint16_t capacity);
 

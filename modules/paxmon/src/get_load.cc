@@ -48,6 +48,30 @@ std::uint16_t get_expected_load(pax_connection_info const& pci) {
   return load;
 }
 
+std::uint16_t get_mean_load(pax_connection_info const& pci) {
+  if (pci.groups_.empty()) {
+    return 0;
+  }
+  auto mean = 0.0F;
+  for (auto const grp : pci.groups_) {
+    mean += static_cast<float>(grp->passengers_) * grp->probability_;
+  }
+  return static_cast<std::uint16_t>(mean);
+}
+
+std::uint16_t get_pax_quantile(pax_cdf const& cdf, float const q) {
+  for (auto const& [pax, prob] : utl::enumerate(cdf.data_)) {
+    if (prob >= q) {
+      return pax;
+    }
+  }
+  throw utl::fail("get_pax_quantile: invalid cdf");
+}
+
+std::uint16_t get_median_load(pax_cdf const& cdf) {
+  return get_pax_quantile(cdf, 0.5F);
+}
+
 inline void convolve_base(pax_pdf& pdf, std::uint16_t const grp_size,
                           float grp_prob) {
   auto old_pdf = pdf;
