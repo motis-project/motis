@@ -14,7 +14,7 @@ The core features are:
   
 More detailed information can be found at [motis-project.de](https://motis-project.de).
 
-To demonstrate the functionalities, an [Android App](https://play.google.com/store/apps/details?id=de.motis_project.app2) and a [web-based information system](https://demo.motis-project.de/) is available. The source code for both front-ends is available as Open Source Software [as well](https://github.com/motis-project/motis/tree/master/scripts).
+To demonstrate the functionalities, an [Android App](https://play.google.com/store/apps/details?id=de.motis_project.demo) and a [web-based information system](https://demo.motis-project.de/) is available. The source code for both front-ends is available as Open Source Software [as well](https://github.com/motis-project/motis/tree/master/scripts).
 
 The system can consume schedule timetables in the [GTFS](https://developers.google.com/transit/gtfs/) or [HAFAS](https://www.fahrplanfelder.ch/fileadmin/fap_daten_test/hrdf.pdf) format as well as real time information in the [GTFS-RT](https://developers.google.com/transit/gtfs-realtime/reference) (and RISML, a propriatary format at Deutsche Bahn) as input data. For pedestrian routing (handled by [Per Pedes Routing](https://github.com/motis-project/ppr)) and car routing (handled by [OSRM](https://github.com/Project-OSRM/osrm-backend)) OpenStreetMap data is used.
 
