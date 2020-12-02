@@ -55,11 +55,14 @@ private:
   int arrival_delay_threshold_{20};
   bool check_graph_times_{false};
   bool check_graph_integrity_{false};
+  std::string mcfp_scenario_dir_{};
+  int mcfp_scenario_min_broken_groups_{500};
 
   paxmon_data data_;
   system_statistics system_stats_;
   tick_statistics tick_stats_;
   std::unique_ptr<stats_writer> stats_writer_;
+  bool write_mcfp_scenarios_{false};
 };
 
 }  // namespace motis::paxmon

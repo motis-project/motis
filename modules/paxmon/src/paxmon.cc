@@ -35,6 +35,7 @@
 #include "motis/paxmon/messages.h"
 #include "motis/paxmon/monitoring_event.h"
 #include "motis/paxmon/output/journey_converter.h"
+#include "motis/paxmon/output/mcfp_scenario.h"
 #include "motis/paxmon/over_capacity_report.h"
 #include "motis/paxmon/reachability.h"
 #include "motis/paxmon/update_load.h"
@@ -76,6 +77,10 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
         "check graph timestamps after each update");
   param(check_graph_integrity_, "check_graph_integrity",
         "check graph integrity after each update");
+  param(mcfp_scenario_dir_, "mcfp_scenario_dir",
+        "output directory for mcfp scenarios");
+  param(mcfp_scenario_min_broken_groups_, "mcfp_scenario_min_broken_groups",
+        "required number of broken groups in an update for mcfp scenarios");
 }
 
 paxmon::~paxmon() = default;
@@ -142,6 +147,14 @@ void paxmon::init(motis::module::registry& reg) {
   reg.register_op("/paxmon/remove_groups", [&](msg_ptr const& msg) -> msg_ptr {
     return remove_groups(msg);
   });
+
+  if (!mcfp_scenario_dir_.empty()) {
+    if (fs::exists(mcfp_scenario_dir_)) {
+      write_mcfp_scenarios_ = fs::is_directory(mcfp_scenario_dir_);
+    } else {
+      write_mcfp_scenarios_ = fs::create_directories(mcfp_scenario_dir_);
+    }
+  }
 }
 
 void print_graph_stats(graph_statistics const& graph_stats) {
@@ -588,6 +601,19 @@ void paxmon::rt_updates_applied() {
       utl::verify(
           check_graph_integrity(data_.graph_, sched),
           "rt_updates_applied: check_graph_integrity (after load update)");
+    }
+
+    if (write_mcfp_scenarios_ &&
+        broken_groups >= mcfp_scenario_min_broken_groups_) {
+      auto const dir =
+          fs::path{mcfp_scenario_dir_} /
+          fs::path{fmt::format(
+              "{}_{}", format_unix_time(sched.system_time_, "%Y-%m-%d_%H-%M"),
+              broken_groups)};
+      LOG(info) << "writing MCFP scenario with " << broken_groups
+                << " broken groups to " << dir.string();
+      fs::create_directories(dir);
+      output::write_scenario(dir, sched, data_, messages);
     }
 
     MOTIS_START_TIMING(publish);
