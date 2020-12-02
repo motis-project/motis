@@ -40,29 +40,42 @@ void write_footpaths(fs::path const& dir, schedule const& sched) {
 }
 
 void write_trip(std::ofstream& out, schedule const& sched,
-                paxmon_data const& data, trip const* trp, std::uint64_t id) {
+                paxmon_data const& data, trip const* trp, std::uint64_t id,
+                bool const include_trip_info) {
   for (auto const& ts : sections_with_load{data.graph_, trp}) {
     auto const& lc = ts.section_.lcon();
     auto const remaining_capacity =
         ts.has_capacity_info() ? ts.capacity() - ts.base_load() : 0;
     out << id << "," << ts.section_.from_station(sched).eva_nr_ << ","
         << lc.d_time_ << "," << ts.section_.to_station(sched).eva_nr_ << ","
-        << lc.a_time_ << "," << remaining_capacity << "\n";
+        << lc.a_time_ << "," << remaining_capacity;
+    if (include_trip_info) {
+      out << ","
+          << sched.categories_.at(lc.full_con_->con_info_->family_)
+                 ->name_.view()
+          << "," << lc.full_con_->con_info_->train_nr_;
+    }
+    out << "\n";
   }
 }
 
 void write_trips(fs::path const& dir, schedule const& sched,
                  paxmon_data const& data,
-                 mcd::hash_map<trip const*, std::uint64_t>& trip_ids) {
+                 mcd::hash_map<trip const*, std::uint64_t>& trip_ids,
+                 bool const include_trip_info) {
   std::ofstream out{(dir / "trips.csv").string()};
   out.exceptions(std::ios_base::failbit | std::ios_base::badbit);
-  out << "id,from_station,departure,to_station,arrival,capacity\n";
+  out << "id,from_station,departure,to_station,arrival,capacity";
+  if (include_trip_info) {
+    out << ",category,train_nr";
+  }
+  out << "\n";
   auto id = 1ULL;
   for (auto const& trp : sched.trip_mem_) {
     if (trp->edges_->empty()) {
       continue;
     }
-    write_trip(out, sched, data, trp.get(), id);
+    write_trip(out, sched, data, trp.get(), id, include_trip_info);
     trip_ids[trp.get()] = id;
     ++id;
   }
@@ -102,11 +115,12 @@ void write_groups(fs::path const& dir, schedule const& sched,
 
 void write_scenario(fs::path const& dir, schedule const& sched,
                     paxmon_data const& data,
-                    std::vector<msg_ptr> const& messages) {
+                    std::vector<msg_ptr> const& messages,
+                    bool const include_trip_info) {
   mcd::hash_map<trip const*, std::uint64_t> trip_ids;
   write_stations(dir, sched);
   write_footpaths(dir, sched);
-  write_trips(dir, sched, data, trip_ids);
+  write_trips(dir, sched, data, trip_ids, include_trip_info);
   write_groups(dir, sched, data, messages, trip_ids);
 }
 

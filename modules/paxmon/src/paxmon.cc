@@ -81,6 +81,8 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
         "output directory for mcfp scenarios");
   param(mcfp_scenario_min_broken_groups_, "mcfp_scenario_min_broken_groups",
         "required number of broken groups in an update for mcfp scenarios");
+  param(mcfp_scenario_include_trip_info_, "mcfp_scenario_include_trip_info",
+        "include trip info (category + train_nr) in mcfp scenarios");
 }
 
 paxmon::~paxmon() = default;
@@ -613,7 +615,8 @@ void paxmon::rt_updates_applied() {
       LOG(info) << "writing MCFP scenario with " << broken_groups
                 << " broken groups to " << dir.string();
       fs::create_directories(dir);
-      output::write_scenario(dir, sched, data_, messages);
+      output::write_scenario(dir, sched, data_, messages,
+                             mcfp_scenario_include_trip_info_);
     }
 
     MOTIS_START_TIMING(publish);
