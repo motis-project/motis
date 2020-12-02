@@ -42,7 +42,7 @@ void write_footpaths(fs::path const& dir, schedule const& sched) {
 void write_trip(std::ofstream& out, schedule const& sched,
                 paxmon_data const& data, trip const* trp, std::uint64_t id,
                 bool const include_trip_info) {
-  for (auto const& ts : sections_with_load{data.graph_, trp}) {
+  for (auto const& ts : sections_with_load{sched, data, trp}) {
     auto const& lc = ts.section_.lcon();
     auto const remaining_capacity =
         ts.has_capacity_info() ? ts.capacity() - ts.base_load() : 0;
