@@ -6,10 +6,10 @@
 
 #include "utl/verify.h"
 
-#include "motis/core/access/trip_iterator.h"
 #include "motis/hash_map.h"
 
 #include "motis/paxmon/messages.h"
+#include "motis/paxmon/trip_section_load_iterator.h"
 
 namespace fs = boost::filesystem;
 using namespace motis::module;
@@ -39,18 +39,20 @@ void write_footpaths(fs::path const& dir, schedule const& sched) {
   }
 }
 
-void write_trip(std::ofstream& out, schedule const& sched, trip const* trp,
-                std::uint64_t id) {
-  for (auto const& section : access::sections{trp}) {
-    auto const& lc = section.lcon();
-    // TODO(pablo): capacity
-    out << id << "," << section.from_station(sched).eva_nr_ << "," << lc.d_time_
-        << "," << section.to_station(sched).eva_nr_ << "," << lc.a_time_ << ","
-        << 0 << "\n";
+void write_trip(std::ofstream& out, schedule const& sched,
+                paxmon_data const& data, trip const* trp, std::uint64_t id) {
+  for (auto const& ts : sections_with_load{data.graph_, trp}) {
+    auto const& lc = ts.section_.lcon();
+    auto const remaining_capacity =
+        ts.has_capacity_info() ? ts.capacity() - ts.base_load() : 0;
+    out << id << "," << ts.section_.from_station(sched).eva_nr_ << ","
+        << lc.d_time_ << "," << ts.section_.to_station(sched).eva_nr_ << ","
+        << lc.a_time_ << "," << remaining_capacity << "\n";
   }
 }
 
 void write_trips(fs::path const& dir, schedule const& sched,
+                 paxmon_data const& data,
                  mcd::hash_map<trip const*, std::uint64_t>& trip_ids) {
   std::ofstream out{(dir / "trips.csv").string()};
   out.exceptions(std::ios_base::failbit | std::ios_base::badbit);
@@ -60,7 +62,7 @@ void write_trips(fs::path const& dir, schedule const& sched,
     if (trp->edges_->empty()) {
       continue;
     }
-    write_trip(out, sched, trp.get(), id);
+    write_trip(out, sched, data, trp.get(), id);
     trip_ids[trp.get()] = id;
     ++id;
   }
@@ -104,7 +106,7 @@ void write_scenario(fs::path const& dir, schedule const& sched,
   mcd::hash_map<trip const*, std::uint64_t> trip_ids;
   write_stations(dir, sched);
   write_footpaths(dir, sched);
-  write_trips(dir, sched, trip_ids);
+  write_trips(dir, sched, data, trip_ids);
   write_groups(dir, sched, data, messages, trip_ids);
 }
 
