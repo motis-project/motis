@@ -17,8 +17,11 @@ namespace motis::paxforecast::behavior::probabilistic {
 template <typename Generator, typename TransferDistribution>
 struct passenger_behavior {
   passenger_behavior(Generator& gen, TransferDistribution& transfer_dist,
-                     unsigned sample_count)
-      : gen_{gen}, transfer_dist_{transfer_dist}, sample_count_{sample_count} {}
+                     unsigned sample_count, bool best_only)
+      : gen_{gen},
+        transfer_dist_{transfer_dist},
+        sample_count_{sample_count},
+        best_only_{best_only} {}
 
   std::vector<float> pick_routes(
       motis::paxmon::passenger_group const& /*grp*/,
@@ -27,12 +30,27 @@ struct passenger_behavior {
     if (alternatives.empty()) {
       return {};
     }
+
     auto probabilities = std::vector<float>(alternatives.size());
     for (auto i = 0U; i < sample_count_; ++i) {
       sample(alternatives, probabilities);
     }
-    for (auto& p : probabilities) {
-      p /= sample_count_;
+    if (best_only_) {
+      auto best_idx = 0ULL;
+      auto best_prob = 0.0F;
+      for (auto i = 0ULL; i < probabilities.size(); ++i) {
+        auto const p = probabilities[i];
+        if (p > best_prob) {
+          best_idx = i;
+          best_prob = p;
+        }
+        probabilities[i] = 0.0F;
+      }
+      probabilities[best_idx] = 1.0F;
+    } else {
+      for (auto& p : probabilities) {
+        p /= sample_count_;
+      }
     }
     return probabilities;
   }
@@ -62,6 +80,7 @@ private:
   Generator& gen_;
   TransferDistribution& transfer_dist_;
   unsigned sample_count_{};
+  bool best_only_{false};
 };
 
 }  // namespace motis::paxforecast::behavior::probabilistic

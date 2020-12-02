@@ -56,6 +56,8 @@ paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
   param(publish_load_forecast_, "publish_load_forecast",
         "publish load forecast");
   param(stats_file_, "stats", "statistics file");
+  param(deterministic_mode_, "deterministic_mode",
+        "all passengers always pick the best alternative");
 }
 
 paxforecast::~paxforecast() = default;
@@ -326,8 +328,8 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   manual_timer sim_timer{"passenger behavior simulation"};
   auto rnd_gen = std::mt19937{std::random_device{}()};
   auto transfer_dist = std::normal_distribution<float>{30.0F, 10.0F};
-  auto pb =
-      behavior::probabilistic::passenger_behavior{rnd_gen, transfer_dist, 1000};
+  auto pb = behavior::probabilistic::passenger_behavior{
+      rnd_gen, transfer_dist, 1000, deterministic_mode_};
   auto const announcements = std::vector<measures::please_use>{};
   auto const sim_result =
       simulate_behavior(sched, data, combined_groups, announcements, pb);

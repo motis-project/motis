@@ -41,6 +41,8 @@ private:
   bool calc_load_forecast_{true};
   bool publish_load_forecast_{false};
 
+  bool deterministic_mode_{false};
+
   std::string stats_file_{"paxforecast_stats.csv"};
   std::unique_ptr<stats_writer> stats_writer_;
 };

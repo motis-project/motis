@@ -5,6 +5,7 @@
 #include "motis/paxforecast/behavior/deterministic/score/all_equal.h"
 #include "motis/paxforecast/behavior/deterministic/score/weighted.h"
 
+#include "motis/paxforecast/behavior/deterministic/distribution/best_only.h"
 #include "motis/paxforecast/behavior/deterministic/distribution/proportional.h"
 
 #include "motis/paxforecast/behavior/deterministic/influence/additive.h"
