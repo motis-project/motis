@@ -95,6 +95,11 @@ struct light_connection {
   time d_time_, a_time_;
   uint32_t trips_ : 31;
   uint32_t valid_ : 1;
+
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+  uint16_t capacity_{};
+  uint16_t passengers_{};
+#endif
 };
 
 // Index of a light_connection in a route edge.

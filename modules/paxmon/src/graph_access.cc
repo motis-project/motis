@@ -256,6 +256,11 @@ void update_trip_route(schedule const& sched, paxmon_data& data,
                        system_statistics& system_stats) {
   ++system_stats.update_trip_route_count_;
   auto const trp = from_fbs(sched, ru->trip());
+
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+  data.trips_affected_by_last_update_.insert(trp);
+#endif
+
   auto td = data.graph_.trip_data_.find(trp);
   if (td == end(data.graph_.trip_data_)) {
     return;

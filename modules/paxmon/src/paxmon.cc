@@ -38,6 +38,7 @@
 #include "motis/paxmon/output/mcfp_scenario.h"
 #include "motis/paxmon/over_capacity_report.h"
 #include "motis/paxmon/reachability.h"
+#include "motis/paxmon/sync_graph_load.h"
 #include "motis/paxmon/update_load.h"
 
 namespace fs = boost::filesystem;
@@ -94,21 +95,33 @@ void paxmon::init(motis::module::registry& reg) {
 
   add_shared_data(DATA_KEY, &data_);
 
-  reg.subscribe("/init", [&]() {
-    load_capacity_files();
-    load_journeys();
-  });
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+  auto constexpr const access_level = ctx::access_t::WRITE;
+#else
+  auto constexpr const access_level = ctx::access_t::READ;
+#endif
+
+  reg.subscribe(
+      "/init",
+      [&]() {
+        load_capacity_files();
+        load_journeys();
+      },
+      access_level);
   reg.register_op("/paxmon/flush", [&](msg_ptr const&) -> msg_ptr {
     stats_writer_->flush();
     return {};
   });
   reg.subscribe("/rt/update",
                 [&](msg_ptr const& msg) { return rt_update(msg); });
-  reg.subscribe("/rt/graph_updated", [&](msg_ptr const&) {
-    scoped_timer t{"paxmon: graph_updated"};
-    rt_updates_applied();
-    return nullptr;
-  });
+  reg.subscribe(
+      "/rt/graph_updated",
+      [&](msg_ptr const&) {
+        scoped_timer t{"paxmon: graph_updated"};
+        rt_updates_applied();
+        return nullptr;
+      },
+      access_level);
 
   // --init /paxmon/eval
   // --paxmon.start_time YYYY-MM-DDTHH:mm
@@ -142,13 +155,15 @@ void paxmon::init(motis::module::registry& reg) {
       },
       ctx::access_t::WRITE);
 
-  reg.register_op("/paxmon/add_groups", [&](msg_ptr const& msg) -> msg_ptr {
-    return add_groups(msg);
-  });
+  reg.register_op(
+      "/paxmon/add_groups",
+      [&](msg_ptr const& msg) -> msg_ptr { return add_groups(msg); },
+      access_level);
 
-  reg.register_op("/paxmon/remove_groups", [&](msg_ptr const& msg) -> msg_ptr {
-    return remove_groups(msg);
-  });
+  reg.register_op(
+      "/paxmon/remove_groups",
+      [&](msg_ptr const& msg) -> msg_ptr { return remove_groups(msg); },
+      access_level);
 
   if (!mcfp_scenario_dir_.empty()) {
     if (fs::exists(mcfp_scenario_dir_)) {
@@ -321,6 +336,7 @@ void paxmon::load_journeys() {
     utl::verify(check_graph_integrity(data_.graph_, sched),
                 "load_journeys: check_graph_integrity");
   }
+  sync_graph_load(get_schedule(), data_);
 }
 
 void paxmon::load_capacity_files() {
@@ -546,53 +562,60 @@ void paxmon::rt_updates_applied() {
       mc.Clear();
     };
 
-    motis_parallel_for(
-        data_.groups_affected_by_last_update_, [&](auto const& pg) {
-          MOTIS_START_TIMING(reachability);
-          auto const reachability =
-              get_reachability(data_, pg->compact_planned_journey_);
-          pg->ok_ = reachability.ok_;
-          MOTIS_STOP_TIMING(reachability);
+    auto const group_handler = [&](auto const& pg) {
+      MOTIS_START_TIMING(reachability);
+      auto const reachability =
+          get_reachability(data_, pg->compact_planned_journey_);
+      pg->ok_ = reachability.ok_;
+      MOTIS_STOP_TIMING(reachability);
 
-          MOTIS_START_TIMING(localization);
-          auto const localization = localize(sched, reachability, search_time);
-          MOTIS_STOP_TIMING(localization);
-          auto const event_type = get_monitoring_event_type(
-              pg, reachability, arrival_delay_threshold_);
+      MOTIS_START_TIMING(localization);
+      auto const localization = localize(sched, reachability, search_time);
+      MOTIS_STOP_TIMING(localization);
+      auto const event_type =
+          get_monitoring_event_type(pg, reachability, arrival_delay_threshold_);
 
-          MOTIS_START_TIMING(update_load);
-          update_load(pg, reachability, localization, data_.graph_);
-          MOTIS_STOP_TIMING(update_load);
+      MOTIS_START_TIMING(update_load);
+      update_load(pg, reachability, localization, data_.graph_);
+      MOTIS_STOP_TIMING(update_load);
 
-          MOTIS_START_TIMING(fbs_events);
-          std::lock_guard guard{update_mutex};
-          fbs_events.emplace_back(
-              to_fbs(sched, mc,
-                     monitoring_event{event_type, *pg, localization,
-                                      reachability.status_}));
-          if (fbs_events.size() >= 10'000) {
-            make_monitoring_msg();
-          }
-          MOTIS_STOP_TIMING(fbs_events);
+      MOTIS_START_TIMING(fbs_events);
+      std::lock_guard guard{update_mutex};
+      fbs_events.emplace_back(
+          to_fbs(sched, mc,
+                 monitoring_event{event_type, *pg, localization,
+                                  reachability.status_}));
+      if (fbs_events.size() >= 10'000) {
+        make_monitoring_msg();
+      }
+      MOTIS_STOP_TIMING(fbs_events);
 
-          total_reachability += MOTIS_TIMING_US(reachability);
-          total_localization += MOTIS_TIMING_US(localization);
-          total_update_load += MOTIS_TIMING_US(update_load);
-          total_fbs_events += MOTIS_TIMING_US(fbs_events);
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+      for (auto const& leg : pg->compact_planned_journey_.legs_) {
+        data_.trips_affected_by_last_update_.insert(leg.trip_);
+      }
+#endif
 
-          if (fbs_events.size() % 10000 == 0) {
-            print_timing();
-          }
+      total_reachability += MOTIS_TIMING_US(reachability);
+      total_localization += MOTIS_TIMING_US(localization);
+      total_update_load += MOTIS_TIMING_US(update_load);
+      total_fbs_events += MOTIS_TIMING_US(fbs_events);
 
-          if (reachability.ok_) {
-            ++ok_groups;
-            ++system_stats_.groups_ok_count_;
-            return;
-          }
-          ++broken_groups;
-          ++system_stats_.groups_broken_count_;
-          broken_passengers += pg->passengers_;
-        });
+      if (fbs_events.size() % 10000 == 0) {
+        print_timing();
+      }
+
+      if (reachability.ok_) {
+        ++ok_groups;
+        ++system_stats_.groups_ok_count_;
+        return;
+      }
+      ++broken_groups;
+      ++system_stats_.groups_broken_count_;
+      broken_passengers += pg->passengers_;
+    };
+
+    motis_parallel_for(data_.groups_affected_by_last_update_, group_handler);
 
     print_timing();
 
@@ -604,6 +627,13 @@ void paxmon::rt_updates_applied() {
           check_graph_integrity(data_.graph_, sched),
           "rt_updates_applied: check_graph_integrity (after load update)");
     }
+
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+    auto& rw_sched = get_schedule();
+    for (auto const trp : data_.trips_affected_by_last_update_) {
+      sync_graph_load(rw_sched, data_, trp);
+    }
+#endif
 
     if (write_mcfp_scenarios_ &&
         broken_groups >= mcfp_scenario_min_broken_groups_) {
@@ -675,11 +705,18 @@ void paxmon::rt_updates_applied() {
     utl::verify(check_graph_integrity(data_.graph_, sched),
                 "rt_updates_applied: check_graph_integrity (end)");
   }
+
+  data_.trips_affected_by_last_update_.clear();
 }
 
 msg_ptr paxmon::add_groups(msg_ptr const& msg) {
-  auto const& sched = get_schedule();
   auto const req = motis_content(AddPassengerGroupsRequest, msg);
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+  auto& sched = get_schedule();
+  std::set<trip const*> affected_trips;
+#else
+  auto const& sched = get_schedule();
+#endif
 
   auto const added_groups =
       utl::to_vec(*req->groups(), [&](PassengerGroup const* pg_fbs) {
@@ -692,10 +729,23 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
                 from_fbs(sched, pg_fbs)));
         pg->id_ = id;
         add_passenger_group_to_graph(sched, data_, *pg);
+
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+        for (auto const& leg : pg->compact_planned_journey_.legs_) {
+          affected_trips.insert(leg.trip_);
+        }
+#endif
+
         return pg;
       });
 
   print_allocator_stats(data_.graph_);
+
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+  for (auto const trp : affected_trips) {
+    sync_graph_load(sched, data_, trp);
+  }
+#endif
 
   message_creator mc;
   mc.create_and_finish(
@@ -709,12 +759,22 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
 
 msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
   auto const req = motis_content(RemovePassengerGroupsRequest, msg);
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+  std::set<trip const*> affected_trips;
+#endif
 
   for (auto const id : *req->ids()) {
     auto& pg = data_.graph_.passenger_groups_.at(id);
     if (pg == nullptr) {
       continue;
     }
+
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+    for (auto const& leg : pg->compact_planned_journey_.legs_) {
+      affected_trips.insert(leg.trip_);
+    }
+#endif
+
     remove_passenger_group_from_graph(pg);
     data_.graph_.passenger_group_allocator_.release(pg);
     pg = nullptr;
@@ -726,6 +786,13 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
     utl::verify(check_graph_integrity(data_.graph_, get_schedule()),
                 "remove_groups (end)");
   }
+
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+  auto& sched = get_schedule();
+  for (auto const trp : affected_trips) {
+    sync_graph_load(sched, data_, trp);
+  }
+#endif
 
   return {};
 }

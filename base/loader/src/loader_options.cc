@@ -31,8 +31,11 @@ std::string loader_options::graph_path() const {
     std::stringstream ss;
     ss << "graph_" << from << "-" << to << "af" << adjust_footpaths_ << "ar"
        << apply_rules_ << "et" << expand_trips_ << "ef" << expand_footpaths_
-       << "ptd" << planned_transfer_delta_ << "nlt" << no_local_transport_
-       << ".raw";
+       << "ptd" << planned_transfer_delta_ << "nlt" << no_local_transport_;
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+    ss << "cap";
+#endif
+    ss << ".raw";
     return ss.str();
   } else {
     return graph_path_;

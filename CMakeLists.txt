@@ -43,6 +43,8 @@ if (MOTIS_CUDA)
   enable_language(CUDA)
 endif()
 
+option(MOTIS_CAPACITY_IN_SCHEDULE "store capacity and load in light connections" OFF)
+
 option(MOTIS_LINT "enable lint (clang-tidy) target" OFF)
 option(MOTIS_COV "enable coverage (coverage) target" OFF)
 
@@ -150,6 +152,10 @@ if (MOTIS_AVX2)
   else()
     set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -mavx2 -mfma)
   endif()
+endif()
+
+if(MOTIS_CAPACITY_IN_SCHEDULE)
+  set(MOTIS_COMPILE_DEFINITIONS MOTIS_CAPACITY_IN_SCHEDULE ${MOTIS_COMPILE_DEFINITIONS})
 endif()
 
 
