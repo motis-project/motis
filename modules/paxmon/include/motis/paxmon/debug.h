@@ -8,7 +8,7 @@
 
 namespace motis::paxmon {
 
-void print_trip(trip const* trp);
+void print_trip(schedule const& sched, trip const* trp);
 
 void print_leg(schedule const& sched, journey_leg const& leg);
 

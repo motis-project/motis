@@ -185,7 +185,7 @@ void update_tracked_groups(
                   << format_time(result.localization_->current_arrival_time_)
                   << "\n";
         if (result.localization_->in_trip()) {
-          print_trip(result.localization_->in_trip_);
+          print_trip(sched, result.localization_->in_trip_);
         }
         throw e;
       }

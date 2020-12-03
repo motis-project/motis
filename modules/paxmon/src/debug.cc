@@ -6,12 +6,15 @@
 
 namespace motis::paxmon {
 
-void print_trip(trip const* trp) {
-  fmt::print("    trip: {:7} / {:10} / {:5} / {:7} / {:10} / {}\n",
-             trp->id_.primary_.get_station_id(), trp->id_.primary_.get_time(),
-             trp->id_.primary_.train_nr_,
-             trp->id_.secondary_.target_station_id_,
-             trp->id_.secondary_.target_time_, trp->id_.secondary_.line_id_);
+void print_trip(schedule const& sched, trip const* trp) {
+  fmt::print(
+      "    trip: {:7} / {:10} / {:5} / {:7} / {:10} / {}\n",
+      sched.stations_.at(trp->id_.primary_.get_station_id())->eva_nr_.view(),
+      format_time(trp->id_.primary_.get_time()), trp->id_.primary_.train_nr_,
+      sched.stations_.at(trp->id_.secondary_.target_station_id_)
+          ->eva_nr_.view(),
+      format_time(trp->id_.secondary_.target_time_),
+      trp->id_.secondary_.line_id_);
 }
 
 void print_leg(schedule const& sched, journey_leg const& leg) {
@@ -30,7 +33,7 @@ void print_leg(schedule const& sched, journey_leg const& leg) {
   } else {
     fmt::print("\n");
   }
-  print_trip(leg.trip_);
+  print_trip(sched, leg.trip_);
 }
 
 void print_trip_section(schedule const& sched,
@@ -75,8 +78,12 @@ void print_trip_edge(schedule const& sched, graph const& g, edge const* e) {
 void print_trip_sections(graph const& g, schedule const& sched, trip const* trp,
                          trip_data const* td) {
   std::cout << "paxmon trip:\n";
-  for (auto const e : td->edges_) {
-    print_trip_edge(sched, g, e);
+  if (td != nullptr) {
+    for (auto const e : td->edges_) {
+      print_trip_edge(sched, g, e);
+    }
+  } else {
+    std::cout << "  not found\n";
   }
   std::cout << "motis trip:" << std::endl;
   for (auto const& sec : motis::access::sections(trp)) {

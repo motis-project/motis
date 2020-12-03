@@ -135,7 +135,7 @@ bool check_trip_times(graph const& g, schedule const& sched, trip const* trp,
   }
   if (!trip_ok) {
     std::cout << "trip (errors above):\n";
-    print_trip(trp);
+    print_trip(sched, trp);
     std::cout << "  sections: " << std::distance(begin(sections), end(sections))
               << ", td edges: " << td->edges_.size()
               << ", event nodes: " << nodes.size() << std::endl;
