@@ -24,11 +24,13 @@ struct trip_section_with_load {
         edge_{td == nullptr ? nullptr : td->edges_.at(idx)} {
     if (edge_ != nullptr) {
       capacity_ = edge_->capacity();
+      capacity_source_ = edge_->get_capacity_source();
     } else {
       auto const cap =
           get_capacity(sched, section_.lcon(), data.trip_capacity_map_,
                        data.category_capacity_map_);
       capacity_ = cap.first;
+      capacity_source_ = cap.second;
     }
   }
 
@@ -37,6 +39,10 @@ struct trip_section_with_load {
   inline bool has_capacity_info() const { return capacity_ != 0; }
 
   inline std::uint16_t capacity() const { return capacity_; }
+
+  inline capacity_source get_capacity_source() const {
+    return capacity_source_;
+  }
 
   std::uint16_t base_load() const {
     return edge_ != nullptr ? get_base_load(edge_->pax_connection_info_) : 0;
@@ -60,6 +66,7 @@ struct trip_section_with_load {
   motis::access::trip_section section_;
   edge const* edge_{};
   std::uint16_t capacity_{};
+  capacity_source capacity_source_{capacity_source::SPECIAL};
 };
 
 struct trip_section_load_iterator {

@@ -1,6 +1,7 @@
 #include "motis/paxmon/output/mcfp_scenario.h"
 
 #include <cstdint>
+#include <algorithm>
 #include <fstream>
 #include <iomanip>
 
@@ -46,7 +47,8 @@ void write_trip(std::ofstream& out, schedule const& sched,
   for (auto const& ts : sections_with_load{sched, data, trp}) {
     auto const& lc = ts.section_.lcon();
     auto const remaining_capacity =
-        ts.has_capacity_info() ? ts.capacity() - ts.base_load() : 0;
+        ts.has_capacity_info() ? std::max(0, ts.capacity() - ts.base_load())
+                               : 0;
     out << id << "," << ts.section_.from_station(sched).eva_nr_ << ","
         << lc.d_time_ << "," << ts.section_.to_station(sched).eva_nr_ << ","
         << lc.a_time_ << "," << remaining_capacity;

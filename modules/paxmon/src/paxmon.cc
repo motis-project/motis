@@ -28,6 +28,7 @@
 #include "motis/paxmon/build_graph.h"
 #include "motis/paxmon/checks.h"
 #include "motis/paxmon/data_key.h"
+#include "motis/paxmon/generate_capacities.h"
 #include "motis/paxmon/graph_access.h"
 #include "motis/paxmon/loader/csv/csv_journeys.h"
 #include "motis/paxmon/loader/journeys/motis_journeys.h"
@@ -52,6 +53,8 @@ namespace motis::paxmon {
 paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
   param(journey_files_, "journeys", "csv journeys or routing responses");
   param(capacity_files_, "capacity", "train capacities");
+  param(generated_capacity_file_, "generated_capacity_file",
+        "output for generated capacities");
   param(stats_file_, "stats", "statistics file");
   param(capacity_match_log_file_, "capacity_match_log",
         "capacity match log file");
@@ -141,6 +144,19 @@ void paxmon::init(motis::module::registry& reg) {
         return {};
       },
       ctx::access_t::WRITE);
+
+  // --init /paxmon/generate_capacities
+  // --paxmon.generated_capacity_file file.csv
+  reg.register_op(
+      "/paxmon/generate_capacities", [&](msg_ptr const&) -> msg_ptr {
+        if (generated_capacity_file_.empty()) {
+          LOG(logging::error)
+              << "generate_capacities: no output file specified";
+          return {};
+        }
+        generate_capacities(get_schedule(), data_, generated_capacity_file_);
+        return {};
+      });
 
   reg.register_op("/paxmon/add_groups", [&](msg_ptr const& msg) -> msg_ptr {
     return add_groups(msg);
