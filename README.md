@@ -1,4 +1,4 @@
-<p align="center"><img src="logo.svg" width="196" height="196"></p>
+<p align="center"><img src="logo.svg" width="196" height="107"></p>
 
 ![Linux Build](https://github.com/motis-project/motis/workflows/Linux%20Build/badge.svg)
 ![Windows Build](https://github.com/motis-project/motis/workflows/Windows%20Build/badge.svg)
