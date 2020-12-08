@@ -129,7 +129,8 @@ msg_ptr make_routing_request(std::string const& from_eva,
 query_generator::query_generator(const schedule& sched)
     : sched_(sched),
       interval_gen_(sched.schedule_begin_ + SCHEDULE_OFFSET_MINUTES * 60,
-                    sched.schedule_end_) {
+                    sched.schedule_begin_ + SCHEDULE_OFFSET_MINUTES * 60 +
+                        SECONDS_A_DAY) {
   station_nodes_ =
       utl::to_vec(sched.station_nodes_, [](station_node_ptr const& s) {
         return static_cast<station_node const*>(s.get());

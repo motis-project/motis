@@ -2,6 +2,8 @@
 #include <fstream>
 #include <vector>
 
+#include "boost/filesystem.hpp"
+
 #include "conf/configuration.h"
 #include "conf/options_parser.h"
 
@@ -15,7 +17,13 @@
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/message_to_journeys.h"
 
+#include "motis/paxmon/build_graph.h"
+#include "motis/paxmon/capacity.h"
+#include "motis/paxmon/generate_capacities.h"
+#include "motis/paxmon/get_load.h"
+#include "motis/paxmon/loader/journeys/to_compact_journey.h"
 #include "motis/paxmon/output/journey_converter.h"
+#include "motis/paxmon/paxmon_data.h"
 #include "motis/paxmon/tools/generator/query_generator.h"
 #include "motis/paxmon/tools/groups/group_generator.h"
 
@@ -23,14 +31,19 @@ using namespace motis;
 using namespace motis::bootstrap;
 using namespace motis::module;
 using namespace motis::routing;
+using namespace motis::paxmon;
 using namespace motis::paxmon::tools::generator;
 using namespace motis::paxmon::output;
 using namespace motis::paxmon::tools::groups;
 
+namespace fs = boost::filesystem;
+
 struct generator_settings : public conf::configuration {
   generator_settings() : configuration{"Generator Settings"} {
     param(csv_journey_path_, "out,o", "Output CSV Journey file");
-    param(num_threads_, "num_threads", "Number of worker threads");
+    param(capacity_path_, "capacity", "Capacity file (in/out)");
+    param(generate_capacities_, "generate_capacities",
+          "Generate capacity file (otherwise load existing file)");
     param(pax_count_, "pax_count", "Total number of passengers");
     param(group_size_mean_, "group_size_mean", "Group size mean");
     param(group_size_stddev_, "group_size_stddev",
@@ -38,10 +51,15 @@ struct generator_settings : public conf::configuration {
     param(group_count_mean_, "group_count_mean", "Group count mean");
     param(group_count_stddev_, "group_count_stddev",
           "Group count standard deviation");
+    param(max_load_, "max_load",
+          "Max allowed trip load (e.g. 1.0 for 100%, set to 0.0 to disable "
+          "check)");
     param(router_target_, "router_target", "Router target");
+    param(num_threads_, "num_threads", "Number of worker threads");
   }
 
   std::string csv_journey_path_{"journeys.csv"};
+  std::string capacity_path_{"capacities.csv"};
   unsigned num_threads_{std::thread::hardware_concurrency()};
   std::string router_target_;
 
@@ -52,17 +70,24 @@ struct generator_settings : public conf::configuration {
 
   double group_count_mean_{2.0};
   double group_count_stddev_{10.0};
+
+  bool generate_capacities_{true};
+  double max_load_{0.0};
 };
 
 struct journey_generator {
-  journey_generator(motis_instance& instance,
+  journey_generator(motis_instance& instance, paxmon_data& pmd,
                     generator_settings const& generator_opt,
-                    group_generator& group_gen)
+                    group_generator& group_gen, bool check_load)
       : instance_{instance},
-        query_gen_{instance.sched()},
+        sched_{instance_.sched()},
+        pmd_{pmd},
+        query_gen_{sched_},
         group_gen_{group_gen},
         generator_opt_{generator_opt},
-        converter_{generator_opt.csv_journey_path_} {
+        converter_{generator_opt.csv_journey_path_},
+        check_load_{check_load},
+        max_load_{generator_opt.max_load_} {
     converter_.writer_.enable_exceptions();
   }
 
@@ -84,6 +109,9 @@ struct journey_generator {
   unsigned generated_group_count() const { return groups_generated_; }
   unsigned generated_routing_query_count() const { return routing_queries_; }
   unsigned different_journey_count() const { return different_journeys_; }
+  unsigned over_capacity_skipped_count() const {
+    return over_capacity_skipped_;
+  }
 
 private:
   bool generate_next() {
@@ -114,33 +142,73 @@ private:
 
     auto generated = 0U;
     for (auto const& j : journeys) {
-      auto const primary_id = next_primary_id_++;
+      auto const primary_id = next_primary_id_;
       auto const group_count = group_gen_.get_group_count();
+      auto groups_added = 0U;
       for (auto secondary_id = 1ULL; secondary_id <= group_count;
            ++secondary_id) {
         auto const group_size = group_gen_.get_group_size();
+        if (!check_journey_load(j, group_size, primary_id, secondary_id)) {
+          break;
+        }
         converter_.write_journey(j, primary_id, secondary_id, group_size);
         generated += group_size;
+        ++groups_added;
       }
-      groups_generated_ += group_count;
+      if (groups_added > 0) {
+        ++next_primary_id_;
+        groups_generated_ += groups_added;
+        ++different_journeys_;
+      }
     }
-    different_journeys_ += journeys.size();
 
     return generated;
   }
 
+  bool check_journey_load(journey const& j, std::uint16_t group_size,
+                          std::uint64_t primary_id,
+                          std::uint64_t secondary_id) {
+    if (!check_load_) {
+      return true;
+    }
+    auto const cj = to_compact_journey(j, sched_);
+    auto pg = pmd_.graph_.passenger_groups_.emplace_back(
+        pmd_.graph_.passenger_group_allocator_.create(passenger_group{
+            cj,
+            static_cast<std::uint64_t>(pmd_.graph_.passenger_groups_.size()),
+            data_source{primary_id, secondary_id}, group_size}));
+    add_passenger_group_to_graph(sched_, pmd_, *pg);
+    for (auto const e : pg->edges_) {
+      if (e->has_capacity() &&
+          get_base_load(e->get_pax_connection_info()) >
+              static_cast<std::uint16_t>(e->capacity() * max_load_)) {
+        remove_passenger_group_from_graph(pg);
+        pmd_.graph_.passenger_groups_.pop_back();
+        ++over_capacity_skipped_;
+        return false;
+      }
+    }
+    return true;
+  }
+
   motis_instance& instance_;
+  schedule const& sched_;
+  paxmon_data& pmd_;
   query_generator query_gen_;
   group_generator& group_gen_;
   generator_settings const& generator_opt_;
+  journey_converter converter_;
+  utl::progress_tracker_ptr progress_tracker_;
+
   unsigned in_flight_{};
   unsigned pax_generated_{};
   unsigned groups_generated_{};
   unsigned routing_queries_{};
   unsigned different_journeys_{};
+  unsigned over_capacity_skipped_{};
   std::uint64_t next_primary_id_{1};
-  journey_converter converter_;
-  utl::progress_tracker_ptr progress_tracker_;
+  bool check_load_{};
+  double max_load_{};
 };
 
 int main(int argc, char const** argv) {
@@ -210,13 +278,41 @@ int main(int argc, char const** argv) {
     return 1;
   }
 
+  auto const check_load = generator_opt.max_load_ > 0.0;
+  auto pmd = paxmon_data{};
+  auto const& sched = instance.sched();
+
+  if (check_load) {
+    if (generator_opt.generate_capacities_) {
+      std::cout << "Generating capacity information..." << std::endl;
+      generate_capacities(sched, pmd, generator_opt.capacity_path_);
+    }
+    if (!fs::exists(generator_opt.capacity_path_)) {
+      std::cout << "Capacity file not found: " << generator_opt.capacity_path_
+                << " (try --generate_capacities 1)\n";
+      return 1;
+    }
+    auto const entries_loaded =
+        load_capacities(sched, generator_opt.capacity_path_,
+                        pmd.trip_capacity_map_, pmd.category_capacity_map_);
+    std::cout << "Loaded " << entries_loaded << " capacity entries"
+              << std::endl;
+    if (entries_loaded == 0) {
+      std::cout
+          << "No capacity information found! (try --generate_capacities 1)"
+          << std::endl;
+      return 1;
+    }
+  }
+
   std::cout << "\nGenerating journeys for at least " << generator_opt.pax_count_
             << " passengers..." << std::endl;
 
   group_generator group_gen{
       generator_opt.group_size_mean_, generator_opt.group_size_stddev_,
       generator_opt.group_count_mean_, generator_opt.group_count_stddev_};
-  journey_generator journey_gen{instance, generator_opt, group_gen};
+  journey_generator journey_gen{instance, pmd, generator_opt, group_gen,
+                                check_load};
   {
     auto bars = utl::global_progress_bars{};
     journey_gen.run();
@@ -228,6 +324,10 @@ int main(int argc, char const** argv) {
             << " different journeys ("
             << journey_gen.generated_routing_query_count()
             << " routing queries).\n";
+  if (check_load) {
+    std::cout << "Had to generate " << journey_gen.over_capacity_skipped_count()
+              << " additional journeys because of load restrictions.\n";
+  }
 
   return 0;
 }
