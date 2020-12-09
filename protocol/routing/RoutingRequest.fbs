@@ -98,7 +98,8 @@ enum SearchType : byte {
   Accessibility,
   DefaultPrice,
   DefaultPriceRegional,
-  PerceivedTravelTime
+  PerceivedTravelTime,
+  LoadSum
 }
 
 // ----------------------------------------------------------------------------

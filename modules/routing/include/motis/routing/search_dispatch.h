@@ -56,6 +56,8 @@ inline search_result search_dispatch(search_query const& q,
 #ifdef MOTIS_CAPACITY_IN_SCHEDULE
     case SearchType_PerceivedTravelTime:
       return get_connections<perceived_travel_time_label<Dir>, Gen>(q);
+    case SearchType_LoadSum:
+      return get_connections<load_sum_label<Dir>, Gen>(q);
 #endif
     default: break;
   }
