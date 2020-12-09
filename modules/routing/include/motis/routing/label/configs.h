@@ -5,6 +5,7 @@
 #include "motis/routing/label/criteria/accessibility.h"
 #include "motis/routing/label/criteria/late_connections.h"
 #include "motis/routing/label/criteria/no_intercity.h"
+#include "motis/routing/label/criteria/perceived_travel_time.h"
 #include "motis/routing/label/criteria/transfers.h"
 #include "motis/routing/label/criteria/travel_time.h"
 #include "motis/routing/label/criteria/weighted.h"
@@ -99,5 +100,22 @@ using accessibility_label =
           dominance<absurdity_post_search_tb, travel_time_alpha_dominance,
                     transfers_dominance, accessibility_dominance>,
           comparator<transfers_dominance, accessibility_dominance>>;
+
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+template <search_dir Dir>
+using perceived_travel_time_label =
+    label<Dir, MAX_TRAVEL_TIME, false, get_travel_time_lb,
+          label_data<travel_time, transfers, perceived_travel_time, absurdity>,
+          initializer<travel_time_initializer, transfers_initializer,
+                      perceived_travel_time_initializer, absurdity_initializer>,
+          updater<travel_time_updater, transfers_updater,
+                  perceived_travel_time_updater, absurdity_updater>,
+          filter<travel_time_filter, transfers_filter>,
+          dominance<absurdity_tb, travel_time_dominance, transfers_dominance,
+                    perceived_travel_time_dominance>,
+          dominance<absurdity_post_search_tb, transfers_dominance,
+                    perceived_travel_time_dominance>,
+          comparator<transfers_dominance, perceived_travel_time_dominance>>;
+#endif
 
 }  // namespace motis::routing

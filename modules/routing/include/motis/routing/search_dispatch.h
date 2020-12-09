@@ -53,6 +53,10 @@ inline search_result search_dispatch(search_query const& q,
       return get_connections<late_connections_label_for_tests<Dir>, Gen>(q);
     case SearchType_Accessibility:
       return get_connections<accessibility_label<Dir>, Gen>(q);
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+    case SearchType_PerceivedTravelTime:
+      return get_connections<perceived_travel_time_label<Dir>, Gen>(q);
+#endif
     default: break;
   }
   throw std::system_error(error::search_type_not_supported);

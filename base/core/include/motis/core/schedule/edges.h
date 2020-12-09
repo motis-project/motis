@@ -26,7 +26,12 @@ struct edge_cost {
         time_(time),
         price_(0),
         transfer_(false),
-        accessibility_(0) {}
+        accessibility_(0) {
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+    capacity_ = c->capacity_;
+    passengers_ = c->passengers_;
+#endif
+  }
 
   explicit edge_cost(duration time, bool transfer = false, uint16_t price = 0,
                      uint16_t accessibility = 0)
@@ -43,6 +48,10 @@ struct edge_cost {
   uint16_t price_;
   bool transfer_;
   uint16_t accessibility_;
+#ifdef MOTIS_CAPACITY_IN_SCHEDULE
+  uint16_t capacity_{};
+  uint16_t passengers_{};
+#endif
 };
 
 const edge_cost NO_EDGE = edge_cost();
