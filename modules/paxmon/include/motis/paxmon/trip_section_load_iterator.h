@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <stdexcept>
 #include <tuple>
 
 #include "utl/verify.h"
@@ -22,11 +24,13 @@ struct trip_section_with_load {
         edge_{td == nullptr ? nullptr : td->edges_.at(idx)} {
     if (edge_ != nullptr) {
       capacity_ = edge_->capacity();
+      capacity_source_ = edge_->get_capacity_source();
     } else {
       auto const cap =
           get_capacity(sched, section_.lcon(), data.trip_capacity_map_,
                        data.category_capacity_map_);
       capacity_ = cap.first;
+      capacity_source_ = cap.second;
     }
   }
 
@@ -35,6 +39,10 @@ struct trip_section_with_load {
   inline bool has_capacity_info() const { return capacity_ != 0; }
 
   inline std::uint16_t capacity() const { return capacity_; }
+
+  inline capacity_source get_capacity_source() const {
+    return capacity_source_;
+  }
 
   std::uint16_t base_load() const {
     return edge_ != nullptr ? get_base_load(edge_->pax_connection_info_) : 0;
@@ -58,6 +66,7 @@ struct trip_section_with_load {
   motis::access::trip_section section_;
   edge const* edge_{};
   std::uint16_t capacity_{};
+  capacity_source capacity_source_{capacity_source::SPECIAL};
 };
 
 struct trip_section_load_iterator {
@@ -189,6 +198,9 @@ struct sections_with_load {
     }
   }
 
+  inline std::size_t size() const { return trip_->edges_->size(); }
+  inline bool empty() const { return trip_->edges_->empty(); }
+
   inline bool has_load_info() const { return td_ != nullptr; }
 
   iterator begin() const { return {sched_, data_, trip_, td_, 0}; }
@@ -198,6 +210,21 @@ struct sections_with_load {
 
   friend iterator begin(sections_with_load const& s) { return s.begin(); }
   friend iterator end(sections_with_load const& s) { return s.end(); }
+
+  trip_section_with_load operator[](std::size_t idx) const {
+    return begin()[static_cast<int>(idx)];
+  }
+
+  trip_section_with_load at(std::size_t idx) const {
+    if (idx < size()) {
+      return (*this)[idx];
+    } else {
+      throw std::out_of_range{"trip_section_with_load::at(): out of range"};
+    }
+  }
+
+  trip_section_with_load front() const { return at(0); }
+  trip_section_with_load back() const { return at(size() - 1); }
 
   schedule const& sched_;
   paxmon_data const& data_;

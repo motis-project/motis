@@ -1,11 +1,13 @@
 #include "motis/paxmon/output/mcfp_scenario.h"
 
 #include <cstdint>
+#include <algorithm>
 #include <fstream>
 #include <iomanip>
 
 #include "utl/verify.h"
 
+#include "motis/core/conv/trip_conv.h"
 #include "motis/hash_map.h"
 
 #include "motis/paxmon/messages.h"
@@ -45,7 +47,8 @@ void write_trip(std::ofstream& out, schedule const& sched,
   for (auto const& ts : sections_with_load{sched, data, trp}) {
     auto const& lc = ts.section_.lcon();
     auto const remaining_capacity =
-        ts.has_capacity_info() ? ts.capacity() - ts.base_load() : 0;
+        ts.has_capacity_info() ? std::max(0, ts.capacity() - ts.base_load())
+                               : 0;
     out << id << "," << ts.section_.from_station(sched).eva_nr_ << ","
         << lc.d_time_ << "," << ts.section_.to_station(sched).eva_nr_ << ","
         << lc.a_time_ << "," << remaining_capacity;
@@ -63,20 +66,31 @@ void write_trips(fs::path const& dir, schedule const& sched,
                  paxmon_data const& data,
                  mcd::hash_map<trip const*, std::uint64_t>& trip_ids,
                  bool const include_trip_info) {
-  std::ofstream out{(dir / "trips.csv").string()};
-  out.exceptions(std::ios_base::failbit | std::ios_base::badbit);
-  out << "id,from_station,departure,to_station,arrival,capacity";
+  std::ofstream trips_file{(dir / "trips.csv").string()};
+  trips_file.exceptions(std::ios_base::failbit | std::ios_base::badbit);
+  trips_file << "id,from_station,departure,to_station,arrival,capacity";
   if (include_trip_info) {
-    out << ",category,train_nr";
+    trips_file << ",category,train_nr";
   }
-  out << "\n";
+  trips_file << "\n";
+
+  std::ofstream trip_ids_file{(dir / "trip_ids.csv").string()};
+  trip_ids_file.exceptions(std::ios_base::failbit | std::ios_base::badbit);
+  trip_ids_file << "id,station,train_nr,time,target_station,target_time,line\n";
+
   auto id = 1ULL;
   for (auto const& trp : sched.trip_mem_) {
     if (trp->edges_->empty()) {
       continue;
     }
-    write_trip(out, sched, data, trp.get(), id, include_trip_info);
+    write_trip(trips_file, sched, data, trp.get(), id, include_trip_info);
     trip_ids[trp.get()] = id;
+    auto const ext_trp = to_extern_trip(sched, trp.get());
+    trip_ids_file << id << "," << ext_trp.station_id_ << ","
+                  << ext_trp.train_nr_ << "," << ext_trp.time_ << ","
+                  << ext_trp.target_station_id_ << "," << ext_trp.target_time_
+                  << "," << std::quoted(ext_trp.line_id_.view(), '"', '"')
+                  << "\n";
     ++id;
   }
 }

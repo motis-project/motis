@@ -34,7 +34,7 @@ std::size_t load_capacities(schedule const& sched,
                             std::string const& capacity_file,
                             trip_capacity_map_t& trip_map,
                             category_capacity_map_t& category_map,
-                            std::string const& match_log_file);
+                            std::string const& match_log_file = "");
 
 std::pair<std::uint16_t, capacity_source> get_capacity(
     schedule const& sched, light_connection const& lc,
