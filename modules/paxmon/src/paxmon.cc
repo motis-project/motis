@@ -17,6 +17,7 @@
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/common/timing.h"
+#include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
@@ -30,6 +31,7 @@
 #include "motis/paxmon/data_key.h"
 #include "motis/paxmon/generate_capacities.h"
 #include "motis/paxmon/graph_access.h"
+#include "motis/paxmon/load_info.h"
 #include "motis/paxmon/loader/csv/csv_journeys.h"
 #include "motis/paxmon/loader/journeys/motis_journeys.h"
 #include "motis/paxmon/localization.h"
@@ -164,6 +166,10 @@ void paxmon::init(motis::module::registry& reg) {
 
   reg.register_op("/paxmon/remove_groups", [&](msg_ptr const& msg) -> msg_ptr {
     return remove_groups(msg);
+  });
+
+  reg.register_op("/paxmon/trip_load_info", [&](msg_ptr const& msg) -> msg_ptr {
+    return get_trip_load_info(msg);
   });
 
   if (!mcfp_scenario_dir_.empty()) {
@@ -744,6 +750,18 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
   }
 
   return {};
+}
+
+msg_ptr paxmon::get_trip_load_info(msg_ptr const& msg) {
+  auto const req = motis_content(TripId, msg);
+  auto const& sched = get_schedule();
+  auto const trp = from_fbs(sched, req);
+
+  auto const tli = calc_trip_load_info(data_, trp);
+  message_creator mc;
+  mc.create_and_finish(MsgContent_TripLoadInfo,
+                       to_fbs(mc, sched, data_.graph_, tli).Union());
+  return make_msg(mc);
 }
 
 }  // namespace motis::paxmon

@@ -24,4 +24,6 @@ struct trip_load_info {
   std::vector<edge_load_info> edges_;
 };
 
+trip_load_info calc_trip_load_info(paxmon_data const& data, trip const* trp);
+
 }  // namespace motis::paxmon
