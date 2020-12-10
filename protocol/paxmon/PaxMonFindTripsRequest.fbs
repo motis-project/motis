@@ -1,0 +1,5 @@
+namespace motis.paxmon;
+
+table PaxMonFindTripsRequest {
+  train_nr: uint;
+}

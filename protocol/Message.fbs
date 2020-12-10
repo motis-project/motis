@@ -75,6 +75,8 @@ include "paxmon/MonitoringUpdate.fbs";
 include "paxmon/AddPassengerGroupsRequest.fbs";
 include "paxmon/AddPassengerGroupsResponse.fbs";
 include "paxmon/RemovePassengerGroupsRequest.fbs";
+include "paxmon/PaxMonFindTripsRequest.fbs";
+include "paxmon/PaxMonFindTripsResponse.fbs";
 include "paxmon/TripLoadInfo.fbs";
 include "paxforecast/PassengerForecast.fbs";
 
@@ -222,7 +224,9 @@ union MsgContent {
   motis.paxmon.AddPassengerGroupsRequest                                  = 098,
   motis.paxmon.AddPassengerGroupsResponse                                 = 099,
   motis.paxmon.RemovePassengerGroupsRequest                               = 100,
-  motis.paxmon.TripLoadInfo                                               = 101
+  motis.paxmon.TripLoadInfo                                               = 101,
+  motis.paxmon.PaxMonFindTripsRequest                                     = 102,
+  motis.paxmon.PaxMonFindTripsResponse                                    = 103
 }
 
 // Destination Examples:

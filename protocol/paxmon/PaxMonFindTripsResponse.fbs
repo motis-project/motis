@@ -1,0 +1,7 @@
+include "base/TripServiceInfo.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonFindTripsResponse {
+  trips: [motis.TripServiceInfo];
+}

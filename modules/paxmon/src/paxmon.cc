@@ -41,6 +41,7 @@
 #include "motis/paxmon/output/mcfp_scenario.h"
 #include "motis/paxmon/over_capacity_report.h"
 #include "motis/paxmon/reachability.h"
+#include "motis/paxmon/service_info.h"
 #include "motis/paxmon/update_load.h"
 
 namespace fs = boost::filesystem;
@@ -170,6 +171,10 @@ void paxmon::init(motis::module::registry& reg) {
 
   reg.register_op("/paxmon/trip_load_info", [&](msg_ptr const& msg) -> msg_ptr {
     return get_trip_load_info(msg);
+  });
+
+  reg.register_op("/paxmon/find_trips", [&](msg_ptr const& msg) -> msg_ptr {
+    return find_trips(msg);
   });
 
   if (!mcfp_scenario_dir_.empty()) {
@@ -761,6 +766,31 @@ msg_ptr paxmon::get_trip_load_info(msg_ptr const& msg) {
   message_creator mc;
   mc.create_and_finish(MsgContent_TripLoadInfo,
                        to_fbs(mc, sched, data_.graph_, tli).Union());
+  return make_msg(mc);
+}
+
+msg_ptr paxmon::find_trips(msg_ptr const& msg) {
+  auto const req = motis_content(PaxMonFindTripsRequest, msg);
+  auto const& sched = get_schedule();
+
+  message_creator mc;
+  std::vector<flatbuffers::Offset<TripServiceInfo>> trips;
+  auto const search_entry = std::make_pair(
+      primary_trip_id{0U, req->train_nr(), 0U}, static_cast<trip*>(nullptr));
+  for (auto it = std::lower_bound(begin(sched.trips_), end(sched.trips_),
+                                  search_entry);
+       it != end(sched.trips_) && it->first.train_nr_ == req->train_nr();
+       ++it) {
+    auto const trp = static_cast<trip const*>(it->second);
+    if (trp->edges_->empty()) {
+      continue;
+    }
+    trips.emplace_back(to_fbs_trip_service_info(mc, sched, trp));
+  }
+
+  mc.create_and_finish(
+      MsgContent_PaxMonFindTripsResponse,
+      CreatePaxMonFindTripsResponse(mc, mc.CreateVector(trips)).Union());
   return make_msg(mc);
 }
 

@@ -46,6 +46,10 @@ flatbuffers::Offset<MonitoringEvent> to_fbs(schedule const& sched,
 flatbuffers::Offset<ServiceInfo> to_fbs(flatbuffers::FlatBufferBuilder& fbb,
                                         service_info const& si);
 
+flatbuffers::Offset<TripServiceInfo> to_fbs_trip_service_info(
+    flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
+    trip const* trp);
+
 flatbuffers::Offset<EdgeLoadInfo> to_fbs(flatbuffers::FlatBufferBuilder& fbb,
                                          schedule const& sched, graph const& g,
                                          edge_load_info const& eli);
