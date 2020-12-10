@@ -1,5 +1,6 @@
 include "paxmon/PassengerGroup.fbs";
 include "paxmon/PassengerLocalization.fbs";
+include "paxmon/TripLoadInfo.fbs";
 
 namespace motis.paxforecast;
 
@@ -14,47 +15,8 @@ table PassengerGroupForecast {
   forecast_alternatives: [ForecastAlternative];
 }
 
-struct CdfEntry {
-  passengers: uint;
-  probability: float;
-}
-
-enum CapacityType : byte { Known, Unknown, Unlimited }
-
-table ServiceInfo {
-  name: string;
-  category: string;
-  train_nr: uint;
-  line: string;
-  provider: string;
-  clasz: ubyte;
-}
-
-table EdgeForecast {
-  from: motis.Station;
-  to: motis.Station;
-  departure_schedule_time: ulong;
-  departure_current_time: ulong;
-  arrival_schedule_time: ulong;
-  arrival_current_time: ulong;
-  capacity_type: CapacityType;
-  capacity: uint;
-  passenger_cdf: [CdfEntry];
-  updated: bool;
-  possibly_over_capacity: bool;
-  expected_passengers: uint;
-}
-
-table TripForecast {
-  trip: motis.TripId;
-  primary_station: motis.Station;
-  secondary_station: motis.Station;
-  service_infos: [ServiceInfo];
-  edges: [EdgeForecast];
-}
-
 table PassengerForecast {
   system_time: ulong;
   groups: [PassengerGroupForecast];
-  trips: [TripForecast];
+  trips: [motis.paxmon.TripLoadInfo];
 }

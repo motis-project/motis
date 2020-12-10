@@ -18,7 +18,7 @@ namespace motis::paxforecast {
 
 load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
                                  simulation_result const& sim_result) {
-  mcd::hash_map<motis::paxmon::edge const*, edge_forecast> edges;
+  mcd::hash_map<motis::paxmon::edge const*, edge_load_info> edges;
   mcd::hash_set<trip const*> trips;
   std::mutex mutex;
 
@@ -44,7 +44,7 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
 
     std::lock_guard guard{mutex};
     edges.emplace(
-        e, edge_forecast{e, cdf, true, possibly_over_capacity, expected_pax});
+        e, edge_load_info{e, cdf, true, possibly_over_capacity, expected_pax});
     for (auto const& trp : e->get_trips(sched)) {
       trips.emplace(trp);
     }
@@ -52,7 +52,7 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
 
   load_forecast lfc;
   lfc.trips_ = utl::to_vec(trips, [&](auto const trp) {
-    return trip_forecast{
+    return trip_load_info{
         trp,
         utl::all(data.graph_.trip_data_.at(trp)->edges_)  //
             | utl::remove_if([](auto const e) { return !e->is_trip(); })  //
@@ -67,8 +67,8 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
                       load_factor_possibly_ge(cdf, e->capacity(), 1.0F);
                   auto const expected_pax =
                       get_expected_load(e->get_pax_connection_info());
-                  return edge_forecast{e, cdf, false, possibly_over_capacity,
-                                       expected_pax};
+                  return edge_load_info{e, cdf, false, possibly_over_capacity,
+                                        expected_pax};
                 }
               })  //
             | utl::vec()};

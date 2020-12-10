@@ -3,6 +3,7 @@
 #include <cassert>
 #include <algorithm>
 
+#include "utl/enumerate.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
@@ -10,6 +11,8 @@
 #include "motis/core/access/trip_access.h"
 #include "motis/core/conv/station_conv.h"
 #include "motis/core/conv/trip_conv.h"
+
+#include "motis/paxmon/get_load.h"
 
 using namespace motis::module;
 using namespace flatbuffers;
@@ -163,6 +166,71 @@ Offset<MonitoringEvent> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
       to_fbs(sched, fbb, me.group_), fbs_localization_type(me.localization_),
       to_fbs(sched, fbb, me.localization_),
       static_cast<ReachabilityStatus>(me.reachability_status_));
+}
+
+Offset<Vector<CdfEntry const*>> cdf_to_fbs(FlatBufferBuilder& fbb,
+                                           pax_cdf const& cdf) {
+  auto entries = std::vector<CdfEntry>{};
+  entries.reserve(cdf.data_.size());
+  auto last_prob = 0.0F;
+  for (auto const& [pax, prob] : utl::enumerate(cdf.data_)) {
+    if (prob != last_prob) {
+      entries.emplace_back(pax, prob);
+      last_prob = prob;
+    }
+  }
+  return fbb.CreateVectorOfStructs(entries);
+}
+
+CapacityType get_capacity_type(motis::paxmon::edge const* e) {
+  if (e->has_unknown_capacity()) {
+    return CapacityType_Unknown;
+  } else if (e->has_unlimited_capacity()) {
+    return CapacityType_Unlimited;
+  } else {
+    return CapacityType_Known;
+  }
+}
+
+Offset<ServiceInfo> to_fbs(FlatBufferBuilder& fbb, service_info const& si) {
+  return CreateServiceInfo(
+      fbb, fbb.CreateString(si.name_), fbb.CreateString(si.category_),
+      si.train_nr_, fbb.CreateString(si.line_), fbb.CreateString(si.provider_),
+      static_cast<service_class_t>(si.clasz_));
+}
+
+Offset<EdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
+                            graph const& g, edge_load_info const& eli) {
+  auto const from = eli.edge_->from(g);
+  auto const to = eli.edge_->to(g);
+  return CreateEdgeLoadInfo(fbb, to_fbs(fbb, from->get_station(sched)),
+                            to_fbs(fbb, to->get_station(sched)),
+                            motis_to_unixtime(sched, from->schedule_time()),
+                            motis_to_unixtime(sched, from->current_time()),
+                            motis_to_unixtime(sched, to->schedule_time()),
+                            motis_to_unixtime(sched, to->current_time()),
+                            get_capacity_type(eli.edge_), eli.edge_->capacity(),
+                            cdf_to_fbs(fbb, eli.forecast_cdf_), eli.updated_,
+                            eli.possibly_over_capacity_,
+                            eli.expected_passengers_);
+}
+
+Offset<TripLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
+                            graph const& g, trip_load_info const& tli) {
+  return CreateTripLoadInfo(
+      fbb,
+      CreateTripServiceInfo(
+          fbb, to_fbs(sched, fbb, tli.trp_),
+          to_fbs(fbb,
+                 *sched.stations_.at(tli.trp_->id_.primary_.get_station_id())),
+          to_fbs(fbb, *sched.stations_.at(
+                          tli.trp_->id_.secondary_.target_station_id_)),
+          fbb.CreateVector(utl::to_vec(
+              get_service_infos(sched, tli.trp_),
+              [&](auto const& sip) { return to_fbs(fbb, sip.first); }))),
+      fbb.CreateVector(utl::to_vec(tli.edges_, [&](auto const& efc) {
+        return to_fbs(fbb, sched, g, efc);
+      })));
 }
 
 }  // namespace motis::paxmon

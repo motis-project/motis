@@ -8,8 +8,10 @@
 
 #include "motis/core/schedule/schedule.h"
 
+#include "motis/paxmon/load_info.h"
 #include "motis/paxmon/monitoring_event.h"
 #include "motis/paxmon/paxmon_data.h"
+#include "motis/paxmon/service_info.h"
 
 #include "motis/module/message.h"
 
@@ -40,5 +42,16 @@ passenger_localization from_fbs(schedule const& sched,
 flatbuffers::Offset<MonitoringEvent> to_fbs(schedule const& sched,
                                             flatbuffers::FlatBufferBuilder& fbb,
                                             monitoring_event const& me);
+
+flatbuffers::Offset<ServiceInfo> to_fbs(flatbuffers::FlatBufferBuilder& fbb,
+                                        service_info const& si);
+
+flatbuffers::Offset<EdgeLoadInfo> to_fbs(flatbuffers::FlatBufferBuilder& fbb,
+                                         schedule const& sched, graph const& g,
+                                         edge_load_info const& eli);
+
+flatbuffers::Offset<TripLoadInfo> to_fbs(flatbuffers::FlatBufferBuilder& fbb,
+                                         schedule const& sched, graph const& g,
+                                         trip_load_info const& tli);
 
 }  // namespace motis::paxmon

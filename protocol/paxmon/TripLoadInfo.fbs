@@ -1,0 +1,31 @@
+include "base/TripServiceInfo.fbs";
+include "base/Station.fbs";
+
+namespace motis.paxmon;
+
+struct CdfEntry {
+  passengers: uint;
+  probability: float;
+}
+
+enum CapacityType : byte { Known, Unknown, Unlimited }
+
+table EdgeLoadInfo {
+  from: motis.Station;
+  to: motis.Station;
+  departure_schedule_time: ulong;
+  departure_current_time: ulong;
+  arrival_schedule_time: ulong;
+  arrival_current_time: ulong;
+  capacity_type: CapacityType;
+  capacity: uint;
+  passenger_cdf: [CdfEntry];
+  updated: bool;
+  possibly_over_capacity: bool;
+  expected_passengers: uint;
+}
+
+table TripLoadInfo {
+  tsi: motis.TripServiceInfo;
+  edges: [EdgeLoadInfo];
+}

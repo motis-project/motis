@@ -8,25 +8,13 @@
 #include "motis/paxforecast/simulation_result.h"
 #include "motis/paxmon/get_load.h"
 #include "motis/paxmon/graph.h"
+#include "motis/paxmon/load_info.h"
 #include "motis/paxmon/paxmon_data.h"
 
 namespace motis::paxforecast {
 
-struct edge_forecast {
-  motis::paxmon::edge const* edge_{};
-  motis::paxmon::pax_cdf forecast_cdf_;
-  bool updated_{};
-  bool possibly_over_capacity_{};
-  std::uint16_t expected_passengers_{};
-};
-
-struct trip_forecast {
-  trip const* trp_{};
-  std::vector<edge_forecast> edges_;
-};
-
 struct load_forecast {
-  std::vector<trip_forecast> trips_;
+  std::vector<motis::paxmon::trip_load_info> trips_;
 };
 
 load_forecast calc_load_forecast(schedule const& sched,
