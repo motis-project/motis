@@ -202,7 +202,7 @@ async function loadForecastLine(file, line, dataCb, progressCb, doneCb) {
   stream.onkey = (key) => {
     const depth = stream.currentDepth();
     return (
-      depth === 4 &&
+      (depth === 4 || depth === 5) &&
       (key === "trip" ||
         key === "edges" ||
         key === "primary_station" ||

@@ -199,16 +199,23 @@ Offset<ServiceInfo> to_fbs(FlatBufferBuilder& fbb, service_info const& si) {
       static_cast<service_class_t>(si.clasz_));
 }
 
-Offset<TripServiceInfo> to_fbs_trip_service_info(FlatBufferBuilder& fbb,
-                                                 schedule const& sched,
-                                                 trip const* trp) {
+Offset<TripServiceInfo> to_fbs_trip_service_info(
+    FlatBufferBuilder& fbb, schedule const& sched, trip const* trp,
+    std::vector<std::pair<service_info, unsigned>> const& service_infos) {
   return CreateTripServiceInfo(
       fbb, to_fbs(sched, fbb, trp),
       to_fbs(fbb, *sched.stations_.at(trp->id_.primary_.get_station_id())),
       to_fbs(fbb, *sched.stations_.at(trp->id_.secondary_.target_station_id_)),
-      fbb.CreateVector(utl::to_vec(
-          get_service_infos(sched, trp),
-          [&](auto const& sip) { return to_fbs(fbb, sip.first); })));
+      fbb.CreateVector(utl::to_vec(service_infos, [&](auto const& sip) {
+        return to_fbs(fbb, sip.first);
+      })));
+}
+
+Offset<TripServiceInfo> to_fbs_trip_service_info(FlatBufferBuilder& fbb,
+                                                 schedule const& sched,
+                                                 trip const* trp) {
+  return to_fbs_trip_service_info(fbb, sched, trp,
+                                  get_service_infos(sched, trp));
 }
 
 Offset<EdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,

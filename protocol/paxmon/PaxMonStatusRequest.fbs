@@ -1,0 +1,6 @@
+namespace motis.paxmon;
+
+table PaxMonStatusRequest {
+  include_trips_affected_by_last_update: bool;
+  include_trips_with_critical_sections: bool;
+}

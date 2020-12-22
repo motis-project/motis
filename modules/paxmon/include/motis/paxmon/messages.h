@@ -47,6 +47,10 @@ flatbuffers::Offset<ServiceInfo> to_fbs(flatbuffers::FlatBufferBuilder& fbb,
                                         service_info const& si);
 
 flatbuffers::Offset<TripServiceInfo> to_fbs_trip_service_info(
+    flatbuffers::FlatBufferBuilder& fbb, schedule const& sched, trip const* trp,
+    std::vector<std::pair<service_info, unsigned>> const& service_infos);
+
+flatbuffers::Offset<TripServiceInfo> to_fbs_trip_service_info(
     flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
     trip const* trp);
 
