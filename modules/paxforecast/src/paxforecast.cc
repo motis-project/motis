@@ -396,6 +396,47 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
     MOTIS_STOP_TIMING(total_load_forecast);
     tick_stats.t_total_load_forecast_ = MOTIS_TIMING_MS(total_load_forecast);
+
+    ////////////////////////////////////////////////////////////////////////////
+    // decide which scenarios should be optimized:
+
+    auto const number_of_affected_groups = tick_stats.groups_;
+    // -> groups in pg_event_types (keys)
+
+    auto const any_affected_trip_over_capacity =
+        std::any_of(begin(lfc.trips_), end(lfc.trips_), [](auto const& tli) {
+          return std::any_of(
+              begin(tli.edges_), end(tli.edges_),
+              [](auto const& eli) { return eli.possibly_over_capacity_; });
+        });
+
+    /*
+    auto const number_of_affected_trips_over_capacity =
+        std::count(begin(lfc.trips_), end(lfc.trips_), [](auto const& tli) {
+          return std::any_of(
+              begin(tli.edges_), end(tli.edges_),
+              [](auto const& eli) { return eli.possibly_over_capacity_; });
+        });
+    */
+
+    /*
+    auto const scenario_unix_timestamp = sched.system_time_;
+    */
+
+    if ((number_of_affected_groups >= 20 && number_of_affected_groups <= 50) &&
+        any_affected_trip_over_capacity) {
+      // optimize this scenario
+      LOG(info) << "optimizing scenario";
+      message_creator opt_mc;
+      opt_mc.create_and_finish(
+          MsgContent_MonitoringUpdate,
+          motis_copy_table(MonitoringUpdate, opt_mc, mon_update).Union(),
+          "/paxassign/monitoring_update");
+      auto const opt_msg = make_msg(opt_mc);
+      motis_call(opt_msg)->val();  // waits until optimization is done
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
   }
 
   MOTIS_START_TIMING(update_tracked_groups);
