@@ -81,6 +81,12 @@ jobs:
       - uses: seanmiddleditch/gha-setup-ninja@master
 
       # ==== INSTALL ====
+      - name: Update APT
+        if: matrix.config.os != 'macos-latest'
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: sudo apt-get update
+          
       - name: Install LLVM
         if: matrix.config.os != 'macos-latest' && matrix.config.cc == 'clang-9'
         env:
