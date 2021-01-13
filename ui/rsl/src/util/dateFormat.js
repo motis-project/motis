@@ -1,16 +1,9 @@
-export const dateTimeFormat = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "long",
-});
-
-export const timeFormat = new Intl.DateTimeFormat(undefined, {
-  timeStyle: "short",
-});
+import { format } from "date-fns";
 
 export function formatDateTime(ts) {
-  return dateTimeFormat.format(new Date(ts * 1000));
+  return format(new Date(ts * 1000), "dd.MM.yyyy, HH:mm:ss O");
 }
 
 export function formatTime(ts) {
-  return timeFormat.format(new Date(ts * 1000));
+  return format(new Date(ts * 1000), "HH:mm");
 }
