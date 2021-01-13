@@ -10,59 +10,96 @@ import TimeControl from "./TimeControl";
 import TripPicker from "./TripPicker";
 import TripLoadForecastChart from "./TripLoadForecastChart";
 
-function updateStatus(setPaxMonStatus) {
-  sendPaxMonStatusRequest({ include_trips_affected_by_last_update: true })
-    .then((res) => res.json())
-    .then((data) => {
-      console.log(data.content);
-      setPaxMonStatus(data.content);
-      if (!data.content.system_time) {
-        console.log("Initial forward...");
-        sendPaxMonInitForward().then((res) => updateStatus(setPaxMonStatus));
-      }
-    });
+async function getInitialStatus(setPaxMonStatus) {
+  const res = await sendPaxMonStatusRequest({});
+  const data = await res.json();
+  setPaxMonStatus(data.content);
+  if (!data.content.system_time) {
+    console.log("Initial forward...");
+    await sendPaxMonInitForward();
+    await getInitialStatus(setPaxMonStatus);
+  }
+}
+
+async function loadAndProcessTripInfo(trip) {
+  const res = await sendPaxMonTripLoadInfoRequest(trip);
+  const data = await res.json();
+  const tli = data.content;
+  addEdgeStatistics(tli);
+  return tli;
+}
+
+async function forwardTimeStepped(
+  endTime,
+  currentTime,
+  stepSize,
+  setPaxMonStatus,
+  selectedTrip,
+  setTripLoadInfo
+) {
+  while (currentTime < endTime) {
+    currentTime = Math.min(endTime, currentTime + stepSize);
+    await sendRISForwardTimeRequest(currentTime);
+    const statusRes = await sendPaxMonStatusRequest({});
+    const statusData = await statusRes.json();
+    setPaxMonStatus(statusData.content);
+    if (selectedTrip) {
+      const tli = await loadAndProcessTripInfo(selectedTrip);
+      setTripLoadInfo(tli);
+    }
+  }
 }
 
 function App() {
   const [paxMonStatus, setPaxMonStatus] = useState(null);
+  const [selectedTrip, setSelectedTrip] = useState(null);
   const [tripLoadInfo, setTripLoadInfo] = useState(null);
+  const [forwardInProgress, setForwardInProgress] = useState(false);
 
   const systemTime = paxMonStatus?.system_time;
 
-  function forwardTimeStepped(endTime, currentTime, stepSize) {
-    const newTime = Math.min(endTime, currentTime + stepSize);
-    if (newTime > currentTime) {
-      sendRISForwardTimeRequest(newTime).then(() => {
-        forwardTimeStepped(endTime, newTime, stepSize);
-      });
-    } else {
-      updateStatus(setPaxMonStatus);
-    }
-  }
-
   function forwardTime(newTime) {
-    forwardTimeStepped(newTime, systemTime, 60);
+    if (forwardInProgress) {
+      return;
+    }
+    setForwardInProgress(true);
+    forwardTimeStepped(
+      newTime,
+      systemTime,
+      60,
+      setPaxMonStatus,
+      selectedTrip,
+      setTripLoadInfo
+    )
+      .then(() => {
+        setForwardInProgress(false);
+      })
+      .catch((e) => {
+        console.log("forwardTime failed:", e);
+        setForwardInProgress(false);
+      });
   }
 
   function loadTripInfo(trip) {
-    console.log("loadTripInfo:", trip);
-    sendPaxMonTripLoadInfoRequest(trip)
-      .then((res) => res.json())
-      .then((data) => {
-        const tli = data.content;
-        addEdgeStatistics(tli);
-        setTripLoadInfo(tli);
-        console.log(tli);
-      });
+    setSelectedTrip(trip);
+    loadAndProcessTripInfo(trip).then((tli) => {
+      setTripLoadInfo(tli);
+    });
   }
 
   useEffect(() => {
-    updateStatus(setPaxMonStatus);
+    getInitialStatus(setPaxMonStatus).catch((e) => {
+      console.log("getInitialStatus failed:", e);
+    });
   }, []);
 
   return (
     <div className="App">
-      <TimeControl systemTime={systemTime} onForwardTime={forwardTime} />
+      <TimeControl
+        systemTime={systemTime}
+        onForwardTime={forwardTime}
+        disabled={forwardInProgress}
+      />
       <TripPicker onLoadTripInfo={loadTripInfo} />
       <TripLoadForecastChart data={tripLoadInfo} systemTime={systemTime} />
     </div>

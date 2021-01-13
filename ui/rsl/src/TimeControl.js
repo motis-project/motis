@@ -8,6 +8,7 @@ function TimeControl(props) {
           <div>System time: {formatDateTime(props.systemTime)}</div>
           <button
             className="bg-gray-200 px-2 py-1 border border-gray-300 rounded-xl"
+            disabled={props.disabled}
             onClick={() => props.onForwardTime(props.systemTime + 60)}
           >
             +1m
@@ -16,6 +17,7 @@ function TimeControl(props) {
             <button
               key={hrs.toString()}
               className="bg-gray-200 px-2 py-1 border border-gray-300 rounded-xl"
+              disabled={props.disabled}
               onClick={() =>
                 props.onForwardTime(props.systemTime + 60 * 60 * hrs)
               }
