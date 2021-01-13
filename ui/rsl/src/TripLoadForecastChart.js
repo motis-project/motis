@@ -69,6 +69,11 @@ function TripLoadForecastChart(props) {
     return null;
   }
 
+  const allEdgesHaveCapacity = edges.every((e) => e.capacity);
+  if (!allEdgesHaveCapacity) {
+    return <div className="text-red-500">Missing capacity information</div>;
+  }
+
   const graphWidth = edges.length * 50;
 
   const maxPax = edges.reduce((max, ef) => Math.max(max, ef.max_pax), 0);

@@ -18,6 +18,14 @@ function TripView(props) {
   );
 }
 
+function filterTrips(trips) {
+  return trips.filter((trip) =>
+    trip.tsi.service_infos.some(
+      (si) => si.clasz === 1 || si.clasz === 2 || si.clasz === 12
+    )
+  );
+}
+
 function TripPicker(props) {
   const [trainNrText, setTrainNrText] = useState("");
   const [tripList, setTripList] = useState([]);
@@ -30,7 +38,7 @@ function TripPicker(props) {
         .then((res) => res.json())
         .then((data) => {
           console.log(data);
-          setTripList(data.content.trips);
+          setTripList(filterTrips(data.content.trips));
         });
     }
   }
@@ -66,6 +74,7 @@ function TripPicker(props) {
           <li
             key={idx.toString()}
             onClick={() => props.onLoadTripInfo(data.tsi.trip)}
+            className="cursor-pointer hover:underline"
           >
             <TripView data={data} />
           </li>
