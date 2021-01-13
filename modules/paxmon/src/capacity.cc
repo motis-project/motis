@@ -122,9 +122,11 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
       return {{lb->second, capacity_source::TRIP_EXACT}};
     } else if (lb->first.train_nr_ == train_nr) {
       return {{lb->second, capacity_source::TRAIN_NR}};
-    } else if (auto const prev = std::prev(lb);
-               prev != end(trip_map) && prev->first.train_nr_ == train_nr) {
-      return {{prev->second, capacity_source::TRAIN_NR}};
+    } else if (lb != begin(trip_map)) {
+      if (auto const prev = std::prev(lb);
+          prev != end(trip_map) && prev->first.train_nr_ == train_nr) {
+        return {{prev->second, capacity_source::TRAIN_NR}};
+      }
     }
   }
   return {};
