@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "utl/erase_if.h"
+#include "utl/progress_tracker.h"
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
@@ -128,6 +129,8 @@ void remove_passenger_group_from_graph(passenger_group* pg) {
 build_graph_stats build_graph_from_journeys(schedule const& sched,
                                             paxmon_data& data) {
   scoped_timer build_graph_timer{"build paxmon graph from journeys"};
+  auto progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker->in_high(data.graph_.passenger_groups_.size());
 
   auto stats = build_graph_stats{};
   for (auto& pg : data.graph_.passenger_groups_) {
@@ -145,6 +148,7 @@ build_graph_stats build_graph_from_journeys(schedule const& sched,
           << "could not add passenger group: " << e.what();
       ++stats.groups_not_added_;
     }
+    progress_tracker->increment();
   }
   if (stats.groups_not_added_ != 0) {
     LOG(motis::logging::error)

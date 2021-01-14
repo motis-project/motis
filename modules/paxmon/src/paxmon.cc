@@ -23,6 +23,7 @@
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_parallel_for.h"
 #include "motis/module/context/motis_publish.h"
+#include "motis/module/event_collector.h"
 #include "motis/module/message.h"
 
 #include "motis/paxmon/broken_interchanges_report.h"
@@ -54,8 +55,6 @@ using namespace motis::rt;
 namespace motis::paxmon {
 
 paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
-  param(journey_files_, "journeys", "csv journeys or routing responses");
-  param(capacity_files_, "capacity", "train capacities");
   param(generated_capacity_file_, "generated_capacity_file",
         "output for generated capacities");
   param(stats_file_, "stats", "statistics file");
@@ -93,23 +92,67 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
 
 paxmon::~paxmon() = default;
 
-void paxmon::init(motis::module::registry& reg) {
-  LOG(info) << "paxmon module loaded";
+void paxmon::import(motis::module::registry& reg) {
+  std::make_shared<event_collector>(
+      get_data_directory().generic_string(), "paxmon", reg,
+      [this](std::map<std::string, msg_ptr> const& dependencies) {
+        using namespace motis::import;
+        auto const msg = dependencies.at("PAXMON_DATA");
 
+        for (auto const* ip : *motis_content(FileEvent, msg)->paths()) {
+          auto const tag = ip->tag()->str();
+          auto const path = ip->path()->str();
+          if (tag == "capacity") {
+            if (fs::is_regular_file(path)) {
+              capacity_files_.emplace_back(path);
+            } else {
+              LOG(warn) << "capacity file not found: " << path;
+              import_successful_ = false;
+            }
+          } else if (tag == "journeys") {
+            if (fs::is_regular_file(path)) {
+              journey_files_.emplace_back(path);
+            } else {
+              LOG(warn) << "journey file not found: " << path;
+              import_successful_ = false;
+            }
+          }
+        }
+
+        load_capacity_files();
+        load_journeys();
+      })
+      ->require("SCHEDULE",
+                [](msg_ptr const& msg) {
+                  return msg->get()->content_type() == MsgContent_ScheduleEvent;
+                })
+      ->require("PAXMON_DATA", [](msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_FileEvent;
+      });
+}
+
+void paxmon::init(motis::module::registry& reg) {
   stats_writer_ = std::make_unique<stats_writer>(stats_file_);
 
   add_shared_data(DATA_KEY, &data_);
 
   reg.subscribe("/init", [&]() {
-    load_capacity_files();
-    load_journeys();
+    if (data_.trip_capacity_map_.empty() &&
+        data_.category_capacity_map_.empty()) {
+      LOG(warn) << "no capacity information available";
+    }
+    LOG(info) << "tracking " << data_.graph_.passenger_groups_.size()
+              << " passenger groups";
   });
+
   reg.register_op("/paxmon/flush", [&](msg_ptr const&) -> msg_ptr {
     stats_writer_->flush();
     return {};
   });
+
   reg.subscribe("/rt/update",
                 [&](msg_ptr const& msg) { return rt_update(msg); });
+
   reg.subscribe("/rt/graph_updated", [&](msg_ptr const&) {
     scoped_timer t{"paxmon: graph_updated"};
     rt_updates_applied();
@@ -133,17 +176,6 @@ void paxmon::init(motis::module::registry& reg) {
   reg.register_op(
       "/paxmon/eval",
       [&](msg_ptr const&) -> msg_ptr {
-        auto const forward = [](std::time_t time) {
-          using namespace motis::ris;
-          message_creator fbb;
-          fbb.create_and_finish(MsgContent_RISForwardTimeRequest,
-                                CreateRISForwardTimeRequest(fbb, time).Union(),
-                                "/ris/forward");
-          LOG(info) << "paxmon: forwarding time to: " << format_unix_time(time)
-                    << " =========================================";
-          motis_call(make_msg(fbb))->val();
-        };
-
         LOG(info) << "paxmon: start time: " << format_unix_time(start_time_)
                   << ", end time: " << format_unix_time(end_time_);
 
@@ -299,6 +331,10 @@ msg_ptr initial_reroute_query(schedule const& sched,
 
 void paxmon::load_journeys() {
   auto const& sched = get_schedule();
+  auto progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker->status("Load Journeys")
+      .out_bounds(10.F, 60.F)
+      .in_high(journey_files_.size());
 
   if (journey_files_.empty()) {
     LOG(warn) << "paxmon: no journey files specified";
@@ -343,9 +379,11 @@ void paxmon::load_journeys() {
                                          group_source_flags::MATCH_REROUTED);
         }
       }
+      progress_tracker->increment();
     }
   }
 
+  progress_tracker->status("Build Graph").out_bounds(60.F, 100.F);
   build_graph_from_journeys(sched, data_);
 
   auto const graph_stats = calc_graph_statistics(sched, data_);
@@ -372,11 +410,16 @@ void paxmon::load_journeys() {
 
 void paxmon::load_capacity_files() {
   auto const& sched = get_schedule();
+  auto progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker->status("Load Capacity Data")
+      .out_bounds(0.F, 10.F)
+      .in_high(capacity_files_.size());
   auto total_entries = 0ULL;
   for (auto const& file : capacity_files_) {
     auto const capacity_path = fs::path{file};
     if (!fs::exists(capacity_path)) {
       LOG(warn) << "capacity file not found: " << file;
+      import_successful_ = false;
       continue;
     }
     auto const entries_loaded =
@@ -385,6 +428,7 @@ void paxmon::load_capacity_files() {
     total_entries += entries_loaded;
     LOG(info) << fmt::format("loaded {:L} capacity entries from {}",
                              entries_loaded, file);
+    progress_tracker->increment();
   }
   if (total_entries == 0) {
     LOG(warn)

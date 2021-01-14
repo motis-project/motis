@@ -27,7 +27,10 @@ struct paxmon : public motis::module::module {
   paxmon(paxmon&&) = delete;
   paxmon& operator=(paxmon&&) = delete;
 
+  void import(motis::module::registry& reg) override;
   void init(motis::module::registry&) override;
+
+  bool import_successful() const override { return import_successful_; }
 
 private:
   void load_journeys();
@@ -69,6 +72,7 @@ private:
   tick_statistics last_tick_stats_;
   std::unique_ptr<stats_writer> stats_writer_;
   bool write_mcfp_scenarios_{false};
+  bool import_successful_{true};
 };
 
 }  // namespace motis::paxmon
