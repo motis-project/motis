@@ -27,5 +27,6 @@ if (MOTIS_CUDA)
       LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
       INSTALL_RPATH "$ORIGIN/../lib:$ORIGIN/")
   target_include_directories(gpucsa PUBLIC include)
+  set_property(TARGET gpucsa PROPERTY CUDA_ARCHITECTURES 75 61)
   target_link_libraries(motis-csa gpucsa)
 endif()
