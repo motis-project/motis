@@ -9,7 +9,7 @@ struct csa_timetable;
 struct gpu_timetable {
   gpu_timetable() = default;
   explicit gpu_timetable(csa_timetable&);
-  ~gpu_timetable() = default;
+  ~gpu_timetable();
 
   gpu_timetable(gpu_timetable&&) noexcept;
   gpu_timetable& operator=(gpu_timetable&&) noexcept;
