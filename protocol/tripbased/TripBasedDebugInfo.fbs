@@ -63,6 +63,7 @@ table StopDebugInfo {
   station_transfer_time: int;
   arrival_transports: [TransportDebugInfo];
   departure_transports: [TransportDebugInfo];
+  platform_transfer_time: int;
 }
 
 table TripDebugInfo {

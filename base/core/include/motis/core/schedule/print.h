@@ -4,6 +4,8 @@
 
 #include "motis/core/schedule/edges.h"
 #include "motis/core/schedule/nodes.h"
+#include "motis/core/schedule/schedule.h"
+#include "motis/core/access/service_access.h"
 
 namespace motis {
 
@@ -32,7 +34,7 @@ inline std::ostream& operator<<(std::ostream& out,
 
 inline void print_node(node const& node, std::ostream& out, int indent,
                        bool print_recursive) {
-  out << "node_id=" << node.id_;
+  out << "node_id=" << node.id_ << " [" << node.type_str() << "]";
   if (node.is_route_node()) {
     out << " [route=" << node.route_ << "]";
   }
@@ -49,7 +51,7 @@ inline void print_node(node const& node, std::ostream& out, int indent,
 }
 
 inline void print_edge(edge const& edge, std::ostream& out, int indent) {
-  out << "to=" << edge.to_->id_ << ", ";
+  out << "to=" << edge.to_->id_ << " [" << edge.to_->type_str() << "], ";
   switch (edge.m_.type_) {
     case edge::ROUTE_EDGE: {
       out << "type=route_edge, "

@@ -170,8 +170,12 @@ struct tb_data {
   nested_fws_multimap<tb_reverse_transfer> reverse_transfers_{
       arrival_times_.index_};
 
-  fws_multimap<uint8_t, uint32_t> in_allowed_{};
-  shared_idx_fws_multimap<uint8_t, uint32_t> out_allowed_{in_allowed_.index_};
+  shared_idx_fws_multimap<uint8_t, line_id> in_allowed_{stops_on_line_.index_};
+  shared_idx_fws_multimap<uint8_t, line_id> out_allowed_{stops_on_line_.index_};
+  shared_idx_fws_multimap<uint16_t, line_id> arrival_platform_{
+      stops_on_line_.index_};
+  shared_idx_fws_multimap<uint16_t, line_id> departure_platform_{
+      stops_on_line_.index_};
 };
 
 }  // namespace motis::tripbased

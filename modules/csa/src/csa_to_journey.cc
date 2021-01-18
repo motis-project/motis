@@ -28,9 +28,9 @@ parse_csa_journey(csa_journey const& csa) {
     auto const d_track = e.is_connection() ? e.con_->full_con_->d_track_ : 0;
     auto const d_time = e.departure_;
     stops.emplace_back(stop_idx++, e.from_->station_ptr_->index_, a_track,
-                       d_track, a_time, d_time, a_time, d_time,
-                       timestamp_reason::SCHEDULE, timestamp_reason::SCHEDULE,
-                       exit, e.enter_);
+                       d_track, a_track, d_track, a_time, d_time, a_time,
+                       d_time, timestamp_reason::SCHEDULE,
+                       timestamp_reason::SCHEDULE, exit, e.enter_);
     a_time = e.arrival_;
     a_track = e.is_connection() ? e.con_->full_con_->a_track_ : 0;
     exit = e.exit_;
@@ -44,7 +44,7 @@ parse_csa_journey(csa_journey const& csa) {
 
   auto const& last_edge = csa.edges_.back();
   stops.emplace_back(stop_idx++, last_edge.to_->station_ptr_->index_, a_track,
-                     0, a_time, INVALID_TIME, a_time, INVALID_TIME,
+                     0, a_track, 0, a_time, INVALID_TIME, a_time, INVALID_TIME,
                      timestamp_reason::SCHEDULE, timestamp_reason::SCHEDULE,
                      exit, false);
 

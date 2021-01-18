@@ -156,7 +156,8 @@ struct graph_builder {
 
   static int get_index(
       mcd::vector<mcd::vector<light_connection>> const& alt_route,
-      mcd::vector<light_connection> const& sections);
+      mcd::vector<light_connection> const& sections,
+      mcd::vector<station*> const& stations);
 
   static void add_to_route(mcd::vector<mcd::vector<light_connection>>& route,
                            mcd::vector<light_connection> const& sections,
@@ -164,7 +165,8 @@ struct graph_builder {
 
   static void add_to_routes(
       mcd::vector<mcd::vector<mcd::vector<light_connection>>>& alt_routes,
-      mcd::vector<light_connection> const& sections);
+      mcd::vector<light_connection> const& sections,
+      mcd::vector<station*> const& stations);
 
   connection_info* get_or_create_connection_info(Section const* section,
                                                  int dep_day_index,
