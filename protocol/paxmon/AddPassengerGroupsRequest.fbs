@@ -1,7 +1,0 @@
-include "paxmon/PassengerGroup.fbs";
-
-namespace motis.paxmon;
-
-table AddPassengerGroupsRequest {
-  groups: [PassengerGroup];
-}

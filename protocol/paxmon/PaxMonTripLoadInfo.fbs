@@ -3,29 +3,29 @@ include "base/Station.fbs";
 
 namespace motis.paxmon;
 
-struct CdfEntry {
+struct PaxMonCdfEntry {
   passengers: uint;
   probability: float;
 }
 
-enum CapacityType : byte { Known, Unknown, Unlimited }
+enum PaxMonCapacityType : byte { Known, Unknown, Unlimited }
 
-table EdgeLoadInfo {
+table PaxMonEdgeLoadInfo {
   from: motis.Station;
   to: motis.Station;
   departure_schedule_time: ulong;
   departure_current_time: ulong;
   arrival_schedule_time: ulong;
   arrival_current_time: ulong;
-  capacity_type: CapacityType;
+  capacity_type: PaxMonCapacityType;
   capacity: uint;
-  passenger_cdf: [CdfEntry];
+  passenger_cdf: [PaxMonCdfEntry];
   updated: bool;
   possibly_over_capacity: bool;
   expected_passengers: uint;
 }
 
-table TripLoadInfo {
+table PaxMonTripLoadInfo {
   tsi: motis.TripServiceInfo;
-  edges: [EdgeLoadInfo];
+  edges: [PaxMonEdgeLoadInfo];
 }

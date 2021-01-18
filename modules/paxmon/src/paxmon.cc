@@ -600,7 +600,7 @@ void paxmon::rt_updates_applied() {
   {
     manual_timer timer{"update affected passenger groups"};
     message_creator mc;
-    std::vector<flatbuffers::Offset<MonitoringEvent>> fbs_events;
+    std::vector<flatbuffers::Offset<PaxMonEvent>> fbs_events;
     std::vector<msg_ptr> messages;
 
     LOG(info) << "groups affected by last update: "
@@ -631,8 +631,8 @@ void paxmon::rt_updates_applied() {
         return;
       }
       mc.create_and_finish(
-          MsgContent_MonitoringUpdate,
-          CreateMonitoringUpdate(mc, mc.CreateVector(fbs_events)).Union(),
+          MsgContent_PaxMonUpdate,
+          CreatePaxMonUpdate(mc, mc.CreateVector(fbs_events)).Union(),
           "/paxmon/monitoring_update");
       messages.emplace_back(make_msg(mc));
       fbs_events.clear();
@@ -773,10 +773,10 @@ void paxmon::rt_updates_applied() {
 
 msg_ptr paxmon::add_groups(msg_ptr const& msg) {
   auto const& sched = get_schedule();
-  auto const req = motis_content(AddPassengerGroupsRequest, msg);
+  auto const req = motis_content(PaxMonAddGroupsRequest, msg);
 
   auto const added_groups =
-      utl::to_vec(*req->groups(), [&](PassengerGroup const* pg_fbs) {
+      utl::to_vec(*req->groups(), [&](PaxMonGroup const* pg_fbs) {
         utl::verify(pg_fbs->planned_journey()->legs()->size() != 0,
                     "trying to add empty passenger group");
         auto const id =
@@ -796,8 +796,8 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
 
   message_creator mc;
   mc.create_and_finish(
-      MsgContent_AddPassengerGroupsResponse,
-      CreateAddPassengerGroupsResponse(
+      MsgContent_PaxMonAddGroupsResponse,
+      CreatePaxMonAddGroupsResponse(
           mc, mc.CreateVector(utl::to_vec(
                   added_groups, [](auto const pg) { return pg->id_; })))
           .Union());
@@ -805,7 +805,7 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
 }
 
 msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
-  auto const req = motis_content(RemovePassengerGroupsRequest, msg);
+  auto const req = motis_content(PaxMonRemoveGroupsRequest, msg);
 
   for (auto const id : *req->ids()) {
     auto& pg = data_.graph_.passenger_groups_.at(id);
@@ -837,7 +837,7 @@ msg_ptr paxmon::get_trip_load_info(msg_ptr const& msg) {
 
   auto const tli = calc_trip_load_info(data_, trp);
   message_creator mc;
-  mc.create_and_finish(MsgContent_TripLoadInfo,
+  mc.create_and_finish(MsgContent_PaxMonTripLoadInfo,
                        to_fbs(mc, sched, data_.graph_, tli).Union());
   return make_msg(mc);
 }

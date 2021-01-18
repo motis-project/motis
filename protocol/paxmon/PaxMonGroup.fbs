@@ -1,17 +1,17 @@
-include "paxmon/CompactJourney.fbs";
+include "paxmon/PaxMonCompactJourney.fbs";
 
 namespace motis.paxmon;
 
-table DataSource {
+table PaxMonDataSource {
   primary_ref: ulong;
   secondary_ref: ulong;
 }
 
-table PassengerGroup {
+table PaxMonGroup {
   id: ulong;
-  source: DataSource;
+  source: PaxMonDataSource;
   passenger_count: uint;
-  planned_journey: CompactJourney;
+  planned_journey: PaxMonCompactJourney;
   probability: float;
   planned_arrival_time: ulong;
   source_flags: ubyte;

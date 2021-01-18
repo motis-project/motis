@@ -1,5 +1,5 @@
 namespace motis.paxmon;
 
-table RemovePassengerGroupsRequest {
+table PaxMonRemoveGroupsRequest {
   ids: [ulong];
 }

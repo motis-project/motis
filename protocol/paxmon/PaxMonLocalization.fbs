@@ -3,18 +3,18 @@ include "base/TripId.fbs";
 
 namespace motis.paxmon;
 
-table PassengerAtStation {
+table PaxMonAtStation {
   station: motis.Station;
   schedule_arrival_time: long;
   current_arrival_time: long;
   first_station: bool;
 }
 
-table PassengerInTrip {
+table PaxMonInTrip {
   trip: motis.TripId;
   next_station: motis.Station;
   schedule_arrival_time: long;
   current_arrival_time: long;
 }
 
-union PassengerLocalization { PassengerAtStation, PassengerInTrip }
+union PaxMonLocalization { PaxMonAtStation, PaxMonInTrip }

@@ -63,8 +63,6 @@ paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
 paxforecast::~paxforecast() = default;
 
 void paxforecast::init(motis::module::registry& reg) {
-  LOG(info) << "passenger forecast module loaded";
-
   stats_writer_ = std::make_unique<stats_writer>(stats_file_);
 
   if (!forecast_filename_.empty()) {
@@ -100,7 +98,7 @@ void update_tracked_groups(
 
   message_creator add_groups_mc;
   auto groups_to_remove = std::vector<std::uint64_t>{};
-  auto groups_to_add = std::vector<Offset<PassengerGroup>>{};
+  auto groups_to_add = std::vector<Offset<PaxMonGroup>>{};
   auto remove_group_count = 0ULL;
   auto add_group_count = 0ULL;
 
@@ -110,8 +108,8 @@ void update_tracked_groups(
     }
     message_creator remove_groups_mc;
     remove_groups_mc.create_and_finish(
-        MsgContent_RemovePassengerGroupsRequest,
-        CreateRemovePassengerGroupsRequest(
+        MsgContent_PaxMonRemoveGroupsRequest,
+        CreatePaxMonRemoveGroupsRequest(
             remove_groups_mc, remove_groups_mc.CreateVector(groups_to_remove))
             .Union(),
         "/paxmon/remove_groups");
@@ -125,9 +123,9 @@ void update_tracked_groups(
       return;
     }
     add_groups_mc.create_and_finish(
-        MsgContent_AddPassengerGroupsRequest,
-        CreateAddPassengerGroupsRequest(
-            add_groups_mc, add_groups_mc.CreateVector(groups_to_add))
+        MsgContent_PaxMonAddGroupsRequest,
+        CreatePaxMonAddGroupsRequest(add_groups_mc,
+                                     add_groups_mc.CreateVector(groups_to_add))
             .Union(),
         "/paxmon/add_groups");
     auto const add_msg = make_msg(add_groups_mc);
@@ -223,7 +221,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   tick_stats.system_time_ = sched.system_time_;
   auto& data = *get_shared_data<paxmon_data*>(motis::paxmon::DATA_KEY);
 
-  auto const mon_update = motis_content(MonitoringUpdate, msg);
+  auto const mon_update = motis_content(PaxMonUpdate, msg);
 
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
@@ -233,8 +231,8 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   std::map<passenger_group const*, monitoring_event_type> pg_event_types;
 
   for (auto const& event : *mon_update->events()) {
-    if (event->type() == MonitoringEventType_NO_PROBLEM ||
-        event->type() == MonitoringEventType_MAJOR_DELAY_EXPECTED) {
+    if (event->type() == PaxMonEventType_NO_PROBLEM ||
+        event->type() == PaxMonEventType_MAJOR_DELAY_EXPECTED) {
       // TODO(pablo): major delay: group is still on all edges in the graph
       continue;
     }
@@ -373,7 +371,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
     MOTIS_START_TIMING(load_forecast_fbs);
     manual_timer load_forecast_msg_timer{"load forecast make msg"};
     auto const forecast_msg =
-        make_passenger_forecast_msg(sched, data, sim_result, lfc);
+        make_forecast_update_msg(sched, data, sim_result, lfc);
     load_forecast_msg_timer.stop_and_print();
     MOTIS_STOP_TIMING(load_forecast_fbs);
     tick_stats.t_load_forecast_fbs_ = MOTIS_TIMING_MS(load_forecast_fbs);

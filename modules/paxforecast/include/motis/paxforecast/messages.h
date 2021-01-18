@@ -10,7 +10,7 @@
 
 namespace motis::paxforecast {
 
-motis::module::msg_ptr make_passenger_forecast_msg(
+motis::module::msg_ptr make_forecast_update_msg(
     schedule const& sched, motis::paxmon::paxmon_data const& data,
     simulation_result const& sim_result, load_forecast const& lfc);
 

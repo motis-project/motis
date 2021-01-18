@@ -103,9 +103,9 @@ void write_groups(fs::path const& dir, schedule const& sched,
   out << "id,start,departure,destination,arrival,passengers,in_trip\n";
   auto id = 1ULL;
   for (auto const& msg : messages) {
-    auto const update = motis_content(MonitoringUpdate, msg);
+    auto const update = motis_content(PaxMonUpdate, msg);
     for (auto const& event : *update->events()) {
-      if (event->type() == MonitoringEventType_NO_PROBLEM) {
+      if (event->type() == PaxMonEventType_NO_PROBLEM) {
         continue;
       }
       auto const loc =

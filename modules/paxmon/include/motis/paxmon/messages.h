@@ -17,31 +17,31 @@
 
 namespace motis::paxmon {
 
-flatbuffers::Offset<CompactJourney> to_fbs(schedule const& sched,
-                                           flatbuffers::FlatBufferBuilder& fbb,
-                                           compact_journey const& cj);
+flatbuffers::Offset<PaxMonCompactJourney> to_fbs(
+    schedule const& sched, flatbuffers::FlatBufferBuilder& fbb,
+    compact_journey const& cj);
 
-compact_journey from_fbs(schedule const& sched, CompactJourney const* cj);
+compact_journey from_fbs(schedule const& sched, PaxMonCompactJourney const* cj);
 
-flatbuffers::Offset<PassengerGroup> to_fbs(schedule const& sched,
-                                           flatbuffers::FlatBufferBuilder& fbb,
-                                           passenger_group const& pg);
+flatbuffers::Offset<PaxMonGroup> to_fbs(schedule const& sched,
+                                        flatbuffers::FlatBufferBuilder& fbb,
+                                        passenger_group const& pg);
 
-passenger_group from_fbs(schedule const& sched, PassengerGroup const* pg);
+passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg);
 
-PassengerLocalization fbs_localization_type(passenger_localization const& loc);
+PaxMonLocalization fbs_localization_type(passenger_localization const& loc);
 
 flatbuffers::Offset<void> to_fbs(schedule const& sched,
                                  flatbuffers::FlatBufferBuilder& fbb,
                                  passenger_localization const& loc);
 
 passenger_localization from_fbs(schedule const& sched,
-                                PassengerLocalization loc_type,
+                                PaxMonLocalization loc_type,
                                 void const* loc_ptr);
 
-flatbuffers::Offset<MonitoringEvent> to_fbs(schedule const& sched,
-                                            flatbuffers::FlatBufferBuilder& fbb,
-                                            monitoring_event const& me);
+flatbuffers::Offset<PaxMonEvent> to_fbs(schedule const& sched,
+                                        flatbuffers::FlatBufferBuilder& fbb,
+                                        monitoring_event const& me);
 
 flatbuffers::Offset<ServiceInfo> to_fbs(flatbuffers::FlatBufferBuilder& fbb,
                                         service_info const& si);
@@ -54,12 +54,12 @@ flatbuffers::Offset<TripServiceInfo> to_fbs_trip_service_info(
     flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
     trip const* trp);
 
-flatbuffers::Offset<EdgeLoadInfo> to_fbs(flatbuffers::FlatBufferBuilder& fbb,
-                                         schedule const& sched, graph const& g,
-                                         edge_load_info const& eli);
+flatbuffers::Offset<PaxMonEdgeLoadInfo> to_fbs(
+    flatbuffers::FlatBufferBuilder& fbb, schedule const& sched, graph const& g,
+    edge_load_info const& eli);
 
-flatbuffers::Offset<TripLoadInfo> to_fbs(flatbuffers::FlatBufferBuilder& fbb,
-                                         schedule const& sched, graph const& g,
-                                         trip_load_info const& tli);
+flatbuffers::Offset<PaxMonTripLoadInfo> to_fbs(
+    flatbuffers::FlatBufferBuilder& fbb, schedule const& sched, graph const& g,
+    trip_load_info const& tli);
 
 }  // namespace motis::paxmon
