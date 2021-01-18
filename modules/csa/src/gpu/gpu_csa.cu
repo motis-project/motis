@@ -327,7 +327,7 @@ fail:
 
 void gpu_csa_free_result(gpu_csa_result* r) {
   r->station_arrivals_ =
-      r->station_arrivals_ == nullptr ? nullptr : r->station_arrivals_ + 1;
+      r->station_arrivals_ == nullptr ? nullptr : r->station_arrivals_ - 1;
   cudaFreeHost(r->station_arrivals_);
   cudaFreeHost(r->trip_reachable_);
   r->station_arrivals_ = nullptr;
