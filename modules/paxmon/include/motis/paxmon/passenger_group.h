@@ -64,4 +64,10 @@ struct passenger_group {
   std::vector<edge*> edges_{};
 };
 
+inline bool is_planned_group(passenger_group const* grp) {
+  return ((grp->source_flags_ & group_source_flags::FORECAST) !=
+          group_source_flags::FORECAST) &&
+         grp->probability_ == 1.0F;
+}
+
 }  // namespace motis::paxmon

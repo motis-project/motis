@@ -271,6 +271,9 @@ void update_trip_route(schedule const& sched, paxmon_data& data,
 
 void add_passenger_group_to_edge(edge* e, passenger_group* pg) {
   e->pax_connection_info_.groups_.emplace(pg);
+  if (is_planned_group(pg)) {
+    e->pax_connection_info_.expected_load_ += pg->passengers_;
+  }
 }
 
 void remove_passenger_group_from_edge(edge* e, passenger_group* pg) {

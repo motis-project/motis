@@ -37,15 +37,7 @@ std::uint16_t get_base_load(pax_connection_info const& pci) {
 }
 
 std::uint16_t get_expected_load(pax_connection_info const& pci) {
-  std::uint16_t load = 0;
-  for (auto const grp : pci.groups_) {
-    if (((grp->source_flags_ & group_source_flags::FORECAST) !=
-         group_source_flags::FORECAST) &&
-        grp->probability_ == 1.0F) {
-      load += grp->passengers_;
-    }
-  }
-  return load;
+  return pci.expected_load_;
 }
 
 std::uint16_t get_mean_load(pax_connection_info const& pci) {
