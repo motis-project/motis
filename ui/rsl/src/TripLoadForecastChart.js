@@ -1,6 +1,10 @@
-import { formatTime, formatDateTime } from "./util/dateFormat";
+import { useRef } from "react";
 
-import "./TripLoadForecastChart.css";
+import {
+  formatTime,
+  formatDateTime,
+  formatFileNameTime,
+} from "./util/dateFormat";
 
 function getSvgLinePath(edges, maxVal, prop) {
   let points = [];
@@ -61,7 +65,62 @@ function getCurrentTimePosition(edges, currentTime) {
   return edges.length * 50 + 5;
 }
 
+function getSvgBlob(svgEl) {
+  const serializer = new XMLSerializer();
+  let source = serializer.serializeToString(svgEl);
+  const css = document.getElementById("svgStyle").outerHTML;
+  source = source.replace("<g", css + "<g");
+  return new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+}
+
+function downloadBlob(url, filename) {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+}
+
+function saveAsSVG(svgEl, baseFileName) {
+  const svgBlob = getSvgBlob(svgEl);
+  const url = URL.createObjectURL(svgBlob);
+  downloadBlob(url, baseFileName + ".svg");
+}
+
+function saveAsPNG(svgEl, baseFileName) {
+  const svgBlob = getSvgBlob(svgEl);
+  const svgUrl = URL.createObjectURL(svgBlob);
+  const svgBB = svgEl.getBoundingClientRect();
+  const canvas = document.createElement("canvas");
+  canvas.width = svgBB.width * 2;
+  canvas.height = svgBB.height * 2;
+  const ctx = canvas.getContext("2d");
+  const img = new Image();
+  img.onload = () => {
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(svgUrl);
+    const pngUrl = canvas.toDataURL("image/png");
+    downloadBlob(pngUrl, baseFileName + ".png");
+  };
+  img.src = svgUrl;
+}
+
+function getBaseFileName(data, systemTime) {
+  let parts = ["forecast", formatFileNameTime(systemTime)];
+  for (const si of data.tsi.service_infos) {
+    if (si.line) {
+      parts.push(`${si.train_nr}-${si.category}-${si.line}`);
+    } else {
+      parts.push(`${si.train_nr}-${si.category}`);
+    }
+  }
+  return parts.join("_");
+}
+
 function TripLoadForecastChart(props) {
+  const svgEl = useRef(null);
+
   const data = props.data;
   const edges = data?.edges;
   const systemTime = props.systemTime;
@@ -173,6 +232,8 @@ function TripLoadForecastChart(props) {
   const title = `${names.join(", ")} (${data.tsi.primary_station.name} - ${
     data.tsi.secondary_station.name
   }), Vorhersage vom ${formatDateTime(systemTime)}`;
+
+  const baseFileName = getBaseFileName(data, systemTime);
 
   let spreadTopPoints = [];
   let spreadBottomPoints = [];
@@ -330,7 +391,7 @@ function TripLoadForecastChart(props) {
   return (
     <div>
       <svg
-        id="forecastSvg"
+        ref={svgEl}
         viewBox={`-100 -15 ${120 + graphWidth} 335`}
         style={{ height: "90vh", width: "100%", marginTop: "10px" }}
       >
@@ -355,6 +416,20 @@ function TripLoadForecastChart(props) {
         </g>
         {currentTimeIndicator}
       </svg>
+      <div className="flex flex-row justify-center items-center space-x-2 m-2">
+        <button
+          className="bg-gray-200 px-2 py-1 border border-gray-300 rounded-xl"
+          onClick={() => saveAsSVG(svgEl.current, baseFileName)}
+        >
+          Save as SVG
+        </button>
+        <button
+          className="bg-gray-200 px-2 py-1 border border-gray-300 rounded-xl"
+          onClick={() => saveAsPNG(svgEl.current, baseFileName)}
+        >
+          Save as PNG
+        </button>
+      </div>
     </div>
   );
 }
