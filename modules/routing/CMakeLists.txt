@@ -8,8 +8,7 @@ add_library(motis-routing STATIC ${motis-routing-files})
 target_include_directories(motis-routing PUBLIC include)
 target_compile_features(motis-routing PUBLIC cxx_std_17)
 target_link_libraries(motis-routing
-  ${Boost_PROGRAM_OPTIONS_LIBRARY}
-  ${Boost_SYSTEM_LIBRARY}
+  boost-system
   motis-module
   motis-core
 )
@@ -61,10 +60,8 @@ add_executable(motis-print-journey EXCLUDE_FROM_ALL ${motis-print-journey-files}
 target_compile_features(motis-print-journey PUBLIC cxx_std_17)
 target_link_libraries(motis-print-journey
   ${CMAKE_THREAD_LIBS_INIT}
-  ${Boost_THREAD_LIBRARY}
-  ${Boost_SYSTEM_LIBRARY}
-  ${Boost_FILESYSTEM_LIBRARY}
-  ${Boost_PROGRAM_OPTIONS_LIBRARY}
+  boost-system
+  boost-filesystem
   motis-module
   motis-core
 )

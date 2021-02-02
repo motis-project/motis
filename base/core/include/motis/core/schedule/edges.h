@@ -355,7 +355,7 @@ public:
   }
 
   inline bool empty() const {
-    return (type() != ROUTE_EDGE) ? true : m_.route_edge_.conns_.empty();
+    return type() != ROUTE_EDGE || m_.route_edge_.conns_.empty();
   }
 
   static time calc_time_off(time const period_begin, time const period_end,

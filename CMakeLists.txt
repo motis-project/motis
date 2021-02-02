@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(motis C CXX ASM)
+project(motis)
 
 if (MSVC)
   # PDB debug information is not supported by buildcache.
@@ -80,22 +80,11 @@ configure_file (
   "${CMAKE_BINARY_DIR}/generated/version.h"
 )
 
-add_definitions(/DBOOST_ASIO_DISABLE_CONCEPTS=1)  # fixes issue with Boost 1.72.0
 
 ################################
 # Dependencies
 ################################
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_MULTITHREADED ON)
-if (MSVC)
-  set(Boost_USE_STATIC_RUNTIME ON)
-endif()
-find_package(Boost 1.70.0 REQUIRED COMPONENTS system filesystem regex program_options thread)
 find_package(Threads)
-
-link_directories(${Boost_LIBRARY_DIRS})
-include_directories(SYSTEM ${Boost_INCLUDE_DIR})
-
 include(cmake/pkg.cmake)
 add_subdirectory(modules/ris/gtfsrtpb)
 
@@ -122,7 +111,6 @@ endif()
 # Quickfix for MSVC
 if (MSVC)
   set(MOTIS_COMPILE_DEFINITIONS
-    BOOST_THREAD_USE_LIB
     WIN32_LEAN_AND_MEAN
     _HAS_AUTO_PTR_ETC
     _USE_MATH_DEFINES
@@ -227,7 +215,7 @@ target_link_libraries(motis-test
   motis-module
   conf
   ianatzdb-res
-  ${Boost_LIBRARIES}
+  boost-filesystem
 )
 target_link_libraries(motis-test gtest gtest_main)
 
@@ -260,7 +248,7 @@ target_link_libraries(motis-itest
   motis-module
   conf
   ianatzdb-res
-  ${Boost_LIBRARIES}
+  boost-filesystem
 )
 target_link_libraries(motis-itest gtest gtest_main)
 set_target_properties(motis-itest PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "--gtest_filter=\"ris_gtfsrt_cancel_message_itest_t0.before_cancel\"")

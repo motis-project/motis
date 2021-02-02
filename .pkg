@@ -1,19 +1,19 @@
 [address-typeahead]
   url=git@github.com:motis-project/address-typeahead.git
   branch=master
-  commit=f047113b0197d413663d78b0c40129d467d628a0
+  commit=d2f3e823525fcc2a3c5276126a21d17dd6b6be98
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=d3492bf8806b3f27c47c17c2b0f6ecf2d64e8f97
+  commit=e69bd7d0d286d02448cfbb2ab094867735027258
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
-  commit=045a78e9a9d08145f49b90d2886b541404442235
+  commit=6d38b7a3ca69679a084b751000d0c00a22be2247
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
-  commit=30b05eca8745173e4a7e4f40695f119a8484a708
+  commit=2b685bcdb31ee9101cc94041e67f89eef2490466
 [date]
   url=git@github.com:motis-project/date.git
   branch=master
@@ -29,7 +29,7 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=65d49b97822216bddae6131210c6899edbfb9bb8
+  commit=ceb7f4103c0a2caf3bc02f96f64d414e317053e8
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
@@ -45,15 +45,15 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=ca08edddd8d2e7ad2ad1a53ede4d111b96733e17
+  commit=556284857335168eaeaf3955c3cdbb5d6fc330a3
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
-  commit=2a68bf1242aab63ad6dc96b5c15eb064ac8e55a9
+  commit=fbc74e5e9a4dec9fc38dbcd4fe97d4cc24a15710
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=061fc7691085211c4db612950c6e3b9889126391
+  commit=29764bf95b0c6c74c94792f454e89e5b5cad31f3
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
@@ -73,8 +73,16 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=pristine
-  commit=2061314d5a1548b1d1fd7579658286c2e9a8a1c6
+  commit=dc18c259a4e9de851646a9fdb40735f78e80a073
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=3195a2f32b2bb48e924bdf7853789664ad844f1f
+  commit=8a293414defd6fac4d2448b4ea1afca766f71730
+[guess]
+  url=git@github.com:motis-project/guess.git
+  branch=master
+  commit=5acaeaacca154bd20987806f9626be5e3b87e1c5
+[boost]
+  url=git@github.com:motis-project/boost.git
+  branch=master
+  commit=4c256be5b83f0d91898ea48d65bdb33e07d30f65

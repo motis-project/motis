@@ -98,8 +98,8 @@ struct osm_graph_dijkstra {
         lng_acc += graph_.nodes_[g]->pos_.lng_;
       }
 
-      goal_center_ = geo::latlng{lat_acc / open_goals_.size(),
-                                 lng_acc / open_goals_.size()};
+      goal_center_ = geo::xyz{geo::latlng{lat_acc / open_goals_.size(),
+                                          lng_acc / open_goals_.size()}};
       for (auto const& g : open_goals_) {
         goal_radius_ = std::max(
             goal_radius_, static_cast<size_t>(std::ceil(geo::haversine_distance(
