@@ -84,11 +84,10 @@ struct web_server::impl {
 
     auto const build_response = [req](msg_ptr const& response) {
       net::web_server::string_res_t res{
-          response == nullptr
-              ? status::ok
-              : response->get()->content_type() == MsgContent_MotisError
-                    ? status::internal_server_error
-                    : status::ok,
+          response == nullptr ? status::ok
+          : response->get()->content_type() == MsgContent_MotisError
+              ? status::internal_server_error
+              : status::ok,
           req.version()};
       res.set(field::access_control_allow_origin, "*");
       res.set(field::access_control_allow_headers,
