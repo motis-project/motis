@@ -97,8 +97,13 @@ jobs:
         run: sudo apt-get update
           
       - name: Install LLVM
-        if: matrix.config.os != 'macos-latest' && matrix.config.cc == 'clang-9'
-        run: sudo apt-get install -y --no-install-recommends libc++-9-dev libc++abi-9-dev clang-tidy-9
+        if: matrix.config.os != 'macos-latest' && matrix.config.cc == 'clang-11'
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 11
+          rm llvm.sh
+          sudo apt-get install -y --no-install-recommends libc++-11-dev libc++abi-11-dev clang-tidy-11
 
       - name: Install Valgrind
         if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
