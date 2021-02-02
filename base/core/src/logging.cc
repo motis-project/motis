@@ -42,7 +42,10 @@ void manual_timer::stop_and_print() {
             << " (" << t << "ms)";
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 std::mutex log::log_mutex_;
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 bool log::enabled_ = true;
 
 }  // namespace motis::logging

@@ -39,7 +39,7 @@ struct route {
         desc_{std::move(route_desc)},
         type_(type) {}
 
-  static std::map<unsigned, category> s_types_;
+  static std::map<unsigned, category> const s_types_;
 
   std::optional<category> get_category() const;
 
