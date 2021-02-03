@@ -89,13 +89,12 @@ jobs:
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
     steps:
       - uses: actions/checkout@v2
-      - uses: seanmiddleditch/gha-setup-ninja@master
 
       # ==== INSTALL ====
       - name: Update APT
         if: matrix.config.os != 'macos-latest'
         run: sudo apt-get update
-          
+
       - name: Install LLVM
         if: matrix.config.os != 'macos-latest' && matrix.config.cc == 'clang-11'
         run: |
@@ -108,6 +107,10 @@ jobs:
       - name: Install Valgrind
         if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
         run: sudo apt-get install -y --no-install-recommends valgrind
+
+      - name: Install Ninja
+        if: matrix.config.os != 'macos-latest'
+        run: sudo apt-get install -y --no-install-recommends ninja-build
 
       # ==== CACHING ====
       - name: buildcache Cache
