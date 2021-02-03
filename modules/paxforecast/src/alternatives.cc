@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <optional>
 
-#include "cista/serialization.h"
+#include "fmt/format.h"
 
 #include "utl/erase_if.h"
 #include "utl/to_vec.h"
@@ -93,35 +93,31 @@ msg_ptr ontrip_station_query(schedule const& sched,
   return make_msg(fbb);
 }
 
-struct cache_key_t {
-  std::uint64_t system_time_{};
-  time next_station_time_{};
-  bool ontrip_{};
-  mcd::string next_station_eva_{};
-  mcd::string dest_station_eva_{};
-  extern_trip trip_{};
-};
-
-cista::byte_buf get_cache_key(schedule const& sched,
-                              unsigned const destination_station_id,
-                              passenger_localization const& localization) {
-  auto key = cache_key_t{static_cast<std::uint64_t>(sched.system_time_),
-                         localization.current_arrival_time_,
-                         localization.in_trip(),
-                         localization.at_station_->eva_nr_,
-                         sched.stations_.at(destination_station_id)->eva_nr_,
-                         {}};
+std::string get_cache_key(schedule const& sched,
+                          unsigned const destination_station_id,
+                          passenger_localization const& localization) {
   if (localization.in_trip()) {
-    key.trip_ = to_extern_trip(sched, localization.in_trip_);
+    auto const et = to_extern_trip(sched, localization.in_trip_);
+    return fmt::format(
+        "{}:{}:{}:{}:trip:{}:{}:{}:{}:{}:{}",
+        static_cast<std::uint64_t>(sched.system_time_),
+        localization.current_arrival_time_,
+        localization.at_station_->eva_nr_.view(),
+        sched.stations_.at(destination_station_id)->eva_nr_.view(),
+        et.station_id_, et.train_nr_, et.time_, et.target_station_id_,
+        et.target_time_, et.line_id_);
   } else {
     auto const interchange_time =
         localization.first_station_
             ? 0
             : sched.stations_.at(localization.at_station_->index_)
                   ->transfer_time_;
-    key.next_station_time_ += interchange_time;
+    return fmt::format(
+        "{}:{}:{}:{}:station", static_cast<std::uint64_t>(sched.system_time_),
+        localization.current_arrival_time_ + interchange_time,
+        localization.at_station_->eva_nr_.view(),
+        sched.stations_.at(destination_station_id)->eva_nr_.view());
   }
-  return cista::serialize(key);
 }
 
 msg_ptr send_routing_request(schedule const& sched,
