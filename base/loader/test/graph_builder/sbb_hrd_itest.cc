@@ -9,7 +9,7 @@ using namespace motis::module;
 using namespace motis::loader;
 using motis::routing::RoutingResponse;
 
-auto sbb_routing_request = R"({
+constexpr auto const sbb_routing_request = R"({
   "content_type": "RoutingRequest",
   "content": {
     "start_type": "PretripStart",

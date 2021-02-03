@@ -5,7 +5,7 @@
 
 namespace motis::ris::risml {
 
-char const* reroute_fixture_1 = R"(
+constexpr auto const reroute_fixture_1 = R"(
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <Paket Version="1.2" SpezVer="1" TOut="20151007000114447" KNr="123864543">
  <ListNachricht>
@@ -125,7 +125,7 @@ TEST(ris_reroute_message, message_1) {
   EXPECT_EQ(RerouteStatus_UmlNeu, ne1->status());
 }
 
-char const* reroute_fixture_only_new = R"(
+constexpr auto const reroute_fixture_only_new = R"(
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <Paket Version="1.2" SpezVer="1" TOut="20151007000240802" KNr="123865299">
  <ListNachricht>
@@ -187,7 +187,7 @@ TEST(ris_reroute_message, message_only_new) {
   EXPECT_STREQ("2", ne1->base()->base()->line_id()->c_str());
 }
 
-char const* reroute_fixture_only_cancel = R"(
+constexpr auto const reroute_fixture_only_cancel = R"(
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <Paket Version="1.2" SpezVer="1" TOut="20151007000241148" KNr="123865305">
  <ListNachricht>

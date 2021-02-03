@@ -33,7 +33,7 @@
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
-  commit=dda79b36b4324f81f3d4a0a67d56351ee9dd0c8a
+  commit=34a46558609e05865c197f0260ab36daa7cbbb6e
 [lmdb]
   url=git@github.com:motis-project/lmdb.git
   branch=master

@@ -4,7 +4,7 @@
 
 using namespace motis::module;
 
-std::string req = R"({
+auto const req = std::string{R"({
   "destination": { "target": "/intermodal" },
   "content": {
     "search_type": "Default",
@@ -34,7 +34,7 @@ std::string req = R"({
     "destination_type": "InputPosition"
   },
   "content_type": "IntermodalRoutingRequest"
-})";
+})"};
 
 using namespace motis;
 using namespace motis::intermodal;

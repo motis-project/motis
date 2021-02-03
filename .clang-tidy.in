@@ -61,7 +61,8 @@ Checks: "*,\
 -llvmlibc-callee-namespace,\
 -llvm-else-after-return,\
 -llvm-qualified-auto,\
--readability-qualified-auto"
+-readability-qualified-auto,\
+-google-readability-avoid-underscore-in-googletest-name"
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^${RELATIVE_SOURCE_DIR}(include/)'
 AnalyzeTemporaryDtors: false
