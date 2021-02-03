@@ -90,6 +90,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - uses: seanmiddleditch/gha-setup-ninja@master
+        if: matrix.config.os == 'macos-latest'
+
       # ==== INSTALL ====
       - name: Update APT
         if: matrix.config.os != 'macos-latest'
