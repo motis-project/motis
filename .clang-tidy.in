@@ -386,3 +386,7 @@ CheckOptions:
     value:           '0'
   - key:             readability-simplify-boolean-expr.ChainedConditionalReturn
     value:           '0'
+  - key:             performance-for-range-copy.AllowedTypes
+    value:           'offset_ptr;ptr'
+  - key:             performance-unnecessary-value-param.AllowedTypes
+    value:           'offset_ptr;ptr'
