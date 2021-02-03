@@ -64,7 +64,7 @@ Checks: "*,\
 -readability-qualified-auto,\
 -google-readability-avoid-underscore-in-googletest-name"
 WarningsAsErrors: '*'
-HeaderFilterRegex: '^${RELATIVE_SOURCE_DIR}(include/)'
+HeaderFilterRegex: '^${RELATIVE_SOURCE_DIR}(base|modules|test)/'
 AnalyzeTemporaryDtors: false
 User:            root
 CheckOptions:

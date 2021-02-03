@@ -15,7 +15,7 @@ using std::get;
 namespace motis::loader::gtfs {
 
 // Source: https://groups.google.com/d/msg/gtfs-changes/keT5rTPS7Y0/71uMz2l6ke0J
-std::map<unsigned, category> const route::s_types_ =
+std::map<unsigned, category> const route::s_types =
     std::map<unsigned, category>{
         {0, category{"Str", category::PRINT_ID | category::BASIC_ROUTE_TYPE}},
         {1, category{"U", category::PRINT_ID | category::BASIC_ROUTE_TYPE}},
@@ -166,7 +166,7 @@ std::map<unsigned, category> const route::s_types_ =
         {1700, category{"Car train"}}};
 
 std::optional<category> route::get_category() const {
-  if (auto const it = s_types_.find(type_); it != end(s_types_)) {
+  if (auto const it = s_types.find(type_); it != end(s_types)) {
     return it->second;
   } else {
     return std::nullopt;
