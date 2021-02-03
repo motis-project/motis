@@ -5,7 +5,7 @@
 
 namespace motis::ris::risml {
 
-char const* cancel_fixture_1 = R"(
+constexpr auto const cancel_fixture_1 = R"(
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <Paket Version="1.2" SpezVer="1" TOut="20151007070635992" KNr="124264761">
  <ListNachricht>
@@ -80,7 +80,7 @@ TEST(ris_cancel_message, message_1) {
   EXPECT_EQ(EventType_DEP, e1->type());
 }
 
-char const* cancel_fixture_2 = R"(
+constexpr auto const cancel_fixture_2 = R"(
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <Paket Version="1.2" SpezVer="1" TOut="20151007161500382" KNr="125683842">
  <ListNachricht>

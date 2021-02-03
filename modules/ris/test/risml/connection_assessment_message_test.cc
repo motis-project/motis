@@ -5,7 +5,7 @@
 
 namespace motis::ris::risml {
 
-char const* connection_assessment_fixture_1 = R"(
+constexpr auto const connection_assessment_fixture_1 = R"(
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <Paket Version="1.2" SpezVer="1" TOut="20151007051838050" KNr="123984009">
 <ListNachricht><Nachricht>
@@ -93,7 +93,7 @@ TEST(DISABLED_ris_connection_assessment_message, message_1) {
   EXPECT_EQ(1444188300, e0_id->schedule_time());
 }
 
-char const* connection_assessment_fixture_2 = R"(
+constexpr auto const connection_assessment_fixture_2 = R"(
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <Paket Version="1.2" SpezVer="1" TOut="20151006235948056" KNr="123863851">
  <ListNachricht>

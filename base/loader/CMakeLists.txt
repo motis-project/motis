@@ -22,8 +22,8 @@ target_include_directories(motis-loader PUBLIC include)
 target_compile_features(motis-loader PUBLIC cxx_std_17)
 add_dependencies(motis-loader generated-schedule-headers)
 target_link_libraries(motis-loader
-  ${Boost_SYSTEM_LIBRARY}
-  ${Boost_FILESYSTEM_LIBRARY}
+  boost-system
+  boost-filesystem
   flatbuffers64
   motis-core
   date

@@ -10,7 +10,7 @@ using namespace motis::module;
 using namespace motis::loader;
 using motis::routing::RoutingResponse;
 
-auto routing_request_rule_service = R"({
+auto const routing_request_rule_service = R"({
   "destination": {
     "type": "Module",
     "target": "/routing"
@@ -37,7 +37,7 @@ auto routing_request_rule_service = R"({
   }
 })";
 
-auto routing_request_standalone = R"({
+auto const routing_request_standalone = R"({
   "content_type": "RoutingRequest",
   "content": {
     "start_type": "PretripStart",

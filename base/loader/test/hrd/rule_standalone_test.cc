@@ -17,13 +17,10 @@ std::string get_simple_traffic_days(std::string const& t) {
 
 bool contains_service(Vector<Offset<Service>> const* services, int train_nr,
                       std::string const& traffic_days) {
-  for (auto const& s : *services) {
-    if (get_simple_traffic_days(s->traffic_days()->str()) == traffic_days &&
-        s->sections()->Get(0)->train_nr() == train_nr) {
-      return true;
-    }
-  }
-  return false;
+  return std::any_of(std::begin(*services), std::end(*services), [&](auto&& s) {
+    return get_simple_traffic_days(s->traffic_days()->str()) == traffic_days &&
+           s->sections()->Get(0)->train_nr() == train_nr;
+  });
 }
 
 TEST(loader_hrd_fbs_services, rule_standalone) {

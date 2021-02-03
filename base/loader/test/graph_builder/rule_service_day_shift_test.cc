@@ -81,6 +81,7 @@ public:
     if (trip_stops.size() != stations.size()) {
       return false;
     }
+    // NOLINTNEXTLINE
     for (auto const& [stop, station] : utl::zip(trip_stops, stations)) {
       if (&stop.get_station(*sched_) != station) {
         return false;

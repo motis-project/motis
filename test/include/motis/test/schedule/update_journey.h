@@ -10,8 +10,8 @@
 
 namespace motis::test::schedule::update_journey {
 
-static loader::loader_options dataset_opt{{"test/schedule/update_journey"},
-                                          "20161124"};
+static auto const dataset_opt =
+    loader::loader_options{{"test/schedule/update_journey"}, "20161124"};
 
 motis::module::msg_ptr get_free_text_ris_msg(
     std::string const& eva_num, int service_num, event_type type,

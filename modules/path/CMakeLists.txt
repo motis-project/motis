@@ -15,8 +15,7 @@ target_compile_features(motis-path PUBLIC cxx_std_17)
 target_include_directories(motis-path PUBLIC include)
 add_dependencies(motis-path generated-motis-libpath-fbs-headers)
 target_link_libraries(motis-path
-  ${Boost_PROGRAM_OPTIONS_LIBRARY}
-  ${Boost_SYSTEM_LIBRARY}
+  boost-system
   motis-core
   motis-module
   motis-libpath
@@ -52,9 +51,8 @@ target_link_libraries(motis-path-prepare
   tiles-import-library
   lmdb
   cista
-  ${Boost_FILESYSTEM}
-  ${Boost_THREAD_LIBRARY}
-  ${Boost_SYSTEM_LIBRARY}
+  boost-system
+  boost-filesystem
   ${CMAKE_THREAD_LIBS_INIT}
 )
 target_compile_options(motis-path-prepare PRIVATE ${MOTIS_CXX_FLAGS})

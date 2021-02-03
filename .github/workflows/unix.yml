@@ -11,66 +11,77 @@ on:
 
 jobs:
   formatting:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
 
+      - name: Install clang-format
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 11
+          rm llvm.sh
+          sudo apt-get install -y --no-install-recommends clang-format-11
+
       - name: Format files
-        run: find base libs modules test -type f -a \( -name "*.cc" -o -name "*.h" \) -print0 | xargs -0 clang-format-9 -i
+        run: find base libs modules test -type f -a \( -name "*.cc" -o -name "*.h" \) -print0 | xargs -0 clang-format-11 -i
 
       - name: Check for differences
         run: |
           git status --porcelain
           git status --porcelain | xargs -I {} -0 test -z \"{}\"
+
   build:
     runs-on: ${{ matrix.config.os }}
     strategy:
       fail-fast: false
       matrix:
         config:
-          - name: Mac OS X
+          - name: MacOS Release
             cxx: clang++
             cc: clang
             mode: Release
             cxxflags: -stdlib=libc++
             os: macos-latest
             artifact: macos
-          - name: GCC 9 Release
-            cxx: g++-9
-            cc: gcc-9
+          - name: GCC 10 Release
+            cxx: g++-10
+            cc: gcc-10
             mode: Release
-            os: ubuntu-latest
+            os: ubuntu-20.04
             artifact: linux
-          - name: GCC 9 Debug
-            cxx: g++-9
-            cc: gcc-9
+          - name: GCC 10 Debug
+            cxx: g++-10
+            cc: gcc-10
             mode: Debug
-            os: ubuntu-latest
-          - name: Clang 9 Release
-            cxx: clang++-9
-            cc: clang-9
+            os: ubuntu-20.04
+          - name: Clang 11 Release
+            cxx: clang++-11
+            cc: clang-11
             mode: Release
             cxxflags: -stdlib=libc++
             ldflags: -lc++abi
-            os: ubuntu-latest
+            os: ubuntu-20.04
           - name: Clang Tidy
-            cxx: clang++-9
-            cc: clang-9
+            cxx: clang++-11
+            cc: clang-11
             mode: Debug
             cxxflags: -stdlib=libc++
             ldflags: -lc++abi
             lint: true
-            os: ubuntu-latest
-          - key: Clang 9 Sanitizer
-            cxx: clang++-9
-            cc: clang-9
+            os: ubuntu-20.04
+          - key: Clang 11 Sanitizer
+            cxx: clang++-11
+            cc: clang-11
             mode: Release
             cflags: -fsanitize=address,undefined -fno-omit-frame-pointer
             cxxflags: -fsanitize=address,undefined -fno-omit-frame-pointer -stdlib=libc++
             ldflags: -lc++abi
-            os: ubuntu-latest
+            os: ubuntu-20.04
     env:
-      BOOST_ROOT: /usr/local/share/boost/1.72.0
+      DEBIAN_FRONTEND: noninteractive
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_ACCURACY: SLOPPY
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
@@ -78,26 +89,31 @@ jobs:
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
     steps:
       - uses: actions/checkout@v2
+
       - uses: seanmiddleditch/gha-setup-ninja@master
+        if: matrix.config.os == 'macos-latest'
 
       # ==== INSTALL ====
       - name: Update APT
         if: matrix.config.os != 'macos-latest'
-        env:
-          DEBIAN_FRONTEND: noninteractive
         run: sudo apt-get update
-          
+
       - name: Install LLVM
-        if: matrix.config.os != 'macos-latest' && matrix.config.cc == 'clang-9'
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: sudo apt-get install -y --no-install-recommends libc++-9-dev libc++abi-9-dev clang-tidy-9
+        if: matrix.config.os != 'macos-latest' && matrix.config.cc == 'clang-11'
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 11
+          rm llvm.sh
+          sudo apt-get install -y --no-install-recommends libc++-11-dev libc++abi-11-dev clang-tidy-11
 
       - name: Install Valgrind
-        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-9'
-        env:
-          DEBIAN_FRONTEND: noninteractive
+        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
         run: sudo apt-get install -y --no-install-recommends valgrind
+
+      - name: Install Ninja
+        if: matrix.config.os != 'macos-latest'
+        run: sudo apt-get install -y --no-install-recommends ninja-build
 
       # ==== CACHING ====
       - name: buildcache Cache
@@ -117,78 +133,6 @@ jobs:
           key: deps-${{ hashFiles('.pkg') }}
           restore-keys: deps-
 
-      - name: libc++ Boost Cache
-        uses: actions/cache@v1
-        id: libcxxboostcache
-        if: contains(matrix.config.cxxflags, 'libc++') && !contains(matrix.config.cxxflags, '-fsanitize=address')
-        with:
-          path: boost_1_72_0
-          key: boost_1_72_0-${{ matrix.config.os }}
-
-      - name: libc++ Boost asan Cache
-        uses: actions/cache@v1
-        id: libcxxboostasancache
-        if: contains(matrix.config.cxxflags, 'libc++') && contains(matrix.config.cxxflags, '-fsanitize=address')
-        with:
-          path: boost_1_72_0_asan
-          key: boost_1_72_0_asan-${{ matrix.config.os }}
-
-      # ==== BOOST FOR LIBCXX ====
-      - name: Boost for libc++
-        if: contains(matrix.config.cxxflags, 'libc++') && !contains(matrix.config.cxxflags, '-fsanitize=address') && steps.libcxxboostcache.outputs.cache-hit != 'true'
-        run: |
-          echo "using clang : 9 : ${{ matrix.config.cxx }} ;" > $HOME/user-config.jam
-          wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.bz2
-          tar xf boost_1_72_0.tar.bz2
-          cd boost_1_72_0
-          ./bootstrap.sh
-          ./b2 -j6 \
-            link=static threading=multi variant=release \
-            toolset=clang-9 cxxflags="-stdlib=libc++" \
-            --with-system \
-            --with-filesystem \
-            --with-iostreams \
-            --with-program_options \
-            --with-thread \
-            --with-date_time \
-            --with-regex \
-            --with-serialization \
-            -s NO_BZIP2=1
-
-      - name: Boost for libc++ asan
-        if: contains(matrix.config.cxxflags, 'libc++') && contains(matrix.config.cxxflags, '-fsanitize=address') && steps.libcxxboostasancache.outputs.cache-hit != 'true'
-        run: |
-          echo "using clang : 9 : /usr/bin/${{ matrix.config.cxx }} ;" > $HOME/user-config.jam
-          wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.bz2
-          tar xf boost_1_72_0.tar.bz2
-          mv boost_1_72_0 boost_1_72_0_asan
-          cd boost_1_72_0_asan
-          ./bootstrap.sh
-          ./b2 -j6 \
-            link=static threading=multi variant=release \
-            toolset=clang-9 cxxflags="-fsanitize=address,undefined -fno-omit-frame-pointer -stdlib=libc++" \
-            --with-system \
-            --with-filesystem \
-            --with-iostreams \
-            --with-program_options \
-            --with-thread \
-            --with-date_time \
-            --with-regex \
-            --with-serialization \
-            -s NO_BZIP2=1
-
-      - name: Set BOOST_ROOT for GCC 9
-        if: matrix.config.cxx == 'g++-9'
-        run: echo "BOOST_ROOT=$BOOST_ROOT_1_72_0" >> $GITHUB_ENV
-
-      - name: Set BOOST_ROOT
-        if: contains(matrix.config.cxxflags, 'libc++') && !contains(matrix.config.cxxflags, '-fsanitize=address')
-        run: echo "BOOST_ROOT=`pwd`/boost_1_72_0" >> $GITHUB_ENV
-
-      - name: Set BOOST_ROOT asan
-        if: contains(matrix.config.cxxflags, 'libc++') && contains(matrix.config.cxxflags, '-fsanitize=address')
-        run: echo "BOOST_ROOT=`pwd`/boost_1_72_0_asan" >> $GITHUB_ENV
-
       # ==== BUILD ====
       - name: CMake
         run: |
@@ -204,7 +148,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} \
             -DMOTIS_LINT=${{ matrix.config.lint }} \
             -DCTX_ASAN=${{ contains(matrix.config.cxxflags, '-fsanitize=address') }} \
-            -DCTX_VALGRIND=${{ matrix.config.cc == 'gcc-9' && matrix.config.mode == 'Debug' }}
+            -DCTX_VALGRIND=${{ matrix.config.cc == 'gcc-10' && matrix.config.mode == 'Debug' }}
 
       - name: Build
         run: |
@@ -229,7 +173,7 @@ jobs:
 
       # ==== VALGRIND ====
       - name: Run Test Mode Valgrind
-        if: matrix.mode == 'Debug' && matrix.config.cc == 'gcc-9'
+        if: matrix.mode == 'Debug' && matrix.config.cc == 'gcc-10'
         run: >
           valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full \
             ./build/motis --mode test \
@@ -240,20 +184,20 @@ jobs:
               --bikesharing.db_max_size 1048576
 
       - name: Run Tests Valgrind
-        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-9'
+        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
         run: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./build/motis-test
 
       - name: Run Integration Tests Valgrind
-        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-9'
+        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
         run: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./build/motis-itest
 
       # ==== DISTRIBUTION ====
       - name: Strip Executable
-        if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-9' || matrix.config.os == 'macos-latest')
+        if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-10' || matrix.config.os == 'macos-latest')
         run: strip build/motis
 
       - name: Compile Web Interface
-        if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-9' || matrix.config.os == 'macos-latest')
+        if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-10' || matrix.config.os == 'macos-latest')
         run: |
           cd ./ui/web
           npm install
@@ -261,7 +205,7 @@ jobs:
           rm -rf node_modules
 
       - name: Create Distribution
-        if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-9' || matrix.config.os == 'macos-latest')
+        if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-10' || matrix.config.os == 'macos-latest')
         run: |
           mkdir motis
           mv ui/web motis
@@ -272,7 +216,7 @@ jobs:
           tar cjf motis-${{ matrix.config.artifact }}.tar.bz2 motis
 
       - name: Upload Distribution
-        if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-9' || matrix.config.os == 'macos-latest')
+        if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-10' || matrix.config.os == 'macos-latest')
         uses: actions/upload-artifact@v1
         with:
           name: motis-${{ matrix.config.artifact }}
@@ -280,7 +224,7 @@ jobs:
 
       # ==== RELEASE ====
       - name: Upload Release
-        if: github.event.action == 'published' && matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-9' || matrix.config.os == 'macos-latest')
+        if: github.event.action == 'published' && matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-10' || matrix.config.os == 'macos-latest')
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

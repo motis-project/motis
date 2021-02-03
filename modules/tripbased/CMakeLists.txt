@@ -8,8 +8,7 @@ file(GLOB_RECURSE motis-tripbased-files src/*.cc)
 add_library(motis-tripbased STATIC ${motis-tripbased-files})
 target_include_directories(motis-tripbased PUBLIC include)
 target_link_libraries(motis-tripbased
-  ${Boost_PROGRAM_OPTIONS_LIBRARY}
-  ${Boost_SYSTEM_LIBRARY}
+  boost-system
   motis-routing
   motis-module
   motis-core

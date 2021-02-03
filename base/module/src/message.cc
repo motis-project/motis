@@ -46,9 +46,16 @@ reflection::Schema const& init_schema(Parser& parser) {
   return *reflection::GetSchema(parser.builder_.GetBufferPointer());
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::unique_ptr<Parser> json_parser = init_parser();
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::unique_ptr<Parser> compact_json_parser = init_parser(true);
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::unique_ptr<Parser> reflection_parser = init_parser();
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static reflection::Schema const& schema = init_schema(*reflection_parser);
 
 std::string message::to_json(bool compact) const {

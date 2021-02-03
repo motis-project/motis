@@ -70,7 +70,7 @@ void gtfsrt_reroute_test::check_reroute_event(ris_message const& message) {
   EXPECT_EQ(EventType_DEP, e5->type());
 }
 
-char const* reroute_only = R"(
+constexpr auto const reroute_only = R"(
 {
   "header": {
     "gtfsRealtimeVersion": "1.0",
@@ -113,7 +113,7 @@ TEST_F(gtfsrt_reroute_test, receive_reroute_only) {
   check_reroute_event(msgs[0]);
 }
 
-char const* reroute_and_delay = R"(
+constexpr auto const reroute_and_delay = R"(
 {
   "header": {
     "gtfsRealtimeVersion": "1.0",

@@ -5,7 +5,7 @@
 
 namespace motis::ris::risml {
 
-char const* addition_fixture_1 = R"(
+constexpr auto const addition_fixture_1 = R"(
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <Paket Version="1.2" SpezVer="1" TOut="20151007001025011" KNr="123869635">
  <ListNachricht>
@@ -84,7 +84,7 @@ TEST(ris_addition_message, message_1) {
   EXPECT_EQ("", e1->track()->str());
 }
 
-char const* addition_fixture_2 = R"(
+constexpr auto const addition_fixture_2 = R"(
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <Paket Version="1.2" SpezVer="1" TOut="20151007043812499" KNr="123928646">
  <ListNachricht>

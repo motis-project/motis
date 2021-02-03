@@ -18,22 +18,17 @@ struct in_out_allowed {
 };
 
 inline bool get_in_allowed(node const* n) {
-  for (auto const& e : n->incoming_edges_) {
-    if (e->from_ == n->get_station() && e->type() != edge::INVALID_EDGE) {
-      return true;
-    }
-  }
-  return false;
+  return std::any_of(
+      begin(n->incoming_edges_), end(n->incoming_edges_), [&](auto&& e) {
+        return e->from_ == n->get_station() && e->type() != edge::INVALID_EDGE;
+      });
 }
 
 inline bool get_out_allowed(node const* n) {
-  for (auto const& e : n->edges_) {
-    if (e.get_destination() == n->get_station() &&
-        e.type() != edge::INVALID_EDGE) {
-      return true;
-    }
-  }
-  return false;
+  return std::any_of(begin(n->edges_), end(n->edges_), [&](auto&& e) {
+    return e.get_destination() == n->get_station() &&
+           e.type() != edge::INVALID_EDGE;
+  });
 }
 
 inline in_out_allowed get_in_out_allowed(node const* n) {

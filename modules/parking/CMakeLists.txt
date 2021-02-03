@@ -27,8 +27,7 @@ target_include_directories(motis-parking PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../pp
 target_compile_features(motis-parking PUBLIC cxx_std_17)
 add_dependencies(motis-parking generated-motis-parking-dbschema-headers)
 target_link_libraries(motis-parking
-  ${Boost_PROGRAM_OPTIONS_LIBRARY}
-  ${Boost_SYSTEM_LIBRARY}
+  boost-system
   motis-module
   motis-core
   geo
