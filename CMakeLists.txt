@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(motis)
 
+enable_language(CXX C ASM)
+
 if (MSVC)
   # PDB debug information is not supported by buildcache.
   # Store debug info in the object files.
