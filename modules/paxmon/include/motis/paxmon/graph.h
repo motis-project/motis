@@ -44,7 +44,7 @@ struct event_node {
   inline time schedule_time() const { return schedule_time_; }
   inline event_type type() const { return type_; }
   inline std::uint32_t station_idx() const { return station_; }
-  inline station const& get_station(schedule const& sched) {
+  inline station const& get_station(schedule const& sched) const {
     return *sched.stations_[station_idx()];
   }
 
