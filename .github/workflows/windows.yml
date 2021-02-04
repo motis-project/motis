@@ -49,7 +49,6 @@ jobs:
 
       - name: Build
         run: |
-          $env:BOOST_ROOT = $env:BOOST_ROOT_1_72_0
           $devShell = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find **\Microsoft.VisualStudio.DevShell.dll
           $installPath = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationpath
           Import-Module $devShell

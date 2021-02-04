@@ -95,7 +95,7 @@ struct overloaded : Ts... {
   using Ts::operator()...;
 };
 template <class... Ts>
-overloaded(Ts...)->overloaded<Ts...>;
+overloaded(Ts...) -> overloaded<Ts...>;
 
 schedule_ptr read_graph(std::string const& path, cista::memory_holder& mem,
                         bool const read_mmap) {

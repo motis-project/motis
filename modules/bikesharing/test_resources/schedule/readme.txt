@@ -1,1 +1,0 @@
-Derived from base/loader/test_resources/hrd_schedules/hand-crafted/.

@@ -75,7 +75,7 @@ struct path_database_query_test : public ::testing::Test {
                                    size_t n) {
     utl::verify(vec->size() >= n * 2 + 1, "cant get nth (size={}, n={})",
                 vec->size(), n);
-    return geo::latlng(vec->Get(n * 2), vec->Get(n * 2 + 1));
+    return {vec->Get(n * 2), vec->Get(n * 2 + 1)};
   }
 
   static std::pair<int64_t, uint64_t> add_feature(

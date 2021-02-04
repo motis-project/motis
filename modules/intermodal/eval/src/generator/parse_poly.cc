@@ -72,7 +72,7 @@ std::unique_ptr<poly> parse_poly(std::string const& filename) {
                       << line << std::endl;
             return nullptr;
           }
-          ring.emplace_back(lat, lon);
+          ring.emplace_back(geo::latlng{lat, lon});
         }
         break;
     }

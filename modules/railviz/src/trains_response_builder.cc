@@ -76,8 +76,8 @@ void trains_response_builder::resolve_paths() {
             auto const& s_arr = sec.to_station(sched_);
 
             geo::polyline stub;
-            stub.emplace_back(s_dep.lat(), s_dep.lng());
-            stub.emplace_back(s_arr.lat(), s_arr.lng());
+            stub.emplace_back(geo::latlng{s_dep.lat(), s_dep.lng()});
+            stub.emplace_back(geo::latlng{s_arr.lat(), s_arr.lng()});
             extra.emplace_back(std::move(stub));
           }
           path_query.add_extra(extra);

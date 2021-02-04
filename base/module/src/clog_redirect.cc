@@ -23,6 +23,7 @@ clog_redirect::~clog_redirect() {
 
 void clog_redirect::set_enabled(bool const enabled) { enabled_ = enabled; }
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 bool clog_redirect::enabled_ = true;
 
 }  // namespace motis::module

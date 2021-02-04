@@ -79,7 +79,7 @@ schedule_ptr load_schedule(loader_options const& opt,
     auto const all_parsers = parsers();
     auto const it = std::find_if(
         begin(all_parsers), end(all_parsers),
-        [& p = path](auto const& parser) { return parser->applicable(p); });
+        [&p = path](auto const& parser) { return parser->applicable(p); });
 
     if (it == end(all_parsers)) {
       for (auto const& parser : parsers()) {

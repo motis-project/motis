@@ -20,6 +20,8 @@ struct clog_redirect {
 private:
   std::ofstream sink_;
   std::streambuf* backup_clog_;
+
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
   static bool enabled_;
 };
 

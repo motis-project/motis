@@ -22,7 +22,7 @@ parkings::parkings(std::string const& filename) {
 
   auto id = 1;
   parkings_ = utl::to_vec(entries, [&id](entry const& e) {
-    return parking_lot(id++, geo::latlng(std::get<0>(e), std::get<1>(e)),
+    return parking_lot(id++, geo::latlng{std::get<0>(e), std::get<1>(e)},
                        std::get<2>(e) != 0);
   });
   rtree_ = geo::make_point_rtree(parkings_,

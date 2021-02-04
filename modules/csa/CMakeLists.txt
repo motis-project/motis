@@ -8,8 +8,7 @@ add_library(motis-csa STATIC ${motis-csa-files})
 target_include_directories(motis-csa PUBLIC include)
 target_compile_features(motis-csa PUBLIC cxx_std_17)
 target_link_libraries(motis-csa
-  ${Boost_PROGRAM_OPTIONS_LIBRARY}
-  ${Boost_SYSTEM_LIBRARY}
+  boost-system
   motis-routing
   motis-module
   motis-core
@@ -27,5 +26,6 @@ if (MOTIS_CUDA)
       LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
       INSTALL_RPATH "$ORIGIN/../lib:$ORIGIN/")
   target_include_directories(gpucsa PUBLIC include)
+  set_property(TARGET gpucsa PROPERTY CUDA_ARCHITECTURES 75 61)
   target_link_libraries(motis-csa gpucsa)
 endif()

@@ -14,10 +14,10 @@ class bbox : public bounds {
 public:
   bbox()
       : bbox(boost::geometry::model::box<geo::latlng>(
-            geo::latlng(std::numeric_limits<double>::min(),
-                        std::numeric_limits<double>::min()),
-            geo::latlng(std::numeric_limits<double>::max(),
-                        std::numeric_limits<double>::max()))) {}
+            geo::latlng{std::numeric_limits<double>::min(),
+                        std::numeric_limits<double>::min()},
+            geo::latlng{std::numeric_limits<double>::max(),
+                        std::numeric_limits<double>::max()})) {}
 
   explicit bbox(boost::geometry::model::box<geo::latlng> box) : box_(box) {
     std::random_device rd;

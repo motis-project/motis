@@ -17,7 +17,7 @@ public:
   gtfsrt_cancel_test() : gtfsrt_test(dataset_opt) {}
 };
 
-char const* simple_cancel = R"(
+constexpr auto const simple_cancel = R"(
 {
   "header": {
     "gtfsRealtimeVersion": "1.0",

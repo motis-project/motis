@@ -3,10 +3,10 @@
 #include <iostream>
 #include <random>
 
-#include "boost/program_options.hpp"
-
+#include "boost/algorithm/string.hpp"
 #include "boost/date_time/gregorian/gregorian_types.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
+#include "boost/program_options.hpp"
 
 #include "utl/erase.h"
 #include "utl/to_vec.h"
@@ -250,7 +250,7 @@ std::string replace_target_escape(std::string const& str,
   }
 
   auto clean_target = target;
-  if (clean_target.starts_with('/')) {
+  if (clean_target[0] == '/') {
     clean_target.erase(clean_target.begin());
   }
   std::replace(clean_target.begin(), clean_target.end(), '/', '_');

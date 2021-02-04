@@ -57,21 +57,18 @@ void init_stop_to_connections(csa_timetable& tt) {
 }
 
 bool is_in_allowed(node const* route_node) {
-  for (auto const& e : route_node->incoming_edges_) {
-    if (e->from_->is_station_node() && e->type() != edge::INVALID_EDGE) {
-      return true;
-    }
-  }
-  return false;
+  return std::any_of(begin(route_node->incoming_edges_),
+                     end(route_node->incoming_edges_), [](auto&& e) {
+                       return e->from_->is_station_node() &&
+                              e->type() != edge::INVALID_EDGE;
+                     });
 }
 
 bool is_out_allowed(node const* route_node) {
-  for (auto const& e : route_node->edges_) {
-    if (e.to_->is_station_node() && e.type() != edge::INVALID_EDGE) {
-      return true;
-    }
-  }
-  return false;
+  return std::any_of(
+      begin(route_node->edges_), end(route_node->edges_), [](auto&& e) {
+        return e.to_->is_station_node() && e.type() != edge::INVALID_EDGE;
+      });
 }
 
 std::vector<uint32_t> get_bucket_starts(
