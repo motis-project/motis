@@ -64,6 +64,9 @@ inline simulation_result simulate_behavior(
   motis_parallel_for(
       combined_groups, ([&](auto const& cpgs) {
         for (auto const& cpg : cpgs.second) {
+          if (cpg.groups_.empty()) {
+            continue;
+          }
           auto const allocation = pb.pick_routes(
               *cpg.groups_.front(), cpg.alternatives_, announcements);
           auto guard = std::lock_guard{result_mutex};

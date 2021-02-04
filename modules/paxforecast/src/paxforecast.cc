@@ -4,11 +4,13 @@
 #include <algorithm>
 #include <limits>
 #include <map>
+#include <memory>
 #include <numeric>
 #include <random>
 
 #include "fmt/format.h"
 
+#include "utl/erase_if.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
@@ -91,6 +93,25 @@ void paxforecast::init(motis::module::registry& reg) {
   });
 }
 
+auto const constexpr REMOVE_GROUPS_BATCH_SIZE = 10'000;
+auto const constexpr ADD_GROUPS_BATCH_SIZE = 10'000;
+
+void send_remove_groups(std::vector<std::uint64_t>& groups_to_remove) {
+  if (groups_to_remove.empty()) {
+    return;
+  }
+  message_creator remove_groups_mc;
+  remove_groups_mc.create_and_finish(
+      MsgContent_PaxMonRemoveGroupsRequest,
+      CreatePaxMonRemoveGroupsRequest(
+          remove_groups_mc, remove_groups_mc.CreateVector(groups_to_remove))
+          .Union(),
+      "/paxmon/remove_groups");
+  auto const remove_msg = make_msg(remove_groups_mc);
+  motis_call(remove_msg)->val();
+  groups_to_remove.clear();
+}
+
 void update_tracked_groups(
     schedule const& sched, simulation_result const& sim_result,
     std::map<passenger_group const*, monitoring_event_type> const&
@@ -103,22 +124,6 @@ void update_tracked_groups(
   auto groups_to_add = std::vector<Offset<PaxMonGroup>>{};
   auto remove_group_count = 0ULL;
   auto add_group_count = 0ULL;
-
-  auto const send_remove_groups = [&]() {
-    if (groups_to_remove.empty()) {
-      return;
-    }
-    message_creator remove_groups_mc;
-    remove_groups_mc.create_and_finish(
-        MsgContent_PaxMonRemoveGroupsRequest,
-        CreatePaxMonRemoveGroupsRequest(
-            remove_groups_mc, remove_groups_mc.CreateVector(groups_to_remove))
-            .Union(),
-        "/paxmon/remove_groups");
-    auto const remove_msg = make_msg(remove_groups_mc);
-    motis_call(remove_msg)->val();
-    groups_to_remove.clear();
-  };
 
   auto const send_add_groups = [&]() {
     if (groups_to_add.empty()) {
@@ -146,18 +151,12 @@ void update_tracked_groups(
     auto const journey_prefix =
         get_prefix(sched, pg->compact_planned_journey_, *result.localization_);
 
-    if (event_type == monitoring_event_type::MAJOR_DELAY_EXPECTED &&
-        result.alternatives_.size() == 1 &&
-        merge_journeys(sched, journey_prefix,
-                       result.alternatives_.front().first->compact_journey_) ==
-            pg->compact_planned_journey_) {
-      // keep existing group (no alternatives found)
-      continue;
+    // major delay groups have already been removed
+    if (event_type != monitoring_event_type::MAJOR_DELAY_EXPECTED) {
+      // remove existing group
+      groups_to_remove.emplace_back(pg->id_);
+      ++remove_group_count;
     }
-
-    // remove existing group
-    groups_to_remove.emplace_back(pg->id_);
-    ++remove_group_count;
 
     // add alternatives
     for (auto const [alt, prob] : result.alternatives_) {
@@ -199,10 +198,10 @@ void update_tracked_groups(
       ++add_group_count;
     }
 
-    if (groups_to_remove.size() >= 10'000) {
-      send_remove_groups();
+    if (groups_to_remove.size() >= REMOVE_GROUPS_BATCH_SIZE) {
+      send_remove_groups(groups_to_remove);
     }
-    if (groups_to_add.size() >= 10'000) {
+    if (groups_to_add.size() >= ADD_GROUPS_BATCH_SIZE) {
       send_add_groups();
     }
   }
@@ -212,8 +211,16 @@ void update_tracked_groups(
   tick_stats.added_groups_ = add_group_count;
   tick_stats.removed_groups_ = remove_group_count;
 
-  send_remove_groups();
+  send_remove_groups(groups_to_remove);
   send_add_groups();
+}
+
+bool has_better_alternative(std::vector<alternative> const& alts,
+                            time expected_arrival_time) {
+  return std::any_of(begin(alts), end(alts),
+                     [expected_arrival_time](alternative const& alt) {
+                       return alt.arrival_time_ < expected_arrival_time;
+                     });
 }
 
 void paxforecast::on_monitoring_event(msg_ptr const& msg) {
@@ -231,15 +238,27 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
   std::map<unsigned, std::vector<combined_passenger_group>> combined_groups;
   std::map<passenger_group const*, monitoring_event_type> pg_event_types;
+  std::map<passenger_group const*, time> expected_arrival_times;
+  auto delayed_groups = 0ULL;
 
   for (auto const& event : *mon_update->events()) {
-    if (event->type() == PaxMonEventType_NO_PROBLEM ||
-        event->type() == PaxMonEventType_MAJOR_DELAY_EXPECTED) {
-      // TODO(pablo): major delay: group is still on all edges in the graph
+    if (event->type() == PaxMonEventType_NO_PROBLEM) {
       continue;
     }
+
     auto const pg = data.get_passenger_group(event->group()->id());
     utl::verify(pg != nullptr, "monitored passenger group already removed");
+
+    auto const major_delay =
+        event->type() == PaxMonEventType_MAJOR_DELAY_EXPECTED;
+
+    if (major_delay) {
+      ++delayed_groups;
+      expected_arrival_times.insert(
+          {pg, unix_to_motistime(sched.schedule_begin_,
+                                 event->expected_arrival_time())});
+    }
+
     auto const inserted = pg_event_types.insert(
         {pg, static_cast<monitoring_event_type>(event->type())});
     utl::verify(inserted.second,
@@ -254,11 +273,19 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
         begin(destination_groups), end(destination_groups),
         [&](auto const& g) { return g.localization_ == localization; });
     if (cpg == end(destination_groups)) {
-      destination_groups.emplace_back(combined_passenger_group{
-          destination_station_id, pg->passengers_, localization, {pg}, {}});
+      destination_groups.emplace_back(
+          combined_passenger_group{destination_station_id,
+                                   pg->passengers_,
+                                   major_delay,
+                                   localization,
+                                   {pg},
+                                   {}});
     } else {
       cpg->passengers_ += pg->passengers_;
       cpg->groups_.push_back(pg);
+      if (major_delay) {
+        cpg->has_major_delay_groups_ = true;
+      }
     }
   }
 
@@ -323,6 +350,54 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
   tick_stats.routing_requests_ = routing_requests;
   tick_stats.alternatives_found_ = alternatives_found;
+
+  std::vector<std::unique_ptr<passenger_group>> removed_groups;
+  if (delayed_groups > 0) {
+    std::vector<std::uint64_t> groups_to_remove;
+    for (auto& cgs : combined_groups) {
+      for (auto& cpg : cgs.second) {
+        if (!cpg.has_major_delay_groups_) {
+          continue;
+        }
+
+        // remove groups without better alternatives from cpg
+        // so that they are not included in the simulation
+        // (they remain unchanged)
+        utl::erase_if(cpg.groups_, [&](passenger_group const* pg) {
+          if (pg_event_types.at(pg) !=
+              monitoring_event_type::MAJOR_DELAY_EXPECTED) {
+            return false;
+          }
+          auto const expected_current_arrival_time =
+              expected_arrival_times.at(pg);
+          utl::verify(expected_current_arrival_time != INVALID_TIME,
+                      "invalid expected arrival time for delayed group");
+          return !has_better_alternative(cpg.alternatives_,
+                                         expected_current_arrival_time);
+        });
+
+        // groups with better alternatives are removed from the paxmon graph
+        // and included in the simulation
+        // temporary copy is needed because the original group is deleted
+        for (auto& pg : cpg.groups_) {
+          if (pg_event_types.at(pg) ==
+              monitoring_event_type::MAJOR_DELAY_EXPECTED) {
+            groups_to_remove.emplace_back(pg->id_);
+            auto& copy = removed_groups.emplace_back(
+                std::make_unique<passenger_group>(*pg));
+            pg = copy.get();
+            pg_event_types.insert(
+                {pg, monitoring_event_type::MAJOR_DELAY_EXPECTED});
+          }
+        }
+
+        if (groups_to_remove.size() >= REMOVE_GROUPS_BATCH_SIZE) {
+          send_remove_groups(groups_to_remove);
+        }
+      }
+    }
+    send_remove_groups(groups_to_remove);
+  }
 
   MOTIS_START_TIMING(passenger_behavior);
   manual_timer sim_timer{"passenger behavior simulation"};
