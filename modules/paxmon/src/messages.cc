@@ -170,7 +170,10 @@ Offset<PaxMonEvent> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
       fbb, static_cast<PaxMonEventType>(me.type_),
       to_fbs(sched, fbb, me.group_), fbs_localization_type(me.localization_),
       to_fbs(sched, fbb, me.localization_),
-      static_cast<PaxMonReachabilityStatus>(me.reachability_status_));
+      static_cast<PaxMonReachabilityStatus>(me.reachability_status_),
+      me.expected_arrival_time_ != INVALID_TIME
+          ? motis_to_unixtime(sched, me.expected_arrival_time_)
+          : 0);
 }
 
 Offset<Vector<PaxMonCdfEntry const*>> cdf_to_fbs(FlatBufferBuilder& fbb,

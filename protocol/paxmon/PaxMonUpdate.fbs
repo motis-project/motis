@@ -22,6 +22,7 @@ table PaxMonEvent {
   group: PaxMonGroup;
   localization: PaxMonLocalization;
   reachability_status: PaxMonReachabilityStatus;
+  expected_arrival_time: ulong; // 0 for broken journeys
 }
 
 table PaxMonUpdate {

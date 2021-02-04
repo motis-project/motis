@@ -650,8 +650,13 @@ void paxmon::rt_updates_applied() {
           MOTIS_START_TIMING(localization);
           auto const localization = localize(sched, reachability, search_time);
           MOTIS_STOP_TIMING(localization);
+
           auto const event_type = get_monitoring_event_type(
               pg, reachability, arrival_delay_threshold_);
+          auto const expected_arrival_time =
+              event_type == monitoring_event_type::TRANSFER_BROKEN
+                  ? INVALID_TIME
+                  : reachability.reachable_trips_.back().exit_real_time_;
 
           MOTIS_START_TIMING(update_load);
           update_load(pg, reachability, localization, data_.graph_);
@@ -659,10 +664,10 @@ void paxmon::rt_updates_applied() {
 
           MOTIS_START_TIMING(fbs_events);
           std::lock_guard guard{update_mutex};
-          fbs_events.emplace_back(
-              to_fbs(sched, mc,
-                     monitoring_event{event_type, *pg, localization,
-                                      reachability.status_}));
+          fbs_events.emplace_back(to_fbs(
+              sched, mc,
+              monitoring_event{event_type, *pg, localization,
+                               reachability.status_, expected_arrival_time}));
           if (fbs_events.size() >= 10'000) {
             make_monitoring_msg();
           }
