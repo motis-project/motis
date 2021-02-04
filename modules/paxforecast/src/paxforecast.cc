@@ -1,6 +1,8 @@
 #include "motis/paxforecast/paxforecast.h"
 
+#include <ctime>
 #include <algorithm>
+#include <limits>
 #include <map>
 #include <numeric>
 #include <random>
@@ -324,7 +326,15 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
   MOTIS_START_TIMING(passenger_behavior);
   manual_timer sim_timer{"passenger behavior simulation"};
-  auto rnd_gen = std::mt19937{std::random_device{}()};
+#ifdef WIN32
+  auto const seed = static_cast<std::mt19937::result_type>(
+      std::time(nullptr) %
+      std::numeric_limits<std::mt19937::result_type>::max());
+#else
+  auto rd = std::random_device();
+  auto const seed = rd();
+#endif
+  auto rnd_gen = std::mt19937{seed};
   auto transfer_dist = std::normal_distribution<float>{30.0F, 10.0F};
   auto pb = behavior::probabilistic::passenger_behavior{
       rnd_gen, transfer_dist, 1000, deterministic_mode_};
