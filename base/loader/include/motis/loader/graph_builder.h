@@ -213,8 +213,8 @@ struct graph_builder {
 
   bool check_trip(trip const* trp);
 
-  bool skip_station(Station const* station);
-  bool skip_route(Route const* route);
+  bool skip_station(Station const* station) const;
+  bool skip_route(Route const* route) const;
 
   unsigned lcon_count_{0U};
   unsigned next_route_index_{0U};

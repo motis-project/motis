@@ -159,7 +159,7 @@ void update_tracked_groups(
     }
 
     // add alternatives
-    for (auto const [alt, prob] : result.alternatives_) {
+    for (auto const& [alt, prob] : result.alternatives_) {
       if (prob == 0.0) {
         continue;
       }

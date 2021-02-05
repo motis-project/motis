@@ -175,7 +175,7 @@ private:
                       : orig >> static_cast<std::size_t>(-offset);
   }
 
-  inline bool skip_rule(Rule const* rule) {
+  inline bool skip_rule(Rule const* rule) const {
     return gb_.no_local_transport_ &&
            (gb_.skip_route(rule->service1()->route()) ||
             gb_.skip_route(rule->service2()->route()));

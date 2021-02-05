@@ -374,7 +374,7 @@ struct footpath_builder {
     return s.str();
   }
 
-  inline bool skip_station(Station const* station) {
+  inline bool skip_station(Station const* station) const {
     return opt_.no_local_transport_ && is_local_station(station);
   }
 

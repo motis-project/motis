@@ -723,11 +723,11 @@ route_section graph_builder::add_route_section(
   return section;
 }
 
-bool graph_builder::skip_station(Station const* station) {
+bool graph_builder::skip_station(Station const* station) const {
   return no_local_transport_ && is_local_station(station);
 }
 
-bool graph_builder::skip_route(Route const* route) {
+bool graph_builder::skip_route(Route const* route) const {
   return no_local_transport_ &&
          std::any_of(
              route->stations()->begin(), route->stations()->end(),
