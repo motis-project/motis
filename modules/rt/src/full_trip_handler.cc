@@ -184,7 +184,7 @@ private:
     return sn.get();
   }
 
-  full_trip_id get_full_trip_id() {
+  full_trip_id get_full_trip_id() const {
     full_trip_id ftid;
 
     auto const tid = msg_->trip_id()->id();
@@ -461,7 +461,7 @@ private:
   bool is_reroute() const { return result_.is_reroute_; }
 
 public:
-  full_trip_result get_result() { return result_; }
+  full_trip_result get_result() const { return result_; }
 
   statistics& stats_;
   schedule& sched_;

@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
+#include <algorithm>
 #include <vector>
 
 #include "motis/memory.h"
@@ -89,22 +90,17 @@ struct node {
 
   bool is_in_allowed() const {
     assert(is_route_node());
-    for (auto const& e : incoming_edges_) {
-      if (e->from_ == station_node_ && e->type() != edge::INVALID_EDGE) {
-        return true;
-      }
-    }
-    return false;
+    return std::any_of(
+        begin(incoming_edges_), end(incoming_edges_), [&](auto const& e) {
+          return e->from_ == station_node_ && e->type() != edge::INVALID_EDGE;
+        });
   }
 
   bool is_out_allowed() const {
     assert(is_route_node());
-    for (auto const& e : edges_) {
-      if (e.to_ == station_node_ && e.type() != edge::INVALID_EDGE) {
-        return true;
-      }
-    }
-    return false;
+    return std::any_of(begin(edges_), end(edges_), [&](auto const& e) {
+      return e.to_ == station_node_ && e.type() != edge::INVALID_EDGE;
+    });
   }
 
   mcd::indexed_vector<edge> edges_;
