@@ -42,7 +42,11 @@ struct log {
   ~log() { std::clog << std::endl; }
 
   std::unique_lock<std::mutex> lock_;
+
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
   static std::mutex log_mutex_;
+
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
   static bool enabled_;
 };
 

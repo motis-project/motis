@@ -36,8 +36,13 @@ using pq_t = clearable_priority_queue<osm_graph_dijkstra_label,
                                       std::vector<osm_graph_dijkstra_label>,
                                       std::greater<>>;
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::thread_specific_ptr<std::vector<size_t>> tls_dists;
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::thread_specific_ptr<std::vector<osm_edge const*>> tls_edges;
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::thread_specific_ptr<pq_t> tls_pq;
 
 struct osm_graph_dijkstra {
@@ -98,8 +103,8 @@ struct osm_graph_dijkstra {
         lng_acc += graph_.nodes_[g]->pos_.lng_;
       }
 
-      goal_center_ = geo::latlng{lat_acc / open_goals_.size(),
-                                 lng_acc / open_goals_.size()};
+      goal_center_ = geo::xyz{geo::latlng{lat_acc / open_goals_.size(),
+                                          lng_acc / open_goals_.size()}};
       for (auto const& g : open_goals_) {
         goal_radius_ = std::max(
             goal_radius_, static_cast<size_t>(std::ceil(geo::haversine_distance(

@@ -244,39 +244,39 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
               get_delay_info(sched, last_route_node, last_con, event_type::ARR);
         }
 
-        stops.emplace_back(
-            static_cast<unsigned int>(++stop_index),
-            get_node(current)->get_station()->id_,
-            last_con == nullptr ? MOTIS_UNKNOWN_TRACK
-                                : last_con->full_con_->a_track_,
-            MOTIS_UNKNOWN_TRACK,
+        stops.emplace_back(static_cast<unsigned int>(++stop_index),
+                           get_node(current)->get_station()->id_,
+                           last_con == nullptr ? MOTIS_UNKNOWN_TRACK
+                                               : last_con->full_con_->a_track_,
+                           MOTIS_UNKNOWN_TRACK,
 
-            // Arrival graph time:
-            stops.empty() ? INVALID_TIME
-                          : last_con ? last_con->a_time_ : current.now_,
+                           // Arrival graph time:
+                           stops.empty() ? INVALID_TIME
+                           : last_con    ? last_con->a_time_
+                                         : current.now_,
 
-            // Departure graph time:
-            current.now_,
+                           // Departure graph time:
+                           current.now_,
 
-            // Arrival schedule time:
-            stops.empty()
-                ? INVALID_TIME
-                : last_con ? walk_arrival_di.get_schedule_time() : current.now_,
+                           // Arrival schedule time:
+                           stops.empty() ? INVALID_TIME
+                           : last_con    ? walk_arrival_di.get_schedule_time()
+                                         : current.now_,
 
-            // Departure schedule time:
-            current.now_,
+                           // Departure schedule time:
+                           current.now_,
 
-            // Arrival reason timestamp
-            walk_arrival_di.get_reason(),
+                           // Arrival reason timestamp
+                           walk_arrival_di.get_reason(),
 
-            // Departure reason timestamp
-            walk_arrival_di.get_reason(),
+                           // Departure reason timestamp
+                           walk_arrival_di.get_reason(),
 
-            // Leaving
-            last_con != nullptr,
+                           // Leaving
+                           last_con != nullptr,
 
-            // Entering
-            false);
+                           // Entering
+                           false);
 
         transports.emplace_back(
             stop_index, static_cast<unsigned int>(stop_index) + 1,

@@ -8,8 +8,7 @@ add_library(motis-tiles STATIC ${motis-tiles-files})
 target_include_directories(motis-tiles PUBLIC include)
 target_compile_features(motis-tiles PUBLIC cxx_std_17)
 target_link_libraries(motis-tiles 
-  ${Boost_PROGRAM_OPTIONS_LIBRARY} 
-  ${Boost_SYSTEM_LIBRARY} 
+  boost-system
   motis-module
   lmdb
   tiles

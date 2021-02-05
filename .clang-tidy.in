@@ -1,4 +1,8 @@
 Checks: "*,\
+-llvmlibc-*,\
+-abseil-*,\
+-llvm-else-after-return,\
+-hicpp-named-parameter,\
 -cert-err60-cpp,\
 -clang-analyzer-core.NonNullParamChecker,\
 -misc-unused-parameters,\
@@ -40,7 +44,7 @@ Checks: "*,\
 -cppcoreguidelines-pro-bounds-constant-array-index,\
 -*-avoid-c-arrays,\
 -*-narrowing-conversions,\
--*-avoid-goto,\
+-*-avoid-goto,
 -hicpp-multiway-paths-covered,\
 -clang-analyzer-cplusplus.NewDeleteLeaks,\
 -clang-analyzer-cplusplus.NewDelete,\
@@ -53,11 +57,12 @@ Checks: "*,\
 -modernize-use-trailing-return-type,\
 -fuchsia-default-arguments-calls,\
 -fuchsia-default-arguments-declarations,\
--google-readability-braces-around-statements,\
--hicpp-braces-around-statements,\
--readability-braces-around-statements,\
--google-readability-avoid-underscore-in-googletest-name,\
--readability-misleading-indentation"
+-misc-no-recursion,\
+-llvmlibc-callee-namespace,\
+-llvm-else-after-return,\
+-llvm-qualified-auto,\
+-readability-qualified-auto,\
+-google-readability-avoid-underscore-in-googletest-name"
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^${RELATIVE_SOURCE_DIR}(base|modules|test)/'
 AnalyzeTemporaryDtors: false

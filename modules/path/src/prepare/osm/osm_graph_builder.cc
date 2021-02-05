@@ -53,7 +53,8 @@ void osm_graph_builder::build_graph(
       auto const task_count =
           std::min<size_t>(std::max<size_t>(matched_stations.size() / 1000, 1),
                            2 * std::thread::hardware_concurrency());
-      auto const batch_size = matched_stations.size() / task_count;
+      auto const batch_size =
+          task_count == 0 ? 1 : matched_stations.size() / task_count;
       utl::verify(batch_size != 0, "osm_graph_builder: empty batch size");
 
       utl::parallel_for(boost::irange(task_count), [&](auto const batch_idx) {

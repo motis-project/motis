@@ -31,7 +31,7 @@ target_compile_features(motis-libpath PUBLIC cxx_std_17)
 target_include_directories(motis-libpath PUBLIC include)
 add_dependencies(motis-libpath generated-motis-libpath-fbs-headers)
 target_link_libraries(motis-libpath
-  ${Boost_SYSTEM_LIBRARY}
+  boost-system
   motis-core
   motis-module
   geo

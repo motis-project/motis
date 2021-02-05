@@ -26,8 +26,8 @@ struct loader_options {
   bool expand_footpaths_{true};
   duration planned_transfer_delta_{30};
   std::string graph_path_{"default"};
-  std::string wzr_classes_path_{""};
-  std::string wzr_matrix_path_{""};
+  std::string wzr_classes_path_{};
+  std::string wzr_matrix_path_{};
 
   std::vector<std::string> dataset_prefix_{};
 };

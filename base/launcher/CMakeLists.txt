@@ -7,10 +7,8 @@ target_compile_features(motis PUBLIC cxx_std_17)
 target_include_directories(motis PRIVATE include)
 target_link_libraries(motis
   ${CMAKE_THREAD_LIBS_INIT}
-  ${Boost_SYSTEM_LIBRARY}
-  ${Boost_THREAD_LIBRARY}
-  ${Boost_FILESYSTEM_LIBRARY}
-  ${NETWORKING}
+  boost-system
+  boost-filesystem
   conf
   motis-bootstrap
   web-server-tls

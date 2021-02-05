@@ -19,8 +19,8 @@ std::unique_ptr<bbox> parse_bbox(std::string const& input) {
     auto const lat_min = boost::lexical_cast<double>(coords[1]);
     auto const lon_max = boost::lexical_cast<double>(coords[2]);
     auto const lat_max = boost::lexical_cast<double>(coords[3]);
-    auto const min_corner = geo::latlng(lat_min, lon_min);
-    auto const max_corner = geo::latlng(lat_max, lon_max);
+    auto const min_corner = geo::latlng{lat_min, lon_min};
+    auto const max_corner = geo::latlng{lat_max, lon_max};
     return std::make_unique<bbox>(
         boost::geometry::model::box<geo::latlng>(min_corner, max_corner));
   } catch (boost::bad_lexical_cast const&) {
