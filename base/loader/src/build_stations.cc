@@ -160,7 +160,7 @@ struct stations_builder {
     }
   }
 
-  inline bool skip_station(Station const* station) {
+  inline bool skip_station(Station const* station) const {
     return no_local_stations_ && is_local_station(station);
   }
 
