@@ -14,6 +14,7 @@ struct system_statistics {
   std::uint64_t reroute_updates_{};
   std::uint64_t groups_ok_count_{};
   std::uint64_t groups_broken_count_{};
+  std::uint64_t groups_major_delay_count_{};
 
   std::uint64_t update_event_times_trip_edges_found_{};
   std::uint64_t update_event_times_dep_updated_{};
@@ -48,10 +49,13 @@ struct tick_statistics {
   std::uint64_t ok_groups_{};
   std::uint64_t broken_groups_{};
   std::uint64_t broken_passengers_{};
+  std::uint64_t major_delay_groups_{};
+  std::uint64_t major_delay_passengers_{};
 
   // totals
   std::uint64_t total_ok_groups_{};
   std::uint64_t total_broken_groups_{};
+  std::uint64_t total_major_delay_groups_{};
 
   // tracking
   std::uint64_t tracked_ok_groups_{};

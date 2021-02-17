@@ -29,9 +29,12 @@ void stats_writer::write_header() {
        << "ok_groups"
        << "broken_groups"
        << "broken_passengers"
+       << "major_delay_groups"
+       << "major_delay_passengers"
        //
        << "total_ok_groups"
        << "total_broken_groups"
+       << "total_major_delay_groups"
        //
        << "tracked_ok_groups"
        << "tracked_broken_groups"
@@ -59,11 +62,11 @@ void stats_writer::write_tick(const tick_statistics& ts) {
        << ts.rt_delay_schedule_updates_
        //
        << ts.affected_groups_ << ts.affected_passengers_ << ts.ok_groups_
-       << ts.broken_groups_
-       << ts.broken_passengers_
+       << ts.broken_groups_ << ts.broken_passengers_ << ts.major_delay_groups_
+       << ts.major_delay_passengers_
        //
-       << ts.total_ok_groups_
-       << ts.total_broken_groups_
+       << ts.total_ok_groups_ << ts.total_broken_groups_
+       << ts.total_major_delay_groups_
        //
        << ts.tracked_ok_groups_
        << ts.tracked_broken_groups_

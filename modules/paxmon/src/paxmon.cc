@@ -597,6 +597,8 @@ void paxmon::rt_updates_applied() {
   auto ok_groups = 0ULL;
   auto broken_groups = 0ULL;
   auto broken_passengers = 0ULL;
+  auto major_delay_groups = 0ULL;
+  auto major_delay_passengers = 0ULL;
   {
     manual_timer timer{"update affected passenger groups"};
     message_creator mc;
@@ -682,14 +684,22 @@ void paxmon::rt_updates_applied() {
             print_timing();
           }
 
-          if (reachability.ok_) {
-            ++ok_groups;
-            ++system_stats_.groups_ok_count_;
-            return;
+          switch (event_type) {
+            case monitoring_event_type::NO_PROBLEM:
+              ++ok_groups;
+              ++system_stats_.groups_ok_count_;
+              break;
+            case monitoring_event_type::TRANSFER_BROKEN:
+              ++broken_groups;
+              ++system_stats_.groups_broken_count_;
+              broken_passengers += pg->passengers_;
+              break;
+            case monitoring_event_type::MAJOR_DELAY_EXPECTED:
+              ++major_delay_groups;
+              ++system_stats_.groups_major_delay_count_;
+              major_delay_passengers += pg->passengers_;
+              break;
           }
-          ++broken_groups;
-          ++system_stats_.groups_broken_count_;
-          broken_passengers += pg->passengers_;
         });
 
     print_timing();
@@ -735,8 +745,12 @@ void paxmon::rt_updates_applied() {
   tick_stats_.ok_groups_ = ok_groups;
   tick_stats_.broken_groups_ = broken_groups;
   tick_stats_.broken_passengers_ = broken_passengers;
+  tick_stats_.major_delay_groups_ = major_delay_groups;
+  tick_stats_.major_delay_passengers_ = major_delay_passengers;
   tick_stats_.total_ok_groups_ = system_stats_.groups_ok_count_;
   tick_stats_.total_broken_groups_ = system_stats_.groups_broken_count_;
+  tick_stats_.total_major_delay_groups_ =
+      system_stats_.groups_major_delay_count_;
 
   LOG(info) << "affected by last rt update: "
             << data_.groups_affected_by_last_update_.size()

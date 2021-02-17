@@ -96,10 +96,12 @@ void paxforecast::init(motis::module::registry& reg) {
 auto const constexpr REMOVE_GROUPS_BATCH_SIZE = 10'000;
 auto const constexpr ADD_GROUPS_BATCH_SIZE = 10'000;
 
-void send_remove_groups(std::vector<std::uint64_t>& groups_to_remove) {
+void send_remove_groups(std::vector<std::uint64_t>& groups_to_remove,
+                        tick_statistics& tick_stats) {
   if (groups_to_remove.empty()) {
     return;
   }
+  tick_stats.removed_groups_ += groups_to_remove.size();
   message_creator remove_groups_mc;
   remove_groups_mc.create_and_finish(
       MsgContent_PaxMonRemoveGroupsRequest,
@@ -199,7 +201,7 @@ void update_tracked_groups(
     }
 
     if (groups_to_remove.size() >= REMOVE_GROUPS_BATCH_SIZE) {
-      send_remove_groups(groups_to_remove);
+      send_remove_groups(groups_to_remove, tick_stats);
     }
     if (groups_to_add.size() >= ADD_GROUPS_BATCH_SIZE) {
       send_add_groups();
@@ -208,10 +210,9 @@ void update_tracked_groups(
 
   LOG(info) << "update_tracked_groups: -" << remove_group_count << " +"
             << add_group_count;
-  tick_stats.added_groups_ = add_group_count;
-  tick_stats.removed_groups_ = remove_group_count;
+  tick_stats.added_groups_ += add_group_count;
 
-  send_remove_groups(groups_to_remove);
+  send_remove_groups(groups_to_remove, tick_stats);
   send_add_groups();
 }
 
@@ -300,6 +301,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   tick_stats.monitoring_events_ = mon_update->events()->size();
   tick_stats.groups_ = pg_event_types.size();
   tick_stats.combined_groups_ = combined_groups.size();
+  tick_stats.major_delay_groups_ = delayed_groups;
 
   auto routing_requests = 0ULL;
   auto alternatives_found = 0ULL;
@@ -388,15 +390,16 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
             pg = copy.get();
             pg_event_types.insert(
                 {pg, monitoring_event_type::MAJOR_DELAY_EXPECTED});
+            ++tick_stats.major_delay_groups_with_alternatives_;
           }
         }
 
         if (groups_to_remove.size() >= REMOVE_GROUPS_BATCH_SIZE) {
-          send_remove_groups(groups_to_remove);
+          send_remove_groups(groups_to_remove, tick_stats);
         }
       }
     }
-    send_remove_groups(groups_to_remove);
+    send_remove_groups(groups_to_remove, tick_stats);
   }
 
   MOTIS_START_TIMING(passenger_behavior);
