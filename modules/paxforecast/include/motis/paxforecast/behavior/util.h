@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <limits>
 #include <optional>
+#include <vector>
 
 #include "utl/enumerate.h"
 #include "utl/verify.h"
@@ -53,6 +54,20 @@ std::vector<std::size_t> max_indices(std::vector<T> const& v) {
   }
   utl::verify(selected.empty() == v.empty(), "max_indices failed");
   return selected;
+}
+
+void only_keep_best_alternative(std::vector<float>& probabilities) {
+  auto best_idx = 0ULL;
+  auto best_prob = 0.0F;
+  for (auto i = 0ULL; i < probabilities.size(); ++i) {
+    auto const p = probabilities[i];
+    if (p > best_prob) {
+      best_idx = i;
+      best_prob = p;
+    }
+    probabilities[i] = 0.0F;
+  }
+  probabilities[best_idx] = 1.0F;
 }
 
 }  // namespace motis::paxforecast::behavior

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <limits>
+#include <numeric>
 #include <random>
 #include <vector>
 
@@ -13,13 +14,15 @@
 #include "motis/paxforecast/behavior/util.h"
 #include "motis/paxforecast/measures/measures.h"
 
-namespace motis::paxforecast::behavior::probabilistic {
+namespace motis::paxforecast::behavior::logit {
 
 template <typename Generator, typename TransferDistribution>
-struct passenger_behavior {
-  passenger_behavior(Generator& gen, TransferDistribution& transfer_dist,
-                     unsigned sample_count, bool best_only)
+struct mixed_logit_passenger_behavior {
+  mixed_logit_passenger_behavior(Generator& gen, float const coeff_duration,
+                                 TransferDistribution& transfer_dist,
+                                 unsigned sample_count, bool best_only)
       : gen_{gen},
+        coeff_duration_{coeff_duration},
         transfer_dist_{transfer_dist},
         sample_count_{sample_count},
         best_only_{best_only} {}
@@ -49,29 +52,29 @@ struct passenger_behavior {
 private:
   inline void sample(std::vector<alternative> const& alternatives,
                      std::vector<float>& probabilities) {
-    auto best_score = std::numeric_limits<float>::max();
-    auto best_alternatives = std::vector<std::size_t>{};
+    auto const coeff_transfer = static_cast<float>(transfer_dist_(gen_));
     for (auto const& [idx, alt] : utl::enumerate(alternatives)) {
-      auto const transfer_weight = static_cast<float>(transfer_dist_(gen_));
-      auto const score = static_cast<float>(alt.duration_) +
-                         transfer_weight * static_cast<float>(alt.transfers_);
-      if (score == best_score) {
-        best_alternatives.emplace_back(idx);
-      } else if (score < best_score) {
-        best_score = score;
-        best_alternatives.clear();
-        best_alternatives.emplace_back(idx);
-      }
-    }
-    for (auto const idx : best_alternatives) {
-      probabilities[idx] += 1.0F / static_cast<float>(best_alternatives.size());
+      auto const prob =
+          utility(alt, coeff_transfer) /
+          std::accumulate(begin(alternatives), end(alternatives), 0.0F,
+                          [&](float const sum, alternative const& a) {
+                            return sum + utility(a, coeff_transfer);
+                          });
+      probabilities[idx] += prob;
     }
   }
 
+  inline float utility(alternative const& alt,
+                       float const coeff_transfer) const {
+    return coeff_duration_ * (-static_cast<float>(alt.duration_)) +
+           coeff_transfer * (-static_cast<float>(alt.transfers_));
+  }
+
   Generator& gen_;
+  float coeff_duration_{};
   TransferDistribution& transfer_dist_;
   unsigned sample_count_{};
   bool best_only_{false};
 };
 
-}  // namespace motis::paxforecast::behavior::probabilistic
+}  // namespace motis::paxforecast::behavior::logit
