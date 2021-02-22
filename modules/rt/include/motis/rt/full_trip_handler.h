@@ -20,7 +20,7 @@ struct full_trip_result {
   };
 
   std::vector<node_id_t> stations_addded_;
-  trip const* trp_{};
+  trip* trp_{};
   status status_{status::OK};
   bool is_new_trip_{};
   bool is_reroute_{};

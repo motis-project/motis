@@ -3,6 +3,7 @@
 #include <cassert>
 #include <algorithm>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -81,6 +82,11 @@ struct full_trip_handler {
     light_connection* lc_{};
   };
 
+  struct trip_backup {
+    mcd::vector<trip::route_edge> edges_;
+    lcon_idx_t lcon_idx_{};
+  };
+
   full_trip_handler(statistics& stats, schedule& sched,
                     update_msg_builder& update_builder,
                     delay_propagator& propagator, FullTripMessage const* msg)
@@ -107,28 +113,45 @@ struct full_trip_handler {
     result_.is_reroute_ = !is_same_route(existing_sections, sections);
 
     if (is_reroute()) {
-      if (!is_new_trip()) {
-        return;  // NYI
+      if (is_new_trip()) {
+        ++stats_.additional_msgs_;
+        ++stats_.additional_total_;
+        ++stats_.additional_ok_;
+      } else if (sections.empty()) {
+        ++stats_.cancel_msgs_;
+      } else {
+        ++stats_.reroute_msgs_;
+        // TODO(pablo): check for rule services
+        ++stats_.reroute_ok_;
       }
 
-      ++stats_.additional_msgs_;
-      ++stats_.additional_total_;
+      auto const canceled_ev_keys =
+          get_canceled_ev_keys(existing_sections, sections);
+      auto const old_trip_backup = get_trip_backup(result_.trp_);
 
       auto incoming = std::vector<incoming_edge_patch>{};
       save_outgoing_edges(get_station_nodes(sections), incoming);
-      auto const lcs = build_light_connections(sections);
+      auto const lcs = build_light_connections(
+          sections);  // TODO(pablo): reuse/copy existing
       auto const route = build_route(sections, lcs, incoming);
       patch_incoming_edges(incoming);
-      result_.trp_ = create_trip(ftid, route);
+      result_.trp_ = create_or_update_trip(result_.trp_, ftid, route);
 
       for (auto const station_idx : result_.stations_addded_) {
         update_builder_.add_station(station_idx);
       }
-      update_builder_.add_reroute(result_.trp_, {}, 0);
+
+      if (old_trip_backup) {
+        update_builder_.add_reroute(result_.trp_, old_trip_backup->edges_,
+                                    old_trip_backup->lcon_idx_);
+      } else {
+        update_builder_.add_reroute(result_.trp_, {}, 0);
+      }
+      for (auto const& ev : canceled_ev_keys) {
+        propagator_.add_canceled(ev);
+      }
 
       existing_sections = get_existing_sections(result_.trp_);
-
-      ++stats_.additional_ok_;
     }
 
     for (auto const& [msg_sec, cur_sec] :
@@ -302,6 +325,7 @@ private:
       lc.valid_ = 1U;
       lc.d_time_ = sec.dep_.schedule_time_;
       lc.a_time_ = sec.arr_.schedule_time_;
+      // TODO(pablo): dir_/provider_; reuse existing
       auto const con_info =
           get_con_info(sched_, con_infos_, ts->category()->code()->str(),
                        ts->line_id()->str(), ts->train_nr());
@@ -379,8 +403,8 @@ private:
     return trip_edges;
   }
 
-  trip* create_trip(full_trip_id const& ftid,
-                    mcd::vector<trip::route_edge> const& trip_edges) {
+  trip* create_or_update_trip(trip* trp, full_trip_id const& ftid,
+                              mcd::vector<trip::route_edge> const& trip_edges) {
     auto const edges =
         sched_.trip_edges_
             .emplace_back(
@@ -388,16 +412,26 @@ private:
             .get();
 
     auto const lcon_idx = static_cast<lcon_idx_t>(0U);
-    auto const trp = sched_.trip_mem_
-                         .emplace_back(mcd::make_unique<trip>(
-                             ftid, edges, lcon_idx, trip_debug{}))
-                         .get();
 
-    auto const trp_entry = mcd::pair{ftid.primary_, ptr<trip>(trp)};
-    sched_.trips_.insert(
-        std::lower_bound(begin(sched_.trips_), end(sched_.trips_), trp_entry),
-        trp_entry);
+    if (trp == nullptr) {
+      trp = sched_.trip_mem_
+                .emplace_back(
+                    mcd::make_unique<trip>(ftid, edges, lcon_idx, trip_debug{}))
+                .get();
 
+      auto const trp_entry = mcd::pair{ftid.primary_, ptr<trip>(trp)};
+      sched_.trips_.insert(
+          std::lower_bound(begin(sched_.trips_), end(sched_.trips_), trp_entry),
+          trp_entry);
+    } else {
+      for (auto const& e : *trp->edges_) {
+        e.get_edge()->m_.route_edge_.conns_[trp->lcon_idx_].valid_ = 0U;
+      }
+      trp->edges_ = edges;
+      trp->lcon_idx_ = lcon_idx;
+    }
+
+    // TODO(pablo): reuse existing
     auto const new_trps_id = sched_.merged_trips_.size();
     sched_.merged_trips_.emplace_back(
         mcd::make_unique<mcd::vector<ptr<trip>>,
@@ -435,6 +469,39 @@ private:
           evk, sched_.tracks_.at(msg_event.current_track_).str(),
           msg_event.schedule_time_);
       ++result_.track_updates_;
+    }
+  }
+
+  static std::vector<ev_key> get_canceled_ev_keys(
+      std::vector<section> const& existing_sections,
+      std::vector<section> const& new_sections) {
+    auto canceled = std::vector<ev_key>{};
+    for (auto const& ex_sec : existing_sections) {
+      if (!std::any_of(begin(new_sections), end(new_sections),
+                       [&](section const& new_sec) {
+                         return new_sec.dep_.station_ == ex_sec.dep_.station_ &&
+                                new_sec.dep_.schedule_time_ ==
+                                    ex_sec.dep_.schedule_time_;
+                       })) {
+        canceled.emplace_back(ex_sec.dep_.get_ev_key());
+      }
+      if (!std::any_of(begin(new_sections), end(new_sections),
+                       [&](section const& new_sec) {
+                         return new_sec.arr_.station_ == ex_sec.arr_.station_ &&
+                                new_sec.arr_.schedule_time_ ==
+                                    ex_sec.arr_.schedule_time_;
+                       })) {
+        canceled.emplace_back(ex_sec.arr_.get_ev_key());
+      }
+    }
+    return canceled;
+  }
+
+  static std::optional<trip_backup> get_trip_backup(trip const* trp) {
+    if (trp != nullptr) {
+      return trip_backup{*trp->edges_, trp->lcon_idx_};
+    } else {
+      return {};
     }
   }
 
