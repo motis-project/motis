@@ -388,8 +388,11 @@ msg_ptr railviz::get_trips(msg_ptr const& msg) {
       sched, find_shared_data<path::path_data>(path::PATH_DATA_KEY), MAX_ZOOM};
   for (auto const* fbs_trp : *req->trips()) {
     auto const trp = from_fbs(sched, fbs_trp);
-    auto const k = ev_key{trp->edges_->at(0), trp->lcon_idx_, event_type::DEP};
-    trb.add_train_full(k);
+    if (!trp->edges_->empty()) {
+      auto const k =
+          ev_key{trp->edges_->at(0), trp->lcon_idx_, event_type::DEP};
+      trb.add_train_full(k);
+    }
   }
   return trb.finish();
 }
