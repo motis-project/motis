@@ -98,7 +98,7 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
     }
 
     case ris::MessageUnion_AdditionMessage: {
-      auto result = additional_service_builder(s, update_builder_)
+      auto result = additional_service_builder(stats_, s, update_builder_)
                         .build_additional_train(
                             reinterpret_cast<ris::AdditionMessage const*>(c));
       stats_.count_additional(result);
