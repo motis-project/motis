@@ -32,6 +32,19 @@ struct compact_journey {
   inline unsigned destination_station_id() const {
     return legs_.back().exit_station_id_;
   }
+
+  inline duration scheduled_duration() const {
+    return !legs_.empty() ? legs_.back().exit_time_ - legs_.front().enter_time_
+                          : 0;
+  }
+
+  inline time scheduled_departure_time() const {
+    return !legs_.empty() ? legs_.front().enter_time_ : INVALID_TIME;
+  }
+
+  inline time scheduled_arrival_time() const {
+    return !legs_.empty() ? legs_.back().exit_time_ : INVALID_TIME;
+  }
 };
 
 }  // namespace motis::paxmon

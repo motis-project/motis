@@ -141,7 +141,7 @@ void enum_trip_candidates(schedule const& sched, std::uint32_t from_station_idx,
             sched.categories_[lc->full_con_->con_info_->family_]->name_;
         auto const enter_diff = static_cast<int>(lc->d_time_) - enter_time;
 
-        for (auto trp : *sched.merged_trips_[lc->trips_]) {
+        for (auto trp : *sched.merged_trips_.at(lc->trips_)) {
           for (auto const& stop : access::stops(trp)) {
             if (stop.get_station_id() == to_station_idx && stop.has_arrival()) {
               auto const arrival_time = stop.arr_lcon().a_time_;
@@ -329,6 +329,7 @@ loader_result load_journeys(schedule const& sched, paxmon_data& data,
   auto journeys_with_missing_trips = 0ULL;
   auto journeys_with_missing_transfers = 0ULL;
   auto journeys_with_invalid_transfer_times = 0ULL;
+  auto journeys_too_long = 0ULL;
 
   auto buf = utl::file(journey_file.data(), "r").content();
   auto const file_content = utl::cstr{buf.data(), buf.size()};
@@ -391,11 +392,14 @@ loader_result load_journeys(schedule const& sched, paxmon_data& data,
                       [&](auto const& leg) { return leg.to_journey_leg(); });
       utl::verify(!current_journey.legs_.empty(), "empty csv journey");
       current_journey.legs_.front().enter_transfer_ = {};
-      auto const planned_arrival_time = current_journey.legs_.back().exit_time_;
+      if (current_journey.scheduled_duration() > 24 * 60) {
+        ++journeys_too_long;
+        return;
+      }
       data.graph_.passenger_groups_.emplace_back(
-          data.graph_.passenger_group_allocator_.create(
-              passenger_group{current_journey, id, source, current_passengers,
-                              planned_arrival_time, source_flags}));
+          data.graph_.passenger_group_allocator_.create(passenger_group{
+              current_journey, id, source, current_passengers,
+              current_journey.scheduled_arrival_time(), source_flags}));
     } else {
       if (!all_trips_found) {
         ++journeys_with_missing_trips;
@@ -489,6 +493,7 @@ loader_result load_journeys(schedule const& sched, paxmon_data& data,
             << " journeys with missing transfers";
   LOG(info) << journeys_with_invalid_transfer_times
             << " journeys with invalid transfer times";
+  LOG(info) << journeys_too_long << " journeys that are too long (skipped)";
   LOG(info) << result.unmatched_journeys_.size() << " unmatched journeys";
 
   return result;
