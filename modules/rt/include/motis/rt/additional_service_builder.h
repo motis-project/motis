@@ -223,7 +223,7 @@ struct additional_service_builder {
     }
   }
 
-  bool trip_already_exists(ris::AdditionMessage const* msg) {
+  bool trip_already_exists(ris::AdditionMessage const* msg) const {
     utl::verify(msg->events()->size() >= 2, "invalid additional trip message");
     auto const first = msg->events()->Get(0);
     auto const last = msg->events()->Get(msg->events()->size() - 1);
