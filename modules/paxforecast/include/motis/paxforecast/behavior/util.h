@@ -60,7 +60,7 @@ std::vector<std::size_t> max_indices(std::vector<T> const& v) {
   return selected;
 }
 
-void only_keep_best_alternative(std::vector<float>& probabilities) {
+inline void only_keep_best_alternative(std::vector<float>& probabilities) {
   auto best_idx = 0ULL;
   auto best_prob = 0.0F;
   for (auto i = 0ULL; i < probabilities.size(); ++i) {
