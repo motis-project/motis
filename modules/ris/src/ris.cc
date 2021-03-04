@@ -32,6 +32,7 @@
 #include "motis/ris/ribasis/ribasis_parser.h"
 #include "motis/ris/ris_message.h"
 #include "motis/ris/risml/risml_parser.h"
+#include "motis/ris/string_view_reader.h"
 #include "motis/ris/zip_reader.h"
 
 #ifdef GetMessage
@@ -168,16 +169,28 @@ struct ris::impl {
               << " imported";
   }
 
+  static std::string_view get_content_type(HTTPRequest const* req) {
+    for (auto const& h : *req->headers()) {
+      if (std::string_view{h->name()->c_str(), h->name()->size()} ==
+          "Content-Type") {
+        return {h->value()->c_str(), h->value()->size()};
+      }
+    }
+    return {};
+  }
+
   msg_ptr upload(msg_ptr const& msg) {
-    auto const content = motis_content(HTTPRequest, msg)->content();
+    auto const req = motis_content(HTTPRequest, msg);
+    auto const content = req->content();
+    auto const ft =
+        guess_file_type(get_content_type(req),
+                        std::string_view{content->c_str(), content->size()});
     auto& sched = get_schedule();
     publisher pub;
-    auto risml_fn = [](std::string_view s, std::string_view,
-                       std::function<void(ris_message &&)> const& cb) {
-      risml::risml_parser::to_ris_message(s, cb);
-    };
 
-    write_to_db(zip_reader{content->c_str(), content->size()}, risml_fn, pub);
+    parse_str_and_write_to_db(
+        std::string_view{content->c_str(), content->size()}, ft, pub);
+
     sched.system_time_ = pub.max_timestamp_;
     sched.last_update_timestamp_ = std::time(nullptr);
     ctx::await_all(motis_publish(make_no_msg("/ris/system_time_changed")));
@@ -405,6 +418,38 @@ private:
     }
   }
 
+  static file_type guess_file_type(std::string_view content_type,
+                                   std::string_view content) {
+    using boost::algorithm::iequals;
+    using boost::algorithm::starts_with;
+
+    if (iequals(content_type, "application/zip")) {
+      return file_type::ZIP;
+    } else if (iequals(content_type, "application/zstd")) {
+      return file_type::ZST;
+    } else if (iequals(content_type, "application/xml") ||
+               iequals(content_type, "text/xml")) {
+      return file_type::XML;
+    } else if (iequals(content_type, "application/json") ||
+               iequals(content_type, "application/x.ribasis")) {
+      return file_type::JSON;
+    }
+
+    if (content.size() < 4) {
+      return file_type::NONE;
+    } else if (starts_with(content, "PK")) {
+      return file_type::ZIP;
+    } else if (starts_with(content, "\x28\xb5\x2f\xfd")) {
+      return file_type::ZST;
+    } else if (starts_with(content, "<")) {
+      return file_type::XML;
+    } else if (starts_with(content, "{")) {
+      return file_type::JSON;
+    }
+
+    return file_type::NONE;
+  }
+
   std::vector<std::tuple<time_t, fs::path, file_type>> collect_files(
       fs::path const& p) {
     if (fs::is_regular_file(p)) {
@@ -428,7 +473,7 @@ private:
     ctx::await_all(utl::to_vec(
         collect_files(fs::canonical(p, p.root_path())), [&](auto&& e) {
           return spawn_job_void([e, this, &pub]() {
-            write_to_db(std::get<1>(e), std::get<2>(e), pub);
+            parse_file_and_write_to_db(std::get<1>(e), std::get<2>(e), pub);
           });
         }));
     env_.force_sync();
@@ -439,7 +484,7 @@ private:
     for (auto const& [t, path, type] :
          collect_files(fs::canonical(p, p.root_path()))) {
       ((void)(t));
-      write_to_db(path, type, pub);
+      parse_file_and_write_to_db(path, type, pub);
       if (instant_forward_) {
         get_schedule().system_time_ = pub.max_timestamp_;
         get_schedule().last_update_timestamp_ = std::time(nullptr);
@@ -468,10 +513,62 @@ private:
   }
 
   template <typename Publisher>
-  void write_to_db(fs::path const& p, file_type const type, Publisher& pub) {
+  void parse_file_and_write_to_db(fs::path const& p, file_type const type,
+                                  Publisher& pub) {
     using tar_zst = tar_reader<zstd_reader>;
     auto const& cp = p.generic_string();
 
+    try {
+      switch (type) {
+        case file_type::ZST:
+          parse_and_write_to_db(tar_zst(zstd_reader(cp.c_str())), type, pub);
+          break;
+        case file_type::ZIP:
+          parse_and_write_to_db(zip_reader(cp.c_str()), type, pub);
+          break;
+        case file_type::XML:
+          parse_and_write_to_db(file_reader(cp.c_str()), type, pub);
+          break;
+        case file_type::PROTOBUF:
+          parse_and_write_to_db(file_reader(cp.c_str()), type, pub);
+          break;
+        case file_type::JSON:
+          parse_and_write_to_db(file_reader(cp.c_str()), type, pub);
+          break;
+        default: assert(false);
+      }
+    } catch (...) {
+      LOG(logging::error) << "failed to read " << p;
+    }
+    add_to_known_files(p);
+  }
+
+  template <typename Publisher>
+  void parse_str_and_write_to_db(std::string_view sv, file_type const type,
+                                 Publisher& pub) {
+    switch (type) {
+      case file_type::ZST:
+        throw utl::fail("zst upload is not supported");
+        break;
+      case file_type::ZIP:
+        parse_and_write_to_db(zip_reader{sv.data(), sv.size()}, type, pub);
+        break;
+      case file_type::XML:
+        parse_and_write_to_db(string_view_reader{sv}, type, pub);
+        break;
+      case file_type::PROTOBUF:
+        parse_and_write_to_db(string_view_reader{sv}, type, pub);
+        break;
+      case file_type::JSON:
+        parse_and_write_to_db(string_view_reader{sv}, type, pub);
+        break;
+      default: assert(false);
+    }
+  }
+
+  template <typename Reader, typename Publisher>
+  void parse_and_write_to_db(Reader&& reader, file_type const type,
+                             Publisher& pub) {
     auto const risml_fn = [this](
                               std::string_view s, std::string_view,
                               std::function<void(ris_message &&)> const& cb) {
@@ -497,29 +594,15 @@ private:
         return gtfsrt_fn(s, file_name, cb);
       }
     };
-    try {
-      switch (type) {
-        case file_type::ZST:
-          write_to_db(tar_zst(zstd_reader(cp.c_str())), file_fn, pub);
-          break;
-        case file_type::ZIP:
-          write_to_db(zip_reader(cp.c_str()), file_fn, pub);
-          break;
-        case file_type::XML:
-          write_to_db(file_reader(cp.c_str()), risml_fn, pub);
-          break;
-        case file_type::PROTOBUF:
-          write_to_db(file_reader(cp.c_str()), gtfsrt_fn, pub);
-          break;
-        case file_type::JSON:
-          write_to_db(file_reader(cp.c_str()), ribasis_fn, pub);
-          break;
-        default: assert(false);
-      }
-    } catch (...) {
-      LOG(logging::error) << "failed to read " << p;
+
+    switch (type) {
+      case file_type::ZST: write_to_db(reader, file_fn, pub); break;
+      case file_type::ZIP: write_to_db(reader, file_fn, pub); break;
+      case file_type::XML: write_to_db(reader, risml_fn, pub); break;
+      case file_type::PROTOBUF: write_to_db(reader, gtfsrt_fn, pub); break;
+      case file_type::JSON: write_to_db(reader, ribasis_fn, pub); break;
+      default: assert(false);
     }
-    add_to_known_files(p);
   }
 
   template <typename Reader, typename ParserFn, typename Publisher>
