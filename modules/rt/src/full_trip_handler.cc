@@ -121,7 +121,10 @@ struct full_trip_handler {
         ++stats_.cancel_msgs_;
       } else {
         ++stats_.reroute_msgs_;
-        // TODO(pablo): check for rule services
+        if (is_rule_service(result_.trp_)) {
+          ++stats_.reroute_rule_service_not_supported_;
+          return;
+        }
         ++stats_.reroute_ok_;
       }
 
@@ -310,6 +313,25 @@ private:
                get_schedule_track(sched_, ev_to), sec.fcon().a_track_, ev_to},
               const_cast<light_connection*>(&lc)};  // NOLINT
         });
+  }
+
+  static bool is_rule_service(trip const* trp) {
+    if (trp == nullptr) {
+      return false;
+    }
+
+    auto const secs = access::sections{trp};
+    return std::any_of(begin(secs), end(secs), [](auto const& sec) {
+      return sec.lcon().full_con_->con_info_->merged_with_ != nullptr ||
+             std::any_of(begin(sec.from_node()->incoming_edges_),
+                         end(sec.from_node()->incoming_edges_),
+                         [](edge const* e) {
+                           return e->type() == edge::THROUGH_EDGE;
+                         }) ||
+             std::any_of(
+                 begin(sec.to_node()->edges_), end(sec.to_node()->edges_),
+                 [](edge const& e) { return e.type() == edge::THROUGH_EDGE; });
+    });
   }
 
   std::vector<light_connection> build_light_connections(
