@@ -19,7 +19,7 @@ struct string_view_reader {
 
   float progress() const { return read_ ? 0.0F : 1.0F; }
 
-  std::string_view current_file_name() const { return {}; }
+  static std::string_view current_file_name() { return {}; }
 
   std::string_view sv_;
   bool read_{false};

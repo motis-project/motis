@@ -527,11 +527,7 @@ private:
           parse_and_write_to_db(zip_reader(cp.c_str()), type, pub);
           break;
         case file_type::XML:
-          parse_and_write_to_db(file_reader(cp.c_str()), type, pub);
-          break;
         case file_type::PROTOBUF:
-          parse_and_write_to_db(file_reader(cp.c_str()), type, pub);
-          break;
         case file_type::JSON:
           parse_and_write_to_db(file_reader(cp.c_str()), type, pub);
           break;
@@ -554,11 +550,7 @@ private:
         parse_and_write_to_db(zip_reader{sv.data(), sv.size()}, type, pub);
         break;
       case file_type::XML:
-        parse_and_write_to_db(string_view_reader{sv}, type, pub);
-        break;
       case file_type::PROTOBUF:
-        parse_and_write_to_db(string_view_reader{sv}, type, pub);
-        break;
       case file_type::JSON:
         parse_and_write_to_db(string_view_reader{sv}, type, pub);
         break;
@@ -596,7 +588,7 @@ private:
     };
 
     switch (type) {
-      case file_type::ZST: write_to_db(reader, file_fn, pub); break;
+      case file_type::ZST:
       case file_type::ZIP: write_to_db(reader, file_fn, pub); break;
       case file_type::XML: write_to_db(reader, risml_fn, pub); break;
       case file_type::PROTOBUF: write_to_db(reader, gtfsrt_fn, pub); break;

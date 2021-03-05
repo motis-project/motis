@@ -216,8 +216,8 @@ struct web_server::impl {
           std::string{req.target()});
       auto const msg = make_msg(mc);
       return receiver_.on_msg(
-          msg, ios_.wrap([&, cb, req_id](msg_ptr const& res,
-                                         std::error_code const& ec) {
+          msg,
+          ios_.wrap([&, cb](msg_ptr const& res, std::error_code const& ec) {
             cb(build_reply(req_id, res, ec));
           }));
     } catch (std::system_error const& e) {
