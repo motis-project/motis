@@ -219,7 +219,8 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
 
     case ris::MessageUnion_FullTripMessage: {
       handle_full_trip_msg(stats_, s, update_builder_, propagator_,
-                           reinterpret_cast<ris::FullTripMessage const*>(c));
+                           reinterpret_cast<ris::FullTripMessage const*>(c),
+                           cancelled_delays_);
       break;
     }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <vector>
 
 #include "motis/core/schedule/schedule.h"
@@ -7,6 +8,7 @@
 #include "motis/module/message.h"
 
 #include "motis/rt/delay_propagator.h"
+#include "motis/rt/schedule_event.h"
 #include "motis/rt/statistics.h"
 #include "motis/rt/update_msg_builder.h"
 
@@ -28,9 +30,9 @@ struct full_trip_result {
   unsigned track_updates_{};
 };
 
-full_trip_result handle_full_trip_msg(statistics& stats, schedule& sched,
-                                      update_msg_builder& update_builder,
-                                      delay_propagator& propagator,
-                                      ris::FullTripMessage const* msg);
+full_trip_result handle_full_trip_msg(
+    statistics& stats, schedule& sched, update_msg_builder& update_builder,
+    delay_propagator& propagator, ris::FullTripMessage const* msg,
+    std::map<schedule_event, delay_info*>& cancelled_delays);
 
 }  // namespace motis::rt

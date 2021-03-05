@@ -89,12 +89,14 @@ struct full_trip_handler {
 
   full_trip_handler(statistics& stats, schedule& sched,
                     update_msg_builder& update_builder,
-                    delay_propagator& propagator, FullTripMessage const* msg)
+                    delay_propagator& propagator, FullTripMessage const* msg,
+                    std::map<schedule_event, delay_info*>& cancelled_delays)
       : stats_{stats},
         sched_{sched},
         update_builder_{update_builder},
         propagator_{propagator},
-        msg_{msg} {}
+        msg_{msg},
+        cancelled_delays_{cancelled_delays} {}
 
   void handle_msg() {
     if (!check_events()) {
@@ -153,6 +155,13 @@ struct full_trip_handler {
       }
       for (auto const& ev : canceled_ev_keys) {
         propagator_.add_canceled(ev);
+        if (auto const it = sched_.graph_to_delay_info_.find(ev);
+            it != end(sched_.graph_to_delay_info_)) {
+          cancelled_delays_.emplace(
+              schedule_event{result_.trp_->id_.primary_, ev.get_station_idx(),
+                             it->second->get_schedule_time(), ev.ev_type_},
+              it->second);
+        }
       }
 
       existing_sections = get_existing_sections(result_.trp_);
@@ -545,11 +554,12 @@ private:
   void update_delay_info(section const& new_sec,
                          std::vector<section> const& existing_sections,
                          GetEventInfo&& get_ev) {
+    auto const& new_ev = get_ev(new_sec);
+    auto const& new_ev_key = new_ev.get_ev_key();
     if (auto const ex_sec =
             std::find_if(begin(existing_sections), end(existing_sections),
                          [&](section const& sec) {
                            auto const& ev = get_ev(sec);
-                           auto const& new_ev = get_ev(new_sec);
                            return ev.station_ == new_ev.station_ &&
                                   ev.schedule_time_ == new_ev.schedule_time_;
                          });
@@ -557,10 +567,15 @@ private:
       if (auto const di =
               sched_.graph_to_delay_info_.find(get_ev(*ex_sec).get_ev_key());
           di != end(sched_.graph_to_delay_info_)) {
-        auto const& new_ev_key = get_ev(new_sec).get_ev_key();
         di->second->set_ev_key(new_ev_key);
         sched_.graph_to_delay_info_[new_ev_key] = di->second;
       }
+    } else if (auto const di = cancelled_delays_.find(schedule_event{
+                   result_.trp_->id_.primary_, new_ev.station_->id_,
+                   new_ev.schedule_time_, new_ev_key.ev_type_});
+               di != end(cancelled_delays_)) {
+      di->second->set_ev_key(new_ev_key);
+      sched_.graph_to_delay_info_[new_ev_key] = di->second;
     }
   }
 
@@ -604,14 +619,15 @@ public:
   ris::FullTripMessage const* msg_;
   full_trip_result result_;
   std::map<connection_info, connection_info const*> con_infos_;
+  std::map<schedule_event, delay_info*>& cancelled_delays_;
 };
 
-full_trip_result handle_full_trip_msg(statistics& stats, schedule& sched,
-                                      update_msg_builder& update_builder,
-                                      delay_propagator& propagator,
-                                      ris::FullTripMessage const* msg) {
-  auto handler =
-      full_trip_handler{stats, sched, update_builder, propagator, msg};
+full_trip_result handle_full_trip_msg(
+    statistics& stats, schedule& sched, update_msg_builder& update_builder,
+    delay_propagator& propagator, ris::FullTripMessage const* msg,
+    std::map<schedule_event, delay_info*>& cancelled_delays) {
+  auto handler = full_trip_handler{stats,      sched, update_builder,
+                                   propagator, msg,   cancelled_delays};
   handler.handle_msg();
   return handler.get_result();
 }
