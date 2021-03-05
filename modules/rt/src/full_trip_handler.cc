@@ -108,7 +108,7 @@ struct full_trip_handler {
     result_.is_new_trip_ = result_.trp_ == nullptr;
 
     auto existing_sections = get_existing_sections(result_.trp_);
-    auto const sections = get_msg_sections();
+    auto sections = get_msg_sections();
 
     result_.is_reroute_ = !is_same_route(existing_sections, sections);
 
@@ -139,6 +139,7 @@ struct full_trip_handler {
       auto const route = build_route(sections, lcs, incoming);
       patch_incoming_edges(incoming);
       result_.trp_ = create_or_update_trip(result_.trp_, ftid, route);
+      update_delay_infos(existing_sections, sections);
 
       for (auto const station_idx : result_.stations_addded_) {
         update_builder_.add_station(station_idx);
@@ -400,8 +401,7 @@ private:
   }
 
   mcd::vector<trip::route_edge> build_route(
-      std::vector<section> const& sections,
-      std::vector<light_connection> const& lcs,
+      std::vector<section>& sections, std::vector<light_connection> const& lcs,
       std::vector<incoming_edge_patch>& incoming) {
     if (sections.empty()) {
       return {};
@@ -411,7 +411,8 @@ private:
 
     auto const route_nodes = build_route_nodes(sections, route_id, incoming);
 
-    for (auto const& [i, sec] : utl::enumerate(sections)) {
+    for (auto i = 0ULL; i < sections.size(); ++i) {
+      auto& sec = sections[i];  // NOLINT
       auto const from_route_node = route_nodes[i];  // NOLINT
       auto const to_route_node = route_nodes[i + 1];  // NOLINT
 
@@ -420,6 +421,11 @@ private:
       add_outgoing_edge(&route_edge, incoming);
       trip_edges.emplace_back(&route_edge);
       constant_graph_add_route_edge(sched_, &route_edge);
+
+      sec.lc_ = const_cast<light_connection*>(  // NOLINT
+          &route_edge.m_.route_edge_.conns_.front());
+      sec.dep_.ev_key_ = ev_key{&route_edge, 0, event_type::DEP};
+      sec.arr_.ev_key_ = ev_key{&route_edge, 0, event_type::ARR};
     }
 
     return trip_edges;
@@ -517,6 +523,45 @@ private:
       }
     }
     return canceled;
+  }
+
+  void update_delay_infos(std::vector<section> const& existing_sections,
+                          std::vector<section> const& new_sections) {
+    if (existing_sections.empty() || new_sections.empty()) {
+      return;
+    }
+
+    for (auto const& new_sec : new_sections) {
+      update_delay_info(
+          new_sec, existing_sections,
+          [](section const& sec) -> event_info const& { return sec.dep_; });
+      update_delay_info(
+          new_sec, existing_sections,
+          [](section const& sec) -> event_info const& { return sec.arr_; });
+    }
+  }
+
+  template <typename GetEventInfo>
+  void update_delay_info(section const& new_sec,
+                         std::vector<section> const& existing_sections,
+                         GetEventInfo&& get_ev) {
+    if (auto const ex_sec =
+            std::find_if(begin(existing_sections), end(existing_sections),
+                         [&](section const& sec) {
+                           auto const& ev = get_ev(sec);
+                           auto const& new_ev = get_ev(new_sec);
+                           return ev.station_ == new_ev.station_ &&
+                                  ev.schedule_time_ == new_ev.schedule_time_;
+                         });
+        ex_sec != end(existing_sections)) {
+      if (auto const di =
+              sched_.graph_to_delay_info_.find(get_ev(*ex_sec).get_ev_key());
+          di != end(sched_.graph_to_delay_info_)) {
+        auto const& new_ev_key = get_ev(new_sec).get_ev_key();
+        di->second->set_ev_key(new_ev_key);
+        sched_.graph_to_delay_info_[new_ev_key] = di->second;
+      }
+    }
   }
 
   static std::optional<trip_backup> get_trip_backup(trip const* trp) {
