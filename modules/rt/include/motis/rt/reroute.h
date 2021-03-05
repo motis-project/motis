@@ -12,10 +12,10 @@
 #include "motis/rt/in_out_allowed.h"
 #include "motis/rt/incoming_edges.h"
 #include "motis/rt/reroute_result.h"
+#include "motis/rt/schedule_event.h"
 #include "motis/rt/update_constant_graph.h"
 #include "motis/rt/update_msg_builder.h"
 #include "motis/rt/validate_graph.h"
-#include "motis/rt/schedule_event.h"
 
 namespace motis::rt {
 
