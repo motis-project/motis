@@ -19,6 +19,17 @@ using namespace flatbuffers;
 
 namespace motis::paxmon {
 
+inline std::uint64_t to_fbs_time(schedule const& sched, time const t) {
+  return t != INVALID_TIME ? static_cast<std::uint64_t>(
+                                 motis_to_unixtime(sched.schedule_begin_, t))
+                           : 0ULL;
+}
+
+inline time from_fbs_time(schedule const& sched, std::uint64_t const ut) {
+  return ut != 0ULL ? unix_to_motistime(sched.schedule_begin_, ut)
+                    : INVALID_TIME;
+}
+
 Offset<PaxMonTransferInfo> to_fbs(FlatBufferBuilder& fbb,
                                   std::optional<transfer_info> const& ti) {
   if (ti) {
@@ -96,25 +107,18 @@ Offset<PaxMonGroup> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
   return CreatePaxMonGroup(
       fbb, pg.id_, to_fbs(fbb, pg.source_), pg.passengers_,
       to_fbs(sched, fbb, pg.compact_planned_journey_), pg.probability_,
-      pg.planned_arrival_time_ != INVALID_TIME
-          ? motis_to_unixtime(sched, pg.planned_arrival_time_)
-          : 0,
-      static_cast<std::underlying_type_t<group_source_flags>>(
-          pg.source_flags_));
+      to_fbs_time(sched, pg.planned_arrival_time_),
+      static_cast<std::underlying_type_t<group_source_flags>>(pg.source_flags_),
+      pg.previous_version_, to_fbs_time(sched, pg.added_time_));
 }
 
 passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg) {
-  return passenger_group{
-      from_fbs(sched, pg->planned_journey()),
-      pg->id(),
-      from_fbs(pg->source()),
+  return make_passenger_group(
+      from_fbs(sched, pg->planned_journey()), from_fbs(pg->source()),
       static_cast<std::uint16_t>(pg->passenger_count()),
-      pg->planned_arrival_time() != 0
-          ? unix_to_motistime(sched.schedule_begin_, pg->planned_arrival_time())
-          : INVALID_TIME,
-      static_cast<group_source_flags>(pg->source_flags()),
-      true,
-      pg->probability()};
+      from_fbs_time(sched, pg->planned_arrival_time()),
+      static_cast<group_source_flags>(pg->source_flags()), pg->probability(),
+      from_fbs_time(sched, pg->added_time()), pg->previous_version(), pg->id());
 }
 
 Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
@@ -171,9 +175,7 @@ Offset<PaxMonEvent> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
       to_fbs(sched, fbb, me.group_), fbs_localization_type(me.localization_),
       to_fbs(sched, fbb, me.localization_),
       static_cast<PaxMonReachabilityStatus>(me.reachability_status_),
-      me.expected_arrival_time_ != INVALID_TIME
-          ? motis_to_unixtime(sched, me.expected_arrival_time_)
-          : 0);
+      to_fbs_time(sched, me.expected_arrival_time_));
 }
 
 Offset<Vector<PaxMonCdfEntry const*>> cdf_to_fbs(FlatBufferBuilder& fbb,
@@ -183,7 +185,7 @@ Offset<Vector<PaxMonCdfEntry const*>> cdf_to_fbs(FlatBufferBuilder& fbb,
   auto last_prob = 0.0F;
   for (auto const& [pax, prob] : utl::enumerate(cdf.data_)) {
     if (prob != last_prob) {
-      entries.emplace_back(pax, prob);
+      entries.emplace_back(static_cast<std::uint32_t>(pax), prob);
       last_prob = prob;
     }
   }

@@ -8,8 +8,8 @@
 namespace motis::paxmon::loader::csv {
 
 struct row {
-  utl::csv_col<std::uint64_t, UTL_NAME("id")> id_;
-  utl::csv_col<std::uint64_t, UTL_NAME("secondary_id")> secondary_id_;
+  utl::csv_col<std::uint32_t, UTL_NAME("id")> id_;
+  utl::csv_col<std::uint32_t, UTL_NAME("secondary_id")> secondary_id_;
   utl::csv_col<std::uint16_t, UTL_NAME("leg_idx")> leg_idx_;
   utl::csv_col<utl::cstr, UTL_NAME("leg_type")> leg_type_;
   utl::csv_col<utl::cstr, UTL_NAME("from")> from_;

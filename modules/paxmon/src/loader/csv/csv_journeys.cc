@@ -339,7 +339,7 @@ loader_result load_journeys(schedule const& sched, paxmon_data& data,
     match_log.open(match_log_file);
   }
 
-  auto current_id = std::optional<std::pair<std::uint64_t, std::uint64_t>>{};
+  auto current_id = std::optional<std::pair<std::uint32_t, std::uint32_t>>{};
   auto current_input_legs = std::vector<input_journey_leg>{};
   std::uint16_t current_passengers = 0;
 
@@ -383,8 +383,6 @@ loader_result load_journeys(schedule const& sched, paxmon_data& data,
 
     if (all_trips_found && !missing_transfer_infos && !invalid_transfer_times) {
       ++result.loaded_journeys_;
-      auto const id =
-          static_cast<std::uint64_t>(data.graph_.passenger_groups_.size());
       auto current_journey = compact_journey{};
       current_journey.legs_ =
           utl::to_vec(std::next(begin(current_input_legs), start_idx),
@@ -396,10 +394,9 @@ loader_result load_journeys(schedule const& sched, paxmon_data& data,
         ++journeys_too_long;
         return;
       }
-      data.graph_.passenger_groups_.emplace_back(
-          data.graph_.passenger_group_allocator_.create(passenger_group{
-              current_journey, id, source, current_passengers,
-              current_journey.scheduled_arrival_time(), source_flags}));
+      data.graph_.add_group(make_passenger_group(
+          std::move(current_journey), source, current_passengers,
+          current_journey.scheduled_arrival_time(), source_flags));
     } else {
       if (!all_trips_found) {
         ++journeys_with_missing_trips;

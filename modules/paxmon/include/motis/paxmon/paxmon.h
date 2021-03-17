@@ -65,6 +65,7 @@ private:
   std::string mcfp_scenario_dir_{};
   int mcfp_scenario_min_broken_groups_{500};
   bool mcfp_scenario_include_trip_info_{false};
+  bool keep_group_history_{false};
 
   paxmon_data data_;
   system_statistics system_stats_;

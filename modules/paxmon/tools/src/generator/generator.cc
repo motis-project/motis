@@ -166,17 +166,15 @@ private:
   }
 
   bool check_journey_load(journey const& j, std::uint16_t group_size,
-                          std::uint64_t primary_id,
-                          std::uint64_t secondary_id) {
+                          std::uint32_t primary_id,
+                          std::uint32_t secondary_id) {
     if (!check_load_) {
       return true;
     }
-    auto const cj = to_compact_journey(j, sched_);
-    auto pg = pmd_.graph_.passenger_groups_.emplace_back(
-        pmd_.graph_.passenger_group_allocator_.create(passenger_group{
-            cj,
-            static_cast<std::uint64_t>(pmd_.graph_.passenger_groups_.size()),
-            data_source{primary_id, secondary_id}, group_size}));
+    auto cj = to_compact_journey(j, sched_);
+    auto pg = pmd_.graph_.add_group(make_passenger_group(
+        std::move(cj), data_source{primary_id, secondary_id}, group_size,
+        cj.scheduled_arrival_time()));
     add_passenger_group_to_graph(sched_, pmd_, *pg);
     for (auto const e : pg->edges_) {
       if (e->has_capacity() &&
@@ -206,7 +204,7 @@ private:
   unsigned routing_queries_{};
   unsigned different_journeys_{};
   unsigned over_capacity_skipped_{};
-  std::uint64_t next_primary_id_{1};
+  std::uint32_t next_primary_id_{1};
   bool check_load_{};
   double max_load_{};
 };

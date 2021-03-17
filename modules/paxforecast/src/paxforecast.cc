@@ -127,6 +127,9 @@ void update_tracked_groups(
   auto remove_group_count = 0ULL;
   auto add_group_count = 0ULL;
 
+  auto const system_time =
+      unix_to_motistime(sched.schedule_begin_, sched.system_time_);
+
   auto const send_add_groups = [&]() {
     if (groups_to_add.empty()) {
       return;
@@ -193,10 +196,10 @@ void update_tracked_groups(
 
       groups_to_add.emplace_back(to_fbs(
           sched, add_groups_mc,
-          passenger_group{new_journey, 0, pg->source_, pg->passengers_,
-                          pg->planned_arrival_time_,
-                          pg->source_flags_ | group_source_flags::FORECAST,
-                          true, prob}));
+          make_passenger_group(std::move(new_journey), pg->source_,
+                               pg->passengers_, pg->planned_arrival_time_,
+                               pg->source_flags_ | group_source_flags::FORECAST,
+                               prob, system_time, pg->id_)));
       ++add_group_count;
     }
 

@@ -1,8 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <type_traits>
 #include <vector>
+
+#include "cista/reflection/comparable.h"
 
 #include "motis/core/schedule/time.h"
 #include "motis/core/journey/journey.h"
@@ -14,8 +17,10 @@ namespace motis::paxmon {
 struct edge;
 
 struct data_source {
-  std::uint64_t primary_ref_{};
-  std::uint64_t secondary_ref_{};
+  CISTA_COMPARABLE()
+
+  std::uint32_t primary_ref_{};
+  std::uint32_t secondary_ref_{};
 };
 
 enum class group_source_flags : std::uint8_t {
@@ -53,6 +58,8 @@ inline constexpr group_source_flags operator&=(group_source_flags& a,
 }
 
 struct passenger_group {
+  inline bool valid() const { return !edges_.empty(); }
+
   compact_journey compact_planned_journey_;
   std::uint64_t id_{};
   data_source source_{};
@@ -60,9 +67,31 @@ struct passenger_group {
   motis::time planned_arrival_time_{INVALID_TIME};
   group_source_flags source_flags_{group_source_flags::NONE};
   bool ok_{true};
-  float probability_{1.0};
+  motis::time added_time_{INVALID_TIME};
+  float probability_{1.0F};
+  std::uint64_t previous_version_{};
   std::vector<edge*> edges_{};
 };
+
+inline passenger_group make_passenger_group(
+    compact_journey&& cj, data_source const source,
+    std::uint16_t const passengers, motis::time const planned_arrival_time,
+    group_source_flags const source_flags = group_source_flags::NONE,
+    float const probability = 1.0F, motis::time added_time = INVALID_TIME,
+    std::optional<std::uint64_t> previous_version = std::nullopt,
+    std::uint64_t id = 0ULL) {
+  return passenger_group{std::move(cj),
+                         id,
+                         source,
+                         passengers,
+                         planned_arrival_time,
+                         source_flags,
+                         true,
+                         added_time,
+                         probability,
+                         previous_version.value_or(id),
+                         {}};
+}
 
 inline bool is_planned_group(passenger_group const* grp) {
   return ((grp->source_flags_ & group_source_flags::FORECAST) !=

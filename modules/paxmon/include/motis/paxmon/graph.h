@@ -144,10 +144,20 @@ struct trip_data {
 };
 
 struct graph {
+  inline passenger_group* add_group(passenger_group&& pg) {
+    auto const id = static_cast<std::uint64_t>(passenger_groups_.size());
+    auto ptr = passenger_groups_.emplace_back(
+        passenger_group_allocator_.create(std::move(pg)));
+    ptr->id_ = id;
+    groups_by_source_[ptr->source_].emplace_back(id);
+    return ptr;
+  }
+
   std::vector<std::unique_ptr<event_node>> nodes_;
   mcd::hash_map<trip const*, std::unique_ptr<trip_data>> trip_data_;
   std::vector<passenger_group*> passenger_groups_;
   allocator<passenger_group> passenger_group_allocator_;
+  mcd::hash_map<data_source, mcd::vector<std::uint64_t>> groups_by_source_;
 };
 
 }  // namespace motis::paxmon

@@ -88,6 +88,8 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
         "required number of broken groups in an update for mcfp scenarios");
   param(mcfp_scenario_include_trip_info_, "mcfp_scenario_include_trip_info",
         "include trip info (category + train_nr) in mcfp scenarios");
+  param(keep_group_history_, "keep_group_history",
+        "keep all passenger group versions");
 }
 
 paxmon::~paxmon() = default;
@@ -798,12 +800,7 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
       utl::to_vec(*req->groups(), [&](PaxMonGroup const* pg_fbs) {
         utl::verify(pg_fbs->planned_journey()->legs()->size() != 0,
                     "trying to add empty passenger group");
-        auto const id =
-            static_cast<std::uint64_t>(data_.graph_.passenger_groups_.size());
-        auto pg = data_.graph_.passenger_groups_.emplace_back(
-            data_.graph_.passenger_group_allocator_.create(
-                from_fbs(sched, pg_fbs)));
-        pg->id_ = id;
+        auto pg = data_.graph_.add_group(from_fbs(sched, pg_fbs));
         add_passenger_group_to_graph(sched, data_, *pg);
         for (auto const& leg : pg->compact_planned_journey_.legs_) {
           data_.trips_affected_by_last_update_.insert(leg.trip_);
@@ -835,8 +832,10 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
       data_.trips_affected_by_last_update_.insert(leg.trip_);
     }
     remove_passenger_group_from_graph(pg);
-    data_.graph_.passenger_group_allocator_.release(pg);
-    pg = nullptr;
+    if (!keep_group_history_) {
+      data_.graph_.passenger_group_allocator_.release(pg);
+      pg = nullptr;
+    }
   }
 
   print_allocator_stats(data_.graph_);

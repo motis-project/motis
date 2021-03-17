@@ -27,8 +27,6 @@ struct journey_leg {
 struct compact_journey {
   CISTA_COMPARABLE()
 
-  std::vector<journey_leg> legs_;
-
   inline unsigned destination_station_id() const {
     return legs_.back().exit_station_id_;
   }
@@ -45,6 +43,8 @@ struct compact_journey {
   inline time scheduled_arrival_time() const {
     return !legs_.empty() ? legs_.back().exit_time_ : INVALID_TIME;
   }
+
+  std::vector<journey_leg> legs_;
 };
 
 }  // namespace motis::paxmon

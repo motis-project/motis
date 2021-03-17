@@ -3,8 +3,8 @@ include "paxmon/PaxMonCompactJourney.fbs";
 namespace motis.paxmon;
 
 table PaxMonDataSource {
-  primary_ref: ulong;
-  secondary_ref: ulong;
+  primary_ref: uint;
+  secondary_ref: uint;
 }
 
 table PaxMonGroup {
@@ -15,4 +15,6 @@ table PaxMonGroup {
   probability: float;
   planned_arrival_time: ulong;
   source_flags: ubyte;
+  previous_version: ulong;
+  added_time: ulong;
 }

@@ -13,8 +13,8 @@ struct group_generator {
         group_size_dist_{group_size_mean, group_size_stddev},
         group_count_dist_{group_count_mean, group_count_stddev} {}
 
-  std::uint64_t get_group_count() {
-    return static_cast<std::uint64_t>(
+  std::uint32_t get_group_count() {
+    return static_cast<std::uint32_t>(
         std::max(1.0, std::round(group_count_dist_(rng_))));
   }
 
