@@ -32,13 +32,16 @@
 #include "motis/paxmon/paxmon_data.h"
 
 #include "motis/paxforecast/alternatives.h"
-#include "motis/paxforecast/behavior/probabilistic/passenger_behavior.h"
 #include "motis/paxforecast/combined_passenger_group.h"
 #include "motis/paxforecast/load_forecast.h"
 #include "motis/paxforecast/measures/measures.h"
 #include "motis/paxforecast/messages.h"
 #include "motis/paxforecast/simulate_behavior.h"
 #include "motis/paxforecast/statistics.h"
+
+#include "motis/paxforecast/behavior/logit/conditional_logit_passenger_behavior.h"
+#include "motis/paxforecast/behavior/logit/mixed_logit_passenger_behavior.h"
+#include "motis/paxforecast/behavior/probabilistic/passenger_behavior.h"
 
 using namespace motis::module;
 using namespace motis::routing;
@@ -416,9 +419,38 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   auto const seed = rd();
 #endif
   auto rnd_gen = std::mt19937{seed};
+
   auto transfer_dist = std::normal_distribution<float>{30.0F, 10.0F};
   auto pb = behavior::probabilistic::passenger_behavior{
       rnd_gen, transfer_dist, 1000, deterministic_mode_};
+
+  /*
+  // TrSimple / TrainSimple.ml
+  auto pb = behavior::logit::conditional_logit_passenger_behavior{
+      0.0011500F, -0.0973259F, deterministic_mode_};
+  */
+
+  /*
+  // TrMin / TrainMin.ml
+  auto pb = behavior::logit::conditional_logit_passenger_behavior{
+      2.8676e-02, 3.2634e-01, deterministic_mode_};
+  */
+
+  /*
+  // TrSimple / TrainSimple.mxlu
+  auto transfer_dist = std::normal_distribution<float>{-0.1040768F, 0.3331784F};
+  auto pb = behavior::logit::mixed_logit_passenger_behavior{
+      rnd_gen, 0.0012139F, transfer_dist, 1000, deterministic_mode_};
+  */
+
+  /*
+  // TrMin / TrainMin.mxlu
+  auto transfer_dist =
+      std::normal_distribution<float>{3.2634e-01F, 1.0000e-01F};
+  auto pb = behavior::logit::mixed_logit_passenger_behavior{
+      rnd_gen, 2.8676e-02F, transfer_dist, 1000, deterministic_mode_};
+  */
+
   auto const announcements = std::vector<measures::please_use>{};
   auto const sim_result =
       simulate_behavior(sched, data, combined_groups, announcements, pb);
