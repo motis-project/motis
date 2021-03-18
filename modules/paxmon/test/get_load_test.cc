@@ -21,7 +21,8 @@ namespace motis::paxmon {
 namespace {
 
 inline passenger_group mk_pg(std::uint16_t passengers, float probability) {
-  return make_passenger_group({}, 0ULL, {}, passengers, INVALID_TIME);
+  return make_passenger_group({}, {}, passengers, INVALID_TIME,
+                              group_source_flags::NONE, probability);
 }
 
 inline pax_connection_info mk_pci(std::vector<passenger_group> const& pgs) {
