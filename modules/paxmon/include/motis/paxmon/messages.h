@@ -23,6 +23,11 @@ flatbuffers::Offset<PaxMonCompactJourney> to_fbs(
 
 compact_journey from_fbs(schedule const& sched, PaxMonCompactJourney const* cj);
 
+flatbuffers::Offset<PaxMonDataSource> to_fbs(
+    flatbuffers::FlatBufferBuilder& fbb, data_source const& ds);
+
+data_source from_fbs(PaxMonDataSource const* ds);
+
 flatbuffers::Offset<PaxMonGroup> to_fbs(schedule const& sched,
                                         flatbuffers::FlatBufferBuilder& fbb,
                                         passenger_group const& pg);

@@ -77,6 +77,8 @@ include "paxmon/PaxMonAddGroupsResponse.fbs";
 include "paxmon/PaxMonRemoveGroupsRequest.fbs";
 include "paxmon/PaxMonFindTripsRequest.fbs";
 include "paxmon/PaxMonFindTripsResponse.fbs";
+include "paxmon/PaxMonGetGroupsRequest.fbs";
+include "paxmon/PaxMonGetGroupsResponse.fbs";
 include "paxmon/PaxMonStatusRequest.fbs";
 include "paxmon/PaxMonStatusResponse.fbs";
 include "paxmon/PaxMonTripLoadInfo.fbs";
@@ -230,7 +232,9 @@ union MsgContent {
   motis.paxmon.PaxMonFindTripsRequest                                     = 102,
   motis.paxmon.PaxMonFindTripsResponse                                    = 103,
   motis.paxmon.PaxMonStatusRequest                                        = 104,
-  motis.paxmon.PaxMonStatusResponse                                       = 105
+  motis.paxmon.PaxMonStatusResponse                                       = 105,
+  motis.paxmon.PaxMonGetGroupsRequest                                     = 106,
+  motis.paxmon.PaxMonGetGroupsResponse                                    = 107
 }
 
 // Destination Examples:

@@ -202,7 +202,8 @@ void update_tracked_groups(
           make_passenger_group(std::move(new_journey), pg->source_,
                                pg->passengers_, pg->planned_arrival_time_,
                                pg->source_flags_ | group_source_flags::FORECAST,
-                               prob, system_time, pg->id_)));
+                               prob, system_time, pg->id_,
+                               pg->generation_ + 1)));
       ++add_group_count;
     }
 

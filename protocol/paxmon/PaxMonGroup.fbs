@@ -15,6 +15,7 @@ table PaxMonGroup {
   probability: float;
   planned_arrival_time: ulong;
   source_flags: ubyte;
+  generation: ubyte;
   previous_version: ulong;
   added_time: ulong;
 }

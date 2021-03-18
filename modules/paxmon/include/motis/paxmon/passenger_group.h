@@ -69,6 +69,7 @@ struct passenger_group {
   bool ok_{true};
   motis::time added_time_{INVALID_TIME};
   float probability_{1.0F};
+  std::uint8_t generation_{};
   std::uint64_t previous_version_{};
   std::vector<edge*> edges_{};
 };
@@ -79,7 +80,7 @@ inline passenger_group make_passenger_group(
     group_source_flags const source_flags = group_source_flags::NONE,
     float const probability = 1.0F, motis::time added_time = INVALID_TIME,
     std::optional<std::uint64_t> previous_version = std::nullopt,
-    std::uint64_t id = 0ULL) {
+    std::uint8_t generation = 0, std::uint64_t id = 0ULL) {
   return passenger_group{std::move(cj),
                          id,
                          source,
@@ -89,6 +90,7 @@ inline passenger_group make_passenger_group(
                          true,
                          added_time,
                          probability,
+                         generation,
                          previous_version.value_or(id),
                          {}};
 }

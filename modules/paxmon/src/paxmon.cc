@@ -231,6 +231,10 @@ void paxmon::init(motis::module::registry& reg) {
     return get_status(msg);
   });
 
+  reg.register_op("/paxmon/get_groups", [&](msg_ptr const& msg) -> msg_ptr {
+    return get_groups(msg);
+  });
+
   if (!mcfp_scenario_dir_.empty()) {
     if (fs::exists(mcfp_scenario_dir_)) {
       write_mcfp_scenarios_ = fs::is_directory(mcfp_scenario_dir_);
@@ -933,6 +937,49 @@ msg_ptr paxmon::get_status(msg_ptr const& msg) {
           mc.CreateVector(trips_affected_by_last_update),
           mc.CreateVector(trips_with_critical_sections))
           .Union());
+  return make_msg(mc);
+}
+
+msg_ptr paxmon::get_groups(msg_ptr const& msg) {
+  auto const req = motis_content(PaxMonGetGroupsRequest, msg);
+  auto const& sched = get_schedule();
+  auto const all_generations = req->all_generations();
+
+  message_creator mc;
+  std::vector<flatbuffers::Offset<PaxMonGroup>> groups;
+
+  auto const add_by_data_source = [&](data_source const& ds) {
+    if (auto const it = data_.graph_.groups_by_source_.find(ds);
+        it != end(data_.graph_.groups_by_source_)) {
+      for (auto const pgid : it->second) {
+        if (auto const pg = data_.graph_.passenger_groups_.at(pgid);
+            pg != nullptr) {
+          if (all_generations || pg->valid()) {
+            groups.emplace_back(to_fbs(sched, mc, *pg));
+          }
+        }
+      }
+    }
+  };
+
+  for (auto const pgid : *req->ids()) {
+    if (auto const pg = data_.graph_.passenger_groups_.at(pgid);
+        pg != nullptr) {
+      if (all_generations) {
+        add_by_data_source(pg->source_);
+      } else {
+        groups.emplace_back(to_fbs(sched, mc, *pg));
+      }
+    }
+  }
+
+  for (auto const ds : *req->sources()) {
+    add_by_data_source(from_fbs(ds));
+  }
+
+  mc.create_and_finish(
+      MsgContent_PaxMonGetGroupsResponse,
+      CreatePaxMonGetGroupsResponse(mc, mc.CreateVector(groups)).Union());
   return make_msg(mc);
 }
 

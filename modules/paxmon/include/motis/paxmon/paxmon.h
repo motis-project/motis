@@ -43,6 +43,7 @@ private:
   motis::module::msg_ptr get_trip_load_info(motis::module::msg_ptr const& msg);
   motis::module::msg_ptr find_trips(motis::module::msg_ptr const& msg);
   motis::module::msg_ptr get_status(motis::module::msg_ptr const& msg);
+  motis::module::msg_ptr get_groups(motis::module::msg_ptr const& msg);
 
   std::vector<std::string> journey_files_;
   std::vector<std::string> capacity_files_;
