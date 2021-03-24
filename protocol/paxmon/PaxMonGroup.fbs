@@ -18,4 +18,5 @@ table PaxMonGroup {
   generation: ubyte;
   previous_version: ulong;
   added_time: ulong;
+  estimated_delay: short;
 }

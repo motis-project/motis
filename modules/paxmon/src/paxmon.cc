@@ -478,7 +478,7 @@ void check_broken_interchanges(
       for (auto grp : ice->pax_connection_info_.groups_) {
         data.groups_affected_by_last_update_.insert(grp);
       }
-    } else if (arrival_delay_threshold < 0 && to->station_ == 0) {
+    } else if (arrival_delay_threshold >= 0 && to->station_ == 0) {
       // check for delayed arrival at destination
       auto const estimated_arrival = static_cast<int>(from->schedule_time());
       for (auto grp : ice->pax_connection_info_.groups_) {
@@ -653,6 +653,12 @@ void paxmon::rt_updates_applied() {
           auto const reachability =
               get_reachability(data_, pg->compact_planned_journey_);
           pg->ok_ = reachability.ok_;
+          if (reachability.ok_) {
+            pg->estimated_delay_ = static_cast<std::int16_t>(
+                static_cast<int>(
+                    reachability.reachable_trips_.back().exit_real_time_) -
+                static_cast<int>(pg->planned_arrival_time_));
+          }
           MOTIS_STOP_TIMING(reachability);
 
           MOTIS_START_TIMING(localization);

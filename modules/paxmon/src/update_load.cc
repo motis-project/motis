@@ -13,7 +13,6 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
                  passenger_localization const& localization, graph const& g) {
   auto disabled_edges = pg->edges_;
   pg->edges_.clear();
-  utl::verify(!disabled_edges.empty(), "update_load: disabled_edges empty");
 
   auto const add_to_edge = [&](edge* e) {
     if (std::find(begin(disabled_edges), end(disabled_edges), e) ==

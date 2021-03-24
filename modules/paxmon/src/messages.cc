@@ -109,7 +109,8 @@ Offset<PaxMonGroup> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
       to_fbs(sched, fbb, pg.compact_planned_journey_), pg.probability_,
       to_fbs_time(sched, pg.planned_arrival_time_),
       static_cast<std::underlying_type_t<group_source_flags>>(pg.source_flags_),
-      pg.generation_, pg.previous_version_, to_fbs_time(sched, pg.added_time_));
+      pg.generation_, pg.previous_version_, to_fbs_time(sched, pg.added_time_),
+      pg.estimated_delay_);
 }
 
 passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg) {
@@ -119,7 +120,7 @@ passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg) {
       from_fbs_time(sched, pg->planned_arrival_time()),
       static_cast<group_source_flags>(pg->source_flags()), pg->probability(),
       from_fbs_time(sched, pg->added_time()), pg->previous_version(),
-      pg->generation(), pg->id());
+      pg->generation(), pg->estimated_delay(), pg->id());
 }
 
 Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
