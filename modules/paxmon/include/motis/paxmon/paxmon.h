@@ -67,6 +67,7 @@ private:
   int mcfp_scenario_min_broken_groups_{500};
   bool mcfp_scenario_include_trip_info_{false};
   bool keep_group_history_{false};
+  bool reuse_groups_{true};
 
   paxmon_data data_;
   system_statistics system_stats_;

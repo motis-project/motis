@@ -90,6 +90,9 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
         "include trip info (category + train_nr) in mcfp scenarios");
   param(keep_group_history_, "keep_group_history",
         "keep all passenger group versions");
+  param(reuse_groups_, "reuse_groups",
+        "update probability of existing groups instead of adding new groups "
+        "when possible");
 }
 
 paxmon::~paxmon() = default;
@@ -806,11 +809,29 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
   auto const& sched = get_schedule();
   auto const req = motis_content(PaxMonAddGroupsRequest, msg);
 
+  auto const allow_reuse = reuse_groups_;
+  auto reused_groups = 0ULL;
   auto const added_groups =
       utl::to_vec(*req->groups(), [&](PaxMonGroup const* pg_fbs) {
         utl::verify(pg_fbs->planned_journey()->legs()->size() != 0,
                     "trying to add empty passenger group");
-        auto pg = data_.graph_.add_group(from_fbs(sched, pg_fbs));
+        auto input_pg = from_fbs(sched, pg_fbs);
+        if (allow_reuse) {
+          if (auto it = data_.graph_.groups_by_source_.find(input_pg.source_);
+              it != end(data_.graph_.groups_by_source_)) {
+            for (auto const id : it->second) {
+              auto existing_pg = data_.graph_.passenger_groups_.at(id);
+              if (existing_pg != nullptr && existing_pg->valid() &&
+                  existing_pg->compact_planned_journey_ ==
+                      input_pg.compact_planned_journey_) {
+                existing_pg->probability_ += input_pg.probability_;
+                ++reused_groups;
+                return existing_pg;
+              }
+            }
+          }
+        }
+        auto pg = data_.graph_.add_group(std::move(input_pg));
         add_passenger_group_to_graph(sched, data_, *pg);
         for (auto const& leg : pg->compact_planned_journey_.legs_) {
           data_.trips_affected_by_last_update_.insert(leg.trip_);
@@ -819,6 +840,8 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
       });
 
   print_allocator_stats(data_.graph_);
+  LOG(info) << "add_groups: " << added_groups.size() << " total, "
+            << reused_groups << " reused";
 
   message_creator mc;
   mc.create_and_finish(
