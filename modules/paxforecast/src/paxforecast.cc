@@ -65,6 +65,9 @@ paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
   param(stats_file_, "stats", "statistics file");
   param(deterministic_mode_, "deterministic_mode",
         "all passengers always pick the best alternative");
+  param(min_delay_improvement_, "min_delay_improvement",
+        "minimum required arrival time improvement for major delay "
+        "alternatives (minutes)");
 }
 
 paxforecast::~paxforecast() = default;
@@ -224,10 +227,12 @@ void update_tracked_groups(
 }
 
 bool has_better_alternative(std::vector<alternative> const& alts,
-                            time expected_arrival_time) {
+                            time expected_arrival_time,
+                            duration min_improvement) {
+  auto const latest_accepted_arrival = expected_arrival_time - min_improvement;
   return std::any_of(begin(alts), end(alts),
-                     [expected_arrival_time](alternative const& alt) {
-                       return alt.arrival_time_ < expected_arrival_time;
+                     [latest_accepted_arrival](alternative const& alt) {
+                       return alt.arrival_time_ <= latest_accepted_arrival;
                      });
 }
 
@@ -361,6 +366,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   tick_stats.alternatives_found_ = alternatives_found;
 
   std::vector<std::unique_ptr<passenger_group>> removed_groups;
+  auto removed_group_count = 0ULL;
   if (delayed_groups > 0) {
     std::vector<std::uint64_t> groups_to_remove;
     for (auto& cgs : combined_groups) {
@@ -382,7 +388,8 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
           utl::verify(expected_current_arrival_time != INVALID_TIME,
                       "invalid expected arrival time for delayed group");
           return !has_better_alternative(cpg.alternatives_,
-                                         expected_current_arrival_time);
+                                         expected_current_arrival_time,
+                                         min_delay_improvement_);
         });
 
         // groups with better alternatives are removed from the paxmon graph
@@ -398,6 +405,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
             pg_event_types.insert(
                 {pg, monitoring_event_type::MAJOR_DELAY_EXPECTED});
             ++tick_stats.major_delay_groups_with_alternatives_;
+            ++removed_group_count;
           }
         }
 
@@ -407,6 +415,9 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
       }
     }
     send_remove_groups(groups_to_remove, tick_stats);
+    LOG(info) << "delayed groups: " << delayed_groups
+              << ", removed groups: " << removed_group_count
+              << " (tick total: " << tick_stats.removed_groups_ << ")";
   }
 
   MOTIS_START_TIMING(passenger_behavior);
@@ -529,6 +540,17 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   MOTIS_STOP_TIMING(total);
   tick_stats.t_total_ = MOTIS_TIMING_MS(total);
 
+  LOG(info) << "paxforecast tick stats: " << tick_stats.monitoring_events_
+            << " monitoring events, " << tick_stats.groups_ << " groups ("
+            << tick_stats.combined_groups_ << " combined), "
+            << tick_stats.major_delay_groups_ << " major delay groups ("
+            << tick_stats.major_delay_groups_with_alternatives_
+            << " with alternatives), " << tick_stats.routing_requests_
+            << " routing requests, " << tick_stats.alternatives_found_
+            << " alternatives found, " << tick_stats.added_groups_
+            << " groups added, " << tick_stats.removed_groups_
+            << " groups removed";
+  ;
   stats_writer_->write_tick(tick_stats);
   stats_writer_->flush();
 }

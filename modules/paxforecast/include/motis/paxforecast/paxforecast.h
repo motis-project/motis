@@ -7,6 +7,7 @@
 
 #include "conf/date_time.h"
 
+#include "motis/core/schedule/time.h"
 #include "motis/module/module.h"
 
 #include "motis/paxforecast/routing_cache.h"
@@ -42,6 +43,7 @@ private:
   bool publish_load_forecast_{false};
 
   bool deterministic_mode_{false};
+  duration min_delay_improvement_{5};
 
   std::string stats_file_{"paxforecast_stats.csv"};
   std::unique_ptr<stats_writer> stats_writer_;
