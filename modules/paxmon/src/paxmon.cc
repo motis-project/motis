@@ -2,9 +2,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <mutex>
-#include <numeric>
-#include <set>
 
 #include "boost/filesystem.hpp"
 
@@ -21,7 +18,6 @@
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
-#include "motis/module/context/motis_parallel_for.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/message.h"
@@ -35,15 +31,13 @@
 #include "motis/paxmon/load_info.h"
 #include "motis/paxmon/loader/csv/csv_journeys.h"
 #include "motis/paxmon/loader/journeys/motis_journeys.h"
-#include "motis/paxmon/localization.h"
 #include "motis/paxmon/messages.h"
-#include "motis/paxmon/monitoring_event.h"
 #include "motis/paxmon/output/journey_converter.h"
 #include "motis/paxmon/output/mcfp_scenario.h"
 #include "motis/paxmon/over_capacity_report.h"
-#include "motis/paxmon/reachability.h"
+#include "motis/paxmon/print_stats.h"
+#include "motis/paxmon/rt_updates.h"
 #include "motis/paxmon/service_info.h"
-#include "motis/paxmon/update_load.h"
 
 namespace fs = boost::filesystem;
 
@@ -247,41 +241,6 @@ void paxmon::init(motis::module::registry& reg) {
   }
 }
 
-void print_graph_stats(graph_statistics const& graph_stats) {
-  LOG(info) << fmt::format("{:L} passenger groups, {:L} passengers",
-                           graph_stats.passenger_groups_,
-                           graph_stats.passengers_);
-  LOG(info) << fmt::format("{:L} graph nodes ({:L} canceled)",
-                           graph_stats.nodes_, graph_stats.canceled_nodes_);
-  LOG(info) << fmt::format(
-      "{:L} graph edges ({:L} canceled): {:L} trip + {:L} interchange + {:L} "
-      "wait + {:L} through",
-      graph_stats.edges_, graph_stats.canceled_edges_, graph_stats.trip_edges_,
-      graph_stats.interchange_edges_, graph_stats.wait_edges_,
-      graph_stats.through_edges_);
-  LOG(info) << fmt::format("{:L} stations", graph_stats.stations_);
-  LOG(info) << fmt::format("{:L} trips", graph_stats.trips_);
-  LOG(info) << fmt::format("over capacity: {:L} trips, {:L} edges",
-                           graph_stats.trips_over_capacity_,
-                           graph_stats.edges_over_capacity_);
-  LOG(info) << fmt::format("broken: {:L} interchange edges, {:L} groups",
-                           graph_stats.broken_edges_,
-                           graph_stats.broken_passenger_groups_);
-}
-
-void print_allocator_stats(graph const& g) {
-  LOG(info) << fmt::format(
-      "passenger group allocator: {:L} groups, {:.2f} MiB currently allocated, "
-      "{:L} free list entries, {:L} total allocations, {:L} total "
-      "deallocations",
-      g.passenger_group_allocator_.elements_allocated(),
-      static_cast<double>(g.passenger_group_allocator_.bytes_allocated()) /
-          (1024.0 * 1024.0),
-      g.passenger_group_allocator_.free_list_size(),
-      g.passenger_group_allocator_.allocation_count(),
-      g.passenger_group_allocator_.release_count());
-}
-
 loader::loader_result paxmon::load_journeys(std::string const& file) {
   auto const journey_path = fs::path{file};
   if (!fs::exists(journey_path)) {
@@ -445,154 +404,17 @@ void paxmon::load_capacity_files() {
   }
 }
 
-void check_broken_interchanges(
-    paxmon_data& data, schedule const& /*sched*/,
-    std::vector<edge*> const& updated_interchange_edges,
-    system_statistics& system_stats, int arrival_delay_threshold) {
-  static std::set<edge*> broken_interchanges;
-  static std::set<passenger_group*> affected_passenger_groups;
-  for (auto& ice : updated_interchange_edges) {
-    if (ice->type_ != edge_type::INTERCHANGE) {
-      continue;
-    }
-    auto const from = ice->from(data.graph_);
-    auto const to = ice->to(data.graph_);
-    auto const ic = static_cast<int>(to->time_) - static_cast<int>(from->time_);
-    if (ice->is_canceled(data.graph_) ||
-        (from->station_ != 0 && to->station_ != 0 &&
-         ic < ice->transfer_time())) {
-      if (ice->broken_) {
-        continue;
-      }
-      ice->broken_ = true;
-      if (broken_interchanges.insert(ice).second) {
-        ++system_stats.total_broken_interchanges_;
-      }
-      for (auto grp : ice->pax_connection_info_.groups_) {
-        if (affected_passenger_groups.insert(grp).second) {
-          system_stats.total_affected_passengers_ += grp->passengers_;
-          grp->ok_ = false;
-        }
-        data.groups_affected_by_last_update_.insert(grp);
-      }
-    } else if (ice->broken_) {
-      // interchange valid again
-      ice->broken_ = false;
-      for (auto grp : ice->pax_connection_info_.groups_) {
-        data.groups_affected_by_last_update_.insert(grp);
-      }
-    } else if (arrival_delay_threshold >= 0 && to->station_ == 0) {
-      // check for delayed arrival at destination
-      auto const estimated_arrival = static_cast<int>(from->schedule_time());
-      for (auto grp : ice->pax_connection_info_.groups_) {
-        auto const estimated_delay =
-            estimated_arrival - static_cast<int>(grp->planned_arrival_time_);
-        if (grp->planned_arrival_time_ != INVALID_TIME &&
-            estimated_delay >= arrival_delay_threshold) {
-          data.groups_affected_by_last_update_.insert(grp);
-        }
-      }
-    }
-  }
-}
-
 msg_ptr paxmon::rt_update(msg_ptr const& msg) {
   auto const& sched = get_schedule();
   auto update = motis_content(RtUpdates, msg);
-
-  tick_stats_.rt_updates_ += update->updates()->size();
-
-  std::vector<edge*> updated_interchange_edges;
-  for (auto const& u : *update->updates()) {
-    switch (u->content_type()) {
-      case Content_RtDelayUpdate: {
-        ++system_stats_.delay_updates_;
-        ++tick_stats_.rt_delay_updates_;
-        auto const du = reinterpret_cast<RtDelayUpdate const*>(u->content());
-        update_event_times(sched, data_.graph_, du, updated_interchange_edges,
-                           system_stats_);
-        tick_stats_.rt_delay_event_updates_ += du->events()->size();
-        for (auto const& uei : *du->events()) {
-          switch (uei->reason()) {
-            case TimestampReason_IS: ++tick_stats_.rt_delay_is_updates_; break;
-            case TimestampReason_FORECAST:
-              ++tick_stats_.rt_delay_forecast_updates_;
-              break;
-            case TimestampReason_PROPAGATION:
-              ++tick_stats_.rt_delay_propagation_updates_;
-              break;
-            case TimestampReason_REPAIR:
-              ++tick_stats_.rt_delay_repair_updates_;
-              break;
-            case TimestampReason_SCHEDULE:
-              ++tick_stats_.rt_delay_schedule_updates_;
-              break;
-          }
-        }
-        break;
-      }
-      case Content_RtRerouteUpdate: {
-        ++system_stats_.reroute_updates_;
-        ++tick_stats_.rt_reroute_updates_;
-        auto const ru = reinterpret_cast<RtRerouteUpdate const*>(u->content());
-        update_trip_route(sched, data_, ru, updated_interchange_edges,
-                          system_stats_);
-        break;
-      }
-      case Content_RtTrackUpdate: {
-        ++tick_stats_.rt_track_updates_;
-        break;
-      }
-      case Content_RtFreeTextUpdate: {
-        ++tick_stats_.rt_free_text_updates_;
-        break;
-      }
-      default: break;
-    }
-  }
-  check_broken_interchanges(data_, sched, updated_interchange_edges,
-                            system_stats_, arrival_delay_threshold_);
+  handle_rt_update(data_, sched, system_stats_, tick_stats_, update,
+                   arrival_delay_threshold_);
   return {};
-}
-
-monitoring_event_type get_monitoring_event_type(
-    passenger_group const* pg, reachability_info const& reachability,
-    int const arrival_delay_threshold) {
-  if (!reachability.ok_) {
-    return monitoring_event_type::TRANSFER_BROKEN;
-  } else if (arrival_delay_threshold >= 0 &&
-             !reachability.reachable_trips_.empty() &&
-             pg->planned_arrival_time_ != INVALID_TIME &&
-             (static_cast<int>(
-                  reachability.reachable_trips_.back().exit_real_time_) -
-                  static_cast<int>(pg->planned_arrival_time_) >=
-              arrival_delay_threshold)) {
-    return monitoring_event_type::MAJOR_DELAY_EXPECTED;
-  } else {
-    return monitoring_event_type::NO_PROBLEM;
-  }
 }
 
 void paxmon::rt_updates_applied() {
   MOTIS_START_TIMING(total);
   auto const& sched = get_schedule();
-  auto const current_time =
-      unix_to_motistime(sched.schedule_begin_, sched.system_time_);
-  utl::verify(current_time != INVALID_TIME, "invalid current system time");
-  auto const preparation_time = 15 /*min*/;
-  auto const search_time = current_time + preparation_time;
-
-  tick_stats_.system_time_ = sched.system_time_;
-
-  auto const affected_passenger_count = std::accumulate(
-      begin(data_.groups_affected_by_last_update_),
-      end(data_.groups_affected_by_last_update_), 0ULL,
-      [](auto const sum, auto const& pg) { return sum + pg->passengers_; });
-
-  tick_stats_.affected_groups_ = data_.groups_affected_by_last_update_.size();
-  tick_stats_.affected_passengers_ = affected_passenger_count;
-
-  data_.trips_affected_by_last_update_.clear();
 
   if (check_graph_times_) {
     utl::verify(check_graph_times(data_.graph_, sched),
@@ -603,165 +425,43 @@ void paxmon::rt_updates_applied() {
                 "rt_updates_applied: check_graph_integrity (start)");
   }
 
-  auto ok_groups = 0ULL;
-  auto broken_groups = 0ULL;
-  auto broken_passengers = 0ULL;
-  auto major_delay_groups = 0ULL;
-  auto major_delay_passengers = 0ULL;
-  {
-    manual_timer timer{"update affected passenger groups"};
-    message_creator mc;
-    std::vector<flatbuffers::Offset<PaxMonEvent>> fbs_events;
-    std::vector<msg_ptr> messages;
+  LOG(info) << "groups affected by last update: "
+            << data_.groups_affected_by_last_update_.size()
+            << ", total groups: " << data_.graph_.passenger_groups_.size();
+  print_allocator_stats(data_.graph_);
 
-    LOG(info) << "groups affected by last update: "
-              << data_.groups_affected_by_last_update_.size()
-              << ", total groups: " << data_.graph_.passenger_groups_.size();
-    print_allocator_stats(data_.graph_);
+  auto messages = update_affected_groups(data_, sched, system_stats_,
+                                         tick_stats_, arrival_delay_threshold_);
 
-    std::mutex update_mutex;
-    auto total_reachability = 0ULL;
-    auto total_localization = 0ULL;
-    auto total_update_load = 0ULL;
-    auto total_fbs_events = 0ULL;
-
-    auto const print_timing = [&]() {
-      if (fbs_events.empty()) {
-        return;
-      }
-      LOG(info) << "update groups timing: reachability "
-                << (total_reachability / 1000) << "ms, localization "
-                << (total_localization / 1000) << "ms, update_load "
-                << (total_update_load / 1000) << "ms, fbs_events "
-                << (total_fbs_events / 1000) << "ms, " << fbs_events.size()
-                << " events";
-    };
-
-    auto const make_monitoring_msg = [&]() {
-      if (fbs_events.empty()) {
-        return;
-      }
-      mc.create_and_finish(
-          MsgContent_PaxMonUpdate,
-          CreatePaxMonUpdate(mc, mc.CreateVector(fbs_events)).Union(),
-          "/paxmon/monitoring_update");
-      messages.emplace_back(make_msg(mc));
-      fbs_events.clear();
-      mc.Clear();
-    };
-
-    motis_parallel_for(
-        data_.groups_affected_by_last_update_, [&](auto const& pg) {
-          MOTIS_START_TIMING(reachability);
-          auto const reachability =
-              get_reachability(data_, pg->compact_planned_journey_);
-          pg->ok_ = reachability.ok_;
-          if (reachability.ok_) {
-            pg->estimated_delay_ = static_cast<std::int16_t>(
-                static_cast<int>(
-                    reachability.reachable_trips_.back().exit_real_time_) -
-                static_cast<int>(pg->planned_arrival_time_));
-          }
-          MOTIS_STOP_TIMING(reachability);
-
-          MOTIS_START_TIMING(localization);
-          auto const localization = localize(sched, reachability, search_time);
-          MOTIS_STOP_TIMING(localization);
-
-          auto const event_type = get_monitoring_event_type(
-              pg, reachability, arrival_delay_threshold_);
-          auto const expected_arrival_time =
-              event_type == monitoring_event_type::TRANSFER_BROKEN
-                  ? INVALID_TIME
-                  : reachability.reachable_trips_.back().exit_real_time_;
-
-          MOTIS_START_TIMING(update_load);
-          update_load(pg, reachability, localization, data_.graph_);
-          MOTIS_STOP_TIMING(update_load);
-
-          MOTIS_START_TIMING(fbs_events);
-          std::lock_guard guard{update_mutex};
-          fbs_events.emplace_back(to_fbs(
-              sched, mc,
-              monitoring_event{event_type, *pg, localization,
-                               reachability.status_, expected_arrival_time}));
-          if (fbs_events.size() >= 10'000) {
-            make_monitoring_msg();
-          }
-          MOTIS_STOP_TIMING(fbs_events);
-
-          total_reachability += MOTIS_TIMING_US(reachability);
-          total_localization += MOTIS_TIMING_US(localization);
-          total_update_load += MOTIS_TIMING_US(update_load);
-          total_fbs_events += MOTIS_TIMING_US(fbs_events);
-
-          if (fbs_events.size() % 10000 == 0) {
-            print_timing();
-          }
-
-          switch (event_type) {
-            case monitoring_event_type::NO_PROBLEM:
-              ++ok_groups;
-              ++system_stats_.groups_ok_count_;
-              break;
-            case monitoring_event_type::TRANSFER_BROKEN:
-              ++broken_groups;
-              ++system_stats_.groups_broken_count_;
-              broken_passengers += pg->passengers_;
-              break;
-            case monitoring_event_type::MAJOR_DELAY_EXPECTED:
-              ++major_delay_groups;
-              ++system_stats_.groups_major_delay_count_;
-              major_delay_passengers += pg->passengers_;
-              break;
-          }
-        });
-
-    print_timing();
-
-    make_monitoring_msg();
-    timer.stop_and_print();
-
-    if (check_graph_integrity_) {
-      utl::verify(
-          check_graph_integrity(data_.graph_, sched),
-          "rt_updates_applied: check_graph_integrity (after load update)");
-    }
-
-    if (write_mcfp_scenarios_ &&
-        broken_groups >= mcfp_scenario_min_broken_groups_) {
-      auto const dir =
-          fs::path{mcfp_scenario_dir_} /
-          fs::path{fmt::format(
-              "{}_{}", format_unix_time(sched.system_time_, "%Y-%m-%d_%H-%M"),
-              broken_groups)};
-      LOG(info) << "writing MCFP scenario with " << broken_groups
-                << " broken groups to " << dir.string();
-      fs::create_directories(dir);
-      output::write_scenario(dir, sched, data_, messages,
-                             mcfp_scenario_include_trip_info_);
-    }
-
-    MOTIS_START_TIMING(publish);
-    for (auto& msg : messages) {
-      ctx::await_all(motis_publish(msg));
-      msg.reset();
-    }
-    MOTIS_STOP_TIMING(publish);
-
-    tick_stats_.t_reachability_ = total_reachability / 1000;
-    tick_stats_.t_localization_ = total_localization / 1000;
-    tick_stats_.t_update_load_ = total_update_load / 1000;
-    tick_stats_.t_fbs_events_ = total_fbs_events / 1000;
-    tick_stats_.t_publish_ =
-        static_cast<std::uint64_t>(MOTIS_TIMING_MS(publish));
+  if (check_graph_integrity_) {
+    utl::verify(check_graph_integrity(data_.graph_, sched),
+                "rt_updates_applied: check_graph_integrity (after "
+                "update_affected_groups)");
   }
 
-  tick_stats_.ok_groups_ = ok_groups;
-  tick_stats_.broken_groups_ = broken_groups;
-  tick_stats_.broken_passengers_ = broken_passengers;
-  tick_stats_.major_delay_groups_ = major_delay_groups;
-  tick_stats_.major_delay_passengers_ = major_delay_passengers;
+  if (write_mcfp_scenarios_ &&
+      tick_stats_.broken_groups_ >= mcfp_scenario_min_broken_groups_) {
+    auto const dir =
+        fs::path{mcfp_scenario_dir_} /
+        fs::path{fmt::format(
+            "{}_{}", format_unix_time(sched.system_time_, "%Y-%m-%d_%H-%M"),
+            tick_stats_.broken_groups_)};
+    LOG(info) << "writing MCFP scenario with " << tick_stats_.broken_groups_
+              << " broken groups to " << dir.string();
+    fs::create_directories(dir);
+    output::write_scenario(dir, sched, data_, messages,
+                           mcfp_scenario_include_trip_info_);
+  }
+
+  MOTIS_START_TIMING(publish);
+  for (auto& msg : messages) {
+    ctx::await_all(motis_publish(msg));
+    msg.reset();
+  }
+  MOTIS_STOP_TIMING(publish);
+
+  tick_stats_.t_publish_ = static_cast<std::uint64_t>(MOTIS_TIMING_MS(publish));
+
   tick_stats_.total_ok_groups_ = system_stats_.groups_ok_count_;
   tick_stats_.total_broken_groups_ = system_stats_.groups_broken_count_;
   tick_stats_.total_major_delay_groups_ =
@@ -773,14 +473,15 @@ void paxmon::rt_updates_applied() {
             << " passengers";
 
   data_.groups_affected_by_last_update_.clear();
-  LOG(info) << "passenger groups: " << ok_groups << " ok, " << broken_groups
+  LOG(info) << "passenger groups: " << tick_stats_.ok_groups_ << " ok, "
+            << tick_stats_.broken_groups_
             << " broken - passengers affected by broken groups: "
-            << broken_passengers;
+            << tick_stats_.broken_passengers_;
   LOG(info) << "groups: " << system_stats_.groups_ok_count_ << " ok + "
             << system_stats_.groups_broken_count_ << " broken";
 
   for (auto const& pg : data_.graph_.passenger_groups_) {
-    if (pg == nullptr) {
+    if (pg == nullptr || !pg->valid()) {
       continue;
     }
     if (pg->ok_) {

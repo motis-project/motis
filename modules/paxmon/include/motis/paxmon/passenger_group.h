@@ -60,6 +60,15 @@ inline constexpr group_source_flags operator&=(group_source_flags& a,
 struct passenger_group {
   inline bool valid() const { return !edges_.empty(); }
 
+  inline std::uint16_t estimated_delay() const { return estimated_delay_; }
+
+  inline motis::time estimated_arrival_time() const {
+    return planned_arrival_time_ != INVALID_TIME
+               ? static_cast<motis::time>(planned_arrival_time_ +
+                                          estimated_delay_)
+               : INVALID_TIME;
+  }
+
   compact_journey compact_planned_journey_;
   std::uint64_t id_{};
   data_source source_{};
