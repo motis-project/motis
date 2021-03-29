@@ -1,0 +1,13 @@
+namespace motis.paxmon;
+
+table PaxMonFilterGroupsResponse {
+  total_tracked_groups: ulong;
+  total_active_groups: ulong;
+
+  filtered_groups: ulong;
+  filtered_unique_groups: ulong;
+  filtered_original_groups: ulong;
+  filtered_forecast_groups: ulong;
+
+  group_ids: [ulong];
+}

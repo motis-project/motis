@@ -11,7 +11,7 @@ import TripPicker from "./TripPicker";
 import TripLoadForecastChart from "./TripLoadForecastChart";
 
 async function getInitialStatus(setPaxMonStatus) {
-  const res = await sendPaxMonStatusRequest({});
+  const res = await sendPaxMonStatusRequest();
   const data = await res.json();
   setPaxMonStatus(data.content);
   if (!data.content.system_time) {
@@ -40,7 +40,7 @@ async function forwardTimeStepped(
   while (currentTime < endTime) {
     currentTime = Math.min(endTime, currentTime + stepSize);
     await sendRISForwardTimeRequest(currentTime);
-    const statusRes = await sendPaxMonStatusRequest({});
+    const statusRes = await sendPaxMonStatusRequest();
     const statusData = await statusRes.json();
     setPaxMonStatus(statusData.content);
     if (selectedTrip) {

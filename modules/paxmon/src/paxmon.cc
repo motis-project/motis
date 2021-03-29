@@ -232,6 +232,14 @@ void paxmon::init(motis::module::registry& reg) {
     return get_groups(msg);
   });
 
+  reg.register_op("/paxmon/filter_groups", [&](msg_ptr const& msg) -> msg_ptr {
+    return filter_groups(msg);
+  });
+
+  reg.register_op("/paxmon/filter_trips", [&](msg_ptr const& msg) -> msg_ptr {
+    return filter_trips(msg);
+  });
+
   if (!mcfp_scenario_dir_.empty()) {
     if (fs::exists(mcfp_scenario_dir_)) {
       write_mcfp_scenarios_ = fs::is_directory(mcfp_scenario_dir_);
@@ -583,15 +591,33 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
 }
 
 msg_ptr paxmon::get_trip_load_info(msg_ptr const& msg) {
-  auto const req = motis_content(TripId, msg);
+  utl::verify(msg != nullptr, "null message in paxmon::get_trip_load_info");
   auto const& sched = get_schedule();
-  auto const trp = from_fbs(sched, req);
-
-  auto const tli = calc_trip_load_info(data_, trp);
   message_creator mc;
-  mc.create_and_finish(MsgContent_PaxMonTripLoadInfo,
-                       to_fbs(mc, sched, data_.graph_, tli).Union());
-  return make_msg(mc);
+
+  auto const to_fbs_load_info = [&](TripId const* fbs_tid) {
+    auto const trp = from_fbs(sched, fbs_tid);
+    auto const tli = calc_trip_load_info(data_, trp);
+    return to_fbs(mc, sched, data_.graph_, tli);
+  };
+
+  switch (msg->get()->content_type()) {
+    case MsgContent_TripId: {
+      auto const req = motis_content(TripId, msg);
+      mc.create_and_finish(MsgContent_PaxMonTripLoadInfo,
+                           to_fbs_load_info(req).Union());
+      return make_msg(mc);
+    }
+    case MsgContent_PaxMonGetTripLoadInfosRequest: {
+      auto const req = motis_content(PaxMonGetTripLoadInfosRequest, msg);
+      mc.create_and_finish(
+          MsgContent_PaxMonGetTripLoadInfosResponse,
+          mc.CreateVector(utl::to_vec(*req->trips(), to_fbs_load_info))
+              .Union());
+      return make_msg(mc);
+    }
+    default: throw std::system_error(error::unexpected_message_type);
+  }
 }
 
 msg_ptr paxmon::find_trips(msg_ptr const& msg) {
@@ -610,8 +636,8 @@ msg_ptr paxmon::find_trips(msg_ptr const& msg) {
     if (trp->edges_->empty()) {
       continue;
     }
-    auto const has_paxmon_data =
-        data_.graph_.trip_data_.find(trp) != end(data_.graph_.trip_data_);
+    auto const tde = data_.graph_.trip_data_.find(trp);
+    auto const has_paxmon_data = tde != end(data_.graph_.trip_data_);
     if (req->only_trips_with_paxmon_data() && !has_paxmon_data) {
       continue;
     }
@@ -625,9 +651,21 @@ msg_ptr paxmon::find_trips(msg_ptr const& msg) {
         continue;
       }
     }
+    auto const all_edges_have_capacity_info =
+        has_paxmon_data &&
+        std::all_of(
+            begin(tde->second->edges_), end(tde->second->edges_),
+            [](edge const* e) { return !e->is_trip() || e->has_capacity(); });
+    auto const has_passengers =
+        has_paxmon_data &&
+        std::any_of(begin(tde->second->edges_), end(tde->second->edges_),
+                    [](edge const* e) {
+                      return e->is_trip() &&
+                             !e->get_pax_connection_info().groups_.empty();
+                    });
     trips.emplace_back(CreatePaxMonTripInfo(
         mc, to_fbs_trip_service_info(mc, sched, trp, service_infos),
-        has_paxmon_data));
+        has_paxmon_data, all_edges_have_capacity_info, has_passengers));
   }
 
   mc.create_and_finish(
@@ -636,25 +674,10 @@ msg_ptr paxmon::find_trips(msg_ptr const& msg) {
   return make_msg(mc);
 }
 
-msg_ptr paxmon::get_status(msg_ptr const& msg) {
-  auto const req = motis_content(PaxMonStatusRequest, msg);
+msg_ptr paxmon::get_status(msg_ptr const& /*msg*/) {
   auto const& sched = get_schedule();
 
   message_creator mc;
-  std::vector<flatbuffers::Offset<TripServiceInfo>>
-      trips_affected_by_last_update;
-  std::vector<flatbuffers::Offset<TripServiceInfo>>
-      trips_with_critical_sections;
-
-  if (req->include_trips_affected_by_last_update()) {
-    trips_affected_by_last_update.reserve(
-        data_.trips_affected_by_last_update_.size());
-    for (auto const trp : data_.trips_affected_by_last_update_) {
-      trips_affected_by_last_update.emplace_back(
-          to_fbs_trip_service_info(mc, sched, trp));
-    }
-  }
-
   mc.create_and_finish(
       MsgContent_PaxMonStatusResponse,
       CreatePaxMonStatusResponse(
@@ -663,9 +686,7 @@ msg_ptr paxmon::get_status(msg_ptr const& msg) {
               last_tick_stats_.tracked_broken_groups_,
           last_tick_stats_.affected_groups_,
           last_tick_stats_.affected_passengers_,
-          last_tick_stats_.broken_groups_, last_tick_stats_.broken_passengers_,
-          mc.CreateVector(trips_affected_by_last_update),
-          mc.CreateVector(trips_with_critical_sections))
+          last_tick_stats_.broken_groups_, last_tick_stats_.broken_passengers_)
           .Union());
   return make_msg(mc);
 }
@@ -710,6 +731,113 @@ msg_ptr paxmon::get_groups(msg_ptr const& msg) {
   mc.create_and_finish(
       MsgContent_PaxMonGetGroupsResponse,
       CreatePaxMonGetGroupsResponse(mc, mc.CreateVector(groups)).Union());
+  return make_msg(mc);
+}
+
+msg_ptr paxmon::filter_groups(msg_ptr const& msg) {
+  auto const req = motis_content(PaxMonFilterGroupsRequest, msg);
+  auto const& sched = get_schedule();
+  auto const current_time =
+      unix_to_motistime(sched.schedule_begin_, sched.system_time_);
+  utl::verify(current_time != INVALID_TIME, "invalid current system time");
+
+  auto const only_delayed = req->only_delayed();
+  auto const min_delay = req->min_delay();
+  auto const only_original = req->only_original();
+  auto const only_forecast = req->only_forecast();
+
+  auto total_tracked_groups = 0ULL;
+  auto total_active_groups = 0ULL;
+  auto filtered_original_groups = 0ULL;
+  auto filtered_forecast_groups = 0ULL;
+  std::vector<std::uint64_t> selected_group_ids;
+  mcd::hash_set<data_source> selected_ds;
+
+  for (auto const pg : data_.graph_.passenger_groups_) {
+    if (pg == nullptr || !pg->valid()) {
+      continue;
+    }
+    ++total_tracked_groups;
+    auto const est_arrival = pg->estimated_arrival_time();
+    if (est_arrival != INVALID_TIME && est_arrival <= current_time) {
+      continue;
+    }
+    ++total_active_groups;
+
+    if (only_delayed && pg->estimated_delay() < min_delay) {
+      continue;
+    }
+
+    if ((pg->source_flags_ & group_source_flags::FORECAST) ==
+        group_source_flags::FORECAST) {
+      if (only_original) {
+        continue;
+      }
+      ++filtered_forecast_groups;
+    } else {
+      if (only_forecast) {
+        continue;
+      }
+      ++filtered_original_groups;
+    }
+
+    selected_group_ids.emplace_back(pg->id_);
+    selected_ds.insert(pg->source_);
+  }
+
+  message_creator mc;
+  mc.create_and_finish(MsgContent_PaxMonFilterGroupsResponse,
+                       CreatePaxMonFilterGroupsResponse(
+                           mc, total_tracked_groups, total_active_groups,
+                           selected_group_ids.size(), selected_ds.size(),
+                           filtered_original_groups, filtered_forecast_groups,
+                           mc.CreateVector(selected_group_ids))
+                           .Union());
+  return make_msg(mc);
+}
+
+msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
+  auto const req = motis_content(PaxMonFilterTripsRequest, msg);
+  auto const& sched = get_schedule();
+  auto const current_time =
+      unix_to_motistime(sched.schedule_begin_, sched.system_time_);
+  utl::verify(current_time != INVALID_TIME, "invalid current system time");
+
+  auto const load_factor_threshold = req->load_factor_possibly_ge();
+  auto const ignore_past_sections = req->ignore_past_sections();
+
+  auto critical_sections = 0ULL;
+  mcd::hash_set<trip const*> selected_trips;
+
+  for (auto const& tde : data_.graph_.trip_data_) {
+    for (auto const e : tde.second->edges_) {
+      if (!e->is_trip() || !e->has_capacity()) {
+        continue;
+      }
+      if (!ignore_past_sections &&
+          e->to(data_.graph_)->current_time() < current_time) {
+        continue;
+      }
+      auto const& pci = e->get_pax_connection_info();
+      auto const pdf = get_load_pdf(pci);
+      auto const cdf = get_cdf(pdf);
+      if (load_factor_possibly_ge(cdf, e->capacity(), load_factor_threshold)) {
+        selected_trips.insert(tde.first);
+        ++critical_sections;
+      }
+    }
+  }
+
+  message_creator mc;
+  auto const selected_tsis = utl::to_vec(selected_trips, [&](trip const* trp) {
+    return to_fbs_trip_service_info(mc, sched, trp);
+  });
+
+  mc.create_and_finish(MsgContent_PaxMonFilterTripsResponse,
+                       CreatePaxMonFilterTripsResponse(
+                           mc, selected_trips.size(), critical_sections,
+                           mc.CreateVector(selected_tsis))
+                           .Union());
   return make_msg(mc);
 }
 

@@ -1,0 +1,9 @@
+namespace motis.paxmon;
+
+table PaxMonFilterGroupsRequest {
+  only_delayed: bool;
+  min_delay: short;
+
+  only_original: bool;
+  only_forecast: bool;
+}

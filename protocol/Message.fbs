@@ -79,9 +79,14 @@ include "paxmon/PaxMonFindTripsRequest.fbs";
 include "paxmon/PaxMonFindTripsResponse.fbs";
 include "paxmon/PaxMonGetGroupsRequest.fbs";
 include "paxmon/PaxMonGetGroupsResponse.fbs";
-include "paxmon/PaxMonStatusRequest.fbs";
 include "paxmon/PaxMonStatusResponse.fbs";
 include "paxmon/PaxMonTripLoadInfo.fbs";
+include "paxmon/PaxMonFilterGroupsRequest.fbs";
+include "paxmon/PaxMonFilterGroupsResponse.fbs";
+include "paxmon/PaxMonFilterTripsRequest.fbs";
+include "paxmon/PaxMonFilterTripsResponse.fbs";
+include "paxmon/PaxMonGetTripLoadInfosRequest.fbs";
+include "paxmon/PaxMonGetTripLoadInfosResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 
 include "HTTPMessage.fbs";
@@ -231,10 +236,15 @@ union MsgContent {
   motis.paxmon.PaxMonTripLoadInfo                                         = 101,
   motis.paxmon.PaxMonFindTripsRequest                                     = 102,
   motis.paxmon.PaxMonFindTripsResponse                                    = 103,
-  motis.paxmon.PaxMonStatusRequest                                        = 104,
-  motis.paxmon.PaxMonStatusResponse                                       = 105,
-  motis.paxmon.PaxMonGetGroupsRequest                                     = 106,
-  motis.paxmon.PaxMonGetGroupsResponse                                    = 107
+  motis.paxmon.PaxMonStatusResponse                                       = 104,
+  motis.paxmon.PaxMonGetGroupsRequest                                     = 105,
+  motis.paxmon.PaxMonGetGroupsResponse                                    = 106,
+  motis.paxmon.PaxMonFilterGroupsRequest                                  = 107,
+  motis.paxmon.PaxMonFilterGroupsResponse                                 = 108,
+  motis.paxmon.PaxMonFilterTripsRequest                                   = 109,
+  motis.paxmon.PaxMonFilterTripsResponse                                  = 110,
+  motis.paxmon.PaxMonGetTripLoadInfosRequest                              = 111,
+  motis.paxmon.PaxMonGetTripLoadInfosResponse                             = 112
 }
 
 // Destination Examples:

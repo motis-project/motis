@@ -5,6 +5,8 @@ namespace motis.paxmon;
 table PaxMonTripInfo {
   tsi: motis.TripServiceInfo;
   has_paxmon_data: bool;
+  all_edges_have_capacity_info: bool;
+  has_passengers: bool;
 }
 
 table PaxMonFindTripsResponse {
