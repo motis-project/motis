@@ -165,9 +165,22 @@ passenger_localization from_fbs(schedule const& sched,
   }
 }
 
+passenger_localization from_fbs(schedule const& sched,
+                                PaxMonLocalizationWrapper const* loc_wrapper) {
+  return from_fbs(sched, loc_wrapper->localization_type(),
+                  loc_wrapper->localization());
+}
+
 PaxMonLocalization fbs_localization_type(passenger_localization const& loc) {
   return loc.in_trip() ? PaxMonLocalization_PaxMonInTrip
                        : PaxMonLocalization_PaxMonAtStation;
+}
+
+Offset<PaxMonLocalizationWrapper> to_fbs_localization_wrapper(
+    schedule const& sched, FlatBufferBuilder& fbb,
+    passenger_localization const& loc) {
+  return CreatePaxMonLocalizationWrapper(fbb, fbs_localization_type(loc),
+                                         to_fbs(sched, fbb, loc));
 }
 
 Offset<PaxMonEvent> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,

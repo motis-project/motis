@@ -18,3 +18,7 @@ table PaxMonInTrip {
 }
 
 union PaxMonLocalization { PaxMonAtStation, PaxMonInTrip }
+
+table PaxMonLocalizationWrapper {
+  localization: PaxMonLocalization;
+}

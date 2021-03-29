@@ -36,6 +36,10 @@ passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg);
 
 PaxMonLocalization fbs_localization_type(passenger_localization const& loc);
 
+flatbuffers::Offset<PaxMonLocalizationWrapper> to_fbs_localization_wrapper(
+    schedule const& sched, flatbuffers::FlatBufferBuilder& fbb,
+    passenger_localization const& loc);
+
 flatbuffers::Offset<void> to_fbs(schedule const& sched,
                                  flatbuffers::FlatBufferBuilder& fbb,
                                  passenger_localization const& loc);
@@ -43,6 +47,9 @@ flatbuffers::Offset<void> to_fbs(schedule const& sched,
 passenger_localization from_fbs(schedule const& sched,
                                 PaxMonLocalization loc_type,
                                 void const* loc_ptr);
+
+passenger_localization from_fbs(schedule const& sched,
+                                PaxMonLocalizationWrapper const* loc_wrapper);
 
 flatbuffers::Offset<PaxMonEvent> to_fbs(schedule const& sched,
                                         flatbuffers::FlatBufferBuilder& fbb,

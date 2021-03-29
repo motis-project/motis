@@ -1,3 +1,5 @@
+include "paxmon/PaxMonLocalization.fbs";
+
 namespace motis.paxmon;
 
 table PaxMonFilterGroupsResponse {
@@ -10,4 +12,5 @@ table PaxMonFilterGroupsResponse {
   filtered_forecast_groups: ulong;
 
   group_ids: [ulong];
+  localizations: [PaxMonLocalizationWrapper];
 }

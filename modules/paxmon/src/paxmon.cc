@@ -746,18 +746,28 @@ msg_ptr paxmon::filter_groups(msg_ptr const& msg) {
 
   auto const only_delayed = req->only_delayed();
   auto const min_delay = req->min_delay();
+  auto const only_with_alternative_potential =
+      req->only_with_alternative_potential();
+  auto const preparation_time = req->preparation_time();
+  auto const only_active = req->only_active();
   auto const only_original = req->only_original();
   auto const only_forecast = req->only_forecast();
+  auto const include_localization = req->include_localization();
+
+  auto const localization_needed =
+      only_with_alternative_potential || include_localization;
+  auto const search_time = static_cast<time>(current_time + preparation_time);
 
   auto total_tracked_groups = 0ULL;
   auto total_active_groups = 0ULL;
   auto filtered_original_groups = 0ULL;
   auto filtered_forecast_groups = 0ULL;
   std::vector<std::uint64_t> selected_group_ids;
+  std::vector<passenger_localization> localizations;
   mcd::hash_set<data_source> selected_ds;
 
   for (auto const pg : data_.graph_.passenger_groups_) {
-    if (pg == nullptr || !pg->valid()) {
+    if (pg == nullptr || (only_active && !pg->valid())) {
       continue;
     }
     ++total_tracked_groups;
@@ -769,6 +779,18 @@ msg_ptr paxmon::filter_groups(msg_ptr const& msg) {
 
     if (only_delayed && pg->estimated_delay() < min_delay) {
       continue;
+    }
+
+    passenger_localization localization;
+    if (localization_needed) {
+      auto const reachability =
+          get_reachability(data_, pg->compact_planned_journey_);
+      localization = localize(sched, reachability, search_time);
+      if (only_with_alternative_potential &&
+          localization.at_station_->index_ ==
+              pg->compact_planned_journey_.destination_station_id()) {
+        continue;
+      }
     }
 
     if ((pg->source_flags_ & group_source_flags::FORECAST) ==
@@ -786,16 +808,25 @@ msg_ptr paxmon::filter_groups(msg_ptr const& msg) {
 
     selected_group_ids.emplace_back(pg->id_);
     selected_ds.insert(pg->source_);
+    if (include_localization) {
+      localizations.emplace_back(localization);
+    }
   }
 
   message_creator mc;
-  mc.create_and_finish(MsgContent_PaxMonFilterGroupsResponse,
-                       CreatePaxMonFilterGroupsResponse(
-                           mc, total_tracked_groups, total_active_groups,
-                           selected_group_ids.size(), selected_ds.size(),
-                           filtered_original_groups, filtered_forecast_groups,
-                           mc.CreateVector(selected_group_ids))
-                           .Union());
+  mc.create_and_finish(
+      MsgContent_PaxMonFilterGroupsResponse,
+      CreatePaxMonFilterGroupsResponse(
+          mc, total_tracked_groups, total_active_groups,
+          selected_group_ids.size(), selected_ds.size(),
+          filtered_original_groups, filtered_forecast_groups,
+          mc.CreateVector(selected_group_ids),
+          mc.CreateVector(utl::to_vec(localizations,
+                                      [&](auto const& loc) {
+                                        return to_fbs_localization_wrapper(
+                                            sched, mc, loc);
+                                      })))
+          .Union());
   return make_msg(mc);
 }
 
