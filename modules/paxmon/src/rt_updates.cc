@@ -149,13 +149,13 @@ std::vector<msg_ptr> update_affected_groups(paxmon_data& data,
                                             schedule const& sched,
                                             system_statistics& system_stats,
                                             tick_statistics& tick_stats,
-                                            int arrival_delay_threshold) {
+                                            int arrival_delay_threshold,
+                                            int preparation_time) {
   scoped_timer timer{"update affected passenger groups"};
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
   utl::verify(current_time != INVALID_TIME, "invalid current system time");
-  auto const preparation_time = 15 /*min*/;
-  auto const search_time = current_time + preparation_time;
+  auto const search_time = static_cast<time>(current_time + preparation_time);
 
   tick_stats.system_time_ = sched.system_time_;
 

@@ -72,6 +72,8 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
   param(arrival_delay_threshold_, "arrival_delay_threshold",
         "threshold for arrival delay at the destination (minutes, -1 to "
         "disable)");
+  param(preparation_time_, "preparation_time",
+        "preparation time for localization (minutes)");
   param(check_graph_times_, "check_graph_times",
         "check graph timestamps after each update");
   param(check_graph_integrity_, "check_graph_integrity",
@@ -438,8 +440,9 @@ void paxmon::rt_updates_applied() {
             << ", total groups: " << data_.graph_.passenger_groups_.size();
   print_allocator_stats(data_.graph_);
 
-  auto messages = update_affected_groups(data_, sched, system_stats_,
-                                         tick_stats_, arrival_delay_threshold_);
+  auto messages =
+      update_affected_groups(data_, sched, system_stats_, tick_stats_,
+                             arrival_delay_threshold_, preparation_time_);
 
   if (check_graph_integrity_) {
     utl::verify(check_graph_integrity(data_.graph_, sched),

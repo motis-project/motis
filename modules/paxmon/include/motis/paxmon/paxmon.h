@@ -63,6 +63,7 @@ private:
   std::uint16_t match_tolerance_{0};
   bool reroute_unmatched_{false};
   int arrival_delay_threshold_{20};
+  int preparation_time_{15};
   bool check_graph_times_{false};
   bool check_graph_integrity_{false};
   std::string mcfp_scenario_dir_{};

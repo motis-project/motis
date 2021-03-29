@@ -18,6 +18,7 @@ void handle_rt_update(paxmon_data& data, schedule const& sched,
 
 std::vector<motis::module::msg_ptr> update_affected_groups(
     paxmon_data& data, schedule const& sched, system_statistics& system_stats,
-    tick_statistics& tick_stats, int arrival_delay_threshold);
+    tick_statistics& tick_stats, int arrival_delay_threshold,
+    int preparation_time);
 
 }  // namespace motis::paxmon
