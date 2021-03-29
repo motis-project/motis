@@ -677,7 +677,7 @@ msg_ptr paxmon::find_trips(msg_ptr const& msg) {
   return make_msg(mc);
 }
 
-msg_ptr paxmon::get_status(msg_ptr const& /*msg*/) {
+msg_ptr paxmon::get_status(msg_ptr const& /*msg*/) const {
   auto const& sched = get_schedule();
 
   message_creator mc;
@@ -698,9 +698,19 @@ msg_ptr paxmon::get_groups(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGetGroupsRequest, msg);
   auto const& sched = get_schedule();
   auto const all_generations = req->all_generations();
+  auto const include_localization = req->include_localization();
+
+  auto const current_time =
+      unix_to_motistime(sched.schedule_begin_, sched.system_time_);
+  auto const search_time =
+      static_cast<time>(current_time + req->preparation_time());
+  if (include_localization) {
+    utl::verify(current_time != INVALID_TIME, "invalid current system time");
+  }
 
   message_creator mc;
   std::vector<flatbuffers::Offset<PaxMonGroup>> groups;
+  std::vector<flatbuffers::Offset<PaxMonLocalizationWrapper>> localizations;
 
   auto const add_by_data_source = [&](data_source const& ds) {
     if (auto const it = data_.graph_.groups_by_source_.find(ds);
@@ -708,8 +718,16 @@ msg_ptr paxmon::get_groups(msg_ptr const& msg) {
       for (auto const pgid : it->second) {
         if (auto const pg = data_.graph_.passenger_groups_.at(pgid);
             pg != nullptr) {
-          if (all_generations || pg->valid()) {
-            groups.emplace_back(to_fbs(sched, mc, *pg));
+          if (!all_generations && !pg->valid()) {
+            continue;
+          }
+          groups.emplace_back(to_fbs(sched, mc, *pg));
+          if (include_localization) {
+            localizations.emplace_back(to_fbs_localization_wrapper(
+                sched, mc,
+                localize(sched,
+                         get_reachability(data_, pg->compact_planned_journey_),
+                         search_time)));
           }
         }
       }
@@ -733,7 +751,9 @@ msg_ptr paxmon::get_groups(msg_ptr const& msg) {
 
   mc.create_and_finish(
       MsgContent_PaxMonGetGroupsResponse,
-      CreatePaxMonGetGroupsResponse(mc, mc.CreateVector(groups)).Union());
+      CreatePaxMonGetGroupsResponse(mc, mc.CreateVector(groups),
+                                    mc.CreateVector(localizations))
+          .Union());
   return make_msg(mc);
 }
 
