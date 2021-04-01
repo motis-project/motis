@@ -36,6 +36,7 @@ struct stations_builder {
     s->index_ = station_idx;
     s->eva_nr_ = name;
     s->name_ = name;
+    s->dummy_ = true;
 
     sched_.eva_to_station_.emplace(name, s.get());
     sched_.stations_.emplace_back(std::move(s));

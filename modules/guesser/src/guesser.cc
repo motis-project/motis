@@ -54,14 +54,10 @@ void guesser::update_stations() {
   mcd::hash_set<std::string> station_names;
   station_indices_.clear();
   for (auto const& s : sched.stations_) {
-    // TODO(pablo): empty stations
-    /*
-    auto total_events = std::accumulate(begin(s->dep_class_events_),
-                                        end(s->dep_class_events_), size_t{0U}) +
-                        std::accumulate(begin(s->arr_class_events_),
-                                        end(s->arr_class_events_), size_t{0U});
-    */
-    if (/*total_events != 0 &&*/ station_names.insert(s->name_.str()).second) {
+    if (s->dummy_) {
+      continue;
+    }
+    if (station_names.insert(s->name_.str()).second) {
       station_indices_.push_back(s->index_);
     }
   }
