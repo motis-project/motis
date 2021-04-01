@@ -89,7 +89,7 @@ struct dynamic_fws_multimap {
     index_type& get_index() const { return multimap_.index_[index_]; }
 
     dynamic_fws_multimap& multimap_;
-    size_type const index_;
+    size_type index_;
   };
 
   struct iterator {

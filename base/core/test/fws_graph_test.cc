@@ -5,8 +5,9 @@
 #include <iostream>
 #include <iterator>
 
+#include "cista/reflection/comparable.h"
+
 #include "utl/enumerate.h"
-#include "utl/struct/comparable.h"
 
 #include "motis/hash_map.h"
 #include "motis/vector.h"
@@ -35,13 +36,13 @@ void print_graph(fws_graph<Node, Edge>& g) {
 }
 
 struct test_node {
-  MAKE_COMPARABLE()
+  CISTA_COMPARABLE()
   std::uint32_t id_{};
   std::uint32_t tag_{};
 };
 
 struct test_edge {
-  MAKE_COMPARABLE()
+  CISTA_COMPARABLE()
   std::uint32_t from_{};
   std::uint32_t to_{};
   std::uint32_t weight_{};
