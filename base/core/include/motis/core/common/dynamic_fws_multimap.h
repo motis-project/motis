@@ -73,11 +73,11 @@ struct dynamic_fws_multimap {
 
     T& operator[](size_type index) {
       return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
-          .data_[get_index().begin_ + index];
+          .data_[data_index(index)];
     }
 
     T const& operator[](size_type index) const {
-      return multimap_.data_[get_index().begin_ + index];
+      return multimap_.data_[data_index(index)];
     }
 
     T& at(size_type index) {
@@ -87,6 +87,10 @@ struct dynamic_fws_multimap {
 
     T const& at(size_type index) const {
       return multimap_.data_[get_and_check_data_index(index)];
+    }
+
+    size_type data_index(size_type index) const {
+      return get_index().begin_ + index;
     }
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
