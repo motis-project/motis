@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <algorithm>
 #include <iterator>
 #include <limits>
 #include <stdexcept>
@@ -275,9 +276,6 @@ struct dynamic_fws_multimap {
   mcd::vector<T>& data() { return data_; }
 
 protected:
-  static constexpr auto const INITIAL_CAPACITY = 2;
-  static constexpr auto const GROW_FACTOR = 2;
-
   size_type insert_new_entry(size_type const map_index) {
     assert(map_index < index_.size());
     auto& idx = index_[map_index];
@@ -292,7 +290,9 @@ protected:
 
   void grow_bucket(size_type const map_index, index_type& idx) {
     auto const new_capacity =
-        idx.capacity_ == 0 ? INITIAL_CAPACITY : idx.capacity_ * GROW_FACTOR;
+        std::max(static_cast<size_type>(idx.capacity_ + 1),
+                 idx.capacity_ == 0 ? initial_capacity_
+                                    : idx.capacity_ * growth_factor_);
     grow_bucket(map_index, idx, new_capacity);
   }
 
@@ -350,6 +350,8 @@ public:
   mcd::vector<index_type> index_;
   mcd::vector<T> data_;
   size_type element_count_{};
+  size_type initial_capacity_{1};
+  size_type growth_factor_{2};
 };
 
 }  // namespace motis
