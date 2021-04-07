@@ -40,7 +40,11 @@ struct dynamic_fws_multimap {
     size_type capacity() const { return get_index().capacity_; }
     [[nodiscard]] bool empty() const { return size() == 0; }
 
-    iterator begin() { return multimap_.data_.begin() + get_index().begin_; }
+    iterator begin() {
+      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+                 .data_.begin() +
+             get_index().begin_;
+    }
 
     const_iterator begin() const {
       return multimap_.data_.begin() + get_index().begin_;
@@ -48,7 +52,9 @@ struct dynamic_fws_multimap {
 
     iterator end() {
       auto const& index = get_index();
-      return multimap_.data_.begin() + index.begin_ + index.size_;
+      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+                 .data_.begin() +
+             index.begin_ + index.size_;
     }
 
     const_iterator end() const {
@@ -121,6 +127,9 @@ struct dynamic_fws_multimap {
     dynamic_fws_multimap const& multimap_;
     size_type index_;
   };
+
+  using mutable_bucket = bucket<false>;
+  using const_bucket = bucket<true>;
 
   template <bool Const>
   struct bucket_iterator {
@@ -223,16 +232,16 @@ struct dynamic_fws_multimap {
   using iterator = bucket_iterator<false>;
   using const_iterator = bucket_iterator<true>;
 
-  bucket<false> operator[](size_type index) {
+  mutable_bucket operator[](size_type index) {
     if (index >= index_.size()) {
       index_.resize(index + 1);
     }
     return {*this, index};
   }
 
-  bucket<true> operator[](size_type index) const { return {*this, index}; }
+  const_bucket operator[](size_type index) const { return {*this, index}; }
 
-  bucket<false> at(size_type index) {
+  mutable_bucket at(size_type index) {
     if (index >= index_.size()) {
       throw std::out_of_range{"dynamic_fws_multimap::at() out of range"};
     } else {
@@ -240,7 +249,7 @@ struct dynamic_fws_multimap {
     }
   }
 
-  bucket<true> at(size_type index) const {
+  const_bucket at(size_type index) const {
     if (index >= index_.size()) {
       throw std::out_of_range{"dynamic_fws_multimap::at() out of range"};
     } else {
@@ -248,7 +257,7 @@ struct dynamic_fws_multimap {
     }
   }
 
-  bucket<false> emplace_back() { return this[index_size()]; }
+  mutable_bucket emplace_back() { return this[index_size()]; }
 
   size_type index_size() const { return index_.size(); }
   size_type data_size() const { return index_.size(); }
