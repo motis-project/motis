@@ -22,6 +22,7 @@ struct dynamic_fws_multimap {
     size_type capacity_{};
   };
 
+  template <bool Const>
   struct bucket {
     friend dynamic_fws_multimap;
 
@@ -30,142 +31,208 @@ struct dynamic_fws_multimap {
     using iterator = typename mcd::vector<T>::iterator;
     using const_iterator = typename mcd::vector<T>::const_iterator;
 
+    template <bool IsConst = Const, typename = std::enable_if_t<IsConst>>
+    explicit bucket(bucket<false> const& b)
+        : multimap_{b.multimap_}, index_{b.index_} {}
+
     size_type index() const { return index_; }
     size_type size() const { return get_index().size_; }
     size_type capacity() const { return get_index().capacity_; }
     [[nodiscard]] bool empty() const { return size() == 0; }
 
-    iterator begin() const {
+    iterator begin() { return multimap_.data_.begin() + get_index().begin_; }
+
+    const_iterator begin() const {
       return multimap_.data_.begin() + get_index().begin_;
     }
 
-    iterator end() const {
+    iterator end() {
       auto const& index = get_index();
       return multimap_.data_.begin() + index.begin_ + index.size_;
     }
 
-    iterator cbegin() const { return begin(); }
-    iterator cend() const { return cend(); }
+    const_iterator end() const {
+      auto const& index = get_index();
+      return multimap_.data_.begin() + index.begin_ + index.size_;
+    }
 
-    friend iterator begin(bucket const& b) { return b.begin(); }
-    friend iterator end(bucket const& b) { return b.end(); }
+    const_iterator cbegin() const { return begin(); }
+    const_iterator cend() const { return end(); }
+
+    friend iterator begin(bucket& b) { return b.begin(); }
+    friend const_iterator begin(bucket const& b) { return b.begin(); }
+    friend iterator end(bucket& b) { return b.end(); }
+    friend const_iterator end(bucket const& b) { return b.end(); }
 
     T& operator[](size_type index) {
+      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+          .data_[get_index().begin_ + index];
+    }
+
+    T const& operator[](size_type index) const {
       return multimap_.data_[get_index().begin_ + index];
     }
 
-    T& operator[](size_type index) const {
-      return multimap_.data_[get_index().begin_ + index];
+    T& at(size_type index) {
+      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+          .data_[get_and_check_data_index(index)];
     }
 
-    T& at(size_type index) const {
+    T const& at(size_type index) const {
+      return multimap_.data_[get_and_check_data_index(index)];
+    }
+
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    size_type push_back(entry_type const& val) {
+      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+          .push_back_entry(index_, val);
+    }
+
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>,
+              typename... Args>
+    size_type emplace_back(Args&&... args) {
+      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+          .emplace_back_entry(index_, std::forward<Args>(args)...);
+    }
+
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    void reserve(size_type new_size) {
+      if (new_size > capacity()) {
+        const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+            .grow_bucket(index_, get_index(), new_size);
+      }
+    }
+
+  protected:
+    bucket(dynamic_fws_multimap const& multimap, size_type index)
+        : multimap_(multimap), index_(index) {}
+
+    index_type const& get_index() const { return multimap_.index_[index_]; }
+
+    size_type get_and_check_data_index(size_type index) const {
       auto const& idx = get_index();
       if (index >= idx.size_) {
         throw std::out_of_range{
             "dynamic_fws_multimap::bucket::at() out of range"};
       }
-      return multimap_.data_[idx.begin_ + index];
+      return idx.begin_ + index;
     }
 
-    size_type push_back(entry_type const& val) {
-      return multimap_.push_back_entry(index_, val);
-    }
-
-    template <typename... Args>
-    size_type emplace_back(Args&&... args) {
-      return multimap_.emplace_back_entry(index_, std::forward<Args>(args)...);
-    }
-
-    void reserve(size_type new_size) {
-      if (new_size > capacity()) {
-        multimap_.grow_bucket(index_, get_index(), new_size);
-      }
-    }
-
-  protected:
-    bucket(dynamic_fws_multimap& multimap, size_type index)
-        : multimap_(multimap), index_(index) {}
-
-    index_type& get_index() const { return multimap_.index_[index_]; }
-
-    dynamic_fws_multimap& multimap_;
+    dynamic_fws_multimap const& multimap_;
     size_type index_;
   };
 
-  struct iterator {
+  template <bool Const>
+  struct bucket_iterator {
     friend dynamic_fws_multimap;
     using iterator_category = std::random_access_iterator_tag;
-    using value_type = bucket;
+    using value_type = bucket<Const>;
     using difference_type = int;
     using pointer = value_type;
     using reference = value_type;
 
+    template <bool IsConst = Const, typename = std::enable_if_t<IsConst>>
+    explicit bucket_iterator(bucket_iterator<false> const& it)
+        : multimap_{it.multimap_}, index_{it.index_} {}
+
     value_type operator*() const { return multimap_.at(index_); }
+
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    value_type operator*() {
+      return const_cast<dynamic_fws_multimap&>(multimap_).at(index_);  // NOLINT
+    }
+
     value_type operator->() const { return multimap_.at(index_); }
 
-    iterator& operator+=(difference_type n) {
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    value_type operator->() {
+      return const_cast<dynamic_fws_multimap&>(multimap_).at(index_);  // NOLINT
+    }
+
+    bucket_iterator& operator+=(difference_type n) {
       index_ += n;
       return *this;
     }
 
-    iterator& operator-=(difference_type n) {
+    bucket_iterator& operator-=(difference_type n) {
       index_ -= n;
       return *this;
     }
 
-    iterator& operator++() {
+    bucket_iterator& operator++() {
       ++index_;
       return *this;
     }
 
-    iterator& operator--() {
+    bucket_iterator& operator--() {
       ++index_;
       return *this;
     }
 
-    iterator operator+(difference_type n) const {
+    bucket_iterator operator+(difference_type n) const {
       return {multimap_, index_ + n};
     }
 
-    iterator operator-(difference_type n) const {
+    bucket_iterator operator-(difference_type n) const {
       return {multimap_, index_ - n};
     }
 
-    int operator-(iterator const& rhs) const { return index_ - rhs.index_; };
+    int operator-(bucket_iterator const& rhs) const {
+      return index_ - rhs.index_;
+    };
 
-    value_type operator[](difference_type n) {
+    value_type operator[](difference_type n) const {
       return multimap_.at(index_ + n);
     }
 
-    bool operator<(iterator const& rhs) const { return index_ < rhs.index_; }
-    bool operator<=(iterator const& rhs) const { return index_ <= rhs.index_; }
-    bool operator>(iterator const& rhs) const { return index_ > rhs.index_; }
-    bool operator>=(iterator const& rhs) const { return index_ >= rhs.index_; }
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    value_type operator[](difference_type n) {
+      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+          .at(index_ + n);
+    }
 
-    bool operator==(iterator const& rhs) const {
+    bool operator<(bucket_iterator const& rhs) const {
+      return index_ < rhs.index_;
+    }
+    bool operator<=(bucket_iterator const& rhs) const {
+      return index_ <= rhs.index_;
+    }
+    bool operator>(bucket_iterator const& rhs) const {
+      return index_ > rhs.index_;
+    }
+    bool operator>=(bucket_iterator const& rhs) const {
+      return index_ >= rhs.index_;
+    }
+
+    bool operator==(bucket_iterator const& rhs) const {
       return &multimap_ == &rhs.multimap_ && index_ == rhs.index_;
     }
 
-    bool operator!=(iterator const& rhs) const {
+    bool operator!=(bucket_iterator const& rhs) const {
       return &multimap_ != &rhs.multimap_ || index_ != rhs.index_;
     }
 
   protected:
-    iterator(dynamic_fws_multimap& multimap, size_type index)
+    bucket_iterator(dynamic_fws_multimap const& multimap, size_type index)
         : multimap_(multimap), index_(index) {}
 
-    dynamic_fws_multimap& multimap_;
+    dynamic_fws_multimap const& multimap_;
     size_type index_;
   };
 
-  bucket operator[](size_type index) {
+  using iterator = bucket_iterator<false>;
+  using const_iterator = bucket_iterator<true>;
+
+  bucket<false> operator[](size_type index) {
     if (index >= index_.size()) {
       index_.resize(index + 1);
     }
     return {*this, index};
   }
 
-  bucket at(size_type index) {
+  bucket<true> operator[](size_type index) const { return {*this, index}; }
+
+  bucket<false> at(size_type index) {
     if (index >= index_.size()) {
       throw std::out_of_range{"dynamic_fws_multimap::at() out of range"};
     } else {
@@ -173,7 +240,15 @@ struct dynamic_fws_multimap {
     }
   }
 
-  bucket emplace_back() { return this[index_size()]; }
+  bucket<true> at(size_type index) const {
+    if (index >= index_.size()) {
+      throw std::out_of_range{"dynamic_fws_multimap::at() out of range"};
+    } else {
+      return {*this, index};
+    }
+  }
+
+  bucket<false> emplace_back() { return this[index_size()]; }
 
   size_type index_size() const { return index_.size(); }
   size_type data_size() const { return index_.size(); }
@@ -181,7 +256,9 @@ struct dynamic_fws_multimap {
   [[nodiscard]] bool empty() const { return index_size() == 0; }
 
   iterator begin() { return {*this, 0}; }
+  const_iterator begin() const { return {*this, 0}; }
   iterator end() { return iterator{*this, index_.size()}; }
+  const_iterator end() const { return const_iterator{*this, index_.size()}; }
 
   friend iterator begin(dynamic_fws_multimap const& m) { return m.begin(); }
   friend iterator end(dynamic_fws_multimap const& m) { return m.end(); }

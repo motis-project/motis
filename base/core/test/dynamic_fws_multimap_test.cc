@@ -10,9 +10,11 @@ namespace motis {
 
 namespace {
 
-template <typename T>
-void check_result(std::vector<T> const& ref,
-                  typename dynamic_fws_multimap<T>::bucket const& result) {
+template <typename T, bool ConstBucket>
+void check_result(
+    std::vector<T> const& ref,
+    typename dynamic_fws_multimap<T>::template bucket<ConstBucket> const&
+        result) {
   if (ref.size() != result.size() && result.size() < 10) {
     std::cout << "Invalid result:\n  Expected: ";
     std::copy(begin(ref), end(ref), std::ostream_iterator<T>(std::cout, " "));
