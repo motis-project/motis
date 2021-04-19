@@ -27,7 +27,6 @@ struct dynamic_fws_multimap_base {
   struct bucket {
     friend dynamic_fws_multimap_base;
 
-    using size_type = size_type;
     using value_type = T;
     using iterator = typename mcd::vector<T>::iterator;
     using const_iterator = typename mcd::vector<T>::const_iterator;
