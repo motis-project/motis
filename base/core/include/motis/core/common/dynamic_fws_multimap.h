@@ -266,7 +266,7 @@ struct dynamic_fws_multimap_base {
   mutable_bucket emplace_back() { return this[index_size()]; }
 
   size_type index_size() const { return index_.size(); }
-  size_type data_size() const { return index_.size(); }
+  size_type data_size() const { return data_.size(); }
   size_type element_count() const { return element_count_; }
   [[nodiscard]] bool empty() const { return index_size() == 0; }
 
