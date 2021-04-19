@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
+#include <algorithm>
 #include <vector>
 
 #include "motis/memory.h"
@@ -76,6 +78,7 @@ struct node {
       return station_node_;
     }
   }
+
   template <typename Fn>
   void for_each_route_node(Fn&& f) const {
     for (auto& edge : edges_) {
@@ -83,6 +86,21 @@ struct node {
         f(edge.to_);
       }
     }
+  }
+
+  bool is_in_allowed() const {
+    assert(is_route_node());
+    return std::any_of(
+        begin(incoming_edges_), end(incoming_edges_), [&](auto const& e) {
+          return e->from_ == station_node_ && e->type() != edge::INVALID_EDGE;
+        });
+  }
+
+  bool is_out_allowed() const {
+    assert(is_route_node());
+    return std::any_of(begin(edges_), end(edges_), [&](auto const& e) {
+      return e.to_ == station_node_ && e.type() != edge::INVALID_EDGE;
+    });
   }
 
   mcd::indexed_vector<edge> edges_;

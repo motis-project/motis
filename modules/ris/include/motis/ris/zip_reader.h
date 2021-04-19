@@ -24,6 +24,7 @@ struct zip_reader {
 
   std::optional<std::string_view> read() const;
   float progress() const;
+  std::string_view current_file_name() const;
 
   struct impl;
   std::unique_ptr<impl> impl_;

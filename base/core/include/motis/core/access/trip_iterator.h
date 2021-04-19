@@ -121,7 +121,8 @@ struct stops {
 
   static iterator begin(trip const* t) { return {t, 0}; }
   static iterator end(trip const* t) {
-    return {t, static_cast<int>(t->edges_->size()) + 1};
+    return {t,
+            t->edges_->empty() ? 0 : static_cast<int>(t->edges_->size()) + 1};
   }
 
   trip const* t_;

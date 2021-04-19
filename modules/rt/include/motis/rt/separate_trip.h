@@ -47,9 +47,8 @@ inline void copy_trip_route(
   auto const route_id = sched.route_count_++;
 
   auto const build_node = [&](node* orig) {
-    auto const n =
-        new node(make_node(orig->station_node_, sched.node_count_++,  // NOLINT
-                           route_id));
+    auto const n = new node(make_node(orig->station_node_,  // NOLINT
+                                      sched.next_node_id_++, route_id));
     orig->station_node_->route_nodes_.emplace_back(n);
     return n;
   };

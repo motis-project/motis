@@ -164,10 +164,6 @@ msg_ptr railviz::get_trip_guesses(msg_ptr const& msg) {
   auto const req = motis_content(RailVizTripGuessRequest, msg);
 
   auto const& sched = get_schedule();
-  auto it =
-      std::lower_bound(begin(sched.trips_), end(sched.trips_),
-                       std::make_pair(primary_trip_id{0U, req->train_num(), 0U},
-                                      static_cast<trip*>(nullptr)));
 
   auto const cmp = [&](trip const* a, trip const* b) {
     return std::abs(static_cast<int64_t>(a->id_.primary_.time_)) <
@@ -175,16 +171,23 @@ msg_ptr railviz::get_trip_guesses(msg_ptr const& msg) {
   };
 
   std::vector<trip const*> trips;
-  while (it != end(sched.trips_) && it->first.train_nr_ == req->train_num()) {
-    trips.emplace_back(it->second);
+  for (auto it = std::lower_bound(
+           begin(sched.trips_), end(sched.trips_),
+           std::make_pair(primary_trip_id{0U, req->train_num(), 0U},
+                          static_cast<trip*>(nullptr)));
+       it != end(sched.trips_) && it->first.train_nr_ == req->train_num();
+       ++it) {
+    auto const trp = it->second;
+    if (trp->edges_->empty() || (*sections(trp).begin()).lcon().valid_ == 0U) {
+      continue;
+    }
+    trips.emplace_back(trp);
 
     auto const interesting_size =
         std::min(req->guess_count(), static_cast<unsigned>(trips.size()));
     std::nth_element(begin(trips), std::next(begin(trips), interesting_size),
                      end(trips), cmp);
     trips.resize(interesting_size);
-
-    ++it;
   }
 
   std::sort(begin(trips), end(trips), cmp);
@@ -388,8 +391,11 @@ msg_ptr railviz::get_trips(msg_ptr const& msg) {
       sched, find_shared_data<path::path_data>(path::PATH_DATA_KEY), MAX_ZOOM};
   for (auto const* fbs_trp : *req->trips()) {
     auto const trp = from_fbs(sched, fbs_trp);
-    auto const k = ev_key{trp->edges_->at(0), trp->lcon_idx_, event_type::DEP};
-    trb.add_train_full(k);
+    if (!trp->edges_->empty()) {
+      auto const k =
+          ev_key{trp->edges_->at(0), trp->lcon_idx_, event_type::DEP};
+      trb.add_train_full(k);
+    }
   }
   return trb.finish();
 }

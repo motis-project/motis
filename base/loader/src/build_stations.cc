@@ -36,6 +36,7 @@ struct stations_builder {
     s->index_ = station_idx;
     s->eva_nr_ = name;
     s->name_ = name;
+    s->dummy_ = true;
 
     sched_.eva_to_station_.emplace(name, s.get());
     sched_.stations_.emplace_back(std::move(s));
@@ -188,7 +189,11 @@ mcd::hash_map<Station const*, station_node*> build_stations(
     b.link_nearby_stations();
   }
 
-  sched.node_count_ = sched.station_nodes_.size();
+  auto const station_count = sched.station_nodes_.size();
+  if (station_count > sched.non_station_node_offset_) {
+    sched.non_station_node_offset_ = station_count + 1'000'000U;
+  }
+  sched.next_node_id_ = sched.non_station_node_offset_;
 
   return std::move(b.station_nodes_);
 }

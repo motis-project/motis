@@ -33,6 +33,7 @@ struct station {
   mcd::vector<footpath> outgoing_footpaths_;
   mcd::vector<footpath> incoming_footpaths_;
   uint32_t source_schedule_{NO_SOURCE_SCHEDULE};
+  bool dummy_{false};
 };
 
 using station_ptr = mcd::unique_ptr<station>;

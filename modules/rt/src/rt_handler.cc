@@ -14,6 +14,7 @@
 
 #include "motis/rt/error.h"
 #include "motis/rt/event_resolver.h"
+#include "motis/rt/full_trip_handler.h"
 #include "motis/rt/reroute.h"
 #include "motis/rt/separate_trip.h"
 #include "motis/rt/trip_correction.h"
@@ -169,11 +170,11 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
           continue;
         }
 
-        if (auto const it = s.graph_to_track_index_.find(*k);
-            it == s.graph_to_track_index_.end()) {
-          s.graph_to_track_index_[*k] = k->ev_type_ == event_type::ARR
-                                            ? k->lcon()->full_con_->a_track_
-                                            : k->lcon()->full_con_->d_track_;
+        if (auto const it = s.graph_to_schedule_track_index_.find(*k);
+            it == s.graph_to_schedule_track_index_.end()) {
+          s.graph_to_schedule_track_index_[*k] =
+              k->ev_type_ == event_type::ARR ? k->lcon()->full_con_->a_track_
+                                             : k->lcon()->full_con_->d_track_;
         }
 
         auto const ev = msg->events()->Get(i);
@@ -213,6 +214,13 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
         s.graph_to_free_texts_[k].emplace(ft);
       }
       free_text_events_.emplace_back(free_texts{trp, ft, events});
+      break;
+    }
+
+    case ris::MessageUnion_FullTripMessage: {
+      handle_full_trip_msg(stats_, s, update_builder_, propagator_,
+                           reinterpret_cast<ris::FullTripMessage const*>(c),
+                           cancelled_delays_);
       break;
     }
 

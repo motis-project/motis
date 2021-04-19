@@ -12,28 +12,8 @@ using namespace motis::routing::output;
 
 namespace motis::tripbased {
 
-namespace debug {
-
-bool is_in_allowed(node const* route_node) {
-  return std::any_of(begin(route_node->incoming_edges_),
-                     end(route_node->incoming_edges_), [](auto&& e) {
-                       return e->from_->is_station_node() &&
-                              e->type() != edge::INVALID_EDGE;
-                     });
-}
-
-bool is_out_allowed(node const* route_node) {
-  return std::any_of(
-      begin(route_node->edges_), end(route_node->edges_), [](auto&& e) {
-        return e.to_->is_station_node() && e.type() != edge::INVALID_EDGE;
-      });
-}
-
-}  // namespace debug
-
 std::pair<std::vector<intermediate::stop>, std::vector<intermediate::transport>>
 parse_tb_journey(schedule const& sched, tb_journey const& tbj) {
-  using namespace debug;
   std::vector<intermediate::stop> stops;
   std::vector<intermediate::transport> transports;
 
@@ -62,13 +42,14 @@ parse_tb_journey(schedule const& sched, tb_journey const& tbj) {
                            dep_lcon.d_time_, a_time, dep_lcon.d_time_,
                            timestamp_reason::SCHEDULE,
                            timestamp_reason::SCHEDULE, exit, enter);
-        assert(!enter || is_in_allowed(stop.get_route_node()));
+        assert(!enter || stop.get_route_node()->is_in_allowed());
         transports.emplace_back(stop_idx - 1, stop_idx, &dep_lcon);
         a_time = dep_lcon.a_time_;
         a_track = dep_lcon.full_con_->a_track_;
         exit = false;
       }
-      assert(is_out_allowed(trip_stop{trp, e.to_stop_index_}.get_route_node()));
+      assert((
+          trip_stop{trp, e.to_stop_index_}.get_route_node()->is_out_allowed()));
       exit = true;
     } else {
       auto const d_time = e.departure_time_;
