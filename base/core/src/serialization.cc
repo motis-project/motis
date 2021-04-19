@@ -2,8 +2,8 @@
 
 #include "cista/serialization.h"
 
-#include "motis/core/common/logging.h"
 #include "motis/core/common/dynamic_fws_multimap.h"
+#include "motis/core/common/logging.h"
 
 namespace motis {
 
@@ -97,12 +97,21 @@ inline void serialize(Ctx& c, dynamic_fws_multimap<T, SizeType> const* origin,
   using Type = dynamic_fws_multimap<T, SizeType>;
   cista::serialize(c, &origin->index_, offset + offsetof(Type, index_));
   cista::serialize(c, &origin->data_, offset + offsetof(Type, data_));
+  cista::serialize(c, &origin->element_count_,
+                   offset + offsetof(Type, element_count_));
+  cista::serialize(c, &origin->initial_capacity_,
+                   offset + offsetof(Type, initial_capacity_));
+  cista::serialize(c, &origin->growth_factor_,
+                   offset + offsetof(Type, growth_factor_));
 }
 
 template <typename Ctx, typename T, typename SizeType>
 inline void deserialize(Ctx const& c, dynamic_fws_multimap<T, SizeType>* el) {
   cista::deserialize(c, &el->index_);
   cista::deserialize(c, &el->data_);
+  cista::deserialize(c, &el->element_count_);
+  cista::deserialize(c, &el->initial_capacity_);
+  cista::deserialize(c, &el->growth_factor_);
 }
 
 template <typename T, typename SizeType>
