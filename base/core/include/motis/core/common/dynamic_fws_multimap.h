@@ -283,6 +283,11 @@ struct dynamic_fws_multimap_base {
 
   mcd::vector<T>& data() { return data_; }
 
+  void reserve(size_type index, size_type data) {
+    index_.reserve(index);
+    data_.reserve(data);
+  }
+
 protected:
   size_type insert_new_entry(size_type const map_index) {
     assert(map_index < index_.size());
