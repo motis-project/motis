@@ -12,8 +12,8 @@
 
 namespace motis {
 
-template <typename T, typename SizeType = std::uint32_t>
-struct dynamic_fws_multimap {
+template <typename Derived, typename T, typename SizeType = std::uint32_t>
+struct dynamic_fws_multimap_base {
   using entry_type = T;
   using size_type = SizeType;
 
@@ -25,7 +25,7 @@ struct dynamic_fws_multimap {
 
   template <bool Const>
   struct bucket {
-    friend dynamic_fws_multimap;
+    friend dynamic_fws_multimap_base;
 
     using size_type = size_type;
     using value_type = T;
@@ -42,7 +42,7 @@ struct dynamic_fws_multimap {
     [[nodiscard]] bool empty() const { return size() == 0; }
 
     iterator begin() {
-      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
                  .data_.begin() +
              get_index().begin_;
     }
@@ -53,7 +53,7 @@ struct dynamic_fws_multimap {
 
     iterator end() {
       auto const& index = get_index();
-      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
                  .data_.begin() +
              index.begin_ + index.size_;
     }
@@ -72,8 +72,8 @@ struct dynamic_fws_multimap {
     friend const_iterator end(bucket const& b) { return b.end(); }
 
     T& operator[](size_type index) {
-      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
-          .data_[data_index(index)];
+      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
+          .data_[get_index().begin_ + index];
     }
 
     T const& operator[](size_type index) const {
@@ -81,7 +81,7 @@ struct dynamic_fws_multimap {
     }
 
     T& at(size_type index) {
-      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
           .data_[get_and_check_data_index(index)];
     }
 
@@ -95,27 +95,27 @@ struct dynamic_fws_multimap {
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
     size_type push_back(entry_type const& val) {
-      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
           .push_back_entry(index_, val);
     }
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>,
               typename... Args>
     size_type emplace_back(Args&&... args) {
-      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
           .emplace_back_entry(index_, std::forward<Args>(args)...);
     }
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
     void reserve(size_type new_size) {
       if (new_size > capacity()) {
-        const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+        const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
             .grow_bucket(index_, get_index(), new_size);
       }
     }
 
   protected:
-    bucket(dynamic_fws_multimap const& multimap, size_type index)
+    bucket(dynamic_fws_multimap_base const& multimap, size_type index)
         : multimap_(multimap), index_(index) {}
 
     index_type const& get_index() const { return multimap_.index_[index_]; }
@@ -129,7 +129,7 @@ struct dynamic_fws_multimap {
       return idx.begin_ + index;
     }
 
-    dynamic_fws_multimap const& multimap_;
+    dynamic_fws_multimap_base const& multimap_;
     size_type index_;
   };
 
@@ -138,7 +138,7 @@ struct dynamic_fws_multimap {
 
   template <bool Const>
   struct bucket_iterator {
-    friend dynamic_fws_multimap;
+    friend dynamic_fws_multimap_base;
     using iterator_category = std::random_access_iterator_tag;
     using value_type = bucket<Const>;
     using difference_type = int;
@@ -153,7 +153,7 @@ struct dynamic_fws_multimap {
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
     value_type operator*() {
-      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
           .at(index_);
     }
 
@@ -161,7 +161,7 @@ struct dynamic_fws_multimap {
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
     value_type operator->() {
-      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
           .at(index_);
     }
 
@@ -203,7 +203,7 @@ struct dynamic_fws_multimap {
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
     value_type operator[](difference_type n) {
-      return const_cast<dynamic_fws_multimap&>(multimap_)  // NOLINT
+      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
           .at(index_ + n);
     }
 
@@ -229,10 +229,10 @@ struct dynamic_fws_multimap {
     }
 
   protected:
-    bucket_iterator(dynamic_fws_multimap const& multimap, size_type index)
+    bucket_iterator(dynamic_fws_multimap_base const& multimap, size_type index)
         : multimap_(multimap), index_(index) {}
 
-    dynamic_fws_multimap const& multimap_;
+    dynamic_fws_multimap_base const& multimap_;
     size_type index_;
   };
 
@@ -276,9 +276,11 @@ struct dynamic_fws_multimap {
   iterator end() { return iterator{*this, index_.size()}; }
   const_iterator end() const { return const_iterator{*this, index_.size()}; }
 
-  friend iterator begin(dynamic_fws_multimap const& m) { return m.begin(); }
+  friend iterator begin(dynamic_fws_multimap_base const& m) {
+    return m.begin();
+  }
 
-  friend iterator end(dynamic_fws_multimap const& m) { return m.end(); }
+  friend iterator end(dynamic_fws_multimap_base const& m) { return m.end(); }
 
   mcd::vector<T>& data() { return data_; }
 
@@ -325,8 +327,7 @@ protected:
     }
   }
 
-  void move_entries(size_type const /*map_index*/,
-                    size_type const old_data_index,
+  void move_entries(size_type const map_index, size_type const old_data_index,
                     size_type const new_data_index, size_type const count) {
     auto old_data = &data_[old_data_index];
     auto new_data = &data_[new_data_index];
@@ -335,6 +336,8 @@ protected:
       new (new_data) T(std::move(*old_data));
       old_data->~T();
     }
+    static_cast<Derived&>(*this).entries_moved(map_index, old_data_index,
+                                               new_data_index, count);
   }
 
   size_type push_back_entry(size_type const map_index, entry_type const& val) {
@@ -358,6 +361,16 @@ public:
   size_type element_count_{};
   size_type initial_capacity_{1};
   size_type growth_factor_{2};
+};
+
+template <typename T, typename SizeType = std::uint32_t>
+struct dynamic_fws_multimap
+    : public dynamic_fws_multimap_base<dynamic_fws_multimap<T, SizeType>, T,
+                                       SizeType> {
+  void entries_moved(SizeType const /*map_index*/,
+                     SizeType const /*old_data_index*/,
+                     SizeType const /*new_data_index*/,
+                     SizeType const /*count*/) {}
 };
 
 }  // namespace motis
