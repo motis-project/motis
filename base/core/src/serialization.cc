@@ -3,6 +3,7 @@
 #include "cista/serialization.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/common/dynamic_fws_multimap.h"
 
 namespace motis {
 
