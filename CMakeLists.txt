@@ -219,7 +219,7 @@ target_link_libraries(motis-test
   ianatzdb-res
   boost-filesystem
 )
-target_link_libraries(motis-test gtest gtest_main)
+target_link_libraries(motis-test gtest gtest_main gmock)
 
 
 ################################
@@ -252,7 +252,7 @@ target_link_libraries(motis-itest
   ianatzdb-res
   boost-filesystem
 )
-target_link_libraries(motis-itest gtest gtest_main)
+target_link_libraries(motis-itest gtest gtest_main gmock)
 set_target_properties(motis-itest PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "--gtest_filter=\"ris_gtfsrt_cancel_message_itest_t0.before_cancel\"")
 
 
