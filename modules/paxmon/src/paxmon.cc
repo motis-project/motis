@@ -868,7 +868,7 @@ msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
       if (!e->is_trip() || !e->has_capacity()) {
         continue;
       }
-      if (!ignore_past_sections &&
+      if (ignore_past_sections &&
           e->to(data_.graph_)->current_time() < current_time) {
         continue;
       }
