@@ -12,6 +12,7 @@
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/time_access.h"
+#include "motis/core/access/trip_access.h"
 #include "motis/core/conv/event_type_conv.h"
 #include "motis/loader/classes.h"
 

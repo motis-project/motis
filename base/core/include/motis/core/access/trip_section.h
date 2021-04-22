@@ -25,7 +25,7 @@ struct trip_section {
   ev_key ev_key_from() const;
   ev_key ev_key_to() const;
 
-  edge const* get_route_edge() const;
+  class edge const* get_route_edge() const;
 
   node* from_node() const;
   node* to_node() const;
