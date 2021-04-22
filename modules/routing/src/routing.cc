@@ -85,6 +85,10 @@ msg_ptr routing::trip_to_connection(msg_ptr const& msg) {
   auto const& sched = get_schedule();
   auto trp = from_fbs(sched, motis_content(TripId, msg));
 
+  if (trp->edges_->empty()) {
+    throw std::system_error(access::error::service_not_found);
+  }
+
   auto const first = trp->edges_->front()->from_;
   auto const last = trp->edges_->back()->to_;
 

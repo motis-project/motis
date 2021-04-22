@@ -14,6 +14,7 @@ struct guesser : public motis::module::module {
   void init(motis::module::registry&) override;
 
 private:
+  void update_stations();
   motis::module::msg_ptr guess(motis::module::msg_ptr const&);
 
   std::vector<unsigned> station_indices_;

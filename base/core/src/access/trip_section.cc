@@ -52,4 +52,10 @@ ev_key trip_section::ev_key_to() const {
   return ev_key{trip_->edges_->at(index_), trip_->lcon_idx_, event_type::ARR};
 }
 
+edge const* trip_section::get_route_edge() const { return edge_; }
+
+node* trip_section::from_node() const { return edge_->from_; }
+
+node* trip_section::to_node() const { return edge_->to_; }
+
 }  // namespace motis::access

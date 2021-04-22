@@ -87,6 +87,15 @@ void update_msg_builder::add_track_nodes(ev_key const& k,
           .Union()));
 }
 
+void update_msg_builder::add_station(node_id_t const station_idx) {
+  auto const station = sched_.stations_.at(station_idx).get();
+  updates_.emplace_back(CreateRtUpdate(
+      fbb_, Content_RtStationAdded,
+      CreateRtStationAdded(fbb_, fbb_.CreateString(station->eva_nr_),
+                           fbb_.CreateString(station->name_))
+          .Union()));
+}
+
 void update_msg_builder::reset() {
   delays_.clear();
   updates_.clear();

@@ -128,7 +128,7 @@ struct footpath_builder {
     // Create the foot node.
     auto foot_node = mcd::make_unique<node>();
     foot_node->station_node_ = sn;
-    foot_node->id_ = sched_.node_count_++;
+    foot_node->id_ = sched_.next_node_id_++;
 
     // STATION_NODE -(FWD_EDGE)-> FOOT_NODE
     sn->edges_.emplace_back(make_fwd_edge(sn, foot_node.get()));

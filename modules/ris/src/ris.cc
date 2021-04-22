@@ -5,6 +5,7 @@
 #include <limits>
 #include <optional>
 
+#include "boost/algorithm/string/predicate.hpp"
 #include "boost/filesystem.hpp"
 
 #include "utl/concat.h"
@@ -21,14 +22,17 @@
 #include "lmdb/lmdb.hpp"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/access/time_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/print_trip.h"
 #include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
 #include "motis/ris/gtfs-rt/gtfsrt_parser.h"
+#include "motis/ris/ribasis/ribasis_parser.h"
 #include "motis/ris/ris_message.h"
 #include "motis/ris/risml/risml_parser.h"
+#include "motis/ris/string_view_reader.h"
 #include "motis/ris/zip_reader.h"
 
 #ifdef GetMessage
@@ -110,7 +114,7 @@ struct ris::impl {
       read_gtfs_trip_ids();
     }
 
-    if (clear_db_) {
+    if (clear_db_ && fs::exists(db_path_)) {
       LOG(info) << "clearing database path " << db_path_;
       fs::remove_all(db_path_);
     }
@@ -165,16 +169,28 @@ struct ris::impl {
               << " imported";
   }
 
+  static std::string_view get_content_type(HTTPRequest const* req) {
+    for (auto const& h : *req->headers()) {
+      if (std::string_view{h->name()->c_str(), h->name()->size()} ==
+          "Content-Type") {
+        return {h->value()->c_str(), h->value()->size()};
+      }
+    }
+    return {};
+  }
+
   msg_ptr upload(msg_ptr const& msg) {
-    auto const content = motis_content(HTTPRequest, msg)->content();
+    auto const req = motis_content(HTTPRequest, msg);
+    auto const content = req->content();
+    auto const ft =
+        guess_file_type(get_content_type(req),
+                        std::string_view{content->c_str(), content->size()});
     auto& sched = get_schedule();
     publisher pub;
-    auto risml_fn = [](std::string_view s,
-                       std::function<void(ris_message &&)> const& cb) {
-      risml::risml_parser::to_ris_message(s, cb);
-    };
 
-    write_to_db(zip_reader{content->c_str(), content->size()}, risml_fn, pub);
+    parse_str_and_write_to_db(
+        std::string_view{content->c_str(), content->size()}, ft, pub);
+
     sched.system_time_ = pub.max_timestamp_;
     sched.last_update_timestamp_ = std::time(nullptr);
     ctx::await_all(motis_publish(make_no_msg("/ris/system_time_changed")));
@@ -225,6 +241,7 @@ struct ris::impl {
   bool instant_forward_{false};
   risml::risml_parser risml_parser_;
   gtfsrt::gtfsrt_parser gtfsrt_parser_;
+  ribasis::ribasis_parser ribasis_parser_;
 
   impl() = default;
   ~impl() = default;
@@ -286,10 +303,16 @@ private:
 
   void forward(time_t const to) {
     auto const& sched = get_schedule();
-    auto const first_schedule_event_day = floor(
-        sched.first_event_schedule_time_, static_cast<time_t>(SECONDS_A_DAY));
-    auto const last_schedule_event_day = ceil(
-        sched.last_event_schedule_time_, static_cast<time_t>(SECONDS_A_DAY));
+    auto const first_schedule_event_day =
+        sched.first_event_schedule_time_ != std::numeric_limits<time_t>::max()
+            ? floor(sched.first_event_schedule_time_,
+                    static_cast<time_t>(SECONDS_A_DAY))
+            : external_schedule_begin(sched);
+    auto const last_schedule_event_day =
+        sched.last_event_schedule_time_ != std::numeric_limits<time_t>::min()
+            ? ceil(sched.last_event_schedule_time_,
+                   static_cast<time_t>(SECONDS_A_DAY))
+            : external_schedule_end(sched);
     auto const min_timestamp =
         get_min_timestamp(first_schedule_event_day, last_schedule_event_day);
     if (min_timestamp) {
@@ -309,7 +332,6 @@ private:
     auto bucket = c.get(db::cursor_op::SET_RANGE, from);
     auto batch_begin = bucket ? bucket->first : 0;
     publisher pub;
-    auto const& sched = get_schedule();
     while (true) {
       if (!bucket) {
         LOG(info) << "end of db reached";
@@ -335,9 +357,7 @@ private:
         utl::verify(ptr + size <= end, "ris: ptr + size > end");
 
         if (auto const msg = GetMessage(ptr);
-            msg->timestamp() <= to && msg->timestamp() >= from &&
-            msg->earliest() <= sched.last_event_schedule_time_ &&
-            msg->latest() >= sched.first_event_schedule_time_) {
+            msg->timestamp() <= to && msg->timestamp() >= from) {
           pub.add(reinterpret_cast<uint8_t const*>(ptr), size);
         }
 
@@ -380,7 +400,7 @@ private:
     return min != max ? std::make_optional(min) : std::nullopt;
   }
 
-  enum class file_type { NONE, ZST, ZIP, XML, PROTOBUF };
+  enum class file_type { NONE, ZST, ZIP, XML, PROTOBUF, JSON };
 
   static file_type get_file_type(fs::path const& p) {
     if (p.extension() == ".zst") {
@@ -391,9 +411,43 @@ private:
       return file_type::XML;
     } else if (p.extension() == ".pb") {
       return file_type::PROTOBUF;
+    } else if (p.extension() == ".json") {
+      return file_type::JSON;
     } else {
       return file_type::NONE;
     }
+  }
+
+  static file_type guess_file_type(std::string_view content_type,
+                                   std::string_view content) {
+    using boost::algorithm::iequals;
+    using boost::algorithm::starts_with;
+
+    if (iequals(content_type, "application/zip")) {
+      return file_type::ZIP;
+    } else if (iequals(content_type, "application/zstd")) {
+      return file_type::ZST;
+    } else if (iequals(content_type, "application/xml") ||
+               iequals(content_type, "text/xml")) {
+      return file_type::XML;
+    } else if (iequals(content_type, "application/json") ||
+               iequals(content_type, "application/x.ribasis")) {
+      return file_type::JSON;
+    }
+
+    if (content.size() < 4) {
+      return file_type::NONE;
+    } else if (starts_with(content, "PK")) {
+      return file_type::ZIP;
+    } else if (starts_with(content, "\x28\xb5\x2f\xfd")) {
+      return file_type::ZST;
+    } else if (starts_with(content, "<")) {
+      return file_type::XML;
+    } else if (starts_with(content, "{")) {
+      return file_type::JSON;
+    }
+
+    return file_type::NONE;
   }
 
   std::vector<std::tuple<time_t, fs::path, file_type>> collect_files(
@@ -419,7 +473,7 @@ private:
     ctx::await_all(utl::to_vec(
         collect_files(fs::canonical(p, p.root_path())), [&](auto&& e) {
           return spawn_job_void([e, this, &pub]() {
-            write_to_db(std::get<1>(e), std::get<2>(e), pub);
+            parse_file_and_write_to_db(std::get<1>(e), std::get<2>(e), pub);
           });
         }));
     env_.force_sync();
@@ -430,7 +484,7 @@ private:
     for (auto const& [t, path, type] :
          collect_files(fs::canonical(p, p.root_path()))) {
       ((void)(t));
-      write_to_db(path, type, pub);
+      parse_file_and_write_to_db(path, type, pub);
       if (instant_forward_) {
         get_schedule().system_time_ = pub.max_timestamp_;
         get_schedule().last_update_timestamp_ = std::time(nullptr);
@@ -459,31 +513,23 @@ private:
   }
 
   template <typename Publisher>
-  void write_to_db(fs::path const& p, file_type const type, Publisher& pub) {
+  void parse_file_and_write_to_db(fs::path const& p, file_type const type,
+                                  Publisher& pub) {
     using tar_zst = tar_reader<zstd_reader>;
     auto const& cp = p.generic_string();
 
-    auto risml_fn = [this](std::string_view s,
-                           std::function<void(ris_message &&)> const& cb) {
-      risml_parser_.to_ris_message(s, cb);
-    };
-    auto gtfsrt_fn = [this](std::string_view s,
-                            std::function<void(ris_message &&)> const& cb) {
-      gtfsrt_parser_.to_ris_message(s, cb);
-    };
     try {
       switch (type) {
         case file_type::ZST:
-          write_to_db(tar_zst(zstd_reader(cp.c_str())), risml_fn, pub);
+          parse_and_write_to_db(tar_zst(zstd_reader(cp.c_str())), type, pub);
           break;
         case file_type::ZIP:
-          write_to_db(zip_reader(cp.c_str()), risml_fn, pub);
+          parse_and_write_to_db(zip_reader(cp.c_str()), type, pub);
           break;
         case file_type::XML:
-          write_to_db(file_reader(cp.c_str()), risml_fn, pub);
-          break;
         case file_type::PROTOBUF:
-          write_to_db(file_reader(cp.c_str()), gtfsrt_fn, pub);
+        case file_type::JSON:
+          parse_and_write_to_db(file_reader(cp.c_str()), type, pub);
           break;
         default: assert(false);
       }
@@ -491,6 +537,64 @@ private:
       LOG(logging::error) << "failed to read " << p;
     }
     add_to_known_files(p);
+  }
+
+  template <typename Publisher>
+  void parse_str_and_write_to_db(std::string_view sv, file_type const type,
+                                 Publisher& pub) {
+    switch (type) {
+      case file_type::ZST:
+        throw utl::fail("zst upload is not supported");
+        break;
+      case file_type::ZIP:
+        parse_and_write_to_db(zip_reader{sv.data(), sv.size()}, type, pub);
+        break;
+      case file_type::XML:
+      case file_type::PROTOBUF:
+      case file_type::JSON:
+        parse_and_write_to_db(string_view_reader{sv}, type, pub);
+        break;
+      default: assert(false);
+    }
+  }
+
+  template <typename Reader, typename Publisher>
+  void parse_and_write_to_db(Reader&& reader, file_type const type,
+                             Publisher& pub) {
+    auto const risml_fn = [this](
+                              std::string_view s, std::string_view,
+                              std::function<void(ris_message &&)> const& cb) {
+      risml_parser_.to_ris_message(s, cb);
+    };
+    auto const gtfsrt_fn = [this](
+                               std::string_view s, std::string_view,
+                               std::function<void(ris_message &&)> const& cb) {
+      gtfsrt_parser_.to_ris_message(s, cb);
+    };
+    auto const ribasis_fn = [this](
+                                std::string_view s, std::string_view,
+                                std::function<void(ris_message &&)> const& cb) {
+      ribasis_parser_.to_ris_message(s, cb);
+    };
+    auto const file_fn = [&](std::string_view s, std::string_view file_name,
+                             std::function<void(ris_message &&)> const& cb) {
+      if (boost::ends_with(file_name, ".xml")) {
+        return risml_fn(s, file_name, cb);
+      } else if (boost::ends_with(file_name, ".json")) {
+        return ribasis_fn(s, file_name, cb);
+      } else if (boost::ends_with(file_name, ".pb")) {
+        return gtfsrt_fn(s, file_name, cb);
+      }
+    };
+
+    switch (type) {
+      case file_type::ZST:
+      case file_type::ZIP: write_to_db(reader, file_fn, pub); break;
+      case file_type::XML: write_to_db(reader, risml_fn, pub); break;
+      case file_type::PROTOBUF: write_to_db(reader, gtfsrt_fn, pub); break;
+      case file_type::JSON: write_to_db(reader, ribasis_fn, pub); break;
+      default: assert(false);
+    }
   }
 
   template <typename Reader, typename ParserFn, typename Publisher>
@@ -560,7 +664,8 @@ private:
 
     std::optional<std::string_view> reader_content;
     while ((reader_content = reader.read())) {
-      parse(*reader_content, [&](ris_message&& m) { write(std::move(m)); });
+      parse(*reader_content, reader.current_file_name(),
+            [&](ris_message&& m) { write(std::move(m)); });
     }
 
     flush_to_db();

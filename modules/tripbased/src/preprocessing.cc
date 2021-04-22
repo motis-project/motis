@@ -56,21 +56,6 @@ edge const* get_incoming_route_edge(node const* route_node) {
   return nullptr;
 }
 
-bool is_in_allowed(node const* route_node) {
-  return std::any_of(begin(route_node->incoming_edges_),
-                     end(route_node->incoming_edges_), [](auto&& e) {
-                       return e->from_->is_station_node() &&
-                              e->type() != edge::INVALID_EDGE;
-                     });
-}
-
-bool is_out_allowed(node const* route_node) {
-  return std::any_of(
-      begin(route_node->edges_), end(route_node->edges_), [](auto&& e) {
-        return e.to_->is_station_node() && e.type() != edge::INVALID_EDGE;
-      });
-}
-
 struct preprocessing {
   preprocessing(schedule const& sched, tb_data& data)
       : sched_(sched),
@@ -131,9 +116,9 @@ struct preprocessing {
         const auto station_id = stop.get_station_id();
         data_.stops_on_line_.push_back(station_id);
         data_.in_allowed_.push_back(
-            static_cast<uint8_t>(is_in_allowed(rn) ? 1U : 0U));
+            static_cast<uint8_t>(rn->is_in_allowed() ? 1U : 0U));
         data_.out_allowed_.push_back(
-            static_cast<uint8_t>(is_out_allowed(rn) ? 1U : 0U));
+            static_cast<uint8_t>(rn->is_out_allowed() ? 1U : 0U));
         lines_at_stop[station_id].emplace_back(route_idx, line_stop_count);
         ++line_stop_count;
       }

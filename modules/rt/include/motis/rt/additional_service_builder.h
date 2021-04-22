@@ -149,11 +149,11 @@ struct additional_service_builder {
       auto const from_route_node =
           prev_route_node != nullptr
               ? prev_route_node
-              : build_route_node(sched_, route_id, sched_.node_count_++,
+              : build_route_node(sched_, route_id, sched_.next_node_id_++,
                                  from_station, from_station_transfer_time, true,
                                  true, incoming);
       auto const to_route_node =
-          build_route_node(sched_, route_id, sched_.node_count_++, to_station,
+          build_route_node(sched_, route_id, sched_.next_node_id_++, to_station,
                            to_station_transfer_time, true, true, incoming);
 
       from_route_node->edges_.push_back(
