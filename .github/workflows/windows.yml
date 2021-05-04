@@ -75,11 +75,6 @@ jobs:
         run: .\build\motis-itest.exe
 
       # ==== DISTRIBUTION ====
-      - uses: bahmutov/npm-install@v1
-        if: matrix.mode == 'Release'
-        with:
-          working-directory: ui/web
-
       - name: Compile Web Interface
         if: matrix.mode == 'Release'
         run: |
