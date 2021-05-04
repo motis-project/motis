@@ -1,6 +1,6 @@
 # Install Elm 0.18
 
-    npm install -g elm@0.18.0
+https://github.com/elm-lang/elm-platform/releases
 
 # Build
 
