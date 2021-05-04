@@ -220,9 +220,9 @@ jobs:
           mkdir elm
           cd elm
           echo Downloading elm...
-          curl -L https://github.com/elm-lang/elm-platform/releases/download/0.18.0-exp/elm-platform-${{ matrix.config.elm }}.tar.gz
+          curl -L -o elm-platform.tar.gz https://github.com/elm-lang/elm-platform/releases/download/0.18.0-exp/elm-platform-${{ matrix.config.elm }}.tar.gz
           echo Extracting elm...
-          cmake -E tar xzf elm-platform-${{ matrix.config.elm }}.tar.gz
+          cmake -E tar xzf elm-platform.tar.gz
           cd ..
           echo Compiling web interface...
           ./elm/elm-make --yes src/Main.elm --output elm.js
