@@ -45,6 +45,7 @@ jobs:
             mode: Release
             cxxflags: -stdlib=libc++
             os: macos-latest
+            elm: macos
             artifact: macos
             avx: On
             avx2: Off
@@ -53,6 +54,7 @@ jobs:
             cc: gcc-10
             mode: Release
             os: ubuntu-20.04
+            elm: linux-64bit
             artifact: linux
             avx: On
             avx2: On
@@ -61,6 +63,7 @@ jobs:
             cc: gcc-10
             mode: Release
             os: ubuntu-20.04
+            elm: linux-64bit
             artifact: linux-noavx
             avx: Off
             avx2: Off
@@ -222,9 +225,10 @@ jobs:
         if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-10' || matrix.config.os == 'macos-latest')
         run: |
           cd ./ui/web
-          npm install
-          ./node_modules/elm/binwrappers/elm-make --yes src/Main.elm --output elm.js
-          rm -rf node_modules
+          mkdir elm
+          curl -sL https://github.com/elm-lang/elm-platform/releases/download/0.18.0-exp/elm-platform-${{ matrix.config.elm }}.tar.gz | tar xz -C elm
+          ./elm/elm-make --yes src/Main.elm --output elm.js
+          rm -rf elm
 
       - name: Create Distribution
         if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-10' || matrix.config.os == 'macos-latest')

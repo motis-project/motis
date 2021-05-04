@@ -53,7 +53,7 @@ jobs:
           $installPath = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationpath
           Import-Module $devShell
           Enter-VsDevShell -VsInstallPath $installPath -SkipAutomaticLocation -DevCmdArguments "-arch=amd64"
-          cmake -GNinja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }}
+          cmake -GNinja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DMOTIS_DEBUG_SYMBOLS=OFF
           .\build\buildcache\bin\buildcache.exe -z
           cmake --build build --target motis motis-test motis-itest motis-eval motis-intermodal-eval
           .\build\buildcache\bin\buildcache.exe -s
@@ -75,17 +75,17 @@ jobs:
         run: .\build\motis-itest.exe
 
       # ==== DISTRIBUTION ====
-      - uses: bahmutov/npm-install@v1
-        if: matrix.mode == 'Release'
-        with:
-          working-directory: ui/web
-
       - name: Compile Web Interface
         if: matrix.mode == 'Release'
         run: |
           cd .\ui\web
-          .\node_modules\elm\Elm-Platform\0.18.0\.cabal-sandbox\bin\elm-make.exe --yes .\src\Main.elm --output elm.js
-          Remove-Item -Recurse -Force .\node_modules
+          mkdir elm
+          cd elm
+          Invoke-WebRequest -Uri https://github.com/elm-lang/elm-platform/releases/download/0.18.0-exp/elm-platform-windows.tar.gz -OutFile elm-platform-windows.tar.gz
+          cmake -E tar xzf .\elm-platform-windows.tar.gz
+          cd ..
+          .\elm\elm-make.exe --yes .\src\Main.elm --output elm.js
+          Remove-Item -Recurse -Force .\elm
 
       - name: Move Profiles
         if: matrix.mode == 'Release'
