@@ -27,7 +27,8 @@ struct csa : public motis::module::module {
   csa_timetable const* get_timetable() const;
 
   motis::module::msg_ptr route(motis::module::msg_ptr const&,
-                               implementation_type) const;
+                               implementation_type,
+                               bool use_profile_search = false) const;
 
 #ifdef MOTIS_CUDA
   bool bridge_zero_duration_connections_{true};

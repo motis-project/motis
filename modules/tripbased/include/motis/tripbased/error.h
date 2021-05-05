@@ -16,7 +16,8 @@ enum error_code_t {
   start_type_not_supported = 6,
   via_not_supported = 7,
   invalid_additional_edges = 8,
-  trip_not_found = 9
+  trip_not_found = 9,
+  include_equivalent_not_supported = 10
 };
 }  // namespace error
 
@@ -41,6 +42,8 @@ public:
       case error::invalid_additional_edges:
         return "tripbased: invalid additional edges";
       case error::trip_not_found: return "tripbased: trip not found";
+      case error::include_equivalent_not_supported:
+        return "tripbased: include equivalent not supported";
       default: return "tripbased: unknown error";
     }
   }

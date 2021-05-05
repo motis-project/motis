@@ -139,7 +139,63 @@ struct pretrip_iterated_ontrip_search {
   template <typename Results>
   void collect_results(CSASearch& csa, Results& results) {
     for (auto const& dest_idx : q_.meta_dests_) {
-      for (csa_journey& j : csa.get_results(tt_.stations_.at(dest_idx))) {
+      for (csa_journey& j : csa.get_results(tt_.stations_.at(dest_idx),
+                                            q_.include_equivalent_)) {
+        if (j.duration() <= MAX_TRAVEL_TIME) {
+          results.push_back(j);
+        }
+      }
+    }
+  }
+
+  schedule const& sched_;
+  csa_timetable const& tt_;
+  csa_query const& q_;
+  csa_statistics& stats_;
+};
+
+template <typename CSAProfileSearch, typename CSAOnTripSearch>
+struct pretrip_profile_search {
+  pretrip_profile_search(schedule const& sched, csa_timetable const& tt,
+                         csa_query const& q, csa_statistics& stats)
+      : sched_{sched}, tt_{tt}, q_{q}, stats_{stats} {}
+
+  template <typename Results>
+  void search_in_interval(Results& results, interval const& search_interval,
+                          bool const ontrip_at_interval_end) {
+    CSAProfileSearch profile_csa{tt_, search_interval, stats_};
+    run_search(profile_csa, results);
+
+    if (ontrip_at_interval_end) {
+      CSAOnTripSearch ontrip_csa{
+          tt_, static_cast<time>(search_interval.end_ + 1), stats_};
+      run_search(ontrip_csa, results);
+    }
+  }
+
+  template <typename CSASearch, typename Results>
+  void run_search(CSASearch& csa, Results& results) {
+    for (auto const& start_idx : q_.meta_starts_) {
+      csa.add_start(tt_.stations_.at(start_idx), 0);
+    }
+
+    MOTIS_START_TIMING(search_timing);
+    csa.search();
+    MOTIS_STOP_TIMING(search_timing);
+
+    MOTIS_START_TIMING(reconstruction_timing);
+    collect_results(csa, results);
+    MOTIS_STOP_TIMING(reconstruction_timing);
+
+    stats_.search_duration_ += MOTIS_TIMING_MS(search_timing);
+    stats_.reconstruction_duration_ += MOTIS_TIMING_MS(reconstruction_timing);
+  }
+
+  template <typename CSASearch, typename Results>
+  void collect_results(CSASearch& csa, Results& results) {
+    for (auto const& dest_idx : q_.meta_dests_) {
+      for (csa_journey& j : csa.get_results(tt_.stations_.at(dest_idx),
+                                            q_.include_equivalent_)) {
         if (j.duration() <= MAX_TRAVEL_TIME) {
           results.push_back(j);
         }

@@ -36,6 +36,8 @@ struct generator_settings : public conf::configuration {
           "replaced by the target url");
     param(large_stations_, "large_stations",
           "use only large stations as start/destination");
+    param(include_equivalent_, "include_equivalent",
+          "set include_equivalent query flag");
     param(query_type_, "query_type", "query type: pretrip|ontrip_station");
     param(targets_, "targets",
           "message target urls. for every url query files will be generated");
@@ -62,6 +64,7 @@ struct generator_settings : public conf::configuration {
   std::string target_file_fwd_{"queries-fwd-${target}.txt"};
   std::string target_file_bwd_{"queries-bwd-${target}.txt"};
   bool large_stations_{false};
+  bool include_equivalent_{false};
   std::string query_type_{"pretrip"};
   std::vector<std::string> targets_{"/routing"};
 };
@@ -142,7 +145,7 @@ static It rand_in(It begin, It end) {
 std::string query(std::string const& target, Start const start_type, int id,
                   std::time_t interval_start, std::time_t interval_end,
                   std::string const& from_eva, std::string const& to_eva,
-                  SearchDir const dir) {
+                  SearchDir const dir, bool include_equivalent) {
   message_creator fbb;
   auto const interval = Interval(interval_start, interval_end);
   fbb.create_and_finish(
@@ -165,7 +168,8 @@ std::string query(std::string const& target, Start const start_type, int id,
           CreateInputStation(fbb, fbb.CreateString(to_eva),
                              fbb.CreateString("")),
           SearchType_Default, dir, fbb.CreateVector(std::vector<Offset<Via>>()),
-          fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()))
+          fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()), true,
+          true, true, include_equivalent)
           .Union(),
       target);
   auto msg = make_msg(fbb);
@@ -351,10 +355,12 @@ int main(int argc, char const** argv) {
       auto& out_bwd = bwd_ofstreams[f_idx];
 
       out_fwd << query(target, start_type, i, interval.first, interval.second,
-                       evas.first, evas.second, SearchDir_Forward)
+                       evas.first, evas.second, SearchDir_Forward,
+                       generator_opt.include_equivalent_)
               << "\n";
       out_bwd << query(target, start_type, i, interval.first, interval.second,
-                       evas.first, evas.second, SearchDir_Backward)
+                       evas.first, evas.second, SearchDir_Backward,
+                       generator_opt.include_equivalent_)
               << "\n";
     }
   }

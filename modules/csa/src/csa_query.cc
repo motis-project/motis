@@ -64,6 +64,7 @@ csa_query::csa_query(schedule const& sched,
 
   dir_ = req->search_dir() == SearchDir_Forward ? search_dir::FWD
                                                 : search_dir::BWD;
+  include_equivalent_ = req->include_equivalent();
 
   switch (req->start_type()) {
     case Start_OntripStationStart: {

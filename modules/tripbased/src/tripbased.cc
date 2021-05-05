@@ -102,6 +102,10 @@ trip_based_query build_tb_query(RoutingRequest const* req,
     throw std::system_error(error::via_not_supported);
   }
 
+  if (req->include_equivalent()) {
+    throw std::system_error(error::include_equivalent_not_supported);
+  }
+
   for (auto const& aew : *req->additional_edges()) {
     if (aew->additional_edge_type() != AdditionalEdge_MumoEdge) {
       throw std::system_error(error::invalid_additional_edges);

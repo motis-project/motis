@@ -13,6 +13,7 @@ static_assert(__AVX__, "AVX not enabled!");
 #include "boost/align/aligned_allocator.hpp"
 
 #include "utl/erase_if.h"
+#include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
 
@@ -21,6 +22,7 @@ static_assert(__AVX__, "AVX not enabled!");
 #include "motis/csa/csa_search_shared.h"
 #include "motis/csa/csa_statistics.h"
 #include "motis/csa/csa_timetable.h"
+#include "motis/csa/error.h"
 
 namespace motis::csa::cpu::sse {
 
@@ -209,7 +211,11 @@ struct csa_search {
     }
   }
 
-  std::vector<csa_journey> get_results(csa_station const& station) {
+  std::vector<csa_journey> get_results(csa_station const& station,
+                                       bool include_equivalent) {
+    utl::verify_ex(!include_equivalent,
+                   std::system_error{error::include_equivalent_not_supported});
+
     std::vector<csa_journey> journeys;
     auto const& station_arrival = arrival_time_[station.id_];
     for (auto i = 0; i <= MAX_TRANSFERS; ++i) {

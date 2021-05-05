@@ -20,6 +20,7 @@ struct csa_query {
   unsigned min_connection_count_{0U};
   bool extend_interval_earlier_{false}, extend_interval_later_{false};
   search_dir dir_{search_dir::FWD};
+  bool include_equivalent_{false};
 };
 
 }  // namespace motis::csa

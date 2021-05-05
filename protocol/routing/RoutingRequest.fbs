@@ -120,4 +120,5 @@ table RoutingRequest {
   use_start_metas: bool = true;
   use_dest_metas: bool = true;
   use_start_footpaths: bool = true;
+  include_equivalent: bool = false;
 }

@@ -14,6 +14,7 @@
 #include "motis/csa/csa_search_shared.h"
 #include "motis/csa/csa_statistics.h"
 #include "motis/csa/csa_timetable.h"
+#include "motis/csa/error.h"
 
 namespace motis::csa::price {
 
@@ -378,7 +379,11 @@ struct csa_search {
     return std::find(begin(starts_), end(starts_), station) != end(starts_);
   }
 
-  std::vector<csa_journey> get_results(csa_station const& station) {
+  std::vector<csa_journey> get_results(csa_station const& station,
+                                       bool include_equivalent) {
+    utl::verify_ex(!include_equivalent,
+                   std::system_error{error::include_equivalent_not_supported});
+
     std::vector<csa_journey> journeys;
     auto const& station_arrival = arrival_[station.id_];
 

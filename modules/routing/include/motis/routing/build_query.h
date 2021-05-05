@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <string>
 
+#include "utl/verify.h"
+
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/time_access.h"
@@ -63,6 +65,9 @@ inline std::pair<node const*, light_connection const*> get_ontrip_train_start(
 inline search_query build_query(schedule const& sched,
                                 RoutingRequest const* req) {
   search_query q;
+
+  utl::verify_ex(!req->include_equivalent(),
+                 std::system_error{error::include_equivalent_not_supported});
 
   switch (req->start_type()) {
     case Start_PretripStart: {

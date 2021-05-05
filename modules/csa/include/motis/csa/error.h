@@ -17,7 +17,8 @@ enum error_code_t {
   via_not_supported = 7,
   additional_edges_not_supported = 8,
   trip_not_found = 9,
-  start_footpaths_no_disable = 10
+  start_footpaths_no_disable = 10,
+  include_equivalent_not_supported = 11
 };
 }  // namespace error
 
@@ -44,6 +45,8 @@ public:
       case error::trip_not_found: return "csa: trip not found";
       case error::start_footpaths_no_disable:
         return "csa: start footpaths cannot be disabled";
+      case error::include_equivalent_not_supported:
+        return "csa: include equivalent not supported";
       default: return "csa: unknown error";
     }
   }

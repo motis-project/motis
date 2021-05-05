@@ -15,6 +15,7 @@
 namespace motis::csa {
 
 response run_csa_search(schedule const&, csa_timetable const&, csa_query const&,
-                        motis::routing::SearchType, implementation_type);
+                        motis::routing::SearchType, implementation_type,
+                        bool use_profile_search);
 
 }  // namespace motis::csa

@@ -14,7 +14,8 @@ enum error_code_t {
   journey_date_not_in_schedule = 4,
   event_not_found = 5,
   edge_type_not_supported = 6,
-  too_many_start_labels = 7
+  too_many_start_labels = 7,
+  include_equivalent_not_supported = 8
 };
 }  // namespace error
 
@@ -38,6 +39,8 @@ public:
         return "routing: edge type not supported";
       case error::too_many_start_labels:
         return "routing: too many start labels (route edge not sorted?)";
+      case error::include_equivalent_not_supported:
+        return "routing: include equivalent not supported";
       default: return "routing: unknown error";
     }
   }
