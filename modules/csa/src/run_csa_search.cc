@@ -20,11 +20,19 @@ using namespace motis::routing;
 
 namespace motis::csa {
 
-inline auto make_ontrip_pareto_set() {
+inline auto make_ontrip_pareto_set(bool const include_equivalent) {
   return make_pareto_set<csa_journey>(
-      [](csa_journey const& a, csa_journey const& b) {
-        return (a.journey_end() <= b.journey_end() &&
-                a.transfers_ <= b.transfers_ && a.price_ <= b.price_);
+      [include_equivalent](csa_journey const& a, csa_journey const& b) {
+        if (include_equivalent) {
+          // price is currently not used
+          return (a.journey_end() < b.journey_end() &&
+                  a.transfers_ <= b.transfers_) ||
+                 (a.journey_end() <= b.journey_end() &&
+                  a.transfers_ < b.transfers_);
+        } else {
+          return (a.journey_end() <= b.journey_end() &&
+                  a.transfers_ <= b.transfers_ && a.price_ <= b.price_);
+        }
       });
 }
 
@@ -45,7 +53,7 @@ response run_search(schedule const& sched, csa_timetable const& tt,
     MOTIS_STOP_TIMING(search_timing);
 
     MOTIS_START_TIMING(reconstruction_timing);
-    auto results = make_ontrip_pareto_set();
+    auto results = make_ontrip_pareto_set(q.include_equivalent_);
     for (auto const& dest_idx : q.meta_dests_) {
       for (auto j :
            csa.get_results(tt.stations_.at(dest_idx), q.include_equivalent_)) {
@@ -121,7 +129,7 @@ response dispatch_search_type(schedule const& sched, csa_timetable const& tt,
             csa_statistics stats;
             if (q.is_ontrip()) {
               gpu_search s{sched, tt, q, stats};
-              auto results = make_ontrip_pareto_set();
+              auto results = make_ontrip_pareto_set(q.include_equivalent_);
               s.search(results, {q.search_interval_.begin_});
               return {stats, std::move(results.set_), q.search_interval_};
             } else {
