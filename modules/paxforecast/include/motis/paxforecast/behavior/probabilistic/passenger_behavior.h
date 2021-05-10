@@ -51,8 +51,8 @@ private:
                      std::vector<float>& probabilities) {
     auto best_score = std::numeric_limits<float>::max();
     auto best_alternatives = std::vector<std::size_t>{};
+    auto const transfer_weight = static_cast<float>(transfer_dist_(gen_));
     for (auto const& [idx, alt] : utl::enumerate(alternatives)) {
-      auto const transfer_weight = static_cast<float>(transfer_dist_(gen_));
       auto const score = static_cast<float>(alt.duration_) +
                          transfer_weight * static_cast<float>(alt.transfers_);
       if (score == best_score) {
