@@ -12,7 +12,7 @@ namespace motis::railviz {
 
 struct trains_response_builder {
   struct query {
-    MAKE_COMPARABLE();
+    CISTA_COMPARABLE()
 
     trip const* trp_;
     int section_index_;

@@ -4,8 +4,8 @@
 #include <mutex>
 #include <utility>
 
+#include "cista/reflection/comparable.h"
 #include "utl/erase_if.h"
-#include "utl/struct/comparable.h"
 #include "utl/verify.h"
 
 #include "ppr/routing/search_profile.h"
@@ -94,7 +94,7 @@ msg_ptr make_direct_ppr_request(geo::latlng const& start,
 }
 
 struct osrm_settings {
-  MAKE_COMPARABLE()
+  CISTA_COMPARABLE()
   int max_duration_{};  // seconds
   double max_distance_{};  // meters
 };

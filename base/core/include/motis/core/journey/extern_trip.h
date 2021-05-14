@@ -2,9 +2,6 @@
 
 #include <ctime>
 
-#include "utl/struct/comparable.h"
-#include "utl/struct/for_each_field.h"
-
 #include "motis/string.h"
 
 #include "motis/core/common/hash_helper.h"
@@ -12,7 +9,7 @@
 namespace motis {
 
 struct extern_trip {
-  MAKE_COMPARABLE()
+  CISTA_COMPARABLE()
 
   mcd::string station_id_;
   uint32_t train_nr_{0};
