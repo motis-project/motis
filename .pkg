@@ -53,7 +53,7 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=29764bf95b0c6c74c94792f454e89e5b5cad31f3
+  commit=b4180c934e9a3ae6419dd5c9ee505aac352c50ba
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
