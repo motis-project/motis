@@ -72,7 +72,7 @@ struct light_connection {
 
   explicit light_connection(time d_time) : d_time_{d_time} {}  // NOLINT
 
-  light_connection(time const d_time, time const a_time,
+  light_connection(int16_t const d_time, int16_t const a_time,
                    connection const* full_con = nullptr,
                    merged_trips_idx const trips = 0)
       : full_con_{full_con},
@@ -92,7 +92,11 @@ struct light_connection {
   }
 
   ptr<connection const> full_con_;
-  time d_time_, a_time_;
+  int16_t d_time_, a_time_;
+  union {
+    size_t bitfield_idx_;
+    loader::bitfield const* traffic_days_;
+  };
   uint32_t trips_ : 31;
   uint32_t valid_ : 1;
 };

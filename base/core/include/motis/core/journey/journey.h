@@ -8,6 +8,7 @@
 
 #include "motis/core/schedule/attribute.h"
 #include "motis/core/schedule/free_text.h"
+#include "motis/core/schedule/time.h"
 #include "motis/core/schedule/timestamp_reason.h"
 #include "motis/core/journey/extern_trip.h"
 
@@ -36,7 +37,7 @@ struct journey {
     unsigned clasz_{0};
     unsigned train_nr_{0};
     std::string line_identifier_;
-    unsigned duration_{0};
+    motis::time duration_{0};
     int mumo_id_{0};
     std::string direction_;
     std::string provider_;

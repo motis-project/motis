@@ -7,9 +7,12 @@
 namespace motis {
 
 struct season {
-  int32_t offset_;
-  time begin_;
-  time end_;
+  using minute_offset_t = int32_t;
+  static constexpr auto const INVALID_OFFSET =
+      std::numeric_limits<minute_offset_t>::max();
+  minute_offset_t offset_{INVALID_OFFSET};
+  time begin_{INVALID_TIME};
+  time end_{INVALID_TIME};
 };
 
 struct timezone {
@@ -44,7 +47,7 @@ struct timezone {
   }
 
   int32_t general_offset_{0};
-  season season_{INVALID_TIME, INVALID_TIME, INVALID_TIME};
+  season season_;
 };
 
 }  // namespace motis

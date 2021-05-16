@@ -22,7 +22,7 @@ inline flatbuffers::Offset<TripId> to_fbs(schedule const& sched,
   auto const& s = trp->id_.secondary_;
   return CreateTripId(
       fbb, fbb.CreateString(sched.stations_.at(p.station_id_)->eva_nr_),
-      p.train_nr_, motis_to_unixtime(sched, p.time_),
+      p.train_nr_, motis_to_unixtime(sched, time(p.time_)),
       fbb.CreateString(sched.stations_.at(s.target_station_id_)->eva_nr_),
       motis_to_unixtime(sched, s.target_time_), fbb.CreateString(s.line_id_));
 }

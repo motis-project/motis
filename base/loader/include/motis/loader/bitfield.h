@@ -8,21 +8,30 @@
 
 namespace motis::loader {
 
-constexpr int BIT_COUNT = 512;
+constexpr unsigned BIT_COUNT = 512;
 using bitfield = std::bitset<BIT_COUNT>;
+
+template <std::size_t BitSetSize>
+bool operator<(std::bitset<BitSetSize> const& x,
+               std::bitset<BitSetSize> const& y) {
+  // i > 0
+  for (auto i = size_t{BitSetSize - 1}; i != 0; --i) {
+    if (x[i] ^ y[i]) {
+      return y[i];
+    }
+  }
+  // i = 0
+  if (x[0] ^ y[0]) {
+    return y[0];
+  }
+  return false;
+}
 
 template <std::size_t BitSetSize>
 struct bitset_comparator {
   bool operator()(std::bitset<BitSetSize> const& lhs,
                   std::bitset<BitSetSize> const& rhs) const {
-    for (std::size_t i = 0; i < BitSetSize; ++i) {
-      int lhs_bit = lhs.test(i) ? 1 : 0;
-      int rhs_bit = rhs.test(i) ? 1 : 0;
-      if (lhs_bit != rhs_bit) {
-        return lhs_bit < rhs_bit;
-      }
-    }
-    return false;
+    return lhs < rhs;
   }
 };
 
@@ -44,7 +53,7 @@ inline std::string serialize_bitset(std::bitset<BitCount> const& bitset) {
 
 template <std::size_t BitCount>
 inline std::bitset<BitCount> deserialize_bitset(utl::cstr str) {
-  return std::bitset<BitCount>(std::string(str.str, str.len));
+  return std::bitset<BitCount>(str.str, str.len);
 }
 
 }  // namespace motis::loader
