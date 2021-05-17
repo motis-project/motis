@@ -4,7 +4,7 @@
 #include <map>
 #include <string>
 
-#include "utl/struct/comparable.h"
+#include "cista/reflection/comparable.h"
 
 #include "motis/data.h"
 #include "motis/hash_map.h"
@@ -18,7 +18,7 @@
 namespace motis::paxmon {
 
 struct cap_trip_id {
-  MAKE_COMPARABLE()
+  CISTA_COMPARABLE()
 
   std::uint32_t train_nr_{};
   std::uint32_t from_station_idx_{};
