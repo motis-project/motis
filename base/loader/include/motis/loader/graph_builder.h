@@ -90,7 +90,7 @@ struct participant {
 };
 
 struct service_with_day_offset {
-  MAKE_COMPARABLE()
+  CISTA_COMPARABLE()
 
   Service const* service_{nullptr};
   int day_offset_{0};

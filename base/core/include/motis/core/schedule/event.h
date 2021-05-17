@@ -4,8 +4,7 @@
 #include <iostream>
 #include <type_traits>
 
-#include "utl/struct/comparable.h"
-#include "utl/struct/for_each_field.h"
+#include "cista/reflection/comparable.h"
 
 #include "motis/core/common/hash_helper.h"
 #include "motis/core/schedule/edges.h"
@@ -18,7 +17,7 @@ namespace motis {
 struct node;
 
 struct ev_key {
-  MAKE_COMPARABLE()
+  CISTA_COMPARABLE()
 
   bool is_not_null() const { return route_edge_.is_not_null(); }
 

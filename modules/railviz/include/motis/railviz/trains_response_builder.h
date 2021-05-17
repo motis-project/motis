@@ -12,10 +12,10 @@ namespace motis::railviz {
 
 struct trains_response_builder {
   struct query {
-    MAKE_COMPARABLE();
+    CISTA_COMPARABLE()
 
-    trip const* trp_;
-    int section_index_;
+    trip const* trp_{nullptr};
+    int section_index_{std::numeric_limits<int>::max()};
     train train_;
   };
 
