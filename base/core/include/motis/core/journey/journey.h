@@ -4,8 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "utl/struct/comparable.h"
-
 #include "motis/core/schedule/attribute.h"
 #include "motis/core/schedule/free_text.h"
 #include "motis/core/schedule/timestamp_reason.h"
