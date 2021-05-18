@@ -6,6 +6,7 @@
 #include "motis/core/schedule/schedule.h"
 #include "motis/module/message.h"
 #include "motis/hash_map.h"
+#include "motis/hash_set.h"
 
 namespace motis::rt {
 
@@ -13,6 +14,8 @@ struct update_msg_builder {
   explicit update_msg_builder(schedule const& sched);
 
   void add_delay(delay_info const* di);
+
+  void trip_separated(trip const* trp);
 
   void add_reroute(trip const* trp,
                    mcd::vector<trip::route_edge> const& old_edges,
@@ -44,6 +47,7 @@ private:
   schedule const& sched_;
   std::vector<flatbuffers::Offset<RtUpdate>> updates_;
   mcd::hash_map<trip const*, std::vector<delay_info const*>> delays_;
+  mcd::hash_set<trip const*> separated_trips_;
   std::size_t delay_count_{0};
   std::size_t reroute_count_{0};
 };

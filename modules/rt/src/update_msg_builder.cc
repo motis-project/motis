@@ -33,6 +33,10 @@ void update_msg_builder::add_delay(delay_info const* di) {
   delays_[trp].emplace_back(di);
 }
 
+void update_msg_builder::trip_separated(trip const* trp) {
+  separated_trips_.insert(trp);
+}
+
 void update_msg_builder::add_reroute(
     trip const* trp, mcd::vector<trip::route_edge> const& old_edges,
     lcon_idx_t const old_lcon_idx) {
@@ -99,6 +103,7 @@ void update_msg_builder::add_station(node_id_t const station_idx) {
 void update_msg_builder::reset() {
   delays_.clear();
   updates_.clear();
+  separated_trips_.clear();
   fbb_.Clear();
   delay_count_ = 0;
   reroute_count_ = 0;
@@ -141,6 +146,7 @@ void update_msg_builder::build_delay_updates() {
           return std::tie(a->schedule_time_, a_station_idx, a_is_dep) <
                  std::tie(b->schedule_time_, b_station_idx, b_is_dep);
         });
+    auto const separated = separated_trips_.find(trp) != end(separated_trips_);
     updates_.emplace_back(CreateRtUpdate(
         fbb_, Content_RtDelayUpdate,
         CreateRtDelayUpdate(
@@ -160,7 +166,8 @@ void update_msg_builder::build_delay_updates() {
                           to_fbs(k.ev_type_)),
                       motis_to_unixtime(sched_, di->get_current_time()),
                       to_fbs(di->get_reason()));
-                })))
+                })),
+            separated)
             .Union()));
   }
   delays_.clear();

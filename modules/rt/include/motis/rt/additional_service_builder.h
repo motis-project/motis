@@ -201,6 +201,12 @@ struct additional_service_builder {
       trp_edge.get_edge()->m_.route_edge_.conns_[0].trips_ = new_trps_id;
     }
 
+    auto const new_route_id = first_edge->from_->route_;
+    auto new_exp_route = sched_.expanded_trips_.emplace_back();
+    new_exp_route.emplace_back(trp);
+    sched_.route_to_expanded_routes_[new_route_id].emplace_back(
+        new_exp_route.index());
+
     return trp;
   }
 
