@@ -137,7 +137,9 @@ trip_id get_connections_from_expanded_trips(
   {
     scoped_timer connections_timer{"csa: build connections"};
     for (auto const& route_trips : sched.expanded_trips_) {
-      utl::verify(!route_trips.empty(), "empty route");
+      if (route_trips.empty()) {
+        continue;
+      }
       auto const first_trip = route_trips[0];
       auto const in_allowed =
           utl::to_vec(stops(first_trip), [](trip_stop const& ts) {
@@ -251,7 +253,7 @@ trip_id get_connections_from_expanded_trips(
                           search_dir::BWD, bridge_zero_duration_connections);
   }
 
-  assert(trip_idx == sched.expanded_trips_.data_size());
+  assert(trip_idx == sched.expanded_trips_.element_count());
   return trip_idx;
 }
 

@@ -34,28 +34,6 @@ struct thousands_sep : std::numpunct<char> {
   string_type do_grouping() const override { return "\3"; }
 };
 
-edge const* get_outgoing_route_edge(node const* route_node) {
-  assert(route_node != nullptr);
-  assert(route_node->is_route_node());
-  for (auto const& e : route_node->edges_) {
-    if (e.type() == edge::ROUTE_EDGE) {
-      return &e;
-    }
-  }
-  return nullptr;
-}
-
-edge const* get_incoming_route_edge(node const* route_node) {
-  assert(route_node != nullptr);
-  assert(route_node->is_route_node());
-  for (auto const& e : route_node->incoming_edges_) {
-    if (e->type() == edge::ROUTE_EDGE) {
-      return e;
-    }
-  }
-  return nullptr;
-}
-
 struct preprocessing {
   preprocessing(schedule const& sched, tb_data& data)
       : sched_(sched),
@@ -68,7 +46,7 @@ struct preprocessing {
     auto const prev_locale =
         std::cout.imbue(std::locale(std::locale::classic(), new thousands_sep));
     auto const stop_count = sched_.station_nodes_.size();
-    auto const line_count = sched_.expanded_trips_.index_size() - 1;
+    auto const line_count = sched_.expanded_trips_.index_size();
     data_.line_to_first_trip_.reserve(line_count);
     data_.line_to_last_trip_.reserve(line_count);
     data_.line_stop_count_.reserve(line_count);
@@ -81,7 +59,7 @@ struct preprocessing {
     auto lcon_count = 0UL;
     LOG(info) << "trip-based preprocessing:";
     LOG(info) << stop_count << " stops";
-    LOG(info) << sched_.expanded_trips_.data_size() << " motis trips";
+    LOG(info) << sched_.expanded_trips_.element_count() << " motis trips";
     LOG(info) << line_count << " lines";
 
     std::vector<std::vector<std::pair<line_id, stop_idx_t>>> lines_at_stop;
@@ -89,15 +67,36 @@ struct preprocessing {
 
     progress_tracker_->status("Init: Routes");
     for (auto route_idx = 0UL; route_idx < line_count; ++route_idx) {
-      auto const& route_trips = sched_.expanded_trips_[route_idx];
-      utl::verify(!route_trips.empty(), "empty route");
-      auto const first_trip = route_trips[0];
-      auto const first_trip_id = route_trips.data_index(0);
-
       utl::verify(data_.line_to_first_trip_.size() == route_idx,
                   "line to first trip index invalid");
       utl::verify(data_.line_to_last_trip_.size() == route_idx,
                   "line to last trip index invalid");
+      utl::verify(data_.stops_on_line_.current_key() == route_idx,
+                  "incorrect line index in stops on line");
+
+      auto const& route_trips = sched_.expanded_trips_.at(route_idx);
+
+      if (route_trips.empty()) {
+        data_.line_to_first_trip_.push_back(0);
+        data_.line_to_last_trip_.push_back(0);
+        data_.stops_on_line_.finish_key();
+        data_.in_allowed_.finish_key();
+        data_.out_allowed_.finish_key();
+        data_.line_stop_count_.push_back(0);
+        continue;
+      }
+
+      auto const first_trip = route_trips[0];
+      auto const first_trip_id = route_trips.data_index(0);
+
+      if (first_trip_id != data_.trip_to_line_.size()) {
+        utl::verify(first_trip_id > data_.trip_to_line_.size(),
+                    "out of order trips not supported");
+        data_.trip_to_line_.resize(first_trip_id);
+        data_.arrival_times_.skip_to_key(first_trip_id);
+        data_.departure_times_.skip_to_key(first_trip_id);
+      }
+
       data_.line_to_first_trip_.push_back(first_trip_id);
       trip_idx = first_trip_id;
       for (auto i = 0UL; i < route_trips.size(); ++i) {
@@ -122,8 +121,6 @@ struct preprocessing {
         lines_at_stop[station_id].emplace_back(route_idx, line_stop_count);
         ++line_stop_count;
       }
-      utl::verify(data_.stops_on_line_.current_key() == route_idx,
-                  "incorrect line index in stops on line");
       utl::verify(line_stop_count == first_trip->edges_->size() + 1,
                   "invalid line stop count");
       data_.stops_on_line_.finish_key();
@@ -191,19 +188,21 @@ struct preprocessing {
     data_.in_allowed_.finish_map();
     data_.out_allowed_.finish_map();
 
-    data_.trip_count_ = trip_idx;
+    data_.trip_idx_end_ = trip_idx;
+    data_.trip_count_ = sched_.expanded_trips_.element_count();
     data_.line_count_ = line_count;
 
     LOG(info) << lcon_count << " light connections";
     LOG(info) << data_.footpaths_.data_size() << " footpaths";
 
-    utl::verify(data_.trip_count_ == sched_.expanded_trips_.data_size(),
-                "incorrect trip count");
+    utl::verify(data_.trip_count_ == sched_.expanded_trips_.element_count(),
+                "incorrect trip count: {} != {}", data_.trip_count_,
+                sched_.expanded_trips_.element_count());
     utl::verify(data_.line_to_first_trip_.size() == line_count,
                 "incorrect size of line to first trip");
     utl::verify(data_.line_stop_count_.size() == line_count,
                 "incorrect size of line stop count");
-    utl::verify(data_.trip_to_line_.size() == data_.trip_count_,
+    utl::verify(data_.trip_to_line_.size() == data_.trip_idx_end_,
                 "incorrect size of trip to line");
     utl::verify(
         data_.footpaths_.index_size() == data_.reverse_footpaths_.index_size(),
@@ -214,9 +213,9 @@ struct preprocessing {
                 "incorrect size of lines at stop");
     utl::verify(data_.stops_on_line_.index_size() == line_count + 1,
                 "incorrect size of stops on line");
-    utl::verify(data_.arrival_times_.index_size() == data_.trip_count_ + 1,
+    utl::verify(data_.arrival_times_.index_size() == data_.trip_idx_end_ + 1,
                 "incorrect size of arrival times");
-    utl::verify(data_.departure_times_.index_size() == data_.trip_count_ + 1,
+    utl::verify(data_.departure_times_.index_size() == data_.trip_idx_end_ + 1,
                 "incorrect size of departure times");
     utl::verify(data_.in_allowed_.index_size() == line_count + 1,
                 "incorrect size of in allowed");
@@ -325,7 +324,7 @@ private:
     std::vector<time> earliest_arrival(stop_count);
     std::vector<time> earliest_change(stop_count);
 
-    for (uint64_t trip_idx = first_trip_idx; trip_idx < data_.trip_count_;
+    for (uint64_t trip_idx = first_trip_idx; trip_idx < data_.trip_idx_end_;
          trip_idx += stride) {
       auto const line_idx = data_.trip_to_line_[trip_idx];
       auto const out_allowed = data_.out_allowed_[line_idx];
@@ -338,8 +337,8 @@ private:
       std::fill(begin(earliest_arrival), end(earliest_arrival), INVALID_TIME);
       std::fill(begin(earliest_change), end(earliest_change), INVALID_TIME);
 
-      for (auto from_stop_idx = line_stop_count - 1; from_stop_idx > 0;
-           --from_stop_idx) {
+      for (auto from_stop_idx = line_stop_count > 0 ? line_stop_count - 1 : 0;
+           from_stop_idx > 0; --from_stop_idx) {
         auto const station_idx = line_stops[from_stop_idx];
 
         auto const trip_arrival = data_.arrival_times_[trip_idx][from_stop_idx];
@@ -420,7 +419,7 @@ private:
     std::vector<time> latest_departure(stop_count);
     std::vector<time> latest_change(stop_count);
 
-    for (uint64_t trip_idx = first_trip_idx; trip_idx < data_.trip_count_;
+    for (uint64_t trip_idx = first_trip_idx; trip_idx < data_.trip_idx_end_;
          trip_idx += stride) {
       auto const line_idx = data_.trip_to_line_[trip_idx];
       auto const in_allowed = data_.in_allowed_[line_idx];
@@ -433,7 +432,8 @@ private:
       std::fill(begin(latest_departure), end(latest_departure), 0);
       std::fill(begin(latest_change), end(latest_change), 0);
 
-      for (int to_stop_idx = 0; to_stop_idx <= line_stop_count - 2;
+      for (int to_stop_idx = 0;
+           line_stop_count >= 2 && to_stop_idx <= line_stop_count - 2;
            ++to_stop_idx) {
         auto const station_idx = line_stops[to_stop_idx];
 

@@ -82,7 +82,7 @@ struct tb_data {
       line_id line, stop_idx_t stop_idx, time earliest_departure) const {
     assert(line < line_count_);
     for (auto trip = line_to_first_trip_[line];
-         trip < trip_count_ && trip_to_line_[trip] == line; ++trip) {
+         trip < trip_idx_end_ && trip_to_line_[trip] == line; ++trip) {
       auto const dep_time = departure_times_[trip][stop_idx];
       if (dep_time >= earliest_departure) {
         return std::make_pair(trip, dep_time);
@@ -98,14 +98,17 @@ struct tb_data {
     assert(line < line_count_);
     auto const first_trip_in_line = line_to_first_trip_[line];
     auto const last_trip_in_line = line_to_last_trip_[line];
-    for (auto trip = first_trip_in_line; trip <= last_trip_in_line; ++trip) {
-      auto const dep_time = departure_times_[trip][stop_idx];
-      if (dep_time >= earliest_departure) {
-        if (trip != first_trip_in_line) {
-          return {{{trip, dep_time}},
-                  {{trip - 1, departure_times_[trip - 1][stop_idx]}}};
-        } else {
-          return {{{trip, dep_time}}, {}};
+    if (first_trip_in_line < trip_idx_end_ &&
+        trip_to_line_[first_trip_in_line] == line) {
+      for (auto trip = first_trip_in_line; trip <= last_trip_in_line; ++trip) {
+        auto const dep_time = departure_times_[trip][stop_idx];
+        if (dep_time >= earliest_departure) {
+          if (trip != first_trip_in_line) {
+            return {{{trip, dep_time}},
+                    {{trip - 1, departure_times_[trip - 1][stop_idx]}}};
+          } else {
+            return {{{trip, dep_time}}, {}};
+          }
         }
       }
     }
@@ -117,7 +120,11 @@ struct tb_data {
   std::optional<std::pair<trip_id, time>> last_reachable_trip(
       line_id line, stop_idx_t stop_idx, time latest_arrival) const {
     assert(line < line_count_);
-    for (auto trip = static_cast<int>(line_to_last_trip_[line]);
+    auto const last_trip_in_line = line_to_last_trip_[line];
+    if (last_trip_in_line >= trip_idx_end_) {
+      return {};
+    }
+    for (auto trip = static_cast<int>(last_trip_in_line);
          trip >= 0 && trip_to_line_[trip] == line; --trip) {
       auto const arr_time = arrival_times_[trip][stop_idx];
       if (arr_time <= latest_arrival) {
@@ -134,15 +141,18 @@ struct tb_data {
     assert(line < line_count_);
     auto const first_trip_in_line = line_to_first_trip_[line];
     auto const last_trip_in_line = line_to_last_trip_[line];
-    for (auto trip = static_cast<int>(line_to_last_trip_[line]);
-         trip >= static_cast<int>(first_trip_in_line); --trip) {
-      auto const arr_time = arrival_times_[trip][stop_idx];
-      if (arr_time <= latest_arrival) {
-        if (trip != last_trip_in_line) {
-          return {{{trip, arr_time}},
-                  {{trip + 1, arrival_times_[trip + 1][stop_idx]}}};
-        } else {
-          return {{{trip, arr_time}}, {}};
+    if (first_trip_in_line < trip_idx_end_ &&
+        trip_to_line_[first_trip_in_line] == line) {
+      for (auto trip = static_cast<int>(line_to_last_trip_[line]);
+           trip >= static_cast<int>(first_trip_in_line); --trip) {
+        auto const arr_time = arrival_times_[trip][stop_idx];
+        if (arr_time <= latest_arrival) {
+          if (trip != last_trip_in_line) {
+            return {{{trip, arr_time}},
+                    {{trip + 1, arrival_times_[trip + 1][stop_idx]}}};
+          } else {
+            return {{{trip, arr_time}}, {}};
+          }
         }
       }
     }
@@ -151,6 +161,7 @@ struct tb_data {
         {{first_trip_in_line, arrival_times_[first_trip_in_line][stop_idx]}}};
   }
 
+  uint64_t trip_idx_end_{};
   uint64_t trip_count_{};
   uint64_t line_count_{};
 

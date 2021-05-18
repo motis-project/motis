@@ -34,6 +34,7 @@ struct header {
   int64_t schedule_begin_{};
   int64_t schedule_end_{};
 
+  uint64_t trip_idx_end_{};
   uint64_t trip_count_{};
   uint64_t line_count_{};
 
