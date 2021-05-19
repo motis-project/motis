@@ -8,7 +8,7 @@
 #include "utl/parser/cstr.h"
 
 #include "motis/core/common/date_time_util.h"
-#include "motis/loader/bitfield.h"
+#include "motis/schedule/bitfield.h"
 #include "motis/loader/util.h"
 
 using namespace utl;

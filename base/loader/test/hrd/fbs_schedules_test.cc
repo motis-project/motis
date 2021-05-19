@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 
-#include "motis/loader/bitfield.h"
+#include "motis/schedule/bitfield.h"
 #include "motis/loader/hrd/hrd_parser.h"
 #include "motis/schedule-format/Schedule_generated.h"
 

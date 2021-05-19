@@ -26,10 +26,8 @@ void verify_timestamp(schedule const& sched, time_t t) {
 }
 
 void verify_external_timestamp(schedule const& sched, time_t t) {
-  if (t < std::min(sched.first_event_schedule_time_,
-                   external_schedule_begin(sched)) ||
-      t >= std::max(sched.last_event_schedule_time_,
-                    external_schedule_end(sched))) {
+  if (t < std::min(sched.loaded_begin_, external_schedule_begin(sched)) ||
+      t >= std::max(sched.loaded_end_, external_schedule_end(sched))) {
     auto const schedule_begin = external_schedule_begin(sched);
     auto const schedule_end = external_schedule_end(sched);
     LOG(logging::error) << "timestamp not in schedule: " << format_unix_time(t)
@@ -52,12 +50,12 @@ time unix_to_motistime(schedule const& sched, std::time_t t) {
 }
 
 time motis_time(int const hhmm, int const day_idx, int const timezone_offset) {
-  return SCHEDULE_OFFSET_MINUTES + day_idx * MINUTES_A_DAY + hhmm_to_min(hhmm) -
-         timezone_offset;
+  return time(SCHEDULE_OFFSET_MINUTES + day_idx * MINUTES_A_DAY +
+              hhmm_to_min(hhmm) - timezone_offset);
 }
 
-std::time_t unix_time(schedule const& sched, int const hhmm, int const day_idx,
-                      int const timezone_offset) {
+std::time_t unix_time(schedule const& sched, int const hhmm,
+                      day_idx_t const day_idx, int const timezone_offset) {
   return motis_to_unixtime(sched, motis_time(hhmm, day_idx, timezone_offset));
 }
 

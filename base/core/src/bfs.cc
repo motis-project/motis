@@ -59,8 +59,8 @@ std::set<trip::route_edge> route_bfs(ev_key const& k, bfs_direction const dir,
 std::set<ev_key> trip_bfs(ev_key const& k, bfs_direction const dir) {
   std::set<ev_key> ev_keys;
   for (auto const& e : route_bfs(k, dir)) {
-    auto const arr = ev_key{e, k.lcon_idx_, event_type::ARR};
-    auto const dep = ev_key{e, k.lcon_idx_, event_type::DEP};
+    auto const arr = ev_key{e, k.lcon_idx_, event_type::ARR, k.day_};
+    auto const dep = ev_key{e, k.lcon_idx_, event_type::DEP, k.day_};
 
     auto const bad_arr = dir == bfs_direction::BACKWARD && k.is_departure() &&
                          arr == k.get_opposite();

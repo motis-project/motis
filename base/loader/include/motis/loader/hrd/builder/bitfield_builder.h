@@ -6,7 +6,7 @@
 
 #include "motis/hash_map.h"
 
-#include "motis/loader/bitfield.h"
+#include "motis/schedule/bitfield.h"
 
 namespace motis::loader::hrd {
 

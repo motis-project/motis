@@ -13,6 +13,8 @@ constexpr uint32_t SECONDS_A_DAY = MINUTES_A_DAY * 60;
 
 namespace motis {
 
+using day_idx_t = int16_t;
+
 struct time {
   constexpr explicit time(int16_t const day, uint16_t const minute)
       : day_{static_cast<decltype(day_)>(
@@ -117,7 +119,7 @@ struct time {
   }
 
 private:
-  int16_t day_;
+  day_idx_t day_;
   uint16_t min_;
 };
 

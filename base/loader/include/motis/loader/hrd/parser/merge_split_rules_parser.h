@@ -3,7 +3,7 @@
 #include <cinttypes>
 #include <map>
 
-#include "motis/loader/bitfield.h"
+#include "motis/schedule/bitfield.h"
 #include "motis/loader/hrd/model/service_rule.h"
 #include "motis/loader/hrd/parse_config.h"
 #include "motis/loader/loaded_file.h"

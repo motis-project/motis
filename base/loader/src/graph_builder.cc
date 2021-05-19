@@ -420,6 +420,81 @@ connection_info* graph_builder::get_or_create_connection_info(
   });
 }
 
+std::vector<std::pair<std::vector<time>, mcd::hash_set<unsigned>>>
+graph_builder::service_times_to_utc(bitfield const& traffic_days,
+                                    day_idx_t const start_idx,
+                                    day_idx_t const end_idx, Service const* s) {
+  assert(start_idx < end_idx);
+  auto utc_times =
+      std::vector<std::pair<std::vector<time>, mcd::hash_set<unsigned>>>{};
+  auto utc_service_times = std::vector<time>{};
+  utc_service_times.reserve(s->times()->size());
+  for (int day_idx = start_idx; day_idx != end_idx; ++day_idx) {
+    if (!traffic_days.test(day_idx)) {
+      continue;
+    }
+    utc_service_times.clear();
+    unsigned initial_day;
+    int fix_offset = 0;
+    for (unsigned i = 1; i < s->times()->size() - 1; ++i) {
+      auto const& station = *sched_.stations_.at(
+          stations_[s->route()->stations()->Get(i / 2)]->id_);
+
+      auto local_time = s->times()->Get(i);
+      auto const day_offset = local_time / MINUTES_A_DAY;
+      local_time = local_time % MINUTES_A_DAY;
+      int adj_day_idx = day_idx + day_offset + SCHEDULE_OFFSET_DAYS;
+
+      auto const in_season =
+          is_in_season(adj_day_idx, local_time, station.timez_);
+      auto const season_offset = in_season ? station.timez_->season_.offset_
+                                           : station.timez_->general_offset_;
+
+      auto pre_utc = local_time - season_offset + fix_offset;
+      if (pre_utc < 0) {
+        pre_utc += 1440;
+        adj_day_idx -= 1;
+      }
+
+      if (i == 1) {
+        initial_day = adj_day_idx;
+      }
+
+      auto const abs_utc = time(adj_day_idx, pre_utc);
+
+      auto const traffic_day_begin = time(initial_day, 0);
+      auto const rel_utc = abs_utc - traffic_day_begin;
+      // TODO
+
+      auto const sort_ok = i == 1 || utc_service_times.back() <= rel_utc;
+      auto const impossible_time =
+          in_season && abs_utc < station.timez_->season_.begin_;
+      if (!sort_ok || impossible_time) {
+        utl::verify(fix_offset < 60,
+                    "data error not recoverable (double adjust)");
+        fix_offset += 60;
+        --i;
+        continue;
+      }
+
+      utc_service_times.emplace_back(rel_utc);
+    }
+
+    auto const it = std::find_if(begin(utc_times), end(utc_times),
+                                 [&utc_service_times](auto const& e) {
+                                   return e.first == utc_service_times;
+                                 });
+    if (it == end(utc_times)) {
+      utc_times.emplace_back(utc_service_times,
+                             mcd::hash_set<unsigned>{initial_day});
+    } else {
+      it->second.insert(initial_day);
+    }
+  }
+
+  return utc_times;
+}
+
 connection_info* graph_builder::get_or_create_connection_info(
     std::array<participant, 16> const& services, int dep_day_index) {
   connection_info* prev_con_info = nullptr;

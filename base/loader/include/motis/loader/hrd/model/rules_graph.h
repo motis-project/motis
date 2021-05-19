@@ -3,7 +3,7 @@
 #include <set>
 #include <vector>
 
-#include "motis/loader/bitfield.h"
+#include "motis/schedule/bitfield.h"
 #include "motis/loader/hrd/model/rule_service.h"
 
 namespace motis::loader::hrd {

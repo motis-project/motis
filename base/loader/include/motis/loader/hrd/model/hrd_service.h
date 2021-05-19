@@ -4,7 +4,7 @@
 
 #include "utl/parser/cstr.h"
 
-#include "motis/loader/bitfield.h"
+#include "motis/schedule/bitfield.h"
 #include "motis/loader/hrd/model/specification.h"
 #include "motis/loader/hrd/parse_config.h"
 #include "motis/loader/util.h"

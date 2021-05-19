@@ -6,7 +6,7 @@
 
 #include "utl/parser/cstr.h"
 
-namespace motis::loader {
+namespace motis {
 
 constexpr unsigned BIT_COUNT = 512;
 using bitfield = std::bitset<BIT_COUNT>;
@@ -56,4 +56,4 @@ inline std::bitset<BitCount> deserialize_bitset(utl::cstr str) {
   return std::bitset<BitCount>(str.str, str.len);
 }
 
-}  // namespace motis::loader
+}  // namespace motis

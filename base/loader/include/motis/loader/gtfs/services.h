@@ -6,7 +6,7 @@
 
 #include "boost/date_time/gregorian/gregorian.hpp"
 
-#include "motis/loader/bitfield.h"
+#include "motis/schedule/bitfield.h"
 #include "motis/loader/gtfs/calendar.h"
 #include "motis/loader/gtfs/calendar_date.h"
 

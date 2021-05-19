@@ -8,12 +8,10 @@
 
 namespace motis {
 
-using motis::logging::scoped_timer;
-
 template <typename ForwardIterator, typename BinaryPredicate>
 std::pair<std::vector<size_t>, ForwardIterator> tracking_unique(
     ForwardIterator begin_it, ForwardIterator end_it, BinaryPredicate p) {
-  scoped_timer timer("tracking_unique");
+  logging::scoped_timer timer("tracking_unique");
   std::vector<size_t> map(static_cast<size_t>(std::distance(begin_it, end_it)));
   auto map_it = begin(map);
   auto insert_it = begin_it;
@@ -37,7 +35,7 @@ std::pair<std::vector<size_t>, ForwardIterator> tracking_unique(
 
 template <typename T>
 void apply_permutation(std::vector<T>& data, std::vector<size_t>& perm) {
-  scoped_timer timer("apply_permutation");
+  logging::scoped_timer timer("apply_permutation");
   std::vector<bool> swapped(data.size(), false);
   auto i = 0u;
   while (true) {
