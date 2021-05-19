@@ -47,7 +47,7 @@ void register_import_schedule(motis_instance& instance,
                     "import_schedule: dataset_opt.dataset_.empty()");
 
         cista::memory_holder memory;
-        auto sched = loader::load_schedule(dataset_opt_cpy, memory);
+        auto sched = loader::load_schedule(dataset_opt_cpy, memory, data_dir);
         instance.shared_data_.emplace_data(
             SCHEDULE_DATA_KEY,
             schedule_data{std::move(memory), std::move(sched)});
