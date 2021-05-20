@@ -50,7 +50,7 @@ private:
   std::vector<std::string> journey_files_;
   std::vector<std::string> capacity_files_;
   std::string generated_capacity_file_;
-  std::string stats_file_{"paxmon_stats.csv"};
+  std::string stats_file_{""};
   std::string capacity_match_log_file_{};
   std::string journey_match_log_file_{};
   std::string initial_over_capacity_report_file_{};
