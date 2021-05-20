@@ -13,7 +13,7 @@ static constexpr struct end_row_t {
 } end_row{};
 
 struct csv_writer {
-  explicit csv_writer(std::string const& filename) : ofs_{}, first_col_{true} {
+  explicit csv_writer(std::string const& filename) : first_col_{true} {
     if (!filename.empty()) {
       ofs_.open(filename);
     }
