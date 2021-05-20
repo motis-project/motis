@@ -47,17 +47,34 @@ std::vector<std::unique_ptr<format_parser>> parsers() {
 using dataset_mem_t = std::variant<cista::mmap, typed_flatbuffer<Schedule>>;
 
 schedule_ptr load_schedule(loader_options const& opt,
-                           cista::memory_holder& schedule_buf) {
+                           cista::memory_holder& schedule_buf,
+                           std::string const& data_dir) {
   ml::scoped_timer time("loading schedule");
 
   // ensure there is an active progress tracker (e.g. for test cases)
   utl::get_active_progress_tracker_or_activate("schedule");
 
-  auto const graph_path = opt.graph_path();
-  if (opt.read_graph_) {
-    utl::verify(fs::is_regular_file(graph_path), "graph not found");
-    LOG(ml::info) << "reading graph " << graph_path;
-    return read_graph(graph_path, schedule_buf, opt.read_graph_mmap_);
+  auto const graph_path = opt.graph_path(data_dir);
+  auto enable_read_graph = opt.read_graph_;
+  auto enable_write_graph = opt.write_graph_;
+  if (opt.cache_graph_) {
+    enable_read_graph = fs::is_regular_file(graph_path);
+    enable_write_graph = true;
+  }
+  if (enable_read_graph) {
+    utl::verify(fs::is_regular_file(graph_path), "graph not found: {}",
+                graph_path);
+    LOG(ml::info) << "reading graph: " << graph_path;
+    try {
+      return read_graph(graph_path, schedule_buf, opt.read_graph_mmap_);
+    } catch (std::runtime_error const& err) {
+      if (opt.cache_graph_) {
+        LOG(ml::info) << "could not load existing graph, updating cache ("
+                      << err.what() << ")";
+      } else {
+        throw err;
+      }
+    }
   }
 
   utl::verify(!opt.dataset_.empty(), "load_schedule: opt.dataset_.empty()");
@@ -129,7 +146,12 @@ schedule_ptr load_schedule(loader_options const& opt,
 
   utl::activate_progress_tracker("schedule");
   auto sched = build_graph(datasets, opt);
-  if (opt.write_graph_) {
+  if (enable_write_graph) {
+    LOG(ml::info) << "writing graph: " << graph_path;
+    auto const graph_dir = fs::path{graph_path}.parent_path();
+    if (!graph_dir.empty()) {
+      fs::create_directories(graph_dir);
+    }
     write_graph(graph_path, *sched);
   }
   return sched;
@@ -138,7 +160,7 @@ schedule_ptr load_schedule(loader_options const& opt,
 schedule_ptr load_schedule(loader_options const& opt) {
   utl::verify(!opt.read_graph_, "load_schedule: read_graph requires buffer");
   cista::memory_holder buf{};
-  return load_schedule(opt, buf);
+  return load_schedule(opt, buf, "");
 }
 
 }  // namespace motis::loader

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "cista/memory_holder.h"
 
 #include "motis/core/schedule/schedule.h"
@@ -12,7 +14,8 @@ namespace motis::loader {
 std::vector<std::unique_ptr<format_parser>> parsers();
 
 schedule_ptr load_schedule(loader_options const&,
-                           cista::memory_holder& schedule_buf);
+                           cista::memory_holder& schedule_buf,
+                           std::string const& data_dir);
 
 schedule_ptr load_schedule(loader_options const&);
 
