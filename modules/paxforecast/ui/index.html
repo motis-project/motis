@@ -5,6 +5,25 @@
   <title>Passenger Forecast</title>
   <script src="https://unpkg.com/vue@next"></script>
 
+  <style type="text/css">
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    #controls, #loadingText {
+      display: flex;
+      justify-content: center;
+    }
+
+    #controls > * {
+      margin: 2px;
+    }
+
+    #loadingText {
+      margin: 5px;
+    }
+  </style>
+
   <style type="text/css" id="svgStyle">
     .over-cap-prob {
       font-family: Arial, Helvetica, sans-serif;
@@ -62,7 +81,7 @@
 <body>
 
 <div id="app">
-  <div>
+  <div id="controls">
     <label>Scenario:</label>
     <select v-model="selectedScenario" :disabled="scenarios.length === 0">
       <option disabled value="">Select a scenario</option>
@@ -101,9 +120,8 @@
     <button v-if="selectedTripData" @click="savePng">
       Save as PNG
     </button>
-
-    <span>{{ loadingText }}</span>
   </div>
+  <div id="loadingText">{{ loadingText }}</div>
 
   <div v-if="selectedTripData">
     <svg id="forecastSvg"

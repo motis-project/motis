@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { sendPaxMonFindTripsRequest } from "./motis/paxMonFindTrips";
+import { formatDateTime } from "./util/dateFormat";
 
 function TripView(props) {
   const names = [
@@ -12,8 +13,10 @@ function TripView(props) {
   ];
   return (
     <span>
-      {names.join(", ")} ({props.data.tsi.primary_station.name} –{" "}
-      {props.data.tsi.secondary_station.name})
+      {names.join(", ")} ({props.data.tsi.primary_station.name} (
+      {formatDateTime(props.data.tsi.trip.time)}) –{" "}
+      {props.data.tsi.secondary_station.name} (
+      {formatDateTime(props.data.tsi.trip.target_time)}))
     </span>
   );
 }
