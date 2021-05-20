@@ -25,6 +25,7 @@ struct dataset_settings : public conf::configuration,
     param(write_graph_, "write_graph", "Write bianry schedule graph");
     param(read_graph_, "read_graph", "Read binary schedule graph");
     param(read_graph_mmap_, "read_graph_mmap", "Read using memory mapped file");
+    param(cache_graph_, "cache_graph", "Cache binary schedule graph");
     param(apply_rules_, "apply_rules",
           "Apply special rules (through-services, merge-split-services)");
     param(adjust_footpaths_, "adjust_footpaths",
