@@ -12,6 +12,10 @@ import TripLoadForecastChart from "./TripLoadForecastChart";
 
 async function getInitialStatus(setPaxMonStatus) {
   const res = await sendPaxMonStatusRequest();
+  if (!res.ok) {
+    console.log("getInitialStatus failed: ", res.status);
+    return;
+  }
   const data = await res.json();
   setPaxMonStatus(data.content);
   if (!data.content.system_time) {

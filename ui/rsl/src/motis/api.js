@@ -33,6 +33,10 @@ console.log(`apiEndpoint: ${apiEndpoint}`);
 function sendRequest(target, contentType, content) {
   return fetch(apiEndpoint, {
     method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({
       destination: { target: target },
       content_type: contentType,
