@@ -45,7 +45,7 @@ private:
   bool deterministic_mode_{false};
   duration min_delay_improvement_{5};
 
-  std::string stats_file_{};
+  std::string stats_file_;
   std::unique_ptr<stats_writer> stats_writer_;
 };
 
