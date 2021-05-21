@@ -116,8 +116,8 @@ std::string file_identifier(std::string filename) {
 
 bool check(int id, std::vector<msg_ptr> const& msgs,
            std::vector<std::string> const& files, std::vector<int>& file_errors,
-           fs::path const& fail_path, bool local,
-           query_type_t const query_type) {
+           fs::path const& fail_path, bool local, query_type_t const query_type,
+           bool pretty_print) {
   assert(msgs.size() == files.size());
   assert(msgs.size() > 1);
   auto const file_count = files.size();
@@ -189,11 +189,14 @@ bool check(int id, std::vector<msg_ptr> const& msgs,
   }
 
   auto const write_file = [&](auto const file_idx) {
+    if (fail_path.empty()) {
+      return;
+    }
     std::ofstream out{
         (fail_path / fs::path{std::to_string(id) + "_" +
                               file_identifier(files[file_idx]) + ".json"})
             .string()};
-    out << msgs[file_idx]->to_json() << std::endl;
+    out << msgs[file_idx]->to_json(!pretty_print) << std::endl;
   };
 
   if (!match) {
@@ -217,6 +220,7 @@ int main(int argc, char** argv) {
   bool help = false;
   bool utc = false;
   bool local = false;
+  bool pretty_print = false;
   std::vector<std::string> filenames;
   std::string fail_dir;
   query_type_t query_type{query_type_t::PRETRIP};
@@ -226,9 +230,10 @@ int main(int argc, char** argv) {
       ("help,h", po::bool_switch(&help), "show help")
       ("utc,u", po::bool_switch(&utc), "print timestamps in UTC")
       ("local,l", po::bool_switch(&local), "print timestamps in local time")
+      ("pretty,p", po::bool_switch(&pretty_print), "pretty-print json files")
       ("i", po::value<std::vector<std::string>>(&filenames), "input file")
       ("fail", po::value<std::string>(&fail_dir)->default_value("fail"),
-          "output directory for different responses")
+          "output directory for different responses (empty to disable)")
       ("type,t",
           po::value<query_type_t>(&query_type)->default_value(query_type),
           "query type: pretrip|ontrip_fwd|ontrip_bwd")
@@ -252,7 +257,9 @@ int main(int argc, char** argv) {
   }
 
   auto const fail_path = fs::path{fail_dir};
-  fs::create_directories(fail_path);
+  if (!fail_path.empty()) {
+    fs::create_directories(fail_path);
+  }
 
   auto in_files = utl::to_vec(filenames, [](std::string const& filename) {
     return std::ifstream{filename};
@@ -297,7 +304,7 @@ int main(int argc, char** argv) {
       if (msgs.size() == file_count) {
         ++msg_count;
         auto success = check(id, msgs, filenames, file_errors, fail_path, local,
-                             query_type);
+                             query_type, pretty_print);
         if (!success) {
           ++errors;
         }
@@ -340,7 +347,7 @@ int main(int argc, char** argv) {
     std::cout << "  " << filenames[i] << ": " << file_errors[i] << std::endl;
   }
 
-  if (errors > 0) {
+  if (errors > 0 && !fail_path.empty()) {
     std::cout << "\nResponses that don't match written to: "
               << fail_path.string() << std::endl;
   }
