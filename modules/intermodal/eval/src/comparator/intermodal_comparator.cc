@@ -48,6 +48,30 @@ std::string format_time(std::time_t t, bool local_time) {
   return out.str();
 }
 
+enum class query_type_t { PRETRIP, ONTRIP_FWD, ONTRIP_BWD };
+
+std::istream& operator>>(std::istream& in, query_type_t& type) {
+  std::string token;
+  in >> token;
+  if (token == "pretrip") {
+    type = query_type_t::PRETRIP;
+  } else if (token == "ontrip_fwd") {
+    type = query_type_t::ONTRIP_FWD;
+  } else if (token == "ontrip_bwd") {
+    type = query_type_t::ONTRIP_BWD;
+  }
+  return in;
+}
+
+std::ostream& operator<<(std::ostream& out, query_type_t const& type) {
+  switch (type) {
+    case query_type_t::PRETRIP: out << "pretrip"; break;
+    case query_type_t::ONTRIP_FWD: out << "ontrip_fwd"; break;
+    case query_type_t::ONTRIP_BWD: out << "ontrip_bwd"; break;
+  }
+  return out;
+}
+
 inline std::time_t departure_time(journey const& j) {
   return j.stops_.front().departure_.timestamp_;
 }
@@ -57,15 +81,33 @@ inline std::time_t arrival_time(journey const& j) {
 }
 
 bool has_connection(std::vector<journey> const& connections,
-                    journey const& ref_con) {
-  return std::any_of(begin(connections), end(connections),
-                     [&](auto const& con) {
-                       return con.duration_ == ref_con.duration_ &&
-                              con.transfers_ == ref_con.transfers_ &&
-                              con.accessibility_ == ref_con.accessibility_ &&
-                              departure_time(con) == departure_time(ref_con) &&
-                              arrival_time(con) == arrival_time(ref_con);
-                     });
+                    journey const& ref_con, query_type_t const query_type) {
+  switch (query_type) {
+    case query_type_t::PRETRIP:
+      return std::any_of(
+          begin(connections), end(connections), [&](auto const& con) {
+            return con.duration_ == ref_con.duration_ &&
+                   con.transfers_ == ref_con.transfers_ &&
+                   con.accessibility_ == ref_con.accessibility_ &&
+                   departure_time(con) == departure_time(ref_con) &&
+                   arrival_time(con) == arrival_time(ref_con);
+          });
+    case query_type_t::ONTRIP_FWD:
+      return std::any_of(
+          begin(connections), end(connections), [&](auto const& con) {
+            return con.transfers_ == ref_con.transfers_ &&
+                   con.accessibility_ == ref_con.accessibility_ &&
+                   arrival_time(con) == arrival_time(ref_con);
+          });
+    case query_type_t::ONTRIP_BWD:
+      return std::any_of(
+          begin(connections), end(connections), [&](auto const& con) {
+            return con.transfers_ == ref_con.transfers_ &&
+                   con.accessibility_ == ref_con.accessibility_ &&
+                   departure_time(con) == departure_time(ref_con);
+          });
+    default: return false;
+  }
 }
 
 std::string file_identifier(std::string filename) {
@@ -74,7 +116,8 @@ std::string file_identifier(std::string filename) {
 
 bool check(int id, std::vector<msg_ptr> const& msgs,
            std::vector<std::string> const& files, std::vector<int>& file_errors,
-           fs::path const& fail_path, bool local) {
+           fs::path const& fail_path, bool local,
+           query_type_t const query_type) {
   assert(msgs.size() == files.size());
   assert(msgs.size() > 1);
   auto const file_count = files.size();
@@ -121,7 +164,7 @@ bool check(int id, std::vector<msg_ptr> const& msgs,
     }
 
     for (auto const& ref_con : ref) {
-      if (!has_connection(r, ref_con)) {
+      if (!has_connection(r, ref_con, query_type)) {
         fail(i) << "Connection with duration=" << std::setw(4)
                 << ref_con.duration_ << ", transfers=" << ref_con.transfers_
                 << ", accessibility=" << std::setw(2) << ref_con.accessibility_
@@ -132,7 +175,7 @@ bool check(int id, std::vector<msg_ptr> const& msgs,
     }
 
     for (auto const& con : r) {
-      if (!has_connection(ref, con)) {
+      if (!has_connection(ref, con, query_type)) {
         fail(i) << "Connection with duration=" << std::setw(4) << con.duration_
                 << ", transfers=" << con.transfers_
                 << ", accessibility=" << std::setw(2) << con.accessibility_
@@ -176,6 +219,7 @@ int main(int argc, char** argv) {
   bool local = false;
   std::vector<std::string> filenames;
   std::string fail_dir;
+  query_type_t query_type{query_type_t::PRETRIP};
   po::options_description desc("Intermodal Comparator");
   // clang-format off
   desc.add_options()
@@ -185,6 +229,9 @@ int main(int argc, char** argv) {
       ("i", po::value<std::vector<std::string>>(&filenames), "input file")
       ("fail", po::value<std::string>(&fail_dir)->default_value("fail"),
           "output directory for different responses")
+      ("type,t",
+          po::value<query_type_t>(&query_type)->default_value(query_type),
+          "query type: pretrip|ontrip_fwd|ontrip_bwd")
       ;
   // clang-format on
   po::positional_options_description pod;
@@ -249,8 +296,8 @@ int main(int argc, char** argv) {
       }
       if (msgs.size() == file_count) {
         ++msg_count;
-        auto success =
-            check(id, msgs, filenames, file_errors, fail_path, local);
+        auto success = check(id, msgs, filenames, file_errors, fail_path, local,
+                             query_type);
         if (!success) {
           ++errors;
         }
