@@ -77,15 +77,7 @@ jobs:
       # ==== DISTRIBUTION ====
       - name: Compile Web Interface
         if: matrix.mode == 'Release'
-        run: |
-          cd .\ui\web
-          mkdir elm
-          cd elm
-          Invoke-WebRequest -Uri https://github.com/elm-lang/elm-platform/releases/download/0.18.0-exp/elm-platform-windows.tar.gz -OutFile elm-platform-windows.tar.gz
-          cmake -E tar xzf .\elm-platform-windows.tar.gz
-          cd ..
-          .\elm\elm-make.exe --yes .\src\Main.elm --output elm.js
-          Remove-Item -Recurse -Force .\elm
+        run: cmake --build build --target motis-web-ui
 
       - name: Move Profiles
         if: matrix.mode == 'Release'

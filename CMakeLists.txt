@@ -184,6 +184,8 @@ endforeach(module)
 add_subdirectory(base/bootstrap EXCLUDE_FROM_ALL)
 add_subdirectory(base/launcher)
 
+add_subdirectory(ui/web)
+
 
 ################################
 # Tests
