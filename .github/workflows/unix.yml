@@ -47,6 +47,7 @@ jobs:
             os: macos-latest
             artifact: macos
             avx: On
+            webui: On
           - name: GCC 10 Release
             cxx: g++-10
             cc: gcc-10
@@ -54,6 +55,7 @@ jobs:
             os: ubuntu-20.04
             artifact: linux
             avx: On
+            webui: On
           - name: GCC 10 Release
             cxx: g++-10
             cc: gcc-10
@@ -61,12 +63,14 @@ jobs:
             os: ubuntu-20.04
             artifact: linux-noavx
             avx: Off
+            webui: On
           - name: GCC 10 Debug
             cxx: g++-10
             cc: gcc-10
             mode: Debug
             os: ubuntu-20.04
             avx: On
+            webui: Off
           - name: Clang 11 Release
             cxx: clang++-11
             cc: clang-11
@@ -75,6 +79,7 @@ jobs:
             ldflags: -lc++abi
             os: ubuntu-20.04
             avx: On
+            webui: Off
           - name: Clang Tidy
             cxx: clang++-11
             cc: clang-11
@@ -84,6 +89,7 @@ jobs:
             lint: true
             os: ubuntu-20.04
             avx: On
+            webui: Off
           - key: Clang 11 Sanitizer
             cxx: clang++-11
             cc: clang-11
@@ -93,6 +99,7 @@ jobs:
             ldflags: -lc++abi
             os: ubuntu-20.04
             avx: On
+            webui: Off
     env:
       DEBIAN_FRONTEND: noninteractive
       BUILDCACHE_COMPRESS: true
@@ -162,7 +169,8 @@ jobs:
             -DMOTIS_LINT=${{ matrix.config.lint }} \
             -DMOTIS_AVX=${{ matrix.config.avx }} \
             -DCTX_ASAN=${{ contains(matrix.config.cxxflags, '-fsanitize=address') }} \
-            -DCTX_VALGRIND=${{ matrix.config.cc == 'gcc-10' && matrix.config.mode == 'Debug' }}
+            -DCTX_VALGRIND=${{ matrix.config.cc == 'gcc-10' && matrix.config.mode == 'Debug' }} \
+            -DMOTIS_WITH_WEBUI=${{ matrix.config.webui }}
 
       - name: Build
         run: |
@@ -211,7 +219,7 @@ jobs:
         run: strip build/motis
 
       - name: Compile Web Interface
-        if: matrix.config.mode == 'Release' && (matrix.config.cc == 'gcc-10' || matrix.config.os == 'macos-latest')
+        if: matrix.config.webui == 'On'
         run: cmake --build build --target motis-web-ui
 
       - name: Create Distribution
