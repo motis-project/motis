@@ -53,6 +53,8 @@ endif()
 option(MOTIS_LINT "enable lint (clang-tidy) target" OFF)
 option(MOTIS_COV "enable coverage (coverage) target" OFF)
 
+option(MOTIS_WITH_WEBUI "enable motis-web-ui target" OFF)
+
 add_library(motis-generated INTERFACE)
 target_include_directories(motis-generated INTERFACE ${CMAKE_BINARY_DIR}/generated)
 
@@ -183,6 +185,10 @@ endforeach(module)
 
 add_subdirectory(base/bootstrap EXCLUDE_FROM_ALL)
 add_subdirectory(base/launcher)
+
+if(MOTIS_WITH_WEBUI)
+  add_subdirectory(ui/web)
+endif()
 
 
 ################################
