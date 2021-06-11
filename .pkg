@@ -69,7 +69,7 @@
 [tar]
   url=git@github.com:motis-project/tar.git
   branch=master
-  commit=6b7c88cb8cbf00e972dc51e3e30d4bb5ea001f40
+  commit=3a08b6575eb6a04e6b3d0977e6da3b61a91d62f2
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
