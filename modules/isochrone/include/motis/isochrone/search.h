@@ -52,8 +52,9 @@ struct search {
 
     auto interval_begin = q.interval_begin_;
     auto interval_end = q.interval_end_;
+    auto interval_length = q.interval_begin_ - q.interval_end_;
 
-
+    td_dijkstra td(q.from_, interval_begin);
 
 
     std::vector<station> stations;
