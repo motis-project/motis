@@ -54,12 +54,14 @@ struct search {
     auto interval_end = q.interval_end_;
     auto interval_length = q.interval_begin_ - q.interval_end_;
 
-    td_dijkstra td(q.from_, interval_begin);
+    td_dijkstra td(q.from_, interval_begin, interval_end);
+
+    td.run();
+
 
 
     std::vector<station> stations;
     std::vector<long> travel_times;
-
 
 
     return search_result(stations, travel_times,
