@@ -22,14 +22,14 @@ struct search_query {
 
 struct search_result {
   search_result() = default;
-  search_result(std::vector<station> stations,
+  search_result(std::vector<station*> stations,
                 std::vector<long> travel_times, time interval_begin,
                 time interval_end)
       : stations_(std::move(stations)),
         travel_times_(std::move(travel_times)),
         interval_begin_(interval_begin),
         interval_end_(interval_end) {}
-  std::vector<station> stations_;
+  std::vector<station*> stations_;
   std::vector<long> travel_times_;
   time interval_begin_{INVALID_TIME};
   time interval_end_{INVALID_TIME};
@@ -45,23 +45,16 @@ struct search {
     auto mutable_node = const_cast<node*>(q.from_);  // NOLINT
     auto const start_edge = create_start_edge(mutable_node);
 
-    time const schedule_begin = SCHEDULE_OFFSET_MINUTES;
-    time const schedule_end =
-        (q.sched_->schedule_end_ - q.sched_->schedule_begin_) / 60;
-
-
     auto interval_begin = q.interval_begin_;
     auto interval_end = q.interval_end_;
-    auto interval_length = q.interval_begin_ - q.interval_end_;
 
-    td_dijkstra td(q.from_, interval_begin, interval_end);
+    td_dijkstra td(q.from_, interval_begin, interval_end, q.sched_);
 
     td.run();
 
 
-
-    std::vector<station> stations;
-    std::vector<long> travel_times;
+    std::vector<station*> stations = td.get_stations();
+    std::vector<long> travel_times = td.get_remaining_times();
 
 
     return search_result(stations, travel_times,

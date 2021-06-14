@@ -46,9 +46,9 @@ msg_ptr isochrone::list_stations(msg_ptr const& msg) {
 
 
   for (auto const& station : res.stations_) {
-    auto const pos = Position(station.width_, station.length_);
-    stations.emplace_back(CreateStation(mc, mc.CreateString(station.eva_nr_),
-                                        mc.CreateString(station.name_), &pos));
+    auto const pos = Position(station->width_, station->length_);
+    stations.emplace_back(CreateStation(mc, mc.CreateString(station->eva_nr_),
+                                        mc.CreateString(station->name_), &pos));
   }
 
   mc.create_and_finish(
