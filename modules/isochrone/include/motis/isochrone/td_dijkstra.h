@@ -44,6 +44,7 @@ public:
   end_time_(end_time),
   sched_(sched) {
     times_.resize(2000000, UNREACHABLE);
+    is_result_.resize(2000000, false);
     times_[start->id_] = begin_time;
     pq_.push(label(start, begin_time, false));
   }
@@ -52,8 +53,10 @@ public:
   void run() {
     while (!pq_.empty()) {
       auto label = pq_.top();
-      if(label.node_->is_station_node()) {
+      if(!is_result_[label.node_->get_station()->id_]
+              && (label.node_->is_route_node() || (label.node_->is_station_node() && !label.last_conn_is_train_))) {
         results_.push_back(label);
+        is_result_[label.node_->get_station()->id_] = true;
       }
       pq_.pop();
 
@@ -102,6 +105,7 @@ public:
 private:
   dial<label, 12000, get_bucket> pq_;
   mcd::vector<time> times_;
+  mcd::vector<bool> is_result_;
   time end_time_;
   std::vector<label> results_;
   const schedule* sched_;
