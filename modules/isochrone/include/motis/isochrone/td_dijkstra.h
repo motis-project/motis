@@ -9,6 +9,7 @@
 
 #include "motis/core/common/dial.h"
 #include "build_query.h"
+#include "motis/isochrone/statistics.h"
 
 namespace motis::isochrone {
 
@@ -79,6 +80,9 @@ public:
 
   }
 
+  statistics get_statistics() {
+    return stats_;
+  }
 
 
   std::vector<station*> get_stations() {
@@ -101,6 +105,7 @@ private:
   time end_time_;
   std::vector<label> results_;
   const schedule* sched_;
+  statistics stats_;
 };
 
 } // namespace motis::isochrone

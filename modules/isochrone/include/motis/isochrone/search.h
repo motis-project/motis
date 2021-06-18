@@ -8,6 +8,7 @@
 #include "motis/core/schedule/schedule.h"
 
 #include "motis/isochrone/td_dijkstra.h"
+#include "motis/isochrone/statistics.h"
 
 namespace motis::isochrone {
 
@@ -22,13 +23,16 @@ struct search_query {
 
 struct search_result {
   search_result() = default;
-  search_result(std::vector<station*> stations,
+  search_result(statistics stats,
+                std::vector<station*> stations,
                 std::vector<long> travel_times, time interval_begin,
                 time interval_end)
-      : stations_(std::move(stations)),
+      : stats_(std::move(stats)),
+        stations_(std::move(stations)),
         travel_times_(std::move(travel_times)),
         interval_begin_(interval_begin),
         interval_end_(interval_end) {}
+  statistics stats_;
   std::vector<station*> stations_;
   std::vector<long> travel_times_;
   time interval_begin_{INVALID_TIME};
@@ -50,14 +54,16 @@ struct search {
 
     td_dijkstra td(q.from_, interval_begin, interval_end, q.sched_);
 
+    MOTIS_START_TIMING(time_dependent_dijkstra_timing);
     td.run();
+    MOTIS_STOP_TIMING(time_dependent_dijkstra_timing);
 
-
+    auto stats = td.get_statistics();
+    stats.time_dependent_dijkstra_ = MOTIS_TIMING_MS(time_dependent_dijkstra_timing);
     std::vector<station*> stations = td.get_stations();
     std::vector<long> travel_times = td.get_remaining_times();
 
-
-    return search_result(stations, travel_times,
+    return search_result(stats, stations, travel_times,
 
                          interval_begin, interval_end);
   }

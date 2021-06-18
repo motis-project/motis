@@ -20,25 +20,25 @@ enum error_code_t {
 
 class error_category_impl : public std::error_category {
 public:
-  const char* name() const noexcept override { return "motis::routing"; }
+  const char* name() const noexcept override { return "motis::isochrone"; }
 
   std::string message(int ev) const noexcept override {
     switch (ev) {
-      case error::ok: return "routing: no error";
+      case error::ok: return "isochrone: no error";
       case error::no_guess_for_station:
-        return "routing: station could not be guessed";
+        return "isochrone: station could not be guessed";
       case error::search_type_not_supported:
-        return "routing: requested search type not supported";
+        return "isochrone: requested search type not supported";
       case error::path_length_not_supported:
-        return "routing: path length not supported";
+        return "isochrone: path length not supported";
       case error::journey_date_not_in_schedule:
-        return "routing: journey date not in schedule";
-      case error::event_not_found: return "routing: event not found";
+        return "isochrone: journey date not in schedule";
+      case error::event_not_found: return "isochrone: event not found";
       case error::edge_type_not_supported:
-        return "routing: edge type not supported";
+        return "isochrone: edge type not supported";
       case error::too_many_start_labels:
-        return "routing: too many start labels (route edge not sorted?)";
-      default: return "routing: unknown error";
+        return "isochrone: too many start labels (route edge not sorted?)";
+      default: return "isochrone: unknown error";
     }
   }
 };
