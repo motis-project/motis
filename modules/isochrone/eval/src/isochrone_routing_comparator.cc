@@ -54,11 +54,11 @@ int main(int argc, char const** argv) {
     auto const r_msg = make_msg(line_r);
     auto const r_res = motis_content(RoutingResponse, r_msg);
     uint64_t at = 0;
-    for(auto it = r_res->connections()->begin(); it != r_res->connections()->end(); ++it) {
-
-    }
-    if (r_res->connections()->size() != 0) {
-      at = r_res->connections()->Get(0)->stops()->Get(r_res->connections()->Get(0)->stops()->size()-1)->arrival()->time();
+    for(auto it : *r_res->connections()) {
+      auto at_new = it->stops()->Get(it->stops()->size()-1)->arrival()->time();
+      if(at_new < at || at == 0) {
+        at = at_new;
+      }
     }
     auto const remaining_time = 3600 - (at - r_res->interval_begin());
     if (times.at(r_msg->id()) != remaining_time) {
