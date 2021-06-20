@@ -1,4 +1,3 @@
-//TODO: Generate queries for isochrone queries
 
 #include <algorithm>
 #include <fstream>
@@ -239,6 +238,6 @@ int main(int argc, char const** argv) {
 
 
   }
-
+  ofs.flush();
   return 0;
 }
