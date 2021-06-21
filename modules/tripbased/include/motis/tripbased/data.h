@@ -20,6 +20,9 @@ using station_id = uint32_t;
 using line_id = uint32_t;
 using stop_idx_t = uint16_t;
 
+constexpr auto const INVALID_TRIP_ID = std::numeric_limits<trip_id>::max();
+constexpr auto const INVALID_LINE_ID = std::numeric_limits<line_id>::max();
+
 struct tb_footpath {
   tb_footpath() = default;
   tb_footpath(station_id from_stop, station_id to_stop, unsigned duration)
@@ -97,7 +100,11 @@ struct tb_data {
                                     time earliest_departure) const {
     assert(line < line_count_);
     auto const first_trip_in_line = line_to_first_trip_[line];
+    if (first_trip_in_line == INVALID_TRIP_ID) {
+      return {{}, {}};
+    }
     auto const last_trip_in_line = line_to_last_trip_[line];
+    assert(last_trip_in_line != INVALID_TRIP_ID);
     if (first_trip_in_line < trip_idx_end_ &&
         trip_to_line_[first_trip_in_line] == line) {
       for (auto trip = first_trip_in_line; trip <= last_trip_in_line; ++trip) {
@@ -140,7 +147,11 @@ struct tb_data {
                                time latest_arrival) const {
     assert(line < line_count_);
     auto const first_trip_in_line = line_to_first_trip_[line];
+    if (first_trip_in_line == INVALID_TRIP_ID) {
+      return {{}, {}};
+    }
     auto const last_trip_in_line = line_to_last_trip_[line];
+    assert(last_trip_in_line != INVALID_TRIP_ID);
     if (first_trip_in_line < trip_idx_end_ &&
         trip_to_line_[first_trip_in_line] == line) {
       for (auto trip = static_cast<int>(line_to_last_trip_[line]);

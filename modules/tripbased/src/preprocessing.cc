@@ -77,8 +77,8 @@ struct preprocessing {
       auto const& route_trips = sched_.expanded_trips_.at(route_idx);
 
       if (route_trips.empty()) {
-        data_.line_to_first_trip_.push_back(0);
-        data_.line_to_last_trip_.push_back(0);
+        data_.line_to_first_trip_.push_back(INVALID_TRIP_ID);
+        data_.line_to_last_trip_.push_back(INVALID_TRIP_ID);
         data_.stops_on_line_.finish_key();
         data_.in_allowed_.finish_key();
         data_.out_allowed_.finish_key();
@@ -92,7 +92,7 @@ struct preprocessing {
       if (first_trip_id != data_.trip_to_line_.size()) {
         utl::verify(first_trip_id > data_.trip_to_line_.size(),
                     "out of order trips not supported");
-        data_.trip_to_line_.resize(first_trip_id);
+        data_.trip_to_line_.resize(first_trip_id, INVALID_LINE_ID);
         data_.arrival_times_.skip_to_key(first_trip_id);
         data_.departure_times_.skip_to_key(first_trip_id);
       }
@@ -261,7 +261,6 @@ struct preprocessing {
       for (auto& t : threads) {
         t.join();
       }
-      assert(transfers_queue_.empty());
     } else {
       precompute_transfers_thread(0, 1);
     }
@@ -272,6 +271,9 @@ struct preprocessing {
               << " u-turns + " << no_improvements_ << " no improvements)";
     assert(data_.transfers_.finished());
     std::cout.imbue(prev_locale);
+    utl::verify(transfers_queue_.empty(),
+                "transfers queue not empty: {} entries remaining",
+                transfers_queue_.size());
   }
 
   void precompute_reverse_transfers() {
@@ -305,7 +307,6 @@ struct preprocessing {
       for (auto& t : threads) {
         t.join();
       }
-      assert(transfers_queue_.empty());
     } else {
       precompute_reverse_transfers_thread(0, 1);
     }
@@ -316,6 +317,9 @@ struct preprocessing {
               << " u-turns + " << no_improvements_ << " no improvements)";
     assert(data_.reverse_transfers_.finished());
     std::cout.imbue(prev_locale);
+    utl::verify(reverse_transfers_queue_.empty(),
+                "reverse transfers queue not empty: {} entries remaining",
+                reverse_transfers_queue_.size());
   }
 
 private:
@@ -327,6 +331,10 @@ private:
     for (uint64_t trip_idx = first_trip_idx; trip_idx < data_.trip_idx_end_;
          trip_idx += stride) {
       auto const line_idx = data_.trip_to_line_[trip_idx];
+      if (line_idx == INVALID_LINE_ID) {
+        add_transfers(trip_idx, {});
+        continue;
+      }
       auto const out_allowed = data_.out_allowed_[line_idx];
 
       auto const line_stop_count = data_.line_stop_count_[line_idx];
@@ -420,6 +428,11 @@ private:
     for (uint64_t trip_idx = first_trip_idx; trip_idx < data_.trip_idx_end_;
          trip_idx += stride) {
       auto const line_idx = data_.trip_to_line_[trip_idx];
+      if (line_idx == INVALID_LINE_ID) {
+        add_reverse_transfers(trip_idx, {});
+        continue;
+      }
+
       auto const in_allowed = data_.in_allowed_[line_idx];
 
       auto const line_stop_count = data_.line_stop_count_[line_idx];
@@ -579,12 +592,12 @@ private:
     if (std::chrono::duration_cast<std::chrono::milliseconds>(
             now - last_progress_update_)
             .count() >= 1000) {
-      auto const percentage =
-          static_cast<int>(std::round(100.0 * static_cast<double>(trip + 1) /
-                                      static_cast<double>(data_.trip_count_)));
+      auto const percentage = static_cast<int>(
+          std::round(100.0 * static_cast<double>(trip + 1) /
+                     static_cast<double>(data_.trip_idx_end_)));
       progress_tracker_->update(percentage);
       LOG(info) << percentage << "% - " << (trip + 1) << "/"
-                << data_.trip_count_ << " trips... " << transfer_count
+                << data_.trip_idx_end_ << "... " << transfer_count
                 << " transfers, " << (uturns_ + no_improvements_)
                 << " ignored (" << uturns_ << " u-turns + " << no_improvements_
                 << " no improvements)";
