@@ -344,6 +344,18 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
     }
   }
 
+  if (dir == search_dir::BWD && transports.back().is_walk()) {
+    auto& second_to_last = stops[stops.size() - 2];
+    auto& last = stops[stops.size() - 1];
+
+    second_to_last.d_time_ = second_to_last.a_time_;
+    second_to_last.d_sched_time_ = second_to_last.a_sched_time_;
+
+    auto const walk_duration = transports.back().duration_;
+    last.a_time_ = second_to_last.d_time_ + walk_duration;
+    last.a_sched_time_ = second_to_last.d_sched_time_ + walk_duration;
+  }
+
   return ret;
 }
 

@@ -45,7 +45,7 @@ auto const parser_config = hrd_5_20_26;
 int main(int argc, char** argv) {
   if (argc < 4) {
     std::cout << "usage: " << argv[0]
-              << " src-schedule target-schedule response [response, ...]";
+              << " src-schedule target-schedule response [response, ...]\n";
     return 0;
   }
 
@@ -314,7 +314,7 @@ int main(int argc, char** argv) {
   }
 
   for (auto const& file : {ATTRIBUTES, TRACKS, INFOTEXT, THROUGH_SERVICES,
-                           MERGE_SPLIT_SERVICES, DIRECTIONS}) {
+                           MERGE_SPLIT_SERVICES, DIRECTIONS, MIN_CT_FILE}) {
     std::ofstream out{
         (new_schedule_path / CORE_DATA / parser_config.files(file)).c_str()};
   }
