@@ -53,8 +53,9 @@ public:
   void run() {
     while (!pq_.empty()) {
       auto label = pq_.top();
-      if(!is_result_[label.node_->get_station()->id_]
-              && (label.node_->is_route_node() || (label.node_->is_station_node() && !label.last_conn_is_train_))) {
+      if(!is_result_[label.node_->get_station()->id_]&&
+          ((label.node_->is_route_node() && is_exit_possible(&label))||
+           (label.node_->is_station_node() && !label.last_conn_is_train_))) {
         results_.push_back(label);
         is_result_[label.node_->get_station()->id_] = true;
       }
@@ -74,6 +75,9 @@ public:
       lcon = &l;
     }
     auto ec = edge.get_edge_cost(t, lcon);
+    if(!ec.is_valid()) {
+      return;
+    }
 
     time new_time = (ec.time_<=end_time_) ? t + ec.time_ : UNREACHABLE;
     if (new_time < times_[edge.to_->id_] && new_time <= end_time_) {
@@ -83,10 +87,20 @@ public:
 
   }
 
+  bool is_exit_possible(label* l){
+    bool possible = false;
+    for(auto const& edge : l->node_->edges_){
+      if(edge.to_->is_station_node()) {
+        possible = edge.valid();
+      }
+    }
+    return possible;
+  }
+
+
   statistics get_statistics() {
     return stats_;
   }
-
 
   std::vector<station*> get_stations() {
     auto stations = std::vector<station*>(results_.size());
@@ -99,7 +113,7 @@ public:
   std::vector<long> get_remaining_times() {
     auto remaining_times = std::vector<long>(results_.size());
     std::transform(results_.begin(), results_.end(), remaining_times.begin(),
-                   [this](label l) -> long { return end_time_-l.now_ ; });
+                   [this](label l) -> long { return (end_time_-l.now_)*60 ; });
     return remaining_times;
   }
 private:
