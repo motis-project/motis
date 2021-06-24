@@ -736,15 +736,16 @@ std::unique_ptr<tb_data> load_data(schedule const& sched,
   return serialization::read_data(filename, sched);
 }
 
-void update_data_file(schedule const& sched, std::string const& filename,
-                      bool const force_update) {
+std::unique_ptr<tb_data> update_data_file(schedule const& sched,
+                                          std::string const& filename,
+                                          bool const force_update) {
   utl::verify(!filename.empty(), "update_data_file: filename empty");
 
   if (!force_update && fs::exists(filename)) {
     LOG(info) << "loading trip-based data from file " << filename;
     scoped_timer load_timer{"trip-based deserialization"};
     if (serialization::data_okay_for_schedule(filename, sched)) {
-      return;
+      return {};
     } else {
       LOG(info) << "existing trip-based data is not okay: " << filename;
     }
@@ -755,6 +756,7 @@ void update_data_file(schedule const& sched, std::string const& filename,
   LOG(info) << "writing trip-based data to file " << filename;
   scoped_timer write_timer{"trip-based serialization"};
   serialization::write_data(*data, filename, sched);
+  return data;
 }
 
 }  // namespace motis::tripbased
