@@ -15,7 +15,7 @@ struct fws_multimap_entry {
 
   fws_multimap_entry(mcd::vector<T> const& data,
                      mcd::vector<Index> const& index, Index key)
-      : data_(data), index_start(index[key]), index_end(index[key + 1]) {}
+      : data_(data), index_start(index[key]), index_end(index[key + 1]), key_{key} {}
 
   fws_multimap_entry(mcd::vector<T> const& data, Index start_index,
                      Index end_index)
@@ -44,9 +44,12 @@ struct fws_multimap_entry {
   inline std::size_t size() const { return index_end - index_start; }
   inline bool empty() const { return size() == 0; }
 
+  inline Index key() const {return key_;}
+
   mcd::vector<T> const& data_;
   Index const index_start;
   Index const index_end;
+  Index key_;
 };
 
 template <typename MapType, typename EntryType>
