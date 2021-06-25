@@ -132,11 +132,11 @@ inline void update_expanded_trips(
     }
   }
 
+  auto new_exp_routes = sched.route_to_expanded_routes_[new_route_id];
   for (auto const new_trip : new_trips) {
     auto new_exp_route = sched.expanded_trips_.emplace_back();
     new_exp_route.emplace_back(new_trip);
-    sched.route_to_expanded_routes_[new_route_id].emplace_back(
-        new_exp_route.index());
+    new_exp_routes.emplace_back(new_exp_route.index());
   }
 }
 
