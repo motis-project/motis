@@ -25,6 +25,8 @@ using namespace motis::bootstrap;
 using namespace motis::module;
 using namespace motis::routing;
 
+std::string const TARGET_ESCAPE = "${target}";
+
 struct generator_settings : public conf::configuration {
   generator_settings() : configuration("Generator Settings") {
     param(query_count_, "query_count", "number of queries to generate");
@@ -243,8 +245,7 @@ std::pair<std::string, std::string> random_station_ids(
 
 std::string replace_target_escape(std::string const& str,
                                   std::string const& target) {
-  std::string const target_escape = "${target}";
-  auto const esc_pos = str.find(target_escape);
+  auto const esc_pos = str.find(TARGET_ESCAPE);
   if (esc_pos == std::string::npos) {
     return str;
   }
@@ -256,7 +257,7 @@ std::string replace_target_escape(std::string const& str,
   std::replace(clean_target.begin(), clean_target.end(), '/', '_');
 
   auto target_str = str;
-  target_str.replace(esc_pos, target_escape.size(), clean_target);
+  target_str.replace(esc_pos, TARGET_ESCAPE.size(), clean_target);
 
   return target_str;
 }
@@ -279,6 +280,17 @@ int main(int argc, char const** argv) {
   }
 
   parser.read_configuration_file();
+
+  bool fns_contain_target_esc =
+      (generator_opt.target_file_fwd_.find(TARGET_ESCAPE) !=
+           std::string::npos &&
+       generator_opt.target_file_bwd_.find(TARGET_ESCAPE) != std::string::npos);
+
+  if (generator_opt.targets_.size() > 1 && !fns_contain_target_esc) {
+    std::cout << "Multiple targets specified, but not every filename contains "
+                 "target escape sequence \"${target}\"\n";
+    return 1;
+  }
 
   std::cout << "\n\tQuery Generator\n\n";
   parser.print_unrecognized(std::cout);
