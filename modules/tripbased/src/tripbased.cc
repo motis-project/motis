@@ -647,23 +647,32 @@ void tripbased::import(motis::module::registry& reg) {
         auto const schedule =
             motis_content(ScheduleEvent, dependencies.at("SCHEDULE"));
 
-        if (!use_data_file_) {
-          import_successful_ = true;
-          return;
+        std::unique_ptr<tb_data> data;
+        auto const& sched = get_schedule();
+
+        if (use_data_file_) {
+          auto const dir = get_data_directory() / "tripbased";
+          boost::filesystem::create_directories(dir);
+          auto const filename = dir / "tripbased.bin";
+
+          auto const state = import_state{schedule->hash()};
+
+          data = update_data_file(
+              sched, filename.generic_string(),
+              read_ini<import_state>(dir / "import.ini") != state);
+          write_ini(dir / "import.ini", state);
+
+          if (!data) {
+            data = load_data(sched, filename.generic_string());
+          }
+        } else {
+          data = build_data(sched);
         }
 
-        auto const dir = get_data_directory() / "tripbased";
-        boost::filesystem::create_directories(dir);
-        auto const filename = dir / "tripbased.bin";
-
-        auto const state = import_state{schedule->hash()};
-
-        auto const& sched = get_schedule();
-        update_data_file(sched, filename.generic_string(),
-                         read_ini<import_state>(dir / "import.ini") != state);
-
-        import_successful_ = true;
-        write_ini(dir / "import.ini", state);
+        if (data) {
+          impl_ = std::make_unique<impl>(std::move(data));
+          import_successful_ = true;
+        }
       })
       ->require("SCHEDULE", [](msg_ptr const& msg) {
         return msg->get()->content_type() == MsgContent_ScheduleEvent;
@@ -672,15 +681,6 @@ void tripbased::import(motis::module::registry& reg) {
 
 void tripbased::init(motis::module::registry& reg) {
   try {
-    if (use_data_file_) {
-      auto const filename =
-          get_data_directory() / "tripbased" / "tripbased.bin";
-      impl_ = std::make_unique<impl>(
-          load_data(get_sched(), filename.generic_string()));
-    } else {
-      impl_ = std::make_unique<impl>(build_data(get_sched()));
-    }
-
     reg.register_op("/tripbased",
                     [this](msg_ptr const& m) { return impl_->route(m); });
     reg.register_op("/tripbased/debug",

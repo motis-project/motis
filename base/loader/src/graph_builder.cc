@@ -303,22 +303,21 @@ bool graph_builder::are_duplicates(Service const* service_a,
 
 void graph_builder::add_expanded_trips(route const& r) {
   assert(!r.empty());
-  auto trips_added = false;
   auto const& re = r.front().get_route_edge();
   if (re != nullptr) {
+    auto const route_id = re->from_->route_;
+    auto route_trips = sched_.expanded_trips_.emplace_back();
+    sched_.route_to_expanded_routes_[route_id].emplace_back(
+        route_trips.index());
     for (auto const& lc : re->m_.route_edge_.conns_) {
       auto const& merged_trips = sched_.merged_trips_[lc.trips_];
       assert(merged_trips != nullptr);
       assert(merged_trips->size() == 1);
       auto const trp = merged_trips->front();
       if (check_trip(trp)) {
-        sched_.expanded_trips_.push_back(trp);
-        trips_added = true;
+        route_trips.push_back(trp);
       }
     }
-  }
-  if (trips_added) {
-    sched_.expanded_trips_.finish_key();
   }
 }
 
@@ -779,10 +778,6 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
     }
   }
 
-  if (opt.expand_trips_) {
-    sched->expanded_trips_.finish_map();
-  }
-
   progress_tracker->status("Footpaths").out_bounds(85, 90);
   build_footpaths(*sched, opt, builder.stations_, fbs_schedules);
 
@@ -829,8 +824,8 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
   LOG(info) << builder.next_route_index_ << " routes";
   LOG(info) << sched->trip_mem_.size() << " trips";
   if (opt.expand_trips_) {
-    LOG(info) << sched->expanded_trips_.index_size() - 1 << " expanded routes";
-    LOG(info) << sched->expanded_trips_.data_size() << " expanded trips";
+    LOG(info) << sched->expanded_trips_.index_size() << " expanded routes";
+    LOG(info) << sched->expanded_trips_.element_count() << " expanded trips";
     LOG(info) << builder.broken_trips_ << " broken trips ignored";
   }
 

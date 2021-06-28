@@ -40,11 +40,7 @@ struct dynamic_fws_multimap_base {
     size_type capacity() const { return get_index().capacity_; }
     [[nodiscard]] bool empty() const { return size() == 0; }
 
-    iterator begin() {
-      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
-                 .data_.begin() +
-             get_index().begin_;
-    }
+    iterator begin() { return mutable_mm().data_.begin() + get_index().begin_; }
 
     const_iterator begin() const {
       return multimap_.data_.begin() + get_index().begin_;
@@ -52,9 +48,7 @@ struct dynamic_fws_multimap_base {
 
     iterator end() {
       auto const& index = get_index();
-      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
-                 .data_.begin() +
-             index.begin_ + index.size_;
+      return mutable_mm().data_.begin() + index.begin_ + index.size_;
     }
 
     const_iterator end() const {
@@ -71,8 +65,7 @@ struct dynamic_fws_multimap_base {
     friend const_iterator end(bucket const& b) { return b.end(); }
 
     T& operator[](size_type index) {
-      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
-          .data_[get_index().begin_ + index];
+      return mutable_mm().data_[get_index().begin_ + index];
     }
 
     T const& operator[](size_type index) const {
@@ -80,13 +73,18 @@ struct dynamic_fws_multimap_base {
     }
 
     T& at(size_type index) {
-      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
-          .data_[get_and_check_data_index(index)];
+      return mutable_mm().data_[get_and_check_data_index(index)];
     }
 
     T const& at(size_type index) const {
       return multimap_.data_[get_and_check_data_index(index)];
     }
+
+    T& front() { return (*this)[0]; }
+    T const& front() const { return (*this)[0]; }
+
+    T& back() { return (*this)[size() - 1]; }
+    T const& back() const { return (*this)[size() - 1]; }
 
     size_type data_index(size_type index) const {
       return get_index().begin_ + index;
@@ -94,29 +92,105 @@ struct dynamic_fws_multimap_base {
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
     size_type push_back(entry_type const& val) {
-      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
-          .push_back_entry(index_, val);
+      return mutable_mm().push_back_entry(index_, val);
     }
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>,
               typename... Args>
     size_type emplace_back(Args&&... args) {
-      return const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
-          .emplace_back_entry(index_, std::forward<Args>(args)...);
+      return mutable_mm().emplace_back_entry(index_,
+                                             std::forward<Args>(args)...);
+    }
+
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    void insert(T* it, T&& val) {
+      auto const pos = std::distance(begin(), it);
+      auto& index = get_index();
+      reserve(index.size_ + 1);
+      it = std::next(begin(), pos);
+      std::move_backward(it, end(), std::next(end()));
+      new (it) T{std::move(val)};
+      index.size_++;
+      mutable_mm().element_count_++;
     }
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
     void reserve(size_type new_size) {
       if (new_size > capacity()) {
-        const_cast<dynamic_fws_multimap_base&>(multimap_)  // NOLINT
-            .grow_bucket(index_, get_index(), new_size);
+        mutable_mm().grow_bucket(index_, get_index(), new_size);
       }
+    }
+
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    void resize(size_type new_size, T init = T{}) {
+      auto const old_size = size();
+      reserve(new_size);
+      auto& index = get_index();
+      auto& data = mutable_mm().data_;
+      if (new_size < old_size) {
+        for (auto i = new_size; i < old_size; ++i) {
+          data[index.begin_ + i].~T();
+        }
+        mutable_mm().element_count_ -= old_size - new_size;
+      } else if (new_size > old_size) {
+        for (auto i = old_size; i < new_size; ++i) {
+          new (&data[index.begin_ + i]) T{init};
+        }
+        mutable_mm().element_count_ += new_size - old_size;
+      }
+      index.size_ = new_size;
+    }
+
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    void pop_back() {
+      if (!empty()) {
+        resize(size() - 1);
+      }
+    }
+
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    void clear() {
+      auto& index = get_index();
+      auto& data = mutable_mm().data_;
+      for (auto i = index.begin_; i < index.begin_ + index.size_; ++i) {
+        data[i].~T();
+      }
+      mutable_mm().element_count_ -= index.size_;
+      index.size_ = 0;
+    }
+
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    T* erase(T* pos) {
+      T* last = std::prev(end());
+      while (pos < last) {
+        std::swap(*pos, *std::next(pos));
+        pos = std::next(pos);
+      }
+      pos->~T();
+      get_index().size_--;
+      mutable_mm().element_count_--;
+      return end();
+    }
+
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    T* erase(T* first, T* last) {
+      if (first != last) {
+        auto const new_end = std::move(last, end(), first);
+        for (auto it = new_end; it != end(); it = std::next(it)) {
+          it->~T();
+        }
+        auto const count = std::distance(new_end, end());
+        get_index().size_ -= count;
+        mutable_mm().element_count_ -= count;
+      }
+      return end();
     }
 
   protected:
     bucket(dynamic_fws_multimap_base const& multimap, size_type index)
         : multimap_(multimap), index_(index) {}
 
+    index_type& get_index() { return mutable_mm().index_[index_]; }
     index_type const& get_index() const { return multimap_.index_[index_]; }
 
     size_type get_and_check_data_index(size_type index) const {
@@ -126,6 +200,10 @@ struct dynamic_fws_multimap_base {
             "dynamic_fws_multimap::bucket::at() out of range"};
       }
       return idx.begin_ + index;
+    }
+
+    dynamic_fws_multimap_base& mutable_mm() {
+      return const_cast<dynamic_fws_multimap_base&>(multimap_);  // NOLINT
     }
 
     dynamic_fws_multimap_base const& multimap_;
@@ -263,7 +341,13 @@ struct dynamic_fws_multimap_base {
     }
   }
 
-  mutable_bucket emplace_back() { return this[index_size()]; }
+  mutable_bucket front() { return (*this)[0]; }
+  const_bucket front() const { return (*this)[0]; }
+
+  mutable_bucket back() { return (*this)[index_size() - 1]; }
+  const_bucket back() const { return (*this)[index_size() - 1]; }
+
+  mutable_bucket emplace_back() { return (*this)[index_size()]; }
 
   size_type index_size() const { return index_.size(); }
   size_type data_size() const { return data_.size(); }

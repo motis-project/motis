@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utl/erase.h"
 #include "utl/to_vec.h"
 
 #include "motis/core/schedule/schedule.h"
@@ -303,8 +304,28 @@ inline void update_delay_infos(
   }
 }
 
+inline void update_expanded_trip(
+    schedule& sched, trip* trp,
+    mcd::vector<trip::route_edge> const& trip_edges) {
+  if (!trp->edges_->empty()) {
+    auto const old_route_id = trp->edges_->front()->from_->route_;
+    for (auto const old_exp_route_id :
+         sched.route_to_expanded_routes_.at(old_route_id)) {
+      utl::erase(sched.expanded_trips_.at(old_exp_route_id), trp);
+    }
+  }
+  if (!trip_edges.empty()) {
+    auto const new_route_id = trip_edges.front()->from_->route_;
+    auto new_exp_route = sched.expanded_trips_.emplace_back();
+    new_exp_route.emplace_back(trp);
+    sched.route_to_expanded_routes_[new_route_id].emplace_back(
+        new_exp_route.index());
+  }
+}
+
 inline void update_trip(schedule& sched, trip* trp,
                         mcd::vector<trip::route_edge> const& trip_edges) {
+  update_expanded_trip(sched, trp, trip_edges);
   for (auto const& trp_e : *trp->edges_) {
     auto const e = trp_e.get_edge();
     e->m_.route_edge_.conns_[trp->lcon_idx_].valid_ = 0U;

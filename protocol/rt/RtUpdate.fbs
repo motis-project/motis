@@ -20,6 +20,7 @@ table UpdatedRtEventInfo {
 table RtDelayUpdate {
   trip: motis.TripId;
   events: [UpdatedRtEventInfo];
+  trip_separated: bool;
 }
 
 table RtRerouteUpdate {

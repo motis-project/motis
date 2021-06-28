@@ -36,7 +36,7 @@ struct tb_ontrip_search {
         count_final_transfer_time_(count_final_transfer_time),
         destination_mode_(dest_mode),
         destination_arrivals_(data.line_count_),
-        first_reachable_stop_(data.trip_count_,
+        first_reachable_stop_(data.trip_idx_end_,
                               Dir == search_dir::FWD
                                   ? std::numeric_limits<stop_idx_t>::max()
                                   : std::numeric_limits<stop_idx_t>::min()) {}
@@ -321,7 +321,7 @@ private:
 
       auto const line = data_.trip_to_line_[trip];
       for (trip_id t = trip;
-           t < data_.trip_count_ && data_.trip_to_line_[t] == line; ++t) {
+           t < data_.trip_idx_end_ && data_.trip_to_line_[t] == line; ++t) {
         first_reachable_stop_[t] =
             std::min(first_reachable_stop_[t], stop_index);
       }
