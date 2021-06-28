@@ -110,7 +110,7 @@ schedule_ptr load_schedule(loader_options const& opt,
 
     auto progress_tracker = utl::activate_progress_tracker(
         opt.dataset_prefix_.empty() || opt.dataset_prefix_[i].empty()
-            ? std::string{"parse {}", i}
+            ? fmt::format("parse {}", i)
             : fmt::format("parse {}", opt.dataset_prefix_[i]));
 
     flatbuffers64::FlatBufferBuilder builder;
