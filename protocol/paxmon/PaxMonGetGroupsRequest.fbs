@@ -1,0 +1,12 @@
+include "paxmon/PaxMonGroup.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonGetGroupsRequest {
+  ids: [ulong];
+  sources: [PaxMonDataSource];
+
+  all_generations: bool;
+  include_localization: bool;
+  preparation_time: short; // min
+}

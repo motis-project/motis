@@ -1,0 +1,16 @@
+include "base/TripServiceInfo.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonStatusResponse {
+  system_time: ulong;
+
+  // system state
+  tracked_groups: ulong;
+
+  // last update
+  last_update_affected_groups: ulong;
+  last_update_affected_passengers: ulong;
+  last_update_broken_groups: ulong;
+  last_update_broken_passengers: ulong;
+}

@@ -47,6 +47,7 @@ jobs:
             os: macos-latest
             artifact: macos
             avx: On
+            avx2: Off
             webui: On
           - name: GCC 10 Release
             cxx: g++-10
@@ -55,6 +56,7 @@ jobs:
             os: ubuntu-20.04
             artifact: linux
             avx: On
+            avx2: On
             webui: On
           - name: GCC 10 Release
             cxx: g++-10
@@ -63,6 +65,7 @@ jobs:
             os: ubuntu-20.04
             artifact: linux-noavx
             avx: Off
+            avx2: Off
             webui: On
           - name: GCC 10 Debug
             cxx: g++-10
@@ -70,6 +73,7 @@ jobs:
             mode: Debug
             os: ubuntu-20.04
             avx: On
+            avx2: On
             webui: Off
           - name: Clang 11 Release
             cxx: clang++-11
@@ -79,6 +83,7 @@ jobs:
             ldflags: -lc++abi
             os: ubuntu-20.04
             avx: On
+            avx2: On
             webui: Off
           - name: Clang Tidy
             cxx: clang++-11
@@ -89,6 +94,7 @@ jobs:
             lint: true
             os: ubuntu-20.04
             avx: On
+            avx2: On
             webui: Off
           - key: Clang 11 Sanitizer
             cxx: clang++-11
@@ -99,6 +105,7 @@ jobs:
             ldflags: -lc++abi
             os: ubuntu-20.04
             avx: On
+            avx2: On
             webui: Off
     env:
       DEBIAN_FRONTEND: noninteractive
@@ -168,6 +175,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} \
             -DMOTIS_LINT=${{ matrix.config.lint }} \
             -DMOTIS_AVX=${{ matrix.config.avx }} \
+            -DMOTIS_AVX2=${{ matrix.config.avx2 }} \
             -DCTX_ASAN=${{ contains(matrix.config.cxxflags, '-fsanitize=address') }} \
             -DCTX_VALGRIND=${{ matrix.config.cc == 'gcc-10' && matrix.config.mode == 'Debug' }} \
             -DMOTIS_WITH_WEBUI=${{ matrix.config.webui }}

@@ -27,6 +27,13 @@ inline flatbuffers::Offset<TripId> to_fbs(schedule const& sched,
       motis_to_unixtime(sched, s.target_time_), fbb.CreateString(s.line_id_));
 }
 
+inline flatbuffers::Offset<TripId> to_fbs(flatbuffers::FlatBufferBuilder& fbb,
+                                          extern_trip const& t) {
+  return CreateTripId(fbb, fbb.CreateString(t.station_id_), t.train_nr_,
+                      t.time_, fbb.CreateString(t.target_station_id_),
+                      t.target_time_, fbb.CreateString(t.line_id_));
+}
+
 inline trip const* from_extern_trip(schedule const& sched,
                                     extern_trip const* t) {
   return get_trip(sched, t->station_id_, t->train_nr_, t->time_,

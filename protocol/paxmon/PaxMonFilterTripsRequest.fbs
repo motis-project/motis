@@ -1,0 +1,6 @@
+namespace motis.paxmon;
+
+table PaxMonFilterTripsRequest {
+  load_factor_possibly_ge: float;
+  ignore_past_sections: bool;
+}

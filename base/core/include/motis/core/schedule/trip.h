@@ -39,6 +39,7 @@ struct primary_trip_id {
     return a == b;
   }
 
+  uint32_t get_station_id() const { return static_cast<uint32_t>(station_id_); }
   motis::time get_time() const { return static_cast<motis::time>(time_); }
   uint32_t get_train_nr() const { return static_cast<uint32_t>(train_nr_); }
 

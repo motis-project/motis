@@ -18,17 +18,17 @@ constexpr time INVALID_TIME = USHRT_MAX;
 constexpr int SCHEDULE_OFFSET_DAYS = 5;
 constexpr time SCHEDULE_OFFSET_MINUTES = MINUTES_A_DAY * SCHEDULE_OFFSET_DAYS;
 
-inline time to_motis_time(int minutes) {
+constexpr inline time to_motis_time(int minutes) {
   // plus four days, because the maximum journey duration is 4 days
   // plus one day, because the first valid motis timestamp is MINUTES_A_DAY
   return SCHEDULE_OFFSET_MINUTES + minutes;
 }
 
-inline time to_motis_time(int day_index, int minutes) {
+constexpr inline time to_motis_time(int day_index, int minutes) {
   return to_motis_time(day_index * MINUTES_A_DAY + minutes);
 }
 
-inline time to_motis_time(int day_index, int hours, int minutes) {
+constexpr inline time to_motis_time(int day_index, int hours, int minutes) {
   return to_motis_time(day_index, hours * 60 + minutes);
 }
 

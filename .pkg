@@ -25,7 +25,7 @@
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
-  commit=34d0435ad07feb55dabd64d99482dd5d28972584
+  commit=c68ab4be8f3cb0e5c6eb181b3f419622e15e02bd
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
