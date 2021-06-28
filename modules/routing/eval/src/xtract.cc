@@ -307,7 +307,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  for (auto const& file : {BASIC_DATA, TIMEZONES}) {
+  for (auto const& file : {BASIC_DATA, TIMEZONES, MIN_CT_FILE}) {
     fs::copy_file(schedule_path / CORE_DATA / parser_config.files(file),
                   new_schedule_path / CORE_DATA / parser_config.files(file),
                   fs::copy_option::overwrite_if_exists);
