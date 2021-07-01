@@ -64,7 +64,9 @@ jobs:
             -DMOTIS_WITH_WEBUI=${{ matrix.config.webui }}
           .\build\buildcache\bin\buildcache.exe -z
           cmake --build build --target motis motis-test motis-itest motis-eval motis-intermodal-eval
+          $CompilerExitCode = $LastExitCode
           .\build\buildcache\bin\buildcache.exe -s
+          exit $CompilerExitCode
 
       # ==== TESTS ====
       - name: Run Test Mode
