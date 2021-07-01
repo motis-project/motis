@@ -21,7 +21,7 @@ struct trip_section_with_load {
   trip_section_with_load(schedule const& sched, paxmon_data const& data,
                          trip const* trp, trip_data const* td, int const idx)
       : section_{trp, idx},
-        edge_{td == nullptr ? nullptr : td->edges_.at(idx)} {
+        edge_{td == nullptr ? nullptr : td->edges_.at(idx).get(data.graph_)} {
     if (edge_ != nullptr) {
       capacity_ = edge_->capacity();
       capacity_source_ = edge_->get_capacity_source();

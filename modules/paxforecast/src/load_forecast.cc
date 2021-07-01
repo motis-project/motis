@@ -55,6 +55,8 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
     return trip_load_info{
         trp,
         utl::all(data.graph_.trip_data_.at(trp)->edges_)  //
+            | utl::transform(
+                  [&](auto const& e) { return e.get(data.graph_); })  //
             | utl::remove_if([](auto const e) { return !e->is_trip(); })  //
             | utl::transform([&](auto const e) {
                 auto const it = edges.find(e);

@@ -85,7 +85,7 @@ void print_trip_sections(graph const& g, schedule const& sched, trip const* trp,
   std::cout << "paxmon trip:\n";
   if (td != nullptr) {
     for (auto const e : td->edges_) {
-      print_trip_edge(sched, g, e);
+      print_trip_edge(sched, g, e.get(g));
     }
   } else {
     std::cout << "  not found\n";

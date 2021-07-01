@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "utl/enumerate.h"
+
 #include "motis/data.h"
 #include "motis/hash_map.h"
 #include "motis/vector.h"
@@ -25,7 +27,19 @@
 namespace motis::paxmon {
 
 struct edge;
+struct edge_idx;
 struct graph;
+
+using event_node_idx = std::uint32_t;
+
+edge* get_edge(graph const& g, edge_idx const& ei);
+
+struct edge_idx {
+  inline edge* get(graph const& g) const { return get_edge(g, *this); }
+
+  event_node_idx node_{};
+  std::uint32_t out_edge_idx_{};
+};
 
 struct event_node {
   inline bool is_valid() const { return valid_; }
@@ -48,6 +62,9 @@ struct event_node {
     return *sched.stations_[station_idx()];
   }
 
+  inline std::uint32_t index(graph const&) const { return index_; }
+
+  event_node_idx index_{};
   time time_{INVALID_TIME};
   time schedule_time_{INVALID_TIME};
   event_type type_{event_type::ARR};
@@ -138,9 +155,9 @@ struct edge {
 };
 
 struct trip_data {
-  std::vector<edge*> edges_;
-  std::vector<event_node*> canceled_nodes_;
-  event_node enter_exit_node_;
+  std::vector<edge_idx> edges_;
+  std::vector<event_node_idx> canceled_nodes_;
+  event_node_idx enter_exit_node_{};
 };
 
 struct graph {
@@ -159,5 +176,20 @@ struct graph {
   allocator<passenger_group> passenger_group_allocator_;
   mcd::hash_map<data_source, mcd::vector<std::uint64_t>> groups_by_source_;
 };
+
+inline edge* get_edge(graph const& g, edge_idx const& ei) {
+  return g.nodes_.at(ei.node_)->outgoing_edges(g).at(ei.out_edge_idx_).get();
+}
+
+inline edge_idx get_edge_idx(graph const& g, edge const* e) {
+  auto const from = e->from(g);
+  auto const node_idx = from->index(g);
+  for (auto const& [i, ep] : utl::enumerate(from->outgoing_edges(g))) {
+    if (ep.get() == e) {
+      return edge_idx{node_idx, static_cast<std::uint32_t>(i)};
+    }
+  }
+  throw std::runtime_error{"get_edge_idx: edge not found"};
+}
 
 }  // namespace motis::paxmon

@@ -660,13 +660,16 @@ msg_ptr paxmon::find_trips(msg_ptr const& msg) {
     }
     auto const all_edges_have_capacity_info =
         has_paxmon_data &&
-        std::all_of(
-            begin(tde->second->edges_), end(tde->second->edges_),
-            [](edge const* e) { return !e->is_trip() || e->has_capacity(); });
+        std::all_of(begin(tde->second->edges_), end(tde->second->edges_),
+                    [&](auto const& ei) {
+                      auto const* e = ei.get(data_.graph_);
+                      return !e->is_trip() || e->has_capacity();
+                    });
     auto const has_passengers =
         has_paxmon_data &&
         std::any_of(begin(tde->second->edges_), end(tde->second->edges_),
-                    [](edge const* e) {
+                    [&](auto const& ei) {
+                      auto const* e = ei.get(data_.graph_);
                       return e->is_trip() &&
                              !e->get_pax_connection_info().groups_.empty();
                     });
@@ -868,7 +871,8 @@ msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
   mcd::hash_set<trip const*> selected_trips;
 
   for (auto const& tde : data_.graph_.trip_data_) {
-    for (auto const e : tde.second->edges_) {
+    for (auto const& ei : tde.second->edges_) {
+      auto const* e = ei.get(data_.graph_);
       if (!e->is_trip() || !e->has_capacity()) {
         continue;
       }

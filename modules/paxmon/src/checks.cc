@@ -31,8 +31,10 @@ bool check_graph_integrity(graph const& g, schedule const& sched) {
         auto const& trips = e->get_trips(sched);
         for (auto const& trp : trips) {
           auto const& td = g.trip_data_.at(trp);
-          if (std::find(begin(td->edges_), end(td->edges_), e.get()) ==
-              end(td->edges_)) {
+          if (std::find_if(begin(td->edges_), end(td->edges_),
+                           [&](auto const& ei) {
+                             return ei.get(g) == e.get();
+                           }) == end(td->edges_)) {
             std::cout << "!! edge missing in trip_data.edges @" << e->type()
                       << "\n";
             ok = false;
@@ -48,7 +50,8 @@ bool check_graph_integrity(graph const& g, schedule const& sched) {
   }
 
   for (auto const& [trp, td] : g.trip_data_) {
-    for (auto const& e : td->edges_) {
+    for (auto const& ei : td->edges_) {
+      auto const* e = ei.get(g);
       auto const& trips = e->get_trips(sched);
       if (std::find(begin(trips), end(trips), trp) == end(trips)) {
         std::cout << "!! trip missing in edge.trips @" << e->type() << "\n";
@@ -78,7 +81,8 @@ bool check_trip_times(graph const& g, schedule const& sched, trip const* trp,
                       trip_data const* td) {
   auto trip_ok = true;
   std::vector<event_node const*> nodes;
-  for (auto const e : td->edges_) {
+  for (auto const ei : td->edges_) {
+    auto const* e = ei.get(g);
     nodes.emplace_back(e->from(g));
     nodes.emplace_back(e->to(g));
   }

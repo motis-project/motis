@@ -25,7 +25,8 @@ reachability_info get_reachability(paxmon_data const& data,
     auto in_trip = false;
     auto entry_ok = false;
     auto exit_ok = false;
-    for (auto [edge_idx, e] : utl::enumerate(td->edges_)) {
+    for (auto [edge_idx, ei] : utl::enumerate(td->edges_)) {
+      auto const* e = ei.get(data.graph_);
       if (!in_trip) {
         auto const from = e->from(data.graph_);
         if (from->station_idx() == leg.enter_station_id_ &&

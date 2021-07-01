@@ -40,13 +40,13 @@ struct rule_trip_adder {
       return nullptr;
     }
 
-    std::vector<edge*> trip_edges;
+    std::vector<edge_idx> trip_edges;
     event_node* prev_node = nullptr;
     for (auto const& section : motis::access::sections(trp)) {
       auto dep_node = get_or_create_dep_node(section);
       auto arr_node = get_or_create_arr_node(section);
-      trip_edges.emplace_back(
-          get_or_create_trip_edge(section, dep_node, arr_node));
+      auto const* e = get_or_create_trip_edge(section, dep_node, arr_node);
+      trip_edges.emplace_back(get_edge_idx(data_.graph_, e));
       if (prev_node != nullptr) {
         get_or_create_wait_edge(section, prev_node, dep_node);
       }
@@ -56,9 +56,14 @@ struct rule_trip_adder {
       add_through_services(section, dep_node, arr_node);
     }
 
+    auto const enter_exit_node_idx =
+        static_cast<event_node_idx>(data_.graph_.nodes_.size());
+    data_.graph_.nodes_.emplace_back(std::make_unique<event_node>(
+        event_node{static_cast<std::uint32_t>(data_.graph_.nodes_.size())}));
+
     auto const [it, inserted] = data_.graph_.trip_data_.emplace(
-        trp,
-        std::make_unique<trip_data>(trip_data{std::move(trip_edges), {}, {}}));
+        trp, std::make_unique<trip_data>(
+                 trip_data{std::move(trip_edges), {}, enter_exit_node_idx}));
     utl::verify(inserted, "trip data already exists");
     return it->second.get();
   }
@@ -99,14 +104,15 @@ struct rule_trip_adder {
         dep_nodes_, rule_node_key{station_idx, schedule_time, merged_trips_idx},
         [&]() {
           return data_.graph_.nodes_
-              .emplace_back(std::make_unique<event_node>(
-                  event_node{section.lcon().d_time_,
-                             schedule_time,
-                             event_type::DEP,
-                             true,
-                             station_idx,
-                             {},
-                             {}}))
+              .emplace_back(std::make_unique<event_node>(event_node{
+                  static_cast<event_node_idx>(data_.graph_.nodes_.size()),
+                  section.lcon().d_time_,
+                  schedule_time,
+                  event_type::DEP,
+                  true,
+                  station_idx,
+                  {},
+                  {}}))
               .get();
         });
   }
@@ -121,14 +127,15 @@ struct rule_trip_adder {
         arr_nodes_, rule_node_key{station_idx, schedule_time, merged_trips_idx},
         [&]() {
           return data_.graph_.nodes_
-              .emplace_back(std::make_unique<event_node>(
-                  event_node{section.lcon().a_time_,
-                             schedule_time,
-                             event_type::ARR,
-                             true,
-                             station_idx,
-                             {},
-                             {}}))
+              .emplace_back(std::make_unique<event_node>(event_node{
+                  static_cast<event_node_idx>(data_.graph_.nodes_.size()),
+                  section.lcon().a_time_,
+                  schedule_time,
+                  event_type::ARR,
+                  true,
+                  station_idx,
+                  {},
+                  {}}))
               .get();
         });
   }
@@ -228,7 +235,8 @@ void update_event_times(schedule const& sched, graph& g,
         get_station(sched, ue->base()->station_id()->str())->index_;
     auto const schedule_time =
         unix_to_motistime(sched, ue->base()->schedule_time());
-    for (auto te : trip_edges->second->edges_) {
+    for (auto tei : trip_edges->second->edges_) {
+      auto const* te = tei.get(g);
       auto const from = te->from(g);
       auto const to = te->to(g);
       if (ue->base()->event_type() == EventType_DEP &&
@@ -294,7 +302,8 @@ void for_each_edge(schedule const& sched, paxmon_data& data,
   for_each_trip(sched, data, journey,
                 [&](journey_leg const& leg, trip_data const* td) {
                   auto in_trip = false;
-                  for (auto e : td->edges_) {
+                  for (auto const& ei : td->edges_) {
+                    auto* e = ei.get(data.graph_);
                     if (!in_trip) {
                       auto const from = e->from(data.graph_);
                       if (from->station_idx() == leg.enter_station_id_ &&
@@ -317,7 +326,8 @@ void for_each_edge(schedule const& sched, paxmon_data& data,
 event_node* find_event_node(graph const& g, trip_data const& td,
                             std::uint32_t const station_idx,
                             event_type const et, time const schedule_time) {
-  for (auto const* e : td.edges_) {
+  for (auto const& ei : td.edges_) {
+    auto const* e = ei.get(g);
     if (et == event_type::DEP) {
       auto* n = e->from(g);
       if (n->station_idx() == station_idx &&

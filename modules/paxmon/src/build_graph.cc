@@ -56,7 +56,8 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
     last_trip = nullptr;
     auto enter_found = false;
     auto exit_found = false;
-    for (auto e : te->edges_) {
+    for (auto& ei : te->edges_) {
+      auto* e = ei.get(data.graph_);
       if (!in_trip) {
         auto const from = e->from(data.graph_);
         if (from->station_ == leg.enter_station_id_ &&
@@ -64,7 +65,7 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
           in_trip = true;
           enter_found = true;
           if (exit_node == nullptr) {
-            exit_node = &te->enter_exit_node_;
+            exit_node = data.graph_.nodes_.at(te->enter_exit_node_).get();
           }
           auto const transfer_time = get_transfer_duration(leg.enter_transfer_);
           add_interchange(exit_node, from, &grp, transfer_time, data.graph_);
@@ -111,8 +112,9 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
   }
 
   if (exit_node != nullptr && last_trip != nullptr) {
-    add_interchange(exit_node, &last_trip->enter_exit_node_, &grp, 0,
-                    data.graph_);
+    add_interchange(exit_node,
+                    data.graph_.nodes_.at(last_trip->enter_exit_node_).get(),
+                    &grp, 0, data.graph_);
   }
 
   utl::verify(!grp.edges_.empty(), "empty passenger group edges");
