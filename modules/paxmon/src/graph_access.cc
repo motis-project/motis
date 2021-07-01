@@ -40,13 +40,13 @@ struct rule_trip_adder {
       return nullptr;
     }
 
-    std::vector<edge_idx> trip_edges;
+    std::vector<edge_index> trip_edges;
     event_node* prev_node = nullptr;
     for (auto const& section : motis::access::sections(trp)) {
       auto dep_node = get_or_create_dep_node(section);
       auto arr_node = get_or_create_arr_node(section);
       auto const* e = get_or_create_trip_edge(section, dep_node, arr_node);
-      trip_edges.emplace_back(get_edge_idx(data_.graph_, e));
+      trip_edges.emplace_back(get_edge_index(data_.graph_, e));
       if (prev_node != nullptr) {
         get_or_create_wait_edge(section, prev_node, dep_node);
       }
@@ -57,7 +57,7 @@ struct rule_trip_adder {
     }
 
     auto const enter_exit_node_idx =
-        static_cast<event_node_idx>(data_.graph_.nodes_.size());
+        static_cast<event_node_index>(data_.graph_.nodes_.size());
     data_.graph_.nodes_.emplace_back(std::make_unique<event_node>(
         event_node{static_cast<std::uint32_t>(data_.graph_.nodes_.size())}));
 
@@ -105,7 +105,7 @@ struct rule_trip_adder {
         [&]() {
           return data_.graph_.nodes_
               .emplace_back(std::make_unique<event_node>(event_node{
-                  static_cast<event_node_idx>(data_.graph_.nodes_.size()),
+                  static_cast<event_node_index>(data_.graph_.nodes_.size()),
                   section.lcon().d_time_,
                   schedule_time,
                   event_type::DEP,
@@ -128,7 +128,7 @@ struct rule_trip_adder {
         [&]() {
           return data_.graph_.nodes_
               .emplace_back(std::make_unique<event_node>(event_node{
-                  static_cast<event_node_idx>(data_.graph_.nodes_.size()),
+                  static_cast<event_node_index>(data_.graph_.nodes_.size()),
                   section.lcon().a_time_,
                   schedule_time,
                   event_type::ARR,

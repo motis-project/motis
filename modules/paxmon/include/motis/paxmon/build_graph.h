@@ -13,7 +13,7 @@ struct build_graph_stats {
 void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
                                   passenger_group& grp);
 
-void remove_passenger_group_from_graph(passenger_group* pg);
+void remove_passenger_group_from_graph(paxmon_data& data, passenger_group* pg);
 
 build_graph_stats build_graph_from_journeys(schedule const& sched,
                                             paxmon_data& data);

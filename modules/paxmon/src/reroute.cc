@@ -131,7 +131,7 @@ event_node* get_or_insert_node(graph& g, trip_data& td, trip_ev_key const tek,
   }
   return g.nodes_
       .emplace_back(std::make_unique<event_node>(
-          event_node{static_cast<event_node_idx>(g.nodes_.size()),
+          event_node{static_cast<event_node_index>(g.nodes_.size()),
                      tek.schedule_time_,
                      tek.schedule_time_,
                      tek.type_,
@@ -160,7 +160,7 @@ std::set<passenger_group*> collect_passenger_groups(graph const& g,
     auto* te = tei.get(g);
     for (auto pg : te->pax_connection_info_.groups_) {
       affected_passenger_groups.insert(pg);
-      utl::erase(pg->edges_, te);
+      utl::erase(pg->edges_, tei);
     }
     te->pax_connection_info_.groups_.clear();
   }
@@ -190,9 +190,10 @@ bool update_passenger_group(trip_data& td, trip const* trp, passenger_group* pg,
       }
       if (enter_index != INVALID_INDEX && exit_index != INVALID_INDEX) {
         for (auto idx = enter_index; idx <= exit_index; ++idx) {
-          auto* e = td.edges_[idx].get(g);
+          auto const& ei = td.edges_[idx];
+          auto* e = ei.get(g);
           add_passenger_group_to_edge(e, pg);
-          pg->edges_.emplace_back(e);
+          pg->edges_.emplace_back(ei);
         }
         return true;
       }
@@ -245,14 +246,14 @@ void apply_reroute(paxmon_data& data, schedule const& sched, trip const* trp,
     }
   }
 
-  std::vector<edge_idx> new_edges;
+  std::vector<edge_index> new_edges;
   if (!new_nodes.empty()) {
     auto const merged_trips = get_merged_trips(trp).value();
     for (auto const& [from, to] : utl::pairwise(new_nodes)) {
       auto e =
           connect_nodes(from, to, merged_trips, encoded_capacity, data.graph_);
       if (e->is_trip()) {
-        new_edges.emplace_back(get_edge_idx(data.graph_, e));
+        new_edges.emplace_back(get_edge_index(data.graph_, e));
       }
     }
   }

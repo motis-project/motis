@@ -23,12 +23,14 @@ void add_interchange(event_node* from, event_node* to, passenger_group* grp,
     if (e->type_ == edge_type::INTERCHANGE && e->to(g) == to &&
         e->transfer_time() == transfer_time) {
       add_passenger_group_to_edge(e.get(), grp);
-      grp->edges_.emplace_back(e.get());
+      grp->edges_.emplace_back(get_edge_index(g, e.get()));
       return;
     }
   }
-  grp->edges_.emplace_back(add_edge(make_interchange_edge(
-      from, to, transfer_time, pax_connection_info{grp})));
+  auto const* e = add_edge(
+      make_interchange_edge(from, to, transfer_time, pax_connection_info{grp}));
+  auto const ei = get_edge_index(g, e);
+  grp->edges_.emplace_back(ei);
 }
 
 };  // namespace
@@ -73,7 +75,7 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
       }
       if (in_trip) {
         add_passenger_group_to_edge(e, &grp);
-        grp.edges_.emplace_back(e);
+        grp.edges_.emplace_back(ei);
         auto const to = e->to(data.graph_);
         if (to->station_ == leg.exit_station_id_ &&
             to->schedule_time_ == leg.exit_time_) {
@@ -85,7 +87,8 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
       }
     }
     if (!enter_found || !exit_found) {
-      for (auto e : grp.edges_) {
+      for (auto const& ei : grp.edges_) {
+        auto* e = ei.get(data.graph_);
         remove_passenger_group_from_edge(e, &grp);
       }
       grp.edges_.clear();
@@ -120,8 +123,9 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
   utl::verify(!grp.edges_.empty(), "empty passenger group edges");
 }
 
-void remove_passenger_group_from_graph(passenger_group* pg) {
-  for (auto e : pg->edges_) {
+void remove_passenger_group_from_graph(paxmon_data& data, passenger_group* pg) {
+  for (auto const& ei : pg->edges_) {
+    auto* e = ei.get(data.graph_);
     auto guard = std::lock_guard{e->pax_connection_info_.mutex_};
     remove_passenger_group_from_edge(e, pg);
   }

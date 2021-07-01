@@ -14,15 +14,15 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
   auto disabled_edges = pg->edges_;
   pg->edges_.clear();
 
-  auto const add_to_edge = [&](edge* e) {
-    if (std::find(begin(disabled_edges), end(disabled_edges), e) ==
+  auto const add_to_edge = [&](edge_index const& ei, edge* e) {
+    if (std::find(begin(disabled_edges), end(disabled_edges), ei) ==
         end(disabled_edges)) {
       auto guard = std::lock_guard{e->pax_connection_info_.mutex_};
       add_passenger_group_to_edge(e, pg);
     } else {
-      utl::erase(disabled_edges, e);
+      utl::erase(disabled_edges, ei);
     }
-    pg->edges_.emplace_back(e);
+    pg->edges_.emplace_back(ei);
   };
 
   auto const add_interchange = [&](reachable_trip const& rt,
@@ -34,12 +34,14 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
     for (auto& e : exit_node->outgoing_edges(g)) {
       if (e->type_ == edge_type::INTERCHANGE && e->to(g) == enter_node &&
           e->transfer_time() == transfer_time) {
-        add_to_edge(e.get());
+        add_to_edge(get_edge_index(g, e.get()), e.get());
         return;
       }
     }
-    pg->edges_.emplace_back(add_edge(make_interchange_edge(
-        exit_node, enter_node, transfer_time, pax_connection_info{pg})));
+    auto const* e = add_edge(make_interchange_edge(
+        exit_node, enter_node, transfer_time, pax_connection_info{pg}));
+    auto const ei = get_edge_index(g, e);
+    pg->edges_.emplace_back(ei);
   };
 
   if (reachability.ok_) {
@@ -52,7 +54,8 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
       utl::verify(rt.valid_exit(), "update_load: invalid exit");
       add_interchange(rt, exit_node);
       for (auto i = rt.enter_edge_idx_; i <= rt.exit_edge_idx_; ++i) {
-        add_to_edge(rt.td_->edges_[i].get(g));
+        auto const& ei = rt.td_->edges_[i];
+        add_to_edge(ei, ei.get(g));
       }
       exit_node = rt.td_->edges_[rt.exit_edge_idx_].get(g)->to(g);
     }
@@ -65,11 +68,12 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
           rt.valid_exit() ? rt.exit_edge_idx_ : rt.td_->edges_.size() - 1;
       add_interchange(rt, exit_node);
       for (auto i = rt.enter_edge_idx_; i <= exit_idx; ++i) {
-        auto* e = rt.td_->edges_[i].get(g);
+        auto const& ei = rt.td_->edges_[i];
+        auto* e = ei.get(g);
         if (e->from(g)->time_ > localization.current_arrival_time_) {
           break;
         }
-        add_to_edge(e);
+        add_to_edge(ei, e);
         auto const to = e->to(g);
         if (to->station_ == localization.at_station_->index_ &&
             to->time_ == localization.current_arrival_time_) {
@@ -84,7 +88,8 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
     }
   }
 
-  for (auto e : disabled_edges) {
+  for (auto const& ei : disabled_edges) {
+    auto* e = ei.get(g);
     auto guard = std::lock_guard{e->pax_connection_info_.mutex_};
     remove_passenger_group_from_edge(e, pg);
   }

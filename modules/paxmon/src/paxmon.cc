@@ -580,7 +580,7 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
     for (auto const& leg : pg->compact_planned_journey_.legs_) {
       data_.trips_affected_by_last_update_.insert(leg.trip_);
     }
-    remove_passenger_group_from_graph(pg);
+    remove_passenger_group_from_graph(data_, pg);
     if (!keep_group_history_) {
       data_.graph_.passenger_group_allocator_.release(pg);
       pg = nullptr;

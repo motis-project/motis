@@ -40,8 +40,10 @@ bool check_graph_integrity(graph const& g, schedule const& sched) {
             ok = false;
           }
         }
-        if (std::find(begin(pg->edges_), end(pg->edges_), e.get()) ==
-            end(pg->edges_)) {
+        if (std::find_if(begin(pg->edges_), end(pg->edges_),
+                         [&](auto const& ei) {
+                           return ei.get(g) == e.get();
+                         }) == end(pg->edges_)) {
           std::cout << "!! edge missing in pg.edges @" << e->type() << "\n";
           ok = false;
         }
@@ -64,7 +66,8 @@ bool check_graph_integrity(graph const& g, schedule const& sched) {
     if (pg == nullptr) {
       continue;
     }
-    for (auto const e : pg->edges_) {
+    for (auto const& ei : pg->edges_) {
+      auto const* e = ei.get(g);
       if (e->pax_connection_info_.groups_.find(pg) ==
           e->pax_connection_info_.groups_.end()) {
         std::cout << "!! passenger group not on edge: id=" << pg->id_ << " @"

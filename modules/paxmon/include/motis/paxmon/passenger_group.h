@@ -11,6 +11,7 @@
 #include "motis/core/journey/journey.h"
 
 #include "motis/paxmon/compact_journey.h"
+#include "motis/paxmon/graph_index.h"
 
 namespace motis::paxmon {
 
@@ -81,7 +82,7 @@ struct passenger_group {
   std::int16_t estimated_delay_{};
   std::uint8_t generation_{};
   std::uint64_t previous_version_{};
-  std::vector<edge*> edges_{};
+  std::vector<edge_index> edges_{};
 };
 
 inline passenger_group make_passenger_group(
