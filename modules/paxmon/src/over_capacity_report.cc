@@ -61,7 +61,8 @@ void write_over_capacity_report(paxmon_data const& data, schedule const& sched,
       if (!e->is_trip() || e->is_canceled(g)) {
         continue;
       }
-      auto const passengers = get_base_load(e->get_pax_connection_info());
+      auto const passengers =
+          get_base_load(g.passenger_groups_, e->get_pax_connection_info());
       auto const capacity = e->capacity();
       if (e->has_capacity() && passengers > capacity) {
         for (auto const& trp : e->get_trips(sched)) {
@@ -97,7 +98,8 @@ void write_over_capacity_report(paxmon_data const& data, schedule const& sched,
     for (auto const& e : edges) {
       auto const& from_station = e->from(g)->get_station(sched);
       auto const& to_station = e->to(g)->get_station(sched);
-      auto const passengers = get_base_load(e->get_pax_connection_info());
+      auto const passengers =
+          get_base_load(g.passenger_groups_, e->get_pax_connection_info());
       auto const capacity = e->capacity();
       auto const additional = static_cast<int>(passengers - capacity);
       auto const percentage = static_cast<double>(passengers) /

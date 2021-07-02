@@ -14,9 +14,11 @@
 
 namespace motis::paxmon {
 
-pax_limits get_pax_limits(pax_connection_info const& pci) {
+pax_limits get_pax_limits(passenger_group_container const& pgc,
+                          pax_connection_info const& pci) {
   auto limits = pax_limits{};
-  for (auto const grp : pci.groups_) {
+  for (auto const grp_id : pci.groups_) {
+    auto const* grp = pgc[grp_id];
     auto const pax = grp->passengers_;
     limits.max_ += pax;
     if (grp->probability_ == 1.0F) {
@@ -26,9 +28,11 @@ pax_limits get_pax_limits(pax_connection_info const& pci) {
   return limits;
 }
 
-std::uint16_t get_base_load(pax_connection_info const& pci) {
+std::uint16_t get_base_load(passenger_group_container const& pgc,
+                            pax_connection_info const& pci) {
   std::uint16_t load = 0;
-  for (auto const grp : pci.groups_) {
+  for (auto const grp_id : pci.groups_) {
+    auto const* grp = pgc[grp_id];
     if (grp->probability_ == 1.0F) {
       load += grp->passengers_;
     }
@@ -40,12 +44,14 @@ std::uint16_t get_expected_load(pax_connection_info const& pci) {
   return pci.expected_load_;
 }
 
-std::uint16_t get_mean_load(pax_connection_info const& pci) {
+std::uint16_t get_mean_load(passenger_group_container const& pgc,
+                            pax_connection_info const& pci) {
   if (pci.groups_.empty()) {
     return 0;
   }
   auto mean = 0.0F;
-  for (auto const grp : pci.groups_) {
+  for (auto const grp_id : pci.groups_) {
+    auto const* grp = pgc[grp_id];
     mean += static_cast<float>(grp->passengers_) * grp->probability_;
   }
   return static_cast<std::uint16_t>(mean);
@@ -81,12 +87,14 @@ inline void convolve_base(pax_pdf& pdf, std::uint16_t const grp_size,
   }
 }
 
-pax_pdf get_load_pdf_base(pax_connection_info const& pci) {
-  auto const limits = get_pax_limits(pci);
+pax_pdf get_load_pdf_base(passenger_group_container const& pgc,
+                          pax_connection_info const& pci) {
+  auto const limits = get_pax_limits(pgc, pci);
   auto pdf = pax_pdf{};
   pdf.data_.resize(limits.max_ + 1);
   pdf.data_[limits.min_] = 1.0F;
-  for (auto const grp : pci.groups_) {
+  for (auto const grp_id : pci.groups_) {
+    auto const* grp = pgc[grp_id];
     if (grp->probability_ != 1.0F) {
       convolve_base(pdf, grp->passengers_, grp->probability_);
     }
@@ -138,15 +146,17 @@ inline void convolve_avx(pax_pdf& pdf, std::uint16_t const grp_size,
   }
 }
 
-pax_pdf get_load_pdf_avx(pax_connection_info const& pci) {
-  auto const limits = get_pax_limits(pci);
+pax_pdf get_load_pdf_avx(passenger_group_container const& pgc,
+                         pax_connection_info const& pci) {
+  auto const limits = get_pax_limits(pgc, pci);
   auto pdf = pax_pdf{};
   auto const pdf_size = limits.max_ + 1;
   pdf.data_.resize(round_up<8>(pdf_size));
   pdf.data_[limits.min_] = 1.0F;
   auto buf = std::vector<float>(pdf.data_.size() + 8);
 
-  for (auto const grp : pci.groups_) {
+  for (auto const grp_id : pci.groups_) {
+    auto const* grp = pgc[grp_id];
     if (grp->probability_ != 1.0F) {
       convolve_avx(pdf, grp->passengers_, grp->probability_, limits, buf);
     }
@@ -158,11 +168,12 @@ pax_pdf get_load_pdf_avx(pax_connection_info const& pci) {
 
 #endif
 
-pax_pdf get_load_pdf(pax_connection_info const& pci) {
+pax_pdf get_load_pdf(passenger_group_container const& pgc,
+                     pax_connection_info const& pci) {
 #ifdef MOTIS_AVX2
-  return get_load_pdf_avx(pci);
+  return get_load_pdf_avx(pgc, pci);
 #else
-  return get_load_pdf_base(pci);
+  return get_load_pdf_base(pgc, pci);
 #endif
 }
 
@@ -177,8 +188,9 @@ pax_cdf get_cdf(pax_pdf const& pdf) {
   return cdf;
 }
 
-pax_cdf get_load_cdf(pax_connection_info const& pci) {
-  return get_cdf(get_load_pdf(pci));
+pax_cdf get_load_cdf(passenger_group_container const& pgc,
+                     pax_connection_info const& pci) {
+  return get_cdf(get_load_pdf(pgc, pci));
 }
 
 template <typename T>

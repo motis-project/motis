@@ -533,8 +533,9 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
                     "trying to add empty passenger group");
         auto input_pg = from_fbs(sched, pg_fbs);
         if (allow_reuse) {
-          if (auto it = data_.graph_.groups_by_source_.find(input_pg.source_);
-              it != end(data_.graph_.groups_by_source_)) {
+          if (auto it = data_.graph_.passenger_groups_.groups_by_source_.find(
+                  input_pg.source_);
+              it != end(data_.graph_.passenger_groups_.groups_by_source_)) {
             for (auto const id : it->second) {
               auto existing_pg = data_.graph_.passenger_groups_.at(id);
               if (existing_pg != nullptr && existing_pg->valid() &&
@@ -547,7 +548,7 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
             }
           }
         }
-        auto pg = data_.graph_.add_group(std::move(input_pg));
+        auto pg = data_.graph_.passenger_groups_.add(std::move(input_pg));
         add_passenger_group_to_graph(sched, data_, *pg);
         for (auto const& leg : pg->compact_planned_journey_.legs_) {
           data_.trips_affected_by_last_update_.insert(leg.trip_);
@@ -573,7 +574,7 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonRemoveGroupsRequest, msg);
 
   for (auto const id : *req->ids()) {
-    auto& pg = data_.graph_.passenger_groups_.at(id);
+    auto pg = data_.graph_.passenger_groups_.at(id);
     if (pg == nullptr) {
       continue;
     }
@@ -582,8 +583,7 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
     }
     remove_passenger_group_from_graph(data_, pg);
     if (!keep_group_history_) {
-      data_.graph_.passenger_group_allocator_.release(pg);
-      pg = nullptr;
+      data_.graph_.passenger_groups_.release(pg->id_);
     }
   }
 
@@ -720,8 +720,9 @@ msg_ptr paxmon::get_groups(msg_ptr const& msg) {
   std::vector<flatbuffers::Offset<PaxMonLocalizationWrapper>> localizations;
 
   auto const add_by_data_source = [&](data_source const& ds) {
-    if (auto const it = data_.graph_.groups_by_source_.find(ds);
-        it != end(data_.graph_.groups_by_source_)) {
+    if (auto const it =
+            data_.graph_.passenger_groups_.groups_by_source_.find(ds);
+        it != end(data_.graph_.passenger_groups_.groups_by_source_)) {
       for (auto const pgid : it->second) {
         if (auto const pg = data_.graph_.passenger_groups_.at(pgid);
             pg != nullptr) {
@@ -881,7 +882,7 @@ msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
         continue;
       }
       auto const& pci = e->get_pax_connection_info();
-      auto const pdf = get_load_pdf(pci);
+      auto const pdf = get_load_pdf(data_.graph_.passenger_groups_, pci);
       auto const cdf = get_cdf(pdf);
       if (load_factor_possibly_ge(cdf, e->capacity(), load_factor_threshold)) {
         selected_trips.insert(tde.first);

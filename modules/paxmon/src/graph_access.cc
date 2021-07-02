@@ -278,14 +278,15 @@ void update_trip_route(schedule const& sched, paxmon_data& data,
 }
 
 void add_passenger_group_to_edge(edge* e, passenger_group* pg) {
-  e->pax_connection_info_.groups_.emplace(pg);
+  auto& pci = e->get_pax_connection_info();
+  pci.groups_.emplace(pg->id_);
   if (is_planned_group(pg)) {
-    e->pax_connection_info_.expected_load_ += pg->passengers_;
+    pci.expected_load_ += pg->passengers_;
   }
 }
 
 void remove_passenger_group_from_edge(edge* e, passenger_group* pg) {
-  e->pax_connection_info_.groups_.erase(pg);
+  e->get_pax_connection_info().groups_.erase(pg->id_);
 }
 
 void for_each_trip(

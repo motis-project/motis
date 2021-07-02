@@ -153,16 +153,17 @@ std::pair<std::uint16_t, capacity_source> guess_trip_capacity(
   }
 }
 
-std::set<passenger_group*> collect_passenger_groups(graph const& g,
-                                                    trip_data& td) {
+std::set<passenger_group*> collect_passenger_groups(graph& g, trip_data& td) {
   std::set<passenger_group*> affected_passenger_groups;
   for (auto const& tei : td.edges_) {
     auto* te = tei.get(g);
-    for (auto pg : te->pax_connection_info_.groups_) {
+    auto& groups = te->get_pax_connection_info().groups_;
+    for (auto pg_id : groups) {
+      auto* pg = g.passenger_groups_[pg_id];
       affected_passenger_groups.insert(pg);
       utl::erase(pg->edges_, tei);
     }
-    te->pax_connection_info_.groups_.clear();
+    groups.clear();
   }
   return affected_passenger_groups;
 }

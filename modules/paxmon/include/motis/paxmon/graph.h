@@ -19,10 +19,9 @@
 #include "motis/core/schedule/trip_idx.h"
 #include "motis/core/journey/extern_trip.h"
 
-#include "motis/paxmon/allocator.h"
 #include "motis/paxmon/capacity_data.h"
 #include "motis/paxmon/graph_index.h"
-#include "motis/paxmon/passenger_group.h"
+#include "motis/paxmon/passenger_group_container.h"
 #include "motis/paxmon/pax_connection_info.h"
 
 namespace motis::paxmon {
@@ -132,6 +131,10 @@ struct edge {
     return pax_connection_info_;
   }
 
+  inline pax_connection_info& get_pax_connection_info() {
+    return pax_connection_info_;
+  }
+
   event_node* from_{};
   event_node* to_{};
   edge_type type_{};
@@ -150,20 +153,9 @@ struct trip_data {
 };
 
 struct graph {
-  inline passenger_group* add_group(passenger_group&& pg) {
-    auto const id = static_cast<std::uint64_t>(passenger_groups_.size());
-    auto ptr = passenger_groups_.emplace_back(
-        passenger_group_allocator_.create(std::move(pg)));
-    ptr->id_ = id;
-    groups_by_source_[ptr->source_].emplace_back(id);
-    return ptr;
-  }
-
   std::vector<std::unique_ptr<event_node>> nodes_;
   mcd::hash_map<trip const*, std::unique_ptr<trip_data>> trip_data_;
-  std::vector<passenger_group*> passenger_groups_;
-  allocator<passenger_group> passenger_group_allocator_;
-  mcd::hash_map<data_source, mcd::vector<std::uint64_t>> groups_by_source_;
+  passenger_group_container passenger_groups_;
 };
 
 }  // namespace motis::paxmon

@@ -17,6 +17,8 @@ namespace motis::paxmon {
 
 struct edge;
 
+using passenger_group_index = std::uint64_t;
+
 struct data_source {
   CISTA_COMPARABLE()
 
@@ -71,7 +73,7 @@ struct passenger_group {
   }
 
   compact_journey compact_planned_journey_;
-  std::uint64_t id_{};
+  passenger_group_index id_{};
   data_source source_{};
   std::uint16_t passengers_{1};
   motis::time planned_arrival_time_{INVALID_TIME};

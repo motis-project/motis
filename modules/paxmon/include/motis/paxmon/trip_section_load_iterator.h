@@ -20,7 +20,8 @@ namespace motis::paxmon {
 struct trip_section_with_load {
   trip_section_with_load(schedule const& sched, paxmon_data const& data,
                          trip const* trp, trip_data const* td, int const idx)
-      : section_{trp, idx},
+      : graph_{data.graph_},
+        section_{trp, idx},
         edge_{td == nullptr ? nullptr : td->edges_.at(idx).get(data.graph_)} {
     if (edge_ != nullptr) {
       capacity_ = edge_->capacity();
@@ -45,15 +46,20 @@ struct trip_section_with_load {
   }
 
   std::uint16_t base_load() const {
-    return edge_ != nullptr ? get_base_load(edge_->pax_connection_info_) : 0;
+    return edge_ != nullptr ? get_base_load(graph_.passenger_groups_,
+                                            edge_->get_pax_connection_info())
+                            : 0;
   }
 
   std::uint16_t mean_load() const {
-    return edge_ != nullptr ? get_mean_load(edge_->pax_connection_info_) : 0;
+    return edge_ != nullptr ? get_mean_load(graph_.passenger_groups_,
+                                            edge_->get_pax_connection_info())
+                            : 0;
   }
 
   pax_pdf load_pdf() const {
-    return edge_ != nullptr ? get_load_pdf(edge_->pax_connection_info_)
+    return edge_ != nullptr ? get_load_pdf(graph_.passenger_groups_,
+                                           edge_->get_pax_connection_info())
                             : pax_pdf{};
   }
 
@@ -63,6 +69,7 @@ struct trip_section_with_load {
     return edge_ != nullptr ? get_median_load(load_cdf()) : 0;
   }
 
+  graph const& graph_;
   motis::access::trip_section section_;
   edge const* edge_{};
   std::uint16_t capacity_{};

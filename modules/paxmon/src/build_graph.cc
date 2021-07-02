@@ -27,8 +27,10 @@ void add_interchange(event_node* from, event_node* to, passenger_group* grp,
       return;
     }
   }
-  auto const* e = add_edge(
-      make_interchange_edge(from, to, transfer_time, pax_connection_info{grp}));
+  auto pci = pax_connection_info{grp->id_};
+  pci.init_expected_load(g.passenger_groups_);
+  auto const* e =
+      add_edge(make_interchange_edge(from, to, transfer_time, std::move(pci)));
   auto const ei = get_edge_index(g, e);
   grp->edges_.emplace_back(ei);
 }
@@ -126,7 +128,7 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
 void remove_passenger_group_from_graph(paxmon_data& data, passenger_group* pg) {
   for (auto const& ei : pg->edges_) {
     auto* e = ei.get(data.graph_);
-    auto guard = std::lock_guard{e->pax_connection_info_.mutex_};
+    auto guard = std::lock_guard{e->get_pax_connection_info().mutex_};
     remove_passenger_group_from_edge(e, pg);
   }
   pg->edges_.clear();
@@ -139,15 +141,14 @@ build_graph_stats build_graph_from_journeys(schedule const& sched,
   progress_tracker->in_high(data.graph_.passenger_groups_.size());
 
   auto stats = build_graph_stats{};
-  for (auto& pg : data.graph_.passenger_groups_) {
+  for (auto* pg : data.graph_.passenger_groups_) {
     utl::verify(pg != nullptr, "null passenger group");
     utl::verify(!pg->compact_planned_journey_.legs_.empty(),
                 "empty passenger group");
     try {
       add_passenger_group_to_graph(sched, data, *pg);
       if (pg->edges_.empty()) {
-        data.graph_.passenger_group_allocator_.release(pg);
-        pg = nullptr;
+        data.graph_.passenger_groups_.release(pg->id_);
       }
     } catch (std::system_error const& e) {
       LOG(motis::logging::error)

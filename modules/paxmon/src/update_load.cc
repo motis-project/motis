@@ -17,7 +17,7 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
   auto const add_to_edge = [&](edge_index const& ei, edge* e) {
     if (std::find(begin(disabled_edges), end(disabled_edges), ei) ==
         end(disabled_edges)) {
-      auto guard = std::lock_guard{e->pax_connection_info_.mutex_};
+      auto guard = std::lock_guard{e->get_pax_connection_info().mutex_};
       add_passenger_group_to_edge(e, pg);
     } else {
       utl::erase(disabled_edges, ei);
@@ -38,8 +38,10 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
         return;
       }
     }
+    auto pci = pax_connection_info{pg->id_};
+    pci.init_expected_load(g.passenger_groups_);
     auto const* e = add_edge(make_interchange_edge(
-        exit_node, enter_node, transfer_time, pax_connection_info{pg}));
+        exit_node, enter_node, transfer_time, std::move(pci)));
     auto const ei = get_edge_index(g, e);
     pg->edges_.emplace_back(ei);
   };
@@ -90,7 +92,7 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
 
   for (auto const& ei : disabled_edges) {
     auto* e = ei.get(g);
-    auto guard = std::lock_guard{e->pax_connection_info_.mutex_};
+    auto guard = std::lock_guard{e->get_pax_connection_info().mutex_};
     remove_passenger_group_from_edge(e, pg);
   }
 }
