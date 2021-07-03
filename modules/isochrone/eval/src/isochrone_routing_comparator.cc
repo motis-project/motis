@@ -35,7 +35,7 @@ int main(int argc, char const** argv) {
   std::ifstream in_i(argv[1]), in_r(argv[2]);
   std::ofstream failed_routes("failed_routes.txt");
   std::string line_i, line_r;
-  std::map<int, uint64_t> times;
+  std::map<int, std::tuple<uint64_t, std::string, std::string, std::string>> times;
   int mismatches = 0;
   while (in_i.peek() != EOF && !in_i.eof()){
 
@@ -43,7 +43,8 @@ int main(int argc, char const** argv) {
     auto const i_msg = make_msg(line_i);
     auto const i_res = motis_content(IsochroneResponse, i_msg);
     for(int i = 0; i<i_res->arrival_times()->size(); ++i) {
-      times[i_msg->id()*1000000+i] = i_res->arrival_times()->Get(i);
+      times[i_msg->id()*1000000+i] = {i_res->arrival_times()->Get(i),i_res->stations()->Get(0)->id()->str(),
+                                      i_res->stations()->Get(i)->id()->str(), i_res->stations()->Get(i)->name()->str()};
     }
 
 
@@ -61,10 +62,12 @@ int main(int argc, char const** argv) {
       }
     }
     auto const remaining_time = 3600 - (at - r_res->interval_begin());
-    if (times.at(r_msg->id()) != remaining_time) {
-      auto x = times.at(r_msg->id());
+    if (std::get<0>(times.at(r_msg->id())) != remaining_time && r_msg->id()%1000000!=0) {
+      auto x = std::get<0>(times.at(r_msg->id()));
       mismatches++;
-      failed_routes << "id:" << r_msg->id() << " iso time:"<< x << " routing time:" << remaining_time << std::endl;
+      failed_routes << "id:" << r_msg->id() << " iso time:"<< x << " routing time:" << remaining_time
+      <<" start:"<< std::get<1>(times.at(r_msg->id()))
+      <<" dest:"<< std::get<2>(times.at(r_msg->id()))<<" "<< std::get<3 >(times.at(r_msg->id())) <<std::endl;
     }
   }
 

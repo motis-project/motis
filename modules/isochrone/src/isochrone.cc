@@ -37,13 +37,10 @@ msg_ptr isochrone::list_stations(msg_ptr const& msg) {
   auto const& sched = get_schedule();
   auto query = build_query(sched, req);
 
-
-
-  auto res = search::get_connections(query);
+  auto res = search::get_reachable_stations(query);
 
   std::vector<Offset<Station>> stations;
   std::vector<long> travel_times;
-
 
   for (auto const& station : res.stations_) {
     auto const pos = Position(station->width_, station->length_);

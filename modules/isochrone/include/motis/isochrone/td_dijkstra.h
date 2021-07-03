@@ -40,13 +40,15 @@ public:
 
   enum : time { UNREACHABLE = std::numeric_limits<time>::max() };
 
-  td_dijkstra (const node* const start, time begin_time, time end_time, const schedule* sched) :
+  td_dijkstra (const std::vector<std::pair<const node*, time>>& starts, time begin_time, time end_time, const schedule* sched) :
   end_time_(end_time),
   sched_(sched) {
     times_.resize(2000000, UNREACHABLE);
-    is_result_.resize(2000000, false);
-    times_[start->id_] = begin_time;
-    pq_.push(label(start, begin_time, false));
+    is_result_.resize(sched_->stations_.size(), false);
+    for(auto start : starts) {
+      times_[start.first->id_] = start.second;
+      pq_.push(label(start.first, start.second, false));
+    }
   }
 
   // dijkstra

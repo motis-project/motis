@@ -40,7 +40,7 @@ struct search_result {
 };
 
 struct search {
-  static search_result get_connections(search_query const& q) {
+  static search_result get_reachable_stations(search_query const& q) {
 
     auto const create_start_edge = [&](node* to) {
       return make_foot_edge(nullptr, to);
@@ -52,7 +52,15 @@ struct search {
     auto interval_begin = q.interval_begin_;
     auto interval_end = q.interval_end_;
 
-    td_dijkstra td(q.from_, interval_begin, interval_end, q.sched_);
+    auto starts = std::vector<std::pair<const node*, time>>();
+    starts.emplace_back(q.from_, interval_begin);
+    /*
+    auto meta_froms = q.sched_->stations_[q.from_->id_]->equivalent_;
+    for (auto const& meta_from : meta_froms) {
+      starts.push_back(q.sched_->station_nodes_[meta_from->index_].get());
+    }
+     */
+    td_dijkstra td(starts, interval_begin, interval_end, q.sched_);
 
     MOTIS_START_TIMING(time_dependent_dijkstra_timing);
     td.run();
