@@ -122,6 +122,14 @@ TEST(fws_graph_test, t1) {
   if (HasFailure()) {
     print_graph(g);
   }
+
+  for (auto const& [ni, n] : utl::enumerate(g.nodes_)) {
+    EXPECT_EQ(ni, g.node_index(&n));
+    auto const edges = g.outgoing_edges(ni);
+    for (auto const& [ei, e] : utl::enumerate(edges)) {
+      EXPECT_EQ(ei, edges.bucket_index(&e));
+    }
+  }
 }
 
 }  // namespace motis

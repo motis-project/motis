@@ -90,6 +90,14 @@ struct dynamic_fws_multimap_base {
       return get_index().begin_ + index;
     }
 
+    size_type bucket_index(const_iterator it) const {
+      if (it < begin() || it >= end()) {
+        throw std::out_of_range{
+            "dynamic_fws_multimap::bucket::bucket_index() out of range"};
+      }
+      return std::distance(begin(), it);
+    }
+
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
     size_type push_back(entry_type const& val) {
       return mutable_mm().push_back_entry(index_, val);
@@ -257,9 +265,21 @@ struct dynamic_fws_multimap_base {
       return *this;
     }
 
+    bucket_iterator operator++(int) {
+      auto old = *this;
+      ++(*this);
+      return old;
+    }
+
     bucket_iterator& operator--() {
       ++index_;
       return *this;
+    }
+
+    bucket_iterator operator--(int) {
+      auto old = *this;
+      --(*this);
+      return old;
     }
 
     bucket_iterator operator+(difference_type n) const {
@@ -270,8 +290,9 @@ struct dynamic_fws_multimap_base {
       return {multimap_, index_ - n};
     }
 
-    int operator-(bucket_iterator const& rhs) const {
-      return index_ - rhs.index_;
+    difference_type operator-(bucket_iterator const& rhs) const {
+      return static_cast<difference_type>(index_) -
+             static_cast<difference_type>(rhs.index_);
     };
 
     value_type operator[](difference_type n) const {
@@ -298,11 +319,11 @@ struct dynamic_fws_multimap_base {
     }
 
     bool operator==(bucket_iterator const& rhs) const {
-      return &multimap_ == &rhs.multimap_ && index_ == rhs.index_;
+      return index_ == rhs.index_ && &multimap_ == &rhs.multimap_;
     }
 
     bool operator!=(bucket_iterator const& rhs) const {
-      return &multimap_ != &rhs.multimap_ || index_ != rhs.index_;
+      return index_ != rhs.index_ || &multimap_ != &rhs.multimap_;
     }
 
   protected:
@@ -359,11 +380,15 @@ struct dynamic_fws_multimap_base {
   iterator end() { return iterator{*this, index_.size()}; }
   const_iterator end() const { return const_iterator{*this, index_.size()}; }
 
-  friend iterator begin(dynamic_fws_multimap_base const& m) {
+  friend iterator begin(dynamic_fws_multimap_base& m) { return m.begin(); }
+  friend const_iterator begin(dynamic_fws_multimap_base const& m) {
     return m.begin();
   }
 
-  friend iterator end(dynamic_fws_multimap_base const& m) { return m.end(); }
+  friend iterator end(dynamic_fws_multimap_base& m) { return m.end(); }
+  friend const_iterator end(dynamic_fws_multimap_base const& m) {
+    return m.end();
+  }
 
   mcd::vector<T>& data() { return data_; }
 

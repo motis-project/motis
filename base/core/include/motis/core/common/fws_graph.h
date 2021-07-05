@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iterator>
+
 #include "motis/core/common/dynamic_fws_multimap.h"
 #include "motis/vector.h"
 
@@ -185,6 +187,10 @@ struct fws_graph {
     return edges_.data_[data_index];
   }
 
+  size_type node_index(node_type const* node) const {
+    return std::distance(nodes_.begin(), node);
+  }
+
   typename edge_fws_multimap<edge_type>::mutable_bucket outgoing_edges(
       size_type from_node) {
     return edges_[from_node];
@@ -195,8 +201,22 @@ struct fws_graph {
     return edges_[from_node];
   }
 
+  typename edge_fws_multimap<edge_type>::mutable_bucket outgoing_edges(
+      node_type const* from_node) {
+    return outgoing_edge(node_index(from_node));
+  }
+
+  typename edge_fws_multimap<edge_type>::const_bucket outgoing_edges(
+      node_type const* from_node) const {
+    return outgoing_edge(node_index(from_node));
+  }
+
   incoming_edge_bucket incoming_edges(size_type to_node) {
     return {edges_, to_node};
+  }
+
+  incoming_edge_bucket incoming_edges(node_type const* to_node) {
+    return incoming_edges(node_index(to_node));
   }
 
   mcd::vector<node_type> nodes_;
