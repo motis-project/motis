@@ -1,14 +1,10 @@
 include "routing/RoutingRequest.fbs";
+include "base/Position.fbs";
 
 namespace motis.isochrone;
 
-table InputStation {
-  id:string;
-  name:string;
-}
-
 table IsochroneRequest {
-    station:  InputStation;
+    position:  motis.Position;
     departure_time: long;
     max_travel_time: long;
 }

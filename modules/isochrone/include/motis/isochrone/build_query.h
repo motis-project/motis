@@ -10,15 +10,26 @@
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/module/context/motis_call.h"
+#include "geo/latlng.h"
+#include "motis/module/message.h"
 
 
 #include "motis/isochrone/search.h"
 #include "motis/isochrone/error.h"
 
+
 #include "motis/protocol/IsochroneRequest_generated.h"
+
+using namespace geo;
+using namespace motis::module;
+using namespace motis::lookup;
+using namespace motis::osrm;
+using namespace flatbuffers;
 
 namespace motis::isochrone {
 
+
+/*
 inline station_node const* get_station_node(schedule const& sched,
                                             InputStation const* input_station) {
   using guesser::StationGuesserResponse;
@@ -46,13 +57,61 @@ inline station_node const* get_station_node(schedule const& sched,
 
   return motis::get_station_node(sched, station_id);
 }
+*/
 
+inline geo::latlng to_latlng(Position const* pos) {
+  return {pos->lat(), pos->lng()};
+}
+
+msg_ptr make_geo_request(latlng const& pos, double radius) {
+  Position fbs_position{pos.lat_, pos.lng_};
+  message_creator mc;
+  mc.create_and_finish(
+          MsgContent_LookupGeoStationRequest,
+          CreateLookupGeoStationRequest(mc, &fbs_position, 0, radius).Union(),
+          "/lookup/geo_station");
+  return make_msg(mc);
+}
+
+msg_ptr make_osrm_request(latlng const& pos,
+                          Vector<Offset<Station>> const* stations,
+                          std::string const& profile, Direction direction) {
+  Position fbs_position{pos.lat_, pos.lng_};
+  std::vector<Position> many;
+  for (auto const* station : *stations) {
+    many.push_back(*station->pos());
+  }
+
+  message_creator mc;
+  mc.create_and_finish(
+          MsgContent_OSRMOneToManyRequest,
+          CreateOSRMOneToManyRequest(mc, mc.CreateString(profile), direction,
+                                     &fbs_position, mc.CreateVectorOfStructs(many))
+                  .Union(),
+          "/osrm/one_to_many");
+  return make_msg(mc);
+}
 
 inline search_query build_query(schedule const& sched,
                                 IsochroneRequest const* req) {
   search_query q;
   verify_external_timestamp(sched, req->departure_time());
-  q.from_ = get_station_node(sched, req->station());
+  auto pos = to_latlng(req->position());
+  auto const geo_msg = motis_call(make_geo_request(pos, req->max_travel_time()))->val();
+  auto const geo_resp = motis_content(LookupGeoStationResponse, geo_msg);
+  auto const stations = geo_resp->stations();
+  auto const osrm_msg =
+          motis_call(make_osrm_request(pos, stations, "foot", Direction_Forward))
+                  ->val();
+  auto const osrm_resp = motis_content(OSRMOneToManyResponse, osrm_msg);
+  for (auto i = 0UL; i < stations->size(); ++i) {
+    auto const dur = osrm_resp->costs()->Get(i)->duration();
+    if (dur > req->max_travel_time()) {
+      continue;
+    }
+    q.start_stations_.emplace_back(motis::get_station_node(sched, stations->Get(i)->id()->str()), unix_to_motistime(sched, req->departure_time()+dur));
+  }
+
   q.interval_begin_ = unix_to_motistime(sched, req->departure_time());
   q.interval_end_ =
       unix_to_motistime(sched, req->departure_time() + req->max_travel_time());

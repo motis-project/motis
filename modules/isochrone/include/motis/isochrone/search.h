@@ -14,7 +14,7 @@ namespace motis::isochrone {
 
 struct search_query {
   schedule const* sched_{nullptr};
-  node const* from_{nullptr};
+  std::vector<std::pair<node const*, time>> start_stations_;
   time interval_begin_{0};
   time interval_end_{0};
   bool use_start_footpaths_{false};
@@ -46,14 +46,10 @@ struct search {
       return make_foot_edge(nullptr, to);
 
     };
-    auto mutable_node = const_cast<node*>(q.from_);  // NOLINT
-    auto const start_edge = create_start_edge(mutable_node);
-
     auto interval_begin = q.interval_begin_;
     auto interval_end = q.interval_end_;
+    auto starts = q.start_stations_;
 
-    auto starts = std::vector<std::pair<const node*, time>>();
-    starts.emplace_back(q.from_, interval_begin);
     /*
     auto meta_froms = q.sched_->stations_[q.from_->id_]->equivalent_;
     for (auto const& meta_from : meta_froms) {
@@ -72,7 +68,6 @@ struct search {
     std::vector<long> travel_times = td.get_remaining_times();
 
     return search_result(stats, stations, travel_times,
-
                          interval_begin, interval_end);
   }
 };
