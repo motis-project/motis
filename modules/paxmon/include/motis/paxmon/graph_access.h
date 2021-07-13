@@ -22,30 +22,27 @@ trip_data* get_or_add_trip(schedule const& sched, paxmon_data& data,
 
 void update_event_times(schedule const& sched, graph& g,
                         motis::rt::RtDelayUpdate const* du,
-                        std::vector<edge*>& updated_interchange_edges,
+                        std::vector<edge_index>& updated_interchange_edges,
                         system_statistics& system_stats);
 
 void update_trip_route(schedule const& sched, paxmon_data& data,
                        motis::rt::RtRerouteUpdate const* ru,
-                       std::vector<edge*>& updated_interchange_edges,
+                       std::vector<edge_index>& updated_interchange_edges,
                        system_statistics& system_stats);
 
-inline edge* add_edge(edge const& e) {
-  auto edge_ptr =
-      e.from_->out_edges_.emplace_back(std::make_unique<edge>(e)).get();
-  e.to_->in_edges_.emplace_back(edge_ptr);
-  return edge_ptr;
+inline edge* add_edge(graph& g, edge&& e) {
+  return &g.graph_.push_back_edge(std::move(e));
 }
 
-inline edge make_trip_edge(event_node* from, event_node* to, edge_type type,
-                           merged_trips_idx merged_trips,
+inline edge make_trip_edge(event_node_index from, event_node_index to,
+                           edge_type type, merged_trips_idx merged_trips,
                            std::uint16_t encoded_capacity,
                            service_class clasz) {
   return edge{from,  to,           type, false, 0, encoded_capacity,
               clasz, merged_trips, {}};
 }
 
-inline edge make_interchange_edge(event_node* from, event_node* to,
+inline edge make_interchange_edge(event_node_index from, event_node_index to,
                                   duration transfer_time,
                                   pax_connection_info&& ci) {
   return edge{from,
@@ -59,7 +56,7 @@ inline edge make_interchange_edge(event_node* from, event_node* to,
               std::move(ci)};
 }
 
-inline edge make_through_edge(event_node* from, event_node* to) {
+inline edge make_through_edge(event_node_index from, event_node_index to) {
   return edge{from,
               to,
               edge_type::THROUGH,

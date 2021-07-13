@@ -21,6 +21,7 @@
 #include "motis/core/conv/trip_conv.h"
 
 #include "motis/paxmon/capacity.h"
+#include "motis/paxmon/graph_index.h"
 #include "motis/paxmon/reroute.h"
 
 namespace motis::paxmon {
@@ -41,13 +42,13 @@ struct rule_trip_adder {
     }
 
     std::vector<edge_index> trip_edges;
-    event_node* prev_node = nullptr;
+    auto prev_node = INVALID_EVENT_NODE_INDEX;
     for (auto const& section : motis::access::sections(trp)) {
       auto dep_node = get_or_create_dep_node(section);
       auto arr_node = get_or_create_arr_node(section);
-      auto const* e = get_or_create_trip_edge(section, dep_node, arr_node);
-      trip_edges.emplace_back(get_edge_index(data_.graph_, e));
-      if (prev_node != nullptr) {
+      auto const ei = get_or_create_trip_edge(section, dep_node, arr_node);
+      trip_edges.emplace_back(ei);
+      if (prev_node != INVALID_EVENT_NODE_INDEX) {
         get_or_create_wait_edge(section, prev_node, dep_node);
       }
       prev_node = arr_node;
@@ -57,9 +58,8 @@ struct rule_trip_adder {
     }
 
     auto const enter_exit_node_idx =
-        static_cast<event_node_index>(data_.graph_.nodes_.size());
-    data_.graph_.nodes_.emplace_back(std::make_unique<event_node>(
-        event_node{static_cast<std::uint32_t>(data_.graph_.nodes_.size())}));
+        static_cast<event_node_index>(data_.graph_.graph_.nodes_.size());
+    data_.graph_.graph_.emplace_back_node(enter_exit_node_idx);
 
     auto const [it, inserted] = data_.graph_.trip_data_.emplace(
         trp, std::make_unique<trip_data>(
@@ -86,7 +86,8 @@ struct rule_trip_adder {
   }
 
   void add_through_services(motis::access::trip_section const& section,
-                            event_node* dep_node, event_node* arr_node) {
+                            event_node_index dep_node,
+                            event_node_index arr_node) {
     (void)section;
     (void)dep_node;
     (void)arr_node;
@@ -94,7 +95,7 @@ struct rule_trip_adder {
     // TODO(pablo): NYI
   }
 
-  event_node* get_or_create_dep_node(
+  event_node_index get_or_create_dep_node(
       motis::access::trip_section const& section) {
     auto const station_idx = section.from_station_id();
     auto const schedule_time = get_schedule_time(
@@ -103,21 +104,16 @@ struct rule_trip_adder {
     return utl::get_or_create(
         dep_nodes_, rule_node_key{station_idx, schedule_time, merged_trips_idx},
         [&]() {
-          return data_.graph_.nodes_
-              .emplace_back(std::make_unique<event_node>(event_node{
-                  static_cast<event_node_index>(data_.graph_.nodes_.size()),
-                  section.lcon().d_time_,
-                  schedule_time,
-                  event_type::DEP,
-                  true,
-                  station_idx,
-                  {},
-                  {}}))
-              .get();
+          auto const idx =
+              static_cast<event_node_index>(data_.graph_.graph_.nodes_.size());
+          data_.graph_.graph_.emplace_back_node(idx, section.lcon().d_time_,
+                                                schedule_time, event_type::DEP,
+                                                true, station_idx);
+          return idx;
         });
   }
 
-  event_node* get_or_create_arr_node(
+  event_node_index get_or_create_arr_node(
       motis::access::trip_section const& section) {
     auto const station_idx = section.to_station_id();
     auto const schedule_time = get_schedule_time(
@@ -126,51 +122,51 @@ struct rule_trip_adder {
     return utl::get_or_create(
         arr_nodes_, rule_node_key{station_idx, schedule_time, merged_trips_idx},
         [&]() {
-          return data_.graph_.nodes_
-              .emplace_back(std::make_unique<event_node>(event_node{
-                  static_cast<event_node_index>(data_.graph_.nodes_.size()),
-                  section.lcon().a_time_,
-                  schedule_time,
-                  event_type::ARR,
-                  true,
-                  station_idx,
-                  {},
-                  {}}))
-              .get();
+          auto const idx =
+              static_cast<event_node_index>(data_.graph_.graph_.nodes_.size());
+          data_.graph_.graph_.emplace_back_node(idx, section.lcon().a_time_,
+                                                schedule_time, event_type::ARR,
+                                                true, station_idx);
+          return idx;
         });
   }
 
-  motis::paxmon::edge* get_or_create_trip_edge(
-      motis::access::trip_section const& section, event_node* dep_node,
-      event_node* arr_node) {
+  edge_index get_or_create_trip_edge(motis::access::trip_section const& section,
+                                     event_node_index dep_node,
+                                     event_node_index arr_node) {
     return utl::get_or_create(trip_edges_, &section.lcon(), [&]() {
       auto const encoded_capacity = encode_capacity(
           get_capacity(sched_, section.lcon(), data_.trip_capacity_map_,
                        data_.category_capacity_map_));
-      return add_edge(make_trip_edge(dep_node, arr_node, edge_type::TRIP,
-                                     section.lcon().trips_, encoded_capacity,
-                                     section.fcon().clasz_));
+      auto const* e = add_edge(
+          data_.graph_, make_trip_edge(dep_node, arr_node, edge_type::TRIP,
+                                       section.lcon().trips_, encoded_capacity,
+                                       section.fcon().clasz_));
+      return get_edge_index(data_.graph_, e);
     });
   }
 
-  motis::paxmon::edge* get_or_create_wait_edge(
-      motis::access::trip_section const& section, event_node* prev_node,
-      event_node* dep_node) {
+  edge_index get_or_create_wait_edge(motis::access::trip_section const& section,
+                                     event_node_index prev_node,
+                                     event_node_index dep_node) {
     return utl::get_or_create(
         wait_edges_, std::make_pair(prev_node, dep_node), [&]() {
-          return add_edge(make_trip_edge(
-              prev_node, dep_node, edge_type::WAIT, section.lcon().trips_,
-              UNLIMITED_ENCODED_CAPACITY, section.fcon().clasz_));
+          auto const* e = add_edge(
+              data_.graph_,
+              make_trip_edge(prev_node, dep_node, edge_type::WAIT,
+                             section.lcon().trips_, UNLIMITED_ENCODED_CAPACITY,
+                             section.fcon().clasz_));
+          return get_edge_index(data_.graph_, e);
         });
   }
 
   schedule const& sched_;
   paxmon_data& data_;
   std::set<trip const*> trips_;
-  std::map<rule_node_key, motis::paxmon::event_node*> dep_nodes_;
-  std::map<rule_node_key, motis::paxmon::event_node*> arr_nodes_;
-  std::map<motis::light_connection const*, motis::paxmon::edge*> trip_edges_;
-  std::map<std::pair<event_node*, event_node*>, motis::paxmon::edge*>
+  std::map<rule_node_key, event_node_index> dep_nodes_;
+  std::map<rule_node_key, event_node_index> arr_nodes_;
+  std::map<motis::light_connection const*, edge_index> trip_edges_;
+  std::map<std::pair<event_node_index, event_node_index>, edge_index>
       wait_edges_;
 };
 
@@ -194,35 +190,33 @@ trip_data* get_or_add_trip(schedule const& sched, paxmon_data& data,
   return get_or_add_trip(sched, data, get_trip(sched, et));
 }
 
-void add_interchange_edges(event_node const* evn,
-                           std::vector<edge*>& updated_interchange_edges,
-                           graph const& g, system_statistics& system_stats) {
+void add_interchange_edges(event_node* evn,
+                           std::vector<edge_index>& updated_interchange_edges,
+                           graph& g, system_statistics& system_stats) {
   if (evn->type_ == event_type::ARR) {
-    return utl::all(evn->outgoing_edges(g))  //
-           | utl::transform([](auto&& e) { return e.get(); })  //
-           | utl::remove_if([](auto&& e) {
-               return e->type_ != edge_type::INTERCHANGE;
-             })  //
+    auto oe = evn->outgoing_edges(g);
+    return utl::all(oe)  //
+           | utl::remove_if(
+                 [](auto&& e) { return e.type_ != edge_type::INTERCHANGE; })  //
            | utl::for_each([&](auto&& e) {
                ++system_stats.total_updated_interchange_edges_;
-               updated_interchange_edges.push_back(e);
+               updated_interchange_edges.push_back(get_edge_index(g, &e));
              });
   } else /*if (evn->type_ == event_type::DEP)*/ {
     assert(evn->type_ == event_type::DEP);
     return utl::all(evn->incoming_edges(g))  //
-           | utl::remove_if([](auto&& e) {
-               return e->type_ != edge_type::INTERCHANGE;
-             })  //
+           | utl::remove_if(
+                 [](auto&& e) { return e.type_ != edge_type::INTERCHANGE; })  //
            | utl::for_each([&](auto&& e) {
                ++system_stats.total_updated_interchange_edges_;
-               updated_interchange_edges.push_back(e);
+               updated_interchange_edges.push_back(get_edge_index(g, &e));
              });
   }
 }
 
 void update_event_times(schedule const& sched, graph& g,
                         RtDelayUpdate const* du,
-                        std::vector<edge*>& updated_interchange_edges,
+                        std::vector<edge_index>& updated_interchange_edges,
                         system_statistics& system_stats) {
   auto const trp = from_fbs(sched, du->trip());
   auto trip_edges = g.trip_data_.find(trp);
@@ -260,7 +254,7 @@ void update_event_times(schedule const& sched, graph& g,
 
 void update_trip_route(schedule const& sched, paxmon_data& data,
                        RtRerouteUpdate const* ru,
-                       std::vector<edge*>& updated_interchange_edges,
+                       std::vector<edge_index>& updated_interchange_edges,
                        system_statistics& system_stats) {
   ++system_stats.update_trip_route_count_;
   auto const trp = from_fbs(sched, ru->trip());
@@ -324,11 +318,11 @@ void for_each_edge(schedule const& sched, paxmon_data& data,
                 });
 }
 
-event_node* find_event_node(graph const& g, trip_data const& td,
+event_node* find_event_node(graph& g, trip_data& td,
                             std::uint32_t const station_idx,
                             event_type const et, time const schedule_time) {
-  for (auto const& ei : td.edges_) {
-    auto const* e = ei.get(g);
+  for (auto& ei : td.edges_) {
+    auto* e = ei.get(g);
     if (et == event_type::DEP) {
       auto* n = e->from(g);
       if (n->station_idx() == station_idx &&

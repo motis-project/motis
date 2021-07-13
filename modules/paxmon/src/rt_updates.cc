@@ -24,11 +24,12 @@ using namespace motis::module;
 namespace motis::paxmon {
 
 void check_broken_interchanges(
-    paxmon_data& data, std::vector<edge*> const& updated_interchange_edges,
+    paxmon_data& data, std::vector<edge_index> const& updated_interchange_edges,
     system_statistics& system_stats, int arrival_delay_threshold) {
   static std::set<edge*> broken_interchanges;
   static std::set<passenger_group*> affected_passenger_groups;
-  for (auto& ice : updated_interchange_edges) {
+  for (auto& icei : updated_interchange_edges) {
+    auto* ice = icei.get(data.graph_);
     if (ice->type_ != edge_type::INTERCHANGE) {
       continue;
     }
@@ -82,7 +83,7 @@ void handle_rt_update(paxmon_data& data, schedule const& sched,
                       int arrival_delay_threshold) {
   tick_stats.rt_updates_ += update->updates()->size();
 
-  std::vector<edge*> updated_interchange_edges;
+  std::vector<edge_index> updated_interchange_edges;
   for (auto const& u : *update->updates()) {
     switch (u->content_type()) {
       case Content_RtDelayUpdate: {

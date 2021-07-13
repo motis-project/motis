@@ -56,17 +56,17 @@ void write_over_capacity_report(paxmon_data const& data, schedule const& sched,
   mcd::hash_map<trip const*, std::vector<edge const*>> over_capacity;
   auto const& g = data.graph_;
 
-  for (auto const& n : g.nodes_) {
-    for (auto const& e : n->outgoing_edges(g)) {
-      if (!e->is_trip() || e->is_canceled(g)) {
+  for (auto const& n : g.graph_.nodes_) {
+    for (auto const& e : n.outgoing_edges(g)) {
+      if (!e.is_trip() || e.is_canceled(g)) {
         continue;
       }
       auto const passengers =
-          get_base_load(g.passenger_groups_, e->get_pax_connection_info());
-      auto const capacity = e->capacity();
-      if (e->has_capacity() && passengers > capacity) {
-        for (auto const& trp : e->get_trips(sched)) {
-          over_capacity[trp].emplace_back(e.get());
+          get_base_load(g.passenger_groups_, e.get_pax_connection_info());
+      auto const capacity = e.capacity();
+      if (e.has_capacity() && passengers > capacity) {
+        for (auto const& trp : e.get_trips(sched)) {
+          over_capacity[trp].emplace_back(&e);
         }
       }
     }

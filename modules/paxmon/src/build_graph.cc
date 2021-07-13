@@ -2,7 +2,6 @@
 
 #include <iostream>
 
-#include "utl/erase_if.h"
 #include "utl/progress_tracker.h"
 #include "utl/verify.h"
 
@@ -17,20 +16,20 @@ namespace motis::paxmon {
 
 namespace {
 
-void add_interchange(event_node* from, event_node* to, passenger_group* grp,
-                     duration transfer_time, graph const& g) {
-  for (auto& e : from->outgoing_edges(g)) {
-    if (e->type_ == edge_type::INTERCHANGE && e->to(g) == to &&
-        e->transfer_time() == transfer_time) {
-      add_passenger_group_to_edge(e.get(), grp);
-      grp->edges_.emplace_back(get_edge_index(g, e.get()));
+void add_interchange(event_node_index from, event_node_index to,
+                     passenger_group* grp, duration transfer_time, graph& g) {
+  for (auto& e : g.graph_.outgoing_edges(from)) {
+    if (e.type_ == edge_type::INTERCHANGE && e.to_ == to &&
+        e.transfer_time() == transfer_time) {
+      add_passenger_group_to_edge(&e, grp);
+      grp->edges_.emplace_back(get_edge_index(g, &e));
       return;
     }
   }
   auto pci = pax_connection_info{grp->id_};
   pci.init_expected_load(g.passenger_groups_);
-  auto const* e =
-      add_edge(make_interchange_edge(from, to, transfer_time, std::move(pci)));
+  auto const* e = add_edge(
+      g, make_interchange_edge(from, to, transfer_time, std::move(pci)));
   auto const ei = get_edge_index(g, e);
   grp->edges_.emplace_back(ei);
 }
@@ -40,7 +39,7 @@ void add_interchange(event_node* from, event_node* to, passenger_group* grp,
 void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
                                   passenger_group& grp) {
   utl::verify(grp.edges_.empty(), "group already added to graph");
-  event_node* exit_node = nullptr;
+  auto exit_node = INVALID_EVENT_NODE_INDEX;
   trip_data* last_trip = nullptr;
 
   for (auto const& leg : grp.compact_planned_journey_.legs_) {
@@ -68,11 +67,12 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
             from->schedule_time_ == leg.enter_time_) {
           in_trip = true;
           enter_found = true;
-          if (exit_node == nullptr) {
-            exit_node = data.graph_.nodes_.at(te->enter_exit_node_).get();
+          if (exit_node == INVALID_EVENT_NODE_INDEX) {
+            exit_node = te->enter_exit_node_;
           }
           auto const transfer_time = get_transfer_duration(leg.enter_transfer_);
-          add_interchange(exit_node, from, &grp, transfer_time, data.graph_);
+          add_interchange(exit_node, from->index_, &grp, transfer_time,
+                          data.graph_);
         }
       }
       if (in_trip) {
@@ -81,7 +81,7 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
         auto const to = e->to(data.graph_);
         if (to->station_ == leg.exit_station_id_ &&
             to->schedule_time_ == leg.exit_time_) {
-          exit_node = to;
+          exit_node = to->index_;
           last_trip = te;
           exit_found = true;
           break;
@@ -116,10 +116,9 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
     }
   }
 
-  if (exit_node != nullptr && last_trip != nullptr) {
-    add_interchange(exit_node,
-                    data.graph_.nodes_.at(last_trip->enter_exit_node_).get(),
-                    &grp, 0, data.graph_);
+  if (exit_node != INVALID_EVENT_NODE_INDEX && last_trip != nullptr) {
+    add_interchange(exit_node, last_trip->enter_exit_node_, &grp, 0,
+                    data.graph_);
   }
 
   utl::verify(!grp.edges_.empty(), "empty passenger group edges");

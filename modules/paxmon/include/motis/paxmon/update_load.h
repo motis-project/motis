@@ -10,6 +10,6 @@
 namespace motis::paxmon {
 
 void update_load(passenger_group* pg, reachability_info const& reachability,
-                 passenger_localization const& localization, graph const& g);
+                 passenger_localization const& localization, graph& g);
 
 }  // namespace motis::paxmon

@@ -20,17 +20,17 @@ void write_broken_interchanges_report(paxmon_data const& data,
   auto const& g = data.graph_;
 
   out << "available,required\n";
-  for (auto const& n : g.nodes_) {
-    for (auto const& e : n->outgoing_edges(g)) {
-      if (!e->is_interchange()) {
+  for (auto const& n : g.graph_.nodes_) {
+    for (auto const& e : n.outgoing_edges(g)) {
+      if (!e.is_interchange()) {
         continue;
       }
-      auto const arrival = e->from(g)->current_time();
-      auto const departure = e->to(g)->current_time();
+      auto const arrival = e.from(g)->current_time();
+      auto const departure = e.to(g)->current_time();
       auto const ic_buffer =
           static_cast<int>(departure) - static_cast<int>(arrival);
-      if (ic_buffer < e->transfer_time()) {
-        out << ic_buffer << "," << e->transfer_time() << "\n";
+      if (ic_buffer < e.transfer_time()) {
+        out << ic_buffer << "," << e.transfer_time() << "\n";
       }
     }
   }

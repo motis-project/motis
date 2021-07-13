@@ -12,6 +12,7 @@
 #include "motis/hash_map.h"
 #include "motis/vector.h"
 
+#include "motis/core/common/fws_graph.h"
 #include "motis/core/schedule/event_type.h"
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/schedule/time.h"
@@ -30,17 +31,23 @@ struct edge;
 struct graph;
 
 struct event_node {
+  using mutable_outgoing_edge_bucket =
+      typename fws_graph<event_node, edge>::mutable_outgoing_edge_bucket;
+  using const_outgoing_edge_bucket =
+      typename fws_graph<event_node, edge>::const_outgoing_edge_bucket;
+
+  using mutable_incoming_edge_bucket =
+      fws_graph<event_node, edge>::mutable_incoming_edge_bucket;
+  using const_incoming_edge_bucket =
+      fws_graph<event_node, edge>::const_incoming_edge_bucket;
+
   inline bool is_valid() const { return valid_; }
   inline bool is_canceled() const { return !valid_; }
 
-  inline std::vector<std::unique_ptr<edge>> const& outgoing_edges(
-      graph const&) const {
-    return out_edges_;
-  }
+  const_outgoing_edge_bucket outgoing_edges(graph const& g) const;
+  mutable_outgoing_edge_bucket outgoing_edges(graph& g) const;
 
-  inline std::vector<edge*> const& incoming_edges(graph const&) const {
-    return in_edges_;
-  }
+  const_incoming_edge_bucket incoming_edges(graph const& g) const;
 
   inline time current_time() const { return time_; }
   inline time schedule_time() const { return schedule_time_; }
@@ -50,7 +57,7 @@ struct event_node {
     return *sched.stations_[station_idx()];
   }
 
-  inline std::uint32_t index(graph const&) const { return index_; }
+  inline event_node_index index(graph const&) const { return index_; }
 
   event_node_index index_{};
   time time_{INVALID_TIME};
@@ -58,9 +65,6 @@ struct event_node {
   event_type type_{event_type::ARR};
   bool valid_{true};
   std::uint32_t station_{0};
-
-  std::vector<std::unique_ptr<edge>> out_edges_;
-  std::vector<edge*> in_edges_;
 };
 
 enum class edge_type : std::uint8_t { TRIP, INTERCHANGE, WAIT, THROUGH };
@@ -92,8 +96,11 @@ struct edge {
 
   inline bool is_wait() const { return type() == edge_type::WAIT; }
 
-  inline event_node* from(graph const&) const { return from_; }
-  inline event_node* to(graph const&) const { return to_; }
+  event_node const* from(graph const&) const;
+  event_node* from(graph&) const;
+
+  event_node const* to(graph const&) const;
+  event_node* to(graph&) const;
 
   inline edge_type type() const { return type_; }
 
@@ -135,8 +142,8 @@ struct edge {
     return pax_connection_info_;
   }
 
-  event_node* from_{};
-  event_node* to_{};
+  event_node_index from_{};
+  event_node_index to_{};
   edge_type type_{};
   bool broken_{false};
   duration transfer_time_{};
@@ -153,7 +160,7 @@ struct trip_data {
 };
 
 struct graph {
-  std::vector<std::unique_ptr<event_node>> nodes_;
+  fws_graph<event_node, edge> graph_;
   mcd::hash_map<trip const*, std::unique_ptr<trip_data>> trip_data_;
   passenger_group_container passenger_groups_;
 };

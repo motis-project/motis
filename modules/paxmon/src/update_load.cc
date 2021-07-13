@@ -10,7 +10,7 @@
 namespace motis::paxmon {
 
 void update_load(passenger_group* pg, reachability_info const& reachability,
-                 passenger_localization const& localization, graph const& g) {
+                 passenger_localization const& localization, graph& g) {
   auto disabled_edges = pg->edges_;
   pg->edges_.clear();
 
@@ -32,16 +32,17 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
     auto const transfer_time = get_transfer_duration(rt.leg_->enter_transfer_);
     auto enter_node = rt.td_->edges_[rt.enter_edge_idx_].get(g)->from(g);
     for (auto& e : exit_node->outgoing_edges(g)) {
-      if (e->type_ == edge_type::INTERCHANGE && e->to(g) == enter_node &&
-          e->transfer_time() == transfer_time) {
-        add_to_edge(get_edge_index(g, e.get()), e.get());
+      if (e.type_ == edge_type::INTERCHANGE && e.to(g) == enter_node &&
+          e.transfer_time() == transfer_time) {
+        add_to_edge(get_edge_index(g, &e), &e);
         return;
       }
     }
     auto pci = pax_connection_info{pg->id_};
     pci.init_expected_load(g.passenger_groups_);
-    auto const* e = add_edge(make_interchange_edge(
-        exit_node, enter_node, transfer_time, std::move(pci)));
+    auto const* e =
+        add_edge(g, make_interchange_edge(exit_node->index_, enter_node->index_,
+                                          transfer_time, std::move(pci)));
     auto const ei = get_edge_index(g, e);
     pg->edges_.emplace_back(ei);
   };
@@ -49,9 +50,8 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
   if (reachability.ok_) {
     utl::verify(!reachability.reachable_trips_.empty(),
                 "update_load: no reachable trips but reachability ok");
-    auto exit_node =
-        g.nodes_.at(reachability.reachable_trips_.front().td_->enter_exit_node_)
-            .get();
+    auto* exit_node = &g.graph_.nodes_.at(
+        reachability.reachable_trips_.front().td_->enter_exit_node_);
     for (auto const& rt : reachability.reachable_trips_) {
       utl::verify(rt.valid_exit(), "update_load: invalid exit");
       add_interchange(rt, exit_node);
@@ -62,9 +62,8 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
       exit_node = rt.td_->edges_[rt.exit_edge_idx_].get(g)->to(g);
     }
   } else if (!reachability.reachable_trips_.empty()) {
-    auto exit_node =
-        g.nodes_.at(reachability.reachable_trips_.front().td_->enter_exit_node_)
-            .get();
+    auto* exit_node = &g.graph_.nodes_.at(
+        reachability.reachable_trips_.front().td_->enter_exit_node_);
     for (auto const& rt : reachability.reachable_trips_) {
       auto const exit_idx =
           rt.valid_exit() ? rt.exit_edge_idx_ : rt.td_->edges_.size() - 1;

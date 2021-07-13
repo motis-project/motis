@@ -1,12 +1,15 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
 
 #include "cista/reflection/comparable.h"
 
 namespace motis::paxmon {
 
 using event_node_index = std::uint32_t;
+auto const constexpr INVALID_EVENT_NODE_INDEX =
+    std::numeric_limits<event_node_index>::max();
 
 struct graph;
 struct edge;

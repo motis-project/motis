@@ -17,35 +17,33 @@ namespace motis::paxmon {
 bool check_graph_integrity(graph const& g, schedule const& sched) {
   auto ok = true;
 
-  for (auto const& n : g.nodes_) {
-    for (auto const& e : n->outgoing_edges(g)) {
-      for (auto const pg_id : e->get_pax_connection_info().groups_) {
+  for (auto const& n : g.graph_.nodes_) {
+    for (auto const& e : n.outgoing_edges(g)) {
+      for (auto const pg_id : e.get_pax_connection_info().groups_) {
         auto const* pg = g.passenger_groups_.at(pg_id);
         if (pg->probability_ <= 0.0 || pg->passengers_ >= 200) {
-          std::cout << "!! invalid psi @" << e->type() << ": id=" << pg->id_
+          std::cout << "!! invalid psi @" << e.type() << ": id=" << pg->id_
                     << "\n";
           ok = false;
         }
-        if (!e->is_trip()) {
+        if (!e.is_trip()) {
           continue;
         }
-        auto const& trips = e->get_trips(sched);
+        auto const& trips = e.get_trips(sched);
         for (auto const& trp : trips) {
           auto const& td = g.trip_data_.at(trp);
           if (std::find_if(begin(td->edges_), end(td->edges_),
-                           [&](auto const& ei) {
-                             return ei.get(g) == e.get();
-                           }) == end(td->edges_)) {
-            std::cout << "!! edge missing in trip_data.edges @" << e->type()
+                           [&](auto const& ei) { return ei.get(g) == &e; }) ==
+              end(td->edges_)) {
+            std::cout << "!! edge missing in trip_data.edges @" << e.type()
                       << "\n";
             ok = false;
           }
         }
         if (std::find_if(begin(pg->edges_), end(pg->edges_),
-                         [&](auto const& ei) {
-                           return ei.get(g) == e.get();
-                         }) == end(pg->edges_)) {
-          std::cout << "!! edge missing in pg.edges @" << e->type() << "\n";
+                         [&](auto const& ei) { return ei.get(g) == &e; }) ==
+            end(pg->edges_)) {
+          std::cout << "!! edge missing in pg.edges @" << e.type() << "\n";
           ok = false;
         }
       }

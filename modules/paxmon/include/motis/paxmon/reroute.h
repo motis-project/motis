@@ -45,7 +45,7 @@ inline std::ostream& operator<<(std::ostream& o, diff_op const op) {
   return o;
 }
 
-std::vector<trip_ev_key> to_trip_ev_keys(trip_data const& td, graph const& g);
+std::vector<trip_ev_key> to_trip_ev_keys(trip_data const& td, graph& g);
 
 std::vector<trip_ev_key> to_trip_ev_keys(
     schedule const& sched,
@@ -55,6 +55,6 @@ std::vector<trip_ev_key> to_trip_ev_keys(
 void apply_reroute(paxmon_data& data, schedule const& sched, trip const* trp,
                    trip_data& td, std::vector<trip_ev_key> const& old_route,
                    std::vector<trip_ev_key> const& new_route,
-                   std::vector<edge*>& updated_interchange_edges);
+                   std::vector<edge_index>& updated_interchange_edges);
 
 }  // namespace motis::paxmon
