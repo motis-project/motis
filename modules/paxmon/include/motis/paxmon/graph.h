@@ -9,7 +9,6 @@
 #include "utl/enumerate.h"
 
 #include "motis/data.h"
-#include "motis/hash_map.h"
 #include "motis/vector.h"
 
 #include "motis/core/common/fws_graph.h"
@@ -24,6 +23,7 @@
 #include "motis/paxmon/graph_index.h"
 #include "motis/paxmon/passenger_group_container.h"
 #include "motis/paxmon/pax_connection_info.h"
+#include "motis/paxmon/trip_data_container.h"
 
 namespace motis::paxmon {
 
@@ -153,15 +153,9 @@ struct edge {
   struct pax_connection_info pax_connection_info_;
 };
 
-struct trip_data {
-  std::vector<edge_index> edges_;
-  std::vector<event_node_index> canceled_nodes_;
-  event_node_index enter_exit_node_{};
-};
-
 struct graph {
   fws_graph<event_node, edge> graph_;
-  mcd::hash_map<trip const*, std::unique_ptr<trip_data>> trip_data_;
+  trip_data_container trip_data_;
   passenger_group_container passenger_groups_;
 };
 

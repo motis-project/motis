@@ -40,15 +40,15 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
                                   passenger_group& grp) {
   utl::verify(grp.edges_.empty(), "group already added to graph");
   auto exit_node = INVALID_EVENT_NODE_INDEX;
-  trip_data* last_trip = nullptr;
+  auto last_trip = INVALID_TRIP_DATA_INDEX;
 
   for (auto const& leg : grp.compact_planned_journey_.legs_) {
     utl::verify(leg.enter_time_ != INVALID_TIME, "invalid enter time");
     utl::verify(leg.exit_time_ != INVALID_TIME, "invalid exit time");
 
-    trip_data* te = nullptr;
+    auto tdi = INVALID_TRIP_DATA_INDEX;
     try {
-      te = get_or_add_trip(sched, data, leg.trip_);
+      tdi = get_or_add_trip(sched, data, leg.trip_);
     } catch (std::system_error const& e) {
       std::cerr << "could not add trip for passenger group " << grp.id_
                 << " (source=" << grp.source_.primary_ref_ << "."
@@ -56,10 +56,10 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
       throw e;
     }
     auto in_trip = false;
-    last_trip = nullptr;
+    last_trip = INVALID_TRIP_DATA_INDEX;
     auto enter_found = false;
     auto exit_found = false;
-    for (auto& ei : te->edges_) {
+    for (auto& ei : data.graph_.trip_data_.edges(tdi)) {
       auto* e = ei.get(data.graph_);
       if (!in_trip) {
         auto const from = e->from(data.graph_);
@@ -68,7 +68,7 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
           in_trip = true;
           enter_found = true;
           if (exit_node == INVALID_EVENT_NODE_INDEX) {
-            exit_node = te->enter_exit_node_;
+            exit_node = data.graph_.trip_data_.enter_exit_node(tdi);
           }
           auto const transfer_time = get_transfer_duration(leg.enter_transfer_);
           add_interchange(exit_node, from->index_, &grp, transfer_time,
@@ -82,7 +82,7 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
         if (to->station_ == leg.exit_station_id_ &&
             to->schedule_time_ == leg.exit_time_) {
           exit_node = to->index_;
-          last_trip = te;
+          last_trip = tdi;
           exit_found = true;
           break;
         }
@@ -102,7 +102,7 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
       print_leg(sched, leg);
 
       std::cout << "\ncurrent trip:\n";
-      print_trip_sections(data.graph_, sched, leg.trip_, te);
+      print_trip_sections(data.graph_, sched, leg.trip_, tdi);
 
       std::cout << "\ncompact planned journey:\n";
       for (auto const& l : grp.compact_planned_journey_.legs_) {
@@ -116,8 +116,10 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
     }
   }
 
-  if (exit_node != INVALID_EVENT_NODE_INDEX && last_trip != nullptr) {
-    add_interchange(exit_node, last_trip->enter_exit_node_, &grp, 0,
+  if (exit_node != INVALID_EVENT_NODE_INDEX &&
+      last_trip != INVALID_TRIP_DATA_INDEX) {
+    add_interchange(exit_node,
+                    data.graph_.trip_data_.enter_exit_node(last_trip), &grp, 0,
                     data.graph_);
   }
 

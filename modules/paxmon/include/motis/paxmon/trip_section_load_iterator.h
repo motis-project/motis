@@ -19,10 +19,14 @@ namespace motis::paxmon {
 
 struct trip_section_with_load {
   trip_section_with_load(schedule const& sched, paxmon_data const& data,
-                         trip const* trp, trip_data const* td, int const idx)
+                         trip const* trp, trip_data_index const tdi,
+                         int const idx)
       : graph_{data.graph_},
         section_{trp, idx},
-        edge_{td == nullptr ? nullptr : td->edges_.at(idx).get(data.graph_)} {
+        edge_{
+            tdi == INVALID_TRIP_DATA_INDEX
+                ? nullptr
+                : data.graph_.trip_data_.edges(tdi).at(idx).get(data.graph_)} {
     if (edge_ != nullptr) {
       capacity_ = edge_->capacity();
       capacity_source_ = edge_->get_capacity_source();
@@ -84,18 +88,18 @@ struct trip_section_load_iterator {
   using reference = value_type;
 
   trip_section_load_iterator(schedule const& sched, paxmon_data const& data,
-                             trip const* trp, trip_data const* td,
+                             trip const* trp, trip_data_index const tdi,
                              int const idx)
-      : sched_{sched}, data_{data}, trip_{trp}, td_{td}, index_{idx} {}
+      : sched_{sched}, data_{data}, trip_{trp}, tdi_{tdi}, index_{idx} {}
 
   trip_section_with_load operator*() {
-    return {sched_, data_, trip_, td_, index_};
+    return {sched_, data_, trip_, tdi_, index_};
   }
   trip_section_with_load operator->() {
-    return {sched_, data_, trip_, td_, index_};
+    return {sched_, data_, trip_, tdi_, index_};
   }
   trip_section_with_load operator[](int rhs) {
-    return {sched_, data_, trip_, td_, index_ + rhs};
+    return {sched_, data_, trip_, tdi_, index_ + rhs};
   }
 
   trip_section_load_iterator& operator+=(int rhs) {
@@ -131,21 +135,21 @@ struct trip_section_load_iterator {
   }
 
   trip_section_load_iterator operator+(difference_type rhs) const {
-    return {sched_, data_, trip_, td_, index_ + rhs};
+    return {sched_, data_, trip_, tdi_, index_ + rhs};
   }
 
   trip_section_load_iterator operator-(difference_type rhs) const {
-    return {sched_, data_, trip_, td_, index_ + rhs};
+    return {sched_, data_, trip_, tdi_, index_ + rhs};
   }
 
   friend trip_section_load_iterator operator+(
       difference_type lhs, trip_section_load_iterator const& rhs) {
-    return {rhs.sched_, rhs.data_, rhs.trip_, rhs.td_, rhs.index_ + lhs};
+    return {rhs.sched_, rhs.data_, rhs.trip_, rhs.tdi_, rhs.index_ + lhs};
   }
 
   friend trip_section_load_iterator operator-(
       difference_type lhs, trip_section_load_iterator const& rhs) {
-    return {rhs.sched_, rhs.data_, rhs.trip_, rhs.td_, rhs.index_ - lhs};
+    return {rhs.sched_, rhs.data_, rhs.trip_, rhs.tdi_, rhs.index_ - lhs};
   }
 
   difference_type operator-(trip_section_load_iterator const& rhs) const {
@@ -153,40 +157,40 @@ struct trip_section_load_iterator {
   }
 
   bool operator==(trip_section_load_iterator const& rhs) const {
-    return std::tie(trip_, td_, index_) ==
-           std::tie(rhs.trip_, rhs.td_, rhs.index_);
+    return std::tie(trip_, tdi_, index_) ==
+           std::tie(rhs.trip_, rhs.tdi_, rhs.index_);
   }
 
   bool operator!=(trip_section_load_iterator const& rhs) const {
-    return std::tie(trip_, td_, index_) !=
-           std::tie(rhs.trip_, rhs.td_, rhs.index_);
+    return std::tie(trip_, tdi_, index_) !=
+           std::tie(rhs.trip_, rhs.tdi_, rhs.index_);
   }
 
   bool operator<(trip_section_load_iterator const& rhs) const {
-    return std::tie(trip_, td_, index_) <
-           std::tie(rhs.trip_, rhs.td_, rhs.index_);
+    return std::tie(trip_, tdi_, index_) <
+           std::tie(rhs.trip_, rhs.tdi_, rhs.index_);
   }
 
   bool operator<=(trip_section_load_iterator const& rhs) const {
-    return std::tie(trip_, td_, index_) <=
-           std::tie(rhs.trip_, rhs.td_, rhs.index_);
+    return std::tie(trip_, tdi_, index_) <=
+           std::tie(rhs.trip_, rhs.tdi_, rhs.index_);
   }
 
   bool operator>(trip_section_load_iterator const& rhs) const {
-    return std::tie(trip_, td_, index_) >
-           std::tie(rhs.trip_, rhs.td_, rhs.index_);
+    return std::tie(trip_, tdi_, index_) >
+           std::tie(rhs.trip_, rhs.tdi_, rhs.index_);
   }
 
   bool operator>=(trip_section_load_iterator const& rhs) const {
-    return std::tie(trip_, td_, index_) >=
-           std::tie(rhs.trip_, rhs.td_, rhs.index_);
+    return std::tie(trip_, tdi_, index_) >=
+           std::tie(rhs.trip_, rhs.tdi_, rhs.index_);
   }
 
 protected:
   schedule const& sched_;
   paxmon_data const& data_;
   trip const* trip_{};
-  trip_data const* td_{};
+  trip_data_index const tdi_{};
   int index_{};
 };
 
@@ -195,24 +199,27 @@ struct sections_with_load {
 
   sections_with_load(schedule const& sched, paxmon_data const& data,
                      trip const* trp)
-      : sched_{sched}, data_{data}, trip_{trp} {
-    if (auto const it = data.graph_.trip_data_.find(trp);
-        it != std::end(data.graph_.trip_data_)) {
-      td_ = it->second.get();
-      utl::verify(trip_->edges_->size() == td_->edges_.size(),
+      : sched_{sched},
+        data_{data},
+        trip_{trp},
+        tdi_{data.graph_.trip_data_.find_index(trp)} {
+    if (tdi_ != INVALID_TRIP_DATA_INDEX) {
+      auto const td_edges = data.graph_.trip_data_.edges(tdi_);
+      utl::verify(trip_->edges_->size() == td_edges.size(),
                   "motis trip edge count ({}) != paxmon trip edge count ({})",
-                  trip_->edges_->size(), td_->edges_.size());
+                  trip_->edges_->size(), td_edges.size());
     }
   }
 
   inline std::size_t size() const { return trip_->edges_->size(); }
   inline bool empty() const { return trip_->edges_->empty(); }
 
-  inline bool has_load_info() const { return td_ != nullptr; }
+  inline bool has_load_info() const { return tdi_ != INVALID_TRIP_DATA_INDEX; }
 
-  iterator begin() const { return {sched_, data_, trip_, td_, 0}; }
+  iterator begin() const { return {sched_, data_, trip_, tdi_, 0}; }
   iterator end() const {
-    return {sched_, data_, trip_, td_, static_cast<int>(trip_->edges_->size())};
+    return {sched_, data_, trip_, tdi_,
+            static_cast<int>(trip_->edges_->size())};
   }
 
   friend iterator begin(sections_with_load const& s) { return s.begin(); }
@@ -236,7 +243,7 @@ struct sections_with_load {
   schedule const& sched_;
   paxmon_data const& data_;
   trip const* trip_{};
-  trip_data const* td_{};
+  trip_data_index const tdi_{};
 };
 
 }  // namespace motis::paxmon

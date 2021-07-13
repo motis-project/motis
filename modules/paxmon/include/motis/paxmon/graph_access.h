@@ -14,11 +14,11 @@
 
 namespace motis::paxmon {
 
-trip_data* get_or_add_trip(schedule const& sched, paxmon_data& data,
-                           trip const* trp);
+trip_data_index get_or_add_trip(schedule const& sched, paxmon_data& data,
+                                trip const* trp);
 
-trip_data* get_or_add_trip(schedule const& sched, paxmon_data& data,
-                           extern_trip const& et);
+trip_data_index get_or_add_trip(schedule const& sched, paxmon_data& data,
+                                extern_trip const& et);
 
 void update_event_times(schedule const& sched, graph& g,
                         motis::rt::RtDelayUpdate const* du,
@@ -73,13 +73,13 @@ void remove_passenger_group_from_edge(edge* e, passenger_group* pg);
 
 void for_each_trip(
     schedule const& sched, paxmon_data& data, compact_journey const& journey,
-    std::function<void(journey_leg const&, trip_data const*)> const& fn);
+    std::function<void(journey_leg const&, trip_data_index)> const& fn);
 
 void for_each_edge(schedule const& sched, paxmon_data& data,
                    compact_journey const& journey,
                    std::function<void(journey_leg const&, edge*)> const& fn);
 
-event_node* find_event_node(graph const& g, trip_data const& td,
+event_node* find_event_node(graph const& g, trip_data_index tdi,
                             std::uint32_t station_idx, event_type et,
                             time schedule_time);
 

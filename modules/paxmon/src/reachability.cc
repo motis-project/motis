@@ -21,11 +21,12 @@ reachability_info get_reachability(paxmon_data const& data,
                         first_leg.enter_time_});
 
   for (auto const& [leg_idx, leg] : utl::enumerate(j.legs_)) {
-    auto const td = data.graph_.trip_data_.at(leg.trip_).get();
+    auto const tdi = data.graph_.trip_data_.get_index(leg.trip_);
     auto in_trip = false;
     auto entry_ok = false;
     auto exit_ok = false;
-    for (auto [edge_idx, ei] : utl::enumerate(td->edges_)) {
+    for (auto [edge_idx, ei] :
+         utl::enumerate(data.graph_.trip_data_.edges(tdi))) {
       auto const* e = ei.get(data.graph_);
       if (!in_trip) {
         auto const from = e->from(data.graph_);
@@ -42,7 +43,7 @@ reachability_info get_reachability(paxmon_data const& data,
           }
           in_trip = true;
           reachability.reachable_trips_.emplace_back(
-              reachable_trip{leg.trip_, td, &leg, from->schedule_time(),
+              reachable_trip{leg.trip_, tdi, &leg, from->schedule_time(),
                              INVALID_TIME, from->current_time(), INVALID_TIME,
                              edge_idx, reachable_trip::INVALID_INDEX});
           entry_ok = true;

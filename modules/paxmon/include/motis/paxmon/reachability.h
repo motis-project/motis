@@ -42,7 +42,7 @@ struct reachable_trip {
       std::numeric_limits<std::size_t>::max();
 
   trip const* trp_{};
-  trip_data* td_{};
+  trip_data_index tdi_{};
   journey_leg const* leg_{};
   time enter_schedule_time_{INVALID_TIME};
   time exit_schedule_time_{INVALID_TIME};

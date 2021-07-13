@@ -30,7 +30,8 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
     utl::verify(exit_node != nullptr,
                 "update_load: add_interchange: missing exit_node");
     auto const transfer_time = get_transfer_duration(rt.leg_->enter_transfer_);
-    auto enter_node = rt.td_->edges_[rt.enter_edge_idx_].get(g)->from(g);
+    auto enter_node =
+        g.trip_data_.edges(rt.tdi_)[rt.enter_edge_idx_].get(g)->from(g);
     for (auto& e : exit_node->outgoing_edges(g)) {
       if (e.type_ == edge_type::INTERCHANGE && e.to(g) == enter_node &&
           e.transfer_time() == transfer_time) {
@@ -50,26 +51,28 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
   if (reachability.ok_) {
     utl::verify(!reachability.reachable_trips_.empty(),
                 "update_load: no reachable trips but reachability ok");
-    auto* exit_node = &g.graph_.nodes_.at(
-        reachability.reachable_trips_.front().td_->enter_exit_node_);
+    auto* exit_node = &g.graph_.nodes_.at(g.trip_data_.enter_exit_node(
+        reachability.reachable_trips_.front().tdi_));
     for (auto const& rt : reachability.reachable_trips_) {
       utl::verify(rt.valid_exit(), "update_load: invalid exit");
       add_interchange(rt, exit_node);
+      auto const td_edges = g.trip_data_.edges(rt.tdi_);
       for (auto i = rt.enter_edge_idx_; i <= rt.exit_edge_idx_; ++i) {
-        auto const& ei = rt.td_->edges_[i];
+        auto const& ei = td_edges[i];
         add_to_edge(ei, ei.get(g));
       }
-      exit_node = rt.td_->edges_[rt.exit_edge_idx_].get(g)->to(g);
+      exit_node = td_edges[rt.exit_edge_idx_].get(g)->to(g);
     }
   } else if (!reachability.reachable_trips_.empty()) {
-    auto* exit_node = &g.graph_.nodes_.at(
-        reachability.reachable_trips_.front().td_->enter_exit_node_);
+    auto* exit_node = &g.graph_.nodes_.at(g.trip_data_.enter_exit_node(
+        reachability.reachable_trips_.front().tdi_));
     for (auto const& rt : reachability.reachable_trips_) {
+      auto const td_edges = g.trip_data_.edges(rt.tdi_);
       auto const exit_idx =
-          rt.valid_exit() ? rt.exit_edge_idx_ : rt.td_->edges_.size() - 1;
+          rt.valid_exit() ? rt.exit_edge_idx_ : td_edges.size() - 1;
       add_interchange(rt, exit_node);
       for (auto i = rt.enter_edge_idx_; i <= exit_idx; ++i) {
-        auto const& ei = rt.td_->edges_[i];
+        auto const& ei = td_edges[i];
         auto* e = ei.get(g);
         if (e->from(g)->time_ > localization.current_arrival_time_) {
           break;
@@ -82,7 +85,7 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
         }
       }
       if (rt.valid_exit()) {
-        exit_node = rt.td_->edges_[rt.exit_edge_idx_].get(g)->to(g);
+        exit_node = td_edges[rt.exit_edge_idx_].get(g)->to(g);
       } else {
         exit_node = nullptr;
       }

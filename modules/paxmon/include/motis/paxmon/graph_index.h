@@ -25,4 +25,8 @@ struct edge_index {
 
 edge_index get_edge_index(graph const& g, edge const* e);
 
+using trip_data_index = std::uint32_t;
+auto const constexpr INVALID_TRIP_DATA_INDEX =
+    std::numeric_limits<trip_data_index>::max();
+
 }  // namespace motis::paxmon

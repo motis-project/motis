@@ -31,10 +31,10 @@ bool check_graph_integrity(graph const& g, schedule const& sched) {
         }
         auto const& trips = e.get_trips(sched);
         for (auto const& trp : trips) {
-          auto const& td = g.trip_data_.at(trp);
-          if (std::find_if(begin(td->edges_), end(td->edges_),
-                           [&](auto const& ei) { return ei.get(g) == &e; }) ==
-              end(td->edges_)) {
+          auto const td_edges = g.trip_data_.edges(trp);
+          if (std::find_if(begin(td_edges), end(td_edges), [&](auto const& ei) {
+                return ei.get(g) == &e;
+              }) == end(td_edges)) {
             std::cout << "!! edge missing in trip_data.edges @" << e.type()
                       << "\n";
             ok = false;
@@ -50,8 +50,8 @@ bool check_graph_integrity(graph const& g, schedule const& sched) {
     }
   }
 
-  for (auto const& [trp, td] : g.trip_data_) {
-    for (auto const& ei : td->edges_) {
+  for (auto const& [trp, tdi] : g.trip_data_.mapping_) {
+    for (auto const& ei : g.trip_data_.edges(tdi)) {
       auto const* e = ei.get(g);
       auto const& trips = e->get_trips(sched);
       if (std::find(begin(trips), end(trips), trp) == end(trips)) {
@@ -80,10 +80,11 @@ bool check_graph_integrity(graph const& g, schedule const& sched) {
 }
 
 bool check_trip_times(graph const& g, schedule const& sched, trip const* trp,
-                      trip_data const* td) {
+                      trip_data_index const tdi) {
   auto trip_ok = true;
   std::vector<event_node const*> nodes;
-  for (auto const ei : td->edges_) {
+  auto const edges = g.trip_data_.edges(tdi);
+  for (auto const ei : edges) {
     auto const* e = ei.get(g);
     nodes.emplace_back(e->from(g));
     nodes.emplace_back(e->to(g));
@@ -143,10 +144,10 @@ bool check_trip_times(graph const& g, schedule const& sched, trip const* trp,
     std::cout << "trip (errors above):\n";
     print_trip(sched, trp);
     std::cout << "  sections: " << std::distance(begin(sections), end(sections))
-              << ", td edges: " << td->edges_.size()
+              << ", td edges: " << edges.size()
               << ", event nodes: " << nodes.size() << std::endl;
 
-    print_trip_sections(g, sched, trp, td);
+    print_trip_sections(g, sched, trp, tdi);
     std::cout << "\n\n";
   }
   return trip_ok;
@@ -155,8 +156,8 @@ bool check_trip_times(graph const& g, schedule const& sched, trip const* trp,
 bool check_graph_times(graph const& g, schedule const& sched) {
   auto ok = true;
 
-  for (auto const& [trp, td] : g.trip_data_) {
-    if (!check_trip_times(g, sched, trp, td.get())) {
+  for (auto const& [trp, tdi] : g.trip_data_.mapping_) {
+    if (!check_trip_times(g, sched, trp, tdi)) {
       ok = false;
     }
   }

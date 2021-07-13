@@ -81,10 +81,10 @@ void print_trip_edge(schedule const& sched, graph const& g, edge const* e) {
 }
 
 void print_trip_sections(graph const& g, schedule const& sched, trip const* trp,
-                         trip_data const* td) {
+                         trip_data_index const tdi) {
   std::cout << "paxmon trip:\n";
-  if (td != nullptr) {
-    for (auto const e : td->edges_) {
+  if (tdi != INVALID_TRIP_DATA_INDEX) {
+    for (auto const e : g.trip_data_.edges(tdi)) {
       print_trip_edge(sched, g, e.get(g));
     }
   } else {

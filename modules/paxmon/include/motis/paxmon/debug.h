@@ -18,6 +18,6 @@ void print_trip_section(schedule const& sched,
 void print_trip_edge(schedule const& sched, graph const& g, edge const* e);
 
 void print_trip_sections(graph const& g, schedule const& sched, trip const* trp,
-                         trip_data const* td);
+                         trip_data_index tdi);
 
 }  // namespace motis::paxmon

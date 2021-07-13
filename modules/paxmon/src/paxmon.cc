@@ -643,8 +643,8 @@ msg_ptr paxmon::find_trips(msg_ptr const& msg) {
     if (trp->edges_->empty()) {
       continue;
     }
-    auto const tde = data_.graph_.trip_data_.find(trp);
-    auto const has_paxmon_data = tde != end(data_.graph_.trip_data_);
+    auto const tdi = data_.graph_.trip_data_.find_index(trp);
+    auto const has_paxmon_data = tdi != INVALID_TRIP_DATA_INDEX;
     if (req->only_trips_with_paxmon_data() && !has_paxmon_data) {
       continue;
     }
@@ -658,21 +658,19 @@ msg_ptr paxmon::find_trips(msg_ptr const& msg) {
         continue;
       }
     }
+    auto const td_edges = data_.graph_.trip_data_.edges(tdi);
     auto const all_edges_have_capacity_info =
         has_paxmon_data &&
-        std::all_of(begin(tde->second->edges_), end(tde->second->edges_),
-                    [&](auto const& ei) {
-                      auto const* e = ei.get(data_.graph_);
-                      return !e->is_trip() || e->has_capacity();
-                    });
+        std::all_of(begin(td_edges), end(td_edges), [&](auto const& ei) {
+          auto const* e = ei.get(data_.graph_);
+          return !e->is_trip() || e->has_capacity();
+        });
     auto const has_passengers =
         has_paxmon_data &&
-        std::any_of(begin(tde->second->edges_), end(tde->second->edges_),
-                    [&](auto const& ei) {
-                      auto const* e = ei.get(data_.graph_);
-                      return e->is_trip() &&
-                             !e->get_pax_connection_info().groups_.empty();
-                    });
+        std::any_of(begin(td_edges), end(td_edges), [&](auto const& ei) {
+          auto const* e = ei.get(data_.graph_);
+          return e->is_trip() && !e->get_pax_connection_info().groups_.empty();
+        });
     trips.emplace_back(CreatePaxMonTripInfo(
         mc, to_fbs_trip_service_info(mc, sched, trp, service_infos),
         has_paxmon_data, all_edges_have_capacity_info, has_passengers));
@@ -871,8 +869,8 @@ msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
   auto critical_sections = 0ULL;
   mcd::hash_set<trip const*> selected_trips;
 
-  for (auto const& tde : data_.graph_.trip_data_) {
-    for (auto const& ei : tde.second->edges_) {
+  for (auto const& [trp, tdi] : data_.graph_.trip_data_.mapping_) {
+    for (auto const& ei : data_.graph_.trip_data_.edges(tdi)) {
       auto const* e = ei.get(data_.graph_);
       if (!e->is_trip() || !e->has_capacity()) {
         continue;
@@ -885,7 +883,7 @@ msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
       auto const pdf = get_load_pdf(data_.graph_.passenger_groups_, pci);
       auto const cdf = get_cdf(pdf);
       if (load_factor_possibly_ge(cdf, e->capacity(), load_factor_threshold)) {
-        selected_trips.insert(tde.first);
+        selected_trips.insert(trp);
         ++critical_sections;
       }
     }
