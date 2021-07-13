@@ -35,7 +35,8 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
       return;
     }
     auto const& additional_groups = entry.second;
-    auto pdf = get_load_pdf(e->get_pax_connection_info());
+    auto pdf = get_load_pdf(data.graph_.passenger_groups_,
+                            e->get_pax_connection_info());
     add_additional_groups(pdf, additional_groups);
     auto const cdf = get_cdf(pdf);
     auto const possibly_over_capacity =
@@ -63,7 +64,8 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
                 if (it != end(edges)) {
                   return it->second;
                 } else {
-                  auto const cdf = get_load_cdf(e->get_pax_connection_info());
+                  auto const cdf = get_load_cdf(data.graph_.passenger_groups_,
+                                                e->get_pax_connection_info());
                   auto const possibly_over_capacity =
                       e->has_capacity() &&
                       load_factor_possibly_ge(cdf, e->capacity(), 1.0F);
