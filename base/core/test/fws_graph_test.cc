@@ -93,15 +93,15 @@ TEST(fws_graph_test, t1) {
   mcd::hash_map<std::uint32_t, mcd::vector<test_edge>> check_fwd;
   mcd::hash_map<std::uint32_t, mcd::vector<test_edge>> check_bwd;
 
-  g.nodes_.emplace_back(0U, 4U);
-  g.nodes_.emplace_back(1U, 8U);
-  g.nodes_.emplace_back(2U, 15U);
-  g.nodes_.emplace_back(3U, 16U);
-  g.nodes_.emplace_back(4U, 23U);
-  g.nodes_.emplace_back(5U, 42U);
-  g.nodes_.emplace_back(6U, 42U);
-  g.nodes_.emplace_back(7U, 42U);
-  g.nodes_.emplace_back(8U, 42U);
+  g.emplace_back_node(0U, 4U);
+  g.emplace_back_node(1U, 8U);
+  g.emplace_back_node(2U, 15U);
+  g.emplace_back_node(3U, 16U);
+  g.emplace_back_node(4U, 23U);
+  g.emplace_back_node(5U, 42U);
+  g.emplace_back_node(6U, 42U);
+  g.emplace_back_node(7U, 42U);
+  g.emplace_back_node(8U, 42U);
 
   add_edge(g, check_fwd, check_bwd, {0U, 2U, 5U});
   add_edge(g, check_fwd, check_bwd, {0U, 3U, 7U});
