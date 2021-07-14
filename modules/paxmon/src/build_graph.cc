@@ -60,8 +60,8 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
     auto enter_found = false;
     auto exit_found = false;
     for (auto& ei : data.graph_.trip_data_.edges(tdi)) {
-      auto* e = ei.get(data.graph_);
       if (!in_trip) {
+        auto* e = ei.get(data.graph_);
         auto const from = e->from(data.graph_);
         if (from->station_ == leg.enter_station_id_ &&
             from->schedule_time_ == leg.enter_time_) {
@@ -77,6 +77,7 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
       }
       if (in_trip) {
         add_passenger_group_to_edge(e, &grp);
+        auto* e = ei.get(data.graph_);
         grp.edges_.emplace_back(ei);
         auto const to = e->to(data.graph_);
         if (to->station_ == leg.exit_station_id_ &&
