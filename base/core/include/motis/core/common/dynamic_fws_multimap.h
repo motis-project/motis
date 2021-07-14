@@ -111,15 +111,13 @@ struct dynamic_fws_multimap_base {
     }
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
-    void insert(T* it, T&& val) {
-      auto const pos = std::distance(begin(), it);
-      auto& index = get_index();
-      reserve(index.size_ + 1);
-      it = std::next(begin(), pos);
-      std::move_backward(it, end(), std::next(end()));
-      new (it) T{std::move(val)};
-      index.size_++;
-      mutable_mm().element_count_++;
+    void insert(iterator it, T const& val) {
+      new (prepare_insert(it)) T{val};
+    }
+
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    void insert(iterator it, T&& val) {
+      new (prepare_insert(it)) T{std::move(val)};
     }
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
@@ -168,24 +166,24 @@ struct dynamic_fws_multimap_base {
     }
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
-    T* erase(T* pos) {
-      T* last = std::prev(end());
+    iterator erase(iterator pos) {
+      auto last = std::prev(end());
       while (pos < last) {
         std::swap(*pos, *std::next(pos));
         pos = std::next(pos);
       }
-      pos->~T();
+      (*pos).~T();
       get_index().size_--;
       mutable_mm().element_count_--;
       return end();
     }
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
-    T* erase(T* first, T* last) {
+    iterator erase(iterator first, iterator last) {
       if (first != last) {
         auto const new_end = std::move(last, end(), first);
         for (auto it = new_end; it != end(); it = std::next(it)) {
-          it->~T();
+          (*it).~T();
         }
         auto const count = std::distance(new_end, end());
         get_index().size_ -= count;
@@ -208,6 +206,18 @@ struct dynamic_fws_multimap_base {
             "dynamic_fws_multimap::bucket::at() out of range"};
       }
       return idx.begin_ + index;
+    }
+
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    T* prepare_insert(bucket::iterator it) {
+      auto const pos = std::distance(begin(), it);
+      auto& index = get_index();
+      reserve(index.size_ + 1);
+      it = std::next(begin(), pos);
+      std::move_backward(it, end(), std::next(end()));
+      index.size_++;
+      mutable_mm().element_count_++;
+      return &(*it);
     }
 
     dynamic_fws_multimap_base& mutable_mm() {
