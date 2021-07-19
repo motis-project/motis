@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <cstring>
 #include <algorithm>
 #include <iterator>
 #include <limits>
@@ -457,12 +458,20 @@ protected:
 
   void move_entries(size_type const map_index, size_type const old_data_index,
                     size_type const new_data_index, size_type const count) {
+    if (count == 0) {
+      return;
+    }
     auto old_data = &data_[old_data_index];
     auto new_data = &data_[new_data_index];
-    for (auto i = static_cast<size_type>(0); i < count;
-         ++i, ++old_data, ++new_data) {
-      new (new_data) T(std::move(*old_data));
-      old_data->~T();
+    if constexpr (std::is_trivially_copyable_v<T>) {
+      std::memcpy(new_data, old_data,
+                  static_cast<std::size_t>(count) * sizeof(T));
+    } else {
+      for (auto i = static_cast<size_type>(0); i < count;
+           ++i, ++old_data, ++new_data) {
+        new (new_data) T(std::move(*old_data));
+        old_data->~T();
+      }
     }
     static_cast<Derived&>(*this).entries_moved(map_index, old_data_index,
                                                new_data_index, count);
