@@ -48,12 +48,12 @@ struct dynamic_fws_multimap_base {
 
     iterator end() {
       auto const& index = get_index();
-      return mutable_mm().data_.begin() + index.begin_ + index.size_;
+      return std::next(mutable_mm().data_.begin(), index.begin_ + index.size_);
     }
 
     const_iterator end() const {
       auto const& index = get_index();
-      return multimap_.data_.begin() + index.begin_ + index.size_;
+      return std::next(multimap_.data_.begin(), index.begin_ + index.size_);
     }
 
     const_iterator cbegin() const { return begin(); }
@@ -387,8 +387,12 @@ struct dynamic_fws_multimap_base {
 
   iterator begin() { return {*this, 0}; }
   const_iterator begin() const { return {*this, 0}; }
-  iterator end() { return iterator{*this, index_.size()}; }
-  const_iterator end() const { return const_iterator{*this, index_.size()}; }
+  iterator end() {
+    return iterator{*this, static_cast<size_type>(index_.size())};
+  }
+  const_iterator end() const {
+    return const_iterator{*this, static_cast<size_type>(index_.size())};
+  }
 
   friend iterator begin(dynamic_fws_multimap_base& m) { return m.begin(); }
   friend const_iterator begin(dynamic_fws_multimap_base const& m) {
