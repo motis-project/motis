@@ -32,8 +32,8 @@ struct dynamic_fws_multimap_base {
     using const_iterator = typename mcd::vector<T>::const_iterator;
 
     template <bool IsConst = Const, typename = std::enable_if_t<IsConst>>
-    explicit bucket(bucket<false> const& b)
-        : multimap_{b.multimap_}, index_{b.index_} {}
+    // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
+    bucket(bucket<false> const& b) : multimap_{b.multimap_}, index_{b.index_} {}
 
     size_type index() const { return index_; }
     size_type size() const { return get_index().size_; }
@@ -241,7 +241,8 @@ struct dynamic_fws_multimap_base {
     using reference = value_type;
 
     template <bool IsConst = Const, typename = std::enable_if_t<IsConst>>
-    explicit bucket_iterator(bucket_iterator<false> const& it)
+    // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
+    bucket_iterator(bucket_iterator<false> const& it)
         : multimap_{it.multimap_}, index_{it.index_} {}
 
     value_type operator*() const { return multimap_.at(index_); }
