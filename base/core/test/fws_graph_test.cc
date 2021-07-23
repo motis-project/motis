@@ -66,11 +66,29 @@ void check_graph(
     auto const bucket = g.outgoing_edges(from);
     EXPECT_EQ(edges.size(), bucket.size());
     EXPECT_THAT(bucket, ElementsAreArray(edges));
+    if (!edges.empty()) {
+      EXPECT_EQ(bucket.front(), edges.front());
+      EXPECT_EQ(bucket.back(), edges.back());
+    }
+    if (bucket.size() == edges.size()) {
+      for (auto i = 0; i < bucket.size(); ++i) {
+        EXPECT_EQ(bucket[i], edges[i]);
+      }
+    }
   }
   for (auto const& [to, edges] : check_bwd) {
     auto const bucket = g.incoming_edges(to);
     EXPECT_EQ(edges.size(), bucket.size());
     EXPECT_THAT(bucket, ElementsAreArray(edges));
+    if (!edges.empty()) {
+      EXPECT_EQ(bucket.front(), edges.front());
+      EXPECT_EQ(bucket.back(), edges.back());
+    }
+    if (bucket.size() == edges.size()) {
+      for (auto i = 0; i < bucket.size(); ++i) {
+        EXPECT_EQ(bucket[i], edges[i]);
+      }
+    }
   }
 }
 
@@ -93,15 +111,15 @@ TEST(fws_graph_test, t1) {
   mcd::hash_map<std::uint32_t, mcd::vector<test_edge>> check_fwd;
   mcd::hash_map<std::uint32_t, mcd::vector<test_edge>> check_bwd;
 
-  g.nodes_.emplace_back(0U, 4U);
-  g.nodes_.emplace_back(1U, 8U);
-  g.nodes_.emplace_back(2U, 15U);
-  g.nodes_.emplace_back(3U, 16U);
-  g.nodes_.emplace_back(4U, 23U);
-  g.nodes_.emplace_back(5U, 42U);
-  g.nodes_.emplace_back(6U, 42U);
-  g.nodes_.emplace_back(7U, 42U);
-  g.nodes_.emplace_back(8U, 42U);
+  g.emplace_back_node(0U, 4U);
+  g.emplace_back_node(1U, 8U);
+  g.emplace_back_node(2U, 15U);
+  g.emplace_back_node(3U, 16U);
+  g.emplace_back_node(4U, 23U);
+  g.emplace_back_node(5U, 42U);
+  g.emplace_back_node(6U, 42U);
+  g.emplace_back_node(7U, 42U);
+  g.emplace_back_node(8U, 42U);
 
   add_edge(g, check_fwd, check_bwd, {0U, 2U, 5U});
   add_edge(g, check_fwd, check_bwd, {0U, 3U, 7U});
@@ -120,8 +138,21 @@ TEST(fws_graph_test, t1) {
   check_graph(g, check_fwd, check_bwd);
 
   if (HasFailure()) {
+    std::cout << "\ngraph:\n\n";
     print_graph(g);
   }
+
+  for (auto const& [ni, n] : utl::enumerate(g.nodes_)) {
+    EXPECT_EQ(ni, g.node_index(&n));
+    auto const edges = g.outgoing_edges(ni);
+    for (auto const& [ei, e] : utl::enumerate(edges)) {
+      EXPECT_EQ(ei, edges.bucket_index(&e));
+    }
+  }
+
+  EXPECT_EQ(g.incoming_edges(1).front().weight_, 3U);
+  g.incoming_edges(1).front().weight_ = 100U;
+  EXPECT_EQ(g.incoming_edges(1).front().weight_, 100U);
 }
 
 }  // namespace motis
