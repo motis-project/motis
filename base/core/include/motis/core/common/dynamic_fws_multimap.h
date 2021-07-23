@@ -79,7 +79,7 @@ struct dynamic_fws_multimap_base {
     friend const_iterator end(bucket const& b) { return b.end(); }
 
     T& operator[](size_type index) {
-      return mutable_mm().data_[get_index().begin_ + index];
+      return mutable_mm().data_[data_index(index)];
     }
 
     T const& operator[](size_type index) const {
@@ -97,10 +97,18 @@ struct dynamic_fws_multimap_base {
     T& front() { return (*this)[0]; }
     T const& front() const { return (*this)[0]; }
 
-    T& back() { return (*this)[size() - 1]; }
-    T const& back() const { return (*this)[size() - 1]; }
+    T& back() {
+      assert(!empty());
+      return (*this)[size() - 1];
+    }
+
+    T const& back() const {
+      assert(!empty());
+      return (*this)[size() - 1];
+    }
 
     size_type data_index(size_type index) const {
+      assert(index < get_index().size_);
       return get_index().begin_ + index;
     }
 
@@ -369,7 +377,10 @@ struct dynamic_fws_multimap_base {
     return {*this, index};
   }
 
-  const_bucket operator[](size_type index) const { return {*this, index}; }
+  const_bucket operator[](size_type index) const {
+    assert(index < index_.size());
+    return {*this, index};
+  }
 
   mutable_bucket at(size_type index) {
     if (index >= index_.size()) {
@@ -552,7 +563,8 @@ protected:
     return data_index;
   }
 
-  static size_type get_order(size_type const size) {
+  inline static size_type get_order(size_type const size) {
+    assert(size != 0);
 #ifdef MOTIS_AVX2
     if constexpr (sizeof(size_type) == 8) {
       return _tzcnt_u64(size);
