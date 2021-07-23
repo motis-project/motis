@@ -173,14 +173,45 @@ struct fws_graph {
     size_type size() const { return edges_.bwd_[to_node_].size(); }
     [[nodiscard]] bool empty() const { return size() == 0; }
 
-    edge_type& operator[](size_type index) { return edges_[to_node_][index]; }
+    edge_type const& operator[](size_type index) const {
+      return edges_.data_[edges_.bwd_[to_node_][index]];
+    }
 
-    edge_type& at(size_type index) const { return edges_[to_node_].at(index); }
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    edge_type& operator[](size_type index) {
+      return mutable_edges().data_[edges_.bwd_[to_node_][index]];
+    }
+
+    edge_type const& at(size_type index) const {
+      return edges_.data_.at(edges_.bwd_[to_node_].at(index));
+    }
+
+    template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
+    edge_type& at(size_type index) {
+      return mutable_edges().data_.at(edges_.bwd_[to_node_].at(index));
+    }
+
+    edge_type const& front() const { return (*this)[0]; }
+    edge_type& front() { return (*this)[0]; }
+
+    edge_type const& back() const {
+      assert(!empty());
+      return (*this)[size() - 1];
+    }
+
+    edge_type& back() {
+      assert(!empty());
+      return (*this)[size() - 1];
+    }
 
   protected:
     incoming_edge_bucket(edge_fws_multimap<edge_type> const& edges,
                          size_type to_node)
         : edges_{edges}, to_node_{to_node} {}
+
+    edge_fws_multimap<edge_type>& mutable_edges() {
+      return const_cast<edge_fws_multimap<edge_type>&>(edges_);  // NOLINT
+    }
 
     edge_fws_multimap<edge_type> const& edges_;
     size_type to_node_;

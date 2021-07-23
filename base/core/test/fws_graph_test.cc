@@ -66,11 +66,29 @@ void check_graph(
     auto const bucket = g.outgoing_edges(from);
     EXPECT_EQ(edges.size(), bucket.size());
     EXPECT_THAT(bucket, ElementsAreArray(edges));
+    if (!edges.empty()) {
+      EXPECT_EQ(bucket.front(), edges.front());
+      EXPECT_EQ(bucket.back(), edges.back());
+    }
+    if (bucket.size() == edges.size()) {
+      for (auto i = 0; i < bucket.size(); ++i) {
+        EXPECT_EQ(bucket[i], edges[i]);
+      }
+    }
   }
   for (auto const& [to, edges] : check_bwd) {
     auto const bucket = g.incoming_edges(to);
     EXPECT_EQ(edges.size(), bucket.size());
     EXPECT_THAT(bucket, ElementsAreArray(edges));
+    if (!edges.empty()) {
+      EXPECT_EQ(bucket.front(), edges.front());
+      EXPECT_EQ(bucket.back(), edges.back());
+    }
+    if (bucket.size() == edges.size()) {
+      for (auto i = 0; i < bucket.size(); ++i) {
+        EXPECT_EQ(bucket[i], edges[i]);
+      }
+    }
   }
 }
 
@@ -120,6 +138,7 @@ TEST(fws_graph_test, t1) {
   check_graph(g, check_fwd, check_bwd);
 
   if (HasFailure()) {
+    std::cout << "\ngraph:\n\n";
     print_graph(g);
   }
 
@@ -130,6 +149,10 @@ TEST(fws_graph_test, t1) {
       EXPECT_EQ(ei, edges.bucket_index(&e));
     }
   }
+
+  EXPECT_EQ(g.incoming_edges(1).front().weight_, 3U);
+  g.incoming_edges(1).front().weight_ = 100U;
+  EXPECT_EQ(g.incoming_edges(1).front().weight_, 100U);
 }
 
 }  // namespace motis
