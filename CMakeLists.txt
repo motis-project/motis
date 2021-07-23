@@ -146,7 +146,7 @@ if (MOTIS_AVX2)
   if (MSVC)
     set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} /arch:AVX2)
   else()
-    set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -mavx2 -mfma)
+    set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -mavx2 -mfma -mbmi)
   endif()
 endif()
 
