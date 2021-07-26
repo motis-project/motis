@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <cstring>
 #include <algorithm>
-#include <array>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -15,6 +14,7 @@
 #include <immintrin.h>
 #endif
 
+#include "motis/array.h"
 #include "motis/vector.h"
 
 #include "cista/next_power_of_2.h"
@@ -585,7 +585,7 @@ protected:
 public:
   mcd::vector<index_type> index_;
   mcd::vector<T> data_;
-  std::array<mcd::vector<index_type>, Log2MaxEntriesPerBucket + 1>
+  mcd::array<mcd::vector<index_type>, Log2MaxEntriesPerBucket + 1>
       free_buckets_;
   size_type element_count_{};
 };
