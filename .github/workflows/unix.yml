@@ -84,12 +84,12 @@ jobs:
           - name: aarch64 Release
             cxx: aarch64-linux-gnu-g++-10
             cc: aarch64-linux-gnu-gcc-10
-            cross: |-
+            cross: |
               -DCMAKE_AR=aarch64-linux-gnu-ar \
               -DCMAKE_LINKER=aarch64-linux-gnu-ld \
               -DCMAKE_SYSTEM_NAME=Linux \
               -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-              -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-aarch64-static;-L;/usr/aarch64-linux-gnu"
+              -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-aarch64-static;-L;/usr/aarch64-linux-gnu" \
             mode: Release
             os: ubuntu-20.04
             artifact: linux-aarch64
@@ -205,7 +205,7 @@ jobs:
             -G Ninja -S . -B build \
             -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
             -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
-            ${{ matrix.config.cross }} \
+            ${{ matrix.config.cross }}
             -DCMAKE_C_FLAGS="${{ matrix.config.cflags }}" \
             -DCMAKE_CXX_FLAGS="${{ matrix.config.cxxflags }}" \
             -DCMAKE_CXX_FLAGS_DEBUG="" \
