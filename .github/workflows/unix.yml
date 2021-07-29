@@ -176,7 +176,7 @@ jobs:
 
       - name: Install Emulator
         if: matrix.config.artifact == 'linux-aarch64'
-        run: sudo apt install -y --no-install-recommends qemu-user-static  binfmt-support
+        run: sudo apt install -y --no-install-recommends qemu-user-static binfmt-support g++-10-aarch64-linux-gnu gcc-10-aarch64-linux-gnu
 
       # ==== CACHING ====
       - name: buildcache Cache
