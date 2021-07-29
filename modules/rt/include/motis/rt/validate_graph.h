@@ -5,6 +5,7 @@
 #include "utl/verify.h"
 
 #include "motis/core/schedule/schedule.h"
+#include "motis/core/access/trip_iterator.h"
 
 namespace motis::rt {
 
@@ -86,6 +87,23 @@ inline void validate_graph(schedule const& sched) {
             });
       }(),
       "incoming edges correct 2");
+
+  utl::verify(
+      [&] {
+        for (auto const& tp : sched.trip_mem_) {
+          time last_time = 0;
+          for (auto const sec : access::sections{tp.get()}) {
+            auto const& lc = sec.lcon();
+            auto const section_times_ok = lc.d_time_ <= lc.a_time_;
+            auto const stop_times_ok = last_time <= lc.d_time_;
+            if (!section_times_ok || !stop_times_ok) {
+              return false;
+            }
+          }
+        }
+        return true;
+      }(),
+      "trip times consistent");
 }
 
 inline void print_graph(schedule const& sched) {
