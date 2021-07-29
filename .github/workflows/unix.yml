@@ -232,7 +232,7 @@ jobs:
               --dataset.begin 20151004 \
               --dataset.write_serialized false \
               --ris.db_max_size 1048576 \
-              --bikesharing.db_max_size 1048576
+              --exclude_modules address osrm parking path ppr tiles
 
       - name: Run Tests Valgrind
         if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
