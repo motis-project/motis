@@ -38,7 +38,7 @@ TEST_F(rt_reroute_test, reroute_with_delay_times) {
   EXPECT_EQ(motis_time(1112), evs.at("0000002").dep_);
   EXPECT_EQ(motis_time(1305), evs.at("0000004").arr_);
   EXPECT_EQ(motis_time(1312), evs.at("0000004").dep_);
-  EXPECT_EQ(motis_time(1500), evs.at("0000001").arr_);
+  EXPECT_EQ(motis_time(1502), evs.at("0000001").arr_);
 }
 
 TEST_F(rt_reroute_test, reroute_with_delay_in_out) {
