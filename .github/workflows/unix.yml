@@ -206,7 +206,7 @@ jobs:
 
       # ==== TESTS ====
       - name: Run Test Mode
-        if: matrix.tests == 'On'
+        if: matrix.config.tests == 'On'
         run: |
           ./build/motis --mode test \
             --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
@@ -215,16 +215,16 @@ jobs:
             --exclude_modules address osrm parking path ppr tiles
 
       - name: Run Tests
-        if: matrix.tests == 'On'
+        if: matrix.config.tests == 'On'
         run: ./build/motis-test
 
       - name: Run Integration Tests
-        if: matrix.tests == 'On'
+        if: matrix.config.tests == 'On'
         run: ./build/motis-itest
 
       # ==== VALGRIND ====
       - name: Run Test Mode Valgrind
-        if: matrix.mode == 'Debug' && matrix.config.cc == 'gcc-10'
+        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
         run: >
           valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full \
             ./build/motis --mode test \
