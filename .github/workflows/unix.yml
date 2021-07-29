@@ -84,15 +84,17 @@ jobs:
           - name: aarch64 Release
             cxx: aarch64-linux-gnu-g++-10
             cc: aarch64-linux-gnu-gcc-10
-            ar: aarch64-linux-gnu-ar
-            linker: aarch64-linux-gnu-ld
-            emulator: qemu-aarch64-static;-L;/usr/aarch64-linux-gnu
-            system: Linux
-            processor: aarch64
+            cross: |
+              -DCMAKE_AR=aarch64-linux-gnu-ar \
+              -DCMAKE_LINKER=aarch64-linux-gnu-ld \
+              -DCMAKE_SYSTEM_NAME=Linux \
+              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+              -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-aarch64-static;-L;/usr/aarch64-linux-gnu"
             mode: Release
             os: ubuntu-20.04
             artifact: linux-aarch64
             avx: Off
+            avx2: Off
             webui: On
             tests: Off
           - name: GCC 10 Debug
@@ -203,11 +205,7 @@ jobs:
             -G Ninja -S . -B build \
             -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
             -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
-            -DCMAKE_AR=${{ matrix.config.ar }} \
-            -DCMAKE_LINKER=${{ matrix.config.linker }} \
-            -DCMAKE_SYSTEM_NAME=${{ matrix.config.system }} \
-            -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.config.processor }} \
-            -DCMAKE_CROSSCOMPILING_EMULATOR=${{ matrix.config.emulator }} \
+            ${{ matrix.config.cross }}
             -DCMAKE_C_FLAGS="${{ matrix.config.cflags }}" \
             -DCMAKE_CXX_FLAGS="${{ matrix.config.cxxflags }}" \
             -DCMAKE_CXX_FLAGS_DEBUG="" \
