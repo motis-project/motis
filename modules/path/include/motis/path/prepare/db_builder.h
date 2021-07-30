@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cinttypes>
+
 #include "cista/reflection/comparable.h"
 
 #include "geo/polyline.h"
@@ -17,7 +19,7 @@ struct seq_seg {
 };
 
 struct db_builder {
-  explicit db_builder(std::string const& fname);
+  explicit db_builder(std::string const& fname, size_t max_size);
   ~db_builder();
 
   db_builder(db_builder const&) noexcept = delete;  // NOLINT

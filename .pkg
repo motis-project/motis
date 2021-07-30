@@ -13,15 +13,15 @@
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
-  commit=2b685bcdb31ee9101cc94041e67f89eef2490466
+  commit=de4f494d73f692972033a66b8dda9fd196aa6cbf
 [date]
   url=git@github.com:motis-project/date.git
   branch=master
-  commit=17429576f2468e1deb487c1d0fee91d3cfd54814
+  commit=d44dce13f533fd4a178af85ca7cd5cc0ce09af61
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=motis
-  commit=3f9e00e128c577b9e43d656ed8ad8c0d21c87bb5
+  commit=abd4965e0d5c0d40c1c7032ca4be8d3ff718cfea
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
