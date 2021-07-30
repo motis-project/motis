@@ -365,6 +365,12 @@ inline std::pair<reroute_result, trip const*> reroute(
   add_not_deleted_trip_events(sched, del_evs, trp, evs);
   if (evs.empty()) {
     disable_trip(*old_trip, old_lcon_idx);
+    trp->edges_ =
+        sched.trip_edges_
+            .emplace_back(mcd::make_unique<mcd::vector<trip::route_edge>>())
+            .get();
+    store_cancelled_delays(sched, trp, del_evs, cancelled_delays,
+                           cancelled_evs);
     return {reroute_result::OK, trp};
   }
   std::sort(begin(evs), end(evs));

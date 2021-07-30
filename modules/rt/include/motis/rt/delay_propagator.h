@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "utl/get_or_create.h"
+#include "utl/verify.h"
 
 #include "motis/hash_set.h"
 
@@ -37,6 +38,8 @@ struct delay_propagator {
   void recalculate(ev_key const& k) {
     auto const di_it = sched_.graph_to_delay_info_.find(k);
     if (di_it != end(sched_.graph_to_delay_info_)) {
+      utl::verify(k == di_it->second->get_ev_key(),
+                  "delay_propagator::recalculate: ev_key mismatch");
       push(di_it->second);
       expand(k);
     }
