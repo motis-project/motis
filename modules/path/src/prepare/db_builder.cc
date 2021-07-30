@@ -55,8 +55,8 @@ service_class get_min_clasz(Classes const& c) {
 }
 
 struct db_builder::impl {
-  explicit impl(std::string const& fname)
-      : db_(make_path_database(fname, false, true)),
+  explicit impl(std::string const& fname, size_t const max_size)
+      : db_(make_path_database(fname, false, true, max_size)),
         feature_inserter_{std::make_unique<tiles::feature_inserter_mt>(
             tiles::dbi_handle{*db_->db_handle_,
                               db_->db_handle_->features_dbi_opener()},
@@ -347,8 +347,8 @@ struct db_builder::impl {
   mcd::hash_map<std::pair<std::string, std::string>, geo::box> boxes_;
 };
 
-db_builder::db_builder(std::string const& fname)
-    : impl_{std::make_unique<impl>(fname)} {}
+db_builder::db_builder(std::string const& fname, size_t const max_size)
+    : impl_{std::make_unique<impl>(fname, max_size)} {}
 db_builder::~db_builder() = default;
 
 void db_builder::store_stations(
