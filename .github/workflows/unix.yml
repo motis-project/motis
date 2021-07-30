@@ -97,6 +97,7 @@ jobs:
             avx2: Off
             webui: On
             tests: On
+            emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
           - name: GCC 10 Debug
             cxx: g++-10
             cc: gcc-10
@@ -228,7 +229,7 @@ jobs:
       - name: Run Test Mode
         if: matrix.config.tests == 'On'
         run: |
-          ./build/motis --mode test \
+          ${{ matrix.config.emulator }} ./build/motis --mode test \
             --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
             --dataset.begin 20151004 \
             --dataset.write_serialized false \
@@ -236,11 +237,11 @@ jobs:
 
       - name: Run Tests
         if: matrix.config.tests == 'On'
-        run: ./build/motis-test
+        run: ${{ matrix.config.emulator }} ./build/motis-test
 
       - name: Run Integration Tests
         if: matrix.config.tests == 'On'
-        run: ./build/motis-itest
+        run: ${{ matrix.config.emulator }} ./build/motis-itest
 
       # ==== VALGRIND ====
       - name: Run Test Mode Valgrind
