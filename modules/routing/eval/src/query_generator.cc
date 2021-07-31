@@ -142,7 +142,7 @@ static It rand_in(It begin, It end) {
 }
 
 std::string query(std::string const& target, Start const start_type, int id,
-                  std::unixtime interval_start, std::unixtime interval_end,
+                  unixtime interval_start, unixtime interval_end,
                   std::string const& from_eva, std::string const& to_eva,
                   SearchDir const dir) {
   message_creator fbb;
