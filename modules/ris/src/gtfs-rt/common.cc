@@ -1,6 +1,7 @@
 #include "motis/ris/gtfs-rt/common.h"
 
 #include "motis/core/common/date_time_util.h"
+#include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/schedule/trip.h"
 #include "motis/ris/gtfs-rt/parse_stop.h"
@@ -25,7 +26,7 @@ evt::evt(trip const& trip, stop_context const& s, event_type const type)
 }
 
 known_addition_trip& knowledge_context::find_additional(
-    std::string const& trip_id, std::time_t const start_date) {
+    std::string const& trip_id, unixtime const start_date) {
   auto const id = gtfs_trip_id{trip_id, start_date};
   auto lb = std::lower_bound(begin(known_additional_),
                              end(known_additional_) - new_known_add_cnt_,
@@ -92,7 +93,7 @@ known_stop_skips* knowledge_context::find_trip_stop_skips(
 }
 
 void knowledge_context::remember_additional(std::string const& trip_id,
-                                            const std::time_t start_date_unix,
+                                            const unixtime start_date_unix,
                                             const time start_date,
                                             const int first_station_id) {
   known_additional_.emplace_back(
@@ -102,7 +103,7 @@ void knowledge_context::remember_additional(std::string const& trip_id,
 }
 
 void knowledge_context::update_additional(std::string const& trip_id,
-                                          const std::time_t start_date_unix,
+                                          const unixtime start_date_unix,
                                           const time start_time,
                                           const int first_station_idx) {
   auto& additional = find_additional(trip_id, start_date_unix);
@@ -118,13 +119,13 @@ void knowledge_context::remember_canceled(
 }
 
 void knowledge_context::remember_canceled(std::string const& trip_id,
-                                          std::time_t const start_date) {
+                                          unixtime const start_date) {
   known_canceled_.emplace_back(gtfs_trip_id{trip_id, start_date});
   ++new_known_can_cnt_;
 }
 
 known_stop_skips* knowledge_context::remember_stop_skips(
-    std::string const& trip_id, std::time_t const date) {
+    std::string const& trip_id, unixtime const date) {
   ++new_known_skip_cnt_;
   return known_stop_skips_
       .emplace_back(std::make_unique<known_stop_skips>(trip_id, date))

@@ -9,6 +9,7 @@
 #include "utl/parser/arg_parser.h"
 
 #include "motis/core/common/date_time_util.h"
+#include "motis/core/common/unixtime.h"
 #include "motis/ris/risml/common.h"
 
 using namespace utl;
@@ -24,12 +25,12 @@ using adjustor = boost::date_time::local_adjustor<ptime, 1, engine>;
 
 namespace motis::ris::risml {
 
-inline std::time_t to_unix_time(boost::posix_time::ptime const& t) {
+inline unixtime to_unix_time(boost::posix_time::ptime const& t) {
   boost::posix_time::ptime epoch(boost::gregorian::date(1970, 1, 1));
   return (t - epoch).total_seconds();
 }
 
-std::time_t parse_time(cstr const& raw) {
+unixtime parse_time(cstr const& raw) {
   // format YYYYMMDDhhmmssfff (fff = millis)
   if (raw.length() < 14) {
     throw std::runtime_error("bad time format (length < 14)");
@@ -47,7 +48,7 @@ std::time_t parse_time(cstr const& raw) {
   return to_unix_time(adjustor::local_to_utc(local_time));
 }
 
-std::time_t parse_schedule_time(context& ctx, cstr const& raw) {
+unixtime parse_schedule_time(context& ctx, cstr const& raw) {
   auto t = parse_time(raw);
   ctx.earliest_ = std::min(ctx.earliest_, t);
   ctx.latest_ = std::max(ctx.latest_, t);

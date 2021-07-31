@@ -10,6 +10,7 @@
 
 #include "ppr/routing/search_profile.h"
 
+#include "motis/core/common/unixtime.h"
 #include "motis/module/context/motis_spawn.h"
 
 using namespace geo;
@@ -284,9 +285,9 @@ void add_direct_connections(std::vector<journey>& journeys,
   for (auto const& d : direct) {
     auto const dep_time =
         fwd ? q_start.time_
-            : static_cast<std::time_t>(q_start.time_ - d.duration_ * 60);
+            : static_cast<unixtime>(q_start.time_ - d.duration_ * 60);
     auto const arr_time =
-        fwd ? static_cast<std::time_t>(q_start.time_ + d.duration_ * 60)
+        fwd ? static_cast<unixtime>(q_start.time_ + d.duration_ * 60)
             : q_start.time_;
 
     auto& j = journeys.emplace_back();

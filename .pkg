@@ -1,7 +1,7 @@
 [address-typeahead]
   url=git@github.com:motis-project/address-typeahead.git
   branch=master
-  commit=d2f3e823525fcc2a3c5276126a21d17dd6b6be98
+  commit=9b33a191c05ee3f489492ea9a89253eaa26b91d4
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -9,7 +9,7 @@
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
-  commit=4062d06917fd64c585921b798fe4b4b1c3dce17c
+  commit=b7d42aa063dd815cee6157bd27dce0caa82d2fa6
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -37,7 +37,7 @@
 [lmdb]
   url=git@github.com:motis-project/lmdb.git
   branch=master
-  commit=39d8127e5697b1323a67e61c3ad8f087384c7429
+  commit=89f4d52b63f2d6ee44757c13c028ceb86718e2eb
 [miniz]
   url=git@github.com:motis-project/miniz.git
   branch=master
@@ -73,7 +73,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=42f4c5f2d8c1e3d3257ea8cdd075da4996206fa6
+  commit=7cc1cf3de712f3ead607af1786a58c4d80877208
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master

@@ -22,6 +22,7 @@
 #include "lmdb/lmdb.hpp"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/common/unixtime.h"
 #include "motis/core/access/time_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/print_trip.h"
@@ -72,7 +73,7 @@ constexpr auto const MIN_DAY_DB = "MIN_DAY_DB";
 //        earliest <= day.end && latest >= day.begin
 constexpr auto const MAX_DAY_DB = "MAX_DAY_DB";
 
-constexpr auto const BATCH_SIZE = time_t{3600};
+constexpr auto const BATCH_SIZE = unixtime{3600};
 
 constexpr auto const WRITE_MSG_BUF_MAX_SIZE = 50000;
 
@@ -89,8 +90,10 @@ constexpr T ceil(T const i, T const multiple) {
 using size_type = uint32_t;
 constexpr auto const SIZE_TYPE_SIZE = sizeof(size_type);
 
-constexpr time_t day(time_t t) { return (t / SECONDS_A_DAY) * SECONDS_A_DAY; }
-constexpr time_t next_day(time_t t) { return day(t) + SECONDS_A_DAY; }
+constexpr unixtime day(unixtime t) {
+  return (t / SECONDS_A_DAY) * SECONDS_A_DAY;
+}
+constexpr unixtime next_day(unixtime t) { return day(t) + SECONDS_A_DAY; }
 
 template <typename Fn>
 inline void for_each_day(ris_message const& m, Fn&& f) {
@@ -100,11 +103,11 @@ inline void for_each_day(ris_message const& m, Fn&& f) {
   }
 }
 
-time_t to_time_t(std::string_view s) {
-  return *reinterpret_cast<time_t const*>(s.data());
+unixtime to_unixtime(std::string_view s) {
+  return *reinterpret_cast<unixtime const*>(s.data());
 }
 
-std::string_view from_time_t(time_t const& t) {
+std::string_view from_unixtime(unixtime const& t) {
   return {reinterpret_cast<char const*>(&t), sizeof(t)};
 }
 
@@ -144,8 +147,8 @@ struct ris::impl {
       LOG(warn) << input_ << " does not exist";
     }
 
-    if (init_time_ != 0) {
-      forward(init_time_);
+    if (init_time_.unix_time_ != 0) {
+      forward(init_time_.unix_time_);
     }
   }
 
@@ -158,7 +161,7 @@ struct ris::impl {
     for (auto const& id : *motis_content(RISGTFSRTMapping, trips_msg)->ids()) {
       try {
         sched.gtfs_trip_ids_.emplace(
-            gtfs_trip_id{id->id()->str(), static_cast<std::time_t>(id->day())},
+            gtfs_trip_id{id->id()->str(), static_cast<unixtime>(id->day())},
             from_fbs(sched, id->trip(), true));
       } catch (...) {
         std::cout << to_extern_trip(id->trip()) << "\n";
@@ -214,7 +217,7 @@ struct ris::impl {
 
   msg_ptr purge(msg_ptr const& msg) {
     auto const until =
-        static_cast<time_t>(motis_content(RISPurgeRequest, msg)->until());
+        static_cast<unixtime>(motis_content(RISPurgeRequest, msg)->until());
 
     auto t = db::txn{env_};
     auto db = t.dbi_open(MSG_DB);
@@ -235,7 +238,7 @@ struct ris::impl {
   std::string gtfs_trip_ids_path_;
   std::string db_path_{"ris.mdb"};
   std::string input_{"ris"};
-  conf::holder<std::time_t> init_time_{0};
+  conf::time init_time_{0};
   bool clear_db_ = false;
   size_t db_max_size_{static_cast<size_t>(1024) * 1024 * 1024 * 512};
   bool instant_forward_{false};
@@ -280,7 +283,7 @@ private:
     void add(uint8_t const* ptr, size_t const size) {
       max_timestamp_ = std::max(
           max_timestamp_,
-          static_cast<time_t>(
+          static_cast<unixtime>(
               flatbuffers::GetRoot<Message>(reinterpret_cast<void const*>(ptr))
                   ->timestamp()));
       offsets_.push_back(
@@ -291,27 +294,27 @@ private:
 
     message_creator fbb_;
     std::vector<flatbuffers::Offset<MessageHolder>> offsets_;
-    time_t max_timestamp_ = 0;
+    unixtime max_timestamp_ = 0;
   };
 
   struct null_publisher {
     void flush() {}
     void add(uint8_t const*, size_t const) {}
     size_t size() const { return 0; }  // NOLINT
-    time_t max_timestamp_ = 0;
+    unixtime max_timestamp_ = 0;
   } null_pub_;
 
-  void forward(time_t const to) {
+  void forward(unixtime const to) {
     auto const& sched = get_schedule();
     auto const first_schedule_event_day =
-        sched.first_event_schedule_time_ != std::numeric_limits<time_t>::max()
+        sched.first_event_schedule_time_ != std::numeric_limits<unixtime>::max()
             ? floor(sched.first_event_schedule_time_,
-                    static_cast<time_t>(SECONDS_A_DAY))
+                    static_cast<unixtime>(SECONDS_A_DAY))
             : external_schedule_begin(sched);
     auto const last_schedule_event_day =
-        sched.last_event_schedule_time_ != std::numeric_limits<time_t>::min()
+        sched.last_event_schedule_time_ != std::numeric_limits<unixtime>::min()
             ? ceil(sched.last_event_schedule_time_,
-                   static_cast<time_t>(SECONDS_A_DAY))
+                   static_cast<unixtime>(SECONDS_A_DAY))
             : external_schedule_end(sched);
     auto const min_timestamp =
         get_min_timestamp(first_schedule_event_day, last_schedule_event_day);
@@ -322,7 +325,7 @@ private:
     }
   }
 
-  void forward(time_t const from, time_t const to) {
+  void forward(unixtime const from, unixtime const to) {
     LOG(info) << "forwarding from " << logging::time(from) << " to "
               << logging::time(to);
 
@@ -380,12 +383,12 @@ private:
     ctx::await_all(motis_publish(make_no_msg("/ris/system_time_changed")));
   }
 
-  std::optional<time_t> get_min_timestamp(time_t const from_day,
-                                          time_t const to_day) {
+  std::optional<unixtime> get_min_timestamp(unixtime const from_day,
+                                            unixtime const to_day) {
     utl::verify(from_day % SECONDS_A_DAY == 0, "from not a day");
     utl::verify(to_day % SECONDS_A_DAY == 0, "to not a day");
 
-    constexpr auto const max = std::numeric_limits<time_t>::max();
+    constexpr auto const max = std::numeric_limits<unixtime>::max();
 
     auto min = max;
     auto t = db::txn{env_, db::txn_flags::RDONLY};
@@ -393,7 +396,7 @@ private:
     for (auto d = from_day; d != to_day; d += SECONDS_A_DAY) {
       auto const r = t.get(db, d);
       if (r) {
-        min = std::min(min, to_time_t(*r));
+        min = std::min(min, to_unixtime(*r));
       }
     }
 
@@ -450,7 +453,7 @@ private:
     return file_type::NONE;
   }
 
-  std::vector<std::tuple<time_t, fs::path, file_type>> collect_files(
+  std::vector<std::tuple<unixtime, fs::path, file_type>> collect_files(
       fs::path const& p) {
     if (fs::is_regular_file(p)) {
       if (auto const t = get_file_type(p);
@@ -458,7 +461,7 @@ private:
         return {std::make_tuple(fs::last_write_time(p), p, t)};
       }
     } else if (fs::is_directory(p)) {
-      std::vector<std::tuple<time_t, fs::path, file_type>> files;
+      std::vector<std::tuple<unixtime, fs::path, file_type>> files;
       for (auto const& entry : fs::directory_iterator(p)) {
         utl::concat(files, collect_files(entry));
       }
@@ -599,9 +602,11 @@ private:
 
   template <typename Reader, typename ParserFn, typename Publisher>
   void write_to_db(Reader&& reader, ParserFn parser_fn, Publisher& pub) {
-    std::map<time_t /* d.b */, time_t /* min(t) : e <= d.e && l >= d.b */> min;
-    std::map<time_t /* d.b */, time_t /* max(t) : e <= d.e && l >= d.b */> max;
-    std::map<time_t /* tout */, std::vector<char>> buf;
+    std::map<unixtime /* d.b */, unixtime /* min(t) : e <= d.e && l >= d.b */>
+        min;
+    std::map<unixtime /* d.b */, unixtime /* max(t) : e <= d.e && l >= d.b */>
+        max;
+    std::map<unixtime /* tout */, std::vector<char>> buf;
     auto buf_msg_count = 0U;
 
     auto flush_to_db = [&]() {
@@ -645,7 +650,7 @@ private:
 
       pub.add(m.data(), m.size());
 
-      for_each_day(m, [&](time_t const d) {
+      for_each_day(m, [&](unixtime const d) {
         if (auto it = min.lower_bound(d); it != end(min) && it->first == d) {
           it->second = std::min(it->second, m.timestamp_);
         } else {
@@ -673,8 +678,8 @@ private:
     pub.flush();
   }
 
-  void update_min_max(std::map<time_t, time_t> const& min,
-                      std::map<time_t, time_t> const& max) {
+  void update_min_max(std::map<unixtime, unixtime> const& min,
+                      std::map<unixtime, unixtime> const& max) {
     std::lock_guard<std::mutex> lock{min_max_mutex_};
 
     auto t = db::txn{env_};
@@ -684,17 +689,17 @@ private:
     for (auto const [day, min_timestamp] : min) {
       auto smallest = min_timestamp;
       if (auto entry = t.get(min_db, day); entry) {
-        smallest = std::min(smallest, to_time_t(*entry));
+        smallest = std::min(smallest, to_unixtime(*entry));
       }
-      t.put(min_db, day, from_time_t(smallest));
+      t.put(min_db, day, from_unixtime(smallest));
     }
 
     for (auto const [day, max_timestamp] : max) {
       auto largest = max_timestamp;
       if (auto entry = t.get(max_db, day); entry) {
-        largest = std::max(largest, to_time_t(*entry));
+        largest = std::max(largest, to_unixtime(*entry));
       }
-      t.put(max_db, day, from_time_t(largest));
+      t.put(max_db, day, from_unixtime(largest));
     }
 
     t.commit();

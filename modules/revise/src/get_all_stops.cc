@@ -11,6 +11,7 @@
 
 #include "utl/verify.h"
 
+#include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/event.h"
 #include "motis/core/access/edge_access.h"
 #include "motis/core/access/realtime_access.h"

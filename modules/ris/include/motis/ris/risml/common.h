@@ -7,16 +7,19 @@
 
 #include "flatbuffers/flatbuffers.h"
 
+#include "motis/core/common/typed_flatbuffer.h"
+#include "motis/core/common/unixtime.h"
+
 namespace motis::ris::risml {
 
 struct context {
-  explicit context(time_t timestamp)
+  explicit context(unixtime timestamp)
       : timestamp_{timestamp},
-        earliest_{std::numeric_limits<time_t>::max()},
-        latest_{std::numeric_limits<time_t>::min()} {}
+        earliest_{std::numeric_limits<unixtime>::max()},
+        latest_{std::numeric_limits<unixtime>::min()} {}
 
   flatbuffers::FlatBufferBuilder b_;
-  time_t timestamp_, earliest_, latest_;
+  unixtime timestamp_, earliest_, latest_;
 };
 
 pugi::xml_attribute inline child_attr(pugi::xml_node const& n, char const* e,

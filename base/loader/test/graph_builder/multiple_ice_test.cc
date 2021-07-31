@@ -119,8 +119,7 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
 
     ASSERT_EQ(first_route_node->incoming_edges_[0]->from_,
               first_route_node->get_station());
-    ASSERT_EQ(first_route_node->get_station(),
-              first_route_node[0].edges_[0].to_);
+    ASSERT_EQ(first_route_node->get_station(), first_route_node->edges_[0].to_);
 
     ASSERT_EQ(edge::ENTER_EDGE, first_route_node->incoming_edges_[0]->type());
     ASSERT_EQ(edge::ROUTE_EDGE, first_route_node->edges_[1].type());
