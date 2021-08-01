@@ -1,3 +1,4 @@
 FROM --platform=$BUILDPLATFORM ubuntu:20.04
-COPY motis /motis
+ARG ARCHIVE
+ADD $ARCHIVE /motis
 ENTRYPOINT ["/motis/motis"]
