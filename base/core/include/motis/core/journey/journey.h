@@ -57,8 +57,8 @@ struct journey {
 
     struct event_info {
       bool valid_{false};
-      std::time_t timestamp_{0};
-      std::time_t schedule_timestamp_{0};
+      unixtime timestamp_{0};
+      unixtime schedule_timestamp_{0};
       timestamp_reason timestamp_reason_{timestamp_reason::SCHEDULE};
       std::string track_;
       std::string schedule_track_;

@@ -4,6 +4,7 @@
 #include "boost/date_time/posix_time/posix_time_types.hpp"
 
 #include "motis/core/common/date_time_util.h"
+#include "motis/core/common/unixtime.h"
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/ris/gtfs-rt/common.h"
@@ -21,7 +22,7 @@ namespace motis::ris::gtfsrt {
 
 Offset<IdEvent> create_id_event(message_context& ctx,
                                 mcd::string const& station_id,
-                                const std::time_t start_time) {
+                                unixtime const start_time) {
   return {CreateIdEvent(ctx.b_, ctx.b_.CreateString(station_id), 0, start_time,
                         IdEventType_Additional)};
 }

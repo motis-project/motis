@@ -21,6 +21,7 @@
 
 #include "version.h"
 
+#include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/time.h"
 #include "motis/core/access/time_access.h"
 #include "motis/module/message.h"
@@ -77,19 +78,19 @@ std::unique_ptr<bounds> parse_bounds(generator_settings const& opt) {
 }
 
 struct search_interval_generator {
-  search_interval_generator(time_t begin, time_t end)
+  search_interval_generator(unixtime begin, unixtime end)
       : begin_(begin), rng_(rd_()), d_(generate_distribution(begin, end)) {
     rng_.seed(std::time(nullptr));
   }
 
-  std::pair<time_t, time_t> random_interval() {
+  std::pair<unixtime, unixtime> random_interval() {
     auto begin = begin_ + d_(rng_) * 3600;
     return {begin, begin + 3600 * 2};
   }
 
 private:
-  static std::discrete_distribution<int> generate_distribution(time_t begin,
-                                                               time_t end) {
+  static std::discrete_distribution<int> generate_distribution(unixtime begin,
+                                                               unixtime end) {
     auto constexpr k_two_hours = 2 * 3600;
     static const int prob[] = {
         1,  // 01: 00:00 - 01:00
@@ -118,14 +119,15 @@ private:
         1  // 24: 23:00 - 24:00
     };
     std::vector<int> v;
-    for (time_t t = begin, hour = 0; t < end - k_two_hours; t += 3600, ++hour) {
+    for (unixtime t = begin, hour = 0; t < end - k_two_hours;
+         t += 3600, ++hour) {
       int h = hour % 24;
       v.push_back(prob[h]);  // NOLINT
     }
     return std::discrete_distribution<int>(std::begin(v), std::end(v));
   }
 
-  time_t begin_;
+  unixtime begin_;
   std::random_device rd_;
   std::mt19937 rng_;
   std::vector<int> hour_prob_;
@@ -157,7 +159,7 @@ inline double scale_factor(geo::merc_xy const& mc) {
   return std::cos(lat_rad);
 }
 
-std::string query(int id, std::time_t interval_begin, std::time_t interval_end,
+std::string query(int id, unixtime interval_begin, unixtime interval_end,
                   geo::latlng start_pos, geo::latlng dest_pos,
                   search_dir dir = search_dir::FWD,
                   int max_walk_duration = 15 * 60) {
@@ -208,7 +210,8 @@ bool has_events(station_node const& s, motis::time from, motis::time to) {
 }
 
 int random_station_id(std::vector<station_node const*> const& station_nodes,
-                      time_t motis_interval_start, time_t motis_interval_end) {
+                      unixtime motis_interval_start,
+                      unixtime motis_interval_end) {
   auto first = std::next(begin(station_nodes), 2);
   auto last = end(station_nodes);
 
@@ -222,7 +225,7 @@ int random_station_id(std::vector<station_node const*> const& station_nodes,
 std::pair<station const*, station const*> random_stations(
     schedule const& sched,
     std::vector<station_node const*> const& station_nodes,
-    time_t interval_start, time_t interval_end) {
+    unixtime interval_start, unixtime interval_end) {
   station const *from = nullptr, *to = nullptr;
   auto motis_interval_start = unix_to_motistime(sched, interval_start);
   auto motis_interval_end = unix_to_motistime(sched, interval_end);

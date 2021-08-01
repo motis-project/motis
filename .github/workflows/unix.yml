@@ -103,6 +103,24 @@ jobs:
             tests: On
             emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
             strip: aarch64-linux-gnu-strip
+          - name: arm Release
+            cxx: arm-linux-gnueabihf-g++-10
+            cc: arm-linux-gnueabihf-gcc-10
+            cross: |-
+              -DCMAKE_AR=/usr/bin/arm-linux-gnueabihf-ar \
+              -DCMAKE_LINKER=/usr/bin/arm-linux-gnueabihf-ld \
+              -DCMAKE_SYSTEM_NAME=Linux \
+              -DCMAKE_SYSTEM_PROCESSOR=arm \
+              -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-arm-static;-L;/usr/arm-linux-gnueabihf" \
+            mode: Release
+            os: ubuntu-20.04
+            artifact: linux-arm
+            avx: Off
+            avx2: Off
+            webui: On
+            tests: On
+            emulator: qemu-arm-static -L /usr/arm-linux-gnueabihf
+            strip: arm-linux-gnueabihf-strip
           - name: GCC 10 Debug
             cxx: g++-10
             cc: gcc-10
@@ -182,9 +200,13 @@ jobs:
         if: matrix.config.os != 'macos-latest'
         run: sudo apt-get install -y --no-install-recommends ninja-build
 
-      - name: Install Emulator
+      - name: Cross Compilation (aarch64)
         if: matrix.config.artifact == 'linux-aarch64'
         run: sudo apt install -y --no-install-recommends qemu-user-static binfmt-support g++-10-aarch64-linux-gnu gcc-10-aarch64-linux-gnu binutils-aarch64-linux-gnu
+
+      - name: Cross Compilation (arm)
+        if: matrix.config.artifact == 'linux-arm'
+        run: sudo apt install -y --no-install-recommends qemu-user-static binfmt-support g++-10-arm-linux-gnueabihf gcc-10-arm-linux-gnueabihf binutils-arm-linux-gnueabi
 
       # ==== CACHING ====
       - name: buildcache Cache

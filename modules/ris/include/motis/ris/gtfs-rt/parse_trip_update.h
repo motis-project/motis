@@ -2,8 +2,10 @@
 
 #include <optional>
 
-#include "motis/ris/gtfs-rt/common.h"
 #include "flatbuffers/flatbuffers.h"
+
+#include "motis/core/common/unixtime.h"
+#include "motis/ris/gtfs-rt/common.h"
 
 #include "motis/protocol/RISMessage_generated.h"
 #include "gtfsrt.pb.h"
@@ -14,7 +16,7 @@ namespace ris::gtfsrt {
 
 void handle_trip_update(
     trip_update_context& update_ctx, std::unique_ptr<knowledge_context> const&,
-    std::time_t,
+    unixtime,
     std::function<void(message_context&, flatbuffers::Offset<Message>)> const&);
 
 flatbuffers::Offset<Message> handle_unknown_cancl_trip_upd(

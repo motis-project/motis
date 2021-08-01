@@ -6,11 +6,11 @@
 
 namespace motis {
 
-std::time_t external_schedule_begin(schedule const& sched) {
+unixtime external_schedule_begin(schedule const& sched) {
   return sched.schedule_begin_ + SCHEDULE_OFFSET_MINUTES * 60;
 }
 
-std::time_t external_schedule_end(schedule const& sched) {
+unixtime external_schedule_end(schedule const& sched) {
   return sched.schedule_end_;
 }
 
@@ -39,11 +39,11 @@ void verify_external_timestamp(schedule const& sched, time_t t) {
   }
 }
 
-std::time_t motis_to_unixtime(schedule const& sched, time t) {
+unixtime motis_to_unixtime(schedule const& sched, time t) {
   return motis_to_unixtime(sched.schedule_begin_, t);
 }
 
-time unix_to_motistime(schedule const& sched, std::time_t t) {
+time unix_to_motistime(schedule const& sched, unixtime t) {
   auto const mt = unix_to_motistime(sched.schedule_begin_, t);
   if (mt == INVALID_TIME) {
     throw std::system_error(motis::access::error::timestamp_not_in_schedule);
@@ -56,8 +56,8 @@ time motis_time(int const hhmm, int const day_idx, int const timezone_offset) {
          timezone_offset;
 }
 
-std::time_t unix_time(schedule const& sched, int const hhmm, int const day_idx,
-                      int const timezone_offset) {
+unixtime unix_time(schedule const& sched, int const hhmm, int const day_idx,
+                   int const timezone_offset) {
   return motis_to_unixtime(sched, motis_time(hhmm, day_idx, timezone_offset));
 }
 
