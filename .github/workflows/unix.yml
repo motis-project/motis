@@ -117,7 +117,7 @@ jobs:
             mode: Release
             os: ubuntu-20.04
             artifact: linux-arm
-            dockerplatform: linux/armv7
+            dockerplatform: linux/arm/v7
             avx: Off
             avx2: Off
             webui: On
