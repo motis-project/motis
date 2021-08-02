@@ -201,7 +201,7 @@ jobs:
         run: sudo apt-get install -y --no-install-recommends ninja-build
 
       - name: Cross Compilation (aarch64)
-        if: matrix.config.artifact == 'linux-aarch64'
+        if: matrix.config.artifact == 'linux-arm64'
         run: sudo apt install -y --no-install-recommends qemu-user-static binfmt-support g++-10-aarch64-linux-gnu gcc-10-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
       - name: Cross Compilation (arm)
