@@ -1,7 +1,9 @@
 FROM ubuntu:20.04
-# ADD $ARCHIVE /motis
-ARG TARGETPLATFORM
-RUN echo $TARGETPLATFORM
+ARG TARGETARCH
+ADD motis-$TARGETARCH.tar.bz2 /
+RUN useradd --user-group --create-home --shell /bin/bash motis
 EXPOSE 8080
 VOLUME ["/data"]
-ENTRYPOINT ["/motis/motis"]
+WORKDIR /motis
+USER motis
+CMD ["/motis/motis", "-c", "/data/config.ini"]
