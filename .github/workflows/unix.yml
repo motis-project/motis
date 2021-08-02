@@ -2,7 +2,7 @@ name: Unix Build
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, docker ]
   pull_request:
     branches: [ master ]
   release:
@@ -355,7 +355,7 @@ jobs:
         if: matrix.config.os == 'ubuntu-20.04' && matrix.config.artifact != ''
         uses: docker/build-push-action@v2
         with:
-          push: true #${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name != 'pull_request' }}
           context: .
           build-args: |
             ARCHIVE=${{ env.GITHUB_WORKSPACE }}/motis-${{ matrix.config.artifact }}.tar.bz2
