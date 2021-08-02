@@ -41,7 +41,6 @@ struct fws_graph {
   struct incoming_edge_bucket {
     friend fws_graph;
 
-    using size_type = size_type;
     using value_type = edge_type;
 
     template <bool IsConst = Const, typename = std::enable_if_t<IsConst>>

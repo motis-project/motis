@@ -7,6 +7,7 @@
 #include "geo/latlng.h"
 
 #include "motis/core/common/constants.h"
+#include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/schedule.h"
 
 #include "motis/protocol/Message_generated.h"
@@ -16,7 +17,7 @@ namespace motis::intermodal {
 struct query_start {
   query_start(routing::Start const start_type,
               flatbuffers::Offset<void> const start, geo::latlng pos,
-              std::time_t time, bool intermodal)
+              unixtime time, bool intermodal)
       : start_type_(start_type),
         start_(start),
         is_intermodal_(intermodal),
@@ -28,7 +29,7 @@ struct query_start {
 
   bool is_intermodal_;
   geo::latlng pos_;
-  std::time_t time_;
+  unixtime time_;
 };
 
 query_start parse_query_start(flatbuffers::FlatBufferBuilder&,

@@ -9,6 +9,7 @@
 #undef NO_DATA
 #endif
 
+#include "motis/core/common/unixtime.h"
 #include "motis/ris/ris_message.h"
 
 #include "motis/protocol/RISMessage_generated.h"
@@ -42,12 +43,12 @@ private:
   void to_ris_message(schedule&, std::string_view,
                       std::function<void(ris_message&&)> const&);
 
-  void parse_entity(schedule&, transit_realtime::FeedEntity const&, std::time_t,
+  void parse_entity(schedule&, transit_realtime::FeedEntity const&,
+                    unixtime message_time,
                     std::function<void(ris_message&&)> const&);
 
   void parse_trip_updates(schedule&, transit_realtime::FeedEntity const&,
-                          std::time_t,
-                          std::function<void(ris_message&&)> const&);
+                          unixtime, std::function<void(ris_message&&)> const&);
 
   std::unique_ptr<knowledge_context> knowledge_;
 };

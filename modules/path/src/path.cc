@@ -46,6 +46,7 @@ struct import_state {
 
 path::path() : module("Path", "path") {
   param(use_cache_, "use_cache", "caches to use during import {osm, seq}");
+  param(max_size_, "max_size", "path db max size");
 }
 
 path::~path() = default;
@@ -116,7 +117,7 @@ void path::init(registry& r) {
     auto data = path_data{};
     data.db_ = make_path_database(
         (get_data_directory() / "path" / "pathdb.mdb").generic_string(), true,
-        false);
+        false, max_size_);
 
     data.render_ctx_ = tiles::make_render_ctx(*data.db_->db_handle_);
 

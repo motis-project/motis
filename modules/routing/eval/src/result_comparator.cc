@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 
+#include "motis/core/common/unixtime.h"
 #include "motis/module/message.h"
 #include "motis/eval/comparator/response.h"
 #include "motis/eval/get_stat.h"
@@ -26,16 +27,16 @@ char get_relation_symbol(T const& u1, T const& u2) {
   }
 }
 
+std::string format_time(unixtime t, bool local_time) {
+  constexpr auto const TIME_FORMAT = "%d.%m. %H:%M";
+  std::time_t conv = t;
+  std::ostringstream out;
+  out << std::put_time(local_time ? std::localtime(&conv) : std::gmtime(&conv),
+                       TIME_FORMAT);
+  return out.str();
+}
+
 void print(journey_meta_data const& con) {
-  auto const format_time = [](time_t t) -> std::string {
-    tm ts = *localtime(&t);
-
-    char buf[6];
-    strftime(static_cast<char*>(buf), sizeof(buf), "%H:%M", &ts);
-
-    return std::string(static_cast<char const*>(buf), 6);
-  };
-
   auto const format_duration = [](int seconds) {
     auto const total_minutes = seconds / 60;
     auto const days = total_minutes / (60 * 24);

@@ -34,6 +34,7 @@ private:
 
   std::vector<std::string> use_cache_;
   bool import_successful_{false};
+  size_t max_size_{size_t{32} * 1024 * 1024 * 1024};
 };
 
 }  // namespace motis::path

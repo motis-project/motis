@@ -11,6 +11,7 @@
 
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
+#include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/event_type.h"
 
 #include "motis/ris/ribasis/common.h"
@@ -188,9 +189,9 @@ void ribasis_parser::to_ris_message(
     ctx.b_.Finish(CreateMessage(ctx.b_, ctx.earliest_, ctx.latest_,
                                 ctx.timestamp_, MessageUnion_FullTripMessage,
                                 trip_msg.Union()));
-    utl::verify(ctx.earliest_ != std::numeric_limits<std::time_t>::max(),
+    utl::verify(ctx.earliest_ != std::numeric_limits<unixtime>::max(),
                 "earliest not set");
-    utl::verify(ctx.latest_ != std::numeric_limits<std::time_t>::min(),
+    utl::verify(ctx.latest_ != std::numeric_limits<unixtime>::min(),
                 "latest not set");
     cb(ris_message{ctx.earliest_, ctx.latest_, ctx.timestamp_,
                    std::move(ctx.b_)});

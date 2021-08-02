@@ -7,8 +7,6 @@
 
 namespace motis {
 
-static_assert(sizeof(time_t) == 8, "time_t size must be 8");
-
 constexpr auto const MODE =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_VERSION;
 
