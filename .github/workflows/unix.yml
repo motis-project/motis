@@ -68,7 +68,7 @@ jobs:
             cc: gcc-10
             mode: Release
             os: ubuntu-20.04
-            artifact: linux
+            artifact: linux-amd64
             avx: On
             avx2: On
             webui: On
@@ -85,7 +85,7 @@ jobs:
             webui: On
             tests: On
             strip: strip
-          - name: aarch64 Release
+          - name: arm64 Release
             cxx: aarch64-linux-gnu-g++-10
             cc: aarch64-linux-gnu-gcc-10
             cross: |-
@@ -96,14 +96,14 @@ jobs:
               -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-aarch64-static;-L;/usr/aarch64-linux-gnu" \
             mode: Release
             os: ubuntu-20.04
-            artifact: linux-aarch64
+            artifact: linux-arm64
             avx: Off
             avx2: Off
             webui: On
             tests: On
             emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
             strip: aarch64-linux-gnu-strip
-          - name: arm Release
+          - name: arm32 Release
             cxx: arm-linux-gnueabihf-g++-10
             cc: arm-linux-gnueabihf-gcc-10
             cross: |-
@@ -201,7 +201,7 @@ jobs:
         run: sudo apt-get install -y --no-install-recommends ninja-build
 
       - name: Cross Compilation (aarch64)
-        if: matrix.config.artifact == 'linux-aarch64'
+        if: matrix.config.artifact == 'linux-arm64'
         run: sudo apt install -y --no-install-recommends qemu-user-static binfmt-support g++-10-aarch64-linux-gnu gcc-10-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
       - name: Cross Compilation (arm)
@@ -329,3 +329,50 @@ jobs:
           asset_path: ./motis-${{ matrix.config.artifact }}.tar.bz2
           asset_name: motis-${{ matrix.config.artifact }}.tar.bz2
           asset_content_type: application/x-tar
+
+  docker:
+    runs-on: ubuntu-20.04
+    needs: build
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+
+      - name: Display structure of downloaded files
+        run: ls -R
+
+      - name: Docker setup-buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          install: true
+
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=edge
+
+      - name: Docker build and push
+        uses: docker/build-push-action@v2
+        with:
+          push: ${{ github.event_name != 'pull_request' }}
+          context: .
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
