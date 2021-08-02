@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <algorithm>
 #include <vector>
 
@@ -252,6 +253,7 @@ inline void separate_trip(schedule& sched, ev_key const& k) {
 }
 
 inline void separate_trip(schedule& sched, trip const* trp) {
+  assert(!trp->edges_->empty());
   auto const first_dep =
       ev_key{trp->edges_->front().get_edge(), trp->lcon_idx_, event_type::DEP};
   separate_trip(sched, first_dep);
