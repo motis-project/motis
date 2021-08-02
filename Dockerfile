@@ -1,6 +1,6 @@
 FROM ubuntu:20.04
 ARG TARGETARCH
-ADD motis-$TARGETARCH.tar.bz2 /
+ADD motis-linux-$TARGETARCH.tar.bz2 /
 RUN useradd --user-group --create-home --shell /bin/bash motis
 EXPOSE 8080
 VOLUME ["/data"]
