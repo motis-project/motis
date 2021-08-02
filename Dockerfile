@@ -1,4 +1,6 @@
 FROM --platform=$BUILDPLATFORM ubuntu:20.04
 ARG ARCHIVE
 ADD $ARCHIVE /motis
+EXPOSE 8080
+VOLUME ["/data"]
 ENTRYPOINT ["/motis/motis"]
