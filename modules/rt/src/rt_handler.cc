@@ -239,6 +239,10 @@ void rt_handler::propagate() {
     auto const& k = di->get_ev_key();
     auto const t = di->get_current_time();
 
+    if (k.is_canceled()) {
+      continue;
+    }
+
     auto const edge_fit = fits_edge(k, t);
     auto const trip_fit = fits_trip(sched_, k, t);
     if (!edge_fit || !trip_fit) {
