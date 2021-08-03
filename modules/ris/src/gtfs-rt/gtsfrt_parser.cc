@@ -2,11 +2,9 @@
 
 #include <optional>
 
-#include "boost/date_time/gregorian/gregorian_types.hpp"
-#include "boost/date_time/posix_time/posix_time_types.hpp"
-
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
+#include "motis/core/common/unixtime.h"
 #include "motis/module/context/get_schedule.h"
 #include "motis/protocol/RISMessage_generated.h"
 #include "motis/ris/gtfs-rt/common.h"
@@ -33,7 +31,7 @@ void finish_ris_msg(message_context& ctx, Offset<Message> message,
 }
 
 void gtfsrt_parser::parse_trip_updates(
-    schedule& sched, FeedEntity const& entity, std::time_t const timestamp,
+    schedule& sched, FeedEntity const& entity, unixtime const timestamp,
     std::function<void(ris_message&&)> const& cb) {
   auto trip_update = entity.trip_update();
   auto descriptor = trip_update.trip();
@@ -61,7 +59,7 @@ void gtfsrt_parser::parse_trip_updates(
 }
 
 void gtfsrt_parser::parse_entity(schedule& sched, FeedEntity const& entity,
-                                 std::time_t message_time,
+                                 unixtime message_time,
                                  std::function<void(ris_message&&)> const& cb) {
   // every entity contains either a trip update, a vehicle update or an
   // alert.
@@ -121,8 +119,8 @@ void gtfsrt_parser::to_ris_message(
 
   LOG(info) << "Parsing " << feed_message.entity().size() << " GTFS-RT updates";
 
-  std::time_t message_time{
-      static_cast<std::time_t>(feed_message.header().timestamp())};
+  unixtime message_time{
+      static_cast<unixtime>(feed_message.header().timestamp())};
   for (auto const& entity : feed_message.entity()) {
     try {
       parse_entity(sched, entity, message_time, cb);

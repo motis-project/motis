@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cinttypes>
 #include <memory>
 #include <optional>
 #include <string>
@@ -13,7 +14,10 @@
 namespace motis::path {
 
 struct path_database {
-  path_database(std::string const& fname, bool read_only);
+  static constexpr auto const kDefaultMaxSize =
+      static_cast<size_t>(32) * 1024 * 1024 * 1024;
+
+  path_database(std::string const& fname, bool read_only, size_t max_size);
 
   static lmdb::txn::dbi data_dbi(lmdb::txn& txn,
                                  lmdb::dbi_flags flags = lmdb::dbi_flags::NONE);
@@ -29,7 +33,7 @@ struct path_database {
 };
 
 std::unique_ptr<path_database> make_path_database(std::string const& fname,
-                                                  bool read_only,
-                                                  bool truncate = false);
+                                                  bool read_only, bool truncate,
+                                                  size_t max_size);
 
 }  // namespace motis::path

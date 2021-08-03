@@ -180,7 +180,7 @@ void prepare(prepare_settings const& opt) {
   auto post_graph = build_post_graph(std::move(resolved_seqs));
   post_process(post_graph);
 
-  db_builder builder(opt.out_);
+  db_builder builder(opt.out_, path_database::kDefaultMaxSize);
   builder.store_stations(*post_graph.originals_);
   serialize_post_graph(post_graph, builder);
   builder.finish();

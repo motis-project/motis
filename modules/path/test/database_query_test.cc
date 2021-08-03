@@ -22,6 +22,8 @@ namespace m = motis;
 namespace mp = m::path;
 namespace mm = m::module;
 
+static constexpr auto const kTestDbMaxSize = 256 * 1024 * 1024;
+
 namespace geo {
 // NOLINTNEXTLINE
 void PrintTo(latlng const& ll, std::ostream* os) {
@@ -184,7 +186,7 @@ struct path_database_query_test : public ::testing::Test {
 };
 
 TEST_F(path_database_query_test, simple) {
-  auto builder = std::make_unique<mp::db_builder>(db_fname());
+  auto builder = std::make_unique<mp::db_builder>(db_fname(), kTestDbMaxSize);
 
   auto [id1, h1] = add_feature(*builder, {0, 1, 2, 3});
 
@@ -193,7 +195,7 @@ TEST_F(path_database_query_test, simple) {
   builder->finish();
   builder.reset();
 
-  auto db = mp::make_path_database(db_fname(), true);
+  auto db = mp::make_path_database(db_fname(), true, false, kTestDbMaxSize);
 
   mp::path_database_query q;
   q.add_sequence(0UL);
@@ -215,7 +217,7 @@ TEST_F(path_database_query_test, simple) {
 }
 
 TEST_F(path_database_query_test, two_features_in_segment) {
-  auto builder = std::make_unique<mp::db_builder>(db_fname());
+  auto builder = std::make_unique<mp::db_builder>(db_fname(), kTestDbMaxSize);
 
   auto [id1, h1] = add_feature(*builder, {0, 1, 2, 3});
   auto [id2, h2] = add_feature(*builder, {3, 4, 5, 6});
@@ -225,7 +227,7 @@ TEST_F(path_database_query_test, two_features_in_segment) {
   builder->finish();
   builder.reset();
 
-  auto db = mp::make_path_database(db_fname(), true);
+  auto db = mp::make_path_database(db_fname(), true, false, kTestDbMaxSize);
 
   mp::path_database_query q;
   q.add_sequence(0UL);
@@ -250,7 +252,7 @@ TEST_F(path_database_query_test, two_features_in_segment) {
 }
 
 TEST_F(path_database_query_test, two_segments) {
-  auto builder = std::make_unique<mp::db_builder>(db_fname());
+  auto builder = std::make_unique<mp::db_builder>(db_fname(), kTestDbMaxSize);
 
   auto [id1, h1] = add_feature(*builder, {0, 1, 2, 3});
   auto [id2, h2] = add_feature(*builder, {3, 4, 5, 6});
@@ -260,7 +262,7 @@ TEST_F(path_database_query_test, two_segments) {
   builder->finish();
   builder.reset();
 
-  auto db = mp::make_path_database(db_fname(), true);
+  auto db = mp::make_path_database(db_fname(), true, false, kTestDbMaxSize);
 
   mp::path_database_query q;
   q.add_sequence(0UL);
@@ -293,7 +295,7 @@ TEST_F(path_database_query_test, two_segments) {
 // empty segments occur if start and end of a segment is identical
 // eg. repeated stations or identical stop positions for close stations
 TEST_F(path_database_query_test, empty_segments) {
-  auto builder = std::make_unique<mp::db_builder>(db_fname());
+  auto builder = std::make_unique<mp::db_builder>(db_fname(), kTestDbMaxSize);
 
   auto [id, h] = add_feature(*builder, {2, 3});
 
@@ -302,7 +304,7 @@ TEST_F(path_database_query_test, empty_segments) {
   builder->finish();
   builder.reset();
 
-  auto db = mp::make_path_database(db_fname(), true);
+  auto db = mp::make_path_database(db_fname(), true, false, kTestDbMaxSize);
 
   mp::path_database_query q;
   q.add_sequence(0UL);
@@ -328,7 +330,7 @@ TEST_F(path_database_query_test, empty_segments) {
 }
 
 TEST_F(path_database_query_test, batch_base) {
-  auto builder = std::make_unique<mp::db_builder>(db_fname());
+  auto builder = std::make_unique<mp::db_builder>(db_fname(), kTestDbMaxSize);
 
   auto [id1, h1] = add_feature(*builder, {0, 1});
   auto [id2, h2] = add_feature(*builder, {2, 3});
@@ -341,7 +343,7 @@ TEST_F(path_database_query_test, batch_base) {
   builder->finish();
   builder.reset();
 
-  auto db = mp::make_path_database(db_fname(), true);
+  auto db = mp::make_path_database(db_fname(), true, false, kTestDbMaxSize);
 
   mp::path_database_query q{20};
   q.add_sequence(0UL);
@@ -382,7 +384,7 @@ TEST_F(path_database_query_test, batch_base) {
 }
 
 TEST_F(path_database_query_test, batch_empty) {
-  auto builder = std::make_unique<mp::db_builder>(db_fname());
+  auto builder = std::make_unique<mp::db_builder>(db_fname(), kTestDbMaxSize);
 
   auto [id1, h1] = add_feature(*builder, {0, 1});
 
@@ -391,7 +393,7 @@ TEST_F(path_database_query_test, batch_empty) {
   builder->finish();
   builder.reset();
 
-  auto db = mp::make_path_database(db_fname(), true);
+  auto db = mp::make_path_database(db_fname(), true, false, kTestDbMaxSize);
 
   mp::path_database_query q;
   q.add_sequence(0UL);
@@ -419,7 +421,7 @@ TEST_F(path_database_query_test, batch_empty) {
 }
 
 TEST_F(path_database_query_test, batch_concat) {
-  auto builder = std::make_unique<mp::db_builder>(db_fname());
+  auto builder = std::make_unique<mp::db_builder>(db_fname(), kTestDbMaxSize);
 
   auto [id1, h1] = add_feature(*builder, {0, 1});
   auto [id2, h2] = add_feature(*builder, {2, 3});
@@ -438,7 +440,7 @@ TEST_F(path_database_query_test, batch_concat) {
   builder->finish();
   builder.reset();
 
-  auto db = mp::make_path_database(db_fname(), true);
+  auto db = mp::make_path_database(db_fname(), true, false, kTestDbMaxSize);
 
   mp::path_database_query q;
   q.add_sequence(0UL);
@@ -481,7 +483,7 @@ TEST_F(path_database_query_test, batch_concat) {
 }
 
 TEST_F(path_database_query_test, batch_reverse_single) {
-  auto builder = std::make_unique<mp::db_builder>(db_fname());
+  auto builder = std::make_unique<mp::db_builder>(db_fname(), kTestDbMaxSize);
 
   auto [id1, h1] = add_feature(*builder, {0, 1});
 
@@ -490,7 +492,7 @@ TEST_F(path_database_query_test, batch_reverse_single) {
   builder->finish();
   builder.reset();
 
-  auto db = mp::make_path_database(db_fname(), true);
+  auto db = mp::make_path_database(db_fname(), true, false, kTestDbMaxSize);
 
   mp::path_database_query q;
   q.add_sequence(0UL);
@@ -512,7 +514,7 @@ TEST_F(path_database_query_test, batch_reverse_single) {
 }
 
 TEST_F(path_database_query_test, batch_partial_sequence) {
-  auto builder = std::make_unique<mp::db_builder>(db_fname());
+  auto builder = std::make_unique<mp::db_builder>(db_fname(), kTestDbMaxSize);
 
   auto [id1, h1] = add_feature(*builder, {0, 1});
   auto [id2, h2] = add_feature(*builder, {2, 3});
@@ -523,7 +525,7 @@ TEST_F(path_database_query_test, batch_partial_sequence) {
   builder->finish();
   builder.reset();
 
-  auto db = mp::make_path_database(db_fname(), true);
+  auto db = mp::make_path_database(db_fname(), true, false, kTestDbMaxSize);
 
   mp::path_database_query q;
   q.add_sequence(0UL, {1, 2});
@@ -555,7 +557,7 @@ TEST_F(path_database_query_test, batch_partial_sequence) {
 }
 
 TEST_F(path_database_query_test, batch_extra) {
-  auto builder = std::make_unique<mp::db_builder>(db_fname());
+  auto builder = std::make_unique<mp::db_builder>(db_fname(), kTestDbMaxSize);
 
   auto [id1, h1] = add_feature(*builder, {0, 1});
 
@@ -564,7 +566,7 @@ TEST_F(path_database_query_test, batch_extra) {
   builder->finish();
   builder.reset();
 
-  auto db = mp::make_path_database(db_fname(), true);
+  auto db = mp::make_path_database(db_fname(), true, false, kTestDbMaxSize);
 
   mp::path_database_query q;
   q.add_extra({{fixed_x_to_latlng(10), fixed_x_to_latlng(11)},

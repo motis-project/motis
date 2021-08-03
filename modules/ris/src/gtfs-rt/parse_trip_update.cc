@@ -423,7 +423,7 @@ void initialize_update_context(
 void handle_trip_update(
     trip_update_context& update_ctx,
     std::unique_ptr<knowledge_context> const& knowledge,
-    const std::time_t timestamp,
+    unixtime const timestamp,
     std::function<void(message_context&, flatbuffers::Offset<Message>)> const&
         place_msg) {
   auto& sched = update_ctx.sched_;

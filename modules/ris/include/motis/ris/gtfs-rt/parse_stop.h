@@ -2,6 +2,7 @@
 
 #include <ctime>
 
+#include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/event_type.h"
 
 #include "gtfsrt.pb.h"
@@ -25,8 +26,8 @@ struct stop_context {
   int idx_{std::numeric_limits<int>::max()};
   bool is_skip_known_{false};
 
-  std::time_t stop_arrival_{0};
-  std::time_t stop_departure_{0};
+  unixtime stop_arrival_{0};
+  unixtime stop_departure_{0};
 };
 
 int get_stop_edge_idx(int, event_type);

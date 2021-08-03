@@ -12,9 +12,10 @@ namespace fs = boost::filesystem;
 
 namespace motis::path {
 
-path_database::path_database(std::string const& fname, bool const read_only)
+path_database::path_database(std::string const& fname, bool const read_only,
+                             size_t const max_size)
     : read_only_{read_only} {
-  env_.set_mapsize(static_cast<mdb_size_t>(32) * 1024 * 1024 * 1024);
+  env_.set_mapsize(max_size);
   env_.set_maxdbs(8);
 
   auto open_flags = lmdb::env_open_flags::NOSUBDIR;
@@ -55,13 +56,14 @@ std::optional<std::string> path_database::try_get(std::string const& k) const {
 
 std::unique_ptr<path_database> make_path_database(std::string const& fname,
                                                   bool const read_only,
-                                                  bool const truncate) {
+                                                  bool const truncate,
+                                                  size_t const max_size) {
   utl::verify(!(read_only && truncate),
               "make_path_database: either truncate or read_only");
   if (auto p = fs::path(fname); p.has_parent_path()) {
     fs::create_directories(p.parent_path());
   }
-  auto db = std::make_unique<path_database>(fname, read_only);
+  auto db = std::make_unique<path_database>(fname, read_only, max_size);
 
   if (truncate) {
     auto txn = db->db_handle_->make_txn();
