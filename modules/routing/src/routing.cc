@@ -47,7 +47,7 @@ msg_ptr routing::route(msg_ptr const& msg) {
   MOTIS_START_TIMING(routing_timing);
 
   auto const req = motis_content(RoutingRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto query = build_query(sched, req);
 
   mem_retriever mem(mem_pool_mutex_, mem_pool_, LABEL_STORE_START_SIZE);

@@ -321,7 +321,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   message_creator mc;
   statistics stats{};
 
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto const start = parse_query_start(mc, req, sched);
   auto const dest = parse_query_dest(mc, req, sched);
 

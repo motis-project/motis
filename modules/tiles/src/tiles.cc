@@ -69,10 +69,11 @@ tiles::tiles() : mm::module("Tiles", "tiles") {
 
 tiles::~tiles() = default;
 
-void tiles::import(mm::registry& reg) {
+void tiles::import(mm::import_dispatcher& reg) {
   auto const collector = std::make_shared<mm::event_collector>(
       get_data_directory().generic_string(), "tiles", reg,
-      [this](std::map<std::string, mm::msg_ptr> const& dependencies) {
+      [this](mm::event_collector::dependencies_map_t const& dependencies,
+             mm::event_collector::publish_fn_t const&) {
         auto const profile_path = fs::path{profile_path_};
 
         auto profile_hash = c::hash(profile_path.string());

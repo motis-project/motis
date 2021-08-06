@@ -19,7 +19,9 @@ namespace motis::module {
 
 dispatcher::dispatcher(registry& reg,
                        std::vector<std::unique_ptr<module>>&& modules)
-    : registry_{reg}, modules_{std::move(modules)} {}
+    : registry_{reg}, modules_{std::move(modules)} {
+  ctx_data::the_dispatcher_ = this;
+}
 
 void dispatcher::on_msg(msg_ptr const& msg, callback const& cb) {
   dispatch(msg, cb, ctx::op_id("dispatcher::on_msg"), ctx::op_type_t::IO);
@@ -37,8 +39,11 @@ std::vector<future> dispatcher::publish(msg_ptr const& msg,
     utl::verify(ctx::current_op<ctx_data>() == nullptr ||
                     ctx::current_op<ctx_data>()->data_.access_ >= op.access_,
                 "match the access permissions of parent or be root operation");
-    return post_work(
-        data, [&, msg] { return op.fn_(msg); }, id);
+    auto f = std::make_shared<ctx::future<ctx_data, msg_ptr>>(id);
+    f->set(op.fn_(msg));
+    return f;
+    //    return post_work(
+    //        data, [&, msg] { return op.fn_(msg); }, id);
   });
 }
 
@@ -97,38 +102,34 @@ void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
     access = op->access_;
   }
 
-  enqueue(
-      data != nullptr ? *data : ctx_data{access, this, &shared_data_},
-      [this, id, cb, msg]() {
-        try {
-          if (auto const op = registry_.get_operation(id.name)) {
-            utl::verify(
-                ctx::current_op<ctx_data>() == nullptr ||
-                    ctx::current_op<ctx_data>()->data_.access_ >= op->access_,
-                "match the access permissions of parent or be root "
-                "operation");
-            return cb(op->fn_(msg), std::error_code());
-          } else if (auto const remote_op = registry_.get_remote_op(id.name);
-                     remote_op.has_value()) {
-            boost::asio::post(runner_.ios_, [op = remote_op.value(), msg,
-                                             cb]() { op(msg, cb); });
-            return;
-          } else {
-            LOG(logging::warn) << "target not found: " << id.name;
-            return handle_no_target(msg, cb);
-          }
-        } catch (std::system_error const& e) {
-          return cb(nullptr, e.code());
-        } catch (std::exception const& e) {
-          LOG(logging::error)
-              << "error executing " << id.name << ": " << e.what();
-          return cb(nullptr, error::unknown_error);
-        } catch (...) {
-          LOG(logging::error) << "unknown error executing " << id.name;
-          return cb(nullptr, error::unknown_error);
-        }
-      },
-      id, op_type, access);
+  //  enqueue(
+  //      data != nullptr ? *data : ctx_data{access, this, &shared_data_},
+  //      [this, id, cb, msg]() {
+  try {
+    if (auto const op = registry_.get_operation(id.name)) {
+      utl::verify(ctx::current_op<ctx_data>() == nullptr ||
+                      ctx::current_op<ctx_data>()->data_.access_ >= op->access_,
+                  "match the access permissions of parent or be root "
+                  "operation");
+      return cb(op->fn_(msg), std::error_code());
+    } else if (auto const remote_op = registry_.get_remote_op(id.name);
+               remote_op.has_value()) {
+      boost::asio::post(runner_.ios_,
+                        [op = remote_op.value(), msg, cb]() { op(msg, cb); });
+      return;
+    } else {
+      return handle_no_target(msg, cb);
+    }
+  } catch (std::system_error const& e) {
+    return cb(nullptr, e.code());
+  } catch (std::exception const& e) {
+    LOG(logging::error) << "error executing " << id.name << ": " << e.what();
+    return cb(nullptr, error::unknown_error);
+  } catch (...) {
+    LOG(logging::error) << "unknown error executing " << id.name;
+    return cb(nullptr, error::unknown_error);
+  }
+  //      }, id, op_type, access);
 }
 
 msg_ptr dispatcher::api_desc(int const id) const {

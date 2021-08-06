@@ -24,8 +24,8 @@
 #include "motis/core/conv/transport_conv.h"
 #include "motis/core/conv/trip_conv.h"
 
-#include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
+#include "motis/module/event_collector.h"
 
 #include "motis/path/path_data.h"
 
@@ -121,26 +121,39 @@ std::string estimate_initial_permalink(schedule const& sched) {
   return fmt::format("/{:.7}/{:.7}/{}", center.lat_, center.lng_, zoom);
 }
 
+void railviz::import(import_dispatcher& reg) {
+  std::make_shared<event_collector>(
+      get_data_directory().generic_string(), "railviz", reg,
+      [this](event_collector::dependencies_map_t const&,
+             event_collector::publish_fn_t const&) {
+        auto const& s = get_sched();
+        train_retriever_ =
+            std::make_unique<train_retriever>(s, bounding_boxes(s));
+
+        if (initial_permalink_.empty()) {
+          initial_permalink_ = estimate_initial_permalink(s);
+          LOG(logging::info)
+              << "est. initial_permalink: " << initial_permalink_;
+        }
+
+        import_successful_ = true;
+      })
+      ->require("SCHEDULE", [](msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_ScheduleEvent;
+      });
+}
+
 void railviz::init(motis::module::registry& reg) {
   reg.register_op("/railviz/map_config",
                   [this](auto const& msg) { return get_map_config(msg); });
-  reg.register_op("/railviz/get_trip_guesses", &railviz::get_trip_guesses);
-  reg.register_op("/railviz/get_station", &railviz::get_station);
+  reg.register_op("/railviz/get_trip_guesses",
+                  [this](msg_ptr const& msg) { return get_trip_guesses(msg); });
+  reg.register_op("/railviz/get_station",
+                  [this](msg_ptr const& msg) { return get_station(msg); });
   reg.register_op("/railviz/get_trains",
                   [this](msg_ptr const& msg) { return get_trains(msg); });
   reg.register_op("/railviz/get_trips",
                   [this](msg_ptr const& msg) { return get_trips(msg); });
-
-  reg.subscribe("/init", [this]() {
-    auto const& s = get_sched();
-    train_retriever_ = std::make_unique<train_retriever>(s, bounding_boxes(s));
-
-    if (initial_permalink_.empty()) {
-      initial_permalink_ = estimate_initial_permalink(s);
-      LOG(logging::info) << "est. initial_permalink: " << initial_permalink_;
-    }
-  });
-
   reg.subscribe("/rt/update", [this](msg_ptr const& msg) {
     using rt::RtUpdates;
     if (train_retriever_) {
@@ -163,7 +176,7 @@ msg_ptr railviz::get_map_config(msg_ptr const&) {
 msg_ptr railviz::get_trip_guesses(msg_ptr const& msg) {
   auto const req = motis_content(RailVizTripGuessRequest, msg);
 
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
 
   auto const cmp = [&](trip const* a, trip const* b) {
     return std::abs(static_cast<int64_t>(a->id_.primary_.time_)) <
@@ -234,7 +247,7 @@ msg_ptr railviz::get_trip_guesses(msg_ptr const& msg) {
 msg_ptr railviz::get_station(msg_ptr const& msg) {
   auto const req = motis_content(RailVizStationRequest, msg);
 
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto const t = unix_to_motistime(sched, req->time());
   auto const station = get_station_node(sched, req->station_id()->str());
 
@@ -364,8 +377,7 @@ msg_ptr railviz::get_trains(msg_ptr const& msg) const {
   logging::scoped_timer timer("get_trains");
 
   auto const req = motis_content(RailVizTrainsRequest, msg);
-  auto const& sched = get_schedule();
-
+  auto const& sched = get_sched();
   auto const start_time = unix_to_motistime(sched, req->start_time());
   auto const end_time = unix_to_motistime(sched, req->end_time());
 
@@ -385,7 +397,7 @@ msg_ptr railviz::get_trains(msg_ptr const& msg) const {
 
 msg_ptr railviz::get_trips(msg_ptr const& msg) {
   auto const* req = motis_content(RailVizTripsRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
 
   trains_response_builder trb{
       sched, find_shared_data<path::path_data>(path::PATH_DATA_KEY), MAX_ZOOM};

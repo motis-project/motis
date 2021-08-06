@@ -103,7 +103,7 @@ msg_ptr guesser::guess(msg_ptr const& msg) {
   for (auto const& match :
        guesser_->guess_match(trim(req->input()->str()), req->guess_count())) {
     auto const guess = match.index;
-    auto const& station = *get_schedule().stations_[station_indices_[guess]];
+    auto const& station = *get_sched().stations_[station_indices_[guess]];
     auto const pos = Position(station.width_, station.length_);
     guesses.emplace_back(CreateStation(b, b.CreateString(station.eva_nr_),
                                        b.CreateString(station.name_), &pos));

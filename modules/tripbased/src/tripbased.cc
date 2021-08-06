@@ -639,10 +639,11 @@ tripbased::tripbased() : module("Trip-Based Routing Options", "tripbased") {
 
 tripbased::~tripbased() = default;
 
-void tripbased::import(motis::module::registry& reg) {
+void tripbased::import(motis::module::import_dispatcher& reg) {
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "tripbased", reg,
-      [this](std::map<std::string, msg_ptr> const& dependencies) {
+      [this](event_collector::dependencies_map_t const& dependencies,
+             event_collector::publish_fn_t const&) {
         using import::ScheduleEvent;
         auto const schedule =
             motis_content(ScheduleEvent, dependencies.at("SCHEDULE"));

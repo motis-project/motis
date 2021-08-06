@@ -10,7 +10,6 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
-#include "tiles/fixed/io/deserialize.h"
 #include "tiles/get_tile.h"
 #include "tiles/parse_tile_url.h"
 
@@ -18,7 +17,6 @@
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/module/context/get_schedule.h"
-#include "motis/module/context/motis_call.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
@@ -51,10 +49,11 @@ path::path() : module("Path", "path") {
 
 path::~path() = default;
 
-void path::import(registry& reg) {
+void path::import(import_dispatcher& reg) {
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "path", reg,
-      [this](std::map<std::string, msg_ptr> const& dependencies) {
+      [this](event_collector::dependencies_map_t const& dependencies,
+             event_collector::publish_fn_t const&) {
         using import::ScheduleEvent;
         using import::OSMEvent;
         using import::OSRMEvent;

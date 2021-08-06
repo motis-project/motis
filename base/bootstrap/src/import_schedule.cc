@@ -19,11 +19,14 @@ namespace mm = motis::module;
 namespace motis::bootstrap {
 
 void register_import_schedule(motis_instance& instance,
+                              mm::import_dispatcher& reg,
                               loader::loader_options const& dataset_opt,
                               std::string const& data_dir) {
   std::make_shared<mm::event_collector>(
-      data_dir, "schedule", instance,
-      [&, dataset_opt](std::map<std::string, mm::msg_ptr> const& dependencies) {
+      data_dir, "schedule", reg,
+      [&, dataset_opt](
+          mm::event_collector::dependencies_map_t const& dependencies,
+          mm::event_collector::publish_fn_t const& publish) {
         auto const& msg = dependencies.at("SCHEDULE");
 
         auto const parsers = loader::parsers();
@@ -52,7 +55,7 @@ void register_import_schedule(motis_instance& instance,
             SCHEDULE_DATA_KEY,
             schedule_data{std::move(memory), std::move(sched)});
 
-        module::message_creator fbb;
+        mm::message_creator fbb;
         fbb.create_and_finish(
             MsgContent_ScheduleEvent,
             import::CreateScheduleEvent(
@@ -70,7 +73,7 @@ void register_import_schedule(motis_instance& instance,
                 instance.sched().hash_)
                 .Union(),
             "/import", DestinationType_Topic);
-        motis_publish(make_msg(fbb));
+        publish(make_msg(fbb));
         return nullptr;
       })
       ->require("SCHEDULE", [](mm::msg_ptr const& msg) {

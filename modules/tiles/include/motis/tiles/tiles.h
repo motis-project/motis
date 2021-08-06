@@ -14,7 +14,7 @@ struct tiles : public motis::module::module {
   tiles(tiles&&) = delete;
   tiles& operator=(tiles&&) = delete;
 
-  void import(motis::module::registry& reg) override;
+  void import(motis::module::import_dispatcher&) override;
   void init(motis::module::registry&) override;
 
   bool import_successful() const override;

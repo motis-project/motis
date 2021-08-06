@@ -20,6 +20,8 @@ struct ctx_data {
   ctx::access_t access_;
   dispatcher* dispatcher_;
   shared_data* shared_data_;
+
+  static dispatcher* the_dispatcher_;
 };
 
 inline ctx_data& current_data() { return ctx::current_op<ctx_data>()->data_; }

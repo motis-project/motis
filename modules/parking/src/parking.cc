@@ -373,10 +373,11 @@ std::string parking::stations_per_parking_file() const {
   return (module_data_dir() / "stations_per_parking.txt").generic_string();
 }
 
-void parking::import(registry& reg) {
+void parking::import(import_dispatcher& reg) {
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "parking", reg,
-      [this](std::map<std::string, msg_ptr> const& dependencies) {
+      [this](event_collector::dependencies_map_t const& dependencies,
+             event_collector::publish_fn_t const&) {
         using namespace ::motis::parking::prepare;
         using import::OSMEvent;
         using import::PPREvent;
