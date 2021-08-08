@@ -190,7 +190,7 @@ jobs:
           chmod +x llvm.sh
           sudo ./llvm.sh 12
           rm llvm.sh
-          sudo apt-get install -y --no-install-recommends libc++-12-dev libc++abi-12-dev clang-tidy-12
+          sudo apt-get install -y --no-install-recommends libc++-12-dev libc++abi-12-dev clang-tidy-12 libunwind-12-dev
 
       - name: Install Valgrind
         if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
