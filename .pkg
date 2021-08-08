@@ -5,7 +5,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=5770b9a3cd6ce5e5fdf01548c05c53dd587e0d52
+  commit=167a140c41300307a98b8a9b2a3a89a75ae1222e
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
@@ -13,7 +13,7 @@
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
-  commit=6bfb909745708e15b068f649aed6bfe8cf4e6d97
+  commit=851bc53aabd0f63f1881ce78537ddaa07d3ec24a
 [date]
   url=git@github.com:motis-project/date.git
   branch=master
@@ -53,7 +53,7 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=32bit
-  commit=3dffb71fda178dac9ca43c41b41bc2180734b671
+  commit=fbe91bd944abc9ab64b86de940fe3e833d4a807b
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
@@ -85,4 +85,4 @@
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=master
-  commit=bca212ca286121db1e7eb2efa9ee8de626633481
+  commit=4c5a751d4d7c4b851d793973a09a5aefd18fff6d
