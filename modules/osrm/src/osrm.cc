@@ -127,21 +127,23 @@ void osrm::init(motis::module::registry& reg) {
 
 void osrm::init_async() {
   std::mutex mutex;
-  motis_parallel_for(
-      datasets_, ([&mutex, this](std::string const& dataset) {
-        fs::path path(dataset);
-        auto directory = path.parent_path();
-        if (!is_directory(directory)) {
-          throw std::runtime_error("OSRM dataset is not a folder!");
-        }
+  //  motis_parallel_for(
+  //      datasets_, ([&mutex, this](std::string const& dataset) {
+  for (auto const& dataset : datasets_) {
+    fs::path path(dataset);
+    auto directory = path.parent_path();
+    if (!is_directory(directory)) {
+      throw std::runtime_error("OSRM dataset is not a folder!");
+    }
 
-        auto const profile = directory.filename().string();
-        scoped_timer timer("loading OSRM dataset: " + profile);
-        auto r = std::make_unique<router>(dataset);
+    auto const profile = directory.filename().string();
+    scoped_timer timer("loading OSRM dataset: " + profile);
+    auto r = std::make_unique<router>(dataset);
 
-        std::lock_guard<std::mutex> lock(mutex);
-        routers_.emplace(profile, std::move(r));
-      }));
+    std::lock_guard<std::mutex> lock(mutex);
+    routers_.emplace(profile, std::move(r));
+  }
+  //      }));
 }
 
 router const* osrm::get_router(std::string const& profile) {

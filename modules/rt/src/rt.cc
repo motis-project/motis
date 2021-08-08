@@ -3,7 +3,6 @@
 #include "boost/program_options.hpp"
 
 #include "motis/core/schedule/serialization.h"
-#include "motis/module/context/get_schedule.h"
 
 #include "motis/rt/rt_handler.h"
 
@@ -20,7 +19,7 @@ rt::~rt() = default;
 
 void rt::init(motis::module::registry& reg) {
   handler_ = std::make_unique<rt_handler>(
-      *get_shared_data_mutable<schedule_data>(SCHEDULE_DATA_KEY).schedule_,
+      *const_cast<schedule*>(&get_sched()),  // NOLINT
       validate_graph_, validate_constant_graph_);
 
   reg.subscribe(
@@ -40,7 +39,7 @@ void rt::init(motis::module::registry& reg) {
       ctx::access_t::WRITE);
   reg.register_op("/rt/dump", [&](motis::module::msg_ptr const& msg) {
     auto const m = motis_content(RtWriteGraphRequest, msg);
-    write_graph(m->path()->str(), motis::module::get_schedule());
+    write_graph(m->path()->str(), get_sched());
     return motis::module::msg_ptr{};
   });
 }

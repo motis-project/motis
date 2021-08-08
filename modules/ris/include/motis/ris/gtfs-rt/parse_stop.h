@@ -17,7 +17,7 @@ namespace ris::gtfsrt {
 struct known_stop_skips;
 
 struct stop_context {
-  void update(schedule&, trip const&,
+  void update(schedule const&, trip const&,
               transit_realtime::TripUpdate_StopTimeUpdate const&,
               known_stop_skips*);
 

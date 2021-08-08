@@ -91,12 +91,12 @@ TEST_F(gtfsrt_cancel_test, cancel_twice) {
   std::string json = simple_cancel;
   auto bin = json_to_protobuf(json);
   auto view = std::string_view{bin.c_str(), bin.size()};
-  gtfsrt_parser cut;
-  auto const msgs1 = cut.parse(*sched_, view);
+  gtfsrt_parser cut{*sched_};
+  auto const msgs1 = cut.parse(view);
 
   ASSERT_EQ(1, msgs1.size());
 
-  auto const msgs2 = cut.parse(*sched_, view);
+  auto const msgs2 = cut.parse(view);
   ASSERT_EQ(0, msgs2.size());
 }
 

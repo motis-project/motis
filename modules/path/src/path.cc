@@ -16,7 +16,6 @@
 #include "motis/core/common/logging.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
-#include "motis/module/context/get_schedule.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
@@ -176,7 +175,7 @@ msg_ptr path::by_station_seq(msg_ptr const& msg) const {
 msg_ptr path::by_trip_id(msg_ptr const& msg) const {
   auto const& data = get_shared_data<path_data>(PATH_DATA_KEY);
   auto const& req = motis_content(PathByTripIdRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   return data.get_response(
       data.trip_to_index(sched, from_fbs(sched, req->trip_id())),
       req->zoom_level());
@@ -185,7 +184,7 @@ msg_ptr path::by_trip_id(msg_ptr const& msg) const {
 msg_ptr path::by_trip_id_batch(msg_ptr const& msg) const {
   auto const& data = get_shared_data<path_data>(PATH_DATA_KEY);
   auto const& req = motis_content(PathByTripIdBatchRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
 
   path_database_query q{req->zoom_level()};
 

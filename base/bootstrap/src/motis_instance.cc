@@ -181,22 +181,24 @@ void motis_instance::publish(std::string const& target, unsigned num_threads) {
   publish(make_no_msg(target), num_threads);
 }
 
-void motis_instance::publish(msg_ptr const& msg, unsigned num_threads) {
-  std::exception_ptr e;
-
-  run(
-      [&]() {
-        try {
-          ctx::await_all(motis_publish(msg));
-        } catch (...) {
-          e = std::current_exception();
-        }
-      },
-      access_of(msg), num_threads);
-
-  if (e) {
-    std::rethrow_exception(e);
-  }
+void motis_instance::publish(msg_ptr const& msg, unsigned /* num_threads */) {
+  ctx_data data{ctx::access_t::READ, ctx_data::the_dispatcher_, nullptr};
+  static_cast<dispatcher*>(this)->publish(msg, data, ctx::op_id{});
+  //  std::exception_ptr e;
+  //
+  //  run(
+  //      [&]() {
+  //        try {
+  //          ctx::await_all(motis_publish(msg));
+  //        } catch (...) {
+  //          e = std::current_exception();
+  //        }
+  //      },
+  //      access_of(msg), num_threads);
+  //
+  //  if (e) {
+  //    std::rethrow_exception(e);
+  //  }
 }
 
 }  // namespace motis::bootstrap

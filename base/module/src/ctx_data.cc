@@ -2,6 +2,6 @@
 
 namespace motis::module {
 
-dispatcher* ctx_data::the_dispatcher_;
+dispatcher* ctx_data::the_dispatcher_;  // NOLINT
 
 }  // namespace motis::module

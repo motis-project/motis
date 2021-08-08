@@ -45,8 +45,9 @@ constexpr auto const TIME_FORMAT = "%d.%m. %H:%M";
 std::string format_time(unixtime t, bool local_time) {
   std::time_t conv = t;
   std::ostringstream out;
-  out << std::put_time(local_time ? std::localtime(&conv) : std::gmtime(&conv),
-                       TIME_FORMAT);
+  out << std::put_time(
+      local_time ? std::localtime(&conv) : std::gmtime(&conv),  // NOLINT
+      TIME_FORMAT);
   return out.str();
 }
 

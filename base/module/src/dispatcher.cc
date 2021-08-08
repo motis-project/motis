@@ -29,6 +29,8 @@ void dispatcher::on_msg(msg_ptr const& msg, callback const& cb) {
 
 std::vector<future> dispatcher::publish(msg_ptr const& msg,
                                         ctx_data const& data, ctx::op_id id) {
+  (void)data;
+
   id.name = msg->get()->destination()->target()->str();
   auto it = registry_.topic_subscriptions_.find(id.name);
   if (it == end(registry_.topic_subscriptions_)) {
@@ -90,6 +92,8 @@ ctx::access_t dispatcher::access_of(std::string const& target) {
 
 void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
                           ctx::op_type_t const op_type, ctx_data const* data) {
+  (void)op_type;
+
   id.name = msg->get()->destination()->target()->str();
   if (id.name == "/api") {
     return cb(api_desc(msg->id()), std::error_code{});
@@ -102,6 +106,7 @@ void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
     access = op->access_;
   }
 
+  (void)access;
   //  enqueue(
   //      data != nullptr ? *data : ctx_data{access, this, &shared_data_},
   //      [this, id, cb, msg]() {

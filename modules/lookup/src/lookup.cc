@@ -4,8 +4,6 @@
 
 #include "motis/core/access/time_access.h"
 
-#include "motis/module/context/get_schedule.h"
-
 #include "motis/lookup/error.h"
 #include "motis/lookup/lookup_geo_station.h"
 #include "motis/lookup/lookup_id_train.h"
@@ -50,7 +48,7 @@ msg_ptr lookup::lookup_station_id(msg_ptr const& msg) const {
 
   message_creator b;
   auto response = motis::lookup::lookup_geo_stations_id(b, *station_geo_index_,
-                                                        get_schedule(), req);
+                                                        get_sched(), req);
   b.create_and_finish(MsgContent_LookupGeoStationResponse, response.Union());
   return make_msg(b);
 }
@@ -72,7 +70,7 @@ msg_ptr lookup::lookup_stations(msg_ptr const& msg) const {
   std::vector<Offset<LookupGeoStationResponse>> responses;
   for (auto const& sub_req : *req->requests()) {
     responses.push_back(motis::lookup::lookup_geo_stations(
-        b, *station_geo_index_, get_schedule(), sub_req));
+        b, *station_geo_index_, get_sched(), sub_req));
   }
   b.create_and_finish(
       MsgContent_LookupBatchGeoStationResponse,

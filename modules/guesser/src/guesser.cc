@@ -11,7 +11,6 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/schedule.h"
-#include "motis/module/context/get_schedule.h"
 #include "motis/protocol/Message_generated.h"
 
 using namespace flatbuffers;

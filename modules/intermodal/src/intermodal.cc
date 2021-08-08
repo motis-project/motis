@@ -14,7 +14,6 @@
 #include "motis/core/access/time_access.h"
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/core/journey/message_to_journeys.h"
-#include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_spawn.h"
 

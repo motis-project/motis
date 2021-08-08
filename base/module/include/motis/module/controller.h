@@ -21,6 +21,10 @@ struct controller : public dispatcher, public registry {
            unsigned num_threads = std::thread::hardware_concurrency()) ->
       typename std::enable_if_t<!std::is_same_v<void, decltype(f())>,
                                 decltype(f())> {
+    (void)access;
+    (void)num_threads;
+    return f();
+    /*
     decltype(f()) result;
     std::exception_ptr eptr;
 
@@ -51,12 +55,17 @@ struct controller : public dispatcher, public registry {
     }
 
     return result;
+    */
   }
 
   template <typename Fn>
   auto run(Fn f, ctx::access_t const access = ctx::access_t::READ,
            unsigned num_threads = std::thread::hardware_concurrency()) ->
       typename std::enable_if_t<std::is_same_v<void, decltype(f())>> {
+    (void)access;
+    (void)num_threads;
+    f();
+    /*
     std::exception_ptr eptr;
 
     access == ctx::access_t::READ ? enqueue_read_io(
@@ -84,6 +93,7 @@ struct controller : public dispatcher, public registry {
     if (eptr) {
       std::rethrow_exception(eptr);
     }
+     */
   }
 };
 

@@ -12,7 +12,6 @@
 #include "motis/core/access/edge_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/journeys_to_message.h"
-#include "motis/module/context/get_schedule.h"
 
 #include "motis/routing/additional_edges.h"
 #include "motis/routing/build_query.h"
@@ -40,7 +39,9 @@ routing::~routing() = default;
 void routing::init(motis::module::registry& reg) {
   reg.register_op("/routing",
                   [this](msg_ptr const& msg) { return route(msg); });
-  reg.register_op("/trip_to_connection", &routing::trip_to_connection);
+  reg.register_op("/trip_to_connection", [this](msg_ptr const& msg) {
+    return trip_to_connection(msg);
+  });
 }
 
 msg_ptr routing::route(msg_ptr const& msg) {
@@ -82,7 +83,7 @@ msg_ptr routing::route(msg_ptr const& msg) {
 msg_ptr routing::trip_to_connection(msg_ptr const& msg) {
   using label = default_label<search_dir::FWD>;
 
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto trp = from_fbs(sched, motis_content(TripId, msg));
 
   if (trp->edges_->empty()) {
