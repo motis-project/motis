@@ -75,12 +75,9 @@ void tiles::import(mm::import_dispatcher& reg) {
       [this](mm::event_collector::dependencies_map_t const& dependencies,
              mm::event_collector::publish_fn_t const&) {
         auto const profile_path = fs::path{profile_path_};
-
-        auto profile_hash = c::hash(profile_path.string());
-        profile_hash = c::hash_combine(profile_hash, profile_path.size());
         auto const profile_str = utl::read_file(profile_path.string().c_str());
         utl::verify(profile_str.has_value(), "tiles::import cant read profile");
-        profile_hash = c::hash_combine(profile_hash, c::hash(*profile_str));
+        auto const profile_hash = c::hash(*profile_str);
 
         auto const dir = get_data_directory() / "tiles";
         auto const path = (dir / "tiles.mdb").string();
