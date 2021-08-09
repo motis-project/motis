@@ -23,13 +23,15 @@ std::pair<int, int> first_last_days(schedule const& sched,
   auto last_day = static_cast<int>(
       (sched.schedule_end_ - interval->from()) / SECONDS_A_DAY - 1);
 
-  utl::verify(
-      sched.schedule_end_ > sched.schedule_begin_ &&
-          interval->from() <= static_cast<uint64_t>(sched.schedule_end_) &&
-          interval->to() >= static_cast<uint64_t>(sched.schedule_begin_),
-      "schedule (from={}, to={}) out of interval (from={}, to={})",
-      format_date(interval->from()), format_date(interval->to()),
-      format_date(sched.schedule_begin_), format_date(sched.schedule_end_));
+  utl::verify(sched.schedule_end_ > sched.schedule_begin_ &&
+                  interval->from() <= sched.schedule_end_ &&
+                  interval->to() >= sched.schedule_begin_,
+              "schedule (from={}, to={}) out of interval (from={}, to={}), "
+              "fbs: {} - {}, sched: {} - {}",
+              format_date(interval->from()), format_date(interval->to()),
+              format_date(sched.schedule_begin_),
+              format_date(sched.schedule_end_), interval->from(),
+              interval->to(), sched.schedule_begin_, sched.schedule_end_);
 
   return {first_day, last_day};
 }
