@@ -106,6 +106,8 @@ jobs:
           - name: arm32 Release
             cxx: arm-linux-gnueabihf-g++-10
             cc: arm-linux-gnueabihf-gcc-10
+            cflags: -Wno-psabi
+            cxxflags: -Wno-psabi
             cross: |-
               -DCMAKE_AR=/usr/bin/arm-linux-gnueabihf-ar \
               -DCMAKE_LINKER=/usr/bin/arm-linux-gnueabihf-ld \
