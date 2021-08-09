@@ -50,8 +50,8 @@ struct import_state {
 };
 
 struct tiles::data {
-  explicit data(std::string const& path)
-      : db_env_{::tiles::make_tile_database(path.c_str())},
+  explicit data(std::string const& path, size_t const db_size)
+      : db_env_{::tiles::make_tile_database(path.c_str(), db_size)},
         db_handle_{db_env_},
         render_ctx_{::tiles::make_render_ctx(db_handle_)},
         pack_handle_{path.c_str()} {}
@@ -65,6 +65,9 @@ struct tiles::data {
 tiles::tiles() : mm::module("Tiles", "tiles") {
   param(profile_path_, "profile", "/path/to/profile.lua");
   param(use_coastline_, "import.use_coastline", "true|false");
+  param(flush_threshold_, "import.flush_threshold",
+        "shared metadata max queue size");
+  param(db_size_, "db_size", "database size");
 }
 
 tiles::~tiles() = default;
@@ -112,7 +115,8 @@ void tiles::import(mm::import_dispatcher& reg) {
           ::tiles::clear_database(path);
           ::tiles::clear_pack_file(path.c_str());
 
-          lmdb::env db_env = ::tiles::make_tile_database(path.c_str());
+          lmdb::env db_env =
+              ::tiles::make_tile_database(path.c_str(), db_size_);
           ::tiles::tile_db_handle db_handle{db_env};
           ::tiles::pack_handle pack_handle{path.c_str()};
 
@@ -139,7 +143,7 @@ void tiles::import(mm::import_dispatcher& reg) {
         }
 
         mm::write_ini(dir / "import.ini", state);
-        data_ = std::make_unique<data>(path);
+        data_ = std::make_unique<data>(path, db_size_);
       });
   collector->require("OSM", [](mm::msg_ptr const& msg) {
     return msg->get()->content_type() == MsgContent_OSMEvent;

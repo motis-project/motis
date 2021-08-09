@@ -361,6 +361,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: motis-project/test-data
+          branch: aachen
 
       - name: Download artifacts
         uses: actions/download-artifact@v2
@@ -369,9 +370,9 @@ jobs:
 
       - name: Unpack distribution and data
         run: |
-          mkdir -p data/gtfs
-          unzip berlin-gtfs.zip -d data/gtfs
-          mv berlin-latest.osm.pbf data
+          mkdir -p data/hrd
+          unzip AVV_HAFAS_520.zip -d data/hrd
+          mv aachen.osm.pbf data
           tar xf motis-${{ matrix.config.artifact }}.tar.bz2
 
       - name: Start MOTIS
@@ -381,7 +382,7 @@ jobs:
             --modules routing lookup guesser ppr address intermodal osrm railviz tiles \
             --server.static_path motis/web \
             --import.data_dir data \
-            --import.paths schedule:data/gtfs osm:data/berlin-latest.osm.pbf \
+            --import.paths schedule:data/hrd osm:data/aachen.osm.pbf \
             --dataset.begin 20210809 \
             --osrm.profiles=motis/osrm-profiles/car.lua \
             --osrm.profiles=motis/osrm-profiles/bike.lua \

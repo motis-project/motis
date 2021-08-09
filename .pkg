@@ -73,7 +73,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=f05ed51b64cc08a49d4d2ed9df7fd4ca57ecc37a
+  commit=4f12263f5866eac259fa6d0f68e356bbc87afafd
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
