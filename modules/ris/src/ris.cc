@@ -264,9 +264,12 @@ private:
     ~publisher() { flush(); }
 
     void flush() {
-      if (offsets_.empty()) {
+      if (offsets_.empty() || in_flush_) {
         return;
       }
+      // prevent the destructor from running flush() again if an exception
+      // occurs inside flush()
+      in_flush_ = true;
 
       fbb_.create_and_finish(
           MsgContent_RISBatch,
@@ -278,6 +281,7 @@ private:
       offsets_.clear();
 
       ctx::await_all(motis_publish(msg));
+      in_flush_ = false;
     }
 
     void add(uint8_t const* ptr, size_t const size) {
@@ -295,6 +299,7 @@ private:
     message_creator fbb_;
     std::vector<flatbuffers::Offset<MessageHolder>> offsets_;
     unixtime max_timestamp_ = 0;
+    bool in_flush_{};
   };
 
   struct null_publisher {
