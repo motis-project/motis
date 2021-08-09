@@ -332,9 +332,65 @@ jobs:
           asset_name: motis-${{ matrix.config.artifact }}.tar.bz2
           asset_content_type: application/x-tar
 
-  docker:
+  full-data-set-test:
     runs-on: ubuntu-20.04
     needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - artifact: macos-noavx2
+            os: macos-latest
+          - artifact: linux-amd64
+            os: ubuntu-20.04
+          - artifact: linux-arm
+            os: ubuntu-20.04
+            emulator: qemu-arm-static -L /usr/arm-linux-gnueabihf
+            packages: qemu-user-static binfmt-support binutils-arm-linux-gnueabi
+          - artifact: linux-arm64
+            os: ubuntu-20.04
+            emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
+            packages: qemu-user-static binfmt-support binutils-aarch64-linux-gnu
+    steps:
+      - name: Install packages
+        if: matrix.config.packages != ''
+        run: sudo apt install -y --no-install-recommends ${{ matrix.config.packages }}
+
+      - name: Download timetable and OSM dataset
+        uses: actions/checkout@v2
+        with:
+          repository: motis-project/test-data
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: motis-${{ matrix.config.artifact }}
+
+      - name: Unpack distribution and data
+        run: |
+          mkdir -p data/gtfs
+          unzip berlin-gtfs.zip -d data/gtfs
+          mv berlin-latest.osm.pbf data
+          tar xf motis-${{ matrix.config.artifact }}.tar.bz2
+          tree .
+
+      - name: Start MOTIS
+        run: |
+          ${{ matrix.config.emulator }} ./motis/motis \
+            --mode test \
+            --modules routing lookup guesser ppr address intermodal osrm railviz tiles \
+            --server.static_path motis/web \
+            --import.data_dir data \
+            --import.paths schedule:data/gtfs osm:data/berlin-latest.osm.pbf \
+            --dataset.begin 20210809 \
+            --osrm.profiles=motis/osrm-profiles/car.lua \
+            --osrm.profiels=motis/osrm-profiles/bike.lua \
+            --ppr.profile=motis/ppr-profiles/default.json \
+            --tiles.profile=motis/tiles-profiles/background.lua
+
+  docker:
+    runs-on: ubuntu-20.04
+    needs: full-data-set-test
     steps:
       - uses: actions/checkout@v2
 
