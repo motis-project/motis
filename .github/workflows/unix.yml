@@ -385,10 +385,12 @@ jobs:
             --import.data_dir data \
             --import.paths schedule:data/hrd osm:data/aachen.osm.pbf \
             --dataset.begin 20210809 \
-            --osrm.profiles=motis/osrm-profiles/car.lua \
-            --osrm.profiles=motis/osrm-profiles/bike.lua \
-            --ppr.profile=motis/ppr-profiles/default.json \
-            --tiles.profile=motis/tiles-profiles/background.lua
+            --osrm.profiles motis/osrm-profiles/car.lua \
+            --osrm.profiles motis/osrm-profiles/bike.lua \
+            --ppr.profile motis/ppr-profiles/default.json \
+            --tiles.profile motis/tiles-profiles/background.lua \
+            --tiles.import.flush_threshold  100000 \
+            --tiles.db_size 268435456
 
   docker:
     runs-on: ubuntu-20.04
