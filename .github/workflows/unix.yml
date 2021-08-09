@@ -361,7 +361,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: motis-project/test-data
-          branch: aachen
+          ref: aachen
 
       - name: Download artifacts
         uses: actions/download-artifact@v2
