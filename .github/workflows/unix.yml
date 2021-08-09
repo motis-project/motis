@@ -372,6 +372,7 @@ jobs:
         run: |
           mkdir -p data/hrd
           unzip AVV_HAFAS_520.zip -d data/hrd
+          mv zeitvs data/hrd
           mv aachen.osm.pbf data
           tar xf motis-${{ matrix.config.artifact }}.tar.bz2
 
