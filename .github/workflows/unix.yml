@@ -373,7 +373,6 @@ jobs:
           unzip berlin-gtfs.zip -d data/gtfs
           mv berlin-latest.osm.pbf data
           tar xf motis-${{ matrix.config.artifact }}.tar.bz2
-          tree .
 
       - name: Start MOTIS
         run: |
