@@ -28,7 +28,7 @@ motis_instance_test::motis_instance_test(
     std::vector<std::string> const& modules_cmdline_opt)
     : instance_(std::make_unique<motis_instance>()) {
   if constexpr (sizeof(void*) < 8) {
-    ctx_data::direct_mode_dispatcher_ = instance_.get();
+    dispatcher::direct_mode_dispatcher_ = instance_.get();
   }
 
   auto modules_cmdline_opt_patched = modules_cmdline_opt;

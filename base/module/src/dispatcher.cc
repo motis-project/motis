@@ -17,6 +17,8 @@
 
 namespace motis::module {
 
+dispatcher* dispatcher::direct_mode_dispatcher_ = nullptr;  // NOLINT
+
 dispatcher::dispatcher(registry& reg,
                        std::vector<std::unique_ptr<module>>&& modules)
     : registry_{reg}, modules_{std::move(modules)} {}
@@ -37,7 +39,7 @@ std::vector<future> dispatcher::publish(msg_ptr const& msg,
     utl::verify(ctx::current_op<ctx_data>() == nullptr ||
                     ctx::current_op<ctx_data>()->data_.access_ >= op.access_,
                 "match the access permissions of parent or be root operation");
-    if (direct_mode_) {
+    if (direct_mode_dispatcher_ != nullptr) {
       auto f = std::make_shared<ctx::future<ctx_data, msg_ptr>>(id);
       f->set(op.fn_(msg));
       return f;
@@ -124,7 +126,7 @@ void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
     }
   };
 
-  if (direct_mode_) {
+  if (direct_mode_dispatcher_ != nullptr) {
     run();
   } else {
     ctx::access_t access{ctx::access_t::NONE};

@@ -21,7 +21,7 @@ struct controller : public dispatcher, public registry {
            unsigned num_threads = std::thread::hardware_concurrency()) ->
       typename std::enable_if_t<!std::is_same_v<void, decltype(f())>,
                                 decltype(f())> {
-    if (direct_mode_) {
+    if (direct_mode_dispatcher_ != nullptr) {
       return f();
     } else {
       decltype(f()) result;
@@ -61,7 +61,7 @@ struct controller : public dispatcher, public registry {
   auto run(Fn f, ctx::access_t const access = ctx::access_t::READ,
            unsigned num_threads = std::thread::hardware_concurrency()) ->
       typename std::enable_if_t<std::is_same_v<void, decltype(f())>> {
-    if (direct_mode_) {
+    if (direct_mode_dispatcher_ != nullptr) {
       return f();
     } else {
       std::exception_ptr eptr;

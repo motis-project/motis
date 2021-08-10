@@ -8,7 +8,7 @@ namespace motis::module {
 
 template <typename Fn>
 auto spawn_job(Fn&& fn) {
-  if (ctx_data::direct_mode_dispatcher_ != nullptr) {
+  if (dispatcher::direct_mode_dispatcher_ != nullptr) {
     auto f =
         std::make_shared<ctx::future<ctx_data, decltype(fn())>>(ctx::op_id{});
     f->set(fn());
@@ -23,7 +23,7 @@ auto spawn_job(Fn&& fn) {
 
 template <typename Fn>
 auto spawn_job_void(Fn&& fn) {
-  if (ctx_data::direct_mode_dispatcher_ != nullptr) {
+  if (dispatcher::direct_mode_dispatcher_ != nullptr) {
     fn();
     auto f = std::make_shared<ctx::future<ctx_data, void>>(ctx::op_id{});
     f->set();

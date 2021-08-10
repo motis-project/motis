@@ -157,24 +157,30 @@ msg_ptr motis_instance::call(std::string const& target, unsigned num_threads) {
 }
 
 msg_ptr motis_instance::call(msg_ptr const& msg, unsigned num_threads) {
-  std::exception_ptr e;
-  msg_ptr response;
+  if (direct_mode_dispatcher_ != nullptr) {
+    ctx_data data{ctx::access_t::READ, dispatcher::direct_mode_dispatcher_,
+                  nullptr};
+    return static_cast<dispatcher*>(this)->req(msg, data, ctx::op_id{})->val();
+  } else {
+    std::exception_ptr e;
+    msg_ptr response;
 
-  run(
-      [&]() {
-        try {
-          response = motis_call(msg)->val();
-        } catch (...) {
-          e = std::current_exception();
-        }
-      },
-      access_of(msg), num_threads);
+    run(
+        [&]() {
+          try {
+            response = motis_call(msg)->val();
+          } catch (...) {
+            e = std::current_exception();
+          }
+        },
+        access_of(msg), num_threads);
 
-  if (e) {
-    std::rethrow_exception(e);
+    if (e) {
+      std::rethrow_exception(e);
+    }
+
+    return response;
   }
-
-  return response;
 }
 
 void motis_instance::publish(std::string const& target, unsigned num_threads) {
@@ -182,8 +188,8 @@ void motis_instance::publish(std::string const& target, unsigned num_threads) {
 }
 
 void motis_instance::publish(msg_ptr const& msg, unsigned num_threads) {
-  if (direct_mode_) {
-    ctx_data data{ctx::access_t::READ, ctx_data::direct_mode_dispatcher_,
+  if (direct_mode_dispatcher_ != nullptr) {
+    ctx_data data{ctx::access_t::READ, dispatcher::direct_mode_dispatcher_,
                   nullptr};
     static_cast<dispatcher*>(this)->publish(msg, data, ctx::op_id{});
   } else {

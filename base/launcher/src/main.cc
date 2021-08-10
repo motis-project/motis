@@ -82,9 +82,8 @@ int main(int argc, char const** argv) {
     return 1;
   }
 
-  instance.direct_mode_ = launcher_opt.direct_mode_;
-  if (instance.direct_mode_) {
-    ctx_data::direct_mode_dispatcher_ = &instance;
+  if (launcher_opt.direct_mode_) {
+    dispatcher::direct_mode_dispatcher_ = &instance;
   }
 
   try {

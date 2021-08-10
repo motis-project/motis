@@ -8,7 +8,7 @@
 namespace motis::module {
 
 inline boost::asio::io_service& get_io_service() {
-  if (ctx_data::direct_mode_dispatcher_ != nullptr) {
+  if (dispatcher::direct_mode_dispatcher_ != nullptr) {
     return ctx_data::the_dispatcher_->scheduler_.ios_;
   } else {
     return ctx::current_op<ctx_data>().data_.dispatcher_->scheduler_.ios_;
