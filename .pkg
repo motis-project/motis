@@ -5,7 +5,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=0583749fd2ecdfbea480dab3f29be263c37542fa
+  commit=83a6099aa197fb8c179ed722beec1d47627e14a6
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
@@ -53,7 +53,7 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=32bit
-  commit=9b200a2a7b94b46d7893d8d6fe5995fb2f5292c4
+  commit=87e851deaf643f92f987e909131798c0e211402a
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
