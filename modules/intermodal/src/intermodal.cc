@@ -14,7 +14,6 @@
 #include "motis/core/access/time_access.h"
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/core/journey/message_to_journeys.h"
-#include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_spawn.h"
 
@@ -321,7 +320,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   message_creator mc;
   statistics stats{};
 
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto const start = parse_query_start(mc, req, sched);
   auto const dest = parse_query_dest(mc, req, sched);
 

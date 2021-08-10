@@ -35,7 +35,6 @@
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/core/statistics/statistics.h"
-#include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
@@ -239,16 +238,16 @@ void add_result(std::vector<tb_journey>& results, tb_journey const& tbj,
 }
 
 struct tripbased::impl {
-  explicit impl(std::unique_ptr<tb_data> data) : tb_data_{std::move(data)} {}
+  explicit impl(schedule const& sched, std::unique_ptr<tb_data> data)
+      : tb_data_{std::move(data)}, sched_{sched} {}
 
   msg_ptr route(msg_ptr const& msg) {
     MOTIS_START_TIMING(total_timing);
     auto const req = motis_content(RoutingRequest, msg);
 
-    auto const& sched = get_schedule();
-    auto const query = build_tb_query(req, sched);
+    auto const query = build_tb_query(req, sched_);
 
-    auto res = route_dispatch(query, sched);
+    auto res = route_dispatch(query, sched_);
 
     MOTIS_STOP_TIMING(total_timing);
 
@@ -263,8 +262,8 @@ struct tripbased::impl {
                 res.journeys_,
                 [&](journey const& j) { return to_connection(fbb, j); })),
             static_cast<uint64_t>(
-                motis_to_unixtime(sched, res.interval_begin_)),
-            static_cast<uint64_t>(motis_to_unixtime(sched, res.interval_end_)),
+                motis_to_unixtime(sched_, res.interval_begin_)),
+            static_cast<uint64_t>(motis_to_unixtime(sched_, res.interval_end_)),
             fbb.CreateVector(std::vector<Offset<DirectConnection>>{}))
             .Union());
     return make_msg(fbb);
@@ -602,7 +601,6 @@ struct tripbased::impl {
 
   msg_ptr debug(msg_ptr const& msg) const {
     auto const req = motis_content(TripBasedTripDebugRequest, msg);
-    auto const& sched = get_schedule();
 
     message_creator fbb;
     fbb.create_and_finish(
@@ -612,12 +610,12 @@ struct tripbased::impl {
             fbb.CreateVector(utl::to_vec(*req->trips(),
                                          [&](TripSelectorWrapper const* tsw) {
                                            return get_trip_debug_info(
-                                               fbb, *tb_data_, sched, tsw);
+                                               fbb, *tb_data_, sched_, tsw);
                                          })),
             fbb.CreateVector(utl::to_vec(*req->stations(),
                                          [&](flatbuffers::String const* eva) {
                                            return get_station_debug_info(
-                                               fbb, *tb_data_, sched,
+                                               fbb, *tb_data_, sched_,
                                                eva->str());
                                          })))
             .Union());
@@ -625,6 +623,7 @@ struct tripbased::impl {
   }
 
   std::unique_ptr<tb_data> tb_data_;
+  schedule const& sched_;
 };
 
 struct import_state {
@@ -639,10 +638,11 @@ tripbased::tripbased() : module("Trip-Based Routing Options", "tripbased") {
 
 tripbased::~tripbased() = default;
 
-void tripbased::import(motis::module::registry& reg) {
+void tripbased::import(motis::module::import_dispatcher& reg) {
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "tripbased", reg,
-      [this](std::map<std::string, msg_ptr> const& dependencies) {
+      [this](event_collector::dependencies_map_t const& dependencies,
+             event_collector::publish_fn_t const&) {
         using import::ScheduleEvent;
         auto const schedule =
             motis_content(ScheduleEvent, dependencies.at("SCHEDULE"));
@@ -658,7 +658,7 @@ void tripbased::import(motis::module::registry& reg) {
 
         auto const state = import_state{schedule->hash()};
 
-        auto const& sched = get_schedule();
+        auto const& sched = get_sched();
         update_data_file(sched, filename.generic_string(),
                          read_ini<import_state>(dir / "import.ini") != state);
 
@@ -676,9 +676,9 @@ void tripbased::init(motis::module::registry& reg) {
       auto const filename =
           get_data_directory() / "tripbased" / "tripbased.bin";
       impl_ = std::make_unique<impl>(
-          load_data(get_sched(), filename.generic_string()));
+          get_sched(), load_data(get_sched(), filename.generic_string()));
     } else {
-      impl_ = std::make_unique<impl>(build_data(get_sched()));
+      impl_ = std::make_unique<impl>(get_sched(), build_data(get_sched()));
     }
 
     reg.register_op("/tripbased",

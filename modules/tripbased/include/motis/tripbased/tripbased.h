@@ -17,7 +17,7 @@ struct tripbased : public motis::module::module {
   tripbased(tripbased&&) = delete;
   tripbased& operator=(tripbased&&) = delete;
 
-  void import(motis::module::registry&) override;
+  void import(motis::module::import_dispatcher&) override;
   void init(motis::module::registry&) override;
 
   bool import_successful() const override;

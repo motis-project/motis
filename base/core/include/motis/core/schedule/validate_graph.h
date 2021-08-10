@@ -6,7 +6,7 @@
 
 #include "motis/core/schedule/schedule.h"
 
-namespace motis::rt {
+namespace motis {
 
 inline void validate_graph(schedule const& sched) {
   utl::verify(
@@ -86,6 +86,31 @@ inline void validate_graph(schedule const& sched) {
             });
       }(),
       "incoming edges correct 2");
+
+  auto const check_edges = [](node const* n) {
+    return std::all_of(begin(n->edges_), end(n->edges_),
+                       [&](edge const& e) { return e.from_ == n; }) &&
+           std::all_of(begin(n->incoming_edges_), end(n->incoming_edges_),
+                       [&](edge const* e) { return e->to_ == n; });
+  };
+
+  utl::verify(
+      [&]() {
+        return std::all_of(
+            begin(sched.station_nodes_), end(sched.station_nodes_),
+            [&](auto&& sn) {
+              return check_edges(sn.get()) &&
+                     std::all_of(begin(sn->route_nodes_), end(sn->route_nodes_),
+                                 [&](auto&& n) {
+                                   return n->get_station() == sn.get() &&
+                                          check_edges(n.get());
+                                 }) &&
+                     (sn->foot_node_.get() == nullptr ||
+                      (sn->foot_node_->get_station() == sn.get() &&
+                       check_edges(sn->foot_node_.get())));
+            });
+      }(),
+      "edge from pointer correct");
 }
 
 inline void print_graph(schedule const& sched) {
@@ -125,4 +150,4 @@ inline void print_graph(schedule const& sched) {
   std::cout << "\n\n";
 }
 
-}  // namespace motis::rt
+}  // namespace motis

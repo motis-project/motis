@@ -5,7 +5,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=e69bd7d0d286d02448cfbb2ab094867735027258
+  commit=3432eef530fd34e7ef0ed8313ec1479251b890c2
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
@@ -13,15 +13,15 @@
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
-  commit=6bfb909745708e15b068f649aed6bfe8cf4e6d97
+  commit=851bc53aabd0f63f1881ce78537ddaa07d3ec24a
 [date]
   url=git@github.com:motis-project/date.git
   branch=master
-  commit=d44dce13f533fd4a178af85ca7cd5cc0ce09af61
+  commit=fefd81f7f12516c25c6497e8e45ef072ba10b11c
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=motis
-  commit=abd4965e0d5c0d40c1c7032ca4be8d3ff718cfea
+  commit=67c40dd37ab31c895ddd4bda8331ad56c777a9a7
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
@@ -52,12 +52,12 @@
   commit=fbc74e5e9a4dec9fc38dbcd4fe97d4cc24a15710
 [ppr]
   url=git@github.com:motis-project/ppr.git
-  branch=master
-  commit=b4180c934e9a3ae6419dd5c9ee505aac352c50ba
+  branch=32bit
+  commit=a71c960157ef9cb799236399da68957dba80569d
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
-  commit=63145aae027915df0b5ccfe7f025efcd2b10a491
+  commit=8166a4dcc8ebd54d5bc7820c3eb211a49a96773a
 [pugixml]
   url=git@github.com:motis-project/pugixml.git
   branch=master
@@ -73,7 +73,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=7cc1cf3de712f3ead607af1786a58c4d80877208
+  commit=82de6f2331108fea332be171fb93673da12a199a
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
