@@ -85,4 +85,4 @@
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=master
-  commit=4c5a751d4d7c4b851d793973a09a5aefd18fff6d
+  commit=bca212ca286121db1e7eb2efa9ee8de626633481
