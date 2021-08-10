@@ -21,7 +21,13 @@ struct ctx_data {
   dispatcher* dispatcher_;
   shared_data* shared_data_;
 
-  static dispatcher* the_dispatcher_;
+  // If this is set to a value != nullptr, it indicates direct mode is on.
+  // This implies that in direct mode there can only be one global dispatcher.
+  // Direct mode means that
+  //   - no code will be executed in ctx::operations.
+  //   - no calls to ctx::current_op<Data>() will be made
+  //   - everything runs sequentially (no interleaving for motis_call/publish)
+  static dispatcher* direct_mode_dispatcher_;
 };
 
 inline ctx_data& current_data() { return ctx::current_op<ctx_data>()->data_; }

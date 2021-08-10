@@ -2,6 +2,6 @@
 
 namespace motis::module {
 
-dispatcher* ctx_data::the_dispatcher_;  // NOLINT
+dispatcher* ctx_data::direct_mode_dispatcher_ = nullptr;  // NOLINT
 
 }  // namespace motis::module

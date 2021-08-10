@@ -57,6 +57,7 @@ struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
   void handle_no_target(msg_ptr const& msg, callback const& cb);
   void retry_no_target_msgs();
 
+  bool direct_mode_{sizeof(void*) >= 8 ? false : true};
   registry& registry_;
   bool queue_no_target_msgs_{false};
   std::queue<std::pair<msg_ptr, callback>> no_target_msg_queue_;
