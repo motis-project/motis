@@ -2,7 +2,7 @@ name: Unix Build
 
 on:
   push:
-    branches: [ master, 32bit ]
+    branches: [ master ]
   pull_request:
     branches: [ master ]
   release:
