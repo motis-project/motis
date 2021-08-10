@@ -229,7 +229,10 @@ jobs:
 
       - name: Cross Compilation (x86)
         if: matrix.config.artifact == 'linux-x86'
-        run: sudo apt install -y --no-install-recommends g++-10-multilib gcc-10-multilib linux-libc-dev:i386
+        run: |
+          dpkg --add-architecture i386
+          sudo apt update
+          sudo apt install -y --no-install-recommends g++-10-multilib gcc-10-multilib linux-libc-dev:i386
 
       # ==== CACHING ====
       - name: buildcache Cache
