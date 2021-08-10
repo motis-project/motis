@@ -92,8 +92,8 @@ jobs:
               -DCMAKE_ASM_FLAGS=-m32 \
               -DCMAKE_SYSTEM_NAME=Linux \
               -DCMAKE_SYSTEM_PROCESSOR=i686
-            cflags: -m32 -fno-rounding-math
-            cxxflags: -m32 -fno-rounding-math
+            cflags: -m32 -mfpmath=sse -msse2
+            cxxflags: -m32 -mfpmath=sse -msse2
             mode: Release
             os: ubuntu-20.04
             artifact: linux-x86
