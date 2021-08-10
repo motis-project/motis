@@ -85,6 +85,23 @@ jobs:
             webui: On
             tests: On
             strip: strip
+          - name: GCC 10 Release (x86)
+            cxx: g++-10
+            cc: gcc-10
+            cross: |-
+              -DCMAKE_ASM_FLAGS=-m32 \
+              -DCMAKE_SYSTEM_NAME=Linux \
+              -DCMAKE_SYSTEM_PROCESSOR=i686
+            cflags: -m32 -fno-rounding-math
+            cxxflags: -m32 -fno-rounding-math
+            mode: Release
+            os: ubuntu-20.04
+            artifact: linux-x86
+            avx: Off
+            avx2: Off
+            webui: On
+            tests: On
+            strip: strip
           - name: arm64 Release
             cxx: aarch64-linux-gnu-g++-10
             cc: aarch64-linux-gnu-gcc-10
@@ -209,6 +226,10 @@ jobs:
       - name: Cross Compilation (arm)
         if: matrix.config.artifact == 'linux-arm'
         run: sudo apt install -y --no-install-recommends qemu-user-static binfmt-support g++-10-arm-linux-gnueabihf gcc-10-arm-linux-gnueabihf binutils-arm-linux-gnueabi
+
+      - name: Cross Compilation (x86)
+        if: matrix.config.artifact == 'linux-x86'
+        run: sudo apt install -y --no-install-recommends g++-10-multilib gcc-10-multilib
 
       # ==== CACHING ====
       - name: buildcache Cache
@@ -342,6 +363,8 @@ jobs:
           - artifact: macos-noavx2
             os: macos-latest
           - artifact: linux-amd64
+            os: ubuntu-20.04
+          - artifact: linux-x86
             os: ubuntu-20.04
           - artifact: linux-arm
             os: ubuntu-20.04
