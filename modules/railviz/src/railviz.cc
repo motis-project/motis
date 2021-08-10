@@ -121,29 +121,18 @@ std::string estimate_initial_permalink(schedule const& sched) {
   return fmt::format("/{:.7}/{:.7}/{}", center.lat_, center.lng_, zoom);
 }
 
-void railviz::import(import_dispatcher& reg) {
-  std::make_shared<event_collector>(
-      get_data_directory().generic_string(), "railviz", reg,
-      [this](event_collector::dependencies_map_t const&,
-             event_collector::publish_fn_t const&) {
-        auto const& s = get_sched();
-        train_retriever_ =
-            std::make_unique<train_retriever>(s, bounding_boxes(s));
-
-        if (initial_permalink_.empty()) {
-          initial_permalink_ = estimate_initial_permalink(s);
-          LOG(logging::info)
-              << "est. initial_permalink: " << initial_permalink_;
-        }
-
-        import_successful_ = true;
-      })
-      ->require("SCHEDULE", [](msg_ptr const& msg) {
-        return msg->get()->content_type() == MsgContent_ScheduleEvent;
-      });
-}
-
 void railviz::init(motis::module::registry& reg) {
+  reg.register_op("/init", [&](auto const&) {
+    auto const& s = get_sched();
+    train_retriever_ = std::make_unique<train_retriever>(s, bounding_boxes(s));
+
+    if (initial_permalink_.empty()) {
+      initial_permalink_ = estimate_initial_permalink(s);
+      LOG(logging::info) << "est. initial_permalink: " << initial_permalink_;
+    }
+
+    return make_no_msg();
+  });
   reg.register_op("/railviz/map_config",
                   [this](auto const& msg) { return get_map_config(msg); });
   reg.register_op("/railviz/get_trip_guesses",
