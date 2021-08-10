@@ -91,7 +91,12 @@ ctx::access_t dispatcher::access_of(std::string const& target) {
 
 void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
                           ctx::op_type_t const op_type, ctx_data const* data) {
-  auto const run = [&]() {
+  id.name = msg->get()->destination()->target()->str();
+  if (id.name == "/api") {
+    return cb(api_desc(msg->id()), std::error_code{});
+  }
+
+  auto const run = [this, id, cb, msg]() {
     try {
       if (auto const op = registry_.get_operation(id.name)) {
         utl::verify(
@@ -119,11 +124,6 @@ void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
     }
   };
 
-  id.name = msg->get()->destination()->target()->str();
-  if (id.name == "/api") {
-    return cb(api_desc(msg->id()), std::error_code{});
-  }
-
   if (direct_mode_) {
     run();
   } else {
@@ -136,7 +136,7 @@ void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
 
     enqueue(
         data != nullptr ? *data : ctx_data{access, this, &shared_data_},
-        [id, cb, msg, run]() { run(); }, id, op_type, access);
+        [run]() { run(); }, id, op_type, access);
   }
 }
 

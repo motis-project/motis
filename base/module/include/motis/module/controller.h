@@ -64,7 +64,6 @@ struct controller : public dispatcher, public registry {
     if (direct_mode_) {
       return f();
     } else {
-      f();
       std::exception_ptr eptr;
 
       access == ctx::access_t::READ ? enqueue_read_io(
