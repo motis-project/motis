@@ -181,7 +181,7 @@ void motis_instance::publish(std::string const& target, unsigned num_threads) {
   publish(make_no_msg(target), num_threads);
 }
 
-void motis_instance::publish(msg_ptr const& msg, unsigned num_thread) {
+void motis_instance::publish(msg_ptr const& msg, unsigned num_threads) {
   if (direct_mode_) {
     ctx_data data{ctx::access_t::READ, ctx_data::direct_mode_dispatcher_,
                   nullptr};
