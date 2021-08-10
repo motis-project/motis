@@ -39,7 +39,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - name: macOS Release
+          - name: macos
             cxx: clang++
             cc: clang
             mode: Release
@@ -51,7 +51,7 @@ jobs:
             webui: On
             tests: Off
             strip: strip
-          - name: macOS Release (no avx)
+          - name: macos-noavx2
             cxx: clang++
             cc: clang
             mode: Release
@@ -63,7 +63,7 @@ jobs:
             webui: On
             tests: On
             strip: strip
-          - name: GCC 10 Release
+          - name: linux-amd64
             cxx: g++-10
             cc: gcc-10
             mode: Release
@@ -74,7 +74,7 @@ jobs:
             webui: On
             tests: On
             strip: strip
-          - name: GCC 10 Release (no-avx)
+          - name: linux-amd64-noavx
             cxx: g++-10
             cc: gcc-10
             mode: Release
@@ -85,7 +85,7 @@ jobs:
             webui: On
             tests: On
             strip: strip
-          - name: GCC 10 Release (x86)
+          - name: linux-x86
             cxx: g++-10
             cc: gcc-10
             cross: |-
@@ -102,7 +102,7 @@ jobs:
             webui: On
             tests: On
             strip: strip
-          - name: arm64 Release
+          - name: linux-arm64
             cxx: aarch64-linux-gnu-g++-10
             cc: aarch64-linux-gnu-gcc-10
             cross: |-
@@ -120,7 +120,7 @@ jobs:
             tests: On
             emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
             strip: aarch64-linux-gnu-strip
-          - name: arm32 Release
+          - name: linux-arm
             cxx: arm-linux-gnueabihf-g++-10
             cc: arm-linux-gnueabihf-gcc-10
             cflags: -Wno-psabi
@@ -140,7 +140,7 @@ jobs:
             tests: On
             emulator: qemu-arm-static -L /usr/arm-linux-gnueabihf
             strip: arm-linux-gnueabihf-strip
-          - name: GCC 10 Debug
+          - name: linux-amd64-debug
             cxx: g++-10
             cc: gcc-10
             mode: Debug
@@ -149,7 +149,7 @@ jobs:
             avx2: On
             webui: Off
             tests: On
-          - name: Clang 12 Release
+          - name: linux-amd64-clang
             cxx: clang++-12
             cc: clang-12
             mode: Release
@@ -160,7 +160,7 @@ jobs:
             avx2: On
             webui: Off
             tests: On
-          - name: Clang Tidy
+          - name: linux-clang-tidy
             cxx: clang++-12
             cc: clang-12
             mode: Debug
@@ -172,7 +172,7 @@ jobs:
             avx2: On
             webui: Off
             tests: On
-          - key: Clang 12 Sanitizer
+          - key: linux-clang-sanitizer
             cxx: clang++-12
             cc: clang-12
             mode: Release
@@ -236,14 +236,14 @@ jobs:
 
       # ==== CACHING ====
       - name: buildcache Cache
-        uses: actions/cache@v1.1.2
+        uses: actions/cache@v2
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-${{ matrix.config.os }}-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ contains(matrix.config.cxxflags, 'sanitize') }}-${{ matrix.config.lint }}-${{ matrix.config.avx }}-${{ matrix.config.avx2 }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          key: buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
-               buildcache-${{ matrix.config.os }}-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ contains(matrix.config.cxxflags, 'sanitize') }}-${{ matrix.config.lint }}-${{ matrix.config.avx }}-${{ matrix.config.avx2 }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
-               buildcache-${{ matrix.config.os }}-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ contains(matrix.config.cxxflags, 'sanitize') }}-${{ matrix.config.lint }}-${{ matrix.config.avx }}-${{ matrix.config.avx2 }}-${{ hashFiles('.pkg') }}-
-               buildcache-${{ matrix.config.os }}-${{ matrix.config.cc }}-${{ matrix.config.mode }}-${{ contains(matrix.config.cxxflags, 'sanitize') }}-${{ matrix.config.lint }}-${{ matrix.config.avx }}-${{ matrix.config.avx2 }}-
+               buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+               buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-
+               buildcache-${{ matrix.config.name }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v1.1.2
