@@ -112,7 +112,7 @@ void tiles::import(mm::import_dispatcher& reg) {
           auto const db_fname = dir / "tiles.mdb";
 
           progress_tracker->status("Clear Database");
-          ::tiles::clear_database(path);
+          ::tiles::clear_database(path, db_size_);
           ::tiles::clear_pack_file(path.c_str());
 
           lmdb::env db_env =

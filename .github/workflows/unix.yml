@@ -389,7 +389,7 @@ jobs:
             --osrm.profiles motis/osrm-profiles/bike.lua \
             --ppr.profile motis/ppr-profiles/default.json \
             --tiles.profile motis/tiles-profiles/background.lua \
-            --tiles.import.flush_threshold  100000 \
+            --tiles.import.flush_threshold 100000 \
             --tiles.db_size 268435456
 
   docker:
