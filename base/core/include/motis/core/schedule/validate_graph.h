@@ -88,23 +88,6 @@ inline void validate_graph(schedule const& sched) {
       }(),
       "incoming edges correct 2");
 
-  utl::verify(
-      [&] {
-        for (auto const& tp : sched.trip_mem_) {
-          time last_time = 0;
-          for (auto const sec : access::sections{tp.get()}) {
-            auto const& lc = sec.lcon();
-            auto const section_times_ok = lc.d_time_ <= lc.a_time_;
-            auto const stop_times_ok = last_time <= lc.d_time_;
-            if (!section_times_ok || !stop_times_ok) {
-              return false;
-            }
-          }
-        }
-        return true;
-      }(),
-      "trip times consistent");
-
   auto const check_edges = [](node const* n) {
     return std::all_of(begin(n->edges_), end(n->edges_),
                        [&](edge const& e) { return e.from_ == n; }) &&
