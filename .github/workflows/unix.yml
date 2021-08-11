@@ -246,7 +246,7 @@ jobs:
                buildcache-${{ matrix.config.name }}-
 
       - name: Dependencies Cache
-        uses: actions/cache@v1.1.2
+        uses: actions/cache@v2
         with:
           path: ${{ github.workspace }}/deps
           key: deps-${{ hashFiles('.pkg') }}
