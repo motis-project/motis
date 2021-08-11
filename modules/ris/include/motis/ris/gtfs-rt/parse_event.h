@@ -19,7 +19,7 @@ struct message_context;
 struct stop_context;
 struct evt;
 
-flatbuffers::Offset<IdEvent> create_id_event(message_context&, schedule&,
+flatbuffers::Offset<IdEvent> create_id_event(message_context&, schedule const&,
                                              trip const&);
 
 flatbuffers::Offset<IdEvent> create_id_event(message_context&,
@@ -29,7 +29,7 @@ flatbuffers::Offset<IdEvent> create_id_event(message_context&,
 flatbuffers::Offset<Event> create_event(trip const&, schedule const&,
                                         message_context&, stop_context const&,
                                         event_type);
-flatbuffers::Offset<Event> create_event(trip const&, schedule&,
+flatbuffers::Offset<Event> create_event(trip const&, schedule const&,
                                         message_context&, int, event_type);
 
 flatbuffers::Offset<Event> create_event(message_context&, evt const&);

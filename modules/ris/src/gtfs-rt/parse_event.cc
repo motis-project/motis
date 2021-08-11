@@ -27,7 +27,7 @@ Offset<IdEvent> create_id_event(message_context& ctx,
                         IdEventType_Additional)};
 }
 
-Offset<IdEvent> create_id_event(message_context& ctx, schedule& sched,
+Offset<IdEvent> create_id_event(message_context& ctx, schedule const& sched,
                                 trip const& trip) {
   auto const unix_time =
       motis_to_unixtime(sched.schedule_begin_, trip.id_.primary_.time_);

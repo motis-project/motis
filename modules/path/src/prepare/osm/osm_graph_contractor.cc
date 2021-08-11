@@ -60,7 +60,7 @@ void osm_graph_contractor::contract() {
   for (auto const& [offset, node_count] : graph_.component_offsets_) {
     auto const component_task_count =
         std::min(std::max<size_t>(node_count / 10000, 1), concurrency);
-    for (auto i = 0ULL; i < component_task_count; ++i) {
+    for (auto i = 0U; i < component_task_count; ++i) {
       work.push_back({offset, node_count, i, component_task_count});
     }
   }

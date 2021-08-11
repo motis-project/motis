@@ -16,7 +16,6 @@
 #include "motis/core/access/station_access.h"
 #include "motis/core/conv/station_conv.h"
 #include "motis/core/statistics/statistics.h"
-#include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
@@ -71,9 +70,9 @@ inline Offset<Parking> create_parking(FlatBufferBuilder& fbb,
 }
 
 inline std::vector<Offset<ParkingEdge>> create_parking_edges(
-    FlatBufferBuilder& fbb, std::vector<parking_edges> const& pes) {
+    schedule const& sched, FlatBufferBuilder& fbb,
+    std::vector<parking_edges> const& pes) {
   std::map<std::string, Offset<Station>> fbs_stations;
-  auto const& sched = get_schedule();
   auto const create_costs = [&](std::vector<parking_edge_costs> const& costs) {
     return fbb.CreateVector(
         utl::to_vec(costs, [&](parking_edge_costs const& c) {
@@ -163,9 +162,11 @@ Offset<Route> find_matching_ppr_route(FootRoutingResponse const* ppr_resp,
 }
 
 struct parking::impl {
-  explicit impl(std::string const& parking_file,
+  explicit impl(schedule const& sched, std::string const& parking_file,
                 std::string const& footedges_db_file, std::size_t db_max_size)
-      : parkings_(parking_file), db_(footedges_db_file, db_max_size, true) {}
+      : sched_(sched),
+        parkings_(parking_file),
+        db_(footedges_db_file, db_max_size, true) {}
 
   void update_ppr_profiles() { ppr_profiles_.update(); }
 
@@ -316,7 +317,7 @@ struct parking::impl {
     fbb.create_and_finish(
         MsgContent_ParkingEdgesResponse,
         CreateParkingEdgesResponse(
-            fbb, fbb.CreateVector(create_parking_edges(fbb, edges)),
+            fbb, fbb.CreateVector(create_parking_edges(sched_, fbb, edges)),
             to_fbs(fbb, "parking.parking_edges",
                    {{"osrm_duration",
                      static_cast<uint64_t>(pe_stats.osrm_duration_)},
@@ -340,6 +341,7 @@ struct parking::impl {
   }
 
 private:
+  schedule const& sched_;
   parkings parkings_;
   database db_;
   ppr_profiles ppr_profiles_;
@@ -373,10 +375,11 @@ std::string parking::stations_per_parking_file() const {
   return (module_data_dir() / "stations_per_parking.txt").generic_string();
 }
 
-void parking::import(registry& reg) {
+void parking::import(import_dispatcher& reg) {
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "parking", reg,
-      [this](std::map<std::string, msg_ptr> const& dependencies) {
+      [this](event_collector::dependencies_map_t const& dependencies,
+             event_collector::publish_fn_t const&) {
         using namespace ::motis::parking::prepare;
         using import::OSMEvent;
         using import::PPREvent;
@@ -392,7 +395,7 @@ void parking::import(registry& reg) {
                                         ppr_ev->graph_size(),
                                         ppr_ev->profiles_hash(),
                                         max_walk_duration_,
-                                        get_schedule().hash_};
+                                        get_sched().hash_};
 
         if (read_ini<import_state>(dir / "import.ini") != state) {
           fs::create_directories(dir);
@@ -417,7 +420,7 @@ void parking::import(registry& reg) {
                       "Parking data extraction failed");
 
           auto park = parkings{std::move(parking_data)};
-          auto st = stations{get_schedule()};
+          auto st = stations{get_sched()};
 
           progress_tracker->status("Compute Foot Edges");
           compute_foot_edges(st, park, footedges_db_file(),
@@ -446,8 +449,8 @@ void parking::import(registry& reg) {
 
 void parking::init(motis::module::registry& reg) {
   try {
-    impl_ = std::make_unique<impl>(parking_file(), footedges_db_file(),
-                                   db_max_size_);
+    impl_ = std::make_unique<impl>(get_sched(), parking_file(),
+                                   footedges_db_file(), db_max_size_);
 
     reg.register_op("/parking/geo",
                     [this](auto&& m) { return impl_->geo_lookup(m); });

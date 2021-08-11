@@ -3,6 +3,7 @@
 #include "utl/to_vec.h"
 
 #include "motis/core/schedule/schedule.h"
+#include "motis/core/schedule/validate_graph.h"
 #include "motis/core/conv/event_type_conv.h"
 
 #include "motis/rt/build_route_node.h"
@@ -15,7 +16,6 @@
 #include "motis/rt/schedule_event.h"
 #include "motis/rt/update_constant_graph.h"
 #include "motis/rt/update_msg_builder.h"
-#include "motis/rt/validate_graph.h"
 
 namespace motis::rt {
 

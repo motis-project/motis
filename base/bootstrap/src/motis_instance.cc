@@ -65,21 +65,26 @@ void motis_instance::import(module_settings const& module_opt,
                             bool const silent) {
   auto bars = utl::global_progress_bars{silent};
 
-  register_import_files(*this);
-  register_import_schedule(*this, dataset_opt, import_opt.data_directory_);
+  auto dispatcher = import_dispatcher{};
+
+  register_import_files(dispatcher);
+  register_import_schedule(*this, dispatcher, dataset_opt,
+                           import_opt.data_directory_);
 
   for (auto const& module : modules_) {
     if (module_opt.is_module_active(module->module_name())) {
       module->set_data_directory(import_opt.data_directory_);
-      module->import(registry_);
+      module->import(dispatcher);
     }
   }
 
   // Dummy message to trigger initial progress updates.
-  publish(make_success_msg("/import"), 1);
+  dispatcher.publish(make_success_msg("/import"));
+  dispatcher.run();
 
   // Paths as actual trigger for import processing.
-  publish(make_file_event(import_opt.import_paths_), 1);
+  dispatcher.publish(make_file_event(import_opt.import_paths_));
+  dispatcher.run();
 
   registry_.reset();
 
@@ -152,24 +157,30 @@ msg_ptr motis_instance::call(std::string const& target, unsigned num_threads) {
 }
 
 msg_ptr motis_instance::call(msg_ptr const& msg, unsigned num_threads) {
-  std::exception_ptr e;
-  msg_ptr response;
+  if (direct_mode_dispatcher_ != nullptr) {
+    ctx_data data{ctx::access_t::READ, dispatcher::direct_mode_dispatcher_,
+                  nullptr};
+    return static_cast<dispatcher*>(this)->req(msg, data, ctx::op_id{})->val();
+  } else {
+    std::exception_ptr e;
+    msg_ptr response;
 
-  run(
-      [&]() {
-        try {
-          response = motis_call(msg)->val();
-        } catch (...) {
-          e = std::current_exception();
-        }
-      },
-      access_of(msg), num_threads);
+    run(
+        [&]() {
+          try {
+            response = motis_call(msg)->val();
+          } catch (...) {
+            e = std::current_exception();
+          }
+        },
+        access_of(msg), num_threads);
 
-  if (e) {
-    std::rethrow_exception(e);
+    if (e) {
+      std::rethrow_exception(e);
+    }
+
+    return response;
   }
-
-  return response;
 }
 
 void motis_instance::publish(std::string const& target, unsigned num_threads) {
@@ -177,20 +188,26 @@ void motis_instance::publish(std::string const& target, unsigned num_threads) {
 }
 
 void motis_instance::publish(msg_ptr const& msg, unsigned num_threads) {
-  std::exception_ptr e;
+  if (direct_mode_dispatcher_ != nullptr) {
+    ctx_data data{ctx::access_t::READ, dispatcher::direct_mode_dispatcher_,
+                  nullptr};
+    static_cast<dispatcher*>(this)->publish(msg, data, ctx::op_id{});
+  } else {
+    std::exception_ptr e;
 
-  run(
-      [&]() {
-        try {
-          ctx::await_all(motis_publish(msg));
-        } catch (...) {
-          e = std::current_exception();
-        }
-      },
-      access_of(msg), num_threads);
+    run(
+        [&]() {
+          try {
+            ctx::await_all(motis_publish(msg));
+          } catch (...) {
+            e = std::current_exception();
+          }
+        },
+        access_of(msg), num_threads);
 
-  if (e) {
-    std::rethrow_exception(e);
+    if (e) {
+      std::rethrow_exception(e);
+    }
   }
 }
 

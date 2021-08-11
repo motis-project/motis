@@ -5,16 +5,15 @@
 #include <regex>
 #include <vector>
 
-#include "boost/algorithm/string/predicate.hpp"
 #include "boost/filesystem.hpp"
 
 #include "cista/hash.h"
 #include "cista/mmap.h"
 
 #include "utl/pipes.h"
+#include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
-#include "motis/module/context/motis_publish.h"
 
 namespace fs = boost::filesystem;
 namespace mi = motis::import;
@@ -70,7 +69,7 @@ cista::hash_t file_hash(std::string const& path) {
   return hash;
 }
 
-void import_coastline(mm::msg_ptr const& msg) {
+void import_coastline(mm::import_dispatcher& reg, mm::msg_ptr const& msg) {
   auto const paths = pick_files(msg, "coastline");
   if (paths.size() > 1) {
     LOG(ml::warn) << "import_coastline: more than one file matches!";
@@ -83,11 +82,11 @@ void import_coastline(mm::msg_ptr const& msg) {
                                  fs::file_size(path))
             .Union(),
         "/import", DestinationType_Topic);
-    motis_publish(make_msg(mc));
+    reg.publish(make_msg(mc));
   }
 }
 
-void import_osm(mm::msg_ptr const& msg) {
+void import_osm(mm::import_dispatcher& reg, mm::msg_ptr const& msg) {
   auto const paths = pick_files(msg, "osm");
   if (paths.size() > 1) {
     LOG(ml::warn) << "import_osm: more than one file matches!";
@@ -100,11 +99,11 @@ void import_osm(mm::msg_ptr const& msg) {
                            fs::file_size(path))
             .Union(),
         "/import", DestinationType_Topic);
-    motis_publish(make_msg(mc));
+    reg.publish(make_msg(mc));
   }
 }
 
-void import_dem(mm::msg_ptr const& msg) {
+void import_dem(mm::import_dispatcher& reg, mm::msg_ptr const& msg) {
   using motis::import::FileEvent;
   for (auto const* ip : *motis_content(FileEvent, msg)->paths()) {
     auto const path = ip->path()->str();
@@ -137,18 +136,17 @@ void import_dem(mm::msg_ptr const& msg) {
         MsgContent_DEMEvent,
         mi::CreateDEMEvent(mc, mc.CreateString(path), hash).Union(), "/import",
         DestinationType_Topic);
-    ctx::await_all(motis_publish(make_msg(mc)));
+    reg.publish(make_msg(mc));
   }
 }
 
-void register_import_files(mm::registry& r) {
-  r.subscribe("/import", [](mm::msg_ptr const& msg) {
+void register_import_files(mm::import_dispatcher& r) {
+  r.subscribe([&](mm::msg_ptr const& msg) {
     if (msg->get()->content_type() == MsgContent_FileEvent) {
-      import_osm(msg);
-      import_coastline(msg);
-      import_dem(msg);
+      import_osm(r, msg);
+      import_coastline(r, msg);
+      import_dem(r, msg);
     }
-    return nullptr;
   });
 }
 
