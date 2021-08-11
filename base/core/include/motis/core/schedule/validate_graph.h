@@ -5,6 +5,7 @@
 #include "utl/verify.h"
 
 #include "motis/core/schedule/schedule.h"
+#include "motis/core/access/trip_iterator.h"
 
 namespace motis {
 

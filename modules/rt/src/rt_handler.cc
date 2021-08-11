@@ -115,11 +115,11 @@ void rt_handler::update(motis::ris::Message const* m) {
 
       if (result.first == reroute_result::OK) {
         for (auto const& e : *result.second->edges_) {
-          propagator_.add_delay(ev_key{e, 0, event_type::DEP});
-          propagator_.add_delay(ev_key{e, 0, event_type::ARR});
+          propagator_.recalculate(ev_key{e, 0, event_type::DEP});
+          propagator_.recalculate(ev_key{e, 0, event_type::ARR});
         }
         for (auto const& e : cancelled_evs) {
-          propagator_.add_canceled(e);
+          propagator_.recalculate(e);
         }
       }
 
@@ -141,11 +141,11 @@ void rt_handler::update(motis::ris::Message const* m) {
 
       if (result.first == reroute_result::OK) {
         for (auto const& e : *result.second->edges_) {
-          propagator_.add_delay(ev_key{e, 0, event_type::DEP});
-          propagator_.add_delay(ev_key{e, 0, event_type::ARR});
+          propagator_.recalculate(ev_key{e, 0, event_type::DEP});
+          propagator_.recalculate(ev_key{e, 0, event_type::ARR});
         }
         for (auto const& e : cancelled_evs) {
-          propagator_.add_canceled(e);
+          propagator_.recalculate(e);
         }
       }
 
@@ -237,6 +237,10 @@ void rt_handler::propagate() {
   for (auto const& di : propagator_.events()) {
     auto const& k = di->get_ev_key();
     auto const t = di->get_current_time();
+
+    if (k.is_canceled()) {
+      continue;
+    }
 
     auto const edge_fit = fits_edge(k, t);
     auto const trip_fit = fits_trip(sched_, k, t);
