@@ -176,15 +176,17 @@ private:
         std::move(cj), data_source{primary_id, secondary_id}, group_size,
         cj.scheduled_arrival_time()));
     add_passenger_group_to_graph(sched_, pmd_, *pg);
-    for (auto const e : pg->edges_) {
-      if (e->has_capacity() &&
-          get_base_load(e->get_pax_connection_info()) >
-              static_cast<std::uint16_t>(e->capacity() * max_load_)) {
-        remove_passenger_group_from_graph(pg);
-        pmd_.graph_.passenger_groups_.pop_back();
-        ++over_capacity_skipped_;
-        return false;
-      }
+    auto const over_capacity =
+        std::any_of(begin(pg->edges_), end(pg->edges_), [&](auto const e) {
+          return e->has_capacity() &&
+                 get_base_load(e->get_pax_connection_info()) >
+                     static_cast<std::uint16_t>(e->capacity() * max_load_);
+        });
+    if (over_capacity) {
+      remove_passenger_group_from_graph(pg);
+      pmd_.graph_.passenger_groups_.pop_back();
+      ++over_capacity_skipped_;
+      return false;
     }
     return true;
   }
