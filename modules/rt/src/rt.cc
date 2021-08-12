@@ -19,7 +19,7 @@ rt::rt() : module("RT", "rt") {
 rt::~rt() = default;
 
 void rt::init(motis::module::registry& reg) {
-  handler_ = std::make_unique<rt_handler>
+  handler_ = std::make_unique<rt_handler>(
       *const_cast<schedule*>(&get_sched()),  // NOLINT
       validate_graph_, validate_constant_graph_, print_stats_);
 

@@ -16,7 +16,6 @@
 #include "motis/core/common/timing.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/message_to_journeys.h"
-#include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/event_collector.h"
@@ -93,10 +92,11 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
 
 paxmon::~paxmon() = default;
 
-void paxmon::import(motis::module::registry& reg) {
+void paxmon::import(motis::module::import_dispatcher& reg) {
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "paxmon", reg,
-      [this](std::map<std::string, msg_ptr> const& dependencies) {
+      [this](event_collector::dependencies_map_t const& dependencies,
+             event_collector::publish_fn_t const& /*publish*/) {
         using namespace motis::import;
         auto const msg = dependencies.at("PAXMON_DATA");
 
@@ -177,10 +177,12 @@ void paxmon::init(motis::module::registry& reg) {
   reg.register_op(
       "/paxmon/eval",
       [&](msg_ptr const&) -> msg_ptr {
-        LOG(info) << "paxmon: start time: " << format_unix_time(start_time_)
-                  << ", end time: " << format_unix_time(end_time_);
+        LOG(info) << "paxmon: start time: "
+                  << format_unix_time(start_time_.unix_time_)
+                  << ", end time: " << format_unix_time(end_time_.unix_time_);
 
-        for (auto t = start_time_; t <= end_time_; t += time_step_) {
+        for (auto t = start_time_.unix_time_; t <= end_time_.unix_time_;
+             t += time_step_) {
           forward(t);
         }
 
@@ -201,13 +203,13 @@ void paxmon::init(motis::module::registry& reg) {
               << "generate_capacities: no output file specified";
           return {};
         }
-        generate_capacities(get_schedule(), data_, generated_capacity_file_);
+        generate_capacities(get_sched(), data_, generated_capacity_file_);
         return {};
       });
 
   reg.register_op(
       "/paxmon/init_forward",
-      [&](msg_ptr const&) -> msg_ptr { return forward(start_time_); },
+      [&](msg_ptr const&) -> msg_ptr { return forward(start_time_.unix_time_); },
       ctx::access_t::WRITE);
 
   reg.register_op("/paxmon/add_groups", [&](msg_ptr const& msg) -> msg_ptr {
@@ -257,7 +259,7 @@ loader::loader_result paxmon::load_journeys(std::string const& file) {
     LOG(warn) << "journey file not found: " << file;
     return {};
   }
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto result = loader::loader_result{};
   if (journey_path.extension() == ".txt") {
     scoped_timer journey_timer{"load motis journeys"};
@@ -308,7 +310,7 @@ msg_ptr initial_reroute_query(schedule const& sched,
 }
 
 void paxmon::load_journeys() {
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->status("Load Journeys")
       .out_bounds(10.F, 60.F)
@@ -387,7 +389,7 @@ void paxmon::load_journeys() {
 }
 
 void paxmon::load_capacity_files() {
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->status("Load Capacity Data")
       .out_bounds(0.F, 10.F)
@@ -415,7 +417,7 @@ void paxmon::load_capacity_files() {
 }
 
 msg_ptr paxmon::rt_update(msg_ptr const& msg) {
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto update = motis_content(RtUpdates, msg);
   handle_rt_update(data_, sched, system_stats_, tick_stats_, update,
                    arrival_delay_threshold_);
@@ -424,7 +426,7 @@ msg_ptr paxmon::rt_update(msg_ptr const& msg) {
 
 void paxmon::rt_updates_applied() {
   MOTIS_START_TIMING(total);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
 
   if (check_graph_times_) {
     utl::verify(check_graph_times(data_.graph_, sched),
@@ -518,7 +520,7 @@ void paxmon::rt_updates_applied() {
 }
 
 msg_ptr paxmon::add_groups(msg_ptr const& msg) {
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto const req = motis_content(PaxMonAddGroupsRequest, msg);
 
   auto const allow_reuse = reuse_groups_;
@@ -586,7 +588,7 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
   print_allocator_stats(data_.graph_);
 
   if (check_graph_integrity_) {
-    utl::verify(check_graph_integrity(data_.graph_, get_schedule()),
+    utl::verify(check_graph_integrity(data_.graph_, get_sched()),
                 "remove_groups (end)");
   }
 
@@ -595,7 +597,7 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
 
 msg_ptr paxmon::get_trip_load_info(msg_ptr const& msg) {
   utl::verify(msg != nullptr, "null message in paxmon::get_trip_load_info");
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   message_creator mc;
 
   auto const to_fbs_load_info = [&](TripId const* fbs_tid) {
@@ -625,7 +627,7 @@ msg_ptr paxmon::get_trip_load_info(msg_ptr const& msg) {
 
 msg_ptr paxmon::find_trips(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFindTripsRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
 
   message_creator mc;
   std::vector<flatbuffers::Offset<PaxMonTripInfo>> trips;
@@ -678,7 +680,7 @@ msg_ptr paxmon::find_trips(msg_ptr const& msg) {
 }
 
 msg_ptr paxmon::get_status(msg_ptr const& /*msg*/) const {
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
 
   message_creator mc;
   mc.create_and_finish(
@@ -696,7 +698,7 @@ msg_ptr paxmon::get_status(msg_ptr const& /*msg*/) const {
 
 msg_ptr paxmon::get_groups(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGetGroupsRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto const all_generations = req->all_generations();
   auto const include_localization = req->include_localization();
 
@@ -759,7 +761,7 @@ msg_ptr paxmon::get_groups(msg_ptr const& msg) {
 
 msg_ptr paxmon::filter_groups(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFilterGroupsRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
   utl::verify(current_time != INVALID_TIME, "invalid current system time");
@@ -852,7 +854,7 @@ msg_ptr paxmon::filter_groups(msg_ptr const& msg) {
 
 msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFilterTripsRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
   utl::verify(current_time != INVALID_TIME, "invalid current system time");

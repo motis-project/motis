@@ -22,4 +22,4 @@ void motis_parallel_for_impl(Vec&& vec, Fn&& fn, ctx::op_id const id) {
 }  // namespace motis::module
 
 #define motis_parallel_for(vec, fn) \
-  motis_parallel_for_impl(vec, fn, ctx::op_id(CTX_LOCATION))
+  ::motis::module::motis_parallel_for_impl(vec, fn, ctx::op_id(CTX_LOCATION))

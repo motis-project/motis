@@ -27,7 +27,7 @@ struct paxmon : public motis::module::module {
   paxmon(paxmon&&) = delete;
   paxmon& operator=(paxmon&&) = delete;
 
-  void import(motis::module::registry& reg) override;
+  void import(motis::module::import_dispatcher& reg) override;
   void init(motis::module::registry&) override;
 
   bool import_successful() const override { return import_successful_; }
@@ -57,8 +57,8 @@ private:
   std::string initial_broken_report_file_{};
   std::string initial_reroute_query_file_{};
   std::string initial_reroute_router_{"/tripbased"};
-  conf::holder<std::time_t> start_time_{};
-  conf::holder<std::time_t> end_time_{};
+  conf::time start_time_{};
+  conf::time end_time_{};
   int time_step_{60};
   std::uint16_t match_tolerance_{0};
   bool reroute_unmatched_{false};

@@ -18,7 +18,6 @@
 #include "motis/core/common/logging.h"
 #include "motis/core/common/timing.h"
 #include "motis/core/access/service_access.h"
-#include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
@@ -239,7 +238,7 @@ bool has_better_alternative(std::vector<alternative> const& alts,
 void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   tick_statistics tick_stats;
   MOTIS_START_TIMING(total);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   tick_stats.system_time_ = sched.system_time_;
   auto& data = *get_shared_data<paxmon_data*>(motis::paxmon::DATA_KEY);
 
