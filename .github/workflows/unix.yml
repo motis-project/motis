@@ -275,7 +275,13 @@ jobs:
       - name: Build
         run: |
           ./build/buildcache/bin/buildcache -z
-          cmake --build build --target motis motis-test motis-itest motis-eval motis-intermodal-eval
+          cmake --build build --target \
+            motis \
+            motis-test \
+            motis-itest \
+            motis-eval \
+            motis-intermodal-eval \
+            motis-pax-tools
           ./build/buildcache/bin/buildcache -s
 
       # ==== TESTS ====
