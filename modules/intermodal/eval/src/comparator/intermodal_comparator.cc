@@ -19,6 +19,7 @@
 #include "geo/latlng.h"
 #include "geo/webmercator.h"
 
+#include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/time.h"
 #include "motis/core/access/time_access.h"
 #include "motis/core/journey/check_journey.h"
@@ -41,10 +42,12 @@ namespace motis::intermodal::eval {
 
 constexpr auto const TIME_FORMAT = "%d.%m. %H:%M";
 
-std::string format_time(std::time_t t, bool local_time) {
+std::string format_time(unixtime t, bool local_time) {
+  std::time_t conv = t;
   std::ostringstream out;
-  out << std::put_time(local_time ? std::localtime(&t) : std::gmtime(&t),
-                       TIME_FORMAT);
+  out << std::put_time(
+      local_time ? std::localtime(&conv) : std::gmtime(&conv),  // NOLINT
+      TIME_FORMAT);
   return out.str();
 }
 
@@ -72,11 +75,11 @@ std::ostream& operator<<(std::ostream& out, query_type_t const& type) {
   return out;
 }
 
-inline std::time_t departure_time(journey const& j) {
+inline unixtime departure_time(journey const& j) {
   return j.stops_.front().departure_.timestamp_;
 }
 
-inline std::time_t arrival_time(journey const& j) {
+inline unixtime arrival_time(journey const& j) {
   return j.stops_.back().arrival_.timestamp_;
 }
 

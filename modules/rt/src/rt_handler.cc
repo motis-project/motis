@@ -7,9 +7,9 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/core/common/raii.h"
+#include "motis/core/schedule/validate_graph.h"
 #include "motis/core/conv/trip_conv.h"
 
-#include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_publish.h"
 
 #include "motis/rt/error.h"
@@ -20,7 +20,6 @@
 #include "motis/rt/trip_correction.h"
 #include "motis/rt/update_constant_graph.h"
 #include "motis/rt/validate_constant_graph.h"
-#include "motis/rt/validate_graph.h"
 #include "motis/rt/validity_check.h"
 
 using motis::module::msg_ptr;
@@ -40,10 +39,9 @@ rt_handler::rt_handler(schedule& sched, bool validate_graph,
 msg_ptr rt_handler::update(msg_ptr const& msg) {
   using ris::RISBatch;
 
-  auto& s = module::get_schedule();
   for (auto const& m : *motis_content(RISBatch, msg)->messages()) {
     try {
-      update(s, m->message_nested_root());
+      update(m->message_nested_root());
     } catch (std::exception const& e) {
       printf("rt::on_message: UNEXPECTED ERROR: %s\n", e.what());
     } catch (...) {
@@ -55,11 +53,11 @@ msg_ptr rt_handler::update(msg_ptr const& msg) {
 
 msg_ptr rt_handler::single(msg_ptr const& msg) {
   using ris::Message;
-  update(module::get_schedule(), motis_content(Message, msg));
+  update(motis_content(Message, msg));
   return flush(nullptr);
 }
 
-void rt_handler::update(schedule& s, motis::ris::Message const* m) {
+void rt_handler::update(motis::ris::Message const* m) {
   stats_.count_message(m->content_type());
   auto c = m->content();
 
@@ -73,7 +71,7 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
                               : timestamp_reason::FORECAST;
 
       auto const resolved = resolve_events(
-          stats_, s, msg->trip_id(),
+          stats_, sched_, msg->trip_id(),
           utl::to_vec(*msg->events(),
                       [](ris::UpdatedEvent const* ev) { return ev->base(); }));
 
@@ -85,7 +83,7 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
         }
 
         auto const upd_time =
-            unix_to_motistime(s, msg->events()->Get(i)->updated_time());
+            unix_to_motistime(sched_, msg->events()->Get(i)->updated_time());
         if (upd_time == INVALID_TIME) {
           ++stats_.update_time_out_of_schedule_;
           continue;
@@ -99,7 +97,7 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
     }
 
     case ris::MessageUnion_AdditionMessage: {
-      auto result = additional_service_builder(stats_, s, update_builder_)
+      auto result = additional_service_builder(stats_, sched_, update_builder_)
                         .build_additional_train(
                             reinterpret_cast<ris::AdditionMessage const*>(c));
       stats_.count_additional(result);
@@ -112,17 +110,17 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
       propagate();
 
       std::vector<ev_key> cancelled_evs;
-      auto const result =
-          reroute(stats_, s, cancelled_delays_, cancelled_evs, msg->trip_id(),
-                  utl::to_vec(*msg->events()), {}, update_builder_);
+      auto const result = reroute(
+          stats_, sched_, cancelled_delays_, cancelled_evs, msg->trip_id(),
+          utl::to_vec(*msg->events()), {}, update_builder_);
 
       if (result.first == reroute_result::OK) {
         for (auto const& e : *result.second->edges_) {
-          propagator_.add_delay(ev_key{e, 0, event_type::DEP});
-          propagator_.add_delay(ev_key{e, 0, event_type::ARR});
+          propagator_.recalculate(ev_key{e, 0, event_type::DEP});
+          propagator_.recalculate(ev_key{e, 0, event_type::ARR});
         }
         for (auto const& e : cancelled_evs) {
-          propagator_.add_canceled(e);
+          propagator_.recalculate(e);
         }
       }
 
@@ -136,19 +134,19 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
 
       std::vector<ev_key> cancelled_evs;
       auto const result =
-          reroute(stats_, s, cancelled_delays_, cancelled_evs, msg->trip_id(),
-                  utl::to_vec(*msg->cancelled_events()),
+          reroute(stats_, sched_, cancelled_delays_, cancelled_evs,
+                  msg->trip_id(), utl::to_vec(*msg->cancelled_events()),
                   utl::to_vec(*msg->new_events()), update_builder_);
 
       stats_.count_reroute(result.first);
 
       if (result.first == reroute_result::OK) {
         for (auto const& e : *result.second->edges_) {
-          propagator_.add_delay(ev_key{e, 0, event_type::DEP});
-          propagator_.add_delay(ev_key{e, 0, event_type::ARR});
+          propagator_.recalculate(ev_key{e, 0, event_type::DEP});
+          propagator_.recalculate(ev_key{e, 0, event_type::ARR});
         }
         for (auto const& e : cancelled_evs) {
-          propagator_.add_canceled(e);
+          propagator_.recalculate(e);
         }
       }
 
@@ -161,7 +159,7 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
       stats_.total_evs_ += msg->events()->size();
 
       auto const resolved = resolve_events(
-          stats_, s, msg->trip_id(),
+          stats_, sched_, msg->trip_id(),
           utl::to_vec(*msg->events(),
                       [](ris::UpdatedTrack const* ev) { return ev->base(); }));
 
@@ -171,9 +169,9 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
           continue;
         }
 
-        if (auto const it = s.graph_to_schedule_track_index_.find(*k);
-            it == s.graph_to_schedule_track_index_.end()) {
-          s.graph_to_schedule_track_index_[*k] =
+        if (auto const it = sched_.graph_to_schedule_track_index_.find(*k);
+            it == sched_.graph_to_schedule_track_index_.end()) {
+          sched_.graph_to_schedule_track_index_[*k] =
               k->ev_type_ == event_type::ARR ? k->lcon()->full_con_->a_track_
                                              : k->lcon()->full_con_->d_track_;
         }
@@ -186,10 +184,11 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
 
         auto fcon = *k->lcon()->full_con_;
         (k->ev_type_ == event_type::ARR ? fcon.a_track_ : fcon.d_track_) =
-            get_track(s, ev->updated_track()->str());
+            get_track(sched_, ev->updated_track()->str());
 
         const_cast<light_connection*>(k->lcon())->full_con_ =  // NOLINT
-            s.full_connections_.emplace_back(mcd::make_unique<connection>(fcon))
+            sched_.full_connections_
+                .emplace_back(mcd::make_unique<connection>(fcon))
                 .get();
       }
       break;
@@ -199,7 +198,7 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
       auto const msg = reinterpret_cast<ris::FreeTextMessage const*>(c);
       stats_.total_evs_ += msg->events()->size();
       auto const [trp, resolved] = resolve_events_and_trip(
-          stats_, s, msg->trip_id(),
+          stats_, sched_, msg->trip_id(),
           utl::to_vec(*msg->events(), [](ris::Event const* ev) { return ev; }));
       if (trp == nullptr) {
         return;
@@ -212,14 +211,14 @@ void rt_handler::update(schedule& s, motis::ris::Message const* m) {
           free_text{msg->free_text()->code(), msg->free_text()->text()->str(),
                     msg->free_text()->type()->str()};
       for (auto const& k : events) {
-        s.graph_to_free_texts_[k].emplace(ft);
+        sched_.graph_to_free_texts_[k].emplace(ft);
       }
       free_text_events_.emplace_back(free_texts{trp, ft, events});
       break;
     }
 
     case ris::MessageUnion_FullTripMessage: {
-      handle_full_trip_msg(stats_, s, update_builder_, propagator_,
+      handle_full_trip_msg(stats_, sched_, update_builder_, propagator_,
                            reinterpret_cast<ris::FullTripMessage const*>(c),
                            cancelled_delays_);
       break;
@@ -239,6 +238,10 @@ void rt_handler::propagate() {
   for (auto const& di : propagator_.events()) {
     auto const& k = di->get_ev_key();
     auto const t = di->get_current_time();
+
+    if (k.is_canceled()) {
+      continue;
+    }
 
     auto const edge_fit = fits_edge(k, t);
     auto const trip_fit = fits_trip(sched_, k, t);

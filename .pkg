@@ -1,27 +1,27 @@
 [address-typeahead]
   url=git@github.com:motis-project/address-typeahead.git
   branch=master
-  commit=d2f3e823525fcc2a3c5276126a21d17dd6b6be98
+  commit=9b33a191c05ee3f489492ea9a89253eaa26b91d4
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=e69bd7d0d286d02448cfbb2ab094867735027258
+  commit=3432eef530fd34e7ef0ed8313ec1479251b890c2
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
-  commit=4062d06917fd64c585921b798fe4b4b1c3dce17c
+  commit=b7d42aa063dd815cee6157bd27dce0caa82d2fa6
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
-  commit=2b685bcdb31ee9101cc94041e67f89eef2490466
+  commit=851bc53aabd0f63f1881ce78537ddaa07d3ec24a
 [date]
   url=git@github.com:motis-project/date.git
   branch=master
-  commit=17429576f2468e1deb487c1d0fee91d3cfd54814
+  commit=fefd81f7f12516c25c6497e8e45ef072ba10b11c
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=motis
-  commit=3f9e00e128c577b9e43d656ed8ad8c0d21c87bb5
+  commit=67c40dd37ab31c895ddd4bda8331ad56c777a9a7
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
@@ -37,7 +37,7 @@
 [lmdb]
   url=git@github.com:motis-project/lmdb.git
   branch=master
-  commit=39d8127e5697b1323a67e61c3ad8f087384c7429
+  commit=89f4d52b63f2d6ee44757c13c028ceb86718e2eb
 [miniz]
   url=git@github.com:motis-project/miniz.git
   branch=master
@@ -53,11 +53,11 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=b4180c934e9a3ae6419dd5c9ee505aac352c50ba
+  commit=65951b9976e75a0836960b305ce22eea0d692b98
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
-  commit=63145aae027915df0b5ccfe7f025efcd2b10a491
+  commit=8166a4dcc8ebd54d5bc7820c3eb211a49a96773a
 [pugixml]
   url=git@github.com:motis-project/pugixml.git
   branch=master
@@ -73,11 +73,11 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=42f4c5f2d8c1e3d3257ea8cdd075da4996206fa6
+  commit=82de6f2331108fea332be171fb93673da12a199a
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=571abc1973838b36931c64b2c7d98cc47e34da34
+  commit=59d8e70d871c9d8db2c46e3f1aa1c29cb25a339a
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master

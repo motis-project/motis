@@ -17,19 +17,20 @@
 
 #include "utl/verify.h"
 
+#include "motis/core/common/unixtime.h"
 #include "motis/hash_map.h"
 #include "motis/protocol/RISMessage_generated.h"
 
 namespace motis::ris::ribasis {
 
 struct context {
-  explicit context(std::time_t timestamp)
+  explicit context(unixtime timestamp)
       : timestamp_{timestamp},
-        earliest_{std::numeric_limits<std::time_t>::max()},
-        latest_{std::numeric_limits<std::time_t>::min()} {}
+        earliest_{std::numeric_limits<unixtime>::max()},
+        latest_{std::numeric_limits<unixtime>::min()} {}
 
   flatbuffers::FlatBufferBuilder b_{};
-  std::time_t timestamp_, earliest_, latest_;
+  unixtime timestamp_, earliest_, latest_;
 
   mcd::hash_map<std::string, flatbuffers::Offset<StationInfo>> stations_;
   mcd::hash_map<std::string, flatbuffers::Offset<CategoryInfo>> categories_;
@@ -92,8 +93,8 @@ T get_parsed_number(rapidjson::Value const& obj, char const* key) {
   return val;
 }
 
-inline std::time_t get_timestamp(rapidjson::Value const& obj, char const* key,
-                                 char const* format = "%FT%T%Ez") {
+inline unixtime get_timestamp(rapidjson::Value const& obj, char const* key,
+                              char const* format = "%FT%T%Ez") {
   auto const s = get_str(obj, key);
   auto tp = date::sys_time<std::chrono::nanoseconds>{};
   auto ss = std::stringstream{};
@@ -104,9 +105,9 @@ inline std::time_t get_timestamp(rapidjson::Value const& obj, char const* key,
       .count();
 }
 
-inline std::time_t get_schedule_timestamp(context& ctx,
-                                          rapidjson::Value const& obj,
-                                          char const* key) {
+inline unixtime get_schedule_timestamp(context& ctx,
+                                       rapidjson::Value const& obj,
+                                       char const* key) {
   auto const ts = get_timestamp(obj, key);
   ctx.earliest_ = std::min(ctx.earliest_, ts);
   ctx.latest_ = std::max(ctx.latest_, ts);

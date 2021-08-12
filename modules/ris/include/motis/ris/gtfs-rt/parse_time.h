@@ -4,6 +4,7 @@
 
 #include "boost/date_time/gregorian/gregorian_types.hpp"
 
+#include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/event.h"
 #include "motis/core/access/realtime_access.h"
 
@@ -24,11 +25,11 @@ inline boost::gregorian::date parse_date(std::string const& dt) {
               stoi(dt.substr(6, 2)));
 };
 
-inline std::time_t get_updated_time(
+inline unixtime get_updated_time(
     transit_realtime::TripUpdate_StopTimeEvent const& time_event,
-    std::time_t schedule_time, const bool is_addition_trip) {
+    unixtime schedule_time, const bool is_addition_trip) {
 
-  std::time_t updated_time = 0;
+  unixtime updated_time = 0;
   if (time_event.has_time() && !is_addition_trip) {
     updated_time = time_event.time();
 
@@ -49,9 +50,8 @@ inline std::time_t get_updated_time(
   return updated_time;
 };
 
-inline std::time_t get_schedule_time(trip const& trip, schedule& sched,
-                                     const int stop_idx,
-                                     const event_type type) {
+inline unixtime get_schedule_time(trip const& trip, schedule const& sched,
+                                  const int stop_idx, const event_type type) {
   auto const edge_idx = type == event_type::DEP ? stop_idx : stop_idx - 1;
   auto const orig_ev_key =
       get_orig_ev_key(sched, {trip.edges_->at(edge_idx), trip.lcon_idx_, type});

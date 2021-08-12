@@ -20,7 +20,7 @@ std::string parse_stop_id(std::string const& stop_id) {
                                         : stop_id;
 }
 
-int get_future_stop_idx(trip const& trip, schedule& sched,
+int get_future_stop_idx(trip const& trip, schedule const& sched,
                         const int last_stop_idx, std::string const& stop_id) {
   access::stops stops(&trip);
   auto idx_offset =
@@ -37,7 +37,7 @@ int get_future_stop_idx(trip const& trip, schedule& sched,
   return (*trip_stop).index();
 }
 
-void update_stop_idx(stop_context& current_stop, schedule& sched,
+void update_stop_idx(stop_context& current_stop, schedule const& sched,
                      trip const& trip,
                      TripUpdate_StopTimeUpdate const& stop_time_upd,
                      known_stop_skips* stop_skips) {
@@ -113,7 +113,7 @@ void update_stop_idx(stop_context& current_stop, schedule& sched,
   }
 };
 
-void stop_context::update(schedule& sched, trip const& trip,
+void stop_context::update(schedule const& sched, trip const& trip,
                           TripUpdate_StopTimeUpdate const& stu,
                           known_stop_skips* stop_skips) {
   update_stop_idx(*this, sched, trip, stu, stop_skips);

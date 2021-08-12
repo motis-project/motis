@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 
+#include "motis/core/common/unixtime.h"
 #include "motis/module/message.h"
 #include "motis/eval/comparator/response.h"
 #include "motis/eval/get_stat.h"
@@ -26,16 +27,17 @@ char get_relation_symbol(T const& u1, T const& u2) {
   }
 }
 
+std::string format_time(unixtime t, bool local_time) {
+  constexpr auto const TIME_FORMAT = "%d.%m. %H:%M";
+  std::time_t conv = t;
+  std::ostringstream out;
+  out << std::put_time(
+      local_time ? std::localtime(&conv) : std::gmtime(&conv),  // NOLINT
+      TIME_FORMAT);
+  return out.str();
+}
+
 void print(journey_meta_data const& con) {
-  auto const format_time = [](time_t t) -> std::string {
-    tm ts = *localtime(&t);
-
-    char buf[6];
-    strftime(static_cast<char*>(buf), sizeof(buf), "%H:%M", &ts);
-
-    return std::string(static_cast<char const*>(buf), 6);
-  };
-
   auto const format_duration = [](int seconds) {
     auto const total_minutes = seconds / 60;
     auto const days = total_minutes / (60 * 24);
@@ -93,15 +95,15 @@ bool print_differences(response const& r1, response const& r2,
                                 ->begin());
     auto const interval_end = static_cast<time_t>(
         reinterpret_cast<PretripStart const*>(req->start())->interval()->end());
-    auto const begin_tm = *std::localtime(&interval_begin);
-    auto const end_tm = *std::localtime(&interval_end);
+    auto const begin_tm = *std::localtime(&interval_begin);  // NOLINT
+    auto const end_tm = *std::localtime(&interval_end);  // NOLINT
     std::cout << std::put_time(&begin_tm, "%FT%TZ") << " - "
               << std::put_time(&end_tm, "%FT%TZ") << "\n";
   } else if (req->start_type() == Start_OntripStationStart) {
     auto const departure_time = static_cast<time_t>(
         reinterpret_cast<OntripStationStart const*>(req->start())
             ->departure_time());
-    auto const departure_tm = *std::localtime(&departure_time);
+    auto const departure_tm = *std::localtime(&departure_time);  // NOLINT
     std::cout << std::put_time(&departure_tm, "%FT%TZ") << "\n";
   }
   if (r1.connections_.size() != r2.connections_.size()) {

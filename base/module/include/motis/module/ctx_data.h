@@ -5,9 +5,7 @@
 
 #include "motis/module/shared_data.h"
 
-namespace motis {
-
-namespace module {
+namespace motis::module {
 
 struct dispatcher;
 
@@ -24,5 +22,4 @@ struct ctx_data {
 
 inline ctx_data& current_data() { return ctx::current_op<ctx_data>()->data_; }
 
-}  // namespace module
-}  // namespace motis
+}  // namespace motis::module

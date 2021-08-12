@@ -12,6 +12,7 @@
 #include "motis/vector.h"
 
 #include "motis/core/common/fws_multimap.h"
+#include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/attribute.h"
 #include "motis/core/schedule/category.h"
 #include "motis/core/schedule/constant_graph.h"
@@ -34,9 +35,9 @@ struct schedule {
   schedule& operator=(schedule const&) = delete;
   ~schedule() = default;
 
-  std::time_t first_event_schedule_time_{std::numeric_limits<time_t>::max()};
-  std::time_t last_event_schedule_time_{std::numeric_limits<time_t>::min()};
-  std::time_t schedule_begin_{0}, schedule_end_{0};
+  unixtime first_event_schedule_time_{std::numeric_limits<time_t>::max()};
+  unixtime last_event_schedule_time_{std::numeric_limits<time_t>::min()};
+  unixtime schedule_begin_{0}, schedule_end_{0};
   mcd::vector<mcd::string> prefixes_;
   mcd::vector<mcd::string> names_;
   cista::hash_t hash_{0U};
@@ -73,7 +74,7 @@ struct schedule {
   mcd::vector<mcd::unique_ptr<mcd::vector<ptr<trip>>>> merged_trips_;
   mcd::vector<mcd::unique_ptr<mcd::string>> filenames_;
 
-  std::time_t system_time_{0U}, last_update_timestamp_{0U};
+  unixtime system_time_{0U}, last_update_timestamp_{0U};
   mcd::vector<mcd::unique_ptr<delay_info>> delay_mem_;
   mcd::hash_map<ev_key, ptr<delay_info>> graph_to_delay_info_;
   mcd::hash_map<ev_key, uint16_t> graph_to_schedule_track_index_;

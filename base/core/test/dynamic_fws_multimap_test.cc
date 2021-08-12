@@ -5,8 +5,7 @@
 
 #include "utl/erase.h"
 #include "utl/erase_if.h"
-
-#include <iostream>
+#include "utl/verify.h"
 
 #include "motis/core/common/dynamic_fws_multimap.h"
 
@@ -60,7 +59,7 @@ inline dynamic_fws_multimap<int> build_test_map_1() {
 
 }  // namespace
 
-TEST(fws_dynamic_multimap_test, int_1) {
+TEST(dynamic_fws_multimap_test, int_1) {
   dynamic_fws_multimap<int> mm;
 
   ASSERT_EQ(0, mm.element_count());
@@ -113,7 +112,7 @@ TEST(fws_dynamic_multimap_test, int_1) {
   EXPECT_EQ(4, mm[1].size());
 }
 
-TEST(fws_dynamic_multimap_test, graph_1) {
+TEST(dynamic_fws_multimap_test, graph_1) {
   dynamic_fws_multimap<test_edge> mm;
 
   mm[0].emplace_back(0U, 1U, 10U);
@@ -132,7 +131,7 @@ TEST(fws_dynamic_multimap_test, graph_1) {
   EXPECT_THAT(mm[3], ElementsAreArray({test_edge{3U, 0U, 50U}}));
 }
 
-TEST(fws_dynamic_multimap_test, int_2) {
+TEST(dynamic_fws_multimap_test, int_2) {
   auto const mm = build_test_map_1();
 
   ASSERT_EQ(3, mm.index_size());
@@ -147,7 +146,7 @@ TEST(fws_dynamic_multimap_test, int_2) {
   EXPECT_EQ(42, mm[1].back());
 }
 
-TEST(fws_dynamic_multimap_test, int_insert_1) {
+TEST(dynamic_fws_multimap_test, int_insert_1) {
   auto mm = build_test_map_1();
 
   mm[1].insert(std::next(mm[1].begin(), 2), 20);
@@ -159,7 +158,20 @@ TEST(fws_dynamic_multimap_test, int_insert_1) {
   EXPECT_THAT(mm[2], ElementsAreArray({100, 200, 250, 300, 350, 400}));
 }
 
-TEST(fws_dynamic_multimap_test, int_erase_1) {
+TEST(dynamic_fws_multimap_test, int_insert_2) {
+  auto mm = build_test_map_1();
+
+  auto const val = 20;
+  mm[1].insert(std::next(mm[1].begin(), 2), val);
+
+  ASSERT_EQ(3, mm.index_size());
+  EXPECT_EQ(13, mm.element_count());
+  EXPECT_THAT(mm[0], ElementsAreArray({4, 8}));
+  EXPECT_THAT(mm[1], ElementsAreArray({15, 16, 20, 23, 42}));
+  EXPECT_THAT(mm[2], ElementsAreArray({100, 200, 250, 300, 350, 400}));
+}
+
+TEST(dynamic_fws_multimap_test, int_erase_1) {
   auto mm = build_test_map_1();
 
   utl::erase(mm[1], 16);
@@ -203,7 +215,7 @@ TEST(fws_dynamic_multimap_test, int_erase_1) {
   EXPECT_THAT(mm[2], ElementsAreArray({200, 300, 350}));
 }
 
-TEST(fws_dynamic_multimap_test, int_erase_2) {
+TEST(dynamic_fws_multimap_test, int_erase_2) {
   auto mm = build_test_map_1();
 
   utl::erase_if(mm[2], [](int e) { return e % 100 == 0; });
@@ -215,7 +227,7 @@ TEST(fws_dynamic_multimap_test, int_erase_2) {
   EXPECT_THAT(mm[2], ElementsAreArray({250, 350}));
 }
 
-TEST(fws_dynamic_multimap_test, int_resize_1) {
+TEST(dynamic_fws_multimap_test, int_resize_1) {
   auto mm = build_test_map_1();
 
   mm[0].resize(4);
@@ -243,7 +255,7 @@ TEST(fws_dynamic_multimap_test, int_resize_1) {
   EXPECT_THAT(mm[2], ElementsAreArray({100, 200, 250, 300, 350, 400}));
 }
 
-TEST(fws_dynamic_multimap_test, pop_back_1) {
+TEST(dynamic_fws_multimap_test, pop_back_1) {
   auto mm = build_test_map_1();
 
   mm[2].pop_back();
@@ -279,7 +291,7 @@ TEST(fws_dynamic_multimap_test, pop_back_1) {
   EXPECT_THAT(mm[2], ElementsAreArray({100, 200, 250, 300, 350}));
 }
 
-TEST(fws_dynamic_multimap_test, clear_1) {
+TEST(dynamic_fws_multimap_test, clear_1) {
   auto mm = build_test_map_1();
 
   mm[0].clear();
@@ -291,7 +303,7 @@ TEST(fws_dynamic_multimap_test, clear_1) {
   EXPECT_THAT(mm[2], ElementsAreArray({100, 200, 250, 300, 350, 400}));
 }
 
-TEST(fws_dynamic_multimap_test, clear_2) {
+TEST(dynamic_fws_multimap_test, clear_2) {
   auto mm = build_test_map_1();
 
   mm[1].clear();
@@ -303,7 +315,7 @@ TEST(fws_dynamic_multimap_test, clear_2) {
   EXPECT_THAT(mm[2], ElementsAreArray({100, 200, 250, 300, 350, 400}));
 }
 
-TEST(fws_dynamic_multimap_test, clear_3) {
+TEST(dynamic_fws_multimap_test, clear_3) {
   auto mm = build_test_map_1();
 
   mm[2].clear();
@@ -314,5 +326,63 @@ TEST(fws_dynamic_multimap_test, clear_3) {
   EXPECT_THAT(mm[1], ElementsAreArray({15, 16, 23, 42}));
   EXPECT_THAT(mm[2], IsEmpty());
 }
+
+namespace {
+
+// -> dynamic_fws_multimap::get_order
+
+#ifdef MOTIS_AVX2
+template <typename T>
+T get_order_bmi1(T const size) {
+  if constexpr (sizeof(T) == 8) {
+    return _tzcnt_u64(size);
+  } else {
+    return _tzcnt_u32(static_cast<std::uint32_t>(size));
+  }
+}
+#endif
+
+template <typename T>
+T get_order_loop(T const size) {
+  for (auto order = T{0}, value = T{1}; order < sizeof(T) * 8;
+       ++order, value = value << 1) {
+    if (value == size) {
+      return order;
+    }
+  }
+  throw utl::fail("dynamic_fws_multimap::get_order: not found for {}", size);
+}
+
+}  // namespace
+
+TEST(dynamic_fws_multimap_test, get_order_loop) {
+  for (std::uint16_t i = 0U; i < 16; ++i) {
+    EXPECT_EQ(get_order_loop(static_cast<std::uint16_t>(1U) << i), i);
+  }
+
+  for (std::uint32_t i = 0U; i < 32; ++i) {
+    EXPECT_EQ(get_order_loop(1U << i), i);
+  }
+
+  for (std::uint64_t i = 0ULL; i < 64; ++i) {
+    EXPECT_EQ(get_order_loop(1ULL << i), i);
+  }
+}
+
+#ifdef MOTIS_AVX2
+TEST(dynamic_fws_multimap_test, get_order_bmi1) {
+  for (std::uint16_t i = 0U; i < 16; ++i) {
+    EXPECT_EQ(get_order_bmi1(static_cast<std::uint16_t>(1U) << i), i);
+  }
+
+  for (std::uint32_t i = 0U; i < 32; ++i) {
+    EXPECT_EQ(get_order_bmi1(1U << i), i);
+  }
+
+  for (std::uint64_t i = 0ULL; i < 64; ++i) {
+    EXPECT_EQ(get_order_bmi1(1ULL << i), i);
+  }
+}
+#endif
 
 }  // namespace motis
