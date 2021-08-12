@@ -209,7 +209,9 @@ void paxmon::init(motis::module::registry& reg) {
 
   reg.register_op(
       "/paxmon/init_forward",
-      [&](msg_ptr const&) -> msg_ptr { return forward(start_time_.unix_time_); },
+      [&](msg_ptr const&) -> msg_ptr {
+        return forward(start_time_.unix_time_);
+      },
       ctx::access_t::WRITE);
 
   reg.register_op("/paxmon/add_groups", [&](msg_ptr const& msg) -> msg_ptr {
