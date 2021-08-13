@@ -31,7 +31,7 @@ struct evt {
   evt& operator=(evt&&) = default;
   ~evt() = default;
 
-  inline void verify_times(schedule& sched) const {
+  inline void verify_times(schedule const& sched) const {
     verify_timestamp(sched, orig_sched_time_);
     if (new_sched_time_ > 0) {
       verify_timestamp(sched, new_sched_time_);
@@ -121,14 +121,14 @@ struct knowledge_context {
 };
 
 struct trip_update_context {
-  trip_update_context(schedule& sched,
+  trip_update_context(schedule const& sched,
                       transit_realtime::TripUpdate& trip_update,
                       bool allow_addition_skip)
       : sched_(sched),
         trip_update_(trip_update),
         is_addition_skip_allowed_{allow_addition_skip} {};
 
-  schedule& sched_;
+  schedule const& sched_;
   transit_realtime::TripUpdate& trip_update_;
   bool is_addition_skip_allowed_{true};
 

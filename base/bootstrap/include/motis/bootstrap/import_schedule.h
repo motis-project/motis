@@ -5,7 +5,9 @@
 
 namespace motis::bootstrap {
 
-void register_import_schedule(motis_instance&, loader::loader_options const&,
+void register_import_schedule(motis_instance&,
+                              motis::module::import_dispatcher&,
+                              loader::loader_options const&,
                               std::string const& data_dir);
 
 }  // namespace motis::bootstrap

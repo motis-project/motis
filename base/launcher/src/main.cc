@@ -82,6 +82,10 @@ int main(int argc, char const** argv) {
     return 1;
   }
 
+  if (launcher_opt.direct_mode_) {
+    dispatcher::direct_mode_dispatcher_ = &instance;
+  }
+
   try {
     instance.import(module_opt, dataset_opt, import_opt);
     instance.init_modules(module_opt, launcher_opt.num_threads_);

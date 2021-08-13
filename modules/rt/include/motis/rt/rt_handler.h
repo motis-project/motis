@@ -21,7 +21,7 @@ struct rt_handler {
 
   motis::module::msg_ptr update(motis::module::msg_ptr const&);
   motis::module::msg_ptr single(motis::module::msg_ptr const&);
-  void update(schedule&, motis::ris::Message const*);
+  void update(motis::ris::Message const*);
   motis::module::msg_ptr flush(motis::module::msg_ptr const&);
 
 private:

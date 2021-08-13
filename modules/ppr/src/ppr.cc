@@ -22,7 +22,6 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/time.h"
-#include "motis/module/context/motis_publish.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
@@ -274,11 +273,11 @@ ppr::ppr() : module("Foot Routing", "ppr") {
 }
 
 ppr::~ppr() = default;
-
-void ppr::import(registry& reg) {
+void ppr::import(import_dispatcher& reg) {
   auto const collector = std::make_shared<event_collector>(
       get_data_directory().generic_string(), "ppr", reg,
-      [this](std::map<std::string, msg_ptr> const& dependencies) {
+      [this](event_collector::dependencies_map_t const& dependencies,
+             event_collector::publish_fn_t const& publish) {
         using import::OSMEvent;
         using import::DEMEvent;
 
@@ -377,7 +376,7 @@ void ppr::import(registry& reg) {
                 profiles_hash)
                 .Union(),
             "/import", DestinationType_Topic);
-        motis_publish(make_msg(fbb));
+        publish(make_msg(fbb));
       });
   collector->require("OSM", [](msg_ptr const& msg) {
     return msg->get()->content_type() == MsgContent_OSMEvent;

@@ -20,6 +20,7 @@
 #include "motis/core/schedule/build_route_node.h"
 #include "motis/core/schedule/category.h"
 #include "motis/core/schedule/price.h"
+#include "motis/core/schedule/validate_graph.h"
 #include "motis/core/access/time_access.h"
 #include "motis/core/access/trip_iterator.h"
 
@@ -829,6 +830,7 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
     LOG(info) << builder.broken_trips_ << " broken trips ignored";
   }
 
+  validate_graph(*sched);
   utl::verify(
       std::all_of(begin(sched->trips_), end(sched->trips_),
                   [](auto const& t) { return t.second->edges_ != nullptr; }),

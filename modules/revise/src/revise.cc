@@ -4,7 +4,6 @@
 
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/core/journey/message_to_journeys.h"
-#include "motis/module/context/get_schedule.h"
 #include "motis/revise/update_journey.h"
 
 using namespace motis::module;
@@ -29,16 +28,14 @@ msg_ptr revise::update(msg_ptr const& msg) {
 }
 
 msg_ptr revise::update(Connection const* con) {
-  auto const& sched = get_schedule();
   message_creator fbb;
   fbb.create_and_finish(
       MsgContent_Connection,
-      to_connection(fbb, update_journey(sched, convert(con))).Union());
+      to_connection(fbb, update_journey(get_sched(), convert(con))).Union());
   return make_msg(fbb);
 }
 
 msg_ptr revise::update(ReviseRequest const* req) {
-  auto const& sched = get_schedule();
   message_creator fbb;
   fbb.create_and_finish(
       MsgContent_ReviseResponse,
@@ -46,8 +43,8 @@ msg_ptr revise::update(ReviseRequest const* req) {
                                     *req->connections(),
                                     [&](Connection const* con) {
                                       return to_connection(
-                                          fbb,
-                                          update_journey(sched, convert(con)));
+                                          fbb, update_journey(get_sched(),
+                                                              convert(con)));
                                     })))
           .Union());
   return make_msg(fbb);

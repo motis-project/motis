@@ -4,6 +4,7 @@
 #include "utl/to_vec.h"
 
 #include "motis/core/schedule/schedule.h"
+#include "motis/core/schedule/validate_graph.h"
 #include "motis/core/conv/event_type_conv.h"
 
 #include "motis/rt/build_route_node.h"
@@ -16,7 +17,6 @@
 #include "motis/rt/schedule_event.h"
 #include "motis/rt/update_constant_graph.h"
 #include "motis/rt/update_msg_builder.h"
-#include "motis/rt/validate_graph.h"
 
 namespace motis::rt {
 
@@ -393,6 +393,7 @@ inline std::pair<reroute_result, trip const*> reroute(
             .get();
     store_cancelled_delays(sched, trp, del_evs, cancelled_delays,
                            cancelled_evs);
+    update_builder.add_reroute(trp, *old_trip, old_lcon_idx);
     return {reroute_result::OK, trp};
   }
   std::sort(begin(evs), end(evs));

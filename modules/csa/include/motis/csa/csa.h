@@ -22,7 +22,7 @@ struct csa : public motis::module::module {
   csa(csa&&) = delete;
   csa& operator=(csa&&) = delete;
 
-  void import(motis::module::registry&) override;
+  void import(motis::module::import_dispatcher&) override;
   void init(motis::module::registry&) override;
 
   bool import_successful() const override { return import_successful_; }

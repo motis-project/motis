@@ -2,7 +2,6 @@
 
 #include "motis/core/access/time_access.h"
 #include "motis/core/journey/journeys_to_message.h"
-#include "motis/module/context/get_schedule.h"
 #include "motis/module/event_collector.h"
 
 #include "motis/csa/build_csa_timetable.h"
@@ -27,10 +26,11 @@ csa::csa() : module("CSA", "csa") {
 
 csa::~csa() = default;
 
-void csa::import(motis::module::registry& reg) {
+void csa::import(motis::module::import_dispatcher& reg) {
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "csa", reg,
-      [this](std::map<std::string, msg_ptr> const& /*dependencies*/) {
+      [this](std::map<std::string, msg_ptr> const& /*dependencies*/,
+             event_collector::publish_fn_t const& /*publish*/) {
         timetable_ =
             build_csa_timetable(get_sched(), bridge_zero_duration_connections_,
                                 add_footpath_connections_);
@@ -71,7 +71,7 @@ csa_timetable const* csa::get_timetable() const { return timetable_.get(); }
 motis::module::msg_ptr csa::route(motis::module::msg_ptr const& msg,
                                   implementation_type impl_type) const {
   auto const req = motis_content(RoutingRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto const response = run_csa_search(
       sched, *timetable_, csa_query(sched, req), req->search_type(), impl_type);
   message_creator mc;

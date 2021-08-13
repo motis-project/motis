@@ -17,7 +17,7 @@ struct cc : public motis::module::module {
   void init(motis::module::registry&) override;
 
 private:
-  static motis::module::msg_ptr check_journey(motis::module::msg_ptr const&);
+  motis::module::msg_ptr check_journey(motis::module::msg_ptr const&);
 };
 
 }  // namespace motis::cc
