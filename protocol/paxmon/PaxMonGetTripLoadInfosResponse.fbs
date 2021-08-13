@@ -1,0 +1,7 @@
+include "paxmon/PaxMonTripLoadInfo.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonGetTripLoadInfosResponse {
+  load_infos: [PaxMonTripLoadInfo];
+}

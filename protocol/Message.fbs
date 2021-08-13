@@ -71,6 +71,23 @@ include "rt/RtUpdate.fbs";
 include "rt/RtWriteGraphRequest.fbs";
 include "tripbased/TripBasedTripDebugRequest.fbs";
 include "tripbased/TripBasedTripDebugResponse.fbs";
+include "paxmon/PaxMonUpdate.fbs";
+include "paxmon/PaxMonAddGroupsRequest.fbs";
+include "paxmon/PaxMonAddGroupsResponse.fbs";
+include "paxmon/PaxMonRemoveGroupsRequest.fbs";
+include "paxmon/PaxMonFindTripsRequest.fbs";
+include "paxmon/PaxMonFindTripsResponse.fbs";
+include "paxmon/PaxMonGetGroupsRequest.fbs";
+include "paxmon/PaxMonGetGroupsResponse.fbs";
+include "paxmon/PaxMonStatusResponse.fbs";
+include "paxmon/PaxMonTripLoadInfo.fbs";
+include "paxmon/PaxMonFilterGroupsRequest.fbs";
+include "paxmon/PaxMonFilterGroupsResponse.fbs";
+include "paxmon/PaxMonFilterTripsRequest.fbs";
+include "paxmon/PaxMonFilterTripsResponse.fbs";
+include "paxmon/PaxMonGetTripLoadInfosRequest.fbs";
+include "paxmon/PaxMonGetTripLoadInfosResponse.fbs";
+include "paxforecast/PaxForecastUpdate.fbs";
 
 include "HTTPMessage.fbs";
 
@@ -154,7 +171,7 @@ union MsgContent {
   motis.lookup.LookupBatchMetaStationRequest                              = 036,
   motis.lookup.LookupBatchMetaStationResponse                             = 037,
   motis.lookup.LookupIdTrainRequest                                       = 038,
-  motis.lookup.LookupIdTrainResponse                                      = 039, 
+  motis.lookup.LookupIdTrainResponse                                      = 039,
   motis.osrm.OSRMOneToManyRequest                                         = 040,
   motis.osrm.OSRMOneToManyResponse                                        = 041,
   motis.osrm.OSRMViaRouteRequest                                          = 042,
@@ -210,7 +227,24 @@ union MsgContent {
   motis.rt.RtUpdates                                                      = 092,
   motis.rt.RtWriteGraphRequest                                            = 093,
   motis.tripbased.TripBasedTripDebugRequest                               = 094,
-  motis.tripbased.TripBasedTripDebugResponse                              = 095
+  motis.tripbased.TripBasedTripDebugResponse                              = 095,
+  motis.paxmon.PaxMonUpdate                                               = 096,
+  motis.paxforecast.PaxForecastUpdate                                     = 097,
+  motis.paxmon.PaxMonAddGroupsRequest                                     = 098,
+  motis.paxmon.PaxMonAddGroupsResponse                                    = 099,
+  motis.paxmon.PaxMonRemoveGroupsRequest                                  = 100,
+  motis.paxmon.PaxMonTripLoadInfo                                         = 101,
+  motis.paxmon.PaxMonFindTripsRequest                                     = 102,
+  motis.paxmon.PaxMonFindTripsResponse                                    = 103,
+  motis.paxmon.PaxMonStatusResponse                                       = 104,
+  motis.paxmon.PaxMonGetGroupsRequest                                     = 105,
+  motis.paxmon.PaxMonGetGroupsResponse                                    = 106,
+  motis.paxmon.PaxMonFilterGroupsRequest                                  = 107,
+  motis.paxmon.PaxMonFilterGroupsResponse                                 = 108,
+  motis.paxmon.PaxMonFilterTripsRequest                                   = 109,
+  motis.paxmon.PaxMonFilterTripsResponse                                  = 110,
+  motis.paxmon.PaxMonGetTripLoadInfosRequest                              = 111,
+  motis.paxmon.PaxMonGetTripLoadInfosResponse                             = 112
 }
 
 // Destination Examples:

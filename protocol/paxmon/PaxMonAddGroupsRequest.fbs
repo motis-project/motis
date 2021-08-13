@@ -1,0 +1,7 @@
+include "paxmon/PaxMonGroup.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonAddGroupsRequest {
+  groups: [PaxMonGroup];
+}

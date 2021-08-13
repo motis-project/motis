@@ -28,6 +28,7 @@
 #include "motis/loader/build_graph.h"
 #include "motis/loader/build_stations.h"
 #include "motis/loader/classes.h"
+#include "motis/loader/filter/local_stations.h"
 #include "motis/loader/interval_util.h"
 #include "motis/loader/rule_route_builder.h"
 #include "motis/loader/rule_service_graph_builder.h"
@@ -46,7 +47,8 @@ char const* c_str(flatbuffers64::String const* str) {
 graph_builder::graph_builder(schedule& sched, loader_options const& opt)
     : sched_{sched},
       apply_rules_{opt.apply_rules_},
-      expand_trips_{opt.expand_trips_} {}
+      expand_trips_{opt.expand_trips_},
+      no_local_transport_{opt.no_local_transport_} {}
 
 full_trip_id graph_builder::get_full_trip_id(Service const* s, int day,
                                              int section_idx) {
@@ -162,7 +164,7 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
       ++it;
     } while (it != end(sorted) && route == (*it)->route());
 
-    if (!route_services.empty()) {
+    if (!route_services.empty() && !skip_route(route)) {
       add_route_services(mcd::to_vec(route_services, [&](Service const* s) {
         return std::make_pair(s, get_or_create_bitfield(s->traffic_days()));
       }));
@@ -721,6 +723,17 @@ route_section graph_builder::add_route_section(
   return section;
 }
 
+bool graph_builder::skip_station(Station const* station) const {
+  return no_local_transport_ && is_local_station(station);
+}
+
+bool graph_builder::skip_route(Route const* route) const {
+  return no_local_transport_ &&
+         std::any_of(
+             route->stations()->begin(), route->stations()->end(),
+             [&](Station const* station) { return skip_station(station); });
+}
+
 schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
                          loader_options const& opt) {
   utl::verify(!fbs_schedules.empty(), "build_graph: no schedules");
@@ -757,7 +770,8 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
   graph_builder builder{*sched, opt};
 
   progress_tracker->status("Add Stations").out_bounds(0, 5);
-  builder.stations_ = build_stations(*sched, fbs_schedules);
+  builder.stations_ =
+      build_stations(*sched, fbs_schedules, opt.no_local_transport_);
 
   for (auto const& [i, fbs_schedule] : utl::enumerate(fbs_schedules)) {
     auto const dataset_prefix =
