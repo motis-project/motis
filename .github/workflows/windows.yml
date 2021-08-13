@@ -63,7 +63,13 @@ jobs:
             -DMOTIS_DEBUG_SYMBOLS=OFF `
             -DMOTIS_WITH_WEBUI=${{ matrix.config.webui }}
           .\build\buildcache\bin\buildcache.exe -z
-          cmake --build build --target motis motis-test motis-itest motis-eval motis-intermodal-eval
+          cmake --build build --target `
+            motis `
+            motis-test `
+            motis-itest `
+            motis-eval `
+            motis-intermodal-eval `
+            motis-pax-tools
           $CompilerExitCode = $LastExitCode
           .\build\buildcache\bin\buildcache.exe -s
           exit $CompilerExitCode

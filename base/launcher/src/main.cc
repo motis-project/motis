@@ -62,10 +62,6 @@ int main(int argc, char const** argv) {
     conf::options_parser parser(confs);
     parser.read_command_line_args(argc, argv, false);
 
-    if (!launcher_opt.init_.empty()) {
-      launcher_opt.mode_ = launcher_settings::motis_mode_t::INIT;
-    }
-
     if (parser.help()) {
       std::cout << "\n\tMOTIS v" << short_version() << "\n\n";
       parser.print_help(std::cout);
@@ -76,6 +72,11 @@ int main(int argc, char const** argv) {
     }
 
     parser.read_configuration_file(false);
+
+    if (!launcher_opt.init_.empty()) {
+      launcher_opt.mode_ = launcher_settings::motis_mode_t::INIT;
+    }
+
     parser.print_used(std::cout);
   } catch (std::exception const& e) {
     std::cout << "options error: " << e.what() << "\n";
@@ -113,7 +114,11 @@ int main(int argc, char const** argv) {
     try {
       instance.call(launcher_opt.init_, launcher_opt.num_threads_);
       return 0;
+    } catch (std::exception const& e) {
+      std::cout << "\ninit error: " << e.what() << "\n";
+      return 1;
     } catch (...) {
+      std::cout << "\ninit error\n";
       return 1;
     }
   }

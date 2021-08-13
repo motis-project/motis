@@ -1,0 +1,22 @@
+include "paxmon/PaxMonGroup.fbs";
+include "paxmon/PaxMonLocalization.fbs";
+include "paxmon/PaxMonTripLoadInfo.fbs";
+
+namespace motis.paxforecast;
+
+table PaxForecastAlternative {
+  journey: motis.paxmon.PaxMonCompactJourney;
+  probability: float;
+}
+
+table PaxForecastGroup {
+  group: motis.paxmon.PaxMonGroup;
+  localization: motis.paxmon.PaxMonLocalization;
+  forecast_alternatives: [PaxForecastAlternative];
+}
+
+table PaxForecastUpdate {
+  system_time: ulong;
+  groups: [PaxForecastGroup];
+  trips: [motis.paxmon.PaxMonTripLoadInfo];
+}

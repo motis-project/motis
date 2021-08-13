@@ -34,7 +34,8 @@ std::string loader_options::graph_path(std::string const& data_dir) const {
     std::stringstream ss;
     ss << "graph_" << from << "-" << to << "af" << adjust_footpaths_ << "ar"
        << apply_rules_ << "et" << expand_trips_ << "ef" << expand_footpaths_
-       << "ptd" << planned_transfer_delta_ << ".raw";
+       << "ptd" << planned_transfer_delta_ << "nlt" << no_local_transport_
+       << ".raw";
     return (fs::path{data_dir} / "schedule" / ss.str()).generic_string();
   } else {
     return graph_path_;

@@ -28,12 +28,13 @@ using namespace motis::logging;
 namespace motis::rt {
 
 rt_handler::rt_handler(schedule& sched, bool validate_graph,
-                       bool validate_constant_graph)
+                       bool validate_constant_graph, bool print_stats)
     : sched_(sched),
       propagator_(sched),
       update_builder_(sched),
       validate_graph_(validate_graph),
-      validate_constant_graph_(validate_constant_graph) {}
+      validate_constant_graph_(validate_constant_graph),
+      print_stats_(print_stats) {}
 
 msg_ptr rt_handler::update(msg_ptr const& msg) {
   using ris::RISBatch;
@@ -96,7 +97,7 @@ void rt_handler::update(motis::ris::Message const* m) {
     }
 
     case ris::MessageUnion_AdditionMessage: {
-      auto result = additional_service_builder(sched_, update_builder_)
+      auto result = additional_service_builder(stats_, sched_, update_builder_)
                         .build_additional_train(
                             reinterpret_cast<ris::AdditionMessage const*>(c));
       stats_.count_additional(result);
@@ -300,7 +301,9 @@ msg_ptr rt_handler::flush(msg_ptr const&) {
   scoped_timer t("flush");
 
   MOTIS_FINALLY([this]() {
-    stats_.print();
+    if (print_stats_) {
+      stats_.print();
+    }
     stats_ = statistics();
     propagator_.reset();
     update_builder_.reset();
@@ -316,6 +319,9 @@ msg_ptr rt_handler::flush(msg_ptr const&) {
   if (validate_constant_graph_) {
     validate_constant_graph(sched_);
   }
+
+  ctx::await_all(
+      motis_publish(motis::module::make_no_msg("/rt/graph_updated")));
 
   if (stats_.sanity_check_fails()) {
     return motis::module::make_error_msg(error::sanity_check_failed);

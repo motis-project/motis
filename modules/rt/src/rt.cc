@@ -13,6 +13,7 @@ rt::rt() : module("RT", "rt") {
         "validate routing graph after every rt update");
   param(validate_constant_graph_, "validate_constant_graph",
         "validate constant graph after every rt update");
+  param(print_stats_, "print_stats", "print statistics after every rt update");
 }
 
 rt::~rt() = default;
@@ -20,7 +21,7 @@ rt::~rt() = default;
 void rt::init(motis::module::registry& reg) {
   handler_ = std::make_unique<rt_handler>(
       *const_cast<schedule*>(&get_sched()),  // NOLINT
-      validate_graph_, validate_constant_graph_);
+      validate_graph_, validate_constant_graph_, print_stats_);
 
   reg.subscribe(
       "/ris/messages",

@@ -24,6 +24,7 @@ struct rt : public motis::module::module {
 private:
   bool validate_graph_{false};
   bool validate_constant_graph_{false};
+  bool print_stats_{true};
 
   std::unique_ptr<rt_handler> handler_;
 };

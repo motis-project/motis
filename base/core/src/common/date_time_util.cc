@@ -28,7 +28,7 @@ int hhmm_to_min(int const hhmm) {
   }
 }
 
-std::string format_unix_time(time_t const t, char const* format) {
+std::string format_unix_time(unixtime const t, char const* format) {
   return date::format(
       format, std::chrono::system_clock::time_point{std::chrono::seconds{t}});
 }
