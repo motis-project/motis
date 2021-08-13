@@ -371,6 +371,7 @@ inline std::pair<reroute_result, trip const*> reroute(
             .get();
     store_cancelled_delays(sched, trp, del_evs, cancelled_delays,
                            cancelled_evs);
+    update_builder.add_reroute(trp, *old_trip, old_lcon_idx);
     return {reroute_result::OK, trp};
   }
   std::sort(begin(evs), end(evs));
