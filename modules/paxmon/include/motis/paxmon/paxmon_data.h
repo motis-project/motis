@@ -14,8 +14,6 @@ struct paxmon_data {
 
   graph graph_;
 
-  std::set<passenger_group*> groups_affected_by_last_update_;
-  std::set<trip const*> trips_affected_by_last_update_;
 };
 
 }  // namespace motis::paxmon

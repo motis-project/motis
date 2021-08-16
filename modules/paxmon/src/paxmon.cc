@@ -423,8 +423,8 @@ void paxmon::load_capacity_files() {
 msg_ptr paxmon::rt_update(msg_ptr const& msg) {
   auto const& sched = get_sched();
   auto update = motis_content(RtUpdates, msg);
-  handle_rt_update(data_, capacity_maps_, sched, system_stats_, tick_stats_,
-                   update, arrival_delay_threshold_);
+  handle_rt_update(data_, capacity_maps_, sched, rt_update_ctx_, system_stats_,
+                   tick_stats_, update, arrival_delay_threshold_);
   return {};
 }
 
@@ -442,13 +442,13 @@ void paxmon::rt_updates_applied() {
   }
 
   LOG(info) << "groups affected by last update: "
-            << data_.groups_affected_by_last_update_.size()
+            << rt_update_ctx_.groups_affected_by_last_update_.size()
             << ", total groups: " << data_.graph_.passenger_groups_.size();
   print_allocator_stats(data_.graph_);
 
-  auto messages =
-      update_affected_groups(data_, sched, system_stats_, tick_stats_,
-                             arrival_delay_threshold_, preparation_time_);
+  auto messages = update_affected_groups(
+      data_, sched, rt_update_ctx_, system_stats_, tick_stats_,
+      arrival_delay_threshold_, preparation_time_);
 
   if (check_graph_integrity_) {
     utl::verify(check_graph_integrity(data_.graph_, sched),
@@ -485,11 +485,11 @@ void paxmon::rt_updates_applied() {
       system_stats_.groups_major_delay_count_;
 
   LOG(info) << "affected by last rt update: "
-            << data_.groups_affected_by_last_update_.size()
+            << rt_update_ctx_.groups_affected_by_last_update_.size()
             << " passenger groups, "
             << " passengers";
 
-  data_.groups_affected_by_last_update_.clear();
+  rt_update_ctx_.groups_affected_by_last_update_.clear();
   LOG(info) << "passenger groups: " << tick_stats_.ok_groups_ << " ok, "
             << tick_stats_.broken_groups_
             << " broken - passengers affected by broken groups: "
@@ -553,7 +553,7 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
         auto pg = data_.graph_.passenger_groups_.add(std::move(input_pg));
         add_passenger_group_to_graph(sched, capacity_maps_, data_, *pg);
         for (auto const& leg : pg->compact_planned_journey_.legs_) {
-          data_.trips_affected_by_last_update_.insert(leg.trip_);
+          rt_update_ctx_.trips_affected_by_last_update_.insert(leg.trip_);
         }
         return pg;
       });
@@ -581,7 +581,7 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
       continue;
     }
     for (auto const& leg : pg->compact_planned_journey_.legs_) {
-      data_.trips_affected_by_last_update_.insert(leg.trip_);
+      rt_update_ctx_.trips_affected_by_last_update_.insert(leg.trip_);
     }
     remove_passenger_group_from_graph(data_, pg);
     if (!keep_group_history_) {
