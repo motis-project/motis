@@ -42,9 +42,10 @@ void write_footpaths(fs::path const& dir, schedule const& sched) {
 }
 
 void write_trip(std::ofstream& out, schedule const& sched,
-                paxmon_data const& data, trip const* trp, std::uint64_t id,
+                capacity_maps const& caps, paxmon_data const& data,
+                trip const* trp, std::uint64_t id,
                 bool const include_trip_info) {
-  for (auto const& ts : sections_with_load{sched, data, trp}) {
+  for (auto const& ts : sections_with_load{sched, caps, data, trp}) {
     auto const& lc = ts.section_.lcon();
     auto const remaining_capacity =
         ts.has_capacity_info() ? std::max(0, ts.capacity() - ts.base_load())
@@ -63,7 +64,7 @@ void write_trip(std::ofstream& out, schedule const& sched,
 }
 
 void write_trips(fs::path const& dir, schedule const& sched,
-                 paxmon_data const& data,
+                 capacity_maps const& caps, paxmon_data const& data,
                  mcd::hash_map<trip const*, std::uint64_t>& trip_ids,
                  bool const include_trip_info) {
   std::ofstream trips_file{(dir / "trips.csv").string()};
@@ -83,7 +84,7 @@ void write_trips(fs::path const& dir, schedule const& sched,
     if (trp->edges_->empty()) {
       continue;
     }
-    write_trip(trips_file, sched, data, trp.get(), id, include_trip_info);
+    write_trip(trips_file, sched, caps, data, trp.get(), id, include_trip_info);
     trip_ids[trp.get()] = id;
     auto const ext_trp = to_extern_trip(sched, trp.get());
     trip_ids_file << id << "," << ext_trp.station_id_ << ","
@@ -128,13 +129,13 @@ void write_groups(fs::path const& dir, schedule const& sched,
 }
 
 void write_scenario(fs::path const& dir, schedule const& sched,
-                    paxmon_data const& data,
+                    capacity_maps const& caps, paxmon_data const& data,
                     std::vector<msg_ptr> const& messages,
                     bool const include_trip_info) {
   mcd::hash_map<trip const*, std::uint64_t> trip_ids;
   write_stations(dir, sched);
   write_footpaths(dir, sched);
-  write_trips(dir, sched, data, trip_ids, include_trip_info);
+  write_trips(dir, sched, caps, data, trip_ids, include_trip_info);
   write_groups(dir, sched, data, messages, trip_ids);
 }
 

@@ -37,7 +37,8 @@ void add_interchange(event_node_index from, event_node_index to,
 
 };  // namespace
 
-void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
+void add_passenger_group_to_graph(schedule const& sched,
+                                  capacity_maps const& caps, paxmon_data& data,
                                   passenger_group& grp) {
   utl::verify(grp.edges_.empty(), "group already added to graph");
   auto exit_node = INVALID_EVENT_NODE_INDEX;
@@ -49,7 +50,7 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
 
     auto tdi = INVALID_TRIP_DATA_INDEX;
     try {
-      tdi = get_or_add_trip(sched, data, leg.trip_);
+      tdi = get_or_add_trip(sched, caps, data, leg.trip_);
     } catch (std::system_error const& e) {
       std::cerr << "could not add trip for passenger group " << grp.id_
                 << " (source=" << grp.source_.primary_ref_ << "."
@@ -139,6 +140,7 @@ void remove_passenger_group_from_graph(paxmon_data& data, passenger_group* pg) {
 }
 
 build_graph_stats build_graph_from_journeys(schedule const& sched,
+                                            capacity_maps const& caps,
                                             paxmon_data& data) {
   scoped_timer build_graph_timer{"build paxmon graph from journeys"};
   auto progress_tracker = utl::get_active_progress_tracker();
@@ -150,7 +152,7 @@ build_graph_stats build_graph_from_journeys(schedule const& sched,
     utl::verify(!pg->compact_planned_journey_.legs_.empty(),
                 "empty passenger group");
     try {
-      add_passenger_group_to_graph(sched, data, *pg);
+      add_passenger_group_to_graph(sched, caps, data, *pg);
       if (pg->edges_.empty()) {
         data.graph_.passenger_groups_.release(pg->id_);
       }

@@ -137,11 +137,11 @@ event_node* get_or_insert_node(graph& g, trip_data_index const tdi,
 }
 
 std::pair<std::uint16_t, capacity_source> guess_trip_capacity(
-    schedule const& sched, paxmon_data& data, trip const* trp) {
+    schedule const& sched, capacity_maps const& caps, trip const* trp) {
   auto const sections = access::sections(trp);
   if (begin(sections) != end(sections)) {
     return get_capacity(sched, (*begin(sections)).lcon(),
-                        data.trip_capacity_map_, data.category_capacity_map_);
+                        caps.trip_capacity_map_, caps.category_capacity_map_);
   } else {
     return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
   }
@@ -207,13 +207,13 @@ std::optional<merged_trips_idx> get_merged_trips(trip const* trp) {
   return get_lcon(trp->edges_->front().get_edge(), trp->lcon_idx_).trips_;
 }
 
-void apply_reroute(paxmon_data& data, schedule const& sched, trip const* trp,
+void apply_reroute(paxmon_data& data, capacity_maps const& caps, schedule const& sched, trip const* trp,
                    trip_data_index const tdi,
                    std::vector<trip_ev_key> const& old_route,
                    std::vector<trip_ev_key> const& new_route,
                    std::vector<edge_index>& updated_interchange_edges) {
   auto const encoded_capacity =
-      encode_capacity(guess_trip_capacity(sched, data, trp));
+      encode_capacity(guess_trip_capacity(sched, caps, trp));
   auto const affected_passenger_groups =
       collect_passenger_groups(data.graph_, tdi);
   auto diff = diff_route(old_route, new_route);

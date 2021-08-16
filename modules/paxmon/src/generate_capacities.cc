@@ -29,8 +29,8 @@ int get_capacity(Generator& rng, std::normal_distribution<>& dist,
   return static_cast<int>(dist.mean() + 3 * dist.stddev());
 }
 
-void generate_capacities(schedule const& sched, paxmon_data const& data,
-                         std::string const& filename) {
+void generate_capacities(schedule const& sched, capacity_maps const& caps,
+                         paxmon_data const& data, std::string const& filename) {
   auto rng = std::mt19937{std::random_device{}()};
 
   auto d_ice1 = std::discrete_distribution<>{.48, .28, .21, .01};
@@ -60,7 +60,7 @@ void generate_capacities(schedule const& sched, paxmon_data const& data,
     auto const trp = tp.get();
     auto has_capacity_data = true;
     auto max_load = std::uint16_t{0};
-    auto const sections = sections_with_load{sched, data, trp};
+    auto const sections = sections_with_load{sched, caps, data, trp};
     if (sections.empty()) {
       continue;
     }

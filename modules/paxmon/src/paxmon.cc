@@ -136,10 +136,11 @@ void paxmon::init(motis::module::registry& reg) {
   stats_writer_ = std::make_unique<stats_writer>(stats_file_);
 
   add_shared_data(DATA_KEY, &data_);
+  add_shared_data(CAPS_KEY, &capacity_maps_);
 
   reg.subscribe("/init", [&]() {
-    if (data_.trip_capacity_map_.empty() &&
-        data_.category_capacity_map_.empty()) {
+    if (capacity_maps_.trip_capacity_map_.empty() &&
+        capacity_maps_.category_capacity_map_.empty()) {
       LOG(warn) << "no capacity information available";
     }
     LOG(info) << "tracking " << data_.graph_.passenger_groups_.size()
@@ -196,16 +197,17 @@ void paxmon::init(motis::module::registry& reg) {
 
   // --init /paxmon/generate_capacities
   // --paxmon.generated_capacity_file file.csv
-  reg.register_op(
-      "/paxmon/generate_capacities", [&](msg_ptr const&) -> msg_ptr {
-        if (generated_capacity_file_.empty()) {
-          LOG(logging::error)
-              << "generate_capacities: no output file specified";
-          return {};
-        }
-        generate_capacities(get_sched(), data_, generated_capacity_file_);
-        return {};
-      });
+  reg.register_op("/paxmon/generate_capacities",
+                  [&](msg_ptr const&) -> msg_ptr {
+                    if (generated_capacity_file_.empty()) {
+                      LOG(logging::error)
+                          << "generate_capacities: no output file specified";
+                      return {};
+                    }
+                    generate_capacities(get_sched(), capacity_maps_, data_,
+                                        generated_capacity_file_);
+                    return {};
+                  });
 
   reg.register_op(
       "/paxmon/init_forward",
@@ -366,7 +368,7 @@ void paxmon::load_journeys() {
   }
 
   progress_tracker->status("Build Graph").out_bounds(60.F, 100.F);
-  build_graph_from_journeys(sched, data_);
+  build_graph_from_journeys(sched, capacity_maps_, data_);
 
   auto const graph_stats = calc_graph_statistics(sched, data_);
   print_graph_stats(graph_stats);
@@ -404,9 +406,9 @@ void paxmon::load_capacity_files() {
       import_successful_ = false;
       continue;
     }
-    auto const entries_loaded =
-        load_capacities(sched, file, data_.trip_capacity_map_,
-                        data_.category_capacity_map_, capacity_match_log_file_);
+    auto const entries_loaded = load_capacities(
+        sched, file, capacity_maps_.trip_capacity_map_,
+        capacity_maps_.category_capacity_map_, capacity_match_log_file_);
     total_entries += entries_loaded;
     LOG(info) << fmt::format("loaded {:L} capacity entries from {}",
                              entries_loaded, file);
@@ -421,8 +423,8 @@ void paxmon::load_capacity_files() {
 msg_ptr paxmon::rt_update(msg_ptr const& msg) {
   auto const& sched = get_sched();
   auto update = motis_content(RtUpdates, msg);
-  handle_rt_update(data_, sched, system_stats_, tick_stats_, update,
-                   arrival_delay_threshold_);
+  handle_rt_update(data_, capacity_maps_, sched, system_stats_, tick_stats_,
+                   update, arrival_delay_threshold_);
   return {};
 }
 
@@ -464,7 +466,7 @@ void paxmon::rt_updates_applied() {
     LOG(info) << "writing MCFP scenario with " << tick_stats_.broken_groups_
               << " broken groups to " << dir.string();
     fs::create_directories(dir);
-    output::write_scenario(dir, sched, data_, messages,
+    output::write_scenario(dir, sched, capacity_maps_, data_, messages,
                            mcfp_scenario_include_trip_info_);
   }
 
@@ -549,7 +551,7 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
           }
         }
         auto pg = data_.graph_.passenger_groups_.add(std::move(input_pg));
-        add_passenger_group_to_graph(sched, data_, *pg);
+        add_passenger_group_to_graph(sched, capacity_maps_, data_, *pg);
         for (auto const& leg : pg->compact_planned_journey_.legs_) {
           data_.trips_affected_by_last_update_.insert(leg.trip_);
         }

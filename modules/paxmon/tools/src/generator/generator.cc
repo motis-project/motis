@@ -19,6 +19,7 @@
 
 #include "motis/paxmon/build_graph.h"
 #include "motis/paxmon/capacity.h"
+#include "motis/paxmon/capacity_maps.h"
 #include "motis/paxmon/generate_capacities.h"
 #include "motis/paxmon/get_load.h"
 #include "motis/paxmon/loader/journeys/to_compact_journey.h"
@@ -76,11 +77,12 @@ struct generator_settings : public conf::configuration {
 };
 
 struct journey_generator {
-  journey_generator(motis_instance& instance, paxmon_data& pmd,
-                    generator_settings const& generator_opt,
+  journey_generator(motis_instance& instance, capacity_maps const& caps,
+                    paxmon_data& pmd, generator_settings const& generator_opt,
                     group_generator& group_gen, bool check_load)
       : instance_{instance},
         sched_{instance_.sched()},
+        caps_{caps},
         pmd_{pmd},
         query_gen_{sched_},
         group_gen_{group_gen},
@@ -175,7 +177,7 @@ private:
     auto pg = pmd_.graph_.passenger_groups_.add(make_passenger_group(
         std::move(cj), data_source{primary_id, secondary_id}, group_size,
         cj.scheduled_arrival_time()));
-    add_passenger_group_to_graph(sched_, pmd_, *pg);
+    add_passenger_group_to_graph(sched_, caps_, pmd_, *pg);
     auto const over_capacity =
         std::any_of(begin(pg->edges_), end(pg->edges_), [&](auto const& ei) {
           auto const* e = ei.get(pmd_.graph_);
@@ -196,6 +198,7 @@ private:
 
   motis_instance& instance_;
   schedule const& sched_;
+  capacity_maps const& caps_;
   paxmon_data& pmd_;
   query_generator query_gen_;
   group_generator& group_gen_;
@@ -282,13 +285,14 @@ int main(int argc, char const** argv) {
   }
 
   auto const check_load = generator_opt.max_load_ > 0.0;
+  auto caps = capacity_maps{};
   auto pmd = paxmon_data{};
   auto const& sched = instance.sched();
 
   if (check_load) {
     if (generator_opt.generate_capacities_) {
       std::cout << "Generating capacity information..." << std::endl;
-      generate_capacities(sched, pmd, generator_opt.capacity_path_);
+      generate_capacities(sched, caps, pmd, generator_opt.capacity_path_);
     }
     if (!fs::exists(generator_opt.capacity_path_)) {
       std::cout << "Capacity file not found: " << generator_opt.capacity_path_
@@ -297,7 +301,7 @@ int main(int argc, char const** argv) {
     }
     auto const entries_loaded =
         load_capacities(sched, generator_opt.capacity_path_,
-                        pmd.trip_capacity_map_, pmd.category_capacity_map_);
+                        caps.trip_capacity_map_, caps.category_capacity_map_);
     std::cout << "Loaded " << entries_loaded << " capacity entries"
               << std::endl;
     if (entries_loaded == 0) {
@@ -314,8 +318,8 @@ int main(int argc, char const** argv) {
   group_generator group_gen{
       generator_opt.group_size_mean_, generator_opt.group_size_stddev_,
       generator_opt.group_count_mean_, generator_opt.group_count_stddev_};
-  journey_generator journey_gen{instance, pmd, generator_opt, group_gen,
-                                check_load};
+  journey_generator journey_gen{instance,      caps,      pmd,
+                                generator_opt, group_gen, check_load};
   {
     auto bars = utl::global_progress_bars{};
     journey_gen.run();

@@ -9,15 +9,18 @@
 #include "motis/module/message.h"
 
 #include "motis/paxmon/capacity_data.h"
+#include "motis/paxmon/capacity_maps.h"
 #include "motis/paxmon/paxmon_data.h"
 #include "motis/paxmon/statistics.h"
 
 namespace motis::paxmon {
 
-trip_data_index get_or_add_trip(schedule const& sched, paxmon_data& data,
+trip_data_index get_or_add_trip(schedule const& sched,
+                                capacity_maps const& caps, paxmon_data& data,
                                 trip const* trp);
 
-trip_data_index get_or_add_trip(schedule const& sched, paxmon_data& data,
+trip_data_index get_or_add_trip(schedule const& sched,
+                                capacity_maps const& caps, paxmon_data& data,
                                 extern_trip const& et);
 
 void update_event_times(schedule const& sched, graph& g,
@@ -25,8 +28,8 @@ void update_event_times(schedule const& sched, graph& g,
                         std::vector<edge_index>& updated_interchange_edges,
                         system_statistics& system_stats);
 
-void update_trip_route(schedule const& sched, paxmon_data& data,
-                       motis::rt::RtRerouteUpdate const* ru,
+void update_trip_route(schedule const& sched, capacity_maps const& caps,
+                       paxmon_data& data, motis::rt::RtRerouteUpdate const* ru,
                        std::vector<edge_index>& updated_interchange_edges,
                        system_statistics& system_stats);
 
@@ -79,11 +82,12 @@ void add_passenger_group_to_edge(graph& g, edge* e, passenger_group* pg);
 void remove_passenger_group_from_edge(graph& g, edge* e, passenger_group* pg);
 
 void for_each_trip(
-    schedule const& sched, paxmon_data& data, compact_journey const& journey,
+    schedule const& sched, capacity_maps const& caps, paxmon_data& data,
+    compact_journey const& journey,
     std::function<void(journey_leg const&, trip_data_index)> const& fn);
 
-void for_each_edge(schedule const& sched, paxmon_data& data,
-                   compact_journey const& journey,
+void for_each_edge(schedule const& sched, capacity_maps const& caps,
+                   paxmon_data& data, compact_journey const& journey,
                    std::function<void(journey_leg const&, edge*)> const& fn);
 
 event_node* find_event_node(graph const& g, trip_data_index tdi,

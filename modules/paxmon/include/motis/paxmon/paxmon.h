@@ -10,6 +10,7 @@
 
 #include "motis/module/module.h"
 
+#include "motis/paxmon/capacity_maps.h"
 #include "motis/paxmon/loader/loader_result.h"
 #include "motis/paxmon/paxmon_data.h"
 #include "motis/paxmon/statistics.h"
@@ -72,6 +73,7 @@ private:
   bool keep_group_history_{false};
   bool reuse_groups_{true};
 
+  capacity_maps capacity_maps_;
   paxmon_data data_;
   system_statistics system_stats_;
   tick_statistics tick_stats_;

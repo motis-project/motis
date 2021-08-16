@@ -23,6 +23,7 @@
 #include "motis/module/context/motis_spawn.h"
 #include "motis/module/message.h"
 
+#include "motis/paxmon/capacity_maps.h"
 #include "motis/paxmon/compact_journey_util.h"
 #include "motis/paxmon/data_key.h"
 #include "motis/paxmon/debug.h"
@@ -241,6 +242,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   auto const& sched = get_sched();
   tick_stats.system_time_ = sched.system_time_;
   auto& data = *get_shared_data<paxmon_data*>(motis::paxmon::DATA_KEY);
+  auto& caps = *get_shared_data<capacity_maps*>(motis::paxmon::CAPS_KEY);
 
   auto const mon_update = motis_content(PaxMonUpdate, msg);
 
@@ -349,7 +351,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
         alternatives_found += cpg.alternatives_.size();
         for (auto const& alt : cpg.alternatives_) {
           for (auto const& leg : alt.compact_journey_.legs_) {
-            get_or_add_trip(sched, data, leg.trip_);
+            get_or_add_trip(sched, caps, data, leg.trip_);
           }
         }
       }
@@ -464,7 +466,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
   auto const announcements = std::vector<measures::please_use>{};
   auto const sim_result =
-      simulate_behavior(sched, data, combined_groups, announcements, pb);
+      simulate_behavior(sched, caps, data, combined_groups, announcements, pb);
   sim_timer.stop_and_print();
   MOTIS_STOP_TIMING(passenger_behavior);
   tick_stats.t_passenger_behavior_ = MOTIS_TIMING_MS(passenger_behavior);

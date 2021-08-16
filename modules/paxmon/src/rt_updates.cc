@@ -77,8 +77,8 @@ void check_broken_interchanges(
   }
 }
 
-void handle_rt_update(paxmon_data& data, schedule const& sched,
-                      system_statistics& system_stats,
+void handle_rt_update(paxmon_data& data, capacity_maps const& caps,
+                      schedule const& sched, system_statistics& system_stats,
                       tick_statistics& tick_stats, RtUpdates const* update,
                       int arrival_delay_threshold) {
   tick_stats.rt_updates_ += update->updates()->size();
@@ -116,7 +116,7 @@ void handle_rt_update(paxmon_data& data, schedule const& sched,
         ++system_stats.reroute_updates_;
         ++tick_stats.rt_reroute_updates_;
         auto const ru = reinterpret_cast<RtRerouteUpdate const*>(u->content());
-        update_trip_route(sched, data, ru, updated_interchange_edges,
+        update_trip_route(sched, caps, data, ru, updated_interchange_edges,
                           system_stats);
         break;
       }
