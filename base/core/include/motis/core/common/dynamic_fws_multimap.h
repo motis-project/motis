@@ -411,6 +411,15 @@ struct dynamic_fws_multimap_base {
   size_type element_count() const { return element_count_; }
   [[nodiscard]] bool empty() const { return index_size() == 0; }
 
+  std::size_t allocated_size() const {
+    auto size = index_.allocated_size_ * sizeof(index_type) +
+                data_.allocated_size_ * sizeof(T);
+    for (auto const& v : free_buckets_) {
+      size += v.allocated_size_ * sizeof(index_type);
+    }
+    return size;
+  }
+
   size_type max_entries_per_bucket() const { return MAX_ENTRIES_PER_BUCKET; }
 
   size_type max_entries_per_bucket_log2() const {
