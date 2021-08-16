@@ -267,7 +267,6 @@ void update_trip_route(schedule const& sched, paxmon_data& data,
   if (tdi == INVALID_TRIP_DATA_INDEX) {
     return;
   }
-  auto trip_edges = data.graph_.trip_data_.edges(tdi);
   ++system_stats.update_trip_route_trip_edges_found_;
 
   auto const current_teks = to_trip_ev_keys(tdi, data.graph_);
@@ -281,7 +280,6 @@ void add_passenger_group_to_edge(graph& g, edge* e, passenger_group* pg) {
   auto groups = g.pax_connection_info_.groups_[e->pci_];
   auto it = std::lower_bound(begin(groups), end(groups), pg->id_);
   if (it == end(groups) || *it != pg->id_) {
-    auto const group_count = groups.size();
     groups.insert(it, pg->id_);
   }
 }
