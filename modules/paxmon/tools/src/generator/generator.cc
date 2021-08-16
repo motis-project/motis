@@ -172,19 +172,21 @@ private:
       return true;
     }
     auto cj = to_compact_journey(j, sched_);
-    auto pg = pmd_.graph_.add_group(make_passenger_group(
+    auto pg = pmd_.graph_.passenger_groups_.add(make_passenger_group(
         std::move(cj), data_source{primary_id, secondary_id}, group_size,
         cj.scheduled_arrival_time()));
     add_passenger_group_to_graph(sched_, pmd_, *pg);
     auto const over_capacity =
         std::any_of(begin(pg->edges_), end(pg->edges_), [&](auto const e) {
           return e->has_capacity() &&
-                 get_base_load(e->get_pax_connection_info()) >
+                 get_base_load(
+                     pmd_.graph_.passenger_groups_,
+                     pmd_.graph_.pax_connection_info_.groups_[e->pci_]) >
                      static_cast<std::uint16_t>(e->capacity() * max_load_);
         });
     if (over_capacity) {
-      remove_passenger_group_from_graph(pg);
-      pmd_.graph_.passenger_groups_.pop_back();
+      remove_passenger_group_from_graph(pmd_, pg);
+      pmd_.graph_.passenger_groups_.release(pg->id_);
       ++over_capacity_skipped_;
       return false;
     }

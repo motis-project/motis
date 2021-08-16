@@ -34,17 +34,23 @@ inline edge* add_edge(graph& g, edge&& e) {
   return &g.graph_.push_back_edge(std::move(e));
 }
 
-inline edge make_trip_edge(event_node_index from, event_node_index to,
+inline edge make_trip_edge(graph& g, event_node_index from, event_node_index to,
                            edge_type type, merged_trips_idx merged_trips,
                            std::uint16_t encoded_capacity,
                            service_class clasz) {
-  return edge{from,  to,           type, false, 0, encoded_capacity,
-              clasz, merged_trips, {}};
+  return edge{from,
+              to,
+              type,
+              false,
+              0,
+              encoded_capacity,
+              clasz,
+              merged_trips,
+              g.pax_connection_info_.insert()};
 }
 
 inline edge make_interchange_edge(event_node_index from, event_node_index to,
-                                  duration transfer_time,
-                                  pax_connection_info&& ci) {
+                                  duration transfer_time, pci_index pci) {
   return edge{from,
               to,
               edge_type::INTERCHANGE,
@@ -53,10 +59,11 @@ inline edge make_interchange_edge(event_node_index from, event_node_index to,
               UNLIMITED_ENCODED_CAPACITY,
               service_class::OTHER,
               0,
-              std::move(ci)};
+              pci};
 }
 
-inline edge make_through_edge(event_node_index from, event_node_index to) {
+inline edge make_through_edge(graph& g, event_node_index from,
+                              event_node_index to) {
   return edge{from,
               to,
               edge_type::THROUGH,
@@ -65,11 +72,11 @@ inline edge make_through_edge(event_node_index from, event_node_index to) {
               UNLIMITED_ENCODED_CAPACITY,
               service_class::OTHER,
               0,
-              {}};
+              g.pax_connection_info_.insert()};
 }
 
-void add_passenger_group_to_edge(edge* e, passenger_group* pg);
-void remove_passenger_group_from_edge(edge* e, passenger_group* pg);
+void add_passenger_group_to_edge(graph& g, edge* e, passenger_group* pg);
+void remove_passenger_group_from_edge(graph& g, edge* e, passenger_group* pg);
 
 void for_each_trip(
     schedule const& sched, paxmon_data& data, compact_journey const& journey,

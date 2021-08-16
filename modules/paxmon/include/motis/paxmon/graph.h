@@ -22,7 +22,7 @@
 #include "motis/paxmon/capacity_data.h"
 #include "motis/paxmon/graph_index.h"
 #include "motis/paxmon/passenger_group_container.h"
-#include "motis/paxmon/pax_connection_info.h"
+#include "motis/paxmon/pci_container.h"
 #include "motis/paxmon/trip_data_container.h"
 
 namespace motis::paxmon {
@@ -134,14 +134,6 @@ struct edge {
 
   inline bool is_broken() const { return broken_; }
 
-  inline pax_connection_info const& get_pax_connection_info() const {
-    return pax_connection_info_;
-  }
-
-  inline pax_connection_info& get_pax_connection_info() {
-    return pax_connection_info_;
-  }
-
   event_node_index from_{};
   event_node_index to_{};
   edge_type type_{};
@@ -150,13 +142,14 @@ struct edge {
   std::uint16_t encoded_capacity_{};
   service_class clasz_{service_class::OTHER};
   merged_trips_idx trips_{};
-  struct pax_connection_info pax_connection_info_;
+  pci_index pci_{};
 };
 
 struct graph {
   fws_graph<event_node, edge> graph_;
   trip_data_container trip_data_;
   passenger_group_container passenger_groups_;
+  pci_container pax_connection_info_;
 };
 
 }  // namespace motis::paxmon

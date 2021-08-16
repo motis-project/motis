@@ -34,8 +34,10 @@ graph_statistics calc_graph_statistics(schedule const& sched,
       if (e.is_canceled(data.graph_)) {
         ++stats.canceled_edges_;
       } else if (e.is_trip() && e.has_capacity() &&
-                 get_base_load(data.graph_.passenger_groups_,
-                               e.get_pax_connection_info()) > e.capacity()) {
+                 get_base_load(
+                     data.graph_.passenger_groups_,
+                     data.graph_.pax_connection_info_.groups_[e.pci_]) >
+                     e.capacity()) {
         ++stats.edges_over_capacity_;
         auto const& edge_trips = e.get_trips(sched);
         trips_over_capacity.insert(begin(edge_trips), end(edge_trips));

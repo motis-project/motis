@@ -40,6 +40,7 @@ void print_allocator_stats(graph const& g) {
       static_cast<double>(allocator.bytes_allocated()) / (1024.0 * 1024.0),
       allocator.free_list_size(), allocator.allocation_count(),
       allocator.release_count());
+  LOG(info) << g.pax_connection_info_.size() << " pax connection infos";
 }
 
 }  // namespace motis::paxmon

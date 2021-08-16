@@ -36,12 +36,12 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
     }
     auto const& additional_groups = entry.second;
     auto pdf = get_load_pdf(data.graph_.passenger_groups_,
-                            e->get_pax_connection_info());
+                            data.graph_.pax_connection_info_.groups_[e->pci_]);
     add_additional_groups(pdf, additional_groups);
     auto const cdf = get_cdf(pdf);
     auto const possibly_over_capacity =
         e->has_capacity() && load_factor_possibly_ge(cdf, e->capacity(), 1.0F);
-    auto const expected_pax = get_expected_load(e->get_pax_connection_info());
+    auto const expected_pax = get_expected_load(data.graph_, e->pci_);
 
     std::lock_guard guard{mutex};
     edges.emplace(
@@ -55,7 +55,7 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
   lfc.trips_ = utl::to_vec(trips, [&](auto const trp) {
     return trip_load_info{
         trp,
-        utl::all(data.graph_.trip_data_.at(trp)->edges_)  //
+        utl::all(data.graph_.trip_data_.edges(trp))  //
             | utl::transform(
                   [&](auto const& e) { return e.get(data.graph_); })  //
             | utl::remove_if([](auto const e) { return !e->is_trip(); })  //
@@ -64,13 +64,14 @@ load_forecast calc_load_forecast(schedule const& sched, paxmon_data const& data,
                 if (it != end(edges)) {
                   return it->second;
                 } else {
-                  auto const cdf = get_load_cdf(data.graph_.passenger_groups_,
-                                                e->get_pax_connection_info());
+                  auto const cdf = get_load_cdf(
+                      data.graph_.passenger_groups_,
+                      data.graph_.pax_connection_info_.groups_[e->pci_]);
                   auto const possibly_over_capacity =
                       e->has_capacity() &&
                       load_factor_possibly_ge(cdf, e->capacity(), 1.0F);
                   auto const expected_pax =
-                      get_expected_load(e->get_pax_connection_info());
+                      get_expected_load(data.graph_, e->pci_);
                   return edge_load_info{e, cdf, false, possibly_over_capacity,
                                         expected_pax};
                 }

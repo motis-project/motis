@@ -19,7 +19,7 @@ bool check_graph_integrity(graph const& g, schedule const& sched) {
 
   for (auto const& n : g.graph_.nodes_) {
     for (auto const& e : n.outgoing_edges(g)) {
-      for (auto const pg_id : e.get_pax_connection_info().groups_) {
+      for (auto const pg_id : g.pax_connection_info_.groups_[e.pci_]) {
         auto const* pg = g.passenger_groups_.at(pg_id);
         if (pg->probability_ <= 0.0 || pg->passengers_ >= 200) {
           std::cout << "!! invalid psi @" << e.type() << ": id=" << pg->id_
@@ -67,8 +67,8 @@ bool check_graph_integrity(graph const& g, schedule const& sched) {
     }
     for (auto const& ei : pg->edges_) {
       auto const* e = ei.get(g);
-      auto const& groups = e->get_pax_connection_info().groups_;
-      if (groups.find(pg->id_) == groups.end()) {
+      auto const groups = g.pax_connection_info_.groups_[e->pci_];
+      if (std::find(begin(groups), end(groups), pg->id_) == end(groups)) {
         std::cout << "!! passenger group not on edge: id=" << pg->id_ << " @"
                   << e->type() << "\n";
         ok = false;

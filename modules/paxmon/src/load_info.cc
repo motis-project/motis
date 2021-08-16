@@ -13,13 +13,13 @@ trip_load_info calc_trip_load_info(paxmon_data const& data, trip const* trp) {
           | utl::transform([&](auto const e) { return e.get(data.graph_); })  //
           | utl::remove_if([](auto const* e) { return !e->is_trip(); })  //
           | utl::transform([&](auto const* e) {
-              auto const cdf = get_load_cdf(data.graph_.passenger_groups_,
-                                            e->get_pax_connection_info());
+              auto const cdf = get_load_cdf(
+                  data.graph_.passenger_groups_,
+                  data.graph_.pax_connection_info_.groups_[e->pci_]);
               auto const possibly_over_capacity =
                   e->has_capacity() &&
                   load_factor_possibly_ge(cdf, e->capacity(), 1.0F);
-              auto const expected_pax =
-                  get_expected_load(e->get_pax_connection_info());
+              auto const expected_pax = get_expected_load(data.graph_, e->pci_);
               return edge_load_info{e, cdf, false, possibly_over_capacity,
                                     expected_pax};
             })  //

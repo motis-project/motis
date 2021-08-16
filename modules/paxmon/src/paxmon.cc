@@ -669,7 +669,8 @@ msg_ptr paxmon::find_trips(msg_ptr const& msg) {
         has_paxmon_data &&
         std::any_of(begin(td_edges), end(td_edges), [&](auto const& ei) {
           auto const* e = ei.get(data_.graph_);
-          return e->is_trip() && !e->get_pax_connection_info().groups_.empty();
+          return e->is_trip() &&
+                 !data_.graph_.pax_connection_info_.groups_[e->pci_].empty();
         });
     trips.emplace_back(CreatePaxMonTripInfo(
         mc, to_fbs_trip_service_info(mc, sched, trp, service_infos),
@@ -879,8 +880,9 @@ msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
           e->to(data_.graph_)->current_time() < current_time) {
         continue;
       }
-      auto const& pci = e->get_pax_connection_info();
-      auto const pdf = get_load_pdf(data_.graph_.passenger_groups_, pci);
+      auto const pdf =
+          get_load_pdf(data_.graph_.passenger_groups_,
+                       data_.graph_.pax_connection_info_.groups_[e->pci_]);
       auto const cdf = get_cdf(pdf);
       if (load_factor_possibly_ge(cdf, e->capacity(), load_factor_threshold)) {
         selected_trips.insert(trp);

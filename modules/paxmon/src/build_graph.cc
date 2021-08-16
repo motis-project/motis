@@ -21,15 +21,16 @@ void add_interchange(event_node_index from, event_node_index to,
   for (auto& e : g.graph_.outgoing_edges(from)) {
     if (e.type_ == edge_type::INTERCHANGE && e.to_ == to &&
         e.transfer_time() == transfer_time) {
-      add_passenger_group_to_edge(&e, grp);
+      add_passenger_group_to_edge(g, &e, grp);
       grp->edges_.emplace_back(get_edge_index(g, &e));
       return;
     }
   }
-  auto pci = pax_connection_info{grp->id_};
-  pci.init_expected_load(g.passenger_groups_);
-  auto const* e = add_edge(
-      g, make_interchange_edge(from, to, transfer_time, std::move(pci)));
+  auto pci = g.pax_connection_info_.insert();
+  g.pax_connection_info_.groups_[pci].emplace_back(grp->id_);
+  g.pax_connection_info_.init_expected_load(g.passenger_groups_, pci);
+  auto const* e =
+      add_edge(g, make_interchange_edge(from, to, transfer_time, pci));
   auto const ei = get_edge_index(g, e);
   grp->edges_.emplace_back(ei);
 }
@@ -76,8 +77,8 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
         }
       }
       if (in_trip) {
-        add_passenger_group_to_edge(e, &grp);
         auto* e = ei.get(data.graph_);
+        add_passenger_group_to_edge(data.graph_, e, &grp);
         grp.edges_.emplace_back(ei);
         auto const to = e->to(data.graph_);
         if (to->station_ == leg.exit_station_id_ &&
@@ -92,7 +93,7 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
     if (!enter_found || !exit_found) {
       for (auto const& ei : grp.edges_) {
         auto* e = ei.get(data.graph_);
-        remove_passenger_group_from_edge(e, &grp);
+        remove_passenger_group_from_edge(data.graph_, e, &grp);
       }
       grp.edges_.clear();
 
@@ -130,8 +131,9 @@ void add_passenger_group_to_graph(schedule const& sched, paxmon_data& data,
 void remove_passenger_group_from_graph(paxmon_data& data, passenger_group* pg) {
   for (auto const& ei : pg->edges_) {
     auto* e = ei.get(data.graph_);
-    auto guard = std::lock_guard{e->get_pax_connection_info().mutex_};
-    remove_passenger_group_from_edge(e, pg);
+    auto guard =
+        std::lock_guard{data.graph_.pax_connection_info_.mutex(e->pci_)};
+    remove_passenger_group_from_edge(data.graph_, e, pg);
   }
   pg->edges_.clear();
 }

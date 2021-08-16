@@ -140,10 +140,11 @@ struct rule_trip_adder {
       auto const encoded_capacity = encode_capacity(
           get_capacity(sched_, section.lcon(), data_.trip_capacity_map_,
                        data_.category_capacity_map_));
-      auto const* e = add_edge(
-          data_.graph_, make_trip_edge(dep_node, arr_node, edge_type::TRIP,
-                                       section.lcon().trips_, encoded_capacity,
-                                       section.fcon().clasz_));
+      auto const* e =
+          add_edge(data_.graph_,
+                   make_trip_edge(data_.graph_, dep_node, arr_node,
+                                  edge_type::TRIP, section.lcon().trips_,
+                                  encoded_capacity, section.fcon().clasz_));
       return get_edge_index(data_.graph_, e);
     });
   }
@@ -155,7 +156,7 @@ struct rule_trip_adder {
         wait_edges_, std::make_pair(prev_node, dep_node), [&]() {
           auto const* e = add_edge(
               data_.graph_,
-              make_trip_edge(prev_node, dep_node, edge_type::WAIT,
+              make_trip_edge(data_.graph_, prev_node, dep_node, edge_type::WAIT,
                              section.lcon().trips_, UNLIMITED_ENCODED_CAPACITY,
                              section.fcon().clasz_));
           return get_edge_index(data_.graph_, e);
@@ -276,16 +277,21 @@ void update_trip_route(schedule const& sched, paxmon_data& data,
                 updated_interchange_edges);
 }
 
-void add_passenger_group_to_edge(edge* e, passenger_group* pg) {
-  auto& pci = e->get_pax_connection_info();
-  pci.groups_.emplace(pg->id_);
-  if (is_planned_group(pg)) {
-    pci.expected_load_ += pg->passengers_;
+void add_passenger_group_to_edge(graph& g, edge* e, passenger_group* pg) {
+  auto groups = g.pax_connection_info_.groups_[e->pci_];
+  auto it = std::lower_bound(begin(groups), end(groups), pg->id_);
+  if (it == end(groups) || *it != pg->id_) {
+    auto const group_count = groups.size();
+    groups.insert(it, pg->id_);
   }
 }
 
-void remove_passenger_group_from_edge(edge* e, passenger_group* pg) {
-  e->get_pax_connection_info().groups_.erase(pg->id_);
+void remove_passenger_group_from_edge(graph& g, edge* e, passenger_group* pg) {
+  auto groups = g.pax_connection_info_.groups_[e->pci_];
+  auto it = std::lower_bound(begin(groups), end(groups), pg->id_);
+  if (it != end(groups) && *it == pg->id_) {
+    groups.erase(it);
+  }
 }
 
 void for_each_trip(

@@ -5,7 +5,7 @@
 namespace motis::paxmon {
 
 pax_pdf get_load_pdf_base(passenger_group_container const& pgc,
-                          pax_connection_info const& pci);
+                          pci_groups groups);
 
 void add_additional_groups_base(
     pax_pdf& pdf, std::vector<std::pair<passenger_group const*, float>> const&
@@ -14,7 +14,7 @@ void add_additional_groups_base(
 #ifdef MOTIS_AVX2
 
 pax_pdf get_load_pdf_avx(passenger_group_container const& pgc,
-                         pax_connection_info const& pci);
+                         pci_groups groups);
 
 void add_additional_groups_avx(
     pax_pdf& pdf, std::vector<std::pair<passenger_group const*, float>> const&

@@ -115,7 +115,7 @@ edge* connect_nodes(event_node* from, event_node* to,
   auto const cap = from->type_ == event_type::DEP ? encoded_capacity
                                                   : UNLIMITED_ENCODED_CAPACITY;
   return add_edge(
-      g, make_trip_edge(from->index_, to->index_, type, merged_trips, cap,
+      g, make_trip_edge(g, from->index_, to->index_, type, merged_trips, cap,
                         service_class::OTHER));  // TODO(pablo): service class
 }
 
@@ -152,7 +152,7 @@ std::set<passenger_group*> collect_passenger_groups(graph& g,
   std::set<passenger_group*> affected_passenger_groups;
   for (auto const& tei : g.trip_data_.edges(tdi)) {
     auto* te = tei.get(g);
-    auto& groups = te->get_pax_connection_info().groups_;
+    auto groups = g.pax_connection_info_.groups_[te->pci_];
     for (auto pg_id : groups) {
       auto* pg = g.passenger_groups_[pg_id];
       affected_passenger_groups.insert(pg);
@@ -164,7 +164,7 @@ std::set<passenger_group*> collect_passenger_groups(graph& g,
 }
 
 bool update_passenger_group(trip_data_index const tdi, trip const* trp,
-                            passenger_group* pg, graph const& g) {
+                            passenger_group* pg, graph& g) {
   static constexpr auto const INVALID_INDEX =
       std::numeric_limits<std::size_t>::max();
   for (auto const& leg : pg->compact_planned_journey_.legs_) {
@@ -189,7 +189,7 @@ bool update_passenger_group(trip_data_index const tdi, trip const* trp,
         for (auto idx = enter_index; idx <= exit_index; ++idx) {
           auto const& ei = edges[idx];
           auto* e = ei.get(g);
-          add_passenger_group_to_edge(e, pg);
+          add_passenger_group_to_edge(g, e, pg);
           pg->edges_.emplace_back(ei);
         }
         return true;
