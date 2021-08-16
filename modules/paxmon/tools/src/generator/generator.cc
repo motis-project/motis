@@ -177,11 +177,12 @@ private:
         cj.scheduled_arrival_time()));
     add_passenger_group_to_graph(sched_, pmd_, *pg);
     auto const over_capacity =
-        std::any_of(begin(pg->edges_), end(pg->edges_), [&](auto const e) {
+        std::any_of(begin(pg->edges_), end(pg->edges_), [&](auto const& ei) {
+          auto const* e = ei.get(pmd_.graph_);
           return e->has_capacity() &&
                  get_base_load(
                      pmd_.graph_.passenger_groups_,
-                     pmd_.graph_.pax_connection_info_.groups_[e->pci_]) >
+                     pmd_.graph_.pax_connection_info_.groups(e->pci_)) >
                      static_cast<std::uint16_t>(e->capacity() * max_load_);
         });
     if (over_capacity) {
