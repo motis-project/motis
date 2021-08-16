@@ -14,7 +14,7 @@
 
 namespace motis::paxmon {
 
-template <typename T>
+template <typename Type>
 struct allocator {
   static constexpr auto const INITIAL_BLOCK_SIZE = 10'000;
   static constexpr auto const ADDITIONAL_BLOCK_SIZE = 100'000;
@@ -72,31 +72,31 @@ struct allocator {
     std::uint32_t block_offset_{INVALID_OFFSET};
   };
 
-  static_assert(sizeof(T) >= sizeof(pointer));
+  static_assert(sizeof(Type) >= sizeof(pointer));
   static_assert(std::max(INITIAL_BLOCK_SIZE, ADDITIONAL_BLOCK_SIZE) *
-                    sizeof(T) <=
+                    sizeof(Type) <=
                 std::numeric_limits<std::uint32_t>::max());
 
   template <typename... Args>
-  inline std::pair<pointer, T*> create(Args&&... args) {
+  inline std::pair<pointer, Type*> create(Args&&... args) {
     auto const ptr = alloc();
     auto* mem_ptr = get(ptr);
-    new (mem_ptr) T(std::forward<Args>(args)...);  // NOLINT
+    new (mem_ptr) Type(std::forward<Args>(args)...);  // NOLINT
     return {ptr, mem_ptr};
   }
 
   inline void release(pointer ptr) {
-    get(ptr)->~T();
+    get(ptr)->~Type();
     dealloc(ptr);
   }
 
-  inline T* get(pointer const ptr) const {
-    return reinterpret_cast<T*>(
+  inline Type* get(pointer const ptr) const {
+    return reinterpret_cast<Type*>(
         reinterpret_cast<std::uintptr_t>(blocks_[ptr.block_index_].data()) +
         static_cast<std::uintptr_t>(ptr.block_offset_));
   }
 
-  inline T* get_checked(pointer const ptr) const {
+  inline Type* get_checked(pointer const ptr) const {
     if (!ptr) {
       return nullptr;
     }
@@ -123,7 +123,7 @@ private:
       return free_list_.take(*this);
     }
     if (!next_ptr_ ||
-        end_ptr_.block_offset_ - next_ptr_.block_offset_ < sizeof(T)) {
+        end_ptr_.block_offset_ - next_ptr_.block_offset_ < sizeof(Type)) {
       auto& new_block = blocks_.emplace_back(block{next_block_size()});
       auto const block_index = static_cast<std::uint32_t>(blocks_.size() - 1);
       next_ptr_ = {block_index, 0};
@@ -131,7 +131,7 @@ private:
       bytes_allocated_ += new_block.size();
     }
     auto const ptr = next_ptr_;
-    next_ptr_.block_offset_ += sizeof(T);
+    next_ptr_.block_offset_ += sizeof(Type);
     return ptr;
   }
 
@@ -144,9 +144,9 @@ private:
 
   inline std::size_t next_block_size() {
     if (blocks_.empty()) {
-      return INITIAL_BLOCK_SIZE * sizeof(T);
+      return INITIAL_BLOCK_SIZE * sizeof(Type);
     } else {
-      return ADDITIONAL_BLOCK_SIZE * sizeof(T);
+      return ADDITIONAL_BLOCK_SIZE * sizeof(Type);
     }
   }
 
