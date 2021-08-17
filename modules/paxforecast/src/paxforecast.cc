@@ -29,7 +29,7 @@
 #include "motis/paxmon/debug.h"
 #include "motis/paxmon/messages.h"
 #include "motis/paxmon/monitoring_event.h"
-#include "motis/paxmon/universe.h"
+#include "motis/paxmon/paxmon_data.h"
 
 #include "motis/paxforecast/alternatives.h"
 #include "motis/paxforecast/combined_passenger_group.h"
@@ -241,8 +241,9 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   MOTIS_START_TIMING(total);
   auto const& sched = get_sched();
   tick_stats.system_time_ = sched.system_time_;
-  auto& uv = *get_shared_data<universe*>(motis::paxmon::DATA_KEY);
-  auto& caps = *get_shared_data<capacity_maps*>(motis::paxmon::CAPS_KEY);
+  auto& data = *get_shared_data<paxmon_data*>(motis::paxmon::DATA_KEY);
+  auto& uv = data.multiverse_.primary();
+  auto& caps = data.capacity_maps_;
 
   auto const mon_update = motis_content(PaxMonUpdate, msg);
 

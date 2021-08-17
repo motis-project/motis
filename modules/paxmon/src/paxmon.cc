@@ -135,15 +135,14 @@ void paxmon::import(motis::module::import_dispatcher& reg) {
 void paxmon::init(motis::module::registry& reg) {
   stats_writer_ = std::make_unique<stats_writer>(stats_file_);
 
-  add_shared_data(DATA_KEY, &multiverse_.primary());
-  add_shared_data(CAPS_KEY, &capacity_maps_);
+  add_shared_data(DATA_KEY, &data_);
 
   reg.subscribe("/init", [&]() {
-    if (capacity_maps_.trip_capacity_map_.empty() &&
-        capacity_maps_.category_capacity_map_.empty()) {
+    if (data_.capacity_maps_.trip_capacity_map_.empty() &&
+        data_.capacity_maps_.category_capacity_map_.empty()) {
       LOG(warn) << "no capacity information available";
     }
-    LOG(info) << "tracking " << multiverse_.primary().passenger_groups_.size()
+    LOG(info) << "tracking " << primary_universe().passenger_groups_.size()
               << " passenger groups";
   });
 
@@ -204,8 +203,8 @@ void paxmon::init(motis::module::registry& reg) {
               << "generate_capacities: no output file specified";
           return {};
         }
-        generate_capacities(get_sched(), capacity_maps_, multiverse_.primary(),
-                            generated_capacity_file_);
+        generate_capacities(get_sched(), data_.capacity_maps_,
+                            primary_universe(), generated_capacity_file_);
         return {};
       });
 
@@ -264,7 +263,7 @@ loader::loader_result paxmon::load_journeys(std::string const& file) {
     return {};
   }
   auto const& sched = get_sched();
-  auto& uv = multiverse_.primary();
+  auto& uv = primary_universe();
   auto result = loader::loader_result{};
   if (journey_path.extension() == ".txt") {
     scoped_timer journey_timer{"load motis journeys"};
@@ -316,7 +315,7 @@ msg_ptr initial_reroute_query(schedule const& sched,
 
 void paxmon::load_journeys() {
   auto const& sched = get_sched();
-  auto& uv = multiverse_.primary();
+  auto& uv = primary_universe();
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->status("Load Journeys")
       .out_bounds(10.F, 60.F)
@@ -370,7 +369,7 @@ void paxmon::load_journeys() {
   }
 
   progress_tracker->status("Build Graph").out_bounds(60.F, 100.F);
-  build_graph_from_journeys(sched, capacity_maps_, uv);
+  build_graph_from_journeys(sched, data_.capacity_maps_, uv);
 
   auto const graph_stats = calc_graph_statistics(sched, uv);
   print_graph_stats(graph_stats);
@@ -408,8 +407,8 @@ void paxmon::load_capacity_files() {
       continue;
     }
     auto const entries_loaded = load_capacities(
-        sched, file, capacity_maps_.trip_capacity_map_,
-        capacity_maps_.category_capacity_map_, capacity_match_log_file_);
+        sched, file, data_.capacity_maps_.trip_capacity_map_,
+        data_.capacity_maps_.category_capacity_map_, capacity_match_log_file_);
     total_entries += entries_loaded;
     LOG(info) << fmt::format("loaded {:L} capacity entries from {}",
                              entries_loaded, file);
@@ -423,17 +422,18 @@ void paxmon::load_capacity_files() {
 
 msg_ptr paxmon::rt_update(msg_ptr const& msg) {
   auto const& sched = get_sched();
-  auto& uv = multiverse_.primary();
+  auto& uv = primary_universe();
   auto update = motis_content(RtUpdates, msg);
-  handle_rt_update(uv, capacity_maps_, sched, rt_update_ctx_, system_stats_,
-                   tick_stats_, update, arrival_delay_threshold_);
+  handle_rt_update(uv, data_.capacity_maps_, sched, rt_update_ctx_,
+                   system_stats_, tick_stats_, update,
+                   arrival_delay_threshold_);
   return {};
 }
 
 void paxmon::rt_updates_applied() {
   MOTIS_START_TIMING(total);
   auto const& sched = get_sched();
-  auto& uv = multiverse_.primary();
+  auto& uv = primary_universe();
 
   if (check_graph_times_) {
     utl::verify(check_graph_times(uv, sched),
@@ -469,7 +469,7 @@ void paxmon::rt_updates_applied() {
     LOG(info) << "writing MCFP scenario with " << tick_stats_.broken_groups_
               << " broken groups to " << dir.string();
     fs::create_directories(dir);
-    output::write_scenario(dir, sched, capacity_maps_, uv, messages,
+    output::write_scenario(dir, sched, data_.capacity_maps_, uv, messages,
                            mcfp_scenario_include_trip_info_);
   }
 
@@ -528,7 +528,7 @@ void paxmon::rt_updates_applied() {
 
 msg_ptr paxmon::add_groups(msg_ptr const& msg) {
   auto const& sched = get_sched();
-  auto& uv = multiverse_.primary();
+  auto& uv = primary_universe();
   auto const req = motis_content(PaxMonAddGroupsRequest, msg);
 
   auto const allow_reuse = reuse_groups_;
@@ -555,7 +555,7 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
           }
         }
         auto pg = uv.passenger_groups_.add(std::move(input_pg));
-        add_passenger_group_to_graph(sched, capacity_maps_, uv, *pg);
+        add_passenger_group_to_graph(sched, data_.capacity_maps_, uv, *pg);
         for (auto const& leg : pg->compact_planned_journey_.legs_) {
           rt_update_ctx_.trips_affected_by_last_update_.insert(leg.trip_);
         }
@@ -577,7 +577,7 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
 }
 
 msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
-  auto& uv = multiverse_.primary();
+  auto& uv = primary_universe();
   auto const req = motis_content(PaxMonRemoveGroupsRequest, msg);
 
   for (auto const id : *req->ids()) {
@@ -606,7 +606,7 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
 msg_ptr paxmon::get_trip_load_info(msg_ptr const& msg) {
   utl::verify(msg != nullptr, "null message in paxmon::get_trip_load_info");
   auto const& sched = get_sched();
-  auto& uv = multiverse_.primary();
+  auto& uv = primary_universe();
   message_creator mc;
 
   auto const to_fbs_load_info = [&](TripId const* fbs_tid) {
@@ -637,7 +637,7 @@ msg_ptr paxmon::get_trip_load_info(msg_ptr const& msg) {
 msg_ptr paxmon::find_trips(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFindTripsRequest, msg);
   auto const& sched = get_sched();
-  auto& uv = multiverse_.primary();
+  auto& uv = primary_universe();
 
   message_creator mc;
   std::vector<flatbuffers::Offset<PaxMonTripInfo>> trips;
@@ -711,7 +711,7 @@ msg_ptr paxmon::get_status(msg_ptr const& /*msg*/) const {
 msg_ptr paxmon::get_groups(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGetGroupsRequest, msg);
   auto const& sched = get_sched();
-  auto& uv = multiverse_.primary();
+  auto& uv = primary_universe();
   auto const all_generations = req->all_generations();
   auto const include_localization = req->include_localization();
 
@@ -773,7 +773,7 @@ msg_ptr paxmon::get_groups(msg_ptr const& msg) {
 msg_ptr paxmon::filter_groups(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFilterGroupsRequest, msg);
   auto const& sched = get_sched();
-  auto& uv = multiverse_.primary();
+  auto& uv = primary_universe();
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
   utl::verify(current_time != INVALID_TIME, "invalid current system time");
@@ -867,7 +867,7 @@ msg_ptr paxmon::filter_groups(msg_ptr const& msg) {
 msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFilterTripsRequest, msg);
   auto const& sched = get_sched();
-  auto& uv = multiverse_.primary();
+  auto& uv = primary_universe();
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
   utl::verify(current_time != INVALID_TIME, "invalid current system time");
@@ -909,5 +909,7 @@ msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
                            .Union());
   return make_msg(mc);
 }
+
+universe& paxmon::primary_universe() { return data_.multiverse_.primary(); }
 
 }  // namespace motis::paxmon

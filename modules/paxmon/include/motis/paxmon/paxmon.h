@@ -10,12 +10,12 @@
 
 #include "motis/module/module.h"
 
-#include "motis/paxmon/capacity_maps.h"
 #include "motis/paxmon/loader/loader_result.h"
-#include "motis/paxmon/multiverse.h"
+#include "motis/paxmon/paxmon_data.h"
 #include "motis/paxmon/rt_update_context.h"
 #include "motis/paxmon/statistics.h"
 #include "motis/paxmon/stats_writer.h"
+#include "motis/paxmon/universe.h"
 
 namespace motis::paxmon {
 
@@ -49,6 +49,8 @@ private:
   motis::module::msg_ptr filter_groups(motis::module::msg_ptr const& msg);
   motis::module::msg_ptr filter_trips(motis::module::msg_ptr const& msg);
 
+  universe& primary_universe();
+
   std::vector<std::string> journey_files_;
   std::vector<std::string> capacity_files_;
   std::string generated_capacity_file_;
@@ -74,8 +76,7 @@ private:
   bool keep_group_history_{false};
   bool reuse_groups_{true};
 
-  capacity_maps capacity_maps_;
-  multiverse multiverse_;
+  paxmon_data data_;
   rt_update_context rt_update_ctx_;
   system_statistics system_stats_;
   tick_statistics tick_stats_;
