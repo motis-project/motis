@@ -48,8 +48,11 @@ private:
   motis::module::msg_ptr get_groups(motis::module::msg_ptr const& msg);
   motis::module::msg_ptr filter_groups(motis::module::msg_ptr const& msg);
   motis::module::msg_ptr filter_trips(motis::module::msg_ptr const& msg);
+  motis::module::msg_ptr fork_universe(motis::module::msg_ptr const& msg);
+  motis::module::msg_ptr destroy_universe(motis::module::msg_ptr const& msg);
 
   universe& primary_universe();
+  universe& get_universe(universe_id id);
 
   std::vector<std::string> journey_files_;
   std::vector<std::string> capacity_files_;

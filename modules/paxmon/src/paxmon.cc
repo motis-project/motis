@@ -25,6 +25,7 @@
 #include "motis/paxmon/build_graph.h"
 #include "motis/paxmon/checks.h"
 #include "motis/paxmon/data_key.h"
+#include "motis/paxmon/error.h"
 #include "motis/paxmon/generate_capacities.h"
 #include "motis/paxmon/graph_access.h"
 #include "motis/paxmon/load_info.h"
@@ -246,6 +247,14 @@ void paxmon::init(motis::module::registry& reg) {
   reg.register_op("/paxmon/filter_trips", [&](msg_ptr const& msg) -> msg_ptr {
     return filter_trips(msg);
   });
+
+  reg.register_op("/paxmon/fork_universe", [&](msg_ptr const& msg) -> msg_ptr {
+    return fork_universe(msg);
+  });
+
+  reg.register_op(
+      "/paxmon/destroy_universe",
+      [&](msg_ptr const& msg) -> msg_ptr { return destroy_universe(msg); });
 
   if (!mcfp_scenario_dir_.empty()) {
     if (fs::exists(mcfp_scenario_dir_)) {
@@ -528,8 +537,8 @@ void paxmon::rt_updates_applied() {
 
 msg_ptr paxmon::add_groups(msg_ptr const& msg) {
   auto const& sched = get_sched();
-  auto& uv = primary_universe();
   auto const req = motis_content(PaxMonAddGroupsRequest, msg);
+  auto& uv = get_universe(req->universe());
 
   auto const allow_reuse = reuse_groups_;
   auto reused_groups = 0ULL;
@@ -577,8 +586,8 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
 }
 
 msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
-  auto& uv = primary_universe();
   auto const req = motis_content(PaxMonRemoveGroupsRequest, msg);
+  auto& uv = get_universe(req->universe());
 
   for (auto const id : *req->ids()) {
     auto pg = uv.passenger_groups_.at(id);
@@ -606,38 +615,43 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
 msg_ptr paxmon::get_trip_load_info(msg_ptr const& msg) {
   utl::verify(msg != nullptr, "null message in paxmon::get_trip_load_info");
   auto const& sched = get_sched();
-  auto& uv = primary_universe();
   message_creator mc;
 
-  auto const to_fbs_load_info = [&](TripId const* fbs_tid) {
-    auto const trp = from_fbs(sched, fbs_tid);
-    auto const tli = calc_trip_load_info(uv, trp);
-    return to_fbs(mc, sched, uv, tli);
+  auto const to_fbs_load_info_for_universe = [&](universe const& uv) {
+    return [&](TripId const* fbs_tid) {
+      auto const trp = from_fbs(sched, fbs_tid);
+      auto const tli = calc_trip_load_info(uv, trp);
+      return to_fbs(mc, sched, uv, tli);
+    };
   };
 
   switch (msg->get()->content_type()) {
     case MsgContent_TripId: {
       auto const req = motis_content(TripId, msg);
-      mc.create_and_finish(MsgContent_PaxMonTripLoadInfo,
-                           to_fbs_load_info(req).Union());
+      mc.create_and_finish(
+          MsgContent_PaxMonTripLoadInfo,
+          to_fbs_load_info_for_universe(primary_universe())(req).Union());
       return make_msg(mc);
     }
     case MsgContent_PaxMonGetTripLoadInfosRequest: {
       auto const req = motis_content(PaxMonGetTripLoadInfosRequest, msg);
       mc.create_and_finish(
           MsgContent_PaxMonGetTripLoadInfosResponse,
-          mc.CreateVector(utl::to_vec(*req->trips(), to_fbs_load_info))
+          mc.CreateVector(
+                utl::to_vec(*req->trips(), to_fbs_load_info_for_universe(
+                                               get_universe(req->universe()))))
               .Union());
       return make_msg(mc);
     }
-    default: throw std::system_error(error::unexpected_message_type);
+    default:
+      throw std::system_error(motis::module::error::unexpected_message_type);
   }
 }
 
 msg_ptr paxmon::find_trips(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFindTripsRequest, msg);
   auto const& sched = get_sched();
-  auto& uv = primary_universe();
+  auto& uv = get_universe(req->universe());
 
   message_creator mc;
   std::vector<flatbuffers::Offset<PaxMonTripInfo>> trips;
@@ -711,7 +725,7 @@ msg_ptr paxmon::get_status(msg_ptr const& /*msg*/) const {
 msg_ptr paxmon::get_groups(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGetGroupsRequest, msg);
   auto const& sched = get_sched();
-  auto& uv = primary_universe();
+  auto& uv = get_universe(req->universe());
   auto const all_generations = req->all_generations();
   auto const include_localization = req->include_localization();
 
@@ -773,7 +787,7 @@ msg_ptr paxmon::get_groups(msg_ptr const& msg) {
 msg_ptr paxmon::filter_groups(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFilterGroupsRequest, msg);
   auto const& sched = get_sched();
-  auto& uv = primary_universe();
+  auto& uv = get_universe(req->universe());
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
   utl::verify(current_time != INVALID_TIME, "invalid current system time");
@@ -867,7 +881,7 @@ msg_ptr paxmon::filter_groups(msg_ptr const& msg) {
 msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFilterTripsRequest, msg);
   auto const& sched = get_sched();
-  auto& uv = primary_universe();
+  auto& uv = get_universe(req->universe());
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
   utl::verify(current_time != INVALID_TIME, "invalid current system time");
@@ -910,6 +924,45 @@ msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
   return make_msg(mc);
 }
 
+msg_ptr paxmon::fork_universe(msg_ptr const& msg) {
+  auto const fork = [&](universe const& base) -> msg_ptr {
+    auto& new_uv = data_.multiverse_.fork(base.id_);
+    message_creator mc;
+    mc.create_and_finish(
+        MsgContent_PaxMonForkUniverseResponse,
+        CreatePaxMonForkUniverseResponse(mc, new_uv.id_).Union());
+    return make_msg(mc);
+  };
+
+  switch (msg->get()->content_type()) {
+    case MsgContent_PaxMonForkUniverseRequest: {
+      auto const req = motis_content(PaxMonForkUniverseRequest, msg);
+      return fork(get_universe(req->universe()));
+    }
+    case MsgContent_MotisNoMessage: return fork(primary_universe());
+    default:
+      throw std::system_error{motis::module::error::unexpected_message_type};
+  }
+}
+
+msg_ptr paxmon::destroy_universe(msg_ptr const& msg) {
+  auto const req = motis_content(PaxMonDestroyUniverseRequest, msg);
+  auto& uv = get_universe(req->universe());
+  if (data_.multiverse_.destroy(uv.id_)) {
+    return make_success_msg();
+  } else {
+    throw std::system_error{error::universe_destruction_failed};
+  }
+}
+
 universe& paxmon::primary_universe() { return data_.multiverse_.primary(); }
+
+universe& paxmon::get_universe(universe_id const id) {
+  if (auto uv = data_.multiverse_.try_get(id); uv) {
+    return *uv.value();
+  } else {
+    throw std::system_error{error::universe_not_found};
+  }
+}
 
 }  // namespace motis::paxmon

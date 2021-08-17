@@ -3,6 +3,8 @@ include "paxmon/PaxMonGroup.fbs";
 namespace motis.paxmon;
 
 table PaxMonGetGroupsRequest {
+  universe: uint;
+
   ids: [ulong];
   sources: [PaxMonDataSource];
 

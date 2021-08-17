@@ -1,5 +1,7 @@
 namespace motis.paxmon;
 
 table PaxMonRemoveGroupsRequest {
+  universe: uint;
+
   ids: [ulong];
 }

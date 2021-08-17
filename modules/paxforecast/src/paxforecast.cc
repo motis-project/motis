@@ -112,7 +112,7 @@ void send_remove_groups(std::vector<std::uint64_t>& groups_to_remove,
   remove_groups_mc.create_and_finish(
       MsgContent_PaxMonRemoveGroupsRequest,
       CreatePaxMonRemoveGroupsRequest(
-          remove_groups_mc, remove_groups_mc.CreateVector(groups_to_remove))
+          remove_groups_mc, 0, remove_groups_mc.CreateVector(groups_to_remove))
           .Union(),
       "/paxmon/remove_groups");
   auto const remove_msg = make_msg(remove_groups_mc);
@@ -142,7 +142,7 @@ void update_tracked_groups(
     }
     add_groups_mc.create_and_finish(
         MsgContent_PaxMonAddGroupsRequest,
-        CreatePaxMonAddGroupsRequest(add_groups_mc,
+        CreatePaxMonAddGroupsRequest(add_groups_mc, 0,
                                      add_groups_mc.CreateVector(groups_to_add))
             .Union(),
         "/paxmon/add_groups");
