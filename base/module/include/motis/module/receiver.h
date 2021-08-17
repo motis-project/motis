@@ -2,6 +2,7 @@
 
 #include <system_error>
 
+#include "motis/module/client.h"
 #include "motis/module/message.h"
 
 namespace motis::module {
@@ -16,6 +17,7 @@ struct receiver {
   receiver& operator=(receiver&&) = default;
   virtual ~receiver() = default;
   virtual void on_msg(msg_ptr const&, callback const&) = 0;
+  virtual void on_connect(std::string const& target, client_hdl const&) = 0;
 };
 
 }  // namespace motis::module

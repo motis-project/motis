@@ -45,6 +45,7 @@ struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
   future req(msg_ptr const& msg, ctx_data const& data, ctx::op_id const& id);
 
   void on_msg(msg_ptr const& msg, callback const& cb) override;
+  void on_connect(std::string const& target, client_hdl const&) override;
 
   void dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
                 ctx::op_type_t op_type, ctx_data const* data = nullptr);

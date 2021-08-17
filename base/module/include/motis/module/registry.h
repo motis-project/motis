@@ -6,6 +6,7 @@
 
 #include "ctx/access_t.h"
 
+#include "motis/module/client.h"
 #include "motis/module/message.h"
 #include "motis/module/receiver.h"
 
@@ -26,6 +27,9 @@ struct registry {
   void register_op(std::string const& name, op_fn_t,
                    ctx::access_t access = ctx::access_t::READ);
 
+  void register_client_handler(std::string&& target,
+                               std::function<void(client_hdl)>&&);
+
   void subscribe(std::string const& topic, op_fn_t,
                  ctx::access_t access = ctx::access_t::READ);
 
@@ -45,6 +49,7 @@ struct registry {
 
   std::map<std::string, op> operations_;
   std::map<std::string, std::vector<op>> topic_subscriptions_;
+  std::map<std::string, std::function<void(client_hdl)>> client_handlers_;
 
   std::mutex mutable remote_op_mutex_;
   std::map<std::string, remote_op_fn_t> remote_operations_;
