@@ -159,6 +159,10 @@ struct web_server::impl {
     server_.on_ws_open([this](net::ws_session_ptr const& s,
                               std::string const& target,
                               bool /* ssl */) { on_ws_open(s, target); });
+    server_.on_upgrade_ok([this](net::web_server::http_req_t const& req) {
+      return req.target() == "/" ||
+             receiver_.connect_ok(std::string{req.target()});
+    });
     server_.set_timeout(std::chrono::seconds(120));
     server_.init(host, port, ec);
     log_path_ = log_path;

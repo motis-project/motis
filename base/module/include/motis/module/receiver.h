@@ -18,6 +18,7 @@ struct receiver {
   virtual ~receiver() = default;
   virtual void on_msg(msg_ptr const&, callback const&) = 0;
   virtual void on_connect(std::string const& target, client_hdl const&) = 0;
+  virtual bool connect_ok(std::string const& target) = 0;
 };
 
 }  // namespace motis::module

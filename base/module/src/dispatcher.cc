@@ -36,6 +36,11 @@ void dispatcher::on_connect(std::string const& target, client_hdl const& c) {
   }
 }
 
+bool dispatcher::connect_ok(std::string const& target) {
+  return registry_.client_handlers_.find(target) !=
+         end(registry_.client_handlers_);
+}
+
 std::vector<future> dispatcher::publish(msg_ptr const& msg,
                                         ctx_data const& data, ctx::op_id id) {
   id.name = msg->get()->destination()->target()->str();
