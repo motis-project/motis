@@ -15,23 +15,23 @@ using namespace motis::logging;
 
 namespace motis::paxmon::loader::journeys {
 
-void load_journey(schedule const& sched, paxmon_data& data, journey const& j,
+void load_journey(schedule const& sched, universe& uv, journey const& j,
                   data_source const& source, std::uint16_t passengers,
                   group_source_flags source_flags) {
   auto const planned_arrival_time = unix_to_motistime(
       sched.schedule_begin_, j.stops_.back().arrival_.schedule_timestamp_);
-  data.graph_.add_group(
+  uv.passenger_groups_.add(
       make_passenger_group(to_compact_journey(j, sched), source, passengers,
                            planned_arrival_time, source_flags));
 }
 
-loader_result load_journeys(schedule const& sched, paxmon_data& data,
+loader_result load_journeys(schedule const& sched, universe& uv,
                             std::string const& journey_file) {
   auto result = loader_result{};
 
   auto add_journey = [&](journey const& j, std::uint32_t primary_ref = 0,
                          std::uint32_t secondary_ref = 0) {
-    load_journey(sched, data, j, data_source{primary_ref, secondary_ref}, 1);
+    load_journey(sched, uv, j, data_source{primary_ref, secondary_ref}, 1);
     ++result.loaded_journeys_;
   };
 

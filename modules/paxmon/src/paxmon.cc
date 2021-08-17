@@ -25,6 +25,7 @@
 #include "motis/paxmon/build_graph.h"
 #include "motis/paxmon/checks.h"
 #include "motis/paxmon/data_key.h"
+#include "motis/paxmon/error.h"
 #include "motis/paxmon/generate_capacities.h"
 #include "motis/paxmon/graph_access.h"
 #include "motis/paxmon/load_info.h"
@@ -138,11 +139,11 @@ void paxmon::init(motis::module::registry& reg) {
   add_shared_data(DATA_KEY, &data_);
 
   reg.subscribe("/init", [&]() {
-    if (data_.trip_capacity_map_.empty() &&
-        data_.category_capacity_map_.empty()) {
+    if (data_.capacity_maps_.trip_capacity_map_.empty() &&
+        data_.capacity_maps_.category_capacity_map_.empty()) {
       LOG(warn) << "no capacity information available";
     }
-    LOG(info) << "tracking " << data_.graph_.passenger_groups_.size()
+    LOG(info) << "tracking " << primary_universe().passenger_groups_.size()
               << " passenger groups";
   });
 
@@ -203,7 +204,8 @@ void paxmon::init(motis::module::registry& reg) {
               << "generate_capacities: no output file specified";
           return {};
         }
-        generate_capacities(get_sched(), data_, generated_capacity_file_);
+        generate_capacities(get_sched(), data_.capacity_maps_,
+                            primary_universe(), generated_capacity_file_);
         return {};
       });
 
@@ -246,6 +248,14 @@ void paxmon::init(motis::module::registry& reg) {
     return filter_trips(msg);
   });
 
+  reg.register_op("/paxmon/fork_universe", [&](msg_ptr const& msg) -> msg_ptr {
+    return fork_universe(msg);
+  });
+
+  reg.register_op(
+      "/paxmon/destroy_universe",
+      [&](msg_ptr const& msg) -> msg_ptr { return destroy_universe(msg); });
+
   if (!mcfp_scenario_dir_.empty()) {
     if (fs::exists(mcfp_scenario_dir_)) {
       write_mcfp_scenarios_ = fs::is_directory(mcfp_scenario_dir_);
@@ -262,14 +272,15 @@ loader::loader_result paxmon::load_journeys(std::string const& file) {
     return {};
   }
   auto const& sched = get_sched();
+  auto& uv = primary_universe();
   auto result = loader::loader_result{};
   if (journey_path.extension() == ".txt") {
     scoped_timer journey_timer{"load motis journeys"};
-    result = loader::journeys::load_journeys(sched, data_, file);
+    result = loader::journeys::load_journeys(sched, uv, file);
   } else if (journey_path.extension() == ".csv") {
     scoped_timer journey_timer{"load csv journeys"};
     result = loader::csv::load_journeys(
-        sched, data_, file, journey_match_log_file_, match_tolerance_);
+        sched, uv, file, journey_match_log_file_, match_tolerance_);
   } else {
     LOG(logging::error) << "paxmon: unknown journey file type: " << file;
   }
@@ -313,6 +324,7 @@ msg_ptr initial_reroute_query(schedule const& sched,
 
 void paxmon::load_journeys() {
   auto const& sched = get_sched();
+  auto& uv = primary_universe();
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->status("Load Journeys")
       .out_bounds(10.F, 60.F)
@@ -356,7 +368,7 @@ void paxmon::load_journeys() {
             converter->write_journey(journeys.front(), uj.source_.primary_ref_,
                                      uj.source_.secondary_ref_, uj.passengers_);
           }
-          loader::journeys::load_journey(sched, data_, journeys.front(),
+          loader::journeys::load_journey(sched, uv, journeys.front(),
                                          uj.source_, uj.passengers_,
                                          group_source_flags::MATCH_REROUTED);
         }
@@ -366,26 +378,25 @@ void paxmon::load_journeys() {
   }
 
   progress_tracker->status("Build Graph").out_bounds(60.F, 100.F);
-  build_graph_from_journeys(sched, data_);
+  build_graph_from_journeys(sched, data_.capacity_maps_, uv);
 
-  auto const graph_stats = calc_graph_statistics(sched, data_);
+  auto const graph_stats = calc_graph_statistics(sched, uv);
   print_graph_stats(graph_stats);
-  print_allocator_stats(data_.graph_);
+  print_allocator_stats(uv);
   if (graph_stats.trips_over_capacity_ > 0 &&
       !initial_over_capacity_report_file_.empty()) {
-    write_over_capacity_report(data_, sched,
-                               initial_over_capacity_report_file_);
+    write_over_capacity_report(uv, sched, initial_over_capacity_report_file_);
   }
   if (!initial_broken_report_file_.empty()) {
-    write_broken_interchanges_report(data_, initial_broken_report_file_);
+    write_broken_interchanges_report(uv, initial_broken_report_file_);
   }
 
   if (check_graph_times_) {
-    utl::verify(check_graph_times(data_.graph_, sched),
+    utl::verify(check_graph_times(uv, sched),
                 "load_journeys: check_graph_times");
   }
   if (check_graph_integrity_) {
-    utl::verify(check_graph_integrity(data_.graph_, sched),
+    utl::verify(check_graph_integrity(uv, sched),
                 "load_journeys: check_graph_integrity");
   }
 }
@@ -404,9 +415,9 @@ void paxmon::load_capacity_files() {
       import_successful_ = false;
       continue;
     }
-    auto const entries_loaded =
-        load_capacities(sched, file, data_.trip_capacity_map_,
-                        data_.category_capacity_map_, capacity_match_log_file_);
+    auto const entries_loaded = load_capacities(
+        sched, file, data_.capacity_maps_.trip_capacity_map_,
+        data_.capacity_maps_.category_capacity_map_, capacity_match_log_file_);
     total_entries += entries_loaded;
     LOG(info) << fmt::format("loaded {:L} capacity entries from {}",
                              entries_loaded, file);
@@ -420,8 +431,10 @@ void paxmon::load_capacity_files() {
 
 msg_ptr paxmon::rt_update(msg_ptr const& msg) {
   auto const& sched = get_sched();
+  auto& uv = primary_universe();
   auto update = motis_content(RtUpdates, msg);
-  handle_rt_update(data_, sched, system_stats_, tick_stats_, update,
+  handle_rt_update(uv, data_.capacity_maps_, sched, rt_update_ctx_,
+                   system_stats_, tick_stats_, update,
                    arrival_delay_threshold_);
   return {};
 }
@@ -429,27 +442,28 @@ msg_ptr paxmon::rt_update(msg_ptr const& msg) {
 void paxmon::rt_updates_applied() {
   MOTIS_START_TIMING(total);
   auto const& sched = get_sched();
+  auto& uv = primary_universe();
 
   if (check_graph_times_) {
-    utl::verify(check_graph_times(data_.graph_, sched),
+    utl::verify(check_graph_times(uv, sched),
                 "rt_updates_applied: check_graph_times");
   }
   if (check_graph_integrity_) {
-    utl::verify(check_graph_integrity(data_.graph_, sched),
+    utl::verify(check_graph_integrity(uv, sched),
                 "rt_updates_applied: check_graph_integrity (start)");
   }
 
   LOG(info) << "groups affected by last update: "
-            << data_.groups_affected_by_last_update_.size()
-            << ", total groups: " << data_.graph_.passenger_groups_.size();
-  print_allocator_stats(data_.graph_);
+            << rt_update_ctx_.groups_affected_by_last_update_.size()
+            << ", total groups: " << uv.passenger_groups_.size();
+  print_allocator_stats(uv);
 
-  auto messages =
-      update_affected_groups(data_, sched, system_stats_, tick_stats_,
-                             arrival_delay_threshold_, preparation_time_);
+  auto messages = update_affected_groups(
+      uv, sched, rt_update_ctx_, system_stats_, tick_stats_,
+      arrival_delay_threshold_, preparation_time_);
 
   if (check_graph_integrity_) {
-    utl::verify(check_graph_integrity(data_.graph_, sched),
+    utl::verify(check_graph_integrity(uv, sched),
                 "rt_updates_applied: check_graph_integrity (after "
                 "update_affected_groups)");
   }
@@ -464,7 +478,7 @@ void paxmon::rt_updates_applied() {
     LOG(info) << "writing MCFP scenario with " << tick_stats_.broken_groups_
               << " broken groups to " << dir.string();
     fs::create_directories(dir);
-    output::write_scenario(dir, sched, data_, messages,
+    output::write_scenario(dir, sched, data_.capacity_maps_, uv, messages,
                            mcfp_scenario_include_trip_info_);
   }
 
@@ -483,11 +497,11 @@ void paxmon::rt_updates_applied() {
       system_stats_.groups_major_delay_count_;
 
   LOG(info) << "affected by last rt update: "
-            << data_.groups_affected_by_last_update_.size()
+            << rt_update_ctx_.groups_affected_by_last_update_.size()
             << " passenger groups, "
             << " passengers";
 
-  data_.groups_affected_by_last_update_.clear();
+  rt_update_ctx_.groups_affected_by_last_update_.clear();
   LOG(info) << "passenger groups: " << tick_stats_.ok_groups_ << " ok, "
             << tick_stats_.broken_groups_
             << " broken - passengers affected by broken groups: "
@@ -495,7 +509,7 @@ void paxmon::rt_updates_applied() {
   LOG(info) << "groups: " << system_stats_.groups_ok_count_ << " ok + "
             << system_stats_.groups_broken_count_ << " broken";
 
-  for (auto const& pg : data_.graph_.passenger_groups_) {
+  for (auto const& pg : uv.passenger_groups_) {
     if (pg == nullptr || !pg->valid()) {
       continue;
     }
@@ -516,7 +530,7 @@ void paxmon::rt_updates_applied() {
   tick_stats_ = {};
 
   if (check_graph_integrity_) {
-    utl::verify(check_graph_integrity(data_.graph_, sched),
+    utl::verify(check_graph_integrity(uv, sched),
                 "rt_updates_applied: check_graph_integrity (end)");
   }
 }
@@ -524,6 +538,7 @@ void paxmon::rt_updates_applied() {
 msg_ptr paxmon::add_groups(msg_ptr const& msg) {
   auto const& sched = get_sched();
   auto const req = motis_content(PaxMonAddGroupsRequest, msg);
+  auto& uv = get_universe(req->universe());
 
   auto const allow_reuse = reuse_groups_;
   auto reused_groups = 0ULL;
@@ -533,10 +548,11 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
                     "trying to add empty passenger group");
         auto input_pg = from_fbs(sched, pg_fbs);
         if (allow_reuse) {
-          if (auto it = data_.graph_.groups_by_source_.find(input_pg.source_);
-              it != end(data_.graph_.groups_by_source_)) {
+          if (auto it =
+                  uv.passenger_groups_.groups_by_source_.find(input_pg.source_);
+              it != end(uv.passenger_groups_.groups_by_source_)) {
             for (auto const id : it->second) {
-              auto existing_pg = data_.graph_.passenger_groups_.at(id);
+              auto existing_pg = uv.passenger_groups_.at(id);
               if (existing_pg != nullptr && existing_pg->valid() &&
                   existing_pg->compact_planned_journey_ ==
                       input_pg.compact_planned_journey_) {
@@ -547,15 +563,15 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
             }
           }
         }
-        auto pg = data_.graph_.add_group(std::move(input_pg));
-        add_passenger_group_to_graph(sched, data_, *pg);
+        auto pg = uv.passenger_groups_.add(std::move(input_pg));
+        add_passenger_group_to_graph(sched, data_.capacity_maps_, uv, *pg);
         for (auto const& leg : pg->compact_planned_journey_.legs_) {
-          data_.trips_affected_by_last_update_.insert(leg.trip_);
+          rt_update_ctx_.trips_affected_by_last_update_.insert(leg.trip_);
         }
         return pg;
       });
 
-  print_allocator_stats(data_.graph_);
+  print_allocator_stats(uv);
   LOG(info) << "add_groups: " << added_groups.size() << " total, "
             << reused_groups << " reused";
 
@@ -571,27 +587,26 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
 
 msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonRemoveGroupsRequest, msg);
+  auto& uv = get_universe(req->universe());
 
   for (auto const id : *req->ids()) {
-    auto& pg = data_.graph_.passenger_groups_.at(id);
+    auto pg = uv.passenger_groups_.at(id);
     if (pg == nullptr) {
       continue;
     }
     for (auto const& leg : pg->compact_planned_journey_.legs_) {
-      data_.trips_affected_by_last_update_.insert(leg.trip_);
+      rt_update_ctx_.trips_affected_by_last_update_.insert(leg.trip_);
     }
-    remove_passenger_group_from_graph(pg);
+    remove_passenger_group_from_graph(uv, pg);
     if (!keep_group_history_) {
-      data_.graph_.passenger_group_allocator_.release(pg);
-      pg = nullptr;
+      uv.passenger_groups_.release(pg->id_);
     }
   }
 
-  print_allocator_stats(data_.graph_);
+  print_allocator_stats(uv);
 
   if (check_graph_integrity_) {
-    utl::verify(check_graph_integrity(data_.graph_, get_sched()),
-                "remove_groups (end)");
+    utl::verify(check_graph_integrity(uv, get_sched()), "remove_groups (end)");
   }
 
   return {};
@@ -602,34 +617,41 @@ msg_ptr paxmon::get_trip_load_info(msg_ptr const& msg) {
   auto const& sched = get_sched();
   message_creator mc;
 
-  auto const to_fbs_load_info = [&](TripId const* fbs_tid) {
-    auto const trp = from_fbs(sched, fbs_tid);
-    auto const tli = calc_trip_load_info(data_, trp);
-    return to_fbs(mc, sched, data_.graph_, tli);
+  auto const to_fbs_load_info_for_universe = [&](universe const& uv) {
+    return [&](TripId const* fbs_tid) {
+      auto const trp = from_fbs(sched, fbs_tid);
+      auto const tli = calc_trip_load_info(uv, trp);
+      return to_fbs(mc, sched, uv, tli);
+    };
   };
 
   switch (msg->get()->content_type()) {
     case MsgContent_TripId: {
       auto const req = motis_content(TripId, msg);
-      mc.create_and_finish(MsgContent_PaxMonTripLoadInfo,
-                           to_fbs_load_info(req).Union());
+      mc.create_and_finish(
+          MsgContent_PaxMonTripLoadInfo,
+          to_fbs_load_info_for_universe(primary_universe())(req).Union());
       return make_msg(mc);
     }
     case MsgContent_PaxMonGetTripLoadInfosRequest: {
       auto const req = motis_content(PaxMonGetTripLoadInfosRequest, msg);
       mc.create_and_finish(
           MsgContent_PaxMonGetTripLoadInfosResponse,
-          mc.CreateVector(utl::to_vec(*req->trips(), to_fbs_load_info))
+          mc.CreateVector(
+                utl::to_vec(*req->trips(), to_fbs_load_info_for_universe(
+                                               get_universe(req->universe()))))
               .Union());
       return make_msg(mc);
     }
-    default: throw std::system_error(error::unexpected_message_type);
+    default:
+      throw std::system_error(motis::module::error::unexpected_message_type);
   }
 }
 
 msg_ptr paxmon::find_trips(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFindTripsRequest, msg);
   auto const& sched = get_sched();
+  auto& uv = get_universe(req->universe());
 
   message_creator mc;
   std::vector<flatbuffers::Offset<PaxMonTripInfo>> trips;
@@ -643,8 +665,8 @@ msg_ptr paxmon::find_trips(msg_ptr const& msg) {
     if (trp->edges_->empty()) {
       continue;
     }
-    auto const tde = data_.graph_.trip_data_.find(trp);
-    auto const has_paxmon_data = tde != end(data_.graph_.trip_data_);
+    auto const tdi = uv.trip_data_.find_index(trp);
+    auto const has_paxmon_data = tdi != INVALID_TRIP_DATA_INDEX;
     if (req->only_trips_with_paxmon_data() && !has_paxmon_data) {
       continue;
     }
@@ -658,18 +680,20 @@ msg_ptr paxmon::find_trips(msg_ptr const& msg) {
         continue;
       }
     }
+    auto const td_edges = uv.trip_data_.edges(tdi);
     auto const all_edges_have_capacity_info =
         has_paxmon_data &&
-        std::all_of(
-            begin(tde->second->edges_), end(tde->second->edges_),
-            [](edge const* e) { return !e->is_trip() || e->has_capacity(); });
+        std::all_of(begin(td_edges), end(td_edges), [&](auto const& ei) {
+          auto const* e = ei.get(uv);
+          return !e->is_trip() || e->has_capacity();
+        });
     auto const has_passengers =
         has_paxmon_data &&
-        std::any_of(begin(tde->second->edges_), end(tde->second->edges_),
-                    [](edge const* e) {
-                      return e->is_trip() &&
-                             !e->get_pax_connection_info().groups_.empty();
-                    });
+        std::any_of(begin(td_edges), end(td_edges), [&](auto const& ei) {
+          auto const* e = ei.get(uv);
+          return e->is_trip() &&
+                 !uv.pax_connection_info_.groups_[e->pci_].empty();
+        });
     trips.emplace_back(CreatePaxMonTripInfo(
         mc, to_fbs_trip_service_info(mc, sched, trp, service_infos),
         has_paxmon_data, all_edges_have_capacity_info, has_passengers));
@@ -701,6 +725,7 @@ msg_ptr paxmon::get_status(msg_ptr const& /*msg*/) const {
 msg_ptr paxmon::get_groups(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGetGroupsRequest, msg);
   auto const& sched = get_sched();
+  auto& uv = get_universe(req->universe());
   auto const all_generations = req->all_generations();
   auto const include_localization = req->include_localization();
 
@@ -717,11 +742,10 @@ msg_ptr paxmon::get_groups(msg_ptr const& msg) {
   std::vector<flatbuffers::Offset<PaxMonLocalizationWrapper>> localizations;
 
   auto const add_by_data_source = [&](data_source const& ds) {
-    if (auto const it = data_.graph_.groups_by_source_.find(ds);
-        it != end(data_.graph_.groups_by_source_)) {
+    if (auto const it = uv.passenger_groups_.groups_by_source_.find(ds);
+        it != end(uv.passenger_groups_.groups_by_source_)) {
       for (auto const pgid : it->second) {
-        if (auto const pg = data_.graph_.passenger_groups_.at(pgid);
-            pg != nullptr) {
+        if (auto const pg = uv.passenger_groups_.at(pgid); pg != nullptr) {
           if (!all_generations && !pg->valid()) {
             continue;
           }
@@ -730,7 +754,7 @@ msg_ptr paxmon::get_groups(msg_ptr const& msg) {
             localizations.emplace_back(to_fbs_localization_wrapper(
                 sched, mc,
                 localize(sched,
-                         get_reachability(data_, pg->compact_planned_journey_),
+                         get_reachability(uv, pg->compact_planned_journey_),
                          search_time)));
           }
         }
@@ -739,8 +763,7 @@ msg_ptr paxmon::get_groups(msg_ptr const& msg) {
   };
 
   for (auto const pgid : *req->ids()) {
-    if (auto const pg = data_.graph_.passenger_groups_.at(pgid);
-        pg != nullptr) {
+    if (auto const pg = uv.passenger_groups_.at(pgid); pg != nullptr) {
       if (all_generations) {
         add_by_data_source(pg->source_);
       } else {
@@ -764,6 +787,7 @@ msg_ptr paxmon::get_groups(msg_ptr const& msg) {
 msg_ptr paxmon::filter_groups(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFilterGroupsRequest, msg);
   auto const& sched = get_sched();
+  auto& uv = get_universe(req->universe());
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
   utl::verify(current_time != INVALID_TIME, "invalid current system time");
@@ -790,7 +814,7 @@ msg_ptr paxmon::filter_groups(msg_ptr const& msg) {
   std::vector<passenger_localization> localizations;
   mcd::hash_set<data_source> selected_ds;
 
-  for (auto const pg : data_.graph_.passenger_groups_) {
+  for (auto const pg : uv.passenger_groups_) {
     if (pg == nullptr || (only_active && !pg->valid())) {
       continue;
     }
@@ -808,7 +832,7 @@ msg_ptr paxmon::filter_groups(msg_ptr const& msg) {
     passenger_localization localization;
     if (localization_needed) {
       auto const reachability =
-          get_reachability(data_, pg->compact_planned_journey_);
+          get_reachability(uv, pg->compact_planned_journey_);
       localization = localize(sched, reachability, search_time);
       if (only_with_alternative_potential &&
           localization.at_station_->index_ ==
@@ -857,6 +881,7 @@ msg_ptr paxmon::filter_groups(msg_ptr const& msg) {
 msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFilterTripsRequest, msg);
   auto const& sched = get_sched();
+  auto& uv = get_universe(req->universe());
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
   utl::verify(current_time != INVALID_TIME, "invalid current system time");
@@ -867,20 +892,20 @@ msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
   auto critical_sections = 0ULL;
   mcd::hash_set<trip const*> selected_trips;
 
-  for (auto const& tde : data_.graph_.trip_data_) {
-    for (auto const e : tde.second->edges_) {
+  for (auto const& [trp, tdi] : uv.trip_data_.mapping_) {
+    for (auto const& ei : uv.trip_data_.edges(tdi)) {
+      auto const* e = ei.get(uv);
       if (!e->is_trip() || !e->has_capacity()) {
         continue;
       }
-      if (ignore_past_sections &&
-          e->to(data_.graph_)->current_time() < current_time) {
+      if (ignore_past_sections && e->to(uv)->current_time() < current_time) {
         continue;
       }
-      auto const& pci = e->get_pax_connection_info();
-      auto const pdf = get_load_pdf(pci);
+      auto const pdf = get_load_pdf(uv.passenger_groups_,
+                                    uv.pax_connection_info_.groups_[e->pci_]);
       auto const cdf = get_cdf(pdf);
       if (load_factor_possibly_ge(cdf, e->capacity(), load_factor_threshold)) {
-        selected_trips.insert(tde.first);
+        selected_trips.insert(trp);
         ++critical_sections;
       }
     }
@@ -897,6 +922,47 @@ msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
                            mc.CreateVector(selected_tsis))
                            .Union());
   return make_msg(mc);
+}
+
+msg_ptr paxmon::fork_universe(msg_ptr const& msg) {
+  auto const fork = [&](universe const& base) -> msg_ptr {
+    auto& new_uv = data_.multiverse_.fork(base.id_);
+    message_creator mc;
+    mc.create_and_finish(
+        MsgContent_PaxMonForkUniverseResponse,
+        CreatePaxMonForkUniverseResponse(mc, new_uv.id_).Union());
+    return make_msg(mc);
+  };
+
+  switch (msg->get()->content_type()) {
+    case MsgContent_PaxMonForkUniverseRequest: {
+      auto const req = motis_content(PaxMonForkUniverseRequest, msg);
+      return fork(get_universe(req->universe()));
+    }
+    case MsgContent_MotisNoMessage: return fork(primary_universe());
+    default:
+      throw std::system_error{motis::module::error::unexpected_message_type};
+  }
+}
+
+msg_ptr paxmon::destroy_universe(msg_ptr const& msg) {
+  auto const req = motis_content(PaxMonDestroyUniverseRequest, msg);
+  auto& uv = get_universe(req->universe());
+  if (data_.multiverse_.destroy(uv.id_)) {
+    return make_success_msg();
+  } else {
+    throw std::system_error{error::universe_destruction_failed};
+  }
+}
+
+universe& paxmon::primary_universe() { return data_.multiverse_.primary(); }
+
+universe& paxmon::get_universe(universe_id const id) {
+  if (auto uv = data_.multiverse_.try_get(id); uv) {
+    return *uv.value();
+  } else {
+    throw std::system_error{error::universe_not_found};
+  }
 }
 
 }  // namespace motis::paxmon

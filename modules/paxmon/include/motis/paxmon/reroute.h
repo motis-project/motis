@@ -12,7 +12,8 @@
 
 #include "motis/module/message.h"
 
-#include "motis/paxmon/paxmon_data.h"
+#include "motis/paxmon/capacity_maps.h"
+#include "motis/paxmon/universe.h"
 
 namespace motis::paxmon {
 
@@ -45,16 +46,17 @@ inline std::ostream& operator<<(std::ostream& o, diff_op const op) {
   return o;
 }
 
-std::vector<trip_ev_key> to_trip_ev_keys(trip_data const& td, graph const& g);
+std::vector<trip_ev_key> to_trip_ev_keys(trip_data_index tdi, universe& uv);
 
 std::vector<trip_ev_key> to_trip_ev_keys(
     schedule const& sched,
     flatbuffers::Vector<flatbuffers::Offset<motis::rt::RtEventInfo>> const&
         events);
 
-void apply_reroute(paxmon_data& data, schedule const& sched, trip const* trp,
-                   trip_data& td, std::vector<trip_ev_key> const& old_route,
+void apply_reroute(universe& uv, capacity_maps const& caps,
+                   schedule const& sched, trip const* trp, trip_data_index tdi,
+                   std::vector<trip_ev_key> const& old_route,
                    std::vector<trip_ev_key> const& new_route,
-                   std::vector<edge*>& updated_interchange_edges);
+                   std::vector<edge_index>& updated_interchange_edges);
 
 }  // namespace motis::paxmon

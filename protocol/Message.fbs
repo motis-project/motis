@@ -87,6 +87,9 @@ include "paxmon/PaxMonFilterTripsRequest.fbs";
 include "paxmon/PaxMonFilterTripsResponse.fbs";
 include "paxmon/PaxMonGetTripLoadInfosRequest.fbs";
 include "paxmon/PaxMonGetTripLoadInfosResponse.fbs";
+include "paxmon/PaxMonForkUniverseRequest.fbs";
+include "paxmon/PaxMonForkUniverseResponse.fbs";
+include "paxmon/PaxMonDestroyUniverseRequest.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 
 include "HTTPMessage.fbs";
@@ -244,7 +247,10 @@ union MsgContent {
   motis.paxmon.PaxMonFilterTripsRequest                                   = 109,
   motis.paxmon.PaxMonFilterTripsResponse                                  = 110,
   motis.paxmon.PaxMonGetTripLoadInfosRequest                              = 111,
-  motis.paxmon.PaxMonGetTripLoadInfosResponse                             = 112
+  motis.paxmon.PaxMonGetTripLoadInfosResponse                             = 112,
+  motis.paxmon.PaxMonForkUniverseRequest                                  = 113,
+  motis.paxmon.PaxMonForkUniverseResponse                                 = 114,
+  motis.paxmon.PaxMonDestroyUniverseRequest                               = 115
 }
 
 // Destination Examples:

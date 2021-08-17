@@ -7,9 +7,8 @@
 
 #include "motis/paxforecast/simulation_result.h"
 #include "motis/paxmon/get_load.h"
-#include "motis/paxmon/graph.h"
 #include "motis/paxmon/load_info.h"
-#include "motis/paxmon/paxmon_data.h"
+#include "motis/paxmon/universe.h"
 
 namespace motis::paxforecast {
 
@@ -18,7 +17,7 @@ struct load_forecast {
 };
 
 load_forecast calc_load_forecast(schedule const& sched,
-                                 motis::paxmon::paxmon_data const& data,
+                                 motis::paxmon::universe const& uv,
                                  simulation_result const& sim_result);
 
 }  // namespace motis::paxforecast

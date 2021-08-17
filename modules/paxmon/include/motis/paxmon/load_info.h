@@ -6,8 +6,7 @@
 #include "motis/core/schedule/trip.h"
 
 #include "motis/paxmon/get_load.h"
-#include "motis/paxmon/graph.h"
-#include "motis/paxmon/paxmon_data.h"
+#include "motis/paxmon/universe.h"
 
 namespace motis::paxmon {
 
@@ -24,6 +23,6 @@ struct trip_load_info {
   std::vector<edge_load_info> edges_;
 };
 
-trip_load_info calc_trip_load_info(paxmon_data const& data, trip const* trp);
+trip_load_info calc_trip_load_info(universe const& uv, trip const* trp);
 
 }  // namespace motis::paxmon

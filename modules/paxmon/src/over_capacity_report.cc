@@ -50,31 +50,33 @@ std::string_view capacity_source_str(capacity_source const src) {
   return "???";
 }
 
-void write_over_capacity_report(paxmon_data const& data, schedule const& sched,
+void write_over_capacity_report(universe const& uv, schedule const& sched,
                                 std::string const& filename) {
   std::ofstream out{filename};
   mcd::hash_map<trip const*, std::vector<edge const*>> over_capacity;
-  auto const& g = data.graph_;
 
-  for (auto const& n : g.nodes_) {
-    for (auto const& e : n->outgoing_edges(g)) {
-      if (!e->is_trip() || e->is_canceled(g)) {
+  for (auto const& n : uv.graph_.nodes_) {
+    for (auto const& e : n.outgoing_edges(uv)) {
+      if (!e.is_trip() || e.is_canceled(uv)) {
         continue;
       }
-      auto const passengers = get_base_load(e->get_pax_connection_info());
-      auto const capacity = e->capacity();
-      if (e->has_capacity() && passengers > capacity) {
-        for (auto const& trp : e->get_trips(sched)) {
-          over_capacity[trp].emplace_back(e.get());
+      auto const passengers = get_base_load(
+          uv.passenger_groups_, uv.pax_connection_info_.groups_[e.pci_]);
+      auto const capacity = e.capacity();
+      if (e.has_capacity() && passengers > capacity) {
+        for (auto const& trp : e.get_trips(sched)) {
+          over_capacity[trp].emplace_back(&e);
         }
       }
     }
   }
 
   for (auto& [trp, edges] : over_capacity) {
-    std::sort(begin(edges), end(edges), [&g](edge const* lhs, edge const* rhs) {
-      return lhs->from(g)->schedule_time() < rhs->from(g)->schedule_time();
-    });
+    std::sort(begin(edges), end(edges),
+              [&uv](edge const* lhs, edge const* rhs) {
+                return lhs->from(uv)->schedule_time() <
+                       rhs->from(uv)->schedule_time();
+              });
     auto const& trp_start_station =
         sched.stations_.at(trp->id_.primary_.get_station_id());
     auto const& trp_target_station =
@@ -95,9 +97,10 @@ void write_over_capacity_report(paxmon_data const& data, schedule const& sched,
         trp_target_station->eva_nr_, trp_target_station->name_, "");
 
     for (auto const& e : edges) {
-      auto const& from_station = e->from(g)->get_station(sched);
-      auto const& to_station = e->to(g)->get_station(sched);
-      auto const passengers = get_base_load(e->get_pax_connection_info());
+      auto const& from_station = e->from(uv)->get_station(sched);
+      auto const& to_station = e->to(uv)->get_station(sched);
+      auto const passengers = get_base_load(
+          uv.passenger_groups_, uv.pax_connection_info_.groups_[e->pci_]);
       auto const capacity = e->capacity();
       auto const additional = static_cast<int>(passengers - capacity);
       auto const percentage = static_cast<double>(passengers) /

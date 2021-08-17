@@ -9,7 +9,7 @@
 #include "motis/hash_map.h"
 
 #include "motis/paxforecast/alternatives.h"
-#include "motis/paxmon/graph.h"
+#include "motis/paxmon/universe.h"
 
 namespace motis::paxforecast {
 

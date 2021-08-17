@@ -1,6 +1,8 @@
 namespace motis.paxmon;
 
 table PaxMonFilterGroupsRequest {
+  universe: uint;
+
   only_delayed: bool;
   min_delay: short;
 
