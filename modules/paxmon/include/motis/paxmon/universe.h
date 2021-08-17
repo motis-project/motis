@@ -28,7 +28,7 @@
 namespace motis::paxmon {
 
 struct edge;
-struct graph;
+struct universe;
 
 struct event_node {
   using mutable_outgoing_edge_bucket =
@@ -44,10 +44,10 @@ struct event_node {
   inline bool is_valid() const { return valid_; }
   inline bool is_canceled() const { return !valid_; }
 
-  const_outgoing_edge_bucket outgoing_edges(graph const& g) const;
-  mutable_outgoing_edge_bucket outgoing_edges(graph& g) const;
+  const_outgoing_edge_bucket outgoing_edges(universe const&) const;
+  mutable_outgoing_edge_bucket outgoing_edges(universe&) const;
 
-  const_incoming_edge_bucket incoming_edges(graph const& g) const;
+  const_incoming_edge_bucket incoming_edges(universe const&) const;
 
   inline time current_time() const { return time_; }
   inline time schedule_time() const { return schedule_time_; }
@@ -57,7 +57,7 @@ struct event_node {
     return *sched.stations_[station_idx()];
   }
 
-  inline event_node_index index(graph const&) const { return index_; }
+  inline event_node_index index(universe const&) const { return index_; }
 
   event_node_index index_{};
   time time_{INVALID_TIME};
@@ -80,12 +80,12 @@ inline std::ostream& operator<<(std::ostream& out, edge_type const et) {
 }
 
 struct edge {
-  inline bool is_valid(graph const& g) const {
-    return from(g)->is_valid() && to(g)->is_valid();
+  inline bool is_valid(universe const& u) const {
+    return from(u)->is_valid() && to(u)->is_valid();
   }
 
-  inline bool is_canceled(graph const& g) const {
-    return from(g)->is_canceled() || to(g)->is_canceled();
+  inline bool is_canceled(universe const& u) const {
+    return from(u)->is_canceled() || to(u)->is_canceled();
   }
 
   inline bool is_trip() const { return type() == edge_type::TRIP; }
@@ -96,11 +96,11 @@ struct edge {
 
   inline bool is_wait() const { return type() == edge_type::WAIT; }
 
-  event_node const* from(graph const&) const;
-  event_node* from(graph&) const;
+  event_node const* from(universe const&) const;
+  event_node* from(universe&) const;
 
-  event_node const* to(graph const&) const;
-  event_node* to(graph&) const;
+  event_node const* to(universe const&) const;
+  event_node* to(universe&) const;
 
   inline edge_type type() const { return type_; }
 
@@ -145,7 +145,9 @@ struct edge {
   pci_index pci_{};
 };
 
-struct graph {
+struct universe {
+  passenger_group const* get_passenger_group(passenger_group_index id) const;
+
   fws_graph<event_node, edge> graph_;
   trip_data_container trip_data_;
   passenger_group_container passenger_groups_;

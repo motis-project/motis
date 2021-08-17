@@ -30,8 +30,8 @@ void print_graph_stats(graph_statistics const& graph_stats) {
                            graph_stats.broken_passenger_groups_);
 }
 
-void print_allocator_stats(graph const& g) {
-  auto const& allocator = g.passenger_groups_.allocator_;
+void print_allocator_stats(universe const& uv) {
+  auto const& allocator = uv.passenger_groups_.allocator_;
   LOG(info) << fmt::format(
       "passenger group allocator: {:L} groups, {:.2f} MiB currently allocated, "
       "{:L} free list entries, {:L} total allocations, {:L} total "
@@ -40,7 +40,7 @@ void print_allocator_stats(graph const& g) {
       static_cast<double>(allocator.bytes_allocated()) / (1024.0 * 1024.0),
       allocator.free_list_size(), allocator.allocation_count(),
       allocator.release_count());
-  LOG(info) << g.pax_connection_info_.size() << " pax connection infos";
+  LOG(info) << uv.pax_connection_info_.size() << " pax connection infos";
 }
 
 }  // namespace motis::paxmon

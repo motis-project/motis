@@ -7,7 +7,7 @@
 
 namespace motis::paxmon {
 
-reachability_info get_reachability(paxmon_data const& data,
+reachability_info get_reachability(universe const& uv,
                                    compact_journey const& j) {
   utl::verify(!j.legs_.empty(), "empty journey");
 
@@ -21,15 +21,14 @@ reachability_info get_reachability(paxmon_data const& data,
                         first_leg.enter_time_});
 
   for (auto const& [leg_idx, leg] : utl::enumerate(j.legs_)) {
-    auto const tdi = data.graph_.trip_data_.get_index(leg.trip_);
+    auto const tdi = uv.trip_data_.get_index(leg.trip_);
     auto in_trip = false;
     auto entry_ok = false;
     auto exit_ok = false;
-    for (auto [edge_idx, ei] :
-         utl::enumerate(data.graph_.trip_data_.edges(tdi))) {
-      auto const* e = ei.get(data.graph_);
+    for (auto [edge_idx, ei] : utl::enumerate(uv.trip_data_.edges(tdi))) {
+      auto const* e = ei.get(uv);
       if (!in_trip) {
-        auto const from = e->from(data.graph_);
+        auto const from = e->from(uv);
         if (from->station_idx() == leg.enter_station_id_ &&
             from->schedule_time() == leg.enter_time_) {
           auto required_arrival_time_at_station = from->current_time();
@@ -50,7 +49,7 @@ reachability_info get_reachability(paxmon_data const& data,
         }
       }
       if (in_trip) {
-        auto const to = e->to(data.graph_);
+        auto const to = e->to(uv);
         if (to->schedule_time() > leg.exit_time_) {
           ok = false;
           break;

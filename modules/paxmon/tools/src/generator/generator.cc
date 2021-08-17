@@ -24,9 +24,9 @@
 #include "motis/paxmon/get_load.h"
 #include "motis/paxmon/loader/journeys/to_compact_journey.h"
 #include "motis/paxmon/output/journey_converter.h"
-#include "motis/paxmon/paxmon_data.h"
 #include "motis/paxmon/tools/generator/query_generator.h"
 #include "motis/paxmon/tools/groups/group_generator.h"
+#include "motis/paxmon/universe.h"
 
 using namespace motis;
 using namespace motis::bootstrap;
@@ -78,12 +78,12 @@ struct generator_settings : public conf::configuration {
 
 struct journey_generator {
   journey_generator(motis_instance& instance, capacity_maps const& caps,
-                    paxmon_data& pmd, generator_settings const& generator_opt,
+                    universe& uv, generator_settings const& generator_opt,
                     group_generator& group_gen, bool check_load)
       : instance_{instance},
         sched_{instance_.sched()},
         caps_{caps},
-        pmd_{pmd},
+        uv_{uv},
         query_gen_{sched_},
         group_gen_{group_gen},
         generator_opt_{generator_opt},
@@ -174,22 +174,21 @@ private:
       return true;
     }
     auto cj = to_compact_journey(j, sched_);
-    auto pg = pmd_.graph_.passenger_groups_.add(make_passenger_group(
+    auto pg = uv_.passenger_groups_.add(make_passenger_group(
         std::move(cj), data_source{primary_id, secondary_id}, group_size,
         cj.scheduled_arrival_time()));
-    add_passenger_group_to_graph(sched_, caps_, pmd_, *pg);
+    add_passenger_group_to_graph(sched_, caps_, uv_, *pg);
     auto const over_capacity =
         std::any_of(begin(pg->edges_), end(pg->edges_), [&](auto const& ei) {
-          auto const* e = ei.get(pmd_.graph_);
+          auto const* e = ei.get(uv_);
           return e->has_capacity() &&
-                 get_base_load(
-                     pmd_.graph_.passenger_groups_,
-                     pmd_.graph_.pax_connection_info_.groups(e->pci_)) >
+                 get_base_load(uv_.passenger_groups_,
+                               uv_.pax_connection_info_.groups(e->pci_)) >
                      static_cast<std::uint16_t>(e->capacity() * max_load_);
         });
     if (over_capacity) {
-      remove_passenger_group_from_graph(pmd_, pg);
-      pmd_.graph_.passenger_groups_.release(pg->id_);
+      remove_passenger_group_from_graph(uv_, pg);
+      uv_.passenger_groups_.release(pg->id_);
       ++over_capacity_skipped_;
       return false;
     }
@@ -199,7 +198,7 @@ private:
   motis_instance& instance_;
   schedule const& sched_;
   capacity_maps const& caps_;
-  paxmon_data& pmd_;
+  universe& uv_;
   query_generator query_gen_;
   group_generator& group_gen_;
   generator_settings const& generator_opt_;
@@ -286,13 +285,13 @@ int main(int argc, char const** argv) {
 
   auto const check_load = generator_opt.max_load_ > 0.0;
   auto caps = capacity_maps{};
-  auto pmd = paxmon_data{};
+  auto uv = universe{};
   auto const& sched = instance.sched();
 
   if (check_load) {
     if (generator_opt.generate_capacities_) {
       std::cout << "Generating capacity information..." << std::endl;
-      generate_capacities(sched, caps, pmd, generator_opt.capacity_path_);
+      generate_capacities(sched, caps, uv, generator_opt.capacity_path_);
     }
     if (!fs::exists(generator_opt.capacity_path_)) {
       std::cout << "Capacity file not found: " << generator_opt.capacity_path_
@@ -318,7 +317,7 @@ int main(int argc, char const** argv) {
   group_generator group_gen{
       generator_opt.group_size_mean_, generator_opt.group_size_stddev_,
       generator_opt.group_count_mean_, generator_opt.group_count_stddev_};
-  journey_generator journey_gen{instance,      caps,      pmd,
+  journey_generator journey_gen{instance,      caps,      uv,
                                 generator_opt, group_gen, check_load};
   {
     auto bars = utl::global_progress_bars{};

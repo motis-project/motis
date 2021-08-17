@@ -5,11 +5,11 @@
 #include "motis/core/schedule/schedule.h"
 
 #include "motis/paxmon/capacity_maps.h"
-#include "motis/paxmon/paxmon_data.h"
+#include "motis/paxmon/universe.h"
 
 namespace motis::paxmon {
 
 void generate_capacities(schedule const& sched, capacity_maps const& caps,
-                         paxmon_data const& data, std::string const& filename);
+                         universe const& uv, std::string const& filename);
 
 }  // namespace motis::paxmon

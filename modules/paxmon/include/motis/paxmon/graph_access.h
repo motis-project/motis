@@ -10,35 +10,36 @@
 
 #include "motis/paxmon/capacity_data.h"
 #include "motis/paxmon/capacity_maps.h"
-#include "motis/paxmon/paxmon_data.h"
 #include "motis/paxmon/statistics.h"
+#include "motis/paxmon/universe.h"
 
 namespace motis::paxmon {
 
 trip_data_index get_or_add_trip(schedule const& sched,
-                                capacity_maps const& caps, paxmon_data& data,
+                                capacity_maps const& caps, universe& uv,
                                 trip const* trp);
 
 trip_data_index get_or_add_trip(schedule const& sched,
-                                capacity_maps const& caps, paxmon_data& data,
+                                capacity_maps const& caps, universe& uv,
                                 extern_trip const& et);
 
-void update_event_times(schedule const& sched, graph& g,
+void update_event_times(schedule const& sched, universe& uv,
                         motis::rt::RtDelayUpdate const* du,
                         std::vector<edge_index>& updated_interchange_edges,
                         system_statistics& system_stats);
 
 void update_trip_route(schedule const& sched, capacity_maps const& caps,
-                       paxmon_data& data, motis::rt::RtRerouteUpdate const* ru,
+                       universe& uv, motis::rt::RtRerouteUpdate const* ru,
                        std::vector<edge_index>& updated_interchange_edges,
                        system_statistics& system_stats);
 
-inline edge* add_edge(graph& g, edge&& e) {
-  return &g.graph_.push_back_edge(std::move(e));
+inline edge* add_edge(universe& uv, edge&& e) {
+  return &uv.graph_.push_back_edge(std::move(e));
 }
 
-inline edge make_trip_edge(graph& g, event_node_index from, event_node_index to,
-                           edge_type type, merged_trips_idx merged_trips,
+inline edge make_trip_edge(universe& uv, event_node_index from,
+                           event_node_index to, edge_type type,
+                           merged_trips_idx merged_trips,
                            std::uint16_t encoded_capacity,
                            service_class clasz) {
   return edge{from,
@@ -49,7 +50,7 @@ inline edge make_trip_edge(graph& g, event_node_index from, event_node_index to,
               encoded_capacity,
               clasz,
               merged_trips,
-              g.pax_connection_info_.insert()};
+              uv.pax_connection_info_.insert()};
 }
 
 inline edge make_interchange_edge(event_node_index from, event_node_index to,
@@ -65,7 +66,7 @@ inline edge make_interchange_edge(event_node_index from, event_node_index to,
               pci};
 }
 
-inline edge make_through_edge(graph& g, event_node_index from,
+inline edge make_through_edge(universe& uv, event_node_index from,
                               event_node_index to) {
   return edge{from,
               to,
@@ -75,22 +76,23 @@ inline edge make_through_edge(graph& g, event_node_index from,
               UNLIMITED_ENCODED_CAPACITY,
               service_class::OTHER,
               0,
-              g.pax_connection_info_.insert()};
+              uv.pax_connection_info_.insert()};
 }
 
-void add_passenger_group_to_edge(graph& g, edge* e, passenger_group* pg);
-void remove_passenger_group_from_edge(graph& g, edge* e, passenger_group* pg);
+void add_passenger_group_to_edge(universe& uv, edge* e, passenger_group* pg);
+void remove_passenger_group_from_edge(universe& uv, edge* e,
+                                      passenger_group* pg);
 
 void for_each_trip(
-    schedule const& sched, capacity_maps const& caps, paxmon_data& data,
+    schedule const& sched, capacity_maps const& caps, universe& uv,
     compact_journey const& journey,
     std::function<void(journey_leg const&, trip_data_index)> const& fn);
 
 void for_each_edge(schedule const& sched, capacity_maps const& caps,
-                   paxmon_data& data, compact_journey const& journey,
+                   universe& uv, compact_journey const& journey,
                    std::function<void(journey_leg const&, edge*)> const& fn);
 
-event_node* find_event_node(graph const& g, trip_data_index tdi,
+event_node* find_event_node(universe const& uv, trip_data_index tdi,
                             std::uint32_t station_idx, event_type et,
                             time schedule_time);
 

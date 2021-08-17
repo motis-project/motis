@@ -10,7 +10,7 @@
 #include "motis/core/schedule/trip.h"
 
 #include "motis/paxmon/compact_journey.h"
-#include "motis/paxmon/paxmon_data.h"
+#include "motis/paxmon/universe.h"
 
 namespace motis::paxmon {
 
@@ -67,7 +67,7 @@ struct reachability_info {
   reachability_status status_{reachability_status::OK};
 };
 
-reachability_info get_reachability(paxmon_data const& data,
+reachability_info get_reachability(universe const& uv,
                                    compact_journey const& j);
 
 }  // namespace motis::paxmon

@@ -60,13 +60,13 @@ void print_trip_section(schedule const& sched,
   }
 }
 
-void print_trip_edge(schedule const& sched, graph const& g, edge const* e) {
-  auto const cur_dep_time = e->from(g)->current_time();
-  auto const cur_sched_time = e->from(g)->schedule_time();
-  auto const& from_station = e->from(g)->get_station(sched);
-  auto const cur_arr_time = e->to(g)->current_time();
-  auto const sched_arr_time = e->to(g)->schedule_time();
-  auto const& to_station = e->to(g)->get_station(sched);
+void print_trip_edge(schedule const& sched, universe const& uv, edge const* e) {
+  auto const cur_dep_time = e->from(uv)->current_time();
+  auto const cur_sched_time = e->from(uv)->schedule_time();
+  auto const& from_station = e->from(uv)->get_station(sched);
+  auto const cur_arr_time = e->to(uv)->current_time();
+  auto const sched_arr_time = e->to(uv)->schedule_time();
+  auto const& to_station = e->to(uv)->get_station(sched);
   auto const& merged_trips = sched.merged_trips_.at(e->get_merged_trips_idx());
   fmt::print("  {:7} [{:7}] {:7} {:50} -> {:7} [{:7}] {:7} {:50}",
              format_time(cur_dep_time), format_time(cur_sched_time),
@@ -80,12 +80,12 @@ void print_trip_edge(schedule const& sched, graph const& g, edge const* e) {
   }
 }
 
-void print_trip_sections(graph const& g, schedule const& sched, trip const* trp,
-                         trip_data_index const tdi) {
+void print_trip_sections(universe const& uv, schedule const& sched,
+                         trip const* trp, trip_data_index const tdi) {
   std::cout << "paxmon trip:\n";
   if (tdi != INVALID_TRIP_DATA_INDEX) {
-    for (auto const e : g.trip_data_.edges(tdi)) {
-      print_trip_edge(sched, g, e.get(g));
+    for (auto const e : uv.trip_data_.edges(tdi)) {
+      print_trip_edge(sched, uv, e.get(uv));
     }
   } else {
     std::cout << "  not found\n";

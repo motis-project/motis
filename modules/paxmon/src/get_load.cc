@@ -45,8 +45,8 @@ std::uint16_t get_expected_load(pci_container const& pcis,
   return pcis.expected_load_[idx];
 }
 
-std::uint16_t get_expected_load(graph const& g, pci_index const idx) {
-  return g.pax_connection_info_.expected_load_[idx];
+std::uint16_t get_expected_load(universe const& uv, pci_index const idx) {
+  return uv.pax_connection_info_.expected_load_[idx];
 }
 
 std::uint16_t get_mean_load(passenger_group_container const& pgc,

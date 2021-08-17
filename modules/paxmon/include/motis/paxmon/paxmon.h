@@ -12,7 +12,7 @@
 
 #include "motis/paxmon/capacity_maps.h"
 #include "motis/paxmon/loader/loader_result.h"
-#include "motis/paxmon/paxmon_data.h"
+#include "motis/paxmon/multiverse.h"
 #include "motis/paxmon/rt_update_context.h"
 #include "motis/paxmon/statistics.h"
 #include "motis/paxmon/stats_writer.h"
@@ -75,7 +75,7 @@ private:
   bool reuse_groups_{true};
 
   capacity_maps capacity_maps_;
-  paxmon_data data_;
+  multiverse multiverse_;
   rt_update_context rt_update_ctx_;
   system_statistics system_stats_;
   tick_statistics tick_stats_;

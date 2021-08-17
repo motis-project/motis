@@ -12,7 +12,7 @@
 #include "motis/module/context/motis_parallel_for.h"
 
 #include "motis/paxmon/graph_access.h"
-#include "motis/paxmon/paxmon_data.h"
+#include "motis/paxmon/universe.h"
 
 #include "motis/paxforecast/combined_passenger_group.h"
 #include "motis/paxforecast/simulation_result.h"
@@ -35,7 +35,7 @@ double avg(std::vector<T> const& data) {
 template <typename PassengerBehavior>
 inline simulation_result simulate_behavior(
     schedule const& sched, motis::paxmon::capacity_maps const& caps,
-    motis::paxmon::paxmon_data& data,
+    motis::paxmon::universe& uv,
     std::map<unsigned, std::vector<combined_passenger_group>> const&
         combined_groups,
     std::vector<measures::please_use> const& announcements,
@@ -46,7 +46,7 @@ inline simulation_result simulate_behavior(
       [&](motis::paxmon::passenger_group const& grp, alternative const& alt,
           float const probability) {
         auto const total_probability = grp.probability_ * probability;
-        for_each_edge(sched, caps, data, alt.compact_journey_,
+        for_each_edge(sched, caps, uv, alt.compact_journey_,
                       [&](motis::paxmon::journey_leg const&,
                           motis::paxmon::edge const* e) {
                         if (e->is_trip()) {

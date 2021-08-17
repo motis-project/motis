@@ -3,7 +3,7 @@
 #include "motis/core/schedule/schedule.h"
 
 #include "motis/paxmon/capacity_maps.h"
-#include "motis/paxmon/paxmon_data.h"
+#include "motis/paxmon/universe.h"
 
 namespace motis::paxmon {
 
@@ -12,13 +12,13 @@ struct build_graph_stats {
 };
 
 void add_passenger_group_to_graph(schedule const& sched,
-                                  capacity_maps const& caps, paxmon_data& data,
+                                  capacity_maps const& caps, universe& uv,
                                   passenger_group& grp);
 
-void remove_passenger_group_from_graph(paxmon_data& data, passenger_group* pg);
+void remove_passenger_group_from_graph(universe& uv, passenger_group* pg);
 
 build_graph_stats build_graph_from_journeys(schedule const& sched,
                                             capacity_maps const& caps,
-                                            paxmon_data& data);
+                                            universe& uv);
 
 }  // namespace motis::paxmon

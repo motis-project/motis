@@ -1,17 +1,17 @@
 #include "motis/paxmon/graph_index.h"
 
-#include "motis/paxmon/graph.h"
+#include "motis/paxmon/universe.h"
 
 namespace motis::paxmon {
 
-edge* edge_index::get(graph const& g) const {
-  return &g.graph_.nodes_.at(node_).outgoing_edges(g).at(out_edge_idx_);
+edge* edge_index::get(universe const& uv) const {
+  return &uv.graph_.nodes_.at(node_).outgoing_edges(uv).at(out_edge_idx_);
 }
 
-edge_index get_edge_index(graph const& g, edge const* e) {
+edge_index get_edge_index(universe const& uv, edge const* e) {
   auto const node_idx = e->from_;
   for (auto const& [i, ep] :
-       utl::enumerate(g.graph_.outgoing_edges(node_idx))) {
+       utl::enumerate(uv.graph_.outgoing_edges(node_idx))) {
     if (&ep == e) {
       return edge_index{node_idx, static_cast<std::uint32_t>(i)};
     }

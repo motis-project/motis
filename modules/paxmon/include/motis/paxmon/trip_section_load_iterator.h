@@ -14,20 +14,19 @@
 #include "motis/paxmon/capacity.h"
 #include "motis/paxmon/capacity_maps.h"
 #include "motis/paxmon/get_load.h"
-#include "motis/paxmon/paxmon_data.h"
+#include "motis/paxmon/universe.h"
 
 namespace motis::paxmon {
 
 struct trip_section_with_load {
   trip_section_with_load(schedule const& sched, capacity_maps const& caps,
-                         paxmon_data const& data, trip const* trp,
+                         universe const& uv, trip const* trp,
                          trip_data_index const tdi, int const idx)
-      : graph_{data.graph_},
+      : uv_{uv},
         section_{trp, idx},
-        edge_{
-            tdi == INVALID_TRIP_DATA_INDEX
-                ? nullptr
-                : data.graph_.trip_data_.edges(tdi).at(idx).get(data.graph_)} {
+        edge_{tdi == INVALID_TRIP_DATA_INDEX
+                  ? nullptr
+                  : uv.trip_data_.edges(tdi).at(idx).get(uv)} {
     if (edge_ != nullptr) {
       capacity_ = edge_->capacity();
       capacity_source_ = edge_->get_capacity_source();
@@ -52,22 +51,22 @@ struct trip_section_with_load {
 
   std::uint16_t base_load() const {
     return edge_ != nullptr
-               ? get_base_load(graph_.passenger_groups_,
-                               graph_.pax_connection_info_.groups_[edge_->pci_])
+               ? get_base_load(uv_.passenger_groups_,
+                               uv_.pax_connection_info_.groups_[edge_->pci_])
                : 0;
   }
 
   std::uint16_t mean_load() const {
     return edge_ != nullptr
-               ? get_mean_load(graph_.passenger_groups_,
-                               graph_.pax_connection_info_.groups_[edge_->pci_])
+               ? get_mean_load(uv_.passenger_groups_,
+                               uv_.pax_connection_info_.groups_[edge_->pci_])
                : 0;
   }
 
   pax_pdf load_pdf() const {
     return edge_ != nullptr
-               ? get_load_pdf(graph_.passenger_groups_,
-                              graph_.pax_connection_info_.groups_[edge_->pci_])
+               ? get_load_pdf(uv_.passenger_groups_,
+                              uv_.pax_connection_info_.groups_[edge_->pci_])
                : pax_pdf{};
   }
 
@@ -77,7 +76,7 @@ struct trip_section_with_load {
     return edge_ != nullptr ? get_median_load(load_cdf()) : 0;
   }
 
-  graph const& graph_;
+  universe const& uv_;
   motis::access::trip_section section_;
   edge const* edge_{};
   std::uint16_t capacity_{};
@@ -92,23 +91,23 @@ struct trip_section_load_iterator {
   using reference = value_type;
 
   trip_section_load_iterator(schedule const& sched, capacity_maps const& caps,
-                             paxmon_data const& data, trip const* trp,
+                             universe const& uv, trip const* trp,
                              trip_data_index const tdi, int const idx)
       : sched_{sched},
         caps_{caps},
-        data_{data},
+        uv_{uv},
         trip_{trp},
         tdi_{tdi},
         index_{idx} {}
 
   trip_section_with_load operator*() {
-    return {sched_, caps_, data_, trip_, tdi_, index_};
+    return {sched_, caps_, uv_, trip_, tdi_, index_};
   }
   trip_section_with_load operator->() {
-    return {sched_, caps_, data_, trip_, tdi_, index_};
+    return {sched_, caps_, uv_, trip_, tdi_, index_};
   }
   trip_section_with_load operator[](int rhs) {
-    return {sched_, caps_, data_, trip_, tdi_, index_ + rhs};
+    return {sched_, caps_, uv_, trip_, tdi_, index_ + rhs};
   }
 
   trip_section_load_iterator& operator+=(int rhs) {
@@ -144,22 +143,22 @@ struct trip_section_load_iterator {
   }
 
   trip_section_load_iterator operator+(difference_type rhs) const {
-    return {sched_, caps_, data_, trip_, tdi_, index_ + rhs};
+    return {sched_, caps_, uv_, trip_, tdi_, index_ + rhs};
   }
 
   trip_section_load_iterator operator-(difference_type rhs) const {
-    return {sched_, caps_, data_, trip_, tdi_, index_ + rhs};
+    return {sched_, caps_, uv_, trip_, tdi_, index_ + rhs};
   }
 
   friend trip_section_load_iterator operator+(
       difference_type lhs, trip_section_load_iterator const& rhs) {
-    return {rhs.sched_, rhs.caps_, rhs.data_,
+    return {rhs.sched_, rhs.caps_, rhs.uv_,
             rhs.trip_,  rhs.tdi_,  rhs.index_ + lhs};
   }
 
   friend trip_section_load_iterator operator-(
       difference_type lhs, trip_section_load_iterator const& rhs) {
-    return {rhs.sched_, rhs.caps_, rhs.data_,
+    return {rhs.sched_, rhs.caps_, rhs.uv_,
             rhs.trip_,  rhs.tdi_,  rhs.index_ - lhs};
   }
 
@@ -200,7 +199,7 @@ struct trip_section_load_iterator {
 protected:
   schedule const& sched_;
   capacity_maps const& caps_;
-  paxmon_data const& data_;
+  universe const& uv_;
   trip const* trip_{};
   trip_data_index const tdi_{};
   int index_{};
@@ -210,14 +209,14 @@ struct sections_with_load {
   using iterator = trip_section_load_iterator;
 
   sections_with_load(schedule const& sched, capacity_maps const& caps,
-                     paxmon_data const& data, trip const* trp)
+                     universe const& uv, trip const* trp)
       : sched_{sched},
         caps_{caps},
-        data_{data},
+        uv_{uv},
         trip_{trp},
-        tdi_{data.graph_.trip_data_.find_index(trp)} {
+        tdi_{uv.trip_data_.find_index(trp)} {
     if (tdi_ != INVALID_TRIP_DATA_INDEX) {
-      auto const td_edges = data.graph_.trip_data_.edges(tdi_);
+      auto const td_edges = uv.trip_data_.edges(tdi_);
       utl::verify(trip_->edges_->size() == td_edges.size(),
                   "motis trip edge count ({}) != paxmon trip edge count ({})",
                   trip_->edges_->size(), td_edges.size());
@@ -229,9 +228,9 @@ struct sections_with_load {
 
   inline bool has_load_info() const { return tdi_ != INVALID_TRIP_DATA_INDEX; }
 
-  iterator begin() const { return {sched_, caps_, data_, trip_, tdi_, 0}; }
+  iterator begin() const { return {sched_, caps_, uv_, trip_, tdi_, 0}; }
   iterator end() const {
-    return {sched_, caps_, data_,
+    return {sched_, caps_, uv_,
             trip_,  tdi_,  static_cast<int>(trip_->edges_->size())};
   }
 
@@ -255,7 +254,7 @@ struct sections_with_load {
 
   schedule const& sched_;
   capacity_maps const& caps_;
-  paxmon_data const& data_;
+  universe const& uv_;
   trip const* trip_{};
   trip_data_index const tdi_{};
 };

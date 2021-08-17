@@ -24,14 +24,14 @@ trip_ev_key to_trip_ev_key(event_node* n) {
   return {n->station_, n->schedule_time_, n->type_, n};
 }
 
-std::vector<trip_ev_key> to_trip_ev_keys(trip_data_index tdi, graph& g) {
+std::vector<trip_ev_key> to_trip_ev_keys(trip_data_index tdi, universe& uv) {
   std::vector<trip_ev_key> teks;
-  auto const edges = g.trip_data_.edges(tdi);
+  auto const edges = uv.trip_data_.edges(tdi);
   teks.reserve(edges.size() * 2);
   for (auto const& ei : edges) {
-    auto const* e = ei.get(g);
-    teks.emplace_back(to_trip_ev_key(e->from(g)));
-    teks.emplace_back(to_trip_ev_key(e->to(g)));
+    auto const* e = ei.get(uv);
+    teks.emplace_back(to_trip_ev_key(e->from(uv)));
+    teks.emplace_back(to_trip_ev_key(e->to(uv)));
   }
   return teks;
 }
@@ -85,11 +85,11 @@ start:
 }
 
 edge* get_connecting_edge(event_node const* from, event_node const* to,
-                          graph& g) {
+                          universe& uv) {
   if (from == nullptr || to == nullptr) {
     return nullptr;
   }
-  for (auto& e : from->outgoing_edges(g)) {
+  for (auto& e : from->outgoing_edges(uv)) {
     if (e.to_ == to->index_) {
       return &e;
     }
@@ -99,7 +99,7 @@ edge* get_connecting_edge(event_node const* from, event_node const* to,
 
 edge* connect_nodes(event_node* from, event_node* to,
                     merged_trips_idx merged_trips,
-                    std::uint16_t encoded_capacity, graph& g) {
+                    std::uint16_t encoded_capacity, universe& uv) {
   if (from == nullptr || to == nullptr) {
     return nullptr;
   }
@@ -107,7 +107,7 @@ edge* connect_nodes(event_node* from, event_node* to,
       (from->type_ == event_type::DEP && to->type_ == event_type::ARR) ||
           (from->type_ == event_type::ARR && to->type_ == event_type::DEP),
       "invalid event sequence");
-  if (auto e = get_connecting_edge(from, to, g); e != nullptr) {
+  if (auto e = get_connecting_edge(from, to, uv); e != nullptr) {
     return e;
   }
   auto const type =
@@ -115,15 +115,15 @@ edge* connect_nodes(event_node* from, event_node* to,
   auto const cap = from->type_ == event_type::DEP ? encoded_capacity
                                                   : UNLIMITED_ENCODED_CAPACITY;
   return add_edge(
-      g, make_trip_edge(g, from->index_, to->index_, type, merged_trips, cap,
-                        service_class::OTHER));  // TODO(pablo): service class
+      uv, make_trip_edge(uv, from->index_, to->index_, type, merged_trips, cap,
+                         service_class::OTHER));  // TODO(pablo): service class
 }
 
-event_node* get_or_insert_node(graph& g, trip_data_index const tdi,
+event_node* get_or_insert_node(universe& uv, trip_data_index const tdi,
                                trip_ev_key const tek,
                                std::set<event_node*>& reactivated_nodes) {
-  for (auto const ni : g.trip_data_.canceled_nodes(tdi)) {
-    auto const n = &g.graph_.nodes_[ni];
+  for (auto const ni : uv.trip_data_.canceled_nodes(tdi)) {
+    auto const n = &uv.graph_.nodes_[ni];
     if (n->station_ == tek.station_id_ &&
         n->schedule_time_ == tek.schedule_time_ && n->type_ == tek.type_) {
       n->valid_ = true;
@@ -131,9 +131,9 @@ event_node* get_or_insert_node(graph& g, trip_data_index const tdi,
       return n;
     }
   }
-  return &g.graph_.emplace_back_node(
-      static_cast<event_node_index>(g.graph_.nodes_.size()), tek.schedule_time_,
-      tek.schedule_time_, tek.type_, true, tek.station_id_);
+  return &uv.graph_.emplace_back_node(
+      static_cast<event_node_index>(uv.graph_.nodes_.size()),
+      tek.schedule_time_, tek.schedule_time_, tek.type_, true, tek.station_id_);
 }
 
 std::pair<std::uint16_t, capacity_source> guess_trip_capacity(
@@ -147,14 +147,14 @@ std::pair<std::uint16_t, capacity_source> guess_trip_capacity(
   }
 }
 
-std::set<passenger_group*> collect_passenger_groups(graph& g,
+std::set<passenger_group*> collect_passenger_groups(universe& uv,
                                                     trip_data_index const tdi) {
   std::set<passenger_group*> affected_passenger_groups;
-  for (auto const& tei : g.trip_data_.edges(tdi)) {
-    auto* te = tei.get(g);
-    auto groups = g.pax_connection_info_.groups_[te->pci_];
+  for (auto const& tei : uv.trip_data_.edges(tdi)) {
+    auto* te = tei.get(uv);
+    auto groups = uv.pax_connection_info_.groups_[te->pci_];
     for (auto pg_id : groups) {
-      auto* pg = g.passenger_groups_[pg_id];
+      auto* pg = uv.passenger_groups_[pg_id];
       affected_passenger_groups.insert(pg);
       utl::erase(pg->edges_, tei);
     }
@@ -164,18 +164,18 @@ std::set<passenger_group*> collect_passenger_groups(graph& g,
 }
 
 bool update_passenger_group(trip_data_index const tdi, trip const* trp,
-                            passenger_group* pg, graph& g) {
+                            passenger_group* pg, universe& uv) {
   static constexpr auto const INVALID_INDEX =
       std::numeric_limits<std::size_t>::max();
   for (auto const& leg : pg->compact_planned_journey_.legs_) {
     if (leg.trip_ == trp) {
-      auto const edges = g.trip_data_.edges(tdi);
+      auto const edges = uv.trip_data_.edges(tdi);
       auto enter_index = INVALID_INDEX;
       auto exit_index = INVALID_INDEX;
       for (auto const& [idx, ei] : utl::enumerate(edges)) {
-        auto const e = ei.get(g);
-        auto const from = e->from(g);
-        auto const to = e->to(g);
+        auto const e = ei.get(uv);
+        auto const from = e->from(uv);
+        auto const to = e->to(uv);
         if (from->station_ == leg.enter_station_id_ &&
             from->schedule_time_ == leg.enter_time_) {
           enter_index = idx;
@@ -188,8 +188,8 @@ bool update_passenger_group(trip_data_index const tdi, trip const* trp,
       if (enter_index != INVALID_INDEX && exit_index != INVALID_INDEX) {
         for (auto idx = enter_index; idx <= exit_index; ++idx) {
           auto const& ei = edges[idx];
-          auto* e = ei.get(g);
-          add_passenger_group_to_edge(g, e, pg);
+          auto* e = ei.get(uv);
+          add_passenger_group_to_edge(uv, e, pg);
           pg->edges_.emplace_back(ei);
         }
         return true;
@@ -207,15 +207,15 @@ std::optional<merged_trips_idx> get_merged_trips(trip const* trp) {
   return get_lcon(trp->edges_->front().get_edge(), trp->lcon_idx_).trips_;
 }
 
-void apply_reroute(paxmon_data& data, capacity_maps const& caps, schedule const& sched, trip const* trp,
+void apply_reroute(universe& uv, capacity_maps const& caps,
+                   schedule const& sched, trip const* trp,
                    trip_data_index const tdi,
                    std::vector<trip_ev_key> const& old_route,
                    std::vector<trip_ev_key> const& new_route,
                    std::vector<edge_index>& updated_interchange_edges) {
   auto const encoded_capacity =
       encode_capacity(guess_trip_capacity(sched, caps, trp));
-  auto const affected_passenger_groups =
-      collect_passenger_groups(data.graph_, tdi);
+  auto const affected_passenger_groups = collect_passenger_groups(uv, tdi);
   auto diff = diff_route(old_route, new_route);
 
   std::vector<event_node*> new_nodes;
@@ -237,57 +237,55 @@ void apply_reroute(paxmon_data& data, capacity_maps const& caps, schedule const&
       }
 
       case diff_op::INSERT: {
-        auto new_node =
-            get_or_insert_node(data.graph_, tdi, tek, reactivated_nodes);
+        auto new_node = get_or_insert_node(uv, tdi, tek, reactivated_nodes);
         new_nodes.emplace_back(new_node);
         break;
       }
     }
   }
 
-  auto edges = data.graph_.trip_data_.edges(tdi);
+  auto edges = uv.trip_data_.edges(tdi);
   edges.clear();
   if (!new_nodes.empty()) {
     auto const merged_trips = get_merged_trips(trp).value();
     for (auto const& [from, to] : utl::pairwise(new_nodes)) {
-      auto e =
-          connect_nodes(from, to, merged_trips, encoded_capacity, data.graph_);
+      auto e = connect_nodes(from, to, merged_trips, encoded_capacity, uv);
       if (e->is_trip()) {
-        edges.emplace_back(get_edge_index(data.graph_, e));
+        edges.emplace_back(get_edge_index(uv, e));
       }
     }
   }
-  auto canceled_nodes = data.graph_.trip_data_.canceled_nodes(tdi);
+  auto canceled_nodes = uv.trip_data_.canceled_nodes(tdi);
   for (auto const* n : removed_nodes) {
-    canceled_nodes.emplace_back(n->index(data.graph_));
+    canceled_nodes.emplace_back(n->index(uv));
   }
 
   for (auto pg : affected_passenger_groups) {
-    update_passenger_group(tdi, trp, pg, data.graph_);
+    update_passenger_group(tdi, trp, pg, uv);
   }
 
   for (auto* n : removed_nodes) {
-    for (auto& e : n->outgoing_edges(data.graph_)) {
+    for (auto& e : n->outgoing_edges(uv)) {
       if (e.type_ == edge_type::INTERCHANGE) {
-        updated_interchange_edges.emplace_back(get_edge_index(data.graph_, &e));
+        updated_interchange_edges.emplace_back(get_edge_index(uv, &e));
       }
     }
-    for (auto& e : n->incoming_edges(data.graph_)) {
+    for (auto& e : n->incoming_edges(uv)) {
       if (e.type_ == edge_type::INTERCHANGE) {
-        updated_interchange_edges.emplace_back(get_edge_index(data.graph_, &e));
+        updated_interchange_edges.emplace_back(get_edge_index(uv, &e));
       }
     }
   }
 
   for (auto* n : reactivated_nodes) {
-    for (auto& e : n->outgoing_edges(data.graph_)) {
+    for (auto& e : n->outgoing_edges(uv)) {
       if (e.type_ == edge_type::INTERCHANGE) {
-        updated_interchange_edges.emplace_back(get_edge_index(data.graph_, &e));
+        updated_interchange_edges.emplace_back(get_edge_index(uv, &e));
       }
     }
-    for (auto& e : n->incoming_edges(data.graph_)) {
+    for (auto& e : n->incoming_edges(uv)) {
       if (e.type_ == edge_type::INTERCHANGE) {
-        updated_interchange_edges.emplace_back(get_edge_index(data.graph_, &e));
+        updated_interchange_edges.emplace_back(get_edge_index(uv, &e));
       }
     }
   }

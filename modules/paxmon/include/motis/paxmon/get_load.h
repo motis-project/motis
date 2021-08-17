@@ -6,10 +6,10 @@
 
 #include "cista/reflection/comparable.h"
 
-#include "motis/paxmon/graph.h"
 #include "motis/paxmon/passenger_group.h"
 #include "motis/paxmon/passenger_group_container.h"
 #include "motis/paxmon/pci_container.h"
+#include "motis/paxmon/universe.h"
 
 namespace motis::paxmon {
 
@@ -39,7 +39,7 @@ pax_limits get_pax_limits(passenger_group_container const& pgc,
 std::uint16_t get_base_load(passenger_group_container const& pgc,
                             pci_groups groups);
 std::uint16_t get_expected_load(pci_container const& pcis, pci_index idx);
-std::uint16_t get_expected_load(graph const& g, pci_index idx);
+std::uint16_t get_expected_load(universe const& uv, pci_index idx);
 
 pax_pdf get_load_pdf(passenger_group_container const& pgc, pci_groups groups);
 pax_cdf get_cdf(pax_pdf const& pdf);
