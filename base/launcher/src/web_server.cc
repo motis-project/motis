@@ -72,6 +72,10 @@ struct ws_client : public client,
     if (auto const lock = session_.lock(); lock) {
       lock->on_msg([this, cb = std::move(cb)](std::string const& req_buf,
                                               net::ws_msg_type const type) {
+        if (!cb) {
+          return;
+        }
+
         msg_ptr err;
         int req_id = 0;
 
@@ -100,13 +104,11 @@ struct ws_client : public client,
   void set_on_close_cb(std::function<void()>&& cb) override {
     auto const lock = session_.lock();
     if (lock) {
-      lock->on_close([s = shared_from_this(), cb = std::move(cb)]() { cb(); });
-    }
-  }
-
-  void closed() {
-    if (on_close_) {
-      on_close_();
+      lock->on_close([s = shared_from_this(), cb = std::move(cb)]() {
+        if (cb) {
+          cb();
+        }
+      });
     }
   }
 
@@ -122,7 +124,6 @@ struct ws_client : public client,
   }
 
   boost::asio::io_service& ios_;
-  std::function<void()> on_close_;
   net::ws_session_ptr session_;
   bool binary_;
 };
