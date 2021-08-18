@@ -187,6 +187,7 @@ jobs:
     env:
       DEBIAN_FRONTEND: noninteractive
       BUILDCACHE_COMPRESS: true
+      BUILDCACHE_DIRECT_MODE: true
       BUILDCACHE_ACCURACY: SLOPPY
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
