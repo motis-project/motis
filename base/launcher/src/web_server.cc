@@ -94,7 +94,7 @@ struct ws_client : public client,
         err->get()->mutate_id(req_id);
 
         if (auto const lock = session_.lock(); lock) {
-          lock->send(err->to_json(), type,
+          lock->send(encode_msg(err, type == net::ws_msg_type::BINARY), type,
                      [](boost::system::error_code, std::size_t) {});
         }
       });
