@@ -1,3 +1,4 @@
+import React from "react";
 import { formatDateTime } from "./util/dateFormat";
 
 function TimeControl(props) {
