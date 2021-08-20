@@ -26,6 +26,7 @@ jobs:
       CXX: cl.exe
       CC: cl.exe
       BUILDCACHE_COMPRESS: true
+      BUILDCACHE_DIRECT_MODE: true
       BUILDCACHE_ACCURACY: SLOPPY # not suitable for coverage/debugging
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
