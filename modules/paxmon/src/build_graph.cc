@@ -161,6 +161,11 @@ build_graph_stats build_graph_from_journeys(schedule const& sched,
     }
     progress_tracker->increment();
   }
+
+  for (auto idx = pci_index{0}; idx < uv.pax_connection_info_.size(); ++idx) {
+    uv.pax_connection_info_.init_expected_load(uv.passenger_groups_, idx);
+  }
+
   if (stats.groups_not_added_ != 0) {
     LOG(motis::logging::error)
         << "could not add " << stats.groups_not_added_ << " passenger groups";
