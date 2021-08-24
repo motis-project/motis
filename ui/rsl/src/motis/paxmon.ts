@@ -1,11 +1,11 @@
-import { Station, TripServiceInfo } from "./base";
+import { Station, TripId, TripServiceInfo } from "./base";
 
 export interface PaxMonFindTripsRequest {
   universe?: number;
   train_nr: number;
   only_trips_with_paxmon_data?: boolean;
   filter_class?: boolean;
-  max_class?: boolean;
+  max_class?: number;
 }
 
 export interface PaxMonTripInfo {
@@ -58,6 +58,11 @@ export interface PaxMonTripLoadInfo {
 
 export interface PaxMonFindTripsResponse {
   trips: PaxMonTripInfo[];
+}
+
+export interface PaxMonGetTripLoadInfosRequest {
+  universe?: number;
+  trips: TripId[];
 }
 
 export interface PaxMonGetTripLoadInfosResponse {
