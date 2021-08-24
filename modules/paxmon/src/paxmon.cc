@@ -7,6 +7,7 @@
 
 #include "fmt/format.h"
 
+#include "utl/pipes.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 #include "utl/zip.h"
@@ -14,6 +15,7 @@
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/common/timing.h"
+#include "motis/core/conv/station_conv.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/module/context/motis_call.h"
@@ -226,6 +228,10 @@ void paxmon::init(motis::module::registry& reg) {
 
   reg.register_op("/paxmon/trip_load_info", [&](msg_ptr const& msg) -> msg_ptr {
     return get_trip_load_info(msg);
+  });
+
+  reg.register_op("/paxmon/groups_in_trip", [&](msg_ptr const& msg) -> msg_ptr {
+    return get_groups_in_trip(msg);
   });
 
   reg.register_op("/paxmon/find_trips", [&](msg_ptr const& msg) -> msg_ptr {
@@ -646,6 +652,38 @@ msg_ptr paxmon::get_trip_load_info(msg_ptr const& msg) {
     default:
       throw std::system_error(motis::module::error::unexpected_message_type);
   }
+}
+
+msg_ptr paxmon::get_groups_in_trip(msg_ptr const& msg) {
+  auto const req = motis_content(PaxMonGetGroupsInTripRequest, msg);
+  auto const& sched = get_sched();
+  auto& uv = get_universe(req->universe());
+  auto const trp = from_fbs(sched, req->trip());
+
+  message_creator mc;
+  mc.create_and_finish(
+      MsgContent_PaxMonGetGroupsInTripResponse,
+      CreatePaxMonGetGroupsInTripResponse(
+          mc,
+          mc.CreateVector(
+              utl::all(uv.trip_data_.edges(trp))  //
+              | utl::transform([&](auto const e) { return e.get(uv); })  //
+              | utl::remove_if([](auto const* e) { return !e->is_trip(); })  //
+              | utl::transform([&](auto const* e) {
+                  auto const* from = e->from(uv);
+                  auto const* to = e->to(uv);
+                  return CreateGroupsInTripSection(
+                      mc, to_fbs(mc, from->get_station(sched)),
+                      to_fbs(mc, to->get_station(sched)),
+                      motis_to_unixtime(sched, from->schedule_time()),
+                      motis_to_unixtime(sched, to->schedule_time()),
+                      mc.CreateVector(
+                          utl::to_vec(uv.pax_connection_info_.groups_[e->pci_],
+                                      [](auto const pgi) { return pgi; })));
+                })  //
+              | utl::vec()))
+          .Union());
+  return make_msg(mc);
 }
 
 msg_ptr paxmon::find_trips(msg_ptr const& msg) {

@@ -1,0 +1,15 @@
+include "base/Station.fbs";
+
+namespace motis.paxmon;
+
+table GroupsInTripSection {
+  from: motis.Station;
+  to: motis.Station;
+  departure_schedule_time: ulong;
+  arrival_schedule_time: ulong;
+  groups: [ulong];
+}
+
+table PaxMonGetGroupsInTripResponse {
+  sections: [GroupsInTripSection];
+}

@@ -81,3 +81,20 @@ export interface PaxMonStatusResponse {
   last_update_broken_groups?: number;
   last_update_broken_passengers?: number;
 }
+
+export interface PaxMonGetGroupsInTripRequest {
+  universe?: number;
+  trip: TripId;
+}
+
+export interface GroupsInTripSection {
+  from: Station;
+  to: Station;
+  departure_schedule_time: number;
+  arrival_schedule_time: number;
+  groups: number[];
+}
+
+export interface PaxMonGetGroupsInTripResponse {
+  sections: GroupsInTripSection[];
+}

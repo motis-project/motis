@@ -1,6 +1,8 @@
 import {
   PaxMonFindTripsRequest,
   PaxMonFindTripsResponse,
+  PaxMonGetGroupsInTripRequest,
+  PaxMonGetGroupsInTripResponse,
   PaxMonGetTripLoadInfosRequest,
   PaxMonGetTripLoadInfosResponse,
   PaxMonStatusResponse,
@@ -86,6 +88,16 @@ export interface PaxMonGetTripLoadInfosResponseMessage extends MessageBase {
   content: PaxMonGetTripLoadInfosResponse;
 }
 
+export interface PaxMonGetGroupsInTripRequestMessage extends MessageBase {
+  content_type: "PaxMonGetGroupsInTripRequest";
+  content: PaxMonGetGroupsInTripRequest;
+}
+
+export interface PaxMonGetGroupsInTripResponseMessage extends MessageBase {
+  content_type: "PaxMonGetGroupsInTripResponse";
+  content: PaxMonGetGroupsInTripResponse;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 export interface RISForwardTimeRequestMessage extends MessageBase {
@@ -106,4 +118,6 @@ export type MotisMessage =
   | PaxMonFindTripsResponseMessage
   | PaxMonGetTripLoadInfosRequestMessage
   | PaxMonGetTripLoadInfosResponseMessage
+  | PaxMonGetGroupsInTripRequestMessage
+  | PaxMonGetGroupsInTripResponseMessage
   | RISForwardTimeRequestMessage;
