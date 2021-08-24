@@ -283,7 +283,7 @@ function TripLoadForecastChart({
 
   const expectedPath = (
     <path
-      d={getSvgLinePath(edges, maxVal, (ef) => ef.expected_passengers)}
+      d={getSvgLinePath(edges, maxVal, (ef) => ef.expected_passengers || 0)}
       className="planned"
     />
   );

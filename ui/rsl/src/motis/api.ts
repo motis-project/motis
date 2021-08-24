@@ -32,7 +32,7 @@ const apiEndpoint = getApiEndpoint(getQueryParameters());
 console.log(`apiEndpoint: ${apiEndpoint}`);
 
 function sendRequest(msg: MotisMessage): Promise<Response> {
-  return fetch(apiEndpoint, {
+  return fetch(`${apiEndpoint}?${msg.destination.target}`, {
     method: "POST",
     headers: {
       Accept: "application/json",
