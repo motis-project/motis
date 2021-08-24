@@ -1,10 +1,10 @@
-export default function getQueryParameters() {
-  var params = {};
+export default function getQueryParameters(): Record<string, string> {
+  const params: Record<string, string> = {};
   window.location.search
     .substr(1)
     .split("&")
     .forEach((p) => {
-      var param = p.split("=");
+      const param = p.split("=");
       params[param[0]] = decodeURIComponent(param[1]);
     });
   return params;

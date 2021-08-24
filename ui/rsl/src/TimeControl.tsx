@@ -1,55 +1,41 @@
 import React from "react";
 import { formatDateTime } from "./util/dateFormat";
 
-function TimeControl(props) {
+type TimeControlProps = {
+  systemTime?: number;
+  onForwardTime: (newTime: number) => void;
+  disabled: boolean;
+};
+
+function TimeControl(props: TimeControlProps): JSX.Element {
   const buttonClass = `bg-gray-200 px-2 py-1 border border-gray-300 rounded-xl ${
     props.disabled ? "text-gray-300" : ""
   }`;
+  const systemTime = props.systemTime;
   return (
     <div className="flex flex-row items-center space-x-2 m-2">
-      {props.systemTime ? (
+      {systemTime ? (
         <>
-          <div>System time: {formatDateTime(props.systemTime)}</div>
+          <div>System time: {formatDateTime(systemTime)}</div>
           {[1, 5, 10, 30].map((min) => (
             <button
               key={`${min}m`}
               className={buttonClass}
               disabled={props.disabled}
-              onClick={() => props.onForwardTime(props.systemTime + 60 * min)}
+              onClick={() => props.onForwardTime(systemTime + 60 * min)}
             >
               +{min}m
             </button>
           ))}
           {[
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15,
-            16,
-            17,
-            18,
-            19,
-            20,
-            24,
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+            20, 24,
           ].map((hrs) => (
             <button
               key={`${hrs}h`}
               className={buttonClass}
               disabled={props.disabled}
-              onClick={() =>
-                props.onForwardTime(props.systemTime + 60 * 60 * hrs)
-              }
+              onClick={() => props.onForwardTime(systemTime + 60 * 60 * hrs)}
             >
               +{hrs}h
             </button>

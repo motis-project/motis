@@ -1,4 +1,10 @@
-export function probPaxLE(cdf, limit) {
+import {
+  PaxMonCdfEntry,
+  PaxMonEdgeLoadInfo,
+  PaxMonTripLoadInfo,
+} from "../motis/paxmon";
+
+export function probPaxLE(cdf: PaxMonCdfEntry[], limit: number): number {
   let prob = 0.0;
   for (const e of cdf) {
     if (e.passengers > limit) {
@@ -9,11 +15,11 @@ export function probPaxLE(cdf, limit) {
   return prob;
 }
 
-export function probPaxGT(cdf, limit) {
+export function probPaxGT(cdf: PaxMonCdfEntry[], limit: number): number {
   return Math.min(1.0, Math.max(0.0, 1.0 - probPaxLE(cdf, limit)));
 }
 
-export function paxQuantile(cdf, q) {
+export function paxQuantile(cdf: PaxMonCdfEntry[], q: number): number {
   let last = null;
   for (const e of cdf) {
     if (e.probability === q) {
@@ -30,7 +36,9 @@ export function paxQuantile(cdf, q) {
   throw new Error("invalid cdf");
 }
 
-export function processEdgeForecast(ef) {
+export function processEdgeForecast(
+  ef: PaxMonEdgeLoadInfo
+): PaxMonEdgeLoadInfo {
   if (!ef.capacity) {
     return ef;
   }
@@ -48,8 +56,8 @@ export function processEdgeForecast(ef) {
   return ef;
 }
 
-export function addEdgeStatistics(tripLoadInfo) {
-  if (!tripLoadInfo || !tripLoadInfo.edges) {
+export function addEdgeStatistics(tripLoadInfo: PaxMonTripLoadInfo): void {
+  if (!tripLoadInfo.edges) {
     return;
   }
   tripLoadInfo.edges.forEach((e) => processEdgeForecast(e));

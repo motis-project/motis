@@ -2,26 +2,31 @@ import React, { useState } from "react";
 
 import { sendPaxMonFindTripsRequest } from "./motis/paxMonFindTrips";
 import { formatDateTime } from "./util/dateFormat";
+import { TripId } from "./motis/base";
+import { PaxMonFindTripsResponse, PaxMonTripInfo } from "./motis/paxmon";
 
-function TripView(props) {
+type TripViewProps = {
+  data: PaxMonTripInfo;
+};
+
+function TripView({ data }: TripViewProps) {
   const names = [
     ...new Set(
-      props.data.tsi.service_infos.map((si) =>
+      data.tsi.service_infos.map((si) =>
         si.line ? `${si.name} [${si.train_nr}]` : si.name
       )
     ),
   ];
   return (
     <span>
-      {names.join(", ")} ({props.data.tsi.primary_station.name} (
-      {formatDateTime(props.data.tsi.trip.time)}) –{" "}
-      {props.data.tsi.secondary_station.name} (
-      {formatDateTime(props.data.tsi.trip.target_time)}))
+      {names.join(", ")} ({data.tsi.primary_station.name} (
+      {formatDateTime(data.tsi.trip.time)}) – {data.tsi.secondary_station.name}{" "}
+      ({formatDateTime(data.tsi.trip.target_time)}))
     </span>
   );
 }
 
-function filterTrips(trips) {
+function filterTrips(trips: PaxMonTripInfo[]) {
   return trips.filter((trip) =>
     trip.tsi.service_infos.some(
       (si) => si.clasz === 1 || si.clasz === 2 || si.clasz === 12
@@ -29,19 +34,24 @@ function filterTrips(trips) {
   );
 }
 
-function TripPicker(props) {
-  const [trainNrText, setTrainNrText] = useState("");
-  const [tripList, setTripList] = useState([]);
+type TripPickerProps = {
+  onLoadTripInfo: (trip: TripId) => void;
+};
 
-  function findByTrainNr(e) {
+function TripPicker({ onLoadTripInfo }: TripPickerProps): JSX.Element {
+  const [trainNrText, setTrainNrText] = useState("");
+  const [tripList, setTripList] = useState<PaxMonTripInfo[]>([]);
+
+  function findByTrainNr(e: React.MouseEvent) {
     e.preventDefault();
     const trainNr = parseInt(trainNrText);
     if (trainNr) {
       sendPaxMonFindTripsRequest({ train_nr: trainNr })
         .then((res) => res.json())
-        .then((data) => {
-          console.log(data);
-          setTripList(filterTrips(data.content.trips));
+        .then((msg) => {
+          console.log(msg);
+          const data = msg.content as PaxMonFindTripsResponse;
+          setTripList(filterTrips(data.trips));
         });
     }
   }
@@ -76,7 +86,7 @@ function TripPicker(props) {
         {tripList.map((data, idx) => (
           <li
             key={idx.toString()}
-            onClick={() => props.onLoadTripInfo(data.tsi.trip)}
+            onClick={() => onLoadTripInfo(data.tsi.trip)}
             className="cursor-pointer hover:underline"
           >
             <TripView data={data} />

@@ -1,6 +1,6 @@
 import getQueryParameters from "../util/queryParameters";
 
-function getApiEndpoint(params) {
+function getApiEndpoint(params: Record<string, string>) {
   const defaultProtocol = window.location.protocol;
   const defaultHost = window.location.hostname;
   const defaultPort = "8080";
@@ -27,10 +27,14 @@ function getApiEndpoint(params) {
   return apiEndpoint;
 }
 
-let apiEndpoint = getApiEndpoint(getQueryParameters());
+const apiEndpoint = getApiEndpoint(getQueryParameters());
 console.log(`apiEndpoint: ${apiEndpoint}`);
 
-function sendRequest(target, contentType, content) {
+function sendRequest(
+  target: string,
+  contentType: string,
+  content: any = null
+): Promise<Response> {
   return fetch(apiEndpoint, {
     method: "POST",
     headers: {

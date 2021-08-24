@@ -5,12 +5,17 @@ import {
   formatDateTime,
   formatFileNameTime,
 } from "./util/dateFormat";
+import { PaxMonEdgeLoadInfo, PaxMonTripLoadInfo } from "./motis/paxmon";
 
-function getSvgLinePath(edges, maxVal, prop) {
-  let points = [];
+function getSvgLinePath(
+  edges: PaxMonEdgeLoadInfo[],
+  maxVal: number,
+  getProp: (ef: PaxMonEdgeLoadInfo) => number
+) {
+  const points = [];
   let x = 0;
   for (const ef of edges) {
-    const load = ef[prop] || 0;
+    const load = getProp(ef);
     const y = 200 - Math.round((load / maxVal) * 200);
     points.push(`${x} ${y}`);
     x += 50;
@@ -24,7 +29,7 @@ function getSvgLinePath(edges, maxVal, prop) {
   }
 }
 
-function getYLabels(maxVal) {
+function getYLabels(maxVal: number) {
   const stepSize =
     maxVal >= 20000
       ? 2000
@@ -37,7 +42,7 @@ function getYLabels(maxVal) {
       : maxVal >= 700
       ? 100
       : 50;
-  let labels = [];
+  const labels = [];
   for (let pax = stepSize; pax < maxVal; pax += stepSize) {
     labels.push({
       pax,
@@ -47,7 +52,10 @@ function getYLabels(maxVal) {
   return labels;
 }
 
-function getCurrentTimePosition(edges, currentTime) {
+function getCurrentTimePosition(
+  edges: PaxMonEdgeLoadInfo[],
+  currentTime: number
+) {
   if (currentTime < edges[0].departure_current_time) {
     return -5;
   } else {
@@ -65,28 +73,36 @@ function getCurrentTimePosition(edges, currentTime) {
   return edges.length * 50 + 5;
 }
 
-function getSvgBlob(svgEl) {
+function getSvgBlob(svgEl: SVGSVGElement) {
   const serializer = new XMLSerializer();
   let source = serializer.serializeToString(svgEl);
-  const css = document.getElementById("svgStyle").outerHTML;
-  source = source.replace("<g", css + "<g");
+  const css = document.getElementById("svgStyle")?.outerHTML;
+  if (css) {
+    source = source.replace("<g", css + "<g");
+  }
   return new Blob([source], { type: "image/svg+xml;charset=utf-8" });
 }
 
-function downloadBlob(url, filename) {
+function downloadBlob(url: string, filename: string) {
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   link.click();
 }
 
-function saveAsSVG(svgEl, baseFileName) {
+function saveAsSVG(svgEl: SVGSVGElement | null, baseFileName: string) {
+  if (!svgEl) {
+    return;
+  }
   const svgBlob = getSvgBlob(svgEl);
   const url = URL.createObjectURL(svgBlob);
   downloadBlob(url, baseFileName + ".svg");
 }
 
-function saveAsPNG(svgEl, baseFileName) {
+function saveAsPNG(svgEl: SVGSVGElement | null, baseFileName: string) {
+  if (!svgEl) {
+    return;
+  }
   const svgBlob = getSvgBlob(svgEl);
   const svgUrl = URL.createObjectURL(svgBlob);
   const svgBB = svgEl.getBoundingClientRect();
@@ -94,6 +110,9 @@ function saveAsPNG(svgEl, baseFileName) {
   canvas.width = svgBB.width * 2;
   canvas.height = svgBB.height * 2;
   const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return;
+  }
   const img = new Image();
   img.onload = () => {
     ctx.fillStyle = "white";
@@ -106,8 +125,8 @@ function saveAsPNG(svgEl, baseFileName) {
   img.src = svgUrl;
 }
 
-function getBaseFileName(data, systemTime) {
-  let parts = ["forecast", formatFileNameTime(systemTime)];
+function getBaseFileName(data: PaxMonTripLoadInfo, systemTime: number) {
+  const parts = ["forecast", formatFileNameTime(systemTime)];
   for (const si of data.tsi.service_infos) {
     if (si.line) {
       parts.push(`${si.train_nr}-${si.category}-${si.line}`);
@@ -118,13 +137,19 @@ function getBaseFileName(data, systemTime) {
   return parts.join("_");
 }
 
-function TripLoadForecastChart(props) {
-  const svgEl = useRef(null);
+type TripLoadForecastChartProps = {
+  data: PaxMonTripLoadInfo | null;
+  systemTime: number | undefined;
+};
 
-  const data = props.data;
+function TripLoadForecastChart({
+  data,
+  systemTime,
+}: TripLoadForecastChartProps): JSX.Element | null {
+  const svgEl = useRef<SVGSVGElement>(null);
+
   const edges = data?.edges;
-  const systemTime = props.systemTime;
-  if (!edges || !systemTime) {
+  if (!data || !edges || !systemTime) {
     return null;
   }
 
@@ -135,7 +160,7 @@ function TripLoadForecastChart(props) {
 
   const graphWidth = edges.length * 50;
 
-  const maxPax = edges.reduce((max, ef) => Math.max(max, ef.max_pax), 0);
+  const maxPax = edges.reduce((max, ef) => Math.max(max, ef.max_pax || 0), 0);
   const maxCapacity = edges.reduce(
     (max, ef) => (ef.capacity ? Math.max(max, ef.capacity) : max),
     0
@@ -201,7 +226,7 @@ function TripLoadForecastChart(props) {
   ));
 
   const overCapProbs = edges.map((e, idx) => {
-    let classes = ["over-cap-prob"];
+    const classes = ["over-cap-prob"];
     let text = "";
     if (e.p_load_gt_100 !== undefined) {
       text = `${(e.p_load_gt_100 * 100).toFixed(0)}%`;
@@ -235,12 +260,12 @@ function TripLoadForecastChart(props) {
 
   const baseFileName = getBaseFileName(data, systemTime);
 
-  let spreadTopPoints = [];
-  let spreadBottomPoints = [];
+  const spreadTopPoints = [];
+  const spreadBottomPoints = [];
   let x = 0;
   for (const ef of edges) {
-    const topLoad = ef.q_95;
-    const bottomLoad = ef.q_5;
+    const topLoad = ef.q_95 || 0;
+    const bottomLoad = ef.q_5 || 0;
     const topY = 200 - Math.round((topLoad / maxVal) * 200);
     const bottomY = 200 - Math.round((bottomLoad / maxVal) * 200);
     spreadTopPoints.push(`${x} ${topY}`);
@@ -258,13 +283,16 @@ function TripLoadForecastChart(props) {
 
   const expectedPath = (
     <path
-      d={getSvgLinePath(edges, maxVal, "expected_passengers")}
+      d={getSvgLinePath(edges, maxVal, (ef) => ef.expected_passengers)}
       className="planned"
     />
   );
 
   const medianPath = (
-    <path d={getSvgLinePath(edges, maxVal, "q_50")} className="median" />
+    <path
+      d={getSvgLinePath(edges, maxVal, (ef) => ef.q_50 || 0)}
+      className="median"
+    />
   );
 
   const yLabels = getYLabels(maxVal).map((label) => (
@@ -279,9 +307,9 @@ function TripLoadForecastChart(props) {
     </text>
   ));
 
-  let stationNameLabels = [];
-  let scheduleTimeLabels = [];
-  let currentTimeLabels = [];
+  const stationNameLabels = [];
+  const scheduleTimeLabels = [];
+  const currentTimeLabels = [];
   const stops = [edges[0].from].concat(edges.map((ef) => ef.to));
   for (const [idx, station] of stops.entries()) {
     const x = idx * 50;
@@ -311,11 +339,11 @@ function TripLoadForecastChart(props) {
         key={idx}
       >
         {station.name}
-        <title>{station.eva}</title>
+        <title>{station.id}</title>
       </text>
     );
 
-    if (arrivalScheduleTime) {
+    if (arrivalScheduleTime && arrivalCurrentTime) {
       if (arrivalScheduleTime !== arrivalCurrentTime) {
         scheduleTimeLabels.push(
           <text
@@ -341,7 +369,7 @@ function TripLoadForecastChart(props) {
         </text>
       );
     }
-    if (departureScheduleTime) {
+    if (departureScheduleTime && departureCurrentTime) {
       if (departureScheduleTime !== departureCurrentTime) {
         scheduleTimeLabels.push(
           <text
