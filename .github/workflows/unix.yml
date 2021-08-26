@@ -211,6 +211,7 @@ jobs:
             tests: On
             strip: /opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/bin/strip
             toolchain: x86_64-multilib-linux-musl
+            install: ninja-build qemu-user-static
           - key: linux-arm-musl
             os: ubuntu-20.04
             cxx: /opt/arm-unknown-linux-musleabi/bin/arm-unknown-linux-musleabi-g++
@@ -226,10 +227,10 @@ jobs:
             avx2: On
             webui: On
             tests: On
-            toolchain: arm-unknown-linux-musleabi
-            emulator: qemu-arm-static
             strip: /opt/arm-unknown-linux-musleabi/arm-unknown-linux-musleabi/bin/strip
+            toolchain: arm-unknown-linux-musleabi
             install: ninja-build qemu-user-static
+            emulator: qemu-arm-static
     env:
       DEBIAN_FRONTEND: noninteractive
       BUILDCACHE_COMPRESS: true
