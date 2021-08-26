@@ -74,6 +74,7 @@ jobs:
             webui: On
             tests: On
             strip: strip
+            install: ninja-build
           - name: linux-amd64-noavx
             cxx: g++-10
             cc: gcc-10
@@ -85,6 +86,7 @@ jobs:
             webui: On
             tests: On
             strip: strip
+            install: ninja-build
           - name: linux-x86
             cxx: g++-10
             cc: gcc-10
@@ -102,6 +104,7 @@ jobs:
             webui: On
             tests: On
             strip: strip
+            install: ninja-build g++-10-multilib gcc-10-multilib linux-libc-dev:i386
           - name: linux-arm64
             cxx: aarch64-linux-gnu-g++-10
             cc: aarch64-linux-gnu-gcc-10
@@ -120,6 +123,7 @@ jobs:
             tests: On
             emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
             strip: aarch64-linux-gnu-strip
+            install: ninja-build qemu-user-static binfmt-support g++-10-aarch64-linux-gnu gcc-10-aarch64-linux-gnu binutils-aarch64-linux-gnu
           - name: linux-arm
             cxx: arm-linux-gnueabihf-g++-10
             cc: arm-linux-gnueabihf-gcc-10
@@ -140,6 +144,7 @@ jobs:
             tests: On
             emulator: qemu-arm-static -L /usr/arm-linux-gnueabihf
             strip: arm-linux-gnueabihf-strip
+            install: ninja-build qemu-user-static binfmt-support g++-10-arm-linux-gnueabihf gcc-10-arm-linux-gnueabihf binutils-arm-linux-gnueabi
           - name: linux-amd64-debug
             cxx: g++-10
             cc: gcc-10
@@ -149,6 +154,7 @@ jobs:
             avx2: On
             webui: Off
             tests: On
+            install: ninja-build valgrind
           - name: linux-amd64-clang
             cxx: clang++-12
             cc: clang-12
@@ -160,6 +166,8 @@ jobs:
             avx2: On
             webui: Off
             tests: On
+            emulator: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full
+            install: ninja-build
           - name: linux-clang-tidy
             cxx: clang++-12
             cc: clang-12
@@ -172,6 +180,7 @@ jobs:
             avx2: On
             webui: Off
             tests: On
+            install: ninja-build
           - key: linux-clang-sanitizer
             cxx: clang++-12
             cc: clang-12
@@ -184,6 +193,43 @@ jobs:
             avx2: On
             webui: Off
             tests: On
+            install: ninja-build
+          - key: linux-amd64-musl
+            os: ubuntu-20.04
+            cxx: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-g++
+            cc: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-gcc
+            mode: Release
+            ldflags: -DCMAKE_EXE_LINKER_FLAGS="-static"
+            cross: |-
+              -DCMAKE_CROSSCOMPILING=1 \
+              -DCMAKE_LIBRARY_PATH=/opt/x86_64-multilib-linux-musl/lib \
+              -DCMAKE_SYSROOT=/opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/sysroot \
+            artifact: linux-musl
+            avx: On
+            avx2: On
+            webui: On
+            tests: On
+            strip: /opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/bin/strip
+            toolchain: x86_64-multilib-linux-musl
+          - key: linux-arm-musl
+            os: ubuntu-20.04
+            cxx: /opt/arm-unknown-linux-musleabi/bin/arm-unknown-linux-musleabi-g++
+            cc: /opt/arm-unknown-linux-musleabi/bin/arm-unknown-linux-musleabi-gcc
+            mode: Release
+            ldflags: -DCMAKE_EXE_LINKER_FLAGS="-static"
+            cross: |-
+              -DCMAKE_CROSSCOMPILING=1 \
+              -DCMAKE_LIBRARY_PATH=/opt/arm-unknown-linux-musleabi/lib \
+              -DCMAKE_SYSROOT=/opt/arm-unknown-linux-musleabi/arm-unknown-linux-musleabi/sysroot \
+            artifact: linux-arm-musl
+            avx: On
+            avx2: On
+            webui: On
+            tests: On
+            toolchain: arm-unknown-linux-musleabi
+            emulator: qemu-arm-static
+            strip: /opt/arm-unknown-linux-musleabi/arm-unknown-linux-musleabi/bin/strip
+            install: ninja-build qemu-user-static
     env:
       DEBIAN_FRONTEND: noninteractive
       BUILDCACHE_COMPRESS: true
@@ -201,7 +247,9 @@ jobs:
       # ==== INSTALL ====
       - name: Update APT
         if: matrix.config.os != 'macos-latest'
-        run: sudo apt-get update
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt update
 
       - name: Install LLVM
         if: matrix.config.os != 'macos-latest' && matrix.config.cc == 'clang-12'
@@ -212,28 +260,15 @@ jobs:
           rm llvm.sh
           sudo apt-get install -y --no-install-recommends libc++-12-dev libc++abi-12-dev clang-tidy-12 libunwind-12-dev
 
-      - name: Install Valgrind
-        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
-        run: sudo apt-get install -y --no-install-recommends valgrind
-
-      - name: Install Ninja
+      - name: Install Packages
         if: matrix.config.os != 'macos-latest'
-        run: sudo apt-get install -y --no-install-recommends ninja-build
+        run: sudo apt-get install -y --no-install-recommends ${{ matrix.config.install }}
 
-      - name: Cross Compilation (aarch64)
-        if: matrix.config.artifact == 'linux-arm64'
-        run: sudo apt install -y --no-install-recommends qemu-user-static binfmt-support g++-10-aarch64-linux-gnu gcc-10-aarch64-linux-gnu binutils-aarch64-linux-gnu
-
-      - name: Cross Compilation (arm)
-        if: matrix.config.artifact == 'linux-arm'
-        run: sudo apt install -y --no-install-recommends qemu-user-static binfmt-support g++-10-arm-linux-gnueabihf gcc-10-arm-linux-gnueabihf binutils-arm-linux-gnueabi
-
-      - name: Cross Compilation (x86)
-        if: matrix.config.artifact == 'linux-x86'
+      - name: Install musl Toolchain
+        if: matrix.config.toolchain
         run: |
-          sudo dpkg --add-architecture i386
-          sudo apt update
-          sudo apt install -y --no-install-recommends g++-10-multilib gcc-10-multilib linux-libc-dev:i386
+          wget https://github.com/motis-project/musl-toolchains/releases/latest/download/${{ matrix.config.toolchain }}.tar.xz
+          tar xf ${{ matrix.config.toolchain }}.tar.xz -C /opt
 
       # ==== CACHING ====
       - name: buildcache Cache
@@ -303,26 +338,6 @@ jobs:
       - name: Run Integration Tests
         if: matrix.config.tests == 'On'
         run: ${{ matrix.config.emulator }} ./build/motis-itest
-
-      # ==== VALGRIND ====
-      - name: Run Test Mode Valgrind
-        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
-        run: >
-          valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full \
-            ./build/motis --mode test \
-              --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
-              --dataset.begin 20151004 \
-              --dataset.write_serialized false \
-              --ris.db_max_size 1048576 \
-              --exclude_modules address osrm parking path ppr tiles
-
-      - name: Run Tests Valgrind
-        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
-        run: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./build/motis-test
-
-      - name: Run Integration Tests Valgrind
-        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
-        run: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./build/motis-itest
 
       # ==== DISTRIBUTION ====
       - name: Strip Executable
