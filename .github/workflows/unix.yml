@@ -219,7 +219,8 @@ jobs:
             mode: Release
             ldflags: -DCMAKE_EXE_LINKER_FLAGS="-static"
             cross: |-
-              -DCMAKE_CROSSCOMPILING=1 \
+              -DCMAKE_SYSTEM_NAME=Linux \
+              -DCMAKE_SYSTEM_PROCESSOR=arm \
               -DCMAKE_LIBRARY_PATH=/opt/arm-unknown-linux-musleabi/lib \
               -DCMAKE_SYSROOT=/opt/arm-unknown-linux-musleabi/arm-unknown-linux-musleabi/sysroot \
             artifact: linux-arm-musl
