@@ -167,7 +167,7 @@ jobs:
             webui: Off
             tests: On
             emulator: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full
-            install: ninja-build
+            install: ninja-build valgrind
           - name: linux-clang-tidy
             cxx: clang++-12
             cc: clang-12
