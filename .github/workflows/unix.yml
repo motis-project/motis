@@ -322,6 +322,13 @@ jobs:
             motis-pax-tools
           ./build/buildcache/bin/buildcache -s
 
+      - name: Show tree on failure
+        if: ${{ failure() }}
+        run: |
+          sudo apt-get install -y --no-install-recommends tree
+          tree build
+          file build/deps/protobuf/protoc
+
       # ==== TESTS ====
       - name: Run Test Mode
         if: matrix.config.tests == 'On'
