@@ -85,7 +85,7 @@ jobs:
             avx2: On
             webui: Off
             tests: On
-            install: ninja-build valgrind
+            install: ninja-build
           - name: linux-clang-tidy
             cxx: clang++-12
             cc: clang-12
