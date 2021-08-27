@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM alpine:3.14
 ARG TARGETARCH
 ADD motis-linux-$TARGETARCH/motis-linux-$TARGETARCH.tar.bz2 /
 RUN useradd --user-group --create-home --shell /bin/bash motis
