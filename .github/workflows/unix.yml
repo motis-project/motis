@@ -216,8 +216,8 @@ jobs:
             os: ubuntu-20.04
             cxx: /opt/arm-unknown-linux-musleabi/bin/arm-unknown-linux-musleabi-g++
             cc: /opt/arm-unknown-linux-musleabi/bin/arm-unknown-linux-musleabi-gcc
-            cflags: -Wno-psabi
-            cxxflags: -Wno-psabi
+            cflags: -Wno-psabi -latomic
+            cxxflags: -Wno-psabi -latomic
             mode: Release
             ldflags: -static-libgcc -static-libstdc++ -static -latomic
             cross: |-
