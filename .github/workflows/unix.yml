@@ -320,7 +320,7 @@ jobs:
             --dataset.write_serialized false \
             --exclude_modules address osrm parking path ppr tiles \
             --ris.db_max_size 1048576 \
-            --exclude_modules address osrm parking path ppr tiles
+            --exclude_modules address osrm parking path ppr tiles tripbased
 
       - name: Run Tests
         if: matrix.config.tests == 'On'
