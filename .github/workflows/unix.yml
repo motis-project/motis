@@ -199,7 +199,7 @@ jobs:
             cxx: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-g++
             cc: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-gcc
             mode: Release
-            ldflags: -DCMAKE_EXE_LINKER_FLAGS="-static"
+            ldflags: -DCMAKE_EXE_LINKER_FLAGS="-static -latomic"
             cross: |-
               -DCMAKE_CROSSCOMPILING=1 \
               -DCMAKE_LIBRARY_PATH=/opt/x86_64-multilib-linux-musl/lib \
@@ -217,7 +217,7 @@ jobs:
             cxx: /opt/arm-unknown-linux-musleabi/bin/arm-unknown-linux-musleabi-g++
             cc: /opt/arm-unknown-linux-musleabi/bin/arm-unknown-linux-musleabi-gcc
             mode: Release
-            ldflags: -DCMAKE_EXE_LINKER_FLAGS="-static"
+            ldflags: -DCMAKE_EXE_LINKER_FLAGS="-static -latomic"
             cross: |-
               -DCMAKE_SYSTEM_NAME=Linux \
               -DCMAKE_SYSTEM_PROCESSOR=arm \
