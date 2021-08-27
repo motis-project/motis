@@ -63,88 +63,6 @@ jobs:
             webui: On
             tests: On
             strip: strip
-          - name: linux-amd64
-            cxx: g++-10
-            cc: gcc-10
-            mode: Release
-            os: ubuntu-20.04
-            artifact: linux-amd64
-            avx: On
-            avx2: On
-            webui: On
-            tests: On
-            strip: strip
-            install: ninja-build
-          - name: linux-amd64-noavx
-            cxx: g++-10
-            cc: gcc-10
-            mode: Release
-            os: ubuntu-20.04
-            artifact: linux-noavx
-            avx: Off
-            avx2: Off
-            webui: On
-            tests: On
-            strip: strip
-            install: ninja-build
-          - name: linux-x86
-            cxx: g++-10
-            cc: gcc-10
-            cross: |-
-              -DCMAKE_ASM_FLAGS=-m32 \
-              -DCMAKE_SYSTEM_NAME=Linux \
-              -DCMAKE_SYSTEM_PROCESSOR=i686
-            cflags: -m32 -mfpmath=sse -msse2
-            cxxflags: -m32 -mfpmath=sse -msse2
-            mode: Release
-            os: ubuntu-20.04
-            artifact: linux-x86
-            avx: Off
-            avx2: Off
-            webui: On
-            tests: On
-            strip: strip
-            install: ninja-build g++-10-multilib gcc-10-multilib linux-libc-dev:i386
-          - name: linux-arm64
-            cxx: aarch64-linux-gnu-g++-10
-            cc: aarch64-linux-gnu-gcc-10
-            cross: |-
-              -DCMAKE_AR=/usr/bin/aarch64-linux-gnu-ar \
-              -DCMAKE_LINKER=/usr/bin/aarch64-linux-gnu-ld \
-              -DCMAKE_SYSTEM_NAME=Linux \
-              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-              -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-aarch64-static;-L;/usr/aarch64-linux-gnu" \
-            mode: Release
-            os: ubuntu-20.04
-            artifact: linux-arm64
-            avx: Off
-            avx2: Off
-            webui: On
-            tests: On
-            emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
-            strip: aarch64-linux-gnu-strip
-            install: ninja-build qemu-user-static binfmt-support g++-10-aarch64-linux-gnu gcc-10-aarch64-linux-gnu binutils-aarch64-linux-gnu
-          - name: linux-arm
-            cxx: arm-linux-gnueabihf-g++-10
-            cc: arm-linux-gnueabihf-gcc-10
-            cflags: -Wno-psabi
-            cxxflags: -Wno-psabi
-            cross: |-
-              -DCMAKE_AR=/usr/bin/arm-linux-gnueabihf-ar \
-              -DCMAKE_LINKER=/usr/bin/arm-linux-gnueabihf-ld \
-              -DCMAKE_SYSTEM_NAME=Linux \
-              -DCMAKE_SYSTEM_PROCESSOR=arm \
-              -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-arm-static;-L;/usr/arm-linux-gnueabihf" \
-            mode: Release
-            os: ubuntu-20.04
-            artifact: linux-arm
-            avx: Off
-            avx2: Off
-            webui: On
-            tests: On
-            emulator: qemu-arm-static -L /usr/arm-linux-gnueabihf
-            strip: arm-linux-gnueabihf-strip
-            install: ninja-build qemu-user-static binfmt-support g++-10-arm-linux-gnueabihf gcc-10-arm-linux-gnueabihf binutils-arm-linux-gnueabi
           - name: linux-amd64-debug
             cxx: g++-10
             cc: gcc-10
@@ -154,6 +72,7 @@ jobs:
             avx2: On
             webui: Off
             tests: On
+            emulator: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full
             install: ninja-build valgrind
           - name: linux-amd64-clang
             cxx: clang++-12
@@ -166,7 +85,6 @@ jobs:
             avx2: On
             webui: Off
             tests: On
-            emulator: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full
             install: ninja-build valgrind
           - name: linux-clang-tidy
             cxx: clang++-12
@@ -194,26 +112,67 @@ jobs:
             webui: Off
             tests: On
             install: ninja-build
-          - key: linux-amd64-musl
+          - key: linux-amd64
             os: ubuntu-20.04
+            toolchain: x86_64-multilib-linux-musl
             cxx: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-g++
             cc: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-gcc
             mode: Release
-            ldflags: -static-libgcc -static-libstdc++ -static -latomic
+            ldflags: -static-libgcc -static-libstdc++ -static
             cross: |-
               -DCMAKE_CROSSCOMPILING=1 \
               -DCMAKE_LIBRARY_PATH=/opt/x86_64-multilib-linux-musl/lib \
-              -DCMAKE_SYSROOT=/opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/sysroot \
-            artifact: linux-musl
+              -DCMAKE_SYSROOT=/opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/sysroot
+            artifact: linux-amd64
             avx: On
             avx2: On
             webui: On
             tests: On
             strip: /opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/bin/strip
-            toolchain: x86_64-multilib-linux-musl
-            install: ninja-build qemu-user-static
-          - key: linux-arm-musl
+            install: ninja-build
+          - key: linux-amd64-noavx
             os: ubuntu-20.04
+            toolchain: x86_64-multilib-linux-musl
+            cxx: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-g++
+            cc: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-gcc
+            mode: Release
+            ldflags: -static-libgcc -static-libstdc++ -static
+            cross: |-
+              -DCMAKE_CROSSCOMPILING=1 \
+              -DCMAKE_LIBRARY_PATH=/opt/x86_64-multilib-linux-musl/lib \
+              -DCMAKE_SYSROOT=/opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/sysroot
+            artifact: linux-amd64-noavx
+            avx: Off
+            avx2: Off
+            webui: On
+            tests: On
+            strip: /opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/bin/strip
+            install: ninja-build
+          - key: linux-x86
+            os: ubuntu-20.04
+            toolchain: x86_64-multilib-linux-musl
+            cxx: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-g++
+            cc: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-gcc
+            cflags: -m32 -mfpmath=sse -msse2
+            cxxflags: -m32 -mfpmath=sse -msse2
+            mode: Release
+            ldflags: -static-libgcc -static-libstdc++ -static
+            cross: |-
+              -DCMAKE_ASM_FLAGS=-m32 \
+              -DCMAKE_SYSTEM_NAME=Linux \
+              -DCMAKE_SYSTEM_PROCESSOR=i686 \
+              -DCMAKE_LIBRARY_PATH=/opt/x86_64-multilib-linux-musl/lib \
+              -DCMAKE_SYSROOT=/opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/sysroot
+            artifact: linux-x86
+            avx: Off
+            avx2: Off
+            webui: On
+            tests: On
+            strip: /opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/bin/strip
+            install: ninja-build
+          - key: linux-arm
+            os: ubuntu-20.04
+            toolchain: arm-unknown-linux-musleabi
             cxx: /opt/arm-unknown-linux-musleabi/bin/arm-unknown-linux-musleabi-g++
             cc: /opt/arm-unknown-linux-musleabi/bin/arm-unknown-linux-musleabi-gcc
             cflags: -Wno-psabi -latomic
@@ -224,16 +183,37 @@ jobs:
               -DCMAKE_SYSTEM_NAME=Linux \
               -DCMAKE_SYSTEM_PROCESSOR=arm \
               -DCMAKE_LIBRARY_PATH=/opt/arm-unknown-linux-musleabi/lib \
-              -DCMAKE_SYSROOT=/opt/arm-unknown-linux-musleabi/arm-unknown-linux-musleabi/sysroot \
-            artifact: linux-arm-musl
-            avx: On
-            avx2: On
+              -DCMAKE_SYSROOT=/opt/arm-unknown-linux-musleabi/arm-unknown-linux-musleabi/sysroot
+            artifact: linux-arm
+            avx: Off
+            avx2: Off
             webui: On
             tests: On
             strip: /opt/arm-unknown-linux-musleabi/arm-unknown-linux-musleabi/bin/strip
-            toolchain: arm-unknown-linux-musleabi
             install: ninja-build qemu-user-static
             emulator: qemu-arm-static
+          - key: linux-arm64
+            os: ubuntu-20.04
+            toolchain: aarch64-unknown-linux-musleabi
+            cxx: /opt/aarch64-unknown-linux-musleabi/bin/aarch64-unknown-linux-musleabi-g++
+            cc: /opt/aarch64-unknown-linux-musleabi/bin/aarch64-unknown-linux-musleabi-gcc
+            cflags: -Wno-psabi -latomic
+            cxxflags: -Wno-psabi -latomic
+            mode: Release
+            ldflags: -static-libgcc -static-libstdc++ -static -latomic
+            cross: |-
+              -DCMAKE_SYSTEM_NAME=Linux \
+              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+              -DCMAKE_LIBRARY_PATH=/opt/aarch64-unknown-linux-musleabi/lib \
+              -DCMAKE_SYSROOT=/opt/aarch64-unknown-linux-musleabi/aarch64-unknown-linux-musleabi/sysroot
+            artifact: linux-arm64
+            avx: Off
+            avx2: Off
+            webui: On
+            tests: On
+            strip: /opt/aarch64-unknown-linux-musleabi/aarch64-unknown-linux-musleabi/bin/strip
+            install: ninja-build qemu-user-static
+            emulator: qemu-aarch64-static
     env:
       DEBIAN_FRONTEND: noninteractive
       BUILDCACHE_COMPRESS: true
