@@ -99,7 +99,7 @@ jobs:
             webui: Off
             tests: On
             install: ninja-build
-          - key: linux-clang-sanitizer
+          - name: linux-clang-sanitizer
             cxx: clang++-12
             cc: clang-12
             mode: Release
@@ -112,7 +112,7 @@ jobs:
             webui: Off
             tests: On
             install: ninja-build
-          - key: linux-amd64
+          - name: linux-amd64
             os: ubuntu-20.04
             toolchain: x86_64-multilib-linux-musl
             cxx: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-g++
@@ -130,7 +130,7 @@ jobs:
             tests: On
             strip: /opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/bin/strip
             install: ninja-build
-          - key: linux-amd64-noavx
+          - name: linux-amd64-noavx
             os: ubuntu-20.04
             toolchain: x86_64-multilib-linux-musl
             cxx: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-g++
@@ -148,7 +148,7 @@ jobs:
             tests: On
             strip: /opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/bin/strip
             install: ninja-build
-          - key: linux-x86
+          - name: linux-x86
             os: ubuntu-20.04
             toolchain: x86_64-multilib-linux-musl
             cxx: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-g++
@@ -170,7 +170,7 @@ jobs:
             tests: On
             strip: /opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/bin/strip
             install: ninja-build
-          - key: linux-arm
+          - name: linux-arm
             os: ubuntu-20.04
             toolchain: arm-unknown-linux-musleabi
             cxx: /opt/arm-unknown-linux-musleabi/bin/arm-unknown-linux-musleabi-g++
@@ -192,7 +192,7 @@ jobs:
             strip: /opt/arm-unknown-linux-musleabi/arm-unknown-linux-musleabi/bin/strip
             install: ninja-build qemu-user-static
             emulator: qemu-arm-static
-          - key: linux-arm64
+          - name: linux-arm64
             os: ubuntu-20.04
             toolchain: aarch64-unknown-linux-musleabi
             cxx: /opt/aarch64-unknown-linux-musleabi/bin/aarch64-unknown-linux-musleabi-g++
