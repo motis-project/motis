@@ -302,8 +302,7 @@ jobs:
             -DCMAKE_C_FLAGS="${{ matrix.config.cflags }}" \
             -DCMAKE_CXX_FLAGS="${{ matrix.config.cxxflags }}" \
             -DCMAKE_CXX_FLAGS_DEBUG="" \
-            -DCMAKE_CXX_LINKER_FLAGS="${{ matrix.config.ldflags }}" \
-            -DCMAKE_CXX_EXE_LINKER_FLAGS="${{ matrix.config.ldflags }}" \
+            -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.config.ldflags }}" \
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} \
             -DMOTIS_LINT=${{ matrix.config.lint }} \
             -DMOTIS_AVX=${{ matrix.config.avx }} \
@@ -328,8 +327,8 @@ jobs:
         if: ${{ failure() }}
         run: |
           sudo apt-get install -y --no-install-recommends tree
-          tree build
           file build/deps/protobuf/protoc
+          ldd build/deps/protobuf/protoc
 
       # ==== TESTS ====
       - name: Run Test Mode
