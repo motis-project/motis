@@ -194,9 +194,9 @@ jobs:
             emulator: qemu-arm-static
           - name: linux-arm64
             os: ubuntu-20.04
-            toolchain: aarch64-unknown-linux-musleabi
-            cxx: /opt/aarch64-unknown-linux-musleabi/bin/aarch64-unknown-linux-musleabi-g++
-            cc: /opt/aarch64-unknown-linux-musleabi/bin/aarch64-unknown-linux-musleabi-gcc
+            toolchain: aarch64-unknown-linux-musl
+            cxx: /opt/aarch64-unknown-linux-musl/bin/aarch64-unknown-linux-musl-g++
+            cc: /opt/aarch64-unknown-linux-musl/bin/aarch64-unknown-linux-musl-gcc
             cflags: -Wno-psabi -latomic
             cxxflags: -Wno-psabi -latomic
             mode: Release
@@ -204,14 +204,14 @@ jobs:
             cross: |-
               -DCMAKE_SYSTEM_NAME=Linux \
               -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-              -DCMAKE_LIBRARY_PATH=/opt/aarch64-unknown-linux-musleabi/lib \
-              -DCMAKE_SYSROOT=/opt/aarch64-unknown-linux-musleabi/aarch64-unknown-linux-musleabi/sysroot
+              -DCMAKE_LIBRARY_PATH=/opt/aarch64-unknown-linux-musl/lib \
+              -DCMAKE_SYSROOT=/opt/aarch64-unknown-linux-musl/aarch64-unknown-linux-musl/sysroot
             artifact: linux-arm64
             avx: Off
             avx2: Off
             webui: On
             tests: On
-            strip: /opt/aarch64-unknown-linux-musleabi/aarch64-unknown-linux-musleabi/bin/strip
+            strip: /opt/aarch64-unknown-linux-musl/aarch64-unknown-linux-musl/bin/strip
             install: ninja-build qemu-user-static
             emulator: qemu-aarch64-static
     env:
