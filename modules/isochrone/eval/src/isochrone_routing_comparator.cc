@@ -56,11 +56,17 @@ int main(int argc, char const** argv) {
     auto const r_res = motis_content(RoutingResponse, r_msg);
     uint64_t at = 0;
     for(auto it : *r_res->connections()) {
-      auto at_new = it->stops()->Get(it->stops()->size()-1)->arrival()->time();
+      auto at_new = (it->stops()->Get(it->stops()->size()-1)->arrival()->time());
+
+      if(it->stops()->size()==2 && it->stops()->Get(0)->departure()->time() == r_res->interval_begin()+1800) {
+        at_new -= 1800;
+      }
+
       if(at_new < at || at == 0) {
         at = at_new;
       }
     }
+
     auto const remaining_time = 3600 - (at - r_res->interval_begin());
     if (std::get<0>(times.at(r_msg->id())) != remaining_time && r_msg->id()%1000000!=0) {
       auto x = std::get<0>(times.at(r_msg->id()));

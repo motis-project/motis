@@ -7,6 +7,9 @@
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/program_options.hpp"
 
+#include "geo/latlng.h"
+#include "geo/webmercator.h"
+
 #include "utl/erase.h"
 
 #include "motis/core/access/time_access.h"
@@ -18,38 +21,39 @@ using namespace flatbuffers;
 using namespace motis;
 using namespace motis::module;
 using namespace motis::routing;
+using namespace motis::intermodal;
 using namespace motis::isochrone;
+using namespace motis::ppr;
 
 
-std::string query(std::string const& target, Start const start_type, int id,
+std::string query(int id,
                   std::time_t interval_start, std::time_t interval_end,
-                  const String *from_eva, const String *to_eva,
-                  SearchDir const dir) {
+                  const Position *start_pos, const String *id_str) {
   message_creator fbb;
+  auto const start = Position(start_pos->lat(), start_pos->lng());
   auto const interval = Interval(interval_start, interval_end);
+  std::vector<Offset<ModeWrapper>> modes_start{CreateModeWrapper(
+          fbb, Mode_FootPPR,
+          CreateFootPPR(fbb, CreateSearchOptions(fbb, fbb.CreateString("default"),
+                                                 15*60))
+                  .Union())};
+  std::vector<Offset<ModeWrapper>> modes_dest{CreateModeWrapper(
+          fbb, Mode_FootPPR,
+          CreateFootPPR(fbb, CreateSearchOptions(fbb, fbb.CreateString("default"),
+                                                 0))
+                  .Union())};
   fbb.create_and_finish(
-          MsgContent_RoutingRequest,
-          CreateRoutingRequest(
-                  fbb, start_type,
-                  start_type == Start_PretripStart
-                  ? CreatePretripStart(
-                          fbb,
-                          motis::routing::CreateInputStation(fbb, fbb.CreateString(from_eva),
-                                             fbb.CreateString("")),
-                          &interval)
-                          .Union()
-                  : CreateOntripStationStart(
-                          fbb,
-                          motis::routing::CreateInputStation(fbb, fbb.CreateString(from_eva),
-                                             fbb.CreateString("")),
-                          interval_start)
+          MsgContent_IntermodalRoutingRequest,
+          CreateIntermodalRoutingRequest(
+                  fbb, IntermodalStart_IntermodalOntripStart,
+                  CreateIntermodalOntripStart(fbb, &start, interval_start)
                           .Union(),
-                  motis::routing::CreateInputStation(fbb, fbb.CreateString(to_eva),
-                                     fbb.CreateString("")),
-                  SearchType_Default, dir, fbb.CreateVector(std::vector<Offset<Via>>()),
-                  fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()), false, false)
+                  fbb.CreateVector(modes_start), IntermodalDestination_InputStation,
+                  CreateInputStation(fbb, fbb.CreateString(id_str), fbb.CreateString("")).Union(),
+                  fbb.CreateVector(modes_dest), SearchType_Default,
+                  SearchDir_Forward)
                   .Union(),
-          target);
+          "/intermodal");
   auto msg = make_msg(fbb);
   msg->get()->mutate_id(id);
 
@@ -83,10 +87,9 @@ bool generate_routing_query(const int i, std::pair<msg_ptr, msg_ptr> qr, std::of
 
   std::cout << "query nr:" << i << std::endl;
   for(int j = 0; j < r_msg->stations()->size(); ++j) {
-    routing_queries << query("/routing", Start_OntripStationStart, i*1000000 + j, q_msg->departure_time(),
-                             q_msg->departure_time()+q_msg->max_travel_time(), q_msg->station()->id(),
-                             r_msg->stations()->Get(j)->id(),
-                             SearchDir_Forward) << "\n";
+    routing_queries << query(i*1000000 + j, q_msg->departure_time(),
+                             q_msg->departure_time()+q_msg->max_travel_time(), q_msg->position(),
+                             r_msg->stations()->Get(j)->id()) << "\n";
   }
 
   return true;

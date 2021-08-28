@@ -7,4 +7,5 @@ table IsochroneRequest {
     position:  motis.Position;
     departure_time: long;
     max_travel_time: long;
+    foot_travel_time: long;
 }

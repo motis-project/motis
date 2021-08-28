@@ -24,6 +24,7 @@ using namespace geo;
 using namespace motis::module;
 using namespace motis::lookup;
 using namespace motis::osrm;
+using namespace motis::ppr;
 using namespace flatbuffers;
 
 namespace motis::isochrone {
@@ -97,19 +98,43 @@ inline search_query build_query(schedule const& sched,
   search_query q;
   verify_external_timestamp(sched, req->departure_time());
   auto pos = to_latlng(req->position());
-  auto const geo_msg = motis_call(make_geo_request(pos, req->max_travel_time()))->val();
+  auto const geo_msg = motis_call(make_geo_request(pos, req->foot_travel_time()))->val();
   auto const geo_resp = motis_content(LookupGeoStationResponse, geo_msg);
   auto const stations = geo_resp->stations();
+  /*
   auto const osrm_msg =
           motis_call(make_osrm_request(pos, stations, "foot", Direction_Forward))
                   ->val();
   auto const osrm_resp = motis_content(OSRMOneToManyResponse, osrm_msg);
-  for (auto i = 0UL; i < stations->size(); ++i) {
-    auto const dur = osrm_resp->costs()->Get(i)->duration();
-    if (dur > req->max_travel_time()) {
-      continue;
+*/
+
+
+  message_creator mc;
+  mc.create_and_finish(
+          MsgContent_FootRoutingRequest,
+          CreateFootRoutingRequest(
+                  mc, req->position(),
+                  mc.CreateVectorOfStructs(utl::to_vec(
+                          *stations, [](auto&& station) { return *station->pos(); })),
+                  CreateSearchOptions(mc, mc.CreateString("default"), req->foot_travel_time()), SearchDirection_Forward, false,
+                  false, false)
+                  .Union(),
+          "/ppr/route");
+  auto const ppr_msg =
+          motis_call(make_msg(mc))
+                  ->val();
+  auto const ppr_resp = motis_content(FootRoutingResponse, ppr_msg);
+
+  auto const routes = ppr_resp->routes();
+  for (auto i = 0UL; i < routes->size(); ++i) {
+    auto const dest_routes = routes->Get(i);
+    auto const dest_id = stations->Get(i)->id()->str();
+    auto const dest_pos = to_latlng(stations->Get(i)->pos());
+    for (auto const& route : *dest_routes->routes()) {
+      q.start_stations_.emplace_back(motis::get_station_node(sched, stations->Get(i)->id()->str()), unix_to_motistime(sched, req->departure_time()+route->duration()*60));
     }
-    q.start_stations_.emplace_back(motis::get_station_node(sched, stations->Get(i)->id()->str()), unix_to_motistime(sched, req->departure_time()+dur));
+
+
   }
 
   q.interval_begin_ = unix_to_motistime(sched, req->departure_time());

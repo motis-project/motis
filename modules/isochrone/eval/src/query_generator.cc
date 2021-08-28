@@ -8,6 +8,7 @@
 #include "boost/date_time/gregorian/gregorian_types.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/program_options.hpp"
+#include "boost/math/constants/constants.hpp"
 
 #include "utl/erase.h"
 #include "utl/to_vec.h"
@@ -19,12 +20,16 @@
 #include "motis/module/message.h"
 #include "motis/bootstrap/dataset_settings.h"
 #include "motis/bootstrap/motis_instance.h"
+#include "geo/latlng.h"
+#include "geo/webmercator.h"
 
 using namespace flatbuffers;
 using namespace motis;
 using namespace motis::bootstrap;
 using namespace motis::module;
 using namespace motis::isochrone;
+using namespace motis::lookup;
+using namespace motis::osrm;
 
 struct generator_settings : public conf::configuration {
   generator_settings() : configuration("Generator Settings") {
@@ -96,16 +101,18 @@ private:
 };
 
 std::string query(int id,
-                  std::time_t interval_start, std::time_t travel_time,
-                  std::string const& from_eva) {
+                  std::time_t departure_time, std::time_t max_travel_time, std::time_t foot_travel_time,
+                  geo::latlng pos) {
   message_creator fbb;
+  auto const ipos = Position(pos.lat_, pos.lng_);
   fbb.create_and_finish(
           MsgContent_IsochroneRequest,
           CreateIsochroneRequest(
                   fbb,
-                  CreateInputStation(fbb, fbb.CreateString(from_eva),
-                                     fbb.CreateString("")),
-                  interval_start,travel_time)
+                  &ipos,
+                  departure_time,
+                  max_travel_time,
+                  foot_travel_time)
                   .Union(),
           "/isochrone");
   auto msg = make_msg(fbb);
@@ -167,11 +174,11 @@ bool is_meta(station const* a, station const* b) {
          end(a->equivalent_);
 }
 
-std::pair<std::string, std::string> random_station_ids(
+station const* random_station(
         schedule const& sched,
         std::vector<station_node const*> const& station_nodes,
         time_t interval_start, time_t interval_end) {
-  station const *from = nullptr, *to = nullptr;
+  station const *s = nullptr;
   auto motis_interval_start = unix_to_motistime(sched, interval_start);
   auto motis_interval_end = unix_to_motistime(sched, interval_end);
   if (motis_interval_start == INVALID_TIME ||
@@ -185,18 +192,44 @@ std::pair<std::string, std::string> random_station_ids(
               << format_time(motis_interval_end) << ")\n";
     std::terminate();
   }
-  do {
-    from = sched.stations_
-            .at(random_station_id(station_nodes, motis_interval_start,
-                                  motis_interval_end))
-            .get();
-    to = sched.stations_
-            .at(random_station_id(station_nodes, motis_interval_start,
-                                  motis_interval_end))
-            .get();
-  } while (from == to || is_meta(from, to));
-  return {from->eva_nr_.str(), to->eva_nr_.str()};
+
+  s = sched.stations_
+          .at(random_station_id(station_nodes, motis_interval_start,
+                                motis_interval_end))
+          .get();
+
+  return s;
 }
+
+constexpr auto EQUATOR_EARTH_RADIUS = 6378137.0;
+
+inline double scale_factor(geo::merc_xy const& mc) {
+  auto const lat_rad =
+          2.0 * std::atan(std::exp(mc.y_ / EQUATOR_EARTH_RADIUS)) - (geo::kPI / 2);
+  return std::cos(lat_rad);
+}
+
+struct point_generator {
+  explicit point_generator()  {}
+
+  geo::latlng random_point_near(geo::latlng const& ref, double max_dist) {
+    auto const ref_merc = geo::latlng_to_merc(ref);
+    geo::latlng pt;
+
+    // http://mathworld.wolfram.com/DiskPointPicking.html
+    double radius =
+            std::sqrt(real_dist_(mt_)) * (max_dist / scale_factor(ref_merc));
+    double angle = real_dist_(mt_) * 2 * boost::math::constants::pi<double>();
+    auto const pt_merc = geo::merc_xy{ref_merc.x_ + radius * std::cos(angle),
+                                      ref_merc.y_ + radius * std::sin(angle)};
+    pt = geo::merc_to_latlng(pt_merc);
+    return pt;
+  }
+
+private:
+  std::mt19937 mt_;
+  std::uniform_real_distribution<double> real_dist_;
+};
 
 int main(int argc, char const** argv) {
   generator_settings generator_opt;
@@ -221,6 +254,8 @@ int main(int argc, char const** argv) {
           sched.schedule_begin_ + SCHEDULE_OFFSET_MINUTES * 60,
           sched.schedule_end_);
 
+  point_generator point_gen;
+
   std::vector<station_node const*> station_nodes;
   station_nodes =
           utl::to_vec(sched.station_nodes_, [](station_node_ptr const& s) {
@@ -230,10 +265,12 @@ int main(int argc, char const** argv) {
   std::ofstream ofs(generator_opt.target_file_);
   for (int i = 1; i <= generator_opt.query_count_; ++i) {
     auto interval = interval_gen.random_interval();
-    auto evas = random_station_ids(sched, station_nodes, interval.first,
+    auto start = random_station(sched, station_nodes, interval.first,
                                    interval.second);
-    ofs << query( i, interval.first, interval.second-interval.first,
-                     evas.first)
+    auto const start_pt =
+            point_gen.random_point_near({start->lat(), start->lng()}, 500);
+    ofs << query( i, interval.first, interval.second-interval.first, 15 * 60,
+                     start_pt)
             << "\n";
 
 
