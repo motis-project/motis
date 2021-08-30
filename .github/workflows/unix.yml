@@ -388,17 +388,19 @@ jobs:
             os: ubuntu-20.04
             image: ubuntu:21.04
             emulator: qemu-arm-static -L /usr/arm-linux-gnueabihf
-            packages: qemu-user-static binfmt-support binutils-arm-linux-gnueabi g++-10-arm-linux-gnueabihf gcc-10-arm-linux-gnueabihf
+            packages: unzip qemu-user-static binfmt-support binutils-arm-linux-gnueabi g++-10-arm-linux-gnueabihf gcc-10-arm-linux-gnueabihf
           - artifact: linux-arm64
             os: ubuntu-20.04
             image: ubuntu:21.04
             emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
-            packages: qemu-user-static binfmt-support binutils-aarch64-linux-gnu g++-10-aarch64-linux-gnu gcc-10-aarch64-linux-gnu
+            packages: unzip qemu-user-static binfmt-support binutils-aarch64-linux-gnu g++-10-aarch64-linux-gnu gcc-10-aarch64-linux-gnu
 
     steps:
       - name: Install packages
         if: matrix.config.packages != ''
-        run: sudo apt install -y --no-install-recommends ${{ matrix.config.packages }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ${{ matrix.config.packages }}
 
       - name: Download timetable and OSM dataset
         uses: actions/checkout@v2
