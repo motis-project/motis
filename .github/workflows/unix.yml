@@ -371,8 +371,7 @@ jobs:
 
   full-data-set-test:
     runs-on: ${{ matrix.config.os }}
-    container:
-      image: ${{ matrix.config.image }}
+    container: ${{ matrix.config.image }}
     needs: build
     strategy:
       fail-fast: false
@@ -399,8 +398,8 @@ jobs:
       - name: Install packages
         if: matrix.config.packages != ''
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ${{ matrix.config.packages }}
+          apt-get update
+          apt-get install -y --no-install-recommends ${{ matrix.config.packages }}
 
       - name: Download timetable and OSM dataset
         uses: actions/checkout@v2

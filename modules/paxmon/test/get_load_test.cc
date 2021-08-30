@@ -206,8 +206,8 @@ TEST(paxmon_get_load, two_groups) {
 TEST(paxmon_get_load, base_eq_avx) {
   auto gen = std::mt19937{std::random_device{}()};
   auto base_group_count_dist = std::uniform_int_distribution{0, 200};
-  auto fc_group_count_dist = std::uniform_int_distribution{1, 1'000};
-  auto add_group_count_dist = std::uniform_int_distribution{1, 200};
+  auto fc_group_count_dist = std::uniform_int_distribution{1, 100};
+  auto add_group_count_dist = std::uniform_int_distribution{1, 10};
   auto group_size_dist = std::normal_distribution<float>{1.5F, 3.0F};
   auto prob_dist = std::uniform_real_distribution<float>{0.0F, 1.0F};
 
@@ -215,7 +215,7 @@ TEST(paxmon_get_load, base_eq_avx) {
     return static_cast<std::uint16_t>(std::max(1.0F, group_size_dist(gen)));
   };
 
-  for (auto run = 0; run < 100; ++run) {
+  for (auto run = 0; run < 5; ++run) {
     auto const base_group_count = base_group_count_dist(gen);
     auto const fc_group_count = fc_group_count_dist(gen);
     auto pgc = passenger_group_container{};
