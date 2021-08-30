@@ -1,7 +1,7 @@
 FROM alpine:3.14
 ARG TARGETARCH
 ADD motis-linux-$TARGETARCH/motis-linux-$TARGETARCH.tar.bz2 /
-RUN useradd --user-group --create-home --shell /bin/bash motis
+RUN addgroup -S motis && adduser -S motis -G motis
 EXPOSE 8080
 VOLUME ["/data"]
 WORKDIR /motis
