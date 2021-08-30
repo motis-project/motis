@@ -395,8 +395,8 @@ jobs:
       - name: Install packages
         if: matrix.config.packages != ''
         run: |
-          apt-get update
-          apt-get install -y --no-install-recommends ${{ matrix.config.packages }}
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ${{ matrix.config.packages }}
 
       - name: Download timetable and OSM dataset
         uses: actions/checkout@v2
