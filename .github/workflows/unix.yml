@@ -72,7 +72,7 @@ jobs:
             avx2: On
             webui: Off
             tests: On
-            emulator: valgrind --error-exitcode=1 --leak-check=full
+            emulator: valgrind --error-exitcode=1
             install: ninja-build valgrind
           - name: linux-amd64-clang
             cxx: clang++-12
@@ -372,7 +372,7 @@ jobs:
   full-data-set-test:
     runs-on: ${{ matrix.config.os }}
     container:
-      image: ubuntu:21.04
+      image: ${{ matrix.config.image }}
     needs: build
     strategy:
       fail-fast: false
@@ -386,10 +386,12 @@ jobs:
             os: ubuntu-20.04
           - artifact: linux-arm
             os: ubuntu-20.04
+            image: ubuntu:21.04
             emulator: qemu-arm-static -L /usr/arm-linux-gnueabihf
             packages: qemu-user-static binfmt-support binutils-arm-linux-gnueabi g++-10-arm-linux-gnueabihf gcc-10-arm-linux-gnueabihf
           - artifact: linux-arm64
             os: ubuntu-20.04
+            image: ubuntu:21.04
             emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
             packages: qemu-user-static binfmt-support binutils-aarch64-linux-gnu g++-10-aarch64-linux-gnu gcc-10-aarch64-linux-gnu
 
