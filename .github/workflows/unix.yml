@@ -72,7 +72,7 @@ jobs:
             avx2: On
             webui: Off
             tests: On
-            emulator: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full
+            emulator: valgrind --error-exitcode=1 --leak-check=full
             install: ninja-build valgrind
           - name: linux-amd64-clang
             cxx: clang++-12
