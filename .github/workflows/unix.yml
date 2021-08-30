@@ -200,7 +200,7 @@ jobs:
             cflags: -Wno-psabi -latomic
             cxxflags: -Wno-psabi -latomic
             mode: Release
-            ldflags: -static-libgcc -static-libstdc++ -static -latomic
+            ldflags: -static-libgcc -static-libstdc++ -static
             cross: |-
               -DCMAKE_SYSTEM_NAME=Linux \
               -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
