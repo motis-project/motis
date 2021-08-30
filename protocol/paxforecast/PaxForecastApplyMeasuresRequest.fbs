@@ -1,0 +1,7 @@
+include "paxforecast/Measures.fbs";
+
+namespace motis.paxforecast;
+
+table PaxForecastApplyMeasuresRequest {
+  measures: [MeasureWrapper];
+}

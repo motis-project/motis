@@ -1,0 +1,9 @@
+include "base/Station.fbs";
+include "paxmon/PaxMonLocalization.fbs";
+
+namespace motis.paxforecast;
+
+table PaxForecastAlternativesRequest {
+  start: motis.paxmon.PaxMonLocalization;
+  destination: motis.Station;
+}

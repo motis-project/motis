@@ -29,6 +29,8 @@ struct paxforecast : public motis::module::module {
 
 private:
   void on_monitoring_event(motis::module::msg_ptr const& msg);
+  motis::module::msg_ptr apply_measures(motis::module::msg_ptr const& msg);
+  motis::module::msg_ptr get_alternatives(motis::module::msg_ptr const& msg);
 
   std::string forecast_filename_;
   std::ofstream forecast_file_;

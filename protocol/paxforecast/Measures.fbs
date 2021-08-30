@@ -1,0 +1,35 @@
+include "base/Interval.fbs";
+include "base/TripId.fbs";
+
+namespace motis.paxforecast;
+
+table MeasureRecipients {
+  trips: [TripId];
+  stations: [string]; // station ids
+}
+
+enum LoadLevel : byte { Low, NoSeats, Full }
+
+table TripLoadInfoMeasure {
+  recipients: MeasureRecipients;
+  interval: Interval;
+  trip: TripId;
+  level: LoadLevel;
+}
+
+table TripRecommendationMeasure {
+  recipients: MeasureRecipients;
+  interval: Interval;
+  planned_trips: [TripId];
+  planned_destinations: [string]; // station ids
+  recommended_trip: TripId;
+}
+
+union Measure {
+  TripLoadInfoMeasure,
+  TripRecommendationMeasure
+}
+
+table MeasureWrapper {
+  measure: Measure;
+}

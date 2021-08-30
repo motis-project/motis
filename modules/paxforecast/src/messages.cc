@@ -2,6 +2,8 @@
 
 #include "utl/to_vec.h"
 
+#include "motis/core/access/time_access.h"
+
 #include "motis/paxmon/messages.h"
 
 using namespace motis::module;
@@ -51,6 +53,13 @@ msg_ptr make_forecast_update_msg(schedule const& sched, universe const& uv,
           .Union(),
       "/paxforecast/passenger_forecast");
   return make_msg(fbb);
+}
+
+Offset<Alternative> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
+                           alternative const& alt) {
+  return CreateAlternative(fbb, to_fbs(sched, fbb, alt.compact_journey_),
+                           motis_to_unixtime(sched, alt.arrival_time_),
+                           alt.duration_, alt.transfers_);
 }
 
 }  // namespace motis::paxforecast

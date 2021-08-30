@@ -18,6 +18,7 @@
 #include "motis/core/common/logging.h"
 #include "motis/core/common/timing.h"
 #include "motis/core/access/service_access.h"
+#include "motis/core/access/station_access.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
@@ -33,6 +34,7 @@
 
 #include "motis/paxforecast/alternatives.h"
 #include "motis/paxforecast/combined_passenger_group.h"
+#include "motis/paxforecast/error.h"
 #include "motis/paxforecast/load_forecast.h"
 #include "motis/paxforecast/measures/measures.h"
 #include "motis/paxforecast/messages.h"
@@ -97,6 +99,14 @@ void paxforecast::init(motis::module::registry& reg) {
     on_monitoring_event(msg);
     return nullptr;
   });
+
+  reg.register_op(
+      "/paxforecast/apply_measures",
+      [&](msg_ptr const& msg) -> msg_ptr { return apply_measures(msg); });
+
+  reg.register_op(
+      "/paxforecast/get_alternatives",
+      [&](msg_ptr const& msg) -> msg_ptr { return get_alternatives(msg); });
 }
 
 auto const constexpr REMOVE_GROUPS_BATCH_SIZE = 10'000;
@@ -555,6 +565,51 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   ;
   stats_writer_->write_tick(tick_stats);
   stats_writer_->flush();
+}
+
+msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
+  auto const req = motis_content(PaxForecastApplyMeasuresRequest, msg);
+  for (auto const& mw : *req->measures()) {
+    switch (mw->measure_type()) {
+      case Measure_TripLoadInfoMeasure: {
+        auto const* m =
+            reinterpret_cast<TripLoadInfoMeasure const*>(mw->measure());
+        (void)m;  // TODO(pablo): NYI
+        throw std::system_error{error::unsupported_measure};
+      }
+      case Measure_TripRecommendationMeasure: {
+        auto const* m =
+            reinterpret_cast<TripRecommendationMeasure const*>(mw->measure());
+        (void)m;  // TODO(pablo): NYI
+        throw std::system_error{error::unsupported_measure};
+      }
+      default: {
+        throw std::system_error{error::unsupported_measure};
+      }
+    }
+  }
+  return make_success_msg();
+}
+
+msg_ptr paxforecast::get_alternatives(msg_ptr const& msg) {
+  auto const req = motis_content(PaxForecastAlternativesRequest, msg);
+  auto const& sched = get_sched();
+
+  auto const loc = from_fbs(sched, req->start_type(), req->start());
+  auto const dest_station = get_station(sched, req->destination()->id()->str());
+  auto const alternatives =
+      find_alternatives(sched, dest_station->index_, loc, routing_cache_);
+
+  message_creator mc;
+  mc.create_and_finish(
+      MsgContent_PaxForecastAlternativesResponse,
+      CreatePaxForecastAlternativesResponse(
+          mc, mc.CreateVector(utl::to_vec(alternatives,
+                                          [&](alternative const& alt) {
+                                            return to_fbs(sched, mc, alt);
+                                          })))
+          .Union());
+  return make_msg(mc);
 }
 
 }  // namespace motis::paxforecast
