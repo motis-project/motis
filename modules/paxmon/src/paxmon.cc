@@ -661,6 +661,65 @@ msg_ptr paxmon::get_groups_in_trip(msg_ptr const& msg) {
   auto const trp = from_fbs(sched, req->trip());
 
   message_creator mc;
+
+  auto const make_section_info = [&](edge const* e) {
+    auto const* from = e->from(uv);
+    auto const* to = e->to(uv);
+    auto const groups = uv.pax_connection_info_.groups_[e->pci_];
+
+    struct groups_by_dest_t {
+      std::uint32_t dest_station_id_{};
+      std::vector<passenger_group const*> groups_{};
+      std::uint32_t min_pax_{};
+      std::uint32_t max_pax_{};
+      float avg_pax_{};
+    };
+
+    mcd::hash_map<uint32_t, groups_by_dest_t> groups_by_dest;
+    std::vector<flatbuffers::Offset<GroupsWithDestination>> groups_by_dest_vec;
+
+    if (req->include_grouped_by_destination()) {
+      for (auto const pgi : uv.pax_connection_info_.groups_[e->pci_]) {
+        auto const* pg = uv.passenger_groups_.at(pgi);
+        auto const dest_station_id =
+            pg->compact_planned_journey_.destination_station_id();
+        auto& gbd = groups_by_dest[dest_station_id];
+        gbd.groups_.emplace_back(pg);
+        gbd.max_pax_ += pg->passengers_;
+        if (pg->probability_ == 1.0F) {
+          gbd.min_pax_ += pg->passengers_;
+        }
+        gbd.avg_pax_ += pg->passengers_ * pg->probability_;
+      }
+      auto dest_ids =
+          utl::to_vec(groups_by_dest, [](auto const& kv) { return kv.first; });
+      std::sort(
+          begin(dest_ids), end(dest_ids), [&](auto const& a, auto const& b) {
+            return groups_by_dest[a].avg_pax_ > groups_by_dest[b].avg_pax_;
+          });
+      for (auto const dest_station_id : dest_ids) {
+        auto const& gbd = groups_by_dest[dest_station_id];
+        groups_by_dest_vec.emplace_back(CreateGroupsWithDestination(
+            mc, to_fbs(mc, *sched.stations_[dest_station_id]),
+            mc.CreateVectorOfStructs(
+                utl::to_vec(gbd.groups_,
+                            [&](passenger_group const* pg) {
+                              return to_fbs_base_info(mc, *pg);
+                            })),
+            gbd.min_pax_, gbd.max_pax_));
+      }
+    }
+
+    return CreateGroupsInTripSection(
+        mc, to_fbs(mc, from->get_station(sched)),
+        to_fbs(mc, to->get_station(sched)),
+        motis_to_unixtime(sched, from->schedule_time()),
+        motis_to_unixtime(sched, to->schedule_time()),
+        mc.CreateVector(utl::to_vec(uv.pax_connection_info_.groups_[e->pci_],
+                                    [](auto const pgi) { return pgi; })),
+        mc.CreateVector(groups_by_dest_vec));
+  };
+
   mc.create_and_finish(
       MsgContent_PaxMonGetGroupsInTripResponse,
       CreatePaxMonGetGroupsInTripResponse(
@@ -669,18 +728,8 @@ msg_ptr paxmon::get_groups_in_trip(msg_ptr const& msg) {
               utl::all(uv.trip_data_.edges(trp))  //
               | utl::transform([&](auto const e) { return e.get(uv); })  //
               | utl::remove_if([](auto const* e) { return !e->is_trip(); })  //
-              | utl::transform([&](auto const* e) {
-                  auto const* from = e->from(uv);
-                  auto const* to = e->to(uv);
-                  return CreateGroupsInTripSection(
-                      mc, to_fbs(mc, from->get_station(sched)),
-                      to_fbs(mc, to->get_station(sched)),
-                      motis_to_unixtime(sched, from->schedule_time()),
-                      motis_to_unixtime(sched, to->schedule_time()),
-                      mc.CreateVector(
-                          utl::to_vec(uv.pax_connection_info_.groups_[e->pci_],
-                                      [](auto const pgi) { return pgi; })));
-                })  //
+              | utl::transform(
+                    [&](auto const* e) { return make_section_info(e); })  //
               | utl::vec()))
           .Union());
   return make_msg(mc);

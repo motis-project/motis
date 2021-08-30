@@ -6,4 +6,6 @@ table PaxMonGetGroupsInTripRequest {
   universe: uint;
 
   trip: motis.TripId;
+
+  include_grouped_by_destination: bool;
 }

@@ -85,6 +85,7 @@ export interface PaxMonStatusResponse {
 export interface PaxMonGetGroupsInTripRequest {
   universe?: number;
   trip: TripId;
+  include_grouped_by_destination: boolean;
 }
 
 export interface GroupsInTripSection {

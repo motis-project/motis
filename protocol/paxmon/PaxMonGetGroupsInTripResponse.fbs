@@ -1,6 +1,14 @@
 include "base/Station.fbs";
+include "paxmon/PaxMonGroup.fbs";
 
 namespace motis.paxmon;
+
+table GroupsWithDestination {
+  destination: motis.Station;
+  groups: [PaxMonGroupBaseInfo];
+  min_passenger_count: uint;
+  max_passenger_count: uint;
+}
 
 table GroupsInTripSection {
   from: motis.Station;
@@ -8,6 +16,7 @@ table GroupsInTripSection {
   departure_schedule_time: ulong;
   arrival_schedule_time: ulong;
   groups: [ulong];
+  groups_by_destination: [GroupsWithDestination];
 }
 
 table PaxMonGetGroupsInTripResponse {
