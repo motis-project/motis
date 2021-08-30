@@ -122,7 +122,7 @@ std::string estimate_initial_permalink(schedule const& sched) {
 }
 
 void railviz::init(motis::module::registry& reg) {
-  reg.register_op("/init", [&](auto const&) {
+  reg.subscribe("/init", [&](auto const&) {
     auto const& s = get_sched();
     train_retriever_ = std::make_unique<train_retriever>(s, bounding_boxes(s));
 

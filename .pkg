@@ -29,7 +29,7 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=ceb7f4103c0a2caf3bc02f96f64d414e317053e8
+  commit=669e6b5b15782ef547507183db2fc8f4ab005a1b
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
@@ -37,7 +37,7 @@
 [lmdb]
   url=git@github.com:motis-project/lmdb.git
   branch=master
-  commit=89f4d52b63f2d6ee44757c13c028ceb86718e2eb
+  commit=9bd01f14f549d8202413c4cd5f49b066b0a22b66
 [miniz]
   url=git@github.com:motis-project/miniz.git
   branch=master
@@ -49,7 +49,7 @@
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
-  commit=fbc74e5e9a4dec9fc38dbcd4fe97d4cc24a15710
+  commit=9aa492376a664304d8209513230bb43258367108
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
@@ -57,7 +57,7 @@
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
-  commit=8166a4dcc8ebd54d5bc7820c3eb211a49a96773a
+  commit=c48de3aceaf483eae25aafcde32a62c1b48d89ce
 [pugixml]
   url=git@github.com:motis-project/pugixml.git
   branch=master
@@ -73,7 +73,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=82de6f2331108fea332be171fb93673da12a199a
+  commit=e3b4199986bf0324fdd1f0c770e7f90b83de6994
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
