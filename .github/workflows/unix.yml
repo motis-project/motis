@@ -1,6 +1,8 @@
 name: Unix Build
 
 on:
+  schedule:
+    - cron:  '0 3 * * 2,6'
   push:
     branches: [ master ]
   pull_request:
