@@ -371,6 +371,8 @@ jobs:
 
   full-data-set-test:
     runs-on: ${{ matrix.config.os }}
+    container:
+      image: ubuntu:21.04
     needs: build
     strategy:
       fail-fast: false
