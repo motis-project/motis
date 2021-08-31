@@ -15,7 +15,7 @@ export function makeMessage(
   };
 }
 
-export function sendMessage(msg: Message): Promise<Response> {
+export function sendMessage(msg: Message): Promise<Message> {
   return fetch(`${apiEndpoint}?${msg.destination.target}`, {
     method: "POST",
     headers: {
@@ -23,7 +23,21 @@ export function sendMessage(msg: Message): Promise<Response> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(msg, null, 2),
-  });
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`API call failed with status ${response.status}`);
+      } else {
+        return response.json();
+      }
+    })
+    .then((json) => {
+      const msg = json as Message;
+      if (!msg.content_type || !msg.content) {
+        throw new Error(`API call returned non-message response`);
+      }
+      return msg;
+    });
 }
 
 export function sendRequest(
@@ -31,6 +45,6 @@ export function sendRequest(
   contentType: MsgContentType = "MotisNoMessage",
   content: MsgContent = {},
   id = 0
-): Promise<Response> {
+): Promise<Message> {
   return sendMessage(makeMessage(target, contentType, content, id));
 }

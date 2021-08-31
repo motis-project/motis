@@ -12,7 +12,7 @@ import {
   sendPaxMonGroupsInTripRequest,
   sendPaxMonInitForward,
   sendPaxMonStatusRequest,
-  sendPaxMonTripLoadInfoRequest,
+  sendPaxMonTripLoadInfosRequest,
 } from "./api/paxmon";
 import { TripId } from "./api/protocol/motis";
 import { sendRISForwardTimeRequest } from "./api/ris";
@@ -21,14 +21,9 @@ import { PaxMonTripLoadInfoWithStats } from "./data/loadInfo";
 async function getInitialStatus(
   setPaxMonStatus: (status: PaxMonStatusResponse | null) => void
 ) {
-  const res = await sendPaxMonStatusRequest();
-  if (!res.ok) {
-    console.log("getInitialStatus failed: ", res.status);
-    return;
-  }
-  const data = await res.json();
-  setPaxMonStatus(data.content);
-  if (!data.content.system_time) {
+  const data = await sendPaxMonStatusRequest();
+  setPaxMonStatus(data);
+  if (!data.system_time) {
     console.log("Initial forward...");
     await sendPaxMonInitForward();
     await getInitialStatus(setPaxMonStatus);
@@ -36,12 +31,13 @@ async function getInitialStatus(
 }
 
 async function loadAndProcessTripInfo(trip: TripId) {
-  const res = await sendPaxMonTripLoadInfoRequest(trip);
-  const data = await res.json();
-  const tli = data.content as PaxMonTripLoadInfo;
+  const res = await sendPaxMonTripLoadInfosRequest({
+    universe: 0,
+    trips: [trip],
+  });
+  const tli = res.load_infos[0];
   const tliWithStats = addEdgeStatistics(tli);
   const groupsRes = await sendPaxMonGroupsInTripRequest(trip);
-  console.log(await groupsRes.json());
   return tliWithStats;
 }
 
@@ -56,9 +52,8 @@ async function forwardTimeStepped(
   while (currentTime < endTime) {
     currentTime = Math.min(endTime, currentTime + stepSize);
     await sendRISForwardTimeRequest(currentTime);
-    const statusRes = await sendPaxMonStatusRequest();
-    const statusData = await statusRes.json();
-    setPaxMonStatus(statusData.content as PaxMonStatusResponse);
+    const statusData = await sendPaxMonStatusRequest();
+    setPaxMonStatus(statusData);
     if (selectedTrip) {
       const tli = await loadAndProcessTripInfo(selectedTrip);
       setTripLoadInfo(tli);
