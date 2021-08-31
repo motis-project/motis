@@ -619,7 +619,7 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
 }
 
 msg_ptr paxmon::get_trip_load_info(msg_ptr const& msg) {
-  utl::verify(msg != nullptr, "null message in paxmon::get_trip_load_info");
+  auto const req = motis_content(PaxMonGetTripLoadInfosRequest, msg);
   auto const& sched = get_sched();
   message_creator mc;
 
@@ -631,27 +631,15 @@ msg_ptr paxmon::get_trip_load_info(msg_ptr const& msg) {
     };
   };
 
-  switch (msg->get()->content_type()) {
-    case MsgContent_TripId: {
-      auto const req = motis_content(TripId, msg);
-      mc.create_and_finish(
-          MsgContent_PaxMonTripLoadInfo,
-          to_fbs_load_info_for_universe(primary_universe())(req).Union());
-      return make_msg(mc);
-    }
-    case MsgContent_PaxMonGetTripLoadInfosRequest: {
-      auto const req = motis_content(PaxMonGetTripLoadInfosRequest, msg);
-      mc.create_and_finish(
-          MsgContent_PaxMonGetTripLoadInfosResponse,
-          mc.CreateVector(
-                utl::to_vec(*req->trips(), to_fbs_load_info_for_universe(
-                                               get_universe(req->universe()))))
-              .Union());
-      return make_msg(mc);
-    }
-    default:
-      throw std::system_error(motis::module::error::unexpected_message_type);
-  }
+  mc.create_and_finish(
+      MsgContent_PaxMonGetTripLoadInfosResponse,
+      CreatePaxMonGetTripLoadInfosResponse(
+          mc, mc.CreateVector(utl::to_vec(*req->trips(),
+                                          to_fbs_load_info_for_universe(
+                                              get_universe(req->universe())))))
+
+          .Union());
+  return make_msg(mc);
 }
 
 msg_ptr paxmon::get_groups_in_trip(msg_ptr const& msg) {
