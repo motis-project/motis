@@ -1,6 +1,6 @@
 // generated file - do not modify - run update-protocol to update
 
-import { TripId, Station, TripServiceInfo } from "../motis";
+import { TripServiceInfo, Station, TripId } from "../motis";
 
 // paxmon/PaxMonAddGroupsRequest.fbs
 export interface PaxMonAddGroupsRequest {
@@ -24,7 +24,7 @@ export interface PaxMonTransferInfo {
 
 // paxmon/PaxMonCompactJourney.fbs
 export interface PaxMonCompactJourneyLeg {
-  trip: TripId;
+  trip: TripServiceInfo;
   enter_station: Station;
   exit_station: Station;
   enter_time: number;
