@@ -5,12 +5,15 @@ import {
   formatDateTime,
   formatFileNameTime,
 } from "./util/dateFormat";
-import { PaxMonEdgeLoadInfo, PaxMonTripLoadInfo } from "./motis/paxmon";
+import {
+  PaxMonEdgeLoadInfoWithStats,
+  PaxMonTripLoadInfoWithStats,
+} from "./data/loadInfo";
 
 function getSvgLinePath(
-  edges: PaxMonEdgeLoadInfo[],
+  edges: PaxMonEdgeLoadInfoWithStats[],
   maxVal: number,
-  getProp: (ef: PaxMonEdgeLoadInfo) => number
+  getProp: (ef: PaxMonEdgeLoadInfoWithStats) => number
 ) {
   const points = [];
   let x = 0;
@@ -53,7 +56,7 @@ function getYLabels(maxVal: number) {
 }
 
 function getCurrentTimePosition(
-  edges: PaxMonEdgeLoadInfo[],
+  edges: PaxMonEdgeLoadInfoWithStats[],
   currentTime: number
 ) {
   if (currentTime < edges[0].departure_current_time) {
@@ -125,7 +128,10 @@ function saveAsPNG(svgEl: SVGSVGElement | null, baseFileName: string) {
   img.src = svgUrl;
 }
 
-function getBaseFileName(data: PaxMonTripLoadInfo, systemTime: number) {
+function getBaseFileName(
+  data: PaxMonTripLoadInfoWithStats,
+  systemTime: number
+) {
   const parts = ["forecast", formatFileNameTime(systemTime)];
   for (const si of data.tsi.service_infos) {
     if (si.line) {
@@ -138,7 +144,7 @@ function getBaseFileName(data: PaxMonTripLoadInfo, systemTime: number) {
 }
 
 type TripLoadForecastChartProps = {
-  data: PaxMonTripLoadInfo | null;
+  data: PaxMonTripLoadInfoWithStats | null;
   systemTime: number | undefined;
 };
 

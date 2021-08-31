@@ -1,5 +1,4 @@
 import getQueryParameters from "../util/queryParameters";
-import { MotisMessage } from "./message";
 
 function getApiEndpoint(params: Record<string, string>) {
   const defaultProtocol = window.location.protocol;
@@ -29,17 +28,5 @@ function getApiEndpoint(params: Record<string, string>) {
 }
 
 const apiEndpoint = getApiEndpoint(getQueryParameters());
-console.log(`apiEndpoint: ${apiEndpoint}`);
 
-function sendRequest(msg: MotisMessage): Promise<Response> {
-  return fetch(`${apiEndpoint}?${msg.destination.target}`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(msg),
-  });
-}
-
-export { apiEndpoint, sendRequest };
+export default apiEndpoint;

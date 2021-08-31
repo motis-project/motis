@@ -1,8 +1,11 @@
 import {
   PaxMonCdfEntry,
-  PaxMonEdgeLoadInfo,
   PaxMonTripLoadInfo,
-} from "../motis/paxmon";
+} from "../api/protocol/motis/paxmon";
+import {
+  PaxMonEdgeLoadInfoWithStats,
+  PaxMonTripLoadInfoWithStats,
+} from "../data/loadInfo";
 
 export function probPaxLE(cdf: PaxMonCdfEntry[], limit: number): number {
   let prob = 0.0;
@@ -37,8 +40,8 @@ export function paxQuantile(cdf: PaxMonCdfEntry[], q: number): number {
 }
 
 export function processEdgeForecast(
-  ef: PaxMonEdgeLoadInfo
-): PaxMonEdgeLoadInfo {
+  ef: PaxMonEdgeLoadInfoWithStats
+): PaxMonEdgeLoadInfoWithStats {
   if (!ef.capacity) {
     return ef;
   }
@@ -56,9 +59,10 @@ export function processEdgeForecast(
   return ef;
 }
 
-export function addEdgeStatistics(tripLoadInfo: PaxMonTripLoadInfo): void {
-  if (!tripLoadInfo.edges) {
-    return;
-  }
-  tripLoadInfo.edges.forEach((e) => processEdgeForecast(e));
+export function addEdgeStatistics(
+  tripLoadInfo: PaxMonTripLoadInfo
+): PaxMonTripLoadInfoWithStats {
+  const withStats = tripLoadInfo as PaxMonTripLoadInfoWithStats;
+  withStats.edges.forEach((e) => processEdgeForecast(e));
+  return withStats;
 }

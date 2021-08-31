@@ -1,9 +1,12 @@
 import React, { useState } from "react";
 
-import { sendPaxMonFindTripsRequest } from "./motis/paxMonFindTrips";
 import { formatDateTime } from "./util/dateFormat";
-import { TripId } from "./motis/base";
-import { PaxMonFindTripsResponse, PaxMonTripInfo } from "./motis/paxmon";
+import {
+  PaxMonFindTripsResponse,
+  PaxMonTripInfo,
+} from "./api/protocol/motis/paxmon";
+import { TripId } from "./api/protocol/motis";
+import { sendPaxMonFindTripsRequest } from "./api/paxmon";
 
 type TripViewProps = {
   data: PaxMonTripInfo;
@@ -46,7 +49,13 @@ function TripPicker({ onLoadTripInfo }: TripPickerProps): JSX.Element {
     e.preventDefault();
     const trainNr = parseInt(trainNrText);
     if (trainNr) {
-      sendPaxMonFindTripsRequest({ train_nr: trainNr })
+      sendPaxMonFindTripsRequest({
+        universe: 0,
+        train_nr: trainNr,
+        only_trips_with_paxmon_data: true,
+        filter_class: false,
+        max_class: 0,
+      })
         .then((res) => res.json())
         .then((msg) => {
           console.log(msg);

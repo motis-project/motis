@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from "react";
 
-import { sendPaxMonStatusRequest } from "./motis/paxMonStatus";
-import { sendRISForwardTimeRequest } from "./motis/risForwardTime";
-import { sendPaxMonTripLoadInfoRequest } from "./motis/paxMonTripLoadInfo";
-import { sendPaxMonInitForward } from "./motis/paxMonInitForward";
 import { addEdgeStatistics } from "./util/statistics";
-
 import TimeControl from "./TimeControl";
 import TripPicker from "./TripPicker";
 import TripLoadForecastChart from "./TripLoadForecastChart";
-import { TripId } from "./motis/base";
-import { PaxMonStatusResponse, PaxMonTripLoadInfo } from "./motis/paxmon";
+import {
+  PaxMonStatusResponse,
+  PaxMonTripLoadInfo,
+} from "./api/protocol/motis/paxmon";
+import {
+  sendPaxMonGroupsInTripRequest,
+  sendPaxMonInitForward,
+  sendPaxMonStatusRequest,
+  sendPaxMonTripLoadInfoRequest,
+} from "./api/paxmon";
+import { TripId } from "./api/protocol/motis";
+import { sendRISForwardTimeRequest } from "./api/ris";
+import { PaxMonTripLoadInfoWithStats } from "./data/loadInfo";
 
 async function getInitialStatus(
   setPaxMonStatus: (status: PaxMonStatusResponse | null) => void
@@ -33,8 +39,10 @@ async function loadAndProcessTripInfo(trip: TripId) {
   const res = await sendPaxMonTripLoadInfoRequest(trip);
   const data = await res.json();
   const tli = data.content as PaxMonTripLoadInfo;
-  addEdgeStatistics(tli);
-  return tli;
+  const tliWithStats = addEdgeStatistics(tli);
+  const groupsRes = await sendPaxMonGroupsInTripRequest(trip);
+  console.log(await groupsRes.json());
+  return tliWithStats;
 }
 
 async function forwardTimeStepped(
@@ -43,7 +51,7 @@ async function forwardTimeStepped(
   stepSize: number,
   setPaxMonStatus: (status: PaxMonStatusResponse | null) => void,
   selectedTrip: TripId | null,
-  setTripLoadInfo: (tli: PaxMonTripLoadInfo | null) => void
+  setTripLoadInfo: (tli: PaxMonTripLoadInfoWithStats | null) => void
 ) {
   while (currentTime < endTime) {
     currentTime = Math.min(endTime, currentTime + stepSize);
@@ -63,9 +71,8 @@ function App(): JSX.Element {
     null
   );
   const [selectedTrip, setSelectedTrip] = useState<TripId | null>(null);
-  const [tripLoadInfo, setTripLoadInfo] = useState<PaxMonTripLoadInfo | null>(
-    null
-  );
+  const [tripLoadInfo, setTripLoadInfo] =
+    useState<PaxMonTripLoadInfoWithStats | null>(null);
   const [forwardInProgress, setForwardInProgress] = useState(false);
 
   const systemTime = paxMonStatus?.system_time;
