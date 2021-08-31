@@ -8,6 +8,6 @@ export function sendRISForwardTimeRequest(
   return sendRequest("/ris/forward", "RISForwardTimeRequest", {
     new_time: typeof newTime === "number" ? newTime : newTime.getTime() / 1000,
   }).then((msg) => {
-    return verifyContentType(msg, "MotisNoMessage");
+    return verifyContentType(msg, "MotisSuccess");
   });
 }

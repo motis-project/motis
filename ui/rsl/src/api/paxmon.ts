@@ -19,7 +19,7 @@ export function sendPaxMonStatusRequest(): Promise<PaxMonStatusResponse> {
 
 export function sendPaxMonInitForward(): Promise<Message> {
   return sendRequest("/paxmon/init_forward").then((msg) => {
-    return verifyContentType(msg, "MotisNoMessage");
+    return verifyContentType(msg, "MotisSuccess");
   });
 }
 
