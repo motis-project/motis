@@ -174,9 +174,9 @@ jobs:
             install: ninja-build
           - name: linux-arm-release
             os: ubuntu-20.04
-            toolchain: arm-unknown-linux-musleabi
-            cxx: /opt/arm-unknown-linux-musleabi/bin/arm-unknown-linux-musleabi-g++
-            cc: /opt/arm-unknown-linux-musleabi/bin/arm-unknown-linux-musleabi-gcc
+            toolchain: arm-unknown-linux-musleabihf
+            cxx: /opt/arm-unknown-linux-musleabihf/bin/arm-unknown-linux-musleabihf-g++
+            cc: /opt/arm-unknown-linux-musleabihf/bin/arm-unknown-linux-musleabihf-gcc
             cflags: -Wno-psabi -latomic
             cxxflags: -Wno-psabi -latomic
             mode: Release
@@ -185,13 +185,13 @@ jobs:
               -DCMAKE_SYSTEM_NAME=Linux \
               -DCMAKE_SYSTEM_PROCESSOR=arm \
               -DCMAKE_LIBRARY_PATH=/opt/arm-unknown-linux-musleabi/lib \
-              -DCMAKE_SYSROOT=/opt/arm-unknown-linux-musleabi/arm-unknown-linux-musleabi/sysroot
+              -DCMAKE_SYSROOT=/opt/arm-unknown-linux-musleabihf/arm-unknown-linux-musleabihf/sysroot
             artifact: linux-arm
             avx: Off
             avx2: Off
             webui: On
             tests: On
-            strip: /opt/arm-unknown-linux-musleabi/arm-unknown-linux-musleabi/bin/strip
+            strip: /opt/arm-unknown-linux-musleabihf/arm-unknown-linux-musleabihf/bin/strip
             install: ninja-build qemu-user-static
             emulator: qemu-arm-static
           - name: linux-arm64-release
