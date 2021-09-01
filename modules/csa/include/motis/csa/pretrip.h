@@ -73,8 +73,9 @@ private:
   }
 
   bool in_interval(csa_journey const& j) const {
-    return j.journey_begin() >= search_interval_.begin_ &&
-           j.journey_begin() <= search_interval_.end_;
+    auto const t =
+        query().dir_ == search_dir::FWD ? j.journey_begin() : j.journey_end();
+    return t >= search_interval_.begin_ && t <= search_interval_.end_;
   }
 
   bool min_connection_count_reached() const {
