@@ -19,9 +19,9 @@ struct revise : public motis::module::module {
   void init(motis::module::registry&) override;
 
 private:
-  static motis::module::msg_ptr update(motis::module::msg_ptr const&);
-  static motis::module::msg_ptr update(Connection const* con);
-  static motis::module::msg_ptr update(ReviseRequest const* req);
+  motis::module::msg_ptr update(motis::module::msg_ptr const&);
+  motis::module::msg_ptr update(Connection const* con);
+  motis::module::msg_ptr update(ReviseRequest const* req);
 };
 
 }  // namespace motis::revise

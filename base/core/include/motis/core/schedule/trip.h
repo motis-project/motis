@@ -13,6 +13,7 @@
 #include "motis/vector.h"
 
 #include "motis/core/common/hash_helper.h"
+#include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/edges.h"
 #include "motis/core/schedule/nodes.h"
 
@@ -39,6 +40,7 @@ struct primary_trip_id {
     return a == b;
   }
 
+  uint32_t get_station_id() const { return static_cast<uint32_t>(station_id_); }
   motis::time get_time() const { return static_cast<motis::time>(time_); }
   uint32_t get_train_nr() const { return static_cast<uint32_t>(train_nr_); }
 
@@ -83,7 +85,7 @@ struct full_trip_id {
 struct gtfs_trip_id {
   CISTA_COMPARABLE()
   mcd::string trip_id_;
-  std::time_t start_date_{0};
+  unixtime start_date_{0};
 };
 
 struct trip {

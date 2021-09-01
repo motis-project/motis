@@ -154,7 +154,7 @@ struct full_trip_handler {
         update_builder_.add_reroute(result_.trp_, {}, 0);
       }
       for (auto const& ev : canceled_ev_keys) {
-        propagator_.add_canceled(ev);
+        propagator_.recalculate(ev);
         if (auto const it = sched_.graph_to_delay_info_.find(ev);
             it != end(sched_.graph_to_delay_info_)) {
           cancelled_delays_.emplace(
@@ -167,10 +167,15 @@ struct full_trip_handler {
       existing_sections = get_existing_sections(result_.trp_);
     }
 
+    auto const recalculate_delays = is_reroute() && !is_new_trip();
     for (auto const& [msg_sec, cur_sec] :
          utl::zip(sections, existing_sections)) {
       update_event(cur_sec.dep_, msg_sec.dep_, cur_sec.lcon());
       update_event(cur_sec.arr_, msg_sec.arr_, cur_sec.lcon());
+      if (recalculate_delays) {
+        propagator_.recalculate(cur_sec.dep_.get_ev_key());
+        propagator_.recalculate(cur_sec.arr_.get_ev_key());
+      }
     }
 
     if (result_.delay_updates_ > 0) {

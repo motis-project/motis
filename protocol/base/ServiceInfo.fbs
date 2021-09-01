@@ -1,0 +1,10 @@
+namespace motis;
+
+table ServiceInfo {
+  name: string;
+  category: string;
+  train_nr: uint;
+  line: string;
+  provider: string;
+  clasz: ubyte;
+}

@@ -5,18 +5,19 @@
 
 #include "flatbuffers/flatbuffers.h"
 
+#include "motis/core/common/typed_flatbuffer.h"
+#include "motis/core/common/unixtime.h"
+
 #ifdef GetMessage
 #undef GetMessage
 #endif
 
 #include "motis/protocol/RISMessage_generated.h"
 
-#include "motis/core/common/typed_flatbuffer.h"
-
 namespace motis::ris {
 
 struct ris_message : typed_flatbuffer<Message> {
-  ris_message(time_t earliest, time_t latest, time_t timestamp,
+  ris_message(unixtime earliest, unixtime latest, unixtime timestamp,
               flatbuffers::FlatBufferBuilder&& fbb)
       : typed_flatbuffer(std::move(fbb)),
         earliest_(earliest),
@@ -24,16 +25,16 @@ struct ris_message : typed_flatbuffer<Message> {
         timestamp_(timestamp) {}
 
   // testing w/o flatbuffers
-  ris_message(time_t earliest, time_t latest, time_t timestamp,
+  ris_message(unixtime earliest, unixtime latest, unixtime timestamp,
               std::string const& msg)
       : typed_flatbuffer(msg),
         earliest_(earliest),
         latest_(latest),
         timestamp_(timestamp) {}
 
-  time_t earliest_;
-  time_t latest_;
-  time_t timestamp_;
+  unixtime earliest_;
+  unixtime latest_;
+  unixtime timestamp_;
 };
 
 }  // namespace motis::ris

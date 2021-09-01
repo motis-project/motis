@@ -5,7 +5,7 @@
 namespace motis::railviz {
 
 struct train {
-  MAKE_COMPARABLE();
+  CISTA_COMPARABLE();
 
   ev_key key_;
   float route_distance_{0};

@@ -38,6 +38,7 @@ endif()
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 option(MOTIS_AVX "enable AVX functions" ON)
+option(MOTIS_AVX2 "enable AVX2 + FMA functions" ON)
 
 option(MOTIS_CUDA "enable CUDA functions" OFF)
 if (MOTIS_CUDA)
@@ -52,6 +53,8 @@ endif()
 
 option(MOTIS_LINT "enable lint (clang-tidy) target" OFF)
 option(MOTIS_COV "enable coverage (coverage) target" OFF)
+
+option(MOTIS_WITH_WEBUI "enable motis-web-ui target" OFF)
 
 add_library(motis-generated INTERFACE)
 target_include_directories(motis-generated INTERFACE ${CMAKE_BINARY_DIR}/generated)
@@ -138,6 +141,14 @@ if (MOTIS_AVX)
     set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -mavx)
   endif()
 endif()
+if (MOTIS_AVX2)
+  set(MOTIS_COMPILE_DEFINITIONS MOTIS_AVX2 ${MOTIS_COMPILE_DEFINITIONS})
+  if (MSVC)
+    set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} /arch:AVX2)
+  else()
+    set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -mavx2 -mfma -mbmi)
+  endif()
+endif()
 
 
 ################################
@@ -183,6 +194,10 @@ endforeach(module)
 
 add_subdirectory(base/bootstrap EXCLUDE_FROM_ALL)
 add_subdirectory(base/launcher)
+
+if(MOTIS_WITH_WEBUI)
+  add_subdirectory(ui/web)
+endif()
 
 
 ################################

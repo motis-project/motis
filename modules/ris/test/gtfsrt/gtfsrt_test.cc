@@ -15,8 +15,8 @@ void gtfsrt_test::SetUp() { sched_ = load_schedule(opts_); }
 
 std::vector<ris_message> gtfsrt_test::parse_json(std::string const& json) {
   auto bin = json_to_protobuf(json);
-  gtfsrt_parser cut;
-  return cut.parse(*sched_, std::string_view{bin.c_str(), bin.size()});
+  gtfsrt_parser cut{*sched_};
+  return cut.parse(std::string_view{bin.c_str(), bin.size()});
 }
 
 }  // namespace motis::ris::gtfsrt

@@ -4,12 +4,13 @@
 #include <mutex>
 #include <utility>
 
+#include "cista/reflection/comparable.h"
 #include "utl/erase_if.h"
-#include "utl/struct/comparable.h"
 #include "utl/verify.h"
 
 #include "ppr/routing/search_profile.h"
 
+#include "motis/core/common/unixtime.h"
 #include "motis/module/context/motis_spawn.h"
 
 using namespace geo;
@@ -94,7 +95,7 @@ msg_ptr make_direct_ppr_request(geo::latlng const& start,
 }
 
 struct osrm_settings {
-  MAKE_COMPARABLE()
+  CISTA_COMPARABLE()
   int max_duration_{};  // seconds
   double max_distance_{};  // meters
 };
@@ -284,9 +285,9 @@ void add_direct_connections(std::vector<journey>& journeys,
   for (auto const& d : direct) {
     auto const dep_time =
         fwd ? q_start.time_
-            : static_cast<std::time_t>(q_start.time_ - d.duration_ * 60);
+            : static_cast<unixtime>(q_start.time_ - d.duration_ * 60);
     auto const arr_time =
-        fwd ? static_cast<std::time_t>(q_start.time_ + d.duration_ * 60)
+        fwd ? static_cast<unixtime>(q_start.time_ + d.duration_ * 60)
             : q_start.time_;
 
     auto& j = journeys.emplace_back();

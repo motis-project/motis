@@ -17,11 +17,11 @@ namespace motis::rt {
 
 struct rt_handler {
   explicit rt_handler(schedule& sched, bool validate_graph,
-                      bool validate_constant_graph);
+                      bool validate_constant_graph, bool print_stats);
 
   motis::module::msg_ptr update(motis::module::msg_ptr const&);
   motis::module::msg_ptr single(motis::module::msg_ptr const&);
-  void update(schedule&, motis::ris::Message const*);
+  void update(motis::ris::Message const*);
   motis::module::msg_ptr flush(motis::module::msg_ptr const&);
 
 private:
@@ -49,6 +49,7 @@ private:
 
   bool validate_graph_;
   bool validate_constant_graph_;
+  bool print_stats_;
 };
 
 }  // namespace motis::rt

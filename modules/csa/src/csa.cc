@@ -2,7 +2,6 @@
 
 #include "motis/core/access/time_access.h"
 #include "motis/core/journey/journeys_to_message.h"
-#include "motis/module/context/get_schedule.h"
 
 #include "motis/csa/build_csa_timetable.h"
 #include "motis/csa/csa_query.h"
@@ -63,7 +62,7 @@ motis::module::msg_ptr csa::route(motis::module::msg_ptr const& msg,
                                   implementation_type impl_type,
                                   bool use_profile_search) const {
   auto const req = motis_content(RoutingRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto const response =
       run_csa_search(sched, *timetable_, csa_query(sched, req),
                      req->search_type(), impl_type, use_profile_search);

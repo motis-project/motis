@@ -16,12 +16,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [Debug, Release]
+        config:
+          - mode: Debug
+            webui: Off
+          - mode: Release
+            webui: On
 
     env:
       CXX: cl.exe
       CC: cl.exe
       BUILDCACHE_COMPRESS: true
+      BUILDCACHE_DIRECT_MODE: true
       BUILDCACHE_ACCURACY: SLOPPY # not suitable for coverage/debugging
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
@@ -31,17 +36,17 @@ jobs:
       - uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: buildcache Cache
-        uses: actions/cache@v1.1.2
+        uses: actions/cache@v2
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-wnds-${{ matrix.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          key: buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
-            buildcache-wnds-${{ matrix.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}
-            buildcache-wnds-${{ matrix.mode }}-${{ hashFiles('.pkg') }}-
-            buildcache-wnds-${{ matrix.mode }}-
+            buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}
+            buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-
+            buildcache-wnds-${{ matrix.config.mode }}-
 
       - name: Dependencies Cache
-        uses: actions/cache@v1.1.2
+        uses: actions/cache@v2
         with:
           path: ${{ github.workspace }}/deps
           key: deps-${{ hashFiles('.pkg') }}
@@ -53,10 +58,22 @@ jobs:
           $installPath = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationpath
           Import-Module $devShell
           Enter-VsDevShell -VsInstallPath $installPath -SkipAutomaticLocation -DevCmdArguments "-arch=amd64"
-          cmake -GNinja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DMOTIS_DEBUG_SYMBOLS=OFF
+          cmake `
+            -GNinja -S . -B build `
+            -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} `
+            -DMOTIS_DEBUG_SYMBOLS=OFF `
+            -DMOTIS_WITH_WEBUI=${{ matrix.config.webui }}
           .\build\buildcache\bin\buildcache.exe -z
-          cmake --build build --target motis motis-test motis-itest motis-eval motis-intermodal-eval
+          cmake --build build --target `
+            motis `
+            motis-test `
+            motis-itest `
+            motis-eval `
+            motis-intermodal-eval `
+            motis-pax-tools
+          $CompilerExitCode = $LastExitCode
           .\build\buildcache\bin\buildcache.exe -s
+          exit $CompilerExitCode
 
       # ==== TESTS ====
       - name: Run Test Mode
@@ -76,26 +93,18 @@ jobs:
 
       # ==== DISTRIBUTION ====
       - name: Compile Web Interface
-        if: matrix.mode == 'Release'
-        run: |
-          cd .\ui\web
-          mkdir elm
-          cd elm
-          Invoke-WebRequest -Uri https://github.com/elm-lang/elm-platform/releases/download/0.18.0-exp/elm-platform-windows.tar.gz -OutFile elm-platform-windows.tar.gz
-          cmake -E tar xzf .\elm-platform-windows.tar.gz
-          cd ..
-          .\elm\elm-make.exe --yes .\src\Main.elm --output elm.js
-          Remove-Item -Recurse -Force .\elm
+        if: matrix.config.webui == 'On'
+        run: cmake --build build --target motis-web-ui
 
       - name: Move Profiles
-        if: matrix.mode == 'Release'
+        if: matrix.config.mode == 'Release'
         run: |
           echo d | xcopy /s .\deps\osrm-backend\profiles .\osrm-profiles
           echo d | xcopy /s .\deps\ppr\profiles .\ppr-profiles
           echo d | xcopy /s .\deps\tiles\profile .\tiles-profiles
 
       - name: Create Distribution
-        if: matrix.mode == 'Release'
+        if: matrix.config.mode == 'Release'
         run: >
           7z a motis-windows.zip
           .\build\motis.exe
@@ -105,7 +114,7 @@ jobs:
           .\ui\web
 
       - name: Upload Distribution
-        if: matrix.mode == 'Release'
+        if: matrix.config.mode == 'Release'
         uses: actions/upload-artifact@v1
         with:
           name: motis-windows
@@ -113,7 +122,7 @@ jobs:
 
       # ==== RELEASE ====
       - name: Upload Release
-        if: github.event.action == 'published' && matrix.mode == 'Release'
+        if: github.event.action == 'published' && matrix.config.mode == 'Release'
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

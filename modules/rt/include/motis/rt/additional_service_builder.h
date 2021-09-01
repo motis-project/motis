@@ -7,10 +7,12 @@
 #include <vector>
 
 #include "utl/get_or_create.h"
+#include "utl/verify.h"
 
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/time_access.h"
+#include "motis/core/access/trip_access.h"
 #include "motis/core/conv/event_type_conv.h"
 #include "motis/loader/classes.h"
 
@@ -24,6 +26,8 @@
 
 namespace motis::rt {
 
+struct statistics;
+
 struct additional_service_builder {
   using section = std::tuple<light_connection, station_node*, station_node*>;
 
@@ -35,12 +39,13 @@ struct additional_service_builder {
     STATION_NOT_FOUND,
     EVENT_TIME_OUT_OF_RANGE,
     STATION_MISMATCH,
-    DECREASING_TIME
+    DECREASING_TIME,
+    DUPLICATE_TRIP
   };
 
-  additional_service_builder(schedule& sched,
+  additional_service_builder(statistics& stats, schedule& sched,
                              update_msg_builder& update_builder)
-      : sched_{sched}, update_builder_{update_builder} {}
+      : stats_{stats}, sched_{sched}, update_builder_{update_builder} {}
 
   status check_events(
       flatbuffers::Vector<flatbuffers::Offset<ris::AdditionalEvent>> const*
@@ -219,10 +224,31 @@ struct additional_service_builder {
     }
   }
 
+  bool trip_already_exists(ris::AdditionMessage const* msg) const {
+    utl::verify(msg->events()->size() >= 2, "invalid additional trip message");
+    auto const first = msg->events()->Get(0);
+    auto const last = msg->events()->Get(msg->events()->size() - 1);
+    auto const trip_id = full_trip_id{
+        primary_trip_id{
+            get_station(sched_, first->base()->station_id()->str())->index_,
+            first->base()->service_num(),
+            unix_to_motistime(sched_, first->base()->schedule_time())},
+        secondary_trip_id{
+            get_station(sched_, last->base()->station_id()->str())->index_,
+            unix_to_motistime(sched_, last->base()->schedule_time()),
+            last->base()->line_id()->str()}};
+
+    return find_trip(sched_, trip_id) != nullptr;
+  }
+
   status build_additional_train(ris::AdditionMessage const* msg) {
     auto const result = check_events(msg->events());
     if (result != status::OK) {
       return result;
+    }
+
+    if (trip_already_exists(msg)) {
+      return status::DUPLICATE_TRIP;
     }
 
     auto const sections = build_sections(msg->events());
@@ -238,6 +264,7 @@ struct additional_service_builder {
     return verify_trip_id(trp, msg->trip_id());
   }
 
+  statistics& stats_;
   schedule& sched_;
   update_msg_builder& update_builder_;
   std::map<connection_info, connection_info const*> con_infos_;

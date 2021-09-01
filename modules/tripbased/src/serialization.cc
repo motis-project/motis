@@ -40,7 +40,11 @@ struct file {
   std::size_t size() const {
     auto const err = std::fseek(f_, 0, SEEK_END);
     utl::verify(err == 0, "fseek to SEEK_END error");
+#ifdef _WIN32
+    auto const size = _ftelli64(f_);
+#else
     auto const size = std::ftell(f_);
+#endif
     std::rewind(f_);
     return static_cast<std::size_t>(size);
   }
@@ -51,7 +55,11 @@ struct file {
   }
 
   void read(void* buf, std::size_t offset, std::size_t size) const {
+#ifdef _WIN32
+    auto const err = _fseeki64(f_, offset, SEEK_SET);
+#else
     auto const err = std::fseek(f_, offset, SEEK_SET);
+#endif
     utl::verify(err == 0, "fseek error");
     auto const bytes_read = std::fread(buf, 1, size, f_);
     utl::verify(bytes_read == size, "file read error");

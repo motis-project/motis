@@ -7,6 +7,7 @@
 
 #include "utl/progress_tracker.h"
 
+#include "motis/module/import_dispatcher.h"
 #include "motis/module/message.h"
 #include "motis/module/registry.h"
 
@@ -32,10 +33,12 @@ struct event_collector : std::enable_shared_from_this<event_collector> {
     std::function<bool(msg_ptr)> matcher_fn_;
   };
   using dependencies_map_t = std::map<std::string, msg_ptr>;
-  using import_op_t = std::function<void(dependencies_map_t const&)>;
+  using publish_fn_t = std::function<void(msg_ptr)>;
+  using import_op_t =
+      std::function<void(dependencies_map_t const&, publish_fn_t const&)>;
 
-  event_collector(std::string data_dir, std::string module_name, registry& reg,
-                  import_op_t op);
+  event_collector(std::string data_dir, std::string module_name,
+                  import_dispatcher&, import_op_t);
 
   event_collector* require(std::string const& name,
                            std::function<bool(msg_ptr)>);
@@ -43,7 +46,7 @@ struct event_collector : std::enable_shared_from_this<event_collector> {
 private:
   std::string data_dir_;
   std::string module_name_;
-  registry& reg_;
+  import_dispatcher& reg_;
   import_op_t op_;
   dependencies_map_t dependencies_;
   std::set<std::string> waiting_for_;

@@ -4,6 +4,7 @@
 
 #include "motis/string.h"
 
+#include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/event_type.h"
 
 #include "motis/protocol/RISMessage_generated.h"
@@ -18,16 +19,17 @@ struct message_context;
 struct stop_context;
 struct evt;
 
-flatbuffers::Offset<IdEvent> create_id_event(message_context&, schedule&,
+flatbuffers::Offset<IdEvent> create_id_event(message_context&, schedule const&,
                                              trip const&);
 
 flatbuffers::Offset<IdEvent> create_id_event(message_context&,
-                                             mcd::string const&, std::time_t);
+                                             mcd::string const& station_id,
+                                             unixtime const start_time);
 
 flatbuffers::Offset<Event> create_event(trip const&, schedule const&,
                                         message_context&, stop_context const&,
                                         event_type);
-flatbuffers::Offset<Event> create_event(trip const&, schedule&,
+flatbuffers::Offset<Event> create_event(trip const&, schedule const&,
                                         message_context&, int, event_type);
 
 flatbuffers::Offset<Event> create_event(message_context&, evt const&);

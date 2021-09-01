@@ -21,6 +21,7 @@ std::unique_ptr<Parser> init_parser(bool compact = false) {
   auto parser = std::make_unique<Parser>();
   parser->opts.strict_json = true;
   parser->opts.skip_unexpected_fields_in_json = true;
+  parser->opts.output_default_scalars_in_json = true;
   if (compact) {
     parser->opts.indent_step = -1;
   }

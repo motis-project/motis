@@ -50,8 +50,8 @@ struct import_state {
 };
 
 struct tiles::data {
-  explicit data(std::string const& path)
-      : db_env_{::tiles::make_tile_database(path.c_str())},
+  explicit data(std::string const& path, size_t const db_size)
+      : db_env_{::tiles::make_tile_database(path.c_str(), db_size)},
         db_handle_{db_env_},
         render_ctx_{::tiles::make_render_ctx(db_handle_)},
         pack_handle_{path.c_str()} {}
@@ -65,21 +65,22 @@ struct tiles::data {
 tiles::tiles() : mm::module("Tiles", "tiles") {
   param(profile_path_, "profile", "/path/to/profile.lua");
   param(use_coastline_, "import.use_coastline", "true|false");
+  param(flush_threshold_, "import.flush_threshold",
+        "shared metadata max queue size");
+  param(db_size_, "db_size", "database size");
 }
 
 tiles::~tiles() = default;
 
-void tiles::import(mm::registry& reg) {
+void tiles::import(mm::import_dispatcher& reg) {
   auto const collector = std::make_shared<mm::event_collector>(
       get_data_directory().generic_string(), "tiles", reg,
-      [this](std::map<std::string, mm::msg_ptr> const& dependencies) {
+      [this](mm::event_collector::dependencies_map_t const& dependencies,
+             mm::event_collector::publish_fn_t const&) {
         auto const profile_path = fs::path{profile_path_};
-
-        auto profile_hash = c::hash(profile_path.string());
-        profile_hash = c::hash_combine(profile_hash, profile_path.size());
         auto const profile_str = utl::read_file(profile_path.string().c_str());
         utl::verify(profile_str.has_value(), "tiles::import cant read profile");
-        profile_hash = c::hash_combine(profile_hash, c::hash(*profile_str));
+        auto const profile_hash = c::hash(*profile_str);
 
         auto const dir = get_data_directory() / "tiles";
         auto const path = (dir / "tiles.mdb").string();
@@ -111,10 +112,11 @@ void tiles::import(mm::registry& reg) {
           auto const db_fname = dir / "tiles.mdb";
 
           progress_tracker->status("Clear Database");
-          ::tiles::clear_database(path);
+          ::tiles::clear_database(path, db_size_);
           ::tiles::clear_pack_file(path.c_str());
 
-          lmdb::env db_env = ::tiles::make_tile_database(path.c_str());
+          lmdb::env db_env =
+              ::tiles::make_tile_database(path.c_str(), db_size_);
           ::tiles::tile_db_handle db_handle{db_env};
           ::tiles::pack_handle pack_handle{path.c_str()};
 
@@ -141,7 +143,7 @@ void tiles::import(mm::registry& reg) {
         }
 
         mm::write_ini(dir / "import.ini", state);
-        data_ = std::make_unique<data>(path);
+        data_ = std::make_unique<data>(path, db_size_);
       });
   collector->require("OSM", [](mm::msg_ptr const& msg) {
     return msg->get()->content_type() == MsgContent_OSMEvent;

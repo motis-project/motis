@@ -62,7 +62,9 @@ Checks: "*,\
 -llvm-else-after-return,\
 -llvm-qualified-auto,\
 -readability-qualified-auto,\
--google-readability-avoid-underscore-in-googletest-name"
+-google-readability-avoid-underscore-in-googletest-name,\
+-readability-function-cognitive-complexity,\
+-altera-struct-pack-align"
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^${RELATIVE_SOURCE_DIR}(base|modules|test)/'
 AnalyzeTemporaryDtors: false

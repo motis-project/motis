@@ -13,6 +13,7 @@
 
 #include "conf/options_parser.h"
 
+#include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/time.h"
 #include "motis/core/access/time_access.h"
 #include "motis/module/message.h"
@@ -70,19 +71,19 @@ struct generator_settings : public conf::configuration {
 };
 
 struct search_interval_generator {
-  search_interval_generator(time_t begin, time_t end)
+  search_interval_generator(unixtime begin, unixtime end)
       : begin_(begin), rng_(rd_()), d_(generate_distribution(begin, end)) {
     rng_.seed(std::time(nullptr));
   }
 
-  std::pair<time_t, time_t> random_interval() {
+  std::pair<unixtime, unixtime> random_interval() {
     auto begin = begin_ + d_(rng_) * 3600;
     return {begin, begin + 3600};
   }
 
 private:
-  static std::discrete_distribution<int> generate_distribution(time_t begin,
-                                                               time_t end) {
+  static std::discrete_distribution<int> generate_distribution(unixtime begin,
+                                                               unixtime end) {
     auto constexpr k_two_hours = 2 * 3600;
     static const int prob[] = {
         1,  // 01: 00:00 - 01:00
@@ -111,14 +112,15 @@ private:
         1  // 24: 23:00 - 24:00
     };
     std::vector<int> v;
-    for (time_t t = begin, hour = 0; t < end - k_two_hours; t += 3600, ++hour) {
+    for (unixtime t = begin, hour = 0; t < end - k_two_hours;
+         t += 3600, ++hour) {
       int h = hour % 24;
       v.push_back(prob[h]);  // NOLINT
     }
     return std::discrete_distribution<int>(std::begin(v), std::end(v));
   }
 
-  time_t begin_;
+  unixtime begin_;
   std::random_device rd_;
   std::mt19937 rng_;
   std::vector<int> hour_prob_;
@@ -143,7 +145,7 @@ static It rand_in(It begin, It end) {
 }
 
 std::string query(std::string const& target, Start const start_type, int id,
-                  std::time_t interval_start, std::time_t interval_end,
+                  unixtime interval_start, unixtime interval_end,
                   std::string const& from_eva, std::string const& to_eva,
                   SearchDir const dir, bool include_equivalent) {
   message_creator fbb;
@@ -198,7 +200,8 @@ bool has_events(station_node const& s, motis::time from, motis::time to) {
 }
 
 int random_station_id(std::vector<station_node const*> const& station_nodes,
-                      time_t motis_interval_start, time_t motis_interval_end) {
+                      unixtime motis_interval_start,
+                      unixtime motis_interval_end) {
   auto first = std::next(begin(station_nodes), 2);
   auto last = end(station_nodes);
 
@@ -217,7 +220,7 @@ bool is_meta(station const* a, station const* b) {
 std::pair<std::string, std::string> random_station_ids(
     schedule const& sched,
     std::vector<station_node const*> const& station_nodes,
-    time_t interval_start, time_t interval_end) {
+    unixtime interval_start, unixtime interval_end) {
   station const *from = nullptr, *to = nullptr;
   auto motis_interval_start = unix_to_motistime(sched, interval_start);
   auto motis_interval_end = unix_to_motistime(sched, interval_end);

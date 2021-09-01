@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "utl/get_or_create.h"
+#include "utl/verify.h"
 
 #include "motis/hash_set.h"
 
@@ -26,19 +27,20 @@ struct delay_propagator {
 
   mcd::hash_set<delay_info*> const& events() const { return events_; }
 
-  void add_delay(ev_key const& k,
-                 timestamp_reason const reason = timestamp_reason::SCHEDULE,
-                 time const updated_time = INVALID_TIME) {
+  void add_delay(ev_key const& k, timestamp_reason const reason,
+                 time const updated_time) {
     auto di = get_or_create_di(k);
     if (reason != timestamp_reason::SCHEDULE && di->set(reason, updated_time)) {
       expand(di->get_ev_key());
     }
   }
 
-  void add_canceled(ev_key const& k) {
+  void recalculate(ev_key const& k) {
     auto const di_it = sched_.graph_to_delay_info_.find(k);
     if (di_it != end(sched_.graph_to_delay_info_)) {
-      push(k);
+      utl::verify(k == di_it->second->get_ev_key(),
+                  "delay_propagator::recalculate: ev_key mismatch");
+      push(di_it->second);
       expand(k);
     }
   }
@@ -70,6 +72,11 @@ private:
   }
 
   void push(ev_key const& k) { pq_.push(get_or_create_di(k)); }
+
+  void push(delay_info* di) {
+    events_.insert(di);
+    pq_.push(di);
+  }
 
   void expand(ev_key const& k) {
     if (k.is_arrival()) {

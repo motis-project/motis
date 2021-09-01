@@ -1,0 +1,5 @@
+namespace motis.paxmon;
+
+table PaxMonForkUniverseRequest {
+  universe: uint; // base universe
+}

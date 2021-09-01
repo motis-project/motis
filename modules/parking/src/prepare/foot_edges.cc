@@ -108,7 +108,10 @@ void compute_foot_edges(
     int threads, std::string const& stations_per_parking_file) {
   std::clog << "Computing foot edges..." << std::endl;
   database db{footedges_db_file,
-              static_cast<std::size_t>(1024) * 1024 * 1024 * 512, false};
+              sizeof(void*) >= 8
+                  ? static_cast<std::size_t>(1024) * 1024 * 1024 * 512
+                  : 256 * 1024 * 1024,
+              false};
 
   routing_graph rg;
   {

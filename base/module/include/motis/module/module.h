@@ -9,6 +9,7 @@
 
 #include "conf/configuration.h"
 
+#include "motis/module/import_dispatcher.h"
 #include "motis/module/message.h"
 #include "motis/module/registry.h"
 #include "motis/module/shared_data.h"
@@ -37,7 +38,7 @@ struct module : public conf::configuration {
   void set_data_directory(std::string const&);
   void set_shared_data(shared_data*);
 
-  virtual void import(registry&) {}
+  virtual void import(import_dispatcher&) {}
   virtual void init(registry&) {}
 
   virtual bool import_successful() const { return true; }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cinttypes>
 #include <limits>
 #include <vector>
 
@@ -15,6 +16,6 @@ struct post_segment_id;
 
 std::vector<std::pair<atomic_path*, bool>> reconstruct_path(
     post_segment_id const&,
-    size_t sanity_check_limit = std::numeric_limits<size_t>::max());
+    std::size_t sanity_check_limit = std::numeric_limits<std::size_t>::max());
 
 }  // namespace motis::path
