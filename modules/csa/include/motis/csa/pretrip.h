@@ -165,21 +165,33 @@ struct pretrip_profile_search {
   void search_in_interval(Results& results, interval const& search_interval,
                           bool const ontrip_at_interval_end) {
     CSAProfileSearch profile_csa{tt_, search_interval, stats_};
-    run_search(profile_csa, results);
+    init_and_run_search(profile_csa, results);
 
     if (ontrip_at_interval_end) {
       CSAOnTripSearch ontrip_csa{
           tt_, static_cast<time>(search_interval.end_ + 1), stats_};
-      run_search(ontrip_csa, results);
+      init_and_run_search(ontrip_csa, results);
     }
+  }
+
+  template <typename Results>
+  void init_and_run_search(CSAProfileSearch& csa, Results& results) {
+    for (auto const& start_idx : q_.meta_dests_) {
+      csa.add_destination(tt_.stations_.at(start_idx), 0);
+    }
+    run_search(csa, results);
+  }
+
+  template <typename Results>
+  void init_and_run_search(CSAOnTripSearch& csa, Results& results) {
+    for (auto const& start_idx : q_.meta_starts_) {
+      csa.add_start(tt_.stations_.at(start_idx), 0);
+    }
+    run_search(csa, results);
   }
 
   template <typename CSASearch, typename Results>
   void run_search(CSASearch& csa, Results& results) {
-    for (auto const& start_idx : q_.meta_starts_) {
-      csa.add_start(tt_.stations_.at(start_idx), 0);
-    }
-
     MOTIS_START_TIMING(search_timing);
     csa.search();
     MOTIS_STOP_TIMING(search_timing);

@@ -25,14 +25,10 @@ struct csa_profile_search {
                      csa_statistics& stats)
       : tt_{tt}, search_interval_{search_interval}, stats_{stats} {}
 
-  void add_start(csa_station const& station, time initial_duration) {
-    // Ready for departure at station at time:
-    // start time + initial_duration (Dir == search_dir::FWD)
-    // start time - initial_duration (Dir == search_dir::BWD)
-    stats_.start_count_++;
-
+  void add_destination(csa_station const& station, time /*initial_duration*/) {
+    // For now initial_duration is always 0
     (void)station;
-    (void)initial_duration;
+    stats_.destination_count_++;
   }
 
   void search() {
