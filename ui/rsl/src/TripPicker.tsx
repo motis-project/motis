@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
+import { useQuery } from "react-query";
 
 import { formatDateTime } from "./util/dateFormat";
 import { PaxMonTripInfo } from "./api/protocol/motis/paxmon";
@@ -35,46 +36,47 @@ function filterTrips(trips: PaxMonTripInfo[]) {
 }
 
 type TripPickerProps = {
-  onLoadTripInfo: (trip: TripId) => void;
+  onTripPicked: (trip: TripId) => void;
 };
 
-function TripPicker({ onLoadTripInfo }: TripPickerProps): JSX.Element {
-  const [trainNrText, setTrainNrText] = useState("");
-  const [tripList, setTripList] = useState<PaxMonTripInfo[]>([]);
-
-  function findByTrainNr(e: React.MouseEvent) {
-    e.preventDefault();
-    const trainNr = parseInt(trainNrText);
-    if (trainNr) {
-      sendPaxMonFindTripsRequest({
+function TripPicker({ onTripPicked }: TripPickerProps): JSX.Element {
+  const trainNrInput = useRef<HTMLInputElement | null>(null);
+  const [trainNr, setTrainNr] = useState<number | null>(null);
+  const { data: tripList } = useQuery(
+    ["trips", trainNr],
+    async () => {
+      const res = await sendPaxMonFindTripsRequest({
         universe: 0,
-        train_nr: trainNr,
+        train_nr: trainNr || 0,
         only_trips_with_paxmon_data: true,
         filter_class: false,
         max_class: 0,
-      }).then((data) => {
-        setTripList(filterTrips(data.trips));
       });
-    }
+      return filterTrips(res.trips);
+    },
+    { enabled: trainNr !== null }
+  );
+
+  function findByTrainNr(e: React.FormEvent) {
+    e.preventDefault();
+    setTrainNr(parseInt(trainNrInput.current?.value || ""));
   }
 
   const filterForm = (
     <div className="flex items-center m-2">
-      <form className="space-x-2">
+      <form className="space-x-2" onSubmit={findByTrainNr}>
         <label>
           Train number:
           <input
             type="text"
             pattern="\d+"
-            value={trainNrText}
-            onChange={(e) => setTrainNrText(e.target.value)}
+            ref={trainNrInput}
             className="w-20 border border-gray-200 rounded ml-2"
           />
         </label>
         <button
           type="submit"
           className="bg-gray-200 px-2 py-1 border border-gray-300 rounded-xl"
-          onClick={findByTrainNr}
         >
           Find
         </button>
@@ -82,13 +84,13 @@ function TripPicker({ onLoadTripInfo }: TripPickerProps): JSX.Element {
     </div>
   );
 
-  const resultList = (
+  const resultList = tripList && (
     <div className="m-2">
       <ul>
         {tripList.map((data, idx) => (
           <li
             key={idx.toString()}
-            onClick={() => onLoadTripInfo(data.tsi.trip)}
+            onClick={() => onTripPicked(data.tsi.trip)}
             className="cursor-pointer hover:underline"
           >
             <TripView data={data} />

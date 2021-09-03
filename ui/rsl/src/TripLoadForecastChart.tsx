@@ -1,14 +1,21 @@
 import React, { useRef } from "react";
 
 import {
-  formatTime,
   formatDateTime,
   formatFileNameTime,
+  formatTime,
 } from "./util/dateFormat";
 import {
   PaxMonEdgeLoadInfoWithStats,
   PaxMonTripLoadInfoWithStats,
 } from "./data/loadInfo";
+import { TripId } from "./api/protocol/motis";
+import {
+  sendPaxMonStatusRequest,
+  sendPaxMonTripLoadInfosRequest,
+} from "./api/paxmon";
+import { addEdgeStatistics } from "./util/statistics";
+import { useQuery } from "react-query";
 
 function getSvgLinePath(
   edges: PaxMonEdgeLoadInfoWithStats[],
@@ -143,21 +150,38 @@ function getBaseFileName(
   return parts.join("_");
 }
 
+async function loadAndProcessTripInfo(trip: TripId) {
+  const res = await sendPaxMonTripLoadInfosRequest({
+    universe: 0,
+    trips: [trip],
+  });
+  const tli = res.load_infos[0];
+  return addEdgeStatistics(tli);
+}
+
 type TripLoadForecastChartProps = {
-  data: PaxMonTripLoadInfoWithStats | null;
-  systemTime: number | undefined;
+  tripId: TripId;
 };
 
 function TripLoadForecastChart({
-  data,
-  systemTime,
+  tripId,
 }: TripLoadForecastChartProps): JSX.Element | null {
+  const { data: status } = useQuery("status", sendPaxMonStatusRequest);
+
+  const { data /*, isLoading, error*/ } = useQuery(
+    ["trip", "load", { tripId }],
+    async () => loadAndProcessTripInfo(tripId),
+    { enabled: !!status }
+  );
+
   const svgEl = useRef<SVGSVGElement>(null);
 
-  const edges = data?.edges;
-  if (!data || !edges || !systemTime) {
+  if (!status || !data) {
     return null;
   }
+
+  const systemTime = status.system_time;
+  const edges = data.edges;
 
   const allEdgesHaveCapacity = edges.every((e) => e.capacity);
   if (!allEdgesHaveCapacity) {
@@ -422,6 +446,20 @@ function TripLoadForecastChart({
     />
   );
 
+  const clickRegions = edges.map((e, idx) => {
+    return (
+      <rect
+        key={idx.toString()}
+        x={idx * 50}
+        y="0"
+        width="50"
+        height="200"
+        fill="transparent"
+        onClick={() => console.log("clicked section:", data?.tsi, e)}
+      />
+    );
+  });
+
   return (
     <div>
       <svg
@@ -449,6 +487,7 @@ function TripLoadForecastChart({
           {currentTimeLabels}
         </g>
         {currentTimeIndicator}
+        <g>{clickRegions}</g>
       </svg>
       <div className="flex flex-row justify-center items-center space-x-2 m-2">
         <button
