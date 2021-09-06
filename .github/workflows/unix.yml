@@ -263,9 +263,9 @@ jobs:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
-               buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
-               buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-
-               buildcache-${{ matrix.config.name }}-
+            buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-
+            buildcache-${{ matrix.config.name }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v2

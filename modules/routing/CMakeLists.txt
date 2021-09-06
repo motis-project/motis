@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.19)
 project(motis)
 
 include_directories(include)
@@ -56,7 +56,7 @@ target_compile_options(motis-query-rewrite PRIVATE ${MOTIS_CXX_FLAGS})
 set_target_properties(motis-query-rewrite PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
 file(GLOB_RECURSE motis-print-journey-files eval/src/print.cc)
-add_executable(motis-print-journey EXCLUDE_FROM_ALL ${motis-print-journey-files})
+add_library(motis-print-journey EXCLUDE_FROM_ALL ${motis-print-journey-files})
 target_compile_features(motis-print-journey PUBLIC cxx_std_17)
 target_link_libraries(motis-print-journey
   ${CMAKE_THREAD_LIBS_INIT}
@@ -64,9 +64,11 @@ target_link_libraries(motis-print-journey
   boost-filesystem
   motis-module
   motis-core
+  motis-subcommand
 )
 target_compile_options(motis-print-journey PRIVATE ${MOTIS_CXX_FLAGS})
 set_target_properties(motis-print-journey PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+target_link_libraries(motis-subcommand motis-print-journey)
 
 add_custom_target(motis-eval)
 add_dependencies(motis-eval motis-xtract motis-generator motis-analyzer motis-comparator motis-print-journey motis-query-rewrite)

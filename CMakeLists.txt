@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.19)
 project(motis)
 
 enable_language(CXX C ASM)
@@ -169,6 +169,7 @@ add_subdirectory(base/data EXCLUDE_FROM_ALL)
 add_subdirectory(base/core EXCLUDE_FROM_ALL)
 add_subdirectory(base/loader EXCLUDE_FROM_ALL)
 add_subdirectory(base/module EXCLUDE_FROM_ALL)
+add_subdirectory(base/subcommand EXCLUDE_FROM_ALL)
 
 file(GLOB all-modules RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/modules ${CMAKE_CURRENT_SOURCE_DIR}/modules/*)
 list(REMOVE_ITEM all-modules ".DS_Store")
