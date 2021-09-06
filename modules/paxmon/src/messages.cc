@@ -61,7 +61,7 @@ Offset<PaxMonCompactJourneyLeg> to_fbs(schedule const& sched,
                                        FlatBufferBuilder& fbb,
                                        journey_leg const& leg) {
   return CreatePaxMonCompactJourneyLeg(
-      fbb, to_fbs_trip_service_info(fbb, sched, leg.trip_),
+      fbb, to_fbs_trip_service_info(fbb, sched, leg),
       to_fbs(fbb, *sched.stations_[leg.enter_station_id_]),
       to_fbs(fbb, *sched.stations_[leg.exit_station_id_]),
       motis_to_unixtime(sched, leg.enter_time_),
@@ -246,6 +246,13 @@ Offset<TripServiceInfo> to_fbs_trip_service_info(FlatBufferBuilder& fbb,
                                                  trip const* trp) {
   return to_fbs_trip_service_info(fbb, sched, trp,
                                   get_service_infos(sched, trp));
+}
+
+Offset<TripServiceInfo> to_fbs_trip_service_info(FlatBufferBuilder& fbb,
+                                                 schedule const& sched,
+                                                 journey_leg const& leg) {
+  return to_fbs_trip_service_info(fbb, sched, leg.trip_,
+                                  get_service_infos_for_leg(sched, leg));
 }
 
 Offset<PaxMonEdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
