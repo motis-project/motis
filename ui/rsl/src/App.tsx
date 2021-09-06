@@ -28,6 +28,15 @@ function App(): JSX.Element {
       <div className="App">
         <TimeControl />
         <TripPicker onTripPicked={setSelectedTrip} />
+        <div>
+          <button
+            type="button"
+            className="bg-gray-200 px-2 py-1 border border-gray-300 rounded-xl"
+            onClick={() => setSelectedTrip(null)}
+          >
+            Close trip
+          </button>
+        </div>
         {tripDisplay}
       </div>
       <ReactQueryDevtools initialIsOpen={false} />

@@ -6,4 +6,5 @@ namespace motis.paxforecast;
 table PaxForecastAlternativesRequest {
   start: motis.paxmon.PaxMonLocalization;
   destination: motis.Station;
+  interval_duration: uint; // min
 }

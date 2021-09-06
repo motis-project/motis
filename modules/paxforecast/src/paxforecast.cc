@@ -341,7 +341,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
         futures.emplace_back(spawn_job_void([this, &sched,
                                              destination_station_id, &cpg] {
           cpg.alternatives_ = find_alternatives(
-              sched, destination_station_id, cpg.localization_, routing_cache_);
+              sched, routing_cache_, destination_station_id, cpg.localization_);
         }));
       }
     }
@@ -598,7 +598,8 @@ msg_ptr paxforecast::get_alternatives(msg_ptr const& msg) {
   auto const loc = from_fbs(sched, req->start_type(), req->start());
   auto const dest_station = get_station(sched, req->destination()->id()->str());
   auto const alternatives =
-      find_alternatives(sched, dest_station->index_, loc, routing_cache_);
+      find_alternatives(sched, routing_cache_, dest_station->index_, loc, false,
+                        req->interval_duration());
 
   message_creator mc;
   mc.create_and_finish(

@@ -23,8 +23,9 @@ struct alternative {
 };
 
 std::vector<alternative> find_alternatives(
-    schedule const& sched, unsigned destination_station_id,
+    schedule const& sched, routing_cache& cache,
+    unsigned destination_station_id,
     motis::paxmon::passenger_localization const& localization,
-    routing_cache& cache);
+    bool use_cache = true, duration pretrip_interval_length = 0);
 
 }  // namespace motis::paxforecast

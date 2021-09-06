@@ -51,6 +51,7 @@ export interface PaxForecastAlternativesRequest {
   start_type: PaxMonLocalizationType;
   start: PaxMonLocalization;
   destination: Station;
+  interval_duration: number;
 }
 
 // paxforecast/PaxForecastAlternativesResponse.fbs

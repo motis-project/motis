@@ -93,9 +93,45 @@ msg_ptr ontrip_station_query(schedule const& sched,
   return make_msg(fbb);
 }
 
+msg_ptr pretrip_station_query(schedule const& sched,
+                              unsigned interchange_station_id,
+                              time earliest_possible_departure,
+                              duration interval_length,
+                              unsigned destination_station_id) {
+  message_creator fbb;
+  auto const interval = Interval{
+      motis_to_unixtime(sched, earliest_possible_departure),
+      motis_to_unixtime(sched, earliest_possible_departure + interval_length)};
+  fbb.create_and_finish(
+      MsgContent_RoutingRequest,
+      CreateRoutingRequest(
+          fbb, Start_PretripStart,
+          CreatePretripStart(
+              fbb,
+              CreateInputStation(
+                  fbb,
+                  fbb.CreateString(
+                      sched.stations_[interchange_station_id]->eva_nr_),
+                  fbb.CreateString("")),
+              &interval)
+              .Union(),
+          CreateInputStation(
+              fbb,
+              fbb.CreateString(
+                  sched.stations_[destination_station_id]->eva_nr_),
+              fbb.CreateString("")),
+          SearchType_Default, SearchDir_Forward,
+          fbb.CreateVector(std::vector<Offset<Via>>()),
+          fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()))
+          .Union(),
+      "/routing");
+  return make_msg(fbb);
+}
+
 std::string get_cache_key(schedule const& sched,
                           unsigned const destination_station_id,
-                          passenger_localization const& localization) {
+                          passenger_localization const& localization,
+                          duration pretrip_interval_length) {
   if (localization.in_trip()) {
     auto const et = to_extern_trip(sched, localization.in_trip_);
     return fmt::format(
@@ -113,16 +149,20 @@ std::string get_cache_key(schedule const& sched,
             : sched.stations_.at(localization.at_station_->index_)
                   ->transfer_time_;
     return fmt::format(
-        "{}:{}:{}:{}:station", static_cast<std::uint64_t>(sched.system_time_),
+        "{}:{}:{}:{}:station{}", static_cast<std::uint64_t>(sched.system_time_),
         localization.current_arrival_time_ + interchange_time,
         localization.at_station_->eva_nr_.view(),
-        sched.stations_.at(destination_station_id)->eva_nr_.view());
+        sched.stations_.at(destination_station_id)->eva_nr_.view(),
+        pretrip_interval_length != 0
+            ? fmt::format(":{}", pretrip_interval_length)
+            : "");
   }
 }
 
 msg_ptr send_routing_request(schedule const& sched,
                              unsigned const destination_station_id,
-                             passenger_localization const& localization) {
+                             passenger_localization const& localization,
+                             duration pretrip_interval_length) {
   msg_ptr query_msg;
   if (localization.in_trip()) {
     query_msg = ontrip_train_query(
@@ -134,43 +174,54 @@ msg_ptr send_routing_request(schedule const& sched,
             ? 0
             : sched.stations_.at(localization.at_station_->index_)
                   ->transfer_time_;
-    query_msg = ontrip_station_query(
-        sched, localization.at_station_->index_,
-        localization.current_arrival_time_ + interchange_time,
-        destination_station_id);
+    auto const earliest_possible_departure =
+        localization.current_arrival_time_ + interchange_time;
+    if (pretrip_interval_length == 0) {
+      query_msg = ontrip_station_query(sched, localization.at_station_->index_,
+                                       earliest_possible_departure,
+                                       destination_station_id);
+    } else {
+      query_msg = pretrip_station_query(
+          sched, localization.at_station_->index_, earliest_possible_departure,
+          pretrip_interval_length, destination_station_id);
+    }
   }
 
   return motis_call(query_msg)->val();
 }
 
-msg_ptr get_routing_response(schedule const& sched,
+msg_ptr get_routing_response(schedule const& sched, routing_cache& cache,
                              unsigned const destination_station_id,
                              passenger_localization const& localization,
-                             routing_cache& cache) {
-  if (cache.is_open()) {
-    auto const cache_key =
-        get_cache_key(sched, destination_station_id, localization);
+                             bool use_cache, duration pretrip_interval_length) {
+  if (use_cache && cache.is_open()) {
+    auto const cache_key = get_cache_key(sched, destination_station_id,
+                                         localization, pretrip_interval_length);
     auto const cache_key_view = std::string_view{
         reinterpret_cast<char const*>(cache_key.data()), cache_key.size()};
     auto msg = cache.get(cache_key_view);
     if (!msg) {
-      msg = send_routing_request(sched, destination_station_id, localization);
+      msg = send_routing_request(sched, destination_station_id, localization,
+                                 pretrip_interval_length);
       cache.put(cache_key_view, msg);
     }
     return msg;
   } else {
-    return send_routing_request(sched, destination_station_id, localization);
+    return send_routing_request(sched, destination_station_id, localization,
+                                pretrip_interval_length);
   }
 }
 
 }  // namespace
 
 std::vector<alternative> find_alternatives(
-    schedule const& sched, unsigned const destination_station_id,
-    passenger_localization const& localization, routing_cache& cache) {
-
+    schedule const& sched, routing_cache& cache,
+    unsigned const destination_station_id,
+    passenger_localization const& localization, bool use_cache,
+    duration pretrip_interval_length) {
   auto const response_msg =
-      get_routing_response(sched, destination_station_id, localization, cache);
+      get_routing_response(sched, cache, destination_station_id, localization,
+                           use_cache, pretrip_interval_length);
   auto const response = motis_content(RoutingResponse, response_msg);
   auto alternatives = message_to_journeys(response);
   // TODO(pablo): alternatives without trips?

@@ -1,31 +1,10 @@
 import React, { useRef, useState } from "react";
 import { useQuery } from "react-query";
 
-import { formatDateTime } from "./util/dateFormat";
 import { PaxMonTripInfo } from "./api/protocol/motis/paxmon";
 import { TripId } from "./api/protocol/motis";
 import { sendPaxMonFindTripsRequest } from "./api/paxmon";
-
-type TripViewProps = {
-  data: PaxMonTripInfo;
-};
-
-function TripView({ data }: TripViewProps) {
-  const names = [
-    ...new Set(
-      data.tsi.service_infos.map((si) =>
-        si.line ? `${si.name} [${si.train_nr}]` : si.name
-      )
-    ),
-  ];
-  return (
-    <span>
-      {names.join(", ")} ({data.tsi.primary_station.name} (
-      {formatDateTime(data.tsi.trip.time)}) – {data.tsi.secondary_station.name}{" "}
-      ({formatDateTime(data.tsi.trip.target_time)}))
-    </span>
-  );
-}
+import TripView from "./TripView";
 
 function filterTrips(trips: PaxMonTripInfo[]) {
   return trips.filter((trip) =>
@@ -93,7 +72,7 @@ function TripPicker({ onTripPicked }: TripPickerProps): JSX.Element {
             onClick={() => onTripPicked(data.tsi.trip)}
             className="cursor-pointer hover:underline"
           >
-            <TripView data={data} />
+            <TripView tsi={data.tsi} format="Long" />
           </li>
         ))}
       </ul>

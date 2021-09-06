@@ -9,6 +9,7 @@ import {
 import { formatDateTime } from "./util/dateFormat";
 import { sendPaxMonStatusRequest } from "./api/paxmon";
 import { sendRISForwardTimeRequest } from "./api/ris";
+import { PaxMonStatusResponse } from "./api/protocol/motis/paxmon";
 
 async function forwardTimeByStepped(
   queryClient: QueryClient,
@@ -88,7 +89,7 @@ function TimeControl(): JSX.Element {
       ) : isLoading ? (
         <div>System time: loading...</div>
       ) : (
-        <div>Error: {error}</div>
+        <div>Error: {error instanceof Error ? error.message : error}</div>
       )}
     </div>
   );
