@@ -7,6 +7,7 @@
 #include "boost/asio/signal_set.hpp"
 #include "boost/filesystem.hpp"
 
+#include "utl/parser/cstr.h"
 #include "utl/to_vec.h"
 
 #include "net/stop_handler.h"
@@ -27,6 +28,7 @@
 #include "motis/launcher/launcher_settings.h"
 #include "motis/launcher/server_settings.h"
 #include "motis/launcher/web_server.h"
+#include "motis/subcommand/subcommand.h"
 
 #include "version.h"
 
@@ -36,7 +38,7 @@ using namespace motis::module;
 using namespace motis::logging;
 using namespace motis;
 
-int main(int argc, char const** argv) {
+int start_instance(int argc, char const** argv) {
   motis_instance instance;
 
   web_server server(instance.runner_.ios(), instance);
@@ -64,6 +66,7 @@ int main(int argc, char const** argv) {
 
     if (parser.help()) {
       std::cout << "\n\tMOTIS v" << short_version() << "\n\n";
+      list_subcommands();
       parser.print_help(std::cout);
       return 0;
     } else if (parser.version()) {
@@ -158,4 +161,14 @@ int main(int argc, char const** argv) {
 #ifdef PROTOBUF_LINKED
   google::protobuf::ShutdownProtobufLibrary();
 #endif
+
+  return 0;
+}
+
+int main(int argc, char const** argv) {
+  if (argc <= 1 || utl::cstr{argv[1]}.starts_with("-")) {
+    return start_instance(argc, argv);
+  } else {
+    return run_subcommand(argv[1], argc - 1, argv + 1);
+  }
 }

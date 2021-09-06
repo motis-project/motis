@@ -11,6 +11,7 @@ target_link_libraries(motis
   boost-filesystem
   conf
   motis-bootstrap
+  motis-subcommand
   web-server-tls
   ianatzdb-res
   pbf_sdf_fonts_res-res

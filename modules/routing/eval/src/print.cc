@@ -16,6 +16,7 @@
 #include "motis/core/journey/print_journey.h"
 #include "motis/module/message.h"
 #include "motis/eval/is_terminal.h"
+#include "motis/subcommand/subcommand.h"
 
 using namespace motis;
 using namespace motis::module;
@@ -26,7 +27,7 @@ using namespace flatbuffers;
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 
-int main(int argc, char** argv) {
+int print(int argc, char const** argv) {
   bool help = false;
   bool utc = false;
   bool local = false;
@@ -101,3 +102,10 @@ int main(int argc, char** argv) {
 
   return 0;
 }
+
+static auto const reg =
+    motis::bootstrap::subcommand_registration{"print", print};
+static auto const x = []() {
+  std::cout << "TEST\n";
+  return 1;
+}();
