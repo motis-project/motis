@@ -702,7 +702,9 @@ msg_ptr paxmon::get_groups_in_trip(msg_ptr const& msg) {
         mc, to_fbs(mc, from->get_station(sched)),
         to_fbs(mc, to->get_station(sched)),
         motis_to_unixtime(sched, from->schedule_time()),
+        motis_to_unixtime(sched, from->current_time()),
         motis_to_unixtime(sched, to->schedule_time()),
+        motis_to_unixtime(sched, to->current_time()),
         mc.CreateVector(utl::to_vec(uv.pax_connection_info_.groups_[e->pci_],
                                     [](auto const pgi) { return pgi; })),
         mc.CreateVector(groups_by_dest_vec));

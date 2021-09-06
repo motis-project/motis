@@ -133,7 +133,9 @@ export interface GroupsInTripSection {
   from: Station;
   to: Station;
   departure_schedule_time: number;
+  departure_current_time: number;
   arrival_schedule_time: number;
+  arrival_current_time: number;
   groups: number[];
   groups_by_destination: GroupsWithDestination[];
 }

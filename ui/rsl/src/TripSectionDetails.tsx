@@ -18,7 +18,7 @@ async function requestAlternatives(
     start_type: "PaxMonAtStation",
     start: {
       station: sec.from,
-      current_arrival_time: sec.departure_schedule_time, // TODO
+      current_arrival_time: sec.arrival_current_time,
       schedule_arrival_time: sec.departure_schedule_time,
       first_station: false,
     },
