@@ -14,7 +14,8 @@ struct subcommand {
 };
 
 struct subc_reg {
-  void register_cmd(std::string const& name, std::string const& desc, main_fn_t&&);
+  void register_cmd(std::string const& name, std::string const& desc,
+                    main_fn_t&&);
   void print_list();
   int execute(std::string const& name, int argc, char const** argv);
   std::map<std::string, subcommand> commands_;
