@@ -44,7 +44,7 @@ int main(int argc, char const** argv) {
   for (auto const& m : instance.modules()) {
     m->reg_subc(reg);
   }
-  if (argc >= 1 && !utl::cstr{argv[1]}.starts_with("-")) {
+  if (argc > 1 && !utl::cstr{argv[1]}.starts_with("-")) {
     return reg.execute(argv[1], argc - 1, argv + 1);
   }
 
