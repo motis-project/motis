@@ -18,5 +18,4 @@ target_link_libraries(motis-osrm
   osrm_extract
   motis-module
 )
-
 target_compile_options(motis-osrm PRIVATE ${MOTIS_CXX_FLAGS})

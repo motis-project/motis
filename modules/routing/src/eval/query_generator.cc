@@ -1,3 +1,5 @@
+#include "motis/routing/eval/commands.h"
+
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -25,6 +27,8 @@ using namespace motis;
 using namespace motis::bootstrap;
 using namespace motis::module;
 using namespace motis::routing;
+
+namespace motis::routing::eval {
 
 struct generator_settings : public conf::configuration {
   generator_settings() : configuration("Generator Settings") {
@@ -264,7 +268,7 @@ std::string replace_target_escape(std::string const& str,
   return target_str;
 }
 
-int main(int argc, char const** argv) {
+int generate(int argc, char const** argv) {
   generator_settings generator_opt;
   dataset_settings dataset_opt;
   dataset_opt.adjust_footpaths_ = true;
@@ -372,3 +376,5 @@ int main(int argc, char const** argv) {
 
   return 0;
 }
+
+}  // namespace motis::routing::eval

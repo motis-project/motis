@@ -1,3 +1,5 @@
+#include "motis/routing/eval/commands.h"
+
 #include <cstring>
 #include <algorithm>
 #include <fstream>
@@ -15,18 +17,19 @@
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/core/journey/print_journey.h"
 #include "motis/module/message.h"
-#include "motis/eval/is_terminal.h"
+#include "motis/routing/eval/is_terminal.h"
 
 using namespace motis;
 using namespace motis::module;
 using namespace motis::routing;
-using namespace motis::eval;
 using namespace flatbuffers;
 
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 
-int main(int argc, char** argv) {
+namespace motis::routing::eval {
+
+int print(int argc, char const** argv) {
   bool help = false;
   bool utc = false;
   bool local = false;
@@ -101,3 +104,5 @@ int main(int argc, char** argv) {
 
   return 0;
 }
+
+}  // namespace motis::routing::eval

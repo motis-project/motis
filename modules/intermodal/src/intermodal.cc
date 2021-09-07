@@ -19,6 +19,7 @@
 
 #include "motis/intermodal/direct_connections.h"
 #include "motis/intermodal/error.h"
+#include "motis/intermodal/eval/commands.h"
 #include "motis/intermodal/mumo_edge.h"
 #include "motis/intermodal/query_bounds.h"
 #include "motis/intermodal/statistics.h"
@@ -40,6 +41,13 @@ intermodal::intermodal() : module("Intermodal Options", "intermodal") {
 }
 
 intermodal::~intermodal() = default;
+
+void intermodal::reg_subc(motis::module::subc_reg& r) {
+  r.register_cmd("intermodal_generate", "generate routing queries",
+                 eval::generate);
+  r.register_cmd("intermodal_compare", "print difference between results",
+                 eval::compare);
+}
 
 void intermodal::init(motis::module::registry& r) {
   r.register_op("/intermodal", [this](msg_ptr const& m) { return route(m); });

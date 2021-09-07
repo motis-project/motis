@@ -1,3 +1,5 @@
+#include "motis/intermodal/eval/commands.h"
+
 #include <cstring>
 #include <ctime>
 #include <algorithm>
@@ -215,9 +217,7 @@ bool check(int id, std::vector<msg_ptr> const& msgs,
   return match;
 }
 
-}  // namespace motis::intermodal::eval
-
-int main(int argc, char** argv) {
+int compare(int argc, char const** argv) {
   using namespace motis::intermodal::eval;
 
   bool help = false;
@@ -357,3 +357,5 @@ int main(int argc, char** argv) {
 
   return (errors == 0 && unmatched_msgs.empty()) ? 0 : 1;
 }
+
+}  // namespace motis::intermodal::eval

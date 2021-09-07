@@ -2,7 +2,7 @@
 
 #include "motis/protocol/RoutingResponse_generated.h"
 
-namespace motis::eval {
+namespace motis::routing::eval {
 
 inline uint64_t get_stat(routing::RoutingResponse const* r,
                          char const* category, char const* name) {
@@ -14,4 +14,4 @@ inline uint64_t get_stat(routing::RoutingResponse const* r,
   return entry == nullptr ? 0 : entry->value();
 }
 
-}  // namespace motis::eval
+}  // namespace motis::routing::eval

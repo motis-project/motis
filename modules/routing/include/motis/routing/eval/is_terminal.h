@@ -8,7 +8,7 @@
 #include <unistd.h>
 #endif
 
-namespace motis::eval {
+namespace motis::routing::eval {
 
 inline bool is_terminal(std::FILE* f) {
 #ifdef _MSC_VER
@@ -18,4 +18,4 @@ inline bool is_terminal(std::FILE* f) {
 #endif
 }
 
-}  // namespace motis::eval
+}  // namespace motis::routing::eval

@@ -1,3 +1,5 @@
+#include "motis/routing/eval/commands.h"
+
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -6,15 +8,17 @@
 
 #include "motis/core/common/unixtime.h"
 #include "motis/module/message.h"
-#include "motis/eval/comparator/response.h"
-#include "motis/eval/get_stat.h"
 #include "motis/protocol/RoutingRequest_generated.h"
+#include "motis/routing/eval/comparator/response.h"
+#include "motis/routing/eval/get_stat.h"
 
 using namespace motis;
 using namespace motis::routing;
 using namespace motis::module;
 using namespace motis::eval;
 using namespace motis::eval::comparator;
+
+namespace motis::routing::eval {
 
 template <typename T>
 char get_relation_symbol(T const& u1, T const& u2) {
@@ -58,8 +62,8 @@ void print(journey_meta_data const& con) {
   };
 
   std::cout << std::right << std::setw(13) << format_duration(con.duration_)  //
-            << " [" << format_time(con.get_departure_time()) << " - "
-            << format_time(con.get_arrival_time()) << "]\t"  //
+            << " [" << format_time(con.get_departure_time(), true) << " - "
+            << format_time(con.get_arrival_time(), true) << "]\t"  //
             << std::setw(5) << con.transfers_;
 }
 
@@ -277,7 +281,7 @@ bool analyze_result(int i, std::tuple<msg_ptr, msg_ptr, msg_ptr> const& res,
   return true;
 }
 
-int main(int argc, char* argv[]) {
+int compare(int argc, char const** argv) {
   if (argc != 4) {
     std::cout << "Usage: " << argv[0]
               << " {results.txt I} {results.txt II} {queries.txt}\n";
@@ -340,4 +344,8 @@ int main(int argc, char* argv[]) {
             << "  #mismatches  = " << stats.mismatches_ << "/" << stats.total()
             << "\n"
             << "  #invalid = " << stats.errors_ << "/" << stats.total() << "\n";
+
+  return (stats.mismatches_ == 0 && stats.errors_ == 0) ? 0 : 1;
 }
+
+}  // namespace motis::routing::eval

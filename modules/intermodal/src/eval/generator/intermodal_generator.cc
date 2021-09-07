@@ -1,3 +1,5 @@
+#include "motis/intermodal/eval/commands.h"
+
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -277,9 +279,7 @@ private:
   bounds* bounds_;
 };
 
-}  // namespace motis::intermodal::eval
-
-int main(int argc, char const** argv) {
+int generate(int argc, char const** argv) {
   using namespace motis::intermodal;
   using namespace motis::intermodal::eval;
   dataset_settings dataset_opt;
@@ -394,4 +394,8 @@ int main(int argc, char const** argv) {
                      search_dir::BWD, max_walk_duration)
             << "\n";
   }
+
+  return 0;
 }
+
+}  // namespace motis::intermodal::eval

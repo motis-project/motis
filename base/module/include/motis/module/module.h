@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -13,6 +15,7 @@
 #include "motis/module/message.h"
 #include "motis/module/registry.h"
 #include "motis/module/shared_data.h"
+#include "motis/module/subc_reg.h"
 
 namespace motis {
 
@@ -31,6 +34,8 @@ struct module : public conf::configuration {
   module& operator=(module&&) = delete;
 
   ~module() override = default;
+
+  virtual void reg_subc(subc_reg&) {}
 
   std::string const& module_name() const { return prefix(); }
 

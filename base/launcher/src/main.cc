@@ -7,6 +7,7 @@
 #include "boost/asio/signal_set.hpp"
 #include "boost/filesystem.hpp"
 
+#include "utl/parser/cstr.h"
 #include "utl/to_vec.h"
 
 #include "net/stop_handler.h"
@@ -39,6 +40,14 @@ using namespace motis;
 int main(int argc, char const** argv) {
   motis_instance instance;
 
+  auto reg = subc_reg{};
+  for (auto const& m : instance.modules()) {
+    m->reg_subc(reg);
+  }
+  if (argc >= 1 && !utl::cstr{argv[1]}.starts_with("-")) {
+    return reg.execute(argv[1], argc - 1, argv + 1);
+  }
+
   web_server server(instance.runner_.ios(), instance);
 
   server_settings server_opt;
@@ -64,6 +73,7 @@ int main(int argc, char const** argv) {
 
     if (parser.help()) {
       std::cout << "\n\tMOTIS v" << short_version() << "\n\n";
+      reg.print_list();
       parser.print_help(std::cout);
       return 0;
     } else if (parser.version()) {

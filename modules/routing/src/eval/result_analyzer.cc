@@ -1,3 +1,5 @@
+#include "motis/routing/eval/commands.h"
+
 #include <cmath>
 #include <algorithm>
 #include <fstream>
@@ -22,7 +24,7 @@ using namespace motis::routing;
 
 namespace po = boost::program_options;
 
-namespace motis::eval {
+namespace motis::routing::eval {
 
 struct thousands_sep : std::numpunct<char> {
   char_type do_thousands_sep() const override { return ','; }
@@ -119,10 +121,7 @@ void print_category(category& cat, uint64_t count, bool compact, int top) {
   }
 }
 
-}  // namespace motis::eval
-
-int main(int argc, char* argv[]) {
-  using namespace motis::eval;
+int analyze_results(int argc, char const** argv) {
   bool help = false;
   bool include_empty = false;
   bool long_output = false;
@@ -164,7 +163,7 @@ int main(int argc, char* argv[]) {
   std::cout.imbue(std::locale(std::locale::classic(), new thousands_sep));
 
   std::map<std::string, category> categories;
-  motis::eval::stat connection_count;
+  stat connection_count;
 
   std::ifstream in(filename);
   std::string line;
@@ -201,7 +200,7 @@ int main(int argc, char* argv[]) {
       });
       for (auto const& rs : *rc->entries()) {
         auto& s = utl::get_or_create(cat.stats_, rs->name()->str(), [&]() {
-          return motis::eval::stat(rs->name()->str(), count);
+          return stat(rs->name()->str(), count);
         });
         s.add(res_msg->id(), rs->value());
       }
@@ -251,4 +250,8 @@ int main(int argc, char* argv[]) {
       }
     }
   }
+
+  return 0;
 }
+
+}  // namespace motis::routing::eval

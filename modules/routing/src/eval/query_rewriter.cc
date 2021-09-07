@@ -1,3 +1,5 @@
+#include "motis/routing/eval/commands.h"
+
 #include <fstream>
 #include <iostream>
 
@@ -13,6 +15,8 @@
 using namespace motis;
 using motis::module::make_msg;
 
+namespace motis::routing::eval {
+
 struct rewrite_options : public conf::configuration {
   rewrite_options() : configuration{"Rewrite options"} {
     param(in_path_, "in", "Input file path");
@@ -22,7 +26,7 @@ struct rewrite_options : public conf::configuration {
   std::string in_path_, out_path_, new_target_;
 };
 
-int main(int argc, char const** argv) {
+int rewrite_queries(int argc, char const** argv) {
   rewrite_options opt;
 
   try {
@@ -64,4 +68,7 @@ int main(int argc, char const** argv) {
   }
 
   std::cout << "rewrote " << count << " queries\n";
+  return 0;
 }
+
+}  // namespace motis::routing::eval

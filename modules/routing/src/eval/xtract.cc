@@ -1,3 +1,5 @@
+#include "motis/routing/eval/commands.h"
+
 #include <iostream>
 #include <map>
 #include <set>
@@ -24,6 +26,8 @@ using namespace motis::loader::hrd;
 using namespace motis::module;
 using motis::routing::RoutingResponse;
 
+namespace motis::routing::eval {
+
 std::tuple<std::string, int, int> get_service_source(std::string const& d) {
   auto const file_end = d.find_first_of(':');
   auto const line_end = d.find_last_of(':');
@@ -42,7 +46,7 @@ struct hrd_footpath {
 
 auto const parser_config = hrd_5_20_26;
 
-int main(int argc, char** argv) {
+int xtract(int argc, char const** argv) {
   if (argc < 4) {
     std::cout << "usage: " << argv[0]
               << " src-schedule target-schedule response [response, ...]";
@@ -318,4 +322,8 @@ int main(int argc, char** argv) {
     std::ofstream out{
         (new_schedule_path / CORE_DATA / parser_config.files(file)).c_str()};
   }
+
+  return 0;
 }
+
+}  // namespace motis::routing::eval

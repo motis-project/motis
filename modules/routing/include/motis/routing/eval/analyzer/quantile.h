@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <type_traits>
 
-namespace motis::eval {
+namespace motis::routing::eval {
 
 // From http://stackoverflow.com/a/10642935
 template <typename T>
@@ -43,6 +43,6 @@ typename member_type<Attr>::type quantile(Attr attr, Col col, double q) {
   return quantile(attr, std::begin(col), std::end(col), q);
 }
 
-}  // namespace motis::eval
+}  // namespace motis::routing::eval
 
 #endif  // IMOTIS_EVAL_QUANTILE_H_
