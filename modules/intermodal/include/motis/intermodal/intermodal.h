@@ -18,6 +18,7 @@ public:
   intermodal(intermodal&&) = delete;
   intermodal& operator=(intermodal&&) = delete;
 
+  void reg_subc(motis::module::subc_reg&) override;
   void init(motis::module::registry&) override;
 
 private:

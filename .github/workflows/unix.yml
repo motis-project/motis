@@ -299,10 +299,7 @@ jobs:
           cmake --build build --target \
             motis \
             motis-test \
-            motis-itest \
-            motis-eval \
-            motis-intermodal-eval \
-            motis-pax-tools
+            motis-itest
           ./build/buildcache/bin/buildcache -s
 
       - name: Show tree on failure

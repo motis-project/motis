@@ -67,10 +67,7 @@ jobs:
           cmake --build build --target `
             motis `
             motis-test `
-            motis-itest `
-            motis-eval `
-            motis-intermodal-eval `
-            motis-pax-tools
+            motis-itest
           $CompilerExitCode = $LastExitCode
           .\build\buildcache\bin\buildcache.exe -s
           exit $CompilerExitCode
