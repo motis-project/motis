@@ -72,7 +72,7 @@ int main(int argc, char const** argv) {
     parser.read_command_line_args(argc, argv, false);
 
     if (parser.help()) {
-      std::cout << "\n\tMOTIS v" << short_version() << "\n\n";
+      std::cout << "\n\tMOTIS " << short_version() << "\n\n";
       reg.print_list();
       parser.print_help(std::cout);
       return 0;
