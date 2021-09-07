@@ -68,8 +68,6 @@ jobs:
             motis `
             motis-test `
             motis-itest `
-            motis-eval `
-            motis-intermodal-eval `
             motis-pax-tools
           $CompilerExitCode = $LastExitCode
           .\build\buildcache\bin\buildcache.exe -s

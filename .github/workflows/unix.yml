@@ -280,8 +280,6 @@ jobs:
             motis \
             motis-test \
             motis-itest \
-            motis-eval \
-            motis-intermodal-eval \
             motis-pax-tools
           ./build/buildcache/bin/buildcache -s
 
