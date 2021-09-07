@@ -1,3 +1,5 @@
+#include "motis/paxmon/tools/commands.h"
+
 #include <algorithm>
 #include <fstream>
 #include <vector>
@@ -38,6 +40,8 @@ using namespace motis::paxmon::output;
 using namespace motis::paxmon::tools::groups;
 
 namespace fs = boost::filesystem;
+
+namespace motis::paxmon::tools {
 
 struct generator_settings : public conf::configuration {
   generator_settings() : configuration{"Generator Settings"} {
@@ -216,7 +220,7 @@ private:
   double max_load_{};
 };
 
-int main(int argc, char const** argv) {
+int generate(int argc, char const** argv) {
   auto const routers = std::vector<std::string>{"tripbased", "csa", "routing"};
   auto const default_router_module = routers.front();
   auto const default_router_target = std::string{"/"} + default_router_module;
@@ -337,3 +341,5 @@ int main(int argc, char const** argv) {
 
   return 0;
 }
+
+}  // namespace motis::paxmon::tools

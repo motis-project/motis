@@ -1,3 +1,5 @@
+#include "motis/paxmon/tools/commands.h"
+
 #include <cmath>
 #include <cstdint>
 #include <fstream>
@@ -26,6 +28,8 @@
 using namespace motis::paxmon;
 using namespace motis::paxmon::tools::groups;
 namespace fs = boost::filesystem;
+
+namespace motis::paxmon::tools {
 
 struct group_settings : public conf::configuration {
   enum class mode_t { REPLACE, SPLIT };
@@ -76,7 +80,7 @@ struct group_settings : public conf::configuration {
   double group_count_stddev_{10.0};
 };
 
-int main(int argc, char const** argv) {
+int gen_groups(int argc, char const** argv) {
   group_settings opt;
 
   try {
@@ -201,3 +205,5 @@ int main(int argc, char const** argv) {
 
   return 0;
 }
+
+}  // namespace motis::paxmon::tools

@@ -1,3 +1,5 @@
+#include "motis/paxmon/tools/commands.h"
+
 #include <iostream>
 
 #include "boost/filesystem.hpp"
@@ -18,7 +20,9 @@ using namespace motis::paxmon::output;
 
 namespace fs = boost::filesystem;
 
-int main(int argc, char** argv) {
+namespace motis::paxmon::tools {
+
+int convert(int argc, char const** argv) {
   if (argc != 3) {
     std::cout << "usage: " << argv[0]
               << " journeys_input.txt journeys_output.csv" << std::endl;
@@ -68,3 +72,5 @@ int main(int argc, char** argv) {
 
   return 0;
 }
+
+}  // namespace motis::paxmon::tools

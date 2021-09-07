@@ -279,8 +279,7 @@ jobs:
           cmake --build build --target \
             motis \
             motis-test \
-            motis-itest \
-            motis-pax-tools
+            motis-itest
           ./build/buildcache/bin/buildcache -s
 
       # ==== TESTS ====
