@@ -11,8 +11,6 @@ namespace flatbuffers64 {
 class FlatBufferBuilder;  // NOLINT(readability-identifier-naming)
 }  // namespace flatbuffers64
 
-constexpr auto const SCHEDULE_FILE = "schedule.raw";
-
 namespace motis::loader {
 
 struct format_parser {

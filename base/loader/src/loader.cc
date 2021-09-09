@@ -85,11 +85,10 @@ schedule_ptr load_schedule(loader_options const& opt,
   std::vector<dataset_mem_t> mem;
   mem.reserve(opt.dataset_.size());
   for (auto const& [i, path] : utl::enumerate(opt.dataset_)) {
-    auto const binary_schedule_file = fs::path(path) / SCHEDULE_FILE;
+    auto const binary_schedule_file = opt.fbs_schedule_path(data_dir, i);
     if (fs::is_regular_file(binary_schedule_file)) {
-      mem.emplace_back(
-          cista::mmap{binary_schedule_file.generic_string().c_str(),
-                      cista::mmap::protection::READ});
+      mem.emplace_back(cista::mmap{binary_schedule_file.c_str(),
+                                   cista::mmap::protection::READ});
       continue;
     }
 
@@ -127,7 +126,11 @@ schedule_ptr load_schedule(loader_options const& opt,
     }
 
     if (opt.write_serialized_) {
-      utl::file(binary_schedule_file.string().c_str(), "w+")
+      auto const schedule_dir = fs::path{binary_schedule_file}.parent_path();
+      if (!schedule_dir.empty()) {
+        fs::create_directories(schedule_dir);
+      }
+      utl::file(binary_schedule_file.c_str(), "w+")
           .write(builder.GetBufferPointer(), builder.GetSize());
     }
 

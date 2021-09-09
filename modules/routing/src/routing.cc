@@ -16,6 +16,7 @@
 #include "motis/routing/additional_edges.h"
 #include "motis/routing/build_query.h"
 #include "motis/routing/error.h"
+#include "motis/routing/eval/commands.h"
 #include "motis/routing/label/configs.h"
 #include "motis/routing/mem_manager.h"
 #include "motis/routing/mem_retriever.h"
@@ -35,6 +36,15 @@ namespace motis::routing {
 routing::routing() : module("Routing", "routing") {}
 
 routing::~routing() = default;
+
+void routing::reg_subc(motis::module::subc_reg& r) {
+  r.register_cmd("print", "prints journeys", eval::print);
+  r.register_cmd("generate", "generate routing queries", eval::generate);
+  r.register_cmd("rewrite", "rewrite query targets", eval::rewrite_queries);
+  r.register_cmd("analyze", "print result statistics", eval::analyze_results);
+  r.register_cmd("compare", "print difference between results", eval::compare);
+  r.register_cmd("xtract", "extract timetable from connections", eval::xtract);
+}
 
 void routing::init(motis::module::registry& reg) {
   reg.register_op("/routing",

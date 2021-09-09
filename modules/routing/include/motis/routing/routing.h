@@ -20,6 +20,7 @@ struct routing : public motis::module::module {
   routing(routing&&) = delete;
   routing& operator=(routing&&) = delete;
 
+  void reg_subc(motis::module::subc_reg&) override;
   void init(motis::module::registry&) override;
 
 private:

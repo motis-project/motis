@@ -40,6 +40,7 @@
 #include "motis/paxmon/print_stats.h"
 #include "motis/paxmon/rt_updates.h"
 #include "motis/paxmon/service_info.h"
+#include "motis/paxmon/tools/commands.h"
 
 namespace fs = boost::filesystem;
 
@@ -94,6 +95,12 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
 }
 
 paxmon::~paxmon() = default;
+
+void paxmon::reg_subc(motis::module::subc_reg& r) {
+  r.register_cmd("paxmon_convert", "convert journeys to csv", tools::convert);
+  r.register_cmd("paxmon_generate", "generate journeys", tools::generate);
+  r.register_cmd("paxmon_groups", "generate groups", tools::gen_groups);
+}
 
 void paxmon::import(motis::module::import_dispatcher& reg) {
   std::make_shared<event_collector>(
