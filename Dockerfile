@@ -7,6 +7,8 @@ RUN addgroup -S motis && adduser -S motis -G motis && \
     echo -e "\
 server.static_path=/motis/web \
 \
+intermodal.router=tripbased \
+\
 [import] \
 paths=schedule:/input/schedule \
 paths=osm:/input/osm.pbf \
