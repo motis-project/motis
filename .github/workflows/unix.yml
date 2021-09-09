@@ -336,7 +336,10 @@ jobs:
 
       - name: Compile Web Interface
         if: matrix.config.webui == 'On'
-        run: cmake --build build --target motis-web-ui
+        run: |
+          cmake --build build --target motis-web-ui
+          rm -r ui/web/elm-stuff
+          rm -r ui/web/src
 
       - name: Create Distribution
         if: matrix.config.artifact

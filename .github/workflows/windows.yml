@@ -91,7 +91,10 @@ jobs:
       # ==== DISTRIBUTION ====
       - name: Compile Web Interface
         if: matrix.config.webui == 'On'
-        run: cmake --build build --target motis-web-ui
+        run: |
+          cmake --build build --target motis-web-ui
+          rm -r ui/web/elm-stuff
+          rm -r ui/web/src
 
       - name: Move Profiles
         if: matrix.config.mode == 'Release'
