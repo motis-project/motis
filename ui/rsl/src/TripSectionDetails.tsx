@@ -1,8 +1,7 @@
 import React from "react";
-import { useQuery } from "react-query";
 
 import { TripId } from "./api/protocol/motis";
-import { sendPaxMonGroupsInTripRequest } from "./api/paxmon";
+import { usePaxMonGroupsInTripQuery } from "./api/paxmon";
 import CombinedGroup from "./CombinedGroup";
 
 type TripSectionDetailsProps = {
@@ -14,9 +13,7 @@ function TripSectionDetails({ tripId }: TripSectionDetailsProps): JSX.Element {
     data: groupsInTrip,
     isLoading,
     error,
-  } = useQuery(["trip", "groups", { tripId }], () =>
-    sendPaxMonGroupsInTripRequest(tripId)
-  );
+  } = usePaxMonGroupsInTripQuery(tripId);
 
   if (isLoading) {
     return <div>Loading trip section data..</div>;

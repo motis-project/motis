@@ -11,8 +11,9 @@ import {
 } from "./data/loadInfo";
 import { TripId } from "./api/protocol/motis";
 import {
-  sendPaxMonStatusRequest,
+  queryKeys,
   sendPaxMonTripLoadInfosRequest,
+  usePaxMonStatusQuery,
 } from "./api/paxmon";
 import { addEdgeStatistics } from "./util/statistics";
 import { useQuery } from "react-query";
@@ -166,10 +167,10 @@ type TripLoadForecastChartProps = {
 function TripLoadForecastChart({
   tripId,
 }: TripLoadForecastChartProps): JSX.Element | null {
-  const { data: status } = useQuery("status", sendPaxMonStatusRequest);
+  const { data: status } = usePaxMonStatusQuery();
 
   const { data /*, isLoading, error*/ } = useQuery(
-    ["trip", "load", { tripId }],
+    queryKeys.tripLoad(tripId),
     async () => loadAndProcessTripInfo(tripId),
     { enabled: !!status }
   );

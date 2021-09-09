@@ -1,15 +1,9 @@
 import React from "react";
-import {
-  QueryClient,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "react-query";
+import { QueryClient, useMutation, useQueryClient } from "react-query";
 
 import { formatDateTime } from "./util/dateFormat";
-import { sendPaxMonStatusRequest } from "./api/paxmon";
+import { usePaxMonStatusQuery } from "./api/paxmon";
 import { sendRISForwardTimeRequest } from "./api/ris";
-import { PaxMonStatusResponse } from "./api/protocol/motis/paxmon";
 
 async function forwardTimeByStepped(
   queryClient: QueryClient,
@@ -29,15 +23,7 @@ async function forwardTimeByStepped(
 function TimeControl(): JSX.Element {
   const queryClient = useQueryClient();
 
-  const {
-    data: status,
-    isLoading,
-    error,
-  } = useQuery("status", sendPaxMonStatusRequest, {
-    refetchInterval: 30 * 1000,
-    refetchOnWindowFocus: true,
-    staleTime: 0,
-  });
+  const { data: status, isLoading, error } = usePaxMonStatusQuery();
 
   const forwardMutation = useMutation((forwardBy: number) => {
     return forwardTimeByStepped(

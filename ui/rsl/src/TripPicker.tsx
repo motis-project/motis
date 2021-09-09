@@ -1,15 +1,18 @@
 import React, { useRef, useState } from "react";
-import { useQuery } from "react-query";
 
 import { PaxMonTripInfo } from "./api/protocol/motis/paxmon";
 import { TripId } from "./api/protocol/motis";
-import { sendPaxMonFindTripsRequest } from "./api/paxmon";
+import { ServiceClass } from "./api/constants";
+import { usePaxMonFindTripsQuery } from "./api/paxmon";
 import TripView from "./TripView";
 
 function filterTrips(trips: PaxMonTripInfo[]) {
   return trips.filter((trip) =>
     trip.tsi.service_infos.some(
-      (si) => si.clasz === 1 || si.clasz === 2 || si.clasz === 12
+      (si) =>
+        si.clasz === ServiceClass.ICE ||
+        si.clasz === ServiceClass.IC ||
+        si.clasz === ServiceClass.OTHER
     )
   );
 }
@@ -20,21 +23,10 @@ type TripPickerProps = {
 
 function TripPicker({ onTripPicked }: TripPickerProps): JSX.Element {
   const trainNrInput = useRef<HTMLInputElement | null>(null);
-  const [trainNr, setTrainNr] = useState<number | null>(null);
-  const { data: tripList } = useQuery(
-    ["trips", trainNr],
-    async () => {
-      const res = await sendPaxMonFindTripsRequest({
-        universe: 0,
-        train_nr: trainNr || 0,
-        only_trips_with_paxmon_data: true,
-        filter_class: false,
-        max_class: 0,
-      });
-      return filterTrips(res.trips);
-    },
-    { enabled: trainNr !== null }
-  );
+  const [trainNr, setTrainNr] = useState<number>();
+  const { data } = usePaxMonFindTripsQuery(trainNr);
+
+  const tripList = filterTrips(data?.trips || []);
 
   function findByTrainNr(e: React.FormEvent) {
     e.preventDefault();
@@ -63,7 +55,7 @@ function TripPicker({ onTripPicked }: TripPickerProps): JSX.Element {
     </div>
   );
 
-  const resultList = tripList && (
+  const resultList = (
     <div className="m-2">
       <ul>
         {tripList.map((data, idx) => (

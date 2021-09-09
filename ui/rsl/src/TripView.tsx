@@ -7,7 +7,7 @@ type TripViewProps = {
   format: "Short" | "Long";
 };
 
-function TripView({ tsi, format }: TripViewProps) {
+function TripView({ tsi, format }: TripViewProps): JSX.Element {
   const names = [
     ...new Set(
       tsi.service_infos.map((si) =>
