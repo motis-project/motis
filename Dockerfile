@@ -8,8 +8,8 @@ RUN addgroup -S motis && adduser -S motis -G motis && \
 server.static_path=/motis/web \
 \
 [import] \
-paths=schedule:/data/schedule \
-paths=osm:/data/osm.pbf \
+paths=schedule:/input/schedule \
+paths=osm:/input/osm.pbf \
 data_dir=/data \
 \
 [tiles] \
@@ -25,6 +25,7 @@ profile=/motis/ppr-profiles/default.json \
 " > /system_config.ini
 EXPOSE 8080
 VOLUME ["/data"]
+VOLUME ["/input"]
 WORKDIR /motis
 USER motis
-CMD ["/motis/motis", "--system_config", "/system_config.ini", "-c", "/data/config.ini"]
+CMD ["/motis/motis", "--system_config", "/system_config.ini", "-c", "/input/config.ini"]
