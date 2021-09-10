@@ -15,6 +15,7 @@ target_link_libraries(motis
   ianatzdb-res
   pbf_sdf_fonts_res-res
   tiles_server_res-res
+  mimalloc-static
 )
 set_target_properties(motis PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 if (NOT MSVC)
