@@ -9,7 +9,9 @@ import { TripId } from "./api/protocol/motis";
 import TripSectionDetails from "./TripSectionDetails";
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { refetchOnWindowFocus: false } },
+  defaultOptions: {
+    queries: { refetchOnWindowFocus: false, staleTime: 10000 },
+  },
 });
 
 function App(): JSX.Element {
@@ -28,15 +30,6 @@ function App(): JSX.Element {
       <div className="App">
         <TimeControl />
         <TripPicker onTripPicked={setSelectedTrip} />
-        <div>
-          <button
-            type="button"
-            className="bg-gray-200 px-2 py-1 border border-gray-300 rounded-xl"
-            onClick={() => setSelectedTrip(null)}
-          >
-            Close trip
-          </button>
-        </div>
         {tripDisplay}
       </div>
       <ReactQueryDevtools initialIsOpen={false} />

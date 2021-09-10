@@ -1,7 +1,9 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
+import { useCombobox } from "downshift";
+import { ChevronDownIcon, XIcon } from "@heroicons/react/solid";
 
 import { PaxMonTripInfo } from "./api/protocol/motis/paxmon";
-import { TripId } from "./api/protocol/motis";
+import { TripId, TripServiceInfo } from "./api/protocol/motis";
 import { ServiceClass } from "./api/constants";
 import { usePaxMonFindTripsQuery } from "./api/paxmon";
 import TripView from "./TripView";
@@ -17,64 +19,106 @@ function filterTrips(trips: PaxMonTripInfo[]) {
   );
 }
 
+function shortTripName(tsi: TripServiceInfo) {
+  const names = [
+    ...new Set(
+      tsi.service_infos.map((si) =>
+        si.line ? `${si.name} [${si.train_nr}]` : si.name
+      )
+    ),
+  ];
+  return names.join(", ");
+}
+
 type TripPickerProps = {
-  onTripPicked: (trip: TripId) => void;
+  onTripPicked: (trip: TripId | null) => void;
 };
 
 function TripPicker({ onTripPicked }: TripPickerProps): JSX.Element {
-  const trainNrInput = useRef<HTMLInputElement | null>(null);
   const [trainNr, setTrainNr] = useState<number>();
   const { data } = usePaxMonFindTripsQuery(trainNr);
-
   const tripList = filterTrips(data?.trips || []);
 
-  function findByTrainNr(e: React.FormEvent) {
-    e.preventDefault();
-    setTrainNr(parseInt(trainNrInput.current?.value || ""));
-  }
-
-  const filterForm = (
-    <div className="flex items-center m-2">
-      <form className="space-x-2" onSubmit={findByTrainNr}>
-        <label>
-          Train number:
-          <input
-            type="text"
-            pattern="\d+"
-            ref={trainNrInput}
-            className="w-20 border border-gray-200 rounded ml-2"
-          />
-        </label>
-        <button
-          type="submit"
-          className="bg-gray-200 px-2 py-1 border border-gray-300 rounded-xl"
-        >
-          Find
-        </button>
-      </form>
-    </div>
-  );
-
-  const resultList = (
-    <div className="m-2">
-      <ul>
-        {tripList.map((data, idx) => (
-          <li
-            key={idx.toString()}
-            onClick={() => onTripPicked(data.tsi.trip)}
-            className="cursor-pointer hover:underline"
-          >
-            <TripView tsi={data.tsi} format="Long" />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+  const {
+    isOpen,
+    getToggleButtonProps,
+    getLabelProps,
+    getMenuProps,
+    getInputProps,
+    getComboboxProps,
+    highlightedIndex,
+    getItemProps,
+    selectedItem,
+    reset,
+  } = useCombobox({
+    items: tripList,
+    itemToString: (item: PaxMonTripInfo | null) =>
+      item !== null ? shortTripName(item.tsi) : "",
+    onInputValueChange: ({ inputValue }) => {
+      console.log("onInputValueChange", inputValue, parseInt(inputValue || ""));
+      if (inputValue != undefined) {
+        const parsed = parseInt(inputValue);
+        if (!isNaN(parsed) || inputValue === "") {
+          setTrainNr(parsed);
+        }
+      }
+    },
+    onSelectedItemChange: (changes) => {
+      console.log("onSelectedItemChange", changes);
+      onTripPicked(changes.selectedItem?.tsi?.trip ?? null);
+    },
+  });
 
   return (
-    <div>
-      {filterForm}
-      {resultList}
+    <div className="relative flex items-center gap-2">
+      <label {...getLabelProps()}>Trip:</label>
+      <div {...getComboboxProps()} className="relative">
+        <input
+          {...getInputProps()}
+          type="text"
+          className="w-60 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+        />
+        {selectedItem ? (
+          <button
+            tabIndex={-1}
+            onClick={() => reset()}
+            aria-label="clear selection"
+            className="absolute top-0 right-0 h-full px-2 flex items-center justify-center"
+          >
+            <XIcon className="h-4 w-4 text-gray-500" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            {...getToggleButtonProps()}
+            aria-label="toggle menu"
+            className="absolute top-0 right-0 h-full px-2 flex items-center justify-center"
+          >
+            <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+          </button>
+        )}
+      </div>
+      <ul
+        {...getMenuProps()}
+        className={`${
+          isOpen && tripList.length > 0 ? "" : "hidden"
+        } absolute top-12 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none p-2`}
+      >
+        {isOpen &&
+          tripList.map((item, index) => (
+            <li
+              className={`${
+                highlightedIndex === index
+                  ? "bg-blue-500 text-white"
+                  : "text-gray-900"
+              } group flex items-center w-full p-2 rounded-md text-sm select-none cursor-pointer`}
+              key={index}
+              {...getItemProps({ item, index })}
+            >
+              <TripView tsi={item.tsi} format="Long" />
+            </li>
+          ))}
+      </ul>
     </div>
   );
 }

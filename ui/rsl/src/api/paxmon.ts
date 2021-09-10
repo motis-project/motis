@@ -63,7 +63,7 @@ export function usePaxMonFindTripsQuery(
         filter_class: false,
         max_class: 0,
       }),
-    { enabled: trainNr != undefined }
+    { enabled: trainNr != undefined && !isNaN(trainNr) }
   );
 }
 
