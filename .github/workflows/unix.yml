@@ -4,7 +4,7 @@ on:
   schedule:
     - cron:  '0 3 * * 2,6'
   push:
-    branches: [ master ]
+    branches: [ master, mimalloc ]
   pull_request:
     branches: [ master ]
   release:
