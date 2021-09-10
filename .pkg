@@ -4,8 +4,8 @@
   commit=9b33a191c05ee3f489492ea9a89253eaa26b91d4
 [cista]
   url=git@github.com:felixguendling/cista.git
-  branch=master
-  commit=fb4d35eeb72e86cd3768a896f5068fc6ba31b5e8
+  branch=mimalloc
+  commit=6e450b0b0759f9bd33f7b5183cc3df2a2404219f
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
