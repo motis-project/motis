@@ -17,7 +17,8 @@ target_link_libraries(motis
   tiles_server_res-res
 )
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux" AND
-   ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
+   ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64" AND
+   NOT ${CMAKE_CXX_FLAGS} MATCHES "fsanitize")
   target_link_libraries(motis mimalloc-obj)
 endif()
 set_target_properties(motis PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")

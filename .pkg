@@ -5,7 +5,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=mimalloc
-  commit=d340abb70dd79eb659f232965351fcc090c69798
+  commit=2729093a0f12abd20ed39953b1a3dc0c1cc00cdb
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
