@@ -1,10 +1,13 @@
 import React from "react";
 import { useQuery } from "react-query";
+import * as Tooltip from "@radix-ui/react-tooltip";
+
 import { Station, TripId } from "./api/protocol/motis";
 import { GroupsWithDestination } from "./api/protocol/motis/paxmon";
 import { sendPaxForecastAlternativesRequest } from "./api/paxforecast";
 import { formatTime } from "./util/dateFormat";
 import TripView from "./TripView";
+import TripLoadForecastChart from "./TripLoadForecastChart";
 
 type CombinedGroupProps = {
   plannedTrip: TripId;
@@ -62,9 +65,22 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
           <li key={idx} className="pl-4">
             Ankunft um {formatTime(alt.arrival_time)} mit {alt.transfers}{" "}
             Umstiegen:
-            <span>
+            <span className="inline-flex gap-3 pl-2">
               {alt.compact_journey.legs.map((leg, legIdx) => (
-                <TripView key={legIdx} tsi={leg.trip} format="Short" />
+                <Tooltip.Root key={legIdx}>
+                  <Tooltip.Trigger>
+                    <TripView tsi={leg.trip} format="Short" />
+                  </Tooltip.Trigger>
+                  <Tooltip.Content>
+                    <div className="w-96 bg-gray-50 p-2 rounded-md shadow-lg flex justify-center">
+                      <TripLoadForecastChart
+                        tripId={leg.trip.trip}
+                        mode="Tooltip"
+                      />
+                    </div>
+                    <Tooltip.Arrow className="text-gray-400 fill-current" />
+                  </Tooltip.Content>
+                </Tooltip.Root>
               ))}
             </span>
           </li>

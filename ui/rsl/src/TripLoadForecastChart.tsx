@@ -164,10 +164,12 @@ async function loadAndProcessTripInfo(trip: TripId) {
 
 type TripLoadForecastChartProps = {
   tripId: TripId;
+  mode: "Interactive" | "Tooltip";
 };
 
 function TripLoadForecastChart({
   tripId,
+  mode,
 }: TripLoadForecastChartProps): JSX.Element | null {
   const { data: status } = usePaxMonStatusQuery();
 
@@ -463,62 +465,69 @@ function TripLoadForecastChart({
     );
   });
 
-  return (
-    <div>
-      <ContextMenu.Root modal={false}>
-        <ContextMenu.Trigger>
-          <svg
-            ref={svgEl}
-            viewBox={`-100 -15 ${120 + graphWidth} 335`}
-            className="max-w-6xl mx-auto mt-2"
-          >
-            <g>{background}</g>
-            <g>{sectionDividers}</g>
-            <g>
-              <path stroke="#DDD" d={`M0 10h${graphWidth}`} />
-              {overCapProbs}
-            </g>
-            {spreadPath}
-            {expectedPath}
-            {medianPath}
-            {outerBorder}
-            <text
-              x={graphWidth / 2}
-              y="-5"
-              textAnchor="middle"
-              className="legend"
-            >
-              {title}
-            </text>
-            <g>{yLabels}</g>
-            <g>
-              {stationNameLabels}
-              {scheduleTimeLabels}
-              {currentTimeLabels}
-            </g>
-            {currentTimeIndicator}
-            <g>{clickRegions}</g>
-          </svg>
-        </ContextMenu.Trigger>
-        <ContextMenu.Content className="bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 p-1 w-56">
-          <ContextMenu.Item
-            className="group flex items-center w-full p-2 text-gray-900 focus:bg-blue-400 focus:text-white focus:outline-none rounded-md text-sm select-none cursor-pointer"
-            onSelect={() => saveAsSVG(svgEl.current, baseFileName)}
-          >
-            <DocumentDownloadIcon className="w-5 h-5 mr-2" aria-hidden="true" />
-            Save as SVG
-          </ContextMenu.Item>
-          <ContextMenu.Item
-            className="group flex items-center w-full p-2 text-gray-900 focus:bg-blue-400 focus:text-white focus:outline-none rounded-md text-sm select-none cursor-pointer"
-            onSelect={() => saveAsPNG(svgEl.current, baseFileName)}
-          >
-            <DocumentDownloadIcon className="w-5 h-5 mr-2" aria-hidden="true" />
-            Save as PNG
-          </ContextMenu.Item>
-        </ContextMenu.Content>
-      </ContextMenu.Root>
-    </div>
+  const chart = (
+    <svg
+      ref={svgEl}
+      viewBox={`-100 -15 ${120 + graphWidth} 335`}
+      className="max-h-[42rem] mx-auto mt-2"
+    >
+      <g>{background}</g>
+      <g>{sectionDividers}</g>
+      <g>
+        <path stroke="#DDD" d={`M0 10h${graphWidth}`} />
+        {overCapProbs}
+      </g>
+      {spreadPath}
+      {expectedPath}
+      {medianPath}
+      {outerBorder}
+      <text x={graphWidth / 2} y="-5" textAnchor="middle" className="legend">
+        {title}
+      </text>
+      <g>{yLabels}</g>
+      <g>
+        {stationNameLabels}
+        {scheduleTimeLabels}
+        {currentTimeLabels}
+      </g>
+      {currentTimeIndicator}
+      <g>{clickRegions}</g>
+    </svg>
   );
+
+  if (mode == "Interactive") {
+    return (
+      <div>
+        <ContextMenu.Root modal={false}>
+          <ContextMenu.Trigger>{chart}</ContextMenu.Trigger>
+          <ContextMenu.Content className="bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 p-1 w-56">
+            <ContextMenu.Item
+              className="group flex items-center w-full p-2 text-gray-900 focus:bg-blue-400 focus:text-white focus:outline-none rounded-md text-sm select-none cursor-pointer"
+              onSelect={() => saveAsSVG(svgEl.current, baseFileName)}
+            >
+              <DocumentDownloadIcon
+                className="w-5 h-5 mr-2"
+                aria-hidden="true"
+              />
+              Save as SVG
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              className="group flex items-center w-full p-2 text-gray-900 focus:bg-blue-400 focus:text-white focus:outline-none rounded-md text-sm select-none cursor-pointer"
+              onSelect={() => saveAsPNG(svgEl.current, baseFileName)}
+            >
+              <DocumentDownloadIcon
+                className="w-5 h-5 mr-2"
+                aria-hidden="true"
+              />
+              Save as PNG
+            </ContextMenu.Item>
+          </ContextMenu.Content>
+        </ContextMenu.Root>
+      </div>
+    );
+  } else {
+    return chart;
+  }
 }
 
 export default TripLoadForecastChart;

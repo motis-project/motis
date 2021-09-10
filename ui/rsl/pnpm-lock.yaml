@@ -3,6 +3,7 @@ lockfileVersion: 5.3
 specifiers:
   '@heroicons/react': ^1.0.4
   '@radix-ui/react-context-menu': ^0.1.0
+  '@radix-ui/react-tooltip': ^0.1.0
   '@tailwindcss/forms': ^0.3.3
   '@types/react': ^17.0.20
   '@types/react-dom': ^17.0.9
@@ -28,6 +29,7 @@ specifiers:
 dependencies:
   '@heroicons/react': 1.0.4_react@17.0.2
   '@radix-ui/react-context-menu': 0.1.0_6a88e7f1db8ec87ba2f5d7a905ae46ed
+  '@radix-ui/react-tooltip': 0.1.0_react-dom@17.0.2+react@17.0.2
   '@tailwindcss/forms': 0.3.3_tailwindcss@2.2.15
   date-fns: 2.23.0
   downshift: 6.1.7_react@17.0.2
@@ -363,7 +365,7 @@ packages:
     engines: {node: '>= 8'}
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
-      fastq: 1.12.0
+      fastq: 1.13.0
     dev: true
 
   /@radix-ui/popper/0.1.0:
@@ -589,6 +591,32 @@ packages:
       react: 17.0.2
     dev: false
 
+  /@radix-ui/react-tooltip/0.1.0_react-dom@17.0.2+react@17.0.2:
+    resolution: {integrity: sha512-6zzA9JUHdHLUSwYClYEOgONTbWEwO7kbh6ho92FHBic2ruIBKktT9MS71/c/G9yvuDNgpi4C5SJXCPLA4dTI3g==}
+    peerDependencies:
+      react: ^16.8 || ^17.0
+      react-dom: ^16.8 || ^17.0
+    dependencies:
+      '@babel/runtime': 7.15.4
+      '@radix-ui/primitive': 0.1.0
+      '@radix-ui/react-compose-refs': 0.1.0_react@17.0.2
+      '@radix-ui/react-context': 0.1.0_react@17.0.2
+      '@radix-ui/react-id': 0.1.0_react@17.0.2
+      '@radix-ui/react-popper': 0.1.0_react@17.0.2
+      '@radix-ui/react-portal': 0.1.0_react-dom@17.0.2+react@17.0.2
+      '@radix-ui/react-presence': 0.1.0_react@17.0.2
+      '@radix-ui/react-primitive': 0.1.0_react@17.0.2
+      '@radix-ui/react-slot': 0.1.0_react@17.0.2
+      '@radix-ui/react-use-controllable-state': 0.1.0_react@17.0.2
+      '@radix-ui/react-use-escape-keydown': 0.1.0_react@17.0.2
+      '@radix-ui/react-use-layout-effect': 0.1.0_react@17.0.2
+      '@radix-ui/react-use-previous': 0.1.0_react@17.0.2
+      '@radix-ui/react-use-rect': 0.1.0_react@17.0.2
+      '@radix-ui/react-visually-hidden': 0.1.0_react@17.0.2
+      react: 17.0.2
+      react-dom: 17.0.2_react@17.0.2
+    dev: false
+
   /@radix-ui/react-use-body-pointer-events/0.1.0_react@17.0.2:
     resolution: {integrity: sha512-svPyoHCcwOq/vpWNEvdH/yD91vN9p8BtiozNQbjVmJRxQ/vS12zqk70AxTGWe+2ZKHq2sggpEQNTv1JHyVFlnQ==}
     peerDependencies:
@@ -646,6 +674,15 @@ packages:
       react: 17.0.2
     dev: false
 
+  /@radix-ui/react-use-previous/0.1.0_react@17.0.2:
+    resolution: {integrity: sha512-0fxNc33rYnCzDMPSiSnfS8YklnxQo8WqbAQXPAgIaaA1jRu2qFB916PL4qCIW+avcAAqFD38vWhqDqcVmBharA==}
+    peerDependencies:
+      react: ^16.8 || ^17.0
+    dependencies:
+      '@babel/runtime': 7.15.4
+      react: 17.0.2
+    dev: false
+
   /@radix-ui/react-use-rect/0.1.0_react@17.0.2:
     resolution: {integrity: sha512-BTj9vMz336G3ukxCOb3QLC1oEOtGrWKPTdEG0pFEw75jyg360rLsfuydYemOtGFPVamXL9Pxo9JCwMcxLWdUlA==}
     peerDependencies:
@@ -662,6 +699,16 @@ packages:
       react: ^16.8 || ^17.0
     dependencies:
       '@babel/runtime': 7.15.4
+      react: 17.0.2
+    dev: false
+
+  /@radix-ui/react-visually-hidden/0.1.0_react@17.0.2:
+    resolution: {integrity: sha512-PS1SNgcx79ZOq+IiHJZNL0aNNl5ygYKQ8DI+7+xK+PlLyA6KpVEhk7D9VMyWUygWWqE6trOgcOG0AyuhnLlmjQ==}
+    peerDependencies:
+      react: ^16.8 || ^17.0
+    dependencies:
+      '@babel/runtime': 7.15.4
+      '@radix-ui/react-primitive': 0.1.0_react@17.0.2
       react: 17.0.2
     dev: false
 
@@ -969,7 +1016,7 @@ packages:
       postcss: ^8.1.0
     dependencies:
       browserslist: 4.17.0
-      caniuse-lite: 1.0.30001255
+      caniuse-lite: 1.0.30001256
       colorette: 1.4.0
       fraction.js: 4.1.1
       normalize-range: 0.1.2
@@ -1021,7 +1068,7 @@ packages:
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
     hasBin: true
     dependencies:
-      caniuse-lite: 1.0.30001255
+      caniuse-lite: 1.0.30001256
       colorette: 1.4.0
       electron-to-chromium: 1.3.835
       escalade: 3.1.1
@@ -1050,8 +1097,8 @@ packages:
     engines: {node: '>= 6'}
     dev: true
 
-  /caniuse-lite/1.0.30001255:
-    resolution: {integrity: sha512-F+A3N9jTZL882f/fg/WWVnKSu6IOo3ueLz4zwaOPbPYHNmM/ZaDUyzyJwS1mZhX7Ex5jqTyW599Gdelh5PDYLQ==}
+  /caniuse-lite/1.0.30001256:
+    resolution: {integrity: sha512-QirrvMLmB4txNnxiaG/xbm6FSzv9LqOZ3Jp9VtCYb3oPIfCHpr/oGn38pFq0udwlkctvXQgPthaXqJ76DaYGnA==}
     dev: true
 
   /chalk/2.4.2:
@@ -1542,8 +1589,8 @@ packages:
     resolution: {integrity: sha1-PYpcZog6FqMMqGQ+hR8Zuqd5eRc=}
     dev: true
 
-  /fastq/1.12.0:
-    resolution: {integrity: sha512-VNX0QkHK3RsXVKr9KrlUv/FoTa0NdbYoHHl7uXHv2rzyHSlxjdNAKug2twd9luJxpcyNeAgf5iPPMutJO67Dfg==}
+  /fastq/1.13.0:
+    resolution: {integrity: sha512-YpkpUnK8od0o1hmeSc7UUs/eB/vIPWJYjKck2QKIzAf71Vm1AAQ3EbuZB3g2JIy+pg+ERD0vqI79KyZiB2e2Nw==}
     dependencies:
       reusify: 1.0.4
     dev: true

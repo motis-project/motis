@@ -20,7 +20,7 @@ function App(): JSX.Element {
   const tripDisplay =
     selectedTrip !== null ? (
       <>
-        <TripLoadForecastChart tripId={selectedTrip} />
+        <TripLoadForecastChart tripId={selectedTrip} mode="Interactive" />
         <TripSectionDetails tripId={selectedTrip} />
       </>
     ) : null;

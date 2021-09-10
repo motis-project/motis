@@ -55,7 +55,6 @@ function TripPicker({ onTripPicked }: TripPickerProps): JSX.Element {
     itemToString: (item: PaxMonTripInfo | null) =>
       item !== null ? shortTripName(item.tsi) : "",
     onInputValueChange: ({ inputValue }) => {
-      console.log("onInputValueChange", inputValue, parseInt(inputValue || ""));
       if (inputValue != undefined) {
         const parsed = parseInt(inputValue);
         if (!isNaN(parsed) || inputValue === "") {
@@ -64,7 +63,6 @@ function TripPicker({ onTripPicked }: TripPickerProps): JSX.Element {
       }
     },
     onSelectedItemChange: (changes) => {
-      console.log("onSelectedItemChange", changes);
       onTripPicked(changes.selectedItem?.tsi?.trip ?? null);
     },
   });
