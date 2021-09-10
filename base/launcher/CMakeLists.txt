@@ -16,14 +16,6 @@ target_link_libraries(motis
   pbf_sdf_fonts_res-res
   tiles_server_res-res
 )
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux" AND
-   ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64" AND
-   NOT "${CMAKE_CXX_FLAGS}" MATCHES "fsanitize")
-  message(STATUS "Linking motis with mimalloc")
-  target_link_libraries(motis mimalloc-obj)
-else()
-  message(STATUS "Linking motis w/o mimalloc")
-endif()
 set_target_properties(motis PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 if (NOT MSVC)
   set_target_properties(motis PROPERTIES LINK_FLAGS "-Wl,-rpath,./")

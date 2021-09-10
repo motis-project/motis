@@ -52,6 +52,7 @@ jobs:
             avx2: On
             webui: On
             tests: Off
+            mimalloc: Off
             strip: strip
           - name: macos-noavx2
             cxx: clang++
@@ -64,6 +65,7 @@ jobs:
             avx2: Off
             webui: On
             tests: On
+            mimalloc: Off
             strip: strip
           - name: linux-amd64-debug
             cxx: g++-10
@@ -74,6 +76,7 @@ jobs:
             avx2: On
             webui: Off
             tests: On
+            mimalloc: Off
             emulator: valgrind --error-exitcode=1
             install: ninja-build valgrind
           - name: linux-amd64-clang
@@ -87,6 +90,7 @@ jobs:
             avx2: On
             webui: Off
             tests: On
+            mimalloc: Off
             install: ninja-build
           - name: linux-clang-tidy
             cxx: clang++-12
@@ -100,6 +104,7 @@ jobs:
             avx2: On
             webui: Off
             tests: On
+            mimalloc: Off
             install: ninja-build
           - name: linux-clang-sanitizer
             cxx: clang++-12
@@ -113,6 +118,7 @@ jobs:
             avx2: On
             webui: Off
             tests: On
+            mimalloc: Off
             install: ninja-build
           - name: linux-amd64-release
             os: ubuntu-20.04
@@ -130,6 +136,7 @@ jobs:
             avx2: On
             webui: On
             tests: On
+            mimalloc: On
             strip: /opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/bin/strip
             install: ninja-build
           - name: linux-amd64-noavx-release
@@ -148,6 +155,7 @@ jobs:
             avx2: Off
             webui: On
             tests: On
+            mimalloc: Off
             strip: /opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/bin/strip
             install: ninja-build
           - name: linux-x86-release
@@ -170,6 +178,7 @@ jobs:
             avx2: Off
             webui: On
             tests: On
+            mimalloc: Off
             strip: /opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/bin/strip
             install: ninja-build
           - name: linux-arm-release
@@ -191,6 +200,7 @@ jobs:
             avx2: Off
             webui: On
             tests: On
+            mimalloc: Off
             strip: /opt/arm-unknown-linux-musleabihf/arm-unknown-linux-musleabihf/bin/strip
             install: ninja-build qemu-user-static
             emulator: qemu-arm-static
@@ -213,6 +223,7 @@ jobs:
             avx2: Off
             webui: On
             tests: On
+            mimalloc: Off
             strip: /opt/aarch64-unknown-linux-musl/aarch64-unknown-linux-musl/bin/strip
             install: ninja-build qemu-user-static
             emulator: qemu-aarch64-static
@@ -289,6 +300,7 @@ jobs:
             -DMOTIS_LINT=${{ matrix.config.lint }} \
             -DMOTIS_AVX=${{ matrix.config.avx }} \
             -DMOTIS_AVX2=${{ matrix.config.avx2 }} \
+            -DMOTIS_MIMALLOC=${{ matrix.config.mimalloc }} \
             -DCTX_ASAN=${{ contains(matrix.config.cxxflags, '-fsanitize=address') }} \
             -DCTX_VALGRIND=${{ matrix.config.cc == 'gcc-10' && matrix.config.mode == 'Debug' }} \
             -DMOTIS_WITH_WEBUI=${{ matrix.config.webui }}
