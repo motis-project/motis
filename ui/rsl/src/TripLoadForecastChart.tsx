@@ -1,4 +1,7 @@
 import React, { useRef } from "react";
+import { useQuery } from "react-query";
+import * as ContextMenu from "@radix-ui/react-context-menu";
+import { DocumentDownloadIcon } from "@heroicons/react/outline";
 
 import {
   formatDateTime,
@@ -16,7 +19,6 @@ import {
   usePaxMonStatusQuery,
 } from "./api/paxmon";
 import { addEdgeStatistics } from "./util/statistics";
-import { useQuery } from "react-query";
 
 function getSvgLinePath(
   edges: PaxMonEdgeLoadInfoWithStats[],
@@ -463,47 +465,58 @@ function TripLoadForecastChart({
 
   return (
     <div>
-      <svg
-        ref={svgEl}
-        viewBox={`-100 -15 ${120 + graphWidth} 335`}
-        style={{ height: "90vh", width: "100%", marginTop: "10px" }}
-      >
-        <g>{background}</g>
-        <g>{sectionDividers}</g>
-        <g>
-          <path stroke="#DDD" d={`M0 10h${graphWidth}`} />
-          {overCapProbs}
-        </g>
-        {spreadPath}
-        {expectedPath}
-        {medianPath}
-        {outerBorder}
-        <text x={graphWidth / 2} y="-5" textAnchor="middle" className="legend">
-          {title}
-        </text>
-        <g>{yLabels}</g>
-        <g>
-          {stationNameLabels}
-          {scheduleTimeLabels}
-          {currentTimeLabels}
-        </g>
-        {currentTimeIndicator}
-        <g>{clickRegions}</g>
-      </svg>
-      <div className="flex flex-row justify-center items-center space-x-2 m-2">
-        <button
-          className="bg-gray-200 px-2 py-1 border border-gray-300 rounded-xl"
-          onClick={() => saveAsSVG(svgEl.current, baseFileName)}
-        >
-          Save as SVG
-        </button>
-        <button
-          className="bg-gray-200 px-2 py-1 border border-gray-300 rounded-xl"
-          onClick={() => saveAsPNG(svgEl.current, baseFileName)}
-        >
-          Save as PNG
-        </button>
-      </div>
+      <ContextMenu.Root modal={false}>
+        <ContextMenu.Trigger>
+          <svg
+            ref={svgEl}
+            viewBox={`-100 -15 ${120 + graphWidth} 335`}
+            className="max-w-6xl mx-auto mt-2"
+          >
+            <g>{background}</g>
+            <g>{sectionDividers}</g>
+            <g>
+              <path stroke="#DDD" d={`M0 10h${graphWidth}`} />
+              {overCapProbs}
+            </g>
+            {spreadPath}
+            {expectedPath}
+            {medianPath}
+            {outerBorder}
+            <text
+              x={graphWidth / 2}
+              y="-5"
+              textAnchor="middle"
+              className="legend"
+            >
+              {title}
+            </text>
+            <g>{yLabels}</g>
+            <g>
+              {stationNameLabels}
+              {scheduleTimeLabels}
+              {currentTimeLabels}
+            </g>
+            {currentTimeIndicator}
+            <g>{clickRegions}</g>
+          </svg>
+        </ContextMenu.Trigger>
+        <ContextMenu.Content className="bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 p-1 w-56">
+          <ContextMenu.Item
+            className="group flex items-center w-full p-2 text-gray-900 focus:bg-blue-400 focus:text-white focus:outline-none rounded-md text-sm select-none cursor-pointer"
+            onSelect={() => saveAsSVG(svgEl.current, baseFileName)}
+          >
+            <DocumentDownloadIcon className="w-5 h-5 mr-2" aria-hidden="true" />
+            Save as SVG
+          </ContextMenu.Item>
+          <ContextMenu.Item
+            className="group flex items-center w-full p-2 text-gray-900 focus:bg-blue-400 focus:text-white focus:outline-none rounded-md text-sm select-none cursor-pointer"
+            onSelect={() => saveAsPNG(svgEl.current, baseFileName)}
+          >
+            <DocumentDownloadIcon className="w-5 h-5 mr-2" aria-hidden="true" />
+            Save as PNG
+          </ContextMenu.Item>
+        </ContextMenu.Content>
+      </ContextMenu.Root>
     </div>
   );
 }

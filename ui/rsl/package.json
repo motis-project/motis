@@ -14,10 +14,12 @@
     "update-protocol": "node --trace-uncaught tools/protocol.js && prettier --write src/api/protocol"
   },
   "dependencies": {
+    "@heroicons/react": "^1.0.4",
+    "@radix-ui/react-context-menu": "^0.1.0",
     "date-fns": "^2.23.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-query": "^3.23.1"
+    "react-query": "^3.23.2"
   },
   "devDependencies": {
     "@types/react": "^17.0.20",
