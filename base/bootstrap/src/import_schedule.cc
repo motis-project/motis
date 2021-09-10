@@ -13,7 +13,6 @@
 #include "motis/bootstrap/import_settings.h"
 #include "motis/loader/loader.h"
 
-namespace fs = boost::filesystem;
 namespace mm = motis::module;
 
 namespace motis::bootstrap {
@@ -62,9 +61,9 @@ void register_import_schedule(motis_instance& instance,
                 fbb,
                 fbb.CreateVector(utl::to_vec(
                     dataset_opt_cpy.dataset_,
-                    [&](auto const& p) {
+                    [&, i = 0](auto const&) mutable {
                       return fbb.CreateString(
-                          (fs::path{p} / "schedule.raw").generic_string());
+                          dataset_opt_cpy.fbs_schedule_path(data_dir, i++));
                     })),
                 fbb.CreateVector(utl::to_vec(dataset_opt_cpy.dataset_prefix_,
                                              [&](auto const& prefix) {

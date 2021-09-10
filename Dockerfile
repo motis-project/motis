@@ -9,6 +9,8 @@ server.static_path=/motis/web\n\
 \n\
 intermodal.router=tripbased\n\
 \n\
+ris.db=/data/ris.mdb\n\
+\n\
 [import]\n\
 paths=schedule:/input/schedule\n\
 paths=osm:/input/osm.pbf\n\
