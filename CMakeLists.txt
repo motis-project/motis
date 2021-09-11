@@ -200,7 +200,7 @@ add_subdirectory(base/bootstrap EXCLUDE_FROM_ALL)
 add_subdirectory(base/launcher)
 
 if (MOTIS_MIMALLOC)
-  target_link_libraries(cista INTERFACE mimalloc-static)
+  target_link_libraries(motis mimalloc-obj)
 endif()
 
 if(MOTIS_WITH_WEBUI)
