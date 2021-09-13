@@ -77,7 +77,7 @@ int main(int argc, char const** argv) {
       parser.print_help(std::cout);
       return 0;
     } else if (parser.version()) {
-      std::cout << "MOTIS v" << long_version() << "\n";
+      std::cout << "MOTIS " << long_version() << "\n";
       return 0;
     }
 

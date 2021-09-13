@@ -37,6 +37,7 @@ endif()
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
+option(MOTIS_MIMALLOC "use mimalloc" OFF)
 option(MOTIS_AVX "enable AVX functions" ON)
 option(MOTIS_AVX2 "enable AVX2 + FMA functions" ON)
 
@@ -97,6 +98,9 @@ configure_file (
 ################################
 find_package(Threads)
 include(cmake/pkg.cmake)
+if (MOTIS_MIMALLOC)
+  target_link_libraries(cista INTERFACE mimalloc-static)
+endif()
 add_subdirectory(modules/ris/gtfsrtpb)
 
 
@@ -194,6 +198,10 @@ endforeach(module)
 
 add_subdirectory(base/bootstrap EXCLUDE_FROM_ALL)
 add_subdirectory(base/launcher)
+
+if (MOTIS_MIMALLOC)
+  target_link_libraries(motis mimalloc-obj)
+endif()
 
 if(MOTIS_WITH_WEBUI)
   add_subdirectory(ui/web)
