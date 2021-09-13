@@ -37,6 +37,7 @@
 #include "motis/paxforecast/error.h"
 #include "motis/paxforecast/load_forecast.h"
 #include "motis/paxforecast/measures/measures.h"
+#include "motis/paxforecast/measures/storage.h"
 #include "motis/paxforecast/messages.h"
 #include "motis/paxforecast/simulate_behavior.h"
 #include "motis/paxforecast/statistics.h"
@@ -53,7 +54,9 @@ using namespace motis::paxmon;
 
 namespace motis::paxforecast {
 
-paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
+paxforecast::paxforecast()
+    : module("Passenger Forecast", "paxforecast"),
+      measures_storage_(std::make_unique<measures::storage>()) {
   param(forecast_filename_, "forecast_results",
         "output file for forecast messages");
   param(behavior_stats_filename_, "behavior_stats",
@@ -97,6 +100,18 @@ void paxforecast::init(motis::module::registry& reg) {
 
   reg.subscribe("/paxmon/monitoring_update", [&](msg_ptr const& msg) {
     on_monitoring_event(msg);
+    return nullptr;
+  });
+
+  reg.subscribe("/paxmon/universe_forked", [&](msg_ptr const& msg) {
+    auto const ev = motis_content(PaxMonUniverseForked, msg);
+    measures_storage_->universe_created(ev->new_universe());
+    return nullptr;
+  });
+
+  reg.subscribe("/paxmon/universe_destroyed", [&](msg_ptr const& msg) {
+    auto const ev = motis_content(PaxMonUniverseDestroyed, msg);
+    measures_storage_->universe_destroyed(ev->universe());
     return nullptr;
   });
 
@@ -572,9 +587,13 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
   auto const& sched = get_sched();
   auto& data = *get_shared_data<paxmon_data*>(motis::paxmon::DATA_KEY);
   auto& uv = data.multiverse_.get(req->universe());
-  auto const ms = from_fbs(sched, req->measures());
+  auto const new_ms = from_fbs(sched, req->measures());
+  auto* ms_storage = measures_storage_->get(req->universe());
+  if (req->replace_existing()) {
+    ms_storage->clear();
+  }
+  ms_storage->add(new_ms);
   (void)uv;
-  (void)ms;
   return make_success_msg();
 }
 

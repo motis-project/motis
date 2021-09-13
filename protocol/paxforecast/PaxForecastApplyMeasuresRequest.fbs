@@ -6,4 +6,5 @@ table PaxForecastApplyMeasuresRequest {
   universe: uint;
 
   measures: [MeasureWrapper];
+  replace_existing: bool;
 }

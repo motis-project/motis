@@ -15,6 +15,10 @@
 
 namespace motis::paxforecast {
 
+namespace measures {
+struct storage;
+}
+
 struct paxforecast : public motis::module::module {
   paxforecast();
   ~paxforecast() override;
@@ -49,6 +53,7 @@ private:
 
   std::string stats_file_;
   std::unique_ptr<stats_writer> stats_writer_;
+  std::unique_ptr<measures::storage> measures_storage_;
 };
 
 }  // namespace motis::paxforecast
