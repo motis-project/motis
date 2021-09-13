@@ -8,6 +8,7 @@ import { sendPaxForecastAlternativesRequest } from "./api/paxforecast";
 import { formatTime } from "./util/dateFormat";
 import TripView from "./TripView";
 import TripLoadForecastChart from "./TripLoadForecastChart";
+import { Alternative } from "./api/protocol/motis/paxforecast";
 
 type CombinedGroupProps = {
   plannedTrip: TripId;
@@ -41,12 +42,10 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
   );
 
   const plannedTripId = JSON.stringify(props.plannedTrip);
-  const alternatives = data?.alternatives.filter(
-    (alt) =>
-      alt.compact_journey.legs.find(
-        (l) => JSON.stringify(l.trip.trip) === plannedTripId
-      ) === undefined
-  );
+  const containsCurrentTrip = (alt: Alternative) =>
+    alt.compact_journey.legs.find(
+      (l) => JSON.stringify(l.trip.trip) === plannedTripId
+    ) !== undefined;
 
   const groupInfo = (
     <div>
@@ -56,13 +55,18 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
     </div>
   );
 
-  const alternativesInfo = alternatives ? (
+  const alternativesInfo = data?.alternatives ? (
     <div>
-      {alternatives.length}/{data?.alternatives.length} Alternativverbindungen
-      (ab {formatTime(props.earliestDeparture)}):
+      {data.alternatives.length} Mögliche Verbindungen (ab{" "}
+      {formatTime(props.earliestDeparture)}):
       <ul>
-        {alternatives.map((alt, idx) => (
-          <li key={idx} className="pl-4">
+        {data.alternatives.map((alt, idx) => (
+          <li
+            key={idx}
+            className={`pl-4 ${
+              containsCurrentTrip(alt) ? "text-gray-400" : ""
+            }`}
+          >
             Ankunft um {formatTime(alt.arrival_time)} mit {alt.transfers}{" "}
             Umstiegen:
             <span className="inline-flex gap-3 pl-2">
@@ -94,12 +98,7 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
   );
 
   return (
-    <div
-      className="mt-2"
-      onClick={() => {
-        console.log(props, data, alternatives);
-      }}
-    >
+    <div className="mt-2">
       {groupInfo}
       {alternativesInfo}
     </div>
