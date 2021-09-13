@@ -19,11 +19,12 @@ target_link_libraries(motis
 set_target_properties(motis PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 if (NOT MSVC)
   set_target_properties(motis PROPERTIES LINK_FLAGS "-Wl,-rpath,./")
-endif()
-if (${CMAKE_BUILD_TYPE} STREQUAL Release)
-  add_custom_command(
-    TARGET motis
-    POST_BUILD
-    COMMAND ${CMAKE_STRIP} ${CMAKE_BINARY_DIR}/motis
-  )
+
+  if (${CMAKE_BUILD_TYPE} STREQUAL Release)
+    add_custom_command(
+      TARGET motis
+      POST_BUILD
+      COMMAND ${CMAKE_STRIP} ${CMAKE_BINARY_DIR}/motis
+    )
+  endif()
 endif()
