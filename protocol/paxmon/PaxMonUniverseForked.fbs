@@ -1,0 +1,6 @@
+namespace motis.paxmon;
+
+table PaxMonUniverseForked {
+  base_universe: uint;
+  new_universe: uint;
+}

@@ -1009,8 +1009,20 @@ msg_ptr paxmon::filter_trips(msg_ptr const& msg) {
 }
 
 msg_ptr paxmon::fork_universe(msg_ptr const& msg) {
+  auto const broadcast = [&](universe const& base, universe const& fork) {
+    message_creator mc;
+    mc.create_and_finish(
+        MsgContent_PaxMonUniverseForked,
+        CreatePaxMonUniverseForked(mc, base.id_, fork.id_).Union(),
+        "/paxmon/universe_forked");
+    auto const msg = make_msg(mc);
+    motis_publish(msg);
+  };
+
   auto const fork = [&](universe const& base) -> msg_ptr {
+    scoped_timer timer{"paxmon: fork universe"};
     auto& new_uv = data_.multiverse_.fork(base.id_);
+    broadcast(base, new_uv);
     message_creator mc;
     mc.create_and_finish(
         MsgContent_PaxMonForkUniverseResponse,
@@ -1033,6 +1045,13 @@ msg_ptr paxmon::destroy_universe(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonDestroyUniverseRequest, msg);
   auto& uv = get_universe(req->universe());
   if (data_.multiverse_.destroy(uv.id_)) {
+    message_creator mc;
+    mc.create_and_finish(
+        MsgContent_PaxMonUniverseDestroyed,
+        CreatePaxMonUniverseDestroyed(mc, req->universe()).Union(),
+        "/paxmon/universe_destroyed");
+    auto const msg = make_msg(mc);
+    motis_publish(msg);
     return make_success_msg();
   } else {
     throw std::system_error{error::universe_destruction_failed};

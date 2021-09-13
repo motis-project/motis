@@ -274,6 +274,17 @@ export interface PaxMonTripLoadInfo {
   edges: PaxMonEdgeLoadInfo[];
 }
 
+// paxmon/PaxMonUniverseDestroyed.fbs
+export interface PaxMonUniverseDestroyed {
+  universe: number;
+}
+
+// paxmon/PaxMonUniverseForked.fbs
+export interface PaxMonUniverseForked {
+  base_universe: number;
+  new_universe: number;
+}
+
 // paxmon/PaxMonUpdate.fbs
 export type PaxMonEventType =
   | "NO_PROBLEM"

@@ -570,7 +570,10 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
   auto const req = motis_content(PaxForecastApplyMeasuresRequest, msg);
   auto const& sched = get_sched();
+  auto& data = *get_shared_data<paxmon_data*>(motis::paxmon::DATA_KEY);
+  auto& uv = data.multiverse_.get(req->universe());
   auto const ms = from_fbs(sched, req->measures());
+  (void)uv;
   (void)ms;
   return make_success_msg();
 }

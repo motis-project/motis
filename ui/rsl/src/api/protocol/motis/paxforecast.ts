@@ -70,6 +70,7 @@ export interface PaxForecastAlternativesResponse {
 
 // paxforecast/PaxForecastApplyMeasuresRequest.fbs
 export interface PaxForecastApplyMeasuresRequest {
+  universe: number;
   measures: MeasureWrapper[];
 }
 

@@ -3,5 +3,7 @@ include "paxforecast/Measures.fbs";
 namespace motis.paxforecast;
 
 table PaxForecastApplyMeasuresRequest {
+  universe: uint;
+
   measures: [MeasureWrapper];
 }

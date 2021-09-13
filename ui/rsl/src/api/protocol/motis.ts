@@ -23,6 +23,8 @@ import {
   PaxMonDestroyUniverseRequest,
   PaxMonGetGroupsInTripRequest,
   PaxMonGetGroupsInTripResponse,
+  PaxMonUniverseForked,
+  PaxMonUniverseDestroyed,
 } from "./motis/paxmon";
 import {
   PaxForecastUpdate,
@@ -124,7 +126,9 @@ export type MsgContent =
   | PaxMonGetGroupsInTripResponse
   | PaxForecastApplyMeasuresRequest
   | PaxForecastAlternativesRequest
-  | PaxForecastAlternativesResponse;
+  | PaxForecastAlternativesResponse
+  | PaxMonUniverseForked
+  | PaxMonUniverseDestroyed;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -156,7 +160,9 @@ export type MsgContentType =
   | "PaxMonGetGroupsInTripResponse"
   | "PaxForecastApplyMeasuresRequest"
   | "PaxForecastAlternativesRequest"
-  | "PaxForecastAlternativesResponse";
+  | "PaxForecastAlternativesResponse"
+  | "PaxMonUniverseForked"
+  | "PaxMonUniverseDestroyed";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";
