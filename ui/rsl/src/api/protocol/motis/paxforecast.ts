@@ -33,6 +33,7 @@ export interface TripRecommendationMeasure {
   planned_trips: TripId[];
   planned_destinations: string[];
   recommended_trip: TripId;
+  interchange_station: string;
 }
 
 // paxforecast/Measures.fbs

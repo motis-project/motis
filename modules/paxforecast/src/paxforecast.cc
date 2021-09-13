@@ -569,25 +569,9 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
 msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
   auto const req = motis_content(PaxForecastApplyMeasuresRequest, msg);
-  for (auto const& mw : *req->measures()) {
-    switch (mw->measure_type()) {
-      case Measure_TripLoadInfoMeasure: {
-        auto const* m =
-            reinterpret_cast<TripLoadInfoMeasure const*>(mw->measure());
-        (void)m;  // TODO(pablo): NYI
-        throw std::system_error{error::unsupported_measure};
-      }
-      case Measure_TripRecommendationMeasure: {
-        auto const* m =
-            reinterpret_cast<TripRecommendationMeasure const*>(mw->measure());
-        (void)m;  // TODO(pablo): NYI
-        throw std::system_error{error::unsupported_measure};
-      }
-      default: {
-        throw std::system_error{error::unsupported_measure};
-      }
-    }
-  }
+  auto const& sched = get_sched();
+  auto const ms = from_fbs(sched, req->measures());
+  (void)ms;
   return make_success_msg();
 }
 

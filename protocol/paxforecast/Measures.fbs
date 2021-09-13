@@ -23,6 +23,7 @@ table TripRecommendationMeasure {
   planned_trips: [TripId];
   planned_destinations: [string]; // station ids
   recommended_trip: TripId;
+  interchange_station: string; // station id
 }
 
 union Measure {
