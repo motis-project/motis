@@ -53,7 +53,6 @@ jobs:
             webui: On
             tests: Off
             mimalloc: Off
-            strip: strip
           - name: macos-noavx2
             cxx: clang++
             cc: clang
@@ -66,7 +65,6 @@ jobs:
             webui: On
             tests: On
             mimalloc: Off
-            strip: strip
           - name: linux-amd64-debug
             cxx: g++-10
             cc: gcc-10
@@ -123,108 +121,62 @@ jobs:
           - name: linux-amd64-release
             os: ubuntu-20.04
             toolchain: x86_64-multilib-linux-musl
-            cxx: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-g++
-            cc: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-gcc
+            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/x86_64-multilib-linux-musl/toolchain-amd64.cmake
             mode: Release
-            ldflags: -static-libgcc -static-libstdc++ -static
-            cross: |-
-              -DCMAKE_CROSSCOMPILING=1 \
-              -DCMAKE_LIBRARY_PATH=/opt/x86_64-multilib-linux-musl/lib \
-              -DCMAKE_SYSROOT=/opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/sysroot
             artifact: linux-amd64
             avx: On
             avx2: On
             webui: On
             tests: On
             mimalloc: On
-            strip: /opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/bin/strip
             install: ninja-build
           - name: linux-amd64-noavx-release
             os: ubuntu-20.04
             toolchain: x86_64-multilib-linux-musl
-            cxx: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-g++
-            cc: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-gcc
+            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/x86_64-multilib-linux-musl/toolchain-amd64.cmake
             mode: Release
-            ldflags: -static-libgcc -static-libstdc++ -static
-            cross: |-
-              -DCMAKE_CROSSCOMPILING=1 \
-              -DCMAKE_LIBRARY_PATH=/opt/x86_64-multilib-linux-musl/lib \
-              -DCMAKE_SYSROOT=/opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/sysroot
             artifact: linux-amd64-noavx
             avx: Off
             avx2: Off
             webui: On
             tests: On
             mimalloc: Off
-            strip: /opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/bin/strip
             install: ninja-build
           - name: linux-x86-release
             os: ubuntu-20.04
             toolchain: x86_64-multilib-linux-musl
-            cxx: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-g++
-            cc: /opt/x86_64-multilib-linux-musl/bin/x86_64-multilib-linux-musl-gcc
-            cflags: -m32 -mfpmath=sse -msse2
-            cxxflags: -m32 -mfpmath=sse -msse2
+            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/x86_64-multilib-linux-musl/toolchain-x86.cmake
             mode: Release
-            ldflags: -static-libgcc -static-libstdc++ -static
-            cross: |-
-              -DCMAKE_ASM_FLAGS=-m32 \
-              -DCMAKE_SYSTEM_NAME=Linux \
-              -DCMAKE_SYSTEM_PROCESSOR=i686 \
-              -DCMAKE_LIBRARY_PATH=/opt/x86_64-multilib-linux-musl/lib \
-              -DCMAKE_SYSROOT=/opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/sysroot
             artifact: linux-x86
             avx: Off
             avx2: Off
             webui: On
             tests: On
             mimalloc: Off
-            strip: /opt/x86_64-multilib-linux-musl/x86_64-multilib-linux-musl/bin/strip
             install: ninja-build
           - name: linux-arm-release
             os: ubuntu-20.04
             toolchain: arm-unknown-linux-musleabihf
-            cxx: /opt/arm-unknown-linux-musleabihf/bin/arm-unknown-linux-musleabihf-g++
-            cc: /opt/arm-unknown-linux-musleabihf/bin/arm-unknown-linux-musleabihf-gcc
-            cflags: -Wno-psabi -latomic
-            cxxflags: -Wno-psabi -latomic
+            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/arm-unknown-linux-musleabihf/toolchain-arm.cmake
             mode: Release
-            ldflags: -static-libgcc -static-libstdc++ -static -latomic
-            cross: |-
-              -DCMAKE_SYSTEM_NAME=Linux \
-              -DCMAKE_SYSTEM_PROCESSOR=arm \
-              -DCMAKE_LIBRARY_PATH=/opt/arm-unknown-linux-musleabi/lib \
-              -DCMAKE_SYSROOT=/opt/arm-unknown-linux-musleabihf/arm-unknown-linux-musleabihf/sysroot
             artifact: linux-arm
             avx: Off
             avx2: Off
             webui: On
             tests: On
             mimalloc: Off
-            strip: /opt/arm-unknown-linux-musleabihf/arm-unknown-linux-musleabihf/bin/strip
             install: ninja-build qemu-user-static
             emulator: qemu-arm-static
           - name: linux-arm64-release
             os: ubuntu-20.04
             toolchain: aarch64-unknown-linux-musl
-            cxx: /opt/aarch64-unknown-linux-musl/bin/aarch64-unknown-linux-musl-g++
-            cc: /opt/aarch64-unknown-linux-musl/bin/aarch64-unknown-linux-musl-gcc
-            cflags: -Wno-psabi -latomic
-            cxxflags: -Wno-psabi -latomic
-            mode: Release
-            ldflags: -static-libgcc -static-libstdc++ -static
-            cross: |-
-              -DCMAKE_SYSTEM_NAME=Linux \
-              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-              -DCMAKE_LIBRARY_PATH=/opt/aarch64-unknown-linux-musl/lib \
-              -DCMAKE_SYSROOT=/opt/aarch64-unknown-linux-musl/aarch64-unknown-linux-musl/sysroot
+            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/aarch64-unknown-linux-musl/toolchain-arm64.cmake
             artifact: linux-arm64
             avx: Off
             avx2: Off
             webui: On
             tests: On
             mimalloc: Off
-            strip: /opt/aarch64-unknown-linux-musl/aarch64-unknown-linux-musl/bin/strip
             install: ninja-build qemu-user-static
             emulator: qemu-aarch64-static
     env:
@@ -314,13 +266,6 @@ jobs:
             motis-itest
           ./build/buildcache/bin/buildcache -s
 
-      - name: Show tree on failure
-        if: ${{ failure() }}
-        run: |
-          sudo apt-get install -y --no-install-recommends tree
-          file build/deps/protobuf/protoc
-          ldd build/deps/protobuf/protoc
-
       # ==== TESTS ====
       - name: Run Test Mode
         if: matrix.config.tests == 'On'
@@ -342,10 +287,6 @@ jobs:
         run: ${{ matrix.config.emulator }} ./build/motis-itest
 
       # ==== DISTRIBUTION ====
-      - name: Strip Executable
-        if: matrix.config.artifact
-        run: ${{ matrix.config.strip }} build/motis
-
       - name: Compile Web Interface
         if: matrix.config.webui == 'On'
         run: |
@@ -455,9 +396,6 @@ jobs:
 
       - name: Download artifacts
         uses: actions/download-artifact@v2
-
-      - name: Display structure of downloaded files
-        run: ls -R
 
       - name: Docker setup-buildx
         uses: docker/setup-buildx-action@v1
