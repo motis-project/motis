@@ -76,13 +76,13 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
                     <TripView tsi={leg.trip} format="Short" />
                   </Tooltip.Trigger>
                   <Tooltip.Content>
-                    <div className="w-96 bg-gray-50 p-2 rounded-md shadow-lg flex justify-center">
+                    <div className="w-96 bg-white p-2 rounded-md shadow-lg flex justify-center">
                       <TripLoadForecastChart
                         tripId={leg.trip.trip}
                         mode="Tooltip"
                       />
                     </div>
-                    <Tooltip.Arrow className="text-gray-400 fill-current" />
+                    <Tooltip.Arrow className="text-white fill-current" />
                   </Tooltip.Content>
                 </Tooltip.Root>
               ))}

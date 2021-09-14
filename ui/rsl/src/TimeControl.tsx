@@ -1,7 +1,7 @@
 import React from "react";
 import { QueryClient, useMutation, useQueryClient } from "react-query";
 
-import { formatDateTime } from "./util/dateFormat";
+import { formatDate, formatTime } from "./util/dateFormat";
 import { usePaxMonStatusQuery } from "./api/paxmon";
 import { sendRISForwardTimeRequest } from "./api/ris";
 
@@ -35,16 +35,17 @@ function TimeControl(): JSX.Element {
 
   const forwardInProgress = forwardMutation.isLoading;
 
-  const buttonClass = `bg-gray-200 px-2 py-1 border border-gray-300 rounded-xl ${
-    forwardInProgress ? "text-gray-300" : ""
+  const buttonClass = `bg-blue-900 px-2 py-1 rounded-xl text-white text-sm ${
+    forwardInProgress ? "text-blue-700" : "hover:bg-blue-800"
   }`;
 
   return (
-    <div className="flex flex-row items-center space-x-2 m-2">
+    <div className="flex justify-center items-baseline space-x-2 p-2 mb-2 bg-blue-700 text-white">
       {status ? (
         <>
-          <div>System time: {formatDateTime(status.system_time)}</div>
-          {[1, 5, 10, 30].map((min) => (
+          <div>{formatDate(status.system_time)}</div>
+          <div className="font-bold">{formatTime(status.system_time)}</div>
+          {[1, 10, 30].map((min) => (
             <button
               key={`${min}m`}
               className={buttonClass}

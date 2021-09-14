@@ -165,11 +165,13 @@ async function loadAndProcessTripInfo(trip: TripId) {
 type TripLoadForecastChartProps = {
   tripId: TripId;
   mode: "Interactive" | "Tooltip";
+  onSectionClick?: (e: PaxMonEdgeLoadInfoWithStats) => void;
 };
 
 function TripLoadForecastChart({
   tripId,
   mode,
+  onSectionClick,
 }: TripLoadForecastChartProps): JSX.Element | null {
   const { data: status } = usePaxMonStatusQuery();
 
@@ -451,19 +453,24 @@ function TripLoadForecastChart({
     />
   );
 
-  const clickRegions = edges.map((e, idx) => {
-    return (
-      <rect
-        key={idx.toString()}
-        x={idx * 50}
-        y="0"
-        width="50"
-        height="200"
-        fill="transparent"
-        onClick={() => console.log("clicked section:", data?.tsi, e)}
-      />
-    );
-  });
+  const clickRegions = onSectionClick
+    ? edges.map((e, idx) => {
+        return (
+          <rect
+            key={idx.toString()}
+            x={idx * 50}
+            y="0"
+            width="50"
+            height="200"
+            fill="transparent"
+            className="cursor-pointer"
+            onClick={() => {
+              onSectionClick(e);
+            }}
+          />
+        );
+      })
+    : [];
 
   const chart = (
     <svg

@@ -68,7 +68,7 @@ function TripPicker({ onTripPicked }: TripPickerProps): JSX.Element {
   });
 
   return (
-    <div className="relative flex items-center gap-2">
+    <div className="relative flex items-center justify-center gap-2">
       <label {...getLabelProps()}>Trip:</label>
       <div {...getComboboxProps()} className="relative">
         <input

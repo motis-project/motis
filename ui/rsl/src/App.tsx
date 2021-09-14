@@ -2,15 +2,14 @@ import React, { useState } from "react";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { ReactQueryDevtools } from "react-query/devtools";
 
+import { TripId } from "./api/protocol/motis";
 import TimeControl from "./TimeControl";
 import TripPicker from "./TripPicker";
-import TripLoadForecastChart from "./TripLoadForecastChart";
-import { TripId } from "./api/protocol/motis";
-import TripSectionDetails from "./TripSectionDetails";
+import TripDetails from "./TripDetails";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { refetchOnWindowFocus: false, staleTime: 10000 },
+    queries: { refetchOnWindowFocus: true, staleTime: 10000 },
   },
 });
 
@@ -18,12 +17,7 @@ function App(): JSX.Element {
   const [selectedTrip, setSelectedTrip] = useState<TripId | null>(null);
 
   const tripDisplay =
-    selectedTrip !== null ? (
-      <>
-        <TripLoadForecastChart tripId={selectedTrip} mode="Interactive" />
-        <TripSectionDetails tripId={selectedTrip} />
-      </>
-    ) : null;
+    selectedTrip !== null ? <TripDetails tripId={selectedTrip} /> : null;
 
   return (
     <QueryClientProvider client={queryClient}>
