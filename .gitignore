@@ -3,6 +3,7 @@
 /.vs
 /out
 /data
+.pkg.lock
 CMakeSettings.json
 .settings
 .cproject
