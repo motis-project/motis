@@ -17,6 +17,7 @@ port module Widgets.Map.Port exposing
     , RVConnections
     , RVDetailFilter
     , RVTrain
+    , IsochroneData
     , mapCloseContextMenu
     , mapFitBounds
     , mapFlyTo
@@ -32,6 +33,7 @@ port module Widgets.Map.Port exposing
     , mapUpdate
     , mapUpdateWalks
     , mapUseTrainClassColors
+    , mapGenerateIsochrones
     )
 
 import Data.Connection.Types exposing (Position, Station, TripId)
@@ -187,6 +189,12 @@ type alias RVConnection =
     }
 
 
+type alias IsochroneData =
+    { stations : List Station
+    , times : List Int
+    }
+
+
 port mapInit : String -> Cmd msg
 
 
@@ -230,3 +238,6 @@ port mapSetConnections : RVConnections -> Cmd msg
 
 
 port mapHighlightConnections : List Int -> Cmd msg
+
+
+port mapGenerateIsochrones : IsochroneData -> Cmd msg

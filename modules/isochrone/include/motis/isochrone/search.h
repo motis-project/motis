@@ -42,10 +42,12 @@ struct search_result {
 struct search {
   static search_result get_reachable_stations(search_query const& q) {
 
+    /*
     auto const create_start_edge = [&](node* to) {
       return make_foot_edge(nullptr, to);
 
     };
+     */
     auto interval_begin = q.interval_begin_;
     auto interval_end = q.interval_end_;
     auto starts = q.start_stations_;

@@ -98,7 +98,8 @@ inline search_query build_query(schedule const& sched,
   search_query q;
   verify_external_timestamp(sched, req->departure_time());
   auto pos = to_latlng(req->position());
-  auto const geo_msg = motis_call(make_geo_request(pos, req->foot_travel_time()))->val();
+  auto foot_travel_time = req->foot_travel_time() < req->max_travel_time() ? req->foot_travel_time() : req->max_travel_time();
+  auto const geo_msg = motis_call(make_geo_request(pos, foot_travel_time))->val();
   auto const geo_resp = motis_content(LookupGeoStationResponse, geo_msg);
   auto const stations = geo_resp->stations();
   /*
@@ -116,7 +117,7 @@ inline search_query build_query(schedule const& sched,
                   mc, req->position(),
                   mc.CreateVectorOfStructs(utl::to_vec(
                           *stations, [](auto&& station) { return *station->pos(); })),
-                  CreateSearchOptions(mc, mc.CreateString("default"), req->foot_travel_time()), SearchDirection_Forward, false,
+                  CreateSearchOptions(mc, mc.CreateString("default"), foot_travel_time), SearchDirection_Forward, false,
                   false, false)
                   .Union(),
           "/ppr/route");
@@ -129,7 +130,7 @@ inline search_query build_query(schedule const& sched,
   for (auto i = 0UL; i < routes->size(); ++i) {
     auto const dest_routes = routes->Get(i);
     auto const dest_id = stations->Get(i)->id()->str();
-    auto const dest_pos = to_latlng(stations->Get(i)->pos());
+    //auto const dest_pos = to_latlng(stations->Get(i)->pos());
     for (auto const& route : *dest_routes->routes()) {
       q.start_stations_.emplace_back(motis::get_station_node(sched, stations->Get(i)->id()->str()), unix_to_motistime(sched, req->departure_time()+route->duration()*60));
     }

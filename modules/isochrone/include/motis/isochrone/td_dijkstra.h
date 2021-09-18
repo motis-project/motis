@@ -20,7 +20,7 @@ public:
   using dist_t = uint32_t;
 
   struct label {
-    label(const node* const node, time now, edge const* pred_edge) :
+    label(const node* node, time now, edge const* pred_edge) :
       node_(node),
       now_(now),
       pred_edge(pred_edge){}
@@ -30,7 +30,7 @@ public:
     }
 
 
-    const node* const node_;
+    const node* node_;
     time now_;
     edge const* pred_edge;
   };
@@ -112,9 +112,7 @@ public:
           results_.push_back(l);
         }
         is_result_[l.node_->get_station()->id_] = true;
-        if(results_.size()==8) {
-          print_nodes(l.node_->id_);
-        }
+
       }
       pq_.pop();
 
@@ -166,9 +164,18 @@ public:
           }
         }
       }
-      results_[i].now_ = best_time;
+      if(best_time < orig_results[i].now_) {
+        results_[i].now_ = UINT16_MAX;
+      }
+    }
+
+    for (auto it = results_.begin(); it != results_.end(); ) {
+      if (it->now_ == UINT16_MAX) { it = results_.erase(it); }
+      else                 { ++it;          }
     }
   }
+
+
   statistics get_statistics() {
     return stats_;
   }

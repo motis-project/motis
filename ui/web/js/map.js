@@ -197,6 +197,101 @@ class RailVizCustomLayer {
   }
 }
 
+// ---------------------------------------------------------------------------
+
+class IsochroneCustomLayer {
+  constructor() {
+    this.id = "isochrone_custom_layer";
+    this.type = "custom";
+  }
+
+  onAdd(map, gl) {
+    this.map = map;
+    this.zoomRounded = Math.floor(this.map.getZoom() * 4) / 4;
+    Isochrone.Render.setup(map, gl);
+
+    this.updateViewportListener = () => this.updateViewport();
+    map.on("moveend", this.updateViewportListener);
+
+
+    this.updateViewport();
+  }
+
+  onRemove(map, gl) {
+    map.off("moveend", this.updateViewportListener);
+  }
+
+  prerender(gl, matrix) {
+    Isochrone.Render.prerender(gl, matrix, this.map.getZoom());
+  }
+
+  render(gl, matrix) {
+    Isochrone.Render.render(gl, matrix, this.map.getZoom());
+  }
+
+  updateViewport() {
+    const rect = this.map.getCanvas().getBoundingClientRect();
+    const center = this.map.getCenter();
+    const zoom = Math.floor(this.map.getZoom());
+    const bearing = this.map.getBearing();
+    const pitch = this.map.getPitch();
+
+    const zoomRounded = Math.floor(this.map.getZoom() * 4) / 4;
+    if (zoomRounded != this.zoomRounded) {
+      console.log(zoomRounded);
+      this.zoomRounded = zoomRounded;
+    }
+
+    var geoBounds = this.map.getBounds();
+    // var railVizBounds = L.latLngBounds(
+    //     this._map.unproject(pixelBounds.subtract(size)),
+    //     this._map.unproject(pixelBounds.add(size).add(size)));
+    var isochroneBounds = geoBounds;
+
+    var mapInfo = {
+      scale: Math.pow(2, zoom),
+      zoom: zoom,
+      pixelBounds: {
+        north: rect.top,
+        west: rect.left,
+        width: rect.width,
+        height: rect.height,
+      },
+      geoBounds: {
+        north: geoBounds.getNorth(),
+        west: geoBounds.getWest(),
+        south: geoBounds.getSouth(),
+        east: geoBounds.getEast(),
+      },
+      railVizBounds: {
+        north: isochroneBounds.getNorth(),
+        west: isochroneBounds.getWest(),
+        south: isochroneBounds.getSouth(),
+        east: isochroneBounds.getEast(),
+      },
+      center: {
+        lat: center.lat,
+        lng: center.lng,
+      },
+      bearing: bearing,
+      pitch: pitch,
+    };
+
+    app.ports.mapUpdate.send(mapInfo);
+
+    localStorageSet(
+        "motis.map",
+        JSON.stringify({
+          lat: center.lat,
+          lng: center.lng,
+          zoom: zoom,
+          bearing: bearing,
+          pitch: pitch,
+        })
+    );
+  }
+}
+
 function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
   app.ports.mapInit.subscribe(function (id) {
     let settings = localStorage.getItem("motis.map");
@@ -268,6 +363,8 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
       RailViz.Path.Extra.init(map_fg, "railviz-base-stations");
       RailViz.Path.Detail.init(map_fg, "railviz-base-stations");
       RailViz.Path.Connections.init(map_fg, "railviz-base-stations");
+
+      map_fg.addLayer(new IsochroneCustomLayer());
     });
 
     ["click", "mousemove", "mouseout"].forEach((t) =>
@@ -331,6 +428,10 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
       }
     });
 
+    app.ports.mapGenerateIsochrones.subscribe(function (opt) {
+      console.log("generateIsochrones: this is a test");
+    });
+
     RailViz.Main.init(apiEndpoint, app.ports);
 
     RailViz.Markers.init(map_fg);
@@ -344,6 +445,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
       RailViz.Main.highlightConnections
     );
 
+    app.ports.mapGenerateIsochrones.subscribe(Isochrone.Render.generateIsochrones);
     app.ports.setTimeOffset.subscribe(RailViz.Main.setTimeOffset);
     app.ports.setPPRSearchOptions.subscribe(RailViz.Main.setPPRSearchOptions);
 

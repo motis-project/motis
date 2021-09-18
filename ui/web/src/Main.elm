@@ -13,6 +13,8 @@ module Main exposing
     , getPPRRoute
     , getPermalink
     , init
+    , isochroneConfig
+    , isochroneView
     , journeyTrips
     , loadTripById
     , locationToMsg
@@ -91,6 +93,7 @@ import Widgets.Routing as Routing
 import Widgets.SimTimePicker as SimTimePicker
 import Widgets.StationEvents as StationEvents
 import Widgets.TripSearch as TripSearch
+import Widgets.Isochrone as Isochrone
 import Widgets.Typeahead as Typeahead
 
 
@@ -115,6 +118,7 @@ type alias Model =
     , tripDetails : Maybe ConnectionDetails.State
     , stationEvents : Maybe StationEvents.Model
     , tripSearch : TripSearch.Model
+    , isochrone : Isochrone.Model
     , subView : Maybe SubView
     , selectedConnectionIdx : Maybe Int
     , scheduleInfo : Maybe ScheduleInfo
@@ -134,6 +138,7 @@ type SubView
     = TripDetailsView
     | StationEventsView
     | TripSearchView
+    | IsochroneView
 
 
 init : ProgramFlags -> Location -> ( Model, Cmd Msg )
@@ -157,6 +162,9 @@ init flags initialLocation =
         ( tripSearchModel, tripSearchCmd ) =
             TripSearch.init remoteAddress locale
 
+        ( isochroneModel, isochroneCmd ) =
+            Isochrone.init flags locale
+
         ( simTimePickerModel, simTimePickerCmd ) =
             SimTimePicker.init locale
 
@@ -167,6 +175,7 @@ init flags initialLocation =
             , tripDetails = Nothing
             , stationEvents = Nothing
             , tripSearch = tripSearchModel
+            , isochrone = isochroneModel
             , subView = Nothing
             , selectedConnectionIdx = Nothing
             , scheduleInfo = Nothing
@@ -198,6 +207,7 @@ init flags initialLocation =
           , Cmd.map MapUpdate mapCmd
           , Cmd.map StationSearchUpdate stationSearchCmd
           , Cmd.map TripSearchUpdate tripSearchCmd
+          , Cmd.map IsochroneUpdate isochroneCmd
           , Cmd.map SimTimePickerUpdate simTimePickerCmd
           , requestScheduleInfo remoteAddress
           , Task.perform UpdateCurrentTime Time.now
@@ -245,8 +255,11 @@ type Msg
     | HandleRailVizError Json.Encode.Value
     | ClearRailVizError
     | TripSearchUpdate TripSearch.Msg
+    | IsochroneUpdate Isochrone.Msg
     | ShowTripSearch
+    | ShowIsochrone
     | ToggleTripSearch
+    | ToggleIsochrone
     | HandleRailVizPermalink Float Float Float Float Float Date
     | SimTimePickerUpdate SimTimePicker.Msg
     | OSRMError Int JourneyWalk ApiError
@@ -651,6 +664,14 @@ update msg model =
             { model | tripSearch = m }
                 ! [ Cmd.map TripSearchUpdate c ]
 
+        IsochroneUpdate msg_ ->
+            let
+                ( m, c ) =
+                    Isochrone.update msg_ model.isochrone
+            in
+            { model | isochrone = m }
+                ! [ Cmd.map IsochroneUpdate c ]
+
         ShowTripSearch ->
             let
                 model1 =
@@ -666,6 +687,21 @@ update msg model =
                   , Task.attempt noop (Dom.focus "trip-search-trainnr-input")
                   ]
 
+        ShowIsochrone ->
+            let
+                model1 =
+                    { model
+                        | subView = Just IsochroneView
+                        , overlayVisible = True
+                    }
+
+                cmd1 = MapDetails.setDetailFilter Nothing
+            in
+            model1
+                ! [ cmd1
+                  , Task.attempt noop (Dom.focus "ischrone-station-input")
+                  ]
+
         ToggleTripSearch ->
             case model.subView of
                 Just TripSearchView ->
@@ -673,6 +709,14 @@ update msg model =
 
                 _ ->
                     update (NavigateTo TripSearchRoute) model
+
+        ToggleIsochrone ->
+            case model.subView of
+                Just IsochroneView ->
+                    update (NavigateTo Connections) model
+
+                _ ->
+                    update (NavigateTo IsochroneSearch) model
 
         HandleRailVizPermalink lat lng zoom bearing pitch date ->
             let
@@ -1130,6 +1174,9 @@ overlayView model =
                 Just TripSearchView ->
                     Just (tripSearchView model.locale model.tripSearch)
 
+                Just IsochroneView ->
+                    Just (isochroneView model.locale model.isochrone)
+
                 Nothing ->
                     Nothing
 
@@ -1167,6 +1214,14 @@ overlayView model =
                 , onClick ToggleTripSearch
                 ]
                 [ i [ class "icon" ] [ text "train" ] ]
+            , div
+                [ classList
+                    [ "isochrone-toggle" => True
+                    , "enabled" => (model.subView == Just IsochroneView)
+                    ]
+                , onClick ToggleIsochrone
+                ]
+                [ i [ class "icon" ] [ text "adjust" ] ]
             ]
         ]
 
@@ -1251,6 +1306,17 @@ tripSearchConfig =
         , selectStationMsg = PrepareSelectStation
         }
 
+isochroneView : Localization -> Isochrone.Model -> List (Html Msg)
+isochroneView locale model =
+    [ Isochrone.view isochroneConfig locale model ]
+
+
+isochroneConfig : Isochrone.Config Msg
+isochroneConfig =
+    Isochrone.Config
+        { internalMsg = IsochroneUpdate
+        , selectStationMsg = PrepareSelectStation
+        }
 
 getPermalink : Model -> String
 getPermalink model =
@@ -1292,6 +1358,9 @@ getPermalink model =
                     urlBase
 
         Just TripSearchView ->
+            urlBase ++ toUrl TripSearchRoute
+
+        Just IsochroneView ->
             urlBase ++ toUrl TripSearchRoute
 
         Nothing ->
@@ -1456,6 +1525,9 @@ routeToMsg route =
 
         RailVizPermalink lat lng zoom bearing pitch date ->
             HandleRailVizPermalink lat lng zoom bearing pitch date
+
+        IsochroneSearch ->
+            ShowIsochrone
 
 
 closeSelectedConnection : Model -> ( Model, Cmd Msg )
