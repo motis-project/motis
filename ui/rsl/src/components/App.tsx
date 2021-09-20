@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { ReactQueryDevtools } from "react-query/devtools";
 
-import { TripId } from "./api/protocol/motis";
+import { TripId } from "../api/protocol/motis";
+
 import TimeControl from "./TimeControl";
 import TripPicker from "./TripPicker";
 import TripDetails from "./TripDetails";

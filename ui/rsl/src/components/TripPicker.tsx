@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { useCombobox } from "downshift";
 import { ChevronDownIcon, XIcon } from "@heroicons/react/solid";
 
-import { PaxMonTripInfo } from "./api/protocol/motis/paxmon";
-import { TripId, TripServiceInfo } from "./api/protocol/motis";
-import { ServiceClass } from "./api/constants";
-import { usePaxMonFindTripsQuery } from "./api/paxmon";
+import { PaxMonTripInfo } from "../api/protocol/motis/paxmon";
+import { TripId, TripServiceInfo } from "../api/protocol/motis";
+import { ServiceClass } from "../api/constants";
+import { usePaxMonFindTripsQuery } from "../api/paxmon";
+
 import TripView from "./TripView";
 
 function filterTrips(trips: PaxMonTripInfo[]) {

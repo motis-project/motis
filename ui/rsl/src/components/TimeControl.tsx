@@ -1,9 +1,9 @@
 import React from "react";
 import { QueryClient, useMutation, useQueryClient } from "react-query";
 
-import { formatDate, formatTime } from "./util/dateFormat";
-import { usePaxMonStatusQuery } from "./api/paxmon";
-import { sendRISForwardTimeRequest } from "./api/ris";
+import { formatDate, formatTime } from "../util/dateFormat";
+import { usePaxMonStatusQuery } from "../api/paxmon";
+import { sendRISForwardTimeRequest } from "../api/ris";
 
 async function forwardTimeByStepped(
   queryClient: QueryClient,

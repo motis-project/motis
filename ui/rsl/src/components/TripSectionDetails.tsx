@@ -1,10 +1,11 @@
 import React from "react";
 
-import { TripId } from "./api/protocol/motis";
-import { usePaxMonGroupsInTripQuery } from "./api/paxmon";
+import { TripId } from "../api/protocol/motis";
+import { usePaxMonGroupsInTripQuery } from "../api/paxmon";
+import { PaxMonEdgeLoadInfoWithStats } from "../data/loadInfo";
+import { GroupsInTripSection } from "../api/protocol/motis/paxmon";
+
 import CombinedGroup from "./CombinedGroup";
-import { PaxMonEdgeLoadInfoWithStats } from "./data/loadInfo";
-import { GroupsInTripSection } from "./api/protocol/motis/paxmon";
 
 function isSameSection(
   sec: GroupsInTripSection,

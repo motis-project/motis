@@ -7,18 +7,18 @@ import {
   formatDateTime,
   formatFileNameTime,
   formatTime,
-} from "./util/dateFormat";
+} from "../util/dateFormat";
 import {
   PaxMonEdgeLoadInfoWithStats,
   PaxMonTripLoadInfoWithStats,
-} from "./data/loadInfo";
-import { TripId } from "./api/protocol/motis";
+} from "../data/loadInfo";
+import { TripId } from "../api/protocol/motis";
 import {
   queryKeys,
   sendPaxMonTripLoadInfosRequest,
   usePaxMonStatusQuery,
-} from "./api/paxmon";
-import { addEdgeStatistics } from "./util/statistics";
+} from "../api/paxmon";
+import { addEdgeStatistics } from "../util/statistics";
 
 function getSvgLinePath(
   edges: PaxMonEdgeLoadInfoWithStats[],

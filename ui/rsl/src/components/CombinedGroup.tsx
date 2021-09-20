@@ -2,13 +2,14 @@ import React from "react";
 import { useQuery } from "react-query";
 import * as Tooltip from "@radix-ui/react-tooltip";
 
-import { Station, TripId } from "./api/protocol/motis";
-import { GroupsWithDestination } from "./api/protocol/motis/paxmon";
-import { sendPaxForecastAlternativesRequest } from "./api/paxforecast";
-import { formatTime } from "./util/dateFormat";
+import { Station, TripId } from "../api/protocol/motis";
+import { GroupsWithDestination } from "../api/protocol/motis/paxmon";
+import { sendPaxForecastAlternativesRequest } from "../api/paxforecast";
+import { formatTime } from "../util/dateFormat";
+import { Alternative } from "../api/protocol/motis/paxforecast";
+
 import TripView from "./TripView";
 import TripLoadForecastChart from "./TripLoadForecastChart";
-import { Alternative } from "./api/protocol/motis/paxforecast";
 
 type CombinedGroupProps = {
   plannedTrip: TripId;

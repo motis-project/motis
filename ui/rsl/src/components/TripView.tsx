@@ -1,6 +1,7 @@
 import React from "react";
-import { formatDateTime } from "./util/dateFormat";
-import { TripServiceInfo } from "./api/protocol/motis";
+
+import { formatDateTime } from "../util/dateFormat";
+import { TripServiceInfo } from "../api/protocol/motis";
 
 type TripViewProps = {
   tsi: TripServiceInfo;
