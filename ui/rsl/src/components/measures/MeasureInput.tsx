@@ -142,8 +142,6 @@ function MeasureInput(): JSX.Element {
     }
   };
 
-  const isMutating = applyMeasuresMutation.isLoading;
-
   const measureDetails: () => JSX.Element = () => {
     switch (measureType) {
       case "TripLoadInfoMeasure":
@@ -295,17 +293,24 @@ function MeasureInput(): JSX.Element {
 
         {measureDetails()}
 
-        <div>
-          <button
-            className={`w-full p-3 rounded ${
-              isMutating
-                ? "bg-db-red-300 text-db-red-100 cursor-wait"
-                : "bg-db-red-500 hover:bg-db-red-600 text-white"
-            }`}
-          >
-            Maßnahme simulieren
-          </button>
-        </div>
+        <button
+          className={`w-full p-3 rounded ${
+            applyMeasuresMutation.isLoading
+              ? "bg-db-red-300 text-db-red-100 cursor-wait"
+              : "bg-db-red-500 hover:bg-db-red-600 text-white"
+          }`}
+        >
+          Maßnahme simulieren
+        </button>
+
+        {applyMeasuresMutation.isError && (
+          <div>
+            <div className={labelClass}>
+              Fehler bei der Maßnahmensimulation:
+            </div>
+            <div>{applyMeasuresMutation.error.message}</div>
+          </div>
+        )}
       </div>
     </form>
   );
