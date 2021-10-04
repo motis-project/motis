@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cista/hashing.h"
 #include "cista/reflection/comparable.h"
 
 #include "motis/core/schedule/time.h"
@@ -8,6 +9,8 @@ namespace motis::paxmon {
 
 struct transfer_info {
   CISTA_COMPARABLE()
+
+  cista::hash_t hash() const { return cista::build_hash(duration_, type_); }
 
   enum class type { SAME_STATION, FOOTPATH };
   duration duration_{};

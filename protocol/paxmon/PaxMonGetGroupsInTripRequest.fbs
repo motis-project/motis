@@ -2,10 +2,14 @@ include "base/TripId.fbs";
 
 namespace motis.paxmon;
 
+enum PaxMonGroupFilter : byte { All, Entering, Exiting }
+enum PaxMonGroupByStation : byte { None, First, Last }
+
 table PaxMonGetGroupsInTripRequest {
   universe: uint;
 
   trip: motis.TripId;
-
-  include_grouped_by_destination: bool;
+  filter: PaxMonGroupFilter;
+  group_by_station: PaxMonGroupByStation;
+  group_by_other_trip: bool; // for filter = Entering/Exiting only
 }

@@ -10,6 +10,13 @@ namespace motis::paxmon {
 compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
                            passenger_localization const& loc);
 
+compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
+                           unsigned const search_station,
+                           time const earliest_arrival);
+
+compact_journey get_suffix(schedule const& sched, compact_journey const& cj,
+                           passenger_localization const& loc);
+
 compact_journey merge_journeys(schedule const& sched,
                                compact_journey const& prefix,
                                compact_journey const& suffix);

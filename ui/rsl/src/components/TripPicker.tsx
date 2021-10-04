@@ -7,7 +7,9 @@ import { TripId, TripServiceInfo } from "../api/protocol/motis";
 import { ServiceClass } from "../api/constants";
 import { usePaxMonFindTripsQuery } from "../api/paxmon";
 
-import TripView from "./TripView";
+import TripServiceInfoView from "./TripServiceInfoView";
+import { useAtom } from "jotai";
+import { universeAtom } from "../data/simulation";
 
 function filterTrips(trips: PaxMonTripInfo[]) {
   return trips.filter((trip) =>
@@ -32,13 +34,22 @@ function shortTripName(tsi: TripServiceInfo) {
 }
 
 type TripPickerProps = {
-  onTripPicked: (trip: TripId | null) => void;
+  onTripPicked: (trip: TripServiceInfo | undefined) => void;
+  clearOnPick: boolean;
+  longDistanceOnly: boolean;
 };
 
-function TripPicker({ onTripPicked }: TripPickerProps): JSX.Element {
+function TripPicker({
+  onTripPicked,
+  clearOnPick,
+  longDistanceOnly,
+}: TripPickerProps): JSX.Element {
+  const [universe] = useAtom(universeAtom);
   const [trainNr, setTrainNr] = useState<number>();
-  const { data } = usePaxMonFindTripsQuery(trainNr);
-  const tripList = filterTrips(data?.trips || []);
+  const { data } = usePaxMonFindTripsQuery(universe, trainNr);
+  const tripList = longDistanceOnly
+    ? filterTrips(data?.trips || [])
+    : data?.trips || [];
 
   const {
     isOpen,
@@ -64,13 +75,18 @@ function TripPicker({ onTripPicked }: TripPickerProps): JSX.Element {
       }
     },
     onSelectedItemChange: (changes) => {
-      onTripPicked(changes.selectedItem?.tsi?.trip ?? null);
+      if (changes.selectedItem != null || !clearOnPick) {
+        onTripPicked(changes.selectedItem?.tsi);
+      }
+      if (changes.selectedItem != null && clearOnPick) {
+        reset();
+      }
     },
   });
 
   return (
-    <div className="relative flex items-center justify-center gap-2">
-      <label {...getLabelProps()}>Trip:</label>
+    <div className="relative inline-flex">
+      {/* <label {...getLabelProps()}>Trip:</label> */}
       <div {...getComboboxProps()} className="relative">
         <input
           {...getInputProps()}
@@ -101,7 +117,7 @@ function TripPicker({ onTripPicked }: TripPickerProps): JSX.Element {
         {...getMenuProps()}
         className={`${
           isOpen && tripList.length > 0 ? "" : "hidden"
-        } absolute top-12 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none p-2`}
+        } absolute w-96 z-50 top-12 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none p-2`}
       >
         {isOpen &&
           tripList.map((item, index) => (
@@ -114,7 +130,7 @@ function TripPicker({ onTripPicked }: TripPickerProps): JSX.Element {
               key={index}
               {...getItemProps({ item, index })}
             >
-              <TripView tsi={item.tsi} format="Long" />
+              <TripServiceInfoView tsi={item.tsi} format="Long" />
             </li>
           ))}
       </ul>

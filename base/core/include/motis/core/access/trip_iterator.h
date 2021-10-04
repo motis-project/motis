@@ -29,6 +29,7 @@ struct trip_iterator {
   }
 
   T operator*() const { return {trip_, index_}; }
+  T operator->() const { return {trip_, index_}; }
   T operator[](int rhs) const { return {trip_, rhs}; }
 
   trip_iterator<T>& operator++() {

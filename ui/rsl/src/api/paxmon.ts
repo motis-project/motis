@@ -1,9 +1,13 @@
 import { sendRequest } from "./request";
 import { verifyContentType } from "./protocol/checks";
-import { TripId } from "./protocol/motis";
+import { MotisSuccess, TripId } from "./protocol/motis";
 import {
+  PaxMonDestroyUniverseRequest,
   PaxMonFindTripsRequest,
   PaxMonFindTripsResponse,
+  PaxMonForkUniverseRequest,
+  PaxMonForkUniverseResponse,
+  PaxMonGetGroupsInTripRequest,
   PaxMonGetGroupsInTripResponse,
   PaxMonGetTripLoadInfosRequest,
   PaxMonGetTripLoadInfosResponse,
@@ -51,13 +55,14 @@ export async function sendPaxMonFindTripsRequest(
 }
 
 export function usePaxMonFindTripsQuery(
+  universe: number,
   trainNr?: number
 ): UseQueryResult<PaxMonFindTripsResponse> {
   return useQuery(
-    queryKeys.findTrips(trainNr),
+    queryKeys.findTrips(universe, trainNr),
     () =>
       sendPaxMonFindTripsRequest({
-        universe: 0,
+        universe,
         train_nr: trainNr || 0,
         only_trips_with_paxmon_data: true,
         filter_class: false,
@@ -68,35 +73,56 @@ export function usePaxMonFindTripsQuery(
 }
 
 export async function sendPaxMonGroupsInTripRequest(
-  trip: TripId
+  content: PaxMonGetGroupsInTripRequest
 ): Promise<PaxMonGetGroupsInTripResponse> {
   const msg = await sendRequest(
     "/paxmon/groups_in_trip",
     "PaxMonGetGroupsInTripRequest",
-    {
-      trip,
-      include_grouped_by_destination: true,
-    }
+    content
   );
   verifyContentType(msg, "PaxMonGetGroupsInTripResponse");
   return msg.content as PaxMonGetGroupsInTripResponse;
 }
 
 export function usePaxMonGroupsInTripQuery(
-  tripId: TripId
+  content: PaxMonGetGroupsInTripRequest
 ): UseQueryResult<PaxMonGetGroupsInTripResponse> {
-  return useQuery(queryKeys.tripGroups(tripId), () =>
-    sendPaxMonGroupsInTripRequest(tripId)
+  return useQuery(queryKeys.tripGroups(content), () =>
+    sendPaxMonGroupsInTripRequest(content)
   );
+}
+
+export async function sendPaxMonForkUniverseRequest(
+  content: PaxMonForkUniverseRequest
+): Promise<PaxMonForkUniverseResponse> {
+  const msg = await sendRequest(
+    "/paxmon/fork_universe",
+    "PaxMonForkUniverseRequest",
+    content
+  );
+  verifyContentType(msg, "PaxMonForkUniverseResponse");
+  return msg.content as PaxMonForkUniverseResponse;
+}
+
+export async function sendPaxMonDestroyUniverseRequest(
+  content: PaxMonDestroyUniverseRequest
+): Promise<MotisSuccess> {
+  const msg = await sendRequest(
+    "/paxmon/destroy_universe",
+    "PaxMonDestroyUniverseRequest",
+    content
+  );
+  verifyContentType(msg, "MotisSuccess");
+  return msg.content as MotisSuccess;
 }
 
 export const queryKeys = {
   all: ["paxmon"] as const,
   status: () => [...queryKeys.all, "status"] as const,
-  findTrips: (trainNr?: number) =>
-    [...queryKeys.all, "findTrips", trainNr] as const,
-  tripLoad: (tripId: TripId) =>
-    [...queryKeys.all, "trip", "load", { tripId }] as const,
-  tripGroups: (tripId: TripId) =>
-    [...queryKeys.all, "trip", "groups", { tripId }] as const,
+  findTrips: (universe: number, trainNr?: number) =>
+    [...queryKeys.all, "findTrips", universe, trainNr] as const,
+  tripLoad: (universe: number, tripId: TripId) =>
+    [...queryKeys.all, "trip", "load", universe, { tripId }] as const,
+  tripGroups: (req: PaxMonGetGroupsInTripRequest) =>
+    [...queryKeys.all, "trip", "groups", req] as const,
 };

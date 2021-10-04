@@ -3,12 +3,15 @@ import React from "react";
 import { formatDateTime } from "../util/dateFormat";
 import { TripServiceInfo } from "../api/protocol/motis";
 
-type TripViewProps = {
+type TripServiceInfoViewProps = {
   tsi: TripServiceInfo;
   format: "Short" | "Long";
 };
 
-function TripView({ tsi, format }: TripViewProps): JSX.Element {
+function TripServiceInfoView({
+  tsi,
+  format,
+}: TripServiceInfoViewProps): JSX.Element {
   const names = [
     ...new Set(
       tsi.service_infos.map((si) =>
@@ -29,4 +32,4 @@ function TripView({ tsi, format }: TripViewProps): JSX.Element {
   }
 }
 
-export default TripView;
+export default TripServiceInfoView;

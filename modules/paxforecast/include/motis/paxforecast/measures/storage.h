@@ -14,9 +14,11 @@ struct storage {
   storage() { universe_created(0); }
 
   void universe_created(motis::paxmon::universe_id const id) {
-    measures_for_universe_.reserve(id + 1);
+    if (id >= measures_for_universe_.size()) {
+      measures_for_universe_.resize(id + 1);
+    }
     if (measures_for_universe_[id] == nullptr) {
-      measures_for_universe_[id] = std::make_unique<measures>();
+      measures_for_universe_[id] = std::make_unique<measure_collection>();
     }
   }
 
@@ -26,7 +28,7 @@ struct storage {
     }
   }
 
-  measures* get(motis::paxmon::universe_id const id) {
+  measure_collection& get(motis::paxmon::universe_id const id) {
     if (id >= measures_for_universe_.size()) {
       throw std::system_error{error::universe_not_found};
     }
@@ -34,10 +36,10 @@ struct storage {
     if (m == nullptr) {
       throw std::system_error{error::universe_not_found};
     }
-    return m;
+    return *m;
   }
 
-  std::vector<std::unique_ptr<measures>> measures_for_universe_;
+  std::vector<std::unique_ptr<measure_collection>> measures_for_universe_;
 };
 
 }  // namespace motis::paxforecast::measures

@@ -53,6 +53,93 @@ compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
   return prefix;
 }
 
+compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
+                           unsigned const search_station,
+                           time const earliest_arrival) {
+  auto prefix = compact_journey{};
+
+  for (auto const& leg : cj.legs_) {
+    auto const sections = access::sections(leg.trip_);
+    auto const search_section_it = std::find_if(
+        begin(sections), end(sections), [&](access::trip_section const& sec) {
+          return (sec.to_station_id() == search_station &&
+                  sec.ev_key_to().get_time() >= earliest_arrival) ||
+                 (sec.from_station_id() == search_station &&
+                  sec.ev_key_from().get_time() >= earliest_arrival);
+        });
+    if (search_section_it != end(sections)) {
+      auto const search_section = *search_section_it;
+      if (search_section.to_station_id() == search_station) {
+        auto& new_leg = prefix.legs_.emplace_back(leg);
+        new_leg.exit_station_id_ = search_station;
+        new_leg.exit_time_ =
+            get_schedule_time(sched, search_section.ev_key_to());
+      } else {
+        // TODO(pablo): ???
+      }
+      break;
+    } else {
+      prefix.legs_.emplace_back(leg);
+    }
+  }
+
+  return prefix;
+}
+
+compact_journey get_suffix(schedule const& sched, compact_journey const& cj,
+                           passenger_localization const& loc) {
+  if (loc.first_station_) {
+    return cj;
+  }
+
+  auto suffix = compact_journey{};
+
+  if (loc.in_trip()) {
+    auto in_trip = false;
+    for (auto const& leg : cj.legs_) {
+      if (in_trip) {
+        suffix.legs_.emplace_back(leg);
+      } else if (leg.trip_ == loc.in_trip_) {
+        in_trip = true;
+        auto const sections = access::sections(leg.trip_);
+        auto arrival_section_it = std::find_if(
+            begin(sections), end(sections),
+            [&](access::trip_section const& sec) {
+              return sec.to_station_id() == loc.at_station_->index_ &&
+                     get_schedule_time(sched, sec.ev_key_to()) ==
+                         loc.schedule_arrival_time_;
+            });
+        utl::verify(arrival_section_it != end(sections),
+                    "get_suffix: arrival section not found");
+        auto first_section_it = std::next(arrival_section_it);
+        if (first_section_it != end(sections)) {
+          auto& new_leg = suffix.legs_.emplace_back(leg);
+          auto const first_section = *first_section_it;
+          new_leg.enter_station_id_ = first_section.from_station_id();
+          new_leg.enter_time_ =
+              get_schedule_time(sched, first_section.ev_key_from());
+        }
+      }
+    }
+  } else {
+    auto const loc_station = loc.at_station_->index_;
+    auto in_trip = false;
+    for (auto const& leg : cj.legs_) {
+      if (!in_trip) {
+        if (leg.enter_station_id_ == loc_station &&
+            leg.enter_time_ >= loc.schedule_arrival_time_) {
+          in_trip = true;
+        } else {
+          continue;
+        }
+      }
+      suffix.legs_.emplace_back(leg);
+    }
+  }
+
+  return suffix;
+}
+
 compact_journey merge_journeys(schedule const& sched,
                                compact_journey const& prefix,
                                compact_journey const& suffix) {

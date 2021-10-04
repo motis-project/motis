@@ -1,11 +1,11 @@
 // generated file - do not modify - run update-protocol to update
 
-import { TripId, Interval, Station } from "../motis";
+import { TripId } from "../motis";
 import {
-  PaxMonLocalization,
-  PaxMonLocalizationType,
   PaxMonCompactJourney,
   PaxMonGroup,
+  PaxMonLocalization,
+  PaxMonLocalizationType,
   PaxMonTripLoadInfo,
 } from "./paxmon";
 
@@ -16,12 +16,12 @@ export interface MeasureRecipients {
 }
 
 // paxforecast/Measures.fbs
-export type LoadLevel = "Low" | "NoSeats" | "Full";
+export type LoadLevel = "Unknown" | "Low" | "NoSeats" | "Full";
 
 // paxforecast/Measures.fbs
 export interface TripLoadInfoMeasure {
   recipients: MeasureRecipients;
-  interval: Interval;
+  time: number;
   trip: TripId;
   level: LoadLevel;
 }
@@ -29,7 +29,7 @@ export interface TripLoadInfoMeasure {
 // paxforecast/Measures.fbs
 export interface TripRecommendationMeasure {
   recipients: MeasureRecipients;
-  interval: Interval;
+  time: number;
   planned_trips: TripId[];
   planned_destinations: string[];
   recommended_trip: TripId;
@@ -47,32 +47,12 @@ export interface MeasureWrapper {
   measure: Measure;
 }
 
-// paxforecast/PaxForecastAlternativesRequest.fbs
-export interface PaxForecastAlternativesRequest {
-  start_type: PaxMonLocalizationType;
-  start: PaxMonLocalization;
-  destination: Station;
-  interval_duration: number;
-}
-
-// paxforecast/PaxForecastAlternativesResponse.fbs
-export interface Alternative {
-  compact_journey: PaxMonCompactJourney;
-  arrival_time: number;
-  duration: number;
-  transfers: number;
-}
-
-// paxforecast/PaxForecastAlternativesResponse.fbs
-export interface PaxForecastAlternativesResponse {
-  alternatives: Alternative[];
-}
-
 // paxforecast/PaxForecastApplyMeasuresRequest.fbs
 export interface PaxForecastApplyMeasuresRequest {
   universe: number;
   measures: MeasureWrapper[];
   replace_existing: boolean;
+  preparation_time: number;
 }
 
 // paxforecast/PaxForecastUpdate.fbs

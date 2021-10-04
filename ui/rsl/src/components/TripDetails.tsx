@@ -12,7 +12,7 @@ type TripDetailsProps = {
 
 function TripDetails({ tripId }: TripDetailsProps): JSX.Element {
   const [selectedSection, setSelectedSection] =
-    useState<PaxMonEdgeLoadInfoWithStats | null>(null);
+    useState<PaxMonEdgeLoadInfoWithStats>();
 
   return (
     <div>
@@ -21,7 +21,13 @@ function TripDetails({ tripId }: TripDetailsProps): JSX.Element {
         mode="Interactive"
         onSectionClick={setSelectedSection}
       />
-      <TripSectionDetails tripId={tripId} selectedSection={selectedSection} />
+      {selectedSection && (
+        <TripSectionDetails
+          tripId={tripId}
+          selectedSection={selectedSection}
+          onClose={() => setSelectedSection(undefined)}
+        />
+      )}
     </div>
   );
 }

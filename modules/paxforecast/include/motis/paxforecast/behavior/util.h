@@ -10,21 +10,7 @@
 
 #include "motis/paxmon/passenger_group.h"
 
-#include "motis/paxforecast/measures/measures.h"
-
 namespace motis::paxforecast::behavior {
-
-inline std::optional<std::size_t> get_recommended_alternative(
-    motis::paxmon::passenger_group const& grp,
-    std::vector<measures::please_use> const& announcements) {
-  for (auto const& announcement : announcements) {
-    if (announcement.direction_station_id_ ==
-        grp.compact_planned_journey_.destination_station_id()) {
-      return {announcement.alternative_id_};
-    }
-  }
-  return {};
-}
 
 template <typename T>
 std::vector<std::size_t> min_indices(std::vector<T> const& v) {

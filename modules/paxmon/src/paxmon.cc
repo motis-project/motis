@@ -7,10 +7,14 @@
 
 #include "fmt/format.h"
 
+#include "utl/enumerate.h"
 #include "utl/pipes.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 #include "utl/zip.h"
+
+#include "motis/hash_map.h"
+#include "motis/pair.h"
 
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
@@ -654,6 +658,54 @@ msg_ptr paxmon::get_groups_in_trip(msg_ptr const& msg) {
   auto const& sched = get_sched();
   auto& uv = get_universe(req->universe());
   auto const trp = from_fbs(sched, req->trip());
+  auto const grp_filter = req->filter();
+  auto const grp_by_station = req->group_by_station();
+  auto const grp_by_other_trip = req->group_by_other_trip();
+
+  auto const get_key = [&](passenger_group const* pg, trip const* other_trip) {
+    std::uint32_t station = 0U;
+    trip const* trp = grp_by_other_trip ? other_trip : nullptr;
+    switch (grp_by_station) {
+      case PaxMonGroupByStation_First:
+        station = pg->compact_planned_journey_.start_station_id();
+        break;
+      case PaxMonGroupByStation_Last:
+        station = pg->compact_planned_journey_.destination_station_id();
+        break;
+    }
+    return mcd::pair{station, trp};
+  };
+
+  auto const group_enters_here =
+      [&](event_node const* trp_node,
+          passenger_group const* pg) -> std::pair<bool, trip const*> {
+    for (auto const& [leg_idx, leg] :
+         utl::enumerate(pg->compact_planned_journey_.legs_)) {
+      if (leg.trip_ == trp &&
+          leg.enter_station_id_ == trp_node->station_idx()) {
+        return {true,
+                leg_idx > 0
+                    ? pg->compact_planned_journey_.legs_[leg_idx - 1].trip_
+                    : nullptr};
+      }
+    }
+    return {false, nullptr};
+  };
+
+  auto const group_exits_here =
+      [&](event_node const* trp_node,
+          passenger_group const* pg) -> std::pair<bool, trip const*> {
+    for (auto const& [leg_idx, leg] :
+         utl::enumerate(pg->compact_planned_journey_.legs_)) {
+      if (leg.trip_ == trp && leg.exit_station_id_ == trp_node->station_idx()) {
+        return {true,
+                leg_idx < pg->compact_planned_journey_.legs_.size() - 1
+                    ? pg->compact_planned_journey_.legs_[leg_idx + 1].trip_
+                    : nullptr};
+      }
+    }
+    return {false, nullptr};
+  };
 
   message_creator mc;
 
@@ -662,47 +714,79 @@ msg_ptr paxmon::get_groups_in_trip(msg_ptr const& msg) {
     auto const* to = e->to(uv);
     auto const groups = uv.pax_connection_info_.groups_[e->pci_];
 
-    struct groups_by_dest_t {
-      std::uint32_t dest_station_id_{};
+    struct grouped_pgs_t {
       std::vector<passenger_group const*> groups_{};
       std::uint32_t min_pax_{};
       std::uint32_t max_pax_{};
       float avg_pax_{};
     };
 
-    mcd::hash_map<uint32_t, groups_by_dest_t> groups_by_dest;
-    std::vector<flatbuffers::Offset<GroupsWithDestination>> groups_by_dest_vec;
+    mcd::hash_map<mcd::pair<std::uint32_t, trip const*>, grouped_pgs_t> grouped;
+    std::vector<flatbuffers::Offset<GroupedPassengerGroups>> grouped_pgs_vec;
 
-    if (req->include_grouped_by_destination()) {
-      for (auto const pgi : uv.pax_connection_info_.groups_[e->pci_]) {
-        auto const* pg = uv.passenger_groups_.at(pgi);
-        auto const dest_station_id =
-            pg->compact_planned_journey_.destination_station_id();
-        auto& gbd = groups_by_dest[dest_station_id];
-        gbd.groups_.emplace_back(pg);
-        gbd.max_pax_ += pg->passengers_;
-        if (pg->probability_ == 1.0F) {
-          gbd.min_pax_ += pg->passengers_;
+    for (auto const pgi : uv.pax_connection_info_.groups_[e->pci_]) {
+      auto const* pg = uv.passenger_groups_.at(pgi);
+      trip const* other_trp = nullptr;
+
+      if (grp_filter == PaxMonGroupFilter_Entering) {
+        auto const [entering, ot] = group_enters_here(from, pg);
+        if (entering) {
+          other_trp = ot;
+        } else {
+          continue;
         }
-        gbd.avg_pax_ += pg->passengers_ * pg->probability_;
+      } else if (grp_filter == PaxMonGroupFilter_Exiting) {
+        auto const [exiting, ot] = group_exits_here(from, pg);
+        if (exiting) {
+          other_trp = ot;
+        } else {
+          continue;
+        }
       }
-      auto dest_ids =
-          utl::to_vec(groups_by_dest, [](auto const& kv) { return kv.first; });
-      std::sort(
-          begin(dest_ids), end(dest_ids), [&](auto const& a, auto const& b) {
-            return groups_by_dest[a].avg_pax_ > groups_by_dest[b].avg_pax_;
-          });
-      for (auto const dest_station_id : dest_ids) {
-        auto const& gbd = groups_by_dest[dest_station_id];
-        groups_by_dest_vec.emplace_back(CreateGroupsWithDestination(
-            mc, to_fbs(mc, *sched.stations_[dest_station_id]),
-            mc.CreateVectorOfStructs(
-                utl::to_vec(gbd.groups_,
-                            [&](passenger_group const* pg) {
-                              return to_fbs_base_info(mc, *pg);
-                            })),
-            gbd.min_pax_, gbd.max_pax_));
+
+      auto const key = get_key(pg, other_trp);
+      auto& gg = grouped[key];
+      gg.groups_.emplace_back(pg);
+      gg.max_pax_ += pg->passengers_;
+      if (pg->probability_ == 1.0F) {
+        gg.min_pax_ += pg->passengers_;
       }
+      gg.avg_pax_ += pg->passengers_ * pg->probability_;
+    }
+
+    auto sorted_keys =
+        utl::to_vec(grouped, [](auto const& kv) { return kv.first; });
+    std::sort(begin(sorted_keys), end(sorted_keys),
+              [&](auto const& a, auto const& b) {
+                return grouped[a].max_pax_ > grouped[b].max_pax_;
+              });
+    // TODO(pablo): include planned arrival time + number of transfers
+    for (auto const key : sorted_keys) {
+      auto const& [station_id, other_trp] = key;
+      auto const& gbd = grouped[key];
+      auto const grouped_by_station =
+          station_id != 0
+              ? mc.CreateVector(std::vector<flatbuffers::Offset<Station>>{
+                    to_fbs(mc, *sched.stations_[station_id])})
+              : mc.CreateVector(
+                    static_cast<flatbuffers::Offset<Station>*>(nullptr), 0);
+      auto const grouped_by_trip =
+          other_trp != nullptr
+              ? mc.CreateVector(
+                    std::vector<flatbuffers::Offset<TripServiceInfo>>{
+                        to_fbs_trip_service_info(mc, sched, other_trp)})
+              : mc.CreateVector(
+                    static_cast<flatbuffers::Offset<TripServiceInfo>*>(nullptr),
+                    0);
+
+      grouped_pgs_vec.emplace_back(CreateGroupedPassengerGroups(
+          mc, grouped_by_station, grouped_by_trip,
+          mc.CreateVectorOfStructs(utl::to_vec(gbd.groups_,
+                                               [&](passenger_group const* pg) {
+                                                 return to_fbs_base_info(mc,
+                                                                         *pg);
+                                               })),
+          gbd.min_pax_, gbd.max_pax_));
     }
 
     return CreateGroupsInTripSection(
@@ -712,9 +796,7 @@ msg_ptr paxmon::get_groups_in_trip(msg_ptr const& msg) {
         motis_to_unixtime(sched, from->current_time()),
         motis_to_unixtime(sched, to->schedule_time()),
         motis_to_unixtime(sched, to->current_time()),
-        mc.CreateVector(utl::to_vec(uv.pax_connection_info_.groups_[e->pci_],
-                                    [](auto const pgi) { return pgi; })),
-        mc.CreateVector(groups_by_dest_vec));
+        mc.CreateVector(grouped_pgs_vec));
   };
 
   mc.create_and_finish(

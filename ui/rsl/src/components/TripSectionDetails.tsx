@@ -1,18 +1,23 @@
-import React from "react";
+import React, { useState } from "react";
 
 import { TripId } from "../api/protocol/motis";
 import { usePaxMonGroupsInTripQuery } from "../api/paxmon";
 import { PaxMonEdgeLoadInfoWithStats } from "../data/loadInfo";
-import { GroupsInTripSection } from "../api/protocol/motis/paxmon";
+import {
+  GroupsInTripSection,
+  PaxMonGroupFilter,
+} from "../api/protocol/motis/paxmon";
 
 import CombinedGroup from "./CombinedGroup";
+import { useAtom } from "jotai";
+import { universeAtom } from "../data/simulation";
 
 function isSameSection(
   sec: GroupsInTripSection,
-  selected: PaxMonEdgeLoadInfoWithStats | null
+  selected: PaxMonEdgeLoadInfoWithStats | undefined
 ) {
   return (
-    selected !== null &&
+    selected != undefined &&
     sec.departure_schedule_time === selected.departure_schedule_time &&
     sec.arrival_schedule_time === selected.arrival_schedule_time &&
     sec.from.id === selected.from.id &&
@@ -20,34 +25,48 @@ function isSameSection(
   );
 }
 
+const groupFilters: Array<{ filter: PaxMonGroupFilter; label: string }> = [
+  { filter: "All", label: "Alle" },
+  { filter: "Entering", label: "Nur Einsteiger" },
+  /*{ filter: "Exiting", label: "Nur Aussteiger" },*/
+];
+
 type TripSectionDetailsProps = {
   tripId: TripId;
-  selectedSection: PaxMonEdgeLoadInfoWithStats | null;
+  selectedSection: PaxMonEdgeLoadInfoWithStats | undefined;
+  onClose: () => void;
 };
 
 function TripSectionDetails({
   tripId,
   selectedSection,
+  onClose,
 }: TripSectionDetailsProps): JSX.Element {
+  const [universe] = useAtom(universeAtom);
+  const [groupFilter, setGroupFilter] = useState<PaxMonGroupFilter>("Entering");
+  //const [groupByOtherTrip, setGroupByOtherTrip] = useState(true);
+
   const {
     data: groupsInTrip,
     isLoading,
     error,
-  } = usePaxMonGroupsInTripQuery(tripId);
+  } = usePaxMonGroupsInTripQuery({
+    universe,
+    trip: tripId,
+    filter: groupFilter,
+    group_by_station: "Last",
+    group_by_other_trip: true,
+  });
 
-  if (isLoading) {
-    return <div>Loading trip section data..</div>;
-  } else if (error || !groupsInTrip) {
-    return (
-      <div>
-        Error loading trip section data:{" "}
-        {error instanceof Error ? error.message : error}
-      </div>
-    );
-  }
-
-  return (
-    <div className="mx-auto max-w-5xl">
+  const content = isLoading ? (
+    <div>Loading trip section data..</div>
+  ) : error || !groupsInTrip ? (
+    <div>
+      Error loading trip section data:{" "}
+      {error instanceof Error ? error.message : error}
+    </div>
+  ) : (
+    <div>
       {groupsInTrip.sections
         .filter((sec) => isSameSection(sec, selectedSection))
         .map((sec, secIdx) => (
@@ -56,15 +75,21 @@ function TripSectionDetails({
               <span>{sec.from.name}</span> → <span>{sec.to.name}</span>
             </div>
             <div>
-              {sec.groups.length} Gruppen, {sec.groups_by_destination.length}{" "}
-              unterschiedliche Ziele
+              {sec.groups.length} Gruppen (
+              {sec.groups.reduce((sum, g) => sum + g.min_passenger_count, 0)}
+              {" - "}
+              {sec.groups.reduce(
+                (sum, g) => sum + g.max_passenger_count,
+                0
+              )}{" "}
+              Reisende)
             </div>
             <ul>
-              {sec.groups_by_destination.slice(0, 20).map((gbd) => (
-                <li key={gbd.destination.id}>
+              {sec.groups.slice(0, 100).map((gg, idx) => (
+                <li key={idx}>
                   <CombinedGroup
                     plannedTrip={tripId}
-                    combinedGroup={gbd}
+                    combinedGroup={gg}
                     startStation={sec.from}
                     earliestDeparture={sec.departure_current_time}
                   />
@@ -73,6 +98,34 @@ function TripSectionDetails({
             </ul>
           </div>
         ))}
+    </div>
+  );
+
+  return (
+    <div className="mx-auto max-w-5xl">
+      <div className="mb-5">
+        <form onSubmit={(e) => e.preventDefault()}>
+          <div className="flex gap-4">
+            Gruppen anzeigen:
+            {groupFilters.map(({ filter, label }) => (
+              <label key={filter} className="inline-flex items-center gap-1">
+                <input
+                  type="radio"
+                  name="group-filter"
+                  value={filter}
+                  checked={groupFilter == filter}
+                  onChange={() => setGroupFilter(filter)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          <button type="button" onClick={onClose}>
+            Gruppenanzeige schließen
+          </button>
+        </form>
+      </div>
+      {content}
     </div>
   );
 }

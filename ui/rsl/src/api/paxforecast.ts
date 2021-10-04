@@ -1,19 +1,16 @@
-import {
-  PaxForecastAlternativesRequest,
-  PaxForecastAlternativesResponse,
-} from "./protocol/motis/paxforecast";
 import { sendRequest } from "./request";
 import { verifyContentType } from "./protocol/checks";
+import { PaxForecastApplyMeasuresRequest } from "./protocol/motis/paxforecast";
+import { MotisSuccess } from "./protocol/motis";
 
-export function sendPaxForecastAlternativesRequest(
-  content: PaxForecastAlternativesRequest
-): Promise<PaxForecastAlternativesResponse> {
-  return sendRequest(
-    "/paxforecast/get_alternatives",
-    "PaxForecastAlternativesRequest",
+export async function sendPaxForecastApplyMeasuresRequest(
+  content: PaxForecastApplyMeasuresRequest
+): Promise<MotisSuccess> {
+  const msg = await sendRequest(
+    "/paxforecast/apply_measures",
+    "PaxForecastApplyMeasuresRequest",
     content
-  ).then((msg) => {
-    verifyContentType(msg, "PaxForecastAlternativesResponse");
-    return msg.content as PaxForecastAlternativesResponse;
-  });
+  );
+  verifyContentType(msg, "MotisSuccess");
+  return msg.content as MotisSuccess;
 }

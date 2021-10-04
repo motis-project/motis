@@ -7,10 +7,12 @@
 #include "fmt/format.h"
 
 #include "utl/erase_if.h"
+#include "utl/overloaded.h"
 #include "utl/to_vec.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/access/realtime_access.h"
+#include "motis/core/access/trip_access.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/message_to_journeys.h"
@@ -214,7 +216,7 @@ msg_ptr get_routing_response(schedule const& sched, routing_cache& cache,
 
 }  // namespace
 
-std::vector<alternative> find_alternatives(
+std::vector<journey> find_alternative_journeys(
     schedule const& sched, routing_cache& cache,
     unsigned const destination_station_id,
     passenger_localization const& localization, bool use_cache,
@@ -234,14 +236,98 @@ std::vector<alternative> find_alternatives(
         return std::tie(lhs.stops_.back().arrival_.timestamp_, lhs.transfers_) <
                std::tie(rhs.stops_.back().arrival_.timestamp_, rhs.transfers_);
       });
-  return utl::to_vec(alternatives, [&](journey const& j) {
+  return alternatives;
+}
+
+bool contains_trip(alternative const& alt, extern_trip const& searched_trip) {
+  return std::any_of(begin(alt.journey_.trips_), end(alt.journey_.trips_),
+                     [&](journey::trip const& jt) {
+                       return jt.extern_trip_ == searched_trip;
+                     });
+}
+
+bool is_recommended(alternative const& alt,
+                    measures::trip_recommendation const& m) {
+  // TODO(pablo): check interchange stop
+  return contains_trip(alt, m.recommended_trip_);
+}
+
+void check_measures(
+    alternative& alt,
+    mcd::vector<measures::measure_variant const*> const& group_measures) {
+  for (auto const* mv : group_measures) {
+    std::visit(utl::overloaded{//
+                               [&](measures::trip_recommendation const& m) {
+                                 if (is_recommended(alt, m)) {
+                                   alt.is_recommended_ = true;
+                                 }
+                               },
+                               [&](measures::trip_load_information const& m) {
+                                 // TODO(pablo): handle case where load
+                                 // information for multiple trips in the
+                                 // journey is available
+                                 if (contains_trip(alt, m.trip_)) {
+                                   alt.load_info_ = m.level_;
+                                 }
+                               }},
+               *mv);
+  }
+}
+
+std::vector<alternative> find_alternatives(
+    schedule const& sched, routing_cache& cache,
+    mcd::vector<measures::measure_variant const*> const& group_measures,
+    unsigned const destination_station_id,
+    passenger_localization const& localization,
+    motis::paxmon::compact_journey const* remaining_journey, bool use_cache,
+    duration pretrip_interval_length) {
+  // default alternative routing
+  auto const journeys = find_alternative_journeys(
+      sched, cache, destination_station_id, localization, use_cache,
+      pretrip_interval_length);
+  auto alternatives = utl::to_vec(journeys, [&](journey const& j) {
     auto const arrival_time = unix_to_motistime(
         sched.schedule_begin_, j.stops_.back().arrival_.timestamp_);
     auto const dur = static_cast<duration>(arrival_time -
                                            localization.current_arrival_time_);
-    return alternative{j, to_compact_journey(j, sched), arrival_time, dur,
-                       j.transfers_};
+    return alternative{
+        j, to_compact_journey(j, sched), arrival_time, dur, j.transfers_, true};
   });
+
+  // add additional alternatives for recommended trips (if not already found)
+  if (remaining_journey != nullptr) {
+    for (auto const* mv : group_measures) {
+      std::visit(utl::overloaded{[&](measures::trip_recommendation const& m) {
+                   if (!std::any_of(begin(alternatives), end(alternatives),
+                                    [&](alternative const& alt) {
+                                      return is_recommended(alt, m);
+                                    })) {
+                     // TODO(pablo): search alternative containing this trip
+
+                     // 1. search from interchange_station ->
+                     // destination_station
+                     (void)m.interchange_station_;
+                     (void)destination_station_id;
+                     // need time at interchange station from remaining_journey
+
+                     // 2. prefix = remaining_journey until interchange_station
+                     // (get_prefix - with localization)
+
+                     // 3. combine prefix + alternatives
+                     // 4. mark as recommended (should work in check_measures
+                     // below)
+                   }
+                 }},
+                 *mv);
+    }
+  }
+
+  // TODO(pablo): mark original journey
+  for (auto& alt : alternatives) {
+    check_measures(alt, group_measures);
+  }
+
+  return alternatives;
 }
 
 }  // namespace motis::paxforecast

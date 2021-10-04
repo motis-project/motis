@@ -1,10 +1,11 @@
 import React, { useRef } from "react";
-import { useQuery } from "react-query";
+import { useQuery, useQueryClient } from "react-query";
 import * as ContextMenu from "@radix-ui/react-context-menu";
 import { DocumentDownloadIcon } from "@heroicons/react/outline";
+import { useAtom } from "jotai";
 
 import {
-  formatDateTime,
+  formatLongDateTime,
   formatFileNameTime,
   formatTime,
 } from "../util/dateFormat";
@@ -19,6 +20,7 @@ import {
   usePaxMonStatusQuery,
 } from "../api/paxmon";
 import { addEdgeStatistics } from "../util/statistics";
+import { universeAtom } from "../data/simulation";
 
 function getSvgLinePath(
   edges: PaxMonEdgeLoadInfoWithStats[],
@@ -153,9 +155,9 @@ function getBaseFileName(
   return parts.join("_");
 }
 
-async function loadAndProcessTripInfo(trip: TripId) {
+async function loadAndProcessTripInfo(universe: number, trip: TripId) {
   const res = await sendPaxMonTripLoadInfosRequest({
-    universe: 0,
+    universe,
     trips: [trip],
   });
   const tli = res.load_infos[0];
@@ -173,12 +175,21 @@ function TripLoadForecastChart({
   mode,
   onSectionClick,
 }: TripLoadForecastChartProps): JSX.Element | null {
+  const [universe] = useAtom(universeAtom);
   const { data: status } = usePaxMonStatusQuery();
 
+  const queryClient = useQueryClient();
   const { data /*, isLoading, error*/ } = useQuery(
-    queryKeys.tripLoad(tripId),
-    async () => loadAndProcessTripInfo(tripId),
-    { enabled: !!status }
+    queryKeys.tripLoad(universe, tripId),
+    async () => loadAndProcessTripInfo(universe, tripId),
+    {
+      enabled: !!status,
+      placeholderData: () => {
+        return universe != 0
+          ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
+          : undefined;
+      },
+    }
   );
 
   const svgEl = useRef<SVGSVGElement>(null);
@@ -293,7 +304,7 @@ function TripLoadForecastChart({
   ];
   const title = `${names.join(", ")} (${data.tsi.primary_station.name} - ${
     data.tsi.secondary_station.name
-  }), Vorhersage vom ${formatDateTime(systemTime)}`;
+  }), Vorhersage vom ${formatLongDateTime(systemTime)}`;
 
   const baseFileName = getBaseFileName(data, systemTime);
 

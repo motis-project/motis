@@ -59,26 +59,8 @@ msg_ptr make_forecast_update_msg(schedule const& sched, universe const& uv,
   return make_msg(fbb);
 }
 
-Offset<Alternative> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
-                           alternative const& alt) {
-  return CreateAlternative(fbb, to_fbs(sched, fbb, alt.compact_journey_),
-                           motis_to_unixtime(sched, alt.arrival_time_),
-                           alt.duration_, alt.transfers_);
-}
-
 std::uint32_t get_station_index(schedule const& sched, String const* eva) {
   return get_station(sched, {eva->c_str(), eva->Length()})->index_;
-}
-
-measures::interval from_fbs(schedule const& sched, Interval const* iv) {
-  auto const begin_mt = unix_to_motistime(sched.schedule_begin_, iv->begin());
-  auto const end_mt = unix_to_motistime(sched.schedule_begin_, iv->end());
-  return {begin_mt != INVALID_TIME
-              ? begin_mt
-              : unix_to_motistime(sched.schedule_begin_, sched.schedule_begin_),
-          end_mt != INVALID_TIME
-              ? end_mt
-              : unix_to_motistime(sched.schedule_begin_, sched.schedule_end_)};
 }
 
 measures::recipients from_fbs(schedule const& sched,
@@ -93,7 +75,7 @@ measures::recipients from_fbs(schedule const& sched,
 measures::trip_recommendation from_fbs(schedule const& sched,
                                        TripRecommendationMeasure const* m) {
   return {from_fbs(sched, m->recipients()),
-          from_fbs(sched, m->interval()),
+          unix_to_motistime(sched.schedule_begin_, m->time()),
           utl::to_vec(*m->planned_trips(),
                       [&](TripId const* t) { return to_extern_trip(t); }),
           utl::to_vec(
@@ -105,25 +87,30 @@ measures::trip_recommendation from_fbs(schedule const& sched,
 
 measures::trip_load_information from_fbs(schedule const& sched,
                                          TripLoadInfoMeasure const* m) {
-  return {from_fbs(sched, m->recipients()), from_fbs(sched, m->interval()),
+  return {from_fbs(sched, m->recipients()),
+          unix_to_motistime(sched.schedule_begin_, m->time()),
           to_extern_trip(m->trip()),
           static_cast<measures::load_level>(m->level())};
 }
 
-measures::measures from_fbs(schedule const& sched,
-                            Vector<Offset<MeasureWrapper>> const* ms) {
-  measures::measures res;
-  for (auto const* m : *ms) {
-    switch (m->measure_type()) {
-      case Measure_TripRecommendationMeasure:
-        res.recommendations_.emplace_back(from_fbs(
+measures::measure_collection from_fbs(
+    schedule const& sched, Vector<Offset<MeasureWrapper>> const* ms) {
+  measures::measure_collection res;
+  for (auto const* fm : *ms) {
+    switch (fm->measure_type()) {
+      case Measure_TripRecommendationMeasure: {
+        auto const m = from_fbs(
             sched,
-            reinterpret_cast<TripRecommendationMeasure const*>(m->measure())));
+            reinterpret_cast<TripRecommendationMeasure const*>(fm->measure()));
+        res[m.time_].emplace_back(m);
         break;
-      case Measure_TripLoadInfoMeasure:
-        res.load_infos_.emplace_back(from_fbs(
-            sched, reinterpret_cast<TripLoadInfoMeasure const*>(m->measure())));
+      }
+      case Measure_TripLoadInfoMeasure: {
+        auto const m = from_fbs(
+            sched, reinterpret_cast<TripLoadInfoMeasure const*>(fm->measure()));
+        res[m.time_].emplace_back(m);
         break;
+      }
       default: throw std::system_error{error::unsupported_measure};
     }
   }

@@ -7,4 +7,5 @@ table PaxForecastApplyMeasuresRequest {
 
   measures: [MeasureWrapper];
   replace_existing: bool;
+  preparation_time: short; // min
 }

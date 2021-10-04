@@ -114,15 +114,24 @@ export interface PaxMonForkUniverseResponse {
 }
 
 // paxmon/PaxMonGetGroupsInTripRequest.fbs
+export type PaxMonGroupFilter = "All" | "Entering" | "Exiting";
+
+// paxmon/PaxMonGetGroupsInTripRequest.fbs
+export type PaxMonGroupByStation = "None" | "First" | "Last";
+
+// paxmon/PaxMonGetGroupsInTripRequest.fbs
 export interface PaxMonGetGroupsInTripRequest {
   universe: number;
   trip: TripId;
-  include_grouped_by_destination: boolean;
+  filter: PaxMonGroupFilter;
+  group_by_station: PaxMonGroupByStation;
+  group_by_other_trip: boolean;
 }
 
 // paxmon/PaxMonGetGroupsInTripResponse.fbs
-export interface GroupsWithDestination {
-  destination: Station;
+export interface GroupedPassengerGroups {
+  grouped_by_station: Station[];
+  grouped_by_trip: TripServiceInfo[];
   groups: PaxMonGroupBaseInfo[];
   min_passenger_count: number;
   max_passenger_count: number;
@@ -136,8 +145,7 @@ export interface GroupsInTripSection {
   departure_current_time: number;
   arrival_schedule_time: number;
   arrival_current_time: number;
-  groups: number[];
-  groups_by_destination: GroupsWithDestination[];
+  groups: GroupedPassengerGroups[];
 }
 
 // paxmon/PaxMonGetGroupsInTripResponse.fbs

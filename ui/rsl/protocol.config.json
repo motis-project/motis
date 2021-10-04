@@ -2,22 +2,12 @@
   "fbsDir": "../../protocol",
   "tsOutputDir": "src/api/protocol",
   "typeFilter": [
-    "motis.Message",
-    "motis.Destination",
-    "motis.DestinationType",
-    "motis.MsgContent",
-    "motis.MotisSuccess",
-    "motis.MotisError",
-    "motis.MotisNoMessage",
-    "motis.TripId",
-    "motis.Position",
-    "motis.Station",
-    "motis.ServiceInfo",
-    "motis.TripServiceInfo",
-    "motis.Interval",
+    "motis.*",
     "motis.ris.RISForwardTimeRequest",
     "motis.paxmon.*",
-    "motis.paxforecast.*"
+    "motis.paxforecast.*",
+    "motis.routing.*",
+    "motis.guesser.*"
   ],
   "header": "// generated file - do not modify - run update-protocol to update"
 }
