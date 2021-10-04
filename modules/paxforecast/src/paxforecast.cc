@@ -626,7 +626,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
         cpg.alternatives_ = find_alternatives(
             sched, routing_cache_, group_measures,
             remaining_planned_journey.destination_station_id(), loc,
-            &remaining_planned_journey, false, 30);
+            &remaining_planned_journey, false, 61);
       }));
     }
     ctx::await_all(futures);

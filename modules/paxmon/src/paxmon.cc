@@ -590,7 +590,7 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
 
   print_allocator_stats(uv);
   LOG(info) << "add_groups: " << added_groups.size() << " total, "
-            << reused_groups << " reused";
+            << reused_groups << " reused (universe " << uv.id_ << ")";
 
   message_creator mc;
   mc.create_and_finish(
@@ -605,20 +605,28 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
 msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonRemoveGroupsRequest, msg);
   auto& uv = get_universe(req->universe());
+  auto const is_primary_universe = uv.id_ == 0;
+  auto removed_groups = 0ULL;
 
   for (auto const id : *req->ids()) {
     auto pg = uv.passenger_groups_.at(id);
     if (pg == nullptr) {
       continue;
     }
-    for (auto const& leg : pg->compact_planned_journey_.legs_) {
-      rt_update_ctx_.trips_affected_by_last_update_.insert(leg.trip_);
+    if (is_primary_universe) {
+      for (auto const& leg : pg->compact_planned_journey_.legs_) {
+        rt_update_ctx_.trips_affected_by_last_update_.insert(leg.trip_);
+      }
     }
     remove_passenger_group_from_graph(uv, pg);
+    ++removed_groups;
     if (!keep_group_history_) {
       uv.passenger_groups_.release(pg->id_);
     }
   }
+
+  LOG(info) << "remove_groups: " << removed_groups << " removed (universe "
+            << uv.id_ << ")";
 
   print_allocator_stats(uv);
 
