@@ -29,6 +29,8 @@ const measureTypes: Array<{ type: MeasureType; label: string }> = [
   { type: "TripRecommendationMeasure", label: "Alternativenempfehlung" },
 ];
 
+const labelClass = "font-semibold";
+
 type MeasureInputProps = {
   onAddMeasure: (measure: MeasureWrapper) => void;
 };
@@ -149,7 +151,7 @@ function MeasureInput(): JSX.Element {
           <>
             {/*<div className="font-semibold mt-2">Auslastungsinformation</div>*/}
             <div>
-              <div>Trip</div>
+              <div className={labelClass}>Trip</div>
               <div>
                 <TripPicker
                   onTripPicked={setLoadInfoTrip}
@@ -159,7 +161,7 @@ function MeasureInput(): JSX.Element {
               </div>
             </div>
             <div>
-              <div>Auslastungsstufe</div>
+              <div className={labelClass}>Auslastungsstufe</div>
               <div className="flex flex-col">
                 {loadLevels.map(({ level, label }) => (
                   <label key={level} className="inline-flex items-center gap-1">
@@ -182,21 +184,21 @@ function MeasureInput(): JSX.Element {
           <>
             {/*<div className="font-semibold mt-2">Alternativenempfehlung</div>*/}
             <div>
-              <div>Reisende Richtung</div>
+              <div className={labelClass}>Reisende Richtung</div>
               <StationPicker
                 onStationPicked={setTripRecDestination}
                 clearOnPick={false}
               />
             </div>
             <div>
-              <div>Umsteigen an Station</div>
+              <div className={labelClass}>Umsteigen an Station</div>
               <StationPicker
                 onStationPicked={setTripRecInterchange}
                 clearOnPick={false}
               />
             </div>
             <div>
-              <div>in Trip</div>
+              <div className={labelClass}>in Trip</div>
               <TripPicker
                 onTripPicked={setTripRecTrip}
                 clearOnPick={false}
@@ -223,11 +225,11 @@ function MeasureInput(): JSX.Element {
     >
       <div className="flex flex-col gap-4">
         <div>
-          <div>Ansage in Zug</div>
-          <ul>
+          <div className={labelClass}>Ansage in Zug</div>
+          <ul className="leading-loose">
             {recipientTrips.map((tsi, idx) => (
               <li key={JSON.stringify(tsi.trip)}>
-                <TripServiceInfoView tsi={tsi} format="Long" />
+                <TripServiceInfoView tsi={tsi} format="Short" />
                 <button
                   type="button"
                   className="ml-3 px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
@@ -245,8 +247,8 @@ function MeasureInput(): JSX.Element {
           />
         </div>
         <div>
-          <div>Ansage an Station</div>
-          <ul>
+          <div className={labelClass}>Ansage an Station</div>
+          <ul className="leading-loose">
             {recipientStations.map((station, idx) => (
               <li key={station.id}>
                 <span>{station.name}</span>
@@ -263,7 +265,7 @@ function MeasureInput(): JSX.Element {
           <StationPicker onStationPicked={addStation} clearOnPick={true} />
         </div>
         <div>
-          <div>Zeitpunkt der Ansage</div>
+          <div className={labelClass}>Zeitpunkt der Ansage</div>
           <div>
             <TimeInput
               value={time}
@@ -274,7 +276,7 @@ function MeasureInput(): JSX.Element {
         </div>
 
         <div>
-          <div>Maßnahmentyp</div>
+          <div className={labelClass}>Maßnahmentyp</div>
           <div className="flex flex-col">
             {measureTypes.map(({ type, label }) => (
               <label key={type} className="inline-flex items-center gap-1">

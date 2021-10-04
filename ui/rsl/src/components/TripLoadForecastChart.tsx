@@ -298,7 +298,7 @@ function TripLoadForecastChart({
   const names = [
     ...new Set(
       data.tsi.service_infos.map((si) =>
-        si.line ? `${si.name} [${si.train_nr}]` : si.name
+        si.line ? `${si.train_nr} [${si.name}]` : si.name
       )
     ),
   ];

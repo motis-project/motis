@@ -8,7 +8,7 @@ type JourneyTripNameViewProps = {
 
 function JourneyTripNameView({ jt }: JourneyTripNameViewProps): JSX.Element {
   const names = [
-    ...new Set(jt.transports.map((t) => `${t.name} [${t.train_nr}]`)),
+    ...new Set(jt.transports.map((t) => `${t.train_nr} [${t.name}]`)),
   ];
   return <span>{names.join(", ")}</span>;
 }

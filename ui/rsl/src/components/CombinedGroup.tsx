@@ -89,9 +89,11 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
 
   const groupInfo = (
     <div>
-      {props.combinedGroup.min_passenger_count}-
-      {props.combinedGroup.max_passenger_count} Reisende Richtung{" "}
-      {destinationStation.name}
+      <span className="font-bold">
+        {props.combinedGroup.min_passenger_count}-
+        {props.combinedGroup.max_passenger_count} Reisende Richtung{" "}
+        {destinationStation.name}
+      </span>
       {previousTrip && (
         <div>
           Ankunft mit: <TripServiceInfoView tsi={previousTrip} format="Long" />
@@ -143,7 +145,7 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
   );
 
   return (
-    <div className="mt-2">
+    <div className="mt-8">
       {groupInfo}
       {alternativesInfo}
     </div>

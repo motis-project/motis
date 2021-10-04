@@ -71,7 +71,7 @@ function TripSectionDetails({
         .filter((sec) => isSameSection(sec, selectedSection))
         .map((sec, secIdx) => (
           <div key={secIdx} className="mb-6">
-            <div className="font-bold">
+            <div className="text-xl">
               <span>{sec.from.name}</span> → <span>{sec.to.name}</span>
             </div>
             <div>
@@ -106,7 +106,7 @@ function TripSectionDetails({
       <div className="mb-5">
         <form onSubmit={(e) => e.preventDefault()}>
           <div className="flex gap-4">
-            Gruppen anzeigen:
+            <span>Gruppen anzeigen:</span>
             {groupFilters.map(({ filter, label }) => (
               <label key={filter} className="inline-flex items-center gap-1">
                 <input
@@ -119,10 +119,14 @@ function TripSectionDetails({
                 {label}
               </label>
             ))}
+            <button
+              type="button"
+              onClick={onClose}
+              className="bg-db-red-500 px-3 py-1 rounded text-white text-sm hover:bg-db-red-600"
+            >
+              Gruppenanzeige schließen
+            </button>
           </div>
-          <button type="button" onClick={onClose}>
-            Gruppenanzeige schließen
-          </button>
         </form>
       </div>
       {content}

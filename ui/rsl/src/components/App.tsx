@@ -53,7 +53,7 @@ function App(): JSX.Element {
             </div>
           )}
           <div className="flex-grow">
-            <div className="mt-4 flex items-center justify-center gap-2">
+            <div className="mt-6 flex items-center justify-center gap-2">
               <span>Trip:</span>
               <TripPicker
                 onTripPicked={(tsi) => setSelectedTrip(tsi?.trip)}
