@@ -26,13 +26,13 @@ function App(): JSX.Element {
   return (
     <QueryClientProvider client={queryClient}>
       <div>
-        <div className="flex justify-center items-baseline space-x-2 p-2 bg-blue-600 text-white divide-x-2 divide-white">
+        <div className="flex justify-center items-baseline space-x-4 p-2 bg-db-cool-gray-300 text-black divide-x-2 divide-db-cool-gray-400">
           <TimeControl allowForwarding={true} />
           <UniverseControl />
-          <div className="flex pl-2">
+          <div className="flex pl-4">
             <button
               type="button"
-              className="bg-blue-800 px-3 py-1 rounded-xl text-white text-sm hover:bg-blue-800"
+              className="bg-db-red-500 px-3 py-1 rounded text-white text-sm hover:bg-db-red-600"
               onClick={() => setSimActive((active) => !active)}
             >
               Maßnahmensimulation

@@ -2,7 +2,7 @@ import React from "react";
 import { useQuery } from "react-query";
 import * as Tooltip from "@radix-ui/react-tooltip";
 
-import { Connection, Station, TripId } from "../api/protocol/motis";
+import { Station, TripId } from "../api/protocol/motis";
 import { GroupedPassengerGroups } from "../api/protocol/motis/paxmon";
 import { sendRoutingRequest } from "../api/routing";
 import { connectionToJourney, Journey } from "../data/journey";

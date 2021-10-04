@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { QueryClient, useMutation, useQueryClient } from "react-query";
+import { useMutation } from "react-query";
 import { useAtom } from "jotai";
 
 import { universeAtom } from "../data/simulation";
@@ -36,14 +36,16 @@ function UniverseControl(): JSX.Element {
   const destroyEnabled = forkEnabled && universe != 0;
 
   return (
-    <div className="flex justify-center items-baseline space-x-2 pl-2">
-      <span>Universum #{universe}</span>
+    <div className="flex justify-center items-center space-x-2 pl-4">
+      <span className="pr-2">Universum #{universe}</span>
       {universes.map((uv) => (
         <button
           key={uv}
           type="button"
-          className={`px-3 py-1 rounded-xl text-white text-sm ${
-            uv == universe ? "bg-blue-500" : "bg-blue-900 hover:bg-blue-800"
+          className={`px-3 py-1 rounded text-white text-sm ${
+            uv == universe
+              ? "bg-db-red-500 ring ring-db-red-800"
+              : "bg-db-red-500 hover:bg-db-red-600"
           }`}
           onClick={() => setUniverse(uv)}
         >
@@ -52,8 +54,10 @@ function UniverseControl(): JSX.Element {
       ))}
       <button
         type="button"
-        className={`bg-blue-900 px-3 py-1 rounded-xl text-white text-sm ${
-          forkEnabled ? "hover:bg-blue-800" : "text-blue-700"
+        className={`inline-flex items-baseline px-3 py-1 rounded text-sm ${
+          forkEnabled
+            ? "bg-db-red-500 hover:bg-db-red-600 text-white"
+            : "bg-db-red-300 text-db-red-100 cursor-default"
         }`}
         onClick={() => forkMutation.mutate(universe)}
         disabled={!forkEnabled}
@@ -62,8 +66,10 @@ function UniverseControl(): JSX.Element {
       </button>
       <button
         type="button"
-        className={`bg-blue-900 px-3 py-1 rounded-xl text-white text-sm ${
-          destroyEnabled ? "hover:bg-blue-800" : "text-blue-700"
+        className={`px-3 py-1 rounded text-sm ${
+          destroyEnabled
+            ? "bg-db-red-500 hover:bg-db-red-600 text-white"
+            : "bg-db-red-300 text-db-red-100 cursor-default"
         }`}
         onClick={() => destroyMutation.mutate(universe)}
         disabled={!destroyEnabled}

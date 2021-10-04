@@ -203,7 +203,7 @@ function MeasureInput(): JSX.Element {
   };
 
   return (
-    <div className="bg-blue-100">
+    <div className="bg-db-cool-gray-200">
       <form
         onSubmit={(e) => {
           e.preventDefault();

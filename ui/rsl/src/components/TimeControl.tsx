@@ -39,8 +39,10 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
 
   const forwardInProgress = forwardMutation.isLoading;
 
-  const buttonClass = `bg-blue-900 px-3 py-1 rounded-xl text-white text-sm ${
-    forwardInProgress ? "text-blue-700" : "hover:bg-blue-800"
+  const buttonClass = `px-3 py-1 rounded text-sm ${
+    !forwardInProgress
+      ? "bg-db-red-500 hover:bg-db-red-600 text-white"
+      : "bg-db-red-300 text-db-red-100 cursor-default"
   }`;
 
   const buttons = allowForwarding ? (
