@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useMutation } from "react-query";
 import { useAtom } from "jotai";
+import { PlusCircleIcon, XCircleIcon } from "@heroicons/react/solid";
 
 import { universeAtom } from "../data/simulation";
 import {
@@ -34,6 +35,9 @@ function UniverseControl(): JSX.Element {
 
   const forkEnabled = !forkMutation.isLoading && !destroyMutation.isLoading;
   const destroyEnabled = forkEnabled && universe != 0;
+
+  // <PlusCircleIcon className="h-5 w-5 text-white" />
+  // <XCircleIcon className="h-5 w-5 text-white" />
 
   return (
     <div className="flex justify-center items-center space-x-2 pl-4">

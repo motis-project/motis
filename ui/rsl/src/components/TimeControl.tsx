@@ -42,7 +42,7 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
   const buttonClass = `px-3 py-1 rounded text-sm ${
     !forwardInProgress
       ? "bg-db-red-500 hover:bg-db-red-600 text-white"
-      : "bg-db-red-300 text-db-red-100 cursor-default"
+      : "bg-db-red-300 text-db-red-100 cursor-wait"
   }`;
 
   const buttons = allowForwarding ? (

@@ -140,6 +140,8 @@ function MeasureInput(): JSX.Element {
     }
   };
 
+  const isMutating = applyMeasuresMutation.isLoading;
+
   const measureDetails: () => JSX.Element = () => {
     switch (measureType) {
       case "TripLoadInfoMeasure":
@@ -155,7 +157,7 @@ function MeasureInput(): JSX.Element {
               />
             </div>
             <div>Auslastungsstufe</div>
-            <div className="flex gap-4">
+            <div className="flex flex-col">
               {loadLevels.map(({ level, label }) => (
                 <label key={level} className="inline-flex items-center gap-1">
                   <input
@@ -203,19 +205,19 @@ function MeasureInput(): JSX.Element {
   };
 
   return (
-    <div className="bg-db-cool-gray-200">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          try {
-            const measure = buildMeasure();
-            console.log(JSON.stringify(measure, null, 2));
-            applyMeasuresMutation.mutate([measure]);
-          } catch (ex) {
-            alert(ex);
-          }
-        }}
-      >
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        try {
+          const measure = buildMeasure();
+          console.log(JSON.stringify(measure, null, 2));
+          applyMeasuresMutation.mutate([measure]);
+        } catch (ex) {
+          alert(ex);
+        }
+      }}
+    >
+      <div className="flex flex-col gap-4">
         <div>
           <div>Ansage in Zug</div>
           <ul>
@@ -224,7 +226,7 @@ function MeasureInput(): JSX.Element {
                 <TripServiceInfoView tsi={tsi} format="Long" />
                 <button
                   type="button"
-                  className="ml-3 px-2 py-1 bg-red-200 hover:bg-red-100 text-xs rounded-xl"
+                  className="ml-3 px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
                   onClick={() => removeTrip(idx)}
                 >
                   Entfernen
@@ -246,7 +248,7 @@ function MeasureInput(): JSX.Element {
                 <span>{station.name}</span>
                 <button
                   type="button"
-                  className="ml-3 px-2 py-1 bg-red-200 hover:bg-red-100 text-xs rounded-xl"
+                  className="ml-3 px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
                   onClick={() => removeStation(idx)}
                 >
                   Entfernen
@@ -265,7 +267,7 @@ function MeasureInput(): JSX.Element {
 
         <div>
           <div>Maßnahmentyp</div>
-          <div className="flex gap-4">
+          <div className="flex flex-col">
             {measureTypes.map(({ type, label }) => (
               <label key={type} className="inline-flex items-center gap-1">
                 <input
@@ -284,10 +286,18 @@ function MeasureInput(): JSX.Element {
         {measureDetails()}
 
         <div>
-          <button>Maßnahme simulieren</button>
+          <button
+            className={`w-full p-3 rounded ${
+              isMutating
+                ? "bg-db-red-300 text-db-red-100 cursor-wait"
+                : "bg-db-red-500 hover:bg-db-red-600 text-white"
+            }`}
+          >
+            Maßnahme simulieren
+          </button>
         </div>
-      </form>
-    </div>
+      </div>
+    </form>
   );
 }
 

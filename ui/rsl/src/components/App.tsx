@@ -26,7 +26,7 @@ function App(): JSX.Element {
   return (
     <QueryClientProvider client={queryClient}>
       <div>
-        <div className="flex justify-center items-baseline space-x-4 p-2 bg-db-cool-gray-300 text-black divide-x-2 divide-db-cool-gray-400">
+        <div className="fixed top-0 w-full z-20 flex justify-center items-baseline space-x-4 p-2 bg-db-cool-gray-200 text-black divide-x-2 divide-db-cool-gray-400">
           <TimeControl allowForwarding={true} />
           <UniverseControl />
           <div className="flex pl-4">
@@ -39,16 +39,25 @@ function App(): JSX.Element {
             </button>
           </div>
         </div>
-        {simActive && <MeasureInput />}
-        <div className="mt-4 flex items-center justify-center gap-2">
-          <span>Trip:</span>
-          <TripPicker
-            onTripPicked={(tsi) => setSelectedTrip(tsi?.trip)}
-            clearOnPick={false}
-            longDistanceOnly={true}
-          />
+
+        <div className="flex justify-between w-full mt-10">
+          <div className="flex-grow">
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <span>Trip:</span>
+              <TripPicker
+                onTripPicked={(tsi) => setSelectedTrip(tsi?.trip)}
+                clearOnPick={false}
+                longDistanceOnly={true}
+              />
+            </div>
+            {tripDisplay}
+          </div>
+          {simActive && (
+            <div className="h-screen fixed top-0 right-0 pt-14 flex flex-col w-full bg-db-cool-gray-200 w-80 p-2 shadow-md">
+              <MeasureInput />
+            </div>
+          )}
         </div>
-        {tripDisplay}
       </div>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

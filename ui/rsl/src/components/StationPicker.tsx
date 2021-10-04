@@ -52,7 +52,7 @@ function StationPicker({
         <input
           {...getInputProps()}
           type="text"
-          className="w-60 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+          className="w-72 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
         />
         <button
           type="button"
