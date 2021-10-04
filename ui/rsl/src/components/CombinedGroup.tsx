@@ -112,8 +112,8 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
             key={idx}
             className={`pl-4 ${containsCurrentTrip(j) ? "text-gray-400" : ""}`}
           >
-            Abfahrt um {formatTime(getDepartureTime(j))}, Ankunft um{" "}
-            {formatTime(getArrivalTime(j))} mit {j.transfers} Umstiegen:
+            {formatTime(getDepartureTime(j))} &rarr;{" "}
+            {formatTime(getArrivalTime(j))}, {j.transfers} Umstiege:
             <span className="inline-flex gap-3 pl-2">
               {j.tripLegs.map((leg, legIdx) => (
                 <Tooltip.Root key={legIdx}>

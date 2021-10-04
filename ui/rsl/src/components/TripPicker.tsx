@@ -37,12 +37,14 @@ type TripPickerProps = {
   onTripPicked: (trip: TripServiceInfo | undefined) => void;
   clearOnPick: boolean;
   longDistanceOnly: boolean;
+  className?: string;
 };
 
 function TripPicker({
   onTripPicked,
   clearOnPick,
   longDistanceOnly,
+  className,
 }: TripPickerProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
   const [trainNr, setTrainNr] = useState<number>();
@@ -85,13 +87,13 @@ function TripPicker({
   });
 
   return (
-    <div className="relative inline-flex">
+    <div className={`relative flex ${className ?? ""}`}>
       {/* <label {...getLabelProps()}>Trip:</label> */}
-      <div {...getComboboxProps()} className="relative">
+      <div {...getComboboxProps()} className="relative w-full">
         <input
           {...getInputProps()}
           type="text"
-          className="w-72 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+          className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
         />
         {selectedItem ? (
           <button

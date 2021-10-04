@@ -1,17 +1,22 @@
 import React from "react";
 import { format, parse } from "date-fns";
 
-type TimeInputProps = {
+export interface TimeInputProps
+  extends Omit<React.ComponentPropsWithoutRef<"input">, "value" | "onChange"> {
   value: Date;
   onChange: (date: Date) => void;
-};
+}
 
 const dateTimeFormat = "yyyy-MM-dd'T'HH:mm";
 
 // TODO: time zones
 // TODO: custom time picker component (datetime-local requires firefox 93+)
 
-function TimeInput({ value, onChange }: TimeInputProps): JSX.Element {
+function TimeInput({
+  value,
+  onChange,
+  ...restProps
+}: TimeInputProps): JSX.Element {
   let textValue = "";
   try {
     textValue = format(value, dateTimeFormat);
@@ -21,7 +26,7 @@ function TimeInput({ value, onChange }: TimeInputProps): JSX.Element {
   return (
     <input
       type="datetime-local"
-      className="w-72 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+      {...restProps}
       value={textValue}
       onChange={(e) => {
         try {

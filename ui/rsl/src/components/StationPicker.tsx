@@ -46,13 +46,13 @@ function StationPicker({
   });
 
   return (
-    <div className="relative inline-flex">
+    <div className="relative flex">
       {/* <label {...getLabelProps()}>Station:</label> */}
-      <div {...getComboboxProps()} className="relative">
+      <div {...getComboboxProps()} className="relative w-full">
         <input
           {...getInputProps()}
           type="text"
-          className="w-72 rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+          className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
         />
         <button
           type="button"

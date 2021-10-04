@@ -146,60 +146,64 @@ function MeasureInput(): JSX.Element {
     switch (measureType) {
       case "TripLoadInfoMeasure":
         return (
-          <div>
+          <>
             {/*<div className="font-semibold mt-2">Auslastungsinformation</div>*/}
-            <div>Trip</div>
             <div>
-              <TripPicker
-                onTripPicked={setLoadInfoTrip}
-                clearOnPick={false}
-                longDistanceOnly={false}
-              />
+              <div>Trip</div>
+              <div>
+                <TripPicker
+                  onTripPicked={setLoadInfoTrip}
+                  clearOnPick={false}
+                  longDistanceOnly={false}
+                />
+              </div>
             </div>
-            <div>Auslastungsstufe</div>
-            <div className="flex flex-col">
-              {loadLevels.map(({ level, label }) => (
-                <label key={level} className="inline-flex items-center gap-1">
-                  <input
-                    type="radio"
-                    name="load-level"
-                    value={level}
-                    checked={loadInfoLevel == level}
-                    onChange={() => setLoadInfoLevel(level)}
-                  />
-                  {label}
-                </label>
-              ))}
+            <div>
+              <div>Auslastungsstufe</div>
+              <div className="flex flex-col">
+                {loadLevels.map(({ level, label }) => (
+                  <label key={level} className="inline-flex items-center gap-1">
+                    <input
+                      type="radio"
+                      name="load-level"
+                      value={level}
+                      checked={loadInfoLevel == level}
+                      onChange={() => setLoadInfoLevel(level)}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
+          </>
         );
       case "TripRecommendationMeasure":
         return (
-          <div>
+          <>
             {/*<div className="font-semibold mt-2">Alternativenempfehlung</div>*/}
-            <div>Reisende Richtung</div>
             <div>
+              <div>Reisende Richtung</div>
               <StationPicker
                 onStationPicked={setTripRecDestination}
                 clearOnPick={false}
               />
             </div>
-            <div>Umsteigen an Station</div>
             <div>
+              <div>Umsteigen an Station</div>
               <StationPicker
                 onStationPicked={setTripRecInterchange}
                 clearOnPick={false}
               />
             </div>
-            <div>in Trip</div>
             <div>
+              <div>in Trip</div>
               <TripPicker
                 onTripPicked={setTripRecTrip}
                 clearOnPick={false}
                 longDistanceOnly={false}
               />
             </div>
-          </div>
+          </>
         );
     }
   };
@@ -261,7 +265,11 @@ function MeasureInput(): JSX.Element {
         <div>
           <div>Zeitpunkt der Ansage</div>
           <div>
-            <TimeInput value={time} onChange={setTime} />
+            <TimeInput
+              value={time}
+              onChange={setTime}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+            />
           </div>
         </div>
 
