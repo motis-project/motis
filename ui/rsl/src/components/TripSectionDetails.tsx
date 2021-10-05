@@ -85,7 +85,7 @@ function TripSectionDetails({
               Reisende)
             </div>
             <ul>
-              {sec.groups.slice(0, 100).map((gg, idx) => (
+              {sec.groups.slice(0, 30).map((gg, idx) => (
                 <li key={idx}>
                   <CombinedGroup
                     plannedTrip={tripId}

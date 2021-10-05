@@ -308,7 +308,11 @@ function MeasureInput(): JSX.Element {
             <div className={labelClass}>
               Fehler bei der Maßnahmensimulation:
             </div>
-            <div>{applyMeasuresMutation.error.message}</div>
+            <div>
+              {applyMeasuresMutation.error instanceof Error
+                ? applyMeasuresMutation.error.message
+                : "Unbekannter Fehler"}
+            </div>
           </div>
         )}
       </div>

@@ -42,6 +42,30 @@ function UniverseControl(): JSX.Element {
   return (
     <div className="flex justify-center items-center space-x-2 pl-4">
       <span className="pr-2">Universum #{universe}</span>
+      <button
+        type="button"
+        className={`inline-flex items-baseline px-3 py-1 rounded text-sm ${
+          forkEnabled
+            ? "bg-db-red-500 hover:bg-db-red-600 text-white"
+            : "bg-db-red-300 text-db-red-100 cursor-default"
+        }`}
+        onClick={() => forkMutation.mutate(universe)}
+        disabled={!forkEnabled}
+      >
+        Kopieren
+      </button>
+      <button
+        type="button"
+        className={`px-3 py-1 rounded text-sm ${
+          destroyEnabled
+            ? "bg-db-red-500 hover:bg-db-red-600 text-white"
+            : "bg-db-red-300 text-db-red-100 cursor-default"
+        }`}
+        onClick={() => destroyMutation.mutate(universe)}
+        disabled={!destroyEnabled}
+      >
+        Löschen
+      </button>
       {universes.map((uv) => (
         <button
           key={uv}
@@ -56,30 +80,6 @@ function UniverseControl(): JSX.Element {
           #{uv}
         </button>
       ))}
-      <button
-        type="button"
-        className={`inline-flex items-baseline px-3 py-1 rounded text-sm ${
-          forkEnabled
-            ? "bg-db-red-500 hover:bg-db-red-600 text-white"
-            : "bg-db-red-300 text-db-red-100 cursor-default"
-        }`}
-        onClick={() => forkMutation.mutate(universe)}
-        disabled={!forkEnabled}
-      >
-        Neu
-      </button>
-      <button
-        type="button"
-        className={`px-3 py-1 rounded text-sm ${
-          destroyEnabled
-            ? "bg-db-red-500 hover:bg-db-red-600 text-white"
-            : "bg-db-red-300 text-db-red-100 cursor-default"
-        }`}
-        onClick={() => destroyMutation.mutate(universe)}
-        disabled={!destroyEnabled}
-      >
-        Löschen
-      </button>
     </div>
   );
 }
