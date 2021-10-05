@@ -613,15 +613,18 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
     if (pg == nullptr) {
       continue;
     }
+    ++removed_groups;
     if (is_primary_universe) {
       for (auto const& leg : pg->compact_planned_journey_.legs_) {
         rt_update_ctx_.trips_affected_by_last_update_.insert(leg.trip_);
       }
-    }
-    remove_passenger_group_from_graph(uv, pg);
-    ++removed_groups;
-    if (!keep_group_history_) {
-      uv.passenger_groups_.release(pg->id_);
+      remove_passenger_group_from_graph(uv, pg);
+      if (!keep_group_history_) {
+        uv.passenger_groups_.release(pg->id_);
+      }
+    } else {
+      // TODO(pablo): workaround
+      pg->probability_ = 0.0F;
     }
   }
 
@@ -734,6 +737,9 @@ msg_ptr paxmon::get_groups_in_trip(msg_ptr const& msg) {
 
     for (auto const pgi : uv.pax_connection_info_.groups_[e->pci_]) {
       auto const* pg = uv.passenger_groups_.at(pgi);
+      if (pg->probability_ == 0.0F) {
+        continue;
+      }
       trip const* other_trp = nullptr;
 
       if (grp_filter == PaxMonGroupFilter_Entering) {

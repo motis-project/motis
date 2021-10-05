@@ -45,7 +45,7 @@ void add_affected_groups(schedule const& sched, universe& uv,
                          time const loc_time, measure_variant const* m) {
   // TODO(pablo): performance optimizations - currently localizing every group
   for (auto const* pg : uv.passenger_groups_) {
-    if (pg == nullptr || !pg->valid()) {
+    if (pg == nullptr || !pg->valid() || pg->probability_ == 0.0F) {
       continue;
     }
     auto const loc = localize(sched, uv, result, pg, loc_time);
