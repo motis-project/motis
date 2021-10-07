@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "react-query";
 import { ReactQueryDevtools } from "react-query/devtools";
 
 import { TripId } from "../api/protocol/motis";
+import getQueryParameters from "../util/queryParameters";
 
 import TimeControl from "./TimeControl";
 import TripPicker from "./TripPicker";
@@ -15,6 +16,8 @@ const queryClient = new QueryClient({
     queries: { refetchOnWindowFocus: true, staleTime: 10000 },
   },
 });
+
+const allowForwarding = getQueryParameters()["allowForwarding"] === "yes";
 
 function App(): JSX.Element {
   const [selectedTrip, setSelectedTrip] = useState<TripId>();
@@ -30,7 +33,7 @@ function App(): JSX.Element {
           className="fixed top-0 w-full z-20 flex justify-center items-baseline space-x-4 p-2
             bg-db-cool-gray-200 text-black divide-x-2 divide-db-cool-gray-400"
         >
-          <TimeControl allowForwarding={true} />
+          <TimeControl allowForwarding={allowForwarding} />
           <UniverseControl />
           <div className="flex pl-4">
             <button
