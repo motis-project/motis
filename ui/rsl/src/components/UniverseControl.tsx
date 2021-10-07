@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useMutation } from "react-query";
+import { useIsMutating, useMutation } from "react-query";
 import { useAtom } from "jotai";
 import { PlusCircleIcon, XCircleIcon } from "@heroicons/react/solid";
 
@@ -12,6 +12,7 @@ import {
 function UniverseControl(): JSX.Element {
   const [universe, setUniverse] = useAtom(universeAtom);
   const [universes, setUniverses] = useState([0]);
+  const isMutating = useIsMutating() != 0;
 
   const forkMutation = useMutation(
     (baseUniverse: number) =>
@@ -33,8 +34,8 @@ function UniverseControl(): JSX.Element {
     }
   );
 
-  const forkEnabled = !forkMutation.isLoading && !destroyMutation.isLoading;
-  const destroyEnabled = forkEnabled && universe != 0;
+  const forkEnabled = !isMutating;
+  const destroyEnabled = !isMutating && universe != 0;
 
   // <PlusCircleIcon className="h-5 w-5 text-white" />
   // <XCircleIcon className="h-5 w-5 text-white" />
@@ -71,11 +72,16 @@ function UniverseControl(): JSX.Element {
           key={uv}
           type="button"
           className={`px-3 py-1 rounded text-white text-sm ${
-            uv == universe
+            isMutating
+              ? uv == universe
+                ? "bg-db-red-300 text-db-red-100 ring ring-db-red-800 cursor-default"
+                : "bg-db-red-300 text-db-red-100 cursor-default"
+              : uv == universe
               ? "bg-db-red-500 ring ring-db-red-800"
               : "bg-db-red-500 hover:bg-db-red-600"
           }`}
           onClick={() => setUniverse(uv)}
+          disabled={isMutating}
         >
           #{uv}
         </button>
