@@ -42,10 +42,8 @@ export function paxQuantile(cdf: PaxMonCdfEntry[], q: number): number {
 export function processEdgeForecast(
   ef: PaxMonEdgeLoadInfoWithStats
 ): PaxMonEdgeLoadInfoWithStats {
-  if (!ef.capacity) {
-    return ef;
-  }
-  ef.p_load_gt_100 = probPaxGT(ef.passenger_cdf, ef.capacity);
+  ef.p_load_gt_100 =
+    ef.capacity == 0 ? 0 : probPaxGT(ef.passenger_cdf, ef.capacity);
   ef.q_20 = paxQuantile(ef.passenger_cdf, 0.2);
   ef.q_50 = paxQuantile(ef.passenger_cdf, 0.5);
   ef.q_80 = paxQuantile(ef.passenger_cdf, 0.8);

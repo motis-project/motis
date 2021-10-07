@@ -200,12 +200,6 @@ function TripLoadForecastChart({
 
   const systemTime = status.system_time;
   const edges = data.edges;
-
-  const allEdgesHaveCapacity = edges.every((e) => e.capacity);
-  if (!allEdgesHaveCapacity) {
-    return <div className="text-red-500">Missing capacity information</div>;
-  }
-
   const graphWidth = edges.length * 50;
 
   const maxPax = edges.reduce((max, ef) => Math.max(max, ef.max_pax || 0), 0);
@@ -216,13 +210,27 @@ function TripLoadForecastChart({
   const maxVal = Math.max(maxPax, maxCapacity) * 1.1;
 
   const background = edges.map((e, idx) => {
+    const x = idx * 50;
+    if (e.capacity == 0) {
+      return (
+        <g key={idx.toString()}>
+          <rect
+            x={x}
+            y={0}
+            width="50"
+            height={200}
+            stroke="#DDD"
+            fill="#ffffff"
+          />
+        </g>
+      );
+    }
     const over200 = maxVal >= e.capacity * 2;
     const y200 = over200
       ? 200 - Math.round(((e.capacity * 2.0) / maxVal) * 200)
       : 0;
     const y100 = 200 - Math.round((e.capacity / maxVal) * 200);
     const y80 = 200 - Math.round(((e.capacity * 0.8) / maxVal) * 200);
-    const x = idx * 50;
     const yDarkRed = 0;
     const hDarkRed = y200;
     const yRed = y200;
@@ -276,7 +284,7 @@ function TripLoadForecastChart({
   const overCapProbs = edges.map((e, idx) => {
     const classes = ["over-cap-prob"];
     let text = "";
-    if (e.p_load_gt_100 !== undefined) {
+    if (e.capacity != 0) {
       text = `${(e.p_load_gt_100 * 100).toFixed(0)}%`;
       if (text === "0%") {
         classes.push("zero");
