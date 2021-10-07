@@ -89,6 +89,7 @@ private:
   std::unique_ptr<stats_writer> stats_writer_;
   bool write_mcfp_scenarios_{false};
   bool import_successful_{true};
+  bool initial_forward_done_{false};
 };
 
 }  // namespace motis::paxmon

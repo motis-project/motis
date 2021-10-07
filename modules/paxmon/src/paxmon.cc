@@ -171,6 +171,10 @@ void paxmon::init(motis::module::registry& reg) {
   reg.subscribe("/rt/graph_updated", [&](msg_ptr const&) {
     scoped_timer t{"paxmon: graph_updated"};
     rt_updates_applied();
+    if (!initial_forward_done_) {
+      initial_forward_done_ = true;
+      motis_call(make_no_msg("/paxmon/init_forward"))->val();
+    }
     return nullptr;
   });
 
@@ -225,7 +229,19 @@ void paxmon::init(motis::module::registry& reg) {
   reg.register_op(
       "/paxmon/init_forward",
       [&](msg_ptr const&) -> msg_ptr {
-        return forward(start_time_.unix_time_);
+        auto const& sched = get_sched();
+        if (start_time_.unix_time_ != 0 &&
+            start_time_.unix_time_ > sched.system_time_ && time_step_ != 0) {
+          LOG(info) << "paxmon: forwarding time: "
+                    << format_unix_time(sched.system_time_) << " -> "
+                    << format_unix_time(start_time_.unix_time_) << " in "
+                    << time_step_ << "s intervals";
+          for (auto t = sched.system_time_ + time_step_;
+               t <= start_time_.unix_time_; t += time_step_) {
+            forward(t);
+          }
+        }
+        return {};
       },
       ctx::access_t::WRITE);
 
