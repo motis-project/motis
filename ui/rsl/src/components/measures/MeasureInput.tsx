@@ -56,6 +56,8 @@ function MeasureInput(): JSX.Element {
   const [tripRecInterchange, setTripRecInterchange] = useState<Station>();
   const [tripRecTrip, setTripRecTrip] = useState<TripServiceInfo>();
 
+  const applyEnabled = universe != 0;
+
   const applyMeasuresMutation = useMutation(
     (measures: MeasureWrapper[]) =>
       sendPaxForecastApplyMeasuresRequest({
@@ -297,8 +299,11 @@ function MeasureInput(): JSX.Element {
           className={`w-full p-3 rounded ${
             applyMeasuresMutation.isLoading
               ? "bg-db-red-300 text-db-red-100 cursor-wait"
-              : "bg-db-red-500 hover:bg-db-red-600 text-white"
+              : applyEnabled
+              ? "bg-db-red-500 hover:bg-db-red-600 text-white"
+              : "bg-db-red-300 text-db-red-100 cursor-not-allowed"
           }`}
+          disabled={!applyEnabled}
         >
           Maßnahme simulieren
         </button>
@@ -313,6 +318,14 @@ function MeasureInput(): JSX.Element {
                 ? applyMeasuresMutation.error.message
                 : "Unbekannter Fehler"}
             </div>
+          </div>
+        )}
+
+        {applyEnabled ? null : (
+          <div>
+            Maßnahmen können nicht im Hauptuniversum (#0) simuliert werden.
+            Bitte zuerst ein neues Paralleluniversum anlegen (Kopieren-Button in
+            der Kopfzeile) bzw. auswählen.
           </div>
         )}
       </div>
