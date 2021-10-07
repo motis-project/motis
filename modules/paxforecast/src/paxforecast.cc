@@ -556,7 +556,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
   auto const& sched = get_sched();
   auto& data = *get_shared_data<paxmon_data*>(motis::paxmon::DATA_KEY);
   LOG(info) << "universe: " << req->universe();
-  auto& uv = data.multiverse_.get(req->universe());
+  auto uv = data.multiverse_.get(req->universe());
   auto& caps = data.capacity_maps_;
 
   // update measures
@@ -585,7 +585,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
     auto const loc_time = t + req->preparation_time();
     manual_timer get_affected_groups_timer{"get_affected_grous"};
     auto const affected_groups =
-        measures::get_affected_groups(sched, uv, loc_time, ms);
+        measures::get_affected_groups(sched, *uv, loc_time, ms);
     get_affected_groups_timer.stop_and_print();
 
     LOG(info) << "affected groups: " << affected_groups.measures_.size();
@@ -638,7 +638,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
       for (auto& [grp_key, cpg] : combined) {
         for (auto const& alt : cpg.alternatives_) {
           for (auto const& leg : alt.compact_journey_.legs_) {
-            get_or_add_trip(sched, caps, uv, leg.trip_);
+            get_or_add_trip(sched, caps, *uv, leg.trip_);
           }
         }
       }
@@ -647,12 +647,12 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
     manual_timer sim_timer{"passenger behavior simulation"};
     auto pb = behavior::default_behavior{deterministic_mode_};
     auto const sim_result =
-        simulate_behavior(sched, caps, uv, combined, pb.pb_);
+        simulate_behavior(sched, caps, *uv, combined, pb.pb_);
     sim_timer.stop_and_print();
 
     manual_timer update_groups_timer{"update groups"};
     tick_statistics tick_stats;
-    update_tracked_groups(sched, uv, sim_result, {}, tick_stats);
+    update_tracked_groups(sched, *uv, sim_result, {}, tick_stats);
     update_groups_timer.stop_and_print();
   }
 

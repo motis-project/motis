@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <stdexcept>
@@ -12,40 +13,41 @@
 namespace motis::paxmon {
 
 struct multiverse {
-  multiverse() { universes_.emplace_back(mcd::make_unique<universe>()); }
+  multiverse() { universes_.emplace_back(std::make_shared<universe>()); }
 
   universe& primary() {
     std::lock_guard lock{mutex_};
-    return *universes_.front();
+    return *universes_.front().get();
   }
 
-  universe& get(universe_id const id) {
+  std::shared_ptr<universe> get(universe_id const id) {
     std::lock_guard lock{mutex_};
-    auto* ptr = universes_.at(id).get();
+    auto ptr = universes_.at(id);
     if (ptr != nullptr) {
-      return *ptr;
+      return ptr;
     } else {
       throw std::runtime_error{"requested paxmon universe already destroyed"};
     }
   }
 
-  std::optional<universe*> try_get(universe_id const id) {
+  std::optional<std::shared_ptr<universe>> try_get(universe_id const id) {
     std::lock_guard lock{mutex_};
     if (id < universes_.size()) {
-      if (auto* ptr = universes_[id].get(); ptr != nullptr) {
+      if (auto ptr = universes_[id]; ptr != nullptr) {
         return {ptr};
       }
     }
     return {};
   }
 
-  universe& fork(universe_id const base_id) {
+  std::shared_ptr<universe> fork(universe_id const base_id) {
     std::lock_guard lock{mutex_};
-    auto const& base_uv = get(base_id);
+    auto const base_uv = get(base_id);
     auto const new_id = universes_.size();
-    auto& new_uv = universes_.emplace_back(mcd::make_unique<universe>(base_uv));
+    auto new_uv =
+        universes_.emplace_back(std::make_shared<universe>(*base_uv.get()));
     new_uv->id_ = new_id;
-    return *new_uv;
+    return new_uv;
   }
 
   bool destroy(universe_id const id) {
@@ -59,8 +61,8 @@ struct multiverse {
     return false;
   }
 
-  mcd::vector<mcd::unique_ptr<universe>> universes_;
-  std::mutex mutex_;
+  mcd::vector<std::shared_ptr<universe>> universes_;
+  std::recursive_mutex mutex_;
 };
 
 }  // namespace motis::paxmon

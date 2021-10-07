@@ -1133,12 +1133,12 @@ msg_ptr paxmon::fork_universe(msg_ptr const& msg) {
 
   auto const fork = [&](universe const& base) -> msg_ptr {
     scoped_timer timer{"paxmon: fork universe"};
-    auto& new_uv = data_.multiverse_.fork(base.id_);
-    broadcast(base, new_uv);
+    auto new_uv = data_.multiverse_.fork(base.id_);
+    broadcast(base, *new_uv);
     message_creator mc;
     mc.create_and_finish(
         MsgContent_PaxMonForkUniverseResponse,
-        CreatePaxMonForkUniverseResponse(mc, new_uv.id_).Union());
+        CreatePaxMonForkUniverseResponse(mc, new_uv->id_).Union());
     return make_msg(mc);
   };
 
