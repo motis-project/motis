@@ -2,7 +2,7 @@ name: Unix Build
 
 on:
   schedule:
-    - cron:  '0 3 * * 2,6'
+    - cron: '0 3 * * 2,6'
   push:
     branches: [ master ]
   pull_request:
@@ -226,9 +226,9 @@ jobs:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
-               buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
-               buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-
-               buildcache-${{ matrix.config.name }}-
+            buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-
+            buildcache-${{ matrix.config.name }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v2
@@ -286,7 +286,7 @@ jobs:
         if: matrix.config.tests == 'On'
         run: ${{ matrix.config.emulator }} ./build/motis-itest
 
-      # ==== DISTRIBUTION ====
+      # ==== WEB INTERFACE ====
       - name: Compile Web Interface
         if: matrix.config.webui == 'On'
         run: |
@@ -294,11 +294,35 @@ jobs:
           rm -r ui/web/elm-stuff
           rm -r ui/web/src
 
+      - name: pnpm Cache
+        if: matrix.config.webui == 'On'
+        uses: actions/cache@v2
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Install RSL Web Interface Dependencies
+      - uses: pnpm/action-setup@v2.0.1
+        if: matrix.config.webui == 'On'
+        with:
+          version: 6.16.1
+          run_install: |
+            - cwd: ./ui/rsl
+
+      - name: Compile RSL Web Interface
+        if: matrix.config.webui == 'On'
+        run: pnpm run build
+        working-directory: ./ui/rsl
+
+      # ==== DISTRIBUTION ====
       - name: Create Distribution
         if: matrix.config.artifact
         run: |
           mkdir motis
           mv ui/web motis
+          mv ui/rsl/dist motis/rsl
           mv build/motis motis
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
           cp -r deps/ppr/profiles motis/ppr-profiles
@@ -426,7 +450,6 @@ jobs:
       - name: Docker build and push
         uses: docker/build-push-action@v2
         with:
-          push: ${{ github.event_name != 'pull_request' }}
           context: .
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
