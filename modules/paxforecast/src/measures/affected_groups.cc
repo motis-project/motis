@@ -13,9 +13,9 @@ using namespace motis::paxmon;
 
 namespace motis::paxforecast::measures {
 
-bool is_recipient(schedule const& sched, universe const& uv,
-                  passenger_group const& pg, passenger_localization const& loc,
-                  recipients const& rcpts) {
+bool is_recipient(schedule const& sched, universe const& /*uv*/,
+                  passenger_group const& /*pg*/,
+                  passenger_localization const& loc, recipients const& rcpts) {
   if (loc.in_trip()) {
     return std::any_of(
         begin(rcpts.trips_), end(rcpts.trips_),

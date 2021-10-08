@@ -90,6 +90,7 @@ private:
         case measures::load_level::FULL:
           score += load_info_weight * load_info_full_weight;
           break;
+        default: break;
       }
       if (score == best_score) {
         best_alternatives.emplace_back(idx);
