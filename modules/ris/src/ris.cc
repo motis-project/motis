@@ -545,20 +545,18 @@ struct ris::impl {
   template <typename Reader, typename Publisher>
   void parse_and_write_to_db(Reader&& reader, file_type const type,
                              Publisher& pub) {
-    auto const risml_fn = [this](
-                              std::string_view s, std::string_view,
-                              std::function<void(ris_message &&)> const& cb) {
-      risml_parser_.to_ris_message(s, cb);
+    auto const risml_fn = [](std::string_view s, std::string_view,
+                             std::function<void(ris_message &&)> const& cb) {
+      risml::risml_parser::to_ris_message(s, cb);
     };
     auto const gtfsrt_fn = [this](
                                std::string_view s, std::string_view,
                                std::function<void(ris_message &&)> const& cb) {
       gtfsrt_parser_.to_ris_message(s, cb);
     };
-    auto const ribasis_fn = [this](
-                                std::string_view s, std::string_view,
-                                std::function<void(ris_message &&)> const& cb) {
-      ribasis_parser_.to_ris_message(s, cb);
+    auto const ribasis_fn = [](std::string_view s, std::string_view,
+                               std::function<void(ris_message &&)> const& cb) {
+      ribasis::ribasis_parser::to_ris_message(s, cb);
     };
     auto const file_fn = [&](std::string_view s, std::string_view file_name,
                              std::function<void(ris_message &&)> const& cb) {

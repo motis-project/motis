@@ -63,7 +63,7 @@ std::vector<std::pair<service_info, unsigned>> get_service_infos_for_leg(
     }
     if (section.to_station_id() == leg.exit_station_id_ &&
         get_schedule_time(sched, section.ev_key_to()) == leg.exit_time_) {
-      in_trip = false;
+      // in_trip = false;
       break;
     }
   }

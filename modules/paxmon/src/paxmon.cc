@@ -699,6 +699,7 @@ msg_ptr paxmon::get_groups_in_trip(msg_ptr const& msg) {
       case PaxMonGroupByStation_Last:
         station = pg->compact_planned_journey_.destination_station_id();
         break;
+      default: break;
     }
     return mcd::pair{station, trp};
   };
@@ -739,7 +740,6 @@ msg_ptr paxmon::get_groups_in_trip(msg_ptr const& msg) {
   auto const make_section_info = [&](edge const* e) {
     auto const* from = e->from(uv);
     auto const* to = e->to(uv);
-    auto const groups = uv.pax_connection_info_.groups_[e->pci_];
 
     struct grouped_pgs_t {
       std::vector<passenger_group const*> groups_{};

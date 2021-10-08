@@ -383,11 +383,11 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
                   fbb.CreateVector(utl::to_vec(
                       stop_seq,
                       [](trip::stop_identity const& s) {
-                        return static_cast<uint8_t>(s.in_allowed_ ? 1u : 0u);
+                        return static_cast<uint8_t>(s.in_allowed_ ? 1U : 0U);
                       })),
                   fbb.CreateVector(
                       utl::to_vec(stop_seq, [](trip::stop_identity const& s) {
-                        return static_cast<uint8_t>(s.out_allowed_ ? 1u : 0u);
+                        return static_cast<uint8_t>(s.out_allowed_ ? 1U : 0U);
                       })));
             }),
         fbb.CreateString(serialize_bitset(traffic_days)),

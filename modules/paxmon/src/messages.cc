@@ -123,7 +123,7 @@ passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg) {
       pg->generation(), pg->estimated_delay(), pg->id());
 }
 
-PaxMonGroupBaseInfo to_fbs_base_info(FlatBufferBuilder& fbb,
+PaxMonGroupBaseInfo to_fbs_base_info(FlatBufferBuilder& /*fbb*/,
                                      passenger_group const& pg) {
   return PaxMonGroupBaseInfo{pg.id_, pg.passengers_, pg.probability_};
 }

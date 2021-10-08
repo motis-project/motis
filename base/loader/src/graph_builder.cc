@@ -521,15 +521,14 @@ light_connection graph_builder::section_to_connection(
       sched_.last_event_schedule_time_,
       motis_to_unixtime(sched_, arr_motis_time) - SCHEDULE_OFFSET_MINUTES * 60);
 
-  return light_connection(
-      dep_motis_time, arr_motis_time,
-      mcd::set_get_or_create(connections_, &con_,
-                             [&]() {
-                               sched_.full_connections_.emplace_back(
-                                   mcd::make_unique<connection>(con_));
-                               return sched_.full_connections_.back().get();
-                             }),
-      trips);
+  return {dep_motis_time, arr_motis_time,
+          mcd::set_get_or_create(connections_, &con_,
+                                 [&]() {
+                                   sched_.full_connections_.emplace_back(
+                                       mcd::make_unique<connection>(con_));
+                                   return sched_.full_connections_.back().get();
+                                 }),
+          trips};
 }
 
 void graph_builder::connect_reverse() {

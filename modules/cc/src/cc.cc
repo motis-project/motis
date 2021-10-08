@@ -52,7 +52,7 @@ ev_key get_event_at(schedule const& sched, Connection const* con,
       begin(*trp->edges_), end(*trp->edges_), [&](trip::route_edge const& e) {
         auto const k = ev_key{e, trp->lcon_idx_, ev_type};
         auto const schedule_time = get_schedule_time(sched, k);
-        return (k.lcon()->valid_ != 0u) &&  //
+        return (k.lcon()->valid_ != 0U) &&  //
                ((ev_type == event_type::ARR &&
                  e->to_->get_station()->id_ == station_idx &&
                  schedule_time == ev_time) ||

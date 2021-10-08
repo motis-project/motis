@@ -202,7 +202,7 @@ msg_ptr railviz::get_trip_guesses(msg_ptr const& msg) {
     utl::verify(it != end(merged), "trip not found in trip");
     auto const merged_ci_idx = std::distance(begin(merged), it);
 
-    auto i = 0u;
+    auto i = 0U;
     for (auto ci = lcon.full_con_->con_info_; ci != nullptr;
          ci = ci->merged_with_) {
       if (i == merged_ci_idx) {
@@ -322,7 +322,7 @@ msg_ptr railviz::get_station(msg_ptr const& msg) {
     std::vector<Offset<TripInfo>> trips;
 
     auto const& merged_trips = *sched.merged_trips_[k.lcon()->trips_];
-    auto merged_trips_idx = 0u;
+    auto merged_trips_idx = 0U;
     for (auto ci = k.lcon()->full_con_->con_info_; ci != nullptr;
          ci = ci->merged_with_, ++merged_trips_idx) {
       auto const& trp = merged_trips.at(merged_trips_idx);
@@ -355,7 +355,7 @@ msg_ptr railviz::get_station(msg_ptr const& msg) {
                         get_track(ev),
                         fbb.CreateString(
                             sched.tracks_[get_schedule_track(sched, ev.k_)]),
-                        ev.k_.lcon()->valid_ != 0u, to_fbs(di.get_reason())));
+                        ev.k_.lcon()->valid_ != 0U, to_fbs(di.get_reason())));
               })))
           .Union());
 
