@@ -8,6 +8,7 @@
 #include "flatbuffers/flatbuffers.h"
 
 #include "cista/hashing.h"
+#include "cista/reflection/comparable.h"
 
 #include "motis/hash_map.h"
 #include "motis/hash_set.h"
@@ -15,6 +16,7 @@
 #include "motis/vector.h"
 
 #include "motis/core/common/hash_helper.h"
+#include "motis/core/schedule/bitfield.h"
 #include "motis/core/schedule/connection.h"
 #include "motis/core/schedule/edges.h"
 #include "motis/core/schedule/nodes.h"
@@ -29,6 +31,11 @@
 #include "motis/schedule-format/Schedule_generated.h"
 
 namespace motis::loader {
+
+struct lcon_times {
+  CISTA_COMPARABLE()
+  uint16_t d_time_, a_time_;
+};
 
 struct route_section {
   route_section()

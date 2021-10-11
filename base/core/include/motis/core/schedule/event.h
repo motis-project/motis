@@ -31,18 +31,14 @@ struct ev_key {
   ev_key get_opposite() const {
     auto const ev_type =
         ev_type_ == event_type::ARR ? event_type::DEP : event_type::ARR;
-    return {route_edge_, lcon_idx_, ev_type};
+    return {route_edge_, lcon_idx_, ev_type, day_};
   }
 
   light_connection const* lcon() const {
     return &route_edge_->m_.route_edge_.conns_[lcon_idx_];
   }
 
-  time get_time() const {
-    return is_not_null()
-               ? ev_type_ == event_type::DEP ? lcon()->d_time_ : lcon()->a_time_
-               : INVALID_TIME;
-  }
+  time get_time() const { return lcon()->event_time(ev_type_, day_); }
 
   bool is_canceled() const { return lcon()->valid_ == 0U; }
 
@@ -58,12 +54,13 @@ struct ev_key {
   uint32_t get_station_idx() const { return get_node()->get_station()->id_; }
 
   cista::hash_t hash() const {
-    return cista::build_hash(route_edge_, lcon_idx_, ev_type_);
+    return cista::build_hash(route_edge_, lcon_idx_, ev_type_, day_);
   }
 
   trip::route_edge route_edge_{nullptr};
   lcon_idx_t lcon_idx_{0};
   event_type ev_type_{event_type::DEP};
+  day_idx_t day_{0};
 };
 
 }  // namespace motis

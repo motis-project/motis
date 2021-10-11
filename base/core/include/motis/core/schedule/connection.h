@@ -10,6 +10,7 @@
 
 #include "motis/core/common/hash_helper.h"
 #include "motis/core/schedule/attribute.h"
+#include "motis/core/schedule/bitfield.h"
 #include "motis/core/schedule/event_type.h"
 #include "motis/core/schedule/provider.h"
 #include "motis/core/schedule/time.h"
@@ -63,38 +64,46 @@ struct connection {
 };
 
 struct light_connection {
-  light_connection()
-      : full_con_{nullptr},
-        d_time_{INVALID_TIME},
-        a_time_{INVALID_TIME},
-        trips_{0U},
-        valid_{0U} {}
+  light_connection() : bitfield_idx_{0U}, trips_{0U}, valid_{0U} {}
 
-  explicit light_connection(time d_time) : d_time_{d_time} {}  // NOLINT
-
-  light_connection(time const d_time, time const a_time,
+  light_connection(int16_t const d_time, int16_t const a_time,
+                   size_t const* bitfield_idx,
                    connection const* full_con = nullptr,
                    merged_trips_idx const trips = 0)
       : full_con_{full_con},
         d_time_{d_time},
         a_time_{a_time},
+        bitfield_idx_{bitfield_idx},
         trips_{trips},
         valid_{1U} {}
 
-  time event_time(event_type const t) const {
-    return t == event_type::DEP ? d_time_ : a_time_;
+  time event_time(event_type const t, day_idx_t day) const {
+    return {day, t == event_type::DEP ? d_time_ : a_time_};
   }
 
-  unsigned travel_time() const { return a_time_ - d_time_; }
+  duration travel_time() const { return a_time_ - d_time_; }
 
-  inline bool operator<(light_connection const& o) const {
-    return d_time_ < o.d_time_;
-  }
-
-  ptr<connection const> full_con_;
-  time d_time_, a_time_;
+  ptr<connection const> full_con_{nullptr};
+  int16_t d_time_{std::numeric_limits<decltype(d_time_)>::max()};
+  int16_t a_time_{std::numeric_limits<decltype(d_time_)>::max()};
+  union {
+    size_t bitfield_idx_;
+    bitfield const* traffic_days_;
+  };
   uint32_t trips_ : 31;
   uint32_t valid_ : 1;
+};
+
+struct d_time_cmp {
+  bool operator()(light_connection const& a, light_connection const& b) {
+    return a.d_time_ < b.d_time_;
+  }
+};
+
+struct a_time_cmp {
+  bool operator()(light_connection const& a, light_connection const& b) {
+    return a.a_time_ < b.a_time_;
+  }
 };
 
 // Index of a light_connection in a route edge.

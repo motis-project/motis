@@ -19,13 +19,13 @@ struct delay_info {
     if (schedule_time_ == 0) {
       *this = d;
     } else {
-      if (d.forecast_time_ != 0) {
+      if (d.forecast_time_.valid()) {
         forecast_time_ = d.forecast_time_;
       }
-      if (d.propagation_time_ != 0) {
+      if (d.propagation_time_.valid()) {
         propagation_time_ = d.propagation_time_;
       }
-      if (is_time_ != 0) {
+      if (is_time_.valid()) {
         is_time_ = d.is_time_;
       }
     }
@@ -43,7 +43,7 @@ struct delay_info {
     }
 
     if (r != timestamp_reason::REPAIR) {
-      repair_time_ = 0;
+      repair_time_ = {};
     }
 
     return get_current_time() != before;
@@ -65,14 +65,14 @@ struct delay_info {
   inline time get_original_time() const { return get(get_original_reason()); }
 
   inline timestamp_reason get_reason() const {
-    if (repair_time_ != 0) {
+    if (repair_time_.valid()) {
       return timestamp_reason::REPAIR;
     }
     return get_original_reason();
   }
 
   inline timestamp_reason get_original_reason() const {
-    if (is_time_ != 0) {
+    if (is_time_.valid()) {
       return timestamp_reason::IS;
     } else {
       auto const times = {

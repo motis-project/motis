@@ -14,6 +14,7 @@
 #include "motis/core/common/fws_multimap.h"
 #include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/attribute.h"
+#include "motis/core/schedule/bitfield.h"
 #include "motis/core/schedule/category.h"
 #include "motis/core/schedule/constant_graph.h"
 #include "motis/core/schedule/delay_info.h"
@@ -35,8 +36,7 @@ struct schedule {
   schedule& operator=(schedule const&) = delete;
   ~schedule() = default;
 
-  unixtime first_event_schedule_time_{std::numeric_limits<time_t>::max()};
-  unixtime last_event_schedule_time_{std::numeric_limits<time_t>::min()};
+  unixtime loaded_begin_{0}, loaded_end_{0};
   unixtime schedule_begin_{0}, schedule_end_{0};
   mcd::vector<mcd::string> prefixes_;
   mcd::vector<mcd::string> names_;
@@ -66,6 +66,7 @@ struct schedule {
   mcd::vector<mcd::unique_ptr<provider>> providers_;
   mcd::vector<mcd::unique_ptr<mcd::string>> directions_;
   mcd::vector<mcd::unique_ptr<timezone>> timezones_;
+  std::vector<bitfield> bitfields_;
 
   mcd::hash_map<gtfs_trip_id, ptr<trip const>> gtfs_trip_ids_;
   mcd::vector<mcd::pair<primary_trip_id, ptr<trip>>> trips_;

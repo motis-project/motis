@@ -50,7 +50,7 @@ struct waiting_time_rules {
   int default_group_{0};
   mcd::hash_map<mcd::string, int> category_map_;
   mcd::vector<int> family_to_wtr_category_;
-  flat_matrix<duration> waiting_time_matrix_;
+  flat_matrix<uint32_t> waiting_time_matrix_;
   mcd::vector<bool> waits_for_other_trains_;
   mcd::vector<bool> other_trains_wait_for_;
 };
