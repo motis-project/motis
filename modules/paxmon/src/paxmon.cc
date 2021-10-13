@@ -621,7 +621,6 @@ msg_ptr paxmon::add_groups(msg_ptr const& msg) {
 msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
   auto const req = motis_content(PaxMonRemoveGroupsRequest, msg);
   auto& uv = get_universe(req->universe());
-  auto const is_primary_universe = uv.id_ == 0;
   auto removed_groups = 0ULL;
 
   for (auto const id : *req->ids()) {
