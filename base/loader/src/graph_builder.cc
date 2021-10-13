@@ -555,7 +555,7 @@ void graph_builder::sort_trips() {
 bitfield const& graph_builder::get_or_create_bitfield(
     String const* serialized_bitfield) {
   return utl::get_or_create(bitfields_, serialized_bitfield, [&]() {
-    return deserialize_bitset<BIT_COUNT>(
+    return deserialize_bitset<MAX_DAYS>(
         {serialized_bitfield->c_str(),
          static_cast<size_t>(serialized_bitfield->Length())});
   });

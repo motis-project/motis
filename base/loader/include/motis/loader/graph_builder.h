@@ -24,7 +24,6 @@
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/schedule/timezone.h"
 
-#include "motis/loader/bitfield.h"
 #include "motis/loader/loader_options.h"
 #include "motis/loader/timezone_util.h"
 

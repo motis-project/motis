@@ -67,7 +67,7 @@ struct light_connection {
   light_connection() : bitfield_idx_{0U}, trips_{0U}, valid_{0U} {}
 
   light_connection(int16_t const d_time, int16_t const a_time,
-                   size_t const* bitfield_idx,
+                   size_t const bitfield_idx,
                    connection const* full_con = nullptr,
                    merged_trips_idx const trips = 0)
       : full_con_{full_con},

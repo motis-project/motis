@@ -44,9 +44,9 @@ TEST(loader_hrd_track_rules, parse_track_rules_1) {
     // ASSERT_TRUE(cstr(to_string(rule_set[0].track_name, b).c_str()) == "3");
 
     std::string all_days_bit_str;
-    all_days_bit_str.resize(BIT_COUNT);
+    all_days_bit_str.resize(MAX_DAYS);
     std::fill(begin(all_days_bit_str), end(all_days_bit_str), '1');
-    std::bitset<BIT_COUNT> all_days(all_days_bit_str);
+    std::bitset<MAX_DAYS> all_days(all_days_bit_str);
 
     ASSERT_TRUE(rule_set[0].bitfield_num_ == 0);
     ASSERT_TRUE(rule_set[0].time_ == TIME_NOT_SET);

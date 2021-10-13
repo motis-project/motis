@@ -78,7 +78,7 @@ private:
   }
 
   inline bitfield get_bitfield(Service const* service) {
-    return deserialize_bitset<BIT_COUNT>(
+    return deserialize_bitset<MAX_DAYS>(
                {service->traffic_days()->c_str(),
                 static_cast<std::size_t>(service->traffic_days()->size())}) &
            schedule_traffic_days_mask_;
@@ -191,7 +191,7 @@ public:
 
 void build_rule_routes(graph_builder& gb,
                        Vector<Offset<RuleService>> const* rule_services) {
-  auto schedule_traffic_days_mask = create_uniform_bitfield<BIT_COUNT>('0');
+  auto schedule_traffic_days_mask = create_uniform_bitfield<MAX_DAYS>('0');
   for (auto day_idx = gb.first_day_; day_idx <= gb.last_day_; ++day_idx) {
     schedule_traffic_days_mask.set(static_cast<std::size_t>(day_idx), true);
   }

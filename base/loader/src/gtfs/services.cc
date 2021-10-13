@@ -35,7 +35,7 @@ greg::date bound_date(std::map<std::string, calendar> const& base, bool first) {
 bitfield calendar_to_bitfield(greg::date const& start, calendar const& c) {
   auto first = std::min(start, c.first_day_);
   auto last =
-      std::min(start + greg::days(BIT_COUNT), c.last_day_ + greg::days(1));
+      std::min(start + greg::days(MAX_DAYS), c.last_day_ + greg::days(1));
 
   bitfield traffic_days;
   int bit = (first - start).days();

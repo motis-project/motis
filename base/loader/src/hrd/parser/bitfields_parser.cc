@@ -61,7 +61,7 @@ std::map<int, bitfield> parse_bitfields(loaded_file const& f, config const& c) {
         hex_str_to_bitset(line.substr(c.bf_.value_), f.name(), line_number);
   });
 
-  bitfields[ALL_DAYS_KEY] = create_uniform_bitfield<BIT_COUNT>('1');
+  bitfields[ALL_DAYS_KEY] = create_uniform_bitfield<MAX_DAYS>('1');
 
   return bitfields;
 }
