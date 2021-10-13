@@ -19,7 +19,7 @@ function UniverseControl(): JSX.Element {
       sendPaxMonForkUniverseRequest({ universe: baseUniverse }),
     {
       onSuccess: (data) => {
-        setUniverses([...universes, data.universe]);
+        setUniverses([...new Set([...universes, data.universe])]);
         setUniverse(data.universe);
       },
     }
