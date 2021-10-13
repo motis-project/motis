@@ -4,9 +4,11 @@
 #include <cstdint>
 #include <cstring>
 #include <algorithm>
+#include <bitset>
 #include <limits>
 #include <new>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -18,6 +20,8 @@ template <typename Type>
 struct allocator {
   static constexpr auto const INITIAL_BLOCK_SIZE = 10'000;
   static constexpr auto const ADDITIONAL_BLOCK_SIZE = 100'000;
+  static constexpr auto const MAX_BLOCK_SIZE =
+      std::max(INITIAL_BLOCK_SIZE, ADDITIONAL_BLOCK_SIZE);
 
   struct block {
     block() = default;
@@ -29,8 +33,23 @@ struct allocator {
       size_ = 0;
     }
 
-    block(block const& o) : ptr_{operator new(o.size_)}, size_{o.size_} {
-      std::memcpy(ptr_, o.ptr_, size_);
+    block(block const& o)
+        : ptr_{operator new(o.size_)}, size_{o.size_}, in_use_{o.in_use_} {
+      if constexpr (std::is_trivially_copyable_v<Type>) {
+        std::memcpy(ptr_, o.ptr_, size_);
+      } else {
+        for (auto i = 0ULL; i < size_ / sizeof(Type); ++i) {
+          if (o.in_use_[i]) {
+            auto const offset = i * sizeof(Type);
+            auto const this_addr = reinterpret_cast<std::uintptr_t>(ptr_) +
+                                   static_cast<std::uintptr_t>(offset);
+            auto const other_addr = reinterpret_cast<std::uintptr_t>(o.ptr_) +
+                                    static_cast<std::uintptr_t>(offset);
+            new (reinterpret_cast<Type*>(this_addr))
+                Type{*reinterpret_cast<Type const*>(other_addr)};
+          }
+        }
+      }
     }
 
     block(block&& o) noexcept : block{} { swap(*this, o); }
@@ -49,6 +68,7 @@ struct allocator {
       using std::swap;
       swap(a.ptr_, b.ptr_);
       swap(a.size_, b.size_);
+      swap(a.in_use_, b.in_use_);
     }
 
     inline std::size_t size() const { return size_; }
@@ -56,6 +76,7 @@ struct allocator {
 
     void* ptr_{};
     std::size_t size_{};
+    std::bitset<MAX_BLOCK_SIZE> in_use_;
   };
 
   struct pointer {
@@ -120,7 +141,9 @@ private:
     ++allocation_count_;
     if (free_list_.next_) {
       --free_list_size_;
-      return free_list_.take(*this);
+      auto const ptr = free_list_.take(*this);
+      mark_in_use(ptr);
+      return ptr;
     }
     if (!next_ptr_ ||
         end_ptr_.block_offset_ - next_ptr_.block_offset_ < sizeof(Type)) {
@@ -131,6 +154,7 @@ private:
       bytes_allocated_ += new_block.size();
     }
     auto const ptr = next_ptr_;
+    mark_in_use(ptr);
     next_ptr_.block_offset_ += sizeof(Type);
     return ptr;
   }
@@ -139,6 +163,7 @@ private:
     --elements_allocated_;
     ++release_count_;
     ++free_list_size_;
+    mark_free(ptr);
     free_list_.push(*this, ptr);
   }
 
@@ -148,6 +173,14 @@ private:
     } else {
       return ADDITIONAL_BLOCK_SIZE * sizeof(Type);
     }
+  }
+
+  inline void mark_in_use(pointer ptr) {
+    blocks_[ptr.block_index_].in_use_.set(ptr.block_offset_ / sizeof(Type));
+  }
+
+  inline void mark_free(pointer ptr) {
+    blocks_[ptr.block_index_].in_use_.reset(ptr.block_offset_ / sizeof(Type));
   }
 
   std::vector<block> blocks_;

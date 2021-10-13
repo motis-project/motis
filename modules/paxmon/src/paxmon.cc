@@ -630,17 +630,12 @@ msg_ptr paxmon::remove_groups(msg_ptr const& msg) {
       continue;
     }
     ++removed_groups;
-    if (is_primary_universe) {
-      for (auto const& leg : pg->compact_planned_journey_.legs_) {
-        rt_update_ctx_.trips_affected_by_last_update_.insert(leg.trip_);
-      }
-      remove_passenger_group_from_graph(uv, pg);
-      if (!keep_group_history_) {
-        uv.passenger_groups_.release(pg->id_);
-      }
-    } else {
-      // TODO(pablo): workaround
-      pg->probability_ = 0.0F;
+    for (auto const& leg : pg->compact_planned_journey_.legs_) {
+      rt_update_ctx_.trips_affected_by_last_update_.insert(leg.trip_);
+    }
+    remove_passenger_group_from_graph(uv, pg);
+    if (!keep_group_history_) {
+      uv.passenger_groups_.release(pg->id_);
     }
   }
 
