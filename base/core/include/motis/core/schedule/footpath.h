@@ -10,7 +10,7 @@ struct footpath {
   CISTA_COMPARABLE()
   uint32_t from_station_;
   uint32_t to_station_;
-  time duration_;
+  duration duration_;
 };
 
 }  // namespace motis

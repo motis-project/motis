@@ -293,7 +293,7 @@ struct rule_service_route_builder {
   }
 
   merged_trips_idx get_or_create_trips(
-      std::array<participant, 16> const& services, int day_idx) {
+      std::array<participant, 16> const& services, unsigned day_idx) {
     auto k = get_services_key(services, day_idx);
     return utl::get_or_create(trips_, k, [&]() {
       return static_cast<merged_trips_idx>(push_mem(
@@ -326,9 +326,9 @@ struct rule_service_route_builder {
     auto const& traffic_days = traffic_days_.at(services[0].service_);
     for (unsigned day_idx = first_day_; day_idx <= last_day_; ++day_idx) {
       if (traffic_days.test(day_idx)) {
-        lcons.push_back(
-            gb_.section_to_connection(get_or_create_trips(services, day_idx),
-                                      services, day_idx, 0, adjusted));
+        lcons.push_back(gb_.section_to_connection(
+            get_or_create_trips(services, day_idx), services, day_idx,
+            motis::INVALID_TIME, adjusted));
         adjusted = false;
       }
     }

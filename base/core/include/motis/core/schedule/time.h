@@ -6,6 +6,8 @@
 #include <limits>
 #include <string>
 
+#include "cista/hash.h"
+
 #include "motis/core/common/constexpr_abs.h"
 #include "motis/core/common/unixtime.h"
 
@@ -120,6 +122,10 @@ struct time {
   uint16_t mam() const {
     assert(min_ < MINUTES_A_DAY);
     return min_;
+  }
+
+  constexpr cista::hash_t hash() const {
+    return cista::hash_combine(day_, min_);
   }
 
 private:

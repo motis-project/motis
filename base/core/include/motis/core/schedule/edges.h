@@ -61,7 +61,6 @@ public:
     AFTER_TRAIN_FWD_EDGE,
     AFTER_TRAIN_BWD_EDGE,
     MUMO_EDGE,
-    HOTEL_EDGE,
     THROUGH_EDGE,
     ENTER_EDGE,
     EXIT_EDGE,
@@ -72,14 +71,39 @@ public:
   edge() : from_{nullptr}, to_{nullptr} {}
 
   /** route edge constructor. */
-  edge(node* from, node* to, mcd::vector<light_connection> const& connections)
-      : from_(from), to_(to) {
+  edge(node* const from, node* const to,
+       mcd::vector<light_connection> const& connections,
+       size_t const route_traffic_days)
+      : from_{from}, to_{to} {
     m_.type_ = ROUTE_EDGE;
     if (!connections.empty()) {
+      m_.route_edge_.bitfield_idx_ = route_traffic_days;
       m_.route_edge_.init_empty();
-      m_.route_edge_.conns_.set(std::begin(connections), std::end(connections));
-      std::sort(std::begin(m_.route_edge_.conns_),
-                std::end(m_.route_edge_.conns_));
+      m_.route_edge_.conns_.set(begin(connections), end(connections));
+      std::sort(begin(m_.route_edge_.conns_), end(m_.route_edge_.conns_),
+                d_time_cmp{});
+    }
+  }
+
+  /** oneway route edge constructor. */
+  edge(node* const from, node* const to,
+       std::vector<light_connection> const& connections,
+       size_t const route_traffic_days, search_dir const dir)
+      : from_{from}, to_{to} {
+    if (dir == search_dir::FWD) {
+      m_.type_ = FWD_ROUTE_EDGE;
+      std::sort(begin(m_.route_edge_.conns_), std::end(m_.route_edge_.conns_),
+                d_time_cmp{});
+    } else if (dir == search_dir::BWD) {
+      m_.type_ = BWD_ROUTE_EDGE;
+      std::sort(begin(m_.route_edge_.conns_), std::end(m_.route_edge_.conns_),
+                a_time_cmp{});
+    }
+
+    if (!connections.empty()) {
+      m_.route_edge_.init_empty();
+      m_.route_edge_.conns_.set(begin(connections), std::end(connections));
+      m_.route_edge_.bitfield_idx_ = route_traffic_days;
     }
   }
 
@@ -173,13 +197,12 @@ public:
       } else {
         return edge_cost(
             std::min_element(
-                std::begin(m_.route_edge_.conns_),
-                std::end(m_.route_edge_.conns_),
+                begin(m_.route_edge_.conns_), std::end(m_.route_edge_.conns_),
                 [](light_connection const& c1, light_connection const& c2) {
                   return c1.travel_time() < c2.travel_time();
                 })
                 ->travel_time(),
-            false, std::begin(m_.route_edge_.conns_)->full_con_->price_);
+            false, begin(m_.route_edge_.conns_)->full_con_->price_);
       }
     } else if (m_.type_ == FOOT_EDGE || m_.type_ == AFTER_TRAIN_FWD_EDGE ||
                m_.type_ == AFTER_TRAIN_BWD_EDGE || m_.type_ == ENTER_EDGE ||
@@ -257,9 +280,9 @@ public:
     }
 
     if (Dir == search_dir::FWD) {
-      auto it = std::lower_bound(std::begin(m_.route_edge_.conns_),
-                                 std::end(m_.route_edge_.conns_),
-                                 light_connection(start_time.mam()));
+      auto it = std::lower_bound(
+          begin(m_.route_edge_.conns_), std::end(m_.route_edge_.conns_),
+          light_connection{start_time.mam(), 0U}, d_time_cmp{});
 
       auto const abort_time = start_time + MAX_TRAVEL_TIME_MINUTES;
       auto day = static_cast<uint16_t>(start_time.day());
@@ -289,7 +312,7 @@ public:
       auto it = std::lower_bound(
           std::rbegin(m_.route_edge_.conns_), std::rend(m_.route_edge_.conns_),
           light_connection{0U, static_cast<uint16_t>(start_time.mam())},
-          a_time_cmp);
+          a_time_cmp{});
 
       auto const abort_time = start_time - MAX_TRAVEL_TIME_MINUTES;
       auto day = static_cast<uint16_t>(start_time.day());
@@ -368,7 +391,6 @@ public:
       case AFTER_TRAIN_FWD_EDGE: return "AFTER_TRAIN_FWD_EDGE";
       case AFTER_TRAIN_BWD_EDGE: return "AFTER_TRAIN_BWD_EDGE";
       case MUMO_EDGE: return "MUMO_EDGE";
-      case HOTEL_EDGE: return "HOTEL_EDGE";
       case THROUGH_EDGE: return "THROUGH_EDGE";
       case ENTER_EDGE: return "ENTER_EDGE";
       case EXIT_EDGE: return "EXIT_EDGE";
@@ -379,39 +401,12 @@ public:
   }
 
   int get_mumo_id() const {
-    switch (type()) {
-      case TIME_DEPENDENT_MUMO_EDGE:
-      case PERIODIC_MUMO_EDGE:
-      case MUMO_EDGE: return m_.foot_edge_.mumo_id_;
-      case HOTEL_EDGE: return m_.hotel_edge_.mumo_id_;
-      default: return -1;
-    }
+    assert(type() == MUMO_EDGE);
+    return m_.foot_edge_.mumo_id_;
   }
 
   inline bool empty() const {
     return type() != ROUTE_EDGE || m_.route_edge_.conns_.empty();
-  }
-
-  static time calc_time_off(time const period_begin, time const period_end,
-                            time const timestamp) {
-    assert(period_begin < MINUTES_A_DAY);
-    assert(period_end < MINUTES_A_DAY);
-    assert(timestamp < MINUTES_A_DAY);
-
-    /* validity-period begins and ends at the same day */
-    if (period_begin <= period_end) {
-      if (timestamp < period_begin) {
-        return period_begin - timestamp;
-      } else if (timestamp > period_end) {
-        return (MINUTES_A_DAY - timestamp) + period_begin;
-      }
-    }
-    /* validity-period is over midnight */
-    else if (timestamp > period_end && timestamp < period_begin) {
-      return period_begin - timestamp;
-    }
-
-    return 0;
   }
 
   ptr<node> from_;
@@ -427,8 +422,6 @@ public:
       if (type_ == ROUTE_EDGE) {
         route_edge_.init_empty();
         route_edge_ = std::move(other.route_edge_);
-      } else if (type_ == HOTEL_EDGE) {
-        hotel_edge_ = other.hotel_edge_;
       } else {
         foot_edge_ = other.foot_edge_;
       }
@@ -439,8 +432,6 @@ public:
       if (type_ == ROUTE_EDGE) {
         route_edge_.init_empty();
         route_edge_ = other.route_edge_;
-      } else if (type_ == HOTEL_EDGE) {
-        hotel_edge_ = other.hotel_edge_;
       } else {
         foot_edge_.init_empty();
         foot_edge_ = other.foot_edge_;
@@ -452,8 +443,6 @@ public:
       if (type_ == ROUTE_EDGE) {
         route_edge_.init_empty();
         route_edge_ = std::move(other.route_edge_);
-      } else if (type_ == HOTEL_EDGE) {
-        hotel_edge_ = other.hotel_edge_;
       } else {
         foot_edge_.init_empty();
         foot_edge_ = other.foot_edge_;
@@ -471,8 +460,6 @@ public:
       if (type_ == ROUTE_EDGE) {
         route_edge_.init_empty();
         route_edge_ = other.route_edge_;
-      } else if (type_ == HOTEL_EDGE) {
-        hotel_edge_ = other.hotel_edge_;
       } else {
         foot_edge_.init_empty();
         foot_edge_ = other.foot_edge_;
@@ -526,94 +513,66 @@ public:
       }
     } foot_edge_;
   } m_;
-
-private:
-  edge_cost calc_cost_time_dependent_edge(time const start_time) const {
-    if (start_time > m_.foot_edge_.interval_end_) {
-      return NO_EDGE;
-    }
-    auto const time_off =
-        std::max(0, m_.foot_edge_.interval_begin_ - start_time);
-    return edge_cost(time_off + m_.foot_edge_.time_cost_,
-                     m_.foot_edge_.transfer_, m_.foot_edge_.price_);
-  }
-
-  edge_cost calc_cost_hotel_edge(time const start_time) const {
-    uint16_t const offset =
-        start_time % MINUTES_A_DAY < m_.hotel_edge_.checkout_time_
-            ? 0
-            : MINUTES_A_DAY;
-    auto const duration = std::max(
-        m_.hotel_edge_.min_stay_duration_,
-        static_cast<uint16_t>((m_.hotel_edge_.checkout_time_ + offset) -
-                              (start_time % MINUTES_A_DAY)));
-    return edge_cost(duration, false, m_.hotel_edge_.price_);
-  }
 };
 
 /* convenience helper functions to generate the right edge type */
 
 inline edge make_route_edge(node* from, node* to,
-                            mcd::vector<light_connection> const& connections) {
-  return edge(from, to, connections);
+                            mcd::vector<light_connection> const& connections,
+                            size_t const bitfield_idx) {
+  return {from, to, connections, bitfield_idx};
 }
 
 inline edge make_foot_edge(node* from, node* to, uint16_t time_cost = 0,
                            bool transfer = false) {
-  return edge(from, to, edge::FOOT_EDGE, time_cost, 0, transfer);
+  return {from, to, edge::FOOT_EDGE, time_cost, 0, transfer};
 }
 
 inline edge make_after_train_fwd_edge(node* from, node* to,
                                       uint16_t time_cost = 0,
                                       bool transfer = false) {
-  return edge(from, to, edge::AFTER_TRAIN_FWD_EDGE, time_cost, 0, transfer);
+  return {from, to, edge::AFTER_TRAIN_FWD_EDGE, time_cost, 0, transfer};
 }
 
 inline edge make_after_train_bwd_edge(node* from, node* to,
                                       uint16_t time_cost = 0,
                                       bool transfer = false) {
-  return edge(from, to, edge::AFTER_TRAIN_BWD_EDGE, time_cost, 0, transfer);
+  return {from, to, edge::AFTER_TRAIN_BWD_EDGE, time_cost, 0, transfer};
 }
 
 inline edge make_mumo_edge(node* from, node* to, uint16_t time_cost = 0,
                            uint16_t price = 0, uint16_t accessibility = 0,
                            int mumo_id = 0) {
-  return edge(from, to, edge::MUMO_EDGE, time_cost, price, false, mumo_id, 0, 0,
-              accessibility);
-}
-
-inline edge make_hotel_edge(node* station_node, uint16_t checkout_time,
-                            uint16_t min_stay_duration, uint16_t price,
-                            int mumo_id) {
-  return edge(station_node, checkout_time, min_stay_duration, price, mumo_id);
+  return {from,  to,    edge::MUMO_EDGE, time_cost,
+          price, false, mumo_id,         accessibility};
 }
 
 inline edge make_invalid_edge(node* from, node* to) {
-  return edge(from, to, edge::INVALID_EDGE, 0, 0, false, 0);
+  return {from, to, edge::INVALID_EDGE, 0, 0, false, 0};
 }
 
 inline edge make_through_edge(node* from, node* to) {
-  return edge(from, to, edge::THROUGH_EDGE, 0, 0, false, 0);
+  return {from, to, edge::THROUGH_EDGE, 0, 0, false, 0};
 }
 
 inline edge make_enter_edge(node* from, node* to, uint16_t time_cost = 0,
                             bool transfer = false) {
-  return edge(from, to, edge::ENTER_EDGE, time_cost, 0, transfer);
+  return {from, to, edge::ENTER_EDGE, time_cost, 0, transfer};
 }
 
 inline edge make_exit_edge(node* from, node* to, uint16_t time_cost = 0,
                            bool transfer = false) {
-  return edge(from, to, edge::EXIT_EDGE, time_cost, 0, transfer);
+  return {from, to, edge::EXIT_EDGE, time_cost, 0, transfer};
 }
 
 inline edge make_fwd_edge(node* from, node* to, uint16_t time_cost = 0,
                           bool transfer = false) {
-  return edge(from, to, edge::FWD_EDGE, time_cost, 0, transfer);
+  return {from, to, edge::FWD_EDGE, time_cost, 0, transfer};
 }
 
 inline edge make_bwd_edge(node* from, node* to, uint16_t time_cost = 0,
                           bool transfer = false) {
-  return edge(from, to, edge::BWD_EDGE, time_cost, 0, transfer);
+  return {from, to, edge::BWD_EDGE, time_cost, 0, transfer};
 }
 
 }  // namespace motis
