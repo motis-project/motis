@@ -28,6 +28,13 @@ struct allocator {
     explicit block(std::size_t size) : ptr_{operator new(size)}, size_{size} {}
 
     ~block() {
+      if constexpr (!std::is_trivially_destructible_v<Type>) {
+        for (auto i = 0ULL; i < size_ / sizeof(Type); ++i) {
+          if (in_use_[i]) {
+            get(i)->~Type();
+          }
+        }
+      }
       operator delete(ptr_);
       ptr_ = nullptr;
       size_ = 0;
@@ -40,13 +47,7 @@ struct allocator {
       } else {
         for (auto i = 0ULL; i < size_ / sizeof(Type); ++i) {
           if (o.in_use_[i]) {
-            auto const offset = i * sizeof(Type);
-            auto const this_addr = reinterpret_cast<std::uintptr_t>(ptr_) +
-                                   static_cast<std::uintptr_t>(offset);
-            auto const other_addr = reinterpret_cast<std::uintptr_t>(o.ptr_) +
-                                    static_cast<std::uintptr_t>(offset);
-            new (reinterpret_cast<Type*>(this_addr))
-                Type{*reinterpret_cast<Type const*>(other_addr)};
+            new (get(i)) Type{*o.get(i)};
           }
         }
       }
@@ -73,6 +74,12 @@ struct allocator {
 
     inline std::size_t size() const { return size_; }
     inline void* data() const { return ptr_; }
+
+    inline Type* get(std::size_t const index) const {
+      return reinterpret_cast<Type*>(
+          reinterpret_cast<std::uintptr_t>(ptr_) +
+          static_cast<std::uintptr_t>(index * sizeof(Type)));
+    }
 
     void* ptr_{};
     std::size_t size_{};
