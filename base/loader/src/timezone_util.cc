@@ -1,7 +1,6 @@
 #include "motis/loader/timezone_util.h"
 
 #include <algorithm>
-#include <iostream>
 
 #include "flatbuffers/flatbuffers.h"
 
@@ -107,7 +106,7 @@ time get_event_time(tz_cache& cache, std::time_t const schedule_begin,
 }
 
 time get_adjusted_event_time(tz_cache& cache, std::time_t const schedule_begin,
-                             int day_idx, int local_time, timezone const* tz,
+                             int local_time, int day_idx, timezone const* tz,
                              char const* stop_tz, char const* provider_tz) {
   auto const t = get_event_time(cache, schedule_begin, day_idx, local_time, tz,
                                 stop_tz, provider_tz);
@@ -120,6 +119,16 @@ time get_adjusted_event_time(tz_cache& cache, std::time_t const schedule_begin,
                      stop_tz, provider_tz);
   utl::verify(adjusted != INVALID_TIME, "adjusted needs to be valid");
   return adjusted;
+}
+
+bool is_local_time_in_season(int const day_idx, int minutes_after_midnight,
+                             timezone const* tz) {
+  auto const minutes_after_schedule_begin =
+      motis::to_motis_time(day_idx, minutes_after_midnight);
+  return tz->season_.begin_ != INVALID_TIME &&
+         tz->season_.begin_ + tz->general_offset_ <=
+             minutes_after_schedule_begin &&
+         minutes_after_schedule_begin <= tz->season_.end_ + tz->season_.offset_;
 }
 
 }  // namespace motis::loader

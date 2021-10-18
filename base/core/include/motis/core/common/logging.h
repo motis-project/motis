@@ -7,6 +7,8 @@
 #include <mutex>
 #include <string>
 
+#include "fmt/format.h"
+
 #ifdef _MSC_VER
 #define MOTIS_GMT(a, b) gmtime_s(b, a)
 #else
@@ -23,6 +25,14 @@
                         << " "
 
 namespace motis::logging {
+
+enum log_level { emrg, alrt, crit, error, warn, notice, info, debug };
+
+static const char* const str[]{"emrg", "alrt", "crit", "erro",
+                               "warn", "note", "info", "debg"};
+
+std::string time(time_t);
+std::string time();
 
 struct log {
   log() : lock_{log_mutex_} {}
@@ -50,13 +60,14 @@ struct log {
   static bool enabled_;
 };
 
-enum log_level { emrg, alrt, crit, error, warn, notice, info, debug };
-
-static const char* const str[]{"emrg", "alrt", "crit", "erro",
-                               "warn", "note", "info", "debg"};
-
-std::string time(time_t);
-std::string time();
+template <typename Msg, typename... Args>
+void l(log_level const lvl, Msg&& msg, Args&&... args) {
+  LOG(lvl) << "[" << motis::logging::str[lvl] << "]"
+           << "[" << motis::logging::time() << "]"
+           << "[" << FILE_NAME << ":" << __LINE__ << "]"
+           << " "
+           << fmt::format(std::forward<Msg>(msg), std::forward<Args>(args)...);
+}
 
 struct scoped_timer final {
   explicit scoped_timer(std::string name);

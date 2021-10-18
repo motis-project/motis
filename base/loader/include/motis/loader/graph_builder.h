@@ -37,11 +37,7 @@ struct lcon_times {
 };
 
 struct route_section {
-  route_section()
-      : from_route_node_(nullptr),
-        to_route_node_(nullptr),
-        outgoing_route_edge_index_(-1) {}
-
+  route_section() = default;
   route_section(node* from, node* to, int edge_idx)
       : from_route_node_(from),
         to_route_node_(to),
@@ -68,9 +64,9 @@ struct route_section {
     return &from_route_node_->edges_[outgoing_route_edge_index_];
   }
 
-  node* from_route_node_;
-  node* to_route_node_;
-  int outgoing_route_edge_index_;
+  node* from_route_node_{nullptr};
+  node* to_route_node_{nullptr};
+  int outgoing_route_edge_index_{-1};
 };
 
 struct participant {
@@ -188,6 +184,10 @@ struct graph_builder {
   void sort_connections();
   void sort_trips();
 
+  mcd::hash_set<std::vector<time>, std::vector<unsigned>> service_times_to_utc(
+      bitfield const& traffic_days, day_idx_t start_idx, day_idx_t end_idx,
+      Service const* s);
+
   bitfield const& get_or_create_bitfield(
       flatbuffers64::String const* serialized_bitfield);
 
@@ -243,6 +243,7 @@ struct graph_builder {
   mcd::hash_map<flatbuffers64::String const*, mcd::string*> filenames_;
   schedule& sched_;
   int first_day_{0}, last_day_{0};
+  day_idx_t from_day_{0}, to_day_{0};
   bool apply_rules_{false};
   bool expand_trips_{false};
   bool no_local_transport_{false};

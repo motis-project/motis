@@ -185,10 +185,105 @@ void graph_builder::index_first_route_node(route const& r) {
   sched_.route_index_to_first_route_node_[route_index] = r[0].from_route_node_;
 }
 
+mcd::hash_set<std::vector<time>, std::vector<unsigned>>
+graph_builder::service_times_to_utc(bitfield const& traffic_days,
+                                    day_idx_t const start_idx,
+                                    day_idx_t const end_idx, Service const* s) {
+  auto utc_times = mcd::hash_set<std::vector<time>, std::vector<unsigned>>{};
+  auto utc_service_times = std::vector<time>{};
+  utc_service_times.resize(s->times()->size());
+  for (auto day_idx = start_idx; day_idx < end_idx; ++day_idx) {
+    if (!traffic_days.test(day_idx)) {
+      continue;
+    }
+    auto initial_day = 0U;
+    auto fix_offset = 0;
+    for (auto i = 1; i < s->times()->size() - 1; ++i) {
+      auto const& station = *sched_.stations_.at(
+          stations_[s->route()->stations()->Get(i / 2)]->id_);
+
+      auto const local_time = s->times()->Get(i) % MINUTES_A_DAY;
+      auto const day_offset = s->times()->Get(i) / MINUTES_A_DAY;
+      auto adj_day_idx = day_idx + day_offset + SCHEDULE_OFFSET_DAYS;
+      auto const is_season =
+          is_local_time_in_season(adj_day_idx, local_time, station.timez_);
+      auto const season_offset = is_season ? station.timez_->season_.offset_
+                                           : station.timez_->general_offset_;
+
+      auto pre_utc = local_time - season_offset + fix_offset;
+      if (pre_utc < 0) {
+        pre_utc += 1440;
+        adj_day_idx -= 1;
+      }
+
+      if (i == 1) {
+        initial_day = adj_day_idx;
+      }
+
+      auto const abs_utc = time{static_cast<day_idx_t>(adj_day_idx),
+                                static_cast<int16_t>(pre_utc)};
+
+      // TODO(felix) why is the relative UTC timestamp computed using the first
+      // traffic day of the service, not the first day in the timetable? Does
+      // this only work for services that operate at on the first day of the
+      // timetable?
+      auto const rel_utc =
+          abs_utc - time{static_cast<day_idx_t>(initial_day), 0};
+
+      auto const sort_ok = i == 1 || utc_service_times.back() <= rel_utc;
+      auto const impossible_time =
+          is_season && abs_utc < station.timez_->season_.begin_;
+      if (!sort_ok || impossible_time) {
+        logging::l(logging::error,
+                   "service {}:{} invalid local time sequence: stop_idx={}, "
+                   "sort_ok={}, impossible_time={}, retrying with offset={}",
+                   s->debug()->file()->c_str(), s->debug()->line_from(), i / 2,
+                   sort_ok, impossible_time, fix_offset + 60);
+        fix_offset += 60;
+        --i;
+        continue;
+      }
+
+      utc_service_times[i - 1] = rel_utc;
+    }
+
+    utc_times[utc_service_times].emplace_back(initial_day);
+  }
+  return utc_times;
+}
+
 void graph_builder::add_route_services(
     mcd::vector<std::pair<Service const*, bitfield>> const& services) {
+  auto const has_traffic_within_timespan =
+      [&](Service const* s, bitfield const& traffic_days,
+          unsigned const start_idx, unsigned const end_idx) {
+        for (unsigned day_idx = start_idx; day_idx < end_idx; ++day_idx) {
+          if (traffic_days.test(day_idx)) {
+            return true;
+          }
+        }
+        return false;
+      };
+
   mcd::vector<route_lcs> alt_routes;
   for (auto const& [s, traffic_days] : services) {
+    auto const day_offset =
+        s->times()->Get(s->times()->size() - 2) / MINUTES_A_DAY;
+    auto const start_idx =
+        static_cast<day_idx_t>(std::max(0, from_day_ - day_offset));
+    auto const end_idx = std::min(MAX_DAYS, to_day_);
+
+    if (!has_traffic_within_timespan(s, traffic_days, start_idx, end_idx)) {
+      continue;
+    }
+
+    auto const utc_times =
+        service_times_to_utc(traffic_days, start_idx, end_idx, s);
+    auto const trip_idx =
+        create_merged_trips(s, 0U);  // TODO(felix) create trip
+    auto const lcons = mcd::vector<mcd::vector<light_connection>>{
+        static_cast<uint32_t>(utc_times.size())};
+    
     auto const first_day_offset =
         s->times()->Get(s->times()->size() - 2) / 1440;
     auto const first_day = std::max(0, first_day_ - first_day_offset);

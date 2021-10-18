@@ -45,12 +45,14 @@ time get_event_time(tz_cache&, std::time_t schedule_begin, int day_idx,
                     char const* stop_tz = nullptr,
                     char const* provider_tz = nullptr);
 
-time get_adjusted_event_time(tz_cache&, int day_idx, uint32_t local_time,
+time get_adjusted_event_time(tz_cache&, std::time_t schedule_begin,
+                             uint32_t local_time, int day_idx,
                              timezone const* tz, char const* stop_tz = nullptr,
                              char const* provider_tz = nullptr);
 
-bool is_in_season(int day_idx, int local_time, timezone const* tz,
-                  char const* stop_tz = nullptr,
-                  char const* provider_tz = nullptr);
+// TODO(felix): add parameters for provider tz string and stop tz string to
+// support GTFS -> how to extract season begin, general offset and season begin,
+// end for Howard Hinnant's date library tz objects?
+bool is_local_time_in_season(int day_idx, int local_time, timezone const* tz);
 
 }  // namespace motis::loader

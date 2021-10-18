@@ -25,10 +25,10 @@ using neighbor = std::pair<Service const*, Rule const*>;
 struct service_section {
   route_section route_section_;
   mcd::vector<participant> participants_;
-  bool in_allowed_from_ = false;
-  bool out_allowed_from_ = false;
-  bool in_allowed_to_ = false;
-  bool out_allowed_to_ = false;
+  bool in_allowed_from_{false};
+  bool out_allowed_from_{false};
+  bool in_allowed_to_{false};
+  bool out_allowed_to_{false};
 };
 
 struct rule_service_section_builder {
