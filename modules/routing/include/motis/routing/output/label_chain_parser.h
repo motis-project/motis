@@ -345,6 +345,8 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
   }
 
   if (dir == search_dir::BWD && transports.back().is_walk()) {
+    utl::verify(stops.size() > 1,
+                "Less than two intermediate stops in label chain parser");
     auto& second_to_last = stops[stops.size() - 2];
     auto& last = stops[stops.size() - 1];
 
