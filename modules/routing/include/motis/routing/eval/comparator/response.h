@@ -52,16 +52,7 @@ struct journey_meta_data {
 
   inline friend bool operator<(journey_meta_data const& a,
                                journey_meta_data const& b) {
-    utl::verify(
-        a.ontrip_start_ == b.ontrip_start_,
-        "Comparing ontrip start connection to non ontrip start connection");
-
-    if (!a.ontrip_start_) {
-      return a.as_tuple() < b.as_tuple();
-    }
-
-    return a.get_arrival_time() < b.get_arrival_time() &&
-           a.transfers_ < b.transfers_;
+    return a.as_tuple() < b.as_tuple();
   }
 
   inline time_t get_departure_time() const { return departure_time_; }
@@ -100,7 +91,7 @@ struct response {
             [&](auto&& con) { return journey_meta_data(con, ontrip_start); })},
         r_{r} {}
 
-  explicit response(routing::RoutingResponse const* r, bool const ontrip_start)
+  response(routing::RoutingResponse const* r, bool const ontrip_start)
       : connections_{utl::to_set(*r->connections(),
                                  [&](Connection const* c) {
                                    return journey_meta_data(c, ontrip_start);
