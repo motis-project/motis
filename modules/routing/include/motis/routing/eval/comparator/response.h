@@ -60,7 +60,7 @@ struct journey_meta_data {
   inline time_t get_arrival_time() const { return arrival_time_; }
 
   inline std::tuple<int, int, int> as_tuple() const {
-    return std::make_tuple(duration_, get_departure_time(), transfers_);
+    return std::make_tuple(transfers_, get_departure_time(), duration_);
   }
 
   inline bool dominates(journey_meta_data const& o) const {
