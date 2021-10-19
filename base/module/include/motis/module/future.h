@@ -2,6 +2,8 @@
 
 #include <memory>
 
+#include "ctx/future.h"
+
 #include "motis/module/ctx_data.h"
 #include "motis/module/message.h"
 

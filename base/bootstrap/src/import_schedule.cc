@@ -51,7 +51,7 @@ void register_import_schedule(motis_instance& instance,
         cista::memory_holder memory;
         auto sched = loader::load_schedule(dataset_opt_cpy, memory, data_dir);
         instance.shared_data_.emplace_data(
-            SCHEDULE_DATA_KEY,
+            motis::module::to_res_id(motis::module::global_res_id::SCHEDULE),
             schedule_data{std::move(memory), std::move(sched)});
 
         mm::message_creator fbb;
