@@ -45,6 +45,8 @@ struct generator_settings : public conf::configuration {
     param(include_equivalent_, "include_equivalent",
           "set include_equivalent query flag");
     param(query_type_, "query_type", "query type: pretrip|ontrip_station");
+    param(search_type_, "search_type",
+          "search type: Default|SingleCriterion|Accessibility|...");
     param(targets_, "targets",
           "message target urls. for every url query files will be generated");
   }
@@ -66,12 +68,37 @@ struct generator_settings : public conf::configuration {
     }
   }
 
+  SearchType get_search_type() const {
+    if (search_type_ == "Default") {
+      return SearchType_Default;
+    } else if (search_type_ == "SingleCriterion") {
+      return SearchType_SingleCriterion;
+    } else if (search_type_ == "SingleCriterionNoIntercity") {
+      return SearchType_SingleCriterionNoIntercity;
+    } else if (search_type_ == "LateConnections") {
+      return SearchType_LateConnections;
+    } else if (search_type_ == "LateConnectionsTest") {
+      return SearchType_LateConnectionsTest;
+    } else if (search_type_ == "Accessibility") {
+      return SearchType_Accessibility;
+    } else if (search_type_ == "DefaultPrice") {
+      return SearchType_DefaultPrice;
+    } else if (search_type_ == "DefaultPriceRegional") {
+      return SearchType_DefaultPriceRegional;
+    } else if (search_type_ == "MaxOccupancy") {
+      return SearchType_MaxOccupancy;
+    } else {
+      throw std::runtime_error{"search type not supported"};
+    }
+  }
+
   int query_count_{1000};
   std::string target_file_fwd_{"queries-fwd-${target}.txt"};
   std::string target_file_bwd_{"queries-bwd-${target}.txt"};
   bool large_stations_{false};
   bool include_equivalent_{false};
   std::string query_type_{"pretrip"};
+  std::string search_type_{"Default"};
   std::vector<std::string> targets_{"/routing"};
 };
 
@@ -149,10 +176,11 @@ static It rand_in(It begin, It end) {
   return std::next(begin, rand_in(0, std::distance(begin, end) - 1));
 }
 
-std::string query(std::string const& target, Start const start_type, int id,
-                  unixtime interval_start, unixtime interval_end,
-                  std::string const& from_eva, std::string const& to_eva,
-                  SearchDir const dir, bool include_equivalent) {
+std::string query(std::string const& target, SearchType const search_type,
+                  Start const start_type, int id, unixtime interval_start,
+                  unixtime interval_end, std::string const& from_eva,
+                  std::string const& to_eva, SearchDir const dir,
+                  bool include_equivalent) {
   message_creator fbb;
   auto const interval = Interval(interval_start, interval_end);
   fbb.create_and_finish(
@@ -174,7 +202,7 @@ std::string query(std::string const& target, Start const start_type, int id,
                     .Union(),
           CreateInputStation(fbb, fbb.CreateString(to_eva),
                              fbb.CreateString("")),
-          SearchType_Default, dir, fbb.CreateVector(std::vector<Offset<Via>>()),
+          search_type, dir, fbb.CreateVector(std::vector<Offset<Via>>()),
           fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()), true,
           true, true, include_equivalent)
           .Union(),
@@ -361,6 +389,7 @@ int generate(int argc, char const** argv) {
     bwd_ofstreams.emplace_back(bwd_fn);
   }
 
+  auto const search_type = generator_opt.get_search_type();
   auto const start_type = generator_opt.get_start_type();
   for (int i = 1; i <= generator_opt.query_count_; ++i) {
     auto interval = interval_gen.random_interval();
@@ -372,13 +401,13 @@ int generate(int argc, char const** argv) {
       auto& out_fwd = fwd_ofstreams[f_idx];
       auto& out_bwd = bwd_ofstreams[f_idx];
 
-      out_fwd << query(target, start_type, i, interval.first, interval.second,
-                       evas.first, evas.second, SearchDir_Forward,
-                       generator_opt.include_equivalent_)
+      out_fwd << query(target, search_type, start_type, i, interval.first,
+                       interval.second, evas.first, evas.second,
+                       SearchDir_Forward, generator_opt.include_equivalent_)
               << "\n";
-      out_bwd << query(target, start_type, i, interval.first, interval.second,
-                       evas.first, evas.second, SearchDir_Backward,
-                       generator_opt.include_equivalent_)
+      out_bwd << query(target, search_type, start_type, i, interval.first,
+                       interval.second, evas.first, evas.second,
+                       SearchDir_Backward, generator_opt.include_equivalent_)
               << "\n";
     }
   }
