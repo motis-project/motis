@@ -94,6 +94,7 @@ bool has_connection(std::vector<journey> const& connections,
             return con.duration_ == ref_con.duration_ &&
                    con.transfers_ == ref_con.transfers_ &&
                    con.accessibility_ == ref_con.accessibility_ &&
+                   con.max_occupancy_ == ref_con.max_occupancy_ &&
                    departure_time(con) == departure_time(ref_con) &&
                    arrival_time(con) == arrival_time(ref_con);
           });
@@ -102,6 +103,7 @@ bool has_connection(std::vector<journey> const& connections,
           begin(connections), end(connections), [&](auto const& con) {
             return con.transfers_ == ref_con.transfers_ &&
                    con.accessibility_ == ref_con.accessibility_ &&
+                   con.max_occupancy_ == ref_con.max_occupancy_ &&
                    arrival_time(con) == arrival_time(ref_con);
           });
     case query_type_t::ONTRIP_BWD:
@@ -109,6 +111,7 @@ bool has_connection(std::vector<journey> const& connections,
           begin(connections), end(connections), [&](auto const& con) {
             return con.transfers_ == ref_con.transfers_ &&
                    con.accessibility_ == ref_con.accessibility_ &&
+                   con.max_occupancy_ == ref_con.max_occupancy_ &&
                    departure_time(con) == departure_time(ref_con);
           });
     default: return false;
@@ -173,6 +176,7 @@ bool check(int id, std::vector<msg_ptr> const& msgs,
         fail(i) << "Connection with duration=" << std::setw(4)
                 << ref_con.duration_ << ", transfers=" << ref_con.transfers_
                 << ", accessibility=" << std::setw(2) << ref_con.accessibility_
+                << ", max_occupancy=" << ref_con.max_occupancy_
                 << ", start=" << format_time(departure_time(ref_con), local)
                 << ", end=" << format_time(arrival_time(ref_con), local)
                 << " missing" << std::endl;
@@ -184,6 +188,7 @@ bool check(int id, std::vector<msg_ptr> const& msgs,
         fail(i) << "Connection with duration=" << std::setw(4) << con.duration_
                 << ", transfers=" << con.transfers_
                 << ", accessibility=" << std::setw(2) << con.accessibility_
+                << ", max_occupancy=" << con.max_occupancy_
                 << ", start=" << format_time(departure_time(con), local)
                 << ", end=" << format_time(arrival_time(con), local)
                 << " unexpected" << std::endl;
