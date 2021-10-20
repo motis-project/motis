@@ -110,6 +110,7 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
   } else {
     out << " (UTC)" << std::endl;
   }
+  out << "         max_occupancy=" << j.max_occupancy_ << "\n";
 
   std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> utf8_conv;
   out << "\nStops:" << std::endl;
