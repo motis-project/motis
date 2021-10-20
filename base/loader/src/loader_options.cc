@@ -42,4 +42,15 @@ std::string loader_options::graph_path(std::string const& data_dir) const {
   }
 }
 
+std::string loader_options::fbs_schedule_path(std::string const& data_dir,
+                                              size_t const id) const {
+  if (dataset_prefix_.empty()) {
+    return (fs::path{data_dir} / "schedule" / "schedule.raw").generic_string();
+  } else {
+    return (fs::path{data_dir} / "schedule" /
+            (dataset_prefix_.at(id) + "_schedule.raw"))
+        .generic_string();
+  }
+}
+
 }  // namespace motis::loader

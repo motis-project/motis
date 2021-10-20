@@ -29,6 +29,7 @@ struct paxmon : public motis::module::module {
   paxmon(paxmon&&) = delete;
   paxmon& operator=(paxmon&&) = delete;
 
+  void reg_subc(motis::module::subc_reg&) override;
   void import(motis::module::import_dispatcher& reg) override;
   void init(motis::module::registry&) override;
 
