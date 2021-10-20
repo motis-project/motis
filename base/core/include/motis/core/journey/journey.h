@@ -82,7 +82,11 @@ struct journey {
 
   bool ok() const { return problems_.empty(); }
 
-  unsigned duration_{0}, transfers_{0}, price_{0}, accessibility_{0};
+  unsigned duration_{0};
+  unsigned transfers_{0};
+  unsigned price_{0};
+  unsigned accessibility_{0};
+  unsigned max_occupancy_{0};
   std::vector<stop> stops_;
   std::vector<transport> transports_;
   std::vector<trip> trips_;

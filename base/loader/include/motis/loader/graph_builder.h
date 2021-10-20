@@ -175,7 +175,7 @@ struct graph_builder {
 
   light_connection section_to_connection(
       merged_trips_idx trips, std::array<participant, 16> const& services,
-      int day, time prev_arr, bool& adjusted);
+      int day, time prev_arr, bool& adjusted, int third);
 
   void connect_reverse();
 
@@ -184,6 +184,12 @@ struct graph_builder {
 
   bitfield const& get_or_create_bitfield(
       flatbuffers64::String const* serialized_bitfield);
+
+  uint8_t estimate_occupancy(int third, time dep_time,
+                             connection_info const* info);
+
+  void set_occtime(std::deque<light_connection>& q);
+  void set_pareto_occupancy(mcd::vector<light_connection>& cons);
 
   void read_attributes(
       int day,

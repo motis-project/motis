@@ -74,12 +74,13 @@ struct light_connection {
 
   light_connection(time const d_time, time const a_time,
                    connection const* full_con = nullptr,
-                   merged_trips_idx const trips = 0)
+                   merged_trips_idx const trips = 0, uint8_t occupancy = 0)
       : full_con_{full_con},
         d_time_{d_time},
         a_time_{a_time},
         trips_{trips},
-        valid_{1U} {}
+        valid_{1U},
+        occupancy_(occupancy) {}
 
   time event_time(event_type const t) const {
     return t == event_type::DEP ? d_time_ : a_time_;
@@ -95,6 +96,9 @@ struct light_connection {
   time d_time_, a_time_;
   uint32_t trips_ : 31;
   uint32_t valid_ : 1;
+  uint8_t occupancy_{};
+  uint16_t occtime_to_0_occ_{};
+  uint16_t max_occ_to_0_{};
 };
 
 // Index of a light_connection in a route edge.

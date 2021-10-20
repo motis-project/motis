@@ -203,9 +203,11 @@ void graph_builder::add_route_services(
       auto const merged_trips_idx = sched_.merged_trips_.size();
       for (unsigned section_idx = 0; section_idx < s->sections()->size();
            ++section_idx) {
+        auto const third = static_cast<int>(
+            ((section_idx)*3) / static_cast<int>(s->sections()->size()));
         lcons.push_back(section_to_connection(merged_trips_idx,
                                               {{participant{s, section_idx}}},
-                                              day, prev_arr, adjusted));
+                                              day, prev_arr, adjusted, third));
         prev_arr = lcons.back().a_time_;
       }
 
@@ -215,6 +217,8 @@ void graph_builder::add_route_services(
 
       utl::verify(merged_trips_idx == create_merged_trips(s, day),
                   "unexpected merged_trips_idx");
+
+      set_pareto_occupancy(lcons);
       add_to_routes(alt_routes, lcons);
     }
   }
@@ -371,7 +375,12 @@ int graph_builder::get_index(
       bool later_eq_arr = static_cast<unsigned>(index) < route_section.size() &&
                           lc.a_time_ >= route_section[index].a_time_;
 
-      if (earlier_eq_dep || later_eq_dep || earlier_eq_arr || later_eq_arr) {
+      // Check if Occupancies are equal
+      bool different_occ =
+          index > 0 && route_section[0].occupancy_ != lc.occupancy_;
+
+      if (earlier_eq_dep || later_eq_dep || earlier_eq_arr || later_eq_arr ||
+          different_occ) {
         return -1;
       }
     }
@@ -403,6 +412,100 @@ void graph_builder::add_to_routes(
 
   alt_routes.emplace_back(sections.size());
   add_to_route(alt_routes.back(), sections, 0);
+}
+
+void graph_builder::set_occtime(std::deque<light_connection>& q) {
+  uint16_t occtime_to_0 = 0;
+  uint8_t max_occ_to_0 = 0;
+  for (auto& c : q) {
+    occtime_to_0 = occtime_to_0 + c.occupancy_ * c.travel_time();
+    c.occtime_to_0_occ_ = occtime_to_0;
+    max_occ_to_0 = std::max(max_occ_to_0, c.occupancy_);
+    c.max_occ_to_0_ = max_occ_to_0;
+  }
+}
+
+void graph_builder::set_pareto_occupancy(mcd::vector<light_connection>& cons) {
+  std::deque<light_connection> not_set;
+  for (auto& con : cons) {
+    if (con.occupancy_ == 0) {
+      con.occtime_to_0_occ_ = 0;
+      con.max_occ_to_0_ = 0;
+      set_occtime(not_set);
+      not_set.clear();
+    } else {
+      not_set.push_front(con);
+    }
+  }
+  set_occtime(not_set);
+  not_set.clear();
+}
+
+uint8_t graph_builder::estimate_occupancy(int third, time dep_time,
+                                          connection_info const* info) {
+  static auto const occ_matrix = std::vector<std::vector<uint8_t>>{
+      {0, 0, 0},  // 0
+      {0, 0, 0},  // 0:30
+      {0, 0, 0},  // 1
+      {0, 0, 0},  // 1:30
+      {0, 0, 0},  // 2
+      {0, 0, 0},  // 2:30
+      {0, 0, 0},  // 3
+      {0, 0, 0},  // 3:30
+      {0, 0, 0},  // 4
+      {0, 0, 0},  //
+      {0, 0, 1},  // 5
+      {0, 0, 1},  //
+      {0, 1, 2},  // 6
+      {0, 1, 2},  //
+      {1, 2, 2},  // 7
+      {1, 2, 2},  //
+      {1, 2, 2},  // 8
+      {0, 1, 1},  //
+      {0, 0, 1},  // 9
+      {0, 0, 0},  //
+      {0, 0, 0},  // 10
+      {0, 0, 0},  //
+      {0, 0, 0},  // 11
+      {0, 0, 0},  //
+      {0, 0, 0},  // 12
+      {0, 0, 0},  //
+      {0, 0, 0},  // 13
+      {0, 0, 0},  //
+      {0, 0, 0},  // 14
+      {0, 0, 0},  //
+      {0, 0, 1},  // 15
+      {0, 1, 1},  //
+      {0, 1, 2},  // 16
+      {1, 2, 2},  //
+      {1, 2, 2},  // 17
+      {1, 2, 2},  //
+      {0, 1, 2},  // 18
+      {0, 0, 1},  //
+      {0, 0, 0},  // 19
+      {0, 0, 0},  //
+      {0, 0, 0},  // 20
+      {0, 0, 0},  //
+      {0, 0, 0},  // 21
+      {0, 0, 0},  //
+      {0, 0, 0},  // 22
+      {0, 0, 0},  //
+      {0, 0, 0},  // 23
+      {0, 0, 0}  //
+  };
+
+  if (std::any_of(info->attributes_.begin(), info->attributes_.end(),
+                  [](attribute const* a) {
+                    return a->code_ == "00" || a->code_ == "10" ||
+                           a->code_ == "01" || a->code_ == "11" ||
+                           a->text_.view().find("ausgelastet") !=
+                               std::string_view::npos;
+                  })) {
+    return 2;
+  }
+  time half_hour = (dep_time % MINUTES_A_DAY) / 30;
+
+  return occ_matrix[half_hour][third];
 }
 
 connection_info* graph_builder::get_or_create_connection_info(
@@ -443,7 +546,7 @@ connection_info* graph_builder::get_or_create_connection_info(
 
 light_connection graph_builder::section_to_connection(
     merged_trips_idx trips, std::array<participant, 16> const& services,
-    int day, time prev_arr, bool& adjusted) {
+    int day, time prev_arr, bool& adjusted, int third) {
   auto const& ref = services[0].service_;
   auto const& section_idx = services[0].section_idx_;
 
@@ -521,6 +624,8 @@ light_connection graph_builder::section_to_connection(
       sched_.last_event_schedule_time_,
       motis_to_unixtime(sched_, arr_motis_time) - SCHEDULE_OFFSET_MINUTES * 60);
 
+  uint8_t occupancy = estimate_occupancy(third, dep_motis_time, con_.con_info_);
+
   return light_connection(
       dep_motis_time, arr_motis_time,
       mcd::set_get_or_create(connections_, &con_,
@@ -529,7 +634,7 @@ light_connection graph_builder::section_to_connection(
                                    mcd::make_unique<connection>(con_));
                                return sched_.full_connections_.back().get();
                              }),
-      trips);
+      trips, occupancy);
 }
 
 void graph_builder::connect_reverse() {

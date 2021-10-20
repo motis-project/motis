@@ -89,4 +89,5 @@ table Connection {
   night_penalty:ushort;
   db_costs:ushort;
   status:ConnectionStatus;
+  max_occupancy:ushort;
 }

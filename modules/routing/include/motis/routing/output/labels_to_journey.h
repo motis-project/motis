@@ -50,6 +50,16 @@ inline unsigned night_penalty(late_connections_label_for_tests<Dir> const& l) {
 }
 
 template <typename Label>
+inline unsigned max_occupancy(Label const&) {
+  return 65535;
+}
+
+template <search_dir Dir>
+inline unsigned max_occupancy(max_occupancy_label<Dir> const& l) {
+  return l.max_occ_;
+}
+
+template <typename Label>
 journey labels_to_journey(schedule const& sched, Label* label,
                           search_dir const dir) {
   auto parsed = parse_label_chain(sched, label, dir);
@@ -71,7 +81,7 @@ journey labels_to_journey(schedule const& sched, Label* label,
                         return s.exit_ ? transfers_count + 1 : transfers_count;
                       });
   j.accessibility_ = get_accessibility(j);
-
+  j.max_occupancy_ = max_occupancy(*label);
   j.db_costs_ = db_costs(*label);
   j.night_penalty_ = night_penalty(*label);
 
