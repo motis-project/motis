@@ -2,9 +2,9 @@ name: Unix Build
 
 on:
   schedule:
-    - cron:  '0 3 * * 2,6'
+    - cron: '0 3 * * 2,6'
   push:
-    branches: [ master ]
+    branches: [ master, algoprak-ss21-csa ]
   pull_request:
     branches: [ master ]
   release:
@@ -226,9 +226,9 @@ jobs:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
-               buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
-               buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-
-               buildcache-${{ matrix.config.name }}-
+            buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-
+            buildcache-${{ matrix.config.name }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v2
