@@ -185,11 +185,11 @@ struct graph_builder {
   bitfield const& get_or_create_bitfield(
       flatbuffers64::String const* serialized_bitfield);
 
-  uint8_t estimate_occupancy(int third, time dep_time,
-                             connection_info const* info);
+  static uint8_t estimate_occupancy(int third, time dep_time,
+                                    connection_info const* info);
 
-  void set_occtime(std::deque<light_connection>& q);
-  void set_pareto_occupancy(mcd::vector<light_connection>& cons);
+  static void set_occtime(std::deque<light_connection>& q);
+  static void set_pareto_occupancy(mcd::vector<light_connection>& cons);
 
   void read_attributes(
       int day,

@@ -332,7 +332,7 @@ struct rule_service_route_builder {
         adjusted = false;
       }
     }
-    gb_.set_pareto_occupancy(lcons);
+    graph_builder::set_pareto_occupancy(lcons);
     return lcons;
   }
 
