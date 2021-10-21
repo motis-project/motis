@@ -50,8 +50,8 @@ struct shared_data {
   shared_data() = default;
   shared_data(shared_data const&) = delete;
   shared_data& operator=(shared_data const&) = delete;
-  shared_data(shared_data&&) noexcept = default;
-  shared_data& operator=(shared_data&&) noexcept = default;
+  shared_data(shared_data&&) noexcept = delete;
+  shared_data& operator=(shared_data&&) noexcept = delete;
   ~shared_data() = default;
 
   template <typename T>
