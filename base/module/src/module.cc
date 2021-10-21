@@ -3,7 +3,6 @@
 #include "boost/filesystem.hpp"
 
 #include "motis/core/schedule/schedule.h"
-#include "motis/core/schedule/schedule_data_key.h"
 
 namespace fs = boost::filesystem;
 

@@ -125,7 +125,7 @@ void path::init(registry& r) {
       LOG(warn) << "pathdb not available: no index!";
     }
 
-    add_shared_data(PATH_DATA_KEY, std::move(data));
+    add_shared_data(to_res_id(global_res_id::PATH_DATA), std::move(data));
   } catch (std::system_error const&) {
     LOG(warn) << "pathdb not available: no database!";
   }
@@ -155,13 +155,15 @@ void path::init(registry& r) {
 }
 
 msg_ptr path::boxes() const {
-  auto const& data = get_shared_data<path_data>(PATH_DATA_KEY);
+  auto const& data =
+      get_shared_data<path_data>(to_res_id(global_res_id::PATH_DATA));
   auto const boxes = data.db_->get(kBoxesKey);
   return make_msg(boxes.data(), boxes.size());
 };
 
 msg_ptr path::by_station_seq(msg_ptr const& msg) const {
-  auto const& data = get_shared_data<path_data>(PATH_DATA_KEY);
+  auto const& data =
+      get_shared_data<path_data>(to_res_id(global_res_id::PATH_DATA));
   auto req = motis_content(PathByStationSeqRequest, msg);
 
   return data.get_response(
@@ -173,7 +175,8 @@ msg_ptr path::by_station_seq(msg_ptr const& msg) const {
 }
 
 msg_ptr path::by_trip_id(msg_ptr const& msg) const {
-  auto const& data = get_shared_data<path_data>(PATH_DATA_KEY);
+  auto const& data =
+      get_shared_data<path_data>(to_res_id(global_res_id::PATH_DATA));
   auto const& req = motis_content(PathByTripIdRequest, msg);
   auto const& sched = get_sched();
   return data.get_response(
@@ -182,7 +185,8 @@ msg_ptr path::by_trip_id(msg_ptr const& msg) const {
 }
 
 msg_ptr path::by_trip_id_batch(msg_ptr const& msg) const {
-  auto const& data = get_shared_data<path_data>(PATH_DATA_KEY);
+  auto const& data =
+      get_shared_data<path_data>(to_res_id(global_res_id::PATH_DATA));
   auto const& req = motis_content(PathByTripIdBatchRequest, msg);
   auto const& sched = get_sched();
 
@@ -222,7 +226,8 @@ msg_ptr path::by_trip_id_batch(msg_ptr const& msg) const {
 }
 
 msg_ptr path::by_tile_feature(msg_ptr const& msg) const {
-  auto const& data = get_shared_data<path_data>(PATH_DATA_KEY);
+  auto const& data =
+      get_shared_data<path_data>(to_res_id(global_res_id::PATH_DATA));
   auto const& req = motis_content(PathByTileFeatureRequest, msg);
 
   message_creator mc;
@@ -239,7 +244,8 @@ msg_ptr path::by_tile_feature(msg_ptr const& msg) const {
 }
 
 msg_ptr path::path_tiles(msg_ptr const& msg) const {
-  auto const& data = get_shared_data<path_data>(PATH_DATA_KEY);
+  auto const& data =
+      get_shared_data<path_data>(to_res_id(global_res_id::PATH_DATA));
   auto tile = tiles::parse_tile_url(msg->get()->destination()->target()->str());
   utl::verify_ex(tile.has_value(), std::system_error{error::invalid_request});
 

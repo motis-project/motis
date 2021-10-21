@@ -24,7 +24,6 @@
 #include "motis/paxmon/broken_interchanges_report.h"
 #include "motis/paxmon/build_graph.h"
 #include "motis/paxmon/checks.h"
-#include "motis/paxmon/data_key.h"
 #include "motis/paxmon/error.h"
 #include "motis/paxmon/generate_capacities.h"
 #include "motis/paxmon/graph_access.h"
@@ -143,7 +142,7 @@ void paxmon::import(motis::module::import_dispatcher& reg) {
 void paxmon::init(motis::module::registry& reg) {
   stats_writer_ = std::make_unique<stats_writer>(stats_file_);
 
-  add_shared_data(DATA_KEY, &data_);
+  add_shared_data(to_res_id(global_res_id::PAX_DATA), &data_);
 
   reg.subscribe("/init", [&]() {
     if (data_.capacity_maps_.trip_capacity_map_.empty() &&
@@ -182,25 +181,28 @@ void paxmon::init(motis::module::registry& reg) {
   // --init /paxmon/eval
   // --paxmon.start_time YYYY-MM-DDTHH:mm
   // --paxmon.end_time YYYY-MM-DDTHH:mm
-  reg.register_op(
-      "/paxmon/eval",
-      [&](msg_ptr const&) -> msg_ptr {
-        LOG(info) << "paxmon: start time: "
-                  << format_unix_time(start_time_.unix_time_)
-                  << ", end time: " << format_unix_time(end_time_.unix_time_);
+  reg.register_op("/paxmon/eval",
+                  [&](msg_ptr const&) -> msg_ptr {
+                    LOG(info) << "paxmon: start time: "
+                              << format_unix_time(start_time_.unix_time_)
+                              << ", end time: "
+                              << format_unix_time(end_time_.unix_time_);
 
-        for (auto t = start_time_.unix_time_; t <= end_time_.unix_time_;
-             t += time_step_) {
-          forward(t);
-        }
+                    for (auto t = start_time_.unix_time_;
+                         t <= end_time_.unix_time_; t += time_step_) {
+                      forward(t);
+                    }
 
-        motis_call(make_no_msg("/paxmon/flush"))->val();
+                    motis_call(make_no_msg("/paxmon/flush"))->val();
 
-        LOG(info) << "paxmon: eval done";
+                    LOG(info) << "paxmon: eval done";
 
-        return {};
-      },
-      ctx::access_t::WRITE);
+                    return {};
+                  },
+                  {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
+                                       ctx::access_t::READ},
+                   ctx::access_request{to_res_id(global_res_id::PAX_DATA),
+                                       ctx::access_t::WRITE}});
 
   // --init /paxmon/generate_capacities
   // --paxmon.generated_capacity_file file.csv
@@ -216,12 +218,14 @@ void paxmon::init(motis::module::registry& reg) {
         return {};
       });
 
-  reg.register_op(
-      "/paxmon/init_forward",
-      [&](msg_ptr const&) -> msg_ptr {
-        return forward(start_time_.unix_time_);
-      },
-      ctx::access_t::WRITE);
+  reg.register_op("/paxmon/init_forward",
+                  [&](msg_ptr const&) -> msg_ptr {
+                    return forward(start_time_.unix_time_);
+                  },
+                  {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
+                                       ctx::access_t::READ},
+                   ctx::access_request{to_res_id(global_res_id::PAX_DATA),
+                                       ctx::access_t::WRITE}});
 
   reg.register_op("/paxmon/add_groups", [&](msg_ptr const& msg) -> msg_ptr {
     return add_groups(msg);

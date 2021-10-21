@@ -5,7 +5,6 @@
 #include "utl/pipes.h"
 
 #include "motis/core/common/logging.h"
-#include "motis/core/schedule/schedule_data_key.h"
 #include "motis/module/clog_redirect.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/event_collector.h"
