@@ -119,8 +119,7 @@ void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
     }
 
     enqueue(
-        std::move(data != nullptr ? ctx_data{*data}
-                                  : ctx_data{this, &shared_data_}),
+        data != nullptr ? ctx_data{*data} : ctx_data{this, &shared_data_},
         [run]() { run(); }, id, op_type, std::move(access));
   }
 }
