@@ -117,7 +117,12 @@ export interface PaxMonForkUniverseResponse {
 export type PaxMonGroupFilter = "All" | "Entering" | "Exiting";
 
 // paxmon/PaxMonGetGroupsInTripRequest.fbs
-export type PaxMonGroupByStation = "None" | "First" | "Last";
+export type PaxMonGroupByStation =
+  | "None"
+  | "First"
+  | "Last"
+  | "FirstLongDistance"
+  | "LastLongDistance";
 
 // paxmon/PaxMonGetGroupsInTripRequest.fbs
 export interface PaxMonGetGroupsInTripRequest {

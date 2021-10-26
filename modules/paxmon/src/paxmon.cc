@@ -30,6 +30,7 @@
 #include "motis/paxmon/broken_interchanges_report.h"
 #include "motis/paxmon/build_graph.h"
 #include "motis/paxmon/checks.h"
+#include "motis/paxmon/compact_journey_util.h"
 #include "motis/paxmon/data_key.h"
 #include "motis/paxmon/error.h"
 #include "motis/paxmon/generate_capacities.h"
@@ -686,12 +687,19 @@ msg_ptr paxmon::get_groups_in_trip(msg_ptr const& msg) {
   auto const get_key = [&](passenger_group const* pg, trip const* other_trip) {
     std::uint32_t station = 0U;
     trip const* trp = grp_by_other_trip ? other_trip : nullptr;
+    auto const& cj = pg->compact_planned_journey_;
     switch (grp_by_station) {
-      case PaxMonGroupByStation_First:
-        station = pg->compact_planned_journey_.start_station_id();
-        break;
+      case PaxMonGroupByStation_First: station = cj.start_station_id(); break;
       case PaxMonGroupByStation_Last:
-        station = pg->compact_planned_journey_.destination_station_id();
+        station = cj.destination_station_id();
+        break;
+      case PaxMonGroupByStation_FirstLongDistance:
+        station = get_first_long_distance_station_id(uv, cj).value_or(
+            cj.start_station_id());
+        break;
+      case PaxMonGroupByStation_LastLongDistance:
+        station = get_last_long_distance_station_id(uv, cj).value_or(
+            cj.destination_station_id());
         break;
       default: break;
     }
@@ -760,7 +768,7 @@ msg_ptr paxmon::get_groups_in_trip(msg_ptr const& msg) {
           continue;
         }
       } else if (grp_filter == PaxMonGroupFilter_Exiting) {
-        auto const [exiting, ot] = group_exits_here(from, pg);
+        auto const [exiting, ot] = group_exits_here(to, pg);
         if (exiting) {
           other_trp = ot;
         } else {

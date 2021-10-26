@@ -5,6 +5,7 @@ import { usePaxMonGroupsInTripQuery } from "../api/paxmon";
 import { PaxMonEdgeLoadInfoWithStats } from "../data/loadInfo";
 import {
   GroupsInTripSection,
+  PaxMonGroupByStation,
   PaxMonGroupFilter,
 } from "../api/protocol/motis/paxmon";
 
@@ -28,7 +29,17 @@ function isSameSection(
 const groupFilters: Array<{ filter: PaxMonGroupFilter; label: string }> = [
   { filter: "All", label: "Alle" },
   { filter: "Entering", label: "Nur Einsteiger" },
-  /*{ filter: "Exiting", label: "Nur Aussteiger" },*/
+  { filter: "Exiting", label: "Nur Aussteiger" },
+];
+
+const groupByStationOptions: Array<{
+  groupBy: PaxMonGroupByStation;
+  label: string;
+}> = [
+  { groupBy: "Last", label: "Letzter Halt" },
+  { groupBy: "LastLongDistance", label: "Letzter Fernverkehrshalt" },
+  { groupBy: "First", label: "Erster Halt" },
+  { groupBy: "FirstLongDistance", label: "Erster Fernverkehrshalt" },
 ];
 
 type TripSectionDetailsProps = {
@@ -44,7 +55,9 @@ function TripSectionDetails({
 }: TripSectionDetailsProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
   const [groupFilter, setGroupFilter] = useState<PaxMonGroupFilter>("Entering");
-  //const [groupByOtherTrip, setGroupByOtherTrip] = useState(true);
+  const [groupByStation, setGroupByStation] =
+    useState<PaxMonGroupByStation>("LastLongDistance");
+  const [groupByOtherTrip, setGroupByOtherTrip] = useState(true);
 
   const {
     data: groupsInTrip,
@@ -54,9 +67,14 @@ function TripSectionDetails({
     universe,
     trip: tripId,
     filter: groupFilter,
-    group_by_station: "Last",
-    group_by_other_trip: true,
+    group_by_station: groupByStation,
+    group_by_other_trip: groupByOtherTrip,
   });
+
+  const groupByDirection =
+    groupByStation === "First" || groupByStation === "FirstLongDistance"
+      ? "Origin"
+      : "Destination";
 
   const content = isLoading ? (
     <div>Loading trip section data..</div>
@@ -92,6 +110,7 @@ function TripSectionDetails({
                     combinedGroup={gg}
                     startStation={sec.from}
                     earliestDeparture={sec.departure_current_time}
+                    groupByDirection={groupByDirection}
                   />
                 </li>
               ))}
@@ -103,8 +122,8 @@ function TripSectionDetails({
 
   return (
     <div className="mx-auto max-w-5xl">
-      <div className="mb-5">
-        <form onSubmit={(e) => e.preventDefault()}>
+      <form onSubmit={(e) => e.preventDefault()}>
+        <div className="mb-5 flex flex-col gap-2">
           <div className="flex gap-4">
             <span>Gruppen anzeigen:</span>
             {groupFilters.map(({ filter, label }) => (
@@ -119,6 +138,34 @@ function TripSectionDetails({
                 {label}
               </label>
             ))}
+          </div>
+          <div className="flex gap-4">
+            <span>Gruppen zusammenfassen:</span>
+            {groupByStationOptions.map(({ groupBy, label }) => (
+              <label key={groupBy} className="inline-flex items-center gap-1">
+                <input
+                  type="radio"
+                  name="group-by-station"
+                  value={groupBy}
+                  checked={groupByStation == groupBy}
+                  onChange={() => setGroupByStation(groupBy)}
+                />
+                {label}
+              </label>
+            ))}
+            {groupFilter !== "All" ? (
+              <label className="inline-flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  name="group-by-other-trip"
+                  checked={groupByOtherTrip}
+                  onChange={() => setGroupByOtherTrip((val) => !val)}
+                />
+                {groupFilter === "Entering" ? "Zubringer" : "Abbringer"}
+              </label>
+            ) : null}
+          </div>
+          <div className="flex gap-4">
             <button
               type="button"
               onClick={onClose}
@@ -127,8 +174,8 @@ function TripSectionDetails({
               Gruppenanzeige schließen
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
       {content}
     </div>
   );

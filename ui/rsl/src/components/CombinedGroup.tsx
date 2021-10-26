@@ -12,11 +12,14 @@ import TripLoadForecastChart from "./TripLoadForecastChart";
 import JourneyTripNameView from "./JourneyTripNameView";
 import TripServiceInfoView from "./TripServiceInfoView";
 
-type CombinedGroupProps = {
+export type GroupByDirection = "Origin" | "Destination";
+
+export type CombinedGroupProps = {
   plannedTrip: TripId;
   combinedGroup: GroupedPassengerGroups;
   startStation: Station;
   earliestDeparture: number;
+  groupByDirection: GroupByDirection;
 };
 
 const SEARCH_INTERVAL = 61;
@@ -44,6 +47,7 @@ function getDepartureTime(j: Journey): number {
 function CombinedGroup(props: CombinedGroupProps): JSX.Element {
   const destinationStation = props.combinedGroup.grouped_by_station[0];
   const previousTrip = props.combinedGroup.grouped_by_trip[0];
+  const findAlternatives = props.groupByDirection === "Destination";
 
   const { data, isLoading, error } = useQuery(
     [
@@ -76,7 +80,8 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
         use_start_metas: true,
         use_dest_metas: true,
         use_start_footpaths: true,
-      })
+      }),
+    { enabled: findAlternatives }
   );
 
   const plannedTripId = JSON.stringify(props.plannedTrip);
@@ -91,7 +96,8 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
     <div>
       <span className="font-bold">
         {props.combinedGroup.min_passenger_count}-
-        {props.combinedGroup.max_passenger_count} Reisende Richtung{" "}
+        {props.combinedGroup.max_passenger_count} Reisende
+        {props.groupByDirection === "Origin" ? " aus " : " in "}Richtung{" "}
         {destinationStation.name}
       </span>
       {previousTrip && (
@@ -147,7 +153,7 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
   return (
     <div className="mt-8">
       {groupInfo}
-      {alternativesInfo}
+      {findAlternatives ? alternativesInfo : null}
     </div>
   );
 }

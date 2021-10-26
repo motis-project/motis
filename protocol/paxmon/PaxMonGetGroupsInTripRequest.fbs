@@ -3,7 +3,13 @@ include "base/TripId.fbs";
 namespace motis.paxmon;
 
 enum PaxMonGroupFilter : byte { All, Entering, Exiting }
-enum PaxMonGroupByStation : byte { None, First, Last }
+enum PaxMonGroupByStation : byte {
+  None,
+  First,
+  Last,
+  FirstLongDistance,
+  LastLongDistance
+}
 
 table PaxMonGetGroupsInTripRequest {
   universe: uint;

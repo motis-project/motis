@@ -185,4 +185,47 @@ compact_journey merge_journeys(schedule const& sched,
   return merged;
 }
 
+inline bool is_long_distance_class(service_class const clasz) {
+  return clasz >= service_class::ICE && clasz <= service_class::N;
+}
+
+std::optional<unsigned> get_first_long_distance_station_id(
+    universe const& uv, compact_journey const& cj) {
+  for (auto const& leg : cj.legs_) {
+    auto const tdi = uv.trip_data_.get_index(leg.trip_);
+    for (auto const ei : uv.trip_data_.edges(tdi)) {
+      auto const* e = ei.get(uv);
+      auto const* from = e->from(uv);
+      if (from->station_idx() == leg.enter_station_id_ &&
+          from->schedule_time() == leg.enter_time_) {
+        if (is_long_distance_class(e->clasz_)) {
+          return {leg.enter_station_id_};
+        }
+        break;
+      }
+    }
+  }
+  return {};
+}
+
+std::optional<unsigned> get_last_long_distance_station_id(
+    universe const& uv, compact_journey const& cj) {
+  for (auto it = std::rbegin(cj.legs_); it != std::rend(cj.legs_); ++it) {
+    auto const& leg = *it;
+    auto const tdi = uv.trip_data_.get_index(leg.trip_);
+    for (auto const ei : uv.trip_data_.edges(tdi)) {
+      auto const* e = ei.get(uv);
+      auto const* from = e->from(uv);
+      if (from->station_idx() == leg.enter_station_id_ &&
+          from->schedule_time() == leg.enter_time_) {
+        if (is_long_distance_class(e->clasz_)) {
+          return {leg.exit_station_id_};
+        }
+        break;
+      }
+    }
+  }
+  return {};
+}
+
 }  // namespace motis::paxmon
