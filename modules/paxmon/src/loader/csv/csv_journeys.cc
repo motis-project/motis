@@ -317,7 +317,7 @@ void write_match_log(
   }
 }
 
-loader_result load_journeys(schedule const& sched, paxmon_data& data,
+loader_result load_journeys(schedule const& sched, universe& uv,
                             std::string const& journey_file,
                             std::string const& match_log_file,
                             duration const match_tolerance) {
@@ -394,7 +394,7 @@ loader_result load_journeys(schedule const& sched, paxmon_data& data,
         ++journeys_too_long;
         return;
       }
-      data.graph_.add_group(make_passenger_group(
+      uv.passenger_groups_.add(make_passenger_group(
           std::move(current_journey), source, current_passengers,
           current_journey.scheduled_arrival_time(), source_flags));
     } else {

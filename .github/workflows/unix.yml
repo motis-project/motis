@@ -1,6 +1,8 @@
 name: Unix Build
 
 on:
+  schedule:
+    - cron:  '0 3 * * 2,6'
   push:
     branches: [ master ]
   pull_request:
@@ -39,7 +41,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - name: macos
+          - name: macos-avx2
             cxx: clang++
             cc: clang
             mode: Release
@@ -50,7 +52,7 @@ jobs:
             avx2: On
             webui: On
             tests: Off
-            strip: strip
+            mimalloc: Off
           - name: macos-noavx2
             cxx: clang++
             cc: clang
@@ -62,84 +64,7 @@ jobs:
             avx2: Off
             webui: On
             tests: On
-            strip: strip
-          - name: linux-amd64
-            cxx: g++-10
-            cc: gcc-10
-            mode: Release
-            os: ubuntu-20.04
-            artifact: linux-amd64
-            avx: On
-            avx2: On
-            webui: On
-            tests: On
-            strip: strip
-          - name: linux-amd64-noavx
-            cxx: g++-10
-            cc: gcc-10
-            mode: Release
-            os: ubuntu-20.04
-            artifact: linux-noavx
-            avx: Off
-            avx2: Off
-            webui: On
-            tests: On
-            strip: strip
-          - name: linux-x86
-            cxx: g++-10
-            cc: gcc-10
-            cross: |-
-              -DCMAKE_ASM_FLAGS=-m32 \
-              -DCMAKE_SYSTEM_NAME=Linux \
-              -DCMAKE_SYSTEM_PROCESSOR=i686
-            cflags: -m32 -mfpmath=sse -msse2
-            cxxflags: -m32 -mfpmath=sse -msse2
-            mode: Release
-            os: ubuntu-20.04
-            artifact: linux-x86
-            avx: Off
-            avx2: Off
-            webui: On
-            tests: On
-            strip: strip
-          - name: linux-arm64
-            cxx: aarch64-linux-gnu-g++-10
-            cc: aarch64-linux-gnu-gcc-10
-            cross: |-
-              -DCMAKE_AR=/usr/bin/aarch64-linux-gnu-ar \
-              -DCMAKE_LINKER=/usr/bin/aarch64-linux-gnu-ld \
-              -DCMAKE_SYSTEM_NAME=Linux \
-              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-              -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-aarch64-static;-L;/usr/aarch64-linux-gnu" \
-            mode: Release
-            os: ubuntu-20.04
-            artifact: linux-arm64
-            avx: Off
-            avx2: Off
-            webui: On
-            tests: On
-            emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
-            strip: aarch64-linux-gnu-strip
-          - name: linux-arm
-            cxx: arm-linux-gnueabihf-g++-10
-            cc: arm-linux-gnueabihf-gcc-10
-            cflags: -Wno-psabi
-            cxxflags: -Wno-psabi
-            cross: |-
-              -DCMAKE_AR=/usr/bin/arm-linux-gnueabihf-ar \
-              -DCMAKE_LINKER=/usr/bin/arm-linux-gnueabihf-ld \
-              -DCMAKE_SYSTEM_NAME=Linux \
-              -DCMAKE_SYSTEM_PROCESSOR=arm \
-              -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-arm-static;-L;/usr/arm-linux-gnueabihf" \
-            mode: Release
-            os: ubuntu-20.04
-            artifact: linux-arm
-            avx: Off
-            avx2: Off
-            webui: On
-            tests: On
-            emulator: qemu-arm-static -L /usr/arm-linux-gnueabihf
-            strip: arm-linux-gnueabihf-strip
+            mimalloc: Off
           - name: linux-amd64-debug
             cxx: g++-10
             cc: gcc-10
@@ -149,6 +74,9 @@ jobs:
             avx2: On
             webui: Off
             tests: On
+            mimalloc: Off
+            emulator: valgrind --error-exitcode=1
+            install: ninja-build valgrind
           - name: linux-amd64-clang
             cxx: clang++-12
             cc: clang-12
@@ -160,6 +88,8 @@ jobs:
             avx2: On
             webui: Off
             tests: On
+            mimalloc: Off
+            install: ninja-build
           - name: linux-clang-tidy
             cxx: clang++-12
             cc: clang-12
@@ -172,7 +102,9 @@ jobs:
             avx2: On
             webui: Off
             tests: On
-          - key: linux-clang-sanitizer
+            mimalloc: Off
+            install: ninja-build
+          - name: linux-clang-sanitizer
             cxx: clang++-12
             cc: clang-12
             mode: Release
@@ -184,9 +116,73 @@ jobs:
             avx2: On
             webui: Off
             tests: On
+            mimalloc: Off
+            install: ninja-build
+          - name: linux-amd64-release
+            os: ubuntu-20.04
+            toolchain: x86_64-multilib-linux-musl
+            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/x86_64-multilib-linux-musl/toolchain-amd64.cmake
+            mode: Release
+            artifact: linux-amd64
+            avx: On
+            avx2: On
+            webui: On
+            tests: On
+            mimalloc: On
+            install: ninja-build
+          - name: linux-amd64-noavx-release
+            os: ubuntu-20.04
+            toolchain: x86_64-multilib-linux-musl
+            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/x86_64-multilib-linux-musl/toolchain-amd64.cmake
+            mode: Release
+            artifact: linux-amd64-noavx
+            avx: Off
+            avx2: Off
+            webui: On
+            tests: On
+            mimalloc: Off
+            install: ninja-build
+          - name: linux-x86-release
+            os: ubuntu-20.04
+            toolchain: x86_64-multilib-linux-musl
+            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/x86_64-multilib-linux-musl/toolchain-x86.cmake
+            mode: Release
+            artifact: linux-x86
+            avx: Off
+            avx2: Off
+            webui: On
+            tests: On
+            mimalloc: Off
+            install: ninja-build
+          - name: linux-arm-release
+            os: ubuntu-20.04
+            toolchain: arm-unknown-linux-musleabihf
+            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/arm-unknown-linux-musleabihf/toolchain-arm.cmake
+            mode: Release
+            artifact: linux-arm
+            avx: Off
+            avx2: Off
+            webui: On
+            tests: On
+            mimalloc: Off
+            install: ninja-build qemu-user-static
+            emulator: qemu-arm-static
+          - name: linux-arm64-release
+            os: ubuntu-20.04
+            toolchain: aarch64-unknown-linux-musl
+            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/aarch64-unknown-linux-musl/toolchain-arm64.cmake
+            artifact: linux-arm64
+            avx: Off
+            avx2: Off
+            webui: On
+            tests: On
+            mimalloc: Off
+            install: ninja-build qemu-user-static
+            emulator: qemu-aarch64-static
     env:
       DEBIAN_FRONTEND: noninteractive
       BUILDCACHE_COMPRESS: true
+      BUILDCACHE_DIRECT_MODE: true
       BUILDCACHE_ACCURACY: SLOPPY
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
@@ -200,7 +196,9 @@ jobs:
       # ==== INSTALL ====
       - name: Update APT
         if: matrix.config.os != 'macos-latest'
-        run: sudo apt-get update
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt update
 
       - name: Install LLVM
         if: matrix.config.os != 'macos-latest' && matrix.config.cc == 'clang-12'
@@ -211,28 +209,15 @@ jobs:
           rm llvm.sh
           sudo apt-get install -y --no-install-recommends libc++-12-dev libc++abi-12-dev clang-tidy-12 libunwind-12-dev
 
-      - name: Install Valgrind
-        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
-        run: sudo apt-get install -y --no-install-recommends valgrind
-
-      - name: Install Ninja
+      - name: Install Packages
         if: matrix.config.os != 'macos-latest'
-        run: sudo apt-get install -y --no-install-recommends ninja-build
+        run: sudo apt-get install -y --no-install-recommends ${{ matrix.config.install }}
 
-      - name: Cross Compilation (aarch64)
-        if: matrix.config.artifact == 'linux-arm64'
-        run: sudo apt install -y --no-install-recommends qemu-user-static binfmt-support g++-10-aarch64-linux-gnu gcc-10-aarch64-linux-gnu binutils-aarch64-linux-gnu
-
-      - name: Cross Compilation (arm)
-        if: matrix.config.artifact == 'linux-arm'
-        run: sudo apt install -y --no-install-recommends qemu-user-static binfmt-support g++-10-arm-linux-gnueabihf gcc-10-arm-linux-gnueabihf binutils-arm-linux-gnueabi
-
-      - name: Cross Compilation (x86)
-        if: matrix.config.artifact == 'linux-x86'
+      - name: Install musl Toolchain
+        if: matrix.config.toolchain
         run: |
-          sudo dpkg --add-architecture i386
-          sudo apt update
-          sudo apt install -y --no-install-recommends g++-10-multilib gcc-10-multilib linux-libc-dev:i386
+          wget https://github.com/motis-project/musl-toolchains/releases/latest/download/${{ matrix.config.toolchain }}.tar.xz
+          tar xf ${{ matrix.config.toolchain }}.tar.xz -C /opt
 
       # ==== CACHING ====
       - name: buildcache Cache
@@ -262,12 +247,12 @@ jobs:
             -DCMAKE_C_FLAGS="${{ matrix.config.cflags }}" \
             -DCMAKE_CXX_FLAGS="${{ matrix.config.cxxflags }}" \
             -DCMAKE_CXX_FLAGS_DEBUG="" \
-            -DCMAKE_CXX_LINKER_FLAGS=${{ matrix.config.ldflags }}" \
-            -DCMAKE_CXX_EXE_LINKER_FLAGS="${{ matrix.config.ldflags }} \
+            -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.config.ldflags }}" \
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} \
             -DMOTIS_LINT=${{ matrix.config.lint }} \
             -DMOTIS_AVX=${{ matrix.config.avx }} \
             -DMOTIS_AVX2=${{ matrix.config.avx2 }} \
+            -DMOTIS_MIMALLOC=${{ matrix.config.mimalloc }} \
             -DCTX_ASAN=${{ contains(matrix.config.cxxflags, '-fsanitize=address') }} \
             -DCTX_VALGRIND=${{ matrix.config.cc == 'gcc-10' && matrix.config.mode == 'Debug' }} \
             -DMOTIS_WITH_WEBUI=${{ matrix.config.webui }}
@@ -278,10 +263,7 @@ jobs:
           cmake --build build --target \
             motis \
             motis-test \
-            motis-itest \
-            motis-eval \
-            motis-intermodal-eval \
-            motis-pax-tools
+            motis-itest
           ./build/buildcache/bin/buildcache -s
 
       # ==== TESTS ====
@@ -293,7 +275,8 @@ jobs:
             --dataset.begin 20151004 \
             --dataset.write_serialized false \
             --exclude_modules address osrm parking path ppr tiles \
-            --ris.db_max_size 1048576
+            --ris.db_max_size 1048576 \
+            --exclude_modules address osrm parking path ppr tiles tripbased
 
       - name: Run Tests
         if: matrix.config.tests == 'On'
@@ -303,34 +286,13 @@ jobs:
         if: matrix.config.tests == 'On'
         run: ${{ matrix.config.emulator }} ./build/motis-itest
 
-      # ==== VALGRIND ====
-      - name: Run Test Mode Valgrind
-        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
-        run: >
-          valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full \
-            ./build/motis --mode test \
-              --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
-              --dataset.begin 20151004 \
-              --dataset.write_serialized false \
-              --ris.db_max_size 1048576 \
-              --exclude_modules address osrm parking path ppr tiles
-
-      - name: Run Tests Valgrind
-        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
-        run: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./build/motis-test
-
-      - name: Run Integration Tests Valgrind
-        if: matrix.config.mode == 'Debug' && matrix.config.cc == 'gcc-10'
-        run: valgrind --error-exitcode=1 --show-reachable=yes --leak-check=full ./build/motis-itest
-
       # ==== DISTRIBUTION ====
-      - name: Strip Executable
-        if: matrix.config.artifact
-        run: ${{ matrix.config.strip }} build/motis
-
       - name: Compile Web Interface
         if: matrix.config.webui == 'On'
-        run: cmake --build build --target motis-web-ui
+        run: |
+          cmake --build build --target motis-web-ui
+          rm -r ui/web/elm-stuff
+          rm -r ui/web/src
 
       - name: Create Distribution
         if: matrix.config.artifact
@@ -378,16 +340,18 @@ jobs:
           - artifact: linux-arm
             os: ubuntu-20.04
             emulator: qemu-arm-static -L /usr/arm-linux-gnueabihf
-            packages: qemu-user-static binfmt-support binutils-arm-linux-gnueabi g++-10-arm-linux-gnueabihf gcc-10-arm-linux-gnueabihf
+            packages: bzip2 unzip qemu-user-static
           - artifact: linux-arm64
             os: ubuntu-20.04
             emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
-            packages: qemu-user-static binfmt-support binutils-aarch64-linux-gnu g++-10-aarch64-linux-gnu gcc-10-aarch64-linux-gnu
+            packages: bzip2 unzip qemu-user-static
 
     steps:
       - name: Install packages
         if: matrix.config.packages != ''
-        run: sudo apt install -y --no-install-recommends ${{ matrix.config.packages }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ${{ matrix.config.packages }}
 
       - name: Download timetable and OSM dataset
         uses: actions/checkout@v2
@@ -432,9 +396,6 @@ jobs:
 
       - name: Download artifacts
         uses: actions/download-artifact@v2
-
-      - name: Display structure of downloaded files
-        run: ls -R
 
       - name: Docker setup-buildx
         uses: docker/setup-buildx-action@v1

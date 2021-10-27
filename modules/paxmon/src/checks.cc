@@ -14,41 +14,45 @@
 
 namespace motis::paxmon {
 
-bool check_graph_integrity(graph const& g, schedule const& sched) {
+bool check_graph_integrity(universe const& uv, schedule const& sched) {
   auto ok = true;
 
-  for (auto const& n : g.nodes_) {
-    for (auto const& e : n->outgoing_edges(g)) {
-      for (auto const pg : e->get_pax_connection_info().groups_) {
+  for (auto const& n : uv.graph_.nodes_) {
+    for (auto const& e : n.outgoing_edges(uv)) {
+      for (auto const pg_id : uv.pax_connection_info_.groups_[e.pci_]) {
+        auto const* pg = uv.passenger_groups_.at(pg_id);
         if (pg->probability_ <= 0.0 || pg->passengers_ >= 200) {
-          std::cout << "!! invalid psi @" << e->type() << ": id=" << pg->id_
+          std::cout << "!! invalid psi @" << e.type() << ": id=" << pg->id_
                     << "\n";
           ok = false;
         }
-        if (!e->is_trip()) {
+        if (!e.is_trip()) {
           continue;
         }
-        auto const& trips = e->get_trips(sched);
+        auto const& trips = e.get_trips(sched);
         for (auto const& trp : trips) {
-          auto const& td = g.trip_data_.at(trp);
-          if (std::find(begin(td->edges_), end(td->edges_), e.get()) ==
-              end(td->edges_)) {
-            std::cout << "!! edge missing in trip_data.edges @" << e->type()
+          auto const td_edges = uv.trip_data_.edges(trp);
+          if (std::find_if(begin(td_edges), end(td_edges), [&](auto const& ei) {
+                return ei.get(uv) == &e;
+              }) == end(td_edges)) {
+            std::cout << "!! edge missing in trip_data.edges @" << e.type()
                       << "\n";
             ok = false;
           }
         }
-        if (std::find(begin(pg->edges_), end(pg->edges_), e.get()) ==
+        if (std::find_if(begin(pg->edges_), end(pg->edges_),
+                         [&](auto const& ei) { return ei.get(uv) == &e; }) ==
             end(pg->edges_)) {
-          std::cout << "!! edge missing in pg.edges @" << e->type() << "\n";
+          std::cout << "!! edge missing in pg.edges @" << e.type() << "\n";
           ok = false;
         }
       }
     }
   }
 
-  for (auto const& [trp, td] : g.trip_data_) {
-    for (auto const& e : td->edges_) {
+  for (auto const& [trp, tdi] : uv.trip_data_.mapping_) {
+    for (auto const& ei : uv.trip_data_.edges(tdi)) {
+      auto const* e = ei.get(uv);
       auto const& trips = e->get_trips(sched);
       if (std::find(begin(trips), end(trips), trp) == end(trips)) {
         std::cout << "!! trip missing in edge.trips @" << e->type() << "\n";
@@ -57,13 +61,14 @@ bool check_graph_integrity(graph const& g, schedule const& sched) {
     }
   }
 
-  for (auto const& pg : g.passenger_groups_) {
+  for (auto const* pg : uv.passenger_groups_) {
     if (pg == nullptr) {
       continue;
     }
-    for (auto const e : pg->edges_) {
-      if (e->pax_connection_info_.groups_.find(pg) ==
-          e->pax_connection_info_.groups_.end()) {
+    for (auto const& ei : pg->edges_) {
+      auto const* e = ei.get(uv);
+      auto const groups = uv.pax_connection_info_.groups_[e->pci_];
+      if (std::find(begin(groups), end(groups), pg->id_) == end(groups)) {
         std::cout << "!! passenger group not on edge: id=" << pg->id_ << " @"
                   << e->type() << "\n";
         ok = false;
@@ -74,13 +79,15 @@ bool check_graph_integrity(graph const& g, schedule const& sched) {
   return ok;
 }
 
-bool check_trip_times(graph const& g, schedule const& sched, trip const* trp,
-                      trip_data const* td) {
+bool check_trip_times(universe const& uv, schedule const& sched,
+                      trip const* trp, trip_data_index const tdi) {
   auto trip_ok = true;
   std::vector<event_node const*> nodes;
-  for (auto const e : td->edges_) {
-    nodes.emplace_back(e->from(g));
-    nodes.emplace_back(e->to(g));
+  auto const edges = uv.trip_data_.edges(tdi);
+  for (auto const ei : edges) {
+    auto const* e = ei.get(uv);
+    nodes.emplace_back(e->from(uv));
+    nodes.emplace_back(e->to(uv));
   }
   auto const sections = motis::access::sections(trp);
 
@@ -137,20 +144,20 @@ bool check_trip_times(graph const& g, schedule const& sched, trip const* trp,
     std::cout << "trip (errors above):\n";
     print_trip(sched, trp);
     std::cout << "  sections: " << std::distance(begin(sections), end(sections))
-              << ", td edges: " << td->edges_.size()
+              << ", td edges: " << edges.size()
               << ", event nodes: " << nodes.size() << std::endl;
 
-    print_trip_sections(g, sched, trp, td);
+    print_trip_sections(uv, sched, trp, tdi);
     std::cout << "\n\n";
   }
   return trip_ok;
 }
 
-bool check_graph_times(graph const& g, schedule const& sched) {
+bool check_graph_times(universe const& uv, schedule const& sched) {
   auto ok = true;
 
-  for (auto const& [trp, td] : g.trip_data_) {
-    if (!check_trip_times(g, sched, trp, td.get())) {
+  for (auto const& [trp, tdi] : uv.trip_data_.mapping_) {
+    if (!check_trip_times(uv, sched, trp, tdi)) {
       ok = false;
     }
   }

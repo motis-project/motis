@@ -27,6 +27,20 @@ void dispatcher::on_msg(msg_ptr const& msg, callback const& cb) {
   dispatch(msg, cb, ctx::op_id("dispatcher::on_msg"), ctx::op_type_t::IO);
 }
 
+void dispatcher::on_connect(std::string const& target, client_hdl const& c) {
+  auto const it = registry_.client_handlers_.find(target);
+  if (it != end(registry_.client_handlers_)) {
+    it->second(c);
+  } else {
+    LOG(logging::warn) << "no ws handler found for target \"" << target << "\"";
+  }
+}
+
+bool dispatcher::connect_ok(std::string const& target) {
+  return registry_.client_handlers_.find(target) !=
+         end(registry_.client_handlers_);
+}
+
 std::vector<future> dispatcher::publish(msg_ptr const& msg,
                                         ctx_data const& data, ctx::op_id id) {
   id.name = msg->get()->destination()->target()->str();

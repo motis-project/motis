@@ -10,8 +10,8 @@
 
 #include "motis/paxmon/load_info.h"
 #include "motis/paxmon/monitoring_event.h"
-#include "motis/paxmon/paxmon_data.h"
 #include "motis/paxmon/service_info.h"
+#include "motis/paxmon/universe.h"
 
 #include "motis/module/message.h"
 
@@ -67,11 +67,11 @@ flatbuffers::Offset<TripServiceInfo> to_fbs_trip_service_info(
     trip const* trp);
 
 flatbuffers::Offset<PaxMonEdgeLoadInfo> to_fbs(
-    flatbuffers::FlatBufferBuilder& fbb, schedule const& sched, graph const& g,
-    edge_load_info const& eli);
+    flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
+    universe const& uv, edge_load_info const& eli);
 
 flatbuffers::Offset<PaxMonTripLoadInfo> to_fbs(
-    flatbuffers::FlatBufferBuilder& fbb, schedule const& sched, graph const& g,
-    trip_load_info const& tli);
+    flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
+    universe const& uv, trip_load_info const& tli);
 
 }  // namespace motis::paxmon

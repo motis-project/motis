@@ -11,10 +11,13 @@
 #include "motis/core/journey/journey.h"
 
 #include "motis/paxmon/compact_journey.h"
+#include "motis/paxmon/graph_index.h"
 
 namespace motis::paxmon {
 
 struct edge;
+
+using passenger_group_index = std::uint64_t;
 
 struct data_source {
   CISTA_COMPARABLE()
@@ -70,7 +73,7 @@ struct passenger_group {
   }
 
   compact_journey compact_planned_journey_;
-  std::uint64_t id_{};
+  passenger_group_index id_{};
   data_source source_{};
   std::uint16_t passengers_{1};
   motis::time planned_arrival_time_{INVALID_TIME};
@@ -81,7 +84,7 @@ struct passenger_group {
   std::int16_t estimated_delay_{};
   std::uint8_t generation_{};
   std::uint64_t previous_version_{};
-  std::vector<edge*> edges_{};
+  std::vector<edge_index> edges_{};
 };
 
 inline passenger_group make_passenger_group(

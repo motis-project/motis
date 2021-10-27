@@ -3,7 +3,10 @@
 
 #include <cmath>
 #include <cstdint>
+#include <initializer_list>
+#include <iostream>
 #include <random>
+#include <utility>
 #include <vector>
 
 #include "utl/enumerate.h"
@@ -12,7 +15,8 @@
 #include "motis/paxmon/get_load.h"
 #include "motis/paxmon/get_load_internal.h"
 #include "motis/paxmon/passenger_group.h"
-#include "motis/paxmon/pax_connection_info.h"
+#include "motis/paxmon/passenger_group_container.h"
+#include "motis/paxmon/pci_container.h"
 
 using namespace testing;
 
@@ -25,11 +29,23 @@ inline passenger_group mk_pg(std::uint16_t passengers, float probability) {
                               group_source_flags::NONE, probability);
 }
 
-inline pax_connection_info mk_pci(std::vector<passenger_group> const& pgs) {
-  auto const grp_ptrs = utl::to_vec(pgs, [](auto const& pg) {
-    return const_cast<passenger_group*>(&pg);  // NOLINT
-  });
-  return pax_connection_info(begin(grp_ptrs), end(grp_ptrs));
+inline passenger_group_container mk_pgc(std::vector<passenger_group>&& pgs) {
+  passenger_group_container pgc;
+  for (auto& pg : pgs) {
+    pgc.add(std::move(pg));
+  }
+  return pgc;
+}
+
+inline pci_groups mk_pci(passenger_group_container const& pgc,
+                         pci_container& pcis) {
+  auto const idx = pcis.insert();
+  auto groups = pcis.groups_[idx];
+  for (auto const& pg : pgc) {
+    groups.emplace_back(pg->id_);
+  }
+  pcis.init_expected_load(pgc, idx);
+  return groups;
 }
 
 inline pax_pdf make_pdf(std::map<std::uint16_t, float> const& m) {
@@ -58,13 +74,14 @@ inline pax_cdf make_cdf(std::map<std::uint16_t, float> const& m) {
 }  // namespace
 
 TEST(paxmon_get_load, only_one_certain) {
-  auto const pgs = std::vector<passenger_group>{{mk_pg(10, 1.0F)}};
-  auto const pci = mk_pci(pgs);
+  auto const pgc = mk_pgc({mk_pg(10, 1.0F)});
+  auto pcis = pci_container{};
+  auto const pcig = mk_pci(pgc, pcis);
   auto const capacity = static_cast<std::uint16_t>(20);
 
-  EXPECT_EQ(get_base_load(pci), 10);
+  EXPECT_EQ(get_base_load(pgc, pcig), 10);
 
-  auto const pdf = get_load_pdf(pci);
+  auto const pdf = get_load_pdf(pgc, pcig);
   EXPECT_EQ(pdf, (make_pdf({{10, 1.0F}})));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.2F));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.5F));
@@ -79,7 +96,7 @@ TEST(paxmon_get_load, only_one_certain) {
   EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 1.5F));
   EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 2.0F));
 
-  for (auto const& cdf : {get_cdf(pdf), get_load_cdf(pci)}) {
+  for (auto const& cdf : {get_cdf(pdf), get_load_cdf(pgc, pcig)}) {
     EXPECT_EQ(cdf, (make_cdf({{10, 1.0F}})));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.2F));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.5F));
@@ -95,19 +112,19 @@ TEST(paxmon_get_load, only_one_certain) {
     EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 2.0F));
   }
 
-  EXPECT_EQ(get_mean_load(pci), 10);
+  EXPECT_EQ(get_mean_load(pgc, pcig), 10);
   EXPECT_EQ(get_median_load(get_cdf(pdf)), 10);
 }
 
 TEST(paxmon_get_load, only_multiple_certain) {
-  auto const pgs = std::vector<passenger_group>{
-      {mk_pg(10, 1.0F), mk_pg(20, 1.0F), mk_pg(30, 1.0F)}};
-  auto const pci = mk_pci(pgs);
+  auto const pgc = mk_pgc({mk_pg(10, 1.0F), mk_pg(20, 1.0F), mk_pg(30, 1.0F)});
+  auto pcis = pci_container{};
+  auto const pcig = mk_pci(pgc, pcis);
   auto const capacity = static_cast<std::uint16_t>(100);
 
-  EXPECT_EQ(get_base_load(pci), 60);
+  EXPECT_EQ(get_base_load(pgc, pcig), 60);
 
-  auto const pdf = get_load_pdf(pci);
+  auto const pdf = get_load_pdf(pgc, pcig);
   EXPECT_EQ(pdf, (make_pdf({{60, 1.0F}})));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.2F));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.5F));
@@ -122,7 +139,7 @@ TEST(paxmon_get_load, only_multiple_certain) {
   EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 1.5F));
   EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 2.0F));
 
-  for (auto const& cdf : {get_cdf(pdf), get_load_cdf(pci)}) {
+  for (auto const& cdf : {get_cdf(pdf), get_load_cdf(pgc, pcig)}) {
     EXPECT_EQ(cdf, (make_cdf({{60, 1.0F}})));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.2F));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.5F));
@@ -138,19 +155,19 @@ TEST(paxmon_get_load, only_multiple_certain) {
     EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 2.0F));
   }
 
-  EXPECT_EQ(get_mean_load(pci), 60);
+  EXPECT_EQ(get_mean_load(pgc, pcig), 60);
   EXPECT_EQ(get_median_load(get_cdf(pdf)), 60);
 }
 
 TEST(paxmon_get_load, two_groups) {
-  auto const pgs =
-      std::vector<passenger_group>{{mk_pg(10, 1.0F), mk_pg(20, 0.4F)}};
-  auto const pci = mk_pci(pgs);
+  auto const pgc = mk_pgc({mk_pg(10, 1.0F), mk_pg(20, 0.4F)});
+  auto pcis = pci_container{};
+  auto const pcig = mk_pci(pgc, pcis);
   auto const capacity = static_cast<std::uint16_t>(20);
 
-  EXPECT_EQ(get_base_load(pci), 10);
+  EXPECT_EQ(get_base_load(pgc, pcig), 10);
 
-  auto const pdf = get_load_pdf(pci);
+  auto const pdf = get_load_pdf(pgc, pcig);
   EXPECT_EQ(pdf.data_, (make_pdf({{10, 0.6F}, {30, 0.4F}}).data_));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.2F));
   EXPECT_TRUE(load_factor_possibly_ge(pdf, capacity, 0.5F));
@@ -165,7 +182,7 @@ TEST(paxmon_get_load, two_groups) {
   EXPECT_TRUE(load_factor_possibly_ge(lf_pdf, 1.5F));
   EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 2.0F));
 
-  for (auto const& cdf : {get_cdf(pdf), get_load_cdf(pci)}) {
+  for (auto const& cdf : {get_cdf(pdf), get_load_cdf(pgc, pcig)}) {
     EXPECT_EQ(cdf, (make_cdf({{10, 0.6F}, {30, 1.0F}})));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.2F));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.5F));
@@ -181,7 +198,7 @@ TEST(paxmon_get_load, two_groups) {
     EXPECT_FALSE(load_factor_possibly_ge(lf_cdf, 2.0F));
   }
 
-  EXPECT_EQ(get_mean_load(pci), 18);
+  EXPECT_EQ(get_mean_load(pgc, pcig), 18);
   EXPECT_EQ(get_median_load(get_cdf(pdf)), 10);
 }
 
@@ -189,8 +206,8 @@ TEST(paxmon_get_load, two_groups) {
 TEST(paxmon_get_load, base_eq_avx) {
   auto gen = std::mt19937{std::random_device{}()};
   auto base_group_count_dist = std::uniform_int_distribution{0, 200};
-  auto fc_group_count_dist = std::uniform_int_distribution{1, 1'000};
-  auto add_group_count_dist = std::uniform_int_distribution{1, 200};
+  auto fc_group_count_dist = std::uniform_int_distribution{1, 100};
+  auto add_group_count_dist = std::uniform_int_distribution{1, 10};
   auto group_size_dist = std::normal_distribution<float>{1.5F, 3.0F};
   auto prob_dist = std::uniform_real_distribution<float>{0.0F, 1.0F};
 
@@ -198,23 +215,24 @@ TEST(paxmon_get_load, base_eq_avx) {
     return static_cast<std::uint16_t>(std::max(1.0F, group_size_dist(gen)));
   };
 
-  for (auto run = 0; run < 100; ++run) {
+  for (auto run = 0; run < 5; ++run) {
     auto const base_group_count = base_group_count_dist(gen);
     auto const fc_group_count = fc_group_count_dist(gen);
-    auto pgs = std::vector<passenger_group>{};
-    pgs.reserve(base_group_count + fc_group_count);
+    auto pgc = passenger_group_container{};
+    pgc.reserve(base_group_count + fc_group_count);
 
     for (auto grp = 0; grp < base_group_count; ++grp) {
-      pgs.emplace_back(mk_pg(get_group_size(), 1.0F));
+      pgc.add(mk_pg(get_group_size(), 1.0F));
     }
 
     for (auto grp = 0; grp < fc_group_count; ++grp) {
-      pgs.emplace_back(mk_pg(get_group_size(), prob_dist(gen)));
+      pgc.add(mk_pg(get_group_size(), prob_dist(gen)));
     }
 
-    auto const pci = mk_pci(pgs);
-    auto pdf_base = get_load_pdf_base(pci);
-    auto pdf_avx = get_load_pdf_avx(pci);
+    auto pcis = pci_container{};
+    auto const pcig = mk_pci(pgc, pcis);
+    auto pdf_base = get_load_pdf_base(pgc, pcig);
+    auto pdf_avx = get_load_pdf_avx(pgc, pcig);
 
     ASSERT_THAT(pdf_avx.data_, Pointwise(FloatNear(1E-5F), pdf_base.data_));
 

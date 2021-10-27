@@ -3,5 +3,7 @@ include "base/TripId.fbs";
 namespace motis.paxmon;
 
 table PaxMonGetTripLoadInfosRequest {
+  universe: uint;
+
   trips: [motis.TripId];
 }

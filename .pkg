@@ -5,11 +5,11 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=fb4d35eeb72e86cd3768a896f5068fc6ba31b5e8
+  commit=eb1b0199eef401493db0d2dd735a14481b823083
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
-  commit=b7d42aa063dd815cee6157bd27dce0caa82d2fa6
+  commit=4c809244b10de534f4423ce4b27aa1a371610e96
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -21,7 +21,7 @@
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=motis
-  commit=67c40dd37ab31c895ddd4bda8331ad56c777a9a7
+  commit=b0966f5f4c14ffc7ffb3badb90d7fdee4b86836a
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
@@ -29,7 +29,7 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=ceb7f4103c0a2caf3bc02f96f64d414e317053e8
+  commit=669e6b5b15782ef547507183db2fc8f4ab005a1b
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
@@ -37,7 +37,7 @@
 [lmdb]
   url=git@github.com:motis-project/lmdb.git
   branch=master
-  commit=89f4d52b63f2d6ee44757c13c028ceb86718e2eb
+  commit=9bd01f14f549d8202413c4cd5f49b066b0a22b66
 [miniz]
   url=git@github.com:motis-project/miniz.git
   branch=master
@@ -45,19 +45,19 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=556284857335168eaeaf3955c3cdbb5d6fc330a3
+  commit=76e30a09879ec2bd83231b76920d6ea9454b67c5
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
-  commit=fbc74e5e9a4dec9fc38dbcd4fe97d4cc24a15710
+  commit=9aa492376a664304d8209513230bb43258367108
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=65951b9976e75a0836960b305ce22eea0d692b98
+  commit=3cf8bc12ca2d1f74f61fb7cd56606c8fe4d4da77
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
-  commit=8166a4dcc8ebd54d5bc7820c3eb211a49a96773a
+  commit=c48de3aceaf483eae25aafcde32a62c1b48d89ce
 [pugixml]
   url=git@github.com:motis-project/pugixml.git
   branch=master
@@ -73,11 +73,11 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=82de6f2331108fea332be171fb93673da12a199a
+  commit=e3b4199986bf0324fdd1f0c770e7f90b83de6994
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=e8e4ec12d3ff7be68284ee2609d297095ed834f0
+  commit=c7be2bfe0b81702078b3aaf9c620c658d8d1f658
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master
@@ -86,3 +86,7 @@
   url=git@github.com:motis-project/boost.git
   branch=master
   commit=bca212ca286121db1e7eb2efa9ee8de626633481
+[mimalloc]
+  url=git@github.com:motis-project/mimalloc.git
+  branch=master
+  commit=076f815cece59e0a0ee08237c8fbba75465452b6

@@ -27,14 +27,14 @@ Offset<PaxForecastGroup> get_passenger_group_forecast(
 
 Offset<Vector<Offset<PaxMonTripLoadInfo>>> to_fbs(FlatBufferBuilder& fbb,
                                                   schedule const& sched,
-                                                  graph const& g,
+                                                  universe const& uv,
                                                   load_forecast const& lfc) {
-  return fbb.CreateVector(utl::to_vec(
-      lfc.trips_, [&](auto const& tfc) { return to_fbs(fbb, sched, g, tfc); }));
+  return fbb.CreateVector(utl::to_vec(lfc.trips_, [&](auto const& tfc) {
+    return to_fbs(fbb, sched, uv, tfc);
+  }));
 }
 
-msg_ptr make_forecast_update_msg(schedule const& sched,
-                                 motis::paxmon::paxmon_data const& data,
+msg_ptr make_forecast_update_msg(schedule const& sched, universe const& uv,
                                  simulation_result const& sim_result,
                                  load_forecast const& lfc) {
   message_creator fbb;
@@ -47,7 +47,7 @@ msg_ptr make_forecast_update_msg(schedule const& sched,
                                     return get_passenger_group_forecast(
                                         fbb, sched, *entry.first, entry.second);
                                   })),
-                              to_fbs(fbb, sched, data.graph_, lfc))
+                              to_fbs(fbb, sched, uv, lfc))
           .Union(),
       "/paxforecast/passenger_forecast");
   return make_msg(fbb);

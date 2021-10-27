@@ -89,9 +89,9 @@ struct graph_statistics {
   std::uint64_t broken_passenger_groups_{};
 };
 
-struct paxmon_data;
+struct universe;
 
 graph_statistics calc_graph_statistics(schedule const& sched,
-                                       paxmon_data const& data);
+                                       universe const& uv);
 
 }  // namespace motis::paxmon

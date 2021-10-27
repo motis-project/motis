@@ -305,6 +305,11 @@ struct fws_graph {
   std::size_t node_count() const { return nodes_.size(); }
   std::size_t edge_count() const { return edges_.element_count(); }
 
+  std::size_t allocated_size() const {
+    return nodes_.allocated_size_ * sizeof(node_type) +
+           edges_.allocated_size() + edges_.bwd_.allocated_size();
+  }
+
   mcd::vector<node_type> nodes_;
   edge_fws_multimap<edge_type> edges_;
 };

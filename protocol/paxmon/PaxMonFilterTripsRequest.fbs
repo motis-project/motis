@@ -1,6 +1,8 @@
 namespace motis.paxmon;
 
 table PaxMonFilterTripsRequest {
+  universe: uint;
+
   load_factor_possibly_ge: float;
   ignore_past_sections: bool;
 }
