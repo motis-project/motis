@@ -471,7 +471,7 @@ struct reconstructor {
   }
 
   stop_id get_board_station_for_trip(route_id const r_id, trip_id const t_id,
-                                     raptor_result const& result,
+                                     raptor_result_base const& result,
                                      raptor_round const result_idx,
                                      stop_offset const arrival_offset) {
     auto const& r = timetable_.routes_[r_id];
