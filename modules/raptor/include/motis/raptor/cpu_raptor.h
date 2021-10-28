@@ -16,7 +16,7 @@ inline trip_count get_earliest_trip(raptor_timetable const& tt,
                                     time const* const prev_arrivals,
                                     stop_times_index const r_stop_offset) {
 
-  station_id const stop_id =
+  stop_id const stop_id =
       tt.route_stops_[route.index_to_route_stops_ + r_stop_offset];
 
   // station was never visited, there can't be a earliest trip
@@ -71,7 +71,7 @@ inline void update_route(raptor_timetable const& tt, route_id const r_id,
   auto const& route = tt.routes_[r_id];
 
   trip_count earliest_trip_id = invalid<trip_count>;
-  for (station_id r_stop_offset = 0; r_stop_offset < route.stop_count_;
+  for (stop_id r_stop_offset = 0; r_stop_offset < route.stop_count_;
        ++r_stop_offset) {
 
     if (!valid(earliest_trip_id)) {
@@ -128,7 +128,7 @@ inline void update_footpaths(raptor_timetable const& tt, time* current_round,
                              earliest_arrivals const& ea,
                              cpu_mark_store& station_marks) {
 
-  for (station_id stop_id = 0; stop_id < tt.stop_count(); ++stop_id) {
+  for (stop_id stop_id = 0; stop_id < tt.stop_count(); ++stop_id) {
 
     auto index_into_transfers = tt.stops_[stop_id].index_to_transfers_;
     auto next_index_into_transfers = tt.stops_[stop_id + 1].index_to_transfers_;
@@ -138,7 +138,6 @@ inline void update_footpaths(raptor_timetable const& tt, time* current_round,
 
       auto const& footpath = tt.footpaths_[current_index];
 
-      // if (arrivals[round_k][stop_id] == invalid_time) { continue; }
       if (!valid(ea[stop_id])) {
         continue;
       }
@@ -175,7 +174,6 @@ inline void invoke_cpu_raptor(raptor_query const& query, raptor_statistics&) {
   init_arrivals(result, query, station_marks);
 
   for (raptor_round round_k = 1; round_k < max_raptor_round; ++round_k) {
-    // std::cout << "raptor round: " << std::to_string(round_k) << '\n';
     bool any_marked = false;
 
     for (auto s_id = 0; s_id < tt.stop_count(); ++s_id) {

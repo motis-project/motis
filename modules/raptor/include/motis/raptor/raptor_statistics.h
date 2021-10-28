@@ -2,8 +2,7 @@
 
 #include "motis/core/statistics/statistics.h"
 
-namespace motis {
-namespace raptor {
+namespace motis::raptor {
 
 struct raptor_statistics {
   uint64_t raptor_time_{0};
@@ -25,5 +24,4 @@ inline stats_category to_stats_category(char const* name,
            {"raptor_queries", s.raptor_queries_}}};
 }
 
-}  // namespace raptor
-}  // namespace motis
+}  // namespace motis::raptor

@@ -1,6 +1,5 @@
 #include "motis/raptor/get_raptor_schedule.h"
 
-#include <numeric>
 #include <thread>
 #include <tuple>
 
@@ -10,11 +9,9 @@
 
 #include "motis/raptor/raptor_util.h"
 
-#include "utl/parallel_for.h"
-
 namespace motis::raptor {
 
-using namespace motis::logging;
+namespace log = motis::logging;
 
 std::vector<stop_time> get_stop_times_from_lcons(
     std::vector<raptor_lcon> const& lcons) {
@@ -31,33 +28,15 @@ std::vector<stop_time> get_stop_times_from_lcons(
   return stop_times;
 }
 
-std::vector<station_id> get_route_stops_from_lcons(
+std::vector<stop_id> get_route_stops_from_lcons(
     std::vector<raptor_lcon> const& lcons) {
-  std::vector<station_id> route_stops;
+  std::vector<stop_id> route_stops;
   route_stops.reserve(lcons.size() + 1);
   for (auto const& lcon : lcons) {
     route_stops.push_back(lcon.from_);
   }
   route_stops.push_back(lcons.back().to_);
   return route_stops;
-}
-
-time get_stand_time(transformable_route const& route) {
-  time route_stand_time = invalid<time>;
-  for (auto const& trip : route.trips_) {
-    for (auto const& st : trip.stop_times_) {
-      auto const stand_time = st.departure_ - st.arrival_;
-      if (!valid(route_stand_time)) {
-        route_stand_time = stand_time;
-        continue;
-      }
-
-      if (stand_time != route_stand_time) {
-        return invalid<time>;
-      }
-    }
-  }
-  return invalid<time>;
 }
 
 void init_stops(schedule const& sched, std::vector<transformable_stop>& tss) {
@@ -70,7 +49,7 @@ void init_stops(schedule const& sched, std::vector<transformable_stop>& tss) {
     s.eva_ = s_ptr->eva_nr_;
 
     s.equivalent_.push_back(s_id);
-    for (auto equi_ptr : s_ptr->equivalent_) {
+    for (auto const& equi_ptr : s_ptr->equivalent_) {
       if (equi_ptr->index_ == s_id) {
         continue;
       }
@@ -140,7 +119,6 @@ void init_routes(schedule const& sched, std::vector<transformable_route>& rs) {
 
     t_route.route_stops_ =
         get_route_stops_from_lcons(t_route.trips_.front().lcons_);
-    t_route.stand_time_ = get_stand_time(t_route);
 
     ++r_id;
   }
@@ -209,8 +187,7 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
     auto stop_times_idx = static_cast<stop_times_index>(tt->stop_times_.size());
     auto rs_idx = static_cast<route_stops_index>(tt->route_stops_.size());
 
-    tt->routes_.emplace_back(tc, sc, stop_times_idx, rs_idx,
-                             t_route.stand_time_);
+    tt->routes_.emplace_back(tc, sc, stop_times_idx, rs_idx);
 
     for (auto const& trip : t_route.trips_) {
       append_vector(tt->stop_times_, trip.stop_times_);
@@ -221,7 +198,7 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
   auto stop_times_idx = static_cast<stop_times_index>(tt->stop_times_.size());
   auto rs_idx = static_cast<route_stops_index>(tt->route_stops_.size());
 
-  tt->routes_.emplace_back(0, 0, stop_times_idx, rs_idx, invalid<time>);
+  tt->routes_.emplace_back(0, 0, stop_times_idx, rs_idx);
 
   // preadd the transfer times
   for (auto const& route : tt->routes_) {
@@ -244,76 +221,8 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
   return tt;
 }
 
-std::unique_ptr<raptor_timetable> create_backward_raptor_timetable(
-    transformable_timetable const& ttt, raptor_timetable const& tt) {
-  auto btt = std::make_unique<raptor_timetable>(tt);
-
-  // Adjust the routes for the backward timetable
-  for (auto const& route : btt->routes_) {
-
-    // Remove the preadded transfer time from the arrival values
-    // Subtract it from the departure values, for correctness
-    // Additionally, negate the time values
-    for (auto trip = 0; trip < route.trip_count_; ++trip) {
-      for (auto offset = 0; offset < route.stop_count_; ++offset) {
-        auto const rsi = route.index_to_route_stops_ + offset;
-        auto const sti =
-            route.index_to_stop_times_ + (trip * route.stop_count_) + offset;
-        auto const s_id = btt->route_stops_[rsi];
-        auto const transfer_time = ttt.stations_[s_id].transfer_time_;
-
-        auto& arrival = btt->stop_times_[sti].arrival_;
-        auto& departure = btt->stop_times_[sti].departure_;
-
-        if (valid(arrival)) {
-          arrival = -(arrival - transfer_time);
-        }
-        if (valid(departure)) {
-          departure = -(departure - transfer_time);
-        }
-        std::swap(arrival, departure);
-      }
-    }
-
-    // Reverse the routes w.r.t trips and route stops
-    auto st_from = std::begin(btt->stop_times_) + route.index_to_stop_times_;
-    auto st_to = st_from + (route.trip_count_ * route.stop_count_);
-    std::reverse(st_from, st_to);
-
-    auto rs_from = std::begin(btt->route_stops_) + route.index_to_route_stops_;
-    auto rs_to = rs_from + route.stop_count_;
-    std::reverse(rs_from, rs_to);
-  }
-
-  // Generate footpaths for backwards timetable
-  // Reverse the incoming footpaths for every station
-  btt->footpaths_.clear();
-  for (auto s_id = 0U; s_id < ttt.stations_.size(); ++s_id) {
-    auto const& t_stop = ttt.stations_[s_id];
-
-    auto footpaths_idx = static_cast<footpaths_index>(btt->footpaths_.size());
-    auto fc = static_cast<footpath_count>(t_stop.incoming_footpaths_.size());
-    btt->stops_[s_id].footpath_count_ = fc;
-    btt->stops_[s_id].index_to_transfers_ = footpaths_idx;
-
-    for_each(t_stop.incoming_footpaths_, [&](auto const& f) {
-      auto const transfer_time = ttt.stations_[f.to_].transfer_time_;
-      btt->footpaths_.emplace_back(f.from_, f.duration_ - transfer_time);
-    });
-
-    btt->incoming_footpaths_[s_id].clear();
-    for_each(t_stop.footpaths_, [&](auto const& f) {
-      auto const transfer_time = ttt.stations_[f.to_].transfer_time_;
-      btt->incoming_footpaths_[s_id].emplace_back(f.to_,
-                                                  f.duration_ - transfer_time);
-    });
-  }
-
-  return btt;
-}
-
 auto get_station_departure_events(transformable_timetable const& ttt,
-                                  station_id const s_id) {
+                                  stop_id const s_id) {
   std::vector<time> dep_events;
 
   auto const& station = ttt.stations_[s_id];
@@ -361,7 +270,6 @@ std::unique_ptr<raptor_schedule> transformable_to_schedule(
   raptor_sched->raptor_id_to_eva_.reserve(ttt.stations_.size());
   raptor_sched->station_id_to_index_.reserve(ttt.stations_.size());
 
-  // raptor_sched->incoming_footpaths_.resize(ttt.stations_.size());
   raptor_sched->departure_events_.resize(ttt.stations_.size());
   raptor_sched->equivalent_stations_.resize(ttt.stations_.size());
 
@@ -373,8 +281,7 @@ std::unique_ptr<raptor_schedule> transformable_to_schedule(
     raptor_sched->transfer_times_.push_back(s.transfer_time_);
     raptor_sched->raptor_id_to_eva_.push_back(s.eva_);
     raptor_sched->eva_to_raptor_id_.emplace(
-        s.eva_,
-        static_cast<station_id>(raptor_sched->eva_to_raptor_id_.size()));
+        s.eva_, static_cast<stop_id>(raptor_sched->eva_to_raptor_id_.size()));
 
     // set equivalent meta stations
     for (auto const equi_s_id : s.equivalent_) {
@@ -422,11 +329,9 @@ std::unique_ptr<raptor_schedule> transformable_to_schedule(
   return raptor_sched;
 }
 
-// std::unique_ptr<raptor_schedule>
-std::tuple<std::unique_ptr<raptor_schedule>, std::unique_ptr<raptor_timetable>,
-           std::unique_ptr<raptor_timetable>>
+std::tuple<std::unique_ptr<raptor_schedule>, std::unique_ptr<raptor_timetable>>
 get_raptor_schedule(schedule const& sched) {
-  scoped_timer timer("building RAPTOR timetable");
+  log::scoped_timer timer("building RAPTOR timetable");
 
   transformable_timetable ttt;
 
@@ -437,22 +342,19 @@ get_raptor_schedule(schedule const& sched) {
   threads.emplace_back(init_routes, std::cref(sched), std::ref(ttt.routes_));
   threads.emplace_back(add_footpaths, std::cref(sched),
                        std::ref(ttt.stations_));
-  for (auto& t : threads) {
-    t.join();
-  }
+
+  std::for_each(begin(threads), end(threads), [](auto& t) { t.join(); });
 
   // after stops and routes are initialized
   init_stop_routes(ttt);
 
-  LOG(info) << "RAPTOR Stations: " << ttt.stations_.size();
-  LOG(info) << "RAPTOR Routes: " << ttt.routes_.size();
+  LOG(log::info) << "RAPTOR Stations: " << ttt.stations_.size();
+  LOG(log::info) << "RAPTOR Routes: " << ttt.routes_.size();
 
   auto raptor_sched = transformable_to_schedule(ttt);
   auto tt = create_raptor_timetable(ttt);
-  auto btt = create_backward_raptor_timetable(ttt, *tt);
 
-  return std::make_tuple(std::move(raptor_sched), std::move(tt),
-                         std::move(btt));
+  return std::make_tuple(std::move(raptor_sched), std::move(tt));
 }
 
 }  // namespace motis::raptor
