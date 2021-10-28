@@ -177,60 +177,6 @@ struct d_query : base_query {
   bool* any_station_marked_h_;
 };
 
-struct host_memory {
-
-  void reset() { *any_station_marked_h_ = false; }
-
-  raptor_result_pinned* result_;
-  bool* any_station_marked_h_;
-};
-
-struct device_memory {
-  bool* any_station_marked_d_;
-  arrival_ptrs d_arrivals_;
-  time* footpaths_scratchpad_;
-  unsigned int* station_marks_;
-  unsigned int* route_marks_;
-};
-
-host_memory get_host_memory(stop_id const stop_count) {
-  host_memory hm{};
-
-  cudaMallocHost(&hm.any_station_marked_h_, sizeof(bool));
-  *hm.any_station_marked_h_ = false;
-
-  hm.result_ = new raptor_result_pinned(stop_count);
-
-  return hm;
-}
-
-device_memory get_device_memory(device const& d, stop_id const stop_count,
-                                route_id const route_count) {
-  device_memory dm{};
-
-  // +1 due to scratchpad memory for GPU
-  auto const arrival_bytes = stop_count * sizeof(time) * (max_raptor_round + 1);
-
-  cuda_malloc_set(&(dm.d_arrivals_.front()), arrival_bytes, 0xFFu);
-  for (auto k = 1u; k < dm.d_arrivals_.size(); ++k) {
-    dm.d_arrivals_[k] = dm.d_arrivals_[k - 1] + stop_count;
-  }
-
-  dm.footpaths_scratchpad_ =
-      dm.d_arrivals_.front() + (dm.d_arrivals_.size() * stop_count);
-
-  size_t station_byte_count = ((stop_count / 32) + 1) * 4;
-  size_t route_byte_count = ((route_count / 32) + 1) * 4;
-
-  cuda_malloc_set(&dm.station_marks_, station_byte_count, 0);
-  cuda_malloc_set(&dm.route_marks_, route_byte_count, 0);
-
-  cudaMalloc(&dm.any_station_marked_d_, sizeof(bool));
-  cudaMemset(dm.any_station_marked_d_, 0, sizeof(bool));
-
-  return dm;
-}
-
 #endif
 
 }  // namespace motis::raptor
