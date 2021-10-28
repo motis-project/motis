@@ -5,10 +5,9 @@
 
 namespace motis::raptor {
 
-// returns the size of a vectors contents in bytes
-// works only if T is trivial
 template <typename T>
 inline auto vec_size_bytes(std::vector<T> const& vec) {
+  static_assert(std::is_trivially_copyable_v<T>);
   return sizeof(T) * vec.size();
 }
 

@@ -2,23 +2,50 @@
 
 #include "utl/to_vec.h"
 
+#include "motis/core/schedule/schedule.h"
+#include "motis/module/message.h"
+
 #include "motis/raptor/mark_store.h"
 #include "motis/raptor/raptor_result.h"
 #include "motis/raptor/raptor_util.h"
 
+#if defined(MOTIS_CUDA)
+#include "motis/raptor/gpu/cuda_util.h"
+#include "motis/raptor/gpu/devices.h"
+#include "motis/raptor/gpu/gpu_timetable.cuh"
+#endif
+
 namespace motis::raptor {
+
+struct base_query {
+  int id_{-1};
+
+  stop_id source_{invalid<stop_id>};
+  stop_id target_{invalid<stop_id>};
+
+  time source_time_begin_{invalid<time>};
+  time source_time_end_{invalid<time>};
+
+  bool forward_{true};
+
+  bool use_start_metas_{true};
+  bool use_dest_metas_{true};
+};
+
+base_query get_base_query(routing::RoutingRequest const* routing_request,
+                          schedule const& sched,
+                          raptor_schedule const& raptor_sched);
 
 struct additional_start {
   additional_start() = delete;
-  additional_start(station_id const s_id, time const offset)
+  additional_start(stop_id const s_id, time const offset)
       : s_id_(s_id), offset_(offset) {}
-  station_id s_id_{invalid<station_id>};
+  stop_id s_id_{invalid<stop_id>};
   time offset_{invalid<time>};
 };
 
 auto inline get_add_starts(raptor_schedule const& raptor_sched,
-                           station_id const source,
-                           bool const use_start_footpaths,
+                           stop_id const source, bool const use_start_footpaths,
                            bool const use_start_metas) {
   std::vector<additional_start> add_starts;
 
@@ -50,19 +77,6 @@ auto inline get_add_starts(raptor_schedule const& raptor_sched,
   return add_starts;
 }
 
-struct base_query {
-  station_id source_{invalid<station_id>};
-  station_id target_{invalid<station_id>};
-
-  time source_time_begin_{invalid<time>};
-  time source_time_end_{invalid<time>};
-
-  bool forward_{true};
-
-  bool use_start_metas_{true};
-  bool use_dest_metas_{true};
-};
-
 struct raptor_query : base_query {
   raptor_query() = delete;
   raptor_query(raptor_query const&) = delete;
@@ -87,5 +101,136 @@ struct raptor_query : base_query {
   std::vector<additional_start> add_starts_;
   std::unique_ptr<raptor_result> result_;
 };
+
+#if defined(MOTIS_CUDA)
+
+struct d_query : base_query {
+  d_query() = delete;
+
+  d_query(base_query const& bq, raptor_schedule const&,
+          raptor_timetable const& tt, bool const, device* device) {
+    static_cast<base_query&>(*this) = bq;
+
+    device_ = device;
+
+    stop_count_ = tt.stop_count();
+
+    // +1 due to scratchpad memory for GPU
+    auto const arrival_bytes =
+        stop_count_ * sizeof(time) * (max_raptor_round + 1);
+
+    cuda_malloc_set(&(d_arrivals_.front()), arrival_bytes, 0xFFu);
+    for (auto k = 1u; k < d_arrivals_.size(); ++k) {
+      d_arrivals_[k] = d_arrivals_[k - 1] + stop_count_;
+    }
+
+    footpaths_scratchpad_ =
+        d_arrivals_.front() + (d_arrivals_.size() * stop_count_);
+
+    size_t station_byte_count = ((tt.stop_count() / 32) + 1) * 4;
+    size_t route_byte_count = ((tt.route_count() / 32) + 1) * 4;
+
+    cuda_malloc_set(&station_marks_, station_byte_count, 0);
+    cuda_malloc_set(&route_marks_, route_byte_count, 0);
+
+    cudaMalloc(&any_station_marked_d_, sizeof(bool));
+    cudaMemset(any_station_marked_d_, 0, sizeof(bool));
+
+    cudaMallocHost(&any_station_marked_h_, sizeof(bool));
+    *any_station_marked_h_ = false;
+
+    result_ = new raptor_result_pinned(stop_count_);
+  }
+
+#if !defined(__CUDACC__)
+  // Do not copy queries, else double free
+  d_query(d_query const&) = delete;
+#else
+  // CUDA needs the copy constructor for the kernel call,
+  // as we pass the query to the kernel, which must be a copy
+  d_query(d_query const&) = default;
+#endif
+
+  __host__ __device__ ~d_query() {
+// Only call free when destructor is called by host,
+// not when device kernel exits, as we pass the query to the kernel
+#if !defined(__CUDACC__)
+    cuda_free(d_arrivals_.front());
+    cuda_free(station_marks_);
+    cuda_free(route_marks_);
+    delete result_;
+#endif
+  }
+
+  stop_id stop_count_;
+
+  // Pointers to device memory
+  bool* any_station_marked_d_;
+  arrival_ptrs d_arrivals_;
+  time* footpaths_scratchpad_;
+  unsigned int* station_marks_;
+  unsigned int* route_marks_;
+
+  // Pointers to host memory
+  device* device_;
+  raptor_result_pinned* result_;
+  bool* any_station_marked_h_;
+};
+
+struct host_memory {
+
+  void reset() { *any_station_marked_h_ = false; }
+
+  raptor_result_pinned* result_;
+  bool* any_station_marked_h_;
+};
+
+struct device_memory {
+  bool* any_station_marked_d_;
+  arrival_ptrs d_arrivals_;
+  time* footpaths_scratchpad_;
+  unsigned int* station_marks_;
+  unsigned int* route_marks_;
+};
+
+host_memory get_host_memory(stop_id const stop_count) {
+  host_memory hm{};
+
+  cudaMallocHost(&hm.any_station_marked_h_, sizeof(bool));
+  *hm.any_station_marked_h_ = false;
+
+  hm.result_ = new raptor_result_pinned(stop_count);
+
+  return hm;
+}
+
+device_memory get_device_memory(device const& d, stop_id const stop_count,
+                                route_id const route_count) {
+  device_memory dm{};
+
+  // +1 due to scratchpad memory for GPU
+  auto const arrival_bytes = stop_count * sizeof(time) * (max_raptor_round + 1);
+
+  cuda_malloc_set(&(dm.d_arrivals_.front()), arrival_bytes, 0xFFu);
+  for (auto k = 1u; k < dm.d_arrivals_.size(); ++k) {
+    dm.d_arrivals_[k] = dm.d_arrivals_[k - 1] + stop_count;
+  }
+
+  dm.footpaths_scratchpad_ =
+      dm.d_arrivals_.front() + (dm.d_arrivals_.size() * stop_count);
+
+  size_t station_byte_count = ((stop_count / 32) + 1) * 4;
+  size_t route_byte_count = ((route_count / 32) + 1) * 4;
+
+  cuda_malloc_set(&dm.station_marks_, station_byte_count, 0);
+  cuda_malloc_set(&dm.route_marks_, route_byte_count, 0);
+
+  cudaMalloc(&dm.any_station_marked_d_, sizeof(bool));
+  cudaMemset(dm.any_station_marked_d_, 0, sizeof(bool));
+
+  return dm;
+}
+
+#endif
 
 }  // namespace motis::raptor

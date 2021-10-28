@@ -7,6 +7,12 @@
 #include "motis/raptor/raptor_statistics.h"
 #include "motis/raptor/raptor_timetable.h"
 
+#if defined(MOTIS_CUDA)
+#include "motis/raptor/gpu/cuda_util.h"
+#include "motis/raptor/gpu/devices.h"
+#include "motis/raptor/gpu/gpu_timetable.cuh"
+#endif
+
 namespace motis::raptor {
 
 struct raptor : public motis::module::module {
@@ -29,13 +35,15 @@ private:
   motis::module::msg_ptr route_generic(motis::module::msg_ptr const&,
                                        RaptorFun const&);
 
-  static motis::module::msg_ptr make_response(
-      std::vector<journey> const&, motis::routing::RoutingRequest const*,
-      raptor_statistics const&);
-
   std::unique_ptr<raptor_schedule> raptor_sched_;
   std::unique_ptr<raptor_timetable> timetable_;
-  std::unique_ptr<raptor_timetable> backward_timetable_;
+
+#if defined(MOTIS_CUDA)
+  std::unique_ptr<host_gpu_timetable> h_gtt_;
+  std::unique_ptr<device_gpu_timetable> d_gtt_;
+
+  devices devices_;
+#endif
 };
 
 }  // namespace motis::raptor

@@ -9,6 +9,10 @@
 #include "motis/raptor/raptor_util.h"
 #include "motis/raptor/reconstructor.h"
 
+#if defined(MOTIS_CUDA)
+#include "motis/raptor/gpu/gpu_raptor.cuh"
+#endif
+
 namespace motis::raptor {
 
 inline auto get_departure_range(time const begin, time const end,
@@ -25,49 +29,11 @@ inline auto get_departure_range(time const begin, time const end,
 }
 
 template <typename RaptorFun, typename Query>
-inline std::vector<journey> bw_search(
-    Query& q, raptor_statistics&, schedule const& sched,
-    raptor_schedule const& raptor_sched, raptor_timetable const&,
-    raptor_timetable const& backward_timetable,
-    RaptorFun const& raptor_search) {
-  std::cout << "BW SEARCH\n";
-
-  std::ofstream id_to_eva("id_to_eva.txt");
-  for (auto const& [id, eva] : raptor_sched.eva_to_raptor_id_) {
-    id_to_eva << id << " " << eva << '\n';
-  }
-  id_to_eva.close();
-
-  reconstructor reconstructor(sched, raptor_sched, backward_timetable);
-
-  print_station_arrivals(q.target_, *q.result_);
-  std::cout << "Query Source: " << q.source_ << '\n';
-  std::cout << "Query Target: " << q.target_ << '\n';
-  raptor_search(q);
-
-  print_station_arrivals(q.source_, *q.result_);
-  print_station_arrivals(q.target_, *q.result_);
-
-  print_station_arrivals(255818, *q.result_);
-  print_station_arrivals(255870, *q.result_);
-  reconstructor.add(q);
-
-  // print_station_arrivals(q.target_, *q.result_);
-
-  return reconstructor.get_journeys();
-}
-
-template <typename RaptorFun, typename Query>
-inline std::vector<journey> raptor_gen(
-    Query& q, raptor_statistics& stats, schedule const& sched,
-    raptor_schedule const& raptor_sched, raptor_timetable const& timetable,
-    raptor_timetable const& backward_timetable,
-    RaptorFun const& raptor_search) {
-
-  if (!q.forward_) {
-    return bw_search(q, stats, sched, raptor_sched, timetable,
-                     backward_timetable, raptor_search);
-  }
+inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
+                                       schedule const& sched,
+                                       raptor_schedule const& raptor_sched,
+                                       raptor_timetable const& timetable,
+                                       RaptorFun const& raptor_search) {
 
   reconstructor reconstructor(sched, raptor_sched, timetable);
 
@@ -123,11 +89,28 @@ inline std::vector<journey> cpu_raptor(raptor_query& q,
                                        raptor_statistics& stats,
                                        schedule const& sched,
                                        raptor_schedule const& raptor_sched,
-                                       raptor_timetable const& tt,
-                                       raptor_timetable const& btt) {
-  return raptor_gen(
-      q, stats, sched, raptor_sched, tt, btt,
-      [&](raptor_query& q) { return invoke_cpu_raptor(q, stats); });
+                                       raptor_timetable const& tt) {
+  return raptor_gen(q, stats, sched, raptor_sched, tt, [&](raptor_query& q) {
+    return invoke_cpu_raptor(q, stats);
+  });
 }
+
+#if defined(MOTIS_CUDA)
+inline std::vector<journey> hybrid_raptor(d_query& dq, raptor_statistics& stats,
+                                          schedule const& sched,
+                                          raptor_schedule const& raptor_sched,
+                                          raptor_timetable const& tt) {
+  return raptor_gen(dq, stats, sched, raptor_sched, tt,
+                    [&](d_query& dq) { return invoke_hybrid_raptor(dq); });
+}
+
+inline std::vector<journey> gpu_raptor(d_query& dq, raptor_statistics& stats,
+                                       schedule const& sched,
+                                       raptor_schedule const& raptor_sched,
+                                       raptor_timetable const& tt) {
+  return raptor_gen(dq, stats, sched, raptor_sched, tt,
+                    [&](d_query& dq) { return invoke_gpu_raptor(dq); });
+}
+#endif
 
 }  // namespace motis::raptor

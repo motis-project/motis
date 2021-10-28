@@ -2,7 +2,6 @@
 
 #include "utl/to_vec.h"
 
-#include "motis/module/context/get_schedule.h"
 #include "motis/module/message.h"
 
 #include "motis/core/common/timing.h"
@@ -13,7 +12,6 @@
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/core/journey/message_to_journeys.h"
 
-#include "motis/raptor/get_raptor_query.h"
 #include "motis/raptor/get_raptor_schedule.h"
 #include "motis/raptor/raptor_query.h"
 #include "motis/raptor/raptor_search.h"
@@ -25,17 +23,50 @@ namespace motis::raptor {
 
 raptor::raptor() : module("RAPTOR Options", "raptor") {}
 
-raptor::~raptor() = default;
+raptor::~raptor() {
+#if defined(MOTIS_CUDA)
+  if (d_gtt_ != nullptr) {
+    destroy_device_gpu_timetable(*d_gtt_);
+  }
+#endif
+}
 
 void raptor::init(motis::module::registry& reg) {
   auto const& sched = get_sched();
 
-  std::tie(raptor_sched_, timetable_, backward_timetable_) =
-      get_raptor_schedule(sched);
+  std::tie(raptor_sched_, timetable_) = get_raptor_schedule(sched);
+
+  reg.register_op("/raptor", [&](motis::module::msg_ptr const& msg) {
+#if defined(MOTIS_CUDA)
+    return route_generic<d_query>(msg, hybrid_raptor);
+#else
+    return route_generic<raptor_query>(msg, cpu_raptor);
+#endif
+  });
 
   reg.register_op("/raptor_cpu", [&](motis::module::msg_ptr const& msg) {
     return route_generic<raptor_query>(msg, cpu_raptor);
   });
+
+#if defined(MOTIS_CUDA)
+  h_gtt_ = get_host_gpu_timetable(*raptor_sched_, *timetable_);
+  d_gtt_ = get_device_gpu_timetable(*h_gtt_);
+
+  reg.register_op("/raptor_gpu", [&](motis::module::msg_ptr const& msg) {
+    //    return route_generic<d_query>(msg, gpu_raptor);
+    if (msg->id() % 2 == 0) {
+      return route_generic<d_query>(msg, gpu_raptor);
+    } else {
+      return route_generic<d_query>(msg, hybrid_raptor);
+    }
+  });
+
+  reg.register_op("/raptor_hy", [&](motis::module::msg_ptr const& msg) {
+    return route_generic<d_query>(msg, hybrid_raptor);
+  });
+
+  devices_ = get_devices();
+#endif
 }
 
 template <class Query>
@@ -44,36 +75,38 @@ inline Query raptor::get_query(
     schedule const& sched) {
   auto base_query = get_base_query(routing_request, sched, *raptor_sched_);
 
-  auto const& tt = base_query.forward_ ? *timetable_ : *backward_timetable_;
-
   auto const use_start_footpaths = routing_request->use_start_footpaths();
 
-  return Query(base_query, *raptor_sched_, tt, use_start_footpaths);
+  if constexpr (std::is_same_v<Query, raptor_query>) {
+    return raptor_query(base_query, *raptor_sched_, *timetable_,
+                        use_start_footpaths);
+  } else {
+    return d_query(base_query, *raptor_sched_, *timetable_, use_start_footpaths,
+                   &devices_.front());
+  }
 }
 
 template <typename Query, typename RaptorFun>
 msg_ptr raptor::route_generic(msg_ptr const& msg,
                               RaptorFun const& raptor_search) {
   auto const req = motis_content(RoutingRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
 
   raptor_statistics stats;
 
   auto q = get_query<Query>(req, sched);
+  q.id_ = (int)msg->id();
 
   MOTIS_START_TIMING(total_calculation_time);
-  auto const& js = raptor_search(q, stats, sched, *raptor_sched_, *timetable_,
-                                 *backward_timetable_);
+  auto const& js = raptor_search(q, stats, sched, *raptor_sched_, *timetable_);
   stats.total_calculation_time_ = MOTIS_GET_TIMING_MS(total_calculation_time);
 
-  return make_response(js, req, stats);
+  return make_response(sched, js, req, stats);
 }
 
-msg_ptr raptor::make_response(std::vector<journey> const& js,
-                              motis::routing::RoutingRequest const* request,
-                              raptor_statistics const& stats) {
-  auto const& sched = get_schedule();
-
+msg_ptr make_response(schedule const& sched, std::vector<journey> const& js,
+                      motis::routing::RoutingRequest const* request,
+                      raptor_statistics const& stats) {
   int64_t interval_start;
   int64_t interval_end;
 
