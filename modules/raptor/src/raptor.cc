@@ -67,6 +67,8 @@ void raptor::init(motis::module::registry& reg) {
 
   devices_ = get_devices();
   mp_per_query_ = std::max(mp_per_query_, int32_t{1});
+
+  mem_store_.init(*timetable_, std::thread::hardware_concurrency());
 #endif
 }
 
@@ -82,8 +84,12 @@ inline Query raptor::get_query(
     return raptor_query(base_query, *raptor_sched_, *timetable_,
                         use_start_footpaths);
   } else {
-    return d_query(base_query, *raptor_sched_, *timetable_, use_start_footpaths,
-                   &devices_.front(), mp_per_query_);
+    auto const mem_idx = mem_store_.get_mem_idx();
+    return d_query(base_query, mem_store_.host_[mem_idx],
+                   mem_store_.device_[mem_idx], mem_store_.context_[mem_idx]);
+    //    return d_query(base_query, *raptor_sched_, *timetable_,
+    //    use_start_footpaths,
+    //                   &devices_.front(), mp_per_query_);
   }
 }
 

@@ -553,133 +553,114 @@ __device__ void update_routes_dev(time const* const prev_arrivals,
   reset_store(route_marks, store_size);
 }
 
-__device__ void init_arrivals_dev(d_query const& dq) {
+__device__ void init_arrivals_dev(base_query const& query,
+                                  device_memory const& device_mem) {
   auto const t_id = get_global_thread_id();
 
   auto const station_store_size = (GTT.stop_count_ / 32) + 1;
-  reset_store(dq.station_marks_, station_store_size);
+  reset_store(device_mem.station_marks_, station_store_size);
 
   auto const route_store_size = (GTT.route_count_ / 32) + 1;
-  reset_store(dq.route_marks_, route_store_size);
+  reset_store(device_mem.route_marks_, route_store_size);
 
   if (t_id == 0) {
-    *dq.any_station_marked_d_ = false;
+    *device_mem.any_station_marked_ = false;
   }
 
   if (t_id == 0) {
-    dq.d_arrivals_[0][dq.source_] = dq.source_time_begin_;
-    mark(dq.station_marks_, dq.source_);
+    device_mem.result_[0][query.source_] = query.source_time_begin_;
+    mark(device_mem.station_marks_, query.source_);
   }
 
   auto const footpath_count =
-      GTT.initialization_footpaths_indices_[dq.source_ + 1] -
-      GTT.initialization_footpaths_indices_[dq.source_];
+      GTT.initialization_footpaths_indices_[query.source_ + 1] -
+      GTT.initialization_footpaths_indices_[query.source_];
   if (t_id < footpath_count) {
     auto const index_into_footpaths =
-        GTT.initialization_footpaths_indices_[dq.source_];
+        GTT.initialization_footpaths_indices_[query.source_];
     auto const f = GTT.initialization_footpaths_[index_into_footpaths + t_id];
 
-    time const new_value = dq.source_time_begin_ + f.duration_;
-    bool updated = update_arrival(dq.d_arrivals_[0], f.to_, new_value);
+    time const new_value = query.source_time_begin_ + f.duration_;
+    bool updated = update_arrival(device_mem.result_[0], f.to_, new_value);
     if (updated) {
-      mark(dq.station_marks_, f.to_);
+      mark(device_mem.station_marks_, f.to_);
     }
   }
 }
 
-__device__ void update_footpaths_dev(d_query const& dq, int round_k) {
-  time* const arrivals = dq.d_arrivals_[round_k];
-  time* const next_arrivals = dq.d_arrivals_[round_k + 1];
+__device__ void update_footpaths_dev(device_memory const& device_mem,
+                                     int round_k) {
+  time* const arrivals = device_mem.result_[round_k];
+  time* const next_arrivals = device_mem.result_[round_k + 1];
 
   // we must only copy the marked arrivals,
   // since an earlier raptor query might have used a footpath
   // to generate the current arrival, a new optimum from this value
   // would be generated using a double walk -> not correct!
-  copy_marked_arrivals(dq.footpaths_scratchpad_, arrivals, dq.station_marks_);
+  copy_marked_arrivals(device_mem.footpaths_scratchpad_, arrivals,
+                       device_mem.station_marks_);
   this_grid().sync();
 
-  update_footpaths_dev_scratch(dq.footpaths_scratchpad_, arrivals,
-                               dq.station_marks_);
+  update_footpaths_dev_scratch(device_mem.footpaths_scratchpad_, arrivals,
+                               device_mem.station_marks_);
   this_grid().sync();
 
   copy_and_min_arrivals(next_arrivals, arrivals);
   this_grid().sync();
 }
 
-__global__
-    // __launch_bounds__(
-    //    (block_dim_x * block_dim_y),
-    //    min_blocks_per_sm)
-    void
-    init_arrivals_kernel(d_query const d_query) {
-  init_arrivals_dev(d_query);
+__global__ void init_arrivals_kernel(base_query const& query,
+                                     device_memory const& device_mem) {
+  init_arrivals_dev(query, device_mem);
 }
 
-__global__
-    // __launch_bounds__(
-    //    (block_dim_x * block_dim_y),
-    //    min_blocks_per_sm)
-    void
-    update_footpaths_kernel(d_query const dq, int round_k) {
-  update_footpaths_dev(dq, round_k);
+__global__ void update_footpaths_kernel(device_memory const& device_mem,
+                                        int round_k) {
+  update_footpaths_dev(device_mem, round_k);
 }
 
-__global__
-    // __launch_bounds__(
-    //    (block_dim_x * block_dim_y),
-    //    min_blocks_per_sm)
-    void
-    update_routes_kernel(d_query const dq, int round_k) {
-  time const* const prev_arrivals = dq.d_arrivals_[round_k - 1];
-  time* const arrivals = dq.d_arrivals_[round_k];
+__global__ void update_routes_kernel(device_memory const device_mem,
+                                     int round_k) {
+  time const* const prev_arrivals = device_mem.result_[round_k - 1];
+  time* const arrivals = device_mem.result_[round_k];
 
-  update_routes_dev(prev_arrivals, arrivals, dq.station_marks_, dq.route_marks_,
-                    dq.any_station_marked_d_);
+  update_routes_dev(prev_arrivals, arrivals, device_mem.station_marks_,
+                    device_mem.route_marks_, device_mem.any_station_marked_);
 }
 
-__global__
-    // __launch_bounds__(
-    //    (block_dim_x * block_dim_y),
-    //    min_blocks_per_sm)
-    void
-    gpu_raptor_kernel(d_query const dq) {
-  init_arrivals_dev(dq);
+__global__ void gpu_raptor_kernel(base_query const& query,
+                                  device_memory const& device_mem) {
+  init_arrivals_dev(query, device_mem);
   this_grid().sync();
 
   for (int8_t round_k = 1; round_k < max_raptor_round; ++round_k) {
-    time const* const prev_arrivals = dq.d_arrivals_[round_k - 1];
-    time* const arrivals = dq.d_arrivals_[round_k];
+    time const* const prev_arrivals = device_mem.result_[round_k - 1];
+    time* const arrivals = device_mem.result_[round_k];
 
-    update_routes_dev(prev_arrivals, arrivals, dq.station_marks_,
-                      dq.route_marks_, dq.any_station_marked_d_);
+    update_routes_dev(prev_arrivals, arrivals, device_mem.station_marks_,
+                      device_mem.route_marks_, device_mem.any_station_marked_);
     this_grid().sync();
 
-    update_footpaths_dev(dq, round_k);
+    update_footpaths_dev(device_mem, round_k);
     this_grid().sync();
   }
 }
 
-void fetch_result_from_device(d_query& dq) {
-  auto& result = *dq.result_;
-
-  // we do not need the last arrival array, it only exists because
-  // how we calculate the footpaths
-  for (auto k = 0; k < max_raptor_round; ++k) {
-    cudaMemcpy(result[k], dq.d_arrivals_[k], dq.stop_count_ * sizeof(time),
-               cudaMemcpyDeviceToHost);
-    cc();
-  }
-}
-
-void invoke_gpu_raptor(d_query& dq) {
-  void* kernel_args[] = {(void*)&dq};
-  launch_kernel(gpu_raptor_kernel, kernel_args, *dq.device_, dq.proc_stream_,
-                dq.mp_per_query_);
+void invoke_gpu_raptor(d_query const& dq) {
+  void* kernel_args[] = {(void*)&dq, (void*)&dq.device_};
+  launch_kernel(gpu_raptor_kernel, kernel_args, dq.context_,
+                dq.context_.proc_stream_);
   cc();
-  cudaDeviceSynchronize();
-  cc();
+  //  cudaStreamSynchronize(dq.proc_stream_);
+  //  cudaDeviceSynchronize();
+  //  cc();
 
-  fetch_result_from_device(dq);
+  cuda_sync_stream(dq.context_.proc_stream_);
+
+  cc();
+  //  fetch_result_from_device(dq);
+  fetch_arrivals_async(dq, dq.context_.transfer_stream_);
+  cuda_sync_stream(dq.context_.transfer_stream_);
 }
 
 }  // namespace motis::raptor

@@ -4,8 +4,6 @@
 
 namespace motis::raptor {
 
-using arrival_ptrs = std::array<time*, max_raptor_round>;
-
 using gpu_route = raptor_route;
 using gpu_stop = raptor_stop;
 using gpu_stop_time = stop_time;

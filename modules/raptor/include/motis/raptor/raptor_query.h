@@ -13,6 +13,7 @@
 #include "motis/raptor/gpu/cuda_util.h"
 #include "motis/raptor/gpu/devices.h"
 #include "motis/raptor/gpu/gpu_timetable.cuh"
+#include "motis/raptor/memory_store.h"
 #endif
 
 namespace motis::raptor {
@@ -97,6 +98,8 @@ struct raptor_query : base_query {
 
   ~raptor_query() = default;
 
+  raptor_result_base const& result() const { return *result_; }
+
   raptor_timetable const& tt_;
   std::vector<additional_start> add_starts_;
   std::unique_ptr<raptor_result> result_;
@@ -106,90 +109,100 @@ struct raptor_query : base_query {
 
 struct d_query : base_query {
   d_query() = delete;
-
-  d_query(base_query const& bq, raptor_schedule const&,
-          raptor_timetable const& tt, bool const, device* device,
-          int32_t const mp_per_query) {
+  d_query(base_query const& bq, host_memory const& hm, device_memory const& dm,
+          device_context const dc)
+      : host_(hm), device_(dm), context_(dc) {
     static_cast<base_query&>(*this) = bq;
-
-    device_ = device;
-    mp_per_query_ = mp_per_query;
-
-    stop_count_ = tt.stop_count();
-
-    // +1 due to scratchpad memory for GPU
-    auto const arrival_bytes =
-        stop_count_ * sizeof(time) * (max_raptor_round + 1);
-
-    cuda_malloc_set(&(d_arrivals_.front()), arrival_bytes, 0xFFu);
-    for (auto k = 1u; k < d_arrivals_.size(); ++k) {
-      d_arrivals_[k] = d_arrivals_[k - 1] + stop_count_;
-    }
-
-    footpaths_scratchpad_ =
-        d_arrivals_.front() + (d_arrivals_.size() * stop_count_);
-
-    size_t station_byte_count = ((tt.stop_count() / 32) + 1) * 4;
-    size_t route_byte_count = ((tt.route_count() / 32) + 1) * 4;
-
-    cuda_malloc_set(&station_marks_, station_byte_count, 0);
-    cuda_malloc_set(&route_marks_, route_byte_count, 0);
-
-    cudaMalloc(&any_station_marked_d_, sizeof(bool));
-    cudaMemset(any_station_marked_d_, 0, sizeof(bool));
-
-    cudaMallocHost(&any_station_marked_h_, sizeof(bool));
-    *any_station_marked_h_ = false;
-
-    cudaStreamCreate(&proc_stream_);
-    cc();
-
-    cudaStreamCreate(&transfer_stream_);
-    cc();
-
-    result_ = new raptor_result_pinned(stop_count_);
   }
 
-#if !defined(__CUDACC__)
-  // Do not copy queries, else double free
-  d_query(d_query const&) = delete;
-#else
-  // CUDA needs the copy constructor for the kernel call,
-  // as we pass the query to the kernel, which must be a copy
-  d_query(d_query const&) = default;
-#endif
+  raptor_result_base const& result() const { return *host_.result_; }
 
-  __host__ __device__ ~d_query() {
-// Only call free when destructor is called by host,
-// not when device kernel exits, as we pass the query to the kernel
-#if !defined(__CUDACC__)
-    cuda_free(d_arrivals_.front());
-    cuda_free(station_marks_);
-    cuda_free(route_marks_);
-    delete result_;
-#endif
-  }
-
-  stop_id stop_count_;
-  int32_t mp_per_query_;
-
-  cudaStream_t proc_stream_;
-  cudaStream_t transfer_stream_;
-
-  // Pointers to device memory
-  //  device_gpu_timetable d_gtt_;
-
-  bool* any_station_marked_d_;
-  arrival_ptrs d_arrivals_;
-  time* footpaths_scratchpad_;
-  unsigned int* station_marks_;
-  unsigned int* route_marks_;
-
-  // Pointers to host memory
-  device* device_;
-  raptor_result_pinned* result_;
-  bool* any_station_marked_h_;
+  host_memory host_;
+  device_memory device_;
+  device_context context_;
 };
+
+// struct d_query : base_query {
+//   d_query() = delete;
+//
+//   d_query(base_query const& bq, raptor_schedule const&,
+//           raptor_timetable const& tt, bool const, device* device,
+//           int32_t const mp_per_query) {
+//     static_cast<base_query&>(*this) = bq;
+//
+//     //    device_ = device;
+//     //    mp_per_query_ = mp_per_query;
+//
+//     //    result_ = new raptor_result_pinned(tt.stop_count());
+//
+//     //    // +1 due to scratchpad memory for GPU
+//     //    auto const byte_size =
+//     //        result_->byte_size() + (tt.stop_count() * sizeof(time));
+//     //
+//     //    cuda_malloc_set(&(d_arrivals_.front()), byte_size, 0xFFu);
+//     //    for (auto k = 1u; k < d_arrivals_.size(); ++k) {
+//     //      d_arrivals_[k] = d_arrivals_[k - 1] + tt.stop_count();
+//     //    }
+//     //
+//     //    footpaths_scratchpad_ =
+//     //        d_arrivals_.front() + (d_arrivals_.size() * tt.stop_count());
+//     //
+//     //    size_t station_byte_count = ((tt.stop_count() / 32) + 1) * 4;
+//     //    size_t route_byte_count = ((tt.route_count() / 32) + 1) * 4;
+//     //
+//     //    cuda_malloc_set(&station_marks_, station_byte_count, 0);
+//     //    cuda_malloc_set(&route_marks_, route_byte_count, 0);
+//     //
+//     //    cudaMalloc(&any_station_marked_d_, sizeof(bool));
+//     //    cudaMemset(any_station_marked_d_, 0, sizeof(bool));
+//     //
+//     //    cudaMallocHost(&any_station_marked_h_, sizeof(bool));
+//     //    *any_station_marked_h_ = false;
+//
+//     //    cudaStreamCreate(&proc_stream_);
+//     //    cc();
+//     //
+//     //    cudaStreamCreate(&transfer_stream_);
+//     //    cc();
+//   }
+//
+//#if !defined(__CUDACC__)
+//   // Do not copy queries, else double free
+//   d_query(d_query const&) = delete;
+//#else
+//   // CUDA needs the copy constructor for the kernel call,
+//   // as we pass the query to the kernel, which must be a copy
+//   d_query(d_query const&) = default;
+//#endif
+//
+//   __host__ __device__ ~d_query() {
+//// Only call free when destructor is called by host,
+//// not when device kernel exits, as we pass the query to the kernel
+//#if !defined(__CUDACC__)
+//    //    cuda_free(d_arrivals_.front());
+//    //    cuda_free(station_marks_);
+//    //    cuda_free(route_marks_);
+////    delete result_;
+//#endif
+//  }
+//
+//  //  int32_t mp_per_query_;
+//  device_context context_;
+//
+//  // Pointers to device memory
+//  device_memory device_;
+//
+//  //  bool* any_station_marked_d_;
+//  //  arrival_ptrs d_arrivals_;
+//  //  time* footpaths_scratchpad_;
+//  //  unsigned int* station_marks_;
+//  //  unsigned int* route_marks_;
+//
+//  // Pointers to host memory
+//  host_memory host_;
+//  //  raptor_result_pinned* result_;
+//  //  bool* any_station_marked_h_;
+//};
 
 #endif
 

@@ -217,7 +217,7 @@ struct reconstructor {
 
   template <typename Query>
   std::vector<candidate> get_candidates(Query const& q) {
-    auto const& result = *q.result_;
+    auto const& result = q.result();
 
     std::vector<candidate> candidates;
 
@@ -308,6 +308,8 @@ struct reconstructor {
 
   template <typename Query>
   intermediate_journey reconstruct_journey(candidate const c, Query const& q) {
+    auto const& result = q.result();
+
     auto const ontrip = q.source_time_begin_ == q.source_time_end_;
     intermediate_journey ij(c.transfers_, q.forward_, ontrip,
                             q.source_time_begin_);
@@ -322,7 +324,7 @@ struct reconstructor {
       // same with footpath reachable stations
       auto [previous_station, used_route, used_trip, stop_offset] =
           get_previous_station(arrival_station, station_arrival, result_idx,
-                               *q.result_);
+                               result);
 
       if (valid(previous_station)) {
         last_departure = ij.add_route(previous_station, used_route, used_trip,
@@ -333,7 +335,7 @@ struct reconstructor {
           auto const adjusted_arrival = station_arrival - inc_f.duration_;
           std::tie(previous_station, used_route, used_trip, stop_offset) =
               get_previous_station(inc_f.from_, adjusted_arrival, result_idx,
-                                   *q.result_);
+                                   result);
 
           if (valid(previous_station)) {
             ij.add_footpath(arrival_station, station_arrival, last_departure,
@@ -349,7 +351,7 @@ struct reconstructor {
       // if (result_idx == 1) { break; }
 
       arrival_station = previous_station;
-      station_arrival = (*q.result_)[result_idx - 1][arrival_station];
+      station_arrival = result[result_idx - 1][arrival_station];
     }
 
     bool can_be_start = false;

@@ -14,42 +14,60 @@ typedef stop_id (*GetRouteStopFun)(route_stops_index const);
 typedef time (*GetStopArrivalFun)(stop_times_index const);
 typedef time (*GetStopDepartureFun)(stop_times_index const);
 
-struct kernel_launch_config {
-  dim3 threads_per_block_;
-  dim3 grid_;
-};
+void cuda_sync_stream(cudaStream_t const& stream) {
+  cudaEvent_t event;
+  cudaEventCreateWithFlags(&event,
+                           cudaEventBlockingSync | cudaEventDisableTiming);
+  cudaEventRecord(event, stream);
+  cudaEventSynchronize(event);
+  cudaEventDestroy(event);
 
-inline auto get_kernel_launch_config_from_props(cudaDeviceProp const& gp,
-                                                int32_t const mp_per_query) {
-  kernel_launch_config klc;
-
-  int32_t block_dim_x = 32;  // must always be 32!
-  int32_t block_dim_y = 32;  // range [1, ..., 32]
-  int32_t block_size = block_dim_x * block_dim_y;
-
-  int32_t max_blocks_per_sm = gp.maxThreadsPerMultiProcessor / block_size;
-  int32_t mp_count = std::min(mp_per_query, gp.multiProcessorCount);
-  int32_t num_blocks = mp_count * max_blocks_per_sm;
-
-  // TOOD(julian) with this enable the max throughput
-  // device.props_.concurrentKernels
-
-  klc.threads_per_block_ = dim3(block_dim_x, block_dim_y, 1);
-  klc.grid_ = dim3(num_blocks, 1, 1);
-
-  return klc;
+  cc();
 }
 
 template <typename Kernel>
-void inline launch_kernel(Kernel kernel, void** args, device const& device,
-                          cudaStream_t stream, int32_t mp_per_query) {
+void inline launch_kernel(Kernel kernel, void** args,
+                          device_context const& device, cudaStream_t s) {
   cudaSetDevice(device.id_);
 
-  auto config =
-      get_kernel_launch_config_from_props(device.props_, mp_per_query);
+  cudaLaunchCooperativeKernel((void*)kernel, device.grid_,
+                              device.threads_per_block_, args, 0, s);
+  cc();
+}
 
-  cudaLaunchCooperativeKernel((void*)kernel, config.grid_,
-                              config.threads_per_block_, args, 0, stream);
+void fetch_result_from_device(d_query& dq) {
+  //  auto& result = *dq.result_;
+
+  // we do not need the last arrival array, it only exists because
+  // how we calculate the footpaths
+  cudaMemcpy(dq.host_.result_->data(), dq.device_.result_.front(),
+             dq.host_.result_->byte_size(), cudaMemcpyDeviceToHost);
+  cc();
+  //  for (auto k = 0; k < max_raptor_round; ++k) {
+  //    cudaMemcpy(result[k], dq.d_arrivals_[k], dq.stop_count_ * sizeof(time),
+  //               cudaMemcpyDeviceToHost);
+  //    cc();
+  //  }
+}
+
+void fetch_arrivals_async(d_query const& dq, cudaStream_t s) {
+  cudaMemcpyAsync(dq.host_.result_->data(), dq.device_.result_.front(),
+                  dq.host_.result_->byte_size(), cudaMemcpyDeviceToHost, s);
+  //  cudaMemcpyAsync((*dq.result_)[round_k], dq.d_arrivals_[round_k],
+  //                  dq.stop_count_ * sizeof(time), cudaMemcpyDeviceToHost, s);
+  cc();
+}
+
+void fetch_arrivals_async(d_query& dq, raptor_round const round_k,
+                          cudaStream_t s) {
+  //  cudaMemcpyAsync((*dq.result_)[round_k], dq.d_arrivals_[round_k],
+  //                  dq.stop_count_ * sizeof(time), cudaMemcpyDeviceToHost, s);
+  cudaMemcpyAsync(dq.host_.result_[round_k], dq.device_.result_[round_k],
+                  dq.host_.result_->stop_count_ * sizeof(time),
+                  cudaMemcpyDeviceToHost, s);
+  //  cudaMemcpyAsync((*dq.result_)[round_k], dq.d_arrivals_[round_k],
+  //                  dq.result_->stop_count_ * sizeof(time),
+  //                  cudaMemcpyDeviceToHost, s);
   cc();
 }
 

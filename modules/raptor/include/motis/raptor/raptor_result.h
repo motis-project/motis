@@ -37,6 +37,8 @@ struct raptor_result_base {
     std::fill(result_, result_ + number_of_entries, invalid<time>);
   }
 
+  time* data() { return result_; }
+
   stop_id stop_count_;
   time* result_;
 };
@@ -60,6 +62,25 @@ struct raptor_result_pinned : raptor_result_base {
 
   ~raptor_result_pinned() { cudaFreeHost(result_); };
 };
+
+using device_result = std::array<time*, max_raptor_round>;
+
+// struct device_result {
+//   device_result() = default;
+//   explicit device_result(stop_id const stop_count) {
+//
+//   ~device_result() { cudaFree(result_.front()); }
+//
+//   void reset() { cudaMemset(result_.front(), 0xFF, bytes_); }
+//
+//   void reset_async(cudaStream_t stream) {
+//   }
+//
+//   auto const& operator[](size_t const idx) { return result_[idx]; }
+//
+//   size_t bytes_{0};
+//   std::array<time*, max_raptor_round> result_{};
+// };
 
 #endif
 
