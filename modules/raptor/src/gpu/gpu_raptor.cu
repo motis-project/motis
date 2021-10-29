@@ -673,8 +673,8 @@ void fetch_result_from_device(d_query& dq) {
 
 void invoke_gpu_raptor(d_query& dq) {
   void* kernel_args[] = {(void*)&dq};
-  launch_kernel(gpu_raptor_kernel, kernel_args, *dq.device_,
-                dq.device_->streams_.front());
+  launch_kernel(gpu_raptor_kernel, kernel_args, *dq.device_, dq.proc_stream_,
+                dq.mp_per_query_);
   cc();
   cudaDeviceSynchronize();
   cc();

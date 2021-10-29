@@ -139,6 +139,12 @@ struct d_query : base_query {
     cudaMallocHost(&any_station_marked_h_, sizeof(bool));
     *any_station_marked_h_ = false;
 
+    cudaStreamCreate(&proc_stream_);
+    cc();
+
+    cudaStreamCreate(&transfer_stream_);
+    cc();
+
     result_ = new raptor_result_pinned(stop_count_);
   }
 
@@ -163,6 +169,8 @@ struct d_query : base_query {
   }
 
   stop_id stop_count_;
+  cudaStream_t proc_stream_;
+  cudaStream_t transfer_stream_;
 
   // Pointers to device memory
   bool* any_station_marked_d_;
