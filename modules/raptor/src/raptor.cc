@@ -21,7 +21,12 @@ using namespace motis::routing;
 
 namespace motis::raptor {
 
-raptor::raptor() : module("RAPTOR Options", "raptor") {}
+raptor::raptor() : module("RAPTOR Options", "raptor") {
+#if defined(MOTIS_CUDA)
+  param(mp_per_query_, "mp_per_query",
+        "specifies how many multiprocessors are allocated to a single query");
+#endif
+}
 
 raptor::~raptor() {
 #if defined(MOTIS_CUDA)
@@ -53,12 +58,7 @@ void raptor::init(motis::module::registry& reg) {
   d_gtt_ = get_device_gpu_timetable(*h_gtt_);
 
   reg.register_op("/raptor_gpu", [&](motis::module::msg_ptr const& msg) {
-    //    return route_generic<d_query>(msg, gpu_raptor);
-    if (msg->id() % 2 == 0) {
-      return route_generic<d_query>(msg, gpu_raptor);
-    } else {
-      return route_generic<d_query>(msg, hybrid_raptor);
-    }
+    return route_generic<d_query>(msg, gpu_raptor);
   });
 
   reg.register_op("/raptor_hy", [&](motis::module::msg_ptr const& msg) {
@@ -66,6 +66,7 @@ void raptor::init(motis::module::registry& reg) {
   });
 
   devices_ = get_devices();
+  mp_per_query_ = std::max(mp_per_query_, int32_t{1});
 #endif
 }
 
@@ -82,7 +83,7 @@ inline Query raptor::get_query(
                         use_start_footpaths);
   } else {
     return d_query(base_query, *raptor_sched_, *timetable_, use_start_footpaths,
-                   &devices_.front());
+                   &devices_.front(), mp_per_query_);
   }
 }
 

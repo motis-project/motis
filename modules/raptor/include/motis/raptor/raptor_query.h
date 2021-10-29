@@ -108,10 +108,12 @@ struct d_query : base_query {
   d_query() = delete;
 
   d_query(base_query const& bq, raptor_schedule const&,
-          raptor_timetable const& tt, bool const, device* device) {
+          raptor_timetable const& tt, bool const, device* device,
+          int32_t const mp_per_query) {
     static_cast<base_query&>(*this) = bq;
 
     device_ = device;
+    mp_per_query_ = mp_per_query;
 
     stop_count_ = tt.stop_count();
 
@@ -169,10 +171,14 @@ struct d_query : base_query {
   }
 
   stop_id stop_count_;
+  int32_t mp_per_query_;
+
   cudaStream_t proc_stream_;
   cudaStream_t transfer_stream_;
 
   // Pointers to device memory
+  //  device_gpu_timetable d_gtt_;
+
   bool* any_station_marked_d_;
   arrival_ptrs d_arrivals_;
   time* footpaths_scratchpad_;

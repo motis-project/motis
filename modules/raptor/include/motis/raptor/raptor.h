@@ -43,6 +43,8 @@ private:
   std::unique_ptr<device_gpu_timetable> d_gtt_;
 
   devices devices_;
+
+  int32_t mp_per_query_;
 #endif
 };
 
