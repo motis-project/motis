@@ -13,6 +13,7 @@
     "fix-lint": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write src",
     "format-check": "prettier --check src",
+    "ts-check": "tsc",
     "update-protocol": "node --trace-uncaught tools/protocol.js && prettier --write src/api/protocol"
   },
   "dependencies": {
