@@ -20,7 +20,6 @@ function StationPicker({
   const {
     isOpen,
     getToggleButtonProps,
-    getLabelProps,
     getMenuProps,
     getInputProps,
     getComboboxProps,

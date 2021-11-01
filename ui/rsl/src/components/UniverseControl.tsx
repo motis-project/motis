@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useIsMutating, useMutation } from "react-query";
 import { useAtom } from "jotai";
-import { PlusCircleIcon, XCircleIcon } from "@heroicons/react/solid";
 
 import { universeAtom } from "../data/simulation";
 import {

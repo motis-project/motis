@@ -31,10 +31,6 @@ const measureTypes: Array<{ type: MeasureType; label: string }> = [
 
 const labelClass = "font-semibold";
 
-type MeasureInputProps = {
-  onAddMeasure: (measure: MeasureWrapper) => void;
-};
-
 function MeasureInput(): JSX.Element {
   const queryClient = useQueryClient();
   const [universe] = useAtom(universeAtom);

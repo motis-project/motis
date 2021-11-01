@@ -56,7 +56,6 @@ function TripPicker({
   const {
     isOpen,
     getToggleButtonProps,
-    getLabelProps,
     getMenuProps,
     getInputProps,
     getComboboxProps,
