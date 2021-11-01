@@ -50,7 +50,6 @@ private:
   motis::module::msg_ptr get_groups(motis::module::msg_ptr const& msg);
   motis::module::msg_ptr filter_groups(motis::module::msg_ptr const& msg);
   motis::module::msg_ptr filter_trips(motis::module::msg_ptr const& msg);
-  motis::module::msg_ptr get_interchanges(motis::module::msg_ptr const& msg);
   motis::module::msg_ptr fork_universe(motis::module::msg_ptr const& msg);
   motis::module::msg_ptr destroy_universe(motis::module::msg_ptr const& msg);
 
