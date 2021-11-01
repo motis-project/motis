@@ -139,7 +139,7 @@ jobs:
           - name: linux-clang-sanitizer
             cxx: clang++-12
             cc: clang-12
-            mode: Release
+            mode: RelWithDebInfo
             cflags: -fsanitize=address,undefined -fno-omit-frame-pointer
             cxxflags: -fsanitize=address,undefined -fno-omit-frame-pointer -stdlib=libc++
             ldflags: -lc++abi
@@ -219,6 +219,7 @@ jobs:
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
+      ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-12
     steps:
       - uses: actions/checkout@v2
 
@@ -239,7 +240,7 @@ jobs:
           chmod +x llvm.sh
           sudo ./llvm.sh 12
           rm llvm.sh
-          sudo apt-get install -y --no-install-recommends libc++-12-dev libc++abi-12-dev clang-tidy-12 libunwind-12-dev
+          sudo apt-get install -y --no-install-recommends libc++-12-dev libc++abi-12-dev clang-tidy-12 libunwind-12-dev llvm-12
 
       - name: Install Packages
         if: matrix.config.os != 'macos-latest'
