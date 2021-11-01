@@ -9,7 +9,7 @@
     "build": "tsc && vite build",
     "serve": "vite preview",
     "serve-host": "vite preview --host",
-    "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
+    "lint": "eslint src --ext .js,.jsx,.ts,.tsx --max-warnings 0",
     "fix-lint": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write src",
     "format-check": "prettier --check src",
