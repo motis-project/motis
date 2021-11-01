@@ -304,7 +304,6 @@ void paxmon::init(motis::module::registry& reg) {
                   [&](msg_ptr const& msg) -> msg_ptr {
                     return api::destroy_universe(get_sched(), data_, msg);
                   });
-                  });
 
   if (!mcfp_scenario_dir_.empty()) {
     if (fs::exists(mcfp_scenario_dir_)) {
