@@ -41,20 +41,11 @@ private:
   void load_capacity_files();
   motis::module::msg_ptr rt_update(motis::module::msg_ptr const& msg);
   void rt_updates_applied();
-  motis::module::msg_ptr add_groups(motis::module::msg_ptr const& msg);
-  motis::module::msg_ptr remove_groups(motis::module::msg_ptr const& msg);
-  motis::module::msg_ptr get_trip_load_info(motis::module::msg_ptr const& msg);
-  motis::module::msg_ptr find_trips(motis::module::msg_ptr const& msg);
-  motis::module::msg_ptr get_status(motis::module::msg_ptr const& msg) const;
-  motis::module::msg_ptr get_groups(motis::module::msg_ptr const& msg);
-  motis::module::msg_ptr filter_groups(motis::module::msg_ptr const& msg);
-  motis::module::msg_ptr filter_trips(motis::module::msg_ptr const& msg);
-  motis::module::msg_ptr fork_universe(motis::module::msg_ptr const& msg);
-  motis::module::msg_ptr destroy_universe(motis::module::msg_ptr const& msg);
 
   universe& primary_universe();
   universe& get_universe(universe_id id);
 
+  // TODO(pablo): move to paxmon_settings struct
   std::vector<std::string> journey_files_;
   std::vector<std::string> capacity_files_;
   std::string generated_capacity_file_;
