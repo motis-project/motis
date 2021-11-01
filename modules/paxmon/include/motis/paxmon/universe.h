@@ -11,6 +11,7 @@
 #include "motis/data.h"
 #include "motis/vector.h"
 
+#include "motis/core/common/dynamic_fws_multimap.h"
 #include "motis/core/common/fws_graph.h"
 #include "motis/core/schedule/event_type.h"
 #include "motis/core/schedule/schedule.h"
@@ -43,6 +44,7 @@ struct event_node {
 
   inline bool is_valid() const { return valid_; }
   inline bool is_canceled() const { return !valid_; }
+  inline bool is_enter_exit_node() const { return station_ == 0; }
 
   const_outgoing_edge_bucket outgoing_edges(universe const&) const;
   mutable_outgoing_edge_bucket outgoing_edges(universe&) const;
@@ -155,6 +157,7 @@ struct universe {
   trip_data_container trip_data_;
   passenger_group_container passenger_groups_;
   pci_container pax_connection_info_;
+  dynamic_fws_multimap<edge_index> interchanges_at_station_;
 };
 
 }  // namespace motis::paxmon

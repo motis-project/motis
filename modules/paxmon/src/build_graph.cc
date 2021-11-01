@@ -34,6 +34,13 @@ void add_interchange(event_node_index from, event_node_index to,
       add_edge(uv, make_interchange_edge(from, to, transfer_time, pci));
   auto const ei = get_edge_index(uv, e);
   grp->edges_.emplace_back(ei);
+
+  auto const from_station = uv.graph_.nodes_[from].station_idx();
+  auto const to_station = uv.graph_.nodes_[to].station_idx();
+  uv.interchanges_at_station_[from_station].emplace_back(ei);
+  if (from_station != to_station) {
+    uv.interchanges_at_station_[to_station].emplace_back(ei);
+  }
 }
 
 };  // namespace
