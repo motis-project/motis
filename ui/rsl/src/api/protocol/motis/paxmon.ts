@@ -13,6 +13,13 @@ export interface PaxMonAddGroupsResponse {
   ids: number[];
 }
 
+// paxmon/PaxMonCombinedGroups.fbs
+export interface PaxMonCombinedGroups {
+  groups: PaxMonGroupBaseInfo[];
+  min_passenger_count: number;
+  max_passenger_count: number;
+}
+
 // paxmon/PaxMonCompactJourney.fbs
 export type PaxMonTransferType = "NONE" | "SAME_STATION" | "FOOTPATH";
 
@@ -131,15 +138,14 @@ export interface PaxMonGetGroupsInTripRequest {
   filter: PaxMonGroupFilter;
   group_by_station: PaxMonGroupByStation;
   group_by_other_trip: boolean;
+  include_group_infos: boolean;
 }
 
 // paxmon/PaxMonGetGroupsInTripResponse.fbs
 export interface GroupedPassengerGroups {
   grouped_by_station: Station[];
   grouped_by_trip: TripServiceInfo[];
-  groups: PaxMonGroupBaseInfo[];
-  min_passenger_count: number;
-  max_passenger_count: number;
+  info: PaxMonCombinedGroups;
 }
 
 // paxmon/PaxMonGetGroupsInTripResponse.fbs
@@ -172,6 +178,39 @@ export interface PaxMonGetGroupsRequest {
 export interface PaxMonGetGroupsResponse {
   groups: PaxMonGroup[];
   localizations: PaxMonLocalizationWrapper[];
+}
+
+// paxmon/PaxMonGetInterchangesRequest.fbs
+export interface PaxMonGetInterchangesRequest {
+  universe: number;
+  station: string;
+  start_time: number;
+  end_time: number;
+  max_count: number;
+  include_meta_stations: boolean;
+  include_group_infos: boolean;
+}
+
+// paxmon/PaxMonGetInterchangesResponse.fbs
+export interface PaxMonTripStopInfo {
+  schedule_time: number;
+  current_time: number;
+  trips: TripServiceInfo[];
+}
+
+// paxmon/PaxMonGetInterchangesResponse.fbs
+export interface PaxMonInterchangeInfo {
+  arrival: PaxMonTripStopInfo[];
+  departure: PaxMonTripStopInfo[];
+  groups: PaxMonCombinedGroups;
+  transfer_time: number;
+}
+
+// paxmon/PaxMonGetInterchangesResponse.fbs
+export interface PaxMonGetInterchangesResponse {
+  station: Station;
+  interchanges: PaxMonInterchangeInfo[];
+  max_count_reached: boolean;
 }
 
 // paxmon/PaxMonGetTripLoadInfosRequest.fbs

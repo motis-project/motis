@@ -21,6 +21,7 @@ table TripRecommendationMeasure {
   time: long;
   planned_trips: [TripId];
   planned_destinations: [string]; // station ids
+  planned_long_distance_destinations: [string]; // station ids
   recommended_trip: TripId;
   interchange_station: string; // station id
 }

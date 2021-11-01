@@ -69,6 +69,7 @@ function TripSectionDetails({
     filter: groupFilter,
     group_by_station: groupByStation,
     group_by_other_trip: groupByOtherTrip,
+    include_group_infos: false,
   });
 
   const groupByDirection =
@@ -94,10 +95,13 @@ function TripSectionDetails({
             </div>
             <div>
               {sec.groups.length} Gruppen (
-              {sec.groups.reduce((sum, g) => sum + g.min_passenger_count, 0)}
+              {sec.groups.reduce(
+                (sum, g) => sum + g.info.min_passenger_count,
+                0
+              )}
               {" - "}
               {sec.groups.reduce(
-                (sum, g) => sum + g.max_passenger_count,
+                (sum, g) => sum + g.info.max_passenger_count,
                 0
               )}{" "}
               Reisende)

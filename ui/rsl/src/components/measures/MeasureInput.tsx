@@ -137,6 +137,7 @@ function MeasureInput(): JSX.Element {
             time: unixTime,
             planned_trips: [],
             planned_destinations: [tripRecDestination.id],
+            planned_long_distance_destinations: [],
             recommended_trip: tripRecTrip.trip,
             interchange_station: tripRecInterchange.id,
           },

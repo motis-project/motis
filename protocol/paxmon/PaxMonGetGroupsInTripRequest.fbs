@@ -18,4 +18,5 @@ table PaxMonGetGroupsInTripRequest {
   filter: PaxMonGroupFilter;
   group_by_station: PaxMonGroupByStation;
   group_by_other_trip: bool; // for filter = Entering/Exiting only
+  include_group_infos: bool; // include PaxMonGroupBaseInfo
 }

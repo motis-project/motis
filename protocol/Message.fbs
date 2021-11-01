@@ -94,6 +94,8 @@ include "paxmon/PaxMonGetGroupsInTripRequest.fbs";
 include "paxmon/PaxMonGetGroupsInTripResponse.fbs";
 include "paxmon/PaxMonUniverseForked.fbs";
 include "paxmon/PaxMonUniverseDestroyed.fbs";
+include "paxmon/PaxMonGetInterchangesRequest.fbs";
+include "paxmon/PaxMonGetInterchangesResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 
@@ -260,7 +262,9 @@ union MsgContent {
   motis.paxmon.PaxMonGetGroupsInTripResponse                              = 117,
   motis.paxforecast.PaxForecastApplyMeasuresRequest                       = 118,
   motis.paxmon.PaxMonUniverseForked                                       = 119,
-  motis.paxmon.PaxMonUniverseDestroyed                                    = 120
+  motis.paxmon.PaxMonUniverseDestroyed                                    = 120,
+  motis.paxmon.PaxMonGetInterchangesRequest                               = 121,
+  motis.paxmon.PaxMonGetInterchangesResponse                              = 122
 }
 
 // Destination Examples:

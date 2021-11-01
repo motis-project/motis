@@ -95,8 +95,8 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
   const groupInfo = (
     <div>
       <span className="font-bold">
-        {props.combinedGroup.min_passenger_count}-
-        {props.combinedGroup.max_passenger_count} Reisende
+        {props.combinedGroup.info.min_passenger_count}-
+        {props.combinedGroup.info.max_passenger_count} Reisende
         {props.groupByDirection === "Origin" ? " aus " : " in "}Richtung{" "}
         {destinationStation.name}
       </span>
