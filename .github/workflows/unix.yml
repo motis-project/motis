@@ -55,7 +55,8 @@ jobs:
         uses: pnpm/action-setup@v2.0.1
         with:
           version: 6.20.0
-          run_install: true
+          run_install: |
+            - cwd: ui/rsl
 
       - name: Formatting
         run: pnpm run format-check
