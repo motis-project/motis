@@ -219,6 +219,7 @@ jobs:
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
+      ASAN_OPTIONS: alloc_dealloc_mismatch=0
       ASAN_SYMBOLIZER_PATH: /usr/lib/llvm-12/bin/llvm-symbolizer
     steps:
       - uses: actions/checkout@v2
