@@ -1,6 +1,22 @@
 // generated file - do not modify - run update-protocol to update
 
 import { StationGuesserRequest, StationGuesserResponse } from "./motis/guesser";
+import {
+  LookupGeoStationIdRequest,
+  LookupGeoStationRequest,
+  LookupGeoStationResponse,
+  LookupBatchGeoStationRequest,
+  LookupBatchGeoStationResponse,
+  LookupStationEventsRequest,
+  LookupStationEventsResponse,
+  LookupScheduleInfoResponse,
+  LookupMetaStationRequest,
+  LookupMetaStationResponse,
+  LookupBatchMetaStationRequest,
+  LookupBatchMetaStationResponse,
+  LookupIdTrainRequest,
+  LookupIdTrainResponse,
+} from "./motis/lookup";
 import { RISForwardTimeRequest } from "./motis/ris";
 import { RoutingRequest, RoutingResponse } from "./motis/routing";
 import {
@@ -294,6 +310,20 @@ export type MsgContent =
   | TripId
   | StationGuesserRequest
   | StationGuesserResponse
+  | LookupGeoStationIdRequest
+  | LookupGeoStationRequest
+  | LookupGeoStationResponse
+  | LookupBatchGeoStationRequest
+  | LookupBatchGeoStationResponse
+  | LookupStationEventsRequest
+  | LookupStationEventsResponse
+  | LookupScheduleInfoResponse
+  | LookupMetaStationRequest
+  | LookupMetaStationResponse
+  | LookupBatchMetaStationRequest
+  | LookupBatchMetaStationResponse
+  | LookupIdTrainRequest
+  | LookupIdTrainResponse
   | RISForwardTimeRequest
   | RoutingRequest
   | RoutingResponse
@@ -336,6 +366,20 @@ export type MsgContentType =
   | "TripId"
   | "StationGuesserRequest"
   | "StationGuesserResponse"
+  | "LookupGeoStationIdRequest"
+  | "LookupGeoStationRequest"
+  | "LookupGeoStationResponse"
+  | "LookupBatchGeoStationRequest"
+  | "LookupBatchGeoStationResponse"
+  | "LookupStationEventsRequest"
+  | "LookupStationEventsResponse"
+  | "LookupScheduleInfoResponse"
+  | "LookupMetaStationRequest"
+  | "LookupMetaStationResponse"
+  | "LookupBatchMetaStationRequest"
+  | "LookupBatchMetaStationResponse"
+  | "LookupIdTrainRequest"
+  | "LookupIdTrainResponse"
   | "RISForwardTimeRequest"
   | "RoutingRequest"
   | "RoutingResponse"

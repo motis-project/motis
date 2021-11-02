@@ -7,7 +7,8 @@
     "motis.paxmon.*",
     "motis.paxforecast.*",
     "motis.routing.*",
-    "motis.guesser.*"
+    "motis.guesser.*",
+    "motis.lookup.*"
   ],
   "header": "// generated file - do not modify - run update-protocol to update"
 }
