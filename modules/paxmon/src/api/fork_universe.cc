@@ -12,7 +12,7 @@ using namespace motis::logging;
 
 namespace motis::paxmon::api {
 
-msg_ptr fork_universe(schedule const& sched, paxmon_data& data,
+msg_ptr fork_universe(paxmon_data& data,
                       msg_ptr const& msg) {
   auto const broadcast = [&](universe const& base, universe const& fork) {
     message_creator mc;

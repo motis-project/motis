@@ -10,8 +10,7 @@ using namespace motis::paxmon;
 
 namespace motis::paxmon::api {
 
-msg_ptr destroy_universe(schedule const& sched, paxmon_data& data,
-                         msg_ptr const& msg) {
+msg_ptr destroy_universe(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonDestroyUniverseRequest, msg);
   auto& uv = get_universe(data, req->universe());
   if (data.multiverse_.destroy(uv.id_)) {

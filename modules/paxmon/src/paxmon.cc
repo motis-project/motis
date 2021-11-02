@@ -297,12 +297,12 @@ void paxmon::init(motis::module::registry& reg) {
                   });
 
   reg.register_op("/paxmon/fork_universe", [&](msg_ptr const& msg) -> msg_ptr {
-    return api::fork_universe(get_sched(), data_, msg);
+    return api::fork_universe(data_, msg);
   });
 
   reg.register_op("/paxmon/destroy_universe",
                   [&](msg_ptr const& msg) -> msg_ptr {
-                    return api::destroy_universe(get_sched(), data_, msg);
+                    return api::destroy_universe(data_, msg);
                   });
 
   if (!mcfp_scenario_dir_.empty()) {
