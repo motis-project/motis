@@ -9,7 +9,6 @@
 namespace motis::paxmon::api {
 
 motis::module::msg_ptr get_status(schedule const& sched,
-                                  tick_statistics const& last_tick_stats,
-                                  motis::module::msg_ptr const& msg);
+                                  tick_statistics const& last_tick_stats);
 
 }  // namespace motis::paxmon::api

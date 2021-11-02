@@ -8,7 +8,7 @@ using namespace motis::paxmon;
 namespace motis::paxmon::api {
 
 msg_ptr get_status(schedule const& sched,
-                   tick_statistics const& last_tick_stats, msg_ptr const& msg) {
+                   tick_statistics const& last_tick_stats) {
   message_creator mc;
   mc.create_and_finish(
       MsgContent_PaxMonStatusResponse,

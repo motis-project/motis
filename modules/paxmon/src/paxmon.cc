@@ -275,8 +275,8 @@ void paxmon::init(motis::module::registry& reg) {
     return api::find_trips(get_sched(), data_, msg);
   });
 
-  reg.register_op("/paxmon/status", [&](msg_ptr const& msg) -> msg_ptr {
-    return api::get_status(get_sched(), last_tick_stats_, msg);
+  reg.register_op("/paxmon/status", [&](msg_ptr const& /*msg*/) -> msg_ptr {
+    return api::get_status(get_sched(), last_tick_stats_);
   });
 
   reg.register_op("/paxmon/get_groups", [&](msg_ptr const& msg) -> msg_ptr {
