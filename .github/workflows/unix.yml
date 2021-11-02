@@ -71,6 +71,7 @@ jobs:
         run: |
           pnpm run update-protocol
           git status --porcelain
+          git diff
           git status --porcelain | xargs -I {} -0 test -z \"{}\"
 
   build:
