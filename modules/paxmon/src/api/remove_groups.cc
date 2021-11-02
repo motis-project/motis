@@ -45,7 +45,7 @@ msg_ptr remove_groups(schedule const& sched, paxmon_data& data,
 
   print_allocator_stats(uv);
 
-  if (check_graph_integrity) {
+  if (check_graph_integrity_end) {
     utl::verify(check_graph_integrity(uv, sched), "remove_groups (end)");
   }
 
