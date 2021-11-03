@@ -94,10 +94,6 @@ std::unique_ptr<device_gpu_timetable> get_device_gpu_timetable(
   bytes +=
       copy_vector_to_device(h_gtt.transfer_times_, &(d_gtt->transfer_times_));
 
-  cudaMemcpyToSymbol(GTT, d_gtt.get(), sizeof(device_gpu_timetable), 0,
-                     cudaMemcpyHostToDevice);
-  cc();
-
   printf("Finished copying RAPTOR timetable to device\n");
   printf("Copied %f mibi bytes\n",
          ((static_cast<double>(bytes)) / (1024 * 1024)));

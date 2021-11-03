@@ -145,7 +145,7 @@ msg_ptr raptor::route_gpu(msg_ptr const& msg) {
 
   loaned_mem loan(mem_store_);
 
-  d_query q(base_query, loan.mem_);
+  d_query q(base_query, loan.mem_, *d_gtt_);
 
   std::vector<journey> js;
   if constexpr (UseHybridRaptor) {

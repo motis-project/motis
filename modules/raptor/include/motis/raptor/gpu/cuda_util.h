@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdio>
+
 #include "cuda_runtime.h"
 
 namespace motis::raptor {

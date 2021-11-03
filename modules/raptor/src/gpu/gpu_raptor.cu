@@ -54,41 +54,22 @@ __device__ void reset_store(unsigned int* store, int const store_size) {
 
 __device__ void convert_station_to_route_marks(unsigned int* station_marks,
                                                unsigned int* route_marks,
-                                               bool* any_station_marked) {
+                                               bool* any_station_marked,
+                                               device_gpu_timetable const& tt) {
   auto const global_t_id = get_global_thread_id();
   auto const global_stride = get_global_stride();
-  for (auto idx = global_t_id; idx < GTT.stop_count_; idx += global_stride) {
+  for (auto idx = global_t_id; idx < tt.stop_count_; idx += global_stride) {
     if (marked(station_marks, idx)) {
       if (!*any_station_marked) {
         *any_station_marked = true;
       }
-      auto const stop = GTT.stops_[idx];
+      auto const stop = tt.stops_[idx];
       for (auto sri = stop.index_to_stop_routes_;
            sri < stop.index_to_stop_routes_ + stop.route_count_; ++sri) {
-        mark(route_marks, GTT.stop_routes_[sri]);
+        mark(route_marks, tt.stop_routes_[sri]);
       }
     }
   }
-}
-
-__device__ time get_stop_arrival_split(stop_times_index const sti) {
-  return GTT.stop_arrivals_[sti];
-}
-
-__device__ time get_stop_departure_split(stop_times_index const sti) {
-  return GTT.stop_departures_[sti];
-}
-
-__device__ stop_id get_route_stop(route_stops_index const rsi) {
-  return GTT.route_stops_[rsi];
-}
-
-__device__ stop_time get_stop_time(stop_times_index const sti) {
-  return GTT.stop_times_[sti];
-}
-
-__device__ time get_arrival(time const* const base, stop_id const s_id) {
-  return base[s_id];
 }
 
 __device__ bool update_arrival(time* const base, stop_id const s_id,
@@ -149,11 +130,12 @@ __device__ bool update_arrival(time* const base, stop_id const s_id,
 }
 
 __device__ void copy_marked_arrivals(time* const to, time* const from,
-                                     unsigned int* station_marks) {
+                                     unsigned int* station_marks,
+                                     device_gpu_timetable const& tt) {
   auto const global_stride = get_global_stride();
 
   auto arr_idx = get_global_thread_id();
-  for (; arr_idx < GTT.stop_count_; arr_idx += global_stride) {
+  for (; arr_idx < tt.stop_count_; arr_idx += global_stride) {
     if (marked(station_marks, arr_idx)) {
       to[arr_idx] = from[arr_idx];
     } else {
@@ -162,11 +144,12 @@ __device__ void copy_marked_arrivals(time* const to, time* const from,
   }
 }
 
-__device__ void copy_and_min_arrivals(time* const to, time* const from) {
+__device__ void copy_and_min_arrivals(time* const to, time* const from,
+                                      device_gpu_timetable const& tt) {
   auto const global_stride = get_global_stride();
 
   auto arr_idx = get_global_thread_id();
-  for (; arr_idx < GTT.stop_count_; arr_idx += global_stride) {
+  for (; arr_idx < tt.stop_count_; arr_idx += global_stride) {
     to[arr_idx] = min(from[arr_idx], to[arr_idx]);
   }
 }
@@ -174,7 +157,8 @@ __device__ void copy_and_min_arrivals(time* const to, time* const from) {
 __device__ void update_route_larger32(gpu_route const& route,
                                       time const* const prev_arrivals,
                                       time* const arrivals,
-                                      unsigned int* station_marks) {
+                                      unsigned int* station_marks,
+                                      device_gpu_timetable const& tt) {
   auto const t_id = threadIdx.x;
 
   stop_id stop_id_t = invalid<stop_id>;
@@ -200,8 +184,9 @@ __device__ void update_route_larger32(gpu_route const& route,
 
       // load the prev arrivals for the current stage
       if (stage_id < active_stop_count) {
-        stop_id_t = get_route_stop(route.index_to_route_stops_ + stage_id);
-        prev_arrival = get_arrival(prev_arrivals, stop_id_t);
+        stop_id_t = tt.route_stops_[route.index_to_route_stops_ + stage_id];
+        //        prev_arrival = get_arrival(prev_arrivals, stop_id_t);
+        prev_arrival = prev_arrivals[stop_id_t];
       }
 
       any_arrival |= __any_sync(FULL_MASK, valid(prev_arrival));
@@ -217,7 +202,7 @@ __device__ void update_route_larger32(gpu_route const& route,
       if (stage_id < active_stop_count) {
         auto const st_idx = route.index_to_stop_times_ +
                             (trip_offset * route.stop_count_) + stage_id;
-        stop_departure = get_stop_departure_split(st_idx);
+        stop_departure = tt.stop_departures_[st_idx];
       }
 
       // get the current stage leader
@@ -237,7 +222,7 @@ __device__ void update_route_larger32(gpu_route const& route,
         if (stage_id > leader) {
           auto const st_idx = route.index_to_stop_times_ +
                               (trip_offset * route.stop_count_) + stage_id;
-          stop_arrival = get_stop_arrival_split(st_idx);
+          stop_arrival = tt.stop_arrivals_[st_idx];
           bool updated = update_arrival(arrivals, stop_id_t, stop_arrival);
           if (updated) {
             mark(station_marks, stop_id_t);
@@ -256,9 +241,9 @@ __device__ void update_route_larger32(gpu_route const& route,
             auto const st_idx = route.index_to_stop_times_ +
                                 (trip_offset * route.stop_count_) + upwards_id;
 
-            stop_arrival = get_stop_arrival_split(st_idx);
+            stop_arrival = tt.stop_arrivals_[st_idx];
             stop_id_t =
-                get_route_stop(route.index_to_route_stops_ + upwards_id);
+                tt.route_stops_[route.index_to_route_stops_ + upwards_id];
             bool updated = update_arrival(arrivals, stop_id_t, stop_arrival);
             if (updated) {
               mark(station_marks, stop_id_t);
@@ -279,7 +264,8 @@ __device__ void update_route_larger32(gpu_route const& route,
 __device__ void update_route_smaller32(gpu_route const route,
                                        time const* const prev_arrivals,
                                        time* const arrivals,
-                                       unsigned int* station_marks) {
+                                       unsigned int* station_marks,
+                                       device_gpu_timetable const& tt) {
   auto const t_id = threadIdx.x;
 
   stop_id stop_id_t = invalid<stop_id>;
@@ -291,8 +277,9 @@ __device__ void update_route_smaller32(gpu_route const route,
   unsigned int active_stop_count = route.stop_count_;
 
   if (t_id < active_stop_count) {
-    stop_id_t = get_route_stop(route.index_to_route_stops_ + t_id);
-    prev_arrival = get_arrival(prev_arrivals, stop_id_t);
+    stop_id_t = tt.route_stops_[route.index_to_route_stops_ + t_id];
+    //    prev_arrival = get_arrival(prev_arrivals, stop_id_t);
+    prev_arrival = prev_arrivals[stop_id_t];
   }
 
   if (!__any_sync(FULL_MASK, valid(prev_arrival))) {
@@ -304,7 +291,7 @@ __device__ void update_route_smaller32(gpu_route const route,
     if (t_id < active_stop_count) {
       auto const st_idx =
           route.index_to_stop_times_ + (trip_offset * route.stop_count_) + t_id;
-      stop_departure = get_stop_departure_split(st_idx);
+      stop_departure = tt.stop_departures_[st_idx];
     }
 
     // elect leader
@@ -318,7 +305,7 @@ __device__ void update_route_smaller32(gpu_route const route,
       auto const st_idx =
           route.index_to_stop_times_ + (trip_offset * route.stop_count_) + t_id;
 
-      stop_arrival = get_stop_arrival_split(st_idx);
+      stop_arrival = tt.stop_arrivals_[st_idx];
       bool updated = update_arrival(arrivals, stop_id_t, stop_arrival);
       if (updated) {
         mark(station_marks, stop_id_t);
@@ -334,15 +321,17 @@ __device__ void update_route_smaller32(gpu_route const route,
 
 __device__ void update_footpaths_dev_scratch(time const* const read_arrivals,
                                              time* const write_arrivals,
-                                             unsigned int* station_marks) {
+                                             unsigned int* station_marks,
+                                             device_gpu_timetable const& tt) {
 
   auto const global_stride = get_global_stride();
 
   auto foot_idx = get_global_thread_id();
-  for (; foot_idx < GTT.footpath_count_; foot_idx += global_stride) {
-    auto const footpath = GTT.footpaths_[foot_idx];
+  for (; foot_idx < tt.footpath_count_; foot_idx += global_stride) {
+    auto const footpath = tt.footpaths_[foot_idx];
 
-    time const from_arrival = get_arrival(read_arrivals, footpath.from_);
+    time const from_arrival = read_arrivals[footpath.from_];
+    //        (read_arrivals, footpath.from_);
     time const new_arrival = from_arrival + footpath.duration_;
 
     if (valid(from_arrival) && marked(station_marks, footpath.from_)) {
@@ -358,17 +347,18 @@ __device__ void update_routes_dev(time const* const prev_arrivals,
                                   time* const arrivals,
                                   unsigned int* station_marks,
                                   unsigned int* route_marks,
-                                  bool* any_station_marked) {
+                                  bool* any_station_marked,
+                                  device_gpu_timetable const& tt) {
 
   if (get_global_thread_id() == 0) {
     *any_station_marked = false;
   }
 
-  convert_station_to_route_marks(station_marks, route_marks,
-                                 any_station_marked);
+  convert_station_to_route_marks(station_marks, route_marks, any_station_marked,
+                                 tt);
   this_grid().sync();
 
-  auto const station_store_size = (GTT.stop_count_ / 32) + 1;
+  auto const station_store_size = (tt.stop_count_ / 32) + 1;
   reset_store(station_marks, station_store_size);
   this_grid().sync();
 
@@ -378,33 +368,34 @@ __device__ void update_routes_dev(time const* const prev_arrivals,
 
   auto const stride = blockDim.y * gridDim.x;
   auto const start_r_id = threadIdx.y + (blockDim.y * blockIdx.x);
-  for (auto r_id = start_r_id; r_id < GTT.route_count_; r_id += stride) {
+  for (auto r_id = start_r_id; r_id < tt.route_count_; r_id += stride) {
     if (!marked(route_marks, r_id)) {
       continue;
     }
 
-    auto const route = GTT.routes_[r_id];
+    auto const route = tt.routes_[r_id];
     if (route.stop_count_ <= 32) {
-      update_route_smaller32(route, prev_arrivals, arrivals, station_marks);
+      update_route_smaller32(route, prev_arrivals, arrivals, station_marks, tt);
     } else {
-      update_route_larger32(route, prev_arrivals, arrivals, station_marks);
+      update_route_larger32(route, prev_arrivals, arrivals, station_marks, tt);
     }
   }
 
   this_grid().sync();
 
-  auto const store_size = (GTT.route_count_ / 32) + 1;
+  auto const store_size = (tt.route_count_ / 32) + 1;
   reset_store(route_marks, store_size);
 }
 
 __device__ void init_arrivals_dev(base_query const& query,
-                                  device_memory const& device_mem) {
+                                  device_memory const& device_mem,
+                                  device_gpu_timetable const& tt) {
   auto const t_id = get_global_thread_id();
 
-  auto const station_store_size = (GTT.stop_count_ / 32) + 1;
+  auto const station_store_size = (tt.stop_count_ / 32) + 1;
   reset_store(device_mem.station_marks_, station_store_size);
 
-  auto const route_store_size = (GTT.route_count_ / 32) + 1;
+  auto const route_store_size = (tt.route_count_ / 32) + 1;
   reset_store(device_mem.route_marks_, route_store_size);
 
   if (t_id == 0) {
@@ -417,12 +408,12 @@ __device__ void init_arrivals_dev(base_query const& query,
   }
 
   auto const footpath_count =
-      GTT.initialization_footpaths_indices_[query.source_ + 1] -
-      GTT.initialization_footpaths_indices_[query.source_];
+      tt.initialization_footpaths_indices_[query.source_ + 1] -
+      tt.initialization_footpaths_indices_[query.source_];
   if (t_id < footpath_count) {
     auto const index_into_footpaths =
-        GTT.initialization_footpaths_indices_[query.source_];
-    auto const f = GTT.initialization_footpaths_[index_into_footpaths + t_id];
+        tt.initialization_footpaths_indices_[query.source_];
+    auto const f = tt.initialization_footpaths_[index_into_footpaths + t_id];
 
     time const new_value = query.source_time_begin_ + f.duration_;
     bool updated = update_arrival(device_mem.result_[0], f.to_, new_value);
@@ -433,7 +424,8 @@ __device__ void init_arrivals_dev(base_query const& query,
 }
 
 __device__ void update_footpaths_dev(device_memory const& device_mem,
-                                     raptor_round round_k) {
+                                     raptor_round round_k,
+                                     device_gpu_timetable const& tt) {
   time* const arrivals = device_mem.result_[round_k];
 
   // we must only copy the marked arrivals,
@@ -441,11 +433,11 @@ __device__ void update_footpaths_dev(device_memory const& device_mem,
   // to generate the current arrival, a new optimum from this value
   // would be generated using a double walk -> not correct!
   copy_marked_arrivals(device_mem.footpaths_scratchpad_, arrivals,
-                       device_mem.station_marks_);
+                       device_mem.station_marks_, tt);
   this_grid().sync();
 
   update_footpaths_dev_scratch(device_mem.footpaths_scratchpad_, arrivals,
-                               device_mem.station_marks_);
+                               device_mem.station_marks_, tt);
   this_grid().sync();
 
   if (round_k == max_raptor_round - 1) {
@@ -453,13 +445,14 @@ __device__ void update_footpaths_dev(device_memory const& device_mem,
   }
 
   time* const next_arrivals = device_mem.result_[round_k + 1];
-  copy_and_min_arrivals(next_arrivals, arrivals);
+  copy_and_min_arrivals(next_arrivals, arrivals, tt);
   this_grid().sync();
 }
 
 __global__ void gpu_raptor_kernel(base_query const query,
-                                  device_memory const device_mem) {
-  init_arrivals_dev(query, device_mem);
+                                  device_memory const device_mem,
+                                  device_gpu_timetable const tt) {
+  init_arrivals_dev(query, device_mem, tt);
   this_grid().sync();
 
   for (raptor_round round_k = 1; round_k < max_raptor_round; ++round_k) {
@@ -467,16 +460,18 @@ __global__ void gpu_raptor_kernel(base_query const query,
     time* const arrivals = device_mem.result_[round_k];
 
     update_routes_dev(prev_arrivals, arrivals, device_mem.station_marks_,
-                      device_mem.route_marks_, device_mem.any_station_marked_);
+                      device_mem.route_marks_, device_mem.any_station_marked_,
+                      tt);
     this_grid().sync();
 
-    update_footpaths_dev(device_mem, round_k);
+    update_footpaths_dev(device_mem, round_k, tt);
     this_grid().sync();
   }
 }
 
 void invoke_gpu_raptor(d_query const& dq) {
-  void* kernel_args[] = {(void*)&dq, (void*)&(dq.mem_->device_)};
+  void* kernel_args[] = {(void*)&dq, (void*)&(dq.mem_->device_),
+                         (void*)&(dq.tt_)};
   launch_kernel(gpu_raptor_kernel, kernel_args, dq.mem_->context_,
                 dq.mem_->context_.proc_stream_);
   cc();

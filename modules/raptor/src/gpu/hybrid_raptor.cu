@@ -1,29 +1,33 @@
 namespace motis::raptor {
 
 __global__ void init_arrivals_kernel(base_query const query,
-                                     device_memory const device_mem) {
-  init_arrivals_dev(query, device_mem);
+                                     device_memory const device_mem,
+                                     device_gpu_timetable const tt) {
+  init_arrivals_dev(query, device_mem, tt);
 }
 
 __global__ void update_footpaths_kernel(device_memory const device_mem,
-                                        raptor_round round_k) {
-  update_footpaths_dev(device_mem, round_k);
+                                        raptor_round round_k,
+                                        device_gpu_timetable const tt) {
+  update_footpaths_dev(device_mem, round_k, tt);
 }
 
 __global__ void update_routes_kernel(device_memory const device_mem,
-                                     raptor_round round_k) {
+                                     raptor_round round_k,
+                                     device_gpu_timetable const tt) {
   time const* const prev_arrivals = device_mem.result_[round_k - 1];
   time* const arrivals = device_mem.result_[round_k];
 
   update_routes_dev(prev_arrivals, arrivals, device_mem.station_marks_,
-                    device_mem.route_marks_, device_mem.any_station_marked_);
+                    device_mem.route_marks_, device_mem.any_station_marked_,
+                    tt);
 }
 
 void invoke_hybrid_raptor(d_query const& dq) {
   auto const& proc_stream = dq.mem_->context_.proc_stream_;
   auto const& transfer_stream = dq.mem_->context_.transfer_stream_;
 
-  void* init_args[] = {(void*)&dq, (void*)&dq.mem_->device_};
+  void* init_args[] = {(void*)&dq, (void*)&dq.mem_->device_, (void*)&dq.tt_};
 
   launch_kernel(init_arrivals_kernel, init_args, dq.mem_->context_,
                 proc_stream);

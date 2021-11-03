@@ -1,12 +1,10 @@
-#include "motis/raptor/gpu/gpu_raptor.cuh"
-#include "motis/raptor/gpu/gpu_timetable.cuh"
+#include "motis/raptor/gpu/cuda_util.h"
 #include "motis/raptor/raptor_query.h"
 
-#include <algorithm>
+#include "motis/raptor/gpu/gpu_raptor.cuh"
+#include "motis/raptor/gpu/gpu_timetable.cuh"
 
 namespace motis::raptor {
-
-__constant__ device_gpu_timetable GTT;
 
 template <typename Kernel>
 void inline launch_kernel(Kernel kernel, void** args,

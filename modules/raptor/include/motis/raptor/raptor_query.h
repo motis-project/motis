@@ -107,18 +107,18 @@ struct raptor_query : base_query {
 };
 
 #if defined(MOTIS_CUDA)
-
 struct d_query : base_query {
   d_query() = delete;
-  d_query(base_query const& bq, mem* mem) : mem_(mem) {
+  d_query(base_query const& bq, mem* mem, device_gpu_timetable const tt)
+      : mem_(mem), tt_(tt) {
     static_cast<base_query&>(*this) = bq;
   }
 
   raptor_result_base const& result() const { return *mem_->host_.result_; }
 
   mem* mem_;
+  device_gpu_timetable tt_;
 };
-
 #endif
 
 }  // namespace motis::raptor
