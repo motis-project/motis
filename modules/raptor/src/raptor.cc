@@ -75,8 +75,8 @@ void raptor::init(motis::module::registry& reg) {
 msg_ptr make_response(schedule const& sched, std::vector<journey> const& js,
                       motis::routing::RoutingRequest const* request,
                       raptor_statistics const& stats) {
-  int64_t interval_start;
-  int64_t interval_end;
+  int64_t interval_start{0};
+  int64_t interval_end{0};
 
   switch (request->start_type()) {
     case Start::Start_PretripStart: {
