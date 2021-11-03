@@ -9,6 +9,8 @@ import {
   PaxMonForkUniverseResponse,
   PaxMonGetGroupsInTripRequest,
   PaxMonGetGroupsInTripResponse,
+  PaxMonGetInterchangesRequest,
+  PaxMonGetInterchangesResponse,
   PaxMonGetTripLoadInfosRequest,
   PaxMonGetTripLoadInfosResponse,
   PaxMonStatusResponse,
@@ -116,6 +118,26 @@ export async function sendPaxMonDestroyUniverseRequest(
   return msg.content as MotisSuccess;
 }
 
+export async function sendPaxMonGetInterchangesRequest(
+  content: PaxMonGetInterchangesRequest
+): Promise<PaxMonGetInterchangesResponse> {
+  const msg = await sendRequest(
+    "/paxmon/get_interchanges",
+    "PaxMonGetInterchangesRequest",
+    content
+  );
+  verifyContentType(msg, "PaxMonGetInterchangesResponse");
+  return msg.content as PaxMonGetInterchangesResponse;
+}
+
+export function usePaxMonGetInterchangesQuery(
+  content: PaxMonGetInterchangesRequest
+): UseQueryResult<PaxMonGetInterchangesResponse> {
+  return useQuery(queryKeys.interchanges(content), () =>
+    sendPaxMonGetInterchangesRequest(content)
+  );
+}
+
 export const queryKeys = {
   all: ["paxmon"] as const,
   status: () => [...queryKeys.all, "status"] as const,
@@ -125,4 +147,6 @@ export const queryKeys = {
     [...queryKeys.all, "trip", "load", universe, { tripId }] as const,
   tripGroups: (req: PaxMonGetGroupsInTripRequest) =>
     [...queryKeys.all, "trip", "groups", req] as const,
+  interchanges: (req: PaxMonGetInterchangesRequest) =>
+    [...queryKeys.all, "interchanges", req] as const,
 };
