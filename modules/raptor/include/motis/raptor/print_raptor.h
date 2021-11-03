@@ -87,7 +87,7 @@ template <typename Container>
 }
 
 [[maybe_unused]] inline void print_station_arrivals(
-    stop_id const s_id, raptor_result const& raptor_result) {
+    stop_id const s_id, raptor_result_base const& raptor_result) {
   std::cout << s_id << "(station) Arrivals: [ ";
   for (auto k = 0; k < max_raptor_round; ++k) {
     std::cout << raptor_result[k][s_id] << " ";
@@ -173,6 +173,18 @@ template <typename Container>
     std::cout << rs << ":" << arrs[rs] << " ";
   }
   std::cout << "]\n";
+}
+
+bool is_reset(raptor_result_base const& result) {
+  for (auto k = 0; k < max_raptor_round; ++k) {
+    for (auto s = 0; s < result.stop_count_; ++s) {
+      if (result[k][s] != invalid<time>) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 }  // namespace motis::raptor
