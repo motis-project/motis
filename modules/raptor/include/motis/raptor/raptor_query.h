@@ -80,7 +80,7 @@ auto inline get_add_starts(raptor_schedule const& raptor_sched,
 }
 
 struct raptor_query : base_query {
-  raptor_query() = default;
+  raptor_query() = delete;
   raptor_query(raptor_query const&) = delete;
   raptor_query(raptor_query const&&) = delete;
   raptor_query operator=(raptor_query const&) = delete;
