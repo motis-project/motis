@@ -59,8 +59,6 @@ __device__ void convert_station_to_route_marks(unsigned int* station_marks,
   auto const global_stride = get_global_stride();
   for (auto idx = global_t_id; idx < GTT.stop_count_; idx += global_stride) {
     if (marked(station_marks, idx)) {
-      // TODO(julian) check if this is superfluous and just do
-      // any_station_marked = true
       if (!*any_station_marked) {
         *any_station_marked = true;
       }
@@ -71,14 +69,6 @@ __device__ void convert_station_to_route_marks(unsigned int* station_marks,
       }
     }
   }
-}
-
-__device__ time get_stop_arrival(stop_times_index const sti) {
-  return GTT.stop_times_[sti].arrival_;
-}
-
-__device__ time get_stop_departure(stop_times_index const sti) {
-  return GTT.stop_times_[sti].departure_;
 }
 
 __device__ time get_stop_arrival_split(stop_times_index const sti) {
@@ -158,15 +148,6 @@ __device__ bool update_arrival(time* const base, stop_id const s_id,
 #endif
 }
 
-__device__ void reset_arrivals(time* const arrivals) {
-  auto const global_stride = get_global_stride();
-  auto arr_idx = get_global_thread_id();
-
-  for (; arr_idx < GTT.stop_count_; arr_idx += global_stride) {
-    arrivals[arr_idx] = invalid<time>;
-  }
-}
-
 __device__ void copy_marked_arrivals(time* const to, time* const from,
                                      unsigned int* station_marks) {
   auto const global_stride = get_global_stride();
@@ -181,15 +162,6 @@ __device__ void copy_marked_arrivals(time* const to, time* const from,
   }
 }
 
-__device__ void copy_arrivals(time* const to, time* const from) {
-  auto const global_stride = get_global_stride();
-
-  auto arr_idx = get_global_thread_id();
-  for (; arr_idx < GTT.stop_count_; arr_idx += global_stride) {
-    to[arr_idx] = from[arr_idx];
-  }
-}
-
 __device__ void copy_and_min_arrivals(time* const to, time* const from) {
   auto const global_stride = get_global_stride();
 
@@ -199,13 +171,10 @@ __device__ void copy_and_min_arrivals(time* const to, time* const from) {
   }
 }
 
-template <GetArrivalFun GetArrival, UpdateArrivalFun UpdateArrival,
-          GetRouteStopFun GetRouteStop, GetStopArrivalFun GetStopArrival,
-          GetStopDepartureFun GetStopDeparture>
-__device__ void update_route_larger32_gen(gpu_route const& route,
-                                          time const* const prev_arrivals,
-                                          time* const arrivals,
-                                          unsigned int* station_marks) {
+__device__ void update_route_larger32(gpu_route const& route,
+                                      time const* const prev_arrivals,
+                                      time* const arrivals,
+                                      unsigned int* station_marks) {
   auto const t_id = threadIdx.x;
 
   stop_id stop_id_t = invalid<stop_id>;
@@ -231,8 +200,8 @@ __device__ void update_route_larger32_gen(gpu_route const& route,
 
       // load the prev arrivals for the current stage
       if (stage_id < active_stop_count) {
-        stop_id_t = GetRouteStop(route.index_to_route_stops_ + stage_id);
-        prev_arrival = GetArrival(prev_arrivals, stop_id_t);
+        stop_id_t = get_route_stop(route.index_to_route_stops_ + stage_id);
+        prev_arrival = get_arrival(prev_arrivals, stop_id_t);
       }
 
       any_arrival |= __any_sync(FULL_MASK, valid(prev_arrival));
@@ -248,7 +217,7 @@ __device__ void update_route_larger32_gen(gpu_route const& route,
       if (stage_id < active_stop_count) {
         auto const st_idx = route.index_to_stop_times_ +
                             (trip_offset * route.stop_count_) + stage_id;
-        stop_departure = GetStopDeparture(st_idx);
+        stop_departure = get_stop_departure_split(st_idx);
       }
 
       // get the current stage leader
@@ -268,8 +237,8 @@ __device__ void update_route_larger32_gen(gpu_route const& route,
         if (stage_id > leader) {
           auto const st_idx = route.index_to_stop_times_ +
                               (trip_offset * route.stop_count_) + stage_id;
-          stop_arrival = GetStopArrival(st_idx);
-          bool updated = UpdateArrival(arrivals, stop_id_t, stop_arrival);
+          stop_arrival = get_stop_arrival_split(st_idx);
+          bool updated = update_arrival(arrivals, stop_id_t, stop_arrival);
           if (updated) {
             mark(station_marks, stop_id_t);
           }
@@ -287,9 +256,10 @@ __device__ void update_route_larger32_gen(gpu_route const& route,
             auto const st_idx = route.index_to_stop_times_ +
                                 (trip_offset * route.stop_count_) + upwards_id;
 
-            stop_arrival = GetStopArrival(st_idx);
-            stop_id_t = GetRouteStop(route.index_to_route_stops_ + upwards_id);
-            bool updated = UpdateArrival(arrivals, stop_id_t, stop_arrival);
+            stop_arrival = get_stop_arrival_split(st_idx);
+            stop_id_t =
+                get_route_stop(route.index_to_route_stops_ + upwards_id);
+            bool updated = update_arrival(arrivals, stop_id_t, stop_arrival);
             if (updated) {
               mark(station_marks, stop_id_t);
             }
@@ -306,84 +276,10 @@ __device__ void update_route_larger32_gen(gpu_route const& route,
   }
 }
 
-template <GetArrivalFun GetArrival, UpdateArrivalFun UpdateArrival,
-          GetRouteStopFun GetRouteStop, GetStopArrivalFun GetStopArrival,
-          GetStopDepartureFun GetStopDeparture>
-__device__ void update_route_smaller32_fronts_gen(
-    gpu_route const route, time const* const prev_arrivals,
-    time* const arrivals, unsigned int* station_marks) {
-  auto const t_id = threadIdx.x;
-  auto const index_to_stop_times = route.index_to_stop_times_;
-  auto const stop_count = route.stop_count_;
-
-  stop_id stop_id_t = invalid<stop_id>;
-  time prev_arrival = invalid<time>;
-  time stop_arrival = invalid<time>;
-  time stop_departure = invalid<time>;
-
-  unsigned leader = stop_count;
-  unsigned int active_stop_count = stop_count;
-
-  unsigned const front_count = 32 / stop_count;
-  unsigned const front_lane = threadIdx.x % stop_count;
-  unsigned const excess_threshold = front_count * stop_count;
-
-  unsigned const front_id = threadIdx.x / stop_count;
-  stop_times_index st_idx = invalid<stop_times_index>;
-
-  if (front_lane < active_stop_count && t_id < excess_threshold) {
-    stop_id_t = GTT.route_stops_[route.index_to_route_stops_ + front_lane];
-    prev_arrival = GetArrival(prev_arrivals, stop_id_t);
-  }
-
-  if (!__any_sync(FULL_MASK, valid(prev_arrival))) {
-    return;
-  }
-
-  for (unsigned trip_offset = front_id; trip_offset < route.trip_count_;
-       trip_offset += front_count) {
-
-    if (front_lane < active_stop_count && t_id < excess_threshold) {
-      st_idx = index_to_stop_times + (trip_offset * stop_count) + front_lane;
-      stop_departure = GetStopDeparture(st_idx);
-    }
-
-    unsigned ballot = __ballot_sync(
-        FULL_MASK, (front_lane < active_stop_count) &&
-                       (t_id < excess_threshold) && valid(prev_arrival) &&
-                       valid(stop_departure) &&
-                       (prev_arrival <= stop_departure));
-
-    for (unsigned f_id = 0; f_id < front_count; ++f_id) {
-      if (f_id == front_id) {
-
-        leader = __ffs(ballot) - 1;
-
-        if (front_lane > leader && front_lane < active_stop_count) {
-          stop_arrival = GetStopArrival(st_idx);
-          bool updated = UpdateArrival(arrivals, stop_id_t, stop_arrival);
-          if (updated) {
-            mark(station_marks, stop_id_t);
-          }
-        }
-
-        if (leader != NO_LEADER) {
-          active_stop_count = leader;
-        }
-      }
-
-      ballot = ballot >> stop_count;
-    }
-  }
-}
-
-template <GetArrivalFun GetArrival, UpdateArrivalFun UpdateArrival,
-          GetRouteStopFun GetRouteStop, GetStopArrivalFun GetStopArrival,
-          GetStopDepartureFun GetStopDeparture>
-__device__ void update_route_smaller32_gen(gpu_route const route,
-                                           time const* const prev_arrivals,
-                                           time* const arrivals,
-                                           unsigned int* station_marks) {
+__device__ void update_route_smaller32(gpu_route const route,
+                                       time const* const prev_arrivals,
+                                       time* const arrivals,
+                                       unsigned int* station_marks) {
   auto const t_id = threadIdx.x;
 
   stop_id stop_id_t = invalid<stop_id>;
@@ -395,8 +291,8 @@ __device__ void update_route_smaller32_gen(gpu_route const route,
   unsigned int active_stop_count = route.stop_count_;
 
   if (t_id < active_stop_count) {
-    stop_id_t = GetRouteStop(route.index_to_route_stops_ + t_id);
-    prev_arrival = GetArrival(prev_arrivals, stop_id_t);
+    stop_id_t = get_route_stop(route.index_to_route_stops_ + t_id);
+    prev_arrival = get_arrival(prev_arrivals, stop_id_t);
   }
 
   if (!__any_sync(FULL_MASK, valid(prev_arrival))) {
@@ -408,7 +304,7 @@ __device__ void update_route_smaller32_gen(gpu_route const route,
     if (t_id < active_stop_count) {
       auto const st_idx =
           route.index_to_stop_times_ + (trip_offset * route.stop_count_) + t_id;
-      stop_departure = GetStopDeparture(st_idx);
+      stop_departure = get_stop_departure_split(st_idx);
     }
 
     // elect leader
@@ -422,8 +318,8 @@ __device__ void update_route_smaller32_gen(gpu_route const route,
       auto const st_idx =
           route.index_to_stop_times_ + (trip_offset * route.stop_count_) + t_id;
 
-      stop_arrival = GetStopArrival(st_idx);
-      bool updated = UpdateArrival(arrivals, stop_id_t, stop_arrival);
+      stop_arrival = get_stop_arrival_split(st_idx);
+      bool updated = update_arrival(arrivals, stop_id_t, stop_arrival);
       if (updated) {
         mark(station_marks, stop_id_t);
       }
@@ -436,10 +332,9 @@ __device__ void update_route_smaller32_gen(gpu_route const route,
   }
 }
 
-template <GetArrivalFun GetArrival, UpdateArrivalFun UpdateArrival>
-__device__ void update_footpaths_dev_scratch_gen(
-    time const* const read_arrivals, time* const write_arrivals,
-    unsigned int* station_marks) {
+__device__ void update_footpaths_dev_scratch(time const* const read_arrivals,
+                                             time* const write_arrivals,
+                                             unsigned int* station_marks) {
 
   auto const global_stride = get_global_stride();
 
@@ -447,66 +342,17 @@ __device__ void update_footpaths_dev_scratch_gen(
   for (; foot_idx < GTT.footpath_count_; foot_idx += global_stride) {
     auto const footpath = GTT.footpaths_[foot_idx];
 
-    time const from_arrival = GetArrival(read_arrivals, footpath.from_);
+    time const from_arrival = get_arrival(read_arrivals, footpath.from_);
     time const new_arrival = from_arrival + footpath.duration_;
 
     if (valid(from_arrival) && marked(station_marks, footpath.from_)) {
-      bool updated = UpdateArrival(write_arrivals, footpath.to_, new_arrival);
+      bool updated = update_arrival(write_arrivals, footpath.to_, new_arrival);
       if (updated) {
         mark(station_marks, footpath.to_);
       }
     }
   }
 }
-
-__device__ auto const update_footpaths_dev_scratch =
-    update_footpaths_dev_scratch_gen<get_arrival, update_arrival>;
-
-template <GetArrivalFun GetArrival, UpdateArrivalFun UpdateArrival>
-__device__ void update_footpaths_dev_new_gen(time const* const arrivals,
-                                             time* const next_arrivals,
-                                             unsigned int* station_marks) {
-  auto const global_stride = get_global_stride();
-
-  auto foot_idx = get_global_thread_id();
-  for (; foot_idx < GTT.footpath_count_; foot_idx += global_stride) {
-    auto const footpath = GTT.footpaths_[foot_idx];
-
-    time from_arrival = arrivals[footpath.from_];
-    time new_arrival = from_arrival + footpath.duration_;
-
-    if (valid(from_arrival) && marked(station_marks, footpath.from_)) {
-      bool updated = UpdateArrival(next_arrivals, footpath.to_, new_arrival);
-      if (updated) {
-        mark(station_marks, footpath.to_);
-      }
-    }
-  }
-}
-
-__device__ auto const update_footpaths_dev_new =
-    update_footpaths_dev_new_gen<get_arrival, update_arrival>;
-
-__device__ auto const update_route_smaller32 =
-    update_route_smaller32_gen<get_arrival, update_arrival, get_route_stop,
-                               get_stop_arrival, get_stop_departure>;
-__device__ auto const update_route_larger32 =
-    update_route_larger32_gen<get_arrival, update_arrival, get_route_stop,
-                              get_stop_arrival, get_stop_departure>;
-
-__device__ auto const update_route_smaller32_fronts =
-    update_route_smaller32_fronts_gen<get_arrival, update_arrival,
-                                      get_route_stop, get_stop_arrival,
-                                      get_stop_departure>;
-
-__device__ auto const update_route_smaller32_split =
-    update_route_smaller32_gen<get_arrival, update_arrival, get_route_stop,
-                               get_stop_arrival_split,
-                               get_stop_departure_split>;
-
-__device__ auto const update_route_larger32_split =
-    update_route_larger32_gen<get_arrival, update_arrival, get_route_stop,
-                              get_stop_arrival_split, get_stop_departure_split>;
 
 __device__ void update_routes_dev(time const* const prev_arrivals,
                                   time* const arrivals,
@@ -539,11 +385,9 @@ __device__ void update_routes_dev(time const* const prev_arrivals,
 
     auto const route = GTT.routes_[r_id];
     if (route.stop_count_ <= 32) {
-      update_route_smaller32_split(route, prev_arrivals, arrivals,
-                                   station_marks);
+      update_route_smaller32(route, prev_arrivals, arrivals, station_marks);
     } else {
-      update_route_larger32_split(route, prev_arrivals, arrivals,
-                                  station_marks);
+      update_route_larger32(route, prev_arrivals, arrivals, station_marks);
     }
   }
 
@@ -589,9 +433,8 @@ __device__ void init_arrivals_dev(base_query const& query,
 }
 
 __device__ void update_footpaths_dev(device_memory const& device_mem,
-                                     int round_k) {
+                                     raptor_round round_k) {
   time* const arrivals = device_mem.result_[round_k];
-  time* const next_arrivals = device_mem.result_[round_k + 1];
 
   // we must only copy the marked arrivals,
   // since an earlier raptor query might have used a footpath
@@ -605,35 +448,21 @@ __device__ void update_footpaths_dev(device_memory const& device_mem,
                                device_mem.station_marks_);
   this_grid().sync();
 
+  if (round_k == max_raptor_round - 1) {
+    return;
+  }
+
+  time* const next_arrivals = device_mem.result_[round_k + 1];
   copy_and_min_arrivals(next_arrivals, arrivals);
   this_grid().sync();
 }
 
-__global__ void init_arrivals_kernel(base_query const& query,
-                                     device_memory const& device_mem) {
-  init_arrivals_dev(query, device_mem);
-}
-
-__global__ void update_footpaths_kernel(device_memory const& device_mem,
-                                        int round_k) {
-  update_footpaths_dev(device_mem, round_k);
-}
-
-__global__ void update_routes_kernel(device_memory const device_mem,
-                                     int round_k) {
-  time const* const prev_arrivals = device_mem.result_[round_k - 1];
-  time* const arrivals = device_mem.result_[round_k];
-
-  update_routes_dev(prev_arrivals, arrivals, device_mem.station_marks_,
-                    device_mem.route_marks_, device_mem.any_station_marked_);
-}
-
-__global__ void gpu_raptor_kernel(base_query const& query,
-                                  device_memory const& device_mem) {
+__global__ void gpu_raptor_kernel(base_query const query,
+                                  device_memory const device_mem) {
   init_arrivals_dev(query, device_mem);
   this_grid().sync();
 
-  for (int8_t round_k = 1; round_k < max_raptor_round; ++round_k) {
+  for (raptor_round round_k = 1; round_k < max_raptor_round; ++round_k) {
     time const* const prev_arrivals = device_mem.result_[round_k - 1];
     time* const arrivals = device_mem.result_[round_k];
 
@@ -647,20 +476,18 @@ __global__ void gpu_raptor_kernel(base_query const& query,
 }
 
 void invoke_gpu_raptor(d_query const& dq) {
-  void* kernel_args[] = {(void*)&dq, (void*)&dq.device_};
-  launch_kernel(gpu_raptor_kernel, kernel_args, dq.context_,
-                dq.context_.proc_stream_);
+  void* kernel_args[] = {(void*)&dq, (void*)&(dq.mem_->device_)};
+  launch_kernel(gpu_raptor_kernel, kernel_args, dq.mem_->context_,
+                dq.mem_->context_.proc_stream_);
   cc();
-  //  cudaStreamSynchronize(dq.proc_stream_);
-  //  cudaDeviceSynchronize();
-  //  cc();
 
-  cuda_sync_stream(dq.context_.proc_stream_);
-
+  cuda_sync_stream(dq.mem_->context_.proc_stream_);
   cc();
-  //  fetch_result_from_device(dq);
-  fetch_arrivals_async(dq, dq.context_.transfer_stream_);
-  cuda_sync_stream(dq.context_.transfer_stream_);
+
+  fetch_arrivals_async(dq, dq.mem_->context_.transfer_stream_);
+  cc();
+  cuda_sync_stream(dq.mem_->context_.transfer_stream_);
+  cc();
 }
 
 }  // namespace motis::raptor
