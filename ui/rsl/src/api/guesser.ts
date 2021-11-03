@@ -18,8 +18,14 @@ export function useStationGuesserQuery(
   content: StationGuesserRequest
 ): UseQueryResult<StationGuesserResponse> {
   return useQuery(
-    ["guesser", content],
+    queryKeys.stationGuess(content),
     () => sendStationGuesserRequest(content),
     { enabled: content.input.length >= 3 }
   );
 }
+
+export const queryKeys = {
+  all: ["guesser"] as const,
+  stationGuess: (req: StationGuesserRequest) =>
+    [...queryKeys.all, req] as const,
+};

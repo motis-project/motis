@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-import { usePaxMonStatusQuery } from "../../api/paxmon";
+import { queryKeys, usePaxMonStatusQuery } from "../../api/paxmon";
 import { Station, TripServiceInfo } from "../../api/protocol/motis";
 import {
   LoadLevel,
@@ -65,7 +65,7 @@ function MeasureInput(): JSX.Element {
     {
       onSuccess: async () => {
         console.log("measures applied");
-        await queryClient.invalidateQueries(["paxmon", "trip"]); // TODO
+        await queryClient.invalidateQueries(queryKeys.trip());
       },
     }
   );

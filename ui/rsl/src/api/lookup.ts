@@ -10,5 +10,10 @@ export async function sendLookupScheduleInfoRequest(): Promise<LookupScheduleInf
 }
 
 export function useLookupScheduleInfoQuery(): UseQueryResult<LookupScheduleInfoResponse> {
-  return useQuery(["lookup", "schedule_info"], sendLookupScheduleInfoRequest);
+  return useQuery(queryKeys.scheduleInfo(), sendLookupScheduleInfoRequest);
 }
+
+export const queryKeys = {
+  all: ["lookup"] as const,
+  scheduleInfo: () => [...queryKeys.all, "schedule_info"] as const,
+};

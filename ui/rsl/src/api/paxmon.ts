@@ -142,11 +142,12 @@ export const queryKeys = {
   all: ["paxmon"] as const,
   status: () => [...queryKeys.all, "status"] as const,
   findTrips: (universe: number, trainNr?: number) =>
-    [...queryKeys.all, "findTrips", universe, trainNr] as const,
+    [...queryKeys.all, "find_trips", universe, trainNr] as const,
+  trip: () => [...queryKeys.all, "trip"] as const,
   tripLoad: (universe: number, tripId: TripId) =>
-    [...queryKeys.all, "trip", "load", universe, { tripId }] as const,
+    [...queryKeys.trip(), "load", universe, { tripId }] as const,
   tripGroups: (req: PaxMonGetGroupsInTripRequest) =>
-    [...queryKeys.all, "trip", "groups", req] as const,
+    [...queryKeys.trip(), "groups", req] as const,
   interchanges: (req: PaxMonGetInterchangesRequest) =>
     [...queryKeys.all, "interchanges", req] as const,
 };
