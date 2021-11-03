@@ -11,7 +11,6 @@
 
 #if defined(MOTIS_CUDA)
 #include "motis/raptor/gpu/cuda_util.h"
-#include "motis/raptor/gpu/devices.h"
 #include "motis/raptor/gpu/gpu_timetable.cuh"
 #include "motis/raptor/memory_store.h"
 #endif
