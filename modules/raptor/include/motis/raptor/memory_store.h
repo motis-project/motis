@@ -34,6 +34,10 @@ inline auto get_launch_paramters(cudaDeviceProp const& prop,
 
 struct device_context {
   device_context() = delete;
+  device_context(device_context const&) = delete;
+  device_context(device_context const&&) = delete;
+  device_context operator=(device_context const&) = delete;
+  device_context operator=(device_context const&&) = delete;
   device_context(device_id const device_id,
                  int32_t const concurrency_per_device)
       : id_(device_id) {
@@ -51,6 +55,8 @@ struct device_context {
     cudaStreamCreate(&transfer_stream_);
     cc();
   }
+
+  ~device_context() = default;
 
   void destroy() {
     cudaSetDevice(id_);
@@ -71,13 +77,18 @@ struct device_context {
 
 struct host_memory {
   host_memory() = delete;
-  explicit host_memory(stop_id const stop_count) {
+  host_memory(host_memory const&) = delete;
+  host_memory(host_memory const&&) = delete;
+  host_memory operator=(host_memory const&) = delete;
+  host_memory operator=(host_memory const&&) = delete;
+  explicit host_memory(stop_id const stop_count)
+      : result_(new raptor_result_pinned(stop_count)) {
     cudaMallocHost(&any_station_marked_, sizeof(bool));
-
-    result_ = new raptor_result_pinned(stop_count);
 
     *any_station_marked_ = false;
   }
+
+  ~host_memory() = default;
 
   void destroy() {
     cudaFreeHost(any_station_marked_);
@@ -95,6 +106,10 @@ struct host_memory {
 
 struct device_memory {
   device_memory() = delete;
+  device_memory(device_memory const&) = delete;
+  device_memory(device_memory const&&) = delete;
+  device_memory operator=(device_memory const&) = delete;
+  device_memory operator=(device_memory const&&) = delete;
   device_memory(stop_id const stop_count, route_id const route_count)
       : stop_count_(stop_count), route_count_(route_count) {
 
@@ -112,12 +127,7 @@ struct device_memory {
     this->reset_async(nullptr);
   }
 
-  size_t get_result_bytes() const {
-    return stop_count_ * sizeof(time) * max_raptor_round;
-  }
-  size_t get_station_mark_bytes() const { return ((stop_count_ / 32) + 1) * 4; }
-  size_t get_route_mark_bytes() const { return ((route_count_ / 32) + 1) * 4; }
-  size_t get_scratchpad_bytes() const { return stop_count_ * sizeof(time); }
+  ~device_memory() = default;
 
   void destroy() {
     cudaFree(result_.front());
@@ -127,6 +137,13 @@ struct device_memory {
     cudaFree(any_station_marked_);
   }
 
+  size_t get_result_bytes() const {
+    return stop_count_ * sizeof(time) * max_raptor_round;
+  }
+  size_t get_station_mark_bytes() const { return ((stop_count_ / 32) + 1) * 4; }
+  size_t get_route_mark_bytes() const { return ((route_count_ / 32) + 1) * 4; }
+  size_t get_scratchpad_bytes() const { return stop_count_ * sizeof(time); }
+
   void reset_async(cudaStream_t s) const {
     cudaMemsetAsync(result_.front(), 0xFF, get_result_bytes(), s);
     cudaMemsetAsync(footpaths_scratchpad_, 0xFF, get_scratchpad_bytes(), s);
@@ -135,7 +152,6 @@ struct device_memory {
     cudaMemsetAsync(any_station_marked_, 0, sizeof(bool), s);
   }
 
-  //  device_gpu_timetable d_gtt_;
   stop_id stop_count_{invalid<stop_id>};
   route_id route_count_{invalid<route_id>};
 
@@ -150,6 +166,11 @@ struct device_memory {
 
 struct mem {
   mem() = delete;
+  mem(mem const&) = delete;
+  mem(mem const&&) = delete;
+  mem operator=(mem const&) = delete;
+  mem operator=(mem const&&) = delete;
+
   mem(stop_id const stop_count, route_id const route_count,
       device_id const device_id, int32_t const concurrency_per_device)
       : host_(stop_count),
@@ -175,11 +196,11 @@ struct memory_store {
     int32_t device_count = 0;
     cudaGetDeviceCount(&device_count);
 
-    memory_.reserve(device_count * concurrency_per_device);
     for (auto device_id = 0; device_id < device_count; ++device_id) {
       for (auto i = 0; i < concurrency_per_device; ++i) {
-        memory_.emplace_back(tt.stop_count(), tt.route_count(), device_id,
-                             concurrency_per_device);
+        memory_.emplace_back(
+            std::make_unique<struct mem>(tt.stop_count(), tt.route_count(),
+                                         device_id, concurrency_per_device));
       }
     }
 
@@ -191,7 +212,7 @@ struct memory_store {
   std::atomic<mem_idx> current_idx_{0};
   static_assert(std::is_unsigned_v<decltype(current_idx_)::value_type>);
 
-  std::vector<mem> memory_;
+  std::vector<std::unique_ptr<mem>> memory_;
   std::vector<std::mutex> memory_mutexes_;
 };
 
@@ -199,11 +220,15 @@ static_assert(
     std::is_unsigned_v<decltype(std::declval<memory_store>().get_mem_idx())>);
 
 struct loaned_mem {
-  loaned_mem() = default;
+  loaned_mem() = delete;
+  loaned_mem(loaned_mem const&) = delete;
+  loaned_mem(loaned_mem const&&) = delete;
+  loaned_mem operator=(loaned_mem const&) = delete;
+  loaned_mem operator=(loaned_mem const&&) = delete;
   explicit loaned_mem(memory_store& store) {
     auto const idx = store.get_mem_idx();
     lock_ = std::unique_lock(store.memory_mutexes_[idx]);
-    mem_ = &store.memory_[idx];
+    mem_ = store.memory_[idx].get();
   }
 
   ~loaned_mem() {
