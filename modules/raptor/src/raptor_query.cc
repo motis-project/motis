@@ -71,6 +71,8 @@ base_query get_base_query(RoutingRequest const* routing_request,
       routing_request->start_type() != Start_OntripStationStart;
   q.use_dest_metas_ = routing_request->use_dest_metas();
 
+  q.use_start_footpaths_ = routing_request->use_start_footpaths();
+
   return q;
 }
 

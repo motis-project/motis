@@ -31,6 +31,8 @@ struct base_query {
 
   bool use_start_metas_{true};
   bool use_dest_metas_{true};
+
+  bool use_start_footpaths_{true};
 };
 
 base_query get_base_query(routing::RoutingRequest const* routing_request,
@@ -79,20 +81,20 @@ auto inline get_add_starts(raptor_schedule const& raptor_sched,
 }
 
 struct raptor_query : base_query {
-  raptor_query() = delete;
+  raptor_query() = default;
   raptor_query(raptor_query const&) = delete;
   raptor_query(raptor_query const&&) = delete;
   raptor_query operator=(raptor_query const&) = delete;
   raptor_query operator=(raptor_query const&&) = delete;
 
   raptor_query(base_query const& bq, raptor_schedule const& raptor_sched,
-               raptor_timetable const& tt, bool const use_start_footpaths)
+               raptor_timetable const& tt)
       : tt_(tt) {
     static_cast<base_query&>(*this) = bq;
 
     result_ = std::make_unique<raptor_result>(tt_.stop_count());
 
-    add_starts_ = get_add_starts(raptor_sched, source_, use_start_footpaths,
+    add_starts_ = get_add_starts(raptor_sched, source_, use_start_footpaths_,
                                  use_start_metas_);
   }
 
@@ -109,100 +111,14 @@ struct raptor_query : base_query {
 
 struct d_query : base_query {
   d_query() = delete;
-  d_query(base_query const& bq, host_memory const& hm, device_memory const& dm,
-          device_context const dc)
-      : host_(hm), device_(dm), context_(dc) {
+  d_query(base_query const& bq, mem* mem) : mem_(mem) {
     static_cast<base_query&>(*this) = bq;
   }
 
-  raptor_result_base const& result() const { return *host_.result_; }
+  raptor_result_base const& result() const { return *mem_->host_.result_; }
 
-  host_memory host_;
-  device_memory device_;
-  device_context context_;
+  mem* mem_;
 };
-
-// struct d_query : base_query {
-//   d_query() = delete;
-//
-//   d_query(base_query const& bq, raptor_schedule const&,
-//           raptor_timetable const& tt, bool const, device* device,
-//           int32_t const mp_per_query) {
-//     static_cast<base_query&>(*this) = bq;
-//
-//     //    device_ = device;
-//     //    mp_per_query_ = mp_per_query;
-//
-//     //    result_ = new raptor_result_pinned(tt.stop_count());
-//
-//     //    // +1 due to scratchpad memory for GPU
-//     //    auto const byte_size =
-//     //        result_->byte_size() + (tt.stop_count() * sizeof(time));
-//     //
-//     //    cuda_malloc_set(&(d_arrivals_.front()), byte_size, 0xFFu);
-//     //    for (auto k = 1u; k < d_arrivals_.size(); ++k) {
-//     //      d_arrivals_[k] = d_arrivals_[k - 1] + tt.stop_count();
-//     //    }
-//     //
-//     //    footpaths_scratchpad_ =
-//     //        d_arrivals_.front() + (d_arrivals_.size() * tt.stop_count());
-//     //
-//     //    size_t station_byte_count = ((tt.stop_count() / 32) + 1) * 4;
-//     //    size_t route_byte_count = ((tt.route_count() / 32) + 1) * 4;
-//     //
-//     //    cuda_malloc_set(&station_marks_, station_byte_count, 0);
-//     //    cuda_malloc_set(&route_marks_, route_byte_count, 0);
-//     //
-//     //    cudaMalloc(&any_station_marked_d_, sizeof(bool));
-//     //    cudaMemset(any_station_marked_d_, 0, sizeof(bool));
-//     //
-//     //    cudaMallocHost(&any_station_marked_h_, sizeof(bool));
-//     //    *any_station_marked_h_ = false;
-//
-//     //    cudaStreamCreate(&proc_stream_);
-//     //    cc();
-//     //
-//     //    cudaStreamCreate(&transfer_stream_);
-//     //    cc();
-//   }
-//
-//#if !defined(__CUDACC__)
-//   // Do not copy queries, else double free
-//   d_query(d_query const&) = delete;
-//#else
-//   // CUDA needs the copy constructor for the kernel call,
-//   // as we pass the query to the kernel, which must be a copy
-//   d_query(d_query const&) = default;
-//#endif
-//
-//   __host__ __device__ ~d_query() {
-//// Only call free when destructor is called by host,
-//// not when device kernel exits, as we pass the query to the kernel
-//#if !defined(__CUDACC__)
-//    //    cuda_free(d_arrivals_.front());
-//    //    cuda_free(station_marks_);
-//    //    cuda_free(route_marks_);
-////    delete result_;
-//#endif
-//  }
-//
-//  //  int32_t mp_per_query_;
-//  device_context context_;
-//
-//  // Pointers to device memory
-//  device_memory device_;
-//
-//  //  bool* any_station_marked_d_;
-//  //  arrival_ptrs d_arrivals_;
-//  //  time* footpaths_scratchpad_;
-//  //  unsigned int* station_marks_;
-//  //  unsigned int* route_marks_;
-//
-//  // Pointers to host memory
-//  host_memory host_;
-//  //  raptor_result_pinned* result_;
-//  //  bool* any_station_marked_h_;
-//};
 
 #endif
 

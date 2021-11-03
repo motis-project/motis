@@ -30,12 +30,10 @@ struct raptor : public motis::module::module {
   void init(motis::module::registry&) override;
 
 private:
-  template <class Query>
-  Query get_query(motis::routing::RoutingRequest const*, schedule const&);
+  motis::module::msg_ptr route_cpu(motis::module::msg_ptr const& msg);
 
-  template <typename Query, typename RaptorFun>
-  motis::module::msg_ptr route_generic(motis::module::msg_ptr const&,
-                                       RaptorFun const&);
+  template <bool UseHybridRaptor>
+  motis::module::msg_ptr route_gpu(motis::module::msg_ptr const& msg);
 
   std::unique_ptr<raptor_schedule> raptor_sched_;
   std::unique_ptr<raptor_timetable> timetable_;
@@ -44,12 +42,9 @@ private:
   std::unique_ptr<host_gpu_timetable> h_gtt_;
   std::unique_ptr<device_gpu_timetable> d_gtt_;
 
-  devices devices_;
-
-  int32_t mp_per_query_;
+  int32_t queries_per_device_{1};
 
   memory_store mem_store_;
-
 #endif
 };
 
