@@ -106,17 +106,17 @@ std::unique_ptr<device_gpu_timetable> get_device_gpu_timetable(
 }
 
 void destroy_device_gpu_timetable(device_gpu_timetable& d_gtt) {
-  cuda_free(d_gtt.stops_);
-  cuda_free(d_gtt.routes_);
-  cuda_free(d_gtt.footpaths_);
-  cuda_free(d_gtt.transfer_times_);
-  cuda_free(d_gtt.stop_times_);
-  cuda_free(d_gtt.stop_arrivals_);
-  cuda_free(d_gtt.stop_departures_);
-  cuda_free(d_gtt.route_stops_);
-  cuda_free(d_gtt.stop_routes_);
-  cuda_free(d_gtt.initialization_footpaths_indices_);
-  cuda_free(d_gtt.initialization_footpaths_);
+  cudaFree(d_gtt.stops_);
+  cudaFree(d_gtt.routes_);
+  cudaFree(d_gtt.footpaths_);
+  cudaFree(d_gtt.transfer_times_);
+  cudaFree(d_gtt.stop_times_);
+  cudaFree(d_gtt.stop_arrivals_);
+  cudaFree(d_gtt.stop_departures_);
+  cudaFree(d_gtt.route_stops_);
+  cudaFree(d_gtt.stop_routes_);
+  cudaFree(d_gtt.initialization_footpaths_indices_);
+  cudaFree(d_gtt.initialization_footpaths_);
 }
 
 }  // namespace motis::raptor

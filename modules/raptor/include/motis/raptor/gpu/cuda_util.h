@@ -16,17 +16,14 @@ namespace motis::raptor {
 #define cc() \
   { cucheck_dev(cudaGetLastError()); }
 
-template <typename T>
-inline void cuda_free(T* ptr) {
-  cudaFree(ptr);
-  cc();
-}
+inline void cuda_sync_stream(cudaStream_t const& stream) {
+  cudaEvent_t event;
+  cudaEventCreateWithFlags(&event,
+                           cudaEventBlockingSync | cudaEventDisableTiming);
+  cudaEventRecord(event, stream);
+  cudaEventSynchronize(event);
+  cudaEventDestroy(event);
 
-template <typename T>
-inline void cuda_malloc_set(T** ptr, size_t const bytes, char const value) {
-  cudaMalloc(ptr, bytes);
-  cc();
-  cudaMemset(*ptr, value, bytes);
   cc();
 }
 
