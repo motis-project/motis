@@ -27,7 +27,7 @@ struct intermediate_journey {
   }
 
   time get_duration() const {
-    if (ontrip_start_) {
+    if (ontrip_) {
       return get_arrival() - ontrip_start_;
     }
 
