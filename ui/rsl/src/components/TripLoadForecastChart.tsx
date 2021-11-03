@@ -1,7 +1,6 @@
 import React, { useRef } from "react";
 import { useQuery, useQueryClient } from "react-query";
-import * as ContextMenu from "@radix-ui/react-context-menu";
-import { DocumentDownloadIcon } from "@heroicons/react/outline";
+import { DownloadIcon } from "@heroicons/react/solid";
 import { useAtom } from "jotai";
 
 import {
@@ -524,31 +523,25 @@ function TripLoadForecastChart({
   if (mode == "Interactive") {
     return (
       <div>
-        <ContextMenu.Root modal={false}>
-          <ContextMenu.Trigger>{chart}</ContextMenu.Trigger>
-          <ContextMenu.Content className="bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 p-1 w-56">
-            <ContextMenu.Item
-              className="group flex items-center w-full p-2 text-gray-900 focus:bg-blue-400 focus:text-white focus:outline-none rounded-md text-sm select-none cursor-pointer"
-              onSelect={() => saveAsSVG(svgEl.current, baseFileName)}
-            >
-              <DocumentDownloadIcon
-                className="w-5 h-5 mr-2"
-                aria-hidden="true"
-              />
-              Save as SVG
-            </ContextMenu.Item>
-            <ContextMenu.Item
-              className="group flex items-center w-full p-2 text-gray-900 focus:bg-blue-400 focus:text-white focus:outline-none rounded-md text-sm select-none cursor-pointer"
-              onSelect={() => saveAsPNG(svgEl.current, baseFileName)}
-            >
-              <DocumentDownloadIcon
-                className="w-5 h-5 mr-2"
-                aria-hidden="true"
-              />
-              Save as PNG
-            </ContextMenu.Item>
-          </ContextMenu.Content>
-        </ContextMenu.Root>
+        <div>{chart}</div>
+        <div className="flex justify-center gap-2 my-2">
+          <button
+            type="button"
+            onClick={() => saveAsSVG(svgEl.current, baseFileName)}
+            className="flex items-center bg-db-red-500 px-3 py-1 rounded text-white text-sm hover:bg-db-red-600"
+          >
+            <DownloadIcon className="w-5 h-5 mr-2" aria-hidden="true" />
+            SVG
+          </button>
+          <button
+            type="button"
+            onClick={() => saveAsPNG(svgEl.current, baseFileName)}
+            className="flex items-center bg-db-red-500 px-3 py-1 rounded text-white text-sm hover:bg-db-red-600"
+          >
+            <DownloadIcon className="w-5 h-5 mr-2" aria-hidden="true" />
+            PNG
+          </button>
+        </div>
       </div>
     );
   } else {
