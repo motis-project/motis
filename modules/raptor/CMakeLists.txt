@@ -11,7 +11,7 @@ if (MOTIS_CUDA)
     set_target_properties(gpu-raptor PROPERTIES
             WINDOWS_EXPORT_ALL_SYMBOLS ON
             CUDA_SEPARABLE_COMPILATION ON
-            CUDA_STANDARD 20
+            CUDA_STANDARD 17
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
             INSTALL_RPATH "$ORIGIN/../lib:$ORIGIN/"
@@ -25,7 +25,7 @@ endif ()
 file(GLOB_RECURSE motis-raptor-files src/*.cc)
 add_library(motis-raptor STATIC ${motis-raptor-files})
 target_include_directories(motis-raptor PUBLIC include)
-target_compile_features(motis-raptor PUBLIC cxx_std_20)
+target_compile_features(motis-raptor PUBLIC cxx_std_17)
 target_link_libraries(motis-raptor
         motis-routing
         motis-module
