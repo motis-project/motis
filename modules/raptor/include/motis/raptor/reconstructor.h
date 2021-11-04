@@ -137,10 +137,9 @@ struct intermediate_journey {
     j.trips_ = generate_journey_trips(transports_, sched);
     j.attributes_ = generate_journey_attributes(transports_);
 
-    // HACK enter and exit flags TODO(julian)
-    for (auto ts = 0; ts < transfers_ + 1; ++ts) {
-      stops_[ts].enter_ = true;
-      stops_[ts].exit_ = true;
+    for (auto const& trip : j.trips_) {
+      stops_[trip.from_].enter_ = true;
+      stops_[trip.to_].exit_ = true;
     }
 
     stops_.front().a_time_ = INVALID_TIME;
