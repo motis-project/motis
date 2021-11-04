@@ -229,7 +229,8 @@ auto get_station_departure_events(transformable_timetable const& ttt,
   for (auto const r_id : station.stop_routes_) {
     auto const& route = ttt.routes_[r_id];
 
-    for (auto offset = 0; offset < route.route_stops_.size(); ++offset) {
+    // - 1 since you cannot enter a route at the last stop
+    for (auto offset = 0; offset < route.route_stops_.size() - 1; ++offset) {
       if (route.route_stops_[offset] != s_id) {
         continue;
       }
