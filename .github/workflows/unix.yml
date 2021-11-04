@@ -4,9 +4,9 @@ on:
   schedule:
     - cron: '0 3 * * 2,6'
   push:
-    branches: [ master ]
+    branches: [ master, rsl-viz ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, rsl-viz ]
   release:
     types:
       - published
