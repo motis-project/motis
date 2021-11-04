@@ -19,7 +19,7 @@ namespace motis::raptor {
   { cucheck_dev(cudaGetLastError()); }
 
 inline void cuda_sync_stream(cudaStream_t const& stream) {
-  cudaEvent_t event;
+  cudaEvent_t event{};
   cudaEventCreateWithFlags(&event,
                            cudaEventBlockingSync | cudaEventDisableTiming);
   cudaEventRecord(event, stream);

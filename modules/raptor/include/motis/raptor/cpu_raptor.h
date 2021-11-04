@@ -1,7 +1,6 @@
 #pragma once
 
 #include "motis/raptor/mark_store.h"
-#include "motis/raptor/print_raptor.h"
 
 namespace motis::raptor {
 
@@ -182,7 +181,10 @@ inline void invoke_cpu_raptor(raptor_query const& query, raptor_statistics&) {
         continue;
       }
 
-      if (!any_marked) any_marked = true;
+      if (!any_marked) {
+        any_marked = true;
+      }
+
       auto const& stop = tt.stops_[s_id];
       for (auto sri = stop.index_to_stop_routes_;
            sri < stop.index_to_stop_routes_ + stop.route_count_; ++sri) {

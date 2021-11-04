@@ -28,13 +28,15 @@ raptor::raptor() : module("RAPTOR Options", "raptor") {
 #endif
 }
 
-raptor::~raptor() {
 #if defined(MOTIS_CUDA)
+raptor::~raptor() {
   if (d_gtt_ != nullptr) {
     destroy_device_gpu_timetable(*d_gtt_);
   }
-#endif
 }
+#else
+raptor::~raptor() = default;
+#endif
 
 void raptor::init(motis::module::registry& reg) {
   auto const& sched = get_sched();

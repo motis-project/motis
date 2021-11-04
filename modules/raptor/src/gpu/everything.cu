@@ -1,6 +1,6 @@
-#include "motis/raptor/gpu/cuda_util.h"
 #include "motis/raptor/raptor_query.h"
 
+#include "motis/raptor/gpu/cuda_util.h"
 #include "motis/raptor/gpu/gpu_raptor.cuh"
 #include "motis/raptor/gpu/gpu_timetable.cuh"
 

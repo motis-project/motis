@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #include "motis/raptor/raptor_timetable.h"
 
 #if defined(MOTIS_CUDA)
@@ -17,37 +19,45 @@ struct raptor_result_base {
   raptor_result_base(raptor_result_base const&&) = delete;
   raptor_result_base& operator=(raptor_result_base const&) = delete;
   raptor_result_base& operator=(raptor_result_base const&&) = delete;
+  ~raptor_result_base() = default;
 
-  const time* operator[](raptor_round const index) const {
-    return &result_[index * stop_count_];
+  time* operator[](raptor_round const index) {  // NOLINT
+    return &result_[static_cast<ptrdiff_t>(index) * stop_count_];
   };
 
-  time* operator[](raptor_round const index) {
-    return &result_[index * stop_count_];
+  time const* operator[](raptor_round const index) const {
+    return &result_[static_cast<ptrdiff_t>(index) * stop_count_];
   };
 
   size_t byte_size() const {
-    size_t const number_of_entries = max_raptor_round * stop_count_;
+    size_t const number_of_entries =
+        static_cast<size_t>(max_raptor_round) * stop_count_;
     size_t const size_in_bytes = sizeof(time) * number_of_entries;
     return size_in_bytes;
   }
 
-  void reset() {
+  void reset() const {
     size_t const number_of_entries = byte_size() / sizeof(time);
     std::fill(result_, result_ + number_of_entries, invalid<time>);
   }
 
-  time* data() { return result_; }
+  time* data() const { return result_; }
 
-  stop_id stop_count_;
-  time* result_;
+  stop_id stop_count_{invalid<stop_id>};
+  time* result_{nullptr};
 };
 
 struct raptor_result : raptor_result_base {
-  raptor_result(stop_id const stop_count) : raptor_result_base(stop_count) {
+  explicit raptor_result(stop_id const stop_count)
+      : raptor_result_base(stop_count) {
     result_ = new time[this->byte_size()];
     this->reset();
   }
+  raptor_result() = delete;
+  raptor_result(raptor_result const&) = delete;
+  raptor_result(raptor_result const&&) = delete;
+  raptor_result& operator=(raptor_result const&) = delete;
+  raptor_result& operator=(raptor_result const&&) = delete;
 
   ~raptor_result() { delete[] result_; };
 };
@@ -56,10 +66,17 @@ struct raptor_result : raptor_result_base {
 using device_result = std::array<time*, max_raptor_round>;
 
 struct raptor_result_pinned : raptor_result_base {
-  raptor_result_pinned(stop_id stop_count) : raptor_result_base(stop_count) {
+  explicit raptor_result_pinned(stop_id stop_count)
+      : raptor_result_base(stop_count) {
     cudaMallocHost(&result_, this->byte_size());
     this->reset();
   }
+
+  raptor_result_pinned() = delete;
+  raptor_result_pinned(raptor_result_pinned const&) = delete;
+  raptor_result_pinned(raptor_result_pinned const&&) = delete;
+  raptor_result_pinned& operator=(raptor_result_pinned const&) = delete;
+  raptor_result_pinned& operator=(raptor_result_pinned const&&) = delete;
 
   ~raptor_result_pinned() { cudaFreeHost(result_); };
 };

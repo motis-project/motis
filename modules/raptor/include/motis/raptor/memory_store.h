@@ -61,7 +61,9 @@ struct device_context {
   void destroy() {
     cudaSetDevice(id_);
     cudaStreamDestroy(proc_stream_);
+    proc_stream_ = cudaStream_t{};
     cudaStreamDestroy(transfer_stream_);
+    transfer_stream_ = cudaStream_t{};
     cuda_check();
   }
 
@@ -92,7 +94,9 @@ struct host_memory {
 
   void destroy() {
     cudaFreeHost(any_station_marked_);
+    any_station_marked_ = nullptr;
     delete result_;
+    result_ = nullptr;
   }
 
   void reset() const {

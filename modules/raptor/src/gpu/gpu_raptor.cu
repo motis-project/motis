@@ -1,9 +1,5 @@
-#include <cstdio>
-
 #include "cooperative_groups.h"
 #include "cuda_profiler_api.h"
-
-#include "motis/core/common/timing.h"
 
 namespace motis::raptor {
 

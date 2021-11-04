@@ -22,7 +22,7 @@ struct transformable_stop {
   std::vector<route_id> stop_routes_;
   std::vector<stop_id> equivalent_;
   time transfer_time_{invalid<time>};
-  std::string eva_{""};
+  std::string eva_{};
   unsigned motis_station_index_{invalid<unsigned>};
 };
 
