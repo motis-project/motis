@@ -69,12 +69,33 @@ struct intermediate_journey {
       auto const sti = sti_base + s_offset;
       auto const stop_time = timetable.stop_times_[sti];
 
-      auto const d_time = stop_time.departure_;
-      auto const tt = raptor_sched.transfer_times_[s_id];
-      auto const a_time = stop_time.arrival_ - tt;
+      auto d_time = stop_time.departure_;
+      auto a_time = stop_time.arrival_;
+      if (valid(a_time)) {
+        a_time -= raptor_sched.transfer_times_[s_id];
+      }
 
       if (s_id == from && valid(d_time)) {
         return d_time;
+      }
+
+      // we exit at the last station -> d_time is invalid
+      if (!valid(d_time) || s_offset == exit_offset) {
+        if (transports_.empty() || transports_.back().is_walk()) {
+          d_time = a_time;
+        } else {
+          d_time = transports_.back().con_->d_time_;
+        }
+      }
+
+      // We only have a single lcon_ptr array for the forward search,
+      // therefore we need to adjust the index
+      auto const backward_sti =
+          sti_base + route.stop_count_ - 1 - (exit_offset - s_offset);
+      auto const lcon = raptor_sched.lcon_ptr_[forward_ ? sti : backward_sti];
+
+      if (!valid(a_time)) {
+        a_time = lcon->a_time_;
       }
 
       auto const motis_index = raptor_sched.station_id_to_index_[s_id];
@@ -89,11 +110,6 @@ struct intermediate_journey {
                             timestamp_reason::SCHEDULE, false, false);
       }
 
-      // We only have a single lcon_ptr array for the forward search,
-      // therefore we need to adjust the index
-      auto const backward_sti =
-          sti_base + route.stop_count_ - 1 - (exit_offset - s_offset);
-      auto const lcon = raptor_sched.lcon_ptr_[forward_ ? sti : backward_sti];
       transports_.emplace_back(stops_.size() - 1, stops_.size(), lcon);
     }
 
