@@ -42,18 +42,18 @@ struct device_context {
                  int32_t const concurrency_per_device)
       : id_(device_id) {
     cudaSetDevice(id_);
-    cc();
+    cuda_check();
 
     cudaGetDeviceProperties(&props_, device_id);
-    cc();
+    cuda_check();
 
     std::tie(threads_per_block_, grid_) =
         get_launch_paramters(props_, concurrency_per_device);
 
     cudaStreamCreate(&proc_stream_);
-    cc();
+    cuda_check();
     cudaStreamCreate(&transfer_stream_);
-    cc();
+    cuda_check();
   }
 
   ~device_context() = default;
@@ -62,7 +62,7 @@ struct device_context {
     cudaSetDevice(id_);
     cudaStreamDestroy(proc_stream_);
     cudaStreamDestroy(transfer_stream_);
-    cc();
+    cuda_check();
   }
 
   device_id id_{};
@@ -122,7 +122,7 @@ struct device_memory {
     cudaMalloc(&station_marks_, get_station_mark_bytes());
     cudaMalloc(&route_marks_, get_route_mark_bytes());
     cudaMalloc(&any_station_marked_, sizeof(bool));
-    cc();
+    cuda_check();
 
     this->reset_async(nullptr);
   }

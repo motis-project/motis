@@ -474,15 +474,15 @@ void invoke_gpu_raptor(d_query const& dq) {
                          (void*)&(dq.tt_)};
   launch_kernel(gpu_raptor_kernel, kernel_args, dq.mem_->context_,
                 dq.mem_->context_.proc_stream_);
-  cc();
+  cuda_check();
 
   cuda_sync_stream(dq.mem_->context_.proc_stream_);
-  cc();
+  cuda_check();
 
   fetch_arrivals_async(dq, dq.mem_->context_.transfer_stream_);
-  cc();
+  cuda_check();
   cuda_sync_stream(dq.mem_->context_.transfer_stream_);
-  cc();
+  cuda_check();
 }
 
 }  // namespace motis::raptor

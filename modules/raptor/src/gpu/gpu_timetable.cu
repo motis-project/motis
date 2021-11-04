@@ -10,9 +10,9 @@ inline size_t copy_vector_to_device(std::vector<T> const& vec, T** ptr) {
 
   const auto size_in_bytes = vec_size_bytes(vec);
   cudaMalloc(ptr, size_in_bytes);
-  cc();
+  cuda_check();
   cudaMemcpy(*ptr, vec.data(), size_in_bytes, cudaMemcpyHostToDevice);
-  cc();
+  cuda_check();
 
   return size_in_bytes;
 }

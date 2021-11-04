@@ -15,7 +15,7 @@ namespace motis::raptor {
     }                                                        \
   }
 
-#define cc() \
+#define cuda_check() \
   { cucheck_dev(cudaGetLastError()); }
 
 inline void cuda_sync_stream(cudaStream_t const& stream) {
@@ -26,7 +26,7 @@ inline void cuda_sync_stream(cudaStream_t const& stream) {
   cudaEventSynchronize(event);
   cudaEventDestroy(event);
 
-  cc();
+  cuda_check();
 }
 
 }  // namespace motis::raptor
