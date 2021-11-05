@@ -27,11 +27,7 @@ struct intermediate_journey {
   }
 
   time get_duration() const {
-    if (ontrip_) {
-      return get_arrival() - ontrip_start_;
-    }
-
-    return get_arrival() - get_departure();
+    return get_arrival() - (ontrip_ ? ontrip_start_ : get_departure());
   }
 
   void add_footpath(stop_id const to, time const a_time, time const d_time,
@@ -40,11 +36,11 @@ struct intermediate_journey {
     if (forward_) {
       stops_.emplace_back(stops_.size(), motis_index, 0, 0, a_time, d_time,
                           a_time, d_time, timestamp_reason::SCHEDULE,
-                          timestamp_reason::SCHEDULE, false, false);
+                          timestamp_reason::SCHEDULE, false, true);
     } else {
       stops_.emplace_back(stops_.size(), motis_index, 0, 0, -d_time, -a_time,
                           -d_time, -a_time, timestamp_reason::SCHEDULE,
-                          timestamp_reason::SCHEDULE, false, false);
+                          timestamp_reason::SCHEDULE, true, false);
     }
 
     transports_.emplace_back(stops_.size() - 1, stops_.size(), duration, 0, 0,
@@ -100,10 +96,14 @@ struct intermediate_journey {
 
       auto const motis_index = raptor_sched.station_id_to_index_[s_id];
 
+      bool enter = s_offset == exit_offset && !transports_.empty() &&
+                   !transports_.back().is_walk();
+      bool exit = s_offset == exit_offset;
+
       if (forward_) {
         stops_.emplace_back(stops_.size(), motis_index, 0, 0, a_time, d_time,
                             a_time, d_time, timestamp_reason::SCHEDULE,
-                            timestamp_reason::SCHEDULE, false, false);
+                            timestamp_reason::SCHEDULE, exit, enter);
       } else {
         stops_.emplace_back(stops_.size(), motis_index, 0, 0, -d_time, -a_time,
                             -d_time, -a_time, timestamp_reason::SCHEDULE,
@@ -122,16 +122,19 @@ struct intermediate_journey {
                          raptor_schedule const& raptor_sched,
                          time const d_time) {
     auto const motis_index = raptor_sched.station_id_to_index_[start];
+
+    auto const enter = !transports_.empty() && !transports_.back().is_walk();
+
     if (forward_) {
       stops_.emplace_back(stops_.size(), motis_index, 0, 0, INVALID_TIME,
                           d_time, INVALID_TIME, d_time,
                           timestamp_reason::SCHEDULE,
-                          timestamp_reason::SCHEDULE, false, false);
+                          timestamp_reason::SCHEDULE, false, enter);
     } else {
       stops_.emplace_back(stops_.size(), motis_index, 0, 0, -d_time,
                           INVALID_TIME, -d_time, INVALID_TIME,
                           timestamp_reason::SCHEDULE,
-                          timestamp_reason::SCHEDULE, false, false);
+                          timestamp_reason::SCHEDULE, false, enter);
     }
   }
 
@@ -152,11 +155,6 @@ struct intermediate_journey {
     j.transports_ = generate_journey_transports(transports_, sched);
     j.trips_ = generate_journey_trips(transports_, sched);
     j.attributes_ = generate_journey_attributes(transports_);
-
-    for (auto const& trip : j.trips_) {
-      stops_[trip.from_].enter_ = true;
-      stops_[trip.to_].exit_ = true;
-    }
 
     stops_.front().a_time_ = INVALID_TIME;
     stops_.back().d_time_ = INVALID_TIME;
