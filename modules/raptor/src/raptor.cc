@@ -119,14 +119,15 @@ msg_ptr make_response(schedule const& sched, std::vector<journey> const& js,
 }
 
 msg_ptr raptor::route_cpu(msg_ptr const& msg) {
+  raptor_statistics stats;
+  MOTIS_START_TIMING(total_calculation_time);
+  
   auto const req = motis_content(RoutingRequest, msg);
   auto const& sched = get_sched();
 
   auto base_query = get_base_query(req, sched, *raptor_sched_);
   raptor_query q(base_query, *raptor_sched_, *timetable_);
 
-  raptor_statistics stats;
-  MOTIS_START_TIMING(total_calculation_time);
   auto const& js = cpu_raptor(q, stats, sched, *raptor_sched_, *timetable_);
   stats.total_calculation_time_ = MOTIS_GET_TIMING_MS(total_calculation_time);
 
