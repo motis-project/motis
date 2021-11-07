@@ -69,7 +69,7 @@ void raptor::init(motis::module::registry& reg) {
     return route_gpu<true>(msg);
   });
 
-  queries_per_device_ = std::max(queries_per_device_, queries_per_device_);
+  queries_per_device_ = std::max(queries_per_device_, int32_t{1});
   mem_store_.init(*timetable_, queries_per_device_);
 #endif
 }
