@@ -11,7 +11,6 @@ using namespace motis::routing;
 base_query get_base_query(RoutingRequest const* routing_request,
                           schedule const& sched,
                           raptor_schedule const& raptor_sched) {
-
   base_query q;
 
   auto const destination_station = routing_request->destination();
@@ -63,6 +62,7 @@ base_query get_base_query(RoutingRequest const* routing_request,
   q.target_ = raptor_sched.eva_to_raptor_id_.at(target_eva);
 
   q.forward_ = (routing_request->search_dir() == SearchDir::SearchDir_Forward);
+  q.ontrip_ = routing_request->start_type() != Start::Start_PretripStart;
 
   // Don't use start meta stations in the ontrip case, because:
   // do as the routing module does
