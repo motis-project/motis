@@ -45,7 +45,7 @@ void raptor::init(motis::module::registry& reg) {
 
 #if defined(MOTIS_CUDA)
   reg.register_op("/raptor", [&](motis::module::msg_ptr const& msg) {
-    return route_gpu<false>(msg);
+    return route_gpu(msg);
   });
 #else
   reg.register_op("/raptor", [&](motis::module::msg_ptr const& msg) {
@@ -62,11 +62,7 @@ void raptor::init(motis::module::registry& reg) {
   d_gtt_ = get_device_gpu_timetable(*h_gtt_);
 
   reg.register_op("/raptor_gpu", [&](motis::module::msg_ptr const& msg) {
-    return route_gpu<false>(msg);
-  });
-
-  reg.register_op("/raptor_hy", [&](motis::module::msg_ptr const& msg) {
-    return route_gpu<true>(msg);
+    return route_gpu(msg);
   });
 
   queries_per_device_ = std::max(queries_per_device_, int32_t{1});
@@ -136,7 +132,6 @@ msg_ptr raptor::route_cpu(msg_ptr const& msg) {
 }
 
 #if defined(MOTIS_CUDA)
-template <bool UseHybridRaptor>
 msg_ptr raptor::route_gpu(msg_ptr const& msg) {
   raptor_statistics stats;
   MOTIS_START_TIMING(total_calculation_time);
@@ -145,18 +140,13 @@ msg_ptr raptor::route_gpu(msg_ptr const& msg) {
   auto const& sched = get_sched();
 
   auto base_query = get_base_query(req, sched, *raptor_sched_);
-  base_query.id_ = msg->id();
 
   loaned_mem loan(mem_store_);
 
   d_query q(base_query, loan.mem_, *d_gtt_);
 
   std::vector<journey> js;
-  if constexpr (UseHybridRaptor) {
-    js = hybrid_raptor(q, stats, sched, *raptor_sched_, *timetable_);
-  } else {
-    js = gpu_raptor(q, stats, sched, *raptor_sched_, *timetable_);
-  }
+  js = gpu_raptor(q, stats, sched, *raptor_sched_, *timetable_);
   stats.total_calculation_time_ = MOTIS_GET_TIMING_MS(total_calculation_time);
 
   return make_response(sched, js, req, stats);

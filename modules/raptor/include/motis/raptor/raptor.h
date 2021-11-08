@@ -30,8 +30,6 @@ struct raptor : public motis::module::module {
 
 private:
   motis::module::msg_ptr route_cpu(motis::module::msg_ptr const& msg);
-
-  template <bool UseHybridRaptor>
   motis::module::msg_ptr route_gpu(motis::module::msg_ptr const& msg);
 
   std::unique_ptr<raptor_schedule> raptor_sched_;

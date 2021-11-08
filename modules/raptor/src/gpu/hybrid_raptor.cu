@@ -1,3 +1,5 @@
+#include "motis/raptor/gpu/gpu_raptor.cuh"
+
 namespace motis::raptor {
 
 __global__ void init_arrivals_kernel(base_query const query,
@@ -36,7 +38,7 @@ void invoke_hybrid_raptor(d_query const& dq) {
   fetch_arrivals_async(dq, 0, transfer_stream);
 
   for (int k = 1; k < max_raptor_round; ++k) {
-    void* kernel_args[] = {(void*)&dq.mem_->device_, (void*)&k};
+    void* kernel_args[] = {(void*)&dq.mem_->device_, (void*)&k, (void*)&dq.tt_};
 
     launch_kernel(update_routes_kernel, kernel_args, dq.mem_->context_,
                   proc_stream);
@@ -51,7 +53,7 @@ void invoke_hybrid_raptor(d_query const& dq) {
                     cudaMemcpyDeviceToHost, transfer_stream);
     cuda_sync_stream(transfer_stream);
 
-    if (!dq.mem_->host_.any_station_marked_) {
+    if (!*dq.mem_->host_.any_station_marked_) {
       break;
     }
 

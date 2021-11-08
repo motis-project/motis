@@ -1,3 +1,5 @@
+#include "motis/raptor/gpu/gpu_raptor.cuh"
+
 #include "cooperative_groups.h"
 #include "cuda_profiler_api.h"
 

@@ -2,12 +2,14 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/raptor/gpu/gpu_timetable.cuh"
+
+#include "motis/raptor/gpu/cuda_util.h"
 #include "motis/raptor/raptor_util.h"
 
 namespace motis::raptor {
 
 template <typename T>
-inline size_t copy_vector_to_device(std::vector<T> const& vec, T** ptr) {
+inline void copy_vector_to_device(std::vector<T> const& vec, T** ptr) {
   static_assert(std::is_trivially_copyable_v<T>);
 
   const auto size_in_bytes = vec_size_bytes(vec);
@@ -15,8 +17,6 @@ inline size_t copy_vector_to_device(std::vector<T> const& vec, T** ptr) {
   cuda_check();
   cudaMemcpy(*ptr, vec.data(), size_in_bytes, cudaMemcpyHostToDevice);
   cuda_check();
-
-  return size_in_bytes;
 }
 
 std::unique_ptr<host_gpu_timetable> get_host_gpu_timetable(

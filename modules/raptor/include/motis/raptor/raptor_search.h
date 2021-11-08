@@ -96,14 +96,6 @@ inline std::vector<journey> cpu_raptor(raptor_query& q,
 }
 
 #if defined(MOTIS_CUDA)
-inline std::vector<journey> hybrid_raptor(d_query& dq, raptor_statistics& stats,
-                                          schedule const& sched,
-                                          raptor_schedule const& raptor_sched,
-                                          raptor_timetable const& tt) {
-  return raptor_gen(dq, stats, sched, raptor_sched, tt,
-                    [&](d_query& dq) { return invoke_hybrid_raptor(dq); });
-}
-
 inline std::vector<journey> gpu_raptor(d_query& dq, raptor_statistics& stats,
                                        schedule const& sched,
                                        raptor_schedule const& raptor_sched,
