@@ -19,7 +19,7 @@
 namespace motis::raptor {
 
 struct base_query {
-  int id_{-1};
+  bool ontrip_{true};
 
   stop_id source_{invalid<stop_id>};
   stop_id target_{invalid<stop_id>};

@@ -36,9 +36,7 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
                                        RaptorFun const& raptor_search) {
   reconstructor reconstructor(sched, raptor_sched, timetable);
 
-  // We have an ontrip query
-  // -> just a single raptor query is needed.
-  if (q.source_time_begin_ == q.source_time_end_) {
+  if (q.ontrip_) {
     stats.raptor_queries_ = 1;
 
     MOTIS_START_TIMING(raptor_time);
