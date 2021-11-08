@@ -42,9 +42,6 @@ struct host_gpu_timetable {
   std::vector<motis::time> stop_arrivals_;
 
   std::vector<time> transfer_times_;
-
-  std::vector<footpaths_index> initialization_footpaths_indices_;
-  std::vector<raptor_footpath> initialization_footpaths_;
 };
 
 struct device_gpu_timetable {
@@ -67,9 +64,6 @@ struct device_gpu_timetable {
   stop_id stop_count_;
   route_id route_count_;
   footpath_id footpath_count_;
-
-  footpaths_index* initialization_footpaths_indices_;
-  raptor_footpath* initialization_footpaths_;
 };
 
 std::unique_ptr<host_gpu_timetable> get_host_gpu_timetable(

@@ -6,9 +6,9 @@
 #include "motis/core/schedule/schedule.h"
 #include "motis/module/message.h"
 
+#include "motis/raptor/additional_start.h"
 #include "motis/raptor/mark_store.h"
 #include "motis/raptor/raptor_result.h"
-#include "motis/raptor/raptor_util.h"
 
 #if defined(MOTIS_CUDA)
 #include "motis/raptor/gpu/cuda_util.h"
@@ -39,47 +39,6 @@ base_query get_base_query(routing::RoutingRequest const* routing_request,
                           schedule const& sched,
                           raptor_schedule const& raptor_sched);
 
-struct additional_start {
-  additional_start() = delete;
-  additional_start(stop_id const s_id, time const offset)
-      : s_id_(s_id), offset_(offset) {}
-  stop_id s_id_{invalid<stop_id>};
-  time offset_{invalid<time>};
-};
-
-auto inline get_add_starts(raptor_schedule const& raptor_sched,
-                           stop_id const source, bool const use_start_footpaths,
-                           bool const use_start_metas) {
-  std::vector<additional_start> add_starts;
-
-  if (use_start_footpaths) {
-    auto const& init_footpaths = raptor_sched.initialization_footpaths_[source];
-    utl::concat(add_starts, utl::to_vec(init_footpaths, [](auto const f) {
-                  return additional_start(f.to_, f.duration_);
-                }));
-  }
-
-  if (use_start_metas) {
-    auto const& equis = raptor_sched.equivalent_stations_[source];
-    utl::concat(add_starts, utl::to_vec(equis, [](auto const s_id) {
-                  return additional_start(s_id, 0);
-                }));
-
-    // Footpaths from meta stations
-    if (use_start_footpaths) {
-      for (auto const equi : equis) {
-        auto const& init_footpaths =
-            raptor_sched.initialization_footpaths_[equi];
-        utl::concat(add_starts, utl::to_vec(init_footpaths, [](auto const f) {
-                      return additional_start(f.to_, f.duration_);
-                    }));
-      }
-    }
-  }
-
-  return add_starts;
-}
-
 struct raptor_query : public base_query {
   raptor_query() = delete;
   raptor_query(raptor_query const&) = delete;
@@ -107,8 +66,20 @@ struct raptor_query : public base_query {
 #if defined(MOTIS_CUDA)
 struct d_query : public base_query {
   d_query() = delete;
-  d_query(base_query const& bq, mem* mem, device_gpu_timetable const tt)
-      : base_query{bq}, mem_{mem}, tt_{tt} {}
+  d_query(base_query const& bq, raptor_schedule const& raptor_sched, mem* mem,
+          device_gpu_timetable const tt)
+      : base_query{bq}, mem_{mem}, tt_{tt} {
+
+    auto const& add_starts = get_add_starts(
+        raptor_sched, source_, use_start_footpaths_, use_start_metas_);
+
+    cudaMemcpyAsync(mem_->device_.additional_starts_, add_starts.data(),
+                    vec_size_bytes(add_starts), cudaMemcpyHostToDevice,
+                    mem_->context_.transfer_stream_);
+    cuda_sync_stream(mem_->context_.transfer_stream_);
+
+    mem_->device_.additional_start_count_ = add_starts.size();
+  }
 
   raptor_result_base const& result() const { return *mem_->host_.result_; }
 

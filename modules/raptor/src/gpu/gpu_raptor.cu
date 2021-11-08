@@ -127,7 +127,7 @@ __device__ bool update_arrival(time* const base, stop_id const s_id,
 #endif
 }
 
-__device__ void copy_marked_arrivals(time* const to, time* const from,
+__device__ void copy_marked_arrivals(time* const to, time const* const from,
                                      unsigned int* station_marks,
                                      device_gpu_timetable const& tt) {
   auto const global_stride = get_global_stride();
@@ -405,18 +405,15 @@ __device__ void init_arrivals_dev(base_query const& query,
     mark(device_mem.station_marks_, query.source_);
   }
 
-  auto const footpath_count =
-      tt.initialization_footpaths_indices_[query.source_ + 1] -
-      tt.initialization_footpaths_indices_[query.source_];
-  if (t_id < footpath_count) {
-    auto const index_into_footpaths =
-        tt.initialization_footpaths_indices_[query.source_];
-    auto const f = tt.initialization_footpaths_[index_into_footpaths + t_id];
+  if (t_id < device_mem.additional_start_count_) {
+    auto const& add_start = device_mem.additional_starts_[t_id];
 
-    time const new_value = query.source_time_begin_ + f.duration_;
-    bool updated = update_arrival(device_mem.result_[0], f.to_, new_value);
+    auto const add_start_time = query.source_time_begin_ + add_start.offset_;
+    bool updated =
+        update_arrival(device_mem.result_[0], add_start.s_id_, add_start_time);
+
     if (updated) {
-      mark(device_mem.station_marks_, f.to_);
+      mark(device_mem.station_marks_, add_start.s_id_);
     }
   }
 }

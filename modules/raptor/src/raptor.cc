@@ -66,7 +66,7 @@ void raptor::init(motis::module::registry& reg) {
   });
 
   queries_per_device_ = std::max(queries_per_device_, int32_t{1});
-  mem_store_.init(*timetable_, queries_per_device_);
+  mem_store_.init(*raptor_sched_, *timetable_, queries_per_device_);
 #endif
 }
 
@@ -143,7 +143,7 @@ msg_ptr raptor::route_gpu(msg_ptr const& msg) {
 
   loaned_mem loan(mem_store_);
 
-  d_query q(base_query, loan.mem_, *d_gtt_);
+  d_query q(base_query, *raptor_sched_, loan.mem_, *d_gtt_);
 
   std::vector<journey> js;
   js = gpu_raptor(q, stats, sched, *raptor_sched_, *timetable_);
