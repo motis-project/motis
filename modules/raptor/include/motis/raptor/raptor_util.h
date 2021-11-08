@@ -17,16 +17,6 @@ inline void append_vector(std::vector<T>& dst, std::vector<T> const& elems) {
   dst.insert(std::end(dst), std::begin(elems), std::end(elems));
 }
 
-template <typename Container, typename UnaryOp>
-inline void for_each(Container& c, UnaryOp&& unary_op) {
-  std::for_each(std::begin(c), std::end(c), unary_op);
-}
-
-template <typename Container, typename UnaryOp>
-inline void for_each(Container const& c, UnaryOp&& unary_op) {
-  std::for_each(std::begin(c), std::end(c), unary_op);
-}
-
 template <typename Container, typename T>
 inline bool contains(Container const& c, T const& ele) {
   return std::find(std::begin(c), std::end(c), ele) != std::end(c);

@@ -166,16 +166,16 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
 
     append_vector(tt->stop_routes_, t_stop.stop_routes_);
 
-    for_each(t_stop.footpaths_, [&](auto const& f) {
+    for (auto const& f : t_stop.footpaths_) {
       auto const transfer_time = ttt.stations_[f.from_].transfer_time_;
       tt->footpaths_.emplace_back(f.to_, f.duration_ - transfer_time);
-    });
+    }
 
-    for_each(t_stop.incoming_footpaths_, [&](auto const& f) {
+    for (auto const& f : t_stop.incoming_footpaths_) {
       auto const transfer_time = ttt.stations_[f.from_].transfer_time_;
       tt->incoming_footpaths_[s_id].emplace_back(f.from_,
                                                  f.duration_ - transfer_time);
-    });
+    }
   }
 
   auto footpaths_idx = static_cast<footpaths_index>(tt->footpaths_.size());
@@ -297,11 +297,10 @@ std::unique_ptr<raptor_schedule> transformable_to_schedule(
 
     // gather all departure events from stations reachable by foot
     for (auto const& f : ttt.stations_[s_id].footpaths_) {
-      for_each(
-          get_station_departure_events(ttt, f.to_), [&](auto const& dep_event) {
-            raptor_sched->departure_events_[s_id].emplace_back(dep_event -
-                                                               f.duration_);
-          });
+      for (auto const& dep_event : get_station_departure_events(ttt, f.to_)) {
+        raptor_sched->departure_events_[s_id].emplace_back(dep_event -
+                                                           f.duration_);
+      }
     }
 
     utl::erase_duplicates(raptor_sched->departure_events_[s_id]);

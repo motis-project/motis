@@ -237,9 +237,12 @@ struct reconstructor {
           continue;
         }
 
-        auto c =
-            candidate{q.source_,          t,           q.source_time_begin_,
-                      result[round_k][t], round_k - 1, true};
+        auto c = candidate{q.source_,
+                           t,
+                           q.source_time_begin_,
+                           result[round_k][t],
+                           static_cast<transfers>(round_k - 1),
+                           true};
 
         // Check if the journey ends with a footpath
         for (; c.arrival_ < result[round_k][t] + tt; c.arrival_++) {
@@ -260,7 +263,7 @@ struct reconstructor {
                         [&](auto const& j) { return dominates(j, c); });
 
         if (!dominated) {
-          // Remove earlier candidates which are dominated by the new candidate
+          // Remove earlier candidates which are dominated by the new candidate.
           utl::erase_if(candidates, [&](auto const& other_c) {
             return c.dominates(other_c);
           });
@@ -273,7 +276,9 @@ struct reconstructor {
     if (!q.use_dest_metas_) {
       add_candidates(q.target_);
     } else {
-      for_each(raptor_sched_.equivalent_stations_[q.target_], add_candidates);
+      for (auto const& c : raptor_sched_.equivalent_stations_[q.target_]) {
+        add_candidates(c);
+      }
     }
 
     return candidates;
