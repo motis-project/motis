@@ -235,7 +235,6 @@ endif()
 target_compile_options(motis-test PRIVATE ${MOTIS_CXX_FLAGS})
 target_compile_definitions(motis-test PRIVATE ${MOTIS_COMPILE_DEFINITIONS})
 target_link_libraries(motis-test
-  ${module-targets}
   ${motis-test-extra-dependencies}
   motis-bootstrap
   motis-core
