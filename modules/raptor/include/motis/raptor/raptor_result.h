@@ -65,7 +65,7 @@ struct raptor_result : raptor_result_base {
 #if defined(MOTIS_CUDA)
 using device_result = std::array<time*, max_raptor_round>;
 
-struct raptor_result_pinned : raptor_result_base {
+struct raptor_result_pinned : public raptor_result_base {
   explicit raptor_result_pinned(stop_id stop_count)
       : raptor_result_base(stop_count) {
     cudaMallocHost(&result_, this->byte_size());

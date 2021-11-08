@@ -3,6 +3,8 @@
 #include <thread>
 #include <tuple>
 
+#include "utl/erase_duplicates.h"
+
 #include "motis/core/common/logging.h"
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/trip_iterator.h"
@@ -71,7 +73,7 @@ void init_stop_routes(transformable_timetable& ttt) {
   }
 
   for (auto& station : ttt.stations_) {
-    sort_and_unique(station.stop_routes_);
+    utl::erase_duplicates(station.stop_routes_);
   }
 }
 
@@ -302,7 +304,7 @@ std::unique_ptr<raptor_schedule> transformable_to_schedule(
           });
     }
 
-    sort_and_unique(raptor_sched->departure_events_[s_id]);
+    utl::erase_duplicates(raptor_sched->departure_events_[s_id]);
   }
 
   // create departure events with meta stations included
@@ -314,7 +316,7 @@ std::unique_ptr<raptor_schedule> transformable_to_schedule(
       append_vector(raptor_sched->departure_events_with_metas_[s_id],
                     raptor_sched->departure_events_[equi_s_id]);
     }
-    sort_and_unique(raptor_sched->departure_events_with_metas_[s_id]);
+    utl::erase_duplicates(raptor_sched->departure_events_with_metas_[s_id]);
   }
 
   // Loop over the routes

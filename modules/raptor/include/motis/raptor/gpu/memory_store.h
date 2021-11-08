@@ -84,9 +84,8 @@ struct host_memory {
   host_memory operator=(host_memory const&) = delete;
   host_memory operator=(host_memory const&&) = delete;
   explicit host_memory(stop_id const stop_count)
-      : result_(new raptor_result_pinned(stop_count)) {
+      : result_{std::make_unique<raptor_result_pinned>(stop_count)} {
     cudaMallocHost(&any_station_marked_, sizeof(bool));
-
     *any_station_marked_ = false;
   }
 
@@ -95,7 +94,6 @@ struct host_memory {
   void destroy() {
     cudaFreeHost(any_station_marked_);
     any_station_marked_ = nullptr;
-    delete result_;
     result_ = nullptr;
   }
 
@@ -104,7 +102,7 @@ struct host_memory {
     result_->reset();
   }
 
-  raptor_result_pinned* result_{nullptr};
+  std::unique_ptr<raptor_result_pinned> result_{nullptr};
   bool* any_station_marked_{nullptr};
 };
 
@@ -115,8 +113,7 @@ struct device_memory {
   device_memory operator=(device_memory const&) = delete;
   device_memory operator=(device_memory const&&) = delete;
   device_memory(stop_id const stop_count, route_id const route_count)
-      : stop_count_(stop_count), route_count_(route_count) {
-
+      : stop_count_{stop_count}, route_count_{route_count} {
     cudaMalloc(&(result_.front()), get_result_bytes());
     for (auto k = 1U; k < result_.size(); ++k) {
       result_[k] = result_[k - 1] + stop_count;
@@ -177,9 +174,9 @@ struct mem {
 
   mem(stop_id const stop_count, route_id const route_count,
       device_id const device_id, int32_t const concurrency_per_device)
-      : host_(stop_count),
-        device_(stop_count, route_count),
-        context_(device_id, concurrency_per_device) {}
+      : host_{stop_count},
+        device_{stop_count, route_count},
+        context_{device_id, concurrency_per_device} {}
 
   ~mem() {
     host_.destroy();

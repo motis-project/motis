@@ -34,10 +34,10 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
                                        raptor_schedule const& raptor_sched,
                                        raptor_timetable const& timetable,
                                        RaptorFun const& raptor_search) {
-
   reconstructor reconstructor(sched, raptor_sched, timetable);
 
-  // We have a ontrip query, just a single raptor query is needed
+  // We have an ontrip query
+  // -> just a single raptor query is needed.
   if (q.source_time_begin_ == q.source_time_end_) {
     stats.raptor_queries_ = 1;
 
@@ -53,10 +53,10 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
   }
 
   // Get departure range before we do the +1 query
-  auto const& dep_events = q.use_start_metas_
-                               ? raptor_sched.departure_events_with_metas_
-                               : raptor_sched.departure_events_;
-  auto const& [lower, upper] = get_departure_range(
+  auto const dep_events = q.use_start_metas_
+                              ? raptor_sched.departure_events_with_metas_
+                              : raptor_sched.departure_events_;
+  auto const [lower, upper] = get_departure_range(
       q.source_time_begin_, q.source_time_end_, dep_events[q.source_]);
 
   stats.raptor_queries_ += 1;

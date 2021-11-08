@@ -12,7 +12,7 @@
 #if defined(MOTIS_CUDA)
 #include "motis/raptor/gpu/cuda_util.h"
 #include "motis/raptor/gpu/gpu_timetable.cuh"
-#include "motis/raptor/memory_store.h"
+#include "motis/raptor/gpu/memory_store.h"
 #endif
 
 namespace motis::raptor {
@@ -79,7 +79,7 @@ auto inline get_add_starts(raptor_schedule const& raptor_sched,
   return add_starts;
 }
 
-struct raptor_query : base_query {
+struct raptor_query : public base_query {
   raptor_query() = delete;
   raptor_query(raptor_query const&) = delete;
   raptor_query(raptor_query const&&) = delete;
@@ -88,14 +88,11 @@ struct raptor_query : base_query {
 
   raptor_query(base_query const& bq, raptor_schedule const& raptor_sched,
                raptor_timetable const& tt)
-      : tt_(tt) {
-    static_cast<base_query&>(*this) = bq;
-
-    result_ = std::make_unique<raptor_result>(tt_.stop_count());
-
-    add_starts_ = get_add_starts(raptor_sched, source_, use_start_footpaths_,
-                                 use_start_metas_);
-  }
+      : base_query{bq},
+        tt_{tt},
+        add_starts_{get_add_starts(raptor_sched, source_, use_start_footpaths_,
+                                   use_start_metas_)},
+        result_{std::make_unique<raptor_result>(tt_.stop_count())} {}
 
   ~raptor_query() = default;
 
@@ -107,12 +104,10 @@ struct raptor_query : base_query {
 };
 
 #if defined(MOTIS_CUDA)
-struct d_query : base_query {
+struct d_query : public base_query {
   d_query() = delete;
   d_query(base_query const& bq, mem* mem, device_gpu_timetable const tt)
-      : mem_(mem), tt_(tt) {
-    static_cast<base_query&>(*this) = bq;
-  }
+      : base_query{bq}, mem_{mem}, tt_{tt} {}
 
   raptor_result_base const& result() const { return *mem_->host_.result_; }
 
