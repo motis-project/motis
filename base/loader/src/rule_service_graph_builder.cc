@@ -483,7 +483,7 @@ struct rule_service_route_builder {
         gb_.sched_.trip_edges_,
         mcd::to_vec(
             begin(sections), end(sections), [](service_section* section) {
-              return trip::route_edge(section->route_section_.get_route_edge());
+              return trip_info::route_edge(section->route_section_.get_route_edge());
             }));
 
     auto const& traffic_days = traffic_days_.at(s);
@@ -575,8 +575,8 @@ struct rule_service_route_builder {
   void expand_trips(node const* start_node) { expand_trips(start_node, {}); }
 
   void expand_trips(node const* start_node,
-                    mcd::vector<trip::route_edge>&& prefix) {
-    mcd::vector<trip::route_edge> path(std::move(prefix));
+                    mcd::vector<trip_info::route_edge>&& prefix) {
+    mcd::vector<trip_info::route_edge> path(std::move(prefix));
     auto n = start_node;
     while (n != nullptr) {
       mcd::vector<edge const*> route_edges;
@@ -610,7 +610,7 @@ struct rule_service_route_builder {
     }
   }
 
-  void make_expanded_trips(mcd::vector<trip::route_edge>& route_edges) {
+  void make_expanded_trips(mcd::vector<trip_info::route_edge>& route_edges) {
     if (route_edges.empty()) {
       return;
     }

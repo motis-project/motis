@@ -331,8 +331,8 @@ struct footpath_builder {
     }
     utl::verify(size > 2, "invalid size");
 
-    constexpr auto const kInvalidTime = std::numeric_limits<duration>::max();
-    auto mat = make_flat_matrix<duration>(size, kInvalidTime);
+    constexpr auto const kInvalidTime = std::numeric_limits<duration_t>::max();
+    auto mat = make_flat_matrix<duration_t>(size, kInvalidTime);
 
     for (auto i = 0; i < size; ++i) {
       auto it = lb;

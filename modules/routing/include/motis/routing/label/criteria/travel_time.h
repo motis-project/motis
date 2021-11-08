@@ -2,15 +2,15 @@
 
 namespace motis::routing {
 
-constexpr duration MAX_TRAVEL_TIME = 1440;
+constexpr duration_t MAX_TRAVEL_TIME = 1440;
 
 struct travel_time {
-  duration travel_time_, travel_time_lb_;
+  duration_t travel_time_, travel_time_lb_;
 };
 
 struct get_travel_time_lb {
   template <typename Label>
-  duration operator()(Label const* l) {
+  duration_t operator()(Label const* l) {
     return l->travel_time_lb_;
   }
 };
@@ -24,7 +24,7 @@ struct travel_time_initializer {
     if (lb.travel_time_.is_reachable(lb_val)) {
       l.travel_time_lb_ = l.travel_time_ + lb_val;
     } else {
-      l.travel_time_lb_ = std::numeric_limits<duration>::max();
+      l.travel_time_lb_ = std::numeric_limits<duration_t>::max();
     }
   }
 };
@@ -38,7 +38,7 @@ struct travel_time_updater {
     if (lb.travel_time_.is_reachable(lb_val)) {
       l.travel_time_lb_ = l.travel_time_ + lb_val;
     } else {
-      l.travel_time_lb_ = std::numeric_limits<duration>::max();
+      l.travel_time_lb_ = std::numeric_limits<duration_t>::max();
     }
   }
 };

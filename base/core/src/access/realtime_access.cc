@@ -9,35 +9,37 @@ namespace motis {
 time get_schedule_time(schedule const& sched, ev_key const& k) {
   auto it = sched.graph_to_delay_info_.find(k);
   if (it == end(sched.graph_to_delay_info_)) {
-    return get_time(k.route_edge_, k.lcon_idx_, k.ev_type_);
+    return get_time(k.route_edge_, k.lcon_idx_, k.ev_type_, k.day_);
   } else {
     return it->second->get_schedule_time();
   }
 }
 
 time get_schedule_time(schedule const& sched, edge const* route_edge,
-                       lcon_idx_t const lcon_index, event_type const ev_type) {
+                       lcon_idx_t const lcon_index, event_type const ev_type,
+                       day_idx_t const day) {
   auto it = sched.graph_to_delay_info_.find({route_edge, lcon_index, ev_type});
   if (it == end(sched.graph_to_delay_info_)) {
-    return get_time(route_edge, lcon_index, ev_type);
+    return get_time(route_edge, lcon_index, ev_type, day);
   } else {
     return it->second->get_schedule_time();
   }
 }
 
 time get_schedule_time(schedule const& sched, edge const* route_edge,
-                       light_connection const* lcon, event_type const ev_type) {
+                       light_connection const* lcon, event_type const ev_type,
+                       day_idx_t const day) {
   auto it = sched.graph_to_delay_info_.find(
       {route_edge, get_lcon_index(route_edge, lcon), ev_type});
   if (it == end(sched.graph_to_delay_info_)) {
-    return ev_type == event_type::DEP ? lcon->d_time_ : lcon->a_time_;
+    return lcon->event_time(ev_type, day);
   } else {
     return it->second->get_schedule_time();
   }
 }
 
 time get_delay(schedule const& sched, ev_key const& k) {
-  return get_time(k.lcon(), k.ev_type_) - get_schedule_time(sched, k);
+  return get_time(k.lcon(), k.ev_type_, k.day_) - get_schedule_time(sched, k);
 }
 
 delay_info get_delay_info(schedule const& sched, node const* route_node,

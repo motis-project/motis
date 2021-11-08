@@ -81,7 +81,7 @@ struct light_connection {
     return {day, t == event_type::DEP ? d_time_ : a_time_};
   }
 
-  duration travel_time() const { return a_time_ - d_time_; }
+  duration_t travel_time() const { return a_time_ - d_time_; }
 
   ptr<connection const> full_con_{nullptr};
   int16_t d_time_{std::numeric_limits<decltype(d_time_)>::max()};

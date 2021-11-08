@@ -6,7 +6,7 @@ namespace motis::access {
 
 class trip_stop {
 public:
-  trip_stop(trip const* t, int index);
+  trip_stop(trip_info const* t, int index);
 
   int index() const;
 
@@ -27,7 +27,7 @@ public:
   bool is_last() const;
 
 private:
-  trip const* trip_;
+  trip_info const* trip_;
   int index_;
   node const* node_;
 };

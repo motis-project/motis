@@ -85,7 +85,7 @@ struct ontrip_gen {
     base_gen<Dir, Label>::generate_labels_at_route_nodes(
         sched, initial_path, starting_footpaths, add_first_interchange_time,
         [&](std::vector<std::pair<edge const*, int>> const& path, edge const&,
-            duration) {
+            duration_t) {
           return generate_start_label(mem, lbs, path, start_time, lcon, labels);
         });
   }

@@ -68,11 +68,11 @@ struct schedule {
   mcd::vector<mcd::unique_ptr<timezone>> timezones_;
   std::vector<bitfield> bitfields_;
 
-  mcd::hash_map<gtfs_trip_id, ptr<trip const>> gtfs_trip_ids_;
-  mcd::vector<mcd::pair<primary_trip_id, ptr<trip>>> trips_;
-  mcd::vector<mcd::unique_ptr<trip>> trip_mem_;
-  mcd::vector<mcd::unique_ptr<mcd::vector<trip::route_edge>>> trip_edges_;
-  mcd::vector<mcd::unique_ptr<mcd::vector<ptr<trip>>>> merged_trips_;
+  mcd::hash_map<gtfs_trip_id, ptr<trip_info const>> gtfs_trip_ids_;
+  mcd::vector<mcd::pair<primary_trip_id, ptr<trip_info>>> trips_;
+  mcd::vector<mcd::unique_ptr<trip_info>> trip_mem_;
+  mcd::vector<mcd::unique_ptr<mcd::vector<trip_info::route_edge>>> trip_edges_;
+  mcd::vector<mcd::unique_ptr<mcd::vector<ptr<trip_info>>>> merged_trips_;
   mcd::vector<mcd::unique_ptr<mcd::string>> filenames_;
 
   unixtime system_time_{0U}, last_update_timestamp_{0U};
@@ -83,7 +83,7 @@ struct schedule {
   mcd::hash_map<ev_key, mcd::vector<ev_key>> waits_for_trains_;
   mcd::hash_map<ev_key, mcd::vector<ev_key>> trains_wait_for_;
 
-  fws_multimap<ptr<trip>> expanded_trips_;
+  fws_multimap<ptr<trip_info>> expanded_trips_;
 };
 
 using schedule_ptr = mcd::unique_ptr<schedule>;

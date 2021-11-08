@@ -130,12 +130,12 @@ struct additional_service_builder {
     return station_nodes;
   }
 
-  mcd::vector<trip::route_edge> build_route(
+  mcd::vector<trip_info::route_edge> build_route(
       std::vector<section> const& sections,
       std::vector<incoming_edge_patch>& incoming) {
     auto const route_id = sched_.route_count_++;
 
-    mcd::vector<trip::route_edge> trip_edges;
+    mcd::vector<trip_info::route_edge> trip_edges;
     node* prev_route_node = nullptr;
     for (auto const& s : sections) {
       light_connection l{};
@@ -171,7 +171,7 @@ struct additional_service_builder {
     return trip_edges;
   }
 
-  trip const* update_trips(mcd::vector<trip::route_edge> const& trip_edges) {
+  trip const* update_trips(mcd::vector<trip_info::route_edge> const& trip_edges) {
     auto const first_edge = trip_edges.front().get_edge();
     auto const first_station = first_edge->from_->get_station();
     auto const first_lcon = first_edge->m_.route_edge_.conns_[0];
@@ -181,7 +181,7 @@ struct additional_service_builder {
     auto const last_lcon = last_edge->m_.route_edge_.conns_[0];
 
     sched_.trip_edges_.emplace_back(
-        mcd::make_unique<mcd::vector<trip::route_edge>>(trip_edges));
+        mcd::make_unique<mcd::vector<trip_info::route_edge>>(trip_edges));
     sched_.trip_mem_.emplace_back(mcd::make_unique<trip>(
         full_trip_id{primary_trip_id{first_station->id_,
                                      first_lcon.full_con_->con_info_->train_nr_,

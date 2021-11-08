@@ -4,7 +4,7 @@
 
 namespace motis::routing {
 
-constexpr duration MAX_TRANSFERS = 7;
+constexpr duration_t MAX_TRANSFERS = 7;
 
 struct transfers {
   uint8_t transfers_, transfers_lb_;

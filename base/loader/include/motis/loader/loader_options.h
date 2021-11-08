@@ -27,7 +27,7 @@ struct loader_options {
   bool expand_trips_{true};
   bool expand_footpaths_{true};
   bool no_local_transport_{false};
-  duration planned_transfer_delta_{30};
+  duration_t planned_transfer_delta_{30};
   std::string graph_path_{"default"};
   std::string wzr_classes_path_{};
   std::string wzr_matrix_path_{};

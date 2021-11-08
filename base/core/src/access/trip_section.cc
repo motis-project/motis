@@ -9,7 +9,7 @@ station const& get_station(schedule const& sched, node const* n) {
   return *sched.stations_[n->get_station()->id_];
 }
 
-trip_section::trip_section(trip const* t, int const index)
+trip_section::trip_section(trip_info const* t, int const index)
     : trip_(t), index_(index), edge_(t->edges_->at(index).get_edge()) {}
 
 int trip_section::index() const { return index_; }

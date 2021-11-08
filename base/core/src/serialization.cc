@@ -43,18 +43,18 @@ cista::hash_t type_hash(primary_trip_id const&, cista::hash_t const h,
 }
 
 template <typename Ctx>
-inline void serialize(Ctx& c, trip::route_edge const* origin,
+inline void serialize(Ctx& c, trip_info::route_edge const* origin,
                       cista::offset_t const offset) {
   cista::serialize(c, &origin->route_node_,
-                   offset + offsetof(trip::route_edge, route_node_));
+                   offset + offsetof(trip_info::route_edge, route_node_));
 }
 
 template <typename Ctx>
-inline void deserialize(Ctx const& c, trip::route_edge* el) {
+inline void deserialize(Ctx const& c, trip_info::route_edge* el) {
   cista::deserialize(c, &el->route_node_);
 }
 
-cista::hash_t type_hash(trip::route_edge const& el, cista::hash_t const h,
+cista::hash_t type_hash(trip_info::route_edge const& el, cista::hash_t const h,
                         std::map<cista::hash_t, unsigned>& done) {
   return cista::hash_combine(cista::type_hash(el.route_node_, h, done),
                              cista::type_hash(el.outgoing_edge_idx_, h, done));

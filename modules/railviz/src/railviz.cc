@@ -307,7 +307,7 @@ msg_ptr railviz::get_station(msg_ptr const& msg) {
       }
 
       for (auto i = 0U; i < re->m_.route_edge_.conns_.size(); ++i) {
-        on_ev(ev_key{trip::route_edge{re}, i, event_type::ARR});
+        on_ev(ev_key{trip_info::route_edge{re}, i, event_type::ARR});
       }
     }
   }

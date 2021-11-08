@@ -234,7 +234,7 @@ void rt_handler::propagate() {
   propagator_.propagate();
 
   std::set<trip const*> trips_to_correct;
-  std::set<trip::route_edge> updated_route_edges;
+  std::set<trip_info::route_edge> updated_route_edges;
   for (auto const& di : propagator_.events()) {
     auto const& k = di->get_ev_key();
     auto const t = di->get_current_time();

@@ -15,7 +15,7 @@ struct update_msg_builder {
   void add_delay(delay_info const* di);
 
   void add_reroute(trip const* trp,
-                   mcd::vector<trip::route_edge> const& old_edges,
+                   mcd::vector<trip_info::route_edge> const& old_edges,
                    lcon_idx_t old_lcon_idx);
 
   void add_free_text_nodes(trip const* trp, free_text const& ft,
@@ -35,7 +35,7 @@ struct update_msg_builder {
 
 private:
   flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<RtEventInfo>>>
-  to_fbs_event_infos(mcd::vector<trip::route_edge> const& edges,
+  to_fbs_event_infos(mcd::vector<trip_info::route_edge> const& edges,
                      lcon_idx_t lcon_idx);
 
   void build_delay_updates();

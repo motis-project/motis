@@ -6,8 +6,8 @@ namespace motis {
 
 journey::transport generate_journey_transport(
     unsigned int from, unsigned int to, connection_info const* con_info,
-    schedule const& sched, duration duration, int mumo_id, unsigned mumo_price,
-    unsigned mumo_accessibility) {
+    schedule const& sched, duration_t duration, int mumo_id,
+    unsigned mumo_price, unsigned mumo_accessibility) {
   bool is_walk = true;
   mcd::string name;
   mcd::string cat_name;

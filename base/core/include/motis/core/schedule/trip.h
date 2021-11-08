@@ -20,40 +20,16 @@
 namespace motis {
 
 struct primary_trip_id {
-  primary_trip_id() : station_id_{0U}, time_{0U}, train_nr_{0U} {}
-  primary_trip_id(uint32_t const station_id, uint32_t const train_nr,
-                  motis::time const time)
-      : station_id_(station_id), time_(time.ts()), train_nr_(train_nr) {}
-
-  friend bool operator<(primary_trip_id const& lhs,
-                        primary_trip_id const& rhs) {
-    uint64_t a = 0, b = 0;
-    std::memcpy(&a, &lhs, sizeof(a));
-    std::memcpy(&b, &rhs, sizeof(b));
-    return a < b;
-  }
-
-  friend bool operator==(primary_trip_id const& lhs,
-                         primary_trip_id const& rhs) {
-    uint64_t a = 0, b = 0;
-    std::memcpy(&a, &lhs, sizeof(a));
-    std::memcpy(&b, &rhs, sizeof(b));
-    return a == b;
-  }
-
-  uint32_t get_station_id() const { return static_cast<uint32_t>(station_id_); }
-  motis::time get_time() const { return static_cast<motis::time>(time_); }
-  uint32_t get_train_nr() const { return static_cast<uint32_t>(train_nr_); }
-
-  uint64_t station_id_ : 31;
-  uint64_t time_ : 16;
-  uint64_t train_nr_ : 17;
+  CISTA_COMPARABLE()
+  uint32_t station_id_{0U};
+  uint32_t train_nr_{0U};
+  time time_;
 };
 
 struct secondary_trip_id {
   CISTA_COMPARABLE();
   uint32_t target_station_id_{0U};
-  motis::time target_time_{INVALID_TIME};
+  time target_time_{INVALID_TIME};
   mcd::string line_id_;
 };
 
@@ -69,16 +45,7 @@ struct trip_debug {
 };
 
 struct full_trip_id {
-  friend bool operator<(full_trip_id const& lhs, full_trip_id const& rhs) {
-    return std::tie(lhs.primary_, lhs.secondary_) <
-           std::tie(rhs.primary_, rhs.secondary_);
-  }
-
-  friend bool operator==(full_trip_id const& lhs, full_trip_id const& rhs) {
-    return std::tie(lhs.primary_, lhs.secondary_) ==
-           std::tie(rhs.primary_, rhs.secondary_);
-  }
-
+  CISTA_COMPARABLE()
   primary_trip_id primary_;
   secondary_trip_id secondary_;
 };
@@ -89,7 +56,7 @@ struct gtfs_trip_id {
   unixtime start_date_{0};
 };
 
-struct trip {
+struct trip_info {
   struct route_edge {
     route_edge() = default;
 
@@ -140,10 +107,15 @@ struct trip {
     uint32_t outgoing_edge_idx_{0};
   };
 
-  full_trip_id id_;
   ptr<mcd::vector<route_edge> const> edges_{nullptr};
   lcon_idx_t lcon_idx_{0U};
   trip_debug dbg_;
+};
+
+struct concrete_trip {
+  full_trip_id id_;
+  trip_info const* trp_;
+  day_idx_t day_;
 };
 
 }  // namespace motis

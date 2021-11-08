@@ -9,12 +9,12 @@ constexpr auto TRANSFER_COST = 20;
 constexpr auto MAX_WEIGHTED = MAX_TRAVEL_TIME + TRANSFER_COST * MAX_TRANSFERS;
 
 struct weighted {
-  duration weighted_, weighted_lb_;
+  duration_t weighted_, weighted_lb_;
 };
 
 struct get_weighted_lb {
   template <typename Label>
-  duration operator()(Label const* l) {
+  duration_t operator()(Label const* l) {
     return l->weighted_lb_;
   }
 };
@@ -30,7 +30,7 @@ struct weighted_initializer {
         lb.transfers_.is_reachable(ic_lb)) {
       l.weighted_lb_ = l.weighted_ + tt_lb + (TRANSFER_COST * ic_lb);
     } else {
-      l.weighted_lb_ = std::numeric_limits<duration>::max();
+      l.weighted_lb_ = std::numeric_limits<duration_t>::max();
     }
   }
 };
@@ -49,7 +49,7 @@ struct weighted_updater {
         lb.transfers_.is_reachable(ic_lb)) {
       l.weighted_lb_ = l.weighted_ + tt_lb + (TRANSFER_COST * ic_lb);
     } else {
-      l.weighted_lb_ = std::numeric_limits<duration>::max();
+      l.weighted_lb_ = std::numeric_limits<duration_t>::max();
     }
   }
 };

@@ -35,13 +35,14 @@ light_connection const& get_lcon(edge const* route_edge, size_t const index) {
   return route_edge->m_.route_edge_.conns_[index];
 }
 
-time get_time(light_connection const* lcon, event_type const ev_type) {
-  return ev_type == event_type::DEP ? lcon->d_time_ : lcon->a_time_;
+time get_time(light_connection const* lcon, event_type const ev_type,
+              day_idx_t const day) {
+  return lcon->event_time(ev_type, day);
 }
 
 time get_time(edge const* route_edge, std::size_t const lcon_index,
-              event_type const ev_type) {
-  return get_time(&get_lcon(route_edge, lcon_index), ev_type);
+              event_type const ev_type, day_idx_t const day) {
+  return get_time(&get_lcon(route_edge, lcon_index), ev_type, day);
 }
 
 lcon_idx_t get_lcon_index(edge const* route_edge,

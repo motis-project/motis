@@ -34,4 +34,24 @@ std::string format_time(time const t) {
   return out.str();
 }
 
+unixtime motis_to_unixtime(unixtime const schedule_begin, time const t) {
+  return schedule_begin + t.ts() * 60;
+}
+
+time unix_to_motistime(unixtime const schedule_begin, unixtime const t) {
+  if (t < schedule_begin) {
+    return INVALID_TIME;
+  }
+  auto motistime = time((t - schedule_begin) / 60);
+  if (!motistime.valid()) {
+    return INVALID_TIME;
+  }
+  return motistime;
+}
+
+day_idx_t get_day_idx(unixtime const schedule_begin, unixtime const t) {
+  utl::verify(t > schedule_begin, "");
+  return
+}
+
 }  // namespace motis

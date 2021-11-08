@@ -7,10 +7,10 @@ namespace motis {
 time get_schedule_time(schedule const&, ev_key const&);
 
 time get_schedule_time(schedule const&, edge const* route_edge, lcon_idx_t,
-                       event_type);
+                       event_type, day_idx_t);
 
 time get_schedule_time(schedule const&, edge const* route_edge,
-                       light_connection const*, event_type);
+                       light_connection const*, event_type, day_idx_t);
 
 time get_delay(schedule const&, ev_key const&);
 

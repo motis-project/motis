@@ -49,7 +49,7 @@ inline void constant_graph_add_route_node(schedule& sched, int route_index,
 }
 
 inline void constant_graph_add_route_edge(schedule& sched,
-                                          trip::route_edge const& route_edge) {
+                                          trip_info::route_edge const& route_edge) {
   auto const min_cost = route_edge->get_minimum_cost();
   if (!min_cost.is_valid()) {
     return;

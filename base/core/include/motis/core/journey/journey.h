@@ -35,7 +35,7 @@ struct journey {
     unsigned clasz_{0};
     unsigned train_nr_{0};
     std::string line_identifier_;
-    motis::time duration_{0};
+    duration_t duration_{0};
     int mumo_id_{0};
     std::string direction_;
     std::string provider_;

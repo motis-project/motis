@@ -40,14 +40,15 @@ inline trip const* from_extern_trip(schedule const& sched,
                   t->target_station_id_, t->target_time_, t->line_id_);
 }
 
-inline extern_trip to_extern_trip(schedule const& sched, trip const* t) {
+inline extern_trip to_extern_trip(schedule const& sched,
+                                  concrete_trip const& t) {
   return extern_trip{
-      sched.stations_.at(t->id_.primary_.station_id_)->eva_nr_,
-      t->id_.primary_.get_train_nr(),
-      motis_to_unixtime(sched, t->id_.primary_.time_),
-      sched.stations_.at(t->id_.secondary_.target_station_id_)->eva_nr_,
-      motis_to_unixtime(sched, t->id_.secondary_.target_time_),
-      t->id_.secondary_.line_id_};
+      sched.stations_.at(t.trp_->id_.primary_.station_id_)->eva_nr_,
+      t.trp_->id_.primary_.get_train_nr(),
+      motis_to_unixtime(sched, t.trp_->id_.primary_.time_),
+      sched.stations_.at(t.trp_->id_.secondary_.target_station_id_)->eva_nr_,
+      motis_to_unixtime(sched, t.trp_->id_.secondary_.target_time_),
+      t.trp_->id_.secondary_.line_id_};
 }
 
 inline extern_trip to_extern_trip(TripId const* trp) {

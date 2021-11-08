@@ -31,7 +31,7 @@ struct compact_journey {
     return legs_.back().exit_station_id_;
   }
 
-  inline duration scheduled_duration() const {
+  inline duration_t scheduled_duration() const {
     return !legs_.empty() ? legs_.back().exit_time_ - legs_.front().enter_time_
                           : 0;
   }

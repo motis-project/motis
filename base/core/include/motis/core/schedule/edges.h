@@ -22,14 +22,14 @@ struct edge_cost {
         transfer_(false),
         accessibility_(0) {}
 
-  edge_cost(duration time, light_connection const* c)
+  edge_cost(duration_t time, light_connection const* c)
       : connection_(c),
         time_(time),
         price_(0),
         transfer_(false),
         accessibility_(0) {}
 
-  explicit edge_cost(duration time, bool transfer = false, uint16_t price = 0,
+  explicit edge_cost(duration_t time, bool transfer = false, uint16_t price = 0,
                      uint16_t accessibility = 0)
       : connection_(nullptr),
         time_(time),
@@ -40,7 +40,7 @@ struct edge_cost {
   bool is_valid() const { return time_ != INVALID_DURATION; }
 
   light_connection const* connection_;
-  duration time_;
+  duration_t time_;
   uint16_t price_;
   bool transfer_;
   uint16_t accessibility_;

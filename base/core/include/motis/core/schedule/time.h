@@ -14,12 +14,12 @@
 namespace motis {
 
 using day_idx_t = int16_t;
-using duration = uint16_t;
+using duration_t = uint16_t;
 
 constexpr auto const MAX_DAYS = day_idx_t{512};
-constexpr auto const MINUTES_A_DAY = duration{1440};
+constexpr auto const MINUTES_A_DAY = duration_t{1440};
 constexpr auto const SECONDS_A_DAY = uint32_t{MINUTES_A_DAY * 60};
-constexpr auto const INVALID_DURATION = std::numeric_limits<duration>::max();
+constexpr auto const INVALID_DURATION = std::numeric_limits<duration_t>::max();
 
 struct time {
   constexpr time() = default;
@@ -151,19 +151,10 @@ time to_motis_time(int day_index, int hours, int minutes);
 
 std::string format_time(time);
 
-inline unixtime motis_to_unixtime(unixtime schedule_begin, time t) {
-  return schedule_begin + t.ts() * 60;
-}
+unixtime motis_to_unixtime(unixtime schedule_begin, time t);
 
-inline time unix_to_motistime(unixtime const schedule_begin, unixtime const t) {
-  if (t < schedule_begin) {
-    return INVALID_TIME;
-  }
-  auto motistime = time((t - schedule_begin) / 60);
-  if (!motistime.valid()) {
-    return INVALID_TIME;
-  }
-  return motistime;
-}
+time unix_to_motistime(unixtime schedule_begin, unixtime t);
+
+day_idx_t day_idx(unixtime schedule_begin, unixtime t);
 
 }  // namespace motis

@@ -34,7 +34,7 @@ void update_msg_builder::add_delay(delay_info const* di) {
 }
 
 void update_msg_builder::add_reroute(
-    trip const* trp, mcd::vector<trip::route_edge> const& old_edges,
+    trip const* trp, mcd::vector<trip_info::route_edge> const& old_edges,
     lcon_idx_t const old_lcon_idx) {
   ++reroute_count_;
   updates_.emplace_back(CreateRtUpdate(
@@ -106,7 +106,7 @@ void update_msg_builder::reset() {
 
 flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<RtEventInfo>>>
 update_msg_builder::to_fbs_event_infos(
-    mcd::vector<trip::route_edge> const& edges, lcon_idx_t const lcon_idx) {
+    mcd::vector<trip_info::route_edge> const& edges, lcon_idx_t const lcon_idx) {
   std::vector<flatbuffers::Offset<RtEventInfo>> events;
   for (auto const& e : edges) {
     utl::verify(e->type() == edge::ROUTE_EDGE, "invalid trip edge");

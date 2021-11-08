@@ -92,7 +92,7 @@ struct trip_candidate {
   std::string_view category_{};
 };
 
-std::pair<time, time> get_interval(time t, duration offset) {
+std::pair<time, time> get_interval(time t, duration_t offset) {
   return {t > offset ? static_cast<time>(t - offset) : static_cast<time>(0),
           t > std::numeric_limits<time>::max() - offset
               ? std::numeric_limits<time>::max()
@@ -113,7 +113,7 @@ std::uint32_t get_train_nr(light_connection const* lc, std::uint32_t expected) {
 void enum_trip_candidates(schedule const& sched, std::uint32_t from_station_idx,
                           std::uint32_t to_station_idx, time enter_time,
                           time exit_time, std::uint32_t train_nr,
-                          duration max_time_diff,
+                          duration_t max_time_diff,
                           std::function<bool(trip_candidate&&)> const& cb) {
   auto const from_station = sched.station_nodes_.at(from_station_idx).get();
   auto const dep_interval = get_interval(enter_time, max_time_diff);
@@ -171,7 +171,7 @@ trip_candidate get_best_trip_candidate(schedule const& sched,
                                        std::uint32_t to_station_idx,
                                        time enter_time, time exit_time,
                                        std::uint32_t train_nr,
-                                       duration max_time_diff) {
+                                       duration_t max_time_diff) {
   auto best = trip_candidate{};
 
   enum_trip_candidates(sched, from_station_idx, to_station_idx, enter_time,
@@ -190,7 +190,7 @@ void debug_trip_match(schedule const& sched, std::uint32_t from_station_idx,
                       std::uint32_t to_station_idx, time enter_time,
                       time exit_time, std::uint32_t train_nr,
                       std::string_view category, std::ofstream& match_log,
-                      duration max_time_diff = 60) {
+                      duration_t max_time_diff = 60) {
   auto const [earliest_dep, latest_dep] =
       get_interval(enter_time, max_time_diff);
   auto const expected_travel_time = static_cast<int>(exit_time - enter_time);
@@ -276,7 +276,7 @@ void write_match_log(
     std::optional<std::pair<std::uint64_t, std::uint64_t>> const& current_id,
     struct row const& row,
     std::vector<input_journey_leg> const& current_input_legs,
-    duration const debug_match_tolerance) {
+    duration_t const debug_match_tolerance) {
   if (!match_log) {
     return;
   }
@@ -320,7 +320,7 @@ void write_match_log(
 loader_result load_journeys(schedule const& sched, universe& uv,
                             std::string const& journey_file,
                             std::string const& match_log_file,
-                            duration const match_tolerance) {
+                            duration_t const match_tolerance) {
   auto const debug_match_tolerance = match_tolerance + 60;
   auto result = loader_result{};
   auto journeys_with_invalid_legs = 0ULL;

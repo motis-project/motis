@@ -57,7 +57,7 @@ struct ev_key {
     return cista::build_hash(route_edge_, lcon_idx_, ev_type_, day_);
   }
 
-  trip::route_edge route_edge_{nullptr};
+  trip_info::route_edge route_edge_{nullptr};
   lcon_idx_t lcon_idx_{0};
   event_type ev_type_{event_type::DEP};
   day_idx_t day_{0};

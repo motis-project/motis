@@ -334,7 +334,7 @@ struct tripbased::impl {
       return std::min(schedule_end, std::max(schedule_begin, t));
     };
 
-    auto const extend_interval = [&](duration const extension) {
+    auto const extend_interval = [&](duration_t const extension) {
       interval_begin =
           q.extend_interval_earlier_
               ? map_to_interval(static_cast<time>(interval_begin - extension))

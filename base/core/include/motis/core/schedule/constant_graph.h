@@ -34,7 +34,7 @@ inline constant_graph build_station_graph(
 
   auto add_edges = [&g, dir](station_node const& sn) {
     // Stores the minimum distance to each neighboring station.
-    mcd::hash_map<uint32_t /* neighbor station node id */, duration> min;
+    mcd::hash_map<uint32_t /* neighbor station node id */, duration_t> min;
 
     auto update_min = [&min](uint32_t const from, edge_cost const& ec) {
       if (!ec.is_valid()) {

@@ -5,7 +5,7 @@
 namespace motis::access {
 
 struct trip_section {
-  trip_section(trip const* t, int index);
+  trip_section(trip_info const* t, int index);
 
   int index() const;
 
@@ -30,7 +30,7 @@ struct trip_section {
   node* from_node() const;
   node* to_node() const;
 
-  trip const* trip_;
+  trip_info const* trip_;
   int index_;
   class edge const* edge_;
 };

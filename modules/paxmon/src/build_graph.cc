@@ -17,7 +17,7 @@ namespace motis::paxmon {
 namespace {
 
 void add_interchange(event_node_index from, event_node_index to,
-                     passenger_group* grp, duration transfer_time,
+                     passenger_group* grp, duration_t transfer_time,
                      universe& uv) {
   for (auto& e : uv.graph_.outgoing_edges(from)) {
     if (e.type_ == edge_type::INTERCHANGE && e.to_ == to &&

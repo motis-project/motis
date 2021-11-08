@@ -12,8 +12,8 @@
 
 namespace motis {
 
-trip const* get_trip(schedule const& sched, std::string const& trip_id,
-                     std::time_t const date) {
+trip_info const* get_trip(schedule const& sched, std::string const& trip_id,
+                          std::time_t const date) {
   if (auto it = sched.gtfs_trip_ids_.find({trip_id, date});
       it == end(sched.gtfs_trip_ids_) || it->first.trip_id_ != trip_id ||
       it->first.start_date_ != date) {
@@ -24,18 +24,18 @@ trip const* get_trip(schedule const& sched, std::string const& trip_id,
   }
 }
 
-trip const* get_trip(schedule const& sched, std::string_view eva_nr,
-                     uint32_t const train_nr, std::time_t const timestamp,
-                     std::string_view target_eva_nr,
-                     std::time_t const target_timestamp,
-                     std::string_view line_id, bool const fuzzy) {
+trip_info const* get_trip(schedule const& sched, std::string_view eva_nr,
+                          uint32_t const train_nr, std::time_t const timestamp,
+                          std::string_view target_eva_nr,
+                          std::time_t const target_timestamp,
+                          std::string_view line_id, bool const fuzzy) {
   auto const station_id = get_station(sched, eva_nr)->index_;
   auto const motis_time = unix_to_motistime(sched, timestamp);
-  auto const primary_id = primary_trip_id(station_id, train_nr, motis_time);
+  auto const primary_id = primary_trip_id{station_id, train_nr, motis_time};
 
-  auto it =
-      std::lower_bound(begin(sched.trips_), end(sched.trips_),
-                       std::make_pair(primary_id, static_cast<trip*>(nullptr)));
+  auto it = std::lower_bound(
+      begin(sched.trips_), end(sched.trips_),
+      std::make_pair(primary_id, static_cast<trip_info*>(nullptr)));
   if (it == end(sched.trips_) || !(it->first == primary_id)) {
     throw std::system_error(access::error::service_not_found);
   }
@@ -55,12 +55,12 @@ trip const* get_trip(schedule const& sched, std::string_view eva_nr,
   throw std::system_error(access::error::service_not_found);
 }
 
-trip const* get_trip(schedule const& sched, extern_trip const& e_trp) {
+trip_info const* get_trip(schedule const& sched, extern_trip const& e_trp) {
   return get_trip(sched, e_trp.station_id_, e_trp.train_nr_, e_trp.time_,
                   e_trp.target_station_id_, e_trp.target_time_, e_trp.line_id_);
 }
 
-trip const* find_trip(schedule const& sched, primary_trip_id id) {
+trip_info const* find_trip(schedule const& sched, primary_trip_id id) {
   auto it = std::lower_bound(begin(sched.trips_), end(sched.trips_),
                              std::make_pair(id, static_cast<trip*>(nullptr)));
   if (it != end(sched.trips_) && it->first == id) {
@@ -69,7 +69,7 @@ trip const* find_trip(schedule const& sched, primary_trip_id id) {
   return nullptr;
 }
 
-trip const* find_trip(schedule const& sched, full_trip_id id) {
+trip_info const* find_trip(schedule const& sched, full_trip_id id) {
   for (auto it = std::lower_bound(
            begin(sched.trips_), end(sched.trips_),
            std::make_pair(id.primary_, static_cast<trip*>(nullptr)));

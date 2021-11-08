@@ -4,10 +4,11 @@
 
 namespace motis {
 
-std::set<trip::route_edge> route_bfs(ev_key const& k, bfs_direction const dir,
-                                     bool with_through_edges) {
-  std::set<trip::route_edge> visited;
-  std::queue<trip::route_edge> q;
+std::set<trip_info::route_edge> route_bfs(ev_key const& k,
+                                          bfs_direction const dir,
+                                          bool with_through_edges) {
+  std::set<trip_info::route_edge> visited;
+  std::queue<trip_info::route_edge> q;
 
   visited.insert(k.route_edge_);
   q.push(k.route_edge_);
@@ -24,7 +25,7 @@ std::set<trip::route_edge> route_bfs(ev_key const& k, bfs_direction const dir,
         }
 
         if (visited.emplace(in).second) {
-          q.push(trip::route_edge{in});
+          q.push(trip_info::route_edge{in});
         }
       }
     }

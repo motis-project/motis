@@ -28,7 +28,7 @@ TEST_F(bfs_test, simple) {
   auto first_dep =
       ev_key{trp->edges_->front().get_edge(), trp->lcon_idx_, event_type::DEP};
 
-  std::set<trip::route_edge> trp_edges;
+  std::set<trip_info::route_edge> trp_edges;
   for (auto const& t : route_trips(sched(), first_dep)) {
     trp_edges.insert(begin(*t->edges_), end(*t->edges_));
   }

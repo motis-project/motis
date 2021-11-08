@@ -10,18 +10,19 @@
 
 namespace motis::paxmon::util {
 
-inline duration get_interchange_time(schedule const& sched,
-                                     std::uint32_t station_idx) {
-  return static_cast<duration>(sched.stations_.at(station_idx)->transfer_time_);
+inline duration_t get_interchange_time(schedule const& sched,
+                                       std::uint32_t station_idx) {
+  return static_cast<duration_t>(
+      sched.stations_.at(station_idx)->transfer_time_);
 }
 
-inline std::optional<duration> get_footpath_duration(
+inline std::optional<duration_t> get_footpath_duration(
     schedule const& sched, std::uint32_t from_station_idx,
     std::uint32_t to_station_idx) {
   for (auto const& fp :
        sched.stations_[from_station_idx]->outgoing_footpaths_) {
     if (fp.to_station_ == to_station_idx) {
-      return {static_cast<duration>(fp.duration_)};
+      return {static_cast<duration_t>(fp.duration_)};
     }
   }
   return {};

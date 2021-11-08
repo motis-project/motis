@@ -49,7 +49,7 @@ ev_key get_event_at(schedule const& sched, Connection const* con,
   auto const trp = from_fbs(sched, trp_it->id());
 
   auto const edge_it = std::find_if(
-      begin(*trp->edges_), end(*trp->edges_), [&](trip::route_edge const& e) {
+      begin(*trp->edges_), end(*trp->edges_), [&](trip_info::route_edge const& e) {
         auto const k = ev_key{e, trp->lcon_idx_, ev_type};
         auto const schedule_time = get_schedule_time(sched, k);
         return (k.lcon()->valid_ != 0u) &&  //

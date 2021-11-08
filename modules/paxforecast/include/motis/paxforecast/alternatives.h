@@ -18,7 +18,7 @@ struct alternative {
   journey journey_;
   motis::paxmon::compact_journey compact_journey_;
   time arrival_time_{INVALID_TIME};
-  duration duration_{};
+  duration_t duration_{};
   unsigned transfers_{};
 };
 

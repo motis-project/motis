@@ -744,10 +744,10 @@ int graph_builder::get_or_create_track(int day,
 void graph_builder::write_trip_info(route const& r) {
   auto edges_ptr =
       sched_.trip_edges_
-          .emplace_back(mcd::make_unique<mcd::vector<trip::route_edge>>(
+          .emplace_back(mcd::make_unique<mcd::vector<trip_info::route_edge>>(
               mcd::to_vec(r,
                           [](route_section const& s) {
-                            return trip::route_edge{s.get_route_edge()};
+                            return trip_info::route_edge{s.get_route_edge()};
                           })))
           .get();
 

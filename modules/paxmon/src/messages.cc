@@ -48,10 +48,10 @@ Offset<PaxMonTransferInfo> to_fbs(FlatBufferBuilder& fbb,
 std::optional<transfer_info> from_fbs(PaxMonTransferInfo const* ti) {
   switch (ti->type()) {
     case PaxMonTransferType_SAME_STATION:
-      return transfer_info{static_cast<duration>(ti->duration()),
+      return transfer_info{static_cast<duration_t>(ti->duration()),
                            transfer_info::type::SAME_STATION};
     case PaxMonTransferType_FOOTPATH:
-      return transfer_info{static_cast<duration>(ti->duration()),
+      return transfer_info{static_cast<duration_t>(ti->duration()),
                            transfer_info::type::FOOTPATH};
     default: return {};
   }

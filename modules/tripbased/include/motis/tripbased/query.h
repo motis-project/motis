@@ -8,7 +8,7 @@ namespace motis::tripbased {
 
 struct additional_edge {
   additional_edge() = default;
-  additional_edge(station_id station, duration dur, uint16_t price,
+  additional_edge(station_id station, duration_t dur, uint16_t price,
                   uint16_t accessibility, uint8_t transfers, int mumo_id)
       : station_id_(station),
         duration_(dur),
@@ -25,7 +25,7 @@ struct additional_edge {
         mumo_id_(info->mumo_id()) {}
 
   station_id station_id_{};
-  duration duration_{};
+  duration_t duration_{};
   uint16_t price_{};
   uint16_t accessibility_{};
   uint8_t transfers_{};
