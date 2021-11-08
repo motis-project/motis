@@ -13,10 +13,10 @@ using namespace motis::routing::output;
 struct intermediate_journey {
   intermediate_journey(transfers const trs, bool const forward,
                        bool const ontrip, time const ontrip_start)
-      : transfers_(trs),
-        forward_(forward),
-        ontrip_(ontrip),
-        ontrip_start_(ontrip_start) {}
+      : transfers_{trs},
+        forward_{forward},
+        ontrip_{ontrip},
+        ontrip_start_{ontrip_start} {}
 
   time get_departure() const {
     return forward_ ? stops_.back().d_time_ : stops_.front().d_time_;
@@ -177,7 +177,6 @@ struct intermediate_journey {
 };
 
 struct reconstructor {
-
   struct candidate {
     candidate() = default;
     candidate(stop_id const source, stop_id const target, time const dep,
