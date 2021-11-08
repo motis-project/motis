@@ -3,6 +3,7 @@
 #include <thread>
 #include <tuple>
 
+#include "utl/concat.h"
 #include "utl/erase_duplicates.h"
 
 #include "motis/core/common/logging.h"
@@ -164,7 +165,7 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
     auto rc = static_cast<route_count>(t_stop.stop_routes_.size());
     tt->stops_.emplace_back(fc, rc, footpaths_idx, sr_idx);
 
-    append_vector(tt->stop_routes_, t_stop.stop_routes_);
+    utl::concat(tt->stop_routes_, t_stop.stop_routes_);
 
     for (auto const& f : t_stop.footpaths_) {
       auto const transfer_time = ttt.stations_[f.from_].transfer_time_;
@@ -192,9 +193,9 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
     tt->routes_.emplace_back(tc, sc, stop_times_idx, rs_idx);
 
     for (auto const& trip : t_route.trips_) {
-      append_vector(tt->stop_times_, trip.stop_times_);
+      utl::concat(tt->stop_times_, trip.stop_times_);
     }
-    append_vector(tt->route_stops_, t_route.route_stops_);
+    utl::concat(tt->route_stops_, t_route.route_stops_);
   }
 
   auto stop_times_idx = static_cast<stop_times_index>(tt->stop_times_.size());
@@ -312,8 +313,8 @@ std::unique_ptr<raptor_schedule> transformable_to_schedule(
   for (auto s_id = 0; s_id < ttt.stations_.size(); ++s_id) {
     auto const s = ttt.stations_[s_id];
     for (auto const equi_s_id : s.equivalent_) {
-      append_vector(raptor_sched->departure_events_with_metas_[s_id],
-                    raptor_sched->departure_events_[equi_s_id]);
+      utl::concat(raptor_sched->departure_events_with_metas_[s_id],
+                  raptor_sched->departure_events_[equi_s_id]);
     }
     utl::erase_duplicates(raptor_sched->departure_events_with_metas_[s_id]);
   }

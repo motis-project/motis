@@ -1,3 +1,5 @@
+#include "utl/concat.h"
+
 #include "motis/core/common/logging.h"
 #include "motis/raptor/gpu/gpu_timetable.cuh"
 #include "motis/raptor/raptor_util.h"
@@ -31,7 +33,7 @@ std::unique_ptr<host_gpu_timetable> get_host_gpu_timetable(
   for (auto const& station_footpaths : sched.initialization_footpaths_) {
     h_gtt->initialization_footpaths_indices_.push_back(
         h_gtt->initialization_footpaths_.size());
-    append_vector(h_gtt->initialization_footpaths_, station_footpaths);
+    utl::concat(h_gtt->initialization_footpaths_, station_footpaths);
   }
   h_gtt->initialization_footpaths_indices_.push_back(
       h_gtt->initialization_footpaths_.size());

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utl/concat.h"
 #include "utl/to_vec.h"
 
 #include "motis/core/schedule/schedule.h"
@@ -53,25 +54,25 @@ auto inline get_add_starts(raptor_schedule const& raptor_sched,
 
   if (use_start_footpaths) {
     auto const& init_footpaths = raptor_sched.initialization_footpaths_[source];
-    append_vector(add_starts, utl::to_vec(init_footpaths, [](auto const f) {
-                    return additional_start(f.to_, f.duration_);
-                  }));
+    utl::concat(add_starts, utl::to_vec(init_footpaths, [](auto const f) {
+                  return additional_start(f.to_, f.duration_);
+                }));
   }
 
   if (use_start_metas) {
     auto const& equis = raptor_sched.equivalent_stations_[source];
-    append_vector(add_starts, utl::to_vec(equis, [](auto const s_id) {
-                    return additional_start(s_id, 0);
-                  }));
+    utl::concat(add_starts, utl::to_vec(equis, [](auto const s_id) {
+                  return additional_start(s_id, 0);
+                }));
 
     // Footpaths from meta stations
     if (use_start_footpaths) {
       for (auto const equi : equis) {
         auto const& init_footpaths =
             raptor_sched.initialization_footpaths_[equi];
-        append_vector(add_starts, utl::to_vec(init_footpaths, [](auto const f) {
-                        return additional_start(f.to_, f.duration_);
-                      }));
+        utl::concat(add_starts, utl::to_vec(init_footpaths, [](auto const f) {
+                      return additional_start(f.to_, f.duration_);
+                    }));
       }
     }
   }
