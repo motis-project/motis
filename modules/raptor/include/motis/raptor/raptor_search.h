@@ -17,13 +17,16 @@ namespace motis::raptor {
 
 inline auto get_departure_range(time const begin, time const end,
                                 std::vector<time> const& departure_events) {
-
-  auto const lower = std::lower_bound(std::cbegin(departure_events),
-                                      std::cend(departure_events), begin) -
-                     1;
-  auto const upper = std::upper_bound(std::cbegin(departure_events),
-                                      std::cend(departure_events), end) -
-                     1;
+  std::ptrdiff_t const lower =
+      std::distance(std::cbegin(departure_events),
+                    std::lower_bound(std::cbegin(departure_events),
+                                     std::cend(departure_events), begin)) -
+      1;
+  std::ptrdiff_t const upper =
+      std::distance(std::cbegin(departure_events),
+                    std::upper_bound(std::cbegin(departure_events),
+                                     std::cend(departure_events), end)) -
+      1;
 
   return std::pair(lower, upper);
 }
@@ -51,9 +54,9 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
   }
 
   // Get departure range before we do the +1 query
-  auto const dep_events = q.use_start_metas_
-                              ? raptor_sched.departure_events_with_metas_
-                              : raptor_sched.departure_events_;
+  auto const& dep_events = q.use_start_metas_
+                               ? raptor_sched.departure_events_with_metas_
+                               : raptor_sched.departure_events_;
   auto const [lower, upper] = get_departure_range(
       q.source_time_begin_, q.source_time_end_, dep_events[q.source_]);
 
@@ -67,9 +70,9 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
   reconstructor.add(q);
   stats.rec_time_ += MOTIS_GET_TIMING_US(plus_one_rec_time);
 
-  for (auto dep_it = upper; dep_it != lower; --dep_it) {
+  for (auto dep_idx = upper; dep_idx != lower; --dep_idx) {
     stats.raptor_queries_ += 1;
-    q.source_time_begin_ = *dep_it;
+    q.source_time_begin_ = dep_events[q.source_][dep_idx];
 
     MOTIS_START_TIMING(raptor_time);
     raptor_search(q);
