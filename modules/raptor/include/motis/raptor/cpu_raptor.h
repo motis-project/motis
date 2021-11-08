@@ -4,12 +4,6 @@
 
 namespace motis::raptor {
 
-[[maybe_unused]] inline void set_upper_bounds(
-    std::vector<std::vector<time>>& arrivals, uint8_t round_k) {
-  std::memcpy(arrivals[round_k].data(), arrivals[round_k - 1].data(),
-              arrivals[round_k].size() * sizeof(time));
-}
-
 inline trip_count get_earliest_trip(raptor_timetable const& tt,
                                     raptor_route const& route,
                                     time const* const prev_arrivals,

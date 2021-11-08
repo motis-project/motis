@@ -117,12 +117,11 @@ struct raptor_incoming_footpath {
 struct raptor_timetable {
   raptor_timetable() = default;
   raptor_timetable(raptor_timetable const&) = default;
+  ~raptor_timetable() = default;
 
   raptor_timetable& operator=(raptor_timetable const&) = delete;
   raptor_timetable(raptor_timetable&&) = delete;
   raptor_timetable& operator=(raptor_timetable const&&) = delete;
-
-  ~raptor_timetable() = default;
 
   std::vector<raptor_stop> stops_;
   std::vector<raptor_route> routes_;
@@ -152,11 +151,9 @@ struct raptor_timetable {
 struct raptor_schedule {
   raptor_schedule() = default;
   raptor_schedule(raptor_schedule const&) = delete;
-
   raptor_schedule& operator=(raptor_schedule const&) = delete;
   raptor_schedule(raptor_schedule&&) = delete;
   raptor_schedule& operator=(raptor_schedule const&&) = delete;
-
   ~raptor_schedule() = default;
 
   std::unordered_map<std::string, stop_id> eva_to_raptor_id_;
