@@ -303,14 +303,23 @@ struct reconstructor {
     utl::erase_if(journeys_, [&](auto const& ij) {
       return ij.get_duration() > max_travel_duration;
     });
+    for (auto& ij : journeys_) {
+      ij.finalize();
+    }
     return utl::to_vec(journeys_,
                        [&](auto& ij) { return ij.to_journey(sched_); });
   }
 
   std::vector<journey> get_journeys(time const end) {
-    utl::erase_if(journeys_,
-                  [&](auto const& ij) { return ij.get_departure() > end; });
-    return get_journeys();
+    utl::erase_if(journeys_, [&](auto const& ij) {
+      return ij.get_departure() > end ||
+             ij.get_duration() > max_travel_duration;
+    });
+    for (auto& ij : journeys_) {
+      ij.finalize();
+    }
+    return utl::to_vec(journeys_,
+                       [&](auto& ij) { return ij.to_journey(sched_); });
   }
 
   bool journey_ends_with_footpath(candidate const c,
@@ -422,8 +431,6 @@ struct reconstructor {
         add_start_with_footpath(best_station);
       }
     }
-
-    ij.finalize();
 
     return ij;
   }
