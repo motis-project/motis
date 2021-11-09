@@ -1,6 +1,5 @@
 #pragma once
 
-#include "motis/core/schedule/footpath.h"
 #include "motis/core/schedule/schedule.h"
 #include "motis/raptor/raptor_timetable.h"
 
