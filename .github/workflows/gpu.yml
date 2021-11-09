@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Get deps
-        run: mkdir -p ~/deps && cp -r ~/deps .
+        run: mkdir -p ~/deps && mv ~/deps .
 
       - name: CMake
         run: |
