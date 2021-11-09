@@ -1,13 +1,11 @@
-#pragma once
-
-#include "motis/raptor/mark_store.h"
+#include "motis/raptor/cpu/cpu_raptor.h"
 
 namespace motis::raptor {
 
-inline trip_count get_earliest_trip(raptor_timetable const& tt,
-                                    raptor_route const& route,
-                                    time const* const prev_arrivals,
-                                    stop_times_index const r_stop_offset) {
+trip_count get_earliest_trip(raptor_timetable const& tt,
+                             raptor_route const& route,
+                             time const* const prev_arrivals,
+                             stop_times_index const r_stop_offset) {
 
   stop_id const stop_id =
       tt.route_stops_[route.index_to_route_stops_ + r_stop_offset];
@@ -39,8 +37,8 @@ inline trip_count get_earliest_trip(raptor_timetable const& tt,
   return invalid<trip_count>;
 }
 
-inline void init_arrivals(raptor_result& result, raptor_query const& q,
-                          cpu_mark_store& station_marks) {
+void init_arrivals(raptor_result& result, raptor_query const& q,
+                   cpu_mark_store& station_marks) {
 
   // Don't set the values for the earliest arrival, as the footpath update
   // in the first round will use the values in conjunction with the
@@ -57,10 +55,9 @@ inline void init_arrivals(raptor_result& result, raptor_query const& q,
   }
 }
 
-inline void update_route(raptor_timetable const& tt, route_id const r_id,
-                         time const* const prev_arrivals,
-                         time* const current_round, earliest_arrivals& ea,
-                         cpu_mark_store& station_marks) {
+void update_route(raptor_timetable const& tt, route_id const r_id,
+                  time const* const prev_arrivals, time* const current_round,
+                  earliest_arrivals& ea, cpu_mark_store& station_marks) {
   auto const& route = tt.routes_[r_id];
 
   trip_count earliest_trip_id = invalid<trip_count>;
@@ -117,9 +114,9 @@ inline void update_route(raptor_timetable const& tt, route_id const r_id,
   }
 }
 
-inline void update_footpaths(raptor_timetable const& tt, time* current_round,
-                             earliest_arrivals const& ea,
-                             cpu_mark_store& station_marks) {
+void update_footpaths(raptor_timetable const& tt, time* current_round,
+                      earliest_arrivals const& ea,
+                      cpu_mark_store& station_marks) {
 
   for (stop_id stop_id = 0; stop_id < tt.stop_count(); ++stop_id) {
 
@@ -155,7 +152,7 @@ inline void update_footpaths(raptor_timetable const& tt, time* current_round,
   }
 }
 
-inline void invoke_cpu_raptor(raptor_query const& query, raptor_statistics&) {
+void invoke_cpu_raptor(raptor_query const& query, raptor_statistics&) {
   auto const& tt = query.tt_;
 
   auto& result = *query.result_;

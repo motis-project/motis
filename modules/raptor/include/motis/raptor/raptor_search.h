@@ -4,7 +4,7 @@
 #include "motis/core/schedule/time.h"
 #include "motis/core/journey/journey.h"
 
-#include "motis/raptor/cpu_raptor.h"
+#include "motis/raptor/cpu/cpu_raptor.h"
 #include "motis/raptor/raptor_timetable.h"
 #include "motis/raptor/raptor_util.h"
 #include "motis/raptor/reconstructor.h"

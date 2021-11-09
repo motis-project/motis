@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "motis/module/module.h"
 
 #include "motis/core/journey/journey.h"
@@ -8,10 +10,8 @@
 #include "motis/raptor/raptor_timetable.h"
 
 #if defined(MOTIS_CUDA)
-#include "motis/raptor/gpu/cuda_util.h"
 #include "motis/raptor/gpu/gpu_timetable.cuh"
 #include "motis/raptor/gpu/memory_store.h"
-#include "motis/raptor/raptor_query.h"
 #endif
 
 namespace motis::raptor {
