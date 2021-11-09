@@ -1,16 +1,14 @@
 #pragma once
 
-#include "utl/concat.h"
-#include "utl/to_vec.h"
-
 #include "motis/core/schedule/schedule.h"
 #include "motis/module/message.h"
 
 #include "motis/raptor/additional_start.h"
-#include "motis/raptor/mark_store.h"
 #include "motis/raptor/raptor_result.h"
 
 #if defined(MOTIS_CUDA)
+#include "motis/raptor/raptor_util.h"
+
 #include "motis/raptor/gpu/cuda_util.h"
 #include "motis/raptor/gpu/gpu_timetable.cuh"
 #include "motis/raptor/gpu/memory_store.h"

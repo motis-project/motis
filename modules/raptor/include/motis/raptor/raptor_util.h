@@ -1,7 +1,7 @@
 #pragma once
 
 #include <algorithm>
-#include <functional>
+#include <type_traits>
 
 namespace motis::raptor {
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cinttypes>
+
 #include "motis/core/statistics/statistics.h"
 
 namespace motis::raptor {
