@@ -33,6 +33,8 @@ jobs:
             -DCMAKE_CXX_COMPILER=g++-10 \
             -DCMAKE_BUILD_TYPE=Release \
             -DMOTIS_CUDA=On \
+            -DMOTIS_AVX=Off \
+            -DMOTIS_AVX2=Off \
             -DMOTIS_WITH_WEBUI=${{ matrix.config.webui }}
 
       - name: Build
