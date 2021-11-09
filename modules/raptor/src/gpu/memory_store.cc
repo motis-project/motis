@@ -1,3 +1,4 @@
+#ifdef MOTIS_CUDA
 #include "motis/raptor/gpu/memory_store.h"
 
 #include "cuda_runtime.h"
@@ -176,3 +177,4 @@ loaned_mem::~loaned_mem() {
 }
 
 }  // namespace motis::raptor
+#endif
