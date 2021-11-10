@@ -52,67 +52,80 @@ struct intermediate_journey {
                              0);
   }
 
-  time add_route(stop_id const from, route_id const r_id, trip_id const trip,
-                 stop_offset const exit_offset,
+  time add_route(stop_id const from, route_id const r_id,
+                 trip_id const trip_idx, stop_offset const exit_offset,
                  raptor_schedule const& raptor_sched,
                  raptor_timetable const& timetable) {
     auto const& route = timetable.routes_[r_id];
 
-    auto const sti_base =
-        route.index_to_stop_times_ + (trip * route.stop_count_);
+    auto const stop_time_idx_base =
+        route.index_to_stop_times_ + (trip_idx * route.stop_count_);
 
     // Add the stops in backwards fashion, reverse the stop vector at the end
     for (auto s_offset = static_cast<int16_t>(exit_offset); s_offset >= 0;
          --s_offset) {
-      auto const rsi = route.index_to_route_stops_ + s_offset;
-      auto const s_id = timetable.route_stops_[rsi];
-
-      auto const sti = sti_base + s_offset;
-      auto const stop_time = timetable.stop_times_[sti];
+      auto const route_stop_idx = route.index_to_route_stops_ + s_offset;
+      auto const station_idx = timetable.route_stops_[route_stop_idx];
+      auto const stop_time_idx = stop_time_idx_base + s_offset;
+      auto const stop_time = timetable.stop_times_[stop_time_idx];
 
       auto d_time = stop_time.departure_;
       auto a_time = stop_time.arrival_;
+      auto d_track = std::optional<unsigned>{};
       if (valid(a_time)) {
-        a_time -= raptor_sched.transfer_times_[s_id];
+        a_time -= raptor_sched.transfer_times_[station_idx];
       }
 
-      if (s_id == from && valid(d_time)) {
+      if (station_idx == from && valid(d_time)) {
         return d_time;
       }
 
-      // we exit at the last station -> d_time is invalid
+      // we is_exit at the last station -> d_time is invalid
       if (!valid(d_time) || s_offset == exit_offset) {
         if (transports_.empty() || transports_.back().is_walk()) {
           d_time = a_time;
         } else {
           d_time = transports_.back().con_->d_time_;
+          d_track = transports_.back().con_->full_con_->d_track_;
         }
       }
 
       // We only have a single lcon_ptr array for the forward search,
       // therefore we need to adjust the index
-      auto const backward_sti =
-          sti_base + route.stop_count_ - 1 - (exit_offset - s_offset);
-      auto const lcon = raptor_sched.lcon_ptr_[forward_ ? sti : backward_sti];
+      auto const bwd_stop_time_idx =
+          stop_time_idx_base + route.stop_count_ - 1 - (exit_offset - s_offset);
+      auto const lcon =
+          raptor_sched.lcon_ptr_[forward_ ? stop_time_idx : bwd_stop_time_idx];
+      auto const a_track = lcon->full_con_->a_track_;
+
+      if (!d_track.has_value()) {
+        if (transports_.empty()) {
+          d_track = lcon->full_con_->d_track_;
+        } else {
+          d_track = transports_.back().con_->full_con_->d_track_;
+        }
+      }
 
       if (!valid(a_time)) {
         a_time = lcon->a_time_;
       }
 
-      auto const motis_index = raptor_sched.station_id_to_index_[s_id];
+      auto const motis_index = raptor_sched.station_id_to_index_[station_idx];
 
-      bool enter = s_offset == exit_offset && !transports_.empty() &&
-                   !transports_.back().is_walk();
-      bool exit = s_offset == exit_offset;
+      auto const is_enter = s_offset == exit_offset && !transports_.empty() &&
+                            !transports_.back().is_walk();
+      auto const is_exit = s_offset == exit_offset;
 
       if (forward_) {
-        stops_.emplace_back(stops_.size(), motis_index, 0, 0, a_time, d_time,
-                            a_time, d_time, timestamp_reason::SCHEDULE,
-                            timestamp_reason::SCHEDULE, exit, enter);
+        stops_.emplace_back(stops_.size(), motis_index, a_track, *d_track,
+                            a_time, d_time, a_time, d_time,
+                            timestamp_reason::SCHEDULE,
+                            timestamp_reason::SCHEDULE, is_exit, is_enter);
       } else {
-        stops_.emplace_back(stops_.size(), motis_index, 0, 0, -d_time, -a_time,
-                            -d_time, -a_time, timestamp_reason::SCHEDULE,
-                            timestamp_reason::SCHEDULE, false, false);
+        stops_.emplace_back(
+            stops_.size(), motis_index, lcon->full_con_->a_track_, *d_track,
+            -d_time, -a_time, -d_time, -a_time, timestamp_reason::SCHEDULE,
+            timestamp_reason::SCHEDULE, false, false);
       }
 
       transports_.emplace_back(stops_.size() - 1, stops_.size(), lcon);
@@ -131,15 +144,17 @@ struct intermediate_journey {
     auto const enter = !transports_.empty() && !transports_.back().is_walk();
 
     if (forward_) {
-      stops_.emplace_back(stops_.size(), motis_index, 0, 0, INVALID_TIME,
-                          d_time, INVALID_TIME, d_time,
-                          timestamp_reason::SCHEDULE,
-                          timestamp_reason::SCHEDULE, false, enter);
+      stops_.emplace_back(
+          stops_.size(), motis_index, 0,
+          enter ? transports_.back().con_->full_con_->d_track_ : 0,
+          INVALID_TIME, d_time, INVALID_TIME, d_time,
+          timestamp_reason::SCHEDULE, timestamp_reason::SCHEDULE, false, enter);
     } else {
-      stops_.emplace_back(stops_.size(), motis_index, 0, 0, -d_time,
-                          INVALID_TIME, -d_time, INVALID_TIME,
-                          timestamp_reason::SCHEDULE,
-                          timestamp_reason::SCHEDULE, false, enter);
+      stops_.emplace_back(
+          stops_.size(), motis_index,
+          enter ? transports_.back().con_->full_con_->a_track_ : 0, 0, -d_time,
+          INVALID_TIME, -d_time, INVALID_TIME, timestamp_reason::SCHEDULE,
+          timestamp_reason::SCHEDULE, enter, false);
     }
   }
 

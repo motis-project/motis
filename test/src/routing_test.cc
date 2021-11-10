@@ -2,6 +2,7 @@
 
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/message_to_journeys.h"
+#include "motis/core/journey/print_journey.h"
 #include "motis/module/message.h"
 #include "motis/test/motis_instance_test.h"
 #include "motis/test/schedule/simple_realtime.h"
@@ -42,9 +43,12 @@ struct routing_itest : public motis_instance_test {
 };
 
 TEST_F(routing_itest, all_routings_deliver_equal_journey) {
+  auto const reference = message_to_journeys(
+      motis_content(RoutingResponse, call(make_routing_request("/routing"))));
+  EXPECT_EQ(reference.size(), 1U);
   for (auto const& target : {"/routing", "/tripbased", "/raptor_cpu", "/csa"}) {
-    auto const response = call(make_routing_request(target));
-    auto const res = motis_content(RoutingResponse, response);
-    EXPECT_EQ(res->connections()->size(), 1);
+    auto const testee = message_to_journeys(
+        motis_content(RoutingResponse, call(make_routing_request(target))));
+    EXPECT_EQ(reference, testee);
   }
 }
