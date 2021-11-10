@@ -139,7 +139,7 @@ raptor::raptor() : module("RAPTOR Options", "raptor") {
 
 #if defined(MOTIS_CUDA)
 raptor::~raptor() {
-  if (impl_->d_gtt_ != nullptr) {
+  if (impl_ != nullptr && impl_->d_gtt_ != nullptr) {
     destroy_device_gpu_timetable(*(impl_->d_gtt_));
   }
 }
