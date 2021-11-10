@@ -21,55 +21,6 @@ using namespace motis::routing;
 
 namespace motis::raptor {
 
-raptor::raptor() : module("RAPTOR Options", "raptor") {
-#if defined(MOTIS_CUDA)
-  param(queries_per_device_, "queries_per_device",
-        "specifies how many queries should run concurrently per device");
-#endif
-}
-
-#if defined(MOTIS_CUDA)
-raptor::~raptor() {
-  if (d_gtt_ != nullptr) {
-    destroy_device_gpu_timetable(*d_gtt_);
-  }
-}
-#else
-raptor::~raptor() = default;
-#endif
-
-void raptor::init(motis::module::registry& reg) {
-  auto const& sched = get_sched();
-
-  std::tie(raptor_sched_, timetable_) = get_raptor_schedule(sched);
-
-#if defined(MOTIS_CUDA)
-  reg.register_op("/raptor", [&](motis::module::msg_ptr const& msg) {
-    return route_gpu(msg);
-  });
-#else
-  reg.register_op("/raptor", [&](motis::module::msg_ptr const& msg) {
-    return route_cpu(msg);
-  });
-#endif
-
-  reg.register_op("/raptor_cpu", [&](motis::module::msg_ptr const& msg) {
-    return route_cpu(msg);
-  });
-
-#if defined(MOTIS_CUDA)
-  h_gtt_ = get_host_gpu_timetable(*raptor_sched_, *timetable_);
-  d_gtt_ = get_device_gpu_timetable(*h_gtt_);
-
-  reg.register_op("/raptor_gpu", [&](motis::module::msg_ptr const& msg) {
-    return route_gpu(msg);
-  });
-
-  queries_per_device_ = std::max(queries_per_device_, int32_t{1});
-  mem_store_.init(*raptor_sched_, *timetable_, queries_per_device_);
-#endif
-}
-
 msg_ptr make_response(schedule const& sched, std::vector<journey> const& js,
                       motis::routing::RoutingRequest const* request,
                       raptor_statistics const& stats) {
@@ -114,43 +65,100 @@ msg_ptr make_response(schedule const& sched, std::vector<journey> const& js,
   return make_msg(fbb);
 }
 
-msg_ptr raptor::route_cpu(msg_ptr const& msg) {
-  MOTIS_START_TIMING(total_calculation_time);
+struct raptor::impl {
+  impl(schedule const& sched, [[maybe_unused]] config const& config) : sched_{sched} {
+    std::tie(raptor_sched_, timetable_) = get_raptor_schedule(sched);
 
-  auto const req = motis_content(RoutingRequest, msg);
-  auto const& sched = get_sched();
+#if defined(MOTIS_CUDA)
+    h_gtt_ = get_host_gpu_timetable(*raptor_sched_, *timetable_);
+    d_gtt_ = get_device_gpu_timetable(*h_gtt_);
 
-  auto const base_query = get_base_query(req, sched, *raptor_sched_);
-  auto q = raptor_query{base_query, *raptor_sched_, *timetable_};
+    queries_per_device_ = std::max(config.queries_per_device_, int32_t{1});
+    mem_store_.init(*raptor_sched_, *timetable_, queries_per_device_);
+#endif
+    }
 
-  raptor_statistics stats;
-  auto const journeys =
-      cpu_raptor(q, stats, sched, *raptor_sched_, *timetable_);
-  stats.total_calculation_time_ = MOTIS_GET_TIMING_MS(total_calculation_time);
+  msg_ptr route_cpu(msg_ptr const& msg) {
+    MOTIS_START_TIMING(total_calculation_time);
 
-  return make_response(sched, journeys, req, stats);
+    auto const req = motis_content(RoutingRequest, msg);
+
+    auto const base_query = get_base_query(req, sched_, *raptor_sched_);
+    auto q = raptor_query{base_query, *raptor_sched_, *timetable_};
+
+    raptor_statistics stats;
+    auto const journeys =
+        cpu_raptor(q, stats, sched_, *raptor_sched_, *timetable_);
+    stats.total_calculation_time_ = MOTIS_GET_TIMING_MS(total_calculation_time);
+
+    return make_response(sched_, journeys, req, stats);
+  }
+
+
+#if defined(MOTIS_CUDA)
+  msg_ptr route_gpu(msg_ptr const& msg) {
+    raptor_statistics stats;
+    MOTIS_START_TIMING(total_calculation_time);
+
+    auto const req = motis_content(RoutingRequest, msg);
+
+    auto base_query = get_base_query(req, sched_, *raptor_sched_);
+
+    loaned_mem loan(mem_store_);
+
+    d_query q(base_query, *raptor_sched_, loan.mem_, *d_gtt_);
+
+    std::vector<journey> js;
+    js = gpu_raptor(q, stats, sched_, *raptor_sched_, *timetable_);
+    stats.total_calculation_time_ = MOTIS_GET_TIMING_MS(total_calculation_time);
+
+    return make_response(sched_, js, req, stats);
+  }
+#endif
+
+  schedule const& sched_;
+  std::unique_ptr<raptor_schedule> raptor_sched_;
+  std::unique_ptr<raptor_timetable> timetable_;
+
+#if defined(MOTIS_CUDA)
+  std::unique_ptr<host_gpu_timetable> h_gtt_;
+  std::unique_ptr<device_gpu_timetable> d_gtt_;
+
+  int32_t queries_per_device_{1};
+
+  memory_store mem_store_;
+#endif
+};
+
+raptor::raptor() : module("RAPTOR Options", "raptor") {
+#if defined(MOTIS_CUDA)
+  param(config_.queries_per_device_, "queries_per_device",
+        "specifies how many queries should run concurrently per device");
+#endif
 }
 
 #if defined(MOTIS_CUDA)
-msg_ptr raptor::route_gpu(msg_ptr const& msg) {
-  raptor_statistics stats;
-  MOTIS_START_TIMING(total_calculation_time);
-
-  auto const req = motis_content(RoutingRequest, msg);
-  auto const& sched = get_sched();
-
-  auto base_query = get_base_query(req, sched, *raptor_sched_);
-
-  loaned_mem loan(mem_store_);
-
-  d_query q(base_query, *raptor_sched_, loan.mem_, *d_gtt_);
-
-  std::vector<journey> js;
-  js = gpu_raptor(q, stats, sched, *raptor_sched_, *timetable_);
-  stats.total_calculation_time_ = MOTIS_GET_TIMING_MS(total_calculation_time);
-
-  return make_response(sched, js, req, stats);
+raptor::~raptor() {
+  if (d_gtt_ != nullptr) {
+    destroy_device_gpu_timetable(*d_gtt_);
+  }
 }
+#else
+raptor::~raptor() = default;
 #endif
+
+void raptor::init(motis::module::registry& reg) {
+  impl_ = std::make_unique<impl>(get_sched(), config_);
+
+  reg.register_op("/raptor_cpu", [&](auto&& m) { return impl_->route_cpu(m); });
+
+#if defined(MOTIS_CUDA)
+  reg.register_op("/raptor", [&](auto&& m) { return impl_->route_gpu(m); });
+  reg.register_op("/raptor_gpu", [&](auto&& m) { return impl_->route_gpu(m); });
+#else
+  reg.register_op("/raptor", [&](auto&& m) { return impl_->route_cpu(m); });
+#endif
+
+}
 
 }  // namespace motis::raptor

@@ -16,6 +16,12 @@
 
 namespace motis::raptor {
 
+struct config {
+#if defined(MOTIS_CUDA)
+  int32_t queries_per_device_{1};
+#endif
+};
+
 struct raptor : public motis::module::module {
   raptor();
   ~raptor() override;
@@ -29,20 +35,10 @@ struct raptor : public motis::module::module {
   void init(motis::module::registry&) override;
 
 private:
-  motis::module::msg_ptr route_cpu(motis::module::msg_ptr const& msg);
-  motis::module::msg_ptr route_gpu(motis::module::msg_ptr const& msg);
+  struct impl;
+  std::unique_ptr<impl> impl_;
 
-  std::unique_ptr<raptor_schedule> raptor_sched_;
-  std::unique_ptr<raptor_timetable> timetable_;
-
-#if defined(MOTIS_CUDA)
-  std::unique_ptr<host_gpu_timetable> h_gtt_;
-  std::unique_ptr<device_gpu_timetable> d_gtt_;
-
-  int32_t queries_per_device_{1};
-
-  memory_store mem_store_;
-#endif
+  config config_;
 };
 
 }  // namespace motis::raptor
