@@ -66,7 +66,8 @@ msg_ptr make_response(schedule const& sched, std::vector<journey> const& js,
 }
 
 struct raptor::impl {
-  impl(schedule const& sched, [[maybe_unused]] config const& config) : sched_{sched} {
+  impl(schedule const& sched, [[maybe_unused]] config const& config)
+      : sched_{sched} {
     std::tie(raptor_sched_, timetable_) = get_raptor_schedule(sched);
 
 #if defined(MOTIS_CUDA)
@@ -76,7 +77,7 @@ struct raptor::impl {
     queries_per_device_ = std::max(config.queries_per_device_, int32_t{1});
     mem_store_.init(*raptor_sched_, *timetable_, queries_per_device_);
 #endif
-    }
+  }
 
   msg_ptr route_cpu(msg_ptr const& msg) {
     MOTIS_START_TIMING(total_calculation_time);
@@ -93,7 +94,6 @@ struct raptor::impl {
 
     return make_response(sched_, journeys, req, stats);
   }
-
 
 #if defined(MOTIS_CUDA)
   msg_ptr route_gpu(msg_ptr const& msg) {
@@ -158,7 +158,6 @@ void raptor::init(motis::module::registry& reg) {
 #else
   reg.register_op("/raptor", [&](auto&& m) { return impl_->route_cpu(m); });
 #endif
-
 }
 
 }  // namespace motis::raptor
