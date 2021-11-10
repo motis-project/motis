@@ -13,15 +13,14 @@ std::vector<additional_start> get_add_starts(
   if (use_start_footpaths) {
     auto const& init_footpaths = raptor_sched.initialization_footpaths_[source];
     utl::concat(add_starts, utl::to_vec(init_footpaths, [](auto const f) {
-                  return additional_start{.s_id_ = f.to_,
-                                          .offset_ = f.duration_};
+                  return additional_start{f.to_, f.duration_};
                 }));
   }
 
   if (use_start_metas) {
     auto const& equis = raptor_sched.equivalent_stations_[source];
     utl::concat(add_starts, utl::to_vec(equis, [](auto const s_id) {
-                  return additional_start{.s_id_ = s_id, .offset_ = 0};
+                  return additional_start{s_id, 0};
                 }));
 
     // Footpaths from meta stations
@@ -30,8 +29,7 @@ std::vector<additional_start> get_add_starts(
         auto const& init_footpaths =
             raptor_sched.initialization_footpaths_[equi];
         utl::concat(add_starts, utl::to_vec(init_footpaths, [](auto const f) {
-                      return additional_start{.s_id_ = f.to_,
-                                              .offset_ = f.duration_};
+                      return additional_start{f.to_, f.duration_};
                     }));
       }
     }
