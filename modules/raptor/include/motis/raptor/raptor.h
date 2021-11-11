@@ -9,11 +9,6 @@
 #include "motis/raptor/raptor_statistics.h"
 #include "motis/raptor/raptor_timetable.h"
 
-#if defined(MOTIS_CUDA)
-#include "motis/raptor/gpu/gpu_timetable.cuh"
-#include "motis/raptor/gpu/memory_store.h"
-#endif
-
 namespace motis::raptor {
 
 struct config {
