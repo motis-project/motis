@@ -387,7 +387,7 @@ std::unique_ptr<raptor_schedule> transformable_to_schedule(
   return raptor_sched;
 }
 
-std::tuple<std::unique_ptr<raptor_schedule>, std::unique_ptr<raptor_timetable>>
+std::pair<std::unique_ptr<raptor_schedule>, std::unique_ptr<raptor_timetable>>
 get_raptor_schedule(schedule const& sched) {
   log::scoped_timer timer("building RAPTOR timetable");
 
@@ -412,7 +412,7 @@ get_raptor_schedule(schedule const& sched) {
   auto raptor_sched = transformable_to_schedule(ttt);
   auto tt = create_raptor_timetable(ttt);
 
-  return std::make_tuple(std::move(raptor_sched), std::move(tt));
+  return std::pair(std::move(raptor_sched), std::move(tt));
 }
 
 }  // namespace motis::raptor

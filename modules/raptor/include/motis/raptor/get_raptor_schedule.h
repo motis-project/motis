@@ -5,7 +5,7 @@
 
 namespace motis::raptor {
 
-std::tuple<std::unique_ptr<raptor_schedule>, std::unique_ptr<raptor_timetable>>
+std::pair<std::unique_ptr<raptor_schedule>, std::unique_ptr<raptor_timetable>>
 get_raptor_schedule(schedule const& sched);
 
 }  // namespace motis::raptor
