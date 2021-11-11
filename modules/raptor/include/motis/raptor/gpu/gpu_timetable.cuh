@@ -67,7 +67,7 @@ struct device_gpu_timetable {
 };
 
 std::unique_ptr<host_gpu_timetable> get_host_gpu_timetable(
-    raptor_schedule const& sched, raptor_timetable const& tt);
+    raptor_timetable const& tt);
 
 std::unique_ptr<device_gpu_timetable> get_device_gpu_timetable(
     host_gpu_timetable const& h_gtt);

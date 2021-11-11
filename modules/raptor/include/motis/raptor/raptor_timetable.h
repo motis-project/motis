@@ -146,13 +146,13 @@ struct raptor_timetable {
   }
 };
 
-struct raptor_schedule {
-  raptor_schedule() = default;
-  raptor_schedule(raptor_schedule const&) = delete;
-  raptor_schedule& operator=(raptor_schedule const&) = delete;
-  raptor_schedule(raptor_schedule&&) = delete;
-  raptor_schedule& operator=(raptor_schedule const&&) = delete;
-  ~raptor_schedule() = default;
+struct raptor_meta_info {
+  raptor_meta_info() = default;
+  raptor_meta_info(raptor_meta_info const&) = delete;
+  raptor_meta_info& operator=(raptor_meta_info const&) = delete;
+  raptor_meta_info(raptor_meta_info&&) = delete;
+  raptor_meta_info& operator=(raptor_meta_info const&&) = delete;
+  ~raptor_meta_info() = default;
 
   std::unordered_map<std::string, stop_id> eva_to_raptor_id_;
   std::vector<std::string> raptor_id_to_eva_;

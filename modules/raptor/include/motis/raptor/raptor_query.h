@@ -35,7 +35,7 @@ struct base_query {
 
 base_query get_base_query(routing::RoutingRequest const* routing_request,
                           schedule const& sched,
-                          raptor_schedule const& raptor_sched);
+                          raptor_meta_info const& raptor_sched);
 
 struct raptor_query : public base_query {
   raptor_query() = delete;
@@ -44,7 +44,7 @@ struct raptor_query : public base_query {
   raptor_query operator=(raptor_query const&) = delete;
   raptor_query operator=(raptor_query const&&) = delete;
 
-  raptor_query(base_query const& bq, raptor_schedule const& raptor_sched,
+  raptor_query(base_query const& bq, raptor_meta_info const& raptor_sched,
                raptor_timetable const& tt)
       : base_query{bq},
         tt_{tt},
@@ -64,7 +64,7 @@ struct raptor_query : public base_query {
 #if defined(MOTIS_CUDA)
 struct d_query : public base_query {
   d_query() = delete;
-  d_query(base_query const& bq, raptor_schedule const& raptor_sched, mem* mem,
+  d_query(base_query const& bq, raptor_meta_info const& raptor_sched, mem* mem,
           device_gpu_timetable const tt)
       : base_query{bq}, mem_{mem}, tt_{tt} {
 

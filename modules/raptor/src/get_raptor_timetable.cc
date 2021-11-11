@@ -1,4 +1,4 @@
-#include "motis/raptor/get_raptor_schedule.h"
+#include "motis/raptor/get_raptor_timetable.h"
 
 #include <thread>
 #include <tuple>
@@ -316,77 +316,77 @@ auto get_initialization_footpaths(transformable_timetable const& ttt) {
   return init_footpaths;
 }
 
-std::unique_ptr<raptor_schedule> transformable_to_schedule(
+std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
     transformable_timetable& ttt) {
-  auto raptor_sched = std::make_unique<raptor_schedule>();
+  auto meta_info = std::make_unique<raptor_meta_info>();
 
   // generate initialization footpaths BEFORE removing empty stations
-  raptor_sched->initialization_footpaths_ = get_initialization_footpaths(ttt);
+  meta_info->initialization_footpaths_ = get_initialization_footpaths(ttt);
 
-  raptor_sched->transfer_times_.reserve(ttt.stations_.size());
-  raptor_sched->raptor_id_to_eva_.reserve(ttt.stations_.size());
-  raptor_sched->station_id_to_index_.reserve(ttt.stations_.size());
+  meta_info->transfer_times_.reserve(ttt.stations_.size());
+  meta_info->raptor_id_to_eva_.reserve(ttt.stations_.size());
+  meta_info->station_id_to_index_.reserve(ttt.stations_.size());
 
-  raptor_sched->departure_events_.resize(ttt.stations_.size());
-  raptor_sched->equivalent_stations_.resize(ttt.stations_.size());
+  meta_info->departure_events_.resize(ttt.stations_.size());
+  meta_info->equivalent_stations_.resize(ttt.stations_.size());
 
   // Loop over the stations
   for (auto s_id = 0; s_id < ttt.stations_.size(); ++s_id) {
     auto const& s = ttt.stations_[s_id];
 
-    raptor_sched->station_id_to_index_.push_back(s.motis_station_index_);
-    raptor_sched->transfer_times_.push_back(s.transfer_time_);
-    raptor_sched->raptor_id_to_eva_.push_back(s.eva_);
-    raptor_sched->eva_to_raptor_id_.emplace(
-        s.eva_, static_cast<stop_id>(raptor_sched->eva_to_raptor_id_.size()));
+    meta_info->station_id_to_index_.push_back(s.motis_station_index_);
+    meta_info->transfer_times_.push_back(s.transfer_time_);
+    meta_info->raptor_id_to_eva_.push_back(s.eva_);
+    meta_info->eva_to_raptor_id_.emplace(
+        s.eva_, static_cast<stop_id>(meta_info->eva_to_raptor_id_.size()));
 
     // set equivalent meta stations
     for (auto const equi_s_id : s.equivalent_) {
-      raptor_sched->equivalent_stations_[s_id].push_back(equi_s_id);
+      meta_info->equivalent_stations_[s_id].push_back(equi_s_id);
     }
 
     // set departure events
-    raptor_sched->departure_events_[s_id] =
+    meta_info->departure_events_[s_id] =
         get_station_departure_events(ttt, s_id);
 
     // gather all departure events from stations reachable by foot
     for (auto const& f : ttt.stations_[s_id].footpaths_) {
       for (auto const& dep_event : get_station_departure_events(ttt, f.to_)) {
-        raptor_sched->departure_events_[s_id].emplace_back(dep_event -
-                                                           f.duration_);
+        meta_info->departure_events_[s_id].emplace_back(dep_event -
+                                                        f.duration_);
       }
     }
 
-    utl::erase_duplicates(raptor_sched->departure_events_[s_id]);
+    utl::erase_duplicates(meta_info->departure_events_[s_id]);
   }
 
   // create departure events with meta stations included
-  raptor_sched->departure_events_with_metas_ = raptor_sched->departure_events_;
+  meta_info->departure_events_with_metas_ = meta_info->departure_events_;
 
   for (auto s_id = 0; s_id < ttt.stations_.size(); ++s_id) {
     auto const s = ttt.stations_[s_id];
     for (auto const equi_s_id : s.equivalent_) {
-      utl::concat(raptor_sched->departure_events_with_metas_[s_id],
-                  raptor_sched->departure_events_[equi_s_id]);
+      utl::concat(meta_info->departure_events_with_metas_[s_id],
+                  meta_info->departure_events_[equi_s_id]);
     }
-    utl::erase_duplicates(raptor_sched->departure_events_with_metas_[s_id]);
+    utl::erase_duplicates(meta_info->departure_events_with_metas_[s_id]);
   }
 
   // Loop over the routes
   for (auto const& r : ttt.routes_) {
     for (auto const& t : r.trips_) {
-      raptor_sched->lcon_ptr_.push_back(nullptr);
+      meta_info->lcon_ptr_.push_back(nullptr);
       for (auto const& rlc : t.lcons_) {
-        raptor_sched->lcon_ptr_.push_back(rlc.lcon_);
+        meta_info->lcon_ptr_.push_back(rlc.lcon_);
       }
     }
   }
 
-  return raptor_sched;
+  return meta_info;
 }
 
-std::pair<std::unique_ptr<raptor_schedule>, std::unique_ptr<raptor_timetable>>
-get_raptor_schedule(schedule const& sched) {
+std::pair<std::unique_ptr<raptor_meta_info>, std::unique_ptr<raptor_timetable>>
+get_raptor_timetable(schedule const& sched) {
   log::scoped_timer timer("building RAPTOR timetable");
 
   transformable_timetable ttt;
@@ -407,10 +407,10 @@ get_raptor_schedule(schedule const& sched) {
   LOG(log::info) << "RAPTOR Stations: " << ttt.stations_.size();
   LOG(log::info) << "RAPTOR Routes: " << ttt.routes_.size();
 
-  auto raptor_sched = transformable_to_schedule(ttt);
+  auto meta_info = transformable_to_meta_info(ttt);
   auto tt = create_raptor_timetable(ttt);
 
-  return std::pair(std::move(raptor_sched), std::move(tt));
+  return {std::move(meta_info), std::move(tt)};
 }
 
 }  // namespace motis::raptor

@@ -12,7 +12,7 @@
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/core/journey/message_to_journeys.h"
 
-#include "motis/raptor/get_raptor_schedule.h"
+#include "motis/raptor/get_raptor_timetable.h"
 #include "motis/raptor/raptor_query.h"
 #include "motis/raptor/raptor_search.h"
 
@@ -68,14 +68,14 @@ msg_ptr make_response(schedule const& sched, std::vector<journey> const& js,
 struct raptor::impl {
   impl(schedule const& sched, [[maybe_unused]] config const& config)
       : sched_{sched} {
-    std::tie(raptor_sched_, timetable_) = get_raptor_schedule(sched);
+    std::tie(meta_info_, timetable_) = get_raptor_timetable(sched);
 
 #if defined(MOTIS_CUDA)
-    h_gtt_ = get_host_gpu_timetable(*raptor_sched_, *timetable_);
+    h_gtt_ = get_host_gpu_timetable(*timetable_);
     d_gtt_ = get_device_gpu_timetable(*h_gtt_);
 
     queries_per_device_ = std::max(config.queries_per_device_, int32_t{1});
-    mem_store_.init(*raptor_sched_, *timetable_, queries_per_device_);
+    mem_store_.init(*meta_info_, *timetable_, queries_per_device_);
 #endif
   }
 
@@ -84,12 +84,12 @@ struct raptor::impl {
 
     auto const req = motis_content(RoutingRequest, msg);
 
-    auto const base_query = get_base_query(req, sched_, *raptor_sched_);
-    auto q = raptor_query{base_query, *raptor_sched_, *timetable_};
+    auto const base_query = get_base_query(req, sched_, *meta_info_);
+    auto q = raptor_query{base_query, *meta_info_, *timetable_};
 
     raptor_statistics stats;
     auto const journeys =
-        cpu_raptor(q, stats, sched_, *raptor_sched_, *timetable_);
+        cpu_raptor(q, stats, sched_, *meta_info_, *timetable_);
     stats.total_calculation_time_ = MOTIS_GET_TIMING_MS(total_calculation_time);
 
     return make_response(sched_, journeys, req, stats);
@@ -102,14 +102,14 @@ struct raptor::impl {
 
     auto const req = motis_content(RoutingRequest, msg);
 
-    auto base_query = get_base_query(req, sched_, *raptor_sched_);
+    auto base_query = get_base_query(req, sched_, *meta_info_);
 
     loaned_mem loan(mem_store_);
 
-    d_query q(base_query, *raptor_sched_, loan.mem_, *d_gtt_);
+    d_query q(base_query, *meta_info_, loan.mem_, *d_gtt_);
 
     std::vector<journey> js;
-    js = gpu_raptor(q, stats, sched_, *raptor_sched_, *timetable_);
+    js = gpu_raptor(q, stats, sched_, *meta_info_, *timetable_);
     stats.total_calculation_time_ = MOTIS_GET_TIMING_MS(total_calculation_time);
 
     return make_response(sched_, js, req, stats);
@@ -117,7 +117,7 @@ struct raptor::impl {
 #endif
 
   schedule const& sched_;
-  std::unique_ptr<raptor_schedule> raptor_sched_;
+  std::unique_ptr<raptor_meta_info> meta_info_;
   std::unique_ptr<raptor_timetable> timetable_;
 
 #if defined(MOTIS_CUDA)

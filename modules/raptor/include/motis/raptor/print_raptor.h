@@ -10,12 +10,12 @@
 namespace motis::raptor {
 
 inline std::string get_string(stop_id const s_id,
-                              raptor_schedule const& sched) {
+                              raptor_meta_info const& sched) {
   return "SID: " + std::to_string(s_id) +
          " -- EVA: " + sched.raptor_id_to_eva_[s_id];
 }
 
-inline void print_station(stop_id const s_id, raptor_schedule const& sched) {
+inline void print_station(stop_id const s_id, raptor_meta_info const& sched) {
   std::cout << "SID: " << s_id << " -- EVA: " << sched.raptor_id_to_eva_[s_id]
             << '\n';
 }
@@ -142,7 +142,7 @@ inline std::vector<route_id> get_routes_containing(Container const& stations,
 
 template <typename Container>
 inline std::vector<route_id> get_routes_containing_evas(
-    Container const& evas, raptor_schedule const& raptor_sched,
+    Container const& evas, raptor_meta_info const& raptor_sched,
     raptor_timetable const& tt) {
 
   std::vector<stop_id> s_ids;

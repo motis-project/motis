@@ -28,7 +28,7 @@ struct intermediate_journey {
   }
 
   void add_footpath(stop_id const to, time const a_time, time const d_time,
-                    time const duration, raptor_schedule const& raptor_sched) {
+                    time const duration, raptor_meta_info const& raptor_sched) {
     auto const motis_index = raptor_sched.station_id_to_index_[to];
     stops_.emplace_back(stops_.size(), motis_index, 0, 0, a_time, d_time,
                         a_time, d_time, timestamp_reason::SCHEDULE,
@@ -39,7 +39,7 @@ struct intermediate_journey {
 
   time add_route(stop_id const from, route_id const r_id,
                  trip_id const trip_idx, stop_offset const exit_offset,
-                 raptor_schedule const& raptor_sched,
+                 raptor_meta_info const& raptor_sched,
                  raptor_timetable const& timetable) {
     auto const& route = timetable.routes_[r_id];
 
@@ -104,7 +104,7 @@ struct intermediate_journey {
   }
 
   void add_start_station(stop_id const start,
-                         raptor_schedule const& raptor_sched,
+                         raptor_meta_info const& raptor_sched,
                          time const d_time) {
     auto const motis_index = raptor_sched.station_id_to_index_[start];
 
@@ -186,7 +186,7 @@ struct reconstructor {
 
   reconstructor() = delete;
 
-  reconstructor(schedule const& sched, raptor_schedule const& raptor_sched,
+  reconstructor(schedule const& sched, raptor_meta_info const& raptor_sched,
                 raptor_timetable const& tt)
       : sched_(sched), raptor_sched_(raptor_sched), timetable_(tt) {}
 
@@ -487,7 +487,7 @@ struct reconstructor {
 
 private:
   schedule const& sched_;
-  raptor_schedule const& raptor_sched_;
+  raptor_meta_info const& raptor_sched_;
   raptor_timetable const& timetable_;
   std::vector<intermediate_journey> journeys_;
 };

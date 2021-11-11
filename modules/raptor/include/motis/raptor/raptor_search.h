@@ -34,7 +34,7 @@ inline auto get_departure_range(time const begin, time const end,
 template <typename RaptorFun, typename Query>
 inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
                                        schedule const& sched,
-                                       raptor_schedule const& raptor_sched,
+                                       raptor_meta_info const& raptor_sched,
                                        raptor_timetable const& timetable,
                                        RaptorFun const& raptor_search) {
   reconstructor reconstructor(sched, raptor_sched, timetable);
@@ -89,7 +89,7 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
 inline std::vector<journey> cpu_raptor(raptor_query& q,
                                        raptor_statistics& stats,
                                        schedule const& sched,
-                                       raptor_schedule const& raptor_sched,
+                                       raptor_meta_info const& raptor_sched,
                                        raptor_timetable const& tt) {
   return raptor_gen(q, stats, sched, raptor_sched, tt, [&](raptor_query& q) {
     return invoke_cpu_raptor(q, stats);
@@ -99,7 +99,7 @@ inline std::vector<journey> cpu_raptor(raptor_query& q,
 #if defined(MOTIS_CUDA)
 inline std::vector<journey> gpu_raptor(d_query& dq, raptor_statistics& stats,
                                        schedule const& sched,
-                                       raptor_schedule const& raptor_sched,
+                                       raptor_meta_info const& raptor_sched,
                                        raptor_timetable const& tt) {
   return raptor_gen(dq, stats, sched, raptor_sched, tt,
                     [&](d_query& dq) { return invoke_gpu_raptor(dq); });

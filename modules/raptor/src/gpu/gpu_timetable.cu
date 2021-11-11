@@ -20,7 +20,7 @@ inline void copy_vector_to_device(std::vector<T> const& vec, T** ptr) {
 }
 
 std::unique_ptr<host_gpu_timetable> get_host_gpu_timetable(
-    raptor_schedule const& sched, raptor_timetable const& tt) {
+    raptor_timetable const& tt) {
   auto h_gtt = std::make_unique<host_gpu_timetable>();
 
   // Copy the members, which are identical on CPU and GPU

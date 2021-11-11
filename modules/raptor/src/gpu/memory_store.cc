@@ -141,13 +141,13 @@ mem::~mem() {
   context_.destroy();
 }
 
-void memory_store::init(raptor_schedule const& sched,
+void memory_store::init(raptor_meta_info const& meta_info,
                         raptor_timetable const& tt,
                         int32_t const concurrency_per_device) {
   int32_t device_count = 0;
   cudaGetDeviceCount(&device_count);
 
-  auto const max_add_starts = get_max_add_starts(sched);
+  auto const max_add_starts = get_max_add_starts(meta_info);
 
   for (auto device_id = 0; device_id < device_count; ++device_id) {
     for (auto i = 0; i < concurrency_per_device; ++i) {

@@ -10,7 +10,7 @@ using namespace motis::routing;
 
 base_query get_base_query(RoutingRequest const* routing_request,
                           schedule const& sched,
-                          raptor_schedule const& raptor_sched) {
+                          raptor_meta_info const& meta_info) {
   utl::verify(routing_request->search_dir() == routing::SearchDir_Forward,
               "RAPTOR currently only supports departure queries");
 
@@ -61,8 +61,8 @@ base_query get_base_query(RoutingRequest const* routing_request,
     }
   }
 
-  q.source_ = raptor_sched.eva_to_raptor_id_.at(start_eva);
-  q.target_ = raptor_sched.eva_to_raptor_id_.at(target_eva);
+  q.source_ = meta_info.eva_to_raptor_id_.at(start_eva);
+  q.target_ = meta_info.eva_to_raptor_id_.at(target_eva);
 
   q.forward_ = (routing_request->search_dir() == SearchDir::SearchDir_Forward);
   q.ontrip_ = routing_request->start_type() != Start::Start_PretripStart;
