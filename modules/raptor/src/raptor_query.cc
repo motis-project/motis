@@ -11,6 +11,9 @@ using namespace motis::routing;
 base_query get_base_query(RoutingRequest const* routing_request,
                           schedule const& sched,
                           raptor_schedule const& raptor_sched) {
+  utl::verify(routing_request->search_dir() == routing::SearchDir_Forward,
+              "RAPTOR currently only supports departure queries");
+
   base_query q;
 
   auto const destination_station = routing_request->destination();

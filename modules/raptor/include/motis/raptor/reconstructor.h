@@ -16,20 +16,12 @@ namespace motis::raptor {
 using namespace motis::routing::output;
 
 struct intermediate_journey {
-  intermediate_journey(transfers const trs, bool const forward,
-                       bool const ontrip, time const ontrip_start)
-      : transfers_{trs},
-        forward_{forward},
-        ontrip_{ontrip},
-        ontrip_start_{ontrip_start} {}
+  intermediate_journey(transfers const trs, bool const ontrip,
+                       time const ontrip_start)
+      : transfers_{trs}, ontrip_{ontrip}, ontrip_start_{ontrip_start} {}
 
-  time get_departure() const {
-    return forward_ ? stops_.back().d_time_ : stops_.front().d_time_;
-  }
-
-  time get_arrival() const {
-    return forward_ ? stops_.front().a_time_ : stops_.back().a_time_;
-  }
+  time get_departure() const { return stops_.back().d_time_; }
+  time get_arrival() const { return stops_.front().a_time_; }
 
   time get_duration() const {
     return get_arrival() - (ontrip_ ? ontrip_start_ : get_departure());
@@ -38,16 +30,9 @@ struct intermediate_journey {
   void add_footpath(stop_id const to, time const a_time, time const d_time,
                     time const duration, raptor_schedule const& raptor_sched) {
     auto const motis_index = raptor_sched.station_id_to_index_[to];
-    if (forward_) {
-      stops_.emplace_back(stops_.size(), motis_index, 0, 0, a_time, d_time,
-                          a_time, d_time, timestamp_reason::SCHEDULE,
-                          timestamp_reason::SCHEDULE, false, true);
-    } else {
-      stops_.emplace_back(stops_.size(), motis_index, 0, 0, -d_time, -a_time,
-                          -d_time, -a_time, timestamp_reason::SCHEDULE,
-                          timestamp_reason::SCHEDULE, true, false);
-    }
-
+    stops_.emplace_back(stops_.size(), motis_index, 0, 0, a_time, d_time,
+                        a_time, d_time, timestamp_reason::SCHEDULE,
+                        timestamp_reason::SCHEDULE, false, true);
     transports_.emplace_back(stops_.size() - 1, stops_.size(), duration, 0, 0,
                              0);
   }
@@ -71,7 +56,6 @@ struct intermediate_journey {
 
       auto d_time = stop_time.departure_;
       auto a_time = stop_time.arrival_;
-      auto d_track = std::optional<unsigned>{};
       if (valid(a_time)) {
         a_time -= raptor_sched.transfer_times_[station_idx];
       }
@@ -86,25 +70,16 @@ struct intermediate_journey {
           d_time = a_time;
         } else {
           d_time = transports_.back().con_->d_time_;
-          d_track = transports_.back().con_->full_con_->d_track_;
         }
       }
 
       // We only have a single lcon_ptr array for the forward search,
       // therefore we need to adjust the index
-      auto const bwd_stop_time_idx =
-          stop_time_idx_base + route.stop_count_ - 1 - (exit_offset - s_offset);
-      auto const lcon =
-          raptor_sched.lcon_ptr_[forward_ ? stop_time_idx : bwd_stop_time_idx];
+      auto const lcon = raptor_sched.lcon_ptr_[stop_time_idx];
       auto const a_track = lcon->full_con_->a_track_;
-
-      if (!d_track.has_value()) {
-        if (transports_.empty()) {
-          d_track = lcon->full_con_->d_track_;
-        } else {
-          d_track = transports_.back().con_->full_con_->d_track_;
-        }
-      }
+      auto const d_track = transports_.empty()
+                               ? lcon->full_con_->d_track_
+                               : transports_.back().con_->full_con_->d_track_;
 
       if (!valid(a_time)) {
         a_time = lcon->a_time_;
@@ -116,17 +91,9 @@ struct intermediate_journey {
                             !transports_.back().is_walk();
       auto const is_exit = s_offset == exit_offset;
 
-      if (forward_) {
-        stops_.emplace_back(stops_.size(), motis_index, a_track, *d_track,
-                            a_time, d_time, a_time, d_time,
-                            timestamp_reason::SCHEDULE,
-                            timestamp_reason::SCHEDULE, is_exit, is_enter);
-      } else {
-        stops_.emplace_back(
-            stops_.size(), motis_index, lcon->full_con_->a_track_, *d_track,
-            -d_time, -a_time, -d_time, -a_time, timestamp_reason::SCHEDULE,
-            timestamp_reason::SCHEDULE, false, false);
-      }
+      stops_.emplace_back(stops_.size(), motis_index, a_track, d_track, a_time,
+                          d_time, a_time, d_time, timestamp_reason::SCHEDULE,
+                          timestamp_reason::SCHEDULE, is_exit, is_enter);
 
       transports_.emplace_back(stops_.size() - 1, stops_.size(), lcon);
     }
@@ -143,26 +110,16 @@ struct intermediate_journey {
 
     auto const enter = !transports_.empty() && !transports_.back().is_walk();
 
-    if (forward_) {
-      stops_.emplace_back(
-          stops_.size(), motis_index, 0,
-          enter ? transports_.back().con_->full_con_->d_track_ : 0,
-          INVALID_TIME, d_time, INVALID_TIME, d_time,
-          timestamp_reason::SCHEDULE, timestamp_reason::SCHEDULE, false, enter);
-    } else {
-      stops_.emplace_back(
-          stops_.size(), motis_index,
-          enter ? transports_.back().con_->full_con_->a_track_ : 0, 0, -d_time,
-          INVALID_TIME, -d_time, INVALID_TIME, timestamp_reason::SCHEDULE,
-          timestamp_reason::SCHEDULE, enter, false);
-    }
+    stops_.emplace_back(
+        stops_.size(), motis_index, 0,
+        enter ? transports_.back().con_->full_con_->d_track_ : 0, INVALID_TIME,
+        d_time, INVALID_TIME, d_time, timestamp_reason::SCHEDULE,
+        timestamp_reason::SCHEDULE, false, enter);
   }
 
   void finalize() {
-    if (forward_) {
-      std::reverse(std::begin(stops_), std::end(stops_));
-      std::reverse(std::begin(transports_), std::end(transports_));
-    }
+    std::reverse(std::begin(stops_), std::end(stops_));
+    std::reverse(std::begin(transports_), std::end(transports_));
 
     unsigned idx = 0;
     for (auto& t : transports_) {
@@ -189,7 +146,6 @@ struct intermediate_journey {
   }
 
   transfers transfers_;
-  bool forward_;
   bool ontrip_;
   time ontrip_start_;
   std::vector<intermediate::stop> stops_;
@@ -347,9 +303,8 @@ struct reconstructor {
   intermediate_journey reconstruct_journey(candidate const c, Query const& q) {
     auto const& result = q.result();
 
-    auto const ontrip = q.source_time_begin_ == q.source_time_end_;
-    auto ij = intermediate_journey{c.transfers_, q.forward_, ontrip,
-                                   q.source_time_begin_};
+    auto ij =
+        intermediate_journey{c.transfers_, q.ontrip_, q.source_time_begin_};
 
     auto arrival_station = c.target_;
     auto last_departure = invalid<time>;
