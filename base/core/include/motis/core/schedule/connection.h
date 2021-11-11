@@ -66,10 +66,10 @@ struct connection {
 struct light_connection {
   light_connection() : bitfield_idx_{0U}, trips_{0U}, valid_{0U} {}
 
-  light_connection(int16_t const d_time, int16_t const a_time,
-                   size_t const bitfield_idx,
+  light_connection(mam_t const d_time, mam_t const a_time,
+                   size_t const bitfield_idx = 0U,
                    connection const* full_con = nullptr,
-                   merged_trips_idx const trips = 0)
+                   merged_trips_idx const trips = 0U)
       : full_con_{full_con},
         d_time_{d_time},
         a_time_{a_time},
@@ -84,8 +84,8 @@ struct light_connection {
   duration_t travel_time() const { return a_time_ - d_time_; }
 
   ptr<connection const> full_con_{nullptr};
-  int16_t d_time_{std::numeric_limits<decltype(d_time_)>::max()};
-  int16_t a_time_{std::numeric_limits<decltype(d_time_)>::max()};
+  mam_t d_time_{std::numeric_limits<decltype(d_time_)>::max()};
+  mam_t a_time_{std::numeric_limits<decltype(d_time_)>::max()};
   union {
     size_t bitfield_idx_;
     bitfield const* traffic_days_;

@@ -445,12 +445,13 @@ private:
     return trip_edges;
   }
 
-  trip* create_or_update_trip(trip* trp, full_trip_id const& ftid,
-                              mcd::vector<trip_info::route_edge> const& trip_edges) {
+  trip* create_or_update_trip(
+      trip* trp, full_trip_id const& ftid,
+      mcd::vector<trip_info::route_edge> const& trip_edges) {
     auto const edges =
         sched_.trip_edges_
-            .emplace_back(
-                mcd::make_unique<mcd::vector<trip_info::route_edge>>(trip_edges))
+            .emplace_back(mcd::make_unique<mcd::vector<trip_info::route_edge>>(
+                trip_edges))
             .get();
 
     auto const lcon_idx = static_cast<lcon_idx_t>(0U);

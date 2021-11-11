@@ -171,7 +171,8 @@ struct additional_service_builder {
     return trip_edges;
   }
 
-  trip const* update_trips(mcd::vector<trip_info::route_edge> const& trip_edges) {
+  trip const* update_trips(
+      mcd::vector<trip_info::route_edge> const& trip_edges) {
     auto const first_edge = trip_edges.front().get_edge();
     auto const first_station = first_edge->from_->get_station();
     auto const first_lcon = first_edge->m_.route_edge_.conns_[0];

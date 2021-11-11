@@ -106,7 +106,8 @@ void update_msg_builder::reset() {
 
 flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<RtEventInfo>>>
 update_msg_builder::to_fbs_event_infos(
-    mcd::vector<trip_info::route_edge> const& edges, lcon_idx_t const lcon_idx) {
+    mcd::vector<trip_info::route_edge> const& edges,
+    lcon_idx_t const lcon_idx) {
   std::vector<flatbuffers::Offset<RtEventInfo>> events;
   for (auto const& e : edges) {
     utl::verify(e->type() == edge::ROUTE_EDGE, "invalid trip edge");

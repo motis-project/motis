@@ -6,6 +6,8 @@
 
 #include "cista/reflection/comparable.h"
 
+#include "utl/verify.h"
+
 #include "motis/core/common/hash_helper.h"
 #include "motis/core/schedule/edges.h"
 #include "motis/core/schedule/event_type.h"
@@ -35,6 +37,7 @@ struct ev_key {
   }
 
   light_connection const* lcon() const {
+    utl::verify(is_not_null(), "ev_key::lcon() null route edge");
     return &route_edge_->m_.route_edge_.conns_[lcon_idx_];
   }
 

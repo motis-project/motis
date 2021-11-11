@@ -367,7 +367,8 @@ inline std::pair<reroute_result, trip const*> reroute(
     disable_trip(*old_trip, old_lcon_idx);
     trp->edges_ =
         sched.trip_edges_
-            .emplace_back(mcd::make_unique<mcd::vector<trip_info::route_edge>>())
+            .emplace_back(
+                mcd::make_unique<mcd::vector<trip_info::route_edge>>())
             .get();
     store_cancelled_delays(sched, trp, del_evs, cancelled_delays,
                            cancelled_evs);

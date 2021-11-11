@@ -48,18 +48,19 @@ ev_key get_event_at(schedule const& sched, Connection const* con,
               "no trip end/start at interchange");
   auto const trp = from_fbs(sched, trp_it->id());
 
-  auto const edge_it = std::find_if(
-      begin(*trp->edges_), end(*trp->edges_), [&](trip_info::route_edge const& e) {
-        auto const k = ev_key{e, trp->lcon_idx_, ev_type};
-        auto const schedule_time = get_schedule_time(sched, k);
-        return (k.lcon()->valid_ != 0u) &&  //
-               ((ev_type == event_type::ARR &&
-                 e->to_->get_station()->id_ == station_idx &&
-                 schedule_time == ev_time) ||
-                (ev_type == event_type::DEP &&
-                 e->from_->get_station()->id_ == station_idx &&
-                 schedule_time == ev_time));
-      });
+  auto const edge_it =
+      std::find_if(begin(*trp->edges_), end(*trp->edges_),
+                   [&](trip_info::route_edge const& e) {
+                     auto const k = ev_key{e, trp->lcon_idx_, ev_type};
+                     auto const schedule_time = get_schedule_time(sched, k);
+                     return (k.lcon()->valid_ != 0u) &&  //
+                            ((ev_type == event_type::ARR &&
+                              e->to_->get_station()->id_ == station_idx &&
+                              schedule_time == ev_time) ||
+                             (ev_type == event_type::DEP &&
+                              e->from_->get_station()->id_ == station_idx &&
+                              schedule_time == ev_time));
+                   });
   utl::verify(edge_it != end(*trp->edges_), "important event not in trip");
 
   return ev_key{*edge_it, trp->lcon_idx_, ev_type};

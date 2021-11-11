@@ -38,7 +38,7 @@ time get_schedule_time(schedule const& sched, edge const* route_edge,
   }
 }
 
-time get_delay(schedule const& sched, ev_key const& k) {
+duration_t get_delay(schedule const& sched, ev_key const& k) {
   return get_time(k.lcon(), k.ev_type_, k.day_) - get_schedule_time(sched, k);
 }
 

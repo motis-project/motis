@@ -31,7 +31,8 @@ trip_info const* get_trip(schedule const& sched, std::string_view eva_nr,
                           std::string_view line_id, bool const fuzzy) {
   auto const station_id = get_station(sched, eva_nr)->index_;
   auto const motis_time = unix_to_motistime(sched, timestamp);
-  auto const primary_id = primary_trip_id{station_id, train_nr, motis_time};
+  auto const primary_id =
+      primary_trip_id{station_id, train_nr, motis_time.mam()};
 
   auto it = std::lower_bound(
       begin(sched.trips_), end(sched.trips_),

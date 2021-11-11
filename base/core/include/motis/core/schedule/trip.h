@@ -23,13 +23,13 @@ struct primary_trip_id {
   CISTA_COMPARABLE()
   uint32_t station_id_{0U};
   uint32_t train_nr_{0U};
-  time time_;
+  duration_t first_departure_mam_{INVALID_DURATION};
 };
 
 struct secondary_trip_id {
   CISTA_COMPARABLE();
   uint32_t target_station_id_{0U};
-  time target_time_{INVALID_TIME};
+  duration_t last_arrival_mam_{INVALID_DURATION};
   mcd::string line_id_;
 };
 
@@ -113,9 +113,8 @@ struct trip_info {
 };
 
 struct concrete_trip {
-  full_trip_id id_;
   trip_info const* trp_;
-  day_idx_t day_;
+  day_idx_t day_idx_;
 };
 
 }  // namespace motis

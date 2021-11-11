@@ -85,8 +85,9 @@ inline std::set<trip const*> route_trips(schedule const& sched,
   return trips;
 }
 
-inline void update_trips(schedule& sched, ev_key const& k,
-                         std::map<trip_info::route_edge, trip_info::route_edge>& edges) {
+inline void update_trips(
+    schedule& sched, ev_key const& k,
+    std::map<trip_info::route_edge, trip_info::route_edge>& edges) {
   for (auto const& t : route_trips(sched, k)) {
     sched.trip_edges_.emplace_back(
         mcd::make_unique<mcd::vector<trip_info::route_edge>>(

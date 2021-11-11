@@ -17,7 +17,7 @@ struct trip_iterator {
   using pointer = T*;
   using reference = T&;
 
-  trip_iterator(trip const* t, int const i) : trip_(t), index_(i) {}
+  trip_iterator(trip_info const* t, int const i) : trip_(t), index_(i) {}
 
   trip_iterator<T>& operator+=(int rhs) {
     index_ += rhs;
@@ -85,14 +85,14 @@ struct trip_iterator {
   }
 
 protected:
-  trip const* trip_;
+  trip_info const* trip_;
   int index_;
 };
 
 struct sections {
   using iterator = trip_iterator<trip_section>;
 
-  explicit sections(trip const* t) : t_(t) {}
+  explicit sections(trip_info const* t) : t_(t) {}
 
   iterator begin() const { return begin(t_); }
   iterator end() const { return end(t_); }
@@ -100,18 +100,18 @@ struct sections {
   friend iterator begin(sections const& s) { return begin(s.t_); }
   friend iterator end(sections const& s) { return end(s.t_); }
 
-  static iterator begin(trip const* t) { return {t, 0}; }
-  static iterator end(trip const* t) {
+  static iterator begin(trip_info const* t) { return {t, 0}; }
+  static iterator end(trip_info const* t) {
     return {t, static_cast<int>(t->edges_->size())};
   }
 
-  trip const* t_;
+  trip_info const* t_;
 };
 
 struct stops {
   using iterator = trip_iterator<trip_stop>;
 
-  explicit stops(trip const* t) : t_(t) {}
+  explicit stops(trip_info const* t) : t_(t) {}
 
   iterator begin() const { return begin(t_); }
   iterator end() const { return end(t_); }
@@ -119,13 +119,13 @@ struct stops {
   friend iterator begin(stops const& s) { return begin(s.t_); }
   friend iterator end(stops const& s) { return end(s.t_); }
 
-  static iterator begin(trip const* t) { return {t, 0}; }
-  static iterator end(trip const* t) {
+  static iterator begin(trip_info const* t) { return {t, 0}; }
+  static iterator end(trip_info const* t) {
     return {t,
             t->edges_->empty() ? 0 : static_cast<int>(t->edges_->size()) + 1};
   }
 
-  trip const* t_;
+  trip_info const* t_;
 };
 
 }  // namespace motis::access

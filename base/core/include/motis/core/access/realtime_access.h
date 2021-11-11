@@ -12,7 +12,7 @@ time get_schedule_time(schedule const&, edge const* route_edge, lcon_idx_t,
 time get_schedule_time(schedule const&, edge const* route_edge,
                        light_connection const*, event_type, day_idx_t);
 
-time get_delay(schedule const&, ev_key const&);
+duration_t get_delay(schedule const&, ev_key const&);
 
 delay_info get_delay_info(schedule const&, node const* route_node,
                           light_connection const*, event_type);

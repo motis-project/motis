@@ -479,12 +479,12 @@ struct rule_service_route_builder {
 
   void write_trip_info(Service const* s,
                        mcd::vector<service_section*> const& sections) {
-    push_mem(
-        gb_.sched_.trip_edges_,
-        mcd::to_vec(
-            begin(sections), end(sections), [](service_section* section) {
-              return trip_info::route_edge(section->route_section_.get_route_edge());
-            }));
+    push_mem(gb_.sched_.trip_edges_,
+             mcd::to_vec(begin(sections), end(sections),
+                         [](service_section* section) {
+                           return trip_info::route_edge(
+                               section->route_section_.get_route_edge());
+                         }));
 
     auto const& traffic_days = traffic_days_.at(s);
     auto edges = gb_.sched_.trip_edges_.back().get();

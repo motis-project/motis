@@ -14,6 +14,7 @@
 namespace motis {
 
 using day_idx_t = int16_t;
+using mam_t = int16_t;
 using duration_t = uint16_t;
 
 constexpr auto const MAX_DAYS = day_idx_t{512};
@@ -25,14 +26,14 @@ struct time {
   constexpr time() = default;
 
   constexpr time(day_idx_t const day, int16_t const minute)
-      : day_{static_cast<decltype(day_)>(
+      : day_idx_{static_cast<decltype(day_idx_)>(
             day + static_cast<day_idx_t>(minute / MINUTES_A_DAY))},
-        min_{static_cast<decltype(min_)>(minute % MINUTES_A_DAY)} {}
+        mam_{static_cast<decltype(mam_)>(minute % MINUTES_A_DAY)} {}
 
   constexpr explicit time(int64_t const timestamp)
-      : day_{static_cast<decltype(day_)>(constexpr_abs(timestamp) /
-                                         MINUTES_A_DAY)},
-        min_{static_cast<decltype(min_)>(constexpr_abs(timestamp) %
+      : day_idx_{static_cast<decltype(day_idx_)>(constexpr_abs(timestamp) /
+                                                 MINUTES_A_DAY)},
+        mam_{static_cast<decltype(mam_)>(constexpr_abs(timestamp) %
                                          MINUTES_A_DAY)} {
     if (timestamp < 0) {
       *this = -*this;
@@ -40,16 +41,18 @@ struct time {
   }
 
   constexpr inline bool valid() const {
-    return day_ < MAX_DAYS && min_ < MINUTES_A_DAY;
+    return day_idx_ < MAX_DAYS && mam_ < MINUTES_A_DAY;
   }
 
-  constexpr inline int32_t ts() const { return day_ * MINUTES_A_DAY + min_; }
+  constexpr inline int32_t ts() const {
+    return day_idx_ * MINUTES_A_DAY + mam_;
+  }
 
   time operator+(time const& o) const {
     time tmp;
-    tmp.min_ = min_ + o.min_;
-    tmp.day_ = day_ + o.day_ + (tmp.min_ / MINUTES_A_DAY);
-    tmp.min_ %= MINUTES_A_DAY;
+    tmp.mam_ = mam_ + o.mam_;
+    tmp.day_idx_ = day_idx_ + o.day_idx_ + (tmp.mam_ / MINUTES_A_DAY);
+    tmp.mam_ %= MINUTES_A_DAY;
     assert(tmp.valid());
     return tmp;
   }
@@ -60,7 +63,7 @@ struct time {
     return tmp;
   }
 
-  time operator-(time const& o) const { return *this - o.ts(); }
+  duration_t operator-(time const& o) const { return ts() - o.ts(); }
 
   time operator-(int32_t const& o) const {
     auto tmp = time(ts() - o);
@@ -70,13 +73,13 @@ struct time {
 
   time operator-() const {
     time tmp;
-    if (min_ != 0) {
-      tmp.day_ = -day_ - static_cast<int16_t>(1);
-      tmp.min_ = MINUTES_A_DAY - min_;
-      tmp.day_ -= tmp.min_ / MINUTES_A_DAY;  // if min_ == 0: subtract 1
+    if (mam_ != 0) {
+      tmp.day_idx_ = -day_idx_ - static_cast<int16_t>(1);
+      tmp.mam_ = MINUTES_A_DAY - mam_;
+      tmp.day_idx_ -= tmp.mam_ / MINUTES_A_DAY;  // if mam_ == 0: subtract 1
     } else {
-      tmp.day_ = -day_;
-      tmp.min_ = 0;
+      tmp.day_idx_ = -day_idx_;
+      tmp.mam_ = 0;
     }
     assert(tmp.valid());
     return tmp;
@@ -91,7 +94,7 @@ struct time {
   bool operator<=(int32_t const& o) const { return ts() <= o; }
   bool operator>=(int32_t const& o) const { return ts() >= o; }
   bool operator==(time const& o) const {
-    return day_ == o.day_ && min_ == o.min_;
+    return day_idx_ == o.day_idx_ && mam_ == o.mam_;
   }
 
   bool operator!=(time const& o) const { return !operator==(o); }
@@ -108,29 +111,27 @@ struct time {
     return *this;
   }
 
-  friend bool operator==(time t, int i) { return i == t.ts(); }
-
   friend std::ostream& operator<<(std::ostream& out, time const& t);
 
   std::string to_str() const;
 
   day_idx_t day() const {
-    assert(day_ <= MAX_DAYS);
-    return day_;
+    assert(day_idx_ <= MAX_DAYS);
+    return day_idx_;
   }
 
   uint16_t mam() const {
-    assert(min_ < MINUTES_A_DAY);
-    return min_;
+    assert(mam_ < MINUTES_A_DAY);
+    return mam_;
   }
 
   constexpr cista::hash_t hash() const {
-    return cista::hash_combine(day_, min_);
+    return cista::hash_combine(day_idx_, mam_);
   }
 
 private:
-  day_idx_t day_{MAX_DAYS};
-  uint16_t min_{MINUTES_A_DAY};
+  day_idx_t day_idx_{MAX_DAYS};
+  mam_t mam_{MINUTES_A_DAY};
 };
 
 constexpr time INVALID_TIME = time();
@@ -154,7 +155,5 @@ std::string format_time(time);
 unixtime motis_to_unixtime(unixtime schedule_begin, time t);
 
 time unix_to_motistime(unixtime schedule_begin, unixtime t);
-
-day_idx_t day_idx(unixtime schedule_begin, unixtime t);
 
 }  // namespace motis

@@ -283,7 +283,7 @@ void graph_builder::add_route_services(
         create_merged_trips(s, 0U);  // TODO(felix) create trip
     auto const lcons = mcd::vector<mcd::vector<light_connection>>{
         static_cast<uint32_t>(utc_times.size())};
-    
+
     auto const first_day_offset =
         s->times()->Get(s->times()->size() - 2) / 1440;
     auto const first_day = std::max(0, first_day_ - first_day_offset);
