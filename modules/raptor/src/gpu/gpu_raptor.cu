@@ -329,7 +329,6 @@ __device__ void update_footpaths_dev_scratch(time const* const read_arrivals,
     auto const footpath = tt.footpaths_[foot_idx];
 
     time const from_arrival = read_arrivals[footpath.from_];
-    //        (read_arrivals, footpath.from_);
     time const new_arrival = from_arrival + footpath.duration_;
 
     if (valid(from_arrival) && marked(station_marks, footpath.from_)) {

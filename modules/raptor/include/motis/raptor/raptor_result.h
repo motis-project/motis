@@ -12,7 +12,7 @@ namespace motis::raptor {
 
 struct raptor_result_base {
   explicit raptor_result_base(stop_id const stop_count)
-      : stop_count_(stop_count) {}
+      : stop_count_{stop_count} {}
 
   raptor_result_base() = delete;
   raptor_result_base(raptor_result_base const&) = delete;
@@ -49,7 +49,7 @@ struct raptor_result_base {
 
 struct raptor_result : raptor_result_base {
   explicit raptor_result(stop_id const stop_count)
-      : raptor_result_base(stop_count) {
+      : raptor_result_base{stop_count} {
     result_ = new time[this->byte_size()];
     this->reset();
   }
@@ -67,7 +67,7 @@ using device_result = std::array<time*, max_raptor_round>;
 
 struct raptor_result_pinned : public raptor_result_base {
   explicit raptor_result_pinned(stop_id stop_count)
-      : raptor_result_base(stop_count) {
+      : raptor_result_base{stop_count} {
     cudaMallocHost(&result_, this->byte_size());
     this->reset();
   }

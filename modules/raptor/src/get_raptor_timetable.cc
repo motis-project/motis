@@ -17,7 +17,7 @@ namespace log = motis::logging;
 struct transformable_footpath {
   transformable_footpath(stop_id const from, stop_id const to,
                          time const duration)
-      : from_(from), to_(to), duration_(duration) {}
+      : from_{from}, to_{to}, duration_{duration} {}
 
   stop_id from_;
   stop_id to_;
@@ -38,13 +38,13 @@ struct raptor_lcon {
   raptor_lcon(stop_id const from, stop_id const to, time const dep,
               time const arrival, bool const in_allowed, bool const out_allowed,
               light_connection const* lc)
-      : from_(from),
-        to_(to),
-        departure_(dep),
-        arrival_(arrival),
-        in_allowed_(in_allowed),
-        out_allowed_(out_allowed),
-        lcon_(lc) {}
+      : from_{from},
+        to_{to},
+        departure_{dep},
+        arrival_{arrival},
+        in_allowed_{in_allowed},
+        out_allowed_{out_allowed},
+        lcon_{lc} {}
   stop_id from_;
   stop_id to_;
   time departure_;

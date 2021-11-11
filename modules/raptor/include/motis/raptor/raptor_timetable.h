@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "utl/verify.h"
+
 #include "motis/core/schedule/connection.h"
 #include "motis/core/schedule/time.h"
 
@@ -58,18 +60,16 @@ constexpr raptor_round max_transfers = 6;
 constexpr raptor_round max_trips = max_transfers + 1;
 constexpr raptor_round max_raptor_round = max_trips + 1;
 
-// TODO(julian) possible to create an enhancement w.r.t. runtime out of this?
-// especially with long timetables (multiple weeks)
 constexpr time const max_travel_duration = 1440;
 
 struct raptor_stop {
   raptor_stop() = delete;
   raptor_stop(footpath_count const fc, route_count const rc,
               footpaths_index const it, stop_routes_index const isr)
-      : footpath_count_(fc),
-        route_count_(rc),
-        index_to_transfers_(it),
-        index_to_stop_routes_(isr) {}
+      : footpath_count_{fc},
+        route_count_{rc},
+        index_to_transfers_{it},
+        index_to_stop_routes_{isr} {}
 
   footpath_count footpath_count_;
   route_count route_count_;
@@ -81,10 +81,10 @@ struct raptor_route {
   raptor_route() = delete;
   raptor_route(trip_count const tc, stop_count const sc,
                stop_times_index const sti, route_stops_index const rsi)
-      : trip_count_(tc),
-        stop_count_(sc),
-        index_to_stop_times_(sti),
-        index_to_route_stops_(rsi) {}
+      : trip_count_{tc},
+        stop_count_{sc},
+        index_to_stop_times_{sti},
+        index_to_route_stops_{rsi} {}
 
   trip_count trip_count_;
   stop_count stop_count_;
@@ -99,7 +99,11 @@ struct stop_time {
 
 struct raptor_footpath {
   raptor_footpath() = delete;
-  raptor_footpath(stop_id const to, time const dur) : to_(to), duration_(dur) {}
+  raptor_footpath(stop_id const to, time const duration)
+      : to_{to}, duration_{static_cast<time8>(duration)} {
+    utl::verify(duration < std::numeric_limits<time8>::max(),
+                "Footpath duration too long to fit inside time8");
+  }
   stop_id to_ : 24;
   time8 duration_;
 };
@@ -107,7 +111,10 @@ struct raptor_footpath {
 struct raptor_incoming_footpath {
   raptor_incoming_footpath() = delete;
   raptor_incoming_footpath(stop_id const from, time const duration)
-      : from_(from), duration_(duration) {}
+      : from_{from}, duration_{static_cast<time8>(duration)} {
+    utl::verify(duration < std::numeric_limits<time8>::max(),
+                "Footpath duration too long to fit inside time8");
+  }
   stop_id from_ : 24;
   time8 duration_;
 };
@@ -171,12 +178,13 @@ struct raptor_meta_info {
   // for all meta stations
   std::vector<std::vector<time>> departure_events_with_metas_;
 
-  // uses the same indexing scheme as the stop times vector in the timetable,
-  // but the first entry for every trip is a nullptr!
-  // since #stop_times(trip) = #lcons(trip) + 1
+  // uses the same indexing scheme as the stop times vector in the
+  // timetable, but the first entry for every trip is a nullptr! since
+  // #stop_times(trip) = #lcons(trip) + 1
   std::vector<light_connection const*> lcon_ptr_;
 
-  // duration of the footpaths INCLUDE transfer time from the departure station
+  // duration of the footpaths INCLUDE transfer time from the departure
+  // station
   std::vector<std::vector<raptor_footpath>> initialization_footpaths_;
 };
 
