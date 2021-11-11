@@ -1,19 +1,14 @@
 #include "gtest/gtest.h"
 
-#include "motis/test/motis_instance_test.h"
 #include "motis/test/schedule/simple_realtime.h"
 
 #include "motis/loader/loader.h"
 #include "motis/raptor/get_raptor_timetable.h"
 #include "motis/raptor/print_raptor.h"
-#include "motis/raptor/raptor.h"
 #include "motis/raptor/raptor_result.h"
 
-using namespace flatbuffers;
 using namespace motis;
 using namespace motis::test;
-using namespace motis::module;
-using namespace motis::routing;
 using namespace motis::raptor;
 using motis::test::schedule::simple_realtime::dataset_opt;
 
