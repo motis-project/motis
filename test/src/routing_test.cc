@@ -17,7 +17,8 @@ using motis::test::schedule::simple_realtime::dataset_opt;
 struct routing_itest : public motis_instance_test {
   routing_itest()
       : motis::test::motis_instance_test(
-            dataset_opt, {"routing", "csa", "raptor", "tripbased"}) {}
+            dataset_opt, {"routing", "csa", "raptor", "tripbased"},
+            {"--tripbased.use_data_file=false"}) {}
 
   msg_ptr make_routing_request(std::string const& target) {
     message_creator fbb;
