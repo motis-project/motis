@@ -1,7 +1,6 @@
-#include "utl/concat.h"
-
-#include "motis/core/common/logging.h"
 #include "motis/raptor/gpu/gpu_timetable.cuh"
+
+#include "utl/concat.h"
 
 #include "motis/raptor/gpu/cuda_util.h"
 #include "motis/raptor/raptor_util.h"

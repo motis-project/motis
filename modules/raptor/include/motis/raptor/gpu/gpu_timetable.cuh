@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "motis/raptor/raptor_timetable.h"
 
 namespace motis::raptor {
@@ -10,12 +12,15 @@ using gpu_stop_time = stop_time;
 
 struct gpu_footpath {
   gpu_footpath()
-      : from_(invalid<decltype(from_)>),
-        to_(-1),
-        duration_(invalid<decltype(duration_)>) {}
+      : from_{invalid<decltype(from_)>},
+        to_{-1},
+        duration_{invalid<decltype(duration_)>} {}
 
-  gpu_footpath(stop_id const from, stop_id const to, motis::time const dur)
-      : from_(from), to_(to), duration_(dur) {}
+  gpu_footpath(stop_id const from, stop_id const to, motis::time const duration)
+      : from_{from}, to_{to}, duration_{static_cast<time8>(duration)} {
+    utl::verify(duration < std::numeric_limits<time8>::max(),
+                "Footpath duration too long to fit inside time8");
+  }
 
   stop_id from_;
   stop_id to_ : 24;
