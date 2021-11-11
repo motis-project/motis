@@ -2,7 +2,7 @@ name: Unix Build
 
 on:
   schedule:
-    - cron:  '0 3 * * 2,6'
+    - cron: '0 3 * * 2,6'
   push:
     branches: [ master ]
   pull_request:
@@ -28,7 +28,10 @@ jobs:
           sudo apt-get install -y --no-install-recommends clang-format-12
 
       - name: Format files
-        run: find base libs modules test -type f -a \( -name "*.cc" -o -name "*.h" \) -print0 | xargs -0 clang-format-12 -i
+        run: |
+          find base libs modules test \
+            -type f -a \( -name "*.cc" -o -name "*.h" -o -name ".cuh" -o -name ".cu" \) \
+            -print0 | xargs -0 clang-format-12 -i
 
       - name: Check for differences
         run: |
@@ -228,9 +231,9 @@ jobs:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
-               buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
-               buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-
-               buildcache-${{ matrix.config.name }}-
+            buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-
+            buildcache-${{ matrix.config.name }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v2

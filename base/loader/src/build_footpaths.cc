@@ -58,11 +58,13 @@ struct footpath_builder {
         continue;
       }
 
-      auto duration = static_cast<int32_t>(footpath->duration());
       auto const from_node = get_station("from", footpath->from());
       auto const to_node = get_station("to", footpath->to());
       auto& from_station = sched_.stations_.at(from_node->id_);
       auto& to_station = sched_.stations_.at(to_node->id_);
+      auto duration =
+          std::max({from_station->transfer_time_, to_station->transfer_time_,
+                    static_cast<int32_t>(footpath->duration())});
 
       if (from_node == to_node) {
         LOG(ml::warn) << "Footpath loop at station " << from_station->eva_nr_
@@ -71,8 +73,6 @@ struct footpath_builder {
       }
 
       if (opt_.adjust_footpaths_) {
-        duration = std::max({from_station->transfer_time_,
-                             to_station->transfer_time_, duration});
         auto const distance = get_distance(*from_station, *to_station) * 1000;
 
         auto adjusted_duration = adjust_footpath_duration(duration, distance);
