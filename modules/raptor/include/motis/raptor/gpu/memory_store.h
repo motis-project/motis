@@ -109,7 +109,7 @@ struct memory_store {
   using mem_idx = uint32_t;
   static_assert(std::is_unsigned_v<mem_idx>);
 
-  void init(raptor_meta_info const& sched, raptor_timetable const& tt,
+  void init(raptor_meta_info const& meta_info, raptor_timetable const& tt,
             int32_t concurrency_per_device);
 
   mem_idx get_mem_idx();

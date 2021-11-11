@@ -9,7 +9,7 @@ void inline launch_kernel(Kernel kernel, void** args,
                           device_context const& device, cudaStream_t s) {
   cudaSetDevice(device.id_);
 
-  cudaLaunchCooperativeKernel((void*)kernel, device.grid_,
+  cudaLaunchCooperativeKernel((void*)kernel, device.grid_,  //  NOLINT
                               device.threads_per_block_, args, 0, s);
   cuda_check();
 }

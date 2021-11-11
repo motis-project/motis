@@ -42,4 +42,5 @@ TEST(print_raptor_itest_results, just_print) {
   raptor_result result(raptor_timetable->stop_count());
   print_station_arrivals(0, result);
   print_route_arrivals(0, *raptor_timetable, result[0]);
+  ASSERT_TRUE(is_reset(result));
 }

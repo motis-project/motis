@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "utl/enumerate.h"
+#include "utl/to_vec.h"
 
 #include "motis/raptor/raptor_result.h"
 #include "motis/raptor/raptor_timetable.h"
@@ -144,13 +145,11 @@ template <typename Container>
 inline std::vector<route_id> get_routes_containing_evas(
     Container const& evas, raptor_meta_info const& raptor_sched,
     raptor_timetable const& tt) {
-
-  std::vector<stop_id> s_ids;
-  for (auto const& eva : evas) {
-    s_ids.push_back(raptor_sched.eva_to_raptor_id_.at(eva));
-  }
-
-  return get_routes_containing(s_ids, tt);
+  return get_routes_containing(
+      utl::to_vec(
+          evas,
+          [&](auto&& eva) { return raptor_sched.eva_to_raptor_id_.at(eva); }),
+      tt);
 }
 
 inline void print_route_arrivals(route_id const r_id,
@@ -166,7 +165,7 @@ inline void print_route_arrivals(route_id const r_id,
   std::cout << "]\n";
 }
 
-bool is_reset(raptor_result_base const& result) {
+inline bool is_reset(raptor_result_base const& result) {
   for (auto k = 0; k < max_raptor_round; ++k) {
     for (auto s = 0; s < result.stop_count_; ++s) {
       if (result[k][s] != invalid<time>) {

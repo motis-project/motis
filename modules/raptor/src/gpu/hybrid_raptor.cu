@@ -29,7 +29,8 @@ void invoke_hybrid_raptor(d_query const& dq) {
   auto const& proc_stream = dq.mem_->context_.proc_stream_;
   auto const& transfer_stream = dq.mem_->context_.transfer_stream_;
 
-  void* init_args[] = {(void*)&dq, (void*)&dq.mem_->device_, (void*)&dq.tt_};
+  void* init_args[] = {(void*)&dq, (void*)&dq.mem_->device_,  // NOLINT
+                       (void*)&dq.tt_};  // NOLINT
 
   launch_kernel(init_arrivals_kernel, init_args, dq.mem_->context_,
                 proc_stream);
@@ -38,7 +39,8 @@ void invoke_hybrid_raptor(d_query const& dq) {
   fetch_arrivals_async(dq, 0, transfer_stream);
 
   for (int k = 1; k < max_raptor_round; ++k) {
-    void* kernel_args[] = {(void*)&dq.mem_->device_, (void*)&k, (void*)&dq.tt_};
+    void* kernel_args[] = {(void*)&dq.mem_->device_, (void*)&k,  // NOLINT
+                           (void*)&dq.tt_};  // NOLINT
 
     launch_kernel(update_routes_kernel, kernel_args, dq.mem_->context_,
                   proc_stream);
