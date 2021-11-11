@@ -10,8 +10,6 @@
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/trip_iterator.h"
 
-#include "motis/raptor/raptor_util.h"
-
 namespace motis::raptor {
 
 namespace log = motis::logging;

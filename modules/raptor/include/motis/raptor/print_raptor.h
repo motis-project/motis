@@ -4,26 +4,25 @@
 
 #include "utl/enumerate.h"
 
+#include "motis/raptor/raptor_result.h"
 #include "motis/raptor/raptor_timetable.h"
 
 namespace motis::raptor {
 
-[[maybe_unused]] inline std::string get_string(stop_id const s_id,
-                                               raptor_schedule const& sched) {
+inline std::string get_string(stop_id const s_id,
+                              raptor_schedule const& sched) {
   return "SID: " + std::to_string(s_id) +
          " -- EVA: " + sched.raptor_id_to_eva_[s_id];
 }
 
-[[maybe_unused]] inline void print_station(stop_id const s_id,
-                                           raptor_schedule const& sched) {
+inline void print_station(stop_id const s_id, raptor_schedule const& sched) {
   std::cout << "SID: " << s_id << " -- EVA: " << sched.raptor_id_to_eva_[s_id]
             << '\n';
 }
 
 template <typename TimeStringer>
-[[maybe_unused]] inline void print_route_gen(route_id const r_id,
-                                             raptor_timetable const& tt,
-                                             TimeStringer const& time_string) {
+inline void print_route_gen(route_id const r_id, raptor_timetable const& tt,
+                            TimeStringer const& time_string) {
   auto const& route = tt.routes_[r_id];
 
   auto stop_count = route.stop_count_;
@@ -52,20 +51,20 @@ template <typename TimeStringer>
   }
 }
 
-[[maybe_unused]] inline void print_route(route_id const r_id,
-                                         raptor_timetable const& tt) {
+inline void print_route(route_id const r_id, raptor_timetable const& tt) {
   print_route_gen(r_id, tt, [](time const t) { return std::to_string(t); });
 }
 
-[[maybe_unused]] inline void print_route_format(route_id const r_id,
-                                                raptor_timetable const& tt) {
+inline void print_route_format(route_id const r_id,
+                               raptor_timetable const& tt) {
   print_route_gen(r_id, tt, [](time const t) { return format_time(t); });
 }
 
 template <typename Container>
-[[maybe_unused]] inline void print_routes(Container const& r_ids,
-                                          raptor_timetable const& tt) {
-  for_each(r_ids, [&](auto const r_id) { print_route(r_id, tt); });
+inline void print_routes(Container const& r_ids, raptor_timetable const& tt) {
+  for (auto const& r_id : r_ids) {
+    print_route(r_id, tt);
+  }
 }
 
 inline void print_footpaths(raptor_timetable const& tt) {
@@ -81,13 +80,15 @@ inline void print_footpaths(raptor_timetable const& tt) {
 }
 
 template <typename Container>
-[[maybe_unused]] inline void print_routes_format(Container const& r_ids,
-                                                 raptor_timetable const& tt) {
-  for_each(r_ids, [&](auto const r_id) { print_route_format(r_id, tt); });
+inline void print_routes_format(Container const& r_ids,
+                                raptor_timetable const& tt) {
+  for (auto const& r_id : r_ids) {
+    print_route_format(r_id, tt);
+  }
 }
 
-[[maybe_unused]] inline void print_station_arrivals(
-    stop_id const s_id, raptor_result_base const& raptor_result) {
+inline void print_station_arrivals(stop_id const s_id,
+                                   raptor_result_base const& raptor_result) {
   std::cout << s_id << "(station) Arrivals: [ ";
   for (auto k = 0; k < max_raptor_round; ++k) {
     std::cout << raptor_result[k][s_id] << " ";
@@ -95,18 +96,8 @@ template <typename Container>
   std::cout << "]\n";
 }
 
-template <class Container>
-[[maybe_unused]] inline void print_js(Container const& js) {
-  std::cout << "Journeys: " << js.size() << '\n';
-  for (auto const& j : js) {
-    std::cout << "Departure: " << get_departure(j)
-              << " Arrival: " << get_arrival(j)
-              << " Interchanges: " << get_transfers(j) << '\n';
-  }
-};
-
-[[maybe_unused]] inline std::vector<route_id> routes_from_station(
-    stop_id const s_id, raptor_timetable const& tt) {
+inline std::vector<route_id> routes_from_station(stop_id const s_id,
+                                                 raptor_timetable const& tt) {
   std::vector<route_id> routes;
 
   auto const& station = tt.stops_[s_id];
@@ -121,8 +112,8 @@ template <class Container>
 }
 
 template <typename Container>
-[[maybe_unused]] inline std::vector<route_id> get_routes_containing(
-    Container const& stations, raptor_timetable const& tt) {
+inline std::vector<route_id> get_routes_containing(Container const& stations,
+                                                   raptor_timetable const& tt) {
   std::vector<route_id> routes;
 
   for (route_id r_id = 0; r_id < tt.route_count(); ++r_id) {
@@ -150,7 +141,7 @@ template <typename Container>
 }
 
 template <typename Container>
-[[maybe_unused]] inline std::vector<route_id> get_routes_containing_evas(
+inline std::vector<route_id> get_routes_containing_evas(
     Container const& evas, raptor_schedule const& raptor_sched,
     raptor_timetable const& tt) {
 
@@ -162,9 +153,9 @@ template <typename Container>
   return get_routes_containing(s_ids, tt);
 }
 
-[[maybe_unused]] inline void print_route_arrivals(route_id const r_id,
-                                                  raptor_timetable const& tt,
-                                                  time const* const arrs) {
+inline void print_route_arrivals(route_id const r_id,
+                                 raptor_timetable const& tt,
+                                 time const* const arrs) {
   auto const& route = tt.routes_[r_id];
   auto const base_rsi = route.index_to_route_stops_;
   std::cout << "[ ";
