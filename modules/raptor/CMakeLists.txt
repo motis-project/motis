@@ -9,6 +9,7 @@ target_link_libraries(motis-raptor
         motis-routing
         motis-module
         motis-core
+        utl
         )
 target_compile_options(motis-raptor PRIVATE ${MOTIS_CXX_FLAGS})
 target_compile_definitions(motis-raptor PRIVATE ${MOTIS_COMPILE_DEFINITIONS})

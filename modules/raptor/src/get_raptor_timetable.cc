@@ -57,6 +57,8 @@ struct raptor_lcon {
 struct transformable_trip {
   std::vector<raptor_lcon> lcons_;
   std::vector<stop_time> stop_times_;
+  std::vector<stop_attributes> stop_attr_;
+  std::string dbg_;
 };
 
 struct transformable_route {
@@ -82,6 +84,23 @@ std::vector<stop_time> get_stop_times_from_lcons(
     }
   }
   return stop_times;
+}
+
+std::vector<stop_attributes> get_stop_attributes_from_lcons(
+    std::vector<raptor_lcon> const& lcons) {
+  auto const edge_count = lcons.size();
+  auto const stop_count = edge_count + 1;
+
+  std::vector<stop_attributes> stop_attributes(stop_count);
+
+  // first stop has no inbound edge; therefore also no occupancy
+  stop_attributes[0].inbound_occupancy_ = 0;
+
+  for (auto idx = 1; idx < stop_count; ++idx) {
+    stop_attributes[idx].inbound_occupancy_ = lcons[idx - 1].lcon_->occupancy_;
+  }
+
+  return stop_attributes;
 }
 
 std::vector<stop_id> get_route_stops_from_lcons(
@@ -169,6 +188,8 @@ void init_routes(schedule const& sched, std::vector<transformable_route>& rs) {
       }
 
       t_trip.stop_times_ = get_stop_times_from_lcons(t_trip.lcons_);
+      t_trip.stop_attr_  = get_stop_attributes_from_lcons(t_trip.lcons_);
+      t_trip.dbg_        = std::string{trip->dbg_.str()};
 
       ++t_id;
     }
@@ -247,6 +268,7 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
 
     for (auto const& trip : t_route.trips_) {
       utl::concat(tt->stop_times_, trip.stop_times_);
+      utl::concat(tt->stop_attr_, trip.stop_attr_);
     }
     utl::concat(tt->route_stops_, t_route.route_stops_);
   }
@@ -275,6 +297,21 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
   }
 
   return tt;
+}
+
+auto create_route_map(transformable_timetable const& ttt) {
+  route_mapping route_map{};
+
+  for(route_id r_id = 0; r_id < ttt.routes_.size(); ++r_id) {
+    auto& route = ttt.routes_[r_id];
+
+    for(trip_id t_id = 0; t_id < route.trips_.size(); ++t_id) {
+      auto const& el = route.trips_[t_id];
+      route_map.insert_dbg(el.dbg_, r_id, t_id);
+    }
+  }
+
+  return route_map;
 }
 
 auto get_station_departure_events(transformable_timetable const& ttt,
@@ -381,6 +418,8 @@ std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
       }
     }
   }
+
+  meta_info->route_mapping_ = std::move(create_route_map(ttt));
 
   return meta_info;
 }

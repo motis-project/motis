@@ -312,7 +312,7 @@ struct rule_service_route_builder {
   }
 
   mcd::vector<light_connection> build_connections(
-      service_section const& section) {
+      service_section const& section, int third) {
     auto participants = section.participants_;
     std::sort(begin(participants), end(participants));
 
@@ -328,7 +328,7 @@ struct rule_service_route_builder {
       if (traffic_days.test(day_idx)) {
         lcons.push_back(
             gb_.section_to_connection(get_or_create_trips(services, day_idx),
-                                      services, day_idx, 0, adjusted));
+                                      services, day_idx, 0, adjusted, third));
         adjusted = false;
       }
     }
@@ -449,8 +449,9 @@ struct rule_service_route_builder {
       auto const from_route_node = find_from(v_from, sections, section_idx);
       auto const to_route_node = find_to(v_to, sections, section_idx);
 
+      int third = ((section_idx)*3) / stops->size();
       sections[section_idx]->route_section_ = gb_.add_route_section(
-          route_id_, build_connections(*sections[section_idx]),
+          route_id_, build_connections(*sections[section_idx], third),
           stops->Get(from),  //
           sections[section_idx]->in_allowed_from_,  //
           sections[section_idx]->out_allowed_from_,

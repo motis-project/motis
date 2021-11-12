@@ -5,6 +5,7 @@
 #include "motis/raptor/raptor_timetable.h"
 
 #if defined(MOTIS_CUDA)
+#include <array>
 #include "cuda_runtime.h"
 #endif
 

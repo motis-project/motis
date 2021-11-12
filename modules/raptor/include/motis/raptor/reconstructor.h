@@ -3,6 +3,9 @@
 #include "utl/erase_if.h"
 #include "utl/to_vec.h"
 
+#include "motis/core/common/logging.h"
+
+#include "motis/raptor/criteria/criteria_into_journey.h"
 #include "motis/raptor/raptor_query.h"
 #include "motis/raptor/raptor_timetable.h"
 #include "motis/raptor/raptor_util.h"
@@ -15,7 +18,9 @@ namespace motis::raptor {
 
 using namespace motis::routing::output;
 
+template <typename CriteriaConfig>
 struct intermediate_journey {
+  using CriteriaData = typename CriteriaConfig::CriteriaData;
   intermediate_journey(transfers const trs, bool const ontrip,
                        time const ontrip_start)
       : transfers_{trs}, ontrip_{ontrip}, ontrip_start_{ontrip_start} {}
@@ -77,9 +82,12 @@ struct intermediate_journey {
       // therefore we need to adjust the index
       auto const lcon = raptor_sched.lcon_ptr_[stop_time_idx];
       auto const a_track = lcon->full_con_->a_track_;
-      auto const d_track = transports_.empty()
-                               ? lcon->full_con_->d_track_
-                               : transports_.back().con_->full_con_->d_track_;
+      //in case of having the first route in the journey or the first route
+      //  used after a foot path determine the departure track from the lcon
+      auto const d_track =
+          (transports_.empty() || transports_.back().con_ == nullptr)
+              ? lcon->full_con_->d_track_
+              : transports_.back().con_->full_con_->d_track_;
 
       if (!valid(a_time)) {
         a_time = lcon->a_time_;
@@ -142,6 +150,7 @@ struct intermediate_journey {
     j.db_costs_ = 0;
     j.price_ = 0;
     j.night_penalty_ = 0;
+    fill_criteria_into_journey(j, crit_data_);
     return j;
   }
 
@@ -150,18 +159,27 @@ struct intermediate_journey {
   time ontrip_start_;
   std::vector<intermediate::stop> stops_;
   std::vector<intermediate::transport> transports_;
+  CriteriaData crit_data_;
 };
 
+template <typename CriteriaConfig>
 struct reconstructor {
+  using CriteriaData = typename CriteriaConfig::CriteriaData;
+
   struct candidate {
+    using CriteriaData = typename CriteriaConfig::CriteriaData;
+
     candidate() = default;
     candidate(stop_id const source, stop_id const target, time const dep,
-              time const arr, transfers const t, bool const ends_with_footpath)
+              time const arr, transfers const t, int crit_offset,
+              CriteriaData crit_data, bool const ends_with_footpath)
         : source_{source},
           target_{target},
           departure_{dep},
           arrival_{arr},
           transfers_{t},
+          crit_offset_{crit_offset},
+          crit_data_{std::move(crit_data)},
           ends_with_footpath_{ends_with_footpath} {}
 
     friend std::ostream& operator<<(std::ostream& out, candidate const& c) {
@@ -170,7 +188,8 @@ struct reconstructor {
     }
 
     bool dominates(candidate const& other) const {
-      return arrival_ <= other.arrival_ && transfers_ <= other.transfers_;
+      return arrival_ <= other.arrival_ && transfers_ <= other.transfers_ &&
+             CriteriaConfig::dominates(other.crit_data_, crit_data_);
     }
 
     stop_id source_{invalid<stop_id>};
@@ -182,6 +201,9 @@ struct reconstructor {
     transfers transfers_ = invalid<transfers>;
 
     bool ends_with_footpath_ = false;
+
+    int crit_offset_{0};
+    CriteriaData crit_data_;
   };
 
   reconstructor() = delete;
@@ -190,8 +212,10 @@ struct reconstructor {
                 raptor_timetable const& tt)
       : sched_(sched), raptor_sched_(raptor_sched), timetable_(tt) {}
 
-  static bool dominates(intermediate_journey const& ij, candidate const& c) {
-    return (ij.get_arrival() <= c.arrival_ && ij.transfers_ <= c.transfers_);
+  static bool dominates(intermediate_journey<CriteriaConfig> const& ij,
+                        candidate const& c) {
+    return (ij.get_arrival() <= c.arrival_ && ij.transfers_ <= c.transfers_ &&
+            CriteriaConfig::dominates(c.crit_data_, ij.crit_data_));
   }
 
   template <typename Query>
@@ -204,42 +228,52 @@ struct reconstructor {
       auto const tt = raptor_sched_.transfer_times_[t];
 
       for (auto round_k = 1; round_k < max_raptor_round; ++round_k) {
-        if (!valid(result[round_k][t])) {
-          continue;
-        }
+        for (auto crit_offset = 0, crit_size = CriteriaConfig::trait_size();
+             crit_offset < crit_size; ++crit_offset) {
+          auto const arrival_idx =
+              CriteriaConfig::get_arrival_idx(t, crit_offset);
 
-        auto c = candidate{q.source_,
-                           t,
-                           q.source_time_begin_,
-                           result[round_k][t],
-                           static_cast<transfers>(round_k - 1),
-                           true};
-
-        // Check if the journey ends with a footpath
-        for (; c.arrival_ < result[round_k][t] + tt; c.arrival_++) {
-          c.ends_with_footpath_ = journey_ends_with_footpath(c, result);
-          if (!c.ends_with_footpath_) {
-            break;
+          if (!valid(result[round_k][arrival_idx])) {
+            continue;
           }
-        }
 
-        c.arrival_ -= tt;
+          auto crit_data = CriteriaConfig::get_traits_data(crit_offset);
+          auto c = candidate{q.source_,
+                             t,
+                             q.source_time_begin_,
+                             result[round_k][arrival_idx],
+                             static_cast<transfers>(round_k - 1),
+                             crit_offset,
+                             std::move(crit_data),
+                             true};
 
-        auto dominated = std::any_of(
-            std::begin(candidates), std::end(candidates),
-            [&](auto const& other_c) { return other_c.dominates(c); });
+          // Check if the journey ends with a footpath
+          for (; c.arrival_ < result[round_k][arrival_idx] + tt; c.arrival_++) {
+            c.ends_with_footpath_ = journey_ends_with_footpath(c, result);
+            if (!c.ends_with_footpath_) {
+              break;
+            }
+          }
 
-        dominated |=
-            std::any_of(std::begin(journeys_), std::end(journeys_),
-                        [&](auto const& j) { return dominates(j, c); });
+          c.arrival_ -= tt;
 
-        if (!dominated) {
-          // Remove earlier candidates which are dominated by the new candidate.
-          utl::erase_if(candidates, [&](auto const& other_c) {
-            return c.dominates(other_c);
-          });
+          auto dominated = std::any_of(
+              std::begin(candidates), std::end(candidates),
+              [&](auto const& other_c) { return other_c.dominates(c); });
 
-          candidates.push_back(c);
+          dominated |=
+              std::any_of(std::begin(journeys_), std::end(journeys_),
+                          [&](auto const& j) { return dominates(j, c); });
+
+          if (!dominated) {
+            // Remove earlier candidates which are dominated by the new
+            // candidate.
+            utl::erase_if(candidates, [&](auto const& other_c) {
+              return c.dominates(other_c);
+            });
+
+            candidates.push_back(c);
+          }
         }
       }
     };
@@ -296,15 +330,17 @@ struct reconstructor {
   bool journey_ends_with_footpath(candidate const c,
                                   raptor_result_base const& result) {
     return !valid(std::get<stop_id>(
-        get_previous_station(c.target_, c.arrival_, c.transfers_ + 1, result)));
+        get_previous_station(c.target_, c.arrival_, c.transfers_ + 1,
+                             c.crit_data_, c.crit_offset_, result)));
   }
 
   template <typename Query>
-  intermediate_journey reconstruct_journey(candidate const c, Query const& q) {
+  intermediate_journey<CriteriaConfig> reconstruct_journey(candidate const c,
+                                                           Query const& q) {
     auto const& result = q.result();
 
-    auto ij =
-        intermediate_journey{c.transfers_, q.ontrip_, q.source_time_begin_};
+    auto ij = intermediate_journey<CriteriaConfig>{c.transfers_, q.ontrip_,
+                                                   q.source_time_begin_};
 
     auto arrival_station = c.target_;
     auto last_departure = invalid<time>;
@@ -315,7 +351,7 @@ struct reconstructor {
       // same with footpath reachable stations
       auto [previous_station, used_route, used_trip, stop_offset] =
           get_previous_station(arrival_station, station_arrival, result_idx,
-                               result);
+                               c.crit_data_, c.crit_offset_, result);
 
       if (valid(previous_station)) {
         last_departure = ij.add_route(previous_station, used_route, used_trip,
@@ -326,7 +362,7 @@ struct reconstructor {
           auto const adjusted_arrival = station_arrival - inc_f.duration_;
           std::tie(previous_station, used_route, used_trip, stop_offset) =
               get_previous_station(inc_f.from_, adjusted_arrival, result_idx,
-                                   result);
+                                   c.crit_data_, c.crit_offset_, result);
 
           if (valid(previous_station)) {
             ij.add_footpath(arrival_station, station_arrival, last_departure,
@@ -340,7 +376,9 @@ struct reconstructor {
       }
 
       arrival_station = previous_station;
-      station_arrival = result[result_idx - 1][arrival_station];
+      auto const arrival_idx =
+          CriteriaConfig::get_arrival_idx(arrival_station, c.crit_offset_);
+      station_arrival = result[result_idx - 1][arrival_idx];
     }
 
     bool can_be_start = false;
@@ -402,12 +440,14 @@ struct reconstructor {
       }
     }
 
+    ij.crit_data_ = std::move(c.crit_data_);
     return ij;
   }
 
   std::tuple<stop_id, route_id, trip_id, stop_offset> get_previous_station(
       stop_id const arrival_station, time const stop_arrival,
-      uint8_t const result_idx, raptor_result_base const& result) {
+      uint8_t const result_idx, CriteriaData const& crit_data,
+      uint32_t crit_offset, raptor_result_base const& result) {
     auto const arrival_stop = timetable_.stops_[arrival_station];
 
     auto const route_count = arrival_stop.route_count_;
@@ -431,7 +471,8 @@ struct reconstructor {
         }
 
         auto const board_station = get_board_station_for_trip(
-            r_id, arrival_trip, result, result_idx - 1, offset);
+            r_id, arrival_trip, result, result_idx - 1, crit_offset, crit_data,
+            offset);
 
         if (valid(board_station)) {
           return {board_station, r_id, arrival_trip, offset};
@@ -461,6 +502,8 @@ struct reconstructor {
   stop_id get_board_station_for_trip(route_id const r_id, trip_id const t_id,
                                      raptor_result_base const& result,
                                      raptor_round const result_idx,
+                                     uint32_t crit_offset,
+                                     CriteriaData const& crit_data,
                                      stop_offset const arrival_offset) {
     auto const& r = timetable_.routes_[r_id];
 
@@ -477,7 +520,12 @@ struct reconstructor {
       auto const sti = first_stop_times_index + stop_offset;
       auto const departure = timetable_.stop_times_[sti].departure_;
 
-      if (valid(departure) && result[result_idx][stop_id] <= departure) {
+      auto const arr_idx =
+          CriteriaConfig::get_arrival_idx(stop_id, crit_offset);
+
+      if (valid(departure) && result[result_idx][arr_idx] <= departure &&
+          CriteriaConfig::trip_matches_traits(crit_data, timetable_, r_id, t_id,
+                                              stop_offset, arrival_offset)) {
         return stop_id;
       }
     }
@@ -489,7 +537,7 @@ private:
   schedule const& sched_;
   raptor_meta_info const& raptor_sched_;
   raptor_timetable const& timetable_;
-  std::vector<intermediate_journey> journeys_;
+  std::vector<intermediate_journey<CriteriaConfig>> journeys_;
 };
 
 }  // namespace motis::raptor

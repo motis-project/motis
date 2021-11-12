@@ -39,6 +39,9 @@ using footpaths_index = uint32_t;
 using raptor_round = uint8_t;
 using transfers = uint8_t;
 
+//additional attributes
+using occ_t = uint8_t;
+
 using earliest_arrivals = std::vector<time>;
 
 template <typename T>
@@ -97,6 +100,10 @@ struct stop_time {
   time departure_{invalid<decltype(departure_)>};
 };
 
+struct stop_attributes {
+  occ_t inbound_occupancy_{0};
+};
+
 struct raptor_footpath {
   raptor_footpath() = delete;
   raptor_footpath(stop_id const to, time const duration)
@@ -133,6 +140,7 @@ struct raptor_timetable {
   std::vector<raptor_footpath> footpaths_;
 
   std::vector<stop_time> stop_times_;
+  std::vector<stop_attributes> stop_attr_;
   std::vector<stop_id> route_stops_;
   std::vector<route_id> stop_routes_;
 
@@ -151,6 +159,14 @@ struct raptor_timetable {
   auto footpath_count() const {
     return static_cast<footpath_id>(footpaths_.size());
   }
+};
+
+struct route_mapping {
+  std::unordered_map<std::string, std::unordered_map<route_id , std::vector<trip_id>>>
+      trip_dbg_to_route_trips_;
+
+  void insert_dbg(std::string const& dbg, route_id r_id, trip_id t_id);
+  std::string str(std::string const& dbg) const;
 };
 
 struct raptor_meta_info {
@@ -186,6 +202,10 @@ struct raptor_meta_info {
   // duration of the footpaths INCLUDE transfer time from the departure
   // station
   std::vector<std::vector<raptor_footpath>> initialization_footpaths_;
+
+  //Mapper table to convert from the regular schedule trip debug string
+  // to raptor route and trip ids and vice versa
+  route_mapping route_mapping_;
 };
 
 }  // namespace motis::raptor

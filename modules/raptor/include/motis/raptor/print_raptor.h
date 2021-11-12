@@ -5,6 +5,7 @@
 #include "utl/enumerate.h"
 #include "utl/to_vec.h"
 
+#include "motis/raptor/raptor_query.h"
 #include "motis/raptor/raptor_result.h"
 #include "motis/raptor/raptor_timetable.h"
 
@@ -46,7 +47,9 @@ inline void print_route_gen(route_id const r_id, raptor_timetable const& tt,
       auto const stop_time = tt.stop_times_[st_idx];
       std::cout << stop_offset << ": "
                 << "(" << time_string(stop_time.arrival_) << ","
-                << time_string(stop_time.departure_) << ") ; ";
+                << time_string(stop_time.departure_) << ")"
+                << "(" << +tt.stop_attr_[st_idx].inbound_occupancy_ << ")"
+                << " ; ";
     }
     std::cout << "]\n";
   }
@@ -175,6 +178,53 @@ inline bool is_reset(raptor_result_base const& result) {
   }
 
   return true;
+}
+
+template <typename CriteriaConfig>
+inline void print_results(raptor_result const& result,
+                          raptor_timetable const& tt,
+                          raptor_round up_to_round = max_raptor_round,
+                          uint32_t only_for_t_offset = invalid<uint32_t>) {
+  auto const trait_size = CriteriaConfig::trait_size();
+  auto trait_loop_start = 0;
+  auto trait_loo_end    = trait_size;
+
+  if(valid(only_for_t_offset)){
+    trait_loo_end = only_for_t_offset+1;
+    trait_loop_start = only_for_t_offset;
+  }
+
+  for (raptor_round round_k = 0;
+       round_k < max_raptor_round && round_k < up_to_round; ++round_k) {
+    std::cout << "Results Round " << +round_k << std::endl;
+    for (int i = 0; i < tt.stop_count(); ++i) {
+      auto had_valid_time = false;
+      for (int j = trait_loop_start; j < trait_loo_end; ++j) {
+        if (valid(result[round_k][(i * trait_size) + j])) {
+
+          if (!had_valid_time) {
+            std::cout << "Stop Id: " << std::setw(7) << +i << " -> ";
+            had_valid_time = true;
+          }
+
+          std::cout << std::setw(6) << +result[round_k][(i * trait_size) + j]
+                    << "; Arrival Idx: " << std::setw(6)
+                    << +((i * trait_size) + j)
+                    << "; Trait Offset: " << std::setw(4) << +j << ";\t\t";
+        }
+      }
+
+      if (had_valid_time) std::cout << std::endl;
+    }
+  }
+}
+
+inline void print_query(raptor_query const& query) {
+  std::cout << "Received Query: " << std::endl;
+  std::cout << "Start Station:  " << std::setw(7) << +query.source_ << " -> "
+            << std::setw(6) << +query.source_time_begin_ << std::endl;
+  std::cout << "End Station:    " << std::setw(7) << +query.target_
+            << std::endl;
 }
 
 }  // namespace motis::raptor

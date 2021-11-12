@@ -8,6 +8,14 @@ namespace motis::raptor {
 
 using namespace motis::routing;
 
+stop_id checked_eva_to_raptor_id(raptor_meta_info const& meta_info, std::string const& eva) {
+  try {
+    return meta_info.eva_to_raptor_id_.at(eva);
+  }catch(std::out_of_range const&) {
+    throw std::system_error{access::error::station_not_found};
+  }
+}
+
 base_query get_base_query(RoutingRequest const* routing_request,
                           schedule const& sched,
                           raptor_meta_info const& meta_info) {
@@ -61,8 +69,8 @@ base_query get_base_query(RoutingRequest const* routing_request,
     }
   }
 
-  q.source_ = meta_info.eva_to_raptor_id_.at(start_eva);
-  q.target_ = meta_info.eva_to_raptor_id_.at(target_eva);
+  q.source_ = checked_eva_to_raptor_id(meta_info, start_eva);
+  q.target_ = checked_eva_to_raptor_id(meta_info, target_eva);
 
   q.forward_ = (routing_request->search_dir() == SearchDir::SearchDir_Forward);
   q.ontrip_ = routing_request->start_type() != Start::Start_PretripStart;
