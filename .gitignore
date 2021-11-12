@@ -40,3 +40,12 @@ callgrind.out.*
 *.callgrind
 /.clangd
 /compile_commands.json
+verification
+helper/.idea
+helper/target
+config_*
+data
+data_debug_schedule
+.pkg.lock
+gtfstid*
+.gitignore
