@@ -8,7 +8,6 @@ namespace motis::raptor {
 
 using gpu_route = raptor_route;
 using gpu_stop = raptor_stop;
-using gpu_stop_time = stop_time;
 
 struct gpu_footpath {
   gpu_footpath()
@@ -38,13 +37,12 @@ struct host_gpu_timetable {
   std::vector<gpu_route> routes_;
   std::vector<gpu_footpath> footpaths_;
 
-  std::vector<gpu_stop_time> stop_times_;
-
   std::vector<stop_id> route_stops_;
   std::vector<route_id> stop_routes_;
 
   std::vector<motis::time> stop_departures_;
   std::vector<motis::time> stop_arrivals_;
+  std::vector<occ_t> stop_inb_occupancy_;
 
   std::vector<time> transfer_times_;
 };
@@ -57,10 +55,9 @@ struct device_gpu_timetable {
 
   time* transfer_times_;
 
-  gpu_stop_time* stop_times_;
-
   motis::time* stop_arrivals_;
   motis::time* stop_departures_;
+  occ_t* stop_inb_occupancy_;
 
   stop_id* route_stops_;
 
