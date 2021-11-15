@@ -15,12 +15,19 @@ struct criteria_config {
     return stop_idx * trait_size() + trait_offset;
   }
 
-  inline static bool is_update_required(CriteriaData const& td, uint32_t t_offset) {
+  inline static bool is_update_required(CriteriaData const& td,
+                                        uint32_t t_offset) {
     return Traits::is_update_required(trait_size(), td, t_offset);
   }
 
-  inline static bool is_trait_satisfied(CriteriaData const& td, uint32_t t_offset) {
+  inline static bool is_trait_satisfied(CriteriaData const& td,
+                                        uint32_t t_offset) {
     return Traits::is_trait_satisfied(trait_size(), td, t_offset);
+  }
+
+  inline static bool is_rescan_from_stop_needed(CriteriaData const& td,
+                                                uint32_t t_offset) {
+    return Traits::is_rescan_from_stop_needed(trait_size(), td, t_offset);
   }
 
   // derive the trait values from the arrival time index
@@ -51,8 +58,8 @@ struct criteria_config {
                                          uint32_t const trip_id,
                                          uint32_t const dep_stop_offset,
                                          uint32_t const arr_stop_offset) {
-    return Traits::trip_matches_traits(dt, tt, route_id, trip_id, dep_stop_offset,
-                                       arr_stop_offset);
+    return Traits::trip_matches_traits(dt, tt, route_id, trip_id,
+                                       dep_stop_offset, arr_stop_offset);
   }
 
   // check if a candidate journey dominates a given journey by checking on the

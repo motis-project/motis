@@ -24,6 +24,12 @@ struct trait_occupancy {
     dt.occupancy_ = dim_idx;
   }
 
+  template <typename TraitsData>
+  inline static bool is_rescan_from_stop_needed(TraitsData const& data,
+                                                uint32_t trait_idx) {
+    return trait_idx < data.max_occupancy_; //TODO
+  }
+
   inline static bool is_update_required(TraitsData const& current_trip_data,
                                         uint32_t old_trip_idx) {
     return true;  // TODO

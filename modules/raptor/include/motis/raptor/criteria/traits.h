@@ -64,7 +64,18 @@ struct traits<FirstTrait, RestTraits...> {
 
     return FirstTrait::is_trait_satisfied(td, first_trait_idx) &&
            traits<RestTraits...>::is_trait_satisfied(rest_trait_size, td,
-                                                     t_offset);
+                                                     rest_trait_offset);
+  }
+
+  inline static bool is_rescan_from_stop_needed(uint32_t total_size,
+                                                TraitsData const& td,
+                                                uint32_t t_offset) {
+    auto const [rest_trait_size, first_trait_idx, rest_trait_offset] =
+        _trait_values(total_size, t_offset);
+
+    return FirstTrait::is_rescan_from_stop_needed(td, first_trait_idx) ||
+           traits<RestTraits...>::is_rescan_from_stop_needed(
+               rest_trait_size, td, rest_trait_offset);
   }
 
   // helper to aggregate values while progressing through the route stop by stop
@@ -134,6 +145,12 @@ struct traits<> {
   inline static bool is_trait_satisfied(uint32_t _1, Data const& _2,
                                         uint32_t _3) {
     return true;  // return natural element of conjunction
+  }
+
+  template<typename Data>
+  inline static bool is_rescan_from_stop_needed(uint32_t _1, Data const& _2,
+                                       uint32_t _3) {
+    return false;
   }
 
   template <typename Data, typename Timetable>

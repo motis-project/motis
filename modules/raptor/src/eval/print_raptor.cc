@@ -31,7 +31,7 @@ using motis::module::make_msg;
 namespace motis::raptor::eval {
 
 struct print_raptor_options : public conf::configuration {
-  print_raptor_options() : configuration{"Validate options"} {
+  print_raptor_options() : configuration{"Print options"} {
     param(in_path_, "in", "Input file path");
   }
 

@@ -284,7 +284,7 @@ public class ResultComparator {
     System.out.print("Reading Files ...");
     var raptorLines = Files.readAllLines(Path.of("./verification/sbb-small/r-raptor_cpu-moc.txt"));
     //var routingLines = Files.readAllLines(Path.of("./data/results/r-fwd-routing-moc.txt"));
-    var routingLines = Files.readAllLines(Path.of("./verification/sbb-small/r-raptor_cpu-moc_bi.txt"));
+    var routingLines = Files.readAllLines(Path.of("./verification/sbb-small/r-raptor_cpu-moc_wo_target_prune.txt"));
 
     if (raptorLines.size() != routingLines.size()) throw new IllegalStateException("Line Counts don't match!");
     System.out.println("Ok");

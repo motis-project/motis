@@ -49,3 +49,4 @@ data_debug_schedule
 .pkg.lock
 gtfstid*
 .gitignore
+/deps/

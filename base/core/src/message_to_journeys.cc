@@ -163,6 +163,8 @@ journey convert(Connection const* conn) {
   journey.transfers_ = get_transfers(journey);
   journey.night_penalty_ = conn->night_penalty();
   journey.db_costs_ = conn->db_costs();
+  journey.max_occupancy_ = conn->max_occupancy();
+  journey.occupancy_ = conn->occupancy();
   journey.accessibility_ = get_accessibility(journey);
 
   return journey;

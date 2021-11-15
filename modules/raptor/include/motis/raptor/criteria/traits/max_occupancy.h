@@ -38,6 +38,12 @@ struct trait_max_occupancy {
     return trait_idx == 0 && data.max_occupancy_ == 0;
   }
 
+  template <typename TraitsData>
+  inline static bool is_rescan_from_stop_needed(TraitsData const& data,
+                                                uint32_t trait_idx) {
+    return trait_idx < data.max_occupancy_;
+  }
+
   template <typename TraitsData, typename Timetable>
   inline static void update_aggregate(TraitsData& aggregate_dt,
                                       Timetable const& tt, uint32_t const _1,
