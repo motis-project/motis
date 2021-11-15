@@ -179,6 +179,11 @@ public:
     }
   }
 
+  bool operates_on_day(day_idx_t const day) {
+    assert(type() == ROUTE_EDGE || type() == BWD_ROUTE_EDGE);
+    return m_.route_edge_.traffic_days_->test(day);
+  }
+
   inline edge_cost get_foot_edge_cost() const {
     return edge_cost(m_.foot_edge_.time_cost_, m_.foot_edge_.transfer_,
                      m_.foot_edge_.price_, m_.foot_edge_.accessibility_);
@@ -254,7 +259,7 @@ public:
   }
 
   template <search_dir Dir = search_dir::FWD>
-  std::pair<light_connection const*, uint16_t> const get_connection(
+  std::pair<light_connection const*, day_idx_t> get_connection(
       time const start_time) const {
     assert(type() == ROUTE_EDGE || type() == FWD_ROUTE_EDGE ||
            type() == BWD_ROUTE_EDGE);
@@ -264,9 +269,11 @@ public:
       return {nullptr, 0};
     }
 
+    // TODO
     // assume traffic in BWD mode as bitfields were built assuming fwd bitfields
+    /*
     bool has_traffic = true;
-    if (Dir == search_dir::FWD) {
+    if constexpr (Dir == search_dir::FWD) {
       has_traffic = false;
       if (m_.route_edge_.traffic_days_ != nullptr) {
         auto const last_day = (start_time + MAX_TRAVEL_TIME_MINUTES).day();
@@ -278,6 +285,7 @@ public:
         }
       }
     }
+    */
 
     if (Dir == search_dir::FWD) {
       auto it = std::lower_bound(
@@ -311,8 +319,7 @@ public:
     } else {
       auto it = std::lower_bound(
           std::rbegin(m_.route_edge_.conns_), std::rend(m_.route_edge_.conns_),
-          light_connection{0U, static_cast<uint16_t>(start_time.mam())},
-          a_time_cmp{});
+          light_connection{0U, start_time.mam()}, a_time_cmp{});
 
       auto const abort_time = start_time - MAX_TRAVEL_TIME_MINUTES;
       auto day = static_cast<uint16_t>(start_time.day());

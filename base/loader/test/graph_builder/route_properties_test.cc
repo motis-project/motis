@@ -20,7 +20,7 @@ TEST_F(loader_graph_builder_never_meet, routes) {
   ASSERT_EQ(3, sched_->route_index_to_first_route_node_.size());
 
   auto node_it = begin(sched_->route_index_to_first_route_node_);
-  auto connections = get_connections(*node_it, 0);
+  auto connections = get_connections(*node_it, time{0});
 
   ASSERT_TRUE(node_it != end(sched_->route_index_to_first_route_node_));
   EXPECT_EQ(2, connections.size());

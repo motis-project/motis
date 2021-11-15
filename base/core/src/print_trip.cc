@@ -36,7 +36,7 @@ inline std::ostream& print_time(std::ostream& out, std::time_t t,
 }
 
 void print_trip(std::ostream& out, schedule const& sched,
-                concrete_trip const* trp, bool const local_time) {
+                concrete_trip const& trp, bool const local_time) {
   std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> utf8_conv;
 
   auto i = 0U;

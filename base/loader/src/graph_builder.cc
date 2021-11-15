@@ -202,9 +202,12 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
       auto const& station = *sched_.stations_.at(
           stations_[s->route()->stations()->Get(i / 2)]->id_);
 
-      auto const local_time = s->times()->Get(i) % MINUTES_A_DAY;
-      auto const day_offset = s->times()->Get(i) / MINUTES_A_DAY;
-      auto adj_day_idx = day_idx + day_offset + SCHEDULE_OFFSET_DAYS;
+      auto const local_time =
+          static_cast<mam_t>(s->times()->Get(i) % MINUTES_A_DAY);
+      auto const day_offset =
+          static_cast<day_idx_t>(s->times()->Get(i) / MINUTES_A_DAY);
+      auto adj_day_idx =
+          static_cast<day_idx_t>(day_idx + day_offset + SCHEDULE_OFFSET_DAYS);
       auto const is_season =
           is_local_time_in_season(adj_day_idx, local_time, station.timez_);
       auto const season_offset = is_season ? station.timez_->season_.offset_
@@ -228,7 +231,7 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
       // this only work for services that operate at on the first day of the
       // timetable?
       auto const rel_utc =
-          abs_utc - time{static_cast<day_idx_t>(initial_day), 0};
+          time{abs_utc - time{static_cast<day_idx_t>(initial_day), 0}};
 
       auto const sort_ok = i == 1 || utc_service_times.back() <= rel_utc;
       auto const impossible_time =
@@ -322,7 +325,7 @@ void graph_builder::add_route_services(
     auto const route_id = next_route_index_++;
     auto r = create_route(services[0].first->route(), route, route_id);
     index_first_route_node(*r);
-    write_trip_info(*r);
+    write_trip_edges(*r);
     if (expand_trips_) {
       add_expanded_trips(*r);
     }
@@ -741,7 +744,7 @@ int graph_builder::get_or_create_track(int day,
   }
 }
 
-void graph_builder::write_trip_info(route const& r) {
+void graph_builder::write_trip_edges(route const& r) {
   auto edges_ptr =
       sched_.trip_edges_
           .emplace_back(mcd::make_unique<mcd::vector<trip_info::route_edge>>(

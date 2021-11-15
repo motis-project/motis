@@ -92,6 +92,7 @@ protected:
 struct sections {
   using iterator = trip_iterator<trip_section>;
 
+  explicit sections(concrete_trip const& t) : t_(t.trp_) {}
   explicit sections(trip_info const* t) : t_(t) {}
 
   iterator begin() const { return begin(t_); }
@@ -111,6 +112,7 @@ struct sections {
 struct stops {
   using iterator = trip_iterator<trip_stop>;
 
+  explicit stops(concrete_trip const& t) : t_(t.trp_) {}
   explicit stops(trip_info const* t) : t_(t) {}
 
   iterator begin() const { return begin(t_); }

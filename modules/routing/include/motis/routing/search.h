@@ -161,9 +161,9 @@ struct search {
           interval_begin, interval_end, q.lcon_, q.use_start_footpaths_));
     };
 
-    time const schedule_begin = SCHEDULE_OFFSET_MINUTES;
-    time const schedule_end =
-        (q.sched_->schedule_end_ - q.sched_->schedule_begin_) / 60;
+    auto const schedule_begin = time{SCHEDULE_OFFSET_MINUTES};
+    auto const schedule_end =
+        time{(q.sched_->schedule_end_ - q.sched_->schedule_begin_) / 60};
 
     auto const map_to_interval = [&schedule_begin, &schedule_end](time t) {
       return std::min(schedule_end, std::max(schedule_begin, t));

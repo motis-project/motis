@@ -21,6 +21,7 @@ constexpr auto const MAX_DAYS = day_idx_t{512};
 constexpr auto const MINUTES_A_DAY = duration_t{1440};
 constexpr auto const SECONDS_A_DAY = uint32_t{MINUTES_A_DAY * 60};
 constexpr auto const INVALID_DURATION = std::numeric_limits<duration_t>::max();
+constexpr auto const INVALID_MAM = std::numeric_limits<mam_t>::max();
 
 struct time {
   constexpr time() = default;
@@ -115,12 +116,12 @@ struct time {
 
   std::string to_str() const;
 
-  day_idx_t day() const {
+  constexpr day_idx_t day() const {
     assert(day_idx_ <= MAX_DAYS);
     return day_idx_;
   }
 
-  uint16_t mam() const {
+  constexpr mam_t mam() const {
     assert(mam_ < MINUTES_A_DAY);
     return mam_;
   }
@@ -135,11 +136,11 @@ private:
 };
 
 constexpr time INVALID_TIME = time();
-constexpr uint32_t SCHEDULE_OFFSET_DAYS = 5;
+constexpr day_idx_t SCHEDULE_OFFSET_DAYS = 5;
 
 // plus four days, because the maximum trip duration is 4 days
 // plus one day, because the first valid motis timestamp is MINUTES_A_DAY
-constexpr uint32_t SCHEDULE_OFFSET_MINUTES =
+constexpr duration_t SCHEDULE_OFFSET_MINUTES =
     SCHEDULE_OFFSET_DAYS * MINUTES_A_DAY;
 
 time to_motis_time(int minutes) {

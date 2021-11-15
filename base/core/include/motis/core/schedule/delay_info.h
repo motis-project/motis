@@ -88,9 +88,13 @@ struct delay_info {
 
   inline void set_ev_key(ev_key const& k) { ev_ = k; }
 
-  ev_key ev_, orig_ev_{ev_};
-  time repair_time_, is_time_;
-  time schedule_time_{ev_.get_time()}, forecast_time_, propagation_time_;
+  ev_key ev_{};
+  ev_key orig_ev_{ev_};
+  time repair_time_{INVALID_TIME};
+  time is_time_{INVALID_TIME};
+  time schedule_time_{ev_.get_time()};
+  time forecast_time_{INVALID_TIME};
+  time propagation_time_{INVALID_TIME};
 };
 
 }  // namespace motis

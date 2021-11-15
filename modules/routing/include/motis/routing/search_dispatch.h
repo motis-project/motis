@@ -47,10 +47,6 @@ inline search_result search_dispatch(search_query const& q,
       return get_connections<single_criterion_label<Dir>, Gen>(q);
     case SearchType_SingleCriterionNoIntercity:
       return get_connections<single_criterion_no_intercity_label<Dir>, Gen>(q);
-    case SearchType_LateConnections:
-      return get_connections<late_connections_label<Dir>, Gen>(q);
-    case SearchType_LateConnectionsTest:
-      return get_connections<late_connections_label_for_tests<Dir>, Gen>(q);
     case SearchType_Accessibility:
       return get_connections<accessibility_label<Dir>, Gen>(q);
     default: break;

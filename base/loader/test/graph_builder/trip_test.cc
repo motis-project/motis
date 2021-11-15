@@ -23,24 +23,24 @@ TEST_F(loader_trip, none) {
 }
 
 TEST_F(loader_trip, simple) {
-  auto trp = get_trip(*sched_, "0000001", 1, unix_time(1000), "0000003",
-                      unix_time(1200), "");
-  ASSERT_NE(nullptr, trp);
+  auto ctrp = get_trip(*sched_, "0000001", 1, unix_time(1000), "0000003",
+                       unix_time(1200), "");
+  ASSERT_NE(nullptr, ctrp);
 
-  auto const& primary = trp->id_.primary_;
-  auto const& secondary = trp->id_.secondary_;
+  auto const& primary = ctrp.trp_->id_.primary_;
+  auto const& secondary = ctrp.trp_->id_.secondary_;
 
   EXPECT_EQ("0000001", sched_->stations_[primary.station_id_]->eva_nr_);
   EXPECT_EQ(1, primary.train_nr_);
-  EXPECT_EQ(motis_time(1000), primary.time_);
+  EXPECT_EQ(motis_time(1000), primary.first_departure_mam_);
 
   EXPECT_EQ("", secondary.line_id_);
   EXPECT_EQ("0000003",
             sched_->stations_[secondary.target_station_id_]->eva_nr_);
-  EXPECT_EQ(motis_time(1200), secondary.target_time_);
+  EXPECT_EQ(motis_time(1200), secondary.last_arrival_mam_);
 
-  ASSERT_EQ(2, trp->edges_->size());
-  for (auto const& sec : sections(trp)) {
+  ASSERT_EQ(2, ctrp.trp_->edges_->size());
+  for (auto const& sec : sections(ctrp.trp_)) {
     auto const& lcon = sec.lcon();
     auto const& info = sec.info(*sched_);
     auto const& from = sec.from_station(*sched_);
@@ -67,7 +67,7 @@ TEST_F(loader_trip, simple) {
     }
   }
 
-  for (auto const& stop : stops(trp)) {
+  for (auto const& stop : stops(ctrp.trp_)) {
     auto const& station = stop.get_station(*sched_);
     switch (stop.index()) {
       case 0:

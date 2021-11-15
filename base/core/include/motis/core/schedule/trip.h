@@ -23,13 +23,13 @@ struct primary_trip_id {
   CISTA_COMPARABLE()
   uint32_t station_id_{0U};
   uint32_t train_nr_{0U};
-  duration_t first_departure_mam_{INVALID_DURATION};
+  mam_t first_departure_mam_{INVALID_MAM};
 };
 
 struct secondary_trip_id {
   CISTA_COMPARABLE();
   uint32_t target_station_id_{0U};
-  duration_t last_arrival_mam_{INVALID_DURATION};
+  duration_t last_arrival_mam_{INVALID_MAM};
   mcd::string line_id_;
 };
 
@@ -107,12 +107,15 @@ struct trip_info {
     uint32_t outgoing_edge_idx_{0};
   };
 
+  full_trip_id id_;
   ptr<mcd::vector<route_edge> const> edges_{nullptr};
   lcon_idx_t lcon_idx_{0U};
+  duration_t travel_duration_{INVALID_DURATION};
   trip_debug dbg_;
 };
 
 struct concrete_trip {
+  CISTA_COMPARABLE()
   trip_info const* trp_;
   day_idx_t day_idx_;
 };
