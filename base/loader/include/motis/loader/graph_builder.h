@@ -184,7 +184,7 @@ struct graph_builder {
   void sort_connections();
   void sort_trips();
 
-  mcd::hash_set<std::vector<time>, std::vector<unsigned>> service_times_to_utc(
+  mcd::hash_map<std::vector<time>, std::vector<unsigned>> service_times_to_utc(
       bitfield const& traffic_days, day_idx_t start_idx, day_idx_t end_idx,
       Service const* s);
 

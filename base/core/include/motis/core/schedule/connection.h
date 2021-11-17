@@ -64,21 +64,33 @@ struct connection {
 };
 
 struct light_connection {
-  light_connection() : bitfield_idx_{0U}, trips_{0U}, valid_{0U} {}
+  light_connection(mam_t const d_time, mam_t const a_time)
+      : full_con_{nullptr},
+        d_time_{d_time},
+        a_time_{a_time},
+        bitfield_idx_{0U},
+        trips_{0U},
+        valid_{false},
+        start_day_offset_{0U} {}
 
   light_connection(mam_t const d_time, mam_t const a_time,
-                   size_t const bitfield_idx = 0U,
-                   connection const* full_con = nullptr,
-                   merged_trips_idx const trips = 0U)
+                   size_t const bitfield_idx, connection const* full_con,
+                   merged_trips_idx const trips, day_idx_t const day_offset)
       : full_con_{full_con},
         d_time_{d_time},
         a_time_{a_time},
         bitfield_idx_{bitfield_idx},
         trips_{trips},
-        valid_{1U} {}
+        valid_{1U},
+        start_day_offset_{static_cast<uint32_t>(day_offset)} {}
 
   time event_time(event_type const t, day_idx_t day) const {
     return {day, t == event_type::DEP ? d_time_ : a_time_};
+  }
+
+  time event_time_with_start_day(event_type const t,
+                                 day_idx_t const start_day) const {
+    return event_time(t, start_day + start_day_offset_);
   }
 
   duration_t travel_time() const { return a_time_ - d_time_; }
@@ -90,8 +102,9 @@ struct light_connection {
     size_t bitfield_idx_;
     bitfield const* traffic_days_;
   };
-  uint32_t trips_ : 31;
+  uint32_t trips_ : 27;
   uint32_t valid_ : 1;
+  uint32_t start_day_offset_ : 4;
 };
 
 struct d_time_cmp {
