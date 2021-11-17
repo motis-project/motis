@@ -138,37 +138,61 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
     ASSERT_EQ(19 * 60 + 3 + MTO, lcon[0].d_time_);
     ASSERT_EQ(19 * 60 + 58 + MTO, lcon[0].a_time_);
 
-    auto connections = get_connections(first_route_node, 19 * 60 + 3);
+    auto connections = get_connections(first_route_node, motis_time(1903));
     ASSERT_EQ(8, static_cast<int>(connections.size()));
 
     auto& stations = sched_->stations_;
     EXPECT_EQ("8000284",
-              stations[get<1>(connections[0])->get_station()->id_]->eva_nr_);
+              stations[get<2>(connections[0])->get_station()->id_]->eva_nr_);
     EXPECT_EQ("8000260",
-              stations[get<1>(connections[1])->get_station()->id_]->eva_nr_);
+              stations[get<2>(connections[1])->get_station()->id_]->eva_nr_);
     EXPECT_EQ("8010101",
-              stations[get<1>(connections[2])->get_station()->id_]->eva_nr_);
+              stations[get<2>(connections[2])->get_station()->id_]->eva_nr_);
     EXPECT_EQ("8010240",
-              stations[get<1>(connections[3])->get_station()->id_]->eva_nr_);
+              stations[get<2>(connections[3])->get_station()->id_]->eva_nr_);
     EXPECT_EQ("8010205",
-              stations[get<1>(connections[4])->get_station()->id_]->eva_nr_);
+              stations[get<2>(connections[4])->get_station()->id_]->eva_nr_);
     EXPECT_EQ("8010222",
-              stations[get<1>(connections[5])->get_station()->id_]->eva_nr_);
+              stations[get<2>(connections[5])->get_station()->id_]->eva_nr_);
     EXPECT_EQ("8011113",
-              stations[get<1>(connections[6])->get_station()->id_]->eva_nr_);
+              stations[get<2>(connections[6])->get_station()->id_]->eva_nr_);
     EXPECT_EQ("8098160",
-              stations[get<1>(connections[7])->get_station()->id_]->eva_nr_);
-    EXPECT_EQ("8011102",
               stations[get<2>(connections[7])->get_station()->id_]->eva_nr_);
+    EXPECT_EQ("8011102",
+              stations[get<3>(connections[7])->get_station()->id_]->eva_nr_);
 
-    EXPECT_EQ(motis_time(1903), get<0>(connections[0])->d_time_);
-    EXPECT_EQ(motis_time(2000), get<0>(connections[1])->d_time_);
-    EXPECT_EQ(motis_time(2155), get<0>(connections[2])->d_time_);
-    EXPECT_EQ(motis_time(2234), get<0>(connections[3])->d_time_);
-    EXPECT_EQ(motis_time(2318), get<0>(connections[4])->d_time_);
-    EXPECT_EQ(motis_time(2349), get<0>(connections[5])->d_time_);
-    EXPECT_EQ(motis_time(2425), get<0>(connections[6])->d_time_);
-    EXPECT_EQ(motis_time(2433), get<0>(connections[7])->d_time_);
+    EXPECT_EQ(
+        motis_time(1903),
+        get<light_connection const*>(connections[0])
+            ->event_time(event_type::DEP, get<day_idx_t>(connections[0])));
+    EXPECT_EQ(
+        motis_time(2000),
+        get<light_connection const*>(connections[1])
+            ->event_time(event_type::DEP, get<day_idx_t>(connections[1])));
+    EXPECT_EQ(
+        motis_time(2155),
+        get<light_connection const*>(connections[2])
+            ->event_time(event_type::DEP, get<day_idx_t>(connections[2])));
+    EXPECT_EQ(
+        motis_time(2234),
+        get<light_connection const*>(connections[3])
+            ->event_time(event_type::DEP, get<day_idx_t>(connections[3])));
+    EXPECT_EQ(
+        motis_time(2318),
+        get<light_connection const*>(connections[4])
+            ->event_time(event_type::DEP, get<day_idx_t>(connections[4])));
+    EXPECT_EQ(
+        motis_time(2349),
+        get<light_connection const*>(connections[5])
+            ->event_time(event_type::DEP, get<day_idx_t>(connections[5])));
+    EXPECT_EQ(
+        motis_time(2425),
+        get<light_connection const*>(connections[6])
+            ->event_time(event_type::DEP, get<day_idx_t>(connections[6])));
+    EXPECT_EQ(
+        motis_time(2433),
+        get<light_connection const*>(connections[7])
+            ->event_time(event_type::DEP, get<day_idx_t>(connections[7])));
 
     EXPECT_EQ(motis_time(1958), get<0>(connections[0])->a_time_);
     EXPECT_EQ(motis_time(2153), get<0>(connections[1])->a_time_);

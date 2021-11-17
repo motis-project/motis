@@ -36,7 +36,6 @@ using component_it = component_vec::iterator;
 using component_range = std::pair<component_it, component_it>;
 
 struct footpath_builder {
-
   footpath_builder(
       schedule& sched, loader_options const& opt,
       mcd::hash_map<Station const*, station_node*> const& station_nodes)

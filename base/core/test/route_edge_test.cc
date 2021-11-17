@@ -4,11 +4,10 @@
 
 using namespace motis;
 
-auto const e =
-    make_route_edge(nullptr, nullptr,
-                    {light_connection(0, 10, 0U), light_connection(1, 11, 0U),
-                     light_connection(2, 12, 0U)},
-                    0U);
+auto const e = make_route_edge(
+    nullptr, nullptr,
+    {light_connection(0, 10), light_connection(1, 11), light_connection(2, 12)},
+    0U);
 
 TEST(core_route_edge, get_connection_test_valid) {
   auto [c, day] = e.get_connection(motis::time{0U, 1U});

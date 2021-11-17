@@ -52,7 +52,7 @@ TEST_F(loader_graph_builder_season_valid, event_times) {
       });
   ASSERT_TRUE(node_it != end(sched_->route_index_to_first_route_node_));
 
-  auto cs = get_connections(*node_it, 0);
+  auto cs = get_connections(*node_it, time{0});
   ASSERT_EQ(38, cs.size());
 
   test_events(cs[0], motis_time(53, 0, 60), motis_time(55, 0, 60));
@@ -76,7 +76,7 @@ TEST_F(loader_graph_builder_season_invalid, event_times) {
       });
   ASSERT_TRUE(node_it != end(sched_->route_index_to_first_route_node_));
 
-  auto cs = get_connections(*node_it, 0);
+  auto cs = get_connections(*node_it, time{0});
   ASSERT_EQ(10, cs.size());
 
   test_events(cs[0], motis_time(108, 0, 60), motis_time(111, 0, 60));

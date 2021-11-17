@@ -18,7 +18,7 @@ protected:
   static edge const* get_route_edge(node const* route_node);
 
   static std::vector<
-      std::tuple<light_connection const*, node const*, node const*>>
+      std::tuple<light_connection const*, day_idx_t, node const*, node const*>>
   get_connections(node const* first_route_node, time departure_time);
 
   std::time_t unix_time(int hhmm, int day_idx = 0,

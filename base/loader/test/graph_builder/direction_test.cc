@@ -22,7 +22,7 @@ TEST_F(loader_direction_services_graph_builder_test, direction_station) {
       });
   ASSERT_FALSE(node_it == end(sched_->route_index_to_first_route_node_));
 
-  auto connections = get_connections(*node_it, 0);
+  auto connections = get_connections(*node_it, time{0});
   ASSERT_GE(connections.size(), 16);
 
   for (auto i = 0U; i < 12; ++i) {
@@ -46,7 +46,7 @@ TEST_F(loader_direction_services_graph_builder_test, direction_text) {
       });
   ASSERT_FALSE(node_it == end(sched_->route_index_to_first_route_node_));
 
-  auto connections = get_connections(*node_it, 0);
+  auto connections = get_connections(*node_it, time{0});
   ASSERT_GE(connections.size(), 27);
 
   for (auto const& e : connections) {
