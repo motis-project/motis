@@ -464,7 +464,7 @@ __global__ void gpu_raptor_kernel(base_query const query,
 }
 
 void invoke_gpu_raptor(d_query const& dq) {
-  void* kernel_args[] = {(void*)&dq, (void*)&(dq.mem_->device_),
+  void* kernel_args[] = {(void*)&dq, (void*)(dq.mem_->active_device_),
                          (void*)&(dq.tt_)};
   launch_kernel(gpu_raptor_kernel, kernel_args, dq.mem_->context_,
                 dq.mem_->context_.proc_stream_);

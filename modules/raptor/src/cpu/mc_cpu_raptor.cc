@@ -1,5 +1,6 @@
 #include "motis/raptor/cpu/mc_cpu_raptor.h"
 
+#include "motis/raptor/criteria/configs.h"
 #include "motis/raptor/cpu/mark_store.h"
 #include "motis/raptor/print_raptor.h"
 #include "motis/raptor/raptor_query.h"
@@ -368,7 +369,6 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics&) {
   }
 }
 
-template void invoke_mc_cpu_raptor<MaxOccupancy>(const raptor_query& query,
-                                                 raptor_statistics&);
+RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(MAKE_MC_CPU_RAPTOR_TEMPLATE_INSTANCE, )
 
 }  // namespace motis::raptor

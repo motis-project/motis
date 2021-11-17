@@ -16,16 +16,16 @@ void inline launch_kernel(Kernel kernel, void** args,
 
 inline void fetch_arrivals_async(d_query const& dq, cudaStream_t s) {
   cudaMemcpyAsync(
-      dq.mem_->host_.result_->data(), dq.mem_->device_.result_.front(),
-      dq.mem_->host_.result_->byte_size(), cudaMemcpyDeviceToHost, s);
+      dq.mem_->active_host_->result_->data(), dq.mem_->active_device_->result_.front(),
+      dq.mem_->active_host_->result_->byte_size(), cudaMemcpyDeviceToHost, s);
   cuda_check();
 }
 
 inline void fetch_arrivals_async(d_query const& dq, raptor_round const round_k,
                                  cudaStream_t s) {
-  cudaMemcpyAsync((*dq.mem_->host_.result_)[round_k],
-                  dq.mem_->device_.result_[round_k],
-                  dq.mem_->host_.result_->stop_count_ * sizeof(time),
+  cudaMemcpyAsync((*dq.mem_->active_host_->result_)[round_k],
+                  dq.mem_->active_device_->result_[round_k],
+                  dq.mem_->active_host_->result_->arrival_times_count_ * sizeof(time),
                   cudaMemcpyDeviceToHost, s);
   cuda_check();
 }

@@ -4,7 +4,6 @@
 #include "motis/core/schedule/edges.h"
 #include "motis/core/schedule/time.h"
 #include "motis/core/journey/journey.h"
-#include "motis/protocol/RoutingRequest_generated.h"
 
 #include "motis/raptor/cpu/cpu_raptor.h"
 #include "motis/raptor/cpu/mc_cpu_raptor.h"
@@ -16,6 +15,7 @@
 
 #if defined(MOTIS_CUDA)
 #include "motis/raptor/gpu/gpu_raptor.cuh"
+#include "motis/raptor/gpu/mc_gpu_raptor.cuh"
 #endif
 
 namespace motis::raptor {
@@ -94,8 +94,7 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
 template <implementation_type Impl, typename Query>
 inline std::vector<journey> search_dispatch(
     Query& q, raptor_statistics& stats, schedule const& sched,
-    raptor_meta_info const& meta_info, raptor_timetable const& tt,
-    routing::SearchType const search_type) {
+    raptor_meta_info const& meta_info, raptor_timetable const& tt) {
   throw std::system_error{access::error::not_implemented};
 }
 
@@ -103,22 +102,24 @@ template <>
 inline std::vector<journey>
 search_dispatch<implementation_type::CPU, raptor_query>(
     raptor_query& q, raptor_statistics& stats, schedule const& sched,
-    raptor_meta_info const& meta_info, raptor_timetable const& tt,
-    routing::SearchType const search_type) {
-  switch (search_type) {
-    case routing::SearchType::SearchType_Default:
+    raptor_meta_info const& meta_info, raptor_timetable const& tt) {
+  switch (q.criteria_config_) {
+    case raptor_criteria_config::Default:
       return raptor_gen<Default>(
           q, stats, sched, meta_info, tt,
           [&](raptor_query& q) { return invoke_cpu_raptor(q, stats); });
 
-    case routing::SearchType::SearchType_MaxOccupancy:
-      q.result_.reset();
-      q.result_ = std::make_unique<raptor_result>(tt.stop_count() *
-                                                  MaxOccupancy::trait_size());
-      return raptor_gen<MaxOccupancy>(
-          q, stats, sched, meta_info, tt, [&](raptor_query& q) {
-            return invoke_mc_cpu_raptor<MaxOccupancy>(q, stats);
-          });
+      RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(CASE_CRITERIA_CONFIG_TO_CPU_INVOKE,
+                                         raptor_criteria_config)
+
+      //    case raptor_criteria_config::MaxOccupancy:
+      //      q.result_.reset();
+      //      q.result_ = std::make_unique<raptor_result>(tt.stop_count() *
+      //                                                  MaxOccupancy::trait_size());
+      //      return raptor_gen<MaxOccupancy>(
+      //          q, stats, sched, meta_info, tt, [&](raptor_query& q) {
+      //            return invoke_mc_cpu_raptor<MaxOccupancy>(q, stats);
+      //          });
 
     default: throw std::system_error{access::error::not_implemented};
   }
@@ -128,12 +129,18 @@ search_dispatch<implementation_type::CPU, raptor_query>(
 template <>
 inline std::vector<journey> search_dispatch<implementation_type::GPU, d_query>(
     d_query& q, raptor_statistics& stats, schedule const& sched,
-    raptor_meta_info const& meta_info, raptor_timetable const& tt,
-    routing::SearchType const search_type) {
-  utl::verify_ex(search_type == routing::SearchType_Default,
-                 access ::error::not_implemented);
-  return raptor_gen<Default>(q, stats, sched, meta_info, tt,
-                             [&](d_query& q) { return invoke_gpu_raptor(q); });
+    raptor_meta_info const& meta_info, raptor_timetable const& tt) {
+
+  switch (q.criteria_config_) {
+    case raptor_criteria_config::Default:
+      return raptor_gen<Default>(q, stats, sched, meta_info, tt,
+                                 [&](d_query& q) { return invoke_gpu_raptor(q); });
+
+      RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(CASE_CRITERIA_CONFIG_TO_GPU_INVOKE, raptor_criteria_config)
+
+    default: throw std::system_error{access::error::not_implemented};
+  }
+
 }
 #endif
 

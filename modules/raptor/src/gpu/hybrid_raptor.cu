@@ -29,7 +29,7 @@ void invoke_hybrid_raptor(d_query const& dq) {
   auto const& proc_stream = dq.mem_->context_.proc_stream_;
   auto const& transfer_stream = dq.mem_->context_.transfer_stream_;
 
-  void* init_args[] = {(void*)&dq, (void*)&dq.mem_->device_,  // NOLINT
+  void* init_args[] = {(void*)&dq, (void*)dq.mem_->active_device_,  // NOLINT
                        (void*)&dq.tt_};  // NOLINT
 
   launch_kernel(init_arrivals_kernel, init_args, dq.mem_->context_,
@@ -39,7 +39,7 @@ void invoke_hybrid_raptor(d_query const& dq) {
   fetch_arrivals_async(dq, 0, transfer_stream);
 
   for (int k = 1; k < max_raptor_round; ++k) {
-    void* kernel_args[] = {(void*)&dq.mem_->device_, (void*)&k,  // NOLINT
+    void* kernel_args[] = {(void*)dq.mem_->active_device_, (void*)&k,  // NOLINT
                            (void*)&dq.tt_};  // NOLINT
 
     launch_kernel(update_routes_kernel, kernel_args, dq.mem_->context_,
@@ -50,12 +50,12 @@ void invoke_hybrid_raptor(d_query const& dq) {
                   proc_stream);
     cuda_sync_stream(proc_stream);
 
-    cudaMemcpyAsync(dq.mem_->host_.any_station_marked_,
-                    dq.mem_->device_.any_station_marked_, sizeof(bool),
+    cudaMemcpyAsync(dq.mem_->active_host_->any_station_marked_,
+                    dq.mem_->active_device_->any_station_marked_, sizeof(bool),
                     cudaMemcpyDeviceToHost, transfer_stream);
     cuda_sync_stream(transfer_stream);
 
-    if (!*dq.mem_->host_.any_station_marked_) {
+    if (!*dq.mem_->active_host_->any_station_marked_) {
       break;
     }
 

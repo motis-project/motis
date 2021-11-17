@@ -13,6 +13,7 @@
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/core/journey/message_to_journeys.h"
 
+#include "motis/raptor/criteria/configs.h"
 #include "motis/raptor/eval/commands.h"
 #include "motis/raptor/get_raptor_timetable.h"
 #include "motis/raptor/implementation_type.h"
@@ -95,7 +96,7 @@ struct raptor::impl {
 
     raptor_statistics stats;
     auto const journeys = search_dispatch<implementation_type::CPU>(
-        q, stats, sched_, *meta_info_, *timetable_, req->search_type());
+        q, stats, sched_, *meta_info_, *timetable_);
     stats.total_calculation_time_ = MOTIS_GET_TIMING_MS(total_calculation_time);
 
     return make_response(sched_, journeys, req, stats);
@@ -117,8 +118,8 @@ struct raptor::impl {
     d_query q(base_query, *meta_info_, loan.mem_, *d_gtt_);
 
     std::vector<journey> js;
-    js = search_dispatch<implementation_type::GPU>(
-        q, stats, sched_, *meta_info_, *timetable_, req->search_type());
+    js = search_dispatch<implementation_type::GPU>(q, stats, sched_,
+                                                   *meta_info_, *timetable_);
     stats.total_calculation_time_ = MOTIS_GET_TIMING_MS(total_calculation_time);
 
     return make_response(sched_, js, req, stats);

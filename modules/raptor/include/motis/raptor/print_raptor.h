@@ -170,7 +170,7 @@ inline void print_route_arrivals(route_id const r_id,
 
 inline bool is_reset(raptor_result_base const& result) {
   for (auto k = 0; k < max_raptor_round; ++k) {
-    for (auto s = 0; s < result.stop_count_; ++s) {
+    for (auto s = 0; s < result.arrival_times_count_; ++s) {
       if (result[k][s] != invalid<time>) {
         return false;
       }

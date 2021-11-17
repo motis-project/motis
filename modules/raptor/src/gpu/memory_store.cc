@@ -3,9 +3,35 @@
 
 #include "cuda_runtime.h"
 
+#include "motis/raptor/criteria/configs.h"
 #include "motis/raptor/gpu/cuda_util.h"
 
 namespace motis::raptor {
+
+//#ifdef _DEBUG
+inline void print_device_properties(cudaDeviceProp const& dp) {
+  printf("Properties of device '%s':\n", dp.name);
+  printf("\tCompute Capability:\t%i.%i\n", dp.major, dp.minor);
+  printf("\tMultiprocessor Count:\t%i\n", dp.multiProcessorCount);
+  printf("\tmaxThreadsPerBlock:\t%i\n", dp.maxThreadsPerBlock);
+  printf("\tmaxThreadsPerDim:\t%i, %i, %i\n", dp.maxThreadsDim[0],
+         dp.maxThreadsDim[1], dp.maxThreadsDim[2]);
+  printf("\tmaxGridSizePerDim:\t%i, %i, %i\n", dp.maxGridSize[0],
+         dp.maxGridSize[1], dp.maxGridSize[2]);
+  printf("\tmaxBlocksPerMult.Proc.:\t%i\n", dp.maxBlocksPerMultiProcessor);
+  printf("\tmaxThreadsPerMul.Proc.:\t%i\n", dp.maxThreadsPerMultiProcessor);
+  printf("\tWarp Size:\t\t%i\n", dp.warpSize);
+  printf("\tSupports Coop Launch:\t%i\n", dp.cooperativeLaunch);
+}
+
+inline void print_device_launch_parameters(dim3 block, dim3 grid) {
+  printf("Launch Parameters:\n");
+  printf("\tBlock Dimensions:\t%i, %i, %i\n", block.x, block.y, block.z);
+  printf("\tThreads per Block:\t%i\n", (block.x * block.y * block.z));
+  printf("\tGrid Dimensions:\t%i, %i, %i\n", grid.x, grid.y, grid.z);
+  printf("\tBlocks per Launch:\t%i\n", (grid.x * grid.y * grid.z));
+}
+//#endif
 
 std::pair<dim3, dim3> get_launch_paramters(
     cudaDeviceProp const& prop, int32_t const concurrency_per_device) {
@@ -14,9 +40,14 @@ std::pair<dim3, dim3> get_launch_paramters(
   int32_t block_size = block_dim_x * block_dim_y;
   int32_t max_blocks_per_sm = prop.maxThreadsPerMultiProcessor / block_size;
 
+  if (max_blocks_per_sm < 1) {
+    throw std::runtime_error{
+        "Require a to large Block size to be executed on one SM!"};
+  }
+
   auto const mp_count = prop.multiProcessorCount / concurrency_per_device;
 
-  int32_t num_blocks = mp_count * max_blocks_per_sm;
+  int32_t num_blocks = mp_count /* * max_blocks_per_sm */;
 
   dim3 threads_per_block(block_dim_x, block_dim_y, 1);
   dim3 grid(num_blocks, 1, 1);
@@ -36,6 +67,11 @@ device_context::device_context(device_id const device_id,
   std::tie(threads_per_block_, grid_) =
       get_launch_paramters(props_, concurrency_per_device);
 
+#ifdef _DEBUG
+  print_device_properties(props_);
+  print_device_launch_parameters(threads_per_block_, grid_);
+#endif
+
   cudaStreamCreate(&proc_stream_);
   cuda_check();
   cudaStreamCreate(&transfer_stream_);
@@ -51,8 +87,11 @@ void device_context::destroy() {
   cuda_check();
 }
 
-host_memory::host_memory(stop_id const stop_count)
-    : result_{std::make_unique<raptor_result_pinned>(stop_count)} {
+host_memory::host_memory(stop_id const stop_count,
+                         raptor_criteria_config const criteria_config)
+    : result_{
+          std::make_unique<raptor_result_pinned>(stop_count, criteria_config)} {
+
   cudaMallocHost(&any_station_marked_, sizeof(bool));
   *any_station_marked_ = false;
 }
@@ -69,11 +108,14 @@ void host_memory::reset() const {
 }
 
 device_memory::device_memory(stop_id const stop_count,
+                             raptor_criteria_config const criteria_config,
                              route_id const route_count,
                              size_t const max_add_starts)
     : stop_count_{stop_count},
       route_count_{route_count},
-      max_add_starts_{max_add_starts} {
+      max_add_starts_{max_add_starts},
+      arrival_times_count_{
+          stop_count * get_trait_size_for_criteria_config(criteria_config)} {
   cudaMalloc(&(result_.front()), get_result_bytes());
   for (auto k = 1U; k < result_.size(); ++k) {
     result_[k] = result_[k - 1] + stop_count;
@@ -99,7 +141,7 @@ void device_memory::destroy() {
 }
 
 size_t device_memory::get_result_bytes() const {
-  return stop_count_ * sizeof(time) * max_raptor_round;
+  return arrival_times_count_ * sizeof(time) * max_raptor_round;
 }
 
 size_t device_memory::get_station_mark_bytes() const {
@@ -131,14 +173,66 @@ void device_memory::reset_async(cudaStream_t s) {
 mem::mem(stop_id const stop_count, route_id const route_count,
          size_t const max_add_starts, device_id const device_id,
          int32_t const concurrency_per_device)
-    : host_{stop_count},
-      device_{stop_count, route_count, max_add_starts},
-      context_{device_id, concurrency_per_device} {}
+    : host_memories_{},
+      device_memories_{},
+      context_{device_id, concurrency_per_device},
+      active_host_{nullptr},
+      active_device_{nullptr},
+      active_config_{raptor_criteria_config::Default},
+      is_reset_{true}
+
+      //host_{stop_count, raptor_criteria_config::Default},
+      //device_{stop_count, raptor_criteria_config::Default, route_count,
+      //       max_add_starts}
+{
+
+  host_memories_.emplace(raptor_criteria_config::Default,
+                         std::make_unique<host_memory>(
+                             stop_count, raptor_criteria_config::Default));
+  device_memories_.emplace(raptor_criteria_config::Default,
+                           std::make_unique<device_memory>(
+                               stop_count, raptor_criteria_config::Default,
+                               route_count, max_add_starts));
+
+  RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(INIT_HOST_AND_DEVICE_MEMORY,
+                                     raptor_criteria_config)
+
+  active_host_ = host_memories_[raptor_criteria_config::Default].get();
+  active_device_ = device_memories_[raptor_criteria_config::Default].get();
+}
 
 mem::~mem() {
-  host_.destroy();
-  device_.destroy();
+  std::for_each(host_memories_.begin(), host_memories_.end(),
+                [](auto& el) { el.second->destroy(); });
+  std::for_each(device_memories_.begin(), device_memories_.end(),
+                [](auto& el) { el.second->destroy(); });
+  //host_.destroy();
+  //device_.destroy();
   context_.destroy();
+}
+
+void mem::reset_active() {
+  active_device_->reset_async(context_.proc_stream_);
+  active_host_->reset();
+  is_reset_ = true;
+}
+
+void mem::require_active(raptor_criteria_config const criteria_config) {
+  if (!is_reset_) {
+    reset_active();
+  }
+
+  if(criteria_config != active_config_) {
+    active_host_ = host_memories_[criteria_config].get();
+    active_device_ = device_memories_[criteria_config].get();
+    active_config_ = criteria_config;
+  }
+
+  // small safety net
+  utl::verify_ex(active_host_ != nullptr && active_device_ != nullptr,
+                 "Either active host or active device are null!");
+
+  is_reset_ = false;
 }
 
 void memory_store::init(raptor_meta_info const& meta_info,
@@ -171,8 +265,7 @@ loaned_mem::loaned_mem(memory_store& store) {
 }
 
 loaned_mem::~loaned_mem() {
-  mem_->device_.reset_async(mem_->context_.proc_stream_);
-  mem_->host_.reset();
+  mem_->reset_active();
   cuda_sync_stream(mem_->context_.proc_stream_);
 }
 

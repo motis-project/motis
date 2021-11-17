@@ -18,6 +18,7 @@ using stop_id = int32_t;
 using route_id = uint32_t;
 using footpath_id = int32_t;
 using trip_id = uint32_t;
+using arrival_id = uint32_t;
 
 using motis_id = int32_t;
 

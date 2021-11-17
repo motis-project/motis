@@ -2,8 +2,10 @@
 
 #include <atomic>
 #include <mutex>
+#include <unordered_map>
 
 #include "motis/raptor/additional_start.h"
+#include "motis/raptor/criteria/configs.h"
 #include "motis/raptor/raptor_result.h"
 
 namespace motis::raptor {
@@ -41,14 +43,14 @@ struct host_memory {
   host_memory(host_memory const&&) = delete;
   host_memory operator=(host_memory const&) = delete;
   host_memory operator=(host_memory const&&) = delete;
-  explicit host_memory(stop_id stop_count);
+  host_memory(stop_id stop_count, raptor_criteria_config criteria_config);
 
   ~host_memory() = default;
 
   void destroy();
   void reset() const;
 
-  std::unique_ptr<raptor_result_pinned> result_{nullptr};
+  std::unique_ptr<raptor_result_pinned> result_{};
   bool* any_station_marked_{nullptr};
 };
 
@@ -58,8 +60,8 @@ struct device_memory {
   device_memory(device_memory const&&) = delete;
   device_memory operator=(device_memory const&) = delete;
   device_memory operator=(device_memory const&&) = delete;
-  device_memory(stop_id stop_count, route_id route_count,
-                size_t max_add_starts);
+  device_memory(stop_id stop_count, raptor_criteria_config criteria_config,
+                route_id route_count, size_t max_add_starts);
 
   ~device_memory() = default;
 
@@ -76,6 +78,7 @@ struct device_memory {
   stop_id stop_count_{invalid<stop_id>};
   route_id route_count_{invalid<route_id>};
   size_t max_add_starts_{invalid<size_t>};
+  arrival_id arrival_times_count_{invalid<arrival_id>};
 
   device_result result_{};
 
@@ -100,9 +103,24 @@ struct mem {
 
   ~mem();
 
-  host_memory host_;
-  device_memory device_;
+  void reset_active();
+  void require_active(raptor_criteria_config criteria_config);
+
   device_context context_;
+  //host_memory host_;
+  //device_memory device_;
+
+
+  host_memory* active_host_;
+  device_memory* active_device_;
+
+private:
+  raptor_criteria_config active_config_;
+  bool is_reset_;
+  std::unordered_map<raptor_criteria_config, std::unique_ptr<host_memory>>
+      host_memories_;
+  std::unordered_map<raptor_criteria_config, std::unique_ptr<device_memory>>
+      device_memories_;
 };
 
 struct memory_store {
