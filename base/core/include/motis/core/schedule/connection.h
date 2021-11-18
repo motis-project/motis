@@ -82,7 +82,7 @@ struct light_connection {
         bitfield_idx_{bitfield_idx},
         trips_{trips},
         valid_{1U},
-        start_day_offset_{static_cast<uint32_t>(day_offset)} {}
+        start_day_offset_{day_offset} {}
 
   time event_time(event_type const t, day_idx_t day) const {
     return {day, t == event_type::DEP ? d_time_ : a_time_};
@@ -104,7 +104,7 @@ struct light_connection {
   };
   uint32_t trips_ : 27;
   uint32_t valid_ : 1;
-  uint32_t start_day_offset_ : 4;
+  day_idx_t start_day_offset_ : 4;
 };
 
 struct d_time_cmp {

@@ -31,32 +31,31 @@ TEST_F(loader_trip, simple) {
 
   EXPECT_EQ("0000001", sched_->stations_[primary.station_id_]->eva_nr_);
   EXPECT_EQ(1, primary.train_nr_);
-  EXPECT_EQ(motis_time(1000), primary.first_departure_mam_);
+  EXPECT_EQ(motis_time(1000), ctrp.get_first_dep_time());
 
   EXPECT_EQ("", secondary.line_id_);
   EXPECT_EQ("0000003",
             sched_->stations_[secondary.target_station_id_]->eva_nr_);
-  EXPECT_EQ(motis_time(1200), secondary.last_arrival_mam_);
+  EXPECT_EQ(motis_time(1200), ctrp.get_last_arr_time());
 
   ASSERT_EQ(2, ctrp.trp_->edges_->size());
-  for (auto const& sec : sections(ctrp.trp_)) {
-    auto const& lcon = sec.lcon();
+  for (auto const& sec : sections(ctrp)) {
     auto const& info = sec.info(*sched_);
     auto const& from = sec.from_station(*sched_);
     auto const& to = sec.to_station(*sched_);
 
     switch (sec.index()) {
       case 0:
-        EXPECT_EQ(motis_time(1000), lcon.d_time_);
-        EXPECT_EQ(motis_time(1100), lcon.a_time_);
+        EXPECT_EQ(motis_time(1000), sec.dep_time());
+        EXPECT_EQ(motis_time(1100), sec.arr_time());
         EXPECT_EQ("0000001", from.eva_nr_);
         EXPECT_EQ("0000002", to.eva_nr_);
         EXPECT_EQ(1, info.train_nr_);
         break;
 
       case 1:
-        EXPECT_EQ(motis_time(1100), lcon.d_time_);
-        EXPECT_EQ(motis_time(1200), lcon.a_time_);
+        EXPECT_EQ(motis_time(1100), sec.dep_time());
+        EXPECT_EQ(motis_time(1200), sec.arr_time());
         EXPECT_EQ("0000002", from.eva_nr_);
         EXPECT_EQ("0000003", to.eva_nr_);
         EXPECT_EQ(1, info.train_nr_);
@@ -66,30 +65,29 @@ TEST_F(loader_trip, simple) {
     }
   }
 
-  for (auto const& stop : stops(ctrp.trp_)) {
+  for (auto const& stop : stops(ctrp)) {
     auto const& station = stop.get_station(*sched_);
     switch (stop.index()) {
       case 0:
         EXPECT_EQ("0000001", station.eva_nr_);
         ASSERT_FALSE(stop.has_arrival());
         ASSERT_TRUE(stop.has_departure());
-        EXPECT_EQ(motis_time(1000), stop.dep_lcon().d_time_);
-
+        EXPECT_EQ(motis_time(1000), stop.dep_time());
         break;
 
       case 1:
         EXPECT_EQ("0000002", station.eva_nr_);
         ASSERT_TRUE(stop.has_arrival());
         ASSERT_TRUE(stop.has_departure());
-        EXPECT_EQ(motis_time(1100), stop.arr_lcon().a_time_);
-        EXPECT_EQ(motis_time(1100), stop.dep_lcon().d_time_);
+        EXPECT_EQ(motis_time(1100), stop.arr_time());
+        EXPECT_EQ(motis_time(1100), stop.dep_time());
         break;
 
       case 2:
         EXPECT_EQ("0000003", station.eva_nr_);
         ASSERT_TRUE(stop.has_arrival());
         ASSERT_FALSE(stop.has_departure());
-        EXPECT_EQ(motis_time(1200), stop.arr_lcon().a_time_);
+        EXPECT_EQ(motis_time(1200), stop.arr_time());
         break;
 
       default: FAIL() << "stop index out of bounds";

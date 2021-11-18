@@ -194,19 +194,41 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
         get<light_connection const*>(connections[7])
             ->event_time(event_type::DEP, get<day_idx_t>(connections[7])));
 
-    EXPECT_EQ(motis_time(1958), get<0>(connections[0])->a_time_);
-    EXPECT_EQ(motis_time(2153), get<0>(connections[1])->a_time_);
-    EXPECT_EQ(motis_time(2232), get<0>(connections[2])->a_time_);
-    EXPECT_EQ(motis_time(2308), get<0>(connections[3])->a_time_);
-    EXPECT_EQ(motis_time(2347), get<0>(connections[4])->a_time_);
-    EXPECT_EQ(motis_time(2423), get<0>(connections[5])->a_time_);
-    EXPECT_EQ(motis_time(2430), get<0>(connections[6])->a_time_);
-    EXPECT_EQ(motis_time(2438), get<0>(connections[7])->a_time_);
+    EXPECT_EQ(
+        motis_time(1958),
+        get<0>(connections[0])
+            ->event_time(event_type::ARR, get<day_idx_t>(connections[0])));
+    EXPECT_EQ(
+        motis_time(2153),
+        get<0>(connections[1])
+            ->event_time(event_type::ARR, get<day_idx_t>(connections[1])));
+    EXPECT_EQ(
+        motis_time(2232),
+        get<0>(connections[2])
+            ->event_time(event_type::ARR, get<day_idx_t>(connections[2])));
+    EXPECT_EQ(
+        motis_time(2308),
+        get<0>(connections[3])
+            ->event_time(event_type::ARR, get<day_idx_t>(connections[3])));
+    EXPECT_EQ(
+        motis_time(2347),
+        get<0>(connections[4])
+            ->event_time(event_type::ARR, get<day_idx_t>(connections[4])));
+    EXPECT_EQ(
+        motis_time(2423),
+        get<0>(connections[5])
+            ->event_time(event_type::ARR, get<day_idx_t>(connections[5])));
+    EXPECT_EQ(
+        motis_time(2430),
+        get<0>(connections[6])
+            ->event_time(event_type::ARR, get<day_idx_t>(connections[6])));
+    EXPECT_EQ(
+        motis_time(2438),
+        get<0>(connections[7])
+            ->event_time(event_type::ARR, get<day_idx_t>(connections[7])));
 
-    ASSERT_TRUE(std::all_of(
-        begin(connections), end(connections),
-        [&](std::tuple<light_connection const*, node const*, node const*> const&
-                con) {
+    ASSERT_TRUE(
+        std::all_of(begin(connections), end(connections), [&](auto const& con) {
           auto fc = std::get<0>(con)->full_con_;
           return fc->con_info_->attributes_.size() == 1 &&
                  fc->con_info_->train_nr_ == 1000 &&
@@ -246,30 +268,38 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
     EXPECT_EQ("Bordbistro", bt->text_);
     EXPECT_EQ("SnackPoint/Imbiss im Zug", sn->text_);
 
-    EXPECT_EQ(bt, get<0>(connections[0])->full_con_->con_info_->attributes_[0]);
-    EXPECT_EQ(bt, get<0>(connections[1])->full_con_->con_info_->attributes_[0]);
-    EXPECT_EQ(bt, get<0>(connections[2])->full_con_->con_info_->attributes_[0]);
-    EXPECT_EQ(bt, get<0>(connections[3])->full_con_->con_info_->attributes_[0]);
-    EXPECT_EQ(sn, get<0>(connections[4])->full_con_->con_info_->attributes_[0]);
-    EXPECT_EQ(sn, get<0>(connections[5])->full_con_->con_info_->attributes_[0]);
-    EXPECT_EQ(sn, get<0>(connections[6])->full_con_->con_info_->attributes_[0]);
-    EXPECT_EQ(sn, get<0>(connections[7])->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(bt, get<light_connection const*>(connections[0])
+                      ->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(bt, get<light_connection const*>(connections[1])
+                      ->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(bt, get<light_connection const*>(connections[2])
+                      ->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(bt, get<light_connection const*>(connections[3])
+                      ->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(sn, get<light_connection const*>(connections[4])
+                      ->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(sn, get<light_connection const*>(connections[5])
+                      ->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(sn, get<light_connection const*>(connections[6])
+                      ->full_con_->con_info_->attributes_[0]);
+    EXPECT_EQ(sn, get<light_connection const*>(connections[7])
+                      ->full_con_->con_info_->attributes_[0]);
 
-    EXPECT_EQ(2, get<1>(connections[6])->incoming_edges_.size());
+    auto const from_node_6 = std::get<2>(connections[6]);
+    EXPECT_EQ(2, from_node_6->incoming_edges_.size());
+    EXPECT_TRUE(std::any_of(begin(from_node_6->incoming_edges_),
+                            end(from_node_6->incoming_edges_),
+                            [&](edge const* e) {
+                              return e->type() == edge::INVALID_EDGE &&
+                                     e->from_ == from_node_6->get_station();
+                            }));
     EXPECT_TRUE(std::any_of(
-        begin(get<1>(connections[6])->incoming_edges_),
-        end(get<1>(connections[6])->incoming_edges_), [&](edge const* e) {
-          return e->type() == edge::INVALID_EDGE &&
-                 e->from_ == get<1>(connections[6])->get_station();
-        }));
-    EXPECT_TRUE(std::any_of(
-        begin(get<1>(connections[6])->incoming_edges_),
-        end(get<1>(connections[6])->incoming_edges_),
+        begin(from_node_6->incoming_edges_), end(from_node_6->incoming_edges_),
         [](edge const* e) { return e->type() == edge::ROUTE_EDGE; }));
 
+    auto const from_node_5 = std::get<2>(connections[5]);
     EXPECT_TRUE(std::none_of(
-        begin(get<1>(connections[5])->incoming_edges_),
-        end(get<1>(connections[5])->incoming_edges_),
+        begin(from_node_5->incoming_edges_), end(from_node_5->incoming_edges_),
         [](edge const* e) { return e->type() == edge::INVALID_EDGE; }));
   }
 }

@@ -19,45 +19,44 @@ public:
 TEST_F(loader_graph_builder_never_meet, routes) {
   ASSERT_EQ(3, sched_->route_index_to_first_route_node_.size());
 
-  auto node_it = begin(sched_->route_index_to_first_route_node_);
-  auto connections = get_connections(*node_it, time{0});
+  auto next_search_time = time{};
 
-  ASSERT_TRUE(node_it != end(sched_->route_index_to_first_route_node_));
-  EXPECT_EQ(2, connections.size());
-  EXPECT_EQ(1, std::get<0>(connections[0])->full_con_->con_info_->train_nr_);
+  {
+    auto const node_it = begin(sched_->route_index_to_first_route_node_);
+    auto const connections = get_connections(*node_it, time{0});
 
-  connections =
-      get_connections(*node_it, std::get<0>(connections[0])->d_time_ + 1);
-  EXPECT_EQ(2, connections.size());
-  EXPECT_EQ(4, std::get<0>(connections[0])->full_con_->con_info_->train_nr_);
+    ASSERT_TRUE(node_it != end(sched_->route_index_to_first_route_node_));
+    EXPECT_EQ(2, connections.size());
+    EXPECT_EQ(1, std::get<0>(connections[0])->full_con_->con_info_->train_nr_);
 
-  node_it = std::next(node_it, 1);
-  connections = get_connections(*node_it, 0);
-  ASSERT_TRUE(node_it != end(sched_->route_index_to_first_route_node_));
-  EXPECT_EQ(2, connections.size());
-  EXPECT_EQ(2, std::get<0>(connections[0])->full_con_->con_info_->train_nr_);
-
-  node_it = std::next(node_it, 1);
-  connections = get_connections(*node_it, 0);
-  ASSERT_TRUE(node_it != end(sched_->route_index_to_first_route_node_));
-  EXPECT_EQ(3, std::get<0>(connections[0])->full_con_->con_info_->train_nr_);
-}
-
-class loader_graph_builder_duplicates_check : public loader_graph_builder_test {
-public:
-  loader_graph_builder_duplicates_check()
-      : loader_graph_builder_test("duplicates", "20150104", 7) {}
-
-  uint32_t get_train_num(char const* first_stop_id) {
-    auto it = std::find_if(
-        begin(sched_->route_index_to_first_route_node_),
-        end(sched_->route_index_to_first_route_node_), [&](node const* n) {
-          return sched_->stations_[n->get_station()->id_]->eva_nr_ ==
-                 first_stop_id;
-        });
-    return std::get<0>(get_connections(*it, 0).at(0))
-        ->full_con_->con_info_->train_nr_;
+    auto const [lcon, day, dep_node, arr_node] = connections[0];
+    next_search_time = lcon->event_time(event_type::DEP, day);
   }
-};
+
+  {
+    auto const node_it = begin(sched_->route_index_to_first_route_node_);
+    auto const connections = get_connections(*node_it, next_search_time + 1);
+
+    auto const [lcon, day, dep_node, arr_node] = connections[0];
+    EXPECT_EQ(2, connections.size());
+    EXPECT_EQ(4, lcon->full_con_->con_info_->train_nr_);
+  }
+  {
+    auto const node_it =
+        std::next(begin(sched_->route_index_to_first_route_node_), 1);
+    auto const connections = get_connections(*node_it, time{0});
+
+    ASSERT_TRUE(node_it != end(sched_->route_index_to_first_route_node_));
+    EXPECT_EQ(2, connections.size());
+    EXPECT_EQ(2, std::get<0>(connections[0])->full_con_->con_info_->train_nr_);
+  }
+  {
+    auto const node_it =
+        std::next(begin(sched_->route_index_to_first_route_node_), 2);
+    auto const connections = get_connections(*node_it, time{0});
+    ASSERT_TRUE(node_it != end(sched_->route_index_to_first_route_node_));
+    EXPECT_EQ(3, std::get<0>(connections[0])->full_con_->con_info_->train_nr_);
+  }
+}
 
 }  // namespace motis::loader

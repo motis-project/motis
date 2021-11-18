@@ -78,7 +78,7 @@ std::vector<std::pair<std::vector<trip*>, bitfield>> block::rule_services() {
           rt->traffic_days_ &= ~traffic_days;
         }
         combinations.emplace_back(
-            utl::to_vec(collected_trips, [](auto&& rt) { return rt->trip_; }),
+            utl::to_vec(collected_trips, [](auto&& rt) { return rt->ctrp_; }),
             traffic_days);
       }
     }

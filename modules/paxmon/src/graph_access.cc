@@ -80,7 +80,7 @@ struct rule_trip_adder {
   void add_merged_services(motis::access::trip_section const& section) {
     for (auto const& merged_trp :
          *sched_.merged_trips_.at(section.lcon().trips_)) {
-      if (merged_trp != section.trip_) {
+      if (merged_trp != section.ctrp_) {
         add_trip(merged_trp);
       }
     }
@@ -100,7 +100,7 @@ struct rule_trip_adder {
       motis::access::trip_section const& section) {
     auto const station_idx = section.from_station_id();
     auto const schedule_time = get_schedule_time(
-        sched_, section.edge(), section.trip_->lcon_idx_, event_type::DEP);
+        sched_, section.edge(), section.ctrp_->lcon_idx_, event_type::DEP);
     auto const merged_trips_idx = section.lcon().trips_;
     return utl::get_or_create(
         dep_nodes_, rule_node_key{station_idx, schedule_time, merged_trips_idx},
@@ -118,7 +118,7 @@ struct rule_trip_adder {
       motis::access::trip_section const& section) {
     auto const station_idx = section.to_station_id();
     auto const schedule_time = get_schedule_time(
-        sched_, section.edge(), section.trip_->lcon_idx_, event_type::ARR);
+        sched_, section.edge(), section.ctrp_->lcon_idx_, event_type::ARR);
     auto const merged_trips_idx = section.lcon().trips_;
     return utl::get_or_create(
         arr_nodes_, rule_node_key{station_idx, schedule_time, merged_trips_idx},

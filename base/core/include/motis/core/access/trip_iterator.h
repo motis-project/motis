@@ -17,7 +17,7 @@ struct trip_iterator {
   using pointer = T*;
   using reference = T&;
 
-  trip_iterator(trip_info const* t, int const i) : trip_(t), index_(i) {}
+  trip_iterator(concrete_trip const t, int const i) : trip_(t), index_(i) {}
 
   trip_iterator<T>& operator+=(int rhs) {
     index_ += rhs;
@@ -85,15 +85,14 @@ struct trip_iterator {
   }
 
 protected:
-  trip_info const* trip_;
+  concrete_trip trip_;
   int index_;
 };
 
 struct sections {
   using iterator = trip_iterator<trip_section>;
 
-  explicit sections(concrete_trip const& t) : t_(t.trp_) {}
-  explicit sections(trip_info const* t) : t_(t) {}
+  explicit sections(concrete_trip const t) : t_{t} {}
 
   iterator begin() const { return begin(t_); }
   iterator end() const { return end(t_); }
@@ -101,19 +100,18 @@ struct sections {
   friend iterator begin(sections const& s) { return begin(s.t_); }
   friend iterator end(sections const& s) { return end(s.t_); }
 
-  static iterator begin(trip_info const* t) { return {t, 0}; }
-  static iterator end(trip_info const* t) {
-    return {t, static_cast<int>(t->edges_->size())};
+  static iterator begin(concrete_trip t) { return {t, 0}; }
+  static iterator end(concrete_trip t) {
+    return {t, static_cast<int>(t.trp_->edges_->size())};
   }
 
-  trip_info const* t_;
+  concrete_trip t_;
 };
 
 struct stops {
   using iterator = trip_iterator<trip_stop>;
 
-  explicit stops(concrete_trip const& t) : t_(t.trp_) {}
-  explicit stops(trip_info const* t) : t_(t) {}
+  explicit stops(concrete_trip const t) : t_{t} {}
 
   iterator begin() const { return begin(t_); }
   iterator end() const { return end(t_); }
@@ -121,13 +119,13 @@ struct stops {
   friend iterator begin(stops const& s) { return begin(s.t_); }
   friend iterator end(stops const& s) { return end(s.t_); }
 
-  static iterator begin(trip_info const* t) { return {t, 0}; }
-  static iterator end(trip_info const* t) {
-    return {t,
-            t->edges_->empty() ? 0 : static_cast<int>(t->edges_->size()) + 1};
+  static iterator begin(concrete_trip const t) { return {t, 0}; }
+  static iterator end(concrete_trip const t) {
+    auto const& edges = *t.trp_->edges_;
+    return {t, edges.empty() ? 0 : static_cast<int>(edges.size() + 1)};
   }
 
-  trip_info const* t_;
+  concrete_trip t_;
 };
 
 }  // namespace motis::access

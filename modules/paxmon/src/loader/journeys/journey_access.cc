@@ -71,7 +71,7 @@ void for_each_trip(
       auto const trip_segments =
           get_journey_trip_segments(j, *enter_stop_idx, *exit_stop_idx);
       for (auto const& jts : trip_segments) {
-        cb(get_trip(sched, jts.trip_->extern_trip_), j.stops_.at(jts.from_),
+        cb(get_trip(sched, jts.ctrp_->extern_trip_), j.stops_.at(jts.from_),
            j.stops_.at(jts.to_),
            jts.from_ == *enter_stop_idx ? enter_transfer : std::nullopt);
       }

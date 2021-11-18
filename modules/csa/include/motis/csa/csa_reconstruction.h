@@ -221,7 +221,7 @@ struct csa_reconstruction {
         for (auto const& exit_con : get_exit_candidates(
                  fp_dep_stop, station_arrival - fp.duration_, transfers)) {
           for (auto const& enter_con :
-               tt_.trip_to_connections_[exit_con->trip_]) {
+               tt_.trip_to_connections_[exit_con->ctrp_]) {
             if (arrival_time_[enter_con->from_station_][transfers - 1] <=
                     enter_con->departure_ &&
                 enter_con->from_in_allowed_) {
@@ -238,7 +238,7 @@ struct csa_reconstruction {
         auto const& fp_arr_stop = tt_.stations_[fp.to_station_];
         for (auto const& enter_con : get_enter_candidates(
                  fp_arr_stop, station_arrival + fp.duration_, transfers)) {
-          auto const& trip_cons = tt_.trip_to_connections_[enter_con->trip_];
+          auto const& trip_cons = tt_.trip_to_connections_[enter_con->ctrp_];
           for (auto i = static_cast<int>(trip_cons.size()) - 1; i >= 0; --i) {
             auto const& exit_con = trip_cons[i];
             auto const exit_arrival =

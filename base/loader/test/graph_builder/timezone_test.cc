@@ -15,11 +15,12 @@ public:
       : loader_graph_builder_test("east-to-west", "20150702", 9) {}
 };
 
-void test_events(
-    std::tuple<light_connection const*, node const*, node const*> c,
-    time expected_dep, time expected_arr) {
-  EXPECT_EQ(expected_dep, std::get<0>(c)->d_time_);
-  EXPECT_EQ(expected_arr, std::get<0>(c)->a_time_);
+void test_events(std::tuple<light_connection const*, day_idx_t, node const*,
+                            node const*> const& c,
+                 time const expected_dep, time const expected_arr) {
+  auto const& [lcon, day, dep_node, arr_node] = c;
+  EXPECT_EQ(expected_dep, lcon->event_time(event_type::DEP, day));
+  EXPECT_EQ(expected_arr, lcon->event_time(event_type::ARR, day));
 }
 
 TEST_F(loader_graph_builder_east_to_west_test, event_times) {
