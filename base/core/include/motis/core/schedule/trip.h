@@ -7,6 +7,7 @@
 #include "cista/offset_t.h"
 #include "cista/reflection/comparable.h"
 
+#include "utl/pipes.h"
 #include "utl/to_vec.h"
 
 #include "motis/string.h"
@@ -106,6 +107,14 @@ struct trip_info {
     ptr<node> route_node_{nullptr};
     uint32_t outgoing_edge_idx_{0};
   };
+
+  auto concrete_trips() const {
+    return utl::generate([i = 0]() mutable { return i++; })  //
+           | utl::take_while([](auto const i) { return i <= MAX_DAYS; })  //
+           | utl::take_while([](auto const i) {
+               return
+             });
+  }
 
   full_trip_id id_;
   ptr<mcd::vector<route_edge> const> edges_{nullptr};

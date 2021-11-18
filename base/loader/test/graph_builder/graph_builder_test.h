@@ -26,6 +26,8 @@ protected:
     return motis::unix_time(*sched_, hhmm, day_idx, timezone_offset);
   }
 
+  void print_trip(concrete_trip const trp) const;
+
   schedule_ptr sched_;
   std::string schedule_name_;
   std::string schedule_begin_;

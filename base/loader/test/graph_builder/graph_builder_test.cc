@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "motis/core/access/trip_iterator.h"
 #include "motis/loader/loader.h"
 
 #include "../hrd/paths.h"
@@ -52,6 +53,39 @@ loader_graph_builder_test::get_connections(node const* first_route_node,
     }
   }
   return cons;
+}
+
+void loader_graph_builder_test::print_trip(concrete_trip const trp) {
+  auto const& id = trp.trp_->id_;
+  std::clog << "trip: ((" << id.primary_.station_id_ << ", "
+            << id.primary_.train_nr_ << ", "
+            << format_time(trp.get_first_dep_time()) << "), ("
+            << id.secondary_.target_station_id_ << ", "
+            << format_time(trp.get_last_arr_time()) << ", "
+            << id.secondary_.line_id_ << "))" << std::endl;
+  std::clog << "  " << trp.trp_->edges_->size()
+            << " edges, lcon_idx=" << trp.trp_->lcon_idx_ << std::endl;
+  std::clog << "  stops: ";
+  for (auto const& stop : motis::access::stops(trp)) {
+    std::clog << stop.get_station(*sched_).name_ << " ";
+  }
+  std::clog << std::endl;
+  for (auto const& sec : motis::access::sections(trp)) {
+    auto con_info = sec.lcon().full_con_->con_info_;
+    std::clog << "  section " << sec.index() << ": "
+              << sec.from_station(*sched_).name_ << " "
+              << format_time(sec.dep_time()) << " -> "
+              << sec.to_station(*sched_).name_ << " "
+              << format_time(sec.arr_time())
+              << " train_nr=" << con_info->train_nr_;
+    con_info = con_info->merged_with_;
+    while (con_info != nullptr) {
+      std::clog << " merged_with=" << con_info->train_nr_;
+      con_info = con_info->merged_with_;
+    }
+    std::clog << std::endl;
+  }
+  std::clog << "\n\n";
 }
 
 }  // namespace motis::loader
