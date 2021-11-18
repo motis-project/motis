@@ -15,7 +15,9 @@ struct trait_max_occupancy {
   // Trait Data
   uint8_t max_occupancy_;
 
-  inline static uint32_t value_range_size() { return moc_value_range_size; }
+  __mark_cuda_rel__ inline static uint32_t value_range_size() {
+    return moc_value_range_size;
+  }
 
   template <typename TraitsData>
   inline static void fill_trait_data_from_idx(TraitsData& dt,

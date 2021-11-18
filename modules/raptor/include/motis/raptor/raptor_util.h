@@ -3,7 +3,18 @@
 #include <algorithm>
 #include <type_traits>
 
+#if defined(MOTIS_CUDA)
+#include "cuda_runtime.h"
+#endif
+
 namespace motis::raptor {
+
+#if defined(MOTIS_CUDA)
+
+#define __mark_cuda_rel__ \
+  __host__ __device__
+
+#endif
 
 template <typename T>
 inline auto vec_size_bytes(std::vector<T> const& vec) {

@@ -1,5 +1,8 @@
 #include "motis/raptor/gpu/gpu_raptor.cuh"
 
+#include "motis/raptor/gpu/raptor_utils.cuh"
+#include "motis/raptor/gpu/gpu_mark_store.cuh"
+
 #include "cooperative_groups.h"
 #include "cuda_profiler_api.h"
 
@@ -11,121 +14,6 @@ using namespace cooperative_groups;
 // no leader is a zero ballot vote (all 0) minus 1 => with underflow all 1's
 constexpr unsigned int FULL_MASK = 0xFFFFffff;
 constexpr unsigned int NO_LEADER = FULL_MASK;
-
-__device__ __forceinline__ unsigned int get_block_thread_id() {
-  return threadIdx.x + (blockDim.x * threadIdx.y);
-}
-
-__device__ __forceinline__ unsigned int get_global_thread_id() {
-  return get_block_thread_id() + (blockDim.x * blockDim.y * blockIdx.x);
-}
-
-__device__ __forceinline__ unsigned int get_block_stride() {
-  return blockDim.x * blockDim.y;
-}
-
-__device__ __forceinline__ unsigned int get_global_stride() {
-  return get_block_stride() * gridDim.x * gridDim.y;
-}
-
-__device__ void mark(unsigned int* store, unsigned int const idx) {
-  unsigned int const store_idx = (idx >> 5);  // divide by 32
-  unsigned int const mask = 1 << (idx % 32);
-  atomicOr(&store[store_idx], mask);
-}
-
-__device__ bool marked(unsigned int const* const store, unsigned int idx) {
-  unsigned int const store_idx = (idx >> 5);  // divide by 32
-  unsigned int const val = store[store_idx];
-  unsigned int const mask = 1 << (idx % 32);
-  return (bool)(val & mask);
-}
-
-__device__ void reset_store(unsigned int* store, int const store_size) {
-  auto const t_id = get_global_thread_id();
-  auto const stride = get_global_stride();
-
-  for (auto idx = t_id; idx < store_size; idx += stride) {
-    store[idx] = 0;
-  }
-}
-
-__device__ void convert_station_to_route_marks(unsigned int* station_marks,
-                                               unsigned int* route_marks,
-                                               bool* any_station_marked,
-                                               device_gpu_timetable const& tt) {
-  auto const global_t_id = get_global_thread_id();
-  auto const global_stride = get_global_stride();
-  for (auto idx = global_t_id; idx < tt.stop_count_; idx += global_stride) {
-    if (marked(station_marks, idx)) {
-      if (!*any_station_marked) {
-        *any_station_marked = true;
-      }
-      auto const stop = tt.stops_[idx];
-      for (auto sri = stop.index_to_stop_routes_;
-           sri < stop.index_to_stop_routes_ + stop.route_count_; ++sri) {
-        mark(route_marks, tt.stop_routes_[sri]);
-      }
-    }
-  }
-}
-
-__device__ bool update_arrival(time* const base, stop_id const s_id,
-                               time const val) {
-
-#if __CUDA_ARCH__ >= 700
-
-  auto old_value = base[s_id];
-  time assumed;
-
-  do {
-    if (old_value <= val) {
-      return false;
-    }
-
-    assumed = old_value;
-
-    old_value = atomicCAS(&base[s_id], assumed, val);
-  } while (assumed != old_value);
-
-  return true;
-
-#else
-
-  // we have a 16-bit time value array, but only 32-bit atomic operations
-  // therefore every two 16-bit time values are read as one 32-bit time value
-  // then they are the corresponding part is updated and stored if a better
-  // time value was found while the remaining 16 bit value part remains
-  // unchanged
-
-  time* const arr_address = &base[s_id];
-  unsigned int* base_address = (unsigned int*)((size_t)arr_address & ~2);
-  unsigned int old_value, assumed, new_value, compare_val;
-
-  old_value = *base_address;
-
-  do {
-    assumed = old_value;
-
-    if ((size_t)arr_address & 2) {
-      compare_val = (0x0000FFFF & assumed) ^ (((unsigned int)val) << 16);
-    } else {
-      compare_val = (0xFFFF0000 & assumed) ^ (unsigned int)val;
-    }
-
-    new_value = __vminu2(old_value, compare_val);
-
-    if (new_value == old_value) {
-      return false;
-    }
-
-    old_value = atomicCAS(base_address, assumed, new_value);
-  } while (assumed != old_value);
-
-  return true;
-
-#endif
-}
 
 __device__ void copy_marked_arrivals(time* const to, time const* const from,
                                      unsigned int* station_marks,

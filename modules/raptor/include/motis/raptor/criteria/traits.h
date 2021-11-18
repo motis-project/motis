@@ -1,7 +1,9 @@
 #pragma once
 
-#include "motis/raptor/raptor_timetable.h"
 #include <tuple>
+
+#include "motis/raptor/raptor_util.h"
+#include "motis/raptor/raptor_timetable.h"
 
 namespace motis::raptor {
 
@@ -15,7 +17,7 @@ template <typename FirstTrait, typename... RestTraits>
 struct traits<FirstTrait, RestTraits...> {
   using TraitsData = trait_data<FirstTrait, RestTraits...>;
 
-  inline static uint32_t size() {
+  __mark_cuda_rel__ inline static uint32_t size() {
     auto size = FirstTrait::value_range_size();
     return size * traits<RestTraits...>::size();
   }
@@ -120,7 +122,7 @@ template <>
 struct traits<> {
   using TraitsData = trait_data<>;
 
-  inline static uint32_t size() { return 1; }
+  __mark_cuda_rel__ inline static uint32_t size() { return 1; }
 
   template <typename Data>
   inline static void get_trait_data(uint32_t const _1, Data& _2,

@@ -153,7 +153,7 @@ size_t device_memory::get_route_mark_bytes() const {
 }
 
 size_t device_memory::get_scratchpad_bytes() const {
-  return stop_count_ * sizeof(time);
+  return arrival_times_count_ * sizeof(time);
 }
 
 size_t device_memory::get_additional_starts_bytes() const {

@@ -1,5 +1,7 @@
 #include "motis/raptor/gpu/gpu_raptor.cuh"
 
+#include "motis/raptor/gpu/raptor_utils.cuh"
+
 namespace motis::raptor {
 
 __global__ void init_arrivals_kernel(base_query const query,

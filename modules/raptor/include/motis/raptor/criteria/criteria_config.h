@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tuple>
+#include "motis/raptor/raptor_util.h"
 
 namespace motis::raptor {
 
@@ -8,9 +9,9 @@ template <typename Traits>
 struct criteria_config {
   using CriteriaData = typename Traits::TraitsData;
 
-  inline static int trait_size() { return Traits::size(); }
+  __mark_cuda_rel__ inline static int trait_size() { return Traits::size(); }
 
-  inline static int get_arrival_idx(uint32_t const stop_idx,
+  __mark_cuda_rel__ inline static int get_arrival_idx(uint32_t const stop_idx,
                                     uint32_t const trait_offset = 0) {
     return stop_idx * trait_size() + trait_offset;
   }

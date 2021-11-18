@@ -4,32 +4,6 @@
 
 namespace motis::raptor {
 
-template <typename Kernel>
-void inline launch_kernel(Kernel kernel, void** args,
-                          device_context const& device, cudaStream_t s) {
-  cudaSetDevice(device.id_);
-
-  cudaLaunchCooperativeKernel((void*)kernel, device.grid_,  //  NOLINT
-                              device.threads_per_block_, args, 0, s);
-  cuda_check();
-}
-
-inline void fetch_arrivals_async(d_query const& dq, cudaStream_t s) {
-  cudaMemcpyAsync(
-      dq.mem_->active_host_->result_->data(), dq.mem_->active_device_->result_.front(),
-      dq.mem_->active_host_->result_->byte_size(), cudaMemcpyDeviceToHost, s);
-  cuda_check();
-}
-
-inline void fetch_arrivals_async(d_query const& dq, raptor_round const round_k,
-                                 cudaStream_t s) {
-  cudaMemcpyAsync((*dq.mem_->active_host_->result_)[round_k],
-                  dq.mem_->active_device_->result_[round_k],
-                  dq.mem_->active_host_->result_->arrival_times_count_ * sizeof(time),
-                  cudaMemcpyDeviceToHost, s);
-  cuda_check();
-}
-
 __device__ void init_arrivals_dev(base_query const& query,
                                   device_memory const& device_mem,
                                   device_gpu_timetable const& tt);
