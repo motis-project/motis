@@ -23,9 +23,8 @@ TEST_F(loader_trip, none) {
 }
 
 TEST_F(loader_trip, simple) {
-  auto ctrp = get_trip(*sched_, "0000001", 1, unix_time(1000), "0000003",
-                       unix_time(1200), "");
-  ASSERT_NE(nullptr, ctrp);
+  auto const ctrp = get_trip(*sched_, "0000001", 1, unix_time(1000), "0000003",
+                             unix_time(1200), "");
 
   auto const& primary = ctrp.trp_->id_.primary_;
   auto const& secondary = ctrp.trp_->id_.secondary_;
@@ -103,9 +102,6 @@ TEST_F(loader_trip, collision) {
                        unix_time(1100), "foo");
   auto trp1 = get_trip(*sched_, "0000004", 2, unix_time(1000), "0000005",
                        unix_time(1100), "bar");
-
-  ASSERT_NE(nullptr, trp0);
-  ASSERT_NE(nullptr, trp1);
   ASSERT_NE(trp0, trp1);
 }
 
@@ -114,9 +110,6 @@ TEST_F(loader_trip, rename) {
                        unix_time(2200), "");
   auto trp1 = get_trip(*sched_, "0000002", 4, unix_time(2100), "0000003",
                        unix_time(2200), "");
-
-  ASSERT_NE(nullptr, trp0);
-  ASSERT_NE(nullptr, trp1);
   ASSERT_EQ(trp0, trp1);
 }
 

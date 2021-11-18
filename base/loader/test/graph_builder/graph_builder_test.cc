@@ -33,18 +33,20 @@ edge const* loader_graph_builder_test::get_route_edge(node const* route_node) {
   }
 }
 
-std::vector<std::tuple<light_connection const*, node const*, node const*>>
+std::vector<
+    std::tuple<light_connection const*, day_idx_t, node const*, node const*>>
 loader_graph_builder_test::get_connections(node const* first_route_node,
-                                           time const departure_time) {
+                                           time departure_time) {
   decltype(get_connections(first_route_node, departure_time)) cons;
   edge const* route_edge = nullptr;
   node const* route_node = first_route_node;
   while ((route_edge = get_route_edge(route_node)) != nullptr) {
     auto const [con, day_idx] = route_edge->get_connection(departure_time);
     if (con != nullptr) {
-      cons.emplace_back(con, route_node, route_edge->to_);
+      cons.emplace_back(con, day_idx, route_node, route_edge->to_);
       route_node = route_edge->to_;
-      departure_time = std::get<0>(cons.back())->a_time_;
+      departure_time = std::get<light_connection const*>(cons.back())
+                           ->event_time(event_type::ARR, day_idx);
     } else {
       break;
     }
