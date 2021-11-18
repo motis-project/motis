@@ -135,11 +135,12 @@ using route_lcs = mcd::vector<mcd::vector<light_connection>>;
 struct graph_builder {
   graph_builder(schedule&, loader_options const&);
 
-  full_trip_id get_full_trip_id(Service const* s, int day, int section_idx = 0);
+  //  full_trip_id get_full_trip_id(Service const* s, int day, int section_idx =
+  //  0);
 
-  merged_trips_idx create_merged_trips(Service const* s, int day_idx);
+  //  merged_trips_idx create_merged_trips(Service const* s, int day_idx);
 
-  trip* register_service(Service const* s, int day_idx);
+  //  trip_info* register_service(Service const* s);
 
   void add_services(
       flatbuffers64::Vector<flatbuffers64::Offset<Service>> const* services);
@@ -147,7 +148,7 @@ struct graph_builder {
   bool has_duplicate(Service const*, mcd::vector<light_connection> const&);
 
   bool are_duplicates(Service const*, mcd::vector<light_connection> const&,
-                      trip const*);
+                      trip_info const*);
 
   void index_first_route_node(route const& r);
 
@@ -166,6 +167,7 @@ struct graph_builder {
 
   static void add_to_routes(
       mcd::vector<mcd::vector<mcd::vector<light_connection>>>& alt_routes,
+      std::vector<time> const& times,
       mcd::vector<light_connection> const& sections);
 
   connection_info* get_or_create_connection_info(Section const* section,
@@ -217,7 +219,7 @@ struct graph_builder {
       Station const* to_stop, bool to_in_allowed, bool to_out_allowed,
       node* from_route_node, node* to_route_node);
 
-  bool check_trip(trip const* trp);
+  bool check_trip(trip_info const* trp);
 
   bool skip_station(Station const* station) const;
   bool skip_route(Route const* route) const;

@@ -29,7 +29,7 @@ struct primary_trip_id {
 struct secondary_trip_id {
   CISTA_COMPARABLE();
   uint32_t target_station_id_{0U};
-  duration_t last_arrival_mam_{INVALID_MAM};
+  mam_t last_arrival_mam_{INVALID_MAM};
   mcd::string line_id_;
 };
 
@@ -116,6 +116,16 @@ struct trip_info {
 
 struct concrete_trip {
   CISTA_COMPARABLE()
+  inline time get_first_dep_time() const {
+    return {day_idx_, trp_->id_.primary_.first_departure_mam_};
+  }
+  inline time get_last_arr_time() const {
+    return {static_cast<day_idx_t>(
+                day_idx_ + trp_->edges_->back()
+                               ->m_.route_edge_.conns_.at(trp_->lcon_idx_)
+                               .start_day_offset_),
+            trp_->id_.secondary_.last_arrival_mam_};
+  }
   trip_info const* trp_;
   day_idx_t day_idx_;
 };

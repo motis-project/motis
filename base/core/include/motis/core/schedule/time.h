@@ -26,7 +26,7 @@ constexpr auto const INVALID_MAM = std::numeric_limits<mam_t>::max();
 struct time {
   constexpr time() = default;
 
-  constexpr time(day_idx_t const day, int16_t const minute)
+  constexpr time(day_idx_t const day, mam_t const minute)
       : day_idx_{static_cast<decltype(day_idx_)>(
             day + static_cast<day_idx_t>(minute / MINUTES_A_DAY))},
         mam_{static_cast<decltype(mam_)>(minute % MINUTES_A_DAY)} {}

@@ -56,34 +56,35 @@ std::vector<journey::trip> generate_journey_trips(
     std::vector<intermediate::transport> const& transports,
     schedule const& sched) {
   struct trp_cmp {
-    bool operator()(trip const* a, trip const* b) const {
-      return a->id_ < b->id_;
+    bool operator()(concrete_trip const& a, concrete_trip const& b) const {
+      return a.day_idx_ == b.day_idx_ && a.trp_->id_ < b.trp_->id_;
     }
   };
 
-  interval_map<trip const*, trp_cmp> intervals;
+  auto trip_intervals = interval_map<concrete_trip, trp_cmp>{};
   for (auto const& t : transports) {
     if (t.con_ == nullptr) {
       continue;
     }
 
     for (auto const& trp : *sched.merged_trips_.at(t.con_->trips_)) {
-      intervals.add_entry(trp, t.from_, t.to_);
+      trip_intervals.add_entry(concrete_trip{trp, t.day_}, t.from_, t.to_);
     }
   }
 
   std::vector<journey::trip> journey_trips;
-  for (auto const& t : intervals.get_attribute_ranges()) {
-    auto const& p = t.first->id_.primary_;
-    auto const& s = t.first->id_.secondary_;
-    for (auto const& range : t.second) {
+  for (auto const& [ctrp, ranges] : trip_intervals.get_attribute_ranges()) {
+    auto const& p = ctrp.trp_->id_.primary_;
+    auto const& s = ctrp.trp_->id_.secondary_;
+    for (auto const& range : ranges) {
       journey_trips.push_back(journey::trip{
           static_cast<unsigned>(range.from_), static_cast<unsigned>(range.to_),
-          extern_trip{sched.stations_.at(p.station_id_)->eva_nr_,
-                      p.get_train_nr(), motis_to_unixtime(sched, p.get_time()),
+          extern_trip{sched.stations_.at(p.station_id_)->eva_nr_, p.train_nr_,
+                      motis_to_unixtime(sched, time{}),
                       sched.stations_.at(s.target_station_id_)->eva_nr_,
-                      motis_to_unixtime(sched, s.target_time_), s.line_id_},
-          t.first->dbg_.str()});
+                      motis_to_unixtime(sched, ctrp.get_last_arr_time()),
+                      s.line_id_},
+          ctrp.trp_->dbg_.str()});
     }
   }
 
