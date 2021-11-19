@@ -270,8 +270,11 @@ void graph_builder::add_route_services(
     return false;
   };
 
-  mcd::vector<route_lcs> alt_routes;
-  for (auto const& [s, traffic_days] : services) {
+  std::vector<route_t> alt_routes;
+  for (auto const& s_t : services) {
+    auto const& s = s_t.first;
+    auto const& traffic_days = s_t.second;
+
     auto const day_offset =
         s->times()->Get(s->times()->size() - 2) / MINUTES_A_DAY;
     auto const start_idx =
@@ -284,20 +287,18 @@ void graph_builder::add_route_services(
 
     auto const utc_times =
         service_times_to_utc(traffic_days, start_idx, end_idx, s);
-
-    // make lcon for each section and time string
-    auto lcon_strings = std::vector<std::vector<light_connection>>{};
-    lcon_strings.resize(utc_times.size());
-    //    auto trip_idx = create_merged_trips(s, 0);
-    for (unsigned time_idx = 0; time_idx < utc_times.size(); ++time_idx) {
-      auto const section_length = static_cast<int>(s->sections()->size());
-      lcon_strings[time_idx].resize(section_length);
-      for (int section_idx = 0; section_idx < section_length; ++section_idx) {
-        lcon_strings[time_idx][section_idx] =
-            section_to_connection(section_idx, s, utc_times[time_idx].first,
-                                  utc_times[time_idx].second, trip_idx);
-      }
-    }
+    auto const lcon_strings = mcd::to_vec(
+        utc_times,
+        [&](cista::pair<std::vector<time>, std::vector<unsigned>> const& utc) {
+          auto const& [times, days] = utc;
+          auto lcon_string = mcd::vector<light_connection>{};
+          for (auto section = 0U; section < s->sections()->size(); ++section) {
+            lcon_string.emplace_back(
+                section_to_connection({participant{s, section}}, times, days,
+                                      merged_trips_idx{/* TODO */}));
+          }
+          return lcon_string;
+        });
 
     for (auto const& [lcons, times] : utl::zip(lcon_strings, utc_times)) {
       add_to_routes(alt_routes, times.first, lcons);
@@ -319,6 +320,7 @@ void graph_builder::add_route_services(
   }
 }
 
+/*
 bool graph_builder::has_duplicate(Service const* service,
                                   mcd::vector<light_connection> const& lcons) {
   auto const& first_station = sched_.stations_.at(
@@ -388,6 +390,7 @@ bool graph_builder::are_duplicates(Service const* service_a,
 
   return true;
 }
+*/
 
 void graph_builder::add_expanded_trips(route const& r) {
   assert(!r.empty());
@@ -410,9 +413,10 @@ void graph_builder::add_expanded_trips(route const& r) {
   }
 }
 
-bool graph_builder::check_trip(trip const* trp) {
+bool graph_builder::check_trip(trip_info const* trp) {
   auto last_time = 0U;
-  for (auto const& section : motis::access::sections(trp)) {
+  for (auto const& section :
+       motis::access::sections({.trp_ = trp, .day_idx_ = 0U})) {
     auto const& lc = section.lcon();
     if (lc.d_time_ > lc.a_time_ || last_time > lc.d_time_) {
       ++broken_trips_;
@@ -473,21 +477,16 @@ void graph_builder::add_to_route(
   }
 }
 
-void graph_builder::add_to_routes(
-    mcd::vector<mcd::vector<mcd::vector<light_connection>>>& alt_routes,
-    mcd::vector<light_connection> const& sections) {
-  for (auto& alt_route : alt_routes) {
-    int index = get_index(alt_route, sections);
-    if (index == -1) {
-      continue;
+void graph_builder::add_to_routes(std::vector<route_t>& alt_routes,
+                                  std::vector<time> const& times,
+                                  mcd::vector<light_connection> const& lcons) {
+  for (auto& r : alt_routes) {
+    if (r.add_service(lcons, times, sched_)) {
+      return;
     }
-
-    add_to_route(alt_route, sections, index);
-    return;
   }
 
-  alt_routes.emplace_back(sections.size());
-  add_to_route(alt_routes.back(), sections, 0);
+  alt_routes.emplace_back(route_t{lcons, times, sched_});
 }
 
 connection_info* graph_builder::get_or_create_connection_info(

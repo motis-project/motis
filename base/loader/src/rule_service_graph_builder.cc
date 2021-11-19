@@ -301,11 +301,14 @@ struct rule_service_route_builder {
           mcd::to_vec(begin(k.services_), end(k.services_),
                       [&](service_with_day_offset sp) {
                         auto const s_day_idx = day_idx + sp.day_offset_;
-                        return ptr<trip>{utl::get_or_create(
+                        return ptr<trip_info>{utl::get_or_create(
                             single_trips_,
                             std::make_pair(sp.service_, s_day_idx), [&]() {
-                              return gb_.register_service(sp.service_,
-                                                          s_day_idx);
+                              // TODO(felix)
+                              //                              return
+                              //                              gb_.register_service(sp.service_,
+                              //                                                          s_day_idx);
+                              return ptr<trip_info>{nullptr};
                             })};
                       })));
     });
@@ -326,9 +329,9 @@ struct rule_service_route_builder {
     auto const& traffic_days = traffic_days_.at(services[0].service_);
     for (unsigned day_idx = first_day_; day_idx <= last_day_; ++day_idx) {
       if (traffic_days.test(day_idx)) {
-        lcons.push_back(gb_.section_to_connection(
-            get_or_create_trips(services, day_idx), services, day_idx,
-            motis::INVALID_TIME, adjusted));
+        //        lcons.push_back(gb_.section_to_connection(
+        //            get_or_create_trips(services, day_idx), services, day_idx,
+        //            motis::INVALID_TIME, adjusted));
         adjusted = false;
       }
     }
@@ -621,8 +624,8 @@ struct rule_service_route_builder {
 
     auto trips_added = false;
     for (auto lcon_idx = 0U; lcon_idx < lc_count; ++lcon_idx) {
-      full_trip_id ftid;
-      push_mem(gb_.sched_.trip_mem_, ftid, edges_ptr, lcon_idx, trip_debug{});
+      full_trip_id id;
+      push_mem(gb_.sched_.trip_mem_, id, edges_ptr, lcon_idx, trip_debug{});
       auto const trip_ptr = gb_.sched_.trip_mem_.back().get();
       if (gb_.check_trip(trip_ptr)) {
         gb_.sched_.expanded_trips_.push_back(trip_ptr);
@@ -637,7 +640,7 @@ struct rule_service_route_builder {
   graph_builder& gb_;
   unsigned first_day_, last_day_;
   std::map<Service const*, mcd::vector<service_section*>>& sections_;
-  std::map<std::pair<Service const*, int>, trip*> single_trips_;
+  std::map<std::pair<Service const*, int>, trip_info*> single_trips_;
   std::map<services_key, merged_trips_idx> trips_;
   unsigned route_id_;
   std::set<node const*, node_id_cmp> start_nodes_;

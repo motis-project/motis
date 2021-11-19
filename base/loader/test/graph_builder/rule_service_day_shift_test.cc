@@ -4,11 +4,9 @@
 #include <numeric>
 
 #include "utl/to_set.h"
-#include "utl/zip.h"
 
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/access/station_access.h"
-#include "motis/core/access/trip_access.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/access/trip_stop.h"
 #include "motis/loader/timezone_util.h"
@@ -26,39 +24,17 @@ public:
       : loader_graph_builder_test(std::move(schedule_name),
                                   std::move(schedule_begin), num_days) {}
 
-  int trip_count(std::vector<station const*> const& stations) {
-    return static_cast<int>(std::count_if(
-        begin(sched_->expanded_trips_.data_),
-        end(sched_->expanded_trips_.data_), [&](concrete_trip const trp) {
-          return check_trip_path(trp, stations);
-        }));
-  }
-
   std::vector<int> trip_days(std::vector<station const*> const& stations) {
     std::vector<int> days;
     for (auto const& trp : sched_->expanded_trips_.data_) {
-      if (check_trip_path(trp, stations)) {
-        days.push_back(begin(stops(trp))->dep_lcon().d_time_ / 1440);
+      for (auto const& ctrp : trp->concrete_trips()) {
+        if (check_trip_path(ctrp, stations)) {
+          days.push_back((*begin(stops(ctrp))).dep_time().ts() / 1440);
+        }
       }
     }
     std::sort(begin(days), end(days));
     return days;
-  }
-
-  bool check_trip_path(concrete_trip const trp,
-                       std::vector<station const*>& stations) const {
-    auto const stps = stops{trp};
-    auto const trip_stops = std::vector<trip_stop>{begin(stps), end(stps)};
-    if (trip_stops.size() != stations.size()) {
-      return false;
-    }
-    // NOLINTNEXTLINE
-    for (auto const& [stop, station] : utl::zip(trip_stops, stations)) {
-      if (&stop.get_station(*sched_) != station) {
-        return false;
-      }
-    }
-    return true;
   }
 
   static void check_trip_times(concrete_trip const trp) {
@@ -80,7 +56,9 @@ public:
 
 TEST_F(service_rules_day_shift_test_1, valid_trip_times) {
   for (auto const& trp : sched_->expanded_trips_.data_) {
-    check_trip_times(trp);
+    for (auto const& ctrp : trp->concrete_trips()) {
+      check_trip_times(ctrp);
+    }
   }
 }
 
@@ -141,7 +119,9 @@ public:
 
 TEST_F(service_rules_day_shift_test_2, valid_trip_times) {
   for (auto const& trp : sched_->expanded_trips_.data_) {
-    check_trip_times(trp);
+    for (auto const& ctrp : trp->concrete_trips()) {
+      check_trip_times(ctrp);
+    }
   }
 }
 
@@ -179,8 +159,8 @@ public:
 
 TEST_F(service_rules_day_shift_test_3, valid_trip_times) {
   for (auto const& trp : sched_->expanded_trips_.data_) {
-    for (auto const& day : trp->concrete_trips()) {
-      check_trip_times(trp);
+    for (auto const& ctrp : trp->concrete_trips()) {
+      check_trip_times(ctrp);
     }
   }
 }

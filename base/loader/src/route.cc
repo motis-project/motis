@@ -11,7 +11,7 @@ route_t::route_t(std::vector<light_connection> const& new_lcons,
   update_traffic_days(new_lcons, sched);
 }
 
-bool route_t::add_service(std::vector<light_connection> const& new_lcons,
+bool route_t::add_service(mcd::vector<light_connection> const& new_lcons,
                           std::vector<time> const& new_times,
                           schedule const& sched) {
   utl::verify(std::all_of(begin(lcons_), end(lcons_),

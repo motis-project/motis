@@ -8,6 +8,7 @@
 #include "./resources.h"
 
 using namespace utl;
+using motis::bitfield;
 using namespace motis::loader;
 using namespace motis::loader::gtfs;
 

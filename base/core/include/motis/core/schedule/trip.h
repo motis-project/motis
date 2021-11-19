@@ -57,6 +57,18 @@ struct gtfs_trip_id {
   unixtime start_date_{0};
 };
 
+struct trip_info;
+
+struct concrete_trip {
+  CISTA_COMPARABLE()
+
+  time get_first_dep_time() const;
+  time get_last_arr_time() const;
+
+  trip_info const* trp_;
+  day_idx_t day_idx_;
+};
+
 struct trip_info {
   struct route_edge {
     route_edge() = default;
@@ -109,34 +121,22 @@ struct trip_info {
   };
 
   auto concrete_trips() const {
-    return utl::generate([i = 0]() mutable { return i++; })  //
-           | utl::take_while([](auto const i) { return i <= MAX_DAYS; })  //
-           | utl::take_while([](auto const i) {
-               return
-             });
+    return utl::iota(day_idx_t{0}, MAX_DAYS)  //
+           | utl::remove_if([&](auto const day) {
+               return edges_->front()
+                   ->m_.route_edge_.conns_.at(lcon_idx_)
+                   .traffic_days_->test(day);
+             })  //
+           | utl::transform([&](auto const day) {
+               return concrete_trip{this, day};
+             })  //
+           | utl::iterable();
   }
 
   full_trip_id id_;
   ptr<mcd::vector<route_edge> const> edges_{nullptr};
   lcon_idx_t lcon_idx_{0U};
-  duration_t travel_duration_{INVALID_DURATION};
   trip_debug dbg_;
-};
-
-struct concrete_trip {
-  CISTA_COMPARABLE()
-  inline time get_first_dep_time() const {
-    return {day_idx_, trp_->id_.primary_.first_departure_mam_};
-  }
-  inline time get_last_arr_time() const {
-    return {static_cast<day_idx_t>(
-                day_idx_ + trp_->edges_->back()
-                               ->m_.route_edge_.conns_.at(trp_->lcon_idx_)
-                               .start_day_offset_),
-            trp_->id_.secondary_.last_arrival_mam_};
-  }
-  trip_info const* trp_;
-  day_idx_t day_idx_;
 };
 
 }  // namespace motis

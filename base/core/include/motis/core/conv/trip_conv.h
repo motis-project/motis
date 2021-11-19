@@ -22,13 +22,9 @@ inline flatbuffers::Offset<TripId> to_fbs(schedule const& sched,
   auto const& s = trp.trp_->id_.secondary_;
   return CreateTripId(
       fbb, fbb.CreateString(sched.stations_.at(p.station_id_)->eva_nr_),
-      p.train_nr_,
-      motis_to_unixtime(sched, time{trp.day_idx_, p.first_departure_mam_}),
+      p.train_nr_, motis_to_unixtime(sched, trp.get_first_dep_time()),
       fbb.CreateString(sched.stations_.at(s.target_station_id_)->eva_nr_),
-      motis_to_unixtime(
-          sched,
-          time{trp.day_idx_, trp.trp_->id_.primary_.first_departure_mam_} +
-              trp.trp_->travel_duration_),
+      motis_to_unixtime(sched, trp.get_last_arr_time()),
       fbb.CreateString(s.line_id_));
 }
 
@@ -50,12 +46,9 @@ inline extern_trip to_extern_trip(schedule const& sched,
   return extern_trip{
       sched.stations_.at(t.trp_->id_.primary_.station_id_)->eva_nr_,
       t.trp_->id_.primary_.train_nr_,
-      motis_to_unixtime(
-          sched, time{t.day_idx_, t.trp_->id_.primary_.first_departure_mam_}),
+      motis_to_unixtime(sched, t.get_first_dep_time()),
       sched.stations_.at(t.trp_->id_.secondary_.target_station_id_)->eva_nr_,
-      motis_to_unixtime(
-          sched, time{t.day_idx_, t.trp_->id_.primary_.first_departure_mam_} +
-                     t.trp_->travel_duration_),
+      motis_to_unixtime(sched, t.get_last_arr_time()),
       t.trp_->id_.secondary_.line_id_};
 }
 

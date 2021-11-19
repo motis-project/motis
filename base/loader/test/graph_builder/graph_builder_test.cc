@@ -2,7 +2,10 @@
 
 #include <iostream>
 
+#include "utl/zip.h"
+
 #include "motis/core/access/trip_iterator.h"
+#include "motis/core/access/trip_stop.h"
 #include "motis/loader/loader.h"
 
 #include "../hrd/paths.h"
@@ -55,7 +58,7 @@ loader_graph_builder_test::get_connections(node const* first_route_node,
   return cons;
 }
 
-void loader_graph_builder_test::print_trip(concrete_trip const trp) {
+void loader_graph_builder_test::print_trip(concrete_trip const trp) const {
   auto const& id = trp.trp_->id_;
   std::clog << "trip: ((" << id.primary_.station_id_ << ", "
             << id.primary_.train_nr_ << ", "
@@ -86,6 +89,37 @@ void loader_graph_builder_test::print_trip(concrete_trip const trp) {
     std::clog << std::endl;
   }
   std::clog << "\n\n";
+}
+
+int loader_graph_builder_test::trip_count(
+    std::vector<station const*> stations) const {
+  return static_cast<int>(std::count_if(
+      begin(sched_->expanded_trips_.data_), end(sched_->expanded_trips_.data_),
+      [&](trip_info const* trp) {
+        auto sum = 0U;
+        for (auto const& ctrp : trp->concrete_trips()) {
+          sum += check_trip_path(ctrp, stations);
+        }
+        return sum;
+      }));
+}
+
+bool loader_graph_builder_test::check_trip_path(
+    concrete_trip const trp,
+    std::vector<station const*> const& stations) const {
+  using namespace motis::access;
+  auto const stps = stops(trp);
+  auto const trip_stops = std::vector<trip_stop>(begin(stps), end(stps));
+  if (trip_stops.size() != stations.size()) {
+    return false;
+  }
+  // NOLINTNEXTLINE(readability-use-anyofallof)
+  for (auto const& [stop, station] : utl::zip(trip_stops, stations)) {
+    if (&stop.get_station(*sched_) != station) {
+      return false;
+    }
+  }
+  return true;
 }
 
 }  // namespace motis::loader

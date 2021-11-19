@@ -25,6 +25,7 @@
 #include "motis/core/schedule/timezone.h"
 
 #include "motis/loader/loader_options.h"
+#include "motis/loader/route.h"
 #include "motis/loader/timezone_util.h"
 
 #include "motis/schedule-format/Schedule_generated.h"
@@ -130,7 +131,6 @@ inline std::size_t push_mem(mcd::vector<mcd::unique_ptr<T>>& elements,
 }
 
 using route = mcd::vector<route_section>;
-using route_lcs = mcd::vector<mcd::vector<light_connection>>;
 
 struct graph_builder {
   graph_builder(schedule&, loader_options const&);
@@ -165,10 +165,9 @@ struct graph_builder {
                            mcd::vector<light_connection> const& sections,
                            int index);
 
-  static void add_to_routes(
-      mcd::vector<mcd::vector<mcd::vector<light_connection>>>& alt_routes,
-      std::vector<time> const& times,
-      mcd::vector<light_connection> const& sections);
+  void add_to_routes(mcd::vector<route_t>& alt_routes,
+                     std::vector<time> const& times,
+                     std::vector<light_connection> const& lcons);
 
   connection_info* get_or_create_connection_info(Section const* section,
                                                  int dep_day_index,
@@ -178,8 +177,9 @@ struct graph_builder {
       std::array<participant, 16> const& services, int dep_day_index);
 
   light_connection section_to_connection(
-      merged_trips_idx trips, std::array<participant, 16> const& services,
-      int day, time prev_arr, bool& adjusted);
+      std::array<participant, 16> const& services,
+      std::vector<time> const& relative_utc,
+      std::vector<unsigned> const& srv_traffic_days, merged_trips_idx);
 
   void connect_reverse();
 
@@ -210,7 +210,7 @@ struct graph_builder {
 
   void write_trip_edges(route const& r);
 
-  mcd::unique_ptr<route> create_route(Route const* r, route_lcs const& lcons,
+  mcd::unique_ptr<route> create_route(Route const* r, route_t const& lcons,
                                       unsigned route_index);
 
   route_section add_route_section(

@@ -70,7 +70,7 @@ public:
     return std::make_pair(false, std::vector<edge const*>());
   }
 
-  mcd::vector<mcd::string> path_evas(trip const* t) {
+  mcd::vector<mcd::string> path_evas(concrete_trip const t) {
     return mcd::to_vec(access::stops{t}, [&](auto&& stop) {
       return stop.get_station(*sched_).eva_nr_;
     });
