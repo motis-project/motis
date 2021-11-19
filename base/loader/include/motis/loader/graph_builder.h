@@ -166,32 +166,33 @@ struct graph_builder {
                            int index);
 
   void add_to_routes(mcd::vector<route_t>& alt_routes,
-                     std::vector<time> const& times,
-                     std::vector<light_connection> const& lcons);
+                     mcd::vector<time> const& times,
+                     mcd::vector<light_connection> const& lcons);
 
   connection_info* get_or_create_connection_info(Section const* section,
-                                                 int dep_day_index,
                                                  connection_info* merged_with);
 
   connection_info* get_or_create_connection_info(
-      std::array<participant, 16> const& services, int dep_day_index);
+      std::array<participant, 16> const& services);
 
   light_connection section_to_connection(
       std::array<participant, 16> const& services,
-      std::vector<time> const& relative_utc,
-      std::vector<unsigned> const& srv_traffic_days, merged_trips_idx);
+      mcd::vector<time> const& relative_utc,
+      mcd::vector<unsigned> const& srv_traffic_days, merged_trips_idx);
 
   void connect_reverse();
 
   void sort_connections();
   void sort_trips();
 
-  mcd::hash_map<std::vector<time>, std::vector<unsigned>> service_times_to_utc(
+  mcd::hash_map<mcd::vector<time>, mcd::vector<unsigned>> service_times_to_utc(
       bitfield const& traffic_days, day_idx_t start_idx, day_idx_t end_idx,
       Service const* s);
 
   bitfield const& get_or_create_bitfield(
       flatbuffers64::String const* serialized_bitfield);
+
+  size_t get_or_create_bitfield(bitfield const&);
 
   void read_attributes(
       int day,

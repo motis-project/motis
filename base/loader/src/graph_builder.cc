@@ -187,12 +187,12 @@ void graph_builder::index_first_route_node(route const& r) {
   sched_.route_index_to_first_route_node_[route_index] = r[0].from_route_node_;
 }
 
-mcd::hash_map<std::vector<time>, std::vector<unsigned>>
+mcd::hash_map<mcd::vector<time>, mcd::vector<unsigned>>
 graph_builder::service_times_to_utc(bitfield const& traffic_days,
                                     day_idx_t const start_idx,
                                     day_idx_t const end_idx, Service const* s) {
-  auto utc_times = mcd::hash_map<std::vector<time>, std::vector<unsigned>>{};
-  auto utc_service_times = std::vector<time>{};
+  auto utc_times = mcd::hash_map<mcd::vector<time>, mcd::vector<unsigned>>{};
+  auto utc_service_times = mcd::vector<time>{};
   utc_service_times.resize(s->times()->size());
   for (auto day_idx = start_idx; day_idx < end_idx; ++day_idx) {
     if (!traffic_days.test(day_idx)) {
@@ -270,7 +270,7 @@ void graph_builder::add_route_services(
     return false;
   };
 
-  std::vector<route_t> alt_routes;
+  mcd::vector<route_t> alt_routes;
   for (auto const& s_t : services) {
     auto const& s = s_t.first;
     auto const& traffic_days = s_t.second;
@@ -289,7 +289,7 @@ void graph_builder::add_route_services(
         service_times_to_utc(traffic_days, start_idx, end_idx, s);
     auto const lcon_strings = mcd::to_vec(
         utc_times,
-        [&](cista::pair<std::vector<time>, std::vector<unsigned>> const& utc) {
+        [&](cista::pair<mcd::vector<time>, mcd::vector<unsigned>> const& utc) {
           auto const& [times, days] = utc;
           auto lcon_string = mcd::vector<light_connection>{};
           for (auto section = 0U; section < s->sections()->size(); ++section) {
@@ -477,8 +477,8 @@ void graph_builder::add_to_route(
   }
 }
 
-void graph_builder::add_to_routes(std::vector<route_t>& alt_routes,
-                                  std::vector<time> const& times,
+void graph_builder::add_to_routes(mcd::vector<route_t>& alt_routes,
+                                  mcd::vector<time> const& times,
                                   mcd::vector<light_connection> const& lcons) {
   for (auto& r : alt_routes) {
     if (r.add_service(lcons, times, sched_)) {
@@ -486,11 +486,11 @@ void graph_builder::add_to_routes(std::vector<route_t>& alt_routes,
     }
   }
 
-  alt_routes.emplace_back(route_t{lcons, times, sched_});
+  alt_routes.emplace_back(lcons, times, sched_);
 }
 
 connection_info* graph_builder::get_or_create_connection_info(
-    Section const* section, int dep_day_index, connection_info* merged_with) {
+    Section const* section, connection_info* merged_with) {
   con_info_.line_identifier_ =
       section->line_id() != nullptr ? section->line_id()->str() : "";
   con_info_.train_nr_ = section->train_nr();
@@ -498,7 +498,10 @@ connection_info* graph_builder::get_or_create_connection_info(
   con_info_.dir_ = get_or_create_direction(section->direction());
   con_info_.provider_ = get_or_create_provider(section->provider());
   con_info_.merged_with_ = merged_with;
-  read_attributes(dep_day_index, section->attributes(), con_info_.attributes_);
+
+  // TODO(felix)
+  //  read_attributes(dep_day_index, section->attributes(),
+  //  con_info_.attributes_);
 
   return mcd::set_get_or_create(con_infos_, &con_info_, [&]() {
     sched_.connection_infos_.emplace_back(
@@ -508,7 +511,7 @@ connection_info* graph_builder::get_or_create_connection_info(
 }
 
 connection_info* graph_builder::get_or_create_connection_info(
-    std::array<participant, 16> const& services, int dep_day_index) {
+    std::array<participant, 16> const& services) {
   connection_info* prev_con_info = nullptr;
 
   for (auto service : services) {
@@ -518,8 +521,7 @@ connection_info* graph_builder::get_or_create_connection_info(
 
     auto const& s = service;
     prev_con_info = get_or_create_connection_info(
-        s.service_->sections()->Get(s.section_idx_), dep_day_index,
-        prev_con_info);
+        s.service_->sections()->Get(s.section_idx_), prev_con_info);
   }
 
   return prev_con_info;
@@ -527,8 +529,8 @@ connection_info* graph_builder::get_or_create_connection_info(
 
 light_connection graph_builder::section_to_connection(
     std::array<participant, 16> const& services,
-    std::vector<time> const& relative_utc,
-    std::vector<size_t> const& service_traffic_days,
+    mcd::vector<time> const& relative_utc,
+    mcd::vector<unsigned> const& service_traffic_days,
     merged_trips_idx const trips_idx) {
   auto const& ref_service = services[0].service_;
   auto const& section_idx = services[0].section_idx_;
@@ -556,67 +558,56 @@ light_connection graph_builder::section_to_connection(
   }));
   assert(std::is_sorted(begin(services), end(services)));
 
-  auto const from_station = ref_service->route()->stations()->Get(section_idx);
-  auto const to_station =
-      ref_service->route()->stations()->Get(section_idx + 1);
-  auto& from = *sched_.stations_.at(stations_[from_station]->id_);
-  auto& to = *sched_.stations_.at(stations_[to_station]->id_);
+  auto const& rel_utc_dep = relative_utc[section_idx * 2];
+  auto const& rel_utc_arr = relative_utc[section_idx * 2 + 1];
 
-  auto plfs = ref_service->tracks();
-  auto dep_platf =
-      plfs != nullptr ? plfs->Get(section_idx)->dep_tracks() : nullptr;
-  auto arr_platf =
-      plfs != nullptr ? plfs->Get(section_idx + 1)->arr_tracks() : nullptr;
+  auto const day_offset = rel_utc_dep.day();
+  auto const utc_mam_dep =
+      static_cast<mam_t>((rel_utc_dep - (day_offset * MINUTES_A_DAY)).ts());
+  auto const utc_mam_arr =
+      static_cast<mam_t>(utc_mam_dep + (rel_utc_arr - rel_utc_dep));
 
-  auto section = ref_service->sections()->Get(section_idx);
-  auto dep_time = ref_service->times()->Get(section_idx * 2 + 1);
-  auto arr_time = ref_service->times()->Get(section_idx * 2 + 2);
+  utl::verify(utc_mam_dep <= utc_mam_arr, "departure must be before arrival");
 
-  // Day indices for shifted bitfields (tracks, attributes)
-  int dep_day_index = day + (dep_time / MINUTES_A_DAY);
-  int arr_day_index = day + (arr_time / MINUTES_A_DAY);
+  bitfield con_traffic_days;
+  for (auto const& day : service_traffic_days) {
+    if (day_offset <= day) {
+      // TODO: use (bitfield, offset) representation to save RAM
+      con_traffic_days.set(day + day_offset);
+    }
+  }
 
-  // Build full connection.
-  auto clasz_it = sched_.classes_.find(section->category()->name()->str());
-  con_.clasz_ = (clasz_it == end(sched_.classes_)) ? service_class::OTHER
-                                                   : clasz_it->second;
-  con_.price_ = get_distance(from, to) * get_price_per_km(con_.clasz_);
-  con_.d_track_ = get_or_create_track(dep_day_index, dep_platf);
-  con_.a_track_ = get_or_create_track(arr_day_index, arr_platf);
-  con_.con_info_ = get_or_create_connection_info(services, dep_day_index);
+  {  // Build full connection.
+    auto const section = ref_service->sections()->Get(section_idx);
+    auto const from_station =
+        ref_service->route()->stations()->Get(section_idx);
+    auto const to_station =
+        ref_service->route()->stations()->Get(section_idx + 1);
+    auto const& from = *sched_.stations_.at(stations_[from_station]->id_);
+    auto const& to = *sched_.stations_.at(stations_[to_station]->id_);
+    auto const clasz_it =
+        sched_.classes_.find(section->category()->name()->str());
+    con_.clasz_ = (clasz_it == end(sched_.classes_)) ? service_class::OTHER
+                                                     : clasz_it->second;
+    con_.price_ = get_distance(from, to) * get_price_per_km(con_.clasz_);
+    // TODO(felix)
+    // con_.d_track_ = get_or_create_track(dep_day_index, dep_platf);
+    // con_.a_track_ = get_or_create_track(arr_day_index, arr_platf);
+    con_.con_info_ = get_or_create_connection_info(services);
+  }
 
-  // Build light connection.
-  time dep_motis_time = 0, arr_motis_time = 0;
-  auto const section_timezone = section->provider() == nullptr
-                                    ? nullptr
-                                    : section->provider()->timezone_name();
-  std::tie(dep_motis_time, arr_motis_time) = get_event_times(
-      tz_cache_, sched_.schedule_begin_, day - first_day_, prev_arr, dep_time,
-      arr_time, from.timez_, c_str(from_station->timezone_name()),
-      c_str(section_timezone), to.timez_, c_str(to_station->timezone_name()),
-      c_str(section_timezone), adjusted);
-
-  // Count events.
-  ++from.dep_class_events_.at(static_cast<service_class_t>(con_.clasz_));
-  ++to.arr_class_events_.at(static_cast<service_class_t>(con_.clasz_));
-
-  // Track first event.
-  sched_.first_event_schedule_time_ = std::min(
-      sched_.first_event_schedule_time_,
-      motis_to_unixtime(sched_, dep_motis_time) - SCHEDULE_OFFSET_MINUTES * 60);
-  sched_.last_event_schedule_time_ = std::max(
-      sched_.last_event_schedule_time_,
-      motis_to_unixtime(sched_, arr_motis_time) - SCHEDULE_OFFSET_MINUTES * 60);
-
-  return light_connection(
-      dep_motis_time, arr_motis_time,
+  return light_connection{
+      utc_mam_dep,
+      utc_mam_arr,
+      get_or_create_bitfield(con_traffic_days),
       mcd::set_get_or_create(connections_, &con_,
                              [&]() {
                                sched_.full_connections_.emplace_back(
                                    mcd::make_unique<connection>(con_));
                                return sched_.full_connections_.back().get();
                              }),
-      trips);
+      trips_idx,
+      0U /* TODO */};
 }
 
 void graph_builder::connect_reverse() {
@@ -639,13 +630,9 @@ void graph_builder::sort_trips() {
       [](auto const& lhs, auto const& rhs) { return lhs.first < rhs.first; });
 }
 
-bitfield const& graph_builder::get_or_create_bitfield(
-    String const* serialized_bitfield) {
-  return utl::get_or_create(bitfields_, serialized_bitfield, [&]() {
-    return deserialize_bitset<MAX_DAYS>(
-        {serialized_bitfield->c_str(),
-         static_cast<size_t>(serialized_bitfield->Length())});
-  });
+size_t graph_builder::get_or_create_bitfield(bitfield const& bf) {
+  sched_.bitfields_.emplace_back(bf);
+  return sched_.bitfields_.size() - 1;
 }
 
 void graph_builder::read_attributes(
@@ -822,7 +809,7 @@ bool graph_builder::skip_route(Route const* route) const {
              [&](Station const* station) { return skip_station(station); });
 }
 
-schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
+schedule_ptr build_graph(mcd::vector<Schedule const*> const& fbs_schedules,
                          loader_options const& opt) {
   utl::verify(!fbs_schedules.empty(), "build_graph: no schedules");
 
