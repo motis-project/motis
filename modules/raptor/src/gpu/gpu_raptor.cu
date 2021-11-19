@@ -2,6 +2,7 @@
 
 #include "motis/raptor/gpu/raptor_utils.cuh"
 #include "motis/raptor/gpu/gpu_mark_store.cuh"
+#include "motis/raptor/gpu/update_arrivals.cuh"
 
 #include "cooperative_groups.h"
 #include "cuda_profiler_api.h"

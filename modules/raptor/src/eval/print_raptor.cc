@@ -12,6 +12,7 @@
 #include "motis/bootstrap/motis_instance.h"
 #include "motis/raptor/raptor_timetable.h"
 #include "motis/raptor/get_raptor_timetable.h"
+#include "motis/raptor/print_raptor.h"
 
 #include "conf/configuration.h"
 #include "conf/options_parser.h"
@@ -125,7 +126,9 @@ int print_raptor(int argc, const char** argv) {
                   import_settings{{dataset_opt.dataset_}});
 
   auto const& sched = instance.sched();
-  auto const [meta_info, _] = get_raptor_timetable(sched);
+  auto const [meta_info, tt] = get_raptor_timetable(sched);
+
+  print_theoretical_moc_figures(*tt);
 
   std::ifstream in{print_opt.in_path_.c_str()};
   in.exceptions(std::ifstream::failbit | std::ifstream::badbit);

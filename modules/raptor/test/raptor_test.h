@@ -70,8 +70,7 @@ std::vector<journey> execute_mc_cpu_raptor(
 
   raptor_query q{bq, *meta_info, *tt};
   q.result_.reset();
-  q.result_ = std::make_unique<raptor_result>(tt->stop_count() *
-                                              CriteriaConfig::trait_size());
+  q.result_ = std::make_unique<raptor_result>(tt->stop_count(), raptor_criteria_config::MaxOccupancy);
   raptor_statistics st;
 
   invoke_mc_cpu_raptor<CriteriaConfig>(q, st);

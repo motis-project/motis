@@ -3,6 +3,7 @@
 #include "motis/raptor/gpu/cuda_util.h"
 #include "motis/raptor/gpu/gpu_mark_store.cuh"
 #include "motis/raptor/gpu/raptor_utils.cuh"
+#include "motis/raptor/gpu/update_arrivals.cuh"
 
 #include "motis/raptor/criteria/configs.h"
 
@@ -11,6 +12,11 @@
 namespace motis::raptor {
 
 using namespace cooperative_groups;
+
+// leader type must be unsigned 32bit
+// no leader is a zero ballot vote (all 0) minus 1 => with underflow all 1's
+constexpr unsigned int FULL_MASK = 0xFFFFffff;
+constexpr unsigned int NO_LEADER = FULL_MASK;
 
 template <typename CriteriaConfig>
 __device__ void mc_copy_marked_arrivals(time* const to, time const* const from,
@@ -45,24 +51,98 @@ __device__ void mc_copy_and_min_arrivals(time* const to, time* const from,
   }
 }
 
-template<typename CriteriaConfig>
-__device__ void mc_update_route_larger32(gpu_route const route,
-                                          unsigned int const t_offset,
-                                          time const* const prev_arrivals,
-                                          time* const arrivals,
-                                          unsigned int* station_marks,
-                                          device_gpu_timetable const& tt) {
-  //TODO implement
+__device__ __forceinline__ unsigned get_criteria_propagation_mask(
+    unsigned const leader, unsigned const stop_count) {
+  auto const stops_to_update = stop_count - leader - 1;
+  auto const mask = (1 << stops_to_update) - 1;
+  return (mask << leader);
 }
 
-template<typename CriteriaConfig>
-__device__ void mc_update_route_smaller32(gpu_route const route,
-                                          unsigned int const t_offset,
-                                          time const* const prev_arrivals,
-                                          time* const arrivals,
-                                          unsigned int* station_marks,
-                                          device_gpu_timetable const& tt) {
-  //TODO implement
+template <typename CriteriaConfig>
+__device__ void mc_update_route_larger32(
+    route_id const r_id, gpu_route const route, unsigned int const t_offset,
+    time const* const prev_arrivals, time* const arrivals,
+    unsigned int* station_marks, device_gpu_timetable const& tt) {
+  // TODO implement
+}
+
+template <typename CriteriaConfig>
+__device__ void mc_update_route_smaller32(
+    route_id const r_id, gpu_route const route, unsigned int const t_offset,
+    time const* const prev_arrivals, time* const arrivals,
+    unsigned int* station_marks, device_gpu_timetable const& tt) {
+
+  auto const t_id = threadIdx.x;
+
+  stop_id s_id = invalid<stop_id>;
+  time prev_arrival = invalid<time>;
+  arrival_id stop_arr_idx = invalid<arrival_id>;
+  time stop_arrival = invalid<time>;
+  time stop_departure = invalid<time>;
+  typename CriteriaConfig::CriteriaData aggregate{};
+
+  unsigned leader = route.stop_count_;
+  unsigned int active_stop_count = route.stop_count_;
+
+  if (t_id < active_stop_count) {
+    s_id = tt.route_stops_[route.index_to_route_stops_ + t_id];
+    stop_arr_idx = CriteriaConfig::get_arrival_idx(s_id, t_offset);
+    prev_arrival = prev_arrivals[stop_arr_idx];
+  }
+
+  // we skip updates if there is no feasible departure station
+  //  on this route with the given trait offset
+  if (!__any_sync(FULL_MASK, valid(prev_arrivals))) {
+    return;
+  }
+
+  for (trip_id trip_offset = 0; trip_offset < route.trip_count_;
+       ++trip_offset) {
+    if (t_id < active_stop_count) {
+      auto const st_index =
+          route.index_to_stop_times_ + (trip_offset * route.stop_count_) + t_id;
+      stop_departure = tt.stop_departures_[st_index];
+    }
+
+    unsigned ballot = __ballot_sync(
+        FULL_MASK, (t_id < active_stop_count) && valid(prev_arrival) &&
+                       valid(stop_departure) &&
+                       (prev_arrival <= stop_departure));
+    leader =
+        __ffs(ballot) - 1;  // index of the first departure location on route
+
+    unsigned criteria_mask =
+        get_criteria_propagation_mask(leader, active_stop_count);
+
+    if (t_id > leader && t_id < active_stop_count) {
+      auto const st_index =
+          route.index_to_stop_times_ + (trip_offset * route.stop_count_) + t_id;
+
+      stop_arrival = tt.stop_arrivals_[st_index];
+      auto const is_departure_stop = (((1 << t_id) & ballot) >> t_id);
+      if (!is_departure_stop) {
+        CriteriaConfig::update_traits_aggregate(aggregate, tt, r_id,
+                                                trip_offset, t_id, st_index);
+      }
+
+      // propagate the additional criteria attributes
+      for (int idx = leader + 1; idx < active_stop_count; ++idx) {
+        //internally uses __shfl_up_sync to propagate the criteria values
+        // along the traits while allowing for max/min/sum operations
+        CriteriaConfig::propagate_and_merge_if_needed(
+            criteria_mask, aggregate, !is_departure_stop && idx <= t_id);
+      }
+
+      if (CriteriaConfig::is_update_required(aggregate, t_offset)) {
+        bool updated = update_arrival(arrivals, stop_arr_idx, stop_arrival);
+        if (updated) {
+          mark(station_marks, s_id);
+        }
+      }
+    }
+
+    CriteriaConfig::reset_traits_aggregate(aggregate);
+  }
 }
 
 template <typename CriteriaConfig>
@@ -144,11 +224,11 @@ __device__ void mc_update_routes_dev(time const* const prev_arrivals,
     auto const route = tt.routes_[r_id];
     auto const t_offset = idx % trait_size;
     if (route.stop_count_ <= 32) {
-      mc_update_route_smaller32<CriteriaConfig>(route, t_offset, arrivals,
-                                                station_marks, tt);
+      mc_update_route_smaller32<CriteriaConfig>(
+          r_id, route, t_offset, prev_arrivals, arrivals, station_marks, tt);
     } else {
-      mc_update_route_larger32<CriteriaConfig>(route, t_offset, arrivals,
-                                               station_marks, tt);
+      mc_update_route_larger32<CriteriaConfig>(
+          r_id, route, t_offset, prev_arrivals, arrivals, station_marks, tt);
     }
   }
 

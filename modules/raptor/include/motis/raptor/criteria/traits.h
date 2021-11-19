@@ -2,8 +2,8 @@
 
 #include <tuple>
 
-#include "motis/raptor/raptor_util.h"
 #include "motis/raptor/raptor_timetable.h"
+#include "motis/raptor/raptor_util.h"
 
 namespace motis::raptor {
 
@@ -46,9 +46,9 @@ struct traits<FirstTrait, RestTraits...> {
                                                       dep_offset, arr_offset);
   }
 
-  inline static bool is_update_required(uint32_t total_size,
-                                        TraitsData const& td,
-                                        uint32_t t_offset) {
+  __mark_cuda_rel__ inline static bool is_update_required(uint32_t total_size,
+                                                          TraitsData const& td,
+                                                          uint32_t t_offset) {
 
     auto const [rest_trait_size, first_trait_idx, rest_trait_offset] =
         _trait_values(total_size, t_offset);
@@ -82,21 +82,31 @@ struct traits<FirstTrait, RestTraits...> {
 
   // helper to aggregate values while progressing through the route stop by stop
   template <typename Timetable>
-  inline static void update_aggregate(TraitsData& aggregate_dt,
-                                      Timetable const& tt, uint32_t const r_id,
-                                      uint32_t const t_id,
-                                      uint32_t const s_offset,
-                                      uint32_t const sti) {
+  __mark_cuda_rel__ inline static void update_aggregate(
+      TraitsData& aggregate_dt, Timetable const& tt, uint32_t const r_id,
+      uint32_t const t_id, uint32_t const s_offset, uint32_t const sti) {
     FirstTrait::update_aggregate(aggregate_dt, tt, r_id, t_id, s_offset, sti);
     traits<RestTraits...>::update_aggregate(aggregate_dt, tt, r_id, t_id,
                                             s_offset, sti);
   }
 
   // reset the aggregate everytime the departure station changes
-  inline static void reset_aggregate(TraitsData& aggregate_dt) {
+  __mark_cuda_rel__ inline static void reset_aggregate(
+      TraitsData& aggregate_dt) {
     FirstTrait::reset_aggregate(aggregate_dt);
     traits<RestTraits...>::reset_aggregate(aggregate_dt);
   }
+
+#if defined(MOTIS_CUDA)
+
+  __device__ inline static void propagate_and_merge_if_needed(
+      unsigned const mask, TraitsData& aggregate, bool const predicate) {
+    FirstTrait::propagate_and_merge_if_needed(mask, aggregate, predicate);
+    traits<RestTraits...>::propagate_and_merge_if_needed(mask, aggregate,
+                                                         predicate);
+  }
+
+#endif
 
   inline static bool dominates(TraitsData const& to_dominate,
                                TraitsData const& dominating) {
@@ -149,19 +159,26 @@ struct traits<> {
     return true;  // return natural element of conjunction
   }
 
-  template<typename Data>
+  template <typename Data>
   inline static bool is_rescan_from_stop_needed(uint32_t _1, Data const& _2,
-                                       uint32_t _3) {
+                                                uint32_t _3) {
     return false;
   }
 
   template <typename Data, typename Timetable>
-  inline static void update_aggregate(Data& _1, Timetable const& _2,
-                                      uint32_t const _3, uint32_t const _4,
-                                      uint32_t const _5, uint32_t const _6) {}
+  __mark_cuda_rel__ inline static void update_aggregate(
+      Data& _1, Timetable const& _2, uint32_t const _3, uint32_t const _4,
+      uint32_t const _5, uint32_t const _6) {}
 
   template <typename Data>
-  inline static void reset_aggregate(Data& _1) {}
+  __mark_cuda_rel__ inline static void reset_aggregate(Data& _1) {}
+
+#if defined(MOTIS_CUDA)
+  template <typename Data>
+  __device__ inline static void propagate_and_merge_if_needed(unsigned const _1,
+                                                              Data& _2,
+                                                              bool const _3) {}
+#endif
 
   // giving the neutral element of the conjunction
   template <typename Data>

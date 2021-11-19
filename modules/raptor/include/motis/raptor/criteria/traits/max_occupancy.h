@@ -4,7 +4,14 @@
 #include <algorithm>
 #include <tuple>
 
+#if defined(MOTIS_CUDA)
+#include "cooperative_groups.h"
+#include "motis/raptor/gpu/gpu_timetable.cuh"
+#endif
+
 namespace motis::raptor {
+
+struct device_gpu_timetable;
 
 constexpr uint8_t max_occupancy = 2;
 
@@ -28,8 +35,8 @@ struct trait_max_occupancy {
   }
 
   template <typename TraitsData>
-  inline static bool is_update_required(TraitsData const& data,
-                                        uint32_t trait_idx) {
+  __mark_cuda_rel__ inline static bool is_update_required(
+      TraitsData const& data, uint32_t trait_idx) {
     return trait_idx >=
            data.max_occupancy_;  // for MOC there is trait_idx == trait_value
   }
@@ -47,17 +54,46 @@ struct trait_max_occupancy {
   }
 
   template <typename TraitsData, typename Timetable>
-  inline static void update_aggregate(TraitsData& aggregate_dt,
-                                      Timetable const& tt, uint32_t const _1,
-                                      uint32_t const _2, uint32_t const _3,
-                                      uint32_t const sti) {
-    auto const stop_occupancy = tt.stop_attr_[sti].inbound_occupancy_;
+  __mark_cuda_rel__ inline static void update_aggregate(
+      TraitsData& aggregate_dt, Timetable const& tt, uint32_t const _1,
+      uint32_t const _2, uint32_t const _3, uint32_t const sti) {
+
+    auto const stop_occupancy = _read_occupancy(tt, _1, _2, _3, sti);
     aggregate_dt.max_occupancy_ =
         std::max(aggregate_dt.max_occupancy_, stop_occupancy);
   }
 
+  template <typename Timetable>
+  __mark_cuda_rel__ inline static uint8_t _read_occupancy(Timetable const& tt,
+                                                          uint32_t const _1,
+                                                          uint32_t const _2,
+                                                          uint32_t const _3,
+                                                          uint32_t const sti) {
+    return tt.stop_attr_[sti].inbound_occupancy_;
+  }
+
+#if defined(MOTIS_CUDA)
+  template <>
+  __mark_cuda_rel__ inline static uint8_t _read_occupancy<device_gpu_timetable>(
+      device_gpu_timetable const& tt, uint32_t const _1, uint32_t const _2,
+      uint32_t const _3, uint32_t const sti) {
+    return tt.stop_inb_occupancy_[sti];
+  }
+
   template <typename TraitsData>
-  inline static void reset_aggregate(TraitsData& aggregate_dt) {
+  __device__ inline static void propagate_and_merge_if_needed(
+      unsigned const mask, TraitsData& aggregate, bool const predicate) {
+    auto const prop_val = aggregate.max_occupancy_;
+    auto const received = __shfl_up_sync(mask, prop_val, 1);
+    if(predicate && aggregate.max_occupancy_ < received)
+      aggregate.max_occupancy_ = received;
+  }
+
+#endif
+
+  template <typename TraitsData>
+  __mark_cuda_rel__ inline static void reset_aggregate(
+      TraitsData& aggregate_dt) {
     aggregate_dt.max_occupancy_ = 0;
   }
 

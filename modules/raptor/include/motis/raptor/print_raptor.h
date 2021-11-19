@@ -227,4 +227,30 @@ inline void print_query(raptor_query const& query) {
             << std::endl;
 }
 
+inline void print_theoretical_moc_figures(raptor_timetable const& tt) {
+  auto pair_count = 0UL;
+  for(route_id r_id = 0; r_id < tt.route_count(); ++r_id) {
+    auto const route = tt.routes_[r_id];
+    auto const trip_count = route.trip_count_;
+
+    auto route_pairs = 0UL;
+    for(uint32_t stop_idx = 1; stop_idx < route.stop_count_; ++stop_idx) {
+      route_pairs += stop_idx;
+    }
+
+    pair_count += (trip_count * route_pairs);
+  }
+
+  auto required_ints = std::ceil(pair_count / 16);
+  auto byte_size     = required_ints * 4;
+  auto kib           = byte_size / 1024.0;
+  auto mib           = kib / 1024.0;
+
+  std::cout << "Number of Dep-Arr Pairs:\t" << +pair_count << "\n";
+  std::cout << "Number of int32 needed:\t"  << +required_ints << "\n";
+  std::cout << "Number of bytes needed:\t"  << byte_size << "\n";
+  std::cout << "Number of Kibibytes req.:\t" << kib << "\n";
+  std::cout << "Number of Mebibtyes req.:\t" << mib << "\n";
+}
+
 }  // namespace motis::raptor

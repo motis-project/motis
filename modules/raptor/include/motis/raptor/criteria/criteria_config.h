@@ -1,7 +1,7 @@
 #pragma once
 
-#include <tuple>
 #include "motis/raptor/raptor_util.h"
+#include <tuple>
 
 namespace motis::raptor {
 
@@ -11,13 +11,13 @@ struct criteria_config {
 
   __mark_cuda_rel__ inline static int trait_size() { return Traits::size(); }
 
-  __mark_cuda_rel__ inline static int get_arrival_idx(uint32_t const stop_idx,
-                                    uint32_t const trait_offset = 0) {
+  __mark_cuda_rel__ inline static int get_arrival_idx(
+      uint32_t const stop_idx, uint32_t const trait_offset = 0) {
     return stop_idx * trait_size() + trait_offset;
   }
 
-  inline static bool is_update_required(CriteriaData const& td,
-                                        uint32_t t_offset) {
+  __mark_cuda_rel__ inline static bool is_update_required(
+      CriteriaData const& td, uint32_t t_offset) {
     return Traits::is_update_required(trait_size(), td, t_offset);
   }
 
@@ -41,16 +41,26 @@ struct criteria_config {
   }
 
   template <typename Timetable>
-  inline static void update_traits_aggregate(CriteriaData& aggregate_dt,
-                                             Timetable const& tt, uint32_t r_id,
-                                             uint32_t t_id, uint32_t s_offset,
-                                             uint32_t sti) {
+  __mark_cuda_rel__ inline static void update_traits_aggregate(
+      CriteriaData& aggregate_dt, Timetable const& tt, uint32_t r_id,
+      uint32_t t_id, uint32_t s_offset, uint32_t sti) {
     Traits::update_aggregate(aggregate_dt, tt, r_id, t_id, s_offset, sti);
   }
 
-  inline static void reset_traits_aggregate(CriteriaData& dt) {
+  __mark_cuda_rel__ inline static void reset_traits_aggregate(
+      CriteriaData& dt) {
     Traits::reset_aggregate(dt);
   }
+
+#if defined(MOTIS_CUDA)
+
+  __device__ inline static void propagate_and_merge_if_needed(
+      unsigned const mask, CriteriaData& aggregate,
+      bool const predicate) {
+    Traits::propagate_and_merge_if_needed(mask, aggregate, predicate);
+  }
+
+#endif
 
   template <typename Timetable>
   inline static bool trip_matches_traits(CriteriaData const& dt,
