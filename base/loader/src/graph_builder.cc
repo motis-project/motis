@@ -31,8 +31,8 @@
 #include "motis/loader/classes.h"
 #include "motis/loader/filter/local_stations.h"
 #include "motis/loader/interval_util.h"
-#include "motis/loader/rule_route_builder.h"
-#include "motis/loader/rule_service_graph_builder.h"
+//#include "motis/loader/rule_route_builder.h"
+//#include "motis/loader/rule_service_graph_builder.h"
 #include "motis/loader/util.h"
 #include "motis/loader/wzr_loader.h"
 
@@ -739,14 +739,21 @@ void graph_builder::write_trip_edges(route const& r) {
 }
 
 mcd::unique_ptr<route> graph_builder::create_route(Route const* r,
-                                                   route_lcs const& lcons,
+                                                   route_t const& lcons,
                                                    unsigned route_index) {
+  assert(std::all_of(begin(lcons.lcons_), end(lcons.lcons_),
+                     [&stops](auto const& lcon_string) {
+                       return lcon_string.size() == stops->size() - 1;
+                     }) &&
+         "number of stops must match number of lcons");
+
   auto const& stops = r->stations();
   auto const& in_allowed = r->in_allowed();
   auto const& out_allowed = r->out_allowed();
   auto route_sections = mcd::make_unique<route>();
 
   route_section last_route_section;
+  auto const bf_idx = get_or_create_bitfield(lcons.traffic_days_);
   for (auto i = 0UL; i < r->stations()->size() - 1; ++i) {
     auto from = i;
     auto to = i + 1;
@@ -755,7 +762,7 @@ mcd::unique_ptr<route> graph_builder::create_route(Route const* r,
                           stops->Get(from), in_allowed->Get(from) != 0U,
                           out_allowed->Get(from) != 0U, stops->Get(to),
                           in_allowed->Get(to) != 0U, out_allowed->Get(to) != 0U,
-                          last_route_section.to_route_node_, nullptr));
+                          last_route_section.to_route_node_, nullptr, bf_idx));
     last_route_section = route_sections->back();
   }
 
@@ -763,10 +770,18 @@ mcd::unique_ptr<route> graph_builder::create_route(Route const* r,
 }
 
 route_section graph_builder::add_route_section(
-    int route_index, mcd::vector<light_connection> const& connections,
+    int route_index, mcd::vector<light_connection> const& cons,
     Station const* from_stop, bool from_in_allowed, bool from_out_allowed,
     Station const* to_stop, bool to_in_allowed, bool to_out_allowed,
-    node* from_route_node, node* to_route_node) {
+    node* from_route_node, node* to_route_node,
+    size_t const route_traffic_days) {
+  assert(
+      std::is_sorted(begin(cons), end(cons),
+                     [](light_connection const& a, light_connection const& b) {
+                       return a.d_time_ <= b.d_time_ && a.a_time_ <= b.a_time_;
+                     }) &&
+      "creating edge with lcons not strictly sorted");
+
   route_section section;
 
   auto const from_station_node = stations_[from_stop];
@@ -791,9 +806,47 @@ route_section graph_builder::add_route_section(
   }
 
   section.outgoing_route_edge_index_ = section.from_route_node_->edges_.size();
-  section.from_route_node_->edges_.push_back(make_route_edge(
-      section.from_route_node_, section.to_route_node_, connections));
-  lcon_count_ += connections.size();
+
+  auto const is_bidirectional =
+      std::all_of(begin(cons), end(cons),
+                  [](auto const& c) { return c.a_time_ < MINUTES_A_DAY; });
+
+  if (!is_bidirectional) {
+    // FWD
+    section.from_route_node_->edges_.push_back(
+        make_fwd_route_edge(section.from_route_node_, section.to_route_node_,
+                            cons, route_traffic_days));
+
+    // BWD
+    auto bwd_cons = mcd::vector<light_connection>();
+    std::transform(
+        begin(cons), end(cons), std::back_inserter(bwd_cons),
+        [this](auto const& c) {
+          auto const shift = c.a_time_ % MINUTES_A_DAY;
+          auto const at = static_cast<mam_t>(c.a_time_ - shift * MINUTES_A_DAY);
+          auto const dt = static_cast<mam_t>(c.d_time_ - shift * MINUTES_A_DAY);
+          auto const bf = sched_.bitfields_[c.bitfield_idx_];
+          return light_connection{
+              dt,
+              at,
+              c.full_con_,
+              get_or_create_bitfield(bf << shift),
+              merged_trips_idx{/* TODO(felix) */},
+              0 /* TODO - doesn't work because of rule services */};
+        });
+
+    // TODO(Simon): make route_traffic_days based on BWD bitfields
+    section.from_route_node_->edges_.push_back(
+        make_bwd_route_edge(section.from_route_node_, section.to_route_node_,
+                            bwd_cons, route_traffic_days));
+
+    lcon_count_ += 2 * cons.size();
+  } else {
+    section.from_route_node_->edges_.push_back(
+        make_route_edge(section.from_route_node_, section.to_route_node_, cons,
+                        route_traffic_days));
+    lcon_count_ += cons.size();
+  }
 
   return section;
 }
@@ -809,7 +862,7 @@ bool graph_builder::skip_route(Route const* route) const {
              [&](Station const* station) { return skip_station(station); });
 }
 
-schedule_ptr build_graph(mcd::vector<Schedule const*> const& fbs_schedules,
+schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
                          loader_options const& opt) {
   utl::verify(!fbs_schedules.empty(), "build_graph: no schedules");
 
@@ -864,7 +917,7 @@ schedule_ptr build_graph(mcd::vector<Schedule const*> const& fbs_schedules,
       scoped_timer timer("rule services");
       progress_tracker->status(fmt::format("Rule Services {}", dataset_prefix))
           .out_bounds(out_mid, out_high);
-      build_rule_routes(builder, fbs_schedule->rule_services());
+      // build_rule_routes(builder, fbs_schedule->rule_services());
     }
   }
 

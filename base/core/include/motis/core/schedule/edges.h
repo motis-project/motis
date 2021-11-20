@@ -87,7 +87,7 @@ public:
 
   /** oneway route edge constructor. */
   edge(node* const from, node* const to,
-       std::vector<light_connection> const& connections,
+       mcd::vector<light_connection> const& connections,
        size_t const route_traffic_days, search_dir const dir)
       : from_{from}, to_{to} {
     if (dir == search_dir::FWD) {
@@ -526,8 +526,20 @@ public:
 
 inline edge make_route_edge(node* from, node* to,
                             mcd::vector<light_connection> const& connections,
-                            size_t const bitfield_idx) {
-  return {from, to, connections, bitfield_idx};
+                            size_t const route_traffic_days) {
+  return edge{from, to, connections, route_traffic_days};
+}
+
+inline edge make_fwd_route_edge(
+    node* from, node* to, mcd::vector<light_connection> const& connections,
+    size_t const route_traffic_days) {
+  return {from, to, connections, route_traffic_days, search_dir::FWD};
+}
+
+inline edge make_bwd_route_edge(
+    node* from, node* to, mcd::vector<light_connection> const& connections,
+    size_t const route_traffic_days) {
+  return {from, to, connections, route_traffic_days, search_dir::BWD};
 }
 
 inline edge make_foot_edge(node* from, node* to, uint16_t time_cost = 0,

@@ -218,7 +218,7 @@ struct graph_builder {
       int route_index, mcd::vector<light_connection> const& connections,
       Station const* from_stop, bool from_in_allowed, bool from_out_allowed,
       Station const* to_stop, bool to_in_allowed, bool to_out_allowed,
-      node* from_route_node, node* to_route_node);
+      node* from_route_node, node* to_route_node, size_t route_traffic_days);
 
   bool check_trip(trip_info const* trp);
 
