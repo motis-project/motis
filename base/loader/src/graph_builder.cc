@@ -427,47 +427,6 @@ bool graph_builder::check_trip(trip_info const* trp) {
   return true;
 }
 
-int graph_builder::get_index(
-    mcd::vector<mcd::vector<light_connection>> const& alt_route,
-    mcd::vector<light_connection> const& sections) {
-  assert(!sections.empty());
-  assert(!alt_route.empty());
-
-  if (alt_route[0].empty()) {
-    return 0;
-  }
-
-  int index = -1;
-  for (auto section_idx = 0UL; section_idx < sections.size(); ++section_idx) {
-    auto const& route_section = alt_route[section_idx];
-    auto const& lc = sections[section_idx];
-    if (index == -1) {
-      index = std::distance(
-          begin(route_section),
-          std::lower_bound(begin(route_section), end(route_section),
-                           sections[section_idx]));
-      --section_idx;
-    } else {
-      // Check if departures stay sorted.
-      bool earlier_eq_dep =
-          index > 0 && lc.d_time_ <= route_section[index - 1].d_time_;
-      bool later_eq_dep = static_cast<unsigned>(index) < route_section.size() &&
-                          lc.d_time_ >= route_section[index].d_time_;
-
-      // Check if arrivals stay sorted.
-      bool earlier_eq_arr =
-          index > 0 && lc.a_time_ <= route_section[index - 1].a_time_;
-      bool later_eq_arr = static_cast<unsigned>(index) < route_section.size() &&
-                          lc.a_time_ >= route_section[index].a_time_;
-
-      if (earlier_eq_dep || later_eq_dep || earlier_eq_arr || later_eq_arr) {
-        return -1;
-      }
-    }
-  }
-  return index;
-}
-
 void graph_builder::add_to_route(
     mcd::vector<mcd::vector<light_connection>>& route,
     mcd::vector<light_connection> const& sections, int index) {
@@ -818,10 +777,8 @@ route_section graph_builder::add_route_section(
                             cons, route_traffic_days));
 
     // BWD
-    auto bwd_cons = mcd::vector<light_connection>();
-    std::transform(
-        begin(cons), end(cons), std::back_inserter(bwd_cons),
-        [this](auto const& c) {
+    auto const bwd_cons =
+        mcd::to_vec(begin(cons), end(cons), [this](auto const& c) {
           auto const shift = c.a_time_ % MINUTES_A_DAY;
           auto const at = static_cast<mam_t>(c.a_time_ - shift * MINUTES_A_DAY);
           auto const dt = static_cast<mam_t>(c.d_time_ - shift * MINUTES_A_DAY);
@@ -829,13 +786,13 @@ route_section graph_builder::add_route_section(
           return light_connection{
               dt,
               at,
-              c.full_con_,
               get_or_create_bitfield(bf << shift),
+              c.full_con_,
               merged_trips_idx{/* TODO(felix) */},
               0 /* TODO - doesn't work because of rule services */};
         });
 
-    // TODO(Simon): make route_traffic_days based on BWD bitfields
+    // TODO(felix): make route_traffic_days based on BWD bitfields
     section.from_route_node_->edges_.push_back(
         make_bwd_route_edge(section.from_route_node_, section.to_route_node_,
                             bwd_cons, route_traffic_days));

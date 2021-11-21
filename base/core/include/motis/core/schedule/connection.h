@@ -64,6 +64,8 @@ struct connection {
 };
 
 struct light_connection {
+  light_connection() = default;
+
   light_connection(mam_t const d_time, mam_t const a_time)
       : full_con_{nullptr},
         d_time_{d_time},
@@ -97,7 +99,7 @@ struct light_connection {
 
   ptr<connection const> full_con_{nullptr};
   mam_t d_time_{std::numeric_limits<decltype(d_time_)>::max()};
-  mam_t a_time_{std::numeric_limits<decltype(d_time_)>::max()};
+  mam_t a_time_{std::numeric_limits<decltype(a_time_)>::max()};
   union {
     size_t bitfield_idx_;
     bitfield const* traffic_days_;

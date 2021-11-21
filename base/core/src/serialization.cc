@@ -31,12 +31,6 @@ cista::hash_t type_hash(light_connection const& el, cista::hash_t const h,
                              cista::type_hash(el.valid_, h, done), 1);
 }
 
-template <typename Ctx>
-inline void serialize(Ctx&, primary_trip_id const*, cista::offset_t const) {}
-
-template <typename Ctx>
-inline void deserialize(Ctx const&, primary_trip_id*) {}
-
 cista::hash_t type_hash(primary_trip_id const&, cista::hash_t const h,
                         std::map<cista::hash_t, unsigned>& done) {
   return cista::hash_combine(cista::type_hash(uint64_t{}, h, done), 31, 16, 17);
@@ -82,11 +76,18 @@ inline void deserialize(Ctx const& c, edge* el) {
   }
 }
 
+cista::hash_t type_hash(bitfield const&, cista::hash_t const h,
+                        std::map<cista::hash_t, unsigned>&) {
+  return cista::hash_combine(cista::hash("bitfield"), h);
+}
+
 cista::hash_t type_hash(edge const& el, cista::hash_t const h,
                         std::map<cista::hash_t, unsigned>& done) {
-  return cista::hash_combine(cista::type_hash(el.m_.route_edge_, h, done),
-                             cista::type_hash(el.m_.foot_edge_, h, done),
-                             cista::type_hash(el.m_.hotel_edge_, h, done));
+  return cista::hash_combine(
+      cista::type_hash(el.m_.route_edge_.type_padding_, h, done),
+      cista::type_hash(el.m_.route_edge_.conns_, h, done),
+      cista::type_hash(cista::hash("bitfield"), h, done),
+      cista::type_hash(el.m_.foot_edge_, h, done));
 }
 
 template <typename Ctx, typename T, typename SizeType>
