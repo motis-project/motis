@@ -13,6 +13,8 @@
 #include "motis/raptor/raptor_util.h"
 #include "motis/raptor/reconstructor.h"
 
+#include "motis/raptor/print_raptor.h"
+
 #if defined(MOTIS_CUDA)
 #include "motis/raptor/gpu/gpu_raptor.cuh"
 #include "motis/raptor/gpu/mc_gpu_raptor.cuh"
@@ -50,6 +52,8 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
     MOTIS_START_TIMING(raptor_time);
     raptor_search(q);
     stats.raptor_time_ = MOTIS_GET_TIMING_MS(raptor_time);
+
+    print_results_of_query(q);
 
     MOTIS_START_TIMING(rec_timing);
     reconstructor.add(q);
@@ -92,9 +96,10 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
 }
 
 template <implementation_type Impl, typename Query>
-inline std::vector<journey> search_dispatch(
-    Query& q, raptor_statistics& stats, schedule const& sched,
-    raptor_meta_info const& meta_info, raptor_timetable const& tt) {
+inline std::vector<journey> search_dispatch(Query& q, raptor_statistics& stats,
+                                            schedule const& sched,
+                                            raptor_meta_info const& meta_info,
+                                            raptor_timetable const& tt) {
   throw std::system_error{access::error::not_implemented};
 }
 
@@ -112,15 +117,6 @@ search_dispatch<implementation_type::CPU, raptor_query>(
       RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(CASE_CRITERIA_CONFIG_TO_CPU_INVOKE,
                                          raptor_criteria_config)
 
-      //    case raptor_criteria_config::MaxOccupancy:
-      //      q.result_.reset();
-      //      q.result_ = std::make_unique<raptor_result>(tt.stop_count() *
-      //                                                  MaxOccupancy::trait_size());
-      //      return raptor_gen<MaxOccupancy>(
-      //          q, stats, sched, meta_info, tt, [&](raptor_query& q) {
-      //            return invoke_mc_cpu_raptor<MaxOccupancy>(q, stats);
-      //          });
-
     default: throw std::system_error{access::error::not_implemented};
   }
 }
@@ -133,35 +129,16 @@ inline std::vector<journey> search_dispatch<implementation_type::GPU, d_query>(
 
   switch (q.criteria_config_) {
     case raptor_criteria_config::Default:
-      return raptor_gen<Default>(q, stats, sched, meta_info, tt,
-                                 [&](d_query& q) { return invoke_gpu_raptor(q); });
+      return raptor_gen<Default>(
+          q, stats, sched, meta_info, tt,
+          [&](d_query& q) { return invoke_gpu_raptor(q); });
 
-      RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(CASE_CRITERIA_CONFIG_TO_GPU_INVOKE, raptor_criteria_config)
+      RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(CASE_CRITERIA_CONFIG_TO_GPU_INVOKE,
+                                         raptor_criteria_config)
 
     default: throw std::system_error{access::error::not_implemented};
   }
-
 }
 #endif
-
-// inline std::vector<journey> cpu_raptor(raptor_query& q,
-//                                        raptor_statistics& stats,
-//                                        schedule const& sched,
-//                                        raptor_meta_info const& raptor_sched,
-//                                        raptor_timetable const& tt) {
-//   return raptor_gen(q, stats, sched, raptor_sched, tt, [&](raptor_query& q) {
-//     return invoke_cpu_raptor(q, stats);
-//   });
-// }
-//
-//#if defined(MOTIS_CUDA)
-// inline std::vector<journey> gpu_raptor(d_query& dq, raptor_statistics& stats,
-//                                        schedule const& sched,
-//                                        raptor_meta_info const& raptor_sched,
-//                                        raptor_timetable const& tt) {
-//   return raptor_gen(dq, stats, sched, raptor_sched, tt,
-//                     [&](d_query& dq) { return invoke_gpu_raptor(dq); });
-// }
-//#endif
 
 }  // namespace motis::raptor

@@ -17,6 +17,10 @@ namespace motis::raptor {
   case routing::SearchType::SearchType_##VAL:   \
     return ACCESSOR::VAL;
 
+#define CASE_ENUM_TO_STRING(VAL, ACCESSOR) \
+  case ACCESSOR::VAL:                      \
+    return #VAL;
+
 #define CASE_TRAIT_SIZE_FOR_CRITERIA_CONFIG(VAL, ACCESSOR) \
   case ACCESSOR::VAL:                                      \
     return VAL::trait_size();

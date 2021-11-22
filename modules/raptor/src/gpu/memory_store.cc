@@ -5,10 +5,15 @@
 
 #include "motis/raptor/criteria/configs.h"
 #include "motis/raptor/gpu/cuda_util.h"
+#include "motis/raptor/gpu/gpu_raptor.cuh"
+#include "motis/raptor/gpu/mc_gpu_raptor.cuh"
 
 namespace motis::raptor {
 
-//#ifdef _DEBUG
+#define FILL_LAUNCH_PARAMETER_MAP(VAL, ACCESSOR) \
+  launch_configs_[ACCESSOR::VAL] =               \
+      get_launch_config(get_mc_gpu_launch_config<VAL>());
+
 inline void print_device_properties(cudaDeviceProp const& dp) {
   printf("Properties of device '%s':\n", dp.name);
   printf("\tCompute Capability:\t%i.%i\n", dp.major, dp.minor);
@@ -24,14 +29,20 @@ inline void print_device_properties(cudaDeviceProp const& dp) {
   printf("\tSupports Coop Launch:\t%i\n", dp.cooperativeLaunch);
 }
 
-inline void print_device_launch_parameters(dim3 block, dim3 grid) {
-  printf("Launch Parameters:\n");
-  printf("\tBlock Dimensions:\t%i, %i, %i\n", block.x, block.y, block.z);
-  printf("\tThreads per Block:\t%i\n", (block.x * block.y * block.z));
-  printf("\tGrid Dimensions:\t%i, %i, %i\n", grid.x, grid.y, grid.z);
-  printf("\tBlocks per Launch:\t%i\n", (grid.x * grid.y * grid.z));
+inline void print_launch_parameters(
+    std::unordered_map<raptor_criteria_config, kernel_launch_config> const&
+        lps) {
+  for(auto const& entry : lps) {
+    printf("Launch Parameters for config: %s\n",
+           get_string_for_criteria_config(entry.first).c_str());
+    auto const& block = entry.second.threads_per_block_;
+    auto const& grid  = entry.second.grid_;
+    printf("\tBlock Dimensions:\t%i, %i, %i\n", block.x, block.y, block.z);
+    printf("\tThreads per Block:\t%i\n", (block.x * block.y * block.z));
+    printf("\tGrid Dimensions:\t%i, %i, %i\n", grid.x, grid.y, grid.z);
+    printf("\tBlocks per Launch:\t%i\n", (grid.x * grid.y * grid.z));
+  }
 }
-//#endif
 
 std::pair<dim3, dim3> get_launch_paramters(
     cudaDeviceProp const& prop, int32_t const concurrency_per_device) {
@@ -47,7 +58,7 @@ std::pair<dim3, dim3> get_launch_paramters(
 
   auto const mp_count = prop.multiProcessorCount / concurrency_per_device;
 
-  int32_t num_blocks = mp_count /* * max_blocks_per_sm */;
+  int32_t num_blocks = mp_count * max_blocks_per_sm;
 
   dim3 threads_per_block(block_dim_x, block_dim_y, 1);
   dim3 grid(num_blocks, 1, 1);
@@ -55,22 +66,38 @@ std::pair<dim3, dim3> get_launch_paramters(
   return {threads_per_block, grid};
 }
 
+inline kernel_launch_config get_launch_config(
+    const std::tuple<int, int>& params) {
+  auto const& [grid_size, block_size] = params;
+  kernel_launch_config klc{};
+  klc.grid_.x = grid_size;
+  klc.grid_.y = 1;
+  klc.grid_.z = 1;
+
+  klc.threads_per_block_.x =
+      32;  // must always be 32 for the route scanning to work properly
+  klc.threads_per_block_.y = std::floor(block_size / 32);
+  klc.threads_per_block_.z = 1;
+
+  return klc;
+}
+
 device_context::device_context(device_id const device_id,
                                int32_t const concurrency_per_device)
-    : id_(device_id) {
+    : id_(device_id), launch_configs_{} {
   cudaSetDevice(id_);
   cuda_check();
 
   cudaGetDeviceProperties(&props_, device_id);
   cuda_check();
-
-  std::tie(threads_per_block_, grid_) =
-      get_launch_paramters(props_, concurrency_per_device);
-
-#ifdef _DEBUG
   print_device_properties(props_);
-  print_device_launch_parameters(threads_per_block_, grid_);
-#endif
+
+  launch_configs_[raptor_criteria_config::Default] =
+      get_launch_config(get_gpu_launch_config());
+  RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(FILL_LAUNCH_PARAMETER_MAP,
+                                     raptor_criteria_config)
+
+  print_launch_parameters(launch_configs_);
 
   cudaStreamCreate(&proc_stream_);
   cuda_check();
@@ -181,9 +208,9 @@ mem::mem(stop_id const stop_count, route_id const route_count,
       active_config_{raptor_criteria_config::Default},
       is_reset_{true}
 
-      //host_{stop_count, raptor_criteria_config::Default},
-      //device_{stop_count, raptor_criteria_config::Default, route_count,
-      //       max_add_starts}
+// host_{stop_count, raptor_criteria_config::Default},
+// device_{stop_count, raptor_criteria_config::Default, route_count,
+//        max_add_starts}
 {
 
   host_memories_.emplace(raptor_criteria_config::Default,
@@ -206,8 +233,8 @@ mem::~mem() {
                 [](auto& el) { el.second->destroy(); });
   std::for_each(device_memories_.begin(), device_memories_.end(),
                 [](auto& el) { el.second->destroy(); });
-  //host_.destroy();
-  //device_.destroy();
+  // host_.destroy();
+  // device_.destroy();
   context_.destroy();
 }
 
@@ -222,7 +249,7 @@ void mem::require_active(raptor_criteria_config const criteria_config) {
     reset_active();
   }
 
-  if(criteria_config != active_config_) {
+  if (criteria_config != active_config_) {
     active_host_ = host_memories_[criteria_config].get();
     active_device_ = device_memories_[criteria_config].get();
     active_config_ = criteria_config;

@@ -35,7 +35,7 @@ void invoke_hybrid_raptor(d_query const& dq) {
                        (void*)&dq.tt_};  // NOLINT
 
   launch_kernel(init_arrivals_kernel, init_args, dq.mem_->context_,
-                proc_stream);
+                proc_stream, raptor_criteria_config::Default);
   cuda_sync_stream(proc_stream);
 
   fetch_arrivals_async(dq, 0, transfer_stream);
@@ -45,11 +45,11 @@ void invoke_hybrid_raptor(d_query const& dq) {
                            (void*)&dq.tt_};  // NOLINT
 
     launch_kernel(update_routes_kernel, kernel_args, dq.mem_->context_,
-                  proc_stream);
+                  proc_stream, raptor_criteria_config::Default);
     cuda_sync_stream(proc_stream);
 
     launch_kernel(update_footpaths_kernel, kernel_args, dq.mem_->context_,
-                  proc_stream);
+                  proc_stream, raptor_criteria_config::Default);
     cuda_sync_stream(proc_stream);
 
     cudaMemcpyAsync(dq.mem_->active_host_->any_station_marked_,

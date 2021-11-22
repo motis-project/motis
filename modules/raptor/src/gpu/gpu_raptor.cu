@@ -352,11 +352,20 @@ __global__ void gpu_raptor_kernel(base_query const query,
   }
 }
 
+std::tuple<int, int> get_gpu_launch_config() {
+  int block_size;
+  int grid_size;
+
+  cudaOccupancyMaxPotentialBlockSize(&grid_size, &block_size,
+                                     gpu_raptor_kernel);
+  return std::make_tuple(grid_size, block_size);
+}
+
 void invoke_gpu_raptor(d_query const& dq) {
   void* kernel_args[] = {(void*)&dq, (void*)(dq.mem_->active_device_),
                          (void*)&(dq.tt_)};
   launch_kernel(gpu_raptor_kernel, kernel_args, dq.mem_->context_,
-                dq.mem_->context_.proc_stream_);
+                dq.mem_->context_.proc_stream_, dq.criteria_config_);
   cuda_check();
 
   cuda_sync_stream(dq.mem_->context_.proc_stream_);

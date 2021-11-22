@@ -15,6 +15,11 @@ using device_id = int32_t;
 std::pair<dim3, dim3> get_launch_paramters(cudaDeviceProp const& prop,
                                            int32_t concurrency_per_device);
 
+struct kernel_launch_config {
+  dim3 threads_per_block_;
+  dim3 grid_;
+};
+
 struct device_context {
   device_context() = delete;
   device_context(device_context const&) = delete;
@@ -30,8 +35,8 @@ struct device_context {
   device_id id_{};
   cudaDeviceProp props_{};
 
-  dim3 threads_per_block_;
-  dim3 grid_;
+  std::unordered_map<raptor_criteria_config, kernel_launch_config>
+      launch_configs_;
 
   cudaStream_t proc_stream_{};
   cudaStream_t transfer_stream_{};
@@ -107,9 +112,8 @@ struct mem {
   void require_active(raptor_criteria_config criteria_config);
 
   device_context context_;
-  //host_memory host_;
-  //device_memory device_;
-
+  // host_memory host_;
+  // device_memory device_;
 
   host_memory* active_host_;
   device_memory* active_device_;

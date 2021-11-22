@@ -180,24 +180,23 @@ inline bool is_reset(raptor_result_base const& result) {
   return true;
 }
 
-template <typename CriteriaConfig>
-inline void print_results(raptor_result const& result,
-                          raptor_timetable const& tt,
+inline void print_results(raptor_result_base const& result,
                           raptor_round up_to_round = max_raptor_round,
                           uint32_t only_for_t_offset = invalid<uint32_t>) {
-  auto const trait_size = CriteriaConfig::trait_size();
+  auto const trait_size =
+      get_trait_size_for_criteria_config(result.criteria_config_);
   auto trait_loop_start = 0;
-  auto trait_loo_end    = trait_size;
+  auto trait_loo_end = trait_size;
 
-  if(valid(only_for_t_offset)){
-    trait_loo_end = only_for_t_offset+1;
+  if (valid(only_for_t_offset)) {
+    trait_loo_end = only_for_t_offset + 1;
     trait_loop_start = only_for_t_offset;
   }
 
   for (raptor_round round_k = 0;
        round_k < max_raptor_round && round_k < up_to_round; ++round_k) {
     std::cout << "Results Round " << +round_k << std::endl;
-    for (int i = 0; i < tt.stop_count(); ++i) {
+    for (int i = 0; i < result.arrival_times_count_ / trait_size; ++i) {
       auto had_valid_time = false;
       for (int j = trait_loop_start; j < trait_loo_end; ++j) {
         if (valid(result[round_k][(i * trait_size) + j])) {
@@ -219,6 +218,23 @@ inline void print_results(raptor_result const& result,
   }
 }
 
+template <typename Query>
+inline void print_results_of_query(Query const& q) {
+  std::cout << "Called Default Impl!\n";
+}
+
+template <>
+inline void print_results_of_query<raptor_query>(raptor_query const& q) {
+  raptor_result_base const& result = *q.result_;
+  print_results(result);
+}
+
+template<>
+inline void print_results_of_query<d_query>(d_query const& q) {
+  auto const& result = q.result();
+  print_results(result);
+}
+
 inline void print_query(raptor_query const& query) {
   std::cout << "Received Query: " << std::endl;
   std::cout << "Start Station:  " << std::setw(7) << +query.source_ << " -> "
@@ -229,12 +245,12 @@ inline void print_query(raptor_query const& query) {
 
 inline void print_theoretical_moc_figures(raptor_timetable const& tt) {
   auto pair_count = 0UL;
-  for(route_id r_id = 0; r_id < tt.route_count(); ++r_id) {
+  for (route_id r_id = 0; r_id < tt.route_count(); ++r_id) {
     auto const route = tt.routes_[r_id];
     auto const trip_count = route.trip_count_;
 
     auto route_pairs = 0UL;
-    for(uint32_t stop_idx = 1; stop_idx < route.stop_count_; ++stop_idx) {
+    for (uint32_t stop_idx = 1; stop_idx < route.stop_count_; ++stop_idx) {
       route_pairs += stop_idx;
     }
 
@@ -242,13 +258,13 @@ inline void print_theoretical_moc_figures(raptor_timetable const& tt) {
   }
 
   auto required_ints = std::ceil(pair_count / 16);
-  auto byte_size     = required_ints * 4;
-  auto kib           = byte_size / 1024.0;
-  auto mib           = kib / 1024.0;
+  auto byte_size = required_ints * 4;
+  auto kib = byte_size / 1024.0;
+  auto mib = kib / 1024.0;
 
   std::cout << "Number of Dep-Arr Pairs:\t" << +pair_count << "\n";
-  std::cout << "Number of int32 needed:\t"  << +required_ints << "\n";
-  std::cout << "Number of bytes needed:\t"  << byte_size << "\n";
+  std::cout << "Number of int32 needed:\t" << +required_ints << "\n";
+  std::cout << "Number of bytes needed:\t" << byte_size << "\n";
   std::cout << "Number of Kibibytes req.:\t" << kib << "\n";
   std::cout << "Number of Mebibtyes req.:\t" << mib << "\n";
 }

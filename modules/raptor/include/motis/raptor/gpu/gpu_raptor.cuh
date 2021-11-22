@@ -18,6 +18,8 @@ __device__ void update_footpaths_dev(device_memory const& device_mem,
                                      raptor_round round_k,
                                      device_gpu_timetable const& tt);
 
+std::tuple<int, int> get_gpu_launch_config();
+
 void invoke_gpu_raptor(d_query const&);
 void invoke_hybrid_raptor(d_query const&);
 

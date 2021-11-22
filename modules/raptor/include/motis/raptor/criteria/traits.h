@@ -114,8 +114,8 @@ struct traits<FirstTrait, RestTraits...> {
            traits<RestTraits...>::dominates(to_dominate, dominating);
   }
 
-  inline static std::tuple<uint32_t, uint32_t, uint32_t> _trait_values(
-      uint32_t const total_size, uint32_t const t_offset) {
+  __mark_cuda_rel__ inline static std::tuple<uint32_t, uint32_t, uint32_t>
+  _trait_values(uint32_t const total_size, uint32_t const t_offset) {
     auto const first_value_size = FirstTrait::value_range_size();
     auto const rest_trait_size = total_size / first_value_size;
 
@@ -148,8 +148,9 @@ struct traits<> {
   }
 
   template <typename Data>
-  inline static bool is_update_required(uint32_t _1, Data const& _2,
-                                        uint32_t _3) {
+  __mark_cuda_rel__ inline static bool is_update_required(uint32_t _1,
+                                                          Data const& _2,
+                                                          uint32_t _3) {
     return true;  // return natural element of conjunction
   }
 

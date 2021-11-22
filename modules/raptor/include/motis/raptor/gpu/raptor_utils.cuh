@@ -1,6 +1,7 @@
 #pragma once
 
 #include "motis/raptor/raptor_query.h"
+#include "motis/raptor/gpu/memory_store.h"
 
 namespace motis::raptor {
 
@@ -22,28 +23,33 @@ __device__ __forceinline__ unsigned int get_global_stride() {
 
 template <typename Kernel>
 void inline launch_kernel(Kernel kernel, void** args,
-                          device_context const& device, cudaStream_t s) {
+                          device_context const& device, cudaStream_t s,
+                          raptor_criteria_config const criteria_config) {
   cudaSetDevice(device.id_);
 
-  cudaLaunchCooperativeKernel((void*)kernel, device.grid_,  //  NOLINT
-                              device.threads_per_block_, args, 0, s);
+  auto const& klc = device.launch_configs_.at(criteria_config);
+
+  cudaLaunchCooperativeKernel((void*)kernel, klc.grid_,  //  NOLINT
+                              klc.threads_per_block_, args, 0, s);
   cuda_check();
 }
 
 inline void fetch_arrivals_async(d_query const& dq, cudaStream_t s) {
-  cudaMemcpyAsync(
-      dq.mem_->active_host_->result_->data(), dq.mem_->active_device_->result_.front(),
-      dq.mem_->active_host_->result_->byte_size(), cudaMemcpyDeviceToHost, s);
+  cudaMemcpyAsync(dq.mem_->active_host_->result_->data(),
+                  dq.mem_->active_device_->result_.front(),
+                  dq.mem_->active_host_->result_->byte_size(),
+                  cudaMemcpyDeviceToHost, s);
   cuda_check();
 }
 
 inline void fetch_arrivals_async(d_query const& dq, raptor_round const round_k,
                                  cudaStream_t s) {
-  cudaMemcpyAsync((*dq.mem_->active_host_->result_)[round_k],
-                  dq.mem_->active_device_->result_[round_k],
-                  dq.mem_->active_host_->result_->arrival_times_count_ * sizeof(time),
-                  cudaMemcpyDeviceToHost, s);
+  cudaMemcpyAsync(
+      (*dq.mem_->active_host_->result_)[round_k],
+      dq.mem_->active_device_->result_[round_k],
+      dq.mem_->active_host_->result_->arrival_times_count_ * sizeof(time),
+      cudaMemcpyDeviceToHost, s);
   cuda_check();
 }
 
-}
+}  // namespace motis::raptor
