@@ -52,7 +52,7 @@ inline std::pair<node const*, light_connection const*> get_ontrip_train_start(
       begin(stops), end(stops), [&](access::trip_stop const& stop) {
         return stop.has_arrival() &&
                stop.get_route_node()->station_node_ == station &&
-               stop.arr_lcon().a_time_ == arrival_time;
+               stop.arr_time() == arrival_time;
       });
   if (stop_it == end(stops)) {
     throw std::system_error(error::event_not_found);

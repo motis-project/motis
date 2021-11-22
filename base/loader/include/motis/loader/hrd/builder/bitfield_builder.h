@@ -23,8 +23,7 @@ struct bitfield_builder {
       int = no_bitfield_num);
 
   std::map<int, bitfield> hrd_bitfields_;
-  mcd::hash_map<bitfield, flatbuffers64::Offset<flatbuffers64::String>,
-                std::hash<bitfield>, std::equal_to<>>
+  mcd::hash_map<bitfield, flatbuffers64::Offset<flatbuffers64::String>>
       fbs_bitfields_;
   std::map<int, flatbuffers64::Offset<flatbuffers64::String>> fbs_bf_lookup_;
 };

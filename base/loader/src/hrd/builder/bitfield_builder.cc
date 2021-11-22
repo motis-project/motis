@@ -35,7 +35,7 @@ Offset<String> bitfield_builder::get_or_create_bitfield(
     int bitfield_num) {
   auto fbs_bitfields_it = fbs_bitfields_.find(b);
   if (fbs_bitfields_it == end(fbs_bitfields_)) {
-    auto serialized = fbb.CreateString(serialize_bitset<MAX_DAYS>(b));
+    auto serialized = fbb.CreateString(serialize_bitset(b));
     std::tie(fbs_bitfields_it, std::ignore) =
         fbs_bitfields_.emplace(b, serialized);
 

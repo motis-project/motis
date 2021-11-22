@@ -37,7 +37,7 @@ struct base_gen {
   }
 
   static inline duration_t get_edge_duration(edge const& e) {
-    utl::verify(e.type() != edge::ROUTE_EDGE && e.type() != edge::HOTEL_EDGE,
+    utl::verify(e.type() != edge::ROUTE_EDGE,
                 "start label generator: invalid edge type");
     return has_no_time_cost(e) ? static_cast<duration_t>(0U)
                                : e.m_.foot_edge_.time_cost_;

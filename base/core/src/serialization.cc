@@ -7,6 +7,8 @@
 
 namespace motis {
 
+static_assert(cista::to_tuple_works_v<bitfield>);
+
 constexpr auto const MODE =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_VERSION;
 

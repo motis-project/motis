@@ -47,8 +47,7 @@ struct ontrip_gen {
         continue;
       } else if ((Dir == search_dir::FWD && !qe.to_->is_station_node()) ||
                  (Dir == search_dir::BWD && !qe.from_->is_station_node()) ||
-                 (qe.type() != edge::TIME_DEPENDENT_MUMO_EDGE &&
-                  qe.type() != edge::MUMO_EDGE)) {
+                 (qe.type() != edge::MUMO_EDGE)) {
         throw std::runtime_error("unsupported edge type");
       }
 

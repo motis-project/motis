@@ -5,6 +5,7 @@
 #include <ctime>
 #include <limits>
 #include <string>
+#include <tuple>
 
 #include "cista/hash.h"
 
@@ -30,6 +31,8 @@ struct time {
       : day_idx_{static_cast<decltype(day_idx_)>(
             day + static_cast<day_idx_t>(minute / MINUTES_A_DAY))},
         mam_{static_cast<decltype(mam_)>(minute % MINUTES_A_DAY)} {}
+
+  auto cista_members() { return std::tie(day_idx_, mam_); }
 
   constexpr explicit time(int64_t const timestamp)
       : day_idx_{static_cast<decltype(day_idx_)>(constexpr_abs(timestamp) /

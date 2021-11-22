@@ -56,21 +56,6 @@ using single_criterion_no_intercity_label =
           comparator<weighted_dominance>>;
 
 template <search_dir Dir>
-using late_connections_label = label<
-    Dir, MAX_TRAVEL_TIME, false, get_travel_time_lb,
-    label_data<travel_time, transfers, late_connections, absurdity>,
-    initializer<travel_time_initializer, transfers_initializer,
-                late_connections_initializer, absurdity_initializer>,
-    updater<travel_time_updater, transfers_updater, late_connections_updater,
-            absurdity_updater>,
-    filter<travel_time_filter, transfers_filter, late_connections_filter>,
-    dominance<absurdity_tb, travel_time_dominance, transfers_dominance,
-              late_connections_dominance>,
-    dominance<absurdity_post_search_tb, travel_time_alpha_dominance,
-              transfers_dominance, late_connections_post_search_dominance>,
-    comparator<transfers_dominance>>;
-
-template <search_dir Dir>
 using accessibility_label =
     label<Dir, MAX_TRAVEL_TIME, false, get_travel_time_lb,
           label_data<travel_time, transfers, accessibility, absurdity>,

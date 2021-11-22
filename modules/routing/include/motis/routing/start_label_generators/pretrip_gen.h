@@ -52,20 +52,14 @@ struct pretrip_gen {
         continue;
       } else if ((Dir == search_dir::FWD && !qe.to_->is_station_node()) ||
                  (Dir == search_dir::BWD && !qe.from_->is_station_node()) ||
-                 (qe.type() != edge::TIME_DEPENDENT_MUMO_EDGE &&
-                  qe.type() != edge::MUMO_EDGE)) {
+                 (qe.type() != edge::MUMO_EDGE)) {
         throw std::runtime_error("unsupported edge type");
       }
 
       std::vector<std::pair<edge const*, int>> path{{start_edge, 0}, {&qe, 0}};
 
-      auto const td = qe.type() == edge::TIME_DEPENDENT_MUMO_EDGE;
-      auto const edge_interval_begin =
-          td ? std::max(qe.m_.foot_edge_.interval_begin_, interval_begin)
-             : interval_begin;
-      auto const edge_interval_end =
-          td ? std::min(qe.m_.foot_edge_.interval_end_, interval_end)
-             : interval_end;
+      auto const edge_interval_begin = interval_begin;
+      auto const edge_interval_end = interval_end;
 
       generate_labels_at_route_nodes(sched, mem, lbs, path, edge_interval_begin,
                                      edge_interval_end, starting_footpaths,

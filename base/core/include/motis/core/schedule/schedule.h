@@ -66,7 +66,7 @@ struct schedule {
   mcd::vector<mcd::unique_ptr<provider>> providers_;
   mcd::vector<mcd::unique_ptr<mcd::string>> directions_;
   mcd::vector<mcd::unique_ptr<timezone>> timezones_;
-  std::vector<bitfield> bitfields_;
+  mcd::vector<bitfield> bitfields_;
 
   mcd::hash_map<gtfs_trip_id, ptr<trip_info const>> gtfs_trip_ids_;
   mcd::vector<mcd::pair<primary_trip_id, ptr<trip_info>>> trips_;
