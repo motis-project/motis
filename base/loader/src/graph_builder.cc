@@ -701,8 +701,8 @@ mcd::unique_ptr<route> graph_builder::create_route(Route const* r,
                                                    route_t const& lcons,
                                                    unsigned route_index) {
   assert(std::all_of(begin(lcons.lcons_), end(lcons.lcons_),
-                     [&stops](auto const& lcon_string) {
-                       return lcon_string.size() == stops->size() - 1;
+                     [&](auto const& lcon_string) {
+                       return lcon_string.size() == r->stations()->size() - 1;
                      }) &&
          "number of stops must match number of lcons");
 

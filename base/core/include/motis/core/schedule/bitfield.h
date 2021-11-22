@@ -2,7 +2,8 @@
 
 #include <cassert>
 #include <algorithm>
-#include <bitset>
+
+#include "cista/containers/bitset.h"
 
 #include "utl/parser/cstr.h"
 
@@ -10,43 +11,23 @@
 
 namespace motis {
 
-using bitfield = std::bitset<MAX_DAYS>;
+using bitfield = cista::bitset<MAX_DAYS>;
 
 template <std::size_t BitSetSize>
-bool operator<(std::bitset<BitSetSize> const& x,
-               std::bitset<BitSetSize> const& y) {
-  // i > 0
-  for (auto i = size_t{BitSetSize - 1}; i != 0; --i) {
-    if (x[i] ^ y[i]) {
-      return y[i];
-    }
-  }
-  // i = 0
-  if (x[0] ^ y[0]) {
-    return y[0];
-  }
-  return false;
-}
-
-template <std::size_t BitSetSize>
-std::bitset<BitSetSize> create_uniform_bitfield(char val) {
+bitfield create_uniform_bitfield(char val) {
   assert(val == '1' || val == '0');
 
   std::string all_days_bit_str;
   all_days_bit_str.resize(BitSetSize);
   std::fill(begin(all_days_bit_str), end(all_days_bit_str), val);
 
-  return std::bitset<BitSetSize>(all_days_bit_str);
+  return {all_days_bit_str};
 }
 
-template <std::size_t BitCount>
-inline std::string serialize_bitset(std::bitset<BitCount> const& bitset) {
+inline std::string serialize_bitset(bitfield const& bitset) {
   return bitset.to_string();
 }
 
-template <std::size_t BitCount>
-inline std::bitset<BitCount> deserialize_bitset(utl::cstr str) {
-  return std::bitset<BitCount>(str.str, str.len);
-}
+inline bitfield deserialize_bitset(utl::cstr str) { return {str.view()}; }
 
 }  // namespace motis
