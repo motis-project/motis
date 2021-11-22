@@ -26,9 +26,19 @@ table TripRecommendationMeasure {
   interchange_station: string; // station id
 }
 
+enum RtUpdateContentType : byte { RIBasis }
+
+table RtUpdateMeasure {
+  recipients: MeasureRecipients;
+  time: long;
+  type: RtUpdateContentType;
+  content: string;
+}
+
 union Measure {
   TripLoadInfoMeasure,
-  TripRecommendationMeasure
+  TripRecommendationMeasure,
+  RtUpdateMeasure
 }
 
 table MeasureWrapper {
