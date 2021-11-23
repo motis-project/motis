@@ -91,7 +91,7 @@ struct time {
     return tmp;
   }
 
-  duration_t operator-(time const& o) const { return ts() - o.ts(); }
+  int32_t operator-(time const& o) const { return ts() - o.ts(); }
 
   time& operator-=(int32_t const o) {
     *this = time{ts() - o};
