@@ -181,6 +181,7 @@ inline bool is_reset(raptor_result_base const& result) {
 }
 
 inline void print_results(raptor_result_base const& result,
+                          raptor_meta_info const& meta,
                           raptor_round up_to_round = max_raptor_round,
                           uint32_t only_for_t_offset = invalid<uint32_t>) {
   auto const trait_size =
@@ -197,12 +198,14 @@ inline void print_results(raptor_result_base const& result,
        round_k < max_raptor_round && round_k < up_to_round; ++round_k) {
     std::cout << "Results Round " << +round_k << std::endl;
     for (int i = 0; i < result.arrival_times_count_ / trait_size; ++i) {
+      auto const eva = meta.raptor_id_to_eva_.at(i);
       auto had_valid_time = false;
       for (int j = trait_loop_start; j < trait_loo_end; ++j) {
         if (valid(result[round_k][(i * trait_size) + j])) {
 
           if (!had_valid_time) {
-            std::cout << "Stop Id: " << std::setw(7) << +i << " -> ";
+            std::cout << "Stop Id: " << std::setw(7) << +i << "(" << eva
+                      << ") -> ";
             had_valid_time = true;
           }
 
@@ -219,20 +222,23 @@ inline void print_results(raptor_result_base const& result,
 }
 
 template <typename Query>
-inline void print_results_of_query(Query const& q) {
+inline void print_results_of_query(Query const& q,
+                                   raptor_meta_info const& meta) {
   std::cout << "Called Default Impl!\n";
 }
 
 template <>
-inline void print_results_of_query<raptor_query>(raptor_query const& q) {
+inline void print_results_of_query<raptor_query>(raptor_query const& q,
+                                                 raptor_meta_info const& meta) {
   raptor_result_base const& result = *q.result_;
-  print_results(result);
+  print_results(result, meta);
 }
 
-template<>
-inline void print_results_of_query<d_query>(d_query const& q) {
+template <>
+inline void print_results_of_query<d_query>(d_query const& q,
+                                            raptor_meta_info const& meta) {
   auto const& result = q.result();
-  print_results(result);
+  print_results(result, meta);
 }
 
 inline void print_query(raptor_query const& query) {

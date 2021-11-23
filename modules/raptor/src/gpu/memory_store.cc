@@ -145,7 +145,7 @@ device_memory::device_memory(stop_id const stop_count,
           stop_count * get_trait_size_for_criteria_config(criteria_config)} {
   cudaMalloc(&(result_.front()), get_result_bytes());
   for (auto k = 1U; k < result_.size(); ++k) {
-    result_[k] = result_[k - 1] + stop_count;
+    result_[k] = result_[k - 1] + arrival_times_count_;
   }
 
   cudaMalloc(&footpaths_scratchpad_, get_scratchpad_bytes());
