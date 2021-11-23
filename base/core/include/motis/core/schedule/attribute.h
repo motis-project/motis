@@ -1,12 +1,15 @@
 #pragma once
 
+#include "cista/reflection/comparable.h"
+
 #include "motis/string.h"
 
 namespace motis {
 
 struct attribute {
-  mcd::string text_;
+  CISTA_COMPARABLE()
   mcd::string code_;
+  mcd::string text_;
 };
 
 }  // namespace motis

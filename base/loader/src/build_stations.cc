@@ -65,7 +65,7 @@ struct stations_builder {
     s->length_ = fbs_station->lng();
     s->eva_nr_ = std::string{sched_.prefixes_[source_schedule]} +
                  fbs_station->id()->str();
-    s->transfer_time_ = std::max(2, fbs_station->interchange_time());
+    s->transfer_time_ = std::max(1, fbs_station->interchange_time());
     s->timez_ = fbs_station->timezone() != nullptr
                     ? get_or_create_timezone(fbs_station->timezone())
                     : nullptr;

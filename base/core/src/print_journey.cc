@@ -173,6 +173,15 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
         << trp.line_id_ << "  " << j.trips_[i].debug_ << std::endl;
   }
 
+  out << "\nAttributes:" << std::endl;
+  for (auto i = 0UL; i < j.attributes_.size(); ++i) {
+    auto const& attribute = j.attributes_[i];
+    out << std::right << std::setw(2) << i << ": " << std::left << std::setw(2)
+        << attribute.from_ << " -> " << std::left << std::setw(2)
+        << attribute.to_ << " {" << attribute.attr_.code_ << "  "
+        << attribute.attr_.text_ << "}" << std::endl;
+  }
+
   auto const report_error = [&](bool first_error) -> std::ostream& {
     if (first_error) {
       out << "\nWARNING: Journey is broken:" << std::endl;
