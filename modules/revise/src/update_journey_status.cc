@@ -6,6 +6,7 @@
 #include "utl/verify.h"
 
 #include "motis/core/common/interval_map.h"
+#include "motis/core/common/unixtime.h"
 #include "motis/core/access/station_access.h"
 
 #include "motis/revise/get_interchanges.h"
@@ -13,7 +14,7 @@
 namespace motis::revise {
 
 int get_walk_time(journey const& j, std::string const& station_id,
-                  time_t const schedule_time) {
+                  unixtime const schedule_time) {
   // Get stop index.
   auto const stop_it =
       std::find_if(begin(j.stops_), end(j.stops_), [&](journey::stop const& s) {

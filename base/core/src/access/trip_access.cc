@@ -69,4 +69,16 @@ trip const* find_trip(schedule const& sched, primary_trip_id id) {
   return nullptr;
 }
 
+trip const* find_trip(schedule const& sched, full_trip_id id) {
+  for (auto it = std::lower_bound(
+           begin(sched.trips_), end(sched.trips_),
+           std::make_pair(id.primary_, static_cast<trip*>(nullptr)));
+       it != end(sched.trips_) && it->first == id.primary_; ++it) {
+    if (it->second->id_.secondary_ == id.secondary_) {
+      return it->second;
+    }
+  }
+  return nullptr;
+}
+
 }  // namespace motis

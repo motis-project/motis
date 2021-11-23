@@ -62,7 +62,7 @@ struct trip_reachable_wrapper {
 
 template <typename BlockType>
 trip_reachable_wrapper(BlockType*, uint32_t, uint32_t)
-    ->trip_reachable_wrapper<BlockType>;
+    -> trip_reachable_wrapper<BlockType>;
 
 struct gpu_search {
   static constexpr time INVALID = std::numeric_limits<time>::max();

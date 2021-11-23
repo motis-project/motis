@@ -26,7 +26,7 @@ ev_key const& get_current_ev_key(schedule const&, ev_key const&);
 
 ev_key const& get_orig_ev_key(schedule const&, ev_key const&);
 
-int get_schedule_track(schedule const&, ev_key const&);
+uint16_t get_schedule_track(schedule const&, ev_key const&);
 
 int get_schedule_track(schedule const&, edge const* route_edge,
                        light_connection const*, event_type);

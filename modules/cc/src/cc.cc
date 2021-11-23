@@ -7,8 +7,6 @@
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/message_to_journeys.h"
 
-#include "motis/module/context/get_schedule.h"
-
 using namespace motis::module;
 
 namespace motis::cc {
@@ -23,7 +21,8 @@ struct interchange {
 };
 
 void cc::init(motis::module::registry& reg) {
-  reg.register_op("/cc", cc::check_journey);
+  reg.register_op("/cc",
+                  [&](msg_ptr const& m) { return cc::check_journey(m); });
 }
 
 ev_key get_event_at(schedule const& sched, Connection const* con,
@@ -139,7 +138,7 @@ void check_interchange(schedule const& sched, Connection const* con,
 
 msg_ptr cc::check_journey(msg_ptr const& msg) {
   auto const con = motis_content(Connection, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   for (auto const& ic : get_interchanges(sched, con)) {
     check_interchange(sched, con, ic);
   }

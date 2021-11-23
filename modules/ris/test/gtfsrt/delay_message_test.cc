@@ -17,7 +17,7 @@ public:
   gtfsrt_delay_test() : gtfsrt_test(dataset_opt) {}
 };
 
-char const* simple_delay = R"(
+constexpr auto const simple_delay = R"(
 {
   "header": {
     "gtfsRealtimeVersion": "1.0",
@@ -113,7 +113,7 @@ TEST_F(gtfsrt_delay_test, simple_delay) {
   EXPECT_EQ(1561598700 + TIMEZONE_OFFSET, e3->updated_time());
 }
 
-char const* simple_delay2 = R"(
+constexpr auto const simple_delay2 = R"(
 {
   "header": {
     "gtfsRealtimeVersion": "1.0",

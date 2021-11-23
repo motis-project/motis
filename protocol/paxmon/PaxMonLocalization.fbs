@@ -1,0 +1,24 @@
+include "base/Station.fbs";
+include "base/TripId.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonAtStation {
+  station: motis.Station;
+  schedule_arrival_time: long;
+  current_arrival_time: long;
+  first_station: bool;
+}
+
+table PaxMonInTrip {
+  trip: motis.TripId;
+  next_station: motis.Station;
+  schedule_arrival_time: long;
+  current_arrival_time: long;
+}
+
+union PaxMonLocalization { PaxMonAtStation, PaxMonInTrip }
+
+table PaxMonLocalizationWrapper {
+  localization: PaxMonLocalization;
+}

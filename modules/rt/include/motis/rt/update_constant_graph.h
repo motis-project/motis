@@ -1,13 +1,21 @@
 #pragma once
 
+#include <cassert>
+
 #include "motis/core/schedule/schedule.h"
 
 namespace motis::rt {
 
+inline void constant_graph_add_station_node(schedule& sched) {
+  sched.travel_time_lower_bounds_fwd_.resize(sched.station_nodes_.size());
+  sched.travel_time_lower_bounds_bwd_.resize(sched.station_nodes_.size());
+}
+
 inline void constant_graph_add_route_node(schedule& sched, int route_index,
                                           station_node const* sn,
                                           bool in_allowed, bool out_allowed) {
-  auto const route_offset = static_cast<uint32_t>(sched.station_nodes_.size());
+  auto const route_offset =
+      static_cast<uint32_t>(sched.non_station_node_offset_);
   auto const route_lb_node_id =
       route_offset + static_cast<uint32_t>(route_index);
   auto const cg_size = route_offset + sched.route_count_;
@@ -49,6 +57,7 @@ inline void constant_graph_add_route_edge(schedule& sched,
 
   auto const update_min = [&](constant_graph& cg, uint32_t const from,
                               uint32_t const to) {
+    assert(from < cg.size() && to < cg.size());
     for (auto& se : cg[from]) {
       if (se.to_ == to) {
         se.cost_ = std::min(se.cost_, min_cost.time_);

@@ -31,7 +31,7 @@ ev_key get_ev_key(schedule const& sched, journey const& j,
 ev_key get_ev_key_from_trip(schedule const& sched, trip const* trp,
                             std::string const& station_id,
                             event_type const& ev_type,
-                            time_t const schedule_time) {
+                            unixtime const schedule_time) {
   auto const is_arr = (ev_type == event_type::ARR);
   auto const s_node = get_station_node(sched, station_id);
   utl::verify(trp != nullptr, "invalid trip");

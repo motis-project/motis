@@ -2,12 +2,9 @@
 
 #include <optional>
 
-#include "boost/date_time/gregorian/gregorian_types.hpp"
-#include "boost/date_time/posix_time/posix_time_types.hpp"
-
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
-#include "motis/module/context/get_schedule.h"
+#include "motis/core/common/unixtime.h"
 #include "motis/protocol/RISMessage_generated.h"
 #include "motis/ris/gtfs-rt/common.h"
 #include "motis/ris/gtfs-rt/parse_time.h"
@@ -20,7 +17,6 @@
 using namespace transit_realtime;
 using namespace flatbuffers;
 using namespace motis::logging;
-using namespace motis::module;
 
 namespace motis::ris::gtfsrt {
 
@@ -33,7 +29,7 @@ void finish_ris_msg(message_context& ctx, Offset<Message> message,
 }
 
 void gtfsrt_parser::parse_trip_updates(
-    schedule& sched, FeedEntity const& entity, std::time_t const timestamp,
+    FeedEntity const& entity, unixtime const timestamp,
     std::function<void(ris_message&&)> const& cb) {
   auto trip_update = entity.trip_update();
   auto descriptor = trip_update.trip();
@@ -41,7 +37,7 @@ void gtfsrt_parser::parse_trip_updates(
     case TripDescriptor_ScheduleRelationship_SCHEDULED:
     case TripDescriptor_ScheduleRelationship_ADDED:
     case TripDescriptor_ScheduleRelationship_CANCELED: {
-      trip_update_context update_ctx{sched, trip_update,
+      trip_update_context update_ctx{sched_, trip_update,
                                      is_addition_skip_allowed_};
       handle_trip_update(update_ctx, knowledge_, timestamp,
                          [&](message_context& ctx, Offset<Message> msg) {
@@ -60,13 +56,13 @@ void gtfsrt_parser::parse_trip_updates(
   }
 }
 
-void gtfsrt_parser::parse_entity(schedule& sched, FeedEntity const& entity,
-                                 std::time_t message_time,
+void gtfsrt_parser::parse_entity(FeedEntity const& entity,
+                                 unixtime message_time,
                                  std::function<void(ris_message&&)> const& cb) {
   // every entity contains either a trip update, a vehicle update or an
   // alert.
   if (entity.has_trip_update()) {
-    parse_trip_updates(sched, entity, message_time, cb);
+    parse_trip_updates(entity, message_time, cb);
   } else if (entity.has_vehicle()) {
     LOG(logging::info) << "GTFS-RT Vehicle update not implemented.";
   } else if (entity.has_alert()) {
@@ -80,12 +76,6 @@ void gtfsrt_parser::parse_entity(schedule& sched, FeedEntity const& entity,
 
 void gtfsrt_parser::to_ris_message(
     std::string_view s, std::function<void(ris_message&&)> const& cb) {
-  to_ris_message(get_schedule(), s, cb);
-}
-
-void gtfsrt_parser::to_ris_message(
-    schedule& sched, std::string_view s,
-    std::function<void(ris_message&&)> const& cb) {
   FeedMessage feed_message;
 
   bool success = feed_message.ParseFromArray(
@@ -121,11 +111,11 @@ void gtfsrt_parser::to_ris_message(
 
   LOG(info) << "Parsing " << feed_message.entity().size() << " GTFS-RT updates";
 
-  std::time_t message_time{
-      static_cast<std::time_t>(feed_message.header().timestamp())};
+  unixtime message_time{
+      static_cast<unixtime>(feed_message.header().timestamp())};
   for (auto const& entity : feed_message.entity()) {
     try {
-      parse_entity(sched, entity, message_time, cb);
+      parse_entity(entity, message_time, cb);
     } catch (const std::exception& e) {
       LOG(logging::error) << "Exception on entity " << entity.id()
                           << " for message with timestamp " << message_time
@@ -139,19 +129,13 @@ void gtfsrt_parser::to_ris_message(
 }
 
 std::vector<ris_message> gtfsrt_parser::parse(std::string_view s) {
-  return parse(get_schedule(), s);
-}
-
-std::vector<ris_message> gtfsrt_parser::parse(schedule& sched,
-                                              std::string_view s) {
   std::vector<ris_message> msgs;
-  to_ris_message(sched, s,
-                 [&](ris_message&& m) { msgs.emplace_back(std::move(m)); });
+  to_ris_message(s, [&](ris_message&& m) { msgs.emplace_back(std::move(m)); });
   return msgs;
 }
 
-gtfsrt_parser::gtfsrt_parser()
-    : knowledge_(std::make_unique<knowledge_context>()) {}
+gtfsrt_parser::gtfsrt_parser(schedule const& sched)
+    : knowledge_{std::make_unique<knowledge_context>()}, sched_{sched} {}
 
 gtfsrt_parser::~gtfsrt_parser() = default;
 

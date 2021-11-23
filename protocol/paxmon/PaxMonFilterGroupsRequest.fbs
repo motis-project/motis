@@ -1,0 +1,17 @@
+namespace motis.paxmon;
+
+table PaxMonFilterGroupsRequest {
+  universe: uint;
+
+  only_delayed: bool;
+  min_delay: short;
+
+  only_with_alternative_potential: bool;
+  preparation_time: short; // min
+
+  only_active: bool = true;
+  only_original: bool;
+  only_forecast: bool;
+
+  include_localization: bool;
+}

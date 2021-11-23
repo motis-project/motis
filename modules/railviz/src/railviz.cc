@@ -24,8 +24,8 @@
 #include "motis/core/conv/transport_conv.h"
 #include "motis/core/conv/trip_conv.h"
 
-#include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_call.h"
+#include "motis/module/event_collector.h"
 
 #include "motis/path/path_data.h"
 
@@ -122,16 +122,7 @@ std::string estimate_initial_permalink(schedule const& sched) {
 }
 
 void railviz::init(motis::module::registry& reg) {
-  reg.register_op("/railviz/map_config",
-                  [this](auto const& msg) { return get_map_config(msg); });
-  reg.register_op("/railviz/get_trip_guesses", &railviz::get_trip_guesses);
-  reg.register_op("/railviz/get_station", &railviz::get_station);
-  reg.register_op("/railviz/get_trains",
-                  [this](msg_ptr const& msg) { return get_trains(msg); });
-  reg.register_op("/railviz/get_trips",
-                  [this](msg_ptr const& msg) { return get_trips(msg); });
-
-  reg.subscribe("/init", [this]() {
+  reg.subscribe("/init", [&](auto const&) {
     auto const& s = get_sched();
     train_retriever_ = std::make_unique<train_retriever>(s, bounding_boxes(s));
 
@@ -139,8 +130,19 @@ void railviz::init(motis::module::registry& reg) {
       initial_permalink_ = estimate_initial_permalink(s);
       LOG(logging::info) << "est. initial_permalink: " << initial_permalink_;
     }
-  });
 
+    return make_no_msg();
+  });
+  reg.register_op("/railviz/map_config",
+                  [this](auto const& msg) { return get_map_config(msg); });
+  reg.register_op("/railviz/get_trip_guesses",
+                  [this](msg_ptr const& msg) { return get_trip_guesses(msg); });
+  reg.register_op("/railviz/get_station",
+                  [this](msg_ptr const& msg) { return get_station(msg); });
+  reg.register_op("/railviz/get_trains",
+                  [this](msg_ptr const& msg) { return get_trains(msg); });
+  reg.register_op("/railviz/get_trips",
+                  [this](msg_ptr const& msg) { return get_trips(msg); });
   reg.subscribe("/rt/update", [this](msg_ptr const& msg) {
     using rt::RtUpdates;
     if (train_retriever_) {
@@ -163,11 +165,7 @@ msg_ptr railviz::get_map_config(msg_ptr const&) {
 msg_ptr railviz::get_trip_guesses(msg_ptr const& msg) {
   auto const req = motis_content(RailVizTripGuessRequest, msg);
 
-  auto const& sched = get_schedule();
-  auto it =
-      std::lower_bound(begin(sched.trips_), end(sched.trips_),
-                       std::make_pair(primary_trip_id{0U, req->train_num(), 0U},
-                                      static_cast<trip*>(nullptr)));
+  auto const& sched = get_sched();
 
   auto const cmp = [&](trip const* a, trip const* b) {
     return std::abs(static_cast<int64_t>(a->id_.primary_.time_)) <
@@ -175,16 +173,23 @@ msg_ptr railviz::get_trip_guesses(msg_ptr const& msg) {
   };
 
   std::vector<trip const*> trips;
-  while (it != end(sched.trips_) && it->first.train_nr_ == req->train_num()) {
-    trips.emplace_back(it->second);
+  for (auto it = std::lower_bound(
+           begin(sched.trips_), end(sched.trips_),
+           std::make_pair(primary_trip_id{0U, req->train_num(), 0U},
+                          static_cast<trip*>(nullptr)));
+       it != end(sched.trips_) && it->first.train_nr_ == req->train_num();
+       ++it) {
+    auto const trp = it->second;
+    if (trp->edges_->empty() || (*sections(trp).begin()).lcon().valid_ == 0U) {
+      continue;
+    }
+    trips.emplace_back(trp);
 
     auto const interesting_size =
         std::min(req->guess_count(), static_cast<unsigned>(trips.size()));
     std::nth_element(begin(trips), std::next(begin(trips), interesting_size),
                      end(trips), cmp);
     trips.resize(interesting_size);
-
-    ++it;
   }
 
   std::sort(begin(trips), end(trips), cmp);
@@ -231,7 +236,7 @@ msg_ptr railviz::get_trip_guesses(msg_ptr const& msg) {
 msg_ptr railviz::get_station(msg_ptr const& msg) {
   auto const req = motis_content(RailVizStationRequest, msg);
 
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto const t = unix_to_motistime(sched, req->time());
   auto const station = get_station_node(sched, req->station_id()->str());
 
@@ -361,8 +366,7 @@ msg_ptr railviz::get_trains(msg_ptr const& msg) const {
   logging::scoped_timer timer("get_trains");
 
   auto const req = motis_content(RailVizTrainsRequest, msg);
-  auto const& sched = get_schedule();
-
+  auto const& sched = get_sched();
   auto const start_time = unix_to_motistime(sched, req->start_time());
   auto const end_time = unix_to_motistime(sched, req->end_time());
 
@@ -382,14 +386,17 @@ msg_ptr railviz::get_trains(msg_ptr const& msg) const {
 
 msg_ptr railviz::get_trips(msg_ptr const& msg) {
   auto const* req = motis_content(RailVizTripsRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
 
   trains_response_builder trb{
       sched, find_shared_data<path::path_data>(path::PATH_DATA_KEY), MAX_ZOOM};
   for (auto const* fbs_trp : *req->trips()) {
     auto const trp = from_fbs(sched, fbs_trp);
-    auto const k = ev_key{trp->edges_->at(0), trp->lcon_idx_, event_type::DEP};
-    trb.add_train_full(k);
+    if (!trp->edges_->empty()) {
+      auto const k =
+          ev_key{trp->edges_->at(0), trp->lcon_idx_, event_type::DEP};
+      trb.add_train_full(k);
+    }
   }
   return trb.finish();
 }

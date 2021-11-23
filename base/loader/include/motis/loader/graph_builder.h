@@ -90,7 +90,7 @@ struct participant {
 };
 
 struct service_with_day_offset {
-  MAKE_COMPARABLE()
+  CISTA_COMPARABLE()
 
   Service const* service_{nullptr};
   int day_offset_{0};
@@ -215,6 +215,9 @@ struct graph_builder {
 
   bool check_trip(trip const* trp);
 
+  bool skip_station(Station const* station) const;
+  bool skip_route(Route const* route) const;
+
   unsigned lcon_count_{0U};
   unsigned next_route_index_{0U};
   tz_cache tz_cache_;
@@ -238,6 +241,7 @@ struct graph_builder {
   int first_day_{0}, last_day_{0};
   bool apply_rules_{false};
   bool expand_trips_{false};
+  bool no_local_transport_{false};
 
   connection_info con_info_;
   connection con_;

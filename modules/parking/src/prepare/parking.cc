@@ -68,7 +68,7 @@ private:
     }
     auto const fee = tags.has_key("fee") && !tags.has_tag("fee", "no");
     out_ << coord.y << "," << coord.x << "," << (fee ? "1" : "0") << "\n";
-    parkings_.emplace_back(++id_, geo::latlng(coord.y, coord.x), fee);
+    parkings_.emplace_back(++id_, geo::latlng{coord.y, coord.x}, fee);
   }
 
   static inline bool access_allowed(osmium::TagList const& tags) {

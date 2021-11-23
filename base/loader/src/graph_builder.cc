@@ -21,6 +21,7 @@
 #include "motis/core/schedule/build_route_node.h"
 #include "motis/core/schedule/category.h"
 #include "motis/core/schedule/price.h"
+#include "motis/core/schedule/validate_graph.h"
 #include "motis/core/access/time_access.h"
 #include "motis/core/access/trip_iterator.h"
 
@@ -28,6 +29,7 @@
 #include "motis/loader/build_graph.h"
 #include "motis/loader/build_stations.h"
 #include "motis/loader/classes.h"
+#include "motis/loader/filter/local_stations.h"
 #include "motis/loader/interval_util.h"
 #include "motis/loader/rule_route_builder.h"
 #include "motis/loader/rule_service_graph_builder.h"
@@ -46,7 +48,8 @@ char const* c_str(flatbuffers64::String const* str) {
 graph_builder::graph_builder(schedule& sched, loader_options const& opt)
     : sched_{sched},
       apply_rules_{opt.apply_rules_},
-      expand_trips_{opt.expand_trips_} {}
+      expand_trips_{opt.expand_trips_},
+      no_local_transport_{opt.no_local_transport_} {}
 
 full_trip_id graph_builder::get_full_trip_id(Service const* s, int day,
                                              int section_idx) {
@@ -162,7 +165,7 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
       ++it;
     } while (it != end(sorted) && route == (*it)->route());
 
-    if (!route_services.empty()) {
+    if (!route_services.empty() && !skip_route(route)) {
       add_route_services(mcd::to_vec(route_services, [&](Service const* s) {
         return std::make_pair(s, get_or_create_bitfield(s->traffic_days()));
       }));
@@ -732,7 +735,7 @@ route_section graph_builder::add_route_section(
     section.from_route_node_ = from_route_node;
   } else {
     section.from_route_node_ = build_route_node(
-        route_index, sched_.node_count_++, from_station_node,
+        route_index, sched_.next_node_id_++, from_station_node,
         from_station->transfer_time_, from_in_allowed, from_out_allowed);
   }
   auto const from_platform =
@@ -746,10 +749,9 @@ route_section graph_builder::add_route_section(
   if (to_route_node != nullptr) {
     section.to_route_node_ = to_route_node;
   } else {
-    section.to_route_node_ =
-        build_route_node(route_index, sched_.node_count_++, to_station_node,
-                         sched_.stations_[to_station_node->id_]->transfer_time_,
-                         to_in_allowed, to_out_allowed);
+    section.to_route_node_ = build_route_node(
+        route_index, sched_.next_node_id_++, to_station_node,
+        to_station->transfer_time_, to_in_allowed, to_out_allowed);
   }
   auto const to_platform =
       to_station->get_platform(connections[0].full_con_->a_track_);
@@ -765,6 +767,17 @@ route_section graph_builder::add_route_section(
   lcon_count_ += connections.size();
 
   return section;
+}
+
+bool graph_builder::skip_station(Station const* station) const {
+  return no_local_transport_ && is_local_station(station);
+}
+
+bool graph_builder::skip_route(Route const* route) const {
+  return no_local_transport_ &&
+         std::any_of(
+             route->stations()->begin(), route->stations()->end(),
+             [&](Station const* station) { return skip_station(station); });
 }
 
 schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
@@ -803,8 +816,9 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
   graph_builder builder{*sched, opt};
 
   progress_tracker->status("Add Stations").out_bounds(0, 5);
-  builder.stations_ = build_stations(*sched, fbs_schedules, builder.tracks_,
-                                     opt.use_platforms_);
+  builder.stations_ =
+      build_stations(*sched, fbs_schedules, builder.tracks_, opt.use_platforms_,
+                     opt.no_local_transport_);
 
   for (auto const& [i, fbs_schedule] : utl::enumerate(fbs_schedules)) {
     auto const dataset_prefix =
@@ -852,10 +866,12 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
 
   progress_tracker->status("Lower Bounds").out_bounds(96, 100).in_high(4);
   sched->transfers_lower_bounds_fwd_ = build_interchange_graph(
-      sched->station_nodes_, sched->route_count_, search_dir::FWD);
+      sched->station_nodes_, sched->non_station_node_offset_,
+      sched->route_count_, search_dir::FWD);
   progress_tracker->increment();
   sched->transfers_lower_bounds_bwd_ = build_interchange_graph(
-      sched->station_nodes_, sched->route_count_, search_dir::BWD);
+      sched->station_nodes_, sched->non_station_node_offset_,
+      sched->route_count_, search_dir::BWD);
   progress_tracker->increment();
   sched->travel_time_lower_bounds_fwd_ =
       build_station_graph(sched->station_nodes_, search_dir::FWD);
@@ -879,6 +895,7 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
     LOG(info) << builder.broken_trips_ << " broken trips ignored";
   }
 
+  validate_graph(*sched);
   utl::verify(
       std::all_of(begin(sched->trips_), end(sched->trips_),
                   [](auto const& t) { return t.second->edges_ != nullptr; }),

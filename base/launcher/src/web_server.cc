@@ -6,11 +6,14 @@
 #include "boost/beast/version.hpp"
 #include "boost/filesystem.hpp"
 
+#include "utl/to_vec.h"
+
 #include "net/web_server/responses.h"
 #include "net/web_server/serve_static.h"
 #include "net/web_server/web_server.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/module/client.h"
 #include "motis/launcher/load_server_certificate.h"
 
 #if defined(NET_TLS)
@@ -21,6 +24,109 @@ namespace fs = boost::filesystem;
 using namespace motis::module;
 
 namespace motis::launcher {
+
+std::string encode_msg(msg_ptr const& msg, bool const binary) {
+  std::string b;
+  if (binary) {
+    b = std::string{reinterpret_cast<char const*>(msg->data()), msg->size()};
+  } else {
+    b = msg->to_json();
+  }
+  return b;
+}
+
+msg_ptr build_reply(int const id, msg_ptr const& res,
+                    std::error_code const& ec) {
+  msg_ptr m = res;
+  if (ec) {
+    m = make_error_msg(ec);
+  } else if (!res) {
+    m = make_success_msg();
+  }
+  m->get()->mutate_id(id);
+  return m;
+}
+
+msg_ptr decode_msg(std::string const& req_buf, bool const binary) {
+  if (binary) {
+    return make_msg(req_buf.data(), req_buf.size());
+  } else {
+    return make_msg(req_buf, true);
+  }
+}
+
+struct ws_client : public client,
+                   public std::enable_shared_from_this<ws_client> {
+  ws_client(boost::asio::io_service& ios, net::ws_session_ptr session,
+            bool binary)
+      : ios_{ios}, session_{std::move(session)}, binary_{binary} {}
+
+  ws_client(ws_client const&) = delete;
+  ws_client(ws_client&&) = delete;
+  ws_client& operator=(ws_client const&) = delete;
+  ws_client& operator=(ws_client&&) = delete;
+
+  ~ws_client() override = default;
+
+  void set_on_msg_cb(std::function<void(msg_ptr const&)>&& cb) override {
+    if (auto const lock = session_.lock(); lock) {
+      lock->on_msg([this, cb = std::move(cb)](std::string const& req_buf,
+                                              net::ws_msg_type const type) {
+        if (!cb) {
+          return;
+        }
+
+        msg_ptr err;
+        int req_id = 0;
+
+        try {
+          auto const req =
+              decode_msg(req_buf, type == net::ws_msg_type::BINARY);
+          req_id = req->get()->id();
+          return cb(req);
+        } catch (std::system_error const& e) {
+          err = build_reply(req_id, nullptr, e.code());
+        } catch (std::exception const& e) {
+          err = make_unknown_error_msg(e.what());
+        } catch (...) {
+          err = make_unknown_error_msg("unknown");
+        }
+        err->get()->mutate_id(req_id);
+
+        if (auto const lock = session_.lock(); lock) {
+          lock->send(encode_msg(err, type == net::ws_msg_type::BINARY), type,
+                     [](boost::system::error_code, std::size_t) {});
+        }
+      });
+    }
+  }
+
+  void set_on_close_cb(std::function<void()>&& cb) override {
+    auto const lock = session_.lock();
+    if (lock) {
+      lock->on_close([s = shared_from_this(), cb = std::move(cb)]() {
+        if (cb) {
+          cb();
+        }
+      });
+    }
+  }
+
+  void send(msg_ptr const& m) override {
+    ios_.post([self = shared_from_this(), m]() {
+      if (auto s = self->session_.lock()) {
+        s->send(
+            encode_msg(m, self->binary_),
+            self->binary_ ? net::ws_msg_type::BINARY : net::ws_msg_type::TEXT,
+            [](boost::system::error_code, size_t) {});
+      }
+    });
+  }
+
+  boost::asio::io_service& ios_;
+  net::ws_session_ptr session_;
+  bool binary_;
+};
 
 struct web_server::impl {
 #if defined(NET_TLS)
@@ -51,6 +157,13 @@ struct web_server::impl {
     server_.on_ws_msg(
         [this](net::ws_session_ptr const& session, std::string const& msg,
                net::ws_msg_type type) { on_ws_msg(session, msg, type); });
+    server_.on_ws_open([this](net::ws_session_ptr const& s,
+                              std::string const& target,
+                              bool /* ssl */) { on_ws_open(s, target); });
+    server_.on_upgrade_ok([this](net::web_server::http_req_t const& req) {
+      return req.target() == "/" ||
+             receiver_.connect_ok(std::string{req.target()});
+    });
     server_.set_timeout(std::chrono::seconds(120));
     server_.init(host, port, ec);
     log_path_ = log_path;
@@ -84,11 +197,10 @@ struct web_server::impl {
 
     auto const build_response = [req](msg_ptr const& response) {
       net::web_server::string_res_t res{
-          response == nullptr
-              ? status::ok
-              : response->get()->content_type() == MsgContent_MotisError
-                    ? status::internal_server_error
-                    : status::ok,
+          response == nullptr ? status::ok
+          : response->get()->content_type() == MsgContent_MotisError
+              ? status::internal_server_error
+              : status::ok,
           req.version()};
       res.set(field::access_control_allow_origin, "*");
       res.set(field::access_control_allow_headers,
@@ -119,15 +231,25 @@ struct web_server::impl {
       return res;
     };
 
+    auto const res_cb = [cb, build_response](msg_ptr const& response) {
+      cb(build_response(response));
+    };
+
     std::string req_msg;
     switch (req.method()) {
       case verb::options: return cb(build_response(nullptr));
-      case verb::post:
+      case verb::post: {
+        auto const content_type = req[field::content_type];
+        if (!content_type.empty() &&
+            !boost::beast::iequals(content_type, "application/json")) {
+          return on_generic_req(req, res_cb);
+        }
         req_msg = req.body();
         if (req_msg.empty()) {
           req_msg = make_no_msg(std::string{req.target()})->to_json();
         }
         break;
+      }
       case verb::head:
       case verb::get:
         if (serve_static_files_ &&
@@ -142,26 +264,36 @@ struct web_server::impl {
             std::make_error_code(std::errc::operation_not_supported))));
     }
 
-    return on_req(req_msg, false,
-                  [cb, build_response](msg_ptr const& response) {
-                    cb(build_response(response));
-                  });
+    return on_msg_req(req_msg, false, res_cb);
+  }
+
+  void on_ws_open(net::ws_session_ptr session, std::string const& target) {
+    LOG(logging::info) << "ws connection to \"" << target << "\"";
+    if (target != "/") {
+      auto const c =
+          std::make_shared<ws_client>(ios_, std::move(session), false);
+      auto const s = c->session_.lock();
+      if (s) {
+        s->on_close([c]() {});
+        receiver_.on_connect(target, c);
+      }
+    }
   }
 
   void on_ws_msg(net::ws_session_ptr const& session, std::string const& msg,
                  net::ws_msg_type type) {
-    bool const binary = type == net::ws_msg_type::BINARY;
-    return on_req(msg, binary,
-                  [session, type, binary](msg_ptr const& response) {
-                    if (auto s = session.lock()) {
-                      s->send(encode_msg(response, binary), type,
-                              [](boost::system::error_code, size_t) {});
-                    }
-                  });
+    auto const is_binary = type == net::ws_msg_type::BINARY;
+    return on_msg_req(msg, is_binary,
+                      [session, type, is_binary](msg_ptr const& response) {
+                        if (auto s = session.lock()) {
+                          s->send(encode_msg(response, is_binary), type,
+                                  [](boost::system::error_code, size_t) {});
+                        }
+                      });
   }
 
-  void on_req(std::string const& request, bool binary,
-              std::function<void(msg_ptr const&)> const& cb) {
+  void on_msg_req(std::string const& request, bool binary,
+                  std::function<void(msg_ptr const&)> const& cb) {
     msg_ptr err;
     int req_id = 0;
     try {
@@ -181,38 +313,45 @@ struct web_server::impl {
       err = make_unknown_error_msg("unknown");
     }
     err->get()->mutate_id(req_id);
-    LOG(logging::error) << err->to_json();
     return cb(err);
   }
 
-  static msg_ptr decode_msg(std::string const& req_buf, bool const binary) {
-    if (binary) {
-      return make_msg(req_buf.data(), req_buf.size());
-    } else {
-      return make_msg(req_buf, true);
-    }
-  }
+  void on_generic_req(net::web_server::http_req_t const& req,
+                      std::function<void(msg_ptr const&)> const& cb) {
+    using namespace boost::beast::http;
 
-  static std::string encode_msg(msg_ptr const& msg, bool const binary) {
-    std::string b;
-    if (binary) {
-      b = std::string{reinterpret_cast<char const*>(msg->data()), msg->size()};
-    } else {
-      b = msg->to_json();
+    auto const req_id = 1;
+    msg_ptr err;
+    try {
+      message_creator mc;
+      mc.create_and_finish(
+          MsgContent_HTTPRequest,
+          CreateHTTPRequest(mc, HTTPMethod_POST, mc.CreateString(req.target()),
+                            mc.CreateVector(utl::to_vec(
+                                req,
+                                [&](auto const& f) {
+                                  return CreateHTTPHeader(
+                                      mc, mc.CreateString(f.name_string()),
+                                      mc.CreateString(f.value()));
+                                })),
+                            mc.CreateString(req.body()))
+              .Union(),
+          std::string{req.target()});
+      auto const msg = make_msg(mc);
+      return receiver_.on_msg(
+          msg,
+          ios_.wrap([&, cb](msg_ptr const& res, std::error_code const& ec) {
+            cb(build_reply(req_id, res, ec));
+          }));
+    } catch (std::system_error const& e) {
+      err = build_reply(req_id, nullptr, e.code());
+    } catch (std::exception const& e) {
+      err = make_unknown_error_msg(e.what());
+    } catch (...) {
+      err = make_unknown_error_msg("unknown");
     }
-    return b;
-  }
-
-  static msg_ptr build_reply(int const id, msg_ptr const& res,
-                             std::error_code const& ec) {
-    msg_ptr m = res;
-    if (ec) {
-      m = make_error_msg(ec);
-    } else if (!res) {
-      m = make_success_msg();
-    }
-    m->get()->mutate_id(id);
-    return m;
+    LOG(logging::error) << err->to_json();
+    return cb(err);
   }
 
   void log_request(msg_ptr const& msg) {

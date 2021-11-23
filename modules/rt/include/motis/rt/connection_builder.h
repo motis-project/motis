@@ -2,6 +2,7 @@
 
 #include <map>
 #include <string>
+#include <string_view>
 
 #include "utl/get_or_create.h"
 
@@ -39,15 +40,15 @@ inline connection_info const* get_con_info(
   });
 }
 
-inline size_t get_track(schedule& sched, std::string const& track_name) {
+inline uint16_t get_track(schedule& sched, std::string_view const track_name) {
   auto const it = std::find_if(
       begin(sched.tracks_), end(sched.tracks_),
       [&track_name](mcd::string const& t) { return t == track_name; });
   if (it == end(sched.tracks_)) {
     sched.tracks_.emplace_back(track_name);
-    return sched.tracks_.size() - 1;
+    return static_cast<uint16_t>(sched.tracks_.size() - 1);
   } else {
-    return static_cast<size_t>(std::distance(begin(sched.tracks_), it));
+    return static_cast<uint16_t>(std::distance(begin(sched.tracks_), it));
   }
 }
 

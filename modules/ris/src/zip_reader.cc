@@ -42,8 +42,10 @@ struct zip_reader::impl {
     if (auto const success =
             mz_zip_reader_file_stat(&ar_, curr_file_index_, &file_stat);
         success) {
+      current_file_name_ = file_stat.m_filename;
       return file_stat.m_uncomp_size;
     } else {
+      current_file_name_.clear();
       throw std::runtime_error("unable to parse file size");
     }
   }
@@ -69,6 +71,8 @@ struct zip_reader::impl {
     return static_cast<float>(curr_file_index_) / num_files_;
   }
 
+  std::string_view current_file_name() const { return current_file_name_; }
+
   std::unique_ptr<mmap_reader> mmap_;
   char const* ptr_{nullptr};
   size_t size_{0};
@@ -78,6 +82,7 @@ struct zip_reader::impl {
   size_t curr_file_index_{0};
 
   std::vector<unsigned char> buf_;
+  std::string current_file_name_;
 };
 
 zip_reader::zip_reader(char const* path)
@@ -93,5 +98,9 @@ std::optional<std::string_view> zip_reader::read() const {
 }
 
 float zip_reader::progress() const { return impl_->progress(); }
+
+std::string_view zip_reader::current_file_name() const {
+  return impl_->current_file_name();
+}
 
 }  // namespace motis::ris

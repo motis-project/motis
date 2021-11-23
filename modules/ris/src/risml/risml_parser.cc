@@ -11,6 +11,7 @@
 #include "motis/protocol/RISMessage_generated.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/common/unixtime.h"
 #include "motis/ris/risml/common.h"
 #include "motis/ris/risml/parse_event.h"
 #include "motis/ris/risml/parse_station.h"
@@ -269,7 +270,7 @@ Offset<Message> parse_conn_assessment_msg(context& ctx, xml_node const& msg) {
 }
 
 boost::optional<ris_message> parse_message(xml_node const& msg,
-                                           std::time_t t_out) {
+                                           unixtime t_out) {
   using parser_func_t =
       std::function<Offset<Message>(context&, xml_node const&)>;
   static std::map<cstr, parser_func_t> map(

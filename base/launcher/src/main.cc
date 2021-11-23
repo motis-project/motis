@@ -7,6 +7,7 @@
 #include "boost/asio/signal_set.hpp"
 #include "boost/filesystem.hpp"
 
+#include "utl/parser/cstr.h"
 #include "utl/to_vec.h"
 
 #include "net/stop_handler.h"
@@ -39,6 +40,14 @@ using namespace motis;
 int main(int argc, char const** argv) {
   motis_instance instance;
 
+  auto reg = subc_reg{};
+  for (auto const& m : instance.modules()) {
+    m->reg_subc(reg);
+  }
+  if (argc > 1 && !utl::cstr{argv[1]}.starts_with("-")) {
+    return reg.execute(argv[1], argc - 1, argv + 1);
+  }
+
   web_server server(instance.runner_.ios(), instance);
 
   server_settings server_opt;
@@ -62,24 +71,30 @@ int main(int argc, char const** argv) {
     conf::options_parser parser(confs);
     parser.read_command_line_args(argc, argv, false);
 
-    if (!launcher_opt.init_.empty()) {
-      launcher_opt.mode_ = launcher_settings::motis_mode_t::INIT;
-    }
-
     if (parser.help()) {
-      std::cout << "\n\tMOTIS v" << short_version() << "\n\n";
+      std::cout << "\n\tMOTIS " << short_version() << "\n\n";
+      reg.print_list();
       parser.print_help(std::cout);
       return 0;
     } else if (parser.version()) {
-      std::cout << "MOTIS v" << long_version() << "\n";
+      std::cout << "MOTIS " << long_version() << "\n";
       return 0;
     }
 
     parser.read_configuration_file(false);
+
+    if (!launcher_opt.init_.empty()) {
+      launcher_opt.mode_ = launcher_settings::motis_mode_t::INIT;
+    }
+
     parser.print_used(std::cout);
   } catch (std::exception const& e) {
     std::cout << "options error: " << e.what() << "\n";
     return 1;
+  }
+
+  if (launcher_opt.direct_mode_) {
+    dispatcher::direct_mode_dispatcher_ = &instance;
   }
 
   try {
@@ -109,7 +124,11 @@ int main(int argc, char const** argv) {
     try {
       instance.call(launcher_opt.init_, launcher_opt.num_threads_);
       return 0;
+    } catch (std::exception const& e) {
+      std::cout << "\ninit error: " << e.what() << "\n";
+      return 1;
     } catch (...) {
+      std::cout << "\ninit error\n";
       return 1;
     }
   }

@@ -54,7 +54,7 @@ inline void copy_trip_route(
     return orig->station_node_->child_nodes_
         .emplace_back(mcd::make_unique<node>(
             make_node(node_type::ROUTE_NODE, orig->station_node_,
-                      sched.node_count_++, route_id)))
+                      sched.next_node_id_++, route_id)))
         .get();
   };
 

@@ -60,7 +60,7 @@ void gtfsrt_additional_test::check_addition_message(
   EXPECT_EQ(EventType_ARR, e3->type());
 }
 
-const char* additional_only = R"(
+constexpr auto const additional_only = R"(
 {
   "header": {
     "gtfsRealtimeVersion": "1.0",
@@ -113,7 +113,7 @@ TEST_F(gtfsrt_additional_test, receive_additional_only) {
   check_addition_message(msgs[0]);
 }
 
-const char* additional_and_delay = R"(
+constexpr auto const additional_and_delay = R"(
 {
   "header": {
     "gtfsRealtimeVersion": "1.0",
@@ -203,7 +203,7 @@ TEST_F(gtfsrt_additional_test, receive_additional_and_delay) {
   EXPECT_EQ(1561600800, events->Get(2)->updated_time());
 }
 
-const char* additional_delay_reroute = R"(
+constexpr auto const additional_delay_reroute = R"(
 {
   "header": {
     "gtfsRealtimeVersion": "1.0",

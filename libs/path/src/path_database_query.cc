@@ -285,7 +285,12 @@ void unpack_features(
           auto feature_ptr = pack.data() + feature_offset;
           auto feature_size = protozero::decode_varint(&feature_ptr, pack_end);
 
-          fn(*q_lb, std::string_view{feature_ptr, feature_size});
+          utl::verify(feature_size < std::numeric_limits<size_t>::max(),
+                      "feature size {} > size_t max {}", feature_size,
+                      std::numeric_limits<size_t>::max());
+
+          fn(*q_lb,
+             std::string_view{feature_ptr, static_cast<size_t>(feature_size)});
         });
 
     utl::erase_if(active_queries,

@@ -5,6 +5,7 @@
 #include <limits>
 #include <optional>
 
+#include "boost/algorithm/string/predicate.hpp"
 #include "boost/filesystem.hpp"
 
 #include "utl/concat.h"
@@ -21,14 +22,17 @@
 #include "lmdb/lmdb.hpp"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/common/unixtime.h"
+#include "motis/core/access/time_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/print_trip.h"
-#include "motis/module/context/get_schedule.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
 #include "motis/ris/gtfs-rt/gtfsrt_parser.h"
+#include "motis/ris/ribasis/ribasis_parser.h"
 #include "motis/ris/ris_message.h"
 #include "motis/ris/risml/risml_parser.h"
+#include "motis/ris/string_view_reader.h"
 #include "motis/ris/zip_reader.h"
 
 #ifdef GetMessage
@@ -68,7 +72,7 @@ constexpr auto const MIN_DAY_DB = "MIN_DAY_DB";
 //        earliest <= day.end && latest >= day.begin
 constexpr auto const MAX_DAY_DB = "MAX_DAY_DB";
 
-constexpr auto const BATCH_SIZE = time_t{3600};
+constexpr auto const BATCH_SIZE = unixtime{3600};
 
 constexpr auto const WRITE_MSG_BUF_MAX_SIZE = 50000;
 
@@ -85,8 +89,10 @@ constexpr T ceil(T const i, T const multiple) {
 using size_type = uint32_t;
 constexpr auto const SIZE_TYPE_SIZE = sizeof(size_type);
 
-constexpr time_t day(time_t t) { return (t / SECONDS_A_DAY) * SECONDS_A_DAY; }
-constexpr time_t next_day(time_t t) { return day(t) + SECONDS_A_DAY; }
+constexpr unixtime day(unixtime t) {
+  return (t / SECONDS_A_DAY) * SECONDS_A_DAY;
+}
+constexpr unixtime next_day(unixtime t) { return day(t) + SECONDS_A_DAY; }
 
 template <typename Fn>
 inline void for_each_day(ris_message const& m, Fn&& f) {
@@ -96,28 +102,31 @@ inline void for_each_day(ris_message const& m, Fn&& f) {
   }
 }
 
-time_t to_time_t(std::string_view s) {
-  return *reinterpret_cast<time_t const*>(s.data());
+unixtime to_unixtime(std::string_view s) {
+  return *reinterpret_cast<unixtime const*>(s.data());
 }
 
-std::string_view from_time_t(time_t const& t) {
+std::string_view from_unixtime(unixtime const& t) {
   return {reinterpret_cast<char const*>(&t), sizeof(t)};
 }
 
 struct ris::impl {
+  impl(schedule& sched, config const& c)
+      : sched_{sched}, config_{c}, gtfsrt_parser_{sched} {}
+
   void init() {
-    if (!gtfs_trip_ids_path_.empty()) {
+    if (!config_.gtfs_trip_ids_path_.empty()) {
       read_gtfs_trip_ids();
     }
 
-    if (clear_db_) {
-      LOG(info) << "clearing database path " << db_path_;
-      fs::remove_all(db_path_);
+    if (config_.clear_db_ && fs::exists(config_.db_path_)) {
+      LOG(info) << "clearing database path " << config_.db_path_;
+      fs::remove_all(config_.db_path_);
     }
 
     env_.set_maxdbs(4);
-    env_.set_mapsize(db_max_size_);
-    env_.open(db_path_.c_str(),
+    env_.set_mapsize(config_.db_max_size_);
+    env_.open(config_.db_path_.c_str(),
               lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOTLS);
 
     db::txn t{env_};
@@ -127,66 +136,76 @@ struct ris::impl {
     t.dbi_open(MAX_DAY_DB, db::dbi_flags::CREATE | db::dbi_flags::INTEGERKEY);
     t.commit();
 
-    if (fs::exists(input_)) {
-      LOG(warn) << "parsing " << input_;
-      // parse_parallel(input_, null_pub_);
-      if (instant_forward_) {
+    if (fs::exists(config_.input_)) {
+      LOG(warn) << "parsing " << config_.input_;
+      // parse_parallel(config_.input_, null_pub_);
+      if (config_.instant_forward_) {
         publisher pub;
-        parse_sequential(input_, pub);
+        parse_sequential(config_.input_, pub);
       } else {
-        parse_sequential(input_, null_pub_);
+        parse_sequential(config_.input_, null_pub_);
       }
     } else {
-      LOG(warn) << input_ << " does not exist";
+      LOG(warn) << config_.input_ << " does not exist";
     }
 
-    if (init_time_ != 0) {
-      forward(init_time_);
+    if (config_.init_time_.unix_time_ != 0) {
+      forward(config_.init_time_.unix_time_);
     }
   }
 
   void read_gtfs_trip_ids() const {
-    auto& sched = get_schedule();
-    auto const trips = utl::file{gtfs_trip_ids_path_.c_str(), "r"}.content();
+    auto const trips =
+        utl::file{config_.gtfs_trip_ids_path_.c_str(), "r"}.content();
     auto const trips_msg =
         make_msg(trips.data(), trips.size(), DEFAULT_FBS_MAX_DEPTH,
                  std::numeric_limits<std::uint32_t>::max());
     for (auto const& id : *motis_content(RISGTFSRTMapping, trips_msg)->ids()) {
       try {
-        sched.gtfs_trip_ids_.emplace(
-            gtfs_trip_id{id->id()->str(), static_cast<std::time_t>(id->day())},
-            from_fbs(sched, id->trip(), true));
+        sched_.gtfs_trip_ids_.emplace(
+            gtfs_trip_id{id->id()->str(), static_cast<unixtime>(id->day())},
+            from_fbs(sched_, id->trip(), true));
       } catch (...) {
         std::cout << to_extern_trip(id->trip()) << "\n";
       }
     }
-    LOG(info) << sched.gtfs_trip_ids_.size() << "/"
+    LOG(info) << sched_.gtfs_trip_ids_.size() << "/"
               << motis_content(RISGTFSRTMapping, trips_msg)->ids()->size()
               << " imported";
   }
 
-  msg_ptr upload(msg_ptr const& msg) {
-    auto const content = motis_content(HTTPRequest, msg)->content();
-    auto& sched = get_schedule();
-    publisher pub;
-    auto risml_fn = [](std::string_view s,
-                       std::function<void(ris_message &&)> const& cb) {
-      risml::risml_parser::to_ris_message(s, cb);
-    };
+  static std::string_view get_content_type(HTTPRequest const* req) {
+    for (auto const& h : *req->headers()) {
+      if (std::string_view{h->name()->c_str(), h->name()->size()} ==
+          "Content-Type") {
+        return {h->value()->c_str(), h->value()->size()};
+      }
+    }
+    return {};
+  }
 
-    write_to_db(zip_reader{content->c_str(), content->size()}, risml_fn, pub);
-    sched.system_time_ = pub.max_timestamp_;
-    sched.last_update_timestamp_ = std::time(nullptr);
+  msg_ptr upload(msg_ptr const& msg) {
+    auto const req = motis_content(HTTPRequest, msg);
+    auto const content = req->content();
+    auto const ft =
+        guess_file_type(get_content_type(req),
+                        std::string_view{content->c_str(), content->size()});
+    publisher pub;
+
+    parse_str_and_write_to_db(
+        std::string_view{content->c_str(), content->size()}, ft, pub);
+
+    sched_.system_time_ = pub.max_timestamp_;
+    sched_.last_update_timestamp_ = std::time(nullptr);
     ctx::await_all(motis_publish(make_no_msg("/ris/system_time_changed")));
     return {};
   }
 
   msg_ptr read(msg_ptr const&) {
-    auto& sched = get_schedule();
     publisher pub;
-    parse_sequential(input_, pub);
-    sched.system_time_ = pub.max_timestamp_;
-    sched.last_update_timestamp_ = std::time(nullptr);
+    parse_sequential(config_.input_, pub);
+    sched_.system_time_ = pub.max_timestamp_;
+    sched_.last_update_timestamp_ = std::time(nullptr);
     ctx::await_all(motis_publish(make_no_msg("/ris/system_time_changed")));
     return {};
   }
@@ -198,7 +217,7 @@ struct ris::impl {
 
   msg_ptr purge(msg_ptr const& msg) {
     auto const until =
-        static_cast<time_t>(motis_content(RISPurgeRequest, msg)->until());
+        static_cast<unixtime>(motis_content(RISPurgeRequest, msg)->until());
 
     auto t = db::txn{env_};
     auto db = t.dbi_open(MSG_DB);
@@ -216,24 +235,6 @@ struct ris::impl {
     return {};
   }
 
-  std::string gtfs_trip_ids_path_;
-  std::string db_path_{"ris.mdb"};
-  std::string input_{"ris"};
-  conf::holder<std::time_t> init_time_{0};
-  bool clear_db_ = false;
-  size_t db_max_size_{static_cast<size_t>(1024) * 1024 * 1024 * 512};
-  bool instant_forward_{false};
-  risml::risml_parser risml_parser_;
-  gtfsrt::gtfsrt_parser gtfsrt_parser_;
-
-  impl() = default;
-  ~impl() = default;
-  impl(impl const&) = delete;
-  impl& operator=(impl const&) = delete;
-  impl(impl&&) = delete;
-  impl& operator=(impl&&) = delete;
-
-private:
   struct publisher {
     publisher() = default;
     publisher(publisher&&) = delete;
@@ -263,7 +264,7 @@ private:
     void add(uint8_t const* ptr, size_t const size) {
       max_timestamp_ = std::max(
           max_timestamp_,
-          static_cast<time_t>(
+          static_cast<unixtime>(
               flatbuffers::GetRoot<Message>(reinterpret_cast<void const*>(ptr))
                   ->timestamp()));
       offsets_.push_back(
@@ -274,32 +275,38 @@ private:
 
     message_creator fbb_;
     std::vector<flatbuffers::Offset<MessageHolder>> offsets_;
-    time_t max_timestamp_ = 0;
+    unixtime max_timestamp_ = 0;
   };
 
   struct null_publisher {
     void flush() {}
     void add(uint8_t const*, size_t const) {}
     size_t size() const { return 0; }  // NOLINT
-    time_t max_timestamp_ = 0;
+    unixtime max_timestamp_ = 0;
   } null_pub_;
 
-  void forward(time_t const to) {
-    auto const& sched = get_schedule();
-    auto const first_schedule_event_day = floor(
-        sched.first_event_schedule_time_, static_cast<time_t>(SECONDS_A_DAY));
-    auto const last_schedule_event_day = ceil(
-        sched.last_event_schedule_time_, static_cast<time_t>(SECONDS_A_DAY));
+  void forward(unixtime const to) {
+    auto const first_schedule_event_day =
+        sched_.first_event_schedule_time_ !=
+                std::numeric_limits<unixtime>::max()
+            ? floor(sched_.first_event_schedule_time_,
+                    static_cast<unixtime>(SECONDS_A_DAY))
+            : external_schedule_begin(sched_);
+    auto const last_schedule_event_day =
+        sched_.last_event_schedule_time_ != std::numeric_limits<unixtime>::min()
+            ? ceil(sched_.last_event_schedule_time_,
+                   static_cast<unixtime>(SECONDS_A_DAY))
+            : external_schedule_end(sched_);
     auto const min_timestamp =
         get_min_timestamp(first_schedule_event_day, last_schedule_event_day);
     if (min_timestamp) {
-      forward(std::max(*min_timestamp, sched.system_time_ + 1), to);
+      forward(std::max(*min_timestamp, sched_.system_time_ + 1), to);
     } else {
       LOG(info) << "ris database has no relevant data";
     }
   }
 
-  void forward(time_t const from, time_t const to) {
+  void forward(unixtime const from, unixtime const to) {
     LOG(info) << "forwarding from " << logging::time(from) << " to "
               << logging::time(to);
 
@@ -309,7 +316,6 @@ private:
     auto bucket = c.get(db::cursor_op::SET_RANGE, from);
     auto batch_begin = bucket ? bucket->first : 0;
     publisher pub;
-    auto const& sched = get_schedule();
     while (true) {
       if (!bucket) {
         LOG(info) << "end of db reached";
@@ -335,9 +341,7 @@ private:
         utl::verify(ptr + size <= end, "ris: ptr + size > end");
 
         if (auto const msg = GetMessage(ptr);
-            msg->timestamp() <= to && msg->timestamp() >= from &&
-            msg->earliest() <= sched.last_event_schedule_time_ &&
-            msg->latest() >= sched.first_event_schedule_time_) {
+            msg->timestamp() <= to && msg->timestamp() >= from) {
           pub.add(reinterpret_cast<uint8_t const*>(ptr), size);
         }
 
@@ -356,16 +360,16 @@ private:
     }
 
     pub.flush();
-    get_schedule().system_time_ = to;
+    sched_.system_time_ = to;
     ctx::await_all(motis_publish(make_no_msg("/ris/system_time_changed")));
   }
 
-  std::optional<time_t> get_min_timestamp(time_t const from_day,
-                                          time_t const to_day) {
+  std::optional<unixtime> get_min_timestamp(unixtime const from_day,
+                                            unixtime const to_day) {
     utl::verify(from_day % SECONDS_A_DAY == 0, "from not a day");
     utl::verify(to_day % SECONDS_A_DAY == 0, "to not a day");
 
-    constexpr auto const max = std::numeric_limits<time_t>::max();
+    constexpr auto const max = std::numeric_limits<unixtime>::max();
 
     auto min = max;
     auto t = db::txn{env_, db::txn_flags::RDONLY};
@@ -373,14 +377,14 @@ private:
     for (auto d = from_day; d != to_day; d += SECONDS_A_DAY) {
       auto const r = t.get(db, d);
       if (r) {
-        min = std::min(min, to_time_t(*r));
+        min = std::min(min, to_unixtime(*r));
       }
     }
 
     return min != max ? std::make_optional(min) : std::nullopt;
   }
 
-  enum class file_type { NONE, ZST, ZIP, XML, PROTOBUF };
+  enum class file_type { NONE, ZST, ZIP, XML, PROTOBUF, JSON };
 
   static file_type get_file_type(fs::path const& p) {
     if (p.extension() == ".zst") {
@@ -391,12 +395,46 @@ private:
       return file_type::XML;
     } else if (p.extension() == ".pb") {
       return file_type::PROTOBUF;
+    } else if (p.extension() == ".json") {
+      return file_type::JSON;
     } else {
       return file_type::NONE;
     }
   }
 
-  std::vector<std::tuple<time_t, fs::path, file_type>> collect_files(
+  static file_type guess_file_type(std::string_view content_type,
+                                   std::string_view content) {
+    using boost::algorithm::iequals;
+    using boost::algorithm::starts_with;
+
+    if (iequals(content_type, "application/zip")) {
+      return file_type::ZIP;
+    } else if (iequals(content_type, "application/zstd")) {
+      return file_type::ZST;
+    } else if (iequals(content_type, "application/xml") ||
+               iequals(content_type, "text/xml")) {
+      return file_type::XML;
+    } else if (iequals(content_type, "application/json") ||
+               iequals(content_type, "application/x.ribasis")) {
+      return file_type::JSON;
+    }
+
+    if (content.size() < 4) {
+      return file_type::NONE;
+    } else if (starts_with(content, "PK")) {
+      return file_type::ZIP;
+    } else if (starts_with(content, "\x28\xb5\x2f\xfd")) {
+      return file_type::ZST;
+    } else if (starts_with(content, "<")) {
+      return file_type::XML;
+    } else if (starts_with(content, "{")) {
+      return file_type::JSON;
+    }
+
+    return file_type::NONE;
+  }
+
+  std::vector<std::tuple<unixtime, fs::path, file_type>> collect_files(
       fs::path const& p) {
     if (fs::is_regular_file(p)) {
       if (auto const t = get_file_type(p);
@@ -404,7 +442,7 @@ private:
         return {std::make_tuple(fs::last_write_time(p), p, t)};
       }
     } else if (fs::is_directory(p)) {
-      std::vector<std::tuple<time_t, fs::path, file_type>> files;
+      std::vector<std::tuple<unixtime, fs::path, file_type>> files;
       for (auto const& entry : fs::directory_iterator(p)) {
         utl::concat(files, collect_files(entry));
       }
@@ -419,7 +457,7 @@ private:
     ctx::await_all(utl::to_vec(
         collect_files(fs::canonical(p, p.root_path())), [&](auto&& e) {
           return spawn_job_void([e, this, &pub]() {
-            write_to_db(std::get<1>(e), std::get<2>(e), pub);
+            parse_file_and_write_to_db(std::get<1>(e), std::get<2>(e), pub);
           });
         }));
     env_.force_sync();
@@ -429,11 +467,11 @@ private:
   void parse_sequential(fs::path const& p, Publisher& pub) {
     for (auto const& [t, path, type] :
          collect_files(fs::canonical(p, p.root_path()))) {
-      ((void)(t));
-      write_to_db(path, type, pub);
-      if (instant_forward_) {
-        get_schedule().system_time_ = pub.max_timestamp_;
-        get_schedule().last_update_timestamp_ = std::time(nullptr);
+      (void)(t);
+      parse_file_and_write_to_db(path, type, pub);
+      if (config_.instant_forward_) {
+        sched_.system_time_ = pub.max_timestamp_;
+        sched_.last_update_timestamp_ = std::time(nullptr);
         try {
           ctx::await_all(
               motis_publish(make_no_msg("/ris/system_time_changed")));
@@ -459,31 +497,23 @@ private:
   }
 
   template <typename Publisher>
-  void write_to_db(fs::path const& p, file_type const type, Publisher& pub) {
+  void parse_file_and_write_to_db(fs::path const& p, file_type const type,
+                                  Publisher& pub) {
     using tar_zst = tar_reader<zstd_reader>;
     auto const& cp = p.generic_string();
 
-    auto risml_fn = [this](std::string_view s,
-                           std::function<void(ris_message &&)> const& cb) {
-      risml_parser_.to_ris_message(s, cb);
-    };
-    auto gtfsrt_fn = [this](std::string_view s,
-                            std::function<void(ris_message &&)> const& cb) {
-      gtfsrt_parser_.to_ris_message(s, cb);
-    };
     try {
       switch (type) {
         case file_type::ZST:
-          write_to_db(tar_zst(zstd_reader(cp.c_str())), risml_fn, pub);
+          parse_and_write_to_db(tar_zst(zstd_reader(cp.c_str())), type, pub);
           break;
         case file_type::ZIP:
-          write_to_db(zip_reader(cp.c_str()), risml_fn, pub);
+          parse_and_write_to_db(zip_reader(cp.c_str()), type, pub);
           break;
         case file_type::XML:
-          write_to_db(file_reader(cp.c_str()), risml_fn, pub);
-          break;
         case file_type::PROTOBUF:
-          write_to_db(file_reader(cp.c_str()), gtfsrt_fn, pub);
+        case file_type::JSON:
+          parse_and_write_to_db(file_reader(cp.c_str()), type, pub);
           break;
         default: assert(false);
       }
@@ -493,11 +523,71 @@ private:
     add_to_known_files(p);
   }
 
+  template <typename Publisher>
+  void parse_str_and_write_to_db(std::string_view sv, file_type const type,
+                                 Publisher& pub) {
+    switch (type) {
+      case file_type::ZST:
+        throw utl::fail("zst upload is not supported");
+        break;
+      case file_type::ZIP:
+        parse_and_write_to_db(zip_reader{sv.data(), sv.size()}, type, pub);
+        break;
+      case file_type::XML:
+      case file_type::PROTOBUF:
+      case file_type::JSON:
+        parse_and_write_to_db(string_view_reader{sv}, type, pub);
+        break;
+      default: assert(false);
+    }
+  }
+
+  template <typename Reader, typename Publisher>
+  void parse_and_write_to_db(Reader&& reader, file_type const type,
+                             Publisher& pub) {
+    auto const risml_fn = [this](
+                              std::string_view s, std::string_view,
+                              std::function<void(ris_message &&)> const& cb) {
+      risml_parser_.to_ris_message(s, cb);
+    };
+    auto const gtfsrt_fn = [this](
+                               std::string_view s, std::string_view,
+                               std::function<void(ris_message &&)> const& cb) {
+      gtfsrt_parser_.to_ris_message(s, cb);
+    };
+    auto const ribasis_fn = [this](
+                                std::string_view s, std::string_view,
+                                std::function<void(ris_message &&)> const& cb) {
+      ribasis_parser_.to_ris_message(s, cb);
+    };
+    auto const file_fn = [&](std::string_view s, std::string_view file_name,
+                             std::function<void(ris_message &&)> const& cb) {
+      if (boost::ends_with(file_name, ".xml")) {
+        return risml_fn(s, file_name, cb);
+      } else if (boost::ends_with(file_name, ".json")) {
+        return ribasis_fn(s, file_name, cb);
+      } else if (boost::ends_with(file_name, ".pb")) {
+        return gtfsrt_fn(s, file_name, cb);
+      }
+    };
+
+    switch (type) {
+      case file_type::ZST:
+      case file_type::ZIP: write_to_db(reader, file_fn, pub); break;
+      case file_type::XML: write_to_db(reader, risml_fn, pub); break;
+      case file_type::PROTOBUF: write_to_db(reader, gtfsrt_fn, pub); break;
+      case file_type::JSON: write_to_db(reader, ribasis_fn, pub); break;
+      default: assert(false);
+    }
+  }
+
   template <typename Reader, typename ParserFn, typename Publisher>
   void write_to_db(Reader&& reader, ParserFn parser_fn, Publisher& pub) {
-    std::map<time_t /* d.b */, time_t /* min(t) : e <= d.e && l >= d.b */> min;
-    std::map<time_t /* d.b */, time_t /* max(t) : e <= d.e && l >= d.b */> max;
-    std::map<time_t /* tout */, std::vector<char>> buf;
+    std::map<unixtime /* d.b */, unixtime /* min(t) : e <= d.e && l >= d.b */>
+        min;
+    std::map<unixtime /* d.b */, unixtime /* max(t) : e <= d.e && l >= d.b */>
+        max;
+    std::map<unixtime /* tout */, std::vector<char>> buf;
     auto buf_msg_count = 0U;
 
     auto flush_to_db = [&]() {
@@ -541,7 +631,7 @@ private:
 
       pub.add(m.data(), m.size());
 
-      for_each_day(m, [&](time_t const d) {
+      for_each_day(m, [&](unixtime const d) {
         if (auto it = min.lower_bound(d); it != end(min) && it->first == d) {
           it->second = std::min(it->second, m.timestamp_);
         } else {
@@ -560,7 +650,8 @@ private:
 
     std::optional<std::string_view> reader_content;
     while ((reader_content = reader.read())) {
-      parse(*reader_content, [&](ris_message&& m) { write(std::move(m)); });
+      parse(*reader_content, reader.current_file_name(),
+            [&](ris_message&& m) { write(std::move(m)); });
     }
 
     flush_to_db();
@@ -568,8 +659,8 @@ private:
     pub.flush();
   }
 
-  void update_min_max(std::map<time_t, time_t> const& min,
-                      std::map<time_t, time_t> const& max) {
+  void update_min_max(std::map<unixtime, unixtime> const& min,
+                      std::map<unixtime, unixtime> const& max) {
     std::lock_guard<std::mutex> lock{min_max_mutex_};
 
     auto t = db::txn{env_};
@@ -579,47 +670,61 @@ private:
     for (auto const [day, min_timestamp] : min) {
       auto smallest = min_timestamp;
       if (auto entry = t.get(min_db, day); entry) {
-        smallest = std::min(smallest, to_time_t(*entry));
+        smallest = std::min(smallest, to_unixtime(*entry));
       }
-      t.put(min_db, day, from_time_t(smallest));
+      t.put(min_db, day, from_unixtime(smallest));
     }
 
     for (auto const [day, max_timestamp] : max) {
       auto largest = max_timestamp;
       if (auto entry = t.get(max_db, day); entry) {
-        largest = std::max(largest, to_time_t(*entry));
+        largest = std::max(largest, to_unixtime(*entry));
       }
-      t.put(max_db, day, from_time_t(largest));
+      t.put(max_db, day, from_unixtime(largest));
     }
 
     t.commit();
   }
 
+  schedule& sched_;
   db::env env_;
   std::atomic<uint64_t> next_msg_id_{0};
   std::mutex min_max_mutex_;
   std::mutex merge_mutex_;
+
+  config const& config_;
+
+  risml::risml_parser risml_parser_;
+  gtfsrt::gtfsrt_parser gtfsrt_parser_;
+  ribasis::ribasis_parser ribasis_parser_;
 };
 
-ris::ris() : module("RIS", "ris"), impl_(std::make_unique<impl>()) {
-  param(impl_->gtfs_trip_ids_path_, "gtfs_trip_ids",
+ris::ris() : module("RIS", "ris") {
+  param(config_.gtfs_trip_ids_path_, "gtfs_trip_ids",
         "path to GTFS trip ids file");
-  param(impl_->db_path_, "db", "ris database path");
-  param(impl_->input_, "input", "ris input (folder or risml)");
-  param(impl_->db_max_size_, "db_max_size", "virtual memory map size");
-  param(impl_->init_time_, "init_time", "initial forward time");
-  param(impl_->clear_db_, "clear_db", "clean db before init");
-  param(impl_->instant_forward_, "instant_forward",
+  param(config_.db_path_, "db", "ris database path");
+  param(config_.input_, "input", "ris input (folder or risml)");
+  param(config_.db_max_size_, "db_max_size", "virtual memory map size");
+  param(config_.init_time_, "init_time", "initial forward time");
+  param(config_.clear_db_, "clear_db", "clean db before init");
+  param(config_.instant_forward_, "instant_forward",
         "automatically forward after every file during read");
-  param(impl_->gtfsrt_parser_.is_addition_skip_allowed_,
+  param(config_.gtfs_is_addition_skip_allowed_,
         "gtfsrt.is_addition_skip_allowed", "allow skips on additional trips");
 }
 
 ris::~ris() = default;
 
 void ris::init(motis::module::registry& r) {
+  impl_ = std::make_unique<impl>(*const_cast<schedule*>(&get_sched())  // NOLINT
+                                 ,
+                                 config_);
   r.subscribe(
-      "/init", [this]() { impl_->init(); }, ctx::access_t::WRITE);
+      "/init",
+      [this]() {
+        impl_->init();  // NOLINT
+      },
+      ctx::access_t::WRITE);
   r.register_op(
       "/ris/upload", [this](auto&& m) { return impl_->upload(m); },
       ctx::access_t::WRITE);
@@ -634,9 +739,9 @@ void ris::init(motis::module::registry& r) {
       ctx::access_t::WRITE);
   r.register_op(
       "/ris/write_gtfs_trip_ids",
-      [](auto&&) {
+      [this](auto&&) {
         message_creator fbb;
-        auto const& sched = get_schedule();
+        auto const& sched = get_sched();
         fbb.create_and_finish(
             MsgContent_RISGTFSRTMapping,
             CreateRISGTFSRTMapping(
@@ -647,7 +752,8 @@ void ris::init(motis::module::registry& r) {
                       // SBB HRD data uses eva numbers
                       // GTFS uses ${eva number}:0:${track}
                       // To use SBB GTFS station indices in HRD:
-                      // -> cut and export the eva number (the part until ':')
+                      // -> cut and export the eva number (the part until
+                      // ':')
                       auto const cut = [](std::string const& s) {
                         auto const i = s.find_first_of(':');
                         return i != std::string::npos ? s.substr(0, i) : s;

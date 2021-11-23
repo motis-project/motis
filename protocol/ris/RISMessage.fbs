@@ -1,5 +1,6 @@
 include "base/EventType.fbs";
 include "base/Connection.fbs";
+include "base/TripId.fbs";
 
 namespace motis.ris;
 
@@ -110,6 +111,60 @@ table ConnectionAssessmentMessage { // Anschlussbewertung
 }
 
 // ----------------------------------------------------------------------------
+// Full Trip Messages
+// ----------------------------------------------------------------------------
+
+table StationInfo {
+  eva:string;
+  ds100:string;
+  name:string;
+}
+
+table CategoryInfo {
+  name:string;
+  code:string;
+}
+
+table ProviderInfo {
+  id:string;
+  name:string;
+  code:string;
+}
+
+table FullTripId {
+  id:TripId;
+  start_station:StationInfo;
+  target_station:StationInfo;
+}
+
+enum TimestampType : byte {Schedule, Is, Forecast, Unknown}
+
+table TripEvent {
+  station:StationInfo;
+  schedule_time:ulong;
+  current_time:ulong;
+  current_time_type:TimestampType;
+  interchange_allowed:bool;
+  schedule_track:string;
+  current_track:string;
+}
+
+table TripSection {
+  train_nr:uint;
+  category:CategoryInfo;
+  line_id:string;
+  provider:ProviderInfo;
+  departure:TripEvent;
+  arrival:TripEvent;
+}
+
+table FullTripMessage {
+  trip_id:FullTripId;
+  external_trip_ref:string; // uuid
+  sections:[TripSection];
+}
+
+// ----------------------------------------------------------------------------
 // Connection Envelope
 // ----------------------------------------------------------------------------
 
@@ -121,7 +176,8 @@ union MessageUnion {
   ConnectionDecisionMessage,
   ConnectionAssessmentMessage,
   TrackMessage,
-  FreeTextMessage
+  FreeTextMessage,
+  FullTripMessage
 }
 
 table Message {

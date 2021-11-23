@@ -42,7 +42,7 @@ auto const free_text_fixture_1 = R"(<?xml version="1.0"?>
 </Paket>
 )";
 
-char const* free_text_fixture_2 = R"(<?xml version="1.0"?>
+constexpr auto const free_text_fixture_2 = R"(<?xml version="1.0"?>
 <Paket Version="1.2" SpezVer="1" TOut="20160410114622030" KNr="1229864054">
  <ListNachricht>
   <Nachricht>

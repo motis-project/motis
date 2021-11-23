@@ -15,15 +15,15 @@ extern "C" {
 #define STR(s) #s
 
 #define FMT_HUMAN_READABLE "%.1f%s"
-#define HUMAN_READABLE(size)                                                \
-  ((size) > 1024 * 1024 * 1024)                                             \
-      ? (((float)(size)) / 1024 / 1024 / 1024)                              \
-      : ((size) > 1024 * 1024)                                              \
-            ? (((float)(size)) / 1024 / 1024)                               \
-            : ((size) > 1024) ? (((float)(size)) / 1024) : ((float)(size)), \
-      ((size) > 1024 * 1024 * 1024)                                         \
-          ? "GB"                                                            \
-          : ((size) > 1024 * 1024) ? "MB" : ((size) > 1024) ? "kb" : "b"
+#define HUMAN_READABLE(size)                                             \
+  ((size) > 1024 * 1024 * 1024) ? (((float)(size)) / 1024 / 1024 / 1024) \
+  : ((size) > 1024 * 1024)      ? (((float)(size)) / 1024 / 1024)        \
+  : ((size) > 1024)             ? (((float)(size)) / 1024)               \
+                                : ((float)(size)),                                   \
+      ((size) > 1024 * 1024 * 1024) ? "GB"                               \
+      : ((size) > 1024 * 1024)      ? "MB"                               \
+      : ((size) > 1024)             ? "kb"                               \
+                                    : "b"
 
 #define CUDA_CALL(call)                                   \
   if ((code = call) != cudaSuccess) {                     \
@@ -46,8 +46,8 @@ __host__ __device__ inline int divup(int a, int b) {
 // TIMETABLE
 //------------------------------------------------------------------------------
 struct gpu_timetable {
-  struct gpu_csa_con* conns_;
-  uint32_t* bucket_starts_;
+  struct gpu_csa_con* conns_{nullptr};
+  uint32_t* bucket_starts_{nullptr};
   uint32_t station_count_, trip_count_, bucket_count_;
 };
 
@@ -59,6 +59,10 @@ struct gpu_timetable* create_csa_gpu_timetable(
   cudaError_t code;
   gpu_timetable* tt =
       static_cast<gpu_timetable*>(malloc(sizeof(gpu_timetable)));
+  if (tt == nullptr) {
+    printf("csa: malloc for gpu_timetable failed\n");
+    return nullptr;
+  }
 
   tt->station_count_ = station_count;
   tt->trip_count_ = trip_count;
@@ -69,15 +73,11 @@ struct gpu_timetable* create_csa_gpu_timetable(
                       bucket_count);
   CUDA_COPY_TO_DEVICE(struct gpu_csa_con, tt->conns_, conns, conn_count);
 
-  printf("Schedule size on GPU: " FMT_HUMAN_READABLE "\n",
-         HUMAN_READABLE(device_bytes));
-
   return tt;
 
 fail:
-  if (tt != nullptr) {
-    cudaFree(tt->conns_);
-  }
+  cudaFree(tt->conns_);
+  cudaFree(tt->bucket_starts_);
   free(tt);
   return nullptr;
 }
@@ -87,7 +87,9 @@ void free_csa_gpu_timetable(struct gpu_timetable* tt) {
     return;
   }
   cudaFree(tt->conns_);
+  cudaFree(tt->bucket_starts_);
   tt->conns_ = nullptr;
+  tt->bucket_starts_ = nullptr;
   tt->station_count_ = 0U;
   tt->trip_count_ = 0U;
   free(tt);
@@ -327,7 +329,7 @@ fail:
 
 void gpu_csa_free_result(gpu_csa_result* r) {
   r->station_arrivals_ =
-      r->station_arrivals_ == nullptr ? nullptr : r->station_arrivals_ + 1;
+      r->station_arrivals_ == nullptr ? nullptr : r->station_arrivals_ - 1;
   cudaFreeHost(r->station_arrivals_);
   cudaFreeHost(r->trip_reachable_);
   r->station_arrivals_ = nullptr;

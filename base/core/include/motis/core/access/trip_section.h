@@ -14,6 +14,8 @@ struct trip_section {
   connection const& fcon() const;
   connection_info const& info(schedule const& sched) const;
 
+  class edge const* edge() const;
+
   station const& from_station(schedule const& sched) const;
   station const& to_station(schedule const& sched) const;
 
@@ -23,9 +25,14 @@ struct trip_section {
   ev_key ev_key_from() const;
   ev_key ev_key_to() const;
 
+  class edge const* get_route_edge() const;
+
+  node* from_node() const;
+  node* to_node() const;
+
   trip const* trip_;
   int index_;
-  edge const* edge_;
+  class edge const* edge_;
 };
 
 }  // namespace motis::access

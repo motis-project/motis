@@ -10,6 +10,7 @@
 
 #include "motis/core/schedule/schedule.h"
 
+#include "motis/loader/filter/local_stations.h"
 #include "motis/loader/interval_util.h"
 #include "motis/loader/timezone_util.h"
 
@@ -22,8 +23,9 @@ namespace motis::loader {
 constexpr auto const kLinkNearbyMaxDistance = 300;  // [m];
 
 struct stations_builder {
-  explicit stations_builder(schedule& sched, std::map<std::string, int>& tracks)
-      : sched_{sched}, tracks_{tracks} {}
+  explicit stations_builder(schedule& sched, std::map<std::string, int>& tracks,
+                            bool no_local_stations)
+      : sched_{sched}, tracks_{tracks}, no_local_stations_{no_local_stations} {}
 
   void add_dummy_node(std::string const& name) {
     auto const station_idx = sched_.station_nodes_.size();
@@ -37,6 +39,7 @@ struct stations_builder {
     s->index_ = station_idx;
     s->eva_nr_ = name;
     s->name_ = name;
+    s->dummy_ = true;
 
     sched_.eva_to_station_.emplace(name, s.get());
     sched_.stations_.emplace_back(std::move(s));
@@ -44,6 +47,10 @@ struct stations_builder {
 
   void add_station(uint32_t const source_schedule, Station const* fbs_station,
                    bool const use_platforms) {
+    if (skip_station(fbs_station)) {
+      return;
+    }
+
     auto const station_idx = sched_.station_nodes_.size();
 
     // Create station node.
@@ -60,7 +67,7 @@ struct stations_builder {
     s->length_ = fbs_station->lng();
     s->eva_nr_ = std::string{sched_.prefixes_[source_schedule]} +
                  fbs_station->id()->str();
-    s->transfer_time_ = std::max(2, fbs_station->interchange_time());
+    s->transfer_time_ = std::max(1, fbs_station->interchange_time());
     s->platform_transfer_time_ = fbs_station->platform_interchange_time();
     if (s->platform_transfer_time_ == 0 ||
         s->platform_transfer_time_ > s->transfer_time_) {
@@ -89,8 +96,10 @@ struct stations_builder {
 
     // Store DS100.
     if (fbs_station->external_ids() != nullptr) {
+      s->external_ids_.reserve(fbs_station->external_ids()->size());
       for (auto const& ds100 : *fbs_station->external_ids()) {
         sched_.ds100_to_station_.emplace(ds100->str(), s.get());
+        s->external_ids_.emplace_back(ds100->str());
       }
     }
 
@@ -123,9 +132,15 @@ struct stations_builder {
   void link_meta_stations(
       f::Vector<f::Offset<MetaStation>> const* meta_stations) {
     for (auto const& meta : *meta_stations) {
+      if (skip_station(meta->station())) {
+        continue;
+      }
       auto& station =
           *sched_.stations_[station_nodes_.at(meta->station())->id_];
       for (auto const& fbs_equivalent : *meta->equivalent()) {
+        if (skip_station(fbs_equivalent)) {
+          continue;
+        }
         auto& equivalent =
             *sched_.stations_[station_nodes_.at(fbs_equivalent)->id_];
         if (station.index_ != equivalent.index_) {
@@ -179,17 +194,23 @@ struct stations_builder {
     });
   }
 
+  inline bool skip_station(Station const* station) const {
+    return no_local_stations_ && is_local_station(station);
+  }
+
   schedule& sched_;
   int first_day_{0}, last_day_{0};
   mcd::hash_map<Station const*, station_node*> station_nodes_;
   mcd::hash_map<Timezone const*, timezone const*> timezones_;
   std::map<std::string, int>& tracks_;
+  bool no_local_stations_{false};
 };
 
 mcd::hash_map<Station const*, station_node*> build_stations(
     schedule& sched, std::vector<Schedule const*> const& fbs_schedules,
-    std::map<std::string, int>& tracks, bool const use_platforms) {
-  stations_builder b{sched, tracks};
+    std::map<std::string, int>& tracks, bool const use_platforms,
+    bool no_local_stations) {
+  stations_builder b{sched, tracks, no_local_stations};
 
   // Add dummy stations.
   b.add_dummy_node(STATION_START);
@@ -223,7 +244,11 @@ mcd::hash_map<Station const*, station_node*> build_stations(
     b.link_nearby_stations();
   }
 
-  sched.node_count_ = sched.station_nodes_.size();
+  auto const station_count = sched.station_nodes_.size();
+  if (station_count > sched.non_station_node_offset_) {
+    sched.non_station_node_offset_ = station_count + 1'000'000U;
+  }
+  sched.next_node_id_ = sched.non_station_node_offset_;
 
   return std::move(b.station_nodes_);
 }

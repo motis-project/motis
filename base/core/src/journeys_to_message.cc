@@ -94,14 +94,8 @@ std::vector<Offset<Trip>> convert_trips(
   for (auto const& t : trips) {
     auto const r =
         Range{static_cast<int16_t>(t.from_), static_cast<int16_t>(t.to_)};
-    journey_trips.push_back(CreateTrip(
-        b, &r,
-        CreateTripId(b, b.CreateString(t.extern_trip_.station_id_),
-                     t.extern_trip_.train_nr_, t.extern_trip_.time_,
-                     b.CreateString(t.extern_trip_.target_station_id_),
-                     t.extern_trip_.target_time_,
-                     b.CreateString(t.extern_trip_.line_id_)),
-        b.CreateString(t.debug_)));
+    journey_trips.push_back(
+        CreateTrip(b, &r, to_fbs(b, t.extern_trip_), b.CreateString(t.debug_)));
   }
 
   return journey_trips;

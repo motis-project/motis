@@ -26,7 +26,11 @@ message(STATUS "${pkg-bin} -l -h -f")
 execute_process(
   COMMAND ${pkg-bin} -l -h -f
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  RESULT_VARIABLE pkg-result
 )
+if (NOT pkg-result EQUAL 0)
+  message(FATAL_ERROR "pkg failed: ${pkg-result}")
+endif()
 
 if (IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps")
   add_subdirectory(deps)

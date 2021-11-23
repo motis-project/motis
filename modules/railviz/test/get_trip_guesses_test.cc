@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 
+#include "motis/core/common/unixtime.h"
 #include "motis/test/motis_instance_test.h"
 
 #include "./schedule.h"
@@ -14,7 +15,7 @@ struct railviz_get_trip_guesses_test : public motis_instance_test {
   railviz_get_trip_guesses_test()
       : motis::test::motis_instance_test(dataset_opt, {"railviz"}) {}
 
-  static msg_ptr get_trip_guesses(int const train_num, time_t const t) {
+  static msg_ptr get_trip_guesses(int const train_num, unixtime const t) {
     message_creator fbb;
     fbb.create_and_finish(
         MsgContent_RailVizTripGuessRequest,

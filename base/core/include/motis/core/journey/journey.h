@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "utl/struct/comparable.h"
+#include "cista/reflection/comparable.h"
 
 #include "motis/core/schedule/attribute.h"
 #include "motis/core/schedule/free_text.h"
@@ -14,6 +14,8 @@
 namespace motis {
 
 struct journey {
+  CISTA_COMPARABLE()
+
   enum class connection_status : uint8_t {
     OK,
     INTERCHANGE_INVALID,
@@ -28,6 +30,7 @@ struct journey {
   };
 
   struct transport {
+    CISTA_COMPARABLE()
     unsigned from_{0}, to_{0};
     bool is_walk_{false};
     std::string name_;
@@ -46,21 +49,23 @@ struct journey {
   };
 
   struct trip {
+    CISTA_COMPARABLE()
     unsigned from_{0}, to_{0};
     extern_trip extern_trip_;
     std::string debug_;
   };
 
   struct stop {
+    CISTA_COMPARABLE()
     bool exit_{false}, enter_{false};
     std::string name_;
     std::string eva_no_;
     double lat_{0}, lng_{0};
-
     struct event_info {
+      CISTA_COMPARABLE()
       bool valid_{false};
-      std::time_t timestamp_{0};
-      std::time_t schedule_timestamp_{0};
+      unixtime timestamp_{0};
+      unixtime schedule_timestamp_{0};
       timestamp_reason timestamp_reason_{timestamp_reason::SCHEDULE};
       std::string track_;
       std::string schedule_track_;
@@ -68,16 +73,19 @@ struct journey {
   };
 
   struct ranged_attribute {
+    CISTA_COMPARABLE()
     unsigned from_{0}, to_{0};
     attribute attr_;
   };
 
   struct ranged_free_text {
+    CISTA_COMPARABLE()
     unsigned from_{0}, to_{0};
     free_text text_;
   };
 
   struct problem {
+    CISTA_COMPARABLE()
     problem_type type_{problem_type::NO_PROBLEM};
     unsigned from_{0}, to_{0};
   };

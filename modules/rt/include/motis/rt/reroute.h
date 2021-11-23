@@ -4,6 +4,7 @@
 
 #include "motis/core/schedule/build_platform_node.h"
 #include "motis/core/schedule/schedule.h"
+#include "motis/core/schedule/validate_graph.h"
 #include "motis/core/conv/event_type_conv.h"
 
 #include "motis/rt/build_route_node.h"
@@ -13,35 +14,11 @@
 #include "motis/rt/in_out_allowed.h"
 #include "motis/rt/incoming_edges.h"
 #include "motis/rt/reroute_result.h"
+#include "motis/rt/schedule_event.h"
 #include "motis/rt/update_constant_graph.h"
 #include "motis/rt/update_msg_builder.h"
-#include "motis/rt/validate_graph.h"
 
 namespace motis::rt {
-
-struct schedule_event {
-  schedule_event(primary_trip_id trp_id, uint32_t station_idx,
-                 motis::time schedule_time, event_type ev_type)
-      : trp_id_(trp_id),
-        station_idx_(station_idx),
-        schedule_time_(schedule_time),
-        ev_type_(ev_type) {}
-
-  friend bool operator<(schedule_event const& a, schedule_event const& b) {
-    return std::tie(a.trp_id_, a.station_idx_, a.schedule_time_, a.ev_type_) <
-           std::tie(b.trp_id_, b.station_idx_, b.schedule_time_, b.ev_type_);
-  }
-
-  friend bool operator==(schedule_event const& a, schedule_event const& b) {
-    return std::tie(a.trp_id_, a.station_idx_, a.schedule_time_, a.ev_type_) ==
-           std::tie(b.trp_id_, b.station_idx_, b.schedule_time_, b.ev_type_);
-  }
-
-  primary_trip_id trp_id_;
-  uint32_t station_idx_;
-  motis::time schedule_time_;
-  event_type ev_type_;
-};
 
 struct reroute_event : public event_info {
   enum class type { ORIGINAL_EVENT, ADDITIONAL };
@@ -278,7 +255,7 @@ inline mcd::vector<trip::route_edge> build_route(
     auto const from_route_node =
         prev_route_node != nullptr
             ? prev_route_node
-            : build_route_node(sched, route_id, sched.node_count_++, s.from_,
+            : build_route_node(sched, route_id, sched.next_node_id_++, s.from_,
                                from_station_transfer_time,
                                s.dep_.in_out_.in_allowed_,
                                s.dep_.in_out_.out_allowed_, incoming);
@@ -293,7 +270,7 @@ inline mcd::vector<trip::route_edge> build_route(
     }
 
     auto const to_route_node = build_route_node(
-        sched, route_id, sched.node_count_++, s.to_, to_station_transfer_time,
+        sched, route_id, sched.next_node_id_++, s.to_, to_station_transfer_time,
         s.arr_.in_out_.in_allowed_, s.arr_.in_out_.out_allowed_, incoming);
 
     auto const to_platform =
@@ -408,6 +385,13 @@ inline std::pair<reroute_result, trip const*> reroute(
   add_not_deleted_trip_events(sched, del_evs, trp, evs);
   if (evs.empty()) {
     disable_trip(*old_trip, old_lcon_idx);
+    trp->edges_ =
+        sched.trip_edges_
+            .emplace_back(mcd::make_unique<mcd::vector<trip::route_edge>>())
+            .get();
+    store_cancelled_delays(sched, trp, del_evs, cancelled_delays,
+                           cancelled_evs);
+    update_builder.add_reroute(trp, *old_trip, old_lcon_idx);
     return {reroute_result::OK, trp};
   }
   std::sort(begin(evs), end(evs));

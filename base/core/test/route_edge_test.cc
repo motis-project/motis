@@ -4,7 +4,7 @@
 
 using namespace motis;
 
-auto e = make_route_edge(
+auto const e = make_route_edge(
     nullptr, nullptr,
     {light_connection(0, 10, nullptr), light_connection(1, 11, nullptr),
      light_connection(2, 12, nullptr)});

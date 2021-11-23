@@ -11,7 +11,7 @@ using namespace motis;
 using namespace motis::module;
 using namespace motis::routing;
 
-auto query = R"({
+constexpr auto const query = R"({
   "destination": {
     "type": "Module",
     "target": "/routing"
@@ -38,7 +38,7 @@ auto query = R"({
   }
 })";
 
-auto guess = [](msg_ptr const&) {
+auto const guess = [](msg_ptr const&) {
   message_creator b;
   auto const pos = Position(0, 0);
   b.create_and_finish(
@@ -51,7 +51,7 @@ auto guess = [](msg_ptr const&) {
   return make_msg(b);
 };
 
-auto route = [](msg_ptr const&) -> msg_ptr {
+auto const route = [](msg_ptr const&) -> msg_ptr {
   message_creator b;
   b.create_and_finish(
       MsgContent_StationGuesserRequest,
@@ -73,6 +73,10 @@ auto route = [](msg_ptr const&) -> msg_ptr {
 
 TEST(module_op, launch) {
   controller c({});
+  if constexpr (sizeof(void*) < 8) {
+    dispatcher::direct_mode_dispatcher_ = &c;
+  }
+
   c.register_op("/guesser", guess);
   c.register_op("/routing", route);
 

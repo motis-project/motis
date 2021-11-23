@@ -27,6 +27,10 @@ motis_instance_test::motis_instance_test(
     std::vector<std::string> const& modules,
     std::vector<std::string> const& modules_cmdline_opt)
     : instance_(std::make_unique<motis_instance>()) {
+  if constexpr (sizeof(void*) < 8) {
+    dispatcher::direct_mode_dispatcher_ = instance_.get();
+  }
+
   auto modules_cmdline_opt_patched = modules_cmdline_opt;
   modules_cmdline_opt_patched.emplace_back("--ris.db_max_size=1048576");
   modules_cmdline_opt_patched.emplace_back("--ris.clear_db=true");

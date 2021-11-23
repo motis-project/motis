@@ -206,12 +206,9 @@ private:
   }
 
   bool dominated_by_results(Label* label) {
-    for (auto const& result : results_) {
-      if (result->dominates(*label)) {
-        return true;
-      }
-    }
-    return false;
+    return std::any_of(begin(results_), end(results_), [&](auto&& result) {
+      return result->dominates(*label);
+    });
   }
 
   void filter_results() {
@@ -224,7 +221,7 @@ private:
       restart = false;
       std::size_t size_before = results_.size();
       utl::erase_if(results_, [it](Label const* l) {
-        return l == (*it) ? false : (*it)->dominates_post_search(*l);
+        return l != (*it) && (*it)->dominates_post_search(*l);
       });
       if (results_.size() != size_before) {
         restart = true;

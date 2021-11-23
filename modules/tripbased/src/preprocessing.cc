@@ -36,24 +36,6 @@ struct thousands_sep : std::numpunct<char> {
   string_type do_grouping() const override { return "\3"; }
 };
 
-bool is_in_allowed(node const* route_node) {
-  for (auto const& e : route_node->incoming_edges_) {
-    if (e->from_->is_station_node() && e->type() != edge::INVALID_EDGE) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool is_out_allowed(node const* route_node) {
-  for (auto const& e : route_node->edges_) {
-    if (e.to_->is_station_node() && e.type() != edge::INVALID_EDGE) {
-      return true;
-    }
-  }
-  return false;
-}
-
 inline uint16_t get_arrival_platform(station const& st, trip_stop const& stop) {
   return stop.has_arrival()
              ? st.get_platform(stop.arr_lcon().full_con_->a_track_)
@@ -67,6 +49,28 @@ inline uint16_t get_departure_platform(station const& st,
              ? st.get_platform(stop.dep_lcon().full_con_->d_track_)
                    .value_or(UNKNOWN_PLATFORM)
              : UNKNOWN_PLATFORM;
+}
+
+edge const* get_outgoing_route_edge(node const* route_node) {
+  assert(route_node != nullptr);
+  assert(route_node->is_route_node());
+  for (auto const& e : route_node->edges_) {
+    if (e.type() == edge::ROUTE_EDGE) {
+      return &e;
+    }
+  }
+  return nullptr;
+}
+
+edge const* get_incoming_route_edge(node const* route_node) {
+  assert(route_node != nullptr);
+  assert(route_node->is_route_node());
+  for (auto const& e : route_node->incoming_edges_) {
+    if (e->type() == edge::ROUTE_EDGE) {
+      return e;
+    }
+  }
+  return nullptr;
 }
 
 struct preprocessing {
@@ -130,9 +134,9 @@ struct preprocessing {
         const auto station_id = station.index_;
         data_.stops_on_line_.push_back(station_id);
         data_.in_allowed_.push_back(
-            static_cast<uint8_t>(is_in_allowed(rn) ? 1U : 0U));
+            static_cast<uint8_t>(rn->is_in_allowed() ? 1U : 0U));
         data_.out_allowed_.push_back(
-            static_cast<uint8_t>(is_out_allowed(rn) ? 1U : 0U));
+            static_cast<uint8_t>(rn->is_out_allowed() ? 1U : 0U));
         data_.arrival_platform_.push_back(get_arrival_platform(station, stop));
         data_.departure_platform_.push_back(
             get_departure_platform(station, stop));
@@ -381,9 +385,7 @@ private:
           earliest_change[station_idx] = trip_change;
         }
 
-        auto const footpaths = outgoing_footpaths(station_idx);
-
-        for (auto const& fp : footpaths) {
+        for_each_outgoing_footpath(station_idx, [&](auto const& fp) {
           auto const fp_arrival =
               static_cast<time>(trip_arrival + fp.duration_);
           if (fp_arrival < earliest_arrival[fp.to_stop_]) {
@@ -392,9 +394,9 @@ private:
           if (fp_arrival < earliest_change[fp.to_stop_]) {
             earliest_change[fp.to_stop_] = fp_arrival;
           }
-        }
+        });
 
-        for (auto const& fp : footpaths) {
+        for_each_outgoing_footpath(station_idx, [&](auto const& fp) {
           for (auto const& [other_line, other_stop_idx, _] :
                data_.lines_at_stop_[fp.to_stop_]) {
             (void)_;
@@ -439,7 +441,7 @@ private:
               transfers[from_stop_idx].emplace_back(other_trip, other_stop_idx);
             }
           }
-        }
+        });
       }
 
       add_transfers(trip_idx, std::move(transfers));
@@ -485,9 +487,7 @@ private:
           latest_change[station_idx] = trip_change;
         }
 
-        auto const footpaths = incoming_footpaths(station_idx);
-
-        for (auto const& fp : footpaths) {
+        for_each_incoming_footpath(station_idx, [&](auto const& fp) {
           auto const fp_departure =
               static_cast<time>(trip_departure - fp.duration_);
           if (fp_departure > latest_departure[fp.from_stop_]) {
@@ -496,9 +496,9 @@ private:
           if (fp_departure > latest_change[fp.from_stop_]) {
             latest_change[fp.from_stop_] = fp_departure;
           }
-        }
+        });
 
-        for (auto const& fp : footpaths) {
+        for_each_incoming_footpath(station_idx, [&](auto const& fp) {
           for (auto const& [other_line, other_stop_idx, _] :
                data_.lines_at_stop_[fp.from_stop_]) {
             (void)_;
@@ -544,7 +544,7 @@ private:
                                                   to_stop_idx);
             }
           }
-        }
+        });
       }
 
       assert(transfers.size() == line_stop_count);
@@ -661,7 +661,7 @@ private:
         earliest_change[station] = trip_change;
         keep = true;
       }
-      for (auto const& fp : outgoing_footpaths(station)) {
+      for_each_outgoing_footpath(station, [&](auto const& fp) {
         auto const fp_arrival = static_cast<time>(trip_arrival + fp.duration_);
         if (fp_arrival < earliest_arrival[fp.to_stop_]) {
           earliest_arrival[fp.to_stop_] = fp_arrival;
@@ -671,7 +671,7 @@ private:
           earliest_change[fp.to_stop_] = fp_arrival;
           keep = true;
         }
-      }
+      });
     }
     return keep;
   }
@@ -700,7 +700,7 @@ private:
         latest_change[station] = trip_change;
         keep = true;
       }
-      for (auto const& fp : incoming_footpaths(station)) {
+      for_each_incoming_footpath(station, [&](auto const& fp) {
         auto const fp_departure =
             static_cast<time>(trip_departure - fp.duration_);
         if (fp_departure > latest_departure[fp.from_stop_]) {
@@ -711,29 +711,29 @@ private:
           latest_change[fp.from_stop_] = fp_departure;
           keep = true;
         }
-      }
+      });
     }
     return keep;
   }
 
-  std::vector<tb_footpath> outgoing_footpaths(station_id from_stop_idx) {
-    std::vector<tb_footpath> reachable;
-    auto const& footpaths = data_.footpaths_[from_stop_idx];
-    reachable.reserve(1 + footpaths.size());
-    reachable.emplace_back(from_stop_idx, from_stop_idx,
-                           sched_.stations_[from_stop_idx]->transfer_time_);
-    std::copy(begin(footpaths), end(footpaths), std::back_inserter(reachable));
-    return reachable;
+  template <typename Fn>
+  void for_each_outgoing_footpath(station_id const from_stop_idx, Fn&& fn) {
+    fn(tb_footpath{from_stop_idx, from_stop_idx,
+                   static_cast<uint32_t>(
+                       sched_.stations_[from_stop_idx]->transfer_time_)});
+    for (auto const& fp : data_.footpaths_[from_stop_idx]) {
+      fn(fp);
+    }
   }
 
-  std::vector<tb_footpath> incoming_footpaths(station_id to_stop_idx) {
-    std::vector<tb_footpath> reachable;
-    auto const& footpaths = data_.reverse_footpaths_[to_stop_idx];
-    reachable.reserve(1 + footpaths.size());
-    reachable.emplace_back(to_stop_idx, to_stop_idx,
-                           sched_.stations_[to_stop_idx]->transfer_time_);
-    std::copy(begin(footpaths), end(footpaths), std::back_inserter(reachable));
-    return reachable;
+  template <typename Fn>
+  void for_each_incoming_footpath(station_id const to_stop_idx, Fn&& fn) {
+    fn(tb_footpath{
+        to_stop_idx, to_stop_idx,
+        static_cast<uint32_t>(sched_.stations_[to_stop_idx]->transfer_time_)});
+    for (auto const& fp : data_.reverse_footpaths_[to_stop_idx]) {
+      fn(fp);
+    }
   }
 
   duration get_transfer_time(tb_footpath const& fp, line_id from_line,

@@ -1,13 +1,21 @@
 cmake_minimum_required(VERSION 3.16)
-project(motis C CXX ASM)
+project(motis)
+
+enable_language(CXX C ASM)
 
 if (MSVC)
   # PDB debug information is not supported by buildcache.
   # Store debug info in the object files.
-  string(REPLACE "/Zi" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
-  string(REPLACE "/Zi" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-  string(REPLACE "/Zi" "" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
-  string(REPLACE "/Zi" "" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+  option(MOTIS_DEBUG_SYMBOLS "generate debug symbols (debug builds)" ON)
+  if (MOTIS_DEBUG_SYMBOLS)
+    set(MOTIS_MSVC_DEBUG_FLAGS "/Z7")
+  else()
+    set(MOTIS_MSVC_DEBUG_FLAGS "")
+  endif()
+  string(REPLACE "/Zi" "${MOTIS_MSVC_DEBUG_FLAGS}" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+  string(REPLACE "/Zi" "${MOTIS_MSVC_DEBUG_FLAGS}" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+  string(REPLACE "/Zi" "${MOTIS_MSVC_DEBUG_FLAGS}" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+  string(REPLACE "/Zi" "${MOTIS_MSVC_DEBUG_FLAGS}" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 endif()
 include(cmake/buildcache.cmake)
 
@@ -29,21 +37,22 @@ endif()
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
+option(MOTIS_MIMALLOC "use mimalloc" OFF)
 option(MOTIS_AVX "enable AVX functions" ON)
-
+option(MOTIS_AVX2 "enable AVX2 + FMA functions" ON)
 option(MOTIS_CUDA "enable CUDA functions" OFF)
+option(MOTIS_LINT "enable lint (clang-tidy) target" OFF)
+option(MOTIS_COV "enable coverage (coverage) target" OFF)
+option(MOTIS_WITH_WEBUI "enable motis-web-ui target" OFF)
+
 if (MOTIS_CUDA)
-  set(MOTIS_CUDA_ARCH "-gencode arch=compute_75,code=sm_75 -gencode arch=compute_61,code=sm_61")
   if (MSVC)
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${MOTIS_CUDA_ARCH} -lcudadevrt")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lcudadevrt")
   else()
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${MOTIS_CUDA_ARCH} --compiler-options -static")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --compiler-options -static")
   endif()
   enable_language(CUDA)
 endif()
-
-option(MOTIS_LINT "enable lint (clang-tidy) target" OFF)
-option(MOTIS_COV "enable coverage (coverage) target" OFF)
 
 add_library(motis-generated INTERFACE)
 target_include_directories(motis-generated INTERFACE ${CMAKE_BINARY_DIR}/generated)
@@ -80,23 +89,15 @@ configure_file (
   "${CMAKE_BINARY_DIR}/generated/version.h"
 )
 
-add_definitions(/DBOOST_ASIO_DISABLE_CONCEPTS=1)  # fixes issue with Boost 1.72.0
 
 ################################
 # Dependencies
 ################################
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_MULTITHREADED ON)
-if (MSVC)
-  set(Boost_USE_STATIC_RUNTIME ON)
-endif()
-find_package(Boost 1.70.0 REQUIRED COMPONENTS system filesystem regex program_options thread)
 find_package(Threads)
-
-link_directories(${Boost_LIBRARY_DIRS})
-include_directories(SYSTEM ${Boost_INCLUDE_DIR})
-
 include(cmake/pkg.cmake)
+if (MOTIS_MIMALLOC)
+  target_link_libraries(cista INTERFACE mimalloc-static)
+endif()
 add_subdirectory(modules/ris/gtfsrtpb)
 
 
@@ -122,7 +123,6 @@ endif()
 # Quickfix for MSVC
 if (MSVC)
   set(MOTIS_COMPILE_DEFINITIONS
-    BOOST_THREAD_USE_LIB
     WIN32_LEAN_AND_MEAN
     _HAS_AUTO_PTR_ETC
     _USE_MATH_DEFINES
@@ -140,6 +140,14 @@ if (MOTIS_AVX)
     set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} /arch:AVX)
   else()
     set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -mavx)
+  endif()
+endif()
+if (MOTIS_AVX2)
+  set(MOTIS_COMPILE_DEFINITIONS MOTIS_AVX2 ${MOTIS_COMPILE_DEFINITIONS})
+  if (MSVC)
+    set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} /arch:AVX2)
+  else()
+    set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -mavx2 -mfma -mbmi)
   endif()
 endif()
 
@@ -188,6 +196,14 @@ endforeach(module)
 add_subdirectory(base/bootstrap EXCLUDE_FROM_ALL)
 add_subdirectory(base/launcher)
 
+if (MOTIS_MIMALLOC)
+  target_link_libraries(motis mimalloc-obj)
+endif()
+
+if(MOTIS_WITH_WEBUI)
+  add_subdirectory(ui/web)
+endif()
+
 
 ################################
 # Tests
@@ -219,7 +235,6 @@ endif()
 target_compile_options(motis-test PRIVATE ${MOTIS_CXX_FLAGS})
 target_compile_definitions(motis-test PRIVATE ${MOTIS_COMPILE_DEFINITIONS})
 target_link_libraries(motis-test
-  ${module-targets}
   ${motis-test-extra-dependencies}
   motis-bootstrap
   motis-core
@@ -227,9 +242,9 @@ target_link_libraries(motis-test
   motis-module
   conf
   ianatzdb-res
-  ${Boost_LIBRARIES}
+  boost-filesystem
 )
-target_link_libraries(motis-test gtest gtest_main)
+target_link_libraries(motis-test gtest gtest_main gmock)
 
 
 ################################
@@ -260,9 +275,9 @@ target_link_libraries(motis-itest
   motis-module
   conf
   ianatzdb-res
-  ${Boost_LIBRARIES}
+  boost-filesystem
 )
-target_link_libraries(motis-itest gtest gtest_main)
+target_link_libraries(motis-itest gtest gtest_main gmock)
 set_target_properties(motis-itest PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "--gtest_filter=\"ris_gtfsrt_cancel_message_itest_t0.before_cancel\"")
 
 

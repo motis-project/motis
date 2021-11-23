@@ -8,8 +8,7 @@ add_library(motis-ppr STATIC ${motis-ppr-files})
 target_include_directories(motis-ppr PUBLIC include)
 target_compile_features(motis-ppr PUBLIC cxx_std_17)
 target_link_libraries(motis-ppr
-  ${Boost_PROGRAM_OPTIONS_LIBRARY}
-  ${Boost_SYSTEM_LIBRARY}
+  boost-system
   ppr-routing
   ppr-preprocessing
   ppr-profiles

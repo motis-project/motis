@@ -387,7 +387,7 @@ private:
       queue.emplace_back(trip, old_last_reachable, stop_index,
                          previous_trip_segment);
       auto const line = data_.trip_to_line_[trip];
-      for (trip_id t = trip; t >= 0 && data_.trip_to_line_[t] == line; --t) {
+      for (trip_id t = trip; data_.trip_to_line_[t] == line; --t) {
         for (auto trfs = transfers; trfs <= MAX_TRANSFERS; ++trfs) {
           first_reachable_stop_[t][trfs] =
               std::max(first_reachable_stop_[t][trfs], stop_index);

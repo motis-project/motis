@@ -65,6 +65,7 @@ struct statistics {
     c("bad event order", s.additional_err_order_);
     c("station not found", s.additional_err_station_);
     c("bad event time", s.additional_err_time_);
+    c("duplicate trip", s.additional_duplicate_trip_);
 
     o << "\nreroute\n";
     c("ok", s.reroute_ok_);
@@ -143,6 +144,9 @@ struct statistics {
       case additional_service_builder::status::STATION_MISMATCH:
         ++additional_station_mismatch_;
         break;
+      case additional_service_builder::status::DUPLICATE_TRIP:
+        ++additional_duplicate_trip_;
+        break;
     }
   }
 
@@ -174,7 +178,8 @@ struct statistics {
             reroute_rule_service_not_supported_ + additional_err_count_ +
             additional_err_order_ + additional_err_station_ +
             additional_err_time_ + additional_decreasing_ev_time_ +
-            additional_station_mismatch_ + canceled_trp_not_found_) != 0;
+            additional_station_mismatch_ + additional_duplicate_trip_ +
+            canceled_trp_not_found_) != 0;
   }
 
   unsigned delay_msgs_ = 0;
@@ -228,6 +233,7 @@ struct statistics {
   unsigned additional_err_time_ = 0;
   unsigned additional_decreasing_ev_time_ = 0;
   unsigned additional_station_mismatch_ = 0;
+  unsigned additional_duplicate_trip_ = 0;
 
   unsigned canceled_trp_not_found_ = 0;
 

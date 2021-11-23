@@ -12,11 +12,11 @@
 #include "motis/core/access/edge_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/journeys_to_message.h"
-#include "motis/module/context/get_schedule.h"
 
 #include "motis/routing/additional_edges.h"
 #include "motis/routing/build_query.h"
 #include "motis/routing/error.h"
+#include "motis/routing/eval/commands.h"
 #include "motis/routing/label/configs.h"
 #include "motis/routing/mem_manager.h"
 #include "motis/routing/mem_retriever.h"
@@ -37,17 +37,28 @@ routing::routing() : module("Routing", "routing") {}
 
 routing::~routing() = default;
 
+void routing::reg_subc(motis::module::subc_reg& r) {
+  r.register_cmd("print", "prints journeys", eval::print);
+  r.register_cmd("generate", "generate routing queries", eval::generate);
+  r.register_cmd("rewrite", "rewrite query targets", eval::rewrite_queries);
+  r.register_cmd("analyze", "print result statistics", eval::analyze_results);
+  r.register_cmd("compare", "print difference between results", eval::compare);
+  r.register_cmd("xtract", "extract timetable from connections", eval::xtract);
+}
+
 void routing::init(motis::module::registry& reg) {
   reg.register_op("/routing",
                   [this](msg_ptr const& msg) { return route(msg); });
-  reg.register_op("/trip_to_connection", &routing::trip_to_connection);
+  reg.register_op("/trip_to_connection", [this](msg_ptr const& msg) {
+    return trip_to_connection(msg);
+  });
 }
 
 msg_ptr routing::route(msg_ptr const& msg) {
   MOTIS_START_TIMING(routing_timing);
 
   auto const req = motis_content(RoutingRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto query = build_query(sched, req);
 
   mem_retriever mem(mem_pool_mutex_, mem_pool_, LABEL_STORE_START_SIZE);
@@ -82,8 +93,12 @@ msg_ptr routing::route(msg_ptr const& msg) {
 msg_ptr routing::trip_to_connection(msg_ptr const& msg) {
   using label = default_label<search_dir::FWD>;
 
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   auto trp = from_fbs(sched, motis_content(TripId, msg));
+
+  if (trp->edges_->empty()) {
+    throw std::system_error(access::error::service_not_found);
+  }
 
   auto const first = trp->edges_->front()->from_;
   auto const last = trp->edges_->back()->to_;

@@ -17,27 +17,8 @@ struct in_out_allowed {
   bool in_allowed_, out_allowed_;
 };
 
-inline bool get_in_allowed(node const* n) {
-  for (auto const& e : n->incoming_edges_) {
-    if (e->from_ == n->get_station() && e->type() != edge::INVALID_EDGE) {
-      return true;
-    }
-  }
-  return false;
-}
-
-inline bool get_out_allowed(node const* n) {
-  for (auto const& e : n->edges_) {
-    if (e.get_destination() == n->get_station() &&
-        e.type() != edge::INVALID_EDGE) {
-      return true;
-    }
-  }
-  return false;
-}
-
 inline in_out_allowed get_in_out_allowed(node const* n) {
-  return {get_in_allowed(n), get_out_allowed(n)};
+  return {n->is_in_allowed(), n->is_out_allowed()};
 }
 
 }  // namespace motis::rt

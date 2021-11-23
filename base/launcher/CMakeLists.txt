@@ -7,10 +7,8 @@ target_compile_features(motis PUBLIC cxx_std_17)
 target_include_directories(motis PRIVATE include)
 target_link_libraries(motis
   ${CMAKE_THREAD_LIBS_INIT}
-  ${Boost_SYSTEM_LIBRARY}
-  ${Boost_THREAD_LIBRARY}
-  ${Boost_FILESYSTEM_LIBRARY}
-  ${NETWORKING}
+  boost-system
+  boost-filesystem
   conf
   motis-bootstrap
   web-server-tls
@@ -21,4 +19,12 @@ target_link_libraries(motis
 set_target_properties(motis PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 if (NOT MSVC)
   set_target_properties(motis PROPERTIES LINK_FLAGS "-Wl,-rpath,./")
+
+  if (${CMAKE_BUILD_TYPE} STREQUAL Release)
+    add_custom_command(
+      TARGET motis
+      POST_BUILD
+      COMMAND ${CMAKE_STRIP} ${CMAKE_BINARY_DIR}/motis
+    )
+  endif()
 endif()

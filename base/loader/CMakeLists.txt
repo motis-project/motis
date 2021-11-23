@@ -22,13 +22,13 @@ target_include_directories(motis-loader PUBLIC include)
 target_compile_features(motis-loader PUBLIC cxx_std_17)
 add_dependencies(motis-loader generated-schedule-headers)
 target_link_libraries(motis-loader
-  ${Boost_SYSTEM_LIBRARY}
-  ${Boost_FILESYSTEM_LIBRARY}
+  boost-system
+  boost-filesystem
   flatbuffers64
   motis-core
   date
   geo
-  tz
+  date-tz
 )
 target_compile_options(motis-loader PRIVATE ${MOTIS_CXX_FLAGS})
 target_compile_definitions(motis-loader PRIVATE FLATBUFFERS_64=1)

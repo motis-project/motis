@@ -13,7 +13,7 @@ node* get_or_add_platform_node(schedule& sched, station_node* station_node,
     platform_node =
         station_node->child_nodes_
             .emplace_back(mcd::make_unique<node>(make_node(
-                node_type::PLATFORM_NODE, station_node, sched.node_count_++)))
+                node_type::PLATFORM_NODE, station_node, sched.next_node_id_++)))
             .get();
     station_node->platform_nodes_[platform] = platform_node;
   }

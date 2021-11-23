@@ -24,6 +24,10 @@ connection_info const& trip_section::info(schedule const& sched) const {
   return get_connection_info(sched, lcon(), trip_);
 }
 
+class edge const* trip_section::edge() const {
+  return edge_;
+}
+
 station const& trip_section::from_station(schedule const& sched) const {
   return get_station(sched, edge_->from_);
 }
@@ -47,5 +51,11 @@ ev_key trip_section::ev_key_from() const {
 ev_key trip_section::ev_key_to() const {
   return ev_key{trip_->edges_->at(index_), trip_->lcon_idx_, event_type::ARR};
 }
+
+edge const* trip_section::get_route_edge() const { return edge_; }
+
+node* trip_section::from_node() const { return edge_->from_; }
+
+node* trip_section::to_node() const { return edge_->to_; }
 
 }  // namespace motis::access
