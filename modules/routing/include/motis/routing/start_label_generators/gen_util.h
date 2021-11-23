@@ -26,7 +26,8 @@ void for_each_edge(node const* rn, Fn fn) {
 }
 
 template <search_dir Dir>
-bool end_reached(time departure_begin, time departure_end, time t) {
+bool end_reached(time const departure_begin, time const departure_end,
+                 time const t) {
   if (Dir == search_dir::FWD) {
     return t > departure_end;
   } else {
@@ -41,8 +42,8 @@ time get_time(light_connection const* lcon, day_idx_t const day) {
 }
 
 template <search_dir Dir, typename Fn>
-void create_labels(time departure_begin, time departure_end, edge const& re,
-                   Fn create_func) {
+void create_labels(time const departure_begin, time const departure_end,
+                   edge const& re, Fn create_func) {
   if (re.empty()) {
     return;
   }
@@ -53,11 +54,12 @@ void create_labels(time departure_begin, time departure_end, edge const& re,
     auto [con, day_idx] = re.get_connection<Dir>(t);
 
     if (con == nullptr ||
-        end_reached<Dir>(departure_begin, departure_end, get_time<Dir>(con))) {
+        end_reached<Dir>(departure_begin, departure_end,
+                         get_time<Dir>(con, 0U /* TODO(felix) day idx */))) {
       break;
     }
 
-    t = get_time<Dir>(con);
+    t = get_time<Dir>(con, /* TODO(felix) day idx */ 0);
 
     create_func(t);
 

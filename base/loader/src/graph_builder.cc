@@ -594,6 +594,15 @@ size_t graph_builder::get_or_create_bitfield(bitfield const& bf) {
   return sched_.bitfields_.size() - 1;
 }
 
+bitfield const& graph_builder::get_or_create_bitfield(
+    String const* serialized_bitfield) {
+  return utl::get_or_create(bitfields_, serialized_bitfield, [&]() {
+    return deserialize_bitset(
+        {serialized_bitfield->c_str(),
+         static_cast<size_t>(serialized_bitfield->Length())});
+  });
+}
+
 void graph_builder::read_attributes(
     int day, Vector<Offset<Attribute>> const* attributes,
     mcd::vector<ptr<attribute const>>& active_attributes) {

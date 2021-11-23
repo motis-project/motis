@@ -38,7 +38,7 @@ bool route_t::add_service(mcd::vector<light_connection> const& new_lcons,
     auto middle_time = new_times[i].mam();
     bool before_pred = false;
     bool after_succ = false;
-    if (times_.size() != 0) {
+    if (!times_.empty()) {
       if (insert_idx != 0) {
         auto before_time = times_[insert_idx - 1][i].mam();
         before_pred = middle_time <= before_time;

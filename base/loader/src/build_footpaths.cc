@@ -1,6 +1,7 @@
 #include "motis/loader/build_footpaths.h"
 
 #include <optional>
+#include <sstream>
 #include <stack>
 
 #include "geo/latlng.h"

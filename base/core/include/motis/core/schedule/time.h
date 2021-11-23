@@ -34,11 +34,10 @@ struct time {
 
   auto cista_members() { return std::tie(day_idx_, mam_); }
 
-  constexpr explicit time(int64_t const timestamp)
-      : day_idx_{static_cast<decltype(day_idx_)>(constexpr_abs(timestamp) /
-                                                 MINUTES_A_DAY)},
-        mam_{static_cast<decltype(mam_)>(constexpr_abs(timestamp) %
-                                         MINUTES_A_DAY)} {
+  constexpr explicit time(unixtime const timestamp)
+      : day_idx_{static_cast<day_idx_t>(constexpr_abs(timestamp) /
+                                        MINUTES_A_DAY)},
+        mam_{static_cast<mam_t>(constexpr_abs(timestamp) % MINUTES_A_DAY)} {
     if (timestamp < 0) {
       *this = -*this;
     }
@@ -67,7 +66,10 @@ struct time {
     return tmp;
   }
 
-  duration_t operator-(time const& o) const { return ts() - o.ts(); }
+  time& operator+=(int32_t const o) {
+    *this = time{ts() + o};
+    return *this;
+  }
 
   time operator-(int32_t const& o) const {
     auto tmp = time(ts() - o);
@@ -87,6 +89,13 @@ struct time {
     }
     assert(tmp.valid());
     return tmp;
+  }
+
+  duration_t operator-(time const& o) const { return ts() - o.ts(); }
+
+  time& operator-=(int32_t const o) {
+    *this = time{ts() - o};
+    return *this;
   }
 
   bool operator<(time const& o) const { return ts() < o.ts(); }
@@ -145,10 +154,6 @@ constexpr day_idx_t SCHEDULE_OFFSET_DAYS = 5;
 // plus one day, because the first valid motis timestamp is MINUTES_A_DAY
 constexpr duration_t SCHEDULE_OFFSET_MINUTES =
     SCHEDULE_OFFSET_DAYS * MINUTES_A_DAY;
-
-time to_motis_time(int minutes) {
-  return time(SCHEDULE_OFFSET_MINUTES + minutes);
-}
 
 time to_motis_time(int day_index, int minutes);
 

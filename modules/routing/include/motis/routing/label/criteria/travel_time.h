@@ -66,8 +66,8 @@ struct travel_time_alpha_dominance {
     domination_info(Label const& a, Label const& b)
         : travel_time_a_(a.travel_time_),
           travel_time_b_(b.travel_time_),
-          dist_(std::min(std::abs(static_cast<int>(a.start_) - b.start_),
-                         std::abs(static_cast<int>(a.now_) - b.now_))) {}
+          dist_(std::min(std::abs(a.start_ - b.start_),
+                         std::abs(a.now_ - b.now_))) {}
 
     domination_info(duration_t const travel_time_a,
                     duration_t const travel_time_b, duration_t const dist)

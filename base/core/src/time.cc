@@ -21,6 +21,20 @@ std::string time::to_str() const {
   return out.str();
 }
 
+time to_motis_time(int minutes) {
+  // plus four days, because the maximum journey duration is 4 days
+  // plus one day, because the first valid motis timestamp is MINUTES_A_DAY
+  return time(SCHEDULE_OFFSET_MINUTES + minutes);
+}
+
+time to_motis_time(int day_index, int minutes) {
+  return to_motis_time(day_index * MINUTES_A_DAY + minutes);
+}
+
+time to_motis_time(int day_index, int hours, int minutes) {
+  return to_motis_time(day_index, hours * 60 + minutes);
+}
+
 std::string format_time(time const t) {
   if (t == INVALID_TIME) {
     return "INVALID";

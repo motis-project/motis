@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <vector>
 
 #include "motis/core/common/unixtime.h"
