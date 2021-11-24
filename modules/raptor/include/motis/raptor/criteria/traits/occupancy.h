@@ -82,6 +82,16 @@ struct trait_occupancy {
     if(predicate && aggregate.occupancy_ < received)
       aggregate.occupancy_ = received;
   }
+
+  template<typename TraitsData>
+  __device__ inline static void carry_to_next_stage(
+      unsigned const mask, TraitsData& aggregate
+      ) {
+    auto const prop_val = aggregate.occupancy_;
+    auto const received = __shfl_down_sync(mask, prop_val, 31);
+    aggregate.occupancy_ = received;
+  }
+
 #endif
 
   template <typename TraitsData>

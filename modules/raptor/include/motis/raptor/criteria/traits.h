@@ -106,6 +106,13 @@ struct traits<FirstTrait, RestTraits...> {
                                                          predicate);
   }
 
+  __device__ inline static void carry_to_next_stage(
+      unsigned const mask, TraitsData& aggregate
+      ) {
+    FirstTrait::carry_to_next_stage(mask, aggregate);
+    traits<RestTraits...>::carry_to_next_stage(mask, aggregate);
+  }
+
 #endif
 
   inline static bool dominates(TraitsData const& to_dominate,
@@ -179,6 +186,10 @@ struct traits<> {
   __device__ inline static void propagate_and_merge_if_needed(unsigned const _1,
                                                               Data& _2,
                                                               bool const _3) {}
+
+  template<typename Data>
+  __device__ inline static void carry_to_next_stage(unsigned const _1,
+                                                    Data& _2){}
 #endif
 
   // giving the neutral element of the conjunction

@@ -89,6 +89,15 @@ struct trait_max_occupancy {
       aggregate.max_occupancy_ = received;
   }
 
+  template<typename TraitsData>
+  __device__ inline static void carry_to_next_stage(
+      unsigned const mask, TraitsData& aggregate
+      ) {
+    auto const prop_val = aggregate.max_occupancy_;
+    auto const received = __shfl_down_sync(mask, prop_val, 31);
+    aggregate.max_occupancy_ = received;
+  }
+
 #endif
 
   template <typename TraitsData>

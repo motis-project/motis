@@ -60,6 +60,12 @@ struct criteria_config {
     Traits::propagate_and_merge_if_needed(mask, aggregate, predicate);
   }
 
+  __device__ inline static void carry_to_next_stage(
+      unsigned const mask, CriteriaData& aggregate
+      ) {
+    Traits::carry_to_next_stage(mask, aggregate);
+  }
+
 #endif
 
   template <typename Timetable>
