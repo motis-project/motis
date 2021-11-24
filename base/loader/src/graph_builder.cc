@@ -33,6 +33,7 @@
 #include "motis/loader/interval_util.h"
 //#include "motis/loader/rule_route_builder.h"
 //#include "motis/loader/rule_service_graph_builder.h"
+#include "motis/loader/tracking_dedup.h"
 #include "motis/loader/util.h"
 #include "motis/loader/wzr_loader.h"
 
@@ -779,7 +780,11 @@ route_section graph_builder::add_route_section(
       std::all_of(begin(cons), end(cons),
                   [](auto const& c) { return c.a_time_ < MINUTES_A_DAY; });
 
-  if (!is_bidirectional) {
+  if (is_bidirectional) {
+    section.from_route_node_->edges_.push_back(
+        make_route_edge(section.from_route_node_, section.to_route_node_, cons,
+                        route_traffic_days));
+  } else {
     // FWD
     section.from_route_node_->edges_.push_back(
         make_fwd_route_edge(section.from_route_node_, section.to_route_node_,
@@ -805,13 +810,6 @@ route_section graph_builder::add_route_section(
     section.from_route_node_->edges_.push_back(
         make_bwd_route_edge(section.from_route_node_, section.to_route_node_,
                             bwd_cons, route_traffic_days));
-
-    lcon_count_ += 2 * cons.size();
-  } else {
-    section.from_route_node_->edges_.push_back(
-        make_route_edge(section.from_route_node_, section.to_route_node_, cons,
-                        route_traffic_days));
-    lcon_count_ += cons.size();
   }
 
   return section;
@@ -826,6 +824,55 @@ bool graph_builder::skip_route(Route const* route) const {
          std::any_of(
              route->stations()->begin(), route->stations()->end(),
              [&](Station const* station) { return skip_station(station); });
+}
+
+void graph_builder::dedup_bitfields() {
+  scoped_timer timer("bitfield deduplication");
+
+  if (sched_.bitfields_.empty()) {
+    return;
+  }
+
+  std::vector<size_t> map;
+  auto& bfs = sched_.bitfields_;
+  {
+    scoped_timer timer("sort/unique");
+    map = tracking_dedupe(
+        bfs,  //
+        [](auto const& a, auto const& b) { return a == b; },
+        [&](auto const& a, auto const& b) { return bfs[a] < bfs[b]; });
+  }
+
+  {
+    scoped_timer timer("idx to ptr");
+    for (auto const& s : sched_.station_nodes_) {
+      for (auto const& route_node : s->get_route_nodes()) {
+        for (auto& e : route_node->edges_) {
+          if (e.type() != edge::ROUTE_EDGE &&
+              e.type() != edge::FWD_ROUTE_EDGE &&
+              e.type() != edge::BWD_ROUTE_EDGE) {
+            continue;
+          }
+          for (auto& c : e.m_.route_edge_.conns_) {
+            c.traffic_days_ = &sched_.bitfields_[map[c.bitfield_idx_]];
+          }
+        }
+      }
+    }
+
+    for (auto const& station : sched_.station_nodes_) {
+      for (auto const& route_node : station->get_route_nodes()) {
+        for (auto& edge : route_node->edges_) {
+          if (edge.empty()) {
+            continue;
+          }
+
+          auto const bf_idx = edge.m_.route_edge_.bitfield_idx_;
+          edge.m_.route_edge_.traffic_days_ = &sched_.bitfields_[map[bf_idx]];
+        }
+      }
+    }
+  }
 }
 
 schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
@@ -891,11 +938,14 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
     sched->expanded_trips_.finish_map();
   }
 
-  progress_tracker->status("Footpaths").out_bounds(85, 90);
+  progress_tracker->status("Footpaths").out_bounds(82, 87);
   build_footpaths(*sched, opt, builder.stations_, fbs_schedules);
 
-  progress_tracker->status("Connect Reverse").out_bounds(90, 93);
+  progress_tracker->status("Connect Reverse").out_bounds(87, 90);
   builder.connect_reverse();
+
+  progress_tracker->status("Sort Bitfields").out_bounds(90, 93);
+  builder.dedup_bitfields();
 
   progress_tracker->status("Sort Trips").out_bounds(93, 95);
   builder.sort_trips();
@@ -943,10 +993,6 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
   }
 
   validate_graph(*sched);
-  utl::verify(
-      std::all_of(begin(sched->trips_), end(sched->trips_),
-                  [](auto const& t) { return t.second->edges_ != nullptr; }),
-      "missing trip edges");
   return sched;
 }
 

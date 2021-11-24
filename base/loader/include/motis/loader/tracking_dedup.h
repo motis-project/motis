@@ -35,7 +35,7 @@ std::pair<std::vector<size_t>, ForwardIterator> tracking_unique(
 }
 
 template <typename T>
-void apply_permutation(std::vector<T>& data, std::vector<size_t>& perm) {
+void apply_permutation(mcd::vector<T>& data, mcd::vector<size_t> const& perm) {
   logging::scoped_timer timer("apply_permutation");
 
   std::vector<bool> swapped(data.size(), false);
@@ -56,18 +56,16 @@ void apply_permutation(std::vector<T>& data, std::vector<size_t>& perm) {
   }
 }
 
-template <typename T, typename BinaryPredicate>
-std::vector<size_t> tracking_dedupe(std::vector<T>& data, BinaryPredicate&& eq,
-                                    BinaryPredicate&& lt) {
+template <typename T, typename EqFn, typename LtFn>
+std::vector<size_t> tracking_dedupe(mcd::vector<T>& data, EqFn&& eq,
+                                    LtFn&& lt) {
   // unique pass 1
-  std::vector<size_t> unique_map1;
-  auto new_end1 = data.begin();
-  std::tie(unique_map1, new_end1) =
-      tracking_unique(data.begin(), data.end(), eq);
-  data.erase(new_end1, data.end());
+  auto const [unique_map1, new_end1_it] =
+      tracking_unique(begin(data), end(data), eq);
+  data.erase(new_end1_it, end(data));
 
   // sort permutation
-  std::vector<size_t> perm(data.size());
+  mcd::vector<size_t> perm(data.size());
   std::iota(begin(perm), end(perm), 0);
   boost::sort::block_indirect_sort(begin(perm), end(perm), lt);
 
@@ -81,11 +79,9 @@ std::vector<size_t> tracking_dedupe(std::vector<T>& data, BinaryPredicate&& eq,
   }
 
   // unique pass 2
-  std::vector<size_t> unique_map2(data.size());
-  auto new_end2 = data.begin();
-  std::tie(unique_map2, new_end2) =
+  auto const [unique_map2, new_end2] =
       tracking_unique(data.begin(), data.end(), eq);
-  data.erase(new_end2, data.end());
+  data.erase(new_end2, end(data));
 
   // make index
   auto idx_map = std::vector<size_t>(unique_map1.size());

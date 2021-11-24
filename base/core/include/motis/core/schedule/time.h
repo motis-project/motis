@@ -19,7 +19,7 @@ using mam_t = int16_t;
 using duration_t = uint16_t;
 
 constexpr auto const MAX_DAYS = day_idx_t{512};
-constexpr auto const MINUTES_A_DAY = duration_t{1440};
+constexpr auto const MINUTES_A_DAY = mam_t{1440};
 constexpr auto const SECONDS_A_DAY = uint32_t{MINUTES_A_DAY * 60};
 constexpr auto const INVALID_DURATION = std::numeric_limits<duration_t>::max();
 constexpr auto const INVALID_MAM = std::numeric_limits<mam_t>::max();
@@ -44,7 +44,8 @@ struct time {
   }
 
   constexpr inline bool valid() const {
-    return day_idx_ < MAX_DAYS && mam_ < MINUTES_A_DAY;
+    return day_idx_ != std::numeric_limits<day_idx_t>::max() &&
+           mam_ != std::numeric_limits<mam_t>::max();
   }
 
   constexpr inline int32_t ts() const {
@@ -71,7 +72,7 @@ struct time {
     return *this;
   }
 
-  time operator-(int32_t const& o) const {
+  time operator-(int32_t const o) const {
     auto tmp = time(ts() - o);
     assert(tmp.valid());
     return tmp;
@@ -80,7 +81,7 @@ struct time {
   time operator-() const {
     time tmp;
     if (mam_ != 0) {
-      tmp.day_idx_ = -day_idx_ - static_cast<int16_t>(1);
+      tmp.day_idx_ = -day_idx_ - 1;
       tmp.mam_ = MINUTES_A_DAY - mam_;
       tmp.day_idx_ -= tmp.mam_ / MINUTES_A_DAY;  // if mam_ == 0: subtract 1
     } else {
@@ -143,11 +144,12 @@ struct time {
   }
 
 private:
-  day_idx_t day_idx_{MAX_DAYS};
-  mam_t mam_{MINUTES_A_DAY};
+  day_idx_t day_idx_{std::numeric_limits<day_idx_t>::max()};
+  mam_t mam_{std::numeric_limits<mam_t>::max()};
 };
 
-constexpr time INVALID_TIME = time();
+constexpr auto const INVALID_TIME = time();
+constexpr auto const MAX_TIME = time{MAX_DAYS, MINUTES_A_DAY};
 constexpr day_idx_t SCHEDULE_OFFSET_DAYS = 5;
 
 // plus four days, because the maximum trip duration is 4 days

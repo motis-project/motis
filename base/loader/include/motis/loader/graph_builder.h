@@ -157,6 +157,8 @@ struct graph_builder {
 
   void add_expanded_trips(route const& r);
 
+  void dedup_bitfields();
+
   static int get_index(
       mcd::vector<mcd::vector<light_connection>> const& alt_route,
       mcd::vector<light_connection> const& sections);

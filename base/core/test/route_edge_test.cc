@@ -4,10 +4,21 @@
 
 using namespace motis;
 
-auto const e = make_route_edge(
-    nullptr, nullptr,
-    {light_connection(0, 10), light_connection(1, 11), light_connection(2, 12)},
-    0U);
+light_connection make_lcon(mam_t const dep, mam_t const arr,
+                           bitfield const& traffic_days) {
+  static auto mem = std::vector<std::unique_ptr<bitfield>>{};
+  auto const ptr =
+      mem.emplace_back(std::make_unique<bitfield>(traffic_days)).get();
+  auto lcon = light_connection{dep, arr};
+  lcon.traffic_days_ = ptr;
+  return lcon;
+}
+
+auto const e = make_route_edge(nullptr, nullptr,
+                               {make_lcon(0, 10, create_uniform_bitfield('1')),
+                                make_lcon(1, 11, create_uniform_bitfield('1')),
+                                make_lcon(2, 12, create_uniform_bitfield('1'))},
+                               0U);
 
 TEST(core_route_edge, get_connection_test_valid) {
   auto [c, day] = e.get_connection(motis::time{0U, 1U});

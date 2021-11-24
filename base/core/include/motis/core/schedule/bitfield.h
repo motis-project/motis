@@ -13,12 +13,11 @@ namespace motis {
 
 using bitfield = cista::bitset<MAX_DAYS>;
 
-template <std::size_t BitSetSize>
-bitfield create_uniform_bitfield(char val) {
+inline bitfield create_uniform_bitfield(char val) {
   assert(val == '1' || val == '0');
 
   std::string all_days_bit_str;
-  all_days_bit_str.resize(BitSetSize);
+  all_days_bit_str.resize(MAX_DAYS);
   std::fill(begin(all_days_bit_str), end(all_days_bit_str), val);
 
   return {all_days_bit_str};

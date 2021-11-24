@@ -46,6 +46,34 @@ inline void validate_graph(schedule const& sched) {
 
   utl::verify(
       [&] {
+        for (auto const& sn : sched.station_nodes_) {
+          for (auto const& se : sn->edges_) {
+            if (se.to_->type() != node_type::ROUTE_NODE) {
+              continue;
+            }
+
+            for (auto const& re : se.to_->edges_) {
+              if (re.empty()) {
+                continue;
+              }
+
+              auto const& lcons = re.m_.route_edge_.conns_;
+              if (!std::all_of(begin(lcons), end(lcons),
+                               [](light_connection const& lcon) {
+                                 return lcon.traffic_days_ != nullptr &&
+                                        lcon.traffic_days_->any();
+                               })) {
+                return false;
+              }
+            }
+          }
+        }
+        return true;
+      }(),
+      "lcons with traffic days = nullptr or zero traffic days");
+
+  utl::verify(
+      [&] {
         auto const check_edges = [](node const* n) {
           return std::all_of(
               begin(n->edges_), end(n->edges_), [n](edge const& e) {
@@ -112,6 +140,11 @@ inline void validate_graph(schedule const& sched) {
             });
       }(),
       "edge from pointer correct");
+
+  utl::verify(
+      std::all_of(begin(sched.trips_), end(sched.trips_),
+                  [](auto const& t) { return t.second->edges_ != nullptr; }),
+      "missing trip edges");
 }
 
 inline void print_graph(schedule const& sched) {

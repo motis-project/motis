@@ -30,6 +30,7 @@ TEST_F(loader_graph_builder_east_to_west_test, event_times) {
       end(sched_->route_index_to_first_route_node_), [&](node const* n) {
         return sched_->stations_[n->get_station()->id_]->eva_nr_ == "2000058";
       });
+  ASSERT_TRUE(node_it != end(sched_->route_index_to_first_route_node_));
   auto cs = get_connections(*node_it, time{0});
   ASSERT_EQ(23, cs.size());
   test_events(cs[0], motis_time(1630, 0, 180), motis_time(1901, 0, 180));

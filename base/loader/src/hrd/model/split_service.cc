@@ -11,8 +11,8 @@
 
 namespace motis::loader::hrd {
 
-auto const all = create_uniform_bitfield<MAX_DAYS>('1');
-auto const none = create_uniform_bitfield<MAX_DAYS>('0');
+auto const all = create_uniform_bitfield('1');
+auto const none = create_uniform_bitfield('0');
 
 struct split_info {
   bitfield traffic_days_;

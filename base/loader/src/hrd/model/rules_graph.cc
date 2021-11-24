@@ -73,7 +73,7 @@ std::pair<std::set<rule_node*>, bitfield> rule_node::max_component() {
 
   rule_node* current = nullptr;
   std::set<rule_node*> queue = {this};
-  component_traffic_days = create_uniform_bitfield<MAX_DAYS>('1');
+  component_traffic_days = create_uniform_bitfield('1');
   while (!queue.empty()) {
     auto first_element = queue.begin();
     current = *first_element;
