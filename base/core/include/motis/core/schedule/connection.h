@@ -121,6 +121,12 @@ struct a_time_gt {
   }
 };
 
+struct a_time_lt {
+  bool operator()(light_connection const& a, light_connection const& b) {
+    return a.a_time_ < b.a_time_;
+  }
+};
+
 // Index of a light_connection in a route edge.
 using lcon_idx_t = uint32_t;
 

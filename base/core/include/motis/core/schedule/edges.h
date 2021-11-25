@@ -76,13 +76,11 @@ public:
        size_t const route_traffic_days)
       : from_{from}, to_{to} {
     m_.type_ = edge_type::ROUTE_EDGE;
-    if (!connections.empty()) {
-      m_.route_edge_.bitfield_idx_ = route_traffic_days;
-      m_.route_edge_.init_empty();
-      m_.route_edge_.conns_.set(begin(connections), end(connections));
-      std::sort(begin(m_.route_edge_.conns_), end(m_.route_edge_.conns_),
-                d_time_lt{});
-    }
+    m_.route_edge_.bitfield_idx_ = route_traffic_days;
+    m_.route_edge_.init_empty();
+    m_.route_edge_.conns_.set(begin(connections), end(connections));
+    std::sort(begin(m_.route_edge_.conns_), end(m_.route_edge_.conns_),
+              d_time_lt{});
   }
 
   /** oneway route edge constructor. */
@@ -90,21 +88,15 @@ public:
        mcd::vector<light_connection> const& connections,
        size_t const route_traffic_days, search_dir const dir)
       : from_{from}, to_{to} {
-    if (dir == search_dir::FWD) {
-      m_.type_ = edge_type::FWD_ROUTE_EDGE;
-      std::sort(begin(m_.route_edge_.conns_), std::end(m_.route_edge_.conns_),
-                d_time_lt{});
-    } else if (dir == search_dir::BWD) {
-      m_.type_ = edge_type::BWD_ROUTE_EDGE;
-      std::sort(begin(m_.route_edge_.conns_), std::end(m_.route_edge_.conns_),
-                a_time_gt{});
-    }
-
-    if (!connections.empty()) {
-      m_.route_edge_.init_empty();
-      m_.route_edge_.conns_.set(begin(connections), std::end(connections));
-      m_.route_edge_.bitfield_idx_ = route_traffic_days;
-    }
+    m_.type_ = (dir == search_dir::FWD ? edge_type::FWD_ROUTE_EDGE
+                                       : edge_type::BWD_ROUTE_EDGE);
+    m_.route_edge_.bitfield_idx_ = route_traffic_days;
+    m_.route_edge_.init_empty();
+    m_.route_edge_.conns_.set(begin(connections), std::end(connections));
+    dir == search_dir::FWD ? std::sort(begin(m_.route_edge_.conns_),
+                                       end(m_.route_edge_.conns_), d_time_lt{})
+                           : std::sort(begin(m_.route_edge_.conns_),
+                                       end(m_.route_edge_.conns_), a_time_lt{});
   }
 
   /** foot edge constructor. */
@@ -199,7 +191,7 @@ public:
   edge_cost get_minimum_cost() const {
     if (m_.type_ == edge_type::INVALID_EDGE) {
       return NO_EDGE;
-    } else if (m_.type_ == edge_type::ROUTE_EDGE) {
+    } else if (is_route_edge()) {
       if (m_.route_edge_.conns_.empty()) {
         return NO_EDGE;
       } else {
@@ -398,6 +390,13 @@ public:
 
   inline edge_type type() const { return m_.type_; }
 
+  inline bool is_route_edge() const { return is_route_edge(type()); }
+
+  static inline bool is_route_edge(edge_type const t) {
+    return t == edge_type::ROUTE_EDGE || t == edge_type::FWD_ROUTE_EDGE ||
+           t == edge_type::BWD_ROUTE_EDGE;
+  }
+
   inline char const* type_str() const {
     switch (type()) {
       case edge_type::ROUTE_EDGE: return "edge_type::ROUTE_EDGE";
@@ -436,7 +435,7 @@ public:
 
     edge_details(edge_details&& other) noexcept {  // NOLINT
       type_ = other.type_;
-      if (type_ == edge_type::ROUTE_EDGE) {
+      if (is_route_edge(type_)) {
         route_edge_.init_empty();
         route_edge_ = std::move(other.route_edge_);
       } else {
@@ -446,7 +445,7 @@ public:
 
     edge_details(edge_details const& other) {  // NOLINT
       type_ = other.type_;
-      if (type_ == edge_type::ROUTE_EDGE) {
+      if (is_route_edge(type_)) {
         route_edge_.init_empty();
         route_edge_ = other.route_edge_;
       } else {
@@ -457,7 +456,7 @@ public:
 
     edge_details& operator=(edge_details&& other) noexcept {
       type_ = other.type_;
-      if (type_ == edge_type::ROUTE_EDGE) {
+      if (is_route_edge(type_)) {
         route_edge_.init_empty();
         route_edge_ = std::move(other.route_edge_);
       } else {
@@ -474,7 +473,7 @@ public:
       }
 
       type_ = other.type_;
-      if (type_ == edge_type::ROUTE_EDGE) {
+      if (is_route_edge(type_)) {
         route_edge_.init_empty();
         route_edge_ = other.route_edge_;
       } else {
@@ -486,7 +485,7 @@ public:
     }
 
     ~edge_details() {
-      if (type_ == edge_type::ROUTE_EDGE) {
+      if (is_route_edge(type_)) {
         using Type = decltype(route_edge_.conns_);
         route_edge_.conns_.~Type();
       }
@@ -497,7 +496,7 @@ public:
 
     // TYPE = edge_type::ROUTE_EDGE
     struct re {
-      uint8_t type_padding_;
+      edge_type type_padding_;
       mcd::vector<light_connection> conns_;
       union {
         size_t bitfield_idx_;
@@ -509,7 +508,7 @@ public:
 
     // TYPE = FOOT_EDGE & CO
     struct fe {
-      uint8_t type_padding_;
+      edge_type type_padding_;
 
       // edge weight
       uint16_t time_cost_;

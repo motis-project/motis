@@ -27,9 +27,8 @@ void loader_graph_builder_test::SetUp() {
 }
 
 edge const* loader_graph_builder_test::get_route_edge(node const* route_node) {
-  auto it = std::find_if(
-      begin(route_node->edges_), end(route_node->edges_),
-      [](edge const& e) { return e.type() == edge_type::ROUTE_EDGE; });
+  auto it = std::find_if(begin(route_node->edges_), end(route_node->edges_),
+                         [](edge const& e) { return e.is_route_edge(); });
   if (it == end(route_node->edges_)) {
     return nullptr;
   } else {

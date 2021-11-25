@@ -303,22 +303,23 @@ void graph_builder::add_route_services(
     for (auto const& [lcons, times] : utl::zip(lcon_strings, utc_times)) {
       add_to_routes(alt_routes, times.first, lcons);
     }
+  }
 
-    for (auto const& route : alt_routes) {
-      if (route.empty() || route[0].empty()) {
-        continue;
-      }
-
-      auto const route_id = next_route_index_++;
-      auto r = create_route(services[0].first->route(), route, route_id);
-      index_first_route_node(*r);
-      write_trip_edges(*r);
-
-      // TODO(felix) fix trips
-      //      if (expand_trips_) {
-      //        add_expanded_trips(*r);
-      //      }
+  for (auto const& route : alt_routes) {
+    if (route.empty() || route[0].empty()) {
+      continue;
     }
+
+    auto const route_id = next_route_index_++;
+    auto r = create_route(services[0].first->route(), route, route_id);
+    index_first_route_node(*r);
+
+    // TODO(felix) fix trips
+    //      write_trip_edges(*r);
+    // TODO(felix) fix trips
+    //      if (expand_trips_) {
+    //        add_expanded_trips(*r);
+    //      }
   }
 }
 
@@ -724,7 +725,7 @@ mcd::unique_ptr<route> graph_builder::create_route(Route const* r,
   auto const& out_allowed = r->out_allowed();
   auto route_sections = mcd::make_unique<route>();
 
-  route_section last_route_section;
+  route_section prev_route_section;
   auto const bf_idx = get_or_create_bitfield(lcons.traffic_days_);
   for (auto i = 0UL; i < r->stations()->size() - 1; ++i) {
     auto const from = i;
@@ -744,8 +745,8 @@ mcd::unique_ptr<route> graph_builder::create_route(Route const* r,
                           stops->Get(from), in_allowed->Get(from) != 0U,
                           out_allowed->Get(from) != 0U, stops->Get(to),
                           in_allowed->Get(to) != 0U, out_allowed->Get(to) != 0U,
-                          last_route_section.to_route_node_, nullptr, bf_idx));
-    last_route_section = route_sections->back();
+                          prev_route_section.to_route_node_, nullptr, bf_idx));
+    prev_route_section = route_sections->back();
   }
 
   return route_sections;
@@ -794,12 +795,12 @@ route_section graph_builder::add_route_section(
                   [](auto const& c) { return c.a_time_ < MINUTES_A_DAY; });
 
   if (is_bidirectional) {
-    section.from_route_node_->edges_.push_back(
+    section.from_route_node_->edges_.emplace_back(
         make_route_edge(section.from_route_node_, section.to_route_node_, cons,
                         route_traffic_days));
   } else {
     // FWD
-    section.from_route_node_->edges_.push_back(
+    section.from_route_node_->edges_.emplace_back(
         make_fwd_route_edge(section.from_route_node_, section.to_route_node_,
                             cons, route_traffic_days));
 
@@ -820,7 +821,7 @@ route_section graph_builder::add_route_section(
         });
 
     // TODO(felix): make route_traffic_days based on BWD bitfields
-    section.from_route_node_->edges_.push_back(
+    section.from_route_node_->edges_.emplace_back(
         make_bwd_route_edge(section.from_route_node_, section.to_route_node_,
                             bwd_cons, route_traffic_days));
   }

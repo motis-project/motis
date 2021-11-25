@@ -296,7 +296,7 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
                             }));
     EXPECT_TRUE(std::any_of(
         begin(from_node_6->incoming_edges_), end(from_node_6->incoming_edges_),
-        [](edge const* e) { return e->type() == edge_type::ROUTE_EDGE; }));
+        [](edge const* e) { return e->is_route_edge(); }));
 
     auto const from_node_5 = std::get<2>(connections[5]);
     EXPECT_TRUE(std::none_of(
