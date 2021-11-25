@@ -180,9 +180,8 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
 
 void graph_builder::index_first_route_node(route const& r) {
   assert(!r.empty());
-  auto route_index = r[0].from_route_node_->route_;
-  if (static_cast<int>(sched_.route_index_to_first_route_node_.size()) <=
-      route_index) {
+  auto const route_index = r[0].from_route_node_->route_;
+  if (sched_.route_index_to_first_route_node_.size() <= route_index) {
     sched_.route_index_to_first_route_node_.resize(route_index + 1);
   }
   sched_.route_index_to_first_route_node_[route_index] = r[0].from_route_node_;
@@ -236,7 +235,7 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
       auto const rel_utc =
           time{abs_utc - time{static_cast<day_idx_t>(initial_day), 0}};
 
-      auto const sort_ok = i == 1 || utc_service_times.back() <= rel_utc;
+      auto const sort_ok = i == 1 || utc_service_times[i - 2] <= rel_utc;
       auto const impossible_time =
           is_season && abs_utc < station.timez_->season_.begin_;
       if (!sort_ok || impossible_time) {
@@ -279,8 +278,8 @@ void graph_builder::add_route_services(
     auto const day_offset =
         s->times()->Get(s->times()->size() - 2) / MINUTES_A_DAY;
     auto const start_idx =
-        static_cast<day_idx_t>(std::max(0, from_day_ - day_offset));
-    auto const end_idx = std::min(MAX_DAYS, to_day_);
+        static_cast<day_idx_t>(std::max(0, first_day_ - day_offset));
+    auto const end_idx = std::min(MAX_DAYS, last_day_);
 
     if (!has_traffic_within_timespan(traffic_days, start_idx, end_idx)) {
       continue;
@@ -314,9 +313,11 @@ void graph_builder::add_route_services(
       auto r = create_route(services[0].first->route(), route, route_id);
       index_first_route_node(*r);
       write_trip_edges(*r);
-      if (expand_trips_) {
-        add_expanded_trips(*r);
-      }
+
+      // TODO(felix) fix trips
+      //      if (expand_trips_) {
+      //        add_expanded_trips(*r);
+      //      }
     }
   }
 }
@@ -334,7 +335,7 @@ bool graph_builder::has_duplicate(Service const* service,
     for (auto const& route_node :
          sched_.station_nodes_[eq->index_]->route_nodes_) {
       for (auto const& route_edge : route_node->edges_) {
-        if (route_edge.type() != edge::ROUTE_EDGE) {
+        if (route_edge.type() != edge_type::ROUTE_EDGE) {
           continue;
         }
 
@@ -391,7 +392,6 @@ bool graph_builder::are_duplicates(Service const* service_a,
 
   return true;
 }
-*/
 
 void graph_builder::add_expanded_trips(route const& r) {
   assert(!r.empty());
@@ -413,6 +413,7 @@ void graph_builder::add_expanded_trips(route const& r) {
     sched_.expanded_trips_.finish_key();
   }
 }
+*/
 
 bool graph_builder::check_trip(trip_info const* trp) {
   auto last_time = 0U;
@@ -690,21 +691,23 @@ int graph_builder::get_or_create_track(int day,
 }
 
 void graph_builder::write_trip_edges(route const& r) {
-  auto edges_ptr =
-      sched_.trip_edges_
-          .emplace_back(mcd::make_unique<mcd::vector<trip_info::route_edge>>(
-              mcd::to_vec(r,
-                          [](route_section const& s) {
-                            return trip_info::route_edge{s.get_route_edge()};
-                          })))
-          .get();
-
-  auto& lcons = edges_ptr->front().get_edge()->m_.route_edge_.conns_;
-  for (auto lcon_idx = lcon_idx_t{}; lcon_idx < lcons.size(); ++lcon_idx) {
-    auto trp = sched_.merged_trips_[lcons[lcon_idx].trips_]->front();
-    trp->edges_ = edges_ptr;
-    trp->lcon_idx_ = lcon_idx;
-  }
+  (void)r;
+  //  auto edges_ptr =
+  //      sched_.trip_edges_
+  //          .emplace_back(mcd::make_unique<mcd::vector<trip_info::route_edge>>(
+  //              mcd::to_vec(r,
+  //                          [](route_section const& s) {
+  //                            return
+  //                            trip_info::route_edge{s.get_route_edge()};
+  //                          })))
+  //          .get();
+  //
+  //  auto& lcons = edges_ptr->front().get_edge()->m_.route_edge_.conns_;
+  //  for (auto lcon_idx = lcon_idx_t{}; lcon_idx < lcons.size(); ++lcon_idx) {
+  //    auto trp = sched_.merged_trips_[lcons[lcon_idx].trips_]->front();
+  //    trp->edges_ = edges_ptr;
+  //    trp->lcon_idx_ = lcon_idx;
+  //  }
 }
 
 mcd::unique_ptr<route> graph_builder::create_route(Route const* r,
@@ -724,10 +727,20 @@ mcd::unique_ptr<route> graph_builder::create_route(Route const* r,
   route_section last_route_section;
   auto const bf_idx = get_or_create_bitfield(lcons.traffic_days_);
   for (auto i = 0UL; i < r->stations()->size() - 1; ++i) {
-    auto from = i;
-    auto to = i + 1;
+    auto const from = i;
+    auto const to = i + 1;
+
+    auto const section_lcons = mcd::to_vec(
+        lcons.lcons_, [&i](mcd::vector<light_connection> const& lcon_string) {
+          return lcon_string[i];  // i-th element of each lcon string
+        });
+
+    utl::verify(section_lcons.size() == lcons.lcons_.size(),
+                "number of connections on route segment must match number of "
+                "services on route");
+
     route_sections->push_back(
-        add_route_section(route_index, lcons[i],  //
+        add_route_section(route_index, section_lcons,  //
                           stops->Get(from), in_allowed->Get(from) != 0U,
                           out_allowed->Get(from) != 0U, stops->Get(to),
                           in_allowed->Get(to) != 0U, out_allowed->Get(to) != 0U,
@@ -753,8 +766,8 @@ route_section graph_builder::add_route_section(
 
   route_section section;
 
-  auto const from_station_node = stations_[from_stop];
-  auto const to_station_node = stations_[to_stop];
+  auto* const from_station_node = stations_.at(from_stop);
+  auto* const to_station_node = stations_.at(to_stop);
 
   if (from_route_node != nullptr) {
     section.from_route_node_ = from_route_node;
@@ -846,31 +859,25 @@ void graph_builder::dedup_bitfields() {
   {
     scoped_timer timer("idx to ptr");
     for (auto const& s : sched_.station_nodes_) {
-      for (auto const& route_node : s->get_route_nodes()) {
+      s->for_each_route_node([&](node* route_node) {
         for (auto& e : route_node->edges_) {
-          if (e.type() != edge::ROUTE_EDGE &&
-              e.type() != edge::FWD_ROUTE_EDGE &&
-              e.type() != edge::BWD_ROUTE_EDGE) {
+          if (e.empty()) {
             continue;
           }
-          for (auto& c : e.m_.route_edge_.conns_) {
+
+          auto& re = e.m_.route_edge_;
+          std::cerr << "processing route=" << route_node->route_
+                    << " lcon_size=" << re.conns_.size() << " "
+                    << sched_.stations_.at(e.from_->get_station()->id_)->name_
+                    << " - "
+                    << sched_.stations_.at(e.to_->get_station()->id_)->name_
+                    << "\n";
+          for (auto& c : re.conns_) {
             c.traffic_days_ = &sched_.bitfields_[map[c.bitfield_idx_]];
           }
+          re.traffic_days_ = &sched_.bitfields_[map[re.bitfield_idx_]];
         }
-      }
-    }
-
-    for (auto const& station : sched_.station_nodes_) {
-      for (auto const& route_node : station->get_route_nodes()) {
-        for (auto& edge : route_node->edges_) {
-          if (edge.empty()) {
-            continue;
-          }
-
-          auto const bf_idx = edge.m_.route_edge_.bitfield_idx_;
-          edge.m_.route_edge_.traffic_days_ = &sched_.bitfields_[map[bf_idx]];
-        }
-      }
+      });
     }
   }
 }

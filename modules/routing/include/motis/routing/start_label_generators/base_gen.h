@@ -20,24 +20,26 @@ template <search_dir Dir, typename Label>
 struct base_gen {
   static inline bool edge_can_be_used(edge const& e) {
     if (Dir == search_dir::FWD) {
-      return e.type() != edge::INVALID_EDGE && e.type() != edge::BWD_EDGE &&
-             e.type() != edge::AFTER_TRAIN_BWD_EDGE;
+      return e.type() != edge_type::INVALID_EDGE &&
+             e.type() != edge_type::BWD_EDGE &&
+             e.type() != edge_type::AFTER_TRAIN_BWD_EDGE;
     } else {
-      return e.type() != edge::INVALID_EDGE && e.type() != edge::FWD_EDGE &&
-             e.type() != edge::AFTER_TRAIN_FWD_EDGE;
+      return e.type() != edge_type::INVALID_EDGE &&
+             e.type() != edge_type::FWD_EDGE &&
+             e.type() != edge_type::AFTER_TRAIN_FWD_EDGE;
     }
   }
 
   static inline bool has_no_time_cost(edge const& e) {
     if (Dir == search_dir::FWD) {
-      return e.type() == edge::ENTER_EDGE;
+      return e.type() == edge_type::ENTER_EDGE;
     } else {
-      return e.type() == edge::EXIT_EDGE;
+      return e.type() == edge_type::EXIT_EDGE;
     }
   }
 
   static inline duration_t get_edge_duration(edge const& e) {
-    utl::verify(e.type() != edge::ROUTE_EDGE,
+    utl::verify(e.type() != edge_type::ROUTE_EDGE,
                 "start label generator: invalid edge type");
     return has_no_time_cost(e) ? static_cast<duration_t>(0U)
                                : e.m_.foot_edge_.time_cost_;
@@ -101,8 +103,8 @@ struct base_gen {
       for_each_edge<Dir>(&foot_node, [&](auto&& fe) {
         auto const& dest = fe.template get_destination<Dir>();
         if (dest->is_station_node() &&
-            fe.type() ==
-                (Dir == search_dir::FWD ? edge::FWD_EDGE : edge::BWD_EDGE)) {
+            fe.type() == (Dir == search_dir::FWD ? edge_type::FWD_EDGE
+                                                 : edge_type::BWD_EDGE)) {
           auto const dist = fe.m_.foot_edge_.time_cost_;
           utl::verify(prev.dist_ + dist < MAX_FOOT_PATH_LENGTH,
                       "max foot path length exceeded");
@@ -141,7 +143,7 @@ struct base_gen {
           auto new_path = p.edges_;
           new_path.emplace_back(&e, additional_cost);
           for_each_edge<Dir>(node, [&](auto&& re) {
-            if (re.type() != edge::ROUTE_EDGE) {
+            if (re.type() != edge_type::ROUTE_EDGE) {
               return;
             }
             generate_start_labels(new_path, re, get_duration(new_path));

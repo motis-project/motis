@@ -125,9 +125,9 @@ private:
     Label blank{};
     bool created = l->create_label(
         blank, edge, lower_bounds_,
-        (Dir == search_dir::FWD && edge.type() == edge::EXIT_EDGE &&
+        (Dir == search_dir::FWD && edge.type() == edge_type::EXIT_EDGE &&
          is_goal_[edge.get_source<Dir>()->get_station()->id_]) ||
-            (Dir == search_dir::BWD && edge.type() == edge::ENTER_EDGE &&
+            (Dir == search_dir::BWD && edge.type() == edge_type::ENTER_EDGE &&
              is_goal_[edge.get_source<Dir>()->get_station()->id_]));
     if (!created) {
       return;

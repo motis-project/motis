@@ -19,8 +19,8 @@ std::set<trip_info::route_edge> route_bfs(ev_key const& k,
 
     if (dir == bfs_direction::BOTH || dir == bfs_direction::BACKWARD) {
       for (auto const& in : e->from_->incoming_edges_) {
-        if (in->type() != edge::THROUGH_EDGE &&
-            in->type() != edge::ROUTE_EDGE) {
+        if (in->type() != edge_type::THROUGH_EDGE &&
+            in->type() != edge_type::ROUTE_EDGE) {
           continue;
         }
 
@@ -32,8 +32,8 @@ std::set<trip_info::route_edge> route_bfs(ev_key const& k,
 
     if (dir == bfs_direction::BOTH || dir == bfs_direction::FORWARD) {
       for (auto const& out : e->to_->edges_) {
-        if (out.type() != edge::THROUGH_EDGE &&
-            out.type() != edge::ROUTE_EDGE) {
+        if (out.type() != edge_type::THROUGH_EDGE &&
+            out.type() != edge_type::ROUTE_EDGE) {
           continue;
         }
 
@@ -46,7 +46,7 @@ std::set<trip_info::route_edge> route_bfs(ev_key const& k,
 
   if (!with_through_edges) {
     for (auto it = begin(visited); it != end(visited);) {
-      if ((*it)->type() == edge::THROUGH_EDGE) {
+      if ((*it)->type() == edge_type::THROUGH_EDGE) {
         it = visited.erase(it);
       } else {
         ++it;

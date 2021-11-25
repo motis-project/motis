@@ -109,15 +109,15 @@ struct light_connection {
   day_idx_t start_day_offset_ : 4;
 };
 
-struct d_time_cmp {
+struct d_time_lt {
   bool operator()(light_connection const& a, light_connection const& b) {
     return a.d_time_ < b.d_time_;
   }
 };
 
-struct a_time_cmp {
+struct a_time_gt {
   bool operator()(light_connection const& a, light_connection const& b) {
-    return a.a_time_ < b.a_time_;
+    return a.a_time_ > b.a_time_;
   }
 };
 

@@ -82,6 +82,7 @@ void route_t::update_traffic_days(
 
 mcd::vector<light_connection> const& route_t::operator[](
     std::size_t idx) const {
+  assert(idx < lcons_.size());
   return lcons_[idx];
 }
 

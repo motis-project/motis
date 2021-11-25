@@ -31,8 +31,6 @@ journey create_journey1() {
   j.duration_ = 30;
   j.price_ = 10;
   j.transfers_ = 2;
-  j.db_costs_ = 100;
-  j.night_penalty_ = 200;
 
   j.stops_.resize(4);
   {
@@ -197,8 +195,6 @@ journey create_journey2() {
   j.duration_ = 15;
   j.price_ = 10;
   j.transfers_ = 0;
-  j.db_costs_ = 100;
-  j.night_penalty_ = 200;
 
   j.stops_.resize(2);
   {

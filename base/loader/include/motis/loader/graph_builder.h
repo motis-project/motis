@@ -60,8 +60,11 @@ struct route_section {
     assert(outgoing_route_edge_index_ >= 0);
     assert(static_cast<unsigned>(outgoing_route_edge_index_) <
            from_route_node_->edges_.size());
-    assert(from_route_node_->edges_[outgoing_route_edge_index_].type() ==
-           edge::ROUTE_EDGE);
+    auto const edge_type =
+        from_route_node_->edges_[outgoing_route_edge_index_].type();
+    assert(edge_type == edge_type::ROUTE_EDGE ||
+           edge_type == edge_type::BWD_ROUTE_EDGE ||
+           edge_type == edge_type::FWD_ROUTE_EDGE);
     return &from_route_node_->edges_[outgoing_route_edge_index_];
   }
 
@@ -247,8 +250,7 @@ struct graph_builder {
       connections_;
   mcd::hash_map<flatbuffers64::String const*, mcd::string*> filenames_;
   schedule& sched_;
-  int first_day_{0}, last_day_{0};
-  day_idx_t from_day_{0}, to_day_{0};
+  day_idx_t first_day_{0}, last_day_{0};
   bool apply_rules_{false};
   bool expand_trips_{false};
   bool no_local_transport_{false};

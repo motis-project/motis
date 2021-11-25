@@ -86,7 +86,5 @@ table Connection {
   attributes:[Attribute];
   free_texts:[FreeText];
   problems:[Problem];
-  night_penalty:ushort;
-  db_costs:ushort;
   status:ConnectionStatus;
 }

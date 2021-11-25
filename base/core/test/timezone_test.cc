@@ -105,7 +105,7 @@ TEST(core_timezone, season_begin_end_overlaps_schedule_period) {
   // from: [ INV {  5*MAD  6*MAD 7*MAD 8*MAD 9*MAD }  INV ]
   // to:     INV [{ 5*MAD  6*MAD 7*MAD 8*MAD 9*MAD }] INV
   ASSERT_EQ(0, tz.season_.begin_.ts());
-  ASSERT_EQ(INVALID_TIME - season_offset, tz.season_.end_);
+  ASSERT_EQ(MAX_TIME - season_offset, tz.season_.end_);
 }
 
 TEST(core_timezone, season_end_before_schedule_period) {
@@ -209,7 +209,7 @@ TEST(core_timezone, move_season_end_to_schedule_period_end) {
   ASSERT_EQ(time(SCHEDULE_OFFSET_DAYS + 2,
                  minutes_after_midnight_season_begin - general_offset),
             tz.season_.begin_);
-  ASSERT_EQ(INVALID_TIME - season_offset, tz.season_.end_);
+  ASSERT_EQ(MAX_TIME - season_offset, tz.season_.end_);
 }
 
 bool is_invalid_time(int day_idx, int minutes_after_midnight,

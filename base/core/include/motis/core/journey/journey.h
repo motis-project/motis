@@ -92,8 +92,6 @@ struct journey {
   connection_status status_{connection_status::OK};
   std::vector<ranged_free_text> free_texts_;
   std::vector<problem> problems_;
-
-  unsigned night_penalty_{0}, db_costs_{0};
 };
 
 }  // namespace motis

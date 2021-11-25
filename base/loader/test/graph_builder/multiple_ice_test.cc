@@ -121,9 +121,10 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
               first_route_node->get_station());
     ASSERT_EQ(first_route_node->get_station(), first_route_node->edges_[0].to_);
 
-    ASSERT_EQ(edge::ENTER_EDGE, first_route_node->incoming_edges_[0]->type());
-    ASSERT_EQ(edge::ROUTE_EDGE, first_route_node->edges_[1].type());
-    ASSERT_EQ(edge::EXIT_EDGE, first_route_node->edges_[0].type());
+    ASSERT_EQ(edge_type::ENTER_EDGE,
+              first_route_node->incoming_edges_[0]->type());
+    ASSERT_EQ(edge_type::ROUTE_EDGE, first_route_node->edges_[1].type());
+    ASSERT_EQ(edge_type::EXIT_EDGE, first_route_node->edges_[0].type());
 
     auto next_route_node = first_route_node->edges_[1].to_;
     ASSERT_TRUE(next_route_node->is_route_node());
@@ -290,17 +291,17 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
     EXPECT_TRUE(std::any_of(begin(from_node_6->incoming_edges_),
                             end(from_node_6->incoming_edges_),
                             [&](edge const* e) {
-                              return e->type() == edge::INVALID_EDGE &&
+                              return e->type() == edge_type::INVALID_EDGE &&
                                      e->from_ == from_node_6->get_station();
                             }));
     EXPECT_TRUE(std::any_of(
         begin(from_node_6->incoming_edges_), end(from_node_6->incoming_edges_),
-        [](edge const* e) { return e->type() == edge::ROUTE_EDGE; }));
+        [](edge const* e) { return e->type() == edge_type::ROUTE_EDGE; }));
 
     auto const from_node_5 = std::get<2>(connections[5]);
     EXPECT_TRUE(std::none_of(
         begin(from_node_5->incoming_edges_), end(from_node_5->incoming_edges_),
-        [](edge const* e) { return e->type() == edge::INVALID_EDGE; }));
+        [](edge const* e) { return e->type() == edge_type::INVALID_EDGE; }));
   }
 }
 

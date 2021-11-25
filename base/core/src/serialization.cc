@@ -61,7 +61,7 @@ inline void serialize(Ctx& c, edge const* origin,
                       cista::offset_t const offset) {
   cista::serialize(c, &origin->from_, offset + offsetof(edge, from_));
   cista::serialize(c, &origin->to_, offset + offsetof(edge, to_));
-  if (origin->type() == edge::ROUTE_EDGE) {
+  if (origin->type() == edge_type::ROUTE_EDGE) {
     cista::serialize(c, &origin->m_.route_edge_.conns_,
                      offset + offsetof(edge, m_) +
                          offsetof(decltype(origin->m_), route_edge_) +
@@ -73,7 +73,7 @@ template <typename Ctx>
 inline void deserialize(Ctx const& c, edge* el) {
   cista::deserialize(c, &el->from_);
   cista::deserialize(c, &el->to_);
-  if (el->type() == edge::ROUTE_EDGE) {
+  if (el->type() == edge_type::ROUTE_EDGE) {
     cista::deserialize(c, &el->m_.route_edge_.conns_);
   }
 }

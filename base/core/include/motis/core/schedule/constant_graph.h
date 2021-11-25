@@ -83,10 +83,10 @@ struct map_interchange_graph_node {
 };
 
 inline bool is_connected(node const* from, node const* to) {
-  return std::find_if(begin(from->edges_), end(from->edges_),
-                      [&to](edge const& e) {
-                        return e.to_ == to && e.type() != edge::INVALID_EDGE;
-                      }) != end(from->edges_);
+  return std::find_if(
+             begin(from->edges_), end(from->edges_), [&to](edge const& e) {
+               return e.to_ == to && e.type() != edge_type::INVALID_EDGE;
+             }) != end(from->edges_);
 }
 
 inline constant_graph build_interchange_graph(

@@ -203,7 +203,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
           auto s2 = std::next(it, 1 + inc);
 
           if (current_state == ONTRIP_TRAIN_START && s2 != end(labels) &&
-              s2->edge_->type() == edge::THROUGH_EDGE) {
+              s2->edge_->type() == edge_type::THROUGH_EDGE) {
             s1 = std::next(it, 1 + inc);
             s2 = std::next(it, 2 + inc);
             ++it;  // skip the initial through edge entirely

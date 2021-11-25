@@ -36,9 +36,9 @@ struct label : public Data {  // NOLINT
     if (pred_ && e.template get_destination<Dir>() == pred_->get_node()) {
       return false;
     }
-    if ((e.type() == edge::BWD_EDGE ||
-         e.type() == edge::AFTER_TRAIN_BWD_EDGE) &&
-        edge_->type() == edge::EXIT_EDGE) {
+    if ((e.type() == edge_type::BWD_EDGE ||
+         e.type() == edge_type::AFTER_TRAIN_BWD_EDGE) &&
+        edge_->type() == edge_type::EXIT_EDGE) {
       return false;
     }
 

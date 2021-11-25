@@ -129,12 +129,12 @@ void collect_events(station_node const* st,
 
   st->for_each_route_node([&](node const* n) {
     for (auto const& e : n->edges_) {
-      if (e.type() == edge::ROUTE_EDGE) {
+      if (e.type() == edge_type::ROUTE_EDGE) {
         collect(e, event_type::DEP);
       }
     }
     for (auto const& ie : n->incoming_edges_) {
-      if (ie->type() == edge::ROUTE_EDGE) {
+      if (ie->type() == edge_type::ROUTE_EDGE) {
         collect(*ie, event_type::ARR);
       }
     }

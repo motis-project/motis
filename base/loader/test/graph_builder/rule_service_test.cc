@@ -54,7 +54,7 @@ public:
 
     for (auto const& n : nodes) {
       for (auto const& e : n->edges_) {
-        if (e.empty() && e.type() != edge::THROUGH_EDGE) {
+        if (e.empty() && e.type() != edge_type::THROUGH_EDGE) {
           continue;
         }
 
@@ -93,7 +93,7 @@ TEST_F(service_rules_graph_builder_test_virt, simple_path_exists) {
 TEST_F(service_rules_graph_builder_test_virt, through_path_exists) {
   auto path = path_exists("0000005", "0000009");
   ASSERT_TRUE(path.first);
-  EXPECT_EQ(path.second[1]->type(), edge::THROUGH_EDGE);
+  EXPECT_EQ(path.second[1]->type(), edge_type::THROUGH_EDGE);
 }
 
 TEST_F(service_rules_graph_builder_test_virt, merge_split_path_exists) {

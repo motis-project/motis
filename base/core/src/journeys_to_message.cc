@@ -5,6 +5,7 @@
 
 #include "motis/core/conv/connection_status_conv.h"
 #include "motis/core/conv/problem_type_conv.h"
+#include "motis/core/conv/timestamp_reason_conv.h"
 #include "motis/core/conv/trip_conv.h"
 
 using namespace flatbuffers;
@@ -12,16 +13,6 @@ using namespace motis::module;
 using namespace motis::routing;
 
 namespace motis {
-
-TimestampReason convert_reason(timestamp_reason const r) {
-  switch (r) {
-    case timestamp_reason::SCHEDULE: return TimestampReason_SCHEDULE;
-    case timestamp_reason::IS: return TimestampReason_IS;
-    case timestamp_reason::FORECAST: return TimestampReason_FORECAST;
-    case timestamp_reason::PROPAGATION: return TimestampReason_PROPAGATION;
-    default: return TimestampReason_SCHEDULE;
-  }
-}
 
 std::vector<Offset<Stop>> convert_stops(
     FlatBufferBuilder& b, std::vector<journey::stop> const& stops) {
@@ -35,7 +26,7 @@ std::vector<Offset<Stop>> convert_stops(
                               b.CreateString(stop.arrival_.track_),
                               b.CreateString(stop.arrival_.schedule_track_),
                               stop.arrival_.valid_,
-                              convert_reason(stop.arrival_.timestamp_reason_))
+                              to_fbs(stop.arrival_.timestamp_reason_))
             : CreateEventInfo(b, 0, 0, b.CreateString(""), b.CreateString(""),
                               stop.arrival_.valid_, TimestampReason_SCHEDULE);
     auto const dep =
@@ -45,7 +36,7 @@ std::vector<Offset<Stop>> convert_stops(
                               b.CreateString(stop.departure_.track_),
                               b.CreateString(stop.departure_.schedule_track_),
                               stop.departure_.valid_,
-                              convert_reason(stop.departure_.timestamp_reason_))
+                              to_fbs(stop.departure_.timestamp_reason_))
             : CreateEventInfo(b, 0, 0, b.CreateString(""), b.CreateString(""),
                               stop.departure_.valid_, TimestampReason_SCHEDULE);
     auto const pos = Position(stop.lat_, stop.lng_);
@@ -146,7 +137,6 @@ Offset<Connection> to_connection(FlatBufferBuilder& b, journey const& j) {
                           b.CreateVector(convert_attributes(b, j.attributes_)),
                           b.CreateVector(convert_free_texts(b, j.free_texts_)),
                           b.CreateVector(convert_problems(b, j.problems_)),
-                          j.night_penalty_, j.db_costs_,
                           status_to_fbs(j.status_));
 }
 
