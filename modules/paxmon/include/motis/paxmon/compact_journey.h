@@ -16,12 +16,12 @@ namespace motis::paxmon {
 struct journey_leg {
   CISTA_COMPARABLE()
 
-  trip const* trip_;
-  unsigned enter_station_id_;
-  unsigned exit_station_id_;
-  motis::time enter_time_;
-  motis::time exit_time_;
-  std::optional<transfer_info> enter_transfer_;
+  trip const* trip_{};
+  unsigned enter_station_id_{};
+  unsigned exit_station_id_{};
+  motis::time enter_time_{};
+  motis::time exit_time_{};
+  std::optional<transfer_info> enter_transfer_{};
 };
 
 struct compact_journey {

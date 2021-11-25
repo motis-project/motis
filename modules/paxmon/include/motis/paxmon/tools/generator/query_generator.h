@@ -12,7 +12,7 @@
 namespace motis::paxmon::tools::generator {
 
 struct query_generator {
-  query_generator(schedule const& sched);
+  explicit query_generator(schedule const& sched);
 
   motis::module::msg_ptr get_routing_request(
       std::string const& target,

@@ -71,7 +71,7 @@ struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
   //   - no code will be executed in ctx::operations.
   //   - no calls to ctx::current_op<Data>() will be made
   //   - everything runs sequentially (no interleaving for motis_call/publish)
-  static dispatcher* direct_mode_dispatcher_;
+  static dispatcher* direct_mode_dispatcher_;  // NOLINT
 };
 
 }  // namespace motis::module
