@@ -9,17 +9,23 @@ namespace motis::raptor {
 
 std::pair<dim3, dim3> get_launch_paramters(
     cudaDeviceProp const& prop, int32_t const concurrency_per_device) {
-  int32_t block_dim_x = 32;  // must always be 32!
-  int32_t block_dim_y = 32;  // range [1, ..., 32]
-  int32_t block_size = block_dim_x * block_dim_y;
-  int32_t max_blocks_per_sm = prop.maxThreadsPerMultiProcessor / block_size;
+  utl::verify(
+      prop.warpSize == 32,
+      "Warp Size must be 32! Otherwise the gRAPTOR algorithm will not work.");
 
-  auto const mp_count = prop.multiProcessorCount / concurrency_per_device;
+  auto const block_size =
+      prop.maxThreadsPerMultiProcessor / prop.maxBlocksPerMultiProcessor;
+  auto const warp_per_block = block_size / prop.warpSize;
 
-  int32_t num_blocks = mp_count * max_blocks_per_sm;
+  int32_t block_dim_x = prop.warpSize;  // must always be 32!
+  int32_t block_dim_y = warp_per_block;
+
+  int32_t block_count =
+      (prop.maxBlocksPerMultiProcessor * prop.multiProcessorCount) /
+      concurrency_per_device;
 
   dim3 threads_per_block(block_dim_x, block_dim_y, 1);
-  dim3 grid(num_blocks, 1, 1);
+  dim3 grid(block_count, 1, 1);
 
   return {threads_per_block, grid};
 }
