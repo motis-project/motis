@@ -5,6 +5,23 @@
 
 namespace motis::raptor {
 
+#if __CUDA_ARCH__ <= 720
+#define MAX_BLOCKS_PER_SM 32
+#define MAX_THREADS_PER_SM 2048
+#elif __CUDA_ARCH__ == 750
+#define MAX_BLOCKS_PER_SM 16
+#define MAX_THREADS_PER_SM 1024
+#elif __CUDA_ARCH__ == 800
+#define MAX_BLOCKS_PER_SM 32
+#define MAX_THREADS_PER_SM 2048
+#elif __CUDA_ARCH__ == 850
+#define MAX_BLOCKS_PER_SM 16
+#define MAX_THREADS_PER_SM 1536
+#endif
+
+#define GPU_RAPTOR_MAX_THREADS_PER_SM (MAX_THREADS_PER_SM / MAX_BLOCKS_PER_SM)
+#define GPU_RAPTOR_MIN_BLOCKS_PER_SM MAX_BLOCKS_PER_SM
+
 using namespace cooperative_groups;
 
 // leader type must be unsigned 32bit
@@ -443,9 +460,10 @@ __device__ void update_footpaths_dev(device_memory const& device_mem,
   this_grid().sync();
 }
 
-__global__ void gpu_raptor_kernel(base_query const query,
-                                  device_memory const device_mem,
-                                  device_gpu_timetable const tt) {
+__global__ void __launch_bounds__(GPU_RAPTOR_MAX_THREADS_PER_SM,
+                                  GPU_RAPTOR_MIN_BLOCKS_PER_SM)
+    gpu_raptor_kernel(base_query const query, device_memory const device_mem,
+                      device_gpu_timetable const tt) {
   init_arrivals_dev(query, device_mem, tt);
   this_grid().sync();
 
