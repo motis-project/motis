@@ -19,7 +19,7 @@ namespace motis::csa {
 
 template <typename T>
 struct arrivals_wrapper {
-  arrivals_wrapper(T* ptr, uint32_t size, uint32_t query_idx)
+  arrivals_wrapper(T* ptr, uint32_t const size, uint32_t const query_idx)
       : ptr_{ptr}, size_{size}, query_idx_{query_idx} {}
 
   T* operator[](size_t const element_index) const {
@@ -35,8 +35,8 @@ struct arrivals_wrapper {
 
 template <typename BlockType>
 struct trip_reachable_wrapper {
-  trip_reachable_wrapper(BlockType const* blocks, uint32_t size,
-                         uint32_t query_idx)
+  trip_reachable_wrapper(BlockType const* blocks, uint32_t const size,
+                         uint32_t const query_idx)
       : blocks_{blocks}, size_{size}, query_idx_{query_idx} {}
 
   struct single_trip_wrapper {
