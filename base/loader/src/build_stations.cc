@@ -92,6 +92,7 @@ struct stations_builder {
         ++platform_id;
       }
       station_nodes_[fbs_station]->platform_nodes_.resize(platform_id);
+      ++stations_with_platforms_;
     }
 
     // Store DS100.
@@ -204,6 +205,7 @@ struct stations_builder {
   mcd::hash_map<Timezone const*, timezone const*> timezones_;
   std::map<std::string, int>& tracks_;
   bool no_local_stations_{false};
+  std::size_t stations_with_platforms_{};
 };
 
 mcd::hash_map<Station const*, station_node*> build_stations(
@@ -238,6 +240,11 @@ mcd::hash_map<Station const*, station_node*> build_stations(
     if (fbs_schedule->meta_stations() != nullptr) {
       b.link_meta_stations(fbs_schedule->meta_stations());
     }
+  }
+
+  if (use_platforms) {
+    utl::verify(b.stations_with_platforms_ > 0,
+                "use_platforms set, but no platform information available");
   }
 
   if (fbs_schedules.size() > 1) {
