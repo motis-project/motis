@@ -1,5 +1,3 @@
-# gui
-
 ## Project setup
 ```
 npm install
