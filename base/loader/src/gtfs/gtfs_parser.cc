@@ -348,9 +348,8 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   progress_tracker->status("Export schedule.raw")
       .out_bounds(60.F, 100.F)
       .in_high(trips.size());
-  auto const interval =
-      Interval{static_cast<uint64_t>(to_unix_time(traffic_days.first_day_)),
-               static_cast<uint64_t>(to_unix_time(traffic_days.last_day_))};
+  auto const interval = Interval{to_unix_time(traffic_days.first_day_),
+                                 to_unix_time(traffic_days.last_day_)};
 
   auto const create_service = [&](trip const* t, bitfield const& traffic_days,
                                   bool const is_rule_service_participant) {

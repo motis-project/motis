@@ -204,18 +204,18 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
       auto const& station = *sched_.stations_.at(
           stations_[s->route()->stations()->Get(i / 2)]->id_);
 
-      auto const local_time =
-          static_cast<mam_t>(s->times()->Get(i) % MINUTES_A_DAY);
+      auto const time_with_fix = s->times()->Get(i) + fix_offset;
+      auto const local_time = static_cast<mam_t>(time_with_fix % MINUTES_A_DAY);
       auto const day_offset =
-          static_cast<day_idx_t>(s->times()->Get(i) / MINUTES_A_DAY);
-      auto adj_day_idx =
-          static_cast<day_idx_t>(day_idx + day_offset + SCHEDULE_OFFSET_DAYS);
+          static_cast<day_idx_t>(time_with_fix / MINUTES_A_DAY);
+      auto adj_day_idx = static_cast<day_idx_t>(
+          day_idx + day_offset - first_day_ + SCHEDULE_OFFSET_DAYS);
       auto const is_season =
           is_local_time_in_season(adj_day_idx, local_time, station.timez_);
       auto const season_offset = is_season ? station.timez_->season_.offset_
                                            : station.timez_->general_offset_;
 
-      auto pre_utc = local_time - season_offset + fix_offset;
+      auto pre_utc = local_time - season_offset;
       if (pre_utc < 0) {
         pre_utc += 1440;
         adj_day_idx -= 1;
@@ -535,7 +535,7 @@ light_connection graph_builder::section_to_connection(
   for (auto const& day : service_traffic_days) {
     if (day_offset <= day) {
       // TODO: use (bitfield, offset) representation to save RAM
-      con_traffic_days.set(day + day_offset - first_day_);
+      con_traffic_days.set(day + day_offset);
     }
   }
 
@@ -868,12 +868,6 @@ void graph_builder::dedup_bitfields() {
           }
 
           auto& re = e.m_.route_edge_;
-          std::cerr << "processing route=" << route_node->route_
-                    << " lcon_size=" << re.conns_.size() << " "
-                    << sched_.stations_.at(e.from_->get_station()->id_)->name_
-                    << " - "
-                    << sched_.stations_.at(e.to_->get_station()->id_)->name_
-                    << "\n";
           for (auto& c : re.conns_) {
             c.traffic_days_ = &sched_.bitfields_[map[c.bitfield_idx_]];
           }

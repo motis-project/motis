@@ -53,7 +53,6 @@ time get_adjusted_event_time(tz_cache&, std::time_t schedule_begin,
 // TODO(felix): add parameters for provider tz string and stop tz string to
 // support GTFS -> how to extract season begin, general offset and season begin,
 // end for Howard Hinnant's date library tz objects?
-bool is_local_time_in_season(int day_idx, int minutes_after_midnight,
-                             timezone const* tz);
+bool is_local_time_in_season(day_idx_t, mam_t, timezone const* tz);
 
 }  // namespace motis::loader

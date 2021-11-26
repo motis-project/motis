@@ -121,10 +121,9 @@ time get_adjusted_event_time(tz_cache& cache, std::time_t const schedule_begin,
   return adjusted;
 }
 
-bool is_local_time_in_season(int const day_idx, int minutes_after_midnight,
+bool is_local_time_in_season(day_idx_t const day, mam_t mam,
                              timezone const* tz) {
-  auto const minutes_after_schedule_begin =
-      motis::to_motis_time(day_idx, minutes_after_midnight);
+  auto const minutes_after_schedule_begin = time{day, mam};
   return tz->season_.begin_ != INVALID_TIME &&
          tz->season_.begin_ + tz->general_offset_ <=
              minutes_after_schedule_begin &&

@@ -18,9 +18,9 @@ std::string format_date(time_t const t, char const* format = "%Y-%m-%d") {
 
 std::pair<int, int> first_last_days(schedule const& sched,
                                     Interval const* interval) {
-  auto first_day = static_cast<int>((sched.schedule_begin_ - interval->from()) /
-                                    SECONDS_A_DAY);
-  auto last_day = static_cast<int>(
+  auto const first_day = static_cast<int>(
+      (sched.schedule_begin_ - interval->from()) / SECONDS_A_DAY);
+  auto const last_day = static_cast<int>(
       (sched.schedule_end_ - interval->from()) / SECONDS_A_DAY - 1);
 
   utl::verify(sched.schedule_end_ > sched.schedule_begin_ &&
