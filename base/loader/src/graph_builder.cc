@@ -193,7 +193,7 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
                                     day_idx_t const end_idx, Service const* s) {
   auto utc_times = mcd::hash_map<mcd::vector<time>, mcd::vector<unsigned>>{};
   auto utc_service_times = mcd::vector<time>{};
-  utc_service_times.resize(s->times()->size());
+  utc_service_times.resize(s->times()->size() - 2);
   for (auto day_idx = start_idx; day_idx < end_idx; ++day_idx) {
     if (!traffic_days.test(day_idx)) {
       continue;
