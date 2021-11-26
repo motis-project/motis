@@ -22,6 +22,13 @@ inline void print_station(stop_id const s_id, raptor_meta_info const& sched) {
             << '\n';
 }
 
+inline void print_stations(raptor_meta_info const& meta) {
+  auto stop_cnt = meta.raptor_id_to_eva_.size();
+  for(int s_id = 0; s_id < stop_cnt; ++s_id) {
+    print_station(s_id, meta);
+  }
+}
+
 template <typename TimeStringer>
 inline void print_route_gen(route_id const r_id, raptor_timetable const& tt,
                             TimeStringer const& time_string) {

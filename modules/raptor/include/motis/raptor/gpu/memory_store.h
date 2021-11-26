@@ -92,6 +92,7 @@ struct device_memory {
   uint32_t* station_marks_{};
   bool* any_station_marked_{};
   time* footpaths_scratchpad_{};
+  time* earliest_arrivals_{};
   additional_start* additional_starts_{};
   size_t additional_start_count_{};
 };

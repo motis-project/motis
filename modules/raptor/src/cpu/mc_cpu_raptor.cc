@@ -1,7 +1,7 @@
 #include "motis/raptor/cpu/mc_cpu_raptor.h"
 
-#include "motis/raptor/criteria/configs.h"
 #include "motis/raptor/cpu/mark_store.h"
+#include "motis/raptor/criteria/configs.h"
 #include "motis/raptor/print_raptor.h"
 #include "motis/raptor/raptor_query.h"
 #include "motis/raptor/raptor_result.h"
@@ -125,13 +125,11 @@ get_next_feasible_trip(raptor_timetable const& tt,
 }
 
 template <typename CriteriaConfig>
-void update_route_for_trait_offset(raptor_timetable const& tt,
-                                   route_id const r_id,
-                                   time const* const prev_arrivals,
-                                   time* const current_round,
-                                   earliest_arrivals& ea,
-                                   cpu_mark_store& station_marks,
-                                   uint32_t trait_offset, int target_arr_idx) {
+void update_route_for_trait_offset(
+    raptor_timetable const& tt, route_id const r_id,
+    time const* const prev_arrivals, time* const current_round,
+    earliest_arrivals& ea, cpu_mark_store& station_marks, uint32_t trait_offset,
+    arrival_id target_arr_idx) {
   auto const& route = tt.routes_[r_id];
 
   typename CriteriaConfig::CriteriaData criteria_data{};
@@ -192,7 +190,7 @@ void update_route_for_trait_offset(raptor_timetable const& tt,
 
     // need the minimum due to footpaths updating arrivals
     // and not earliest arrivals
-    //includes local and target pruning
+    // includes local and target pruning
     auto const ea_target_min = std::min(ea[stop_arr_idx], ea[target_arr_idx]);
     auto const min = std::min(current_round[stop_arr_idx], ea_target_min);
 
@@ -208,7 +206,7 @@ void update_route_for_trait_offset(raptor_timetable const& tt,
      * current_round from former runs of the algorithm, but the earliest
      * arrivals start at invalid<time> every run.
      *
-     * Therefore, we need to set the earliest arrival independently from
+     * Therefore, we need to set the earliest arrival independently of
      * the results in current round.
      *
      * We cannot carry over the earliest arrivals from former runs, since
@@ -251,11 +249,14 @@ void update_route(raptor_timetable const& tt, route_id const r_id,
 
 template <typename CriteriaConfig>
 inline void update_footpaths(raptor_timetable const& tt, time* current_round,
+                             earliest_arrivals const& current_round_arr_const,
                              earliest_arrivals& ea,
-                             cpu_mark_store& station_marks) {
+                             cpu_mark_store& station_marks,
+                             stop_id const target_s_id) {
 
   // How far do we need to skip until the next stop is reached?
   auto const trait_size = CriteriaConfig::trait_size();
+  auto const target_arr_idx = CriteriaConfig::get_arrival_idx(target_s_id);
 
   for (stop_id stop_id = 0; stop_id < tt.stop_count(); ++stop_id) {
 
@@ -274,7 +275,7 @@ inline void update_footpaths(raptor_timetable const& tt, time* current_round,
         auto const to_arr_idx =
             CriteriaConfig::get_arrival_idx(footpath.to_, s_trait_offset);
 
-        if (!valid(ea[from_arr_idx])) {
+        if (!valid(current_round_arr_const[from_arr_idx])) {
           continue;
         }
 
@@ -284,15 +285,19 @@ inline void update_footpaths(raptor_timetable const& tt, time* current_round,
         // and write to the normal arrivals,
         // otherwise it is possible that two footpaths
         // are chained together
-        motis::time const new_arrival = ea[from_arr_idx] + footpath.duration_;
+        motis::time const new_arrival =
+            current_round_arr_const[from_arr_idx] + footpath.duration_;
 
         motis::time to_arrival = current_round[to_arr_idx];
-        motis::time to_earliest_arrival = ea[to_arr_idx];
+        motis::time to_ea = ea[to_arr_idx];
 
-        auto const min = std::min(to_arrival, to_earliest_arrival);
+        auto min = std::min(to_arrival, to_ea);  // local pruning
+        min = std::min(min,
+                       ea[target_arr_idx + s_trait_offset]);  // target pruning
         if (new_arrival < min) {
           station_marks.mark(footpath.to_);
           current_round[to_arr_idx] = new_arrival;
+          ea[to_arr_idx] = new_arrival;
         }
       }
     }
@@ -308,12 +313,9 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics&) {
 #ifdef _DEBUG
   print_query(query);
   //    print_routes({9663}, tt);
-  //     print_stations(raptor_sched);
   //     print_route_trip_debug_strings(raptor_sched);
 #endif
-  // print_route(15118, tt);
-  //  print_routes(get_routes_containing(std::vector<int>{5210,15072}, tt),
-  //  tt);
+  // print_routes(get_routes_containing(std::vector<int>{4075}, tt), tt);
 
   earliest_arrivals ea(tt.stop_count() * CriteriaConfig::trait_size(),
                        invalid<motis::time>);
@@ -356,16 +358,14 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics&) {
                                    target_s_id);
     }
 
-    // if(round_k == 2)
-    //   print_results<CriteriaConfig>(result, tt, 3, 0);
-
     route_marks.reset();
 
     std::memcpy(current_round_arrivals.data(), result[round_k],
                 current_round_arrivals.size() * sizeof(motis::time));
 
     update_footpaths<CriteriaConfig>(tt, result[round_k],
-                                     current_round_arrivals, station_marks);
+                                     current_round_arrivals, ea, station_marks,
+                                     target_s_id);
   }
 }
 

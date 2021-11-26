@@ -149,6 +149,7 @@ device_memory::device_memory(stop_id const stop_count,
   }
 
   cudaMalloc(&footpaths_scratchpad_, get_scratchpad_bytes());
+  cudaMalloc(&earliest_arrivals_, get_scratchpad_bytes());
   cudaMalloc(&station_marks_, get_station_mark_bytes());
   cudaMalloc(&route_marks_, get_route_mark_bytes());
   cudaMalloc(&any_station_marked_, sizeof(bool));
@@ -161,6 +162,7 @@ device_memory::device_memory(stop_id const stop_count,
 void device_memory::destroy() {
   cudaFree(result_.front());
   cudaFree(footpaths_scratchpad_);
+  cudaFree(earliest_arrivals_);
   cudaFree(station_marks_);
   cudaFree(route_marks_);
   cudaFree(any_station_marked_);
@@ -190,6 +192,7 @@ size_t device_memory::get_additional_starts_bytes() const {
 void device_memory::reset_async(cudaStream_t s) {
   cudaMemsetAsync(result_.front(), 0xFF, get_result_bytes(), s);
   cudaMemsetAsync(footpaths_scratchpad_, 0xFF, get_scratchpad_bytes(), s);
+  cudaMemsetAsync(earliest_arrivals_, 0xFF, get_scratchpad_bytes(), s);
   cudaMemsetAsync(station_marks_, 0, get_station_mark_bytes(), s);
   cudaMemsetAsync(route_marks_, 0, get_route_mark_bytes(), s);
   cudaMemsetAsync(any_station_marked_, 0, sizeof(bool), s);
@@ -207,10 +210,6 @@ mem::mem(stop_id const stop_count, route_id const route_count,
       active_device_{nullptr},
       active_config_{raptor_criteria_config::Default},
       is_reset_{true}
-
-// host_{stop_count, raptor_criteria_config::Default},
-// device_{stop_count, raptor_criteria_config::Default, route_count,
-//        max_add_starts}
 {
 
   host_memories_.emplace(raptor_criteria_config::Default,
@@ -233,8 +232,6 @@ mem::~mem() {
                 [](auto& el) { el.second->destroy(); });
   std::for_each(device_memories_.begin(), device_memories_.end(),
                 [](auto& el) { el.second->destroy(); });
-  // host_.destroy();
-  // device_.destroy();
   context_.destroy();
 }
 
@@ -294,6 +291,9 @@ loaned_mem::loaned_mem(memory_store& store) {
 loaned_mem::~loaned_mem() {
   mem_->reset_active();
   cuda_sync_stream(mem_->context_.proc_stream_);
+
+  using namespace std::chrono_literals;
+  std::this_thread::sleep_for(5s);
 }
 
 }  // namespace motis::raptor

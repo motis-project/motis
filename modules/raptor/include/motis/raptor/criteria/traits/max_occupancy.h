@@ -95,6 +95,7 @@ struct trait_max_occupancy {
       ) {
     auto const prop_val = aggregate.max_occupancy_;
     auto const received = __shfl_down_sync(mask, prop_val, 31);
+//    printf("Received Carry over value of %i;\tprop_val: %i\n", received, prop_val);
     aggregate.max_occupancy_ = received;
   }
 

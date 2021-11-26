@@ -128,7 +128,7 @@ int print_raptor(int argc, const char** argv) {
   auto const& sched = instance.sched();
   auto const [meta_info, tt] = get_raptor_timetable(sched);
 
-  print_theoretical_moc_figures(*tt);
+  //print_theoretical_moc_figures(*tt);
 
   std::ifstream in{print_opt.in_path_.c_str()};
   in.exceptions(std::ifstream::failbit | std::ifstream::badbit);
