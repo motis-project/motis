@@ -3,6 +3,7 @@
 #include <tuple>
 
 #include "motis/core/common/date_time_util.h"
+#include "motis/core/access/time_access.h"
 
 #include "./graph_builder_test.h"
 
@@ -78,7 +79,38 @@ TEST_F(loader_graph_builder_season_invalid, event_times) {
       });
   ASSERT_TRUE(node_it != end(sched_->route_index_to_first_route_node_));
 
-  auto cs = get_connections(*node_it, time{0});
+  std::cout << format_unix_time(external_schedule_begin(*sched_)) << "\n";
+  std::cout << format_unix_time(external_schedule_end(*sched_)) << "\n";
+  std::cout << format_unix_time(
+                   motis_to_unixtime(*sched_, time{SCHEDULE_OFFSET_DAYS, 0}))
+            << "\n";
+  for (auto const& e : (*node_it)->edges_) {
+    if (e.empty()) {
+      continue;
+    }
+    for (auto const& lcon : e.m_.route_edge_.conns_) {
+      for (auto day = day_idx_t{0U}; day != lcon.traffic_days_->size(); ++day) {
+        if (lcon.traffic_days_->test(day)) {
+          std::cout << format_unix_time(motis_to_unixtime(
+                           *sched_, lcon.event_time(event_type::DEP, day)))
+                    << "\n";
+        }
+      }
+    }
+
+    auto const [lcon, day] =
+        e.get_connection(time{SCHEDULE_OFFSET_DAYS - 1, 0});
+    std::cout << "lcon: ";
+    if (lcon != nullptr) {
+      std::cout << format_unix_time(motis_to_unixtime(
+                       *sched_, lcon->event_time(event_type::DEP, day)))
+                << "\n";
+    } else {
+      std::cout << "not found\n";
+    }
+  }
+
+  auto cs = get_connections(*node_it, time{SCHEDULE_OFFSET_DAYS - 1, 0});
   ASSERT_EQ(10, cs.size());
 
   test_events(cs[0], motis_time(108, 0, 60), motis_time(111, 0, 60));

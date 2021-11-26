@@ -118,6 +118,8 @@ public:
   edge_cost get_edge_cost(time const start_time,
                           light_connection const* last_con) const {
     switch (m_.type_) {
+      case edge_type::FWD_ROUTE_EDGE:
+      case edge_type::BWD_ROUTE_EDGE: [[fallthrough]];
       case edge_type::ROUTE_EDGE: return get_route_edge_cost<Dir>(start_time);
 
       case edge_type::ENTER_EDGE:
@@ -172,10 +174,8 @@ public:
     }
   }
 
-  bool operates_on_day(day_idx_t const day) {
-    assert(type() == edge_type::ROUTE_EDGE ||
-           type() == edge_type::BWD_ROUTE_EDGE ||
-           type() == edge_type::FWD_ROUTE_EDGE);
+  bool operates_on_day(day_idx_t const day) const {
+    assert(is_route_edge());
     return m_.route_edge_.traffic_days_->test(day);
   }
 
@@ -221,8 +221,8 @@ public:
 
   inline light_connection const* get_next_valid_lcon(light_connection const* lc,
                                                      unsigned skip = 0) const {
-    assert(type() == edge_type::ROUTE_EDGE);
-    assert(lc);
+    assert(is_route_edge());
+    assert(lc != nullptr);
 
     auto it = lc;
     while (it != end(m_.route_edge_.conns_)) {
@@ -310,7 +310,7 @@ public:
         }
 
         if (it->traffic_days_->test(day) && it->valid_) {
-          return {get_next_valid_lcon(&*it), day};
+          return {&*it, day};
         } else {
           ++it;
         }
@@ -339,7 +339,7 @@ public:
         }
 
         if (it->traffic_days_->test(day) && it->valid_) {
-          return {get_prev_valid_lcon(&*it), day};
+          return {&*it, day};
         } else {
           ++it;
         }

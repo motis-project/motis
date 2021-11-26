@@ -535,7 +535,7 @@ light_connection graph_builder::section_to_connection(
   for (auto const& day : service_traffic_days) {
     if (day_offset <= day) {
       // TODO: use (bitfield, offset) representation to save RAM
-      con_traffic_days.set(day + day_offset);
+      con_traffic_days.set(day + day_offset - first_day_);
     }
   }
 
@@ -551,7 +551,8 @@ light_connection graph_builder::section_to_connection(
         sched_.classes_.find(section->category()->name()->str());
     con_.clasz_ = (clasz_it == end(sched_.classes_)) ? service_class::OTHER
                                                      : clasz_it->second;
-    con_.price_ = get_distance(from, to) * get_price_per_km(con_.clasz_);
+    con_.price_ = static_cast<decltype(con_.price_)>(
+        get_distance(from, to) * get_price_per_km(con_.clasz_));
     // TODO(felix)
     // con_.d_track_ = get_or_create_track(dep_day_index, dep_platf);
     // con_.a_track_ = get_or_create_track(arr_day_index, arr_platf);
