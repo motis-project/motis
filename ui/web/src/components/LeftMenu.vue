@@ -4,7 +4,7 @@
       <div id="overlay-content">
         <div id="search">
           <div class="pure-g-gutters">
-            <InputField labelName="Start" iconType="place" :showLabel="true" id="start"
+            <InputField labelName="Start" iconType="place" :showLabel="true" id="start" 
               class="pure-u-1 pure-u-sm-12-24 from-location" @getStartInput="setStartInput" />
           </div>
 
@@ -17,7 +17,10 @@
 
           <div class="pure-g-gutters">
             <InputField labelName="Ziel" iconType="place" :showLabel="true" id="dest"
-              class="pure-u-1 pure-u-sm-12-24 from-location" @getDestInput="setDestInput" />
+              class="pure-u-1 pure-u-sm-12-24 to-location" @getDestInput="setDestInput" />
+          
+            <InputField labelName="Uhrzeit" iconType="schedule" :showLabel="true" id="time"
+              class="pure-u-1 pure-u-1 pure-u-sm-9-24"  />
           </div>
         </div>
       </div>
@@ -53,7 +56,7 @@ export default defineComponent({
     },
     setDestInput( input:string ){
       this.destination = input;
-    }
+    },
   },
 });
 </script>

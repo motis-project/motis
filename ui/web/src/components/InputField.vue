@@ -6,7 +6,8 @@
         <div class="gb-input-icon">
           <i class="icon">{{ iconType }}</i>
         </div>
-        <input class="gb-input" :id="id" tabindex="1" @change="sendChangedText" v-model="inputText">
+        <input class="gb-input" v-if="id === 'start' || id === 'dest'" :id="id" tabindex="1" @change="sendChangedText" v-model="inputText">
+        <input class="gb-input" v-else-if="id === 'time'" :id="id" tabindex="1" @change="sendChangedText" v-model="time">
       </div>
     </div>
   </div>
@@ -33,6 +34,7 @@ export default defineComponent({
   data() {
     return {
       inputText: '',
+      time: (new Date).getHours() + ":" + ("0" + (new Date).getMinutes()).slice(-2),
     }
   },
   methods: {
