@@ -1,5 +1,5 @@
 <template>
-    <InputField labelName="Start" iconType="place" className="pure-u-1 pure-u-sm-12-24 from location"/>
+    <InputField labelName="Start" iconType="place"/>
 </template>
 
 <script lang="ts">
