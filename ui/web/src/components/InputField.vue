@@ -6,7 +6,7 @@
         <div class="gb-input-icon">
           <i class="icon">{{ iconType }}</i>
         </div>
-        <input class="gb-input" tabindex="1" />
+        <input class="gb-input" :id="id" tabindex="1" @change="sendChangedText" v-model="inputText">
       </div>
     </div>
   </div>
@@ -28,7 +28,21 @@ export default defineComponent({
     labelName: String,
     iconType: String,
     showLabel: Boolean,
+    id: String,
   },
+  data() {
+    return {
+      inputText: '',
+    }
+  },
+  methods: {
+    sendChangedText() {
+      if(this.labelName === 'Start')
+        this.$emit('getStartInput', (<HTMLInputElement>document.getElementById("start")).value);
+      else
+        this.$emit('getDestInput', (<HTMLInputElement>document.getElementById("dest")).value);
+    },
+  }
 });
 </script>
 
