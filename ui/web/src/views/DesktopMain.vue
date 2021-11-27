@@ -1,5 +1,9 @@
 <template>
-  <left-menu></left-menu>
+  <div class="app">
+    <div class="map-container">
+      <left-menu></left-menu>
+    </div>
+  </div>
 </template>
 
 <script lang="ts">

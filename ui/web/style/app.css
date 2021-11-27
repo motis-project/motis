@@ -557,8 +557,13 @@
 
 .swap-locations-btn {
   position: absolute;
-  right: 20px;
-  top: 60px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 95px;
+  top: 100px;
+  left: 0;
+  right: 0;
+  z-index: 100;
 }
 
 .swap-locations-btn input {
