@@ -1,5 +1,5 @@
 <template>
-    <InputField labelName="Start" iconType="place"/>
+    <InputField :show=false labelName="Start" iconType="place"/>
 </template>
 
 <script lang="ts">

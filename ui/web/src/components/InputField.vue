@@ -1,7 +1,7 @@
 <template>
     <div>
         <div>
-            <div v-show=show class="label">{{ labelName }}</div>
+            <div v-if=show class="label">{{ labelName }}</div>
             <div class="gb-input-group">
                 <div class="gb-input-icon">
                     <i class="icon">{{ iconType }}</i>
@@ -14,8 +14,8 @@
 
 
 <!-- How to use this component:
-    <InputField show: true labelName="Start" iconType="place"/>
-    to not display the labelName remove show: true
+    <InputField :show=true labelName="Start" iconType="place"/>
+    to not display the labelName set :show to false
 -->
 
 
@@ -28,7 +28,7 @@ export default defineComponent({
       labelName: String,
       iconType: String,
       show: Boolean,
-  }
+  },
 });
 </script>
 
