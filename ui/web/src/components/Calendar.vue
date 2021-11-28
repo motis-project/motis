@@ -79,6 +79,11 @@ export default defineComponent({
       for (let i = 0; i < 42; i++) {
         this.daysToDisplay.push(day);
         day = new Date(day.setDate(day.getDate() + 1));
+        if((i == 35 || i == 28) && day.getMonth() != this.currentMonth)
+        {
+          this.daysToDisplay.pop();
+          break;
+        }
         if (i < 7) {
           this.weekDayNames.push(day.toLocaleString("de-DE", { weekday: "short" }));
         }
