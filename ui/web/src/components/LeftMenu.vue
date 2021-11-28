@@ -12,14 +12,15 @@
                 <div :class="['mode', firstOptions.car ? 'enabled' : '']"><i class="icon">directions_car</i></div>
               </div>
             </div>
+            <calendar class="pure-u-1 pure-u-sm-12-24"></calendar>
           </div>
 
-          <div class="swap-locations-btn">
+          <button class="swap-locations-btn">
             <label class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select">
               <input type="checkbox" @click="swapStartDest" />
               <i class="icon">swap_vert</i>
             </label>
-          </div>
+          </button>
 
           <div class="pure-g-gutters">
             <div class="pure-u-1 pure-u-sm-12-24 from-location">
@@ -76,6 +77,7 @@ import { defineComponent } from "vue";
 import InputField from "./InputField.vue";
 import BlockWithCheckbox from "./BlockWithCheckbox.vue";
 import Slider from "./Slider.vue";
+import Calendar from './Calendar.vue'
 
 export default defineComponent({
   name: "LeftMenu",
@@ -83,6 +85,7 @@ export default defineComponent({
     InputField,
     BlockWithCheckbox,
     Slider,
+    Calendar
   },
   data() {
     return {
