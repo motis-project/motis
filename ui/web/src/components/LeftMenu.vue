@@ -33,6 +33,16 @@
             </div>
             <InputField labelName="Uhrzeit" iconType="schedule" :showLabel="true" :initInputText="time"
               class="pure-u-1 pure-u-1 pure-u-sm-9-24"  />
+            <div class="pure-u-1 pure-u-sm-3-24 time-option">
+              <div>
+                <input type="radio" id="search-forward" name="time-option" checked>
+                  <label for="search-forward">Abfahrt</label>
+              </div>
+              <div>
+                <input type="radio" id="search-backward" name="time-option">
+                <label for="search-backward">Ankunft</label>
+              </div>
+            </div>
           </div>
 
           <div class="mode-picker-editor visible" v-show="isOptionsWindowOpened">
