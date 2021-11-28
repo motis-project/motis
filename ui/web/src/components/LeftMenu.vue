@@ -1,5 +1,5 @@
 <template>
-  <div class="overlay-container">
+  <div :class="['overlay-container', isHidden ? 'hidden' : '']">
     <div class="overlay">
       <div id="overlay-content">
         <div id="search">
@@ -69,6 +69,14 @@
         </div>
       </div>
     </div>
+    <div class="overlay-tabs">
+      <div class="overlay-toggle">
+        <i class="icon" v-on:click="isHidden = !isHidden">arrow_drop_down</i>
+      </div>
+      <div class="trip-search-toggle">
+        <i class="icon">train</i>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -105,7 +113,8 @@ export default defineComponent({
         foot: true,
         bicycle: false,
         car: false
-      } as OptionsButtons
+      } as OptionsButtons,
+      isHidden: false,
     };
   },
   methods: {
