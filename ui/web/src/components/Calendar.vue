@@ -9,8 +9,10 @@
       @inputChanged="onFieldInput"
       @focus="calendarVisible = true"
       @blur="inputBluredHandler"
-      @decreaseClick="changeDay(-1)"
-      @increaseClick="changeDay(1)"
+      @decreaseClick="stopInterval(-1)"
+      @increaseClick="stopInterval(1)"
+      @decreaseMouseDown="mouseDown(-1)"
+      @increaseMouseDown="mouseDown(1)"
     ></input-field>
     <div class="paper calendar" v-show="calendarVisible" @mousedown="calendarClickedHandler">
       <div class="month">
@@ -57,6 +59,8 @@ export default defineComponent({
       calendarVisible: false,
       currentDate: {} as Date,
       calendarClicked: false,
+      timeout: 0,
+      interval: 0,
     };
   },
   created() {
@@ -129,6 +133,14 @@ export default defineComponent({
     dayClick(day : Date) {
       this.currentDate = day;
       this.calendarVisible = false;
+    },
+    mouseDown(value: number){
+      this.timeout = setTimeout(() => this.interval = setInterval(() => this.changeDay(value), 100) ,1000)
+    },
+    stopInterval(value: number){
+      clearInterval(this.interval);
+      clearTimeout(this.timeout)
+      this.changeDay(value);
     }
   },
 });

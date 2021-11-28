@@ -16,12 +16,12 @@
         />
         <div class="gb-input-widget" v-if="showArrows">
           <div class="day-buttons" >
-            <div @click="$emit('decreaseClick')">
+            <div @mouseup="$emit('decreaseClick')" @mousedown="$emit('decreaseMouseDown')">
               <a class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"
                 ><i class="icon">chevron_left</i></a
               >
             </div>
-            <div @click="$emit('increaseClick')">
+            <div @mouseup="$emit('increaseClick')" @mousedown="$emit('increaseMouseDown')">
               <a class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"
                 ><i class="icon">chevron_right</i></a
               >
