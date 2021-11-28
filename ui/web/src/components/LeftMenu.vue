@@ -31,8 +31,7 @@
                 <div :class="['mode', secondOptions.car ? 'enabled' : '']"><i class="icon">directions_car</i></div>
               </div>
             </div>
-            <InputField labelName="Uhrzeit" iconType="schedule" :showLabel="true" :initInputText="time"
-              class="pure-u-1 pure-u-1 pure-u-sm-9-24"  />
+            <InputField labelName="Uhrzeit" iconType="schedule" :showLabel="true" :initInputText="timeToDisplay" class="pure-u-1 pure-u-1 pure-u-sm-9-24" :showArrows="true" @decreaseClick="changeTime(-1)" @increaseClick="changeTime(1)"/>
             <div class="pure-u-1 pure-u-sm-3-24 time-option">
               <div>
                 <input type="radio" id="search-forward" name="time-option" checked>
@@ -109,7 +108,7 @@ export default defineComponent({
     return {
       start: '',
       destination: '',
-      time:  (new Date).getHours() + ":" + ("0" + (new Date).getMinutes()).slice(-2),
+      time: {} as Date,
       isOptionsWindowOpened: false,
       pressedOptions: {} as OptionsButtons,
       firstOptions: 
@@ -126,6 +125,15 @@ export default defineComponent({
       } as OptionsButtons,
       isHidden: false,
     };
+  },
+  created() {
+    let currentTime = new Date();
+    this.time = currentTime;
+  },
+  computed: {
+    timeToDisplay : function() : String {
+      return this.time.getHours() + ":" + ("0" + this.time.getMinutes()).slice(-2)
+    }
   },
   methods: {
     swapStartDest() {
@@ -149,7 +157,16 @@ export default defineComponent({
     },
     optionsWindowCloseClick() {
       this.isOptionsWindowOpened = false;
-    }
+    },
+    changeTime(change : number) {
+      this.time = new Date(
+        this.time.getFullYear(),
+        this.time.getMonth(),
+        this.time.getDay(),
+        this.time.getHours() + change,
+        this.time.getMinutes()
+      );
+    },
   },
 });
 
