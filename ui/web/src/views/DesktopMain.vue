@@ -1,34 +1,31 @@
 <template>
   <div class="app">
-    <div class="map-container">
-      <LeftMenu @searchHidden="searchFieldHidden = !searchFieldHidden"></LeftMenu>
-      <div id="station-search" :class="['', searchFieldHidden ? 'overlay-hidden' : '']">
-          <InputField labelName="Stationsearch" iconType="place" :showLabel="false" />
-            <div class="paper hide">
-              <ul class="proposals"></ul>
-            </div>
-        </div>
+    <LeftMenu @searchHidden="searchFieldHidden = !searchFieldHidden"></LeftMenu>
+    <div id="station-search" :class="['', searchFieldHidden ? 'overlay-hidden' : '']">
+      <InputField labelName="Stationsearch" iconType="place" :showLabel="false" />
+      <div class="paper hide">
+        <ul class="proposals"></ul>
       </div>
     </div>
+  </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
-import LeftMenu from '../components/LeftMenu.vue'
-import InputField from '../components/InputField.vue'
+import { defineComponent } from "vue";
+import LeftMenu from "../components/LeftMenu.vue";
+import InputField from "../components/InputField.vue";
 
 export default defineComponent({
-  name: 'DesktopMain',
-  components:
-  {
+  name: "DesktopMain",
+  components: {
     LeftMenu,
-    InputField
+    InputField,
   },
   data() {
     return {
-      searchFieldHidden: false
-    }
-  }
+      searchFieldHidden: false,
+    };
+  },
 });
 </script>
 

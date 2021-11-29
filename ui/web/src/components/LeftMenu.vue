@@ -1,11 +1,17 @@
 <template>
-  <div :class="['overlay-container', isHidden ? 'hidden' : '']">
+  <div :class="['overlay-container', isOverlayHidden ? 'hidden' : '']">
     <div class="overlay">
       <div id="overlay-content">
         <div id="search">
           <div class="pure-g-gutters">
             <div class="pure-u-1 pure-u-sm-12-24 from-location">
-              <InputField labelName="Start" iconType="place" :showLabel="true" :initInputText="start" @inputChanged="setStartInput" />
+              <InputField
+                labelName="Start"
+                iconType="place"
+                :showLabel="true"
+                :initInputText="start"
+                @inputChanged="setStartInput"
+              />
               <div class="mode-picker-btn" @click="optinsButton1Click">
                 <div :class="['mode', firstOptions.foot ? 'enabled' : '']"><i class="icon">directions_walk</i></div>
                 <div :class="['mode', firstOptions.bicycle ? 'enabled' : '']"><i class="icon">directions_bike</i></div>
@@ -24,21 +30,36 @@
 
           <div class="pure-g-gutters">
             <div class="pure-u-1 pure-u-sm-12-24 from-location">
-              <InputField labelName="Ziel" iconType="place" :showLabel="true" :initInputText="destination" @inputChanged="setDestInput" />
+              <InputField
+                labelName="Ziel"
+                iconType="place"
+                :showLabel="true"
+                :initInputText="destination"
+                @inputChanged="setDestInput"
+              />
               <div class="mode-picker-btn" @click="optinsButton2Click">
                 <div :class="['mode', secondOptions.foot ? 'enabled' : '']"><i class="icon">directions_walk</i></div>
                 <div :class="['mode', secondOptions.bicycle ? 'enabled' : '']"><i class="icon">directions_bike</i></div>
                 <div :class="['mode', secondOptions.car ? 'enabled' : '']"><i class="icon">directions_car</i></div>
               </div>
             </div>
-            <InputField labelName="Uhrzeit" iconType="schedule" :showLabel="true" :initInputText="timeToDisplay" class="pure-u-1 pure-u-1 pure-u-sm-9-24" :showArrows="true" @decreaseClick="changeTime(-1)" @increaseClick="changeTime(1)"/>
+            <InputField
+              labelName="Uhrzeit"
+              iconType="schedule"
+              :showLabel="true"
+              :initInputText="timeToDisplay"
+              class="pure-u-1 pure-u-1 pure-u-sm-9-24"
+              :showArrows="true"
+              @decreaseClick="changeTime(-1)"
+              @increaseClick="changeTime(1)"
+            />
             <div class="pure-u-1 pure-u-sm-3-24 time-option">
               <div>
-                <input type="radio" id="search-forward" name="time-option" checked>
-                  <label for="search-forward">Abfahrt</label>
+                <input type="radio" id="search-forward" name="time-option" checked />
+                <label for="search-forward">Abfahrt</label>
               </div>
               <div>
-                <input type="radio" id="search-backward" name="time-option">
+                <input type="radio" id="search-backward" name="time-option" />
                 <label for="search-backward">Ankunft</label>
               </div>
             </div>
@@ -64,7 +85,11 @@
                 </div>
                 <Slider></Slider>
               </BlockWithCheckbox>
-              <BlockWithCheckbox title="Fahrrad" :isChecked="pressedOptions.bicycle" @isCheckedChanged="pressedOptions.bicycle = $event">
+              <BlockWithCheckbox
+                title="Fahrrad"
+                :isChecked="pressedOptions.bicycle"
+                @isCheckedChanged="pressedOptions.bicycle = $event"
+              >
                 <Slider></Slider>
               </BlockWithCheckbox>
               <BlockWithCheckbox title="Auto" :isChecked="pressedOptions.car" @isCheckedChanged="pressedOptions.car = $event">
@@ -77,13 +102,46 @@
           </div>
         </div>
       </div>
+      <div :class="['sub-overlay', isSubOverlayHidden ? 'hidden' : '']">
+        <div id="sub-overlay-content">
+          <div class="trip-search">
+            <div class="header">
+              <div id="trip-search-form">
+                <div class="pure-g gutters">
+                  <InputField
+                    class="pure-u-1 pure-u-sm-1-2 train-nr"
+                    labelName="Zugnummer"
+                    iconType="train"
+                    :showLabel="true"
+                  ></InputField>
+                </div>
+                <div class="pure-g gutters">
+                  <Calendar class="pure-u-1 pure-u-sm-12-24 to-location"></Calendar>
+                  <InputField
+                    labelName="Uhrzeit"
+                    iconType="schedule"
+                    :showLabel="true"
+                    :initInputText="timeToDisplay"
+                    class="pure-u-1 pure-u-1 pure-u-sm-12-24"
+                    :showArrows="true"
+                    @decreaseClick="changeTime(-1)"
+                    @increaseClick="changeTime(1)"
+                  />
+                </div>
+              </div>
+            </div>
+            <div class="trips"></div>
+          </div>
+        </div>
+        <div class="sub-overlay-close" @click="isSubOverlayHidden = true"><i class="icon">close</i></div>
+      </div>
     </div>
     <div class="overlay-tabs">
       <div class="overlay-toggle">
-        <i class="icon" v-on:click="isHidden = !isHidden, $emit('searchHidden')" >arrow_drop_down</i>
+        <i class="icon" v-on:click="(isOverlayHidden = !isOverlayHidden), $emit('searchHidden')">arrow_drop_down</i>
       </div>
-      <div class="trip-search-toggle">
-        <i class="icon">train</i>
+      <div :class="['trip-search-toggle', isSubOverlayHidden ? '' : 'enabled']">
+        <i class="icon" @click="isSubOverlayHidden = !isSubOverlayHidden">train</i>
       </div>
     </div>
   </div>
@@ -94,7 +152,7 @@ import { defineComponent } from "vue";
 import InputField from "./InputField.vue";
 import BlockWithCheckbox from "./BlockWithCheckbox.vue";
 import Slider from "./Slider.vue";
-import Calendar from './Calendar.vue'
+import Calendar from "./Calendar.vue";
 
 export default defineComponent({
   name: "LeftMenu",
@@ -102,32 +160,31 @@ export default defineComponent({
     InputField,
     BlockWithCheckbox,
     Slider,
-    Calendar
+    Calendar,
   },
   data() {
     return {
-      start: '',
-      destination: '',
+      start: "",
+      destination: "",
       time: {} as Date,
       isOptionsWindowOpened: false,
       pressedOptions: {
         foot: false,
         bicycle: false,
-        car: false
+        car: false,
       } as OptionsButtons,
-      firstOptions: 
-      {
+      firstOptions: {
         foot: true,
         bicycle: false,
-        car: false
+        car: false,
       } as OptionsButtons,
-      secondOptions: 
-      {
+      secondOptions: {
         foot: true,
         bicycle: false,
-        car: false
+        car: false,
       } as OptionsButtons,
-      isHidden: false,
+      isOverlayHidden: false,
+      isSubOverlayHidden: true
     };
   },
   created() {
@@ -135,9 +192,9 @@ export default defineComponent({
     this.time = currentTime;
   },
   computed: {
-    timeToDisplay : function() : String {
-      return this.time.getHours() + ":" + ("0" + this.time.getMinutes()).slice(-2)
-    }
+    timeToDisplay: function (): String {
+      return this.time.getHours() + ":" + ("0" + this.time.getMinutes()).slice(-2);
+    },
   },
   methods: {
     swapStartDest() {
@@ -162,7 +219,7 @@ export default defineComponent({
     optionsWindowCloseClick() {
       this.isOptionsWindowOpened = false;
     },
-    changeTime(change : number) {
+    changeTime(change: number) {
       this.time = new Date(
         this.time.getFullYear(),
         this.time.getMonth(),
@@ -175,9 +232,9 @@ export default defineComponent({
 });
 
 interface OptionsButtons {
-  foot: Boolean,
-  bicycle: Boolean,
-  car: Boolean
+  foot: Boolean;
+  bicycle: Boolean;
+  car: Boolean;
 }
 </script>
 
