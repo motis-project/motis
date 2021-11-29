@@ -1,6 +1,6 @@
 <template>
   <div>
-    <input-field
+    <InputField
       :showLabel="true"
       labelName="Datum"
       iconType="event"
@@ -13,7 +13,7 @@
       @increaseClick="stopInterval(1)"
       @decreaseMouseDown="mouseDown(-1)"
       @increaseMouseDown="mouseDown(1)"
-    ></input-field>
+    ></InputField>
     <div class="paper calendar" v-show="calendarVisible" @mousedown="calendarClickedHandler">
       <div class="month">
         <i class="icon" @click="changeMonth(-1)">chevron_left</i>

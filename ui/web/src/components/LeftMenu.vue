@@ -12,7 +12,7 @@
                 <div :class="['mode', firstOptions.car ? 'enabled' : '']"><i class="icon">directions_car</i></div>
               </div>
             </div>
-            <calendar class="pure-u-1 pure-u-sm-12-24"></calendar>
+            <Calendar class="pure-u-1 pure-u-sm-12-24"></Calendar>
           </div>
 
           <button class="swap-locations-btn">

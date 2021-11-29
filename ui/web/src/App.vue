@@ -1,5 +1,5 @@
 <template>
-  <desktop-main></desktop-main>
+  <DesktopMain></DesktopMain>
 </template>
 
 <script lang="ts">

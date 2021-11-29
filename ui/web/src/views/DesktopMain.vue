@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <div class="map-container">
-      <left-menu></left-menu>
+      <LeftMenu></LeftMenu>
     </div>
   </div>
 </template>
