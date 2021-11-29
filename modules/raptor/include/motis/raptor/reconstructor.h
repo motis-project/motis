@@ -73,13 +73,17 @@ struct intermediate_journey {
         }
       }
 
-      // We only have a single lcon_ptr array for the forward search,
-      // therefore we need to adjust the index
+      auto const& get_d_track = [&](auto&& lcon) {
+        if (transports_.empty() || transports_.back().is_walk()) {
+          return lcon->full_con_->d_track_;
+        } else {
+          return transports_.back().con_->full_con_->d_track_;
+        }
+      };
+
       auto const lcon = raptor_sched.lcon_ptr_[stop_time_idx];
       auto const a_track = lcon->full_con_->a_track_;
-      auto const d_track = transports_.empty()
-                               ? lcon->full_con_->d_track_
-                               : transports_.back().con_->full_con_->d_track_;
+      auto const d_track = get_d_track(lcon);
 
       if (!valid(a_time)) {
         a_time = lcon->a_time_;
