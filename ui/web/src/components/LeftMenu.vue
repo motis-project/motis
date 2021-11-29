@@ -80,7 +80,7 @@
     </div>
     <div class="overlay-tabs">
       <div class="overlay-toggle">
-        <i class="icon" v-on:click="isHidden = !isHidden">arrow_drop_down</i>
+        <i class="icon" v-on:click="isHidden = !isHidden, $emit('searchHidden')" >arrow_drop_down</i>
       </div>
       <div class="trip-search-toggle">
         <i class="icon">train</i>
