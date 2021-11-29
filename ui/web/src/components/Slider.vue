@@ -3,7 +3,7 @@
     <div class="label">Maximale Dauer (Minuten)</div>
     <div class="numeric slider control">
       <input v-model="sliderValue" type="range" min="0" max="30" step="1" />
-      <input v-bind:value="sliderValue" type="text" />
+      <input v-model="sliderValueComputed" type="text" />
     </div>
   </div>
 </template>
@@ -18,5 +18,20 @@ export default defineComponent({
       sliderValue: 15,
     };
   },
+  computed: {
+    sliderValueComputed: {
+      get: function() : string {
+        return this.sliderValue.toString();
+      },
+      set: function(value: string) {
+        console.log(value);
+        let n = +value;
+        if(value != '' && !isNaN(n)) {
+          this.sliderValue = n - 1;
+          this.sliderValue = n > 30 ? 30 : (n < 0 ? 0 : n);
+        }
+      }
+    }
+  }
 });
 </script>

@@ -2,7 +2,7 @@
   <fieldset class="mode walk">
     <legend class="mode-header">
       <label>
-        <input type="checkbox" :checked="isChecked"/>
+        <input type="checkbox" :checked="isChecked" @input="$emit('isCheckedChanged', $event.target.checked)"/>
         {{title}}
       </label>
     </legend>

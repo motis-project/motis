@@ -50,7 +50,7 @@
               <div class="title">Verkehrsmittel am Start</div>
             </div>
             <div class="content">
-              <BlockWithCheckbox title="Fußweg" :isChecked="pressedOptions.foot">
+              <BlockWithCheckbox title="Fußweg" :isChecked="pressedOptions.foot" @isCheckedChanged="pressedOptions.foot = $event">
                 <div class="option">
                   <div class="label">Profil</div>
                   <div class="profile-picker">
@@ -64,10 +64,10 @@
                 </div>
                 <Slider></Slider>
               </BlockWithCheckbox>
-              <BlockWithCheckbox title="Fahrrad" :isChecked="pressedOptions.bicycle">
+              <BlockWithCheckbox title="Fahrrad" :isChecked="pressedOptions.bicycle" @isCheckedChanged="pressedOptions.bicycle = $event">
                 <Slider></Slider>
               </BlockWithCheckbox>
-              <BlockWithCheckbox title="Auto" :isChecked="pressedOptions.car">
+              <BlockWithCheckbox title="Auto" :isChecked="pressedOptions.car" @isCheckedChanged="pressedOptions.car = $event">
                 <Slider></Slider>
                 <div class="option">
                   <label> <input type="checkbox" />Parkplätze verwenden </label>
@@ -110,7 +110,11 @@ export default defineComponent({
       destination: '',
       time: {} as Date,
       isOptionsWindowOpened: false,
-      pressedOptions: {} as OptionsButtons,
+      pressedOptions: {
+        foot: false,
+        bicycle: false,
+        car: false
+      } as OptionsButtons,
       firstOptions: 
       {
         foot: true,
