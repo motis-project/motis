@@ -51,12 +51,6 @@ struct full_trip_id {
   secondary_trip_id secondary_;
 };
 
-struct gtfs_trip_id {
-  CISTA_COMPARABLE()
-  mcd::string trip_id_;
-  unixtime start_date_{0};
-};
-
 struct trip_info;
 
 struct concrete_trip {
@@ -73,7 +67,8 @@ struct trip_info {
   struct route_edge {
     route_edge() = default;
 
-    route_edge(edge const* e) {  // NOLINT
+    route_edge(edge const* e, day_idx_t const day_offset = 0U)
+        : day_offset_{day_offset} {  // NOLINT
       if (e != nullptr) {
         route_node_ = e->from_;
         for (auto i = 0U; i < route_node_->edges_.size(); ++i) {
@@ -87,7 +82,8 @@ struct trip_info {
     }
 
 #if defined(MOTIS_SCHEDULE_MODE_OFFSET)
-    route_edge(ptr<edge const> e) : route_edge(e.get()) {}  // NOLINT
+    route_edge(ptr<edge const> e, day_idx_t const day_offset = 0U)
+        : route_edge{e.get(), day_offset} {}  // NOLINT
 #endif
 
     friend bool operator==(route_edge const& a, route_edge const& b) {
@@ -118,6 +114,7 @@ struct trip_info {
 
     ptr<node> route_node_{nullptr};
     uint32_t outgoing_edge_idx_{0};
+    day_idx_t day_offset_{0};
   };
 
   auto concrete_trips() const {

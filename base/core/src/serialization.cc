@@ -13,6 +13,23 @@ constexpr auto const MODE =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_VERSION;
 
 template <typename Ctx>
+inline void serialize(Ctx& c, bitfield_idx_or_ptr const* origin,
+                      cista::offset_t const offset) {
+  serialize(c, &origin->bitfield_idx_,
+            offset + offsetof(bitfield_idx_or_ptr, bitfield_idx_));
+}
+
+template <typename Ctx>
+inline void deserialize(Ctx const& c, bitfield_idx_or_ptr* el) {
+  deserialize(c, &el->bitfield_idx_);
+}
+
+cista::hash_t type_hash(bitfield_idx_or_ptr const& el, cista::hash_t const h,
+                        std::map<cista::hash_t, unsigned>& done) {
+  return cista::hash_combine(cista::type_hash(el.bitfield_idx_, h, done));
+}
+
+template <typename Ctx>
 inline void serialize(Ctx& c, light_connection const* origin,
                       cista::offset_t const offset) {
   serialize(c, &origin->full_con_,

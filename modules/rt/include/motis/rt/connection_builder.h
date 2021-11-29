@@ -29,7 +29,7 @@ inline connection_info const* get_con_info(
     std::map<connection_info, connection_info const*>& con_infos,
     std::string const& category, std::string const& line_id, int train_nr) {
   connection_info con_info;
-  con_info.family_ = get_family(sched, category);
+  con_info.category_ = get_family(sched, category);
   con_info.line_identifier_ = line_id;
   con_info.train_nr_ = train_nr;
 
@@ -65,7 +65,7 @@ inline connection* get_full_con(schedule& sched,
   c.con_info_ = con_info;
   c.d_track_ = dep_track;
   c.a_track_ = arr_track;
-  c.clasz_ = get_clasz(sched.categories_[con_info->family_]->name_);
+  c.clasz_ = get_clasz(sched.categories_[con_info->category_]->name_);
   sched.full_connections_.emplace_back(mcd::make_unique<connection>(c));
   return sched.full_connections_.back().get();
 }

@@ -138,7 +138,7 @@ void enum_trip_candidates(schedule const& sched, std::uint32_t from_station_idx,
         }
         auto const current_train_nr = get_train_nr(lc, train_nr);
         auto const& current_category =
-            sched.categories_[lc->full_con_->con_info_->family_]->name_;
+            sched.categories_[lc->full_con_->con_info_->category_]->name_;
         auto const enter_diff = static_cast<int>(lc->d_time_) - enter_time;
 
         for (auto trp : *sched.merged_trips_.at(lc->trips_)) {

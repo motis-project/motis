@@ -81,16 +81,19 @@ std::optional<concrete_trip> find_trip(schedule const& sched,
 }
 
 std::optional<concrete_trip> get_trip(schedule const& sched,
-                                      std::string const& trip_id,
+                                      mcd::string const& trip_id,
                                       unixtime const date) {
-  if (auto it = sched.gtfs_trip_ids_.find({trip_id, date});
-      it == end(sched.gtfs_trip_ids_) || it->first.trip_id_ != trip_id ||
-      it->first.start_date_ != date) {
-    throw std::runtime_error{
-        "Could not find trip for the given trip id and day!"};
-  } else {
-    return concrete_trip{it->second, unix_to_motistime(sched, date).day()};
-  }
+  auto const it = sched.gtfs_trip_ids_.find(trip_id);
+  utl::verify(it != end(sched.gtfs_trip_ids_), "trip {} not found", trip_id);
+
+  auto const t = unix_to_motistime(sched, date);
+  utl::verify(t.mam() == 0, "get_trip({}): {} is not a day", trip_id, date);
+  utl::verify(!it->second->edges_->empty(), "trip {} has no edges", trip_id);
+  utl::verify(it->second->edges_->front()->operates_on_day(t.day()),
+              "trip {} doesn't operate on day {}", trip_id,
+              format_unix_time(date));
+
+  return concrete_trip{it->second, t.day()};
 }
 
 }  // namespace motis

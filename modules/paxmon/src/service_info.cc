@@ -13,7 +13,7 @@ namespace motis::paxmon {
 service_info get_service_info(schedule const& sched, connection const& fc,
                               connection_info const* ci) {
   return service_info{get_service_name(sched, ci),
-                      sched.categories_.at(ci->family_)->name_.view(),
+                      sched.categories_.at(ci->category_)->name_.view(),
                       output_train_nr(ci->train_nr_, ci->original_train_nr_),
                       ci->line_identifier_.view(),
                       ci->provider_ != nullptr

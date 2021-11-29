@@ -138,12 +138,15 @@ using route = mcd::vector<route_section>;
 struct graph_builder {
   graph_builder(schedule&, loader_options const&);
 
-  //  full_trip_id get_full_trip_id(Service const* s, int day, int section_idx =
-  //  0);
+  full_trip_id get_full_trip_id(Service const* s,
+                                mcd::vector<time> const& rel_utc_times,
+                                size_t section_idx = 0);
 
-  //  merged_trips_idx create_merged_trips(Service const* s, int day_idx);
+  merged_trips_idx create_merged_trips(Service const*,
+                                       mcd::vector<time> const& rel_utc_times);
 
-  //  trip_info* register_service(Service const* s);
+  trip_info* register_service(Service const* s,
+                              mcd::vector<time> const& rel_utc_times);
 
   void add_services(
       flatbuffers64::Vector<flatbuffers64::Offset<Service>> const* services);
@@ -155,8 +158,12 @@ struct graph_builder {
 
   void index_first_route_node(route const& r);
 
+  bool has_traffic_within_timespan(bitfield const& traffic_days,
+                                   day_idx_t start_idx,
+                                   day_idx_t end_idx) const;
+
   void add_route_services(
-      mcd::vector<std::pair<Service const*, bitfield>> const& services);
+      mcd::vector<std::pair<Service const*, bitfield_idx_t>> const& services);
 
   void add_expanded_trips(route const& r);
 
@@ -194,24 +201,18 @@ struct graph_builder {
       bitfield const& traffic_days, day_idx_t start_idx, day_idx_t end_idx,
       Service const* s);
 
-  bitfield const& get_or_create_bitfield(
+  bitfield_idx_t store_bitfield(bitfield const&);
+  bitfield_idx_t get_or_create_bitfield(
       flatbuffers64::String const* serialized_bitfield);
 
-  size_t get_or_create_bitfield(bitfield const&);
-
-  void read_attributes(
-      int day,
-      flatbuffers64::Vector<flatbuffers64::Offset<Attribute>> const* attributes,
-      mcd::vector<ptr<attribute const>>& active_attributes);
-
   mcd::string const* get_or_create_direction(Direction const* dir);
+  mcd::string const* get_or_create_string(flatbuffers64::String const* str);
 
   provider const* get_or_create_provider(Provider const* p);
 
   int get_or_create_category_index(Category const* c);
 
-  int get_or_create_track(
-      int day,
+  uint32_t get_or_create_track(
       flatbuffers64::Vector<flatbuffers64::Offset<Track>> const* tracks);
 
   void write_trip_edges(route const& r);
@@ -236,7 +237,7 @@ struct graph_builder {
   std::map<Category const*, int> categories_;
   std::map<std::string, int> tracks_;
   std::map<AttributeInfo const*, attribute*> attributes_;
-  std::map<flatbuffers64::String const*, mcd::string const*> directions_;
+  std::map<flatbuffers64::String const*, mcd::string const*> strings_;
   std::map<Provider const*, provider const*> providers_;
   mcd::hash_map<Station const*, station_node*> stations_;
   mcd::hash_map<flatbuffers64::String const*, bitfield> bitfields_;

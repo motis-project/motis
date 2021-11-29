@@ -54,7 +54,7 @@ void write_trip(std::ofstream& out, schedule const& sched,
         << lc.a_time_ << "," << remaining_capacity;
     if (include_trip_info) {
       out << ","
-          << sched.categories_.at(lc.full_con_->con_info_->family_)
+          << sched.categories_.at(lc.full_con_->con_info_->category_)
                  ->name_.view()
           << "," << lc.full_con_->con_info_->train_nr_;
     }

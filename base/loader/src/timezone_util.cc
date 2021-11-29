@@ -105,22 +105,6 @@ time get_event_time(tz_cache& cache, std::time_t const schedule_begin,
   }
 }
 
-time get_adjusted_event_time(tz_cache& cache, std::time_t const schedule_begin,
-                             int local_time, int day_idx, timezone const* tz,
-                             char const* stop_tz, char const* provider_tz) {
-  auto const t = get_event_time(cache, schedule_begin, day_idx, local_time, tz,
-                                stop_tz, provider_tz);
-  if (t != INVALID_TIME) {
-    return t;
-  }
-
-  auto const adjusted =
-      get_event_time(cache, schedule_begin, day_idx, local_time + kAdjust, tz,
-                     stop_tz, provider_tz);
-  utl::verify(adjusted != INVALID_TIME, "adjusted needs to be valid");
-  return adjusted;
-}
-
 bool is_local_time_in_season(day_idx_t const day, mam_t mam,
                              timezone const* tz) {
   auto const minutes_after_schedule_begin = time{day, mam};

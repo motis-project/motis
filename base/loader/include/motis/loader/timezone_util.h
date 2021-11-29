@@ -45,11 +45,6 @@ time get_event_time(tz_cache&, std::time_t schedule_begin, int day_idx,
                     char const* stop_tz = nullptr,
                     char const* provider_tz = nullptr);
 
-time get_adjusted_event_time(tz_cache&, std::time_t schedule_begin,
-                             uint32_t local_time, int day_idx,
-                             timezone const* tz, char const* stop_tz = nullptr,
-                             char const* provider_tz = nullptr);
-
 // TODO(felix): add parameters for provider tz string and stop tz string to
 // support GTFS -> how to extract season begin, general offset and season begin,
 // end for Howard Hinnant's date library tz objects?

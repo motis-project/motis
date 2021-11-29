@@ -12,12 +12,12 @@ inline flatbuffers::Offset<Transport> to_fbs(
     connection_info const* ci, trip const* trp, int16_t from_stop_idx = 0,
     int16_t to_stop_idx = 0) {
   auto const range = Range{from_stop_idx, to_stop_idx};
-  auto const& cat_name = sched.categories_.at(ci->family_)->name_;
+  auto const& cat_name = sched.categories_.at(ci->category_)->name_;
   auto const clasz_it = sched.classes_.find(cat_name);
   auto const clasz =
       clasz_it == end(sched.classes_) ? service_class::OTHER : clasz_it->second;
   return CreateTransport(
-      fbb, &range, fbb.CreateString(cat_name), ci->family_,
+      fbb, &range, fbb.CreateString(cat_name), ci->category_,
       static_cast<service_class_t>(clasz),
       output_train_nr(ci->train_nr_, ci->original_train_nr_),
       fbb.CreateString(ci->line_identifier_),

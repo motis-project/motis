@@ -76,7 +76,7 @@ public:
        size_t const route_traffic_days)
       : from_{from}, to_{to} {
     m_.type_ = edge_type::ROUTE_EDGE;
-    m_.route_edge_.bitfield_idx_ = route_traffic_days;
+    m_.route_edge_.traffic_days_ = route_traffic_days;
     m_.route_edge_.init_empty();
     m_.route_edge_.conns_.set(begin(connections), end(connections));
     std::sort(begin(m_.route_edge_.conns_), end(m_.route_edge_.conns_),
@@ -90,7 +90,7 @@ public:
       : from_{from}, to_{to} {
     m_.type_ = (dir == search_dir::FWD ? edge_type::FWD_ROUTE_EDGE
                                        : edge_type::BWD_ROUTE_EDGE);
-    m_.route_edge_.bitfield_idx_ = route_traffic_days;
+    m_.route_edge_.traffic_days_ = route_traffic_days;
     m_.route_edge_.init_empty();
     m_.route_edge_.conns_.set(begin(connections), std::end(connections));
     dir == search_dir::FWD ? std::sort(begin(m_.route_edge_.conns_),
@@ -498,10 +498,7 @@ public:
     struct re {
       edge_type type_padding_;
       mcd::vector<light_connection> conns_;
-      union {
-        size_t bitfield_idx_;
-        bitfield const* traffic_days_;
-      };
+      bitfield_idx_or_ptr traffic_days_;
 
       void init_empty() { new (&conns_) mcd::vector<light_connection>(); }
     } route_edge_;

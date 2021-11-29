@@ -23,18 +23,23 @@
 #include "motis/core/schedule/nodes.h"
 #include "motis/core/schedule/provider.h"
 #include "motis/core/schedule/station.h"
+#include "motis/core/schedule/traffic_day_info.h"
 #include "motis/core/schedule/trip.h"
 #include "motis/core/schedule/waiting_time_rules.h"
 
 namespace motis {
 
 struct schedule {
+  using track_infos = traffic_day_info<ptr<mcd::string const>>;
+
   schedule() = default;
   schedule(schedule&&) = delete;
   schedule(schedule const&) = delete;
   schedule& operator=(schedule&&) = delete;
   schedule& operator=(schedule const&) = delete;
   ~schedule() = default;
+
+  mcd::string empty_string_;
 
   unixtime loaded_begin_{0}, loaded_end_{0};
   unixtime schedule_begin_{0}, schedule_end_{0};
@@ -46,7 +51,6 @@ struct schedule {
   mcd::hash_map<mcd::string, ptr<station>> eva_to_station_;
   mcd::hash_map<mcd::string, ptr<station>> ds100_to_station_;
   mcd::hash_map<mcd::string, service_class> classes_;
-  mcd::vector<mcd::string> tracks_;
   constant_graph travel_time_lower_bounds_fwd_;
   constant_graph travel_time_lower_bounds_bwd_;
   constant_graph transfers_lower_bounds_fwd_;
@@ -61,14 +65,16 @@ struct schedule {
 
   mcd::vector<mcd::unique_ptr<connection>> full_connections_;
   mcd::vector<mcd::unique_ptr<connection_info>> connection_infos_;
-  mcd::vector<mcd::unique_ptr<attribute>> attributes_;
+  mcd::vector<mcd::unique_ptr<attribute>> attribute_mem_;
+  mcd::vector<track_infos> tracks_{track_infos(&empty_string_)};
+  mcd::vector<attribute> attributes_;
   mcd::vector<mcd::unique_ptr<category>> categories_;
   mcd::vector<mcd::unique_ptr<provider>> providers_;
-  mcd::vector<mcd::unique_ptr<mcd::string>> directions_;
+  mcd::vector<mcd::unique_ptr<mcd::string>> string_mem_;
   mcd::vector<mcd::unique_ptr<timezone>> timezones_;
   mcd::vector<bitfield> bitfields_;
 
-  mcd::hash_map<gtfs_trip_id, ptr<trip_info const>> gtfs_trip_ids_;
+  mcd::hash_map<mcd::string, ptr<trip_info const>> gtfs_trip_ids_;
   mcd::vector<mcd::pair<primary_trip_id, ptr<trip_info>>> trips_;
   mcd::vector<mcd::unique_ptr<trip_info>> trip_mem_;
   mcd::vector<mcd::unique_ptr<mcd::vector<trip_info::route_edge>>> trip_edges_;
