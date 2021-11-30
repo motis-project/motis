@@ -22,9 +22,7 @@ namespace routing::output {
 template <typename Label>
 journey labels_to_journey(schedule const& sched, Label* label,
                           search_dir const dir) {
-  auto parsed = parse_label_chain(sched, label, dir);
-  std::vector<intermediate::stop>& s = parsed.first;
-  std::vector<intermediate::transport> const& t = parsed.second;
+  auto [s, t] = parse_label_chain(sched, label, dir);
   update_walk_times(s, t);
 
   journey j;

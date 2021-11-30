@@ -296,7 +296,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
         if (current.connection_) {
           transports.emplace_back(static_cast<unsigned int>(stop_index),
                                   static_cast<unsigned int>(stop_index) + 1,
-                                  current.connection_, 0U /* TODO(felix) */);
+                                  current.connection_, current.day_);
         }
 
         // do not collect the last connection route node.

@@ -5,6 +5,7 @@
 #include "boost/program_options.hpp"
 
 #include "utl/to_vec.h"
+#include "utl/zip.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/common/timing.h"
@@ -110,11 +111,13 @@ msg_ptr routing::trip_to_connection(msg_ptr const& msg) {
   auto const dep_time = trp.get_first_dep_time();
 
   auto const make_label = [&](label* pred, edge const* e,
-                              light_connection const* lcon, time now) {
+                              light_connection const* lcon, day_idx_t const day,
+                              time now) {
     auto l = label();
     l.pred_ = pred;
     l.edge_ = e;
     l.connection_ = lcon;
+    l.day_ = day;
     l.start_ = dep_time;
     l.now_ = now;
     l.dominated_ = false;
@@ -122,18 +125,21 @@ msg_ptr routing::trip_to_connection(msg_ptr const& msg) {
   };
 
   auto labels = std::vector<label>{trp.trp_->edges_->size() + 3};
-  labels[0] = make_label(nullptr, &e_0, nullptr, dep_time);
-  labels[1] = make_label(&labels[0], &e_1, nullptr, dep_time);
+  labels[0] = make_label(nullptr, &e_0, nullptr, day_idx_t{}, dep_time);
+  labels[1] = make_label(&labels[0], &e_1, nullptr, day_idx_t{}, dep_time);
 
   int i = 2;
-  for (auto const& e : *trp.trp_->edges_) {
+  for (auto const& [e, day_offset] :
+       utl::zip(*trp.trp_->edges_, trp.trp_->day_offsets_)) {
     auto const& lcon = get_lcon(e, trp.trp_->lcon_idx_);
-    labels[i] = make_label(&labels[i - 1], e, &lcon,
-                           lcon.event_time(event_type::ARR, trp.day_idx_));
+    auto const day = trp.day_idx_ + day_offset;
+    labels[i] = make_label(&labels[i - 1], e, &lcon, day,
+                           lcon.event_time(event_type::ARR, day));
     ++i;
   }
 
-  labels[i] = make_label(&labels[i - 1], &e_n, nullptr, labels[i - 1].now_);
+  labels[i] = make_label(&labels[i - 1], &e_n, nullptr, day_idx_t{},
+                         labels[i - 1].now_);
 
   message_creator fbb;
   fbb.create_and_finish(

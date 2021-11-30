@@ -22,8 +22,10 @@ struct edge_cost {
         transfer_(false),
         accessibility_(0) {}
 
-  edge_cost(duration_t time, light_connection const* c)
+  edge_cost(duration_t const time, light_connection const* c,
+            day_idx_t const day)
       : connection_(c),
+        day_(day),
         time_(time),
         price_(0),
         transfer_(false),
@@ -40,6 +42,7 @@ struct edge_cost {
   bool is_valid() const { return time_ != INVALID_DURATION; }
 
   light_connection const* connection_;
+  day_idx_t day_;
   duration_t time_;
   uint16_t price_;
   bool transfer_;
@@ -414,8 +417,7 @@ public:
   }
 
   int get_mumo_id() const {
-    assert(type() == edge_type::MUMO_EDGE);
-    return m_.foot_edge_.mumo_id_;
+    return type() == edge_type::MUMO_EDGE ? m_.foot_edge_.mumo_id_ : -1;
   }
 
   inline bool empty() const {

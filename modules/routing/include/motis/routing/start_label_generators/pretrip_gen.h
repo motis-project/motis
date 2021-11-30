@@ -22,7 +22,7 @@ struct pretrip_gen {
                                       std::vector<edge> const& meta_edges,
                                       std::vector<edge> const& query_edges,
                                       time interval_begin, time interval_end,
-                                      light_connection const*,
+                                      light_connection const*, day_idx_t const,
                                       bool starting_footpaths) {
     std::vector<Label*> labels;
     auto const start = sched.station_nodes_.at(0).get();

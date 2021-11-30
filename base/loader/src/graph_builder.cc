@@ -77,10 +77,16 @@ merged_trips_idx graph_builder::create_merged_trips(
 
 trip_info* graph_builder::register_service(
     Service const* s, mcd::vector<time> const& rel_utc_times) {
+  auto day_offsets = mcd::vector<day_idx_t>{};
+  day_offsets.resize(s->sections()->size());
+  for (auto i = 0; i != rel_utc_times.size(); i += 2) {
+    day_offsets[i / 2] = rel_utc_times[i].day();
+  }
+
   auto const stored =
       sched_.trip_mem_
           .emplace_back(mcd::make_unique<trip_info>(
-              get_full_trip_id(s, rel_utc_times), nullptr, 0U,
+              get_full_trip_id(s, rel_utc_times), nullptr, day_offsets, 0U,
               s->debug() == nullptr
                   ? trip_debug{}
                   : trip_debug{utl::get_or_create(
@@ -552,17 +558,14 @@ light_connection graph_builder::section_to_connection(
   }
 
   return light_connection{
-      utc_mam_dep,
-      utc_mam_arr,
-      store_bitfield(con_traffic_days),
+      utc_mam_dep, utc_mam_arr, store_bitfield(con_traffic_days),
       mcd::set_get_or_create(connections_, &con_,
                              [&]() {
                                sched_.full_connections_.emplace_back(
                                    mcd::make_unique<connection>(con_));
                                return sched_.full_connections_.back().get();
                              }),
-      trips_idx,
-      0U /* TODO */};
+      trips_idx};
 }
 
 void graph_builder::connect_reverse() {
@@ -775,13 +778,8 @@ route_section graph_builder::add_route_section(
           auto const at = static_cast<mam_t>(c.a_time_ - shift * MINUTES_A_DAY);
           auto const dt = static_cast<mam_t>(c.d_time_ - shift * MINUTES_A_DAY);
           auto const bf = sched_.bitfields_[c.traffic_days_];
-          return light_connection{
-              dt,
-              at,
-              store_bitfield(bf << shift),
-              c.full_con_,
-              merged_trips_idx{/* TODO(felix) */},
-              0 /* TODO - doesn't work because of rule services */};
+          return light_connection{dt, at, store_bitfield(bf << shift),
+                                  c.full_con_, c.trips_};
         });
 
     // TODO(felix): make route_traffic_days based on BWD bitfields

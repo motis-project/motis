@@ -52,14 +52,11 @@ void create_labels(time const departure_begin, time const departure_end,
   auto const max_start_labels = departure_end - departure_begin + 1;
   while (!end_reached<Dir>(departure_begin, departure_end, t)) {
     auto [con, day_idx] = re.get_connection<Dir>(t);
+    t = get_time<Dir>(con, day_idx);
 
-    if (con == nullptr ||
-        end_reached<Dir>(departure_begin, departure_end,
-                         get_time<Dir>(con, 0U /* TODO(felix) day idx */))) {
+    if (con == nullptr || end_reached<Dir>(departure_begin, departure_end, t)) {
       break;
     }
-
-    t = get_time<Dir>(con, /* TODO(felix) day idx */ 0);
 
     create_func(t);
 
