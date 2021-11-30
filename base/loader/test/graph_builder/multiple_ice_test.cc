@@ -222,13 +222,12 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
     }
 
     auto const& tracks = sched_->tracks_;
-    auto const day = day_idx_t{0U};
 
     auto const get_track = [&](size_t const idx, event_type const ev_type) {
-      return tracks
-          .at(get<light_connection const*>(conns.at(idx))
-                  ->full_con_->get_track(ev_type))
-          .get_info(day)
+      auto const lcon = get<light_connection const*>(conns.at(idx));
+      auto const offset = lcon->a_time_ / MINUTES_A_DAY;
+      return tracks.at(lcon->full_con_->get_track(ev_type))
+          .get_info(get<day_idx_t>(conns.at(idx)) + offset)
           ->str();
     };
 

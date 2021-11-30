@@ -500,8 +500,8 @@ light_connection graph_builder::section_to_connection(
   }));
   assert(std::is_sorted(begin(services), end(services)));
 
-  auto const& rel_utc_dep = relative_utc[section_idx * 2];
-  auto const& rel_utc_arr = relative_utc[section_idx * 2 + 1];
+  auto const rel_utc_dep = relative_utc[section_idx * 2];
+  auto const rel_utc_arr = relative_utc[section_idx * 2 + 1];
 
   auto const day_offset = rel_utc_dep.day();
   auto const utc_mam_dep =
@@ -539,8 +539,12 @@ light_connection graph_builder::section_to_connection(
     auto arr_platf = tracks != nullptr
                          ? tracks->Get(section_idx + 1)->arr_tracks()
                          : nullptr;
-    con_.d_track_ = get_or_create_track(dep_platf);
-    con_.a_track_ = get_or_create_track(arr_platf);
+    con_.d_track_ = get_or_create_track(
+        dep_platf,
+        ref_service->times()->Get(section_idx * 2 + 1) / MINUTES_A_DAY);
+    con_.a_track_ = get_or_create_track(
+        arr_platf,
+        ref_service->times()->Get(section_idx * 2 + 2) / MINUTES_A_DAY);
     con_.con_info_ = get_or_create_connection_info(services);
   }
 
@@ -635,20 +639,18 @@ mcd::string const* graph_builder::get_or_create_string(String const* str) {
   });
 }
 
-uint32_t graph_builder::get_or_create_track(
-    Vector<Offset<Track>> const* tracks) {
+uint32_t graph_builder::get_or_create_track(Vector<Offset<Track>> const* tracks,
+                                            day_idx_t const offset) {
   if (tracks == nullptr || tracks->size() == 0U) {
     return 0U;
   }
-
-  auto const idx = sched_.tracks_.size();
   sched_.tracks_.emplace_back(schedule::track_infos{
       &sched_.empty_string_, mcd::to_vec(*tracks, [&](Track const* track) {
         return mcd::pair{
-            get_or_create_bitfield(track->bitfield()),
+            get_or_create_bitfield(track->bitfield(), offset),
             ptr<mcd::string const>{get_or_create_string(track->name())}};
       })});
-  return idx;
+  return sched_.tracks_.size() - 1;
 }
 
 void graph_builder::write_trip_edges(route const& r) {

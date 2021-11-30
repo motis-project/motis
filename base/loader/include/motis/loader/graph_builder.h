@@ -213,7 +213,8 @@ struct graph_builder {
   int get_or_create_category_index(Category const* c);
 
   uint32_t get_or_create_track(
-      flatbuffers64::Vector<flatbuffers64::Offset<Track>> const* tracks);
+      flatbuffers64::Vector<flatbuffers64::Offset<Track>> const* tracks,
+      day_idx_t offset);
 
   void write_trip_edges(route const& r);
 
