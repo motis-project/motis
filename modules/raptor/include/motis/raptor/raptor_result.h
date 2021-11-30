@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <array>
 
 #include "motis/raptor/raptor_timetable.h"
 
