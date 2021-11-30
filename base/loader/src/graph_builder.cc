@@ -80,7 +80,7 @@ trip_info* graph_builder::register_service(
   auto day_offsets = mcd::vector<day_idx_t>{};
   day_offsets.resize(s->sections()->size());
   for (auto i = 0; i != rel_utc_times.size(); i += 2) {
-    day_offsets[i / 2] = rel_utc_times[i].day();
+    day_offsets[i / 2] = rel_utc_times[i].day();  // TODO(felix) test for this
   }
 
   auto const stored =
