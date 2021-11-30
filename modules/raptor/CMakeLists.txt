@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.18)
 project(motis)
 
 file(GLOB_RECURSE motis-raptor-files src/*.cc)
