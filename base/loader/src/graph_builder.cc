@@ -63,7 +63,8 @@ full_trip_id graph_builder::get_full_trip_id(
   auto const line_id_ptr = s->sections()->Get(0)->line_id();
   auto const line_id = line_id_ptr != nullptr ? line_id_ptr->str() : "";
 
-  return {primary_trip_id{first_station, train_nr, rel_utc_times.front().mam()},
+  return {primary_trip_id{first_station, train_nr,
+                          rel_utc_times.at(section_idx * 2).mam()},
           secondary_trip_id{last_station, rel_utc_times.back().mam(), line_id}};
 }
 
@@ -541,10 +542,12 @@ light_connection graph_builder::section_to_connection(
                          : nullptr;
     con_.d_track_ = get_or_create_track(
         dep_platf,
-        ref_service->times()->Get(section_idx * 2 + 1) / MINUTES_A_DAY);
+        std::max(0, first_day_ - SCHEDULE_OFFSET_DAYS) +
+            ref_service->times()->Get(section_idx * 2 + 1) / MINUTES_A_DAY);
     con_.a_track_ = get_or_create_track(
         arr_platf,
-        ref_service->times()->Get(section_idx * 2 + 2) / MINUTES_A_DAY);
+        std::max(0, first_day_ - SCHEDULE_OFFSET_DAYS) +
+            ref_service->times()->Get(section_idx * 2 + 2) / MINUTES_A_DAY);
     con_.con_info_ = get_or_create_connection_info(services);
   }
 
@@ -588,12 +591,13 @@ bitfield_idx_t graph_builder::store_bitfield(bitfield const& bf) {
 }
 
 bitfield_idx_t graph_builder::get_or_create_bitfield(
-    String const* serialized_bitfield) {
-  return store_bitfield(
-      utl::get_or_create(bitfields_, serialized_bitfield, [&]() {
+    String const* serialized_bitfield, day_idx_t const offset) {
+  return store_bitfield(utl::get_or_create(
+      bitfields_, mcd::pair{serialized_bitfield, offset}, [&]() {
         return deserialize_bitset(
-            {serialized_bitfield->c_str(),
-             static_cast<size_t>(serialized_bitfield->Length())});
+                   {serialized_bitfield->c_str(),
+                    static_cast<size_t>(serialized_bitfield->Length())}) >>
+               offset;
       }));
 }
 

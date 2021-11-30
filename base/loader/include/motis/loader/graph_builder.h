@@ -203,7 +203,7 @@ struct graph_builder {
 
   bitfield_idx_t store_bitfield(bitfield const&);
   bitfield_idx_t get_or_create_bitfield(
-      flatbuffers64::String const* serialized_bitfield);
+      flatbuffers64::String const* serialized_bitfield, day_idx_t offset = 0);
 
   mcd::string const* get_or_create_direction(Direction const* dir);
   mcd::string const* get_or_create_string(flatbuffers64::String const* str);
@@ -241,7 +241,9 @@ struct graph_builder {
   std::map<flatbuffers64::String const*, mcd::string const*> strings_;
   std::map<Provider const*, provider const*> providers_;
   mcd::hash_map<Station const*, station_node*> stations_;
-  mcd::hash_map<flatbuffers64::String const*, bitfield> bitfields_;
+  mcd::hash_map<mcd::pair<flatbuffers64::String const*, day_idx_t /* offset */>,
+                bitfield>
+      bitfields_;
   mcd::hash_set<connection_info*,
                 deep_ptr_hash<cista::hashing<connection_info>, connection_info>,
                 deep_ptr_eq<connection_info>>
