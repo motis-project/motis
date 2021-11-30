@@ -4,43 +4,16 @@
 #include "cuda_runtime.h"
 
 #include "motis/raptor/gpu/cuda_util.h"
+#include "motis/raptor/gpu/gpu_raptor.cuh"
 
 namespace motis::raptor {
-
-std::pair<dim3, dim3> get_launch_paramters(
-    cudaDeviceProp const& prop, int32_t const concurrency_per_device) {
-  utl::verify(
-      prop.warpSize == 32,
-      "Warp Size must be 32! Otherwise the gRAPTOR algorithm will not work.");
-
-  auto const block_size =
-      prop.maxThreadsPerMultiProcessor / prop.maxBlocksPerMultiProcessor;
-  auto const warp_per_block = block_size / prop.warpSize;
-
-  int32_t block_dim_x = prop.warpSize;  // must always be 32!
-  int32_t block_dim_y = warp_per_block;
-
-  int32_t block_count =
-      (prop.maxBlocksPerMultiProcessor * prop.multiProcessorCount) /
-      concurrency_per_device;
-
-  dim3 threads_per_block(block_dim_x, block_dim_y, 1);
-  dim3 grid(block_count, 1, 1);
-
-  return {threads_per_block, grid};
-}
 
 device_context::device_context(device_id const device_id,
                                int32_t const concurrency_per_device)
     : id_(device_id) {
-  cudaSetDevice(id_);
-  cuda_check();
-
-  cudaGetDeviceProperties(&props_, device_id);
-  cuda_check();
 
   std::tie(threads_per_block_, grid_) =
-      get_launch_paramters(props_, concurrency_per_device);
+      get_gpu_raptor_launch_paramters(device_id, concurrency_per_device);
 
   cudaStreamCreate(&proc_stream_);
   cuda_check();
@@ -91,7 +64,6 @@ device_memory::device_memory(stop_id const stop_count,
   cudaMalloc(&any_station_marked_, sizeof(bool));
   cudaMalloc(&additional_starts_, get_additional_starts_bytes());
   cuda_check();
-
   this->reset_async(nullptr);
 }
 
@@ -158,7 +130,7 @@ void memory_store::init(raptor_meta_info const& meta_info,
   for (auto device_id = 0; device_id < device_count; ++device_id) {
     for (auto i = 0; i < concurrency_per_device; ++i) {
       memory_.emplace_back(std::make_unique<struct mem>(
-          tt.stop_count(), tt.route_count(), max_add_starts, device_id,
+          tt.stops_.size(), tt.routes_.size(), max_add_starts, device_id,
           concurrency_per_device));
     }
   }

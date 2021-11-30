@@ -68,7 +68,7 @@ struct d_query : public base_query {
           device_gpu_timetable const tt)
       : base_query{bq}, mem_{mem}, tt_{tt} {
 
-    auto const& add_starts = get_add_starts(
+    auto const add_starts = get_add_starts(
         meta_info, source_, use_start_footpaths_, use_start_metas_);
 
     cudaMemcpyAsync(mem_->device_.additional_starts_, add_starts.data(),

@@ -76,16 +76,16 @@ struct device_memory {
   stop_id stop_count_{invalid<stop_id>};
   route_id route_count_{invalid<route_id>};
   size_t max_add_starts_{invalid<size_t>};
+  size_t additional_start_count_{0};
 
   device_result result_{};
 
   // TODO(julian) move from uint32_t to char or something
-  uint32_t* route_marks_{};
-  uint32_t* station_marks_{};
-  bool* any_station_marked_{};
-  time* footpaths_scratchpad_{};
-  additional_start* additional_starts_{};
-  size_t additional_start_count_{};
+  uint32_t* route_marks_{nullptr};
+  uint32_t* station_marks_{nullptr};
+  bool* any_station_marked_{nullptr};
+  time* footpaths_scratchpad_{nullptr};
+  additional_start* additional_starts_{nullptr};
 };
 
 struct mem {

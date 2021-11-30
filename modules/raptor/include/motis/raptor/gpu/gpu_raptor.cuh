@@ -47,4 +47,7 @@ __device__ void update_footpaths_dev(device_memory const& device_mem,
 void invoke_gpu_raptor(d_query const&);
 void invoke_hybrid_raptor(d_query const&);
 
+std::pair<dim3, dim3> get_gpu_raptor_launch_paramters(
+    device_id device_id, int32_t concurrency_per_device);
+
 }  // namespace motis::raptor

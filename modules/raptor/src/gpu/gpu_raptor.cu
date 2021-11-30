@@ -481,6 +481,30 @@ __global__ void __launch_bounds__(GPU_RAPTOR_MAX_THREADS_PER_SM,
   }
 }
 
+std::pair<dim3, dim3> get_gpu_raptor_launch_paramters(
+    device_id const device_id, int32_t const concurrency_per_device) {
+  cudaSetDevice(device_id);
+  cuda_check();
+
+  cudaDeviceProp prop{};
+  cudaGetDeviceProperties(&prop, device_id);
+  cuda_check();
+
+  utl::verify(
+      prop.warpSize == 32,
+      "Warp Size must be 32! Otherwise the gRAPTOR algorithm will not work.");
+
+  int min_grid_size = 0;
+  int block_size = 0;
+  cudaOccupancyMaxPotentialBlockSize(&min_grid_size, &block_size,
+                                     gpu_raptor_kernel, 0, 0);
+
+  dim3 threads_per_block(prop.warpSize, block_size / prop.warpSize, 1);
+  dim3 grid(min_grid_size / concurrency_per_device, 1, 1);
+
+  return {threads_per_block, grid};
+}
+
 void invoke_gpu_raptor(d_query const& dq) {
   void* kernel_args[] = {(void*)&dq, (void*)&(dq.mem_->device_),
                          (void*)&(dq.tt_)};
@@ -493,6 +517,7 @@ void invoke_gpu_raptor(d_query const& dq) {
 
   fetch_arrivals_async(dq, dq.mem_->context_.transfer_stream_);
   cuda_check();
+
   cuda_sync_stream(dq.mem_->context_.transfer_stream_);
   cuda_check();
 }
