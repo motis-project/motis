@@ -367,18 +367,6 @@ __device__ void init_arrivals_dev(base_query const& query,
                                   device_gpu_timetable const& tt) {
   auto const t_id = get_global_thread_id();
 
-  auto const station_store_size = (tt.stop_count_ / 32) + 1;
-  reset_store(device_mem.station_marks_, station_store_size);
-
-  auto const route_store_size = (tt.route_count_ / 32) + 1;
-  reset_store(device_mem.route_marks_, route_store_size);
-
-  this_grid().sync();
-
-  if (t_id == 0) {
-    *device_mem.any_station_marked_ = false;
-  }
-
   if (t_id == 0) {
     device_mem.result_[0][query.source_] = query.source_time_begin_;
     mark(device_mem.station_marks_, query.source_);
