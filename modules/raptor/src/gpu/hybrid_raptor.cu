@@ -8,12 +8,6 @@ __global__ void init_arrivals_kernel(base_query const query,
   init_arrivals_dev(query, device_mem, tt);
 }
 
-__global__ void update_footpaths_kernel(device_memory const device_mem,
-                                        raptor_round round_k,
-                                        device_gpu_timetable const tt) {
-  update_footpaths_dev(device_mem, round_k, tt);
-}
-
 __global__ void update_routes_kernel(device_memory const device_mem,
                                      raptor_round round_k,
                                      device_gpu_timetable const tt) {
@@ -21,8 +15,13 @@ __global__ void update_routes_kernel(device_memory const device_mem,
   time* const arrivals = device_mem.result_[round_k];
 
   update_routes_dev(prev_arrivals, arrivals, device_mem.station_marks_,
-                    device_mem.route_marks_, device_mem.any_station_marked_,
-                    tt);
+                    device_mem.route_marks_, tt);
+}
+
+__global__ void update_footpaths_kernel(device_memory const device_mem,
+                                        raptor_round round_k,
+                                        device_gpu_timetable const tt) {
+  update_footpaths_dev(device_mem, round_k, tt);
 }
 
 void invoke_hybrid_raptor(d_query const& dq) {
