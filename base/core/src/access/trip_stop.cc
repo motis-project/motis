@@ -33,18 +33,27 @@ light_connection const& trip_stop::dep_lcon() const {
                   trip_.trp_->lcon_idx_);
 }
 
+day_idx_t trip_stop::dep_day() const {
+  return trip_.day_idx_ + trip_.trp_->day_offsets_.at(index_);
+}
+
+day_idx_t trip_stop::arr_day() const {
+  return trip_.day_idx_ + trip_.trp_->day_offsets_.at(index_ - 1) +
+         arr_lcon().a_time_ / MINUTES_A_DAY;
+}
+
 time trip_stop::arr_time() const {
   auto const lcon = arr_lcon();
   return lcon.event_time(
       event_type::ARR,
-      static_cast<day_idx_t>(trip_.day_idx_ + lcon.start_day_offset_));
+      static_cast<day_idx_t>(trip_.day_idx_ +
+                             trip_.trp_->day_offsets_.at(index_ - 1)));
 }
 
 time trip_stop::dep_time() const {
   auto const lcon = dep_lcon();
-  return lcon.event_time(
-      event_type::DEP,
-      static_cast<day_idx_t>(trip_.day_idx_ + lcon.start_day_offset_));
+  return lcon.event_time(event_type::DEP,
+                         trip_.day_idx_ + trip_.trp_->day_offsets_.at(index_));
 }
 
 connection_info const& trip_stop::arr_info(schedule const& sched) const {

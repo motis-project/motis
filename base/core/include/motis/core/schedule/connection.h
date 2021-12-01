@@ -3,6 +3,8 @@
 #include <cinttypes>
 #include <tuple>
 
+#include "utl/pipes.h"
+
 #include "motis/string.h"
 #include "motis/vector.h"
 
@@ -46,17 +48,29 @@ inline service_class& operator++(service_class& c) {
 struct connection_info {
   CISTA_COMPARABLE();
 
-  mcd::vector<ptr<attribute const>> attributes_;
+  auto attributes(day_idx_t const day) const {
+    return utl::all(attributes_)  //
+           | utl::remove_if(
+                 [day](auto&& e) { return !e.traffic_days_->test(day); })  //
+           | utl::transform([&](auto&& e) { return e.attr_; })  //
+           | utl::iterable();
+  }
+
+  mcd::vector<traffic_day_attribute> attributes_;
   mcd::string line_identifier_;
   ptr<mcd::string const> dir_{nullptr};
   ptr<provider const> provider_{nullptr};
-  uint32_t family_{0U};
+  uint32_t category_{0U};
   uint32_t train_nr_{0U};
   uint32_t original_train_nr_{0U};
   ptr<connection_info const> merged_with_{nullptr};
 };
 
 struct connection {
+  uint16_t get_track(event_type const t) const {
+    return t == event_type::DEP ? d_track_ : a_track_;
+  }
+
   ptr<connection_info const> con_info_{nullptr};
   uint16_t price_{0U};
   uint16_t d_track_{0U}, a_track_{0U};
@@ -70,29 +84,22 @@ struct light_connection {
       : full_con_{nullptr},
         d_time_{d_time},
         a_time_{a_time},
-        bitfield_idx_{0U},
+        traffic_days_{0U},
         trips_{0U},
-        valid_{false},
-        start_day_offset_{0U} {}
+        valid_{false} {}
 
   light_connection(mam_t const d_time, mam_t const a_time,
                    size_t const bitfield_idx, connection const* full_con,
-                   merged_trips_idx const trips, day_idx_t const day_offset)
+                   merged_trips_idx const trips)
       : full_con_{full_con},
         d_time_{d_time},
         a_time_{a_time},
-        bitfield_idx_{bitfield_idx},
+        traffic_days_{bitfield_idx},
         trips_{trips},
-        valid_{1U},
-        start_day_offset_{day_offset} {}
+        valid_{1U} {}
 
   time event_time(event_type const t, day_idx_t day) const {
     return {day, t == event_type::DEP ? d_time_ : a_time_};
-  }
-
-  time event_time_with_start_day(event_type const t,
-                                 day_idx_t const start_day) const {
-    return event_time(t, start_day + start_day_offset_);
   }
 
   duration_t travel_time() const { return a_time_ - d_time_; }
@@ -100,13 +107,9 @@ struct light_connection {
   ptr<connection const> full_con_{nullptr};
   mam_t d_time_{std::numeric_limits<decltype(d_time_)>::max()};
   mam_t a_time_{std::numeric_limits<decltype(a_time_)>::max()};
-  union {
-    size_t bitfield_idx_;
-    bitfield const* traffic_days_;
-  };
-  uint32_t trips_ : 27;
+  bitfield_idx_or_ptr traffic_days_;
+  uint32_t trips_ : 31;
   uint32_t valid_ : 1;
-  day_idx_t start_day_offset_ : 4;
 };
 
 struct d_time_lt {

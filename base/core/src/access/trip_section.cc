@@ -25,7 +25,7 @@ time trip_section::arr_time() const {
 
 time trip_section::dep_time() const {
   return get_lcon(edge_, ctrp_.trp_->lcon_idx_)
-      .event_time(event_type::ARR, ctrp_.day_idx_);
+      .event_time(event_type::DEP, ctrp_.day_idx_);
 }
 
 connection const& trip_section::fcon() const { return *lcon().full_con_; }

@@ -76,7 +76,7 @@ bool route_t::empty() const { return times_.empty(); }
 void route_t::update_traffic_days(
     mcd::vector<light_connection> const& new_lcons, schedule const& sched) {
   for (auto const& lcon : new_lcons) {
-    traffic_days_ |= sched.bitfields_[lcon.bitfield_idx_];
+    traffic_days_ |= sched.bitfields_[lcon.traffic_days_.bitfield_idx_];
   }
 }
 

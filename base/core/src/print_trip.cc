@@ -52,21 +52,13 @@ void print_trip(std::ostream& out, schedule const& sched,
               << std::setfill('.') << stop_name << std::setfill(' ') << " a: ";
 
     if (!stop.is_first()) {
-      print_time(
-          out,
-          motis_to_unixtime(sched, stop.arr_lcon().event_time_with_start_day(
-                                       event_type::ARR, trp.day_idx_)),
-          local_time);
+      print_time(out, motis_to_unixtime(sched, stop.arr_time()), local_time);
     } else {
       out << "            ";
     }
     out << "  d: ";
     if (!stop.is_last()) {
-      print_time(
-          out,
-          motis_to_unixtime(sched, stop.dep_lcon().event_time_with_start_day(
-                                       event_type::DEP, trp.day_idx_)),
-          local_time);
+      print_time(out, motis_to_unixtime(sched, stop.dep_time()), local_time);
     }
     out << "\n";
 

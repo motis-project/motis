@@ -41,7 +41,9 @@ struct ev_key {
     return &route_edge_->m_.route_edge_.conns_[lcon_idx_];
   }
 
-  time get_time() const { return lcon()->event_time(ev_type_, day_); }
+  time get_time() const {
+    return lcon_is_valid() ? lcon()->event_time(ev_type_, day_) : INVALID_TIME;
+  }
 
   bool is_canceled() const { return lcon()->valid_ == 0U; }
 

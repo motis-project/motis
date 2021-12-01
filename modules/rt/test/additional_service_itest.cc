@@ -57,7 +57,7 @@ TEST_F(rt_additional_service_test, simple) {
     EXPECT_EQ(77, conns[0].full_con_->con_info_->train_nr_);
     EXPECT_EQ(
         "ICE",
-        sched().categories_[conns[0].full_con_->con_info_->family_]->name_);
+        sched().categories_[conns[0].full_con_->con_info_->category_]->name_);
   }
 
   EXPECT_EQ(mcd::vector<mcd::string>({"7a", "2", "2", "5"}),

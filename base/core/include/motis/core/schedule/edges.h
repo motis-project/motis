@@ -22,8 +22,10 @@ struct edge_cost {
         transfer_(false),
         accessibility_(0) {}
 
-  edge_cost(duration_t time, light_connection const* c)
+  edge_cost(duration_t const time, light_connection const* c,
+            day_idx_t const day)
       : connection_(c),
+        day_(day),
         time_(time),
         price_(0),
         transfer_(false),
@@ -40,6 +42,7 @@ struct edge_cost {
   bool is_valid() const { return time_ != INVALID_DURATION; }
 
   light_connection const* connection_;
+  day_idx_t day_;
   duration_t time_;
   uint16_t price_;
   bool transfer_;
@@ -76,7 +79,7 @@ public:
        size_t const route_traffic_days)
       : from_{from}, to_{to} {
     m_.type_ = edge_type::ROUTE_EDGE;
-    m_.route_edge_.bitfield_idx_ = route_traffic_days;
+    m_.route_edge_.traffic_days_ = route_traffic_days;
     m_.route_edge_.init_empty();
     m_.route_edge_.conns_.set(begin(connections), end(connections));
     std::sort(begin(m_.route_edge_.conns_), end(m_.route_edge_.conns_),
@@ -90,7 +93,7 @@ public:
       : from_{from}, to_{to} {
     m_.type_ = (dir == search_dir::FWD ? edge_type::FWD_ROUTE_EDGE
                                        : edge_type::BWD_ROUTE_EDGE);
-    m_.route_edge_.bitfield_idx_ = route_traffic_days;
+    m_.route_edge_.traffic_days_ = route_traffic_days;
     m_.route_edge_.init_empty();
     m_.route_edge_.conns_.set(begin(connections), std::end(connections));
     dir == search_dir::FWD ? std::sort(begin(m_.route_edge_.conns_),
@@ -414,8 +417,7 @@ public:
   }
 
   int get_mumo_id() const {
-    assert(type() == edge_type::MUMO_EDGE);
-    return m_.foot_edge_.mumo_id_;
+    return type() == edge_type::MUMO_EDGE ? m_.foot_edge_.mumo_id_ : -1;
   }
 
   inline bool empty() const {
@@ -498,10 +500,7 @@ public:
     struct re {
       edge_type type_padding_;
       mcd::vector<light_connection> conns_;
-      union {
-        size_t bitfield_idx_;
-        bitfield const* traffic_days_;
-      };
+      bitfield_idx_or_ptr traffic_days_;
 
       void init_empty() { new (&conns_) mcd::vector<light_connection>(); }
     } route_edge_;

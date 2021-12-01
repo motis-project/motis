@@ -18,13 +18,14 @@ struct label : public Data {  // NOLINT
   label() = default;  // NOLINT
 
   label(edge const* e, label* pred, time now, lower_bounds& lb,
-        light_connection const* lcon = nullptr)
+        day_idx_t const day = 0, light_connection const* lcon = nullptr)
       : pred_(pred),
         edge_(e),
         connection_(lcon),
         start_(pred != nullptr ? pred->start_ : now),
         now_(now),
-        dominated_(false) {
+        dominated_(false),
+        day_(day) {
     Init::init(*this, lb);
   }
 
@@ -34,16 +35,20 @@ struct label : public Data {  // NOLINT
   bool create_label(label& l, Edge const& e, LowerBounds& lb, bool no_cost,
                     int additional_time_cost = 0) {
     if (pred_ && e.template get_destination<Dir>() == pred_->get_node()) {
+      std::cerr << "NOT BACK\n";
       return false;
     }
     if ((e.type() == edge_type::BWD_EDGE ||
          e.type() == edge_type::AFTER_TRAIN_BWD_EDGE) &&
         edge_->type() == edge_type::EXIT_EDGE) {
+      std::cerr << "NO EXIT AFTER BWD|ATBE\n";
       return false;
     }
 
     auto ec = e.template get_edge_cost<Dir>(now_, connection_);
     if (!ec.is_valid()) {
+      std::cerr << "INVALID EDGE COST " << e.type_str() << " " << connection_
+                << "\n";
       return false;
     }
     if (no_cost) {
@@ -56,6 +61,7 @@ struct label : public Data {  // NOLINT
     l.pred_ = this;
     l.edge_ = &e;
     l.connection_ = ec.connection_;
+    l.day_ = ec.day_;
     l.now_ += (Dir == search_dir::FWD) ? ec.time_ : -ec.time_;
 
     Updater::update(l, ec, lb);
@@ -99,6 +105,7 @@ struct label : public Data {  // NOLINT
   light_connection const* connection_;
   time start_, now_;
   bool dominated_;
+  day_idx_t day_;
 };
 
 }  // namespace motis::routing

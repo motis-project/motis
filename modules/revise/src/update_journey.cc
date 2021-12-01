@@ -37,8 +37,8 @@ struct con_info_cmp {
   bool operator()(connection_info const* a, connection_info const* b) const {
     auto train_nr_a = output_train_nr(a->train_nr_, a->original_train_nr_);
     auto train_nr_b = output_train_nr(b->train_nr_, b->original_train_nr_);
-    return std::tie(a->line_identifier_, a->family_, train_nr_a, a->dir_) <
-           std::tie(b->line_identifier_, b->family_, train_nr_b, b->dir_);
+    return std::tie(a->line_identifier_, a->category_, train_nr_a, a->dir_) <
+           std::tie(b->line_identifier_, b->category_, train_nr_b, b->dir_);
   }
 };
 

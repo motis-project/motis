@@ -16,8 +16,8 @@ std::vector<journey::transport> generate_journey_transports(
     bool operator()(connection_info const* a, connection_info const* b) const {
       auto train_nr_a = output_train_nr(a->train_nr_, a->original_train_nr_);
       auto train_nr_b = output_train_nr(b->train_nr_, b->original_train_nr_);
-      return std::tie(a->line_identifier_, a->family_, train_nr_a, a->dir_) <
-             std::tie(b->line_identifier_, b->family_, train_nr_b, b->dir_);
+      return std::tie(a->line_identifier_, a->category_, train_nr_a, a->dir_) <
+             std::tie(b->line_identifier_, b->category_, train_nr_b, b->dir_);
     }
   };
 
@@ -112,9 +112,8 @@ std::vector<journey::stop> generate_journey_stops(
                                          motis_to_unixtime(
                                              sched.schedule_begin_,
                                              stop.a_sched_time_),
-                                         stop.a_reason_,
-                                         sched.tracks_[stop.a_track_].str(),
-                                         sched.tracks_[stop.a_track_].str()}
+                                         stop.a_reason_, stop.a_track_->str(),
+                                         stop.a_track_->str()}
              : journey::stop::event_info{false, 0, 0,
                                          timestamp_reason::SCHEDULE, "", ""},
          stop.d_time_ != INVALID_TIME
@@ -125,9 +124,8 @@ std::vector<journey::stop> generate_journey_stops(
                                          motis_to_unixtime(
                                              sched.schedule_begin_,
                                              stop.d_sched_time_),
-                                         stop.d_reason_,
-                                         sched.tracks_[stop.d_track_].str(),
-                                         sched.tracks_[stop.d_track_].str()}
+                                         stop.d_reason_, stop.d_track_->str(),
+                                         stop.d_track_->str()}
              : journey::stop::event_info{false, 0, 0,
                                          timestamp_reason::SCHEDULE, "", ""}});
   }
@@ -141,8 +139,9 @@ std::vector<journey::ranged_attribute> generate_journey_attributes(
     if (t.con_ == nullptr) {
       continue;
     } else {
-      for (auto const& attribute : t.con_->full_con_->con_info_->attributes_) {
-        attributes.add_entry(attribute, t.from_, t.to_);
+      for (auto const& attr :
+           t.con_->full_con_->con_info_->attributes(t.day_)) {
+        attributes.add_entry(attr, t.from_, t.to_);
       }
     }
   }

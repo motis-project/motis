@@ -116,12 +116,12 @@ void collect_events(station_node const* st,
       auto const& lc = e.m_.route_edge_.conns_[lcon_idx];
       if (ev_type == event_type::DEP &&
           wtr.waits_for_other_trains(
-              wtr.waiting_time_category(lc.full_con_->con_info_->family_))) {
+              wtr.waiting_time_category(lc.full_con_->con_info_->category_))) {
         waits_for_other_trains.emplace_back(ev_key{&e, lcon_idx, ev_type});
       }
       if (ev_type == event_type::ARR &&
           wtr.other_trains_wait_for(
-              wtr.waiting_time_category(lc.full_con_->con_info_->family_))) {
+              wtr.waiting_time_category(lc.full_con_->con_info_->category_))) {
         other_trains_wait_for.emplace_back(ev_key{&e, lcon_idx, ev_type});
       }
     }
@@ -161,8 +161,8 @@ void add_dependencies(schedule& sched,
         continue;
       }
       auto const waiting_time = wtr.waiting_time_family(
-          connector.lcon()->full_con_->con_info_->family_,
-          feeder.lcon()->full_con_->con_info_->family_);
+          connector.lcon()->full_con_->con_info_->category_,
+          feeder.lcon()->full_con_->con_info_->category_);
       if (waiting_time == 0) {
         continue;
       }

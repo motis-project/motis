@@ -181,7 +181,7 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
     }
   }
 
-  auto const& category = sched.categories_[ci->family_]->name_;
+  auto const& category = sched.categories_[ci->category_]->name_;
   if (auto const it = category_map.find(category); it != end(category_map)) {
     return {{it->second, capacity_source::CATEGORY}};
   } else if (auto const it = category_map.find(

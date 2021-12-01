@@ -8,7 +8,7 @@ namespace motis.loader;
 table Section {
   category: Category;
   provider: Provider;
-  train_nr: int;
+  train_nr: uint;
   line_id: string;
   attributes: [Attribute];
   direction: Direction;

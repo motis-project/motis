@@ -16,6 +16,9 @@ public:
   light_connection const& arr_lcon() const;
   light_connection const& dep_lcon() const;
 
+  day_idx_t dep_day() const;
+  day_idx_t arr_day() const;
+
   time arr_time() const;
   time dep_time() const;
 

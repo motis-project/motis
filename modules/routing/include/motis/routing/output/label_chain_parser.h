@@ -179,14 +179,15 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
     switch (current_state) {
       case ONTRIP_TRAIN_START:
       case AT_STATION: {
-        unsigned a_track = MOTIS_UNKNOWN_TRACK;
-        unsigned d_track = MOTIS_UNKNOWN_TRACK;
+        auto a_track = &sched.empty_string_;
+        auto d_track = &sched.empty_string_;
         time a_time = walk_arrival, a_sched_time = walk_arrival;
         time d_time = INVALID_TIME, d_sched_time = INVALID_TIME;
         timestamp_reason a_reason = walk_arrival_di.get_reason(),
                          d_reason = timestamp_reason::SCHEDULE;
         if (a_time == INVALID_TIME && last_con != nullptr) {
-          a_track = last_con->full_con_->a_track_;
+          a_track = sched.tracks_.at(last_con->full_con_->a_track_)
+                        .get_info(0U /* TODO(felix) */);
           a_time = last_con->event_time(event_type::ARR, 0U /* TODO(felix) */);
 
           auto a_di =
@@ -211,7 +212,8 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
 
           if (s2 != end(labels) && s2->connection_ != nullptr) {
             auto const& succ = *s2;
-            d_track = succ.connection_->full_con_->d_track_;
+            d_track = sched.tracks_.at(succ.connection_->full_con_->d_track_)
+                          .get_info(0U /* TODO(felix) */);
             d_time = succ.connection_->event_time(event_type::DEP,
                                                   0U /* TODO(felix) */);
 
@@ -244,9 +246,11 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
         stops.emplace_back(intermediate::stop{
             static_cast<unsigned int>(++stop_index),
             get_node(current)->get_station()->id_,
-            last_con == nullptr ? MOTIS_UNKNOWN_TRACK
-                                : last_con->full_con_->a_track_,
-            MOTIS_UNKNOWN_TRACK,
+            last_con == nullptr
+                ? ptr<mcd::string const>{&sched.empty_string_}
+                : sched.tracks_.at(last_con->full_con_->a_track_)
+                      .get_info(0 /* TODO(felix) */),
+            &sched.empty_string_,
 
             // Arrival graph time:
             stops.empty() ? INVALID_TIME
@@ -292,7 +296,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
         if (current.connection_) {
           transports.emplace_back(static_cast<unsigned int>(stop_index),
                                   static_cast<unsigned int>(stop_index) + 1,
-                                  current.connection_, 0U /* TODO(felix) */);
+                                  current.connection_, current.day_);
         }
 
         // do not collect the last connection route node.
@@ -319,8 +323,10 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
             stops.emplace_back(intermediate::stop{
                 static_cast<unsigned int>(++stop_index),
                 get_node(current)->get_station()->id_,
-                current.connection_->full_con_->a_track_,  // NOLINT
-                succ.connection_->full_con_->d_track_,
+                sched.tracks_.at(current.connection_->full_con_->a_track_)
+                    .get_info(0U /* TODO(felix) */),  // NOLINT
+                sched.tracks_.at(succ.connection_->full_con_->d_track_)
+                    .get_info(0U /* TODO(felix) */),
                 current.connection_->event_time(event_type::ARR,
                                                 0U /* TODO(felix) */),
                 succ.connection_->event_time(event_type::DEP,

@@ -81,12 +81,12 @@ get_transport_debug_infos(FlatBufferBuilder& fbb, schedule const& sched,
                                   light_connection const& lcon) {
     auto con_info = lcon.full_con_->con_info_;
     while (con_info != nullptr) {
-      auto const& cat_name = sched.categories_[con_info->family_]->name_;
+      auto const& cat_name = sched.categories_[con_info->category_]->name_;
       auto const clasz_it = sched.classes_.find(cat_name);
       auto const clasz = clasz_it == end(sched.classes_) ? service_class::OTHER
                                                          : clasz_it->second;
       transports.push_back(CreateTransportDebugInfo(
-          fbb, fbb.CreateString(cat_name), con_info->family_,
+          fbb, fbb.CreateString(cat_name), con_info->category_,
           static_cast<service_class_t>(clasz),
           output_train_nr(con_info->train_nr_, con_info->original_train_nr_),
           con_info->original_train_nr_,
