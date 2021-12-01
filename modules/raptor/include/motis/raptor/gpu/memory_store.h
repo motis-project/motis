@@ -12,9 +12,6 @@ namespace motis::raptor {
 
 using device_id = int32_t;
 
-std::pair<dim3, dim3> get_launch_paramters(cudaDeviceProp const& prop,
-                                           int32_t concurrency_per_device);
-
 struct kernel_launch_config {
   dim3 threads_per_block_;
   dim3 grid_;
@@ -84,17 +81,16 @@ struct device_memory {
   route_id route_count_{invalid<route_id>};
   size_t max_add_starts_{invalid<size_t>};
   arrival_id arrival_times_count_{invalid<arrival_id>};
+  size_t additional_start_count_{0};
 
   device_result result_{};
-
   // TODO(julian) move from uint32_t to char or something
-  uint32_t* route_marks_{};
-  uint32_t* station_marks_{};
-  bool* any_station_marked_{};
-  time* footpaths_scratchpad_{};
-  time* earliest_arrivals_{};
-  additional_start* additional_starts_{};
-  size_t additional_start_count_{};
+  uint32_t* route_marks_{nullptr};
+  uint32_t* station_marks_{nullptr};
+  bool* any_station_marked_{nullptr};
+  time* footpaths_scratchpad_{nullptr};
+  time* earliest_arrivals_{nullptr};
+  additional_start* additional_starts_{nullptr};
 };
 
 struct mem {

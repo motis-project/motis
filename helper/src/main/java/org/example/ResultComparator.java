@@ -282,9 +282,9 @@ public class ResultComparator {
   public static void main(String[] args) throws IOException, ParseException {
     var mocRelevant = true;
     System.out.print("Reading Files ...");
-    var raptorLines = Files.readAllLines(Path.of("./verification/sbb-small/r-raptor_gpu-moc.txt"));
+    var raptorLines = Files.readAllLines(Path.of("../motis-orig/verification/sbb-small/r-raptor_gpu-def.txt"));
     //var routingLines = Files.readAllLines(Path.of("./data/results/r-fwd-routing-moc.txt"));
-    var routingLines = Files.readAllLines(Path.of("./verification/sbb-small/r-raptor_cpu-moc.txt"));
+    var routingLines = Files.readAllLines(Path.of("../motis-orig/verification/sbb-small/r-raptor_cpu-def.txt"));
 
     if (raptorLines.size() != routingLines.size()) throw new IllegalStateException("Line Counts don't match!");
     System.out.println("Ok");

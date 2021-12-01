@@ -1,7 +1,9 @@
 #pragma once
 
-#include "motis/raptor/raptor_util.h"
 #include <tuple>
+
+#include "motis/raptor/raptor_timetable.h"
+#include "motis/raptor/raptor_util.h"
 
 namespace motis::raptor {
 
@@ -9,74 +11,79 @@ template <typename Traits>
 struct criteria_config {
   using CriteriaData = typename Traits::TraitsData;
 
-  __mark_cuda_rel__ inline static int trait_size() { return Traits::size(); }
+  __mark_cuda_rel__ inline static trait_id trait_size() {
+    return Traits::size();
+  }
 
   __mark_cuda_rel__ inline static int get_arrival_idx(
-      uint32_t const stop_idx, uint32_t const trait_offset = 0) {
+      stop_id const stop_idx, trait_id const trait_offset = 0) {
     return stop_idx * trait_size() + trait_offset;
   }
 
-  __mark_cuda_rel__ inline static bool is_update_required(
-      CriteriaData const& td, uint32_t t_offset) {
-    return Traits::is_update_required(trait_size(), td, t_offset);
+//  // TODO get rid of
+//  __mark_cuda_rel__ inline static bool is_update_required(
+//      CriteriaData const& td, trait_id t_offset) {
+//    return Traits::is_update_required(trait_size(), td, t_offset);
+//  }
+
+  __mark_cuda_rel__ inline static trait_id get_write_to_trait_id(
+      CriteriaData const& d) {
+    return Traits::get_write_to_trait_id(d);
   }
 
+  // TODO use again
   inline static bool is_trait_satisfied(CriteriaData const& td,
-                                        uint32_t t_offset) {
+                                        trait_id t_offset) {
     return Traits::is_trait_satisfied(trait_size(), td, t_offset);
   }
 
+  //****************************************************************************
+  // Only used by CPU RAPTOR
   inline static bool is_rescan_from_stop_needed(CriteriaData const& td,
-                                                uint32_t t_offset) {
+                                                trait_id t_offset) {
     return Traits::is_rescan_from_stop_needed(trait_size(), td, t_offset);
   }
-
-  // derive the trait values from the arrival time index
-  // expecting that the stop_idx is already subtracted and the given index
-  // only specifies the shifts within the traits
-  inline static CriteriaData get_traits_data(uint32_t const trait_offset) {
-    CriteriaData data{};
-    Traits::get_trait_data(trait_size(), data, trait_offset);
-    return data;
-  }
+  //****************************************************************************
 
   template <typename Timetable>
   __mark_cuda_rel__ inline static void update_traits_aggregate(
-      CriteriaData& aggregate_dt, Timetable const& tt, uint32_t r_id,
-      uint32_t t_id, uint32_t s_offset, uint32_t sti) {
-    Traits::update_aggregate(aggregate_dt, tt, r_id, t_id, s_offset, sti);
+      CriteriaData& aggregate_dt, Timetable const& tt,
+      time const* const prev_arrivals, stop_offset const s_offset,
+      stop_times_index const current_sti) {
+    Traits::update_aggregate(aggregate_dt, tt, prev_arrivals, s_offset,
+                             current_sti, trait_size());
   }
 
   __mark_cuda_rel__ inline static void reset_traits_aggregate(
-      CriteriaData& dt) {
-    Traits::reset_aggregate(dt);
+      CriteriaData& dt, route_id const r_id, trip_id const t_id,
+      trait_id const initial_offset) {
+    dt.route_id_ = r_id;
+    dt.trip_id_ = t_id;
+    dt.departure_trait_id_ = initial_offset;
+    Traits::reset_aggregate(trait_size(), dt, initial_offset);
   }
 
 #if defined(MOTIS_CUDA)
 
   __device__ inline static void propagate_and_merge_if_needed(
-      unsigned const mask, CriteriaData& aggregate,
-      bool const predicate) {
+      unsigned const mask, CriteriaData& aggregate, bool const predicate) {
     Traits::propagate_and_merge_if_needed(mask, aggregate, predicate);
   }
 
-  __device__ inline static void carry_to_next_stage(
-      unsigned const mask, CriteriaData& aggregate
-      ) {
+  __device__ inline static void carry_to_next_stage(unsigned const mask,
+                                                    CriteriaData& aggregate) {
     Traits::carry_to_next_stage(mask, aggregate);
   }
 
 #endif
 
-  template <typename Timetable>
-  inline static bool trip_matches_traits(CriteriaData const& dt,
-                                         Timetable const& tt,
-                                         uint32_t const route_id,
-                                         uint32_t const trip_id,
-                                         uint32_t const dep_stop_offset,
-                                         uint32_t const arr_stop_offset) {
-    return Traits::trip_matches_traits(dt, tt, route_id, trip_id,
-                                       dep_stop_offset, arr_stop_offset);
+  // derive the trait values from the arrival time index
+  // expecting that the stop_idx is already subtracted and the given index
+  // only specifies the shifts within the traits
+  inline static CriteriaData get_traits_data(trait_id const trait_offset) {
+    CriteriaData data{};
+    Traits::get_trait_data(trait_size(), data, trait_offset);
+    return data;
   }
 
   // check if a candidate journey dominates a given journey by checking on the

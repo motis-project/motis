@@ -78,20 +78,33 @@ __device__ __forceinline__ unsigned get_last_departure_stop(
 }
 
 template <typename CriteriaConfig>
+__device__ __forceinline__ time get_earliest_arrival(
+    const time* const earliest_arrivals, stop_id const target_stop_id,
+    stop_id const current_stop_id, trait_id const write_to_offset) {
+
+  arrival_id const current_idx =
+      CriteriaConfig::get_arrival_idx(current_stop_id, write_to_offset);
+  time const stop_ea = earliest_arrivals[current_idx];
+  auto const target_arr_idx =
+      CriteriaConfig::get_arrival_idx(target_stop_id, write_to_offset);
+  time const target_ea = earliest_arrivals[target_arr_idx];
+  return umin(stop_ea, target_ea);
+}
+
+template <typename CriteriaConfig>
 __device__ void mc_update_route_larger32(
-    route_id const r_id, gpu_route const route, unsigned int const t_offset,
+    route_id const r_id, gpu_route const route, trait_id const t_offset,
     time const* const prev_arrivals, time* const arrivals,
     time* const earliest_arrivals, stop_id const target_stop_id,
-    unsigned int* station_marks, device_gpu_timetable const& tt) {
+    uint32_t* station_marks, device_gpu_timetable const& tt) {
 
   auto const t_id = threadIdx.x;
 
   stop_id stop_id_t = invalid<stop_id>;
-  arrival_id stop_arr_idx = invalid<arrival_id>;
   time prev_arrival = invalid<time>;
   time stop_arrival = invalid<time>;
   time stop_departure = invalid<time>;
-  time earliest_arrival = invalid<time>;
+
   typename CriteriaConfig::CriteriaData aggregate{};
   unsigned last_known_dep_stop = invalid<unsigned>;
 
@@ -115,13 +128,8 @@ __device__ void mc_update_route_larger32(
       // load the prev arrivals for the current stage
       if (stage_id < active_stop_count) {
         stop_id_t = tt.route_stops_[route.index_to_route_stops_ + stage_id];
-        stop_arr_idx = CriteriaConfig::get_arrival_idx(stop_id_t, t_offset);
+        auto const stop_arr_idx = CriteriaConfig::get_arrival_idx(stop_id_t, t_offset);
         prev_arrival = prev_arrivals[stop_arr_idx];
-        time const stop_ea = earliest_arrivals[stop_arr_idx];
-        auto const target_arr_idx =
-            CriteriaConfig::get_arrival_idx(target_stop_id, t_offset);
-        time const target_ea = earliest_arrivals[target_arr_idx];
-        earliest_arrival = umin(stop_ea, target_ea);
       }
 
       any_arrival |= __any_sync(FULL_MASK, valid(prev_arrival));
@@ -223,7 +231,8 @@ __device__ void mc_update_route_larger32(
             //              printf("Resetting Aggregate for t_id: %i\tstage:%
             //              i\n ", t_id,
             //                     current_stage);
-            CriteriaConfig::reset_traits_aggregate(aggregate);
+            CriteriaConfig::reset_traits_aggregate(aggregate, r_id, trip_offset,
+                                                   t_offset);
           }
 
           if (!is_departure_stop) {
@@ -232,8 +241,8 @@ __device__ void mc_update_route_larger32(
             //              printf("Updating aggregate for t_id: %i\tstage:% i\n
             //              ", t_id,
             //                     current_stage);
-            CriteriaConfig::update_traits_aggregate(aggregate, tt, r_id,
-                                                    trip_offset, t_id, st_idx);
+            CriteriaConfig::update_traits_aggregate(
+                aggregate, tt, prev_arrivals, t_id, st_idx);
           }
 
           // propagate the additional criteria attributes
@@ -254,15 +263,20 @@ __device__ void mc_update_route_larger32(
           //                r_id, t_offset, trip_offset, stop_id_t,
           //                get_moc<CriteriaConfig>(aggregate));
 
-          if (stop_arrival < earliest_arrival &&
-              CriteriaConfig::is_update_required(aggregate, t_offset)) {
+          auto const write_to_offset =
+              CriteriaConfig::get_write_to_trait_id(aggregate);
+          auto const earliest_arrival = get_earliest_arrival<CriteriaConfig>(
+              earliest_arrivals, target_stop_id, stop_id_t, write_to_offset);
+          if (stop_arrival < earliest_arrival) {
 
             //            if (r_id == 127 && stage_id == 38 && trip_offset == 43
             //            &&
             //                t_offset == 2)
             //              printf("\n\nPassed the barrier!\n\n");
-
-            bool updated = update_arrival(arrivals, stop_arr_idx, stop_arrival);
+            auto const write_to_arr_idx =
+                CriteriaConfig::get_arrival_idx(stop_id_t, write_to_offset);
+            bool updated =
+                update_arrival(arrivals, write_to_arr_idx, stop_arrival);
             if (updated) {
               //              if (t_offset == 0 && (stop_id_t == 5363)) {
               //                printf(
@@ -282,7 +296,7 @@ __device__ void mc_update_route_larger32(
               //                    t_offset, trip_offset, stop_id_t,
               //                    stop_arr_idx, stop_arrival);
 
-              update_arrival(earliest_arrivals, stop_arr_idx, stop_arrival);
+              update_arrival(earliest_arrivals, write_to_arr_idx, stop_arrival);
               mark(station_marks, stop_id_t);
             }
           }
@@ -301,19 +315,18 @@ __device__ void mc_update_route_larger32(
 
 template <typename CriteriaConfig>
 __device__ void mc_update_route_smaller32(
-    route_id const r_id, gpu_route const route, unsigned int const t_offset,
+    route_id const r_id, gpu_route const route, trait_id const t_offset,
     time const* const prev_arrivals, time* const arrivals,
     time* const earliest_arrivals, stop_id const target_stop_id,
-    unsigned int* station_marks, device_gpu_timetable const& tt) {
+    uint32_t* station_marks, device_gpu_timetable const& tt) {
 
   auto const t_id = threadIdx.x;
 
   stop_id s_id = invalid<stop_id>;
   time prev_arrival = invalid<time>;
-  arrival_id stop_arr_idx = invalid<arrival_id>;
   time stop_arrival = invalid<time>;
   time stop_departure = invalid<time>;
-  time earliest_arrival = invalid<time>;
+
   typename CriteriaConfig::CriteriaData aggregate{};
 
   unsigned leader = route.stop_count_;
@@ -321,13 +334,8 @@ __device__ void mc_update_route_smaller32(
 
   if (t_id < active_stop_count) {
     s_id = tt.route_stops_[route.index_to_route_stops_ + t_id];
-    stop_arr_idx = CriteriaConfig::get_arrival_idx(s_id, t_offset);
+    auto const stop_arr_idx = CriteriaConfig::get_arrival_idx(s_id, t_offset);
     prev_arrival = prev_arrivals[stop_arr_idx];
-    time const stop_ea = earliest_arrivals[stop_arr_idx];
-    auto const target_arr_idx =
-        CriteriaConfig::get_arrival_idx(target_stop_id, t_offset);
-    time const target_ea = earliest_arrivals[target_arr_idx];
-    earliest_arrival = umin(stop_ea, target_ea);
   }
 
   // we skip updates if there is no feasible departure station
@@ -349,11 +357,11 @@ __device__ void mc_update_route_smaller32(
                        valid(stop_departure) &&
                        (prev_arrival <= stop_departure));
 
-//    if (t_id == 0 && (r_id == 20530) && t_offset == 0 && trip_offset == 1)
-//      printf(
-//          "Ballot Mask for r_id: %i, t_offset: %i, trip_offset: "
-//          "%i;\t%x\n",
-//          r_id, t_offset, trip_offset, ballot);
+    //    if (t_id == 0 && (r_id == 20530) && t_offset == 0 && trip_offset == 1)
+    //      printf(
+    //          "Ballot Mask for r_id: %i, t_offset: %i, trip_offset: "
+    //          "%i;\t%x\n",
+    //          r_id, t_offset, trip_offset, ballot);
 
     leader =
         __ffs(ballot) - 1;  // index of the first departure location on route
@@ -361,12 +369,13 @@ __device__ void mc_update_route_smaller32(
     unsigned criteria_mask =
         get_criteria_propagation_mask(leader, active_stop_count);
 
-//    if (t_id == 0 && (r_id == 20530) && t_offset == 0 && trip_offset == 1) {
-//      printf(
-//          "Criteria Mask for r_id: %i, t_offset: %i, trip_offset: "
-//          "%i;\t%x\n",
-//          r_id, t_offset, trip_offset, criteria_mask);
-//    }
+    //    if (t_id == 0 && (r_id == 20530) && t_offset == 0 && trip_offset == 1)
+    //    {
+    //      printf(
+    //          "Criteria Mask for r_id: %i, t_offset: %i, trip_offset: "
+    //          "%i;\t%x\n",
+    //          r_id, t_offset, trip_offset, criteria_mask);
+    //    }
 
     if (t_id > leader && t_id < active_stop_count) {
       auto const st_index =
@@ -375,15 +384,17 @@ __device__ void mc_update_route_smaller32(
       stop_arrival = tt.stop_arrivals_[st_index];
       auto const is_departure_stop = (((1 << t_id) & ballot) >> t_id);
 
-//      if (is_departure_stop && (r_id == 20530) && t_offset == 0 && t_id < 5 && trip_offset == 1)
-//        printf(
-//            "Is Departure Stop: r_id: %i\tt_offset: %i;\t trip_id: %i\tt_id: "
-//            "%i\ts_id: %i\n",
-//            r_id, t_offset, trip_offset, t_id, s_id);
+      //      if (is_departure_stop && (r_id == 20530) && t_offset == 0 && t_id
+      //      < 5 && trip_offset == 1)
+      //        printf(
+      //            "Is Departure Stop: r_id: %i\tt_offset: %i;\t trip_id:
+      //            %i\tt_id: "
+      //            "%i\ts_id: %i\n",
+      //            r_id, t_offset, trip_offset, t_id, s_id);
 
       if (!is_departure_stop) {
-        CriteriaConfig::update_traits_aggregate(aggregate, tt, r_id,
-                                                trip_offset, t_id, st_index);
+        CriteriaConfig::update_traits_aggregate(
+            aggregate, tt, prev_arrivals, t_id /* == stop offset */, st_index);
       }
 
       // propagate the additional criteria attributes
@@ -394,31 +405,38 @@ __device__ void mc_update_route_smaller32(
             criteria_mask, aggregate, !is_departure_stop && idx <= t_id);
       }
 
-//      if (r_id == 20530 && t_offset == 0 && t_id < 5 && trip_offset == 1)
-//        printf(
-//            "\nt_id: %i\tr_id: %i\tt_offset: %i\ttrip_id: %i\tfound moc for "
-//            "s_id: %i\tmoc: %i\n",
-//            t_id, r_id, t_offset, trip_offset, s_id,
-//            get_moc<CriteriaConfig>(aggregate));
+      //      if (r_id == 20530 && t_offset == 0 && t_id < 5 && trip_offset ==
+      //      1)
+      //        printf(
+      //            "\nt_id: %i\tr_id: %i\tt_offset: %i\ttrip_id: %i\tfound moc
+      //            for " "s_id: %i\tmoc: %i\n", t_id, r_id, t_offset,
+      //            trip_offset, s_id, get_moc<CriteriaConfig>(aggregate));
 
       // Note: Earliest Arrival may, when reaching this point not be the
       //       'earliest arrival' at this stop, but it gives a sufficient
       //       upper bound and allows preventing arrival time which are the same
       //       as for one round earlier
-      if (stop_arrival < earliest_arrival &&
-          CriteriaConfig::is_update_required(aggregate, t_offset)) {
-        bool updated = update_arrival(arrivals, stop_arr_idx, stop_arrival);
-        if (updated) {
-//          if (t_offset == 0 && (s_id == 26487)) {
-//            printf(
-//                "Wrote arrival to Stop %i from r_id: %i;\tt_offset: "
-//                "%i;\ttrip_offset: %i;ballot mask: %x\tarrival: "
-//                "%i;\tearliest_arrivals: %i\n",
-//                s_id, r_id, t_offset, trip_offset, ballot, stop_arrival,
-//                earliest_arrival);
-//          }
 
-          update_arrival(earliest_arrivals, stop_arr_idx, stop_arrival);
+      auto const write_to_offset =
+          CriteriaConfig::get_write_to_trait_id(aggregate);
+      auto const earliest_arrival = get_earliest_arrival<CriteriaConfig>(
+          earliest_arrivals, target_stop_id, s_id, write_to_offset);
+      if (stop_arrival < earliest_arrival) {
+        auto const write_to_idx =
+            CriteriaConfig::get_arrival_idx(s_id, write_to_offset);
+        bool updated = update_arrival(arrivals, write_to_idx, stop_arrival);
+        if (updated) {
+          //          if (t_offset == 0 && (s_id == 26487)) {
+          //            printf(
+          //                "Wrote arrival to Stop %i from r_id: %i;\tt_offset:
+          //                "
+          //                "%i;\ttrip_offset: %i;ballot mask: %x\tarrival: "
+          //                "%i;\tearliest_arrivals: %i\n",
+          //                s_id, r_id, t_offset, trip_offset, ballot,
+          //                stop_arrival, earliest_arrival);
+          //          }
+
+          update_arrival(earliest_arrivals, write_to_idx, stop_arrival);
           //          if ((r_id == 62 || r_id == 69))
           //            printf(
           //                "\nt_id: %i\tr_id: %i\tt_offset: %i\ttrip_id:
@@ -430,7 +448,8 @@ __device__ void mc_update_route_smaller32(
       }
     }
 
-    CriteriaConfig::reset_traits_aggregate(aggregate);
+    CriteriaConfig::reset_traits_aggregate(aggregate, r_id, trip_offset,
+                                           t_offset);
     //    if (leader != NO_LEADER) {
     //      active_stop_count = leader;
     //    }
@@ -442,7 +461,7 @@ template <typename CriteriaConfig>
 __device__ void mc_update_footpaths_dev_scratch(
     time const* const read_arrivals, time* const write_arrivals,
     time* const earliest_arrivals, stop_id const target_stop_id,
-    unsigned int* station_marks, device_gpu_timetable const& tt) {
+    uint32_t* station_marks, device_gpu_timetable const& tt) {
 
   auto const global_stride = get_global_stride();
 
@@ -493,28 +512,13 @@ __device__ void mc_update_footpaths_dev_scratch(
 }
 
 template <typename CriteriaConfig>
-__device__ void mc_update_routes_dev(
-    time const* const prev_arrivals, time* const arrivals,
-    time* const earliest_arrivals, unsigned int* station_marks,
-    unsigned int* route_marks, bool* any_station_marked,
-    stop_id const target_stop_id, device_gpu_timetable const& tt) {
-
-  if (get_global_thread_id() == 0) {
-    *any_station_marked = false;
-  }
-
-  convert_station_to_route_marks(station_marks, route_marks, any_station_marked,
-                                 tt);
-
-  this_grid().sync();
-
-  auto const station_store_size = (tt.stop_count_ / 32) + 1;
-  reset_store(station_marks, station_store_size);
-  this_grid().sync();
-
-  if (!*any_station_marked) {
-    return;
-  }
+__device__ void mc_update_routes_dev(time const* const prev_arrivals,
+                                     time* const arrivals,
+                                     time* const earliest_arrivals,
+                                     uint32_t* station_marks,
+                                     uint32_t* route_marks,
+                                     stop_id const target_stop_id,
+                                     device_gpu_timetable const& tt) {
 
   // blockDim.x = 32; blockDim.y = 32; gridDim.x =
   // 6; => Stride = 32*6 => 192
@@ -549,7 +553,7 @@ __device__ void mc_update_routes_dev(
 
 template <typename CriteriaConfig>
 __device__ void mc_update_footpaths_dev(device_memory const& device_mem,
-                                        raptor_round round_k,
+                                        raptor_round const round_k,
                                         stop_id const target_stop_id,
                                         device_gpu_timetable const& tt) {
   time* const arrivals = device_mem.result_[round_k];
@@ -574,16 +578,6 @@ __device__ void mc_init_arrivals_dev(base_query const& query,
                                      device_memory const& device_mem,
                                      device_gpu_timetable const& tt) {
   auto const t_id = get_global_thread_id();
-
-  auto const station_store_size = (tt.stop_count_ / 32) + 1;
-  reset_store(device_mem.station_marks_, station_store_size);
-
-  auto const route_store_size = (tt.route_count_ / 32) + 1;
-  reset_store(device_mem.route_marks_, route_store_size);
-
-  if (t_id == 0) {
-    *device_mem.any_station_marked_ = false;
-  }
 
   auto const trait_size = CriteriaConfig::trait_size();
   if (t_id < trait_size) {
@@ -620,18 +614,30 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
   this_grid().sync();
 
   for (raptor_round round_k = 1; round_k < max_raptor_round; ++round_k) {
-//    if (get_global_thread_id() == 0) {
-//      printf("Round %i\n", round_k);
-//    }
-//    this_grid().sync();
+    if (get_global_thread_id() == 0) {
+      *(device_mem.any_station_marked_) = false;
+    }
+    this_grid().sync();
+
+    convert_station_to_route_marks(device_mem.station_marks_,
+                                   device_mem.route_marks_,
+                                   device_mem.any_station_marked_, tt);
+    this_grid().sync();
+
+    auto const station_store_size = (tt.stop_count_ / 32) + 1;
+    reset_store(device_mem.station_marks_, station_store_size);
+    this_grid().sync();
+
+    if (!(*device_mem.any_station_marked_)) {
+      return;
+    }
 
     time const* const prev_arrivals = device_mem.result_[round_k - 1];
     time* const arrivals = device_mem.result_[round_k];
 
     mc_update_routes_dev<CriteriaConfig>(
         prev_arrivals, arrivals, device_mem.earliest_arrivals_,
-        device_mem.station_marks_, device_mem.route_marks_,
-        device_mem.any_station_marked_, query.target_, tt);
+        device_mem.station_marks_, device_mem.route_marks_, query.target_, tt);
 
     this_grid().sync();
 
@@ -655,8 +661,6 @@ void invoke_mc_gpu_raptor(d_query const& dq) {
   cuda_sync_stream(dq.mem_->context_.proc_stream_);
   cuda_check();
 
-  fflush(stdout);
-
   fetch_arrivals_async(dq, dq.mem_->context_.transfer_stream_);
   cuda_check();
 
@@ -664,13 +668,30 @@ void invoke_mc_gpu_raptor(d_query const& dq) {
   cuda_check();
 }
 
-#define GENERATE_LAUNCH_CONFIG_FUNCTION(VAL, ACCESSOR)             \
-  template <>                                                      \
-  std::tuple<int, int> get_mc_gpu_launch_config<VAL>() {           \
-    int block_size, grid_size;                                     \
-    cudaOccupancyMaxPotentialBlockSize(&grid_size, &block_size,    \
-                                       mc_gpu_raptor_kernel<VAL>); \
-    return std::make_tuple(grid_size, block_size);                 \
+#define GENERATE_LAUNCH_CONFIG_FUNCTION(VAL, ACCESSOR)                        \
+  template <>                                                                 \
+  std::pair<dim3, dim3> get_mc_gpu_raptor_launch_parameters<VAL>(             \
+      device_id const device_id, int32_t const concurrency_per_device) {      \
+    cudaSetDevice(device_id);                                                 \
+    cuda_check();                                                             \
+                                                                              \
+    cudaDeviceProp prop{};                                                    \
+    cudaGetDeviceProperties(&prop, device_id);                                \
+    cuda_check();                                                             \
+                                                                              \
+    utl::verify(prop.warpSize == 32,                                          \
+                "Warp Size must be 32! Otherwise the gRAPTOR algorithm will " \
+                "not work.");                                                 \
+                                                                              \
+    int min_grid_size = 0;                                                    \
+    int block_size = 0;                                                       \
+    cudaOccupancyMaxPotentialBlockSize(&min_grid_size, &block_size,           \
+                                       mc_gpu_raptor_kernel<VAL>, 0, 0);      \
+                                                                              \
+    dim3 threads_per_block(prop.warpSize, block_size / prop.warpSize, 1);     \
+    dim3 grid(min_grid_size / concurrency_per_device, 1, 1);                  \
+                                                                              \
+    return {threads_per_block, grid};                                         \
   }
 
 RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(GENERATE_LAUNCH_CONFIG_FUNCTION,

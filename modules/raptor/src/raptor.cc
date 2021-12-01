@@ -80,6 +80,8 @@ struct raptor::impl {
 
     queries_per_device_ = std::max(config.queries_per_device_, int32_t{1});
     mem_store_.init(*meta_info_, *timetable_, queries_per_device_);
+
+    cudaDeviceSynchronize();
 #endif
   }
 

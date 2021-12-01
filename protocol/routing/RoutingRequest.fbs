@@ -100,8 +100,8 @@ enum SearchType : byte {
   DefaultPriceRegional,
 
   MaxOccupancy,
-  Occupancy,
-  OccMaxOcc
+  TimeSlottedOccupancy,
+  MinTransferTimes
 }
 
 // ----------------------------------------------------------------------------

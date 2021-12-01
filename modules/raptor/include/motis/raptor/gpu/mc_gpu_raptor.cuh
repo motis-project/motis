@@ -4,12 +4,14 @@
 
 namespace motis::raptor {
 
-#define GENERATE_LAUNCH_CONFIG_FUNC_DECL(VAL, ACCESSOR) \
-  template<>                                          \
-  std::tuple<int, int> get_mc_gpu_launch_config<VAL>();
+#define GENERATE_LAUNCH_CONFIG_FUNC_DECL(VAL, ACCESSOR)           \
+  template <>                                                     \
+  std::pair<dim3, dim3> get_mc_gpu_raptor_launch_parameters<VAL>( \
+      device_id const device_id, int32_t const concurrency_per_device);
 
-template<typename CriteriaConfig>
-std::tuple<int, int> get_mc_gpu_launch_config() {
+template <typename CriteriaConfig>
+std::pair<dim3, dim3> get_mc_gpu_raptor_launch_parameters(
+    device_id const device_id, int32_t const concurrency_per_device) {
   throw std::system_error{access::error::not_implemented};
 }
 

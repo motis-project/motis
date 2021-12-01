@@ -44,7 +44,7 @@ __device__ void copy_and_min_arrivals(time* const to, time* const from,
 __device__ void update_route_larger32(gpu_route const& route,
                                       time const* const prev_arrivals,
                                       time* const arrivals,
-                                      unsigned int* station_marks,
+                                      uint32_t* station_marks,
                                       device_gpu_timetable const& tt) {
   auto const t_id = threadIdx.x;
 
@@ -151,7 +151,7 @@ __device__ void update_route_larger32(gpu_route const& route,
 __device__ void update_route_smaller32(gpu_route const route,
                                        time const* const prev_arrivals,
                                        time* const arrivals,
-                                       unsigned int* station_marks,
+                                       uint32_t* station_marks,
                                        device_gpu_timetable const& tt) {
   auto const t_id = threadIdx.x;
 
@@ -208,7 +208,7 @@ __device__ void update_route_smaller32(gpu_route const route,
 
 __device__ void update_footpaths_dev_scratch(time const* const read_arrivals,
                                              time* const write_arrivals,
-                                             unsigned int* station_marks,
+                                             uint32_t* station_marks,
                                              device_gpu_timetable const& tt) {
 
   auto const global_stride = get_global_stride();
@@ -231,26 +231,9 @@ __device__ void update_footpaths_dev_scratch(time const* const read_arrivals,
 
 __device__ void update_routes_dev(time const* const prev_arrivals,
                                   time* const arrivals,
-                                  unsigned int* station_marks,
-                                  unsigned int* route_marks,
-                                  bool* any_station_marked,
+                                  uint32_t* station_marks,
+                                  uint32_t* route_marks,
                                   device_gpu_timetable const& tt) {
-
-  if (get_global_thread_id() == 0) {
-    *any_station_marked = false;
-  }
-
-  convert_station_to_route_marks(station_marks, route_marks, any_station_marked,
-                                 tt);
-  this_grid().sync();
-
-  auto const station_store_size = (tt.stop_count_ / 32) + 1;
-  reset_store(station_marks, station_store_size);
-  this_grid().sync();
-
-  if (!*any_station_marked) {
-    return;
-  }
 
   auto const stride = blockDim.y * gridDim.x;
   auto const start_r_id = threadIdx.y + (blockDim.y * blockIdx.x);
@@ -278,16 +261,6 @@ __device__ void init_arrivals_dev(base_query const& query,
                                   device_gpu_timetable const& tt) {
   auto const t_id = get_global_thread_id();
 
-  auto const station_store_size = (tt.stop_count_ / 32) + 1;
-  reset_store(device_mem.station_marks_, station_store_size);
-
-  auto const route_store_size = (tt.route_count_ / 32) + 1;
-  reset_store(device_mem.route_marks_, route_store_size);
-
-  if (t_id == 0) {
-    *device_mem.any_station_marked_ = false;
-  }
-
   if (t_id == 0) {
     device_mem.result_[0][query.source_] = query.source_time_begin_;
     mark(device_mem.station_marks_, query.source_);
@@ -307,7 +280,7 @@ __device__ void init_arrivals_dev(base_query const& query,
 }
 
 __device__ void update_footpaths_dev(device_memory const& device_mem,
-                                     raptor_round round_k,
+                                     raptor_round const round_k,
                                      device_gpu_timetable const& tt) {
   time* const arrivals = device_mem.result_[round_k];
 
@@ -339,11 +312,29 @@ __global__ void gpu_raptor_kernel(base_query const query,
   this_grid().sync();
 
   for (raptor_round round_k = 1; round_k < max_raptor_round; ++round_k) {
+    if (get_global_thread_id() == 0) {
+      *(device_mem.any_station_marked_) = false;
+    }
+    this_grid().sync();
+
+    convert_station_to_route_marks(device_mem.station_marks_,
+                                   device_mem.route_marks_,
+                                   device_mem.any_station_marked_, tt);
+    this_grid().sync();
+
+    auto const station_store_size = (tt.stop_count_ / 32) + 1;
+    reset_store(device_mem.station_marks_, station_store_size);
+    this_grid().sync();
+
+    if (!(*device_mem.any_station_marked_)) {
+      return;
+    }
+
     time const* const prev_arrivals = device_mem.result_[round_k - 1];
     time* const arrivals = device_mem.result_[round_k];
 
     update_routes_dev(prev_arrivals, arrivals, device_mem.station_marks_,
-                      device_mem.route_marks_, device_mem.any_station_marked_,
+                      device_mem.route_marks_,
                       tt);
     this_grid().sync();
 
@@ -352,13 +343,28 @@ __global__ void gpu_raptor_kernel(base_query const query,
   }
 }
 
-std::tuple<int, int> get_gpu_launch_config() {
-  int block_size;
-  int grid_size;
+std::pair<dim3, dim3> get_gpu_raptor_launch_parameters(
+    device_id const device_id, int32_t const concurrency_per_device) {
+  cudaSetDevice(device_id);
+  cuda_check();
 
-  cudaOccupancyMaxPotentialBlockSize(&grid_size, &block_size,
-                                     gpu_raptor_kernel);
-  return std::make_tuple(grid_size, block_size);
+  cudaDeviceProp prop{};
+  cudaGetDeviceProperties(&prop, device_id);
+  cuda_check();
+
+  utl::verify(
+      prop.warpSize == 32,
+      "Warp Size must be 32! Otherwise the gRAPTOR algorithm will not work.");
+
+  int min_grid_size = 0;
+  int block_size = 0;
+  cudaOccupancyMaxPotentialBlockSize(&min_grid_size, &block_size,
+                                     gpu_raptor_kernel, 0, 0);
+
+  dim3 threads_per_block(prop.warpSize, block_size / prop.warpSize, 1);
+  dim3 grid(min_grid_size / concurrency_per_device, 1, 1);
+
+  return {threads_per_block, grid};
 }
 
 void invoke_gpu_raptor(d_query const& dq) {
@@ -373,6 +379,7 @@ void invoke_gpu_raptor(d_query const& dq) {
 
   fetch_arrivals_async(dq, dq.mem_->context_.transfer_stream_);
   cuda_check();
+
   cuda_sync_stream(dq.mem_->context_.transfer_stream_);
   cuda_check();
 }

@@ -23,8 +23,7 @@ __global__ void update_routes_kernel(device_memory const device_mem,
   time* const arrivals = device_mem.result_[round_k];
 
   update_routes_dev(prev_arrivals, arrivals, device_mem.station_marks_,
-                    device_mem.route_marks_, device_mem.any_station_marked_,
-                    tt);
+                    device_mem.route_marks_, tt);
 }
 
 void invoke_hybrid_raptor(d_query const& dq) {
@@ -34,8 +33,8 @@ void invoke_hybrid_raptor(d_query const& dq) {
   void* init_args[] = {(void*)&dq, (void*)dq.mem_->active_device_,  // NOLINT
                        (void*)&dq.tt_};  // NOLINT
 
-  launch_kernel(init_arrivals_kernel, init_args, dq.mem_->context_,
-                proc_stream, raptor_criteria_config::Default);
+  launch_kernel(init_arrivals_kernel, init_args, dq.mem_->context_, proc_stream,
+                raptor_criteria_config::Default);
   cuda_sync_stream(proc_stream);
 
   fetch_arrivals_async(dq, 0, transfer_stream);

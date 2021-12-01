@@ -46,7 +46,11 @@ helper/target
 config_*
 data
 data_debug_schedule
+data_hafas
 .pkg.lock
 gtfstid*
 .gitignore
 /deps/
+cmake-vs
+cmake-build-debug
+cmake-build-relwithdebinfo

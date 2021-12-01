@@ -20,6 +20,9 @@ using footpath_id = int32_t;
 using trip_id = uint32_t;
 using arrival_id = uint32_t;
 
+using trait_id = uint8_t;
+using dimension_id = uint8_t;
+
 using motis_id = int32_t;
 
 // these are only 16bit wide, because they are used relativ to a station/route

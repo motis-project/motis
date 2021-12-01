@@ -18,4 +18,16 @@ inline void fill_criteria_into_journey(journey& j,
   j.max_occupancy_ = data.max_occupancy_;
 }
 
+template <>
+inline void fill_criteria_into_journey(
+    journey& j, MinTransferTimes::CriteriaData const& data) {
+  j.min_transfer_time_ = data.min_transfer_time_idx_ * 5;
+}
+
+template <>
+inline void fill_criteria_into_journey(
+    journey& j, TimeSlottedOccupancy::CriteriaData const& data) {
+  j.time_slotted_occupancy_ = data.summed_occ_time_;
+}
+
 }  // namespace motis::raptor

@@ -78,22 +78,24 @@ template <typename CriteriaConfig>
 inline std::tuple<trip_id, typename CriteriaConfig::CriteriaData>
 get_next_feasible_trip(raptor_timetable const& tt,
                        time const* const prev_arrivals, route_id r_id,
-                       trip_id earliest_trip_id, uint32_t trait_offset,
-                       stop_id arr_offset) {
+                       trip_id earliest_trip_id, trait_id trait_offset,
+                       stop_offset arr_offset) {
 
   auto const& route = tt.routes_[r_id];
-  stop_id new_dep_offset;
+  stop_offset new_dep_offset;
 
   typename CriteriaConfig::CriteriaData trip_data{};
 
   for (trip_id trip_id = earliest_trip_id + 1; trip_id < route.trip_count_;
        ++trip_id) {
+    CriteriaConfig::reset_traits_aggregate(trip_data, r_id, trip_id,
+                                           trait_offset);
 
     // aggregate the trait data for the current departure station
     new_dep_offset = arr_offset - 1;
     stop_times_index const arr_sti =
         route.index_to_stop_times_ + (trip_id * route.stop_count_) + arr_offset;
-    CriteriaConfig::update_traits_aggregate(trip_data, tt, r_id, trip_id,
+    CriteriaConfig::update_traits_aggregate(trip_data, tt, prev_arrivals,
                                             arr_offset, arr_sti);
 
     do {
@@ -105,20 +107,18 @@ get_next_feasible_trip(raptor_timetable const& tt,
           CriteriaConfig::get_arrival_idx(dep_s_id, trait_offset);
       auto dep_stop_times = tt.stop_times_[dep_sti];
 
-      if (CriteriaConfig::is_update_required(trip_data, trait_offset) &&
+      if (/*CriteriaConfig::is_update_required(trip_data, trait_offset) &&*/
           valid(dep_stop_times.departure_) &&
           prev_arrivals[dep_arr_idx] <= dep_stop_times.departure_) {
         return std::make_tuple(trip_id, std::move(trip_data));
       }
 
-      CriteriaConfig::update_traits_aggregate(trip_data, tt, r_id, trip_id,
+      CriteriaConfig::update_traits_aggregate(trip_data, tt, prev_arrivals,
                                               new_dep_offset, dep_sti);
       --new_dep_offset;
 
-    } while (new_dep_offset >= 0 &&
-             CriteriaConfig::is_update_required(trip_data, trait_offset));
-
-    CriteriaConfig::reset_traits_aggregate(trip_data);
+    } while (new_dep_offset >= 0 //&&
+             /*CriteriaConfig::is_update_required(trip_data, trait_offset)*/);
   }
 
   return std::make_tuple(invalid<raptor::trip_id>, std::move(trip_data));
@@ -128,7 +128,7 @@ template <typename CriteriaConfig>
 void update_route_for_trait_offset(
     raptor_timetable const& tt, route_id const r_id,
     time const* const prev_arrivals, time* const current_round,
-    earliest_arrivals& ea, cpu_mark_store& station_marks, uint32_t trait_offset,
+    earliest_arrivals& ea, cpu_mark_store& station_marks, trip_id trait_offset,
     arrival_id target_arr_idx) {
   auto const& route = tt.routes_[r_id];
 
@@ -142,7 +142,8 @@ void update_route_for_trait_offset(
       earliest_trip_id = get_earliest_trip<CriteriaConfig>(
           tt, route, prev_arrivals, r_stop_offset, trait_offset);
 
-      CriteriaConfig::reset_traits_aggregate(criteria_data);
+      CriteriaConfig::reset_traits_aggregate(criteria_data, r_id,
+                                             earliest_trip_id, trait_offset);
       continue;
     }
 
@@ -152,9 +153,8 @@ void update_route_for_trait_offset(
                                  (earliest_trip_id * route.stop_count_) +
                                  r_stop_offset;
 
-    CriteriaConfig::update_traits_aggregate(criteria_data, tt, r_id,
-                                            earliest_trip_id, r_stop_offset,
-                                            current_stop_time_idx);
+    CriteriaConfig::update_traits_aggregate(
+        criteria_data, tt, prev_arrivals, r_stop_offset, current_stop_time_idx);
 
     if (CriteriaConfig::is_rescan_from_stop_needed(criteria_data,
                                                    trait_offset)) {
@@ -175,8 +175,9 @@ void update_route_for_trait_offset(
         // no trip was found on this route which matches the trait_offset
         // while going from the known departure station we can also skip all
         // further stops until finding a new stop we can depart from
-        CriteriaConfig::reset_traits_aggregate(criteria_data);
         earliest_trip_id = invalid<trip_count>;
+        CriteriaConfig::reset_traits_aggregate(criteria_data, r_id,
+                                               earliest_trip_id, trait_offset);
 
         // it is still possible that this stop can serve as departure stop
         --r_stop_offset;
@@ -194,8 +195,9 @@ void update_route_for_trait_offset(
     auto const ea_target_min = std::min(ea[stop_arr_idx], ea[target_arr_idx]);
     auto const min = std::min(current_round[stop_arr_idx], ea_target_min);
 
-    if (stop_time.arrival_ < min &&
-        CriteriaConfig::is_update_required(criteria_data, trait_offset)) {
+    if (stop_time.arrival_ < min
+        //&&
+        /*CriteriaConfig::is_update_required(criteria_data, trait_offset)*/) {
       station_marks.mark(stop_id);
       current_round[stop_arr_idx] = stop_time.arrival_;
     }
@@ -213,8 +215,8 @@ void update_route_for_trait_offset(
      * then we would skip on updates to the curren_round results.
      */
 
-    if (stop_time.arrival_ < ea[stop_arr_idx] &&
-        CriteriaConfig::is_update_required(criteria_data, trait_offset)) {
+    if (stop_time.arrival_ < ea[stop_arr_idx] //&&
+        /*CriteriaConfig::is_update_required(criteria_data, trait_offset)*/) {
       ea[stop_arr_idx] = stop_time.arrival_;
     }
 
@@ -227,7 +229,8 @@ void update_route_for_trait_offset(
                    get_earliest_trip<CriteriaConfig>(
                        tt, route, prev_arrivals, r_stop_offset, trait_offset));
 
-      CriteriaConfig::reset_traits_aggregate(criteria_data);
+      CriteriaConfig::reset_traits_aggregate(criteria_data, r_id,
+                                             earliest_trip_id, trait_offset);
     }
   }
 }

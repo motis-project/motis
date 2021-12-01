@@ -74,7 +74,7 @@ struct d_query : public base_query {
 
     mem_->require_active(bq.criteria_config_);
 
-    auto const& add_starts = get_add_starts(
+    auto const add_starts = get_add_starts(
         meta_info, source_, use_start_footpaths_, use_start_metas_);
 
     cudaMemcpyAsync(mem_->active_device_->additional_starts_, add_starts.data(),

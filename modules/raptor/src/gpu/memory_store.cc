@@ -10,9 +10,10 @@
 
 namespace motis::raptor {
 
-#define FILL_LAUNCH_PARAMETER_MAP(VAL, ACCESSOR) \
-  launch_configs_[ACCESSOR::VAL] =               \
-      get_launch_config(get_mc_gpu_launch_config<VAL>());
+#define FILL_LAUNCH_PARAMETER_MAP(VAL, ACCESSOR)                  \
+  launch_configs_[ACCESSOR::VAL] =                                \
+      get_launch_config(get_mc_gpu_raptor_launch_parameters<VAL>( \
+          device_id, concurrency_per_device));
 
 inline void print_device_properties(cudaDeviceProp const& dp) {
   printf("Properties of device '%s':\n", dp.name);
@@ -32,11 +33,11 @@ inline void print_device_properties(cudaDeviceProp const& dp) {
 inline void print_launch_parameters(
     std::unordered_map<raptor_criteria_config, kernel_launch_config> const&
         lps) {
-  for(auto const& entry : lps) {
+  for (auto const& entry : lps) {
     printf("Launch Parameters for config: %s\n",
            get_string_for_criteria_config(entry.first).c_str());
     auto const& block = entry.second.threads_per_block_;
-    auto const& grid  = entry.second.grid_;
+    auto const& grid = entry.second.grid_;
     printf("\tBlock Dimensions:\t%i, %i, %i\n", block.x, block.y, block.z);
     printf("\tThreads per Block:\t%i\n", (block.x * block.y * block.z));
     printf("\tGrid Dimensions:\t%i, %i, %i\n", grid.x, grid.y, grid.z);
@@ -44,41 +45,12 @@ inline void print_launch_parameters(
   }
 }
 
-std::pair<dim3, dim3> get_launch_paramters(
-    cudaDeviceProp const& prop, int32_t const concurrency_per_device) {
-  int32_t block_dim_x = 32;  // must always be 32!
-  int32_t block_dim_y = 32;  // range [1, ..., 32]
-  int32_t block_size = block_dim_x * block_dim_y;
-  int32_t max_blocks_per_sm = prop.maxThreadsPerMultiProcessor / block_size;
-
-  if (max_blocks_per_sm < 1) {
-    throw std::runtime_error{
-        "Require a to large Block size to be executed on one SM!"};
-  }
-
-  auto const mp_count = prop.multiProcessorCount / concurrency_per_device;
-
-  int32_t num_blocks = mp_count * max_blocks_per_sm;
-
-  dim3 threads_per_block(block_dim_x, block_dim_y, 1);
-  dim3 grid(num_blocks, 1, 1);
-
-  return {threads_per_block, grid};
-}
-
 inline kernel_launch_config get_launch_config(
-    const std::tuple<int, int>& params) {
-  auto const& [grid_size, block_size] = params;
+    const std::pair<dim3, dim3> params) {
+  auto const& [block_size, grid_size] = params;
   kernel_launch_config klc{};
-  klc.grid_.x = grid_size;
-  klc.grid_.y = 1;
-  klc.grid_.z = 1;
-
-  klc.threads_per_block_.x =
-      32;  // must always be 32 for the route scanning to work properly
-  klc.threads_per_block_.y = std::floor(block_size / 32);
-  klc.threads_per_block_.z = 1;
-
+  klc.grid_ = grid_size;
+  klc.threads_per_block_ = block_size;
   return klc;
 }
 
@@ -92,8 +64,8 @@ device_context::device_context(device_id const device_id,
   cuda_check();
   print_device_properties(props_);
 
-  launch_configs_[raptor_criteria_config::Default] =
-      get_launch_config(get_gpu_launch_config());
+  launch_configs_[raptor_criteria_config::Default] = get_launch_config(
+      get_gpu_raptor_launch_parameters(device_id, concurrency_per_device));
   RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(FILL_LAUNCH_PARAMETER_MAP,
                                      raptor_criteria_config)
 
@@ -209,8 +181,7 @@ mem::mem(stop_id const stop_count, route_id const route_count,
       active_host_{nullptr},
       active_device_{nullptr},
       active_config_{raptor_criteria_config::Default},
-      is_reset_{true}
-{
+      is_reset_{true} {
 
   host_memories_.emplace(raptor_criteria_config::Default,
                          std::make_unique<host_memory>(
@@ -270,7 +241,7 @@ void memory_store::init(raptor_meta_info const& meta_info,
   for (auto device_id = 0; device_id < device_count; ++device_id) {
     for (auto i = 0; i < concurrency_per_device; ++i) {
       memory_.emplace_back(std::make_unique<struct mem>(
-          tt.stop_count(), tt.route_count(), max_add_starts, device_id,
+          tt.stops_.size(), tt.routes_.size(), max_add_starts, device_id,
           concurrency_per_device));
     }
   }
@@ -291,9 +262,6 @@ loaned_mem::loaned_mem(memory_store& store) {
 loaned_mem::~loaned_mem() {
   mem_->reset_active();
   cuda_sync_stream(mem_->context_.proc_stream_);
-
-  using namespace std::chrono_literals;
-  std::this_thread::sleep_for(5s);
 }
 
 }  // namespace motis::raptor

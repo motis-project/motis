@@ -147,7 +147,8 @@ Offset<Connection> to_connection(FlatBufferBuilder& b, journey const& j) {
                           b.CreateVector(convert_free_texts(b, j.free_texts_)),
                           b.CreateVector(convert_problems(b, j.problems_)),
                           j.night_penalty_, j.db_costs_, j.max_occupancy_,
-                          j.occupancy_, status_to_fbs(j.status_));
+                          j.time_slotted_occupancy_, j.min_transfer_time_,
+                          status_to_fbs(j.status_));
 }
 
 }  // namespace motis

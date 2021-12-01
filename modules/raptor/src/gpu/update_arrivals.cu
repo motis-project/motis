@@ -9,7 +9,7 @@ __device__ bool update_arrival(time* const base, stop_id const s_id,
 #if __CUDA_ARCH__ >= 700
 
   auto old_value = base[s_id];
-  time assumed;
+  time assumed{};
 
   do {
     if (old_value <= val) {

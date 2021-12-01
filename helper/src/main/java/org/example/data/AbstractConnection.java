@@ -19,10 +19,8 @@ public abstract class AbstractConnection<ST extends Stop> {
     var trips = (JSONArray) conn.get("trips");
     if(conn.containsKey("max_occupancy"))
       this.moc = (Long) conn.get("max_occupancy");
-    else{
-      var ucriteris = (JSONObject)conn.get("ucriteria");
-      this.moc = (Long) ucriteris.get("occupancy_max");
-    }
+    else
+      this.moc = 0;
 
     this.stops = new ArrayList<>();
     for (int i = 0, stopsSize = stops.size(); i < stopsSize; i++) {
