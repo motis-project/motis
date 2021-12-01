@@ -53,8 +53,10 @@ struct header {
   fws_multimap_offset transfers_{};
   fws_multimap_offset reverse_transfers_{};
 
-  fws_multimap_offset in_allowed_{};
+  array_offset in_allowed_data_{};
   array_offset out_allowed_data_{};
+  array_offset arrival_platform_data_{};
+  array_offset departure_platform_data_{};
 };
 
 void write_data(tb_data const& data, std::string const& filename,

@@ -14,7 +14,12 @@
 
 namespace motis {
 
-enum class node_type { STATION_NODE, ROUTE_NODE, FOOT_NODE };
+enum class node_type : uint8_t {
+  STATION_NODE,
+  ROUTE_NODE,
+  FOOT_NODE,
+  PLATFORM_NODE
+};
 
 struct node;
 
@@ -23,27 +28,24 @@ using station_node = node;
 using node_id_t = uint32_t;
 
 struct node {
-  bool is_station_node() const { return station_node_ == nullptr; }
-  bool is_route_node() const { return route_ != -1; }
-  bool is_foot_node() const { return !is_station_node() && !is_route_node(); }
-
-  node_type type() const {
-    if (is_station_node()) {
-      return node_type::STATION_NODE;
-    } else if (is_route_node()) {
-      return node_type::ROUTE_NODE;
-    } else {
-      return node_type::FOOT_NODE;
-    }
+  inline bool is_station_node() const {
+    return type_ == node_type::STATION_NODE;
+  }
+  inline bool is_route_node() const { return type_ == node_type::ROUTE_NODE; }
+  inline bool is_foot_node() const { return type_ == node_type::FOOT_NODE; }
+  inline bool is_platform_node() const {
+    return type_ == node_type::PLATFORM_NODE;
   }
 
+  inline node_type type() const { return type_; }
+
   char const* type_str() const {
-    if (is_station_node()) {
-      return "STATION_NODE";
-    } else if (is_route_node()) {
-      return "ROUTE_NODE";
-    } else {
-      return "FOOT_NODE";
+    switch (type_) {
+      case node_type::STATION_NODE: return "STATION_NODE";
+      case node_type::ROUTE_NODE: return "ROUTE_NODE";
+      case node_type::FOOT_NODE: return "FOOT_NODE";
+      case node_type::PLATFORM_NODE: return "PLATFORM_NODE";
+      default: return "UNKNOWN_NODE";
     }
   }
 
@@ -108,15 +110,18 @@ struct node {
   ptr<station_node> station_node_{nullptr};
   int32_t route_{-1};
   node_id_t id_{0};
+  node_type type_{node_type::STATION_NODE};
 
   // Station Node Properties
   mcd::unique_ptr<node> foot_node_;
-  mcd::vector<mcd::unique_ptr<node>> route_nodes_;
+  mcd::vector<mcd::unique_ptr<node>> child_nodes_;
+  mcd::vector<node*> platform_nodes_;
 };
 
-inline node make_node(node* station_node, node_id_t const node_id,
-                      int32_t const route = -1) {
+inline node make_node(node_type const type, node* station_node,
+                      node_id_t const node_id, int32_t const route = -1) {
   node n;
+  n.type_ = type;
   n.station_node_ = station_node;
   n.id_ = node_id;
   n.route_ = route;
@@ -124,7 +129,7 @@ inline node make_node(node* station_node, node_id_t const node_id,
 }
 
 inline station_node make_station_node(node_id_t const id) {
-  return make_node(nullptr, id);
+  return make_node(node_type::STATION_NODE, nullptr, id);
 }
 
 using station_node_ptr = mcd::unique_ptr<station_node>;
