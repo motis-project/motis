@@ -105,24 +105,20 @@ struct service_with_day_offset {
 struct services_key {
   services_key() = default;
 
-  services_key(Service const* service, int day_idx)
-      : services_({{service, 0}}), day_idx_(day_idx) {}
+  explicit services_key(Service const* service) : services_({{service, 0}}) {}
 
-  services_key(std::set<service_with_day_offset> services, int day_idx)
-      : services_(std::move(services)), day_idx_(day_idx) {}
+  explicit services_key(std::set<service_with_day_offset> services)
+      : services_(std::move(services)) {}
 
   friend bool operator<(services_key const& lhs, services_key const& rhs) {
-    return std::tie(lhs.services_, lhs.day_idx_) <
-           std::tie(rhs.services_, rhs.day_idx_);
+    return lhs.services_ < rhs.services_;
   }
 
   friend bool operator==(services_key const& lhs, services_key const& rhs) {
-    return std::tie(lhs.services_, lhs.day_idx_) ==
-           std::tie(rhs.services_, rhs.day_idx_);
+    return lhs.services_ == rhs.services_;
   }
 
   std::set<service_with_day_offset> services_;
-  int day_idx_{0};
 };
 
 template <typename T, typename... Args>

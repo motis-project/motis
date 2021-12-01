@@ -13,8 +13,8 @@ table Rule {
   service2: Service;
   from: Station;
   to: Station;
-  day_offset1: uint;
-  day_offset2: uint;
+  day_offset1: int;
+  day_offset2: int;
   day_switch: bool;
 }
 

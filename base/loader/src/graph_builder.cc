@@ -31,8 +31,8 @@
 #include "motis/loader/classes.h"
 #include "motis/loader/filter/local_stations.h"
 #include "motis/loader/interval_util.h"
-//#include "motis/loader/rule_route_builder.h"
-//#include "motis/loader/rule_service_graph_builder.h"
+#include "motis/loader/rule_route_builder.h"
+#include "motis/loader/rule_service_graph_builder.h"
 #include "motis/loader/tracking_dedup.h"
 #include "motis/loader/util.h"
 #include "motis/loader/wzr_loader.h"
@@ -281,7 +281,9 @@ void graph_builder::add_route_services(
 
     for (auto const& [lcon_string, times] :
          utl::zip(lcon_strings, rel_utc_times_and_traffic_days)) {
-      add_to_routes(alt_routes, times.first, lcon_string);
+      if (!has_duplicate(s, lcon_string)) {
+        add_to_routes(alt_routes, times.first, lcon_string);
+      }
     }
   }
 
@@ -295,14 +297,12 @@ void graph_builder::add_route_services(
     index_first_route_node(*r);
     write_trip_edges(*r);
 
-    // TODO(felix) fix trips
-    //      if (expand_trips_) {
-    //        add_expanded_trips(*r);
-    //      }
+    if (expand_trips_) {
+      add_expanded_trips(*r);
+    }
   }
 }
 
-/*
 bool graph_builder::has_duplicate(Service const* service,
                                   mcd::vector<light_connection> const& lcons) {
   auto const& first_station = sched_.stations_.at(
@@ -315,14 +315,13 @@ bool graph_builder::has_duplicate(Service const* service,
     for (auto const& route_node :
          sched_.station_nodes_[eq->index_]->route_nodes_) {
       for (auto const& route_edge : route_node->edges_) {
-        if (route_edge.type() != edge_type::ROUTE_EDGE) {
+        if (route_edge.type() != edge_type::ROUTE_EDGE &&
+            route_edge.type() != edge_type::FWD_ROUTE_EDGE) {
           continue;
         }
 
-        for (auto* lc = route_edge.get_connection(lcons.front().d_time_);
-             lc != nullptr && lc->d_time_ == lcons.front().d_time_;
-             lc = route_edge.get_next_valid_lcon(lc, 1U)) {
-          for (auto const& trp : *sched_.merged_trips_[lc->trips_]) {
+        for (auto const& lc : route_edge.m_.route_edge_.conns_) {
+          for (auto const& trp : *sched_.merged_trips_[lc.trips_]) {
             if (are_duplicates(service, lcons, trp)) {
               return true;
             }
@@ -337,16 +336,17 @@ bool graph_builder::has_duplicate(Service const* service,
 
 bool graph_builder::are_duplicates(Service const* service_a,
                                    mcd::vector<light_connection> const& lcons_a,
-                                   trip const* trp_b) {
+                                   trip_info const* trp_b) {
   auto const* stations_a = service_a->route()->stations();
-  auto const stops_b = access::stops{trp_b};
+  auto const stops_b = access::stops{concrete_trip{trp_b, 0}};
   auto const stop_count_b = std::distance(begin(stops_b), end(stops_b));
 
   if (stations_a->size() != stop_count_b) {
     return false;
   }
 
-  auto const are_equivalent = [&](Station const* st_a, station const& s_b) {
+  auto const stations_are_equivalent = [&](Station const* st_a,
+                                           station const& s_b) {
     auto const& s_a = sched_.stations_.at(stations_.at(st_a)->id_);
     return s_a->source_schedule_ != s_b.source_schedule_ &&
            std::any_of(
@@ -356,8 +356,8 @@ bool graph_builder::are_duplicates(Service const* service_a,
 
   auto const& last_stop_b = *std::next(begin(stops_b), stop_count_b - 1);
   if (lcons_a.back().a_time_ != last_stop_b.arr_lcon().a_time_ ||
-      !are_equivalent(stations_a->Get(stations_a->size() - 1),
-                      last_stop_b.get_station(sched_))) {
+      !stations_are_equivalent(stations_a->Get(stations_a->size() - 1),
+                               last_stop_b.get_station(sched_))) {
     return false;
   }
 
@@ -365,7 +365,8 @@ bool graph_builder::are_duplicates(Service const* service_a,
        std::next(it_b) != end(stops_b); ++i_a, ++it_b) {
     if (lcons_a[i_a - 1].a_time_ != (*it_b).arr_lcon().a_time_ ||
         lcons_a[i_a].d_time_ != (*it_b).dep_lcon().d_time_ ||
-        !are_equivalent(stations_a->Get(i_a), (*it_b).get_station(sched_))) {
+        !stations_are_equivalent(stations_a->Get(i_a),
+                                 (*it_b).get_station(sched_))) {
       return false;
     }
   }
@@ -393,7 +394,6 @@ void graph_builder::add_expanded_trips(route const& r) {
     sched_.expanded_trips_.finish_key();
   }
 }
-*/
 
 bool graph_builder::check_trip(trip_info const* trp) {
   auto last_time = 0U;
@@ -520,9 +520,7 @@ light_connection graph_builder::section_to_connection(
 
   bitfield con_traffic_days;
   for (auto const& day : service_traffic_days) {
-    if (day_offset <= day) {
-      con_traffic_days.set(day + day_offset);
-    }
+    con_traffic_days.set(day + day_offset);
   }
 
   {  // Build full connection.
@@ -906,7 +904,7 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
       scoped_timer timer("rule services");
       progress_tracker->status(fmt::format("Rule Services {}", dataset_prefix))
           .out_bounds(out_mid, out_high);
-      // build_rule_routes(builder, fbs_schedule->rule_services());
+      build_rule_routes(builder, fbs_schedule->rule_services());
     }
   }
 
