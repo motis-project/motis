@@ -23,7 +23,7 @@ namespace motis::ris::gtfsrt {
 struct knowledge_context;
 
 struct gtfsrt_parser {
-  gtfsrt_parser(schedule const& sched);
+  explicit gtfsrt_parser(schedule const& sched);
   ~gtfsrt_parser();
 
   gtfsrt_parser(gtfsrt_parser const&) = delete;

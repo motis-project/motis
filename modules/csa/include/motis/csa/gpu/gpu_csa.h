@@ -1,6 +1,6 @@
 #pragma once
 
-#include <inttypes.h>
+#include <cinttypes>
 
 extern "C" {
 
@@ -9,10 +9,10 @@ enum { GPU_CSA_MAX_TRAVEL_TIME = 1440U };
 
 struct gpu_timetable;
 
-typedef uint16_t gpu_csa_time;
-typedef uint32_t gpu_csa_station_id;
-typedef uint32_t gpu_csa_trip_idx;
-typedef uint16_t gpu_csa_con_idx;
+using gpu_csa_time = uint16_t;
+using gpu_csa_station_id = uint32_t;
+using gpu_csa_trip_idx = uint32_t;
+using gpu_csa_con_idx = uint16_t;
 
 struct gpu_csa_con {
   gpu_csa_station_id from_, to_;

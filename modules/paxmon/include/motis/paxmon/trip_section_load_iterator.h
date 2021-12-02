@@ -201,7 +201,7 @@ protected:
   capacity_maps const& caps_;
   universe const& uv_;
   trip const* trip_{};
-  trip_data_index const tdi_{};
+  trip_data_index tdi_{};
   int index_{};
 };
 
@@ -256,7 +256,7 @@ struct sections_with_load {
   capacity_maps const& caps_;
   universe const& uv_;
   trip const* trip_{};
-  trip_data_index const tdi_{};
+  trip_data_index tdi_{};
 };
 
 }  // namespace motis::paxmon
