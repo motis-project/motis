@@ -51,6 +51,69 @@ inline void add_group_to_alternative(schedule const& sched,
       });
 }
 
+struct sim_data {
+  void finish_stats(std::uint64_t combined_group_count) {
+    result_.stats_.combined_group_count_ = combined_group_count;
+    result_.stats_.found_alt_count_avg_ = avg(found_alt_count_);
+    result_.stats_.picked_alt_count_avg_ = avg(picked_alt_count_);
+    result_.stats_.best_alt_prob_avg_ = avg(best_alt_prob_);
+    result_.stats_.second_alt_prob_avg_ = avg(second_alt_prob_);
+  }
+
+  simulation_result& result_;
+  std::mutex result_mutex_;
+  std::vector<std::uint8_t> found_alt_count_;
+  std::vector<std::uint8_t> picked_alt_count_;
+  std::vector<float> best_alt_prob_;
+  std::vector<float> second_alt_prob_;
+};
+
+template <typename PassengerBehavior>
+inline void simulate_behavior_for_cpg(schedule const& sched,
+                                      motis::paxmon::capacity_maps const& caps,
+                                      motis::paxmon::universe& uv,
+                                      PassengerBehavior& pb,
+                                      combined_passenger_group const& cpg,
+                                      sim_data& sd) {
+  if (cpg.groups_.empty()) {
+    return;
+  }
+  auto const allocation =
+      pb.pick_routes(*cpg.groups_.front(), cpg.alternatives_);
+  auto guard = std::lock_guard{sd.result_mutex_};
+  sd.result_.stats_.group_count_ += cpg.groups_.size();
+  for (auto const& grp : cpg.groups_) {
+    auto& group_result = sd.result_.group_results_[grp];
+    group_result.localization_ = &cpg.localization_;
+    std::uint8_t picked = 0;
+    for (auto const& [alt, probability] :
+         utl::zip(cpg.alternatives_, allocation)) {
+      if (probability < 0.01F) {
+        continue;
+      }
+      group_result.alternatives_.emplace_back(&alt, probability);
+      add_group_to_alternative(sched, caps, uv, sd.result_, *grp, alt,
+                               probability);
+      ++picked;
+    }
+    sd.found_alt_count_.emplace_back(
+        static_cast<std::uint8_t>(cpg.alternatives_.size()));
+    sd.picked_alt_count_.emplace_back(picked);
+    if (picked == 1) {
+      sd.best_alt_prob_.emplace_back(group_result.alternatives_.front().second);
+    } else if (picked > 1) {
+      auto top = std::vector<std::pair<alternative const*, float>>(2);
+      std::partial_sort_copy(begin(group_result.alternatives_),
+                             end(group_result.alternatives_), begin(top),
+                             end(top), [](auto const& lhs, auto const& rhs) {
+                               return lhs.second > rhs.second;
+                             });
+      sd.best_alt_prob_.emplace_back(top[0].second);
+      sd.second_alt_prob_.emplace_back(top[1].second);
+    }
+  }
+}
+
 template <typename PassengerBehavior>
 inline simulation_result simulate_behavior(
     schedule const& sched, motis::paxmon::capacity_maps const& caps,
@@ -59,68 +122,17 @@ inline simulation_result simulate_behavior(
         combined_groups,
     PassengerBehavior& pb) {
   simulation_result result;
-
-  std::mutex result_mutex;
-  std::vector<std::uint8_t> found_alt_count;
-  std::vector<std::uint8_t> picked_alt_count;
-  std::vector<float> best_alt_prob;
-  std::vector<float> second_alt_prob;
-
-  motis_parallel_for(
-      combined_groups, ([&](auto const& cpgs) {
-        for (auto const& cpg : cpgs.second) {
-          if (cpg.groups_.empty()) {
-            continue;
-          }
-          auto const allocation =
-              pb.pick_routes(*cpg.groups_.front(), cpg.alternatives_);
-          auto guard = std::lock_guard{result_mutex};
-          result.stats_.group_count_ += cpg.groups_.size();
-          for (auto const& grp : cpg.groups_) {
-            auto& group_result = result.group_results_[grp];
-            group_result.localization_ = &cpg.localization_;
-            std::uint8_t picked = 0;
-            for (auto const& [alt, probability] :
-                 utl::zip(cpg.alternatives_, allocation)) {
-              if (probability < 0.01F) {
-                continue;
-              }
-              group_result.alternatives_.emplace_back(&alt, probability);
-              add_group_to_alternative(sched, caps, uv, result, *grp, alt,
-                                       probability);
-              ++picked;
-            }
-            found_alt_count.emplace_back(
-                static_cast<std::uint8_t>(cpg.alternatives_.size()));
-            picked_alt_count.emplace_back(picked);
-            if (picked == 1) {
-              best_alt_prob.emplace_back(
-                  group_result.alternatives_.front().second);
-            } else if (picked > 1) {
-              auto top = std::vector<std::pair<alternative const*, float>>(2);
-              std::partial_sort_copy(begin(group_result.alternatives_),
-                                     end(group_result.alternatives_),
-                                     begin(top), end(top),
-                                     [](auto const& lhs, auto const& rhs) {
-                                       return lhs.second > rhs.second;
-                                     });
-              best_alt_prob.emplace_back(top[0].second);
-              second_alt_prob.emplace_back(top[1].second);
-            }
-          }
-        }
-      }));
-
-  result.stats_.combined_group_count_ = combined_groups.size();
-  result.stats_.found_alt_count_avg_ = avg(found_alt_count);
-  result.stats_.picked_alt_count_avg_ = avg(picked_alt_count);
-  result.stats_.best_alt_prob_avg_ = avg(best_alt_prob);
-  result.stats_.second_alt_prob_avg_ = avg(second_alt_prob);
-
+  sim_data sd{result};
+  motis_parallel_for(combined_groups, ([&](auto const& cpgs) {
+                       for (auto const& cpg : cpgs.second) {
+                         simulate_behavior_for_cpg(sched, caps, uv, pb, cpg,
+                                                   sd);
+                       }
+                     }));
+  sd.finish_stats(combined_groups.size());
   return result;
 }
 
-// TODO(pablo): refactor, remove duplication
 template <typename PassengerBehavior>
 inline simulation_result simulate_behavior(
     schedule const& sched, motis::paxmon::capacity_maps const& caps,
@@ -130,63 +142,12 @@ inline simulation_result simulate_behavior(
                   combined_passenger_group> const& combined_groups,
     PassengerBehavior& pb) {
   simulation_result result;
-
-  std::mutex result_mutex;
-  std::vector<std::uint8_t> found_alt_count;
-  std::vector<std::uint8_t> picked_alt_count;
-  std::vector<float> best_alt_prob;
-  std::vector<float> second_alt_prob;
-
-  motis_parallel_for(
-      combined_groups, ([&](auto const& entry) {
-        auto const& cpg = entry.second;
-        if (cpg.groups_.empty()) {
-          return;
-        }
-        auto const allocation =
-            pb.pick_routes(*cpg.groups_.front(), cpg.alternatives_);
-        auto guard = std::lock_guard{result_mutex};
-        result.stats_.group_count_ += cpg.groups_.size();
-        for (auto const& grp : cpg.groups_) {
-          auto& group_result = result.group_results_[grp];
-          group_result.localization_ = &cpg.localization_;
-          std::uint8_t picked = 0;
-          for (auto const& [alt, probability] :
-               utl::zip(cpg.alternatives_, allocation)) {
-            if (probability < 0.01F) {
-              continue;
-            }
-            group_result.alternatives_.emplace_back(&alt, probability);
-            add_group_to_alternative(sched, caps, uv, result, *grp, alt,
-                                     probability);
-            ++picked;
-          }
-          found_alt_count.emplace_back(
-              static_cast<std::uint8_t>(cpg.alternatives_.size()));
-          picked_alt_count.emplace_back(picked);
-          if (picked == 1) {
-            best_alt_prob.emplace_back(
-                group_result.alternatives_.front().second);
-          } else if (picked > 1) {
-            auto top = std::vector<std::pair<alternative const*, float>>(2);
-            std::partial_sort_copy(begin(group_result.alternatives_),
-                                   end(group_result.alternatives_), begin(top),
-                                   end(top),
-                                   [](auto const& lhs, auto const& rhs) {
-                                     return lhs.second > rhs.second;
-                                   });
-            best_alt_prob.emplace_back(top[0].second);
-            second_alt_prob.emplace_back(top[1].second);
-          }
-        }
-      }));
-
-  result.stats_.combined_group_count_ = combined_groups.size();
-  result.stats_.found_alt_count_avg_ = avg(found_alt_count);
-  result.stats_.picked_alt_count_avg_ = avg(picked_alt_count);
-  result.stats_.best_alt_prob_avg_ = avg(best_alt_prob);
-  result.stats_.second_alt_prob_avg_ = avg(second_alt_prob);
-
+  sim_data sd{result};
+  motis_parallel_for(combined_groups, ([&](auto const& cpgs) {
+                       simulate_behavior_for_cpg(sched, caps, uv, pb,
+                                                 cpgs.second, sd);
+                     }));
+  sd.finish_stats(combined_groups.size());
   return result;
 }
 
