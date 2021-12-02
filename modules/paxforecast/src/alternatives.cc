@@ -294,31 +294,25 @@ std::vector<alternative> find_alternatives(
         j, to_compact_journey(j, sched), arrival_time, dur, j.transfers_, true};
   });
 
-  // add additional alternatives for recommended trips (if not already found)
+  // TODO(pablo): add additional alternatives for recommended trips (if not
+  // already found)
   if (remaining_journey != nullptr) {
+    auto recommended_trips_not_found = 0ULL;
     for (auto const* mv : group_measures) {
       std::visit(utl::overloaded{[&](measures::trip_recommendation const& m) {
                    if (!std::any_of(begin(alternatives), end(alternatives),
                                     [&](alternative const& alt) {
                                       return is_recommended(alt, m);
                                     })) {
-                     // TODO(pablo): search alternative containing this trip
-
-                     // 1. search from interchange_station ->
-                     // destination_station
-                     (void)m.interchange_station_;
-                     (void)destination_station_id;
-                     // need time at interchange station from remaining_journey
-
-                     // 2. prefix = remaining_journey until interchange_station
-                     // (get_prefix - with localization)
-
-                     // 3. combine prefix + alternatives
-                     // 4. mark as recommended (should work in check_measures
-                     // below)
+                     ++recommended_trips_not_found;
                    }
                  }},
                  *mv);
+    }
+    if (recommended_trips_not_found > 0) {
+      LOG(info)
+          << recommended_trips_not_found
+          << " recommended trips not included in any alternative journeys";
     }
   }
 
