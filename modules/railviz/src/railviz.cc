@@ -371,7 +371,8 @@ msg_ptr railviz::get_trains(msg_ptr const& msg) const {
   auto const end_time = unix_to_motistime(sched, req->end_time());
 
   trains_response_builder trb{
-      sched, find_shared_data<path::path_data>(path::PATH_DATA_KEY),
+      sched,
+      find_shared_data<path::path_data>(to_res_id(global_res_id::PATH_DATA)),
       req->zoom_geo()};
   for (auto const& ev : train_retriever_->trains(
            start_time, end_time, req->max_trains(), req->last_trains(),
@@ -389,7 +390,9 @@ msg_ptr railviz::get_trips(msg_ptr const& msg) {
   auto const& sched = get_sched();
 
   trains_response_builder trb{
-      sched, find_shared_data<path::path_data>(path::PATH_DATA_KEY), MAX_ZOOM};
+      sched,
+      find_shared_data<path::path_data>(to_res_id(global_res_id::PATH_DATA)),
+      MAX_ZOOM};
   for (auto const* fbs_trp : *req->trips()) {
     auto const trp = from_fbs(sched, fbs_trp);
     if (!trp->edges_->empty()) {

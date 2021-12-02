@@ -722,63 +722,69 @@ void ris::init(motis::module::registry& r) {
       [this]() {
         impl_->init();  // NOLINT
       },
-      ctx::access_t::WRITE);
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
   r.register_op(
       "/ris/upload", [this](auto&& m) { return impl_->upload(m); },
-      ctx::access_t::WRITE);
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
   r.register_op(
       "/ris/forward", [this](auto&& m) { return impl_->forward(m); },
-      ctx::access_t::WRITE);
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
   r.register_op(
       "/ris/read", [this](auto&& m) { return impl_->read(m); },
-      ctx::access_t::WRITE);
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
   r.register_op(
       "/ris/purge", [this](auto&& m) { return impl_->purge(m); },
-      ctx::access_t::WRITE);
-  r.register_op(
-      "/ris/write_gtfs_trip_ids",
-      [this](auto&&) {
-        message_creator fbb;
-        auto const& sched = get_sched();
-        fbb.create_and_finish(
-            MsgContent_RISGTFSRTMapping,
-            CreateRISGTFSRTMapping(
-                fbb,
-                fbb.CreateVector(utl::to_vec(
-                    sched.gtfs_trip_ids_,
-                    [&](mcd::pair<gtfs_trip_id, ptr<trip const>> const& id) {
-                      // SBB HRD data uses eva numbers
-                      // GTFS uses ${eva number}:0:${track}
-                      // To use SBB GTFS station indices in HRD:
-                      // -> cut and export the eva number (the part until
-                      // ':')
-                      auto const cut = [](std::string const& s) {
-                        auto const i = s.find_first_of(':');
-                        return i != std::string::npos ? s.substr(0, i) : s;
-                      };
-                      auto const& p = id.second->id_.primary_;
-                      auto const& s = id.second->id_.secondary_;
-                      return CreateGTFSID(
-                          fbb, fbb.CreateString(id.first.trip_id_),
-                          id.first.start_date_,
-                          CreateTripId(
-                              fbb,
-                              fbb.CreateString(
-                                  cut(sched.stations_.at(p.station_id_)
-                                          ->eva_nr_.str())),
-                              p.train_nr_, motis_to_unixtime(sched, p.time_),
-                              fbb.CreateString(
-                                  cut(sched.stations_.at(s.target_station_id_)
-                                          ->eva_nr_.str())),
-                              motis_to_unixtime(sched, s.target_time_),
-                              fbb.CreateString(s.line_id_)));
-                    })))
-                .Union());
-        auto const msg = make_msg(fbb);
-        utl::file{"gtfs_trips.raw", "w"}.write(msg->data(), msg->size());
-        return nullptr;
-      },
-      ctx::access_t::READ);
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
+  r.register_op("/ris/write_gtfs_trip_ids", [this](auto&&) {
+    message_creator fbb;
+    auto const& sched = get_sched();
+    fbb.create_and_finish(
+        MsgContent_RISGTFSRTMapping,
+        CreateRISGTFSRTMapping(
+            fbb, fbb.CreateVector(utl::to_vec(
+                     sched.gtfs_trip_ids_,
+                     [&](mcd::pair<gtfs_trip_id, ptr<trip const>> const& id) {
+                       // SBB HRD data uses eva numbers
+                       // GTFS uses ${eva number}:0:${track}
+                       // To use SBB GTFS station indices in HRD:
+                       // -> cut and export the eva number (the part until
+                       // ':')
+                       auto const cut = [](std::string const& s) {
+                         auto const i = s.find_first_of(':');
+                         return i != std::string::npos ? s.substr(0, i) : s;
+                       };
+                       auto const& p = id.second->id_.primary_;
+                       auto const& s = id.second->id_.secondary_;
+                       return CreateGTFSID(
+                           fbb, fbb.CreateString(id.first.trip_id_),
+                           id.first.start_date_,
+                           CreateTripId(
+                               fbb,
+                               fbb.CreateString(
+                                   cut(sched.stations_.at(p.station_id_)
+                                           ->eva_nr_.str())),
+                               p.train_nr_, motis_to_unixtime(sched, p.time_),
+                               fbb.CreateString(
+                                   cut(sched.stations_.at(s.target_station_id_)
+                                           ->eva_nr_.str())),
+                               motis_to_unixtime(sched, s.target_time_),
+                               fbb.CreateString(s.line_id_)));
+                     })))
+            .Union());
+    auto const msg = make_msg(fbb);
+    utl::file{"gtfs_trips.raw", "w"}.write(msg->data(), msg->size());
+    return nullptr;
+  });
 }
 
 }  // namespace motis::ris

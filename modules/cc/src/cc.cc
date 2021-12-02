@@ -122,8 +122,9 @@ void check_interchange(schedule const& sched, Connection const* con,
   auto const transfer_time = ic.enter_.get_time() - ic.exit_.get_time();
   if (ic.exit_stop_idx_ == ic.enter_stop_idx_) {
     utl::verify(
-        transfer_time >=
-            sched.stations_.at(ic.enter_.get_station_idx())->transfer_time_,
+        transfer_time >= sched.stations_.at(ic.enter_.get_station_idx())
+                             ->get_transfer_time(ic.exit_.get_track(),
+                                                 ic.enter_.get_track()),
         "transfer time below station transfer time");
   } else {
     auto min_transfer_time = 0;

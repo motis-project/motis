@@ -29,7 +29,6 @@
 
 #include "motis/paxmon/capacity_maps.h"
 #include "motis/paxmon/compact_journey_util.h"
-#include "motis/paxmon/data_key.h"
 #include "motis/paxmon/debug.h"
 #include "motis/paxmon/messages.h"
 #include "motis/paxmon/monitoring_event.h"
@@ -274,7 +273,8 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   MOTIS_START_TIMING(total);
   auto const& sched = get_sched();
   tick_stats.system_time_ = sched.system_time_;
-  auto& data = *get_shared_data<paxmon_data*>(motis::paxmon::DATA_KEY);
+  auto& data =
+      *get_shared_data<paxmon_data*>(to_res_id(global_res_id::PAX_DATA));
   auto& uv = data.multiverse_.primary();
   auto& caps = data.capacity_maps_;
 
@@ -554,7 +554,8 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
   scoped_timer all_timer{"apply_measures"};
   auto const req = motis_content(PaxForecastApplyMeasuresRequest, msg);
   auto const& sched = get_sched();
-  auto& data = *get_shared_data<paxmon_data*>(motis::paxmon::DATA_KEY);
+  auto& data =
+      *get_shared_data<paxmon_data*>(to_res_id(global_res_id::PAX_DATA));
   LOG(info) << "universe: " << req->universe();
   auto uv = data.multiverse_.get(req->universe());
   auto& caps = data.capacity_maps_;

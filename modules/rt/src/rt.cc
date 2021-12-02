@@ -26,18 +26,24 @@ void rt::init(motis::module::registry& reg) {
   reg.subscribe(
       "/ris/messages",
       [&](motis::module::msg_ptr const& msg) { return handler_->update(msg); },
-      ctx::access_t::WRITE);
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
   reg.register_op(
       "/rt/single",
       [&](motis::module::msg_ptr const& msg) { return handler_->single(msg); },
-      ctx::access_t::WRITE);
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
   reg.subscribe(
       "/ris/system_time_changed",
       [&](motis::module::msg_ptr const& msg) {
         handler_->flush(msg);
         return nullptr;
       },
-      ctx::access_t::WRITE);
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
   reg.register_op("/rt/dump", [&](motis::module::msg_ptr const& msg) {
     auto const m = motis_content(RtWriteGraphRequest, msg);
     write_graph(m->path()->str(), get_sched());

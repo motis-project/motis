@@ -94,7 +94,9 @@ struct allocator {
 
     CISTA_COMPARABLE()
 
-    operator bool() const noexcept { return block_index_ != INVALID_BLOCK; }
+    explicit operator bool() const noexcept {
+      return block_index_ != INVALID_BLOCK;
+    }
 
     std::uint32_t block_index_{INVALID_BLOCK};
     std::uint32_t block_offset_{INVALID_OFFSET};
@@ -119,7 +121,7 @@ struct allocator {
   }
 
   inline Type* get(pointer const ptr) const {
-    return reinterpret_cast<Type*>(
+    return reinterpret_cast<Type*>(  //  NOLINT
         reinterpret_cast<std::uintptr_t>(blocks_[ptr.block_index_].data()) +
         static_cast<std::uintptr_t>(ptr.block_offset_));
   }
