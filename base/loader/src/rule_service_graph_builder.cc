@@ -230,20 +230,17 @@ struct node_id_cmp {
 
 struct rule_service_route_builder {
   rule_service_route_builder(
-      graph_builder& gb,  //
-      unsigned first_day, unsigned last_day,
+      graph_builder& gb,
       std::map<Service const*, mcd::vector<service_section*>>& sections,
       unsigned route_id, rule_route const& rs)
       : gb_(gb),
-        first_day_(first_day),
-        last_day_(last_day),
         sections_(sections),
         route_id_(route_id),
         traffic_days_(rs.traffic_days_) {}
 
   void build_routes() {
-    for (auto& entry : sections_) {
-      build_route(entry.first, entry.second);
+    for (auto& [service, sections] : sections_) {
+      build_route(service, sections);
     }
 
     for (auto& entry : sections_) {
@@ -289,18 +286,19 @@ struct rule_service_route_builder {
   }
 
   merged_trips_idx get_or_create_trips(
-      std::array<participant, 16> const& services) {
+      std::array<participant, 16> const& services,
+      mcd::vector<motis::time> const& times) {
     auto k = get_services_key(services);
     return utl::get_or_create(trips_, k, [&]() {
-      return static_cast<merged_trips_idx>(
-          push_mem(gb_.sched_.merged_trips_,
-                   mcd::to_vec(begin(k.services_), end(k.services_),
-                               [&](service_with_day_offset sp) {
-                                 return ptr<trip_info>{utl::get_or_create(
-                                     single_trips_, sp.service_, [&]() {
-                                       return gb_.register_service(sp.service_);
-                                     })};
-                               })));
+      return static_cast<merged_trips_idx>(push_mem(
+          gb_.sched_.merged_trips_,
+          mcd::to_vec(begin(k.services_), end(k.services_),
+                      [&](service_with_day_offset sp) {
+                        return ptr<trip_info>{utl::get_or_create(
+                            single_trips_, sp.service_, [&]() {
+                              return gb_.register_service(sp.service_, times);
+                            })};
+                      })));
     });
   }
 
@@ -315,15 +313,11 @@ struct rule_service_route_builder {
     assert(!participants.empty());
 
     mcd::vector<light_connection> lcons;
-    bool adjusted = false;
-    auto const& traffic_days = traffic_days_.at(services[0].service_);
-    for (unsigned day_idx = first_day_; day_idx <= last_day_; ++day_idx) {
-      if (traffic_days.test(day_idx)) {
-        lcons.push_back(gb_.section_to_connection(
-            services, 0, get_or_create_trips(services)));
-        adjusted = false;
-      }
-    }
+    //    auto const& [traffic_days, times] =
+    //    traffic_days_.at(services[0].service_);
+    //    lcons.push_back(gb_.section_to_connection(
+    //        services, times, traffic_days, get_or_create_trips(services,
+    //        times)));
     return lcons;
   }
 
@@ -478,17 +472,14 @@ struct rule_service_route_builder {
                                section->route_section_.get_route_edge());
                          }));
 
-    auto const& traffic_days = traffic_days_.at(s);
+    //    auto const& traffic_days = traffic_days_.at(s);
     auto edges = gb_.sched_.trip_edges_.back().get();
-    auto lcon_idx = lcon_idx_t{};
-    for (unsigned day_idx = first_day_; day_idx <= last_day_; ++day_idx) {
-      if (traffic_days.test(day_idx)) {
-        auto trp = single_trips_.at(s);
-        trp->edges_ = edges;
-        trp->lcon_idx_ = lcon_idx;
-        ++lcon_idx;
-      }
-    }
+    auto lcon_idx = lcon_idx_t{0U};
+
+    auto trp = single_trips_.at(s);
+    trp->edges_ = edges;
+    trp->lcon_idx_ = lcon_idx;
+    ++lcon_idx;
   }
 
   void connect_through_services(rule_route const& rs) {
@@ -614,7 +605,8 @@ struct rule_service_route_builder {
     auto trips_added = false;
     for (auto lcon_idx = 0U; lcon_idx < lc_count; ++lcon_idx) {
       full_trip_id ftid;
-      push_mem(gb_.sched_.trip_mem_, ftid, edges_ptr, lcon_idx, trip_debug{});
+      //      push_mem(gb_.sched_.trip_mem_, ftid, edges_ptr, lcon_idx,
+      //      trip_debug{});
       auto const trip_ptr = gb_.sched_.trip_mem_.back().get();
       if (gb_.check_trip(trip_ptr)) {
         gb_.sched_.expanded_trips_.push_back(trip_ptr);
@@ -627,14 +619,14 @@ struct rule_service_route_builder {
   }
 
   graph_builder& gb_;
-  unsigned first_day_, last_day_;
   std::map<Service const*, mcd::vector<service_section*>>& sections_;
   std::map<Service const*, trip_info*> single_trips_;
   std::map<services_key, merged_trips_idx> trips_;
   unsigned route_id_;
   std::set<node const*, node_id_cmp> start_nodes_;
   std::set<node const*> through_target_nodes_;
-  std::map<Service const*, bitfield> const& traffic_days_;
+  std::map<std::pair<Service const*, mcd::vector<motis::time>>, bitfield> const&
+      traffic_days_;
 };
 
 rule_service_graph_builder::rule_service_graph_builder(graph_builder& gb)
@@ -649,12 +641,11 @@ void rule_service_graph_builder::add_rule_services(
   for (auto const& rule_service : rule_services) {
     auto route_id = gb_.next_route_index_++;
 
-    rule_service_section_builder section_builder(gb_, rule_service);
+    rule_service_section_builder section_builder(rule_service);
     section_builder.build_sections(rule_service);
 
-    rule_service_route_builder route_builder(
-        gb_, rule_service.first_day_, rule_service.last_day_,
-        section_builder.sections_, route_id, rule_service);
+    rule_service_route_builder route_builder(gb_, section_builder.sections_,
+                                             route_id, rule_service);
     route_builder.build_routes();
     route_builder.connect_through_services(rule_service);
 

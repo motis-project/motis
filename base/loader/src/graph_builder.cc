@@ -172,11 +172,20 @@ void graph_builder::index_first_route_node(route const& r) {
   sched_.route_index_to_first_route_node_[route_index] = r[0].from_route_node_;
 }
 
-mcd::hash_map<mcd::vector<time>, mcd::vector<unsigned>>
+std::optional<mcd::hash_map<mcd::vector<time>, bitfield>>
 graph_builder::service_times_to_utc(bitfield const& traffic_days,
-                                    day_idx_t const start_idx,
-                                    day_idx_t const end_idx, Service const* s) {
-  auto utc_times = mcd::hash_map<mcd::vector<time>, mcd::vector<unsigned>>{};
+                                    Service const* s) const {
+  auto const day_offset =
+      s->times()->Get(s->times()->size() - 2) / MINUTES_A_DAY;
+  auto const start_idx =
+      static_cast<day_idx_t>(std::max(0, first_day_ - day_offset));
+  auto const end_idx = std::min(MAX_DAYS, last_day_);
+
+  if (!has_traffic_within_timespan(traffic_days, start_idx, end_idx)) {
+    return std::nullopt;
+  }
+
+  auto utc_times = mcd::hash_map<mcd::vector<time>, bitfield>{};
   auto utc_service_times = mcd::vector<time>{};
   utc_service_times.resize(s->times()->size() - 2);
   for (auto day_idx = start_idx; day_idx < end_idx; ++day_idx) {
@@ -187,7 +196,7 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
     auto fix_offset = 0U;
     for (auto i = 1; i < s->times()->size() - 1; ++i) {
       auto const& station = *sched_.stations_.at(
-          stations_[s->route()->stations()->Get(i / 2)]->id_);
+          stations_.at(s->route()->stations()->Get(i / 2))->id_);
 
       auto const time_with_fix = s->times()->Get(i) + fix_offset;
       auto const local_time = static_cast<mam_t>(time_with_fix % MINUTES_A_DAY);
@@ -230,8 +239,7 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
 
       utc_service_times[i - 1] = rel_utc;
     }
-
-    utc_times[utc_service_times].emplace_back(initial_day);
+    utc_times[utc_service_times].set(initial_day);
   }
   return utc_times;
 }
@@ -254,21 +262,16 @@ void graph_builder::add_route_services(
     auto const& s = s_t.first;
     auto const& traffic_days = sched_.bitfields_.at(s_t.second);
 
-    auto const day_offset =
-        s->times()->Get(s->times()->size() - 2) / MINUTES_A_DAY;
-    auto const start_idx =
-        static_cast<day_idx_t>(std::max(0, first_day_ - day_offset));
-    auto const end_idx = std::min(MAX_DAYS, last_day_);
+    auto const rel_utc_times_and_traffic_days =
+        service_times_to_utc(traffic_days, s);
 
-    if (!has_traffic_within_timespan(traffic_days, start_idx, end_idx)) {
-      continue;
+    if (!rel_utc_times_and_traffic_days.has_value()) {
+      continue;  // No service within timespan.
     }
 
-    auto const rel_utc_times_and_traffic_days =
-        service_times_to_utc(traffic_days, start_idx, end_idx, s);
     auto const lcon_strings = mcd::to_vec(
-        rel_utc_times_and_traffic_days,
-        [&](cista::pair<mcd::vector<time>, mcd::vector<unsigned>> const& utc) {
+        *rel_utc_times_and_traffic_days,
+        [&](cista::pair<mcd::vector<time>, bitfield> const& utc) {
           auto const& [times, string_traffic_days] = utc;
           auto lcon_string = mcd::vector<light_connection>{};
           auto const trip = create_merged_trips(s, times);
@@ -280,7 +283,7 @@ void graph_builder::add_route_services(
         });
 
     for (auto const& [lcon_string, times] :
-         utl::zip(lcon_strings, rel_utc_times_and_traffic_days)) {
+         utl::zip(lcon_strings, *rel_utc_times_and_traffic_days)) {
       if (!has_duplicate(s, lcon_string)) {
         add_to_routes(alt_routes, times.first, lcon_string);
       }
@@ -478,8 +481,7 @@ connection_info* graph_builder::get_or_create_connection_info(
 
 light_connection graph_builder::section_to_connection(
     std::array<participant, 16> const& services,
-    mcd::vector<time> const& relative_utc,
-    mcd::vector<unsigned> const& service_traffic_days,
+    mcd::vector<time> const& relative_utc, bitfield const& traffic_days,
     merged_trips_idx const trips_idx) {
   auto const& ref_service = services[0].service_;
   auto const& section_idx = services[0].section_idx_;
@@ -518,11 +520,6 @@ light_connection graph_builder::section_to_connection(
 
   utl::verify(utc_mam_dep <= utc_mam_arr, "departure must be before arrival");
 
-  bitfield con_traffic_days;
-  for (auto const& day : service_traffic_days) {
-    con_traffic_days.set(day + day_offset);
-  }
-
   {  // Build full connection.
     auto const section = ref_service->sections()->Get(section_idx);
     auto const from_station =
@@ -556,7 +553,7 @@ light_connection graph_builder::section_to_connection(
   }
 
   return light_connection{
-      utc_mam_dep, utc_mam_arr, store_bitfield(con_traffic_days),
+      utc_mam_dep, utc_mam_arr, store_bitfield(traffic_days << day_offset),
       mcd::set_get_or_create(connections_, &con_,
                              [&]() {
                                sched_.full_connections_.emplace_back(
@@ -691,7 +688,6 @@ mcd::unique_ptr<route> graph_builder::create_route(Route const* r,
   auto route_sections = mcd::make_unique<route>();
 
   route_section prev_route_section;
-  auto const route_bitfield_idx = store_bitfield(lcons.traffic_days_);
   for (auto i = 0UL; i < r->stations()->size() - 1; ++i) {
     auto const from = i;
     auto const to = i + 1;
@@ -705,12 +701,12 @@ mcd::unique_ptr<route> graph_builder::create_route(Route const* r,
                 "number of connections on route segment must match number of "
                 "services on route");
 
-    route_sections->push_back(add_route_section(
-        route_index, section_lcons,  //
-        stops->Get(from), in_allowed->Get(from) != 0U,
-        out_allowed->Get(from) != 0U, stops->Get(to), in_allowed->Get(to) != 0U,
-        out_allowed->Get(to) != 0U, prev_route_section.to_route_node_, nullptr,
-        route_bitfield_idx));
+    route_sections->push_back(
+        add_route_section(route_index, section_lcons,  //
+                          stops->Get(from), in_allowed->Get(from) != 0U,
+                          out_allowed->Get(from) != 0U, stops->Get(to),
+                          in_allowed->Get(to) != 0U, out_allowed->Get(to) != 0U,
+                          prev_route_section.to_route_node_, nullptr));
     prev_route_section = route_sections->back();
   }
 
@@ -721,8 +717,7 @@ route_section graph_builder::add_route_section(
     int route_index, mcd::vector<light_connection> const& cons,
     Station const* from_stop, bool from_in_allowed, bool from_out_allowed,
     Station const* to_stop, bool to_in_allowed, bool to_out_allowed,
-    node* from_route_node, node* to_route_node,
-    size_t const route_traffic_days) {
+    node* from_route_node, node* to_route_node) {
   assert(
       std::is_sorted(begin(cons), end(cons),
                      [](light_connection const& a, light_connection const& b) {
@@ -760,14 +755,12 @@ route_section graph_builder::add_route_section(
                   [](auto const& c) { return c.a_time_ < MINUTES_A_DAY; });
 
   if (is_bidirectional) {
-    section.from_route_node_->edges_.emplace_back(
-        make_route_edge(section.from_route_node_, section.to_route_node_, cons,
-                        route_traffic_days));
+    section.from_route_node_->edges_.emplace_back(make_route_edge(
+        section.from_route_node_, section.to_route_node_, cons));
   } else {
     // FWD
-    section.from_route_node_->edges_.emplace_back(
-        make_fwd_route_edge(section.from_route_node_, section.to_route_node_,
-                            cons, route_traffic_days));
+    section.from_route_node_->edges_.emplace_back(make_fwd_route_edge(
+        section.from_route_node_, section.to_route_node_, cons));
 
     // BWD
     auto const bwd_cons =
@@ -781,9 +774,8 @@ route_section graph_builder::add_route_section(
         });
 
     // TODO(felix): make route_traffic_days based on BWD bitfields
-    section.from_route_node_->edges_.emplace_back(
-        make_bwd_route_edge(section.from_route_node_, section.to_route_node_,
-                            bwd_cons, route_traffic_days));
+    section.from_route_node_->edges_.emplace_back(make_bwd_route_edge(
+        section.from_route_node_, section.to_route_node_, bwd_cons));
   }
 
   return section;
@@ -830,7 +822,6 @@ void graph_builder::dedup_bitfields() {
           for (auto& c : re.conns_) {
             c.traffic_days_ = &sched_.bitfields_[map[c.traffic_days_]];
           }
-          re.traffic_days_ = &sched_.bitfields_[map[re.traffic_days_]];
         }
       });
     }

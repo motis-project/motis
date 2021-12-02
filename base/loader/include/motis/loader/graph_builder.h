@@ -185,17 +185,16 @@ struct graph_builder {
 
   light_connection section_to_connection(
       std::array<participant, 16> const& services,
-      mcd::vector<time> const& relative_utc,
-      mcd::vector<unsigned> const& srv_traffic_days, merged_trips_idx);
+      mcd::vector<time> const& relative_utc, bitfield const& traffic_days,
+      merged_trips_idx);
 
   void connect_reverse();
 
   void sort_connections();
   void sort_trips();
 
-  mcd::hash_map<mcd::vector<time>, mcd::vector<unsigned>> service_times_to_utc(
-      bitfield const& traffic_days, day_idx_t start_idx, day_idx_t end_idx,
-      Service const* s);
+  std::optional<mcd::hash_map<mcd::vector<time>, bitfield>>
+  service_times_to_utc(bitfield const& traffic_days, Service const* s) const;
 
   bitfield_idx_t store_bitfield(bitfield const&);
   bitfield_idx_t get_or_create_bitfield(
@@ -221,7 +220,7 @@ struct graph_builder {
       int route_index, mcd::vector<light_connection> const& connections,
       Station const* from_stop, bool from_in_allowed, bool from_out_allowed,
       Station const* to_stop, bool to_in_allowed, bool to_out_allowed,
-      node* from_route_node, node* to_route_node, size_t route_traffic_days);
+      node* from_route_node, node* to_route_node);
 
   bool check_trip(trip_info const* trp);
 

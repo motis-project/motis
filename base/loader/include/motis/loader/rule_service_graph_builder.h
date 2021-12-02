@@ -9,9 +9,9 @@
 namespace motis::loader {
 
 struct rule_route {
-  std::map<Service const*, bitfield> traffic_days_;
+  std::map<std::pair<Service const*, mcd::vector<time>>, bitfield>
+      traffic_days_;
   std::vector<Rule const*> rules_;
-  day_idx_t first_day_{}, last_day_{};
 };
 
 struct rule_service_graph_builder {

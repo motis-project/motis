@@ -75,11 +75,9 @@ public:
 
   /** route edge constructor. */
   edge(node* const from, node* const to,
-       mcd::vector<light_connection> const& connections,
-       size_t const route_traffic_days)
+       mcd::vector<light_connection> const& connections)
       : from_{from}, to_{to} {
     m_.type_ = edge_type::ROUTE_EDGE;
-    m_.route_edge_.traffic_days_ = route_traffic_days;
     m_.route_edge_.init_empty();
     m_.route_edge_.conns_.set(begin(connections), end(connections));
     std::sort(begin(m_.route_edge_.conns_), end(m_.route_edge_.conns_),
@@ -88,12 +86,10 @@ public:
 
   /** oneway route edge constructor. */
   edge(node* const from, node* const to,
-       mcd::vector<light_connection> const& connections,
-       size_t const route_traffic_days, search_dir const dir)
+       mcd::vector<light_connection> const& connections, search_dir const dir)
       : from_{from}, to_{to} {
     m_.type_ = (dir == search_dir::FWD ? edge_type::FWD_ROUTE_EDGE
                                        : edge_type::BWD_ROUTE_EDGE);
-    m_.route_edge_.traffic_days_ = route_traffic_days;
     m_.route_edge_.init_empty();
     m_.route_edge_.conns_.set(begin(connections), std::end(connections));
     dir == search_dir::FWD ? std::sort(begin(m_.route_edge_.conns_),
@@ -179,7 +175,9 @@ public:
 
   bool operates_on_day(day_idx_t const day) const {
     assert(is_route_edge());
-    return m_.route_edge_.traffic_days_->test(day);
+    return std::any_of(
+        begin(m_.route_edge_.conns_), end(m_.route_edge_.conns_),
+        [&](light_connection const& c) { return c.traffic_days_->test(day); });
   }
 
   inline edge_cost get_foot_edge_cost() const {
@@ -270,24 +268,6 @@ public:
     if (m_.route_edge_.conns_.empty()) {
       return {nullptr, 0};
     }
-
-    // TODO(felix) Check route edge traffic days first (-> speedup?)
-    // assume traffic in BWD mode as bitfields were built assuming fwd bitfields
-    /*
-    bool has_traffic = true;
-    if constexpr (Dir == search_dir::FWD) {
-      has_traffic = false;
-      if (m_.route_edge_.traffic_days_ != nullptr) {
-        auto const last_day = (start_time + MAX_TRAVEL_TIME_MINUTES).day();
-        for (int day_idx = start_time.day(); day_idx <= last_day; ++day_idx) {
-          has_traffic |= m_.route_edge_.traffic_days_->test(day_idx);
-        }
-        if (!has_traffic) {
-          return {nullptr, 0};
-        }
-      }
-    }
-    */
 
     if (Dir == search_dir::FWD) {
       auto it = std::lower_bound(
@@ -500,7 +480,6 @@ public:
     struct re {
       edge_type type_padding_;
       mcd::vector<light_connection> conns_;
-      bitfield_idx_or_ptr traffic_days_;
 
       void init_empty() { new (&conns_) mcd::vector<light_connection>(); }
     } route_edge_;
@@ -533,21 +512,18 @@ public:
 /* convenience helper functions to generate the right edge type */
 
 inline edge make_route_edge(node* from, node* to,
-                            mcd::vector<light_connection> const& connections,
-                            size_t const route_traffic_days) {
-  return edge{from, to, connections, route_traffic_days};
+                            mcd::vector<light_connection> const& connections) {
+  return {from, to, connections};
 }
 
 inline edge make_fwd_route_edge(
-    node* from, node* to, mcd::vector<light_connection> const& connections,
-    size_t const route_traffic_days) {
-  return {from, to, connections, route_traffic_days, search_dir::FWD};
+    node* from, node* to, mcd::vector<light_connection> const& connections) {
+  return {from, to, connections, search_dir::FWD};
 }
 
 inline edge make_bwd_route_edge(
-    node* from, node* to, mcd::vector<light_connection> const& connections,
-    size_t const route_traffic_days) {
-  return {from, to, connections, route_traffic_days, search_dir::BWD};
+    node* from, node* to, mcd::vector<light_connection> const& connections) {
+  return {from, to, connections, search_dir::BWD};
 }
 
 inline edge make_foot_edge(node* from, node* to, uint16_t time_cost = 0,
