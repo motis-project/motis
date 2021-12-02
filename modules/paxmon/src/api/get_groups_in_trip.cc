@@ -138,7 +138,6 @@ motis::module::msg_ptr get_groups_in_trip(schedule const& sched,
               [&](auto const& a, auto const& b) {
                 return grouped[a].max_pax_ > grouped[b].max_pax_;
               });
-    // TODO(pablo): include planned arrival time + number of transfers
     for (auto const key : sorted_keys) {
       auto const& [station_id, other_trp] = key;
       auto const& gbd = grouped[key];

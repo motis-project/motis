@@ -580,7 +580,6 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
   // simulate passenger behavior with measures
   for (auto const& [t, ms] : measures) {
     scoped_timer measure_timer{"measure"};
-    // TODO(pablo): remove preparation time
     LOG(info) << "apply_measures @" << format_time(t);
     auto const loc_time = t + req->preparation_time();
     manual_timer get_affected_groups_timer{"get_affected_grous"};

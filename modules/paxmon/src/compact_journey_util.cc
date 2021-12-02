@@ -53,10 +53,11 @@ compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
   return prefix;
 }
 
-compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
-                           unsigned const search_station,
-                           time const earliest_arrival) {
+std::pair<compact_journey, time> get_prefix_and_arrival_time(
+    schedule const& sched, compact_journey const& cj,
+    unsigned const search_station, time const earliest_arrival) {
   auto prefix = compact_journey{};
+  auto current_arrival_time = INVALID_TIME;
 
   for (auto const& leg : cj.legs_) {
     auto const sections = access::sections(leg.trip_);
@@ -74,8 +75,7 @@ compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
         new_leg.exit_station_id_ = search_station;
         new_leg.exit_time_ =
             get_schedule_time(sched, search_section.ev_key_to());
-      } else {
-        // TODO(pablo): ???
+        current_arrival_time = search_section.lcon().a_time_;
       }
       break;
     } else {
@@ -83,7 +83,7 @@ compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
     }
   }
 
-  return prefix;
+  return {prefix, current_arrival_time};
 }
 
 compact_journey get_suffix(schedule const& sched, compact_journey const& cj,

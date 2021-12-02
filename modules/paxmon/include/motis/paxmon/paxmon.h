@@ -45,7 +45,6 @@ private:
   universe& primary_universe();
   universe& get_universe(universe_id id);
 
-  // TODO(pablo): move to paxmon_settings struct
   std::vector<std::string> journey_files_;
   std::vector<std::string> capacity_files_;
   std::string generated_capacity_file_;

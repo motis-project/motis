@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <utility>
 
 #include "motis/core/schedule/schedule.h"
 
@@ -13,9 +14,9 @@ namespace motis::paxmon {
 compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
                            passenger_localization const& loc);
 
-compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
-                           unsigned const search_station,
-                           time const earliest_arrival);
+std::pair<compact_journey, time> get_prefix_and_arrival_time(
+    schedule const& sched, compact_journey const& cj,
+    unsigned const search_station, time const earliest_arrival);
 
 compact_journey get_suffix(schedule const& sched, compact_journey const& cj,
                            passenger_localization const& loc);

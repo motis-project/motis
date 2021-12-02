@@ -74,7 +74,7 @@ std::vector<std::pair<service_info, unsigned>> get_service_infos_for_leg(
     return get_service_infos(sched, leg.trip_);
   }
   auto sis = utl::to_vec(si_counts, [](auto const& e) {
-    return std::make_pair(e.first, e.second);
+    return std::pair{e.first, e.second};
   });
   std::sort(begin(sis), end(sis),
             [](auto const& a, auto const& b) { return a.second > b.second; });
