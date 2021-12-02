@@ -31,8 +31,6 @@ struct fixed_distribution {
     return p.value_;
   }
 
-  // ostream/istream omitted
-
   result_type value_{};
 };
 

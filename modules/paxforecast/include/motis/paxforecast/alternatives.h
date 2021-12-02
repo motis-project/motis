@@ -25,17 +25,10 @@ struct alternative {
   time arrival_time_{INVALID_TIME};
   duration duration_{};
   unsigned transfers_{};
-  bool in_default_routing_{};
   bool is_original_{};
   bool is_recommended_{};
   measures::load_level load_info_{measures::load_level::UNKNOWN};
 };
-
-std::vector<journey> find_alternative_journeys(
-    schedule const& sched, routing_cache& cache,
-    unsigned destination_station_id,
-    motis::paxmon::passenger_localization const& localization,
-    bool use_cache = true, duration pretrip_interval_length = 0);
 
 std::vector<alternative> find_alternatives(
     schedule const& sched, routing_cache& cache,
