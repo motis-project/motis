@@ -53,9 +53,6 @@ struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
 
   motis::module::msg_ptr api_desc(int id) const;
 
-  ctx::access_t access_of(std::string const& target);
-  ctx::access_t access_of(msg_ptr const& msg);
-
   void handle_no_target(msg_ptr const& msg, callback const& cb);
   void retry_no_target_msgs();
 

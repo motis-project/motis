@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ctx/access_data.h"
 #include "ctx/access_scheduler.h"
 #include "ctx/operation.h"
 
@@ -9,13 +10,12 @@ namespace motis::module {
 
 struct dispatcher;
 
-struct ctx_data {
-  ctx_data(ctx::access_t access, dispatcher* d, shared_data* shared_data)
-      : access_{access}, dispatcher_{d}, shared_data_{shared_data} {}
+struct ctx_data : public ctx::access_data {
+  ctx_data(dispatcher* d, shared_data* shared_data)
+      : dispatcher_{d}, shared_data_{shared_data} {}
 
   void transition(ctx::transition, ctx::op_id const&, ctx::op_id const&) {}
 
-  ctx::access_t access_;
   dispatcher* dispatcher_;
   shared_data* shared_data_;
 };
