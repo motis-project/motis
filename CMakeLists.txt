@@ -40,22 +40,19 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 option(MOTIS_MIMALLOC "use mimalloc" OFF)
 option(MOTIS_AVX "enable AVX functions" ON)
 option(MOTIS_AVX2 "enable AVX2 + FMA functions" ON)
-
 option(MOTIS_CUDA "enable CUDA functions" OFF)
+option(MOTIS_LINT "enable lint (clang-tidy) target" OFF)
+option(MOTIS_COV "enable coverage (coverage) target" OFF)
+option(MOTIS_WITH_WEBUI "enable motis-web-ui target" OFF)
+
 if (MOTIS_CUDA)
-  set(MOTIS_CUDA_ARCH "-gencode arch=compute_75,code=sm_75 -gencode arch=compute_61,code=sm_61")
   if (MSVC)
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${MOTIS_CUDA_ARCH} -lcudadevrt")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lcudadevrt")
   else()
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${MOTIS_CUDA_ARCH} --compiler-options -static")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --compiler-options -static")
   endif()
   enable_language(CUDA)
 endif()
-
-option(MOTIS_LINT "enable lint (clang-tidy) target" OFF)
-option(MOTIS_COV "enable coverage (coverage) target" OFF)
-
-option(MOTIS_WITH_WEBUI "enable motis-web-ui target" OFF)
 
 add_library(motis-generated INTERFACE)
 target_include_directories(motis-generated INTERFACE ${CMAKE_BINARY_DIR}/generated)
@@ -238,7 +235,6 @@ endif()
 target_compile_options(motis-test PRIVATE ${MOTIS_CXX_FLAGS})
 target_compile_definitions(motis-test PRIVATE ${MOTIS_COMPILE_DEFINITIONS})
 target_link_libraries(motis-test
-  ${module-targets}
   ${motis-test-extra-dependencies}
   motis-bootstrap
   motis-core

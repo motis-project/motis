@@ -29,10 +29,27 @@ namespace fs = boost::filesystem;
 
 namespace motis::tripbased {
 
+constexpr uint16_t UNKNOWN_PLATFORM = 0U;
+
 struct thousands_sep : std::numpunct<char> {
   char_type do_thousands_sep() const override { return ','; }
   string_type do_grouping() const override { return "\3"; }
 };
+
+inline uint16_t get_arrival_platform(station const& st, trip_stop const& stop) {
+  return stop.has_arrival()
+             ? st.get_platform(stop.arr_lcon().full_con_->a_track_)
+                   .value_or(UNKNOWN_PLATFORM)
+             : UNKNOWN_PLATFORM;
+}
+
+inline uint16_t get_departure_platform(station const& st,
+                                       trip_stop const& stop) {
+  return stop.has_departure()
+             ? st.get_platform(stop.dep_lcon().full_con_->d_track_)
+                   .value_or(UNKNOWN_PLATFORM)
+             : UNKNOWN_PLATFORM;
+}
 
 edge const* get_outgoing_route_edge(node const* route_node) {
   assert(route_node != nullptr);
@@ -113,12 +130,16 @@ struct preprocessing {
       stop_idx_t line_stop_count = 0U;
       for (auto const& stop : stops(first_trip)) {
         auto const* rn = stop.get_route_node();
-        const auto station_id = stop.get_station_id();
+        auto const& station = stop.get_station(sched_);
+        const auto station_id = station.index_;
         data_.stops_on_line_.push_back(station_id);
         data_.in_allowed_.push_back(
             static_cast<uint8_t>(rn->is_in_allowed() ? 1U : 0U));
         data_.out_allowed_.push_back(
             static_cast<uint8_t>(rn->is_out_allowed() ? 1U : 0U));
+        data_.arrival_platform_.push_back(get_arrival_platform(station, stop));
+        data_.departure_platform_.push_back(
+            get_departure_platform(station, stop));
         lines_at_stop[station_id].emplace_back(route_idx, line_stop_count);
         ++line_stop_count;
       }
@@ -129,6 +150,8 @@ struct preprocessing {
       data_.stops_on_line_.finish_key();
       data_.in_allowed_.finish_key();
       data_.out_allowed_.finish_key();
+      data_.arrival_platform_.finish_key();
+      data_.departure_platform_.finish_key();
       data_.line_stop_count_.push_back(line_stop_count);
 
       for (auto i = 0UL; i < route_trips.size(); ++i) {
@@ -190,6 +213,8 @@ struct preprocessing {
     data_.departure_times_.finish_map();
     data_.in_allowed_.finish_map();
     data_.out_allowed_.finish_map();
+    data_.arrival_platform_.finish_map();
+    data_.departure_platform_.finish_map();
 
     data_.trip_count_ = trip_idx;
     data_.line_count_ = line_count;
@@ -222,13 +247,16 @@ struct preprocessing {
                 "incorrect size of in allowed");
     utl::verify(data_.out_allowed_.index_size() == line_count + 1,
                 "incorrect size of out allowed");
+    utl::verify(data_.arrival_platform_.index_size() == line_count + 1,
+                "incorrect size of arrival platform");
+    utl::verify(data_.departure_platform_.index_size() == line_count + 1,
+                "incorrect size of departure platform");
     utl::verify(data_.footpaths_.finished(), "footpaths not finished");
     utl::verify(data_.reverse_footpaths_.finished(),
                 "reverse not footpaths finished");
     utl::verify(data_.lines_at_stop_.finished(), "lines at stop not finished");
     utl::verify(data_.stops_on_line_.finished(), "stops on line not finished");
     utl::verify(data_.arrival_times_.finished(), "arrival times not finished");
-    utl::verify(data_.in_allowed_.finished(), "in allowed not finished");
     std::cout.imbue(prev_locale);
   }
 
@@ -351,6 +379,12 @@ private:
           earliest_arrival[station_idx] = trip_arrival;
         }
 
+        auto const trip_change = static_cast<time>(
+            trip_arrival + sched_.stations_[station_idx]->transfer_time_);
+        if (trip_change < earliest_change[station_idx]) {
+          earliest_change[station_idx] = trip_change;
+        }
+
         for_each_outgoing_footpath(station_idx, [&](auto const& fp) {
           auto const fp_arrival =
               static_cast<time>(trip_arrival + fp.duration_);
@@ -363,8 +397,6 @@ private:
         });
 
         for_each_outgoing_footpath(station_idx, [&](auto const& fp) {
-          auto const station_arrival =
-              static_cast<time>(trip_arrival + fp.duration_);
           for (auto const& [other_line, other_stop_idx, _] :
                data_.lines_at_stop_[fp.to_stop_]) {
             (void)_;
@@ -372,6 +404,10 @@ private:
                 data_.in_allowed_[other_line][other_stop_idx] == 0) {
               continue;
             }
+            auto const station_arrival = static_cast<time>(
+                trip_arrival + get_transfer_time(fp, line_idx, from_stop_idx,
+                                                 other_line, other_stop_idx,
+                                                 station_idx));
             auto const reachable = data_.first_reachable_trip(
                 other_line, other_stop_idx, station_arrival);
             if (!reachable || (reachable->second - trip_arrival) > 1440) {
@@ -445,6 +481,12 @@ private:
           latest_departure[station_idx] = trip_departure;
         }
 
+        auto const trip_change = static_cast<time>(
+            trip_departure - sched_.stations_[station_idx]->transfer_time_);
+        if (trip_change > latest_change[station_idx]) {
+          latest_change[station_idx] = trip_change;
+        }
+
         for_each_incoming_footpath(station_idx, [&](auto const& fp) {
           auto const fp_departure =
               static_cast<time>(trip_departure - fp.duration_);
@@ -457,8 +499,6 @@ private:
         });
 
         for_each_incoming_footpath(station_idx, [&](auto const& fp) {
-          auto const station_departure =
-              static_cast<time>(trip_departure - fp.duration_);
           for (auto const& [other_line, other_stop_idx, _] :
                data_.lines_at_stop_[fp.from_stop_]) {
             (void)_;
@@ -466,6 +506,10 @@ private:
                 data_.out_allowed_[other_line][other_stop_idx] == 0) {
               continue;
             }
+            auto const station_departure = static_cast<time>(
+                trip_departure - get_transfer_time(fp, other_line,
+                                                   other_stop_idx, line_idx,
+                                                   to_stop_idx, station_idx));
             auto const reachable = data_.last_reachable_trip(
                 other_line, other_stop_idx, station_departure);
             if (!reachable || (trip_departure - reachable->second) > 1440) {
@@ -611,6 +655,12 @@ private:
         earliest_arrival[station] = trip_arrival;
         keep = true;
       }
+      auto const trip_change = static_cast<time>(
+          trip_arrival + sched_.stations_[station]->platform_transfer_time_);
+      if (trip_change < earliest_change[station]) {
+        earliest_change[station] = trip_change;
+        keep = true;
+      }
       for_each_outgoing_footpath(station, [&](auto const& fp) {
         auto const fp_arrival = static_cast<time>(trip_arrival + fp.duration_);
         if (fp_arrival < earliest_arrival[fp.to_stop_]) {
@@ -642,6 +692,12 @@ private:
       }
       if (trip_departure > latest_departure[station]) {
         latest_departure[station] = trip_departure;
+        keep = true;
+      }
+      auto const trip_change = static_cast<time>(
+          trip_departure - sched_.stations_[station]->platform_transfer_time_);
+      if (trip_change > latest_change[station]) {
+        latest_change[station] = trip_change;
         keep = true;
       }
       for_each_incoming_footpath(station, [&](auto const& fp) {
@@ -677,6 +733,29 @@ private:
         static_cast<uint32_t>(sched_.stations_[to_stop_idx]->transfer_time_)});
     for (auto const& fp : data_.reverse_footpaths_[to_stop_idx]) {
       fn(fp);
+    }
+  }
+
+  duration get_transfer_time(tb_footpath const& fp, line_id from_line,
+                             stop_idx_t from_stop_idx, line_id to_line,
+                             stop_idx_t to_stop_idx,
+                             station_id from_station) const {
+    if (fp.is_interstation_walk()) {
+      return static_cast<duration>(fp.duration_);
+    } else {
+      auto const station = sched_.stations_[from_station].get();
+      if (station->transfer_time_ != station->platform_transfer_time_) {
+        auto const from_platform =
+            data_.arrival_platform_[from_line][from_stop_idx];
+        auto const to_platform =
+            data_.departure_platform_[to_line][to_stop_idx];
+        return static_cast<duration>(from_platform == to_platform &&
+                                             from_platform != 0
+                                         ? station->platform_transfer_time_
+                                         : station->transfer_time_);
+      } else {
+        return static_cast<duration>(station->transfer_time_);
+      }
     }
   }
 

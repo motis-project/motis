@@ -102,4 +102,17 @@ uint16_t get_schedule_track(schedule const& sched, ev_key const& k) {
   }
 }
 
+int get_schedule_track(schedule const& sched, edge const* route_edge,
+                       light_connection const* lcon, event_type const ev_type) {
+  return get_schedule_track(
+      sched, {route_edge, get_lcon_index(route_edge, lcon), ev_type});
+}
+
+int get_schedule_track(schedule const& sched, node const* route_node,
+                       light_connection const* lcon, event_type const ev_type) {
+  auto route_edge = get_route_edge(route_node, lcon, ev_type);
+  auto lcon_idx = get_lcon_index(route_edge, lcon);
+  return get_schedule_track(sched, {route_edge, lcon_idx, ev_type});
+}
+
 }  // namespace motis
