@@ -4,6 +4,7 @@
 #include <array>
 #include <map>
 #include <set>
+#include <variant>
 
 #include "flatbuffers/flatbuffers.h"
 
@@ -26,6 +27,7 @@
 
 #include "motis/loader/loader_options.h"
 #include "motis/loader/route.h"
+#include "motis/loader/rules_graph.h"
 #include "motis/loader/timezone_util.h"
 
 #include "motis/schedule-format/Schedule_generated.h"
@@ -74,51 +76,32 @@ struct route_section {
 };
 
 struct participant {
-  participant() : service_(nullptr), section_idx_(0) {}
+  participant()
+      : service_(static_cast<service_node const*>(nullptr)), section_idx_(0) {}
+
+  participant(service_node const* service, unsigned section_idx)
+      : service_(service), section_idx_(section_idx) {}
 
   participant(Service const* service, unsigned section_idx)
       : service_(service), section_idx_(section_idx) {}
 
   friend bool operator<(participant const& lhs, participant const& rhs) {
-    return lhs.service_ > rhs.service_;
+    return lhs.service() > rhs.service();
   }
 
   friend bool operator>(participant const& lhs, participant const& rhs) {
-    return lhs.service_ < rhs.service_;
+    return lhs.service() < rhs.service();
   }
 
   friend bool operator==(participant const& lhs, participant const& rhs) {
-    return lhs.service_ == rhs.service_;
+    return lhs.service() == rhs.service();
   }
 
-  Service const* service_;
+  Service const* service() const;
+  service_node const* sn() const;
+
+  std::variant<Service const*, service_node const*> service_;
   unsigned section_idx_;
-};
-
-struct service_with_day_offset {
-  CISTA_COMPARABLE()
-
-  Service const* service_{nullptr};
-  int day_offset_{0};
-};
-
-struct services_key {
-  services_key() = default;
-
-  explicit services_key(Service const* service) : services_({{service, 0}}) {}
-
-  explicit services_key(std::set<service_with_day_offset> services)
-      : services_(std::move(services)) {}
-
-  friend bool operator<(services_key const& lhs, services_key const& rhs) {
-    return lhs.services_ < rhs.services_;
-  }
-
-  friend bool operator==(services_key const& lhs, services_key const& rhs) {
-    return lhs.services_ == rhs.services_;
-  }
-
-  std::set<service_with_day_offset> services_;
 };
 
 template <typename T, typename... Args>
@@ -128,6 +111,8 @@ inline std::size_t push_mem(mcd::vector<mcd::unique_ptr<T>>& elements,
   elements.emplace_back(new T{args...});
   return idx;
 }
+
+mcd::vector<day_idx_t> day_offsets(mcd::vector<time> const& rel_utc_times);
 
 using route = mcd::vector<route_section>;
 
@@ -140,6 +125,8 @@ struct graph_builder {
 
   merged_trips_idx create_merged_trips(Service const*,
                                        mcd::vector<time> const& rel_utc_times);
+
+  trip_debug get_trip_debug(Service const* s);
 
   trip_info* register_service(Service const* s,
                               mcd::vector<time> const& rel_utc_times);

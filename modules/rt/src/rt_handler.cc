@@ -246,7 +246,7 @@ void rt_handler::propagate() {
     auto const edge_fit = fits_edge(k, t);
     auto const trip_fit = fits_trip(sched_, k, t);
     if (!edge_fit || !trip_fit) {
-      auto const trp = sched_.merged_trips_[k.lcon()->trips_]->front();
+      auto const trp = sched_.merged_trips_[k.lcon()->merged_trips_]->front();
       seperate_trip(sched_, trp);
 
       if (!trip_fit) {

@@ -1,50 +1,16 @@
 #include "motis/loader/rule_route_builder.h"
 
-#include "motis/vector.h"
-
-#include "utl/pipes.h"
-
 #include <queue>
 
 #include "utl/get_or_create.h"
+#include "utl/pipes.h"
+
+#include "motis/loader/rules_graph.h"
+#include "motis/vector.h"
 
 using namespace flatbuffers64;
 
 namespace motis::loader {
-
-struct rule_node;
-
-struct service_node {
-  service_node(Service const* service, mcd::vector<time>&& times,
-               bitfield const& traffic_days)
-      : service_(service),
-        times_(std::move(times)),
-        traffic_days_(traffic_days) {}
-
-  std::vector<rule_node*> rule_nodes_;
-  Service const* service_{nullptr};
-  mcd::vector<time> times_;
-  bitfield traffic_days_;
-};
-
-struct rule_node {
-  rule_node(service_node* s1, service_node* s2, Rule const* rule)
-      : s1_(s1), s2_(s2), rule_(rule) {}
-
-  service_node *s1_, *s2_;
-  Rule const* rule_;
-};
-
-struct rules_graph {
-  std::vector<std::unique_ptr<service_node>> service_nodes_;
-  std::vector<std::unique_ptr<rule_node>> rule_nodes_;
-};
-
-struct rule_node_cmp {
-  bool operator()(rule_node const* lhs, rule_node const* rhs) const {
-    return lhs->rule_ < rhs->rule_;
-  }
-};
 
 struct rule_route_builder {
   rule_route_builder(graph_builder& gb,
@@ -63,13 +29,14 @@ private:
     auto const get_or_create_service_nodes = [&](Rule const* r,
                                                  Service const* s) {
       return utl::get_or_create(service_nodes, s, [&]() {
-        auto times = gb_.service_times_to_utc(get_bitfield(s), s);
-        if (!times.has_value()) {
+        auto utc_time_strings = gb_.service_times_to_utc(get_bitfield(s), s);
+        if (!utc_time_strings.has_value()) {
           return std::vector<service_node*>{};
         }
         return utl::to_vec(
-            *times, [&](cista::pair<mcd::vector<time>, bitfield>& utc_times) {
-              auto& [times, traffic_days] = utc_times;
+            *utc_time_strings,
+            [&](cista::pair<mcd::vector<time>, bitfield>& utc_time_string) {
+              auto& [times, traffic_days] = utc_time_string;
               return rg_.service_nodes_
                   .emplace_back(std::make_unique<service_node>(
                       r->service1(), std::move(times), traffic_days))
@@ -113,7 +80,7 @@ private:
     }
     for (auto& sn : rg_.service_nodes_) {
       if (sn->traffic_days_.any()) {
-        single_services_.emplace_back(sn->service_, sn->times_,
+        left_over_trips_.emplace_back(sn->service_, sn->times_,
                                       sn->traffic_days_);
       }
     }
@@ -128,7 +95,7 @@ private:
     auto ref_traffic_days = ref_sn->traffic_days_;
 
     std::queue<std::tuple<rule_node*, service_node*, int>> queue;
-    std::set<rule_node*, rule_node_cmp> route_rules;
+    std::set<rule_node*> route_rules;
     std::map<service_node*, int> traffic_day_offsets;
     queue.emplace(ref_rn, ref_sn, 0);
     traffic_day_offsets[ref_sn] = 0;
@@ -181,12 +148,11 @@ private:
       auto const service_traffic_days =
           shifted_bitfield(ref_traffic_days, -offset) &
           schedule_traffic_days_mask_;
-      route.traffic_days_[std::pair{sn->service_, sn->times_}] =
-          service_traffic_days;
+      route.traffic_days_[sn] = service_traffic_days;
       sn->traffic_days_ &= ~service_traffic_days;
     }
     for (auto const& rn : route_rules) {
-      route.rules_.push_back(rn->rule_);
+      route.rules_.push_back(rn);
     }
     return true;
   }
@@ -207,7 +173,7 @@ public:
   rules_graph rg_;
   bitfield const& schedule_traffic_days_mask_;
   std::vector<std::tuple<Service const*, mcd::vector<time>, bitfield>>
-      single_services_;
+      left_over_trips_;
   mcd::vector<rule_route> rule_routes_;
 };
 
@@ -224,7 +190,7 @@ void build_rule_routes(graph_builder& gb,
     rule_route_builder rrb(gb, schedule_traffic_days_mask);
     rrb.build(rs);
 
-    for (auto const& [service, times, traffic_days] : rrb.single_services_) {
+    for (auto const& [service, times, traffic_days] : rrb.left_over_trips_) {
       gb.add_route_services(
           {std::make_pair(service, gb.store_bitfield(traffic_days))});
     }

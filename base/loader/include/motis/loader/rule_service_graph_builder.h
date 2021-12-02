@@ -5,13 +5,13 @@
 #include "motis/vector.h"
 
 #include "motis/loader/graph_builder.h"
+#include "motis/loader/rules_graph.h"
 
 namespace motis::loader {
 
 struct rule_route {
-  std::map<std::pair<Service const*, mcd::vector<time>>, bitfield>
-      traffic_days_;
-  std::vector<Rule const*> rules_;
+  std::map<service_node const*, bitfield> traffic_days_;
+  std::vector<rule_node const*> rules_;
 };
 
 struct rule_service_graph_builder {

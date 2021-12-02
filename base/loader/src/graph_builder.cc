@@ -14,6 +14,7 @@
 
 #include "date/date.h"
 
+#include "utl/overloaded.h"
 #include "utl/parser/cstr.h"
 
 #include "motis/core/common/constants.h"
@@ -42,8 +43,30 @@ using namespace flatbuffers64;
 
 namespace motis::loader {
 
+mcd::vector<day_idx_t> day_offsets(mcd::vector<time> const& rel_utc_times) {
+  auto day_offsets = mcd::vector<day_idx_t>{};
+  day_offsets.resize(rel_utc_times.size() / 2);
+  for (auto i = 0; i != rel_utc_times.size(); i += 2) {
+    day_offsets[i / 2] = rel_utc_times[i].day();  // TODO(felix) test for this
+  }
+  return day_offsets;
+}
+
 char const* c_str(flatbuffers64::String const* str) {
   return str == nullptr ? nullptr : str->c_str();
+}
+
+Service const* participant::service() const {
+  return std::visit(utl::overloaded{[](Service const* s) { return s; },
+                                    [](service_node const* sn) {
+                                      return sn == nullptr ? nullptr
+                                                           : sn->service_;
+                                    }},
+                    service_);
+}
+
+service_node const* participant::sn() const {
+  return std::get<service_node const*>(service_);
 }
 
 graph_builder::graph_builder(schedule& sched, loader_options const& opt)
@@ -75,30 +98,27 @@ merged_trips_idx graph_builder::create_merged_trips(
       mcd::vector<ptr<trip_info>>({register_service(s, rel_utc_times)})));
 }
 
+trip_debug graph_builder::get_trip_debug(Service const* s) {
+  return s->debug() == nullptr
+             ? trip_debug{}
+             : trip_debug{utl::get_or_create(
+                              filenames_, s->debug()->file(),
+                              [&]() {
+                                return sched_.filenames_
+                                    .emplace_back(mcd::make_unique<mcd::string>(
+                                        s->debug()->file()->str()))
+                                    .get();
+                              }),
+                          s->debug()->line_from(), s->debug()->line_to()};
+}
+
 trip_info* graph_builder::register_service(
     Service const* s, mcd::vector<time> const& rel_utc_times) {
-  auto day_offsets = mcd::vector<day_idx_t>{};
-  day_offsets.resize(s->sections()->size());
-  for (auto i = 0; i != rel_utc_times.size(); i += 2) {
-    day_offsets[i / 2] = rel_utc_times[i].day();  // TODO(felix) test for this
-  }
-
   auto const stored =
       sched_.trip_mem_
           .emplace_back(mcd::make_unique<trip_info>(
-              get_full_trip_id(s, rel_utc_times), nullptr, day_offsets, 0U,
-              s->debug() == nullptr
-                  ? trip_debug{}
-                  : trip_debug{utl::get_or_create(
-                                   filenames_, s->debug()->file(),
-                                   [&]() {
-                                     return sched_.filenames_
-                                         .emplace_back(
-                                             mcd::make_unique<mcd::string>(
-                                                 s->debug()->file()->str()))
-                                         .get();
-                                   }),
-                               s->debug()->line_from(), s->debug()->line_to()}))
+              get_full_trip_id(s, rel_utc_times), nullptr,
+              day_offsets(rel_utc_times), 0U, get_trip_debug(s)))
           .get();
   sched_.trips_.emplace_back(stored->id_.primary_, stored);
 
@@ -438,13 +458,13 @@ connection_info* graph_builder::get_or_create_connection_info(
   connection_info* prev_con_info = nullptr;
 
   for (auto service : services) {
-    if (service.service_ == nullptr) {
+    if (service.service() == nullptr) {
       return prev_con_info;
     }
 
     auto const& s = service;
     prev_con_info = get_or_create_connection_info(
-        s.service_->sections()->Get(s.section_idx_), prev_con_info);
+        s.service()->sections()->Get(s.section_idx_), prev_con_info);
   }
 
   return prev_con_info;
@@ -483,26 +503,26 @@ light_connection graph_builder::section_to_connection(
     std::array<participant, 16> const& services,
     mcd::vector<time> const& relative_utc, bitfield const& traffic_days,
     merged_trips_idx const trips_idx) {
-  auto const& ref_service = services[0].service_;
+  auto const ref_service = services[0].service();
   auto const& section_idx = services[0].section_idx_;
 
   assert(ref_service != nullptr);
   assert(std::all_of(begin(services), end(services), [&](participant const& s) {
-    if (s.service_ == nullptr) {
+    if (s.service() == nullptr) {
       return true;
     }
 
     auto const ref_stops = ref_service->route()->stations();
-    auto const s_stops = s.service_->route()->stations();
+    auto const s_stops = s.service()->route()->stations();
 
     auto const stations_match =
         s_stops->Get(s.section_idx_) == ref_stops->Get(section_idx) &&
         s_stops->Get(s.section_idx_ + 1) == ref_stops->Get(section_idx + 1);
 
     auto const times_match =
-        s.service_->times()->Get(s.section_idx_ * 2 + 1) % 1440 ==
+        s.service()->times()->Get(s.section_idx_ * 2 + 1) % 1440 ==
             ref_service->times()->Get(section_idx * 2 + 1) % 1440 &&
-        s.service_->times()->Get(s.section_idx_ * 2 + 2) % 1440 ==
+        s.service()->times()->Get(s.section_idx_ * 2 + 2) % 1440 ==
             ref_service->times()->Get(section_idx * 2 + 2) % 1440;
 
     return stations_match && times_match;

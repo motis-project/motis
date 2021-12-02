@@ -10,6 +10,7 @@
 #include "motis/core/schedule/price.h"
 #include "motis/core/schedule/trip.h"
 #include "motis/core/access/trip_iterator.h"
+#include "motis/loader/rules_graph.h"
 #include "motis/loader/util.h"
 #include "utl/get_or_create.h"
 
@@ -20,7 +21,7 @@ namespace motis::loader {
 using namespace flatbuffers64;
 using namespace motis::logging;
 
-using neighbor = std::pair<Service const*, Rule const*>;
+using neighbor = std::pair<service_node const*, rule_node const*>;
 
 struct service_section {
   route_section route_section_;
@@ -31,76 +32,97 @@ struct service_section {
   bool out_allowed_to_ = false;
 };
 
+struct services_key {
+  struct service_with_day_offset {
+    CISTA_COMPARABLE()
+    service_node const* service_{nullptr};
+    int day_offset_{0};
+  };
+
+  services_key() = default;
+
+  explicit services_key(service_node const* service)
+      : services_({{service, 0}}) {}
+
+  explicit services_key(std::set<service_with_day_offset> services)
+      : services_(std::move(services)) {}
+
+  friend bool operator<(services_key const& lhs, services_key const& rhs) {
+    return lhs.services_ < rhs.services_;
+  }
+
+  friend bool operator==(services_key const& lhs, services_key const& rhs) {
+    return lhs.services_ == rhs.services_;
+  }
+
+  std::set<service_with_day_offset> services_;
+};
+
 struct rule_service_section_builder {
   rule_service_section_builder(rule_route const& rs)
       : neighbors_(build_neighbors(rs)), sections_(build_empty_sections(rs)) {}
 
-  static std::map<Service const*, mcd::vector<neighbor>> build_neighbors(
+  static std::map<service_node const*, mcd::vector<neighbor>> build_neighbors(
       rule_route const& rs) {
-    std::map<Service const*, mcd::vector<neighbor>> neighbors;
+    std::map<service_node const*, mcd::vector<neighbor>> neighbors;
     for (auto const& r : rs.rules_) {
-      if (r->type() != RuleType_THROUGH) {
-        neighbors[r->service1()].emplace_back(r->service2(), r);
-        neighbors[r->service2()].emplace_back(r->service1(), r);
+      if (r->rule_->type() != RuleType_THROUGH) {
+        neighbors[r->s1_].emplace_back(r->s1_, r);
+        neighbors[r->s2_].emplace_back(r->s2_, r);
       }
     }
     return neighbors;
   }
 
-  static std::map<Service const*, mcd::vector<service_section*>>
+  static std::map<service_node const*, mcd::vector<service_section*>>
   build_empty_sections(rule_route const& rs) {
-    std::map<Service const*, mcd::vector<service_section*>> sections;
+    auto sections =
+        std::map<service_node const*, mcd::vector<service_section*>>{};
     for (auto const& r : rs.rules_) {
       sections.emplace(
-          r->service1(),
-          mcd::vector<service_section*>(
-              static_cast<mcd::vector<service_section*>::size_type>(
-                  r->service1()->sections()->size())));
+          r->s1_, mcd::vector<service_section*>(
+                      static_cast<mcd::vector<service_section*>::size_type>(
+                          r->s1_->service_->sections()->size())));
       sections.emplace(
-          r->service2(),
-          mcd::vector<service_section*>(
-              static_cast<mcd::vector<service_section*>::size_type>(
-                  r->service2()->sections()->size())));
+          r->s2_, mcd::vector<service_section*>(
+                      static_cast<mcd::vector<service_section*>::size_type>(
+                          r->s2_->service_->sections()->size())));
+      std::cout << r->s1_ << ": " << sections.at(r->s1_).size() << "\n";
+      std::cout << r->s2_ << ": " << sections.at(r->s2_).size() << "\n";
     }
     return sections;
   }
 
-  static unsigned stop_index_of(Service const* s, Station const* station) {
-    auto const& stations = *s->route()->stations();
+  static unsigned stop_index_of(service_node const* s, Station const* station) {
+    auto const& stations = *s->service_->route()->stations();
     auto it = std::find(std::begin(stations), std::end(stations), station);
     utl::verify(it != std::end(stations), "rule station not found");
     return static_cast<unsigned>(std::distance(std::begin(stations), it));
   }
 
   void build_sections(rule_route const& rs) {
-    std::set<Service const*> built;
+    std::set<service_node const*> built;
     for (auto const& r : rs.rules_) {
-      for (auto const& s : {r->service1(), r->service2()}) {
+      for (auto const& s : {r->s1_, r->s2_}) {
         if (built.insert(s).second) {
-          add_service(s);
+          auto const section_count =
+              static_cast<unsigned>(s->service_->sections()->size());
+          add_service(s, 0, section_count, 0, section_count, sections_[s], {});
         }
       }
     }
   }
 
-  void add_service(Service const* service) {
-    add_service(service, 0, static_cast<unsigned>(service->sections()->size()),
-                0, static_cast<unsigned>(service->sections()->size()),
-                sections_[service], std::set<Service const*>());
-  }
-
-  void add_service(Service const* service,  //
+  void add_service(service_node const* service,  //
                    unsigned from_idx, unsigned to_idx,  //
                    unsigned src_from_idx, unsigned src_to_idx,  //
                    mcd::vector<service_section*>& sections,
-                   std::set<Service const*> visited) {
+                   std::set<service_node const*> visited) {
     visited.emplace(service);
 
     // Recursive add_service call for each neighbor.
-    for (auto const& neighbor : neighbors_[service]) {
-      Rule const* rule = neighbor.second;
-      Service const* neighbor_service = neighbor.first;
-
+    for (auto const& [neighbor_service, rn] : neighbors_[service]) {
+      auto const rule = rn->rule_;
       if (visited.find(neighbor_service) != end(visited)) {
         continue;
       }
@@ -146,27 +168,25 @@ struct rule_service_section_builder {
       auto not_already_added =
           std::find_if(begin(section_participants), end(section_participants),
                        [&service](participant const& p) {
-                         return p.service_ == service;
+                         return p.sn() == service;
                        }) == end(section_participants);
 
       if (not_already_added) {
         section_participants.emplace_back(service, service_section_idx);
 
         auto& ss = sections_[service][service_section_idx];
-        ss->in_allowed_from_ |=
-            service->route()->in_allowed()->Get(service_section_idx) != 0U;
-        ss->out_allowed_from_ |=
-            service->route()->out_allowed()->Get(service_section_idx) != 0U;
-        ss->in_allowed_to_ |=
-            service->route()->in_allowed()->Get(service_section_idx + 1) != 0U;
-        ss->out_allowed_to_ |=
-            service->route()->out_allowed()->Get(service_section_idx + 1) != 0U;
+        auto const* in_allowed = service->service_->route()->in_allowed();
+        auto const* out_allowed = service->service_->route()->out_allowed();
+        ss->in_allowed_from_ |= in_allowed->Get(service_section_idx) != 0U;
+        ss->out_allowed_from_ |= out_allowed->Get(service_section_idx) != 0U;
+        ss->in_allowed_to_ |= in_allowed->Get(service_section_idx + 1) != 0U;
+        ss->out_allowed_to_ |= out_allowed->Get(service_section_idx + 1) != 0U;
       }
     }
   }
 
-  std::map<Service const*, mcd::vector<neighbor>> neighbors_;
-  std::map<Service const*, mcd::vector<service_section*>> sections_;
+  std::map<service_node const*, mcd::vector<neighbor>> neighbors_;
+  std::map<service_node const*, mcd::vector<service_section*>> sections_;
   mcd::vector<std::unique_ptr<service_section>> section_mem_;
 };
 
@@ -231,7 +251,7 @@ struct node_id_cmp {
 struct rule_service_route_builder {
   rule_service_route_builder(
       graph_builder& gb,
-      std::map<Service const*, mcd::vector<service_section*>>& sections,
+      std::map<service_node const*, mcd::vector<service_section*>>& sections,
       unsigned route_id, rule_route const& rs)
       : gb_(gb),
         sections_(sections),
@@ -244,11 +264,13 @@ struct rule_service_route_builder {
     }
 
     for (auto& entry : sections_) {
-      write_trip_info(entry.first, entry.second);
+      auto const& sn = entry.first;
+      auto const& sections = entry.second;
+      write_trip_info(sn, sections);
       utl::verify(
-          [&entry] {
+          [&] {
             node const* pred_to = nullptr;
-            for (auto const& s : entry.second) {
+            for (auto const& s : sections) {
               if (pred_to != nullptr &&
                   pred_to != s->route_section_.from_route_node_) {
                 return false;
@@ -272,31 +294,31 @@ struct rule_service_route_builder {
       std::array<participant, 16> const& services) {
     services_key k;
     auto const ref_day_offset =
-        services[0].service_->times()->Get(services[0].section_idx_ * 2 + 1) /
+        services[0].service()->times()->Get(services[0].section_idx_ * 2 + 1) /
         1440;
     for (auto const& s : services) {
-      if (s.service_ == nullptr) {
+      if (s.service() == nullptr) {
         break;
       }
       auto const s_day_offset =
-          s.service_->times()->Get(s.section_idx_ * 2 + 1) / 1440;
-      k.services_.insert({s.service_, ref_day_offset - s_day_offset});
+          s.service()->times()->Get(s.section_idx_ * 2 + 1) / 1440;
+      k.services_.insert({s.sn(), ref_day_offset - s_day_offset});
     }
     return k;
   }
 
   merged_trips_idx get_or_create_trips(
-      std::array<participant, 16> const& services,
-      mcd::vector<motis::time> const& times) {
+      std::array<participant, 16> const& services) {
     auto k = get_services_key(services);
-    return utl::get_or_create(trips_, k, [&]() {
+    return utl::get_or_create(merged_trips_, k, [&]() {
       return static_cast<merged_trips_idx>(push_mem(
           gb_.sched_.merged_trips_,
           mcd::to_vec(begin(k.services_), end(k.services_),
-                      [&](service_with_day_offset sp) {
-                        return ptr<trip_info>{utl::get_or_create(
-                            single_trips_, sp.service_, [&]() {
-                              return gb_.register_service(sp.service_, times);
+                      [&](services_key::service_with_day_offset sp) {
+                        return ptr<trip_info>{
+                            utl::get_or_create(trip_infos_, sp.service_, [&]() {
+                              return gb_.register_service(sp.service_->service_,
+                                                          sp.service_->times_);
                             })};
                       })));
     });
@@ -313,11 +335,10 @@ struct rule_service_route_builder {
     assert(!participants.empty());
 
     mcd::vector<light_connection> lcons;
-    //    auto const& [traffic_days, times] =
-    //    traffic_days_.at(services[0].service_);
-    //    lcons.push_back(gb_.section_to_connection(
-    //        services, times, traffic_days, get_or_create_trips(services,
-    //        times)));
+    auto const& traffic_days = traffic_days_.at(services[0].sn());
+    auto const& times = services[0].sn()->times_;
+    lcons.push_back(gb_.section_to_connection(services, times, traffic_days,
+                                              get_or_create_trips(services)));
     return lcons;
   }
 
@@ -341,7 +362,7 @@ struct rule_service_route_builder {
     }
 
     for (participant const& p : s->participants_) {
-      auto const& p_sections = sections_.at(p.service_);
+      auto const& p_sections = sections_.at(p.sn());
       auto const p_succ_from =
           find_from(visited, p_sections, p.section_idx_ + 1);
       if (p_succ_from != nullptr) {
@@ -372,7 +393,7 @@ struct rule_service_route_builder {
     }
 
     for (participant const& p : s->participants_) {
-      auto const& p_sections = sections_.at(p.service_);
+      auto const& p_sections = sections_.at(p.sn());
       auto const p_pred_to = find_to(visited, p_sections, p.section_idx_ - 1);
       if (p_pred_to != nullptr) {
         return p_pred_to;
@@ -382,30 +403,27 @@ struct rule_service_route_builder {
     return nullptr;
   }
 
-  void build_route(Service const* s, mcd::vector<service_section*>& sections) {
-    utl::verify(s->sections()->size() == sections.size(),
+  void build_route(service_node const* s,
+                   mcd::vector<service_section*>& sections) {
+    utl::verify(s->service_->sections()->size() == sections.size(),
                 "section count mismatch");
     utl::verify(std::none_of(begin(sections), end(sections),
                              [](service_section* ss) { return ss == nullptr; }),
                 "every section created");
     utl::verify(std::all_of(begin(sections), end(sections),
                             [&s](service_section const* ss) {
-                              auto is_curr = [&s](participant const& p) {
-                                return p.service_ == s;
-                              };
-                              auto contains_curr =
-                                  std::find_if(begin(ss->participants_),
-                                               end(ss->participants_),
-                                               is_curr) !=
-                                  end(ss->participants_);
-                              return contains_curr;
+                              return std::find_if(begin(ss->participants_),
+                                                  end(ss->participants_),
+                                                  [&s](participant const& p) {
+                                                    return p.sn() == s;
+                                                  }) != end(ss->participants_);
                             }),
-                "every section contains participant");
+                "every section contains current participant");
     utl::verify(
         std::all_of(begin(sections), end(sections),
                     [](service_section const* ss) {
                       auto const get_from_to = [](participant const& p) {
-                        auto const stations = p.service_->route()->stations();
+                        auto const stations = p.service()->route()->stations();
                         auto const from = stations->Get(p.section_idx_);
                         auto const to = stations->Get(p.section_idx_ + 1);
                         return std::make_pair(from, to);
@@ -420,7 +438,7 @@ struct rule_service_route_builder {
                     }),
         "service section station mismatch");
 
-    auto const& r = s->route();
+    auto const& r = s->service_->route();
     auto const& stops = r->stations();
     for (auto i = 0UL; i < stops->size() - 1; ++i) {
       auto section_idx = i;
@@ -463,7 +481,7 @@ struct rule_service_route_builder {
         "all sections: s[i].to = s[i + 1].from");
   }
 
-  void write_trip_info(Service const* s,
+  void write_trip_info(service_node const* s,
                        mcd::vector<service_section*> const& sections) {
     push_mem(gb_.sched_.trip_edges_,
              mcd::to_vec(begin(sections), end(sections),
@@ -472,26 +490,22 @@ struct rule_service_route_builder {
                                section->route_section_.get_route_edge());
                          }));
 
-    //    auto const& traffic_days = traffic_days_.at(s);
-    auto edges = gb_.sched_.trip_edges_.back().get();
-    auto lcon_idx = lcon_idx_t{0U};
-
-    auto trp = single_trips_.at(s);
-    trp->edges_ = edges;
-    trp->lcon_idx_ = lcon_idx;
-    ++lcon_idx;
+    auto trp = trip_infos_.at(s);
+    trp->edges_ = gb_.sched_.trip_edges_.back().get();
+    trp->day_offsets_ = day_offsets(s->times_);
+    trp->dbg_ = gb_.get_trip_debug(s->service_);
   }
 
   void connect_through_services(rule_route const& rs) {
     for (auto const& r : rs.rules_) {
-      if (r->type() == RuleType_THROUGH) {
+      if (r->rule_->type() == RuleType_THROUGH) {
         connect_route_nodes(r);
       }
     }
   }
 
-  node* get_through_route_node(Service const* service, Station const* station,
-                               bool source) {
+  node* get_through_route_node(service_node const* service,
+                               Station const* station, bool source) {
     auto get_node = [source](service_section const* s) {
       return source ? s->route_section_.to_route_node_
                     : s->route_section_.from_route_node_;
@@ -519,9 +533,9 @@ struct rule_service_route_builder {
     }
   }
 
-  void connect_route_nodes(Rule const* r) {
-    auto s1_node = get_through_route_node(r->service1(), r->from(), true);
-    auto s2_node = get_through_route_node(r->service2(), r->from(), false);
+  void connect_route_nodes(rule_node const* r) {
+    auto s1_node = get_through_route_node(r->s1_, r->rule_->from(), true);
+    auto s2_node = get_through_route_node(r->s2_, r->rule_->from(), false);
     for (auto const& e : s1_node->edges_) {
       if (e.type() == edge_type::THROUGH_EDGE && e.to_ == s2_node) {
         return;
@@ -605,8 +619,8 @@ struct rule_service_route_builder {
     auto trips_added = false;
     for (auto lcon_idx = 0U; lcon_idx < lc_count; ++lcon_idx) {
       full_trip_id ftid;
-      //      push_mem(gb_.sched_.trip_mem_, ftid, edges_ptr, lcon_idx,
-      //      trip_debug{});
+      push_mem(gb_.sched_.trip_mem_, ftid, edges_ptr, mcd::vector<day_idx_t>{},
+               lcon_idx, trip_debug{});
       auto const trip_ptr = gb_.sched_.trip_mem_.back().get();
       if (gb_.check_trip(trip_ptr)) {
         gb_.sched_.expanded_trips_.push_back(trip_ptr);
@@ -619,14 +633,13 @@ struct rule_service_route_builder {
   }
 
   graph_builder& gb_;
-  std::map<Service const*, mcd::vector<service_section*>>& sections_;
-  std::map<Service const*, trip_info*> single_trips_;
-  std::map<services_key, merged_trips_idx> trips_;
+  std::map<service_node const*, mcd::vector<service_section*>>& sections_;
+  std::map<service_node const*, trip_info*> trip_infos_;
+  std::map<services_key, merged_trips_idx> merged_trips_;
   unsigned route_id_;
   std::set<node const*, node_id_cmp> start_nodes_;
   std::set<node const*> through_target_nodes_;
-  std::map<std::pair<Service const*, mcd::vector<motis::time>>, bitfield> const&
-      traffic_days_;
+  std::map<service_node const*, bitfield> const& traffic_days_;
 };
 
 rule_service_graph_builder::rule_service_graph_builder(graph_builder& gb)

@@ -50,7 +50,7 @@ TEST_F(rt_additional_service_test, simple) {
     auto const& conns = trp_e.get_edge()->m_.route_edge_.conns_;
     ASSERT_EQ(1, conns.size());
 
-    auto const& trps = *sched().merged_trips_.at(conns[0].trips_);
+    auto const& trps = *sched().merged_trips_.at(conns[0].merged_trips_);
     ASSERT_EQ(1, trps.size());
     EXPECT_EQ(trp, trps[0]);
 
