@@ -51,8 +51,9 @@
               :initInputText="timeToDisplay"
               class="pure-u-1 pure-u-1 pure-u-sm-9-24"
               :showArrows="true"
-              @decreaseClick="changeTime(-1)"
-              @increaseClick="changeTime(1)"
+              @inputChanged="changeTime"
+              @decreaseClick="setTime(-1)"
+              @increaseClick="setTime(1)"
             />
             <div class="pure-u-1 pure-u-sm-3-24 time-option">
               <div>
@@ -125,8 +126,9 @@
                     :initInputText="timeToDisplay"
                     class="pure-u-1 pure-u-1 pure-u-sm-12-24"
                     :showArrows="true"
-                    @decreaseClick="changeTime(-1)"
-                    @increaseClick="changeTime(1)"
+                    @inputChanged="changeTime"
+                    @decreaseClick="setTime(-1)"
+                    @increaseClick="setTime(1)"
                   />
                 </div>
               </div>
@@ -220,7 +222,7 @@ export default defineComponent({
     optionsWindowCloseClick() {
       this.isOptionsWindowOpened = false;
     },
-    changeTime(change: number) {
+    setTime(change: number) {
       this.time = new Date(
         this.time.getFullYear(),
         this.time.getMonth(),
@@ -228,6 +230,21 @@ export default defineComponent({
         this.time.getHours() + change,
         this.time.getMinutes()
       );
+    },
+    changeTime(value: string) {
+      let arr = value.split(":");
+      if (arr.length === 2 && arr[1].length === 2) {
+        let numberArr = arr.map((s) => +s);
+        if (
+          numberArr[0] >= 0 && numberArr[0] < 24 &&
+          numberArr[1] >= 0 && numberArr[1] < 60  
+        ) {
+          let date = new Date(0, 0, 0, numberArr[0], numberArr[1]);
+          if (!isNaN(date.getTime())) {
+            this.time = date;
+          }
+        }
+      }
     },
   },
 });
