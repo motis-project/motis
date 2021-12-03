@@ -52,6 +52,8 @@ inline void add_group_to_alternative(schedule const& sched,
 }
 
 struct sim_data {
+  explicit sim_data(simulation_result& result) : result_{result} {}
+
   void finish_stats(std::uint64_t combined_group_count) {
     result_.stats_.combined_group_count_ = combined_group_count;
     result_.stats_.found_alt_count_avg_ = avg(found_alt_count_);
