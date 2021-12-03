@@ -25,7 +25,7 @@ using neighbor = std::pair<service_node const*, rule_node const*>;
 
 struct service_section {
   route_section route_section_;
-  mcd::vector<participant> participants_;
+  std::vector<participant> participants_;
   bool in_allowed_from_ = false;
   bool out_allowed_from_ = false;
   bool in_allowed_to_ = false;
@@ -87,8 +87,6 @@ struct rule_service_section_builder {
           r->s2_, mcd::vector<service_section*>(
                       static_cast<mcd::vector<service_section*>::size_type>(
                           r->s2_->service_->sections()->size())));
-      std::cout << r->s1_ << ": " << sections.at(r->s1_).size() << "\n";
-      std::cout << r->s2_ << ": " << sections.at(r->s2_).size() << "\n";
     }
     return sections;
   }
@@ -190,58 +188,6 @@ struct rule_service_section_builder {
   mcd::vector<std::unique_ptr<service_section>> section_mem_;
 };
 
-struct lcon_time_adjuster {
-  static void adjust(edge* prev_edge, edge* e) {
-    auto& prev_lcons = prev_edge->m_.route_edge_.conns_;
-    auto& curr_lcons = e->m_.route_edge_.conns_;
-
-    for (auto lcon_idx = lcon_idx_t{};
-         lcon_idx < static_cast<int>(prev_lcons.size()); ++lcon_idx) {
-      auto& prev_lcon = prev_lcons[lcon_idx];
-      auto& curr_lcon = curr_lcons[lcon_idx];
-
-      auto& last_arr = prev_lcon.a_time_;
-      auto& curr_dep = curr_lcon.d_time_;
-      auto& curr_arr = curr_lcon.a_time_;
-
-      if (last_arr > curr_dep) {
-        curr_dep += 60;
-      }
-
-      if (curr_dep > curr_arr) {
-        curr_arr += 60;
-      }
-
-      assert(last_arr <= curr_dep && curr_dep <= curr_arr);
-    }
-  }
-
-  void process_following_route_edges(edge* e, edge* pred) {
-    for (auto& following : e->to_->edges_) {
-      if (!following.empty()) {
-        adjust(pred == nullptr ? e : pred, &following);
-        queue_.emplace(&following, nullptr);
-      } else if (following.type() == edge_type::THROUGH_EDGE) {
-        queue_.emplace(&following, e);
-      }
-    }
-  }
-
-  void adjust_times(node* first_route_node) {
-    for (auto& following : first_route_node->edges_) {
-      queue_.emplace(&following, nullptr);
-    }
-
-    while (!queue_.empty()) {
-      auto el = queue_.front();
-      queue_.pop();
-      process_following_route_edges(el.first, el.second);
-    }
-  }
-
-  std::queue<std::pair<edge*, edge*>> queue_;
-};
-
 struct node_id_cmp {
   bool operator()(node const* lhs, node const* rhs) const {
     return lhs->id_ < rhs->id_;
@@ -283,32 +229,22 @@ struct rule_service_route_builder {
     }
   }
 
-  void adjust_times() {
-    for (auto& entry : sections_) {
-      lcon_time_adjuster().adjust_times(
-          entry.second[0]->route_section_.from_route_node_);
-    }
-  }
-
   static services_key get_services_key(
-      std::array<participant, 16> const& services) {
+      std::vector<participant> const& services) {
     services_key k;
     auto const ref_day_offset =
-        services[0].service()->times()->Get(services[0].section_idx_ * 2 + 1) /
+        services[0].service()->times()->Get(services[0].section_idx() * 2 + 1) /
         1440;
     for (auto const& s : services) {
-      if (s.service() == nullptr) {
-        break;
-      }
       auto const s_day_offset =
-          s.service()->times()->Get(s.section_idx_ * 2 + 1) / 1440;
+          s.service()->times()->Get(s.section_idx() * 2 + 1) / 1440;
       k.services_.insert({s.sn(), ref_day_offset - s_day_offset});
     }
     return k;
   }
 
   merged_trips_idx get_or_create_trips(
-      std::array<participant, 16> const& services) {
+      std::vector<participant> const& services) {
     auto k = get_services_key(services);
     return utl::get_or_create(merged_trips_, k, [&]() {
       return static_cast<merged_trips_idx>(push_mem(
@@ -329,16 +265,12 @@ struct rule_service_route_builder {
     auto participants = section.participants_;
     std::sort(begin(participants), end(participants));
 
-    std::array<participant, 16> services;
-    std::copy(begin(participants), end(participants), begin(services));
-
     assert(!participants.empty());
 
     mcd::vector<light_connection> lcons;
-    auto const& traffic_days = traffic_days_.at(services[0].sn());
-    auto const& times = services[0].sn()->times_;
-    lcons.push_back(gb_.section_to_connection(services, times, traffic_days,
-                                              get_or_create_trips(services)));
+    auto const& traffic_days = traffic_days_.at(participants[0].sn());
+    lcons.push_back(gb_.section_to_connection(
+        participants, traffic_days, get_or_create_trips(participants)));
     return lcons;
   }
 
@@ -364,7 +296,7 @@ struct rule_service_route_builder {
     for (participant const& p : s->participants_) {
       auto const& p_sections = sections_.at(p.sn());
       auto const p_succ_from =
-          find_from(visited, p_sections, p.section_idx_ + 1);
+          find_from(visited, p_sections, p.section_idx() + 1);
       if (p_succ_from != nullptr) {
         return p_succ_from;
       }
@@ -394,7 +326,7 @@ struct rule_service_route_builder {
 
     for (participant const& p : s->participants_) {
       auto const& p_sections = sections_.at(p.sn());
-      auto const p_pred_to = find_to(visited, p_sections, p.section_idx_ - 1);
+      auto const p_pred_to = find_to(visited, p_sections, p.section_idx() - 1);
       if (p_pred_to != nullptr) {
         return p_pred_to;
       }
@@ -424,8 +356,8 @@ struct rule_service_route_builder {
                     [](service_section const* ss) {
                       auto const get_from_to = [](participant const& p) {
                         auto const stations = p.service()->route()->stations();
-                        auto const from = stations->Get(p.section_idx_);
-                        auto const to = stations->Get(p.section_idx_ + 1);
+                        auto const from = stations->Get(p.section_idx());
+                        auto const to = stations->Get(p.section_idx() + 1);
                         return std::make_pair(from, to);
                       };
 
@@ -492,7 +424,7 @@ struct rule_service_route_builder {
 
     auto trp = trip_infos_.at(s);
     trp->edges_ = gb_.sched_.trip_edges_.back().get();
-    trp->day_offsets_ = day_offsets(s->times_);
+    trp->day_offsets_ = day_offsets(*trp->edges_);
     trp->dbg_ = gb_.get_trip_debug(s->service_);
   }
 
@@ -607,6 +539,67 @@ struct rule_service_route_builder {
     }
   }
 
+  mcd::vector<day_idx_t> day_offsets(
+      mcd::vector<trip_info::route_edge> const& route_edges) {
+    auto const find_first_bit =
+        [&](bitfield_idx_or_ptr const& bits) -> day_idx_t {
+      for (auto i = day_idx_t{0}; i != bits->size(); ++i) {
+        if (gb_.sched_.bitfields_.at(bits).test(i)) {
+          return i;
+        }
+      }
+      assert(false);
+      return 0U;
+    };
+
+    auto const get_connection = [&](edge const& e, motis::time const t)
+        -> std::pair<light_connection const*, day_idx_t> {
+      auto it = std::lower_bound(begin(e.m_.route_edge_.conns_),
+                                 std::end(e.m_.route_edge_.conns_),
+                                 light_connection{t.mam(), 0U}, d_time_lt{});
+
+      auto const abort_time = t + MAX_TRAVEL_TIME_MINUTES;
+      auto day = t.day();
+
+      while (true) {
+        if (day >= MAX_DAYS) {
+          return {nullptr, 0};
+        }
+
+        if (it == end(e.m_.route_edge_.conns_)) {
+          it = begin(e.m_.route_edge_.conns_);
+          day += 1;
+          continue;
+        }
+
+        if (it->event_time(event_type::DEP, day) > abort_time) {
+          return {nullptr, 0};
+        }
+
+        if (gb_.sched_.bitfields_.at(it->traffic_days_).test(day) &&
+            it->valid_) {
+          return {&*it, day};
+        } else {
+          ++it;
+        }
+      }
+    };
+
+    auto const& first_lcon = route_edges.at(0)->m_.route_edge_.conns_.at(0);
+    auto const& traffic_days = first_lcon.traffic_days_;
+    auto const first_traffic_day_first_route_edge =
+        find_first_bit(traffic_days);
+    auto const first_dep = first_lcon.event_time(
+        event_type::DEP, first_traffic_day_first_route_edge);
+    auto arr = first_dep;
+    return mcd::to_vec(route_edges, [&](trip_info::route_edge const& e) {
+      auto const [con, day_idx] = get_connection(*e, arr);
+      arr = con->event_time(event_type::ARR, day_idx);
+      return motis::time{con->event_time(event_type::DEP, day_idx) - first_dep}
+          .day();
+    });
+  }
+
   void make_expanded_trips(mcd::vector<trip_info::route_edge>& route_edges) {
     if (route_edges.empty()) {
       return;
@@ -619,7 +612,7 @@ struct rule_service_route_builder {
     auto trips_added = false;
     for (auto lcon_idx = 0U; lcon_idx < lc_count; ++lcon_idx) {
       full_trip_id ftid;
-      push_mem(gb_.sched_.trip_mem_, ftid, edges_ptr, mcd::vector<day_idx_t>{},
+      push_mem(gb_.sched_.trip_mem_, ftid, edges_ptr, day_offsets(route_edges),
                lcon_idx, trip_debug{});
       auto const trip_ptr = gb_.sched_.trip_mem_.back().get();
       if (gb_.check_trip(trip_ptr)) {

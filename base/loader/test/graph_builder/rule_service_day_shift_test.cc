@@ -11,6 +11,8 @@
 #include "motis/core/access/trip_stop.h"
 #include "motis/loader/timezone_util.h"
 
+#include "motis/core/schedule/validate_graph.h"
+
 #include "./graph_builder_test.h"
 
 using namespace motis::access;
@@ -72,6 +74,15 @@ TEST_F(service_rules_day_shift_test_1, through_every_day) {
   auto const* i = get_station(*sched_, "0000009");
   auto const* j = get_station(*sched_, "0000010");
   auto const* k = get_station(*sched_, "0000011");
+
+  print_graph(*sched_);
+  for (auto const& t : sched_->expanded_trips_) {
+    for (auto const& t1 : t) {
+      for (auto const& ctrp : t1->concrete_trips()) {
+        print_trip(ctrp);
+      }
+    }
+  }
 
   //  EXPECT_EQ(num_days_ + 1, trip_count({a, c, d, e, g, h, i, j, k}));
   EXPECT_EQ(2, trip_count({a, c, d, e, g, h, i, j, k}));

@@ -26,6 +26,7 @@
 #include "motis/core/schedule/timezone.h"
 
 #include "motis/loader/loader_options.h"
+#include "motis/loader/local_and_motis_traffic_days.h"
 #include "motis/loader/route.h"
 #include "motis/loader/rules_graph.h"
 #include "motis/loader/timezone_util.h"
@@ -76,31 +77,34 @@ struct route_section {
 };
 
 struct participant {
-  participant()
-      : service_(static_cast<service_node const*>(nullptr)), section_idx_(0) {}
-
   participant(service_node const* service, unsigned section_idx)
-      : service_(service), section_idx_(section_idx) {}
-
-  participant(Service const* service, unsigned section_idx)
-      : service_(service), section_idx_(section_idx) {}
-
-  friend bool operator<(participant const& lhs, participant const& rhs) {
-    return lhs.service() > rhs.service();
+      : service_(service), section_idx_(section_idx) {
+    assert(section_idx < service->service_->sections()->size() &&
+           "section_idx out of range");
+    assert(service->times_.size() == service->service_->sections()->size() * 2);
   }
 
-  friend bool operator>(participant const& lhs, participant const& rhs) {
-    return lhs.service() < rhs.service();
-  }
+  participant(Service const* service, mcd::vector<time> times,
+              unsigned section_idx)
+      : service_(service_info{service, std::move(times)}),
+        section_idx_(section_idx) {}
 
-  friend bool operator==(participant const& lhs, participant const& rhs) {
-    return lhs.service() == rhs.service();
+  friend bool operator<(participant const& a, participant const& b) {
+    return std::make_tuple(a.service(), a.utc_times()) <
+           std::make_tuple(b.service(), b.utc_times());
   }
 
   Service const* service() const;
   service_node const* sn() const;
+  unsigned section_idx() const;
+  mcd::vector<motis::time> const& utc_times() const;
 
-  std::variant<Service const*, service_node const*> service_;
+private:
+  struct service_info {
+    Service const* service_;
+    mcd::vector<motis::time> utc_times_;
+  };
+  std::variant<service_info, service_node const*> service_;
   unsigned section_idx_;
 };
 
@@ -146,7 +150,7 @@ struct graph_builder {
                                    day_idx_t end_idx) const;
 
   void add_route_services(
-      mcd::vector<std::pair<Service const*, bitfield_idx_t>> const& services);
+      mcd::vector<std::pair<Service const*, bitfield>> const& services);
 
   void add_expanded_trips(route const& r);
 
@@ -168,11 +172,10 @@ struct graph_builder {
                                                  connection_info* merged_with);
 
   connection_info* get_or_create_connection_info(
-      std::array<participant, 16> const& services);
+      std::vector<participant> const& services);
 
   light_connection section_to_connection(
-      std::array<participant, 16> const& services,
-      mcd::vector<time> const& relative_utc, bitfield const& traffic_days,
+      std::vector<participant> const& services, bitfield const& traffic_days,
       merged_trips_idx);
 
   void connect_reverse();
@@ -180,11 +183,13 @@ struct graph_builder {
   void sort_connections();
   void sort_trips();
 
-  std::optional<mcd::hash_map<mcd::vector<time>, bitfield>>
+  std::optional<mcd::hash_map<mcd::vector<time>, local_and_motis_traffic_days>>
   service_times_to_utc(bitfield const& traffic_days, Service const* s) const;
 
   bitfield_idx_t store_bitfield(bitfield const&);
-  bitfield_idx_t get_or_create_bitfield(
+  bitfield_idx_t get_or_create_bitfield_idx(
+      flatbuffers64::String const* serialized_bitfield, day_idx_t offset = 0);
+  bitfield get_or_create_bitfield(
       flatbuffers64::String const* serialized_bitfield, day_idx_t offset = 0);
 
   mcd::string const* get_or_create_direction(Direction const* dir);
@@ -201,7 +206,7 @@ struct graph_builder {
   void write_trip_edges(route const& r);
 
   mcd::unique_ptr<route> create_route(Route const* r, route_t const& lcons,
-                                      unsigned route_index);
+                                      int route_index);
 
   route_section add_route_section(
       int route_index, mcd::vector<light_connection> const& connections,

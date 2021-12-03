@@ -26,22 +26,24 @@ private:
   void build_rules_graph(RuleService const* rs) {
     std::map<Service const*, std::vector<service_node*>> service_nodes;
 
-    auto const get_or_create_service_nodes = [&](Rule const* r,
-                                                 Service const* s) {
+    auto const get_or_create_service_nodes = [&](Service const* s) {
       return utl::get_or_create(service_nodes, s, [&]() {
-        auto utc_time_strings = gb_.service_times_to_utc(get_bitfield(s), s);
+        auto const local_traffic_days = get_bitfield(s);
+        auto utc_time_strings = gb_.service_times_to_utc(local_traffic_days, s);
         if (!utc_time_strings.has_value()) {
           return std::vector<service_node*>{};
         }
-        return utl::to_vec(
-            *utc_time_strings,
-            [&](cista::pair<mcd::vector<time>, bitfield>& utc_time_string) {
-              auto& [times, traffic_days] = utc_time_string;
-              return rg_.service_nodes_
-                  .emplace_back(std::make_unique<service_node>(
-                      r->service1(), std::move(times), traffic_days))
-                  .get();
-            });
+        return utl::to_vec(*utc_time_strings,
+                           [&](cista::pair<mcd::vector<time>,
+                                           local_and_motis_traffic_days> const&
+                                   utc_time_string) {
+                             auto const& [times, traffic_days] =
+                                 utc_time_string;
+                             return rg_.service_nodes_
+                                 .emplace_back(std::make_unique<service_node>(
+                                     s, times, traffic_days))
+                                 .get();
+                           });
       });
     };
 
@@ -50,11 +52,11 @@ private:
         continue;
       }
 
-      auto const s1_nodes = get_or_create_service_nodes(r, r->service1());
-      auto const s2_nodes = get_or_create_service_nodes(r, r->service2());
+      auto const& s1_nodes = get_or_create_service_nodes(r->service1());
+      auto const& s2_nodes = get_or_create_service_nodes(r->service2());
 
-      for (auto const& s1_node : s1_nodes) {
-        for (auto const& s2_node : s2_nodes) {
+      for (auto* s1_node : s1_nodes) {
+        for (auto* s2_node : s2_nodes) {
           auto const rn = rg_.rule_nodes_
                               .emplace_back(std::make_unique<rule_node>(
                                   s1_node, s2_node, r))
@@ -79,20 +81,19 @@ private:
       }
     }
     for (auto& sn : rg_.service_nodes_) {
-      if (sn->traffic_days_.any()) {
-        left_over_trips_.emplace_back(sn->service_, sn->times_,
-                                      sn->traffic_days_);
+      if (sn->traffic_days_.local_traffic_days_.any()) {
+        left_over_trips_.emplace_back(sn.get());
       }
     }
   }
 
   bool build_routes(rule_node* ref_rn) {
-    if (ref_rn->s1_->traffic_days_.none() ||
-        ref_rn->s2_->traffic_days_.none()) {
+    if (ref_rn->s1_->traffic_days_.local_traffic_days_.none() ||
+        ref_rn->s2_->traffic_days_.local_traffic_days_.none()) {
       return false;
     }
     auto const ref_sn = ref_rn->s1_;
-    auto ref_traffic_days = ref_sn->traffic_days_;
+    auto ref_traffic_days = ref_sn->traffic_days_.local_traffic_days_;
 
     std::queue<std::tuple<rule_node*, service_node*, int>> queue;
     std::set<rule_node*> route_rules;
@@ -114,7 +115,8 @@ private:
                     (day_switch ? 1 : 0);
       auto const new_offset = offset + delta_offset;
       auto const new_traffic_days =
-          ref_traffic_days & shifted_bitfield(to->traffic_days_, new_offset) &
+          ref_traffic_days &
+          shifted_bitfield(to->traffic_days_.local_traffic_days_, new_offset) &
           schedule_traffic_days_mask_;
 
       if (new_traffic_days.none()) {
@@ -148,8 +150,10 @@ private:
       auto const service_traffic_days =
           shifted_bitfield(ref_traffic_days, -offset) &
           schedule_traffic_days_mask_;
-      route.traffic_days_[sn] = service_traffic_days;
-      sn->traffic_days_ &= ~service_traffic_days;
+      route.traffic_days_[sn] =
+          shifted_bitfield(service_traffic_days, sn->traffic_days_.shift_);
+      assert(route.traffic_days_[sn].any());
+      sn->traffic_days_.local_traffic_days_ &= ~service_traffic_days;
     }
     for (auto const& rn : route_rules) {
       route.rules_.push_back(rn);
@@ -157,7 +161,7 @@ private:
     return true;
   }
 
-  static inline bitfield shifted_bitfield(bitfield const& orig, int offset) {
+  static bitfield shifted_bitfield(bitfield const& orig, int offset) {
     return offset > 0 ? orig << static_cast<std::size_t>(offset)
                       : orig >> static_cast<std::size_t>(-offset);
   }
@@ -171,9 +175,8 @@ private:
 public:
   graph_builder& gb_;
   rules_graph rg_;
-  bitfield const& schedule_traffic_days_mask_;
-  std::vector<std::tuple<Service const*, mcd::vector<time>, bitfield>>
-      left_over_trips_;
+  bitfield schedule_traffic_days_mask_;
+  std::vector<service_node const*> left_over_trips_;
   mcd::vector<rule_route> rule_routes_;
 };
 
@@ -190,9 +193,10 @@ void build_rule_routes(graph_builder& gb,
     rule_route_builder rrb(gb, schedule_traffic_days_mask);
     rrb.build(rs);
 
-    for (auto const& [service, times, traffic_days] : rrb.left_over_trips_) {
+    for (auto const& sn : rrb.left_over_trips_) {
       gb.add_route_services(
-          {std::make_pair(service, gb.store_bitfield(traffic_days))});
+          {std::make_pair(sn->service_, sn->traffic_days_.local_traffic_days_ >>
+                                            sn->traffic_days_.shift_)});
     }
 
     rsgb.add_rule_services(rrb.rule_routes_);

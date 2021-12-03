@@ -382,7 +382,9 @@ public:
 
   inline char const* type_str() const {
     switch (type()) {
-      case edge_type::ROUTE_EDGE: return "edge_type::ROUTE_EDGE";
+      case edge_type::ROUTE_EDGE: return "ROUTE_EDGE";
+      case edge_type::FWD_ROUTE_EDGE: return "FWD_ROUTE_EDGE";
+      case edge_type::BWD_ROUTE_EDGE: return "BWD_ROUTE_EDGE";
       case edge_type::FOOT_EDGE: return "FOOT_EDGE";
       case edge_type::AFTER_TRAIN_FWD_EDGE: return "AFTER_TRAIN_FWD_EDGE";
       case edge_type::AFTER_TRAIN_BWD_EDGE: return "AFTER_TRAIN_BWD_EDGE";

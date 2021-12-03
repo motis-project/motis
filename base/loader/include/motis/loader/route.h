@@ -25,8 +25,8 @@ struct route_t {
 
   mcd::vector<light_connection> const& operator[](size_t) const;
 
-  mcd::vector<mcd::vector<time>> times_;
-  mcd::vector<mcd::vector<light_connection>> lcons_;
+  std::vector<mcd::vector<time>> times_;
+  std::vector<mcd::vector<light_connection>> lcons_;
   bitfield traffic_days_;
 };
 

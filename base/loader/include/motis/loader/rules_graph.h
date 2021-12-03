@@ -3,6 +3,8 @@
 #include "motis/core/schedule/bitfield.h"
 #include "motis/vector.h"
 
+#include "motis/loader/local_and_motis_traffic_days.h"
+
 #include "motis/schedule-format/RuleService_generated.h"
 #include "motis/schedule-format/Service_generated.h"
 
@@ -11,16 +13,18 @@ namespace motis::loader {
 struct rule_node;
 
 struct service_node {
-  service_node(Service const* service, mcd::vector<time>&& times,
-               bitfield const& traffic_days)
+  service_node(Service const* service, mcd::vector<time> times,
+               local_and_motis_traffic_days const& local_traffic_days)
       : service_(service),
         times_(std::move(times)),
-        traffic_days_(traffic_days) {}
+        traffic_days_(local_traffic_days) {
+    assert(times_.size() == service->sections()->size() * 2);
+  }
 
   std::vector<rule_node*> rule_nodes_;
   Service const* service_{nullptr};
   mcd::vector<time> times_;
-  bitfield traffic_days_;
+  local_and_motis_traffic_days traffic_days_;
 };
 
 struct rule_node {
