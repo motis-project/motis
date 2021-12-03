@@ -34,7 +34,7 @@ void update_trip_route(schedule const& sched, capacity_maps const& caps,
                        system_statistics& system_stats);
 
 inline edge* add_edge(universe& uv, edge&& e) {
-  return &uv.graph_.push_back_edge(std::move(e));
+  return &uv.graph_.push_back_edge(e);
 }
 
 inline edge make_trip_edge(universe& uv, event_node_index from,

@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "boost/algorithm/string/trim.hpp"
+
 #include "utl/parser/cstr.h"
 #include "utl/parser/csv.h"
 #include "utl/verify.h"
@@ -75,13 +77,32 @@ std::vector<minct> load_minct(loaded_file const& minct_file) {
   return records;
 }
 
-int station_meta_data::get_station_change_time(int eva_num) const {
+void load_platforms(loaded_file const& platform_file,
+                    station_meta_data& metas) {
+  enum { ds100_code, station_name, platform_name, track_name };
+  using entry = std::tuple<cstr, cstr, cstr, cstr>;
+
+  std::vector<entry> entries;
+  auto platform_content = platform_file.content();
+  read<entry, ';'>(platform_content, entries,
+                   {{"ril100", "bahnhof", "Bstg", "Gleis1"}});
+
+  for (auto const& e : entries) {
+    auto ds100 = std::get<ds100_code>(e).to_str();
+    boost::algorithm::trim(ds100);
+    metas.platforms_[ds100][std::get<platform_name>(e).to_str()].insert(
+        std::get<track_name>(e).to_str());
+  }
+}
+
+std::pair<int, int> station_meta_data::get_station_change_time(
+    int eva_num) const {
   auto it = station_change_times_.find(eva_num);
   if (it == std::end(station_change_times_)) {
     if (eva_num < 1000000) {
-      return DEFAULT_CHANGE_TIME_LOCAL_TRANSPORT;
+      return {DEFAULT_CHANGE_TIME_LOCAL_TRANSPORT, 0};
     } else {
-      return DEFAULT_CHANGE_TIME_LONG_DISTANCE;
+      return {DEFAULT_CHANGE_TIME_LONG_DISTANCE, 0};
     }
   } else {
     return it->second;
@@ -131,17 +152,21 @@ void parse_station_meta_data(loaded_file const& infotext_file,
                              loaded_file const& metabhf_file,
                              loaded_file const& metabhf_zusatz_file,
                              loaded_file const& minct_file,
+                             loaded_file const& platform_file,
                              station_meta_data& metas, config const& config) {
   parse_ds100_mappings(infotext_file, metas.ds100_to_eva_num_);
+  load_platforms(platform_file, metas);
   for (auto const& record : load_minct(minct_file)) {
     auto const from_ds100 = std::get<from_ds100_key>(record);
     auto const to_ds100 = std::get<to_ds100_key>(record);
     auto const duration = std::get<duration_key>(record);
+    auto const platform_interchange = std::get<track_change_time_key>(record);
 
     if (to_ds100.len == 0) {
       auto eva_number_it = metas.ds100_to_eva_num_.find(from_ds100);
       if (eva_number_it != end(metas.ds100_to_eva_num_)) {
-        metas.station_change_times_[eva_number_it->second] = duration;
+        metas.station_change_times_[eva_number_it->second] = {
+            duration, platform_interchange};
       }
     } else {
       auto from_eva_num_it = metas.ds100_to_eva_num_.find(from_ds100);

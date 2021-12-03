@@ -50,9 +50,6 @@ std::vector<future> dispatcher::publish(msg_ptr const& msg,
   }
 
   return utl::to_vec(it->second, [&](auto&& op) {
-    utl::verify(ctx::current_op<ctx_data>() == nullptr ||
-                    ctx::current_op<ctx_data>()->data_.access_ >= op.access_,
-                "match the access permissions of parent or be root operation");
     if (direct_mode_dispatcher_ != nullptr) {
       auto f = std::make_shared<ctx::future<ctx_data, msg_ptr>>(id);
       f->set(op.fn_(msg));
@@ -83,28 +80,6 @@ future dispatcher::req(msg_ptr const& msg, ctx_data const& data,
   return f;
 }
 
-ctx::access_t dispatcher::access_of(std::string const& target) {
-  if (auto const it = registry_.topic_subscriptions_.find(target);
-      it != end(registry_.topic_subscriptions_)) {
-    utl::verify(!registry_.topic_subscriptions_.empty(),
-                "empty topic subscriptions");
-    return std::max_element(
-               begin(it->second), end(it->second),
-               [](auto const& a, auto const& b) {
-                 return static_cast<std::underlying_type_t<ctx::access_t>>(
-                            a.access_) <
-                        static_cast<std::underlying_type_t<ctx::access_t>>(
-                            b.access_);
-               })
-        ->access_;
-  } else if (auto const it = registry_.operations_.find(target);
-             it != end(registry_.operations_)) {
-    return it->second.access_;
-  } else {
-    return ctx::access_t::READ;
-  }
-}
-
 void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
                           ctx::op_type_t const op_type, ctx_data const* data) {
   id.name = msg->get()->destination()->target()->str();
@@ -115,11 +90,6 @@ void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
   auto const run = [this, id, cb, msg]() {
     try {
       if (auto const op = registry_.get_operation(id.name)) {
-        utl::verify(
-            ctx::current_op<ctx_data>() == nullptr ||
-                ctx::current_op<ctx_data>()->data_.access_ >= op->access_,
-            "match the access permissions of parent or be root "
-            "operation");
         return cb(op->fn_(msg), std::error_code());
       } else if (auto const remote_op = registry_.get_remote_op(id.name);
                  remote_op.has_value()) {
@@ -143,16 +113,14 @@ void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
   if (direct_mode_dispatcher_ != nullptr) {
     run();
   } else {
-    ctx::access_t access{ctx::access_t::NONE};
-    if (data != nullptr) {
-      access = ctx::access_t::NONE;
-    } else if (auto const op = registry_.get_operation(id.name); op) {
+    auto access = ctx::accesses_t{};
+    if (auto const op = registry_.get_operation(id.name); op) {
       access = op->access_;
     }
 
     enqueue(
-        data != nullptr ? *data : ctx_data{access, this, &shared_data_},
-        [run]() { run(); }, id, op_type, access);
+        data != nullptr ? ctx_data{*data} : ctx_data{this, &shared_data_},
+        [run]() { run(); }, id, op_type, std::move(access));
   }
 }
 
@@ -167,10 +135,6 @@ msg_ptr dispatcher::api_desc(int const id) const {
           .Union(),
       "", DestinationType_Module, id);
   return make_msg(fbb);
-}
-
-ctx::access_t dispatcher::access_of(msg_ptr const& msg) {
-  return access_of(msg->get()->destination()->target()->str());
 }
 
 void dispatcher::handle_no_target(msg_ptr const& msg, callback const& cb) {

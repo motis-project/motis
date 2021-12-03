@@ -35,7 +35,7 @@ struct arrivals_wrapper {
 
 template <typename BlockType>
 struct trip_reachable_wrapper {
-  trip_reachable_wrapper(BlockType* blocks, uint32_t const size,
+  trip_reachable_wrapper(BlockType const* blocks, uint32_t const size,
                          uint32_t const query_idx)
       : blocks_{blocks}, size_{size}, query_idx_{query_idx} {}
 

@@ -101,7 +101,7 @@ inline void validate_graph(schedule const& sched) {
             begin(sched.station_nodes_), end(sched.station_nodes_),
             [&](auto&& sn) {
               return check_edges(sn.get()) &&
-                     std::all_of(begin(sn->route_nodes_), end(sn->route_nodes_),
+                     std::all_of(begin(sn->child_nodes_), end(sn->child_nodes_),
                                  [&](auto&& n) {
                                    return n->get_station() == sn.get() &&
                                           check_edges(n.get());
