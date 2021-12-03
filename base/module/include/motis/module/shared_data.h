@@ -1,11 +1,15 @@
 #pragma once
 
 #include <any>
+#include <atomic>
 
 #include "utl/verify.h"
 
+#include "ctx/res_id_t.h"
+
 #include "motis/hash_map.h"
-#include "motis/string.h"
+
+#include "motis/module/global_res_ids.h"
 
 namespace motis::module {
 
@@ -46,43 +50,46 @@ struct shared_data {
   shared_data() = default;
   shared_data(shared_data const&) = delete;
   shared_data& operator=(shared_data const&) = delete;
-  shared_data(shared_data&&) noexcept = default;
-  shared_data& operator=(shared_data&&) noexcept = default;
+  shared_data(shared_data&&) noexcept = delete;
+  shared_data& operator=(shared_data&&) noexcept = delete;
   ~shared_data() = default;
 
   template <typename T>
-  void emplace_data(std::string_view const name, T t) {
-    utl::verify(!includes(name), "{} already in shared data", name);
-    data_.emplace(name, std::forward<T>(t));
+  void emplace_data(ctx::res_id_t const res_id, T t) {
+    utl::verify(!includes(res_id), "{} already in shared data", res_id);
+    data_.emplace(res_id, std::forward<T>(t));
   }
 
-  bool includes(std::string_view const name) const {
-    return data_.find(name) != end(data_);
+  bool includes(ctx::res_id_t const res_id) const {
+    return data_.find(res_id) != end(data_);
   }
 
   template <typename T>
-  // NOLINTNEXTLINE(readability-avoid-const-params-in-decls)
-  T const& get(std::string_view const name) const {
-    auto const it = data_.find(name);
-    utl::verify(it != end(data_), "{} not in shared_data", name);
+  T const& get(ctx::res_id_t const res_id) const {
+    auto const it = data_.find(res_id);
+    utl::verify(it != end(data_), "{} not in shared_data", res_id);
     return *it->second.get<T>();
   }
 
   template <typename T>
-  T& get(std::string_view const name) {
-    auto const it = data_.find(name);
-    utl::verify(it != end(data_), "{} not in shared_data", name);
+  T& get(ctx::res_id_t const res_id) {
+    auto const it = data_.find(res_id);
+    utl::verify(it != end(data_), "{} not in shared_data", res_id);
     return *it->second.get<T>();
   }
 
   template <typename T>
-  T const* find(std::string_view const name) const {
-    auto const it = data_.find(name);
+  T const* find(ctx::res_id_t const res_id) const {
+    auto const it = data_.find(res_id);
     return it != end(data_) ? it->second.get<T>() : nullptr;
   }
 
+  ctx::res_id_t generate_res_id() { return ++res_id_; }
+
 private:
-  mcd::hash_map<mcd::string, type_erased> data_;
+  mcd::hash_map<ctx::res_id_t, type_erased> data_;
+  std::atomic<ctx::res_id_t> res_id_{
+      to_res_id(global_res_id::FIRST_FREE_RES_ID)};
 };
 
 }  // namespace motis::module

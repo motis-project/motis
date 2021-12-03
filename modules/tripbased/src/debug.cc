@@ -214,7 +214,8 @@ Offset<Vector<Offset<StopDebugInfo>>> get_trip_stop_debug_info(
         get_footpath_debug_info(fbb, data, sched, station),
         get_reverse_footpath_debug_info(fbb, data, sched, station),
         sched.stations_[station]->transfer_time_, arrival_transports,
-        departure_transports));
+        departure_transports,
+        sched.stations_[station]->platform_transfer_time_));
   }
   return fbb.CreateVector(sdis);
 }

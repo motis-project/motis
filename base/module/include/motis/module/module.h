@@ -50,22 +50,22 @@ protected:
   schedule const& get_sched() const;
 
   template <typename T>
-  T const& get_shared_data(std::string_view const s) const {
-    return shared_data_->get<T>(s);
+  T const& get_shared_data(ctx::res_id_t const id) const {
+    return shared_data_->get<T>(id);
   }
 
   template <typename T>
-  T& get_shared_data_mutable(std::string_view const s) {
-    return shared_data_->get<T>(s);
+  T& get_shared_data_mutable(ctx::res_id_t const id) {
+    return shared_data_->get<T>(id);
   }
 
   template <typename T>
-  T const* find_shared_data(std::string_view const s) const {
-    return shared_data_->find<T>(s);
+  T const* find_shared_data(ctx::res_id_t const id) const {
+    return shared_data_->find<T>(id);
   }
 
   template <typename T>
-  void add_shared_data(std::string_view const s, T&& data) {
+  void add_shared_data(ctx::res_id_t const s, T&& data) {
     shared_data_->emplace_data(s, std::forward<T>(data));
   }
 

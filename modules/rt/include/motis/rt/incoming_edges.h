@@ -45,6 +45,11 @@ inline void save_outgoing_edges(std::set<station_node*> const& station_nodes,
     if (s->foot_node_) {
       save_outgoing_edges(s->foot_node_.get(), incoming);
     }
+    for (auto const& pn : s->platform_nodes_) {
+      if (pn != nullptr) {
+        save_outgoing_edges(pn, incoming);
+      }
+    }
   }
 }
 
