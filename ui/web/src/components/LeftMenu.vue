@@ -239,7 +239,10 @@ export default defineComponent({
           numberArr[0] >= 0 && numberArr[0] < 24 &&
           numberArr[1] >= 0 && numberArr[1] < 60  
         ) {
-          let date = new Date(0, 0, 0, numberArr[0], numberArr[1]);
+          let date = new Date(new Date().getFullYear(), 
+                              new Date().getMonth(), 
+                              new Date().getDay(), 
+                              numberArr[0], numberArr[1]);
           if (!isNaN(date.getTime())) {
             this.time = date;
           }
