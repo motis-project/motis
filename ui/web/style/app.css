@@ -557,11 +557,8 @@
 
 .swap-locations-btn {
   position: absolute;
-  margin-left: auto;
-  margin-right: auto;
-  top: 84px;
-  left: 0;
-  right: 70px;
+  top: 60px;
+  right: 17px;
   z-index: 1;
   background-color: transparent;
   border-style: none;

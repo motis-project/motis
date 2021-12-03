@@ -12,21 +12,22 @@
                 :initInputText="start"
                 @inputChanged="setStartInput"
               />
+
               <div class="mode-picker-btn" @click="optinsButton1Click">
                 <div :class="['mode', firstOptions.foot ? 'enabled' : '']"><i class="icon">directions_walk</i></div>
                 <div :class="['mode', firstOptions.bicycle ? 'enabled' : '']"><i class="icon">directions_bike</i></div>
                 <div :class="['mode', firstOptions.car ? 'enabled' : '']"><i class="icon">directions_car</i></div>
               </div>
+
+              <button class="swap-locations-btn">
+                <label class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select">
+                  <input type="checkbox" @click="swapStartDest" />
+                  <i class="icon">swap_vert</i>
+                </label>
+              </button>
             </div>
             <Calendar class="pure-u-1 pure-u-sm-12-24"></Calendar>
           </div>
-
-          <button class="swap-locations-btn">
-            <label class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select">
-              <input type="checkbox" @click="swapStartDest" />
-              <i class="icon">swap_vert</i>
-            </label>
-          </button>
 
           <div class="pure-g-gutters">
             <div class="pure-u-1 pure-u-sm-12-24 from-location">
