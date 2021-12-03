@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include "motis/vector.h"
+
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/journey/journey.h"
 
@@ -12,6 +14,9 @@
 
 #include "motis/paxforecast/routing_cache.h"
 
+#include "motis/paxforecast/measures/load_level.h"
+#include "motis/paxforecast/measures/measures.h"
+
 namespace motis::paxforecast {
 
 struct alternative {
@@ -20,11 +25,17 @@ struct alternative {
   time arrival_time_{INVALID_TIME};
   duration duration_{};
   unsigned transfers_{};
+  bool is_original_{};
+  bool is_recommended_{};
+  measures::load_level load_info_{measures::load_level::UNKNOWN};
 };
 
 std::vector<alternative> find_alternatives(
-    schedule const& sched, unsigned destination_station_id,
+    schedule const& sched, routing_cache& cache,
+    mcd::vector<measures::measure_variant const*> const& group_measures,
+    unsigned const destination_station_id,
     motis::paxmon::passenger_localization const& localization,
-    routing_cache& cache);
+    motis::paxmon::compact_journey const* remaining_journey, bool use_cache,
+    duration pretrip_interval_length);
 
 }  // namespace motis::paxforecast

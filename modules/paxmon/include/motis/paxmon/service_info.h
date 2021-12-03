@@ -10,6 +10,8 @@
 
 #include "motis/core/schedule/schedule.h"
 
+#include "motis/paxmon/compact_journey.h"
+
 namespace motis::paxmon {
 
 struct service_info {
@@ -28,5 +30,8 @@ service_info get_service_info(schedule const& sched, connection const& fc,
 
 std::vector<std::pair<service_info, unsigned>> get_service_infos(
     schedule const& sched, trip const* trp);
+
+std::vector<std::pair<service_info, unsigned>> get_service_infos_for_leg(
+    schedule const& sched, journey_leg const& leg);
 
 }  // namespace motis::paxmon

@@ -1,6 +1,7 @@
 #include "motis/paxmon/tools/generator/query_generator.h"
 
 #include <algorithm>
+#include <iostream>
 #include <random>
 
 #include "utl/to_vec.h"
@@ -126,15 +127,44 @@ msg_ptr make_routing_request(std::string const& from_eva,
   return make_msg(fbb);
 }
 
-query_generator::query_generator(const schedule& sched)
+query_generator::query_generator(const schedule& sched,
+                                 unsigned const largest_stations)
     : sched_(sched),
       interval_gen_(sched.schedule_begin_ + SCHEDULE_OFFSET_MINUTES * 60,
                     sched.schedule_begin_ + SCHEDULE_OFFSET_MINUTES * 60 +
                         SECONDS_A_DAY) {
-  station_nodes_ =
-      utl::to_vec(sched.station_nodes_, [](station_node_ptr const& s) {
-        return static_cast<station_node const*>(s.get());
-      });
+  if (largest_stations > 0) {
+    auto stations = utl::to_vec(sched.stations_,
+                                [](station_ptr const& s) { return s.get(); });
+
+    std::vector<double> sizes(stations.size());
+    for (auto i = 0UL; i < stations.size(); ++i) {
+      auto& factor = sizes[i];
+      auto const& events = stations[i]->dep_class_events_;
+      for (auto j = 0UL; j < events.size(); ++j) {
+        factor +=
+            std::pow(2.0, static_cast<double>(service_class::NUM_CLASSES) - j) *
+            events.at(j);
+      }
+    }
+
+    std::sort(begin(stations), end(stations),
+              [&](station const* a, station const* b) {
+                return sizes[a->index_] > sizes[b->index_];
+              });
+
+    auto const n =
+        std::min(static_cast<size_t>(largest_stations), stations.size());
+    for (auto i = 0U; i < n; ++i) {
+      station_nodes_.push_back(
+          sched.station_nodes_.at(stations[i]->index_).get());
+    }
+  } else {
+    station_nodes_ =
+        utl::to_vec(sched.station_nodes_, [](station_node_ptr const& s) {
+          return static_cast<station_node const*>(s.get());
+        });
+  }
 }
 
 motis::module::msg_ptr query_generator::get_routing_request(

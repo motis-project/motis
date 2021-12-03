@@ -61,7 +61,7 @@ Offset<PaxMonCompactJourneyLeg> to_fbs(schedule const& sched,
                                        FlatBufferBuilder& fbb,
                                        journey_leg const& leg) {
   return CreatePaxMonCompactJourneyLeg(
-      fbb, to_fbs(fbb, to_extern_trip(sched, leg.trip_)),
+      fbb, to_fbs_trip_service_info(fbb, sched, leg),
       to_fbs(fbb, *sched.stations_[leg.enter_station_id_]),
       to_fbs(fbb, *sched.stations_[leg.exit_station_id_]),
       motis_to_unixtime(sched, leg.enter_time_),
@@ -71,7 +71,7 @@ Offset<PaxMonCompactJourneyLeg> to_fbs(schedule const& sched,
 
 journey_leg from_fbs(schedule const& sched,
                      PaxMonCompactJourneyLeg const* leg) {
-  return {get_trip(sched, to_extern_trip(leg->trip())),
+  return {get_trip(sched, to_extern_trip(leg->trip()->trip())),
           get_station(sched, leg->enter_station()->id()->str())->index_,
           get_station(sched, leg->exit_station()->id()->str())->index_,
           unix_to_motistime(sched, leg->enter_time()),
@@ -121,6 +121,11 @@ passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg) {
       static_cast<group_source_flags>(pg->source_flags()), pg->probability(),
       from_fbs_time(sched, pg->added_time()), pg->previous_version(),
       pg->generation(), pg->estimated_delay(), pg->id());
+}
+
+PaxMonGroupBaseInfo to_fbs_base_info(FlatBufferBuilder& /*fbb*/,
+                                     passenger_group const& pg) {
+  return PaxMonGroupBaseInfo{pg.id_, pg.passengers_, pg.probability_};
 }
 
 Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
@@ -241,6 +246,13 @@ Offset<TripServiceInfo> to_fbs_trip_service_info(FlatBufferBuilder& fbb,
                                                  trip const* trp) {
   return to_fbs_trip_service_info(fbb, sched, trp,
                                   get_service_infos(sched, trp));
+}
+
+Offset<TripServiceInfo> to_fbs_trip_service_info(FlatBufferBuilder& fbb,
+                                                 schedule const& sched,
+                                                 journey_leg const& leg) {
+  return to_fbs_trip_service_info(fbb, sched, leg.trip_,
+                                  get_service_infos_for_leg(sched, leg));
 }
 
 Offset<PaxMonEdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,

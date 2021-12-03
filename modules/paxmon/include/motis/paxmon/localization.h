@@ -2,6 +2,8 @@
 
 #include <tuple>
 
+#include "cista/hashing.h"
+
 #include "motis/core/schedule/schedule.h"
 
 #include "motis/paxmon/reachability.h"
@@ -32,6 +34,11 @@ struct passenger_localization {
   }
 
   bool in_trip() const { return in_trip_ != nullptr; }
+
+  cista::hash_t hash() const {
+    return cista::build_hash(in_trip_, at_station_, schedule_arrival_time_,
+                             current_arrival_time_, first_station_);
+  }
 };
 
 passenger_localization localize(schedule const& sched,

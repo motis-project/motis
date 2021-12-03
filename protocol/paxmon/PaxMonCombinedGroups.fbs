@@ -1,0 +1,9 @@
+include "paxmon/PaxMonGroup.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonCombinedGroups {
+  groups: [PaxMonGroupBaseInfo];
+  min_passenger_count: uint;
+  max_passenger_count: uint;
+}

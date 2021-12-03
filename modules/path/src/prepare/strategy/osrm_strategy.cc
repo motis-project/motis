@@ -227,6 +227,7 @@ struct osrm_strategy::impl {
     if (from_nodes.size() <= to_nodes.size()) {
       return route(from_nodes, to_nodes, true);
     } else {
+      // NOLINTNEXTLINE(readability-suspicious-call-argument)
       return route(to_nodes, from_nodes, false);
     }
   }

@@ -1,0 +1,15 @@
+namespace motis.paxmon;
+
+table PaxMonGetInterchangesRequest {
+  universe: uint;
+
+  station: string; // station id
+
+  // filters
+  start_time: long;
+  end_time: long;
+  max_count: uint;
+
+  include_meta_stations: bool;
+  include_group_infos: bool;
+}

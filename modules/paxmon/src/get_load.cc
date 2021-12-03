@@ -20,9 +20,11 @@ pax_limits get_pax_limits(passenger_group_container const& pgc,
   for (auto const grp_id : groups) {
     auto const* grp = pgc[grp_id];
     auto const pax = grp->passengers_;
-    limits.max_ += pax;
     if (grp->probability_ == 1.0F) {
       limits.min_ += pax;
+    }
+    if (grp->probability_ != 0.0F) {
+      limits.max_ += pax;
     }
   }
   return limits;

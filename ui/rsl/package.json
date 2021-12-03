@@ -2,46 +2,46 @@
   "name": "rsl",
   "version": "0.1.0",
   "private": true,
-  "dependencies": {
-    "@craco/craco": "^6.0.0",
-    "@tailwindcss/postcss7-compat": "^2.0.2",
-    "@testing-library/jest-dom": "^5.11.6",
-    "@testing-library/react": "^11.2.2",
-    "@testing-library/user-event": "^12.6.0",
-    "autoprefixer": "^9.8.6",
-    "date-fns": "^2.16.1",
-    "postcss": "^7.0.35",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
-    "react-scripts": "4.0.3",
-    "tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.0.2",
-    "web-vitals": "^0.2.4"
-  },
   "scripts": {
-    "start": "craco start",
-    "build": "craco build",
-    "test": "craco test",
-    "eject": "react-scripts eject"
+    "preinstall": "npx only-allow pnpm",
+    "dev": "vite",
+    "dev-host": "vite --host",
+    "build": "tsc && vite build",
+    "serve": "vite preview",
+    "serve-host": "vite preview --host",
+    "lint": "eslint src --ext .js,.jsx,.ts,.tsx --max-warnings 0",
+    "fix-lint": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write src",
+    "format-check": "prettier --check src",
+    "ts-check": "tsc",
+    "update-protocol": "node --trace-uncaught tools/protocol.js && prettier --write src/api/protocol"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  "dependencies": {
+    "@heroicons/react": "^1.0.5",
+    "@radix-ui/react-tooltip": "^0.1.1",
+    "@tailwindcss/forms": "^0.3.4",
+    "date-fns": "^2.27.0",
+    "downshift": "^6.1.7",
+    "jotai": "^1.4.6",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-query": "^3.34.0"
   },
   "devDependencies": {
-    "prettier": "2.2.1"
+    "@types/react": "^17.0.37",
+    "@types/react-dom": "^17.0.11",
+    "@typescript-eslint/eslint-plugin": "^4.33.0",
+    "@typescript-eslint/parser": "^4.33.0",
+    "@vitejs/plugin-react-refresh": "^1.3.6",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-react": "^7.27.1",
+    "eslint-plugin-react-hooks": "^4.3.0",
+    "postcss": "^8.4.4",
+    "prettier": "^2.5.0",
+    "tailwindcss": "^2.2.19",
+    "typescript": "~4.4.4",
+    "vite": "^2.6.14"
   }
 }
