@@ -1,10 +1,9 @@
 {
   "name": "web",
   "version": "1.0.0",
-  "description": "npm install -g elm@0.18.0",
-  "main": "elm.js",
+  "description": "yarn add next react react-dom",
+  "main": "index.tsx",
   "dependencies": {
-    "elm": "^0.18.0"
   },
   "devDependencies": {},
   "scripts": {
