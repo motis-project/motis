@@ -201,10 +201,10 @@ public class ResultComparator {
     return map;
   }
 
-  static List<ComparisonResult> compare(long resCount, Map<Long, List<CompareConnection>> raptorConns, Map<Long, List<CompareConnection>> routingConns, boolean mocRelevant) {
+  static List<ComparisonResult> compare(long resCount, Map<Long, List<CompareConnection>> raptorConns, Map<Long, List<CompareConnection>> routingConns, boolean mocRelevant, int up_to_line) {
 
     var r = new ArrayList<ComparisonResult>();
-    for (long queryId = 1; queryId <= resCount; queryId++) {
+    for (long queryId = 1; queryId <= resCount && queryId < up_to_line; queryId++) {
 
       var rpc = raptorConns.get(queryId);
       var roc = routingConns.get(queryId);
@@ -286,7 +286,7 @@ public class ResultComparator {
     //var routingLines = Files.readAllLines(Path.of("./data/results/r-fwd-routing-moc.txt"));
     var routingLines = Files.readAllLines(Path.of("verification/sbb-small/r-raptor_cpu-moc.txt"));
 
-    if (raptorLines.size() != routingLines.size()) throw new IllegalStateException("Line Counts don't match!");
+    //if (raptorLines.size() != routingLines.size()) throw new IllegalStateException("Line Counts don't match!");
     System.out.println("Ok");
 
     System.out.print("Parsing data ...");
@@ -298,7 +298,7 @@ public class ResultComparator {
     System.out.println("Ok");
 
     System.out.print("Comparing ...");
-    var comparison = compare(raptorLines.size(), raptorConns, routingConns, mocRelevant);
+    var comparison = compare(raptorLines.size(), raptorConns, routingConns, mocRelevant, 608);
     System.out.println("Ok");
 
     var full_match_count = 0;

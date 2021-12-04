@@ -59,7 +59,7 @@ struct traits<FirstTrait, RestTraits...> {
     return write_idx;
   }
 
-  inline static bool is_trait_satisfied(trait_id total_size,
+  __mark_cuda_rel__ inline static bool is_trait_satisfied(trait_id total_size,
                                         TraitsData const& td,
                                         trait_id t_offset) {
     auto const [rest_trait_size, first_dimension_idx, rest_trait_offset] =
@@ -211,7 +211,7 @@ struct traits<> {
   }
 
   template <typename Data>
-  inline static bool is_trait_satisfied(uint32_t _1, Data const& _2,
+  __mark_cuda_rel__ inline static bool is_trait_satisfied(uint32_t _1, Data const& _2,
                                         uint32_t _3) {
     return true;  // return natural element of conjunction
   }

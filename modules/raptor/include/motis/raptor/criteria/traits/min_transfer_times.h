@@ -50,16 +50,15 @@ struct trait_min_transfer_times {
   }
 
   template <typename TraitsData>
-  __device__ inline static dimension_id get_write_to_dimension_id(
+  __mark_cuda_rel__ inline static dimension_id get_write_to_dimension_id(
       TraitsData const& d) {
     return (d.initial_mtt_idx_ < d.min_transfer_time_idx_)
                ? d.min_transfer_time_idx_
                : d.initial_mtt_idx_;
   }
 
-  // TODO check if this can be removed
   template <typename TraitsData>
-  inline static bool is_trait_satisfied(TraitsData const& data,
+  __mark_cuda_rel__ inline static bool is_trait_satisfied(TraitsData const& data,
                                         dimension_id const dimension_idx) {
     return dimension_idx == 0 && data.min_transfer_time_idx_ == 0;
   }

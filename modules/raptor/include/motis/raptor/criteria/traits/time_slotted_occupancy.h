@@ -75,15 +75,15 @@ struct trait_time_slotted_occupancy {
   }
 
   template <typename TraitsData>
-  __device__ inline static dimension_id get_write_to_dimension_id(
+  __mark_cuda_rel__ inline static dimension_id get_write_to_dimension_id(
       TraitsData const& d) {
     return d.initial_soc_idx_ + d.occ_time_slot_;
   }
 
   template <typename TraitsData>
-  inline static bool is_trait_satisfied(TraitsData const& data,
+  __mark_cuda_rel__ inline static bool is_trait_satisfied(TraitsData const& data,
                                         dimension_id const dimension_idx) {
-    return dimension_idx == 0 && data.occ_time_slot_ == 0;  // TODO
+    return dimension_idx == data.occ_time_slot_;
   }
 
   //****************************************************************************

@@ -46,9 +46,9 @@ struct trait_max_occupancy {
   }
 
   template <typename TraitsData>
-  inline static bool is_trait_satisfied(TraitsData const& data,
+  __mark_cuda_rel__ inline static bool is_trait_satisfied(TraitsData const& data,
                                         dimension_id const dimension_idx) {
-    return dimension_idx == 0 && data.max_occupancy_ == 0;
+    return dimension_idx == data.max_occupancy_;
   }
 
   //****************************************************************************

@@ -32,7 +32,7 @@ struct criteria_config {
   }
 
   // TODO use again
-  inline static bool is_trait_satisfied(CriteriaData const& td,
+  __mark_cuda_rel__ inline static bool is_trait_satisfied(CriteriaData const& td,
                                         trait_id t_offset) {
     return Traits::is_trait_satisfied(trait_size(), td, t_offset);
   }
