@@ -18,7 +18,7 @@ using day_idx_t = int16_t;
 using mam_t = int16_t;
 using duration_t = uint16_t;
 
-constexpr auto const MAX_DAYS = day_idx_t{512};
+constexpr auto const MAX_DAYS = day_idx_t{365};
 constexpr auto const MINUTES_A_DAY = mam_t{1440};
 constexpr auto const SECONDS_A_DAY = uint32_t{MINUTES_A_DAY * 60};
 constexpr auto const INVALID_DURATION = std::numeric_limits<duration_t>::max();

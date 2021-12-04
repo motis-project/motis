@@ -12,9 +12,8 @@ light_connection make_lcon(mam_t const dep, mam_t const arr) {
   return lcon;
 }
 
-auto const e =
-    make_route_edge(nullptr, nullptr,
-                    {make_lcon(0, 10), make_lcon(1, 11), make_lcon(2, 12)}, 0U);
+auto const e = make_route_edge(
+    nullptr, nullptr, {make_lcon(0, 10), make_lcon(1, 11), make_lcon(2, 12)});
 
 TEST(core_route_edge, get_connection_test_valid) {
   auto [c, day] = e.get_connection(motis::time{0, 1});

@@ -117,9 +117,9 @@ struct trip_info {
   auto concrete_trips() const {
     return utl::iota(day_idx_t{0}, MAX_DAYS)  //
            | utl::remove_if([&](auto const day) {
-               return edges_->front()
-                   ->m_.route_edge_.conns_.at(lcon_idx_)
-                   .traffic_days_->test(day);
+               return !edges_->front()
+                           ->m_.route_edge_.conns_.at(lcon_idx_)
+                           .traffic_days_->test(day);
              })  //
            | utl::transform([&](auto const day) {
                return concrete_trip{this, day};

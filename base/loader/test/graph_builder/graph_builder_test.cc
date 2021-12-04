@@ -63,8 +63,8 @@ void loader_graph_builder_test::print_trip(concrete_trip const trp) const {
             << id.primary_.train_nr_ << ", "
             << format_time(trp.get_first_dep_time()) << "), ("
             << id.secondary_.target_station_id_ << ", "
-            << format_time(trp.get_last_arr_time()) << ", "
-            << id.secondary_.line_id_ << "))" << std::endl;
+            << format_time(trp.get_last_arr_time()) << ", \""
+            << id.secondary_.line_id_ << "\"))" << std::endl;
   std::clog << "  " << trp.trp_->edges_->size()
             << " edges, lcon_idx=" << trp.trp_->lcon_idx_ << std::endl;
   std::clog << "  stops: ";
