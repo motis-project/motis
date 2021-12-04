@@ -50,7 +50,7 @@ struct trait_min_transfer_times {
   }
 
   template <typename TraitsData>
-  __mark_cuda_rel__ inline static dimension_id get_write_to_dimension_id(
+  __device__ inline static dimension_id get_write_to_dimension_id(
       TraitsData const& d) {
     return (d.initial_mtt_idx_ < d.min_transfer_time_idx_)
                ? d.min_transfer_time_idx_
@@ -131,6 +131,15 @@ struct trait_min_transfer_times {
     // scale the index linearly to determine a lower bound
     //  for guaranteed transfer times
     dt.min_transfer_time_idx_ = dimension_idx;
+  }
+
+  template<typename TraitsData>
+  inline static std::vector<dimension_id> get_feasible_dimensions(
+      dimension_id const initial_offset,
+      TraitsData const& data
+      ) {
+    //TODO;
+    return std::vector<dimension_id>{};
   }
 
   template <typename TraitsData>

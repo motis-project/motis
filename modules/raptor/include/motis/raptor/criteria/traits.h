@@ -1,9 +1,12 @@
 #pragma once
 
 #include <tuple>
+#include <vector>
 
 #include "motis/raptor/raptor_timetable.h"
 #include "motis/raptor/raptor_util.h"
+
+#include "cooperative_groups.h"
 
 namespace motis::raptor {
 
@@ -41,14 +44,19 @@ struct traits<FirstTrait, RestTraits...> {
   }
 
   __mark_cuda_rel__ inline static trait_id get_write_to_trait_id(
-      TraitsData const& d) {
+      TraitsData& d) {
     auto const first_dimension_idx = FirstTrait::get_write_to_dimension_id(d);
-    auto const first_dim_step_width = size();
+    auto const first_dim_step_width = traits<RestTraits...>::size();
 
     auto const rest_trait_offset =
         traits<RestTraits...>::get_write_to_trait_id(d);
 
-    return (first_dim_step_width * first_dimension_idx) + rest_trait_offset;
+    auto write_idx = first_dim_step_width * first_dimension_idx + rest_trait_offset;
+//    if(d.route_id_ == 70 && d.trip_id_ == 2)
+//      printf("FDI: %i;\tFDS: %i;\tRTO: %i;\ttest %i\n", first_dimension_idx,
+//             first_dim_step_width, rest_trait_offset, write_idx);
+
+    return write_idx;
   }
 
   inline static bool is_trait_satisfied(trait_id total_size,
@@ -131,6 +139,33 @@ struct traits<FirstTrait, RestTraits...> {
                                           rest_trait_offset);
   }
 
+  inline static std::vector<trait_id> get_feasible_trait_ids(
+      trait_id const total_size, trait_id const initial_offset,
+      TraitsData const& input) {
+
+    auto const [rest_trait_size, first_dimension_idx, rest_trait_offset] =
+        _trait_values(total_size, initial_offset);
+
+    auto const first_dimensions =
+        FirstTrait::get_feasible_dimensions(first_dimension_idx, input);
+    auto const first_size = traits<RestTraits...>::size();
+    auto const rest_feasible = traits<RestTraits...>::get_feasible_trait_ids(
+        rest_trait_size, rest_trait_offset, input);
+
+    std::vector<trait_id> total_feasible(first_dimensions.size() *
+                                         rest_feasible.size());
+
+    auto idx = 0;
+    for (auto const first_dim : first_dimensions) {
+      for (auto const rest_offset : rest_feasible) {
+        total_feasible[idx] = first_dim * first_size + rest_offset;
+        ++idx;
+      }
+    }
+
+    return total_feasible;
+  }
+
   inline static bool dominates(TraitsData const& to_dominate,
                                TraitsData const& dominating) {
     return FirstTrait::dominates(to_dominate, dominating) &&
@@ -162,9 +197,11 @@ struct traits<> {
   inline static void get_trait_data(uint32_t const _1, Data& _2,
                                     uint32_t const _3) {}
 
-  template<typename Data>
+  template <typename Data>
   __mark_cuda_rel__ inline static trait_id get_write_to_trait_id(
-      Data const& d){}
+      Data const& d) {
+    return 0;
+  }
 
   template <typename Data>
   __mark_cuda_rel__ inline static bool is_update_required(uint32_t _1,
@@ -206,6 +243,13 @@ struct traits<> {
   __device__ inline static void carry_to_next_stage(unsigned const _1,
                                                     Data& _2) {}
 #endif
+
+  template <typename Data>
+  inline static std::vector<trait_id> get_feasible_trait_ids(
+      trait_id const total_size, trait_id const initial_offset,
+      Data const& input) {
+    return std::vector<trait_id>{0};
+  }
 
   // giving the neutral element of the conjunction
   template <typename Data>

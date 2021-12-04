@@ -75,7 +75,7 @@ struct trait_time_slotted_occupancy {
   }
 
   template <typename TraitsData>
-  __mark_cuda_rel__ inline static dimension_id get_write_to_dimension_id(
+  __device__ inline static dimension_id get_write_to_dimension_id(
       TraitsData const& d) {
     return d.initial_soc_idx_ + d.occ_time_slot_;
   }
@@ -199,6 +199,19 @@ struct trait_time_slotted_occupancy {
 
     // when determined this way only gives a lower bound not the actual value
     dt.summed_occ_time_ = dimension_idx * slot_divisor;
+  }
+
+  template <typename TraitsData>
+  static std::vector<dimension_id> get_feasible_dimensions(
+      dimension_id const initial_offset,
+      TraitsData const& data) {
+
+    //there is exactly one feasible dimension, which is the
+    // initial - what is consumed by the trip
+    dimension_id const new_dimension = initial_offset - data.occ_time_slot_;
+    if(new_dimension >= 0) return std::vector<dimension_id>{new_dimension};
+
+    return std::vector<dimension_id>{};
   }
 
   template <typename TraitsData>

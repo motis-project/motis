@@ -20,14 +20,14 @@ struct criteria_config {
     return stop_idx * trait_size() + trait_offset;
   }
 
-//  // TODO get rid of
-//  __mark_cuda_rel__ inline static bool is_update_required(
-//      CriteriaData const& td, trait_id t_offset) {
-//    return Traits::is_update_required(trait_size(), td, t_offset);
-//  }
+  //  // TODO get rid of
+  //  __mark_cuda_rel__ inline static bool is_update_required(
+  //      CriteriaData const& td, trait_id t_offset) {
+  //    return Traits::is_update_required(trait_size(), td, t_offset);
+  //  }
 
   __mark_cuda_rel__ inline static trait_id get_write_to_trait_id(
-      CriteriaData const& d) {
+      CriteriaData& d) {
     return Traits::get_write_to_trait_id(d);
   }
 
@@ -84,6 +84,14 @@ struct criteria_config {
     CriteriaData data{};
     Traits::get_trait_data(trait_size(), data, trait_offset);
     return data;
+  }
+
+  inline static std::vector<trait_id> get_feasible_traits(
+      trait_id const initial_offset, CriteriaData const& new_trip) {
+    auto feasible = Traits::get_feasible_trait_ids(trait_size(), initial_offset,
+                                                   new_trip);
+    std::reverse(std::begin(feasible), std::end(feasible));
+    return feasible;
   }
 
   // check if a candidate journey dominates a given journey by checking on the

@@ -31,6 +31,18 @@ __device__ occ_t get_moc<MaxOccupancy>(MaxOccupancy ::CriteriaData const& d) {
 }
 
 template <typename CriteriaConfig>
+__device__ occ_t
+get_initial_moc(typename CriteriaConfig::CriteriaData const& d) {
+  return 4;
+}
+
+template <>
+__device__ occ_t
+get_initial_moc<MaxOccupancy>(MaxOccupancy ::CriteriaData const& d) {
+  return d.initial_moc_idx_;
+}
+
+template <typename CriteriaConfig>
 __device__ void mc_copy_marked_arrivals(time* const to, time const* const from,
                                         unsigned int* station_marks,
                                         device_gpu_timetable const& tt) {
@@ -119,16 +131,19 @@ __device__ void mc_update_route_larger32(
   unsigned int criteria_mask = 0;
 
   for (int trip_offset = 0; trip_offset < route.trip_count_; ++trip_offset) {
+    CriteriaConfig::reset_traits_aggregate(aggregate, r_id, trip_offset,
+                                           t_offset);
 
-    for (int current_stage = 0; current_stage < active_stage_count;
+    for (uint32_t current_stage = 0; current_stage < active_stage_count;
          ++current_stage) {
 
-      int stage_id = (current_stage << 5) + t_id;  // stage_id ^= stop_id
+      uint32_t stage_id = (current_stage << 5) + t_id;  // stage_id ^= stop_id
 
       // load the prev arrivals for the current stage
       if (stage_id < active_stop_count) {
         stop_id_t = tt.route_stops_[route.index_to_route_stops_ + stage_id];
-        auto const stop_arr_idx = CriteriaConfig::get_arrival_idx(stop_id_t, t_offset);
+        auto const stop_arr_idx =
+            CriteriaConfig::get_arrival_idx(stop_id_t, t_offset);
         prev_arrival = prev_arrivals[stop_arr_idx];
       }
 
@@ -246,7 +261,7 @@ __device__ void mc_update_route_larger32(
           }
 
           // propagate the additional criteria attributes
-          for (int idx = leader; idx < active_stop_count && idx - leader < 32;
+          for (uint32_t idx = leader; idx < active_stop_count && idx - leader < 32;
                ++idx) {
             // internally uses __shfl_up_sync to propagate the criteria values
             //  along the traits while allowing for max/min/sum operations
@@ -262,7 +277,6 @@ __device__ void mc_update_route_larger32(
           //                %i\tfound moc " "for s_id: %i\tmoc: %i\n", t_id,
           //                r_id, t_offset, trip_offset, stop_id_t,
           //                get_moc<CriteriaConfig>(aggregate));
-
           auto const write_to_offset =
               CriteriaConfig::get_write_to_trait_id(aggregate);
           auto const earliest_arrival = get_earliest_arrival<CriteriaConfig>(
@@ -346,6 +360,8 @@ __device__ void mc_update_route_smaller32(
 
   for (trip_id trip_offset = 0; trip_offset < route.trip_count_;
        ++trip_offset) {
+    CriteriaConfig::reset_traits_aggregate(aggregate, r_id, trip_offset,
+                                           t_offset);
     if (t_id < active_stop_count) {
       auto const st_index =
           route.index_to_stop_times_ + (trip_offset * route.stop_count_) + t_id;
@@ -398,19 +414,12 @@ __device__ void mc_update_route_smaller32(
       }
 
       // propagate the additional criteria attributes
-      for (int idx = leader + 1; idx < active_stop_count; ++idx) {
+      for (uint32_t idx = leader + 1; idx < active_stop_count; ++idx) {
         // internally uses __shfl_up_sync to propagate the criteria values
         //  along the traits while allowing for max/min/sum operations
         CriteriaConfig::propagate_and_merge_if_needed(
             criteria_mask, aggregate, !is_departure_stop && idx <= t_id);
       }
-
-      //      if (r_id == 20530 && t_offset == 0 && t_id < 5 && trip_offset ==
-      //      1)
-      //        printf(
-      //            "\nt_id: %i\tr_id: %i\tt_offset: %i\ttrip_id: %i\tfound moc
-      //            for " "s_id: %i\tmoc: %i\n", t_id, r_id, t_offset,
-      //            trip_offset, s_id, get_moc<CriteriaConfig>(aggregate));
 
       // Note: Earliest Arrival may, when reaching this point not be the
       //       'earliest arrival' at this stop, but it gives a sufficient
@@ -421,6 +430,15 @@ __device__ void mc_update_route_smaller32(
           CriteriaConfig::get_write_to_trait_id(aggregate);
       auto const earliest_arrival = get_earliest_arrival<CriteriaConfig>(
           earliest_arrivals, target_stop_id, s_id, write_to_offset);
+
+//      if (s_id == 3625)
+//        printf(
+//            "\nt_id: %i\tr_id: %i\tt_offset: %i\ttrip_id: %i\tfound moc"
+//            " for s_id: %i\tmoc: %i;\twrite idx: %i;\tinitial moc: %i;\tarrival: %i\n",
+//            t_id, r_id, t_offset, trip_offset, s_id,
+//            get_moc<CriteriaConfig>(aggregate), write_to_offset,
+//            get_initial_moc<CriteriaConfig>(aggregate), stop_arrival);
+
       if (stop_arrival < earliest_arrival) {
         auto const write_to_idx =
             CriteriaConfig::get_arrival_idx(s_id, write_to_offset);
@@ -447,9 +465,6 @@ __device__ void mc_update_route_smaller32(
         }
       }
     }
-
-    CriteriaConfig::reset_traits_aggregate(aggregate, r_id, trip_offset,
-                                           t_offset);
     //    if (leader != NO_LEADER) {
     //      active_stop_count = leader;
     //    }

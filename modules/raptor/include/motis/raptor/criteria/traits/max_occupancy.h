@@ -37,10 +37,12 @@ struct trait_max_occupancy {
   }
 
   template <typename TraitsData>
-  __mark_cuda_rel__ inline static dimension_id get_write_to_dimension_id(
+  __mark_cuda_rel__ inline static uint32_t get_write_to_dimension_id(
       TraitsData const& d) {
-    return (d.initial_moc_idx_ < d.max_occupancy_) ? d.max_occupancy_
-                                                   : d.initial_moc_idx_;
+    if(d.initial_moc_idx_ < d.max_occupancy_) {
+      return d.max_occupancy_;
+    }
+    return d.initial_moc_idx_;
   }
 
   template <typename TraitsData>
@@ -117,6 +119,23 @@ struct trait_max_occupancy {
     // can be used as occupancy at idx 0
     //  maps to an occupancy value of 0
     dt.max_occupancy_ = dimension_idx;
+  }
+
+  template <typename TraitsData>
+  inline static std::vector<dimension_id> get_feasible_dimensions(
+      dimension_id const initial_offset,
+      TraitsData const& data) {
+
+    if (data.max_occupancy_ == 2 && initial_offset == 2) return std::vector<dimension_id>{2};
+    if (data.max_occupancy_ == 1 && initial_offset == 2) return std::vector<dimension_id>{1, 2};
+    if (data.max_occupancy_ == 0 && initial_offset == 2) return std::vector<dimension_id>{0, 1, 2};
+
+    if (data.max_occupancy_ == 1 && initial_offset == 1) return std::vector<dimension_id>{1};
+    if (data.max_occupancy_ == 0 && initial_offset == 1) return std::vector<dimension_id>{0, 1};
+
+    if (data.max_occupancy_ == 0 && initial_offset == 0) return std::vector<dimension_id>{0};
+
+    return std::vector<dimension_id>{};
   }
 
   //  template <typename TraitsData, typename Timetable>

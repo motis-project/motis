@@ -14,6 +14,7 @@
 #include "motis/raptor/reconstructor.h"
 
 #include "motis/raptor/print_raptor.h"
+#include "motis/raptor/print_results.h"
 
 #if defined(MOTIS_CUDA)
 #include "motis/raptor/gpu/gpu_raptor.cuh"

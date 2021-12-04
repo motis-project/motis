@@ -90,8 +90,8 @@ struct intermediate_journey {
       // therefore we need to adjust the index
       auto const lcon = raptor_sched.lcon_ptr_[stop_time_idx];
       auto const a_track = lcon->full_con_->a_track_;
-      //in case of having the first route in the journey or the first route
-      //  used after a foot path determine the departure track from the lcon
+      // in case of having the first route in the journey or the first route
+      //   used after a foot path determine the departure track from the lcon
       auto const d_track = get_d_track(lcon);
 
       if (!valid(a_time)) {
@@ -336,7 +336,7 @@ struct reconstructor {
                                   raptor_result_base const& result) {
     return !valid(std::get<stop_id>(
         get_previous_station(c.target_, c.arrival_, c.transfers_ + 1,
-                             c.crit_data_, c.crit_offset_, result)));
+                             c.crit_offset_, result)));
   }
 
   template <typename Query>
@@ -350,13 +350,15 @@ struct reconstructor {
     auto arrival_station = c.target_;
     auto last_departure = invalid<time>;
     auto station_arrival = c.arrival_;
+    auto trait_offset = c.crit_offset_;
     for (auto result_idx = c.transfers_ + 1; result_idx > 0; --result_idx) {
       // TODO(julian) possible to skip this if station arrival at index larger
       // than last departure minus transfertime,
       // same with footpath reachable stations
-      auto [previous_station, used_route, used_trip, stop_offset] =
+      auto [previous_station, used_route, used_trip, stop_offset,
+            new_trait_offset] =
           get_previous_station(arrival_station, station_arrival, result_idx,
-                               c.crit_data_, c.crit_offset_, result);
+                               trait_offset, result);
 
       if (valid(previous_station)) {
         last_departure = ij.add_route(previous_station, used_route, used_trip,
@@ -365,9 +367,10 @@ struct reconstructor {
         for (auto const& inc_f :
              timetable_.incoming_footpaths_[arrival_station]) {
           auto const adjusted_arrival = station_arrival - inc_f.duration_;
-          std::tie(previous_station, used_route, used_trip, stop_offset) =
+          std::tie(previous_station, used_route, used_trip, stop_offset,
+                   new_trait_offset) =
               get_previous_station(inc_f.from_, adjusted_arrival, result_idx,
-                                   c.crit_data_, c.crit_offset_, result);
+                                   trait_offset, result);
 
           if (valid(previous_station)) {
             ij.add_footpath(arrival_station, station_arrival, last_departure,
@@ -381,8 +384,9 @@ struct reconstructor {
       }
 
       arrival_station = previous_station;
+      trait_offset = new_trait_offset;
       auto const arrival_idx =
-          CriteriaConfig::get_arrival_idx(arrival_station, c.crit_offset_);
+          CriteriaConfig::get_arrival_idx(arrival_station, trait_offset);
       station_arrival = result[result_idx - 1][arrival_idx];
     }
 
@@ -449,10 +453,10 @@ struct reconstructor {
     return ij;
   }
 
-  std::tuple<stop_id, route_id, trip_id, stop_offset> get_previous_station(
-      stop_id const arrival_station, time const stop_arrival,
-      uint8_t const result_idx, CriteriaData const& crit_data,
-      uint32_t crit_offset, raptor_result_base const& result) {
+  std::tuple<stop_id, route_id, trip_id, stop_offset, trait_id>
+  get_previous_station(stop_id const arrival_station, time const stop_arrival,
+                       uint8_t const result_idx, trait_id trait_offset,
+                       raptor_result_base const& result) {
     auto const arrival_stop = timetable_.stops_[arrival_station];
 
     auto const route_count = arrival_stop.route_count_;
@@ -475,18 +479,18 @@ struct reconstructor {
           continue;
         }
 
-        auto const board_station = get_board_station_for_trip(
-            r_id, arrival_trip, result, result_idx - 1, crit_offset, crit_data,
-            offset);
+        auto const [board_station, new_trait_offset] =
+            get_board_station_for_trip(r_id, arrival_trip, result,
+                                       result_idx - 1, trait_offset, offset);
 
         if (valid(board_station)) {
-          return {board_station, r_id, arrival_trip, offset};
+          return {board_station, r_id, arrival_trip, offset, new_trait_offset};
         }
       }
     }
 
     return {invalid<stop_id>, invalid<route_id>, invalid<trip_id>,
-            invalid<stop_offset>};
+            invalid<stop_offset>, invalid<trait_id>};
   }
 
   trip_id get_arrival_trip_at_station(route_id const r_id, time const arrival,
@@ -504,47 +508,56 @@ struct reconstructor {
     return invalid<trip_id>;
   }
 
-  stop_id get_board_station_for_trip(route_id const r_id, trip_id const t_id,
-                                     raptor_result_base const& result,
-                                     raptor_round const result_idx,
-                                     trait_id crit_offset,
-                                     CriteriaData const& crit_data,
-                                     stop_offset const arrival_offset) {
+  std::tuple<stop_id, trait_id> get_board_station_for_trip(
+      route_id const r_id, trip_id const t_id, raptor_result_base const& result,
+      raptor_round const result_idx, trait_id trait_offset,
+      stop_offset const arrival_offset) {
     auto const& r = timetable_.routes_[r_id];
 
     auto const first_stop_times_index =
         r.index_to_stop_times_ + (t_id * r.stop_count_);
 
-    //TODO
-    //1. build the aggregate for this trip from offset 0 - arr_offset
-    //2. iterate through the trip and reduce the aggregate by one segment
-    //   getting closer to the arrival station
-    //2.1 while iterating search the trait offset downwards for possible arrival
-    //    times at the departure station. Thereby only iterate over feasible
-    //    trait offsets
-
-    // -1, since we cannot board a trip at the last station
-    CriteriaData aggregate{};
     auto const max_offset =
         std::min(static_cast<stop_offset>(r.stop_count_ - 1), arrival_offset);
+    CriteriaData aggregate{};
+
+    // -1, since we cannot board a trip at the last station
     for (auto stop_offset = 0; stop_offset < max_offset; ++stop_offset) {
+      // 1. build the aggregate for this trip from offset 0 -> arr_offset
+      CriteriaConfig::reset_traits_aggregate(aggregate, r_id, t_id,
+                                             trait_offset);
+      for (auto s_offset = stop_offset + 1; s_offset <= max_offset;
+           ++s_offset) {
+        auto const current_sti = first_stop_times_index + s_offset;
+        CriteriaConfig::update_traits_aggregate(
+            aggregate, timetable_, result[result_idx], s_offset, current_sti);
+      }
+
       auto const rsi = r.index_to_route_stops_ + stop_offset;
       auto const stop_id = timetable_.route_stops_[rsi];
 
       auto const sti = first_stop_times_index + stop_offset;
       auto const departure = timetable_.stop_times_[sti].departure_;
 
-      auto const arr_idx =
-          CriteriaConfig::get_arrival_idx(stop_id, crit_offset);
+      // while iterating search the trait offset downwards for possible
+      // arrival times at the departure station. Thereby only iterate over
+      // feasible trait offsets
+      auto const feasible_trait_ids =
+          CriteriaConfig::get_feasible_traits(trait_offset, aggregate);
+      auto it = feasible_trait_ids.cbegin();
 
-      if (valid(departure) && result[result_idx][arr_idx] <= departure &&
-          CriteriaConfig::trip_matches_traits(crit_data, timetable_, r_id, t_id,
-                                              stop_offset, arrival_offset)) {
-        return stop_id;
+      while (it != feasible_trait_ids.cend()) {
+        auto const arr_idx = CriteriaConfig::get_arrival_idx(stop_id, *it);
+
+        if (valid(departure) && result[result_idx][arr_idx] <= departure) {
+          return {stop_id, *it};
+        }
+
+        ++it;
       }
     }
 
-    return invalid<stop_id>;
+    return {invalid<stop_id>, invalid<trait_id>};
   }
 
 private:
