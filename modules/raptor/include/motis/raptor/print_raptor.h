@@ -38,27 +38,27 @@ inline void print_route_gen(route_id const r_id, raptor_timetable const& tt,
   auto index_into_route_stops = route.index_to_route_stops_;
   auto index_into_stop_times = route.index_to_stop_times_;
 
-  std::cout << r_id << "\t{ ";
+  std::cerr << r_id << "\t{ ";
   for (stop_id stop_offset = 0; stop_offset < stop_count; ++stop_offset) {
-    std::cout << stop_offset << ": "
+    std::cerr << stop_offset << ": "
               << tt.route_stops_[index_into_route_stops + stop_offset] << " ";
   }
-  std::cout << "} " << stop_count << "\n";
+  std::cerr << "} " << stop_count << "\n";
 
   for (trip_count trip_offset = 0; trip_offset < route.trip_count_;
        ++trip_offset) {
-    std::cout << trip_offset << " \t[ ";
+    std::cerr << trip_offset << " \t[ ";
     for (stop_id stop_offset = 0; stop_offset < stop_count; ++stop_offset) {
       auto const st_idx =
           index_into_stop_times + (trip_offset * stop_count) + stop_offset;
       auto const stop_time = tt.stop_times_[st_idx];
-      std::cout << stop_offset << ": "
+      std::cerr << stop_offset << ": "
                 << "(" << time_string(stop_time.arrival_) << ","
                 << time_string(stop_time.departure_) << ")"
                 << "(" << +tt.stop_attr_[st_idx].inbound_occupancy_ << ")"
                 << " ; ";
     }
-    std::cout << "]\n";
+    std::cerr << "]\n";
   }
 }
 

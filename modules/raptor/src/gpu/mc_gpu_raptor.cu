@@ -169,32 +169,38 @@ __device__ void mc_update_route_larger32(
                          valid(stop_departure) &&
                          (prev_arrival <= stop_departure));
 
-      //      if (t_id == 0 && (r_id == 4877) && current_stage == 0)
-      //        printf(
-      //            "Ballot Mask for r_id: %i, t_offset: %i, trip_offset: "
-      //            "%i;\tstage: %i\t%x\n",
-      //            r_id, t_offset, trip_offset, current_stage, ballot);
+//      if (t_id == 0 && (r_id == 118) && trip_offset == 1)
+//        printf(
+//            "Ballot Mask for r_id: %i, t_offset: %i, trip_offset: "
+//            "%i;\tstage: %i\t%x\n",
+//            r_id, t_offset, trip_offset, current_stage, ballot);
 
       // index of first possible departure station on this stage
       leader = __ffs(ballot) - 1;
 
+      auto const stop_count_on_stage =
+          active_stop_count < ((current_stage + 1) << 5)
+              ? (active_stop_count - (current_stage << 5))
+              : 32;
       if (leader != NO_LEADER) {
-        auto const stop_count_on_stage =
-            active_stop_count < ((current_stage + 1) << 5)
-                ? (active_stop_count - (current_stage << 5))
-                : 32;
         criteria_mask =
             get_criteria_propagation_mask(leader, stop_count_on_stage);
-      } else {
-        criteria_mask = 0;
+      } else if(valid(last_known_dep_stop)){
+        //no leader in current stags; though maybe there is a leader in the
+        //  previous stage
+//        printf("Active Stop count %i;\ton stage: %i\n", stop_count_on_stage, current_stage);
+        criteria_mask = (1 << stop_count_on_stage) - 1;
+      }else {
+        //no departure stop up to now
+        continue;
       }
 
-      //      if (t_id == 0 && (r_id == 4877) && current_stage == 0) {
-      //        printf(
-      //            "Criteria Mask for r_id: %i, t_offset: %i, trip_offset: "
-      //            "%i;\tstage: %i\t%x\n",
-      //            r_id, t_offset, trip_offset, current_stage, criteria_mask);
-      //      }
+      if (t_id == 0 && (r_id == 118) && trip_offset == 1) {
+//        printf(
+//            "Criteria Mask for r_id: %i, t_offset: %i, trip_offset: "
+//            "%i;\tstage: %i\t%x\n",
+//            r_id, t_offset, trip_offset, current_stage, criteria_mask);
+      }
 
       if (leader != NO_LEADER) {
         // adjust the determined departure location to the current stage
@@ -211,12 +217,13 @@ __device__ void mc_update_route_larger32(
         unsigned carry_mask = (1 << 31) | 1;
         CriteriaConfig::carry_to_next_stage(carry_mask, aggregate);
 
-        //        if (t_id == 0 && r_id == 118)
-        //          printf(
-        //              "t_id: %i\tr_id: %i\tt_offset: %i\ttrip_id: %i\tfound "
-        //              "carried moc for s_id: %i\tmoc: %i\n",
-        //              t_id, r_id, t_offset, trip_offset, stop_id_t,
-        //              get_moc<CriteriaConfig>(aggregate));
+//        if (t_id == 0 && r_id == 118 && trip_offset == 1)
+//          printf(
+//              "t_id: %i\tr_id: %i\tt_offset: %i\ttrip_id: %i;\tstage: "
+//              "%i\tfound "
+//              "carried moc for s_id: %i\tmoc: %i\n",
+//              t_id, r_id, t_offset, trip_offset, current_stage, stop_id_t,
+//              get_moc<CriteriaConfig>(aggregate));
       }
 
       // update this stage if there is a leader or a known dep stop from
@@ -241,74 +248,64 @@ __device__ void mc_update_route_larger32(
 
           if (t_id != 0 || !valid(last_known_dep_stop) ||
               leader - (current_stage << 5) == 0) {
-            //            if (r_id == 4877 && stage_id == 13 && trip_offset == 1
-            //            && t_offset == 0)
-            //              printf("Resetting Aggregate for t_id: %i\tstage:%
-            //              i\n ", t_id,
-            //                     current_stage);
+//            if (r_id == 118 && current_stage == 1 && trip_offset == 1)
+//              printf("Resetting Aggregate for t_id: %i\tstage:% i\n ", t_id,
+//                     current_stage);
             CriteriaConfig::reset_traits_aggregate(aggregate, r_id, trip_offset,
                                                    t_offset);
           }
 
           if (!is_departure_stop) {
-            //            if (r_id == 4877 && stage_id == 13 && trip_offset == 1
-            //            && t_offset == 0)
-            //              printf("Updating aggregate for t_id: %i\tstage:% i\n
-            //              ", t_id,
-            //                     current_stage);
             CriteriaConfig::update_traits_aggregate(
                 aggregate, tt, prev_arrivals, t_id, st_idx);
+
+//            if (r_id == 118 && current_stage == 1 && trip_offset == 1) {
+//              printf("Updated aggregate for t_id: %i\tstage:% i;\tnew moc: %i\n", t_id,
+//                     current_stage, get_moc<CriteriaConfig>(aggregate));
+//            }
           }
 
           // propagate the additional criteria attributes
-          for (uint32_t idx = leader; idx < active_stop_count && idx - leader < 32;
-               ++idx) {
+          for (uint32_t idx = __ffs(criteria_mask);
+               idx < stop_count_on_stage; ++idx) {
             // internally uses __shfl_up_sync to propagate the criteria values
             //  along the traits while allowing for max/min/sum operations
             CriteriaConfig::propagate_and_merge_if_needed(
                 criteria_mask, aggregate,
                 !is_departure_stop && idx <= stage_id);
+
+//            if(r_id == 118 && current_stage == 1)
+//            printf("Updated aggregate in Loop for t_id: %i\tstage:% i;\tnew moc: %i\n", t_id,
+//                   current_stage, get_moc<CriteriaConfig>(aggregate));
           }
 
-          //          if (r_id == 4877 && stage_id == 13 && trip_offset == 1 &&
-          //              t_offset == 0)
-          //            printf(
-          //                "t_id: %i\tr_id: %i\tt_offset: %i\ttrip_id:
-          //                %i\tfound moc " "for s_id: %i\tmoc: %i\n", t_id,
-          //                r_id, t_offset, trip_offset, stop_id_t,
-          //                get_moc<CriteriaConfig>(aggregate));
           auto const write_to_offset =
               CriteriaConfig::get_write_to_trait_id(aggregate);
           auto const earliest_arrival = get_earliest_arrival<CriteriaConfig>(
               earliest_arrivals, target_stop_id, stop_id_t, write_to_offset);
-          if (stop_arrival < earliest_arrival) {
 
-            //            if (r_id == 127 && stage_id == 38 && trip_offset == 43
-            //            &&
-            //                t_offset == 2)
-            //              printf("\n\nPassed the barrier!\n\n");
+//          if (stop_id_t == 7936 && r_id == 118)
+//            printf(
+//                "\nt_id: %i\tr_id: %i\tt_offset: %i\ttrip_id: %i\tfound moc"
+//                " for s_id: %i\tmoc: %i;\twrite idx: %i;\tinitial moc: "
+//                "%i;\tarrival: %i\n",
+//                t_id, r_id, t_offset, trip_offset, stop_id_t,
+//                get_moc<CriteriaConfig>(aggregate), write_to_offset,
+//                get_initial_moc<CriteriaConfig>(aggregate), stop_arrival);
+
+          if (stop_arrival < earliest_arrival) {
             auto const write_to_arr_idx =
                 CriteriaConfig::get_arrival_idx(stop_id_t, write_to_offset);
             bool updated =
                 update_arrival(arrivals, write_to_arr_idx, stop_arrival);
             if (updated) {
-              //              if (t_offset == 0 && (stop_id_t == 5363)) {
-              //                printf(
-              //                    "Wrote arrival to stop %i from r_id > 32:
-              //                    %i;\tt_offset: "
-              //                    "%i;\ttrip_offset: %i;\tarrival:
-              //                    %i;\tballot: %x\n", stop_id_t, r_id,
-              //                    t_offset, trip_offset, stop_arrival,
-              //                    ballot);
-              //              }
-
-              //              if (r_id == 118)
-              //                printf(
-              //                    "t_id: %i\tr_id: %i\tt_offset: %i\ttrip_id:
-              //                    %i\twrite " "update" "for " "s_id: %i\tto
-              //                    arr idx: %i\tarr_time: %i\n", t_id, r_id,
-              //                    t_offset, trip_offset, stop_id_t,
-              //                    stop_arr_idx, stop_arrival);
+//              if (stop_id_t == 7936 && r_id == 118) {
+//                printf(
+//                    "Wrote arrival to stop %i from r_id > 32: %i;\tt_offset: "
+//                    "%i;\ttrip_offset: %i;\tarrival: %i;\tballot: %x\n",
+//                    stop_id_t, r_id, t_offset, trip_offset, stop_arrival,
+//                    ballot);
+//              }
 
               update_arrival(earliest_arrivals, write_to_arr_idx, stop_arrival);
               mark(station_marks, stop_id_t);
@@ -431,28 +428,27 @@ __device__ void mc_update_route_smaller32(
       auto const earliest_arrival = get_earliest_arrival<CriteriaConfig>(
           earliest_arrivals, target_stop_id, s_id, write_to_offset);
 
-//      if (s_id == 3625)
-//        printf(
-//            "\nt_id: %i\tr_id: %i\tt_offset: %i\ttrip_id: %i\tfound moc"
-//            " for s_id: %i\tmoc: %i;\twrite idx: %i;\tinitial moc: %i;\tarrival: %i\n",
-//            t_id, r_id, t_offset, trip_offset, s_id,
-//            get_moc<CriteriaConfig>(aggregate), write_to_offset,
-//            get_initial_moc<CriteriaConfig>(aggregate), stop_arrival);
+      //      if (s_id == 3625)
+      //        printf(
+      //            "\nt_id: %i\tr_id: %i\tt_offset: %i\ttrip_id: %i\tfound moc"
+      //            " for s_id: %i\tmoc: %i;\twrite idx: %i;\tinitial moc:
+      //            %i;\tarrival: %i\n", t_id, r_id, t_offset, trip_offset,
+      //            s_id, get_moc<CriteriaConfig>(aggregate), write_to_offset,
+      //            get_initial_moc<CriteriaConfig>(aggregate), stop_arrival);
 
       if (stop_arrival < earliest_arrival) {
         auto const write_to_idx =
             CriteriaConfig::get_arrival_idx(s_id, write_to_offset);
         bool updated = update_arrival(arrivals, write_to_idx, stop_arrival);
         if (updated) {
-          //          if (t_offset == 0 && (s_id == 26487)) {
-          //            printf(
-          //                "Wrote arrival to Stop %i from r_id: %i;\tt_offset:
-          //                "
-          //                "%i;\ttrip_offset: %i;ballot mask: %x\tarrival: "
-          //                "%i;\tearliest_arrivals: %i\n",
-          //                s_id, r_id, t_offset, trip_offset, ballot,
-          //                stop_arrival, earliest_arrival);
-          //          }
+//          if (s_id == 7936) {
+//            printf(
+//                "Wrote arrival to Stop %i from r_id: %i;\tt_offset:"
+//                "%i;\ttrip_offset: %i;ballot mask: %x\tarrival: "
+//                "%i;\tearliest_arrivals: %i\n",
+//                s_id, r_id, t_offset, trip_offset, ballot, stop_arrival,
+//                earliest_arrival);
+//          }
 
           update_arrival(earliest_arrivals, write_to_idx, stop_arrival);
           //          if ((r_id == 62 || r_id == 69))
@@ -505,14 +501,14 @@ __device__ void mc_update_footpaths_dev_scratch(
     time const target_ea = earliest_arrivals[target_arr_idx];
     time const earliest_arrival = umin(to_stop_ea, target_ea);
 
-    //    if (footpath.to_ == 5363 && t_offset == 0) {
-    //      printf(
-    //          "Considered arrival to Stop %i from footpath: from
-    //          %i;\tt_offset: "
-    //          "%i;\tarrival at src: %i;\tFP duration: %i\n",
-    //          footpath.to_, footpath.from_, t_offset, from_arrival,
-    //          footpath.duration_);
-    //    }
+    //        if (footpath.to_ == 7933 && t_offset == 1) {
+    //          printf(
+    //              "Considered arrival to Stop %i from footpath: from
+    //              %i;\tt_offset: "
+    //              "%i;\tarrival at src: %i;\tFP duration: %i\n",
+    //              footpath.to_, footpath.from_, t_offset, from_arrival,
+    //              footpath.duration_);
+    //        }
 
     if (valid(from_arrival) && marked(station_marks, footpath.from_) &&
         new_arrival < earliest_arrival) {
