@@ -40,3 +40,6 @@ callgrind.out.*
 *.callgrind
 /.clangd
 /compile_commands.json
+/website.html
+/oldindex.txt
+/ui/oldWebStuff

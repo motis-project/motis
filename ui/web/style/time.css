@@ -1,9 +1,0 @@
-.hour-buttons {
-  display: table;
-  margin-right: 4px;
-  border-spacing: 4px;
-}
-
-.hour-buttons > * {
-  display: table-cell;
-}
