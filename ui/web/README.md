@@ -4,7 +4,7 @@
 
 Navigate into the `ui/web` directory and install the needed dependencies using
 
-     yarn
+    yarn
 
 ## Start the development Server
 
