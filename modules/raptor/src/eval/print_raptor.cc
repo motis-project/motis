@@ -41,7 +41,7 @@ struct print_raptor_options : public conf::configuration {
 
 void print(schedule const& sched, raptor_meta_info const& meta_info,
            journey const& j) {
-  std::cout << "Journey with TR: " << j.trips_.size()
+  std::cout << "\nJourney with TR: " << j.trips_.size()
             << ";\tMOC: " << j.max_occupancy_ << ";\tDuration: " << j.duration_
             << ";\n=========================================================\n";
 
@@ -72,7 +72,7 @@ void print(schedule const& sched, raptor_meta_info const& meta_info,
                 << ";\tArr: " << std::setw(7)
                 << +unix_to_motistime(sched.schedule_begin_,
                                       j_from_stop.arrival_.timestamp_)
-                << " (" << j_from_stop.arrival_.timestamp_ << ");\n";
+                << " (" << j_from_stop.arrival_.timestamp_ << ");\n\n";
     }
 
     std::cout << std::setw(3) << idx << ": "
@@ -89,7 +89,7 @@ void print(schedule const& sched, raptor_meta_info const& meta_info,
               << ";\teva: " << j_to_stop.eva_no_ << ";\tArr: " << std::setw(7)
               << +unix_to_motistime(sched.schedule_begin_,
                                     j_to_stop.arrival_.timestamp_)
-              << " (" << j_to_stop.arrival_.timestamp_ << ");\n";
+              << " (" << j_to_stop.arrival_.timestamp_ << ");\n\n";
 
     prev_arr_eva = j_to_stop.eva_no_;
     prev_arr_time = j_to_stop.arrival_.timestamp_;

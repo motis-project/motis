@@ -26,7 +26,10 @@ void print_results(raptor_result_base const& result,
 
     for (raptor_round round_k = 0;
          round_k < max_raptor_round && round_k < up_to_round; ++round_k) {
-      std::cerr << "Results Round " << +round_k << std::endl;
+      std::cerr << "==========================================================\n"
+          << "Results Round " << +round_k << "\n"
+          << "=========================================================="
+          << std::endl;
       for (int i = 0; i < (result.arrival_times_count_ / trait_size) - 1; ++i) {
         auto const eva = meta.raptor_id_to_eva_.at(i);
         auto had_valid_time = false;

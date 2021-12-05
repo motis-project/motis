@@ -298,7 +298,7 @@ public class ResultComparator {
     System.out.println("Ok");
 
     System.out.print("Comparing ...");
-    var comparison = compare(raptorLines.size(), raptorConns, routingConns, mocRelevant, 608);
+    var comparison = compare(raptorLines.size(), raptorConns, routingConns, mocRelevant, 1001);
     System.out.println("Ok");
 
     var full_match_count = 0;
