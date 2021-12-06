@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "motis/core/access/realtime_access.h"
+#include "motis/core/access/trip_access.h"
 #include "motis/core/access/trip_iterator.h"
 
 namespace motis::paxmon {
@@ -22,7 +23,8 @@ passenger_localization localize(schedule const& sched,
               tripit->exit_schedule_time_, tripit->exit_real_time_, false};
     }
     // passenger is currently in this trip
-    auto sections = access::sections(tripit->trp_);
+    auto const* trp = get_trip(sched, tripit->trip_idx_);
+    auto sections = access::sections(trp);
     auto lb =
         std::lower_bound(begin(sections), end(sections), localization_time,
                          [](access::trip_section const& section, auto const t) {
@@ -32,8 +34,7 @@ passenger_localization localize(schedule const& sched,
       lb--;
     }
     auto const current_section = *lb;
-    return {tripit->trp_,
-            sched.stations_[current_section.to_station_id()].get(),
+    return {trp, sched.stations_[current_section.to_station_id()].get(),
             get_schedule_time(sched, current_section.ev_key_to()),
             current_section.lcon().a_time_, false};
   }

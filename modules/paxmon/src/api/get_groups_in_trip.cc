@@ -7,6 +7,7 @@
 #include "motis/hash_map.h"
 #include "motis/pair.h"
 
+#include "motis/core/access/trip_access.h"
 #include "motis/core/conv/station_conv.h"
 #include "motis/core/conv/trip_conv.h"
 
@@ -57,12 +58,15 @@ motis::module::msg_ptr get_groups_in_trip(schedule const& sched,
           passenger_group const* pg) -> std::pair<bool, trip const*> {
     for (auto const& [leg_idx, leg] :
          utl::enumerate(pg->compact_planned_journey_.legs_)) {
-      if (leg.trip_ == trp &&
+      if (leg.trip_idx_ == trp->trip_idx_ &&
           leg.enter_station_id_ == trp_node->station_idx()) {
-        return {true,
-                leg_idx > 0
-                    ? pg->compact_planned_journey_.legs_[leg_idx - 1].trip_
-                    : nullptr};
+        return {
+            true,
+            leg_idx > 0
+                ? get_trip(
+                      sched,
+                      pg->compact_planned_journey_.legs_[leg_idx - 1].trip_idx_)
+                : nullptr};
       }
     }
     return {false, nullptr};
@@ -73,11 +77,15 @@ motis::module::msg_ptr get_groups_in_trip(schedule const& sched,
           passenger_group const* pg) -> std::pair<bool, trip const*> {
     for (auto const& [leg_idx, leg] :
          utl::enumerate(pg->compact_planned_journey_.legs_)) {
-      if (leg.trip_ == trp && leg.exit_station_id_ == trp_node->station_idx()) {
-        return {true,
-                leg_idx < pg->compact_planned_journey_.legs_.size() - 1
-                    ? pg->compact_planned_journey_.legs_[leg_idx + 1].trip_
-                    : nullptr};
+      if (leg.trip_idx_ == trp->trip_idx_ &&
+          leg.exit_station_id_ == trp_node->station_idx()) {
+        return {
+            true,
+            leg_idx < pg->compact_planned_journey_.legs_.size() - 1
+                ? get_trip(
+                      sched,
+                      pg->compact_planned_journey_.legs_[leg_idx + 1].trip_idx_)
+                : nullptr};
       }
     }
     return {false, nullptr};

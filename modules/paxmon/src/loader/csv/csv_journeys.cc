@@ -239,7 +239,7 @@ struct input_journey_leg {
                 "input_journey_leg.to_journey_leg(): invalid times");
     utl::verify(trip_found(),
                 "input_journey_leg.to_journey_leg(): trip not found");
-    return journey_leg{trp_candidate_.trp_,
+    return journey_leg{trp_candidate_.trp_->trip_idx_,
                        from_station_idx_.value(),
                        to_station_idx_.value(),
                        enter_time_,

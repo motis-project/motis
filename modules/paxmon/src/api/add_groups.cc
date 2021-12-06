@@ -4,6 +4,7 @@
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/access/trip_access.h"
 
 #include "motis/paxmon/build_graph.h"
 #include "motis/paxmon/get_universe.h"
@@ -47,7 +48,8 @@ msg_ptr add_groups(schedule const& sched, paxmon_data& data,
         auto pg = uv.passenger_groups_.add(std::move(input_pg));
         add_passenger_group_to_graph(sched, data.capacity_maps_, uv, *pg);
         for (auto const& leg : pg->compact_planned_journey_.legs_) {
-          rt_update_ctx.trips_affected_by_last_update_.insert(leg.trip_);
+          rt_update_ctx.trips_affected_by_last_update_.insert(
+              get_trip(sched, leg.trip_idx_));
         }
         return pg;
       });

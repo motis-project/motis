@@ -386,7 +386,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
         alternatives_found += cpg.alternatives_.size();
         for (auto const& alt : cpg.alternatives_) {
           for (auto const& leg : alt.compact_journey_.legs_) {
-            get_or_add_trip(sched, caps, uv, leg.trip_);
+            get_or_add_trip(sched, caps, uv, leg.trip_idx_);
           }
         }
       }
@@ -638,7 +638,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
       for (auto& [grp_key, cpg] : combined) {
         for (auto const& alt : cpg.alternatives_) {
           for (auto const& leg : alt.compact_journey_.legs_) {
-            get_or_add_trip(sched, caps, *uv, leg.trip_);
+            get_or_add_trip(sched, caps, *uv, leg.trip_idx_);
           }
         }
       }

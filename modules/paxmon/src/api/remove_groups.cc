@@ -3,6 +3,7 @@
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/access/trip_access.h"
 
 #include "motis/paxmon/build_graph.h"
 #include "motis/paxmon/checks.h"
@@ -32,7 +33,8 @@ msg_ptr remove_groups(schedule const& sched, paxmon_data& data,
     }
     ++removed_groups;
     for (auto const& leg : pg->compact_planned_journey_.legs_) {
-      rt_update_ctx.trips_affected_by_last_update_.insert(leg.trip_);
+      rt_update_ctx.trips_affected_by_last_update_.insert(
+          get_trip(sched, leg.trip_idx_));
     }
     remove_passenger_group_from_graph(uv, pg);
     if (!keep_group_history) {

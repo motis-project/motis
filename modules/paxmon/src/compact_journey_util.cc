@@ -6,6 +6,7 @@
 #include "utl/verify.h"
 
 #include "motis/core/access/realtime_access.h"
+#include "motis/core/access/trip_access.h"
 #include "motis/core/access/trip_iterator.h"
 
 #include "motis/paxmon/checks.h"
@@ -25,7 +26,7 @@ compact_journey get_prefix(schedule const& sched, compact_journey const& cj,
   }
 
   for (auto const& leg : cj.legs_) {
-    auto const sections = access::sections(leg.trip_);
+    auto const sections = access::sections(get_trip(sched, leg.trip_idx_));
     auto const enter_section_it = std::find_if(
         begin(sections), end(sections), [&](access::trip_section const& sec) {
           return sec.from_station_id() == leg.enter_station_id_ &&
@@ -60,7 +61,7 @@ std::pair<compact_journey, time> get_prefix_and_arrival_time(
   auto current_arrival_time = INVALID_TIME;
 
   for (auto const& leg : cj.legs_) {
-    auto const sections = access::sections(leg.trip_);
+    auto const sections = access::sections(get_trip(sched, leg.trip_idx_));
     auto const search_section_it = std::find_if(
         begin(sections), end(sections), [&](access::trip_section const& sec) {
           return (sec.to_station_id() == search_station &&
@@ -99,9 +100,9 @@ compact_journey get_suffix(schedule const& sched, compact_journey const& cj,
     for (auto const& leg : cj.legs_) {
       if (in_trip) {
         suffix.legs_.emplace_back(leg);
-      } else if (leg.trip_ == loc.in_trip_) {
+      } else if (get_trip(sched, leg.trip_idx_) == loc.in_trip_) {
         in_trip = true;
-        auto const sections = access::sections(leg.trip_);
+        auto const sections = access::sections(loc.in_trip_);
         auto arrival_section_it = std::find_if(
             begin(sections), end(sections),
             [&](access::trip_section const& sec) {
@@ -152,7 +153,7 @@ compact_journey merge_journeys(schedule const& sched,
   auto merged = prefix;
   auto const& last_prefix_leg = prefix.legs_.back();
   auto const& first_suffix_leg = suffix.legs_.front();
-  if (last_prefix_leg.trip_ == first_suffix_leg.trip_) {
+  if (last_prefix_leg.trip_idx_ == first_suffix_leg.trip_idx_) {
     auto& merged_leg = merged.legs_.back();
     merged_leg.exit_station_id_ = first_suffix_leg.exit_station_id_;
     merged_leg.exit_time_ = first_suffix_leg.exit_time_;
@@ -192,7 +193,7 @@ inline bool is_long_distance_class(service_class const clasz) {
 std::optional<unsigned> get_first_long_distance_station_id(
     universe const& uv, compact_journey const& cj) {
   for (auto const& leg : cj.legs_) {
-    auto const tdi = uv.trip_data_.get_index(leg.trip_);
+    auto const tdi = uv.trip_data_.get_index(leg.trip_idx_);
     for (auto const ei : uv.trip_data_.edges(tdi)) {
       auto const* e = ei.get(uv);
       auto const* from = e->from(uv);
@@ -212,7 +213,7 @@ std::optional<unsigned> get_last_long_distance_station_id(
     universe const& uv, compact_journey const& cj) {
   for (auto it = std::rbegin(cj.legs_); it != std::rend(cj.legs_); ++it) {
     auto const& leg = *it;
-    auto const tdi = uv.trip_data_.get_index(leg.trip_);
+    auto const tdi = uv.trip_data_.get_index(leg.trip_idx_);
     for (auto const ei : uv.trip_data_.edges(tdi)) {
       auto const* e = ei.get(uv);
       auto const* from = e->from(uv);

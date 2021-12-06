@@ -42,13 +42,15 @@ struct rule_trip_adder {
       return INVALID_TRIP_DATA_INDEX;
     }
 
-    utl::verify(!uv_.trip_data_.contains(trp), "trip data already exists");
+    utl::verify(!uv_.trip_data_.contains(trp->trip_idx_),
+                "trip data already exists");
 
     auto const enter_exit_node_idx =
         static_cast<event_node_index>(uv_.graph_.nodes_.size());
     uv_.graph_.emplace_back_node(enter_exit_node_idx);
 
-    auto const tdi = uv_.trip_data_.insert_trip(trp, enter_exit_node_idx);
+    auto const tdi =
+        uv_.trip_data_.insert_trip(trp->trip_idx_, enter_exit_node_idx);
     auto trip_edges = uv_.trip_data_.edges(tdi);
 
     auto prev_node = INVALID_EVENT_NODE_INDEX;
@@ -73,7 +75,7 @@ struct rule_trip_adder {
     if (auto td = add_trip(trp); td != INVALID_TRIP_DATA_INDEX) {
       return td;
     } else {
-      return uv_.trip_data_.get_index(trp);
+      return uv_.trip_data_.get_index(trp->trip_idx_);
     }
   }
 
@@ -180,8 +182,19 @@ trip_data_index add_trip(schedule const& sched, capacity_maps const& caps,
 
 trip_data_index get_or_add_trip(schedule const& sched,
                                 capacity_maps const& caps, universe& uv,
+                                trip_idx_t trip_idx) {
+  if (auto const idx = uv.trip_data_.find_index(trip_idx);
+      idx != INVALID_TRIP_DATA_INDEX) {
+    return idx;
+  } else {
+    return add_trip(sched, caps, uv, get_trip(sched, trip_idx));
+  }
+}
+
+trip_data_index get_or_add_trip(schedule const& sched,
+                                capacity_maps const& caps, universe& uv,
                                 trip const* trp) {
-  if (auto const idx = uv.trip_data_.find_index(trp);
+  if (auto const idx = uv.trip_data_.find_index(trp->trip_idx_);
       idx != INVALID_TRIP_DATA_INDEX) {
     return idx;
   } else {
@@ -224,7 +237,7 @@ void update_event_times(schedule const& sched, universe& uv,
                         std::vector<edge_index>& updated_interchange_edges,
                         system_statistics& system_stats) {
   auto const trp = from_fbs(sched, du->trip());
-  auto const tdi = uv.trip_data_.find_index(trp);
+  auto const tdi = uv.trip_data_.find_index(trp->trip_idx_);
   if (tdi == INVALID_TRIP_DATA_INDEX) {
     return;
   }
@@ -265,7 +278,7 @@ void update_trip_route(schedule const& sched, capacity_maps const& caps,
                        system_statistics& system_stats) {
   ++system_stats.update_trip_route_count_;
   auto const trp = from_fbs(sched, ru->trip());
-  auto const tdi = uv.trip_data_.find_index(trp);
+  auto const tdi = uv.trip_data_.find_index(trp->trip_idx_);
   if (tdi == INVALID_TRIP_DATA_INDEX) {
     return;
   }
@@ -300,7 +313,7 @@ void for_each_trip(
     compact_journey const& journey,
     std::function<void(journey_leg const&, trip_data_index)> const& fn) {
   for (auto const& leg : journey.legs_) {
-    fn(leg, get_or_add_trip(sched, caps, uv, leg.trip_));
+    fn(leg, get_or_add_trip(sched, caps, uv, leg.trip_idx_));
   }
 }
 

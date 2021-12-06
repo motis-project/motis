@@ -3,6 +3,7 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
+#include "motis/core/access/trip_access.h"
 #include "motis/hash_set.h"
 
 #include "motis/paxmon/get_load.h"
@@ -28,7 +29,7 @@ msg_ptr filter_trips(schedule const& sched, paxmon_data& data,
   auto critical_sections = 0ULL;
   mcd::hash_set<trip const*> selected_trips;
 
-  for (auto const& [trp, tdi] : uv.trip_data_.mapping_) {
+  for (auto const& [trp_idx, tdi] : uv.trip_data_.mapping_) {
     for (auto const& ei : uv.trip_data_.edges(tdi)) {
       auto const* e = ei.get(uv);
       if (!e->is_trip() || !e->has_capacity()) {
@@ -41,7 +42,7 @@ msg_ptr filter_trips(schedule const& sched, paxmon_data& data,
                                     uv.pax_connection_info_.groups_[e->pci_]);
       auto const cdf = get_cdf(pdf);
       if (load_factor_possibly_ge(cdf, e->capacity(), load_factor_threshold)) {
-        selected_trips.insert(trp);
+        selected_trips.insert(get_trip(sched, trp_idx));
         ++critical_sections;
       }
     }

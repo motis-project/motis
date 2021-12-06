@@ -58,7 +58,7 @@ void add_passenger_group_to_graph(schedule const& sched,
 
     auto tdi = INVALID_TRIP_DATA_INDEX;
     try {
-      tdi = get_or_add_trip(sched, caps, uv, leg.trip_);
+      tdi = get_or_add_trip(sched, caps, uv, leg.trip_idx_);
     } catch (std::system_error const& e) {
       std::cerr << "could not add trip for passenger group " << grp.id_
                 << " (source=" << grp.source_.primary_ref_ << "."
@@ -112,7 +112,7 @@ void add_passenger_group_to_graph(schedule const& sched,
       print_leg(sched, leg);
 
       std::cout << "\ncurrent trip:\n";
-      print_trip_sections(uv, sched, leg.trip_, tdi);
+      print_trip_sections(uv, sched, leg.trip_idx_, tdi);
 
       std::cout << "\ncompact planned journey:\n";
       for (auto const& l : grp.compact_planned_journey_.legs_) {

@@ -17,6 +17,10 @@ namespace motis::paxmon {
 
 trip_data_index get_or_add_trip(schedule const& sched,
                                 capacity_maps const& caps, universe& uv,
+                                trip_idx_t trip_idx);
+
+trip_data_index get_or_add_trip(schedule const& sched,
+                                capacity_maps const& caps, universe& uv,
                                 trip const* trp);
 
 trip_data_index get_or_add_trip(schedule const& sched,

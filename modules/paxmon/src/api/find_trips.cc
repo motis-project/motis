@@ -29,7 +29,7 @@ msg_ptr find_trips(schedule const& sched, paxmon_data& data,
     if (trp->edges_->empty()) {
       continue;
     }
-    auto const tdi = uv.trip_data_.find_index(trp);
+    auto const tdi = uv.trip_data_.find_index(trp->trip_idx_);
     auto const has_paxmon_data = tdi != INVALID_TRIP_DATA_INDEX;
     if (req->only_trips_with_paxmon_data() && !has_paxmon_data) {
       continue;

@@ -144,7 +144,7 @@ struct trip {
   full_trip_id id_;
   ptr<mcd::vector<route_edge> const> edges_{nullptr};
   lcon_idx_t lcon_idx_{0U};
-  trip_idx_t trip_idx_{0U};
+  trip_idx_t trip_idx_{0U};  // position in schedule.trip_mem_
   trip_debug dbg_;
 };
 
