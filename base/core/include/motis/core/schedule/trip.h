@@ -88,6 +88,8 @@ struct gtfs_trip_id {
   unixtime start_date_{0};
 };
 
+using trip_idx_t = uint32_t;
+
 struct trip {
   struct route_edge {
     route_edge() = default;
@@ -142,6 +144,7 @@ struct trip {
   full_trip_id id_;
   ptr<mcd::vector<route_edge> const> edges_{nullptr};
   lcon_idx_t lcon_idx_{0U};
+  trip_idx_t trip_idx_{0U};
   trip_debug dbg_;
 };
 

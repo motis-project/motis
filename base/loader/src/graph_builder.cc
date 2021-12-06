@@ -103,6 +103,7 @@ trip* graph_builder::register_service(Service const* s, int day_idx) {
       sched_.trip_mem_
           .emplace_back(mcd::make_unique<trip>(
               get_full_trip_id(s, day_idx), nullptr, 0U,
+              static_cast<trip_idx_t>(sched_.trip_mem_.size()),
               s->debug() == nullptr
                   ? trip_debug{}
                   : trip_debug{utl::get_or_create(

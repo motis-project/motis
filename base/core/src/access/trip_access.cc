@@ -60,6 +60,10 @@ trip const* get_trip(schedule const& sched, extern_trip const& e_trp) {
                   e_trp.target_station_id_, e_trp.target_time_, e_trp.line_id_);
 }
 
+trip const* get_trip(schedule const& sched, trip_idx_t const idx) {
+  return sched.trip_mem_.at(idx).get();
+}
+
 trip const* find_trip(schedule const& sched, primary_trip_id id) {
   auto it = std::lower_bound(begin(sched.trips_), end(sched.trips_),
                              std::make_pair(id, static_cast<trip*>(nullptr)));

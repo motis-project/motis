@@ -490,8 +490,10 @@ private:
 
     if (trp == nullptr) {
       trp = sched_.trip_mem_
-                .emplace_back(
-                    mcd::make_unique<trip>(ftid, edges, lcon_idx, trip_debug{}))
+                .emplace_back(mcd::make_unique<trip>(
+                    ftid, edges, lcon_idx,
+                    static_cast<trip_idx_t>(sched_.trip_mem_.size()),
+                    trip_debug{}))
                 .get();
 
       auto const trp_entry = mcd::pair{ftid.primary_, ptr<trip>(trp)};
