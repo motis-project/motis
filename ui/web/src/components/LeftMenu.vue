@@ -2,13 +2,13 @@
   <div :class="['overlay-container', isOverlayHidden ? 'hidden' : '']">
     <div class="overlay">
       <div id="overlay-content">
-        <ConnectionSearchOverlay></ConnectionSearchOverlay>
+        <router-view name="overlay"></router-view>
       </div>
       <div :class="['sub-overlay', isSubOverlayHidden ? 'hidden' : '']">
         <div id="sub-overlay-content">
-          <TrainSearch></TrainSearch>
+          <router-view name="subOverlay"></router-view>
         </div>
-        <div class="sub-overlay-close" @click="isSubOverlayHidden = true"><i class="icon">close</i></div>
+        <div class="sub-overlay-close" @click="openCloseTrainSearch"><i class="icon">close</i></div>
       </div>
     </div>
     <div class="overlay-tabs">
@@ -16,7 +16,7 @@
         <i class="icon" v-on:click="(isOverlayHidden = !isOverlayHidden), $emit('searchHidden')">arrow_drop_down</i>
       </div>
       <div :class="['trip-search-toggle', isSubOverlayHidden ? '' : 'enabled']">
-        <i class="icon" @click="isSubOverlayHidden = !isSubOverlayHidden">train</i>
+        <i class="icon" @click="openCloseTrainSearch">train</i>
       </div>
     </div>
   </div>
@@ -24,21 +24,26 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import ConnectionSearchOverlay from "../views/ConnectionSearch.vue";
-import TrainSearch from "../views/TrainSearch.vue";
 
 export default defineComponent({
   name: "LeftMenu",
-  components: {
-    ConnectionSearchOverlay,
-    TrainSearch,
-  },
   data() {
     return {
       isOverlayHidden: false,
       isSubOverlayHidden: true,
     };
   },
+  methods: {
+    openCloseTrainSearch() {
+      this.isSubOverlayHidden = !this.isSubOverlayHidden
+      if(!this.isSubOverlayHidden) {
+        this.$router.push("/trips");
+      }
+      else {
+        this.$router.push("/");
+      }
+    }
+  }
 });
 </script>
 

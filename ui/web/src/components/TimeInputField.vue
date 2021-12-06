@@ -4,11 +4,11 @@
     iconType="schedule"
     :showLabel="true"
     :initInputText="timeToDisplay"
-    class="pure-u-1 pure-u-1 pure-u-sm-9-24"
+    class="pure-u-1 pure-u-sm-9-24"
     :showArrows="true"
-    @inputChanged="changeTime"
-    @decreaseClick="setTime(-1)"
-    @increaseClick="setTime(1)"
+    @inputChanged="setTime"
+    @decreaseClick="changeTime(-1)"
+    @increaseClick="changeTime(1)"
   />
 </template>
 
@@ -32,7 +32,7 @@ export default defineComponent({
     },
   },
   methods: {
-    setTime(change: number) {
+    changeTime(change: number) {
       this.time = new Date(
         this.time.getFullYear(),
         this.time.getMonth(),
@@ -41,7 +41,7 @@ export default defineComponent({
         this.time.getMinutes()
       );
     },
-    changeTime(value: string) {
+    setTime(value: string) {
       let arr = value.split(":");
       if (arr.length === 2 && arr[1].length === 2) {
         let numberArr = arr.map((s) => +s);
