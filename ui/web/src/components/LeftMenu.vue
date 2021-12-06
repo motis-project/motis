@@ -44,17 +44,7 @@
                 <div :class="['mode', secondOptions.car ? 'enabled' : '']"><i class="icon">directions_car</i></div>
               </div>
             </div>
-            <InputField
-              labelName="Uhrzeit"
-              iconType="schedule"
-              :showLabel="true"
-              :initInputText="timeToDisplay"
-              class="pure-u-1 pure-u-1 pure-u-sm-9-24"
-              :showArrows="true"
-              @inputChanged="changeTime"
-              @decreaseClick="setTime(-1)"
-              @increaseClick="setTime(1)"
-            />
+            <TimeInputField></TimeInputField>
             <div class="pure-u-1 pure-u-sm-3-24 time-option">
               <div>
                 <input type="radio" id="search-forward" name="time-option" checked />
@@ -119,17 +109,7 @@
                 </div>
                 <div class="pure-g gutters">
                   <Calendar class="pure-u-1 pure-u-sm-12-24 to-location"></Calendar>
-                  <InputField
-                    labelName="Uhrzeit"
-                    iconType="schedule"
-                    :showLabel="true"
-                    :initInputText="timeToDisplay"
-                    class="pure-u-1 pure-u-1 pure-u-sm-12-24"
-                    :showArrows="true"
-                    @inputChanged="changeTime"
-                    @decreaseClick="setTime(-1)"
-                    @increaseClick="setTime(1)"
-                  />
+                  <TimeInputField></TimeInputField>
                 </div>
               </div>
             </div>
@@ -156,6 +136,7 @@ import InputField from "./InputField.vue";
 import BlockWithCheckbox from "./BlockWithCheckbox.vue";
 import Slider from "./Slider.vue";
 import Calendar from "./Calendar.vue";
+import TimeInputField from "./TimeInputField.vue"
 
 export default defineComponent({
   name: "LeftMenu",
@@ -164,12 +145,12 @@ export default defineComponent({
     BlockWithCheckbox,
     Slider,
     Calendar,
+    TimeInputField,
   },
   data() {
     return {
       start: "",
       destination: "",
-      time: {} as Date,
       isOptionsWindowOpened: false,
       pressedOptions: {
         foot: false,
@@ -189,15 +170,6 @@ export default defineComponent({
       isOverlayHidden: false,
       isSubOverlayHidden: true
     };
-  },
-  created() {
-    let currentTime = new Date();
-    this.time = currentTime;
-  },
-  computed: {
-    timeToDisplay: function (): String {
-      return this.time.getHours() + ":" + ("0" + this.time.getMinutes()).slice(-2);
-    },
   },
   methods: {
     swapStartDest() {
@@ -221,33 +193,6 @@ export default defineComponent({
     },
     optionsWindowCloseClick() {
       this.isOptionsWindowOpened = false;
-    },
-    setTime(change: number) {
-      this.time = new Date(
-        this.time.getFullYear(),
-        this.time.getMonth(),
-        this.time.getDay(),
-        this.time.getHours() + change,
-        this.time.getMinutes()
-      );
-    },
-    changeTime(value: string) {
-      let arr = value.split(":");
-      if (arr.length === 2 && arr[1].length === 2) {
-        let numberArr = arr.map((s) => +s);
-        if (
-          numberArr[0] >= 0 && numberArr[0] < 24 &&
-          numberArr[1] >= 0 && numberArr[1] < 60  
-        ) {
-          let date = new Date(new Date().getFullYear(), 
-                              new Date().getMonth(), 
-                              new Date().getDay(), 
-                              numberArr[0], numberArr[1]);
-          if (!isNaN(date.getTime())) {
-            this.time = date;
-          }
-        }
-      }
     },
   },
 });
