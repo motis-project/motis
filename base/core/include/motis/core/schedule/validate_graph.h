@@ -151,7 +151,7 @@ inline void validate_graph(schedule const& sched) {
 inline void print_graph(schedule const& sched) {
   auto const indent_line = [](size_t const indent) {
     for (auto i = 0U; i != indent; ++i) {
-      std::cout << "  ";
+      std::cerr << "  ";
     }
   };
 
@@ -159,10 +159,18 @@ inline void print_graph(schedule const& sched) {
     return sched.stations_.at(n->get_station()->id_)->name_;
   };
 
-  std::cout << "\n\nGraph:\n";
+  auto const traffic_days = [&](bitfield_idx_or_ptr const& b) {
+    if (b.bitfield_idx_ < 1000) {
+      return sched.bitfields_.at(b.bitfield_idx_);
+    } else {
+      return *b.traffic_days_;
+    }
+  };
+
+  std::cerr << "\n\nGraph:\n";
   auto const print_edge = [&](edge const* e, size_t const indent) {
     indent_line(indent);
-    std::cout << e->type_str() << ": " << station_name(e->from_) << " -> "
+    std::cerr << e->type_str() << ": " << station_name(e->from_) << " -> "
               << station_name(e->to_) << std::endl;
     if (e->is_route_edge()) {
       for (auto const& lcon : e->m_.route_edge_.conns_) {
@@ -170,43 +178,44 @@ inline void print_graph(schedule const& sched) {
 
         auto con_info = lcon.full_con_->con_info_;
         while (con_info != nullptr) {
-          std::cout << get_service_name(sched, con_info);
+          std::cerr << get_service_name(sched, con_info);
           con_info = con_info->merged_with_;
           if (con_info != nullptr) {
-            std::cout << "|";
+            std::cerr << "|";
           }
         }
 
-        std::cout << ", dep=" << format_time(time{0, lcon.d_time_})
-                  << ", arr= " << format_time(time{0, lcon.a_time_})
+        std::cerr << ", dep=" << format_time(time{0, lcon.d_time_})
+                  << ", arr=" << format_time(time{0, lcon.a_time_})
                   << ", traffic_days={";
         auto first = true;
         for (auto i = day_idx_t{0}; i != MAX_DAYS; ++i) {
-          if (lcon.traffic_days_->test(i)) {
+          if (traffic_days(lcon.traffic_days_).test(i)) {
             if (!first) {
+              std::cerr << ", ";
+            } else {
               first = false;
-              std::cout << " ";
             }
-            std::cout << i;
+            std::cerr << i;
           }
         }
-        std::cout << "}\n";
+        std::cerr << "}\n";
       }
     }
   };
 
   auto const print_node = [&](node const* n, size_t const indent) {
     indent_line(indent);
-    std::cout << n->type_str() << " " << station_name(n) << ":" << std::endl;
+    std::cerr << n->type_str() << " " << station_name(n) << ":" << std::endl;
 
     indent_line(indent + 1);
-    std::cout << n->edges_.size() << " outgoing edges:" << std::endl;
+    std::cerr << n->edges_.size() << " outgoing edges:" << std::endl;
     for (auto const& e : n->edges_) {
       print_edge(&e, indent + 2);
     }
 
     indent_line(indent + 1);
-    std::cout << n->incoming_edges_.size() << " incoming edges:" << std::endl;
+    std::cerr << n->incoming_edges_.size() << " incoming edges:" << std::endl;
     for (auto const& e : n->incoming_edges_) {
       print_edge(e, indent + 2);
     }
@@ -218,7 +227,7 @@ inline void print_graph(schedule const& sched) {
       print_node(e.to_, 1);
     }
   }
-  std::cout << "\n\n";
+  std::cerr << "\n\n";
 }
 
 }  // namespace motis

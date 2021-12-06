@@ -227,6 +227,8 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
     auto initial_local_day = day_idx_t{0};
     auto initial_day_shift = day_idx_t{0};
     auto fix_offset = 0U;
+    std::cerr << s->sections()->Get(0)->train_nr() << " at day " << day_idx
+              << "\n";
     for (auto i = 1; i < s->times()->size() - 1; ++i) {
       auto const& station = *sched_.stations_.at(
           stations_.at(s->route()->stations()->Get(i / 2))->id_);
@@ -272,13 +274,12 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
         continue;
       }
 
+      std::cerr << "  " << time{day_offset, local_time} << " " << rel_utc
+                << "\n";
       utc_service_times[i - 1] = rel_utc;
     }
 
     auto& traffic = utc_times[utc_service_times];
-    assert((traffic.shift_ == local_and_motis_traffic_days::INVALID_SHIFT ||
-            traffic.shift_ == initial_day_shift) &&
-           "different day shifts for one time string");
     traffic.shift_ = initial_day_shift;
     traffic.motis_traffic_days_.set(initial_motis_day);
     traffic.local_traffic_days_.set(initial_local_day);
@@ -604,6 +605,17 @@ light_connection graph_builder::section_to_connection(
     con_.con_info_ = get_or_create_connection_info(services);
   }
 
+  auto const from_station = ref_service->route()->stations()->Get(section_idx);
+  auto const to_station =
+      ref_service->route()->stations()->Get(section_idx + 1);
+  std::cerr << "building lcon train_nr=" << con_.con_info_->train_nr_ << ", "
+            << from_station->name()->str() << " -> "
+            << to_station->name()->str() << ": "
+            << services[0].utc_times()[section_idx * 2] << " "
+            << services[0].utc_times()[section_idx * 2 + 1] << ", ";
+  print(std::cerr, traffic_days);
+  std::cerr << "\n";
+
   return light_connection{
       utc_mam_dep, utc_mam_arr, store_bitfield(traffic_days << day_offset),
       mcd::set_get_or_create(connections_, &con_,
@@ -806,34 +818,8 @@ route_section graph_builder::add_route_section(
   }
 
   section.outgoing_route_edge_index_ = section.from_route_node_->edges_.size();
-
-  auto const is_bidirectional =
-      std::all_of(begin(cons), end(cons),
-                  [](auto const& c) { return c.a_time_ < MINUTES_A_DAY; });
-
-  if (is_bidirectional) {
-    section.from_route_node_->edges_.emplace_back(make_route_edge(
-        section.from_route_node_, section.to_route_node_, cons));
-  } else {
-    // FWD
-    section.from_route_node_->edges_.emplace_back(make_fwd_route_edge(
-        section.from_route_node_, section.to_route_node_, cons));
-
-    // BWD
-    auto const bwd_cons =
-        mcd::to_vec(begin(cons), end(cons), [this](auto const& c) {
-          auto const shift = c.a_time_ % MINUTES_A_DAY;
-          auto const at = static_cast<mam_t>(c.a_time_ - shift * MINUTES_A_DAY);
-          auto const dt = static_cast<mam_t>(c.d_time_ - shift * MINUTES_A_DAY);
-          auto const bf = sched_.bitfields_[c.traffic_days_];
-          return light_connection{dt, at, store_bitfield(bf << shift),
-                                  c.full_con_, c.trips_};
-        });
-
-    // TODO(felix): make route_traffic_days based on BWD bitfields
-    section.from_route_node_->edges_.emplace_back(make_bwd_route_edge(
-        section.from_route_node_, section.to_route_node_, bwd_cons));
-  }
+  section.from_route_node_->edges_.emplace_back(
+      make_route_edge(section.from_route_node_, section.to_route_node_, cons));
 
   return section;
 }
@@ -908,6 +894,7 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
 
   auto sched = mcd::make_unique<schedule>();
   sched->classes_ = class_mapping();
+  sched->bitfields_.push_back({});
   std::tie(sched->schedule_begin_, sched->schedule_end_) = opt.interval();
 
   for (auto const& [index, fbs_schedule] : utl::enumerate(fbs_schedules)) {

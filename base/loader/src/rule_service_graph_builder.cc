@@ -1,5 +1,7 @@
 #include "motis/loader/rule_service_graph_builder.h"
 
+#include <motis/core/access/service_access.h>
+#include <utl/enumerate.h>
 #include <algorithm>
 #include <map>
 #include <queue>
@@ -9,6 +11,7 @@
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/price.h"
 #include "motis/core/schedule/trip.h"
+#include "motis/core/schedule/validate_graph.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/loader/rules_graph.h"
 #include "motis/loader/util.h"
@@ -271,6 +274,23 @@ struct rule_service_route_builder {
     auto const& traffic_days = traffic_days_.at(participants[0].sn());
     lcons.push_back(gb_.section_to_connection(
         participants, traffic_days, get_or_create_trips(participants)));
+    auto const& ref_p = section.participants_.at(0);
+    std::cerr << "section to connection "
+              << ref_p.service()
+                     ->route()
+                     ->stations()
+                     ->Get(ref_p.section_idx())
+                     ->name()
+                     ->str()
+              << " -> "
+              << ref_p.service()
+                     ->route()
+                     ->stations()
+                     ->Get(ref_p.section_idx() + 1)
+                     ->name()
+                     ->str()
+              << ": ";
+    print_lcon(lcons.back());
     return lcons;
   }
 
@@ -539,6 +559,32 @@ struct rule_service_route_builder {
     }
   }
 
+  void print_lcon(light_connection const& lcon) {
+    auto con_info = lcon.full_con_->con_info_;
+    while (con_info != nullptr) {
+      std::cerr << get_service_name(gb_.sched_, con_info);
+      con_info = con_info->merged_with_;
+      if (con_info != nullptr) {
+        std::cerr << "|";
+      }
+    }
+    std::cerr << ", dep=" << format_time(motis::time{0, lcon.d_time_})
+              << ", arr=" << format_time(motis::time{0, lcon.a_time_})
+              << ", traffic_days={";
+    auto first = true;
+    for (auto i = day_idx_t{0}; i != MAX_DAYS; ++i) {
+      if (gb_.sched_.bitfields_.at(lcon.traffic_days_).test(i)) {
+        if (!first) {
+          std::cerr << ", ";
+        } else {
+          first = false;
+        }
+        std::cerr << i;
+      }
+    }
+    std::cerr << "}\n";
+  }
+
   mcd::vector<day_idx_t> day_offsets(
       mcd::vector<trip_info::route_edge> const& route_edges) {
     auto const find_first_bit =
@@ -558,7 +604,6 @@ struct rule_service_route_builder {
                                  std::end(e.m_.route_edge_.conns_),
                                  light_connection{t.mam(), 0U}, d_time_lt{});
 
-      auto const abort_time = t + MAX_TRAVEL_TIME_MINUTES;
       auto day = t.day();
 
       while (true) {
@@ -572,12 +617,7 @@ struct rule_service_route_builder {
           continue;
         }
 
-        if (it->event_time(event_type::DEP, day) > abort_time) {
-          return {nullptr, 0};
-        }
-
-        if (gb_.sched_.bitfields_.at(it->traffic_days_).test(day) &&
-            it->valid_) {
+        if (gb_.sched_.bitfields_.at(it->traffic_days_).test(day)) {
           return {&*it, day};
         } else {
           ++it;
@@ -585,18 +625,30 @@ struct rule_service_route_builder {
       }
     };
 
+    for (auto const& [i, e] : utl::enumerate(route_edges)) {
+      std::cerr << gb_.sched_.stations_.at(e->from_->get_station()->id_)->name_
+                << " -> "
+                << gb_.sched_.stations_.at(e->to_->get_station()->id_)->name_
+                << ": ";
+      for (auto const& lcon : e->m_.route_edge_.conns_) {
+        print_lcon(lcon);
+      }
+    }
+
     auto const& first_lcon = route_edges.at(0)->m_.route_edge_.conns_.at(0);
-    auto const& traffic_days = first_lcon.traffic_days_;
-    auto const first_traffic_day_first_route_edge =
-        find_first_bit(traffic_days);
     auto const first_dep = first_lcon.event_time(
-        event_type::DEP, first_traffic_day_first_route_edge);
+        event_type::DEP, find_first_bit(first_lcon.traffic_days_));
     auto arr = first_dep;
+    std::cerr << "first_lcon - train_nr="
+              << first_lcon.full_con_->con_info_->train_nr_ << ", time=" << arr
+              << "\n";
     return mcd::to_vec(route_edges, [&](trip_info::route_edge const& e) {
       auto const [con, day_idx] = get_connection(*e, arr);
+      assert(con != nullptr);
       arr = con->event_time(event_type::ARR, day_idx);
-      return motis::time{con->event_time(event_type::DEP, day_idx) - first_dep}
-          .day();
+      std::cerr << "  arr=" << arr
+                << " day_offset=" << (day_idx - first_dep.day()) << "\n";
+      return static_cast<day_idx_t>(day_idx - first_dep.day());
     });
   }
 
@@ -654,6 +706,8 @@ void rule_service_graph_builder::add_rule_services(
                                              route_id, rule_service);
     route_builder.build_routes();
     route_builder.connect_through_services(rule_service);
+
+    print_graph(gb_.sched_);
 
     if (gb_.expand_trips_) {
       route_builder.expand_trips();

@@ -150,14 +150,22 @@ private:
       auto const service_traffic_days =
           shifted_bitfield(ref_traffic_days, -offset) &
           schedule_traffic_days_mask_;
-      route.traffic_days_[sn] =
-          shifted_bitfield(service_traffic_days, sn->traffic_days_.shift_);
+      route.traffic_days_[sn] = service_traffic_days;
+
+      std::cerr << "train_nr=" << sn->service_->sections()->Get(0)->train_nr()
+                << ": ";
+      print(std::cerr, route.traffic_days_.at(sn));
+      std::cerr << "\n";
+
       assert(route.traffic_days_[sn].any());
       sn->traffic_days_.local_traffic_days_ &= ~service_traffic_days;
     }
+    std::cerr << "RULES:\n";
     for (auto const& rn : route_rules) {
+      std::cerr << *rn;
       route.rules_.push_back(rn);
     }
+    std::cerr << "============\n";
     return true;
   }
 

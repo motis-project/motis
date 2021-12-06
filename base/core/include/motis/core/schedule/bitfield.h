@@ -3,6 +3,7 @@
 #include <cassert>
 #include <algorithm>
 #include <limits>
+#include <ostream>
 
 #include "cista/containers/bitset.h"
 
@@ -47,6 +48,22 @@ union bitfield_idx_or_ptr {
   bitfield const* traffic_days_;
   bitfield_idx_t bitfield_idx_;
 };
+
+inline void print(std::ostream& out, bitfield const& b) {
+  out << "traffic_days={";
+  auto first = true;
+  for (auto i = day_idx_t{0}; i != MAX_DAYS; ++i) {
+    if (b.test(i)) {
+      if (!first) {
+        out << ", ";
+      } else {
+        first = false;
+      }
+      out << i;
+    }
+  }
+  out << "}";
+}
 
 inline bitfield create_uniform_bitfield(char val) {
   assert(val == '1' || val == '0');

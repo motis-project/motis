@@ -19,13 +19,15 @@ light_connection const& trip_section::lcon() const {
 }
 
 time trip_section::arr_time() const {
-  return get_lcon(edge_, ctrp_.trp_->lcon_idx_)
-      .event_time(event_type::ARR, ctrp_.day_idx_);
+  auto const lcon = get_lcon(edge_, ctrp_.trp_->lcon_idx_);
+  return lcon.event_time(event_type::ARR,
+                         ctrp_.day_idx_ + ctrp_.trp_->day_offsets_.at(index_));
 }
 
 time trip_section::dep_time() const {
   return get_lcon(edge_, ctrp_.trp_->lcon_idx_)
-      .event_time(event_type::DEP, ctrp_.day_idx_);
+      .event_time(event_type::DEP,
+                  ctrp_.day_idx_ + ctrp_.trp_->day_offsets_.at(index_));
 }
 
 connection const& trip_section::fcon() const { return *lcon().full_con_; }
