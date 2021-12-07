@@ -9,7 +9,7 @@
         <input
           class="gb-input"
           tabindex="1"
-          @input="$emit('inputChanged', $event.target.value)"
+          @input="$emit('inputChanged', $event.target.value), onInput($event.target.value)"
           :value="initInputText"
           @focus="$emit('focus', $event)"
           @blur="$emit('blur', $event)"
@@ -28,8 +28,10 @@
             </div>
           </div>
         </div>
+
       </div>
     </div>
+    <StationAddressAutocomplete :input="autocompleteInput" v-show="showStationAddress"> </StationAddressAutocomplete>
   </div>
 </template>
 
@@ -42,15 +44,35 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
+import StationAddressAutocomplete from "./StationAddressAutocomplete.vue";
 
 export default defineComponent({
+  components: { StationAddressAutocomplete },
   name: "InputField",
+  data() {
+    return {
+      showStationAddress: false,
+      autocompleteInput: "" 
+    }
+  },
   props: {
     labelName: String,
     iconType: String,
     showLabel: Boolean,
     initInputText: String,
     showArrows: Boolean,
+  },
+  methods: {
+    onInput(input: string){
+      this.autocompleteInput = input
+      if(input.length > 2){
+        this.showStationAddress = true
+      }
+      else{
+        this.showStationAddress = false
+      }
+
+    },
   },
 });
 </script>

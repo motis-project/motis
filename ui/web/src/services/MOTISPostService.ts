@@ -1,10 +1,11 @@
 import axios from 'axios'
 import { App } from 'vue'
-import Guess from '@/models/Guess';
-import GuessResponseContent from '@/models/Guess';
+import { StationGuessResponseContent } from '../models/StationGuess';
+import { AddressGuessResponseContent } from '../models/AddressGuess';
+
 
 var service: MOTISPostService = {
-    async test(input: string, gc: number) {
+    async getStationGuessResponse(input: string, gc: number) {
         let rq = {
             destination: {
                 type: "Module",
@@ -16,22 +17,46 @@ var service: MOTISPostService = {
                 guess_count: gc
             }
         };
-        return (await axios.post<GuessResponse>("https://europe.motis-project.de/", rq)).data.content;
+        return (await axios.post<StationGuessResponse>("https://europe.motis-project.de/", rq)).data.content;
+    },
+    async getAddressGuessResponse(input: string) {
+        let rq = {
+            destination: {
+                type: "Module",
+                target: "/address"
+            },
+            content_type: "AddressRequest",
+            content: {
+                input: input
+            }
+        };
+        return (await axios.post<AddressGuessResponse>("https://europe.motis-project.de/", rq)).data.content;
     }
 }
 
-interface GuessResponse {
+interface StationGuessResponse {
     destination: {
         type: string,
         target: string
     },
     content_type: string,
-    content: GuessResponseContent,
+    content: StationGuessResponseContent,
     id: number
 }
 
+interface AddressGuessResponse {
+    destination: {
+        target: string
+    },
+    content_type: string,
+    content: AddressGuessResponseContent,
+    id: 1
+}
+
+
 interface MOTISPostService {
-    test(input: string, gc: number): Promise<GuessResponseContent>
+    getStationGuessResponse(input: string, gc: number): Promise<StationGuessResponseContent>
+    getAddressGuessResponse(input: string): Promise<AddressGuessResponseContent>
 }
 
 
