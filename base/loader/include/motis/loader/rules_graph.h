@@ -35,45 +35,6 @@ struct rule_node {
     return a.rule_ < b.rule_;
   }
 
-  friend std::ostream& operator<<(std::ostream& out, rule_node const& rn) {
-    auto const print_service = [&](service_node const* const s) {
-      out << "  train_nr=" << s->service_->sections()->Get(0)->train_nr();
-      out << ", orig_";
-      auto const orig =
-          deserialize_bitset(utl::cstr{s->service_->traffic_days()->c_str(),
-                                       s->service_->traffic_days()->size()});
-      if (orig == create_uniform_bitfield('1')) {
-        out << "traffic_days=ALL";
-      } else {
-        print(out, orig);
-      }
-
-      out << ", offset=" << s->traffic_days_.shift_ << "\n";
-      const auto stations = s->service_->route()->stations();
-      for (auto i = 0U; i != stations->size(); ++i) {
-        out << "     " << stations->Get(i)->name()->str() << " "
-            << (i == 0U ? "       " : format_time(s->times_.at(2 * i - 1)))
-            << (i != 0U && i != stations->size() - 1 ? " - " : "   ")
-            << (i == stations->size() - 1 ? ""
-                                          : format_time(s->times_.at(2 * i)))
-            << "\n";
-      }
-    };
-
-    std::cerr << EnumNameRuleType(rn.rule_->type()) << ": "
-              << rn.rule_->from()->name()->str() << " - "
-              << rn.rule_->to()->name()->str()
-              << " day_offset1=" << rn.rule_->day_offset1()
-              << ", day_offset2=" << rn.rule_->day_offset2()
-              << ", day_switch=" << (rn.rule_->day_switch() ? "true" : "false")
-              << "\n";
-
-    print_service(rn.s1_);
-    print_service(rn.s2_);
-
-    return out;
-  }
-
   service_node *s1_, *s2_;
   Rule const* rule_;
 };

@@ -58,12 +58,6 @@ private:
                                    utc_time_string) {
                              auto const& [times, traffic_days] =
                                  utc_time_string;
-
-                             print(std::cerr, get_masked_traffic_days(s));
-                             std::cerr << " -> UTC -> ";
-                             print(std::cerr, traffic_days.local_traffic_days_);
-                             std::cerr << "\n";
-
                              return rg_.service_nodes_
                                  .emplace_back(std::make_unique<service_node>(
                                      s, times, traffic_days))
@@ -88,14 +82,6 @@ private:
                               .get();
           s1_node->rule_nodes_.push_back(rn);
           s2_node->rule_nodes_.push_back(rn);
-          std::cerr << "TMP RULE (motis_day_offset="
-                    << (-gb_.first_day_ + SCHEDULE_OFFSET_DAYS) << ")\n";
-          std::cerr << "  service 1 masked_";
-          print(std::cerr, get_masked_traffic_days(s1_node->service_));
-          std::cerr << "\n";
-          std::cerr << "  service 2 masked_";
-          print(std::cerr, get_masked_traffic_days(s2_node->service_));
-          std::cerr << "\n" << *rn << "\n";
         }
       }
     }
@@ -125,9 +111,6 @@ private:
     }
     auto const ref_sn = ref_rn->s1_;
     auto ref_traffic_days = ref_sn->traffic_days_.local_traffic_days_;
-    std::cerr << "REF ";
-    print(std::cerr, ref_traffic_days);
-    std::cerr << "\n";
 
     std::queue<std::tuple<rule_node*, service_node*, int>> queue;
     std::set<rule_node*> route_rules;
@@ -152,17 +135,6 @@ private:
           ref_traffic_days &
           shifted_bitfield(to->traffic_days_.local_traffic_days_, new_offset) &
           schedule_traffic_days_mask_;
-
-      std::cerr << "REF ";
-      print(std::cerr, new_traffic_days);
-      std::cerr << "\nTO before_";
-      print(std::cerr, to->traffic_days_.local_traffic_days_);
-      std::cerr << ", shifted_";
-      print(std::cerr, shifted_bitfield(to->traffic_days_.local_traffic_days_,
-                                        new_offset));
-      std::cerr << ", schedule_";
-      print(std::cerr, schedule_traffic_days_mask_);
-      std::cerr << "\n";
 
       if (new_traffic_days.none()) {
         continue;
@@ -190,10 +162,6 @@ private:
       return false;
     }
 
-    std::cerr << "REF ";
-    print(std::cerr, ref_traffic_days);
-    std::cerr << "\n";
-
     auto& route = rule_routes_.emplace_back();
     for (auto const [sn, offset] : traffic_day_offsets) {
       auto const service_traffic_days =
@@ -202,28 +170,11 @@ private:
       route.traffic_days_[sn] =
           shifted_bitfield(service_traffic_days, sn->traffic_days_.shift_);
       assert(route.traffic_days_.at(sn).any());
-
-      std::cerr << "train_nr=" << sn->service_->sections()->Get(0)->train_nr()
-                << ": ";
-      print(std::cerr, route.traffic_days_.at(sn));
-      std::cerr << "\n";
-
-      assert(route.traffic_days_[sn].any());
       sn->traffic_days_.local_traffic_days_ &= ~service_traffic_days;
     }
-    std::cerr << "FINAL RULES:\n";
     for (auto const& rn : route_rules) {
-      std::cerr << "TMP RULE (motis_day_offset="
-                << (-gb_.first_day_ + SCHEDULE_OFFSET_DAYS) << ")\n";
-      std::cerr << "  service 1 masked_";
-      print(std::cerr, get_masked_traffic_days(rn->s1_->service_));
-      std::cerr << "\n";
-      std::cerr << "  service 2 masked_";
-      print(std::cerr, get_masked_traffic_days(rn->s2_->service_));
-      std::cerr << "\n" << *rn;
       route.rules_.push_back(rn);
     }
-    std::cerr << "============\n";
     return true;
   }
 
@@ -255,10 +206,6 @@ void build_rule_routes(graph_builder& gb,
     rrb.build(rs);
 
     for (auto const& sn : rrb.left_over_trips_) {
-      std::cerr << "SINGLE SERVICE "
-                << sn->service_->sections()->Get(0)->train_nr() << ": ";
-      print(std::cerr, sn->traffic_days_.local_traffic_days_);
-      std::cerr << "\n";
       gb.add_route_services({std::make_pair(
           sn->service_, sn->traffic_days_.local_traffic_days_)});
     }

@@ -39,16 +39,12 @@ struct pareto_dijkstra {
         additional_edges_(std::move(additional_edges)),
         lower_bounds_(lower_bounds),
         label_store_(label_store),
-        max_labels_(1024 * 1024 * 128),
+        max_labels_(std::uint64_t{1024} * 1024 * 128),
         sched_(sched) {}
 
   void add_start_labels(std::vector<Label*> const& start_labels) {
     for (auto const& l : start_labels) {
       if (!l->is_filtered()) {
-        std::cerr
-            << "adding start label at " << l->now_ << " "
-            << sched_->stations_.at(l->get_node()->get_station()->id_)->name_
-            << "\n";
         node_labels_[l->get_node()->id_].emplace_back(l);
         queue_.push(l);
       }
@@ -135,22 +131,11 @@ private:
             (Dir == search_dir::BWD && edge.type() == edge_type::ENTER_EDGE &&
              is_goal_[edge.get_source<Dir>()->get_station()->id_]));
     if (!created) {
-      std::cerr
-          << "NOT CREATED: " << l->now_ << " "
-          << sched_->stations_.at(l->get_node()->get_station()->id_)->name_
-          << ": " << edge.from_->id_ << " --" << edge.type_str() << "--> "
-          << edge.to_->id_ << "\n";
       return;
     }
 
     auto new_label = label_store_.create<Label>(blank);
     ++stats_.labels_created_;
-
-    std::cerr << "created label: " << new_label->now_ << " "
-              << sched_->stations_
-                     .at(new_label->get_node()->get_station()->id_)
-                     ->name_
-              << "\n";
 
     if (edge.get_destination<Dir>()->id_ < station_node_count_ &&
         is_goal_[edge.get_destination<Dir>()->id_]) {
@@ -204,12 +189,10 @@ private:
     for (auto it = dest_labels.begin(); it != dest_labels.end();) {
       Label* o = *it;
       if (o->dominates(*new_label)) {
-        std::cerr << "DOMINATION BY OLD\n";
         return false;
       }
 
       if (new_label->dominates(*o)) {
-        std::cerr << "DOMINATION BY NEW\n";
         it = dest_labels.erase(it);
         o->dominated_ = true;
       } else {
@@ -257,7 +240,7 @@ private:
   LowerBounds& lower_bounds_;
   mem_manager& label_store_;
   statistics stats_;
-  std::size_t max_labels_;
+  std::uint64_t max_labels_;
   schedule const* sched_;
 };
 

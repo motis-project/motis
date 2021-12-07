@@ -213,9 +213,6 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
   auto const end_idx = std::min(MAX_DAYS, last_day_);
 
   if (!has_traffic_within_timespan(traffic_days, start_idx, end_idx)) {
-    std::cerr << "NO TRAFFIC IN TIMESPAN: ";
-    print(std::cerr, traffic_days);
-    std::cerr << ", start=" << start_idx << ", end=" << end_idx << "\n ";
     return std::nullopt;
   }
 
@@ -231,8 +228,6 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
     auto initial_day_shift = day_idx_t{0};
     auto fix_offset = 0U;
     auto invalid = false;
-    std::cerr << s->sections()->Get(0)->train_nr() << " at day " << day_idx
-              << "\n";
     for (auto i = 1; i < s->times()->size() - 1; ++i) {
       auto const& station = *sched_.stations_.at(
           stations_.at(s->route()->stations()->Get(i / 2))->id_);
@@ -282,8 +277,6 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
         }
       }
 
-      std::cerr << "  " << time{day_offset, local_time} << " " << rel_utc
-                << "\n";
       utc_service_times[i - 1] = rel_utc;
     }
 
@@ -318,9 +311,6 @@ void graph_builder::add_route_services(
         service_times_to_utc(traffic_days, s);
 
     if (!rel_utc_times_and_traffic_days.has_value()) {
-      std::cerr << "NO TRAFFIC DAYS: ";
-      print(std::cerr, traffic_days);
-      std::cerr << "\n";
       continue;  // No service within timespan.
     }
 
@@ -619,17 +609,6 @@ light_connection graph_builder::section_to_connection(
             ref_service->times()->Get(section_idx * 2 + 2) / MINUTES_A_DAY);
     con_.con_info_ = get_or_create_connection_info(services);
   }
-
-  auto const from_station = ref_service->route()->stations()->Get(section_idx);
-  auto const to_station =
-      ref_service->route()->stations()->Get(section_idx + 1);
-  std::cerr << "building lcon train_nr=" << con_.con_info_->train_nr_ << ", "
-            << from_station->name()->str() << " -> "
-            << to_station->name()->str() << ": "
-            << services[0].utc_times()[section_idx * 2] << " "
-            << services[0].utc_times()[section_idx * 2 + 1] << ", ";
-  print(std::cerr, traffic_days);
-  std::cerr << "\n";
 
   return light_connection{
       utc_mam_dep, utc_mam_arr, store_bitfield(traffic_days << day_offset),

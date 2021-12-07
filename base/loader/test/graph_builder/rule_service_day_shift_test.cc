@@ -60,14 +60,6 @@ public:
       : service_rules_day_shift_test("mss-dayshift", "20180108", 3) {}
 };
 
-TEST_F(service_rules_day_shift_test_1, valid_trip_times) {
-  for (auto const& trp : sched_->expanded_trips_.data_) {
-    for (auto const& ctrp : trp->concrete_trips()) {
-      //      check_trip_times(ctrp);
-    }
-  }
-}
-
 TEST_F(service_rules_day_shift_test_1, through_every_day) {
   auto const* a = get_station(*sched_, "0000001");
   auto const* c = get_station(*sched_, "0000003");
@@ -78,14 +70,6 @@ TEST_F(service_rules_day_shift_test_1, through_every_day) {
   auto const* i = get_station(*sched_, "0000009");
   auto const* j = get_station(*sched_, "0000010");
   auto const* k = get_station(*sched_, "0000011");
-
-  for (auto const& t : sched_->expanded_trips_) {
-    for (auto const& t1 : t) {
-      for (auto const& ctrp : t1->concrete_trips()) {
-        print_trip(ctrp);
-      }
-    }
-  }
 
   //  EXPECT_EQ(num_days_ + 1, trip_count({a, c, d, e, g, h, i, j, k}));
   EXPECT_EQ(2, trip_count({a, c, d, e, g, h, i, j, k}));
@@ -131,14 +115,6 @@ public:
       : service_rules_day_shift_test("mss-dayshift2", "20180108", 5) {}
 };
 
-TEST_F(service_rules_day_shift_test_2, valid_trip_times) {
-  for (auto const& trp : sched_->expanded_trips_.data_) {
-    for (auto const& ctrp : trp->concrete_trips()) {
-      //      check_trip_times(ctrp);
-    }
-  }
-}
-
 TEST_F(service_rules_day_shift_test_2, expanded_trips) {
   print_graph(*sched_);
 
@@ -170,14 +146,6 @@ public:
   service_rules_day_shift_test_3()
       : service_rules_day_shift_test("mss-dayshift3", "20180108", 5) {}
 };
-
-TEST_F(service_rules_day_shift_test_3, valid_trip_times) {
-  for (auto const& trp : sched_->expanded_trips_.data_) {
-    for (auto const& ctrp : trp->concrete_trips()) {
-      //      check_trip_times(ctrp);
-    }
-  }
-}
 
 TEST_F(service_rules_day_shift_test_3, expanded_trips) {
   auto const* a = get_station(*sched_, "0000001");

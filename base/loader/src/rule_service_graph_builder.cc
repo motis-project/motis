@@ -125,28 +125,6 @@ struct rule_service_section_builder {
     }
 
     // Add service as participant to the specified sections.
-
-    std::cerr << "adding " << service->service_->sections()->Get(0)->train_nr()
-              << " to:\n";
-    for (unsigned src_section_idx = src_from_idx,
-                  service_section_idx = from_idx;
-         src_section_idx < src_to_idx;
-         ++src_section_idx, ++service_section_idx) {
-      std::cerr << "  "
-                << service->service_->route()
-                       ->stations()
-                       ->Get(service_section_idx)
-                       ->name()
-                       ->str()
-                << " - "
-                << service->service_->route()
-                       ->stations()
-                       ->Get(service_section_idx + 1)
-                       ->name()
-                       ->str()
-                << "\n";
-    }
-
     for (unsigned src_section_idx = src_from_idx,
                   service_section_idx = from_idx;
          src_section_idx < src_to_idx;
@@ -520,32 +498,6 @@ struct rule_service_route_builder {
     }
   }
 
-  void print_lcon(light_connection const& lcon) {
-    auto con_info = lcon.full_con_->con_info_;
-    while (con_info != nullptr) {
-      std::cerr << get_service_name(gb_.sched_, con_info);
-      con_info = con_info->merged_with_;
-      if (con_info != nullptr) {
-        std::cerr << "|";
-      }
-    }
-    std::cerr << ", dep=" << format_time(motis::time{0, lcon.d_time_})
-              << ", arr=" << format_time(motis::time{0, lcon.a_time_})
-              << ", traffic_days={";
-    auto first = true;
-    for (auto i = day_idx_t{0}; i != MAX_DAYS; ++i) {
-      if (gb_.sched_.bitfields_.at(lcon.traffic_days_).test(i)) {
-        if (!first) {
-          std::cerr << ", ";
-        } else {
-          first = false;
-        }
-        std::cerr << i;
-      }
-    }
-    std::cerr << "}\n";
-  }
-
   mcd::vector<day_idx_t> day_offsets(
       mcd::vector<trip_info::route_edge> const& route_edges) {
     auto const find_first_bit =
@@ -585,17 +537,6 @@ struct rule_service_route_builder {
         }
       }
     };
-
-    std::cerr << "XPANDED TRIP\n";
-    for (auto const& [i, e] : utl::enumerate(route_edges)) {
-      std::cerr << gb_.sched_.stations_.at(e->from_->get_station()->id_)->name_
-                << " -> "
-                << gb_.sched_.stations_.at(e->to_->get_station()->id_)->name_
-                << ": ";
-      for (auto const& lcon : e->m_.route_edge_.conns_) {
-        print_lcon(lcon);
-      }
-    }
 
     auto const& first_lcon = route_edges.at(0)->m_.route_edge_.conns_.at(0);
     auto const first_dep = first_lcon.event_time(

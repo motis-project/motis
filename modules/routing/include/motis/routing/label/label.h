@@ -35,20 +35,16 @@ struct label : public Data {  // NOLINT
   bool create_label(label& l, Edge const& e, LowerBounds& lb, bool no_cost,
                     int additional_time_cost = 0) {
     if (pred_ && e.template get_destination<Dir>() == pred_->get_node()) {
-      std::cerr << "NOT BACK\n";
       return false;
     }
     if ((e.type() == edge_type::BWD_EDGE ||
          e.type() == edge_type::AFTER_TRAIN_BWD_EDGE) &&
         edge_->type() == edge_type::EXIT_EDGE) {
-      std::cerr << "NO EXIT AFTER BWD|ATBE\n";
       return false;
     }
 
     auto ec = e.template get_edge_cost<Dir>(now_, connection_);
     if (!ec.is_valid()) {
-      std::cerr << "INVALID EDGE COST " << e.type_str() << " " << connection_
-                << "\n";
       return false;
     }
     if (no_cost) {

@@ -154,23 +154,7 @@ TEST_F(service_rules_graph_builder_test_virt, trip_1) {
   auto sections = access::sections(trp1);
   int i = 0;
 
-  std::cerr << "TRAIN NUMBERS:\n";
   for (auto it = begin(sections); it != end(sections); ++it, ++i) {
-
-    for (auto const train_nr :
-         get_service_numbers((*it).lcon().full_con_->con_info_)) {
-      std::cerr << i << ": " << train_nr << "\n";
-    }
-
-    auto merged = 0;
-    for (auto con = (*it).lcon().full_con_->con_info_; con != nullptr;
-         con = con->merged_with_, ++merged) {
-      auto const trp =
-          sched_->merged_trips_.at((*it).lcon().trips_)->at(merged);
-      std::cerr << "  " << trp->id_.primary_.train_nr_ << " " << con->train_nr_
-                << "\n";
-    }
-
     auto train_nr = (*it).info(*sched_).train_nr_;
     if (i == 3) {
       EXPECT_EQ(5, train_nr);
