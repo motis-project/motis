@@ -334,9 +334,8 @@ struct reconstructor {
 
   bool journey_ends_with_footpath(candidate const c,
                                   raptor_result_base const& result) {
-    return !valid(std::get<stop_id>(
-        get_previous_station(c.target_, c.arrival_, c.transfers_ + 1,
-                             c.crit_offset_, result)));
+    return !valid(std::get<stop_id>(get_previous_station(
+        c.target_, c.arrival_, c.transfers_ + 1, c.crit_offset_, result)));
   }
 
   template <typename Query>
@@ -543,7 +542,13 @@ struct reconstructor {
       // arrival times at the departure station. Thereby only iterate over
       // feasible trait offsets
       auto const feasible_trait_ids =
-          CriteriaConfig::get_feasible_traits(trait_offset, aggregate);
+          result_idx > 0
+              ? CriteriaConfig::get_feasible_traits(trait_offset, aggregate)
+              // the start values are not duplicated along all trait offsets
+              // therefore
+              //  fall back to t_offset = 0 to find the start timings
+              : std::vector<trait_id>{0};
+
       auto it = feasible_trait_ids.cbegin();
 
       while (it != feasible_trait_ids.cend()) {

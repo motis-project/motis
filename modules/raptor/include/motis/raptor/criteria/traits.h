@@ -15,7 +15,7 @@ struct raptor_data : public TraitData... {
   route_id route_id_;
   trip_id trip_id_;
 
-  trait_id departure_trait_id_;
+  trip_id departure_trait_id_;
 };
 
 template <typename... Trait>

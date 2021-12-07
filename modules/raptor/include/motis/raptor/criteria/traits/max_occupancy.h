@@ -124,16 +124,11 @@ struct trait_max_occupancy {
   template <typename TraitsData>
   inline static std::vector<dimension_id> get_feasible_dimensions(
       dimension_id const initial_offset,
-      TraitsData const& data) {
+      TraitsData const& _1) {
 
-    if (data.max_occupancy_ == 2 && initial_offset == 2) return std::vector<dimension_id>{2};
-    if (data.max_occupancy_ == 1 && initial_offset == 2) return std::vector<dimension_id>{1, 2};
-    if (data.max_occupancy_ == 0 && initial_offset == 2) return std::vector<dimension_id>{0, 1, 2};
-
-    if (data.max_occupancy_ == 1 && initial_offset == 1) return std::vector<dimension_id>{1};
-    if (data.max_occupancy_ == 0 && initial_offset == 1) return std::vector<dimension_id>{0, 1};
-
-    if (data.max_occupancy_ == 0 && initial_offset == 0) return std::vector<dimension_id>{0};
+    if (initial_offset == 2) return std::vector<dimension_id>{0, 1, 2};
+    if (initial_offset == 1) return std::vector<dimension_id>{0, 1};
+    if (initial_offset == 0) return std::vector<dimension_id>{0};
 
     return std::vector<dimension_id>{};
   }

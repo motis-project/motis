@@ -68,14 +68,14 @@ template <>
 void print_results_of_query<raptor_query>(raptor_query const& q,
                                           raptor_meta_info const& meta) {
   raptor_result_base const& result = *q.result_;
-  print_results(result, meta);
+  print_results(result, meta, 3);
 }
 
 template <>
 void print_results_of_query<d_query>(d_query const& q,
                                      raptor_meta_info const& meta) {
   auto const& result = q.result();
-  print_results(result, meta);
+  print_results(result, meta, 3);
 }
 
 }

@@ -21,13 +21,18 @@ constexpr unsigned int FULL_MASK = 0xFFFFffff;
 constexpr unsigned int NO_LEADER = FULL_MASK;
 
 template <typename CriteriaConfig>
-__device__ occ_t get_moc(typename CriteriaConfig::CriteriaData const& d) {
+__device__ dimension_id get_moc(typename CriteriaConfig::CriteriaData const& d) {
   return 3;
 }
 
 template <>
-__device__ occ_t get_moc<MaxOccupancy>(MaxOccupancy ::CriteriaData const& d) {
+__device__ dimension_id get_moc<MaxOccupancy>(MaxOccupancy ::CriteriaData const& d) {
   return d.max_occupancy_;
+}
+
+template<>
+__device__ dimension_id get_moc<TimeSlottedOccupancy>(TimeSlottedOccupancy::CriteriaData const& d) {
+  return d.summed_occ_time_;
 }
 
 template <typename CriteriaConfig>
@@ -311,15 +316,14 @@ __device__ void mc_update_route_larger32(
             bool updated =
                 update_arrival(arrivals, write_to_arr_idx, stop_arrival);
             if (updated) {
-              //              if (stop_id_t == 7936 && r_id == 118) {
-              //                printf(
-              //                    "Wrote arrival to stop %i from r_id > 32:
-              //                    %i;\tt_offset: "
-              //                    "%i;\ttrip_offset: %i;\tarrival:
-              //                    %i;\tballot: %x\n", stop_id_t, r_id,
-              //                    t_offset, trip_offset, stop_arrival,
-              //                    ballot);
-              //              }
+//              if (stop_id_t == 21135 && (write_to_offset == 1 || write_to_offset == 10)
+//                  || stop_id_t == 10569 && write_to_offset == 0) {
+//                printf(
+//                    "Wrote arrival to stop %i from r_id > 32: %i;\ttrip_offset: "
+//                    "%i;\twrite_offset: %i;\tt_offset: %i;\tarrival: %i;\tballot: %x;\tadd: %i\n",
+//                    stop_id_t, r_id, trip_offset, write_to_offset, t_offset, stop_arrival,
+//                    ballot, get_moc<CriteriaConfig>(aggregate));
+//              }
 
               update_arrival(earliest_arrivals, write_to_arr_idx, stop_arrival);
               mark(station_marks, stop_id_t);
@@ -373,6 +377,7 @@ __device__ void mc_update_route_smaller32(
        ++trip_offset) {
     CriteriaConfig::reset_traits_aggregate(aggregate, r_id, trip_offset,
                                            t_offset);
+
     if (t_id < active_stop_count) {
       auto const st_index =
           route.index_to_stop_times_ + (trip_offset * route.stop_count_) + t_id;
@@ -384,11 +389,12 @@ __device__ void mc_update_route_smaller32(
                        valid(stop_departure) &&
                        (prev_arrival <= stop_departure));
 
-//    if (t_id == 5 && (r_id == 26110) && t_offset == 2)
-//      printf(
-//          "Ballot Mask for r_id: %i, t_offset: %i, trip_offset: "
-//          "%i;\t%x;\tasc: %i;\tprev_arr: %i\n",
-//          r_id, t_offset, trip_offset, ballot, active_stop_count, prev_arrival);
+    //    if (t_id == 5 && (r_id == 26110) && t_offset == 2)
+    //      printf(
+    //          "Ballot Mask for r_id: %i, t_offset: %i, trip_offset: "
+    //          "%i;\t%x;\tasc: %i;\tprev_arr: %i\n",
+    //          r_id, t_offset, trip_offset, ballot, active_stop_count,
+    //          prev_arrival);
 
     leader =
         __ffs(ballot) - 1;  // index of the first departure location on route
@@ -444,28 +450,29 @@ __device__ void mc_update_route_smaller32(
       auto const earliest_arrival = get_earliest_arrival<CriteriaConfig>(
           earliest_arrivals, target_stop_id, s_id, write_to_offset);
 
-//      if (r_id == 26110 && t_offset == 2)
-//        printf(
-//            "\nt_id: %i\tr_id: %i\tt_offset: %i\ttrip_id: %i\tfound moc"
-//            " for s_id: %i\tmoc: %i;\twrite idx: %i;\tinitial moc: "
-//            "%i;\tarrival: %i;\tballot: %x;\tasc: %i;\tsatis: %i\n",
-//            t_id, r_id, t_offset, trip_offset, s_id,
-//            get_moc<CriteriaConfig>(aggregate), write_to_offset,
-//            get_initial_moc<CriteriaConfig>(aggregate), stop_arrival,
-//            ballot, active_stop_count, satisfied_stop_count);
+      //      if (r_id == 26110 && t_offset == 2)
+      //        printf(
+      //            "\nt_id: %i\tr_id: %i\tt_offset: %i\ttrip_id: %i\tfound moc"
+      //            " for s_id: %i\tmoc: %i;\twrite idx: %i;\tinitial moc: "
+      //            "%i;\tarrival: %i;\tballot: %x;\tasc: %i;\tsatis: %i\n",
+      //            t_id, r_id, t_offset, trip_offset, s_id,
+      //            get_moc<CriteriaConfig>(aggregate), write_to_offset,
+      //            get_initial_moc<CriteriaConfig>(aggregate), stop_arrival,
+      //            ballot, active_stop_count, satisfied_stop_count);
 
       if (stop_arrival < earliest_arrival) {
         auto const write_to_idx =
             CriteriaConfig::get_arrival_idx(s_id, write_to_offset);
         bool updated = update_arrival(arrivals, write_to_idx, stop_arrival);
         if (updated) {
-//          if (r_id == 26110 && t_offset == 2) {
+//          if (s_id == 21135 && (write_to_offset == 1 || write_to_offset == 10)
+//              || s_id == 10569 && write_to_offset == 0) {
 //            printf(
-//                "Wrote arrival to Stop %i from r_id: %i;\tt_offset:"
-//                "%i;\ttrip_offset: %i;ballot mask: %x\tarrival: "
-//                "%i;\tearliest_arrivals: %i\n",
-//                s_id, r_id, t_offset, trip_offset, ballot, stop_arrival,
-//                earliest_arrival);
+//                "Wrote arrival to Stop %i from r_id: %i;\ttrip_offset:"
+//                "%i;\twrite_offset: %i;\tt_offset %i;\tballot mask: %x\tarrival: "
+//                "%i;\tearliest_arrivals: %i;\tadd: %i\n",
+//                s_id, r_id, trip_offset, write_to_offset, t_offset, ballot, stop_arrival,
+//                earliest_arrival, get_moc<CriteriaConfig>(aggregate));
 //          }
 
           update_arrival(earliest_arrivals, write_to_idx, stop_arrival);
@@ -496,20 +503,23 @@ __device__ void mc_update_route_smaller32(
                 CriteriaConfig::is_trait_satisfied(aggregate, t_offset)) ||
                (satisfied_ea <= stop_arrival && valid(stop_arrival))));
 
-//      if (r_id == 17290 && t_offset == 0) {
-//        printf(
-//            "t_id (%i) < asc (%i): %s;\tis_sat && valid(arr): %s;\tsat_ea <= arr: "
-//            "%s;\tsat_ea: %i;\tarr: %i\n",
-//            t_id, active_stop_count,
-//            (t_id < active_stop_count) ? "true" : "false",
-//            (valid(satisfied_ea) &&
-//             CriteriaConfig::is_trait_satisfied(aggregate, t_offset))
-//                ? "true"
-//                : "false",
-//            (satisfied_ea <= stop_arrival && valid(stop_arrival)) ? "true"
-//                                                                  : "false",
-//            satisfied_ea, stop_arrival);
-//      }
+      //      if (r_id == 17290 && t_offset == 0) {
+      //        printf(
+      //            "t_id (%i) < asc (%i): %s;\tis_sat && valid(arr):
+      //            %s;\tsat_ea <= arr: "
+      //            "%s;\tsat_ea: %i;\tarr: %i\n",
+      //            t_id, active_stop_count,
+      //            (t_id < active_stop_count) ? "true" : "false",
+      //            (valid(satisfied_ea) &&
+      //             CriteriaConfig::is_trait_satisfied(aggregate, t_offset))
+      //                ? "true"
+      //                : "false",
+      //            (satisfied_ea <= stop_arrival && valid(stop_arrival)) ?
+      //            "true"
+      //                                                                  :
+      //                                                                  "false",
+      //            satisfied_ea, stop_arrival);
+      //      }
 
       // not satisfied yet but there's a chance we can reduce the number of
       // stops to be scanned on the next trip
@@ -522,20 +532,21 @@ __device__ void mc_update_route_smaller32(
       auto const initial_acs = active_stop_count;
       active_stop_count -= leading_zero_count;
 
-//      if (r_id == 17290 && t_offset == 0 && t_id == 17) {
-//        printf(
-//            "ACS Update; sat ballot: %x;\tsat ea: "
-//            "%i;\tHM: %x;\tinv ballot: %x;\tinit clz: %i;\tclz: %i;\tinit acs: "
-//            "%i;\tnew acs: %i\n",
-//            satisfied_ballot, satisfied_ea,
-//            helper_mask, inverted_ballot, initial_clz, leading_zero_count,
-//            initial_acs, active_stop_count);
-//      }
+      //      if (r_id == 17290 && t_offset == 0 && t_id == 17) {
+      //        printf(
+      //            "ACS Update; sat ballot: %x;\tsat ea: "
+      //            "%i;\tHM: %x;\tinv ballot: %x;\tinit clz: %i;\tclz:
+      //            %i;\tinit acs: "
+      //            "%i;\tnew acs: %i\n",
+      //            satisfied_ballot, satisfied_ea,
+      //            helper_mask, inverted_ballot, initial_clz,
+      //            leading_zero_count, initial_acs, active_stop_count);
+      //      }
 
       // if every stop is satisfied we can skip further updates
       if ((1 << route.stop_count_) - 1 == satisfied_ballot) {
-//        if (r_id == 17290 && t_offset == 0 && t_id == 17)
-//          printf("broke on trip_offset: %i", trip_offset);
+        //        if (r_id == 17290 && t_offset == 0 && t_id == 17)
+        //          printf("broke on trip_offset: %i", trip_offset);
         break;
       }
     }
@@ -580,20 +591,19 @@ __device__ void mc_update_footpaths_dev_scratch(
     time const target_ea = earliest_arrivals[target_arr_idx];
     time const earliest_arrival = umin(to_stop_ea, target_ea);
 
-    //    if (footpath.to_ == 7933 && t_offset == 1) {
-    //      printf(
-    //          "Considered arrival to Stop %i from footpath: from
-    //          %i;\tt_offset: "
-    //          "%i;\tarrival at src: %i;\tFP duration: %i\n",
-    //          footpath.to_, footpath.from_, t_offset, from_arrival,
-    //          footpath.duration_);
-    //    }
-
     if (valid(from_arrival) && marked(station_marks, footpath.from_) &&
         new_arrival < earliest_arrival) {
       bool updated =
           update_arrival(write_arrivals, to_arrival_idx, new_arrival);
       if (updated) {
+//        if (footpath.to_ == 21135 && (t_offset == 1 || t_offset == 10)
+//            || footpath.to_ == 10569 && t_offset == 0) {
+//          printf(
+//              "Wrote arrival to Stop %i from footpath: from %i;\tt_offset: "
+//              "%i;\tarrival at src: %i;\tFP duration: %i\n",
+//              footpath.to_, footpath.from_, t_offset, from_arrival,
+//              footpath.duration_);
+//        }
         update_arrival(earliest_arrivals, to_arrival_idx, new_arrival);
         mark(station_marks, footpath.to_);
       }
@@ -676,17 +686,17 @@ __device__ void mc_init_arrivals_dev(base_query const& query,
     mark(device_mem.station_marks_, query.source_);
   }
 
-  auto req_update_count = device_mem.additional_start_count_ * trait_size;
+  auto req_update_count = device_mem.additional_start_count_;  // * trait_size;
   auto global_stride = get_global_stride();
   for (auto idx = t_id; idx < req_update_count; idx += global_stride) {
-    auto const add_start_idx = idx / trait_size;
-    auto const add_start_t_off = idx % trait_size;
+    auto const add_start_idx = idx;  // / trait_size;
+    // auto const add_start_t_off = idx % trait_size;
 
     auto const& add_start = device_mem.additional_starts_[add_start_idx];
 
     auto const add_start_time = query.source_time_begin_ + add_start.offset_;
-    auto const add_start_arr_idx =
-        CriteriaConfig::get_arrival_idx(add_start.s_id_, add_start_t_off);
+    auto const add_start_arr_idx = CriteriaConfig::get_arrival_idx(
+        add_start.s_id_, 0);  // add_start_t_off);
     bool updated = update_arrival(device_mem.result_[0], add_start_arr_idx,
                                   add_start_time);
 
