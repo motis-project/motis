@@ -5,8 +5,6 @@ import { DatePicker } from './DatePicker';
 
 export const Search: React.FC = () => {
     
-    
-    
     return (
         <div id="search">
             <div className="pure-g gutters">
@@ -35,31 +33,7 @@ export const Search: React.FC = () => {
                     </div>
                 </div>
                 <div className="pure-u-1 pure-u-sm-12-24">
-                    <div>
-                        <div>
-                            <div className="label">Datum</div>
-                            <div className="gb-input-group">
-                                <div className="gb-input-icon">
-                                    <i className="icon">event</i></div>
-                                <input className="gb-input" tabIndex={3} />
-                                <div className="gb-input-widget">
-                                    <div className="day-buttons">
-                                        <div>
-                                            <a className="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select">
-                                                <i className="icon">chevron_left</i>
-                                            </a>
-                                        </div>
-                                        <div>
-                                            <a className="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select">
-                                            <i className="icon">chevron_right</i>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <DatePicker />
-                    </div>
+                    <DatePicker />
                 </div>
             </div>
             <div className="pure-g gutters">
