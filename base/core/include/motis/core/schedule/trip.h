@@ -127,6 +127,12 @@ struct trip_info {
            | utl::iterable();
   }
 
+  size_t ctrp_count() const {
+    return edges_->front()
+        ->m_.route_edge_.conns_.at(lcon_idx_)
+        .traffic_days_->count();
+  }
+
   full_trip_id id_;
   ptr<mcd::vector<route_edge> const> edges_{nullptr};
   mcd::vector<day_idx_t> day_offsets_;

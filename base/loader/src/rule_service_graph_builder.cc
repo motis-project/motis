@@ -35,32 +35,6 @@ struct service_section {
   bool out_allowed_to_ = false;
 };
 
-struct services_key {
-  struct service_with_day_offset {
-    CISTA_COMPARABLE()
-    service_node const* service_{nullptr};
-    int day_offset_{0};
-  };
-
-  services_key() = default;
-
-  explicit services_key(service_node const* service)
-      : services_({{service, 0}}) {}
-
-  explicit services_key(std::set<service_with_day_offset> services)
-      : services_(std::move(services)) {}
-
-  friend bool operator<(services_key const& lhs, services_key const& rhs) {
-    return lhs.services_ < rhs.services_;
-  }
-
-  friend bool operator==(services_key const& lhs, services_key const& rhs) {
-    return lhs.services_ == rhs.services_;
-  }
-
-  std::set<service_with_day_offset> services_;
-};
-
 struct rule_service_section_builder {
   rule_service_section_builder(rule_route const& rs)
       : neighbors_(build_neighbors(rs)), sections_(build_empty_sections(rs)) {}
@@ -70,8 +44,8 @@ struct rule_service_section_builder {
     std::map<service_node const*, mcd::vector<neighbor>> neighbors;
     for (auto const& r : rs.rules_) {
       if (r->rule_->type() != RuleType_THROUGH) {
-        neighbors[r->s1_].emplace_back(r->s1_, r);
-        neighbors[r->s2_].emplace_back(r->s2_, r);
+        neighbors[r->s1_].emplace_back(r->s2_, r);
+        neighbors[r->s2_].emplace_back(r->s1_, r);
       }
     }
     return neighbors;
@@ -82,14 +56,10 @@ struct rule_service_section_builder {
     auto sections =
         std::map<service_node const*, mcd::vector<service_section*>>{};
     for (auto const& r : rs.rules_) {
-      sections.emplace(
-          r->s1_, mcd::vector<service_section*>(
-                      static_cast<mcd::vector<service_section*>::size_type>(
-                          r->s1_->service_->sections()->size())));
-      sections.emplace(
-          r->s2_, mcd::vector<service_section*>(
-                      static_cast<mcd::vector<service_section*>::size_type>(
-                          r->s2_->service_->sections()->size())));
+      sections.emplace(r->s1_, mcd::vector<service_section*>{})
+          .first->second.resize(r->s1_->service_->sections()->size());
+      sections.emplace(r->s2_, mcd::vector<service_section*>{})
+          .first->second.resize(r->s2_->service_->sections()->size());
     }
     return sections;
   }
@@ -155,18 +125,41 @@ struct rule_service_section_builder {
     }
 
     // Add service as participant to the specified sections.
+
+    std::cerr << "adding " << service->service_->sections()->Get(0)->train_nr()
+              << " to:\n";
+    for (unsigned src_section_idx = src_from_idx,
+                  service_section_idx = from_idx;
+         src_section_idx < src_to_idx;
+         ++src_section_idx, ++service_section_idx) {
+      std::cerr << "  "
+                << service->service_->route()
+                       ->stations()
+                       ->Get(service_section_idx)
+                       ->name()
+                       ->str()
+                << " - "
+                << service->service_->route()
+                       ->stations()
+                       ->Get(service_section_idx + 1)
+                       ->name()
+                       ->str()
+                << "\n";
+    }
+
     for (unsigned src_section_idx = src_from_idx,
                   service_section_idx = from_idx;
          src_section_idx < src_to_idx;
          ++src_section_idx, ++service_section_idx) {
       if (sections[src_section_idx] == nullptr) {
-        section_mem_.emplace_back(std::make_unique<service_section>());
-        sections[src_section_idx] = section_mem_.back().get();
+        sections[src_section_idx] =
+            section_mem_.emplace_back(std::make_unique<service_section>())
+                .get();
       }
       sections_[service][service_section_idx] = sections[src_section_idx];
 
       auto& section_participants = sections[src_section_idx]->participants_;
-      auto not_already_added =
+      auto const not_already_added =
           std::find_if(begin(section_participants), end(section_participants),
                        [&service](participant const& p) {
                          return p.sn() == service;
@@ -232,34 +225,21 @@ struct rule_service_route_builder {
     }
   }
 
-  static services_key get_services_key(
-      std::vector<participant> const& services) {
-    services_key k;
-    auto const ref_day_offset =
-        services[0].service()->times()->Get(services[0].section_idx() * 2 + 1) /
-        1440;
-    for (auto const& s : services) {
-      auto const s_day_offset =
-          s.service()->times()->Get(s.section_idx() * 2 + 1) / 1440;
-      k.services_.insert({s.sn(), ref_day_offset - s_day_offset});
-    }
-    return k;
-  }
-
   merged_trips_idx get_or_create_trips(
       std::vector<participant> const& services) {
-    auto k = get_services_key(services);
+    auto const k = utl::to_vec(services, [](participant const& p) {
+      return std::pair{p.sn(), p.section_idx()};
+    });
     return utl::get_or_create(merged_trips_, k, [&]() {
       return static_cast<merged_trips_idx>(push_mem(
           gb_.sched_.merged_trips_,
-          mcd::to_vec(begin(k.services_), end(k.services_),
-                      [&](services_key::service_with_day_offset sp) {
-                        return ptr<trip_info>{
-                            utl::get_or_create(trip_infos_, sp.service_, [&]() {
-                              return gb_.register_service(sp.service_->service_,
-                                                          sp.service_->times_);
-                            })};
-                      })));
+          mcd::to_vec(
+              begin(services), end(services), [&](participant const& p) {
+                return ptr<trip_info>{
+                    utl::get_or_create(trip_infos_, p.sn(), [&]() {
+                      return gb_.register_service(p.service(), p.utc_times());
+                    })};
+              })));
     });
   }
 
@@ -270,28 +250,9 @@ struct rule_service_route_builder {
 
     assert(!participants.empty());
 
-    mcd::vector<light_connection> lcons;
-    auto const& traffic_days = traffic_days_.at(participants[0].sn());
-    lcons.push_back(gb_.section_to_connection(
-        participants, traffic_days, get_or_create_trips(participants)));
-    auto const& ref_p = section.participants_.at(0);
-    std::cerr << "section to connection "
-              << ref_p.service()
-                     ->route()
-                     ->stations()
-                     ->Get(ref_p.section_idx())
-                     ->name()
-                     ->str()
-              << " -> "
-              << ref_p.service()
-                     ->route()
-                     ->stations()
-                     ->Get(ref_p.section_idx() + 1)
-                     ->name()
-                     ->str()
-              << ": ";
-    print_lcon(lcons.back());
-    return lcons;
+    return mcd::vector<light_connection>{gb_.section_to_connection(
+        participants, traffic_days_.at(participants[0].sn()),
+        get_or_create_trips(participants))};
   }
 
   node* find_to(std::set<service_section*>& visited,
@@ -625,6 +586,7 @@ struct rule_service_route_builder {
       }
     };
 
+    std::cerr << "XPANDED TRIP\n";
     for (auto const& [i, e] : utl::enumerate(route_edges)) {
       std::cerr << gb_.sched_.stations_.at(e->from_->get_station()->id_)->name_
                 << " -> "
@@ -638,16 +600,11 @@ struct rule_service_route_builder {
     auto const& first_lcon = route_edges.at(0)->m_.route_edge_.conns_.at(0);
     auto const first_dep = first_lcon.event_time(
         event_type::DEP, find_first_bit(first_lcon.traffic_days_));
-    auto arr = first_dep;
-    std::cerr << "first_lcon - train_nr="
-              << first_lcon.full_con_->con_info_->train_nr_ << ", time=" << arr
-              << "\n";
+    auto t = first_dep;
     return mcd::to_vec(route_edges, [&](trip_info::route_edge const& e) {
-      auto const [con, day_idx] = get_connection(*e, arr);
+      auto const [con, day_idx] = get_connection(*e, t);
       assert(con != nullptr);
-      arr = con->event_time(event_type::ARR, day_idx);
-      std::cerr << "  arr=" << arr
-                << " day_offset=" << (day_idx - first_dep.day()) << "\n";
+      t = con->event_time(event_type::ARR, day_idx);
       return static_cast<day_idx_t>(day_idx - first_dep.day());
     });
   }
@@ -680,7 +637,10 @@ struct rule_service_route_builder {
   graph_builder& gb_;
   std::map<service_node const*, mcd::vector<service_section*>>& sections_;
   std::map<service_node const*, trip_info*> trip_infos_;
-  std::map<services_key, merged_trips_idx> merged_trips_;
+  std::map<
+      std::vector<std::pair<service_node const*, unsigned /* section idx */>>,
+      merged_trips_idx>
+      merged_trips_;
   unsigned route_id_;
   std::set<node const*, node_id_cmp> start_nodes_;
   std::set<node const*> through_target_nodes_;
@@ -706,8 +666,6 @@ void rule_service_graph_builder::add_rule_services(
                                              route_id, rule_service);
     route_builder.build_routes();
     route_builder.connect_through_services(rule_service);
-
-    print_graph(gb_.sched_);
 
     if (gb_.expand_trips_) {
       route_builder.expand_trips();

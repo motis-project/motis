@@ -37,9 +37,17 @@ struct rule_node {
 
   friend std::ostream& operator<<(std::ostream& out, rule_node const& rn) {
     auto const print_service = [&](service_node const* const s) {
-      out << "  train_nr=" << s->service_->sections()->Get(0)->train_nr()
-          << " ";
-      print(std::cerr, s->traffic_days_.local_traffic_days_);
+      out << "  train_nr=" << s->service_->sections()->Get(0)->train_nr();
+      out << ", orig_";
+      auto const orig =
+          deserialize_bitset(utl::cstr{s->service_->traffic_days()->c_str(),
+                                       s->service_->traffic_days()->size()});
+      if (orig == create_uniform_bitfield('1')) {
+        out << "traffic_days=ALL";
+      } else {
+        print(out, orig);
+      }
+
       out << ", offset=" << s->traffic_days_.shift_ << "\n";
       const auto stations = s->service_->route()->stations();
       for (auto i = 0U; i != stations->size(); ++i) {

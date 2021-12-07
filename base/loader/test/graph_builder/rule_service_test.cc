@@ -108,11 +108,9 @@ TEST_F(service_rules_graph_builder_test_virt, service_numbers_1) {
   auto const& e = path.second[0];
 
   ASSERT_FALSE(e->empty());
-  auto train_nrs =
-      get_service_numbers(e->m_.route_edge_.conns_[0].full_con_->con_info_);
-  EXPECT_TRUE(train_nrs.find(1) != end(train_nrs));
-  EXPECT_TRUE(train_nrs.find(2) != end(train_nrs));
-  EXPECT_TRUE(train_nrs.find(3) != end(train_nrs));
+  EXPECT_EQ(
+      (std::set<int>{1, 2, 3}),
+      get_service_numbers(e->m_.route_edge_.conns_[0].full_con_->con_info_));
 }
 
 TEST_F(service_rules_graph_builder_test_virt, service_numbers_2) {
@@ -155,7 +153,24 @@ TEST_F(service_rules_graph_builder_test_virt, trip_1) {
 
   auto sections = access::sections(trp1);
   int i = 0;
+
+  std::cerr << "TRAIN NUMBERS:\n";
   for (auto it = begin(sections); it != end(sections); ++it, ++i) {
+
+    for (auto const train_nr :
+         get_service_numbers((*it).lcon().full_con_->con_info_)) {
+      std::cerr << i << ": " << train_nr << "\n";
+    }
+
+    auto merged = 0;
+    for (auto con = (*it).lcon().full_con_->con_info_; con != nullptr;
+         con = con->merged_with_, ++merged) {
+      auto const trp =
+          sched_->merged_trips_.at((*it).lcon().trips_)->at(merged);
+      std::cerr << "  " << trp->id_.primary_.train_nr_ << " " << con->train_nr_
+                << "\n";
+    }
+
     auto train_nr = (*it).info(*sched_).train_nr_;
     if (i == 3) {
       EXPECT_EQ(5, train_nr);
@@ -166,7 +181,7 @@ TEST_F(service_rules_graph_builder_test_virt, trip_1) {
 }
 
 TEST_F(service_rules_graph_builder_test_virt, trip_2) {
-  auto trp = get_trip(*sched_, "0000002", 3, unix_time(210, 0, 60), "0000011",
+  auto trp = get_trip(*sched_, "0000002", 3, unix_time(159, 0, 60), "0000011",
                       unix_time(800, 0, 120), "");
 
   auto sections = access::sections(trp);

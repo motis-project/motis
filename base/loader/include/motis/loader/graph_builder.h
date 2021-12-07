@@ -95,6 +95,7 @@ struct participant {
   service_node const* sn() const;
   unsigned section_idx() const;
   mcd::vector<motis::time> const& utc_times() const;
+  bitfield traffic_days() const;
 
 private:
   struct service_info {
@@ -181,7 +182,8 @@ struct graph_builder {
   void sort_trips();
 
   std::optional<mcd::hash_map<mcd::vector<time>, local_and_motis_traffic_days>>
-  service_times_to_utc(bitfield const& traffic_days, Service const* s) const;
+  service_times_to_utc(bitfield const& traffic_days, Service const* s,
+                       bool const skip_invalid = false) const;
 
   bitfield_idx_t store_bitfield(bitfield const&);
   bitfield_idx_t get_or_create_bitfield_idx(

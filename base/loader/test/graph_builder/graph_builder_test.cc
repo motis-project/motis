@@ -92,22 +92,20 @@ void loader_graph_builder_test::print_trip(concrete_trip const trp) const {
 
 int loader_graph_builder_test::trip_count(
     std::vector<station const*> stations) const {
-  return static_cast<int>(std::count_if(
-      begin(sched_->expanded_trips_.data_), end(sched_->expanded_trips_.data_),
-      [&](trip_info const* trp) {
-        auto sum = 0U;
-        for (auto const& ctrp : trp->concrete_trips()) {
-          sum += check_trip_path(ctrp, stations);
-        }
-        return sum;
-      }));
+  return std::accumulate(begin(sched_->expanded_trips_.data_),
+                         end(sched_->expanded_trips_.data_), 0,
+                         [&](int const sum, trip_info const* trp) {
+                           if (!check_trip_path(trp, stations)) {
+                             return sum;
+                           }
+                           return sum + static_cast<int>(trp->ctrp_count());
+                         });
 }
 
 bool loader_graph_builder_test::check_trip_path(
-    concrete_trip const trp,
-    std::vector<station const*> const& stations) const {
+    trip_info const* trp, std::vector<station const*> const& stations) const {
   using namespace motis::access;
-  auto const stps = stops(trp);
+  auto const stps = stops(concrete_trip{trp, 0});
   auto const trip_stops = std::vector<trip_stop>(begin(stps), end(stps));
   if (trip_stops.size() != stations.size()) {
     return false;

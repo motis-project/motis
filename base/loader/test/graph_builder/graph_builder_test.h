@@ -29,7 +29,8 @@ protected:
   void print_trip(concrete_trip) const;
 
   int trip_count(std::vector<station const*>) const;
-  bool check_trip_path(concrete_trip, std::vector<station const*> const&) const;
+  bool check_trip_path(trip_info const*,
+                       std::vector<station const*> const&) const;
 
   schedule_ptr sched_;
   std::string schedule_name_;

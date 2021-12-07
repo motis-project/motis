@@ -65,6 +65,11 @@ inline void print(std::ostream& out, bitfield const& b) {
   out << "}";
 }
 
+inline bitfield shifted_bitfield(bitfield const& orig, day_idx_t const offset) {
+  return offset > 0 ? orig << static_cast<std::size_t>(offset)
+                    : orig >> static_cast<std::size_t>(-offset);
+}
+
 inline bitfield create_uniform_bitfield(char val) {
   assert(val == '1' || val == '0');
 

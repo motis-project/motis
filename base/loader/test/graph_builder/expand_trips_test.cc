@@ -37,7 +37,14 @@ TEST_F(expand_trips_test, check_expanded_trips) {
   auto const* j = get_station(*sched_, "0000010");
   auto const* k = get_station(*sched_, "0000011");
   EXPECT_EQ(6, sched_->expanded_trips_.index_size() - 1);
-  EXPECT_EQ(6 * num_days_, sched_->expanded_trips_.data_size());
+  EXPECT_EQ(6 * num_days_, (std::accumulate(begin(sched_->expanded_trips_),
+                                            end(sched_->expanded_trips_), 0U,
+                                            [](unsigned sum, auto const trp) {
+                                              for (auto const& t : trp) {
+                                                sum += t->ctrp_count();
+                                              }
+                                              return sum;
+                                            })));
   EXPECT_EQ(num_days_, trip_count({b, c, d, f, h, j, k}));
   EXPECT_EQ(num_days_, trip_count({b, c, d, e, g, i}));
   EXPECT_EQ(num_days_, trip_count({b, c, d, e, j, k}));

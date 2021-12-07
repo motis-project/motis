@@ -19,6 +19,7 @@ connection_info const& get_connection_info(schedule const& sched,
 
   auto info = lcon.full_con_->con_info_;
   for (int i = 0; i < pos; ++i) {
+    assert(info != nullptr);
     info = info->merged_with_;
   }
   return *info;

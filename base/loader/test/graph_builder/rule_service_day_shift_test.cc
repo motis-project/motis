@@ -19,6 +19,8 @@ using namespace motis::access;
 
 namespace motis::loader {
 
+using day_vec_t = std::vector<day_idx_t>;
+
 class service_rules_day_shift_test : public loader_graph_builder_test {
 public:
   service_rules_day_shift_test(std::string schedule_name,
@@ -26,13 +28,15 @@ public:
       : loader_graph_builder_test(std::move(schedule_name),
                                   std::move(schedule_begin), num_days) {}
 
-  std::vector<int> trip_days(std::vector<station const*> const& stations) {
-    std::vector<int> days;
+  std::vector<day_idx_t> trip_days(
+      std::vector<station const*> const& stations) {
+    std::vector<day_idx_t> days;
     for (auto const& trp : sched_->expanded_trips_.data_) {
+      if (!check_trip_path(trp, stations)) {
+        continue;
+      }
       for (auto const& ctrp : trp->concrete_trips()) {
-        if (check_trip_path(ctrp, stations)) {
-          days.push_back((*begin(stops(ctrp))).dep_time().ts() / 1440);
-        }
+        days.push_back((*begin(stops(ctrp))).dep_time().day());
       }
     }
     std::sort(begin(days), end(days));
@@ -90,9 +94,9 @@ TEST_F(service_rules_day_shift_test_1, through_every_day) {
 
   // days: 5 6 7
 
-  EXPECT_EQ((std::vector<int>{5, 6}), trip_days({a, c, d, e, g, h, i, j, k}));
-  EXPECT_EQ((std::vector<int>{7}), trip_days({a, c, d, e, g}));
-  EXPECT_EQ((std::vector<int>{5}), trip_days({g, h, i, j, k}));
+  EXPECT_EQ((day_vec_t{5, 6}), trip_days({a, c, d, e, g, h, i, j, k}));
+  EXPECT_EQ((day_vec_t{7}), trip_days({a, c, d, e, g}));
+  EXPECT_EQ((day_vec_t{5}), trip_days({g, h, i, j, k}));
 }
 
 TEST_F(service_rules_day_shift_test_1, through_one_day) {
@@ -107,7 +111,7 @@ TEST_F(service_rules_day_shift_test_1, through_one_day) {
   // days: 5 6 7
 
   EXPECT_EQ(1, trip_count({b, c, d, e, f, g, h}));
-  EXPECT_EQ((std::vector<int>{6}), trip_days({b, c, d, e, f, g, h}));
+  EXPECT_EQ((day_vec_t{6}), trip_days({b, c, d, e, f, g, h}));
 }
 
 TEST_F(service_rules_day_shift_test_1, through_day_shift_between_services) {
@@ -118,7 +122,7 @@ TEST_F(service_rules_day_shift_test_1, through_day_shift_between_services) {
   auto const* p = get_station(*sched_, "0000016");
 
   EXPECT_EQ(1, trip_count({l, m, n, o, p}));
-  EXPECT_EQ((std::vector<int>{6}), trip_days({l, m, n, o, p}));
+  EXPECT_EQ((day_vec_t{6}), trip_days({l, m, n, o, p}));
 }
 
 class service_rules_day_shift_test_2 : public service_rules_day_shift_test {
@@ -136,6 +140,8 @@ TEST_F(service_rules_day_shift_test_2, valid_trip_times) {
 }
 
 TEST_F(service_rules_day_shift_test_2, expanded_trips) {
+  print_graph(*sched_);
+
   auto const* a = get_station(*sched_, "0000001");
   auto const* b = get_station(*sched_, "0000002");
   auto const* c = get_station(*sched_, "0000003");
@@ -150,15 +156,13 @@ TEST_F(service_rules_day_shift_test_2, expanded_trips) {
 
   // days: 5 6 7 8 9
 
-  EXPECT_EQ((std::vector<int>{5, 6, 7, 8, 9}),
-            trip_days({a, b, c, d, e, g, k, j}));
-  EXPECT_EQ((std::vector<int>{5, 6}),
-            trip_days({a, b, c, d, e, g, k, i, c, d, e}));
-  EXPECT_EQ((std::vector<int>{7, 8}), trip_days({a, b, c, d, e, g, k, i}));
-  EXPECT_EQ((std::vector<int>{6, 7, 8, 9}), trip_days({f, h, g, k, j}));
-  EXPECT_EQ((std::vector<int>{5, 6, 7}), trip_days({f, h, g, k, i, c, d, e}));
-  EXPECT_EQ((std::vector<int>{8, 9}), trip_days({f, h, g, k, i}));
-  EXPECT_EQ((std::vector<int>{5, 6}), trip_days({i, c, d, e}));
+  EXPECT_EQ((day_vec_t{5, 6, 7, 8, 9}), trip_days({a, b, c, d, e, g, k, j}));
+  EXPECT_EQ((day_vec_t{5, 6}), trip_days({a, b, c, d, e, g, k, i, c, d, e}));
+  EXPECT_EQ((day_vec_t{7, 8}), trip_days({a, b, c, d, e, g, k, i}));
+  EXPECT_EQ((day_vec_t{6, 7, 8, 9}), trip_days({f, h, g, k, j}));
+  EXPECT_EQ((day_vec_t{5, 6, 7}), trip_days({f, h, g, k, i, c, d, e}));
+  EXPECT_EQ((day_vec_t{8, 9}), trip_days({f, h, g, k, i}));
+  EXPECT_EQ((day_vec_t{5, 6}), trip_days({i, c, d, e}));
 }
 
 class service_rules_day_shift_test_3 : public service_rules_day_shift_test {
@@ -191,9 +195,9 @@ TEST_F(service_rules_day_shift_test_3, expanded_trips) {
   EXPECT_EQ(1, trip_count({a, b, c, d, e, f}));
   EXPECT_EQ(1, trip_count({g, c, d, e, f}));
   EXPECT_EQ(1, trip_count({h, i, e, f}));
-  EXPECT_EQ((std::vector<int>{6}), trip_days({a, b, c, d, e, f}));
-  EXPECT_EQ((std::vector<int>{7}), trip_days({g, c, d, e, f}));
-  EXPECT_EQ((std::vector<int>{7}), trip_days({h, i, e, f}));
+  EXPECT_EQ((day_vec_t{6}), trip_days({a, b, c, d, e, f}));
+  EXPECT_EQ((day_vec_t{7}), trip_days({g, c, d, e, f}));
+  EXPECT_EQ((day_vec_t{7}), trip_days({h, i, e, f}));
 }
 
 TEST_F(service_rules_day_shift_test_3, motis_trips) {

@@ -171,7 +171,7 @@ inline void print_graph(schedule const& sched) {
   auto const print_edge = [&](edge const* e, size_t const indent) {
     indent_line(indent);
     std::cerr << e->type_str() << ": " << station_name(e->from_) << " -> "
-              << station_name(e->to_) << std::endl;
+              << station_name(e->to_) << "[" << e->to_->id_ << "]\n";
     if (e->is_route_edge()) {
       for (auto const& lcon : e->m_.route_edge_.conns_) {
         indent_line(indent + 1);
@@ -206,7 +206,8 @@ inline void print_graph(schedule const& sched) {
 
   auto const print_node = [&](node const* n, size_t const indent) {
     indent_line(indent);
-    std::cerr << n->type_str() << " " << station_name(n) << ":" << std::endl;
+    std::cerr << "id=" << n->id_ << ", " << n->type_str() << " at "
+              << station_name(n) << ":" << std::endl;
 
     indent_line(indent + 1);
     std::cerr << n->edges_.size() << " outgoing edges:" << std::endl;

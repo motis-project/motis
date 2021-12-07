@@ -204,7 +204,8 @@ void graph_builder::index_first_route_node(route const& r) {
 
 std::optional<mcd::hash_map<mcd::vector<time>, local_and_motis_traffic_days>>
 graph_builder::service_times_to_utc(bitfield const& traffic_days,
-                                    Service const* s) const {
+                                    Service const* s,
+                                    bool const skip_invalid) const {
   auto const day_offset =
       s->times()->Get(s->times()->size() - 2) / MINUTES_A_DAY;
   auto const start_idx =
@@ -212,6 +213,9 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
   auto const end_idx = std::min(MAX_DAYS, last_day_);
 
   if (!has_traffic_within_timespan(traffic_days, start_idx, end_idx)) {
+    std::cerr << "NO TRAFFIC IN TIMESPAN: ";
+    print(std::cerr, traffic_days);
+    std::cerr << ", start=" << start_idx << ", end=" << end_idx << "\n ";
     return std::nullopt;
   }
 
@@ -219,14 +223,14 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
       mcd::hash_map<mcd::vector<time>, local_and_motis_traffic_days>{};
   auto utc_service_times = mcd::vector<time>{};
   utc_service_times.resize(s->times()->size() - 2);
-  for (auto day_idx = start_idx; day_idx < end_idx; ++day_idx) {
+  for (auto day_idx = start_idx; day_idx <= end_idx; ++day_idx) {
     if (!traffic_days.test(day_idx)) {
       continue;
     }
     auto initial_motis_day = day_idx_t{0};
-    auto initial_local_day = day_idx_t{0};
     auto initial_day_shift = day_idx_t{0};
     auto fix_offset = 0U;
+    auto invalid = false;
     std::cerr << s->sections()->Get(0)->train_nr() << " at day " << day_idx
               << "\n";
     for (auto i = 1; i < s->times()->size() - 1; ++i) {
@@ -254,7 +258,6 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
       if (i == 1) {
         initial_day_shift = shift;
         initial_motis_day = adj_day_idx;
-        initial_local_day = day_idx;
       }
 
       auto const abs_utc = time{adj_day_idx, static_cast<int16_t>(pre_utc)};
@@ -264,14 +267,19 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
       auto const impossible_time =
           is_season && abs_utc < station.timez_->season_.begin_;
       if (!sort_ok || impossible_time) {
-        logging::l(logging::warn,
-                   "service {}:{} invalid local time sequence: stop_idx={}, "
-                   "sort_ok={}, impossible_time={}, retrying with offset={}",
-                   s->debug()->file()->c_str(), s->debug()->line_from(), i / 2,
-                   sort_ok, impossible_time, fix_offset + 60);
-        fix_offset += 60;
-        --i;
-        continue;
+        if (skip_invalid) {
+          invalid = true;
+          break;
+        } else {
+          logging::l(logging::warn,
+                     "service {}:{} invalid local time sequence: stop_idx={}, "
+                     "sort_ok={}, impossible_time={}, retrying with offset={}",
+                     s->debug()->file()->c_str(), s->debug()->line_from(),
+                     i / 2, sort_ok, impossible_time, fix_offset + 60);
+          fix_offset += 60;
+          --i;
+          continue;
+        }
       }
 
       std::cerr << "  " << time{day_offset, local_time} << " " << rel_utc
@@ -279,10 +287,11 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
       utc_service_times[i - 1] = rel_utc;
     }
 
-    auto& traffic = utc_times[utc_service_times];
+    auto& traffic =
+        utc_times[invalid ? mcd::vector<motis::time>{} : utc_service_times];
     traffic.shift_ = initial_day_shift;
     traffic.motis_traffic_days_.set(initial_motis_day);
-    traffic.local_traffic_days_.set(initial_local_day);
+    traffic.local_traffic_days_.set(day_idx);
   }
   return utc_times;
 }
@@ -290,7 +299,7 @@ graph_builder::service_times_to_utc(bitfield const& traffic_days,
 bool graph_builder::has_traffic_within_timespan(bitfield const& traffic_days,
                                                 day_idx_t const start_idx,
                                                 day_idx_t const end_idx) const {
-  for (auto day_idx = start_idx; day_idx < end_idx; ++day_idx) {
+  for (auto day_idx = start_idx; day_idx <= end_idx; ++day_idx) {
     if (traffic_days.test(day_idx)) {
       return true;
     }
@@ -309,6 +318,9 @@ void graph_builder::add_route_services(
         service_times_to_utc(traffic_days, s);
 
     if (!rel_utc_times_and_traffic_days.has_value()) {
+      std::cerr << "NO TRAFFIC DAYS: ";
+      print(std::cerr, traffic_days);
+      std::cerr << "\n";
       continue;  // No service within timespan.
     }
 
@@ -486,7 +498,10 @@ connection_info* graph_builder::get_or_create_connection_info(
     std::vector<participant> const& services) {
   connection_info* prev_con_info = nullptr;
 
-  for (auto service : services) {
+  auto reversed = services;
+  std::reverse(begin(reversed), end(reversed));
+
+  for (auto const& service : reversed) {
     if (service.service() == nullptr) {
       return prev_con_info;
     }
