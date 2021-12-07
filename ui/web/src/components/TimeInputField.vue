@@ -9,6 +9,7 @@
     @inputChanged="setTime"
     @decreaseClick="changeTime(-1)"
     @increaseClick="changeTime(1)"
+    :showAutocomplete="false"
   />
 </template>
 

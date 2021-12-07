@@ -9,10 +9,10 @@
         <input
           class="gb-input"
           tabindex="1"
-          @input="$emit('inputChanged', $event.target.value), onInput($event.target.value)"
-          :value="initInputText"
-          @focus="$emit('focus', $event)"
-          @blur="$emit('blur', $event)"
+          @input="$emit('inputChanged', $event.target.value), onInput()"
+          v-model="inputValue"
+          @focus="$emit('focus', $event), onInput()"
+          @blur="$emit('blur', $event), showStationAddress = false"
         />
         <div class="gb-input-widget" v-if="showArrows">
           <div class="day-buttons" >
@@ -31,7 +31,7 @@
 
       </div>
     </div>
-    <StationAddressAutocomplete :input="autocompleteInput" v-show="showStationAddress"> </StationAddressAutocomplete>
+    <StationAddressAutocomplete :input="autocompleteInput" v-show="showStationAddress" v-if="showAutocomplete" @elementClicked="onElementClicked"> </StationAddressAutocomplete>
   </div>
 </template>
 
@@ -45,6 +45,8 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import StationAddressAutocomplete from "./StationAddressAutocomplete.vue";
+import StationGuess from "../models/StationGuess";
+import AddressGuess from "../models/AddressGuess";
 
 export default defineComponent({
   components: { StationAddressAutocomplete },
@@ -52,7 +54,8 @@ export default defineComponent({
   data() {
     return {
       showStationAddress: false,
-      autocompleteInput: "" 
+      autocompleteInput: "",
+      inputValue: ""
     }
   },
   props: {
@@ -61,18 +64,26 @@ export default defineComponent({
     showLabel: Boolean,
     initInputText: String,
     showArrows: Boolean,
+    showAutocomplete: Boolean,
+  },
+  created() {
+    this.inputValue = this.initInputText ? this.initInputText : '';
   },
   methods: {
-    onInput(input: string){
-      this.autocompleteInput = input
-      if(input.length > 2){
+    onInput(){
+      if(this.inputValue.length > 2){
         this.showStationAddress = true
+        this.autocompleteInput = this.inputValue
       }
       else{
         this.showStationAddress = false
       }
-
     },
+    onElementClicked(element: AddressGuess | StationGuess) {
+      this.inputValue = element.name;
+      this.autocompleteInput = element.name;
+      this.showStationAddress = false;
+    }
   },
 });
 </script>

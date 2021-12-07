@@ -2,7 +2,7 @@
   <div id="search">
     <div class="pure-g-gutters">
       <div class="pure-u-1 pure-u-sm-12-24 from-location">
-        <InputField labelName="Start" iconType="place" :showLabel="true" :initInputText="start" @inputChanged="setStartInput" />
+        <InputField labelName="Start" iconType="place" :showLabel="true" :initInputText="start" @inputChanged="setStartInput" :showAutocomplete="true" />
 
         <div class="mode-picker-btn" @click="optinsButton1Click">
           <div :class="['mode', firstOptions.foot ? 'enabled' : '']"><i class="icon">directions_walk</i></div>
@@ -28,6 +28,7 @@
           :showLabel="true"
           :initInputText="destination"
           @inputChanged="setDestInput"
+          :showAutocomplete="true"
         />
         <div class="mode-picker-btn" @click="optinsButton2Click">
           <div :class="['mode', secondOptions.foot ? 'enabled' : '']"><i class="icon">directions_walk</i></div>

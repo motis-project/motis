@@ -8,6 +8,7 @@
             labelName="Zugnummer"
             iconType="train"
             :showLabel="true"
+            :showAutocomplete="false"
           ></InputField>
         </div>
         <div class="pure-g gutters">

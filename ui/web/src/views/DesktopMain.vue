@@ -2,7 +2,7 @@
   <div class="app">
     <LeftMenu @searchHidden="searchFieldHidden = !searchFieldHidden"></LeftMenu>
     <div id="station-search" :class="['', searchFieldHidden ? 'overlay-hidden' : '']">
-      <InputField labelName="Stationsearch" iconType="place" :showLabel="false"/>
+      <InputField labelName="Stationsearch" iconType="place" :showLabel="false" :showAutocomplete="true"/>
       <div class="paper hide">
         <ul class="proposals"></ul>
       </div>
@@ -26,7 +26,6 @@ export default defineComponent({
       searchFieldHidden: false,
     };
   },
-
 });
 </script>
 

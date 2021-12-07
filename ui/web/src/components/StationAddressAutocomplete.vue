@@ -2,23 +2,25 @@
   <div class="paper">
     <ul class="proposals">
       <li
-        @mouseover="onMouseOver"
-        :class="['', isMouseOver ? 'selected' : '']"
+        @mouseenter="g.isMouseOver = true"
+        @mouseleave="g.isMouseOver = false"
+        :class="['', g.isMouseOver ? 'selected' : '']"
         v-for="g in stationGuesses"
-        :key="g.id"
-        :title="g.name"
-        @click="$emit('elementClicked', g)"
+        :key="g.stationGuess.id"
+        :title="g.stationGuess.name"
+        @mousedown="$emit('elementClicked', g.stationGuess)"
       >
         <i class="icon">train</i>
-        <span class="station"> {{ g.name }} </span>
+        <span class="station"> {{ g.stationGuess.name }} </span>
       </li>
       <li
-        @mouseover="onMouseOver"
-        :class="['', isMouseOver ? 'selected' : '']"
+        @mouseenter="g.isMouseOver = true"
+        @mouseleave="g.isMouseOver = false"
+        :class="['', g.isMouseOver ? 'selected' : '']"
         v-for="g in addressGuesses"
         :key="g.addressGuess.id"
         :title="g.addressGuess.name"
-        @click="$emit('elementClicked', g)"
+        @mousedown="$emit('elementClicked', g.addressGuess)"
       >
         <i class="icon">place</i>
         <span class="address-name">{{ g.addressGuess.name }}</span>
@@ -40,7 +42,7 @@ export default defineComponent({
   data() {
     return {
       isMouseOver: false,
-      stationGuesses: [] as StationGuess[],
+      stationGuesses: [] as Station[],
       addressGuesses: [] as Address[],
     };
   },
@@ -73,7 +75,12 @@ export default defineComponent({
   },
   watch: {
     input(newInput) {
-      this.$postService.getStationGuessResponse(newInput, 6).then((data) => (this.stationGuesses = data.guesses));
+      this.$postService.getStationGuessResponse(newInput, 6).then((data) => (this.stationGuesses = data.guesses.map<Station>((g) => {
+        return{
+          stationGuess: g,
+          isMouseOver: false,
+        }
+      })));
       this.$postService.getAddressGuessResponse(newInput).then(
         (data) =>
           (this.addressGuesses = data.guesses.map<Address>((g) => {
@@ -90,6 +97,10 @@ export default defineComponent({
 interface Address {
   addressGuess: AddressGuess;
   region: string;
+  isMouseOver: boolean;
+}
+interface Station {
+  stationGuess: StationGuess;
   isMouseOver: boolean;
 }
 </script>

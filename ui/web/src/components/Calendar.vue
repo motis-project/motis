@@ -13,6 +13,7 @@
       @increaseClick="stopInterval(1)"
       @decreaseMouseDown="mouseDown(-1)"
       @increaseMouseDown="mouseDown(1)"
+      :showAutocomplete="false"
     ></InputField>
     <div class="paper calendar" v-show="calendarVisible" @mousedown="calendarClickedHandler">
       <div class="month">
