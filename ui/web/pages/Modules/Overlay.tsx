@@ -3,6 +3,7 @@ import React from 'react';
 import Maybe, { nothing } from 'true-myth/maybe';
 
 import { Search } from './Search';
+import { SubOverlay } from './SubOverlay';
 
 //interface Model {
     //routing : Routing.Model,
@@ -37,18 +38,20 @@ export const Overlay: React.FC = (props) => {
             <div className='overlay'>
                 <div id='overlay-content'>
                     <Search />
-                    {/*<Connections />*/}
+                    <div id="connections">
+                        <div className="no-results">
+                            <div className="schedule-range">Auskunft von 19.10.2020 bis 21.10.2020 möglich</div>
+                        </div>
+                    </div>
                 </div>
-                <div className="sub-overlay">
-                    {/*<SubOverlay />*/}
-                </div>
+                <SubOverlay />
             </div>
             <div className='overlay-tabs'>
                 <div className='overlay-toggle'>{/**onClick */ }
-                    {/*<img className='icon'>arrow_drop_down</img>*/}
+                    <i className='icon'>arrow_drop_down</i>
                 </div>
                 <div className='trip-search-toggle'>{/**enabled, onClick*/}
-                    {/*<img className='icon'>train</img>*/}
+                    <i className='icon'>train</i>
                 </div>
             </div>
         </div>

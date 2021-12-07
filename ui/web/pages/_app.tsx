@@ -4,8 +4,12 @@ import '../style/app.css';
 import '../style/button.css';
 import '../style/calendar.css';
 import '../style/global.css';
+import '../style/grids-gutters.css';
+import '../style/grids-min.css';
+import '../style/grids-responsive-min.css';
 import '../style/input.css';
-import '../style/search-form.css';
+import '../style/mapbox-gl.css'
+//import '../style/search-form.css';
 import '../style/spinner.css';
 import '../style/taglist.css';
 import '../style/time.css';

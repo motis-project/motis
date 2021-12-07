@@ -566,7 +566,7 @@
 }
 
 .swap-locations-btn .icon {
-  font-size: 22px;
+  font-size: 22px !important;
   transition: all 0.2s ease;
 }
 

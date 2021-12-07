@@ -8,7 +8,7 @@ export default function Index() {
         <Head>
             <title>MOTIS</title>
         </Head>
-        <div className="app-container">
+        <div id="app-container">
             <Main />
         </div>   
     </>)
