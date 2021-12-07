@@ -116,8 +116,6 @@ public:
 };
 
 TEST_F(service_rules_day_shift_test_2, expanded_trips) {
-  print_graph(*sched_);
-
   auto const* a = get_station(*sched_, "0000001");
   auto const* b = get_station(*sched_, "0000002");
   auto const* c = get_station(*sched_, "0000003");
