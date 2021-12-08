@@ -3,7 +3,7 @@ import React from 'react';
 import Maybe, { nothing } from 'true-myth/maybe';
 
 import { Overlay } from '../Modules/Overlay';
-import { StationSearch, stationSearch } from '../Modules/StationSearch';
+import { StationSearch } from '../Modules/StationSearch';
 
 let visible = false;
 

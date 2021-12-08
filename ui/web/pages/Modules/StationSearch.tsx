@@ -3,7 +3,7 @@ import React from "react";
 export const StationSearch: React.FC = (props) => {
 
     return(
-        <div id="sation-search" className="">
+        <div id="station-search" className="">
             <div>
                 <div>
                     <div className="label"></div>
