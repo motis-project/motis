@@ -8,6 +8,7 @@
 #include "motis/core/common/interval_map.h"
 #include "motis/core/common/unixtime.h"
 #include "motis/core/access/station_access.h"
+#include "motis/core/access/track_access.h"
 
 #include "motis/revise/get_interchanges.h"
 
@@ -47,22 +48,11 @@ int get_walk_time(journey const& j, std::string const& station_id,
   }
 }
 
-std::optional<uint16_t> get_track(schedule const& sched,
-                                  std::string const& track_name) {
-  auto const it =
-      std::find_if(begin(sched.tracks_), end(sched.tracks_),
-                   [&track_name](auto const& t) { return t == track_name; });
-  return it == end(sched.tracks_)
-             ? std::nullopt
-             : std::make_optional(static_cast<uint16_t>(
-                   std::distance(begin(sched.tracks_), it)));
-}
-
 bool is_same_platform(schedule const& sched, station const* st,
                       std::string const& track1_name,
                       std::string const& track2_name) {
-  auto const track1 = get_track(sched, track1_name);
-  auto const track2 = get_track(sched, track2_name);
+  auto const track1 = get_track_index(sched, track1_name);
+  auto const track2 = get_track_index(sched, track2_name);
   if (track1.has_value() && track2.has_value()) {
     auto const platform1 = st->get_platform(track1.value());
     auto const platform2 = st->get_platform(track2.value());
