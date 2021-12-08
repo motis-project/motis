@@ -81,6 +81,7 @@ struct device_memory {
   route_id route_count_{invalid<route_id>};
   size_t max_add_starts_{invalid<size_t>};
   arrival_id arrival_times_count_{invalid<arrival_id>};
+  trait_id trait_size_{invalid<trait_id>};
   size_t additional_start_count_{0};
 
   device_result result_{};
@@ -88,6 +89,7 @@ struct device_memory {
   uint32_t* route_marks_{nullptr};
   uint32_t* station_marks_{nullptr};
   bool* any_station_marked_{nullptr};
+  bool* overall_station_marked_{nullptr};
   time* footpaths_scratchpad_{nullptr};
   time* earliest_arrivals_{nullptr};
   additional_start* additional_starts_{nullptr};

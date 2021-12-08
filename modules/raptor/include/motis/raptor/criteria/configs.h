@@ -36,7 +36,7 @@ inline raptor_criteria_config get_criteria_config_from_search_type(
   }
 }
 
-inline uint32_t get_trait_size_for_criteria_config(
+inline trait_id get_trait_size_for_criteria_config(
     raptor_criteria_config const rc) {
   switch (rc) {
     case raptor_criteria_config::Default:

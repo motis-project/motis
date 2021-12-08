@@ -113,8 +113,8 @@ device_memory::device_memory(stop_id const stop_count,
     : stop_count_{stop_count},
       route_count_{route_count},
       max_add_starts_{max_add_starts},
-      arrival_times_count_{
-          stop_count * get_trait_size_for_criteria_config(criteria_config)} {
+      trait_size_{get_trait_size_for_criteria_config(criteria_config)}{
+  arrival_times_count_ = stop_count * trait_size_;
   cudaMalloc(&(result_.front()), get_result_bytes());
   for (auto k = 1U; k < result_.size(); ++k) {
     result_[k] = result_[k - 1] + arrival_times_count_;
@@ -124,7 +124,8 @@ device_memory::device_memory(stop_id const stop_count,
   cudaMalloc(&earliest_arrivals_, get_scratchpad_bytes());
   cudaMalloc(&station_marks_, get_station_mark_bytes());
   cudaMalloc(&route_marks_, get_route_mark_bytes());
-  cudaMalloc(&any_station_marked_, sizeof(bool));
+  cudaMalloc(&any_station_marked_, sizeof(bool) * trait_size_);
+  cudaMalloc(&overall_station_marked_, sizeof(bool));
   cudaMalloc(&additional_starts_, get_additional_starts_bytes());
   cuda_check();
 
@@ -138,6 +139,7 @@ void device_memory::destroy() {
   cudaFree(station_marks_);
   cudaFree(route_marks_);
   cudaFree(any_station_marked_);
+  cudaFree(overall_station_marked_);
   cudaFree(additional_starts_);
 }
 
@@ -146,11 +148,11 @@ size_t device_memory::get_result_bytes() const {
 }
 
 size_t device_memory::get_station_mark_bytes() const {
-  return ((stop_count_ / 32) + 1) * 4;
+  return ((arrival_times_count_ / 32) + 1) * 4;
 }
 
 size_t device_memory::get_route_mark_bytes() const {
-  return ((route_count_ / 32) + 1) * 4;
+  return (((route_count_ * trait_size_) / 32) + 1) * 4;
 }
 
 size_t device_memory::get_scratchpad_bytes() const {
@@ -167,7 +169,8 @@ void device_memory::reset_async(cudaStream_t s) {
   cudaMemsetAsync(earliest_arrivals_, 0xFF, get_scratchpad_bytes(), s);
   cudaMemsetAsync(station_marks_, 0, get_station_mark_bytes(), s);
   cudaMemsetAsync(route_marks_, 0, get_route_mark_bytes(), s);
-  cudaMemsetAsync(any_station_marked_, 0, sizeof(bool), s);
+  cudaMemsetAsync(any_station_marked_, 0, sizeof(bool) * trait_size_, s);
+  cudaMemsetAsync(overall_station_marked_, 0, sizeof(bool), s);
   cudaMemsetAsync(additional_starts_, 0xFF, get_additional_starts_bytes(), s);
   additional_start_count_ = invalid<decltype(additional_start_count_)>;
 }

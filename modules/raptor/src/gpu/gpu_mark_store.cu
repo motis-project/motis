@@ -44,4 +44,28 @@ __device__ void convert_station_to_route_marks(uint32_t* station_marks,
   }
 }
 
+__device__ void mc_convert_station_to_route_marks(
+    uint32_t* station_marks, uint32_t* route_marks, bool* any_station_marked,
+    bool* overall_station_marked,
+    device_gpu_timetable const& tt, trait_id const trait_size) {
+  auto const global_t_id = get_global_thread_id();
+  auto const global_stride = get_global_stride();
+  auto const max_idx = tt.stop_count_ * trait_size;
+  for (auto idx = global_t_id; idx < max_idx; idx += global_stride) {
+    if (marked(station_marks, idx)) {
+      auto const t_offset = idx % trait_size;
+      auto const s_id = idx / trait_size;
+
+      any_station_marked[t_offset] = true;
+      *(overall_station_marked) = true;
+
+      auto const stop = tt.stops_[s_id];
+      for (auto sri = stop.index_to_stop_routes_;
+           sri < stop.index_to_stop_routes_ + stop.route_count_; ++sri) {
+        mark(route_marks, tt.stop_routes_[sri] * trait_size + t_offset);
+      }
+    }
+  }
+}
+
 }  // namespace motis::raptor

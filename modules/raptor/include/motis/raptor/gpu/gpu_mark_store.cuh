@@ -14,4 +14,9 @@ __device__ void convert_station_to_route_marks(uint32_t* station_marks,
                                                uint32_t* route_marks,
                                                bool* any_station_marked,
                                                device_gpu_timetable const& tt);
-}
+
+__device__ void mc_convert_station_to_route_marks(
+    uint32_t* station_marks, uint32_t* route_marks, bool* any_station_marked,
+    bool* overall_station_marked, device_gpu_timetable const& tt,
+    trait_id const trait_size);
+}  // namespace motis::raptor

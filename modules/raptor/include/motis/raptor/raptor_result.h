@@ -14,9 +14,9 @@ namespace motis::raptor {
 
 struct raptor_result_base {
   raptor_result_base(stop_id const stop_count,
-                              raptor_criteria_config const criteria_config)
-      : arrival_times_count_{stop_count * get_trait_size_for_criteria_config(
-                                              criteria_config)},
+                     raptor_criteria_config const criteria_config)
+      : arrival_times_count_{static_cast<arrival_id>(
+            stop_count * get_trait_size_for_criteria_config(criteria_config))},
         criteria_config_{criteria_config} {}
 
   raptor_result_base() = delete;
@@ -55,7 +55,7 @@ struct raptor_result_base {
 
 struct raptor_result : raptor_result_base {
   raptor_result(stop_id const stop_count,
-                         raptor_criteria_config const criteria_config)
+                raptor_criteria_config const criteria_config)
       : raptor_result_base{stop_count, criteria_config} {
     result_ = new time[this->byte_size()];
     this->reset();
@@ -74,7 +74,7 @@ using device_result = std::array<time*, max_raptor_round>;
 
 struct raptor_result_pinned : public raptor_result_base {
   raptor_result_pinned(stop_id stop_count,
-                                raptor_criteria_config const criteria_config)
+                       raptor_criteria_config const criteria_config)
       : raptor_result_base{stop_count, criteria_config} {
     cudaMallocHost(&result_, this->byte_size());
     this->reset();

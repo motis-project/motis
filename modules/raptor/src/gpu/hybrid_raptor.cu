@@ -52,8 +52,8 @@ void invoke_hybrid_raptor(d_query const& dq) {
     cuda_sync_stream(proc_stream);
 
     cudaMemcpyAsync(dq.mem_->active_host_->any_station_marked_,
-                    dq.mem_->active_device_->any_station_marked_, sizeof(bool),
-                    cudaMemcpyDeviceToHost, transfer_stream);
+                    dq.mem_->active_device_->overall_station_marked_,
+                    sizeof(bool), cudaMemcpyDeviceToHost, transfer_stream);
     cuda_sync_stream(transfer_stream);
 
     if (!*dq.mem_->active_host_->any_station_marked_) {
