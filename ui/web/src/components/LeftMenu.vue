@@ -15,7 +15,7 @@
       <div class="overlay-toggle">
         <i class="icon" v-on:click="(isOverlayHidden = !isOverlayHidden), $emit('searchHidden')">arrow_drop_down</i>
       </div>
-      <div :class="['trip-search-toggle', isSubOverlayHidden ? '' : 'enabled']">
+      <div :class="['trip-search-toggle', isTrainSubOverlayOpened ? 'enabled' : '']">
         <i class="icon" @click="openCloseTrainSearch">train</i>
       </div>
     </div>
@@ -24,6 +24,8 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
+import { SubOverlayNames } from "../router/index";
+import { RouteLocationNormalized } from "vue-router";
 
 export default defineComponent({
   name: "LeftMenu",
@@ -33,17 +35,34 @@ export default defineComponent({
       isSubOverlayHidden: true,
     };
   },
+  computed: {
+    isTrainSubOverlayOpened: function (): boolean {
+      return this.$route.name === "TrainSearch";
+    },
+  },
   methods: {
     openCloseTrainSearch() {
-      this.isSubOverlayHidden = !this.isSubOverlayHidden
-      if(!this.isSubOverlayHidden) {
+      if (this.isSubOverlayHidden) {
         this.$router.push("/trips");
-      }
+      } 
       else {
         this.$router.push("/");
       }
-    }
-  }
+    },
+  },
+  watch: {
+    $route(to: RouteLocationNormalized, from: RouteLocationNormalized) {
+      if (!to.name) {
+        return;
+      }
+      if (SubOverlayNames.includes(to.name.toString())) {
+        this.isSubOverlayHidden = false;
+      } 
+      else {
+        this.isSubOverlayHidden = true;
+      }
+    },
+  },
 });
 </script>
 

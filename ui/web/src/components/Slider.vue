@@ -24,7 +24,6 @@ export default defineComponent({
         return this.sliderValue.toString();
       },
       set: function(value: string) {
-        console.log(value);
         let n = +value;
         if(value != '' && !isNaN(n)) {
           this.sliderValue = n - 1;
