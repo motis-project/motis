@@ -2,17 +2,17 @@
   <div>
     <div>
       <div v-if="showLabel" class="label">{{ labelName }}</div>
-      <div class="gb-input-group">
+      <div :class="['gb-input-group', isFocused ? 'gb-input-group-selected' : '']">
         <div class="gb-input-icon">
           <i class="icon">{{ iconType }}</i>
         </div>
         <input
           class="gb-input"
           tabindex="1"
-          @input="$emit('inputChanged', $event.target.value), onInput()"
+          @input="onInput()"
           v-model="inputValue"
-          @focus="$emit('focus', $event), onInput()"
-          @blur="$emit('blur', $event), showStationAddress = false"
+          @focus="$emit('focus', $event), onInput(), isFocused = true"
+          @blur="$emit('blur', $event), showStationAddress = false, isFocused = false"
         />
         <div class="gb-input-widget" v-if="showArrows">
           <div class="day-buttons" >
@@ -31,7 +31,7 @@
 
       </div>
     </div>
-    <StationAddressAutocomplete :input="autocompleteInput" v-show="showStationAddress" v-if="showAutocomplete" @elementClicked="onElementClicked"> </StationAddressAutocomplete>
+    <StationAddressAutocomplete :input="inputValue" v-show="showStationAddress" v-if="showAutocomplete" @elementClicked="onElementClicked"> </StationAddressAutocomplete>
   </div>
 </template>
 
@@ -54,8 +54,8 @@ export default defineComponent({
   data() {
     return {
       showStationAddress: false,
-      autocompleteInput: "",
-      inputValue: ""
+      inputValue: "",
+      isFocused: false
     }
   },
   props: {
@@ -66,6 +66,14 @@ export default defineComponent({
     showArrows: Boolean,
     showAutocomplete: Boolean,
   },
+  watch: {
+    initInputText(newValue: string) {
+        this.inputValue = newValue
+    },
+    inputValue(newValue: string) {
+      this.$emit('inputChanged', newValue)
+    }
+  },
   created() {
     this.inputValue = this.initInputText ? this.initInputText : '';
   },
@@ -73,7 +81,6 @@ export default defineComponent({
     onInput(){
       if(this.inputValue.length > 2){
         this.showStationAddress = true
-        this.autocompleteInput = this.inputValue
       }
       else{
         this.showStationAddress = false
@@ -81,7 +88,6 @@ export default defineComponent({
     },
     onElementClicked(element: AddressGuess | StationGuess) {
       this.inputValue = element.name;
-      this.autocompleteInput = element.name;
       this.showStationAddress = false;
     }
   },

@@ -74,7 +74,7 @@ export default defineComponent({
     input: String,
   },
   watch: {
-    input(newInput) {
+    input(newInput: string) {
       this.$postService.getStationGuessResponse(newInput, 6).then((data) => (this.stationGuesses = data.guesses.map<Station>((g) => {
         return{
           stationGuess: g,
