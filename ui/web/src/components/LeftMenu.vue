@@ -8,7 +8,7 @@
         <div id="sub-overlay-content">
           <router-view name="subOverlay"></router-view>
         </div>
-        <div class="sub-overlay-close" @click="openCloseTrainSearch"><i class="icon">close</i></div>
+        <div class="sub-overlay-close" @click="$router.push('/')"><i class="icon">close</i></div>
       </div>
     </div>
     <div class="overlay-tabs">
@@ -42,7 +42,7 @@ export default defineComponent({
   },
   methods: {
     openCloseTrainSearch() {
-      if (this.isSubOverlayHidden) {
+      if (!this.isTrainSubOverlayOpened) {
         this.$router.push("/trips");
       } 
       else {
