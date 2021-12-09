@@ -7,12 +7,14 @@
 #include "boost/asio/strand.hpp"
 #include "boost/filesystem/path.hpp"
 
+#include "ctx/access_scheduler.h"
+
 #include "conf/configuration.h"
 
+#include "motis/module/ctx_data.h"
 #include "motis/module/import_dispatcher.h"
 #include "motis/module/message.h"
 #include "motis/module/registry.h"
-#include "motis/module/shared_data.h"
 #include "motis/module/subc_reg.h"
 
 namespace motis {
@@ -39,7 +41,7 @@ struct module : public conf::configuration {
 
   std::string data_path(boost::filesystem::path const&);
   void set_data_directory(std::string const&);
-  void set_shared_data(shared_data*);
+  void set_shared_data(ctx::access_scheduler<ctx_data>*);
 
   virtual void import(import_dispatcher&) {}
   virtual void init(registry&) {}
@@ -72,8 +74,8 @@ protected:
   boost::filesystem::path const& get_data_directory() const;
 
 private:
+  ctx::access_scheduler<ctx_data>* shared_data_;
   boost::filesystem::path data_directory_;
-  shared_data* shared_data_{nullptr};
 };
 
 }  // namespace module

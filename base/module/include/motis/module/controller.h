@@ -30,7 +30,7 @@ struct controller : public dispatcher, public registry {
       std::exception_ptr eptr;
 
       enqueue(
-          ctx_data{this, &shared_data_},
+          ctx_data{this},
           [&]() {
             try {
               result = f();
@@ -61,7 +61,7 @@ struct controller : public dispatcher, public registry {
       std::exception_ptr eptr;
 
       enqueue(
-          ctx_data{this, &shared_data_},
+          ctx_data{this},
           [&]() {
             try {
               f();

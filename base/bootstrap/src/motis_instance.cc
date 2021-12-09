@@ -27,7 +27,7 @@ namespace motis::bootstrap {
 
 motis_instance::motis_instance() : controller{build_modules()} {
   for (auto& m : modules_) {
-    m->set_shared_data(&shared_data_);
+    m->set_shared_data(this);
   }
 }
 
@@ -55,8 +55,7 @@ std::vector<std::string> motis_instance::module_names() const {
 }
 
 schedule const& motis_instance::sched() const {
-  return *shared_data_.get<schedule_data>(to_res_id(global_res_id::SCHEDULE))
-              .schedule_;
+  return *get<schedule_data>(to_res_id(global_res_id::SCHEDULE)).schedule_;
 }
 
 void motis_instance::import(module_settings const& module_opt,
@@ -88,7 +87,7 @@ void motis_instance::import(module_settings const& module_opt,
 
   registry_.reset();
 
-  utl::verify(shared_data_.includes(to_res_id(global_res_id::SCHEDULE)),
+  utl::verify(includes(to_res_id(global_res_id::SCHEDULE)),
               "schedule not loaded");
 
   if (import_opt.require_successful_) {
@@ -159,7 +158,7 @@ msg_ptr motis_instance::call(std::string const& target, unsigned num_threads) {
 
 msg_ptr motis_instance::call(msg_ptr const& msg, unsigned num_threads) {
   if (direct_mode_dispatcher_ != nullptr) {
-    ctx_data data{dispatcher::direct_mode_dispatcher_, nullptr};
+    ctx_data data{dispatcher::direct_mode_dispatcher_};
     return static_cast<dispatcher*>(this)->req(msg, data, ctx::op_id{})->val();
   } else {
     std::exception_ptr e;
@@ -191,7 +190,7 @@ void motis_instance::publish(std::string const& target, unsigned num_threads) {
 
 void motis_instance::publish(msg_ptr const& msg, unsigned num_threads) {
   if (direct_mode_dispatcher_ != nullptr) {
-    ctx_data data{dispatcher::direct_mode_dispatcher_, nullptr};
+    ctx_data data{dispatcher::direct_mode_dispatcher_};
     static_cast<dispatcher*>(this)->publish(msg, data, ctx::op_id{});
   } else {
     std::exception_ptr e;
