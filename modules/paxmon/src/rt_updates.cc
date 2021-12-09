@@ -15,6 +15,7 @@
 #include "motis/paxmon/monitoring_event.h"
 #include "motis/paxmon/print_stats.h"
 #include "motis/paxmon/reachability.h"
+#include "motis/paxmon/track_update.h"
 #include "motis/paxmon/update_load.h"
 
 using namespace motis::rt;
@@ -123,6 +124,8 @@ void handle_rt_update(universe& uv, capacity_maps const& caps,
       }
       case Content_RtTrackUpdate: {
         ++tick_stats.rt_track_updates_;
+        auto const tu = reinterpret_cast<RtTrackUpdate const*>(u->content());
+        update_track(sched, uv, tu, updated_interchange_edges, system_stats);
         break;
       }
       case Content_RtFreeTextUpdate: {
