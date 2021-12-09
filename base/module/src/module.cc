@@ -15,7 +15,9 @@ schedule const& module::get_sched() const {
 
 void module::set_data_directory(std::string const& d) { data_directory_ = d; }
 
-void module::set_shared_data(shared_data* d) { shared_data_ = d; }
+void module::set_shared_data(ctx::access_scheduler<ctx_data>* d) {
+  shared_data_ = d;
+}
 
 std::string module::data_path(fs::path const& p) {
   return p.parent_path() == data_directory_

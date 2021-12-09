@@ -13,7 +13,7 @@
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
-  commit=1415d709e1c2162377a23e857ef10b084189f2a1
+  commit=109e81bee85acb15bf8800e04689650c6d30e8ff
 [date]
   url=git@github.com:motis-project/date.git
   branch=master
