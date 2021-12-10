@@ -803,6 +803,9 @@ void invoke_mc_gpu_raptor(d_query const& dq) {
   fetch_arrivals_async(dq, dq.mem_->context_.transfer_stream_);
   cuda_check();
 
+  fetch_statistics_async(dq, dq.mem_->context_.transfer_stream_);
+  cuda_check();
+
   cuda_sync_stream(dq.mem_->context_.transfer_stream_);
   cuda_check();
 }

@@ -138,7 +138,9 @@ inline std::vector<journey> search_dispatch<implementation_type::GPU, d_query>(
     case raptor_criteria_config::Default:
       return raptor_gen<Default>(
           q, stats, sched, meta_info, tt,
-          [&](d_query& q) { return invoke_gpu_raptor(q); });
+          [&](d_query& q) {
+            return invoke_gpu_raptor(q);;
+          });
 
       RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(CASE_CRITERIA_CONFIG_TO_GPU_INVOKE,
                                          raptor_criteria_config)

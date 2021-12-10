@@ -7,6 +7,7 @@
 #include "motis/raptor/additional_start.h"
 #include "motis/raptor/criteria/configs.h"
 #include "motis/raptor/raptor_result.h"
+#include "motis/raptor/raptor_statistics.h"
 
 namespace motis::raptor {
 
@@ -53,6 +54,7 @@ struct host_memory {
   void reset() const;
 
   std::unique_ptr<raptor_result_pinned> result_{};
+  raptor_statistics* stats_{nullptr};
   bool* any_station_marked_{nullptr};
 };
 
@@ -93,6 +95,7 @@ struct device_memory {
   time* footpaths_scratchpad_{nullptr};
   time* earliest_arrivals_{nullptr};
   additional_start* additional_starts_{nullptr};
+  raptor_statistics* stats_{nullptr};
 };
 
 struct mem {

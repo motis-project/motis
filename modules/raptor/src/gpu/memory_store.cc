@@ -92,11 +92,14 @@ host_memory::host_memory(stop_id const stop_count,
           std::make_unique<raptor_result_pinned>(stop_count, criteria_config)} {
 
   cudaMallocHost(&any_station_marked_, sizeof(bool));
+  cudaMallocHost(&stats_, sizeof(raptor_statistics));
   *any_station_marked_ = false;
 }
 
 void host_memory::destroy() {
   cudaFreeHost(any_station_marked_);
+  cudaFreeHost(stats_);
+  stats_ = nullptr;
   any_station_marked_ = nullptr;
   result_ = nullptr;
 }
@@ -127,6 +130,7 @@ device_memory::device_memory(stop_id const stop_count,
   cudaMalloc(&any_station_marked_, sizeof(bool) * trait_size_);
   cudaMalloc(&overall_station_marked_, sizeof(bool));
   cudaMalloc(&additional_starts_, get_additional_starts_bytes());
+  cudaMalloc(&stats_, sizeof(raptor_statistics));
   cuda_check();
 
   this->reset_async(nullptr);
@@ -141,6 +145,7 @@ void device_memory::destroy() {
   cudaFree(any_station_marked_);
   cudaFree(overall_station_marked_);
   cudaFree(additional_starts_);
+  cudaFree(stats_);
 }
 
 size_t device_memory::get_result_bytes() const {
@@ -172,6 +177,7 @@ void device_memory::reset_async(cudaStream_t s) {
   cudaMemsetAsync(any_station_marked_, 0, sizeof(bool) * trait_size_, s);
   cudaMemsetAsync(overall_station_marked_, 0, sizeof(bool), s);
   cudaMemsetAsync(additional_starts_, 0xFF, get_additional_starts_bytes(), s);
+  cudaMemsetAsync(stats_, 0, sizeof(raptor_statistics), s);
   additional_start_count_ = invalid<decltype(additional_start_count_)>;
 }
 

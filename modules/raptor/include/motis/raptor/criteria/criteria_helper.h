@@ -34,7 +34,8 @@ namespace motis::raptor {
 #define CASE_CRITERIA_CONFIG_TO_GPU_INVOKE(VAL, ACCESSOR)                    \
   case ACCESSOR::VAL:                                                        \
     return raptor_gen<VAL>(q, stats, sched, meta_info, tt, [&](d_query& q) { \
-      return invoke_mc_gpu_raptor<VAL>(q);                                   \
+      invoke_mc_gpu_raptor<VAL>(q);                                          \
+      stats = *q.mem_->active_host_->stats_;                                 \
     });
 
 #if defined(MOTIS_CUDA)

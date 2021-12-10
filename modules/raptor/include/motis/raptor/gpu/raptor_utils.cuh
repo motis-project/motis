@@ -34,6 +34,14 @@ void inline launch_kernel(Kernel kernel, void** args,
   cuda_check();
 }
 
+inline void fetch_statistics_async(d_query const& dq, cudaStream_t s) {
+  cudaMemcpyAsync(dq.mem_->active_host_->stats_,
+                  dq.mem_->active_device_->stats_,
+                  sizeof(raptor_statistics),
+                  cudaMemcpyDeviceToHost, s);
+  cuda_check();
+}
+
 inline void fetch_arrivals_async(d_query const& dq, cudaStream_t s) {
   cudaMemcpyAsync(dq.mem_->active_host_->result_->data(),
                   dq.mem_->active_device_->result_.front(),
