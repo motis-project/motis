@@ -15,7 +15,10 @@ function UniverseControl(): JSX.Element {
 
   const forkMutation = useMutation(
     (baseUniverse: number) =>
-      sendPaxMonForkUniverseRequest({ universe: baseUniverse }),
+      sendPaxMonForkUniverseRequest({
+        universe: baseUniverse,
+        fork_schedule: true,
+      }),
     {
       onSuccess: (data) => {
         setUniverses([...new Set([...universes, data.universe])]);

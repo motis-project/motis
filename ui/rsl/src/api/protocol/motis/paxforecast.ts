@@ -38,9 +38,26 @@ export interface TripRecommendationMeasure {
 }
 
 // paxforecast/Measures.fbs
-export type Measure = TripLoadInfoMeasure | TripRecommendationMeasure;
+export type RtUpdateContentType = "RIBasis";
 
-export type MeasureType = "TripLoadInfoMeasure" | "TripRecommendationMeasure";
+// paxforecast/Measures.fbs
+export interface RtUpdateMeasure {
+  recipients: MeasureRecipients;
+  time: number;
+  type: RtUpdateContentType;
+  content: string;
+}
+
+// paxforecast/Measures.fbs
+export type Measure =
+  | TripLoadInfoMeasure
+  | TripRecommendationMeasure
+  | RtUpdateMeasure;
+
+export type MeasureType =
+  | "TripLoadInfoMeasure"
+  | "TripRecommendationMeasure"
+  | "RtUpdateMeasure";
 
 // paxforecast/Measures.fbs
 export interface MeasureWrapper {

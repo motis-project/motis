@@ -113,6 +113,7 @@ export interface PaxMonFindTripsResponse {
 // paxmon/PaxMonForkUniverseRequest.fbs
 export interface PaxMonForkUniverseRequest {
   universe: number;
+  fork_schedule: boolean;
 }
 
 // paxmon/PaxMonForkUniverseResponse.fbs
