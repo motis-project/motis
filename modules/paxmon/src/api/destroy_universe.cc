@@ -3,7 +3,6 @@
 #include "motis/module/context/motis_publish.h"
 
 #include "motis/paxmon/error.h"
-#include "motis/paxmon/get_universe.h"
 
 using namespace motis::module;
 using namespace motis::paxmon;
@@ -12,8 +11,7 @@ namespace motis::paxmon::api {
 
 msg_ptr destroy_universe(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonDestroyUniverseRequest, msg);
-  auto& uv = get_universe(data, req->universe());
-  if (data.multiverse_.destroy(uv.id_)) {
+  if (data.multiverse_.destroy(req->universe())) {
     message_creator mc;
     mc.create_and_finish(
         MsgContent_PaxMonUniverseDestroyed,

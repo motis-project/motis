@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "ctx/res_id_t.h"
+
 #include "utl/enumerate.h"
 
 #include "motis/data.h"
@@ -153,6 +155,7 @@ struct universe {
   passenger_group const* get_passenger_group(passenger_group_index id) const;
 
   universe_id id_{};
+  ctx::res_id_t schedule_res_id_{};
   fws_graph<event_node, edge> graph_;
   trip_data_container trip_data_;
   passenger_group_container passenger_groups_;

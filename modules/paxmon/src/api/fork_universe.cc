@@ -12,7 +12,7 @@ using namespace motis::logging;
 
 namespace motis::paxmon::api {
 
-msg_ptr fork_universe(paxmon_data& data, msg_ptr const& msg) {
+msg_ptr fork_universe(paxmon& mod, paxmon_data& data, msg_ptr const& msg) {
   auto const broadcast = [&](universe const& base, universe const& fork) {
     message_creator mc;
     mc.create_and_finish(
@@ -23,10 +23,11 @@ msg_ptr fork_universe(paxmon_data& data, msg_ptr const& msg) {
     motis_publish(msg);
   };
 
-  auto const fork = [&](universe const& base) -> msg_ptr {
+  auto const fork = [&](universe const& base_uv, schedule const& base_sched,
+                        bool const fork_schedule) -> msg_ptr {
     scoped_timer timer{"paxmon: fork universe"};
-    auto new_uv = data.multiverse_.fork(base.id_);
-    broadcast(base, *new_uv);
+    auto* new_uv = data.multiverse_.fork(base_uv, base_sched, fork_schedule);
+    broadcast(base_uv, *new_uv);
     message_creator mc;
     mc.create_and_finish(
         MsgContent_PaxMonForkUniverseResponse,
@@ -37,9 +38,9 @@ msg_ptr fork_universe(paxmon_data& data, msg_ptr const& msg) {
   switch (msg->get()->content_type()) {
     case MsgContent_PaxMonForkUniverseRequest: {
       auto const req = motis_content(PaxMonForkUniverseRequest, msg);
-      return fork(get_universe(data, req->universe()));
+      auto const uv_access = get_universe_and_schedule(data, req->universe());
+      return fork(uv_access.uv_, uv_access.sched_, req->fork_schedule());
     }
-    case MsgContent_MotisNoMessage: return fork(get_primary_universe(data));
     default:
       throw std::system_error{motis::module::error::unexpected_message_type};
   }

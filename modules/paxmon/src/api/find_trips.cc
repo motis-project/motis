@@ -12,10 +12,11 @@ using namespace motis::paxmon;
 
 namespace motis::paxmon::api {
 
-msg_ptr find_trips(schedule const& sched, paxmon_data& data,
-                   msg_ptr const& msg) {
+msg_ptr find_trips(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFindTripsRequest, msg);
-  auto& uv = get_universe(data, req->universe());
+  auto const uv_access = get_universe_and_schedule(data, req->universe());
+  auto const& sched = uv_access.sched_;
+  auto& uv = uv_access.uv_;
 
   message_creator mc;
   std::vector<flatbuffers::Offset<PaxMonTripInfo>> trips;

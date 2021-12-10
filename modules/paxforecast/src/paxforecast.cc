@@ -30,6 +30,7 @@
 #include "motis/paxmon/capacity_maps.h"
 #include "motis/paxmon/compact_journey_util.h"
 #include "motis/paxmon/debug.h"
+#include "motis/paxmon/get_universe.h"
 #include "motis/paxmon/messages.h"
 #include "motis/paxmon/monitoring_event.h"
 #include "motis/paxmon/paxmon_data.h"
@@ -99,29 +100,37 @@ void paxforecast::init(motis::module::registry& reg) {
     routing_cache_.open(routing_cache_filename_);
   }
 
-  reg.subscribe("/paxmon/monitoring_update", [&](msg_ptr const& msg) {
-    on_monitoring_event(msg);
-    return nullptr;
-  });
+  reg.subscribe("/paxmon/monitoring_update",
+                [&](msg_ptr const& msg) {
+                  on_monitoring_event(msg);
+                  return nullptr;
+                },
+                {});
 
-  reg.subscribe("/paxmon/universe_forked", [&](msg_ptr const& msg) {
-    auto const ev = motis_content(PaxMonUniverseForked, msg);
-    LOG(info) << "paxforecast: /paxmon/universe_forked: new="
-              << ev->new_universe() << ", base=" << ev->base_universe();
-    measures_storage_->universe_created(ev->new_universe());
-    return nullptr;
-  });
+  reg.subscribe("/paxmon/universe_forked",
+                [&](msg_ptr const& msg) {
+                  auto const ev = motis_content(PaxMonUniverseForked, msg);
+                  LOG(info)
+                      << "paxforecast: /paxmon/universe_forked: new="
+                      << ev->new_universe() << ", base=" << ev->base_universe();
+                  measures_storage_->universe_created(ev->new_universe());
+                  return nullptr;
+                },
+                {});
 
-  reg.subscribe("/paxmon/universe_destroyed", [&](msg_ptr const& msg) {
-    auto const ev = motis_content(PaxMonUniverseDestroyed, msg);
-    LOG(info) << "paxforecast: /paxmon/universe_destroyed: " << ev->universe();
-    measures_storage_->universe_destroyed(ev->universe());
-    return nullptr;
-  });
+  reg.subscribe("/paxmon/universe_destroyed",
+                [&](msg_ptr const& msg) {
+                  auto const ev = motis_content(PaxMonUniverseDestroyed, msg);
+                  LOG(info) << "paxforecast: /paxmon/universe_destroyed: "
+                            << ev->universe();
+                  measures_storage_->universe_destroyed(ev->universe());
+                  return nullptr;
+                },
+                {});
 
   reg.register_op(
       "/paxforecast/apply_measures",
-      [&](msg_ptr const& msg) -> msg_ptr { return apply_measures(msg); });
+      [&](msg_ptr const& msg) -> msg_ptr { return apply_measures(msg); }, {});
 }
 
 auto const constexpr REMOVE_GROUPS_BATCH_SIZE = 10'000;
@@ -269,14 +278,16 @@ bool has_better_alternative(std::vector<alternative> const& alts,
 }
 
 void paxforecast::on_monitoring_event(msg_ptr const& msg) {
-  tick_statistics tick_stats;
   MOTIS_START_TIMING(total);
-  auto const& sched = get_sched();
-  tick_stats.system_time_ = sched.system_time_;
   auto& data =
       *get_shared_data<paxmon_data*>(to_res_id(global_res_id::PAX_DATA));
-  auto& uv = data.multiverse_.primary();
+  auto const uv_access = get_universe_and_schedule(data);
+  auto const& sched = uv_access.sched_;
+  auto& uv = uv_access.uv_;
   auto& caps = data.capacity_maps_;
+
+  tick_statistics tick_stats;
+  tick_stats.system_time_ = sched.system_time_;
 
   auto const mon_update = motis_content(PaxMonUpdate, msg);
 
@@ -553,11 +564,12 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
   scoped_timer all_timer{"apply_measures"};
   auto const req = motis_content(PaxForecastApplyMeasuresRequest, msg);
-  auto const& sched = get_sched();
   auto& data =
       *get_shared_data<paxmon_data*>(to_res_id(global_res_id::PAX_DATA));
-  LOG(info) << "universe: " << req->universe();
-  auto uv = data.multiverse_.get(req->universe());
+  auto const uv_access =
+      get_universe_and_schedule(data, req->universe(), ctx::access_t::WRITE);
+  auto const& sched = uv_access.sched_;
+  auto& uv = uv_access.uv_;
   auto& caps = data.capacity_maps_;
 
   // update measures
@@ -585,7 +597,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
     auto const loc_time = t + req->preparation_time();
     manual_timer get_affected_groups_timer{"get_affected_grous"};
     auto const affected_groups =
-        measures::get_affected_groups(sched, *uv, loc_time, ms);
+        measures::get_affected_groups(sched, uv, loc_time, ms);
     get_affected_groups_timer.stop_and_print();
 
     LOG(info) << "affected groups: " << affected_groups.measures_.size();
@@ -638,7 +650,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
       for (auto& [grp_key, cpg] : combined) {
         for (auto const& alt : cpg.alternatives_) {
           for (auto const& leg : alt.compact_journey_.legs_) {
-            get_or_add_trip(sched, caps, *uv, leg.trip_idx_);
+            get_or_add_trip(sched, caps, uv, leg.trip_idx_);
           }
         }
       }
@@ -647,12 +659,12 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
     manual_timer sim_timer{"passenger behavior simulation"};
     auto pb = behavior::default_behavior{deterministic_mode_};
     auto const sim_result =
-        simulate_behavior(sched, caps, *uv, combined, pb.pb_);
+        simulate_behavior(sched, caps, uv, combined, pb.pb_);
     sim_timer.stop_and_print();
 
     manual_timer update_groups_timer{"update groups"};
     tick_statistics tick_stats;
-    update_tracked_groups(sched, *uv, sim_result, {}, tick_stats);
+    update_tracked_groups(sched, uv, sim_result, {}, tick_stats);
     update_groups_timer.stop_and_print();
   }
 

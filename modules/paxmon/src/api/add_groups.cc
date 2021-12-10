@@ -17,11 +17,13 @@ using namespace motis::logging;
 
 namespace motis::paxmon::api {
 
-msg_ptr add_groups(schedule const& sched, paxmon_data& data,
-                   rt_update_context& rt_update_ctx, bool const allow_reuse,
-                   msg_ptr const& msg) {
+msg_ptr add_groups(paxmon_data& data, rt_update_context& rt_update_ctx,
+                   bool const allow_reuse, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonAddGroupsRequest, msg);
-  auto& uv = get_universe(data, req->universe());
+  auto const uv_access =
+      get_universe_and_schedule(data, req->universe(), ctx::access_t::WRITE);
+  auto const& sched = uv_access.sched_;
+  auto& uv = uv_access.uv_;
 
   auto reused_groups = 0ULL;
   auto const added_groups =

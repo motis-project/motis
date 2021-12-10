@@ -62,7 +62,7 @@ using namespace motis::rt;
 
 namespace motis::paxmon {
 
-paxmon::paxmon() : module("Passenger Monitoring", "paxmon") {
+paxmon::paxmon() : module("Passenger Monitoring", "paxmon"), data_{*this} {
   param(generated_capacity_file_, "generated_capacity_file",
         "output for generated capacities");
   param(stats_file_, "stats", "statistics file");
@@ -114,6 +114,9 @@ void paxmon::reg_subc(motis::module::subc_reg& r) {
 }
 
 void paxmon::import(motis::module::import_dispatcher& reg) {
+  add_shared_data(to_res_id(global_res_id::PAX_DATA), &data_);
+  data_.multiverse_.create_default_universe();
+
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "paxmon", reg,
       [this](event_collector::dependencies_map_t const& dependencies,
@@ -156,34 +159,48 @@ void paxmon::import(motis::module::import_dispatcher& reg) {
 void paxmon::init(motis::module::registry& reg) {
   stats_writer_ = std::make_unique<stats_writer>(stats_file_);
 
-  add_shared_data(to_res_id(global_res_id::PAX_DATA), &data_);
-
-  reg.subscribe("/init", [&]() {
-    if (data_.capacity_maps_.trip_capacity_map_.empty() &&
-        data_.capacity_maps_.category_capacity_map_.empty()) {
-      LOG(warn) << "no capacity information available";
-    }
-    LOG(info) << "tracking " << primary_universe().passenger_groups_.size()
-              << " passenger groups";
-  });
+  reg.subscribe(
+      "/init",
+      [&]() {
+        if (data_.capacity_maps_.trip_capacity_map_.empty() &&
+            data_.capacity_maps_.category_capacity_map_.empty()) {
+          LOG(warn) << "no capacity information available";
+        }
+        LOG(info) << "tracking " << primary_universe().passenger_groups_.size()
+                  << " passenger groups";
+      },
+      {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
+                           ctx::access_t::READ},
+       ctx::access_request{to_res_id(global_res_id::PAX_DEFAULT_UNIVERSE),
+                           ctx::access_t::READ}});
 
   reg.register_op("/paxmon/flush", [&](msg_ptr const&) -> msg_ptr {
     stats_writer_->flush();
     return {};
   });
 
-  reg.subscribe("/rt/update",
-                [&](msg_ptr const& msg) { return rt_update(msg); });
+  reg.subscribe(
+      "/rt/update", [&](msg_ptr const& msg) { return rt_update(msg); },
+      {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
+                           ctx::access_t::READ},
+       ctx::access_request{to_res_id(global_res_id::PAX_DEFAULT_UNIVERSE),
+                           ctx::access_t::WRITE}});
 
-  reg.subscribe("/rt/graph_updated", [&](msg_ptr const&) {
-    scoped_timer t{"paxmon: graph_updated"};
-    rt_updates_applied();
-    if (!initial_forward_done_) {
-      initial_forward_done_ = true;
-      motis_call(make_no_msg("/paxmon/init_forward"))->val();
-    }
-    return nullptr;
-  });
+  reg.subscribe(
+      "/rt/graph_updated",
+      [&](msg_ptr const&) {
+        scoped_timer t{"paxmon: graph_updated"};
+        rt_updates_applied();
+        if (!initial_forward_done_) {
+          initial_forward_done_ = true;
+          motis_call(make_no_msg("/paxmon/init_forward"))->val();
+        }
+        return nullptr;
+      },
+      {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
+                           ctx::access_t::READ},
+       ctx::access_request{to_res_id(global_res_id::PAX_DEFAULT_UNIVERSE),
+                           ctx::access_t::WRITE}});
 
   auto const forward = [](std::time_t time) {
     using namespace motis::ris;
@@ -199,33 +216,34 @@ void paxmon::init(motis::module::registry& reg) {
   // --init /paxmon/eval
   // --paxmon.start_time YYYY-MM-DDTHH:mm
   // --paxmon.end_time YYYY-MM-DDTHH:mm
-  reg.register_op("/paxmon/eval",
-                  [&](msg_ptr const&) -> msg_ptr {
-                    LOG(info) << "paxmon: start time: "
-                              << format_unix_time(start_time_.unix_time_)
-                              << ", end time: "
-                              << format_unix_time(end_time_.unix_time_);
+  reg.register_op(
+      "/paxmon/eval",
+      [&](msg_ptr const&) -> msg_ptr {
+        LOG(info) << "paxmon: start time: "
+                  << format_unix_time(start_time_.unix_time_)
+                  << ", end time: " << format_unix_time(end_time_.unix_time_);
 
-                    for (auto t = start_time_.unix_time_;
-                         t <= end_time_.unix_time_; t += time_step_) {
-                      forward(t);
-                    }
+        for (auto t = start_time_.unix_time_; t <= end_time_.unix_time_;
+             t += time_step_) {
+          forward(t);
+        }
 
-                    motis_call(make_no_msg("/paxmon/flush"))->val();
+        motis_call(make_no_msg("/paxmon/flush"))->val();
 
-                    LOG(info) << "paxmon: eval done";
+        LOG(info) << "paxmon: eval done";
 
-                    return {};
-                  },
-                  {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
-                                       ctx::access_t::READ},
-                   ctx::access_request{to_res_id(global_res_id::PAX_DATA),
-                                       ctx::access_t::WRITE}});
+        return {};
+      },
+      {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
+                           ctx::access_t::READ},
+       ctx::access_request{to_res_id(global_res_id::PAX_DEFAULT_UNIVERSE),
+                           ctx::access_t::WRITE}});
 
   // --init /paxmon/generate_capacities
   // --paxmon.generated_capacity_file file.csv
   reg.register_op(
-      "/paxmon/generate_capacities", [&](msg_ptr const&) -> msg_ptr {
+      "/paxmon/generate_capacities",
+      [&](msg_ptr const&) -> msg_ptr {
         if (generated_capacity_file_.empty()) {
           LOG(logging::error)
               << "generate_capacities: no output file specified";
@@ -234,7 +252,11 @@ void paxmon::init(motis::module::registry& reg) {
         generate_capacities(get_sched(), data_.capacity_maps_,
                             primary_universe(), generated_capacity_file_);
         return {};
-      });
+      },
+      {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
+                           ctx::access_t::READ},
+       ctx::access_request{to_res_id(global_res_id::PAX_DEFAULT_UNIVERSE),
+                           ctx::access_t::READ}});
 
   reg.register_op(
       "/paxmon/init_forward",
@@ -255,60 +277,81 @@ void paxmon::init(motis::module::registry& reg) {
       },
       {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
                            ctx::access_t::WRITE},
-       ctx::access_request{to_res_id(global_res_id::PAX_DATA),
+       ctx::access_request{to_res_id(global_res_id::PAX_DEFAULT_UNIVERSE),
                            ctx::access_t::WRITE}});
 
-  reg.register_op("/paxmon/add_groups", [&](msg_ptr const& msg) -> msg_ptr {
-    return api::add_groups(get_sched(), data_, rt_update_ctx_, reuse_groups_,
-                           msg);
-  });
+  reg.register_op("/paxmon/add_groups",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::add_groups(data_, rt_update_ctx_, reuse_groups_,
+                                           msg);
+                  },
+                  {});
 
-  reg.register_op("/paxmon/remove_groups", [&](msg_ptr const& msg) -> msg_ptr {
-    return api::remove_groups(get_sched(), data_, rt_update_ctx_,
-                              keep_group_history_, check_graph_integrity_, msg);
-  });
+  reg.register_op("/paxmon/remove_groups",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::remove_groups(data_, rt_update_ctx_,
+                                              keep_group_history_,
+                                              check_graph_integrity_, msg);
+                  },
+                  {});
 
-  reg.register_op("/paxmon/trip_load_info", [&](msg_ptr const& msg) -> msg_ptr {
-    return api::get_trip_load_info(get_sched(), data_, msg);
-  });
+  reg.register_op("/paxmon/trip_load_info",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::get_trip_load_info(data_, msg);
+                  },
+                  {});
 
-  reg.register_op("/paxmon/groups_in_trip", [&](msg_ptr const& msg) -> msg_ptr {
-    return api::get_groups_in_trip(get_sched(), data_, msg);
-  });
+  reg.register_op("/paxmon/groups_in_trip",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::get_groups_in_trip(data_, msg);
+                  },
+                  {});
 
-  reg.register_op("/paxmon/find_trips", [&](msg_ptr const& msg) -> msg_ptr {
-    return api::find_trips(get_sched(), data_, msg);
-  });
+  reg.register_op("/paxmon/find_trips",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::find_trips(data_, msg);
+                  },
+                  {});
 
   reg.register_op("/paxmon/status", [&](msg_ptr const& /*msg*/) -> msg_ptr {
     return api::get_status(get_sched(), last_tick_stats_);
   });
 
-  reg.register_op("/paxmon/get_groups", [&](msg_ptr const& msg) -> msg_ptr {
-    return api::get_groups(get_sched(), data_, msg);
-  });
+  reg.register_op("/paxmon/get_groups",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::get_groups(data_, msg);
+                  },
+                  {});
 
-  reg.register_op("/paxmon/filter_groups", [&](msg_ptr const& msg) -> msg_ptr {
-    return api::filter_groups(get_sched(), data_, msg);
-  });
+  reg.register_op("/paxmon/filter_groups",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::filter_groups(data_, msg);
+                  },
+                  {});
 
-  reg.register_op("/paxmon/filter_trips", [&](msg_ptr const& msg) -> msg_ptr {
-    return api::filter_trips(get_sched(), data_, msg);
-  });
+  reg.register_op("/paxmon/filter_trips",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::filter_trips(data_, msg);
+                  },
+                  {});
 
   reg.register_op("/paxmon/get_interchanges",
                   [&](msg_ptr const& msg) -> msg_ptr {
-                    return api::get_interchanges(get_sched(), data_, msg);
-                  });
+                    return api::get_interchanges(data_, msg);
+                  },
+                  {});
 
-  reg.register_op("/paxmon/fork_universe", [&](msg_ptr const& msg) -> msg_ptr {
-    return api::fork_universe(data_, msg);
-  });
+  reg.register_op("/paxmon/fork_universe",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::fork_universe(*this, data_, msg);
+                  },
+                  {});
 
   reg.register_op("/paxmon/destroy_universe",
                   [&](msg_ptr const& msg) -> msg_ptr {
                     return api::destroy_universe(data_, msg);
-                  });
+                  },
+                  {});
 
   if (!mcfp_scenario_dir_.empty()) {
     if (fs::exists(mcfp_scenario_dir_)) {
@@ -589,14 +632,9 @@ void paxmon::rt_updates_applied() {
   }
 }
 
-universe& paxmon::primary_universe() { return data_.multiverse_.primary(); }
-
-universe& paxmon::get_universe(universe_id const id) {
-  if (auto uv = data_.multiverse_.try_get(id); uv) {
-    return *uv.value();
-  } else {
-    throw std::system_error{error::universe_not_found};
-  }
+universe& paxmon::primary_universe() {
+  return *get_shared_data<std::unique_ptr<universe>>(motis::module::to_res_id(
+      motis::module::global_res_id::PAX_DEFAULT_UNIVERSE));
 }
 
 }  // namespace motis::paxmon

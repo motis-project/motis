@@ -43,7 +43,6 @@ private:
   void rt_updates_applied();
 
   universe& primary_universe();
-  universe& get_universe(universe_id id);
 
   std::vector<std::string> journey_files_;
   std::vector<std::string> capacity_files_;

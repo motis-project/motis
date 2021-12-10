@@ -15,10 +15,11 @@ using namespace motis::paxmon;
 
 namespace motis::paxmon::api {
 
-msg_ptr filter_trips(schedule const& sched, paxmon_data& data,
-                     msg_ptr const& msg) {
+msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFilterTripsRequest, msg);
-  auto& uv = get_universe(data, req->universe());
+  auto const uv_access = get_universe_and_schedule(data, req->universe());
+  auto const& sched = uv_access.sched_;
+  auto& uv = uv_access.uv_;
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
   utl::verify(current_time != INVALID_TIME, "invalid current system time");

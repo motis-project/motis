@@ -20,11 +20,12 @@ using namespace motis::paxmon;
 
 namespace motis::paxmon::api {
 
-motis::module::msg_ptr get_groups_in_trip(schedule const& sched,
-                                          paxmon_data& data,
+motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
                                           motis::module::msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGetGroupsInTripRequest, msg);
-  auto& uv = get_universe(data, req->universe());
+  auto const uv_access = get_universe_and_schedule(data, req->universe());
+  auto const& sched = uv_access.sched_;
+  auto& uv = uv_access.uv_;
   auto const trp = from_fbs(sched, req->trip());
   auto const grp_filter = req->filter();
   auto const grp_by_station = req->group_by_station();

@@ -17,13 +17,15 @@ using namespace motis::logging;
 
 namespace motis::paxmon::api {
 
-msg_ptr remove_groups(schedule const& sched, paxmon_data& data,
-                      rt_update_context& rt_update_ctx,
+msg_ptr remove_groups(paxmon_data& data, rt_update_context& rt_update_ctx,
                       bool const keep_group_history,
                       bool const check_graph_integrity_end,
                       msg_ptr const& msg) {
   auto const req = motis_content(PaxMonRemoveGroupsRequest, msg);
-  auto& uv = get_universe(data, req->universe());
+  auto const uv_access =
+      get_universe_and_schedule(data, req->universe(), ctx::access_t::WRITE);
+  auto const& sched = uv_access.sched_;
+  auto& uv = uv_access.uv_;
   auto removed_groups = 0ULL;
 
   for (auto const id : *req->ids()) {
