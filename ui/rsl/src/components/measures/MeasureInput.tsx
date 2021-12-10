@@ -138,6 +138,8 @@ function MeasureInput(): JSX.Element {
             interchange_station: tripRecInterchange.id,
           },
         };
+      case "RtUpdateMeasure":
+        throw new Error("Maßnahmentyp noch nicht unterstützt");
     }
   };
 
@@ -204,6 +206,8 @@ function MeasureInput(): JSX.Element {
             </div>
           </>
         );
+      case "RtUpdateMeasure":
+        throw new Error("Maßnahmentyp noch nicht unterstützt");
     }
   };
 
