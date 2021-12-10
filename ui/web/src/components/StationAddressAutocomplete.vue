@@ -33,7 +33,7 @@
 </template>
 
 <script lang="ts">
-import AddressGuess from "@/models/AddressGuess";
+import AddressGuess from "../models/AddressGuess";
 import { defineComponent } from "vue";
 import StationGuess from "../models/StationGuess";
 
@@ -74,7 +74,7 @@ export default defineComponent({
     input: String,
   },
   watch: {
-    input(newInput: string) {
+    input(newInput) {
       this.$postService.getStationGuessResponse(newInput, 6).then((data) => (this.stationGuesses = data.guesses.map<Station>((g) => {
         return{
           stationGuess: g,

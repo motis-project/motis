@@ -89,7 +89,8 @@ export default defineComponent({
     onElementClicked(element: AddressGuess | StationGuess) {
       this.inputValue = element.name;
       this.showStationAddress = false;
-    }
+      this.$emit('autocompleteElementClicked', element);
+    },
   },
 });
 </script>

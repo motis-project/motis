@@ -116,7 +116,7 @@ export default defineComponent({
       type: Object as PropType<Trip>,
       required: true,
     },
-    intitContent: {
+    initContent: {
       type: Object as PropType<TripResponseContent>,
       required: false
     }
@@ -186,8 +186,8 @@ export default defineComponent({
     },
   },
   created() {
-    if(this.intitContent) {
-      this.content = this.intitContent
+    if(this.initContent) {
+      this.content = this.initContent
     }
     this.$postService.getTripResponce(this.trip).then((data) => {
       if (data.trips.length > 0 && data.trips[0].id.station_id === this.trip.station_id) {

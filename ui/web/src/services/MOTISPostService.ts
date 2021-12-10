@@ -1,9 +1,11 @@
 import axios from 'axios'
 import { App } from 'vue'
-import { StationGuessResponseContent } from '../models/StationGuess';
+import StationGuess, { StationGuessResponseContent } from '../models/StationGuess';
 import { AddressGuessResponseContent } from '../models/AddressGuess';
 import Trip from '../models/Trip';
 import TripResponseContent from '../models/TripResponseContent';
+import { RailVizStationResponseContent } from '../models/DepartureTimetable';
+import { stringifyQuery } from 'vue-router';
 
 
 var service: MOTISPostService = {
@@ -44,6 +46,23 @@ var service: MOTISPostService = {
       content: trip
     };
     return (await axios.post<TripResponce>("https://europe.motis-project.de/", rq)).data.content;
+  },
+  async getDeparturesResponse(station: string, by_schedule_time: Boolean, direction: string, event_count: number, time: number) {
+    let rq = {
+      destination: {
+        type: "Module",
+        target: "/railviz/get_station"
+      },
+      content_type: "RailVizStationRequest",
+      content: {
+        by_schedule_time: by_schedule_time,
+        direction: direction,
+        event_count: event_count,
+        station_id: station,
+        time: time
+      },
+    };
+  return (await axios.post<RailVizStationResponse>("https://europe.motis-project.de/", rq)).data.content;
   }
 }
 
@@ -63,7 +82,7 @@ interface AddressGuessResponse {
   },
   content_type: string,
   content: AddressGuessResponseContent,
-  id: 1
+  id: number
 }
 
 interface TripResponce {
@@ -76,11 +95,22 @@ interface TripResponce {
   id: number
 }
 
+interface RailVizStationResponse {
+  destination: {
+    type: string,
+    target: string
+  },
+  content_type: string,
+  content: RailVizStationResponseContent,
+  id: number
+}
+
 
 interface MOTISPostService {
   getStationGuessResponse(input: string, gc: number): Promise<StationGuessResponseContent>
   getAddressGuessResponse(input: string): Promise<AddressGuessResponseContent>
   getTripResponce(input: Trip) : Promise<TripResponseContent>
+  getDeparturesResponse(station: string, by_schedule_time: Boolean, direction: string, event_count: number, time: number) : Promise<RailVizStationResponseContent>
 }
 
 

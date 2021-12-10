@@ -2,9 +2,9 @@ import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router'
 import ConnectionSearch from "../views/ConnectionSearch.vue"
 import TrainSearch from "../views/TrainSearch.vue"
 import Trip from '../views/Trip.vue'
+import StationTimetable from "../views/StationTimetable.vue"
 import {Router, RouteLocationNormalizedLoaded} from "vue-router"
-
-export const SubOverlayNames = ["TrainSearch", "Trip"]
+export const SubOverlayNames = ["TrainSearch", "StationTimetable", "Trip"]
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -20,6 +20,22 @@ const routes: Array<RouteRecordRaw> = [
     components: {
       overlay: ConnectionSearch,
       subOverlay: TrainSearch
+    }
+  },
+  {
+    path: '/station/:id/:name',
+    name: "StationTimetable",
+    components: {
+      overlay: ConnectionSearch,
+      subOverlay: StationTimetable
+    },
+    props: {
+      subOverlay: route => ({
+        stationGuess: {
+          id: route.params.id,
+          name: route.params.name,
+        }
+      }) 
     }
   },
   {
@@ -40,7 +56,7 @@ const routes: Array<RouteRecordRaw> = [
           line_id: route.params.line_id
         }
       })
-    }
+    }, 
   }
 ]
 
