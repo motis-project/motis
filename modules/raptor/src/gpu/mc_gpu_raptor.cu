@@ -642,11 +642,11 @@ __device__ void mc_update_routes_dev(time const* const prev_arrivals,
   auto const trait_size = CriteriaConfig::trait_size();
   auto const max_idx = tt.route_count_ * trait_size;
   for (auto idx = start_idx; idx < max_idx; idx += stride) {
-    auto const r_id = idx / trait_size;
-    if (!marked(route_marks, r_id)) {
+    if (!marked(route_marks, idx)) {
       continue;
     }
 
+    auto const r_id = idx / trait_size;
     auto const route = tt.routes_[r_id];
     auto const t_offset = idx % trait_size;
 
@@ -662,6 +662,9 @@ __device__ void mc_update_routes_dev(time const* const prev_arrivals,
   }
 
   this_grid().sync();
+
+  auto const store_size = (max_idx / 32) + 1;
+  reset_store(route_marks, store_size);
 }
 
 template <typename CriteriaConfig>
@@ -693,8 +696,8 @@ __device__ void mc_init_arrivals_dev(base_query const& query,
   auto const t_id = get_global_thread_id();
 
   auto const trait_size = CriteriaConfig::trait_size();
-  if (t_id < trait_size) {
-    auto const arr_idx = CriteriaConfig::get_arrival_idx(query.source_, t_id);
+  if (t_id == 0) {
+    auto const arr_idx = CriteriaConfig::get_arrival_idx(query.source_, 0);
     device_mem.result_[0][arr_idx] = query.source_time_begin_;
     mark(device_mem.station_marks_, arr_idx);
   }
@@ -713,7 +716,7 @@ __device__ void mc_init_arrivals_dev(base_query const& query,
                                   add_start_time);
 
     if (updated) {
-      mark(device_mem.station_marks_, add_start_idx);
+      mark(device_mem.station_marks_, add_start_arr_idx);
     }
   }
 }
@@ -744,6 +747,14 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
         trait_size);
     this_grid().sync();
 
+//    if(t_id == 0 && round_k == 2) {
+//      printf("\nRoute Marks:\n");
+//      print_store(device_mem.route_marks_, tt.route_count_ * trait_size,
+//                  trait_size);
+//    }
+//
+//    this_grid().sync();
+
     auto const station_store_size = ((tt.stop_count_ * trait_size) / 32) + 1;
     reset_store(device_mem.station_marks_, station_store_size);
     this_grid().sync();
@@ -765,6 +776,14 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
                                             tt);
 
     this_grid().sync();
+
+//    if(t_id == 0 && round_k == 1) {
+//      printf("Station Marks:\n");
+//      print_store(device_mem.station_marks_, tt.stop_count_ * trait_size,
+//                  trait_size);
+//    }
+//
+//    this_grid().sync();
   }
 }
 

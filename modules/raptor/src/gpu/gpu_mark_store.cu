@@ -68,4 +68,29 @@ __device__ void mc_convert_station_to_route_marks(
   }
 }
 
+__device__ void print_store(uint32_t* store, unsigned const size,
+                            trait_id const trait_size) {
+  if (get_global_thread_id() == 0) {
+    for (auto idx = 0; idx < size; idx += trait_size) {
+            auto const s_id = idx / trait_size;
+
+//      if (marked(store, idx))
+//        printf("id: %i\n", idx);
+
+            bool wrote_s_id = false;
+            for (auto t_offset = 0; t_offset < trait_size; ++t_offset) {
+              if (marked(store, idx + t_offset)) {
+                if (!wrote_s_id) {
+                  wrote_s_id = true;
+                  printf("id: %i;\t", s_id);
+                }
+                printf("%i;\t", t_offset);
+              }
+              if (wrote_s_id) printf("\n");
+            }
+      //    }
+    }
+  }
+}
+
 }  // namespace motis::raptor
