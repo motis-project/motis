@@ -14,6 +14,7 @@
 #include "motis/core/common/logging.h"
 
 #include "motis/module/error.h"
+#include "motis/module/global_res_ids.h"
 
 namespace motis::module {
 
@@ -21,7 +22,10 @@ dispatcher* dispatcher::direct_mode_dispatcher_ = nullptr;  // NOLINT
 
 dispatcher::dispatcher(registry& reg,
                        std::vector<std::unique_ptr<module>>&& modules)
-    : registry_{reg}, modules_{std::move(modules)} {}
+    : ctx::access_scheduler<ctx_data>(
+          to_res_id(global_res_id::FIRST_FREE_RES_ID)),
+      registry_{reg},
+      modules_{std::move(modules)} {}
 
 void dispatcher::on_msg(msg_ptr const& msg, callback const& cb) {
   dispatch(msg, cb, ctx::op_id("dispatcher::on_msg"), ctx::op_type_t::IO);

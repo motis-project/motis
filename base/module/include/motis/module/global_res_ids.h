@@ -2,6 +2,8 @@
 
 #include <type_traits>
 
+#include "ctx/res_id_t.h"
+
 namespace motis::module {
 
 enum class global_res_id { SCHEDULE, PAX_DATA, PATH_DATA, FIRST_FREE_RES_ID };
