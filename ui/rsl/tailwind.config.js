@@ -1,13 +1,10 @@
 const colors = require("tailwindcss/colors");
 
 module.exports = {
-  mode: "jit",
-  purge: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
-  darkMode: false, // or 'media' or 'class'
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
-        gray: colors.blueGray,
         class: {
           air: "#90a4ae",
           ice: "#9c27b0",
@@ -57,9 +54,6 @@ module.exports = {
         "db-gray": "#cecece",
       },
     },
-  },
-  variants: {
-    extend: {},
   },
   plugins: [require("@tailwindcss/forms")],
 };
