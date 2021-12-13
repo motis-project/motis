@@ -14,7 +14,7 @@
             checked
           />
           <label for="station-departures" @click="getDepartures(true)"
-            >Abfahrt</label
+            >{{$t.departure}}</label
           >
         </div>
         <div>
@@ -24,7 +24,7 @@
             name="station-event-types"
           />
           <label for="station-arrivals" @click="getDepartures(false)"
-            >Ankunft</label
+            >{{$t.arrival}}</label
           >
         </div>
       </div>

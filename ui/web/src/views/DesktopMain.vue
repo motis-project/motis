@@ -2,10 +2,7 @@
   <div class="app">
     <LeftMenu @searchHidden="searchFieldHidden = !searchFieldHidden"></LeftMenu>
     <div id="station-search" :class="['', searchFieldHidden ? 'overlay-hidden' : '']">
-      <InputField labelName="Stationsearch" iconType="place" :showLabel="false" :showAutocomplete="true" @autocompleteElementClicked="goToTimetable"/>
-      <div class="paper hide">
-        <ul class="proposals"></ul>
-      </div>
+      <InputField iconType="place" :showLabel="false" :showAutocomplete="true" @autocompleteElementClicked="goToTimetable"/>
     </div>
   </div>
 </template>

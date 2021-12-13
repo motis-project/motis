@@ -2,7 +2,7 @@
   <div id="search">
     <div class="pure-g-gutters">
       <div class="pure-u-1 pure-u-sm-12-24 from-location">
-        <InputField labelName="Start" iconType="place" :showLabel="true" :initInputText="start" @inputChanged="setStartInput" :showAutocomplete="true" />
+        <InputField :labelName="$t.start" iconType="place" :showLabel="true" :initInputText="start" @inputChanged="setStartInput" :showAutocomplete="true" />
 
         <div class="mode-picker-btn" @click="optinsButton1Click">
           <div :class="['mode', firstOptions.foot ? 'enabled' : '']"><i class="icon">directions_walk</i></div>
@@ -23,7 +23,7 @@
     <div class="pure-g-gutters">
       <div class="pure-u-1 pure-u-sm-12-24 from-location">
         <InputField
-          labelName="Ziel"
+          :labelName="$t.destination"
           iconType="place"
           :showLabel="true"
           :initInputText="destination"
@@ -40,11 +40,11 @@
       <div class="pure-u-1 pure-u-sm-3-24 time-option">
         <div>
           <input type="radio" id="search-forward" name="time-option" checked />
-          <label for="search-forward">Abfahrt</label>
+          <label for="search-forward">{{$t.departure}}</label>
         </div>
         <div>
           <input type="radio" id="search-backward" name="time-option" />
-          <label for="search-backward">Ankunft</label>
+          <label for="search-backward">{{$t.arrival}}</label>
         </div>
       </div>
     </div>
@@ -52,34 +52,34 @@
     <div class="mode-picker-editor visible" v-show="isOptionsWindowOpened">
       <div class="header">
         <div class="sub-overlay-close"><i class="icon" @click="optionsWindowCloseClick">close</i></div>
-        <div class="title">Verkehrsmittel am Start</div>
+        <div class="title">{{pressedOptions == firstOptions ? $t.startTransports : $t.destinationTransports}}</div>
       </div>
       <div class="content">
-        <BlockWithCheckbox title="Fußweg" :isChecked="pressedOptions.foot" @isCheckedChanged="pressedOptions.foot = $event">
+        <BlockWithCheckbox :title="$t.walk" :isChecked="pressedOptions.foot" @isCheckedChanged="pressedOptions.foot = $event">
           <div class="option">
-            <div class="label">Profil</div>
+            <div class="label">{{$t.profile}}</div>
             <div class="profile-picker">
               <select>
-                <option value="default">Standard</option>
-                <option value="accessibility1">Auch nach leichten Wegen suchen</option>
-                <option value="wheelchair">Rollstuhl</option>
-                <option value="elevation">Weniger Steigung</option>
+                <option value="default">{{$t.searchProfile_default}}</option>
+                <option value="accessibility1">{{$t.searchProfile_accessibility}}</option>
+                <option value="wheelchair">{{$t.searchProfile_wheelchair}}</option>
+                <option value="elevation">{{$t.searchProfile_elevation}}</option>
               </select>
             </div>
           </div>
           <Slider></Slider>
         </BlockWithCheckbox>
         <BlockWithCheckbox
-          title="Fahrrad"
+          :title="$t.bike"
           :isChecked="pressedOptions.bicycle"
           @isCheckedChanged="pressedOptions.bicycle = $event"
         >
           <Slider></Slider>
         </BlockWithCheckbox>
-        <BlockWithCheckbox title="Auto" :isChecked="pressedOptions.car" @isCheckedChanged="pressedOptions.car = $event">
+        <BlockWithCheckbox :title="$t.car" :isChecked="pressedOptions.car" @isCheckedChanged="pressedOptions.car = $event">
           <Slider></Slider>
           <div class="option">
-            <label> <input type="checkbox" />Parkplätze verwenden </label>
+            <label> <input type="checkbox" />{{$t.useParking}} </label>
           </div>
         </BlockWithCheckbox>
       </div>

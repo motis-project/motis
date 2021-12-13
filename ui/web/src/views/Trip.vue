@@ -57,7 +57,7 @@
             <i class="icon">{{ areStopsExpanded[tIndex] ? "expand_more" : "expand_less" }}</i
             ><i class="icon">{{ areStopsExpanded[tIndex] ? "expand_less" : "expand_more" }}</i>
           </div>
-          <span>Fahrt {{ content.stops.length - 2 }} Stationen ({{ duration }})</span>
+          <span>{{$ts.countTranslate("stop", content.stops.length - 2)}} ({{ duration }})</span>
         </div>
         <div :class="['intermediate-stops', areStopsExpanded[tIndex] ? 'expanded' : '']" v-show="areStopsExpanded[tIndex]">
           <div v-for="stop in getIntermediateStops(transport)" :key="stop.station" :class="['stop', getPastOrFuture(stop.departure.time)]">
@@ -130,7 +130,7 @@ export default defineComponent({
   },
   computed: {
     date: function (): string {
-      return new Date(this.content.trips[0].id.time * 1000).toLocaleString("de-DE", {
+      return new Date(this.content.trips[0].id.time * 1000).toLocaleString(this.$ts.currentLocale, {
         month: "2-digit",
         year: "numeric",
         day: "numeric",
@@ -154,32 +154,24 @@ export default defineComponent({
       );
       let res = "";
       if (time.getDate() > 1) {
-        res += `${time.getDate() - 1}d`;
+        res += this.$ts.formatTranslate("days", (time.getDate() - 1).toString());
       }
       if (res != "") {
         res += " ";
       }
       if (time.getHours() > 1) {
-        res += `${time.getHours() - 1}h`;
+        res += this.$ts.formatTranslate("hours", (time.getHours() - 1).toString());
       }
       if (res != "") {
         res += " ";
       }
       if (time.getMinutes() > 0) {
-        res += `${time.getMinutes()}min`;
+        res += this.$ts.formatTranslate("minutes", time.getMinutes().toString());
       }
       return res;
     },
     changes: function (): string {
-      let res = "";
-      if (this.content.trips.length == 1) {
-        res = "Keine Umstiege";
-      } else if (this.content.trips.length == 2) {
-        res = "1 Umstieg";
-      } else if (this.content.trips.length > 2) {
-        res = `${this.content.trips.length} Umstiege`;
-      }
-      return res;
+      return this.$ts.countTranslate("changes", this.content.trips.length - 1);
     },
     transports: function (): Transport[] {
       return this.content.transports.map((t) => t.move);

@@ -2,10 +2,10 @@
   <div>
     <InputField
       :showLabel="true"
-      labelName="Datum"
+      :labelName="$t.date"
       iconType="event"
       :showArrows="true"
-      :initInputText="currentDate.toLocaleString('de-DE', { month: '2-digit', year: 'numeric', day: 'numeric' })"
+      :initInputText="currentDate.toLocaleString($ts.currentLocale, { month: '2-digit', year: 'numeric', day: 'numeric' })"
       @inputChanged="onFieldInput"
       @focus="calendarVisible = true"
       @blur="inputBluredHandler"
@@ -72,7 +72,7 @@ export default defineComponent({
     currentDate: function (date: Date) {
       this.daysToDisplay = [];
       this.weekDayNames = [];
-      this.currentMonthToDisplay = `${date.toLocaleString("de-DE", { month: "long" })} ${date.getFullYear()}`;
+      this.currentMonthToDisplay = `${date.toLocaleString(this.$ts.currentLocale, { month: "long" })} ${date.getFullYear()}`;
       this.currentMonth = date.getMonth();
       let day = new Date(date.getFullYear(), date.getMonth(), 1);
       let first = day.getDate() - (day.getDay() == 0 ? 7 : day.getDay());
@@ -86,7 +86,7 @@ export default defineComponent({
           break;
         }
         if (i < 7) {
-          this.weekDayNames.push(day.toLocaleString("de-DE", { weekday: "short" }));
+          this.weekDayNames.push(day.toLocaleString(this.$ts.currentLocale, { weekday: "short" }));
         }
       }
     },

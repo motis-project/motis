@@ -1,6 +1,6 @@
 <template>
   <InputField
-    labelName="Uhrzeit"
+    :labelName="$t.time"
     iconType="schedule"
     :showLabel="true"
     :initInputText="timeToDisplay"

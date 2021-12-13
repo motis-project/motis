@@ -5,7 +5,7 @@
         <div class="pure-g gutters">
           <InputField
             class="pure-u-1 pure-u-sm-1-2 train-nr"
-            labelName="Zugnummer"
+            :labelName="$t.trainNr"
             iconType="train"
             :showLabel="true"
             :showAutocomplete="false"

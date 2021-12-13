@@ -18,11 +18,9 @@ export default defineComponent({
   props: {
     title: {
       type: String as PropType<String>,
-      required: true
     },
     isChecked: {
       type: Boolean as PropType<Boolean>,
-      required: true
     }
   }
 })
