@@ -1,14 +1,8 @@
 import StationGuess from "./StationGuess";
-import Transport from "./Transport";
-import Trip from "./Trip";
+import TransportTrip from "./TransportTrip";
 
-export default interface DepatrureTimetable {
-  id: Trip,
-  transport: Transport
-}
-
-export interface Event {
-  trips: DepatrureTimetable[],
+export default interface Event {
+  trips: TransportTrip[],
   type: string,
   event: {
     time: number,

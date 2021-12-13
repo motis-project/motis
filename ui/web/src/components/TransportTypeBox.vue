@@ -26,7 +26,7 @@ export default defineComponent({
       required: true,
     },
     trip: {
-      type: Object as PropType<Trip> | PropType<TripInfoId>,
+      type: Object as PropType<Trip>,
       required: false,
     },
   },

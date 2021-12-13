@@ -64,8 +64,7 @@
 <script lang="ts">
 import StationGuess from "../models/StationGuess";
 import { defineComponent, PropType } from "vue";
-import DepartureTimetable from "../models/DepartureTimetable";
-import { Event } from "../models/DepartureTimetable";
+import Event from "../models/DepartureTimetable";
 import TransportTypeBox from "../components/TransportTypeBox.vue";
 import { TripInfoId } from "../models/TrainGuess";
 
