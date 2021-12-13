@@ -39,7 +39,7 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
-    path: '/trip/:station_id/:train_nr/:time/:target_station_id/:target_time/:?line_id',
+    path: '/trip/:station_id/:train_nr/:time/:target_station_id/:target_time/:line_id?',
     name: "Trip",
     components: {
       overlay: ConnectionSearch,
