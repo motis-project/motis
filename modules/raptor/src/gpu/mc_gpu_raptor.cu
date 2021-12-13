@@ -341,10 +341,41 @@ __device__ void mc_update_route_larger32(
       }
 
       if (leader != NO_LEADER) {
-        // there is a leader in the current stage; therefore safe the last
-        // possible departure stop for updates to the next stage
-        last_known_dep_stop = get_last_departure_stop(criteria_mask);
-        last_known_dep_stop += current_stage << 5;
+        if (current_stage == active_stage_count - 1) {
+          // at the last stage check the stop satisfaction and reduce asc if
+          // possible
+          time satisfied_ea = invalid<time>;
+          if ((1 << t_id) & criteria_mask) {
+            auto satisfied_arr_idx =
+                CriteriaConfig::get_arrival_idx(stop_id_t, t_offset);
+            satisfied_ea = get_earliest_arrival<CriteriaConfig>(
+                earliest_arrivals, stop_id_t, target_stop_id, t_offset);
+          }
+          auto satisfied_ballot = __ballot_sync(
+              FULL_MASK,
+              stage_id < active_stop_count &&
+                  ((valid(satisfied_ea) &&
+                    CriteriaConfig::is_trait_satisfied(aggregate, t_offset)) ||
+                   (satisfied_ea <= stop_arrival && valid(stop_arrival))));
+
+          auto stage_asc = active_stop_count - (current_stage << 5);
+          auto const helper_mask =
+              stage_asc < 32 ? __brev((1 << (32 - stage_asc)) - 1) : 0;
+          auto const inverted_ballot = ~(satisfied_ballot | helper_mask);
+          auto leading_zero_count = __clz(inverted_ballot);
+          leading_zero_count -= (32 - stage_asc);
+          active_stop_count -= leading_zero_count;
+          stage_asc -= leading_zero_count;
+
+          if (stage_asc == 0) {
+            active_stage_count -= 1;
+          }
+        } else {
+          // there is a leader in the current stage; therefore safe the last
+          // possible departure stop for updates to the next stage
+          last_known_dep_stop = get_last_departure_stop(criteria_mask);
+          last_known_dep_stop += current_stage << 5;
+        }
       }
     }
   }
@@ -538,7 +569,7 @@ __device__ void mc_update_route_smaller32(
       auto const helper_mask = __brev((1 << (32 - active_stop_count)) - 1);
       auto inverted_ballot = ~(satisfied_ballot | helper_mask);
       auto leading_zero_count = __clz(inverted_ballot);
-      auto const initial_clz = leading_zero_count;
+      //      auto const initial_clz = leading_zero_count;
       leading_zero_count -= (32 - active_stop_count);
 
       auto const initial_acs = active_stop_count;
@@ -747,13 +778,13 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
         trait_size);
     this_grid().sync();
 
-//    if(t_id == 0 && round_k == 2) {
-//      printf("\nRoute Marks:\n");
-//      print_store(device_mem.route_marks_, tt.route_count_ * trait_size,
-//                  trait_size);
-//    }
-//
-//    this_grid().sync();
+    //    if(t_id == 0 && round_k == 2) {
+    //      printf("\nRoute Marks:\n");
+    //      print_store(device_mem.route_marks_, tt.route_count_ * trait_size,
+    //                  trait_size);
+    //    }
+    //
+    //    this_grid().sync();
 
     auto const station_store_size = ((tt.stop_count_ * trait_size) / 32) + 1;
     reset_store(device_mem.station_marks_, station_store_size);
@@ -777,13 +808,13 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
 
     this_grid().sync();
 
-//    if(t_id == 0 && round_k == 1) {
-//      printf("Station Marks:\n");
-//      print_store(device_mem.station_marks_, tt.stop_count_ * trait_size,
-//                  trait_size);
-//    }
-//
-//    this_grid().sync();
+    //    if(t_id == 0 && round_k == 1) {
+    //      printf("Station Marks:\n");
+    //      print_store(device_mem.station_marks_, tt.stop_count_ * trait_size,
+    //                  trait_size);
+    //    }
+    //
+    //    this_grid().sync();
   }
 }
 
