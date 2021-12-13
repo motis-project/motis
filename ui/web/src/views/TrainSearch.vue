@@ -13,8 +13,8 @@
           ></InputField>
         </div>
         <div class="pure-g gutters">
-          <Calendar class="pure-u-1 pure-u-sm-12-24 to-location"></Calendar>
-          <TimeInputField></TimeInputField>
+          <Calendar class="pure-u-1 pure-u-sm-12-24 to-location" @dateChanged="setNewDate"></Calendar>
+          <TimeInputField @timeChanged="setNewTime"></TimeInputField>
         </div>
       </div>
     </div>
@@ -29,6 +29,9 @@
           <div class="trip-time">
             <div class="time">
               {{ setTimeToDisplay(trip.trip_info.id.time) }}
+            </div>
+            <div class="date" v-if="checkDay(trip.trip_info.id.time)">
+              {{ setDateToDisplay(trip.trip_info.id.time) }}
             </div>
           </div>
           <div class="trip-first-station">
@@ -64,34 +67,45 @@ export default defineComponent({
   },
   data() {
     return {
-      currentTrainInput: NaN as number,
+      currentTrainInput: -1 as number,
       areGuessesDisplayed: false as boolean,
       currentDate: Date.now() as number,
       trainGuesses: [] as Trips[],
+      dateFromCalendar: NaN as number,
+      timeFromTimeField: "" as string
     };
   },
   created() {
     let d = new Date();
-    this.currentDate = new Date(2020, 10, 19, d.getHours(), d.getMinutes(), d.getSeconds()).getTime() / 1000;
+    this.dateFromCalendar = new Date(2020, 10, 19).valueOf() / 1000;
+    this.timeFromTimeField = d.getHours() + ":" + ("0" + d.getMinutes()).slice(-2);
+    this.setupDate();
   },
   methods: {
     setCurrentTrainNumber(input: string) {
       if (!isNaN(+input)) {
         this.currentTrainInput = +input;
+        this.sendRequest();
+      }
+    },
+    sendRequest(){
+      if(this.currentTrainInput != -1){
         this.$postService.getTrainGuessResponse(this.currentDate, this.currentTrainInput).then((resp) => 
                                                                   (this.trainGuesses = resp.trips));
         this.areGuessesDisplayed = true;
       }
-    },
-    // Not called yet
-    setCurrentTime(newTime: Date) {
-      this.currentDate = newTime.getSeconds();
     },
     setTimeToDisplay(value: number): string{
       let d = new Date(value * 1000);
       let result: string = "";
       d.getHours() < 10 ? result += '0' + d.getHours() : result += d.getHours();
       d.getMinutes() < 10 ? result += ':0' + d.getMinutes() : result += ':' + d.getMinutes();
+      return result;
+    },
+    setDateToDisplay(value: number): string{
+      let d = new Date(value * 1000);
+      let result: string = "";
+      result += d.getDate() + "." + (d.getMonth() + 1);
       return result;
     },
     goToFirstStation(trip: Trips){
@@ -101,6 +115,30 @@ export default defineComponent({
         name: 'StationTimeTableFromTrainSearch',
         params: t
       })
+    },
+    setNewDate(date: Date){
+      this.dateFromCalendar = date.valueOf() / 1000;
+      this.setupDate();
+    },
+    checkDay(date: number): boolean {
+      if(new Date(date * 1000).getDate() !== new Date(this.currentDate * 1000).getDate())
+        return true;
+      else
+        return false;
+    },
+    setNewTime(time: string){
+      this.timeFromTimeField = time;
+      this.setupDate()
+    },
+    setupDate(){
+      if((this.timeFromTimeField.length === 5 || this.timeFromTimeField.length === 4) && this.timeFromTimeField[2] === ":"){
+        let inputArray: string[] = this.timeFromTimeField.split(":");
+        let hours: number = +(inputArray[0]);
+        let minutes: number = +(inputArray[1]);
+        if(hours < 24 && hours >= 0 && minutes < 60 && minutes >= 0){
+          this.currentDate = this.dateFromCalendar + (hours * 60 * 60) + (minutes * 60);
+        }
+      }
     }
   }
 });

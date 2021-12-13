@@ -66,7 +66,7 @@ export default defineComponent({
   },
   created() {
     let now = new Date();
-    this.currentDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    this.currentDate = new Date(2020, 9, 19);
   },
   watch: {
     currentDate: function (date: Date) {
@@ -98,6 +98,7 @@ export default defineComponent({
         this.currentDate.getMonth() + change,
         this.currentDate.getDate()
       );
+      this.$emit('dateChanged', this.currentDate);
     },
     changeDay(change: number) {
       this.currentDate = new Date(
@@ -105,6 +106,7 @@ export default defineComponent({
         this.currentDate.getMonth(),
         this.currentDate.getDate() + change
       );
+      this.$emit('dateChanged', this.currentDate);
     },
     calendarClickedHandler() {
       this.calendarClicked = true;

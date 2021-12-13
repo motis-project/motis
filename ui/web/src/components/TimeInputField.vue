@@ -29,7 +29,9 @@ export default defineComponent({
   },
   computed: {
     timeToDisplay: function (): String {
-      return this.time.getHours() + ":" + ("0" + this.time.getMinutes()).slice(-2);
+      let res: string = this.time.getHours() + ":" + ("0" + this.time.getMinutes()).slice(-2);
+      this.$emit("timeChanged", res);
+      return res;
     },
   },
   methods: {

@@ -11,8 +11,8 @@
 import { defineComponent } from "vue";
 import LeftMenu from "../components/LeftMenu.vue";
 import InputField from "../components/InputField.vue";
-import AddressGuess from "@/models/AddressGuess";
-import StationGuess from "@/models/StationGuess";
+import AddressGuess from "../models/AddressGuess";
+import StationGuess from "../models/StationGuess";
 
 export default defineComponent({
   name: "DesktopMain",
