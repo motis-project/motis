@@ -4,7 +4,7 @@ import TrainSearch from "../views/TrainSearch.vue"
 import Trip from '../views/Trip.vue'
 import StationTimetable from "../views/StationTimetable.vue"
 import {Router, RouteLocationNormalizedLoaded} from "vue-router"
-export const SubOverlayNames = ["TrainSearch", "StationTimetable", "Trip"]
+export const SubOverlayNames = ["TrainSearch", "StationTimetable", "Trip", "StationTimeTableFromTrainSearch"]
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -39,7 +39,7 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
-    path: '/trip/:station_id/:train_nr/:time/:target_station_id/:target_time/:line_id',
+    path: '/trip/:station_id/:train_nr/:time/:target_station_id/:target_time/:?line_id',
     name: "Trip",
     components: {
       overlay: ConnectionSearch,
@@ -57,6 +57,25 @@ const routes: Array<RouteRecordRaw> = [
         }
       })
     }, 
+  },
+  {
+    path: '/station/:id/:time',
+    name: 'StationTimeTableFromTrainSearch',
+    components: {
+      overlay: ConnectionSearch,
+      subOverlay: StationTimetable
+    },
+    props: {
+      subOverlay: route => ({
+        stationGuess: {
+          name: route.params.name,
+          id: route.params.id
+        },
+        tripIdGuess: {
+          time: route.params.time
+        }
+      })
+    }
   }
 ]
 

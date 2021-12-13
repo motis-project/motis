@@ -6,6 +6,7 @@ import Trip from '../models/Trip';
 import TripResponseContent from '../models/TripResponseContent';
 import { RailVizStationResponseContent } from '../models/DepartureTimetable';
 import { stringifyQuery } from 'vue-router';
+import { TrainGuessResponseContent } from '@/models/TrainGuess'
 
 
 var service: MOTISPostService = {
@@ -63,6 +64,21 @@ var service: MOTISPostService = {
       },
     };
   return (await axios.post<RailVizStationResponse>("https://europe.motis-project.de/", rq)).data.content;
+  },
+  async getTrainGuessResponse(currentTime: number, currentTrainNum: number){
+    let rq = {
+        destination: {
+            target: "/railviz/get_trip_guesses",
+            type: "Module"
+        },
+        content_type: "RailVizTripGuessRequest",
+        content: {
+            guess_count: 20,
+            time: currentTime,
+            train_num: currentTrainNum
+        },
+    }
+    return (await axios.post<TrainGuessResponse>("https://europe.motis-project.de/", rq)).data.content;
   }
 }
 
@@ -105,12 +121,23 @@ interface RailVizStationResponse {
   id: number
 }
 
+interface TrainGuessResponse {
+  destination: {
+      type: string,
+      target: string
+  },
+  content_type: string,
+  content: TrainGuessResponseContent,
+  id: 1
+}
+
 
 interface MOTISPostService {
   getStationGuessResponse(input: string, gc: number): Promise<StationGuessResponseContent>
   getAddressGuessResponse(input: string): Promise<AddressGuessResponseContent>
   getTripResponce(input: Trip) : Promise<TripResponseContent>
   getDeparturesResponse(station: string, by_schedule_time: Boolean, direction: string, event_count: number, time: number) : Promise<RailVizStationResponseContent>
+  getTrainGuessResponse(currentTime: number, currentTrainNum: number): Promise<TrainGuessResponseContent>
 }
 
 

@@ -1,6 +1,6 @@
 <template>
   <div @click="goToTripDetails()">
-    <div :class="`train-box train-class-${transport.clasz} with-tooltip`" :data-tooltip="transport.provider">
+    <div :class="`train-box train-class-${transport.clasz} with-tooltip`" :data-tooltip="transport.provider + '\nZugnummer: ' + transport.train_nr">
       <svg class="train-icon"><use :xlink:href="'#' + icon"></use></svg>
       <span class="train-name">{{ transport.name }}</span>
     </div>
@@ -11,6 +11,7 @@
 import { defineComponent, PropType } from "vue";
 import Transport from "../models/Transport";
 import Trip from "../models/Trip";
+import { TripInfoId } from "../models/TrainGuess";
 
 export default defineComponent({
   name: "TransportTypeBox",
@@ -20,7 +21,7 @@ export default defineComponent({
       required: true,
     },
     trip: {
-      type: Object as PropType<Trip>,
+      type: Object as PropType<Trip> | PropType<TripInfoId>,
       required: false,
     },
   },

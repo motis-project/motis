@@ -67,6 +67,7 @@ import { defineComponent, PropType } from "vue";
 import DepartureTimetable from "../models/DepartureTimetable";
 import { Event } from "../models/DepartureTimetable";
 import TransportTypeBox from "../components/TransportTypeBox.vue";
+import { TripInfoId } from "../models/TrainGuess";
 
 export default defineComponent({
   name: "StationTimetable",
@@ -83,23 +84,43 @@ export default defineComponent({
   props: {
     stationGuess: {
       type: Object as PropType<StationGuess>,
-      required: true,
+      required: true
     },
+    tripIdGuess: {
+      type: Object as PropType<TripInfoId>,
+      required: false
+    }
   },
   created() {
-    this.$postService
-      .getDeparturesResponse(
-        this.stationGuess.id,
-        true,
-        "BOTH",
-        20,
-        new Date(2020, 9, 19, 18, 0).valueOf() / 1000
-      )
-      .then((data) => {
-        this.departures = data.events;
-        this.station = data.station;
-        this.getDepartures(true);
-      });
+    if(!this.tripIdGuess){
+      this.$postService
+        .getDeparturesResponse(
+          this.stationGuess.id,
+          true,
+          "BOTH",
+          20,
+          new Date(2020, 9, 19, 18, 0).valueOf() / 1000
+        )
+        .then((data) => {
+          this.departures = data.events;
+          this.station = data.station;
+          this.getDepartures(true);
+        });
+    } else if(this.tripIdGuess){ 
+      this.$postService
+        .getDeparturesResponse(
+          this.stationGuess.id,
+          true,
+          "BOTH",
+          20,
+          this.tripIdGuess.time
+        )
+        .then((data) => {
+          this.departures = data.events;
+          this.station = data.station;
+          this.getDepartures(true);
+        });
+     }
   },
   methods: {
     getTimeString(timeInSeconds: number) {
