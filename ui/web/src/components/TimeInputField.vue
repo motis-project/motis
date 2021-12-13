@@ -29,9 +29,11 @@ export default defineComponent({
   },
   computed: {
     timeToDisplay: function (): String {
-      let res: string = this.time.getHours() + ":" + ("0" + this.time.getMinutes()).slice(-2);
-      this.$emit("timeChanged", res);
-      return res;
+      let result: string = "";
+      this.time.getHours() < 10 ? result += '0' + this.time.getHours() : result += this.time.getHours();
+      this.time.getMinutes() < 10 ? result += ':0' + this.time.getMinutes() : result += ':' + this.time.getMinutes();
+      this.$emit("timeChanged", result);
+      return result;
     },
   },
   methods: {
