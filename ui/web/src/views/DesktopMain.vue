@@ -27,11 +27,11 @@ export default defineComponent({
   },
   methods: {
     isStation(element: AddressGuess | StationGuess): element is StationGuess {
-      return 'name' in element;
+      return 'id' in element;
     },
     goToTimetable(element: AddressGuess | StationGuess) {
       if (this.isStation(element)) {
-        let { pos, ...t } = element as { [key: string]: any };
+        let { pos, name, ...t } = element as { [key: string]: any };
         this.$router.push({
           name: "StationTimetable",
           params: t,

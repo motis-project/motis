@@ -23,7 +23,7 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
-    path: '/station/:id/:name',
+    path: '/station/:id',
     name: "StationTimetable",
     components: {
       overlay: ConnectionSearch,
@@ -33,7 +33,6 @@ const routes: Array<RouteRecordRaw> = [
       subOverlay: route => ({
         stationGuess: {
           id: route.params.id,
-          name: route.params.name,
         }
       }) 
     }
