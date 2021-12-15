@@ -5,7 +5,7 @@ import { DatePicker } from "./DatePicker";
 export const SimTimePicker: React.FC = () => {
     return (
         <div className="sim-time-picker-container">
-            <div className="sim-time-picker-overlay hidden">
+            <div className="sim-time-picker-overlay">
                 <div className="title">
                     <input type="checkbox" id="sim-mode-checkbox" name="sim-mode-checkbox" />
                         <label htmlFor="sim-mode-checkbox">Simulationsmodus</label>
