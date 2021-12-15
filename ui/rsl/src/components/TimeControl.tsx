@@ -5,10 +5,11 @@ import { useAtom } from "jotai";
 import { formatDate, formatTime } from "../util/dateFormat";
 import { usePaxMonStatusQuery } from "../api/paxmon";
 import { sendRISForwardTimeRequest } from "../api/ris";
-import { universeAtom } from "../data/simulation";
+import { scheduleAtom, universeAtom } from "../data/simulation";
 
 async function forwardTimeByStepped(
   queryClient: QueryClient,
+  schedule: number,
   currentTime: number,
   forwardBy: number,
   stepSize = 60
@@ -16,7 +17,7 @@ async function forwardTimeByStepped(
   const endTime = currentTime + forwardBy;
   while (currentTime < endTime) {
     currentTime = Math.min(endTime, currentTime + stepSize);
-    await sendRISForwardTimeRequest(currentTime);
+    await sendRISForwardTimeRequest(currentTime, schedule);
     await queryClient.invalidateQueries();
   }
   return currentTime;
@@ -29,11 +30,13 @@ type TimeControlProps = {
 function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
   const queryClient = useQueryClient();
   const [universe] = useAtom(universeAtom);
+  const [schedule] = useAtom(scheduleAtom);
   const { data: status, isLoading, error } = usePaxMonStatusQuery(universe);
 
   const forwardMutation = useMutation((forwardBy: number) => {
     return forwardTimeByStepped(
       queryClient,
+      schedule,
       status?.system_time || 0,
       forwardBy
     );

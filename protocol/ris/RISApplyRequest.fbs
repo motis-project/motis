@@ -1,0 +1,14 @@
+include "ris/RISContentType.fbs";
+
+namespace motis.ris;
+
+table RISInputMessage {
+  type: RISContentType;
+  content: string;
+}
+
+table RISApplyRequest {
+  schedule: ulong;
+  input_messages: [RISInputMessage];
+  // ris_messages: [RISMessage]; // TODO
+}

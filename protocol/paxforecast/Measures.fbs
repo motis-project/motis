@@ -1,4 +1,5 @@
 include "base/TripId.fbs";
+include "ris/RISContentType.fbs";
 
 namespace motis.paxforecast;
 
@@ -26,12 +27,10 @@ table TripRecommendationMeasure {
   interchange_station: string; // station id
 }
 
-enum RtUpdateContentType : byte { RIBasis }
-
 table RtUpdateMeasure {
   recipients: MeasureRecipients;
   time: long;
-  type: RtUpdateContentType;
+  type: motis.ris.RISContentType;
   content: string;
 }
 

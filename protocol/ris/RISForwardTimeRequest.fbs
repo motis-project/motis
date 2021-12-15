@@ -13,5 +13,6 @@ namespace motis.ris;
 table RISForwardTimeRequest {
   /// Unix timestamp - all messages with a release time up to and including
   /// this timestamp are loaded and processed.
-  new_time:ulong;
+  new_time: ulong;
+  schedule: ulong;
 }

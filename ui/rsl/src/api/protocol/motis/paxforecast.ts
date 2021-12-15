@@ -1,6 +1,7 @@
 // generated file - do not modify - run update-protocol to update
 
 import { TripId } from "../motis";
+import { RISContentType } from "./ris";
 import {
   PaxMonCompactJourney,
   PaxMonGroup,
@@ -38,13 +39,10 @@ export interface TripRecommendationMeasure {
 }
 
 // paxforecast/Measures.fbs
-export type RtUpdateContentType = "RIBasis";
-
-// paxforecast/Measures.fbs
 export interface RtUpdateMeasure {
   recipients: MeasureRecipients;
   time: number;
-  type: RtUpdateContentType;
+  type: RISContentType;
   content: string;
 }
 

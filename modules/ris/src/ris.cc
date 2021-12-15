@@ -111,12 +111,11 @@ std::string_view from_unixtime(unixtime const& t) {
 }
 
 struct ris::impl {
-  impl(schedule& sched, config const& c)
-      : sched_{sched}, config_{c}, gtfsrt_parser_{sched} {}
+  impl(schedule& sched, config const& c) : config_{c}, gtfsrt_parser_{sched} {}
 
-  void init() {
+  void init(schedule& sched) {
     if (!config_.gtfs_trip_ids_path_.empty()) {
-      read_gtfs_trip_ids();
+      read_gtfs_trip_ids(sched);
     }
 
     if (config_.clear_db_ && fs::exists(config_.db_path_)) {
@@ -141,20 +140,20 @@ struct ris::impl {
       // parse_parallel(config_.input_, null_pub_);
       if (config_.instant_forward_) {
         publisher pub;
-        parse_sequential(config_.input_, pub);
+        parse_sequential(sched, config_.input_, pub);
       } else {
-        parse_sequential(config_.input_, null_pub_);
+        parse_sequential(sched, config_.input_, null_pub_);
       }
     } else {
       LOG(warn) << config_.input_ << " does not exist";
     }
 
     if (config_.init_time_.unix_time_ != 0) {
-      forward(config_.init_time_.unix_time_);
+      forward(sched, 0U, config_.init_time_.unix_time_);
     }
   }
 
-  void read_gtfs_trip_ids() const {
+  void read_gtfs_trip_ids(schedule& sched) const {
     auto const trips =
         utl::file{config_.gtfs_trip_ids_path_.c_str(), "r"}.content();
     auto const trips_msg =
@@ -162,14 +161,14 @@ struct ris::impl {
                  std::numeric_limits<std::uint32_t>::max());
     for (auto const& id : *motis_content(RISGTFSRTMapping, trips_msg)->ids()) {
       try {
-        sched_.gtfs_trip_ids_.emplace(
+        sched.gtfs_trip_ids_.emplace(
             gtfs_trip_id{id->id()->str(), static_cast<unixtime>(id->day())},
-            from_fbs(sched_, id->trip(), true));
+            from_fbs(sched, id->trip(), true));
       } catch (...) {
         std::cout << to_extern_trip(id->trip()) << "\n";
       }
     }
-    LOG(info) << sched_.gtfs_trip_ids_.size() << "/"
+    LOG(info) << sched.gtfs_trip_ids_.size() << "/"
               << motis_content(RISGTFSRTMapping, trips_msg)->ids()->size()
               << " imported";
   }
@@ -184,7 +183,7 @@ struct ris::impl {
     return {};
   }
 
-  msg_ptr upload(msg_ptr const& msg) {
+  msg_ptr upload(schedule& sched, msg_ptr const& msg) {
     auto const req = motis_content(HTTPRequest, msg);
     auto const content = req->content();
     auto const ft =
@@ -195,23 +194,31 @@ struct ris::impl {
     parse_str_and_write_to_db(
         std::string_view{content->c_str(), content->size()}, ft, pub);
 
-    sched_.system_time_ = pub.max_timestamp_;
-    sched_.last_update_timestamp_ = std::time(nullptr);
-    ctx::await_all(motis_publish(make_no_msg("/ris/system_time_changed")));
+    sched.system_time_ = pub.max_timestamp_;
+    sched.last_update_timestamp_ = std::time(nullptr);
+    publish_system_time_changed(pub.schedule_res_id_);
     return {};
   }
 
-  msg_ptr read(msg_ptr const&) {
+  msg_ptr read(schedule& sched, msg_ptr const&) {
     publisher pub;
-    parse_sequential(config_.input_, pub);
-    sched_.system_time_ = pub.max_timestamp_;
-    sched_.last_update_timestamp_ = std::time(nullptr);
-    ctx::await_all(motis_publish(make_no_msg("/ris/system_time_changed")));
+    parse_sequential(sched, config_.input_, pub);
+    sched.system_time_ = pub.max_timestamp_;
+    sched.last_update_timestamp_ = std::time(nullptr);
+    publish_system_time_changed(pub.schedule_res_id_);
     return {};
   }
 
-  msg_ptr forward(msg_ptr const& msg) {
-    forward(motis_content(RISForwardTimeRequest, msg)->new_time());
+  msg_ptr forward(module& mod, msg_ptr const& msg) {
+    auto const req = motis_content(RISForwardTimeRequest, msg);
+    auto const schedule_res_id =
+        req->schedule() == 0U ? to_res_id(global_res_id::SCHEDULE)
+                              : static_cast<ctx::res_id_t>(req->schedule());
+    auto res_lock =
+        mod.lock_resources({{schedule_res_id, ctx::access_t::WRITE}});
+    auto& sched = *res_lock.get<schedule_data>(schedule_res_id).schedule_;
+    forward(sched, schedule_res_id,
+            motis_content(RISForwardTimeRequest, msg)->new_time());
     return {};
   }
 
@@ -235,8 +242,32 @@ struct ris::impl {
     return {};
   }
 
+  msg_ptr apply(module& mod, msg_ptr const& msg) {
+    auto const req = motis_content(RISApplyRequest, msg);
+    auto const schedule_res_id =
+        req->schedule() == 0U ? to_res_id(global_res_id::SCHEDULE)
+                              : static_cast<ctx::res_id_t>(req->schedule());
+    auto res_lock =
+        mod.lock_resources({{schedule_res_id, ctx::access_t::WRITE}});
+    auto& sched = *res_lock.get<schedule_data>(schedule_res_id).schedule_;
+
+    publisher pub{schedule_res_id};
+    for (auto const& rim : *req->input_messages()) {
+      parse_publish_message(rim, pub);
+    }
+
+    pub.flush();
+    sched.system_time_ = std::max(sched.system_time_, pub.max_timestamp_);
+    sched.last_update_timestamp_ = std::time(nullptr);
+
+    publish_system_time_changed(schedule_res_id);
+    return {};
+  }
+
   struct publisher {
     publisher() = default;
+    explicit publisher(ctx::res_id_t schedule_res_id)
+        : schedule_res_id_{schedule_res_id} {}
     publisher(publisher&&) = delete;
     publisher(publisher const&) = delete;
     publisher& operator=(publisher&&) = delete;
@@ -251,7 +282,8 @@ struct ris::impl {
 
       fbb_.create_and_finish(
           MsgContent_RISBatch,
-          CreateRISBatch(fbb_, fbb_.CreateVector(offsets_)).Union(),
+          CreateRISBatch(fbb_, fbb_.CreateVector(offsets_), schedule_res_id_)
+              .Union(),
           "/ris/messages");
 
       auto msg = make_msg(fbb_);
@@ -276,6 +308,7 @@ struct ris::impl {
     message_creator fbb_;
     std::vector<flatbuffers::Offset<MessageHolder>> offsets_;
     unixtime max_timestamp_ = 0;
+    ctx::res_id_t schedule_res_id_{};
   };
 
   struct null_publisher {
@@ -283,30 +316,33 @@ struct ris::impl {
     void add(uint8_t const*, size_t const) {}
     size_t size() const { return 0; }  // NOLINT
     unixtime max_timestamp_ = 0;
+    ctx::res_id_t schedule_res_id_{};
   } null_pub_;
 
-  void forward(unixtime const to) {
+  void forward(schedule& sched, ctx::res_id_t schedule_res_id,
+               unixtime const to) {
     auto const first_schedule_event_day =
-        sched_.first_event_schedule_time_ !=
-                std::numeric_limits<unixtime>::max()
-            ? floor(sched_.first_event_schedule_time_,
+        sched.first_event_schedule_time_ != std::numeric_limits<unixtime>::max()
+            ? floor(sched.first_event_schedule_time_,
                     static_cast<unixtime>(SECONDS_A_DAY))
-            : external_schedule_begin(sched_);
+            : external_schedule_begin(sched);
     auto const last_schedule_event_day =
-        sched_.last_event_schedule_time_ != std::numeric_limits<unixtime>::min()
-            ? ceil(sched_.last_event_schedule_time_,
+        sched.last_event_schedule_time_ != std::numeric_limits<unixtime>::min()
+            ? ceil(sched.last_event_schedule_time_,
                    static_cast<unixtime>(SECONDS_A_DAY))
-            : external_schedule_end(sched_);
+            : external_schedule_end(sched);
     auto const min_timestamp =
         get_min_timestamp(first_schedule_event_day, last_schedule_event_day);
     if (min_timestamp) {
-      forward(std::max(*min_timestamp, sched_.system_time_ + 1), to);
+      forward(sched, schedule_res_id,
+              std::max(*min_timestamp, sched.system_time_ + 1), to);
     } else {
       LOG(info) << "ris database has no relevant data";
     }
   }
 
-  void forward(unixtime const from, unixtime const to) {
+  void forward(schedule& sched, ctx::res_id_t schedule_res_id,
+               unixtime const from, unixtime const to) {
     LOG(info) << "forwarding from " << logging::time(from) << " to "
               << logging::time(to);
 
@@ -315,7 +351,7 @@ struct ris::impl {
     auto c = db::cursor{t, db};
     auto bucket = c.get(db::cursor_op::SET_RANGE, from);
     auto batch_begin = bucket ? bucket->first : 0;
-    publisher pub;
+    publisher pub{schedule_res_id};
     while (true) {
       if (!bucket) {
         LOG(info) << "end of db reached";
@@ -360,8 +396,8 @@ struct ris::impl {
     }
 
     pub.flush();
-    sched_.system_time_ = to;
-    ctx::await_all(motis_publish(make_no_msg("/ris/system_time_changed")));
+    sched.system_time_ = to;
+    publish_system_time_changed(pub.schedule_res_id_);
   }
 
   std::optional<unixtime> get_min_timestamp(unixtime const from_day,
@@ -464,17 +500,16 @@ struct ris::impl {
   }
 
   template <typename Publisher>
-  void parse_sequential(fs::path const& p, Publisher& pub) {
+  void parse_sequential(schedule& sched, fs::path const& p, Publisher& pub) {
     for (auto const& [t, path, type] :
          collect_files(fs::canonical(p, p.root_path()))) {
       (void)(t);
       parse_file_and_write_to_db(path, type, pub);
       if (config_.instant_forward_) {
-        sched_.system_time_ = pub.max_timestamp_;
-        sched_.last_update_timestamp_ = std::time(nullptr);
+        sched.system_time_ = pub.max_timestamp_;
+        sched.last_update_timestamp_ = std::time(nullptr);
         try {
-          ctx::await_all(
-              motis_publish(make_no_msg("/ris/system_time_changed")));
+          publish_system_time_changed(pub.schedule_res_id_);
         } catch (std::system_error& e) {
           LOG(info) << e.what();
         }
@@ -684,17 +719,44 @@ struct ris::impl {
     t.commit();
   }
 
-  schedule& sched_;
+  static void publish_system_time_changed(ctx::res_id_t schedule_res_id) {
+    message_creator mc;
+    mc.create_and_finish(
+        MsgContent_RISSystemTimeChanged,
+        CreateRISSystemTimeChanged(mc, schedule_res_id).Union(),
+        "/ris/system_time_changed");
+    ctx::await_all(motis_publish(make_msg(mc)));
+  }
+
+  template <typename Publisher>
+  void parse_publish_message(RISInputMessage const* rim, Publisher& pub) {
+    auto content_sv =
+        std::string_view{rim->content()->c_str(), rim->content()->size()};
+
+    auto const handle_message = [&](ris_message&& m) {
+      pub.add(m.data(), m.size());
+    };
+
+    switch (rim->type()) {
+      case RISContentType_RIBasis: {
+        ribasis::ribasis_parser::to_ris_message(content_sv, handle_message);
+        break;
+      }
+      case RISContentType_RISML: {
+        risml::risml_parser::to_ris_message(content_sv, handle_message);
+        break;
+      }
+      default: throw utl::fail("ris: unsupported message type");
+    }
+  }
+
   db::env env_;
-  std::atomic<uint64_t> next_msg_id_{0};
   std::mutex min_max_mutex_;
   std::mutex merge_mutex_;
 
   config const& config_;
 
-  risml::risml_parser risml_parser_;
   gtfsrt::gtfsrt_parser gtfsrt_parser_;
-  ribasis::ribasis_parser ribasis_parser_;
 };
 
 ris::ris() : module("RIS", "ris") {
@@ -720,23 +782,26 @@ void ris::init(motis::module::registry& r) {
   r.subscribe(
       "/init",
       [this]() {
-        impl_->init();  // NOLINT
+        impl_->init(const_cast<schedule&>(get_sched()));  // NOLINT
       },
       ctx::accesses_t{ctx::access_request{
           to_res_id(::motis::module::global_res_id::SCHEDULE),
           ctx::access_t::WRITE}});
   r.register_op(
-      "/ris/upload", [this](auto&& m) { return impl_->upload(m); },
+      "/ris/upload",
+      [this](auto&& m) {
+        return impl_->upload(const_cast<schedule&>(get_sched()), m);  // NOLINT
+      },
       ctx::accesses_t{ctx::access_request{
           to_res_id(::motis::module::global_res_id::SCHEDULE),
           ctx::access_t::WRITE}});
+  r.register_op("/ris/forward",
+                [this](auto&& m) { return impl_->forward(*this, m); }, {});
   r.register_op(
-      "/ris/forward", [this](auto&& m) { return impl_->forward(m); },
-      ctx::accesses_t{ctx::access_request{
-          to_res_id(::motis::module::global_res_id::SCHEDULE),
-          ctx::access_t::WRITE}});
-  r.register_op(
-      "/ris/read", [this](auto&& m) { return impl_->read(m); },
+      "/ris/read",
+      [this](auto&& m) {
+        return impl_->read(const_cast<schedule&>(get_sched()), m);  // NOLINT
+      },
       ctx::accesses_t{ctx::access_request{
           to_res_id(::motis::module::global_res_id::SCHEDULE),
           ctx::access_t::WRITE}});
@@ -745,6 +810,8 @@ void ris::init(motis::module::registry& r) {
       ctx::accesses_t{ctx::access_request{
           to_res_id(::motis::module::global_res_id::SCHEDULE),
           ctx::access_t::WRITE}});
+  r.register_op("/ris/apply",
+                [this](auto&& m) { return impl_->apply(*this, m); }, {});
   r.register_op("/ris/write_gtfs_trip_ids", [this](auto&&) {
     message_creator fbb;
     auto const& sched = get_sched();
