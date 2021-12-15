@@ -11,6 +11,7 @@
 #include "motis/paxmon/localization.h"
 #include "motis/paxmon/passenger_group.h"
 #include "motis/paxmon/reachability.h"
+#include "motis/paxmon/universe.h"
 
 #include "motis/paxforecast/routing_cache.h"
 
@@ -31,7 +32,8 @@ struct alternative {
 };
 
 std::vector<alternative> find_alternatives(
-    schedule const& sched, routing_cache& cache,
+    motis::paxmon::universe const& uv, schedule const& sched,
+    routing_cache& cache,
     mcd::vector<measures::measure_variant const*> const& group_measures,
     unsigned const destination_station_id,
     motis::paxmon::passenger_localization const& localization,

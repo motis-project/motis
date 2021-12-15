@@ -124,6 +124,7 @@ export interface RoutingRequest {
   use_start_metas: boolean; // default: true
   use_dest_metas: boolean; // default: true
   use_start_footpaths: boolean; // default: true
+  schedule: number;
 }
 
 // routing/RoutingResponse.fbs

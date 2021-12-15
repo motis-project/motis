@@ -373,9 +373,9 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
       for (auto& cpg : cgs.second) {
         ++routing_requests;
         futures.emplace_back(
-            spawn_job_void([this, &sched, destination_station_id, &cpg] {
+            spawn_job_void([this, &uv, &sched, destination_station_id, &cpg] {
               cpg.alternatives_ = find_alternatives(
-                  sched, routing_cache_, {}, destination_station_id,
+                  uv, sched, routing_cache_, {}, destination_station_id,
                   cpg.localization_, nullptr, true, 0);
             }));
       }
@@ -636,7 +636,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
       auto group_measures = mcd::to_vec(measures_set);
       futures.emplace_back(spawn_job_void([&, this, group_measures] {
         cpg.alternatives_ = find_alternatives(
-            sched, routing_cache_, group_measures,
+            uv, sched, routing_cache_, group_measures,
             remaining_planned_journey.destination_station_id(), loc,
             &remaining_planned_journey, false, 61);
       }));

@@ -2,16 +2,29 @@ import React, { useState } from "react";
 import { useIsMutating, useMutation } from "react-query";
 import { useAtom } from "jotai";
 
-import { universeAtom } from "../data/simulation";
+import { scheduleAtom, universeAtom } from "../data/simulation";
 import {
   sendPaxMonDestroyUniverseRequest,
   sendPaxMonForkUniverseRequest,
 } from "../api/paxmon";
 
+type Universe = {
+  universe: number;
+  schedule: number;
+};
+
 function UniverseControl(): JSX.Element {
   const [universe, setUniverse] = useAtom(universeAtom);
-  const [universes, setUniverses] = useState([0]);
+  const [schedule, setSchedule] = useAtom(scheduleAtom);
+  const [universes, setUniverses] = useState<Universe[]>([
+    { universe: 0, schedule: 0 },
+  ]);
   const isMutating = useIsMutating() != 0;
+
+  function switchTo(uv: Universe) {
+    setUniverse(uv.universe);
+    setSchedule(uv.schedule);
+  }
 
   const forkMutation = useMutation(
     (baseUniverse: number) =>
@@ -21,8 +34,9 @@ function UniverseControl(): JSX.Element {
       }),
     {
       onSuccess: (data) => {
-        setUniverses([...new Set([...universes, data.universe])]);
-        setUniverse(data.universe);
+        const newUv = { universe: data.universe, schedule: data.schedule };
+        setUniverses([...new Set([...universes, newUv])]);
+        switchTo(newUv);
       },
     }
   );
@@ -30,8 +44,8 @@ function UniverseControl(): JSX.Element {
     (uv: number) => sendPaxMonDestroyUniverseRequest({ universe: uv }),
     {
       onSuccess: (data, variables) => {
-        setUniverses(universes.filter((u) => u != variables));
-        setUniverse(0);
+        setUniverses(universes.filter((u) => u.universe != variables));
+        switchTo(universes[0]);
       },
     }
   );
@@ -44,7 +58,9 @@ function UniverseControl(): JSX.Element {
 
   return (
     <div className="flex justify-center items-center space-x-2 pl-4">
-      <span className="pr-2">Universum #{universe}</span>
+      <span className="pr-2">
+        Universum #{universe} (Fahrplan #{schedule})
+      </span>
       <button
         type="button"
         className={`inline-flex items-baseline px-3 py-1 rounded text-sm ${
@@ -71,21 +87,22 @@ function UniverseControl(): JSX.Element {
       </button>
       {universes.map((uv) => (
         <button
-          key={uv}
+          key={uv.universe}
           type="button"
           className={`px-3 py-1 rounded text-white text-sm ${
             isMutating
-              ? uv == universe
+              ? uv.universe == universe
                 ? "bg-db-red-300 text-db-red-100 ring ring-db-red-800 cursor-default"
                 : "bg-db-red-300 text-db-red-100 cursor-default"
-              : uv == universe
+              : uv.universe == universe
               ? "bg-db-red-500 ring ring-db-red-800"
               : "bg-db-red-500 hover:bg-db-red-600"
           }`}
-          onClick={() => setUniverse(uv)}
+          onClick={() => switchTo(uv)}
           disabled={isMutating}
+          title={`Universum ${uv.universe} (Fahrplan ${uv.schedule})`}
         >
-          #{uv}
+          #{uv.universe}
         </button>
       ))}
     </div>

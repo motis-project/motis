@@ -119,6 +119,7 @@ export interface PaxMonForkUniverseRequest {
 // paxmon/PaxMonForkUniverseResponse.fbs
 export interface PaxMonForkUniverseResponse {
   universe: number;
+  schedule: number;
 }
 
 // paxmon/PaxMonGetGroupsInTripRequest.fbs
@@ -336,6 +337,8 @@ export interface PaxMonUniverseDestroyed {
 export interface PaxMonUniverseForked {
   base_universe: number;
   new_universe: number;
+  new_schedule: number;
+  schedule_forked: boolean;
 }
 
 // paxmon/PaxMonUpdate.fbs

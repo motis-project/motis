@@ -21,6 +21,7 @@
 #include "motis/core/schedule/trip.h"
 #include "motis/core/schedule/trip_idx.h"
 #include "motis/core/journey/extern_trip.h"
+#include "motis/module/global_res_ids.h"
 
 #include "motis/paxmon/capacity_data.h"
 #include "motis/paxmon/graph_index.h"
@@ -153,6 +154,11 @@ using universe_id = std::uint32_t;
 
 struct universe {
   passenger_group const* get_passenger_group(passenger_group_index id) const;
+
+  bool uses_default_schedule() const {
+    return schedule_res_id_ ==
+           motis::module::to_res_id(motis::module::global_res_id::SCHEDULE);
+  }
 
   universe_id id_{};
   ctx::res_id_t schedule_res_id_{};
