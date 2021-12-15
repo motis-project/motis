@@ -18,7 +18,9 @@ using namespace flatbuffers;
 
 namespace motis::rt {
 
-update_msg_builder::update_msg_builder(schedule const& sched) : sched_{sched} {}
+update_msg_builder::update_msg_builder(schedule const& sched,
+                                       ctx::res_id_t const schedule_res_id)
+    : sched_{sched}, schedule_res_id_{schedule_res_id} {}
 
 void update_msg_builder::add_delay(delay_info const* di) {
   ++delay_count_;
@@ -170,8 +172,9 @@ msg_ptr update_msg_builder::finish() {
   build_delay_updates();
   fbb_.create_and_finish(
       MsgContent_RtUpdates,
-      CreateRtUpdates(fbb_, fbb_.CreateVector(updates_)).Union(), "/rt/update",
-      DestinationType_Topic);
+      CreateRtUpdates(fbb_, fbb_.CreateVector(updates_), schedule_res_id_)
+          .Union(),
+      "/rt/update", DestinationType_Topic);
   return make_msg(fbb_);
 }
 

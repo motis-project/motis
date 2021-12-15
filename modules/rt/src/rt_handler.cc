@@ -28,11 +28,13 @@ using namespace motis::logging;
 
 namespace motis::rt {
 
-rt_handler::rt_handler(schedule& sched, bool validate_graph,
-                       bool validate_constant_graph, bool print_stats)
+rt_handler::rt_handler(schedule& sched, ctx::res_id_t schedule_res_id,
+                       bool validate_graph, bool validate_constant_graph,
+                       bool print_stats)
     : sched_(sched),
+      schedule_res_id_(schedule_res_id),
       propagator_(sched),
-      update_builder_(sched),
+      update_builder_(sched, schedule_res_id),
       validate_graph_(validate_graph),
       validate_constant_graph_(validate_constant_graph),
       print_stats_(print_stats) {}
