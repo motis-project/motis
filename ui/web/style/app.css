@@ -557,8 +557,11 @@
 
 .swap-locations-btn {
   position: absolute;
-  right: 20px;
   top: 60px;
+  right: 17px;
+  z-index: 1;
+  background-color: transparent;
+  border-style: none;
 }
 
 .swap-locations-btn input {
@@ -610,8 +613,8 @@ fieldset > legend {
   display: none;
   position: absolute;
   z-index: 10;
-  top: 0px;
-  left: 0px;
+  top: 20px;
+  left: 15px;
   width: 540px;
   height: 510px;
   padding: 0;
