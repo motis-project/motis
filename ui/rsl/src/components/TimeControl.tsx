@@ -42,10 +42,10 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
     );
   });
 
-  const forwardInProgress = forwardMutation.isLoading;
+  const forwardDisabled = forwardMutation.isLoading || schedule != 0;
 
   const buttonClass = `px-3 py-1 rounded text-sm ${
-    !forwardInProgress
+    !forwardDisabled
       ? "bg-db-red-500 hover:bg-db-red-600 text-white"
       : "bg-db-red-300 text-db-red-100 cursor-wait"
   }`;
@@ -57,7 +57,7 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
           key={`${min}m`}
           type="button"
           className={buttonClass}
-          disabled={forwardInProgress}
+          disabled={forwardDisabled}
           onClick={() => {
             forwardMutation.mutate(60 * min);
           }}
@@ -70,7 +70,7 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
           key={`${hrs}h`}
           type="button"
           className={buttonClass}
-          disabled={forwardInProgress}
+          disabled={forwardDisabled}
           onClick={() => {
             forwardMutation.mutate(60 * 60 * hrs);
           }}
