@@ -344,7 +344,7 @@ struct ris::impl {
   void forward(schedule& sched, ctx::res_id_t schedule_res_id,
                unixtime const from, unixtime const to) {
     LOG(info) << "forwarding from " << logging::time(from) << " to "
-              << logging::time(to);
+              << logging::time(to) << " [schedule " << schedule_res_id << "]";
 
     auto t = db::txn{env_, db::txn_flags::RDONLY};
     auto db = t.dbi_open(MSG_DB);
