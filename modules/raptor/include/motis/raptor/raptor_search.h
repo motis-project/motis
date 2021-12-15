@@ -49,8 +49,8 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
 
   if (q.ontrip_) {
 
-        print_routes(get_routes_containing(std::vector<int>{27816, 22004}, timetable),
-                     timetable);
+//        print_routes(get_routes_containing(std::vector<int>{27816, 22004}, timetable),
+//                     timetable);
 //    print_route(118, timetable);
 //    print_route(32099, timetable);
 
@@ -60,7 +60,7 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
     raptor_search(q);
     stats.raptor_time_ = MOTIS_GET_TIMING_MS(raptor_time);
 
-    print_results_of_query(q, raptor_sched);
+//    print_results_of_query(q, raptor_sched);
 
     MOTIS_START_TIMING(rec_timing);
     reconstructor.add(q);

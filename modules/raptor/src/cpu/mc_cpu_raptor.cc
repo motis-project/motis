@@ -107,7 +107,7 @@ get_next_feasible_trip(raptor_timetable const& tt,
           CriteriaConfig::get_arrival_idx(dep_s_id, trait_offset);
       auto dep_stop_times = tt.stop_times_[dep_sti];
 
-      if (/*CriteriaConfig::is_update_required(trip_data, trait_offset) &&*/
+      if (CriteriaConfig::get_write_to_trait_id(trip_data) == trait_offset &&
           valid(dep_stop_times.departure_) &&
           prev_arrivals[dep_arr_idx] <= dep_stop_times.departure_) {
         return std::make_tuple(trip_id, std::move(trip_data));
@@ -117,8 +117,8 @@ get_next_feasible_trip(raptor_timetable const& tt,
                                               new_dep_offset, dep_sti);
       --new_dep_offset;
 
-    } while (new_dep_offset >= 0 //&&
-             /*CriteriaConfig::is_update_required(trip_data, trait_offset)*/);
+    } while (new_dep_offset >= 0 &&
+             CriteriaConfig::get_write_to_trait_id(trip_data) == trait_offset);
   }
 
   return std::make_tuple(invalid<raptor::trip_id>, std::move(trip_data));
@@ -196,8 +196,8 @@ void update_route_for_trait_offset(
     auto const min = std::min(current_round[stop_arr_idx], ea_target_min);
 
     if (stop_time.arrival_ < min
-        //&&
-        /*CriteriaConfig::is_update_required(criteria_data, trait_offset)*/) {
+        &&
+        CriteriaConfig::get_write_to_trait_id(criteria_data) == trait_offset) {
       station_marks.mark(stop_id);
       current_round[stop_arr_idx] = stop_time.arrival_;
     }
@@ -215,8 +215,8 @@ void update_route_for_trait_offset(
      * then we would skip on updates to the curren_round results.
      */
 
-    if (stop_time.arrival_ < ea[stop_arr_idx] //&&
-        /*CriteriaConfig::is_update_required(criteria_data, trait_offset)*/) {
+    if (stop_time.arrival_ < ea[stop_arr_idx] &&
+        CriteriaConfig::get_write_to_trait_id(criteria_data) == trait_offset) {
       ea[stop_arr_idx] = stop_time.arrival_;
     }
 
