@@ -4,7 +4,10 @@
 #include <algorithm>
 #include <tuple>
 
-#include "motis/raptor/raptor_timetable.h"
+#include "motis/raptor/raptor_util.h"
+#include "motis/raptor/types.h"
+
+#include "motis/core/journey/journey.h"
 
 #if defined(MOTIS_CUDA)
 #include "motis/raptor/gpu/gpu_timetable.cuh"
@@ -62,27 +65,19 @@ struct trait_time_slotted_occupancy {
   uint32_t summed_occ_time_{};
   uint32_t occ_time_slot_{};
 
-  __mark_cuda_rel__ inline static dimension_id index_range_size() {
+  _mark_cuda_rel_ inline static dimension_id index_range_size() {
     // slots match linearly to indices
     return slot_count;
   }
 
-  // TODO check if this can be removed by the new method of determining a target
-  //      occupancy level
   template <typename TraitsData>
-  __mark_cuda_rel__ inline static bool is_update_required(
-      TraitsData const& data, dimension_id const dimension_idx) {
-    return dimension_idx == data.occ_time_slot_;
-  }
-
-  template <typename TraitsData>
-  __mark_cuda_rel__ inline static dimension_id get_write_to_dimension_id(
+  _mark_cuda_rel_ inline static dimension_id get_write_to_dimension_id(
       TraitsData const& d) {
     return d.initial_soc_idx_ + d.occ_time_slot_;
   }
 
   template <typename TraitsData>
-  __mark_cuda_rel__ inline static bool is_trait_satisfied(
+  _mark_cuda_rel_ inline static bool is_trait_satisfied(
       TraitsData const& data, dimension_id const dimension_idx) {
     return dimension_idx == data.occ_time_slot_;
   }
@@ -92,12 +87,12 @@ struct trait_time_slotted_occupancy {
   template <typename TraitsData>
   inline static bool is_rescan_from_stop_needed(
       TraitsData const& data, dimension_id const dimension_idx) {
-    return dimension_idx < data.occ_time_slot_;  // TODO
+    return dimension_idx < data.occ_time_slot_;
   }
   //****************************************************************************
 
   template <typename TraitsData, typename Timetable>
-  __mark_cuda_rel__ inline static void update_aggregate(
+  _mark_cuda_rel_ inline static void update_aggregate(
       TraitsData& aggregate_dt, Timetable const& tt, time const* const _1,
       stop_offset const _2, stop_times_index const current_sti,
       trait_id const _3) {
@@ -109,61 +104,23 @@ struct trait_time_slotted_occupancy {
     aggregate_dt.occ_time_slot_ = aggregate_dt.summed_occ_time_ / slot_divisor;
 
 #if defined(MOTIS_CUDA)
-    aggregate_dt._segment_prop_occ_time_ = (stop_occupancy * segment_duration);
-    aggregate_dt.summed_occ_time_ = 0;
-    aggregate_dt.occ_time_slot_ = 0;
+    //only update the segment prop value on the first update after reset
+    if(!valid(aggregate_dt._segment_prop_occ_time_))
+      aggregate_dt._segment_prop_occ_time_ = (stop_occupancy * segment_duration);
 #endif
-  }
-
-  template <typename Timetable>
-  __mark_cuda_rel__ inline static uint8_t _read_occupancy(
-      Timetable const& tt, stop_times_index const sti) {
-    return tt.stop_attr_[sti].inbound_occupancy_;
-  }
-
-  template <typename Timetable>
-  __mark_cuda_rel__ inline static uint32_t _read_segment_duration(
-      Timetable const& tt, stop_times_index const current_sti) {
-    // because og stop time index alignment and the additional knowledge, that
-    // we can't use a trip to arrive at the first stop we can safely reduce sti
-    //  by one to get the time of the previous stop
-
-    auto const previous_sti = current_sti - 1;
-
-    // always use the segment duration and ignore stand times at a station
-    auto const& previous_times = tt.stop_times_[previous_sti];
-    auto const& current_times = tt.stop_times_[current_sti];
-
-    return current_times.arrival_ - previous_times.departure_;
   }
 
 #if defined(MOTIS_CUDA)
   uint32_t _segment_prop_occ_time_ = invalid<uint32_t>;
 
-  template <>
-  __mark_cuda_rel__ inline static uint8_t _read_occupancy<device_gpu_timetable>(
-      device_gpu_timetable const& tt, stop_times_index const sti) {
-    return tt.stop_inb_occupancy_[sti];
-  }
-
-  template <>
-  __mark_cuda_rel__ inline static uint32_t
-  _read_segment_duration<device_gpu_timetable>(device_gpu_timetable const& tt,
-                                               stop_times_index const sti) {
-    auto const prev_sti = sti - 1;
-    auto const departure_time = tt.stop_departures_[prev_sti];
-    auto const arrival_time = tt.stop_arrivals_[sti];
-    return arrival_time - departure_time;
-  }
-
   template <typename TraitsData>
   __device__ inline static void propagate_and_merge_if_needed(
       TraitsData& aggregate, unsigned const mask, bool const predicate) {
-    if (valid(aggregate._segment_prop_occ_time_)) {
-      // there is always a call to update before the propagation is done
-      // store this value to always repeat the same value to the next one
-      aggregate.summed_occ_time_ = aggregate._segment_prop_occ_time_;
-    }
+//    if (valid(aggregate._segment_prop_occ_time_)) {
+//      // there is always a call to update before the propagation is done
+//      // store this value to always repeat the same value to the next one
+//      aggregate.summed_occ_time_ = aggregate._segment_prop_occ_time_;
+//    }
     auto const prop_val = aggregate.summed_occ_time_;
     auto const received = __shfl_up_sync(mask, prop_val, 1);
     if (predicate) {
@@ -178,13 +135,14 @@ struct trait_time_slotted_occupancy {
     auto const prop_val = aggregate.summed_occ_time_;
     auto const received = __shfl_down_sync(mask, prop_val, 31);
     aggregate.summed_occ_time_ = received;
+    aggregate.occ_time_slot_ = aggregate.summed_occ_time_ / slot_divisor;
     aggregate._segment_prop_occ_time_ = invalid<uint32_t>;
   }
 
 #endif
 
   template <typename TraitsData>
-  __mark_cuda_rel__ inline static void reset_aggregate(
+  _mark_cuda_rel_ inline static void reset_aggregate(
       TraitsData& aggregate_dt, dimension_id const initial_dim_id) {
     aggregate_dt.summed_occ_time_ = 0;
     aggregate_dt.occ_time_slot_ = 0;
@@ -207,18 +165,7 @@ struct trait_time_slotted_occupancy {
   // below is used solely in reconstructor
 
   template <typename TraitsData>
-  inline static void fill_trait_data_from_idx(TraitsData& dt,
-                                              uint32_t const dimension_idx) {
-    // can be used as occupancy at idx 0
-    //  maps to an occupancy value of 0
-    dt.occ_time_slot_ = dimension_idx;
-
-    // when determined this way only gives a lower bound not the actual value
-    dt.summed_occ_time_ = dimension_idx * slot_divisor;
-  }
-
-  template <typename TraitsData>
-  static std::vector<dimension_id> get_feasible_dimensions(
+  inline static std::vector<dimension_id> get_feasible_dimensions(
       dimension_id const initial_offset, TraitsData const& data) {
 
     // there is exactly one feasible dimension, which is the
@@ -229,11 +176,55 @@ struct trait_time_slotted_occupancy {
     return std::vector<dimension_id>{};
   }
 
-  template <typename TraitsData>
-  static bool dominates(TraitsData const& to_dominate,
-                        TraitsData const& dominating) {
-    return dominating.occ_time_slot_ <= to_dominate.occ_time_slot_;
+  inline static bool dominates(dimension_id const to_dominate,
+                        dimension_id const dominating) {
+    return dominating <= to_dominate;
   }
+
+  inline static void fill_journey(journey& j, dimension_id const dim) {
+    j.time_slotted_occupancy_ = dim;
+  }
+
+private:
+  template <typename Timetable>
+  _mark_cuda_rel_ inline static uint8_t _read_occupancy(
+      Timetable const& tt, stop_times_index const sti) {
+    return tt.stop_attr_[sti].inbound_occupancy_;
+  }
+
+  template <typename Timetable>
+  _mark_cuda_rel_ inline static uint32_t _read_segment_duration(
+      Timetable const& tt, stop_times_index const current_sti) {
+    // because og stop time index alignment and the additional knowledge, that
+    // we can't use a trip to arrive at the first stop we can safely reduce sti
+    //  by one to get the time of the previous stop
+
+    auto const previous_sti = current_sti - 1;
+
+    // always use the segment duration and ignore stand times at a station
+    auto const& previous_times = tt.stop_times_[previous_sti];
+    auto const& current_times = tt.stop_times_[current_sti];
+
+    return current_times.arrival_ - previous_times.departure_;
+  }
+
+#if defined(MOTIS_CUDA)
+  template <>
+  _mark_cuda_rel_ inline static uint8_t _read_occupancy<device_gpu_timetable>(
+      device_gpu_timetable const& tt, stop_times_index const sti) {
+    return tt.stop_inb_occupancy_[sti];
+  }
+
+  template <>
+  _mark_cuda_rel_ inline static uint32_t
+  _read_segment_duration<device_gpu_timetable>(device_gpu_timetable const& tt,
+                                               stop_times_index const sti) {
+    auto const prev_sti = sti - 1;
+    auto const departure_time = tt.stop_departures_[prev_sti];
+    auto const arrival_time = tt.stop_arrivals_[sti];
+    return arrival_time - departure_time;
+  }
+#endif
 };
 
 }  // namespace motis::raptor

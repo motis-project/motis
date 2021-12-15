@@ -313,13 +313,6 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics&) {
   auto& result = *query.result_;
   auto const target_s_id = query.target_;
 
-#ifdef _DEBUG
-  print_query(query);
-  //    print_routes({9663}, tt);
-  //     print_route_trip_debug_strings(raptor_sched);
-#endif
-  // print_routes(get_routes_containing(std::vector<int>{4075}, tt), tt);
-
   earliest_arrivals ea(tt.stop_count() * CriteriaConfig::trait_size(),
                        invalid<motis::time>);
 

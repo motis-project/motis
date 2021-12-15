@@ -257,8 +257,8 @@ __device__ void mc_update_route_larger32(
           //                         "\tt_id %i\ts_id: %i\n",
           //                     r_id, t_offset, trip_offset, t_id, stop_id_t);
 
-          if (t_id != 0 || !valid(last_known_dep_stop) ||
-              leader - (current_stage << 5) == 0) {
+          auto const stage_0_is_leader = leader - (current_stage << 5) == 0;
+          if (t_id != 0 || !valid(last_known_dep_stop) || stage_0_is_leader) {
             //            if (r_id == 118 && current_stage == 1 && trip_offset
             //            == 1)
             //              printf("Resetting Aggregate for t_id: %i\tstage:%
@@ -288,7 +288,11 @@ __device__ void mc_update_route_larger32(
             //  along the traits while allowing for max/min/sum operations
             CriteriaConfig::propagate_and_merge_if_needed(
                 criteria_mask, aggregate,
-                !is_departure_stop && idx <= stage_id);
+                !is_departure_stop &&
+                    idx <= t_id
+                    // prevent write update if this has carry value
+                    && (t_id != 0 || !valid(last_known_dep_stop) ||
+                        stage_0_is_leader));
 
             //            if(r_id == 118 && current_stage == 1)
             //            printf("Updated aggregate in Loop for t_id:
@@ -319,19 +323,16 @@ __device__ void mc_update_route_larger32(
             bool updated =
                 update_arrival(arrivals, write_to_arr_idx, stop_arrival);
             if (updated) {
-              //              if (stop_id_t == 21135 && (write_to_offset == 1 ||
-              //              write_to_offset == 10)
-              //                  || stop_id_t == 10569 && write_to_offset == 0)
-              //                  {
-              //                printf(
-              //                    "Wrote arrival to stop %i from r_id > 32:
-              //                    %i;\ttrip_offset: "
-              //                    "%i;\twrite_offset: %i;\tt_offset:
-              //                    %i;\tarrival: %i;\tballot: %x;\tadd: %i\n",
-              //                    stop_id_t, r_id, trip_offset,
-              //                    write_to_offset, t_offset, stop_arrival,
-              //                    ballot, get_moc<CriteriaConfig>(aggregate));
-              //              }
+              if (stop_id_t == 22004 ||
+                  (write_to_offset == 15)) {
+                printf(
+                    "Wrote arrival to stop %i from r_id > 32: "
+                    "%i;\ttrip_offset: "
+                    "%i;\twrite_offset: %i;\tt_offset: %i;\tarrival: "
+                    "%i;\tballot: %x;\tadd: %i\n",
+                    stop_id_t, r_id, trip_offset, write_to_offset, t_offset,
+                    stop_arrival, ballot, get_moc<CriteriaConfig>(aggregate));
+              }
 
               update_arrival(earliest_arrivals, write_to_arr_idx, stop_arrival);
               mark(station_marks, write_to_arr_idx);
@@ -504,19 +505,16 @@ __device__ void mc_update_route_smaller32(
             CriteriaConfig::get_arrival_idx(s_id, write_to_offset);
         bool updated = update_arrival(arrivals, write_to_idx, stop_arrival);
         if (updated) {
-          //          if (s_id == 21135 && (write_to_offset == 1 ||
-          //          write_to_offset == 10)
-          //              || s_id == 10569 && write_to_offset == 0) {
-          //            printf(
-          //                "Wrote arrival to Stop %i from r_id:
-          //                %i;\ttrip_offset:"
-          //                "%i;\twrite_offset: %i;\tt_offset %i;\tballot mask:
-          //                %x\tarrival: "
-          //                "%i;\tearliest_arrivals: %i;\tadd: %i\n",
-          //                s_id, r_id, trip_offset, write_to_offset, t_offset,
-          //                ballot, stop_arrival, earliest_arrival,
-          //                get_moc<CriteriaConfig>(aggregate));
-          //          }
+          if (s_id == 22004 || (write_to_offset == 15)) {
+            printf(
+                "Wrote arrival to Stop %i from r_id: %i;\ttrip_offset:"
+                "%i;\twrite_offset: %i;\tt_offset %i;\tballot mask: "
+                "%x\tarrival: "
+                "%i;\tearliest_arrivals: %i;\tadd: %i\n",
+                s_id, r_id, trip_offset, write_to_offset, t_offset, ballot,
+                stop_arrival, earliest_arrival,
+                get_moc<CriteriaConfig>(aggregate));
+          }
 
           update_arrival(earliest_arrivals, write_to_idx, stop_arrival);
           //          if ((r_id == 62 || r_id == 69))
@@ -639,15 +637,13 @@ __device__ void mc_update_footpaths_dev_scratch(
       bool updated =
           update_arrival(write_arrivals, to_arrival_idx, new_arrival);
       if (updated) {
-        //        if (footpath.to_ == 21135 && (t_offset == 1 || t_offset == 10)
-        //            || footpath.to_ == 10569 && t_offset == 0) {
-        //          printf(
-        //              "Wrote arrival to Stop %i from footpath: from
-        //              %i;\tt_offset: "
-        //              "%i;\tarrival at src: %i;\tFP duration: %i\n",
-        //              footpath.to_, footpath.from_, t_offset, from_arrival,
-        //              footpath.duration_);
-        //        }
+        if (footpath.to_ == 22004 || (t_offset == 15)) {
+          printf(
+              "Wrote arrival to Stop %i from footpath: from %i;\tt_offset: "
+              "%i;\tarrival at src: %i;\tFP duration: %i\n",
+              footpath.to_, footpath.from_, t_offset, from_arrival,
+              footpath.duration_);
+        }
         update_arrival(earliest_arrivals, to_arrival_idx, new_arrival);
         mark(station_marks, to_arrival_idx);
       }
@@ -761,8 +757,8 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
 
   auto const trait_size = CriteriaConfig::trait_size();
 
-  for (raptor_round round_k = 1; round_k < max_raptor_round; ++round_k) {
-    //    if (get_global_thread_id() == 0) printf("Raptor Round %i\n", round_k);
+  for (raptor_round round_k = 1; round_k < 2; ++round_k) {
+    if (get_global_thread_id() == 0) printf("Raptor Round %i\n", round_k);
     auto const t_id = get_global_thread_id();
     if (t_id < trait_size) {
       device_mem.any_station_marked_[t_id] = false;

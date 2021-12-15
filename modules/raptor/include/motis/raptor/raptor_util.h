@@ -11,8 +11,12 @@ namespace motis::raptor {
 
 #if defined(MOTIS_CUDA)
 
-#define __mark_cuda_rel__ \
+#define _mark_cuda_rel_ \
   __host__ __device__
+
+#else
+
+#define _mark_cuda_rel_
 
 #endif
 

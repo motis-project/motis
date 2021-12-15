@@ -2,8 +2,12 @@
 
 #include <tuple>
 
-#include "motis/raptor/raptor_timetable.h"
+#include "motis/raptor/types.h"
 #include "motis/raptor/raptor_util.h"
+
+namespace motis {
+struct journey;
+}
 
 namespace motis::raptor {
 
@@ -11,28 +15,21 @@ template <typename Traits>
 struct criteria_config {
   using CriteriaData = typename Traits::TraitsData;
 
-  __mark_cuda_rel__ inline static trait_id trait_size() {
+  _mark_cuda_rel_ inline static trait_id trait_size() {
     return Traits::size();
   }
 
-  __mark_cuda_rel__ inline static int get_arrival_idx(
+  _mark_cuda_rel_ inline static int get_arrival_idx(
       stop_id const stop_idx, trait_id const trait_offset = 0) {
     return stop_idx * trait_size() + trait_offset;
   }
 
-  //  // TODO get rid of
-  //  __mark_cuda_rel__ inline static bool is_update_required(
-  //      CriteriaData const& td, trait_id t_offset) {
-  //    return Traits::is_update_required(trait_size(), td, t_offset);
-  //  }
-
-  __mark_cuda_rel__ inline static trait_id get_write_to_trait_id(
+  _mark_cuda_rel_ inline static trait_id get_write_to_trait_id(
       CriteriaData& d) {
     return Traits::get_write_to_trait_id(d);
   }
 
-  // TODO use again
-  __mark_cuda_rel__ inline static bool is_trait_satisfied(CriteriaData const& td,
+  _mark_cuda_rel_ inline static bool is_trait_satisfied(CriteriaData const& td,
                                         trait_id t_offset) {
     return Traits::is_trait_satisfied(trait_size(), td, t_offset);
   }
@@ -46,7 +43,7 @@ struct criteria_config {
   //****************************************************************************
 
   template <typename Timetable>
-  __mark_cuda_rel__ inline static void update_traits_aggregate(
+  _mark_cuda_rel_ inline static void update_traits_aggregate(
       CriteriaData& aggregate_dt, Timetable const& tt,
       time const* const prev_arrivals, stop_offset const s_offset,
       stop_times_index const current_sti) {
@@ -54,7 +51,7 @@ struct criteria_config {
                              current_sti, trait_size());
   }
 
-  __mark_cuda_rel__ inline static void reset_traits_aggregate(
+  _mark_cuda_rel_ inline static void reset_traits_aggregate(
       CriteriaData& dt, route_id const r_id, trip_id const t_id,
       trait_id const initial_offset) {
     dt.route_id_ = r_id;
@@ -77,15 +74,6 @@ struct criteria_config {
 
 #endif
 
-  // derive the trait values from the arrival time index
-  // expecting that the stop_idx is already subtracted and the given index
-  // only specifies the shifts within the traits
-  inline static CriteriaData get_traits_data(trait_id const trait_offset) {
-    CriteriaData data{};
-    Traits::get_trait_data(trait_size(), data, trait_offset);
-    return data;
-  }
-
   inline static std::vector<trait_id> get_feasible_traits(
       trait_id const initial_offset, CriteriaData const& new_trip) {
     auto feasible = Traits::get_feasible_trait_ids(trait_size(), initial_offset,
@@ -96,9 +84,13 @@ struct criteria_config {
 
   // check if a candidate journey dominates a given journey by checking on the
   // respective timetable values
-  inline static bool dominates(CriteriaData const& to_dominate,
-                               CriteriaData const& dominating) {
-    return Traits::dominates(to_dominate, dominating);
+  inline static bool dominates(trait_id const to_dominate,
+                               trait_id const dominating) {
+    return Traits::dominates(trait_size(), to_dominate, dominating);
+  }
+
+  inline static void fill_journey(journey& journey, trait_id const t_offset) {
+    Traits::fill_journey(trait_size(), journey, t_offset);
   }
 };
 

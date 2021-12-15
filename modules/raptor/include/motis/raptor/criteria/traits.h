@@ -3,10 +3,18 @@
 #include <tuple>
 #include <vector>
 
-#include "motis/raptor/raptor_timetable.h"
-#include "motis/raptor/raptor_util.h"
+#include "utl/verify.h"
 
+#include "motis/raptor/raptor_util.h"
+#include "motis/raptor/types.h"
+
+#if defined(MOTIS_CUDA)
 #include "cooperative_groups.h"
+#endif
+
+namespace motis {
+struct journey;
+}
 
 namespace motis::raptor {
 
@@ -25,43 +33,26 @@ template <typename FirstTrait, typename... RestTraits>
 struct traits<FirstTrait, RestTraits...> {
   using TraitsData = raptor_data<FirstTrait, RestTraits...>;
 
-  __mark_cuda_rel__ inline static trait_id size() {
+  _mark_cuda_rel_ inline static trait_id size() {
     auto size = FirstTrait::index_range_size();
     return size * traits<RestTraits...>::size();
   }
 
-  // TODO get rid of
-  __mark_cuda_rel__ inline static bool is_update_required(trait_id total_size,
-                                                          TraitsData const& td,
-                                                          trait_id t_offset) {
-
-    auto const [rest_trait_size, first_dimension_idx, rest_trait_offset] =
-        _trait_values(total_size, t_offset);
-
-    return FirstTrait::is_update_required(td, first_dimension_idx) &&
-           traits<RestTraits...>::is_update_required(rest_trait_offset, td,
-                                                     rest_trait_offset);
-  }
-
-  __mark_cuda_rel__ inline static trait_id get_write_to_trait_id(
-      TraitsData& d) {
+  _mark_cuda_rel_ inline static trait_id get_write_to_trait_id(TraitsData& d) {
     auto const first_dimension_idx = FirstTrait::get_write_to_dimension_id(d);
     auto const first_dim_step_width = traits<RestTraits...>::size();
 
     auto const rest_trait_offset =
         traits<RestTraits...>::get_write_to_trait_id(d);
 
-    auto write_idx = first_dim_step_width * first_dimension_idx + rest_trait_offset;
-//    if(d.route_id_ == 70 && d.trip_id_ == 2)
-//      printf("FDI: %i;\tFDS: %i;\tRTO: %i;\ttest %i\n", first_dimension_idx,
-//             first_dim_step_width, rest_trait_offset, write_idx);
-
+    auto write_idx =
+        first_dim_step_width * first_dimension_idx + rest_trait_offset;
     return write_idx;
   }
 
-  __mark_cuda_rel__ inline static bool is_trait_satisfied(trait_id total_size,
-                                        TraitsData const& td,
-                                        trait_id t_offset) {
+  _mark_cuda_rel_ inline static bool is_trait_satisfied(trait_id total_size,
+                                                        TraitsData const& td,
+                                                        trait_id t_offset) {
     auto const [rest_trait_size, first_dimension_idx, rest_trait_offset] =
         _trait_values(total_size, t_offset);
 
@@ -86,7 +77,7 @@ struct traits<FirstTrait, RestTraits...> {
 
   // helper to aggregate values while progressing through the route stop by stop
   template <typename Timetable>
-  __mark_cuda_rel__ inline static void update_aggregate(
+  _mark_cuda_rel_ inline static void update_aggregate(
       TraitsData& aggregate_dt, Timetable const& tt,
       time const* const previous_arrivals, stop_offset const s_offset,
       stop_times_index const current_sti, trait_id const total_trait_size) {
@@ -100,8 +91,7 @@ struct traits<FirstTrait, RestTraits...> {
   }
 
   // reset the aggregate everytime the departure station changes
-
-  __mark_cuda_rel__ inline static void reset_aggregate(
+  _mark_cuda_rel_ inline static void reset_aggregate(
       trait_id const total_size, TraitsData& aggregate_dt,
       trait_id const initial_t_offset) {
     auto const [rest_trait_size, first_dimension_idx, rest_trait_offset] =
@@ -127,17 +117,6 @@ struct traits<FirstTrait, RestTraits...> {
   }
 
 #endif
-
-  inline static void get_trait_data(trait_id const total_size, TraitsData& dt,
-                                    trait_id const trait_offset) {
-    auto const [rest_trait_size, first_dimension_idx, rest_trait_offset] =
-        _trait_values(total_size, trait_offset);
-
-    FirstTrait::fill_trait_data_from_idx(dt, first_dimension_idx);
-
-    traits<RestTraits...>::get_trait_data(rest_trait_size, dt,
-                                          rest_trait_offset);
-  }
 
   inline static std::vector<trait_id> get_feasible_trait_ids(
       trait_id const total_size, trait_id const initial_offset,
@@ -166,13 +145,33 @@ struct traits<FirstTrait, RestTraits...> {
     return total_feasible;
   }
 
-  inline static bool dominates(TraitsData const& to_dominate,
-                               TraitsData const& dominating) {
-    return FirstTrait::dominates(to_dominate, dominating) &&
-           traits<RestTraits...>::dominates(to_dominate, dominating);
+  inline static bool dominates(trait_id const total_size,
+                               trait_id const to_dominate,
+                               trait_id const dominating) {
+    auto const [rest_size_todom, first_dim_todom, rest_trait_todom] =
+        _trait_values(total_size, to_dominate);
+
+    auto const [rest_size_domin, first_dim_domin, rest_trait_domin] =
+        _trait_values(total_size, dominating);
+
+    utl::verify_ex(rest_size_todom == rest_size_domin,
+                   "Trait derivation failed!");
+
+    return FirstTrait::dominates(first_dim_todom, first_dim_domin) &&
+           traits<RestTraits...>::dominates(rest_size_domin, rest_trait_todom,
+                                            rest_trait_domin);
   }
 
-  __mark_cuda_rel__ inline static std::tuple<trait_id, dimension_id, trait_id>
+  inline static void fill_journey(trait_id const total_size, journey& journey,
+                                  trait_id const t_offset) {
+    auto const [rest_size, first_dimension, rest_offset] =
+        _trait_values(total_size, t_offset);
+    FirstTrait::fill_journey(journey, first_dimension);
+    traits<RestTraits...>::fill_journey(rest_size, journey, rest_offset);
+  }
+
+private:
+  _mark_cuda_rel_ inline static std::tuple<trait_id, dimension_id, trait_id>
   _trait_values(trait_id const total_size, trait_id const t_offset) {
     auto const first_value_size = FirstTrait::index_range_size();
     auto const rest_trait_size = total_size / first_value_size;
@@ -183,36 +182,23 @@ struct traits<FirstTrait, RestTraits...> {
     return std::make_tuple(rest_trait_size, first_dimension_idx,
                            rest_trait_offset);
   }
-
-private:
 };
 
 template <>
 struct traits<> {
   using TraitsData = raptor_data<>;
 
-  __mark_cuda_rel__ inline static uint32_t size() { return 1; }
+  _mark_cuda_rel_ inline static uint32_t size() { return 1; }
 
   template <typename Data>
-  inline static void get_trait_data(uint32_t const _1, Data& _2,
-                                    uint32_t const _3) {}
-
-  template <typename Data>
-  __mark_cuda_rel__ inline static trait_id get_write_to_trait_id(
-      Data const& d) {
+  _mark_cuda_rel_ inline static trait_id get_write_to_trait_id(Data const& d) {
     return 0;
   }
 
   template <typename Data>
-  __mark_cuda_rel__ inline static bool is_update_required(uint32_t _1,
-                                                          Data const& _2,
-                                                          uint32_t _3) {
-    return true;  // return natural element of conjunction
-  }
-
-  template <typename Data>
-  __mark_cuda_rel__ inline static bool is_trait_satisfied(uint32_t _1, Data const& _2,
-                                        uint32_t _3) {
+  _mark_cuda_rel_ inline static bool is_trait_satisfied(uint32_t _1,
+                                                        Data const& _2,
+                                                        uint32_t _3) {
     return true;  // return natural element of conjunction
   }
 
@@ -223,13 +209,13 @@ struct traits<> {
   }
 
   template <typename Data, typename Timetable>
-  __mark_cuda_rel__ inline static void update_aggregate(
+  _mark_cuda_rel_ inline static void update_aggregate(
       Data& aggregate_dt, Timetable const& tt,
       time const* const previous_arrivals, stop_offset const s_offset,
       stop_times_index const current_sti, trait_id const total_trait_size) {}
 
   template <typename Data>
-  __mark_cuda_rel__ inline static void reset_aggregate(
+  _mark_cuda_rel_ inline static void reset_aggregate(
       trait_id const total_size, Data& aggregate_dt,
       trait_id const initial_t_offset) {}
 
@@ -252,10 +238,13 @@ struct traits<> {
   }
 
   // giving the neutral element of the conjunction
-  template <typename Data>
-  inline static bool dominates(Data const& _1, Data const& _2) {
+  inline static bool dominates(trait_id const _0, trait_id const& _1,
+                               trait_id const& _2) {
     return true;
   }
+
+  inline static void fill_journey(trait_id const _0, journey& _1,
+                                  trait_id const _2) {}
 };
 
 }  // namespace motis::raptor

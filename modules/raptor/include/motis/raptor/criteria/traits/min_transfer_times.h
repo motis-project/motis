@@ -4,7 +4,10 @@
 #include <algorithm>
 #include <tuple>
 
-#include "motis/raptor/raptor_timetable.h"
+#include "motis/raptor/raptor_util.h"
+#include "motis/raptor/types.h"
+
+#include "motis/core/journey/journey.h"
 
 #if defined(MOTIS_CUDA)
 #include "motis/raptor/gpu/gpu_timetable.cuh"
@@ -30,27 +33,12 @@ struct trait_min_transfer_times {
   dimension_id initial_mtt_idx_{};
   uint8_t min_transfer_time_idx_{};
 
-  __mark_cuda_rel__ inline static dimension_id index_range_size() {
+  _mark_cuda_rel_ inline static dimension_id index_range_size() {
     return _index_range_size_;
   }
 
   template <typename TraitsData>
-  __mark_cuda_rel__ inline static bool is_update_required(
-      TraitsData const& data, dimension_id const dimension_idx) {
-
-    // Index ranges from 0 to 4;
-    // 0 ^=  0 - < 5 minutes minimal tt
-    // 1 ^=  5 - <10
-    // 2 ^= 10 - <15
-    // 3 ^= 15 - <20
-    // 4 ^= 20 - >20
-    // Write updates if the transfer time into the given trip is
-    // at least as big as the given trait_idx requires
-    return dimension_idx <= data.min_transfer_time_idx_;
-  }
-
-  template <typename TraitsData>
-  __mark_cuda_rel__ inline static dimension_id get_write_to_dimension_id(
+  _mark_cuda_rel_ inline static dimension_id get_write_to_dimension_id(
       TraitsData const& d) {
     return (d.initial_mtt_idx_ < d.min_transfer_time_idx_)
                ? d.min_transfer_time_idx_
@@ -58,8 +46,8 @@ struct trait_min_transfer_times {
   }
 
   template <typename TraitsData>
-  __mark_cuda_rel__ inline static bool is_trait_satisfied(TraitsData const& data,
-                                        dimension_id const dimension_idx) {
+  _mark_cuda_rel_ inline static bool is_trait_satisfied(
+      TraitsData const& data, dimension_id const dimension_idx) {
     return dimension_idx == 0 && data.min_transfer_time_idx_ == 0;
   }
 
@@ -73,7 +61,7 @@ struct trait_min_transfer_times {
   //****************************************************************************
 
   template <typename TraitsData, typename Timetable>
-  __mark_cuda_rel__ inline static void update_aggregate(
+  _mark_cuda_rel_ inline static void update_aggregate(
       TraitsData& td, Timetable const& tt, time const* const previous_arrivals,
       stop_offset const current_stop, stop_times_index const current_sti,
       trait_id const total_trait_size) {
@@ -115,7 +103,7 @@ struct trait_min_transfer_times {
 #endif
 
   template <typename TraitsData>
-  __mark_cuda_rel__ inline static void reset_aggregate(
+  _mark_cuda_rel_ inline static void reset_aggregate(
       TraitsData& aggregate_dt, dimension_id const initial_dim_id) {
     aggregate_dt.min_transfer_time_idx_ = invalid<uint8_t>;
     aggregate_dt.initial_mtt_idx_ = initial_dim_id;
@@ -125,33 +113,25 @@ struct trait_min_transfer_times {
   // below is used solely in reconstructor
 
   template <typename TraitsData>
-  inline static void fill_trait_data_from_idx(
-      TraitsData& dt, dimension_id const dimension_idx) {
-    // scale the index linearly to determine a lower bound
-    //  for guaranteed transfer times
-    dt.min_transfer_time_idx_ = dimension_idx;
-  }
-
-  template<typename TraitsData>
   inline static std::vector<dimension_id> get_feasible_dimensions(
-      dimension_id const initial_offset,
-      TraitsData const& data
-      ) {
-    //TODO;
+      dimension_id const initial_offset, TraitsData const& data) {
+    // TODO;
     return std::vector<dimension_id>{};
   }
 
-  template <typename TraitsData>
-  static bool dominates(TraitsData const& to_dominate,
-                        TraitsData const& dominating) {
+  inline static bool dominates(dimension_id const to_dominate,
+                        dimension_id const dominating) {
     // TODO
-    return dominating.min_transfer_time_idx_ <=
-           to_dominate.min_transfer_time_idx_;
+    return dominating <= to_dominate;
+  }
+
+  inline static void fill_journey(journey& j, dimension_id const dim) {
+    j.min_transfer_time_ = dim;
   }
 
 private:
   template <typename Timetable>
-  __mark_cuda_rel__ static inline time _get_departure_time(
+  _mark_cuda_rel_ static inline time _get_departure_time(
       Timetable const& tt, stop_times_index const departure_sti) {
     auto const& stop_times = tt.stop_times_[departure_sti];
     return stop_times.departure_;
@@ -159,7 +139,7 @@ private:
 
 #if defined(MOTIS_CUDA)
   template <>
-  __mark_cuda_rel__ static inline time
+  _mark_cuda_rel_ static inline time
   _get_departure_time<device_gpu_timetable>(
       device_gpu_timetable const& tt, stop_times_index const departure_sti) {
     return tt.stop_departures_[departure_sti];
