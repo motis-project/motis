@@ -52,9 +52,13 @@ void create_labels(time const departure_begin, time const departure_end,
   auto const max_start_labels = departure_end - departure_begin + 1;
   while (!end_reached<Dir>(departure_begin, departure_end, t)) {
     auto [con, day_idx] = re.get_connection<Dir>(t);
+    if (con == nullptr) {
+      break;
+    }
+
     t = get_time<Dir>(con, day_idx);
 
-    if (con == nullptr || end_reached<Dir>(departure_begin, departure_end, t)) {
+    if (end_reached<Dir>(departure_begin, departure_end, t)) {
       break;
     }
 
