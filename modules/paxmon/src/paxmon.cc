@@ -188,8 +188,12 @@ void paxmon::init(motis::module::registry& reg) {
 
   reg.subscribe(
       "/rt/graph_updated",
-      [&](msg_ptr const&) {
+      [&](msg_ptr const& msg) {
         scoped_timer t{"paxmon: graph_updated"};
+        auto const rgu = motis_content(RtGraphUpdated, msg);
+        if (rgu->schedule() != 0U) {
+          return nullptr;  // TODO(pablo): not yet supported
+        }
         rt_updates_applied();
         if (!initial_forward_done_) {
           initial_forward_done_ = true;
@@ -532,6 +536,9 @@ msg_ptr paxmon::rt_update(msg_ptr const& msg) {
   auto const& sched = get_sched();
   auto& uv = primary_universe();
   auto update = motis_content(RtUpdates, msg);
+  if (update->schedule() != 0U) {
+    return {};  // TODO(pablo): not yet supported
+  }
   handle_rt_update(uv, data_.capacity_maps_, sched, rt_update_ctx_,
                    system_stats_, tick_stats_, update,
                    arrival_delay_threshold_);

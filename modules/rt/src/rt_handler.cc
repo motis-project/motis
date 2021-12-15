@@ -11,6 +11,7 @@
 #include "motis/core/conv/trip_conv.h"
 
 #include "motis/module/context/motis_publish.h"
+#include "motis/module/message.h"
 
 #include "motis/rt/error.h"
 #include "motis/rt/event_resolver.h"
@@ -347,8 +348,11 @@ msg_ptr rt_handler::flush(msg_ptr const&) {
     validate_constant_graph(sched_);
   }
 
-  ctx::await_all(
-      motis_publish(motis::module::make_no_msg("/rt/graph_updated")));
+  motis::module::message_creator mc;
+  mc.create_and_finish(MsgContent_RtGraphUpdated,
+                       CreateRtGraphUpdated(mc, schedule_res_id_).Union(),
+                       "/rt/graph_updated");
+  ctx::await_all(motis_publish(module::make_msg(mc)));
 
   if (stats_.sanity_check_fails()) {
     return motis::module::make_error_msg(error::sanity_check_failed);
