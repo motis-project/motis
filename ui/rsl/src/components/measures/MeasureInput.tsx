@@ -36,7 +36,7 @@ function MeasureInput(): JSX.Element {
   const [universe] = useAtom(universeAtom);
   const [recipientTrips, setRecipientTrips] = useState<TripServiceInfo[]>([]);
   const [recipientStations, setRecipientStations] = useState<Station[]>([]);
-  const { data: status } = usePaxMonStatusQuery();
+  const { data: status } = usePaxMonStatusQuery(universe);
   const [time, setTime] = useState(() =>
     status ? new Date(status.system_time * 1000) : new Date()
   );

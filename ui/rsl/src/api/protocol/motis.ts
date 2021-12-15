@@ -45,6 +45,7 @@ import {
   PaxMonUniverseDestroyed,
   PaxMonGetInterchangesRequest,
   PaxMonGetInterchangesResponse,
+  PaxMonStatusRequest,
 } from "./motis/paxmon";
 import {
   PaxForecastUpdate,
@@ -353,7 +354,8 @@ export type MsgContent =
   | PaxMonUniverseForked
   | PaxMonUniverseDestroyed
   | PaxMonGetInterchangesRequest
-  | PaxMonGetInterchangesResponse;
+  | PaxMonGetInterchangesResponse
+  | PaxMonStatusRequest;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -409,7 +411,8 @@ export type MsgContentType =
   | "PaxMonUniverseForked"
   | "PaxMonUniverseDestroyed"
   | "PaxMonGetInterchangesRequest"
-  | "PaxMonGetInterchangesResponse";
+  | "PaxMonGetInterchangesResponse"
+  | "PaxMonStatusRequest";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

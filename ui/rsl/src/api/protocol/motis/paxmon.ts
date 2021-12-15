@@ -287,14 +287,16 @@ export interface PaxMonRemoveGroupsRequest {
   ids: number[];
 }
 
+// paxmon/PaxMonStatusRequest.fbs
+export interface PaxMonStatusRequest {
+  universe: number;
+}
+
 // paxmon/PaxMonStatusResponse.fbs
 export interface PaxMonStatusResponse {
   system_time: number;
-  tracked_groups: number;
-  last_update_affected_groups: number;
-  last_update_affected_passengers: number;
-  last_update_broken_groups: number;
-  last_update_broken_passengers: number;
+  active_groups: number;
+  trip_count: number;
 }
 
 // paxmon/PaxMonTripLoadInfo.fbs

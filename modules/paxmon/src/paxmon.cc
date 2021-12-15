@@ -313,9 +313,11 @@ void paxmon::init(motis::module::registry& reg) {
                   },
                   {});
 
-  reg.register_op("/paxmon/status", [&](msg_ptr const& /*msg*/) -> msg_ptr {
-    return api::get_status(get_sched(), last_tick_stats_);
-  });
+  reg.register_op("/paxmon/status",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::get_status(data_, msg, last_tick_stats_);
+                  },
+                  {});
 
   reg.register_op("/paxmon/get_groups",
                   [&](msg_ptr const& msg) -> msg_ptr {
