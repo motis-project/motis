@@ -42,7 +42,7 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
     );
   });
 
-  const forwardDisabled = forwardMutation.isLoading || schedule != 0;
+  const forwardDisabled = forwardMutation.isLoading;
 
   const buttonClass = `px-3 py-1 rounded text-sm ${
     !forwardDisabled
