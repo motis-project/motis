@@ -62,15 +62,15 @@ void rt::init(motis::module::registry& reg) {
           schedule_res_id =
               get_schedule_res_id(motis_content(RISSystemTimeChanged, msg));
         }
+        // only used to lock the schedule, rt_handler already has a reference
         auto res_lock =
             lock_resources({{schedule_res_id, ctx::access_t::WRITE}});
-        auto& sched = *res_lock.get<schedule_data>(schedule_res_id).schedule_;
 
         std::unique_lock lock{handler_mutex};
         if (auto const it = handlers_.find(schedule_res_id);
             it != end(handlers_)) {
           lock.unlock();
-          it->second.get()->flush(msg);
+          it->second->flush(msg);
           if (schedule_res_id != DEFAULT_SCHEDULE_RES_ID) {
             lock.lock();
             handlers_.erase(it);
