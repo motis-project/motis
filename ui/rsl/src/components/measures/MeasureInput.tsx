@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 import { queryKeys, usePaxMonStatusQuery } from "../../api/paxmon";
 import { Station, TripServiceInfo } from "../../api/protocol/motis";

@@ -1,5 +1,3 @@
-import React from "react";
-
 import { JourneyTrip } from "../data/journey";
 
 type JourneyTripNameViewProps = {

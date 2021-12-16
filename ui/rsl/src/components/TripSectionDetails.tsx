@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 import { TripId } from "../api/protocol/motis";
 import { usePaxMonGroupsInTripQuery } from "../api/paxmon";

@@ -1,5 +1,3 @@
-import React from "react";
-
 import { formatDateTime } from "../util/dateFormat";
 import { TripServiceInfo } from "../api/protocol/motis";
 

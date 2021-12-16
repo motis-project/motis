@@ -1,4 +1,3 @@
-import React from "react";
 import { QueryClient, useMutation, useQueryClient } from "react-query";
 import { useAtom } from "jotai";
 

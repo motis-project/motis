@@ -1,4 +1,3 @@
-import React from "react";
 import { useQuery } from "react-query";
 import { useAtom } from "jotai";
 import * as Tooltip from "@radix-ui/react-tooltip";

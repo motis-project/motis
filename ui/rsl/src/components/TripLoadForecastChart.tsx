@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import { useRef } from "react";
 import { useQuery, useQueryClient } from "react-query";
 import { DownloadIcon } from "@heroicons/react/solid";
 import { useAtom } from "jotai";

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useCombobox } from "downshift";
 import { ChevronDownIcon } from "@heroicons/react/solid";
 import { Station } from "../api/protocol/motis";
