@@ -9,8 +9,7 @@ using namespace motis::paxmon;
 
 namespace motis::paxmon::api {
 
-msg_ptr get_status(paxmon_data& data, motis::module::msg_ptr const& msg,
-                   tick_statistics const& last_tick_stats) {
+msg_ptr get_status(paxmon_data& data, motis::module::msg_ptr const& msg) {
   auto const req = motis_content(PaxMonStatusRequest, msg);
   auto const uv_access = get_universe_and_schedule(data, req->universe());
   auto const& sched = uv_access.sched_;

@@ -3,13 +3,10 @@
 #include "motis/module/message.h"
 
 #include "motis/paxmon/paxmon_data.h"
-#include "motis/paxmon/rt_update_context.h"
 
 namespace motis::paxmon::api {
 
-motis::module::msg_ptr remove_groups(paxmon_data& data,
-                                     rt_update_context& rt_update_ctx,
-                                     bool keep_group_history,
+motis::module::msg_ptr remove_groups(paxmon_data& data, bool keep_group_history,
                                      bool check_graph_integrity_end,
                                      motis::module::msg_ptr const& msg);
 

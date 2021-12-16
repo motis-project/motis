@@ -5,7 +5,9 @@
 #include <mutex>
 #include <optional>
 #include <stdexcept>
+#include <vector>
 
+#include "utl/erase.h"
 #include "utl/verify.h"
 
 #include "motis/core/schedule/schedule.h"
@@ -32,10 +34,10 @@ struct multiverse {
         motis::module::global_res_id::PAX_DEFAULT_UNIVERSE);
     auto uvp = std::make_unique<universe>();
     uvp->schedule_res_id_ = default_schedule_res_id;
-    ++schedule_refs_[default_schedule_res_id];
     mod_.add_shared_data(default_uv_res_id, std::move(uvp));
     universe_res_map_[0] = default_uv_res_id;
     schedule_res_map_[0] = default_schedule_res_id;
+    universes_using_schedule_[default_schedule_res_id].emplace_back(0);
   }
 
   universe_access get(
@@ -68,7 +70,6 @@ struct multiverse {
       new_schedule_res_id = mod_.generate_res_id();
       mod_.add_shared_data(new_schedule_res_id, copy_graph(base_sched));
     }
-    ++schedule_refs_[new_schedule_res_id];
     auto new_uvp = std::make_unique<universe>(base_uv);
     new_uvp->id_ = new_id;
     new_uvp->schedule_res_id_ = new_schedule_res_id;
@@ -76,6 +77,7 @@ struct multiverse {
     mod_.add_shared_data(new_uv_res_id, std::move(new_uvp));
     universe_res_map_[new_id] = new_uv_res_id;
     schedule_res_map_[new_id] = new_schedule_res_id;
+    universes_using_schedule_[new_schedule_res_id].emplace_back(new_id);
     return new_uv;
   }
 
@@ -93,7 +95,9 @@ struct multiverse {
                            motis::module::global_res_id::PAX_DEFAULT_UNIVERSE),
           "paxmon::multiverse.destroy: default universe");
       mod_.remove_shared_data(uv_res_id);
-      if (--schedule_refs_[schedule_res_id] == 0) {
+      auto& sched_refs = universes_using_schedule_[schedule_res_id];
+      utl::erase(sched_refs, id);
+      if (sched_refs.empty()) {
         utl::verify(
             schedule_res_id != motis::module::to_res_id(
                                    motis::module::global_res_id::SCHEDULE),
@@ -107,11 +111,22 @@ struct multiverse {
     }
   }
 
+  std::vector<universe_id> universes_using_schedule(
+      ctx::res_id_t const schedule_res_id) {
+    std::lock_guard lock{mutex_};
+    if (auto const it = universes_using_schedule_.find(schedule_res_id);
+        it != end(universes_using_schedule_)) {
+      return it->second;
+    } else {
+      return {};
+    }
+  }
+
   std::recursive_mutex mutex_;
   motis::module::module& mod_;
   std::map<universe_id, ctx::res_id_t> universe_res_map_;
   std::map<universe_id, ctx::res_id_t> schedule_res_map_;
-  std::map<ctx::res_id_t, std::uint32_t> schedule_refs_;
+  std::map<ctx::res_id_t, std::vector<universe_id>> universes_using_schedule_;
   universe_id last_id_{};
 };
 

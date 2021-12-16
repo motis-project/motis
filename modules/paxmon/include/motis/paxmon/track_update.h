@@ -11,9 +11,8 @@
 
 namespace motis::paxmon {
 
-void update_track(schedule const& sched, universe const& uv,
+void update_track(schedule const& sched, universe& uv,
                   motis::rt::RtTrackUpdate const* tu,
-                  std::vector<edge_index>& updated_interchange_edges,
-                  system_statistics& system_stats);
+                  std::vector<edge_index>& updated_interchange_edges);
 
 }  // namespace motis::paxmon

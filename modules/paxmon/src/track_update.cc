@@ -35,18 +35,17 @@ edge const* find_trip_edge(schedule const& sched, universe const& uv,
   return nullptr;
 }
 
-void update_track(schedule const& sched, universe const& uv,
+void update_track(schedule const& sched, universe& uv,
                   motis::rt::RtTrackUpdate const* tu,
-                  std::vector<edge_index>& updated_interchange_edges,
-                  system_statistics& system_stats) {
-  ++system_stats.update_track_count_;
+                  std::vector<edge_index>& updated_interchange_edges) {
+  ++uv.system_stats_.update_track_count_;
   auto const trp = from_fbs(sched, tu->trip());
   auto const tdi = uv.trip_data_.find_index(trp->trip_idx_);
   if (tdi == INVALID_TRIP_DATA_INDEX) {
     return;
   }
   auto const st = get_station(sched, tu->event()->station_id()->str());
-  ++system_stats.update_track_trip_found_;
+  ++uv.system_stats_.update_track_trip_found_;
 
   if (st->track_to_platform_.empty()) {
     // no platform information -> no update necessary

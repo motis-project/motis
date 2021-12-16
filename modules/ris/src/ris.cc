@@ -253,7 +253,7 @@ struct ris::impl {
 
     publisher pub{schedule_res_id};
     for (auto const& rim : *req->input_messages()) {
-      parse_publish_message(rim, pub);
+      parse_and_publish_message(rim, pub);
     }
 
     pub.flush();
@@ -729,7 +729,7 @@ struct ris::impl {
   }
 
   template <typename Publisher>
-  void parse_publish_message(RISInputMessage const* rim, Publisher& pub) {
+  void parse_and_publish_message(RISInputMessage const* rim, Publisher& pub) {
     auto content_sv =
         std::string_view{rim->content()->c_str(), rim->content()->size()};
 

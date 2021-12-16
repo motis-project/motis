@@ -1,5 +1,7 @@
 #include "motis/paxmon/statistics.h"
 
+#include "motis/core/schedule/schedule.h"
+
 #include "motis/paxmon/get_load.h"
 #include "motis/paxmon/universe.h"
 

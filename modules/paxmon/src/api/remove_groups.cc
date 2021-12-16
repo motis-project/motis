@@ -17,8 +17,7 @@ using namespace motis::logging;
 
 namespace motis::paxmon::api {
 
-msg_ptr remove_groups(paxmon_data& data, rt_update_context& rt_update_ctx,
-                      bool const keep_group_history,
+msg_ptr remove_groups(paxmon_data& data, bool const keep_group_history,
                       bool const check_graph_integrity_end,
                       msg_ptr const& msg) {
   auto const req = motis_content(PaxMonRemoveGroupsRequest, msg);
@@ -34,10 +33,6 @@ msg_ptr remove_groups(paxmon_data& data, rt_update_context& rt_update_ctx,
       continue;
     }
     ++removed_groups;
-    for (auto const& leg : pg->compact_planned_journey_.legs_) {
-      rt_update_ctx.trips_affected_by_last_update_.insert(
-          get_trip(sched, leg.trip_idx_));
-    }
     remove_passenger_group_from_graph(uv, pg);
     if (!keep_group_history) {
       uv.passenger_groups_.release(pg->id_);

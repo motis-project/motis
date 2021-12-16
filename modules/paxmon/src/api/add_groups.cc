@@ -17,8 +17,8 @@ using namespace motis::logging;
 
 namespace motis::paxmon::api {
 
-msg_ptr add_groups(paxmon_data& data, rt_update_context& rt_update_ctx,
-                   bool const allow_reuse, msg_ptr const& msg) {
+msg_ptr add_groups(paxmon_data& data, bool const allow_reuse,
+                   msg_ptr const& msg) {
   auto const req = motis_content(PaxMonAddGroupsRequest, msg);
   auto const uv_access =
       get_universe_and_schedule(data, req->universe(), ctx::access_t::WRITE);
@@ -49,10 +49,6 @@ msg_ptr add_groups(paxmon_data& data, rt_update_context& rt_update_ctx,
         }
         auto pg = uv.passenger_groups_.add(std::move(input_pg));
         add_passenger_group_to_graph(sched, data.capacity_maps_, uv, *pg);
-        for (auto const& leg : pg->compact_planned_journey_.legs_) {
-          rt_update_ctx.trips_affected_by_last_update_.insert(
-              get_trip(sched, leg.trip_idx_));
-        }
         return pg;
       });
 

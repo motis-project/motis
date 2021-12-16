@@ -3,7 +3,9 @@
 #include <cstdint>
 #include <vector>
 
-#include "motis/core/schedule/schedule.h"
+namespace motis {
+struct schedule;
+}
 
 namespace motis::paxmon {
 

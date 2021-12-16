@@ -87,6 +87,7 @@ export interface PaxForecastGroup {
 
 // paxforecast/PaxForecastUpdate.fbs
 export interface PaxForecastUpdate {
+  universe: number;
   system_time: number;
   groups: PaxForecastGroup[];
   trips: PaxMonTripLoadInfo[];

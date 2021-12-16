@@ -27,6 +27,8 @@
 #include "motis/paxmon/graph_index.h"
 #include "motis/paxmon/passenger_group_container.h"
 #include "motis/paxmon/pci_container.h"
+#include "motis/paxmon/rt_update_context.h"
+#include "motis/paxmon/statistics.h"
 #include "motis/paxmon/trip_data_container.h"
 
 namespace motis::paxmon {
@@ -162,11 +164,17 @@ struct universe {
 
   universe_id id_{};
   ctx::res_id_t schedule_res_id_{};
+
   fws_graph<event_node, edge> graph_;
   trip_data_container trip_data_;
   passenger_group_container passenger_groups_;
   pci_container pax_connection_info_;
   dynamic_fws_multimap<edge_index> interchanges_at_station_;
+
+  rt_update_context rt_update_ctx_;
+  system_statistics system_stats_;
+  tick_statistics tick_stats_;
+  tick_statistics last_tick_stats_;
 };
 
 }  // namespace motis::paxmon

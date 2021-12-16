@@ -26,5 +26,6 @@ table PaxMonEvent {
 }
 
 table PaxMonUpdate {
+  universe: uint;
   events: [PaxMonEvent];
 }

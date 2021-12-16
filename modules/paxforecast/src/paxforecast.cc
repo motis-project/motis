@@ -278,18 +278,18 @@ bool has_better_alternative(std::vector<alternative> const& alts,
 }
 
 void paxforecast::on_monitoring_event(msg_ptr const& msg) {
+  auto const mon_update = motis_content(PaxMonUpdate, msg);
   MOTIS_START_TIMING(total);
   auto& data =
       *get_shared_data<paxmon_data*>(to_res_id(global_res_id::PAX_DATA));
-  auto const uv_access = get_universe_and_schedule(data);
+  auto const uv_access = get_universe_and_schedule(data, mon_update->universe(),
+                                                   ctx::access_t::WRITE);
   auto const& sched = uv_access.sched_;
   auto& uv = uv_access.uv_;
   auto& caps = data.capacity_maps_;
 
   tick_statistics tick_stats;
   tick_stats.system_time_ = sched.system_time_;
-
-  auto const mon_update = motis_content(PaxMonUpdate, msg);
 
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
@@ -488,7 +488,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
       sim_result.stats_.second_alt_prob_avg_ * 100,
       sim_result.stats_.group_count_, sim_result.stats_.combined_group_count_);
 
-  if (behavior_stats_file_.is_open()) {
+  if (behavior_stats_file_.is_open() && uv.id_ == 0) {
     fmt::print(behavior_stats_file_, "{},{},{},{:.4f},{:.4f},{:.2f},{:.2f}\n",
                static_cast<std::uint64_t>(sched.system_time_),
                sim_result.stats_.group_count_,
@@ -518,7 +518,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
     tick_stats.t_load_forecast_fbs_ = MOTIS_TIMING_MS(load_forecast_fbs);
 
     MOTIS_START_TIMING(write_load_forecast);
-    if (forecast_file_.is_open()) {
+    if (forecast_file_.is_open() && uv.id_ == 0) {
       scoped_timer load_forecast_msg_timer{"load forecast to json"};
       forecast_file_ << forecast_msg->to_json(true) << std::endl;
     }
@@ -556,9 +556,10 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
             << " alternatives found, " << tick_stats.added_groups_
             << " groups added, " << tick_stats.removed_groups_
             << " groups removed";
-  ;
-  stats_writer_->write_tick(tick_stats);
-  stats_writer_->flush();
+  if (uv.id_ == 0) {
+    stats_writer_->write_tick(tick_stats);
+    stats_writer_->flush();
+  }
 }
 
 msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
@@ -593,7 +594,35 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
   // simulate passenger behavior with measures
   for (auto const& [t, ms] : measures) {
     scoped_timer measure_timer{"measure"};
-    LOG(info) << "apply_measures @" << format_time(t);
+    auto const contains_rt_updates =
+        std::any_of(begin(ms), end(ms), [](auto const& m) {
+          return std::holds_alternative<measures::rt_update>(m);
+        });
+
+    LOG(info) << "apply_measures @" << format_time(t)
+              << " [contains_rt_updates=" << contains_rt_updates << "]";
+
+    if (contains_rt_updates) {
+      scoped_timer rt_timer{"applying rt updates"};
+      auto rt_lock =
+          lock_resources({{uv.schedule_res_id_, ctx::access_t::WRITE}});
+      message_creator mc;
+      std::vector<flatbuffers::Offset<motis::ris::RISInputMessage>> rims;
+      for (auto const& m : ms) {
+        if (std::holds_alternative<measures::rt_update>(m)) {
+          auto const rtum = std::get<measures::rt_update>(m);
+          rims.emplace_back(CreateRISInputMessage(
+              mc, rtum.type_, mc.CreateString(rtum.content_)));
+        }
+      }
+      mc.create_and_finish(
+          MsgContent_RISApplyRequest,
+          CreateRISApplyRequest(mc, uv.schedule_res_id_, mc.CreateVector(rims))
+              .Union(),
+          "/ris/apply");
+      motis_call(make_msg(mc))->val();
+    }
+
     auto const loc_time = t + req->preparation_time();
     manual_timer get_affected_groups_timer{"get_affected_grous"};
     auto const affected_groups =

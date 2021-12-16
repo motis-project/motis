@@ -369,5 +369,6 @@ export interface PaxMonEvent {
 
 // paxmon/PaxMonUpdate.fbs
 export interface PaxMonUpdate {
+  universe: number;
   events: PaxMonEvent[];
 }
