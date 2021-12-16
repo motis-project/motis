@@ -11,7 +11,7 @@ using namespace motis::logging;
 
 namespace motis::paxmon::api {
 
-msg_ptr fork_universe(paxmon& mod, paxmon_data& data, msg_ptr const& msg) {
+msg_ptr fork_universe(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonForkUniverseRequest, msg);
   auto const uv_access = get_universe_and_schedule(data, req->universe());
   auto const& base_uv = uv_access.uv_;
