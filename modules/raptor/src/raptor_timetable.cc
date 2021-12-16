@@ -6,12 +6,6 @@
 
 namespace motis::raptor {
 
-// overload invalid for station id,
-// since we have 32b and 24b station ids, which must be comparable
-template <>
-constexpr auto invalid<stop_id> = -1;
-
-
 void route_mapping::insert_dbg(const std::string& dbg, route_id r_id, trip_id t_id) {
   auto& route_map = utl::get_or_create(
       trip_dbg_to_route_trips_, std::string{dbg},

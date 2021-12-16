@@ -10,23 +10,6 @@
 
 namespace motis::raptor {
 
-
-
-template <typename T>
-inline constexpr T min_value = std::numeric_limits<T>::min();
-
-template <typename T>
-inline constexpr T max_value = std::numeric_limits<T>::max();
-
-template <typename T>
-inline constexpr T invalid = max_value<T>;
-// Template specializations in raptor_timetable.cc
-
-template <typename T>
-inline constexpr auto valid(T const& value) {
-  return value != invalid<T>;
-}
-
 constexpr raptor_round max_transfers = 6;
 constexpr raptor_round max_trips = max_transfers + 1;
 constexpr raptor_round max_raptor_round = max_trips + 1;

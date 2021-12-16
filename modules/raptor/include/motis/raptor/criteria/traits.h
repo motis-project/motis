@@ -40,6 +40,10 @@ struct traits<FirstTrait, RestTraits...> {
 
   _mark_cuda_rel_ inline static trait_id get_write_to_trait_id(TraitsData& d) {
     auto const first_dimension_idx = FirstTrait::get_write_to_dimension_id(d);
+    if (!valid(first_dimension_idx)){
+      return invalid<trait_id>;
+    }
+
     auto const first_dim_step_width = traits<RestTraits...>::size();
 
     auto const rest_trait_offset =

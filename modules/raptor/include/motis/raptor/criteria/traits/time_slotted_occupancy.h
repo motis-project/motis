@@ -8,11 +8,12 @@
 #include "motis/raptor/types.h"
 
 #include "motis/core/journey/journey.h"
+#include "utl/verify.h"
 
 #if defined(MOTIS_CUDA)
 #include "motis/raptor/gpu/gpu_timetable.cuh"
-#include "cuda_runtime.h"
 #include "cooperative_groups.h"
+#include "cuda_runtime.h"
 #endif
 
 namespace motis::raptor {
@@ -73,7 +74,9 @@ struct trait_time_slotted_occupancy {
   template <typename TraitsData>
   _mark_cuda_rel_ inline static dimension_id get_write_to_dimension_id(
       TraitsData const& d) {
-    return d.initial_soc_idx_ + d.occ_time_slot_;
+    int const write_to = d.initial_soc_idx_ + d.occ_time_slot_;
+    return write_to < slot_count ? static_cast<dimension_id>(write_to)
+                                 : invalid<dimension_id>;
   }
 
   template <typename TraitsData>
@@ -104,9 +107,10 @@ struct trait_time_slotted_occupancy {
     aggregate_dt.occ_time_slot_ = aggregate_dt.summed_occ_time_ / slot_divisor;
 
 #if defined(MOTIS_CUDA)
-    //only update the segment prop value on the first update after reset
-    if(!valid(aggregate_dt._segment_prop_occ_time_))
-      aggregate_dt._segment_prop_occ_time_ = (stop_occupancy * segment_duration);
+    // only update the segment prop value on the first update after reset
+    if (!valid(aggregate_dt._segment_prop_occ_time_))
+      aggregate_dt._segment_prop_occ_time_ =
+          (stop_occupancy * segment_duration);
 #endif
   }
 
@@ -116,11 +120,11 @@ struct trait_time_slotted_occupancy {
   template <typename TraitsData>
   __device__ inline static void propagate_and_merge_if_needed(
       TraitsData& aggregate, unsigned const mask, bool const predicate) {
-//    if (valid(aggregate._segment_prop_occ_time_)) {
-//      // there is always a call to update before the propagation is done
-//      // store this value to always repeat the same value to the next one
-//      aggregate.summed_occ_time_ = aggregate._segment_prop_occ_time_;
-//    }
+    //    if (valid(aggregate._segment_prop_occ_time_)) {
+    //      // there is always a call to update before the propagation is done
+    //      // store this value to always repeat the same value to the next one
+    //      aggregate.summed_occ_time_ = aggregate._segment_prop_occ_time_;
+    //    }
     auto const prop_val = aggregate.summed_occ_time_;
     auto const received = __shfl_up_sync(mask, prop_val, 1);
     if (predicate) {
@@ -148,13 +152,13 @@ struct trait_time_slotted_occupancy {
     aggregate_dt.occ_time_slot_ = 0;
     aggregate_dt.initial_soc_idx_ = initial_dim_id;
 
-//    if (aggregate_dt.route_id_ == 18031 && initial_dim_id == 29 &&
-//        aggregate_dt.trip_id_ == 14)
-//      printf(
-//          "Resetting aggregate for r_id: %i;\ttrip_offset: %i;\tdim_id: "
-//          "%i;\tsummed: %i;\tslot: %i;\n",
-//          aggregate_dt.route_id_, aggregate_dt.trip_id_, initial_dim_id,
-//          aggregate_dt.summed_occ_time_, aggregate_dt.occ_time_slot_);
+    //    if (aggregate_dt.route_id_ == 18031 && initial_dim_id == 29 &&
+    //        aggregate_dt.trip_id_ == 14)
+    //      printf(
+    //          "Resetting aggregate for r_id: %i;\ttrip_offset: %i;\tdim_id: "
+    //          "%i;\tsummed: %i;\tslot: %i;\n",
+    //          aggregate_dt.route_id_, aggregate_dt.trip_id_, initial_dim_id,
+    //          aggregate_dt.summed_occ_time_, aggregate_dt.occ_time_slot_);
 
 #if defined(MOTIS_CUDA)
     aggregate_dt._segment_prop_occ_time_ = invalid<uint32_t>;
@@ -170,14 +174,16 @@ struct trait_time_slotted_occupancy {
 
     // there is exactly one feasible dimension, which is the
     //  initial - what is consumed by the trip
-    dimension_id const new_dimension = initial_offset - data.occ_time_slot_;
-    if (new_dimension >= 0) return std::vector<dimension_id>{new_dimension};
+    int const new_dimension = initial_offset - data.occ_time_slot_;
+    if (new_dimension >= 0)
+      return std::vector<dimension_id>{
+          static_cast<dimension_id>(new_dimension)};
 
     return std::vector<dimension_id>{};
   }
 
   inline static bool dominates(dimension_id const to_dominate,
-                        dimension_id const dominating) {
+                               dimension_id const dominating) {
     return dominating <= to_dominate;
   }
 
