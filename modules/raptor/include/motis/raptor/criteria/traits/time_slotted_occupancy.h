@@ -211,7 +211,14 @@ private:
     auto const& previous_times = tt.stop_times_[previous_sti];
     auto const& current_times = tt.stop_times_[current_sti];
 
-    return current_times.arrival_ - previous_times.departure_;
+    auto const dep_time = valid(previous_times.departure_)
+                              ? previous_times.departure_
+                              : previous_times.arrival_;
+    auto const arr_time = valid(current_times.arrival_)
+                              ? current_times.arrival_
+                              : current_times.departure_;
+
+    return arr_time - dep_time;
   }
 
 #if defined(MOTIS_CUDA)
@@ -226,8 +233,14 @@ private:
   _read_segment_duration<device_gpu_timetable>(device_gpu_timetable const& tt,
                                                stop_times_index const sti) {
     auto const prev_sti = sti - 1;
-    auto const departure_time = tt.stop_departures_[prev_sti];
-    auto const arrival_time = tt.stop_arrivals_[sti];
+    auto departure_time = tt.stop_departures_[prev_sti];
+    if (!valid(departure_time))
+      departure_time = tt.stop_arrivals_[prev_sti];
+
+    auto arrival_time = tt.stop_arrivals_[sti];
+    if (!valid(arrival_time))
+      arrival_time = tt.stop_departures_[sti];
+
     return arrival_time - departure_time;
   }
 #endif
