@@ -51,7 +51,8 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
     }
   }
 
-  for (auto const& [trp, tdi] : uv.trip_data_.mapping_) {
+  for (auto const& [trp_idx, tdi] : uv.trip_data_.mapping_) {
+    auto const* trp = get_trip(sched, trp_idx);
     for (auto const& ei : uv.trip_data_.edges(tdi)) {
       auto const* e = ei.get(uv);
       auto const& trips = e->get_trips(sched);
