@@ -33,8 +33,12 @@ interface SubView{
 
 export const Overlay: React.FC = (props) => {
 
+    const[overlayHidden, setOverlayHidden] = React.useState<Boolean>(false);
+
+    const[subOverlayHidden, setSubOverlayHidden] = React.useState<Boolean>(true);
+
     return(
-        <div className='overlay-container'>{/*hidden>*/}
+        <div className={overlayHidden ? 'overlay-container' : "overlay-container hidden" }>
             <div className='overlay'>
                 <div id='overlay-content'>
                     <Search />
@@ -44,13 +48,13 @@ export const Overlay: React.FC = (props) => {
                         </div>
                     </div>
                 </div>
-                <SubOverlay />
+                <SubOverlay subOverlayHidden={subOverlayHidden}/>
             </div>
             <div className='overlay-tabs'>
-                <div className='overlay-toggle'>{/**onClick */ }
+                <div className='overlay-toggle' onClick={() => setOverlayHidden(!overlayHidden)}>
                     <i className='icon'>arrow_drop_down</i>
                 </div>
-                <div className='trip-search-toggle'>{/**enabled, onClick*/}
+                <div className='trip-search-toggle' onClick={() => setSubOverlayHidden(!subOverlayHidden)}>{/**enabled*/}
                     <i className='icon'>train</i>
                 </div>
             </div>

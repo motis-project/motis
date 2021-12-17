@@ -2,9 +2,9 @@ import React from 'react';
 
 import { DatePicker } from './DatePicker';
 
-export const SubOverlay: React.FC = () => {
+export const SubOverlay: React.FC<{'subOverlayHidden' : Boolean}> = (props) => {
     return (
-        <div className="sub-overlay hidden">
+        <div className={props.subOverlayHidden ? "sub-overlay hidden" : "sub-overlay"}>
             <div id="sub-overlay-content">
                 <div className="trip-search">
                     <div className="header">
