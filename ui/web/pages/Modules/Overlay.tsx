@@ -54,7 +54,7 @@ export const Overlay: React.FC = (props) => {
                 <div className='overlay-toggle' onClick={() => setOverlayHidden(!overlayHidden)}>
                     <i className='icon'>arrow_drop_down</i>
                 </div>
-                <div className='trip-search-toggle' onClick={() => setSubOverlayHidden(!subOverlayHidden)}>{/**enabled*/}
+                <div className={subOverlayHidden ? 'trip-search-toggle' : 'trip-search-toggle enabled'} onClick={() => setSubOverlayHidden(!subOverlayHidden)}>
                     <i className='icon'>train</i>
                 </div>
             </div>
