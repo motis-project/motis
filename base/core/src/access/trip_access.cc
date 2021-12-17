@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "utl/verify.h"
+
 #include "motis/string.h"
 
 #include "motis/core/schedule/schedule.h"
@@ -12,16 +14,41 @@
 
 namespace motis {
 
-trip const* get_trip(schedule const& sched, std::string const& trip_id,
-                     std::time_t const date) {
-  if (auto it = sched.gtfs_trip_ids_.find({trip_id, date});
-      it == end(sched.gtfs_trip_ids_) || it->first.trip_id_ != trip_id ||
-      it->first.start_date_ != date) {
-    throw std::runtime_error{
-        "Could not find trip for the given trip id and day!"};
+trip const* get_trip(schedule const& sched, gtfs_trip_id const& trip_id) {
+  auto const it = sched.gtfs_trip_ids_.find(trip_id.trip_id_);
+  utl::verify(it != end(sched.gtfs_trip_ids_), "unable to find GTFS trip {}",
+              trip_id);
+
+  auto const& trips = it->second;
+  if (trip_id.start_date_.has_value()) {
+    auto const trip_it =
+        std::find_if(begin(trips), end(trips),
+                     [&](mcd::pair<unixtime, ptr<trip const>> const& trp) {
+                       return trp.first == *trip_id.start_date_;
+                     });
+    utl::verify(trip_it != end(trips),
+                "unable to find GTFS trip {} with at date {}", trip_id,
+                format_unix_time(*trip_id.start_date_));
+    return trip_it->second;
+  } else if (it->second.size() > 1) {
+    auto const n = now();
+    auto const closest_to_now =
+        std::min_element(begin(it->second), end(it->second),
+                         [&](mcd::pair<unixtime, ptr<trip const>> const& a,
+                             mcd::pair<unixtime, ptr<trip const>> const& b) {
+                           return (a.first - n) < (b.first - n);
+                         });
+    LOG(logging::warn) << "ambiguous trip id " << trip_id << " w/o date, using "
+                       << format_unix_time(closest_to_now->first, "%F");
+    return closest_to_now->second;
   } else {
-    return it->second;
+    return it->second.front().second;
   }
+}
+
+trip const* get_trip(schedule const& sched, std::string const& trip_id,
+                     std::time_t const t) {
+  return get_trip(sched, gtfs_trip_id{trip_id, t});
 }
 
 trip const* get_trip(schedule const& sched, std::string_view eva_nr,

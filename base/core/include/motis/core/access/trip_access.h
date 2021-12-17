@@ -7,6 +7,8 @@
 
 namespace motis {
 
+trip const* get_trip(schedule const&, std::string const& trip_id, std::time_t);
+
 trip const* get_trip(schedule const&, std::string_view eva_nr,
                      uint32_t train_nr, std::time_t timestamp,
                      std::string_view target_eva_nr,
@@ -18,7 +20,5 @@ trip const* get_trip(schedule const&, extern_trip const&);
 trip const* find_trip(schedule const&, primary_trip_id);
 
 trip const* find_trip(schedule const&, full_trip_id);
-
-trip const* get_trip(schedule const&, std::string const& trip_id, std::time_t);
 
 }  // namespace motis
