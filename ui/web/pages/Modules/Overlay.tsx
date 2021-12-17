@@ -38,13 +38,13 @@ export const Overlay: React.FC = (props) => {
     const[subOverlayHidden, setSubOverlayHidden] = React.useState<Boolean>(true);
 
     return(
-        <div className={overlayHidden ? 'overlay-container' : "overlay-container hidden" }>
+        <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden' }>
             <div className='overlay'>
                 <div id='overlay-content'>
                     <Search />
-                    <div id="connections">
-                        <div className="no-results">
-                            <div className="schedule-range">Auskunft von 19.10.2020 bis 21.10.2020 möglich</div>
+                    <div id='connections'>
+                        <div className='no-results'>
+                            <div className='schedule-range'>Auskunft von 19.10.2020 bis 21.10.2020 möglich</div>
                         </div>
                     </div>
                 </div>
