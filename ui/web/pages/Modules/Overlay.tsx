@@ -48,7 +48,7 @@ export const Overlay: React.FC = (props) => {
                         </div>
                     </div>
                 </div>
-                <SubOverlay subOverlayHidden={subOverlayHidden}/>
+                <SubOverlay subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden}/>
             </div>
             <div className='overlay-tabs'>
                 <div className='overlay-toggle' onClick={() => setOverlayHidden(!overlayHidden)}>

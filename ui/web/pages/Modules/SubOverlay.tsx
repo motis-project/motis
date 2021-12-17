@@ -2,7 +2,7 @@ import React from 'react';
 
 import { DatePicker } from './DatePicker';
 
-export const SubOverlay: React.FC<{'subOverlayHidden' : Boolean}> = (props) => {
+export const SubOverlay: React.FC<{'subOverlayHidden' : Boolean, setSubOverlayHidden: React.Dispatch<React.SetStateAction<Boolean>>}> = (props) => {
     return (
         <div className={props.subOverlayHidden ? "sub-overlay hidden" : "sub-overlay"}>
             <div id="sub-overlay-content">
@@ -77,7 +77,7 @@ export const SubOverlay: React.FC<{'subOverlayHidden' : Boolean}> = (props) => {
                     <div className="trips"></div>
                 </div>
             </div>
-            <div className="sub-overlay-close"><i className="icon">close</i></div>
+            <div className="sub-overlay-close" onClick={() => props.setSubOverlayHidden(!props.subOverlayHidden)}><i className="icon">close</i></div>
         </div>
     )
 }
