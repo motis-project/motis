@@ -16,6 +16,13 @@
 #include "motis/module/error.h"
 #include "motis/module/global_res_ids.h"
 
+namespace ctx {
+template void ctx::scheduler<motis::module::ctx_data>::enqueue_io(
+    std::shared_ptr<ctx::operation<motis::module::ctx_data>> const& op);
+template void ctx::scheduler<motis::module::ctx_data>::enqueue_work(
+    std::shared_ptr<ctx::operation<motis::module::ctx_data>> const& op);
+}  // namespace ctx
+
 namespace motis::module {
 
 dispatcher* dispatcher::direct_mode_dispatcher_ = nullptr;  // NOLINT
