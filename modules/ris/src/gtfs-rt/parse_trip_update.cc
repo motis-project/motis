@@ -8,7 +8,6 @@
 #include "utl/verify.h"
 
 #include "motis/core/common/date_time_util.h"
-#include "motis/core/common/logging.h"
 #include "motis/core/schedule/event.h"
 #include "motis/core/schedule/event_type.h"
 #include "motis/core/access/edge_access.h"
@@ -26,7 +25,6 @@
 
 using namespace transit_realtime;
 using namespace flatbuffers;
-using namespace motis::logging;
 
 namespace motis::ris::gtfsrt {
 
@@ -83,10 +81,8 @@ void collect_events(trip_update_context& update_ctx,
                TripUpdate_StopTimeUpdate_ScheduleRelationship_SKIPPED) {
       // check for already skipped stops
       if (skipped_stops == nullptr) {  // lazy initializer
-        auto start_date =
-            to_unix_time(parse_date(trip_update.trip().start_date()));
         skipped_stops =
-            knowledge->remember_stop_skips(update_ctx.trip_id_, start_date);
+            knowledge->remember_stop_skips(to_trip_id(trip_update.trip()));
       }
 
       if (!skipped_stops->is_skipped(stop_ctx.seq_no_)) {
@@ -184,8 +180,8 @@ void collect_additional_events(
       }
 
       if (known_skips == nullptr) {
-        update_ctx.known_stop_skips_ = knowledge->remember_stop_skips(
-            update_ctx.trip_id_, update_ctx.trip_start_date_);
+        update_ctx.known_stop_skips_ =
+            knowledge->remember_stop_skips(update_ctx.trip_id_);
         known_skips = update_ctx.known_stop_skips_;
       }
 
@@ -354,8 +350,7 @@ void check_and_fix_implicit_cancel(
       !update_ctx.is_canceled_) {
     update_ctx.is_canceled_ = true;
     update_ctx.is_new_canceled_ = true;
-    knowledge->remember_canceled(update_ctx.trip_id_,
-                                 update_ctx.trip_start_date_);
+    knowledge->remember_canceled(update_ctx.trip_id_);
     update_ctx.is_events_.clear();
     update_ctx.additional_events_.clear();
     update_ctx.forecast_event_.clear();
@@ -381,20 +376,14 @@ void initialize_update_context(
   update_ctx.is_new_canceled_ = update_ctx.is_canceled_ &&
                                 !knowledge->is_cancel_known(trip_update.trip());
 
-  update_ctx.trip_id_ = trip_update.trip().trip_id();
-
-  update_ctx.trip_start_date_ =
-      to_unix_time(parse_date(trip_update.trip().start_date()));
+  update_ctx.trip_id_ = to_trip_id(trip_update.trip());
 
   if (update_ctx.is_addition_ && !update_ctx.is_new_addition_) {
     auto const prim_id =
-        knowledge
-            ->find_additional(update_ctx.trip_id_, update_ctx.trip_start_date_)
-            .primary_id_;
+        knowledge->find_additional(update_ctx.trip_id_).primary_id_;
     update_ctx.trip_ = find_trip(sched, prim_id);
   } else if (!update_ctx.is_addition_) {
-    update_ctx.trip_ =
-        get_trip(sched, update_ctx.trip_id_, update_ctx.trip_start_date_);
+    update_ctx.trip_ = get_trip(sched, update_ctx.trip_id_);
   } else {
     return;
   }
@@ -442,9 +431,8 @@ void handle_trip_update(
     auto const motis_start_date =
         unix_to_motistime(sched, first_evt.orig_sched_time_);
     auto const station = get_station(sched, first_evt.stop_id_);
-    knowledge->remember_additional(update_ctx.trip_id_,
-                                   update_ctx.trip_start_date_,
-                                   motis_start_date, station->index_);
+    knowledge->remember_additional(update_ctx.trip_id_, motis_start_date,
+                                   station->index_);
 
     if (!update_ctx.is_events_.empty()) {
       check_and_fix_delay_with_additional(update_ctx);
@@ -467,9 +455,8 @@ void handle_trip_update(
       }
 
       auto stop = access::trip_stop{update_ctx.trip_, first_valid_stop_idx};
-      knowledge->update_additional(
-          update_ctx.trip_id_, update_ctx.trip_start_date_,
-          stop.dep_lcon().d_time_, stop.get_station_id());
+      knowledge->update_additional(update_ctx.trip_id_, stop.dep_lcon().d_time_,
+                                   stop.get_station_id());
     }
 
     if (!update_ctx.is_events_.empty()) {
@@ -484,10 +471,8 @@ void handle_trip_update(
                              first_evt.orig_sched_time_);
     } else if (update_ctx.is_addition_ &&
                !update_ctx.is_addition_skip_allowed_) {
-      auto const& prim_id = knowledge
-                                ->find_additional(update_ctx.trip_id_,
-                                                  update_ctx.trip_start_date_)
-                                .primary_id_;
+      auto const& prim_id =
+          knowledge->find_additional(update_ctx.trip_id_).primary_id_;
       return create_id_event(ctx, sched.stations_[prim_id.station_id_]->eva_nr_,
                              motis_to_unixtime(sched, prim_id.time_));
     } else {
