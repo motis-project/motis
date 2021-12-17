@@ -81,6 +81,29 @@ TEST_F(gtfsrt_delay_test, simple_delay_poznan) {
 
   // currently only Is_ Messages and no Forecast expected
   ASSERT_EQ(1, msgs.size());
+
+  auto const& message = msgs[0];
+  EXPECT_EQ(1639740232, message.timestamp_);
+  //  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, message.earliest_);
+  //  EXPECT_EQ(1561598940 + TIMEZONE_OFFSET, message.latest_);
+
+  auto outer_msg = GetMessage(message.data());
+  ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
+  auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
+
+  auto id = inner_msg->trip_id();
+  EXPECT_STREQ("3955", id->station_id()->c_str());
+  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, id->schedule_time());
+  EXPECT_EQ(DelayType_Is, inner_msg->type());
+
+  auto events = inner_msg->events();
+  ASSERT_EQ(4, events->size());
+
+  auto e0 = events->Get(0);
+  EXPECT_STREQ("8502113:0:1", e0->base()->station_id()->c_str());
+  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, e0->base()->schedule_time());
+  EXPECT_EQ(EventType_DEP, e0->base()->type());
+  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, e0->updated_time());
 }
 
 }  // namespace motis::ris::gtfsrt

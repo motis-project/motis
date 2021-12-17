@@ -104,11 +104,20 @@ void update_stop_idx(stop_context& current_stop, schedule const& sched,
         current_stop.is_skip_known_ = true;
       }
     } else {
-      // it is currently not possible to obtain the
-      // stop idx just by having the sequence number
-      // therfore error out
-      throw std::runtime_error{
-          "Unable to obtain stop idx just by non consecutive sequence numbers"};
+      utl::verify(stop_time_upd.has_stop_sequence(),
+                  "update without station id and without stop sequence");
+
+      auto const idx = stop_time_upd.stop_sequence();
+      utl::verify(idx <= trip.edges_->size() + 1,
+                  "invalid stop index {} for trip with {} sections", idx,
+                  trip.edges_->size());
+
+      auto const station_idx =
+          idx == 0 ? trip.edges_->front()->from_->get_station()->id_
+                   : trip.edges_->at(idx - 1)->to_->get_station()->id_;
+
+      current_stop.station_id_ = sched.stations_.at(station_idx)->eva_nr_;
+      current_stop.idx_ = stop_time_upd.stop_sequence();
     }
   }
 };
