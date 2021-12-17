@@ -1,0 +1,54 @@
+{
+  "header": {
+    "gtfsRealtimeVersion": "1.0",
+    "incrementality": "FULL_DATASET",
+    "timestamp": "1639740232"
+  },
+  "entity": [
+    {
+      "id": "5017",
+      "vehicle": {
+        "trip": {
+          "tripId": "7_11795^A",
+          "scheduleRelationship": "SCHEDULED",
+          "routeId": "502"
+        },
+        "position": {
+          "latitude": 52.2534599,
+          "longitude": 17.0892696,
+          "speed": 4.44
+        },
+        "currentStopSequence": 9,
+        "timestamp": "1639740222",
+        "vehicle": {
+          "id": "5017",
+          "label": "502/5"
+        }
+      }
+    },
+    {
+      "id": "5017",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "t",
+          "scheduleRelationship": "SCHEDULED",
+          "routeId": "502"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 9,
+            "arrival": {
+              "delay": 20
+            },
+            "scheduleRelationship": "SCHEDULED"
+          }
+        ],
+        "vehicle": {
+          "id": "5017",
+          "label": "502/5"
+        },
+        "timestamp": "1639740222"
+      }
+    }
+  ]
+}

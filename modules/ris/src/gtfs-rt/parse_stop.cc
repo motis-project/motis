@@ -95,7 +95,7 @@ void update_stop_idx(stop_context& current_stop, schedule const& sched,
     if (has_stop) {
       current_stop.station_id_ = stop_time_upd.stop_id();
       current_stop.seq_no_ = has_sequ ? stop_time_upd.stop_sequence()
-                                      : std::numeric_limits<int>::max();
+                                      : std::numeric_limits<unsigned>::max();
       if (!has_sequ || stop_skips == nullptr ||
           !stop_skips->is_skipped(current_stop.seq_no_)) {
         current_stop.idx_ = get_future_stop_idx(trip, sched, current_stop.idx_,
