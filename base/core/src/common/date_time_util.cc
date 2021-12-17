@@ -7,16 +7,22 @@
 
 namespace motis {
 
-std::time_t to_unix_time(boost::posix_time::ptime const& t) {
+unixtime now() {
+  return std::chrono::duration_cast<std::chrono::seconds>(
+             std::chrono::system_clock::now().time_since_epoch())
+      .count();
+}
+
+unixtime to_unix_time(boost::posix_time::ptime const& t) {
   boost::posix_time::ptime epoch(boost::gregorian::date(1970, 1, 1));
   return (t - epoch).total_seconds();
 }
 
-std::time_t to_unix_time(boost::gregorian::date const& date) {
+unixtime to_unix_time(boost::gregorian::date const& date) {
   return to_unix_time(boost::posix_time::ptime(date));
 }
 
-std::time_t to_unix_time(int year, int month, int day) {
+unixtime to_unix_time(int year, int month, int day) {
   return to_unix_time(boost::gregorian::date(year, month, day));
 }
 
