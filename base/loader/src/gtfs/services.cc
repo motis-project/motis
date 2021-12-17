@@ -8,27 +8,53 @@ namespace greg = boost::gregorian;
 
 namespace motis::loader::gtfs {
 
-greg::date bound_date(std::map<std::string, calendar> const& base, bool first) {
-  if (base.empty()) {
-    return {1970, 1, 1};
-  }
+greg::date bound_date(
+    std::map<std::string, calendar> const& base,
+    std::map<std::string, std::vector<calendar_date>> const& exceptions,
+    bool first) {
+  constexpr auto const kMin = greg::date{9999, 12, 31};
+  constexpr auto const kMax = greg::date{1400, 1, 1};
+
+  auto const min_base_day = [&]() {
+    auto const it =
+        std::min_element(begin(base), end(base),
+                         [](std::pair<std::string, calendar> const& lhs,
+                            std::pair<std::string, calendar> const& rhs) {
+                           return lhs.second.first_day_ < rhs.second.first_day_;
+                         });
+    return it == end(base) ? kMin : it->second.first_day_;
+  };
+
+  auto const max_base_day = [&]() {
+    auto const it =
+        std::max_element(begin(base), end(base),
+                         [](std::pair<std::string, calendar> const& lhs,
+                            std::pair<std::string, calendar> const& rhs) {
+                           return lhs.second.last_day_ < rhs.second.last_day_;
+                         });
+    return it == end(base) ? kMax : it->second.last_day_;
+  };
 
   if (first) {
-    return std::min_element(begin(base), end(base),
-                            [](std::pair<std::string, calendar> const& lhs,
-                               std::pair<std::string, calendar> const& rhs) {
-                              return lhs.second.first_day_ <
-                                     rhs.second.first_day_;
-                            })
-        ->second.first_day_;
+    auto min = min_base_day();
+    for (auto const& [id, dates] : exceptions) {
+      for (auto const& date : dates) {
+        if (date.type_ == calendar_date::ADD) {
+          min = std::min(min, date.day_);
+        }
+      }
+    }
+    return min;
   } else {
-    return std::max_element(begin(base), end(base),
-                            [](std::pair<std::string, calendar> const& lhs,
-                               std::pair<std::string, calendar> const& rhs) {
-                              return lhs.second.last_day_ <
-                                     rhs.second.last_day_;
-                            })
-        ->second.last_day_;
+    auto max = max_base_day();
+    for (auto const& [id, dates] : exceptions) {
+      for (auto const& date : dates) {
+        if (date.type_ == calendar_date::ADD) {
+          max = std::max(max, date.day_);
+        }
+      }
+    }
+    return max;
   }
 }
 
@@ -60,8 +86,8 @@ traffic_days merge_traffic_days(
   motis::logging::scoped_timer timer{"traffic days"};
 
   traffic_days s;
-  s.first_day_ = bound_date(base, true);
-  s.last_day_ = bound_date(base, false);
+  s.first_day_ = bound_date(base, exceptions, true);
+  s.last_day_ = bound_date(base, exceptions, false);
 
   for (auto const& base_calendar : base) {
     s.traffic_days_[base_calendar.first] = std::make_unique<bitfield>(
