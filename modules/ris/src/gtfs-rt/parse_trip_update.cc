@@ -294,11 +294,9 @@ void check_and_fix_addition(trip_update_context& update_ctx) {
     add_evts.erase(end(add_evts) - 1);
   }
 
-  if (add_evts.size() < 2) {
-    throw std::runtime_error(
-        "Found additional trip with only one collected event! " +
-        update_ctx.trip_id_);
-  }
+  utl::verify(add_evts.size() >= 2,
+              "found additional trip {} with only one event",
+              update_ctx.trip_id_);
 }
 
 void check_and_fix_delay_with_additional(trip_update_context& update_ctx) {
