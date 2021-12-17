@@ -13,6 +13,7 @@
 
 #include "motis/module/ctx_data.h"
 #include "motis/module/import_dispatcher.h"
+#include "motis/module/locked_resources.h"
 #include "motis/module/message.h"
 #include "motis/module/registry.h"
 #include "motis/module/subc_reg.h"
@@ -74,10 +75,8 @@ struct module : public conf::configuration {
 
   ctx::res_id_t generate_res_id() { return shared_data_->generate_res_id(); }
 
-  ctx::access_scheduler<ctx_data>::mutex lock_resources(
-      ctx::accesses_t access, ctx::op_type_t op_type = ctx::op_type_t::WORK) {
-    return {*shared_data_, op_type, std::move(access)};
-  }
+  locked_resources lock_resources(
+      ctx::accesses_t access, ctx::op_type_t op_type = ctx::op_type_t::WORK);
 
   boost::filesystem::path const& get_data_directory() const;
 
