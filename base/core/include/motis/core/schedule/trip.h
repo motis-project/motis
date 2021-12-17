@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cinttypes>
+#include <optional>
 #include <utility>
 
 #include "cista/hashing.h"
