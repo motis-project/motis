@@ -104,7 +104,7 @@ struct knowledge_context {
   known_addition_trip& find_additional(gtfs_trip_id const&);
 
   void remember_additional(gtfs_trip_id, time, int);
-  void update_additional(gtfs_trip_id, time, int);
+  void update_additional(gtfs_trip_id const&, time, int);
   void remember_canceled(transit_realtime::TripDescriptor const&);
   void remember_canceled(gtfs_trip_id);
   known_stop_skips* remember_stop_skips(gtfs_trip_id);

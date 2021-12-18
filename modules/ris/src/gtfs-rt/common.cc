@@ -82,7 +82,7 @@ void knowledge_context::remember_additional(gtfs_trip_id trip_id,
   ++new_known_add_cnt_;
 }
 
-void knowledge_context::update_additional(gtfs_trip_id trip_id,
+void knowledge_context::update_additional(gtfs_trip_id const& trip_id,
                                           time const start_time,
                                           int const first_station_idx) {
   auto& additional = find_additional(trip_id);
