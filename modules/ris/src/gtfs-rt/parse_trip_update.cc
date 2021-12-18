@@ -52,10 +52,10 @@ void collect_events(trip_update_context& update_ctx,
       }
 
       auto const has_delay_for_addition =
-          [&](TripUpdate_StopTimeEvent const& time_evt) -> bool {
-        return (!update_ctx.is_addition_ ||
-                (update_ctx.is_addition_ && time_evt.has_delay()));
-      };
+          [&](TripUpdate_StopTimeEvent const& time_evt) {
+            return (!update_ctx.is_addition_ ||
+                    (update_ctx.is_addition_ && time_evt.has_delay()));
+          };
 
       if (stu.has_arrival() && has_delay_for_addition(stu.arrival()) &&
           stop_ctx.idx_ > 0) {

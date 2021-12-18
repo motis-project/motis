@@ -7,10 +7,6 @@
 #include "motis/ris/gtfs-rt/parse_stop.h"
 #include "motis/ris/gtfs-rt/parse_time.h"
 
-using trip_ids_it =
-    std::vector<std::pair<motis::gtfs_trip_id, motis::trip*>>::iterator;
-using trip_id_pair = std::pair<motis::gtfs_trip_id, motis::trip*>;
-
 namespace motis::ris::gtfsrt {
 
 evt::evt(trip const& trip, stop_context const& s, event_type const type)
@@ -38,7 +34,6 @@ known_addition_trip& knowledge_context::find_additional(
 }
 
 void knowledge_context::sort_known_lists() {
-
   std::sort(begin(known_additional_), end(known_additional_));
   std::sort(begin(known_canceled_), end(known_canceled_));
   std::sort(begin(known_stop_skips_), end(known_stop_skips_),

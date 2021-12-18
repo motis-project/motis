@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 
+#include "motis/core/common/date_time_util.h"
 #include "motis/loader/loader.h"
 #include "motis/ris/ris_message.h"
 #include "motis/test/schedule/gtfs_minimal_poznan.h"
@@ -27,27 +28,6 @@ constexpr auto const simple_delay_poznan_json = R"(
   "entity": [
     {
       "id": "5017",
-      "vehicle": {
-        "trip": {
-          "tripId": "7_11795^A",
-          "scheduleRelationship": "SCHEDULED",
-          "routeId": "502"
-        },
-        "position": {
-          "latitude": 52.2534599,
-          "longitude": 17.0892696,
-          "speed": 4.44
-        },
-        "currentStopSequence": 9,
-        "timestamp": "1639740222",
-        "vehicle": {
-          "id": "5017",
-          "label": "502/5"
-        }
-      }
-    },
-    {
-      "id": "5017",
       "tripUpdate": {
         "trip": {
           "tripId": "7_11795^A",
@@ -58,7 +38,7 @@ constexpr auto const simple_delay_poznan_json = R"(
           {
             "stopSequence": 9,
             "arrival": {
-              "delay": 20
+              "delay": 60
             },
             "scheduleRelationship": "SCHEDULED"
           }
@@ -74,7 +54,7 @@ constexpr auto const simple_delay_poznan_json = R"(
 }
 )";
 
-constexpr auto const TIMEZONE_OFFSET = -7200;
+constexpr auto const TIMEZONE_OFFSET = -3600;
 
 TEST_F(gtfsrt_delay_test, simple_delay_poznan) {
   auto const msgs = parse_json(simple_delay_poznan_json);
@@ -92,18 +72,19 @@ TEST_F(gtfsrt_delay_test, simple_delay_poznan) {
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
   auto id = inner_msg->trip_id();
-  EXPECT_STREQ("3955", id->station_id()->c_str());
-  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, id->schedule_time());
+  EXPECT_STREQ("3750", id->station_id()->c_str());
+  EXPECT_EQ(parse_unix_time("2021-12-17 12:09 CET"), id->schedule_time());
   EXPECT_EQ(DelayType_Is, inner_msg->type());
 
   auto events = inner_msg->events();
-  ASSERT_EQ(4, events->size());
+  ASSERT_EQ(1, events->size());
 
   auto e0 = events->Get(0);
-  EXPECT_STREQ("8502113:0:1", e0->base()->station_id()->c_str());
-  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, e0->base()->schedule_time());
-  EXPECT_EQ(EventType_DEP, e0->base()->type());
-  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, e0->updated_time());
+  EXPECT_STREQ("3955", e0->base()->station_id()->c_str());
+  EXPECT_EQ(parse_unix_time("2021-12-17 12:26 CET"),
+            e0->base()->schedule_time());
+  EXPECT_EQ(EventType_ARR, e0->base()->type());
+  EXPECT_EQ(parse_unix_time("2021-12-17 12:27 CET"), e0->updated_time());
 }
 
 }  // namespace motis::ris::gtfsrt

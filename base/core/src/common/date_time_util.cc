@@ -4,6 +4,7 @@
 #include "boost/date_time/posix_time/posix_time.hpp"
 
 #include "date/date.h"
+#include "date/tz.h"
 
 namespace motis {
 
@@ -39,12 +40,16 @@ std::string format_unix_time(unixtime const t, char const* format) {
       format, std::chrono::system_clock::time_point{std::chrono::seconds{t}});
 }
 
-time_t parse_unix_time(std::string_view s, char const* format) {
-  date::local_time<std::chrono::system_clock::duration> tp;
-  std::stringstream ss;
-  ss << s;
-  ss >> date::parse(format, tp);
-  return std::chrono::duration_cast<std::chrono::seconds>(tp.time_since_epoch())
+unixtime parse_unix_time(std::string_view s, char const* format) {
+  using namespace date;
+  std::stringstream in;
+  in << s;
+  local_seconds ls;
+  std::string tz;
+  in >> parse(format, ls, tz);
+  auto const time_stamp = date::make_zoned(tz, ls).get_sys_time();
+  return std::chrono::duration_cast<std::chrono::seconds>(
+             time_stamp.time_since_epoch())
       .count();
 }
 
