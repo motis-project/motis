@@ -64,8 +64,8 @@ TEST_F(gtfsrt_delay_test, simple_delay_poznan) {
 
   auto const& message = msgs[0];
   EXPECT_EQ(1639740232, message.timestamp_);
-  //  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, message.earliest_);
-  //  EXPECT_EQ(1561598940 + TIMEZONE_OFFSET, message.latest_);
+  EXPECT_EQ(parse_unix_time("2021-12-17 12:26 CET"), message.earliest_);
+  EXPECT_EQ(parse_unix_time("2021-12-17 12:27 CET"), message.latest_);
 
   auto outer_msg = GetMessage(message.data());
   ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
