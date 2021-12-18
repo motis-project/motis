@@ -12,9 +12,9 @@ using motis::test::schedule::gtfs_minimal_swiss::dataset_opt;
 
 namespace motis::ris::gtfsrt {
 
-class gtfsrt_delay_test : public gtfsrt_test {
+class gtfsrt_delay_test_swiss : public gtfsrt_test {
 public:
-  gtfsrt_delay_test() : gtfsrt_test(dataset_opt) {}
+  gtfsrt_delay_test_swiss() : gtfsrt_test(dataset_opt) {}
 };
 
 constexpr auto const simple_delay = R"(
@@ -65,7 +65,7 @@ constexpr auto const simple_delay = R"(
 
 constexpr auto const TIMEZONE_OFFSET = -7200;
 
-TEST_F(gtfsrt_delay_test, simple_delay) {
+TEST_F(gtfsrt_delay_test_swiss, simple_delay) {
   auto const msgs = parse_json(simple_delay);
 
   // currently only Is_ Messages and no Forecast expected
@@ -159,7 +159,7 @@ constexpr auto const simple_delay2 = R"(
 }
 )";
 
-TEST_F(gtfsrt_delay_test, simple_delay2) {
+TEST_F(gtfsrt_delay_test_swiss, simple_delay2) {
   auto const msgs = parse_json(simple_delay2);
 
   // currently only Is_ Messages and no Forecast expected

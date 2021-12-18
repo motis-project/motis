@@ -13,9 +13,9 @@ using motis::test::schedule::gtfs_minimal_poznan::dataset_opt;
 
 namespace motis::ris::gtfsrt {
 
-class gtfsrt_delay_test : public gtfsrt_test {
+class gtfsrt_delay_test_poznan : public gtfsrt_test {
 public:
-  gtfsrt_delay_test() : gtfsrt_test(dataset_opt) {}
+  gtfsrt_delay_test_poznan() : gtfsrt_test(dataset_opt) {}
 };
 
 constexpr auto const simple_delay_poznan_json = R"(
@@ -54,7 +54,7 @@ constexpr auto const simple_delay_poznan_json = R"(
 }
 )";
 
-TEST_F(gtfsrt_delay_test, simple_delay_poznan) {
+TEST_F(gtfsrt_delay_test_poznan, simple_delay_poznan) {
   auto const msgs = parse_json(simple_delay_poznan_json);
 
   // currently only Is_ Messages and no Forecast expected
