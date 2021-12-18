@@ -54,8 +54,6 @@ constexpr auto const simple_delay_poznan_json = R"(
 }
 )";
 
-constexpr auto const TIMEZONE_OFFSET = -3600;
-
 TEST_F(gtfsrt_delay_test, simple_delay_poznan) {
   auto const msgs = parse_json(simple_delay_poznan_json);
 
