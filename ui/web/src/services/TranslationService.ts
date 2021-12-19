@@ -36,6 +36,10 @@ interface Translation {
 export class TranslationService {
   private _t: Translation = reactive({}) as Translation;
   public isLoaded = false;
+  public availableLocales = [
+    "de-DE",
+    "en-US"
+  ];
 
   public get t(): Translation {
     return this._t;

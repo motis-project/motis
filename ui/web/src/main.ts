@@ -10,7 +10,7 @@ app.use(TranslationService, "de-DE");
 let interval = setInterval(() => {
     if (TranslationService.service.isLoaded) {
         TranslationService.service.isLoaded;
-        app.use(router);
+        app.use(router(TranslationService.service));
         app.use(MOTISPostService);
         app.use(DateTimeService);
         app.mount('#app');

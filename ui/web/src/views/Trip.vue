@@ -40,7 +40,7 @@
             </div>
             <div class="delay"></div>
             <div class="station">
-              <span>{{ firstStopName }}</span>
+              <span @click="goToStop(getFirstStop(transport))">{{ firstStopName }}</span>
             </div>
           </div>
         </div>
@@ -76,7 +76,7 @@
               <div class="departure"></div>
             </div>
             <div class="station">
-              <span>{{ stop.station.name }}</span>
+              <span @click="goToStop(stop)">{{ stop.station.name }}</span>
             </div>
           </div>
         </div>
@@ -88,7 +88,7 @@
             </div>
             <div class="delay"></div>
             <div class="station">
-              <span>{{ lastStopName }}</span>
+              <span @click="goToStop(getLastStop(transport))">{{ lastStopName }}</span>
             </div>
           </div>
         </div>
@@ -177,12 +177,9 @@ export default defineComponent({
     if(this.initContent) {
       this.content = this.initContent
     }
-    this.$postService.getTripResponce(this.trip).then((data) => {
-      if (data.trips.length > 0 && data.trips[0].id.station_id === this.trip.station_id) {
-        this.content = data;
-
-      }
-    });
+    else {
+      this.sendRequest();
+    }
   },
   methods: {
     getFirstStop(transport: Transport) {
@@ -215,6 +212,21 @@ export default defineComponent({
       else {
         return 100 - (diffWithCurrent / diff) * 100;
       }
+    },
+    sendRequest() {
+      this.$postService.getTripResponce(this.trip).then((data) => {
+      if (data.trips.length > 0 && data.trips[0].id.station_id === this.trip.station_id) {
+        this.content = data;
+      }
+      }).catch(e => this.$router.back());
+    },
+    goToStop(stop: Stop) {
+      this.$router.push({
+        name: "StationTimetable",
+        params: {
+          id: stop.station.id
+        },
+      });
     }
   },
   watch: {
@@ -222,6 +234,9 @@ export default defineComponent({
         let expand = this.$route.name === "Trip";
         this.content.transports.forEach((t) => this.areStopsExpanded.push(expand));
         this.isContentLoaded = true;
+    },
+    trip: function() {
+      this.sendRequest();
     }
   }
 });

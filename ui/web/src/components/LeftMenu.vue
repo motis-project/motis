@@ -57,6 +57,7 @@ export default defineComponent({
       }
       if (SubOverlayNames.includes(to.name.toString())) {
         this.isSubOverlayHidden = false;
+        this.isOverlayHidden = false;
       } 
       else {
         this.isSubOverlayHidden = true;

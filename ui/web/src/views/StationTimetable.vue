@@ -195,7 +195,7 @@ export default defineComponent({
           this.station = data.station;
           this.getDepartures(isDeparture);
           this.isContentLoaded = true;
-        });
+        }).catch(e => this.$router.back());
     },
   },
 });
