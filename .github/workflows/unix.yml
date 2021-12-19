@@ -255,6 +255,7 @@ jobs:
           wget https://github.com/motis-project/mold/releases/download/v1.0.0-musl-strip/mold-linux-amd64
           sudo rm /usr/bin/ld
           sudo mv mold-linux-amd64 /usr/bin/ld
+          chmod +x /usr/bin/ld
 
       - name: Install musl Toolchain
         if: matrix.config.toolchain
