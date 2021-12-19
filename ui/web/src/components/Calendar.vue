@@ -14,6 +14,7 @@
       @decreaseMouseDown="mouseDown(-1)"
       @increaseMouseDown="mouseDown(1)"
       :showAutocomplete="false"
+      :key="inputFieldKey"
     ></InputField>
     <div class="paper calendar" v-show="calendarVisible" @mousedown="calendarClickedHandler">
       <div class="month">
@@ -62,6 +63,7 @@ export default defineComponent({
       calendarClicked: false,
       timeout: 0,
       interval: 0,
+      inputFieldKey: 0
     };
   },
   created() {
@@ -116,6 +118,7 @@ export default defineComponent({
         this.calendarClicked = false;
       } else {
         this.calendarVisible = false;
+        this.inputFieldKey++;
       }
     },
     onFieldInput(value: string) {

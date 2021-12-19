@@ -10,6 +10,8 @@
     @decreaseClick="changeTime(-1)"
     @increaseClick="changeTime(1)"
     :showAutocomplete="false"
+    :key="inputFieldKey"
+    @blur="inputFieldKey++"
   />
 </template>
 
@@ -25,6 +27,7 @@ export default defineComponent({
   data() {
     return {
       time: {} as Date,
+      inputFieldKey: 0
     };
   },
   computed: {
