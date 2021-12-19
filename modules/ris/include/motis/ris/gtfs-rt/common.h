@@ -13,6 +13,9 @@
 #include "motis/core/schedule/trip.h"
 #include "motis/core/access/time_access.h"
 
+#ifdef NO_DATA
+#undef NO_DATA
+#endif
 #include "gtfsrt.pb.h"
 
 namespace motis {
@@ -101,6 +104,7 @@ struct knowledge_context {
   bool is_additional_known(transit_realtime::TripDescriptor const&) const;
   known_stop_skips* find_trip_stop_skips(
       transit_realtime::TripDescriptor const&) const;
+  known_addition_trip const& find_additional(gtfs_trip_id const&) const;
   known_addition_trip& find_additional(gtfs_trip_id const&);
 
   void remember_additional(gtfs_trip_id, time, int);

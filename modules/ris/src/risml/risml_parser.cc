@@ -306,8 +306,9 @@ boost::optional<ris_message> parse_message(xml_node const& msg,
   return {{ctx.earliest_, ctx.latest_, ctx.timestamp_, std::move(ctx.b_)}};
 }
 
-void risml_parser::to_ris_message(
-    std::string_view s, std::function<void(ris_message&&)> const& cb) {
+void to_ris_message(std::string_view s,
+                    std::function<void(ris_message&&)> const& cb,
+                    std::string const& tag) {
   try {
     xml_document d;
     auto r = d.load_buffer(reinterpret_cast<void const*>(s.data()), s.size());
@@ -329,7 +330,7 @@ void risml_parser::to_ris_message(
   }
 }
 
-std::vector<ris_message> risml_parser::parse(std::string_view s) {
+std::vector<ris_message> parse(std::string_view s, std::string const& tag) {
   std::vector<ris_message> msgs;
   to_ris_message(s, [&](ris_message&& m) { msgs.emplace_back(std::move(m)); });
   return msgs;

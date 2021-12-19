@@ -69,7 +69,7 @@ constexpr auto const reroute_fixture_1 = R"(
 )";
 
 TEST(ris_reroute_message, message_1) {
-  auto const messages = risml_parser::parse(reroute_fixture_1);
+  auto const messages = parse(reroute_fixture_1);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
@@ -166,7 +166,7 @@ constexpr auto const reroute_fixture_only_new = R"(
 )";
 
 TEST(ris_reroute_message, message_only_new) {
-  auto const messages = risml_parser::parse(reroute_fixture_only_new);
+  auto const messages = parse(reroute_fixture_only_new);
   ASSERT_EQ(1, messages.size());
 
   auto outer_msg = GetMessage(messages[0].data());
@@ -228,7 +228,7 @@ constexpr auto const reroute_fixture_only_cancel = R"(
 )";
 
 TEST(ris_reroute_message, message_only_cancel) {
-  auto const messages = risml_parser::parse(reroute_fixture_only_cancel);
+  auto const messages = parse(reroute_fixture_only_cancel);
   ASSERT_EQ(1, messages.size());
 
   auto outer_msg = GetMessage(messages[0].data());

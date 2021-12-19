@@ -10,7 +10,7 @@ using namespace transit_realtime;
 
 namespace motis::ris::gtfsrt {
 
-int get_stop_edge_idx(const int stop_idx, const event_type type) {
+int get_stop_edge_idx(int const stop_idx, const event_type type) {
   return type == event_type::DEP ? stop_idx : stop_idx - 1;
 }
 

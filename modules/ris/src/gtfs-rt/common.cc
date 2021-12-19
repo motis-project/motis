@@ -21,11 +21,17 @@ evt::evt(trip const& trip, stop_context const& s, event_type const type)
   new_sched_time_ = orig_sched_time_;
 }
 
+known_addition_trip const& knowledge_context::find_additional(
+    gtfs_trip_id const& trip_id) const {
+  return const_cast<knowledge_context*>(this)  // NOLINT
+      ->find_additional(trip_id);
+}
+
 known_addition_trip& knowledge_context::find_additional(
     gtfs_trip_id const& trip_id) {
-  auto lb = std::lower_bound(begin(known_additional_),
-                             end(known_additional_) - new_known_add_cnt_,
-                             known_addition_trip{trip_id});
+  auto const lb = std::lower_bound(begin(known_additional_),
+                                   end(known_additional_) - new_known_add_cnt_,
+                                   known_addition_trip{trip_id});
   if (lb == end(known_additional_) || lb->gtfs_id_ != trip_id) {
     throw std::runtime_error(
         "Tried to find an unknown additional trip which should be known!");
