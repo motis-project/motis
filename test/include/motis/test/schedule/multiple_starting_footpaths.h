@@ -10,7 +10,8 @@ struct schedule;
 namespace test::schedule::multiple_starting_foothpaths {
 
 static auto const dataset_opt = loader::loader_options{
-    {"test/schedule/multiple_starting_footpaths"}, "20151124"};
+    .dataset_ = {"test/schedule/multiple_starting_footpaths"},
+    .schedule_begin_ = "20151124"};
 
 }  // namespace test::schedule::multiple_starting_foothpaths
 }  // namespace motis

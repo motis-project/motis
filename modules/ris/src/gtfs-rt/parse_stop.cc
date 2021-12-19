@@ -14,11 +14,7 @@ int get_stop_edge_idx(int const stop_idx, const event_type type) {
   return type == event_type::DEP ? stop_idx : stop_idx - 1;
 }
 
-std::string parse_stop_id(std::string const& stop_id) {
-  auto colon_idx = stop_id.find_first_of(':');
-  return colon_idx != std::string::npos ? stop_id.substr(0, colon_idx)
-                                        : stop_id;
-}
+std::string parse_stop_id(std::string const& stop_id) { return stop_id; }
 
 int get_future_stop_idx(trip const& trip, schedule const& sched,
                         const int last_stop_idx, std::string const& stop_id) {
@@ -40,7 +36,7 @@ int get_future_stop_idx(trip const& trip, schedule const& sched,
 void update_stop_idx(stop_context& current_stop, schedule const& sched,
                      trip const& trip,
                      TripUpdate_StopTimeUpdate const& stop_time_upd,
-                     known_stop_skips* stop_skips) {
+                     known_stop_skips* stop_skips, std::string const& tag) {
   // Method to obtain the current stop idx
   // A. is the stop idx for the given stop time update already known?
   // check for same sequence number; if this is not given GTFS-RT
@@ -74,7 +70,7 @@ void update_stop_idx(stop_context& current_stop, schedule const& sched,
 
       current_stop.idx_ = current_stop.idx_ + 1;
       if (has_stop) {
-        current_stop.station_id_ = stop_time_upd.stop_id();
+        current_stop.station_id_ = tag + stop_time_upd.stop_id();
       } else if (has_sequ && current_stop.idx_ >= 0) {
         current_stop.station_id_ = access::trip_stop{&trip, current_stop.idx_}
                                        .get_station(sched)
@@ -93,7 +89,7 @@ void update_stop_idx(stop_context& current_stop, schedule const& sched,
     // 2. the numbers increase not consecutively along the route
     // whichever situation does not matter a search is required
     if (has_stop) {
-      current_stop.station_id_ = stop_time_upd.stop_id();
+      current_stop.station_id_ = tag + stop_time_upd.stop_id();
       current_stop.seq_no_ = has_sequ ? stop_time_upd.stop_sequence()
                                       : std::numeric_limits<unsigned>::max();
       if (!has_sequ || stop_skips == nullptr ||
@@ -124,8 +120,9 @@ void update_stop_idx(stop_context& current_stop, schedule const& sched,
 
 void stop_context::update(schedule const& sched, trip const& trip,
                           TripUpdate_StopTimeUpdate const& stu,
-                          known_stop_skips* stop_skips) {
-  update_stop_idx(*this, sched, trip, stu, stop_skips);
+                          known_stop_skips* stop_skips,
+                          std::string const& tag) {
+  update_stop_idx(*this, sched, trip, stu, stop_skips, tag);
   if (!is_skip_known_ && idx_ > 0) {
     stop_arrival_ = get_schedule_time(trip, sched, idx_, event_type::ARR);
   }

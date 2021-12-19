@@ -41,20 +41,18 @@ void parse_trip_updates(schedule const& sched, knowledge_context& knowledge,
     case TripDescriptor_ScheduleRelationship_CANCELED: {
       trip_update_context update_ctx{sched, trip_update,
                                      is_additional_skip_allowed};
-      handle_trip_update(update_ctx, knowledge, timestamp,
-                         [&](message_context& ctx, Offset<Message> msg) {
-                           finish_ris_msg(ctx, msg, cb);
-                         });
+      handle_trip_update(
+          update_ctx, knowledge, timestamp,
+          [&](message_context& ctx, Offset<Message> msg) {
+            finish_ris_msg(ctx, msg, cb);
+          },
+          tag);
       break;
     }
 
+    case TripDescriptor_ScheduleRelationship_DUPLICATED:
     case TripDescriptor_ScheduleRelationship_UNSCHEDULED:
-      throw std::runtime_error{
-          "Found unsupported UNSCHEDULED trip update. Skipping."};
-
-    default:
-      throw std::runtime_error{
-          "GTFS-RT found unhandled case for Schedule relationship"};
+    default: throw utl::fail("unhandled schedule relationship");
   }
 }
 

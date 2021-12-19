@@ -7,6 +7,7 @@
 
 #include "utl/parser/cstr.h"
 #include "utl/parser/mmap_reader.h"
+#include "utl/verify.h"
 
 #include "motis/protocol/RISMessage_generated.h"
 
@@ -309,6 +310,8 @@ boost::optional<ris_message> parse_message(xml_node const& msg,
 void to_ris_message(std::string_view s,
                     std::function<void(ris_message&&)> const& cb,
                     std::string const& tag) {
+  utl::verify(tag.empty(), "risml does not support multi-schedule");
+
   try {
     xml_document d;
     auto r = d.load_buffer(reinterpret_cast<void const*>(s.data()), s.size());
@@ -331,6 +334,7 @@ void to_ris_message(std::string_view s,
 }
 
 std::vector<ris_message> parse(std::string_view s, std::string const& tag) {
+  utl::verify(tag.empty(), "risml does not support multi-schedule");
   std::vector<ris_message> msgs;
   to_ris_message(s, [&](ris_message&& m) { msgs.emplace_back(std::move(m)); });
   return msgs;

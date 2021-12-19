@@ -162,7 +162,9 @@ Offset<Vector<Offset<TripSection>>> parse_sections(
 
 void to_ris_message(std::string_view s,
                     const std::function<void(ris_message&&)>& cb,
-                    std::string const&) {
+                    std::string const& tag) {
+  utl::verify(tag.empty(), "ribasis does not support multi-schedule");
+
   rapidjson::Document doc;
   if (doc.Parse(s.data(), s.size()).HasParseError()) {
     doc.GetParseError();
@@ -201,9 +203,11 @@ void to_ris_message(std::string_view s,
   }
 }
 
-std::vector<ris_message> parse(std::string_view s, std::string const&) {
+std::vector<ris_message> parse(std::string_view s, std::string const& tag) {
+  utl::verify(tag.empty(), "ribasis does not support multi-schedule");
   std::vector<ris_message> msgs;
-  to_ris_message(s, [&](ris_message&& m) { msgs.emplace_back(std::move(m)); });
+  to_ris_message(
+      s, [&](ris_message&& m) { msgs.emplace_back(std::move(m)); }, tag);
   return msgs;
 }
 

@@ -16,7 +16,8 @@ namespace ris::gtfsrt {
 
 void handle_trip_update(
     trip_update_context& update_ctx, knowledge_context&, unixtime,
-    std::function<void(message_context&, flatbuffers::Offset<Message>)> const&);
+    std::function<void(message_context&, flatbuffers::Offset<Message>)> const&,
+    std::string const& tag);
 
 flatbuffers::Offset<Message> handle_unknown_cancl_trip_upd(
     schedule& sched, knowledge_context&, message_context&,
