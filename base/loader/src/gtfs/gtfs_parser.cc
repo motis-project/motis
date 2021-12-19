@@ -49,12 +49,15 @@ using std::get;
 
 namespace motis::loader::gtfs {
 
-auto const required_files = {AGENCY_FILE, STOPS_FILE,      ROUTES_FILE,
-                             TRIPS_FILE,  STOP_TIMES_FILE, TRANSFERS_FILE};
+auto const required_files = {AGENCY_FILE, STOPS_FILE, ROUTES_FILE, TRIPS_FILE,
+                             STOP_TIMES_FILE};
 
 cista::hash_t hash(fs::path const& path) {
   auto hash = cista::BASE_HASH;
   auto const hash_file = [&](fs::path const& p) {
+    if (!fs::is_regular_file(p)) {
+      return;
+    }
     cista::mmap m{p.generic_string().c_str(), cista::mmap::protection::READ};
     hash = cista::hash_combine(
         cista::hash(std::string_view{

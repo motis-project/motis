@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cinttypes>
+#include <optional>
 #include <utility>
 
 #include "cista/hashing.h"
@@ -84,8 +85,12 @@ struct full_trip_id {
 
 struct gtfs_trip_id {
   CISTA_COMPARABLE()
+  gtfs_trip_id() = default;
+  gtfs_trip_id(mcd::string trip_id, std::optional<unixtime> start_date)
+      : trip_id_{std::move(trip_id)}, start_date_{std::move(start_date)} {}
+  friend std::ostream& operator<<(std::ostream& out, gtfs_trip_id const&);
   mcd::string trip_id_;
-  unixtime start_date_{0};
+  std::optional<unixtime> start_date_;
 };
 
 struct trip {

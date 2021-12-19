@@ -22,7 +22,7 @@ struct stop_context {
               known_stop_skips*);
 
   std::string station_id_;
-  int seq_no_{std::numeric_limits<int>::max()};
+  unsigned seq_no_{std::numeric_limits<unsigned>::max()};
   int idx_{std::numeric_limits<int>::max()};
   bool is_skip_known_{false};
 

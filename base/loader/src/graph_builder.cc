@@ -121,7 +121,7 @@ trip* graph_builder::register_service(Service const* s, int day_idx) {
   if (s->trip_id() != nullptr) {
     auto const motis_time = to_motis_time(day_idx - first_day_ - 5, 0);
     auto const date = motis_to_unixtime(sched_, motis_time);
-    sched_.gtfs_trip_ids_[{s->trip_id()->str(), date}] = stored;
+    sched_.gtfs_trip_ids_[s->trip_id()->str()].emplace_back(date, stored);
   }
 
   for (auto i = 1UL; i < s->sections()->size(); ++i) {

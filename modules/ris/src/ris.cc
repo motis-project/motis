@@ -115,10 +115,6 @@ struct ris::impl {
       : sched_{sched}, config_{c}, gtfsrt_parser_{sched} {}
 
   void init() {
-    if (!config_.gtfs_trip_ids_path_.empty()) {
-      read_gtfs_trip_ids();
-    }
-
     if (config_.clear_db_ && fs::exists(config_.db_path_)) {
       LOG(info) << "clearing database path " << config_.db_path_;
       fs::remove_all(config_.db_path_);
@@ -152,26 +148,6 @@ struct ris::impl {
     if (config_.init_time_.unix_time_ != 0) {
       forward(config_.init_time_.unix_time_);
     }
-  }
-
-  void read_gtfs_trip_ids() const {
-    auto const trips =
-        utl::file{config_.gtfs_trip_ids_path_.c_str(), "r"}.content();
-    auto const trips_msg =
-        make_msg(trips.data(), trips.size(), DEFAULT_FBS_MAX_DEPTH,
-                 std::numeric_limits<std::uint32_t>::max());
-    for (auto const& id : *motis_content(RISGTFSRTMapping, trips_msg)->ids()) {
-      try {
-        sched_.gtfs_trip_ids_.emplace(
-            gtfs_trip_id{id->id()->str(), static_cast<unixtime>(id->day())},
-            from_fbs(sched_, id->trip(), true));
-      } catch (...) {
-        std::cout << to_extern_trip(id->trip()) << "\n";
-      }
-    }
-    LOG(info) << sched_.gtfs_trip_ids_.size() << "/"
-              << motis_content(RISGTFSRTMapping, trips_msg)->ids()->size()
-              << " imported";
   }
 
   static std::string_view get_content_type(HTTPRequest const* req) {
@@ -698,8 +674,6 @@ struct ris::impl {
 };
 
 ris::ris() : module("RIS", "ris") {
-  param(config_.gtfs_trip_ids_path_, "gtfs_trip_ids",
-        "path to GTFS trip ids file");
   param(config_.db_path_, "db", "ris database path");
   param(config_.input_, "input", "ris input (folder or risml)");
   param(config_.db_max_size_, "db_max_size", "virtual memory map size");
@@ -745,46 +719,6 @@ void ris::init(motis::module::registry& r) {
       ctx::accesses_t{ctx::access_request{
           to_res_id(::motis::module::global_res_id::SCHEDULE),
           ctx::access_t::WRITE}});
-  r.register_op("/ris/write_gtfs_trip_ids", [this](auto&&) {
-    message_creator fbb;
-    auto const& sched = get_sched();
-    fbb.create_and_finish(
-        MsgContent_RISGTFSRTMapping,
-        CreateRISGTFSRTMapping(
-            fbb, fbb.CreateVector(utl::to_vec(
-                     sched.gtfs_trip_ids_,
-                     [&](mcd::pair<gtfs_trip_id, ptr<trip const>> const& id) {
-                       // SBB HRD data uses eva numbers
-                       // GTFS uses ${eva number}:0:${track}
-                       // To use SBB GTFS station indices in HRD:
-                       // -> cut and export the eva number (the part until
-                       // ':')
-                       auto const cut = [](std::string const& s) {
-                         auto const i = s.find_first_of(':');
-                         return i != std::string::npos ? s.substr(0, i) : s;
-                       };
-                       auto const& p = id.second->id_.primary_;
-                       auto const& s = id.second->id_.secondary_;
-                       return CreateGTFSID(
-                           fbb, fbb.CreateString(id.first.trip_id_),
-                           id.first.start_date_,
-                           CreateTripId(
-                               fbb,
-                               fbb.CreateString(
-                                   cut(sched.stations_.at(p.station_id_)
-                                           ->eva_nr_.str())),
-                               p.train_nr_, motis_to_unixtime(sched, p.time_),
-                               fbb.CreateString(
-                                   cut(sched.stations_.at(s.target_station_id_)
-                                           ->eva_nr_.str())),
-                               motis_to_unixtime(sched, s.target_time_),
-                               fbb.CreateString(s.line_id_)));
-                     })))
-            .Union());
-    auto const msg = make_msg(fbb);
-    utl::file{"gtfs_trips.raw", "w"}.write(msg->data(), msg->size());
-    return nullptr;
-  });
 }
 
 }  // namespace motis::ris

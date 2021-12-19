@@ -11,6 +11,8 @@ using namespace motis::test;
 using namespace motis::module;
 using namespace motis::ris::gtfsrt;
 
+using motis::test::schedule::gtfs_minimal_swiss::dataset_opt;
+
 constexpr auto const TIMEZONE_OFFSET = -120;
 
 // used reroute message is a combination of the one used in the
@@ -27,6 +29,7 @@ constexpr auto const TIMEZONE_OFFSET = -120;
 struct ris_gtfsrt_reroute_message_itest_t0 : public gtfsrt_itest {
   ris_gtfsrt_reroute_message_itest_t0()
       : gtfsrt_itest(
+            dataset_opt,
             "--ris.input=modules/ris/test_resources/gtfs-rt/reroute_itest/"
             "/t0") {}
 };
@@ -76,6 +79,7 @@ TEST_F(ris_gtfsrt_reroute_message_itest_t0,
 struct ris_gtfsrt_reroute_message_itest_t1 : public gtfsrt_itest {
   ris_gtfsrt_reroute_message_itest_t1()
       : gtfsrt_itest(
+            dataset_opt,
             "--ris.input=modules/ris/test_resources/gtfs-rt/reroute_itest/"
             "/t1") {}
 };

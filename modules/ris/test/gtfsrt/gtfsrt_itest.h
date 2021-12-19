@@ -8,12 +8,11 @@
 #include "motis/test/motis_instance_test.h"
 #include "motis/test/schedule/gtfs_minimal_swiss.h"
 
-using motis::test::schedule::gtfs_minimal_swiss::dataset_opt;
-
 namespace motis::ris::gtfsrt {
 
 struct gtfsrt_itest : public motis::test::motis_instance_test {
-  gtfsrt_itest(std::string const& test_sample)
+  gtfsrt_itest(loader::loader_options const& dataset_opt,
+               std::string const& test_sample)
       : motis::test::motis_instance_test{
             dataset_opt,
             {"ris", "rt"},

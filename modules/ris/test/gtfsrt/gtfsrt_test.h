@@ -12,7 +12,9 @@
 #include "gtfsrt.pb.h"
 
 namespace motis::ris {
+
 struct ris_message;
+
 namespace gtfsrt {
 
 inline std::string json_to_protobuf(std::string msg_json) {

@@ -62,16 +62,14 @@ struct message_context {
 };
 
 struct known_stop_skips {
-  known_stop_skips(std::string trip_id, unixtime time)
-      : trip_id(std::move(trip_id)), trip_date{time} {}
+  known_stop_skips(gtfs_trip_id trip_id) : trip_id_{std::move(trip_id)} {}
 
   inline bool is_skipped(int const seq_no) {
     auto it = skipped_stops_.find(seq_no);
     return it != end(skipped_stops_) ? it->second : false;
   }
 
-  std::string const trip_id;
-  unixtime const trip_date;
+  gtfs_trip_id trip_id_;
   mcd::hash_map<int /*seq-no */, bool> skipped_stops_;
 };
 
@@ -103,13 +101,13 @@ struct knowledge_context {
   bool is_additional_known(transit_realtime::TripDescriptor const&) const;
   known_stop_skips* find_trip_stop_skips(
       transit_realtime::TripDescriptor const&) const;
-  known_addition_trip& find_additional(std::string const&, unixtime);
+  known_addition_trip& find_additional(gtfs_trip_id const&);
 
-  void remember_additional(std::string const&, unixtime, time, int);
-  void update_additional(std::string const&, unixtime, time, int);
+  void remember_additional(gtfs_trip_id, time, int);
+  void update_additional(gtfs_trip_id const&, time, int);
   void remember_canceled(transit_realtime::TripDescriptor const&);
-  void remember_canceled(std::string const&, unixtime);
-  known_stop_skips* remember_stop_skips(std::string const&, unixtime);
+  void remember_canceled(gtfs_trip_id);
+  known_stop_skips* remember_stop_skips(gtfs_trip_id);
 
   std::vector<known_addition_trip> known_additional_;
   std::vector<gtfs_trip_id> known_canceled_;
@@ -133,8 +131,7 @@ struct trip_update_context {
   bool is_addition_skip_allowed_{true};
 
   trip const* trip_{nullptr};
-  std::string trip_id_;
-  unixtime trip_start_date_{0};
+  gtfs_trip_id trip_id_;
 
   std::vector<evt> is_events_;
   std::vector<evt> forecast_event_;
