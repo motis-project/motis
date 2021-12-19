@@ -29,10 +29,8 @@ export default defineComponent({
   },
   computed: {
     timeToDisplay: function (): String {
-      let result: string = "";
-      this.time.getHours() < 10 ? result += '0' + this.time.getHours() : result += this.time.getHours();
-      this.time.getMinutes() < 10 ? result += ':0' + this.time.getMinutes() : result += ':' + this.time.getMinutes();
-      this.$emit("timeChanged", result);
+      let result = this.$ds.getTimeString(this.time.valueOf());
+      this.$emit("timeChanged", this.time);
       return result;
     },
   },
@@ -47,26 +45,14 @@ export default defineComponent({
       );
     },
     setTime(value: string) {
-      let arr = value.split(":");
-      if (arr.length === 2 && arr[1].length === 2) {
-        let numberArr = arr.map((s) => +s);
-        if (
-          numberArr[0] >= 0 && numberArr[0] < 24 &&
-          numberArr[1] >= 0 && numberArr[1] < 60  
-        ) {
-          let date = new Date(new Date().getFullYear(), 
-                              new Date().getMonth(), 
-                              new Date().getDay(), 
-                              numberArr[0], numberArr[1]);
-          if (!isNaN(date.getTime())) {
-            this.time = date;
-          }
-        }
+      let t = this.$ds.parseTime(value);
+      if(t.valueOf()) {
+        this.time = t;
       }
     },
   },
   created() {
-    let currentTime = new Date();
+    let currentTime = this.$ds.date;
     this.time = currentTime;
   },
 });

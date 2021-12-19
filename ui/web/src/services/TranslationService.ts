@@ -33,8 +33,9 @@ interface Translation {
   useParking: string
 }
 
-class TranslationService {
+export class TranslationService {
   private _t: Translation = reactive({}) as Translation;
+  public isLoaded = false;
 
   public get t(): Translation {
     return this._t;
@@ -50,6 +51,7 @@ class TranslationService {
     this.currentLocale = locale;
     this.loadLocale(locale).then(t => {
       Object.assign(this._t, t);
+      this.isLoaded = true;
     });
   }
 
@@ -96,10 +98,13 @@ declare module '@vue/runtime-core' {
   }
 }
 
-export default {
-  install: (app: App, options: string) => {
-    let service = reactive(new TranslationService(options));
-    app.config.globalProperties.$ts = service;
-    app.config.globalProperties.$t = service.t;
+class TranslationServicePlugin {
+  public service: TranslationService = {} as TranslationService;
+  public install(app: App, options: string) {
+    this.service = reactive(new TranslationService(options)) as TranslationService;
+    app.config.globalProperties.$ts = this.service;
+    app.config.globalProperties.$t = this.service.t;
   }
 }
+
+export default new TranslationServicePlugin();

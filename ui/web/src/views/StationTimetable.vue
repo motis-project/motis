@@ -1,5 +1,6 @@
 <template>
-  <div class="station-events">
+  <LoadingBar v-if="!isContentLoaded"></LoadingBar>
+  <div class="station-events" v-else>
     <div class="header">
       <div id="" class="back">
         <i class="icon" @click="$router.go(-1)">arrow_back</i>
@@ -42,13 +43,13 @@
         <div class="event-list">
           <div class="date-header divider">
             <span>{{
-              getTimeString(filteredEvents[0].event.time, "date")
+              getDateString(filteredEvents[0].event.time)
             }}</span>
           </div>
           <div v-for="timetable in filteredEvents" :key="timetable.trips[0].id">
             <div class="station-event" v-if="timetable">
               <div class="event-time">
-                {{ getTimeString(timetable.event.time, "time") }}
+                {{ getTimeString(timetable.event.time) }}
               </div>
               <div class="event-train">
                 <span>
@@ -91,6 +92,7 @@ import { defineComponent, PropType } from "vue";
 import Event from "../models/DepartureTimetable";
 import TransportTypeBox from "../components/TransportTypeBox.vue";
 import { TripInfoId } from "../models/TrainGuess";
+import LoadingBar from "../components/LoadingBar.vue"
 
 export default defineComponent({
   name: "StationTimetable",
@@ -106,10 +108,12 @@ export default defineComponent({
       isDeparture: true,
       isUpperEnd: false,
       isBottomEnd: false,
+      isContentLoaded: false
     };
   },
   components: {
     TransportTypeBox,
+    LoadingBar
   },
   props: {
     stationGuess: {
@@ -123,7 +127,7 @@ export default defineComponent({
   },
   created() {
     if(!this.tripIdGuess){
-      this.date = new Date(2020, 9, 19, new Date().getHours(), new Date().getMinutes()).valueOf() / 1000;
+      this.date = this.$ds.dateTimeInSeconds;
     } else if(this.tripIdGuess){ 
       this.date = this.tripIdGuess.time;
     }
@@ -138,23 +142,11 @@ export default defineComponent({
     },
   },
   methods: {
-    getTimeString(timeInSeconds: number, timeOrDate: string) {
-      let date = new Date(timeInSeconds * 1000);
-      if (timeOrDate === "time") {
-        return (
-          ("0" + date.getHours()).slice(-2) +
-          ":" +
-          ("0" + date.getMinutes()).slice(-2)
-        );
-      } else if (timeOrDate === "date") {
-        return (
-          date.getDate() +
-          "." +
-          ("0" + (date.getMonth() + 1)).slice(-2) +
-          "." +
-          date.getFullYear()
-        );
-      }
+    getTimeString(timeInSeconds: number) {
+      return this.$ds.getTimeString(timeInSeconds * 1000);
+    },
+    getDateString(timeInSeconds: number) {
+      return this.$ds.getDateString(timeInSeconds * 1000);
     },
     getDepartures(isDeparture: boolean) {
       if (isDeparture && this.departures) {
@@ -202,6 +194,7 @@ export default defineComponent({
           }
           this.station = data.station;
           this.getDepartures(isDeparture);
+          this.isContentLoaded = true;
         });
     },
   },

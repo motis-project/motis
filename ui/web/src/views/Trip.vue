@@ -130,11 +130,7 @@ export default defineComponent({
   },
   computed: {
     date: function (): string {
-      return new Date(this.content.trips[0].id.time * 1000).toLocaleString(this.$ts.currentLocale, {
-        month: "2-digit",
-        year: "numeric",
-        day: "numeric",
-      });
+      return this.$ds.getDateString(this.content.trips[0].id.time * 1000);
     },
     departure: function (): string {
       return this.getTimeString(this.content.stops[0].departure.time);
@@ -199,18 +195,17 @@ export default defineComponent({
       return this.content.stops.slice(transport.range.from + 1, transport.range.to - 1);
     },
     getTimeString(timeInSeconds: number) {
-      let date = new Date(timeInSeconds * 1000);
-      return date.getHours() + ":" + ("0" + date.getMinutes()).slice(-2);
+      return this.$ds.getTimeString(timeInSeconds * 1000);
     },
     getPastOrFuture(timeInSeconds: number) {
       let date = new Date(timeInSeconds * 1000);
-      return date < new Date() ? 'past' : 'future';
+      return date < this.$ds.date ? 'past' : 'future';
     },
     getStopProgress(stop: Stop) {
       let index = this.content.stops.indexOf(stop);
       let nextStop = this.content.stops[index + 1];
       let diff = nextStop.arrival.time - stop.departure.time;
-      let diffWithCurrent = nextStop.arrival.time - (new Date().valueOf() / 1000);
+      let diffWithCurrent = nextStop.arrival.time - this.$ds.dateTimeInSeconds;
       if(diffWithCurrent < 0) {
         return 100;
       }
@@ -218,7 +213,7 @@ export default defineComponent({
         return 0;
       }
       else {
-        return (diffWithCurrent / diff) * 100;
+        return 100 - (diffWithCurrent / diff) * 100;
       }
     }
   },

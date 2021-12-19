@@ -5,7 +5,7 @@
       :labelName="$t.date"
       iconType="event"
       :showArrows="true"
-      :initInputText="currentDate.toLocaleString($ts.currentLocale, { month: '2-digit', year: 'numeric', day: 'numeric' })"
+      :initInputText="$ds.getDateString(currentDate.valueOf())"
       @inputChanged="onFieldInput"
       @focus="calendarVisible = true"
       @blur="inputBluredHandler"
@@ -65,8 +65,7 @@ export default defineComponent({
     };
   },
   created() {
-    let now = new Date();
-    this.currentDate = new Date(2020, 9, 19);
+    this.currentDate = this.$ds.date;
   },
   watch: {
     currentDate: function (date: Date) {
@@ -120,22 +119,9 @@ export default defineComponent({
       }
     },
     onFieldInput(value: string) {
-      let arr = value.split(".");
-      if (arr.length === 3 && arr[2].length === 4 && arr[1].length == 2) {
-        let numberArr = arr.map((s) => +s);
-        numberArr[1]--;
-        if (
-          numberArr[0] > 0 &&
-          numberArr[1] >= 0 &&
-          numberArr[1] < 12 &&
-          !isNaN(new Date(numberArr[2], numberArr[1], 0).getTime()) &&
-          numberArr[0] <= new Date(numberArr[2], numberArr[1] + 1, 0).getDate()
-        ) {
-          let date = new Date(numberArr[2], numberArr[1], numberArr[0]);
-          if (!isNaN(date.getTime())) {
-            this.currentDate = date;
-          }
-        }
+      let d = this.$ds.parseDate(value);
+      if(d.valueOf()) {
+        this.currentDate = d;
       }
     },
     dayClick(day : Date) {

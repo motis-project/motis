@@ -14,6 +14,12 @@ import { defineComponent } from 'vue'
 export default defineComponent({
     name: "LoadingBar"
 })
+
+export enum LoadingState {
+  NothingToShow,
+  Loading,
+  Loaded
+} 
 </script>
 
 
