@@ -10,6 +10,7 @@
 
 #include "utl/concat.h"
 #include "utl/parser/file.h"
+#include "utl/read_file.h"
 
 #include "conf/date_time.h"
 
@@ -30,6 +31,7 @@
 #include "motis/module/context/motis_spawn.h"
 #include "motis/ris/gtfs-rt/common.h"
 #include "motis/ris/gtfs-rt/gtfsrt_parser.h"
+#include "motis/ris/gtfs-rt/util.h"
 #include "motis/ris/ribasis/ribasis_parser.h"
 #include "motis/ris/ris_message.h"
 #include "motis/ris/risml/risml_parser.h"
@@ -721,6 +723,44 @@ ris::ris() : module("RIS", "ris") {
 }
 
 ris::~ris() = default;
+
+void ris::reg_subc(motis::module::subc_reg& r) {
+  r.register_cmd(
+      "gtfsrt-json2pb", "json to protobuf", [](int argc, char const** argv) {
+        if (argc != 3) {
+          std::cout << "usage: " << argv[0] << " JSON_FILE PB_OUTPUT\n";
+          return 1;
+        }
+
+        auto const file = utl::read_file(argv[1]);
+        if (!file.has_value()) {
+          std::cout << "unable to read file " << argv[1] << "\n";
+          return 1;
+        }
+
+        auto const out = gtfsrt::json_to_protobuf(*file);
+        utl::file{argv[2], "w"}.write(&out[0], out.size());
+
+        return 0;
+      });
+  r.register_cmd("gtfsrt-pb2json", "protobuf to json",
+                 [](int argc, char const** argv) {
+                   if (argc != 2) {
+                     std::cout << "usage: " << argv[0] << " PB_FILE\n";
+                     return 1;
+                   }
+
+                   auto const file = utl::read_file(argv[1]);
+                   if (!file.has_value()) {
+                     std::cout << "unable to read file " << argv[1] << "\n";
+                     return 1;
+                   }
+
+                   std::cout << gtfsrt::protobuf_to_json(*file) << "\n";
+
+                   return 0;
+                 });
+}
 
 void ris::init(motis::module::registry& r) {
   impl_ = std::make_unique<impl>(*const_cast<schedule*>(&get_sched())  // NOLINT

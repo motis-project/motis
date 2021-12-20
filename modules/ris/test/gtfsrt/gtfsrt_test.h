@@ -18,13 +18,6 @@ struct ris_message;
 
 namespace gtfsrt {
 
-inline std::string json_to_protobuf(std::string const& msg_json) {
-  transit_realtime::FeedMessage msg;
-  google::protobuf::util::JsonStringToMessage(msg_json, &msg);
-  auto binary_msg = msg.SerializeAsString();
-  return binary_msg;
-};
-
 struct gtfsrt_test : public ::testing::Test {
   gtfsrt_test(loader::loader_options);
 

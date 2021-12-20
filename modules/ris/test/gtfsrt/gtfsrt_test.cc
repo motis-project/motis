@@ -5,6 +5,7 @@
 #include "motis/loader/loader.h"
 #include "motis/ris/gtfs-rt/common.h"
 #include "motis/ris/gtfs-rt/gtfsrt_parser.h"
+#include "motis/ris/gtfs-rt/util.h"
 #include "motis/ris/ris_message.h"
 
 namespace motis::ris::gtfsrt {
