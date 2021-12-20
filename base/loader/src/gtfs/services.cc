@@ -22,7 +22,7 @@ greg::date bound_date(
                             std::pair<std::string, calendar> const& rhs) {
                            return lhs.second.first_day_ < rhs.second.first_day_;
                          });
-    return it == end(base) ? kMin : it->second.first_day_;
+    return it == end(base) ? kMax : it->second.first_day_;
   };
 
   auto const max_base_day = [&]() {
@@ -32,7 +32,7 @@ greg::date bound_date(
                             std::pair<std::string, calendar> const& rhs) {
                            return lhs.second.last_day_ < rhs.second.last_day_;
                          });
-    return it == end(base) ? kMax : it->second.last_day_;
+    return it == end(base) ? kMin : it->second.last_day_;
   };
 
   if (first) {
