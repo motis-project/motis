@@ -148,6 +148,7 @@ struct trip {
   ptr<mcd::vector<route_edge> const> edges_{nullptr};
   lcon_idx_t lcon_idx_{0U};
   trip_debug dbg_;
+  mcd::vector<uint32_t> stop_seq_numbers_;
 };
 
 }  // namespace motis

@@ -107,7 +107,8 @@ void to_ris_message(schedule const& sched, knowledge_context& knowledge,
     } catch (const std::exception& e) {
       LOG(logging::error) << "Exception on entity " << entity.id()
                           << " for message with timestamp " << message_time
-                          << ": " << e.what();
+                          << ": " << e.what()
+                          << ", entity=" << entity.Utf8DebugString();
     }
   }
   knowledge.sort_known_lists();

@@ -108,4 +108,18 @@ trip const* find_trip(schedule const& sched, full_trip_id id) {
   return nullptr;
 }
 
+unsigned stop_seq_to_stop_idx(trip const& trp, unsigned stop_seq) {
+  if (trp.stop_seq_numbers_.empty() || stop_seq == 0U) {
+    return stop_seq;
+  } else {
+    auto const it = std::lower_bound(begin(trp.stop_seq_numbers_),
+                                     end(trp.stop_seq_numbers_), stop_seq);
+    utl::verify(it != end(trp.stop_seq_numbers_) && *it == stop_seq,
+                "stop sequence {} for trip {} not found, sequence: {}",
+                stop_seq, trp.dbg_.str(), trp.stop_seq_numbers_);
+    return static_cast<unsigned>(
+        std::distance(begin(trp.stop_seq_numbers_), it));
+  }
+}
+
 }  // namespace motis

@@ -47,11 +47,13 @@ struct trip {
     bool in_allowed_{false};
   };
   using stop_seq = std::vector<stop_identity>;
+  using stop_seq_numbers = std::vector<unsigned>;
 
   trip(route const*, bitfield const*, block*, std::string id,
        std::string headsign, std::string short_name, unsigned line);
 
   stop_seq stops() const;
+  stop_seq_numbers seq_numbers() const;
 
   int avg_speed() const;
   int distance() const;

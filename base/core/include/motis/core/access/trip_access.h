@@ -22,4 +22,6 @@ trip const* find_trip(schedule const&, primary_trip_id);
 
 trip const* find_trip(schedule const&, full_trip_id);
 
+unsigned stop_seq_to_stop_idx(trip const&, unsigned stop_seq);
+
 }  // namespace motis

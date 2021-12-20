@@ -17,6 +17,7 @@ std::string format_date(time_t const t, char const* format = "%Y-%m-%d") {
 }
 
 std::pair<int, int> first_last_days(schedule const& sched,
+                                    size_t const source_index,
                                     Interval const* interval) {
   auto first_day = static_cast<int>((sched.schedule_begin_ - interval->from()) /
                                     SECONDS_A_DAY);
@@ -26,8 +27,9 @@ std::pair<int, int> first_last_days(schedule const& sched,
   utl::verify(sched.schedule_end_ > sched.schedule_begin_ &&
                   interval->from() <= sched.schedule_end_ &&
                   interval->to() >= sched.schedule_begin_,
-              "schedule (from={}, to={}) out of interval (from={}, to={}), "
+              "schedule {} (from={}, to={}) out of interval (from={}, to={}), "
               "fbs: {} - {}, sched: {} - {}",
+              sched.prefixes_.empty() ? "" : sched.prefixes_.at(source_index),
               format_date(interval->from()), format_date(interval->to()),
               format_date(sched.schedule_begin_),
               format_date(sched.schedule_end_), interval->from(),

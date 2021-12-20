@@ -128,6 +128,7 @@ struct ris::impl {
       if (auto const colon_pos = input.find(':');
           colon_pos != std::string::npos) {
         tag_ = input.substr(0, colon_pos);
+        tag_ = tag_.empty() ? "" : tag_ + "_";
         path_ = fs::path{input.substr(colon_pos + 1)};
       } else {
         path_ = fs::path{input};
