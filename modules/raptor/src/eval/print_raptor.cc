@@ -10,9 +10,9 @@
 #include "motis/module/message.h"
 #include "motis/bootstrap/dataset_settings.h"
 #include "motis/bootstrap/motis_instance.h"
-#include "motis/raptor/raptor_timetable.h"
 #include "motis/raptor/get_raptor_timetable.h"
 #include "motis/raptor/print_raptor.h"
+#include "motis/raptor/raptor_timetable.h"
 
 #include "conf/configuration.h"
 #include "conf/options_parser.h"
@@ -42,7 +42,10 @@ struct print_raptor_options : public conf::configuration {
 void print(schedule const& sched, raptor_meta_info const& meta_info,
            journey const& j) {
   std::cout << "\nJourney with TR: " << j.trips_.size()
-            << ";\tMOC: " << j.max_occupancy_ << ";\tDuration: " << j.duration_
+            << ";\tMOC: " << j.max_occupancy_
+            << ";\tTSO: " << j.time_slotted_occupancy_
+            << ";\tMTT: " << j.min_transfer_time_
+            << ";\tDuration: " << j.duration_
             << ";\n=========================================================\n";
 
   // iterate over the trips in the journey and validate the occupancy values to
@@ -128,7 +131,7 @@ int print_raptor(int argc, const char** argv) {
   auto const& sched = instance.sched();
   auto const [meta_info, tt] = get_raptor_timetable(sched);
 
-  //print_theoretical_moc_figures(*tt);
+  // print_theoretical_moc_figures(*tt);
 
   std::ifstream in{print_opt.in_path_.c_str()};
   in.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -157,4 +160,4 @@ int print_raptor(int argc, const char** argv) {
   return 0;
 }
 
-}
+}  // namespace motis::raptor::eval

@@ -271,9 +271,10 @@ std::string replace_target_escape(std::string const& str,
 int generate(int argc, char const** argv) {
   generator_settings generator_opt;
   dataset_settings dataset_opt;
+  import_settings import_opt;
   dataset_opt.adjust_footpaths_ = true;
 
-  conf::options_parser parser({&dataset_opt, &generator_opt});
+  conf::options_parser parser({&dataset_opt, &generator_opt, &import_opt});
   parser.read_command_line_args(argc, argv);
 
   if (parser.help()) {
@@ -303,8 +304,7 @@ int generate(int argc, char const** argv) {
   parser.print_used(std::cout);
 
   motis_instance instance;
-  instance.import(module_settings{}, dataset_opt,
-                  import_settings({dataset_opt.dataset_}));
+  instance.import(module_settings{}, dataset_opt, import_opt);
 
   auto const& sched = instance.sched();
   search_interval_generator interval_gen(

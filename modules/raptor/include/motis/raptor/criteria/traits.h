@@ -40,7 +40,7 @@ struct traits<FirstTrait, RestTraits...> {
 
   _mark_cuda_rel_ inline static trait_id get_write_to_trait_id(TraitsData& d) {
     auto const first_dimension_idx = FirstTrait::get_write_to_dimension_id(d);
-    if (!valid(first_dimension_idx)){
+    if (!valid(first_dimension_idx)) {
       return invalid<trait_id>;
     }
 
@@ -76,6 +76,11 @@ struct traits<FirstTrait, RestTraits...> {
     return FirstTrait::is_rescan_from_stop_needed(td, first_dimension_idx) ||
            traits<RestTraits...>::is_rescan_from_stop_needed(
                rest_trait_size, td, rest_trait_offset);
+  }
+
+  inline static bool is_forward_propagation_required() {
+    return FirstTrait::is_forward_propagation_required() ||
+           traits<RestTraits...>::is_forward_propagation_required();
   }
   //****************************************************************************
 
@@ -210,6 +215,10 @@ struct traits<> {
   inline static bool is_rescan_from_stop_needed(uint32_t _1, Data const& _2,
                                                 uint32_t _3) {
     return false;
+  }
+
+  inline static bool is_forward_propagation_required() {
+    return false; //return natural element
   }
 
   template <typename Data, typename Timetable>

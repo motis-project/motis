@@ -24,7 +24,7 @@ inline void print_station(stop_id const s_id, raptor_meta_info const& sched) {
 
 inline void print_stations(raptor_meta_info const& meta) {
   auto stop_cnt = meta.raptor_id_to_eva_.size();
-  for(int s_id = 0; s_id < stop_cnt; ++s_id) {
+  for (int s_id = 0; s_id < stop_cnt; ++s_id) {
     print_station(s_id, meta);
   }
 }
@@ -103,6 +103,21 @@ inline void print_station_arrivals(stop_id const s_id,
   std::cout << s_id << "(station) Arrivals: [ ";
   for (auto k = 0; k < max_raptor_round; ++k) {
     std::cout << raptor_result[k][s_id] << " ";
+  }
+  std::cout << "]\n";
+}
+
+template <typename CriteriaConfig>
+inline void mc_print_station_arrivals(stop_id const s_id,
+                                      raptor_round const round,
+                                      raptor_result_base const& raptor_result) {
+  auto const trait_size = CriteriaConfig::trait_size();
+  std::cout << +round << "(round) " << s_id << "(station) Arrivals: [ ";
+  for(auto t_off = 0; t_off < trait_size; ++t_off) {
+    auto const arr_idx = CriteriaConfig::get_arrival_idx(s_id, t_off);
+    auto const time = raptor_result[round][arr_idx];
+    if (valid(time))
+      std::cout << t_off << ": " << time << "; ";
   }
   std::cout << "]\n";
 }

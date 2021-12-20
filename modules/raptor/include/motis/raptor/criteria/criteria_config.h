@@ -19,7 +19,7 @@ struct criteria_config {
     return Traits::size();
   }
 
-  _mark_cuda_rel_ inline static int get_arrival_idx(
+  _mark_cuda_rel_ inline static arrival_id get_arrival_idx(
       stop_id const stop_idx, trait_id const trait_offset = 0) {
     return stop_idx * trait_size() + trait_offset;
   }
@@ -39,6 +39,10 @@ struct criteria_config {
   inline static bool is_rescan_from_stop_needed(CriteriaData const& td,
                                                 trait_id t_offset) {
     return Traits::is_rescan_from_stop_needed(trait_size(), td, t_offset);
+  }
+
+  inline static bool is_forward_propagation_required() {
+    return Traits::is_forward_propagation_required();
   }
   //****************************************************************************
 

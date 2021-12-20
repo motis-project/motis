@@ -55,24 +55,27 @@ public class ResultComparator {
       }
     }
 
-    public String toString(boolean mocRelevant) {
-      return departureFmt() + "\t\t" + arrivalFmt() + "\t\t" + durationStr + "\tTR: " + tripCount + (mocRelevant ? "\tMOC: " + moc : "");
+    public String toString() {
+      return departureFmt() + "\t\t" + arrivalFmt() + "\t\t" + durationStr + "\tTR: " + tripCount + "\tMOC: " + moc + "\tTSO: " + tso;
     }
 
-    public boolean dominates(CompareConnection toDominate, boolean mocRelevant) {
+    public boolean dominates(CompareConnection toDominate) {
       if (toDominate == null) return true;
 
-      return tripCount <= toDominate.tripCount && (!mocRelevant || moc <= toDominate.moc) && unix_arr_time <= toDominate.unix_arr_time;
+      return tripCount <= toDominate.tripCount && moc <= toDominate.moc && tso <= toDominate.tso && unix_arr_time <= toDominate.unix_arr_time;
     }
 
-    public int compareTo(CompareConnection o, boolean mocRelevant) {
+    public int compareTo(CompareConnection o) {
       if (o == null) return -1;
 
       var tc = Long.compare(this.tripCount, o.tripCount);
       if (tc != 0) return tc;
 
       var mc = Long.compare(this.moc, o.moc);
-      if (mc != 0 && mocRelevant) return mc;
+      if (mc != 0) return mc;
+
+      var tso = Long.compare(this.tso, o.tso);
+      if (tso != 0) return tso;
 
       //var dc = Long.compare(this.duration.getSeconds(), o.duration.getSeconds());
       //if (dc != 0) return dc;
@@ -154,9 +157,9 @@ public class ResultComparator {
       return rpcTrMocMask == rocTrMocMask;
     }
 
-    public String toString(boolean mocRelevant) {
+    public String toString() {
       if (routingConns.size() != raptorConns.size()) throw new IllegalStateException("Mismatch conn count!");
-      var empty = String.format("%-74s", "---");
+      var empty = String.format("%-83s", "---");
       var bld = new StringBuilder();
       bld.append("Comparison for Query ID: ").append(id).append(";\tFound full match: ").append(isFullMatch()).append(";\tMatching Connection Count: ").append((rpcConCnt == rocConCnt)).append("\n");
       bld.append("==================================================================================================\n");
@@ -164,9 +167,9 @@ public class ResultComparator {
         var lhs = raptorConns.get(i);
         var rhs = routingConns.get(i);
 
-        var lhsString = lhs != null ? lhs.toString(mocRelevant) : empty;
-        var rhsString = rhs != null ? rhs.toString(mocRelevant) : empty;
-        var matches = (lhs != null && rhs != null && lhs.compareTo(rhs, mocRelevant) == 0) ? "M" : "-";
+        var lhsString = lhs != null ? lhs.toString() : empty;
+        var rhsString = rhs != null ? rhs.toString() : empty;
+        var matches = (lhs != null && rhs != null && lhs.compareTo(rhs) == 0) ? "M" : "-";
 
         bld.append(String.format("%02d", i)).append(": ").append(lhsString).append("\t\t").append(matches).append("\t\t").append(rhsString).append("\n");
       }
@@ -175,7 +178,7 @@ public class ResultComparator {
     }
   }
 
-  static List<CompareConnection> getConnections(long id, JSONObject content, boolean mocRelevant) {
+  static List<CompareConnection> getConnections(long id, JSONObject content) {
     var conns = (JSONArray) content.get("connections");
     var cs = new ArrayList<CompareConnection>();
     for (var c : conns) {
@@ -184,24 +187,24 @@ public class ResultComparator {
     }
     cs.sort((lhs, rhs) -> {
       if (lhs == null || rhs == null) throw new IllegalStateException("Received a null!");
-      return lhs.compareTo(rhs, mocRelevant);
+      return lhs.compareTo(rhs);
     });
     return cs;
   }
 
-  static HashMap<Long, List<CompareConnection>> transform(List<String> lines, boolean mocRelevant) throws ParseException {
+  static HashMap<Long, List<CompareConnection>> transform(List<String> lines) throws ParseException {
     var parser = new JSONParser();
     var map = new HashMap<Long, List<CompareConnection>>();
     for (var line : lines) {
       var response = (JSONObject) parser.parse(line);
       var id = (Long) response.get("id");
-      var conns = getConnections(id, (JSONObject) response.get("content"), mocRelevant);
+      var conns = getConnections(id, (JSONObject) response.get("content"));
       map.put(id, conns);
     }
     return map;
   }
 
-  static List<ComparisonResult> compare(long resCount, Map<Long, List<CompareConnection>> raptorConns, Map<Long, List<CompareConnection>> routingConns, boolean mocRelevant, int up_to_line) {
+  static List<ComparisonResult> compare(long resCount, Map<Long, List<CompareConnection>> raptorConns, Map<Long, List<CompareConnection>> routingConns, int up_to_line) {
 
     var r = new ArrayList<ComparisonResult>();
     for (long queryId = 1; queryId <= resCount && queryId < up_to_line; queryId++) {
@@ -219,7 +222,7 @@ public class ResultComparator {
         var rapc = rpc.get(rpcIdx);
         var rouc = roc.get(rocIdx);
 
-        var compare = rapc.compareTo(rouc, mocRelevant);
+        var compare = rapc.compareTo(rouc);
         if (compare < 0) {
           // LHS better than RHS
           result.addRpcOnly(rapc);
@@ -265,12 +268,12 @@ public class ResultComparator {
     }
   }
 
-  static void filterDominated(List<CompareConnection> conns, boolean mocRelevant) {
+  static void filterDominated(List<CompareConnection> conns) {
     for (int i = 0; i < conns.size(); i++) {
       var dominator = conns.get(i);
       for (int j = i+1; j < conns.size(); j++) {
         var toDominate = conns.get(j);
-        if(dominator.dominates(toDominate, mocRelevant)) {
+        if(dominator.dominates(toDominate)) {
           conns.remove(j--);
         }
       }
@@ -280,25 +283,24 @@ public class ResultComparator {
   static final boolean fullPrint = false;
 
   public static void main(String[] args) throws IOException, ParseException {
-    var mocRelevant = true;
     System.out.print("Reading Files ...");
-    var raptorLines = Files.readAllLines(Path.of("verification/sbb-small/r-raptor_gpu-moc.txt"));
+    var raptorLines = Files.readAllLines(Path.of("verification/sbb-small/r-raptor_gpu-tso.txt"));
     //var routingLines = Files.readAllLines(Path.of("./data/results/r-fwd-routing-moc.txt"));
-    var routingLines = Files.readAllLines(Path.of("verification/sbb-small/r-raptor_cpu-moc.txt"));
+    var routingLines = Files.readAllLines(Path.of("verification/sbb-small/r-raptor_cpu-tso.txt"));
 
     //if (raptorLines.size() != routingLines.size()) throw new IllegalStateException("Line Counts don't match!");
     System.out.println("Ok");
 
     System.out.print("Parsing data ...");
-    var raptorConns = transform(raptorLines, mocRelevant);
-    var routingConns = transform(routingLines, mocRelevant);
+    var raptorConns = transform(raptorLines);
+    var routingConns = transform(routingLines);
     //for(var e : routingConns.entrySet()) {
     //  filterDominated(e.getValue(), mocRelevant);
     //}
     System.out.println("Ok");
 
     System.out.print("Comparing ...");
-    var comparison = compare(raptorLines.size(), raptorConns, routingConns, mocRelevant, 1001);
+    var comparison = compare(raptorLines.size(), raptorConns, routingConns, 1001);
     System.out.println("Ok");
 
     var full_match_count = 0;
@@ -312,7 +314,7 @@ public class ResultComparator {
 
     for (var res : comparison) {
       if(fullPrint || !res.isFullMatch()) {
-        System.out.println(res.toString(mocRelevant));
+        System.out.println(res.toString());
         System.out.println();
         System.out.println();
       }

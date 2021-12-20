@@ -58,6 +58,11 @@ struct trait_min_transfer_times {
       TraitsData const& data, dimension_id const dimension_idx) {
     return dimension_idx > data.min_transfer_time_idx_;
   }
+
+  inline static bool is_forward_propagation_required() {
+    // we can find all valid solutions by individually checking each offset
+    return false;
+  }
   //****************************************************************************
 
   template <typename TraitsData, typename Timetable>

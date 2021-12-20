@@ -92,6 +92,12 @@ struct trait_time_slotted_occupancy {
       TraitsData const& data, dimension_id const dimension_idx) {
     return dimension_idx < data.occ_time_slot_;
   }
+
+  inline static bool is_forward_propagation_required() {
+    //we also need to write arrival times to other trait offsets
+    //  otherwise we will fail to find all valid solutions
+    return true;
+  }
   //****************************************************************************
 
   template <typename TraitsData, typename Timetable>

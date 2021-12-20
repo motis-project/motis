@@ -22,6 +22,11 @@ public abstract class AbstractConnection<ST extends Stop> {
     else
       this.moc = 0;
 
+    if (conn.containsKey("time_slotted_occupancy"))
+      this.tso = (Long) conn.get("time_slotted_occupancy");
+    else
+      this.tso = 0;
+
     this.stops = new ArrayList<>();
     for (int i = 0, stopsSize = stops.size(); i < stopsSize; i++) {
       var st = (JSONObject) stops.get(i);
@@ -55,5 +60,6 @@ public abstract class AbstractConnection<ST extends Stop> {
   public final String durationStr;
   public final long tripCount;
   public final long moc;
+  public final long tso;
   public final List<ST> stops;
 }
