@@ -6,7 +6,6 @@
 
 #include "motis/core/schedule/time.h"
 #include "motis/test/motis_instance_test.h"
-#include "motis/test/schedule/gtfs_minimal_swiss.h"
 
 namespace motis::ris::gtfsrt {
 
