@@ -5,6 +5,7 @@
 #include "boost/date_time/gregorian/gregorian_types.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
 
+#include "utl/enumerate.h"
 #include "utl/verify.h"
 
 #include "motis/core/common/date_time_util.h"
@@ -36,7 +37,7 @@ void collect_events(trip_update_context& update_ctx,
   auto& sched = update_ctx.sched_;
 
   stop_context stop_ctx;
-  for (auto const& stu : trip_update.stop_time_update()) {
+  for (auto const& [i, stu] : utl::enumerate(trip_update.stop_time_update())) {
     stop_ctx.update(sched, trip, stu, skipped_stops, tag);
 
     if (!stu.has_schedule_relationship() ||
@@ -45,10 +46,10 @@ void collect_events(trip_update_context& update_ctx,
 
       if (skipped_stops != nullptr &&
           skipped_stops->is_skipped(stop_ctx.seq_no_)) {
-        throw std::runtime_error(
-            "Stop " + stop_ctx.station_id_ +
-            " previously reported as SKIPPED is now reported as SCHEDULED. "
-            "This is not supported.");
+        throw utl::fail(
+            "stop_time_update {} for trip {}: stop seq_no={}, id={} was "
+            "SKIPPED now SCHEDULED",
+            i, trip.dbg_, stop_ctx.seq_no_, stop_ctx.station_id_);
       }
 
       auto const has_delay_for_addition =
@@ -137,7 +138,7 @@ void collect_additional_events(trip_update_context& update_ctx,
 
       if (known_skips != nullptr && known_skips->is_skipped(base.seq_no_)) {
         throw std::runtime_error(
-            "Stop " + base.stop_id_ +
+            "collect_additional_events: Stop " + base.stop_id_ +
             " previously reported as SKIPPED is now reported as SCHEDULED. "
             "This is not supported.");
       }

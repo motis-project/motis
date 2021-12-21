@@ -23,7 +23,7 @@ struct stop_context {
 
   std::string station_id_;
   unsigned seq_no_{std::numeric_limits<unsigned>::max()};
-  int idx_{std::numeric_limits<int>::max()};
+  unsigned idx_{std::numeric_limits<unsigned>::max()};
   bool is_skip_known_{false};
 
   unixtime stop_arrival_{0};

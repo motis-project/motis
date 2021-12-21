@@ -21,14 +21,22 @@ void update_stop_idx(stop_context& current_stop, schedule const& sched,
                      trip const& trip,
                      TripUpdate_StopTimeUpdate const& stop_time_upd,
                      known_stop_skips* stop_skips, std::string const& tag) {
-  current_stop.is_skip_known_ =
-      stop_skips != nullptr && stop_skips->is_skipped(current_stop.seq_no_);
-  if (current_stop.is_skip_known_) {
+  if (stop_time_upd.has_stop_sequence() &&
+      stop_time_upd.stop_sequence() == current_stop.seq_no_ &&
+      stop_time_upd.has_stop_id() &&
+      tag + stop_time_upd.stop_id() == current_stop.station_id_) {
     return;
   }
 
   if (stop_time_upd.has_stop_sequence()) {
     current_stop.seq_no_ = stop_time_upd.stop_sequence();
+  }
+
+  current_stop.is_skip_known_ = stop_skips != nullptr &&
+                                stop_time_upd.has_stop_sequence() &&
+                                stop_skips->is_skipped(current_stop.seq_no_);
+  if (current_stop.is_skip_known_) {
+    return;
   }
 
   if (stop_time_upd.has_stop_sequence()) {
