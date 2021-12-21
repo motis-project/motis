@@ -8,10 +8,12 @@ namespace greg = boost::gregorian;
 
 namespace motis::loader::gtfs {
 
+enum class bound { first, last };
+
 greg::date bound_date(
     std::map<std::string, calendar> const& base,
     std::map<std::string, std::vector<calendar_date>> const& exceptions,
-    bool first) {
+    bound const b) {
   constexpr auto const kMin = greg::date{9999, 12, 31};
   constexpr auto const kMax = greg::date{1400, 1, 1};
 
@@ -22,7 +24,8 @@ greg::date bound_date(
                             std::pair<std::string, calendar> const& rhs) {
                            return lhs.second.first_day_ < rhs.second.first_day_;
                          });
-    return it == end(base) ? kMin : it->second.first_day_;
+    return it == end(base) ? std::pair{"", kMin}
+                           : std::pair{it->first, it->second.first_day_};
   };
 
   auto const max_base_day = [&]() {
@@ -32,30 +35,44 @@ greg::date bound_date(
                             std::pair<std::string, calendar> const& rhs) {
                            return lhs.second.last_day_ < rhs.second.last_day_;
                          });
-    return it == end(base) ? kMax : it->second.last_day_;
+    return it == end(base) ? std::pair{"", kMax}
+                           : std::pair{it->first, it->second.last_day_};
   };
 
-  if (first) {
-    auto min = min_base_day();
-    for (auto const& [id, dates] : exceptions) {
-      for (auto const& date : dates) {
-        if (date.type_ == calendar_date::ADD) {
-          min = std::min(min, date.day_);
+  switch (b) {
+    case bound::first: {
+      auto [min_id, min] = min_base_day();
+      for (auto const& [id, dates] : exceptions) {
+        for (auto const& date : dates) {
+          if (date.type_ == calendar_date::ADD && date.day_ < min) {
+            min = date.day_;
+            min_id = id;
+          }
         }
       }
+
+      LOG(logging::info) << "first date " << min << " from service " << min_id;
+
+      return min;
     }
-    return min;
-  } else {
-    auto max = max_base_day();
-    for (auto const& [id, dates] : exceptions) {
-      for (auto const& date : dates) {
-        if (date.type_ == calendar_date::ADD) {
-          max = std::max(max, date.day_);
+    case bound::last: {
+      auto [max_id, max] = max_base_day();
+      for (auto const& [id, dates] : exceptions) {
+        for (auto const& date : dates) {
+          if (date.type_ == calendar_date::ADD && date.day_ > max) {
+            max = date.day_;
+            max_id = id;
+          }
         }
       }
+
+      LOG(logging::info) << "last date " << max << " from service " << max_id;
+
+      return max;
     }
-    return max;
   }
+
+  assert(false);
 }
 
 bitfield calendar_to_bitfield(std::string const& service_name,
@@ -94,8 +111,8 @@ traffic_days merge_traffic_days(
   motis::logging::scoped_timer timer{"traffic days"};
 
   traffic_days s;
-  s.first_day_ = bound_date(base, exceptions, true);
-  s.last_day_ = bound_date(base, exceptions, false);
+  s.first_day_ = bound_date(base, exceptions, bound::first);
+  s.last_day_ = bound_date(base, exceptions, bound::last);
 
   for (auto const& [service_name, calendar] : base) {
     s.traffic_days_[service_name] = std::make_unique<bitfield>(
