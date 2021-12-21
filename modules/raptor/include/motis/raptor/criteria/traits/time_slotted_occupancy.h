@@ -94,8 +94,8 @@ struct trait_time_slotted_occupancy {
   }
 
   inline static bool is_forward_propagation_required() {
-    //we also need to write arrival times to other trait offsets
-    //  otherwise we will fail to find all valid solutions
+    // we also need to write arrival times to other trait offsets
+    //   otherwise we will fail to find all valid solutions
     return true;
   }
   //****************************************************************************
@@ -125,15 +125,16 @@ struct trait_time_slotted_occupancy {
 
   template <typename TraitsData>
   __device__ inline static void propagate_and_merge_if_needed(
-      TraitsData& aggregate, unsigned const mask, bool const predicate) {
+      TraitsData& aggregate, unsigned const mask, bool const is_departure_stop,
+      bool const write_update) {
     //    if (valid(aggregate._segment_prop_occ_time_)) {
     //      // there is always a call to update before the propagation is done
     //      // store this value to always repeat the same value to the next one
     //      aggregate.summed_occ_time_ = aggregate._segment_prop_occ_time_;
     //    }
-    auto const prop_val = aggregate.summed_occ_time_;
+    auto const prop_val = is_departure_stop ? 0 : aggregate.summed_occ_time_;
     auto const received = __shfl_up_sync(mask, prop_val, 1);
-    if (predicate) {
+    if (write_update) {
       aggregate.summed_occ_time_ = received + aggregate._segment_prop_occ_time_;
       aggregate.occ_time_slot_ = aggregate.summed_occ_time_ / slot_divisor;
     }
@@ -240,12 +241,10 @@ private:
                                                stop_times_index const sti) {
     auto const prev_sti = sti - 1;
     auto departure_time = tt.stop_departures_[prev_sti];
-    if (!valid(departure_time))
-      departure_time = tt.stop_arrivals_[prev_sti];
+    if (!valid(departure_time)) departure_time = tt.stop_arrivals_[prev_sti];
 
     auto arrival_time = tt.stop_arrivals_[sti];
-    if (!valid(arrival_time))
-      arrival_time = tt.stop_departures_[sti];
+    if (!valid(arrival_time)) arrival_time = tt.stop_departures_[sti];
 
     return arrival_time - departure_time;
   }

@@ -4,8 +4,8 @@
 #include <algorithm>
 #include <tuple>
 
-#include "motis/raptor/types.h"
 #include "motis/raptor/raptor_util.h"
+#include "motis/raptor/types.h"
 
 #include "motis/core/journey/journey.h"
 
@@ -33,15 +33,15 @@ struct trait_max_occupancy {
   template <typename TraitsData>
   _mark_cuda_rel_ inline static uint32_t get_write_to_dimension_id(
       TraitsData const& d) {
-    if(d.initial_moc_idx_ < d.max_occupancy_) {
+    if (d.initial_moc_idx_ < d.max_occupancy_) {
       return d.max_occupancy_;
     }
     return d.initial_moc_idx_;
   }
 
   template <typename TraitsData>
-  _mark_cuda_rel_ inline static bool is_trait_satisfied(TraitsData const& data,
-                                        dimension_id const dimension_idx) {
+  _mark_cuda_rel_ inline static bool is_trait_satisfied(
+      TraitsData const& data, dimension_id const dimension_idx) {
     return dimension_idx == data.max_occupancy_;
   }
 
@@ -70,14 +70,14 @@ struct trait_max_occupancy {
         std::max(aggregate_dt.max_occupancy_, stop_occupancy);
   }
 
-
 #if defined(MOTIS_CUDA)
   template <typename TraitsData>
   __device__ inline static void propagate_and_merge_if_needed(
-      TraitsData& aggregate, unsigned const mask, bool const predicate) {
-    auto const prop_val = aggregate.max_occupancy_;
+      TraitsData& aggregate, unsigned const mask, bool const is_departure_stop,
+      bool const write_update) {
+    auto const prop_val = is_departure_stop ? 0 : aggregate.max_occupancy_;
     auto const received = __shfl_up_sync(mask, prop_val, 1);
-    if (predicate && aggregate.max_occupancy_ < received)
+    if (write_update && aggregate.max_occupancy_ < received)
       aggregate.max_occupancy_ = received;
   }
 
@@ -102,8 +102,7 @@ struct trait_max_occupancy {
 
   template <typename TraitsData>
   inline static std::vector<dimension_id> get_feasible_dimensions(
-      dimension_id const initial_offset,
-      TraitsData const& _1) {
+      dimension_id const initial_offset, TraitsData const& _1) {
 
     if (initial_offset == 2) return std::vector<dimension_id>{0, 1, 2};
     if (initial_offset == 1) return std::vector<dimension_id>{0, 1};
@@ -135,7 +134,6 @@ private:
     return tt.stop_inb_occupancy_[sti];
   }
 #endif
-
 };
 
 }  // namespace motis::raptor

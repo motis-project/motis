@@ -300,10 +300,15 @@ inline void update_route_for_trait_offset_forward_project(
             current_stop_time.arrival_ < min_ea) {
           current_round[write_arr] = current_stop_time.arrival_;
           station_marks.mark(write_arr);
-          if (CriteriaConfig::is_trait_satisfied(aggregate, trait_offset))
-            ++consecutive_writes;
-          else
-            consecutive_writes = 0;
+        }
+
+        if (CriteriaConfig::is_trait_satisfied(aggregate, trait_offset)) {
+          //either we wrote a time or already know a better time
+          ++consecutive_writes;
+        }else {
+          //we didn't satisfy; therefor at least this stop can still improve
+          // which is after stops which potentially received a value
+          consecutive_writes = 0;
         }
 
         if (current_stop_time.arrival_ < ea[write_arr]) {

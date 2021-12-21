@@ -6,7 +6,7 @@ import java.nio.file.Path;
 
 public class ResponseExtractor {
 
-  static final int RESPONSE_ID = 806;
+  static final int RESPONSE_ID = 364;
 
   public static void main(String[] args) throws IOException {
     var lines = Files.readAllLines(Path.of("./verification/sbb-small/r-raptor_gpu-tso.txt"));

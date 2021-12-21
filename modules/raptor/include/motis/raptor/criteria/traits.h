@@ -113,10 +113,12 @@ struct traits<FirstTrait, RestTraits...> {
 
 #if defined(MOTIS_CUDA)
   __device__ inline static void propagate_and_merge_if_needed(
-      unsigned const mask, TraitsData& aggregate, bool const predicate) {
-    FirstTrait::propagate_and_merge_if_needed(aggregate, mask, predicate);
-    traits<RestTraits...>::propagate_and_merge_if_needed(mask, aggregate,
-                                                         predicate);
+      unsigned const mask, TraitsData& aggregate, bool const is_departure_stop,
+      bool const write_update) {
+    FirstTrait::propagate_and_merge_if_needed(aggregate, mask,
+                                              is_departure_stop, write_update);
+    traits<RestTraits...>::propagate_and_merge_if_needed(
+        mask, aggregate, is_departure_stop, write_update);
   }
 
   __device__ inline static void carry_to_next_stage(unsigned const mask,
@@ -218,7 +220,7 @@ struct traits<> {
   }
 
   inline static bool is_forward_propagation_required() {
-    return false; //return natural element
+    return false;  // return natural element
   }
 
   template <typename Data, typename Timetable>
@@ -236,7 +238,8 @@ struct traits<> {
   template <typename Data>
   __device__ inline static void propagate_and_merge_if_needed(unsigned const _1,
                                                               Data& _2,
-                                                              bool const _3) {}
+                                                              bool const _3,
+                                                              bool const _4) {}
 
   template <typename Data>
   __device__ inline static void carry_to_next_stage(unsigned const _1,

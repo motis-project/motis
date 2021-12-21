@@ -237,12 +237,14 @@ __device__ void mc_update_route_larger32(
 //              get_initial_moc<CriteriaConfig>(aggregate));
       }
 
-      auto const has_no_carry_value =
-          t_id != 0 || !valid(last_known_dep_stop) || leader == 0;
-      if (has_no_carry_value) {
+      auto const has_carry_value = t_id == 0 && valid(last_known_dep_stop);
+      if (!has_carry_value) {
 //        if (r_id == 29933 && current_stage == 1 && trip_offset == 0 && t_id == 18)
 //          printf("Resetting Aggregate for t_id: %i\tstage:%i\n ", t_id,
 //                 current_stage);
+
+        //don't reset if this has a carry value even if it is a departure station
+        // as arrival time might be improved through the carry value
         CriteriaConfig::reset_traits_aggregate(aggregate, r_id, trip_offset,
                                                t_offset);
       }
@@ -297,10 +299,10 @@ __device__ void mc_update_route_larger32(
             //  along the traits while allowing for max/min/sum operations
             CriteriaConfig::propagate_and_merge_if_needed(
                 criteria_mask, aggregate,
-                !is_departure_stop &&
+                is_departure_stop,
                     idx <= t_id
                     // prevent write update if this has carry value
-                    && has_no_carry_value);
+                    && !has_carry_value);
 
 //            if (r_id == 29933 && current_stage == 1 && trip_offset == 0)
 //              printf(
@@ -490,7 +492,7 @@ __device__ void mc_update_route_smaller32(
         // internally uses __shfl_up_sync to propagate the criteria values
         //  along the traits while allowing for max/min/sum operations
         CriteriaConfig::propagate_and_merge_if_needed(
-            criteria_mask, aggregate, !is_departure_stop && idx <= t_id);
+            criteria_mask, aggregate, is_departure_stop, idx <= t_id);
       }
 
       // Note: Earliest Arrival may, when reaching this point not be the

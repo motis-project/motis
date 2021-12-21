@@ -2,8 +2,8 @@
 
 #include <tuple>
 
-#include "motis/raptor/types.h"
 #include "motis/raptor/raptor_util.h"
+#include "motis/raptor/types.h"
 
 namespace motis {
 struct journey;
@@ -15,9 +15,7 @@ template <typename Traits>
 struct criteria_config {
   using CriteriaData = typename Traits::TraitsData;
 
-  _mark_cuda_rel_ inline static trait_id trait_size() {
-    return Traits::size();
-  }
+  _mark_cuda_rel_ inline static trait_id trait_size() { return Traits::size(); }
 
   _mark_cuda_rel_ inline static arrival_id get_arrival_idx(
       stop_id const stop_idx, trait_id const trait_offset = 0) {
@@ -30,7 +28,7 @@ struct criteria_config {
   }
 
   _mark_cuda_rel_ inline static bool is_trait_satisfied(CriteriaData const& td,
-                                        trait_id t_offset) {
+                                                        trait_id t_offset) {
     return Traits::is_trait_satisfied(trait_size(), td, t_offset);
   }
 
@@ -67,8 +65,10 @@ struct criteria_config {
 #if defined(MOTIS_CUDA)
 
   __device__ inline static void propagate_and_merge_if_needed(
-      unsigned const mask, CriteriaData& aggregate, bool const predicate) {
-    Traits::propagate_and_merge_if_needed(mask, aggregate, predicate);
+      unsigned const mask, CriteriaData& aggregate,
+      bool const is_departure_stop, bool const write_value) {
+    Traits::propagate_and_merge_if_needed(mask, aggregate, is_departure_stop,
+                                          write_value);
   }
 
   __device__ inline static void carry_to_next_stage(unsigned const mask,
@@ -80,8 +80,8 @@ struct criteria_config {
 
   inline static std::vector<trait_id> get_feasible_traits(
       trait_id const initial_offset, CriteriaData const& new_trip) {
-    auto feasible = Traits::get_feasible_trait_ids(trait_size(), initial_offset,
-                                                   new_trip);
+    auto feasible =
+        Traits::get_feasible_trait_ids(trait_size(), initial_offset, new_trip);
     std::reverse(std::begin(feasible), std::end(feasible));
     return feasible;
   }

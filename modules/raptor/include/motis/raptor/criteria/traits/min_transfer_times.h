@@ -95,7 +95,8 @@ struct trait_min_transfer_times {
 
   template <typename TraitsData>
   __device__ inline static void propagate_and_merge_if_needed(
-      TraitsData& aggregate, unsigned const mask, bool const predicate) {
+      TraitsData& aggregate, unsigned const mask, bool const is_departure_stop,
+      bool const write_update) {
     // intentionally empty as updates per stop are not needed for this criteria
   }
 
@@ -125,7 +126,7 @@ struct trait_min_transfer_times {
   }
 
   inline static bool dominates(dimension_id const to_dominate,
-                        dimension_id const dominating) {
+                               dimension_id const dominating) {
     // TODO
     return dominating <= to_dominate;
   }
@@ -144,8 +145,7 @@ private:
 
 #if defined(MOTIS_CUDA)
   template <>
-  _mark_cuda_rel_ static inline time
-  _get_departure_time<device_gpu_timetable>(
+  _mark_cuda_rel_ static inline time _get_departure_time<device_gpu_timetable>(
       device_gpu_timetable const& tt, stop_times_index const departure_sti) {
     return tt.stop_departures_[departure_sti];
   }
