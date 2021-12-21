@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "motis/core/access/trip_access.h"
+#include "motis/test/schedule/gtfs_minimal_swiss.h"
 
 #include "./gtfsrt_itest.h"
 
