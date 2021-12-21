@@ -54,28 +54,30 @@ inline void init_arrivals(raptor_result& result, raptor_query const& q,
                           cpu_mark_store& station_marks, bool const propagate) {
 
   auto const traits_size = CriteriaConfig::trait_size();
-  auto propagate_across_traits = [traits_size](time* const arrivals,
-                                               stop_id stop_id,
-                                               motis::time arrival_val) {
+  auto propagate_across_traits = [traits_size, &station_marks](
+                                     time* const arrivals, stop_id stop_id,
+                                     motis::time arrival_val) {
     auto const last_arr_idx = (stop_id * traits_size) + traits_size;
-    for (int arr_idx = (stop_id * traits_size); arr_idx < last_arr_idx;
+    for (arrival_id arr_idx = (stop_id * traits_size); arr_idx < last_arr_idx;
          ++arr_idx) {
       arrivals[arr_idx] = std::min(arrival_val, arrivals[arr_idx]);
+      station_marks.mark(arr_idx);
     }
   };
 
   result[0][traits_size * q.source_] = q.source_time_begin_;
   if (propagate)
     propagate_across_traits(result[0], q.source_, q.source_time_begin_);
-  station_marks.mark(q.source_);
+  station_marks.mark(q.source_ * traits_size);
 
   for (auto const& add_start : q.add_starts_) {
     motis::time const add_start_time = q.source_time_begin_ + add_start.offset_;
     result[0][traits_size * add_start.s_id_] =
         std::min(result[0][traits_size * add_start.s_id_], add_start_time);
-    if (propagate)
+    station_marks.mark(add_start.s_id_ * traits_size);
+    if (propagate) {
       propagate_across_traits(result[0], add_start.s_id_, add_start_time);
-    station_marks.mark(add_start.s_id_);
+    }
   }
 }
 
@@ -202,7 +204,7 @@ void update_route_for_trait_offset(
 
     if (stop_time.arrival_ < min &&
         CriteriaConfig::get_write_to_trait_id(criteria_data) == trait_offset) {
-      station_marks.mark(stop_id);
+      station_marks.mark(stop_arr_idx);
       current_round[stop_arr_idx] = stop_time.arrival_;
     }
 
@@ -276,6 +278,39 @@ inline void update_route_for_trait_offset_forward_project(
       auto const arrival_idx =
           CriteriaConfig::get_arrival_idx(stop_id, trait_offset);
 
+      // it's important to first check if a better arrival time can be archived
+      //  before checking if the station can serve as departure station
+      //  otherwise potentially improved arrival times are not written
+      if (valid(departure_offset)) {
+        CriteriaConfig::update_traits_aggregate(aggregate, tt, previous_round,
+                                                r_stop_offset, current_sti);
+
+        auto const write_off = CriteriaConfig::get_write_to_trait_id(aggregate);
+        auto const write_arr =
+            CriteriaConfig::get_arrival_idx(stop_id, write_off);
+        auto const earl_arr = ea[write_arr];
+        auto const target_arr =
+            CriteriaConfig::get_arrival_idx(target_s_id, write_off);
+        auto const earl_tar = ea[target_arr];
+
+        auto min_ea = std::min(earl_arr, earl_tar);
+        min_ea = std::min(min_ea, current_round[write_arr]);
+
+        if (valid(current_stop_time.arrival_) &&
+            current_stop_time.arrival_ < min_ea) {
+          current_round[write_arr] = current_stop_time.arrival_;
+          station_marks.mark(write_arr);
+          if (CriteriaConfig::is_trait_satisfied(aggregate, trait_offset))
+            ++consecutive_writes;
+          else
+            consecutive_writes = 0;
+        }
+
+        if (current_stop_time.arrival_ < ea[write_arr]) {
+          ea[write_arr] = current_stop_time.arrival_;
+        }
+      }
+
       // can station serve as departure station?
       if (valid(previous_round[arrival_idx]) &&
           valid(current_stop_time.departure_) &&
@@ -286,63 +321,10 @@ inline void update_route_for_trait_offset_forward_project(
         consecutive_writes = 0;
         continue;
       }
-
-      if (!valid(departure_offset)) {
-        continue;
-      }
-
-      CriteriaConfig::update_traits_aggregate(aggregate, tt, previous_round,
-                                              r_stop_offset, current_sti);
-
-      auto const write_off = CriteriaConfig::get_write_to_trait_id(aggregate);
-      auto const write_arr =
-          CriteriaConfig::get_arrival_idx(stop_id, write_off);
-      auto const earl_arr = ea[write_arr];
-      auto const target_arr =
-          CriteriaConfig::get_arrival_idx(target_s_id, write_off);
-      auto const earl_tar = ea[target_arr];
-
-      auto min_ea = std::min(earl_arr, earl_tar);
-      min_ea = std::min(min_ea, current_round[write_arr]);
-
-      if (valid(current_stop_time.arrival_) &&
-          current_stop_time.arrival_ < min_ea) {
-        current_round[write_arr] = current_stop_time.arrival_;
-        station_marks.mark(stop_id);
-        if (CriteriaConfig::is_trait_satisfied(aggregate, trait_offset))
-          ++consecutive_writes;
-        else
-          consecutive_writes = 0;
-      }
-
-      if (current_stop_time.arrival_ < ea[write_arr]) {
-        ea[write_arr] = current_stop_time.arrival_;
-      }
     }
 
     active_stop_count -= consecutive_writes;
     if (active_stop_count <= 1) break;
-  }
-}
-
-template <typename CriteriaConfig>
-void update_route(raptor_timetable const& tt, route_id const r_id,
-                  time const* const prev_arrivals, time* const current_round,
-                  earliest_arrivals& ea, cpu_mark_store& station_marks,
-                  stop_id const target_s_id, bool const use_fwd_prop) {
-  auto const trait_size = CriteriaConfig::trait_size();
-  for (uint32_t t_offset = 0; t_offset < trait_size; ++t_offset) {
-    if (use_fwd_prop) {
-      update_route_for_trait_offset_forward_project<CriteriaConfig>(
-          tt, t_offset, r_id, prev_arrivals, current_round, ea, station_marks,
-          target_s_id);
-    } else {
-      auto const target_arr_idx =
-          CriteriaConfig::get_arrival_idx(target_s_id, t_offset);
-      update_route_for_trait_offset<CriteriaConfig>(
-          tt, r_id, prev_arrivals, current_round, ea, station_marks, t_offset,
-          target_arr_idx);
-    }
   }
 }
 
@@ -394,7 +376,7 @@ inline void update_footpaths(raptor_timetable const& tt, time* current_round,
         min = std::min(min,
                        ea[target_arr_idx + s_trait_offset]);  // target pruning
         if (new_arrival < min) {
-          station_marks.mark(footpath.to_);
+          station_marks.mark(to_arr_idx);
           current_round[to_arr_idx] = new_arrival;
           ea[to_arr_idx] = new_arrival;
         }
@@ -411,14 +393,13 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics&) {
 
   auto const use_fwd_prop = CriteriaConfig::is_forward_propagation_required();
 
-  earliest_arrivals ea(tt.stop_count() * CriteriaConfig::trait_size(),
-                       invalid<motis::time>);
+  auto const trait_size = CriteriaConfig::trait_size();
+  earliest_arrivals ea(tt.stop_count() * trait_size, invalid<motis::time>);
 
-  earliest_arrivals current_round_arrivals(tt.stop_count() *
-                                           CriteriaConfig::trait_size());
+  earliest_arrivals current_round_arrivals(tt.stop_count() * trait_size);
 
-  cpu_mark_store station_marks(tt.stop_count());
-  cpu_mark_store route_marks(tt.route_count());
+  cpu_mark_store station_marks(tt.stop_count() * trait_size);
+  cpu_mark_store route_marks(tt.route_count() * trait_size);
 
   init_arrivals<CriteriaConfig>(result, query, station_marks, !use_fwd_prop);
 
@@ -426,14 +407,16 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics&) {
     bool any_marked = false;
 
     for (auto s_id = 0; s_id < tt.stop_count(); ++s_id) {
-      if (!station_marks.marked(s_id)) {
-        continue;
-      }
-      if (!any_marked) any_marked = true;
-      auto const& stop = tt.stops_[s_id];
-      for (auto sri = stop.index_to_stop_routes_;
-           sri < stop.index_to_stop_routes_ + stop.route_count_; ++sri) {
-        route_marks.mark(tt.stop_routes_[sri]);
+      for (auto t_offset = 0; t_offset < trait_size; ++t_offset) {
+        if (!station_marks.marked(s_id * trait_size + t_offset)) {
+          continue;
+        }
+        if (!any_marked) any_marked = true;
+        auto const& stop = tt.stops_[s_id];
+        for (auto sri = stop.index_to_stop_routes_;
+             sri < stop.index_to_stop_routes_ + stop.route_count_; ++sri) {
+          route_marks.mark(tt.stop_routes_[sri] * trait_size + t_offset);
+        }
       }
     }
     if (!any_marked) {
@@ -442,14 +425,24 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics&) {
 
     station_marks.reset();
 
-    for (route_id r_id = 0; r_id < tt.route_count(); ++r_id) {
-      if (!route_marks.marked(r_id)) {
-        continue;
-      }
+    for (uint32_t t_offset = 0; t_offset < trait_size; ++t_offset) {
+      for (route_id r_id = 0; r_id < tt.route_count(); ++r_id) {
+        if (!route_marks.marked(r_id * trait_size + t_offset)) {
+          continue;
+        }
 
-      update_route<CriteriaConfig>(tt, r_id, result[round_k - 1],
-                                   result[round_k], ea, station_marks,
-                                   target_s_id, use_fwd_prop);
+        if (use_fwd_prop) {
+          update_route_for_trait_offset_forward_project<CriteriaConfig>(
+              tt, t_offset, r_id, result[round_k - 1], result[round_k], ea,
+              station_marks, target_s_id);
+        } else {
+          auto const target_arr_idx =
+              CriteriaConfig::get_arrival_idx(target_s_id, t_offset);
+          update_route_for_trait_offset<CriteriaConfig>(
+              tt, r_id, result[round_k - 1], result[round_k], ea, station_marks,
+              t_offset, target_arr_idx);
+        }
+      }
     }
 
     route_marks.reset();
