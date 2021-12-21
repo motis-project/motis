@@ -9,8 +9,7 @@
             iconType="train"
             :showLabel="true"
             :showAutocomplete="false"
-            @inputChanged="setCurrentTrainNumber"
-          ></InputField>
+            @inputChanged="setCurrentTrainNumber"></InputField>
         </div>
         <div class="pure-g gutters">
           <Calendar class="pure-u-1 pure-u-sm-12-24 to-location" @dateChanged="setNewDate"></Calendar>
@@ -90,7 +89,7 @@ export default defineComponent({
     },
     sendRequest(){
       this.contentLoadingState = LoadingState.Loading;
-      if(this.currentTrainInput != -1){
+      if(this.currentTrainInput !== -1){
         this.$postService.getTrainGuessResponse(this.currentDate.valueOf() / 1000, this.currentTrainInput).then((resp) => {
           this.trainGuesses = resp.trips;
           this.contentLoadingState = LoadingState.Loaded;
@@ -107,7 +106,8 @@ export default defineComponent({
     },
     goToFirstStation(trip: Trips){
       let temp: DataToRouter = { name: trip.first_station.name, id: trip.first_station.id, time: trip.trip_info.id.time}
-      let {sos, ...t} = temp as { [key: string]: any };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let t = temp as { [key: string]: any };
       this.$router.push({
         name: 'StationTimeTableFromTrainSearch',
         params: t
@@ -115,17 +115,15 @@ export default defineComponent({
     },
     setNewDate(date: Date){
       this.currentDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(),
-          this.currentDate.getHours(), this.currentDate.getMinutes());
+                                  this.currentDate.getHours(), this.currentDate.getMinutes());
     },
-    checkDay(date: number): boolean {
-      if(this.$ds.date.getDate() !== this.currentDate.getDate())
-        return true;
-      else
-        return false;
+    checkDay(): boolean {
+      if(this.$ds.date.getDate() !== this.currentDate.getDate()) { return true; }
+      else { return false; }
     },
     setNewTime(time: Date){
       this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), this.currentDate.getDate(),
-          time.getHours(), time.getMinutes());
+                                  time.getHours(), time.getMinutes());
     },
   }
 });

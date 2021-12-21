@@ -9,7 +9,7 @@ class DateTimeService {
   private _ts: TranslationService;
 
   public constructor(ts: TranslationService) {
-    let now = new Date();
+    const now = new Date();
     this.dateTime = new Date(2020, 9, 19, now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()).valueOf()
     this._ts = ts;
   }
@@ -42,8 +42,8 @@ class DateTimeService {
   }
 
   public parseTime(timeToParse: string) : Date {
-    let d = this.date;
-    let t = DateTime.fromFormat(timeToParse, this.timeFormat).toJSDate();
+    const d = this.date;
+    const t = DateTime.fromFormat(timeToParse, this.timeFormat).toJSDate();
     return new Date(d.getFullYear(), d.getMonth(), d.getDate(), t.getHours(), t.getMinutes());
   }
 
@@ -61,8 +61,8 @@ declare module '@vue/runtime-core' {
 }
 
 export default {
-  install: (app: App, options: string) => {
-    let service = reactive(new DateTimeService(app.config.globalProperties.$ts));
+  install: (app: App): void => {
+    const service = reactive(new DateTimeService(app.config.globalProperties.$ts));
     window.setTimeout(() => { service.dateTime += 1000; window.setInterval(() => service.dateTime += 1000, 1000) }, 1000 - new Date().getMilliseconds())
     app.config.globalProperties.$ds = service;
   }

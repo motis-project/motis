@@ -1,14 +1,14 @@
-import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHashHistory, RouteRecordRaw, Router, RouteLocationNormalizedLoaded } from 'vue-router'
 import ConnectionSearch from "../views/ConnectionSearch.vue"
 import TrainSearch from "../views/TrainSearch.vue"
 import Trip from '../views/Trip.vue'
 import StationTimetable from "../views/StationTimetable.vue"
-import {Router, RouteLocationNormalizedLoaded} from "vue-router"
 import { TranslationService } from '../services/TranslationService'
 import PageNotFound from '../views/PageNotFound.vue'
 
 export const SubOverlayNames = ["TrainSearch", "StationTimetable", "Trip", "StationTimeTableFromTrainSearch"]
 
+/*eslint-disable camelcase*/
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/:locale?/',
@@ -37,7 +37,7 @@ const routes: Array<RouteRecordRaw> = [
         stationGuess: {
           id: route.params.id,
         }
-      }) 
+      })
     }
   },
   {
@@ -58,7 +58,7 @@ const routes: Array<RouteRecordRaw> = [
           line_id: route.params.line_id
         }
       })
-    }, 
+    },
   },
   {
     path: '/:locale?/station/:id/:time',
@@ -85,24 +85,25 @@ const routes: Array<RouteRecordRaw> = [
     component: PageNotFound
   }
 ]
+/* eslint-enable camelcase*/
 
 const router = createRouter({
   history: createWebHashHistory(process.env.BASE_URL),
   routes
 })
 
-var ts : TranslationService;
+let ts : TranslationService;
 
 router.beforeEach((to, from, next) => {
   let isNextCalled = false;
   let isLocaleInvalid = false;
-  
+
   if(to.params.locale !== ts.currentLocale) {
     if(ts.availableLocales.includes(to.params.locale as string)) {
       ts.changeLocale(to.params.locale as string);
     }
     else {
-      let path = router.resolve(`/${ts.currentLocale}` + to.path);
+      const path = router.resolve(`/${ts.currentLocale}` + to.path);
       if(path.name !== 'PageNotFound') {
         next({path: path.fullPath, replace: true});
         isNextCalled = true;
@@ -130,7 +131,7 @@ declare module '@vue/runtime-core' {
   }
 }
 
-export default (tarnslationService: TranslationService) => {
+export default (tarnslationService: TranslationService): Router => {
   ts = tarnslationService
   return router
 }

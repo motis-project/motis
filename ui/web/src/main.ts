@@ -5,9 +5,9 @@ import DateTimeService from './services/DateTimeService';
 import MOTISPostService from './services/MOTISPostService';
 import TranslationService from './services/TranslationService';
 
-var app = createApp(App)
+const app = createApp(App)
 app.use(TranslationService, "de-DE");
-let interval = setInterval(() => {
+const interval = setInterval(() => {
     if (TranslationService.service.isLoaded) {
         TranslationService.service.isLoaded;
         app.use(router(TranslationService.service));

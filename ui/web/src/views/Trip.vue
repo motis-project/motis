@@ -3,13 +3,21 @@
   <div v-else class="connection-details trip-view">
     <div class="connection-info">
       <div class="header">
-        <div class="back" @click="$router.back()"><i class="icon">arrow_back</i></div>
+        <div class="back" @click="$router.back()">
+          <i class="icon">arrow_back</i>
+        </div>
         <div class="details">
-          <div class="date">{{ date }}</div>
+          <div class="date">
+            {{ date }}
+          </div>
           <div class="connection-times">
             <div class="times">
-              <div class="connection-departure">{{ departure }}</div>
-              <div class="connection-arrival">{{ arrival }}</div>
+              <div class="connection-departure">
+                {{ departure }}
+              </div>
+              <div class="connection-arrival">
+                {{ arrival }}
+              </div>
             </div>
             <div class="locations">
               <div>{{ firstStopName }}</div>
@@ -17,8 +25,7 @@
             </div>
           </div>
           <div class="summary">
-            <span class="duration"><i class="icon">schedule</i>{{ duration }}</span
-            ><span class="interchanges"><i class="icon">transfer_within_a_station</i>{{ changes }}</span>
+            <span class="duration"><i class="icon">schedule</i>{{ duration }}</span><span class="interchanges"><i class="icon">transfer_within_a_station</i>{{ changes }}</span>
           </div>
         </div>
         <div class="actions"></div>
@@ -28,8 +35,7 @@
       <div
         v-for="(transport, tIndex) in transports"
         :key="transport.line_id"
-        :class="`train-detail train-class-${transport.clasz}`"
-      >
+        :class="`train-detail train-class-${transport.clasz}`">
         <div class="top-border"></div>
         <TransportTypeBox :transport="transport"></TransportTypeBox>
         <div class="first-stop">
@@ -54,10 +60,9 @@
             <div class="timeline train-color-border progress" :style="`height: ${getStopProgress(getFirstStop(transport))}%`"></div>
           </div>
           <div class="expand-icon">
-            <i class="icon">{{ areStopsExpanded[tIndex] ? "expand_more" : "expand_less" }}</i
-            ><i class="icon">{{ areStopsExpanded[tIndex] ? "expand_less" : "expand_more" }}</i>
+            <i class="icon">{{ areStopsExpanded[tIndex] ? "expand_more" : "expand_less" }}</i><i class="icon">{{ areStopsExpanded[tIndex] ? "expand_less" : "expand_more" }}</i>
           </div>
-          <span>{{$ts.countTranslate("stop", content.stops.length - 2)}} ({{ duration }})</span>
+          <span>{{ $ts.countTranslate("stop", content.stops.length - 2) }} ({{ duration }})</span>
         </div>
         <div :class="['intermediate-stops', areStopsExpanded[tIndex] ? 'expanded' : '']" v-show="areStopsExpanded[tIndex]">
           <div v-for="stop in getIntermediateStops(transport)" :key="stop.station" :class="['stop', getPastOrFuture(stop.departure.time)]">
@@ -107,6 +112,7 @@ import Stop from "../models/Stop";
 import LoadingBar from "../components/LoadingBar.vue"
 
 export default defineComponent({
+  name: "Trip",
   components: {
     TransportTypeBox,
     LoadingBar
@@ -118,14 +124,14 @@ export default defineComponent({
     },
     initContent: {
       type: Object as PropType<TripResponseContent>,
-      required: false
+      required: false,
     }
   },
   data() {
     return {
       content: {} as TripResponseContent,
       isContentLoaded: false,
-      areStopsExpanded: [] as Boolean[],
+      areStopsExpanded: [] as boolean[],
     };
   },
   computed: {
@@ -152,13 +158,13 @@ export default defineComponent({
       if (time.getDate() > 1) {
         res += this.$ts.formatTranslate("days", (time.getDate() - 1).toString());
       }
-      if (res != "") {
+      if (res !== "") {
         res += " ";
       }
       if (time.getHours() > 1) {
         res += this.$ts.formatTranslate("hours", (time.getHours() - 1).toString());
       }
-      if (res != "") {
+      if (res !== "") {
         res += " ";
       }
       if (time.getMinutes() > 0) {
@@ -173,6 +179,16 @@ export default defineComponent({
       return this.content.transports.map((t) => t.move);
     },
   },
+  watch: {
+    content: function() {
+      let expand = this.$route.name === "Trip";
+      this.content.transports.forEach(() => this.areStopsExpanded.push(expand));
+      this.isContentLoaded = true;
+    },
+    trip: function() {
+      this.sendRequest();
+    }
+  },
   created() {
     if(this.initContent) {
       this.content = this.initContent
@@ -182,10 +198,10 @@ export default defineComponent({
     }
   },
   methods: {
-    getFirstStop(transport: Transport) {
+    getFirstStop() {
       return this.content.stops[0];
     },
-    getLastStop(transport: Transport) {
+    getLastStop() {
       return this.content.stops[this.content.stops.length - 1];
     },
     getIntermediateStops(transport: Transport) {
@@ -215,10 +231,10 @@ export default defineComponent({
     },
     sendRequest() {
       this.$postService.getTripResponce(this.trip).then((data) => {
-      if (data.trips.length > 0 && data.trips[0].id.station_id === this.trip.station_id) {
-        this.content = data;
-      }
-      }).catch(e => this.$router.back());
+        if (data.trips.length > 0 && data.trips[0].id.station_id === this.trip.station_id) {
+          this.content = data;
+        }
+      }).catch(() => this.$router.back());
     },
     goToStop(stop: Stop) {
       this.$router.push({
@@ -227,16 +243,6 @@ export default defineComponent({
           id: stop.station.id
         },
       });
-    }
-  },
-  watch: {
-    content: function(newValue: TripResponseContent) {
-        let expand = this.$route.name === "Trip";
-        this.content.transports.forEach((t) => this.areStopsExpanded.push(expand));
-        this.isContentLoaded = true;
-    },
-    trip: function() {
-      this.sendRequest();
     }
   }
 });

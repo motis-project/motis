@@ -2,8 +2,8 @@
   <fieldset class="mode walk">
     <legend class="mode-header">
       <label>
-        <input type="checkbox" :checked="isChecked" @input="$emit('isCheckedChanged', $event.target.checked)"/>
-        {{title}}
+        <input type="checkbox" :checked="isChecked" @input="$emit('isCheckedChanged', $event.target.checked)" />
+        {{ title }}
       </label>
     </legend>
     <slot></slot>
@@ -17,12 +17,13 @@ export default defineComponent({
   name: "BlockWithCheckbox",
   props: {
     title: {
-      type: String as PropType<String>,
+      type: String as PropType<string>,
     },
     isChecked: {
-      type: Boolean as PropType<Boolean>,
+      type: Boolean as PropType<boolean>,
     }
-  }
+  },
+  emits: ["isCheckedChanged"]
 })
 </script>
 

@@ -8,8 +8,7 @@ import DesktopMain from './views/DesktopMain.vue';
 
 export default defineComponent({
   name: 'App',
-  components:
-  {
+  components: {
     DesktopMain
   }
 });

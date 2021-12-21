@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 export default interface Stop {
   station: {
     id: string,

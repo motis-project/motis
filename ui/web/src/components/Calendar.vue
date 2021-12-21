@@ -14,8 +14,7 @@
       @decreaseMouseDown="mouseDown(-1)"
       @increaseMouseDown="mouseDown(1)"
       :showAutocomplete="false"
-      :key="inputFieldKey"
-    ></InputField>
+      :key="inputFieldKey"></InputField>
     <div class="paper calendar" v-show="calendarVisible" @mousedown="calendarClickedHandler">
       <div class="month">
         <i class="icon" @click="changeMonth(-1)">chevron_left</i>
@@ -23,7 +22,9 @@
         <i class="icon" @click="changeMonth(1)">chevron_right</i>
       </div>
       <ul class="weekdays">
-        <li v-for="dayName in weekDayNames" :key="dayName">{{ dayName }}</li>
+        <li v-for="dayName in weekDayNames" :key="dayName">
+          {{ dayName }}
+        </li>
       </ul>
       <ul class="calendardays">
         <li
@@ -34,8 +35,7 @@
             'valid-day',
             day.getTime() == currentDate.getTime() ? 'selected' : '',
           ]"
-          @mousedown.stop="dayClick(day)"
-        >
+          @mousedown.stop="dayClick(day)">
           {{ day.getDate() }}
         </li>
       </ul>
@@ -44,7 +44,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from "vue";
+import { defineComponent } from "vue";
 import InputField from "./InputField.vue";
 
 export default defineComponent({
@@ -52,6 +52,7 @@ export default defineComponent({
   components: {
     InputField,
   },
+  emits: ["dateChanged"],
   data() {
     return {
       daysToDisplay: [] as Date[],
@@ -66,9 +67,6 @@ export default defineComponent({
       inputFieldKey: 0
     };
   },
-  created() {
-    this.currentDate = this.$ds.date;
-  },
   watch: {
     currentDate: function (date: Date) {
       this.daysToDisplay = [];
@@ -76,13 +74,12 @@ export default defineComponent({
       this.currentMonthToDisplay = `${date.toLocaleString(this.$ts.currentLocale, { month: "long" })} ${date.getFullYear()}`;
       this.currentMonth = date.getMonth();
       let day = new Date(date.getFullYear(), date.getMonth(), 1);
-      let first = day.getDate() - (day.getDay() == 0 ? 7 : day.getDay());
+      let first = day.getDate() - (day.getDay() === 0 ? 7 : day.getDay());
       day = new Date(day.setDate(first));
       for (let i = 0; i < 42; i++) {
         this.daysToDisplay.push(day);
         day = new Date(day.setDate(day.getDate() + 1));
-        if((i == 35 || i == 28) && day.getMonth() != this.currentMonth)
-        {
+        if((i === 35 || i === 28) && day.getMonth() !== this.currentMonth) {
           this.daysToDisplay.pop();
           break;
         }
@@ -91,6 +88,9 @@ export default defineComponent({
         }
       }
     },
+  },
+  created() {
+    this.currentDate = this.$ds.date;
   },
   methods: {
     changeMonth(change: number) {
@@ -116,7 +116,8 @@ export default defineComponent({
       if (this.calendarClicked) {
         (<HTMLElement>event.target).focus();
         this.calendarClicked = false;
-      } else {
+      }
+      else {
         this.calendarVisible = false;
         this.inputFieldKey++;
       }
@@ -132,7 +133,7 @@ export default defineComponent({
       this.calendarVisible = false;
     },
     mouseDown(value: number){
-      this.timeout = setTimeout(() => this.interval = setInterval(() => this.changeDay(value), 100) ,1000)
+      this.timeout = setTimeout(() => this.interval = setInterval(() => this.changeDay(value), 100), 1000)
     },
     stopInterval(value: number){
       clearInterval(this.interval);

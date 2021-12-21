@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 export default interface AddressGuess {
 
     pos: {
@@ -6,7 +7,7 @@ export default interface AddressGuess {
     },
     name: string,
     type: string,
-    regions: Region[] 
+    regions: Region[]
 
 }
 export interface AddressGuessResponseContent{

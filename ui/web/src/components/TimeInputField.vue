@@ -11,8 +11,7 @@
     @increaseClick="changeTime(1)"
     :showAutocomplete="false"
     :key="inputFieldKey"
-    @blur="inputFieldKey++"
-  />
+    @blur="inputFieldKey++"></InputField>
 </template>
 
 <script lang="ts">
@@ -24,6 +23,9 @@ export default defineComponent({
   components: {
     InputField,
   },
+  emits: [
+    "timeChanged"
+  ],
   data() {
     return {
       time: {} as Date,
@@ -31,11 +33,15 @@ export default defineComponent({
     };
   },
   computed: {
-    timeToDisplay: function (): String {
+    timeToDisplay: function (): string {
       let result = this.$ds.getTimeString(this.time.valueOf());
       this.$emit("timeChanged", this.time);
       return result;
     },
+  },
+  created() {
+    let currentTime = this.$ds.date;
+    this.time = currentTime;
   },
   methods: {
     changeTime(change: number) {
@@ -53,10 +59,6 @@ export default defineComponent({
         this.time = t;
       }
     },
-  },
-  created() {
-    let currentTime = this.$ds.date;
-    this.time = currentTime;
   },
 });
 </script>

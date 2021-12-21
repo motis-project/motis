@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import Attribute from "./SmallTypes/Attribute";
 import FreeText from "./SmallTypes/FreeText";
 import Problem from "./SmallTypes/Problem";

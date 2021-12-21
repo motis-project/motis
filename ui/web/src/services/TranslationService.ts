@@ -1,5 +1,6 @@
 import { App, reactive } from 'vue'
 
+/* eslint-disable camelcase */
 interface Translation {
   [key: string]: string | string[]
 
@@ -16,7 +17,7 @@ interface Translation {
   bike: string,
   car: string,
   maxDuration: string,
-  searchProfile_default: string,
+  searchProfile_defalt: string,
   searchProfile_accessibility: string,
   searchProfile_wheelchair: string,
   searchProfile_elevation: string,
@@ -32,6 +33,7 @@ interface Translation {
   profile: string,
   useParking: string
 }
+/* eslint-enable camelcase */
 
 export class TranslationService {
   private _t: Translation = reactive({}) as Translation;
@@ -51,7 +53,7 @@ export class TranslationService {
     this.changeLocale(locale);
   }
 
-  public changeLocale(locale: string) {
+  public changeLocale(locale: string): void {
     this.currentLocale = locale;
     this.loadLocale(locale).then(t => {
       Object.assign(this._t, t);
@@ -60,11 +62,11 @@ export class TranslationService {
   }
 
   public countTranslate(str: string, count: number): string {
-    let arr = this.t[str];
+    const arr = this.t[str];
     if (!arr || !(Array.isArray(arr))) {
       return '';
     }
-    let index = count > arr.length - 1 ? arr.length - 1 : count;
+    const index = count > arr.length - 1 ? arr.length - 1 : count;
     return this.format(arr[index], count.toString());
   }
 
@@ -82,7 +84,7 @@ export class TranslationService {
     }
 
     return str.replace(/{(\d+)}/g, function (match, number) {
-      return typeof formatOptions[number] != 'undefined'
+      return typeof formatOptions[number] !== 'undefined'
         ? formatOptions[number]
         : match;
     })
