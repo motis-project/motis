@@ -18,7 +18,7 @@ struct ris_db_order : public motis_instance_test {
   ris_db_order()
       : motis::test::motis_instance_test(
             dataset_opt_long, {"ris"},
-            {"--ris.inputs="
+            {"--ris.input="
              "modules/ris/test_resources/database_test/order_test"}) {}
 
   static msg_ptr forward(time_t time) {

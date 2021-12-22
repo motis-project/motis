@@ -124,14 +124,26 @@ struct ris::impl {
    * In single-timetable mode, the tag should be omitted.
    */
   struct input {
-    input(std::string const& input) {
-      if (auto const colon_pos = input.find(':');
-          colon_pos != std::string::npos) {
-        tag_ = input.substr(0, colon_pos);
-        tag_ = tag_.empty() ? "" : tag_ + "_";
-        path_ = fs::path{input.substr(colon_pos + 1)};
+    explicit input(std::string const& in) : input{split(in)} {}
+
+    fs::path const& path() const { return path_; }
+    std::string const& tag() const { return tag_; }
+    gtfsrt::knowledge_context& gtfs_knowledge() { return gtfs_knowledge_; }
+
+  private:
+    explicit input(std::pair<fs::path, std::string>&& path_and_tag)
+        : path_{std::move(path_and_tag.first)},
+          tag_{path_and_tag.second},
+          gtfs_knowledge_{path_and_tag.second} {}
+
+    static std::pair<fs::path, std::string> split(std::string const& in) {
+      std::string tag;
+      if (auto const colon_pos = in.find(':'); colon_pos != std::string::npos) {
+        tag = in.substr(0, colon_pos);
+        tag = tag.empty() ? "" : tag + "_";
+        return std::pair{fs::path{in.substr(colon_pos + 1)}, tag};
       } else {
-        path_ = fs::path{input};
+        return std::pair{fs::path{in}, tag};
       }
     }
 
@@ -165,8 +177,8 @@ struct ris::impl {
     t.commit();
 
     for (auto& in : inputs_) {
-      if (fs::exists(in.path_)) {
-        LOG(warn) << "parsing " << in.path_;
+      if (fs::exists(in.path())) {
+        LOG(warn) << "parsing " << in.path();
         if (config_.instant_forward_) {
           publisher pub;
           parse_sequential(in, pub);
@@ -174,7 +186,7 @@ struct ris::impl {
           parse_sequential(in, null_pub_);
         }
       } else {
-        LOG(warn) << in.path_ << " does not exist";
+        LOG(warn) << in.path() << " does not exist";
       }
     }
 
@@ -477,7 +489,7 @@ struct ris::impl {
   template <typename Publisher>
   void parse_sequential(input& in, Publisher& pub) {
     for (auto const& [t, path, type] :
-         collect_files(fs::canonical(in.path_, in.path_.root_path()))) {
+         collect_files(fs::canonical(in.path(), in.path().root_path()))) {
       (void)t;
       parse_file_and_write_to_db(in, path, type, pub);
       if (config_.instant_forward_) {
@@ -559,17 +571,17 @@ struct ris::impl {
                              Publisher& pub) {
     auto const risml_fn = [&](std::string_view s, std::string_view,
                               std::function<void(ris_message &&)> const& cb) {
-      risml::to_ris_message(s, cb, in.tag_);
+      risml::to_ris_message(s, cb, in.tag());
     };
     auto const gtfsrt_fn = [&](std::string_view s, std::string_view,
                                std::function<void(ris_message &&)> const& cb) {
-      gtfsrt::to_ris_message(sched_, in.gtfs_knowledge_,
+      gtfsrt::to_ris_message(sched_, in.gtfs_knowledge(),
                              config_.gtfs_is_addition_skip_allowed_, s, cb,
-                             in.tag_);
+                             in.tag());
     };
     auto const ribasis_fn = [&](std::string_view s, std::string_view,
                                 std::function<void(ris_message &&)> const& cb) {
-      ribasis::to_ris_message(s, cb, in.tag_);
+      ribasis::to_ris_message(s, cb, in.tag());
     };
     auto const file_fn = [&](std::string_view s, std::string_view file_name,
                              std::function<void(ris_message &&)> const& cb) {
@@ -711,8 +723,8 @@ struct ris::impl {
 
 ris::ris() : module("RIS", "ris") {
   param(config_.db_path_, "db", "ris database path");
-  param(config_.input_, "inputs",
-        "input paths. expected format [tag:]path (tag should match the "
+  param(config_.input_, "input",
+        "input paths. expected format [tag:]path (tag MUST match the "
         "timetable)");
   param(config_.db_max_size_, "db_max_size", "virtual memory map size");
   param(config_.init_time_, "init_time", "initial forward time");
@@ -764,9 +776,9 @@ void ris::reg_subc(motis::module::subc_reg& r) {
 }
 
 void ris::init(motis::module::registry& r) {
-  impl_ = std::make_unique<impl>(*const_cast<schedule*>(&get_sched())  // NOLINT
-                                 ,
-                                 config_);
+  impl_ =
+      std::make_unique<impl>(*const_cast<schedule*>(&get_sched()),  // NOLINT
+                             config_);
   r.subscribe(
       "/init",
       [this]() {

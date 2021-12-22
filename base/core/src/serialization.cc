@@ -148,6 +148,9 @@ schedule_ptr read_graph(std::string const& path, cista::memory_holder& mem,
                             },
                             [&](cista::buffer& b) {
                               return cista::deserialize<schedule, MODE>(b);
+                            },
+                            [&](cista::byte_buf& b) {
+                              return cista::deserialize<schedule, MODE>(b);
                             }},
                  mem);
   return ptr;

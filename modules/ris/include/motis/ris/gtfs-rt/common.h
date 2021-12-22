@@ -2,6 +2,7 @@
 
 #include <ctime>
 #include <optional>
+#include <string>
 
 #include "flatbuffers/flatbuffers.h"
 
@@ -101,6 +102,8 @@ struct known_addition_trip {
 };
 
 struct knowledge_context {
+  explicit knowledge_context(std::string tag) : tag_{std::move(tag)} {}
+
   void sort_known_lists();
 
   bool is_cancel_known(transit_realtime::TripDescriptor const&) const;
@@ -123,6 +126,8 @@ struct knowledge_context {
 
   std::vector<std::unique_ptr<known_stop_skips>> known_stop_skips_;
   int new_known_skip_cnt_{0};
+
+  std::string tag_;
 };
 
 struct trip_update_context {

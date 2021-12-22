@@ -83,7 +83,7 @@ void collect_events(trip_update_context& update_ctx,
       // check for already skipped stops
       if (skipped_stops == nullptr) {  // lazy initializer
         skipped_stops =
-            knowledge.remember_stop_skips(to_trip_id(trip_update.trip()));
+            knowledge.remember_stop_skips(to_trip_id(trip_update.trip(), tag));
       }
 
       if (!skipped_stops->is_skipped(stop_ctx.seq_no_)) {
@@ -354,7 +354,8 @@ void check_and_fix_implicit_cancel(trip_update_context& update_ctx,
 }
 
 void initialize_update_context(knowledge_context const& knowledge,
-                               trip_update_context& update_ctx) {
+                               trip_update_context& update_ctx,
+                               std::string const& tag) {
   auto& sched = update_ctx.sched_;
   auto trip_update = update_ctx.trip_update_;
   update_ctx.is_addition_ = trip_update.trip().has_schedule_relationship() &&
@@ -371,7 +372,7 @@ void initialize_update_context(knowledge_context const& knowledge,
   update_ctx.is_new_canceled_ =
       update_ctx.is_canceled_ && !knowledge.is_cancel_known(trip_update.trip());
 
-  update_ctx.trip_id_ = to_trip_id(trip_update.trip());
+  update_ctx.trip_id_ = to_trip_id(trip_update.trip(), tag);
 
   if (update_ctx.is_addition_ && !update_ctx.is_new_addition_) {
     auto const prim_id =
@@ -409,7 +410,7 @@ void handle_trip_update(
         place_msg,
     std::string const& tag) {
   auto& sched = update_ctx.sched_;
-  initialize_update_context(knowledge, update_ctx);
+  initialize_update_context(knowledge, update_ctx, tag);
 
   if (update_ctx.is_new_addition_ ||
       (update_ctx.is_addition_ && !update_ctx.is_addition_skip_allowed_)) {

@@ -46,16 +46,16 @@ trip const* get_trip(schedule const& sched, gtfs_trip_id const& trip_id) {
   }
 }
 
-trip const* get_trip(schedule const& sched, std::string const& trip_id,
-                     std::time_t const t) {
-  return get_trip(sched, gtfs_trip_id{trip_id, t});
+trip const* get_trip(schedule const& sched, std::string const& tag,
+                     std::string const& trip_id, unixtime const t) {
+  return get_trip(sched, gtfs_trip_id{tag, trip_id, t});
 }
 
 trip const* get_trip(schedule const& sched, std::string_view eva_nr,
-                     uint32_t const train_nr, std::time_t const timestamp,
+                     uint32_t const train_nr, unixtime const timestamp,
                      std::string_view target_eva_nr,
-                     std::time_t const target_timestamp,
-                     std::string_view line_id, bool const fuzzy) {
+                     unixtime const target_timestamp, std::string_view line_id,
+                     bool const fuzzy) {
   auto const station_id = get_station(sched, eva_nr)->index_;
   auto const motis_time = unix_to_motistime(sched, timestamp);
   auto const primary_id = primary_trip_id(station_id, train_nr, motis_time);

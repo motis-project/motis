@@ -1,0 +1,2 @@
+route_long_name,route_short_name,agency_id,route_desc,route_type,route_id,route_color,route_text_color
+Dąbrowskiego Szkoła - Dąbrowskiego Szkoła,17,333,Dąbrowskiego Szkoła - Żwirki i Wigury - Wrzesińska - Henrykowo - Olszewo - Chudzice - Rumiejki - Połażejewo - Ulejno - Tadeuszewo - Ruszkowo I - Ruszkowo II - Wrzesińska - Żwirki i Wigury - Dąbrowskiego Szkoła^s- kursuje w dni nauki szkolnej^ H - kurs przez Harcerska- Źrenica,3,17,FA8072,FFFFFF

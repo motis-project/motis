@@ -89,11 +89,23 @@ struct full_trip_id {
 };
 
 struct gtfs_trip_id {
-  CISTA_COMPARABLE()
   gtfs_trip_id() = default;
-  gtfs_trip_id(mcd::string trip_id, std::optional<unixtime> start_date)
-      : trip_id_{std::move(trip_id)}, start_date_{std::move(start_date)} {}
+  gtfs_trip_id(std::string const& dataset_prefix, std::string const& trip_id,
+               std::optional<unixtime> start_date)
+      : trip_id_{dataset_prefix + trip_id}, start_date_{start_date} {}
   friend std::ostream& operator<<(std::ostream& out, gtfs_trip_id const&);
+  bool operator<(gtfs_trip_id const& o) const {
+    return std::tie(trip_id_, start_date_) <
+           std::tie(o.trip_id_, o.start_date_);
+  }
+  bool operator==(gtfs_trip_id const& o) const {
+    return std::tie(trip_id_, start_date_) ==
+           std::tie(o.trip_id_, o.start_date_);
+  }
+  bool operator!=(gtfs_trip_id const& o) const {
+    return std::tie(trip_id_, start_date_) !=
+           std::tie(o.trip_id_, o.start_date_);
+  }
   mcd::string trip_id_;
   std::optional<unixtime> start_date_;
 };

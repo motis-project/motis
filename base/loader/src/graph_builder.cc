@@ -123,7 +123,8 @@ trip* graph_builder::register_service(Service const* s, int day_idx) {
   if (s->trip_id() != nullptr) {
     auto const motis_time = to_motis_time(day_idx - first_day_ - 5, 0);
     auto const date = motis_to_unixtime(sched_, motis_time);
-    sched_.gtfs_trip_ids_[s->trip_id()->str()].emplace_back(date, stored);
+    sched_.gtfs_trip_ids_[dataset_prefix_ + s->trip_id()->str()].emplace_back(
+        date, stored);
   }
 
   for (auto i = 1UL; i < s->sections()->size(); ++i) {
@@ -829,6 +830,9 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
     auto const out_mid = out_low + (out_high - out_low) * .9F;
     progress_tracker->status(fmt::format("Add Services {}", dataset_prefix))
         .out_bounds(out_low, out_mid);
+
+    builder.dataset_prefix_ =
+        dataset_prefix.empty() ? dataset_prefix : dataset_prefix + "_";
 
     std::tie(builder.first_day_, builder.last_day_) =
         first_last_days(*sched, i, fbs_schedule->interval());

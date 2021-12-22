@@ -218,6 +218,7 @@ struct graph_builder {
   bool skip_station(Station const* station) const;
   bool skip_route(Route const* route) const;
 
+  std::string dataset_prefix_;
   unsigned lcon_count_{0U};
   unsigned next_route_index_{0U};
   tz_cache tz_cache_;

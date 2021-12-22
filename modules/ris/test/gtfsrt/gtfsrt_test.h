@@ -26,7 +26,7 @@ struct gtfsrt_test : public ::testing::Test {
   std::vector<ris_message> parse_json(std::string const&);
 
   schedule_ptr sched_;
-  knowledge_context knowledge_;
+  knowledge_context knowledge_{""};
   loader::loader_options opts_;
 };
 

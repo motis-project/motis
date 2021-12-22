@@ -55,27 +55,26 @@ bool knowledge_context::is_additional_known(
     transit_realtime::TripDescriptor const& d) const {
   return std::binary_search(begin(known_additional_),
                             end(known_additional_) - new_known_add_cnt_,
-                            known_addition_trip(to_trip_id(d)));
+                            known_addition_trip(to_trip_id(d, tag_)));
 }
 
 bool knowledge_context::is_cancel_known(
     transit_realtime::TripDescriptor const& d) const {
   return std::binary_search(begin(known_canceled_),
                             end(known_canceled_) - new_known_can_cnt_,
-                            to_trip_id(d));
+                            to_trip_id(d, tag_));
 }
 
 known_stop_skips* knowledge_context::find_trip_stop_skips(
     transit_realtime::TripDescriptor const& d) const {
-  auto const trip_id = to_trip_id(d);
+  auto const trip_id = to_trip_id(d, tag_);
   auto const lower = std::lower_bound(
       begin(known_stop_skips_), end(known_stop_skips_) - new_known_skip_cnt_,
       trip_id,
       [](std::unique_ptr<known_stop_skips> const& lhs,
          gtfs_trip_id const& rhs) { return lhs->trip_id_ < rhs; });
   if (lower == end(known_stop_skips_) || lower->get()->trip_id_ != trip_id) {
-    return nullptr;  // TODO(felix) resolve trip to make sure it's the same
-    // trip ids identifying the same trip don't have to have the same trip_id
+    return nullptr;
   }
   return lower->get();
 }
@@ -98,7 +97,7 @@ void knowledge_context::update_additional(gtfs_trip_id const& trip_id,
 
 void knowledge_context::remember_canceled(
     transit_realtime::TripDescriptor const& d) {
-  known_canceled_.emplace_back(to_trip_id(d));
+  known_canceled_.emplace_back(to_trip_id(d, tag_));
   ++new_known_can_cnt_;
 }
 

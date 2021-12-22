@@ -26,8 +26,10 @@ struct ris_gtfsrt_addition_message_itest_t0 : public gtfsrt_itest {
   ris_gtfsrt_addition_message_itest_t0()
       : gtfsrt_itest(
             dataset_opt,
-            "--ris.input=modules/ris/test_resources/gtfs-rt/addition_itest/"
-            "t0") {}
+            {"--ris.instant_forward=true",
+             "--ris.gtfsrt.is_addition_skip_allowed=true",
+             "--ris.input=modules/ris/test_resources/gtfs-rt/addition_itest/"
+             "t0"}) {}
 };
 
 TEST_F(ris_gtfsrt_addition_message_itest_t0,
@@ -69,8 +71,10 @@ struct ris_gtfsrt_addition_message_itest_t1 : public gtfsrt_itest {
   ris_gtfsrt_addition_message_itest_t1()
       : gtfsrt_itest(
             dataset_opt,
-            "--ris.input=modules/ris/test_resources/gtfs-rt/addition_itest/"
-            "t1") {}
+            {"--ris.instant_forward=true",
+             "--ris.gtfsrt.is_addition_skip_allowed=true",
+             "--ris.input=modules/ris/test_resources/gtfs-rt/addition_itest/"
+             "t1"}) {}
 };
 
 TEST_F(ris_gtfsrt_addition_message_itest_t1,
