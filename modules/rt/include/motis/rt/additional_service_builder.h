@@ -103,7 +103,8 @@ struct additional_service_builder {
     for (auto i = 1U; i < events->size(); i += 2) {
       utl::verify(events->Get(i)->seq_no() >= 0,
                   "invalid negative sequence number");
-      stop_seq_numbers.emplace_back(events->Get(i)->seq_no());
+      stop_seq_numbers.emplace_back(
+          static_cast<unsigned>(events->Get(i)->seq_no()));
       utl::verify(i + 1 == events->size() ||
                       events->Get(i + 1)->seq_no() == stop_seq_numbers.back(),
                   "additional service: seq number mismatch i={}", i);
