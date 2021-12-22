@@ -183,8 +183,8 @@ struct reconstructor {
           departure_{dep},
           arrival_{arr},
           transfers_{t},
-          trait_offset_{trait_offset},
-          ends_with_footpath_{ends_with_footpath} {}
+          ends_with_footpath_{ends_with_footpath},
+          trait_offset_{trait_offset} {}
 
     friend std::ostream& operator<<(std::ostream& out, candidate const& c) {
       return out << "(departure=" << c.departure_ << ", arrival=" << c.arrival_

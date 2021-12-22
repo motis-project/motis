@@ -116,7 +116,7 @@ device_memory::device_memory(stop_id const stop_count,
     : stop_count_{stop_count},
       route_count_{route_count},
       max_add_starts_{max_add_starts},
-      trait_size_{get_trait_size_for_criteria_config(criteria_config)}{
+      trait_size_{get_trait_size_for_criteria_config(criteria_config)} {
   arrival_times_count_ = stop_count * trait_size_;
   cudaMalloc(&(result_.front()), get_result_bytes());
   for (auto k = 1U; k < result_.size(); ++k) {
@@ -184,13 +184,13 @@ void device_memory::reset_async(cudaStream_t s) {
 mem::mem(stop_id const stop_count, route_id const route_count,
          size_t const max_add_starts, device_id const device_id,
          int32_t const concurrency_per_device)
-    : host_memories_{},
-      device_memories_{},
-      context_{device_id, concurrency_per_device},
+    : context_{device_id, concurrency_per_device},
       active_host_{nullptr},
       active_device_{nullptr},
       active_config_{raptor_criteria_config::Default},
-      is_reset_{true} {
+      is_reset_{true},
+      host_memories_{},
+      device_memories_{} {
 
   host_memories_.emplace(raptor_criteria_config::Default,
                          std::make_unique<host_memory>(

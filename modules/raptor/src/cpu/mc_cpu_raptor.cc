@@ -124,7 +124,7 @@ get_next_feasible_trip(raptor_timetable const& tt,
                                               new_dep_offset, dep_sti);
       --new_dep_offset;
 
-    } while (new_dep_offset >= 0 &&
+    } while (new_dep_offset != 0 &&
              CriteriaConfig::get_write_to_trait_id(trip_data) == trait_offset);
   }
 
@@ -250,8 +250,6 @@ inline void update_route_for_trait_offset_forward_project(
 
   auto const& route = tt.routes_[r_id];
 
-  auto const trait_size = CriteriaConfig::trait_size();
-  uint32_t satisfied_stop_cnt = 0;
   typename CriteriaConfig::CriteriaData aggregate{};
 
   auto active_stop_count = route.stop_count_;

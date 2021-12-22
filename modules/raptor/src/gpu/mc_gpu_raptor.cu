@@ -588,7 +588,7 @@ __device__ void mc_update_route_smaller32(
       //      auto const initial_clz = leading_zero_count;
       leading_zero_count -= (32 - active_stop_count);
 
-      auto const initial_acs = active_stop_count;
+//      auto const initial_acs = active_stop_count;
       active_stop_count -= leading_zero_count;
 
       //      if (r_id == 17290 && t_offset == 0 && t_id == 17) {
