@@ -142,14 +142,15 @@ private:
     auto const& stop_times = tt.stop_times_[departure_sti];
     return stop_times.departure_;
   }
+};
 
 #if defined(MOTIS_CUDA)
-  template <>
-  _mark_cuda_rel_ static inline time _get_departure_time<device_gpu_timetable>(
-      device_gpu_timetable const& tt, stop_times_index const departure_sti) {
-    return tt.stop_departures_[departure_sti];
-  }
+template <>
+_mark_cuda_rel_ inline time
+trait_min_transfer_times::_get_departure_time<device_gpu_timetable>(
+    device_gpu_timetable const& tt, stop_times_index const departure_sti) {
+  return tt.stop_departures_[departure_sti];
+}
 #endif
-};
 
 }  // namespace motis::raptor

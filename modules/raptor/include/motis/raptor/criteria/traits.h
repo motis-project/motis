@@ -202,19 +202,19 @@ struct traits<> {
   _mark_cuda_rel_ inline static uint32_t size() { return 1; }
 
   template <typename Data>
-  _mark_cuda_rel_ inline static trait_id get_write_to_trait_id(Data const& d) {
+  _mark_cuda_rel_ inline static trait_id get_write_to_trait_id(Data const&) {
     return 0;
   }
 
   template <typename Data>
-  _mark_cuda_rel_ inline static bool is_trait_satisfied(uint32_t _1,
-                                                        Data const& _2,
-                                                        uint32_t _3) {
+  _mark_cuda_rel_ inline static bool is_trait_satisfied(uint32_t,
+                                                        Data const&,
+                                                        uint32_t) {
     return true;  // return natural element of conjunction
   }
 
   template <typename Data>
-  inline static bool is_rescan_from_stop_needed(uint32_t _1, Data const& _2,
+  inline static bool is_rescan_from_stop_needed(uint32_t _1, Data const&,
                                                 uint32_t _3) {
     return false;
   }
@@ -225,42 +225,42 @@ struct traits<> {
 
   template <typename Data, typename Timetable>
   _mark_cuda_rel_ inline static void update_aggregate(
-      Data& aggregate_dt, Timetable const& tt,
-      time const* const previous_arrivals, stop_offset const s_offset,
-      stop_times_index const current_sti, trait_id const total_trait_size) {}
+      Data&, Timetable const&,
+      time const* const, stop_offset const,
+      stop_times_index const, trait_id const) {}
 
   template <typename Data>
   _mark_cuda_rel_ inline static void reset_aggregate(
-      trait_id const total_size, Data& aggregate_dt,
-      trait_id const initial_t_offset) {}
+      trait_id const, Data&,
+      trait_id const) {}
 
 #if defined(MOTIS_CUDA)
   template <typename Data>
-  __device__ inline static void propagate_and_merge_if_needed(unsigned const _1,
-                                                              Data& _2,
-                                                              bool const _3,
-                                                              bool const _4) {}
+  __device__ inline static void propagate_and_merge_if_needed(unsigned const,
+                                                              Data&,
+                                                              bool const,
+                                                              bool const) {}
 
   template <typename Data>
-  __device__ inline static void carry_to_next_stage(unsigned const _1,
-                                                    Data& _2) {}
+  __device__ inline static void carry_to_next_stage(unsigned const,
+                                                    Data&) {}
 #endif
 
   template <typename Data>
   inline static std::vector<trait_id> get_feasible_trait_ids(
-      trait_id const total_size, trait_id const initial_offset,
-      Data const& input) {
+      trait_id const, trait_id const,
+      Data const&) {
     return std::vector<trait_id>{0};
   }
 
   // giving the neutral element of the conjunction
-  inline static bool dominates(trait_id const _0, trait_id const& _1,
-                               trait_id const& _2) {
+  inline static bool dominates(trait_id const, trait_id const&,
+                               trait_id const&) {
     return true;
   }
 
-  inline static void fill_journey(trait_id const _0, journey& _1,
-                                  trait_id const _2) {}
+  inline static void fill_journey(trait_id const, journey&,
+                                  trait_id const) {}
 };
 
 }  // namespace motis::raptor

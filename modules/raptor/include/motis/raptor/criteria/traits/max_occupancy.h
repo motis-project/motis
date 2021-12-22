@@ -61,9 +61,8 @@ struct trait_max_occupancy {
 
   template <typename TraitsData, typename Timetable>
   _mark_cuda_rel_ inline static void update_aggregate(
-      TraitsData& aggregate_dt, Timetable const& tt, time const* const _1,
-      stop_offset const _2, stop_times_index const current_sti,
-      trait_id const _3) {
+      TraitsData& aggregate_dt, Timetable const& tt, time const* const,
+      stop_offset const, stop_times_index const current_sti, trait_id const) {
 
     auto const stop_occupancy = _read_occupancy(tt, current_sti);
     aggregate_dt.max_occupancy_ =
@@ -102,7 +101,7 @@ struct trait_max_occupancy {
 
   template <typename TraitsData>
   inline static std::vector<dimension_id> get_feasible_dimensions(
-      dimension_id const initial_offset, TraitsData const& _1) {
+      dimension_id const initial_offset, TraitsData const&) {
 
     if (initial_offset == 2) return std::vector<dimension_id>{0, 1, 2};
     if (initial_offset == 1) return std::vector<dimension_id>{0, 1};
@@ -126,14 +125,15 @@ private:
       Timetable const& tt, stop_times_index const sti) {
     return tt.stop_attr_[sti].inbound_occupancy_;
   }
+};
 
 #if defined(MOTIS_CUDA)
-  template <>
-  _mark_cuda_rel_ inline static occ_t _read_occupancy<device_gpu_timetable>(
-      device_gpu_timetable const& tt, stop_times_index const sti) {
-    return tt.stop_inb_occupancy_[sti];
-  }
+template <>
+_mark_cuda_rel_ inline occ_t
+trait_max_occupancy::_read_occupancy<device_gpu_timetable>(
+    device_gpu_timetable const& tt, stop_times_index const sti) {
+  return tt.stop_inb_occupancy_[sti];
+}
 #endif
-};
 
 }  // namespace motis::raptor

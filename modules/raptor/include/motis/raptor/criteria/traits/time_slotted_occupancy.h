@@ -102,9 +102,8 @@ struct trait_time_slotted_occupancy {
 
   template <typename TraitsData, typename Timetable>
   _mark_cuda_rel_ inline static void update_aggregate(
-      TraitsData& aggregate_dt, Timetable const& tt, time const* const _1,
-      stop_offset const _2, stop_times_index const current_sti,
-      trait_id const _3) {
+      TraitsData& aggregate_dt, Timetable const& tt, time const* const,
+      stop_offset const, stop_times_index const current_sti, trait_id const) {
 
     auto const stop_occupancy = _read_occupancy(tt, current_sti);
     auto const segment_duration = _read_segment_duration(tt, current_sti);
@@ -227,28 +226,29 @@ private:
 
     return arr_time - dep_time;
   }
+};
 
 #if defined(MOTIS_CUDA)
-  template <>
-  _mark_cuda_rel_ inline static uint8_t _read_occupancy<device_gpu_timetable>(
-      device_gpu_timetable const& tt, stop_times_index const sti) {
-    return tt.stop_inb_occupancy_[sti];
-  }
+template <>
+_mark_cuda_rel_ inline uint8_t
+trait_time_slotted_occupancy::_read_occupancy<device_gpu_timetable>(
+    device_gpu_timetable const& tt, stop_times_index const sti) {
+  return tt.stop_inb_occupancy_[sti];
+}
 
-  template <>
-  _mark_cuda_rel_ inline static uint32_t
-  _read_segment_duration<device_gpu_timetable>(device_gpu_timetable const& tt,
-                                               stop_times_index const sti) {
-    auto const prev_sti = sti - 1;
-    auto departure_time = tt.stop_departures_[prev_sti];
-    if (!valid(departure_time)) departure_time = tt.stop_arrivals_[prev_sti];
+template <>
+_mark_cuda_rel_ inline uint32_t
+trait_time_slotted_occupancy::_read_segment_duration<device_gpu_timetable>(
+    device_gpu_timetable const& tt, stop_times_index const sti) {
+  auto const prev_sti = sti - 1;
+  auto departure_time = tt.stop_departures_[prev_sti];
+  if (!valid(departure_time)) departure_time = tt.stop_arrivals_[prev_sti];
 
-    auto arrival_time = tt.stop_arrivals_[sti];
-    if (!valid(arrival_time)) arrival_time = tt.stop_departures_[sti];
+  auto arrival_time = tt.stop_arrivals_[sti];
+  if (!valid(arrival_time)) arrival_time = tt.stop_departures_[sti];
 
-    return arrival_time - departure_time;
-  }
+  return arrival_time - departure_time;
+}
 #endif
-};
 
 }  // namespace motis::raptor
