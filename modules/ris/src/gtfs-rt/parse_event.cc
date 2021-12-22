@@ -123,7 +123,7 @@ Offset<Message> create_additional_msg(message_context& ctx,
         events.emplace_back(
             CreateAdditionalEvent(ctx.b_, create_event(ctx, event),
                                   ctx.b_.CreateString("Additional Service"),
-                                  ctx.b_.CreateString("")));
+                                  ctx.b_.CreateString(""), event.seq_no_));
       });
   return CreateMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,

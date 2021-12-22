@@ -14,10 +14,12 @@ using motis::routing::RoutingResponse;
 
 struct loader_graph_builder_gtfs_block_id : public motis_instance_test {
   explicit loader_graph_builder_gtfs_block_id(std::string schedule_begin)
-      : motis_instance_test({{(gtfs::SCHEDULES / "block_id").generic_string()},
-                             std::move(schedule_begin),
-                             1},
-                            {"routing"}) {}
+      : motis_instance_test(
+            loader_options{
+                .dataset_ = {(gtfs::SCHEDULES / "block_id").generic_string()},
+                .schedule_begin_ = std::move(schedule_begin),
+                .num_days_ = 1},
+            {"routing"}) {}
 
   msg_ptr routing_query(std::string_view const& from,
                         std::string_view const& to,

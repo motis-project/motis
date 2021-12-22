@@ -91,6 +91,27 @@ struct additional_service_builder {
     return status::OK;
   }
 
+  static mcd::vector<uint32_t> build_seq_numbers(
+      flatbuffers::Vector<flatbuffers::Offset<ris::AdditionalEvent>> const*
+          events) {
+    if (events->Get(0)->seq_no() == -1) {
+      return {};
+    }
+
+    mcd::vector<uint32_t> stop_seq_numbers{
+        static_cast<uint32_t>(events->Get(0)->seq_no())};
+    for (auto i = 1U; i < events->size(); i += 2) {
+      utl::verify(events->Get(i)->seq_no() >= 0,
+                  "invalid negative sequence number");
+      stop_seq_numbers.emplace_back(
+          static_cast<unsigned>(events->Get(i)->seq_no()));
+      utl::verify(i + 1 == events->size() ||
+                      events->Get(i + 1)->seq_no() == stop_seq_numbers.back(),
+                  "additional service: seq number mismatch i={}", i);
+    }
+    return stop_seq_numbers;
+  }
+
   std::vector<section> build_sections(
       flatbuffers::Vector<flatbuffers::Offset<ris::AdditionalEvent>> const*
           events) {
@@ -191,7 +212,8 @@ struct additional_service_builder {
     return trip_edges;
   }
 
-  trip const* update_trips(mcd::vector<trip::route_edge> const& trip_edges) {
+  trip const* update_trips(mcd::vector<trip::route_edge> const& trip_edges,
+                           mcd::vector<uint32_t> const& seq_numbers) {
     auto const first_edge = trip_edges.front().get_edge();
     auto const first_station = first_edge->from_->get_station();
     auto const first_lcon = first_edge->m_.route_edge_.conns_[0];
@@ -209,7 +231,7 @@ struct additional_service_builder {
                      secondary_trip_id{
                          last_station->id_, last_lcon.a_time_,
                          first_lcon.full_con_->con_info_->line_identifier_}},
-        sched_.trip_edges_.back().get(), 0U, trip_debug{}));
+        sched_.trip_edges_.back().get(), 0U, trip_debug{}, seq_numbers));
 
     auto const trp = sched_.trip_mem_.back().get();
     auto const trp_entry = mcd::pair{trp->id_.primary_, ptr<trip>(trp)};
@@ -272,12 +294,13 @@ struct additional_service_builder {
     }
 
     auto const sections = build_sections(msg->events());
+    auto const seq_numbers = build_seq_numbers(msg->events());
     auto const station_nodes = get_station_nodes(sections);
     std::vector<incoming_edge_patch> incoming;
     save_outgoing_edges(station_nodes, incoming);
     auto const route = build_route(sections, incoming);
     patch_incoming_edges(incoming);
-    auto const trp = update_trips(route);
+    auto const trp = update_trips(route, seq_numbers);
 
     update_builder_.add_reroute(trp, {}, 0);
 

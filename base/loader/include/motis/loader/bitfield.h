@@ -8,7 +8,7 @@
 
 namespace motis::loader {
 
-constexpr int BIT_COUNT = 512;
+constexpr int BIT_COUNT = 2048;
 using bitfield = std::bitset<BIT_COUNT>;
 
 template <std::size_t BitSetSize>

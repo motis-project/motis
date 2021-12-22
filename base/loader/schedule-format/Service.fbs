@@ -18,7 +18,8 @@ table Service {
   times : [int];
   route_key : uint (key);
   debug : ServiceDebugInfo;
-  rule_participant: bool = false;
-  initial_train_nr: int;
-  trip_id : string; //optional
+  rule_participant : bool = false;
+  initial_train_nr : int;
+  trip_id : string; // optional
+  seq_numbers : [uint]; // optional
 }

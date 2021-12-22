@@ -2,6 +2,7 @@
 
 #include <ctime>
 #include <optional>
+#include <string>
 
 #include "flatbuffers/flatbuffers.h"
 
@@ -13,6 +14,9 @@
 #include "motis/core/schedule/trip.h"
 #include "motis/core/access/time_access.h"
 
+#ifdef NO_DATA
+#undef NO_DATA
+#endif
 #include "gtfsrt.pb.h"
 
 namespace motis {
@@ -62,45 +66,51 @@ struct message_context {
 };
 
 struct known_stop_skips {
-  known_stop_skips(gtfs_trip_id trip_id) : trip_id_{std::move(trip_id)} {}
+  explicit known_stop_skips(gtfs_trip_id trip_id)
+      : trip_id_{std::move(trip_id)} {}
 
-  inline bool is_skipped(int const seq_no) {
+  bool is_skipped(unsigned const seq_no) {
     auto it = skipped_stops_.find(seq_no);
     return it != end(skipped_stops_) ? it->second : false;
   }
 
   gtfs_trip_id trip_id_;
-  mcd::hash_map<int /*seq-no */, bool> skipped_stops_;
+  mcd::hash_map<unsigned /* seq-no */, bool> skipped_stops_;
 };
 
 struct known_addition_trip {
-  friend bool operator<(known_addition_trip const& lhs,
-                        known_addition_trip const& rhs) {
-    return lhs.gtfs_id_ < rhs.gtfs_id_;
-  }
-
-  friend bool operator==(known_addition_trip const& lhs,
-                         known_addition_trip const& rhs) {
-    return lhs.gtfs_id_ == rhs.gtfs_id_;
-  }
-
   known_addition_trip() = default;
+
   explicit known_addition_trip(gtfs_trip_id gtfs_id)
-      : gtfs_id_(std::move(gtfs_id)){};
+      : gtfs_id_(std::move(gtfs_id)) {}
+
   known_addition_trip(gtfs_trip_id gtfs_id, primary_trip_id const& prim_id)
-      : gtfs_id_(std::move(gtfs_id)), primary_id_(prim_id){};
+      : gtfs_id_(std::move(gtfs_id)), primary_id_(prim_id) {}
+
+  friend bool operator<(known_addition_trip const& a,
+                        known_addition_trip const& b) {
+    return a.gtfs_id_ < b.gtfs_id_;
+  }
+
+  friend bool operator==(known_addition_trip const& a,
+                         known_addition_trip const& b) {
+    return a.gtfs_id_ == b.gtfs_id_;
+  }
 
   gtfs_trip_id gtfs_id_;
   primary_trip_id primary_id_;
 };
 
 struct knowledge_context {
+  explicit knowledge_context(std::string tag) : tag_{std::move(tag)} {}
+
   void sort_known_lists();
 
   bool is_cancel_known(transit_realtime::TripDescriptor const&) const;
   bool is_additional_known(transit_realtime::TripDescriptor const&) const;
   known_stop_skips* find_trip_stop_skips(
       transit_realtime::TripDescriptor const&) const;
+  known_addition_trip const& find_additional(gtfs_trip_id const&) const;
   known_addition_trip& find_additional(gtfs_trip_id const&);
 
   void remember_additional(gtfs_trip_id, time, int);
@@ -116,6 +126,8 @@ struct knowledge_context {
 
   std::vector<std::unique_ptr<known_stop_skips>> known_stop_skips_;
   int new_known_skip_cnt_{0};
+
+  std::string tag_;
 };
 
 struct trip_update_context {

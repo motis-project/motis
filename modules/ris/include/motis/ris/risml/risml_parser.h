@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -9,20 +10,8 @@
 
 namespace motis::ris::risml {
 
-struct risml_parser {
-
-  static void to_ris_message(std::string_view,
-                             std::function<void(ris_message&&)> const&);
-  static std::vector<ris_message> parse(std::string_view);
-
-  risml_parser() = default;
-  ~risml_parser() = default;
-
-  risml_parser(risml_parser const&) = delete;
-  risml_parser& operator=(risml_parser const&) = delete;
-
-  risml_parser(risml_parser&&) = delete;
-  risml_parser& operator=(risml_parser&&) = delete;
-};
+void to_ris_message(std::string_view, std::function<void(ris_message&&)> const&,
+                    std::string const& tag = "");
+std::vector<ris_message> parse(std::string_view, std::string const& tag = "");
 
 }  // namespace motis::ris::risml

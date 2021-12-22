@@ -7,6 +7,7 @@
 
 #include "motis/core/schedule/schedule.h"
 #include "motis/loader/loader_options.h"
+#include "motis/ris/gtfs-rt/common.h"
 
 #include "motis/protocol/RISMessage_generated.h"
 #include "gtfsrt.pb.h"
@@ -17,15 +18,7 @@ struct ris_message;
 
 namespace gtfsrt {
 
-inline std::string json_to_protobuf(std::string msg_json) {
-  transit_realtime::FeedMessage msg;
-  google::protobuf::util::JsonStringToMessage(msg_json, &msg);
-  auto binary_msg = msg.SerializeAsString();
-  return binary_msg;
-};
-
-class gtfsrt_test : public ::testing::Test {
-protected:
+struct gtfsrt_test : public ::testing::Test {
   gtfsrt_test(loader::loader_options);
 
   void SetUp() override;
@@ -33,6 +26,7 @@ protected:
   std::vector<ris_message> parse_json(std::string const&);
 
   schedule_ptr sched_;
+  knowledge_context knowledge_{""};
   loader::loader_options opts_;
 };
 

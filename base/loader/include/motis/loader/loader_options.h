@@ -14,7 +14,8 @@ struct loader_options {
   std::string graph_path(std::string const& data_dir) const;
   std::string fbs_schedule_path(std::string const& data_dir, size_t id) const;
 
-  std::vector<std::string> dataset_{"rohdaten"};
+  std::vector<std::string> dataset_{};
+  std::vector<std::string> dataset_prefix_{};
   std::string schedule_begin_{"TODAY"};
   int num_days_{2};
   bool write_serialized_{false};
@@ -32,8 +33,6 @@ struct loader_options {
   std::string graph_path_{"default"};
   std::string wzr_classes_path_{};
   std::string wzr_matrix_path_{};
-
-  std::vector<std::string> dataset_prefix_{};
 };
 
 }  // namespace motis::loader

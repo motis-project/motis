@@ -17,7 +17,7 @@ struct multiverse {
 
   universe& primary() {
     std::lock_guard lock{mutex_};
-    return *universes_.front().get();
+    return *universes_.front();
   }
 
   std::shared_ptr<universe> get(universe_id const id) {
@@ -44,8 +44,7 @@ struct multiverse {
     std::lock_guard lock{mutex_};
     auto const base_uv = get(base_id);
     auto const new_id = universes_.size();
-    auto new_uv =
-        universes_.emplace_back(std::make_shared<universe>(*base_uv.get()));
+    auto new_uv = universes_.emplace_back(std::make_shared<universe>(*base_uv));
     new_uv->id_ = new_id;
     return new_uv;
   }

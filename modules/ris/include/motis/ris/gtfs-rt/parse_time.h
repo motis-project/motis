@@ -30,8 +30,9 @@ inline std::optional<unixtime> parse_start_date(std::string const& yyyymmdd) {
   }
 }
 
-inline gtfs_trip_id to_trip_id(transit_realtime::TripDescriptor const& d) {
-  return {d.trip_id(), parse_start_date(d.start_date())};
+inline gtfs_trip_id to_trip_id(transit_realtime::TripDescriptor const& d,
+                               std::string const& tag) {
+  return {tag, d.trip_id(), parse_start_date(d.start_date())};
 }
 
 inline unixtime get_updated_time(

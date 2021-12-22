@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "motis/core/access/trip_access.h"
+#include "motis/test/schedule/gtfs_minimal_swiss.h"
 
 #include "./gtfsrt_itest.h"
 
@@ -23,7 +24,10 @@ struct ris_gtfsrt_delay_message_itest_t0 : public gtfsrt_itest {
   ris_gtfsrt_delay_message_itest_t0()
       : gtfsrt_itest(
             dataset_opt,
-            "--ris.input=modules/ris/test_resources/gtfs-rt/delay_itest/t0") {}
+            {"--ris.instant_forward=true",
+             "--ris.gtfsrt.is_addition_skip_allowed=true",
+             "--ris.input=modules/ris/test_resources/gtfs-rt/delay_itest/t0"}) {
+  }
 };
 
 TEST_F(ris_gtfsrt_delay_message_itest_t0, simple) {
@@ -62,7 +66,10 @@ struct ris_gtfsrt_delay_message_itest_t1 : public gtfsrt_itest {
   ris_gtfsrt_delay_message_itest_t1()
       : gtfsrt_itest(
             dataset_opt,
-            "--ris.input=modules/ris/test_resources/gtfs-rt/delay_itest/t1") {}
+            {"--ris.instant_forward=true",
+             "--ris.gtfsrt.is_addition_skip_allowed=true",
+             "--ris.input=modules/ris/test_resources/gtfs-rt/delay_itest/t1"}) {
+  }
 };
 
 TEST_F(ris_gtfsrt_delay_message_itest_t1, updated_delay) {

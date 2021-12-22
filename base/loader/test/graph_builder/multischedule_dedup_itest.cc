@@ -17,8 +17,8 @@ struct multischedule_dedup_test : public motis_instance_test {
                 .dataset_ =
                     {(hrd::SCHEDULES / "single-ice").generic_string(),
                      (hrd::SCHEDULES / "multiple-ices").generic_string()},
-                .schedule_begin_ = "20151004",
-                .dataset_prefix_ = {{"s"}, {"m"}}},
+                .dataset_prefix_ = {"s", "m"},
+                .schedule_begin_ = "20151004"},
             {"routing"}) {}
 };
 

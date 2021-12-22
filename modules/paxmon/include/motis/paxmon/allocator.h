@@ -76,7 +76,7 @@ struct allocator {
     inline void* data() const { return ptr_; }
 
     inline Type* get(std::size_t const index) const {
-      return reinterpret_cast<Type*>(
+      return reinterpret_cast<Type*>(  // NOLINT(performance-no-int-to-ptr)
           reinterpret_cast<std::uintptr_t>(ptr_) +
           static_cast<std::uintptr_t>(index * sizeof(Type)));
     }

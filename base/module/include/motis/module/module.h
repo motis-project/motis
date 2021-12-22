@@ -74,7 +74,7 @@ protected:
   boost::filesystem::path const& get_data_directory() const;
 
 private:
-  ctx::access_scheduler<ctx_data>* shared_data_;
+  ctx::access_scheduler<ctx_data>* shared_data_{nullptr};
   boost::filesystem::path data_directory_;
 };
 

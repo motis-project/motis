@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "motis/core/access/trip_access.h"
+#include "motis/test/schedule/gtfs_minimal_swiss.h"
 
 #include "motis/ris/gtfs-rt/common.h"
 
@@ -30,14 +31,16 @@ struct ris_gtfsrt_reroute_message_itest_t0 : public gtfsrt_itest {
   ris_gtfsrt_reroute_message_itest_t0()
       : gtfsrt_itest(
             dataset_opt,
-            "--ris.input=modules/ris/test_resources/gtfs-rt/reroute_itest/"
-            "/t0") {}
+            {"--ris.instant_forward=true",
+             "--ris.gtfsrt.is_addition_skip_allowed=true",
+             "--ris.input=modules/ris/test_resources/gtfs-rt/reroute_itest/"
+             "/t0"}) {}
 };
 
 TEST_F(ris_gtfsrt_reroute_message_itest_t0,
        handle_initial_reported_skips_and_delay) {
-  auto trp_same_skips =
-      get_trip(sched(), "95.TA.59-100-j19-1.91.H", 1561593600);
+  auto trp_same_skips = get_gtfs_trip(
+      sched(), gtfs_trip_id{"", "95.TA.59-100-j19-1.91.H", 1561593600});
 
   EXPECT_EQ(3, trp_same_skips->edges_->size());
   auto trip_events = get_trip_event_info(sched(), trp_same_skips);
@@ -56,7 +59,8 @@ TEST_F(ris_gtfsrt_reroute_message_itest_t0,
   EXPECT_EQ(motis_time(1561614180) + TIMEZONE_OFFSET,
             trip_events.at("8501500:0:2").arr_);  // seq 6
 
-  auto trp_skip_delay = get_trip(sched(), "13.TA.1-1-j19-1.13.H", 1561593600);
+  auto trp_skip_delay = get_gtfs_trip(
+      sched(), gtfs_trip_id{"", "13.TA.1-1-j19-1.13.H", 1561593600});
 
   EXPECT_EQ(7, trp_skip_delay->edges_->size());
   trip_events = get_trip_event_info(sched(), trp_skip_delay);
@@ -80,14 +84,16 @@ struct ris_gtfsrt_reroute_message_itest_t1 : public gtfsrt_itest {
   ris_gtfsrt_reroute_message_itest_t1()
       : gtfsrt_itest(
             dataset_opt,
-            "--ris.input=modules/ris/test_resources/gtfs-rt/reroute_itest/"
-            "/t1") {}
+            {"--ris.instant_forward=true",
+             "--ris.gtfsrt.is_addition_skip_allowed=true",
+             "--ris.input=modules/ris/test_resources/gtfs-rt/reroute_itest/"
+             "/t1"}) {}
 };
 
 TEST_F(ris_gtfsrt_reroute_message_itest_t1,
        handle_further_reported_skips_and_delay) {
-  auto trp_same_skips =
-      get_trip(sched(), "95.TA.59-100-j19-1.91.H", 1561593600);
+  auto trp_same_skips = get_gtfs_trip(
+      sched(), gtfs_trip_id{"", "95.TA.59-100-j19-1.91.H", 1561593600});
   // expecting same state as with t0
   EXPECT_EQ(3, trp_same_skips->edges_->size());
   auto trip_events = get_trip_event_info(sched(), trp_same_skips);
@@ -107,7 +113,8 @@ TEST_F(ris_gtfsrt_reroute_message_itest_t1,
             trip_events.at("8501500:0:2").arr_);  // seq 6
 
   // expecting to also skip seq-no 6
-  auto trp_skip_delay = get_trip(sched(), "13.TA.1-1-j19-1.13.H", 1561593600);
+  auto trp_skip_delay = get_gtfs_trip(
+      sched(), gtfs_trip_id{"", "13.TA.1-1-j19-1.13.H", 1561593600});
 
   EXPECT_EQ(6, trp_skip_delay->edges_->size());
   trip_events = get_trip_event_info(sched(), trp_skip_delay);

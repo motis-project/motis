@@ -14,7 +14,7 @@
 
 namespace motis {
 
-trip const* get_trip(schedule const& sched, gtfs_trip_id const& trip_id) {
+trip const* get_gtfs_trip(schedule const& sched, gtfs_trip_id const& trip_id) {
   auto const it = sched.gtfs_trip_ids_.find(trip_id.trip_id_);
   utl::verify(it != end(sched.gtfs_trip_ids_), "unable to find GTFS trip {}",
               trip_id);
@@ -46,16 +46,11 @@ trip const* get_trip(schedule const& sched, gtfs_trip_id const& trip_id) {
   }
 }
 
-trip const* get_trip(schedule const& sched, std::string const& trip_id,
-                     std::time_t const t) {
-  return get_trip(sched, gtfs_trip_id{trip_id, t});
-}
-
 trip const* get_trip(schedule const& sched, std::string_view eva_nr,
-                     uint32_t const train_nr, std::time_t const timestamp,
+                     uint32_t const train_nr, unixtime const timestamp,
                      std::string_view target_eva_nr,
-                     std::time_t const target_timestamp,
-                     std::string_view line_id, bool const fuzzy) {
+                     unixtime const target_timestamp, std::string_view line_id,
+                     bool const fuzzy) {
   auto const station_id = get_station(sched, eva_nr)->index_;
   auto const motis_time = unix_to_motistime(sched, timestamp);
   auto const primary_id = primary_trip_id(station_id, train_nr, motis_time);
@@ -106,6 +101,20 @@ trip const* find_trip(schedule const& sched, full_trip_id id) {
     }
   }
   return nullptr;
+}
+
+unsigned stop_seq_to_stop_idx(trip const& trp, unsigned stop_seq) {
+  if (trp.stop_seq_numbers_.empty() || stop_seq == 0U) {
+    return stop_seq;
+  } else {
+    auto const it = std::lower_bound(begin(trp.stop_seq_numbers_),
+                                     end(trp.stop_seq_numbers_), stop_seq);
+    utl::verify(it != end(trp.stop_seq_numbers_) && *it == stop_seq,
+                "stop sequence {} for trip {} not found, sequence: {}",
+                stop_seq, trp.dbg_.str(), trp.stop_seq_numbers_);
+    return static_cast<unsigned>(
+        std::distance(begin(trp.stop_seq_numbers_), it));
+  }
 }
 
 }  // namespace motis

@@ -65,15 +65,4 @@ TEST_F(ris_db_order, order_all_at_once) {
                msgs[1]->get()->destination()->target()->c_str());
 }
 
-TEST_F(ris_db_order, order_separate) {}
-
-// TEST_F(ris_db, no_overlap_after) {}
-// TEST_F(ris_db, overlap_begin_short) {}
-// TEST_F(ris_db, overlap_begin_and_end_short) {}
-// TEST_F(ris_db, overlap_end_short) {}
-// TEST_F(ris_db, overlap_begin_long) {}
-// TEST_F(ris_db, overlap_begin_and_end_long) {}
-// TEST_F(ris_db, overlap_end_long) {}
-// TEST_F(ris_db, overlap_inside) {}
-
 }  // namespace motis::ris
