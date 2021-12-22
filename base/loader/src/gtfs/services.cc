@@ -73,6 +73,7 @@ greg::date bound_date(
   }
 
   assert(false);
+  throw std::runtime_error{"unreachable"};
 }
 
 bitfield calendar_to_bitfield(std::string const& service_name,
