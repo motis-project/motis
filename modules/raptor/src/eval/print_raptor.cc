@@ -52,7 +52,6 @@ void print(schedule const& sched, raptor_meta_info const& meta_info,
   //   the expectation
   std::string prev_arr_eva{j.stops_[0].eva_no_};
   auto prev_arr_time = j.stops_[0].departure_.timestamp_;
-  bool had_fp = false;
   for (int idx = 0, size = j.trips_.size(); idx < size; ++idx) {
     auto const& j_trip = j.trips_[idx];
     auto const s_trip = get_trip(sched, j_trip.extern_trip_);
@@ -96,7 +95,6 @@ void print(schedule const& sched, raptor_meta_info const& meta_info,
 
     prev_arr_eva = j_to_stop.eva_no_;
     prev_arr_time = j_to_stop.arrival_.timestamp_;
-    had_fp = false;
   }
 }
 
@@ -142,8 +140,8 @@ int print_raptor(int argc, const char** argv) {
     auto const message = make_msg(json);
 
     if (message->get()->content_type() != MsgContent_RoutingResponse) {
-      throw std::exception{
-          "Found message with content type other than RoutingResponse!"};
+      throw std::exception(
+          "Found message with content type other than RoutingResponse!");
     }
 
     auto const res = motis_content(RoutingResponse, message);

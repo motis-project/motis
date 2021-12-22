@@ -48,7 +48,7 @@ bool contains_loop_in_range(trip const* trip, uint32_t range_begin_s_off,
   std::set<node_id_t> known_stations{};
   auto const edges = trip->edges_;
   if (range_end_s_off > edges->size()) {
-    throw std::runtime_error{"Range end offset is not within trip size!"};
+    throw std::runtime_error("Range end offset is not within trip size!");
   }
 
   auto has_loop = false;
@@ -274,8 +274,8 @@ int validate(int argc, const char** argv) {
     auto const message = make_msg(json);
 
     if (message->get()->content_type() != MsgContent_RoutingResponse) {
-      throw std::exception{
-          "Found message with content type other than RoutingResponse!"};
+      throw std::exception(
+          "Found message with content type other than RoutingResponse!");
     }
 
     auto const res = motis_content(RoutingResponse, message);
