@@ -10,9 +10,6 @@ namespace motis::raptor {
   template void invoke_mc_cpu_raptor<VAL>(const raptor_query& query, \
                                           raptor_statistics&);
 
-#define MAKE_MC_GPU_RAPTOR_TEMPLATE_INSTANCE(VAL, ACCESSOR) \
-  template void invoke_mc_gpu_raptor<VAL>(const d_query& dq);
-
 #define CASE_SEARCH_TYPE_TO_ENUM(VAL, ACCESSOR) \
   case routing::SearchType::SearchType_##VAL:   \
     return ACCESSOR::VAL;

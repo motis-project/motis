@@ -19,6 +19,24 @@ RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(GENERATE_LAUNCH_CONFIG_FUNC_DECL,
                                    raptor_criteria_config)
 
 template <typename CriteriaConfig>
+__device__ void mc_update_routes_dev(time const* const, time* const,
+                                     time* const, uint32_t*, uint32_t*,
+                                     stop_id const,
+                                     device_gpu_timetable const&);
+
+template <typename CriteriaConfig>
+__device__ void mc_update_footpaths_dev(device_memory const&,
+                                        raptor_round const, stop_id const,
+                                        device_gpu_timetable const&);
+
+template <typename CriteriaConfig>
+__device__ void mc_init_arrivals_dev(base_query const&, device_memory const&,
+                                     device_gpu_timetable const&);
+
+template <typename CriteriaConfig>
+void invoke_hybrid_mc_raptor(d_query const&);
+
+template <typename CriteriaConfig>
 void invoke_mc_gpu_raptor(d_query const&);
 
 }  // namespace motis::raptor
