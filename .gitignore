@@ -47,6 +47,7 @@ config_*
 data
 data_debug_schedule
 data_hafas
+data_delfi
 .pkg.lock
 gtfstid*
 .gitignore
@@ -54,3 +55,4 @@ gtfstid*
 cmake-vs
 cmake-build-debug
 cmake-build-relwithdebinfo
+*.pdf
