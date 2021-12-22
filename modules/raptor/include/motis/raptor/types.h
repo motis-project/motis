@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <limits>
 
 #include "motis/core/schedule/time.h"
 
