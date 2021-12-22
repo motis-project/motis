@@ -140,7 +140,7 @@ int print_raptor(int argc, const char** argv) {
     auto const message = make_msg(json);
 
     if (message->get()->content_type() != MsgContent_RoutingResponse) {
-      throw std::exception(
+      throw std::runtime_error(
           "Found message with content type other than RoutingResponse!");
     }
 
