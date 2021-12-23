@@ -32,6 +32,10 @@ namespace motis::ris::gtfsrt {
 void collect_events(trip_update_context& update_ctx,
                     knowledge_context& knowledge, std::string const& tag) {
   auto const& trip = *update_ctx.trip_;
+  if (trip.edges_->empty()) {  // trip is canceled - ignore
+    return;
+  }
+
   auto skipped_stops = update_ctx.known_stop_skips_;
   auto trip_update = update_ctx.trip_update_;
   auto& sched = update_ctx.sched_;
