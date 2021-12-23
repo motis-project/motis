@@ -61,19 +61,9 @@ void parse_entity(schedule const& sched, knowledge_context& knowledge,
                   FeedEntity const& entity, unixtime message_time,
                   std::function<void(ris_message&&)> const& cb,
                   std::string const& tag) {
-  // every entity contains either a trip update, a vehicle update or an
-  // alert.
   if (entity.has_trip_update()) {
     parse_trip_updates(sched, knowledge, is_additional_skip_allowed, entity,
                        message_time, cb, tag);
-  } else if (entity.has_vehicle()) {
-    LOG(logging::info) << "GTFS-RT Vehicle update not implemented.";
-  } else if (entity.has_alert()) {
-    LOG(logging::error) << "GTFS-RT Alert not implemented";
-  } else {
-    throw std::runtime_error{
-        "GTFS-RT entity is neither a trip update, vehicle update or alert. "
-        "Skipping."};
   }
 }
 
