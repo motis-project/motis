@@ -38,6 +38,9 @@ namespace motis::intermodal {
 intermodal::intermodal() : module("Intermodal Options", "intermodal") {
   param(router_, "router", "routing module");
   param(revise_, "revise", "revise connections");
+  param(ppr_fallback_, "ppr_fallabck",
+        "use direct line as fallback if ppr is not available or results are "
+        "empty (useful if ppr doesn't cover the whole timetable area)");
 }
 
 intermodal::~intermodal() = default;
@@ -364,7 +367,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
             req, start.pos_,
             std::bind(appender, std::ref(deps),  // NOLINT
                       STATION_START, _1, start.pos_, _2, _3, _4, _5, _6),
-            mumo_stats_appender, ppr_profiles_);
+            mumo_stats_appender, ppr_profiles_, ppr_fallback_);
       }));
     }
     if (dest.is_intermodal_) {
@@ -372,7 +375,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
         make_dests(req, dest.pos_,
                    std::bind(appender, std::ref(arrs),  // NOLINT
                              _1, STATION_END, _2, dest.pos_, _3, _4, _5, _6),
-                   mumo_stats_appender, ppr_profiles_);
+                   mumo_stats_appender, ppr_profiles_, ppr_fallback_);
       }));
     }
   } else {
@@ -382,7 +385,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
             req, start.pos_,
             std::bind(appender, std::ref(deps),  // NOLINT
                       _1, STATION_START, _2, start.pos_, _3, _4, _5, _6),
-            mumo_stats_appender, ppr_profiles_);
+            mumo_stats_appender, ppr_profiles_, ppr_fallback_);
       }));
     }
     if (dest.is_intermodal_) {
@@ -390,7 +393,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
         make_dests(req, dest.pos_,
                    std::bind(appender, std::ref(arrs),  // NOLINT
                              STATION_END, _1, dest.pos_, _2, _3, _4, _5, _6),
-                   mumo_stats_appender, ppr_profiles_);
+                   mumo_stats_appender, ppr_profiles_, ppr_fallback_);
       }));
     }
   }

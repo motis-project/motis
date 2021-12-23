@@ -64,10 +64,10 @@ using mumo_stats_appender_fun = std::function<void(stats_category&&)>;
 
 void make_starts(IntermodalRoutingRequest const*, geo::latlng const&,
                  appender_fun const&, mumo_stats_appender_fun const&,
-                 ppr_profiles const&);
+                 ppr_profiles const&, bool ppr_fallback);
 void make_dests(IntermodalRoutingRequest const*, geo::latlng const&,
                 appender_fun const&, mumo_stats_appender_fun const&,
-                ppr_profiles const&);
+                ppr_profiles const&, bool ppr_fallback);
 
 void remove_intersection(std::vector<mumo_edge>& starts,
                          std::vector<mumo_edge>& destinations,
