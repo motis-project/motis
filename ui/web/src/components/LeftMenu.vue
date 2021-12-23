@@ -7,7 +7,7 @@
       <div :class="['sub-overlay', isSubOverlayHidden ? 'hidden' : '']">
         <div id="sub-overlay-content">
           <RouterView name="subOverlay" v-slot="{ Component }">
-            <keep-alive include="StationTimetable,TrainSearch">
+            <keep-alive include="TrainSearch">
               <component :is="Component">
               </component>
             </keep-alive>
