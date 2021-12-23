@@ -26,6 +26,7 @@ private:
 
   std::string router_{"routing"};
   bool revise_{false};
+  bool ppr_fallback_{false};
   ppr_profiles ppr_profiles_;
 };
 
