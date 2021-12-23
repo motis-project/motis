@@ -6,7 +6,12 @@
       </div>
       <div :class="['sub-overlay', isSubOverlayHidden ? 'hidden' : '']">
         <div id="sub-overlay-content">
-          <RouterView name="subOverlay"></RouterView>
+          <RouterView name="subOverlay" v-slot="{ Component }">
+            <keep-alive include="StationTimetable,TrainSearch">
+              <component :is="Component">
+              </component>
+            </keep-alive>
+          </RouterView>
         </div>
         <div class="sub-overlay-close" @click="$router.push('/')">
           <i class="icon">close</i>
