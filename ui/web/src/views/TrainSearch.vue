@@ -77,6 +77,11 @@ export default defineComponent({
       LoadingState: LoadingState
     };
   },
+  watch: {
+    currentTrainInput(){
+      setTimeout(this.sendRequest, 500);
+    }
+  },
   created() {
     this.currentDate = this.$ds.date;
   },
@@ -84,7 +89,6 @@ export default defineComponent({
     setCurrentTrainNumber(input: string) {
       if (!isNaN(+input)) {
         this.currentTrainInput = +input;
-        this.sendRequest();
       }
     },
     sendRequest(){
