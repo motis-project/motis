@@ -1,9 +1,45 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { Modepicker } from './ModePicker';
 import { DatePicker } from './DatePicker';
+import { IntermodalRoutingRequest } from './IntermodalRoutingRequestTypes';
+
+
+interface Destination {
+    type: string,
+    target: string
+}
+
+
+interface intermodalRoutingRequest{
+    destination: Destination,
+    content_type: string,
+    content: IntermodalRoutingRequest,
+}
+
+
+const getRoutingOptions = (req : intermodalRoutingRequest) => {
+    return {
+        method: 'POST',
+        headers: '',
+        body: req
+        // Was ware hier nochmal die Attribute? Warum ist Motis down? >:V
+    }
+}
+
 
 export const Search: React.FC = () => {
+
+    const [searchQuery, setSearchQuery] = useState<intermodalRoutingRequest>();
+
+    
+    
+    useEffect(() => {
+        let requestURL = 'https://europe.motis-project.de'
+
+        //fetch(requestURL, getRoutingOptions(searchQuery))
+
+    }, [searchQuery]);
     
     return (
         <div id='search'>
