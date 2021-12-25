@@ -38,7 +38,7 @@ namespace motis::intermodal {
 intermodal::intermodal() : module("Intermodal Options", "intermodal") {
   param(router_, "router", "routing module");
   param(revise_, "revise", "revise connections");
-  param(ppr_fallback_, "ppr_fallabck",
+  param(ppr_fallback_, "ppr_fallback",
         "use direct line as fallback if ppr is not available or results are "
         "empty (useful if ppr doesn't cover the whole timetable area)");
 }
