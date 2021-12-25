@@ -205,14 +205,12 @@ void apply_parking_patches(journey& j, std::vector<parking_patch>& patches) {
   }
 }
 
-msg_ptr postprocess_response(msg_ptr const& response_msg,
-                             query_start const& q_start,
-                             query_dest const& q_dest,
-                             IntermodalRoutingRequest const* req,
-                             std::vector<mumo_edge const*> const& edge_mapping,
-                             statistics& stats, bool const revise,
-                             std::vector<stats_category> const& mumo_stats,
-                             ppr_profiles const& profiles) {
+msg_ptr postprocess_response(
+    msg_ptr const& response_msg, query_start const& q_start,
+    query_dest const& q_dest, IntermodalRoutingRequest const* req,
+    std::vector<mumo_edge const*> const& edge_mapping, statistics& stats,
+    bool const revise, std::vector<stats_category> const& mumo_stats,
+    ppr_profiles const& profiles, bool const ppr_fallback) {
   auto const dir = req->search_dir();
   auto routing_response = motis_content(RoutingResponse, response_msg);
   auto journeys = message_to_journeys(routing_response);
@@ -262,7 +260,8 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
   }
 
   MOTIS_START_TIMING(direct_connection_timing);
-  auto const direct = get_direct_connections(q_start, q_dest, req, profiles);
+  auto const direct =
+      get_direct_connections(q_start, q_dest, req, profiles, ppr_fallback);
   stats.dominated_by_direct_connection_ =
       remove_dominated_journeys(journeys, direct);
   add_direct_connections(journeys, direct, q_start, q_dest, req);
@@ -436,7 +435,8 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   stats.routing_duration_ =
       static_cast<uint64_t>(MOTIS_TIMING_MS(routing_timing));
   return postprocess_response(resp, start, dest, req, edge_mapping, stats,
-                              revise_, mumo_stats, ppr_profiles_);
+                              revise_, mumo_stats, ppr_profiles_,
+                              ppr_fallback_);
 }
 
 }  // namespace motis::intermodal
