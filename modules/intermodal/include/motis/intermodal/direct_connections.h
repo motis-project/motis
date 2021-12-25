@@ -26,8 +26,7 @@ struct direct_connection {
 
 std::vector<direct_connection> get_direct_connections(
     query_start const& q_start, query_dest const& q_dest,
-    IntermodalRoutingRequest const* req, ppr_profiles const& profiles,
-    bool const ppr_fallback);
+    IntermodalRoutingRequest const* req, ppr_profiles const& profiles);
 
 std::size_t remove_dominated_journeys(
     std::vector<journey>& journeys,

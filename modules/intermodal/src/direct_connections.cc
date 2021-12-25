@@ -188,8 +188,7 @@ msg_ptr make_direct_osrm_request(geo::latlng const& start,
 
 std::vector<direct_connection> get_direct_connections(
     query_start const& q_start, query_dest const& q_dest,
-    IntermodalRoutingRequest const* req, ppr_profiles const& profiles,
-    bool const ppr_fallback) {
+    IntermodalRoutingRequest const* req, ppr_profiles const& profiles) {
   auto direct = std::vector<direct_connection>{};
   auto const beeline = distance(q_start.pos_, q_dest.pos_);
 
@@ -199,35 +198,18 @@ std::vector<direct_connection> get_direct_connections(
   auto const ppr_settings = get_direct_ppr_settings(req, profiles);
   if (ppr_settings.max_duration_ > 0 && beeline <= ppr_settings.max_distance_) {
     futures.emplace_back(spawn_job_void([&]() {
-      try {
-        auto const ppr_msg =
-            motis_call(make_direct_ppr_request(
-                           q_start.pos_, q_dest.pos_, ppr_settings.profile_,
-                           ppr_settings.max_duration_, req->search_dir()))
-                ->val();
-        auto const ppr_resp = motis_content(FootRoutingResponse, ppr_msg);
-        auto const routes = ppr_resp->routes();
-
-        if (routes->size() == 1) {
-          std::lock_guard guard{direct_mutex};
-          for (auto const& route : *routes->Get(0)->routes()) {
-            direct.emplace_back(mumo_type::FOOT, route->duration(),
-                                route->accessibility());
-          }
-        } else if (ppr_fallback) {
-          std::lock_guard guard{direct_mutex};
-          auto const duration =
-              (beeline / profiles.get_walking_speed(ppr_settings.profile_)) /
-              60.0F * 1.5F;
-          direct.emplace_back(mumo_type::FOOT, duration, 0);
-        }
-      } catch (std::exception const& /* module not found */) {
-        if (ppr_fallback) {
-          std::lock_guard guard{direct_mutex};
-          auto const duration =
-              (beeline / profiles.get_walking_speed(ppr_settings.profile_)) /
-              60.0F * 1.5F;
-          direct.emplace_back(mumo_type::FOOT, duration, 0);
+      auto const ppr_msg =
+          motis_call(make_direct_ppr_request(
+                         q_start.pos_, q_dest.pos_, ppr_settings.profile_,
+                         ppr_settings.max_duration_, req->search_dir()))
+              ->val();
+      auto const ppr_resp = motis_content(FootRoutingResponse, ppr_msg);
+      auto const routes = ppr_resp->routes();
+      if (routes->size() == 1) {
+        std::lock_guard guard{direct_mutex};
+        for (auto const& route : *routes->Get(0)->routes()) {
+          direct.emplace_back(mumo_type::FOOT, route->duration(),
+                              route->accessibility());
         }
       }
     }));

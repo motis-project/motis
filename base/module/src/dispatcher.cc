@@ -138,9 +138,6 @@ msg_ptr dispatcher::api_desc(int const id) const {
 }
 
 void dispatcher::handle_no_target(msg_ptr const& msg, callback const& cb) {
-  LOG(logging::warn) << "target \""
-                     << msg->get()->destination()->target()->str()
-                     << "\" not found";
   if (queue_no_target_msgs_) {
     no_target_msg_queue_.emplace(msg, cb);
   } else {

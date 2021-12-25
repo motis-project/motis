@@ -103,7 +103,7 @@ msg_ptr make_ppr_request(latlng const& pos,
 
 void ppr_edges(latlng const& pos, SearchOptions const* search_options,
                Direction direction, appender_fun const& appender,
-               ppr_profiles const& profiles, bool const ppr_fallback) {
+               ppr_profiles const& profiles) {
   auto const max_dur = search_options->duration_limit();
   if (max_dur == 0) {
     return;
@@ -114,46 +114,21 @@ void ppr_edges(latlng const& pos, SearchOptions const* search_options,
   auto const geo_resp = motis_content(LookupGeoStationResponse, geo_msg);
   auto const stations = geo_resp->stations();
 
-  auto const make_direct_edges_fallback = [&]() {
-    for (auto const& s : *stations) {
-      auto const station_pos = to_latlng(s->pos());
-      auto const duration =
-          (distance(station_pos, pos) /
-           profiles.get_walking_speed(search_options->profile()->str())) /
-          60.0F * 1.5F;
-      if (duration <= search_options->duration_limit()) {
-        appender(s->id()->str(), station_pos, duration, 0, mumo_type::FOOT, 0);
-      }
-    }
-  };
+  auto const ppr_msg =
+      motis_call(make_ppr_request(pos, stations, search_options, direction))
+          ->val();
+  auto const ppr_resp = motis_content(FootRoutingResponse, ppr_msg);
 
-  try {
-    auto const ppr_msg =
-        motis_call(make_ppr_request(pos, stations, search_options, direction))
-            ->val();
-    auto const ppr_resp = motis_content(FootRoutingResponse, ppr_msg);
-
-    auto const routes = ppr_resp->routes();
-    if (ppr_fallback && routes->size() == 0U) {
-      make_direct_edges_fallback();
-      return;
+  auto const routes = ppr_resp->routes();
+  assert(routes->size() <= stations->size());
+  for (auto i = 0U; i < routes->size(); ++i) {
+    auto const dest_routes = routes->Get(i);
+    auto const dest_id = stations->Get(i)->id()->str();
+    auto const dest_pos = to_latlng(stations->Get(i)->pos());
+    for (auto const& route : *dest_routes->routes()) {
+      appender(dest_id, dest_pos, route->duration(), route->accessibility(),
+               mumo_type::FOOT, 0);
     }
-
-    assert(routes->size() <= stations->size());
-    for (auto i = 0U; i < routes->size(); ++i) {
-      auto const dest_routes = routes->Get(i);
-      auto const dest_id = stations->Get(i)->id()->str();
-      auto const dest_pos = to_latlng(stations->Get(i)->pos());
-      for (auto const& route : *dest_routes->routes()) {
-        appender(dest_id, dest_pos, route->duration(), route->accessibility(),
-                 mumo_type::FOOT, 0);
-      }
-    }
-  } catch (std::exception const& /* probably module not found */) {
-    if (!ppr_fallback) {
-      throw;
-    }
-    make_direct_edges_fallback();
   }
 }
 
@@ -200,7 +175,7 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
                 Direction const osrm_direction, appender_fun const& appender,
                 mumo_stats_appender_fun const& mumo_stats_appender,
                 std::string const& mumo_stats_prefix,
-                ppr_profiles const& profiles, bool const ppr_fallback) {
+                ppr_profiles const& profiles) {
   for (auto const& wrapper : *modes) {
     switch (wrapper->mode_type()) {
       case Mode_Foot: {
@@ -233,8 +208,7 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
       case Mode_FootPPR: {
         auto const options =
             reinterpret_cast<FootPPR const*>(wrapper->mode())->search_options();
-        ppr_edges(pos, options, osrm_direction, appender, profiles,
-                  ppr_fallback);
+        ppr_edges(pos, options, osrm_direction, appender, profiles);
         break;
       }
 
@@ -254,17 +228,17 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
 void make_starts(IntermodalRoutingRequest const* req, latlng const& pos,
                  appender_fun const& appender,
                  mumo_stats_appender_fun const& mumo_stats_appender,
-                 ppr_profiles const& profiles, bool const ppr_fallback) {
+                 ppr_profiles const& profiles) {
   make_edges(req->start_modes(), pos, Direction_Forward, appender,
-             mumo_stats_appender, "intermodal.start.", profiles, ppr_fallback);
+             mumo_stats_appender, "intermodal.start.", profiles);
 }
 
 void make_dests(IntermodalRoutingRequest const* req, latlng const& pos,
                 appender_fun const& appender,
                 mumo_stats_appender_fun const& mumo_stats_appender,
-                ppr_profiles const& profiles, bool const ppr_fallback) {
+                ppr_profiles const& profiles) {
   make_edges(req->destination_modes(), pos, Direction_Backward, appender,
-             mumo_stats_appender, "intermodal.dest.", profiles, ppr_fallback);
+             mumo_stats_appender, "intermodal.dest.", profiles);
 }
 
 void remove_intersection(std::vector<mumo_edge>& starts,
