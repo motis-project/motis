@@ -10,7 +10,7 @@ class DateTimeService {
 
   public constructor(ts: TranslationService) {
     const now = new Date();
-    this.dateTime = new Date(2020, 9, 19, now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()).valueOf()
+    this.dateTime = new Date(2021, 11, 25, now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()).valueOf()
     this._ts = ts;
   }
 
