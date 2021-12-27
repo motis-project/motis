@@ -38,6 +38,12 @@ void motis_instance::stop_remotes() {
   remotes_.clear();
 }
 
+void motis_instance::stop_io() {
+  for (auto const& module : modules_) {
+    module->stop_io();
+  }
+}
+
 std::vector<motis::module::module*> motis_instance::modules() const {
   std::vector<motis::module::module*> m;
   for (auto& module : modules_) {
@@ -129,6 +135,15 @@ void motis_instance::init_modules(module_settings const& module_opt,
     }
   }
   publish("/init", num_threads);
+}
+
+void motis_instance::init_io(module_settings const& module_opt) {
+  for (auto const& module : modules_) {
+    if (!module_opt.is_module_active(module->prefix())) {
+      continue;
+    }
+    module->init_io(runner_.ios());
+  }
 }
 
 void motis_instance::init_remotes(

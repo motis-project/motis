@@ -12,8 +12,8 @@
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
-
 #include "motis/module/error.h"
+#include "motis/module/module.h"
 
 namespace motis::module {
 
