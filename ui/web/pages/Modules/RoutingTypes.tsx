@@ -1,13 +1,4 @@
 export interface Interval {
-
-}
-
-
-export interface SearchDirection {
-
-}
-
-
-export interface SearchType {
-    
+    begin: number,
+    end: number
 }
