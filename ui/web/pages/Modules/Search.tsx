@@ -2,42 +2,79 @@ import React, { useEffect, useState } from 'react';
 
 import { Modepicker } from './ModePicker';
 import { DatePicker } from './DatePicker';
-import { IntermodalRoutingRequest } from './IntermodalRoutingRequestTypes';
+import { IntermodalRoutingRequest, IntermodalPretripStartInfo, PretripStartInfo } from './IntermodalRoutingTypes';
+import { Position, Station } from './ConnectionTypes';
+import { SearchOptions } from './PPRTypes';
+import { Interval } from './RoutingTypes';
 
 
 interface Destination {
-    type: string,
-    target: string
+    name: string,
+    id: string
 }
 
 
-interface intermodalRoutingRequest{
-    destination: Destination,
-    content_type: string,
-    content: IntermodalRoutingRequest,
+interface Mode {
+    mode_type: string,
+    mode: { search_options: SearchOptions}
 }
 
 
-const getRoutingOptions = (req : intermodalRoutingRequest) => {
+interface Start {
+    station: Station,
+    min_connection_count: number,
+    interval: Interval,
+    extend_interval_later: boolean,
+    extend_interval_earlier: boolean
+}
+
+
+const getRoutingOptions = (startType: string, startModes: [Mode], start: Start, searchType: string, searchDirection: string, destinationType: string, destinationModes: [Mode], destination: Destination ) => {
     return {
         method: 'POST',
-        headers: '',
-        body: req
-        // Was ware hier nochmal die Attribute? Warum ist Motis down? >:V
+        headers: [],
+        body: JSON.stringify({  destination: {type: "Module", target: "/intermodal"}, 
+                                content_type: 'IntermodalRoutingRequest',
+                                content: {startType: startType, startModes: startModes, start: start, searchType: searchType, searchDirection: searchDirection, destinationType: destinationType, destinationModes: destinationModes, destination: destination} })
     }
 }
 
 
 export const Search: React.FC = () => {
 
-    const [searchQuery, setSearchQuery] = useState<intermodalRoutingRequest>();
-
+    const [searchQuery, setSearchQuery] = useState<boolean>(true);
     
+    // StartType
+    const [startType, setStartType] = useState<string>('PreTripStart');
+    
+    // StartModes
+    const [startModes, setStartModes] = useState<[Mode]>([{mode_type: 'FootPPR', mode: { search_options: {profile: 'default', duration_limit: 900 } } } ]);
+    
+    // Start
+    const [start, setStart] = useState<Start>({ station: { name: 'Darmstadt Hauptbahnhof', id: 'delfi_de:06411:4734:64:63'}, min_connection_count: 5, interval: { begin: 1640430180, end: 164043738 }, extend_interval_later: true, extend_interval_earlier: true });
+    
+    // SearchType
+    const [searchType, setSearchType] = useState<string>('Accessibility');
+    
+    // SearchDirection
+    const [searchDirection, setSearchDirection] = useState<string>('Forward');
+    
+    // DestinationType
+    const [destinationType, setDestinationType] = useState<string>('InputStation');
+    
+    // Destination_modes tracks the ModePicker for the Destination
+    const [destinationModes, setDestinationModes] = useState<[Mode]>([{mode_type: 'FootPPR', mode: { search_options: {profile: 'default', duration_limit: 900 } } } ]);
+    
+    // Destination holds the Value of 'to location' input field
+    const [destination, setDestination] = useState<Destination>({name: 'Frankfurt (Main) Westbahnhof', id: 'delfi_D_de:06412:1204' });
+
     
     useEffect(() => {
-        let requestURL = 'https://europe.motis-project.de'
+        let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest'
 
-        //fetch(requestURL, getRoutingOptions(searchQuery))
+        fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination))
+            .then(res => res.json())
+            .then()
 
     }, [searchQuery]);
     
