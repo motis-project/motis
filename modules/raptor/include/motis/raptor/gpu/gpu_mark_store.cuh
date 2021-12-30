@@ -6,6 +6,8 @@ namespace motis::raptor {
 
 __device__ void mark(uint32_t* store, unsigned int const idx);
 
+__device__ void unmark(uint32_t* store, unsigned int const idx);
+
 __device__ bool marked(uint32_t const* const store, unsigned int idx);
 
 __device__ void reset_store(unsigned int* store, int const store_size);

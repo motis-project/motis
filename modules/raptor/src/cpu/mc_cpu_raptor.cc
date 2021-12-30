@@ -8,6 +8,8 @@
 #include "motis/raptor/raptor_statistics.h"
 #include "motis/raptor/raptor_timetable.h"
 
+#include "motis/core/common/timing.h"
+
 namespace motis::raptor {
 
 template <typename CriteriaConfig>
@@ -332,6 +334,31 @@ inline void update_route_for_trait_offset_forward_project(
 }
 
 template <typename CriteriaConfig>
+inline void clear_dominated_arrivals(stop_id const stop_count,
+                                     time* const current_round,
+                                     earliest_arrivals& ea,
+                                     cpu_mark_store& station_marks) {
+  auto const trait_size = CriteriaConfig::trait_size();
+  for (stop_id s_id = 0; s_id < stop_count; ++s_id) {
+    time min_arrival_at_stop = current_round[trait_size * s_id];
+    for (trait_id t_offset = 1; t_offset < trait_size; ++t_offset) {
+      // if the value is larger or equal than the minimum we can prune it
+      //   because it is dominated by the minimum on the earliest trait offset
+      if (min_arrival_at_stop <= current_round[trait_size * s_id + t_offset]) {
+        current_round[trait_size * s_id + t_offset] = invalid<time>;
+        station_marks.unmark(trait_size * s_id + t_offset);
+        if(min_arrival_at_stop < ea[trait_size * s_id + t_offset])
+          ea[trait_size * s_id + t_offset] = min_arrival_at_stop;
+      } else {
+        // a higher t_offset has a better value; remember the larger value
+        //  to again check higher t_offsets against it
+        min_arrival_at_stop = current_round[trait_size * s_id + t_offset];
+      }
+    }
+  }
+}
+
+template <typename CriteriaConfig>
 inline void update_footpaths(raptor_timetable const& tt, time* current_round,
                              earliest_arrivals const& current_round_arr_const,
                              earliest_arrivals& ea,
@@ -389,7 +416,7 @@ inline void update_footpaths(raptor_timetable const& tt, time* current_round,
 }
 
 template <typename CriteriaConfig>
-void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics&) {
+void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics& stats) {
   auto const& tt = query.tt_;
   auto& result = *query.result_;
   auto const target_s_id = query.target_;
@@ -428,6 +455,7 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics&) {
 
     station_marks.reset();
 
+    MOTIS_START_TIMING(route_update);
     for (uint32_t t_offset = 0; t_offset < trait_size; ++t_offset) {
       for (route_id r_id = 0; r_id < tt.route_count(); ++r_id) {
         if (!route_marks.marked(r_id * trait_size + t_offset)) {
@@ -447,15 +475,26 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics&) {
         }
       }
     }
+    auto const route_time = MOTIS_GET_TIMING_US(route_update);
+    stats.cpu_time_routes_ += route_time;
 
     route_marks.reset();
 
+    MOTIS_START_TIMING(prune_arrivals);
+    clear_dominated_arrivals<CriteriaConfig>(tt.stop_count(), result[round_k],
+                                             ea, station_marks);
+    auto const prune_time = MOTIS_GET_TIMING_US(prune_arrivals);
+    stats.cpu_time_clear_arrivals_ += prune_time;
+
+    MOTIS_START_TIMING(footpath_update);
     std::memcpy(current_round_arrivals.data(), result[round_k],
                 current_round_arrivals.size() * sizeof(motis::time));
 
     update_footpaths<CriteriaConfig>(tt, result[round_k],
                                      current_round_arrivals, ea, station_marks,
                                      target_s_id);
+    auto const fp_time = MOTIS_GET_TIMING_US(footpath_update);
+    stats.cpu_time_footpath_ += fp_time;
   }
 }
 

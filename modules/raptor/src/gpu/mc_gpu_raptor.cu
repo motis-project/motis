@@ -738,6 +738,44 @@ __device__ void mc_update_footpaths_dev_scratch(
 }
 
 template <typename CriteriaConfig>
+__device__ void mc_clear_dominated_arrivals(stop_id const stop_count,
+                                            time* const arrivals,
+                                            time* const ea,
+                                            uint32_t* station_marks) {
+  auto const global_stride = get_global_stride();
+
+  auto s_id = get_global_thread_id();
+  auto trait_size = CriteriaConfig::trait_size();
+  for (; s_id < stop_count; s_id += global_stride) {
+    time min_arrival_at_stop = arrivals[trait_size * s_id];
+//    auto unmarked = false;
+    for (trait_id t_offset = 1; t_offset < trait_size; ++t_offset) {
+      // if the value is larger or equal than the minimum we can prune it
+      //   because it is dominated by the minimum on the earliest trait offset
+      auto const arr_time = arrivals[trait_size * s_id + t_offset];
+      if (valid(arr_time) && min_arrival_at_stop <= arr_time) {
+//        if(!unmarked) {
+//          unmarked = true;
+//          printf("unmarking s_id %i;\t", s_id);
+//        }
+//        printf("%i;\t", t_offset);
+
+        arrivals[trait_size * s_id + t_offset] = invalid<time>;
+        unmark(station_marks, trait_size * s_id + t_offset);
+        if (min_arrival_at_stop < ea[trait_size * s_id + t_offset])
+          ea[trait_size * s_id + t_offset] = min_arrival_at_stop;
+      } else if(arr_time < min_arrival_at_stop) {
+        // a higher t_offset has a better value; remember the larger value
+        //  to again check higher t_offsets against it
+        min_arrival_at_stop = arrivals[trait_size * s_id + t_offset];
+      }
+    }
+
+//    if (unmarked) printf("\n");
+  }
+}
+
+template <typename CriteriaConfig>
 __device__ void mc_update_routes_dev(time const* const prev_arrivals,
                                      time* const arrivals,
                                      time* const earliest_arrivals,
@@ -863,13 +901,6 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
         trait_size);
     this_grid().sync();
 
-    //    if(t_id == 0 && round_k == 2) {
-    //      printf("\nRoute Marks:\n");
-    //      print_store(device_mem.route_marks_, tt.route_count_ * trait_size,
-    //                  trait_size);
-    //    }
-    //
-    //    this_grid().sync();
 
     auto const station_store_size = ((tt.stop_count_ * trait_size) / 32) + 1;
     reset_store(device_mem.station_marks_, station_store_size);
@@ -887,6 +918,18 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
         device_mem.station_marks_, device_mem.route_marks_, query.target_, tt);
 
     this_grid().sync();
+
+    mc_clear_dominated_arrivals<CriteriaConfig>(
+        device_mem.stop_count_, device_mem.result_[round_k],
+        device_mem.earliest_arrivals_, device_mem.station_marks_);
+    this_grid().sync();
+
+//    if(t_id == 0 && round_k == 2) {
+//      printf("\nRoute Marks after:\n");
+//      print_store(device_mem.station_marks_, tt.stop_count_ * trait_size,
+//                  trait_size);
+//    }
+//    this_grid().sync();
 
     mc_update_footpaths_dev<CriteriaConfig>(device_mem, round_k, query.target_,
                                             tt);
@@ -921,7 +964,8 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
 
     //    if(t_id == 0 && round_k == 1) {
     //      printf("Station Marks:\n");
-    //      print_store(device_mem.station_marks_, tt.stop_count_ * trait_size,
+    //      print_store(device_mem.station_marks_, tt.stop_count_ *
+    //      trait_size,
     //                  trait_size);
     //    }
     //
