@@ -64,13 +64,14 @@ void print(schedule const& sched, raptor_meta_info const& meta_info,
       // there is a Footpath in between
       std::cout << "     From:\ts_id: " << std::setw(6)
                 << +meta_info.eva_to_raptor_id_.at(prev_arr_eva)
-                << ";\teva: " << prev_arr_eva << ";\tDep: " << std::setw(7)
+                << ";\teva: " << std::setw(15) << prev_arr_eva
+                << ";\tDep: " << std::setw(7)
                 << +unix_to_motistime(sched.schedule_begin_, prev_arr_time)
                 << " (" << prev_arr_time << ");\n"
                 << "     Using: Footpath\n"
                 << "     To:\ts_id: " << std::setw(6)
                 << +meta_info.eva_to_raptor_id_.at(j_from_stop.eva_no_)
-                << ";\teva: " << j_from_stop.eva_no_
+                << ";\teva: " << std::setw(15) << j_from_stop.eva_no_
                 << ";\tArr: " << std::setw(7)
                 << +unix_to_motistime(sched.schedule_begin_,
                                       j_from_stop.arrival_.timestamp_)
@@ -80,7 +81,8 @@ void print(schedule const& sched, raptor_meta_info const& meta_info,
     std::cout << std::setw(3) << idx << ": "
               << "From:\ts_id: " << std::setw(6)
               << +meta_info.eva_to_raptor_id_.at(j_from_stop.eva_no_)
-              << ";\teva: " << j_from_stop.eva_no_ << ";\tDep: " << std::setw(7)
+              << ";\teva: " << std::setw(15) << j_from_stop.eva_no_
+              << ";\tDep: " << std::setw(7)
               << +unix_to_motistime(sched.schedule_begin_,
                                     j_from_stop.departure_.timestamp_)
               << " (" << j_from_stop.departure_.timestamp_ << ");\n"
@@ -88,7 +90,8 @@ void print(schedule const& sched, raptor_meta_info const& meta_info,
               << meta_info.route_mapping_.str(s_trip_dbg) << ";\n"
               << "     To:\ts_id: " << std::setw(6)
               << +meta_info.eva_to_raptor_id_.at(j_to_stop.eva_no_)
-              << ";\teva: " << j_to_stop.eva_no_ << ";\tArr: " << std::setw(7)
+              << ";\teva: " << std::setw(15) << j_to_stop.eva_no_
+              << ";\tArr: " << std::setw(7)
               << +unix_to_motistime(sched.schedule_begin_,
                                     j_to_stop.arrival_.timestamp_)
               << " (" << j_to_stop.arrival_.timestamp_ << ");\n\n";
