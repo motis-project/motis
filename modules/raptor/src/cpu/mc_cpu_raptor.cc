@@ -301,11 +301,11 @@ inline void update_route_for_trait_offset_forward_project(
         }
 
         if (CriteriaConfig::is_trait_satisfied(aggregate, trait_offset)) {
-          //either we wrote a time or already know a better time
+          // either we wrote a time or already know a better time
           ++consecutive_writes;
-        }else {
-          //we didn't satisfy; therefor at least this stop can still improve
-          // which is after stops which potentially received a value
+        } else {
+          // we didn't satisfy; therefor at least this stop can still improve
+          //  which is after stops which potentially received a value
           consecutive_writes = 0;
         }
 

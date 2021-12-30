@@ -82,7 +82,7 @@ struct trait_time_slotted_occupancy {
   template <typename TraitsData>
   _mark_cuda_rel_ inline static bool is_trait_satisfied(
       TraitsData const& data, dimension_id const dimension_idx) {
-    return dimension_idx == data.occ_time_slot_;
+    return dimension_idx == get_write_to_dimension_id(data);
   }
 
   //****************************************************************************
