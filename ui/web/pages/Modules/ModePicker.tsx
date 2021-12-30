@@ -1,12 +1,26 @@
 import React from 'react';
 
-export const Modepicker: React.FC = () => {
+import { SearchOptions } from './PPRTypes';
+
+export interface Mode {
+    mode_type: string,
+    mode: { search_options: SearchOptions}
+}
+
+
+const switchToMode = (mode: string, old_mode: Mode, setModes: React.Dispatch<React.SetStateAction<[Mode]>>) => {
+
+    setModes([{mode_type: mode, mode: old_mode.mode}])
+}
+
+
+export const Modepicker: React.FC<{'modes': [Mode], 'setModes': React.Dispatch<React.SetStateAction<[Mode]>>}> = (props) => {
     return (
         <div className='mode-picker'>
             <div className='mode-picker-btn'>
-                            <div className='mode enabled'><i className='icon'>directions_walk</i></div>
-                            <div className='mode'><i className='icon'>directions_bike</i></div>
-                            <div className='mode'><i className='icon'>directions_car</i></div>
+                            <div className={props.modes[0].mode_type == 'FootPPR' ? 'mode enabled' : 'mode'} onClick={() => switchToMode('FootPPR', props.modes[0], props.setModes)}><i className='icon'>directions_walk</i></div>
+                            <div className={props.modes[0].mode_type == 'BikePPR' ? 'mode enabled' : 'mode'} onClick={() => switchToMode('BikePPR', props.modes[0], props.setModes)}><i className='icon'>directions_bike</i></div>
+                            <div className={props.modes[0].mode_type == 'CarPPR' ? 'mode enabled' : 'mode'} onClick={() => switchToMode('CarPPR', props.modes[0], props.setModes)}><i className='icon'>directions_car</i></div>
                         </div>
                         <div className='mode-picker-editor'>
                             <div className='header'>

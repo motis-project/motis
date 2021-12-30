@@ -4,19 +4,13 @@ import { Modepicker } from './ModePicker';
 import { DatePicker } from './DatePicker';
 import { IntermodalRoutingRequest, IntermodalPretripStartInfo, PretripStartInfo } from './IntermodalRoutingTypes';
 import { Position, Station } from './ConnectionTypes';
-import { SearchOptions } from './PPRTypes';
+import { Mode } from './ModePicker';
 import { Interval } from './RoutingTypes';
 
 
 interface Destination {
     name: string,
     id: string
-}
-
-
-interface Mode {
-    mode_type: string,
-    mode: { search_options: SearchOptions}
 }
 
 
@@ -51,7 +45,7 @@ export const Search: React.FC = () => {
     const [startModes, setStartModes] = useState<[Mode]>([{mode_type: 'FootPPR', mode: { search_options: {profile: 'default', duration_limit: 900 } } } ]);
     
     // Start
-    const [start, setStart] = useState<Start>({ station: { name: 'Darmstadt Hauptbahnhof', id: 'delfi_de:06411:4734:64:63'}, min_connection_count: 5, interval: { begin: 1640430180, end: 164043738 }, extend_interval_later: true, extend_interval_earlier: true });
+    const [start, setStart] = useState<string>('Darmstadt Hauptbahnhof')//<Start>({ station: { name: 'Darmstadt Hauptbahnhof', id: 'delfi_de:06411:4734:64:63'}, min_connection_count: 5, interval: { begin: 1640430180, end: 164043738 }, extend_interval_later: true, extend_interval_earlier: true });
     
     // SearchType
     const [searchType, setSearchType] = useState<string>('Accessibility');
@@ -66,15 +60,16 @@ export const Search: React.FC = () => {
     const [destinationModes, setDestinationModes] = useState<[Mode]>([{mode_type: 'FootPPR', mode: { search_options: {profile: 'default', duration_limit: 900 } } } ]);
     
     // Destination holds the Value of 'to location' input field
-    const [destination, setDestination] = useState<Destination>({name: 'Frankfurt (Main) Westbahnhof', id: 'delfi_D_de:06412:1204' });
+    const [destination, setDestination] = useState<string>("Frankfurt (Main) Westbahnhof")//<Destination>({name: 'Frankfurt (Main) Westbahnhof', id: 'delfi_D_de:06412:1204' });
 
     
     useEffect(() => {
         let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest'
+        //console.log('Fire searchQuery')
 
-        fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination))
-            .then(res => res.json())
-            .then()
+        //fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination))
+        //    .then(res => res.json())
+        //    .then()
 
     }, [searchQuery]);
     
@@ -91,16 +86,33 @@ export const Search: React.FC = () => {
                                 <div className='gb-input-icon'>
                                     <i className='icon'>place</i>
                                     </div>
-                            <input className='gb-input' tabIndex={1} /></div>
+                            <input  className='gb-input' tabIndex={1} value={start} 
+                                    onChange={e => {
+                                        //e.preventDefault();
+                                        //console.log("Start changed")
+                                        setStart(e.currentTarget.value)
+                                    } }
+                                    onKeyPress={e => {
+                                        if (e.key == "Enter") {
+                                            e.preventDefault();
+                                            console.log("Pressed Enter in Start")
+                                            setSearchQuery(!searchQuery)
+                                        }
+                                    } } /></div>
                         </form>
                         <div className='paper hide'>
                             <ul className='proposals'></ul>
                         </div>
                     </div>
-                    <Modepicker />
+                    <Modepicker modes={startModes} setModes={setStartModes}/>
                     <div className='swap-locations-btn'>
                         <label className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'>
-                            <input type='checkbox' />
+                            <input  type='checkbox' 
+                                    onClick={() => {
+                                        let tmp = destination;
+                                        setDestination(start);
+                                        setStart(tmp);
+                            }}/>
                             <i className='icon'>swap_vert</i>
                         </label>
                     </div>
@@ -116,14 +128,26 @@ export const Search: React.FC = () => {
                             <div className='label'>Ziel</div>
                             <div className='gb-input-group'>
                                 <div className='gb-input-icon'><i className='icon'>place</i></div>
-                                <input className='gb-input' tabIndex={2} />
+                                <input  className='gb-input' tabIndex={2} value={destination}
+                                        onChange={e => {
+                                            //e.preventDefault();
+                                            //console.log("Start changed")
+                                            setDestination(e.currentTarget.value)
+                                        } }
+                                        onKeyPress={e => {
+                                            if (e.key == "Enter") {
+                                                e.preventDefault();
+                                                console.log("Pressed Enter in Destination")
+                                                setSearchQuery(!searchQuery)
+                                            }
+                                        } }/>
                             </div>
                         </div>
                         <div className='paper hide'>
                             <ul className='proposals'></ul>
                         </div>
                     </div>
-                    <Modepicker />
+                    <Modepicker modes={destinationModes} setModes={setDestinationModes}/>
                 </div> 
                 <div className='pure-u-1 pure-u-sm-9-24'>
                     <div>
