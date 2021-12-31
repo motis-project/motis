@@ -87,16 +87,13 @@ struct traits<FirstTrait, RestTraits...> {
   // helper to aggregate values while progressing through the route stop by stop
   template <typename Timetable>
   _mark_cuda_rel_ inline static void update_aggregate(
-      TraitsData& aggregate_dt, Timetable const& tt,
-      time const* const previous_arrivals, stop_offset const s_offset,
-      stop_times_index const current_sti, trait_id const total_trait_size) {
+      TraitsData& aggregate_dt, Timetable const& tt, stop_offset const s_offset,
+      stop_times_index const current_sti) {
 
-    FirstTrait::update_aggregate(aggregate_dt, tt, previous_arrivals, s_offset,
-                                 current_sti, total_trait_size);
+    FirstTrait::update_aggregate(aggregate_dt, tt, s_offset, current_sti);
 
-    traits<RestTraits...>::update_aggregate(aggregate_dt, tt, previous_arrivals,
-                                            s_offset, current_sti,
-                                            total_trait_size);
+    traits<RestTraits...>::update_aggregate(aggregate_dt, tt, s_offset,
+                                            current_sti);
   }
 
   // reset the aggregate everytime the departure station changes
@@ -119,6 +116,14 @@ struct traits<FirstTrait, RestTraits...> {
                                               is_departure_stop, write_update);
     traits<RestTraits...>::propagate_and_merge_if_needed(
         mask, aggregate, is_departure_stop, write_update);
+  }
+
+  template <typename Timetable>
+  __device__ inline static void calculate_aggregate(
+      TraitsData& aggregate, Timetable const& tt,
+      stop_times_index const dep_sti, stop_times_index const arr_sti) {
+    FirstTrait::calculate_aggregate(aggregate, tt, dep_sti, arr_sti);
+    traits<RestTraits...>::calculate_aggregate(aggregate, tt, dep_sti, arr_sti);
   }
 
   __device__ inline static void carry_to_next_stage(unsigned const mask,
@@ -224,10 +229,8 @@ struct traits<> {
 
   template <typename Data, typename Timetable>
   _mark_cuda_rel_ inline static void update_aggregate(Data&, Timetable const&,
-                                                      time const* const,
                                                       stop_offset const,
-                                                      stop_times_index const,
-                                                      trait_id const) {}
+                                                      stop_times_index const) {}
 
   template <typename Data>
   _mark_cuda_rel_ inline static void reset_aggregate(trait_id const, Data&,
@@ -238,6 +241,11 @@ struct traits<> {
   __device__ inline static void propagate_and_merge_if_needed(unsigned const,
                                                               Data&, bool const,
                                                               bool const) {}
+
+  template <typename Data, typename Timetable>
+  __device__ inline static void calculate_aggregate(Data&, Timetable const&,
+                                                    stop_times_index const,
+                                                    stop_times_index const) {}
 
   template <typename Data>
   __device__ inline static void carry_to_next_stage(unsigned const, Data&) {}

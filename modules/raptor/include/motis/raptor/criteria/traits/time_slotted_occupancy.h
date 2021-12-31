@@ -102,8 +102,8 @@ struct trait_time_slotted_occupancy {
 
   template <typename TraitsData, typename Timetable>
   _mark_cuda_rel_ inline static void update_aggregate(
-      TraitsData& aggregate_dt, Timetable const& tt, time const* const,
-      stop_offset const, stop_times_index const current_sti, trait_id const) {
+      TraitsData& aggregate_dt, Timetable const& tt, stop_offset const,
+      stop_times_index const current_sti) {
 
     auto const stop_occupancy = _read_occupancy(tt, current_sti);
     auto const segment_duration = _read_segment_duration(tt, current_sti);
@@ -137,6 +137,20 @@ struct trait_time_slotted_occupancy {
       aggregate.summed_occ_time_ = received + aggregate._segment_prop_occ_time_;
       aggregate.occ_time_slot_ = aggregate.summed_occ_time_ / slot_divisor;
     }
+  }
+
+  template <typename TraitsData>
+  __device__ inline static void calculate_aggregate(
+      TraitsData& aggregate, device_gpu_timetable const& tt,
+      stop_times_index const dep_sti, stop_times_index const arr_sti) {
+
+    for (stop_times_index current = dep_sti + 1; current <= arr_sti;
+         ++current) {
+      auto const duration = _read_segment_duration(tt, current);
+      auto const occupancy = _read_occupancy(tt, current);
+      aggregate.summed_occ_time_ += (duration * occupancy);
+    }
+    aggregate.occ_time_slot_ = aggregate.summed_occ_time_ / slot_divisor;
   }
 
   template <typename TraitsData>

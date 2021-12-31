@@ -524,8 +524,8 @@ struct reconstructor {
       for (auto s_offset = stop_offset + 1; s_offset <= max_offset;
            ++s_offset) {
         auto const current_sti = first_stop_times_index + s_offset;
-        CriteriaConfig::update_traits_aggregate(
-            aggregate, timetable_, result[result_idx], s_offset, current_sti);
+        CriteriaConfig::update_traits_aggregate(aggregate, timetable_, s_offset,
+                                                current_sti);
       }
 
       auto const rsi = r.index_to_route_stops_ + stop_offset;

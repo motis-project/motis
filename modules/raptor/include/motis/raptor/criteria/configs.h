@@ -9,15 +9,23 @@
 
 namespace motis::raptor {
 
-using Default = criteria_config<traits<>>;
-using MaxOccupancy = criteria_config<traits<trait_max_occupancy>>;
-using TimeSlottedOccupancy = criteria_config<traits<trait_time_slotted_occupancy>>;
-using MinTransferTimes = criteria_config<traits<trait_min_transfer_times>>;
-
+using Default = criteria_config<traits<>, CalcMethod::Flat>;
+using MaxOccupancy =
+    criteria_config<traits<trait_max_occupancy>, CalcMethod::Flat>;
+using MaxOccupancyShfl =
+    criteria_config<traits<trait_max_occupancy>, CalcMethod::Shfl>;
+using TimeSlottedOccupancy =
+    criteria_config<traits<trait_time_slotted_occupancy>, CalcMethod::Flat>;
+using TimeSlottedOccupancyShfl =
+    criteria_config<traits<trait_time_slotted_occupancy>, CalcMethod::Shfl>;
+using MinTransferTimes =
+    criteria_config<traits<trait_min_transfer_times>, CalcMethod::Flat>;
 
 #define RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(DO, ACCESSOR) \
   DO(MaxOccupancy, ACCESSOR)                             \
+  DO(MaxOccupancyShfl, ACCESSOR)                         \
   DO(TimeSlottedOccupancy, ACCESSOR)                     \
+  DO(TimeSlottedOccupancyShfl, ACCESSOR)                 \
   DO(MinTransferTimes, ACCESSOR)
 
 enum class raptor_criteria_config {

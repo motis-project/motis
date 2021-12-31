@@ -104,7 +104,7 @@ get_next_feasible_trip(raptor_timetable const& tt,
     new_dep_offset = arr_offset - 1;
     stop_times_index const arr_sti =
         route.index_to_stop_times_ + (trip_id * route.stop_count_) + arr_offset;
-    CriteriaConfig::update_traits_aggregate(trip_data, tt, prev_arrivals,
+    CriteriaConfig::update_traits_aggregate(trip_data, tt,
                                             arr_offset, arr_sti);
 
     do {
@@ -122,7 +122,7 @@ get_next_feasible_trip(raptor_timetable const& tt,
         return std::make_tuple(trip_id, std::move(trip_data));
       }
 
-      CriteriaConfig::update_traits_aggregate(trip_data, tt, prev_arrivals,
+      CriteriaConfig::update_traits_aggregate(trip_data, tt,
                                               new_dep_offset, dep_sti);
       --new_dep_offset;
 
@@ -163,7 +163,7 @@ void update_route_for_trait_offset(
                                  r_stop_offset;
 
     CriteriaConfig::update_traits_aggregate(
-        criteria_data, tt, prev_arrivals, r_stop_offset, current_stop_time_idx);
+        criteria_data, tt, r_stop_offset, current_stop_time_idx);
 
     if (CriteriaConfig::is_rescan_from_stop_needed(criteria_data,
                                                    trait_offset)) {
@@ -282,7 +282,7 @@ inline void update_route_for_trait_offset_forward_project(
       //  before checking if the station can serve as departure station
       //  otherwise potentially improved arrival times are not written
       if (valid(departure_offset)) {
-        CriteriaConfig::update_traits_aggregate(aggregate, tt, previous_round,
+        CriteriaConfig::update_traits_aggregate(aggregate, tt,
                                                 r_stop_offset, current_sti);
 
         auto const write_off = CriteriaConfig::get_write_to_trait_id(aggregate);

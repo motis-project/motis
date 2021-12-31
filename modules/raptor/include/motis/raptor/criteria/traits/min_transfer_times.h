@@ -67,28 +67,9 @@ struct trait_min_transfer_times {
 
   template <typename TraitsData, typename Timetable>
   _mark_cuda_rel_ inline static void update_aggregate(
-      TraitsData& td, Timetable const& tt, time const* const previous_arrivals,
-      stop_offset const current_stop, stop_times_index const current_sti,
-      trait_id const total_trait_size) {
-    // this method is called for all stops behind a departure station
-    // every departure station resets the aggregate
-    // therefore, we can do a look back and
-    if (!valid(td.min_transfer_time_idx_)) {
-      auto const departure_sti = current_sti - 1;
-      auto const departure_time = _get_departure_time(tt, departure_sti);
-
-      auto const& route = tt.routes_[td.route_id_];
-      auto const dep_s_id =
-          tt.route_stops_[route.index_to_route_stops_ + current_stop - 1];
-
-      // skip the arrival index back to the departure station
-      auto const departure_arr_idx =
-          dep_s_id * total_trait_size + td.departure_trait_id_;
-      auto const arrival_at_dep = previous_arrivals[departure_arr_idx];
-
-      td.min_transfer_time_idx_ = (departure_time - arrival_at_dep) / 5;
-      if (td.min_transfer_time_idx_ > 4) td.min_transfer_time_idx_ = 4;
-    }
+      TraitsData& td, Timetable const& tt, stop_offset const current_stop,
+      stop_times_index const current_sti) {
+    // intentionally empty as updates per stop are not needed for this criteria
   }
 
 #if defined(MOTIS_CUDA)
@@ -97,6 +78,13 @@ struct trait_min_transfer_times {
   __device__ inline static void propagate_and_merge_if_needed(
       TraitsData& aggregate, unsigned const mask, bool const is_departure_stop,
       bool const write_update) {
+    // intentionally empty as updates per stop are not needed for this criteria
+  }
+
+  template <typename TraitsData>
+  __device__ inline static void calculate_aggregate(
+      TraitsData& aggregate, device_gpu_timetable const& tt,
+      stop_times_index const dep_sti, stop_times_index const arr_sti) {
     // intentionally empty as updates per stop are not needed for this criteria
   }
 

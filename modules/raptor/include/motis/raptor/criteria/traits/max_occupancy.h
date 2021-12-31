@@ -61,8 +61,8 @@ struct trait_max_occupancy {
 
   template <typename TraitsData, typename Timetable>
   _mark_cuda_rel_ inline static void update_aggregate(
-      TraitsData& aggregate_dt, Timetable const& tt, time const* const,
-      stop_offset const, stop_times_index const current_sti, trait_id const) {
+      TraitsData& aggregate_dt, Timetable const& tt, stop_offset const,
+      stop_times_index const current_sti) {
 
     auto const stop_occupancy = _read_occupancy(tt, current_sti);
     aggregate_dt.max_occupancy_ =
@@ -78,6 +78,19 @@ struct trait_max_occupancy {
     auto const received = __shfl_up_sync(mask, prop_val, 1);
     if (write_update && aggregate.max_occupancy_ < received)
       aggregate.max_occupancy_ = received;
+  }
+
+  template <typename TraitsData>
+  __device__ inline static void calculate_aggregate(
+      TraitsData& aggregate, device_gpu_timetable const& tt,
+      stop_times_index const dep_sti, stop_times_index const arr_sti) {
+
+    for (stop_times_index current = dep_sti + 1; current <= arr_sti;
+         ++current) {
+      auto const occupancy = _read_occupancy(tt, current);
+      if (occupancy > aggregate.max_occupancy_)
+        aggregate.max_occupancy_ = occupancy;
+    }
   }
 
   template <typename TraitsData>

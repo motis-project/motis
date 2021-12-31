@@ -11,9 +11,15 @@ struct journey;
 
 namespace motis::raptor {
 
-template <typename Traits>
+enum class CalcMethod {
+  Shfl,
+  Flat
+};
+
+template <typename Traits, CalcMethod calc>
 struct criteria_config {
   using CriteriaData = typename Traits::TraitsData;
+  static constexpr auto UsesShflCalc = calc == CalcMethod::Shfl;
 
   _mark_cuda_rel_ inline static trait_id trait_size() { return Traits::size(); }
 
@@ -47,10 +53,8 @@ struct criteria_config {
   template <typename Timetable>
   _mark_cuda_rel_ inline static void update_traits_aggregate(
       CriteriaData& aggregate_dt, Timetable const& tt,
-      time const* const prev_arrivals, stop_offset const s_offset,
-      stop_times_index const current_sti) {
-    Traits::update_aggregate(aggregate_dt, tt, prev_arrivals, s_offset,
-                             current_sti, trait_size());
+      stop_offset const s_offset, stop_times_index const current_sti) {
+    Traits::update_aggregate(aggregate_dt, tt, s_offset, current_sti);
   }
 
   _mark_cuda_rel_ inline static void reset_traits_aggregate(
@@ -69,6 +73,13 @@ struct criteria_config {
       bool const is_departure_stop, bool const write_value) {
     Traits::propagate_and_merge_if_needed(mask, aggregate, is_departure_stop,
                                           write_value);
+  }
+
+  template <typename Timetable>
+  __device__ inline static void calculate_traits_aggregate(
+      CriteriaData& aggregate, Timetable const& tt,
+      stop_times_index const dep_sti, stop_times_index const arr_sti) {
+    Traits::calculate_aggregate(aggregate, tt, dep_sti, arr_sti);
   }
 
   __device__ inline static void carry_to_next_stage(unsigned const mask,
