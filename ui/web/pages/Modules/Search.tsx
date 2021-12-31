@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 
 import { Modepicker } from './ModePicker';
 import { DatePicker } from './DatePicker';
-import { IntermodalRoutingRequest, IntermodalPretripStartInfo, PretripStartInfo } from './IntermodalRoutingTypes';
-import { Position, Station } from './ConnectionTypes';
+import { IntermodalRoutingRequest, IntermodalRoutingResponse, IntermodalPretripStartInfo, PretripStartInfo } from './IntermodalRoutingTypes';
+import { Connection, Station } from './ConnectionTypes';
 import { Mode } from './ModePicker';
 import { Interval } from './RoutingTypes';
 
@@ -23,26 +23,31 @@ interface Start {
 }
 
 
-const getRoutingOptions = (startType: string, startModes: [Mode], start: Start, searchType: string, searchDirection: string, destinationType: string, destinationModes: [Mode], destination: Destination ) => {
+const getRoutingOptions = (startType: string, startModes: Mode[], start: string, searchType: string, searchDirection: string, destinationType: string, destinationModes: Mode[], destination: string ) => {
     return {
         method: 'POST',
-        headers: [],
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({  destination: {type: "Module", target: "/intermodal"}, 
                                 content_type: 'IntermodalRoutingRequest',
-                                content: {startType: startType, startModes: startModes, start: start, searchType: searchType, searchDirection: searchDirection, destinationType: destinationType, destinationModes: destinationModes, destination: destination} })
+                                content: {start_type: startType, start_modes: startModes, start: { station: { name: start, id: 'delfi_de:06411:4734:64:63'}, min_connection_count: 5, interval: { begin: 1640951760, end: 1640958960 }, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: {name: destination, id: 'delfi_de:06412:1204:3:3' }} })
     }
 }
 
 
-export const Search: React.FC = () => {
+const getDefaultMode = () => {
+    return {mode_type: '', mode: { search_options: { profile: 'default', duration_limit: 30 } } }
+}
+
+
+export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>}> = (props) => {
 
     const [searchQuery, setSearchQuery] = useState<boolean>(true);
     
     // StartType
-    const [startType, setStartType] = useState<string>('PreTripStart');
+    const [startType, setStartType] = useState<string>('PretripStart');
     
     // StartModes
-    const [startModes, setStartModes] = useState<[Mode]>([{mode_type: 'FootPPR', mode: { search_options: {profile: 'default', duration_limit: 900 } } } ]);
+    const [startModes, setStartModes] = useState<Mode[]>([]);
     
     // Start
     const [start, setStart] = useState<string>('Darmstadt Hauptbahnhof')//<Start>({ station: { name: 'Darmstadt Hauptbahnhof', id: 'delfi_de:06411:4734:64:63'}, min_connection_count: 5, interval: { begin: 1640430180, end: 164043738 }, extend_interval_later: true, extend_interval_earlier: true });
@@ -57,7 +62,7 @@ export const Search: React.FC = () => {
     const [destinationType, setDestinationType] = useState<string>('InputStation');
     
     // Destination_modes tracks the ModePicker for the Destination
-    const [destinationModes, setDestinationModes] = useState<[Mode]>([{mode_type: 'FootPPR', mode: { search_options: {profile: 'default', duration_limit: 900 } } } ]);
+    const [destinationModes, setDestinationModes] = useState<Mode[]>([]);
     
     // Destination holds the Value of 'to location' input field
     const [destination, setDestination] = useState<string>("Frankfurt (Main) Westbahnhof")//<Destination>({name: 'Frankfurt (Main) Westbahnhof', id: 'delfi_D_de:06412:1204' });
@@ -67,9 +72,13 @@ export const Search: React.FC = () => {
         let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest'
         //console.log('Fire searchQuery')
 
-        //fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination))
-        //    .then(res => res.json())
-        //    .then()
+        fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination))
+            .then(res => res.json())
+            .then((res: IntermodalRoutingResponse) => {
+                console.log("Response came in");
+                console.log(res)
+                props.setConnections(res.content.connections)
+            })
 
     }, [searchQuery]);
     
@@ -104,7 +113,7 @@ export const Search: React.FC = () => {
                             <ul className='proposals'></ul>
                         </div>
                     </div>
-                    <Modepicker modes={startModes} setModes={setStartModes}/>
+                    <Modepicker start={true}/>{/* modes={startModes} setModes={setStartModes}/>*/}
                     <div className='swap-locations-btn'>
                         <label className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'>
                             <input  type='checkbox' 
@@ -147,7 +156,7 @@ export const Search: React.FC = () => {
                             <ul className='proposals'></ul>
                         </div>
                     </div>
-                    <Modepicker modes={destinationModes} setModes={setDestinationModes}/>
+                    <Modepicker start={false}/>{/*} modes={destinationModes} setModes={setDestinationModes}/>*/}
                 </div> 
                 <div className='pure-u-1 pure-u-sm-9-24'>
                     <div>
@@ -169,18 +178,14 @@ export const Search: React.FC = () => {
                     </div>
                 </div>
                 <div className='pure-u-1 pure-u-sm-3-24 time-option'>
-                    <div>
-                        <label>
-                            Abfahrt
-                        <input type='radio' id='search-forward' name='time-option' />
-                        </label>
-                    </div>
-                    <div>
-                        <label>
-                            Ankunft
-                        <input type='radio' id='search-backward' name='time-option' />
-                        </label>
-                    </div>
+                    <form>
+                        <input type='radio' id='search-forward' name='time-option' defaultChecked={searchDirection === 'Forward'} onClick={() => setSearchDirection('Forward')}/>
+                        <label htmlFor='search-forward'>Abfahrt</label>
+                    </form>
+                    <form>
+                        <input type='radio' id='search-backward' name='time-option' defaultChecked={searchDirection === 'Backward'} onClick={() => setSearchDirection('Backward')}/>
+                        <label htmlFor='search-backward'>Ankunft</label>
+                    </form>
                 </div>
             </div>
         </div>
