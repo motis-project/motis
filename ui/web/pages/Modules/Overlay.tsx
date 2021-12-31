@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import Maybe, { nothing } from 'true-myth/maybe';
 
 import { Search } from './Search';
 import { SubOverlay } from './SubOverlay';
+import { Connection } from './ConnectionTypes';
 
 //interface Model {
     //routing : Routing.Model,
@@ -33,15 +34,20 @@ interface SubView{
 
 export const Overlay: React.FC = (props) => {
 
-    const[overlayHidden, setOverlayHidden] = React.useState<Boolean>(false);
+    // Boolean used to decide if the Overlay is being displayed
+    const [overlayHidden, setOverlayHidden] = useState<Boolean>(false);
 
-    const[subOverlayHidden, setSubOverlayHidden] = React.useState<Boolean>(true);
+    // Boolean used to decide if the SubOverlay is being displayed
+    const [subOverlayHidden, setSubOverlayHidden] = useState<Boolean>(true);
+
+    // Connections
+    const [connections, setConnections] = useState<Connection[]>([]);
 
     return(
         <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden' }>
             <div className='overlay'>
                 <div id='overlay-content'>
-                    <Search />
+                    <Search setConnections={setConnections}/>
                     <div id='connections'>
                         <div className='no-results'>
                             <div className='schedule-range'>Auskunft von 19.10.2020 bis 21.10.2020 möglich</div>
