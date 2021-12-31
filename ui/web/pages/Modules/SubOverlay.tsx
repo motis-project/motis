@@ -37,8 +37,7 @@ export const SubOverlay: React.FC<{'subOverlayHidden' : Boolean, setSubOverlayHi
                                             <div className='gb-input-icon'>
                                                 <i className='icon'>schedule</i>
                                             </div>
-                                            <input
-                                                className='gb-input' tabIndex={4} />
+                                            <input className='gb-input' tabIndex={4} />
                                             <div className='gb-input-widget'>
                                                 <div className='hour-buttons'>
                                                     <div><a
@@ -58,7 +57,7 @@ export const SubOverlay: React.FC<{'subOverlayHidden' : Boolean, setSubOverlayHi
                     <div className='trips'></div>
                 </div>
             </div>
-            <div className='sub-overlay-close' onClick={() => props.setSubOverlayHidden(!props.subOverlayHidden)}><i className='icon'>close</i></div>
+            <div className='sub-overlay-close' onClick={() => props.setSubOverlayHidden(true)}><i className='icon'>close</i></div>
         </div>
     )
 }
