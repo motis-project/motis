@@ -5,24 +5,14 @@ import { Interval } from './RoutingTypes';
 export interface IntermodalRoutingRequest {
     start_type: string,
     start: IntermodalPretripStartInfo | PretripStartInfo,
-    startModes: [FootModeInfo | BikeModeInfo | CarModeInfo | FootPPRInfo | CarParkingModeInfo],
+    startModes: (FootModeInfo | BikeModeInfo | CarModeInfo | FootPPRInfo | CarParkingModeInfo)[],
     destination: Station | Position,
-    destinationModes: [FootModeInfo | BikeModeInfo | CarModeInfo | FootPPRInfo | CarParkingModeInfo],
+    destinationModes: (FootModeInfo | BikeModeInfo | CarModeInfo | FootPPRInfo | CarParkingModeInfo)[],
     searchType: 'DeafaultSearch' | 'SingleCriterion' | 'SingleCriterionNoIntercity' | 'LateConnections' | 'LateConnectionsTest' | 'Accessibility',
     searchDir: 'Forward' | 'Backward'
 }
 
 
-export interface IntermodalRoutingResponse {
-    content_type: string,
-    content: {
-        connections: [Connection],
-        interval_begin: number,
-        interval_end: number,
-        direct_connections: [Connection]
-    },
-    id: number
-}
 
 
 export interface IntermodalPretripStartInfo {
@@ -66,4 +56,33 @@ interface FootPPRInfo {
 interface CarParkingModeInfo {
     maxCarDuration: number,
     pprSearchOptions: SearchOptions
+}
+
+
+export interface IntermodalRoutingResponse {
+    content_type: string,
+    content: {
+        connections: Connection[],
+        interval_begin: number,
+        interval_end: number,
+        direct_connections: Connection[]
+        statistics: Statistic[]
+    },
+    destination: {
+        target: string,
+        type: string
+    }
+    id: number
+}
+
+
+interface Statistic {
+    category: string,
+    entries: Entry[]
+}
+
+
+interface Entry {
+    name: string,
+    value: number
 }

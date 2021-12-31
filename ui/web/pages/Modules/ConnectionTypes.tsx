@@ -1,8 +1,8 @@
 export interface Connection {
-    stops: [Stop],
-    transports: [TransportInfo | WalkInfo],
-    trips: [Trip],
-    problems: [Problem]
+    stops: Stop[],
+    transports: TransportInfo | WalkInfo[],
+    trips: Trip[],
+    problems: Problem[]
 }
 
 
