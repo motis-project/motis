@@ -20,41 +20,9 @@ struct schedule;
 namespace routing::output {
 
 template <typename Label>
-inline unsigned db_costs(Label const&) {
-  return 0;
-}
-
-template <search_dir Dir>
-inline unsigned db_costs(late_connections_label<Dir> const& l) {
-  return l.db_costs_;
-}
-
-template <search_dir Dir>
-inline unsigned db_costs(late_connections_label_for_tests<Dir> const& l) {
-  return l.db_costs_;
-}
-
-template <typename Label>
-inline unsigned night_penalty(Label const&) {
-  return 0;
-}
-
-template <search_dir Dir>
-inline unsigned night_penalty(late_connections_label<Dir> const& l) {
-  return l.night_penalty_;
-}
-
-template <search_dir Dir>
-inline unsigned night_penalty(late_connections_label_for_tests<Dir> const& l) {
-  return l.night_penalty_;
-}
-
-template <typename Label>
 journey labels_to_journey(schedule const& sched, Label* label,
                           search_dir const dir) {
-  auto parsed = parse_label_chain(sched, label, dir);
-  std::vector<intermediate::stop>& s = parsed.first;
-  std::vector<intermediate::transport> const& t = parsed.second;
+  auto [s, t] = parse_label_chain(sched, label, dir);
   update_walk_times(s, t);
 
   journey j;
@@ -71,9 +39,6 @@ journey labels_to_journey(schedule const& sched, Label* label,
                         return s.exit_ ? transfers_count + 1 : transfers_count;
                       });
   j.accessibility_ = get_accessibility(j);
-
-  j.db_costs_ = db_costs(*label);
-  j.night_penalty_ = night_penalty(*label);
 
   return j;
 }

@@ -21,11 +21,11 @@ struct absurdity_initializer {
 struct absurdity_updater {
   template <typename Label, typename LowerBounds>
   static void update(Label& l, edge_cost const&, LowerBounds&) {
-    if (l.edge_->type() == edge::FOOT_EDGE ||
-        l.edge_->type() == edge::AFTER_TRAIN_FWD_EDGE ||
-        l.edge_->type() == edge::AFTER_TRAIN_BWD_EDGE ||
-        l.edge_->type() == edge::ENTER_EDGE ||
-        l.edge_->type() == edge::EXIT_EDGE) {
+    if (l.edge_->type() == edge_type::FOOT_EDGE ||
+        l.edge_->type() == edge_type::AFTER_TRAIN_FWD_EDGE ||
+        l.edge_->type() == edge_type::AFTER_TRAIN_BWD_EDGE ||
+        l.edge_->type() == edge_type::ENTER_EDGE ||
+        l.edge_->type() == edge_type::EXIT_EDGE) {
       if (l.foot_counter_ <= MAX_SUCCESSIVE_FOOT_EDGES_ALLOWED) {
         ++l.foot_counter_;
       }

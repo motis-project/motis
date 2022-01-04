@@ -27,6 +27,7 @@ struct search_query {
   bool use_dest_metas_{false};
   bool use_start_footpaths_{false};
   light_connection const* lcon_{nullptr};
+  day_idx_t day_{};
 };
 
 struct search_result {
@@ -152,18 +153,19 @@ struct search {
     }
 
     pareto_dijkstra<Dir, Label, lower_bounds> pd(
-        q.sched_->next_node_id_, q.sched_->stations_.size(), is_goal,
+        q.sched_, q.sched_->next_node_id_, q.sched_->stations_.size(), is_goal,
         std::move(additional_edges), lbs, *q.mem_);
 
     auto const add_start_labels = [&](time interval_begin, time interval_end) {
       pd.add_start_labels(StartLabelGenerator::generate(
           *q.sched_, *q.mem_, lbs, &start_edge, meta_edges, q.query_edges_,
-          interval_begin, interval_end, q.lcon_, q.use_start_footpaths_));
+          interval_begin, interval_end, q.lcon_, q.day_,
+          q.use_start_footpaths_));
     };
 
-    time const schedule_begin = SCHEDULE_OFFSET_MINUTES;
-    time const schedule_end =
-        (q.sched_->schedule_end_ - q.sched_->schedule_begin_) / 60;
+    auto const schedule_begin = time{SCHEDULE_OFFSET_MINUTES};
+    auto const schedule_end =
+        time{(q.sched_->schedule_end_ - q.sched_->schedule_begin_) / 60};
 
     auto const map_to_interval = [&schedule_begin, &schedule_end](time t) {
       return std::min(schedule_end, std::max(schedule_begin, t));

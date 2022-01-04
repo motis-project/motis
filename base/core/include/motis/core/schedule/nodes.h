@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <vector>
 
+#include "utl/pipes.h"
+
 #include "motis/memory.h"
 #include "motis/vector.h"
 
@@ -90,18 +92,26 @@ struct node {
     }
   }
 
+  auto get_route_nodes() const {
+    return utl::all(edges_) |
+           utl::remove_if([](auto&& e) { return !e.to_->is_route_node(); }) |
+           utl::transform([](auto&& e) { return e.to_; }) |  //
+           utl::iterable();
+  }
+
   bool is_in_allowed() const {
     assert(is_route_node());
-    return std::any_of(
-        begin(incoming_edges_), end(incoming_edges_), [&](auto const& e) {
-          return e->from_ == station_node_ && e->type() != edge::INVALID_EDGE;
-        });
+    return std::any_of(begin(incoming_edges_), end(incoming_edges_),
+                       [&](auto const& e) {
+                         return e->from_ == station_node_ &&
+                                e->type() != edge_type::INVALID_EDGE;
+                       });
   }
 
   bool is_out_allowed() const {
     assert(is_route_node());
     return std::any_of(begin(edges_), end(edges_), [&](auto const& e) {
-      return e.to_ == station_node_ && e.type() != edge::INVALID_EDGE;
+      return e.to_ == station_node_ && e.type() != edge_type::INVALID_EDGE;
     });
   }
 

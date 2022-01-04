@@ -34,7 +34,7 @@ inline constant_graph build_station_graph(
 
   auto add_edges = [&g, dir](station_node const& sn) {
     // Stores the minimum distance to each neighboring station.
-    mcd::hash_map<uint32_t /* neighbor station node id */, duration> min;
+    mcd::hash_map<uint32_t /* neighbor station node id */, duration_t> min;
 
     auto update_min = [&min](uint32_t const from, edge_cost const& ec) {
       if (!ec.is_valid()) {
@@ -83,10 +83,10 @@ struct map_interchange_graph_node {
 };
 
 inline bool is_connected(node const* from, node const* to) {
-  return std::find_if(begin(from->edges_), end(from->edges_),
-                      [&to](edge const& e) {
-                        return e.to_ == to && e.type() != edge::INVALID_EDGE;
-                      }) != end(from->edges_);
+  return std::find_if(
+             begin(from->edges_), end(from->edges_), [&to](edge const& e) {
+               return e.to_ == to && e.type() != edge_type::INVALID_EDGE;
+             }) != end(from->edges_);
 }
 
 inline constant_graph build_interchange_graph(

@@ -39,10 +39,7 @@ table HotelEdge {
 }
 
 union AdditionalEdge {
-  MumoEdge,
-  PeriodicMumoEdge,
-  TimeDependentMumoEdge,
-  HotelEdge
+  MumoEdge
 }
 
 table AdditionalEdgeWrapper {

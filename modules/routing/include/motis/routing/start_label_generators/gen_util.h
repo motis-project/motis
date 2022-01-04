@@ -26,7 +26,8 @@ void for_each_edge(node const* rn, Fn fn) {
 }
 
 template <search_dir Dir>
-bool end_reached(time departure_begin, time departure_end, time t) {
+bool end_reached(time const departure_begin, time const departure_end,
+                 time const t) {
   if (Dir == search_dir::FWD) {
     return t > departure_end;
   } else {
@@ -35,13 +36,14 @@ bool end_reached(time departure_begin, time departure_end, time t) {
 }
 
 template <search_dir Dir>
-time get_time(light_connection const* lcon) {
-  return (Dir == search_dir::FWD) ? lcon->d_time_ : lcon->a_time_;
+time get_time(light_connection const* lcon, day_idx_t const day) {
+  return lcon->event_time(
+      Dir == search_dir::FWD ? event_type::DEP : event_type::ARR, day);
 }
 
 template <search_dir Dir, typename Fn>
-void create_labels(time departure_begin, time departure_end, edge const& re,
-                   Fn create_func) {
+void create_labels(time const departure_begin, time const departure_end,
+                   edge const& re, Fn create_func) {
   if (re.empty()) {
     return;
   }
@@ -49,14 +51,16 @@ void create_labels(time departure_begin, time departure_end, edge const& re,
   auto t = Dir == search_dir::FWD ? departure_begin : departure_end;
   auto const max_start_labels = departure_end - departure_begin + 1;
   while (!end_reached<Dir>(departure_begin, departure_end, t)) {
-    auto con = re.get_connection<Dir>(t);
-
-    if (con == nullptr ||
-        end_reached<Dir>(departure_begin, departure_end, get_time<Dir>(con))) {
+    auto [con, day_idx] = re.get_connection<Dir>(t);
+    if (con == nullptr) {
       break;
     }
 
-    t = get_time<Dir>(con);
+    t = get_time<Dir>(con, day_idx);
+
+    if (end_reached<Dir>(departure_begin, departure_end, t)) {
+      break;
+    }
 
     create_func(t);
 

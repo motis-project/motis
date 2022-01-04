@@ -124,7 +124,7 @@ void add_final_footpath(
     std::map<station_id, time> const& start_times,
     bool count_initial_transfer_time,
     std::function<bool(station_id)> const& is_start,
-    std::function<duration(station_id)> const& get_initial_duration) {
+    std::function<duration_t(station_id)> const& get_initial_duration) {
   std::optional<tb_journey::tb_edge> best_fp;
   if (Dir == search_dir::FWD) {
     // edges:
@@ -202,7 +202,7 @@ void reconstruct_tb_journey(
     std::map<station_id, time> const& start_times,
     bool count_initial_transfer_time,
     std::function<bool(station_id)> const& is_start,
-    std::function<duration(station_id)> const& get_initial_duration,
+    std::function<duration_t(station_id)> const& get_initial_duration,
     tb_statistics& stats) {
   if (j.is_reconstructed()) {
     return;

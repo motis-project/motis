@@ -32,10 +32,10 @@ inline location to_location(geo::latlng const& pos) {
   return make_location(pos.lng_, pos.lat_);
 }
 
-inline duration get_duration(route const& r) {
-  return static_cast<duration>(
+inline duration_t get_duration(route const& r) {
+  return static_cast<duration_t>(
       std::min(std::round(r.duration_ / 60),
-               static_cast<double>(std::numeric_limits<duration>::max())));
+               static_cast<double>(std::numeric_limits<duration_t>::max())));
 }
 
 inline uint16_t get_accessibility(route const& r) {

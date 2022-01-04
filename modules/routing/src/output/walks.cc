@@ -18,8 +18,7 @@ void update_walk_times(std::vector<intermediate::stop>& stops,
     }
     auto& from = stops[t.from_];
     auto& to = stops[t.to_];
-    auto const delay =
-        static_cast<int>(from.a_time_) - static_cast<int>(from.a_sched_time_);
+    auto const delay = from.a_time_ - from.a_sched_time_;
     from.d_reason_ = from.a_reason_;
     from.d_sched_time_ = static_cast<time>(from.d_time_ - delay);
     to.a_reason_ = from.d_reason_;
@@ -38,8 +37,7 @@ void update_walk_times(std::vector<intermediate::stop>& stops,
     utl::verify(t.is_walk(), "not a walk");
     auto& from = stops[t.from_];
     auto& to = stops[t.to_];
-    auto const delay =
-        static_cast<int>(to.d_time_) - static_cast<int>(to.d_sched_time_);
+    auto const delay = to.d_time_ - to.d_sched_time_;
     to.a_reason_ = to.d_reason_;
     to.a_sched_time_ = static_cast<time>(to.a_time_ - delay);
     from.d_reason_ = to.a_reason_;

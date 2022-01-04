@@ -239,12 +239,12 @@ inline std::vector<section> build_trip_from_events(
   return sections;
 }
 
-inline mcd::vector<trip::route_edge> build_route(
+inline mcd::vector<trip_info::route_edge> build_route(
     schedule& sched, std::vector<section> const& sections,
     std::vector<incoming_edge_patch>& incoming) {
   auto const route_id = sched.route_count_++;
 
-  mcd::vector<trip::route_edge> trip_edges;
+  mcd::vector<trip_info::route_edge> trip_edges;
   node* prev_route_node = nullptr;
   for (auto& s : sections) {
     auto const from_station = sched.stations_.at(s.from_->id_).get();
@@ -308,7 +308,7 @@ inline std::set<station_node*> get_station_nodes(
 
 inline void update_delay_infos(
     schedule& sched, std::vector<reroute_event>& events,
-    mcd::vector<trip::route_edge> const& trip_edges) {
+    mcd::vector<trip_info::route_edge> const& trip_edges) {
   auto const update_di = [&](reroute_event& ev, ev_key const& new_ev) {
     if (ev.di_ != nullptr) {
       ev.di_->set_ev_key(new_ev);
@@ -324,7 +324,7 @@ inline void update_delay_infos(
 }
 
 inline void update_trip(schedule& sched, trip* trp,
-                        mcd::vector<trip::route_edge> const& trip_edges) {
+                        mcd::vector<trip_info::route_edge> const& trip_edges) {
   for (auto const& trp_e : *trp->edges_) {
     auto const e = trp_e.get_edge();
     e->m_.route_edge_.conns_[trp->lcon_idx_].valid_ = 0U;
@@ -339,12 +339,12 @@ inline void update_trip(schedule& sched, trip* trp,
   }
 
   sched.trip_edges_.emplace_back(
-      mcd::make_unique<mcd::vector<trip::route_edge>>(trip_edges));
+      mcd::make_unique<mcd::vector<trip_info::route_edge>>(trip_edges));
   trp->edges_ = sched.trip_edges_.back().get();
   trp->lcon_idx_ = 0;
 }
 
-inline void disable_trip(mcd::vector<trip::route_edge> const& edges,
+inline void disable_trip(mcd::vector<trip_info::route_edge> const& edges,
                          int lcon_idx) {
   for (auto const& e : edges) {
     e->m_.route_edge_.conns_[lcon_idx].valid_ = 0U;
@@ -387,7 +387,8 @@ inline std::pair<reroute_result, trip const*> reroute(
     disable_trip(*old_trip, old_lcon_idx);
     trp->edges_ =
         sched.trip_edges_
-            .emplace_back(mcd::make_unique<mcd::vector<trip::route_edge>>())
+            .emplace_back(
+                mcd::make_unique<mcd::vector<trip_info::route_edge>>())
             .get();
     store_cancelled_delays(sched, trp, del_evs, cancelled_delays,
                            cancelled_evs);

@@ -124,7 +124,8 @@ struct stations_builder {
                     input_timez->season()->day_idx_last_day(),
                     input_timez->season()->minutes_after_midnight_first_day(),
                     input_timez->season()->minutes_after_midnight_last_day())
-              : timezone{input_timez->general_offset()};
+              : timezone{.general_offset_ = input_timez->general_offset(),
+                         .season_ = {}};
       sched_.timezones_.emplace_back(mcd::make_unique<timezone>(tz));
       return sched_.timezones_.back().get();
     });

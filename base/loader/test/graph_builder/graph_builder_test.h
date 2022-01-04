@@ -18,13 +18,19 @@ protected:
   static edge const* get_route_edge(node const* route_node);
 
   static std::vector<
-      std::tuple<light_connection const*, node const*, node const*>>
+      std::tuple<light_connection const*, day_idx_t, node const*, node const*>>
   get_connections(node const* first_route_node, time departure_time);
 
   std::time_t unix_time(int hhmm, int day_idx = 0,
                         int timezone_offset = DEFAULT_TIMEZONE_OFFSET) {
     return motis::unix_time(*sched_, hhmm, day_idx, timezone_offset);
   }
+
+  void print_trip(concrete_trip) const;
+
+  int trip_count(std::vector<station const*>) const;
+  bool check_trip_path(trip_info const*,
+                       std::vector<station const*> const&) const;
 
   schedule_ptr sched_;
   std::string schedule_name_;

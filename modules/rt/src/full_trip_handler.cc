@@ -83,7 +83,7 @@ struct full_trip_handler {
   };
 
   struct trip_backup {
-    mcd::vector<trip::route_edge> edges_;
+    mcd::vector<trip_info::route_edge> edges_;
     lcon_idx_t lcon_idx_{};
   };
 
@@ -418,13 +418,13 @@ private:
     return nodes;
   }
 
-  mcd::vector<trip::route_edge> build_route(
+  mcd::vector<trip_info::route_edge> build_route(
       std::vector<section>& sections, std::vector<light_connection> const& lcs,
       std::vector<incoming_edge_patch>& incoming) {
     if (sections.empty()) {
       return {};
     }
-    auto trip_edges = mcd::vector<trip::route_edge>{};
+    auto trip_edges = mcd::vector<trip_info::route_edge>{};
     auto const route_id = sched_.route_count_++;
 
     auto const route_nodes = build_route_nodes(sections, route_id, incoming);
@@ -478,12 +478,13 @@ private:
     return trip_edges;
   }
 
-  trip* create_or_update_trip(trip* trp, full_trip_id const& ftid,
-                              mcd::vector<trip::route_edge> const& trip_edges) {
+  trip* create_or_update_trip(
+      trip* trp, full_trip_id const& ftid,
+      mcd::vector<trip_info::route_edge> const& trip_edges) {
     auto const edges =
         sched_.trip_edges_
-            .emplace_back(
-                mcd::make_unique<mcd::vector<trip::route_edge>>(trip_edges))
+            .emplace_back(mcd::make_unique<mcd::vector<trip_info::route_edge>>(
+                trip_edges))
             .get();
 
     auto const lcon_idx = static_cast<lcon_idx_t>(0U);

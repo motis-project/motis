@@ -54,7 +54,7 @@ public:
 
     for (auto const& n : nodes) {
       for (auto const& e : n->edges_) {
-        if (e.empty() && e.type() != edge::THROUGH_EDGE) {
+        if (e.empty() && e.type() != edge_type::THROUGH_EDGE) {
           continue;
         }
 
@@ -70,7 +70,7 @@ public:
     return std::make_pair(false, std::vector<edge const*>());
   }
 
-  mcd::vector<mcd::string> path_evas(trip const* t) {
+  mcd::vector<mcd::string> path_evas(concrete_trip const t) {
     return mcd::to_vec(access::stops{t}, [&](auto&& stop) {
       return stop.get_station(*sched_).eva_nr_;
     });
@@ -93,7 +93,7 @@ TEST_F(service_rules_graph_builder_test_virt, simple_path_exists) {
 TEST_F(service_rules_graph_builder_test_virt, through_path_exists) {
   auto path = path_exists("0000005", "0000009");
   ASSERT_TRUE(path.first);
-  EXPECT_EQ(path.second[1]->type(), edge::THROUGH_EDGE);
+  EXPECT_EQ(path.second[1]->type(), edge_type::THROUGH_EDGE);
 }
 
 TEST_F(service_rules_graph_builder_test_virt, merge_split_path_exists) {
@@ -108,11 +108,9 @@ TEST_F(service_rules_graph_builder_test_virt, service_numbers_1) {
   auto const& e = path.second[0];
 
   ASSERT_FALSE(e->empty());
-  auto train_nrs =
-      get_service_numbers(e->m_.route_edge_.conns_[0].full_con_->con_info_);
-  EXPECT_TRUE(train_nrs.find(1) != end(train_nrs));
-  EXPECT_TRUE(train_nrs.find(2) != end(train_nrs));
-  EXPECT_TRUE(train_nrs.find(3) != end(train_nrs));
+  EXPECT_EQ(
+      (std::set<int>{1, 2, 3}),
+      get_service_numbers(e->m_.route_edge_.conns_[0].full_con_->con_info_));
 }
 
 TEST_F(service_rules_graph_builder_test_virt, service_numbers_2) {
@@ -155,6 +153,7 @@ TEST_F(service_rules_graph_builder_test_virt, trip_1) {
 
   auto sections = access::sections(trp1);
   int i = 0;
+
   for (auto it = begin(sections); it != end(sections); ++it, ++i) {
     auto train_nr = (*it).info(*sched_).train_nr_;
     if (i == 3) {
@@ -166,7 +165,7 @@ TEST_F(service_rules_graph_builder_test_virt, trip_1) {
 }
 
 TEST_F(service_rules_graph_builder_test_virt, trip_2) {
-  auto trp = get_trip(*sched_, "0000002", 3, unix_time(210, 0, 60), "0000011",
+  auto trp = get_trip(*sched_, "0000002", 3, unix_time(159, 0, 60), "0000011",
                       unix_time(800, 0, 120), "");
 
   auto sections = access::sections(trp);

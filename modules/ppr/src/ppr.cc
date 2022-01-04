@@ -107,9 +107,9 @@ Offset<Route> write_route(FlatBufferBuilder& fbb, route const& r,
                     : fbb.CreateVector(std::vector<Offset<Edge>>{});
   auto const path = write_polyline(
       fbb, include_path ? get_route_path(r) : std::vector<location>{});
-  auto const duration_min = static_cast<duration>(
+  auto const duration_min = static_cast<duration_t>(
       std::min(std::round(r.duration_ / 60),
-               static_cast<double>(std::numeric_limits<duration>::max())));
+               static_cast<double>(std::numeric_limits<duration_t>::max())));
   auto const accessibility_disc =
       static_cast<uint16_t>(std::ceil(r.accessibility_));
   return CreateRoute(

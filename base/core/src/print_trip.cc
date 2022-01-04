@@ -35,8 +35,8 @@ inline std::ostream& print_time(std::ostream& out, std::time_t t,
   return out << std::put_time(&time, "%d.%m. %H:%M");
 }
 
-void print_trip(std::ostream& out, schedule const& sched, trip const* trp,
-                bool const local_time) {
+void print_trip(std::ostream& out, schedule const& sched,
+                concrete_trip const& trp, bool const local_time) {
   std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> utf8_conv;
 
   auto i = 0U;
@@ -52,15 +52,13 @@ void print_trip(std::ostream& out, schedule const& sched, trip const* trp,
               << std::setfill('.') << stop_name << std::setfill(' ') << " a: ";
 
     if (!stop.is_first()) {
-      print_time(out, motis_to_unixtime(sched, stop.arr_lcon().a_time_),
-                 local_time);
+      print_time(out, motis_to_unixtime(sched, stop.arr_time()), local_time);
     } else {
       out << "            ";
     }
     out << "  d: ";
     if (!stop.is_last()) {
-      print_time(out, motis_to_unixtime(sched, stop.dep_lcon().d_time_),
-                 local_time);
+      print_time(out, motis_to_unixtime(sched, stop.dep_time()), local_time);
     }
     out << "\n";
 

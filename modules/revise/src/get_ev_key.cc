@@ -37,7 +37,8 @@ ev_key get_ev_key_from_trip(schedule const& sched, trip const* trp,
   utl::verify(trp != nullptr, "invalid trip");
 
   auto const re_it = std::find_if(
-      begin(*trp->edges_), end(*trp->edges_), [&](trip::route_edge const& re) {
+      begin(*trp->edges_), end(*trp->edges_),
+      [&](trip_info::route_edge const& re) {
         auto const ev = ev_key{re, trp->lcon_idx_, ev_type};
         return (is_arr ? re->to_ : re->from_)->station_node_ == s_node &&
                motis_to_unixtime(sched.schedule_begin_,

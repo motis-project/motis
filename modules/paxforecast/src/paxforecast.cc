@@ -260,7 +260,7 @@ void update_tracked_groups(
 
 bool has_better_alternative(std::vector<alternative> const& alts,
                             time expected_arrival_time,
-                            duration min_improvement) {
+                            duration_t min_improvement) {
   auto const latest_accepted_arrival = expected_arrival_time - min_improvement;
   return std::any_of(begin(alts), end(alts),
                      [latest_accepted_arrival](alternative const& alt) {

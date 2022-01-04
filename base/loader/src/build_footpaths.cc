@@ -1,6 +1,7 @@
 #include "motis/loader/build_footpaths.h"
 
 #include <optional>
+#include <sstream>
 #include <stack>
 
 #include "geo/latlng.h"
@@ -36,7 +37,6 @@ using component_it = component_vec::iterator;
 using component_range = std::pair<component_it, component_it>;
 
 struct footpath_builder {
-
   footpath_builder(
       schedule& sched, loader_options const& opt,
       mcd::hash_map<Station const*, station_node*> const& station_nodes)
@@ -142,7 +142,7 @@ struct footpath_builder {
       // check whether it is allowed to transfer at the route-node
       // we do this by checking, whether it has an edge to the station
       for (auto const& e : route_node->edges_) {
-        if (e.to_ == sn && e.type() != edge::INVALID_EDGE) {
+        if (e.to_ == sn && e.type() != edge_type::INVALID_EDGE) {
           // the foot-edge may only be used
           // if a train was used beforewards when
           // trying to use it from a route node
@@ -155,7 +155,7 @@ struct footpath_builder {
 
     // STATION_NODE -(AFTER_TRAIN_BWD)-> ROUTE_NODE
     for (auto const& e : sn->edges_) {
-      if (e.to_->is_route_node() && e.type() != edge::INVALID_EDGE) {
+      if (e.to_->is_route_node() && e.type() != edge_type::INVALID_EDGE) {
         foot_node->edges_.emplace_back(
             make_after_train_bwd_edge(foot_node.get(), e.to_, 0, true));
       }
@@ -332,8 +332,8 @@ struct footpath_builder {
     }
     utl::verify(size > 2, "invalid size");
 
-    constexpr auto const kInvalidTime = std::numeric_limits<motis::time>::max();
-    auto mat = make_flat_matrix<motis::time>(size, kInvalidTime);
+    constexpr auto const kInvalidTime = std::numeric_limits<duration_t>::max();
+    auto mat = make_flat_matrix<duration_t>(size, kInvalidTime);
 
     for (auto i = 0; i < size; ++i) {
       auto it = lb;

@@ -53,7 +53,7 @@ struct parking_edge_costs {
         foot_distance_{foot_distance} {}
 
   bool valid() const {
-    return total_duration_ != std::numeric_limits<duration>::max();
+    return total_duration_ != std::numeric_limits<duration_t>::max();
   }
 
   std::string station_id_;
@@ -63,9 +63,9 @@ struct parking_edge_costs {
   uint16_t foot_duration_{0};  // min
   uint16_t foot_accessibility_{0};
   double foot_distance_{0};
-  duration total_duration_{
-      std::min(static_cast<duration>(car_duration_ + foot_duration_),
-               std::numeric_limits<duration>::max())};  // min
+  duration_t total_duration_{
+      std::min(static_cast<duration_t>(car_duration_ + foot_duration_),
+               std::numeric_limits<duration_t>::max())};  // min
   uint16_t total_accessibility_{foot_accessibility_};
 };
 

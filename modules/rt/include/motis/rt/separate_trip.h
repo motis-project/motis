@@ -15,7 +15,7 @@
 
 namespace motis::rt {
 
-inline std::set<trip::route_edge> route_edges(ev_key const& k) {
+inline std::set<trip_info::route_edge> route_edges(ev_key const& k) {
   return route_bfs(k, bfs_direction::BOTH, true);
 }
 
@@ -44,7 +44,7 @@ inline edge copy_edge(edge const& original, node* from, node* to,
 
 inline void copy_trip_route(
     schedule& sched, ev_key const& k, std::map<node const*, node*>& nodes,
-    std::map<trip::route_edge, trip::route_edge>& edges,
+    std::map<trip_info::route_edge, trip_info::route_edge>& edges,
     std::map<node const*,
              std::pair<light_connection const*, light_connection const*>>&
         lcons) {
@@ -66,7 +66,7 @@ inline void copy_trip_route(
 
     from->edges_.push_back(copy_edge(*e, from, to, k.lcon_idx_));
     auto const& new_edge = from->edges_.back();
-    edges[e] = trip::route_edge(&new_edge);
+    edges[e] = trip_info::route_edge(&new_edge);
     constant_graph_add_route_edge(sched, edges[e]);
 
     if (e->type() == edge::ROUTE_EDGE) {
@@ -94,12 +94,13 @@ inline std::set<trip const*> route_trips(schedule const& sched,
   return trips;
 }
 
-inline void update_trips(schedule& sched, ev_key const& k,
-                         std::map<trip::route_edge, trip::route_edge>& edges) {
+inline void update_trips(
+    schedule& sched, ev_key const& k,
+    std::map<trip_info::route_edge, trip_info::route_edge>& edges) {
   for (auto const& t : route_trips(sched, k)) {
     sched.trip_edges_.emplace_back(
-        mcd::make_unique<mcd::vector<trip::route_edge>>(
-            mcd::to_vec(*t->edges_, [&](trip::route_edge const& e) {
+        mcd::make_unique<mcd::vector<trip_info::route_edge>>(
+            mcd::to_vec(*t->edges_, [&](trip_info::route_edge const& e) {
               return edges.at(e.get_edge());
             })));
     const_cast<trip*>(t)->edges_ = sched.trip_edges_.back().get();  // NOLINT
@@ -182,7 +183,7 @@ inline std::set<station_node*> route_station_nodes(ev_key const& k) {
 
 inline void update_delays(
     lcon_idx_t const lcon_idx,
-    std::map<trip::route_edge, trip::route_edge> const& edges,
+    std::map<trip_info::route_edge, trip_info::route_edge> const& edges,
     schedule& sched) {
   auto const update_di = [&](ev_key const& orig_k, ev_key const& new_k) {
     auto const it = sched.graph_to_delay_info_.find(orig_k);
@@ -213,7 +214,7 @@ inline void seperate_trip(schedule& sched, ev_key const& k) {
   std::vector<incoming_edge_patch> incoming;
   save_outgoing_edges(station_nodes, incoming);
   auto nodes = std::map<node const*, node*>{};
-  auto edges = std::map<trip::route_edge, trip::route_edge>{};
+  auto edges = std::map<trip_info::route_edge, trip_info::route_edge>{};
   auto lcons =
       std::map<node const*,
                std::pair<light_connection const*, light_connection const*>>{};

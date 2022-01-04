@@ -515,10 +515,10 @@ private:
                         }) != end(start_stations_);
   }
 
-  inline duration get_initial_duration(station_id station) {
-    return static_cast<duration>(Dir == search_dir::FWD
-                                     ? start_times_[station] - start_time_
-                                     : start_time_ - start_times_[station]);
+  inline duration_t get_initial_duration(station_id station) {
+    return static_cast<duration_t>(Dir == search_dir::FWD
+                                       ? start_times_[station] - start_time_
+                                       : start_time_ - start_times_[station]);
   }
 
   void add_iteration_results() {

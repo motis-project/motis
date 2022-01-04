@@ -44,20 +44,21 @@ inline station_node const* get_station_node(schedule const& sched,
   return motis::get_station_node(sched, station_id);
 }
 
-inline std::pair<node const*, light_connection const*> get_ontrip_train_start(
-    schedule const& sched, TripId const* trip, station_node const* station,
-    time arrival_time) {
+inline std::tuple<node const*, light_connection const*, day_idx_t>
+get_ontrip_train_start(schedule const& sched, TripId const* trip,
+                       station_node const* station, time arrival_time) {
   auto const stops = access::stops(from_fbs(sched, trip));
   auto const stop_it = std::find_if(
       begin(stops), end(stops), [&](access::trip_stop const& stop) {
         return stop.has_arrival() &&
                stop.get_route_node()->station_node_ == station &&
-               stop.arr_lcon().a_time_ == arrival_time;
+               stop.arr_time() == arrival_time;
       });
   if (stop_it == end(stops)) {
     throw std::system_error(error::event_not_found);
   }
-  return {(*stop_it).get_route_node(), &(*stop_it).arr_lcon()};
+  return {(*stop_it).get_route_node(), &(*stop_it).arr_lcon(),
+          (*stop_it).arr_day()};
 }
 
 inline search_query build_query(schedule const& sched,
@@ -96,12 +97,10 @@ inline search_query build_query(schedule const& sched,
 
     case Start_OntripTrainStart: {
       auto start = reinterpret_cast<OntripTrainStart const*>(req->start());
-      auto const ontrip_start = get_ontrip_train_start(
+      std::tie(q.from_, q.lcon_, q.day_) = get_ontrip_train_start(
           sched, start->trip(), get_station_node(sched, start->station()),
           unix_to_motistime(sched, start->arrival_time()));
       q.interval_begin_ = unix_to_motistime(sched, start->arrival_time());
-      q.from_ = ontrip_start.first;
-      q.lcon_ = ontrip_start.second;
       q.interval_end_ = INVALID_TIME;
       q.use_dest_metas_ = req->use_dest_metas();
       q.use_start_footpaths_ = req->use_start_footpaths();
@@ -117,8 +116,9 @@ inline search_query build_query(schedule const& sched,
 
   // TODO(Felix Guendling) remove when more edge types are supported
   if (req->search_dir() == SearchDir_Backward &&
-      std::any_of(begin(q.query_edges_), end(q.query_edges_),
-                  [](edge const& e) { return e.type() != edge::MUMO_EDGE; })) {
+      std::any_of(
+          begin(q.query_edges_), end(q.query_edges_),
+          [](edge const& e) { return e.type() != edge_type::MUMO_EDGE; })) {
     throw std::system_error(error::edge_type_not_supported);
   }
 

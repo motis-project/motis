@@ -3,6 +3,7 @@
 #include <tuple>
 
 #include "motis/core/common/date_time_util.h"
+#include "motis/core/access/time_access.h"
 
 #include "./graph_builder_test.h"
 
@@ -15,11 +16,12 @@ public:
       : loader_graph_builder_test("east-to-west", "20150702", 9) {}
 };
 
-void test_events(
-    std::tuple<light_connection const*, node const*, node const*> c,
-    time expected_dep, time expected_arr) {
-  EXPECT_EQ(expected_dep, std::get<0>(c)->d_time_);
-  EXPECT_EQ(expected_arr, std::get<0>(c)->a_time_);
+void test_events(std::tuple<light_connection const*, day_idx_t, node const*,
+                            node const*> const& c,
+                 time const expected_dep, time const expected_arr) {
+  auto const& [lcon, day, dep_node, arr_node] = c;
+  EXPECT_EQ(expected_dep, lcon->event_time(event_type::DEP, day));
+  EXPECT_EQ(expected_arr, lcon->event_time(event_type::ARR, day));
 }
 
 TEST_F(loader_graph_builder_east_to_west_test, event_times) {
@@ -29,7 +31,8 @@ TEST_F(loader_graph_builder_east_to_west_test, event_times) {
       end(sched_->route_index_to_first_route_node_), [&](node const* n) {
         return sched_->stations_[n->get_station()->id_]->eva_nr_ == "2000058";
       });
-  auto cs = get_connections(*node_it, 0);
+  ASSERT_TRUE(node_it != end(sched_->route_index_to_first_route_node_));
+  auto cs = get_connections(*node_it, motis_time(1630, 0, 180));
   ASSERT_EQ(23, cs.size());
   test_events(cs[0], motis_time(1630, 0, 180), motis_time(1901, 0, 180));
   // GMT+3 -> GMT+1 (season time)
@@ -52,7 +55,7 @@ TEST_F(loader_graph_builder_season_valid, event_times) {
       });
   ASSERT_TRUE(node_it != end(sched_->route_index_to_first_route_node_));
 
-  auto cs = get_connections(*node_it, 0);
+  auto cs = get_connections(*node_it, motis_time(53, 0, 60));
   ASSERT_EQ(38, cs.size());
 
   test_events(cs[0], motis_time(53, 0, 60), motis_time(55, 0, 60));
@@ -76,7 +79,7 @@ TEST_F(loader_graph_builder_season_invalid, event_times) {
       });
   ASSERT_TRUE(node_it != end(sched_->route_index_to_first_route_node_));
 
-  auto cs = get_connections(*node_it, 0);
+  auto cs = get_connections(*node_it, time{SCHEDULE_OFFSET_DAYS, 0});
   ASSERT_EQ(10, cs.size());
 
   test_events(cs[0], motis_time(108, 0, 60), motis_time(111, 0, 60));

@@ -5,6 +5,7 @@
 #include "boost/program_options.hpp"
 
 #include "utl/to_vec.h"
+#include "utl/zip.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/common/timing.h"
@@ -96,43 +97,49 @@ msg_ptr routing::trip_to_connection(msg_ptr const& msg) {
   auto const& sched = get_sched();
   auto trp = from_fbs(sched, motis_content(TripId, msg));
 
-  if (trp->edges_->empty()) {
+  if (trp.trp_->edges_->empty()) {
     throw std::system_error(access::error::service_not_found);
   }
 
-  auto const first = trp->edges_->front()->from_;
-  auto const last = trp->edges_->back()->to_;
+  auto const first = trp.trp_->edges_->front()->from_;
+  auto const last = trp.trp_->edges_->back()->to_;
 
   auto const e_0 = make_foot_edge(nullptr, first->get_station());
   auto const e_1 = make_enter_edge(first->get_station(), first);
   auto const e_n = make_exit_edge(last, last->get_station());
 
-  auto const dep_time = get_lcon(trp->edges_->front(), trp->lcon_idx_).d_time_;
+  auto const dep_time = trp.get_first_dep_time();
 
   auto const make_label = [&](label* pred, edge const* e,
-                              light_connection const* lcon, time now) {
+                              light_connection const* lcon, day_idx_t const day,
+                              time now) {
     auto l = label();
     l.pred_ = pred;
     l.edge_ = e;
     l.connection_ = lcon;
+    l.day_ = day;
     l.start_ = dep_time;
     l.now_ = now;
     l.dominated_ = false;
     return l;
   };
 
-  auto labels = std::vector<label>{trp->edges_->size() + 3};
-  labels[0] = make_label(nullptr, &e_0, nullptr, dep_time);
-  labels[1] = make_label(&labels[0], &e_1, nullptr, dep_time);
+  auto labels = std::vector<label>{trp.trp_->edges_->size() + 3};
+  labels[0] = make_label(nullptr, &e_0, nullptr, day_idx_t{}, dep_time);
+  labels[1] = make_label(&labels[0], &e_1, nullptr, day_idx_t{}, dep_time);
 
   int i = 2;
-  for (auto const& e : *trp->edges_) {
-    auto const& lcon = get_lcon(e, trp->lcon_idx_);
-    labels[i] = make_label(&labels[i - 1], e, &lcon, lcon.a_time_);
+  for (auto const& [e, day_offset] :
+       utl::zip(*trp.trp_->edges_, trp.trp_->day_offsets_)) {
+    auto const& lcon = get_lcon(e, trp.trp_->lcon_idx_);
+    auto const day = trp.day_idx_ + day_offset;
+    labels[i] = make_label(&labels[i - 1], e, &lcon, day,
+                           lcon.event_time(event_type::ARR, day));
     ++i;
   }
 
-  labels[i] = make_label(&labels[i - 1], &e_n, nullptr, labels[i - 1].now_);
+  labels[i] = make_label(&labels[i - 1], &e_n, nullptr, day_idx_t{},
+                         labels[i - 1].now_);
 
   message_creator fbb;
   fbb.create_and_finish(

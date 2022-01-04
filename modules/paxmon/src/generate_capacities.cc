@@ -112,7 +112,7 @@ void generate_capacities(schedule const& sched, capacity_maps const& caps,
     }
 
     auto const family =
-        sections.front().section_.lcon().full_con_->con_info_->family_;
+        sections.front().section_.lcon().full_con_->con_info_->category_;
     auto const cap_tid = cap_trip_id{
         static_cast<std::uint32_t>(trp->id_.primary_.train_nr_),
         trp->id_.primary_.get_station_id(),

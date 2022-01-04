@@ -257,7 +257,7 @@ void rt_handler::propagate() {
   propagator_.propagate();
 
   std::set<trip const*> trips_to_correct;
-  std::set<trip::route_edge> updated_route_edges;
+  std::set<trip_info::route_edge> updated_route_edges;
   for (auto const& di : propagator_.events()) {
     auto const& k = di->get_ev_key();
     auto const t = di->get_current_time();
@@ -269,7 +269,7 @@ void rt_handler::propagate() {
     auto const edge_fit = fits_edge(k, t);
     auto const trip_fit = fits_trip(sched_, k, t);
     if (!edge_fit || !trip_fit) {
-      auto const trp = sched_.merged_trips_[k.lcon()->trips_]->front();
+      auto const trp = sched_.merged_trips_[k.lcon()->merged_trips_]->front();
       seperate_trip(sched_, trp);
 
       if (!trip_fit) {

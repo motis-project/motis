@@ -44,7 +44,9 @@ struct csa_connection {
         light_con_(light_con) {}
   explicit csa_connection(motis::time t) : departure_(t), arrival_(t) {}
 
-  inline duration get_duration() const { return arrival_ - departure_; }
+  inline duration_t get_duration() const {
+    return arrival_.ts() - departure_.ts();
+  }
 
   station_id from_station_{0};
   station_id to_station_{0};
@@ -64,7 +66,7 @@ struct csa_station {
   explicit csa_station(station const* station_ptr);
 
   unsigned id_;
-  motis::time transfer_time_;
+  duration_t transfer_time_;
   std::vector<footpath> footpaths_;
   std::vector<footpath> incoming_footpaths_;
   std::vector<csa_connection const*> outgoing_connections_;

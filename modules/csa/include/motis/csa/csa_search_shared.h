@@ -7,8 +7,8 @@
 namespace motis {
 namespace csa {
 
-constexpr duration MAX_TRAVEL_TIME = 1440;
-constexpr duration MAX_TRANSFERS = 7;
+constexpr duration_t MAX_TRAVEL_TIME = 1440;
+constexpr duration_t MAX_TRANSFERS = 7;
 
 // https://stackoverflow.com/questions/49318316/initialize-all-elements-or-stdarray-with-the-same-constructor-arguments
 template <typename T, std::size_t N, std::size_t Idx = N>

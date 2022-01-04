@@ -6,7 +6,7 @@ namespace motis::access {
 
 class trip_stop {
 public:
-  trip_stop(trip const* t, int index);
+  trip_stop(concrete_trip t, int index);
 
   int index() const;
 
@@ -15,6 +15,12 @@ public:
 
   light_connection const& arr_lcon() const;
   light_connection const& dep_lcon() const;
+
+  day_idx_t dep_day() const;
+  day_idx_t arr_day() const;
+
+  time arr_time() const;
+  time dep_time() const;
 
   connection_info const& arr_info(schedule const& sched) const;
   connection_info const& dep_info(schedule const& sched) const;
@@ -27,7 +33,7 @@ public:
   bool is_last() const;
 
 private:
-  trip const* trip_;
+  concrete_trip trip_;
   int index_;
   node const* node_;
 };

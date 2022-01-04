@@ -2,15 +2,15 @@
 
 namespace motis::routing {
 
-constexpr duration MAX_TRAVEL_TIME = 1440;
+constexpr duration_t MAX_TRAVEL_TIME = 1440;
 
 struct travel_time {
-  duration travel_time_, travel_time_lb_;
+  duration_t travel_time_, travel_time_lb_;
 };
 
 struct get_travel_time_lb {
   template <typename Label>
-  duration operator()(Label const* l) {
+  duration_t operator()(Label const* l) {
     return l->travel_time_lb_;
   }
 };
@@ -24,7 +24,7 @@ struct travel_time_initializer {
     if (lb.travel_time_.is_reachable(lb_val)) {
       l.travel_time_lb_ = l.travel_time_ + lb_val;
     } else {
-      l.travel_time_lb_ = std::numeric_limits<duration>::max();
+      l.travel_time_lb_ = std::numeric_limits<duration_t>::max();
     }
   }
 };
@@ -38,7 +38,7 @@ struct travel_time_updater {
     if (lb.travel_time_.is_reachable(lb_val)) {
       l.travel_time_lb_ = l.travel_time_ + lb_val;
     } else {
-      l.travel_time_lb_ = std::numeric_limits<duration>::max();
+      l.travel_time_lb_ = std::numeric_limits<duration_t>::max();
     }
   }
 };
@@ -66,10 +66,11 @@ struct travel_time_alpha_dominance {
     domination_info(Label const& a, Label const& b)
         : travel_time_a_(a.travel_time_),
           travel_time_b_(b.travel_time_),
-          dist_(std::min(std::abs(static_cast<int>(a.start_) - b.start_),
-                         std::abs(static_cast<int>(a.now_) - b.now_))) {}
+          dist_(std::min(std::abs(a.start_ - b.start_),
+                         std::abs(a.now_ - b.now_))) {}
 
-    domination_info(time travel_time_a, time travel_time_b, time dist)
+    domination_info(duration_t const travel_time_a,
+                    duration_t const travel_time_b, duration_t const dist)
         : travel_time_a_(travel_time_a),
           travel_time_b_(travel_time_b),
           dist_(dist) {}
@@ -84,8 +85,8 @@ struct travel_time_alpha_dominance {
       return travel_time_a_ + a * dist_ < travel_time_b_;
     }
 
-    time travel_time_a_, travel_time_b_;
-    time dist_;
+    duration_t travel_time_a_, travel_time_b_;
+    duration_t dist_;
   };
 
   template <typename Label>

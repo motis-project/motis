@@ -23,41 +23,39 @@ TEST_F(loader_trip, none) {
 }
 
 TEST_F(loader_trip, simple) {
-  auto trp = get_trip(*sched_, "0000001", 1, unix_time(1000), "0000003",
-                      unix_time(1200), "");
-  ASSERT_NE(nullptr, trp);
+  auto const ctrp = get_trip(*sched_, "0000001", 1, unix_time(1000), "0000003",
+                             unix_time(1200), "");
 
-  auto const& primary = trp->id_.primary_;
-  auto const& secondary = trp->id_.secondary_;
+  auto const& primary = ctrp.trp_->id_.primary_;
+  auto const& secondary = ctrp.trp_->id_.secondary_;
 
   EXPECT_EQ("0000001", sched_->stations_[primary.station_id_]->eva_nr_);
   EXPECT_EQ(1, primary.train_nr_);
-  EXPECT_EQ(motis_time(1000), primary.time_);
+  EXPECT_EQ(motis_time(1000), ctrp.get_first_dep_time());
 
   EXPECT_EQ("", secondary.line_id_);
   EXPECT_EQ("0000003",
             sched_->stations_[secondary.target_station_id_]->eva_nr_);
-  EXPECT_EQ(motis_time(1200), secondary.target_time_);
+  EXPECT_EQ(motis_time(1200), ctrp.get_last_arr_time());
 
-  ASSERT_EQ(2, trp->edges_->size());
-  for (auto const& sec : sections(trp)) {
-    auto const& lcon = sec.lcon();
+  ASSERT_EQ(2, ctrp.trp_->edges_->size());
+  for (auto const& sec : sections(ctrp)) {
     auto const& info = sec.info(*sched_);
     auto const& from = sec.from_station(*sched_);
     auto const& to = sec.to_station(*sched_);
 
     switch (sec.index()) {
       case 0:
-        EXPECT_EQ(motis_time(1000), lcon.d_time_);
-        EXPECT_EQ(motis_time(1100), lcon.a_time_);
+        EXPECT_EQ(motis_time(1000), sec.dep_time());
+        EXPECT_EQ(motis_time(1100), sec.arr_time());
         EXPECT_EQ("0000001", from.eva_nr_);
         EXPECT_EQ("0000002", to.eva_nr_);
         EXPECT_EQ(1, info.train_nr_);
         break;
 
       case 1:
-        EXPECT_EQ(motis_time(1100), lcon.d_time_);
-        EXPECT_EQ(motis_time(1200), lcon.a_time_);
+        EXPECT_EQ(motis_time(1100), sec.dep_time());
+        EXPECT_EQ(motis_time(1200), sec.arr_time());
         EXPECT_EQ("0000002", from.eva_nr_);
         EXPECT_EQ("0000003", to.eva_nr_);
         EXPECT_EQ(1, info.train_nr_);
@@ -67,30 +65,29 @@ TEST_F(loader_trip, simple) {
     }
   }
 
-  for (auto const& stop : stops(trp)) {
+  for (auto const& stop : stops(ctrp)) {
     auto const& station = stop.get_station(*sched_);
     switch (stop.index()) {
       case 0:
         EXPECT_EQ("0000001", station.eva_nr_);
         ASSERT_FALSE(stop.has_arrival());
         ASSERT_TRUE(stop.has_departure());
-        EXPECT_EQ(motis_time(1000), stop.dep_lcon().d_time_);
-
+        EXPECT_EQ(motis_time(1000), stop.dep_time());
         break;
 
       case 1:
         EXPECT_EQ("0000002", station.eva_nr_);
         ASSERT_TRUE(stop.has_arrival());
         ASSERT_TRUE(stop.has_departure());
-        EXPECT_EQ(motis_time(1100), stop.arr_lcon().a_time_);
-        EXPECT_EQ(motis_time(1100), stop.dep_lcon().d_time_);
+        EXPECT_EQ(motis_time(1100), stop.arr_time());
+        EXPECT_EQ(motis_time(1100), stop.dep_time());
         break;
 
       case 2:
         EXPECT_EQ("0000003", station.eva_nr_);
         ASSERT_TRUE(stop.has_arrival());
         ASSERT_FALSE(stop.has_departure());
-        EXPECT_EQ(motis_time(1200), stop.arr_lcon().a_time_);
+        EXPECT_EQ(motis_time(1200), stop.arr_time());
         break;
 
       default: FAIL() << "stop index out of bounds";
@@ -103,9 +100,6 @@ TEST_F(loader_trip, collision) {
                        unix_time(1100), "foo");
   auto trp1 = get_trip(*sched_, "0000004", 2, unix_time(1000), "0000005",
                        unix_time(1100), "bar");
-
-  ASSERT_NE(nullptr, trp0);
-  ASSERT_NE(nullptr, trp1);
   ASSERT_NE(trp0, trp1);
 }
 
@@ -114,9 +108,6 @@ TEST_F(loader_trip, rename) {
                        unix_time(2200), "");
   auto trp1 = get_trip(*sched_, "0000002", 4, unix_time(2100), "0000003",
                        unix_time(2200), "");
-
-  ASSERT_NE(nullptr, trp0);
-  ASSERT_NE(nullptr, trp1);
   ASSERT_EQ(trp0, trp1);
 }
 

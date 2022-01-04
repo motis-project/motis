@@ -17,7 +17,7 @@ struct path_database;
 struct path_index;
 
 struct path_data {
-  size_t trip_to_index(schedule const&, trip const*) const;
+  size_t trip_to_index(schedule const&, trip_info const*) const;
 
   module::msg_ptr get_response(size_t index, int zoom_level = -1) const;
 

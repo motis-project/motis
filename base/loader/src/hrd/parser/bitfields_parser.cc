@@ -43,6 +43,11 @@ bitfield hex_str_to_bitset(cstr hex, char const* filename, int line_number) {
   std::string bitstring(std::next(begin(bit_str), period_begin + 2),
                         std::next(begin(bit_str), period_end));
   std::reverse(begin(bitstring), end(bitstring));
+  if (bitstring.size() > MAX_DAYS) {
+    LOG(error) << bitstring.size()
+               << " bits in traffic days > MAX_DAYS=" << MAX_DAYS;
+    throw parser_error{filename, line_number};
+  }
   return bitfield{bitstring};
 }
 
@@ -61,7 +66,7 @@ std::map<int, bitfield> parse_bitfields(loaded_file const& f, config const& c) {
         hex_str_to_bitset(line.substr(c.bf_.value_), f.name(), line_number);
   });
 
-  bitfields[ALL_DAYS_KEY] = create_uniform_bitfield<BIT_COUNT>('1');
+  bitfields[ALL_DAYS_KEY] = create_uniform_bitfield('1');
 
   return bitfields;
 }

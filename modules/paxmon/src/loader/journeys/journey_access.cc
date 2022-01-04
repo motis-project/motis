@@ -71,7 +71,7 @@ void for_each_trip(
       auto const trip_segments =
           get_journey_trip_segments(j, *enter_stop_idx, *exit_stop_idx);
       for (auto const& jts : trip_segments) {
-        cb(get_trip(sched, jts.trip_->extern_trip_), j.stops_.at(jts.from_),
+        cb(get_trip(sched, jts.ctrp_->extern_trip_), j.stops_.at(jts.from_),
            j.stops_.at(jts.to_),
            jts.from_ == *enter_stop_idx ? enter_transfer : std::nullopt);
       }
@@ -83,14 +83,14 @@ void for_each_trip(
         if (*exit_stop_idx == stop_idx) {
           auto const st = get_station(sched, stop.eva_no_);
           enter_transfer =
-              transfer_info{static_cast<duration>(st->transfer_time_),
+              transfer_info{static_cast<duration_t>(st->transfer_time_),
                             transfer_info::type::SAME_STATION};
         } else {
           auto const walk_duration =
               (stop.arrival_.schedule_timestamp_ -
                j.stops_.at(*exit_stop_idx).departure_.schedule_timestamp_) /
               60;
-          enter_transfer = transfer_info{static_cast<duration>(walk_duration),
+          enter_transfer = transfer_info{static_cast<duration_t>(walk_duration),
                                          transfer_info::type::FOOTPATH};
         }
       } else {

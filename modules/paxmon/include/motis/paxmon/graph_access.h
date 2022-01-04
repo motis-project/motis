@@ -54,7 +54,7 @@ inline edge make_trip_edge(universe& uv, event_node_index from,
 }
 
 inline edge make_interchange_edge(event_node_index from, event_node_index to,
-                                  duration transfer_time, pci_index pci) {
+                                  duration_t transfer_time, pci_index pci) {
   return edge{from,
               to,
               edge_type::INTERCHANGE,

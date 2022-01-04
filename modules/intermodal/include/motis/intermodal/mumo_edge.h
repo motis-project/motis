@@ -36,8 +36,8 @@ struct car_parking_edge {
 
 struct mumo_edge {
   mumo_edge(std::string from, std::string to, geo::latlng const& from_pos,
-            geo::latlng const& to_pos, duration const d, uint16_t accessibility,
-            mumo_type const type, int const id)
+            geo::latlng const& to_pos, duration_t const d,
+            uint16_t accessibility, mumo_type const type, int const id)
       : from_(std::move(from)),
         to_(std::move(to)),
         from_pos_(from_pos),
@@ -49,7 +49,7 @@ struct mumo_edge {
 
   std::string from_, to_;
   geo::latlng from_pos_, to_pos_;
-  duration duration_;
+  duration_t duration_;
   uint16_t accessibility_;
   mumo_type type_;
   int id_;
@@ -57,7 +57,7 @@ struct mumo_edge {
 };
 
 using appender_fun = std::function<mumo_edge&(
-    std::string const&, geo::latlng const&, duration const, uint16_t const,
+    std::string const&, geo::latlng const&, duration_t const, uint16_t const,
     mumo_type const, int const)>;
 
 using mumo_stats_appender_fun = std::function<void(stats_category&&)>;

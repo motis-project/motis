@@ -8,7 +8,7 @@ namespace motis {
 
 journey::transport generate_journey_transport(
     unsigned int from, unsigned int to, connection_info const* con_info,
-    schedule const& sched, duration duration = 0, int mumo_id = -1,
+    schedule const& sched, duration_t duration = 0, int mumo_id = -1,
     unsigned mumo_price = 0, unsigned mumo_accessibility = 0);
 
 }  // namespace motis

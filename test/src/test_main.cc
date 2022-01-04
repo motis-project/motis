@@ -4,6 +4,8 @@
 
 #include "gtest/gtest.h"
 
+#include "utl/progress_tracker.h"
+
 #include "test_dir.h"
 
 #ifdef PROTOBUF_LINKED
@@ -13,6 +15,8 @@
 namespace fs = boost::filesystem;
 
 int main(int argc, char** argv) {
+  utl::activate_progress_tracker("");
+
   fs::current_path(MOTIS_TEST_EXECUTION_DIR);
   std::cout << "executing tests in " << fs::current_path() << std::endl;
 

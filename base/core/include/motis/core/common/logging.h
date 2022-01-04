@@ -26,6 +26,11 @@
 
 namespace motis::logging {
 
+enum log_level { emrg, alrt, crit, error, warn, notice, info, debug };
+
+static const char* const str[]{"emrg", "alrt", "crit", "erro",
+                               "warn", "note", "info", "debg"};
+
 std::string time(time_t);
 std::string time();
 
@@ -54,11 +59,6 @@ struct log {
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
   static bool enabled_;
 };
-
-enum log_level { emrg, alrt, crit, error, warn, notice, info, debug };
-
-static const char* const str[]{"emrg", "alrt", "crit", "erro",
-                               "warn", "note", "info", "debg"};
 
 template <typename Msg, typename... Args>
 void l(log_level const lvl, Msg&& msg, Args&&... args) {

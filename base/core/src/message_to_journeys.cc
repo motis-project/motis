@@ -37,7 +37,7 @@ journey::stop to_stop(Stop const& stop) {
   return s;
 }
 
-journey::transport to_transport(Walk const& walk, uint16_t duration) {
+journey::transport to_transport(Walk const& walk, duration_t const duration) {
   auto t = journey::transport{};
   t.is_walk_ = true;
   t.duration_ = duration;
@@ -50,7 +50,8 @@ journey::transport to_transport(Walk const& walk, uint16_t duration) {
   return t;
 }
 
-journey::transport to_transport(Transport const& transport, uint16_t duration) {
+journey::transport to_transport(Transport const& transport,
+                                duration_t const duration) {
   auto t = journey::transport{};
   t.duration_ = duration;
   t.from_ = transport.range()->from();
@@ -109,12 +110,13 @@ journey::problem to_problem(Problem const& problem) {
   return p;
 }
 
-uint16_t get_move_duration(
+duration_t get_move_duration(
     Range const& range,
     flatbuffers::Vector<flatbuffers::Offset<Stop>> const& stops) {
-  Stop const& from = *stops[range.from()];
-  Stop const& to = *stops[range.to()];
-  return (to.arrival()->time() - from.departure()->time()) / 60;
+  auto const dep_time = stops[range.from()]->departure()->time();
+  auto const arr_time = stops[range.to()]->arrival()->time();
+  auto const minutes = static_cast<int64_t>((arr_time - dep_time) / 60);
+  return minutes;
 }
 
 journey convert(Connection const* conn) {
@@ -161,8 +163,6 @@ journey convert(Connection const* conn) {
   journey.status_ = status_from_fbs(conn->status());
   journey.duration_ = get_duration(journey);
   journey.transfers_ = get_transfers(journey);
-  journey.night_penalty_ = conn->night_penalty();
-  journey.db_costs_ = conn->db_costs();
   journey.accessibility_ = get_accessibility(journey);
 
   return journey;

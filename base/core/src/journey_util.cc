@@ -8,7 +8,7 @@
 
 namespace motis {
 
-uint16_t get_duration(journey const& journey) {
+duration_t get_duration(journey const& journey) {
   if (!journey.stops_.empty()) {
     return (journey.stops_.back().arrival_.timestamp_ -
             journey.stops_.front().departure_.timestamp_) /

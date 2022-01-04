@@ -183,12 +183,12 @@ std::string query(std::string const& target, Start const start_type, int id,
   return json;
 }
 
-bool has_events(edge const& e, motis::time from, motis::time to) {
-  auto con = e.get_connection(from);
-  return con != nullptr && con->d_time_ <= to;
+bool has_events(edge const& e, time const from, time const to) {
+  auto [con, day] = e.get_connection(from);
+  return con != nullptr && con->event_time(event_type::DEP, day) <= to;
 }
 
-bool has_events(station_node const& s, motis::time from, motis::time to) {
+bool has_events(station_node const& s, time const from, time const to) {
   auto found = false;
   s.for_each_route_node([&](node const* r) {
     for (auto const& e : r->edges_) {
@@ -201,15 +201,14 @@ bool has_events(station_node const& s, motis::time from, motis::time to) {
 }
 
 int random_station_id(std::vector<station_node const*> const& station_nodes,
-                      unixtime motis_interval_start,
-                      unixtime motis_interval_end) {
+                      time const interval_start, time const interval_end) {
   auto first = std::next(begin(station_nodes), 2);
   auto last = end(station_nodes);
 
   station_node const* s = nullptr;
   do {
     s = *rand_in(first, last);
-  } while (!has_events(*s, motis_interval_start, motis_interval_end));
+  } while (!has_events(*s, interval_start, interval_end));
   return s->id_;
 }
 

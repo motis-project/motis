@@ -29,7 +29,7 @@ struct pareto_dijkstra {
   };
 
   pareto_dijkstra(
-      int node_count, unsigned int station_node_count,
+      schedule const* sched, int node_count, unsigned int station_node_count,
       boost::container::vector<bool> const& is_goal,
       mcd::hash_map<node const*, std::vector<edge>> additional_edges,
       LowerBounds& lower_bounds, mem_manager& label_store)
@@ -39,7 +39,8 @@ struct pareto_dijkstra {
         additional_edges_(std::move(additional_edges)),
         lower_bounds_(lower_bounds),
         label_store_(label_store),
-        max_labels_(1024 * 1024 * 128) {}
+        max_labels_(std::uint64_t{1024} * 1024 * 128),
+        sched_(sched) {}
 
   void add_start_labels(std::vector<Label*> const& start_labels) {
     for (auto const& l : start_labels) {
@@ -125,9 +126,9 @@ private:
     Label blank{};
     bool created = l->create_label(
         blank, edge, lower_bounds_,
-        (Dir == search_dir::FWD && edge.type() == edge::EXIT_EDGE &&
+        (Dir == search_dir::FWD && edge.type() == edge_type::EXIT_EDGE &&
          is_goal_[edge.get_source<Dir>()->get_station()->id_]) ||
-            (Dir == search_dir::BWD && edge.type() == edge::ENTER_EDGE &&
+            (Dir == search_dir::BWD && edge.type() == edge_type::ENTER_EDGE &&
              is_goal_[edge.get_source<Dir>()->get_station()->id_]));
     if (!created) {
       return;
@@ -239,7 +240,8 @@ private:
   LowerBounds& lower_bounds_;
   mem_manager& label_store_;
   statistics stats_;
-  std::size_t max_labels_;
+  std::uint64_t max_labels_;
+  schedule const* sched_;
 };
 
 }  // namespace motis::routing

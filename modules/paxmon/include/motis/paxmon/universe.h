@@ -112,7 +112,7 @@ struct edge {
     return *sched.merged_trips_.at(trips_);
   }
 
-  inline duration transfer_time() const { return transfer_time_; }
+  inline duration_t transfer_time() const { return transfer_time_; }
 
   inline std::uint16_t capacity() const {
     return get_capacity(encoded_capacity_);
@@ -140,7 +140,7 @@ struct edge {
   event_node_index to_{};
   edge_type type_{};
   bool broken_{false};
-  duration transfer_time_{};
+  duration_t transfer_time_{};
   std::uint16_t encoded_capacity_{};
   service_class clasz_{service_class::OTHER};
   merged_trips_idx trips_{};

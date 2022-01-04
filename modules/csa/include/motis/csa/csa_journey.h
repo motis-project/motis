@@ -1,5 +1,7 @@
 #pragma once
 
+#include "motis/core/schedule/time.h"
+
 #include "motis/csa/csa_timetable.h"
 
 namespace motis::csa {
@@ -12,8 +14,8 @@ struct csa_journey {
       : dir_(dir),
         start_time_(start_time),
         arrival_time_(arrival_time),
-        duration_(arrival_time > start_time ? arrival_time - start_time
-                                            : start_time - arrival_time),
+        duration_((arrival_time > start_time ? arrival_time - start_time
+                                             : start_time - arrival_time)),
         transfers_(transfers),
         price_(price),
         destination_station_(destination_station) {}
@@ -53,7 +55,7 @@ struct csa_journey {
 
     bool is_connection() const { return con_ != nullptr; }
     bool is_walk() const { return con_ == nullptr; }
-    int duration() const { return arrival_ - departure_; }
+    duration_t duration() const { return arrival_ - departure_; }
 
     light_connection const* con_{nullptr};
     csa_station const* from_{nullptr};
@@ -86,13 +88,13 @@ struct csa_journey {
 
   time journey_begin() const { return edges_.front().departure_; }
   time journey_end() const { return edges_.back().arrival_; }
-  time duration() const { return journey_end() - journey_begin(); }
+  duration_t duration() const { return journey_end() - journey_begin(); }
 
   uint32_t query_idx_{0U};
   search_dir dir_{search_dir::FWD};
   time start_time_{INVALID_TIME};
   time arrival_time_{INVALID_TIME};
-  unsigned duration_{};
+  duration_t duration_{};
   unsigned transfers_{};
   unsigned accessibility_{};
   unsigned price_{};

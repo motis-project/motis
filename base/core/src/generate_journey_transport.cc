@@ -6,8 +6,8 @@ namespace motis {
 
 journey::transport generate_journey_transport(
     unsigned int from, unsigned int to, connection_info const* con_info,
-    schedule const& sched, duration duration, int mumo_id, unsigned mumo_price,
-    unsigned mumo_accessibility) {
+    schedule const& sched, duration_t duration, int mumo_id,
+    unsigned mumo_price, unsigned mumo_accessibility) {
   bool is_walk = true;
   mcd::string name;
   mcd::string cat_name;
@@ -21,8 +21,8 @@ journey::transport generate_journey_transport(
   if (con_info != nullptr) {
     is_walk = false;
 
-    cat_id = con_info->family_;
-    cat_name = sched.categories_[con_info->family_]->name_;
+    cat_id = con_info->category_;
+    cat_name = sched.categories_[cat_id]->name_;
 
     auto clasz_it = sched.classes_.find(cat_name);
     clasz = static_cast<service_class_t>(clasz_it == end(sched.classes_)

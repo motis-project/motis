@@ -8,6 +8,7 @@
 #include "cista/offset_t.h"
 #include "cista/reflection/comparable.h"
 
+#include "utl/pipes.h"
 #include "utl/to_vec.h"
 
 #include "motis/string.h"
@@ -21,7 +22,7 @@
 namespace motis {
 
 struct primary_trip_id {
-  primary_trip_id() : station_id_{0}, time_{INVALID_TIME}, train_nr_{0} {}
+  primary_trip_id() : station_id_{0}, time_{INVALID_MAM}, train_nr_{0} {}
   primary_trip_id(uint32_t station_id, uint32_t train_nr, motis::time time)
       : station_id_(station_id), time_(time), train_nr_(train_nr) {}
 
@@ -42,18 +43,17 @@ struct primary_trip_id {
   }
 
   uint32_t get_station_id() const { return static_cast<uint32_t>(station_id_); }
-  motis::time get_time() const { return static_cast<motis::time>(time_); }
   uint32_t get_train_nr() const { return static_cast<uint32_t>(train_nr_); }
 
   uint64_t station_id_ : 31;
-  uint64_t time_ : 16;
+  mam_t first_departure_mam_ : 16;
   uint64_t train_nr_ : 17;
 };
 
 struct secondary_trip_id {
   CISTA_COMPARABLE();
   uint32_t target_station_id_{0U};
-  motis::time target_time_{INVALID_TIME};
+  mam_t last_arrival_mam_{INVALID_MAM};
   mcd::string line_id_;
 };
 
@@ -74,16 +74,7 @@ struct trip_debug {
 };
 
 struct full_trip_id {
-  friend bool operator<(full_trip_id const& lhs, full_trip_id const& rhs) {
-    return std::tie(lhs.primary_, lhs.secondary_) <
-           std::tie(rhs.primary_, rhs.secondary_);
-  }
-
-  friend bool operator==(full_trip_id const& lhs, full_trip_id const& rhs) {
-    return std::tie(lhs.primary_, lhs.secondary_) ==
-           std::tie(rhs.primary_, rhs.secondary_);
-  }
-
+  CISTA_COMPARABLE()
   primary_trip_id primary_;
   secondary_trip_id secondary_;
 };
@@ -110,7 +101,20 @@ struct gtfs_trip_id {
   std::optional<unixtime> start_date_;
 };
 
-struct trip {
+
+struct trip_info;
+
+struct concrete_trip {
+  CISTA_COMPARABLE()
+
+  time get_first_dep_time() const;
+  time get_last_arr_time() const;
+
+  trip_info const* trp_;
+  day_idx_t day_idx_;
+};
+
+struct trip_info {
   struct route_edge {
     route_edge() = default;
 
@@ -128,7 +132,7 @@ struct trip {
     }
 
 #if defined(MOTIS_SCHEDULE_MODE_OFFSET)
-    route_edge(ptr<edge const> e) : route_edge(e.get()) {}  // NOLINT
+    route_edge(ptr<edge const> e) : route_edge{e.get()} {}  // NOLINT
 #endif
 
     friend bool operator==(route_edge const& a, route_edge const& b) {
@@ -161,8 +165,28 @@ struct trip {
     uint32_t outgoing_edge_idx_{0};
   };
 
+  auto concrete_trips() const {
+    return utl::iota(day_idx_t{0}, MAX_DAYS)  //
+           | utl::remove_if([&](auto const day) {
+               return !edges_->front()
+                           ->m_.route_edge_.conns_.at(lcon_idx_)
+                           .traffic_days_->test(day);
+             })  //
+           | utl::transform([&](auto const day) {
+               return concrete_trip{this, day};
+             })  //
+           | utl::iterable();
+  }
+
+  size_t ctrp_count() const {
+    return edges_->front()
+        ->m_.route_edge_.conns_.at(lcon_idx_)
+        .traffic_days_->count();
+  }
+
   full_trip_id id_;
   ptr<mcd::vector<route_edge> const> edges_{nullptr};
+  mcd::vector<day_idx_t> day_offsets_;
   lcon_idx_t lcon_idx_{0U};
   trip_debug dbg_;
   mcd::vector<uint32_t> stop_seq_numbers_;

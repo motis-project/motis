@@ -81,7 +81,8 @@ waiting_time_rules load_waiting_time_rules(
   auto const number_of_groups = rules.default_group_;
   rules.waits_for_other_trains_.resize(number_of_groups + 1);
   rules.other_trains_wait_for_.resize(number_of_groups + 1);
-  rules.waiting_time_matrix_ = make_flat_matrix<duration>(number_of_groups + 1);
+  rules.waiting_time_matrix_ =
+      make_flat_matrix<duration_t>(number_of_groups + 1);
 
   for (int i = 0; i < number_of_groups * number_of_groups; i++) {
     int connecting_cat = i / number_of_groups + 1;
@@ -115,12 +116,12 @@ void collect_events(station_node const* st,
       auto const& lc = e.m_.route_edge_.conns_[lcon_idx];
       if (ev_type == event_type::DEP &&
           wtr.waits_for_other_trains(
-              wtr.waiting_time_category(lc.full_con_->con_info_->family_))) {
+              wtr.waiting_time_category(lc.full_con_->con_info_->category_))) {
         waits_for_other_trains.emplace_back(ev_key{&e, lcon_idx, ev_type});
       }
       if (ev_type == event_type::ARR &&
           wtr.other_trains_wait_for(
-              wtr.waiting_time_category(lc.full_con_->con_info_->family_))) {
+              wtr.waiting_time_category(lc.full_con_->con_info_->category_))) {
         other_trains_wait_for.emplace_back(ev_key{&e, lcon_idx, ev_type});
       }
     }
@@ -128,12 +129,12 @@ void collect_events(station_node const* st,
 
   st->for_each_route_node([&](node const* n) {
     for (auto const& e : n->edges_) {
-      if (e.type() == edge::ROUTE_EDGE) {
+      if (e.is_route_edge()) {
         collect(e, event_type::DEP);
       }
     }
     for (auto const& ie : n->incoming_edges_) {
-      if (ie->type() == edge::ROUTE_EDGE) {
+      if (ie->is_route_edge()) {
         collect(*ie, event_type::ARR);
       }
     }
@@ -143,7 +144,7 @@ void collect_events(station_node const* st,
 void add_dependencies(schedule& sched,
                       std::vector<ev_key> const& waits_for_other_trains,
                       std::vector<ev_key> const& other_trains_wait_for,
-                      duration planned_transfer_delta, std::mutex& mutex) {
+                      duration_t planned_transfer_delta, std::mutex& mutex) {
   std::vector<std::pair<ev_key, ev_key>> entries;
   auto const& wtr = sched.waiting_time_rules_;
   for (auto const& feeder : other_trains_wait_for) {
@@ -160,8 +161,8 @@ void add_dependencies(schedule& sched,
         continue;
       }
       auto const waiting_time = wtr.waiting_time_family(
-          connector.lcon()->full_con_->con_info_->family_,
-          feeder.lcon()->full_con_->con_info_->family_);
+          connector.lcon()->full_con_->con_info_->category_,
+          feeder.lcon()->full_con_->con_info_->category_);
       if (waiting_time == 0) {
         continue;
       }
@@ -177,7 +178,7 @@ void add_dependencies(schedule& sched,
   }
 }
 
-void calc_waits_for(schedule& sched, duration planned_transfer_delta) {
+void calc_waits_for(schedule& sched, duration_t planned_transfer_delta) {
   scoped_timer timer("calculating waiting time rule dependencies");
   std::mutex mutex;
   utl::parallel_for(sched.station_nodes_, [&](auto const& st) {

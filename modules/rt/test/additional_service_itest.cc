@@ -50,14 +50,14 @@ TEST_F(rt_additional_service_test, simple) {
     auto const& conns = trp_e.get_edge()->m_.route_edge_.conns_;
     ASSERT_EQ(1, conns.size());
 
-    auto const& trps = *sched().merged_trips_.at(conns[0].trips_);
+    auto const& trps = *sched().merged_trips_.at(conns[0].merged_trips_);
     ASSERT_EQ(1, trps.size());
     EXPECT_EQ(trp, trps[0]);
 
     EXPECT_EQ(77, conns[0].full_con_->con_info_->train_nr_);
     EXPECT_EQ(
         "ICE",
-        sched().categories_[conns[0].full_con_->con_info_->family_]->name_);
+        sched().categories_[conns[0].full_con_->con_info_->category_]->name_);
   }
 
   EXPECT_EQ(mcd::vector<mcd::string>({"7a", "2", "2", "5"}),

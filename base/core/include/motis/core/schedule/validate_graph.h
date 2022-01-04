@@ -5,6 +5,7 @@
 #include "utl/verify.h"
 
 #include "motis/core/schedule/schedule.h"
+#include "motis/core/access/service_access.h"
 #include "motis/core/access/trip_iterator.h"
 
 namespace motis {
@@ -43,6 +44,34 @@ inline void validate_graph(schedule const& sched) {
         return true;
       }(),
       "all light connections sorted after rt update");
+
+  utl::verify(
+      [&] {
+        for (auto const& sn : sched.station_nodes_) {
+          for (auto const& se : sn->edges_) {
+            if (se.to_->type() != node_type::ROUTE_NODE) {
+              continue;
+            }
+
+            for (auto const& re : se.to_->edges_) {
+              if (re.empty()) {
+                continue;
+              }
+
+              auto const& lcons = re.m_.route_edge_.conns_;
+              if (!std::all_of(begin(lcons), end(lcons),
+                               [](light_connection const& lcon) {
+                                 return lcon.traffic_days_ != nullptr &&
+                                        lcon.traffic_days_->any();
+                               })) {
+                return false;
+              }
+            }
+          }
+        }
+        return true;
+      }(),
+      "lcons with traffic days = nullptr or zero traffic days");
 
   utl::verify(
       [&] {
@@ -112,43 +141,94 @@ inline void validate_graph(schedule const& sched) {
             });
       }(),
       "edge from pointer correct");
+
+  utl::verify(
+      std::all_of(begin(sched.trips_), end(sched.trips_),
+                  [](auto const& t) { return t.second->edges_ != nullptr; }),
+      "missing trip edges");
 }
 
 inline void print_graph(schedule const& sched) {
-  std::cout << "\n\nGraph:\n";
-  auto const print_edge = [&](edge const* e) {
-    std::cout << "    " << e;
-    std::cout.flush();
-    std::cout << " " << e->type_str() << ": " << e->from_ << " ("
-              << e->from_->type_str() << " " << e->from_->id_ << ", station "
-              << e->from_->id_ << ") -> " << e->to_ << " ("
-              << e->to_->type_str() << " " << e->to_->id_ << ", station "
-              << e->to_->get_station()->id_ << ")" << std::endl;
+  auto const indent_line = [](size_t const indent) {
+    for (auto i = 0U; i != indent; ++i) {
+      std::cerr << "  ";
+    }
   };
 
-  auto const print_node = [&](node const* n) {
-    std::cout << n->type_str() << " " << n->id_ << " " << n << " (station "
-              << n->get_station()->id_ << "):" << std::endl;
-    std::cout << "  " << n->edges_.size()
-              << " outgoing edges: begin=" << n->edges_.begin()
-              << ", end=" << n->edges_.end() << std::endl;
-    for (auto const& e : n->edges_) {
-      print_edge(&e);
+  auto const station_name = [&](node const* n) {
+    return sched.stations_.at(n->get_station()->id_)->name_;
+  };
+
+  auto const traffic_days = [&](bitfield_idx_or_ptr const& b) {
+    if (b.bitfield_idx_ < 1000) {
+      return sched.bitfields_.at(b.bitfield_idx_);
+    } else {
+      return *b.traffic_days_;
     }
-    std::cout << "  " << n->incoming_edges_.size()
-              << " incoming edges:" << std::endl;
+  };
+
+  std::cerr << "\n\nGraph:\n";
+  auto const print_edge = [&](edge const* e, size_t const indent) {
+    indent_line(indent);
+    std::cerr << e->type_str() << ": " << station_name(e->from_) << " -> "
+              << station_name(e->to_) << "[" << e->to_->id_ << "]\n";
+    if (e->is_route_edge()) {
+      for (auto const& lcon : e->m_.route_edge_.conns_) {
+        indent_line(indent + 1);
+
+        auto con_info = lcon.full_con_->con_info_;
+        while (con_info != nullptr) {
+          std::cerr << get_service_name(sched, con_info);
+          con_info = con_info->merged_with_;
+          if (con_info != nullptr) {
+            std::cerr << "|";
+          }
+        }
+
+        std::cerr << ", dep=" << format_time(time{0, lcon.d_time_})
+                  << ", arr=" << format_time(time{0, lcon.a_time_})
+                  << ", traffic_days={";
+        auto first = true;
+        for (auto i = day_idx_t{0}; i != MAX_DAYS; ++i) {
+          if (traffic_days(lcon.traffic_days_).test(i)) {
+            if (!first) {
+              std::cerr << ", ";
+            } else {
+              first = false;
+            }
+            std::cerr << i;
+          }
+        }
+        std::cerr << "}\n";
+      }
+    }
+  };
+
+  auto const print_node = [&](node const* n, size_t const indent) {
+    indent_line(indent);
+    std::cerr << "id=" << n->id_ << ", " << n->type_str() << " at "
+              << station_name(n) << ":" << std::endl;
+
+    indent_line(indent + 1);
+    std::cerr << n->edges_.size() << " outgoing edges:" << std::endl;
+    for (auto const& e : n->edges_) {
+      print_edge(&e, indent + 2);
+    }
+
+    indent_line(indent + 1);
+    std::cerr << n->incoming_edges_.size() << " incoming edges:" << std::endl;
     for (auto const& e : n->incoming_edges_) {
-      print_edge(e);
+      print_edge(e, indent + 2);
     }
   };
 
   for (auto const& sn : sched.station_nodes_) {
-    print_node(sn.get());
+    print_node(sn.get(), 0);
     for (auto const& e : sn->edges_) {
-      print_node(e.to_);
+      print_node(e.to_, 1);
     }
   }
-  std::cout << "\n\n";
+  std::cerr << "\n\n";
 }
 
 }  // namespace motis

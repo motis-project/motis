@@ -197,7 +197,7 @@ msg_ptr railviz::get_trip_guesses(msg_ptr const& msg) {
   auto const get_first_dep_ci = [&](trip const* trp) {
     auto const& lcon =
         trp->edges_->front()->m_.route_edge_.conns_[trp->lcon_idx_];
-    auto const& merged = *sched.merged_trips_[lcon.trips_];
+    auto const& merged = *sched.merged_trips_[lcon.merged_trips_];
     auto const it = std::find(begin(merged), end(merged), trp);
     utl::verify(it != end(merged), "trip not found in trip");
     auto const merged_ci_idx = std::distance(begin(merged), it);
@@ -307,7 +307,7 @@ msg_ptr railviz::get_station(msg_ptr const& msg) {
       }
 
       for (auto i = 0U; i < re->m_.route_edge_.conns_.size(); ++i) {
-        on_ev(ev_key{trip::route_edge{re}, i, event_type::ARR});
+        on_ev(ev_key{trip_info::route_edge{re}, i, event_type::ARR});
       }
     }
   }

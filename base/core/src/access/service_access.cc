@@ -15,7 +15,7 @@ uint32_t output_train_nr(uint32_t train_nr, uint32_t original_train_nr) {
 
 std::string get_service_name(schedule const& sched,
                              connection_info const* info) {
-  auto rule = sched.categories_[info->family_]->output_rule_;
+  auto rule = sched.categories_[info->category_]->output_rule_;
   auto const force_train_nr = (rule & 0b1000U) != 0;  // line_id -> train_nr
   auto const force_provider = (rule & 0b0100U) != 0;  // category -> provider
   auto const base_rule = rule & 0b0011U;
@@ -32,7 +32,7 @@ std::string get_service_name(schedule const& sched,
     print_id = std::to_string(train_nr);
   }
 
-  auto const& category = sched.categories_[info->family_]->name_;
+  auto const& category = sched.categories_[info->category_]->name_;
 
   std::string provider;
   if (info->provider_ != nullptr) {

@@ -7,7 +7,7 @@ namespace motis::access {
 
 connection_info const& get_connection_info(schedule const& sched,
                                            light_connection const& lcon,
-                                           trip const* trp) {
+                                           trip_info const* trp) {
   auto const& trips = *sched.merged_trips_[lcon.trips_];
   if (trips.size() == 1) {
     return *lcon.full_con_->con_info_;
@@ -19,6 +19,7 @@ connection_info const& get_connection_info(schedule const& sched,
 
   auto info = lcon.full_con_->con_info_;
   for (int i = 0; i < pos; ++i) {
+    assert(info != nullptr);
     info = info->merged_with_;
   }
   return *info;

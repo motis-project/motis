@@ -22,7 +22,7 @@ struct pretrip_gen {
                                       std::vector<edge> const& meta_edges,
                                       std::vector<edge> const& query_edges,
                                       time interval_begin, time interval_end,
-                                      light_connection const*,
+                                      light_connection const*, day_idx_t const,
                                       bool starting_footpaths) {
     std::vector<Label*> labels;
     auto const start = sched.station_nodes_.at(0).get();
@@ -52,20 +52,14 @@ struct pretrip_gen {
         continue;
       } else if ((Dir == search_dir::FWD && !qe.to_->is_station_node()) ||
                  (Dir == search_dir::BWD && !qe.from_->is_station_node()) ||
-                 (qe.type() != edge::TIME_DEPENDENT_MUMO_EDGE &&
-                  qe.type() != edge::MUMO_EDGE)) {
+                 (qe.type() != edge_type::MUMO_EDGE)) {
         throw std::runtime_error("unsupported edge type");
       }
 
       std::vector<std::pair<edge const*, int>> path{{start_edge, 0}, {&qe, 0}};
 
-      auto const td = qe.type() == edge::TIME_DEPENDENT_MUMO_EDGE;
-      auto const edge_interval_begin =
-          td ? std::max(qe.m_.foot_edge_.interval_begin_, interval_begin)
-             : interval_begin;
-      auto const edge_interval_end =
-          td ? std::min(qe.m_.foot_edge_.interval_end_, interval_end)
-             : interval_end;
+      auto const edge_interval_begin = interval_begin;
+      auto const edge_interval_end = interval_end;
 
       generate_labels_at_route_nodes(sched, mem, lbs, path, edge_interval_begin,
                                      edge_interval_end, starting_footpaths,
@@ -94,7 +88,7 @@ struct pretrip_gen {
     base_gen<Dir, Label>::generate_labels_at_route_nodes(
         sched, initial_path, starting_footpaths, add_first_interchange_time,
         [&](std::vector<std::pair<edge const*, int>> const& path,
-            edge const& re, duration initial_walk) {
+            edge const& re, duration_t initial_walk) {
           return generate_start_labels(path, re, mem, lbs, interval_begin,
                                        interval_end, initial_walk, labels);
         });
@@ -103,7 +97,7 @@ struct pretrip_gen {
   static void generate_start_labels(
       std::vector<std::pair<edge const*, int>> const& path, edge const& re,
       mem_manager& mem, lower_bounds& lbs, time interval_begin,
-      time interval_end, duration initial_walk, std::vector<Label*>& labels) {
+      time interval_end, duration_t initial_walk, std::vector<Label*>& labels) {
     assert(!path.empty());
 
     auto const departure_begin = static_cast<time>(

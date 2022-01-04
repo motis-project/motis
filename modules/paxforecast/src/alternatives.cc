@@ -288,8 +288,8 @@ std::vector<alternative> find_alternatives(
   auto alternatives = utl::to_vec(journeys, [&](journey const& j) {
     auto const arrival_time = unix_to_motistime(
         sched.schedule_begin_, j.stops_.back().arrival_.timestamp_);
-    auto const dur = static_cast<duration>(arrival_time -
-                                           localization.current_arrival_time_);
+    auto const dur = static_cast<duration_t>(
+        arrival_time - localization.current_arrival_time_);
     return alternative{
         j, to_compact_journey(j, sched), arrival_time, dur, j.transfers_, true};
   });

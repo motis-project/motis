@@ -238,7 +238,7 @@ std::vector<parking_edges> get_cached_parking_edges(
   MOTIS_STOP_TIMING(osrm_timing);
   pe_stats.osrm_duration_ = MOTIS_TIMING_MS(osrm_timing);
 
-  auto const foot_duration_limit = static_cast<duration>(
+  auto const foot_duration_limit = static_cast<duration_t>(
       std::ceil(ppr_search_options->duration_limit() / 60));
   auto const filter_station = [&](FootEdge const* fe) {
     return fe->duration() > foot_duration_limit ||

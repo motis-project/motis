@@ -17,7 +17,7 @@ struct incoming_edge_patch {
   explicit incoming_edge_patch(edge const* e, int incoming_edge_idx = -1)
       : edge_(e), incoming_edge_idx_(incoming_edge_idx) {}
 
-  trip::route_edge edge_;
+  trip_info::route_edge edge_;
   int incoming_edge_idx_{-1};
 };
 

@@ -7,8 +7,27 @@
 
 namespace motis {
 
+static_assert(cista::to_tuple_works_v<bitfield>);
+
 constexpr auto const MODE =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_VERSION;
+
+template <typename Ctx>
+inline void serialize(Ctx& c, bitfield_idx_or_ptr const* origin,
+                      cista::offset_t const offset) {
+  serialize(c, &origin->bitfield_idx_,
+            offset + offsetof(bitfield_idx_or_ptr, bitfield_idx_));
+}
+
+template <typename Ctx>
+inline void deserialize(Ctx const& c, bitfield_idx_or_ptr* el) {
+  deserialize(c, &el->bitfield_idx_);
+}
+
+cista::hash_t type_hash(bitfield_idx_or_ptr const& el, cista::hash_t const h,
+                        std::map<cista::hash_t, unsigned>& done) {
+  return cista::hash_combine(cista::type_hash(el.bitfield_idx_, h, done));
+}
 
 template <typename Ctx>
 inline void serialize(Ctx& c, light_connection const* origin,
@@ -31,30 +50,24 @@ cista::hash_t type_hash(light_connection const& el, cista::hash_t const h,
                              cista::type_hash(el.valid_, h, done), 1);
 }
 
-template <typename Ctx>
-inline void serialize(Ctx&, primary_trip_id const*, cista::offset_t const) {}
-
-template <typename Ctx>
-inline void deserialize(Ctx const&, primary_trip_id*) {}
-
 cista::hash_t type_hash(primary_trip_id const&, cista::hash_t const h,
                         std::map<cista::hash_t, unsigned>& done) {
   return cista::hash_combine(cista::type_hash(uint64_t{}, h, done), 31, 16, 17);
 }
 
 template <typename Ctx>
-inline void serialize(Ctx& c, trip::route_edge const* origin,
+inline void serialize(Ctx& c, trip_info::route_edge const* origin,
                       cista::offset_t const offset) {
   cista::serialize(c, &origin->route_node_,
-                   offset + offsetof(trip::route_edge, route_node_));
+                   offset + offsetof(trip_info::route_edge, route_node_));
 }
 
 template <typename Ctx>
-inline void deserialize(Ctx const& c, trip::route_edge* el) {
+inline void deserialize(Ctx const& c, trip_info::route_edge* el) {
   cista::deserialize(c, &el->route_node_);
 }
 
-cista::hash_t type_hash(trip::route_edge const& el, cista::hash_t const h,
+cista::hash_t type_hash(trip_info::route_edge const& el, cista::hash_t const h,
                         std::map<cista::hash_t, unsigned>& done) {
   return cista::hash_combine(cista::type_hash(el.route_node_, h, done),
                              cista::type_hash(el.outgoing_edge_idx_, h, done));
@@ -65,7 +78,7 @@ inline void serialize(Ctx& c, edge const* origin,
                       cista::offset_t const offset) {
   cista::serialize(c, &origin->from_, offset + offsetof(edge, from_));
   cista::serialize(c, &origin->to_, offset + offsetof(edge, to_));
-  if (origin->type() == edge::ROUTE_EDGE) {
+  if (origin->is_route_edge()) {
     cista::serialize(c, &origin->m_.route_edge_.conns_,
                      offset + offsetof(edge, m_) +
                          offsetof(decltype(origin->m_), route_edge_) +
@@ -77,16 +90,23 @@ template <typename Ctx>
 inline void deserialize(Ctx const& c, edge* el) {
   cista::deserialize(c, &el->from_);
   cista::deserialize(c, &el->to_);
-  if (el->type() == edge::ROUTE_EDGE) {
+  if (el->is_route_edge()) {
     cista::deserialize(c, &el->m_.route_edge_.conns_);
   }
 }
 
+cista::hash_t type_hash(bitfield const&, cista::hash_t const h,
+                        std::map<cista::hash_t, unsigned>&) {
+  return cista::hash_combine(cista::hash("bitfield"), h);
+}
+
 cista::hash_t type_hash(edge const& el, cista::hash_t const h,
                         std::map<cista::hash_t, unsigned>& done) {
-  return cista::hash_combine(cista::type_hash(el.m_.route_edge_, h, done),
-                             cista::type_hash(el.m_.foot_edge_, h, done),
-                             cista::type_hash(el.m_.hotel_edge_, h, done));
+  return cista::hash_combine(
+      cista::type_hash(el.m_.route_edge_.type_padding_, h, done),
+      cista::type_hash(el.m_.route_edge_.conns_, h, done),
+      cista::type_hash(cista::hash("bitfield"), h, done),
+      cista::type_hash(el.m_.foot_edge_, h, done));
 }
 
 template <typename Ctx, typename T, typename SizeType>
