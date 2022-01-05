@@ -3,6 +3,7 @@ import React from 'react';
 import Maybe, { nothing } from 'true-myth/maybe';
 
 import { Overlay } from '../Modules/Overlay';
+import { MapContainer } from '../Modules/MapContainer';
 
 let visible = false;
 
@@ -27,7 +28,7 @@ export const Main: React.FC = () => {
     
     return(
         <div className='app'>
-            {/* visible && <MapView />*/}
+            <MapContainer />
             <Overlay />
             {//<StationSearchView />
             }
