@@ -79,7 +79,7 @@ std::vector<journey::trip> generate_journey_trips(
     for (auto const& range : ranges) {
       journey_trips.push_back(journey::trip{
           static_cast<unsigned>(range.from_), static_cast<unsigned>(range.to_),
-          extern_trip{sched.stations_.at(p.station_id_)->eva_nr_, p.train_nr_,
+          extern_trip{sched.stations_.at(p.station_id_)->eva_nr_, p.train_nr(),
                       motis_to_unixtime(sched, time{}),
                       sched.stations_.at(s.target_station_id_)->eva_nr_,
                       motis_to_unixtime(sched, ctrp.get_last_arr_time()),
@@ -112,10 +112,13 @@ std::vector<journey::stop> generate_journey_stops(
                                          motis_to_unixtime(
                                              sched.schedule_begin_,
                                              stop.a_sched_time_),
-                                         stop.a_reason_, stop.a_track_->str(),
-                                         stop.a_sched_track_->str(),
-                                         stop.a_track_->str(),
-                                         stop.d_sched_track_->str()}
+                                         stop.a_reason_,
+                                         stop.a_track_ != nullptr
+                                             ? stop.a_track_->str()
+                                             : "",
+                                         stop.a_sched_track_ != nullptr
+                                             ? stop.a_sched_track_->str()
+                                             : ""}
              : journey::stop::event_info{false, 0, 0,
                                          timestamp_reason::SCHEDULE, "", ""},
          stop.d_time_ != INVALID_TIME
@@ -126,10 +129,13 @@ std::vector<journey::stop> generate_journey_stops(
                                          motis_to_unixtime(
                                              sched.schedule_begin_,
                                              stop.d_sched_time_),
-                                         stop.a_reason_, stop.a_track_->str(),
-                                         stop.a_sched_track_->str(),
-                                         stop.a_track_->str(),
-                                         stop.d_sched_track_->str()}
+                                         stop.d_reason_,
+                                         stop.d_track_ != nullptr
+                                             ? stop.d_track_->str()
+                                             : "",
+                                         stop.d_sched_track_ != nullptr
+                                             ? stop.d_sched_track_->str()
+                                             : ""}
              : journey::stop::event_info{false, 0, 0,
                                          timestamp_reason::SCHEDULE, "", ""}});
   }

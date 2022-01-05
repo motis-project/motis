@@ -50,6 +50,12 @@ cista::hash_t type_hash(light_connection const& el, cista::hash_t const h,
                              cista::type_hash(el.valid_, h, done), 1);
 }
 
+template <typename Ctx>
+inline void serialize(Ctx&, primary_trip_id const*, cista::offset_t const) {}
+
+template <typename Ctx>
+inline void deserialize(Ctx const&, primary_trip_id*) {}
+
 cista::hash_t type_hash(primary_trip_id const&, cista::hash_t const h,
                         std::map<cista::hash_t, unsigned>& done) {
   return cista::hash_combine(cista::type_hash(uint64_t{}, h, done), 31, 16, 17);

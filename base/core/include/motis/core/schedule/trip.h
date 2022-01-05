@@ -22,9 +22,13 @@
 namespace motis {
 
 struct primary_trip_id {
-  primary_trip_id() : station_id_{0}, time_{INVALID_MAM}, train_nr_{0} {}
-  primary_trip_id(uint32_t station_id, uint32_t train_nr, motis::time time)
-      : station_id_(station_id), time_(time), train_nr_(train_nr) {}
+  primary_trip_id()
+      : station_id_{0}, first_departure_mam_{INVALID_MAM}, train_nr_{0} {}
+  primary_trip_id(uint32_t station_id, uint32_t train_nr,
+                  mam_t first_departure_mam)
+      : station_id_(station_id),
+        first_departure_mam_(first_departure_mam),
+        train_nr_(train_nr) {}
 
   friend bool operator<(primary_trip_id const& lhs,
                         primary_trip_id const& rhs) {
@@ -42,13 +46,26 @@ struct primary_trip_id {
     return a == b;
   }
 
-  uint32_t get_station_id() const { return static_cast<uint32_t>(station_id_); }
-  uint32_t get_train_nr() const { return static_cast<uint32_t>(train_nr_); }
+  friend std::ostream& operator<<(std::ostream& out,
+                                  primary_trip_id const& id) {
+    return out << "{PRIMARY_TRIP_ID station_idx=" << id.station_id_
+               << ", first_dep="
+               << format_time(time{day_idx_t{0}, id.first_departure_mam()})
+               << ", train_nr=" << id.train_nr_ << "}";
+  }
+
+  uint32_t station_id() const { return static_cast<uint32_t>(station_id_); }
+  uint32_t train_nr() const { return static_cast<uint32_t>(train_nr_); }
+  mam_t first_departure_mam() const {
+    return static_cast<mam_t>(first_departure_mam_);
+  }
 
   uint64_t station_id_ : 31;
-  mam_t first_departure_mam_ : 16;
+  uint64_t first_departure_mam_ : 16;
   uint64_t train_nr_ : 17;
 };
+
+static_assert(sizeof(primary_trip_id) == 8);
 
 struct secondary_trip_id {
   CISTA_COMPARABLE();
@@ -100,7 +117,6 @@ struct gtfs_trip_id {
   mcd::string trip_id_;
   std::optional<unixtime> start_date_;
 };
-
 
 struct trip_info;
 
@@ -178,10 +194,21 @@ struct trip_info {
            | utl::iterable();
   }
 
-  size_t ctrp_count() const {
-    return edges_->front()
-        ->m_.route_edge_.conns_.at(lcon_idx_)
-        .traffic_days_->count();
+  bitfield const& traffic_days() const {
+    return *edges_->front()->m_.route_edge_.conns_.at(lcon_idx_).traffic_days_;
+  }
+
+  size_t ctrp_count() const { return traffic_days().count(); }
+
+  bool operates_on_day(day_idx_t const day) const {
+    if (day < 0U || day >= MAX_DAYS || edges_ == nullptr || edges_->empty()) {
+      return false;
+    } else if (edges_->front()->empty()) {
+      return false;
+    } else {
+      return edges_->front()->m_.route_edge_.conns_.front().traffic_days_->test(
+          day);
+    }
   }
 
   full_trip_id id_;

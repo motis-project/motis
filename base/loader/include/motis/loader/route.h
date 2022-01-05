@@ -14,7 +14,8 @@ struct route_t {
           mcd::vector<time> const& times, schedule const& sched);
 
   bool add_service(mcd::vector<light_connection> const& new_lcons,
-                   mcd::vector<time> const& new_times, schedule const& sched);
+                   mcd::vector<time> const& new_times, schedule const& sched,
+                   mcd::vector<station*> const& stations);
 
   void verify_sorted();
 

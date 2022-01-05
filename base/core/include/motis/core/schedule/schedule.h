@@ -30,7 +30,7 @@
 namespace motis {
 
 struct schedule {
-  using track_infos = traffic_day_info<ptr<mcd::string const>>;
+  using track_infos = traffic_day_info<uint32_t>;
 
   schedule() = default;
   schedule(schedule&&) = delete;
@@ -38,8 +38,6 @@ struct schedule {
   schedule& operator=(schedule&&) = delete;
   schedule& operator=(schedule const&) = delete;
   ~schedule() = default;
-
-  mcd::string empty_string_;
 
   unixtime loaded_begin_{0}, loaded_end_{0};
   unixtime schedule_begin_{0}, schedule_end_{0};
@@ -66,7 +64,8 @@ struct schedule {
   mcd::vector<mcd::unique_ptr<connection>> full_connections_;
   mcd::vector<mcd::unique_ptr<connection_info>> connection_infos_;
   mcd::vector<mcd::unique_ptr<attribute>> attribute_mem_;
-  mcd::vector<track_infos> tracks_{track_infos(&empty_string_)};
+  fws_multimap<mcd::pair<uint32_t /* string idx */, bitfield_idx_or_ptr>>
+      tracks_;
   mcd::vector<attribute> attributes_;
   mcd::vector<mcd::unique_ptr<category>> categories_;
   mcd::vector<mcd::unique_ptr<provider>> providers_;

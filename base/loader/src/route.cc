@@ -1,5 +1,7 @@
 #include "motis/loader/route.h"
 
+#include "motis/core/access/track_access.h"
+
 namespace motis::loader {
 
 route_t::route_t() = default;
@@ -13,7 +15,8 @@ route_t::route_t(mcd::vector<light_connection> const& new_lcons,
 
 bool route_t::add_service(mcd::vector<light_connection> const& new_lcons,
                           mcd::vector<time> const& new_times,
-                          schedule const& sched) {
+                          schedule const& sched,
+                          mcd::vector<station*> const& stations) {
   utl::verify(std::all_of(begin(lcons_), end(lcons_),
                           [&new_lcons](auto const& i) {
                             return new_lcons.size() == i.size();
@@ -24,8 +27,8 @@ bool route_t::add_service(mcd::vector<light_connection> const& new_lcons,
 
   auto const insert_it = std::lower_bound(
       begin(times_), end(times_), new_times,
-      [](mcd::vector<time> const& lhs, mcd::vector<time> const& rhs) {
-        return lhs.front() < rhs.front();
+      [](mcd::vector<time> const& a, mcd::vector<time> const& b) {
+        return a.front() < b.front();
       });
   auto const insert_idx = std::distance(begin(times_), insert_it);
 
@@ -34,22 +37,53 @@ bool route_t::add_service(mcd::vector<light_connection> const& new_lcons,
   // check 3 < 4 -> ok
   // check 9 < 10 -> ok
   // check 14 < 12 -> fail, new service overtakes the existing
-  for (unsigned i = 0; i < new_times.size(); ++i) {
-    auto middle_time = new_times[i].mam();
-    bool before_pred = false;
-    bool after_succ = false;
-    if (!times_.empty()) {
+  if (!times_.empty()) {
+    for (auto i = 0U; i < new_times.size(); ++i) {
+      auto const middle_time = new_times[i].mam();
+
       if (insert_idx != 0) {
-        auto before_time = times_[insert_idx - 1][i].mam();
-        before_pred = middle_time <= before_time;
+        auto const pred_time = times_[insert_idx - 1][i].mam();
+        if (middle_time <= pred_time) {
+          return false;
+        }
       }
-      if (static_cast<int>(insert_idx) < static_cast<int>(times_.size())) {
-        auto after_time = times_[insert_idx][i].mam();
-        after_succ = middle_time >= after_time;
+
+      if (insert_idx < times_.size()) {
+        auto const succ_time = times_[insert_idx][i].mam();
+        if (middle_time >= succ_time) {
+          return false;
+        }
       }
     }
-    if (before_pred || after_succ) {
-      return false;
+
+    for (auto section_idx = 0U; section_idx != new_lcons.size();
+         ++section_idx) {
+      for (auto day_idx = 0U; day_idx != MAX_DAYS; ++day_idx) {
+        if (!sched.bitfields_.at(new_lcons.at(section_idx).traffic_days_)
+                 .test(day_idx)) {
+          continue;
+        }
+
+        auto const d_station = stations[section_idx];
+        auto const d_track = get_track_string_idx(
+            sched, lcons_.front().at(section_idx).full_con_->d_track_, day_idx);
+        auto const new_d_track = get_track_string_idx(
+            sched, new_lcons.at(section_idx).full_con_->d_track_, day_idx);
+        if (d_station->get_platform(d_track) !=
+            d_station->get_platform(new_d_track)) {
+          return false;
+        }
+
+        auto const a_station = stations[section_idx + 1];
+        auto const a_track = get_track_string_idx(
+            sched, lcons_.front().at(section_idx).full_con_->a_track_, day_idx);
+        auto const new_a_track = get_track_string_idx(
+            sched, new_lcons.at(section_idx).full_con_->a_track_, day_idx);
+        if (a_station->get_platform(a_track) !=
+            a_station->get_platform(new_a_track)) {
+          return false;
+        }
+      }
     }
   }
 

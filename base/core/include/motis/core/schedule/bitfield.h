@@ -39,6 +39,7 @@ union bitfield_idx_or_ptr {
   bool operator==(std::nullptr_t) const { return traffic_days_ == nullptr; }
   bool operator!=(std::nullptr_t) const { return traffic_days_ != nullptr; }
   bitfield const* operator->() const { return traffic_days_; }
+  bitfield const& operator*() const { return *traffic_days_; }
   operator size_t() const { return bitfield_idx_; }  // NOLINT
   bitfield_idx_or_ptr& operator=(bitfield const* bf) {
     traffic_days_ = bf;

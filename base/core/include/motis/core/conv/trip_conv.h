@@ -44,8 +44,8 @@ inline concrete_trip from_extern_trip(schedule const& sched,
 inline extern_trip to_extern_trip(schedule const& sched,
                                   concrete_trip const& t) {
   return extern_trip{
-      sched.stations_.at(t.trp_->id_.primary_.station_id_)->eva_nr_,
-      t.trp_->id_.primary_.train_nr_,
+      sched.stations_.at(t.trp_->id_.primary_.station_id())->eva_nr_,
+      t.trp_->id_.primary_.train_nr(),
       motis_to_unixtime(sched, t.get_first_dep_time()),
       sched.stations_.at(t.trp_->id_.secondary_.target_station_id_)->eva_nr_,
       motis_to_unixtime(sched, t.get_last_arr_time()),

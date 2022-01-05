@@ -23,8 +23,8 @@ struct station {
   double lat() const { return width_; }
   double lng() const { return length_; }
 
-  std::optional<uint16_t> get_platform(uint16_t track) const {
-    auto const it = track_to_platform_.find(track);
+  std::optional<uint16_t> get_platform(uint32_t const track_string_idx) const {
+    auto const it = track_to_platform_.find(track_string_idx);
     if (it == end(track_to_platform_)) {
       return std::nullopt;
     } else {
@@ -32,9 +32,10 @@ struct station {
     }
   }
 
-  int32_t get_transfer_time(uint16_t track1, uint16_t track2) const {
-    auto const platform1 = get_platform(track1);
-    auto const platform2 = get_platform(track2);
+  duration_t get_transfer_time(uint32_t const track_string_idx_1,
+                               uint32_t const track_string_idx_2) const {
+    auto const platform1 = get_platform(track_string_idx_1);
+    auto const platform2 = get_platform(track_string_idx_2);
     return platform1.has_value() && platform1 == platform2
                ? platform_transfer_time_
                : transfer_time_;
@@ -53,7 +54,7 @@ struct station {
   mcd::vector<footpath> outgoing_footpaths_;
   mcd::vector<footpath> incoming_footpaths_;
   uint32_t source_schedule_{NO_SOURCE_SCHEDULE};
-  mcd::hash_map<uint16_t, uint16_t> track_to_platform_;
+  mcd::hash_map<uint32_t, uint32_t> track_to_platform_;
   mcd::vector<mcd::string> external_ids_;
   bool dummy_{false};
 };

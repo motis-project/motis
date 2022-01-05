@@ -120,9 +120,7 @@ trip_debug graph_builder::get_trip_debug(Service const* s) {
                                         s->debug()->file()->str()))
                                     .get();
                               }),
-                          s->debug()->line_from(), s->debug()->line_to(),
-                          s->seq_numbers() == nullptr ? mcd::vector<uint32_t>{}
-                                                      : mcd::to_vec(*s->seq_numbers())};
+                          s->debug()->line_from(), s->debug()->line_to()};
 }
 
 trip_info* graph_builder::register_service(
@@ -131,7 +129,9 @@ trip_info* graph_builder::register_service(
       sched_.trip_mem_
           .emplace_back(mcd::make_unique<trip_info>(
               get_full_trip_id(s, rel_utc_times), nullptr,
-              day_offsets(rel_utc_times), 0U, get_trip_debug(s)))
+              day_offsets(rel_utc_times), 0U, get_trip_debug(s),
+              s->seq_numbers() == nullptr ? mcd::vector<uint32_t>{}
+                                          : mcd::to_vec(*s->seq_numbers())))
           .get();
   sched_.trips_.emplace_back(stored->id_.primary_, stored);
 
@@ -310,6 +310,17 @@ bool graph_builder::has_traffic_within_timespan(bitfield const& traffic_days,
 
 void graph_builder::add_route_services(
     mcd::vector<std::pair<Service const*, bitfield>> const& services) {
+  assert([&]() {
+    return std::all_of(begin(services), end(services), [&](auto&& s) {
+      return s.first->route() == services.front().first->route();
+    });
+  }() && "all services have same route");
+
+  auto const stations = mcd::to_vec(
+      *services.front().first->route()->stations(), [&](auto const& s) {
+        return sched_.stations_[stations_.find(s)->second->id_].get();
+      });
+
   mcd::vector<route_t> alt_routes;
   for (auto const& s_t : services) {
     auto const& s = s_t.first;
@@ -340,7 +351,7 @@ void graph_builder::add_route_services(
     for (auto const& [lcon_string, times] :
          utl::zip(lcon_strings, *rel_utc_times_and_traffic_days)) {
       if (!has_duplicate(s, lcon_string)) {
-        add_to_routes(alt_routes, times.first, lcon_string);
+        add_to_routes(alt_routes, times.first, lcon_string, stations);
       }
     }
   }
@@ -488,7 +499,7 @@ void graph_builder::add_to_routes(mcd::vector<route_t>& alt_routes,
                                   mcd::vector<light_connection> const& lcons,
                                   mcd::vector<station*> const& stations) {
   for (auto& r : alt_routes) {
-    if (r.add_service(lcons, times, sched_)) {
+    if (r.add_service(lcons, times, sched_, stations)) {
       return;
     }
   }
@@ -533,8 +544,8 @@ connection_info* graph_builder::get_or_create_connection_info(
             utl::get_or_create(attributes_, attr->info(), [&]() {
               return sched_.attribute_mem_
                   .emplace_back(mcd::make_unique<attribute>(
-                      attribute{.text_ = attr->info()->text()->str(),
-                                .code_ = attr->info()->code()->str()}))
+                      attribute{.code_ = attr->info()->code()->str(),
+                                .text_ = attr->info()->text()->str()}))
                   .get();
             })};
       });
@@ -688,7 +699,7 @@ mcd::string const* graph_builder::get_or_create_direction(
   } else if (dir->station() != nullptr) {
     return &sched_.stations_[stations_[dir->station()]->id_]->name_;
   } else /* direction text */ {
-    return get_or_create_string(dir->text());
+    return sched_.string_mem_.at(get_or_create_string(dir->text())).get();
   }
 }
 
@@ -714,12 +725,11 @@ int graph_builder::get_or_create_category_index(Category const* c) {
   });
 }
 
-mcd::string const* graph_builder::get_or_create_string(String const* str) {
+uint32_t graph_builder::get_or_create_string(String const* str) {
   return utl::get_or_create(strings_, str, [&]() {
-    return sched_.string_mem_
-        .emplace_back(mcd::make_unique<mcd::string>(
-            std::string_view{str->c_str(), str->size()}))
-        .get();
+    sched_.string_mem_.emplace_back(mcd::make_unique<mcd::string>(
+        std::string_view{str->c_str(), str->size()}));
+    return sched_.string_mem_.size() - 1;
   });
 }
 
@@ -728,13 +738,15 @@ uint32_t graph_builder::get_or_create_track(Vector<Offset<Track>> const* tracks,
   if (tracks == nullptr || tracks->size() == 0U) {
     return 0U;
   }
-  sched_.tracks_.emplace_back(schedule::track_infos{
-      &sched_.empty_string_, mcd::to_vec(*tracks, [&](Track const* track) {
-        return mcd::pair{
-            get_or_create_bitfield_idx(track->bitfield(), offset),
-            ptr<mcd::string const>{get_or_create_string(track->name())}};
-      })});
-  return sched_.tracks_.size() - 1;
+
+  for (auto const& track : *tracks) {
+    sched_.tracks_.emplace_back(
+        get_or_create_string(track->name()),
+        get_or_create_bitfield_idx(track->bitfield(), offset));
+  }
+  sched_.tracks_.finish_key();
+
+  return static_cast<uint32_t>(sched_.tracks_.index_size() - 1);
 }
 
 void graph_builder::write_trip_edges(route const& r) {
@@ -822,7 +834,7 @@ route_section graph_builder::add_route_section(
         from_station->transfer_time_, from_in_allowed, from_out_allowed);
   }
   auto const from_platform =
-      from_station->get_platform(connections[0].full_con_->d_track_);
+      from_station->get_platform(cons[0].full_con_->d_track_);
   if (from_in_allowed && from_platform) {
     add_platform_enter_edge(sched_, section.from_route_node_, from_station_node,
                             from_station->platform_transfer_time_,
@@ -837,7 +849,7 @@ route_section graph_builder::add_route_section(
         to_station->transfer_time_, to_in_allowed, to_out_allowed);
   }
   auto const to_platform =
-      to_station->get_platform(connections[0].full_con_->a_track_);
+      to_station->get_platform(cons[0].full_con_->a_track_);
   if (to_out_allowed && to_platform) {
     add_platform_exit_edge(sched_, section.to_route_node_, to_station_node,
                            to_station->platform_transfer_time_,
@@ -896,10 +908,8 @@ void graph_builder::dedup_bitfields() {
       });
     }
 
-    for (auto& t : sched_.tracks_) {
-      for (auto& [traffic_days, el] : t.entries_) {
-        traffic_days = &sched_.bitfields_[map[traffic_days]];
-      }
+    for (auto& [track_string_idx, traffic_days] : sched_.tracks_.data_) {
+      traffic_days = &sched_.bitfields_[map[traffic_days]];
     }
 
     for (auto& t : con_infos_) {
@@ -920,6 +930,10 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
   }
 
   auto sched = mcd::make_unique<schedule>();
+  sched->string_mem_.emplace_back(
+      mcd::make_unique<mcd::string>(""));  // empty string on index 0
+  sched->tracks_.emplace_back(0, 0);
+  sched->tracks_.finish_key();  // empty track info on index 0
   sched->classes_ = class_mapping();
   sched->bitfields_.push_back({});
   std::tie(sched->schedule_begin_, sched->schedule_end_) = opt.interval();
@@ -947,9 +961,8 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
   graph_builder builder{*sched, opt};
 
   progress_tracker->status("Add Stations").out_bounds(0, 5);
-  builder.stations_ =
-      build_stations(*sched, fbs_schedules, builder.tracks_, opt.use_platforms_,
-                     opt.no_local_transport_);
+  builder.stations_ = build_stations(builder, fbs_schedules, opt.use_platforms_,
+                                     opt.no_local_transport_);
 
   for (auto const& [i, fbs_schedule] : utl::enumerate(fbs_schedules)) {
     auto const dataset_prefix =
@@ -1031,6 +1044,8 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
     LOG(info) << sched->expanded_trips_.data_size() << " expanded trips";
     LOG(info) << builder.broken_trips_ << " broken trips ignored";
   }
+
+  sched->tracks_.finish_map();
 
   validate_graph(*sched);
   utl::verify(

@@ -170,7 +170,7 @@ TEST_F(service_rules_day_shift_test_3, motis_trips) {
   EXPECT_EQ(3, sched_->trips_.size());
   EXPECT_EQ(std::set<uint32_t>({1, 2, 3}),
             utl::to_set(sched_->trips_, [](auto&& t) {
-              return t.second->id_.primary_.train_nr_;
+              return t.second->id_.primary_.train_nr();
             }));
 }
 

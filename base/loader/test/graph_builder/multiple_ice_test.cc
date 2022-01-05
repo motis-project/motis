@@ -1,6 +1,7 @@
 #include "./graph_builder_test.h"
 
 #include "motis/core/common/date_time_util.h"
+#include "motis/core/access/track_access.h"
 
 using std::get;
 
@@ -221,14 +222,12 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
       ASSERT_EQ("Deutsche Bahn AG", fc->con_info_->provider_->full_name_);
     }
 
-    auto const& tracks = sched_->tracks_;
-
     auto const get_track = [&](size_t const idx, event_type const ev_type) {
       auto const lcon = get<light_connection const*>(conns.at(idx));
-      auto const offset = lcon->a_time_ / MINUTES_A_DAY;
-      return tracks.at(lcon->full_con_->get_track(ev_type))
-          .get_info(get<day_idx_t>(conns.at(idx)) + offset)
-          ->str();
+      auto const day_idx =
+          get<day_idx_t>(conns.at(idx)) + (lcon->a_time_ / MINUTES_A_DAY);
+      return get_track_name(*sched_, lcon->full_con_->get_track(ev_type),
+                            day_idx);
     };
 
     EXPECT_EQ("6", get_track(0, event_type::DEP));

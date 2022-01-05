@@ -8,14 +8,15 @@
 namespace motis::routing::output::intermediate {
 
 struct stop {
-  unsigned index_;
-  unsigned station_id_;
-  mcd::string const *a_track_, *d_track_;
-  mcd::string const *a_sched_track_, *d_sched_track_;
+  unsigned index_{0U};
+  unsigned station_id_{0U};
+  mcd::string const *a_track_{nullptr}, *d_track_{nullptr};
+  mcd::string const *a_sched_track_{nullptr}, *d_sched_track_{nullptr};
   time a_time_, d_time_;
   time a_sched_time_, d_sched_time_;
-  timestamp_reason a_reason_, d_reason_;
-  bool exit_, enter_;
+  timestamp_reason a_reason_{timestamp_reason::SCHEDULE},
+      d_reason_{timestamp_reason::SCHEDULE};
+  bool exit_{false}, enter_{false};
 };
 
 }  // namespace motis::routing::output::intermediate

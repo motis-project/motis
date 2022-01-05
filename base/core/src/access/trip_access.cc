@@ -15,13 +15,38 @@
 namespace motis {
 
 concrete_trip get_trip(schedule const& sched, gtfs_trip_id const& trip_id) {
-  if (auto it = sched.gtfs_trip_ids_.find(trip_id);
-      it == end(sched.gtfs_trip_ids_) || it->first != trip_id.trip_id_ ||
-      it->second->operates_on(trip_id.start_date_)) {
+  auto const get_set_bit = [&](bitfield const& b, day_idx_t const start = 0U) {
+    for (auto i = start; i < MAX_DAYS; ++i) {
+      if (b.test(i)) {
+        return i;
+      }
+    }
+    return day_idx_t{-1};
+  };
+
+  if (auto it = sched.gtfs_trip_ids_.find(trip_id.trip_id_);
+      it == end(sched.gtfs_trip_ids_)) {
     throw std::runtime_error{
         "Could not find trip for the given trip id and day!"};
+  } else if (trip_id.start_date_.has_value()) {
+    // start day set - check if service operates
+    auto const start_day_idx =
+        unix_to_motistime(sched, *trip_id.start_date_).day();
+    utl::verify(it->second->operates_on_day(start_day_idx),
+                "trip {} does not operate on day {}",
+                format_unix_time(*trip_id.start_date_, "%F"));
+    return {it->second, start_day_idx};
+  } else if (it->second->ctrp_count() == 1U) {
+    // unambiguous day
+    return {it->second, get_set_bit(it->second->traffic_days())};
   } else {
-    return it->second;
+    // ambiguous day - closest to today
+    auto const n = now();
+    auto const day_idx = get_set_bit(it->second->traffic_days(),
+                                     unix_to_motistime(sched, n).day());
+    utl::verify(day_idx != -1, "no traffic day for {} after {} found",
+                trip_id.trip_id_, format_unix_time(n, "%F"));
+    return {it->second, day_idx};
   }
 }
 
@@ -39,6 +64,12 @@ concrete_trip get_trip(schedule const& sched, std::string_view eva_nr,
       begin(sched.trips_), end(sched.trips_),
       std::make_pair(primary_id, static_cast<trip_info*>(nullptr)));
   if (it == end(sched.trips_) || !(it->first == primary_id)) {
+    std::cerr << "sizeof=" << sizeof(primary_trip_id) << "\n";
+    std::cerr << "NEEDLE: " << primary_id << "\n";
+    for (auto const& [id, trp] : sched.trips_) {
+      std::cerr << "  available: " << id << "\n";
+    }
+
     throw std::system_error(access::error::service_not_found);
   }
 
@@ -90,10 +121,10 @@ std::optional<concrete_trip> find_trip(schedule const& sched,
       return concrete_trip{it->second, day_idx};
     }
   }
-  return nullptr;
+  return std::nullopt;
 }
 
-unsigned stop_seq_to_stop_idx(trip const& trp, unsigned stop_seq) {
+unsigned stop_seq_to_stop_idx(trip_info const& trp, unsigned stop_seq) {
   if (trp.stop_seq_numbers_.empty() || stop_seq == 0U) {
     return stop_seq;
   } else {

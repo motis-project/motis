@@ -194,7 +194,7 @@ struct graph_builder {
       flatbuffers64::String const* serialized_bitfield, day_idx_t offset = 0);
 
   mcd::string const* get_or_create_direction(Direction const* dir);
-  mcd::string const* get_or_create_string(flatbuffers64::String const* str);
+  uint32_t get_or_create_string(flatbuffers64::String const* str);
 
   provider const* get_or_create_provider(Provider const* p);
 
@@ -227,7 +227,7 @@ struct graph_builder {
   std::map<Category const*, int> categories_;
   std::map<std::string, int> tracks_;
   std::map<AttributeInfo const*, attribute*> attributes_;
-  std::map<flatbuffers64::String const*, mcd::string const*> strings_;
+  std::map<flatbuffers64::String const*, uint32_t> strings_;
   std::map<Provider const*, provider const*> providers_;
   mcd::hash_map<Station const*, station_node*> stations_;
   mcd::hash_map<mcd::pair<flatbuffers64::String const*, day_idx_t /* offset */>,

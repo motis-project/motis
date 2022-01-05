@@ -11,6 +11,7 @@
 #include "motis/core/schedule/schedule.h"
 
 #include "motis/loader/filter/local_stations.h"
+#include "motis/loader/graph_builder.h"
 #include "motis/loader/interval_util.h"
 #include "motis/loader/timezone_util.h"
 
@@ -23,15 +24,14 @@ namespace motis::loader {
 constexpr auto const kLinkNearbyMaxDistance = 300;  // [m];
 
 struct stations_builder {
-  explicit stations_builder(schedule& sched, std::map<std::string, int>& tracks,
-                            bool no_local_stations)
-      : sched_{sched}, tracks_{tracks}, no_local_stations_{no_local_stations} {}
+  explicit stations_builder(graph_builder& gb, bool no_local_stations)
+      : gb_{gb}, no_local_stations_{no_local_stations} {}
 
   void add_dummy_node(std::string const& name) {
-    auto const station_idx = sched_.station_nodes_.size();
+    auto const station_idx = sched().station_nodes_.size();
 
     // Create dummy station node.
-    sched_.station_nodes_.emplace_back(mcd::make_unique<station_node>(
+    sched().station_nodes_.emplace_back(mcd::make_unique<station_node>(
         make_station_node(static_cast<unsigned>(station_idx))));
 
     // Create dummy station object.
@@ -41,8 +41,8 @@ struct stations_builder {
     s->name_ = name;
     s->dummy_ = true;
 
-    sched_.eva_to_station_.emplace(name, s.get());
-    sched_.stations_.emplace_back(std::move(s));
+    sched().eva_to_station_.emplace(name, s.get());
+    sched().stations_.emplace_back(std::move(s));
   }
 
   void add_station(uint32_t const source_schedule, Station const* fbs_station,
@@ -51,13 +51,13 @@ struct stations_builder {
       return;
     }
 
-    auto const station_idx = sched_.station_nodes_.size();
+    auto const station_idx = sched().station_nodes_.size();
 
     // Create station node.
     auto node_ptr = mcd::make_unique<station_node>(
         make_station_node(static_cast<unsigned>(station_idx)));
     station_nodes_[fbs_station] = node_ptr.get();
-    sched_.station_nodes_.emplace_back(std::move(node_ptr));
+    sched().station_nodes_.emplace_back(std::move(node_ptr));
 
     // Create station object.
     auto s = mcd::make_unique<station>();
@@ -65,7 +65,7 @@ struct stations_builder {
     s->name_ = fbs_station->name()->str();
     s->width_ = fbs_station->lat();
     s->length_ = fbs_station->lng();
-    s->eva_nr_ = std::string{sched_.prefixes_[source_schedule]} +
+    s->eva_nr_ = std::string{sched().prefixes_[source_schedule]} +
                  fbs_station->id()->str();
     s->transfer_time_ = std::max(1, fbs_station->interchange_time());
     s->platform_transfer_time_ = fbs_station->platform_interchange_time();
@@ -86,8 +86,7 @@ struct stations_builder {
       auto platform_id = 1;
       for (auto const& platform : *fbs_station->platforms()) {
         for (auto const& track : *platform->tracks()) {
-          s->track_to_platform_[get_or_create_track(track->str())] =
-              platform_id;
+          s->track_to_platform_[gb_.get_or_create_string(track)] = platform_id;
         }
         ++platform_id;
       }
@@ -99,17 +98,17 @@ struct stations_builder {
     if (fbs_station->external_ids() != nullptr) {
       s->external_ids_.reserve(fbs_station->external_ids()->size());
       for (auto const& ds100 : *fbs_station->external_ids()) {
-        sched_.ds100_to_station_.emplace(ds100->str(), s.get());
+        sched().ds100_to_station_.emplace(ds100->str(), s.get());
         s->external_ids_.emplace_back(ds100->str());
       }
     }
 
-    utl::verify(
-        sched_.eva_to_station_.find(s->eva_nr_) == end(sched_.eva_to_station_),
-        "add_station: have non-unique station_id: {}", s->eva_nr_);
+    utl::verify(sched().eva_to_station_.find(s->eva_nr_) ==
+                    end(sched().eva_to_station_),
+                "add_station: have non-unique station_id: {}", s->eva_nr_);
 
-    sched_.eva_to_station_.emplace(s->eva_nr_, s.get());
-    sched_.stations_.emplace_back(std::move(s));
+    sched().eva_to_station_.emplace(s->eva_nr_, s.get());
+    sched().stations_.emplace_back(std::move(s));
   }
 
   timezone const* get_or_create_timezone(Timezone const* input_timez) {
@@ -126,8 +125,8 @@ struct stations_builder {
                     input_timez->season()->minutes_after_midnight_last_day())
               : timezone{.general_offset_ = input_timez->general_offset(),
                          .season_ = {}};
-      sched_.timezones_.emplace_back(mcd::make_unique<timezone>(tz));
-      return sched_.timezones_.back().get();
+      sched().timezones_.emplace_back(mcd::make_unique<timezone>(tz));
+      return sched().timezones_.back().get();
     });
   }
 
@@ -138,13 +137,13 @@ struct stations_builder {
         continue;
       }
       auto& station =
-          *sched_.stations_[station_nodes_.at(meta->station())->id_];
+          *sched().stations_[station_nodes_.at(meta->station())->id_];
       for (auto const& fbs_equivalent : *meta->equivalent()) {
         if (skip_station(fbs_equivalent)) {
           continue;
         }
         auto& equivalent =
-            *sched_.stations_[station_nodes_.at(fbs_equivalent)->id_];
+            *sched().stations_[station_nodes_.at(fbs_equivalent)->id_];
         if (station.index_ != equivalent.index_) {
           station.equivalent_.push_back(&equivalent);
         }
@@ -154,12 +153,12 @@ struct stations_builder {
 
   void link_nearby_stations() {
     auto const station_rtree =
-        geo::make_point_rtree(sched_.stations_, [](auto const& s) {
+        geo::make_point_rtree(sched().stations_, [](auto const& s) {
           return geo::latlng{s->lat(), s->lng()};
         });
 
     for (auto const& [from_idx, from_station] :
-         utl::enumerate(sched_.stations_)) {
+         utl::enumerate(sched().stations_)) {
       if (from_station->source_schedule_ == NO_SOURCE_SCHEDULE) {
         continue;  // no dummy stations
       }
@@ -171,7 +170,7 @@ struct stations_builder {
           continue;
         }
 
-        auto& to_station = sched_.stations_.at(to_idx);
+        auto& to_station = sched().stations_.at(to_idx);
         if (to_station->source_schedule_ == NO_SOURCE_SCHEDULE) {
           continue;  // no dummy stations
         }
@@ -185,35 +184,24 @@ struct stations_builder {
     }
   }
 
-  int get_or_create_track(std::string const& name) {
-    if (sched_.tracks_.empty()) {
-      sched_.tracks_.emplace_back("");
-    }
-    return utl::get_or_create(tracks_, name, [&]() {
-      int index = sched_.tracks_.size();
-      sched_.tracks_.emplace_back(name);
-      return index;
-    });
-  }
-
   inline bool skip_station(Station const* station) const {
     return no_local_stations_ && is_local_station(station);
   }
 
-  schedule& sched_;
+  schedule& sched() { return gb_.sched_; }
+
+  graph_builder& gb_;
   int first_day_{0}, last_day_{0};
   mcd::hash_map<Station const*, station_node*> station_nodes_;
   mcd::hash_map<Timezone const*, timezone const*> timezones_;
-  std::map<std::string, int>& tracks_;
   bool no_local_stations_{false};
   std::size_t stations_with_platforms_{};
 };
 
 mcd::hash_map<Station const*, station_node*> build_stations(
-    schedule& sched, std::vector<Schedule const*> const& fbs_schedules,
-    std::map<std::string, int>& tracks, bool const use_platforms,
-    bool no_local_stations) {
-  stations_builder b{sched, tracks, no_local_stations};
+    graph_builder& gb, std::vector<Schedule const*> const& fbs_schedules,
+    bool const use_platforms, bool no_local_stations) {
+  stations_builder b{gb, no_local_stations};
 
   // Add dummy stations.
   b.add_dummy_node(STATION_START);
@@ -232,7 +220,7 @@ mcd::hash_map<Station const*, station_node*> build_stations(
   // Add actual stations.
   for (auto const& [src_index, fbs_schedule] : utl::enumerate(fbs_schedules)) {
     std::tie(b.first_day_, b.last_day_) =
-        first_last_days(sched, src_index, fbs_schedule->interval());
+        first_last_days(gb.sched_, src_index, fbs_schedule->interval());
 
     for (auto const* fbs_station : *fbs_schedule->stations()) {
       b.add_station(src_index, fbs_station, use_platforms);
@@ -252,11 +240,11 @@ mcd::hash_map<Station const*, station_node*> build_stations(
     b.link_nearby_stations();
   }
 
-  auto const station_count = sched.station_nodes_.size();
-  if (station_count > sched.non_station_node_offset_) {
-    sched.non_station_node_offset_ = station_count + 1'000'000U;
+  auto const station_count = gb.sched_.station_nodes_.size();
+  if (station_count > gb.sched_.non_station_node_offset_) {
+    gb.sched_.non_station_node_offset_ = station_count + 1'000'000U;
   }
-  sched.next_node_id_ = sched.non_station_node_offset_;
+  gb.sched_.next_node_id_ = gb.sched_.non_station_node_offset_;
 
   return std::move(b.station_nodes_);
 }

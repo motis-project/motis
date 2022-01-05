@@ -7,6 +7,7 @@
 
 #include "motis/core/schedule/connection.h"
 #include "motis/core/access/realtime_access.h"
+#include "motis/core/access/track_access.h"
 
 #include "motis/routing/output/stop.h"
 #include "motis/routing/output/transport.h"
@@ -170,6 +171,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
 
   node const* last_route_node = nullptr;
   light_connection const* last_con = nullptr;
+  auto last_day_idx = day_idx_t{0};
   auto walk_arrival = INVALID_TIME;
   auto walk_arrival_di = delay_info{{nullptr, 0U, event_type::DEP}};
   auto stop_index = -1;
@@ -182,25 +184,28 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
     switch (current_state) {
       case ONTRIP_TRAIN_START:
       case AT_STATION: {
-        auto a_track = &sched.empty_string_;
-        auto d_track = &sched.empty_string_;
-        auto a_sched_track = &sched.empty_string_;
-        auto d_sched_track = &sched.empty_string_;
+        mcd::string const* a_track = nullptr;
+        mcd::string const* d_track = nullptr;
+        mcd::string const* a_sched_track = nullptr;
+        mcd::string const* d_sched_track = nullptr;
         time a_time = walk_arrival, a_sched_time = walk_arrival;
         time d_time = INVALID_TIME, d_sched_time = INVALID_TIME;
         timestamp_reason a_reason = walk_arrival_di.get_reason(),
                          d_reason = timestamp_reason::SCHEDULE;
         if (a_time == INVALID_TIME && last_con != nullptr) {
-          a_track = sched.tracks_.at(last_con->full_con_->a_track_)
-                        .get_info(0U /* TODO(felix) */);
-          a_time = last_con->event_time(event_type::ARR, 0U /* TODO(felix) */);
+          a_track = &get_track_name(sched, last_con->full_con_->a_track_,
+                                    last_day_idx);
+          a_time = last_con->event_time(event_type::ARR, last_day_idx);
 
           auto a_di =
               get_delay_info(sched, last_route_node, last_con, event_type::ARR);
           a_sched_time = a_di.get_schedule_time();
           a_reason = a_di.get_reason();
-          a_sched_track = get_schedule_track(sched, last_route_node, last_con,
-                                             event_type::ARR);
+          //  a_sched_track = sched.string_mem_
+          //                      .at(get_schedule_track(sched, last_route_node,
+          //                                             last_con,
+          //                                             event_type::ARR))
+          //                      .get();
         }
 
         walk_arrival = INVALID_TIME;
@@ -219,27 +224,30 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
 
           if (s2 != end(labels) && s2->connection_ != nullptr) {
             auto const& succ = *s2;
-            d_track = sched.tracks_.at(succ.connection_->full_con_->d_track_)
-                          .get_info(0U /* TODO(felix) */);
-            d_time = succ.connection_->event_time(event_type::DEP,
-                                                  0U /* TODO(felix) */);
+            d_track = &get_track_name(
+                sched, succ.connection_->full_con_->d_track_, succ.day_);
+            d_time = succ.connection_->event_time(event_type::DEP, succ.day_);
 
             auto d_di = get_delay_info(sched, get_node(*s1), succ.connection_,
                                        event_type::DEP);
             d_sched_time = d_di.get_schedule_time();
             d_reason = d_di.get_reason();
-            d_sched_track = get_schedule_track(
-                sched, get_node(*s1), succ.connection_, event_type::DEP);
+            // d_sched_track =
+            //     sched.string_mem_
+            //         .at(get_schedule_track(sched, get_node(*s1),
+            //                                succ.connection_,
+            //                                event_type::DEP))
+            //         .get();
           }
         }
 
-        stops.emplace_back(static_cast<unsigned int>(++stop_index),
-                           get_node(current)->get_station()->id_, a_track,
-                           d_track, a_sched_track, d_sched_track, a_time,
-                           d_time, a_sched_time, d_sched_time, a_reason,
-                           d_reason,
-                           last_con != nullptr && a_time != INVALID_TIME,
-                           d_time != INVALID_TIME);
+        stops.emplace_back(output::intermediate::stop{
+            static_cast<unsigned int>(++stop_index),
+            get_node(current)->get_station()->id_, a_track, d_track,
+            a_sched_track, d_sched_track, a_time, d_time, a_sched_time,
+            d_sched_time, a_reason, d_reason,
+            last_con != nullptr && a_time != INVALID_TIME,
+            d_time != INVALID_TIME});
         break;
       }
 
@@ -253,46 +261,57 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
               get_delay_info(sched, last_route_node, last_con, event_type::ARR);
         }
 
-        stops.emplace_back(static_cast<unsigned int>(++stop_index),
-                           get_node(current)->get_station()->id_,
-                           last_con == nullptr ? MOTIS_UNKNOWN_TRACK
-                                               : last_con->full_con_->a_track_,
-                           MOTIS_UNKNOWN_TRACK,
+        stops.emplace_back(intermediate::stop{
+            .index_ = static_cast<unsigned int>(++stop_index),
 
-                           last_con == nullptr
-                               ? MOTIS_UNKNOWN_TRACK
-                               : get_schedule_track(sched, last_route_node,
-                                                    last_con, event_type::ARR),
-                           MOTIS_UNKNOWN_TRACK,
+            .station_id_ = get_node(current)->get_station()->id_,
+
+            .a_track_ =
+                last_con == nullptr
+                    ? nullptr
+                    : &get_track_name(sched, last_con->full_con_->a_track_,
+                                      last_day_idx),
+
+            .d_track_ = nullptr,
+
+            // .a_sched_track_ =
+            //     last_con == nullptr
+            //         ? nullptr
+            //         : sched.string_mem_
+            //               .at(get_schedule_track(sched, last_route_node,
+            //                                      last_con, event_type::ARR))
+            //               .get(),
+
+            .d_sched_track_ = nullptr,
 
             // Arrival graph time:
-            stops.empty() ? INVALID_TIME
-            : last_con
-                ? last_con->event_time(event_type::ARR, 0U /* TODO(felix) */)
-                : current.now_,
+            .a_time_ = stops.empty() ? INVALID_TIME
+                       : last_con
+                           ? last_con->event_time(event_type::ARR, last_day_idx)
+                           : current.now_,
 
             // Departure graph time:
-            current.now_,
+            .d_time_ = current.now_,
 
             // Arrival schedule time:
-            stops.empty() ? INVALID_TIME
-            : last_con    ? walk_arrival_di.get_schedule_time()
-                          : current.now_,
+            .a_sched_time_ = stops.empty() ? INVALID_TIME
+                             : last_con    ? walk_arrival_di.get_schedule_time()
+                                           : current.now_,
 
             // Departure schedule time:
-            current.now_,
+            .d_sched_time_ = current.now_,
 
             // Arrival reason timestamp
-            walk_arrival_di.get_reason(),
+            .a_reason_ = walk_arrival_di.get_reason(),
 
             // Departure reason timestamp
-            walk_arrival_di.get_reason(),
+            .d_reason_ = walk_arrival_di.get_reason(),
 
             // Leaving
-            last_con != nullptr,
+            .exit_ = last_con != nullptr,
 
             // Entering
-            false});
+            .enter_ = false});
 
         transports.emplace_back(
             stop_index, static_cast<unsigned int>(stop_index) + 1,
@@ -332,25 +351,38 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
                 sched, get_node(current), current.connection_, event_type::ARR);
             auto const d_di = get_delay_info(sched, dep_route_node,
                                              succ.connection_, event_type::DEP);
-            auto const a_sched_track = get_schedule_track(
-                sched, get_node(current), current.connection_, event_type::ARR);
-            auto const d_sched_track = get_schedule_track(
-                sched, dep_route_node, succ.connection_, event_type::DEP);
+            auto const a_sched_track = nullptr;
+            //  sched.string_mem_
+            //      .at(get_schedule_track(sched, get_node(current),
+            //                             current.connection_,
+            //                             event_type::ARR))
+            //      .get();
+            auto const d_sched_track = nullptr;
+            //  sched.string_mem_
+            //      .at(get_schedule_track(sched, dep_route_node,
+            //                             succ.connection_,
+            //                             event_type::DEP))
+            //      .get();
 
-            stops.emplace_back(
+            stops.emplace_back(intermediate::stop{
                 static_cast<unsigned int>(++stop_index),
                 get_node(current)->get_station()->id_,
-                current.connection_->full_con_->a_track_,  // NOLINT
-                succ.connection_->full_con_->d_track_, a_sched_track,
-                d_sched_track, current.connection_->a_time_,
-                succ.connection_->d_time_, a_di.get_schedule_time(),
-                d_di.get_schedule_time(), a_di.get_reason(), d_di.get_reason(),
-                false, false);
+                &get_track_name(sched, current.connection_->full_con_->a_track_,
+                                current.day_),  // NOLINT
+                &get_track_name(sched, succ.connection_->full_con_->d_track_,
+                                succ.day_),
+                a_sched_track, d_sched_track,
+                current.connection_->event_time(event_type::ARR, current.day_),
+                succ.connection_->event_time(event_type::DEP, succ.day_),
+                a_di.get_schedule_time(), d_di.get_schedule_time(),
+                a_di.get_reason(), d_di.get_reason(), false, false});
           }
         }
 
         last_route_node = get_node(current);
         last_con = current.connection_;
+        last_day_idx = current.day_;
+
         break;
       }
     }

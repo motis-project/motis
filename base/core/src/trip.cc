@@ -3,7 +3,7 @@
 namespace motis {
 
 time concrete_trip::get_first_dep_time() const {
-  return {day_idx_, trp_->id_.primary_.first_departure_mam_};
+  return {day_idx_, trp_->id_.primary_.first_departure_mam()};
 }
 
 time concrete_trip::get_last_arr_time() const {

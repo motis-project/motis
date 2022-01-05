@@ -6,15 +6,14 @@
 #include "motis/hash_map.h"
 
 #include "motis/core/schedule/schedule.h"
+#include "motis/schedule-format/Schedule_generated.h"
 
 namespace motis::loader {
 
-struct Station;  // NOLINT
-struct Schedule;  // NOLINT
+struct graph_builder;
 
 mcd::hash_map<Station const*, station_node*> build_stations(
-    schedule&, std::vector<Schedule const*> const&,
-    std::map<std::string, int>& tracks, bool use_platforms,
+    graph_builder&, std::vector<Schedule const*> const&, bool use_platforms,
     bool no_local_stations);
 
 }  // namespace motis::loader
