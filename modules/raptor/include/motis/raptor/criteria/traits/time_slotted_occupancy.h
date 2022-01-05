@@ -101,6 +101,13 @@ struct trait_time_slotted_occupancy {
   //****************************************************************************
 
   template <typename TraitsData, typename Timetable>
+  _mark_cuda_rel_ inline static std::tuple<bool, bool> set_and_check_departure(
+      TraitsData& aggregate, Timetable const& tt, stop_offset const dep_stop,
+      time const prev_arrival, time const stop_departure) {
+    return std::make_tuple(false, true);
+  }
+
+  template <typename TraitsData, typename Timetable>
   _mark_cuda_rel_ inline static void update_aggregate(
       TraitsData& aggregate_dt, Timetable const& tt, stop_offset const,
       stop_times_index const current_sti) {

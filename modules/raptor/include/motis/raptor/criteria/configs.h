@@ -4,7 +4,7 @@
 #include "motis/raptor/criteria/criteria_helper.h"
 #include "motis/raptor/criteria/traits.h"
 #include "motis/raptor/criteria/traits/max_occupancy.h"
-#include "motis/raptor/criteria/traits/min_transfer_times.h"
+#include "motis/raptor/criteria/traits/tranfer_classes.h"
 #include "motis/raptor/criteria/traits/time_slotted_occupancy.h"
 
 namespace motis::raptor {
@@ -19,7 +19,7 @@ using TimeSlottedOccupancy =
 using TimeSlottedOccupancyShfl =
     criteria_config<traits<trait_time_slotted_occupancy>, CalcMethod::Shfl>;
 using MinTransferTimes =
-    criteria_config<traits<trait_min_transfer_times>, CalcMethod::Flat>;
+    criteria_config<traits<trait_max_transfer_class>, CalcMethod::Flat>;
 
 #define RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(DO, ACCESSOR) \
   DO(MaxOccupancy, ACCESSOR)                             \

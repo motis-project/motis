@@ -44,12 +44,10 @@ void print(schedule const& sched, raptor_meta_info const& meta_info,
   std::cout << "\nJourney with TR: " << j.trips_.size()
             << ";\tMOC: " << j.max_occupancy_
             << ";\tTSO: " << j.time_slotted_occupancy_
-            << ";\tMTT: " << j.min_transfer_time_
+            << ";\tMTC: " << j.max_transfer_class_
             << ";\tDuration: " << j.duration_
             << ";\n=========================================================\n";
 
-  // iterate over the trips in the journey and validate the occupancy values to
-  //   the expectation
   std::string prev_arr_eva{j.stops_[0].eva_no_};
   auto prev_arr_time = j.stops_[0].departure_.timestamp_;
   for (int idx = 0, size = j.trips_.size(); idx < size; ++idx) {

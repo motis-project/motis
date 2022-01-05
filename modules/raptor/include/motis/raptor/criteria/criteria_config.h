@@ -10,11 +10,9 @@ struct journey;
 }
 
 namespace motis::raptor {
+struct raptor_route;
 
-enum class CalcMethod {
-  Shfl,
-  Flat
-};
+enum class CalcMethod { Shfl, Flat };
 
 template <typename Traits, CalcMethod calc>
 struct criteria_config {
@@ -58,11 +56,10 @@ struct criteria_config {
   }
 
   _mark_cuda_rel_ inline static void reset_traits_aggregate(
-      CriteriaData& dt, route_id const r_id, trip_id const t_id,
-      trait_id const initial_offset) {
-    dt.route_id_ = r_id;
+      CriteriaData& dt, raptor_route const* route,
+      trip_id const t_id, trait_id const initial_offset) {
+    dt.route_ = route;
     dt.trip_id_ = t_id;
-    dt.departure_trait_id_ = initial_offset;
     Traits::reset_aggregate(trait_size(), dt, initial_offset);
   }
 

@@ -95,6 +95,8 @@ struct raptor_timetable {
   std::vector<stop_id> route_stops_;
   std::vector<route_id> stop_routes_;
 
+  std::vector<time> transfer_times_;
+
   // Needed for the reconstruction
   // duration REDUCED by the transfer times from the departure station
   std::vector<std::vector<raptor_incoming_footpath>> incoming_footpaths_;
@@ -131,7 +133,6 @@ struct raptor_meta_info {
   std::unordered_map<std::string, stop_id> eva_to_raptor_id_;
   std::vector<std::string> raptor_id_to_eva_;
   std::vector<unsigned> station_id_to_index_;
-  std::vector<time> transfer_times_;
 
   // contains the stop_id itself as first element
   std::vector<std::vector<stop_id>> equivalent_stations_;

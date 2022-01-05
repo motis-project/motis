@@ -29,6 +29,9 @@ trip_count get_earliest_trip(raptor_timetable const& tt,
     return invalid<trip_count>;
   }
 
+  // TODO adapted for TT
+  time const transfer_time = tt.transfer_times_[stop_id];
+
   // get first defined earliest trip for the stop in the route
   auto const first_trip_stop_idx = route.index_to_stop_times_ + r_stop_offset;
   auto const last_trip_stop_idx =
@@ -41,7 +44,7 @@ trip_count get_earliest_trip(raptor_timetable const& tt,
 
     auto const stop_time = tt.stop_times_[stop_time_idx];
     if (valid(stop_time.departure_) &&
-        prev_arrivals[stop_arr_idx] <= stop_time.departure_) {
+        prev_arrivals[stop_arr_idx] + transfer_time <= stop_time.departure_) {
       return current_trip;
     }
 
@@ -53,6 +56,7 @@ trip_count get_earliest_trip(raptor_timetable const& tt,
 
 template <typename CriteriaConfig>
 inline void init_arrivals(raptor_result& result, raptor_query const& q,
+                          raptor_timetable const& tt,
                           cpu_mark_store& station_marks, bool const propagate) {
 
   auto const traits_size = CriteriaConfig::trait_size();
@@ -67,13 +71,14 @@ inline void init_arrivals(raptor_result& result, raptor_query const& q,
     }
   };
 
-  result[0][traits_size * q.source_] = q.source_time_begin_;
-  if (propagate)
-    propagate_across_traits(result[0], q.source_, q.source_time_begin_);
+  // TODO adapted for TT
+  auto const start_time = q.source_time_begin_ - tt.transfer_times_[q.source_];
+  result[0][traits_size * q.source_] = start_time;
+  if (propagate) propagate_across_traits(result[0], q.source_, start_time);
   station_marks.mark(q.source_ * traits_size);
 
   for (auto const& add_start : q.add_starts_) {
-    motis::time const add_start_time = q.source_time_begin_ + add_start.offset_;
+    motis::time const add_start_time = start_time + add_start.offset_;
     result[0][traits_size * add_start.s_id_] =
         std::min(result[0][traits_size * add_start.s_id_], add_start_time);
     station_marks.mark(add_start.s_id_ * traits_size);
@@ -97,15 +102,14 @@ get_next_feasible_trip(raptor_timetable const& tt,
 
   for (trip_id trip_id = earliest_trip_id + 1; trip_id < route.trip_count_;
        ++trip_id) {
-    CriteriaConfig::reset_traits_aggregate(trip_data, r_id, trip_id,
+    CriteriaConfig::reset_traits_aggregate(trip_data, &route, trip_id,
                                            trait_offset);
 
     // aggregate the trait data for the current departure station
     new_dep_offset = arr_offset - 1;
     stop_times_index const arr_sti =
         route.index_to_stop_times_ + (trip_id * route.stop_count_) + arr_offset;
-    CriteriaConfig::update_traits_aggregate(trip_data, tt,
-                                            arr_offset, arr_sti);
+    CriteriaConfig::update_traits_aggregate(trip_data, tt, arr_offset, arr_sti);
 
     do {
       auto const dep_sti = route.index_to_stop_times_ +
@@ -116,17 +120,23 @@ get_next_feasible_trip(raptor_timetable const& tt,
           CriteriaConfig::get_arrival_idx(dep_s_id, trait_offset);
       auto dep_stop_times = tt.stop_times_[dep_sti];
 
+      // TODO adapted for TT
+      auto const transfer_times = tt.transfer_times_[dep_s_id];
+
       if (CriteriaConfig::get_write_to_trait_id(trip_data) == trait_offset &&
           valid(dep_stop_times.departure_) &&
-          prev_arrivals[dep_arr_idx] <= dep_stop_times.departure_) {
+          prev_arrivals[dep_arr_idx] + transfer_times <=
+              dep_stop_times.departure_) {
         return std::make_tuple(trip_id, std::move(trip_data));
       }
 
-      CriteriaConfig::update_traits_aggregate(trip_data, tt,
-                                              new_dep_offset, dep_sti);
+      if(new_dep_offset == 0) break;
+
+      CriteriaConfig::update_traits_aggregate(trip_data, tt, new_dep_offset,
+                                              dep_sti);
       --new_dep_offset;
 
-    } while (new_dep_offset != 0 &&
+    } while (new_dep_offset >= 0 &&
              CriteriaConfig::get_write_to_trait_id(trip_data) == trait_offset);
   }
 
@@ -151,7 +161,7 @@ void update_route_for_trait_offset(
       earliest_trip_id = get_earliest_trip<CriteriaConfig>(
           tt, route, prev_arrivals, r_stop_offset, trait_offset);
 
-      CriteriaConfig::reset_traits_aggregate(criteria_data, r_id,
+      CriteriaConfig::reset_traits_aggregate(criteria_data, &route,
                                              earliest_trip_id, trait_offset);
       continue;
     }
@@ -162,8 +172,8 @@ void update_route_for_trait_offset(
                                  (earliest_trip_id * route.stop_count_) +
                                  r_stop_offset;
 
-    CriteriaConfig::update_traits_aggregate(
-        criteria_data, tt, r_stop_offset, current_stop_time_idx);
+    CriteriaConfig::update_traits_aggregate(criteria_data, tt, r_stop_offset,
+                                            current_stop_time_idx);
 
     if (CriteriaConfig::is_rescan_from_stop_needed(criteria_data,
                                                    trait_offset)) {
@@ -185,7 +195,7 @@ void update_route_for_trait_offset(
         // while going from the known departure station we can also skip all
         // further stops until finding a new stop we can depart from
         earliest_trip_id = invalid<trip_count>;
-        CriteriaConfig::reset_traits_aggregate(criteria_data, r_id,
+        CriteriaConfig::reset_traits_aggregate(criteria_data, &route,
                                                earliest_trip_id, trait_offset);
 
         // it is still possible that this stop can serve as departure stop
@@ -229,15 +239,17 @@ void update_route_for_trait_offset(
     }
 
     // check if we could catch an earlier trip
+    // TODO adapted for TT
+    auto const transfer_time = tt.transfer_times_[stop_id];
     auto const previous_k_arrival = prev_arrivals[stop_arr_idx];
     if (valid(stop_time.departure_) &&
-        previous_k_arrival <= stop_time.departure_) {
+        previous_k_arrival + transfer_time <= stop_time.departure_) {
       earliest_trip_id =
           std::min(earliest_trip_id,
                    get_earliest_trip<CriteriaConfig>(
                        tt, route, prev_arrivals, r_stop_offset, trait_offset));
 
-      CriteriaConfig::reset_traits_aggregate(criteria_data, r_id,
+      CriteriaConfig::reset_traits_aggregate(criteria_data, &route,
                                              earliest_trip_id, trait_offset);
     }
   }
@@ -257,7 +269,7 @@ inline void update_route_for_trait_offset_forward_project(
   auto active_stop_count = route.stop_count_;
 
   for (trip_count trip_id = 0; trip_id < route.trip_count_; ++trip_id) {
-    CriteriaConfig::reset_traits_aggregate(aggregate, r_id, trip_id,
+    CriteriaConfig::reset_traits_aggregate(aggregate, &route, trip_id,
                                            trait_offset);
 
     auto const trip_first_sti =
@@ -282,8 +294,8 @@ inline void update_route_for_trait_offset_forward_project(
       //  before checking if the station can serve as departure station
       //  otherwise potentially improved arrival times are not written
       if (valid(departure_offset)) {
-        CriteriaConfig::update_traits_aggregate(aggregate, tt,
-                                                r_stop_offset, current_sti);
+        CriteriaConfig::update_traits_aggregate(aggregate, tt, r_stop_offset,
+                                                current_sti);
 
         auto const write_off = CriteriaConfig::get_write_to_trait_id(aggregate);
         auto const write_arr =
@@ -317,11 +329,14 @@ inline void update_route_for_trait_offset_forward_project(
       }
 
       // can station serve as departure station?
+      // TODO adapted for TT
+      auto const transfer_time = tt.transfer_times_[stop_id];
       if (valid(previous_round[arrival_idx]) &&
           valid(current_stop_time.departure_) &&
-          previous_round[arrival_idx] <= current_stop_time.departure_) {
+          previous_round[arrival_idx] + transfer_time <=
+              current_stop_time.departure_) {
         departure_offset = r_stop_offset;
-        CriteriaConfig::reset_traits_aggregate(aggregate, r_id, trip_id,
+        CriteriaConfig::reset_traits_aggregate(aggregate, &route, trip_id,
                                                trait_offset);
         consecutive_writes = 0;
         continue;
@@ -347,7 +362,7 @@ inline void clear_dominated_arrivals(stop_id const stop_count,
       if (min_arrival_at_stop <= current_round[trait_size * s_id + t_offset]) {
         current_round[trait_size * s_id + t_offset] = invalid<time>;
         station_marks.unmark(trait_size * s_id + t_offset);
-        if(min_arrival_at_stop < ea[trait_size * s_id + t_offset])
+        if (min_arrival_at_stop < ea[trait_size * s_id + t_offset])
           ea[trait_size * s_id + t_offset] = min_arrival_at_stop;
       } else {
         // a higher t_offset has a better value; remember the larger value
@@ -431,7 +446,8 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics& stats) {
   cpu_mark_store station_marks(tt.stop_count() * trait_size);
   cpu_mark_store route_marks(tt.route_count() * trait_size);
 
-  init_arrivals<CriteriaConfig>(result, query, station_marks, !use_fwd_prop);
+  init_arrivals<CriteriaConfig>(result, query, tt, station_marks,
+                                !use_fwd_prop);
 
   for (raptor_round round_k = 1; round_k < max_raptor_round; ++round_k) {
     bool any_marked = false;
@@ -480,11 +496,13 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics& stats) {
 
     route_marks.reset();
 
-    MOTIS_START_TIMING(prune_arrivals);
-    clear_dominated_arrivals<CriteriaConfig>(tt.stop_count(), result[round_k],
-                                             ea, station_marks);
-    auto const prune_time = MOTIS_GET_TIMING_US(prune_arrivals);
-    stats.cpu_time_clear_arrivals_ += prune_time;
+    if(use_fwd_prop) {
+      MOTIS_START_TIMING(prune_arrivals);
+      clear_dominated_arrivals<CriteriaConfig>(tt.stop_count(), result[round_k],
+                                               ea, station_marks);
+      auto const prune_time = MOTIS_GET_TIMING_US(prune_arrivals);
+      stats.cpu_time_clear_arrivals_ += prune_time;
+    }
 
     MOTIS_START_TIMING(footpath_update);
     std::memcpy(current_round_arrivals.data(), result[round_k],

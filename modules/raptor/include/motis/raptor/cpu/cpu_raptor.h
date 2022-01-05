@@ -15,7 +15,7 @@ trip_count get_earliest_trip(raptor_timetable const& tt,
                              stop_times_index r_stop_offset);
 
 void init_arrivals(raptor_result& result, raptor_query const& q,
-                   cpu_mark_store& station_marks);
+                   raptor_timetable const&, cpu_mark_store& station_marks);
 
 void update_route(raptor_timetable const& tt, route_id r_id,
                   time const* prev_arrivals, time* current_round,

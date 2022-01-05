@@ -40,7 +40,10 @@ callgrind.out.*
 *.callgrind
 /.clangd
 /compile_commands.json
-verification
+verification/delfi
+verification/hafas
+verification/sbb
+verification/sbb-small/r-routing-tso.txt
 helper/.idea
 helper/target
 config_*

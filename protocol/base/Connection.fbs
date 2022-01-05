@@ -90,6 +90,6 @@ table Connection {
   db_costs:ushort;
   max_occupancy:ushort;
   time_slotted_occupancy: ushort;
-  Min_transfer_time: ushort;
+  max_transfer_class: ushort;
   status:ConnectionStatus;
 }

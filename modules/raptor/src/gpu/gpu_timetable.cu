@@ -57,6 +57,8 @@ std::unique_ptr<host_gpu_timetable> get_host_gpu_timetable(
     h_gtt->stop_inb_occupancy_.push_back(stop_attr.inbound_occupancy_);
   }
 
+  h_gtt->transfer_times_ = tt.transfer_times_;
+
   return h_gtt;
 }
 

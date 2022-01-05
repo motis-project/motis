@@ -285,8 +285,7 @@ public class ResultComparator {
   public static void main(String[] args) throws IOException, ParseException {
     System.out.print("Reading Files ...");
     var raptorLines = Files.readAllLines(Path.of("verification/sbb-small/r-raptor_gpu-tso.txt"));
-    //var routingLines = Files.readAllLines(Path.of("./data/results/r-fwd-routing-moc.txt"));
-    var routingLines = Files.readAllLines(Path.of("verification/sbb-small/r-raptor_cpu-tso_valid.txt"));
+    var routingLines = Files.readAllLines(Path.of("verification/sbb-small/r-raptor_cpu-tso.txt"));
 
     //if (raptorLines.size() != routingLines.size()) throw new IllegalStateException("Line Counts don't match!");
     System.out.println("Ok");

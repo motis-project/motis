@@ -1,7 +1,7 @@
 #include "motis/raptor/gpu/gpu_raptor.cuh"
 
-#include "motis/raptor/gpu/raptor_utils.cuh"
 #include "motis/raptor/gpu/gpu_mark_store.cuh"
+#include "motis/raptor/gpu/raptor_utils.cuh"
 #include "motis/raptor/gpu/update_arrivals.cuh"
 
 #include "cooperative_groups.h"
@@ -52,6 +52,7 @@ __device__ void update_route_larger32(gpu_route const& route,
   time prev_arrival = invalid<time>;
   time stop_arrival = invalid<time>;
   time stop_departure = invalid<time>;
+  time transfer_time = invalid<time>;
 
   int active_stop_count = route.stop_count_;
 
@@ -90,13 +91,15 @@ __device__ void update_route_larger32(gpu_route const& route,
         auto const st_idx = route.index_to_stop_times_ +
                             (trip_offset * route.stop_count_) + stage_id;
         stop_departure = tt.stop_departures_[st_idx];
+        transfer_time = tt.transfer_times_[stop_id_t];
       }
 
       // get the current stage leader
+      //TODO adapted for TT
       unsigned int ballot = __ballot_sync(
           FULL_MASK, (stage_id < active_stop_count) && valid(prev_arrival) &&
                          valid(stop_departure) &&
-                         (prev_arrival <= stop_departure));
+                         (prev_arrival + transfer_time <= stop_departure));
       leader = __ffs(ballot) - 1;
 
       if (leader != NO_LEADER) {
@@ -159,6 +162,7 @@ __device__ void update_route_smaller32(gpu_route const route,
   time prev_arrival = invalid<time>;
   time stop_arrival = invalid<time>;
   time stop_departure = invalid<time>;
+  time transfer_time = invalid<time>;
 
   unsigned leader = route.stop_count_;
   unsigned int active_stop_count = route.stop_count_;
@@ -179,13 +183,15 @@ __device__ void update_route_smaller32(gpu_route const route,
       auto const st_idx =
           route.index_to_stop_times_ + (trip_offset * route.stop_count_) + t_id;
       stop_departure = tt.stop_departures_[st_idx];
+      transfer_time = tt.transfer_times_[stop_id_t];
     }
 
     // elect leader
+    //TODO adapted for TT
     unsigned ballot = __ballot_sync(
         FULL_MASK, (t_id < active_stop_count) && valid(prev_arrival) &&
                        valid(stop_departure) &&
-                       (prev_arrival <= stop_departure));
+                       (prev_arrival + transfer_time <= stop_departure));
     leader = __ffs(ballot) - 1;
 
     if (t_id > leader && t_id < active_stop_count) {
@@ -230,8 +236,7 @@ __device__ void update_footpaths_dev_scratch(time const* const read_arrivals,
 }
 
 __device__ void update_routes_dev(time const* const prev_arrivals,
-                                  time* const arrivals,
-                                  uint32_t* station_marks,
+                                  time* const arrivals, uint32_t* station_marks,
                                   uint32_t* route_marks,
                                   device_gpu_timetable const& tt) {
 
@@ -261,15 +266,19 @@ __device__ void init_arrivals_dev(base_query const& query,
                                   device_gpu_timetable const& tt) {
   auto const t_id = get_global_thread_id();
 
+  //TODO adapted for TT
+  auto const start_time =
+      query.source_time_begin_ - tt.transfer_times_[query.source_];
+
   if (t_id == 0) {
-    device_mem.result_[0][query.source_] = query.source_time_begin_;
+    device_mem.result_[0][query.source_] = start_time;
     mark(device_mem.station_marks_, query.source_);
   }
 
   if (t_id < device_mem.additional_start_count_) {
     auto const& add_start = device_mem.additional_starts_[t_id];
 
-    auto const add_start_time = query.source_time_begin_ + add_start.offset_;
+    auto const add_start_time = start_time + add_start.offset_;
     bool updated =
         update_arrival(device_mem.result_[0], add_start.s_id_, add_start_time);
 
@@ -334,8 +343,7 @@ __global__ void gpu_raptor_kernel(base_query const query,
     time* const arrivals = device_mem.result_[round_k];
 
     update_routes_dev(prev_arrivals, arrivals, device_mem.station_marks_,
-                      device_mem.route_marks_,
-                      tt);
+                      device_mem.route_marks_, tt);
     this_grid().sync();
 
     update_footpaths_dev(device_mem, round_k, tt);

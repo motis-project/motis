@@ -24,7 +24,7 @@ constexpr uint32_t moc_value_range_size = max_occupancy + 1;
 struct trait_max_occupancy {
   // Trait Data
   dimension_id initial_moc_idx_{};
-  uint8_t max_occupancy_{};
+  occ_t max_occupancy_{};
 
   _mark_cuda_rel_ inline static dimension_id index_range_size() {
     return moc_value_range_size;
@@ -60,6 +60,13 @@ struct trait_max_occupancy {
   //****************************************************************************
 
   template <typename TraitsData, typename Timetable>
+  _mark_cuda_rel_ inline static std::tuple<bool, bool> set_and_check_departure(
+      TraitsData& aggregate, Timetable const& tt, stop_offset const dep_stop,
+      time const prev_arrival, time const stop_departure) {
+    return std::make_tuple(false, true);
+  }
+
+  template <typename TraitsData, typename Timetable>
   _mark_cuda_rel_ inline static void update_aggregate(
       TraitsData& aggregate_dt, Timetable const& tt, stop_offset const,
       stop_times_index const current_sti) {
@@ -81,6 +88,14 @@ struct trait_max_occupancy {
   }
 
   template <typename TraitsData>
+  __device__ inline static void carry_to_next_stage(unsigned const mask,
+                                                    TraitsData& aggregate) {
+    auto const prop_val = aggregate.max_occupancy_;
+    auto const received = __shfl_down_sync(mask, prop_val, 31);
+    aggregate.max_occupancy_ = received;
+  }
+
+  template <typename TraitsData>
   __device__ inline static void calculate_aggregate(
       TraitsData& aggregate, device_gpu_timetable const& tt,
       stop_times_index const dep_sti, stop_times_index const arr_sti) {
@@ -91,14 +106,6 @@ struct trait_max_occupancy {
       if (occupancy > aggregate.max_occupancy_)
         aggregate.max_occupancy_ = occupancy;
     }
-  }
-
-  template <typename TraitsData>
-  __device__ inline static void carry_to_next_stage(unsigned const mask,
-                                                    TraitsData& aggregate) {
-    auto const prop_val = aggregate.max_occupancy_;
-    auto const received = __shfl_down_sync(mask, prop_val, 31);
-    aggregate.max_occupancy_ = received;
   }
 #endif
 

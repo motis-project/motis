@@ -177,6 +177,8 @@ void raptor::reg_subc(motis::module::subc_reg& r) {
                  eval::print_raptor);
   r.register_cmd("validate", "validates journeys against schedule",
                  eval::validate);
+  r.register_cmd("print-raptor-route", "prints a given route from raptor timetable",
+                 eval::print_raptor_route);
 }
 
 }  // namespace motis::raptor

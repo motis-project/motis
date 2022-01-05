@@ -188,8 +188,8 @@ void init_routes(schedule const& sched, std::vector<transformable_route>& rs) {
       }
 
       t_trip.stop_times_ = get_stop_times_from_lcons(t_trip.lcons_);
-      t_trip.stop_attr_  = get_stop_attributes_from_lcons(t_trip.lcons_);
-      t_trip.dbg_        = std::string{trip->dbg_.str()};
+      t_trip.stop_attr_ = get_stop_attributes_from_lcons(t_trip.lcons_);
+      t_trip.dbg_ = std::string{trip->dbg_.str()};
 
       ++t_id;
     }
@@ -228,6 +228,7 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
   auto tt = std::make_unique<raptor_timetable>();
 
   tt->stops_.reserve(ttt.stations_.size() + 1);
+  tt->transfer_times_.reserve(ttt.stations_.size());
   tt->incoming_footpaths_.resize(ttt.stations_.size());
 
   for (auto s_id = 0U; s_id < ttt.stations_.size(); ++s_id) {
@@ -241,6 +242,7 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
 
     utl::concat(tt->stop_routes_, t_stop.stop_routes_);
 
+    // TODO commented out transfer time reduction in footpaths
     for (auto const& f : t_stop.footpaths_) {
       auto const transfer_time = ttt.stations_[f.from_].transfer_time_;
       tt->footpaths_.emplace_back(f.to_, f.duration_ - transfer_time);
@@ -248,9 +250,12 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
 
     for (auto const& f : t_stop.incoming_footpaths_) {
       auto const transfer_time = ttt.stations_[f.from_].transfer_time_;
-      tt->incoming_footpaths_[s_id].emplace_back(f.from_,
-                                                 f.duration_ - transfer_time);
+      tt->incoming_footpaths_[s_id].emplace_back(
+          f.from_, f.duration_ - transfer_time);
     }
+
+    auto const transfer_time = ttt.stations_[s_id].transfer_time_;
+    tt->transfer_times_.push_back(transfer_time);
   }
 
   auto footpaths_idx = static_cast<footpaths_index>(tt->footpaths_.size());
@@ -279,22 +284,24 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
   tt->routes_.emplace_back(0, 0, stop_times_idx, rs_idx);
 
   // preadd the transfer times
-  for (auto const& route : tt->routes_) {
-    for (auto trip = 0; trip < route.trip_count_; ++trip) {
-      for (auto offset = 0; offset < route.stop_count_; ++offset) {
-        auto const rsi = route.index_to_route_stops_ + offset;
-        auto const sti =
-            route.index_to_stop_times_ + (trip * route.stop_count_) + offset;
-
-        auto const s_id = tt->route_stops_[rsi];
-        auto const transfer_time = ttt.stations_[s_id].transfer_time_;
-        auto& arrival = tt->stop_times_[sti].arrival_;
-        if (valid(arrival)) {
-          arrival += transfer_time;
-        }
-      }
-    }
-  }
+  // TODO comment out for TC Feature
+  //  for (auto const& route : tt->routes_) {
+  //    for (auto trip = 0; trip < route.trip_count_; ++trip) {
+  //      for (auto offset = 0; offset < route.stop_count_; ++offset) {
+  //        auto const rsi = route.index_to_route_stops_ + offset;
+  //        auto const sti =
+  //            route.index_to_stop_times_ + (trip * route.stop_count_) +
+  //            offset;
+  //
+  //        auto const s_id = tt->route_stops_[rsi];
+  //        auto const transfer_time = ttt.stations_[s_id].transfer_time_;
+  //        auto& arrival = tt->stop_times_[sti].arrival_;
+  //        if (valid(arrival)) {
+  //          arrival += transfer_time;
+  //        }
+  //      }
+  //    }
+  //  }
 
   return tt;
 }
@@ -302,10 +309,10 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
 auto create_route_map(transformable_timetable const& ttt) {
   route_mapping route_map{};
 
-  for(route_id r_id = 0; r_id < ttt.routes_.size(); ++r_id) {
+  for (route_id r_id = 0; r_id < ttt.routes_.size(); ++r_id) {
     auto& route = ttt.routes_[r_id];
 
-    for(trip_id t_id = 0; t_id < route.trips_.size(); ++t_id) {
+    for (trip_id t_id = 0; t_id < route.trips_.size(); ++t_id) {
       auto const& el = route.trips_[t_id];
       route_map.insert_dbg(el.dbg_, r_id, t_id);
     }
@@ -360,7 +367,6 @@ std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
   // generate initialization footpaths BEFORE removing empty stations
   meta_info->initialization_footpaths_ = get_initialization_footpaths(ttt);
 
-  meta_info->transfer_times_.reserve(ttt.stations_.size());
   meta_info->raptor_id_to_eva_.reserve(ttt.stations_.size());
   meta_info->station_id_to_index_.reserve(ttt.stations_.size());
 
@@ -372,7 +378,6 @@ std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
     auto const& s = ttt.stations_[s_id];
 
     meta_info->station_id_to_index_.push_back(s.motis_station_index_);
-    meta_info->transfer_times_.push_back(s.transfer_time_);
     meta_info->raptor_id_to_eva_.push_back(s.eva_);
     meta_info->eva_to_raptor_id_.emplace(
         s.eva_, static_cast<stop_id>(meta_info->eva_to_raptor_id_.size()));

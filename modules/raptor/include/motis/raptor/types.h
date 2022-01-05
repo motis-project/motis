@@ -40,6 +40,7 @@ using transfers = uint8_t;
 
 //additional attributes
 using occ_t = uint8_t;
+using transfer_class_t = uint8_t;
 
 using earliest_arrivals = std::vector<time>;
 

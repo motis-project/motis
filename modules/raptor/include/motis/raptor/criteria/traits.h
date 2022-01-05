@@ -5,6 +5,7 @@
 
 #include "utl/verify.h"
 
+#include "motis/raptor/raptor_timetable.h"
 #include "motis/raptor/raptor_util.h"
 #include "motis/raptor/types.h"
 
@@ -20,10 +21,8 @@ namespace motis::raptor {
 
 template <typename... TraitData>
 struct raptor_data : public TraitData... {
-  route_id route_id_;
+  raptor_route const* route_;
   trip_id trip_id_;
-
-  trip_id departure_trait_id_;
 };
 
 template <typename... Trait>
@@ -84,6 +83,21 @@ struct traits<FirstTrait, RestTraits...> {
   }
   //****************************************************************************
 
+  template <typename Timetable>
+  _mark_cuda_rel_ inline static bool set_and_check_departure(
+      bool const checked, TraitsData& aggregate, Timetable const& tt,
+      stop_offset const dep_stop, time const prev_arrival,
+      time const stop_departure) {
+
+    auto const [first_checked, first_feasible] =
+        FirstTrait::set_and_check_departure(aggregate, tt, dep_stop,
+                                            prev_arrival, stop_departure);
+    if (!first_feasible) return false;
+    return traits<RestTraits...>::set_and_check_departure(
+        checked || first_checked, aggregate, tt, dep_stop, prev_arrival,
+        stop_departure);
+  }
+
   // helper to aggregate values while progressing through the route stop by stop
   template <typename Timetable>
   _mark_cuda_rel_ inline static void update_aggregate(
@@ -118,6 +132,12 @@ struct traits<FirstTrait, RestTraits...> {
         mask, aggregate, is_departure_stop, write_update);
   }
 
+  __device__ inline static void carry_to_next_stage(unsigned const mask,
+                                                    TraitsData& aggregate) {
+    FirstTrait::carry_to_next_stage(mask, aggregate);
+    traits<RestTraits...>::carry_to_next_stage(mask, aggregate);
+  }
+
   template <typename Timetable>
   __device__ inline static void calculate_aggregate(
       TraitsData& aggregate, Timetable const& tt,
@@ -125,13 +145,6 @@ struct traits<FirstTrait, RestTraits...> {
     FirstTrait::calculate_aggregate(aggregate, tt, dep_sti, arr_sti);
     traits<RestTraits...>::calculate_aggregate(aggregate, tt, dep_sti, arr_sti);
   }
-
-  __device__ inline static void carry_to_next_stage(unsigned const mask,
-                                                    TraitsData& aggregate) {
-    FirstTrait::carry_to_next_stage(mask, aggregate);
-    traits<RestTraits...>::carry_to_next_stage(mask, aggregate);
-  }
-
 #endif
 
   inline static std::vector<trait_id> get_feasible_trait_ids(
@@ -225,6 +238,21 @@ struct traits<> {
 
   inline static bool is_forward_propagation_required() {
     return false;  // return natural element
+  }
+
+  template <typename Timetable, typename Data>
+  _mark_cuda_rel_ inline static bool set_and_check_departure(
+      bool const checked, Data& data, Timetable const& tt,
+      stop_offset const dep_stop, time const prev_arrival,
+      time const stop_departure) {
+    if (!checked) {
+      stop_id const stop_id =
+          tt.route_stops_[data.route_->index_to_route_stops_ + dep_stop];
+      time regular_tt = tt.transfer_times_[stop_id];
+      return prev_arrival + regular_tt <= stop_departure;
+    }
+
+    return true;
   }
 
   template <typename Data, typename Timetable>
