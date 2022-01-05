@@ -3,7 +3,7 @@ import React from 'react';
 import Maybe, { nothing } from 'true-myth/maybe';
 
 import { Overlay } from '../Modules/Overlay';
-import { SimTimePicker } from '../Modules/SimTimePicker';
+import { SimTimeOverlay } from '../Modules/SimTimeOverlay';
 
 let visible = false;
 
@@ -32,7 +32,7 @@ export const Main: React.FC = () => {
             <Overlay />
             {//<StationSearchView />
             }
-            <SimTimePicker />
+            <SimTimeOverlay />
         </div>
     );
 };
