@@ -1,6 +1,9 @@
 import React from "react";
 
 export const MapContainer: React.FC = () => {
+
+    const[simTimePickerSelected, setSimTimePickerSelected] = React.useState<Boolean>(false);
+
     return (
         <div className="map-container">
             <div id="map-background" className="mapboxgl-map">
