@@ -166,8 +166,14 @@ struct ris::impl {
 
     env_.set_maxdbs(4);
     env_.set_mapsize(config_.db_max_size_);
-    env_.open(config_.db_path_.c_str(),
-              lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOTLS);
+
+    try {
+      env_.open(config_.db_path_.c_str(),
+                lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOTLS);
+    } catch (...) {
+      l(logging::error, "ris: can't open database {}", config_.db_path_);
+      throw;
+    }
 
     db::txn t{env_};
     t.dbi_open(FILE_DB, db::dbi_flags::CREATE);
@@ -488,19 +494,27 @@ struct ris::impl {
 
   template <typename Publisher>
   void parse_sequential(input& in, Publisher& pub) {
+    if (!fs::exists(in.path())) {
+      l(logging::error, "ris input path {} does not exist", in.path());
+      return;
+    }
+
     for (auto const& [t, path, type] :
          collect_files(fs::canonical(in.path(), in.path().root_path()))) {
-      (void)t;
-      parse_file_and_write_to_db(in, path, type, pub);
-      if (config_.instant_forward_) {
-        sched_.system_time_ = pub.max_timestamp_;
-        sched_.last_update_timestamp_ = std::time(nullptr);
-        try {
-          ctx::await_all(
-              motis_publish(make_no_msg("/ris/system_time_changed")));
-        } catch (std::system_error& e) {
-          LOG(info) << e.what();
+      try {
+        parse_file_and_write_to_db(in, path, type, pub);
+        if (config_.instant_forward_) {
+          sched_.system_time_ = pub.max_timestamp_;
+          sched_.last_update_timestamp_ = std::time(nullptr);
+          try {
+            ctx::await_all(
+                motis_publish(make_no_msg("/ris/system_time_changed")));
+          } catch (std::system_error& e) {
+            LOG(info) << e.what();
+          }
         }
+      } catch (std::exception const& e) {
+        l(logging::error, "error parsing file {}", path);
       }
     }
     env_.force_sync();

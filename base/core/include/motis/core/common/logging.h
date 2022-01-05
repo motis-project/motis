@@ -62,11 +62,12 @@ static const char* const str[]{"emrg", "alrt", "crit", "erro",
 
 template <typename Msg, typename... Args>
 void l(log_level const lvl, Msg&& msg, Args&&... args) {
-  LOG(lvl) << "[" << motis::logging::str[lvl] << "]"
-           << "[" << motis::logging::time() << "]"
-           << "[" << FILE_NAME << ":" << __LINE__ << "]"
-           << " "
-           << fmt::format(std::forward<Msg>(msg), std::forward<Args>(args)...);
+  motis::logging::log() << "[" << motis::logging::str[lvl] << "]"
+                        << "[" << motis::logging::time() << "]"
+                        << "[" << FILE_NAME << ":" << __LINE__ << "]"
+                        << " "
+                        << fmt::format(std::forward<Msg>(msg),
+                                       std::forward<Args>(args)...);
 }
 
 struct scoped_timer final {
