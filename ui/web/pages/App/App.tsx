@@ -5,7 +5,6 @@ import Maybe, { nothing } from 'true-myth/maybe';
 import { Overlay } from '../Modules/Overlay';
 import { StationSearch } from '../Modules/StationSearch';
 import { MapContainer } from '../Modules/MapContainer';
-import { SimTimePicker } from '../Modules/SimTimePicker';
 
 let visible = false;
 
@@ -35,7 +34,6 @@ export const Main: React.FC = () => {
             {//<StationSearchView />
             }
             <StationSearch />
-            <SimTimePicker />
         </div>
     );
 };

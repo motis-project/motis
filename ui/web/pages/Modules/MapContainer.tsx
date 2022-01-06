@@ -1,4 +1,5 @@
 import React from "react";
+import { SimTimePicker } from "./SimTimePicker";
 
 export const MapContainer: React.FC = () => {
 
@@ -51,7 +52,7 @@ export const MapContainer: React.FC = () => {
             </div>
             <div className="railviz-tooltip hidden"></div>
             <div className="map-bottom-overlay">
-                <div className="sim-time-overlay">
+                <div className="sim-time-overlay" onClick={() => setSimTimePickerSelected(true)} onBlur={() => setSimTimePickerSelected(false)}>
                     <div id="railviz-loading-spinner" className="">
                         <div className="spinner">
                             <div className="bounce1"></div>
@@ -64,6 +65,7 @@ export const MapContainer: React.FC = () => {
                                 className="icon">link</i></a></div>
                     <div className="sim-icon" title="Simulationsmodus aktiv"><i className="icon">warning</i></div>
                     <div className="time" id="sim-time-overlay">19.10.2020 16:47:01</div>
+                    { simTimePickerSelected ? <SimTimePicker /> : null }
                 </div>
                 <div className="train-color-picker-overlay">
                     <div><input type="radio" id="train-color-picker-none" name="train-color-picker"/><label
