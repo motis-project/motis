@@ -136,9 +136,11 @@ struct graph_builder {
   void add_services(
       flatbuffers64::Vector<flatbuffers64::Offset<Service>> const* services);
 
-  bool has_duplicate(Service const*, mcd::vector<light_connection> const&);
+  bool has_duplicate(Service const*,
+                     mcd::vector<static_light_connection> const&);
 
-  bool are_duplicates(Service const*, mcd::vector<light_connection> const&,
+  bool are_duplicates(Service const*,
+                      mcd::vector<static_light_connection> const&,
                       trip_info const*);
 
   void index_first_route_node(route const& r);
@@ -155,17 +157,17 @@ struct graph_builder {
   void dedup_bitfields();
 
   static int get_index(
-      mcd::vector<mcd::vector<light_connection>> const& alt_route,
-      mcd::vector<light_connection> const& sections,
+      mcd::vector<mcd::vector<static_light_connection>> const& alt_route,
+      mcd::vector<static_light_connection> const& sections,
       mcd::vector<station*> const& stations);
 
-  static void add_to_route(mcd::vector<mcd::vector<light_connection>>& route,
-                           mcd::vector<light_connection> const& sections,
-                           int index);
+  static void add_to_route(
+      mcd::vector<mcd::vector<static_light_connection>>& route,
+      mcd::vector<static_light_connection> const& sections, int index);
 
   void add_to_routes(mcd::vector<route_t>& alt_routes,
                      mcd::vector<time> const& times,
-                     mcd::vector<light_connection> const& lcons,
+                     mcd::vector<static_light_connection> const& lcons,
                      mcd::vector<station*> const& stations);
 
   connection_info* get_or_create_connection_info(Section const* section,
@@ -174,7 +176,7 @@ struct graph_builder {
   connection_info* get_or_create_connection_info(
       std::vector<participant> const& services);
 
-  light_connection section_to_connection(
+  static_light_connection section_to_connection(
       std::vector<participant> const& services, bitfield const& traffic_days,
       merged_trips_idx);
 
@@ -210,7 +212,7 @@ struct graph_builder {
                                       int route_index);
 
   route_section add_route_section(
-      int route_index, mcd::vector<light_connection> const& connections,
+      int route_index, mcd::vector<static_light_connection> const& connections,
       Station const* from_stop, bool from_in_allowed, bool from_out_allowed,
       Station const* to_stop, bool to_in_allowed, bool to_out_allowed,
       node* from_route_node, node* to_route_node);

@@ -6,7 +6,7 @@ using namespace motis;
 
 static_light_connection make_lcon(mam_t const dep, mam_t const arr) {
   static auto const always = bitfield{"1"};
-  auto lcon = light_connection{dep, arr};
+  auto lcon = static_light_connection{dep, arr};
   lcon.traffic_days_ = &always;
   lcon.valid_ = true;
   return lcon;
