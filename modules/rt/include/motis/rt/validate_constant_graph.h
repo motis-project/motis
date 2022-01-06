@@ -32,10 +32,10 @@ inline void validate_constant_graph(schedule const& sched) {
     for (auto from = 0ULL; from < ref_cg.size(); ++from) {
       auto const& updated = updated_cg[from];
       for (auto const& ref_se : ref_cg[from]) {
-        auto const to = ref_se.to_;
+        auto const to = ref_se.to();
         auto const updated_ce =
             std::find_if(begin(updated), end(updated),
-                         [to](auto const& se) { return se.to_ == to; });
+                         [to](auto const& se) { return se.to() == to; });
         utl::verify(updated_ce != end(updated), "constant graph: missing edge");
         utl::verify(updated_ce->cost_ <= ref_se.cost_,
                     "constant graph: wrong costs: graph={}, from={}, to={}, "

@@ -24,14 +24,14 @@ inline void constant_graph_add_route_node(schedule& sched, int route_index,
                             bool const is_exit) {
     auto& fwd_edges = sched.transfers_lower_bounds_fwd_[to];
     if (std::find_if(begin(fwd_edges), end(fwd_edges), [&](auto const& se) {
-          return se.to_ == from;
+          return se.to() == from;
         }) == end(fwd_edges)) {
       fwd_edges.emplace_back(from, is_exit);
     }
 
     auto& bwd_edges = sched.transfers_lower_bounds_bwd_[from];
     if (std::find_if(begin(bwd_edges), end(bwd_edges), [&](auto const& se) {
-          return se.to_ == to;
+          return se.to() == to;
         }) == end(bwd_edges)) {
       bwd_edges.emplace_back(to, !is_exit);
     }
@@ -59,7 +59,7 @@ inline void constant_graph_add_route_edge(
                               uint32_t const to) {
     assert(from < cg.size() && to < cg.size());
     for (auto& se : cg[from]) {
-      if (se.to_ == to) {
+      if (se.to() == to) {
         se.cost_ = std::min(se.cost_, min_cost.time_);
         return;
       }

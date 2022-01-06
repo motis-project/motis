@@ -205,7 +205,8 @@ journey update_journey(schedule const& sched, journey const& j) {
     auto const& s = t.first->id_.secondary_;
     for (auto const& range : t.second) {
       updated_journey.trips_.push_back(journey::trip{
-          static_cast<unsigned>(range.from_), static_cast<unsigned>(range.to_),
+          static_cast<unsigned>(range.from()),
+          static_cast<unsigned>(range.to()),
           extern_trip{sched.stations_.at(p.station_id_)->eva_nr_,
                       p.get_train_nr(), motis_to_unixtime(sched, p.get_time()),
                       sched.stations_.at(s.target_station_id_)->eva_nr_,
@@ -222,7 +223,7 @@ journey update_journey(schedule const& sched, journey const& j) {
   for (auto const& t : transport_intervals.get_attribute_ranges()) {
     for (auto const& range : t.second) {
       updated_journey.transports_.push_back(
-          generate_journey_transport(range.from_, range.to_, t.first, sched));
+          generate_journey_transport(range.from(), range.to_, t.first, sched));
     }
   }
   std::vector<journey::transport> old_walk_transports;
@@ -285,9 +286,10 @@ journey update_journey(schedule const& sched, journey const& j) {
   for (auto const& [attr, ranges] :
        attribute_intervals.get_attribute_ranges()) {
     for (auto const& range : ranges) {
-      updated_journey.attributes_.push_back({static_cast<unsigned>(range.from_),
-                                             static_cast<unsigned>(range.to_),
-                                             {attr->code_, attr->text_}});
+      updated_journey.attributes_.push_back(
+          {static_cast<unsigned>(range.from()),
+           static_cast<unsigned>(range.to_),
+           {attr->code_, attr->text_}});
     }
   }
   std::sort(begin(updated_journey.attributes_),

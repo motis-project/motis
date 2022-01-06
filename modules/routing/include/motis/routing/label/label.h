@@ -58,6 +58,7 @@ struct label : public Data {  // NOLINT
     l.edge_ = &e;
     l.connection_ = ec.connection_;
     l.day_ = ec.day_;
+    std::cerr << "SETTING DAY " << l.day_ << "\n";
     l.now_ += (Dir == search_dir::FWD) ? ec.time_ : -ec.time_;
 
     Updater::update(l, ec, lb);
@@ -101,7 +102,7 @@ struct label : public Data {  // NOLINT
   light_connection const* connection_;
   time start_, now_;
   bool dominated_;
-  day_idx_t day_;
+  day_idx_t day_{-1};
 };
 
 }  // namespace motis::routing

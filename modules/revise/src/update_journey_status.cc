@@ -121,8 +121,8 @@ void update_canceled_train_status(journey& j) {
     for (auto const& range : ranges.second) {
       j.problems_.emplace_back(
           journey::problem{journey::problem_type::CANCELED_TRAIN,
-                           static_cast<unsigned>(range.from_),
-                           static_cast<unsigned>(range.to_)});
+                           static_cast<unsigned>(range.from()),
+                           static_cast<unsigned>(range.to())});
     }
   }
 }

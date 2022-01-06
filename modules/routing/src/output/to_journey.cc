@@ -40,7 +40,7 @@ std::vector<journey::transport> generate_journey_transports(
   for (auto const& t : intervals.get_attribute_ranges()) {
     for (auto const& range : t.second) {
       journey_transports.push_back(
-          generate_journey_transport(range.from_, range.to_, t.first, sched));
+          generate_journey_transport(range.from(), range.to(), t.first, sched));
     }
   }
 
@@ -78,7 +78,8 @@ std::vector<journey::trip> generate_journey_trips(
     auto const& s = ctrp.trp_->id_.secondary_;
     for (auto const& range : ranges) {
       journey_trips.push_back(journey::trip{
-          static_cast<unsigned>(range.from_), static_cast<unsigned>(range.to_),
+          static_cast<unsigned>(range.from()),
+          static_cast<unsigned>(range.to()),
           extern_trip{sched.stations_.at(p.station_id_)->eva_nr_, p.train_nr(),
                       motis_to_unixtime(sched, time{}),
                       sched.stations_.at(s.target_station_id_)->eva_nr_,
@@ -164,7 +165,7 @@ std::vector<journey::ranged_attribute> generate_journey_attributes(
     auto const& text = attribute->text_;
 
     for (auto const& range : attribute_ranges) {
-      journey_attributes.push_back({static_cast<unsigned>(range.from_),
+      journey_attributes.push_back({static_cast<unsigned>(range.from()),
                                     static_cast<unsigned>(range.to_),
                                     {code, text}});
     }

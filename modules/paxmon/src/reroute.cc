@@ -90,7 +90,7 @@ edge* get_connecting_edge(event_node const* from, event_node const* to,
     return nullptr;
   }
   for (auto& e : from->outgoing_edges(uv)) {
-    if (e.to_ == to->index_) {
+    if (e.to() == to->index_) {
       return &e;
     }
   }

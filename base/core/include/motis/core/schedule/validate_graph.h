@@ -15,11 +15,11 @@ inline void validate_graph(schedule const& sched) {
       [&] {
         for (auto const& sn : sched.station_nodes_) {
           for (auto const& se : sn->edges_) {
-            if (se.to_->type() != node_type::ROUTE_NODE) {
+            if (se.to()->type() != node_type::ROUTE_NODE) {
               continue;
             }
 
-            for (auto const& re : se.to_->edges_) {
+            for (auto const& re : se.to()->edges_) {
               if (re.empty()) {
                 continue;
               }
@@ -49,11 +49,11 @@ inline void validate_graph(schedule const& sched) {
       [&] {
         for (auto const& sn : sched.station_nodes_) {
           for (auto const& se : sn->edges_) {
-            if (se.to_->type() != node_type::ROUTE_NODE) {
+            if (se.to()->type() != node_type::ROUTE_NODE) {
               continue;
             }
 
-            for (auto const& re : se.to_->edges_) {
+            for (auto const& re : se.to()->edges_) {
               if (re.empty()) {
                 continue;
               }
@@ -78,8 +78,8 @@ inline void validate_graph(schedule const& sched) {
         auto const check_edges = [](node const* n) {
           return std::all_of(
               begin(n->edges_), end(n->edges_), [n](edge const& e) {
-                auto const in = e.to_->incoming_edges_;
-                return e.from_ == n &&
+                auto const in = e.to()->incoming_edges_;
+                return e.from() == n &&
                        std::find(begin(in), end(in), &e) != end(in);
               });
         };
@@ -90,7 +90,7 @@ inline void validate_graph(schedule const& sched) {
               return check_edges(sn.get()) &&
                      std::all_of(
                          begin(sn->edges_), end(sn->edges_),
-                         [&](auto const& e) { return check_edges(e.to_); });
+                         [&](auto const& e) { return check_edges(e.to()); });
             });
       }(),
       "incoming edges correct 1");
@@ -119,7 +119,7 @@ inline void validate_graph(schedule const& sched) {
 
   auto const check_edges = [](node const* n) {
     return std::all_of(begin(n->edges_), end(n->edges_),
-                       [&](edge const& e) { return e.from_ == n; }) &&
+                       [&](edge const& e) { return e.from() == n; }) &&
            std::all_of(begin(n->incoming_edges_), end(n->incoming_edges_),
                        [&](edge const* e) { return e->to_ == n; });
   };
@@ -225,7 +225,7 @@ inline void print_graph(schedule const& sched) {
   for (auto const& sn : sched.station_nodes_) {
     print_node(sn.get(), 0);
     for (auto const& e : sn->edges_) {
-      print_node(e.to_, 1);
+      print_node(e.to(), 1);
     }
   }
   std::cerr << "\n\n";

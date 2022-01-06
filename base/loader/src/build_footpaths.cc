@@ -142,7 +142,7 @@ struct footpath_builder {
       // check whether it is allowed to transfer at the route-node
       // we do this by checking, whether it has an edge to the station
       for (auto const& e : route_node->edges_) {
-        if (e.to_ == sn && e.type() != edge_type::INVALID_EDGE) {
+        if (e.to() == sn && e.type() != edge_type::INVALID_EDGE) {
           // the foot-edge may only be used
           // if a train was used beforewards when
           // trying to use it from a route node
@@ -155,9 +155,9 @@ struct footpath_builder {
 
     // STATION_NODE -(AFTER_TRAIN_BWD)-> ROUTE_NODE
     for (auto const& e : sn->edges_) {
-      if (e.to_->is_route_node() && e.type() != edge_type::INVALID_EDGE) {
+      if (e.to()->is_route_node() && e.type() != edge_type::INVALID_EDGE) {
         foot_node->edges_.emplace_back(
-            make_after_train_bwd_edge(foot_node.get(), e.to_, 0, true));
+            make_after_train_bwd_edge(foot_node.get(), e.to(), 0, true));
       }
     }
 
@@ -245,8 +245,8 @@ struct footpath_builder {
       std::vector<footpath> fps;
       if (station_node->foot_node_ != nullptr) {
         for (auto const& foot_edge : station_node->foot_node_->edges_) {
-          auto const from_station = foot_edge.from_->get_station()->id_;
-          auto const to_station = foot_edge.to_->get_station()->id_;
+          auto const from_station = foot_edge.from()->get_station()->id_;
+          auto const to_station = foot_edge.to()->get_station()->id_;
           auto const duration = foot_edge.m_.foot_edge_.time_cost_;
 
           utl::verify(from_station == station_node->id_,
@@ -338,7 +338,7 @@ struct footpath_builder {
     for (auto i = 0; i < size; ++i) {
       auto it = lb;
       for (auto const& edge : fgraph[(lb + i)->second]) {  // precond.: sorted!
-        while (it != ub && edge.to_station_ != it->second) {
+        while (it != ub && edge.to() station_ != it->second) {
           ++it;
         }
         auto j = std::distance(lb, it);

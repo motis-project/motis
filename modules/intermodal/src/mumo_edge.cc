@@ -298,8 +298,8 @@ std::vector<Offset<AdditionalEdgeWrapper>> write_edges(
     edge_mapping.emplace_back(&edge);
     edges.emplace_back(CreateAdditionalEdgeWrapper(
         fbb, AdditionalEdge_MumoEdge,
-        CreateMumoEdge(fbb, fbb.CreateString(edge.from_),
-                       fbb.CreateString(edge.to_), edge.duration_, 0,
+        CreateMumoEdge(fbb, fbb.CreateString(edge.from()),
+                       fbb.CreateString(edge.to()), edge.duration_, 0,
                        edge.accessibility_, edge_id)
             .Union()));
   }
@@ -309,8 +309,8 @@ std::vector<Offset<AdditionalEdgeWrapper>> write_edges(
     edge_mapping.emplace_back(&edge);
     edges.emplace_back(CreateAdditionalEdgeWrapper(
         fbb, AdditionalEdge_MumoEdge,
-        CreateMumoEdge(fbb, fbb.CreateString(edge.from_),
-                       fbb.CreateString(edge.to_), edge.duration_, 0,
+        CreateMumoEdge(fbb, fbb.CreateString(edge.from()),
+                       fbb.CreateString(edge.to()), edge.duration_, 0,
                        edge.accessibility_, edge_id)
             .Union()));
   }

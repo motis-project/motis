@@ -6,7 +6,7 @@
 
 namespace motis {
 
-class edge;
+struct edge;
 struct schedule;
 
 namespace routing {

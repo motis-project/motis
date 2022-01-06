@@ -647,18 +647,18 @@ light_connection graph_builder::section_to_connection(
 void graph_builder::connect_reverse() {
   for (auto& station_node : sched_.station_nodes_) {
     for (auto& station_edge : station_node->edges_) {
-      station_edge.to_->incoming_edges_.push_back(&station_edge);
-      if (station_edge.to_->get_station() != station_node.get()) {
+      station_edge.to()->incoming_edges_.push_back(&station_edge);
+      if (station_edge.to()->get_station() != station_node.get()) {
         continue;
       }
-      for (auto& edge : station_edge.to_->edges_) {
-        edge.to_->incoming_edges_.push_back(&edge);
+      for (auto& edge : station_edge.to()->edges_) {
+        edge.to()->incoming_edges_.push_back(&edge);
       }
     }
     for (auto& platform_node : station_node->platform_nodes_) {
       if (platform_node != nullptr) {
         for (auto& edge : platform_node->edges_) {
-          edge.to_->incoming_edges_.push_back(&edge);
+          edge.to()->incoming_edges_.push_back(&edge);
         }
       }
     }

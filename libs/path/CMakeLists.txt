@@ -27,7 +27,7 @@ file(GLOB_RECURSE motis-libpath-files src/*.cc)
 
 add_library(motis-libpath STATIC ${motis-libpath-files})
 target_include_directories(motis-libpath PUBLIC include)
-target_compile_features(motis-libpath PUBLIC cxx_std_17)
+target_compile_features(motis-libpath PUBLIC cxx_std_20)
 target_include_directories(motis-libpath PUBLIC include)
 add_dependencies(motis-libpath generated-motis-libpath-fbs-headers)
 target_link_libraries(motis-libpath

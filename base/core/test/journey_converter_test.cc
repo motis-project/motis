@@ -175,15 +175,15 @@ journey create_journey1() {
   j.attributes_.resize(2);
   {
     auto& attribute = j.attributes_[0];
-    attribute.from_ = 0;
-    attribute.to_ = 1;
+    attribute.from() = 0;
+    attribute.to() = 1;
     attribute.attr_.text_ = "AAA";
     attribute.attr_.code_ = "A";
   }
   {
     auto& attribute = j.attributes_[1];
-    attribute.from_ = 1;
-    attribute.to_ = 2;
+    attribute.from() = 1;
+    attribute.to() = 2;
     attribute.attr_.text_ = "BBB";
     attribute.attr_.code_ = "B";
   }

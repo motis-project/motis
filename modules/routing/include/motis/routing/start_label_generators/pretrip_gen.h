@@ -47,11 +47,11 @@ struct pretrip_gen {
                                          std::vector<Label*>& labels) {
     auto const start = sched.station_nodes_.at(0).get();
     for (auto const& qe : query_edges) {
-      if ((Dir == search_dir::FWD && qe.from_ != start) ||
-          (Dir == search_dir::BWD && qe.to_ != start)) {
+      if ((Dir == search_dir::FWD && qe.from() != start) ||
+          (Dir == search_dir::BWD && qe.to() != start)) {
         continue;
       } else if ((Dir == search_dir::FWD && !qe.to_->is_station_node()) ||
-                 (Dir == search_dir::BWD && !qe.from_->is_station_node()) ||
+                 (Dir == search_dir::BWD && !qe.from()->is_station_node()) ||
                  (qe.type() != edge_type::MUMO_EDGE)) {
         throw std::runtime_error("unsupported edge type");
       }

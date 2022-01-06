@@ -77,26 +77,55 @@ struct connection {
   service_class clasz_{service_class::AIR};  // service_class 0
 };
 
-struct light_connection {
-  light_connection() = default;
+struct rt_light_connection {
+  rt_light_connection() = default;
 
-  light_connection(mam_t const d_time, mam_t const a_time)
+  rt_light_connection(time const d_time, time const a_time)
+      : full_con_{nullptr},
+        d_time_{d_time.ts()},
+        a_time_{a_time.ts()},
+        trips_{0U},
+        valid_{0U} {}
+
+  rt_light_connection(time const d_time, time const a_time,
+                      connection const* full_con, merged_trips_idx const trips)
+      : full_con_{full_con},
+        d_time_{d_time.ts()},
+        a_time_{a_time.ts()},
+        trips_{trips},
+        valid_{1U} {}
+
+  time event_time(event_type const t) const {
+    return time{t == event_type::DEP ? d_time_ : a_time_};
+  }
+
+  duration_t travel_time() const { return a_time_ - d_time_; }
+
+  ptr<connection const> full_con_{nullptr};
+  int32_t d_time_;
+  int32_t a_time_;
+  uint32_t trips_ : 31;
+  uint32_t valid_ : 1;
+};
+
+struct static_light_connection {
+  static_light_connection() = default;
+
+  static_light_connection(mam_t const d_time, mam_t const a_time)
       : full_con_{nullptr},
         d_time_{d_time},
         a_time_{a_time},
         traffic_days_{0U},
-        trips_{0U},
-        valid_{false} {}
+        trips_{0U} {}
 
-  light_connection(mam_t const d_time, mam_t const a_time,
-                   size_t const bitfield_idx, connection const* full_con,
-                   merged_trips_idx const trips)
+  static_light_connection(mam_t const d_time, mam_t const a_time,
+                          size_t const bitfield_idx, connection const* full_con,
+                          merged_trips_idx const trips)
       : full_con_{full_con},
         d_time_{d_time},
         a_time_{a_time},
         traffic_days_{bitfield_idx},
-        trips_{trips},
-        valid_{1U} {}
+        trips_{trips} {}
 
   time event_time(event_type const t, day_idx_t day) const {
     return {day, t == event_type::DEP ? d_time_ : a_time_};
@@ -108,24 +137,35 @@ struct light_connection {
   mam_t d_time_{std::numeric_limits<decltype(d_time_)>::max()};
   mam_t a_time_{std::numeric_limits<decltype(a_time_)>::max()};
   bitfield_idx_or_ptr traffic_days_;
-  uint32_t trips_ : 31;
-  uint32_t valid_ : 1;
+  uint32_t trips_;
 };
 
 struct d_time_lt {
-  bool operator()(light_connection const& a, light_connection const& b) {
+  bool operator()(rt_light_connection const& a, rt_light_connection const& b) {
+    return a.d_time_ < b.d_time_;
+  }
+  bool operator()(static_light_connection const& a,
+                  static_light_connection const& b) {
     return a.d_time_ < b.d_time_;
   }
 };
 
 struct a_time_gt {
-  bool operator()(light_connection const& a, light_connection const& b) {
+  bool operator()(rt_light_connection const& a, rt_light_connection const& b) {
+    return a.a_time_ > b.a_time_;
+  }
+  bool operator()(static_light_connection const& a,
+                  static_light_connection const& b) {
     return a.a_time_ > b.a_time_;
   }
 };
 
 struct a_time_lt {
-  bool operator()(light_connection const& a, light_connection const& b) {
+  bool operator()(rt_light_connection const& a, rt_light_connection const& b) {
+    return a.a_time_ < b.a_time_;
+  }
+  bool operator()(static_light_connection const& a,
+                  static_light_connection const& b) {
     return a.a_time_ < b.a_time_;
   }
 };

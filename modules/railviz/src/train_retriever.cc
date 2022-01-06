@@ -68,7 +68,7 @@ struct edge_geo_index {
 
       from->for_each_route_node([&](node const* route_node) {
         for (auto const& e : route_node->edges_) {
-          if (!is_relevant(e, clasz_) || e.to_->get_station() != to) {
+          if (!is_relevant(e, clasz_) || e.to()->get_station() != to) {
             continue;
           }
 
@@ -107,8 +107,8 @@ std::unique_ptr<edge_geo_index> make_edge_rtree(
         continue;
       }
 
-      auto const from = e.from_->get_station()->id_;
-      auto const to = e.to_->get_station()->id_;
+      auto const from = e.from()->get_station()->id_;
+      auto const to = e.to()->get_station()->id_;
       std::pair<int, int> const station_pair(std::min(from, to),
                                              std::max(from, to));
       if (!included_station_pairs.insert(station_pair).second) {

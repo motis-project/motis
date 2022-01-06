@@ -28,7 +28,7 @@ osm_graph_contractor::osm_graph_contractor(osm_graph const& graph)
   for (auto const& n : graph_.nodes_) {
     auto from = n->idx_;
     for (auto const& e : n->edges_) {
-      auto to = e.to_->idx_;
+      auto to = e.to()->idx_;
       nodes_[from]->out_edges_.emplace_back(to, e.dist_);
       nodes_[to]->inc_edges_.emplace_back(from, e.dist_);
     }

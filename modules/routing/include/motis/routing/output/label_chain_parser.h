@@ -171,7 +171,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
 
   node const* last_route_node = nullptr;
   light_connection const* last_con = nullptr;
-  auto last_day_idx = day_idx_t{0};
+  auto last_day_idx = day_idx_t{-1};
   auto walk_arrival = INVALID_TIME;
   auto walk_arrival_di = delay_info{{nullptr, 0U, event_type::DEP}};
   auto stop_index = -1;
@@ -193,6 +193,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
         timestamp_reason a_reason = walk_arrival_di.get_reason(),
                          d_reason = timestamp_reason::SCHEDULE;
         if (a_time == INVALID_TIME && last_con != nullptr) {
+          std::cerr << __LINE__ << " DAY IDX: " << last_day_idx << "\n";
           a_track = &get_track_name(sched, last_con->full_con_->a_track_,
                                     last_day_idx);
           a_time = last_con->event_time(event_type::ARR, last_day_idx);
@@ -224,6 +225,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
 
           if (s2 != end(labels) && s2->connection_ != nullptr) {
             auto const& succ = *s2;
+            std::cerr << __LINE__ << " DAY IDX: " << succ.day_ << "\n";
             d_track = &get_track_name(
                 sched, succ.connection_->full_con_->d_track_, succ.day_);
             d_time = succ.connection_->event_time(event_type::DEP, succ.day_);
@@ -261,6 +263,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
               get_delay_info(sched, last_route_node, last_con, event_type::ARR);
         }
 
+        std::cerr << __LINE__ << " DAY IDX: " << last_day_idx << "\n";
         stops.emplace_back(intermediate::stop{
             .index_ = static_cast<unsigned int>(++stop_index),
 
@@ -326,6 +329,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
 
       case IN_CONNECTION: {
         if (current.connection_) {
+          std::cerr << __LINE__ << " DAY IDX: " << current.day_ << "\n";
           transports.emplace_back(static_cast<unsigned int>(stop_index),
                                   static_cast<unsigned int>(stop_index) + 1,
                                   current.connection_, current.day_);
@@ -364,6 +368,8 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
             //                             event_type::DEP))
             //      .get();
 
+            std::cerr << __LINE__ << " DAY IDX: " << current.day_ << "\n";
+            std::cerr << __LINE__ << " DAY IDX: " << succ.day_ << "\n";
             stops.emplace_back(intermediate::stop{
                 static_cast<unsigned int>(++stop_index),
                 get_node(current)->get_station()->id_,

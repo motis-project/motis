@@ -27,13 +27,13 @@ inline void update_platform_edge(schedule& sched, ev_key const& k,
     utl::verify(old_pn != nullptr, "invalid old platform");
     if (k.is_departure()) {
       for (auto& e : old_pn->edges_) {
-        if (e.to_ == rn) {
+        if (e.to() == rn) {
           e.m_.type_ = edge::INVALID_EDGE;
         }
       }
     } else {
       for (auto& e : rn->edges_) {
-        if (e.to_ == old_pn) {
+        if (e.to() == old_pn) {
           e.m_.type_ = edge::INVALID_EDGE;
         }
       }

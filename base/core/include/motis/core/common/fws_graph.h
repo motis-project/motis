@@ -17,7 +17,7 @@ struct edge_fws_multimap
                      SizeType const new_data_index, SizeType const count) {
     auto const old_data_end = old_data_index + count;
     for (auto const& e : this->at(map_index)) {
-      for (auto& i : bwd_.at(e.to_)) {
+      for (auto& i : bwd_.at(e.to())) {
         if (i >= old_data_index && i < old_data_end) {
           i = new_data_index + (i - old_data_index);
         }
@@ -225,14 +225,14 @@ struct fws_graph {
   using const_incoming_edge_bucket = incoming_edge_bucket<true>;
 
   edge_type& push_back_edge(edge_type const& e) {
-    auto const data_index = edges_[e.from_].push_back(e);
-    edges_.bwd_[e.to_].push_back(data_index);
+    auto const data_index = edges_[e.from()].push_back(e);
+    edges_.bwd_[e.to()].push_back(data_index);
     return edges_.data_[data_index];
   }
 
   edge_type& push_back_edge(edge_type&& e) {
-    auto const from = e.from_;
-    auto const to = e.to_;
+    auto const from = e.from();
+    auto const to = e.to();
     auto const data_index = edges_[from].emplace_back(std::move(e));
     edges_.bwd_[to].push_back(data_index);
     return edges_.data_[data_index];

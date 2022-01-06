@@ -110,7 +110,7 @@ motis::time get_foot_edge_duration(schedule const& sched, Connection const* con,
   auto const& foot_edges = from_node->foot_node_->edges_;
   auto const fe_it = std::find_if(
       begin(foot_edges), end(foot_edges), [&to_node](edge const& e) {
-        return e.type() == edge::FWD_EDGE && e.to_ == to_node;
+        return e.type() == edge::FWD_EDGE && e.to() == to_node;
       });
   utl::verify(fe_it != end(foot_edges), "foot edge not found");
 

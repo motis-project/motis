@@ -36,8 +36,8 @@ inline edge copy_edge(edge const& original, node* from, node* to,
     e = make_route_edge(from, to, {original.m_.route_edge_.conns_[lcon_index]});
   } else {
     e = original;
-    e.from_ = from;
-    e.to_ = to;
+    e.from() = from;
+    e.to() = to;
   }
   return e;
 }

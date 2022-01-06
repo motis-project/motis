@@ -40,11 +40,11 @@ inline tb_reverse_transfer find_reverse_transfer(queue_entry const& from_qe,
       std::min(from_qe.to_stop_index_,
                static_cast<stop_idx_t>(data.line_stop_count_[from_line] - 1));
 
-  for (auto from_stop_idx = from_qe.from_stop_index_;
+  for (auto from_stop_idx = from_qe.from() stop_index_;
        from_stop_idx <= stop_count; ++from_stop_idx) {
     for (auto const& transfer : data.transfers_.at(from_trip, from_stop_idx)) {
       if (transfer.to_trip_ == to_trip) {
-        if (transfer.to_stop_idx_ != to_qe.from_stop_index_) {
+        if (transfer.to_stop_idx_ != to_qe.from() stop_index_) {
           continue;
         }
         return {from_trip, from_stop_idx,
@@ -57,7 +57,7 @@ inline tb_reverse_transfer find_reverse_transfer(queue_entry const& from_qe,
                       << from_qe.trip_ << "."
                       << static_cast<int>(from_qe.to_stop_index_) << " to "
                       << to_qe.trip_ << "."
-                      << static_cast<int>(to_qe.from_stop_index_)
+                      << static_cast<int>(to_qe.from() stop_index_)
                       << " not found";
   throw std::runtime_error{
       "trip-based journey reconstruction: transfer not found (fwd)"};
@@ -71,7 +71,7 @@ inline tb_transfer find_transfer(queue_entry const& from_qe,
   auto const to_line = data.trip_to_line_[to_trip];
   for (auto to_stop_index = static_cast<int>(
            std::min(to_qe.to_stop_index_, data.line_stop_count_[to_line]));
-       to_stop_index >= 0 /*to_qe.from_stop_index_*/; --to_stop_index) {
+       to_stop_index >= 0 /*to_qe.from()stop_index_*/; --to_stop_index) {
     for (auto const& transfer :
          data.reverse_transfers_.at(to_trip, to_stop_index)) {
       if (transfer.from_trip_ == from_trip) {
@@ -86,7 +86,7 @@ inline tb_transfer find_transfer(queue_entry const& from_qe,
       << "trip-based journey reconstruction: find transfer (BWD) from trip "
       << from_qe.trip_ << "." << static_cast<int>(from_qe.to_stop_index_)
       << " to " << to_qe.trip_ << ".["
-      << static_cast<int>(to_qe.from_stop_index_) << ","
+      << static_cast<int>(to_qe.from() stop_index_) << ","
       << static_cast<int>(to_qe.to_stop_index_) << "] not found";
 
   throw std::runtime_error{
@@ -228,8 +228,8 @@ void reconstruct_tb_journey(
 
     if (Dir == search_dir::FWD) {
       j.edges_.emplace_back(
-          qe.trip_, qe.from_stop_index_, exit_stop_idx,
-          data.departure_times_[qe.trip_][qe.from_stop_index_],
+          qe.trip_, qe.from() stop_index_, exit_stop_idx,
+          data.departure_times_[qe.trip_][qe.from() stop_index_],
           data.arrival_times_[qe.trip_][exit_stop_idx]);
 
       queue_idx = qe.previous_trip_segment_;
@@ -238,7 +238,7 @@ void reconstruct_tb_journey(
             queues[t - 1][qe.previous_trip_segment_], qe, data);  // NOLINT
         exit_stop_idx = transfer.from_stop_idx_;
         auto const cur_enter_station =
-            data.stops_on_line_[line][qe.from_stop_index_];
+            data.stops_on_line_[line][qe.from() stop_index_];
         auto const prev_exit_station =
             data.stops_on_line_[data.trip_to_line_[transfer.from_trip_]]
                                [transfer.from_stop_idx_];
@@ -253,7 +253,7 @@ void reconstruct_tb_journey(
         }
       } else {
         j.start_station_ = data.stops_on_line_[data.trip_to_line_[qe.trip_]]
-                                              [qe.from_stop_index_];
+                                              [qe.from() stop_index_];
       }
     } else {
       j.edges_.emplace_back(qe.trip_, exit_stop_idx, qe.to_stop_index_,

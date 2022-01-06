@@ -133,7 +133,7 @@ struct osm_graph_dijkstra {
       auto const& node = graph_.nodes_[this_idx];
       for (auto const& curr_edge : node->edges_) {
         size_t const new_dist = label.dist_ + curr_edge.dist_;
-        size_t const to_idx = curr_edge.to_->idx_;
+        size_t const to_idx = curr_edge.to()->idx_;
 
         if (new_dist < limit_ && new_dist < dist(to_idx)) {
           dist(to_idx) = new_dist;
@@ -216,7 +216,7 @@ std::vector<double> shortest_path_distances(osm_graph const& graph,
 
     auto const it =
         std::find_if(begin(from_node->edges_), end(from_node->edges_),
-                     [&](auto const& edge) { return edge.to_ == to_node; });
+                     [&](auto const& edge) { return edge.to() == to_node; });
     if (it != end(from_node->edges_)) {
       distances[i] = it->dist_;
     } else {

@@ -428,7 +428,7 @@ struct rule_service_route_builder {
     auto s1_node = get_through_route_node(r->s1_, r->rule_->from(), true);
     auto s2_node = get_through_route_node(r->s2_, r->rule_->from(), false);
     for (auto const& e : s1_node->edges_) {
-      if (e.type() == edge_type::THROUGH_EDGE && e.to_ == s2_node) {
+      if (e.type() == edge_type::THROUGH_EDGE && e.to() == s2_node) {
         return;
       }
     }
@@ -492,8 +492,8 @@ struct rule_service_route_builder {
     for (auto const& e : n->edges_) {
       if (e.is_route_edge()) {
         route_edges.push_back(&e);
-      } else if (e.type() == edge_type::THROUGH_EDGE && e.to_ != n) {
-        add_outgoing_route_edges(route_edges, e.to_);
+      } else if (e.type() == edge_type::THROUGH_EDGE && e.to() != n) {
+        add_outgoing_route_edges(route_edges, e.to());
       }
     }
   }
@@ -563,8 +563,7 @@ struct rule_service_route_builder {
     for (auto lcon_idx = 0U; lcon_idx < lc_count; ++lcon_idx) {
       full_trip_id ftid;
       push_mem(gb_.sched_.trip_mem_, ftid, edges_ptr, day_offsets(route_edges),
-               lcon_idx, trip_debug{},
-               mcd::vector<uint32_t>{});
+               lcon_idx, trip_debug{}, mcd::vector<uint32_t>{});
       auto const trip_ptr = gb_.sched_.trip_mem_.back().get();
       if (gb_.check_trip(trip_ptr)) {
         gb_.sched_.expanded_trips_.push_back(trip_ptr);

@@ -51,7 +51,7 @@ inline void print_node(node const& node, std::ostream& out, int indent,
 }
 
 inline void print_edge(edge const& edge, std::ostream& out, int indent) {
-  out << "to=" << edge.to_->id_ << " [" << edge.to_->type_str() << "], ";
+  out << "to=" << edge.to()->id_ << " [" << edge.to()->type_str() << "], ";
   switch (edge.m_.type_) {
     case edge::ROUTE_EDGE: {
       out << "type=route_edge, "

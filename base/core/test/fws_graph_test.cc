@@ -53,7 +53,7 @@ inline std::ostream& operator<<(std::ostream& out, test_node const& n) {
 }
 
 inline std::ostream& operator<<(std::ostream& out, test_edge const& e) {
-  return out << "{from=" << e.from_ << ", to=" << e.to_
+  return out << "{from=" << e.from() << ", to=" << e.to()
              << ", weight=" << e.weight_ << "}";
 }
 
@@ -98,8 +98,8 @@ void add_edge(fws_graph<Node, Edge>& g,
               mcd::hash_map<std::uint32_t, mcd::vector<Edge>>& check_bwd,
               Edge const& e) {
   g.push_back_edge(e);
-  check_fwd[e.from_].push_back(e);
-  check_bwd[e.to_].push_back(e);
+  check_fwd[e.from()].push_back(e);
+  check_bwd[e.to()].push_back(e);
 
   check_graph(g, check_fwd, check_bwd);
 }

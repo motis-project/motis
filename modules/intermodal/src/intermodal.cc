@@ -120,7 +120,7 @@ split_transport_result split_transport(journey& j,
 
   auto const update_indices = [&](auto& v) {
     for (auto& e : v) {
-      update_idx(e.from_);
+      update_idx(e.from());
       update_idx(e.to_);
     }
   };

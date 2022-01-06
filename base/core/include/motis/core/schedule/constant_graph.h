@@ -48,9 +48,9 @@ inline constant_graph build_station_graph(
     };
 
     for (auto const& inner_station_edge : sn.edges_) {
-      for (auto const& e : inner_station_edge.to_->edges_) {
-        if (e.to_->get_station() != &sn) {
-          update_min(e.to_->get_station()->id_, e.get_minimum_cost());
+      for (auto const& e : inner_station_edge.to()->edges_) {
+        if (e.to()->get_station() != &sn) {
+          update_min(e.to()->get_station()->id_, e.get_minimum_cost());
         }
       }
     }
@@ -85,7 +85,7 @@ struct map_interchange_graph_node {
 inline bool is_connected(node const* from, node const* to) {
   return std::find_if(
              begin(from->edges_), end(from->edges_), [&to](edge const& e) {
-               return e.to_ == to && e.type() != edge_type::INVALID_EDGE;
+               return e.to() == to && e.type() != edge_type::INVALID_EDGE;
              }) != end(from->edges_);
 }
 
@@ -98,7 +98,7 @@ inline constant_graph build_interchange_graph(
     auto const s = (dir == search_dir::FWD) ? to : from;
     auto const t = (dir == search_dir::FWD) ? from : to;
     return std::find_if(begin(g[s]), end(g[s]), [&t](simple_edge const& e) {
-             return e.to_ == t;
+             return e.to() == t;
            }) == end(g[s]);
   };
 
@@ -113,22 +113,22 @@ inline constant_graph build_interchange_graph(
   auto add_station_edges = [&g, route_offset, add_edge, dir,
                             is_new](station_node const* sn) {
     for (auto const& e : sn->edges_) {
-      if (e.to_->is_foot_node()) {
-        for (auto const& fe : e.to_->edges_) {
-          if (fe.to_->is_station_node() && is_new(sn->id_, fe.to_->id_)) {
-            auto const s = (dir == search_dir::FWD) ? fe.to_->id_ : sn->id_;
-            auto const t = (dir == search_dir::FWD) ? sn->id_ : fe.to_->id_;
+      if (e.to()->is_foot_node()) {
+        for (auto const& fe : e.to()->edges_) {
+          if (fe.to()->is_station_node() && is_new(sn->id_, fe.to()->id_)) {
+            auto const s = (dir == search_dir::FWD) ? fe.to()->id_ : sn->id_;
+            auto const t = (dir == search_dir::FWD) ? sn->id_ : fe.to()->id_;
             g[s].emplace_back(t, false);
           }
         }
-      } else if (e.to_->is_route_node()) {
-        auto const route_lb_node_id = e.to_->route_ + route_offset;
+      } else if (e.to()->is_route_node()) {
+        auto const route_lb_node_id = e.to()->route_ + route_offset;
 
-        if (is_connected(sn, e.to_)) {
+        if (is_connected(sn, e.to())) {
           add_edge(sn->id_, route_lb_node_id, false);
         }
 
-        if (is_connected(e.to_, sn)) {
+        if (is_connected(e.to(), sn)) {
           add_edge(route_lb_node_id, sn->id_, true);
         }
       }
@@ -207,9 +207,9 @@ public:
 
   inline void expand_edge(uint32_t dist, simple_edge const& edge) {
     uint32_t new_dist = dist + edge.cost_;  // NOLINT
-    if (new_dist < dists_[edge.to_] && new_dist <= MaxValue) {
-      dists_[edge.to_] = new_dist;
-      pq_.push(label(edge.to_, new_dist));
+    if (new_dist < dists_[edge.to()] && new_dist <= MaxValue) {
+      dists_[edge.to()] = new_dist;
+      pq_.push(label(edge.to(), new_dist));
     }
   }
 

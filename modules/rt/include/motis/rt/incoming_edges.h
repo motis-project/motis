@@ -28,12 +28,12 @@ inline bool station_contains_node(station_node const* s, node const* n) {
 inline void save_outgoing_edges(node const* n,
                                 std::vector<incoming_edge_patch>& incoming) {
   for (auto const& e : n->edges_) {
-    auto const incoming_edge = std::find(begin(e.to_->incoming_edges_),
-                                         end(e.to_->incoming_edges_), &e);
-    utl::verify(incoming_edge != end(e.to_->incoming_edges_),
+    auto const incoming_edge = std::find(begin(e.to()->incoming_edges_),
+                                         end(e.to()->incoming_edges_), &e);
+    utl::verify(incoming_edge != end(e.to()->incoming_edges_),
                 "incoming edge not found");
     auto const incoming_edge_idx =
-        std::distance(begin(e.to_->incoming_edges_), incoming_edge);
+        std::distance(begin(e.to()->incoming_edges_), incoming_edge);
     incoming.emplace_back(&e, static_cast<int>(incoming_edge_idx));
   }
 }

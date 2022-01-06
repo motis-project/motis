@@ -37,7 +37,7 @@ void database::put(const persistable_foot_edges& fe) {
   auto db = txn.dbi_open();
   auto const key =
       get_db_key(fe.get()->parking_id(), fe.get()->search_profile()->str());
-  txn.put(db, key, fe.to_string());
+  txn.put(db, key, fe.to() string());
   txn.commit();
 }
 

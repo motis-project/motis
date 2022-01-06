@@ -86,16 +86,16 @@ struct node {
   template <typename Fn>
   void for_each_route_node(Fn&& f) const {
     for (auto& edge : edges_) {
-      if (edge.to_->is_route_node()) {
-        f(edge.to_);
+      if (edge.to()->is_route_node()) {
+        f(edge.to());
       }
     }
   }
 
   auto get_route_nodes() const {
     return utl::all(edges_) |
-           utl::remove_if([](auto&& e) { return !e.to_->is_route_node(); }) |
-           utl::transform([](auto&& e) { return e.to_; }) |  //
+           utl::remove_if([](auto&& e) { return !e.to()->is_route_node(); }) |
+           utl::transform([](auto&& e) { return e.to(); }) |  //
            utl::iterable();
   }
 
@@ -111,7 +111,7 @@ struct node {
   bool is_out_allowed() const {
     assert(is_route_node());
     return std::any_of(begin(edges_), end(edges_), [&](auto const& e) {
-      return e.to_ == station_node_ && e.type() != edge_type::INVALID_EDGE;
+      return e.to() == station_node_ && e.type() != edge_type::INVALID_EDGE;
     });
   }
 

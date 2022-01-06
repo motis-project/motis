@@ -18,5 +18,5 @@ add_library(motis-ris-gtfsrtpb STATIC
   ${CMAKE_CURRENT_BINARY_DIR}/gtfsrt.pb.cc
 )
 target_link_libraries(motis-ris-gtfsrtpb protobuf)
-target_compile_features(motis-ris-gtfsrtpb PUBLIC cxx_std_17)
+target_compile_features(motis-ris-gtfsrtpb PUBLIC cxx_std_20)
 target_include_directories(motis-ris-gtfsrtpb SYSTEM PUBLIC ${CMAKE_CURRENT_BINARY_DIR})

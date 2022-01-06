@@ -155,11 +155,11 @@ struct post_graph_builder {
         auto const current_color = base_color + color_offset;
 
         auto const& edge = edges[i];
-        std::scoped_lock lock(node_mutex_[edge.from_idx_],
-                              node_mutex_[edge.to_idx_]);
+        std::scoped_lock lock(node_mutex_[edge.from() idx_],
+                              node_mutex_[edge.to() idx_]);
 
-        auto* from = graph_.nodes_.at(edge.from_idx_).get();
-        auto* to = graph_.nodes_.at(edge.to_idx_).get();
+        auto* from = graph_.nodes_.at(edge.from() idx_).get();
+        auto* to = graph_.nodes_.at(edge.to() idx_).get();
 
         add_color(from->out_, to, current_color);
         add_color(to->inc_, from, current_color);

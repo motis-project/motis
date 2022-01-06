@@ -38,8 +38,8 @@ inline void print_seq_graph(std::vector<part_task> const& part_tasks,
                 ? 0
                 : part_tasks[edge.part_task_idx_].key_.strategy_->strategy_id_;
 
-        fmt::print(out, "{}:{}|{}:{:.1e} ", edge.to_->ref_.strategy_id_,
-                   edge.to_->idx_, strategy_id, edge.weight());
+        fmt::print(out, "{}:{}|{}:{:.1e} ", edge.to()->ref_.strategy_id_,
+                   edge.to()->idx_, strategy_id, edge.weight());
       }
       out << "\n";
     }

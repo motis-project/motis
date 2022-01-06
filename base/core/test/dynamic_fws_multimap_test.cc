@@ -32,7 +32,7 @@ struct test_edge {
 };
 
 inline std::ostream& operator<<(std::ostream& out, test_edge const& e) {
-  return out << "{from=" << e.from_ << ", to=" << e.to_
+  return out << "{from=" << e.from() << ", to=" << e.to()
              << ", weight=" << e.weight_ << "}";
 }
 

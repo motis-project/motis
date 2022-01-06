@@ -20,7 +20,7 @@ void add_interchange(event_node_index from, event_node_index to,
                      passenger_group* grp, duration_t transfer_time,
                      universe& uv) {
   for (auto& e : uv.graph_.outgoing_edges(from)) {
-    if (e.type_ == edge_type::INTERCHANGE && e.to_ == to &&
+    if (e.type_ == edge_type::INTERCHANGE && e.to() == to &&
         e.transfer_time() == transfer_time) {
       add_passenger_group_to_edge(uv, &e, grp);
       grp->edges_.emplace_back(get_edge_index(uv, &e));
