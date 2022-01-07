@@ -1,13 +1,16 @@
 module.exports = {
   root: true,
+
   env: {
     node: true
   },
+
   'extends': [
     'plugin:vue/vue3-strongly-recommended',
     'eslint:recommended',
     '@vue/typescript/recommended'
   ],
+
   parserOptions: {
     parser: "@typescript-eslint/parser",
     ecmaVersion: 2020,
@@ -15,6 +18,7 @@ module.exports = {
       jsx : false
     }
   },
+
   rules: {
     'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
@@ -92,5 +96,17 @@ module.exports = {
     "comma-spacing": "warn",
     "eol-last": "warn",
     "func-call-spacing": "warn",
-  }
+  },
+
+  overrides: [
+    {
+      files: [
+        '**/__tests__/*.{j,t}s?(x)',
+        '**/tests/unit/**/*.spec.{j,t}s?(x)'
+      ],
+      env: {
+        jest: true
+      }
+    }
+  ]
 }

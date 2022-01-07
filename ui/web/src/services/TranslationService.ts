@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { App, reactive } from 'vue'
 
 /* eslint-disable camelcase */
@@ -46,10 +47,9 @@ export class TranslationService {
   public get t(): Translation {
     return this._t;
   }
-  public currentLocale: string;
+  public currentLocale = "";
 
   public constructor(locale: string) {
-    this.currentLocale = locale;
     this.changeLocale(locale);
   }
 
@@ -75,7 +75,7 @@ export class TranslationService {
   }
 
   private loadLocale(locale: string): Promise<Translation> {
-    return fetch("locales/" + locale + ".json").then(t => t.json()).then(json => json as Translation);
+    return axios.get("locales/" + locale + ".json").then(r => r.data).then(json => json as Translation);
   }
 
   private format(str: string, ...formatOptions: string[]) {
@@ -105,11 +105,18 @@ declare module '@vue/runtime-core' {
 }
 
 class TranslationServicePlugin {
-  public service: TranslationService = {} as TranslationService;
+  public service: TranslationService | null = null;
   public install(app: App, options: string) {
-    this.service = reactive(new TranslationService(options)) as TranslationService;
-    app.config.globalProperties.$ts = this.service;
-    app.config.globalProperties.$t = this.service.t;
+    this.createTranslationService(options);
+    if(this.service !== null) {
+      app.config.globalProperties.$ts = this.service;
+      app.config.globalProperties.$t = this.service.t;
+    }
+  }
+  public createTranslationService(options: string) {
+    if(this.service === null) {
+      this.service = reactive(new TranslationService(options)) as TranslationService;
+    }
   }
 }
 

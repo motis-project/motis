@@ -73,7 +73,8 @@ export default defineComponent({
       this.weekDayNames = [];
       this.currentMonthToDisplay = `${date.toLocaleString(this.$ts.currentLocale, { month: "long" })} ${date.getFullYear()}`;
       this.currentMonth = date.getMonth();
-      let day = new Date(date.getFullYear(), date.getMonth(), 1);
+      let day = new Date(date.getFullYear(), date.getMonth(), 1,
+                         this.currentDate.getHours(), this.currentDate.getMinutes(), this.currentDate.getSeconds(), this.currentDate.getMilliseconds());
       let first = day.getDate() - (day.getDay() === 0 ? 7 : day.getDay());
       day = new Date(day.setDate(first));
       for (let i = 0; i < 42; i++) {
@@ -126,6 +127,7 @@ export default defineComponent({
       let d = this.$ds.parseDate(value);
       if(d.valueOf()) {
         this.currentDate = d;
+        this.$emit('dateChanged', this.currentDate);
       }
     },
     dayClick(day : Date) {
