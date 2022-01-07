@@ -136,8 +136,7 @@ get_next_feasible_trip(raptor_timetable const& tt,
                                               dep_sti);
       --new_dep_offset;
 
-    } while (new_dep_offset >= 0 &&
-             CriteriaConfig::get_write_to_trait_id(trip_data) == trait_offset);
+    } while (CriteriaConfig::get_write_to_trait_id(trip_data) == trait_offset);
   }
 
   return std::make_tuple(invalid<raptor::trip_id>, std::move(trip_data));

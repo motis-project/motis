@@ -18,7 +18,34 @@
 
 namespace motis::raptor {
 
-struct device_gpu_timetable;
+template <typename Timetable>
+_mark_cuda_rel_ inline static occ_t _read_occupancy(
+    Timetable const& tt, stop_times_index const sti) {
+  return tt.stop_attr_[sti].inbound_occupancy_;
+}
+
+template <typename Timetable>
+_mark_cuda_rel_ inline static time _read_segment_duration(
+    Timetable const& tt, stop_times_index const current_sti) {
+  // because og stop time index alignment and the additional knowledge, that
+  // we can't use a trip to arrive at the first stop we can safely reduce sti
+  //  by one to get the time of the previous stop
+
+  auto const previous_sti = current_sti - 1;
+
+  // always use the segment duration and ignore stand times at a station
+  auto const& previous_times = tt.stop_times_[previous_sti];
+  auto const& current_times = tt.stop_times_[current_sti];
+
+  auto const dep_time = valid(previous_times.departure_)
+                            ? previous_times.departure_
+                            : previous_times.arrival_;
+  auto const arr_time = valid(current_times.arrival_)
+                            ? current_times.arrival_
+                            : current_times.departure_;
+
+  return arr_time - dep_time;
+}
 
 template <dimension_id SlotCount>
 struct trait_time_slotted_occupancy {
@@ -223,44 +250,15 @@ struct trait_time_slotted_occupancy {
   }
 };
 
-template <typename Timetable>
-_mark_cuda_rel_ inline static uint8_t _read_occupancy(
-    Timetable const& tt, stop_times_index const sti) {
-  return tt.stop_attr_[sti].inbound_occupancy_;
-}
-
-template <typename Timetable>
-_mark_cuda_rel_ inline static uint32_t _read_segment_duration(
-    Timetable const& tt, stop_times_index const current_sti) {
-  // because og stop time index alignment and the additional knowledge, that
-  // we can't use a trip to arrive at the first stop we can safely reduce sti
-  //  by one to get the time of the previous stop
-
-  auto const previous_sti = current_sti - 1;
-
-  // always use the segment duration and ignore stand times at a station
-  auto const& previous_times = tt.stop_times_[previous_sti];
-  auto const& current_times = tt.stop_times_[current_sti];
-
-  auto const dep_time = valid(previous_times.departure_)
-                            ? previous_times.departure_
-                            : previous_times.arrival_;
-  auto const arr_time = valid(current_times.arrival_)
-                            ? current_times.arrival_
-                            : current_times.departure_;
-
-  return arr_time - dep_time;
-}
-
 #if defined(MOTIS_CUDA)
 template <>
-_mark_cuda_rel_ inline uint8_t _read_occupancy<device_gpu_timetable>(
+_mark_cuda_rel_ inline occ_t _read_occupancy<device_gpu_timetable>(
     device_gpu_timetable const& tt, stop_times_index const sti) {
   return tt.stop_inb_occupancy_[sti];
 }
 
 template <>
-_mark_cuda_rel_ inline uint32_t _read_segment_duration<device_gpu_timetable>(
+_mark_cuda_rel_ inline time _read_segment_duration<device_gpu_timetable>(
     device_gpu_timetable const& tt, stop_times_index const sti) {
   auto const prev_sti = sti - 1;
   auto departure_time = tt.stop_departures_[prev_sti];
