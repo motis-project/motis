@@ -36,19 +36,21 @@ edge const* loader_graph_builder_test::get_route_edge(node const* route_node) {
   }
 }
 
-std::vector<
-    std::tuple<light_connection const*, day_idx_t, node const*, node const*>>
+std::vector<std::tuple<static_light_connection const*, day_idx_t, node const*,
+                       node const*>>
 loader_graph_builder_test::get_connections(node const* first_route_node,
                                            time departure_time) {
   decltype(get_connections(first_route_node, departure_time)) cons;
   edge const* route_edge = nullptr;
   node const* route_node = first_route_node;
   while ((route_edge = get_route_edge(route_node)) != nullptr) {
-    auto const [con, day_idx] = route_edge->get_connection(departure_time);
+    auto const [con, day_idx] =
+        mcd::get<edge::static_route_edge>(route_edge->data_)
+            .get_connection(departure_time);
     if (con != nullptr) {
-      cons.emplace_back(con, day_idx, route_node, route_edge->to_);
-      route_node = route_edge->to_;
-      departure_time = std::get<light_connection const*>(cons.back())
+      cons.emplace_back(con, day_idx, route_node, route_edge->to());
+      route_node = route_edge->to();
+      departure_time = std::get<static_light_connection const*>(cons.back())
                            ->event_time(event_type::ARR, day_idx);
     } else {
       break;
@@ -73,7 +75,7 @@ void loader_graph_builder_test::print_trip(concrete_trip const trp) const {
   }
   std::clog << std::endl;
   for (auto const& sec : motis::access::sections(trp)) {
-    auto con_info = sec.lcon().full_con_->con_info_;
+    auto con_info = sec.lcon().full_con().con_info_;
     std::clog << "  section " << sec.index() << ": "
               << sec.from_station(*sched_).name_ << " "
               << format_time(sec.dep_time()) << " -> "

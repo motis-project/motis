@@ -15,7 +15,7 @@ void foreach_departure_in(edge const& edge, time const begin, time const end,
     return;
   }
 
-  auto const& conns = edge.m_.route_edge_.conns_;
+  auto const& conns = edge.static_lcons();
   auto const start = std::lower_bound(std::begin(conns), std::end(conns),
                                       light_connection(begin));
   for (auto it = start; it != std::end(conns) && it->d_time_ < end; ++it) {
@@ -30,7 +30,7 @@ void foreach_arrival_in(edge const& edge, time const begin, time const end,
     return;
   }
 
-  auto const& conns = edge.m_.route_edge_.conns_;
+  auto const& conns = edge.static_lcons();
   auto it = std::lower_bound(std::begin(conns), std::end(conns), begin,
                              [](light_connection const& lcon, time const& t) {
                                return lcon.a_time_ < t;

@@ -8,7 +8,7 @@ inline bool fits_edge(ev_key const& k, motis::time const t) {
   auto prev = k.lcon_idx_ == 0
                   ? ev_key{}  //
                   : ev_key{k.route_edge_, k.lcon_idx_ - 1, k.ev_type_};
-  auto succ = k.lcon_idx_ == k.route_edge_->m_.route_edge_.conns_.size() - 1
+  auto succ = k.lcon_idx_ == k.route_edge_->static_lcons().size() - 1
                   ? ev_key{}
                   : ev_key{k.route_edge_, k.lcon_idx_ + 1, k.ev_type_};
   return (!prev.is_not_null() || t > prev.get_time()) &&
@@ -17,7 +17,7 @@ inline bool fits_edge(ev_key const& k, motis::time const t) {
 
 inline bool fits_edge(schedule const& sched, ev_key const& k,
                       uint16_t const new_track) {
-  if (k.route_edge_->m_.route_edge_.conns_.size() == 1) {
+  if (k.route_edge_->static_lcons().size() == 1) {
     return true;
   }
   auto const station = sched.stations_[k.get_station_idx()].get();

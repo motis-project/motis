@@ -9,9 +9,9 @@ trip_stop::trip_stop(concrete_trip const t, int const index)
     : trip_(t), index_(index) {
   assert(!trip_.trp_->edges_->empty());
   if (index == static_cast<int>(trip_.trp_->edges_->size())) {
-    node_ = trip_.trp_->edges_->back().get_edge()->to_;
+    node_ = trip_.trp_->edges_->back().get_edge()->to();
   } else {
-    node_ = trip_.trp_->edges_->at(index).get_edge()->from_;
+    node_ = trip_.trp_->edges_->at(index).get_edge()->from();
   }
   assert(node_->is_route_node());
 }
@@ -24,38 +24,17 @@ bool trip_stop::has_departure() const {
   return index_ < static_cast<int>(trip_.trp_->edges_->size());
 }
 
-light_connection const& trip_stop::arr_lcon() const {
-  return get_lcon(trip_.trp_->edges_->at(index_ - 1).get_edge(),
-                  trip_.trp_->lcon_idx_);
+generic_light_connection trip_stop::arr_lcon() const {
+  return trip_.lcon(index_ - 1);
 }
 
-light_connection const& trip_stop::dep_lcon() const {
-  return get_lcon(trip_.trp_->edges_->at(index_).get_edge(),
-                  trip_.trp_->lcon_idx_);
+generic_light_connection trip_stop::dep_lcon() const {
+  return trip_.lcon(index_);
 }
 
-day_idx_t trip_stop::dep_day() const {
-  return trip_.day_idx_ + trip_.trp_->day_offsets_.at(index_);
-}
+time trip_stop::arr_time() const { return arr_lcon().a_time(); }
 
-day_idx_t trip_stop::arr_day() const {
-  return trip_.day_idx_ + trip_.trp_->day_offsets_.at(index_ - 1) +
-         arr_lcon().a_time_ / MINUTES_A_DAY;
-}
-
-time trip_stop::arr_time() const {
-  auto const lcon = arr_lcon();
-  return lcon.event_time(
-      event_type::ARR,
-      static_cast<day_idx_t>(trip_.day_idx_ +
-                             trip_.trp_->day_offsets_.at(index_ - 1)));
-}
-
-time trip_stop::dep_time() const {
-  auto const lcon = dep_lcon();
-  return lcon.event_time(event_type::DEP,
-                         trip_.day_idx_ + trip_.trp_->day_offsets_.at(index_));
-}
+time trip_stop::dep_time() const { return dep_lcon().d_time(); }
 
 connection_info const& trip_stop::arr_info(schedule const& sched) const {
   return get_connection_info(sched, arr_lcon(), trip_.trp_);

@@ -20,22 +20,7 @@ inline void validate_graph(schedule const& sched) {
             }
 
             for (auto const& re : se.to()->edges_) {
-              if (re.empty()) {
-                continue;
-              }
-
-              auto const& lcons = re.m_.route_edge_.conns_;
-              auto const is_sorted_dep = std::is_sorted(
-                  begin(lcons), end(lcons),
-                  [](light_connection const& a, light_connection const& b) {
-                    return a.d_time_ < b.d_time_;
-                  });
-              auto const is_sorted_arr = std::is_sorted(
-                  begin(lcons), end(lcons),
-                  [](light_connection const& a, light_connection const& b) {
-                    return a.a_time_ < b.a_time_;
-                  });
-              if (!is_sorted_dep || !is_sorted_arr) {
+              if (!re.is_sorted()) {
                 return false;
               }
             }
@@ -54,13 +39,13 @@ inline void validate_graph(schedule const& sched) {
             }
 
             for (auto const& re : se.to()->edges_) {
-              if (re.empty()) {
+              if (re.empty() && re.type() == edge_type::STATIC_ROUTE_EDGE) {
                 continue;
               }
 
-              auto const& lcons = re.m_.route_edge_.conns_;
+              auto const& lcons = re.static_lcons();
               if (!std::all_of(begin(lcons), end(lcons),
-                               [](light_connection const& lcon) {
+                               [](static_light_connection const& lcon) {
                                  return lcon.traffic_days_ != nullptr &&
                                         lcon.traffic_days_->any();
                                })) {
@@ -100,8 +85,8 @@ inline void validate_graph(schedule const& sched) {
         auto const check_edges = [](node const* n) {
           return std::all_of(begin(n->incoming_edges_), end(n->incoming_edges_),
                              [n](edge* const e) {
-                               auto const& out = e->from_->edges_;
-                               return e->to_ == n && e >= out.begin() &&
+                               auto const& out = e->from()->edges_;
+                               return e->to() == n && e >= out.begin() &&
                                       e < out.end();
                              });
         };
@@ -112,7 +97,7 @@ inline void validate_graph(schedule const& sched) {
               return check_edges(sn.get()) &&
                      std::all_of(
                          begin(sn->incoming_edges_), end(sn->incoming_edges_),
-                         [&](auto const& e) { return check_edges(e->from_); });
+                         [&](auto const& e) { return check_edges(e->from()); });
             });
       }(),
       "incoming edges correct 2");
@@ -121,7 +106,7 @@ inline void validate_graph(schedule const& sched) {
     return std::all_of(begin(n->edges_), end(n->edges_),
                        [&](edge const& e) { return e.from() == n; }) &&
            std::all_of(begin(n->incoming_edges_), end(n->incoming_edges_),
-                       [&](edge const* e) { return e->to_ == n; });
+                       [&](edge const* e) { return e->to() == n; });
   };
 
   utl::verify(
@@ -170,10 +155,10 @@ inline void print_graph(schedule const& sched) {
   std::cerr << "\n\nGraph:\n";
   auto const print_edge = [&](edge const* e, size_t const indent) {
     indent_line(indent);
-    std::cerr << e->type_str() << ": " << station_name(e->from_) << " -> "
-              << station_name(e->to_) << "[" << e->to_->id_ << "]\n";
+    std::cerr << e->type_str() << ": " << station_name(e->from()) << " -> "
+              << station_name(e->to()) << "[" << e->to()->id_ << "]\n";
     if (e->is_route_edge()) {
-      for (auto const& lcon : e->m_.route_edge_.conns_) {
+      for (auto const& lcon : e->static_lcons()) {
         indent_line(indent + 1);
 
         auto con_info = lcon.full_con_->con_info_;

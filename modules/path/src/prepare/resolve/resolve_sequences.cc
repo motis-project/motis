@@ -138,7 +138,7 @@ struct plan_executor {
     mcd::vector<sequence_info> infos;
     mcd::vector<osm_path> paths{task.seq_->station_ids_.size() - 1};
     for (auto const& [edge, new_path] : resolve_sequence(shortest_path)) {
-      auto station_idx = edge->from_->station_idx_;
+      auto station_idx = edge->from()->station_idx_;
       if (station_idx == paths.size()) {
         --station_idx;  // last inner station belongs to last segment
       }
@@ -152,7 +152,7 @@ struct plan_executor {
               ? stub_strategy_
               : pp_.part_tasks_.at(edge->part_task_idx_).key_.strategy_;
       infos.emplace_back(station_idx, size_before, path.size(),
-                         edge->from_->station_idx_ != edge->to_->station_idx_,
+                         edge->from()->station_idx_ != edge->to_->station_idx_,
                          s->source_spec_);
     }
 
@@ -194,7 +194,7 @@ struct plan_executor {
   resolve_sequence(std::vector<seq_edge const*> const& seq_edges) {
     auto const resolve = [&](auto const* seq_edge, auto maybe_defer) {
       auto const& part_task_idx = seq_edge->part_task_idx_;
-      auto const& from_ref = seq_edge->from_->ref_;
+      auto const& from_ref = seq_edge->from()->ref_;
       auto const& to_ref = seq_edge->to_->ref_;
 
       if (part_task_idx == kInvalidPartTask) {
@@ -219,7 +219,7 @@ struct plan_executor {
             auto stop_path = sc::steady_clock::now();
             stats_.add_path_timing(
                 {s,
-                 seq_edge->from_->station_idx_ != seq_edge->to_->station_idx_,
+                 seq_edge->from()->station_idx_ != seq_edge->to_->station_idx_,
                  sc::duration_cast<sc::microseconds>(stop_path - start_path)
                      .count()});
 

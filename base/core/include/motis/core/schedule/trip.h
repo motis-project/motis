@@ -125,6 +125,7 @@ struct concrete_trip {
 
   time get_first_dep_time() const;
   time get_last_arr_time() const;
+  generic_light_connection lcon(size_t) const;
 
   trip_info const* trp_;
   day_idx_t day_idx_;
@@ -136,7 +137,7 @@ struct trip_info {
 
     route_edge(edge const* e) {  // NOLINT
       if (e != nullptr) {
-        route_node_ = e->from_;
+        route_node_ = e->from();
         for (auto i = 0U; i < route_node_->edges_.size(); ++i) {
           if (&route_node_->edges_[i] == e) {
             outgoing_edge_idx_ = i;
@@ -184,8 +185,13 @@ struct trip_info {
   auto concrete_trips() const {
     return utl::iota(day_idx_t{0}, MAX_DAYS)  //
            | utl::remove_if([&](auto const day) {
+               if (edges_->front()->empty()) {
+                 return true;
+               }
+
                return !edges_->front()
-                           ->m_.route_edge_.conns_.at(lcon_idx_)
+                           ->static_lcons()
+                           .at(lcon_idx_)
                            .traffic_days_->test(day);
              })  //
            | utl::transform([&](auto const day) {
@@ -195,7 +201,7 @@ struct trip_info {
   }
 
   bitfield const& traffic_days() const {
-    return *edges_->front()->m_.route_edge_.conns_.at(lcon_idx_).traffic_days_;
+    return *edges_->front()->static_lcons().at(lcon_idx_).traffic_days_;
   }
 
   size_t ctrp_count() const { return traffic_days().count(); }
@@ -206,8 +212,7 @@ struct trip_info {
     } else if (edges_->front()->empty()) {
       return false;
     } else {
-      return edges_->front()->m_.route_edge_.conns_.front().traffic_days_->test(
-          day);
+      return edges_->front()->static_lcons().front().traffic_days_->test(day);
     }
   }
 

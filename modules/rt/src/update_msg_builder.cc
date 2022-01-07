@@ -114,7 +114,7 @@ update_msg_builder::to_fbs_event_infos(
     events.emplace_back(CreateRtEventInfo(
         fbb_,
         fbb_.CreateString(
-            sched_.stations_[e->from_->get_station()->id_]->eva_nr_),
+            sched_.stations_[e->from()->get_station()->id_]->eva_nr_),
         motis_to_unixtime(
             sched_, get_schedule_time(sched_, e, lcon_idx, event_type::DEP)),
         EventType_DEP));

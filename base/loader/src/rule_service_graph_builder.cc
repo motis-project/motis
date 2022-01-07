@@ -221,14 +221,14 @@ struct rule_service_route_builder {
     });
   }
 
-  mcd::vector<light_connection> build_connections(
+  mcd::vector<static_light_connection> build_connections(
       service_section const& section) {
     auto participants = section.participants_;
     std::sort(begin(participants), end(participants));
 
     assert(!participants.empty());
 
-    return mcd::vector<light_connection>{gb_.section_to_connection(
+    return mcd::vector<static_light_connection>{gb_.section_to_connection(
         participants, traffic_days_.at(participants[0].sn()),
         get_or_create_trips(participants))};
   }
@@ -473,13 +473,13 @@ struct rule_service_route_builder {
         for (auto const* re : route_edges) {
           auto new_prefix = path;
           new_prefix.emplace_back(re);
-          expand_trips(re->to_, std::move(new_prefix));
+          expand_trips(re->to(), std::move(new_prefix));
         }
         return;
       } else if (route_edges.size() == 1) {
         auto const* re = route_edges[0];
         path.emplace_back(re);
-        n = re->to_;
+        n = re->to();
       } else {
         n = nullptr;
       }
@@ -512,10 +512,10 @@ struct rule_service_route_builder {
     };
 
     auto const get_connection = [&](edge const& e, motis::time const t)
-        -> std::pair<light_connection const*, day_idx_t> {
-      auto it = std::lower_bound(begin(e.m_.route_edge_.conns_),
-                                 std::end(e.m_.route_edge_.conns_),
-                                 light_connection{t.mam(), 0U}, d_time_lt{});
+        -> std::pair<static_light_connection const*, day_idx_t> {
+      auto it =
+          std::lower_bound(begin(e.static_lcons()), std::end(e.static_lcons()),
+                           static_light_connection{t.mam(), 0U}, d_time_lt{});
 
       auto day = t.day();
 
@@ -524,8 +524,8 @@ struct rule_service_route_builder {
           return {nullptr, 0};
         }
 
-        if (it == end(e.m_.route_edge_.conns_)) {
-          it = begin(e.m_.route_edge_.conns_);
+        if (it == end(e.static_lcons())) {
+          it = begin(e.static_lcons());
           day += 1;
           continue;
         }
@@ -538,7 +538,7 @@ struct rule_service_route_builder {
       }
     };
 
-    auto const& first_lcon = route_edges.at(0)->m_.route_edge_.conns_.at(0);
+    auto const& first_lcon = route_edges.at(0)->static_lcons().at(0);
     auto const first_dep = first_lcon.event_time(
         event_type::DEP, find_first_bit(first_lcon.traffic_days_));
     auto t = first_dep;
@@ -554,7 +554,7 @@ struct rule_service_route_builder {
     if (route_edges.empty()) {
       return;
     }
-    auto const lc_count = route_edges.front()->m_.route_edge_.conns_.size();
+    auto const lc_count = route_edges.front()->static_lcons().size();
 
     push_mem(gb_.sched_.trip_edges_, route_edges);
     auto const edges_ptr = gb_.sched_.trip_edges_.back().get();

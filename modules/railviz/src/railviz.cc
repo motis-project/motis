@@ -196,7 +196,7 @@ msg_ptr railviz::get_trip_guesses(msg_ptr const& msg) {
 
   auto const get_first_dep_ci = [&](trip const* trp) {
     auto const& lcon =
-        trp->edges_->front()->m_.route_edge_.conns_[trp->lcon_idx_];
+        trp->edges_->front()->static_lcons()[trp->lcon_idx_];
     auto const& merged = *sched.merged_trips_[lcon.merged_trips_];
     auto const it = std::find(begin(merged), end(merged), trp);
     utl::verify(it != end(merged), "trip not found in trip");
@@ -289,7 +289,7 @@ msg_ptr railviz::get_station(msg_ptr const& msg) {
         continue;
       }
 
-      for (auto i = 0U; i < re.m_.route_edge_.conns_.size(); ++i) {
+      for (auto i = 0U; i < re.static_lcons().size(); ++i) {
         on_ev(ev_key{&re, i, event_type::DEP});
       }
     }
@@ -297,16 +297,16 @@ msg_ptr railviz::get_station(msg_ptr const& msg) {
 
   // collect arrival events (only out allowed)
   for (auto const& se : station->incoming_edges_) {
-    if (se->type() == edge::INVALID_EDGE || !se->from_->is_route_node()) {
+    if (se->type() == edge::INVALID_EDGE || !se->from()->is_route_node()) {
       continue;
     }
 
-    for (auto const& re : se->from_->incoming_edges_) {
+    for (auto const& re : se->from()->incoming_edges_) {
       if (re->empty()) {
         continue;
       }
 
-      for (auto i = 0U; i < re->m_.route_edge_.conns_.size(); ++i) {
+      for (auto i = 0U; i < re->static_lcons().size(); ++i) {
         on_ev(ev_key{trip_info::route_edge{re}, i, event_type::ARR});
       }
     }

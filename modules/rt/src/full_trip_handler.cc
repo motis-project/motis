@@ -470,7 +470,7 @@ private:
       constant_graph_add_route_edge(sched_, &route_edge);
 
       sec.lc_ = const_cast<light_connection*>(  // NOLINT
-          &route_edge.m_.route_edge_.conns_.front());
+          &route_edge.static_lcons().front());
       sec.dep_.ev_key_ = ev_key{&route_edge, 0, event_type::DEP};
       sec.arr_.ev_key_ = ev_key{&route_edge, 0, event_type::ARR};
     }
@@ -501,7 +501,7 @@ private:
           trp_entry);
     } else {
       for (auto const& e : *trp->edges_) {
-        e.get_edge()->m_.route_edge_.conns_[trp->lcon_idx_].valid_ = 0U;
+        e.get_edge()->static_lcons()[trp->lcon_idx_].valid_ = 0U;
       }
       trp->edges_ = edges;
       trp->lcon_idx_ = lcon_idx;
@@ -514,7 +514,7 @@ private:
                          std::initializer_list<ptr<trip>>>({trp}));
 
     for (auto const& trp_edge : trip_edges) {
-      trp_edge.get_edge()->m_.route_edge_.conns_[lcon_idx].trips_ = new_trps_id;
+      trp_edge.get_edge()->static_lcons()[lcon_idx].trips_ = new_trps_id;
     }
 
     return trp;

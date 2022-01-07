@@ -35,7 +35,7 @@ TEST_F(ris_gtfsrt_cancel_message_itest_t0, before_cancel) {
   ASSERT_NE(nullptr, trip);
   auto const lcon_idx = trip->lcon_idx_;
   for (auto const& e : *trip->edges_) {
-    EXPECT_TRUE(e->m_.route_edge_.conns_[lcon_idx].valid_);
+    EXPECT_TRUE(e->static_lcons()[lcon_idx].valid_);
   }
 }
 
@@ -57,6 +57,6 @@ TEST_F(ris_gtfsrt_cancel_message_itest_t1, after_cancel) {
   ASSERT_NE(nullptr, trip);
   auto const lcon_idx = trip->lcon_idx_;
   for (auto const& e : *trip->edges_) {
-    EXPECT_FALSE(e->m_.route_edge_.conns_[lcon_idx].valid_);
+    EXPECT_FALSE(e->static_lcons()[lcon_idx].valid_);
   }
 }

@@ -13,11 +13,8 @@ public:
   bool has_arrival() const;
   bool has_departure() const;
 
-  light_connection const& arr_lcon() const;
-  light_connection const& dep_lcon() const;
-
-  day_idx_t dep_day() const;
-  day_idx_t arr_day() const;
+  generic_light_connection arr_lcon() const;
+  generic_light_connection dep_lcon() const;
 
   time arr_time() const;
   time dep_time() const;

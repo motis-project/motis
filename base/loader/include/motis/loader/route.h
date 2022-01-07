@@ -10,10 +10,10 @@ namespace motis::loader {
 struct route_t {
   route_t();
 
-  route_t(mcd::vector<light_connection> const& new_lcons,
+  route_t(mcd::vector<static_light_connection> const& new_lcons,
           mcd::vector<time> const& times, schedule const& sched);
 
-  bool add_service(mcd::vector<light_connection> const& new_lcons,
+  bool add_service(mcd::vector<static_light_connection> const& new_lcons,
                    mcd::vector<time> const& new_times, schedule const& sched,
                    mcd::vector<station*> const& stations);
 
@@ -21,13 +21,13 @@ struct route_t {
 
   bool empty() const;
 
-  void update_traffic_days(mcd::vector<light_connection> const& new_lcons,
-                           schedule const&);
+  void update_traffic_days(
+      mcd::vector<static_light_connection> const& new_lcons, schedule const&);
 
-  mcd::vector<light_connection> const& operator[](size_t) const;
+  mcd::vector<static_light_connection> const& operator[](size_t) const;
 
   std::vector<mcd::vector<time>> times_;
-  std::vector<mcd::vector<light_connection>> lcons_;
+  std::vector<mcd::vector<static_light_connection>> lcons_;
   bitfield traffic_days_;
 };
 

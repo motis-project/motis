@@ -212,16 +212,15 @@ struct additional_service_builder {
     return trip_edges;
   }
 
-  trip const* update_trips(
-      mcd::vector<trip_info::route_edge> const& trip_edges,
+  trip const* update_trips(mcd::vector<trip_info::route_edge> const& trip_edges,
                            mcd::vector<uint32_t> const& seq_numbers) {
     auto const first_edge = trip_edges.front().get_edge();
-    auto const first_station = first_edge->from_->get_station();
-    auto const first_lcon = first_edge->m_.route_edge_.conns_[0];
+    auto const first_station = first_edge->from()->get_station();
+    auto const first_lcon = first_edge->static_lcons()[0];
 
     auto const last_edge = trip_edges.back().get_edge();
     auto const last_station = last_edge->to_->get_station();
-    auto const last_lcon = last_edge->m_.route_edge_.conns_[0];
+    auto const last_lcon = last_edge->static_lcons()[0];
 
     sched_.trip_edges_.emplace_back(
         mcd::make_unique<mcd::vector<trip_info::route_edge>>(trip_edges));
@@ -246,7 +245,7 @@ struct additional_service_builder {
                          std::initializer_list<ptr<trip>>>({trp}));
 
     for (auto const& trp_edge : trip_edges) {
-      trp_edge.get_edge()->m_.route_edge_.conns_[0].trips_ = new_trps_id;
+      trp_edge.get_edge()->static_lcons()[0].trips_ = new_trps_id;
     }
 
     return trp;

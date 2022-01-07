@@ -27,7 +27,7 @@ struct pretrip_gen {
     std::vector<Label*> labels;
     auto const start = sched.station_nodes_.at(0).get();
     if ((start_edge->to_ == start && Dir == search_dir::FWD) ||
-        (start_edge->from_ == start && Dir == search_dir::BWD)) {
+        (start_edge->from() == start && Dir == search_dir::BWD)) {
       generate_intermodal_starts(sched, mem, lbs, start_edge, query_edges,
                                  interval_begin, interval_end,
                                  starting_footpaths, labels);

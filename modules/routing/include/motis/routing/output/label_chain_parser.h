@@ -156,7 +156,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
 
     auto& last_label = labels[labels.size() - 1];
     auto const second_edge = last_label.edge_;
-    last_edge = make_invalid_edge(&last_node, second_edge->from_);
+    last_edge = make_invalid_edge(&last_node, second_edge->from());
     last_label.edge_ = &last_edge;
     last_label.connection_ = nullptr;
 

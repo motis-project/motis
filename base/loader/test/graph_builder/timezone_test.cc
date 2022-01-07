@@ -16,8 +16,8 @@ public:
       : loader_graph_builder_test("east-to-west", "20150702", 9) {}
 };
 
-void test_events(std::tuple<light_connection const*, day_idx_t, node const*,
-                            node const*> const& c,
+void test_events(std::tuple<static_light_connection const*, day_idx_t,
+                            node const*, node const*> const& c,
                  time const expected_dep, time const expected_arr) {
   auto const& [lcon, day, dep_node, arr_node] = c;
   EXPECT_EQ(expected_dep, lcon->event_time(event_type::DEP, day));

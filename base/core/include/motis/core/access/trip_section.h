@@ -9,7 +9,7 @@ struct trip_section {
 
   int index() const;
 
-  light_connection const& lcon() const;
+  generic_light_connection lcon() const;
 
   connection const& fcon() const;
   connection_info const& info(schedule const& sched) const;

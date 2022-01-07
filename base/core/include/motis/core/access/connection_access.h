@@ -5,7 +5,7 @@
 namespace motis::access {
 
 connection_info const& get_connection_info(schedule const&,
-                                           light_connection const&,
+                                           generic_light_connection const&,
                                            trip_info const*);
 
 }  // namespace motis::access

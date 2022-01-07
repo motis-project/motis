@@ -103,7 +103,7 @@ struct node {
     assert(is_route_node());
     return std::any_of(begin(incoming_edges_), end(incoming_edges_),
                        [&](auto const& e) {
-                         return e->from_ == station_node_ &&
+                         return e->from() == station_node_ &&
                                 e->type() != edge_type::INVALID_EDGE;
                        });
   }

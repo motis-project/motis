@@ -57,7 +57,7 @@ ev_key get_event_at(schedule const& sched, Connection const* con,
                  e->to_->get_station()->id_ == station_idx &&
                  schedule_time == ev_time) ||
                 (ev_type == event_type::DEP &&
-                 e->from_->get_station()->id_ == station_idx &&
+                 e->from()->get_station()->id_ == station_idx &&
                  schedule_time == ev_time));
       });
   utl::verify(edge_it != end(*trp->edges_), "important event not in trip");

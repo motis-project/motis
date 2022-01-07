@@ -98,7 +98,7 @@ inline constant_graph build_interchange_graph(
     auto const s = (dir == search_dir::FWD) ? to : from;
     auto const t = (dir == search_dir::FWD) ? from : to;
     return std::find_if(begin(g[s]), end(g[s]), [&t](simple_edge const& e) {
-             return e.to() == t;
+             return e.to_ == t;
            }) == end(g[s]);
   };
 
@@ -207,9 +207,9 @@ public:
 
   inline void expand_edge(uint32_t dist, simple_edge const& edge) {
     uint32_t new_dist = dist + edge.cost_;  // NOLINT
-    if (new_dist < dists_[edge.to()] && new_dist <= MaxValue) {
-      dists_[edge.to()] = new_dist;
-      pq_.push(label(edge.to(), new_dist));
+    if (new_dist < dists_[edge.to_] && new_dist <= MaxValue) {
+      dists_[edge.to_] = new_dist;
+      pq_.push(label(edge.to_, new_dist));
     }
   }
 

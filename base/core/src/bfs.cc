@@ -18,9 +18,10 @@ std::set<trip_info::route_edge> route_bfs(ev_key const& k,
     q.pop();
 
     if (dir == bfs_direction::BOTH || dir == bfs_direction::BACKWARD) {
-      for (auto const& in : e->from_->incoming_edges_) {
+      for (auto const& in : e->from()->incoming_edges_) {
         if (in->type() != edge_type::THROUGH_EDGE &&
-            in->type() != edge_type::ROUTE_EDGE) {
+            in->type() != edge_type::RT_ROUTE_EDGE &&
+            in->type() != edge_type::STATIC_ROUTE_EDGE) {
           continue;
         }
 
@@ -31,9 +32,10 @@ std::set<trip_info::route_edge> route_bfs(ev_key const& k,
     }
 
     if (dir == bfs_direction::BOTH || dir == bfs_direction::FORWARD) {
-      for (auto const& out : e->to_->edges_) {
+      for (auto const& out : e->to()->edges_) {
         if (out.type() != edge_type::THROUGH_EDGE &&
-            out.type() != edge_type::ROUTE_EDGE) {
+            out.type() != edge_type::RT_ROUTE_EDGE &&
+            out.type() != edge_type::STATIC_ROUTE_EDGE) {
           continue;
         }
 

@@ -64,12 +64,6 @@ concrete_trip get_trip(schedule const& sched, std::string_view eva_nr,
       begin(sched.trips_), end(sched.trips_),
       std::make_pair(primary_id, static_cast<trip_info*>(nullptr)));
   if (it == end(sched.trips_) || !(it->first == primary_id)) {
-    std::cerr << "sizeof=" << sizeof(primary_trip_id) << "\n";
-    std::cerr << "NEEDLE: " << primary_id << "\n";
-    for (auto const& [id, trp] : sched.trips_) {
-      std::cerr << "  available: " << id << "\n";
-    }
-
     throw std::system_error(access::error::service_not_found);
   }
 
@@ -82,7 +76,7 @@ concrete_trip get_trip(schedule const& sched, std::string_view eva_nr,
     if ((fuzzy || line_id == s.line_id_) &&
         target_station_id == s.target_station_id_ &&
         last_arrival_mam == s.last_arrival_mam_ &&
-        it->second->edges_->front()->operates_on_day(day_idx)) {
+        it->second->operates_on_day(day_idx)) {
       return {it->second, day_idx};
     }
   }
@@ -102,7 +96,7 @@ std::optional<concrete_trip> find_trip(schedule const& sched,
       std::lower_bound(begin(sched.trips_), end(sched.trips_),
                        std::make_pair(id, static_cast<trip_info*>(nullptr)));
   for (; it != end(sched.trips_) && it->first == id; ++it) {
-    if (it->second->edges_->front()->operates_on_day(day_idx)) {
+    if (it->second->operates_on_day(day_idx)) {
       return concrete_trip{it->second, day_idx};
     }
   }
@@ -117,7 +111,7 @@ std::optional<concrete_trip> find_trip(schedule const& sched,
            std::make_pair(id.primary_, static_cast<trip_info*>(nullptr)));
        it != end(sched.trips_) && it->first == id.primary_; ++it) {
     if (it->second->id_.secondary_ == id.secondary_ &&
-        it->second->edges_->front()->operates_on_day(day_idx)) {
+        it->second->operates_on_day(day_idx)) {
       return concrete_trip{it->second, day_idx};
     }
   }

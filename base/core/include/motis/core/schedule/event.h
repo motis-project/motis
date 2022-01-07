@@ -38,7 +38,7 @@ struct ev_key {
 
   rt_light_connection const* lcon() const {
     utl::verify(is_not_null(), "ev_key::lcon() null route edge");
-    return &route_edge_->m_.route_edge_.conns_[lcon_idx_];
+    return &route_edge_->rt_lcons()[lcon_idx_];
   }
 
   time get_time() const {
@@ -53,7 +53,8 @@ struct ev_key {
   }
 
   node* get_node() const {
-    return ev_type_ == event_type::DEP ? route_edge_->from_ : route_edge_->to_;
+    return ev_type_ == event_type::DEP ? route_edge_->from()
+                                       : route_edge_->to();
   }
 
   uint32_t get_station_idx() const { return get_node()->get_station()->id_; }

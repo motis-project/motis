@@ -67,7 +67,7 @@ inline void constant_graph_add_route_edge(
     cg[from].emplace_back(to, min_cost.time_);
   };
 
-  auto const from_station_id = route_edge->from_->get_station()->id_;
+  auto const from_station_id = route_edge->from()->get_station()->id_;
   auto const to_station_id = route_edge->to_->get_station()->id_;
 
   update_min(sched.travel_time_lower_bounds_fwd_, to_station_id,

@@ -23,7 +23,7 @@ inline std::map<node const*, in_out_allowed> get_route_in_out_allowed(
     ev_key const& k) {
   std::map<node const*, in_out_allowed> in_out_allowed;
   for (auto const& e : route_edges(k)) {
-    in_out_allowed[e->from_] = get_in_out_allowed(e->from_);
+    in_out_allowed[e->from()] = get_in_out_allowed(e->from());
     in_out_allowed[e->to_] = get_in_out_allowed(e->to_);
   }
   return in_out_allowed;
@@ -33,7 +33,7 @@ inline edge copy_edge(edge const& original, node* from, node* to,
                       int lcon_index) {
   edge e;
   if (original.type() == edge::ROUTE_EDGE) {
-    e = make_route_edge(from, to, {original.m_.route_edge_.conns_[lcon_index]});
+    e = make_route_edge(from, to, {original.static_lcons()[lcon_index]});
   } else {
     e = original;
     e.from() = from;
@@ -59,8 +59,8 @@ inline void copy_trip_route(
   };
 
   for (auto const& e : route_edges(k)) {
-    auto const from = utl::get_or_create(nodes, e->from_,
-                                         [&] { return build_node(e->from_); });
+    auto const from = utl::get_or_create(nodes, e->from(),
+                                         [&] { return build_node(e->from()); });
     auto const to =
         utl::get_or_create(nodes, e->to_, [&] { return build_node(e->to_); });
 
@@ -70,9 +70,9 @@ inline void copy_trip_route(
     constant_graph_add_route_edge(sched, edges[e]);
 
     if (e->type() == edge::ROUTE_EDGE) {
-      auto const& old_lcon = e->m_.route_edge_.conns_[k.lcon_idx_];
+      auto const& old_lcon = e->static_lcons()[k.lcon_idx_];
       const_cast<light_connection&>(old_lcon).valid_ = false;  // NOLINT
-      auto const& new_lcon = new_edge.m_.route_edge_.conns_.back();
+      auto const& new_lcon = new_edge.static_lcons().back();
       lcons[from].second = &new_lcon;
       lcons[to].first = &new_lcon;
     }
@@ -87,7 +87,7 @@ inline std::set<trip const*> route_trips(schedule const& sched,
       continue;
     }
 
-    auto trips_idx = e->m_.route_edge_.conns_[k.lcon_idx_].trips_;
+    auto trips_idx = e->static_lcons()[k.lcon_idx_].trips_;
     auto const& merged_trips = *sched.merged_trips_.at(trips_idx);
     trips.insert(begin(merged_trips), end(merged_trips));
   }
@@ -175,7 +175,7 @@ inline void build_change_edges(
 inline std::set<station_node*> route_station_nodes(ev_key const& k) {
   std::set<station_node*> station_nodes;
   for (auto const& e : route_edges(k)) {
-    station_nodes.insert(e->from_->get_station());
+    station_nodes.insert(e->from()->get_station());
     station_nodes.insert(e->to_->get_station());
   }
   return station_nodes;

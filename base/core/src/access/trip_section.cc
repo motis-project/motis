@@ -14,23 +14,15 @@ trip_section::trip_section(concrete_trip const t, int const index)
 
 int trip_section::index() const { return index_; }
 
-light_connection const& trip_section::lcon() const {
-  return get_lcon(edge_, ctrp_.trp_->lcon_idx_);
+generic_light_connection trip_section::lcon() const {
+  return ctrp_.lcon(index_);
 }
 
-time trip_section::arr_time() const {
-  auto const lcon = get_lcon(edge_, ctrp_.trp_->lcon_idx_);
-  return lcon.event_time(event_type::ARR,
-                         ctrp_.day_idx_ + ctrp_.trp_->day_offsets_.at(index_));
-}
+time trip_section::arr_time() const { return lcon().a_time(); }
 
-time trip_section::dep_time() const {
-  return get_lcon(edge_, ctrp_.trp_->lcon_idx_)
-      .event_time(event_type::DEP,
-                  ctrp_.day_idx_ + ctrp_.trp_->day_offsets_.at(index_));
-}
+time trip_section::dep_time() const { return lcon().d_time(); }
 
-connection const& trip_section::fcon() const { return *lcon().full_con_; }
+connection const& trip_section::fcon() const { return lcon().full_con(); }
 
 connection_info const& trip_section::info(schedule const& sched) const {
   return get_connection_info(sched, lcon(), ctrp_.trp_);
@@ -41,19 +33,19 @@ class edge const* trip_section::edge() const {
 }
 
 station const& trip_section::from_station(schedule const& sched) const {
-  return get_station(sched, edge_->from_);
+  return get_station(sched, edge_->from());
 }
 
 station const& trip_section::to_station(schedule const& sched) const {
-  return get_station(sched, edge_->to_);
+  return get_station(sched, edge_->to());
 }
 
 uint32_t trip_section::from_station_id() const {
-  return edge_->from_->get_station()->id_;
+  return edge_->from()->get_station()->id_;
 }
 
 uint32_t trip_section::to_station_id() const {
-  return edge_->to_->get_station()->id_;
+  return edge_->to()->get_station()->id_;
 }
 
 ev_key trip_section::ev_key_from() const {
@@ -68,8 +60,8 @@ ev_key trip_section::ev_key_to() const {
 
 edge const* trip_section::get_route_edge() const { return edge_; }
 
-node* trip_section::from_node() const { return edge_->from_; }
+node* trip_section::from_node() const { return edge_->from(); }
 
-node* trip_section::to_node() const { return edge_->to_; }
+node* trip_section::to_node() const { return edge_->to(); }
 
 }  // namespace motis::access

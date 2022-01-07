@@ -32,13 +32,6 @@ namespace motis {
 struct schedule {
   using track_infos = traffic_day_info<uint32_t>;
 
-  schedule() = default;
-  schedule(schedule&&) = delete;
-  schedule(schedule const&) = delete;
-  schedule& operator=(schedule&&) = delete;
-  schedule& operator=(schedule const&) = delete;
-  ~schedule() = default;
-
   unixtime loaded_begin_{0}, loaded_end_{0};
   unixtime schedule_begin_{0}, schedule_end_{0};
   mcd::vector<mcd::string> prefixes_;
@@ -90,6 +83,8 @@ struct schedule {
 
   fws_multimap<ptr<trip_info>> expanded_trips_;
 };
+
+static_assert(std::is_aggregate_v<schedule>);
 
 using schedule_ptr = mcd::unique_ptr<schedule>;
 

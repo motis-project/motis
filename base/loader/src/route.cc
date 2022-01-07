@@ -6,14 +6,14 @@ namespace motis::loader {
 
 route_t::route_t() = default;
 
-route_t::route_t(mcd::vector<light_connection> const& new_lcons,
+route_t::route_t(mcd::vector<static_light_connection> const& new_lcons,
                  mcd::vector<time> const& times, schedule const& sched) {
   lcons_.emplace_back(new_lcons);
   times_.emplace_back(times);
   update_traffic_days(new_lcons, sched);
 }
 
-bool route_t::add_service(mcd::vector<light_connection> const& new_lcons,
+bool route_t::add_service(mcd::vector<static_light_connection> const& new_lcons,
                           mcd::vector<time> const& new_times,
                           schedule const& sched,
                           mcd::vector<station*> const& stations) {
@@ -108,13 +108,14 @@ void route_t::verify_sorted() {
 bool route_t::empty() const { return times_.empty(); }
 
 void route_t::update_traffic_days(
-    mcd::vector<light_connection> const& new_lcons, schedule const& sched) {
+    mcd::vector<static_light_connection> const& new_lcons,
+    schedule const& sched) {
   for (auto const& lcon : new_lcons) {
     traffic_days_ |= sched.bitfields_[lcon.traffic_days_.bitfield_idx_];
   }
 }
 
-mcd::vector<light_connection> const& route_t::operator[](
+mcd::vector<static_light_connection> const& route_t::operator[](
     std::size_t idx) const {
   assert(idx < lcons_.size());
   return lcons_[idx];

@@ -27,11 +27,11 @@ struct gtfsrt_itest : public motis::test::motis_instance_test {
     for (auto const& trip_e : *trp->edges_) {
       auto const e = trip_e.get_edge();
       auto& dep =
-          ev[sched.stations_.at(e->from_->get_station()->id_)->eva_nr_.str()];
+          ev[sched.stations_.at(e->from()->get_station()->id_)->eva_nr_.str()];
       auto& arr =
           ev[sched.stations_.at(e->to_->get_station()->id_)->eva_nr_.str()];
-      dep.dep_ = e->m_.route_edge_.conns_[trp->lcon_idx_].d_time_;
-      arr.arr_ = e->m_.route_edge_.conns_[trp->lcon_idx_].a_time_;
+      dep.dep_ = e->static_lcons()[trp->lcon_idx_].d_time_;
+      arr.arr_ = e->static_lcons()[trp->lcon_idx_].a_time_;
     }
     return ev;
   }

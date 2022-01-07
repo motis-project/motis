@@ -1,5 +1,6 @@
 #pragma once
 
+#include <utl/verify.h>
 #include <cassert>
 #include <algorithm>
 
@@ -20,28 +21,19 @@ struct node;
 struct edge_cost {
   edge_cost() = default;
 
-  constexpr edge_cost(duration_t const time, static_light_connection const* c,
-                      day_idx_t const day)
-      : static_lcon_(c), day_(day), time_(time) {}
-
-  constexpr edge_cost(duration_t const time, rt_light_connection const* c)
-      : rt_lcon_(c), time_(time) {}
+  edge_cost(duration_t const time, generic_light_connection c)
+      : lcon_{c}, time_{time} {}
 
   constexpr explicit edge_cost(duration_t time, bool transfer = false,
                                uint16_t price = 0, uint16_t accessibility = 0)
-      : static_lcon_(nullptr),
-        rt_lcon_(nullptr),
-        day_(-1),
-        time_(time),
+      : time_(time),
         price_(price),
         transfer_(transfer),
         accessibility_(accessibility) {}
 
   constexpr bool is_valid() const { return time_ != INVALID_DURATION; }
 
-  static_light_connection const* static_lcon_{nullptr};
-  rt_light_connection const* rt_lcon_{nullptr};
-  day_idx_t day_{-1};
+  generic_light_connection lcon_;
   duration_t time_{INVALID_DURATION};
   uint16_t price_{0U};
   bool transfer_{false};
@@ -49,7 +41,7 @@ struct edge_cost {
 };
 
 constexpr auto const NO_EDGE = edge_cost();
-constexpr auto const FREE_EDGE = edge_cost(0, false, 0, 0);
+constexpr auto const FREE_EDGE = edge_cost(0U, false, 0U, 0U);
 
 enum class search_dir { FWD, BWD };
 
@@ -76,12 +68,6 @@ struct edge {
   };
 
   struct static_route_edge {
-    explicit static_route_edge(ptr<node> from, ptr<node> to,
-                               mcd::vector<static_light_connection>&& conns)
-        : from_{from}, to_{to}, conns_{std::move(conns)} {
-      std::sort(std::begin(conns_), std::end(conns_));
-    }
-
     template <search_dir Dir = search_dir::FWD>
     edge_cost get_edge_cost(time const start_time) const {
       auto const [c, day] = get_connection<Dir>(start_time);
@@ -182,12 +168,6 @@ struct edge {
   };
 
   struct rt_route_edge {
-    rt_route_edge(ptr<node> from, ptr<node> to,
-                  mcd::vector<rt_light_connection>&& conns)
-        : from_{from}, to_{to}, conns_{std::move(conns)} {
-      std::sort(std::begin(conns_), std::end(conns_));
-    }
-
     template <search_dir Dir = search_dir::FWD>
     edge_cost get_edge_cost(time const start_time) const {
       auto const* c = get_connection<Dir>(start_time);
@@ -206,7 +186,8 @@ struct edge {
 
       if (Dir == search_dir::FWD) {
         auto it = std::lower_bound(std::begin(conns_), std::end(conns_),
-                                   rt_light_connection(start_time, time{}));
+                                   rt_light_connection(start_time, time{}),
+                                   d_time_lt{});
 
         if (it == std::end(conns_)) {
           return nullptr;
@@ -214,12 +195,9 @@ struct edge {
           return get_next_valid_lcon(&*it);
         }
       } else {
-        auto it = std::lower_bound(
-            conns_.rbegin(), conns_.rend(),
-            rt_light_connection(time{}, start_time),
-            [](rt_light_connection const& lhs, rt_light_connection const& rhs) {
-              return lhs.a_time_ > rhs.a_time_;
-            });
+        auto it = std::lower_bound(conns_.rbegin(), conns_.rend(),
+                                   rt_light_connection(time{}, start_time),
+                                   a_time_gt{});
 
         if (it == conns_.rend()) {
           return nullptr;
@@ -320,29 +298,6 @@ struct edge {
   static_assert(static_cast<std::underlying_type_t<edge_type>>(
                     edge_type::NUM_EDGE_TYPES) == mcd::variant_size<data_t>());
 
-  template <edge_type>
-  struct id {};
-
-  /**  invalid edge constructor */
-  edge(node* from, node* to) { data_.emplace<invalid_edge>(from, to); }
-
-  /** route edge constructor. */
-  edge(node* from, node* to, mcd::vector<static_light_connection>&& conns) {
-    data_.emplace<static_route_edge>(from, to, std::move(conns));
-  }
-
-  edge(node* from, node* to, mcd::vector<rt_light_connection>&& conns) {
-    data_.emplace<rt_route_edge>(from, to, std::move(conns));
-  }
-
-  /** foot edge constructor. */
-  template <edge_type EdgeType>
-  edge(id<EdgeType>, node* from, node* to, uint16_t time_cost, uint16_t price,
-       bool transfer, int mumo_id = 0, uint16_t accessibility = 0) {
-    data_.emplace<to_index(EdgeType)>(constant_cost_edge{
-        from, to, time_cost, price, accessibility, transfer, mumo_id});
-  }
-
   constexpr static data_t::index_t to_index(edge_type const t) {
     return static_cast<data_t::index_t>(
         static_cast<std::underlying_type_t<edge_type>>(t));
@@ -437,11 +392,11 @@ struct edge {
     }
   }
 
-  node const* from() const {
+  node* from() const {
     return data_.apply([](auto&& x) { return x.from_; });
   }
 
-  node const* to() const {
+  node* to() const {
     return data_.apply([](auto&& x) { return x.to_; });
   }
 
@@ -489,12 +444,19 @@ struct edge {
       case edge_type::BWD_EDGE: return "BWD_EDGE";
       case edge_type::NUM_EDGE_TYPES: return "???";
     }
+    return "UNREACHABLE";
   }
 
   int get_mumo_id() const {
     return type() == edge_type::MUMO_EDGE
                ? mcd::get<constant_cost_edge>(data_).mumo_id_
                : -1;
+  }
+
+  duration_t constant_time_cost() const {
+    utl::verify(mcd::holds_alternative<constant_cost_edge>(data_),
+                "no constant time cost for {}", type_str());
+    return mcd::get<constant_cost_edge>(data_).time_cost_;
   }
 
   bool empty() const {
@@ -507,76 +469,224 @@ struct edge {
     }
   }
 
+  mcd::vector<static_light_connection>& static_lcons() {
+    utl::verify(type() == edge_type::STATIC_ROUTE_EDGE,
+                "static_lcons() called on {}", type_str());
+    return mcd::get<static_route_edge>(data_).conns_;
+  }
+
+  mcd::vector<rt_light_connection>& rt_lcons() {
+    utl::verify(type() == edge_type::RT_ROUTE_EDGE,
+                "static_lcons() called on {}", type_str());
+    return mcd::get<rt_route_edge>(data_).conns_;
+  }
+
+  mcd::vector<static_light_connection> const& static_lcons() const {
+    utl::verify(type() == edge_type::STATIC_ROUTE_EDGE,
+                "static_lcons() called on {}", type_str());
+    return mcd::get<static_route_edge>(data_).conns_;
+  }
+
+  mcd::vector<rt_light_connection> const& rt_lcons() const {
+    utl::verify(type() == edge_type::RT_ROUTE_EDGE,
+                "static_lcons() called on {}", type_str());
+    return mcd::get<rt_route_edge>(data_).conns_;
+  }
+
+  bool contains(rt_light_connection const* lcon) const {
+    switch (type()) {
+      case edge_type::RT_ROUTE_EDGE:
+        return mcd::get<rt_route_edge>(data_).conns_.contains(lcon);
+      default: return false;
+    }
+  }
+
+  template <search_dir Dir = search_dir::FWD>
+  generic_light_connection get_connection(time const t) const {
+    switch (type()) {
+      case edge_type::RT_ROUTE_EDGE:
+        return generic_light_connection{
+            mcd::get<rt_route_edge>(data_).get_connection<Dir>(t)};
+      case edge_type::STATIC_ROUTE_EDGE:
+        return generic_light_connection{
+            mcd::get<static_route_edge>(data_).get_connection<Dir>(t)};
+      default: throw utl::fail("get_connection on {}", type_str());
+    }
+  }
+
+  bool is_sorted() const {
+    auto const is_sorted_dep = [](auto&& lcons) {
+      return std::is_sorted(begin(lcons), end(lcons), [](auto&& a, auto&& b) {
+        return a.d_time_ < b.d_time_;
+      });
+    };
+    auto const is_sorted_arr = [](auto&& lcons) {
+      return std::is_sorted(begin(lcons), end(lcons), [](auto&& a, auto&& b) {
+        return a.a_time_ < b.a_time_;
+      });
+    };
+
+    switch (type()) {
+      case edge_type::RT_ROUTE_EDGE:
+        return is_sorted_dep(mcd::get<rt_route_edge>(data_).conns_) &&
+               is_sorted_arr(mcd::get<rt_route_edge>(data_).conns_);
+      case edge_type::STATIC_ROUTE_EDGE:
+        return is_sorted_dep(mcd::get<static_route_edge>(data_).conns_) &&
+               is_sorted_arr(mcd::get<static_route_edge>(data_).conns_);
+      default: return true;
+    }
+  }
+
   data_t data_{invalid_edge{nullptr, nullptr}};
 };
 
 /* convenience helper functions to generate the right edge type */
 
+/** foot edge constructor. */
 inline edge make_static_route_edge(
-    node* from, node* to, mcd::vector<static_light_connection>&& connections) {
-  return edge{from, to, std::move(connections)};
+    node* from, node* to, mcd::vector<static_light_connection>&& conns) {
+  edge e;
+  std::sort(std::begin(conns), std::end(conns), d_time_lt{});
+  e.data_.emplace<edge::static_route_edge>(edge::static_route_edge{
+      .from_ = from, .to_ = to, .conns_ = std::move(conns)});
+  return e;
 }
 
 inline edge make_rt_route_edge(node* from, node* to,
-                               mcd::vector<rt_light_connection>&& connections) {
-  return edge{from, to, std::move(connections)};
+                               mcd::vector<rt_light_connection>&& conns) {
+  edge e;
+  std::sort(std::begin(conns), std::end(conns), d_time_lt{});
+  e.data_.emplace<edge::rt_route_edge>(edge::rt_route_edge{
+      .from_ = from, .to_ = to, .conns_ = std::move(conns)});
+  return e;
 }
 
 inline edge make_foot_edge(node* from, node* to, uint16_t time_cost = 0,
                            bool transfer = false) {
-  return edge{
-      edge::id<edge_type::FOOT_EDGE>{}, from, to, time_cost, 0, transfer};
+  edge e;
+  e.data_.emplace<edge::to_index(edge_type::FOOT_EDGE)>(
+      edge::constant_cost_edge{.from_ = from,
+                               .to_ = to,
+                               .time_cost_ = time_cost,
+                               .price_ = 0,
+                               .accessibility_ = 0,
+                               .is_transfer_ = transfer});
+  return e;
 }
 
 inline edge make_after_train_fwd_edge(node* from, node* to,
                                       uint16_t time_cost = 0,
                                       bool transfer = false) {
-  return edge(edge::id<edge_type::AFTER_TRAIN_FWD_EDGE>{}, from, to, time_cost,
-              0, transfer);
+
+  edge e;
+  e.data_.emplace<edge::to_index(edge_type::AFTER_TRAIN_FWD_EDGE)>(
+      edge::constant_cost_edge{.from_ = from,
+                               .to_ = to,
+                               .time_cost_ = time_cost,
+                               .price_ = 0,
+                               .accessibility_ = 0,
+                               .is_transfer_ = transfer});
+  return e;
 }
 
 inline edge make_after_train_bwd_edge(node* from, node* to,
                                       uint16_t time_cost = 0,
                                       bool transfer = false) {
-  return edge(edge::id<edge_type::AFTER_TRAIN_BWD_EDGE>{}, from, to, time_cost,
-              0, transfer);
+  edge e;
+  e.data_.emplace<edge::to_index(edge_type::AFTER_TRAIN_BWD_EDGE)>(
+      edge::constant_cost_edge{.from_ = from,
+                               .to_ = to,
+                               .time_cost_ = time_cost,
+                               .price_ = 0,
+                               .accessibility_ = 0,
+                               .is_transfer_ = transfer});
+  return e;
 }
 
 inline edge make_mumo_edge(node* from, node* to, uint16_t time_cost = 0,
                            uint16_t price = 0, uint16_t accessibility = 0,
                            int mumo_id = 0) {
-  return edge(edge::id<edge_type::MUMO_EDGE>{}, from, to, time_cost, price,
-              false, mumo_id, accessibility);
+  edge e;
+  e.data_.emplace<edge::to_index(edge_type::MUMO_EDGE)>(
+      edge::constant_cost_edge{.from_ = from,
+                               .to_ = to,
+                               .time_cost_ = time_cost,
+                               .price_ = price,
+                               .accessibility_ = accessibility,
+                               .is_transfer_ = false,
+                               .mumo_id_ = mumo_id});
+  return e;
 }
 
-inline edge make_invalid_edge(node* from, node* to) { return edge(from, to); }
+inline edge make_invalid_edge(node* from, node* to) {
+  edge e;
+  e.data_.emplace<edge::invalid_edge>(from, to);
+  return e;
+}
 
 inline edge make_through_edge(node* from, node* to) {
-  return edge(edge::id<edge_type::THROUGH_EDGE>{}, from, to, 0, 0, false, 0);
+  edge e;
+  e.data_.emplace<edge::to_index(edge_type::THROUGH_EDGE)>(
+      edge::constant_cost_edge{.from_ = from,
+                               .to_ = to,
+                               .time_cost_ = 0,
+                               .price_ = 0,
+                               .accessibility_ = 0,
+                               .is_transfer_ = false,
+                               .mumo_id_ = 0});
+  return e;
 }
 
 inline edge make_enter_edge(node* from, node* to, uint16_t time_cost = 0,
                             bool transfer = false) {
-  return edge(edge::id<edge_type::ENTER_EDGE>{}, from, to, time_cost, 0,
-              transfer);
+  edge e;
+  e.data_.emplace<edge::to_index(edge_type::ENTER_EDGE)>(
+      edge::constant_cost_edge{.from_ = from,
+                               .to_ = to,
+                               .time_cost_ = time_cost,
+                               .price_ = 0,
+                               .accessibility_ = 0,
+                               .is_transfer_ = transfer});
+  return e;
 }
 
 inline edge make_exit_edge(node* from, node* to, uint16_t time_cost = 0,
                            bool transfer = false) {
-  return edge(edge::id<edge_type::EXIT_EDGE>{}, from, to, time_cost, 0,
-              transfer);
+  edge e;
+  e.data_.emplace<edge::to_index(edge_type::EXIT_EDGE)>(
+      edge::constant_cost_edge{.from_ = from,
+                               .to_ = to,
+                               .time_cost_ = time_cost,
+                               .price_ = 0,
+                               .accessibility_ = 0,
+                               .is_transfer_ = transfer});
+  return e;
 }
 
 inline edge make_fwd_edge(node* from, node* to, uint16_t time_cost = 0,
                           bool transfer = false) {
-  return edge(edge::id<edge_type::FWD_EDGE>{}, from, to, time_cost, 0,
-              transfer);
+  edge e;
+  e.data_.emplace<edge::to_index(edge_type::FWD_EDGE)>(
+      edge::constant_cost_edge{.from_ = from,
+                               .to_ = to,
+                               .time_cost_ = time_cost,
+                               .price_ = 0,
+                               .accessibility_ = 0,
+                               .is_transfer_ = transfer});
+  return e;
 }
 
 inline edge make_bwd_edge(node* from, node* to, uint16_t time_cost = 0,
                           bool transfer = false) {
-  return edge(edge::id<edge_type::BWD_EDGE>{}, from, to, time_cost, 0,
-              transfer);
+  edge e;
+  e.data_.emplace<edge::to_index(edge_type::BWD_EDGE)>(
+      edge::constant_cost_edge{.from_ = from,
+                               .to_ = to,
+                               .time_cost_ = time_cost,
+                               .price_ = 0,
+                               .accessibility_ = 0,
+                               .is_transfer_ = transfer});
+  return e;
 }
 
 }  // namespace motis

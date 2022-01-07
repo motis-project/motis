@@ -327,7 +327,7 @@ inline void update_trip(schedule& sched, trip* trp,
                         mcd::vector<trip_info::route_edge> const& trip_edges) {
   for (auto const& trp_e : *trp->edges_) {
     auto const e = trp_e.get_edge();
-    e->m_.route_edge_.conns_[trp->lcon_idx_].valid_ = 0U;
+    e->static_lcons()[trp->lcon_idx_].valid_ = 0U;
   }
 
   auto const trps = mcd::vector<ptr<trip>>{trp};
@@ -335,7 +335,7 @@ inline void update_trip(schedule& sched, trip* trp,
   sched.merged_trips_.emplace_back(
       mcd::make_unique<mcd::vector<ptr<trip>>>(trps));
   for (auto const& e : trip_edges) {
-    e->m_.route_edge_.conns_[0].trips_ = merged_trps_idx;
+    e->static_lcons()[0].trips_ = merged_trps_idx;
   }
 
   sched.trip_edges_.emplace_back(
@@ -347,7 +347,7 @@ inline void update_trip(schedule& sched, trip* trp,
 inline void disable_trip(mcd::vector<trip_info::route_edge> const& edges,
                          int lcon_idx) {
   for (auto const& e : edges) {
-    e->m_.route_edge_.conns_[lcon_idx].valid_ = 0U;
+    e->static_lcons()[lcon_idx].valid_ = 0U;
   }
 }
 
@@ -368,7 +368,7 @@ inline std::pair<reroute_result, trip const*> reroute(
     if ((get_lcon(e, trp->lcon_idx_).full_con_->con_info_->merged_with_ !=
          nullptr) ||
         std::any_of(
-            begin(e->from_->incoming_edges_), end(e->from_->incoming_edges_),
+            begin(e->from()->incoming_edges_), end(e->from()->incoming_edges_),
             [](edge const* e) { return e->type() == edge::THROUGH_EDGE; }) ||
         std::any_of(
             begin(e->to_->edges_), end(e->to_->edges_),

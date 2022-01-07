@@ -55,10 +55,10 @@ inline void print_edge(edge const& edge, std::ostream& out, int indent) {
   switch (edge.m_.type_) {
     case edge::ROUTE_EDGE: {
       out << "type=route_edge, "
-          << "[#connections=" << edge.m_.route_edge_.conns_.size() << "]:\n";
-      for (unsigned i = 0; i < edge.m_.route_edge_.conns_.size(); ++i) {
+          << "[#connections=" << edge.static_lcons().size() << "]:\n";
+      for (unsigned i = 0; i < edge.static_lcons().size(); ++i) {
         out << indentation(indent + 1) << "connection[" << i
-            << "]: " << edge.m_.route_edge_.conns_.el_[i] << "\n";
+            << "]: " << edge.static_lcons().el_[i] << "\n";
       }
       break;
     }

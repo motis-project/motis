@@ -212,7 +212,7 @@ struct graph_builder {
                                       int route_index);
 
   route_section add_route_section(
-      int route_index, mcd::vector<static_light_connection> const& connections,
+      int route_index, mcd::vector<static_light_connection>&& connections,
       Station const* from_stop, bool from_in_allowed, bool from_out_allowed,
       Station const* to_stop, bool to_in_allowed, bool to_out_allowed,
       node* from_route_node, node* to_route_node);

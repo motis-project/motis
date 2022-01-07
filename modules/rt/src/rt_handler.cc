@@ -291,7 +291,7 @@ void rt_handler::propagate() {
 
   for (auto const& trp : trips_to_correct) {
     assert(trp->lcon_idx_ == 0 &&
-           trp->edges_->front()->m_.route_edge_.conns_.size() == 1);
+           trp->edges_->front()->static_lcons().size() == 1);
     for (auto const& di : trip_corrector(sched_, trp).fix_times()) {
       update_builder_.add_delay(di);
       updated_route_edges.insert(di->get_ev_key().route_edge_);

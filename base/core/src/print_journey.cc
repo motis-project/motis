@@ -177,8 +177,8 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
   for (auto i = 0UL; i < j.attributes_.size(); ++i) {
     auto const& attribute = j.attributes_[i];
     out << std::right << std::setw(2) << i << ": " << std::left << std::setw(2)
-        << attribute.from() << " -> " << std::left << std::setw(2)
-        << attribute.to() << " {" << attribute.attr_.code_ << "  "
+        << attribute.from_ << " -> " << std::left << std::setw(2)
+        << attribute.to_ << " {" << attribute.attr_.code_ << "  "
         << attribute.attr_.text_ << "}" << std::endl;
   }
 

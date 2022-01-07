@@ -184,8 +184,8 @@ std::string query(std::string const& target, Start const start_type, int id,
 }
 
 bool has_events(edge const& e, time const from, time const to) {
-  auto [con, day] = e.get_connection(from);
-  return con != nullptr && con->event_time(event_type::DEP, day) <= to;
+  auto con = e.get_connection(from);
+  return con != nullptr && con.d_time() <= to;
 }
 
 bool has_events(station_node const& s, time const from, time const to) {

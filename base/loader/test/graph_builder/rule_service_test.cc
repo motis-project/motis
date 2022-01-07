@@ -108,9 +108,8 @@ TEST_F(service_rules_graph_builder_test_virt, service_numbers_1) {
   auto const& e = path.second[0];
 
   ASSERT_FALSE(e->empty());
-  EXPECT_EQ(
-      (std::set<int>{1, 2, 3}),
-      get_service_numbers(e->m_.route_edge_.conns_[0].full_con_->con_info_));
+  EXPECT_EQ((std::set<int>{1, 2, 3}),
+            get_service_numbers(e->static_lcons()[0].full_con_->con_info_));
 }
 
 TEST_F(service_rules_graph_builder_test_virt, service_numbers_2) {
@@ -121,7 +120,7 @@ TEST_F(service_rules_graph_builder_test_virt, service_numbers_2) {
 
   ASSERT_FALSE(e->empty());
   auto train_nrs =
-      get_service_numbers(e->m_.route_edge_.conns_[0].full_con_->con_info_);
+      get_service_numbers(e->static_lcons()[0].full_con_->con_info_);
   EXPECT_TRUE(train_nrs.find(1) != end(train_nrs));
   EXPECT_TRUE(train_nrs.find(2) != end(train_nrs));
 }
@@ -134,7 +133,7 @@ TEST_F(service_rules_graph_builder_test_virt, service_numbers_3) {
 
   ASSERT_FALSE(e->empty());
   auto train_nrs =
-      get_service_numbers(e->m_.route_edge_.conns_[0].full_con_->con_info_);
+      get_service_numbers(e->static_lcons()[0].full_con_->con_info_);
 
   EXPECT_TRUE(train_nrs.find(2) != end(train_nrs));
   EXPECT_TRUE(train_nrs.find(3) != end(train_nrs));
@@ -170,10 +169,10 @@ TEST_F(service_rules_graph_builder_test_virt, trip_2) {
 
   auto sections = access::sections(trp);
   auto sec2 = *std::next(begin(sections));
-  auto const& merged_trips = *sched_->merged_trips_[sec2.lcon().trips_];
+  auto const& merged_trips = *sched_->merged_trips_[sec2.lcon().trips()];
   EXPECT_EQ(3, merged_trips.size());
 
-  auto con_info = sec2.lcon().full_con_->con_info_;
+  auto con_info = sec2.lcon().full_con().con_info_;
   for (unsigned i = 0; i < merged_trips.size();
        ++i, con_info = con_info->merged_with_) {
     ASSERT_TRUE(con_info != nullptr);

@@ -143,7 +143,7 @@ struct time {
     return cista::hash_combine(day_idx_, mam_);
   }
 
-private:
+  // private:
   day_idx_t day_idx_{std::numeric_limits<day_idx_t>::max()};
   mam_t mam_{std::numeric_limits<mam_t>::max()};
 };

@@ -118,16 +118,17 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
     ASSERT_EQ(1, first_route_node->incoming_edges_.size());
     ASSERT_EQ(2, first_route_node->edges_.size());
 
-    ASSERT_EQ(first_route_node->incoming_edges_[0]->from_,
+    ASSERT_EQ(first_route_node->incoming_edges_[0]->from(),
               first_route_node->get_station());
-    ASSERT_EQ(first_route_node->get_station(), first_route_node->edges_[0].to_);
+    ASSERT_EQ(first_route_node->get_station(),
+              first_route_node->edges_[0].to());
 
     ASSERT_EQ(edge_type::ENTER_EDGE,
               first_route_node->incoming_edges_[0]->type());
-    ASSERT_EQ(edge_type::ROUTE_EDGE, first_route_node->edges_[1].type());
+    ASSERT_EQ(edge_type::STATIC_ROUTE_EDGE, first_route_node->edges_[1].type());
     ASSERT_EQ(edge_type::EXIT_EDGE, first_route_node->edges_[0].type());
 
-    auto next_route_node = first_route_node->edges_[1].to_;
+    auto next_route_node = first_route_node->edges_[1].to();
     ASSERT_TRUE(next_route_node->is_route_node());
 
     ASSERT_EQ("8000260",
@@ -136,8 +137,8 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
     // [M]otis [T]ime [O]ffset (1*MINUTES_A_DAY - GMT+1)
     auto const MTO = SCHEDULE_OFFSET_MINUTES - 60;
     ASSERT_TRUE(first_route_node->edges_[1].is_route_edge());
-    ASSERT_EQ(1, first_route_node->edges_[1].m_.route_edge_.conns_.size());
-    auto& lcon = first_route_node->edges_[1].m_.route_edge_.conns_;
+    ASSERT_EQ(1, first_route_node->edges_[1].static_lcons().size());
+    auto& lcon = first_route_node->edges_[1].static_lcons();
     ASSERT_EQ(time{19 * 60 + 3 + MTO},
               lcon[0].event_time(event_type::DEP, SCHEDULE_OFFSET_DAYS));
     ASSERT_EQ(time{19 * 60 + 58 + MTO},
@@ -167,28 +168,28 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
               stations[get<3>(conns[7])->get_station()->id_]->eva_nr_);
 
     EXPECT_EQ(motis_time(1903),
-              get<light_connection const*>(conns[0])->event_time(
+              get<static_light_connection const*>(conns[0])->event_time(
                   event_type::DEP, get<day_idx_t>(conns[0])));
     EXPECT_EQ(motis_time(2000),
-              get<light_connection const*>(conns[1])->event_time(
+              get<static_light_connection const*>(conns[1])->event_time(
                   event_type::DEP, get<day_idx_t>(conns[1])));
     EXPECT_EQ(motis_time(2155),
-              get<light_connection const*>(conns[2])->event_time(
+              get<static_light_connection const*>(conns[2])->event_time(
                   event_type::DEP, get<day_idx_t>(conns[2])));
     EXPECT_EQ(motis_time(2234),
-              get<light_connection const*>(conns[3])->event_time(
+              get<static_light_connection const*>(conns[3])->event_time(
                   event_type::DEP, get<day_idx_t>(conns[3])));
     EXPECT_EQ(motis_time(2318),
-              get<light_connection const*>(conns[4])->event_time(
+              get<static_light_connection const*>(conns[4])->event_time(
                   event_type::DEP, get<day_idx_t>(conns[4])));
     EXPECT_EQ(motis_time(2349),
-              get<light_connection const*>(conns[5])->event_time(
+              get<static_light_connection const*>(conns[5])->event_time(
                   event_type::DEP, get<day_idx_t>(conns[5])));
     EXPECT_EQ(motis_time(2425),
-              get<light_connection const*>(conns[6])->event_time(
+              get<static_light_connection const*>(conns[6])->event_time(
                   event_type::DEP, get<day_idx_t>(conns[6])));
     EXPECT_EQ(motis_time(2433),
-              get<light_connection const*>(conns[7])->event_time(
+              get<static_light_connection const*>(conns[7])->event_time(
                   event_type::DEP, get<day_idx_t>(conns[7])));
 
     EXPECT_EQ(motis_time(1958), get<0>(conns[0])->event_time(
@@ -223,7 +224,7 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
     }
 
     auto const get_track = [&](size_t const idx, event_type const ev_type) {
-      auto const lcon = get<light_connection const*>(conns.at(idx));
+      auto const lcon = get<static_light_connection const*>(conns.at(idx));
       auto const day_idx =
           get<day_idx_t>(conns.at(idx)) + (lcon->a_time_ / MINUTES_A_DAY);
       return get_track_name(*sched_, lcon->full_con_->get_track(ev_type),
@@ -260,7 +261,7 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
     EXPECT_EQ("SnackPoint/Imbiss im Zug", sn_info.attr_->text_);
 
     auto const get_attr = [&](size_t const i) {
-      auto const attr = get<light_connection const*>(conns[i])
+      auto const attr = get<static_light_connection const*>(conns[i])
                             ->full_con_->con_info_->attributes_.at(0);
       EXPECT_TRUE(attr.traffic_days_->test(get<day_idx_t>(conns[i])));
       return attr.attr_;
@@ -281,7 +282,7 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
                             end(from_node_6->incoming_edges_),
                             [&](edge const* e) {
                               return e->type() == edge_type::INVALID_EDGE &&
-                                     e->from_ == from_node_6->get_station();
+                                     e->from() == from_node_6->get_station();
                             }));
     EXPECT_TRUE(std::any_of(begin(from_node_6->incoming_edges_),
                             end(from_node_6->incoming_edges_),

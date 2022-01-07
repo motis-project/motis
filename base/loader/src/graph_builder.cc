@@ -338,7 +338,7 @@ void graph_builder::add_route_services(
         [&](cista::pair<mcd::vector<time>, local_and_motis_traffic_days> const&
                 utc) {
           auto const& [times, string_traffic_days] = utc;
-          auto lcon_string = mcd::vector<light_connection>{};
+          auto lcon_string = mcd::vector<static_light_connection>{};
           auto const trip = create_merged_trips(s, times);
           for (auto section = 0U; section < s->sections()->size(); ++section) {
             lcon_string.emplace_back(section_to_connection(
@@ -372,8 +372,8 @@ void graph_builder::add_route_services(
   }
 }
 
-bool graph_builder::has_duplicate(Service const* service,
-                                  mcd::vector<light_connection> const& lcons) {
+bool graph_builder::has_duplicate(
+    Service const* service, mcd::vector<static_light_connection> const& lcons) {
   auto const& first_station = sched_.stations_.at(
       stations_.at(service->route()->stations()->Get(0))->id_);
   for (auto const& eq : first_station->equivalent_) {
@@ -387,12 +387,11 @@ bool graph_builder::has_duplicate(Service const* service,
         continue;
       }
       for (auto const& route_edge : route_node->edges_) {
-        if (route_edge.type() != edge_type::ROUTE_EDGE &&
-            route_edge.type() != edge_type::FWD_ROUTE_EDGE) {
+        if (route_edge.type() != edge_type::STATIC_ROUTE_EDGE) {
           continue;
         }
 
-        for (auto const& lc : route_edge.m_.route_edge_.conns_) {
+        for (auto const& lc : route_edge.static_lcons()) {
           for (auto const& trp : *sched_.merged_trips_[lc.trips_]) {
             if (are_duplicates(service, lcons, trp)) {
               return true;
@@ -406,9 +405,10 @@ bool graph_builder::has_duplicate(Service const* service,
   return false;
 }
 
-bool graph_builder::are_duplicates(Service const* service_a,
-                                   mcd::vector<light_connection> const& lcons_a,
-                                   trip_info const* trp_b) {
+bool graph_builder::are_duplicates(
+    Service const* service_a,
+    mcd::vector<static_light_connection> const& lcons_a,
+    trip_info const* trp_b) {
   auto const* stations_a = service_a->route()->stations();
   auto const stops_b = access::stops{concrete_trip{trp_b, 0}};
   auto const stop_count_b = std::distance(begin(stops_b), end(stops_b));
@@ -427,7 +427,8 @@ bool graph_builder::are_duplicates(Service const* service_a,
   };
 
   auto const& last_stop_b = *std::next(begin(stops_b), stop_count_b - 1);
-  if (lcons_a.back().a_time_ != last_stop_b.arr_lcon().a_time_ ||
+  if (lcons_a.back().a_time_ !=
+          last_stop_b.arr_lcon().as_static_lcon()->a_time_ ||
       !stations_are_equivalent(stations_a->Get(stations_a->size() - 1),
                                last_stop_b.get_station(sched_))) {
     return false;
@@ -435,8 +436,9 @@ bool graph_builder::are_duplicates(Service const* service_a,
 
   for (auto [i_a, it_b] = std::tuple{1ULL, std::next(begin(stops_b))};
        std::next(it_b) != end(stops_b); ++i_a, ++it_b) {
-    if (lcons_a[i_a - 1].a_time_ != (*it_b).arr_lcon().a_time_ ||
-        lcons_a[i_a].d_time_ != (*it_b).dep_lcon().d_time_ ||
+    if (lcons_a[i_a - 1].a_time_ !=
+            (*it_b).arr_lcon().as_static_lcon()->a_time_ ||
+        lcons_a[i_a].d_time_ != (*it_b).dep_lcon().as_static_lcon()->d_time_ ||
         !stations_are_equivalent(stations_a->Get(i_a),
                                  (*it_b).get_station(sched_))) {
       return false;
@@ -451,7 +453,7 @@ void graph_builder::add_expanded_trips(route const& r) {
   auto trips_added = false;
   auto const& re = r.front().get_route_edge();
   if (re != nullptr) {
-    for (auto const& lc : re->m_.route_edge_.conns_) {
+    for (auto const& lc : re->static_lcons()) {
       auto const& merged_trips = sched_.merged_trips_[lc.trips_];
       assert(merged_trips != nullptr);
       assert(merged_trips->size() == 1);
@@ -486,18 +488,18 @@ bool graph_builder::check_trip(trip_info const* trp) {
 }
 
 void graph_builder::add_to_route(
-    mcd::vector<mcd::vector<light_connection>>& route,
-    mcd::vector<light_connection> const& sections, int index) {
+    mcd::vector<mcd::vector<static_light_connection>>& route,
+    mcd::vector<static_light_connection> const& sections, int index) {
   for (auto section_idx = 0UL; section_idx < sections.size(); ++section_idx) {
     route[section_idx].insert(std::next(begin(route[section_idx]), index),
                               sections[section_idx]);
   }
 }
 
-void graph_builder::add_to_routes(mcd::vector<route_t>& alt_routes,
-                                  mcd::vector<time> const& times,
-                                  mcd::vector<light_connection> const& lcons,
-                                  mcd::vector<station*> const& stations) {
+void graph_builder::add_to_routes(
+    mcd::vector<route_t>& alt_routes, mcd::vector<time> const& times,
+    mcd::vector<static_light_connection> const& lcons,
+    mcd::vector<station*> const& stations) {
   for (auto& r : alt_routes) {
     if (r.add_service(lcons, times, sched_, stations)) {
       return;
@@ -557,7 +559,7 @@ connection_info* graph_builder::get_or_create_connection_info(
   });
 }
 
-light_connection graph_builder::section_to_connection(
+static_light_connection graph_builder::section_to_connection(
     std::vector<participant> const& services, bitfield const& traffic_days,
     merged_trips_idx const trips_idx) {
   auto const ref_service = services[0].service();
@@ -633,7 +635,7 @@ light_connection graph_builder::section_to_connection(
     con_.con_info_ = get_or_create_connection_info(services);
   }
 
-  return light_connection{
+  return static_light_connection{
       utc_mam_dep, utc_mam_arr, store_bitfield(traffic_days << day_offset),
       mcd::set_get_or_create(connections_, &con_,
                              [&]() {
@@ -759,7 +761,7 @@ void graph_builder::write_trip_edges(route const& r) {
                           })))
           .get();
 
-  auto& lcons = edges_ptr->front().get_edge()->m_.route_edge_.conns_;
+  auto& lcons = edges_ptr->front().get_edge()->static_lcons();
   for (auto lcon_idx = lcon_idx_t{0U}; lcon_idx < lcons.size(); ++lcon_idx) {
     auto trp = sched_.merged_trips_[lcons[lcon_idx].trips_]->front();
     trp->edges_ = edges_ptr;
@@ -786,21 +788,17 @@ mcd::unique_ptr<route> graph_builder::create_route(Route const* r,
     auto const from = i;
     auto const to = i + 1;
 
-    auto const section_lcons = mcd::to_vec(
-        lcons.lcons_, [&i](mcd::vector<light_connection> const& lcon_string) {
-          return lcon_string[i];  // i-th element of each lcon string
-        });
-
-    utl::verify(section_lcons.size() == lcons.lcons_.size(),
-                "number of connections on route segment must match number of "
-                "services on route");
-
-    route_sections->push_back(
-        add_route_section(route_index, section_lcons,  //
-                          stops->Get(from), in_allowed->Get(from) != 0U,
-                          out_allowed->Get(from) != 0U, stops->Get(to),
-                          in_allowed->Get(to) != 0U, out_allowed->Get(to) != 0U,
-                          prev_route_section.to_route_node_, nullptr));
+    route_sections->push_back(add_route_section(
+        route_index,
+        mcd::to_vec(
+            lcons.lcons_,
+            [&i](mcd::vector<static_light_connection> const& lcon_string) {
+              return lcon_string[i];
+            }),
+        stops->Get(from), in_allowed->Get(from) != 0U,
+        out_allowed->Get(from) != 0U, stops->Get(to), in_allowed->Get(to) != 0U,
+        out_allowed->Get(to) != 0U, prev_route_section.to_route_node_,
+        nullptr));
     prev_route_section = route_sections->back();
   }
 
@@ -808,16 +806,17 @@ mcd::unique_ptr<route> graph_builder::create_route(Route const* r,
 }
 
 route_section graph_builder::add_route_section(
-    int route_index, mcd::vector<light_connection> const& cons,
+    int route_index, mcd::vector<static_light_connection>&& cons,
     Station const* from_stop, bool from_in_allowed, bool from_out_allowed,
     Station const* to_stop, bool to_in_allowed, bool to_out_allowed,
     node* from_route_node, node* to_route_node) {
-  assert(
-      std::is_sorted(begin(cons), end(cons),
-                     [](light_connection const& a, light_connection const& b) {
-                       return a.d_time_ <= b.d_time_ && a.a_time_ <= b.a_time_;
-                     }) &&
-      "creating edge with lcons not strictly sorted");
+  assert(std::is_sorted(begin(cons), end(cons),
+                        [](static_light_connection const& a,
+                           static_light_connection const& b) {
+                          return a.d_time_ <= b.d_time_ &&
+                                 a.a_time_ <= b.a_time_;
+                        }) &&
+         "creating edge with lcons not strictly sorted");
 
   route_section section;
 
@@ -857,8 +856,8 @@ route_section graph_builder::add_route_section(
   }
 
   section.outgoing_route_edge_index_ = section.from_route_node_->edges_.size();
-  section.from_route_node_->edges_.emplace_back(
-      make_route_edge(section.from_route_node_, section.to_route_node_, cons));
+  section.from_route_node_->edges_.emplace_back(make_static_route_edge(
+      section.from_route_node_, section.to_route_node_, std::move(cons)));
 
   return section;
 }
@@ -900,8 +899,7 @@ void graph_builder::dedup_bitfields() {
             continue;
           }
 
-          auto& re = e.m_.route_edge_;
-          for (auto& c : re.conns_) {
+          for (auto& c : mcd::get<edge::static_route_edge>(e.data_).conns_) {
             c.traffic_days_ = &sched_.bitfields_[map[c.traffic_days_]];
           }
         }

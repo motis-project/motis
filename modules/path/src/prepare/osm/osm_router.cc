@@ -150,7 +150,7 @@ struct osm_graph_dijkstra {
     auto curr_edge = edge(goal);
     while (curr_edge != nullptr) {
       result.push_back(curr_edge);
-      curr_edge = edge(curr_edge->from_->idx_);
+      curr_edge = edge(curr_edge->from()->idx_);
     }
     std::reverse(begin(result), end(result));
     return result;

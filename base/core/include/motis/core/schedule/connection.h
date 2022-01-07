@@ -3,9 +3,13 @@
 #include <cinttypes>
 #include <tuple>
 
+#include "utl/overloaded.h"
 #include "utl/pipes.h"
+#include "utl/verify.h"
 
+#include "motis/pair.h"
 #include "motis/string.h"
+#include "motis/variant.h"
 #include "motis/vector.h"
 
 #include "cista/reflection/comparable.h"
@@ -138,6 +142,77 @@ struct static_light_connection {
   mam_t a_time_{std::numeric_limits<decltype(a_time_)>::max()};
   bitfield_idx_or_ptr traffic_days_;
   uint32_t trips_;
+};
+
+struct generic_light_connection {
+  struct invalid {};
+  using static_t = std::pair<static_light_connection const*, day_idx_t>;
+  using rt_t = rt_light_connection const*;
+  using data = mcd::variant<invalid, static_t, rt_t>;
+
+  constexpr generic_light_connection() : data_{invalid{}} {}
+  generic_light_connection(static_t p) : data_{p} {}
+  generic_light_connection(rt_t lcon) : data_{lcon} {}
+
+  connection const& full_con() const {
+    return data_.apply(utl::overloaded{
+        [](static_t lcon) -> connection const& {
+          return *lcon.first->full_con_;
+        },
+        [](rt_t lcon) -> connection const& { return *lcon->full_con_; },
+        [](invalid) -> connection const& {
+          throw std::runtime_error{"invalid generic lcon"};
+        }});
+  }
+
+  time d_time() const {
+    return data_.apply(utl::overloaded{
+        [](static_t lcon) {
+          return lcon.first->event_time(event_type::DEP, lcon.second);
+        },
+        [](rt_t lcon) { return time{lcon->d_time_}; },
+        [](invalid) -> time {
+          throw std::runtime_error{"invalid generic lcon"};
+        }});
+  }
+
+  time a_time() const {
+    return data_.apply(utl::overloaded{
+        [](static_t lcon) {
+          return lcon.first->event_time(event_type::ARR, lcon.second);
+        },
+        [](rt_t lcon) { return time{lcon->a_time_}; },
+        [](invalid) -> time {
+          throw std::runtime_error{"invalid generic lcon"};
+        }});
+  }
+
+  merged_trips_idx trips() const {
+    return data_.apply(
+        utl::overloaded{[](static_t lcon) { return lcon.first->trips_; },
+                        [](rt_t lcon) { return lcon->trips_; },
+                        [](invalid) -> merged_trips_idx {
+                          throw std::runtime_error{"invalid generic lcon"};
+                        }});
+  }
+
+  bool operator==(std::nullptr_t) const {
+    return data_.apply(
+        utl::overloaded{[](static_t lcon) { return lcon.first == nullptr; },
+                        [](rt_t lcon) { return lcon == nullptr; },
+                        [](invalid) -> bool { return true; }});
+  }
+
+  static_light_connection const* as_static_lcon() const {
+    utl::verify(mcd::holds_alternative<static_t>(data_),
+                "as_static_lcon() on rt_lcon");
+    return mcd::get<static_t>(data_).first;
+  }
+
+  duration_t travel_time() const { return a_time() - d_time(); }
+
+private:
+  data data_;
 };
 
 struct d_time_lt {

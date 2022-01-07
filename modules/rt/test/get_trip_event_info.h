@@ -23,9 +23,9 @@ inline trip_event_info get_trip_event_info(schedule const& sched,
   for (auto const& trip_e : *trp->edges_) {
     auto const e = trip_e.get_edge();
 
-    auto& dep = ev[sched.stations_.at(e->from_->get_station()->id_)->eva_nr_];
+    auto& dep = ev[sched.stations_.at(e->from()->get_station()->id_)->eva_nr_];
     dep.dep_ = e->get_connection(trp->lcon_idx_)->d_time_;
-    dep.in_out_ = get_in_out_allowed(e->from_);
+    dep.in_out_ = get_in_out_allowed(e->from());
 
     auto& arr = ev[sched.stations_.at(e->to_->get_station()->id_)->eva_nr_];
     arr.arr_ = e->get_connection(trp->lcon_idx_)->a_time_;

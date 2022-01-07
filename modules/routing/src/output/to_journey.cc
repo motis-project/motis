@@ -25,7 +25,7 @@ std::vector<journey::transport> generate_journey_transports(
   interval_map<connection_info const*, con_info_cmp> intervals;
   for (auto const& t : transports) {
     if (t.con_ != nullptr) {
-      auto con_info = t.con_->full_con_->con_info_;
+      auto con_info = t.con_.full_con().con_info_;
       while (con_info != nullptr) {
         intervals.add_entry(con_info, t.from_, t.to_);
         con_info = con_info->merged_with_;
@@ -40,7 +40,7 @@ std::vector<journey::transport> generate_journey_transports(
   for (auto const& t : intervals.get_attribute_ranges()) {
     for (auto const& range : t.second) {
       journey_transports.push_back(
-          generate_journey_transport(range.from(), range.to(), t.first, sched));
+          generate_journey_transport(range.from_, range.to_, t.first, sched));
     }
   }
 
@@ -67,7 +67,7 @@ std::vector<journey::trip> generate_journey_trips(
       continue;
     }
 
-    for (auto const& trp : *sched.merged_trips_.at(t.con_->trips_)) {
+    for (auto const& trp : *sched.merged_trips_.at(t.con_.trips())) {
       trip_intervals.add_entry(concrete_trip{trp, t.day_}, t.from_, t.to_);
     }
   }
@@ -78,8 +78,7 @@ std::vector<journey::trip> generate_journey_trips(
     auto const& s = ctrp.trp_->id_.secondary_;
     for (auto const& range : ranges) {
       journey_trips.push_back(journey::trip{
-          static_cast<unsigned>(range.from()),
-          static_cast<unsigned>(range.to()),
+          static_cast<unsigned>(range.from_), static_cast<unsigned>(range.to_),
           extern_trip{sched.stations_.at(p.station_id_)->eva_nr_, p.train_nr(),
                       motis_to_unixtime(sched, time{}),
                       sched.stations_.at(s.target_station_id_)->eva_nr_,
@@ -150,8 +149,7 @@ std::vector<journey::ranged_attribute> generate_journey_attributes(
     if (t.con_ == nullptr) {
       continue;
     } else {
-      for (auto const& attr :
-           t.con_->full_con_->con_info_->attributes(t.day_)) {
+      for (auto const& attr : t.con_.full_con().con_info_->attributes(t.day_)) {
         attributes.add_entry(attr, t.from_, t.to_);
       }
     }
@@ -165,7 +163,7 @@ std::vector<journey::ranged_attribute> generate_journey_attributes(
     auto const& text = attribute->text_;
 
     for (auto const& range : attribute_ranges) {
-      journey_attributes.push_back({static_cast<unsigned>(range.from()),
+      journey_attributes.push_back({static_cast<unsigned>(range.from_),
                                     static_cast<unsigned>(range.to_),
                                     {code, text}});
     }

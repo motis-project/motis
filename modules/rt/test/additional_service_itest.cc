@@ -25,7 +25,7 @@ mcd::vector<mcd::string> get_tracks(motis::schedule const& sched,
                                     trip const* trp) {
   mcd::vector<mcd::string> tracks;
   for (auto const& trp_e : *trp->edges_) {
-    auto const full_con = trp_e.get_edge()->m_.route_edge_.conns_[0].full_con_;
+    auto const full_con = trp_e.get_edge()->static_lcons()[0].full_con_;
     tracks.push_back(sched.tracks_[full_con->d_track_]);
     tracks.push_back(sched.tracks_[full_con->a_track_]);
   }
@@ -35,7 +35,7 @@ mcd::vector<mcd::string> get_tracks(motis::schedule const& sched,
 std::vector<motis::time> get_times(trip const* trp) {
   std::vector<motis::time> times;
   for (auto const& trp_e : *trp->edges_) {
-    auto const lcon = trp_e.get_edge()->m_.route_edge_.conns_[0];
+    auto const lcon = trp_e.get_edge()->static_lcons()[0];
     times.push_back(lcon.d_time_);
     times.push_back(lcon.a_time_);
   }
@@ -47,7 +47,7 @@ TEST_F(rt_additional_service_test, simple) {
                       unix_time(2300), "");
 
   for (auto const& trp_e : *trp->edges_) {
-    auto const& conns = trp_e.get_edge()->m_.route_edge_.conns_;
+    auto const& conns = trp_e.get_edge()->static_lcons();
     ASSERT_EQ(1, conns.size());
 
     auto const& trps = *sched().merged_trips_.at(conns[0].merged_trips_);

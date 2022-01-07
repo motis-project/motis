@@ -129,7 +129,7 @@ void enum_trip_candidates(schedule const& sched, std::uint32_t from_station_idx,
       if (e.type() != ::motis::edge::ROUTE_EDGE) {
         continue;
       }
-      auto const& conns = e.m_.route_edge_.conns_;
+      auto const& conns = e.static_lcons();
       for (auto lc = std::lower_bound(begin(conns), end(conns),
                                       light_connection{earliest_dep});
            lc != end(conns) && lc->d_time_ <= latest_dep; lc = std::next(lc)) {

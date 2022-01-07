@@ -18,7 +18,7 @@ struct label : public Data {  // NOLINT
   label() = default;  // NOLINT
 
   label(edge const* e, label* pred, time now, lower_bounds& lb,
-        day_idx_t const day = 0, light_connection const* lcon = nullptr)
+        day_idx_t const day = 0, generic_light_connection lcon = nullptr)
       : pred_(pred),
         edge_(e),
         connection_(lcon),
@@ -99,10 +99,9 @@ struct label : public Data {  // NOLINT
 
   label* pred_;
   edge const* edge_;
-  light_connection const* connection_;
+  generic_light_connection connection_;
   time start_, now_;
   bool dominated_;
-  day_idx_t day_{-1};
 };
 
 }  // namespace motis::routing

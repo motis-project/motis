@@ -30,7 +30,7 @@ using rtree = bgi::rtree<value, bgi::quadratic<16>>;
 namespace motis::railviz {
 
 bool is_relevant(edge const& e, service_class clasz) {
-  return !e.empty() && e.m_.route_edge_.conns_[0].full_con_->clasz_ == clasz;
+  return !e.empty() && e.static_lcons()[0].full_con_->clasz_ == clasz;
 }
 
 geo::latlng station_coords(schedule const& sched, unsigned station_idx) {
@@ -220,7 +220,7 @@ std::vector<train> train_retriever::trains(
     for (auto const& re : route_edges) {
       auto const* e = re.get_edge();
 
-      auto const& s_dep = sched_.stations_.at(e->from_->get_station()->id_);
+      auto const& s_dep = sched_.stations_.at(e->from()->get_station()->id_);
       b.extend({s_dep->lat(), s_dep->lng()});
 
       auto const& s_arr = sched_.stations_.at(e->to_->get_station()->id_);
@@ -237,8 +237,8 @@ std::vector<train> train_retriever::trains(
   auto const foreach_train = [&](service_class const clasz, auto&& fn) {
     for (auto const& e :
          edge_index_[static_cast<service_class_t>(clasz)]->edges(area)) {
-      for (auto i = 0U; i < e->m_.route_edge_.conns_.size(); ++i) {
-        auto const& c = e->m_.route_edge_.conns_[i];
+      for (auto i = 0U; i < e->static_lcons().size(); ++i) {
+        auto const& c = e->static_lcons()[i];
         if (c.valid_ == 0U || c.a_time_ < start_time || c.d_time_ > end_time) {
           continue;
         }

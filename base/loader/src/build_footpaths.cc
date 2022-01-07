@@ -247,7 +247,7 @@ struct footpath_builder {
         for (auto const& foot_edge : station_node->foot_node_->edges_) {
           auto const from_station = foot_edge.from()->get_station()->id_;
           auto const to_station = foot_edge.to()->get_station()->id_;
-          auto const duration = foot_edge.m_.foot_edge_.time_cost_;
+          auto const duration = foot_edge.constant_time_cost();
 
           utl::verify(from_station == station_node->id_,
                       "foot path wrong at station");
@@ -338,7 +338,7 @@ struct footpath_builder {
     for (auto i = 0; i < size; ++i) {
       auto it = lb;
       for (auto const& edge : fgraph[(lb + i)->second]) {  // precond.: sorted!
-        while (it != ub && edge.to() station_ != it->second) {
+        while (it != ub && edge.to_station_ != it->second) {
           ++it;
         }
         auto j = std::distance(lb, it);

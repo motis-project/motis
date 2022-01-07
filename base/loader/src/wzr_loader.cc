@@ -112,8 +112,8 @@ void collect_events(station_node const* st,
                     waiting_time_rules const& wtr) {
   auto const collect = [&](edge const& e, event_type const ev_type) {
     for (auto lcon_idx = lcon_idx_t{};
-         lcon_idx < e.m_.route_edge_.conns_.size(); ++lcon_idx) {
-      auto const& lc = e.m_.route_edge_.conns_[lcon_idx];
+         lcon_idx < e.static_lcons().size(); ++lcon_idx) {
+      auto const& lc = e.static_lcons()[lcon_idx];
       if (ev_type == event_type::DEP &&
           wtr.waits_for_other_trains(
               wtr.waiting_time_category(lc.full_con_->con_info_->category_))) {

@@ -9,7 +9,7 @@ edge* edge_index::get(universe const& uv) const {
 }
 
 edge_index get_edge_index(universe const& uv, edge const* e) {
-  auto const node_idx = e->from_;
+  auto const node_idx = e->from();
   for (auto const& [i, ep] :
        utl::enumerate(uv.graph_.outgoing_edges(node_idx))) {
     if (&ep == e) {
