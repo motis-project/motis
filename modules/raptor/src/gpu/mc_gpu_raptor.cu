@@ -32,11 +32,11 @@ get_moc<MaxOccupancy>(MaxOccupancy ::CriteriaData const& d) {
   return d.max_occupancy_;
 }
 
-template <>
-__device__ dimension_id
-get_moc<TimeSlottedOccupancy>(TimeSlottedOccupancy::CriteriaData const& d) {
-  return d.initial_soc_idx_ + d.occ_time_slot_;
-}
+//template <>
+//__device__ dimension_id
+//get_moc<TimeSlottedOccupancy>(TimeSlottedOccupancy::CriteriaData const& d) {
+//  return d.initial_soc_idx_ + d.occ_time_slot_;
+//}
 
 template <typename CriteriaConfig>
 __device__ occ_t
@@ -50,11 +50,11 @@ get_initial_moc<MaxOccupancy>(MaxOccupancy ::CriteriaData const& d) {
   return d.initial_moc_idx_;
 }
 
-template <>
-__device__ occ_t get_initial_moc<TimeSlottedOccupancy>(
-    TimeSlottedOccupancy::CriteriaData const& d) {
-  return d.summed_occ_time_;
-}
+//template <>
+//__device__ occ_t get_initial_moc<TimeSlottedOccupancy>(
+//    TimeSlottedOccupancy::CriteriaData const& d) {
+//  return d.summed_occ_time_;
+//}
 
 template <typename CriteriaConfig>
 __device__ void mc_copy_marked_arrivals(time* const to, time const* const from,

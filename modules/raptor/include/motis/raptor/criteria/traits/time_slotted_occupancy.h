@@ -20,6 +20,7 @@ namespace motis::raptor {
 
 struct device_gpu_timetable;
 
+template <dimension_id SlotCount>
 struct trait_time_slotted_occupancy {
 
   /**
@@ -55,11 +56,14 @@ struct trait_time_slotted_occupancy {
 
   static constexpr uint32_t max_conn_duration = 1440;  // minutes
   static constexpr uint32_t max_occupancy_value = 2;
+
   static constexpr uint32_t max_time_occ_value =
       max_conn_duration * max_occupancy_value;  //^= 2880
-  static constexpr uint32_t slot_divisor = 45;
-  static constexpr uint32_t slot_count =
-      max_time_occ_value / slot_divisor;  // 64
+
+  static constexpr uint32_t slot_divisor = max_time_occ_value / SlotCount;
+
+  // static constexpr uint32_t slot_count =
+  //      max_time_occ_value / slot_divisor;  // 64
 
   // Trait Data
   dimension_id initial_soc_idx_{};
@@ -68,15 +72,15 @@ struct trait_time_slotted_occupancy {
 
   _mark_cuda_rel_ inline static dimension_id index_range_size() {
     // slots match linearly to indices
-    return slot_count;
+    return SlotCount;
   }
 
   template <typename TraitsData>
   _mark_cuda_rel_ inline static dimension_id get_write_to_dimension_id(
       TraitsData const& d) {
     int const write_to = d.initial_soc_idx_ + d.occ_time_slot_;
-    return write_to < slot_count ? static_cast<dimension_id>(write_to)
-                                 : invalid<dimension_id>;
+    return write_to < SlotCount ? static_cast<dimension_id>(write_to)
+                                : invalid<dimension_id>;
   }
 
   template <typename TraitsData>
@@ -217,49 +221,46 @@ struct trait_time_slotted_occupancy {
   inline static void fill_journey(journey& j, dimension_id const dim) {
     j.time_slotted_occupancy_ = dim;
   }
-
-private:
-  template <typename Timetable>
-  _mark_cuda_rel_ inline static uint8_t _read_occupancy(
-      Timetable const& tt, stop_times_index const sti) {
-    return tt.stop_attr_[sti].inbound_occupancy_;
-  }
-
-  template <typename Timetable>
-  _mark_cuda_rel_ inline static uint32_t _read_segment_duration(
-      Timetable const& tt, stop_times_index const current_sti) {
-    // because og stop time index alignment and the additional knowledge, that
-    // we can't use a trip to arrive at the first stop we can safely reduce sti
-    //  by one to get the time of the previous stop
-
-    auto const previous_sti = current_sti - 1;
-
-    // always use the segment duration and ignore stand times at a station
-    auto const& previous_times = tt.stop_times_[previous_sti];
-    auto const& current_times = tt.stop_times_[current_sti];
-
-    auto const dep_time = valid(previous_times.departure_)
-                              ? previous_times.departure_
-                              : previous_times.arrival_;
-    auto const arr_time = valid(current_times.arrival_)
-                              ? current_times.arrival_
-                              : current_times.departure_;
-
-    return arr_time - dep_time;
-  }
 };
+
+template <typename Timetable>
+_mark_cuda_rel_ inline static uint8_t _read_occupancy(
+    Timetable const& tt, stop_times_index const sti) {
+  return tt.stop_attr_[sti].inbound_occupancy_;
+}
+
+template <typename Timetable>
+_mark_cuda_rel_ inline static uint32_t _read_segment_duration(
+    Timetable const& tt, stop_times_index const current_sti) {
+  // because og stop time index alignment and the additional knowledge, that
+  // we can't use a trip to arrive at the first stop we can safely reduce sti
+  //  by one to get the time of the previous stop
+
+  auto const previous_sti = current_sti - 1;
+
+  // always use the segment duration and ignore stand times at a station
+  auto const& previous_times = tt.stop_times_[previous_sti];
+  auto const& current_times = tt.stop_times_[current_sti];
+
+  auto const dep_time = valid(previous_times.departure_)
+                            ? previous_times.departure_
+                            : previous_times.arrival_;
+  auto const arr_time = valid(current_times.arrival_)
+                            ? current_times.arrival_
+                            : current_times.departure_;
+
+  return arr_time - dep_time;
+}
 
 #if defined(MOTIS_CUDA)
 template <>
-_mark_cuda_rel_ inline uint8_t
-trait_time_slotted_occupancy::_read_occupancy<device_gpu_timetable>(
+_mark_cuda_rel_ inline uint8_t _read_occupancy<device_gpu_timetable>(
     device_gpu_timetable const& tt, stop_times_index const sti) {
   return tt.stop_inb_occupancy_[sti];
 }
 
 template <>
-_mark_cuda_rel_ inline uint32_t
-trait_time_slotted_occupancy::_read_segment_duration<device_gpu_timetable>(
+_mark_cuda_rel_ inline uint32_t _read_segment_duration<device_gpu_timetable>(
     device_gpu_timetable const& tt, stop_times_index const sti) {
   auto const prev_sti = sti - 1;
   auto departure_time = tt.stop_departures_[prev_sti];
