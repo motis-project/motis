@@ -1,10 +1,9 @@
+import Position from "./SmallTypes/Position";
+
 export default interface StationGuess {
     id: string,
     name: string,
-    pos: {
-        lat: number,
-        lng: number
-    }
+    pos: Position
 }
 
 export interface StationGuessResponseContent {
