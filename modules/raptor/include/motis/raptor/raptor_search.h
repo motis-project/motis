@@ -98,7 +98,10 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
     stats.rec_time_ += MOTIS_GET_TIMING_US(rec_timing);
   }
 
-  return reconstructor.get_journeys(q.source_time_end_);
+  auto const journeys = reconstructor.get_journeys(q.source_time_end_);
+  stats.raptor_connections_ = journeys.size();
+
+  return std::move(journeys);
 }
 
 template <implementation_type Impl, typename Query>

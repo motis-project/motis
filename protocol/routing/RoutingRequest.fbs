@@ -102,7 +102,6 @@ enum SearchType : byte {
   MaxOccupancy,
   MaxOccupancyShfl,
   //TimeSlottedOccupancy,
-  //TimeSlottedOccupancyShfl,
   MinTransferTimes,
 
   Tso96,
@@ -124,28 +123,7 @@ enum SearchType : byte {
   Tso12,
   Tso10,
   Tso08,
-  Tso06,
-
-  Tso96Shfl,
-  Tso90Shfl,
-  Tso80Shfl,
-  Tso72Shfl,
-  Tso64Shfl,
-  Tso60Shfl,
-  Tso48Shfl,
-  Tso45Shfl,
-  Tso40Shfl,
-  Tso36Shfl,
-  Tso32Shfl,
-  Tso30Shfl,
-  Tso24Shfl,
-  Tso20Shfl,
-  Tso18Shfl,
-  Tso16Shfl,
-  Tso12Shfl,
-  Tso10Shfl,
-  Tso08Shfl,
-  Tso06Shfl
+  Tso06
 
 }
 

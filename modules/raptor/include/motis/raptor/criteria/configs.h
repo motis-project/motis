@@ -21,10 +21,6 @@ using MaxOccupancyShfl =
 //     criteria_config<traits<trait_time_slotted_occupancy<64>>,
 //     CalcMethod::Flat>;
 
-// using TimeSlottedOccupancyShfl =
-//     criteria_config<traits<trait_time_slotted_occupancy<64>>,
-//     CalcMethod::Shfl>;
-
 using Tso96 =
     criteria_config<traits<trait_time_slotted_occupancy<96>>, CalcMethod::Flat>;
 using Tso90 =
@@ -66,47 +62,6 @@ using Tso08 =
 using Tso06 =
     criteria_config<traits<trait_time_slotted_occupancy<6>>, CalcMethod::Flat>;
 
-using Tso96Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<96>>, CalcMethod::Shfl>;
-using Tso90Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<90>>, CalcMethod::Shfl>;
-using Tso80Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<80>>, CalcMethod::Shfl>;
-using Tso72Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<72>>, CalcMethod::Shfl>;
-using Tso64Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<64>>, CalcMethod::Shfl>;
-using Tso60Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<60>>, CalcMethod::Shfl>;
-using Tso48Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<48>>, CalcMethod::Shfl>;
-using Tso45Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<45>>, CalcMethod::Shfl>;
-using Tso40Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<40>>, CalcMethod::Shfl>;
-using Tso36Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<36>>, CalcMethod::Shfl>;
-using Tso32Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<32>>, CalcMethod::Shfl>;
-using Tso30Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<30>>, CalcMethod::Shfl>;
-using Tso24Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<24>>, CalcMethod::Shfl>;
-using Tso20Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<20>>, CalcMethod::Shfl>;
-using Tso18Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<18>>, CalcMethod::Shfl>;
-using Tso16Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<16>>, CalcMethod::Shfl>;
-using Tso12Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<12>>, CalcMethod::Shfl>;
-using Tso10Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<10>>, CalcMethod::Shfl>;
-using Tso08Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<8>>, CalcMethod::Shfl>;
-using Tso06Shfl =
-    criteria_config<traits<trait_time_slotted_occupancy<6>>, CalcMethod::Shfl>;
-
 using MinTransferTimes =
     criteria_config<traits<trait_max_transfer_class>, CalcMethod::Flat>;
 
@@ -134,28 +89,7 @@ using MinTransferTimes =
   DO(Tso12, ACCESSOR)                                    \
   DO(Tso10, ACCESSOR)                                    \
   DO(Tso08, ACCESSOR)                                    \
-  DO(Tso06, ACCESSOR)                                    \
-                                                         \
-  DO(Tso96Shfl, ACCESSOR)                                \
-  DO(Tso90Shfl, ACCESSOR)                                \
-  DO(Tso80Shfl, ACCESSOR)                                \
-  DO(Tso72Shfl, ACCESSOR)                                \
-  DO(Tso64Shfl, ACCESSOR)                                \
-  DO(Tso60Shfl, ACCESSOR)                                \
-  DO(Tso48Shfl, ACCESSOR)                                \
-  DO(Tso45Shfl, ACCESSOR)                                \
-  DO(Tso40Shfl, ACCESSOR)                                \
-  DO(Tso36Shfl, ACCESSOR)                                \
-  DO(Tso32Shfl, ACCESSOR)                                \
-  DO(Tso30Shfl, ACCESSOR)                                \
-  DO(Tso24Shfl, ACCESSOR)                                \
-  DO(Tso20Shfl, ACCESSOR)                                \
-  DO(Tso18Shfl, ACCESSOR)                                \
-  DO(Tso16Shfl, ACCESSOR)                                \
-  DO(Tso12Shfl, ACCESSOR)                                \
-  DO(Tso10Shfl, ACCESSOR)                                \
-  DO(Tso08Shfl, ACCESSOR)                                \
-  DO(Tso06Shfl, ACCESSOR)
+  DO(Tso06, ACCESSOR)
 
 enum class raptor_criteria_config {
   Default,

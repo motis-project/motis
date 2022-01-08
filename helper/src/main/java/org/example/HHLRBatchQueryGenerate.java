@@ -10,18 +10,22 @@ import java.util.List;
 
 public class HHLRBatchQueryGenerate {
   static String BASE_FLODER = "./batch_base/";
+  static int SPLIT_COUNT = 40000;
 
   public static void main(String[] args) throws IOException {
-    String outname = "q-hhlr-batch.txt";
+    String outname = "q-hhlr-swiss-ontrip-false-";
     System.out.println("Writing to " + outname);
 
-    var outStream = new BufferedOutputStream(new FileOutputStream(outname));
+    var arrayCount = 0;
+
+    var currentFileName = outname + arrayCount + ".txt";
+    var outStream = new BufferedOutputStream(new FileOutputStream(currentFileName));
 
     for(var queryFile : config) {
       var total_id = 0;
       var lines = queryFile.readQueryFile();
       for(var config : queryFile.configs) {
-        System.out.print("Writing queries for config " + config.toString() + "...");
+        System.out.println("...Writing queries for config " + config.toString());
         //expecting base files to target routing and have Default as Search Type
         for (var line : lines) {
           ++total_id;
@@ -34,9 +38,16 @@ public class HHLRBatchQueryGenerate {
           out_line = out_line.substring(0, lastComma) + ", \"id\": " + total_id + "}\n";
 
           outStream.write(out_line.getBytes(StandardCharsets.UTF_8));
-        }
 
-        System.out.println("Ok");
+          if (total_id % SPLIT_COUNT == 0) {
+            outStream.close();
+            System.out.println("...Splitting batch to '" + currentFileName + "'");
+            ++arrayCount;
+            currentFileName = outname + arrayCount + ".txt";
+            outStream = new BufferedOutputStream(new FileOutputStream(currentFileName));
+          }
+
+        }
       }
     }
 
@@ -45,78 +56,61 @@ public class HHLRBatchQueryGenerate {
 
   static QueryFile[] config = new QueryFile[]{
     new QueryFile(Dataset.swiss, QueryType.OntripStationStart, false, new Config[]{
-      //Default
       new Config(Targets.raptor_cpu, SearchType.Default),
       new Config(Targets.raptor_gpu, SearchType.Default),
+      new Config(Targets.raptor_cpu, SearchType.Tso96),
+      new Config(Targets.raptor_gpu, SearchType.Tso96),
 
-      //Max Occupancy
       new Config(Targets.raptor_cpu, SearchType.MaxOccupancy),
       new Config(Targets.raptor_gpu, SearchType.MaxOccupancy),
-      new Config(Targets.raptor_gpu, SearchType.MaxOccupancyShfl),
-
-      //Time Slotted Occupancy
-      new Config(Targets.raptor_cpu, SearchType.Tso96),
       new Config(Targets.raptor_cpu, SearchType.Tso90),
-      new Config(Targets.raptor_cpu, SearchType.Tso80),
-      new Config(Targets.raptor_cpu, SearchType.Tso72),
-      new Config(Targets.raptor_cpu, SearchType.Tso64),
-      new Config(Targets.raptor_cpu, SearchType.Tso60),
-      new Config(Targets.raptor_cpu, SearchType.Tso48),
-      new Config(Targets.raptor_cpu, SearchType.Tso45),
-      new Config(Targets.raptor_cpu, SearchType.Tso40),
-      new Config(Targets.raptor_cpu, SearchType.Tso36),
-      new Config(Targets.raptor_cpu, SearchType.Tso32),
-      new Config(Targets.raptor_cpu, SearchType.Tso30),
-      new Config(Targets.raptor_cpu, SearchType.Tso24),
-      new Config(Targets.raptor_cpu, SearchType.Tso20),
-      new Config(Targets.raptor_cpu, SearchType.Tso18),
-      new Config(Targets.raptor_cpu, SearchType.Tso16),
-      new Config(Targets.raptor_cpu, SearchType.Tso12),
-      new Config(Targets.raptor_cpu, SearchType.Tso10),
-      new Config(Targets.raptor_cpu, SearchType.Tso08),
-      new Config(Targets.raptor_cpu, SearchType.Tso06),
-
-      new Config(Targets.raptor_gpu, SearchType.Tso96),
       new Config(Targets.raptor_gpu, SearchType.Tso90),
+
+      new Config(Targets.raptor_cpu, SearchType.Tso80),
       new Config(Targets.raptor_gpu, SearchType.Tso80),
-      new Config(Targets.raptor_gpu, SearchType.Tso72),
-      new Config(Targets.raptor_gpu, SearchType.Tso64),
-      new Config(Targets.raptor_gpu, SearchType.Tso60),
-      new Config(Targets.raptor_gpu, SearchType.Tso48),
-      new Config(Targets.raptor_gpu, SearchType.Tso45),
-      new Config(Targets.raptor_gpu, SearchType.Tso40),
-      new Config(Targets.raptor_gpu, SearchType.Tso36),
-      new Config(Targets.raptor_gpu, SearchType.Tso32),
-      new Config(Targets.raptor_gpu, SearchType.Tso30),
-      new Config(Targets.raptor_gpu, SearchType.Tso24),
-      new Config(Targets.raptor_gpu, SearchType.Tso20),
-      new Config(Targets.raptor_gpu, SearchType.Tso18),
-      new Config(Targets.raptor_gpu, SearchType.Tso16),
-      new Config(Targets.raptor_gpu, SearchType.Tso12),
-      new Config(Targets.raptor_gpu, SearchType.Tso10),
-      new Config(Targets.raptor_gpu, SearchType.Tso08),
+      new Config(Targets.raptor_cpu, SearchType.Tso06),
       new Config(Targets.raptor_gpu, SearchType.Tso06),
 
-      new Config(Targets.raptor_gpu, SearchType.Tso96Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso90Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso80Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso72Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso64Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso60Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso48Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso45Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso40Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso36Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso32Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso30Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso24Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso20Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso18Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso16Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso12Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso10Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso08Shfl),
-      new Config(Targets.raptor_gpu, SearchType.Tso06Shfl),
+      new Config(Targets.raptor_cpu, SearchType.Tso72),
+      new Config(Targets.raptor_gpu, SearchType.Tso72),
+      new Config(Targets.raptor_cpu, SearchType.Tso08),
+      new Config(Targets.raptor_gpu, SearchType.Tso08),
+
+      new Config(Targets.raptor_cpu, SearchType.Tso64),
+      new Config(Targets.raptor_gpu, SearchType.Tso64),
+      new Config(Targets.raptor_cpu, SearchType.Tso10),
+      new Config(Targets.raptor_gpu, SearchType.Tso10),
+
+      new Config(Targets.raptor_cpu, SearchType.Tso60),
+      new Config(Targets.raptor_gpu, SearchType.Tso60),
+      new Config(Targets.raptor_cpu, SearchType.Tso12),
+      new Config(Targets.raptor_gpu, SearchType.Tso12),
+
+      new Config(Targets.raptor_cpu, SearchType.Tso48),
+      new Config(Targets.raptor_gpu, SearchType.Tso48),
+      new Config(Targets.raptor_cpu, SearchType.Tso16),
+      new Config(Targets.raptor_gpu, SearchType.Tso16),
+
+      new Config(Targets.raptor_cpu, SearchType.Tso45),
+      new Config(Targets.raptor_gpu, SearchType.Tso45),
+      new Config(Targets.raptor_cpu, SearchType.Tso18),
+      new Config(Targets.raptor_gpu, SearchType.Tso18),
+
+      new Config(Targets.raptor_cpu, SearchType.Tso40),
+      new Config(Targets.raptor_gpu, SearchType.Tso40),
+      new Config(Targets.raptor_cpu, SearchType.Tso36),
+      new Config(Targets.raptor_gpu, SearchType.Tso36),
+
+      new Config(Targets.raptor_cpu, SearchType.Tso32),
+      new Config(Targets.raptor_gpu, SearchType.Tso32),
+      new Config(Targets.raptor_cpu, SearchType.Tso20),
+      new Config(Targets.raptor_gpu, SearchType.Tso20),
+
+      new Config(Targets.raptor_cpu, SearchType.Tso30),
+      new Config(Targets.raptor_gpu, SearchType.Tso30),
+      new Config(Targets.raptor_cpu, SearchType.Tso24),
+      new Config(Targets.raptor_gpu, SearchType.Tso24),
+
     })
 
   };
