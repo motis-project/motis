@@ -5,6 +5,7 @@ import Maybe, { nothing } from 'true-myth/maybe';
 import { Search } from './Search';
 import { SubOverlay } from './SubOverlay';
 import { Connection } from './ConnectionTypes';
+import { ConnectionRender } from './ConnectionRender';
 
 //interface Model {
     //routing : Routing.Model,
@@ -49,9 +50,7 @@ export const Overlay: React.FC = (props) => {
                 <div id='overlay-content'>
                     <Search setConnections={setConnections}/>
                     <div id='connections'>
-                        <div className='no-results'>
-                            <div className='schedule-range'>Auskunft von 19.10.2020 bis 21.10.2020 möglich</div>
-                        </div>
+                        <ConnectionRender connectionArr = {connections} />
                     </div>
                 </div>
                 <SubOverlay subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden}/>

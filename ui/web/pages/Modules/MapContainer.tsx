@@ -65,7 +65,6 @@ export const MapContainer: React.FC = () => {
                                 className="icon">link</i></a></div>
                     <div className="sim-icon" title="Simulationsmodus aktiv"><i className="icon">warning</i></div>
                     <div className="time" id="sim-time-overlay">19.10.2020 16:47:01</div>
-                    { simTimePickerSelected ? <SimTimePicker /> : null }
                 </div>
                 <div className="train-color-picker-overlay">
                     <div><input type="radio" id="train-color-picker-none" name="train-color-picker"/><label
@@ -80,6 +79,7 @@ export const MapContainer: React.FC = () => {
                 <div className="item">Routen von hier</div>
                 <div className="item">Routen hierher</div>
             </div>
+            {simTimePickerSelected && <SimTimePicker />}
         </div>
     );
 };
