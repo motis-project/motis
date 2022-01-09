@@ -12,7 +12,7 @@ const interval = setInterval(() => {
         app.use(router(TranslationService.service));
         app.use(MOTISPostService);
         const now = new Date();
-        const initialDateTime = new Date(2021, 11, 25, now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()).valueOf()
+        const initialDateTime = new Date(2021, 11, 30, now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()).valueOf()
         app.use(DateTimeService, TranslationService.service, initialDateTime);
         app.mount('#app');
         clearInterval(interval);

@@ -1,4 +1,5 @@
 /* eslint-disable camelcase */
+import CustomMovement from "./CustomMovement";
 import Attribute from "./SmallTypes/Attribute";
 import FreeText from "./SmallTypes/FreeText";
 import Problem from "./SmallTypes/Problem";
@@ -8,10 +9,9 @@ import Trip from "./Trip";
 
 export default interface TripResponseContent {
   stops: Stop[],
-  transports: {
-    move: Transport
-  }[],
+  transports: Move[],
   trips: {
+    range: Range,
     id: Trip
   }[],
   attributes: Attribute[],
@@ -20,4 +20,10 @@ export default interface TripResponseContent {
   night_penalty: number,
   db_costs: number,
   status: string
+}
+
+
+export interface Move {
+  move_type: "Walk" | "Transport",
+  move: Transport | CustomMovement
 }
