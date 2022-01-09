@@ -39,10 +39,11 @@ struct base_gen {
   }
 
   static inline duration_t get_edge_duration(edge const& e) {
-    utl::verify(e.type() != edge_type::ROUTE_EDGE,
+    utl::verify(e.type() != edge_type::RT_ROUTE_EDGE &&
+                    e.type() != edge_type::STATIC_ROUTE_EDGE,
                 "start label generator: invalid edge type");
     return has_no_time_cost(e) ? static_cast<duration_t>(0U)
-                               : e.m_.foot_edge_.time_cost_;
+                               : e.constant_time_cost();
   }
 
   static duration_t get_duration(
@@ -105,7 +106,7 @@ struct base_gen {
         if (dest->is_station_node() &&
             fe.type() == (Dir == search_dir::FWD ? edge_type::FWD_EDGE
                                                  : edge_type::BWD_EDGE)) {
-          auto const dist = fe.m_.foot_edge_.time_cost_;
+          auto const dist = fe.constant_time_cost();
           utl::verify(prev.dist_ + dist < MAX_FOOT_PATH_LENGTH,
                       "max foot path length exceeded");
           pq.push(path(prev, &fe, &last, dist, dest));
@@ -143,7 +144,7 @@ struct base_gen {
           auto new_path = p.edges_;
           new_path.emplace_back(&e, additional_cost);
           for_each_edge<Dir>(node, [&](auto&& re) {
-            if (re.type() != edge_type::ROUTE_EDGE) {
+            if (re.empty()) {
               return;
             }
             generate_start_labels(new_path, re, get_duration(new_path));

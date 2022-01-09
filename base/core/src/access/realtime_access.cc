@@ -26,26 +26,30 @@ time get_schedule_time(schedule const& sched, edge const* route_edge,
 }
 
 time get_schedule_time(schedule const& sched, edge const* route_edge,
-                       rt_light_connection const* lcon,
+                       generic_light_connection const& lcon,
                        event_type const ev_type) {
+  if (lcon.is_static()) {
+    return lcon.event_time(ev_type);
+  }
+
   auto it = sched.graph_to_delay_info_.find(
-      {route_edge, get_lcon_index(route_edge, lcon), ev_type});
+      {route_edge, get_lcon_index(route_edge, lcon.rt_con()), ev_type});
   if (it == end(sched.graph_to_delay_info_)) {
-    return lcon->event_time(ev_type);
+    return lcon.event_time(ev_type);
   } else {
     return it->second->get_schedule_time();
   }
 }
 
 duration_t get_delay(schedule const& sched, ev_key const& k) {
-  return get_time(k.lcon(), k.ev_type_) - get_schedule_time(sched, k);
+  return k.lcon()->event_time(k.ev_type_) - get_schedule_time(sched, k);
 }
 
 delay_info get_delay_info(schedule const& sched, node const* route_node,
-                          rt_light_connection const* lcon,
+                          generic_light_connection const& lcon,
                           event_type const ev_type) {
-  auto route_edge = get_rt_route_edge(route_node, lcon, ev_type);
-  auto lcon_idx = get_lcon_index(route_edge, lcon);
+  auto route_edge = get_route_edge(route_node, lcon, ev_type);
+  auto lcon_idx = route_edge->get_lcon_index(lcon);
   auto it = sched.graph_to_delay_info_.find({route_edge, lcon_idx, ev_type});
   if (it == end(sched.graph_to_delay_info_)) {
     return delay_info{ev_key{route_edge, lcon_idx, ev_type}};
@@ -55,9 +59,9 @@ delay_info get_delay_info(schedule const& sched, node const* route_node,
 }
 
 delay_info get_delay_info(schedule const& sched, edge const* route_edge,
-                          rt_light_connection const* lcon,
+                          generic_light_connection const& lcon,
                           event_type const ev_type) {
-  auto lcon_idx = get_lcon_index(route_edge, lcon);
+  auto lcon_idx = route_edge->get_lcon_index(lcon);
   auto it = sched.graph_to_delay_info_.find({route_edge, lcon_idx, ev_type});
   if (it == end(sched.graph_to_delay_info_)) {
     return delay_info{ev_key{route_edge, lcon_idx, ev_type}};
@@ -104,17 +108,17 @@ uint16_t get_schedule_track(schedule const& sched, ev_key const& k) {
 }
 
 int get_schedule_track(schedule const& sched, edge const* route_edge,
-                       rt_light_connection const* lcon,
+                       generic_light_connection const& lcon,
                        event_type const ev_type) {
   return get_schedule_track(
-      sched, ev_key{route_edge, get_lcon_index(route_edge, lcon), ev_type});
+      sched, ev_key{route_edge, route_edge->get_lcon_index(lcon), ev_type});
 }
 
 int get_schedule_track(schedule const& sched, node const* route_node,
-                       rt_light_connection const* lcon,
+                       generic_light_connection const& lcon,
                        event_type const ev_type) {
-  auto route_edge = get_rt_route_edge(route_node, lcon, ev_type);
-  auto lcon_idx = get_lcon_index(route_edge, lcon);
+  auto route_edge = get_route_edge(route_node, lcon, ev_type);
+  auto lcon_idx = route_edge->get_lcon_index(lcon);
   return get_schedule_track(sched, {route_edge, lcon_idx, ev_type});
 }
 

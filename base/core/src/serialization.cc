@@ -12,8 +12,7 @@ static_assert(cista::to_tuple_works_v<bitfield>);
 constexpr auto const MODE = cista::mode::WITH_INTEGRITY;
 
 template <typename Ctx>
-inline void serialize(Ctx& c, motis::time const* origin,
-                      cista::offset_t const offset) {}
+inline void serialize(Ctx&, motis::time const*, cista::offset_t const) {}
 
 template <typename Ctx>
 inline void deserialize(Ctx const& c, motis::time* el) {

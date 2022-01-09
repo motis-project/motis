@@ -26,8 +26,7 @@ struct search_query {
   bool use_start_metas_{false};
   bool use_dest_metas_{false};
   bool use_start_footpaths_{false};
-  light_connection const* lcon_{nullptr};
-  day_idx_t day_{};
+  generic_light_connection lcon_;
 };
 
 struct search_result {
@@ -54,7 +53,7 @@ struct search {
     auto const route_offset = q.sched_->non_station_node_offset_;
     for (auto const& e : q.query_edges_) {
       auto const from_node = (Dir == search_dir::FWD) ? e.from() : e.to();
-      auto const to_node = (Dir == search_dir::FWD) ? e.to_ : e.from();
+      auto const to_node = (Dir == search_dir::FWD) ? e.to() : e.from();
 
       // station graph
       auto const from_station = from_node->get_station()->id_;
@@ -159,8 +158,7 @@ struct search {
     auto const add_start_labels = [&](time interval_begin, time interval_end) {
       pd.add_start_labels(StartLabelGenerator::generate(
           *q.sched_, *q.mem_, lbs, &start_edge, meta_edges, q.query_edges_,
-          interval_begin, interval_end, q.lcon_, q.day_,
-          q.use_start_footpaths_));
+          interval_begin, interval_end, q.lcon_, q.use_start_footpaths_));
     };
 
     auto const schedule_begin = time{SCHEDULE_OFFSET_MINUTES};

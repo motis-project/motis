@@ -225,10 +225,10 @@ TEST_F(loader_graph_builder_multiple_ice, route_nodes) {
 
     auto const get_track = [&](size_t const idx, event_type const ev_type) {
       auto const lcon = get<static_light_connection const*>(conns.at(idx));
-      auto const day_idx =
-          get<day_idx_t>(conns.at(idx)) + (lcon->a_time_ / MINUTES_A_DAY);
-      return get_track_name(*sched_, lcon->full_con_->get_track(ev_type),
-                            day_idx);
+      auto const day_idx = static_cast<day_idx_t>(
+          get<day_idx_t>(conns.at(idx)) + (lcon->a_time_ / MINUTES_A_DAY));
+      return get_track_name(
+          *sched_, generic_light_connection{std::pair{lcon, day_idx}}, ev_type);
     };
 
     EXPECT_EQ("6", get_track(0, event_type::DEP));

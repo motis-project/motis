@@ -145,24 +145,24 @@ struct static_light_connection {
 };
 
 struct generic_light_connection {
-  struct invalid {};
   using static_t = std::pair<static_light_connection const*, day_idx_t>;
   using rt_t = rt_light_connection const*;
-  using data = mcd::variant<invalid, static_t, rt_t>;
+  using data = mcd::variant<static_t, rt_t>;
 
-  constexpr generic_light_connection() : data_{invalid{}} {}
-  generic_light_connection(static_t p) : data_{p} {}
-  generic_light_connection(rt_t lcon) : data_{lcon} {}
+  constexpr generic_light_connection() = default;
+  generic_light_connection(nullptr_t) {}
+  generic_light_connection(static_t p) : data_{p} {}  // NOLINT
+  generic_light_connection(rt_t lcon) : data_{lcon} {}  // NOLINT
+  generic_light_connection(static_light_connection const* lcon,
+                           day_idx_t const day)
+      : data_{static_t{lcon, day}} {}
 
   connection const& full_con() const {
     return data_.apply(utl::overloaded{
         [](static_t lcon) -> connection const& {
           return *lcon.first->full_con_;
         },
-        [](rt_t lcon) -> connection const& { return *lcon->full_con_; },
-        [](invalid) -> connection const& {
-          throw std::runtime_error{"invalid generic lcon"};
-        }});
+        [](rt_t lcon) -> connection const& { return *lcon->full_con_; }});
   }
 
   time d_time() const {
@@ -170,10 +170,7 @@ struct generic_light_connection {
         [](static_t lcon) {
           return lcon.first->event_time(event_type::DEP, lcon.second);
         },
-        [](rt_t lcon) { return time{lcon->d_time_}; },
-        [](invalid) -> time {
-          throw std::runtime_error{"invalid generic lcon"};
-        }});
+        [](rt_t lcon) { return time{lcon->d_time_}; }});
   }
 
   time a_time() const {
@@ -181,26 +178,23 @@ struct generic_light_connection {
         [](static_t lcon) {
           return lcon.first->event_time(event_type::ARR, lcon.second);
         },
-        [](rt_t lcon) { return time{lcon->a_time_}; },
-        [](invalid) -> time {
-          throw std::runtime_error{"invalid generic lcon"};
-        }});
+        [](rt_t lcon) { return time{lcon->a_time_}; }});
+  }
+
+  time event_time(event_type const ev_type) const {
+    return ev_type == event_type::DEP ? d_time() : a_time();
   }
 
   merged_trips_idx trips() const {
     return data_.apply(
         utl::overloaded{[](static_t lcon) { return lcon.first->trips_; },
-                        [](rt_t lcon) { return lcon->trips_; },
-                        [](invalid) -> merged_trips_idx {
-                          throw std::runtime_error{"invalid generic lcon"};
-                        }});
+                        [](rt_t lcon) { return lcon->trips_; }});
   }
 
   bool operator==(std::nullptr_t) const {
     return data_.apply(
         utl::overloaded{[](static_t lcon) { return lcon.first == nullptr; },
-                        [](rt_t lcon) { return lcon == nullptr; },
-                        [](invalid) -> bool { return true; }});
+                        [](rt_t lcon) { return lcon == nullptr; }});
   }
 
   static_light_connection const* as_static_lcon() const {
@@ -210,6 +204,25 @@ struct generic_light_connection {
   }
 
   duration_t travel_time() const { return a_time() - d_time(); }
+
+  bool is_static() const { return mcd::holds_alternative<static_t>(data_); }
+  bool is_rt() const { return mcd::holds_alternative<rt_t>(data_); }
+
+  rt_t rt_con() const {
+    utl::verify(mcd::holds_alternative<rt_t>(data_),
+                "generic_light_connection: rt_con on static con");
+    return mcd::get<rt_t>(data_);
+  }
+
+  static_t static_con() const {
+    utl::verify(mcd::holds_alternative<static_t>(data_),
+                "generic_light_connection: rt_con on static con");
+    return mcd::get<static_t>(data_);
+  }
+
+  bool valid() const { return data_.valid(); }
+
+  operator bool() const { return valid(); }
 
 private:
   data data_;

@@ -18,14 +18,13 @@ struct label : public Data {  // NOLINT
   label() = default;  // NOLINT
 
   label(edge const* e, label* pred, time now, lower_bounds& lb,
-        day_idx_t const day = 0, generic_light_connection lcon = nullptr)
+        generic_light_connection lcon = nullptr)
       : pred_(pred),
         edge_(e),
-        connection_(lcon),
+        connection_(std::move(lcon)),
         start_(pred != nullptr ? pred->start_ : now),
         now_(now),
-        dominated_(false),
-        day_(day) {
+        dominated_(false) {
     Init::init(*this, lb);
   }
 
@@ -57,8 +56,6 @@ struct label : public Data {  // NOLINT
     l.pred_ = this;
     l.edge_ = &e;
     l.connection_ = ec.connection_;
-    l.day_ = ec.day_;
-    std::cerr << "SETTING DAY " << l.day_ << "\n";
     l.now_ += (Dir == search_dir::FWD) ? ec.time_ : -ec.time_;
 
     Updater::update(l, ec, lb);

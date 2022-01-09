@@ -200,6 +200,18 @@ struct trip_info {
            | utl::iterable();
   }
 
+  concrete_trip get_concrete_trip(generic_light_connection const& c) const {
+    auto const e_it =
+        std::find_if(begin(*edges_), end(*edges_),
+                     [&](route_edge const& e) { return e->contains(c); });
+    utl::verify(e_it != end(*edges_),
+                "trip::get_concrete_trip(): edge not found in trip");
+
+    auto const edge_idx = std::distance(begin(*edges_), e_it);
+    auto const day = c.d_time().day() - day_offsets_.at(edge_idx);
+    return concrete_trip{this, static_cast<day_idx_t>(day)};
+  }
+
   bitfield const& traffic_days() const {
     return *edges_->front()->static_lcons().at(lcon_idx_).traffic_days_;
   }

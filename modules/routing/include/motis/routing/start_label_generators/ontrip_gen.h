@@ -12,12 +12,14 @@ namespace motis::routing {
 
 template <search_dir Dir, typename Label>
 struct ontrip_gen {
-  static std::vector<Label*> generate(
-      schedule const& sched, mem_manager& mem, lower_bounds& lbs,
-      edge const* start_edge, std::vector<edge> const&,
-      std::vector<edge> const& query_edges, time interval_begin,
-      time /* interval_end */, light_connection const* lcon,
-      day_idx_t const day, bool starting_footpaths) {
+  static std::vector<Label*> generate(schedule const& sched, mem_manager& mem,
+                                      lower_bounds& lbs, edge const* start_edge,
+                                      std::vector<edge> const&,
+                                      std::vector<edge> const& query_edges,
+                                      time interval_begin,
+                                      time /* interval_end */,
+                                      generic_light_connection const& lcon,
+                                      bool starting_footpaths) {
     std::vector<Label*> labels;
     auto const start = sched.station_nodes_.at(0).get();
     if (start_edge->get_destination<Dir>() == start) {
@@ -26,10 +28,10 @@ struct ontrip_gen {
     } else if (start_edge->get_destination<Dir>()->is_route_node()) {
       utl::verify(lcon != nullptr, "ontrip train start missing lcon");
       generate_train_start(sched, mem, lbs, start_edge, interval_begin, lcon,
-                           day, labels);
+                           labels);
     } else {
       generate_station_starts(sched, mem, lbs, start_edge, interval_begin,
-                              starting_footpaths, lcon, day, labels);
+                              starting_footpaths, lcon, labels);
     }
     return labels;
   }
@@ -43,7 +45,7 @@ struct ontrip_gen {
       if ((Dir == search_dir::FWD && qe.from() != start) ||
           (Dir == search_dir::BWD && qe.to() != start)) {
         continue;
-      } else if ((Dir == search_dir::FWD && !qe.to_->is_station_node()) ||
+      } else if ((Dir == search_dir::FWD && !qe.to()->is_station_node()) ||
                  (Dir == search_dir::BWD && !qe.from()->is_station_node()) ||
                  (qe.type() != edge_type::MUMO_EDGE)) {
         throw std::runtime_error("unsupported edge type");
@@ -52,57 +54,50 @@ struct ontrip_gen {
       std::vector<std::pair<edge const*, int>> path{{start_edge, 0}, {&qe, 0}};
 
       generate_labels_at_route_nodes(sched, mem, lbs, path, start_time,
-                                     starting_footpaths, true, nullptr,
-                                     day_idx_t{}, labels);
+                                     starting_footpaths, true, nullptr, labels);
     }
   }
 
   static void generate_station_starts(schedule const& sched, mem_manager& mem,
                                       lower_bounds& lbs, edge const* start_edge,
                                       time start_time, bool starting_footpaths,
-                                      light_connection const* lcon,
-                                      day_idx_t const day,
+                                      generic_light_connection const& lcon,
                                       std::vector<Label*>& labels) {
     generate_labels_at_route_nodes(sched, mem, lbs, {{start_edge, 0}},
                                    start_time, starting_footpaths, false, lcon,
-                                   day, labels);
+                                   labels);
   }
 
   static void generate_train_start(schedule const&, mem_manager& mem,
                                    lower_bounds& lbs, edge const* start_edge,
                                    time start_time,
-                                   light_connection const* lcon,
-                                   day_idx_t const day,
+                                   generic_light_connection const& lcon,
                                    std::vector<Label*>& labels) {
-    generate_start_label(mem, lbs, {{start_edge, 0}}, start_time, lcon, day,
-                         labels);
+    generate_start_label(mem, lbs, {{start_edge, 0}}, start_time, lcon, labels);
   }
 
   static void generate_labels_at_route_nodes(
       schedule const& sched, mem_manager& mem, lower_bounds& lbs,
       std::vector<std::pair<edge const*, int>> const& initial_path,
       time start_time, bool starting_footpaths, bool add_first_interchange_time,
-      light_connection const* lcon, day_idx_t const day,
-      std::vector<Label*>& labels) {
+      generic_light_connection const& lcon, std::vector<Label*>& labels) {
     base_gen<Dir, Label>::generate_labels_at_route_nodes(
         sched, initial_path, starting_footpaths, add_first_interchange_time,
         [&](std::vector<std::pair<edge const*, int>> const& path, edge const&,
             duration_t) {
-          return generate_start_label(mem, lbs, path, start_time, lcon, day,
-                                      labels);
+          return generate_start_label(mem, lbs, path, start_time, lcon, labels);
         });
   }
 
   static void generate_start_label(
       mem_manager& mem, lower_bounds& lbs,
       std::vector<std::pair<edge const*, int>> const& path, time start_time,
-      light_connection const* lcon, day_idx_t const day,
-      std::vector<Label*>& labels) {
+      generic_light_connection const& lcon, std::vector<Label*>& labels) {
     Label* l = nullptr;
     for (auto const& [e, additional_time_cost] : path) {
       if (l == nullptr) {
         assert(additional_time_cost == 0);
-        l = mem.create<Label>(e, nullptr, start_time, lbs, day, lcon);
+        l = mem.create<Label>(e, nullptr, start_time, lbs, lcon);
       } else {
         auto new_label = mem.create<Label>();
         if (!l->create_label(*new_label, *e, lbs, false,

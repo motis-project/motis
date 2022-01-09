@@ -22,11 +22,11 @@ struct pretrip_gen {
                                       std::vector<edge> const& meta_edges,
                                       std::vector<edge> const& query_edges,
                                       time interval_begin, time interval_end,
-                                      light_connection const*, day_idx_t const,
+                                      generic_light_connection const&,
                                       bool starting_footpaths) {
     std::vector<Label*> labels;
     auto const start = sched.station_nodes_.at(0).get();
-    if ((start_edge->to_ == start && Dir == search_dir::FWD) ||
+    if ((start_edge->to() == start && Dir == search_dir::FWD) ||
         (start_edge->from() == start && Dir == search_dir::BWD)) {
       generate_intermodal_starts(sched, mem, lbs, start_edge, query_edges,
                                  interval_begin, interval_end,
@@ -50,7 +50,7 @@ struct pretrip_gen {
       if ((Dir == search_dir::FWD && qe.from() != start) ||
           (Dir == search_dir::BWD && qe.to() != start)) {
         continue;
-      } else if ((Dir == search_dir::FWD && !qe.to_->is_station_node()) ||
+      } else if ((Dir == search_dir::FWD && !qe.to()->is_station_node()) ||
                  (Dir == search_dir::BWD && !qe.from()->is_station_node()) ||
                  (qe.type() != edge_type::MUMO_EDGE)) {
         throw std::runtime_error("unsupported edge type");

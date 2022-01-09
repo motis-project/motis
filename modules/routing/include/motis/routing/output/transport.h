@@ -7,11 +7,10 @@ namespace motis::routing::output::intermediate {
 struct transport {
   transport() = default;
   transport(unsigned const from, unsigned const to,
-            generic_light_connection con, day_idx_t const day)
+            generic_light_connection con)
       : from_{from},
         to_{to},
         con_{std::move(con)},
-        day_{day},
         duration_{con.travel_time()},
         mumo_id_{0},
         mumo_price_{0},
@@ -32,7 +31,6 @@ struct transport {
 
   unsigned from_, to_;
   generic_light_connection con_;
-  day_idx_t day_;
   duration_t duration_;
   int mumo_id_;
   unsigned mumo_price_;

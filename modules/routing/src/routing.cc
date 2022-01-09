@@ -101,8 +101,8 @@ msg_ptr routing::trip_to_connection(msg_ptr const& msg) {
     throw std::system_error(access::error::service_not_found);
   }
 
-  auto const first = trp.trp_->edges_->front()->from_;
-  auto const last = trp.trp_->edges_->back()->to_;
+  auto const first = trp.trp_->edges_->front()->from();
+  auto const last = trp.trp_->edges_->back()->to();
 
   auto const e_0 = make_foot_edge(nullptr, first->get_station());
   auto const e_1 = make_enter_edge(first->get_station(), first);
@@ -111,13 +111,12 @@ msg_ptr routing::trip_to_connection(msg_ptr const& msg) {
   auto const dep_time = trp.get_first_dep_time();
 
   auto const make_label = [&](label* pred, edge const* e,
-                              light_connection const* lcon, day_idx_t const day,
-                              time now) {
+                              generic_light_connection const& c,
+                              time const now) {
     auto l = label();
     l.pred_ = pred;
     l.edge_ = e;
-    l.connection_ = lcon;
-    l.day_ = day;
+    l.connection_ = c;
     l.start_ = dep_time;
     l.now_ = now;
     l.dominated_ = false;
@@ -125,21 +124,18 @@ msg_ptr routing::trip_to_connection(msg_ptr const& msg) {
   };
 
   auto labels = std::vector<label>{trp.trp_->edges_->size() + 3};
-  labels[0] = make_label(nullptr, &e_0, nullptr, day_idx_t{}, dep_time);
-  labels[1] = make_label(&labels[0], &e_1, nullptr, day_idx_t{}, dep_time);
+  labels[0] = make_label(nullptr, &e_0, nullptr, dep_time);
+  labels[1] = make_label(&labels[0], &e_1, nullptr, dep_time);
 
   int i = 2;
-  for (auto const& [e, day_offset] :
-       utl::zip(*trp.trp_->edges_, trp.trp_->day_offsets_)) {
-    auto const& lcon = get_lcon(e, trp.trp_->lcon_idx_);
-    auto const day = trp.day_idx_ + day_offset;
-    labels[i] = make_label(&labels[i - 1], e, &lcon, day,
-                           lcon.event_time(event_type::ARR, day));
+  for (auto j = 0U; j != trp.trp_->edges_->size(); ++j) {
+    auto const lcon = trp.lcon(j);
+    labels[i] = make_label(&labels[i - 1], trp.trp_->edges_->at(j), lcon,
+                           lcon.event_time(event_type::ARR));
     ++i;
   }
 
-  labels[i] = make_label(&labels[i - 1], &e_n, nullptr, day_idx_t{},
-                         labels[i - 1].now_);
+  labels[i] = make_label(&labels[i - 1], &e_n, nullptr, labels[i - 1].now_);
 
   message_creator fbb;
   fbb.create_and_finish(

@@ -36,9 +36,9 @@ bool end_reached(time const departure_begin, time const departure_end,
 }
 
 template <search_dir Dir>
-time get_time(light_connection const* lcon, day_idx_t const day) {
-  return lcon->event_time(
-      Dir == search_dir::FWD ? event_type::DEP : event_type::ARR, day);
+time get_time(generic_light_connection lcon) {
+  return lcon.event_time(Dir == search_dir::FWD ? event_type::DEP
+                                                : event_type::ARR);
 }
 
 template <search_dir Dir, typename Fn>
@@ -51,12 +51,12 @@ void create_labels(time const departure_begin, time const departure_end,
   auto t = Dir == search_dir::FWD ? departure_begin : departure_end;
   auto const max_start_labels = departure_end - departure_begin + 1;
   while (!end_reached<Dir>(departure_begin, departure_end, t)) {
-    auto [con, day_idx] = re.get_connection<Dir>(t);
+    auto con = re.get_connection<Dir>(t);
     if (con == nullptr) {
       break;
     }
 
-    t = get_time<Dir>(con, day_idx);
+    t = get_time<Dir>(con);
 
     if (end_reached<Dir>(departure_begin, departure_end, t)) {
       break;

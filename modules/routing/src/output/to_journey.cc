@@ -68,7 +68,7 @@ std::vector<journey::trip> generate_journey_trips(
     }
 
     for (auto const& trp : *sched.merged_trips_.at(t.con_.trips())) {
-      trip_intervals.add_entry(concrete_trip{trp, t.day_}, t.from_, t.to_);
+      trip_intervals.add_entry(trp->get_concrete_trip(t.con_), t.from_, t.to_);
     }
   }
 
@@ -149,7 +149,8 @@ std::vector<journey::ranged_attribute> generate_journey_attributes(
     if (t.con_ == nullptr) {
       continue;
     } else {
-      for (auto const& attr : t.con_.full_con().con_info_->attributes(t.day_)) {
+      for (auto const& attr :
+           t.con_.full_con().con_info_->attributes(t.con_.d_time().day())) {
         attributes.add_entry(attr, t.from_, t.to_);
       }
     }

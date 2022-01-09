@@ -19,13 +19,15 @@ namespace motis {
 struct node;
 
 struct edge_cost {
-  edge_cost() = default;
+  constexpr edge_cost() = default;
 
-  edge_cost(duration_t const time, generic_light_connection c)
-      : lcon_{c}, time_{time} {}
+  edge_cost(duration_t const time, generic_light_connection const& c)
+      : connection_{c}, time_{time} {}
 
-  constexpr explicit edge_cost(duration_t time, bool transfer = false,
-                               uint16_t price = 0, uint16_t accessibility = 0)
+  constexpr ~edge_cost() = default;
+
+  constexpr explicit edge_cost(duration_t time, bool transfer, uint16_t price,
+                               uint16_t accessibility)
       : time_(time),
         price_(price),
         transfer_(transfer),
@@ -33,15 +35,15 @@ struct edge_cost {
 
   constexpr bool is_valid() const { return time_ != INVALID_DURATION; }
 
-  generic_light_connection lcon_;
+  generic_light_connection connection_;
   duration_t time_{INVALID_DURATION};
   uint16_t price_{0U};
   bool transfer_{false};
   uint16_t accessibility_{0U};
 };
 
-constexpr auto const NO_EDGE = edge_cost();
-constexpr auto const FREE_EDGE = edge_cost(0U, false, 0U, 0U);
+constexpr auto const NO_EDGE = edge_cost{};
+constexpr auto const FREE_EDGE = edge_cost{0U, false, 0U, 0U};
 
 enum class search_dir { FWD, BWD };
 
@@ -77,7 +79,7 @@ struct edge {
                        (Dir == search_dir::FWD)
                            ? c->event_time(event_type::ARR, day) - start_time
                            : start_time - c->event_time(event_type::DEP, day),
-                       c, day);
+                       c, c->full_con_->price_, 0U);
     }
 
     template <search_dir Dir = search_dir::FWD>
@@ -158,7 +160,7 @@ struct edge {
                                                    c2.travel_time();
                                           })
                              ->travel_time(),
-                         false, begin(conns_)->full_con_->price_);
+                         false, begin(conns_)->full_con_->price_, 0U);
       }
     }
 
@@ -252,7 +254,7 @@ struct edge {
                                                    c2.travel_time();
                                           })
                              ->travel_time(),
-                         false, begin(conns_)->full_con_->price_);
+                         false, begin(conns_)->full_con_->price_, 0U);
       }
     }
 
@@ -266,7 +268,9 @@ struct edge {
       return edge_cost(time_cost_, is_transfer_, price_, accessibility_);
     }
 
-    edge_cost get_min_edge_cost() const { return edge_cost(0U, is_transfer_); }
+    edge_cost get_min_edge_cost() const {
+      return edge_cost(0U, is_transfer_, 0U, 0U);
+    }
 
     ptr<node> from_{nullptr};
     ptr<node> to_{nullptr};
@@ -361,7 +365,6 @@ struct edge {
 
       case edge_type::MUMO_EDGE:
       case edge_type::FOOT_EDGE:
-        [[fallthrough]];
         return mcd::get<constant_cost_edge>(data_).get_edge_cost();
 
       case edge_type::THROUGH_EDGE: return last_con ? FREE_EDGE : NO_EDGE;
@@ -493,10 +496,39 @@ struct edge {
     return mcd::get<rt_route_edge>(data_).conns_;
   }
 
-  bool contains(rt_light_connection const* lcon) const {
+  lcon_idx_t get_lcon_index(generic_light_connection const& glcon) const {
+    switch (type()) {
+      case edge_type::RT_ROUTE_EDGE: {
+        auto const c = glcon.rt_con();
+        auto const& conns = mcd::get<rt_route_edge>(data_).conns_;
+        utl::verify(c >= begin(conns) && c < end(conns),
+                    "get_lcon_index(): not found");
+        return static_cast<lcon_idx_t>(std::distance(begin(conns), c));
+      }
+
+      case edge_type::STATIC_ROUTE_EDGE: {
+        auto const c = glcon.static_con().first;
+        auto const& conns = mcd::get<static_route_edge>(data_).conns_;
+        utl::verify(c >= begin(conns) && c < end(conns),
+                    "get_lcon_index(): not found");
+        return static_cast<lcon_idx_t>(std::distance(begin(conns), c));
+      }
+
+      default: throw utl::fail("get_lcon_index on {}", type_str());
+    }
+  }
+
+  bool contains(generic_light_connection const& c) const {
     switch (type()) {
       case edge_type::RT_ROUTE_EDGE:
-        return mcd::get<rt_route_edge>(data_).conns_.contains(lcon);
+        return c.is_rt() &&
+               mcd::get<rt_route_edge>(data_).conns_.contains(c.rt_con());
+
+      case edge_type::STATIC_ROUTE_EDGE:
+        return c.is_static() &&
+               mcd::get<static_route_edge>(data_).conns_.contains(
+                   c.static_con().first);
+
       default: return false;
     }
   }
@@ -507,9 +539,11 @@ struct edge {
       case edge_type::RT_ROUTE_EDGE:
         return generic_light_connection{
             mcd::get<rt_route_edge>(data_).get_connection<Dir>(t)};
+
       case edge_type::STATIC_ROUTE_EDGE:
         return generic_light_connection{
             mcd::get<static_route_edge>(data_).get_connection<Dir>(t)};
+
       default: throw utl::fail("get_connection on {}", type_str());
     }
   }

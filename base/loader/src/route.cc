@@ -58,7 +58,7 @@ bool route_t::add_service(mcd::vector<static_light_connection> const& new_lcons,
 
     for (auto section_idx = 0U; section_idx != new_lcons.size();
          ++section_idx) {
-      for (auto day_idx = 0U; day_idx != MAX_DAYS; ++day_idx) {
+      for (auto day_idx = day_idx_t{0}; day_idx != MAX_DAYS; ++day_idx) {
         if (!sched.bitfields_.at(new_lcons.at(section_idx).traffic_days_)
                  .test(day_idx)) {
           continue;
@@ -66,9 +66,9 @@ bool route_t::add_service(mcd::vector<static_light_connection> const& new_lcons,
 
         auto const d_station = stations[section_idx];
         auto const d_track = get_track_string_idx(
-            sched, lcons_.front().at(section_idx).full_con_->d_track_, day_idx);
+            sched, {&lcons_.front().at(section_idx), day_idx}, event_type::DEP);
         auto const new_d_track = get_track_string_idx(
-            sched, new_lcons.at(section_idx).full_con_->d_track_, day_idx);
+            sched, {&new_lcons.at(section_idx), day_idx}, event_type::DEP);
         if (d_station->get_platform(d_track) !=
             d_station->get_platform(new_d_track)) {
           return false;
@@ -76,9 +76,9 @@ bool route_t::add_service(mcd::vector<static_light_connection> const& new_lcons,
 
         auto const a_station = stations[section_idx + 1];
         auto const a_track = get_track_string_idx(
-            sched, lcons_.front().at(section_idx).full_con_->a_track_, day_idx);
+            sched, {&lcons_.front().at(section_idx), day_idx}, event_type::ARR);
         auto const new_a_track = get_track_string_idx(
-            sched, new_lcons.at(section_idx).full_con_->a_track_, day_idx);
+            sched, {&new_lcons.at(section_idx), day_idx}, event_type::ARR);
         if (a_station->get_platform(a_track) !=
             a_station->get_platform(new_a_track)) {
           return false;
