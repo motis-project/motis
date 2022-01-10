@@ -231,7 +231,7 @@ mcd::hash_map<Station const*, station_node*> build_stations(
   // Add actual stations.
   for (auto const& [src_index, fbs_schedule] : utl::enumerate(fbs_schedules)) {
     std::tie(b.first_day_, b.last_day_) =
-        first_last_days(sched, fbs_schedule->interval());
+        first_last_days(sched, src_index, fbs_schedule->interval());
 
     for (auto const* fbs_station : *fbs_schedule->stations()) {
       b.add_station(src_index, fbs_station, use_platforms);

@@ -198,10 +198,13 @@ std::vector<train> train_retriever::trains(
     time const start_time, time const end_time, int const max_count,
     int const last_count, geo::box const& area, int const zoom_level) {
   constexpr auto const kTolerance = .1F;
-  auto const limit = (last_count > max_count ||
-                      std::abs(last_count - max_count) < max_count * kTolerance)
-                         ? std::min(last_count, max_count) * (1. + kTolerance)
-                         : max_count;
+  constexpr auto const show_all = true;
+  auto const limit =
+      show_all ? std::numeric_limits<int>::max()
+      : (last_count > max_count ||
+         std::abs(last_count - max_count) < max_count * kTolerance)
+          ? std::min(last_count, max_count) * (1. + kTolerance)
+          : max_count;
 
   mcd::hash_map<node const*, float> route_distances;
   auto const get_or_create_route_distance = [&](ev_key const& k) {

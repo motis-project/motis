@@ -143,8 +143,9 @@ jobs:
             cxx: g++-10
             cc: gcc-10
             mode: Release
-            cflags: -fsanitize=address,undefined -fno-omit-frame-pointer
-            cxxflags: -fsanitize=address,undefined -fno-omit-frame-pointer
+            cflags: -fsanitize=address,undefined -fno-omit-frame-pointer -B/opt
+            cxxflags: -fsanitize=address,undefined -fno-omit-frame-pointer -B/opt
+            ldflags: -B/opt
             os: ubuntu-20.04
             avx: On
             avx2: On
@@ -248,6 +249,13 @@ jobs:
       - name: Install Packages
         if: matrix.config.os != 'macos-latest'
         run: sudo apt-get install -y --no-install-recommends ${{ matrix.config.install }}
+
+      - name: Install Mold Linker
+        if: matrix.config.os != 'macos-latest'
+        run: |
+          wget https://github.com/motis-project/mold/releases/download/v1.0.0-musl-strip/mold-linux-amd64
+          sudo mv mold-linux-amd64 /opt/ld
+          chmod +x /opt/ld
 
       - name: Install musl Toolchain
         if: matrix.config.toolchain

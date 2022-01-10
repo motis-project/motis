@@ -64,6 +64,7 @@ Checks: "*,\
 -readability-qualified-auto,\
 -google-readability-avoid-underscore-in-googletest-name,\
 -readability-function-cognitive-complexity,\
+-readability-avoid-const-params-in-decls,\
 -altera-struct-pack-align"
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^${RELATIVE_SOURCE_DIR}(base|modules|test)/'

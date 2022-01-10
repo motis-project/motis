@@ -9,7 +9,7 @@ namespace motis::module {
 struct dispatcher;
 
 struct ctx_data : public ctx::access_data {
-  ctx_data(dispatcher* d) : dispatcher_{d} {}
+  explicit ctx_data(dispatcher* d) : dispatcher_{d} {}
 
   void transition(ctx::transition, ctx::op_id const&, ctx::op_id const&) {}
 

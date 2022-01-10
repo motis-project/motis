@@ -15,8 +15,7 @@ void print_trip(schedule const& sched, trip const* trp) {
       sched.stations_.at(trp->id_.secondary_.target_station_id_)
           ->eva_nr_.view(),
       format_time(trp->id_.secondary_.target_time_),
-      trp->id_.secondary_.line_id_, static_cast<void const*>(trp),
-      trp->dbg_.str());
+      trp->id_.secondary_.line_id_, static_cast<void const*>(trp), trp->dbg_);
 }
 
 void print_trip(schedule const& sched, trip_idx_t const idx) {

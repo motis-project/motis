@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cinttypes>
+#include <memory>
 #include <string>
 
 #include "conf/date_time.h"
@@ -12,7 +13,7 @@ namespace motis::ris {
 struct config {
   std::string gtfs_trip_ids_path_;
   std::string db_path_{"ris.mdb"};
-  std::string input_{"ris"};
+  std::vector<std::string> input_;
   conf::time init_time_{0};
   bool clear_db_ = false;
   size_t db_max_size_{static_cast<size_t>(1024) * 1024 * 1024 * 512};
@@ -30,6 +31,7 @@ struct ris : public motis::module::module {
   ris(ris&&) = delete;
   ris& operator=(ris&&) = delete;
 
+  void reg_subc(motis::module::subc_reg&) override;
   void init(motis::module::registry&) override;
 
 private:

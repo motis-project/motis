@@ -17,7 +17,7 @@ namespace motis::paxforecast {
 
 namespace measures {
 struct storage;
-}
+}  // namespace measures
 
 struct paxforecast : public motis::module::module {
   paxforecast();

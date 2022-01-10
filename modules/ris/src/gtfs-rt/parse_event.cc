@@ -23,34 +23,31 @@ namespace motis::ris::gtfsrt {
 Offset<IdEvent> create_id_event(message_context& ctx,
                                 mcd::string const& station_id,
                                 unixtime const start_time) {
-  return {CreateIdEvent(ctx.b_, ctx.b_.CreateString(station_id), 0, start_time,
-                        IdEventType_Additional)};
+  return CreateIdEvent(ctx.b_, ctx.b_.CreateString(station_id), 0, start_time,
+                       IdEventType_Additional);
 }
 
 Offset<IdEvent> create_id_event(message_context& ctx, schedule const& sched,
                                 trip const& trip) {
   auto const unix_time =
       motis_to_unixtime(sched.schedule_begin_, trip.id_.primary_.time_);
-  auto const stop_id = sched.stations_[trip.id_.primary_.station_id_]->eva_nr_;
+  auto const stop_id =
+      sched.stations_.at(trip.id_.primary_.station_id_)->eva_nr_;
   auto const service_id = trip.id_.primary_.train_nr_;
-
-  return {CreateIdEvent(ctx.b_, ctx.b_.CreateString(stop_id), service_id,
-                        unix_time, IdEventType_Schedule)};
+  return CreateIdEvent(ctx.b_, ctx.b_.CreateString(stop_id), service_id,
+                       unix_time, IdEventType_Schedule);
 }
 
 Offset<Event> create_event(trip const& trip, schedule& sched,
                            message_context& ctx, const int stop_idx,
                            const event_type type) {
-  access::trip_stop stop{&trip, stop_idx};
+  auto const stop = access::trip_stop{&trip, stop_idx};
   auto const stop_id = stop.get_station(sched).eva_nr_;
-  auto const to_str = [&](auto const& v) -> Offset<String> {
-    return ctx.b_.CreateString(v);
-  };
   auto const sched_time = get_schedule_time(trip, sched, stop_idx, type);
-  return {CreateEvent(
-      ctx.b_, to_str(stop_id.view()), trip.id_.primary_.train_nr_,
-      to_str(trip.id_.secondary_.line_id_.view()),
-      type == event_type::DEP ? EventType_DEP : EventType_ARR, sched_time)};
+  return CreateEvent(
+      ctx.b_, ctx.b_.CreateString(stop_id.view()), trip.id_.primary_.train_nr_,
+      ctx.b_.CreateString(trip.id_.secondary_.line_id_.view()),
+      type == event_type::DEP ? EventType_DEP : EventType_ARR, sched_time);
 }
 
 Offset<Event> create_event(trip const& trip, schedule& sched,
@@ -72,16 +69,18 @@ Offset<Message> create_delay_message(message_context& ctx,
                                      Offset<IdEvent> const& id_event,
                                      std::vector<evt> const& delay_evts,
                                      DelayType delay) {
-  std::vector<Offset<UpdatedEvent>> events;
-  std::for_each(begin(delay_evts), end(delay_evts), [&](evt const& event) {
-    ctx.adjust_times(event.new_sched_time_);
-    events.emplace_back(CreateUpdatedEvent(ctx.b_, create_event(ctx, event),
-                                           event.new_sched_time_));
-  });
   return CreateMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,
       MessageUnion_DelayMessage,
-      CreateDelayMessage(ctx.b_, id_event, delay, ctx.b_.CreateVector(events))
+      CreateDelayMessage(ctx.b_, id_event, delay,
+                         ctx.b_.CreateVector(utl::to_vec(
+                             delay_evts,
+                             [&](evt const& event) {
+                               ctx.adjust_times(event.new_sched_time_);
+                               return CreateUpdatedEvent(
+                                   ctx.b_, create_event(ctx, event),
+                                   event.new_sched_time_);
+                             })))
           .Union());
 }
 
@@ -124,7 +123,7 @@ Offset<Message> create_additional_msg(message_context& ctx,
         events.emplace_back(
             CreateAdditionalEvent(ctx.b_, create_event(ctx, event),
                                   ctx.b_.CreateString("Additional Service"),
-                                  ctx.b_.CreateString("")));
+                                  ctx.b_.CreateString(""), event.seq_no_));
       });
   return CreateMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,

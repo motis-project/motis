@@ -115,14 +115,17 @@ trip* graph_builder::register_service(Service const* s, int day_idx) {
                                                  s->debug()->file()->str()))
                                          .get();
                                    }),
-                               s->debug()->line_from(), s->debug()->line_to()}))
+                               s->debug()->line_from(), s->debug()->line_to()},
+              s->seq_numbers() == nullptr ? mcd::vector<uint32_t>{}
+                                          : mcd::to_vec(*s->seq_numbers())))
           .get();
   sched_.trips_.emplace_back(stored->id_.primary_, stored);
 
   if (s->trip_id() != nullptr) {
     auto const motis_time = to_motis_time(day_idx - first_day_ - 5, 0);
     auto const date = motis_to_unixtime(sched_, motis_time);
-    sched_.gtfs_trip_ids_[{s->trip_id()->str(), date}] = stored;
+    sched_.gtfs_trip_ids_[dataset_prefix_ + s->trip_id()->str()].emplace_back(
+        date, stored);
   }
 
   for (auto i = 1UL; i < s->sections()->size(); ++i) {
@@ -201,7 +204,7 @@ void graph_builder::add_route_services(
         });
 
     for (int day = first_day; day <= last_day_; ++day) {
-      if (!traffic_days.test(day)) {
+      if (day >= traffic_days.size() || !traffic_days.test(day)) {
         continue;
       }
 
@@ -829,8 +832,11 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
     progress_tracker->status(fmt::format("Add Services {}", dataset_prefix))
         .out_bounds(out_low, out_mid);
 
+    builder.dataset_prefix_ =
+        dataset_prefix.empty() ? dataset_prefix : dataset_prefix + "_";
+
     std::tie(builder.first_day_, builder.last_day_) =
-        first_last_days(*sched, fbs_schedule->interval());
+        first_last_days(*sched, i, fbs_schedule->interval());
     builder.add_services(fbs_schedule->services());
     if (opt.apply_rules_) {
       scoped_timer timer("rule services");

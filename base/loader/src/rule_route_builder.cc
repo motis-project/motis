@@ -193,6 +193,9 @@ void build_rule_routes(graph_builder& gb,
                        Vector<Offset<RuleService>> const* rule_services) {
   auto schedule_traffic_days_mask = create_uniform_bitfield<BIT_COUNT>('0');
   for (auto day_idx = gb.first_day_; day_idx <= gb.last_day_; ++day_idx) {
+    if (day_idx >= schedule_traffic_days_mask.size()) {
+      continue;
+    }
     schedule_traffic_days_mask.set(static_cast<std::size_t>(day_idx), true);
   }
 

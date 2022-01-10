@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "motis/loader/rule_service_graph_builder.h"
 
 #include "motis/schedule-format/Schedule_generated.h"

@@ -5,6 +5,7 @@
 namespace motis::cc {
 
 static loader::loader_options dataset_opt{
-    {"modules/cc/test_resources/schedule"}, "20151124"};
+    .dataset_ = {"modules/cc/test_resources/schedule"},
+    .schedule_begin_ = "20151124"};
 
 }  // namespace motis::cc

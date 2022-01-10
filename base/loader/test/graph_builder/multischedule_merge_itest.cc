@@ -17,8 +17,8 @@ struct multischedule_merge_test : public motis_instance_test {
             loader_options{
                 .dataset_ = {(hrd::SCHEDULES / "single-ice").generic_string(),
                              (hrd::SCHEDULES / "single-bus").generic_string()},
-                .schedule_begin_ = "20151004",
-                .dataset_prefix_ = {{"ice"}, {"bus"}}},
+                .dataset_prefix_ = {"ice", "bus"},
+                .schedule_begin_ = "20151004"},
             {"routing"}) {}
 };
 

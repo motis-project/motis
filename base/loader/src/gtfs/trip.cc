@@ -109,11 +109,17 @@ trip::trip(route const* route, bitfield const* service, block* blk,
 
 trip::stop_seq trip::stops() const {
   return utl::to_vec(
-      begin(stop_times_), end(stop_times_),
-      [](flat_map<stop_time>::entry_t const& e) -> stop_identity {
+      stop_times_, [](flat_map<stop_time>::entry_t const& e) -> stop_identity {
         return {e.second.stop_, e.second.arr_.in_out_allowed_,
                 e.second.dep_.in_out_allowed_};
       });
+}
+
+trip::stop_seq_numbers trip::seq_numbers() const {
+  return utl::to_vec(stop_times_,
+                     [](flat_map<stop_time>::entry_t const& e) -> unsigned {
+                       return e.first;
+                     });
 }
 
 int trip::avg_speed() const {
