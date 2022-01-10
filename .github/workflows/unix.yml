@@ -57,7 +57,7 @@ jobs:
       - name: Install RSL Web Interface Dependencies
         uses: pnpm/action-setup@v2.0.1
         with:
-          version: 6.20.1
+          version: 6.25.1
           run_install: |
             - cwd: ui/rsl
 
