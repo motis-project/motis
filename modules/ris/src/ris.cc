@@ -155,7 +155,7 @@ struct ris::impl {
     gtfsrt::knowledge_context gtfs_knowledge_;
   };
 
-  impl(config const& c) : config_{c} {}
+  explicit impl(config const& c) : config_{c} {}
 
   void init(schedule& sched) {
     inputs_ = utl::to_vec(config_.input_, [&](std::string const& in) {
