@@ -24,7 +24,7 @@ struct gtfsrt_test : public ::testing::Test {
 
   void SetUp() override;
 
-  std::vector<ris_message> parse_json(std::string const&);
+  std::vector<ris_message> parse_json(std::string const&) const;
 
   schedule_ptr sched_;
   std::unique_ptr<knowledge_context> knowledge_;

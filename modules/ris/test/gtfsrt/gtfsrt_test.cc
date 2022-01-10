@@ -18,7 +18,8 @@ void gtfsrt_test::SetUp() {
   knowledge_ = std::make_unique<knowledge_context>("", *sched_);
 }
 
-std::vector<ris_message> gtfsrt_test::parse_json(std::string const& json) {
+std::vector<ris_message> gtfsrt_test::parse_json(
+    std::string const& json) const {
   return parse(*knowledge_, true, std::string_view{json_to_protobuf(json)});
 }
 
