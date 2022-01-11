@@ -10,5 +10,4 @@ table RISInputMessage {
 table RISApplyRequest {
   schedule: ulong;
   input_messages: [RISInputMessage];
-  // ris_messages: [RISMessage]; // TODO
 }
