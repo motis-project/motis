@@ -33,6 +33,18 @@ interface SubView {
     TripSearchView: any
 }
 
+const displayTime = (posixTime) => {
+    let today = new Date(posixTime*1000);
+    let h = String(today.getHours());
+    let m = String(today.getMinutes()).padStart(2, '0');
+    return h + ':' + m
+}
+
+const displayDuration = (posixTime) => {
+    let dur = String(posixTime + ' min')
+    return dur
+}
+
 export const Overlay: React.FC = (props) => {
 
     // Boolean used to decide if the Overlay is being displayed
@@ -55,24 +67,24 @@ export const Overlay: React.FC = (props) => {
                                 <div className='pure-g'>
                                     <div className='pure-u-4-24 connection-times'>
                                         <div className='connection-departure'>
-                                            {connectionElem.trips[0].id.time}
+                                            {displayTime(connectionElem.trips[0].id.time)}
                                         </div>
                                         <div className='connection-arrivial'>
-                                            {connectionElem.trips[0].id.target_time}
+                                            {displayTime(connectionElem.trips[0].id.target_time)}
                                         </div>
                                     </div>
                                     <div className='pure-u-4-24 connection-duration'>
-                                        {(connectionElem.trips[0].id.target_time - connectionElem.trips[0].id.time) / 60}
+                                        {displayDuration((connectionElem.trips[0].id.target_time - connectionElem.trips[0].id.time) / 60)}
                                     </div>
                                     <div className='pure-u-16-24 connection-trains'>
                                         <div className='transport-graph'>
                                             <svg width='335' height='40' viewBox='0 0 335 40'>
                                                 <g>
-                                                    <g className='part train-className-2 acc-0'>
+                                                    <g className='part train-class-2 acc-0'>
                                                         <line x1='0' y1='12' x2='326' y2='12' className='train-line'></line>
                                                         <circle cx='12' cy='12' r='12' className='train-circle'></circle>
-                                                        <use xlinkHref='#train' className='train-icon' x='4' y='4' width='16' height='16'></use><text
-                                                            x='0' y='40' textAnchor='start' className='train-name'>IC 117</text>
+                                                        <use xlinkHref='#train' className='train-icon' x='4' y='4' width='16' height='16'></use>
+                                                        <text x='0' y='40' textAnchor='start' className='train-name'>IC 117</text>
                                                         <rect x='0' y='0' width='323' height='24' className='tooltipTrigger'></rect>
                                                     </g>
                                                 </g>
