@@ -29,4 +29,5 @@ export default defineComponent({
   @import "../style/spinner.css";
   @import "../style/app.css";
   @import "../style/transport-graph.css";
+  @import "../style/gutters.css";
 </style>

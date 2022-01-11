@@ -4,7 +4,7 @@
     iconType="schedule"
     :showLabel="true"
     :initInputText="timeToDisplay"
-    class="pure-u-1 pure-u-sm-9-24"
+    class="main-gutter time-gutter"
     :showArrows="true"
     @inputChanged="setTime"
     @decreaseClick="changeTime(-1)"
