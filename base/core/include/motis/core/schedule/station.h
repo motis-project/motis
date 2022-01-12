@@ -8,6 +8,7 @@
 
 #include "motis/array.h"
 #include "motis/hash_map.h"
+#include "motis/hash_set.h"
 #include "motis/memory.h"
 #include "motis/string.h"
 #include "motis/vector.h"
@@ -45,6 +46,14 @@ struct station {
     return from_platform.has_value() && from_platform == to_platform
                ? platform_transfer_time_
                : transfer_time_;
+  }
+
+  mcd::hash_set<uint16_t> get_platforms() const {
+    mcd::hash_set<uint16_t> platforms;
+    for (auto const& e : track_to_platform_) {
+      platforms.insert(e.second);
+    }
+    return platforms;
   }
 
   uint32_t index_{0};
