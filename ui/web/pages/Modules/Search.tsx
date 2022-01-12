@@ -39,6 +39,13 @@ const getDefaultMode = () => {
 }
 
 
+function addHours(date: Date, hours: number): Date {
+    let res = new Date(date);
+    res.setHours(res.getHours() + hours);
+    return res
+}
+
+
 export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>}> = (props) => {
 
     const [searchQuery, setSearchQuery] = useState<boolean>(true);
@@ -67,6 +74,11 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     // Destination holds the Value of 'to location' input field
     const [destination, setDestination] = useState<string>("Frankfurt (Main) Westbahnhof")//<Destination>({name: 'Frankfurt (Main) Westbahnhof', id: 'delfi_D_de:06412:1204' });
 
+    // Current Date
+    const [currentDate, setCurrentDate] = useState<Date>(new Date());
+
+    // SearchTime
+    const [searchTime, setSearchTime] = useState<Date>(new Date())
     
     useEffect(() => {
         let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest'
@@ -162,15 +174,16 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                     <div>
                         <div className='label'>Uhrzeit</div>
                         <div className='gb-input-group'>
-                            <div className='gb-input-icon'><i className='icon'>schedule</i></div><input
-                                className='gb-input' tabIndex={4} />
+                            <div className='gb-input-icon'><i className='icon'>schedule</i></div>
+                            <input
+                                className='gb-input' tabIndex={4} value={searchTime.getHours() + ':' + ('0' + searchTime.getMinutes()).slice(-2)} />
                             <div className='gb-input-widget'>
                                 <div className='hour-buttons'>
                                     <div><a
-                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'><i
+                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => setSearchTime(addHours(searchTime, -1))}><i
                                                 className='icon'>chevron_left</i></a></div>
                                     <div><a
-                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'><i
+                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => setSearchTime(addHours(searchTime, 1))}><i
                                                 className='icon'>chevron_right</i></a></div>
                                 </div>
                             </div>

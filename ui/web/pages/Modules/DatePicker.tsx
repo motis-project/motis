@@ -1,5 +1,15 @@
 import React from 'react';
 
+
+const displayToday = () => {
+    let today = new Date();
+    let dd = String(today.getDate()).padStart(2, '0');
+    let mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+    let yyyy = today.getFullYear();
+    return dd + '.' + mm + '.' + yyyy
+}
+
+
 export const DatePicker: React.FC = () => {
     
     const[datePickerSelected, setDatePickerSelected] = React.useState<Boolean>(false);
@@ -11,7 +21,7 @@ export const DatePicker: React.FC = () => {
                 <div className='gb-input-group'>
                     <div className='gb-input-icon'>
                         <i className='icon'>event</i></div>
-                    <input className='gb-input' tabIndex={3} onBlur={() => setDatePickerSelected(false)} onFocus={() => setDatePickerSelected(true)}/>
+                    <input className='gb-input' tabIndex={3} defaultValue={displayToday()} onBlur={() => setDatePickerSelected(false)} onFocus={() => setDatePickerSelected(true)}/>
                     <div className='gb-input-widget'>
                         <div className='day-buttons'>
                             <div>
