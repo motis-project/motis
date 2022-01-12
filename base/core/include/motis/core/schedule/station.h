@@ -32,10 +32,16 @@ struct station {
     }
   }
 
-  int32_t get_transfer_time(uint16_t track1, uint16_t track2) const {
-    auto const platform1 = get_platform(track1);
-    auto const platform2 = get_platform(track2);
-    return platform1.has_value() && platform1 == platform2
+  int32_t get_transfer_time_between_tracks(uint16_t from_track,
+                                           uint16_t to_track) const {
+    return get_transfer_time_between_platforms(get_platform(from_track),
+                                               get_platform(to_track));
+  }
+
+  int32_t get_transfer_time_between_platforms(
+      std::optional<uint16_t> from_platform,
+      std::optional<uint16_t> to_platform) const {
+    return from_platform.has_value() && from_platform == to_platform
                ? platform_transfer_time_
                : transfer_time_;
   }
