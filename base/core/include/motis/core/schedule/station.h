@@ -12,6 +12,7 @@
 #include "motis/string.h"
 #include "motis/vector.h"
 
+#include "motis/core/schedule/connection.h"
 #include "motis/core/schedule/footpath.h"
 #include "motis/core/schedule/timezone.h"
 
