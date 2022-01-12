@@ -1,6 +1,6 @@
 export interface Connection {
     stops: Stop[],
-    transports: TransportInfo | WalkInfo[],
+    transports: (TransportInfo | WalkInfo)[],
     trips: Trip[],
     problems: Problem[]
 }
@@ -36,7 +36,8 @@ interface EventInfo {
 }
 
 
-interface TransportInfo {
+export interface TransportInfo {
+    category_id: number,
     range: Range,
     category_name: string,
     class: number,
@@ -48,7 +49,7 @@ interface TransportInfo {
 }
 
 
-interface WalkInfo {
+export interface WalkInfo {
     range: Range,
     mumo_id: number,
     price: number,

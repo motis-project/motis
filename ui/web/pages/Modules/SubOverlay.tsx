@@ -2,7 +2,7 @@ import React from 'react';
 
 import { DatePicker } from './DatePicker';
 
-export const SubOverlay: React.FC<{'subOverlayHidden' : Boolean, setSubOverlayHidden: React.Dispatch<React.SetStateAction<Boolean>>}> = (props) => {
+export const SubOverlay: React.FC<{'subOverlayHidden' : Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>}> = (props) => {
     return (
         <div className={props.subOverlayHidden ? 'sub-overlay hidden' : 'sub-overlay'}>
             <div id='sub-overlay-content'>
