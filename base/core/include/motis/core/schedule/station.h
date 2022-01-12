@@ -34,15 +34,15 @@ struct station {
     }
   }
 
-  int32_t get_transfer_time_between_tracks(uint16_t from_track,
-                                           uint16_t to_track) const {
+  duration get_transfer_time_between_tracks(uint16_t const from_track,
+                                            uint16_t const to_track) const {
     return get_transfer_time_between_platforms(get_platform(from_track),
                                                get_platform(to_track));
   }
 
-  int32_t get_transfer_time_between_platforms(
-      std::optional<uint16_t> from_platform,
-      std::optional<uint16_t> to_platform) const {
+  duration get_transfer_time_between_platforms(
+      std::optional<uint16_t> const from_platform,
+      std::optional<uint16_t> const to_platform) const {
     return from_platform.has_value() && from_platform == to_platform
                ? platform_transfer_time_
                : transfer_time_;
@@ -58,8 +58,8 @@ struct station {
 
   uint32_t index_{0};
   double length_{0.0}, width_{0.0};
-  int32_t transfer_time_{0};
-  int32_t platform_transfer_time_{};
+  duration transfer_time_{0};
+  duration platform_transfer_time_{};
   mcd::array<uint64_t, static_cast<service_class_t>(service_class::NUM_CLASSES)>
       arr_class_events_{{0}}, dep_class_events_{{0}};
   mcd::string eva_nr_;
