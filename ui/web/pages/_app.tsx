@@ -15,6 +15,7 @@ import '../style/taglist.css';
 import '../style/time.css';
 import '../style/transport-graph.css';
 import '../style/typeahead.css';
+import "react-datepicker/dist/react-datepicker.css";
 
 function MyApp({ Component, pageProps }) {
     return <Component {...pageProps} />

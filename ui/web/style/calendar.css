@@ -106,3 +106,74 @@
 .today {
   border: 1px solid #4971E7;
 }
+
+.popper {
+  margin-top: 0px;
+}
+
+.react-datepicker-popper {
+  transform: translate(0, 0) !important;
+  inset: 47px 0px 0px 0px !important;
+}
+
+.react-datepicker__header {
+  background-color: #FFFFFF !important;
+  border-bottom: 0px !important;
+}
+
+.react-datepicker {
+  z-index: 10 !important;
+  display: table !important;
+  font-family: 'Roboto', sans-serif !important;
+  border: 1px solid #DDDDDD !important;
+  box-shadow: 0 3px 9px rgb(0 0 0 / 16%);
+}
+
+/*.react-datepicker__current-month {
+  color: #ee3897 !important;
+  font-size: .85em !important;
+  font-weight: 700 !important;
+}
+
+.react-datepicker__day-names {
+  height: 40px;
+}
+
+.react-datepicker__day-name {
+  width: 40px !important;
+  height: 40px;
+  margin: 0px !important;
+  color: #96a2ba !important;
+  font-size: .75em !important;
+  font-weight: 700 !important;
+}
+
+.react-datepicker__day-name:before {
+  content: "";
+  display: inline-block;
+  vertical-align: middle;
+  height: 100%;
+}
+
+.react-datepicker__month {
+  height: 240px;
+  margin: 0px !important;
+}
+
+.react-datepicker__week {
+  width: 280px !important;
+  height: 40px !important;
+}
+
+.react-datepicker__day {
+  width: 40px !important;
+  height: 40px !important;
+  margin: 0px !important;
+}
+
+.react-datepicker__day:before {
+  content: "";
+  display: inline-block;
+  vertical-align: middle;
+  height: 100%;
+}*/
