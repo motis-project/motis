@@ -28,11 +28,6 @@ const locale = {
 }
 
 
-const isPosition = (test : Position | Station): test is Position => {
-    return (test as Position).lat !== undefined;
-}
-
-
 function addDays(date: Date, days: number): Date {
     let res = new Date(date);
     res.setDate(res.getDate() + days);
@@ -52,9 +47,6 @@ export const SubOverlay: React.FC<{'subOverlayHidden' : Boolean, 'setSubOverlayH
                 <div className='trip-search'>
                     <div className='header'>
                         <div id='trip-search-form'>
-                            {/*props.test.map((x : Position | Station) => (
-                                isPosition(x) ? <div>{x.lat}</div> : <div>{x.name + x.id}</div>
-                            ))*/}
                             <div className='pure-g gutters'>
                                 <div className='pure-u-1 pure-u-sm-1-2 train-nr'>
                                     <div>
