@@ -16,12 +16,12 @@ specifiers:
   eslint-config-prettier: ^8.3.0
   eslint-plugin-react: ^7.28.0
   eslint-plugin-react-hooks: ^4.3.0
-  jotai: ^1.5.1
+  jotai: ^1.5.2
   postcss: ^8.4.5
   prettier: ^2.5.1
   react: ^17.0.2
   react-dom: ^17.0.2
-  react-query: ^3.34.7
+  react-query: ^3.34.8
   tailwindcss: ^3.0.13
   typescript: ^4.5.4
   vite: ^2.7.10
@@ -31,10 +31,10 @@ dependencies:
   '@radix-ui/react-tooltip': 0.1.6_react-dom@17.0.2+react@17.0.2
   date-fns: 2.28.0
   downshift: 6.1.7_react@17.0.2
-  jotai: 1.5.1_react-query@3.34.7+react@17.0.2
+  jotai: 1.5.2_react-query@3.34.8+react@17.0.2
   react: 17.0.2
   react-dom: 17.0.2_react@17.0.2
-  react-query: 3.34.7_react-dom@17.0.2+react@17.0.2
+  react-query: 3.34.8_react-dom@17.0.2+react@17.0.2
 
 devDependencies:
   '@tailwindcss/forms': 0.4.0_tailwindcss@3.0.13
@@ -908,7 +908,7 @@ packages:
       postcss: ^8.1.0
     dependencies:
       browserslist: 4.19.1
-      caniuse-lite: 1.0.30001298
+      caniuse-lite: 1.0.30001299
       fraction.js: 4.1.2
       normalize-range: 0.1.2
       picocolors: 1.0.0
@@ -960,8 +960,8 @@ packages:
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
     hasBin: true
     dependencies:
-      caniuse-lite: 1.0.30001298
-      electron-to-chromium: 1.4.40
+      caniuse-lite: 1.0.30001299
+      electron-to-chromium: 1.4.44
       escalade: 3.1.1
       node-releases: 2.0.1
       picocolors: 1.0.0
@@ -984,8 +984,8 @@ packages:
     engines: {node: '>= 6'}
     dev: true
 
-  /caniuse-lite/1.0.30001298:
-    resolution: {integrity: sha512-AcKqikjMLlvghZL/vfTHorlQsLDhGRalYf1+GmWCf5SCMziSGjRYQW/JEksj14NaYHIR6KIhrFAy0HV5C25UzQ==}
+  /caniuse-lite/1.0.30001299:
+    resolution: {integrity: sha512-iujN4+x7QzqA2NCSrS5VUy+4gLmRd4xv6vbBBsmfVqTx8bLAD8097euLqQgKxSVLvxjSDcvF1T/i9ocgnUFexw==}
     dev: true
 
   /chalk/2.4.2:
@@ -1171,8 +1171,8 @@ packages:
       tslib: 2.3.1
     dev: false
 
-  /electron-to-chromium/1.4.40:
-    resolution: {integrity: sha512-j+eVIyQGt2EU5xPWUblhpp5P5z5xyAdRgzogBgfe2F5JGV17gr9pfzWBua6DlPL00LavbOjxubWkWkbVQe9Wlw==}
+  /electron-to-chromium/1.4.44:
+    resolution: {integrity: sha512-tHGWiUUmY7GABK8+DNcr474cnZDTzD8x1736SlDosVH8+/vRJeqfaIBAEHFtMjddz/0T4rKKYsxEc8BwQRdBpw==}
     dev: true
 
   /enquirer/2.3.6:
@@ -1893,8 +1893,8 @@ packages:
     resolution: {integrity: sha1-6PvzdNxVb/iUehDcsFctYz8s+hA=}
     dev: true
 
-  /jotai/1.5.1_react-query@3.34.7+react@17.0.2:
-    resolution: {integrity: sha512-6WMj3nZyxt8D3yZfgPOWmu+r/ec0vSinHfvq3UIGLrz0+KzWFaeTyODscmZEK7zISMFPiR2rPwBsKpSUirD7+A==}
+  /jotai/1.5.2_react-query@3.34.8+react@17.0.2:
+    resolution: {integrity: sha512-h9rlP7Mxov8BglO6Xh9jttZlxEuPt3r8wJNU3zSNKvVFXmb1fw4808JkyUodVvZTBDZHrukz9Z6aigOh+nxK/A==}
     engines: {node: '>=12.7.0'}
     peerDependencies:
       '@babel/core': '*'
@@ -1928,7 +1928,7 @@ packages:
         optional: true
     dependencies:
       react: 17.0.2
-      react-query: 3.34.7_react-dom@17.0.2+react@17.0.2
+      react-query: 3.34.8_react-dom@17.0.2+react@17.0.2
     dev: false
 
   /js-sha3/0.8.0:
@@ -2061,8 +2061,8 @@ packages:
       big-integer: 1.6.51
     dev: false
 
-  /nanoid/3.1.30:
-    resolution: {integrity: sha512-zJpuPDwOv8D2zq2WRoMe1HsfZthVewpel9CAvTfc/2mBD1uUT/agc5f7GHGWXlYkFvi1mVxe4IjvP2HNrop7nQ==}
+  /nanoid/3.1.32:
+    resolution: {integrity: sha512-F8mf7R3iT9bvThBoW4tGXhXFHCctyCiUUPrWF8WaTqa3h96d9QybkSeba43XVOOE3oiLfkVDe4bT8MeGmkrTxw==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
     dev: true
@@ -2261,7 +2261,7 @@ packages:
     resolution: {integrity: sha512-jBDboWM8qpaqwkMwItqTQTiFikhs/67OYVvblFFTM7MrZjt6yMKd6r2kgXizEbTTljacm4NldIlZnhbjr84QYg==}
     engines: {node: ^10 || ^12 || >=14}
     dependencies:
-      nanoid: 3.1.30
+      nanoid: 3.1.32
       picocolors: 1.0.0
       source-map-js: 1.0.1
     dev: true
@@ -2321,8 +2321,8 @@ packages:
     resolution: {integrity: sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==}
     dev: false
 
-  /react-query/3.34.7_react-dom@17.0.2+react@17.0.2:
-    resolution: {integrity: sha512-Q8+H2DgpoZdGUpwW2Z9WAbSrIE+yOdZiCUokHjlniOOmlcsfqNLgvHF5i7rtuCmlw3hv5OAhtpS7e97/DvgpWw==}
+  /react-query/3.34.8_react-dom@17.0.2+react@17.0.2:
+    resolution: {integrity: sha512-pl9e2VmVbgKf29Qn/WpmFVtB2g17JPqLLyOQg3GfSs/S2WABvip5xlT464vfXtilLPcJVg9bEHHlqmC38/nvDw==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0
       react-dom: '*'

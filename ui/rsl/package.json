@@ -21,10 +21,10 @@
     "@radix-ui/react-tooltip": "^0.1.6",
     "date-fns": "^2.28.0",
     "downshift": "^6.1.7",
-    "jotai": "^1.5.1",
+    "jotai": "^1.5.2",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-query": "^3.34.7"
+    "react-query": "^3.34.8"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.4.0",
