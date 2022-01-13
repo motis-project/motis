@@ -16,8 +16,6 @@ trip const* get_trip(schedule const&, std::string_view eva_nr,
 
 trip const* get_trip(schedule const&, extern_trip const&);
 
-trip const* get_trip(schedule const&, std::string const& trip_id, std::time_t);
-
 trip const* get_trip(schedule const&, trip_idx_t);
 
 trip const* find_trip(schedule const&, primary_trip_id);
