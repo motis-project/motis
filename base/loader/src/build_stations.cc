@@ -67,8 +67,10 @@ struct stations_builder {
     s->length_ = fbs_station->lng();
     s->eva_nr_ = std::string{sched_.prefixes_[source_schedule]} +
                  fbs_station->id()->str();
-    s->transfer_time_ = std::max(1, fbs_station->interchange_time());
-    s->platform_transfer_time_ = fbs_station->platform_interchange_time();
+    s->transfer_time_ =
+        static_cast<duration>(std::max(1, fbs_station->interchange_time()));
+    s->platform_transfer_time_ =
+        static_cast<duration>(fbs_station->platform_interchange_time());
     if (s->platform_transfer_time_ == 0 ||
         s->platform_transfer_time_ > s->transfer_time_) {
       s->platform_transfer_time_ = s->transfer_time_;

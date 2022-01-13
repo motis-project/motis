@@ -388,13 +388,14 @@ int graph_builder::get_index(
 
       // Check if both tracks have the same platform or both tracks have no
       // platform information.
-      auto const& station = stations[section_idx + 1];
+      auto const& dep_station = stations[section_idx];
+      auto const& arr_station = stations[section_idx + 1];
       auto const different_dep_platform =
-          station->get_platform(lc.full_con_->d_track_) !=
-          station->get_platform(route_section[0].full_con_->d_track_);
+          dep_station->get_platform(lc.full_con_->d_track_) !=
+          dep_station->get_platform(route_section[0].full_con_->d_track_);
       auto const different_arr_platform =
-          station->get_platform(lc.full_con_->a_track_) !=
-          station->get_platform(route_section[0].full_con_->a_track_);
+          arr_station->get_platform(lc.full_con_->a_track_) !=
+          arr_station->get_platform(route_section[0].full_con_->a_track_);
 
       if (earlier_eq_dep || later_eq_dep || earlier_eq_arr || later_eq_arr ||
           different_dep_platform || different_arr_platform) {
