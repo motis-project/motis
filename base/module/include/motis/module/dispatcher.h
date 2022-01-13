@@ -4,7 +4,7 @@
 #include <queue>
 #include <string_view>
 
-#include "ctx/access_scheduler.h"
+#include "ctx/ctx.h"
 
 #include "motis/module/ctx_data.h"
 #include "motis/module/future.h"
