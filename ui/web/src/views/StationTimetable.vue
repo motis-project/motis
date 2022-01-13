@@ -110,10 +110,8 @@ export default defineComponent({
   },
   data() {
     return {
-      // departures: [] as (Event | Divider)[],
       departures: [] as Event [],
       station: {} as StationGuess,
-      // filteredEvents: [] as (Event | Divider)[],
       filteredEvents: [] as Event[],
       date: 0 as number,
       direction: "BOTH",
@@ -121,7 +119,6 @@ export default defineComponent({
       isUpperEnd: false,
       isBottomEnd: false,
       isContentLoaded: false,
-      placeOfSeparator: 0 as number,
       separators: [] as number []
     };
   },
@@ -176,9 +173,9 @@ export default defineComponent({
     getSeparator(events : Event []) {
       this.separators = [];
       for (let i = 1; i < events.length; i++) {
-        if (parseInt(this.getDateString(events[i - 1].event.time).split('.')[0]) < parseInt(this.getDateString(events[i].event.time).split('.')[0]) ||
-          parseInt(this.getDateString(events[i - 1].event.time).split('.')[1]) < parseInt(this.getDateString(events[i].event.time).split('.')[1]) ||
-          parseInt(this.getDateString(events[i - 1].event.time).split('.')[2]) < parseInt(this.getDateString(events[i].event.time).split('.')[2])) {
+        if ((new Date(events[i - 1].event.time * 1000).getDate() < new Date(events[i].event.time * 1000).getDate()) ||
+          (new Date(events[i - 1].event.time * 1000).getMonth() < new Date(events[i].event.time * 1000).getMonth()) ||
+          (new Date(events[i - 1].event.time * 1000).getFullYear() < new Date(events[i].event.time * 1000).getFullYear())) {
           this.separators.push(i);
         }
       }
@@ -215,6 +212,4 @@ export default defineComponent({
     },
   },
 });
-
-// interface Divider {}
 </script>
