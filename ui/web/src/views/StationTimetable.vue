@@ -45,7 +45,7 @@
               getDateString(filteredEvents[0].event.time)
             }}</span>
           </div>
-          <div v-for="timetable in filteredEvents" :key="timetable.trips[0].id">
+          <div v-for="(timetable, index) in filteredEvents" :key="timetable.trips[0].id">
             <div class="station-event" v-if="timetable">
               <div class="event-time">
                 {{ getTimeString(timetable.event.time) }}
@@ -64,6 +64,9 @@
                 <i class="icon">arrow_forward</i>{{ timetable.trips[0].transport.direction }}
               </div>
               <div class="event-track"></div>
+            </div>
+            <div class="date-header divider" v-if="separators.includes(index + 1)">
+              <span>{{ getDateString(filteredEvents[index + 1].event.time) }}</span>
             </div>
             <div class="" v-else></div>
           </div>
@@ -117,7 +120,9 @@ export default defineComponent({
       isDeparture: true,
       isUpperEnd: false,
       isBottomEnd: false,
-      isContentLoaded: false
+      isContentLoaded: false,
+      placeOfSeparator: 0 as number,
+      separators: [] as number []
     };
   },
   watch: {
@@ -155,6 +160,7 @@ export default defineComponent({
           (event) => event.type === "ARR"
         );
       }
+      this.getSeparator(this.filteredEvents);
       this.isDeparture = isDeparture;
     },
     changeTimeGap(change: string) {
@@ -167,7 +173,16 @@ export default defineComponent({
       }
       this.getInfo(this.stationGuess, this.isDeparture, change === "EARLIER");
     },
-
+    getSeparator(events : Event []) {
+      this.separators = [];
+      for (let i = 1; i < events.length; i++) {
+        if (parseInt(this.getDateString(events[i - 1].event.time).split('.')[0]) < parseInt(this.getDateString(events[i].event.time).split('.')[0]) ||
+          parseInt(this.getDateString(events[i - 1].event.time).split('.')[1]) < parseInt(this.getDateString(events[i].event.time).split('.')[1]) ||
+          parseInt(this.getDateString(events[i - 1].event.time).split('.')[2]) < parseInt(this.getDateString(events[i].event.time).split('.')[2])) {
+          this.separators.push(i);
+        }
+      }
+    },
     getInfo(
       newValue: StationGuess,
       isDeparture: boolean,
