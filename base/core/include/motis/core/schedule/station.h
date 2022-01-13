@@ -8,10 +8,12 @@
 
 #include "motis/array.h"
 #include "motis/hash_map.h"
+#include "motis/hash_set.h"
 #include "motis/memory.h"
 #include "motis/string.h"
 #include "motis/vector.h"
 
+#include "motis/core/schedule/connection.h"
 #include "motis/core/schedule/footpath.h"
 #include "motis/core/schedule/timezone.h"
 
@@ -32,18 +34,32 @@ struct station {
     }
   }
 
-  int32_t get_transfer_time(uint16_t track1, uint16_t track2) const {
-    auto const platform1 = get_platform(track1);
-    auto const platform2 = get_platform(track2);
-    return platform1.has_value() && platform1 == platform2
+  duration get_transfer_time_between_tracks(uint16_t const from_track,
+                                            uint16_t const to_track) const {
+    return get_transfer_time_between_platforms(get_platform(from_track),
+                                               get_platform(to_track));
+  }
+
+  duration get_transfer_time_between_platforms(
+      std::optional<uint16_t> const from_platform,
+      std::optional<uint16_t> const to_platform) const {
+    return from_platform.has_value() && from_platform == to_platform
                ? platform_transfer_time_
                : transfer_time_;
   }
 
+  mcd::hash_set<uint16_t> get_platforms() const {
+    mcd::hash_set<uint16_t> platforms;
+    for (auto const& e : track_to_platform_) {
+      platforms.insert(e.second);
+    }
+    return platforms;
+  }
+
   uint32_t index_{0};
   double length_{0.0}, width_{0.0};
-  int32_t transfer_time_{0};
-  int32_t platform_transfer_time_{};
+  duration transfer_time_{0};
+  duration platform_transfer_time_{};
   mcd::array<uint64_t, static_cast<service_class_t>(service_class::NUM_CLASSES)>
       arr_class_events_{{0}}, dep_class_events_{{0}};
   mcd::string eva_nr_;

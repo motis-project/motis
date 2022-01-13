@@ -16,8 +16,8 @@ inline duration get_interchange_time(
     std::optional<std::uint16_t> departure_track) {
   auto const& st = sched.stations_.at(station_idx);
   if (arrival_track.has_value() && departure_track.has_value()) {
-    return static_cast<duration>(
-        st->get_transfer_time(arrival_track.value(), departure_track.value()));
+    return static_cast<duration>(st->get_transfer_time_between_tracks(
+        arrival_track.value(), departure_track.value()));
   } else {
     return static_cast<duration>(st->transfer_time_);
   }
