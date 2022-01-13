@@ -37,7 +37,7 @@
             'extend-search-interval search-before',
             isUpperEnd ? 'disabled' : '',
           ]">
-          <a @click="changeTimeGap('EARLIER')" v-show="!isUpperEnd">Früher</a>
+          <a @click="changeTimeGap('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }} </a>
         </div>
         <div class="event-list">
           <div class="date-header divider">
@@ -76,7 +76,7 @@
               'extend-search-interval search-after',
               isBottomEnd ? 'disabled' : '',
             ]">
-            <a @click="changeTimeGap('LATER')" v-show="!isBottomEnd">Später</a>
+            <a @click="changeTimeGap('LATER')" v-show="!isBottomEnd"> {{ $t.later }} </a>
           </div>
         </div>
       </div>
@@ -173,9 +173,9 @@ export default defineComponent({
     getSeparator(events : Event []) {
       this.separators = [];
       for (let i = 1; i < events.length; i++) {
-        if ((new Date(events[i - 1].event.time * 1000).getDate() < new Date(events[i].event.time * 1000).getDate()) ||
-          (new Date(events[i - 1].event.time * 1000).getMonth() < new Date(events[i].event.time * 1000).getMonth()) ||
-          (new Date(events[i - 1].event.time * 1000).getFullYear() < new Date(events[i].event.time * 1000).getFullYear())) {
+        let earlier = new Date(events[i - 1].event.time * 1000);
+        let later = new Date(events[i].event.time * 1000);
+        if (earlier.getDate() < later.getDate() || earlier.getMonth() < later.getMonth() || earlier.getFullYear() < later.getFullYear()) {
           this.separators.push(i);
         }
       }
