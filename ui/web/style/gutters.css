@@ -70,7 +70,7 @@
   .main-gutter{
     box-sizing: border-box;
     padding: 0em, 0.5em;
-    position: fixed;
+    position: absolute;
     display: inline-block;
     *display: inline;
     zoom: 1;
