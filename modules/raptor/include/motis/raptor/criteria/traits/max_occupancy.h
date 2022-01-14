@@ -16,19 +16,21 @@
 
 namespace motis::raptor {
 
-constexpr uint8_t max_occupancy = 2;
-
-// linearly scale max_occupancy values to indices
-constexpr uint32_t moc_value_range_size = max_occupancy + 1;
+struct data_max_occupancy {
+  dimension_id initial_moc_idx_{0};
+  occ_t max_occupancy_{0};
+};
 
 struct trait_max_occupancy {
+  constexpr static occ_t max_occupancy = 2;
+
+  constexpr static dimension_id DIMENSION_SIZE = max_occupancy + 1;
+  constexpr static bool REQ_DIMENSION_PROPAGATION = false;
+  constexpr static bool CHECKS_TRANSFER_TIME = false;
+
   // Trait Data
   dimension_id initial_moc_idx_{};
   occ_t max_occupancy_{};
-
-  _mark_cuda_rel_ inline static dimension_id index_range_size() {
-    return moc_value_range_size;
-  }
 
   template <typename TraitsData>
   _mark_cuda_rel_ inline static uint32_t get_write_to_dimension_id(
@@ -45,6 +47,19 @@ struct trait_max_occupancy {
     return dimension_idx == get_write_to_dimension_id(data);
   }
 
+  template <typename Timetable, typename TraitsData>
+  _mark_cuda_rel_ inline static bool check_departure_stop(
+      Timetable const&, TraitsData&, stop_offset const, stop_id const,
+      time const, time const) {
+    return true;
+  }
+
+  template <typename TraitsData>
+  _mark_cuda_rel_ inline static void set_departure_stop(TraitsData& aggregate,
+                                                        stop_offset const) {
+    aggregate.max_occupancy_ = 0;
+  }
+
   //****************************************************************************
   // Used only in CPU based
   template <typename TraitsData>
@@ -52,19 +67,7 @@ struct trait_max_occupancy {
       TraitsData const& data, dimension_id const dimension_idx) {
     return dimension_idx < data.max_occupancy_;
   }
-
-  inline static bool is_forward_propagation_required() {
-    // we can find all valid solutions by individually checking each offset
-    return false;
-  }
   //****************************************************************************
-
-  template <typename TraitsData, typename Timetable>
-  _mark_cuda_rel_ inline static std::tuple<bool, bool> set_and_check_departure(
-      TraitsData& aggregate, Timetable const& tt, stop_offset const dep_stop,
-      time const prev_arrival, time const stop_departure) {
-    return std::make_tuple(false, true);
-  }
 
   template <typename TraitsData, typename Timetable>
   _mark_cuda_rel_ inline static void update_aggregate(
@@ -98,6 +101,7 @@ struct trait_max_occupancy {
   template <typename TraitsData>
   __device__ inline static void calculate_aggregate(
       TraitsData& aggregate, device_gpu_timetable const& tt,
+      time const,
       stop_times_index const dep_sti, stop_times_index const arr_sti) {
 
     for (stop_times_index current = dep_sti + 1; current <= arr_sti;
@@ -137,6 +141,12 @@ struct trait_max_occupancy {
 
   inline static void fill_journey(journey& j, dimension_id const dim) {
     j.max_occupancy_ = dim;
+  }
+
+  template <typename TraitsData>
+  _mark_cuda_rel_ inline static void fill_aggregate(TraitsData& d,
+                                                    dimension_id const dim) {
+    d.max_occupancy_ = dim;
   }
 
 private:

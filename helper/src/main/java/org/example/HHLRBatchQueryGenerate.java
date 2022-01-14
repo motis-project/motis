@@ -56,60 +56,64 @@ public class HHLRBatchQueryGenerate {
 
   static QueryFile[] config = new QueryFile[]{
     new QueryFile(Dataset.swiss, QueryType.OntripStationStart, false, new Config[]{
-      new Config(Targets.raptor_cpu, SearchType.Default),
-      new Config(Targets.raptor_gpu, SearchType.Default),
-      new Config(Targets.raptor_cpu, SearchType.Tso96),
-      new Config(Targets.raptor_gpu, SearchType.Tso96),
+//      new Config(Targets.raptor_cpu, SearchType.Default),
+//      new Config(Targets.raptor_gpu, SearchType.Default),
+//      new Config(Targets.raptor_cpu, SearchType.Tso96),
+//      new Config(Targets.raptor_gpu, SearchType.Tso96),
+//
+//      new Config(Targets.raptor_cpu, SearchType.MaxOccupancy),
+//      new Config(Targets.raptor_gpu, SearchType.MaxOccupancy),
+//      new Config(Targets.raptor_cpu, SearchType.Tso90),
+//      new Config(Targets.raptor_gpu, SearchType.Tso90),
+//
+//      new Config(Targets.raptor_cpu, SearchType.Tso80),
+//      new Config(Targets.raptor_gpu, SearchType.Tso80),
+//      new Config(Targets.raptor_cpu, SearchType.Tso06),
+//      new Config(Targets.raptor_gpu, SearchType.Tso06),
+//
+//      new Config(Targets.raptor_cpu, SearchType.Tso72),
+//      new Config(Targets.raptor_gpu, SearchType.Tso72),
+//      new Config(Targets.raptor_cpu, SearchType.Tso08),
+//      new Config(Targets.raptor_gpu, SearchType.Tso08),
+//
+//      new Config(Targets.raptor_cpu, SearchType.Tso64),
+//      new Config(Targets.raptor_gpu, SearchType.Tso64),
+//      new Config(Targets.raptor_cpu, SearchType.Tso10),
+//      new Config(Targets.raptor_gpu, SearchType.Tso10),
+//
+//      new Config(Targets.raptor_cpu, SearchType.Tso60),
+//      new Config(Targets.raptor_gpu, SearchType.Tso60),
+//      new Config(Targets.raptor_cpu, SearchType.Tso12),
+//      new Config(Targets.raptor_gpu, SearchType.Tso12),
+//
+//      new Config(Targets.raptor_cpu, SearchType.Tso48),
+//      new Config(Targets.raptor_gpu, SearchType.Tso48),
+//      new Config(Targets.raptor_cpu, SearchType.Tso16),
+//      new Config(Targets.raptor_gpu, SearchType.Tso16),
+//
+//      new Config(Targets.raptor_cpu, SearchType.Tso45),
+//      new Config(Targets.raptor_gpu, SearchType.Tso45),
+//      new Config(Targets.raptor_cpu, SearchType.Tso18),
+//      new Config(Targets.raptor_gpu, SearchType.Tso18),
+//
+//      new Config(Targets.raptor_cpu, SearchType.Tso40),
+//      new Config(Targets.raptor_gpu, SearchType.Tso40),
+//      new Config(Targets.raptor_cpu, SearchType.Tso36),
+//      new Config(Targets.raptor_gpu, SearchType.Tso36),
+//
+//      new Config(Targets.raptor_cpu, SearchType.Tso32),
+//      new Config(Targets.raptor_gpu, SearchType.Tso32),
+//      new Config(Targets.raptor_cpu, SearchType.Tso20),
+//      new Config(Targets.raptor_gpu, SearchType.Tso20),
+//
+//      new Config(Targets.raptor_cpu, SearchType.Tso30),
+//      new Config(Targets.raptor_gpu, SearchType.Tso30),
+//      new Config(Targets.raptor_cpu, SearchType.Tso24),
+//      new Config(Targets.raptor_gpu, SearchType.Tso24),
 
-      new Config(Targets.raptor_cpu, SearchType.MaxOccupancy),
-      new Config(Targets.raptor_gpu, SearchType.MaxOccupancy),
-      new Config(Targets.raptor_cpu, SearchType.Tso90),
-      new Config(Targets.raptor_gpu, SearchType.Tso90),
-
-      new Config(Targets.raptor_cpu, SearchType.Tso80),
-      new Config(Targets.raptor_gpu, SearchType.Tso80),
-      new Config(Targets.raptor_cpu, SearchType.Tso06),
-      new Config(Targets.raptor_gpu, SearchType.Tso06),
-
-      new Config(Targets.raptor_cpu, SearchType.Tso72),
-      new Config(Targets.raptor_gpu, SearchType.Tso72),
-      new Config(Targets.raptor_cpu, SearchType.Tso08),
-      new Config(Targets.raptor_gpu, SearchType.Tso08),
-
-      new Config(Targets.raptor_cpu, SearchType.Tso64),
-      new Config(Targets.raptor_gpu, SearchType.Tso64),
-      new Config(Targets.raptor_cpu, SearchType.Tso10),
-      new Config(Targets.raptor_gpu, SearchType.Tso10),
-
-      new Config(Targets.raptor_cpu, SearchType.Tso60),
-      new Config(Targets.raptor_gpu, SearchType.Tso60),
-      new Config(Targets.raptor_cpu, SearchType.Tso12),
-      new Config(Targets.raptor_gpu, SearchType.Tso12),
-
-      new Config(Targets.raptor_cpu, SearchType.Tso48),
-      new Config(Targets.raptor_gpu, SearchType.Tso48),
-      new Config(Targets.raptor_cpu, SearchType.Tso16),
-      new Config(Targets.raptor_gpu, SearchType.Tso16),
-
-      new Config(Targets.raptor_cpu, SearchType.Tso45),
-      new Config(Targets.raptor_gpu, SearchType.Tso45),
-      new Config(Targets.raptor_cpu, SearchType.Tso18),
-      new Config(Targets.raptor_gpu, SearchType.Tso18),
-
-      new Config(Targets.raptor_cpu, SearchType.Tso40),
-      new Config(Targets.raptor_gpu, SearchType.Tso40),
-      new Config(Targets.raptor_cpu, SearchType.Tso36),
-      new Config(Targets.raptor_gpu, SearchType.Tso36),
-
-      new Config(Targets.raptor_cpu, SearchType.Tso32),
-      new Config(Targets.raptor_gpu, SearchType.Tso32),
-      new Config(Targets.raptor_cpu, SearchType.Tso20),
-      new Config(Targets.raptor_gpu, SearchType.Tso20),
-
-      new Config(Targets.raptor_cpu, SearchType.Tso30),
-      new Config(Targets.raptor_gpu, SearchType.Tso30),
-      new Config(Targets.raptor_cpu, SearchType.Tso24),
-      new Config(Targets.raptor_gpu, SearchType.Tso24),
+      new Config(Targets.routing, SearchType.Default),
+      new Config(Targets.routing, SearchType.MaxOccupancy),
+      new Config(Targets.routing, SearchType.TimeSlottedOccupancy)
 
     })
 
@@ -172,6 +176,8 @@ enum SearchType {
   Default,
   MaxOccupancy,
   MaxOccupancyShfl,
+
+  TimeSlottedOccupancy,
 
   Tso96,
   Tso90,

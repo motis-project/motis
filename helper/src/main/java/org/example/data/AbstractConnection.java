@@ -27,6 +27,15 @@ public abstract class AbstractConnection<ST extends Stop> {
     else
       this.tso = 0;
 
+    if(conn.containsKey("max_transfer_class"))
+      this.mtc = (Long)conn.get("max_transfer_class");
+    else {
+      if(conn.containsKey("Min_transfer_time"))
+        this.mtc = (Long)conn.get("Min_transfer_time");
+      else
+        this.mtc = 0;
+    }
+
     this.stops = new ArrayList<>();
     for (int i = 0, stopsSize = stops.size(); i < stopsSize; i++) {
       var st = (JSONObject) stops.get(i);
@@ -61,5 +70,6 @@ public abstract class AbstractConnection<ST extends Stop> {
   public final long tripCount;
   public final long moc;
   public final long tso;
+  public final long mtc;
   public final List<ST> stops;
 }

@@ -111,7 +111,7 @@ template <typename CriteriaConfig>
 inline void mc_print_station_arrivals(stop_id const s_id,
                                       raptor_round const round,
                                       raptor_result_base const& raptor_result) {
-  auto const trait_size = CriteriaConfig::trait_size();
+  auto const trait_size = CriteriaConfig::TRAITS_SIZE;
   std::cout << +round << "(round) " << s_id << "(station) Arrivals: [ ";
   for(auto t_off = 0; t_off < trait_size; ++t_off) {
     auto const arr_idx = CriteriaConfig::get_arrival_idx(s_id, t_off);

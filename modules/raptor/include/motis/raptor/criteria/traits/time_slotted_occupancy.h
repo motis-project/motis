@@ -47,6 +47,15 @@ _mark_cuda_rel_ inline static time _read_segment_duration(
   return arr_time - dep_time;
 }
 
+struct data_time_slotted_occupancy {
+  dimension_id initial_soc_idx_{};
+  uint32_t summed_occ_time_{};
+  uint32_t occ_time_slot_{};
+#if defined(MOTIS_CUDA)
+  uint32_t _segment_prop_occ_time_ = invalid<uint32_t>;
+#endif
+};
+
 template <dimension_id SlotCount>
 struct trait_time_slotted_occupancy {
 
@@ -89,18 +98,14 @@ struct trait_time_slotted_occupancy {
 
   static constexpr uint32_t slot_divisor = max_time_occ_value / SlotCount;
 
-  // static constexpr uint32_t slot_count =
-  //      max_time_occ_value / slot_divisor;  // 64
+  constexpr static dimension_id DIMENSION_SIZE = SlotCount;
+  constexpr static bool REQ_DIMENSION_PROPAGATION = false;
+  constexpr static bool CHECKS_TRANSFER_TIME = false;
 
   // Trait Data
   dimension_id initial_soc_idx_{};
   uint32_t summed_occ_time_{};
   uint32_t occ_time_slot_{};
-
-  _mark_cuda_rel_ inline static dimension_id index_range_size() {
-    // slots match linearly to indices
-    return SlotCount;
-  }
 
   template <typename TraitsData>
   _mark_cuda_rel_ inline static dimension_id get_write_to_dimension_id(
@@ -116,6 +121,20 @@ struct trait_time_slotted_occupancy {
     return dimension_idx == get_write_to_dimension_id(data);
   }
 
+  template <typename Timetable, typename TraitsData>
+  _mark_cuda_rel_ inline static bool check_departure_stop(
+      Timetable const&, TraitsData&, stop_offset const, stop_id const,
+      time const, time const) {
+    return true;
+  }
+
+  template <typename TraitsData>
+  _mark_cuda_rel_ inline static void set_departure_stop(TraitsData& aggregate,
+                                                        stop_offset const) {
+    aggregate.summed_occ_time_ = 0;
+    aggregate.occ_time_slot_ = 0;
+  }
+
   //****************************************************************************
   // Used only in CPU based
   template <typename TraitsData>
@@ -123,20 +142,7 @@ struct trait_time_slotted_occupancy {
       TraitsData const& data, dimension_id const dimension_idx) {
     return dimension_idx < data.occ_time_slot_;
   }
-
-  inline static bool is_forward_propagation_required() {
-    // we also need to write arrival times to other trait offsets
-    //   otherwise we will fail to find all valid solutions
-    return true;
-  }
   //****************************************************************************
-
-  template <typename TraitsData, typename Timetable>
-  _mark_cuda_rel_ inline static std::tuple<bool, bool> set_and_check_departure(
-      TraitsData& aggregate, Timetable const& tt, stop_offset const dep_stop,
-      time const prev_arrival, time const stop_departure) {
-    return std::make_tuple(false, true);
-  }
 
   template <typename TraitsData, typename Timetable>
   _mark_cuda_rel_ inline static void update_aggregate(
@@ -158,8 +164,6 @@ struct trait_time_slotted_occupancy {
   }
 
 #if defined(MOTIS_CUDA)
-  uint32_t _segment_prop_occ_time_ = invalid<uint32_t>;
-
   template <typename TraitsData>
   __device__ inline static void propagate_and_merge_if_needed(
       TraitsData& aggregate, unsigned const mask, bool const is_departure_stop,
@@ -180,6 +184,7 @@ struct trait_time_slotted_occupancy {
   template <typename TraitsData>
   __device__ inline static void calculate_aggregate(
       TraitsData& aggregate, device_gpu_timetable const& tt,
+      time const,
       stop_times_index const dep_sti, stop_times_index const arr_sti) {
 
     for (stop_times_index current = dep_sti + 1; current <= arr_sti;
@@ -210,14 +215,6 @@ struct trait_time_slotted_occupancy {
     aggregate_dt.occ_time_slot_ = 0;
     aggregate_dt.initial_soc_idx_ = initial_dim_id;
 
-    //    if (aggregate_dt.route_id_ == 18031 && initial_dim_id == 29 &&
-    //        aggregate_dt.trip_id_ == 14)
-    //      printf(
-    //          "Resetting aggregate for r_id: %i;\ttrip_offset: %i;\tdim_id: "
-    //          "%i;\tsummed: %i;\tslot: %i;\n",
-    //          aggregate_dt.route_id_, aggregate_dt.trip_id_, initial_dim_id,
-    //          aggregate_dt.summed_occ_time_, aggregate_dt.occ_time_slot_);
-
 #if defined(MOTIS_CUDA)
     aggregate_dt._segment_prop_occ_time_ = invalid<uint32_t>;
 #endif
@@ -247,6 +244,12 @@ struct trait_time_slotted_occupancy {
 
   inline static void fill_journey(journey& j, dimension_id const dim) {
     j.time_slotted_occupancy_ = dim;
+  }
+
+  template <typename TraitsData>
+  _mark_cuda_rel_ inline static void fill_aggregate(TraitsData& d,
+                                                    dimension_id const dim) {
+    d.occ_time_slot_ = dim;
   }
 };
 

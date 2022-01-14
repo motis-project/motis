@@ -9,66 +9,124 @@
 
 namespace motis::raptor {
 
-using Default = criteria_config<traits<>, CalcMethod::Flat>;
+using Default =
+    criteria_config<criteria_data<>, traits<>, default_transfer_time_calculator,
+                    CalcMethod::Flat>;
 
 using MaxOccupancy =
-    criteria_config<traits<trait_max_occupancy>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_max_occupancy>,
+                    traits<trait_max_occupancy>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 
 using MaxOccupancyShfl =
-    criteria_config<traits<trait_max_occupancy>, CalcMethod::Shfl>;
+    criteria_config<criteria_data<data_max_occupancy>,
+                    traits<trait_max_occupancy>,
+                    default_transfer_time_calculator, CalcMethod::Shfl>;
 
 // using TimeSlottedOccupancy =
-//     criteria_config<traits<trait_time_slotted_occupancy<64>>,
-//     CalcMethod::Flat>;
+//     criteria_config<traits<trait_time_slotted_occupancy<60>>,
+//                     default_transfer_time_calculator, CalcMethod::Flat>;
+
+// using TimeSlottedOccupancyShfl =
+//     criteria_config<traits<trait_time_slotted_occupancy<60>>,
+//                     default_transfer_time_calculator, CalcMethod::Shfl>;
+
+using MaxTransferClass =
+    criteria_config<criteria_data<data_max_transfer_class>,
+                    traits<trait_max_transfer_class<false>>,
+                    transfer_class_transfer_time_calculator, CalcMethod::Flat>;
+
+using TcMaxOccupancy =
+    criteria_config<criteria_data<data_max_occupancy, data_max_transfer_class>,
+                    traits<trait_max_transfer_class<true>, trait_max_occupancy>,
+                    transfer_class_transfer_time_calculator, CalcMethod::Flat>;
 
 using Tso96 =
-    criteria_config<traits<trait_time_slotted_occupancy<96>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<96>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso90 =
-    criteria_config<traits<trait_time_slotted_occupancy<90>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<90>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso80 =
-    criteria_config<traits<trait_time_slotted_occupancy<80>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<80>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso72 =
-    criteria_config<traits<trait_time_slotted_occupancy<72>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<72>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso64 =
-    criteria_config<traits<trait_time_slotted_occupancy<64>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<64>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso60 =
-    criteria_config<traits<trait_time_slotted_occupancy<60>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<60>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso48 =
-    criteria_config<traits<trait_time_slotted_occupancy<48>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<48>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso45 =
-    criteria_config<traits<trait_time_slotted_occupancy<45>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<45>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso40 =
-    criteria_config<traits<trait_time_slotted_occupancy<40>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<40>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso36 =
-    criteria_config<traits<trait_time_slotted_occupancy<36>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<36>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso32 =
-    criteria_config<traits<trait_time_slotted_occupancy<32>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<32>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso30 =
-    criteria_config<traits<trait_time_slotted_occupancy<30>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<30>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso24 =
-    criteria_config<traits<trait_time_slotted_occupancy<24>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<24>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso20 =
-    criteria_config<traits<trait_time_slotted_occupancy<20>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<20>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso18 =
-    criteria_config<traits<trait_time_slotted_occupancy<18>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<18>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso16 =
-    criteria_config<traits<trait_time_slotted_occupancy<16>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<16>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso12 =
-    criteria_config<traits<trait_time_slotted_occupancy<12>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<12>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso10 =
-    criteria_config<traits<trait_time_slotted_occupancy<10>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<10>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso08 =
-    criteria_config<traits<trait_time_slotted_occupancy<8>>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<8>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 using Tso06 =
-    criteria_config<traits<trait_time_slotted_occupancy<6>>, CalcMethod::Flat>;
-
-using MinTransferTimes =
-    criteria_config<traits<trait_max_transfer_class>, CalcMethod::Flat>;
+    criteria_config<criteria_data<data_time_slotted_occupancy>,
+                    traits<trait_time_slotted_occupancy<6>>,
+                    default_transfer_time_calculator, CalcMethod::Flat>;
 
 #define RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(DO, ACCESSOR) \
   DO(MaxOccupancy, ACCESSOR)                             \
   DO(MaxOccupancyShfl, ACCESSOR)                         \
-  DO(MinTransferTimes, ACCESSOR)                         \
+  DO(MaxTransferClass, ACCESSOR)                         \
+  DO(TcMaxOccupancy, ACCESSOR)                           \
                                                          \
   DO(Tso96, ACCESSOR)                                    \
   DO(Tso90, ACCESSOR)                                    \
@@ -111,7 +169,7 @@ inline trait_id get_trait_size_for_criteria_config(
     raptor_criteria_config const rc) {
   switch (rc) {
     case raptor_criteria_config::Default:
-      return Default::trait_size();  //^= 1
+      return Default::TRAITS_SIZE;  //^= 1
 
       RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(CASE_TRAIT_SIZE_FOR_CRITERIA_CONFIG,
                                          raptor_criteria_config)

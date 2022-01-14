@@ -34,15 +34,13 @@ struct intermediate_journey {
   }
 
   void add_footpath(stop_id const to, time const a_time, time const d_time,
-                    time const duration, raptor_meta_info const& raptor_sched,
-                    raptor_timetable const& timetable) {
+                    time const duration, raptor_meta_info const& raptor_sched) {
     auto const motis_index = raptor_sched.station_id_to_index_[to];
-    auto arrival_with_tt = a_time;
-    if (valid(a_time)) arrival_with_tt += timetable.transfer_times_[to];
-    stops_.emplace_back(stops_.size(), motis_index, 0, 0, arrival_with_tt,
-                        d_time, arrival_with_tt, d_time,
-                        timestamp_reason::SCHEDULE, timestamp_reason::SCHEDULE,
-                        false, true);
+    // TODO commented because the TT is no longer pre-added to the arrival
+    // a_time now has the transfer time preadded
+    stops_.emplace_back(stops_.size(), motis_index, 0, 0, a_time, d_time,
+                        a_time, d_time, timestamp_reason::SCHEDULE,
+                        timestamp_reason::SCHEDULE, false, true);
     transports_.emplace_back(stops_.size() - 1, stops_.size(), duration, 0, 0,
                              0);
   }
@@ -234,11 +232,11 @@ struct reconstructor {
 
     auto add_candidates = [&](stop_id const target) {
       // TODO commented out because tt is not longer pre-added to arrivals
-      auto const tt = timetable_.transfer_times_[target];
+      // auto const tt = timetable_.transfer_times_[target];
 
       for (auto round_k = 1; round_k < max_raptor_round; ++round_k) {
         for (trait_id trait_offset = 0,
-                      trait_size = CriteriaConfig::trait_size();
+                      trait_size = CriteriaConfig::TRAITS_SIZE;
              trait_offset < trait_size; ++trait_offset) {
           auto const arrival_idx =
               CriteriaConfig::get_arrival_idx(target, trait_offset);
@@ -257,6 +255,9 @@ struct reconstructor {
 
           // Check if the journey ends with a footpath
           // TODO commented out because tt is not longer pre-added to arrivals
+          auto const tt = CriteriaConfig::get_transfer_time(
+              timetable_, trait_offset, target);
+
           for (; c.arrival_ < result[round_k][arrival_idx] + tt; c.arrival_++) {
             c.ends_with_footpath_ = journey_ends_with_footpath(c, result);
             if (!c.ends_with_footpath_) {
@@ -308,7 +309,9 @@ struct reconstructor {
         // since all arrivals in the results are with pre-added transfer times.
         // But only if the journey does not end with a footpath,
         // since footpaths have no pre-added transfer times.
-        c.arrival_ -= timetable_.transfer_times_[c.target_];
+        // c.arrival_ -= timetable_.transfer_times_[c.target_];
+        c.arrival_ -= CriteriaConfig::get_transfer_time(
+            timetable_, c.trait_offset_, c.target_);
       }
 
       journeys_.push_back(reconstruct_journey(c, q));
@@ -378,8 +381,12 @@ struct reconstructor {
                                    trait_offset, result);
 
           if (valid(previous_station)) {
-            ij.add_footpath(arrival_station, station_arrival, last_departure,
-                            inc_f.duration_, raptor_sched_, timetable_);
+            auto const fp_arrival =
+                station_arrival +
+                CriteriaConfig::get_transfer_time(timetable_, trait_offset,
+                                                  previous_station);
+            ij.add_footpath(arrival_station, fp_arrival, last_departure,
+                            inc_f.duration_, raptor_sched_);
             last_departure =
                 ij.add_route(previous_station, used_route, used_trip,
                              stop_offset, raptor_sched_, timetable_);
@@ -433,7 +440,7 @@ struct reconstructor {
           }
 
           ij.add_footpath(arrival_station, last_departure, last_departure,
-                          f.duration_, raptor_sched_, timetable_);
+                          f.duration_, raptor_sched_);
 
           // TODO commented out because fp are not longer reduced by TT
           auto const first_footpath_duration =
@@ -523,24 +530,23 @@ struct reconstructor {
     auto const first_stop_times_index =
         r.index_to_stop_times_ + (t_id * r.stop_count_);
 
+    // -1, since we cannot board a trip at the last station
     auto const max_offset =
         std::min(static_cast<stop_offset>(r.stop_count_ - 1), arrival_offset);
-    CriteriaData aggregate{};
+    CriteriaConfig aggregate{&r};
 
-    // -1, since we cannot board a trip at the last station
     for (auto stop_offset = 0; stop_offset < max_offset; ++stop_offset) {
+      aggregate.reset(t_id, trait_offset);
+
       // 1. build the aggregate for this trip from offset 0 -> arr_offset
-      CriteriaConfig::reset_traits_aggregate(aggregate, &r, t_id, trait_offset);
       for (auto s_offset = stop_offset + 1; s_offset <= max_offset;
            ++s_offset) {
         auto const current_sti = first_stop_times_index + s_offset;
-        CriteriaConfig::update_traits_aggregate(aggregate, timetable_, s_offset,
-                                                current_sti);
+        aggregate.update_from_stop(timetable_, s_offset, current_sti);
       }
 
       auto const rsi = r.index_to_route_stops_ + stop_offset;
       auto const stop_id = timetable_.route_stops_[rsi];
-      auto const transfer_time = timetable_.transfer_times_[stop_id];
 
       auto const sti = first_stop_times_index + stop_offset;
       auto const departure = timetable_.stop_times_[sti].departure_;
@@ -550,14 +556,17 @@ struct reconstructor {
       // feasible trait offsets
       auto const feasible_trait_ids =
           result_idx > 0
-              ? CriteriaConfig::get_feasible_traits(trait_offset, aggregate)
-              // the start values are not duplicated along all trait offsets
-              // therefore
+              ? aggregate.get_feasible_traits(trait_offset)
+              // the start values are not replicated along all trait offsets
               //  fall back to t_offset = 0 to find the start timings
               : std::vector<trait_id>{0};
 
-      auto it = feasible_trait_ids.cbegin();
+      //we need to determine the transfer time based on the trait offset
+      // the arrival was written on
+      auto const transfer_time = CriteriaConfig::get_transfer_time(
+          timetable_, trait_offset, stop_id);
 
+      auto it = feasible_trait_ids.cbegin();
       while (it != feasible_trait_ids.cend()) {
         auto const arr_idx = CriteriaConfig::get_arrival_idx(stop_id, *it);
 

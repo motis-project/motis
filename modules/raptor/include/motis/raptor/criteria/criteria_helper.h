@@ -20,7 +20,7 @@ namespace motis::raptor {
 
 #define CASE_TRAIT_SIZE_FOR_CRITERIA_CONFIG(VAL, ACCESSOR) \
   case ACCESSOR::VAL:                                      \
-    return VAL::trait_size();
+    return VAL::TRAITS_SIZE;
 
 #define CASE_CRITERIA_CONFIG_TO_CPU_INVOKE(VAL, ACCESSOR) \
   case ACCESSOR::VAL:                                     \

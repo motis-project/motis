@@ -7,7 +7,6 @@ import org.json.simple.parser.ParseException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.regex.Pattern;
 
 public class SplitBatchResult {
   final static String HHLR_BASE_FOLDER = "C:\\Users\\Leon\\git\\motis\\Auswertung\\";

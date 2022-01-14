@@ -56,13 +56,13 @@ public class ResultComparator {
     }
 
     public String toString() {
-      return departureFmt() + "\t\t" + arrivalFmt() + "\t\t" + durationStr + "\tTR: " + tripCount + "\tMOC: " + moc + "\tTSO: " + tso;
+      return departureFmt() + "\t\t" + arrivalFmt() + "\t\t" + durationStr + "\tTR: " + tripCount + "\tMOC: " + moc + "\tTSO: " + tso + "\tMTC: " + mtc;
     }
 
     public boolean dominates(CompareConnection toDominate) {
       if (toDominate == null) return true;
 
-      return tripCount <= toDominate.tripCount && moc <= toDominate.moc && tso <= toDominate.tso && unix_arr_time <= toDominate.unix_arr_time;
+      return tripCount <= toDominate.tripCount && moc <= toDominate.moc && tso <= toDominate.tso && mtc <= toDominate.mtc && unix_arr_time <= toDominate.unix_arr_time;
     }
 
     public int compareTo(CompareConnection o) {
@@ -76,6 +76,9 @@ public class ResultComparator {
 
       var tso = Long.compare(this.tso, o.tso);
       if (tso != 0) return tso;
+
+      var mtc = Long.compare(this.mtc, o.mtc);
+      if (mtc != 0) return mtc;
 
       //var dc = Long.compare(this.duration.getSeconds(), o.duration.getSeconds());
       //if (dc != 0) return dc;
@@ -159,7 +162,7 @@ public class ResultComparator {
 
     public String toString() {
       if (routingConns.size() != raptorConns.size()) throw new IllegalStateException("Mismatch conn count!");
-      var empty = String.format("%-83s", "---");
+      var empty = String.format("%-88s", "---");
       var bld = new StringBuilder();
       bld.append("Comparison for Query ID: ").append(id).append(";\tFound full match: ").append(isFullMatch()).append(";\tMatching Connection Count: ").append((rpcConCnt == rocConCnt)).append("\n");
       bld.append("==================================================================================================\n");
@@ -271,9 +274,9 @@ public class ResultComparator {
   static void filterDominated(List<CompareConnection> conns) {
     for (int i = 0; i < conns.size(); i++) {
       var dominator = conns.get(i);
-      for (int j = i+1; j < conns.size(); j++) {
+      for (int j = i + 1; j < conns.size(); j++) {
         var toDominate = conns.get(j);
-        if(dominator.dominates(toDominate)) {
+        if (dominator.dominates(toDominate)) {
           conns.remove(j--);
         }
       }
@@ -284,8 +287,8 @@ public class ResultComparator {
 
   public static void main(String[] args) throws IOException, ParseException {
     System.out.print("Reading Files ...");
-    var raptorLines = Files.readAllLines(Path.of("verification/sbb-small/r-raptor_gpu-tso.txt"));
-    var routingLines = Files.readAllLines(Path.of("verification/sbb-small/r-raptor_cpu-tso.txt"));
+    var raptorLines = Files.readAllLines(Path.of("verification/sbb-small/r-raptor_cpu-mtc.txt"));
+    var routingLines = Files.readAllLines(Path.of("verification/sbb-small/r-routing-mtc.txt"));
 
     //if (raptorLines.size() != routingLines.size()) throw new IllegalStateException("Line Counts don't match!");
     System.out.println("Ok");
@@ -312,7 +315,7 @@ public class ResultComparator {
     var totalCount = raptorLines.size();
 
     for (var res : comparison) {
-      if(fullPrint || !res.isFullMatch()) {
+      if (fullPrint || !res.isFullMatch()) {
         System.out.println(res.toString());
         System.out.println();
         System.out.println();
@@ -350,7 +353,7 @@ public class ResultComparator {
     System.out.println();
     System.out.println();
 
-    if(!moreRpcConns.isEmpty()) {
+    if (!moreRpcConns.isEmpty()) {
       var blcRpc = new StringBuilder("More Raptor Connections for Queries: ");
       moreRpcConns.forEach((e) -> blcRpc.append(e.id).append(", "));
       System.out.println(blcRpc);
@@ -358,7 +361,7 @@ public class ResultComparator {
       System.out.println();
     }
 
-    if(!moreRocConns.isEmpty()) {
+    if (!moreRocConns.isEmpty()) {
       var blcRoc = new StringBuilder("More Routing Connections for Queries: ");
       moreRocConns.forEach((e) -> blcRoc.append(e.id).append(", "));
       System.out.println(blcRoc);
