@@ -203,7 +203,7 @@ inline connection_info const* get_con_info(
                           base->base()->service_num());
     }
     case reroute_event::type::ORIGINAL_EVENT:
-      return ev.k_.lcon()->full_con_->con_info_;
+      return ev.k_.lcon().full_con().con_info_;
     default: return nullptr;
   }
 }

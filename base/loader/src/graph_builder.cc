@@ -205,6 +205,7 @@ void graph_builder::index_first_route_node(route const& r) {
   sched_.route_index_to_first_route_node_[route_index] = r[0].from_route_node_;
 }
 
+/* TODO using minutes_after_midnight_first_departure_day = time; */
 std::optional<mcd::hash_map<mcd::vector<time>, local_and_motis_traffic_days>>
 graph_builder::service_times_to_utc(bitfield const& traffic_days,
                                     Service const* s,

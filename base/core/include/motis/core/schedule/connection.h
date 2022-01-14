@@ -89,7 +89,7 @@ struct rt_light_connection {
         d_time_{d_time.ts()},
         a_time_{a_time.ts()},
         trips_{0U},
-        valid_{0U} {}
+        valid_{1U} {}
 
   rt_light_connection(time const d_time, time const a_time,
                       connection const* full_con, merged_trips_idx const trips)
@@ -147,7 +147,7 @@ struct static_light_connection {
 struct generic_light_connection {
   using static_t = std::pair<static_light_connection const*, day_idx_t>;
   using rt_t = rt_light_connection const*;
-  using data = mcd::variant<static_t, rt_t>;
+  using data_t = mcd::variant<static_t, rt_t>;
 
   constexpr generic_light_connection() = default;
   generic_light_connection(nullptr_t) {}
@@ -158,6 +158,7 @@ struct generic_light_connection {
       : data_{static_t{lcon, day}} {}
 
   connection const& full_con() const {
+    assert(data_.valid());
     return data_.apply(utl::overloaded{
         [](static_t lcon) -> connection const& {
           return *lcon.first->full_con_;
@@ -166,6 +167,7 @@ struct generic_light_connection {
   }
 
   time d_time() const {
+    assert(data_.valid());
     return data_.apply(utl::overloaded{
         [](static_t lcon) {
           return lcon.first->event_time(event_type::DEP, lcon.second);
@@ -174,6 +176,7 @@ struct generic_light_connection {
   }
 
   time a_time() const {
+    assert(data_.valid());
     return data_.apply(utl::overloaded{
         [](static_t lcon) {
           return lcon.first->event_time(event_type::ARR, lcon.second);
@@ -186,18 +189,20 @@ struct generic_light_connection {
   }
 
   merged_trips_idx trips() const {
+    assert(data_.valid());
     return data_.apply(
         utl::overloaded{[](static_t lcon) { return lcon.first->trips_; },
                         [](rt_t lcon) { return lcon->trips_; }});
   }
 
   bool operator==(std::nullptr_t) const {
-    return data_.apply(
-        utl::overloaded{[](static_t lcon) { return lcon.first == nullptr; },
-                        [](rt_t lcon) { return lcon == nullptr; }});
+    return !valid() || data_.apply(utl::overloaded{
+                           [](static_t lcon) { return lcon.first == nullptr; },
+                           [](rt_t lcon) { return lcon == nullptr; }});
   }
 
   static_light_connection const* as_static_lcon() const {
+    assert(data_.valid());
     utl::verify(mcd::holds_alternative<static_t>(data_),
                 "as_static_lcon() on rt_lcon");
     return mcd::get<static_t>(data_).first;
@@ -205,19 +210,32 @@ struct generic_light_connection {
 
   duration_t travel_time() const { return a_time() - d_time(); }
 
-  bool is_static() const { return mcd::holds_alternative<static_t>(data_); }
-  bool is_rt() const { return mcd::holds_alternative<rt_t>(data_); }
+  bool is_static() const {
+    return valid() && mcd::holds_alternative<static_t>(data_);
+  }
+
+  bool is_rt() const { return valid() && mcd::holds_alternative<rt_t>(data_); }
 
   rt_t rt_con() const {
-    utl::verify(mcd::holds_alternative<rt_t>(data_),
+    utl::verify(valid() && mcd::holds_alternative<rt_t>(data_),
                 "generic_light_connection: rt_con on static con");
     return mcd::get<rt_t>(data_);
   }
 
   static_t static_con() const {
-    utl::verify(mcd::holds_alternative<static_t>(data_),
+    utl::verify(valid() && mcd::holds_alternative<static_t>(data_),
                 "generic_light_connection: rt_con on static con");
     return mcd::get<static_t>(data_);
+  }
+
+  bool active() const {
+    assert(valid());
+    return valid() &&
+           data_.apply(utl::overloaded{[](static_t lcon) {
+                                         auto const& [c, day] = lcon;
+                                         return c->traffic_days_->test(day);
+                                       },
+                                       [](rt_t lcon) { return lcon->valid_; }});
   }
 
   bool valid() const { return data_.valid(); }
@@ -225,7 +243,7 @@ struct generic_light_connection {
   operator bool() const { return valid(); }
 
 private:
-  data data_;
+  data_t data_;
 };
 
 struct d_time_lt {

@@ -9,7 +9,7 @@ namespace motis {
 time get_schedule_time(schedule const& sched, ev_key const& k) {
   auto it = sched.graph_to_delay_info_.find(k);
   if (it == end(sched.graph_to_delay_info_)) {
-    return get_time(k.route_edge_, k.lcon_idx_, k.ev_type_);
+    return get_rt_time(k.route_edge_, k.lcon_idx_, k.ev_type_);
   } else {
     return it->second->get_schedule_time();
   }
@@ -19,7 +19,7 @@ time get_schedule_time(schedule const& sched, edge const* route_edge,
                        lcon_idx_t const lcon_index, event_type const ev_type) {
   auto it = sched.graph_to_delay_info_.find({route_edge, lcon_index, ev_type});
   if (it == end(sched.graph_to_delay_info_)) {
-    return get_time(route_edge, lcon_index, ev_type);
+    return get_rt_time(route_edge, lcon_index, ev_type);
   } else {
     return it->second->get_schedule_time();
   }
@@ -33,7 +33,7 @@ time get_schedule_time(schedule const& sched, edge const* route_edge,
   }
 
   auto it = sched.graph_to_delay_info_.find(
-      {route_edge, get_lcon_index(route_edge, lcon.rt_con()), ev_type});
+      {route_edge, route_edge->get_lcon_index(lcon.rt_con()), ev_type});
   if (it == end(sched.graph_to_delay_info_)) {
     return lcon.event_time(ev_type);
   } else {
@@ -42,7 +42,7 @@ time get_schedule_time(schedule const& sched, edge const* route_edge,
 }
 
 duration_t get_delay(schedule const& sched, ev_key const& k) {
-  return k.lcon()->event_time(k.ev_type_) - get_schedule_time(sched, k);
+  return k.lcon().event_time(k.ev_type_) - get_schedule_time(sched, k);
 }
 
 delay_info get_delay_info(schedule const& sched, node const* route_node,
@@ -100,8 +100,8 @@ ev_key const& get_orig_ev_key(schedule const& sched, ev_key const& k) {
 uint16_t get_schedule_track(schedule const& sched, ev_key const& k) {
   auto it = sched.graph_to_schedule_track_index_.find(k);
   if (it == end(sched.graph_to_schedule_track_index_)) {
-    auto const full_con = k.lcon()->full_con_;
-    return k.is_arrival() ? full_con->a_track_ : full_con->d_track_;
+    auto const& full_con = k.lcon().full_con();
+    return k.is_arrival() ? full_con.a_track_ : full_con.d_track_;
   } else {
     return it->second;
   }

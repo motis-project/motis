@@ -20,7 +20,6 @@ enum state {
   AT_STATION,
   PRE_CONNECTION,
   IN_CONNECTION,
-  PRE_WALK,
   WALK,
   WALK_SKIP,
   BWD_WALK,
@@ -29,6 +28,16 @@ enum state {
   IN_CONNECTION_THROUGH_SKIP,
   ONTRIP_TRAIN_START
 };
+static char const* state_str[] = {"AT_STATION",
+                                  "PRE_CONNECTION",
+                                  "IN_CONNECTION",
+                                  "WALK",
+                                  "WALK_SKIP",
+                                  "BWD_WALK",
+                                  "BWD_WALK_SKIP",
+                                  "IN_CONNECTION_THROUGH",
+                                  "IN_CONNECTION_THROUGH_SKIP",
+                                  "ONTRIP_TRAIN_START"};
 
 template <typename Label>
 inline node* get_node(Label const& l) {
@@ -178,6 +187,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
   auto it = begin(labels);
   int current_state = initial_state(it);
   while (it != end(labels)) {
+    std::cerr << "STATE: " << state_str[current_state] << "\n";
     auto& current = *it;
 
     switch (current_state) {

@@ -56,7 +56,7 @@ inline void update_platform_edge(schedule& sched, ev_key const& k,
 }
 
 inline void update_track(schedule& sched, ev_key const& k, uint16_t new_track) {
-  auto fcon = *k.lcon()->full_con_;
+  auto fcon = *k.lcon().full_con();
   auto& track = (k.ev_type_ == event_type::ARR ? fcon.a_track_ : fcon.d_track_);
   auto const old_track = track;
   track = new_track;

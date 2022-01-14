@@ -138,8 +138,8 @@ private:
               sched_.stations_[k.get_station_idx()]->transfer_time_;
           auto const max_waiting_time =
               sched_.waiting_time_rules_.waiting_time_family(
-                  k.lcon()->full_con_->con_info_->category_,
-                  current_feeder_k.lcon()->full_con_->con_info_->category_);
+                  k.lcon().full_con().con_info_->category_,
+                  current_feeder_k.lcon().full_con().con_info_->category_);
           if (arr_curr_time + transfer_time <=
               dep_sched_time + max_waiting_time) {
             max = std::max(max, arr_curr_time + transfer_time);

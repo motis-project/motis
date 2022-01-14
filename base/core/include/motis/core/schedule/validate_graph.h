@@ -39,7 +39,7 @@ inline void validate_graph(schedule const& sched) {
             }
 
             for (auto const& re : se.to()->edges_) {
-              if (re.empty() && re.type() == edge_type::STATIC_ROUTE_EDGE) {
+              if (re.empty() || re.type() == edge_type::RT_ROUTE_EDGE) {
                 continue;
               }
 

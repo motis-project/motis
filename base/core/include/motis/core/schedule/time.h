@@ -23,6 +23,7 @@ constexpr auto const MINUTES_A_DAY = mam_t{1440};
 constexpr auto const SECONDS_A_DAY = uint32_t{MINUTES_A_DAY * 60};
 constexpr auto const INVALID_DURATION = std::numeric_limits<duration_t>::max();
 constexpr auto const INVALID_MAM = std::numeric_limits<mam_t>::max();
+constexpr auto const INVALID_DAY = std::numeric_limits<day_idx_t>::max();
 
 struct time {
   constexpr time() = default;
@@ -144,8 +145,8 @@ struct time {
   }
 
   // private:
-  day_idx_t day_idx_{std::numeric_limits<day_idx_t>::max()};
-  mam_t mam_{std::numeric_limits<mam_t>::max()};
+  day_idx_t day_idx_{INVALID_DAY};
+  mam_t mam_{INVALID_MAM};
 };
 
 constexpr auto const INVALID_TIME = time();

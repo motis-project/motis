@@ -38,7 +38,7 @@ void trains_response_builder::add_train_full(ev_key k) {
 }
 
 void trains_response_builder::add_train(train t) {
-  auto const& trp = sched_.merged_trips_.at(t.key_.lcon()->trips_)->at(0);
+  auto const& trp = sched_.merged_trips_.at(t.key_.lcon().trips())->at(0);
 
   auto const it = std::find_if(
       sections::begin(trp), sections::end(trp),
@@ -138,19 +138,19 @@ Offset<Train> trains_response_builder::write_railviz_train(
       station_indices_.emplace_back(arr.get_station_idx());
 
   std::vector<Offset<String>> service_names;
-  auto c_info = dep.lcon()->full_con_->con_info_;
+  auto c_info = dep.lcon().full_con().con_info_;
   while (c_info != nullptr) {
     service_names.push_back(mc_.CreateString(get_service_name(sched_, c_info)));
     c_info = c_info->merged_with_;
   }
 
   auto const trips =
-      utl::to_vec(*sched_.merged_trips_[dep.lcon()->trips_],
+      utl::to_vec(*sched_.merged_trips_[dep.lcon().trips()],
                   [&](trip const* trp) { return to_fbs(sched_, mc_, trp); });
 
   return CreateTrain(
       mc_, mc_.CreateVector(service_names),
-      static_cast<service_class_t>(dep.lcon()->full_con_->clasz_),
+      static_cast<service_class_t>(dep.lcon().full_con().clasz_),
       q.train_.route_distance_,
       mc_.CreateString(sched_.stations_.at(dep_station_idx)->eva_nr_),
       mc_.CreateString(sched_.stations_.at(arr_station_idx)->eva_nr_),

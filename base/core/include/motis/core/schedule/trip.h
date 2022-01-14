@@ -127,8 +127,8 @@ struct concrete_trip {
   time get_last_arr_time() const;
   generic_light_connection lcon(size_t) const;
 
-  trip_info const* trp_;
-  day_idx_t day_idx_;
+  trip_info const* trp_{nullptr};
+  day_idx_t day_idx_{INVALID_TIME.day()};
 };
 
 struct trip_info {

@@ -11,8 +11,7 @@ time concrete_trip::get_last_arr_time() const {
           trp_->id_.secondary_.last_arrival_mam_};
 }
 
-generic_light_connection concrete_trip::lcon(size_t const index) const {
-  auto const i = index - 1;
+generic_light_connection concrete_trip::lcon(size_t const i) const {
   auto const& e = *trp_->edges_->at(i).get_edge();
   auto const lcon_idx = trp_->lcon_idx_;
 

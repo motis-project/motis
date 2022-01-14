@@ -22,8 +22,8 @@ inline bool fits_edge(schedule const& sched, ev_key const& k,
   }
   auto const station = sched.stations_[k.get_station_idx()].get();
   return station->get_platform(k.is_departure()
-                                   ? k.lcon()->full_con_->d_track_
-                                   : k.lcon()->full_con_->a_track_) ==
+                                   ? k.lcon().full_con().d_track_
+                                   : k.lcon().full_con().a_track_) ==
          station->get_platform(new_track);
 }
 

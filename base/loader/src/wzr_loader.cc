@@ -149,7 +149,7 @@ void add_dependencies(schedule& sched,
   auto const& wtr = sched.waiting_time_rules_;
   for (auto const& feeder : other_trains_wait_for) {
     for (auto const& connector : waits_for_other_trains) {
-      if (feeder.lcon()->trips_ == connector.lcon()->trips_) {
+      if (feeder.lcon().trips() == connector.lcon().trips()) {
         continue;
       }
       auto const feeder_time = feeder.get_time();
@@ -161,8 +161,8 @@ void add_dependencies(schedule& sched,
         continue;
       }
       auto const waiting_time = wtr.waiting_time_family(
-          connector.lcon()->full_con_->con_info_->category_,
-          feeder.lcon()->full_con_->con_info_->category_);
+          connector.lcon().full_con().con_info_->category_,
+          feeder.lcon().full_con().con_info_->category_);
       if (waiting_time == 0) {
         continue;
       }

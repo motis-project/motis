@@ -73,7 +73,7 @@ void update_msg_builder::add_track_nodes(ev_key const& k,
                                          std::string const& track,
                                          motis::time const schedule_time) {
   auto const trip =
-      to_fbs(sched_, fbb_, sched_.merged_trips_[k.lcon()->trips_]->at(0));
+      to_fbs(sched_, fbb_, sched_.merged_trips_[k.lcon().trips()]->at(0));
   updates_.emplace_back(CreateRtUpdate(
       fbb_, Content_RtTrackUpdate,
       CreateRtTrackUpdate(

@@ -59,17 +59,17 @@ void add_to_intervals(
   }
 
   // trips
-  for (auto const& trp : *sched.merged_trips_.at(ev.lcon()->trips_)) {
+  for (auto const& trp : *sched.merged_trips_.at(ev.lcon().trips())) {
     trip_intervals.add_entry(trp, interval);
   }
 
   // attributes
-  for (auto const& attribute : ev.lcon()->full_con_->con_info_->attributes_) {
+  for (auto const& attribute : ev.lcon().full_con().con_info_->attributes_) {
     attribute_intervals.add_entry(attribute, interval);
   }
 
   // transports
-  auto con_info = ev.lcon()->full_con_->con_info_;
+  auto con_info = ev.lcon().full_con().con_info_;
   while (con_info != nullptr) {
     transport_intervals.add_entry(con_info, interval);
     con_info = con_info->merged_with_;

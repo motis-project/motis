@@ -195,8 +195,7 @@ msg_ptr railviz::get_trip_guesses(msg_ptr const& msg) {
   std::sort(begin(trips), end(trips), cmp);
 
   auto const get_first_dep_ci = [&](trip const* trp) {
-    auto const& lcon =
-        trp->edges_->front()->static_lcons()[trp->lcon_idx_];
+    auto const& lcon = trp->edges_->front()->static_lcons()[trp->lcon_idx_];
     auto const& merged = *sched.merged_trips_[lcon.merged_trips_];
     auto const it = std::find(begin(merged), end(merged), trp);
     utl::verify(it != end(merged), "trip not found in trip");
@@ -321,9 +320,9 @@ msg_ptr railviz::get_station(msg_ptr const& msg) {
   auto const get_trips = [&](ev_key const& k) {
     std::vector<Offset<TripInfo>> trips;
 
-    auto const& merged_trips = *sched.merged_trips_[k.lcon()->trips_];
+    auto const& merged_trips = *sched.merged_trips_[k.lcon().trips()];
     auto merged_trips_idx = 0U;
-    for (auto ci = k.lcon()->full_con_->con_info_; ci != nullptr;
+    for (auto ci = k.lcon().full_con().con_info_; ci != nullptr;
          ci = ci->merged_with_, ++merged_trips_idx) {
       auto const& trp = merged_trips.at(merged_trips_idx);
       trips.push_back(CreateTripInfo(fbb, to_fbs(sched, fbb, trp),
