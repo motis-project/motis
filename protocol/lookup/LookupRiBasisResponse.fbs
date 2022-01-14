@@ -1,0 +1,13 @@
+include "base/TripId.fbs";
+include "ribasis/RiBasisFahrt.fbs";
+
+namespace motis.lookup;
+
+table RiBasisTrip {
+  trip_id: TripId;
+  fahrt: motis.ribasis.RiBasisFahrt;
+}
+
+table LookupRiBasisResponse {
+  trips: [RiBasisTrip];
+}

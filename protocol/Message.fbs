@@ -21,6 +21,8 @@ include "lookup/LookupIdTrainRequest.fbs";
 include "lookup/LookupIdTrainResponse.fbs";
 include "lookup/LookupMetaStationRequest.fbs";
 include "lookup/LookupMetaStationResponse.fbs";
+include "lookup/LookupRiBasisRequest.fbs";
+include "lookup/LookupRiBasisResponse.fbs";
 include "lookup/LookupScheduleInfoResponse.fbs";
 include "lookup/LookupStationEventsRequest.fbs";
 include "lookup/LookupStationEventsResponse.fbs";
@@ -272,7 +274,9 @@ union MsgContent {
   motis.paxmon.PaxMonStatusRequest                                        = 123,
   motis.ris.RISApplyRequest                                               = 124,
   motis.ris.RISSystemTimeChanged                                          = 125,
-  motis.rt.RtGraphUpdated                                                 = 126
+  motis.rt.RtGraphUpdated                                                 = 126,
+  motis.lookup.LookupRiBasisRequest                                       = 127,
+  motis.lookup.LookupRiBasisResponse                                      = 128
 }
 
 // Destination Examples:

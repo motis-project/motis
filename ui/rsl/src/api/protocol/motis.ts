@@ -16,6 +16,8 @@ import {
   LookupBatchMetaStationResponse,
   LookupIdTrainRequest,
   LookupIdTrainResponse,
+  LookupRiBasisRequest,
+  LookupRiBasisResponse,
 } from "./motis/lookup";
 import { RISForwardTimeRequest } from "./motis/ris";
 import { RoutingRequest, RoutingResponse } from "./motis/routing";
@@ -355,7 +357,9 @@ export type MsgContent =
   | PaxMonUniverseDestroyed
   | PaxMonGetInterchangesRequest
   | PaxMonGetInterchangesResponse
-  | PaxMonStatusRequest;
+  | PaxMonStatusRequest
+  | LookupRiBasisRequest
+  | LookupRiBasisResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -412,7 +416,9 @@ export type MsgContentType =
   | "PaxMonUniverseDestroyed"
   | "PaxMonGetInterchangesRequest"
   | "PaxMonGetInterchangesResponse"
-  | "PaxMonStatusRequest";
+  | "PaxMonStatusRequest"
+  | "LookupRiBasisRequest"
+  | "LookupRiBasisResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";
