@@ -5,6 +5,7 @@ import Maybe, { nothing } from 'true-myth/maybe';
 import { Search } from './Search';
 import { SubOverlay } from './SubOverlay';
 import { Connection } from './ConnectionTypes';
+import { Translations } from './Localization';
 
 //interface Model {
     //routing : Routing.Model,
@@ -32,7 +33,7 @@ interface SubView{
     TripSearchView : any
 }
 
-export const Overlay: React.FC = (props) => {
+export const Overlay: React.FC<{'translation': Translations}> = (props) => {
 
     // Boolean used to decide if the Overlay is being displayed
     const [overlayHidden, setOverlayHidden] = useState<Boolean>(false);
@@ -47,14 +48,14 @@ export const Overlay: React.FC = (props) => {
         <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden' }>
             <div className='overlay'>
                 <div id='overlay-content'>
-                    <Search setConnections={setConnections}/>
+                    <Search setConnections={setConnections} translation={props.translation}/>
                     <div id='connections'>
                         <div className='no-results'>
-                            <div className='schedule-range'>Auskunft von 19.10.2020 bis 21.10.2020 möglich</div>
+                            <div className='schedule-range'>{props.translation.connections.scheduleRange(new Date(2020, 9,19), new Date(2020, 9, 21))}</div>
                         </div>
                     </div>
                 </div>
-                <SubOverlay subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden}/>
+                <SubOverlay translation={props.translation} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden}/>
             </div>
             <div className='overlay-tabs'>
                 <div className='overlay-toggle' onClick={() => setOverlayHidden(!overlayHidden)}>

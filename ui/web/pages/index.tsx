@@ -1,17 +1,19 @@
 import React from 'react';
+
 import Head from 'next/head'
 
-import { Main } from './App/App'
+import { App } from './App/App'
 
 export default function Index() {
-    return(<>
+    return(
+      <>
         <Head>
             <title>MOTIS</title>
         </Head>
         <div id='app-container'>
-            <Main />
-        </div>   
-    </>)
+            <App />
+        </div>
+      </>)
 }
 
 /*import Head from 'next/head'

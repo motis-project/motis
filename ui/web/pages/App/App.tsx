@@ -1,14 +1,26 @@
 import React from 'react';
 
 import Maybe, { nothing } from 'true-myth/maybe';
+import { useRouter} from 'next/router';
 
 import { Overlay } from '../Modules/Overlay';
+import { Translations, deTranslations, enTranslations } from '../Modules/Localization';
 
 let visible = false;
 
 
-export const Main: React.FC = () => {
-    
+const getQuery = (): Translations => {
+    let router = useRouter();
+    let { locale } = router.query;
+    if (locale === 'en') {
+        return enTranslations
+    }
+    return deTranslations
+}
+
+
+export const App: React.FC = () => {
+
     /*let Model: Boolean = true;
 
     const [showMap, setShowMap] = React.useState(false);
@@ -28,7 +40,7 @@ export const Main: React.FC = () => {
     return(
         <div className='app'>
             {/* visible && <MapView />*/}
-            <Overlay />
+            <Overlay translation={getQuery()}/>
             {//<StationSearchView />
             }
             {//<SimTimePickerView />

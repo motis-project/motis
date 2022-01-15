@@ -6,6 +6,7 @@ import { IntermodalRoutingRequest, IntermodalRoutingResponse, IntermodalPretripS
 import { Connection, Station } from './ConnectionTypes';
 import { Mode } from './ModePicker';
 import { Interval } from './RoutingTypes';
+import { Translations } from './Localization';
 
 
 interface Destination {
@@ -46,7 +47,7 @@ function addHours(date: Date, hours: number): Date {
 }
 
 
-export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>}> = (props) => {
+export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations}> = (props) => {
 
     const [searchQuery, setSearchQuery] = useState<boolean>(true);
     
@@ -101,7 +102,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                     <div>
                         <form>
                             <div className='label'>
-                                Start
+                                {props.translation.search.start}
                             </div>
                             <div className='gb-input-group'>
                                 <div className='gb-input-icon'>
@@ -125,7 +126,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                             <ul className='proposals'></ul>
                         </div>
                     </div>
-                    <Modepicker start={true}/>{/* modes={startModes} setModes={setStartModes}/>*/}
+                    <Modepicker translation={props.translation} start={true}/>{/* modes={startModes} setModes={setStartModes}/>*/}
                     <div className='swap-locations-btn'>
                         <label className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'>
                             <input  type='checkbox' 
@@ -139,14 +140,14 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                     </div>
                 </div>
                 <div className='pure-u-1 pure-u-sm-12-24'>
-                    <DatePicker />
+                    <DatePicker translation={props.translation}/>
                 </div>
             </div>
             <div className='pure-g gutters'>
                 <div className='pure-u-1 pure-u-sm-12-24 to-location'>
                     <div>
                         <div>
-                            <div className='label'>Ziel</div>
+                            <div className='label'>{props.translation.search.destination}</div>
                             <div className='gb-input-group'>
                                 <div className='gb-input-icon'><i className='icon'>place</i></div>
                                 <input  className='gb-input' tabIndex={2} value={destination}
@@ -168,11 +169,11 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                             <ul className='proposals'></ul>
                         </div>
                     </div>
-                    <Modepicker start={false}/>{/*} modes={destinationModes} setModes={setDestinationModes}/>*/}
+                    <Modepicker translation={props.translation} start={false}/>{/*} modes={destinationModes} setModes={setDestinationModes}/>*/}
                 </div> 
                 <div className='pure-u-1 pure-u-sm-9-24'>
                     <div>
-                        <div className='label'>Uhrzeit</div>
+                        <div className='label'>{props.translation.search.time}</div>
                         <div className='gb-input-group'>
                             <div className='gb-input-icon'><i className='icon'>schedule</i></div>
                             <input
@@ -193,11 +194,11 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                 <div className='pure-u-1 pure-u-sm-3-24 time-option'>
                     <form>
                         <input type='radio' id='search-forward' name='time-option' defaultChecked={searchDirection === 'Forward'} onClick={() => setSearchDirection('Forward')}/>
-                        <label htmlFor='search-forward'>Abfahrt</label>
+                        <label htmlFor='search-forward'>{props.translation.search.departure}</label>
                     </form>
                     <form>
                         <input type='radio' id='search-backward' name='time-option' defaultChecked={searchDirection === 'Backward'} onClick={() => setSearchDirection('Backward')}/>
-                        <label htmlFor='search-backward'>Ankunft</label>
+                        <label htmlFor='search-backward'>{props.translation.search.arrival}</label>
                     </form>
                 </div>
             </div>

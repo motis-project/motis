@@ -2,15 +2,7 @@ import React, { useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 
 import { Station, Position } from './ConnectionTypes';
-
-
-const displayToday = () => {
-    let today = new Date();
-    let dd = String(today.getDate()).padStart(2, '0');
-    let mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
-    let yyyy = today.getFullYear();
-    return dd + '.' + mm + '.' + yyyy
-}
+import { Translations } from './Localization';
 
 
 const days = ['SO', 'MO', 'DI', 'MI', 'DO', 'FR', 'SA']
@@ -35,7 +27,7 @@ function addDays(date: Date, days: number): Date {
 }
 
 
-export const SubOverlay: React.FC<{'subOverlayHidden' : Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>}> = (props) => {
+export const SubOverlay: React.FC<{'translation': Translations, 'subOverlayHidden' : Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>}> = (props) => {
 
     const[datePickerSelected, setDatePickerSelected] = React.useState<Boolean>(false);
 
@@ -50,7 +42,7 @@ export const SubOverlay: React.FC<{'subOverlayHidden' : Boolean, 'setSubOverlayH
                             <div className='pure-g gutters'>
                                 <div className='pure-u-1 pure-u-sm-1-2 train-nr'>
                                     <div>
-                                        <div className='label'>Zugnummer</div>
+                                        <div className='label'>{props.translation.search.trainNr}</div>
                                         <div className='gb-input-group'>
                                             <div className='gb-input-icon'>
                                                 <i className='icon'>train</i>
@@ -66,7 +58,7 @@ export const SubOverlay: React.FC<{'subOverlayHidden' : Boolean, 'setSubOverlayH
                                 <div className='pure-u-1 pure-u-sm-12-24 to-location'>
                                     <div>
                                         <div>
-                                            <div className='label'>Datum</div>
+                                            <div className='label'>{props.translation.search.date }</div>
                                             <div className='gb-input-group'>
                                                 <div className='gb-input-icon'>
                                                     <i className='icon'>event</i></div>
@@ -81,17 +73,10 @@ export const SubOverlay: React.FC<{'subOverlayHidden' : Boolean, 'setSubOverlayH
                                                                 decreaseMonth,
                                                                 increaseMonth,
                                                             }) => (
-                                                                <div
-                                                                    style={{
-                                                                        display: "flex",
-                                                                        justifyContent: "center",
-                                                                    }}
-                                                                    >
-                                                                    <div className='month'>
-                                                                        <i className='icon' onClick={decreaseMonth}>chevron_left</i>
-                                                                        <span className='month-name'>{months[date.getMonth()] + ' ' + date.getFullYear()}</span>
-                                                                        <i className='icon' onClick={increaseMonth}>chevron_right</i>
-                                                                    </div>
+                                                                <div className='month'>
+                                                                    <i className='icon' onClick={decreaseMonth}>chevron_left</i>
+                                                                    <span className='month-name'>{months[date.getMonth()] + ' ' + date.getFullYear()}</span>
+                                                                    <i className='icon' onClick={increaseMonth}>chevron_right</i>
                                                                 </div>
                                                             )}
                                                             calendarStartDay={1}
@@ -120,7 +105,7 @@ export const SubOverlay: React.FC<{'subOverlayHidden' : Boolean, 'setSubOverlayH
                                 </div>
                                 <div className='pure-u-1 pure-u-sm-12-24'>
                                     <div>
-                                        <div className='label'>Uhrzeit</div>
+                                        <div className='label'>{props.translation.search.time}</div>
                                         <div className='gb-input-group'>
                                             <div className='gb-input-icon'>
                                                 <i className='icon'>schedule</i>

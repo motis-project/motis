@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { Translations } from './Localization';
+
 
 const displayToday = () => {
     let today = new Date();
@@ -10,14 +12,14 @@ const displayToday = () => {
 }
 
 
-export const DatePicker: React.FC = () => {
+export const DatePicker: React.FC<{'translation': Translations}> = (props) => {
     
     const[datePickerSelected, setDatePickerSelected] = React.useState<Boolean>(false);
     
     return (
         <div>
             <div>
-                <div className='label'>Datum</div>
+                <div className='label'>{props.translation.search.date}</div>
                 <div className='gb-input-group'>
                     <div className='gb-input-icon'>
                         <i className='icon'>event</i></div>

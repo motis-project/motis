@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Translations } from './Localization';
 
 import { SearchOptions } from './PPRTypes';
 
@@ -8,7 +9,7 @@ export interface Mode {
 }
 
 
-export const Modepicker: React.FC<{'start': boolean/*, 'modes': Mode[], 'setModes': React.Dispatch<React.SetStateAction<Mode[]>>*/}> = (props) => {
+export const Modepicker: React.FC<{'translation': Translations, 'start': boolean/*, 'modes': Mode[], 'setModes': React.Dispatch<React.SetStateAction<Mode[]>>*/}> = (props) => {
     
     // FootSelected
     const [footSelected, setFootSelected] = useState<boolean>(false);//(props.modes[0].mode_type === 'FootPPR' || props.modes[0].mode_type === 'Foot');
@@ -41,46 +42,44 @@ export const Modepicker: React.FC<{'start': boolean/*, 'modes': Mode[], 'setMode
                         <div className={modePickerVisible ? 'mode-picker-editor visible' : 'mode-picker-editor'}>
                             <div className='header'>
                                 <div className='sub-overlay-close' onClick={() => setModePickerVisible(false)}><i className='icon'>close</i></div>
-                                <div className='title'>{'Verkehrsmittel am '.concat(props.start ? 'Start' : 'Ziel')}</div>
+                                <div className='title'>{props.start ? props.translation.search.startTransports : props.translation.search.destinationTransports}</div>
                             </div>
                             <div className='content'>
                                 <fieldset className='mode walk'>
-                                    <legend className='mode-header'><label><input type='checkbox' defaultChecked={footSelected} onClick={() => setFootSelected(!footSelected)}/>Fußweg</label>
+                                    <legend className='mode-header'><label><input type='checkbox' defaultChecked={footSelected} onClick={() => setFootSelected(!footSelected)}/>{props.translation.connections.walk}</label>
                                     </legend>
                                     <div className='option'>
-                                        <div className='label'>Profil</div>
+                                        <div className='label'>{props.translation.search.searchProfile.profile}</div>
                                         <div className='profile-picker'><select>
-                                                <option value='default'>Standard</option>
-                                                <option value='accessibility1'>Auch nach leichten Wegen
-                                                    suchen</option>
-                                                <option value='wheelchair'>Rollstuhl</option>
-                                                <option value='elevation'>Weniger Steigung</option>
+                                                <option value='default'>{props.translation.searchProfiles.default}</option>
+                                                <option value='accessibility1'>{props.translation.searchProfiles.accessibility1}</option>
+                                                <option value='wheelchair'>{props.translation.searchProfiles.wheelchair}</option>
+                                                <option value='elevation'>{props.translation.searchProfiles.elevation}</option>
                                             </select></div>
                                     </div>
                                     <div className='option'>
-                                        <div className='label'>Maximale Dauer (Minuten)</div>
+                                        <div className='label'>{props.translation.search.maxDuration}</div>
                                         <div className='numeric slider control'><input type='range' min='0'
                                                 max='30' step='1' value={footMaxDurationSlider} onChange={(e) => setFootMaxDurationSlider(e.currentTarget.valueAsNumber)} /><input type='text' value={footMaxDurationSlider} onChange={(e) => setFootMaxDurationSlider(e.currentTarget.valueAsNumber > 30 ? 30 : e.currentTarget.valueAsNumber)} /></div>
                                     </div>
                                 </fieldset>
                                 <fieldset className='mode bike'>
-                                    <legend className='mode-header'><label><input type='checkbox' defaultChecked={bikeSelected} onClick={() => setBikeSelected(!bikeSelected)}/>Fahrrad</label></legend>
+                                    <legend className='mode-header'><label><input type='checkbox' defaultChecked={bikeSelected} onClick={() => setBikeSelected(!bikeSelected)}/>{props.translation.connections.bike}</label></legend>
                                     <div className='option'>
-                                        <div className='label'>Maximale Dauer (Minuten)</div>
+                                        <div className='label'>{props.translation.search.maxDuration}</div>
                                         <div className='numeric slider control' ><input type='range' min='0'
                                                 max='30' step='1' value={bikeMaxDurationSlider} onChange={(e) => setBikeMaxDurationSlider(e.currentTarget.valueAsNumber)} /><input type='text' value={bikeMaxDurationSlider} onChange={(e) => setBikeMaxDurationSlider(e.currentTarget.valueAsNumber > 30 ? 30 : e.currentTarget.valueAsNumber)} /></div>
                                     </div>
                                 </fieldset>
                                 <fieldset className='mode car'>
-                                    <legend className='mode-header'><label><input type='checkbox' defaultChecked={carSelected} onClick={() => setCarSelected(!carSelected)}/>Auto</label>
+                                    <legend className='mode-header'><label><input type='checkbox' defaultChecked={carSelected} onClick={() => setCarSelected(!carSelected)}/>{props.translation.connections.car}</label>
                                     </legend>
                                     <div className='option'>
-                                        <div className='label'>Maximale Dauer (Minuten)</div>
+                                        <div className='label'>{props.translation.search.maxDuration}</div>
                                         <div className='numeric slider control'><input type='range' min='0'
                                                 max='30' step='1' value={carMaxDurationSlider} onChange={(e) => setCarMaxDurationSlider(e.currentTarget.valueAsNumber)} /><input type='text' value={carMaxDurationSlider} onChange={(e) => setCarMaxDurationSlider(e.currentTarget.valueAsNumber > 30 ? 30 : e.currentTarget.valueAsNumber)} /></div>
                                     </div>
-                                    <div className='option'><label><input type='checkbox' />Parkplätze
-                                            verwenden</label></div>
+                                    <div className='option'><label><input type='checkbox' />{props.translation.search.useParking}</label></div>
                                 </fieldset>
                             </div>
                         </div>
