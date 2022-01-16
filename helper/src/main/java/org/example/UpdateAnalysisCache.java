@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.function.Function;
 
 public class UpdateAnalysisCache {
 
@@ -18,72 +19,101 @@ public class UpdateAnalysisCache {
 
   public static void main(String[] args) throws IOException, ParseException {
     var inFiles = Files.list(Path.of(ANALYZE_DIR))
-      .filter(p -> !p.getFileName().toString().endsWith(".anlz"))
+      .filter(p -> !p.getFileName().toString().endsWith(".anlz") && !p.getFileName().toString().endsWith(".anlz_full"))
       .toList();
 
     var cacheFiles = Files.list(Path.of(ANALYZE_DIR))
       .filter(p -> p.getFileName().toString().endsWith(".anlz"))
       .toList();
 
+    var fullCacheFiles = Files.list(Path.of(ANALYZE_DIR))
+      .filter(p -> p.getFileName().toString().endsWith(".anlz_full"))
+      .toList();
+
     for (var inFile : inFiles) {
       System.out.println("Processing File '" + inFile + "'");
       //try to find existing cache file
-      var found = false;
+      var foundCacheFile = false;
       for (var cache : cacheFiles) {
         if (cache.getFileName().toString().startsWith(inFile.getFileName().toString())) {
-          found = true;
+          foundCacheFile = true;
           System.out.println("  ... found cache file.");
           break;
         }
       }
 
-      if (found) {
+      var foundFullCacheFile = false;
+      for (var cache : fullCacheFiles) {
+        if (cache.getFileName().toString().startsWith(inFile.getFileName().toString())) {
+          foundFullCacheFile = true;
+          System.out.println("  ... found full cache file.");
+          break;
+        }
+      }
+
+      if (foundCacheFile && foundFullCacheFile) {
         System.out.println("  ... skipping.");
         continue;
       }
 
       System.out.println("  ... analyzing");
-      var analysis = new ArrayList<>(analyze(inFile));
+      var cacheEntries = new ArrayList<CacheEntry>();
+      var fullCacheEntries = new ArrayList<CacheEntry>();
+      analyze(inFile, !foundCacheFile, cacheEntries::addAll, !foundFullCacheFile, fullCacheEntries::addAll);
       System.out.println("  ... analysis done.");
 
-      var outFileName = inFile.getFileName().toString() + ".anlz";
-      var outDir = inFile.getParent() + "/" + outFileName;
-      System.out.println("  ... determined cache file name '" + outDir + "'");
+      if (!cacheEntries.isEmpty()) {
+        var outFileName = inFile.getFileName().toString() + ".anlz";
+        var outDir = inFile.getParent() + "/" + outFileName;
+        writeCacheFile(outDir, cacheEntries);
+      }
 
-      var linesOut = new ArrayList<String>();
-      linesOut.add(CacheEntry.getHeader());
-      for (var c : analysis)
-        linesOut.add(c.toString());
-
-      Files.write(Path.of(outDir), linesOut);
-      System.out.println("  ... wrote cache file.");
+      if (!fullCacheEntries.isEmpty()) {
+        var outFileName = inFile.getFileName().toString() + ".anlz_full";
+        var outDir = inFile.getParent() + "/" + outFileName;
+        writeCacheFile(outDir, fullCacheEntries);
+      }
     }
   }
 
-
   static class CacheEntry {
 
-    public CacheEntry(String category, String name, String value) {
+    public CacheEntry(String category, String name, String id, String value) {
       this.category = category;
       this.name = name;
       this.value = value;
+      this.id = id;
     }
 
     String category;
     String name;
     String value;
+    String id;
 
     static String getHeader() {
-      return "category,name,value";
+      return "category,name,id,value";
     }
 
     @Override
     public String toString() {
-      return category + "," + name + "," + value;
+      return category + "," + name + "," + id + "," + value;
     }
   }
 
-  static List<CacheEntry> analyze(Path file) throws IOException, ParseException {
+  static void writeCacheFile(String outDir, List<CacheEntry> cacheEntries) throws IOException {
+    System.out.println("  ... determined cache file name '" + outDir + "'");
+
+    var linesOut = new ArrayList<String>();
+    linesOut.add(CacheEntry.getHeader());
+    for (var c : cacheEntries)
+      linesOut.add(c.toString());
+
+    Files.write(Path.of(outDir), linesOut);
+    System.out.println("  ... wrote cache file.");
+  }
+
+  static void analyze(Path file, boolean doCacheUpdate, Function<List<CacheEntry>, Boolean> cacheCb,
+                      boolean doFullCacheUpdate, Function<List<CacheEntry>, Boolean> fullCacheCb) throws IOException, ParseException {
     var lines = Files.readAllLines(file);
     var parser = new JSONParser();
 
@@ -100,68 +130,93 @@ public class UpdateAnalysisCache {
       var connections = (JSONArray) content.get("connections");
       var statistics = (JSONArray) content.get("statistics");
 
-      if(connections.isEmpty()){
+      if (connections.isEmpty()) {
         ++no_conn;
         continue;
-      }else{
+      } else {
         ++counted;
       }
 
-      for(var s : statistics) {
-        var statCat = (JSONObject)s;
+      for (var s : statistics) {
+        var statCat = (JSONObject) s;
         var cat = values.computeIfAbsent((String) statCat.get("category"), k -> new HashMap<>());
-        var entries = (JSONArray)statCat.get("entries");
+        var entries = (JSONArray) statCat.get("entries");
         var foundRaptorConns = false;
-        for(var e : entries) {
-          var entry = (JSONObject)e;
-          var ent = cat.computeIfAbsent((String)entry.get("name"), k -> new ArrayList<>());
+        for (var e : entries) {
+          var entry = (JSONObject) e;
+          var ent = cat.computeIfAbsent((String) entry.get("name"), k -> new ArrayList<>());
           ent.add((Long) entry.get("value"));
 
-          if(((String)statCat.get("category")).equals("raptor") && ((String)entry.get("name")).equals("raptor_connections")) {
+          if (((String) statCat.get("category")).equals("raptor") && ((String) entry.get("name")).equals("raptor_connections")) {
             foundRaptorConns = true;
           }
         }
 
-        if(((String)statCat.get("category")).equals("raptor") && !foundRaptorConns) {
+        if (((String) statCat.get("category")).equals("raptor") && !foundRaptorConns) {
           var ent = cat.computeIfAbsent("raptor_connections", k -> new ArrayList<>());
-          ent.add((long)connections.size());
+          ent.add((long) connections.size());
         }
       }
     }
 
-    return calculateCacheEntries(values, total_count, no_conn, counted);
+    if (doCacheUpdate) {
+      cacheCb.apply(calculateCacheEntries(values, total_count, no_conn, counted));
+    }
+
+    if (doFullCacheUpdate) {
+      fullCacheCb.apply(calculateFullCacheEntries(values));
+    }
+
   }
 
   static List<CacheEntry> calculateCacheEntries(HashMap<String, HashMap<String, List<Long>>> stats, int total, int none, int counted) {
     var values = new ArrayList<CacheEntry>();
-    values.add(new CacheEntry("general", "total_count", "" + total));
-    values.add(new CacheEntry("general", "no_conn", "" + none));
-    values.add(new CacheEntry("general", "counted", "" + counted));
+    values.add(new CacheEntry("general", "total_count", "" + 0, "" + total));
+    values.add(new CacheEntry("general", "no_conn", "" + 0, "" + none));
+    values.add(new CacheEntry("general", "counted", "" + 0, "" + counted));
 
-    for(var cat : stats.entrySet()) {
+    for (var cat : stats.entrySet()) {
       var catName = cat.getKey();
 
-      for(var val : cat.getValue().entrySet()) {
+      for (var val : cat.getValue().entrySet()) {
         var valName = val.getKey();
 
         //1. sum
         var sum = val.getValue().stream().reduce(0L, Long::sum);
-        values.add(new CacheEntry(catName, "sum_" + valName, "" + sum));
+        values.add(new CacheEntry(catName, "sum_" + valName, "" + 0, "" + sum));
 
         //2. avg
-        values.add(new CacheEntry(catName, "avg_" + valName, "" + (sum / (0f + val.getValue().size()))));
+        values.add(new CacheEntry(catName, "avg_" + valName, "" + 0, "" + (sum / (0f + val.getValue().size()))));
 
         var sorted = val.getValue();
         sorted.sort(Long::compare);
 
         //quantiles
-        values.add(new CacheEntry(catName, "q99_" + valName, "" + quantile(sorted, 0.99)));
-        values.add(new CacheEntry(catName, "q90_" + valName, "" + quantile(sorted, 0.90)));
-        values.add(new CacheEntry(catName, "q80_" + valName, "" + quantile(sorted, 0.80)));
-        values.add(new CacheEntry(catName, "q50_" + valName, "" + quantile(sorted, 0.50)));
+        values.add(new CacheEntry(catName, "q99_" + valName, "" + 0, "" + quantile(sorted, 0.99)));
+        values.add(new CacheEntry(catName, "q90_" + valName, "" + 0, "" + quantile(sorted, 0.90)));
+        values.add(new CacheEntry(catName, "q80_" + valName, "" + 0, "" + quantile(sorted, 0.80)));
+        values.add(new CacheEntry(catName, "q50_" + valName, "" + 0, "" + quantile(sorted, 0.50)));
       }
     }
 
+    return values;
+  }
+
+  static List<CacheEntry> calculateFullCacheEntries(HashMap<String, HashMap<String, List<Long>>> stats) {
+    var values = new ArrayList<CacheEntry>();
+    for (var cat : stats.entrySet()) {
+      var catName = cat.getKey();
+
+      for (var val : cat.getValue().entrySet()) {
+        var valName = val.getKey();
+
+        var count = 0;
+        for(var v : val.getValue()) {
+          values.add(new CacheEntry(catName, valName, "" + count, "" + v));
+          ++count;
+        }
+      }
+    }
     return values;
   }
 

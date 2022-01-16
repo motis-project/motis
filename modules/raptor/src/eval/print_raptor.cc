@@ -39,8 +39,8 @@ struct print_raptor_options : public conf::configuration {
   std::string in_path_;
 };
 
-void print(schedule const& sched, raptor_meta_info const& meta_info,
-           journey const& j) {
+void print(schedule const& sched, raptor_timetable const& timetable,
+           raptor_meta_info const& meta_info, journey const& j) {
   std::cout << "\nJourney with TR: " << j.trips_.size()
             << ";\tMOC: " << j.max_occupancy_
             << ";\tTSO: " << j.time_slotted_occupancy_
@@ -49,7 +49,10 @@ void print(schedule const& sched, raptor_meta_info const& meta_info,
             << ";\n=========================================================\n";
 
   std::string prev_arr_eva{j.stops_[0].eva_no_};
+  time prev_tt = invalid<time>;
+  stop_id prev_raptor_stop = invalid<stop_id>;
   auto prev_arr_time = j.stops_[0].departure_.timestamp_;
+
   for (int idx = 0, size = j.trips_.size(); idx < size; ++idx) {
     auto const& j_trip = j.trips_[idx];
     auto const s_trip = get_trip(sched, j_trip.extern_trip_);
@@ -58,14 +61,16 @@ void print(schedule const& sched, raptor_meta_info const& meta_info,
     auto const j_from_stop = j.stops_[j_trip.from_];
     auto const j_to_stop = j.stops_[j_trip.to_];
 
+    auto const from_s_id = meta_info.eva_to_raptor_id_.at(j_from_stop.eva_no_);
+    auto const from_tt = timetable.transfer_times_[from_s_id];
+
     if (prev_arr_eva != j_from_stop.eva_no_) {
       // there is a Footpath in between
-      std::cout << "     From:\ts_id: " << std::setw(6)
-                << +meta_info.eva_to_raptor_id_.at(prev_arr_eva)
+      std::cout << "     From:\ts_id: " << std::setw(6) << +prev_raptor_stop
                 << ";\teva: " << std::setw(15) << prev_arr_eva
                 << ";\tDep: " << std::setw(7)
                 << +unix_to_motistime(sched.schedule_begin_, prev_arr_time)
-                << " (" << prev_arr_time << ");\n"
+                << " (" << prev_arr_time << ");\tTT: " << prev_tt << "\n"
                 << "     Using: Footpath\n"
                 << "     To:\ts_id: " << std::setw(6)
                 << +meta_info.eva_to_raptor_id_.at(j_from_stop.eva_no_)
@@ -73,28 +78,34 @@ void print(schedule const& sched, raptor_meta_info const& meta_info,
                 << ";\tArr: " << std::setw(7)
                 << +unix_to_motistime(sched.schedule_begin_,
                                       j_from_stop.arrival_.timestamp_)
-                << " (" << j_from_stop.arrival_.timestamp_ << ");\n\n";
+                << " (" << j_from_stop.arrival_.timestamp_
+                << ");\tTT: " << from_tt << "\n\n";
     }
 
+    auto const to_s_id = meta_info.eva_to_raptor_id_.at(j_to_stop.eva_no_);
+    auto const to_tt = timetable.transfer_times_[to_s_id];
+
     std::cout << std::setw(3) << idx << ": "
-              << "From:\ts_id: " << std::setw(6)
-              << +meta_info.eva_to_raptor_id_.at(j_from_stop.eva_no_)
+              << "From:\ts_id: " << std::setw(6) << +from_s_id
               << ";\teva: " << std::setw(15) << j_from_stop.eva_no_
               << ";\tDep: " << std::setw(7)
               << +unix_to_motistime(sched.schedule_begin_,
                                     j_from_stop.departure_.timestamp_)
-              << " (" << j_from_stop.departure_.timestamp_ << ");\n"
+              << " (" << j_from_stop.departure_.timestamp_
+              << ");\tTT: " << from_tt << "\n"
               << "     Using: " << s_trip_dbg
               << meta_info.route_mapping_.str(s_trip_dbg) << ";\n"
-              << "     To:\ts_id: " << std::setw(6)
-              << +meta_info.eva_to_raptor_id_.at(j_to_stop.eva_no_)
+              << "     To:\ts_id: " << std::setw(6) << +to_s_id
               << ";\teva: " << std::setw(15) << j_to_stop.eva_no_
               << ";\tArr: " << std::setw(7)
               << +unix_to_motistime(sched.schedule_begin_,
                                     j_to_stop.arrival_.timestamp_)
-              << " (" << j_to_stop.arrival_.timestamp_ << ");\n\n";
+              << " (" << j_to_stop.arrival_.timestamp_ << ");\tTT: " << to_tt
+              << "\n\n";
 
     prev_arr_eva = j_to_stop.eva_no_;
+    prev_raptor_stop = to_s_id;
+    prev_tt = to_tt;
     prev_arr_time = j_to_stop.arrival_.timestamp_;
   }
 }
@@ -152,7 +163,7 @@ int print_raptor(int argc, const char** argv) {
 
     auto const journeys = message_to_journeys(res);
     for (auto const& j : journeys) {
-      print(sched, *meta_info, j);
+      print(sched, *tt, *meta_info, j);
     }
   }
 

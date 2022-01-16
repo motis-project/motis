@@ -20,6 +20,14 @@ struct data_max_transfer_class {
   transfer_class_t initial_transfer_class_{invalid<transfer_class_t>};
   transfer_class_t active_transfer_class_{invalid<transfer_class_t>};
   transfer_class_t _staged_transfer_class_{invalid<transfer_class_t>};
+
+  stop_offset _dep_offset{invalid<stop_offset>};
+  time _slow_tt{invalid<time>};
+  time _fast_tt{invalid<time>};
+  time _regular_tt{invalid<time>};
+  time _prev_arr{invalid<time>};
+  time _stop_dep{invalid<time>};
+  time _dep_s_id{invalid<time>};
 };
 
 /***
@@ -61,11 +69,6 @@ struct trait_max_transfer_class {
 
   static constexpr float fast_tt_multiplier = 0.7f;
   static constexpr float slow_tt_multiplier = 1.5f;
-
-  // Trait Data
-  transfer_class_t initial_transfer_class_{invalid<transfer_class_t>};
-  transfer_class_t active_transfer_class_{invalid<transfer_class_t>};
-  transfer_class_t _staged_transfer_class_{invalid<transfer_class_t>};
 
   template <typename TraitsData>
   _mark_cuda_rel_ inline static dimension_id get_write_to_dimension_id(
@@ -152,29 +155,41 @@ struct trait_max_transfer_class {
   template <typename TraitsData>
   __device__ inline static void calculate_aggregate(
       TraitsData& aggregate, device_gpu_timetable const& tt,
-      time const prev_arrival,
-      stop_times_index const dep_sti, stop_times_index const arr_sti) {
+      time const* const prev_arrivals, stop_times_index const dep_sti,
+      stop_times_index const arr_sti) {
 
     auto const first_sti = aggregate.route_->index_to_stop_times_ +
                            aggregate.route_->stop_count_ * aggregate.trip_id_;
     auto const dep_offset = dep_sti - first_sti;
-    auto const dep_s_id = aggregate.route_->index_to_route_stops_ + dep_offset;
+    auto const dep_s_idx = aggregate.route_->index_to_route_stops_ + dep_offset;
+    auto const dep_s_id = tt.route_stops_[dep_s_idx];
 
-    auto const regular_tt = tt.transfer_times_[dep_s_id];
+    auto const prev_arrival = prev_arrivals[aggregate.total_size_ * dep_s_id +
+                                            aggregate.initial_t_offset_];
+
+    time const regular_tt = tt.transfer_times_[dep_s_id];
     auto const stop_departure = tt.stop_departures_[dep_sti];
 
-    auto const slow_tt = regular_tt * slow_tt_multiplier;
-    auto const fast_tt = regular_tt * fast_tt_multiplier;
+    time const slow_tt = regular_tt * slow_tt_multiplier;
+    time const fast_tt = regular_tt * fast_tt_multiplier;
 
-    //when reaching this point we already checked on the thread responsible for
-    //the given departure stop, therefore, we know that one of the categories
-    //will fit, and we are only interested to find out which
+    aggregate._dep_offset = dep_offset;
+    aggregate._dep_s_id = dep_s_id;
+    aggregate._slow_tt = slow_tt;
+    aggregate._fast_tt = fast_tt;
+    aggregate._regular_tt = regular_tt;
+    aggregate._prev_arr = prev_arrival;
+    aggregate._stop_dep = stop_departure;
+
+    // when reaching this point we already checked on the thread responsible for
+    // the given departure stop, therefore, we know that one of the categories
+    // will fit, and we are only interested to find out which
     if (prev_arrival + slow_tt <= stop_departure) {
-      aggregate._staged_transfer_class_ = 0;
+      aggregate.active_transfer_class_ = 0;
     } else if (prev_arrival + regular_tt <= stop_departure) {
-      aggregate._staged_transfer_class_ = 1;
+      aggregate.active_transfer_class_ = 1;
     } else if (prev_arrival + fast_tt <= stop_departure) {
-      aggregate._staged_transfer_class_ = 2;
+      aggregate.active_transfer_class_ = 2;
     }
   }
 

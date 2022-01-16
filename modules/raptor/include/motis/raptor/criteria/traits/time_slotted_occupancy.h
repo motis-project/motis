@@ -184,7 +184,7 @@ struct trait_time_slotted_occupancy {
   template <typename TraitsData>
   __device__ inline static void calculate_aggregate(
       TraitsData& aggregate, device_gpu_timetable const& tt,
-      time const,
+      time const* const,
       stop_times_index const dep_sti, stop_times_index const arr_sti) {
 
     for (stop_times_index current = dep_sti + 1; current <= arr_sti;

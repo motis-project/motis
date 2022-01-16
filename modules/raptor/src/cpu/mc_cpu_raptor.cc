@@ -93,12 +93,12 @@ inline void init_arrivals(raptor_result& result, raptor_query const& q,
 template <typename CriteriaConfig>
 inline std::tuple<trip_id, CriteriaConfig> get_next_feasible_trip(
     raptor_timetable const& tt, time const* const prev_arrivals, route_id r_id,
-    trip_id earliest_trip_id, trait_id trait_offset, stop_offset arr_offset) {
+    trip_id earliest_trip_id, trait_id const trait_offset, stop_offset arr_offset) {
 
   auto const& route = tt.routes_[r_id];
   stop_offset new_dep_offset;
 
-  CriteriaConfig trip_data{&route};
+  CriteriaConfig trip_data{&route, trait_offset};
 
   for (trip_id trip_id = earliest_trip_id + 1; trip_id < route.trip_count_;
        ++trip_id) {
@@ -144,10 +144,10 @@ template <typename CriteriaConfig>
 void update_route_for_trait_offset(
     raptor_timetable const& tt, route_id const r_id,
     time const* const prev_arrivals, time* const current_round,
-    earliest_arrivals& ea, cpu_mark_store& station_marks, trip_id trait_offset,
-    arrival_id target_arr_idx) {
+    earliest_arrivals& ea, cpu_mark_store& station_marks,
+    trait_id const trait_offset, arrival_id target_arr_idx) {
   auto const& route = tt.routes_[r_id];
-  CriteriaConfig criteria_data{&route};
+  CriteriaConfig criteria_data{&route, trait_offset};
   criteria_data.reset(invalid<trip_id>, trait_offset);
 
   trip_count earliest_trip_id = invalid<trip_count>;
@@ -257,7 +257,7 @@ inline void update_route_for_trait_offset_forward_project(
     cpu_mark_store& station_marks, stop_id const target_s_id) {
 
   auto const& route = tt.routes_[r_id];
-  CriteriaConfig aggregate{&route};
+  CriteriaConfig aggregate{&route, trait_offset};
 
   auto active_stop_count = route.stop_count_;
 

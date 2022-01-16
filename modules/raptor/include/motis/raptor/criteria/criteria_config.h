@@ -21,11 +21,18 @@ struct criteria_data : public TraitData... {
       std::conjunction<std::is_default_constructible<TraitData>...>::value,
       "All trait data structs need to be default constructible!");
 
-  _mark_cuda_rel_ explicit criteria_data(raptor_route const* route)
-      : route_{route} {}
+  _mark_cuda_rel_ criteria_data(raptor_route const* route,
+                                trait_id const total_size,
+                                trait_id const initial_t_offset)
+      : route_{route},
+        total_size_{total_size},
+        initial_t_offset_{initial_t_offset} {}
 
   raptor_route const* route_;
   trip_id trip_id_{invalid<trip_id>};
+
+  trait_id initial_t_offset_;
+  trait_id total_size_;
 };
 
 struct default_transfer_time_calculator {
@@ -43,7 +50,6 @@ struct default_transfer_time_calculator {
 template <typename Data, typename Traits, typename TransferTimeCalculator,
           CalcMethod calc>
 struct criteria_config : Data {
-  using CriteriaData = Data;
 
   constexpr static auto USES_SHFL_CALC = calc == CalcMethod::Shfl;
 
@@ -62,9 +68,9 @@ struct criteria_config : Data {
 
   constexpr static trait_id SWEEP_BLOCK_SIZE = Traits::SWEEP_BLOCK_SIZE;
 
-  _mark_cuda_rel_ explicit criteria_config(raptor_route const* route)
-    : Data(route)
-  {}
+  _mark_cuda_rel_ criteria_config(raptor_route const* route,
+                                  trait_id const initial_offset)
+      : Data(route, TRAITS_SIZE, initial_offset) {}
 
   _mark_cuda_rel_ inline static arrival_id get_arrival_idx(
       stop_id const stop_idx, trait_id const trait_offset = 0) {
@@ -77,12 +83,12 @@ struct criteria_config : Data {
 
   template <typename Timetable>
   _mark_cuda_rel_ inline bool check_and_set_departure_stop(
-      Timetable const& tt,
-      stop_offset const dep_offset, stop_id const dep_stop_id,
-      time const prev_arrival, time const stop_departure) {
+      Timetable const& tt, stop_offset const dep_offset,
+      stop_id const dep_stop_id, time const prev_arrival,
+      time const stop_departure) {
     auto const feasible =
-        Traits::check_departure_stop(false, tt, *this, dep_offset,
-                                     dep_stop_id, prev_arrival, stop_departure);
+        Traits::check_departure_stop(false, tt, *this, dep_offset, dep_stop_id,
+                                     prev_arrival, stop_departure);
 
     if (feasible) Traits::set_departure_stop(*this, dep_offset);
 
@@ -93,7 +99,8 @@ struct criteria_config : Data {
   _mark_cuda_rel_ inline static time get_transfer_time(Timetable const& tt,
                                                        trait_id const t_offset,
                                                        stop_id const s_id) {
-    CriteriaData aggregate{nullptr};
+    criteria_config<Data, Traits, TransferTimeCalculator, calc> aggregate{
+        nullptr, t_offset};
     Traits::fill_aggregate(TRAITS_SIZE, aggregate, t_offset);
     return TransferTimeCalculator::get_transfer_time(aggregate, tt, s_id);
   }
@@ -111,21 +118,21 @@ struct criteria_config : Data {
 
   template <typename Timetable>
   _mark_cuda_rel_ inline void update_from_stop(
-      Timetable const& tt,
-      stop_offset const s_offset, stop_times_index const current_sti) {
+      Timetable const& tt, stop_offset const s_offset,
+      stop_times_index const current_sti) {
     Traits::update_aggregate(*this, tt, s_offset, current_sti);
   }
 
-  _mark_cuda_rel_ inline void reset(
-      trip_id const t_id, trait_id const initial_offset) {
+  _mark_cuda_rel_ inline void reset(trip_id const t_id,
+                                    trait_id const initial_offset) {
     this->trip_id_ = t_id;
     Traits::reset_aggregate(TRAITS_SIZE, *this, initial_offset);
   }
 
 #if defined(MOTIS_CUDA)
-  __device__ inline void propagate_along_warp(
-      unsigned const mask,
-      bool const is_departure_stop, bool const write_value) {
+  __device__ inline void propagate_along_warp(unsigned const mask,
+                                              bool const is_departure_stop,
+                                              bool const write_value) {
     Traits::propagate_and_merge_if_needed(mask, *this, is_departure_stop,
                                           write_value);
   }
@@ -135,10 +142,11 @@ struct criteria_config : Data {
   }
 
   template <typename Timetable>
-  __device__ inline void calculate(
-      Timetable const& tt, time const prev_arrival,
-      stop_times_index const dep_sti, stop_times_index const arr_sti) {
-    Traits::calculate_aggregate(*this, tt, prev_arrival, dep_sti, arr_sti);
+  __device__ inline void calculate(Timetable const& tt,
+                                   time const* const prev_arrivals,
+                                   stop_times_index const dep_sti,
+                                   stop_times_index const arr_sti) {
+    Traits::calculate_aggregate(*this, tt, prev_arrivals, dep_sti, arr_sti);
   }
 #endif
 

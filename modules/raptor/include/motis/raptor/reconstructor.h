@@ -173,7 +173,7 @@ struct intermediate_journey {
 
 template <typename CriteriaConfig>
 struct reconstructor {
-  using CriteriaData = typename CriteriaConfig::CriteriaData;
+  using CriteriaData = CriteriaConfig;
 
   struct candidate {
 
@@ -523,7 +523,7 @@ struct reconstructor {
 
   std::tuple<stop_id, trait_id> get_board_station_for_trip(
       route_id const r_id, trip_id const t_id, raptor_result_base const& result,
-      raptor_round const result_idx, trait_id trait_offset,
+      raptor_round const result_idx, trait_id const trait_offset,
       stop_offset const arrival_offset) {
     auto const& r = timetable_.routes_[r_id];
 
@@ -533,7 +533,7 @@ struct reconstructor {
     // -1, since we cannot board a trip at the last station
     auto const max_offset =
         std::min(static_cast<stop_offset>(r.stop_count_ - 1), arrival_offset);
-    CriteriaConfig aggregate{&r};
+    CriteriaConfig aggregate{&r, trait_offset};
 
     for (auto stop_offset = 0; stop_offset < max_offset; ++stop_offset) {
       aggregate.reset(t_id, trait_offset);

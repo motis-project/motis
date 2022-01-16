@@ -43,8 +43,9 @@ struct traits<FirstTrait, RestTraits...> {
       "A trait without dimension propagation is not allowed on top of a trait "
       "with dimension propagation! Change the trait order accordingly.");
 
-  template<typename CriteriaData>
-  _mark_cuda_rel_ inline static trait_id get_write_to_trait_id(CriteriaData& d) {
+  template <typename CriteriaData>
+  _mark_cuda_rel_ inline static trait_id get_write_to_trait_id(
+      CriteriaData& d) {
     auto const first_dimension_idx = FirstTrait::get_write_to_dimension_id(d);
     if (!valid(first_dimension_idx)) {
       return invalid<trait_id>;
@@ -60,7 +61,7 @@ struct traits<FirstTrait, RestTraits...> {
     return write_idx;
   }
 
-  template<typename CriteriaData>
+  template <typename CriteriaData>
   _mark_cuda_rel_ inline static bool is_trait_satisfied(trait_id total_size,
                                                         CriteriaData const& td,
                                                         trait_id t_offset) {
@@ -86,7 +87,7 @@ struct traits<FirstTrait, RestTraits...> {
                dep_offset, dep_s_id, prev_arrival, stop_departure);
   }
 
-  template<typename CriteriaData>
+  template <typename CriteriaData>
   _mark_cuda_rel_ inline static void set_departure_stop(
       CriteriaData& data, stop_offset const dep_offset) {
     FirstTrait::set_departure_stop(data, dep_offset);
@@ -95,7 +96,7 @@ struct traits<FirstTrait, RestTraits...> {
 
   //****************************************************************************
   // Only used by CPU RAPTOR
-  template<typename CriteriaData>
+  template <typename CriteriaData>
   inline static bool is_rescan_from_stop_needed(trait_id total_size,
                                                 CriteriaData const& td,
                                                 trait_id t_offset) {
@@ -111,8 +112,8 @@ struct traits<FirstTrait, RestTraits...> {
   // helper to aggregate values while progressing through the route stop by stop
   template <typename Timetable, typename CriteriaData>
   _mark_cuda_rel_ inline static void update_aggregate(
-      CriteriaData& aggregate_dt, Timetable const& tt, stop_offset const s_offset,
-      stop_times_index const current_sti) {
+      CriteriaData& aggregate_dt, Timetable const& tt,
+      stop_offset const s_offset, stop_times_index const current_sti) {
 
     FirstTrait::update_aggregate(aggregate_dt, tt, s_offset, current_sti);
 
@@ -121,7 +122,7 @@ struct traits<FirstTrait, RestTraits...> {
   }
 
   // reset the aggregate everytime the departure station changes
-  template<typename CriteriaData>
+  template <typename CriteriaData>
   _mark_cuda_rel_ inline static void reset_aggregate(
       trait_id const total_size, CriteriaData& aggregate_dt,
       trait_id const initial_t_offset) {
@@ -134,17 +135,17 @@ struct traits<FirstTrait, RestTraits...> {
   }
 
 #if defined(MOTIS_CUDA)
-  template<typename CriteriaData>
+  template <typename CriteriaData>
   __device__ inline static void propagate_and_merge_if_needed(
-      unsigned const mask, CriteriaData& aggregate, bool const is_departure_stop,
-      bool const write_update) {
+      unsigned const mask, CriteriaData& aggregate,
+      bool const is_departure_stop, bool const write_update) {
     FirstTrait::propagate_and_merge_if_needed(aggregate, mask,
                                               is_departure_stop, write_update);
     traits<RestTraits...>::propagate_and_merge_if_needed(
         mask, aggregate, is_departure_stop, write_update);
   }
 
-  template<typename CriteriaData>
+  template <typename CriteriaData>
   __device__ inline static void carry_to_next_stage(unsigned const mask,
                                                     CriteriaData& aggregate) {
     FirstTrait::carry_to_next_stage(mask, aggregate);
@@ -153,16 +154,18 @@ struct traits<FirstTrait, RestTraits...> {
 
   template <typename Timetable, typename CriteriaData>
   __device__ inline static void calculate_aggregate(
-      CriteriaData& aggregate, Timetable const& tt, time const prev_arrival,
-      stop_times_index const dep_sti, stop_times_index const arr_sti) {
-    FirstTrait::calculate_aggregate(aggregate, tt, prev_arrival, dep_sti,
+      CriteriaData& aggregate, Timetable const& tt,
+      time const* const prev_arrivals, stop_times_index const dep_sti,
+      stop_times_index const arr_sti) {
+
+    FirstTrait::calculate_aggregate(aggregate, tt, prev_arrivals, dep_sti,
                                     arr_sti);
-    traits<RestTraits...>::calculate_aggregate(aggregate, tt, prev_arrival,
+    traits<RestTraits...>::calculate_aggregate(aggregate, tt, prev_arrivals,
                                                dep_sti, arr_sti);
   }
 #endif
 
-  template<typename CriteriaData>
+  template <typename CriteriaData>
   inline static std::vector<trait_id> get_feasible_trait_ids(
       trait_id const total_size, trait_id const initial_offset,
       CriteriaData const& input) {
@@ -215,7 +218,7 @@ struct traits<FirstTrait, RestTraits...> {
     traits<RestTraits...>::fill_journey(rest_size, journey, rest_offset);
   }
 
-  template<typename CriteriaData>
+  template <typename CriteriaData>
   _mark_cuda_rel_ inline static void fill_aggregate(trait_id const total_size,
                                                     CriteriaData& aggregate,
                                                     trait_id const t_offset) {
@@ -244,11 +247,6 @@ struct traits<> {
   constexpr static trait_id SIZE = 1;
   constexpr static bool REQ_DIMENSION_PROPAGATION = false;
   constexpr static trait_id SWEEP_BLOCK_SIZE = 1;
-
-  inline static trait_id get_sweep_block_size() {
-    printf("returning 1");
-    return 1;
-  }
 
   template <typename Data>
   _mark_cuda_rel_ inline static trait_id get_write_to_trait_id(Data const&) {
@@ -301,7 +299,7 @@ struct traits<> {
 
   template <typename Data, typename Timetable>
   __device__ inline static void calculate_aggregate(Data&, Timetable const&,
-                                                    time const,
+                                                    time const* const,
                                                     stop_times_index const,
                                                     stop_times_index const) {}
 
