@@ -7,6 +7,8 @@ import { Connection, Station } from './ConnectionTypes';
 import { Mode } from './ModePicker';
 import { Interval } from './RoutingTypes';
 import { Translations } from './Localization';
+import { AddressSuggestionResponse, Address, StationSuggestionResponse } from './SuggestionTypes';
+import { Proposals } from './Proposals';
 
 
 interface Destination {
@@ -35,6 +37,15 @@ const getRoutingOptions = (startType: string, startModes: Mode[], start: string,
 }
 
 
+const getPostRequest = (body: any) => {
+    return {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify( body )
+    }
+}
+
+
 const getDefaultMode = () => {
     return {mode_type: '', mode: { search_options: { profile: 'default', duration_limit: 30 } } }
 }
@@ -43,7 +54,42 @@ const getDefaultMode = () => {
 function addHours(date: Date, hours: number): Date {
     let res = new Date(date);
     res.setHours(res.getHours() + hours);
-    return res
+    return res;
+}
+
+
+const fetchSuggestions = (input: string, setAddresses: React.Dispatch<React.SetStateAction<Address[]>>, setStations: React.Dispatch<React.SetStateAction<Station[]>>) => {
+    let requestURL = 'https://europe.motis-project.de/?elm=AddressSuggestions'
+
+    let body = {
+        destination: { type: 'Module', target: '/address'},
+        content_type: 'AddressRequest',
+        content: { input: input }
+    }
+
+    fetch(requestURL, getPostRequest(body))
+            .then(res => res.json())
+            .then((res: AddressSuggestionResponse) => {
+                console.log("Response came in");
+                console.log(res);
+                setAddresses(res.content.guesses)
+            })
+
+    requestURL = 'https://europe.motis-project.de/?elm=StationSuggestions'
+
+    let body2 = {
+        destination: { type: 'Module', target: '/guesser'},
+        content_type: 'StationGuesserRequest',
+        content: { guess_count: 6, input: input }
+    }
+
+    fetch(requestURL, getPostRequest(body))
+            .then(res => res.json())
+            .then((res: StationSuggestionResponse) => {
+                console.log("Response came in");
+                console.log(res);
+                setStations(res.content.guesses)
+            })
 }
 
 
@@ -79,7 +125,31 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
     // SearchTime
-    const [searchTime, setSearchTime] = useState<Date>(new Date())
+    const [searchTime, setSearchTime] = useState<Date>(new Date());
+
+    // show Start Suggestions
+    const [showStartSuggestions, setShowStartSuggestions] = useState<boolean>(false);
+
+    // fetch Start Address Suggestions
+    const [fetchStartSuggestions, setFetchStartSuggestions] = useState<boolean>(false);
+
+    // Start Address Suggestions
+    const [startAddressSuggestions, setStartAddressSuggestions] = useState<Address[]>([]);
+
+    // Start Station Suggestions
+    const [startStationSuggestions, setStartStationSuggestions] = useState<Station[]>([]);
+
+    // fetch Destination Address Suggestions
+    const [fetchDestinationAddressSuggestions, setFetchDestinationAddressSuggestions] = useState<boolean>(false);
+
+    // Destination Address Suggestions
+    const [destinationAddressSuggestions, setDestinationAddressSuggestions] = useState<Address[]>([]);
+
+    // Destination Station Suggestions
+    const [destinationStationSuggestions, setDestinationStationSuggestions] = useState<Station[]>([]);
+
+    // show Destination Suggestions
+    const [showDestinationSuggestions, setShowDestinationSuggestions] = useState<boolean>(false);
     
     useEffect(() => {
         let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest'
@@ -94,6 +164,15 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
             })
 
     }, [searchQuery]);
+
+    //
+    useEffect(() => {
+        fetchSuggestions(start, setStartAddressSuggestions, setStartStationSuggestions);
+    }, [fetchStartSuggestions])
+    
+    useEffect(() => {
+        fetchSuggestions(destination, setDestinationAddressSuggestions, setDestinationStationSuggestions)
+    }, [fetchDestinationAddressSuggestions])
     
     return (
         <div id='search'>
@@ -113,6 +192,9 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                         //e.preventDefault();
                                         //console.log("Start changed")
                                         setStart(e.currentTarget.value)
+                                        if (e.currentTarget.value.length >= 3) {
+                                            setFetchStartSuggestions(!fetchStartSuggestions);
+                                        }
                                     } }
                                     onKeyPress={e => {
                                         if (e.key == "Enter") {
@@ -120,10 +202,16 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                             console.log("Pressed Enter in Start")
                                             setSearchQuery(!searchQuery)
                                         }
+                                    } }
+                                    onFocus={_ => {
+                                        setShowStartSuggestions(true);
+                                    } }
+                                    onBlur={_ => {
+                                        setShowStartSuggestions(false);
                                     } } /></div>
                         </form>
-                        <div className='paper hide'>
-                            <ul className='proposals'></ul>
+                        <div className='paper' style={showStartSuggestions && startAddressSuggestions.length > 0 ? {} : {display: 'none'}}>
+                            <Proposals addresses={startAddressSuggestions} stations={startStationSuggestions}/>
                         </div>
                     </div>
                     <Modepicker translation={props.translation} start={true}/>{/* modes={startModes} setModes={setStartModes}/>*/}
@@ -155,6 +243,9 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                             //e.preventDefault();
                                             //console.log("Start changed")
                                             setDestination(e.currentTarget.value)
+                                            if (e.currentTarget.value.length >= 3) {
+                                                setFetchDestinationAddressSuggestions(!fetchDestinationAddressSuggestions);
+                                            }
                                         } }
                                         onKeyPress={e => {
                                             if (e.key == "Enter") {
@@ -162,11 +253,17 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                                 console.log("Pressed Enter in Destination")
                                                 setSearchQuery(!searchQuery)
                                             }
+                                        } }
+                                        onFocus={_ => {
+                                            setShowDestinationSuggestions(true);
+                                        } }
+                                        onBlur={_ => {
+                                            setShowDestinationSuggestions(false);
                                         } }/>
                             </div>
                         </div>
-                        <div className='paper hide'>
-                            <ul className='proposals'></ul>
+                        <div className='paper' style={showDestinationSuggestions && destinationAddressSuggestions.length > 0 ? {} : {display: 'none'}}>
+                            <Proposals addresses={destinationAddressSuggestions} stations={destinationStationSuggestions}/>
                         </div>
                     </div>
                     <Modepicker translation={props.translation} start={false}/>{/*} modes={destinationModes} setModes={setDestinationModes}/>*/}
