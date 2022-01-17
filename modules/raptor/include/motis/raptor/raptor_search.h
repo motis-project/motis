@@ -94,7 +94,7 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
   auto const journeys = reconstructor.get_journeys(q.source_time_end_);
   stats.raptor_connections_ = journeys.size();
 
-  return std::move(journeys);
+  return journeys;
 }
 
 template <implementation_type Impl, typename Query>

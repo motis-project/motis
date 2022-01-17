@@ -31,8 +31,8 @@ struct criteria_data : public TraitData... {
   raptor_route const* route_;
   trip_id trip_id_{invalid<trip_id>};
 
-  trait_id initial_t_offset_;
   trait_id total_size_;
+  trait_id initial_t_offset_;
 };
 
 struct default_transfer_time_calculator {
