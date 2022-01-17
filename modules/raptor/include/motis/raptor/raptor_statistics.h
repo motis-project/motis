@@ -9,10 +9,6 @@ namespace motis::raptor {
 struct raptor_statistics {
   uint64_t raptor_time_{0};
 
-  uint64_t total_route_update_time_{0};
-  uint64_t total_footpath_update_time_{0};
-  uint64_t total_criteria_calc_time_{0};
-
   uint64_t cpu_time_routes_{0};
   uint64_t cpu_time_footpath_{0};
   uint64_t cpu_time_clear_arrivals_{0};
@@ -39,9 +35,6 @@ inline stats_category to_stats_category(char const* name,
                                         raptor_statistics const& s) {
   return {name,
           {{"raptor_time_ms", s.raptor_time_},
-
-           {"route_update_time_us", s.total_route_update_time_},
-           {"footpath_update_time_us", s.total_footpath_update_time_},
 
            {"cpu_route_time_us", s.cpu_time_routes_},
            {"cpu_footpath_time_us", s.cpu_time_footpath_},

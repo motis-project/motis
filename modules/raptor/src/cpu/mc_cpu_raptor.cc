@@ -93,7 +93,8 @@ inline void init_arrivals(raptor_result& result, raptor_query const& q,
 template <typename CriteriaConfig>
 inline std::tuple<trip_id, CriteriaConfig> get_next_feasible_trip(
     raptor_timetable const& tt, time const* const prev_arrivals, route_id r_id,
-    trip_id earliest_trip_id, trait_id const trait_offset, stop_offset arr_offset) {
+    trip_id earliest_trip_id, trait_id const trait_offset,
+    stop_offset arr_offset) {
 
   auto const& route = tt.routes_[r_id];
   stop_offset new_dep_offset;
@@ -487,17 +488,9 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics& stats) {
 
         ++routes_scanned;
 
-//        if (!CriteriaConfig::REQ_DIMENSION_PROPAGATION) {
-          update_route_for_trait_offset_forward_project<CriteriaConfig>(
-              tt, t_offset, r_id, result[round_k - 1], result[round_k], ea,
-              station_marks, target_s_id);
-//        } else {
-//          auto const target_arr_idx =
-//              CriteriaConfig::get_arrival_idx(target_s_id, t_offset);
-//          update_route_for_trait_offset<CriteriaConfig>(
-//              tt, r_id, result[round_k - 1], result[round_k], ea, station_marks,
-//              t_offset, target_arr_idx);
-//        }
+        update_route_for_trait_offset_forward_project<CriteriaConfig>(
+            tt, t_offset, r_id, result[round_k - 1], result[round_k], ea,
+            station_marks, target_s_id);
       }
     }
     stats.total_scanned_routes_ += routes_scanned;

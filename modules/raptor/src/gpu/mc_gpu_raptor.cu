@@ -21,13 +21,13 @@ constexpr unsigned int FULL_MASK = 0xFFFFffff;
 constexpr unsigned int NO_LEADER = FULL_MASK;
 
 template <typename CriteriaConfig>
-__device__ void
-print_aggregate(CriteriaConfig const& d) {}
+__device__ void print_aggregate(CriteriaConfig const& d) {}
 
 template <>
-__device__ void
-print_aggregate<MaxTransferClass>(MaxTransferClass const& d) {
-  printf("dep_off %i\tprev %i\tdep %i\ttt %i\tfast %i\tslow %i\tmtc %i\n", d._dep_offset, d._prev_arr, d._stop_dep, d._regular_tt, d._fast_tt, d._slow_tt, d.active_transfer_class_);
+__device__ void print_aggregate<MaxTransferClass>(MaxTransferClass const& d) {
+  printf("dep_off %i\tprev %i\tdep %i\ttt %i\tfast %i\tslow %i\tmtc %i\n",
+         d._dep_offset, d._prev_arr, d._stop_dep, d._regular_tt, d._fast_tt,
+         d._slow_tt, d.active_transfer_class_);
 }
 
 template <typename CriteriaConfig>
@@ -509,7 +509,7 @@ __device__ void mc_update_footpaths_dev_scratch(
         CriteriaConfig::get_arrival_idx(footpath.to_, t_offset);
 
     time const from_arrival = read_arrivals[from_arrival_idx];
-    if(valid(from_arrival)) {
+    if (valid(from_arrival)) {
       time const new_arrival = from_arrival + footpath.duration_;
 
       // this give potentially just an upper bound and not the real
@@ -558,10 +558,10 @@ __device__ void perform_arrival_sweeping(stop_id const stop_count,
         if (valid(min_at_stop) && valid(current) && min_at_stop <= current) {
           arrivals[arr_idx] = invalid<time>;
           unmark(station_marks, arr_idx);
-          if(min_at_stop <= ea[arr_idx]) {
+          if (min_at_stop <= ea[arr_idx]) {
             ea[arr_idx] = invalid<time>;
           }
-        }else if(current < min_at_stop) {
+        } else if (current < min_at_stop) {
           // a higher t_offset has a better value; remember the larger value
           //  to again check higher t_offsets against it
           min_at_stop = current;
@@ -572,13 +572,16 @@ __device__ void perform_arrival_sweeping(stop_id const stop_count,
 }
 
 template <typename CriteriaConfig>
-__device__ void mc_update_routes_dev(time const* const prev_arrivals,
-                                     time* const arrivals,
-                                     time* const earliest_arrivals,
-                                     uint32_t* station_marks,
-                                     uint32_t* route_marks,
+__device__ void mc_update_routes_dev(device_memory const& device_mem,
+                                     raptor_round const round_k,
                                      stop_id const target_stop_id,
                                      device_gpu_timetable const& tt) {
+
+  time const* const prev_arrivals = device_mem.result_[round_k - 1];
+  time* const arrivals = device_mem.result_[round_k];
+  uint32_t* route_marks = device_mem.route_marks_;
+  uint32_t* station_marks = device_mem.station_marks_;
+  time* const earliest_arrivals = device_mem.earliest_arrivals_;
 
   // blockDim.x = 32; blockDim.y = 32; gridDim.x =
   // 6; => Stride = 32*6 => 192
@@ -586,11 +589,17 @@ __device__ void mc_update_routes_dev(time const* const prev_arrivals,
   // threadIdx.y = 1..32 + (blockDim.y = 32 * blockIdx.x = 1..6)
   auto const start_idx = threadIdx.y + (blockDim.y * blockIdx.x);
 
+  uint64_t route_count = 0;
+
   auto const trait_size = CriteriaConfig::TRAITS_SIZE;
   auto const max_idx = tt.route_count_ * trait_size;
   for (auto idx = start_idx; idx < max_idx; idx += stride) {
     if (!marked(route_marks, idx)) {
       continue;
+    }
+
+    if (threadIdx.x == 0) {
+      ++route_count;
     }
 
     auto const r_id = idx / trait_size;
@@ -609,6 +618,23 @@ __device__ void mc_update_routes_dev(time const* const prev_arrivals,
   }
 
   this_grid().sync();
+
+  if (threadIdx.x == 0) {
+    if (round_k == 1)
+      atomicAdd(&device_mem.stats_->scanned_routes_1_, route_count);
+    if (round_k == 2)
+      atomicAdd(&device_mem.stats_->scanned_routes_2_, route_count);
+    if (round_k == 3)
+      atomicAdd(&device_mem.stats_->scanned_routes_3_, route_count);
+    if (round_k == 4)
+      atomicAdd(&device_mem.stats_->scanned_routes_4_, route_count);
+    if (round_k == 5)
+      atomicAdd(&device_mem.stats_->scanned_routes_5_, route_count);
+    if (round_k == 6)
+      atomicAdd(&device_mem.stats_->scanned_routes_5_, route_count);
+    if (round_k == 7)
+      atomicAdd(&device_mem.stats_->scanned_routes_7_, route_count);
+  }
 
   auto const store_size = (max_idx / 32) + 1;
   reset_store(route_marks, store_size);
@@ -716,12 +742,8 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
       return;
     }
 
-    time const* const prev_arrivals = device_mem.result_[round_k - 1];
-    time* const arrivals = device_mem.result_[round_k];
-
-    mc_update_routes_dev<CriteriaConfig>(
-        prev_arrivals, arrivals, device_mem.earliest_arrivals_,
-        device_mem.station_marks_, device_mem.route_marks_, query.target_, tt);
+    mc_update_routes_dev<CriteriaConfig>(device_mem, round_k, query.target_,
+                                         tt);
 
     this_grid().sync();
 
@@ -732,8 +754,22 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
 
     mc_update_footpaths_dev<CriteriaConfig>(device_mem, round_k, query.target_,
                                             tt);
-
     this_grid().sync();
+
+    if (t_id == 0) {
+      device_mem.stats_->number_of_rounds_ = round_k;
+    }
+  }
+
+  if(t_id == 0) {
+    device_mem.stats_->total_scanned_routes_ =
+        device_mem.stats_->scanned_routes_1_ +
+        device_mem.stats_->scanned_routes_2_ +
+        device_mem.stats_->scanned_routes_3_ +
+        device_mem.stats_->scanned_routes_4_ +
+        device_mem.stats_->scanned_routes_5_ +
+        device_mem.stats_->scanned_routes_6_ +
+        device_mem.stats_->scanned_routes_7_;
   }
 }
 
@@ -799,10 +835,10 @@ void invoke_mc_gpu_raptor(d_query const& dq) {
       device_memory const&, raptor_round const, stop_id const,    \
       device_gpu_timetable const&);
 
-#define MAKE_MC_UPDATE_ROUTES_TEMPLATE_INSTANCE(VAL, ACCESSOR)           \
-  template __device__ void mc_update_routes_dev<VAL>(                    \
-      time const* const, time* const, time* const, uint32_t*, uint32_t*, \
-      stop_id const, device_gpu_timetable const&);
+#define MAKE_MC_UPDATE_ROUTES_TEMPLATE_INSTANCE(VAL, ACCESSOR) \
+  template __device__ void mc_update_routes_dev<VAL>(          \
+      device_memory const&, raptor_round const, stop_id const, \
+      device_gpu_timetable const&);
 
 RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(GENERATE_LAUNCH_CONFIG_FUNCTION,
                                    raptor_criteria_config)

@@ -24,12 +24,7 @@ __global__ void mc_update_routes_kernel(device_memory const device_mem,
                                         raptor_round round_k,
                                         stop_id const target_stop_id,
                                         device_gpu_timetable const tt) {
-  time const* const prev_arrivals = device_mem.result_[round_k - 1];
-  time* const arrivals = device_mem.result_[round_k];
-
-  mc_update_routes_dev<CriteriaConfig>(
-      prev_arrivals, arrivals, device_mem.earliest_arrivals_,
-      device_mem.station_marks_, target_stop_id, device_mem.route_marks_, tt);
+  mc_update_routes_dev<CriteriaConfig>(device_mem, round_k, target_stop_id, tt);
 }
 
 template <typename CriteriaConfig>
@@ -50,9 +45,8 @@ void invoke_hybrid_mc_raptor(d_query const& dq) {
     void* kernel_args[] = {(void*)dq.mem_->active_device_, (void*)&k,  // NOLINT
                            (void*)&dq.target_, (void*)&dq.tt_};  // NOLINT
 
-    launch_kernel(mc_update_routes_kernel<CriteriaConfig>,
-                  kernel_args, dq.mem_->context_, proc_stream,
-                  dq.criteria_config_);
+    launch_kernel(mc_update_routes_kernel<CriteriaConfig>, kernel_args,
+                  dq.mem_->context_, proc_stream, dq.criteria_config_);
     cuda_sync_stream(proc_stream);
 
     launch_kernel(mc_update_footpaths_kernel<CriteriaConfig>, kernel_args,
