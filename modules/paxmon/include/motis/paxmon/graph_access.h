@@ -17,6 +17,10 @@ namespace motis::paxmon {
 
 trip_data_index get_or_add_trip(schedule const& sched,
                                 capacity_maps const& caps, universe& uv,
+                                trip_idx_t trip_idx);
+
+trip_data_index get_or_add_trip(schedule const& sched,
+                                capacity_maps const& caps, universe& uv,
                                 trip const* trp);
 
 trip_data_index get_or_add_trip(schedule const& sched,
@@ -25,13 +29,11 @@ trip_data_index get_or_add_trip(schedule const& sched,
 
 void update_event_times(schedule const& sched, universe& uv,
                         motis::rt::RtDelayUpdate const* du,
-                        std::vector<edge_index>& updated_interchange_edges,
-                        system_statistics& system_stats);
+                        std::vector<edge_index>& updated_interchange_edges);
 
 void update_trip_route(schedule const& sched, capacity_maps const& caps,
                        universe& uv, motis::rt::RtRerouteUpdate const* ru,
-                       std::vector<edge_index>& updated_interchange_edges,
-                       system_statistics& system_stats);
+                       std::vector<edge_index>& updated_interchange_edges);
 
 inline edge* add_edge(universe& uv, edge&& e) {
   return &uv.graph_.push_back_edge(e);

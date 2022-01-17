@@ -146,7 +146,10 @@ void railviz::init(motis::module::registry& reg) {
   reg.subscribe("/rt/update", [this](msg_ptr const& msg) {
     using rt::RtUpdates;
     if (train_retriever_) {
-      train_retriever_->update(motis_content(RtUpdates, msg));
+      auto const rtu = motis_content(RtUpdates, msg);
+      if (rtu->schedule() == 0U) {
+        train_retriever_->update(rtu);
+      }
     }
     return nullptr;
   });

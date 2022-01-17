@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cinttypes>
+#include <memory>
 #include <string>
 
 #include "conf/date_time.h"

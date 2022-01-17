@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 import { queryKeys, usePaxMonStatusQuery } from "../../api/paxmon";
 import { Station, TripServiceInfo } from "../../api/protocol/motis";
@@ -16,6 +16,7 @@ import { useMutation, useQueryClient } from "react-query";
 import { useAtom } from "jotai";
 import { universeAtom } from "../../data/simulation";
 import { sendPaxForecastApplyMeasuresRequest } from "../../api/paxforecast";
+import { RISContentType } from "../../api/protocol/motis/ris";
 
 const loadLevels: Array<{ level: LoadLevel; label: string }> = [
   { level: "Unknown", label: "unbekannt" },
@@ -24,9 +25,15 @@ const loadLevels: Array<{ level: LoadLevel; label: string }> = [
   { level: "Full", label: "voll" },
 ];
 
+const risContentTypes: Array<{ type: RISContentType; label: string }> = [
+  { type: "RIBasis", label: "RI Basis" },
+  { type: "RISML", label: "RISML" },
+];
+
 const measureTypes: Array<{ type: MeasureType; label: string }> = [
   { type: "TripLoadInfoMeasure", label: "Auslastungsinformation" },
   { type: "TripRecommendationMeasure", label: "Alternativenempfehlung" },
+  { type: "RtUpdateMeasure", label: "Echtzeitmeldung" },
 ];
 
 const labelClass = "font-semibold";
@@ -36,7 +43,7 @@ function MeasureInput(): JSX.Element {
   const [universe] = useAtom(universeAtom);
   const [recipientTrips, setRecipientTrips] = useState<TripServiceInfo[]>([]);
   const [recipientStations, setRecipientStations] = useState<Station[]>([]);
-  const { data: status } = usePaxMonStatusQuery();
+  const { data: status } = usePaxMonStatusQuery(universe);
   const [time, setTime] = useState(() =>
     status ? new Date(status.system_time * 1000) : new Date()
   );
@@ -51,6 +58,9 @@ function MeasureInput(): JSX.Element {
   const [tripRecDestination, setTripRecDestination] = useState<Station>();
   const [tripRecInterchange, setTripRecInterchange] = useState<Station>();
   const [tripRecTrip, setTripRecTrip] = useState<TripServiceInfo>();
+
+  const [rtContentType, setRtContentType] = useState<RISContentType>("RIBasis");
+  const [rtContent, setRtContent] = useState("");
 
   const applyEnabled = universe != 0;
 
@@ -138,6 +148,16 @@ function MeasureInput(): JSX.Element {
             interchange_station: tripRecInterchange.id,
           },
         };
+      case "RtUpdateMeasure":
+        return {
+          measure_type: "RtUpdateMeasure",
+          measure: {
+            recipients,
+            time: unixTime,
+            type: rtContentType,
+            content: rtContent,
+          },
+        };
     }
   };
 
@@ -201,6 +221,47 @@ function MeasureInput(): JSX.Element {
                 clearOnPick={false}
                 longDistanceOnly={false}
               />
+            </div>
+          </>
+        );
+      case "RtUpdateMeasure":
+        return (
+          <>
+            <div>
+              <div className={labelClass}>Meldungstyp</div>
+              <div className="flex flex-col">
+                {risContentTypes.map(({ type, label }) => (
+                  <label key={type} className="inline-flex items-center gap-1">
+                    <input
+                      type="radio"
+                      name="ris-content-type"
+                      value={type}
+                      checked={rtContentType == type}
+                      onChange={() => setRtContentType(type)}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className={labelClass}>Echtzeitmeldung</div>
+              <div>
+                <textarea
+                  value={rtContent}
+                  onChange={(e) => setRtContent(e.target.value)}
+                  rows={10}
+                  className="
+                    mt-1
+                    block
+                    w-full
+                    rounded-md
+                    border-gray-300
+                    shadow-sm
+                    focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50
+                  "
+                />
+              </div>
             </div>
           </>
         );

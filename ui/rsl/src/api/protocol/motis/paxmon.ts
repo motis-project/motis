@@ -113,11 +113,13 @@ export interface PaxMonFindTripsResponse {
 // paxmon/PaxMonForkUniverseRequest.fbs
 export interface PaxMonForkUniverseRequest {
   universe: number;
+  fork_schedule: boolean;
 }
 
 // paxmon/PaxMonForkUniverseResponse.fbs
 export interface PaxMonForkUniverseResponse {
   universe: number;
+  schedule: number;
 }
 
 // paxmon/PaxMonGetGroupsInTripRequest.fbs
@@ -285,14 +287,16 @@ export interface PaxMonRemoveGroupsRequest {
   ids: number[];
 }
 
+// paxmon/PaxMonStatusRequest.fbs
+export interface PaxMonStatusRequest {
+  universe: number;
+}
+
 // paxmon/PaxMonStatusResponse.fbs
 export interface PaxMonStatusResponse {
   system_time: number;
-  tracked_groups: number;
-  last_update_affected_groups: number;
-  last_update_affected_passengers: number;
-  last_update_broken_groups: number;
-  last_update_broken_passengers: number;
+  active_groups: number;
+  trip_count: number;
 }
 
 // paxmon/PaxMonTripLoadInfo.fbs
@@ -335,6 +339,8 @@ export interface PaxMonUniverseDestroyed {
 export interface PaxMonUniverseForked {
   base_universe: number;
   new_universe: number;
+  new_schedule: number;
+  schedule_forked: boolean;
 }
 
 // paxmon/PaxMonUpdate.fbs
@@ -363,5 +369,6 @@ export interface PaxMonEvent {
 
 // paxmon/PaxMonUpdate.fbs
 export interface PaxMonUpdate {
+  universe: number;
   events: PaxMonEvent[];
 }

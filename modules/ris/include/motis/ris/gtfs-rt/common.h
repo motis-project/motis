@@ -102,7 +102,8 @@ struct known_addition_trip {
 };
 
 struct knowledge_context {
-  explicit knowledge_context(std::string tag) : tag_{std::move(tag)} {}
+  explicit knowledge_context(std::string tag, schedule const& sched)
+      : tag_{std::move(tag)}, sched_{sched} {}
 
   void sort_known_lists();
 
@@ -128,6 +129,7 @@ struct knowledge_context {
   int new_known_skip_cnt_{0};
 
   std::string tag_;
+  schedule const& sched_;
 };
 
 struct trip_update_context {

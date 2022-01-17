@@ -60,13 +60,16 @@ include "railviz/RailVizTripGuessResponse.fbs";
 include "railviz/RailVizTripsRequest.fbs";
 include "revise/ReviseRequest.fbs";
 include "revise/ReviseResponse.fbs";
+include "ris/RISApplyRequest.fbs";
 include "ris/RISBatch.fbs";
 include "ris/RISForwardTimeRequest.fbs";
 include "ris/RISGTFSRTMapping.fbs";
 include "ris/RISMessage.fbs";
 include "ris/RISPurgeRequest.fbs";
+include "ris/RISSystemTimeChanged.fbs";
 include "routing/RoutingRequest.fbs";
 include "routing/RoutingResponse.fbs";
+include "rt/RtGraphUpdated.fbs";
 include "rt/RtUpdate.fbs";
 include "rt/RtWriteGraphRequest.fbs";
 include "tripbased/TripBasedTripDebugRequest.fbs";
@@ -79,6 +82,7 @@ include "paxmon/PaxMonFindTripsRequest.fbs";
 include "paxmon/PaxMonFindTripsResponse.fbs";
 include "paxmon/PaxMonGetGroupsRequest.fbs";
 include "paxmon/PaxMonGetGroupsResponse.fbs";
+include "paxmon/PaxMonStatusRequest.fbs";
 include "paxmon/PaxMonStatusResponse.fbs";
 include "paxmon/PaxMonTripLoadInfo.fbs";
 include "paxmon/PaxMonFilterGroupsRequest.fbs";
@@ -264,7 +268,11 @@ union MsgContent {
   motis.paxmon.PaxMonUniverseForked                                       = 119,
   motis.paxmon.PaxMonUniverseDestroyed                                    = 120,
   motis.paxmon.PaxMonGetInterchangesRequest                               = 121,
-  motis.paxmon.PaxMonGetInterchangesResponse                              = 122
+  motis.paxmon.PaxMonGetInterchangesResponse                              = 122,
+  motis.paxmon.PaxMonStatusRequest                                        = 123,
+  motis.ris.RISApplyRequest                                               = 124,
+  motis.ris.RISSystemTimeChanged                                          = 125,
+  motis.rt.RtGraphUpdated                                                 = 126
 }
 
 // Destination Examples:

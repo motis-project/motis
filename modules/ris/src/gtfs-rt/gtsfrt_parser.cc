@@ -28,7 +28,7 @@ void finish_ris_msg(message_context& ctx, Offset<Message> message,
   cb(std::move(ris_msg));
 }
 
-void parse_trip_updates(schedule const& sched, knowledge_context& knowledge,
+void parse_trip_updates(knowledge_context& knowledge,
                         bool const is_additional_skip_allowed,
                         FeedEntity const& entity, unixtime const timestamp,
                         std::function<void(ris_message&&)> const& cb,
@@ -39,7 +39,7 @@ void parse_trip_updates(schedule const& sched, knowledge_context& knowledge,
     case TripDescriptor_ScheduleRelationship_SCHEDULED:
     case TripDescriptor_ScheduleRelationship_ADDED:
     case TripDescriptor_ScheduleRelationship_CANCELED: {
-      trip_update_context update_ctx{sched, trip_update,
+      trip_update_context update_ctx{knowledge.sched_, trip_update,
                                      is_additional_skip_allowed};
       handle_trip_update(
           update_ctx, knowledge, timestamp,
@@ -56,18 +56,18 @@ void parse_trip_updates(schedule const& sched, knowledge_context& knowledge,
   }
 }
 
-void parse_entity(schedule const& sched, knowledge_context& knowledge,
+void parse_entity(knowledge_context& knowledge,
                   bool const is_additional_skip_allowed,
                   FeedEntity const& entity, unixtime message_time,
                   std::function<void(ris_message&&)> const& cb,
                   std::string const& tag) {
   if (entity.has_trip_update()) {
-    parse_trip_updates(sched, knowledge, is_additional_skip_allowed, entity,
+    parse_trip_updates(knowledge, is_additional_skip_allowed, entity,
                        message_time, cb, tag);
   }
 }
 
-void to_ris_message(schedule const& sched, knowledge_context& knowledge,
+void to_ris_message(knowledge_context& knowledge,
                     bool const is_additional_skip_allowed, std::string_view s,
                     std::function<void(ris_message&&)> const& cb,
                     std::string const& tag) {
@@ -92,8 +92,8 @@ void to_ris_message(schedule const& sched, knowledge_context& knowledge,
       static_cast<unixtime>(feed_message.header().timestamp());
   for (auto const& entity : feed_message.entity()) {
     try {
-      parse_entity(sched, knowledge, is_additional_skip_allowed, entity,
-                   message_time, cb, tag);
+      parse_entity(knowledge, is_additional_skip_allowed, entity, message_time,
+                   cb, tag);
     } catch (const std::exception& e) {
       LOG(logging::error) << "Exception on entity " << entity.id()
                           << " for message with timestamp " << message_time
@@ -104,13 +104,12 @@ void to_ris_message(schedule const& sched, knowledge_context& knowledge,
   knowledge.sort_known_lists();
 }
 
-std::vector<ris_message> parse(schedule const& sched,
-                               knowledge_context& knowledge,
+std::vector<ris_message> parse(knowledge_context& knowledge,
                                bool is_additional_skip_allowed,
                                std::string_view s, std::string const& tag) {
   std::vector<ris_message> msgs;
   to_ris_message(
-      sched, knowledge, is_additional_skip_allowed, s,
+      knowledge, is_additional_skip_allowed, s,
       [&](ris_message&& m) { msgs.emplace_back(std::move(m)); }, tag);
   return msgs;
 }

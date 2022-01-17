@@ -61,6 +61,8 @@ csa_query::csa_query(schedule const& sched,
                  std::system_error{error::via_not_supported});
   utl::verify_ex(req->additional_edges()->size() == 0U,
                  std::system_error{error::additional_edges_not_supported});
+  utl::verify_ex(req->schedule() == 0U,
+                 std::system_error{error::schedule_not_supported});
 
   dir_ = req->search_dir() == SearchDir_Forward ? search_dir::FWD
                                                 : search_dir::BWD;

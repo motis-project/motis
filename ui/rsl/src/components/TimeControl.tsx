@@ -1,12 +1,14 @@
-import React from "react";
 import { QueryClient, useMutation, useQueryClient } from "react-query";
+import { useAtom } from "jotai";
 
 import { formatDate, formatTime } from "../util/dateFormat";
 import { usePaxMonStatusQuery } from "../api/paxmon";
 import { sendRISForwardTimeRequest } from "../api/ris";
+import { scheduleAtom, universeAtom } from "../data/simulation";
 
 async function forwardTimeByStepped(
   queryClient: QueryClient,
+  schedule: number,
   currentTime: number,
   forwardBy: number,
   stepSize = 60
@@ -14,7 +16,7 @@ async function forwardTimeByStepped(
   const endTime = currentTime + forwardBy;
   while (currentTime < endTime) {
     currentTime = Math.min(endTime, currentTime + stepSize);
-    await sendRISForwardTimeRequest(currentTime);
+    await sendRISForwardTimeRequest(currentTime, schedule);
     await queryClient.invalidateQueries();
   }
   return currentTime;
@@ -26,21 +28,23 @@ type TimeControlProps = {
 
 function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
   const queryClient = useQueryClient();
-
-  const { data: status, isLoading, error } = usePaxMonStatusQuery();
+  const [universe] = useAtom(universeAtom);
+  const [schedule] = useAtom(scheduleAtom);
+  const { data: status, isLoading, error } = usePaxMonStatusQuery(universe);
 
   const forwardMutation = useMutation((forwardBy: number) => {
     return forwardTimeByStepped(
       queryClient,
+      schedule,
       status?.system_time || 0,
       forwardBy
     );
   });
 
-  const forwardInProgress = forwardMutation.isLoading;
+  const forwardDisabled = forwardMutation.isLoading;
 
   const buttonClass = `px-3 py-1 rounded text-sm ${
-    !forwardInProgress
+    !forwardDisabled
       ? "bg-db-red-500 hover:bg-db-red-600 text-white"
       : "bg-db-red-300 text-db-red-100 cursor-wait"
   }`;
@@ -52,7 +56,7 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
           key={`${min}m`}
           type="button"
           className={buttonClass}
-          disabled={forwardInProgress}
+          disabled={forwardDisabled}
           onClick={() => {
             forwardMutation.mutate(60 * min);
           }}
@@ -65,7 +69,7 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
           key={`${hrs}h`}
           type="button"
           className={buttonClass}
-          disabled={forwardInProgress}
+          disabled={forwardDisabled}
           onClick={() => {
             forwardMutation.mutate(60 * 60 * hrs);
           }}

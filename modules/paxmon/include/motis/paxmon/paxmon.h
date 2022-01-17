@@ -12,7 +12,6 @@
 
 #include "motis/paxmon/loader/loader_result.h"
 #include "motis/paxmon/paxmon_data.h"
-#include "motis/paxmon/rt_update_context.h"
 #include "motis/paxmon/statistics.h"
 #include "motis/paxmon/stats_writer.h"
 #include "motis/paxmon/universe.h"
@@ -40,10 +39,10 @@ private:
   loader::loader_result load_journeys(std::string const& file);
   void load_capacity_files();
   motis::module::msg_ptr rt_update(motis::module::msg_ptr const& msg);
-  void rt_updates_applied();
+  void rt_updates_applied(motis::module::msg_ptr const& msg);
+  void rt_updates_applied(universe& uv, schedule const& sched);
 
   universe& primary_universe();
-  universe& get_universe(universe_id id);
 
   std::vector<std::string> journey_files_;
   std::vector<std::string> capacity_files_;
@@ -71,10 +70,6 @@ private:
   bool reuse_groups_{true};
 
   paxmon_data data_;
-  rt_update_context rt_update_ctx_;
-  system_statistics system_stats_;
-  tick_statistics tick_stats_;
-  tick_statistics last_tick_stats_;
   std::unique_ptr<stats_writer> stats_writer_;
   bool write_mcfp_scenarios_{false};
   bool import_successful_{true};

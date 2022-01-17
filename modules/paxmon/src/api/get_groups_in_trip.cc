@@ -7,6 +7,7 @@
 #include "motis/hash_map.h"
 #include "motis/pair.h"
 
+#include "motis/core/access/trip_access.h"
 #include "motis/core/conv/station_conv.h"
 #include "motis/core/conv/trip_conv.h"
 
@@ -19,11 +20,12 @@ using namespace motis::paxmon;
 
 namespace motis::paxmon::api {
 
-motis::module::msg_ptr get_groups_in_trip(schedule const& sched,
-                                          paxmon_data& data,
+motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
                                           motis::module::msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGetGroupsInTripRequest, msg);
-  auto& uv = get_universe(data, req->universe());
+  auto const uv_access = get_universe_and_schedule(data, req->universe());
+  auto const& sched = uv_access.sched_;
+  auto& uv = uv_access.uv_;
   auto const trp = from_fbs(sched, req->trip());
   auto const grp_filter = req->filter();
   auto const grp_by_station = req->group_by_station();
@@ -57,12 +59,15 @@ motis::module::msg_ptr get_groups_in_trip(schedule const& sched,
           passenger_group const* pg) -> std::pair<bool, trip const*> {
     for (auto const& [leg_idx, leg] :
          utl::enumerate(pg->compact_planned_journey_.legs_)) {
-      if (leg.trip_ == trp &&
+      if (leg.trip_idx_ == trp->trip_idx_ &&
           leg.enter_station_id_ == trp_node->station_idx()) {
-        return {true,
-                leg_idx > 0
-                    ? pg->compact_planned_journey_.legs_[leg_idx - 1].trip_
-                    : nullptr};
+        return {
+            true,
+            leg_idx > 0
+                ? get_trip(
+                      sched,
+                      pg->compact_planned_journey_.legs_[leg_idx - 1].trip_idx_)
+                : nullptr};
       }
     }
     return {false, nullptr};
@@ -73,11 +78,15 @@ motis::module::msg_ptr get_groups_in_trip(schedule const& sched,
           passenger_group const* pg) -> std::pair<bool, trip const*> {
     for (auto const& [leg_idx, leg] :
          utl::enumerate(pg->compact_planned_journey_.legs_)) {
-      if (leg.trip_ == trp && leg.exit_station_id_ == trp_node->station_idx()) {
-        return {true,
-                leg_idx < pg->compact_planned_journey_.legs_.size() - 1
-                    ? pg->compact_planned_journey_.legs_[leg_idx + 1].trip_
-                    : nullptr};
+      if (leg.trip_idx_ == trp->trip_idx_ &&
+          leg.exit_station_id_ == trp_node->station_idx()) {
+        return {
+            true,
+            leg_idx < pg->compact_planned_journey_.legs_.size() - 1
+                ? get_trip(
+                      sched,
+                      pg->compact_planned_journey_.legs_[leg_idx + 1].trip_idx_)
+                : nullptr};
       }
     }
     return {false, nullptr};

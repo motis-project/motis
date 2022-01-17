@@ -13,23 +13,36 @@ import {
   PaxMonGetInterchangesResponse,
   PaxMonGetTripLoadInfosRequest,
   PaxMonGetTripLoadInfosResponse,
+  PaxMonStatusRequest,
   PaxMonStatusResponse,
 } from "./protocol/motis/paxmon";
 import { useQuery, UseQueryResult } from "react-query";
 
-export async function sendPaxMonStatusRequest(): Promise<PaxMonStatusResponse> {
-  const msg = await sendRequest("/paxmon/status");
+export async function sendPaxMonStatusRequest(
+  content: PaxMonStatusRequest
+): Promise<PaxMonStatusResponse> {
+  const msg = await sendRequest(
+    "/paxmon/status",
+    "PaxMonStatusRequest",
+    content
+  );
   verifyContentType(msg, "PaxMonStatusResponse");
   return msg.content as PaxMonStatusResponse;
 }
 
-export function usePaxMonStatusQuery(): UseQueryResult<PaxMonStatusResponse> {
-  return useQuery(queryKeys.status(), sendPaxMonStatusRequest, {
-    refetchInterval: 30 * 1000,
-    refetchOnWindowFocus: true,
-    staleTime: 0,
-    notifyOnChangeProps: "tracked",
-  });
+export function usePaxMonStatusQuery(
+  universe: number
+): UseQueryResult<PaxMonStatusResponse> {
+  return useQuery(
+    queryKeys.status(universe),
+    () => sendPaxMonStatusRequest({ universe }),
+    {
+      refetchInterval: 30 * 1000,
+      refetchOnWindowFocus: true,
+      staleTime: 0,
+      notifyOnChangeProps: "tracked",
+    }
+  );
 }
 
 export async function sendPaxMonTripLoadInfosRequest(
@@ -140,7 +153,7 @@ export function usePaxMonGetInterchangesQuery(
 
 export const queryKeys = {
   all: ["paxmon"] as const,
-  status: () => [...queryKeys.all, "status"] as const,
+  status: (universe: number) => [...queryKeys.all, "status", universe] as const,
   findTrips: (universe: number, trainNr?: number) =>
     [...queryKeys.all, "find_trips", universe, trainNr] as const,
   trip: () => [...queryKeys.all, "trip"] as const,

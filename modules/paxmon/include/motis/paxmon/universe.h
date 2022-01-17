@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "ctx/res_id_t.h"
+
 #include "utl/enumerate.h"
 
 #include "motis/data.h"
@@ -19,11 +21,14 @@
 #include "motis/core/schedule/trip.h"
 #include "motis/core/schedule/trip_idx.h"
 #include "motis/core/journey/extern_trip.h"
+#include "motis/module/global_res_ids.h"
 
 #include "motis/paxmon/capacity_data.h"
 #include "motis/paxmon/graph_index.h"
 #include "motis/paxmon/passenger_group_container.h"
 #include "motis/paxmon/pci_container.h"
+#include "motis/paxmon/rt_update_context.h"
+#include "motis/paxmon/statistics.h"
 #include "motis/paxmon/trip_data_container.h"
 
 namespace motis::paxmon {
@@ -152,12 +157,24 @@ using universe_id = std::uint32_t;
 struct universe {
   passenger_group const* get_passenger_group(passenger_group_index id) const;
 
+  bool uses_default_schedule() const {
+    return schedule_res_id_ ==
+           motis::module::to_res_id(motis::module::global_res_id::SCHEDULE);
+  }
+
   universe_id id_{};
+  ctx::res_id_t schedule_res_id_{};
+
   fws_graph<event_node, edge> graph_;
   trip_data_container trip_data_;
   passenger_group_container passenger_groups_;
   pci_container pax_connection_info_;
   dynamic_fws_multimap<edge_index> interchanges_at_station_;
+
+  rt_update_context rt_update_ctx_;
+  system_statistics system_stats_;
+  tick_statistics tick_stats_;
+  tick_statistics last_tick_stats_;
 };
 
 }  // namespace motis::paxmon

@@ -13,11 +13,14 @@ namespace motis::ris::gtfsrt {
 gtfsrt_test::gtfsrt_test(loader::loader_options options)
     : opts_{std::move(options)} {}
 
-void gtfsrt_test::SetUp() { sched_ = load_schedule(opts_); }
+void gtfsrt_test::SetUp() {
+  sched_ = load_schedule(opts_);
+  knowledge_ = std::make_unique<knowledge_context>("", *sched_);
+}
 
-std::vector<ris_message> gtfsrt_test::parse_json(std::string const& json) {
-  return parse(*sched_, knowledge_, true,
-               std::string_view{json_to_protobuf(json)});
+std::vector<ris_message> gtfsrt_test::parse_json(
+    std::string const& json) const {
+  return parse(*knowledge_, true, std::string_view{json_to_protobuf(json)});
 }
 
 }  // namespace motis::ris::gtfsrt

@@ -4,6 +4,7 @@
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/access/trip_access.h"
 
 #include "motis/paxmon/build_graph.h"
 #include "motis/paxmon/get_universe.h"
@@ -16,11 +17,13 @@ using namespace motis::logging;
 
 namespace motis::paxmon::api {
 
-msg_ptr add_groups(schedule const& sched, paxmon_data& data,
-                   rt_update_context& rt_update_ctx, bool const allow_reuse,
+msg_ptr add_groups(paxmon_data& data, bool const allow_reuse,
                    msg_ptr const& msg) {
   auto const req = motis_content(PaxMonAddGroupsRequest, msg);
-  auto& uv = get_universe(data, req->universe());
+  auto const uv_access =
+      get_universe_and_schedule(data, req->universe(), ctx::access_t::WRITE);
+  auto const& sched = uv_access.sched_;
+  auto& uv = uv_access.uv_;
 
   auto reused_groups = 0ULL;
   auto const added_groups =
@@ -46,9 +49,6 @@ msg_ptr add_groups(schedule const& sched, paxmon_data& data,
         }
         auto pg = uv.passenger_groups_.add(std::move(input_pg));
         add_passenger_group_to_graph(sched, data.capacity_maps_, uv, *pg);
-        for (auto const& leg : pg->compact_planned_journey_.legs_) {
-          rt_update_ctx.trips_affected_by_last_update_.insert(leg.trip_);
-        }
         return pg;
       });
 

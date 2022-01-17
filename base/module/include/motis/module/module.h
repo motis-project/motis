@@ -7,12 +7,13 @@
 #include "boost/asio/strand.hpp"
 #include "boost/filesystem/path.hpp"
 
-#include "ctx/access_scheduler.h"
+#include "ctx/ctx.h"
 
 #include "conf/configuration.h"
 
 #include "motis/module/ctx_data.h"
 #include "motis/module/import_dispatcher.h"
+#include "motis/module/locked_resources.h"
 #include "motis/module/message.h"
 #include "motis/module/registry.h"
 #include "motis/module/subc_reg.h"
@@ -48,7 +49,6 @@ struct module : public conf::configuration {
 
   virtual bool import_successful() const { return true; }
 
-protected:
   schedule const& get_sched() const;
 
   template <typename T>
@@ -67,9 +67,16 @@ protected:
   }
 
   template <typename T>
-  void add_shared_data(ctx::res_id_t const s, T&& data) {
-    shared_data_->emplace_data(s, std::forward<T>(data));
+  void add_shared_data(ctx::res_id_t const id, T&& data) {
+    shared_data_->emplace_data(id, std::forward<T>(data));
   }
+
+  void remove_shared_data(ctx::res_id_t const id) { shared_data_->remove(id); }
+
+  ctx::res_id_t generate_res_id() { return shared_data_->generate_res_id(); }
+
+  locked_resources lock_resources(
+      ctx::accesses_t access, ctx::op_type_t op_type = ctx::op_type_t::WORK);
 
   boost::filesystem::path const& get_data_directory() const;
 

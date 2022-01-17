@@ -6,6 +6,7 @@
 
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/service_access.h"
+#include "motis/core/access/trip_access.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/hash_map.h"
 
@@ -43,10 +44,11 @@ std::vector<std::pair<service_info, unsigned>> get_service_infos(
 
 std::vector<std::pair<service_info, unsigned>> get_service_infos_for_leg(
     schedule const& sched, journey_leg const& leg) {
+  auto const* trp = get_trip(sched, leg.trip_idx_);
   mcd::hash_map<service_info, unsigned> si_counts;
   auto enter_found = false;
   auto in_trip = false;
-  for (auto const& section : motis::access::sections(leg.trip_)) {
+  for (auto const& section : motis::access::sections(trp)) {
     if (!in_trip) {
       if (section.from_station_id() == leg.enter_station_id_ &&
           get_schedule_time(sched, section.ev_key_from()) == leg.enter_time_) {
@@ -71,7 +73,7 @@ std::vector<std::pair<service_info, unsigned>> get_service_infos_for_leg(
   // is not a currently valid compact journey leg (e.g. a planned journey)
   // in that case, return all service infos for the trip
   if (!enter_found) {
-    return get_service_infos(sched, leg.trip_);
+    return get_service_infos(sched, trp);
   }
   auto sis = utl::to_vec(si_counts, [](auto const& e) {
     return std::pair{e.first, e.second};

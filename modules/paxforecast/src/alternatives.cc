@@ -1,5 +1,6 @@
 #include "motis/paxforecast/alternatives.h"
 
+#include <cassert>
 #include <cstdint>
 #include <algorithm>
 #include <optional>
@@ -32,7 +33,14 @@ namespace motis::paxforecast {
 
 namespace {
 
-msg_ptr ontrip_train_query(schedule const& sched, trip const* trp,
+std::uint64_t get_schedule_id(universe const& uv) {
+  return uv.uses_default_schedule()
+             ? 0ULL
+             : static_cast<std::uint64_t>(uv.schedule_res_id_);
+}
+
+msg_ptr ontrip_train_query(universe const& uv, schedule const& sched,
+                           trip const* trp,
                            unsigned first_possible_interchange_station_id,
                            time first_possible_interchange_arrival,
                            unsigned destination_station_id) {
@@ -58,13 +66,14 @@ msg_ptr ontrip_train_query(schedule const& sched, trip const* trp,
               fbb.CreateString("")),
           SearchType_Default, SearchDir_Forward,
           fbb.CreateVector(std::vector<Offset<Via>>()),
-          fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()))
+          fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()), true,
+          true, true, get_schedule_id(uv))
           .Union(),
       "/routing");
   return make_msg(fbb);
 }
 
-msg_ptr ontrip_station_query(schedule const& sched,
+msg_ptr ontrip_station_query(universe const& uv, schedule const& sched,
                              unsigned interchange_station_id,
                              time earliest_possible_departure,
                              unsigned destination_station_id) {
@@ -89,13 +98,14 @@ msg_ptr ontrip_station_query(schedule const& sched,
               fbb.CreateString("")),
           SearchType_Default, SearchDir_Forward,
           fbb.CreateVector(std::vector<Offset<Via>>()),
-          fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()))
+          fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()), true,
+          true, true, get_schedule_id(uv))
           .Union(),
       "/routing");
   return make_msg(fbb);
 }
 
-msg_ptr pretrip_station_query(schedule const& sched,
+msg_ptr pretrip_station_query(universe const& uv, schedule const& sched,
                               unsigned interchange_station_id,
                               time earliest_possible_departure,
                               duration interval_length,
@@ -124,7 +134,8 @@ msg_ptr pretrip_station_query(schedule const& sched,
               fbb.CreateString("")),
           SearchType_Default, SearchDir_Forward,
           fbb.CreateVector(std::vector<Offset<Via>>()),
-          fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()))
+          fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()), true,
+          true, true, get_schedule_id(uv))
           .Union(),
       "/routing");
   return make_msg(fbb);
@@ -161,14 +172,14 @@ std::string get_cache_key(schedule const& sched,
   }
 }
 
-msg_ptr send_routing_request(schedule const& sched,
+msg_ptr send_routing_request(universe const& uv, schedule const& sched,
                              unsigned const destination_station_id,
                              passenger_localization const& localization,
                              duration pretrip_interval_length) {
   msg_ptr query_msg;
   if (localization.in_trip()) {
     query_msg = ontrip_train_query(
-        sched, localization.in_trip_, localization.at_station_->index_,
+        uv, sched, localization.in_trip_, localization.at_station_->index_,
         localization.current_arrival_time_, destination_station_id);
   } else {
     auto const interchange_time =
@@ -179,37 +190,40 @@ msg_ptr send_routing_request(schedule const& sched,
     auto const earliest_possible_departure =
         localization.current_arrival_time_ + interchange_time;
     if (pretrip_interval_length == 0) {
-      query_msg = ontrip_station_query(sched, localization.at_station_->index_,
-                                       earliest_possible_departure,
-                                       destination_station_id);
+      query_msg = ontrip_station_query(
+          uv, sched, localization.at_station_->index_,
+          earliest_possible_departure, destination_station_id);
     } else {
       query_msg = pretrip_station_query(
-          sched, localization.at_station_->index_, earliest_possible_departure,
-          pretrip_interval_length, destination_station_id);
+          uv, sched, localization.at_station_->index_,
+          earliest_possible_departure, pretrip_interval_length,
+          destination_station_id);
     }
   }
 
   return motis_call(query_msg)->val();
 }
 
-msg_ptr get_routing_response(schedule const& sched, routing_cache& cache,
+msg_ptr get_routing_response(universe const& uv, schedule const& sched,
+                             routing_cache& cache,
                              unsigned const destination_station_id,
                              passenger_localization const& localization,
                              bool use_cache, duration pretrip_interval_length) {
   if (use_cache && cache.is_open()) {
+    assert(uv.uses_default_schedule());
     auto const cache_key = get_cache_key(sched, destination_station_id,
                                          localization, pretrip_interval_length);
     auto const cache_key_view = std::string_view{
         reinterpret_cast<char const*>(cache_key.data()), cache_key.size()};
     auto msg = cache.get(cache_key_view);
     if (!msg) {
-      msg = send_routing_request(sched, destination_station_id, localization,
-                                 pretrip_interval_length);
+      msg = send_routing_request(uv, sched, destination_station_id,
+                                 localization, pretrip_interval_length);
       cache.put(cache_key_view, msg);
     }
     return msg;
   } else {
-    return send_routing_request(sched, destination_station_id, localization,
+    return send_routing_request(uv, sched, destination_station_id, localization,
                                 pretrip_interval_length);
   }
 }
@@ -217,13 +231,13 @@ msg_ptr get_routing_response(schedule const& sched, routing_cache& cache,
 }  // namespace
 
 std::vector<journey> find_alternative_journeys(
-    schedule const& sched, routing_cache& cache,
+    universe const& uv, schedule const& sched, routing_cache& cache,
     unsigned const destination_station_id,
     passenger_localization const& localization, bool use_cache,
     duration pretrip_interval_length) {
   auto const response_msg =
-      get_routing_response(sched, cache, destination_station_id, localization,
-                           use_cache, pretrip_interval_length);
+      get_routing_response(uv, sched, cache, destination_station_id,
+                           localization, use_cache, pretrip_interval_length);
   auto const response = motis_content(RoutingResponse, response_msg);
   auto alternatives = message_to_journeys(response);
   // TODO(pablo): alternatives without trips?
@@ -275,15 +289,20 @@ void check_measures(
 }
 
 std::vector<alternative> find_alternatives(
-    schedule const& sched, routing_cache& cache,
+    universe const& uv, schedule const& sched, routing_cache& cache,
     mcd::vector<measures::measure_variant const*> const& group_measures,
     unsigned const destination_station_id,
     passenger_localization const& localization,
-    motis::paxmon::compact_journey const* remaining_journey, bool use_cache,
+    compact_journey const* remaining_journey, bool use_cache,
     duration pretrip_interval_length) {
+  // never use cache for schedule forks
+  if (!uv.uses_default_schedule()) {
+    use_cache = false;
+  }
+
   // default alternative routing
   auto const journeys = find_alternative_journeys(
-      sched, cache, destination_station_id, localization, use_cache,
+      uv, sched, cache, destination_station_id, localization, use_cache,
       pretrip_interval_length);
   auto alternatives = utl::to_vec(journeys, [&](journey const& j) {
     auto const arrival_time = unix_to_motistime(

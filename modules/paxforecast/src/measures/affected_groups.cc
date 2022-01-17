@@ -73,18 +73,23 @@ affected_groups_info get_affected_groups(schedule const& sched, universe& uv,
   auto result = affected_groups_info{};
   for (auto const& mv : measures) {
     std::visit(
-        utl::overloaded{[&](trip_recommendation const& m) {
-                          add_affected_groups(
-                              sched, uv, result, m.recipients_, loc_time, &mv,
-                              [&m](passenger_group const* pg) {
-                                return matches_destination(pg, m);
-                              });
-                        },
-                        [&](trip_load_information const& m) {
-                          add_affected_groups(
-                              sched, uv, result, m.recipients_, loc_time, &mv,
-                              [](passenger_group const*) { return true; });
-                        }},
+        utl::overloaded{
+            [&](trip_recommendation const& m) {
+              add_affected_groups(sched, uv, result, m.recipients_, loc_time,
+                                  &mv, [&m](passenger_group const* pg) {
+                                    return matches_destination(pg, m);
+                                  });
+            },
+            [&](trip_load_information const& m) {
+              add_affected_groups(sched, uv, result, m.recipients_, loc_time,
+                                  &mv,
+                                  [](passenger_group const*) { return true; });
+            },
+            [&](rt_update const& m) {
+              add_affected_groups(sched, uv, result, m.recipients_, loc_time,
+                                  &mv,
+                                  [](passenger_group const*) { return true; });
+            }},
         mv);
   }
   return result;

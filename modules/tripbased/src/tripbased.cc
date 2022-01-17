@@ -107,6 +107,10 @@ trip_based_query build_tb_query(RoutingRequest const* req,
     }
   }
 
+  if (req->schedule() != 0U) {
+    throw std::system_error(error::schedule_not_supported);
+  }
+
   std::string start_node_eva;
 
   switch (q.start_type_) {

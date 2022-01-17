@@ -3,6 +3,7 @@
 #include "fmt/core.h"
 
 #include "motis/core/access/realtime_access.h"
+#include "motis/core/access/trip_access.h"
 
 namespace motis::paxmon {
 
@@ -15,6 +16,10 @@ void print_trip(schedule const& sched, trip const* trp) {
           ->eva_nr_.view(),
       format_time(trp->id_.secondary_.target_time_),
       trp->id_.secondary_.line_id_, static_cast<void const*>(trp), trp->dbg_);
+}
+
+void print_trip(schedule const& sched, trip_idx_t const idx) {
+  return print_trip(sched, get_trip(sched, idx));
 }
 
 void print_leg(schedule const& sched, journey_leg const& leg) {
@@ -32,7 +37,7 @@ void print_leg(schedule const& sched, journey_leg const& leg) {
   } else {
     fmt::print("\n");
   }
-  print_trip(sched, leg.trip_);
+  print_trip(sched, leg.trip_idx_);
 }
 
 void print_trip_section(schedule const& sched,
@@ -93,6 +98,11 @@ void print_trip_sections(universe const& uv, schedule const& sched,
   for (auto const& sec : motis::access::sections(trp)) {
     print_trip_section(sched, sec);
   }
+}
+
+void print_trip_sections(universe const& uv, schedule const& sched,
+                         trip_idx_t const idx, trip_data_index const tdi) {
+  return print_trip_sections(uv, sched, get_trip(sched, idx), tdi);
 }
 
 }  // namespace motis::paxmon

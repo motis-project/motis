@@ -9,6 +9,7 @@
 #include "utl/verify.h"
 
 #include "motis/core/access/realtime_access.h"
+#include "motis/core/access/trip_access.h"
 
 #include "motis/paxmon/debug.h"
 
@@ -50,7 +51,8 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
     }
   }
 
-  for (auto const& [trp, tdi] : uv.trip_data_.mapping_) {
+  for (auto const& [trp_idx, tdi] : uv.trip_data_.mapping_) {
+    auto const* trp = get_trip(sched, trp_idx);
     for (auto const& ei : uv.trip_data_.edges(tdi)) {
       auto const* e = ei.get(uv);
       auto const& trips = e->get_trips(sched);
@@ -156,8 +158,8 @@ bool check_trip_times(universe const& uv, schedule const& sched,
 bool check_graph_times(universe const& uv, schedule const& sched) {
   auto ok = true;
 
-  for (auto const& [trp, tdi] : uv.trip_data_.mapping_) {
-    if (!check_trip_times(uv, sched, trp, tdi)) {
+  for (auto const& [trp_idx, tdi] : uv.trip_data_.mapping_) {
+    if (!check_trip_times(uv, sched, get_trip(sched, trp_idx), tdi)) {
       ok = false;
     }
   }

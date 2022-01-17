@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import { useRef } from "react";
 import { useQuery, useQueryClient } from "react-query";
 import { DownloadIcon } from "@heroicons/react/solid";
 import { useAtom } from "jotai";
@@ -175,7 +175,7 @@ function TripLoadForecastChart({
   onSectionClick,
 }: TripLoadForecastChartProps): JSX.Element | null {
   const [universe] = useAtom(universeAtom);
-  const { data: status } = usePaxMonStatusQuery();
+  const { data: status } = usePaxMonStatusQuery(universe);
 
   const queryClient = useQueryClient();
   const { data /*, isLoading, error*/ } = useQuery(

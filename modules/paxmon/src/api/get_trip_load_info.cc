@@ -13,9 +13,12 @@ using namespace motis::paxmon;
 
 namespace motis::paxmon::api {
 
-msg_ptr get_trip_load_info(schedule const& sched, paxmon_data& data,
-                           msg_ptr const& msg) {
+msg_ptr get_trip_load_info(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGetTripLoadInfosRequest, msg);
+  auto const uv_access = get_universe_and_schedule(data, req->universe());
+  auto const& sched = uv_access.sched_;
+  auto& uv = uv_access.uv_;
+
   message_creator mc;
 
   auto const to_fbs_load_info_for_universe = [&](universe const& uv) {
@@ -29,9 +32,8 @@ msg_ptr get_trip_load_info(schedule const& sched, paxmon_data& data,
   mc.create_and_finish(
       MsgContent_PaxMonGetTripLoadInfosResponse,
       CreatePaxMonGetTripLoadInfosResponse(
-          mc, mc.CreateVector(utl::to_vec(
-                  *req->trips(), to_fbs_load_info_for_universe(
-                                     get_universe(data, req->universe())))))
+          mc, mc.CreateVector(utl::to_vec(*req->trips(),
+                                          to_fbs_load_info_for_universe(uv))))
 
           .Union());
   return make_msg(mc);

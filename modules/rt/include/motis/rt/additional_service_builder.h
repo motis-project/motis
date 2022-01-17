@@ -231,7 +231,9 @@ struct additional_service_builder {
                      secondary_trip_id{
                          last_station->id_, last_lcon.a_time_,
                          first_lcon.full_con_->con_info_->line_identifier_}},
-        sched_.trip_edges_.back().get(), 0U, trip_debug{}, seq_numbers));
+        sched_.trip_edges_.back().get(), 0U,
+        static_cast<trip_idx_t>(sched_.trip_mem_.size()), trip_debug{},
+        seq_numbers));
 
     auto const trp = sched_.trip_mem_.back().get();
     auto const trp_entry = mcd::pair{trp->id_.primary_, ptr<trip>(trp)};

@@ -14,10 +14,11 @@ using namespace motis::paxmon;
 
 namespace motis::paxmon::api {
 
-msg_ptr get_groups(schedule const& sched, paxmon_data& data,
-                   msg_ptr const& msg) {
+msg_ptr get_groups(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGetGroupsRequest, msg);
-  auto& uv = get_universe(data, req->universe());
+  auto const uv_access = get_universe_and_schedule(data, req->universe());
+  auto const& sched = uv_access.sched_;
+  auto& uv = uv_access.uv_;
   auto const all_generations = req->all_generations();
   auto const include_localization = req->include_localization();
 

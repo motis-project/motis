@@ -46,7 +46,7 @@ msg_ptr make_forecast_update_msg(schedule const& sched, universe const& uv,
   message_creator fbb;
   fbb.create_and_finish(
       MsgContent_PaxForecastUpdate,
-      CreatePaxForecastUpdate(fbb, sched.system_time_,
+      CreatePaxForecastUpdate(fbb, uv.id_, sched.system_time_,
                               fbb.CreateVector(utl::to_vec(
                                   sim_result.group_results_,
                                   [&](auto const& entry) {
@@ -93,6 +93,12 @@ measures::trip_load_information from_fbs(schedule const& sched,
           static_cast<measures::load_level>(m->level())};
 }
 
+measures::rt_update from_fbs(schedule const& sched, RtUpdateMeasure const* m) {
+  return {from_fbs(sched, m->recipients()),
+          unix_to_motistime(sched.schedule_begin_, m->time()), m->type(),
+          m->content()->str()};
+}
+
 measures::measure_collection from_fbs(
     schedule const& sched, Vector<Offset<MeasureWrapper>> const* ms) {
   measures::measure_collection res;
@@ -108,6 +114,12 @@ measures::measure_collection from_fbs(
       case Measure_TripLoadInfoMeasure: {
         auto const m = from_fbs(
             sched, reinterpret_cast<TripLoadInfoMeasure const*>(fm->measure()));
+        res[m.time_].emplace_back(m);
+        break;
+      }
+      case Measure_RtUpdateMeasure: {
+        auto const m = from_fbs(
+            sched, reinterpret_cast<RtUpdateMeasure const*>(fm->measure()));
         res[m.time_].emplace_back(m);
         break;
       }

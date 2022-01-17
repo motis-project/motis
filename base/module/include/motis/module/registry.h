@@ -28,18 +28,21 @@ struct op {
 struct registry {
   void register_op(std::string const& name, op_fn_t,
                    ctx::accesses_t&& = std::vector<ctx::access_request>{
-                       to_res_id(global_res_id::SCHEDULE)});
+                       {to_res_id(global_res_id::SCHEDULE),
+                        ctx::access_t::READ}});
 
   void register_client_handler(std::string&& target,
                                std::function<void(client_hdl)>&&);
 
   void subscribe(std::string const& topic, op_fn_t,
                  ctx::accesses_t&& = std::vector<ctx::access_request>{
-                     to_res_id(global_res_id::SCHEDULE)});
+                     {to_res_id(global_res_id::SCHEDULE),
+                      ctx::access_t::READ}});
 
   void subscribe(std::string const& topic, void_op_fn_t,
                  ctx::accesses_t&& = std::vector<ctx::access_request>{
-                     to_res_id(global_res_id::SCHEDULE)});
+                     {to_res_id(global_res_id::SCHEDULE),
+                      ctx::access_t::READ}});
 
   std::vector<std::string> register_remote_ops(
       std::vector<std::string> const& names, remote_op_fn_t const& fn);

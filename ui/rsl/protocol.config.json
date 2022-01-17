@@ -4,6 +4,7 @@
   "typeFilter": [
     "motis.*",
     "motis.ris.RISForwardTimeRequest",
+    "motis.ris.RISContentType",
     "motis.paxmon.*",
     "motis.paxforecast.*",
     "motis.routing.*",

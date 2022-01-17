@@ -2,6 +2,7 @@
 
 #include "motis/module/message.h"
 
+#include "motis/paxmon/paxmon.h"
 #include "motis/paxmon/paxmon_data.h"
 
 namespace motis::paxmon::api {

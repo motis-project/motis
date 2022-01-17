@@ -3,6 +3,7 @@
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/access/trip_access.h"
 
 #include "motis/paxmon/build_graph.h"
 #include "motis/paxmon/checks.h"
@@ -16,13 +17,14 @@ using namespace motis::logging;
 
 namespace motis::paxmon::api {
 
-msg_ptr remove_groups(schedule const& sched, paxmon_data& data,
-                      rt_update_context& rt_update_ctx,
-                      bool const keep_group_history,
+msg_ptr remove_groups(paxmon_data& data, bool const keep_group_history,
                       bool const check_graph_integrity_end,
                       msg_ptr const& msg) {
   auto const req = motis_content(PaxMonRemoveGroupsRequest, msg);
-  auto& uv = get_universe(data, req->universe());
+  auto const uv_access =
+      get_universe_and_schedule(data, req->universe(), ctx::access_t::WRITE);
+  auto const& sched = uv_access.sched_;
+  auto& uv = uv_access.uv_;
   auto removed_groups = 0ULL;
 
   for (auto const id : *req->ids()) {
@@ -31,9 +33,6 @@ msg_ptr remove_groups(schedule const& sched, paxmon_data& data,
       continue;
     }
     ++removed_groups;
-    for (auto const& leg : pg->compact_planned_journey_.legs_) {
-      rt_update_ctx.trips_affected_by_last_update_.insert(leg.trip_);
-    }
     remove_passenger_group_from_graph(uv, pg);
     if (!keep_group_history) {
       uv.passenger_groups_.release(pg->id_);

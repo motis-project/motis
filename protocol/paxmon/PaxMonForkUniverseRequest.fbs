@@ -2,4 +2,5 @@ namespace motis.paxmon;
 
 table PaxMonForkUniverseRequest {
   universe: uint; // base universe
+  fork_schedule: bool;
 }

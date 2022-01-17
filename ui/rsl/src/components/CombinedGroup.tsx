@@ -1,5 +1,5 @@
-import React from "react";
 import { useQuery } from "react-query";
+import { useAtom } from "jotai";
 import * as Tooltip from "@radix-ui/react-tooltip";
 
 import { Station, TripId } from "../api/protocol/motis";
@@ -7,6 +7,7 @@ import { GroupedPassengerGroups } from "../api/protocol/motis/paxmon";
 import { sendRoutingRequest } from "../api/routing";
 import { connectionToJourney, Journey } from "../data/journey";
 import { formatTime } from "../util/dateFormat";
+import { scheduleAtom } from "../data/simulation";
 
 import TripLoadForecastChart from "./TripLoadForecastChart";
 import JourneyTripNameView from "./JourneyTripNameView";
@@ -49,6 +50,8 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
   const previousTrip = props.combinedGroup.grouped_by_trip[0];
   const findAlternatives = props.groupByDirection === "Destination";
 
+  const [schedule] = useAtom(scheduleAtom);
+
   const { data, isLoading, error } = useQuery(
     [
       "alternatives",
@@ -80,6 +83,7 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
         use_start_metas: true,
         use_dest_metas: true,
         use_start_footpaths: true,
+        schedule,
       }),
     { enabled: findAlternatives }
   );

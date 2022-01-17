@@ -1,6 +1,7 @@
 // generated file - do not modify - run update-protocol to update
 
 import { TripId } from "../motis";
+import { RISContentType } from "./ris";
 import {
   PaxMonCompactJourney,
   PaxMonGroup,
@@ -38,9 +39,23 @@ export interface TripRecommendationMeasure {
 }
 
 // paxforecast/Measures.fbs
-export type Measure = TripLoadInfoMeasure | TripRecommendationMeasure;
+export interface RtUpdateMeasure {
+  recipients: MeasureRecipients;
+  time: number;
+  type: RISContentType;
+  content: string;
+}
 
-export type MeasureType = "TripLoadInfoMeasure" | "TripRecommendationMeasure";
+// paxforecast/Measures.fbs
+export type Measure =
+  | TripLoadInfoMeasure
+  | TripRecommendationMeasure
+  | RtUpdateMeasure;
+
+export type MeasureType =
+  | "TripLoadInfoMeasure"
+  | "TripRecommendationMeasure"
+  | "RtUpdateMeasure";
 
 // paxforecast/Measures.fbs
 export interface MeasureWrapper {
@@ -72,6 +87,7 @@ export interface PaxForecastGroup {
 
 // paxforecast/PaxForecastUpdate.fbs
 export interface PaxForecastUpdate {
+  universe: number;
   system_time: number;
   groups: PaxForecastGroup[];
   trips: PaxMonTripLoadInfo[];

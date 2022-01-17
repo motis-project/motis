@@ -18,11 +18,11 @@ struct journey_leg {
   CISTA_COMPARABLE()
 
   cista::hash_t hash() const {
-    return cista::build_hash(trip_, enter_station_id_, exit_station_id_,
+    return cista::build_hash(trip_idx_, enter_station_id_, exit_station_id_,
                              enter_time_, exit_time_);
   }
 
-  trip const* trip_{nullptr};
+  trip_idx_t trip_idx_{0};
   unsigned enter_station_id_{0};
   unsigned exit_station_id_{0};
   motis::time enter_time_{0};

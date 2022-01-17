@@ -166,4 +166,13 @@ void write_graph(std::string const& path, schedule const& sched) {
   }
 }
 
+schedule_data copy_graph(schedule const& sched) {
+  logging::scoped_timer timer{"clone schedule"};
+  auto buf = cista::serialize<cista::mode::NONE>(sched);
+  auto ptr = schedule_ptr{};
+  ptr.self_allocated_ = false;
+  ptr.el_ = cista::deserialize<schedule, cista::mode::NONE>(buf);
+  return schedule_data{cista::memory_holder{std::move(buf)}, std::move(ptr)};
+}
+
 }  // namespace motis

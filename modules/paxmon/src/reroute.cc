@@ -168,7 +168,7 @@ bool update_passenger_group(trip_data_index const tdi, trip const* trp,
   static constexpr auto const INVALID_INDEX =
       std::numeric_limits<std::size_t>::max();
   for (auto const& leg : pg->compact_planned_journey_.legs_) {
-    if (leg.trip_ == trp) {
+    if (leg.trip_idx_ == trp->trip_idx_) {
       auto const edges = uv.trip_data_.edges(tdi);
       auto enter_index = INVALID_INDEX;
       auto exit_index = INVALID_INDEX;

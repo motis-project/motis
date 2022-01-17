@@ -2,19 +2,15 @@
 
 #include "motis/paxmon/error.h"
 #include "motis/paxmon/paxmon_data.h"
+#include "motis/paxmon/universe_access.h"
 
 namespace motis::paxmon {
 
-inline universe& get_primary_universe(paxmon_data& data) {
-  return data.multiverse_.primary();
-}
-
-inline universe& get_universe(paxmon_data& data, universe_id const id) {
-  if (auto uv = data.multiverse_.try_get(id); uv) {
-    return *uv.value();
-  } else {
-    throw std::system_error{error::universe_not_found};
-  }
+inline universe_access get_universe_and_schedule(
+    paxmon_data& data, universe_id const id = 0,
+    ctx::access_t const universe_access = ctx::access_t::READ,
+    ctx::access_t const schedule_access = ctx::access_t::READ) {
+  return data.multiverse_.get(id, universe_access, schedule_access);
 }
 
 }  // namespace motis::paxmon

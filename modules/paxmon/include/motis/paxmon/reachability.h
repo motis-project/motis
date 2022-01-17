@@ -41,7 +41,7 @@ struct reachable_trip {
   static constexpr auto const INVALID_INDEX =
       std::numeric_limits<std::size_t>::max();
 
-  trip const* trp_{};
+  trip_idx_t trip_idx_{};
   trip_data_index tdi_{};
   journey_leg const* leg_{};
   time enter_schedule_time_{INVALID_TIME};

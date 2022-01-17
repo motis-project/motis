@@ -71,7 +71,7 @@ Offset<PaxMonCompactJourneyLeg> to_fbs(schedule const& sched,
 
 journey_leg from_fbs(schedule const& sched,
                      PaxMonCompactJourneyLeg const* leg) {
-  return {get_trip(sched, to_extern_trip(leg->trip()->trip())),
+  return {get_trip(sched, to_extern_trip(leg->trip()->trip()))->trip_idx_,
           get_station(sched, leg->enter_station()->id()->str())->index_,
           get_station(sched, leg->exit_station()->id()->str())->index_,
           unix_to_motistime(sched, leg->enter_time()),
@@ -251,7 +251,7 @@ Offset<TripServiceInfo> to_fbs_trip_service_info(FlatBufferBuilder& fbb,
 Offset<TripServiceInfo> to_fbs_trip_service_info(FlatBufferBuilder& fbb,
                                                  schedule const& sched,
                                                  journey_leg const& leg) {
-  return to_fbs_trip_service_info(fbb, sched, leg.trip_,
+  return to_fbs_trip_service_info(fbb, sched, get_trip(sched, leg.trip_idx_),
                                   get_service_infos_for_leg(sched, leg));
 }
 
