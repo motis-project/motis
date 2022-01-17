@@ -23,7 +23,7 @@ jobs:
         run: |
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
-          sudo ./llvm.sh 12
+          sudo ./llvm.sh 12 || sudo ./llvm.sh 12 workaround
           rm llvm.sh
           sudo apt-get install -y --no-install-recommends clang-format-12
 
@@ -242,7 +242,7 @@ jobs:
         run: |
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
-          sudo ./llvm.sh 12
+          sudo ./llvm.sh 12 || sudo ./llvm.sh 12 workaround
           rm llvm.sh
           sudo apt-get install -y --no-install-recommends libc++-12-dev libc++abi-12-dev clang-tidy-12 libunwind-12-dev llvm-12
 
