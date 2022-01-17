@@ -235,7 +235,8 @@ private:
     ftid.primary_.train_nr_ = tid->train_nr();
     ftid.secondary_.target_station_id_ =
         get_station(sched_, view(tid->target_station_id()))->index_;
-    ftid.secondary_.target_time_ = unix_to_motistime(sched_, tid->time());
+    ftid.secondary_.target_time_ =
+        unix_to_motistime(sched_, tid->target_time());
     ftid.secondary_.line_id_ = view(tid->line_id());
 
     return ftid;
@@ -445,7 +446,7 @@ private:
 
       auto const to_route_node = route_nodes[i + 1];  // NOLINT
       auto const to_station_node = to_route_node->get_station();
-      auto const to_station = sched_.stations_[to_route_node->id_].get();
+      auto const to_station = sched_.stations_[to_station_node->id_].get();
       auto const to_platform =
           to_station->get_platform(sec.arr_.current_track_);
 
