@@ -435,10 +435,6 @@ __device__ void mc_update_route_smaller32(
         auto const earliest_arrival = get_earliest_arrival<CriteriaConfig>(
             earliest_arrivals, target_stop_id, s_id, write_to_offset);
 
-//        if(r_id == 13692 && t_id == 21 && trip_offset == 0) {
-//          printf("wo %i\tarr %i\tea %i\n", write_to_offset, stop_arrival, earliest_arrival);
-//        }
-
         if (stop_arrival < earliest_arrival) {
           auto const write_to_idx =
               CriteriaConfig::get_arrival_idx(s_id, write_to_offset);
@@ -513,21 +509,23 @@ __device__ void mc_update_footpaths_dev_scratch(
         CriteriaConfig::get_arrival_idx(footpath.to_, t_offset);
 
     time const from_arrival = read_arrivals[from_arrival_idx];
-    time const new_arrival = from_arrival + footpath.duration_;
+    if(valid(from_arrival)) {
+      time const new_arrival = from_arrival + footpath.duration_;
 
-    // this give potentially just an upper bound and not the real
-    //  earliest arrival value at the time the update is written
-    time const to_stop_ea = earliest_arrivals[to_arrival_idx];
-    time const target_ea = earliest_arrivals[target_arr_idx];
-    time const earliest_arrival = umin(to_stop_ea, target_ea);
+      // this give potentially just an upper bound and not the real
+      //  earliest arrival value at the time the update is written
+      time const to_stop_ea = earliest_arrivals[to_arrival_idx];
+      time const target_ea = earliest_arrivals[target_arr_idx + t_offset];
+      time const earliest_arrival = umin(to_stop_ea, target_ea);
 
-    if (valid(from_arrival) && marked(station_marks, from_arrival_idx) &&
-        new_arrival < earliest_arrival) {
-      bool updated =
-          update_arrival(write_arrivals, to_arrival_idx, new_arrival);
-      if (updated) {
-        update_arrival(earliest_arrivals, to_arrival_idx, new_arrival);
-        mark(station_marks, to_arrival_idx);
+      if (marked(station_marks, from_arrival_idx) &&
+          new_arrival < earliest_arrival) {
+        bool updated =
+            update_arrival(write_arrivals, to_arrival_idx, new_arrival);
+        if (updated) {
+          update_arrival(earliest_arrivals, to_arrival_idx, new_arrival);
+          mark(station_marks, to_arrival_idx);
+        }
       }
     }
   }
@@ -669,12 +667,6 @@ __device__ void mc_init_arrivals_dev(base_query const& query,
   if (t_id == 0) {
     write_to_trait_blocks(device_mem.result_[0], query.source_,
                           query.source_time_begin_);
-
-    //    auto const arr_idx = CriteriaConfig::get_arrival_idx(query.source_,
-    //    0); device_mem.result_[0][arr_idx] =
-    //        query.source_time_begin_ -
-    //        CriteriaConfig::get_transfer_time(tt, 0, query.source_);
-    //    mark(device_mem.station_marks_, arr_idx);
   }
 
   auto req_update_count = device_mem.additional_start_count_;
@@ -688,16 +680,6 @@ __device__ void mc_init_arrivals_dev(base_query const& query,
 
     write_to_trait_blocks(device_mem.result_[0], add_start.s_id_,
                           add_start_time);
-    //
-    //    auto const add_start_arr_idx =
-    //        CriteriaConfig::get_arrival_idx(add_start.s_id_, 0);
-    //    bool updated = update_arrival(device_mem.result_[0],
-    //    add_start_arr_idx,
-    //                                  add_start_time);
-    //
-    //    if (updated) {
-    //      mark(device_mem.station_marks_, add_start_arr_idx);
-    //    }
   }
 }
 

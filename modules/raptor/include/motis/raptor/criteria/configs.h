@@ -33,12 +33,12 @@ using MaxOccupancyShfl =
 
 using MaxTransferClass =
     criteria_config<criteria_data<data_max_transfer_class>,
-                    traits<trait_max_transfer_class<false>>,
+                    traits<trait_max_transfer_class>,
                     transfer_class_transfer_time_calculator, CalcMethod::Flat>;
 
 using TcMaxOccupancy =
     criteria_config<criteria_data<data_max_occupancy, data_max_transfer_class>,
-                    traits<trait_max_transfer_class<true>, trait_max_occupancy>,
+                    traits<trait_max_transfer_class, trait_max_occupancy>,
                     transfer_class_transfer_time_calculator, CalcMethod::Flat>;
 
 using Tso96 =

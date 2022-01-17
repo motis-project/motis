@@ -425,9 +425,10 @@ inline void update_footpaths(raptor_timetable const& tt, time* current_round,
         motis::time to_arrival = current_round[to_arr_idx];
         motis::time to_ea = ea[to_arr_idx];
 
-        auto min = std::min(to_arrival, to_ea);  // local pruning
-        min = std::min(min,
-                       ea[target_arr_idx + s_trait_offset]);  // target pruning
+        // local pruning
+        auto min = std::min(to_arrival, to_ea);
+        // target pruning
+        min = std::min(min, ea[target_arr_idx + s_trait_offset]);
         if (new_arrival < min) {
           station_marks.mark(to_arr_idx);
           current_round[to_arr_idx] = new_arrival;
@@ -486,17 +487,17 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics& stats) {
 
         ++routes_scanned;
 
-        if (!CriteriaConfig::REQ_DIMENSION_PROPAGATION) {
+//        if (!CriteriaConfig::REQ_DIMENSION_PROPAGATION) {
           update_route_for_trait_offset_forward_project<CriteriaConfig>(
               tt, t_offset, r_id, result[round_k - 1], result[round_k], ea,
               station_marks, target_s_id);
-        } else {
-          auto const target_arr_idx =
-              CriteriaConfig::get_arrival_idx(target_s_id, t_offset);
-          update_route_for_trait_offset<CriteriaConfig>(
-              tt, r_id, result[round_k - 1], result[round_k], ea, station_marks,
-              t_offset, target_arr_idx);
-        }
+//        } else {
+//          auto const target_arr_idx =
+//              CriteriaConfig::get_arrival_idx(target_s_id, t_offset);
+//          update_route_for_trait_offset<CriteriaConfig>(
+//              tt, r_id, result[round_k - 1], result[round_k], ea, station_marks,
+//              t_offset, target_arr_idx);
+//        }
       }
     }
     stats.total_scanned_routes_ += routes_scanned;

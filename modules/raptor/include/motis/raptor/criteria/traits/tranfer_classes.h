@@ -36,23 +36,7 @@ struct data_max_transfer_class {
  * the lowest dimension value requires the most transfer time and therefore,
  * leads to having the higher arrival times in the lower dimension indices.
  * This prevents them from being dominated.
- *
- * If this criteria is used in conjunction with other criteria which rely
- * on the departure station to determine their respective dimension indices.
- * This is e.g. true for the Occupancy based criteria. To demonstrate the
- * problem examine the following example: A trip with 6 stops is scanned.
- * The stops with index 0 and 3 are feasible departure stops, but on stop with
- * index 3 only a fast transfer enable catching the train, where as on the first
- * stop the train can be reached even with a slow transfer. When having both
- * stops as valid departure stops for the occupancy criteria, the stops with
- * indices 4 and 5 calculate their value starting from stop 3 instead of 0.
- * Therefore, separate scans per dimension index are necessary, when such
- * criteria are present in the configuration. In this case use the parameter
- * to control the behaviour of this criteria.
- *
- * @tparam UsedWithDepartureRelying
  */
-template <bool UsedWithDepartureRelying>
 struct trait_max_transfer_class {
 
   // a lower class means slower transfer times
@@ -64,7 +48,20 @@ struct trait_max_transfer_class {
 
   // indices
   constexpr static dimension_id DIMENSION_SIZE = _max_transfer_class + 1;
-  constexpr static bool REQ_DIMENSION_PROPAGATION = UsedWithDepartureRelying;
+
+  /**
+   * A trip always needs to be scanned once per dimension otherwise we would
+   * shadow possible arrival times for lower dimension indices.
+   *
+   * Consider the following route A-B-C with one trip 5-10'-20'.
+   * From the previous arrivals it is known that A can be reached by 2'
+   * and B can be reached by 4'. Both are now feasible departure stations.
+   * From A with a slow transfer of 3 Minutes and from B with a fast transfer of
+   * 1 Minute. When scanning a trip with forward propagation the arrival at C
+   * would only be written from departure B and dimension index 2 shadowing a
+   * dominating arrival at C from departure A on dimension index 0.
+   */
+  constexpr static bool REQ_DIMENSION_PROPAGATION = true;
   constexpr static bool CHECKS_TRANSFER_TIME = true;
 
   static constexpr float fast_tt_multiplier = 0.7f;
@@ -96,13 +93,11 @@ struct trait_max_transfer_class {
     if (prev_arrival + slow_tt <= stop_departure) {
       aggregate._staged_transfer_class_ = 0;
       return true;
-    } else if ((aggregate.initial_transfer_class_ >= 1 ||
-                !UsedWithDepartureRelying) &&
+    } else if (aggregate.initial_transfer_class_ >= 1 &&
                prev_arrival + regular_tt <= stop_departure) {
       aggregate._staged_transfer_class_ = 1;
       return true;
-    } else if ((aggregate.initial_transfer_class_ >= 2 ||
-                !UsedWithDepartureRelying) &&
+    } else if (aggregate.initial_transfer_class_ >= 2 &&
                prev_arrival + fast_tt <= stop_departure) {
       aggregate._staged_transfer_class_ = 2;
       return true;
@@ -173,13 +168,13 @@ struct trait_max_transfer_class {
     time const slow_tt = regular_tt * slow_tt_multiplier;
     time const fast_tt = regular_tt * fast_tt_multiplier;
 
-    aggregate._dep_offset = dep_offset;
-    aggregate._dep_s_id = dep_s_id;
-    aggregate._slow_tt = slow_tt;
-    aggregate._fast_tt = fast_tt;
-    aggregate._regular_tt = regular_tt;
-    aggregate._prev_arr = prev_arrival;
-    aggregate._stop_dep = stop_departure;
+//    aggregate._dep_offset = dep_offset;
+//    aggregate._dep_s_id = dep_s_id;
+//    aggregate._slow_tt = slow_tt;
+//    aggregate._fast_tt = fast_tt;
+//    aggregate._regular_tt = regular_tt;
+//    aggregate._prev_arr = prev_arrival;
+//    aggregate._stop_dep = stop_departure;
 
     // when reaching this point we already checked on the thread responsible for
     // the given departure stop, therefore, we know that one of the categories
