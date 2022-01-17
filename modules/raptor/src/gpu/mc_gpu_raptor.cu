@@ -589,7 +589,7 @@ __device__ void mc_update_routes_dev(device_memory const& device_mem,
   // threadIdx.y = 1..32 + (blockDim.y = 32 * blockIdx.x = 1..6)
   auto const start_idx = threadIdx.y + (blockDim.y * blockIdx.x);
 
-  uint64_t route_count = 0;
+  uint32_t route_count = 0;
 
   auto const trait_size = CriteriaConfig::TRAITS_SIZE;
   auto const max_idx = tt.route_count_ * trait_size;

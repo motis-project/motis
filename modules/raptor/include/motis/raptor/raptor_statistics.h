@@ -19,14 +19,14 @@ struct raptor_statistics {
   uint64_t raptor_queries_{0};
   uint64_t raptor_connections_{0};
 
-  uint64_t total_scanned_routes_{0};
-  uint64_t scanned_routes_1_{0};
-  uint64_t scanned_routes_2_{0};
-  uint64_t scanned_routes_3_{0};
-  uint64_t scanned_routes_4_{0};
-  uint64_t scanned_routes_5_{0};
-  uint64_t scanned_routes_6_{0};
-  uint64_t scanned_routes_7_{0};
+  uint32_t total_scanned_routes_{0};
+  uint32_t scanned_routes_1_{0};
+  uint32_t scanned_routes_2_{0};
+  uint32_t scanned_routes_3_{0};
+  uint32_t scanned_routes_4_{0};
+  uint32_t scanned_routes_5_{0};
+  uint32_t scanned_routes_6_{0};
+  uint32_t scanned_routes_7_{0};
 
   uint64_t number_of_rounds_{0};
 };
