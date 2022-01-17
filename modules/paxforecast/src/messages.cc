@@ -121,6 +121,7 @@ measures::measure_collection from_fbs(
         auto const m = from_fbs(
             sched, reinterpret_cast<RtUpdateMeasure const*>(fm->measure()));
         res[m.time_].emplace_back(m);
+        break;
       }
       default: throw std::system_error{error::unsupported_measure};
     }
