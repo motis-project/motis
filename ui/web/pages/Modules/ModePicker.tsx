@@ -39,7 +39,7 @@ export const Modepicker: React.FC<{'translation': Translations, 'start': boolean
                             <div className={bikeSelected ? 'mode enabled' : 'mode'}><i className='icon'>directions_bike</i></div>
                             <div className={carSelected ? 'mode enabled' : 'mode'}><i className='icon'>directions_car</i></div>
                         </div>
-                        <div className={modePickerVisible ? 'mode-picker-editor visible' : 'mode-picker-editor'}>
+                        <div className='mode-picker-editor' style={modePickerVisible ? {display: 'flex'} : {display: 'none'}}>
                             <div className='header'>
                                 <div className='sub-overlay-close' onClick={() => setModePickerVisible(false)}><i className='icon'>close</i></div>
                                 <div className='title'>{props.start ? props.translation.search.startTransports : props.translation.search.destinationTransports}</div>

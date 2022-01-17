@@ -13,8 +13,6 @@ export interface IntermodalRoutingRequest {
 }
 
 
-
-
 export interface IntermodalPretripStartInfo {
     position: Position,
     interval: Interval,
