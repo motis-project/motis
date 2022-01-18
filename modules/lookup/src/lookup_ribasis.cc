@@ -148,7 +148,7 @@ struct rib_ctx {
 
   FlatBufferBuilder& fbb_;
   schedule const& sched_;
-  uu::random_generator uuid_gen_;
+  uu::random_generator uuid_gen_{};
 
   Offset<String> empty_string_;
 
@@ -198,10 +198,9 @@ Offset<RiBasisFahrtRelation> trip_relation(rib_ctx& rc, trip const* trp) {
 RiBasisZeitstatus convert_reason(timestamp_reason const tr) {
   switch (tr) {
     case timestamp_reason::SCHEDULE: return ribasis::RiBasisZeitstatus_FAHRPLAN;
-    case timestamp_reason::FORECAST: return ribasis::RiBasisZeitstatus_PROGNOSE;
     case timestamp_reason::IS: return ribasis::RiBasisZeitstatus_MELDUNG;
+    case timestamp_reason::FORECAST:
     case timestamp_reason::PROPAGATION:
-      return ribasis::RiBasisZeitstatus_PROGNOSE;
     case timestamp_reason::REPAIR: return ribasis::RiBasisZeitstatus_PROGNOSE;
     default: throw utl::fail("unsupported timestamp_reason");
   }
