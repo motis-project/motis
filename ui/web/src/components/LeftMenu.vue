@@ -2,7 +2,11 @@
   <div :class="['overlay-container', isOverlayHidden ? 'hidden' : '']">
     <div class="overlay">
       <div id="overlay-content">
-        <RouterView name="overlay"></RouterView>
+        <RouterView name="overlay" v-slot="{ Component }">
+          <keep-alive include="ConnectionSearch">
+            <component :is="Component"></component>
+          </keep-alive>
+        </RouterView>
       </div>
       <div :class="['sub-overlay', isSubOverlayHidden ? 'hidden' : '']">
         <div id="sub-overlay-content">

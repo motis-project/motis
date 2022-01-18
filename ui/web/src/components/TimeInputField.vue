@@ -35,7 +35,6 @@ export default defineComponent({
   computed: {
     timeToDisplay: function (): string {
       let result = this.$ds.getTimeString(this.time.valueOf());
-      this.$emit("timeChanged", this.time);
       return result;
     },
   },
@@ -52,12 +51,14 @@ export default defineComponent({
         this.time.getHours() + change,
         this.time.getMinutes()
       );
+      this.$emit("timeChanged", this.time);
     },
     setTime(value: string) {
       let t = this.$ds.parseTime(value);
       if(t.valueOf()) {
         this.time = t;
       }
+      this.$emit("timeChanged", this.time);
     },
   },
 });

@@ -5,7 +5,8 @@ import { AddressGuessResponseContent } from '../models/AddressGuess';
 import Trip from '../models/Trip';
 import TripResponseContent from '../models/TripResponseContent';
 import { RailVizStationResponseContent } from '../models/DepartureTimetable';
-import { TrainGuessResponseContent } from '@/models/TrainGuess'
+import { TrainGuessResponseContent } from '../models/TrainGuess'
+import ConnectionResponseContent, { ConnectionRequestContent } from "../models/ConnectionContent"
 
 /* eslint-disable camelcase*/
 const service: MOTISPostService = {
@@ -78,6 +79,21 @@ const service: MOTISPostService = {
         },
     }
     return (await axios.post<TrainGuessResponse>("https://europe.motis-project.de/", rq)).data.content;
+  },
+  async getConnectionResponse(connectionRequest: ConnectionRequestContent){
+    const rq = {
+        destination: {
+          target: "/intermodal",
+          type: "Module"
+        },
+        content_type: "IntermodalRoutingRequest",
+        content: {
+          ...connectionRequest,
+          search_type: "Accessibility",
+          search_dir: "Forward"
+        },
+    }
+    return (await axios.post<ConnectionResponse>("https://europe.motis-project.de/", rq)).data.content;
   }
 }
 
@@ -127,7 +143,16 @@ interface TrainGuessResponse {
   },
   content_type: string,
   content: TrainGuessResponseContent,
-  id: 1
+  id: number
+}
+
+interface ConnectionResponse {
+  destination: {
+    type: string,
+    target: string
+  },
+  content_type: string,
+  content: ConnectionResponseContent,
 }
 /* eslint-enable camelcase*/
 
@@ -137,6 +162,7 @@ interface MOTISPostService {
   getTripResponce(input: Trip) : Promise<TripResponseContent>
   getDeparturesResponse(station: string, byScheduleTime: boolean, direction: string, eventCount: number, time: number) : Promise<RailVizStationResponseContent>
   getTrainGuessResponse(currentTime: number, currentTrainNum: number): Promise<TrainGuessResponseContent>
+  getConnectionResponse(connectionRequest: ConnectionRequestContent): Promise<ConnectionResponseContent>
 }
 
 

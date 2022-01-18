@@ -32,7 +32,8 @@ interface Translation {
   earlier : string,
   later: string,
   profile: string,
-  useParking: string
+  useParking: string,
+  parking: string
 }
 /* eslint-enable camelcase */
 

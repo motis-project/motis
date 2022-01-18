@@ -14,7 +14,8 @@
     "flush-promises": "^1.0.2",
     "luxon": "^2.2.0",
     "vue": "^3.0.0",
-    "vue-router": "^4.0.0-0"
+    "vue-router": "^4.0.0-0",
+    "vuex": "^4.0.2"
   },
   "devDependencies": {
     "@types/jest": "^24.0.19",

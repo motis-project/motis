@@ -1,6 +1,7 @@
 import { TranslationService } from "../services/TranslationService";
 import { Router } from "vue-router";
 import Stop from "../models/Stop";
+import { Move } from "../models/TripResponseContent";
 
 export default {
   methods: {
@@ -50,6 +51,19 @@ export default {
       else {
         return 100 - (diffWithCurrent / diff) * 100;
       }
+    },
+    getNonEmptyTransports(transports: Move[]): Move[] {
+      const res: Move[] = [];
+      for(let i = 0; i < transports.length; i++) {
+        const t = transports[i];
+        if(!("mumo_id" in t.move) || t.move.mumo_id !== -1) {
+          res.push({...t})
+        }
+        else {
+          res[res.length - 1].move.range.to = t.move.range.to;
+        }
+      }
+      return res;
     },
   }
 }

@@ -61,6 +61,18 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
+    path: '/:locale?/connection/:index',
+    name: "Connection",
+    components: {
+      overlay: Trip,
+    },
+    props: {
+      overlay: route => ({
+        index: Number.parseInt(route.params.index as string)
+      })
+    },
+  },
+  {
     path: '/:locale?/station/:id/:time',
     name: 'StationTimeTableFromTrainSearch',
     components: {

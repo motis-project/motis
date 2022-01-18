@@ -60,6 +60,7 @@ import LoadingBar from "../components/LoadingBar.vue"
 import WayTransport from "../components/WayTransport.vue"
 import WayCustomMovement from "../components/WayCustomMovement.vue"
 import CustomMovement from "../models/CustomMovement";
+import WayMixin from "../mixins/WayMixin"
 
 export default defineComponent({
   name: "Trip",
@@ -68,21 +69,14 @@ export default defineComponent({
     WayTransport,
     WayCustomMovement
   },
+  mixins: [ WayMixin ],
   props: {
     trip: {
       type: Object as PropType<Trip>,
       required: false,
     },
-    initContent: {
-      type: Object as PropType<TripResponseContent>,
-      required: false,
-    },
-    startStationName: {
-      type: String as PropType<string>,
-      required: false
-    },
-    endStationName: {
-      type: String as PropType<string>,
+    index: {
+      type: Number as PropType<number>,
       required: false
     }
   },
@@ -90,6 +84,8 @@ export default defineComponent({
     return {
       content: {} as TripResponseContent,
       isContentLoaded: false,
+      startStationName: undefined as (string | undefined),
+      endStationName: undefined as (string | undefined)
     };
   },
   computed: {
@@ -109,26 +105,7 @@ export default defineComponent({
       return this.content.stops[this.content.stops.length - 1].station.name;
     },
     duration: function (): string {
-      let time = new Date(
-        (this.content.stops[this.content.stops.length - 1].arrival.time - this.content.stops[0].departure.time) * 1000
-      );
-      let res = "";
-      if (time.getDate() > 1) {
-        res += this.$ts.formatTranslate("days", (time.getDate() - 1).toString());
-      }
-      if (res !== "") {
-        res += " ";
-      }
-      if (time.getHours() > 1) {
-        res += this.$ts.formatTranslate("hours", (time.getHours() - 1).toString());
-      }
-      if (res !== "") {
-        res += " ";
-      }
-      if (time.getMinutes() > 0) {
-        res += this.$ts.formatTranslate("minutes", time.getMinutes().toString());
-      }
-      return res;
+      return this.getReadableDuration(this.content.stops[0].departure.time, this.content.stops[this.content.stops.length - 1].arrival.time, this.$ts);
     },
     changes: function (): string {
       return this.$ts.countTranslate("changes", this.content.trips.length - 1);
@@ -141,17 +118,15 @@ export default defineComponent({
     content: function() {
       this.isContentLoaded = true;
     },
-    trip: function() {
-      this.sendRequest();
+    trip() {
+      this.getData();
+    },
+    index() {
+      this.getData();
     }
   },
   created() {
-    if(this.initContent) {
-      this.content = this.initContent
-    }
-    else {
-      this.sendRequest();
-    }
+    this.getData();
   },
   methods: {
     getTimeString(timeInSeconds: number) {
@@ -189,6 +164,21 @@ export default defineComponent({
       }
       else {
         return this.getStopsForTransport(customMovement)[1].station.name;
+      }
+    },
+    getData() {
+      console.log(this.index);
+      if(this.index !== undefined && this.$store.state.connections.length > 0
+        && this.index < this.$store.state.connections.length && this.index >= 0) {
+        this.content = this.$store.state.connections[this.index];
+        this.startStationName = this.$store.state.startInput.name;
+        this.endStationName = this.$store.state.destinationInput.name;
+      }
+      else if(this.trip !== undefined) {
+        this.sendRequest();
+      }
+      else {
+        this.$router.push({name: "ConnectionSearch"});
       }
     }
   }

@@ -15,9 +15,11 @@
 import { defineComponent, PropType } from "vue";
 import Transport from "../models/Transport";
 import Trip from "../models/Trip";
+import ClassZConverter from "../mixins/ClassZConverter"
 
 export default defineComponent({
   name: "TransportTypeBox",
+  mixins: [ ClassZConverter ],
   props: {
     transport: {
       type: Object as PropType<Transport>,
@@ -30,27 +32,7 @@ export default defineComponent({
   },
   computed: {
     icon: function (): string {
-      switch (this.transport.clasz) {
-      case 1:
-      case 2:
-      case 4:
-      case 5:
-      case 6:
-        return "train";
-      case 0:
-        return "plane";
-      case 7:
-        return "sbahn";
-      case 8:
-        return "ubahn";
-      case 9:
-        return "tram";
-      case 11:
-        return "ship";
-      case 3:
-      default:
-        return "bus";
-      }
+      return this.convertClassZ(this.transport.clasz)
     },
   },
   methods: {

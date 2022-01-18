@@ -98,7 +98,7 @@ export default defineComponent({
   },
   methods: {
     getIntermediateStops() {
-      return this.stops.slice(1, this.stops.length - 2);
+      return this.stops.slice(1, this.stops.length - 1);
     },
     getStopProgress(stop: Stop) {
       return this.getProgress(stop, this.stops[this.stops.indexOf(stop) + 1], this.$ds.dateTimeInSeconds);
