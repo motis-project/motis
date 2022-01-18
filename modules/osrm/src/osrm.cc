@@ -123,12 +123,22 @@ void osrm::init(motis::module::registry& reg) {
     auto const req = motis_content(OSRMSmoothViaRouteRequest, msg);
     return get_router(req->profile()->str())->smooth_via(req);
   });
+  reg.register_op("/osrm/many_to_many", [this](msg_ptr const& msg) {
+    auto const req = motis_content(OSRMManyToManyRequest, msg);
+    return get_router(req->profile()->str())->many_to_many(req);
+  });
+  reg.register_op("/osrm/route", [this](msg_ptr const& msg) {
+    auto const req = motis_content(OSRMRouteRequest, msg);
+    return get_router(req->profile()->str())->route(req);
+  });
 }
 
 void osrm::init_async() {
+  LOG(info) << "init async" << datasets_[0];
   std::mutex mutex;
   motis_parallel_for(
       datasets_, ([&mutex, this](std::string const& dataset) {
+        LOG(logging::info) << dataset;
         fs::path path(dataset);
         auto directory = path.parent_path();
         if (!is_directory(directory)) {
@@ -142,6 +152,8 @@ void osrm::init_async() {
         std::lock_guard<std::mutex> lock(mutex);
         routers_.emplace(profile, std::move(r));
       }));
+
+  motis_publish(make_no_msg("/osrm/initialized"));
 }
 
 router const* osrm::get_router(std::string const& profile) {

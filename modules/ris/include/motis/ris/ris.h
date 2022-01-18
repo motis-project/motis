@@ -16,7 +16,8 @@ struct config {
   std::vector<std::string> input_;
   conf::time init_time_{0};
   bool clear_db_ = false;
-  size_t db_max_size_{static_cast<size_t>(1024) * 1024 * 1024 * 512};
+  size_t db_max_size_{sizeof(void*) >= 8 ? 1024ULL * 1024 * 1024 * 1024
+                                         : 256 * 1024 * 1024};
   bool instant_forward_{false};
   bool gtfs_is_addition_skip_allowed_{true};
 };

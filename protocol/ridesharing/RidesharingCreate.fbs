@@ -1,0 +1,11 @@
+include "base/Position.fbs";
+
+namespace motis.ridesharing;
+
+table RidesharingCreate {
+  driver : int;
+  time : long;
+  max_passengers: ushort;
+  start : motis.Position;
+  target : motis.Position;
+}

@@ -1,0 +1,16 @@
+namespace motis.ridesharing;
+
+table Cost {
+  duration: double;
+  distance: double;
+}
+
+table RoutingRow {
+  costs: [Cost];
+}
+
+table RoutingTable {
+  routing_matrix: [RoutingRow];
+}
+
+root_type RoutingTable;

@@ -42,6 +42,26 @@ inline service_class& operator++(service_class& c) {
   return c = static_cast<service_class>(static_cast<service_class_t>(c) + 1);
 }
 
+inline bool operator<(service_class const a, service_class const b) {
+  return static_cast<std::underlying_type_t<service_class>>(a) <
+         static_cast<std::underlying_type_t<service_class>>(b);
+}
+
+inline bool operator<=(service_class const a, service_class const b) {
+  return static_cast<std::underlying_type_t<service_class>>(a) <=
+         static_cast<std::underlying_type_t<service_class>>(b);
+}
+
+inline bool operator>(service_class const a, service_class const b) {
+  return static_cast<std::underlying_type_t<service_class>>(a) >
+         static_cast<std::underlying_type_t<service_class>>(b);
+}
+
+inline bool operator>=(service_class const a, service_class const b) {
+  return static_cast<std::underlying_type_t<service_class>>(a) >=
+         static_cast<std::underlying_type_t<service_class>>(b);
+}
+
 struct connection_info {
   CISTA_COMPARABLE();
 

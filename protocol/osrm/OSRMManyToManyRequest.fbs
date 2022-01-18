@@ -1,0 +1,25 @@
+include "base/Position.fbs";
+
+namespace motis.osrm;
+
+// JSON Example 
+// (empty sources or sinks means all coordinates are supposed to be used, this example routes from coordinate 0 to coordinate 0 and 1):
+// --
+// {
+//   "destination": {
+//     "type": "Module",
+//     "target": "/osrm/many_to_many"
+//   },
+//   "content_type": "OSRMManyToManyRequest",
+//   "content": {
+//     "profile": "car",
+//     "coordinates": [
+//       { "lat": 49.87738029, "lng": 8.64555359 },
+//       { "lat": 49.97738029, "lng": 8.74555359 }
+//     ]
+//   }
+// }
+table OSRMManyToManyRequest {
+  profile: string;
+  coordinates : [motis.Position];
+}

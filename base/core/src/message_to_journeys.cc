@@ -47,6 +47,11 @@ journey::transport to_transport(Walk const& walk, uint16_t duration) {
   t.mumo_price_ = walk.price();
   t.mumo_accessibility_ = walk.accessibility();
   t.mumo_type_ = walk.mumo_type()->c_str();
+  t.provider_ = walk.lift_key()->c_str();
+  t.from_leg_ = walk.from_leg();
+  t.to_leg_ = walk.to_leg();
+  t.from_loc_ = {walk.from_loc()->lat(), walk.from_loc()->lng()};
+  t.to_loc_ = {walk.to_loc()->lat(), walk.to_loc()->lng()};
   return t;
 }
 

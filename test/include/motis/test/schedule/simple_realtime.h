@@ -23,5 +23,10 @@ static auto const dataset_opt_long =
                            .schedule_begin_ = "20151124",
                            .num_days_ = 6};
 
+static auto const dataset_opt_two_weeks =
+    loader::loader_options{.dataset_ = {"test/schedule/simple_realtime"},
+                           .schedule_begin_ = "20151124",
+                           .num_days_ = 14};
+
 }  // namespace test::schedule::simple_realtime
 }  // namespace motis

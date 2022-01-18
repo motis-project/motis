@@ -10,6 +10,10 @@
 #include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/schedule.h"
 
+#include "motis/intermodal/mumo_type.h"
+
+#include "motis/ridesharing/query_response.h"
+
 #include "motis/protocol/Message_generated.h"
 
 namespace motis::intermodal {
@@ -30,6 +34,7 @@ struct query_start {
   bool is_intermodal_;
   geo::latlng pos_;
   unixtime time_;
+  std::optional<motis::ridesharing::ridesharing_edge> rs_data_{};
 };
 
 query_start parse_query_start(flatbuffers::FlatBufferBuilder&,

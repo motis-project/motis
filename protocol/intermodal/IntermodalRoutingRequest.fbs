@@ -71,11 +71,17 @@ table CarParking {
   ppr_search_options: ppr.SearchOptions;
 }
 
+table Ridesharing {
+  required_seats: int;
+  ppr_search_options: ppr.SearchOptions;
+}
+
 union Mode {
   Foot,
   Bike,
   Car,
   FootPPR,
+  Ridesharing,
   CarParking
 }
 

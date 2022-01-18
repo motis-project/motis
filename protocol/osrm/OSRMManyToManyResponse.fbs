@@ -1,0 +1,11 @@
+include "osrm/Cost.fbs";
+
+namespace motis.osrm;
+
+table OSRMManyToManyResponseRow {
+  costs:[Cost]; 
+}
+
+table OSRMManyToManyResponse {
+  routing_matrix:[OSRMManyToManyResponseRow];
+}

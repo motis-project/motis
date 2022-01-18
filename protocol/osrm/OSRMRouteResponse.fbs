@@ -1,0 +1,7 @@
+include "osrm/Cost.fbs";
+
+namespace motis.osrm;
+
+table OSRMRouteResponse {
+  costs:[Cost]; 
+}

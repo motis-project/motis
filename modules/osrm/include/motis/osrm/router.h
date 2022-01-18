@@ -17,6 +17,8 @@ struct router {
   router& operator=(router&&) = delete;
 
   motis::module::msg_ptr one_to_many(OSRMOneToManyRequest const*) const;
+  motis::module::msg_ptr many_to_many(OSRMManyToManyRequest const*) const;
+  motis::module::msg_ptr route(OSRMRouteRequest const*) const;
   motis::module::msg_ptr via(OSRMViaRouteRequest const*) const;
   motis::module::msg_ptr smooth_via(OSRMSmoothViaRouteRequest const*) const;
 

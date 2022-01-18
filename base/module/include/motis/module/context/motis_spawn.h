@@ -3,6 +3,7 @@
 #include "ctx/ctx.h"
 
 #include "motis/module/ctx_data.h"
+#include "motis/module/dispatcher.h"
 
 namespace motis::module {
 

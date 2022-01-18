@@ -1,0 +1,26 @@
+include "base/Position.fbs";
+
+namespace motis.ridesharing;
+
+table RidesharingEdge {
+  from_station_id: string;
+  from_pos: motis.Position;
+  from_leg: ushort;
+  parking_id: int; 
+  parking_pos: motis.Position;
+  to_station_id: string;
+  to_pos: motis.Position;
+  to_leg: ushort;
+  rs_price: ushort;
+  rs_t: long;
+  rs_duration: ushort;  
+  ppr_duration: ushort;
+  ppr_accessibility: ushort;
+  lift_key: string;
+}
+
+table RidesharingResponse {
+  arrs:[RidesharingEdge];
+  deps:[RidesharingEdge];
+  direct_connections:[RidesharingEdge];
+}

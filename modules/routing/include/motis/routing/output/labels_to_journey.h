@@ -71,7 +71,7 @@ journey labels_to_journey(schedule const& sched, Label* label,
                         return s.exit_ ? transfers_count + 1 : transfers_count;
                       });
   j.accessibility_ = get_accessibility(j);
-
+  j.price_ = t.front().mumo_price_;
   j.db_costs_ = db_costs(*label);
   j.night_penalty_ = night_penalty(*label);
 

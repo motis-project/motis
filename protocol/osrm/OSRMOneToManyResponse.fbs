@@ -1,9 +1,6 @@
-namespace motis.osrm;
+include "osrm/Cost.fbs";
 
-struct Cost {
-  duration:double;
-  distance:double;
-}
+namespace motis.osrm;
 
 table OSRMOneToManyResponse {
   costs:[Cost];

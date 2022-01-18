@@ -1,0 +1,124 @@
+#include <chrono>
+#include <cmath>
+#include <cstdlib>
+
+#include "motis/core/common/logging.h"
+
+#include "motis/module/message.h"
+#include "motis/module/module.h"
+
+#include "motis/protocol/Message_generated.h"
+#include "motis/ridesharing/routing_result.h"
+#include "motis/test/motis_instance_test.h"
+#include "motis/test/schedule/simple_realtime.h"
+
+#include <exception>
+#include <fstream>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <iterator>
+#include <random>
+#include <regex>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "./rs_super_itest.h"
+#include "flatbuffers/flatbuffers.h"
+#include "flatbuffers/idl.h"
+#include "geo/latlng.h"
+#include "gtest/gtest.h"
+
+using namespace geo;
+using namespace flatbuffers;
+using namespace motis::osrm;
+using namespace motis::test;
+using namespace motis::test::schedule;
+using namespace motis::module;
+using namespace motis::routing;
+using namespace motis::intermodal;
+using motis::logging::info;
+using motis::test::schedule::simple_realtime::dataset_opt;
+
+namespace motis::ridesharing {
+
+struct rs_crud_itest : public rs_super_itest {
+  rs_crud_itest() : rs_super_itest(12) {}
+
+  msg_ptr ridesharing_remove(int driver, int time_lift_start) {
+    message_creator mc;
+    mc.create_and_finish(
+        MsgContent_RidesharingRemove,
+        CreateRidesharingRemove(mc, driver, time_lift_start).Union(),
+        "/ridesharing/remove");
+    return make_msg(mc);
+  }
+
+  msg_ptr ridesharing_unbook(int driver, int time_lift_start, int passenger) {
+    message_creator mc;
+    mc.create_and_finish(
+        MsgContent_RidesharingUnbook,
+        CreateRidesharingUnbook(mc, driver, time_lift_start, passenger).Union(),
+        "/ridesharing/unbook");
+    return make_msg(mc);
+  }
+};
+
+TEST_F(rs_crud_itest, create_book_unbook) {
+  publish(make_no_msg("/osrm/initialized"));
+  auto res = call(ridesharing_book(123, 200, 321));
+  auto content = motis_content(RidesharingLiftResponse, res);
+  ASSERT_EQ(ResponseType_Not_Found, content->response_type());
+
+  call(ridesharing_create(123, 200));
+  call(ridesharing_create(124, 210));
+
+  res = call(ridesharing_book(125, 200, 321));
+  content = motis_content(RidesharingLiftResponse, res);
+  ASSERT_EQ(ResponseType_Not_Found, content->response_type());
+
+  res = call(ridesharing_book(123, 200));
+  content = motis_content(RidesharingLiftResponse, res);
+  ASSERT_EQ(ResponseType_Success, content->response_type());
+
+  res = call(ridesharing_book(123, 200, 321));
+  content = motis_content(RidesharingLiftResponse, res);
+  ASSERT_EQ(ResponseType_Success, content->response_type());
+
+  res = call(ridesharing_unbook(126, 0, 0));
+  content = motis_content(RidesharingLiftResponse, res);
+  ASSERT_EQ(ResponseType_Not_Found, content->response_type());
+
+  res = call(ridesharing_unbook(123, 200, 321));
+  content = motis_content(RidesharingLiftResponse, res);
+  ASSERT_EQ(ResponseType_Success, content->response_type());
+
+  res = call(ridesharing_unbook(123, 200, 321));
+  content = motis_content(RidesharingLiftResponse, res);
+  ASSERT_EQ(ResponseType_Not_Yet_Booked, content->response_type());
+
+  res = call(ridesharing_book(123, 200, 321));
+  content = motis_content(RidesharingLiftResponse, res);
+  ASSERT_EQ(ResponseType_Success, content->response_type());
+}
+
+TEST_F(rs_crud_itest, create_remove) {
+  publish(make_no_msg("/osrm/initialized"));
+  call(ridesharing_create(123, 200));
+  call(ridesharing_create(124, 210));
+
+  auto res = call(ridesharing_remove(124, 250));
+  auto content = motis_content(RidesharingLiftResponse, res);
+  ASSERT_EQ(ResponseType_Not_Found, content->response_type());
+
+  res = call(ridesharing_remove(123, 200));
+  content = motis_content(RidesharingLiftResponse, res);
+  ASSERT_EQ(ResponseType_Success, content->response_type());
+
+  res = call(ridesharing_book(123, 200, 1));
+  content = motis_content(RidesharingLiftResponse, res);
+  ASSERT_EQ(ResponseType_Not_Found, content->response_type());
+}
+
+}  // namespace motis::ridesharing

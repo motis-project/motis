@@ -6,13 +6,14 @@ namespace motis::routing::output::intermediate {
 
 struct transport {
   transport() = default;
-  transport(unsigned const from, unsigned const to, light_connection const* con)
+  transport(unsigned const from, unsigned const to, light_connection const* con,
+            uint16_t price = 0)
       : from_(from),
         to_(to),
         con_(con),
         duration_(con->a_time_ - con->d_time_),
         mumo_id_(0),
-        mumo_price_(0),
+        mumo_price_(price),
         mumo_accessibility_(0) {}
 
   transport(unsigned const from, unsigned const to, unsigned const duration,

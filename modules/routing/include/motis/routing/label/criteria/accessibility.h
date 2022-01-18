@@ -40,7 +40,8 @@ struct accessibility_dominance {
   };
 
   template <typename Label>
-  static domination_info<Label> dominates(Label const& a, Label const& b) {
+  static domination_info<Label> dominates(Label const& a, Label const& b,
+                                          bool) {
     return domination_info<Label>(a, b);
   }
 };

@@ -24,8 +24,12 @@ include "lookup/LookupMetaStationResponse.fbs";
 include "lookup/LookupScheduleInfoResponse.fbs";
 include "lookup/LookupStationEventsRequest.fbs";
 include "lookup/LookupStationEventsResponse.fbs";
+include "osrm/OSRMManyToManyRequest.fbs";
+include "osrm/OSRMManyToManyResponse.fbs";
 include "osrm/OSRMOneToManyRequest.fbs";
 include "osrm/OSRMOneToManyResponse.fbs";
+include "osrm/OSRMRouteRequest.fbs";
+include "osrm/OSRMRouteResponse.fbs";
 include "osrm/OSRMSmoothViaRouteRequest.fbs";
 include "osrm/OSRMSmoothViaRouteResponse.fbs";
 include "osrm/OSRMViaRouteRequest.fbs";
@@ -38,6 +42,8 @@ include "parking/ParkingGeoRequest.fbs";
 include "parking/ParkingGeoResponse.fbs";
 include "parking/ParkingLookupRequest.fbs";
 include "parking/ParkingLookupResponse.fbs";
+include "parking/ParkingPprRequest.fbs";
+include "parking/ParkingPprResponse.fbs";
 include "path/PathBoxesResponse.fbs";
 include "path/PathByStationSeqRequest.fbs";
 include "path/PathByTileFeatureRequest.fbs";
@@ -45,6 +51,34 @@ include "path/PathByTripIdBatchRequest.fbs";
 include "path/PathByTripIdBatchResponse.fbs";
 include "path/PathByTripIdRequest.fbs";
 include "path/PathSeqResponse.fbs";
+include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
+include "paxforecast/PaxForecastUpdate.fbs";
+include "paxmon/PaxMonAddGroupsRequest.fbs";
+include "paxmon/PaxMonAddGroupsResponse.fbs";
+include "paxmon/PaxMonDestroyUniverseRequest.fbs";
+include "paxmon/PaxMonFilterGroupsRequest.fbs";
+include "paxmon/PaxMonFilterGroupsResponse.fbs";
+include "paxmon/PaxMonFilterTripsRequest.fbs";
+include "paxmon/PaxMonFilterTripsResponse.fbs";
+include "paxmon/PaxMonFindTripsRequest.fbs";
+include "paxmon/PaxMonFindTripsResponse.fbs";
+include "paxmon/PaxMonForkUniverseRequest.fbs";
+include "paxmon/PaxMonForkUniverseResponse.fbs";
+include "paxmon/PaxMonGetGroupsInTripRequest.fbs";
+include "paxmon/PaxMonGetGroupsInTripResponse.fbs";
+include "paxmon/PaxMonGetGroupsRequest.fbs";
+include "paxmon/PaxMonGetGroupsResponse.fbs";
+include "paxmon/PaxMonGetInterchangesRequest.fbs";
+include "paxmon/PaxMonGetInterchangesResponse.fbs";
+include "paxmon/PaxMonGetTripLoadInfosRequest.fbs";
+include "paxmon/PaxMonGetTripLoadInfosResponse.fbs";
+include "paxmon/PaxMonRemoveGroupsRequest.fbs";
+include "paxmon/PaxMonStatusRequest.fbs";
+include "paxmon/PaxMonStatusResponse.fbs";
+include "paxmon/PaxMonTripLoadInfo.fbs";
+include "paxmon/PaxMonUniverseDestroyed.fbs";
+include "paxmon/PaxMonUniverseForked.fbs";
+include "paxmon/PaxMonUpdate.fbs";
 include "ppr/FootRoutingProfilesResponse.fbs";
 include "ppr/FootRoutingRequest.fbs";
 include "ppr/FootRoutingResponse.fbs";
@@ -60,6 +94,16 @@ include "railviz/RailVizTripGuessResponse.fbs";
 include "railviz/RailVizTripsRequest.fbs";
 include "revise/ReviseRequest.fbs";
 include "revise/ReviseResponse.fbs";
+include "ridesharing/RidesharingBook.fbs";
+include "ridesharing/RidesharingCreate.fbs";
+include "ridesharing/RidesharingGetLiftsRequest.fbs";
+include "ridesharing/RidesharingGetLiftsResponse.fbs";
+include "ridesharing/RidesharingLiftResponse.fbs";
+include "ridesharing/RidesharingRemove.fbs";
+include "ridesharing/RidesharingRequest.fbs";
+include "ridesharing/RidesharingResponse.fbs";
+include "ridesharing/RidesharingStatistics.fbs";
+include "ridesharing/RidesharingUnbook.fbs";
 include "ris/RISApplyRequest.fbs";
 include "ris/RISBatch.fbs";
 include "ris/RISForwardTimeRequest.fbs";
@@ -74,34 +118,6 @@ include "rt/RtUpdate.fbs";
 include "rt/RtWriteGraphRequest.fbs";
 include "tripbased/TripBasedTripDebugRequest.fbs";
 include "tripbased/TripBasedTripDebugResponse.fbs";
-include "paxmon/PaxMonUpdate.fbs";
-include "paxmon/PaxMonAddGroupsRequest.fbs";
-include "paxmon/PaxMonAddGroupsResponse.fbs";
-include "paxmon/PaxMonRemoveGroupsRequest.fbs";
-include "paxmon/PaxMonFindTripsRequest.fbs";
-include "paxmon/PaxMonFindTripsResponse.fbs";
-include "paxmon/PaxMonGetGroupsRequest.fbs";
-include "paxmon/PaxMonGetGroupsResponse.fbs";
-include "paxmon/PaxMonStatusRequest.fbs";
-include "paxmon/PaxMonStatusResponse.fbs";
-include "paxmon/PaxMonTripLoadInfo.fbs";
-include "paxmon/PaxMonFilterGroupsRequest.fbs";
-include "paxmon/PaxMonFilterGroupsResponse.fbs";
-include "paxmon/PaxMonFilterTripsRequest.fbs";
-include "paxmon/PaxMonFilterTripsResponse.fbs";
-include "paxmon/PaxMonGetTripLoadInfosRequest.fbs";
-include "paxmon/PaxMonGetTripLoadInfosResponse.fbs";
-include "paxmon/PaxMonForkUniverseRequest.fbs";
-include "paxmon/PaxMonForkUniverseResponse.fbs";
-include "paxmon/PaxMonDestroyUniverseRequest.fbs";
-include "paxmon/PaxMonGetGroupsInTripRequest.fbs";
-include "paxmon/PaxMonGetGroupsInTripResponse.fbs";
-include "paxmon/PaxMonUniverseForked.fbs";
-include "paxmon/PaxMonUniverseDestroyed.fbs";
-include "paxmon/PaxMonGetInterchangesRequest.fbs";
-include "paxmon/PaxMonGetInterchangesResponse.fbs";
-include "paxforecast/PaxForecastUpdate.fbs";
-include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 
 include "HTTPMessage.fbs";
 
@@ -272,7 +288,23 @@ union MsgContent {
   motis.paxmon.PaxMonStatusRequest                                        = 123,
   motis.ris.RISApplyRequest                                               = 124,
   motis.ris.RISSystemTimeChanged                                          = 125,
-  motis.rt.RtGraphUpdated                                                 = 126
+  motis.rt.RtGraphUpdated                                                 = 126,
+  motis.parking.ParkingPprRequest                                         = 127,
+  motis.parking.ParkingPprResponse                                        = 128,
+  motis.ridesharing.RidesharingRequest                                    = 129,
+  motis.ridesharing.RidesharingCreate                                     = 130,
+  motis.ridesharing.RidesharingResponse                                   = 131,
+  motis.ridesharing.RidesharingRemove                                     = 132,
+  motis.ridesharing.RidesharingStatistics                                 = 133,
+  motis.ridesharing.RidesharingBook                                       = 134,
+  motis.ridesharing.RidesharingUnbook                                     = 135,
+  motis.ridesharing.RidesharingLiftResponse                               = 136,
+  motis.ridesharing.RidesharingGetLiftsRequest                            = 137,
+  motis.ridesharing.RidesharingGetLiftsResponse                           = 138,
+  motis.osrm.OSRMManyToManyRequest                                        = 139,
+  motis.osrm.OSRMManyToManyResponse                                       = 140,
+  motis.osrm.OSRMRouteRequest                                             = 141,
+  motis.osrm.OSRMRouteResponse                                            = 142
 }
 
 // Destination Examples:

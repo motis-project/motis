@@ -196,8 +196,16 @@ void apply_parking_patches(journey& j, std::vector<parking_patch>& patches) {
         car_first ? str.first_transport_ : str.second_transport_;
     auto& foot_transport =
         car_first ? str.second_transport_ : str.first_transport_;
+    if (p.e_->type_ == mumo_type::RIDESHARING) {
+      auto const rs = p.e_->ridesharing_.value();
+      car_transport.provider_ = rs.lift_key_;
+      car_transport.from_leg_ = rs.from_leg_;
+      car_transport.to_leg_ = rs.to_leg_;
+      car_transport.mumo_type_ = to_string(p.e_->type_);
+    } else {
+      car_transport.mumo_type_ = to_string(mumo_type::CAR);
+    }
 
-    car_transport.mumo_type_ = to_string(mumo_type::CAR);
     foot_transport.mumo_type_ = to_string(mumo_type::FOOT);
   }
 }
@@ -207,13 +215,13 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
                              query_dest const& q_dest,
                              IntermodalRoutingRequest const* req,
                              std::vector<mumo_edge const*> const& edge_mapping,
+                             ridesharing_edges const& rs_edges,
                              statistics& stats, bool const revise,
                              std::vector<stats_category> const& mumo_stats,
                              ppr_profiles const& profiles) {
   auto const dir = req->search_dir();
   auto routing_response = motis_content(RoutingResponse, response_msg);
   auto journeys = message_to_journeys(routing_response);
-
   message_creator mc;
   for (auto& journey : journeys) {
     auto& stops = journey.stops_;
@@ -236,6 +244,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
     std::vector<parking_patch> patches;
 
     for (auto& t : journey.transports_) {
+
       if (!t.is_walk_ || t.mumo_id_ < 0) {
         continue;
       }
@@ -251,17 +260,32 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
         }
         patches.emplace_back(e, t.from_, t.to_);
       }
-    }
 
+      if (e->type_ == mumo_type::RIDESHARING) {
+        auto const rs_data = e->ridesharing_.value();
+        t.mumo_type_ = to_string(mumo_type::RIDESHARING);
+        t.provider_ = rs_data.lift_key_;
+        t.from_leg_ = rs_data.from_leg_;
+        t.to_leg_ = rs_data.to_leg_;
+        t.from_loc_ = {rs_data.from_loc_.lat_, rs_data.from_loc_.lng_};
+        t.to_loc_ = {rs_data.to_loc_.lat_, rs_data.to_loc_.lng_};
+        if (!(e->car_parking_.value().parking_pos_ == e->to_pos_ ||
+              e->car_parking_.value().parking_pos_ == e->from_pos_)) {
+          patches.emplace_back(e, t.from_, t.to_);
+        }
+      }
+    }
     if (!patches.empty()) {
       apply_parking_patches(journey, patches);
     }
   }
 
   MOTIS_START_TIMING(direct_connection_timing);
-  auto const direct = get_direct_connections(q_start, q_dest, req, profiles);
+  auto const direct = get_direct_connections(q_start, q_dest, req, profiles,
+                                             rs_edges.direct_connections_);
   stats.dominated_by_direct_connection_ =
-      remove_dominated_journeys(journeys, direct);
+      remove_dominated_journeys(journeys, direct, q_start);
+
   add_direct_connections(journeys, direct, q_start, q_dest, req);
   MOTIS_STOP_TIMING(direct_connection_timing);
   stats.direct_connection_duration_ =
@@ -321,6 +345,23 @@ msg_ptr empty_response(statistics& stats, schedule const& sched) {
           .Union());
 
   return make_msg(mc);
+}
+
+std::pair<uint16_t, motis::ppr::SearchOptions const*> get_mode_data(
+    IntermodalRoutingRequest const* req) {
+  for (auto const& m : *req->start_modes()) {
+    if (m->mode_type() == Mode_Ridesharing) {
+      auto const rs = reinterpret_cast<Ridesharing const*>(m->mode());
+      return {rs->required_seats(), rs->ppr_search_options()};
+    }
+  }
+  for (auto const& m : *req->destination_modes()) {
+    if (m->mode_type() == Mode_Ridesharing) {
+      auto const rs = reinterpret_cast<Ridesharing const*>(m->mode());
+      return {rs->required_seats(), rs->ppr_search_options()};
+    }
+  }
+  return {0, nullptr};
 }
 
 msg_ptr intermodal::route(msg_ptr const& msg) {
@@ -395,6 +436,27 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
     }
   }
 
+  ridesharing_edges rs_edges;
+  bool ridesharing_start =
+      start.is_intermodal_ &&
+      std::any_of((*req->start_modes()).begin(), (*req->start_modes()).end(),
+                  [](auto const* mode) {
+                    return mode->mode_type() == Mode_Ridesharing;
+                  });
+  bool ridesharing_dest =
+      dest.is_intermodal_ &&
+      std::any_of((*req->destination_modes()).begin(),
+                  (*req->destination_modes()).end(), [](auto const* mode) {
+                    return mode->mode_type() == Mode_Ridesharing;
+                  });
+  if (ridesharing_start || ridesharing_dest) {
+    futures.emplace_back(spawn_job_void([&] {
+      make_ridesharing_request(rs_edges, start.pos_, dest.pos_,
+                               ridesharing_start, ridesharing_dest, start.time_,
+                               get_mode_data(req));
+    }));
+  }
+
   ctx::await_all(futures);
   MOTIS_STOP_TIMING(mumo_edge_timing);
 
@@ -403,14 +465,15 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   stats.mumo_edge_duration_ =
       static_cast<uint64_t>(MOTIS_TIMING_MS(mumo_edge_timing));
 
-  if ((start.is_intermodal_ && deps.empty()) ||
-      (dest.is_intermodal_ && arrs.empty())) {
+  if ((start.is_intermodal_ && deps.empty() && rs_edges.deps_.empty()) ||
+      (dest.is_intermodal_ && arrs.empty() && rs_edges.arrs_.empty())) {
     return empty_response(stats, sched);
   }
 
-  //  remove_intersection(deps, arrs, start.pos_, dest.pos_, req->search_dir());
   std::vector<mumo_edge const*> edge_mapping;
-  auto edges = write_edges(mc, deps, arrs, edge_mapping);
+  auto edges = write_edges(mc, deps, arrs, rs_edges, edge_mapping);
+
+  // remove_intersection(deps, arrs, start.pos_, dest.pos_, req->search_dir());
 
   auto const router = ((req->search_type() == SearchType_Default ||
                         req->search_type() == SearchType_Accessibility) &&
@@ -432,8 +495,8 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   MOTIS_STOP_TIMING(routing_timing);
   stats.routing_duration_ =
       static_cast<uint64_t>(MOTIS_TIMING_MS(routing_timing));
-  return postprocess_response(resp, start, dest, req, edge_mapping, stats,
-                              revise_, mumo_stats, ppr_profiles_);
+  return postprocess_response(resp, start, dest, req, edge_mapping, rs_edges,
+                              stats, revise_, mumo_stats, ppr_profiles_);
 }
 
 }  // namespace motis::intermodal

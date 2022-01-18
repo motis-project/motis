@@ -1,0 +1,29 @@
+include "base/Position.fbs";
+
+namespace motis.ridesharing;
+
+table FBRoutingResult {
+  duration: double;
+  distance: double;
+}
+
+table FBPassenger {
+  passenger_id: int;
+  from: motis.Position;
+  to: motis.Position;
+  price: ushort;
+  required_arrival: long;
+}
+
+table FBLift {
+  time_lift_start: long;
+  driver_id: int;
+  waypoints:  [motis.Position];  
+  total_rr: FBRoutingResult;
+  rrs: [FBRoutingResult];  
+  passenger: [FBPassenger];
+}
+
+table RidesharingGetLiftsResponse {
+  lifts: [FBLift];
+}

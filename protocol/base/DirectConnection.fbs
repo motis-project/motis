@@ -4,4 +4,8 @@ table DirectConnection {
   duration:uint;
   accessibility:uint;
   mumo_type:string;
+  price:ushort;
+  departure_time:long;
 }
+
+

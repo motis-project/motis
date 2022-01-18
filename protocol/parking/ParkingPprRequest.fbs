@@ -1,0 +1,16 @@
+include "base/Position.fbs";
+include "ppr/SearchOptions.fbs";
+
+namespace motis.parking;
+
+table ParkingPprRequest {
+  parking_id: int;  
+  parking_position: motis.Position;
+  search_profile: string;
+  station_id: string; 
+  station_position: motis.Position;
+  to_station: bool;  
+  ppr_search_options: motis.ppr.SearchOptions;
+}
+
+root_type ParkingPprRequest;

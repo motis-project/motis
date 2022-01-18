@@ -9,17 +9,19 @@ template <typename TieBreaker, typename FirstDominator,
           typename... RestDominators>
 struct dominance<TieBreaker, FirstDominator, RestDominators...> {
   template <typename Label>
-  static bool dominates(bool could_dominate, Label const& a, Label const& b) {
-    auto d = FirstDominator::dominates(a, b);
+  static bool dominates(bool could_dominate, Label const& a, Label const& b,
+                        bool terminal) {
+    auto d = FirstDominator::dominates(a, b, terminal);
     return !d.greater() && dominance<TieBreaker, RestDominators...>::dominates(
-                               could_dominate || d.smaller(), a, b);
+                               could_dominate || d.smaller(), a, b, terminal);
   }
 };
 
 template <typename TieBreaker>
 struct dominance<TieBreaker> {
   template <typename Label>
-  static bool dominates(bool could_dominate, Label const& a, Label const& b) {
+  static bool dominates(bool could_dominate, Label const& a, Label const& b,
+                        bool) {
     return TieBreaker::dominates(could_dominate, a, b);
   }
 };

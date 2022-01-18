@@ -1,0 +1,20 @@
+include "base/Position.fbs";
+
+include "ppr/SearchOptions.fbs";
+
+namespace motis.ridesharing;
+
+enum QUERYMODE : ubyte {  
+  START,
+  DESTINATION,
+  BOTH
+}
+
+table RidesharingRequest {
+  start : motis.Position;
+  target : motis.Position;
+  time : long;
+  passengers: ushort;
+  query_mode: QUERYMODE;
+  ppr_search_options: ppr.SearchOptions;
+}

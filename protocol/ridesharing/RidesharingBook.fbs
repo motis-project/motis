@@ -1,0 +1,16 @@
+include "base/Position.fbs";
+
+namespace motis.ridesharing;
+
+table RidesharingBook {
+  driver : int;
+  time_lift_start : long;
+  passenger : int;
+  passenger_count: ushort;
+  required_arrival : long;
+  pick_up : motis.Position;
+  pick_up_on_leg_index : ushort;
+  drop_off : motis.Position;
+  drop_off_on_leg_index : ushort;
+  price : ushort;
+}

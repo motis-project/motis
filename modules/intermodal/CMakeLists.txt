@@ -12,6 +12,7 @@ target_link_libraries(motis-intermodal
   motis-module
   motis-core
   motis-bootstrap
+  motis-ridesharing
   geo
   ppr-routing
 )

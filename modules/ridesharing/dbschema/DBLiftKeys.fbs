@@ -1,0 +1,12 @@
+namespace motis.ridesharing;
+
+table DBLiftKey {
+  t: long;
+  driver_id: int;
+}
+
+table DBLiftKeys {
+  keys: [DBLiftKey];
+}
+
+root_type DBLiftKeys;

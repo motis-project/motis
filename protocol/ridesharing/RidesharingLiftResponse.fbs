@@ -1,0 +1,17 @@
+include "base/Position.fbs";
+
+namespace motis.ridesharing;
+
+enum ResponseType : ubyte {
+  Success,
+  Already_Booked,
+  Not_Found,
+  Not_Yet_Booked,
+  Not_Available,
+  Already_Exists
+}
+
+table RidesharingLiftResponse {
+  response_type : ResponseType;
+  lift_key : string;
+}

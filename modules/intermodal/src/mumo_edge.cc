@@ -2,13 +2,16 @@
 
 #include <algorithm>
 
-#include "utl/erase_if.h"
-
 #include "motis/core/common/constants.h"
+
 #include "motis/module/context/motis_call.h"
 #include "motis/module/message.h"
 
+#include "motis/intermodal/direct_connections.h"
 #include "motis/intermodal/error.h"
+#include "motis/intermodal/ridesharing_edges.h"
+
+#include "utl/erase_if.h"
 
 using namespace geo;
 using namespace flatbuffers;
@@ -17,11 +20,12 @@ using namespace motis::lookup;
 using namespace motis::osrm;
 using namespace motis::module;
 using namespace motis::ppr;
+using namespace motis::ridesharing;
 using namespace motis::parking;
 
 namespace motis::intermodal {
 
-inline geo::latlng to_latlng(Position const* pos) {
+inline latlng to_latlng(Position const* pos) {
   return {pos->lat(), pos->lng()};
 }
 
@@ -60,20 +64,21 @@ void osrm_edges(latlng const& pos, int max_dur, int max_dist,
   auto const geo_msg = motis_call(make_geo_request(pos, max_dist))->val();
   auto const geo_resp = motis_content(LookupGeoStationResponse, geo_msg);
   auto const stations = geo_resp->stations();
+  try {
+    auto const osrm_msg =
+        motis_call(make_osrm_request(pos, stations, to_string(type), direction))
+            ->val();
+    auto const osrm_resp = motis_content(OSRMOneToManyResponse, osrm_msg);
 
-  auto const osrm_msg =
-      motis_call(make_osrm_request(pos, stations, to_string(type), direction))
-          ->val();
-  auto const osrm_resp = motis_content(OSRMOneToManyResponse, osrm_msg);
-
-  for (auto i = 0UL; i < stations->size(); ++i) {
-    auto const dur = osrm_resp->costs()->Get(i)->duration();
-    if (dur > max_dur) {
-      continue;
+    for (auto i = 0UL; i < stations->size(); ++i) {
+      auto const dur = osrm_resp->costs()->Get(i)->duration();
+      if (dur > max_dur || dur <= 0) {
+        continue;
+      }
+      appender(stations->Get(i)->id()->str(),
+               to_latlng(stations->Get(i)->pos()), dur / 60, 45, type, 0);
     }
-
-    appender(stations->Get(i)->id()->str(), to_latlng(stations->Get(i)->pos()),
-             dur / 60, 0, type, 0);
+  } catch (...) {
   }
 }
 
@@ -171,6 +176,63 @@ void car_parking_edges(latlng const& pos, int max_car_duration,
   mumo_stats_appender(std::move(stats));
 }
 
+void add_ridesharing_edge(std::vector<mumo_edge>& add_edges_vec,
+                          RidesharingEdge const* e) {
+  auto& me = add_edges_vec.emplace_back(
+      e->from_station_id()->str(), e->to_station_id()->str(),
+      to_latlng(e->from_pos()), to_latlng(e->to_pos()),
+      (e->rs_duration() + e->ppr_duration()) / 60, e->ppr_accessibility(),
+      mumo_type::RIDESHARING, e->parking_id());
+  // LOG(logging::info) << e->to_leg() << " to " << e->from_leg();
+  me.ridesharing_ = {e->lift_key()->str(),  e->rs_t(),
+                     e->rs_price(),         e->from_leg(),
+                     e->to_leg(),           to_latlng(e->from_pos()),
+                     to_latlng(e->to_pos())};
+  me.car_parking_ = {
+      {e->parking_id(), to_latlng(e->parking_pos()),
+       static_cast<uint16_t>(e->rs_duration() / 60),
+       static_cast<uint16_t>(e->ppr_duration()), e->ppr_accessibility(),
+       static_cast<uint16_t>(e->rs_duration() + e->ppr_duration() * 60), true}};
+}
+
+void make_ridesharing_request(
+    ridesharing_edges& rs_edges, latlng const& start, latlng const& dest,
+    bool start_is_intermodal, bool dest_is_intermodal, std::time_t t,
+    std::pair<uint16_t, SearchOptions const*> mode_data) {
+  message_creator mc;
+  Position fbs_start{start.lat_, start.lng_};
+  Position fbs_dest{dest.lat_, dest.lng_};
+
+  mc.create_and_finish(
+      MsgContent_RidesharingRequest,
+      motis::ridesharing::CreateRidesharingRequest(
+          mc, &fbs_start, &fbs_dest, t, mode_data.first,
+          start_is_intermodal
+              ? (dest_is_intermodal ? motis::ridesharing::QUERYMODE_BOTH
+                                    : motis::ridesharing::QUERYMODE_START)
+              : motis::ridesharing::QUERYMODE_DESTINATION,
+          motis_copy_table(SearchOptions, mc, mode_data.second))
+          .Union(),
+      "/ridesharing/edges");
+  auto const res = motis_call(make_msg(mc))->val();
+  auto const rs_resp = motis_content(RidesharingResponse, res);
+
+  for (auto const mm_edge : *(rs_resp->deps())) {
+    add_ridesharing_edge(rs_edges.deps_, mm_edge);
+  }
+  for (auto const mm_edge : *(rs_resp->arrs())) {
+    add_ridesharing_edge(rs_edges.arrs_, mm_edge);
+  }
+  for (auto const e : *rs_resp->direct_connections()) {
+    rs_edges.direct_connections_.emplace_back(direct_connection{
+        mumo_type::RIDESHARING, static_cast<duration>(e->rs_duration() / 60), 0,
+        e->rs_price(), e->rs_t(),
+        ridesharing_edge{e->lift_key()->str(), e->rs_t(), e->rs_price(),
+                         e->from_leg(), e->to_leg(), to_latlng(e->from_pos()),
+                         to_latlng(e->to_pos())}});
+  }
+}
+
 void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
                 Direction const osrm_direction, appender_fun const& appender,
                 mumo_stats_appender_fun const& mumo_stats_appender,
@@ -220,6 +282,10 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
         break;
       }
 
+      case Mode_Ridesharing: {
+        break;
+      }
+
       default: throw std::system_error(error::unknown_mode);
     }
   }
@@ -243,9 +309,8 @@ void make_dests(IntermodalRoutingRequest const* req, latlng const& pos,
 
 void remove_intersection(std::vector<mumo_edge>& starts,
                          std::vector<mumo_edge>& destinations,
-                         geo::latlng const& query_start,
-                         geo::latlng const& query_destination,
-                         SearchDir const dir) {
+                         latlng const& query_start,
+                         latlng const& query_destination, SearchDir const dir) {
   if (starts.empty() || destinations.empty()) {
     return;
   }
@@ -289,9 +354,11 @@ void remove_intersection(std::vector<mumo_edge>& starts,
 std::vector<Offset<AdditionalEdgeWrapper>> write_edges(
     FlatBufferBuilder& fbb, std::vector<mumo_edge> const& starts,
     std::vector<mumo_edge> const& destinations,
+    ridesharing_edges const& rs_edges,
     std::vector<mumo_edge const*>& edge_mapping) {
   std::vector<Offset<AdditionalEdgeWrapper>> edges;
-  edges.reserve(starts.size() + destinations.size());
+  edges.reserve(starts.size() + destinations.size() + rs_edges.arrs_.size() +
+                rs_edges.deps_.size());
 
   for (auto const& edge : starts) {
     auto const edge_id = static_cast<int>(edge_mapping.size());
@@ -312,6 +379,40 @@ std::vector<Offset<AdditionalEdgeWrapper>> write_edges(
         CreateMumoEdge(fbb, fbb.CreateString(edge.from_),
                        fbb.CreateString(edge.to_), edge.duration_, 0,
                        edge.accessibility_, edge_id)
+            .Union()));
+  }
+
+  for (auto const& edge : rs_edges.arrs_) {
+    auto const edge_id = static_cast<int>(edge_mapping.size());
+    edge_mapping.emplace_back(&edge);
+    auto const in =
+        Interval{edge.ridesharing_.value().t_, edge.ridesharing_.value().t_};
+    edges.emplace_back(CreateAdditionalEdgeWrapper(
+        fbb, AdditionalEdge_TimeDependentMumoEdge,
+        CreateTimeDependentMumoEdge(
+            fbb,
+            CreateMumoEdge(fbb, fbb.CreateString(edge.from_),
+                           fbb.CreateString(edge.to_), edge.duration_,
+                           edge.ridesharing_.value().price_,
+                           edge.accessibility_, edge_id),
+            &in)
+            .Union()));
+  }
+  for (auto const& edge : rs_edges.deps_) {
+    auto const edge_id = static_cast<int>(edge_mapping.size());
+
+    edge_mapping.emplace_back(&edge);
+    auto const in =
+        Interval{edge.ridesharing_.value().t_, edge.ridesharing_.value().t_};
+    edges.emplace_back(CreateAdditionalEdgeWrapper(
+        fbb, AdditionalEdge_TimeDependentMumoEdge,
+        CreateTimeDependentMumoEdge(
+            fbb,
+            CreateMumoEdge(fbb, fbb.CreateString(edge.from_),
+                           fbb.CreateString(edge.to_), edge.duration_,
+                           edge.ridesharing_.value().price_,
+                           edge.accessibility_, edge_id),
+            &in)
             .Union()));
   }
 

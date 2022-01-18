@@ -6,6 +6,8 @@
 
 #include "cista/reflection/comparable.h"
 
+#include "geo/latlng.h"
+
 #include "motis/core/schedule/attribute.h"
 #include "motis/core/schedule/free_text.h"
 #include "motis/core/schedule/timestamp_reason.h"
@@ -46,6 +48,10 @@ struct journey {
     unsigned mumo_price_{0};
     unsigned mumo_accessibility_{0};
     std::string mumo_type_;
+    uint16_t from_leg_{100};
+    uint16_t to_leg_{100};
+    geo::latlng from_loc_{};
+    geo::latlng to_loc_{};
   };
 
   struct trip {

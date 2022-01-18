@@ -140,6 +140,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
   std::vector<Label> labels;
 
   auto c = terminal_label;
+  auto const price = c->other_price_ + c->regional_price_;
   do {
     labels.insert(begin(labels), *c);
   } while ((c = c->pred_));
@@ -297,7 +298,9 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
         transports.emplace_back(
             stop_index, static_cast<unsigned int>(stop_index) + 1,
             std::next(it)->now_ - current.now_,
-            std::next(it)->edge_->get_mumo_id(), 0,
+            std::next(it)->edge_->get_mumo_id(),
+            std::next(it)->other_price_ + std::next(it)->regional_price_ -
+                current.other_price_ - current.regional_price_,
             std::next(it)->edge_->get_minimum_cost().accessibility_);
 
         walk_arrival = std::next(it)->now_;
@@ -307,9 +310,11 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
 
       case IN_CONNECTION: {
         if (current.connection_) {
-          transports.emplace_back(static_cast<unsigned int>(stop_index),
-                                  static_cast<unsigned int>(stop_index) + 1,
-                                  current.connection_);
+          transports.emplace_back(
+              static_cast<unsigned int>(stop_index),
+              static_cast<unsigned int>(stop_index) + 1, current.connection_,
+              std::next(it)->other_price_ + std::next(it)->regional_price_ -
+                  current.other_price_ - current.regional_price_);
         }
 
         // do not collect the last connection route node.
@@ -379,6 +384,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
     last.a_sched_time_ = second_to_last.d_sched_time_ + walk_duration;
   }
 
+  ret.second.front().mumo_price_ = price;
   return ret;
 }
 

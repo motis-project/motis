@@ -72,7 +72,7 @@ struct search {
       travel_time_lb_graph_edges[to_station].emplace_back(
           simple_edge{from_station, ec.time_});
       transfers_lb_graph_edges[to_interchange].emplace_back(simple_edge{
-          from_interchange, static_cast<uint16_t>(ec.transfer_ ? 1 : 0)});
+          from_interchange, static_cast<uint16_t>(ec.transfers_ ? 1 : 0)});
     }
 
     auto const& meta_goals = q.sched_->stations_[q.to_->id_]->equivalent_;

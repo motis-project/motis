@@ -18,14 +18,14 @@ struct edge_cost {
       : connection_(nullptr),
         time_(INVALID_TIME),
         price_(0),
-        transfer_(false),
+        transfers_(0),
         accessibility_(0) {}
 
-  edge_cost(duration time, light_connection const* c)
+  edge_cost(duration time, light_connection const* c, uint16_t price = 0)
       : connection_(c),
         time_(time),
-        price_(0),
-        transfer_(false),
+        price_(price),
+        transfers_(0u),
         accessibility_(0) {}
 
   explicit edge_cost(duration time, bool transfer = false, uint16_t price = 0,
@@ -33,7 +33,7 @@ struct edge_cost {
       : connection_(nullptr),
         time_(time),
         price_(price),
-        transfer_(transfer),
+        transfers_(static_cast<uint8_t>(transfer)),
         accessibility_(accessibility) {}
 
   bool is_valid() const { return time_ != INVALID_TIME; }
@@ -41,7 +41,7 @@ struct edge_cost {
   light_connection const* connection_;
   duration time_;
   uint16_t price_;
-  bool transfer_;
+  uint8_t transfers_;
   uint16_t accessibility_;
 };
 
@@ -113,6 +113,7 @@ public:
   template <search_dir Dir = search_dir::FWD>
   edge_cost get_edge_cost(time start_time,
                           light_connection const* last_con) const {
+
     switch (m_.type_) {
       case ROUTE_EDGE: return get_route_edge_cost<Dir>(start_time);
 
@@ -125,7 +126,8 @@ public:
 
       case EXIT_EDGE:
         if (Dir == search_dir::FWD) {
-          return last_con == nullptr ? NO_EDGE : get_foot_edge_cost();
+          return last_con == nullptr ? get_foot_edge_no_cost()
+                                     : get_foot_edge_cost();
         } else {
           return get_foot_edge_no_cost();
         }
@@ -300,7 +302,7 @@ public:
                ? NO_EDGE
                : edge_cost((Dir == search_dir::FWD) ? c->a_time_ - start_time
                                                     : start_time - c->d_time_,
-                           c);
+                           c, c->full_con_->price_);
   }
 
   template <search_dir Dir = search_dir::FWD>

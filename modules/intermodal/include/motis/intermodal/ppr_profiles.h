@@ -1,11 +1,12 @@
 #pragma once
 
-#include <map>
-#include <string>
-
 #include "motis/core/common/logging.h"
+
 #include "motis/module/context/motis_call.h"
 #include "motis/module/message.h"
+
+#include <map>
+#include <string>
 
 namespace motis::intermodal {
 
