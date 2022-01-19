@@ -66,7 +66,7 @@
 /*dealing with small screen size*/
 
 
-@media screen and (max-width: 570px){
+@media screen and (max-width: 650px){
   .main-gutter{
     box-sizing: border-box;
     padding: 0em, 0.5em;
