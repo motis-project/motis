@@ -1,6 +1,6 @@
 <template>
   <LoadingBar v-if="!isContentLoaded"></LoadingBar>
-  <div v-else class="connection-details trip-view">
+  <div v-else :class="['connection-details', isTripView ? 'trip-view' : '']">
     <div class="connection-info">
       <div class="header">
         <div class="back" @click="$router.back()">
@@ -31,22 +31,25 @@
         <div class="actions"></div>
       </div>
     </div>
-    <div class="connection-journey" id="sub-connection-journey">
-      <div
-        v-for="(transport) in transports"
+    <div class="connection-journey" :id="isTripView ? 'sub-connection-journey' : 'connection-journey'">
+      <template
+        v-for="(transport, tIndex) in transports"
         :key="transport.line_id">
         <WayTransport
           v-if="transport.move_type === 'Transport'"
-          :areStopsInitialExpanded="$route.name === 'Trip'"
+          :areStopsInitialExpanded="isTripView"
           :transport="transport.move"
-          :stops="getStopsForTransport(transport.move)"></WayTransport>
+          :stops="getStopsForTransport(transport.move)"
+          :additionalMove="additionalMoves[tIndex]"
+          :trip="getTripForTransport(transport.move)"></WayTransport>
+        <template v-else-if="transport.move.mumo_id === -1"></template>
         <WayCustomMovement
           v-else
           :customMovement="transport.move"
           :stops="getStopsForTransport(transport.move)"
           :startStationName="determineStartStationNameForCustomMovement(transport.move)"
           :endStationName="determineEndStationNameForCustomMovement(transport.move)"></WayCustomMovement>
-      </div>
+      </template>
     </div>
   </div>
 </template>
@@ -85,7 +88,8 @@ export default defineComponent({
       content: {} as TripResponseContent,
       isContentLoaded: false,
       startStationName: undefined as (string | undefined),
-      endStationName: undefined as (string | undefined)
+      endStationName: undefined as (string | undefined),
+      additionalMoves: [] as (string | undefined)[]
     };
   },
   computed: {
@@ -99,10 +103,10 @@ export default defineComponent({
       return this.getTimeString(this.content.stops[this.content.stops.length - 1].arrival.time);
     },
     firstStopName: function (): string {
-      return this.content.stops[0].station.name;
+      return this.index !== undefined ? this.startStationName as string : this.content.stops[0].station.name;
     },
     lastStopName: function (): string {
-      return this.content.stops[this.content.stops.length - 1].station.name;
+      return this.index !== undefined ? this.endStationName as string : this.content.stops[this.content.stops.length - 1].station.name;
     },
     duration: function (): string {
       return this.getReadableDuration(this.content.stops[0].departure.time, this.content.stops[this.content.stops.length - 1].arrival.time, this.$ts);
@@ -113,10 +117,21 @@ export default defineComponent({
     transports: function (): Move[] {
       return this.content.transports;
     },
+    isTripView() {
+      return this.$route.name === "Trip";
+    }
   },
   watch: {
     content: function() {
       this.isContentLoaded = true;
+      let additionalMoveForNext: string | undefined = undefined;
+      for(let t of this.content.transports) {
+        this.additionalMoves.push(additionalMoveForNext)
+        additionalMoveForNext = undefined;
+        if("mumo_id" in t.move && t.move.mumo_id === -1) {
+          additionalMoveForNext =  this.getReadableDuration(this.content.stops[t.move.range.from].departure.time, this.content.stops[t.move.range.to].arrival.time, this.$ts);
+        }
+      }
     },
     trip() {
       this.getData();
@@ -142,32 +157,39 @@ export default defineComponent({
       }
     },
     getStopsForTransport(transport: Transport | CustomMovement) {
-      return this.content.stops.slice(transport.range.from, transport.range.to + 1);
+      let transportIndex = this.content.transports.map(t => t.move).indexOf(transport);
+      let nextTransport = transportIndex === this.content.transports.length - 1 ? transport : this.content.transports[transportIndex + 1].move;
+      let addOne = (!("mumo_id" in nextTransport) || nextTransport.mumo_id !== -1) && (!("mumo_id" in transport) || transport.mumo_id !== -1);
+      return this.content.stops.slice(transport.range.from, transport.range.to + (addOne ? 1 : 0));
     },
     determineStartStationNameForCustomMovement(customMovement: CustomMovement) {
-      if(this.transports.map(t => t.move).indexOf(customMovement) === 0 && this.startStationName !== undefined) {
-        return this.startStationName;
+      let start = this.getStopsForTransport(customMovement)[0].station.name;
+      let ts = this.transports.map(t => t.move);
+      if(ts.indexOf(customMovement) === 0 && this.startStationName !== undefined) {
+        start = this.startStationName
       }
-      else if(customMovement.mumo_type === "car") {
-        return "Parkplatz";
+      else if(ts.indexOf(customMovement) === 1 && "mumo_type" in ts[0] && ts[0].mumo_type === "car"
+        || ts.indexOf(customMovement) === ts.length - 1 && "mumo_type" in customMovement && customMovement.mumo_type === "car") {
+        start = this.$t.parking
       }
-      else {
-        return this.getStopsForTransport(customMovement)[0].station.name;
-      }
+      return start;
     },
     determineEndStationNameForCustomMovement(customMovement: CustomMovement) {
-      if(this.transports.map(t => t.move).indexOf(customMovement) === this.transports.length - 1 && this.endStationName !== undefined) {
-        return this.endStationName;
+      let stops = this.getStopsForTransport(customMovement);
+      let destination = stops[stops.length - 1].station.name;
+      let ts = this.transports.map(t => t.move);
+      let lastT = ts[ts.length - 1];
+
+      if(ts.indexOf(customMovement) === ts.length - 1 && this.endStationName !== undefined) {
+        destination = this.endStationName;
       }
-      else if(customMovement.mumo_type === "car") {
-        return "Parkplatz";
+      else if(ts.indexOf(customMovement) === ts.length - 2 && "mumo_type" in lastT && lastT.mumo_type === "car"
+        || ts.indexOf(customMovement) === 0 && "mumo_type" in customMovement && customMovement.mumo_type === "car") {
+        destination = this.$t.parking
       }
-      else {
-        return this.getStopsForTransport(customMovement)[1].station.name;
-      }
+      return destination;
     },
     getData() {
-      console.log(this.index);
       if(this.index !== undefined && this.$store.state.connections.length > 0
         && this.index < this.$store.state.connections.length && this.index >= 0) {
         this.content = this.$store.state.connections[this.index];
@@ -180,6 +202,12 @@ export default defineComponent({
       else {
         this.$router.push({name: "ConnectionSearch"});
       }
+    },
+    getTripForTransport(transport: Transport) {
+      if(!this.isTripView) {
+        return this.content.trips.filter(t => t.id.train_nr === transport.train_nr)[0].id;
+      }
+      return undefined;
     }
   }
 });

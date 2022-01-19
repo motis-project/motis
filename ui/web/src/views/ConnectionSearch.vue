@@ -214,7 +214,7 @@ import StationGuess from "../models/StationGuess";
 import AddressGuess from "../models/AddressGuess";
 import { Start, Mode, InputStation } from "../models/ConnectionContent";
 import Position from "../models/SmallTypes/Position";
-import TripResponseContent from "../models/TripResponseContent";
+import TripResponseContent, { Move } from "../models/TripResponseContent";
 import WayMixin from "../mixins/WayMixin";
 import TransportLine from "../components/TransportLine.vue";
 import LoadingBar, { LoadingState } from "../components/LoadingBar.vue"
@@ -280,7 +280,6 @@ export default defineComponent({
     };
   },
   activated() {
-    console.log("activated");
     for(let i = 0; i < this.isTooltipVisible.length; i++) {
       this.isTooltipVisible[i] = false;
     }
@@ -502,7 +501,20 @@ export default defineComponent({
           index: connectionIndex
         },
       })
-    }
+    },
+    getNonEmptyTransports(transports: Move[]): Move[] {
+      const res: Move[] = [];
+      for(let i = 0; i < transports.length; i++) {
+        const t = transports[i];
+        if(!("mumo_id" in t.move) || t.move.mumo_id !== -1) {
+          res.push({...t})
+        }
+        else {
+          res[res.length - 1].move.range.to = t.move.range.to;
+        }
+      }
+      return res;
+    },
   },
 });
 

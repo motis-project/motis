@@ -28,13 +28,13 @@
           :style="`height: ${getStopProgress(stops[0])}%`"></div>
       </div>
       <div class="expand-icon"></div>
-      <span>Fahrrad {{ getReadableDuration(stops[0].departure.time, stops[1].arrival.time, $ts) }}</span>
+      <span>{{ (customMovement.mumo_type === "foot" ? $t.walk : $t[customMovement.mumo_type]) + " (" + getReadableDuration(stops[0].departure.time, stops[1].arrival.time, $ts) + ")" }}</span>
     </div>
     <div class="last-stop">
-      <div class="stop past">
+      <div :class="['stop', getPastOrFuture($ds.date, stops[1].arrival.time)]">
         <div class="timeline train-color-border"></div>
         <div class="time">
-          <span class="past">{{ $ds.getTimeString(stops[1].departure.time * 1000) }}</span>
+          <span :class="getPastOrFuture($ds.date, stops[1].arrival.time)">{{ $ds.getTimeString(stops[1].arrival.time * 1000) }}</span>
         </div>
         <div class="delay"></div>
         <div class="station">
@@ -53,7 +53,7 @@ import Stop from "../models/Stop";
 
 export default defineComponent({
   name: "WayCustomMovement",
-  mixins: [WayMixin],
+  mixins: [ WayMixin ],
   props: {
     customMovement: {
       type: Object as PropType<CustomMovement>,
@@ -74,6 +74,7 @@ export default defineComponent({
   },
   methods: {
     getStopProgress(stop: Stop) {
+      console.log(this.stops);
       return this.getProgress(stop, this.stops[this.stops.indexOf(stop) + 1], this.$ds.dateTimeInSeconds);
     }
   }

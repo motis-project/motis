@@ -1,7 +1,10 @@
 <template>
   <div :class="`train-detail train-class-${transport.clasz}`">
     <div class="top-border"></div>
-    <TransportTypeBox :transport="transport"></TransportTypeBox>
+    <TransportTypeBox :transport="transport" :trip="trip"></TransportTypeBox>
+    <div class="train-top-line" v-if="additionalMove">
+      <span>{{ additionalMove + " " + $t.walk }}</span>
+    </div>
     <div class="first-stop">
       <div :class="['stop', getPastOrFuture($ds.date, stops[0].departure.time)]">
         <div class="timeline train-color-border"></div>
@@ -16,14 +19,14 @@
     </div>
     <div :class="['direction', getPastOrFuture($ds.date, stops[0].departure.time)]">
       <div class="timeline train-color-border"></div>
-      <i class="icon">arrow_forward</i>{{ stops[stops.length - 1].station.name }}
+      <i class="icon">arrow_forward</i>{{ transport.direction }}
     </div>
     <div :class="['intermediate-stops-toggle', 'clickable', getPastOrFuture($ds.date, stops[0].departure.time)]" @click="areStopsExpanded = !areStopsExpanded">
       <div class="timeline-container">
         <div class="timeline train-color-border bg"></div>
         <div class="timeline train-color-border progress" :style="`height: ${getStopProgress(stops[0])}%`"></div>
       </div>
-      <div class="expand-icon">
+      <div class="expand-icon" :style="'visibility:' + (stops.length > 2 ? 'visible' : 'hidden')">
         <i class="icon">{{ areStopsExpanded ? "expand_more" : "expand_less" }}</i><i class="icon">{{ areStopsExpanded ? "expand_less" : "expand_more" }}</i>
       </div>
       <span>{{ $ts.countTranslate("stop", stops.length - 2) }} ({{ getReadableDuration(stops[0].departure.time, stops[stops.length - 1].arrival.time, $ts) }})</span>
@@ -70,6 +73,7 @@ import TransportTypeBox from './TransportTypeBox.vue'
 import WayMixin from "../mixins/WayMixin"
 import Transport from "../models/Transport"
 import Stop from '../models/Stop'
+import Trip from '../models/Trip'
 
 export default defineComponent({
   name: "WayTransport",
@@ -89,6 +93,14 @@ export default defineComponent({
     areStopsInitialExpanded: {
       type: Boolean as PropType<boolean>,
       required: true
+    },
+    additionalMove: {
+      type: String as PropType<string>,
+      required: false
+    },
+    trip: {
+      type: Object as PropType<Trip>,
+      required: false
     }
   },
   data() {

@@ -21,7 +21,6 @@ const routes: Array<RouteRecordRaw> = [
     path: '/:locale?/trips',
     name: "TrainSearch",
     components: {
-      overlay: ConnectionSearch,
       subOverlay: TrainSearch
     }
   },
@@ -29,7 +28,6 @@ const routes: Array<RouteRecordRaw> = [
     path: '/:locale?/station/:id',
     name: "StationTimetable",
     components: {
-      overlay: ConnectionSearch,
       subOverlay: StationTimetable
     },
     props: {
@@ -44,7 +42,6 @@ const routes: Array<RouteRecordRaw> = [
     path: '/:locale?/trip/:station_id/:train_nr/:time/:target_station_id/:target_time/:line_id?',
     name: "Trip",
     components: {
-      overlay: ConnectionSearch,
       subOverlay: Trip
     },
     props: {
@@ -76,7 +73,6 @@ const routes: Array<RouteRecordRaw> = [
     path: '/:locale?/station/:id/:time',
     name: 'StationTimeTableFromTrainSearch',
     components: {
-      overlay: ConnectionSearch,
       subOverlay: StationTimetable
     },
     props: {
