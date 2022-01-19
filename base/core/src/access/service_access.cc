@@ -1,3 +1,5 @@
+#include "motis/core/access/service_access.h"
+
 #include <string>
 
 #include "boost/algorithm/string/trim.hpp"

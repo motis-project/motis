@@ -17,72 +17,65 @@ struct controller : public dispatcher, public registry {
       : dispatcher{*static_cast<registry*>(this), std::move(modules)} {}
 
   template <typename Fn>
-  auto run(Fn f, ctx::access_t const access = ctx::access_t::READ,
+  auto run(Fn f,
+           ctx::accesses_t&& accesses = {ctx::access_request{
+               to_res_id(global_res_id::SCHEDULE), ctx::access_t::READ}},
            unsigned num_threads = std::thread::hardware_concurrency()) ->
       typename std::enable_if_t<!std::is_same_v<void, decltype(f())>,
                                 decltype(f())> {
-    decltype(f()) result;
-    std::exception_ptr eptr;
+    if (direct_mode_dispatcher_ != nullptr) {
+      return f();
+    } else {
+      decltype(f()) result;
+      std::exception_ptr eptr;
 
-    access == ctx::access_t::READ ? enqueue_read_io(
-                                        ctx_data(access, this, &shared_data_),
-                                        [&]() {
-                                          try {
-                                            result = f();
-                                          } catch (...) {
-                                            eptr = std::current_exception();
-                                          }
-                                        },
-                                        ctx::op_id(CTX_LOCATION))
-                                  : enqueue_write_io(
-                                        ctx_data(access, this, &shared_data_),
-                                        [&]() {
-                                          try {
-                                            result = f();
-                                          } catch (...) {
-                                            eptr = std::current_exception();
-                                          }
-                                        },
-                                        ctx::op_id(CTX_LOCATION));
-    runner_.run(num_threads);
+      enqueue(
+          ctx_data{this},
+          [&]() {
+            try {
+              result = f();
+            } catch (...) {
+              eptr = std::current_exception();
+            }
+          },
+          ctx::op_id(CTX_LOCATION), ctx::op_type_t::IO, std::move(accesses));
+      runner_.run(num_threads);
 
-    if (eptr) {
-      std::rethrow_exception(eptr);
+      if (eptr) {
+        std::rethrow_exception(eptr);
+      }
+
+      return result;
     }
-
-    return result;
   }
 
   template <typename Fn>
-  auto run(Fn f, ctx::access_t const access = ctx::access_t::READ,
-           unsigned num_threads = std::thread::hardware_concurrency()) ->
+  auto run(Fn&& f,
+           std::vector<ctx::access_request>&& access = {ctx::access_request{
+               to_res_id(global_res_id::SCHEDULE), ctx::access_t::READ}},
+           unsigned const num_threads = std::thread::hardware_concurrency()) ->
       typename std::enable_if_t<std::is_same_v<void, decltype(f())>> {
-    std::exception_ptr eptr;
+    if (direct_mode_dispatcher_ != nullptr) {
+      return f();
+    } else {
+      std::exception_ptr eptr;
 
-    access == ctx::access_t::READ ? enqueue_read_io(
-                                        ctx_data(access, this, &shared_data_),
-                                        [&]() {
-                                          try {
-                                            f();
-                                          } catch (...) {
-                                            eptr = std::current_exception();
-                                          }
-                                        },
-                                        ctx::op_id(CTX_LOCATION))
-                                  : enqueue_write_io(
-                                        ctx_data(access, this, &shared_data_),
-                                        [&]() {
-                                          try {
-                                            f();
-                                          } catch (...) {
-                                            eptr = std::current_exception();
-                                          }
-                                        },
-                                        ctx::op_id(CTX_LOCATION));
-    runner_.run(num_threads);
+      enqueue(
+          ctx_data{this},
+          [&]() {
+            try {
+              f();
+            } catch (...) {
+              eptr = std::current_exception();
+            }
+          },
+          ctx::op_id{CTX_LOCATION}, ctx::op_type_t::IO, std::move(access));
 
-    if (eptr) {
-      std::rethrow_exception(eptr);
+      runner_.run(num_threads);
+
+      if (eptr) {
+        std::rethrow_exception(eptr);
+      }
     }
   }
 };

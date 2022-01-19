@@ -73,10 +73,14 @@ auto const route = [](msg_ptr const&) -> msg_ptr {
 
 TEST(module_op, launch) {
   controller c({});
-  c.register_op("/guesser", guess);
-  c.register_op("/routing", route);
+  if constexpr (sizeof(void*) < 8) {
+    dispatcher::direct_mode_dispatcher_ = &c;
+  }
 
-  auto result = c.run([]() { return motis_call(make_msg(query))->val(); });
+  c.register_op("/guesser", guess, {});
+  c.register_op("/routing", route, {});
+
+  auto result = c.run([]() { return motis_call(make_msg(query))->val(); }, {});
 
   ASSERT_TRUE(result);
   motis_content(RoutingResponse, result);

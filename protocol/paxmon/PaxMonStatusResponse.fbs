@@ -1,0 +1,10 @@
+include "base/TripServiceInfo.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonStatusResponse {
+  system_time: ulong;
+
+  active_groups: ulong;
+  trip_count: ulong;
+}

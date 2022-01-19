@@ -53,6 +53,9 @@ private:
   void build_rules_graph(RuleService const* rs) {
     std::map<Service const*, service_node*> service_to_node;
     for (auto const r : *rs->rules()) {
+      if (skip_rule(r)) {
+        continue;
+      }
       auto s1_node = utl::get_or_create(service_to_node, r->service1(), [&]() {
         return rg_.service_nodes_
             .emplace_back(std::make_unique<service_node>(
@@ -172,6 +175,12 @@ private:
                       : orig >> static_cast<std::size_t>(-offset);
   }
 
+  inline bool skip_rule(Rule const* rule) const {
+    return gb_.no_local_transport_ &&
+           (gb_.skip_route(rule->service1()->route()) ||
+            gb_.skip_route(rule->service2()->route()));
+  }
+
 public:
   graph_builder& gb_;
   rules_graph rg_;
@@ -184,6 +193,9 @@ void build_rule_routes(graph_builder& gb,
                        Vector<Offset<RuleService>> const* rule_services) {
   auto schedule_traffic_days_mask = create_uniform_bitfield<BIT_COUNT>('0');
   for (auto day_idx = gb.first_day_; day_idx <= gb.last_day_; ++day_idx) {
+    if (day_idx >= schedule_traffic_days_mask.size()) {
+      continue;
+    }
     schedule_traffic_days_mask.set(static_cast<std::size_t>(day_idx), true);
   }
 

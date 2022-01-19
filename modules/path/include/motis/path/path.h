@@ -17,7 +17,7 @@ struct path : public motis::module::module {
   path(path&&) = delete;
   path& operator=(path&&) = delete;
 
-  void import(motis::module::registry&) override;
+  void import(motis::module::import_dispatcher&) override;
   void init(motis::module::registry&) override;
 
   bool import_successful() const override { return import_successful_; }
@@ -34,6 +34,7 @@ private:
 
   std::vector<std::string> use_cache_;
   bool import_successful_{false};
+  size_t max_size_{size_t{32} * 1024 * 1024 * 1024};
 };
 
 }  // namespace motis::path

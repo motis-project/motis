@@ -1,0 +1,6 @@
+namespace motis.paxmon;
+
+table PaxMonForkUniverseResponse {
+  universe: uint; // new universe
+  schedule: ulong; // schedule id of new universe
+}

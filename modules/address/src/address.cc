@@ -9,6 +9,8 @@
 
 #include "cereal/archives/binary.hpp"
 
+#include "cista/reflection/comparable.h"
+
 #include "utl/to_vec.h"
 
 #include "address-typeahead/common.h"
@@ -124,10 +126,11 @@ std::string address::db_file() const {
   return (get_data_directory() / "address" / "address_db.raw").generic_string();
 }
 
-void address::import(motis::module::registry& reg) {
+void address::import(motis::module::import_dispatcher& reg) {
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "address", reg,
-      [this](std::map<std::string, msg_ptr> const& dependencies) {
+      [this](event_collector::dependencies_map_t const& dependencies,
+             event_collector::publish_fn_t const&) {
         using import::OSMEvent;
 
         auto const dir = get_data_directory() / "address";

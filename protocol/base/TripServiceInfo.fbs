@@ -1,0 +1,12 @@
+include "base/TripId.fbs";
+include "base/ServiceInfo.fbs";
+include "base/Station.fbs";
+
+namespace motis;
+
+table TripServiceInfo {
+  trip: TripId;
+  primary_station: Station;
+  secondary_station: Station;
+  service_infos: [ServiceInfo];
+}

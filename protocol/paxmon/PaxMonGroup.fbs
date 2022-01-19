@@ -1,0 +1,28 @@
+include "paxmon/PaxMonCompactJourney.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonDataSource {
+  primary_ref: uint;
+  secondary_ref: uint;
+}
+
+table PaxMonGroup {
+  id: ulong;
+  source: PaxMonDataSource;
+  passenger_count: uint;
+  planned_journey: PaxMonCompactJourney;
+  probability: float;
+  planned_arrival_time: ulong;
+  source_flags: ubyte;
+  generation: ubyte;
+  previous_version: ulong;
+  added_time: ulong;
+  estimated_delay: short;
+}
+
+struct PaxMonGroupBaseInfo {
+  id: ulong;
+  passenger_count: uint;
+  probability: float;
+}

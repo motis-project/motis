@@ -2,7 +2,9 @@
 
 #include "utl/to_vec.h"
 
+#include "motis/core/schedule/build_platform_node.h"
 #include "motis/core/schedule/schedule.h"
+#include "motis/core/schedule/validate_graph.h"
 #include "motis/core/conv/event_type_conv.h"
 
 #include "motis/rt/build_route_node.h"
@@ -15,7 +17,6 @@
 #include "motis/rt/schedule_event.h"
 #include "motis/rt/update_constant_graph.h"
 #include "motis/rt/update_msg_builder.h"
-#include "motis/rt/validate_graph.h"
 
 namespace motis::rt {
 
@@ -246,10 +247,10 @@ inline mcd::vector<trip::route_edge> build_route(
   mcd::vector<trip::route_edge> trip_edges;
   node* prev_route_node = nullptr;
   for (auto& s : sections) {
-    auto const from_station_transfer_time =
-        sched.stations_.at(s.from_->id_)->transfer_time_;
-    auto const to_station_transfer_time =
-        sched.stations_.at(s.to_->id_)->transfer_time_;
+    auto const from_station = sched.stations_.at(s.from_->id_).get();
+    auto const to_station = sched.stations_.at(s.to_->id_).get();
+    auto const from_station_transfer_time = from_station->transfer_time_;
+    auto const to_station_transfer_time = to_station->transfer_time_;
 
     auto const from_route_node =
         prev_route_node != nullptr
@@ -258,9 +259,28 @@ inline mcd::vector<trip::route_edge> build_route(
                                from_station_transfer_time,
                                s.dep_.in_out_.in_allowed_,
                                s.dep_.in_out_.out_allowed_, incoming);
+
+    auto const from_platform =
+        from_station->get_platform(s.lcon_.full_con_->d_track_);
+    if (s.dep_.in_out_.in_allowed_ && from_platform) {
+      auto const pn = add_platform_enter_edge(
+          sched, from_route_node, s.from_,
+          from_station->platform_transfer_time_, from_platform.value());
+      add_outgoing_edge(&pn->edges_.back(), incoming);
+    }
+
     auto const to_route_node = build_route_node(
         sched, route_id, sched.next_node_id_++, s.to_, to_station_transfer_time,
         s.arr_.in_out_.in_allowed_, s.arr_.in_out_.out_allowed_, incoming);
+
+    auto const to_platform =
+        to_station->get_platform(s.lcon_.full_con_->a_track_);
+    if (s.arr_.in_out_.out_allowed_ && to_platform) {
+      add_platform_exit_edge(sched, to_route_node, s.to_,
+                             to_station->platform_transfer_time_,
+                             to_platform.value());
+      add_outgoing_edge(&to_route_node->edges_.back(), incoming);
+    }
 
     from_route_node->edges_.push_back(
         make_route_edge(from_route_node, to_route_node, {s.lcon_}));
@@ -365,6 +385,13 @@ inline std::pair<reroute_result, trip const*> reroute(
   add_not_deleted_trip_events(sched, del_evs, trp, evs);
   if (evs.empty()) {
     disable_trip(*old_trip, old_lcon_idx);
+    trp->edges_ =
+        sched.trip_edges_
+            .emplace_back(mcd::make_unique<mcd::vector<trip::route_edge>>())
+            .get();
+    store_cancelled_delays(sched, trp, del_evs, cancelled_delays,
+                           cancelled_evs);
+    update_builder.add_reroute(trp, *old_trip, old_lcon_idx);
     return {reroute_result::OK, trp};
   }
   std::sort(begin(evs), end(evs));

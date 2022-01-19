@@ -28,7 +28,7 @@ target_link_libraries(motis-loader
   motis-core
   date
   geo
-  tz
+  date-tz
 )
 target_compile_options(motis-loader PRIVATE ${MOTIS_CXX_FLAGS})
 target_compile_definitions(motis-loader PRIVATE FLATBUFFERS_64=1)

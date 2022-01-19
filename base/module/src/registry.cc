@@ -2,6 +2,8 @@
 
 #include "boost/algorithm/string/predicate.hpp"
 
+#include "utl/verify.h"
+
 #include "motis/core/common/logging.h"
 
 #include "motis/module/message.h"
@@ -10,32 +12,39 @@
 namespace motis::module {
 
 void registry::register_op(std::string const& name, op_fn_t fn,
-                           ctx::access_t const access) {
+                           ctx::accesses_t&& access) {
   auto const call = [fn_rec = std::move(fn),
                      name](msg_ptr const& m) -> msg_ptr { return fn_rec(m); };
-  if (!operations_.emplace(name, op{std::move(call), access}).second) {
-    throw std::runtime_error("target already registered");
-  }
+  auto const inserted =
+      operations_.emplace(name, op{std::move(call), std::move(access)}).second;
+  utl::verify(inserted, "register_op: target {} already registered");
+}
+
+void registry::register_client_handler(
+    std::string&& target, std::function<void(client_hdl)>&& handler) {
+  auto const inserted =
+      client_handlers_.emplace(std::move(target), std::move(handler)).second;
+  utl::verify(inserted, "client_handler: target {} already registered");
 }
 
 void registry::subscribe(std::string const& topic, op_fn_t fn,
-                         ctx::access_t const access) {
+                         ctx::accesses_t&& access) {
   topic_subscriptions_[topic].emplace_back(
       [fn_rec = std::move(fn), topic](msg_ptr const& m) -> msg_ptr {
         return fn_rec(m);
       },
-      access);
+      std::move(access));
 }
 
 void registry::subscribe(std::string const& topic, void_op_fn_t fn,
-                         ctx::access_t const access) {
+                         ctx::accesses_t&& access) {
   subscribe(
       topic,
       [fn_rec = std::move(fn)](msg_ptr const&) {
         fn_rec();
         return msg_ptr{};
       },
-      access);
+      std::move(access));
 }
 
 std::vector<std::string> registry::register_remote_ops(

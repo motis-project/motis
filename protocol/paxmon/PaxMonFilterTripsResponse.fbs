@@ -1,0 +1,10 @@
+include "base/TripServiceInfo.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonFilterTripsResponse {
+  filtered_trips: ulong;
+  critical_sections: ulong;
+
+  trips: [motis.TripServiceInfo];
+}

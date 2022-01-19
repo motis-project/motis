@@ -41,6 +41,10 @@ std::bitset<7> traffic_week_days(gtfs_calendar const& c) {
 }
 
 std::map<std::string, calendar> read_calendar(loaded_file file) {
+  if (file.empty()) {
+    return {};
+  }
+
   std::map<std::string, calendar> services;
   for (auto const& c : read<gtfs_calendar>(file.content(), calendar_columns)) {
     services.insert(std::make_pair(

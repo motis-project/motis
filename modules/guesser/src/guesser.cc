@@ -11,7 +11,6 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/schedule.h"
-#include "motis/module/context/get_schedule.h"
 #include "motis/protocol/Message_generated.h"
 
 using namespace flatbuffers;
@@ -38,6 +37,9 @@ void guesser::init(motis::module::registry& reg) {
   reg.subscribe("/rt/update", [this](msg_ptr const& m) {
     using namespace motis::rt;
     auto const update = motis_content(RtUpdates, m);
+    if (update->schedule() != 0U) {
+      return nullptr;  // multiple schedules not yet supported
+    }
     if (std::any_of(update->updates()->begin(), update->updates()->end(),
                     [](RtUpdate const* u) {
                       return u->content_type() == Content_RtStationAdded;
@@ -103,7 +105,7 @@ msg_ptr guesser::guess(msg_ptr const& msg) {
   for (auto const& match :
        guesser_->guess_match(trim(req->input()->str()), req->guess_count())) {
     auto const guess = match.index;
-    auto const& station = *get_schedule().stations_[station_indices_[guess]];
+    auto const& station = *get_sched().stations_[station_indices_[guess]];
     auto const pos = Position(station.width_, station.length_);
     guesses.emplace_back(CreateStation(b, b.CreateString(station.eva_nr_),
                                        b.CreateString(station.name_), &pos));

@@ -2,6 +2,7 @@
 
 #include "utl/verify.h"
 
+#include "motis/core/common/unixtime.h"
 #include "motis/core/access/station_access.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/message.h"
@@ -14,7 +15,7 @@ using namespace motis::module;
 
 namespace motis::intermodal {
 
-inline std::time_t get_direct_start_time(Interval const* interval) {
+inline unixtime get_direct_start_time(Interval const* interval) {
   return interval->begin() + (interval->end() - interval->begin()) / 2;
 }
 

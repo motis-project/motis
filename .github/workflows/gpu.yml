@@ -1,0 +1,56 @@
+name: Linux GPU Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  release:
+    types:
+      - published
+
+jobs:
+  build:
+    runs-on: [self-hosted, linux, x64, gpu]
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      BUILDCACHE_COMPRESS: true
+      BUILDCACHE_DIRECT_MODE: true
+      BUILDCACHE_ACCURACY: SLOPPY
+      UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
+      CUDACXX: /usr/local/cuda/bin/nvcc
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Get deps
+        run: mkdir -p ~/deps && mv ~/deps .
+
+      - name: CMake
+        run: |
+          cmake ${{ matrix.config.cross }} \
+            -G Ninja -S . -B build \
+            -DCMAKE_C_COMPILER=gcc-10 \
+            -DCMAKE_CXX_COMPILER=g++-10 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DMOTIS_CUDA=On \
+            -DMOTIS_AVX=Off \
+            -DMOTIS_AVX2=Off \
+            -DMOTIS_WITH_WEBUI=${{ matrix.config.webui }}
+
+      - name: Build
+        run: |
+          ./build/buildcache/bin/buildcache -z
+          cmake --build build --target \
+            motis \
+            motis-test \
+            motis-itest
+          ./build/buildcache/bin/buildcache -s
+
+      - name: Save deps
+        run: mv deps ~
+
+      - name: Run Tests
+        run: ${{ matrix.config.emulator }} ./build/motis-test
+
+      - name: Run Integration Tests
+        run: ${{ matrix.config.emulator }} ./build/motis-itest

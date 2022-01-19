@@ -5,7 +5,6 @@
 #include "utl/pipes.h"
 
 #include "motis/core/common/logging.h"
-#include "motis/core/schedule/schedule_data_key.h"
 #include "motis/module/clog_redirect.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/event_collector.h"
@@ -13,17 +12,19 @@
 #include "motis/bootstrap/import_settings.h"
 #include "motis/loader/loader.h"
 
-namespace fs = boost::filesystem;
 namespace mm = motis::module;
 
 namespace motis::bootstrap {
 
 void register_import_schedule(motis_instance& instance,
+                              mm::import_dispatcher& reg,
                               loader::loader_options const& dataset_opt,
                               std::string const& data_dir) {
   std::make_shared<mm::event_collector>(
-      data_dir, "schedule", instance,
-      [&, dataset_opt](std::map<std::string, mm::msg_ptr> const& dependencies) {
+      data_dir, "schedule", reg,
+      [&, dataset_opt](
+          mm::event_collector::dependencies_map_t const& dependencies,
+          mm::event_collector::publish_fn_t const& publish) {
         auto const& msg = dependencies.at("SCHEDULE");
 
         auto const parsers = loader::parsers();
@@ -48,20 +49,20 @@ void register_import_schedule(motis_instance& instance,
 
         cista::memory_holder memory;
         auto sched = loader::load_schedule(dataset_opt_cpy, memory, data_dir);
-        instance.shared_data_.emplace_data(
-            SCHEDULE_DATA_KEY,
+        instance.emplace_data(
+            motis::module::to_res_id(motis::module::global_res_id::SCHEDULE),
             schedule_data{std::move(memory), std::move(sched)});
 
-        module::message_creator fbb;
+        mm::message_creator fbb;
         fbb.create_and_finish(
             MsgContent_ScheduleEvent,
             import::CreateScheduleEvent(
                 fbb,
                 fbb.CreateVector(utl::to_vec(
                     dataset_opt_cpy.dataset_,
-                    [&](auto const& p) {
+                    [&, i = 0](auto const&) mutable {
                       return fbb.CreateString(
-                          (fs::path{p} / "schedule.raw").generic_string());
+                          dataset_opt_cpy.fbs_schedule_path(data_dir, i++));
                     })),
                 fbb.CreateVector(utl::to_vec(dataset_opt_cpy.dataset_prefix_,
                                              [&](auto const& prefix) {
@@ -70,7 +71,7 @@ void register_import_schedule(motis_instance& instance,
                 instance.sched().hash_)
                 .Union(),
             "/import", DestinationType_Topic);
-        motis_publish(make_msg(fbb));
+        publish(make_msg(fbb));
         return nullptr;
       })
       ->require("SCHEDULE", [](mm::msg_ptr const& msg) {

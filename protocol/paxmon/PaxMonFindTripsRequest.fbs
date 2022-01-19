@@ -1,0 +1,10 @@
+namespace motis.paxmon;
+
+table PaxMonFindTripsRequest {
+  universe: uint;
+
+  train_nr: uint;
+  only_trips_with_paxmon_data: bool;
+  filter_class: bool;
+  max_class: uint;
+}

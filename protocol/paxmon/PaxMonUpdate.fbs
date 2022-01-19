@@ -1,0 +1,31 @@
+include "paxmon/PaxMonGroup.fbs";
+include "paxmon/PaxMonLocalization.fbs";
+
+namespace motis.paxmon;
+
+enum PaxMonEventType : byte {
+  NO_PROBLEM,
+  TRANSFER_BROKEN,
+  MAJOR_DELAY_EXPECTED,
+}
+
+enum PaxMonReachabilityStatus : byte {
+  OK,
+  BROKEN_INITIAL_ENTRY,
+  BROKEN_TRANSFER_EXIT,
+  BROKEN_TRANSFER_ENTRY,
+  BROKEN_FINAL_EXIT
+}
+
+table PaxMonEvent {
+  type: PaxMonEventType;
+  group: PaxMonGroup;
+  localization: PaxMonLocalization;
+  reachability_status: PaxMonReachabilityStatus;
+  expected_arrival_time: ulong; // 0 for broken journeys
+}
+
+table PaxMonUpdate {
+  universe: uint;
+  events: [PaxMonEvent];
+}

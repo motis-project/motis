@@ -1,0 +1,9 @@
+include "paxmon/PaxMonGroup.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonAddGroupsRequest {
+  universe: uint;
+
+  groups: [PaxMonGroup];
+}

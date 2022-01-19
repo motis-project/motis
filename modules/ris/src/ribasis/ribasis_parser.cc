@@ -11,6 +11,7 @@
 
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
+#include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/event_type.h"
 
 #include "motis/ris/ribasis/common.h"
@@ -159,8 +160,11 @@ Offset<Vector<Offset<TripSection>>> parse_sections(
   }));
 }
 
-void ribasis_parser::to_ris_message(
-    std::string_view s, const std::function<void(ris_message&&)>& cb) {
+void to_ris_message(std::string_view s,
+                    const std::function<void(ris_message&&)>& cb,
+                    std::string const& tag) {
+  utl::verify(tag.empty(), "ribasis does not support multi-schedule");
+
   rapidjson::Document doc;
   if (doc.Parse(s.data(), s.size()).HasParseError()) {
     doc.GetParseError();
@@ -188,9 +192,9 @@ void ribasis_parser::to_ris_message(
     ctx.b_.Finish(CreateMessage(ctx.b_, ctx.earliest_, ctx.latest_,
                                 ctx.timestamp_, MessageUnion_FullTripMessage,
                                 trip_msg.Union()));
-    utl::verify(ctx.earliest_ != std::numeric_limits<std::time_t>::max(),
+    utl::verify(ctx.earliest_ != std::numeric_limits<unixtime>::max(),
                 "earliest not set");
-    utl::verify(ctx.latest_ != std::numeric_limits<std::time_t>::min(),
+    utl::verify(ctx.latest_ != std::numeric_limits<unixtime>::min(),
                 "latest not set");
     cb(ris_message{ctx.earliest_, ctx.latest_, ctx.timestamp_,
                    std::move(ctx.b_)});
@@ -199,9 +203,11 @@ void ribasis_parser::to_ris_message(
   }
 }
 
-std::vector<ris_message> ribasis_parser::parse(std::string_view s) {
+std::vector<ris_message> parse(std::string_view s, std::string const& tag) {
+  utl::verify(tag.empty(), "ribasis does not support multi-schedule");
   std::vector<ris_message> msgs;
-  to_ris_message(s, [&](ris_message&& m) { msgs.emplace_back(std::move(m)); });
+  to_ris_message(
+      s, [&](ris_message&& m) { msgs.emplace_back(std::move(m)); }, tag);
   return msgs;
 }
 

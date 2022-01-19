@@ -1,0 +1,47 @@
+{
+  "name": "rsl",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "dev": "vite",
+    "dev-host": "vite --host",
+    "build": "tsc && vite build",
+    "serve": "vite preview",
+    "serve-host": "vite preview --host",
+    "lint": "eslint src --ext .js,.jsx,.ts,.tsx --max-warnings 0",
+    "fix-lint": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write src",
+    "format-check": "prettier --check src",
+    "ts-check": "tsc",
+    "update-protocol": "node --trace-uncaught tools/protocol.js && prettier --write src/api/protocol"
+  },
+  "dependencies": {
+    "@heroicons/react": "^1.0.5",
+    "@radix-ui/react-tooltip": "^0.1.6",
+    "date-fns": "^2.28.0",
+    "downshift": "^6.1.7",
+    "jotai": "^1.5.2",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-query": "^3.34.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.4.0",
+    "@types/react": "^17.0.38",
+    "@types/react-dom": "^17.0.11",
+    "@typescript-eslint/eslint-plugin": "^5.9.1",
+    "@typescript-eslint/parser": "^5.9.1",
+    "@vitejs/plugin-react": "^1.1.4",
+    "autoprefixer": "^10.4.2",
+    "eslint": "^8.6.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-react": "^7.28.0",
+    "eslint-plugin-react-hooks": "^4.3.0",
+    "postcss": "^8.4.5",
+    "prettier": "^2.5.1",
+    "tailwindcss": "^3.0.13",
+    "typescript": "^4.5.4",
+    "vite": "^2.7.10"
+  }
+}

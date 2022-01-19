@@ -78,10 +78,8 @@ loaded_file::loaded_file(boost::filesystem::path const& p, bool convert_utf8)
   }
 }
 
-loaded_file::loaded_file(loaded_file&& o) noexcept {
-  name_ = std::move(o.name_);
-  buf_ = std::move(o.buf_);
-}
+loaded_file::loaded_file(loaded_file&& o) noexcept
+    : name_{std::move(o.name_)}, buf_{std::move(o.buf_)} {}
 
 loaded_file::~loaded_file() = default;
 

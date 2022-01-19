@@ -32,6 +32,9 @@ struct dataset_settings : public conf::configuration,
           "Remove footpaths if they do not fit an assumed average speed");
     param(expand_footpaths_, "expand_footpaths",
           "Calculate expanded footpaths");
+    param(use_platforms_, "use_platforms",
+          "Use separate interchange times for trips stopping at the same "
+          "platform");
     param(schedule_begin_, "begin",
           "schedule interval begin (TODAY or YYYYMMDD)");
     param(num_days_, "num_days", "number of days");
@@ -41,6 +44,8 @@ struct dataset_settings : public conf::configuration,
     param(wzr_classes_path_, "wzr_classes_path",
           "waiting time rules class mapping");
     param(wzr_matrix_path_, "wzr_matrix_path", "waiting time matrix");
+    param(no_local_transport_, "no_local_transport",
+          "don't load local transport");
   }
 };
 

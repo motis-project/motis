@@ -110,13 +110,15 @@ inline constant_graph build_interchange_graph(
     }
   };
 
-  auto add_station_edges = [&g, route_offset,
-                            add_edge](station_node const* sn) {
+  auto add_station_edges = [&g, route_offset, add_edge, dir,
+                            is_new](station_node const* sn) {
     for (auto const& e : sn->edges_) {
       if (e.to_->is_foot_node()) {
         for (auto const& fe : e.to_->edges_) {
-          if (fe.to_->is_station_node()) {
-            g[fe.to_->id_].emplace_back(sn->id_, false);
+          if (fe.to_->is_station_node() && is_new(sn->id_, fe.to_->id_)) {
+            auto const s = (dir == search_dir::FWD) ? fe.to_->id_ : sn->id_;
+            auto const t = (dir == search_dir::FWD) ? sn->id_ : fe.to_->id_;
+            g[s].emplace_back(t, false);
           }
         }
       } else if (e.to_->is_route_node()) {

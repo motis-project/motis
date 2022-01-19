@@ -5,6 +5,7 @@
 #include "motis/string.h"
 
 #include "motis/core/common/hash_helper.h"
+#include "motis/core/common/unixtime.h"
 
 namespace motis {
 
@@ -13,10 +14,10 @@ struct extern_trip {
 
   mcd::string station_id_;
   uint32_t train_nr_{0};
-  time_t time_{0};
+  unixtime time_{0};
 
   mcd::string target_station_id_;
-  time_t target_time_{0};
+  unixtime target_time_{0};
   mcd::string line_id_;
 };
 

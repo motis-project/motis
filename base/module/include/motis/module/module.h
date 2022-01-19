@@ -7,11 +7,16 @@
 #include "boost/asio/strand.hpp"
 #include "boost/filesystem/path.hpp"
 
+#include "ctx/ctx.h"
+
 #include "conf/configuration.h"
 
+#include "motis/module/ctx_data.h"
+#include "motis/module/import_dispatcher.h"
+#include "motis/module/locked_resources.h"
 #include "motis/module/message.h"
 #include "motis/module/registry.h"
-#include "motis/module/shared_data.h"
+#include "motis/module/subc_reg.h"
 
 namespace motis {
 
@@ -31,45 +36,53 @@ struct module : public conf::configuration {
 
   ~module() override = default;
 
+  virtual void reg_subc(subc_reg&) {}
+
   std::string const& module_name() const { return prefix(); }
 
   std::string data_path(boost::filesystem::path const&);
   void set_data_directory(std::string const&);
-  void set_shared_data(shared_data*);
+  void set_shared_data(ctx::access_scheduler<ctx_data>*);
 
-  virtual void import(registry&) {}
+  virtual void import(import_dispatcher&) {}
   virtual void init(registry&) {}
 
   virtual bool import_successful() const { return true; }
 
-protected:
   schedule const& get_sched() const;
 
   template <typename T>
-  T const& get_shared_data(std::string_view const s) const {
-    return shared_data_->get<T>(s);
+  T const& get_shared_data(ctx::res_id_t const id) const {
+    return shared_data_->get<T>(id);
   }
 
   template <typename T>
-  T& get_shared_data_mutable(std::string_view const s) {
-    return shared_data_->get<T>(s);
+  T& get_shared_data_mutable(ctx::res_id_t const id) {
+    return shared_data_->get<T>(id);
   }
 
   template <typename T>
-  T const* find_shared_data(std::string_view const s) const {
-    return shared_data_->find<T>(s);
+  T const* find_shared_data(ctx::res_id_t const id) const {
+    return shared_data_->find<T>(id);
   }
 
   template <typename T>
-  void add_shared_data(std::string_view const s, T&& data) {
-    shared_data_->emplace_data(s, std::forward<T>(data));
+  void add_shared_data(ctx::res_id_t const id, T&& data) {
+    shared_data_->emplace_data(id, std::forward<T>(data));
   }
+
+  void remove_shared_data(ctx::res_id_t const id) { shared_data_->remove(id); }
+
+  ctx::res_id_t generate_res_id() { return shared_data_->generate_res_id(); }
+
+  locked_resources lock_resources(
+      ctx::accesses_t access, ctx::op_type_t op_type = ctx::op_type_t::WORK);
 
   boost::filesystem::path const& get_data_directory() const;
 
 private:
+  ctx::access_scheduler<ctx_data>* shared_data_{nullptr};
   boost::filesystem::path data_directory_;
-  shared_data* shared_data_{nullptr};
 };
 
 }  // namespace module

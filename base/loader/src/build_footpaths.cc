@@ -14,6 +14,8 @@
 #include "motis/core/common/floyd_warshall.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/price.h"
+#include "motis/core/schedule/time.h"
+#include "motis/loader/filter/local_stations.h"
 
 #include "motis/schedule-format/Schedule_generated.h"
 
@@ -53,11 +55,17 @@ struct footpath_builder {
         return it->second;
       };
 
-      auto duration = static_cast<int32_t>(footpath->duration());
+      if (skip_station(footpath->from()) || skip_station(footpath->to())) {
+        continue;
+      }
+
       auto const from_node = get_station("from", footpath->from());
       auto const to_node = get_station("to", footpath->to());
       auto& from_station = sched_.stations_.at(from_node->id_);
       auto& to_station = sched_.stations_.at(to_node->id_);
+      auto duration =
+          std::max({from_station->transfer_time_, to_station->transfer_time_,
+                    static_cast<motis::duration>(footpath->duration())});
 
       if (from_node == to_node) {
         LOG(ml::warn) << "Footpath loop at station " << from_station->eva_nr_
@@ -66,8 +74,6 @@ struct footpath_builder {
       }
 
       if (opt_.adjust_footpaths_) {
-        duration = std::max({from_station->transfer_time_,
-                             to_station->transfer_time_, duration});
         auto const distance = get_distance(*from_station, *to_station) * 1000;
 
         auto adjusted_duration = adjust_footpath_duration(duration, distance);
@@ -122,6 +128,7 @@ struct footpath_builder {
 
     // Create the foot node.
     auto foot_node = mcd::make_unique<node>();
+    foot_node->type_ = node_type::FOOT_NODE;
     foot_node->station_node_ = sn;
     foot_node->id_ = sched_.next_node_id_++;
 
@@ -175,7 +182,7 @@ struct footpath_builder {
                           geo::latlng{to_s->lat(), to_s->lng()});
         auto const duration =
             std::max({from_s->transfer_time_, to_s->transfer_time_,
-                      static_cast<int32_t>(std::round(
+                      static_cast<motis::duration>(std::round(
                           static_cast<double>(distance) / (60 * WALK_SPEED)))});
         add_foot_edge_pair(from_sn, to_sn, duration);
       }
@@ -367,6 +374,10 @@ struct footpath_builder {
         << "-" << fp.duration_ << "min";
     }
     return s.str();
+  }
+
+  inline bool skip_station(Station const* station) const {
+    return opt_.no_local_transport_ && is_local_station(station);
   }
 
   schedule& sched_;

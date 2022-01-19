@@ -25,18 +25,13 @@ private:
   motis::module::msg_ptr lookup_station(motis::module::msg_ptr const&) const;
   motis::module::msg_ptr lookup_stations(motis::module::msg_ptr const&) const;
 
-  static motis::module::msg_ptr lookup_station_events(
-      motis::module::msg_ptr const&);
+  motis::module::msg_ptr lookup_station_events(motis::module::msg_ptr const&);
+  motis::module::msg_ptr lookup_id_train(motis::module::msg_ptr const&);
+  motis::module::msg_ptr lookup_meta_station(motis::module::msg_ptr const&);
+  motis::module::msg_ptr lookup_meta_stations(motis::module::msg_ptr const&);
+  motis::module::msg_ptr lookup_schedule_info();
 
-  static motis::module::msg_ptr lookup_id_train(motis::module::msg_ptr const&);
-
-  static motis::module::msg_ptr lookup_meta_station(
-      motis::module::msg_ptr const&);
-
-  static motis::module::msg_ptr lookup_meta_stations(
-      motis::module::msg_ptr const&);
-
-  static motis::module::msg_ptr lookup_schedule_info();
+  motis::module::msg_ptr lookup_ribasis(motis::module::msg_ptr const&);
 
   std::unique_ptr<geo::point_rtree> station_geo_index_;
 };

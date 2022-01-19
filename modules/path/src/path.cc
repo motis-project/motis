@@ -10,15 +10,12 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
-#include "tiles/fixed/io/deserialize.h"
 #include "tiles/get_tile.h"
 #include "tiles/parse_tile_url.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
-#include "motis/module/context/get_schedule.h"
-#include "motis/module/context/motis_call.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
@@ -46,14 +43,16 @@ struct import_state {
 
 path::path() : module("Path", "path") {
   param(use_cache_, "use_cache", "caches to use during import {osm, seq}");
+  param(max_size_, "max_size", "path db max size");
 }
 
 path::~path() = default;
 
-void path::import(registry& reg) {
+void path::import(import_dispatcher& reg) {
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "path", reg,
-      [this](std::map<std::string, msg_ptr> const& dependencies) {
+      [this](event_collector::dependencies_map_t const& dependencies,
+             event_collector::publish_fn_t const&) {
         using import::ScheduleEvent;
         using import::OSMEvent;
         using import::OSRMEvent;
@@ -116,7 +115,7 @@ void path::init(registry& r) {
     auto data = path_data{};
     data.db_ = make_path_database(
         (get_data_directory() / "path" / "pathdb.mdb").generic_string(), true,
-        false);
+        false, max_size_);
 
     data.render_ctx_ = tiles::make_render_ctx(*data.db_->db_handle_);
 
@@ -126,7 +125,7 @@ void path::init(registry& r) {
       LOG(warn) << "pathdb not available: no index!";
     }
 
-    add_shared_data(PATH_DATA_KEY, std::move(data));
+    add_shared_data(to_res_id(global_res_id::PATH_DATA), std::move(data));
   } catch (std::system_error const&) {
     LOG(warn) << "pathdb not available: no database!";
   }
@@ -156,13 +155,15 @@ void path::init(registry& r) {
 }
 
 msg_ptr path::boxes() const {
-  auto const& data = get_shared_data<path_data>(PATH_DATA_KEY);
+  auto const& data =
+      get_shared_data<path_data>(to_res_id(global_res_id::PATH_DATA));
   auto const boxes = data.db_->get(kBoxesKey);
   return make_msg(boxes.data(), boxes.size());
 };
 
 msg_ptr path::by_station_seq(msg_ptr const& msg) const {
-  auto const& data = get_shared_data<path_data>(PATH_DATA_KEY);
+  auto const& data =
+      get_shared_data<path_data>(to_res_id(global_res_id::PATH_DATA));
   auto req = motis_content(PathByStationSeqRequest, msg);
 
   return data.get_response(
@@ -174,18 +175,20 @@ msg_ptr path::by_station_seq(msg_ptr const& msg) const {
 }
 
 msg_ptr path::by_trip_id(msg_ptr const& msg) const {
-  auto const& data = get_shared_data<path_data>(PATH_DATA_KEY);
+  auto const& data =
+      get_shared_data<path_data>(to_res_id(global_res_id::PATH_DATA));
   auto const& req = motis_content(PathByTripIdRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
   return data.get_response(
       data.trip_to_index(sched, from_fbs(sched, req->trip_id())),
       req->zoom_level());
 }
 
 msg_ptr path::by_trip_id_batch(msg_ptr const& msg) const {
-  auto const& data = get_shared_data<path_data>(PATH_DATA_KEY);
+  auto const& data =
+      get_shared_data<path_data>(to_res_id(global_res_id::PATH_DATA));
   auto const& req = motis_content(PathByTripIdBatchRequest, msg);
-  auto const& sched = get_schedule();
+  auto const& sched = get_sched();
 
   path_database_query q{req->zoom_level()};
 
@@ -223,7 +226,8 @@ msg_ptr path::by_trip_id_batch(msg_ptr const& msg) const {
 }
 
 msg_ptr path::by_tile_feature(msg_ptr const& msg) const {
-  auto const& data = get_shared_data<path_data>(PATH_DATA_KEY);
+  auto const& data =
+      get_shared_data<path_data>(to_res_id(global_res_id::PATH_DATA));
   auto const& req = motis_content(PathByTileFeatureRequest, msg);
 
   message_creator mc;
@@ -240,7 +244,8 @@ msg_ptr path::by_tile_feature(msg_ptr const& msg) const {
 }
 
 msg_ptr path::path_tiles(msg_ptr const& msg) const {
-  auto const& data = get_shared_data<path_data>(PATH_DATA_KEY);
+  auto const& data =
+      get_shared_data<path_data>(to_res_id(global_res_id::PATH_DATA));
   auto tile = tiles::parse_tile_url(msg->get()->destination()->target()->str());
   utl::verify_ex(tile.has_value(), std::system_error{error::invalid_request});
 

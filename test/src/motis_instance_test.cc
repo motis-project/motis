@@ -27,6 +27,10 @@ motis_instance_test::motis_instance_test(
     std::vector<std::string> const& modules,
     std::vector<std::string> const& modules_cmdline_opt)
     : instance_(std::make_unique<motis_instance>()) {
+  if constexpr (sizeof(void*) < 8) {
+    dispatcher::direct_mode_dispatcher_ = instance_.get();
+  }
+
   auto modules_cmdline_opt_patched = modules_cmdline_opt;
   modules_cmdline_opt_patched.emplace_back("--ris.db_max_size=1048576");
   modules_cmdline_opt_patched.emplace_back("--ris.clear_db=true");
@@ -86,6 +90,15 @@ motis_instance_test::msg_sink(std::vector<module::msg_ptr>* vec) {
     vec->push_back(m);
     return nullptr;
   };
+}
+
+schedule const& motis_instance_test::sched() const {
+  return instance_->sched();
+}
+
+std::time_t motis_instance_test::unix_time(int hhmm, int day_idx,
+                                           int timezone_offset) const {
+  return motis::unix_time(sched(), hhmm, day_idx, timezone_offset);
 }
 
 }  // namespace motis::test

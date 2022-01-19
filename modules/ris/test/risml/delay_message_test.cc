@@ -3,7 +3,9 @@
 #include "motis/protocol/RISMessage_generated.h"
 #include "motis/ris/risml/risml_parser.h"
 
-namespace motis::ris::risml {
+using namespace motis::ris::risml;
+using namespace motis::ris;
+using namespace motis;
 
 constexpr auto ist_fixture_1 = R"(
 <?xml version="1.0" encoding="iso-8859-1" ?>
@@ -39,14 +41,14 @@ constexpr auto ist_fixture_1 = R"(
 )";
 
 TEST(ris_delay_message, ist_message_1) {
-  auto const messages = risml_parser::parse(ist_fixture_1);
+  auto const messages = parse(ist_fixture_1);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
   EXPECT_EQ(1444168774, message.timestamp_);
   EXPECT_EQ(1444172760, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
+  auto outer_msg = motis::ris::GetMessage(message.data());
   ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
@@ -106,14 +108,14 @@ constexpr auto ist_fixture_2 = R"(
 )";
 
 TEST(ris_delay_message, ist_message_2) {
-  auto const messages = risml_parser::parse(ist_fixture_2);
+  auto const messages = parse(ist_fixture_2);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
   EXPECT_EQ(1444168802, message.timestamp_);
   EXPECT_EQ(1444173360, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
+  auto outer_msg = motis::ris::GetMessage(message.data());
   ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
@@ -170,7 +172,7 @@ constexpr auto ist_fixture_3 = R"(
 )";
 
 TEST(ris_delay_message, ist_message_3) {
-  auto const messages = risml_parser::parse(ist_fixture_3);
+  auto const messages = parse(ist_fixture_3);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
@@ -178,7 +180,7 @@ TEST(ris_delay_message, ist_message_3) {
   EXPECT_EQ(1447688700, message.earliest_);
   EXPECT_EQ(1447693200, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
+  auto outer_msg = motis::ris::GetMessage(message.data());
   ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
@@ -243,32 +245,32 @@ EventType get_type(std::vector<ris_message> const& messages) {
   if (messages.empty()) {
     throw std::runtime_error("messages empty");
   }
-  auto content = GetMessage(messages[0].data())->content();
+  auto content = motis::ris::GetMessage(messages[0].data())->content();
   auto delay_message = reinterpret_cast<DelayMessage const*>(content);
   return delay_message->events()->Get(0)->base()->type();
 }
 
 TEST(ris_delay_message, train_event_type) {
   auto start_msg = type_fixture("Start");
-  auto start = risml_parser::parse(start_msg.c_str());
+  auto start = parse(start_msg.c_str());
   ASSERT_EQ(EventType_DEP, get_type(start));
 
   auto ab_msg = type_fixture("Ab");
-  auto ab = risml_parser::parse(ab_msg.c_str());
+  auto ab = parse(ab_msg.c_str());
   ASSERT_EQ(EventType_DEP, get_type(ab));
 
   auto an_msg = type_fixture("An");
-  auto an = risml_parser::parse(an_msg.c_str());
+  auto an = parse(an_msg.c_str());
   ASSERT_EQ(EventType_ARR, get_type(an));
 
   auto ziel_msg = type_fixture("Ziel");
-  auto ziel = risml_parser::parse(ziel_msg.c_str());
+  auto ziel = parse(ziel_msg.c_str());
   ASSERT_EQ(EventType_ARR, get_type(ziel));
 
   // "Durch" events are ignored
   auto pass_msg = type_fixture("Durch");
-  auto pass = risml_parser::parse(pass_msg.c_str());
-  auto content = GetMessage(pass[0].data())->content();
+  auto pass = parse(pass_msg.c_str());
+  auto content = motis::ris::GetMessage(pass[0].data())->content();
   auto delay_message = reinterpret_cast<DelayMessage const*>(content);
   EXPECT_EQ(0, delay_message->events()->size());
 }
@@ -307,7 +309,7 @@ constexpr auto ist_prog_fixture_1 = R"(
 )";
 
 TEST(ris_delay_message, ist_prog_message_1) {
-  auto const messages = risml_parser::parse(ist_prog_fixture_1);
+  auto const messages = parse(ist_prog_fixture_1);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
@@ -315,7 +317,7 @@ TEST(ris_delay_message, ist_prog_message_1) {
   EXPECT_EQ(1444166580, message.earliest_);
   EXPECT_EQ(1444169100, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
+  auto outer_msg = motis::ris::GetMessage(message.data());
   ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
@@ -374,7 +376,7 @@ constexpr auto ist_prog_fixture_2 = R"--((
 ))--";
 
 TEST(ris_delay_message, ist_prog_message_2) {
-  auto const messages = risml_parser::parse(ist_prog_fixture_2);
+  auto const messages = parse(ist_prog_fixture_2);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
@@ -382,7 +384,7 @@ TEST(ris_delay_message, ist_prog_message_2) {
   EXPECT_EQ(1444165800, message.earliest_);
   EXPECT_EQ(1444169940, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
+  auto outer_msg = motis::ris::GetMessage(message.data());
   ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
@@ -418,5 +420,3 @@ TEST(ris_delay_message, ist_prog_message_2) {
   EXPECT_EQ(EventType_ARR, e2->base()->type());
   EXPECT_EQ(1444170120, e2->updated_time());
 }
-
-}  // namespace motis::ris::risml

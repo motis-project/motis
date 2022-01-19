@@ -3,6 +3,7 @@
 /.vs
 /out
 /data
+.pkg.mutex
 CMakeSettings.json
 .settings
 .cproject

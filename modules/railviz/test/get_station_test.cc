@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 
+#include "motis/core/common/unixtime.h"
 #include "motis/test/motis_instance_test.h"
 
 #include "./schedule.h"
@@ -14,7 +15,7 @@ struct railviz_get_station_test : public motis_instance_test {
   railviz_get_station_test()
       : motis::test::motis_instance_test(dataset_opt, {"railviz"}) {}
 
-  static msg_ptr get_station(std::string const& station_id, time_t const t,
+  static msg_ptr get_station(std::string const& station_id, unixtime const t,
                              unsigned event_count) {
     message_creator fbb;
     fbb.create_and_finish(
