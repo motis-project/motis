@@ -4,13 +4,14 @@
     iconType="schedule"
     :showLabel="true"
     :initInputText="timeToDisplay"
-    class="pure-u-1 pure-u-sm-9-24"
+    class="main-gutter time-gutter"
     :showArrows="true"
     @inputChanged="setTime"
     @decreaseClick="changeTime(-1)"
     @increaseClick="changeTime(1)"
     :showAutocomplete="false"
-  />
+    :key="inputFieldKey"
+    @blur="inputFieldKey++"></InputField>
 </template>
 
 <script lang="ts">
@@ -22,19 +23,24 @@ export default defineComponent({
   components: {
     InputField,
   },
+  emits: [
+    "timeChanged"
+  ],
   data() {
     return {
       time: {} as Date,
+      inputFieldKey: 0
     };
   },
   computed: {
-    timeToDisplay: function (): String {
-      let result: string = "";
-      this.time.getHours() < 10 ? result += '0' + this.time.getHours() : result += this.time.getHours();
-      this.time.getMinutes() < 10 ? result += ':0' + this.time.getMinutes() : result += ':' + this.time.getMinutes();
-      this.$emit("timeChanged", result);
+    timeToDisplay: function (): string {
+      let result = this.$ds.getTimeString(this.time.valueOf());
       return result;
     },
+  },
+  created() {
+    let currentTime = this.$ds.date;
+    this.time = currentTime;
   },
   methods: {
     changeTime(change: number) {
@@ -45,29 +51,15 @@ export default defineComponent({
         this.time.getHours() + change,
         this.time.getMinutes()
       );
+      this.$emit("timeChanged", this.time);
     },
     setTime(value: string) {
-      let arr = value.split(":");
-      if (arr.length === 2 && arr[1].length === 2) {
-        let numberArr = arr.map((s) => +s);
-        if (
-          numberArr[0] >= 0 && numberArr[0] < 24 &&
-          numberArr[1] >= 0 && numberArr[1] < 60  
-        ) {
-          let date = new Date(new Date().getFullYear(), 
-                              new Date().getMonth(), 
-                              new Date().getDay(), 
-                              numberArr[0], numberArr[1]);
-          if (!isNaN(date.getTime())) {
-            this.time = date;
-          }
-        }
+      let t = this.$ds.parseTime(value);
+      if(t.valueOf()) {
+        this.time = t;
       }
+      this.$emit("timeChanged", this.time);
     },
-  },
-  created() {
-    let currentTime = new Date();
-    this.time = currentTime;
   },
 });
 </script>

@@ -1,15 +1,23 @@
 <template>
   <LoadingBar v-if="!isContentLoaded"></LoadingBar>
-  <div v-else class="connection-details trip-view">
+  <div v-else :class="['connection-details', isTripView ? 'trip-view' : '']">
     <div class="connection-info">
       <div class="header">
-        <div class="back" @click="$router.back()"><i class="icon">arrow_back</i></div>
+        <div class="back" @click="$router.back()">
+          <i class="icon">arrow_back</i>
+        </div>
         <div class="details">
-          <div class="date">{{ date }}</div>
+          <div class="date">
+            {{ date }}
+          </div>
           <div class="connection-times">
             <div class="times">
-              <div class="connection-departure">{{ departure }}</div>
-              <div class="connection-arrival">{{ arrival }}</div>
+              <div class="connection-departure">
+                {{ departure }}
+              </div>
+              <div class="connection-arrival">
+                {{ arrival }}
+              </div>
             </div>
             <div class="locations">
               <div>{{ firstStopName }}</div>
@@ -17,82 +25,31 @@
             </div>
           </div>
           <div class="summary">
-            <span class="duration"><i class="icon">schedule</i>{{ duration }}</span
-            ><span class="interchanges"><i class="icon">transfer_within_a_station</i>{{ changes }}</span>
+            <span class="duration"><i class="icon">schedule</i>{{ duration }}</span><span class="interchanges"><i class="icon">transfer_within_a_station</i>{{ changes }}</span>
           </div>
         </div>
         <div class="actions"></div>
       </div>
     </div>
-    <div class="connection-journey" id="sub-connection-journey">
-      <div
+    <div class="connection-journey" :id="isTripView ? 'sub-connection-journey' : 'connection-journey'">
+      <template
         v-for="(transport, tIndex) in transports"
-        :key="transport.line_id"
-        :class="`train-detail train-class-${transport.clasz}`"
-      >
-        <div class="top-border"></div>
-        <TransportTypeBox :transport="transport"></TransportTypeBox>
-        <div class="first-stop">
-          <div :class="['stop', getPastOrFuture(getFirstStop(transport).departure.time)]">
-            <div class="timeline train-color-border"></div>
-            <div class="time">
-              <span :class="getPastOrFuture(getFirstStop(transport).departure.time)">{{ departure }}</span>
-            </div>
-            <div class="delay"></div>
-            <div class="station">
-              <span>{{ firstStopName }}</span>
-            </div>
-          </div>
-        </div>
-        <div :class="['direction', getPastOrFuture(getFirstStop(transport).departure.time)]">
-          <div class="timeline train-color-border"></div>
-          <i class="icon">arrow_forward</i>{{ lastStopName }}
-        </div>
-        <div :class="['intermediate-stops-toggle', 'clickable', getPastOrFuture(getFirstStop(transport).departure.time)]" @click="areStopsExpanded[tIndex] = !areStopsExpanded[tIndex]">
-          <div class="timeline-container">
-            <div class="timeline train-color-border bg"></div>
-            <div class="timeline train-color-border progress" :style="`height: ${getStopProgress(getFirstStop(transport))}%`"></div>
-          </div>
-          <div class="expand-icon">
-            <i class="icon">{{ areStopsExpanded[tIndex] ? "expand_more" : "expand_less" }}</i
-            ><i class="icon">{{ areStopsExpanded[tIndex] ? "expand_less" : "expand_more" }}</i>
-          </div>
-          <span>{{$ts.countTranslate("stop", content.stops.length - 2)}} ({{ duration }})</span>
-        </div>
-        <div :class="['intermediate-stops', areStopsExpanded[tIndex] ? 'expanded' : '']" v-show="areStopsExpanded[tIndex]">
-          <div v-for="stop in getIntermediateStops(transport)" :key="stop.station" :class="['stop', getPastOrFuture(stop.departure.time)]">
-            <div class="timeline train-color-border bg"></div>
-            <div class="timeline train-color-border progress" :style="`height: ${getStopProgress(stop)}%`"></div>
-            <div class="time">
-              <div class="arrival">
-                <span :class="getPastOrFuture(stop.arrival.time)">{{ getTimeString(stop.arrival.time) }}</span>
-              </div>
-              <div class="departure">
-                <span :class="getPastOrFuture(stop.departure.time)">{{ getTimeString(stop.departure.time) }}</span>
-              </div>
-            </div>
-            <div class="delay">
-              <div class="arrival"></div>
-              <div class="departure"></div>
-            </div>
-            <div class="station">
-              <span>{{ stop.station.name }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="last-stop">
-          <div :class="['stop', getPastOrFuture(getLastStop(transport).arrival.time)]">
-            <div class="timeline train-color-border"></div>
-            <div class="time">
-              <span :class="getPastOrFuture(getLastStop(transport).arrival.time)">{{ arrival }}</span>
-            </div>
-            <div class="delay"></div>
-            <div class="station">
-              <span>{{ lastStopName }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+        :key="transport.line_id">
+        <WayTransport
+          v-if="transport.move_type === 'Transport'"
+          :areStopsInitialExpanded="isTripView"
+          :transport="transport.move"
+          :stops="getStopsForTransport(transport.move)"
+          :additionalMove="additionalMoves[tIndex]"
+          :trip="getTripForTransport(transport.move)"></WayTransport>
+        <template v-else-if="transport.move.mumo_id === -1"></template>
+        <WayCustomMovement
+          v-else
+          :customMovement="transport.move"
+          :stops="getStopsForTransport(transport.move)"
+          :startStationName="determineStartStationNameForCustomMovement(transport.move)"
+          :endStationName="determineEndStationNameForCustomMovement(transport.move)"></WayCustomMovement>
+      </template>
     </div>
   </div>
 </template>
@@ -100,24 +57,29 @@
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
 import Trip from "../models/Trip";
-import TripResponseContent from "../models/TripResponseContent";
-import TransportTypeBox from "../components/TransportTypeBox.vue";
+import TripResponseContent, { Move } from "../models/TripResponseContent";
 import Transport from "../models/Transport";
-import Stop from "../models/Stop";
 import LoadingBar from "../components/LoadingBar.vue"
+import WayTransport from "../components/WayTransport.vue"
+import WayCustomMovement from "../components/WayCustomMovement.vue"
+import CustomMovement from "../models/CustomMovement";
+import WayMixin from "../mixins/WayMixin"
 
 export default defineComponent({
+  name: "Trip",
   components: {
-    TransportTypeBox,
-    LoadingBar
+    LoadingBar,
+    WayTransport,
+    WayCustomMovement
   },
+  mixins: [ WayMixin ],
   props: {
     trip: {
       type: Object as PropType<Trip>,
-      required: true,
+      required: false,
     },
-    initContent: {
-      type: Object as PropType<TripResponseContent>,
+    index: {
+      type: Number as PropType<number>,
       required: false
     }
   },
@@ -125,16 +87,14 @@ export default defineComponent({
     return {
       content: {} as TripResponseContent,
       isContentLoaded: false,
-      areStopsExpanded: [] as Boolean[],
+      startStationName: undefined as (string | undefined),
+      endStationName: undefined as (string | undefined),
+      additionalMoves: [] as (string | undefined)[]
     };
   },
   computed: {
     date: function (): string {
-      return new Date(this.content.trips[0].id.time * 1000).toLocaleString(this.$ts.currentLocale, {
-        month: "2-digit",
-        year: "numeric",
-        day: "numeric",
-      });
+      return this.$ds.getDateString(this.content.trips[0].id.time * 1000);
     },
     departure: function (): string {
       return this.getTimeString(this.content.stops[0].departure.time);
@@ -143,90 +103,111 @@ export default defineComponent({
       return this.getTimeString(this.content.stops[this.content.stops.length - 1].arrival.time);
     },
     firstStopName: function (): string {
-      return this.content.stops[0].station.name;
+      return this.index !== undefined ? this.startStationName as string : this.content.stops[0].station.name;
     },
     lastStopName: function (): string {
-      return this.content.stops[this.content.stops.length - 1].station.name;
+      return this.index !== undefined ? this.endStationName as string : this.content.stops[this.content.stops.length - 1].station.name;
     },
     duration: function (): string {
-      let time = new Date(
-        (this.content.stops[this.content.stops.length - 1].arrival.time - this.content.stops[0].departure.time) * 1000
-      );
-      let res = "";
-      if (time.getDate() > 1) {
-        res += this.$ts.formatTranslate("days", (time.getDate() - 1).toString());
-      }
-      if (res != "") {
-        res += " ";
-      }
-      if (time.getHours() > 1) {
-        res += this.$ts.formatTranslate("hours", (time.getHours() - 1).toString());
-      }
-      if (res != "") {
-        res += " ";
-      }
-      if (time.getMinutes() > 0) {
-        res += this.$ts.formatTranslate("minutes", time.getMinutes().toString());
-      }
-      return res;
+      return this.getReadableDuration(this.content.stops[0].departure.time, this.content.stops[this.content.stops.length - 1].arrival.time, this.$ts);
     },
     changes: function (): string {
       return this.$ts.countTranslate("changes", this.content.trips.length - 1);
     },
-    transports: function (): Transport[] {
-      return this.content.transports.map((t) => t.move);
+    transports: function (): Move[] {
+      return this.content.transports;
     },
-  },
-  created() {
-    if(this.initContent) {
-      this.content = this.initContent
-    }
-    this.$postService.getTripResponce(this.trip).then((data) => {
-      if (data.trips.length > 0 && data.trips[0].id.station_id === this.trip.station_id) {
-        this.content = data;
-
-      }
-    });
-  },
-  methods: {
-    getFirstStop(transport: Transport) {
-      return this.content.stops[0];
-    },
-    getLastStop(transport: Transport) {
-      return this.content.stops[this.content.stops.length - 1];
-    },
-    getIntermediateStops(transport: Transport) {
-      return this.content.stops.slice(transport.range.from + 1, transport.range.to - 1);
-    },
-    getTimeString(timeInSeconds: number) {
-      let date = new Date(timeInSeconds * 1000);
-      return date.getHours() + ":" + ("0" + date.getMinutes()).slice(-2);
-    },
-    getPastOrFuture(timeInSeconds: number) {
-      let date = new Date(timeInSeconds * 1000);
-      return date < new Date() ? 'past' : 'future';
-    },
-    getStopProgress(stop: Stop) {
-      let index = this.content.stops.indexOf(stop);
-      let nextStop = this.content.stops[index + 1];
-      let diff = nextStop.arrival.time - stop.departure.time;
-      let diffWithCurrent = nextStop.arrival.time - (new Date().valueOf() / 1000);
-      if(diffWithCurrent < 0) {
-        return 100;
-      }
-      else if(diffWithCurrent > diff) {
-        return 0;
-      }
-      else {
-        return (diffWithCurrent / diff) * 100;
-      }
+    isTripView() {
+      return this.$route.name === "Trip";
     }
   },
   watch: {
-    content: function(newValue: TripResponseContent) {
-        let expand = this.$route.name === "Trip";
-        this.content.transports.forEach((t) => this.areStopsExpanded.push(expand));
-        this.isContentLoaded = true;
+    content: function() {
+      this.isContentLoaded = true;
+      let additionalMoveForNext: string | undefined = undefined;
+      for(let t of this.content.transports) {
+        this.additionalMoves.push(additionalMoveForNext)
+        additionalMoveForNext = undefined;
+        if("mumo_id" in t.move && t.move.mumo_id === -1) {
+          additionalMoveForNext =  this.getReadableDuration(this.content.stops[t.move.range.from].departure.time, this.content.stops[t.move.range.to].arrival.time, this.$ts);
+        }
+      }
+    },
+    trip() {
+      this.getData();
+    },
+    index() {
+      this.getData();
+    }
+  },
+  created() {
+    this.getData();
+  },
+  methods: {
+    getTimeString(timeInSeconds: number) {
+      return this.$ds.getTimeString(timeInSeconds * 1000);
+    },
+    sendRequest() {
+      if(this.trip !== undefined) {
+        this.$postService.getTripResponce(this.trip).then((data) => {
+          if (this.trip !== undefined && data.trips.length > 0 && data.trips[0].id.station_id === this.trip.station_id) {
+            this.content = data;
+          }
+        }).catch(() => this.$router.back());
+      }
+    },
+    getStopsForTransport(transport: Transport | CustomMovement) {
+      let transportIndex = this.content.transports.map(t => t.move).indexOf(transport);
+      let nextTransport = transportIndex === this.content.transports.length - 1 ? transport : this.content.transports[transportIndex + 1].move;
+      let addOne = (!("mumo_id" in nextTransport) || nextTransport.mumo_id !== -1) && (!("mumo_id" in transport) || transport.mumo_id !== -1);
+      return this.content.stops.slice(transport.range.from, transport.range.to + (addOne ? 1 : 0));
+    },
+    determineStartStationNameForCustomMovement(customMovement: CustomMovement) {
+      let start = this.getStopsForTransport(customMovement)[0].station.name;
+      let ts = this.transports.map(t => t.move);
+      if(ts.indexOf(customMovement) === 0 && this.startStationName !== undefined) {
+        start = this.startStationName
+      }
+      else if(ts.indexOf(customMovement) === 1 && "mumo_type" in ts[0] && ts[0].mumo_type === "car"
+        || ts.indexOf(customMovement) === ts.length - 1 && "mumo_type" in customMovement && customMovement.mumo_type === "car") {
+        start = this.$t.parking
+      }
+      return start;
+    },
+    determineEndStationNameForCustomMovement(customMovement: CustomMovement) {
+      let stops = this.getStopsForTransport(customMovement);
+      let destination = stops[stops.length - 1].station.name;
+      let ts = this.transports.map(t => t.move);
+      let lastT = ts[ts.length - 1];
+
+      if(ts.indexOf(customMovement) === ts.length - 1 && this.endStationName !== undefined) {
+        destination = this.endStationName;
+      }
+      else if(ts.indexOf(customMovement) === ts.length - 2 && "mumo_type" in lastT && lastT.mumo_type === "car"
+        || ts.indexOf(customMovement) === 0 && "mumo_type" in customMovement && customMovement.mumo_type === "car") {
+        destination = this.$t.parking
+      }
+      return destination;
+    },
+    getData() {
+      if(this.index !== undefined && this.$store.state.connections.length > 0
+        && this.index < this.$store.state.connections.length && this.index >= 0) {
+        this.content = this.$store.state.connections[this.index];
+        this.startStationName = this.$store.state.startInput.name;
+        this.endStationName = this.$store.state.destinationInput.name;
+      }
+      else if(this.trip !== undefined) {
+        this.sendRequest();
+      }
+      else {
+        this.$router.push({name: "ConnectionSearch"});
+      }
+    },
+    getTripForTransport(transport: Transport) {
+      if(!this.isTripView) {
+        return this.content.trips.filter(t => t.id.train_nr === transport.train_nr)[0].id;
+      }
+      return undefined;
     }
   }
 });

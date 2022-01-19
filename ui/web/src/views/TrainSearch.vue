@@ -9,8 +9,7 @@
             iconType="train"
             :showLabel="true"
             :showAutocomplete="false"
-            @inputChanged="setCurrentTrainNumber"
-          ></InputField>
+            @inputChanged="setCurrentTrainNumber"></InputField>
         </div>
         <div class="pure-g gutters">
           <Calendar class="pure-u-1 pure-u-sm-12-24 to-location" @dateChanged="setNewDate"></Calendar>
@@ -18,7 +17,8 @@
         </div>
       </div>
     </div>
-    <div class="trips">
+    <LoadingBar v-if="contentLoadingState === LoadingState.Loading"></LoadingBar>
+    <div class="trips" v-else-if="contentLoadingState === LoadingState.Loaded">
       <ul style="list-style-type: none; margin-left: -40px" v-show="areGuessesDisplayed">
         <li class="trip" v-for="trip in trainGuesses" :key="trip">
           <div class="trip-train">
@@ -56,6 +56,7 @@ import TimeInputField from "../components/TimeInputField.vue";
 import InputField from "../components/InputField.vue";
 import Trips from "../models/TrainGuess";
 import TransportTypeBox from "../components/TransportTypeBox.vue";
+import LoadingBar, {LoadingState} from "../components/LoadingBar.vue"
 
 export default defineComponent({
   name: "TrainSearch",
@@ -63,83 +64,71 @@ export default defineComponent({
     Calendar,
     TimeInputField,
     InputField,
-    TransportTypeBox
+    TransportTypeBox,
+    LoadingBar
   },
   data() {
     return {
       currentTrainInput: -1 as number,
       areGuessesDisplayed: false as boolean,
-      currentDate: Date.now() as number,
+      currentDate: {} as Date,
       trainGuesses: [] as Trips[],
-      dateFromCalendar: NaN as number,
-      timeFromTimeField: "" as string
+      contentLoadingState: LoadingState.NothingToShow,
+      LoadingState: LoadingState
     };
   },
+  watch: {
+    currentTrainInput(){
+      setTimeout(this.sendRequest, 500);
+    }
+  },
   created() {
-    let d = new Date();
-    this.dateFromCalendar = new Date(2020, 10, 19).valueOf() / 1000;
-    this.timeFromTimeField = d.getHours() + ":" + ("0" + d.getMinutes()).slice(-2);
-    this.setupDate();
+    this.currentDate = this.$ds.date;
   },
   methods: {
     setCurrentTrainNumber(input: string) {
       if (!isNaN(+input)) {
         this.currentTrainInput = +input;
-        this.sendRequest();
       }
     },
     sendRequest(){
-      if(this.currentTrainInput != -1){
-        this.$postService.getTrainGuessResponse(this.currentDate, this.currentTrainInput).then((resp) => 
-                                                                  (this.trainGuesses = resp.trips));
+      this.contentLoadingState = LoadingState.Loading;
+      if(this.currentTrainInput !== -1){
+        this.$postService.getTrainGuessResponse(this.currentDate.valueOf() / 1000, this.currentTrainInput).then((resp) => {
+          this.trainGuesses = resp.trips;
+          this.contentLoadingState = LoadingState.Loaded;
+        });
         this.areGuessesDisplayed = true;
       }
     },
     setTimeToDisplay(value: number): string{
-      let d = new Date(value * 1000);
-      let result: string = "";
-      d.getHours() < 10 ? result += '0' + d.getHours() : result += d.getHours();
-      d.getMinutes() < 10 ? result += ':0' + d.getMinutes() : result += ':' + d.getMinutes();
-      return result;
+      return this.$ds.getTimeString(value * 1000);
     },
     setDateToDisplay(value: number): string{
       let d = new Date(value * 1000);
-      let result: string = "";
-      result += d.getDate() + "." + (d.getMonth() + 1);
-      return result;
+      return d.toLocaleString(this.$ts.currentLocale, { month: '2-digit', day: '2-digit' }).slice(0, 5);
     },
     goToFirstStation(trip: Trips){
       let temp: DataToRouter = { name: trip.first_station.name, id: trip.first_station.id, time: trip.trip_info.id.time}
-      let {sos, ...t} = temp as { [key: string]: any };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let t = temp as { [key: string]: any };
       this.$router.push({
         name: 'StationTimeTableFromTrainSearch',
         params: t
       })
     },
     setNewDate(date: Date){
-      this.dateFromCalendar = date.valueOf() / 1000;
-      this.setupDate();
+      this.currentDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(),
+                                  this.currentDate.getHours(), this.currentDate.getMinutes());
     },
-    checkDay(date: number): boolean {
-      if(new Date(date * 1000).getDate() !== new Date(this.currentDate * 1000).getDate())
-        return true;
-      else
-        return false;
+    checkDay(): boolean {
+      if(this.$ds.date.getDate() !== this.currentDate.getDate()) { return true; }
+      else { return false; }
     },
-    setNewTime(time: string){
-      this.timeFromTimeField = time;
-      this.setupDate()
+    setNewTime(time: Date){
+      this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), this.currentDate.getDate(),
+                                  time.getHours(), time.getMinutes());
     },
-    setupDate(){
-      if((this.timeFromTimeField.length === 5 || this.timeFromTimeField.length === 4) && this.timeFromTimeField[2] === ":"){
-        let inputArray: string[] = this.timeFromTimeField.split(":");
-        let hours: number = +(inputArray[0]);
-        let minutes: number = +(inputArray[1]);
-        if(hours < 24 && hours >= 0 && minutes < 60 && minutes >= 0){
-          this.currentDate = this.dateFromCalendar + (hours * 60 * 60) + (minutes * 60);
-        }
-      }
-    }
   }
 });
 

@@ -5,7 +5,7 @@
       :labelName="$t.date"
       iconType="event"
       :showArrows="true"
-      :initInputText="currentDate.toLocaleString($ts.currentLocale, { month: '2-digit', year: 'numeric', day: 'numeric' })"
+      :initInputText="$ds.getDateString(currentDate.valueOf())"
       @inputChanged="onFieldInput"
       @focus="calendarVisible = true"
       @blur="inputBluredHandler"
@@ -14,7 +14,7 @@
       @decreaseMouseDown="mouseDown(-1)"
       @increaseMouseDown="mouseDown(1)"
       :showAutocomplete="false"
-    ></InputField>
+      :key="inputFieldKey"></InputField>
     <div class="paper calendar" v-show="calendarVisible" @mousedown="calendarClickedHandler">
       <div class="month">
         <i class="icon" @click="changeMonth(-1)">chevron_left</i>
@@ -22,7 +22,9 @@
         <i class="icon" @click="changeMonth(1)">chevron_right</i>
       </div>
       <ul class="weekdays">
-        <li v-for="dayName in weekDayNames" :key="dayName">{{ dayName }}</li>
+        <li v-for="dayName in weekDayNames" :key="dayName">
+          {{ dayName }}
+        </li>
       </ul>
       <ul class="calendardays">
         <li
@@ -33,8 +35,7 @@
             'valid-day',
             day.getTime() == currentDate.getTime() ? 'selected' : '',
           ]"
-          @mousedown.stop="dayClick(day)"
-        >
+          @mousedown.stop="dayClick(day)">
           {{ day.getDate() }}
         </li>
       </ul>
@@ -43,7 +44,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from "vue";
+import { defineComponent } from "vue";
 import InputField from "./InputField.vue";
 
 export default defineComponent({
@@ -51,6 +52,7 @@ export default defineComponent({
   components: {
     InputField,
   },
+  emits: ["dateChanged"],
   data() {
     return {
       daysToDisplay: [] as Date[],
@@ -62,11 +64,8 @@ export default defineComponent({
       calendarClicked: false,
       timeout: 0,
       interval: 0,
+      inputFieldKey: 0
     };
-  },
-  created() {
-    let now = new Date();
-    this.currentDate = new Date(2020, 9, 19);
   },
   watch: {
     currentDate: function (date: Date) {
@@ -74,14 +73,14 @@ export default defineComponent({
       this.weekDayNames = [];
       this.currentMonthToDisplay = `${date.toLocaleString(this.$ts.currentLocale, { month: "long" })} ${date.getFullYear()}`;
       this.currentMonth = date.getMonth();
-      let day = new Date(date.getFullYear(), date.getMonth(), 1);
-      let first = day.getDate() - (day.getDay() == 0 ? 7 : day.getDay());
+      let day = new Date(date.getFullYear(), date.getMonth(), 1,
+                         this.currentDate.getHours(), this.currentDate.getMinutes(), this.currentDate.getSeconds(), this.currentDate.getMilliseconds());
+      let first = day.getDate() - (day.getDay() === 0 ? 7 : day.getDay());
       day = new Date(day.setDate(first));
       for (let i = 0; i < 42; i++) {
         this.daysToDisplay.push(day);
         day = new Date(day.setDate(day.getDate() + 1));
-        if((i == 35 || i == 28) && day.getMonth() != this.currentMonth)
-        {
+        if((i === 35 || i === 28) && day.getMonth() !== this.currentMonth) {
           this.daysToDisplay.pop();
           break;
         }
@@ -90,6 +89,9 @@ export default defineComponent({
         }
       }
     },
+  },
+  created() {
+    this.currentDate = this.$ds.date;
   },
   methods: {
     changeMonth(change: number) {
@@ -115,27 +117,17 @@ export default defineComponent({
       if (this.calendarClicked) {
         (<HTMLElement>event.target).focus();
         this.calendarClicked = false;
-      } else {
+      }
+      else {
         this.calendarVisible = false;
+        this.inputFieldKey++;
       }
     },
     onFieldInput(value: string) {
-      let arr = value.split(".");
-      if (arr.length === 3 && arr[2].length === 4 && arr[1].length == 2) {
-        let numberArr = arr.map((s) => +s);
-        numberArr[1]--;
-        if (
-          numberArr[0] > 0 &&
-          numberArr[1] >= 0 &&
-          numberArr[1] < 12 &&
-          !isNaN(new Date(numberArr[2], numberArr[1], 0).getTime()) &&
-          numberArr[0] <= new Date(numberArr[2], numberArr[1] + 1, 0).getDate()
-        ) {
-          let date = new Date(numberArr[2], numberArr[1], numberArr[0]);
-          if (!isNaN(date.getTime())) {
-            this.currentDate = date;
-          }
-        }
+      let d = this.$ds.parseDate(value);
+      if(d.valueOf()) {
+        this.currentDate = d;
+        this.$emit('dateChanged', this.currentDate);
       }
     },
     dayClick(day : Date) {
@@ -143,7 +135,7 @@ export default defineComponent({
       this.calendarVisible = false;
     },
     mouseDown(value: number){
-      this.timeout = setTimeout(() => this.interval = setInterval(() => this.changeDay(value), 100) ,1000)
+      this.timeout = setTimeout(() => this.interval = setInterval(() => this.changeDay(value), 100), 1000)
     },
     stopInterval(value: number){
       clearInterval(this.interval);

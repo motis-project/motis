@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import StationGuess from "./StationGuess";
 import TransportTrip from "./TransportTrip";
 
@@ -9,7 +10,7 @@ export default interface Event {
     schedule_time: number,
     track: string,
     schedule_track: string,
-    valid: Boolean,
+    valid: boolean,
     reason: string
   }
 }

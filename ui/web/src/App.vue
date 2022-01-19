@@ -8,8 +8,7 @@ import DesktopMain from './views/DesktopMain.vue';
 
 export default defineComponent({
   name: 'App',
-  components:
-  {
+  components: {
     DesktopMain
   }
 });
@@ -30,4 +29,5 @@ export default defineComponent({
   @import "../style/spinner.css";
   @import "../style/app.css";
   @import "../style/transport-graph.css";
+  @import "../style/gutters.css";
 </style>

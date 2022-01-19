@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import StationGuess from "./StationGuess";
 import TransportTrip from "./TransportTrip";
 

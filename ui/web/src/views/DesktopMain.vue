@@ -2,7 +2,11 @@
   <div class="app">
     <LeftMenu @searchHidden="searchFieldHidden = !searchFieldHidden"></LeftMenu>
     <div id="station-search" :class="['', searchFieldHidden ? 'overlay-hidden' : '']">
-      <InputField iconType="place" :showLabel="false" :showAutocomplete="true" @autocompleteElementClicked="goToTimetable"/>
+      <InputField
+        iconType="place"
+        :showLabel="false"
+        :showAutocomplete="true"
+        @autocompleteElementClicked="goToTimetable"></InputField>
     </div>
   </div>
 </template>
@@ -31,7 +35,8 @@ export default defineComponent({
     },
     goToTimetable(element: AddressGuess | StationGuess) {
       if (this.isStation(element)) {
-        let { pos, name, ...t } = element as { [key: string]: any };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let t = element as { [key: string]: any };
         this.$router.push({
           name: "StationTimetable",
           params: t,

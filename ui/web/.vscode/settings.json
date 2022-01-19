@@ -1,0 +1,9 @@
+{
+  "vetur.validation.template": false,
+  "vetur.validation.script": true,
+  "vetur.validation.style": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "editor.tabSize": 2
+}

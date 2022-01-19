@@ -1,21 +1,35 @@
 <template>
   <div class="option">
-    <div class="label">{{$t.maxDuration}}</div>
+    <div class="label">
+      {{ $t.maxDuration }}
+    </div>
     <div class="numeric slider control">
-      <input v-model="sliderValue" type="range" min="0" max="30" step="1" />
+      <input
+        v-model="sliderValueComputed"
+        type="range"
+        min="0"
+        max="30"
+        step="1" />
       <input v-model="sliderValueComputed" type="text" />
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent, PropType } from "vue";
 
 export default defineComponent({
-  name: "InputField",
+  name: "Slider",
+  props: {
+    initSliderValue: {
+      type: Number as PropType<number>,
+      required: true,
+    }
+  },
+  emits: ["sliderValueChanged"],
   data() {
     return {
-      sliderValue: 15,
+      sliderValue: this.initSliderValue,
     };
   },
   computed: {
@@ -25,11 +39,16 @@ export default defineComponent({
       },
       set: function(value: string) {
         let n = +value;
-        if(value != '' && !isNaN(n)) {
+        if(value !== '' && !isNaN(n)) {
           this.sliderValue = n - 1;
           this.sliderValue = n > 30 ? 30 : (n < 0 ? 0 : n);
         }
       }
+    }
+  },
+  watch: {
+    sliderValue() {
+      this.$emit("sliderValueChanged", this.sliderValue);
     }
   }
 });

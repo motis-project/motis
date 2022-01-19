@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import Range from "./SmallTypes/Range";
 
 export default interface Transport {

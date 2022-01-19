@@ -1,7 +1,9 @@
 <template>
   <div>
     <div>
-      <div v-if="showLabel" class="label">{{ labelName }}</div>
+      <div v-if="showLabel" class="label">
+        {{ labelName }}
+      </div>
       <div :class="['gb-input-group', isFocused ? 'gb-input-group-selected' : '']">
         <div class="gb-input-icon">
           <i class="icon">{{ iconType }}</i>
@@ -12,26 +14,27 @@
           @input="onInput()"
           v-model="inputValue"
           @focus="$emit('focus', $event), onInput(), isFocused = true"
-          @blur="$emit('blur', $event), showStationAddress = false, isFocused = false"
-        />
+          @blur="$emit('blur', $event), showStationAddress = false, isFocused = false" />
         <div class="gb-input-widget" v-if="showArrows">
-          <div class="day-buttons" >
+          <div class="day-buttons">
             <div @mouseup="$emit('decreaseClick')" @mousedown="$emit('decreaseMouseDown')">
-              <a class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"
-                ><i class="icon">chevron_left</i></a
-              >
+              <a
+                class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"><i class="icon">chevron_left</i></a>
             </div>
             <div @mouseup="$emit('increaseClick')" @mousedown="$emit('increaseMouseDown')">
-              <a class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"
-                ><i class="icon">chevron_right</i></a
-              >
+              <a
+                class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"><i class="icon">chevron_right</i></a>
             </div>
           </div>
         </div>
-
       </div>
     </div>
-    <StationAddressAutocomplete :input="inputValue" v-show="showStationAddress" v-if="showAutocomplete" @elementClicked="onElementClicked"> </StationAddressAutocomplete>
+    <StationAddressAutocomplete
+      :input="inputValue"
+      v-show="showStationAddress"
+      v-if="showAutocomplete"
+      @elementClicked="onElementClicked">
+    </StationAddressAutocomplete>
   </div>
 </template>
 
@@ -49,14 +52,9 @@ import StationGuess from "../models/StationGuess";
 import AddressGuess from "../models/AddressGuess";
 
 export default defineComponent({
-  components: { StationAddressAutocomplete },
   name: "InputField",
-  data() {
-    return {
-      showStationAddress: false,
-      inputValue: "",
-      isFocused: false
-    }
+  components: {
+    StationAddressAutocomplete
   },
   props: {
     labelName: String,
@@ -66,9 +64,26 @@ export default defineComponent({
     showArrows: Boolean,
     showAutocomplete: Boolean,
   },
+  emits: [
+    "inputChanged",
+    "focus",
+    "blur",
+    "decreaseClick",
+    "decreaseMouseDown",
+    "increaseClick",
+    "increaseMouseDown",
+    "autocompleteElementClicked"
+  ],
+  data() {
+    return {
+      showStationAddress: false,
+      inputValue: "",
+      isFocused: false
+    }
+  },
   watch: {
     initInputText(newValue: string) {
-        this.inputValue = newValue
+      this.inputValue = newValue
     },
     inputValue(newValue: string) {
       this.$emit('inputChanged', newValue)

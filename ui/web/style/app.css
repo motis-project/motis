@@ -65,6 +65,7 @@
 
 .sub-overlay.hidden {
   left: -590px;
+  visibility: hidden;
 }
 
 #sub-overlay-content {
@@ -1773,3 +1774,37 @@ fieldset > legend {
   margin-right: 2px;
   margin-top: -4px;
 }
+
+@media (pointer:none), (pointer:coarse), screen and (max-width: 650px){
+  .overlay-container {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 0px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: all .4s ease;
+    pointer-events: none;
+  }
+
+  .overlay {
+    z-index: 10;
+    background-color: white;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+    border-radius: 0px;
+    border-top-right-radius: 0;
+    transition: all .4s ease;
+    flex: 0 0 auto;
+    order: 1;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
+  .overlay-tabs {
+    display: none;
+  }
+}
+

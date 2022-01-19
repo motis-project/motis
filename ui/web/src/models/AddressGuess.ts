@@ -1,18 +1,17 @@
-export default interface AddressGuess {
+/* eslint-disable camelcase */
+import Position from "./SmallTypes/Position";
 
-    pos: {
-        lat: number,
-        lng: number
-    },
-    name: string,
-    type: string,
-    regions: Region[] 
+export default interface AddressGuess {
+  pos: Position,
+  name: string,
+  type: string,
+  regions: Region[]
 
 }
-export interface AddressGuessResponseContent{
-    guesses: AddressGuess[]
+export interface AddressGuessResponseContent {
+  guesses: AddressGuess[]
 }
 interface Region {
-    name: string,
-    admin_level: number
+  name: string,
+  admin_level: number
 }

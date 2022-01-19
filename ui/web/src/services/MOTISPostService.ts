@@ -1,17 +1,17 @@
 import axios from 'axios'
 import { App } from 'vue'
-import StationGuess, { StationGuessResponseContent } from '../models/StationGuess';
+import { StationGuessResponseContent } from '../models/StationGuess';
 import { AddressGuessResponseContent } from '../models/AddressGuess';
 import Trip from '../models/Trip';
 import TripResponseContent from '../models/TripResponseContent';
 import { RailVizStationResponseContent } from '../models/DepartureTimetable';
-import { stringifyQuery } from 'vue-router';
-import { TrainGuessResponseContent } from '@/models/TrainGuess'
+import { TrainGuessResponseContent } from '../models/TrainGuess'
+import ConnectionResponseContent, { ConnectionRequestContent } from "../models/ConnectionContent"
 
-
-var service: MOTISPostService = {
+/* eslint-disable camelcase*/
+const service: MOTISPostService = {
   async getStationGuessResponse(input: string, gc: number) {
-    let rq = {
+    const rq = {
       destination: {
         type: "Module",
         target: "/guesser"
@@ -25,7 +25,7 @@ var service: MOTISPostService = {
     return (await axios.post<StationGuessResponse>("https://europe.motis-project.de/", rq)).data.content;
   },
   async getAddressGuessResponse(input: string) {
-    let rq = {
+    const rq = {
       destination: {
         type: "Module",
         target: "/address"
@@ -38,7 +38,7 @@ var service: MOTISPostService = {
     return (await axios.post<AddressGuessResponse>("https://europe.motis-project.de/", rq)).data.content;
   },
   async getTripResponce(trip: Trip) {
-    let rq = {
+    const rq = {
       destination: {
         type: "Module",
         target: "/trip_to_connection"
@@ -48,17 +48,17 @@ var service: MOTISPostService = {
     };
     return (await axios.post<TripResponce>("https://europe.motis-project.de/", rq)).data.content;
   },
-  async getDeparturesResponse(station: string, by_schedule_time: Boolean, direction: string, event_count: number, time: number) {
-    let rq = {
+  async getDeparturesResponse(station: string, byScheduleTime: boolean, direction: string, eventCount: number, time: number) {
+    const rq = {
       destination: {
         type: "Module",
         target: "/railviz/get_station"
       },
       content_type: "RailVizStationRequest",
       content: {
-        by_schedule_time: by_schedule_time,
+        by_schedule_time: byScheduleTime,
         direction: direction,
-        event_count: event_count,
+        event_count: eventCount,
         station_id: station,
         time: time
       },
@@ -66,7 +66,7 @@ var service: MOTISPostService = {
   return (await axios.post<RailVizStationResponse>("https://europe.motis-project.de/", rq)).data.content;
   },
   async getTrainGuessResponse(currentTime: number, currentTrainNum: number){
-    let rq = {
+    const rq = {
         destination: {
             target: "/railviz/get_trip_guesses",
             type: "Module"
@@ -79,6 +79,21 @@ var service: MOTISPostService = {
         },
     }
     return (await axios.post<TrainGuessResponse>("https://europe.motis-project.de/", rq)).data.content;
+  },
+  async getConnectionResponse(connectionRequest: ConnectionRequestContent){
+    const rq = {
+        destination: {
+          target: "/intermodal",
+          type: "Module"
+        },
+        content_type: "IntermodalRoutingRequest",
+        content: {
+          ...connectionRequest,
+          search_type: "Accessibility",
+          search_dir: "Forward"
+        },
+    }
+    return (await axios.post<ConnectionResponse>("https://europe.motis-project.de/", rq)).data.content;
   }
 }
 
@@ -128,16 +143,26 @@ interface TrainGuessResponse {
   },
   content_type: string,
   content: TrainGuessResponseContent,
-  id: 1
+  id: number
 }
 
+interface ConnectionResponse {
+  destination: {
+    type: string,
+    target: string
+  },
+  content_type: string,
+  content: ConnectionResponseContent,
+}
+/* eslint-enable camelcase*/
 
 interface MOTISPostService {
   getStationGuessResponse(input: string, gc: number): Promise<StationGuessResponseContent>
   getAddressGuessResponse(input: string): Promise<AddressGuessResponseContent>
   getTripResponce(input: Trip) : Promise<TripResponseContent>
-  getDeparturesResponse(station: string, by_schedule_time: Boolean, direction: string, event_count: number, time: number) : Promise<RailVizStationResponseContent>
+  getDeparturesResponse(station: string, byScheduleTime: boolean, direction: string, eventCount: number, time: number) : Promise<RailVizStationResponseContent>
   getTrainGuessResponse(currentTime: number, currentTrainNum: number): Promise<TrainGuessResponseContent>
+  getConnectionResponse(connectionRequest: ConnectionRequestContent): Promise<ConnectionResponseContent>
 }
 
 
@@ -164,7 +189,7 @@ declare module '@vue/runtime-core' {
 }
 
 export default {
-  install: (app: App, options: string) => {
+  install: (app: App) : void => {
     app.config.globalProperties.$postService = service;
   }
 }

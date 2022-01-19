@@ -1,0 +1,107 @@
+.main-gutter{
+  box-sizing: border-box;
+  padding: 0em, 0.5em;
+  position: relative;
+  display: inline-block;
+  *display: inline;
+  zoom: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
+  vertical-align: top;
+  text-rendering: auto;
+}
+
+.from-gutter{
+  width:50%;
+  *width:49.969%;
+}
+
+.to-gutter{
+  width:50%;
+  *width:49.969%;
+}
+
+.calendar-gutter{
+  width: 50%;
+  *width: 49.969%;
+}
+
+.time-gutter{
+  width: 37.5%;
+}
+
+.time-options-gutter{
+  width: 12.5%;
+  height: 50px;
+  line-height: 15px;
+  margin-top: 15px;
+  padding: 0 !important;
+}
+
+.time-options-gutter label {
+  float: right;
+  font-size: 70%;
+  border-width: 0;
+  border: 2px solid #6d8dec;
+  border-radius: .35em;
+  cursor: pointer;
+  text-align: center;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  padding: 2px 0 !important;
+  height: auto !important;
+  width: 100%;
+}
+
+.time-options-gutter input {
+  display: none;
+}
+
+.time-options-gutter input:checked + label {
+  background-color: #6d8dec;
+  color: white;
+}
+
+
+/*dealing with small screen size*/
+
+
+@media screen and (max-width: 650px){
+  .main-gutter{
+    box-sizing: border-box;
+    padding: 0em, 0.5em;
+    position: absolute;
+    display: inline-block;
+    *display: inline;
+    zoom: 1;
+    letter-spacing: normal;
+    word-spacing: normal;
+    vertical-align: top;
+    text-rendering: auto;
+  }
+
+  .from-gutter{
+    width: 90vw;
+    height: 25px;
+    margin-top: -20px;
+  }
+  .to-gutter{
+    width: 90vw;
+    height: 25px;
+    margin-top: 56px;
+  }
+  .calendar-gutter{
+    width: 38vw;
+    margin-top: 136px;
+  }
+  .time-gutter{
+    width: 35vw;
+    margin-left: 39vw;
+    margin-top: 136px;
+  }
+  .time-options-gutter{
+    width: 15vw;
+    margin-left: 75vw;
+    margin-top: 148px;
+  }
+}

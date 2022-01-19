@@ -8,8 +8,7 @@
           v-for="(g, gIndex) in stationGuesses"
           :key="g.stationGuess.id"
           :title="g.stationGuess.name"
-          @mousedown="$emit('elementClicked', g.stationGuess)"
-        >
+          @mousedown="$emit('elementClicked', g.stationGuess)">
           <i class="icon">train</i>
           <span class="station"> {{ g.stationGuess.name }} </span>
         </li>
@@ -19,8 +18,7 @@
           v-for="(g, gIndex) in addressGuesses"
           :key="g.addressGuess.id"
           :title="g.addressGuess.name + ', ' + g.region.split(', ')[0]"
-          @mousedown="$emit('elementClicked', g.addressGuess)"
-        >
+          @mousedown="$emit('elementClicked', g.addressGuess)">
           <i class="icon">place</i>
           <span class="address-name">{{ g.addressGuess.name }}</span>
           <span class="address-region"> {{ g.region }}</span>
@@ -37,6 +35,10 @@ import StationGuess from "../models/StationGuess";
 
 export default defineComponent({
   name: "StationAddressAutocomplete",
+  props: {
+    input: String,
+  },
+  emits: ["elementClicked"],
   data() {
     return {
       isMouseOver: false,
@@ -45,21 +47,51 @@ export default defineComponent({
       currentFocused: 0
     };
   },
+  watch: {
+    input(newInput) {
+      this.$postService.getStationGuessResponse(newInput, 6).then(
+        (data) => {
+          this.stationGuesses = data.guesses.map<Station>((g) => {
+            return {
+              stationGuess: g,
+              isMouseOver: false,
+            };
+          });
+          this.focusElement(0);
+        }
+      );
+      this.$postService.getAddressGuessResponse(newInput).then(
+        (data) => {
+          this.addressGuesses = data.guesses.splice(0, 9).map<Address>((g) => {
+            return {
+              addressGuess: g,
+              region: this.getRegion(g),
+              isMouseOver: false,
+            };
+          });
+          this.focusElement(0);
+        }
+      );
+    },
+  },
+  created() {
+    window.addEventListener('keydown', this.keyDown);
+  },
   methods: {
     getRegion(g: AddressGuess) {
-      let r6 = g.regions.filter((r) => r.admin_level == 6);
+      let r6 = g.regions.filter((r) => r.admin_level === 6);
       let res = "";
-      if (r6.length != 0) {
+      if (r6.length !== 0) {
         res += r6[0].name;
       }
 
-      let r4 = g.regions.filter((r) => r.admin_level == 4);
-      if (r4.length != 0 && r6.length == 0) {
+      let r4 = g.regions.filter((r) => r.admin_level === 4);
+      if (r4.length !== 0 && r6.length === 0) {
         res += r4[0].name;
       }
 
-      let r2 = g.regions.filter((r) => r.admin_level == 2);
-      if (r2.length != 0) {
+      let r2 = g.regions.filter((r) => r.admin_level === 2);
+      if (r2.length !== 0) {
         if (res !== "") {
           res += ", ";
         }
@@ -72,28 +104,29 @@ export default defineComponent({
         return;
       }
       switch(e.key) {
-        case 'ArrowUp':
-          if(this.currentFocused > 0) {
-            this.focusElement(this.currentFocused - 1);
-          }
-          else {
-            this.focusElement(this.stationGuesses.length + this.addressGuesses.length - 1);
-          }
-          break;
-        case 'ArrowDown':
-          if(this.currentFocused < this.stationGuesses.length + this.addressGuesses.length - 1) {
-            this.focusElement(this.currentFocused + 1);
-          }
-          else {
-            this.focusElement(0);
-          }
-          break;
-        case 'Enter':
-          let element = this.getElement(this.currentFocused);
-          if(element) {
-            this.$emit('elementClicked', ("addressGuess" in element ? element.addressGuess : element.stationGuess));
-          }
-          break;
+      case 'ArrowUp':
+        if(this.currentFocused > 0) {
+          this.focusElement(this.currentFocused - 1);
+        }
+        else {
+          this.focusElement(this.stationGuesses.length + this.addressGuesses.length - 1);
+        }
+        break;
+      case 'ArrowDown':
+        if(this.currentFocused < this.stationGuesses.length + this.addressGuesses.length - 1) {
+          this.focusElement(this.currentFocused + 1);
+        }
+        else {
+          this.focusElement(0);
+        }
+        break;
+      case 'Enter': {
+        let element = this.getElement(this.currentFocused);
+        if(element) {
+          this.$emit('elementClicked', ("addressGuess" in element ? element.addressGuess : element.stationGuess));
+        }
+        break;
+      }
       }
     },
     focusElement(index: number) {
@@ -122,39 +155,6 @@ export default defineComponent({
         return this.stationGuesses[index];
       }
     }
-  },
-  created() {
-    window.addEventListener('keydown', this.keyDown);
-  },
-  props: {
-    input: String,
-  },
-  watch: {
-    input(newInput) {
-      this.$postService.getStationGuessResponse(newInput, 6).then(
-        (data) => {
-          this.stationGuesses = data.guesses.map<Station>((g) => {
-            return {
-              stationGuess: g,
-              isMouseOver: false,
-            };
-          });
-          this.focusElement(0);
-        }
-      );
-      this.$postService.getAddressGuessResponse(newInput).then(
-        (data) => {
-          this.addressGuesses = data.guesses.splice(0, 9).map<Address>((g) => {
-            return {
-              addressGuess: g,
-              region: this.getRegion(g),
-              isMouseOver: false,
-            };
-          });
-          this.focusElement(0);
-        }
-      );
-    },
   },
 });
 interface Address {
