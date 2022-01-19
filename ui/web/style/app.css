@@ -64,7 +64,8 @@
 }
 
 .sub-overlay.hidden {
-  left: -660px;
+  left: -590px;
+  visibility: hidden;
 }
 
 #sub-overlay-content {
@@ -1774,7 +1775,7 @@ fieldset > legend {
   margin-top: -4px;
 }
 
-@media screen and (max-width: 650px){
+@media (pointer:none), (pointer:coarse), screen and (max-width: 650px){
   .overlay-container {
     display: flex;
     align-items: flex-start;
