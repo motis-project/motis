@@ -9,7 +9,8 @@
     "motis.paxforecast.*",
     "motis.routing.*",
     "motis.guesser.*",
-    "motis.lookup.*"
+    "motis.lookup.*",
+    "motis.ribasis.*"
   ],
   "header": "// generated file - do not modify - run update-protocol to update"
 }
