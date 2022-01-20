@@ -8,12 +8,23 @@
 
 #include "motis/core/schedule/time.h"
 #include "motis/core/statistics/statistics.h"
-#include "motis/intermodal/mumo_type.h"
 #include "motis/intermodal/ppr_profiles.h"
 #include "motis/intermodal/ridesharing_edges.h"
 #include "motis/protocol/Message_generated.h"
 
 namespace motis::intermodal {
+
+enum class mumo_type : int { FOOT, BIKE, CAR, CAR_PARKING, RIDESHARING };
+
+inline int to_int(mumo_type const type) {
+  return static_cast<typename std::underlying_type<mumo_type>::type>(type);
+}
+
+inline std::string to_string(mumo_type const type) {
+  static char const* strs[] = {"foot", "bike", "car", "car_parking",
+                               "ridesharing"};
+  return strs[to_int(type)];  // NOLINT
+}
 
 struct car_parking_edge {
   int32_t parking_id_{};

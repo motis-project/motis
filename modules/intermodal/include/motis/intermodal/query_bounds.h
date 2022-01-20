@@ -10,8 +10,6 @@
 #include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/schedule.h"
 
-#include "motis/intermodal/mumo_type.h"
-
 #include "motis/ridesharing/query_response.h"
 
 #include "motis/protocol/Message_generated.h"
