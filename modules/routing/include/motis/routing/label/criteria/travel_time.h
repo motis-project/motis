@@ -55,8 +55,7 @@ struct travel_time_dominance {
   };
 
   template <typename Label>
-  static domination_info<Label> dominates(Label const& a, Label const& b,
-                                          bool) {
+  static domination_info<Label> dominates(Label const& a, Label const& b) {
     return domination_info<Label>(a, b);
   }
 };
@@ -76,12 +75,12 @@ struct travel_time_alpha_dominance {
           dist_(dist) {}
 
     inline bool greater() const {
-      auto a = 5.0f * (static_cast<double>(travel_time_a_) / travel_time_b_);
+      auto a = 5.0F * (static_cast<double>(travel_time_a_) / travel_time_b_);
       return travel_time_a_ + a * dist_ > travel_time_b_;
     }
 
     inline bool smaller() const {
-      auto a = 5.0f * (static_cast<double>(travel_time_a_) / travel_time_b_);
+      auto a = 5.0F * (static_cast<double>(travel_time_a_) / travel_time_b_);
       return travel_time_a_ + a * dist_ < travel_time_b_;
     }
 
@@ -90,8 +89,7 @@ struct travel_time_alpha_dominance {
   };
 
   template <typename Label>
-  static domination_info<Label> dominates(Label const& a, Label const& b,
-                                          bool) {
+  static domination_info<Label> dominates(Label const& a, Label const& b) {
     return domination_info<Label>(a, b);
   }
 };

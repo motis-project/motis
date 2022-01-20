@@ -39,7 +39,9 @@ struct weighted_updater {
   template <typename Label, typename LowerBounds>
   static void update(Label& l, edge_cost const& ec, LowerBounds& lb) {
     l.weighted_ += ec.time_;
-    l.weighted_ += ec.transfers_ * TRANSFER_COST;
+    if (ec.transfer_) {
+      l.weighted_ += TRANSFER_COST;
+    }
 
     auto const tt_lb = lb.travel_time_[l.get_node()];
     auto const ic_lb = lb.transfers_[l.get_node()];
@@ -64,8 +66,7 @@ struct weighted_dominance {
   };
 
   template <typename Label>
-  static domination_info<Label> dominates(Label const& a, Label const& b,
-                                          bool) {
+  static domination_info<Label> dominates(Label const& a, Label const& b) {
     return domination_info<Label>(a, b);
   }
 };

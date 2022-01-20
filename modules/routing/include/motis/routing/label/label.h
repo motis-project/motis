@@ -1,10 +1,20 @@
 #pragma once
 
 #include "motis/core/schedule/edges.h"
-
 #include "motis/routing/lower_bounds.h"
 
 namespace motis::routing {
+
+enum class create_label_result {
+  CREATED,
+  CYCLE,
+  AFTER_EXIT,
+  FILTERED,
+  NO_EDGE
+};
+
+constexpr char const* create_label_result_str[] = {
+    "CREATED", "CYCLE", "AFTER_EXIT", "FILTERED", "NO_EDGE"};
 
 template <typename... DataClass>
 struct label_data : public DataClass... {};
@@ -15,6 +25,7 @@ template <search_dir Dir, std::size_t MaxBucket,
           typename PostSearchDominance, typename Comparator>
 struct label : public Data {  // NOLINT
   enum : std::size_t { MAX_BUCKET = MaxBucket };
+  static constexpr auto dir = Dir;
 
   label() = default;  // NOLINT
 
@@ -32,43 +43,45 @@ struct label : public Data {  // NOLINT
   node const* get_node() const { return edge_->get_destination<Dir>(); }
 
   template <typename Edge, typename LowerBounds>
-  bool create_label(label& l, Edge const& e, LowerBounds& lb, bool no_cost,
-                    int additional_time_cost = 0) {
+  create_label_result create_label(label& l, Edge const& e, LowerBounds& lb,
+                                   bool no_cost, int additional_time_cost = 0) {
     if (pred_ && e.template get_destination<Dir>() == pred_->get_node()) {
-      return false;
+      return create_label_result::CYCLE;
     }
     if ((e.type() == edge::BWD_EDGE ||
          e.type() == edge::AFTER_TRAIN_BWD_EDGE) &&
         edge_->type() == edge::EXIT_EDGE) {
-      return false;
+      return create_label_result::AFTER_EXIT;
     }
+
     auto ec = e.template get_edge_cost<Dir>(now_, connection_);
     if (!ec.is_valid()) {
-      return false;
+      return create_label_result::NO_EDGE;
     }
     if (no_cost) {
       ec.time_ = 0;
     } else {
       ec.time_ += additional_time_cost;
     }
+
     l = *this;
     l.pred_ = this;
     l.edge_ = &e;
-    l.start_label_ = false;
     l.connection_ = ec.connection_;
     l.now_ += (Dir == search_dir::FWD) ? ec.time_ : -ec.time_;
 
     Updater::update(l, ec, lb);
-    return !l.is_filtered();
+    return l.is_filtered() ? create_label_result::FILTERED
+                           : create_label_result::CREATED;
   }
 
   inline bool is_filtered() { return Filter::is_filtered(*this); }
 
-  bool dominates(label const& o, bool terminal = false) const {
+  bool dominates(label const& o) const {
     if (incomparable(o)) {
       return false;
     }
-    return Dominance::dominates(false, *this, o, terminal);
+    return Dominance::dominates(false, *this, o);
   }
 
   bool incomparable(label const& o) const {
@@ -81,7 +94,7 @@ struct label : public Data {  // NOLINT
   time current_end() const { return Dir == search_dir::FWD ? now_ : start_; }
 
   bool dominates_post_search(label const& o) const {
-    return PostSearchDominance::dominates(false, *this, o, true);
+    return PostSearchDominance::dominates(false, *this, o);
   }
 
   bool operator<(label const& o) const {
@@ -94,17 +107,11 @@ struct label : public Data {  // NOLINT
 
   std::size_t get_bucket() const { return GetBucket()(this); }
 
-  search_dir direction() const { return Dir; }
-
   label* pred_;
   edge const* edge_;
   light_connection const* connection_;
   time start_, now_;
-  uint16_t regional_price_ = 0;
-  uint16_t other_price_ = 0;
-  uint16_t total_price_ = 0;
   bool dominated_;
-  bool start_label_;
 };
 
 }  // namespace motis::routing

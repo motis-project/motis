@@ -27,7 +27,9 @@ struct transfers_initializer {
 struct transfers_updater {
   template <typename Label, typename LowerBounds>
   static void update(Label& l, edge_cost const& ec, LowerBounds& lb) {
-    l.transfers_ += ec.transfers_;
+    if (ec.transfer_) {
+      ++l.transfers_;
+    }
 
     auto const lb_val = lb.transfers_[l.get_node()];
     if (lb.transfers_.is_reachable(lb_val)) {
@@ -50,8 +52,7 @@ struct transfers_dominance {
   };
 
   template <typename Label>
-  static domination_info<Label> dominates(Label const& a, Label const& b,
-                                          bool) {
+  static domination_info<Label> dominates(Label const& a, Label const& b) {
     return domination_info<Label>(a, b);
   }
 };
