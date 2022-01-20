@@ -38,23 +38,16 @@ ridesharing::ridesharing() : module("Ridesharing Options", "ridesharing") {
 ridesharing::~ridesharing() = default;
 
 void ridesharing::init(motis::module::registry& reg) {
-  reg.subscribe("/osrm/initialized", std::bind(&ridesharing::init_module, this,
-                                               std::placeholders::_1));
-  reg.register_op("/ridesharing/edges",
-                  std::bind(&ridesharing::edges, this, std::placeholders::_1));
-  reg.register_op("/ridesharing/create",
-                  std::bind(&ridesharing::create, this, std::placeholders::_1));
-  reg.register_op("/ridesharing/remove",
-                  std::bind(&ridesharing::remove, this, std::placeholders::_1));
-  reg.register_op("/ridesharing/book",
-                  std::bind(&ridesharing::book, this, std::placeholders::_1));
-  reg.register_op("/ridesharing/unbook",
-                  std::bind(&ridesharing::unbook, this, std::placeholders::_1));
-  reg.register_op(
-      "/ridesharing/timeout",
-      std::bind(&ridesharing::time_out, this, std::placeholders::_1));
-  reg.register_op("/ridesharing/stats", std::bind(&ridesharing::statistics,
-                                                  this, std::placeholders::_1));
+  reg.subscribe("/osrm/initialized", [&](auto&& m) { return init_module(m); });
+  reg.register_op("/ridesharing/edges", [&](auto&& m) { return edges(m); });
+  reg.register_op("/ridesharing/create", [&](auto&& m) { return create(m); });
+  reg.register_op("/ridesharing/remove", [&](auto&& m) { return remove(m); });
+  reg.register_op("/ridesharing/book", [&](auto&& m) { return book(m); });
+  reg.register_op("/ridesharing/unbook", [&](auto&& m) { return unbook(m); });
+  reg.register_op("/ridesharing/timeout",
+                  [&](auto&& m) { return time_out(m); });
+  reg.register_op("/ridesharing/stats",
+                  [&](auto&& m) { return statistics(m); });
 }
 
 msg_ptr ridesharing::init_module(msg_ptr const&) {

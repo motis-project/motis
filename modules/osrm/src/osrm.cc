@@ -134,11 +134,9 @@ void osrm::init(motis::module::registry& reg) {
 }
 
 void osrm::init_async() {
-  LOG(info) << "init async" << datasets_[0];
   std::mutex mutex;
   motis_parallel_for(
       datasets_, ([&mutex, this](std::string const& dataset) {
-        LOG(logging::info) << dataset;
         fs::path path(dataset);
         auto directory = path.parent_path();
         if (!is_directory(directory)) {
