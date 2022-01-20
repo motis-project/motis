@@ -1,10 +1,9 @@
 #pragma once
 
-#include "motis/module/module.h"
-
-#include "motis/intermodal/ppr_profiles.h"
-
 #include <string>
+
+#include "motis/module/module.h"
+#include "motis/intermodal/ppr_profiles.h"
 
 namespace motis::intermodal {
 
