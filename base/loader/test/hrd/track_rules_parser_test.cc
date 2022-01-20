@@ -87,26 +87,4 @@ TEST(loader_hrd_track_rules, parse_track_rules_2) {
   }
 }
 
-TEST(loader_hrd_track_rules, parse_track_rules_line_too_short) {
-  for (auto const& c : {hrd_5_00_8, hrd_5_20_26}) {
-    bool catched = false;
-    loaded_file f = {c.files(BITFIELDS), "000001 EF"};
-    auto track_file_content =
-        "8509404 30467 85____ 3             000000\n"
-        "8509404 30467 85____ 5             00000";
-    loaded_file track_rules_file = {c.files(TRACKS), track_file_content};
-
-    try {
-      flatbuffers64::FlatBufferBuilder b;
-      auto bitfields = parse_bitfields(f, c);
-      auto track_rules = parse_track_rules(track_rules_file, b, c);
-    } catch (parser_error const& e) {
-      ASSERT_TRUE(e.line_number_ == 2);
-      ASSERT_STREQ(c.files(TRACKS), e.filename_);
-      catched = true;
-    }
-    ASSERT_TRUE(catched);
-  }
-}
-
 }  // namespace motis::loader::hrd
