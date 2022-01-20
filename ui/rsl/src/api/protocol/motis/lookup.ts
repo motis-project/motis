@@ -8,6 +8,7 @@ import {
   Interval,
   EventType,
 } from "../motis";
+import { RiBasisFahrt } from "./ribasis";
 
 // lookup/LookupGeoStationIdRequest.fbs
 export interface LookupGeoStationIdRequest {
@@ -66,6 +67,23 @@ export interface LookupMetaStationResponse {
 // lookup/LookupMetaStationResponse.fbs
 export interface LookupBatchMetaStationResponse {
   responses: LookupMetaStationResponse[];
+}
+
+// lookup/LookupRiBasisRequest.fbs
+export interface LookupRiBasisRequest {
+  trip_id: TripId;
+  schedule: number;
+}
+
+// lookup/LookupRiBasisResponse.fbs
+export interface RiBasisTrip {
+  trip_id: TripId;
+  fahrt: RiBasisFahrt;
+}
+
+// lookup/LookupRiBasisResponse.fbs
+export interface LookupRiBasisResponse {
+  trips: RiBasisTrip[];
 }
 
 // lookup/LookupScheduleInfoResponse.fbs

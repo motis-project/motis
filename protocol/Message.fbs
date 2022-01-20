@@ -21,6 +21,8 @@ include "lookup/LookupIdTrainRequest.fbs";
 include "lookup/LookupIdTrainResponse.fbs";
 include "lookup/LookupMetaStationRequest.fbs";
 include "lookup/LookupMetaStationResponse.fbs";
+include "lookup/LookupRiBasisRequest.fbs";
+include "lookup/LookupRiBasisResponse.fbs";
 include "lookup/LookupScheduleInfoResponse.fbs";
 include "lookup/LookupStationEventsRequest.fbs";
 include "lookup/LookupStationEventsResponse.fbs";
@@ -289,22 +291,24 @@ union MsgContent {
   motis.ris.RISApplyRequest                                               = 124,
   motis.ris.RISSystemTimeChanged                                          = 125,
   motis.rt.RtGraphUpdated                                                 = 126,
-  motis.parking.ParkingPprRequest                                         = 127,
-  motis.parking.ParkingPprResponse                                        = 128,
-  motis.ridesharing.RidesharingRequest                                    = 129,
-  motis.ridesharing.RidesharingCreate                                     = 130,
-  motis.ridesharing.RidesharingResponse                                   = 131,
-  motis.ridesharing.RidesharingRemove                                     = 132,
-  motis.ridesharing.RidesharingStatistics                                 = 133,
-  motis.ridesharing.RidesharingBook                                       = 134,
-  motis.ridesharing.RidesharingUnbook                                     = 135,
-  motis.ridesharing.RidesharingLiftResponse                               = 136,
-  motis.ridesharing.RidesharingGetLiftsRequest                            = 137,
-  motis.ridesharing.RidesharingGetLiftsResponse                           = 138,
-  motis.osrm.OSRMManyToManyRequest                                        = 139,
-  motis.osrm.OSRMManyToManyResponse                                       = 140,
-  motis.osrm.OSRMRouteRequest                                             = 141,
-  motis.osrm.OSRMRouteResponse                                            = 142
+  motis.lookup.LookupRiBasisRequest                                       = 127,
+  motis.lookup.LookupRiBasisResponse                                      = 128,
+  motis.parking.ParkingPprRequest                                         = 129,
+  motis.parking.ParkingPprResponse                                        = 130,
+  motis.ridesharing.RidesharingRequest                                    = 131,
+  motis.ridesharing.RidesharingCreate                                     = 132,
+  motis.ridesharing.RidesharingResponse                                   = 133,
+  motis.ridesharing.RidesharingRemove                                     = 134,
+  motis.ridesharing.RidesharingStatistics                                 = 135,
+  motis.ridesharing.RidesharingBook                                       = 136,
+  motis.ridesharing.RidesharingUnbook                                     = 137,
+  motis.ridesharing.RidesharingLiftResponse                               = 138,
+  motis.ridesharing.RidesharingGetLiftsRequest                            = 139,
+  motis.ridesharing.RidesharingGetLiftsResponse                           = 140,
+  motis.osrm.OSRMManyToManyRequest                                        = 141,
+  motis.osrm.OSRMManyToManyResponse                                       = 142,
+  motis.osrm.OSRMRouteRequest                                             = 143,
+  motis.osrm.OSRMRouteResponse                                            = 144
 }
 
 // Destination Examples:
