@@ -38,5 +38,5 @@ export interface Address {
 
 export interface Region {
     name: string,
-    adminLevel: number
+    admin_level: number
 }
