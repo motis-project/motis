@@ -307,8 +307,9 @@ void make_dests(IntermodalRoutingRequest const* req, latlng const& pos,
 
 void remove_intersection(std::vector<mumo_edge>& starts,
                          std::vector<mumo_edge>& destinations,
-                         latlng const& query_start,
-                         latlng const& query_destination, SearchDir const dir) {
+                         geo::latlng const& query_start,
+                         geo::latlng const& query_destination,
+                         SearchDir const dir) {
   if (starts.empty() || destinations.empty()) {
     return;
   }
