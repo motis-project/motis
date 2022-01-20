@@ -27,7 +27,9 @@ struct transfers_initializer {
 struct transfers_updater {
   template <typename Label, typename LowerBounds>
   static void update(Label& l, edge_cost const& ec, LowerBounds& lb) {
-    l.transfers_ += ec.transfers_;
+    if (ec.transfer_) {
+      ++l.transfers_;
+    }
 
     auto const lb_val = lb.transfers_[l.get_node()];
     if (lb.transfers_.is_reachable(lb_val)) {

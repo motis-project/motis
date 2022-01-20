@@ -39,7 +39,7 @@ struct weighted_updater {
   template <typename Label, typename LowerBounds>
   static void update(Label& l, edge_cost const& ec, LowerBounds& lb) {
     l.weighted_ += ec.time_;
-    l.weighted_ += ec.transfers_ * TRANSFER_COST;
+    l.weighted_ += (ec.transfer_ ? 1 : 0) * TRANSFER_COST;
 
     auto const tt_lb = lb.travel_time_[l.get_node()];
     auto const ic_lb = lb.transfers_[l.get_node()];
