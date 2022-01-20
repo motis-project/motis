@@ -2,7 +2,6 @@
 #include <array>
 #include <string>
 
-#include "motis/core/common/logging.h"
 #include "motis/parking/parkings.h"
 
 #include "utl/parser/cstr.h"
