@@ -39,12 +39,18 @@ using namespace motis::module;
 using namespace motis::routing;
 using namespace motis::intermodal;
 using motis::logging::info;
-using motis::test::schedule::simple_realtime::dataset_opt;
+using motis::test::schedule::simple_realtime::dataset_opt_two_weeks;
 
 namespace motis::ridesharing {
 
-struct rs_crud_itest : public rs_super_itest {
-  rs_crud_itest() : rs_super_itest(12) {}
+struct rs_crud_itest : public motis_instance_test {
+  rs_crud_itest()
+      : motis::test::motis_instance_test(
+            dataset_opt_two_weeks, {"lookup", "ridesharing"},
+            {"--ridesharing.database_path=:memory:",
+             "--ridesharing.use_parking=false"}) {
+    initialize_mocked(*instance_, 12);
+  }
 
   msg_ptr ridesharing_remove(int driver, int time_lift_start) {
     message_creator mc;

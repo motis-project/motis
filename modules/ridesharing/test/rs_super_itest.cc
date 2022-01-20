@@ -81,7 +81,7 @@ void initialize_mocked(bootstrap::motis_instance& instance,
     auto const many = utl::to_vec(*req->many(), [](auto const& loc) {
       return geo::latlng{loc->lat(), loc->lng()};
     });
-    auto const costs = utl::to_vec(many, [&one](auto const& loc) {
+    auto const costs = utl::to_vec(many, [&](auto const& loc) {
       return test_routing_cost(base_cost, one, loc);
     });
     mc.create_and_finish(
@@ -127,17 +127,8 @@ void initialize_mocked(bootstrap::motis_instance& instance,
   });
 }
 
-rs_super_itest::rs_super_itest()
-    : motis::test::motis_instance_test(dataset_opt_two_weeks,
-                                       {"lookup", "ridesharing"},
-                                       {"--ridesharing.database_path=:memory:",
-                                        "--ridesharing.use_parking=false"}) {
-  initialize_mocked(*instance_, 10000);
-}
-
-msg_ptr rs_super_itest::ridesharing_create(int driver, int64_t time_lift_start,
-                                           geo::latlng const& start,
-                                           geo::latlng const& dest) {
+msg_ptr ridesharing_create(int driver, int64_t time_lift_start,
+                           geo::latlng const& start, geo::latlng const& dest) {
   message_creator mc;
   Position s{start.lat_, start.lng_};
   Position d{dest.lat_, dest.lng_};
@@ -148,8 +139,8 @@ msg_ptr rs_super_itest::ridesharing_create(int driver, int64_t time_lift_start,
   return make_msg(mc);
 }
 
-msg_ptr rs_super_itest::ridesharing_create(int driver, int64_t time_lift_start,
-                                           double destination_lng) {
+msg_ptr ridesharing_create(int driver, int64_t time_lift_start,
+                           double destination_lng) {
   message_creator mc;
   Position start{50.8, 6.0};
   Position destination{50.8, destination_lng};
@@ -161,7 +152,7 @@ msg_ptr rs_super_itest::ridesharing_create(int driver, int64_t time_lift_start,
   return make_msg(mc);
 }
 
-msg_ptr rs_super_itest::ridesharing_edges(double const lat) {
+msg_ptr ridesharing_edges(double const lat) {
   message_creator mc;
   Position start{lat, 6.2};
   Position destination{lat, 7.2};
@@ -175,8 +166,8 @@ msg_ptr rs_super_itest::ridesharing_edges(double const lat) {
   return make_msg(mc);
 }
 
-msg_ptr rs_super_itest::ridesharing_edges(int64_t t, geo::latlng const& s,
-                                          geo::latlng const& d) {
+msg_ptr ridesharing_edges(int64_t t, geo::latlng const& s,
+                          geo::latlng const& d) {
   message_creator mc;
   Position start{s.lat_, s.lng_};
   Position destination{d.lat_, d.lng_};
@@ -190,8 +181,11 @@ msg_ptr rs_super_itest::ridesharing_edges(int64_t t, geo::latlng const& s,
   return make_msg(mc);
 }
 
-msg_ptr rs_super_itest::ridesharing_book(int driver, int time_lift_start,
-                                         int passenger) {
+motis::module::msg_ptr ridesharing_stats() {
+  return motis::module::make_no_msg("/ridesharing/stats");
+}
+
+msg_ptr ridesharing_book(int driver, int time_lift_start, int passenger) {
   message_creator mc;
   Position pick_up{49, 9.0};
   Position drop_off{49, 11.0};
@@ -204,10 +198,9 @@ msg_ptr rs_super_itest::ridesharing_book(int driver, int time_lift_start,
   return make_msg(mc);
 }
 
-msg_ptr rs_super_itest::ridesharing_book(int driver, int time_lift_start,
-                                         int passenger, geo::latlng const& piu,
-                                         geo::latlng const& dro,
-                                         uint16_t from_leg, uint16_t to_leg) {
+msg_ptr ridesharing_book(int driver, int time_lift_start, int passenger,
+                         geo::latlng const& piu, geo::latlng const& dro,
+                         uint16_t from_leg, uint16_t to_leg) {
   message_creator mc;
   Position pick_up{piu.lat_, piu.lng_};
   Position drop_off{dro.lat_, dro.lng_};
@@ -221,7 +214,7 @@ msg_ptr rs_super_itest::ridesharing_book(int driver, int time_lift_start,
   return make_msg(mc);
 }
 
-msg_ptr rs_super_itest::ridesharing_get_lifts(int id) {
+msg_ptr ridesharing_get_lifts(int id) {
   message_creator mc;
   mc.create_and_finish(MsgContent_RidesharingGetLiftsRequest,
                        CreateRidesharingGetLiftsRequest(mc, id).Union(),

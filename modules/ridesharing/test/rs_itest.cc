@@ -1,3 +1,7 @@
+#include "./rs_super_itest.h"
+
+#include <string>
+
 #include "boost/geometry.hpp"
 
 #include "motis/core/common/logging.h"
@@ -8,9 +12,6 @@
 #include "motis/test/motis_instance_test.h"
 #include "motis/test/schedule/simple_realtime.h"
 
-#include <string>
-
-#include "./rs_super_itest.h"
 #include "flatbuffers/flatbuffers.h"
 #include "flatbuffers/idl.h"
 #include "geo/constants.h"
@@ -27,12 +28,18 @@ using namespace motis::module;
 using namespace motis::routing;
 using namespace motis::intermodal;
 using motis::logging::info;
-using motis::test::schedule::simple_realtime::dataset_opt;
+using motis::test::schedule::simple_realtime::dataset_opt_two_weeks;
 
 namespace motis::ridesharing {
 
-struct rs_itest : public rs_super_itest {
-  rs_itest() : rs_super_itest(10000) {}
+struct rs_itest : public motis_instance_test {
+  rs_itest()
+      : motis::test::motis_instance_test(
+            dataset_opt_two_weeks, {"lookup", "ridesharing"},
+            {"--ridesharing.database_path=:memory:",
+             "--ridesharing.use_parking=false"}) {
+    initialize_mocked(*instance_, 10000);
+  }
 };
 
 TEST_F(rs_itest, edges_book) {

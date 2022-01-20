@@ -28,11 +28,20 @@ using namespace motis::module;
 using namespace motis::routing;
 using namespace motis::ppr;
 using namespace motis::intermodal;
+using motis::test::schedule::simple_realtime::dataset_opt_two_weeks;
 
 namespace motis::ridesharing {
 
-struct rs_parking_itest : public rs_super_itest {
-  rs_parking_itest() : rs_super_itest() {}
+struct rs_parking_itest : public motis_instance_test {
+  rs_parking_itest()
+      : motis::test::motis_instance_test(
+            dataset_opt_two_weeks, {"lookup", "ridesharing", "parking"},
+            {"--ridesharing.database_path=:memory:",
+             "--ridesharing.use_parking=true",
+             "--parking.parking=modules/parking/test_resources/"
+             "parking_ridesharing.txt"}) {
+    initialize_mocked(*instance_, 100000);
+  }
 };
 
 TEST_F(rs_parking_itest, edges_multiple_lift) {
