@@ -222,6 +222,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
   auto const dir = req->search_dir();
   auto routing_response = motis_content(RoutingResponse, response_msg);
   auto journeys = message_to_journeys(routing_response);
+
   message_creator mc;
   for (auto& journey : journeys) {
     auto& stops = journey.stops_;
@@ -244,7 +245,6 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
     std::vector<parking_patch> patches;
 
     for (auto& t : journey.transports_) {
-
       if (!t.is_walk_ || t.mumo_id_ < 0) {
         continue;
       }
@@ -275,6 +275,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
         }
       }
     }
+
     if (!patches.empty()) {
       apply_parking_patches(journey, patches);
     }
@@ -470,10 +471,9 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
     return empty_response(stats, sched);
   }
 
+  //  remove_intersection(deps, arrs, start.pos_, dest.pos_, req->search_dir());
   std::vector<mumo_edge const*> edge_mapping;
   auto edges = write_edges(mc, deps, arrs, rs_edges, edge_mapping);
-
-  // remove_intersection(deps, arrs, start.pos_, dest.pos_, req->search_dir());
 
   auto const router = ((req->search_type() == SearchType_Default ||
                         req->search_type() == SearchType_Accessibility) &&

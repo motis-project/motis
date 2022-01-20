@@ -292,9 +292,12 @@ void add_direct_connections(std::vector<journey>& journeys,
                             IntermodalRoutingRequest const* req) {
   auto const fwd = req->search_dir() == SearchDir_Forward;
   for (auto const& d : direct) {
-    if (d.dep_time_ + d.duration_ * 60 < q_start.time_) {
-      continue;
-    }
+    auto const dep_time =
+        fwd ? q_start.time_
+            : static_cast<unixtime>(q_start.time_ - d.duration_ * 60);
+    auto const arr_time =
+        fwd ? static_cast<unixtime>(q_start.time_ + d.duration_ * 60)
+            : q_start.time_;
 
     auto& j = journeys.emplace_back();
     auto& start = j.stops_.emplace_back();
@@ -303,32 +306,25 @@ void add_direct_connections(std::vector<journey>& journeys,
     start.lat_ = q_start.pos_.lat_;
     start.lng_ = q_start.pos_.lng_;
     start.departure_.valid_ = true;
+    start.departure_.timestamp_ = dep_time;
+    start.departure_.schedule_timestamp_ = dep_time;
     auto& dest = j.stops_.emplace_back();
     dest.name_ = STATION_END;
     dest.eva_no_ = STATION_END;
     dest.lat_ = q_dest.pos_.lat_;
     dest.lng_ = q_dest.pos_.lng_;
     dest.arrival_.valid_ = true;
+    dest.arrival_.timestamp_ = arr_time;
+    dest.arrival_.schedule_timestamp_ = arr_time;
     auto& transport = j.transports_.emplace_back();
     transport.from_ = 0;
     transport.to_ = 1;
+    transport.is_walk_ = true;
     transport.duration_ = d.duration_;
     transport.mumo_accessibility_ = d.accessibility_;
     transport.mumo_type_ = to_string(d.type_);
     transport.is_walk_ = true;
-    if (d.type_ != mumo_type::RIDESHARING) {
-      auto const dep_time =
-          fwd ? q_start.time_
-              : static_cast<std::time_t>(q_start.time_ - d.duration_ * 60);
-      auto const arr_time =
-          fwd ? static_cast<std::time_t>(q_start.time_ + d.duration_ * 60)
-              : q_start.time_;
-      j.stops_.front().departure_.timestamp_ =
-          dep_time;  // reference start invalid by now
-      j.stops_.front().departure_.schedule_timestamp_ = dep_time;
-      dest.arrival_.timestamp_ = arr_time;
-      dest.arrival_.schedule_timestamp_ = arr_time;
-    } else {
+    if (d.type_ == mumo_type::RIDESHARING) {
       auto const dep_time = d.dep_time_;
       auto const arr_time = dep_time + d.duration_ * 60;
       j.stops_.front().departure_.timestamp_ = q_start.time_;
@@ -342,6 +338,18 @@ void add_direct_connections(std::vector<journey>& journeys,
       transport.to_leg_ = rs_data.to_leg_;
       transport.from_loc_ = {rs_data.from_loc_.lat_, rs_data.from_loc_.lng_};
       transport.to_loc_ = {rs_data.to_loc_.lat_, rs_data.to_loc_.lng_};
+    } else {
+      auto const dep_time =
+          fwd ? q_start.time_
+              : static_cast<std::time_t>(q_start.time_ - d.duration_ * 60);
+      auto const arr_time =
+          fwd ? static_cast<std::time_t>(q_start.time_ + d.duration_ * 60)
+              : q_start.time_;
+      j.stops_.front().departure_.timestamp_ =
+          dep_time;  // reference start invalid by now
+      j.stops_.front().departure_.schedule_timestamp_ = dep_time;
+      dest.arrival_.timestamp_ = arr_time;
+      dest.arrival_.schedule_timestamp_ = arr_time;
     }
     j.price_ = j.transports_[0].mumo_price_;
   }

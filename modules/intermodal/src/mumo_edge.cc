@@ -2,16 +2,15 @@
 
 #include <algorithm>
 
-#include "motis/core/common/constants.h"
+#include "utl/erase_if.h"
 
+#include "motis/core/common/constants.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/message.h"
 
 #include "motis/intermodal/direct_connections.h"
 #include "motis/intermodal/error.h"
 #include "motis/intermodal/ridesharing_edges.h"
-
-#include "utl/erase_if.h"
 
 using namespace geo;
 using namespace flatbuffers;
