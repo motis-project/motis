@@ -29,13 +29,12 @@ struct pareto_dijkstra {
   };
 
   pareto_dijkstra(
-      int node_count, unsigned int station_node_count,
-      boost::container::vector<bool> const& is_goal,
+      schedule const& sched, boost::container::vector<bool> const& is_goal,
       mcd::hash_map<node const*, std::vector<edge>> additional_edges,
       LowerBounds& lower_bounds, mem_manager& label_store)
       : is_goal_(is_goal),
-        station_node_count_(station_node_count),
-        node_labels_(*label_store.get_node_labels<Label>(node_count)),
+        station_node_count_(sched.station_nodes_.size()),
+        node_labels_(*label_store.get_node_labels<Label>(sched.next_node_id_)),
         additional_edges_(std::move(additional_edges)),
         lower_bounds_(lower_bounds),
         label_store_(label_store),
@@ -120,7 +119,6 @@ struct pareto_dijkstra {
 
   std::vector<Label*> const& get_results() { return results_; }
 
-private:
   void create_new_label(Label* l, edge const& edge) {
     Label blank{};
     bool created = l->create_label(
@@ -240,6 +238,7 @@ private:
   mem_manager& label_store_;
   statistics stats_;
   std::size_t max_labels_;
+  schedule const& sched_;
 };
 
 }  // namespace motis::routing
