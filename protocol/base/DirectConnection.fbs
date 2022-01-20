@@ -7,5 +7,3 @@ table DirectConnection {
   price:ushort;
   departure_time:long;
 }
-
-
