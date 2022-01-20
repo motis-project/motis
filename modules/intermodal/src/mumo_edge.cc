@@ -19,12 +19,11 @@ using namespace motis::lookup;
 using namespace motis::osrm;
 using namespace motis::module;
 using namespace motis::ppr;
-using namespace motis::ridesharing;
 using namespace motis::parking;
 
 namespace motis::intermodal {
 
-inline latlng to_latlng(Position const* pos) {
+inline geo::latlng to_latlng(Position const* pos) {
   return {pos->lat(), pos->lng()};
 }
 
@@ -63,21 +62,19 @@ void osrm_edges(latlng const& pos, int max_dur, int max_dist,
   auto const geo_msg = motis_call(make_geo_request(pos, max_dist))->val();
   auto const geo_resp = motis_content(LookupGeoStationResponse, geo_msg);
   auto const stations = geo_resp->stations();
-  try {
-    auto const osrm_msg =
-        motis_call(make_osrm_request(pos, stations, to_string(type), direction))
-            ->val();
-    auto const osrm_resp = motis_content(OSRMOneToManyResponse, osrm_msg);
+  auto const osrm_msg =
+      motis_call(make_osrm_request(pos, stations, to_string(type), direction))
+          ->val();
+  auto const osrm_resp = motis_content(OSRMOneToManyResponse, osrm_msg);
 
-    for (auto i = 0UL; i < stations->size(); ++i) {
-      auto const dur = osrm_resp->costs()->Get(i)->duration();
-      if (dur > max_dur || dur <= 0) {
-        continue;
-      }
-      appender(stations->Get(i)->id()->str(),
-               to_latlng(stations->Get(i)->pos()), dur / 60, 45, type, 0);
+  for (auto i = 0UL; i < stations->size(); ++i) {
+    auto const dur = osrm_resp->costs()->Get(i)->duration();
+    if (dur > max_dur || dur <= 0) {
+      continue;
     }
-  } catch (...) {
+
+    appender(stations->Get(i)->id()->str(), to_latlng(stations->Get(i)->pos()),
+             dur / 60, 0, type, 0);
   }
 }
 
@@ -176,7 +173,7 @@ void car_parking_edges(latlng const& pos, int max_car_duration,
 }
 
 void add_ridesharing_edge(std::vector<mumo_edge>& add_edges_vec,
-                          RidesharingEdge const* e) {
+                          ridesharing::RidesharingEdge const* e) {
   auto& me = add_edges_vec.emplace_back(
       e->from_station_id()->str(), e->to_station_id()->str(),
       to_latlng(e->from_pos()), to_latlng(e->to_pos()),
@@ -198,6 +195,8 @@ void make_ridesharing_request(
     ridesharing_edges& rs_edges, latlng const& start, latlng const& dest,
     bool start_is_intermodal, bool dest_is_intermodal, std::time_t t,
     std::pair<uint16_t, SearchOptions const*> mode_data) {
+  using ridesharing::RidesharingResponse;
+
   message_creator mc;
   Position fbs_start{start.lat_, start.lng_};
   Position fbs_dest{dest.lat_, dest.lng_};
