@@ -1,0 +1,176 @@
+namespace motis.ribasis;
+
+table RiBasisMeta {
+  id: string; // uuid
+  owner: string;
+  format: string;
+  version: string;
+  correlation: [string];
+  created: string; // timestamp
+  sequence: long;
+}
+
+enum RiBasisFahrtKategorie : byte { SOLL, IST, VORSCHAU }
+
+enum RiBasisFahrtTyp : byte {
+  PLANFAHRT,
+  ERSATZFAHRT,
+  ENTLASTUNGSFAHRT,
+  SONDERFAHRT
+}
+
+table RiBasisHaltestelle {
+  haltestelleid: string; // uuid
+  bezeichnung: string;
+  evanummer: string;
+  rl100: string;
+}
+
+table RiBasisBetreiber {
+  name: string;
+  code: string;
+}
+
+table RiBasisVerwaltung {
+  verwaltungid: string;
+  betreiber: RiBasisBetreiber;
+}
+
+table RiBasisGattung {
+  gattungid: string;
+  name: string;
+  code: string;
+}
+
+table RiBasisLinie {
+  linieid: string;
+  name: string;
+}
+
+table RiBasisFahrtRelation {
+  startfahrtnummer: string;
+  startzeit: string; // timestamp
+  startverwaltung: string;
+  startgattung: string;
+  startlinie: string;
+  starthaltestelle: RiBasisHaltestelle;
+  zielzeit: string; // timestamp
+  zielhaltestelle: RiBasisHaltestelle;
+}
+
+enum RiBasisZeitstatus : byte {
+  FAHRPLAN,
+  MELDUNG,
+  AUTOMAT,
+  PROGNOSE,
+  UNBEKANNT
+}
+
+enum RiBasisOrtTyp : byte { STEIG, GLEIS }
+
+table RiBasisOrt {
+  ortid: string; // uuid | empty
+  bezeichnung: string;
+  orttyp: RiBasisOrtTyp;
+}
+
+enum RiBasisHaltzuordnungstyp : byte {
+  IST_ERSATZ_FUER,
+  WIRD_ERSETZT_DURCH,
+  IST_ENTLASTUNG_FUER,
+  WIRD_ENTLASTET_DURCH,
+  GLEISAENDERUNG_VON,
+  GLEISAENDERUNG_NACH
+}
+
+table RiBasisAbfahrtZuordnung {
+  fahrtid: string; // uuid
+  abfahrtid: string; // uuid
+  typ: RiBasisHaltzuordnungstyp;
+}
+
+table RiBasisAbfahrt {
+  abfahrtid: string; // uuid
+  haltestelle: RiBasisHaltestelle;
+  fahrgastwechsel: bool;
+  planabfahrtzeit: string; // timestamp
+  abfahrtzeit: string; // timestamp
+  abfahrtzeitstatus: RiBasisZeitstatus;
+  planabfahrtort: RiBasisOrt;
+  abfahrtort: RiBasisOrt;
+  zusatzhalt: bool;
+  bedarfshalt: bool;
+  allAbfahrtzuordnung: [RiBasisAbfahrtZuordnung];
+}
+
+table RiBasisAnkunftZuordnung {
+  fahrtid: string; // uuid
+  ankunftid: string; // uuid
+  typ: RiBasisHaltzuordnungstyp;
+}
+
+table RiBasisAnkunft {
+  ankunftid: string; // uuid
+  haltestelle: RiBasisHaltestelle;
+  fahrgastwechsel: bool;
+  planankunftzeit: string; // timestamp
+  ankunftzeit: string; // timestamp
+  ankunftzeitstatus: RiBasisZeitstatus;
+  planankunftort: RiBasisOrt;
+  ankunftort: RiBasisOrt;
+  zusatzhalt: bool;
+  bedarfshalt: bool;
+  allAnkunftzuordnung: [RiBasisAnkunftZuordnung];
+}
+
+table RiBasisFormation {
+  fahrtid: string; // uuid
+  abfahrtid: string; // uuid
+  ankunftid: string; // uuid
+}
+
+table RiBasisFahrtAbschnitt {
+  fahrtnummer: string;
+  fahrtbezeichnung: string;
+  fahrtname: string;
+  verwaltungid: string;
+  gattungid: string; // uuid
+  linieid: string; // uuid
+  abfahrt: RiBasisAbfahrt;
+  ankunft: RiBasisAnkunft;
+  allVereinigtmit: [RiBasisFormation];
+}
+
+enum RiBasisFahrtZuordnungstyp : byte { DURCHBINDUNG, WENDE }
+
+table RiBasisZubringerFahrtZuordnung {
+  fahrtid: string; // uuid
+  ankunftid: string; // uuid
+  typ: RiBasisFahrtZuordnungstyp;
+}
+
+table RiBasisAbbringerFahrtZuordnung {
+  fahrtid: string; // uuid
+  abfahrtid: string; // uuid
+  typ: RiBasisFahrtZuordnungstyp;
+}
+
+table RiBasisFahrtData {
+  kategorie: RiBasisFahrtKategorie;
+  planstarttag: string; // YYYY-MM-DD
+  fahrtid: string; // uuid
+  fahrtrelation: RiBasisFahrtRelation;
+  verkehrstag: string; // YYYY-MM-DD
+  fahrttyp: RiBasisFahrtTyp;
+  allVerwaltung: [RiBasisVerwaltung];
+  allGattung: [RiBasisGattung];
+  allLinie: [RiBasisLinie];
+  allFahrtabschnitt: [RiBasisFahrtAbschnitt];
+  allZubringerfahrtzuordnung: [RiBasisZubringerFahrtZuordnung];
+  allAbbringerfahrtzuordnung: [RiBasisAbbringerFahrtZuordnung];
+}
+
+table RiBasisFahrt {
+  meta: RiBasisMeta;
+  data: RiBasisFahrtData;
+}

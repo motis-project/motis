@@ -31,6 +31,8 @@ private:
   motis::module::msg_ptr lookup_meta_stations(motis::module::msg_ptr const&);
   motis::module::msg_ptr lookup_schedule_info();
 
+  motis::module::msg_ptr lookup_ribasis(motis::module::msg_ptr const&);
+
   std::unique_ptr<geo::point_rtree> station_geo_index_;
 };
 

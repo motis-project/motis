@@ -1,0 +1,8 @@
+include "base/TripId.fbs";
+
+namespace motis.lookup;
+
+table LookupRiBasisRequest {
+  trip_id: TripId;
+  schedule: ulong; // schedule id (0 = default)
+}

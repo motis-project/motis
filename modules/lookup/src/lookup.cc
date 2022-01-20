@@ -8,6 +8,7 @@
 #include "motis/lookup/lookup_geo_station.h"
 #include "motis/lookup/lookup_id_train.h"
 #include "motis/lookup/lookup_meta_station.h"
+#include "motis/lookup/lookup_ribasis.h"
 #include "motis/lookup/lookup_station_events.h"
 
 using namespace flatbuffers;
@@ -41,6 +42,8 @@ void lookup::init(registry& r) {
                 [&](msg_ptr const& m) { return lookup_meta_station(m); });
   r.register_op("/lookup/meta_station_batch",
                 [&](msg_ptr const& m) { return lookup_meta_stations(m); });
+  r.register_op("/lookup/ribasis",
+                [&](msg_ptr const& m) { return lookup_ribasis(m); }, {});
 }
 
 msg_ptr lookup::lookup_station_id(msg_ptr const& msg) const {
@@ -147,6 +150,20 @@ msg_ptr lookup::lookup_schedule_info() {
                                        external_schedule_begin(sched),
                                        external_schedule_end(sched))
           .Union());
+  return make_msg(b);
+}
+
+msg_ptr lookup::lookup_ribasis(msg_ptr const& msg) {
+  auto req = motis_content(LookupRiBasisRequest, msg);
+  auto const schedule_res_id =
+      req->schedule() == 0U ? to_res_id(global_res_id::SCHEDULE)
+                            : static_cast<ctx::res_id_t>(req->schedule());
+  auto res_lock = lock_resources({{schedule_res_id, ctx::access_t::READ}});
+  auto const& sched = *res_lock.get<schedule_data>(schedule_res_id).schedule_;
+
+  message_creator b;
+  auto rbf = motis::lookup::lookup_ribasis(b, sched, req);
+  b.create_and_finish(MsgContent_LookupRiBasisResponse, rbf.Union());
   return make_msg(b);
 }
 
