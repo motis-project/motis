@@ -124,7 +124,7 @@ struct pretrip_gen {
         } else {
           auto new_label = mem.create<Label>();
           if (l->create_label(*new_label, *e, lbs, false,
-                               additional_time_cost) !=
+                              additional_time_cost) !=
               create_label_result::CREATED) {
             return;
           }
@@ -150,8 +150,7 @@ struct pretrip_gen {
         l = mem.create<Label>(e, nullptr, start, lbs);
       } else {
         auto new_label = mem.create<Label>();
-        if (l->create_label(*new_label, *e, lbs, false,
-                             additional_time_cost) !=
+        if (l->create_label(*new_label, *e, lbs, false, additional_time_cost) !=
             create_label_result::CREATED) {
           return;
         }

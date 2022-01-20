@@ -113,8 +113,7 @@ struct late_connections_dominance {
   };
 
   template <typename Label>
-  static domination_info<Label> dominates(Label const& a, Label const& b,
-                                          bool) {
+  static domination_info<Label> dominates(Label const& a, Label const& b) {
     return domination_info<Label>(a, b);
   }
 };
@@ -136,8 +135,7 @@ struct late_connections_post_search_dominance_base {
   };
 
   template <typename Label>
-  static domination_info<Label> dominates(Label const& a, Label const& b,
-                                          bool) {
+  static domination_info<Label> dominates(Label const& a, Label const& b) {
     return domination_info<Label>(a, b);
   }
 };

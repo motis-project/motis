@@ -53,16 +53,11 @@ struct price_updater {
 struct price_dominance {
   template <typename Label>
   struct domination_info {
-    domination_info(Label const& a, Label const& b, bool terminal) {
-      if (terminal) {
-        greater_ = a.total_price_ > b.total_price_;
-        smaller_ = a.total_price_ < b.total_price_;
-        return;
-      }
+    domination_info(Label const& a, Label const& b) {
       uint32_t const min_wage_diff = a.now_ > b.now_
                                          ? (a.now_ - b.now_) * MINUTELY_WAGE
                                          : (b.now_ - a.now_) * MINUTELY_WAGE;
-      auto const fwd = a.direction() == search_dir::FWD;
+      auto const fwd = Label::dir == search_dir::FWD;
 
       auto const regional_remaining_a =
           MAX_REGIONAL_TRAIN_TICKET_PRICE - a.regional_price_;
@@ -88,9 +83,8 @@ struct price_dominance {
   };
 
   template <typename Label>
-  static domination_info<Label> dominates(Label const& a, Label const& b,
-                                          bool terminal) {
-    auto dom_info = domination_info<Label>(a, b, terminal);
+  static domination_info<Label> dominates(Label const& a, Label const& b) {
+    auto dom_info = domination_info<Label>(a, b);
     return dom_info;
   }
 };

@@ -113,7 +113,6 @@ public:
   template <search_dir Dir = search_dir::FWD>
   edge_cost get_edge_cost(time start_time,
                           light_connection const* last_con) const {
-
     switch (m_.type_) {
       case ROUTE_EDGE: return get_route_edge_cost<Dir>(start_time);
 
@@ -126,8 +125,7 @@ public:
 
       case EXIT_EDGE:
         if (Dir == search_dir::FWD) {
-          return last_con == nullptr ? get_foot_edge_no_cost()
-                                     : get_foot_edge_cost();
+          return last_con == nullptr ? NO_EDGE : get_foot_edge_cost();
         } else {
           return get_foot_edge_no_cost();
         }
