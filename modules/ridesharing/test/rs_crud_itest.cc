@@ -1,43 +1,13 @@
-#include <chrono>
-#include <cmath>
-#include <cstdlib>
+#include "./rs_super_itest.h"
 
-#include "motis/core/common/logging.h"
+#include "gtest/gtest.h"
 
-#include "motis/module/message.h"
-#include "motis/module/module.h"
-
-#include "motis/protocol/Message_generated.h"
 #include "motis/ridesharing/routing_result.h"
 #include "motis/test/motis_instance_test.h"
 #include "motis/test/schedule/simple_realtime.h"
 
-#include <exception>
-#include <fstream>
-#include <functional>
-#include <iomanip>
-#include <iostream>
-#include <iterator>
-#include <random>
-#include <regex>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "./rs_super_itest.h"
-#include "flatbuffers/flatbuffers.h"
-#include "flatbuffers/idl.h"
-#include "geo/latlng.h"
-#include "gtest/gtest.h"
-
-using namespace geo;
-using namespace flatbuffers;
-using namespace motis::osrm;
 using namespace motis::test;
-using namespace motis::test::schedule;
 using namespace motis::module;
-using namespace motis::routing;
-using namespace motis::intermodal;
 using motis::logging::info;
 using motis::test::schedule::simple_realtime::dataset_opt_two_weeks;
 
