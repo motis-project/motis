@@ -45,7 +45,7 @@ export const Overlay: React.FC<{'translation': Translations}> = (props) => {
     const [connections, setConnections] = useState<Connection[]>([]);
 
     return(
-        <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden' }>
+        <div className={overlayHidden ? 'overlay-container hidden' : 'overlay-container' }>
             <div className='overlay'>
                 <div id='overlay-content'>
                     <Search setConnections={setConnections} translation={props.translation}/>
