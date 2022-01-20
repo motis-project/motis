@@ -24,17 +24,15 @@
 namespace motis::ridesharing {
 
 struct rs_super_itest : public motis::test::motis_instance_test {
-  double base_cost_;
-  explicit rs_super_itest(double base_cost);
-
-  void initialize_mocked();
+  explicit rs_super_itest(std::vector<std::string> const& modules,
+                          std::vector<std::string> const& options);
 
   motis::module::msg_ptr ridesharing_create(int driver, int64_t time_lift_start,
                                             geo::latlng const& start,
                                             geo::latlng const& dest);
   motis::module::msg_ptr ridesharing_create(int driver, int64_t time_lift_start,
                                             double destination_lng = 7.7);
-  motis::module::msg_ptr ridesharing_edges(double const lat = 50.8);
+  motis::module::msg_ptr ridesharing_edges(double lat = 50.8);
 
   motis::module::msg_ptr ridesharing_edges(int64_t t, geo::latlng const& s,
                                            geo::latlng const& d);
@@ -52,16 +50,6 @@ struct rs_super_itest : public motis::test::motis_instance_test {
                                           uint16_t from_leg, uint16_t to_leg);
 
   motis::module::msg_ptr ridesharing_get_lifts(int id);
-
-  motis::osrm::Cost test_routing_cost(geo::latlng const& a,
-                                      geo::latlng const& b) {
-    double delta_lng = std::abs(a.lng_ - b.lng_);
-    double delta_lat = std::abs(a.lat_ - b.lat_);
-
-    return motis::osrm::Cost{
-        base_cost_ * delta_lng + 1.5 * base_cost_ * delta_lat,
-        16 * base_cost_ * delta_lng + 24 * base_cost_ * delta_lat};
-  }
 };
 
 }  // namespace motis::ridesharing

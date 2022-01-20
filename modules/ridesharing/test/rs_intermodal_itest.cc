@@ -197,7 +197,7 @@ TEST_F(rs_intermodal_test, intermodal_ridesharing_entry) {
   ASSERT_EQ(0, t.from_leg_);
   ASSERT_EQ(0, t.to_leg_);
 
-  ASSERT_EQ(45, rj.accessibility_);
+  ASSERT_EQ(0, rj.accessibility_);
   ASSERT_EQ(1032, rj.price_);
   ASSERT_EQ(250, rj.duration_);
 

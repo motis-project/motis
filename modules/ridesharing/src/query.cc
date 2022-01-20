@@ -67,7 +67,6 @@ std::unordered_multimap<T, V> select(std::vector<T> const& v,
   return result;
 }
 
-// TODO *1.2
 ridesharing_edge query::make_direct_ridesharing_edge(std::string const& from,
                                                      std::string const& to,
                                                      lift const& li,
@@ -95,14 +94,6 @@ ridesharing_edge query::make_direct_ridesharing_edge(std::string const& from,
           0,
           0,
           lift_key{li.t_, li.driver_id_}.to_string()};
-
-  // return CreateRidesharingEdge(
-  //   mc, mc.CreateString(from), &start_,
-  //   0, &start_,
-  //   mc.CreateString(to), &target_,
-  //   price, t, ce.common_.duration_, 0,
-  //   0, mc.CreateString(lift_key{li.t_, li.driver_id_}.to_string())
-  // );
 }
 
 ridesharing_edge query::make_ridesharing_edge(
@@ -300,14 +291,14 @@ void query::setup_potential_edges(
       if (!entry.second.stations_.empty()) {
         // If a direct connection exist, there is going to be a routing bc of
         // lift_dest
-        lift_depart_.push_back(std::make_tuple(
-            li, entry.second, direct_found ? lift_waypoint_counter : -1));
+        lift_depart_.emplace_back(li, entry.second,
+                                  direct_found ? lift_waypoint_counter : -1);
       }
     }
     bool lift_noted = false;
     for (auto& entry : pick_up_connections_by_li) {
       if (!entry.second.stations_.empty()) {
-        lift_dest_.push_back(std::make_tuple(li, entry.second));
+        lift_dest_.emplace_back(li, entry.second);
         if (!lift_noted) {
           lift_waypoint_counter += sz;
           lift_noted = true;
@@ -442,17 +433,20 @@ connection_eval query::evaluate_same_leg(query_mode mode,
                         li.from_routings_[con.to_leg_].at(st) -
                         li.rrs_[con.from_leg_];
       break;
+
     case query_mode::DESTINATION:
       from_leg_detour = li.to_routings_[con.from_leg_].at(st) + common +
                         query_target_to_lifts_[lift_idx] -
                         li.rrs_[con.from_leg_];
       break;
+
     case query_mode::BOTH:
       from_leg_detour =
           lifts_to_query_start_[lift_idx] + common +
           query_target_to_lifts_[direct_connection + con.to_leg_] -
           li.rrs_[con.from_leg_];
       break;
+
     default: break;
   }
   return {common, from_leg_detour, routing_result{0.0, 0.0}};
@@ -478,58 +472,16 @@ connection_eval query::evaluate_different_leg(query_mode mode,
                       li.to_routings_[con.to_leg_].at(st) -
                       li.rrs_[con.to_leg_];
       break;
-    case query_mode::DESTINATION:
-      /*if (query_target_to_lifts_.size() <= lift_idx) {
-        LOG(logging::info) << query_target_to_lifts_.size() << "qttl " <<
-      lift_idx;
-      }
-      if (from_pick_up_.size() <= station_offset + lift_idx) {
 
-        LOG(logging::info) << from_pick_up_.size() << "fpu " << station_offset +
-      lift_idx;
-      }
-      if (li.rrs_.size() <= con.from_leg_ || li.rrs_.size() <= con.to_leg_ ||
-         li.to_routings_.size() <= con.from_leg_ || li.from_routings_.size() <=
-      con.from_leg_) { LOG(logging::info) << li.rrs_.size() << "qmd rrs " <<
-      con.from_leg_ << "->" << con.to_leg_
-           << " " << li.from_routings_.size() << " " << li.to_routings_.size();
-      }*/
-      // common = from_pick_up_[station_offset + lift_idx] +
-      // li.from_routings_[con.from_leg_].at(st);
+    case query_mode::DESTINATION:
       from_leg_detour = li.to_routings_[con.from_leg_].at(st) +
                         li.from_routings_[con.from_leg_].at(st) -
                         li.rrs_[con.from_leg_];
       to_leg_detour = from_pick_up_[station_offset + lift_idx] +
                       query_target_to_lifts_[lift_idx] - li.rrs_[con.to_leg_];
       break;
+
     case query_mode::BOTH:
-      // common = to_drop_off_[station_offset + lift_idx] +
-      //                     from_pick_up_[pick_up_stations_.size() +
-      //                     con.to_leg_ + j];
-      /*if (lifts_to_query_start_.size() <= lift_idx) {
-        LOG(logging::info) << lifts_to_query_start_.size() << "dir ltqs" <<
-      lift_idx;
-      }
-      if (query_target_to_lifts_.size() <= direct_connection + con.to_leg_) {
-        LOG(logging::info) << query_target_to_lifts_.size() << "dir qttl" <<
-      lift_idx;
-      }
-      if (to_drop_off_.size() <= station_offset + lift_idx) {
-
-        LOG(logging::info) << to_drop_off_.size() << "dir tdo" << station_offset
-      + lift_idx;
-      }
-      if (from_pick_up_.size() <= station_offset + lift_idx) {
-
-        LOG(logging::info) << from_pick_up_.size() << "dir fpu " <<
-      pick_up_stations_.size() + con.to_leg_ + j;
-      }
-      if (li.rrs_.size() <= con.from_leg_ || li.rrs_.size() <= con.to_leg_ ||
-         li.to_routings_.size() <= con.from_leg_ || li.from_routings_.size() <=
-      con.from_leg_) { LOG(logging::info) << li.rrs_.size() << "qmboth rrs " <<
-      con.from_leg_ << "->" << con.to_leg_
-           << " " << li.from_routings_.size() << " " << li.to_routings_.size();
-      }*/
       from_leg_detour = lifts_to_query_start_[lift_idx] +
                         to_drop_off_[station_offset + lift_idx] -
                         li.rrs_[con.from_leg_];
@@ -538,12 +490,10 @@ connection_eval query::evaluate_different_leg(query_mode mode,
           from_pick_up_[pick_up_stations_.size() + con.to_leg_ + j] -
           li.rrs_[con.to_leg_];
       break;
+
     default: break;
   }
-  return {common,
-          //+ std::accumulate(li.rrs_.begin() + con.from_leg_ + 1,
-          // li.rrs_.begin() + con.to_leg_, routing_result{0, 0}),
-          from_leg_detour, to_leg_detour};
+  return {common, from_leg_detour, to_leg_detour};
 }
 
 query_response query::make_edges(
@@ -586,8 +536,6 @@ query_response query::make_edges(
             mc, "START", station_evas[st], li, ce,
             lifts_to_query_start_[lift_idx].duration_, con, parkings[st].first,
             parkings[st].second, station_locations[st]));
-        // LOG(logging::info) << "DEPS: " << station_evas[st] <<
-        // qr.deps_.size();
       }
     }
     // direct_connections;

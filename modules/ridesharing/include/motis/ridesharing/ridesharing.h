@@ -53,8 +53,8 @@ private:
   motis::module::msg_ptr remove(motis::module::msg_ptr const&);
   motis::module::msg_ptr book(motis::module::msg_ptr const&);
   motis::module::msg_ptr unbook(motis::module::msg_ptr const&);
-  motis::module::msg_ptr time_out(motis::module::msg_ptr const& msg);
-  motis::module::msg_ptr statistics(motis::module::msg_ptr const& msg);
+  motis::module::msg_ptr time_out();
+  motis::module::msg_ptr statistics();
 
   void load_lifts_from_db();
   void initialize_routing_matrix();

@@ -32,7 +32,7 @@ using namespace motis::intermodal;
 namespace motis::ridesharing {
 
 struct rs_parking_itest : public rs_super_itest {
-  rs_parking_itest() : rs_super_itest(100000) {}
+  rs_parking_itest() : rs_super_itest() {}
 };
 
 TEST_F(rs_parking_itest, edges_multiple_lift) {

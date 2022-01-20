@@ -166,6 +166,7 @@ journey convert(Connection const* conn) {
   journey.status_ = status_from_fbs(conn->status());
   journey.duration_ = get_duration(journey);
   journey.transfers_ = get_transfers(journey);
+  journey.price_ = conn->price();
   journey.night_penalty_ = conn->night_penalty();
   journey.db_costs_ = conn->db_costs();
   journey.accessibility_ = get_accessibility(journey);

@@ -44,10 +44,8 @@ void ridesharing::init(motis::module::registry& reg) {
   reg.register_op("/ridesharing/remove", [&](auto&& m) { return remove(m); });
   reg.register_op("/ridesharing/book", [&](auto&& m) { return book(m); });
   reg.register_op("/ridesharing/unbook", [&](auto&& m) { return unbook(m); });
-  reg.register_op("/ridesharing/timeout",
-                  [&](auto&& m) { return time_out(m); });
-  reg.register_op("/ridesharing/stats",
-                  [&](auto&& m) { return statistics(m); });
+  reg.register_op("/ridesharing/timeout", [&](auto&&) { return time_out(); });
+  reg.register_op("/ridesharing/stats", [&](auto&&) { return statistics(); });
 }
 
 msg_ptr ridesharing::init_module(msg_ptr const&) {
@@ -97,8 +95,8 @@ msg_ptr ridesharing::init_module(msg_ptr const&) {
   load_lifts_from_db();
   MOTIS_STOP_TIMING(init_time);
   stats_.init_time_ = MOTIS_TIMING_US(init_time);
-  LOG(info) << "Initialiation complete with " << parkings_.size()
-            << " considered Stations";
+  LOG(info) << "ridesharing init complete with " << parkings_.size()
+            << " considered transfer points";
   motis_publish(make_no_msg("/ridesharing/initialized"));
   return nullptr;
 }
@@ -366,7 +364,7 @@ void ridesharing::initialize_routing_matrix() {
   database_->put_routing_table(make_routing_table(routing_matrix_), hashcode);
 }
 
-msg_ptr ridesharing::time_out([[maybe_unused]] msg_ptr const& msg) {
+msg_ptr ridesharing::time_out() {
   auto const t = std::time(0);
   auto const lk = lift_key{t - 3600 * 12, 0};
   auto low = lift_connections_.lower_bound(lk);
@@ -378,7 +376,7 @@ msg_ptr ridesharing::time_out([[maybe_unused]] msg_ptr const& msg) {
   return make_ridesharing_response(ResponseType_Success, lk);
 }
 
-msg_ptr ridesharing::statistics([[maybe_unused]] msg_ptr const& msg) {
+msg_ptr ridesharing::statistics() {
   message_creator mc;
   mc.create_and_finish(
       MsgContent_RidesharingStatistics,
