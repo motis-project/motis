@@ -37,5 +37,6 @@
   "useParking": "Use parkings",
   "parking": "Parking",
   "noDepartures": "No departures in the selected time period",
+  "noArrivals": "No arrivals in the selected time period",
   "noInTimetable": "Time period not in the timetable"
 }

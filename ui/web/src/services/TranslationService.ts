@@ -35,6 +35,7 @@ interface Translation {
   useParking: string,
   parking: string,
   noDepartures: string,
+  noArrivals: string,
   noInTimetable: string
 }
 /* eslint-enable camelcase */

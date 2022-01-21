@@ -24,7 +24,7 @@
             type="radio"
             id="station-arrivals"
             name="station-event-types" />
-          <label for="station-arrivals" @click="getDepartures(false)">{{
+          <label for="station-arrivals" @click="getDepartures(false), isDeparture = false">{{
             $t.arrival
           }}</label>
         </div>
@@ -55,8 +55,11 @@
         </div>
         <div class="no-results" v-if="isEmptyTimetable">
           <div class="date-header divider"></div>
-          <div class="msg">
+          <div class="msg" v-if="isDeparture">
             {{ $t.noDepartures }}
+          </div>
+          <div class="msg" v-else>
+            {{ $t.noArrivals }}
           </div>
           <div class="divider footer"></div>
         </div>
@@ -169,6 +172,7 @@ export default defineComponent({
       this.isBottomEnd = false;
       this.isEmptyTimetable = false;
       this.isContentLoaded = false;
+      this.isDeparture = true;
       this.getInfo(newValue, this.isDeparture);
     },
   },
