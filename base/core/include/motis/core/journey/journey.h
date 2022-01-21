@@ -33,23 +33,32 @@ struct journey {
 
   struct transport {
     CISTA_COMPARABLE()
+
+    // general attributes
     unsigned from_{0}, to_{0};
+    unsigned duration_{0};
+
+    // walk / multi-modal
     bool is_walk_{false};
+    int mumo_id_{0};
+    unsigned mumo_price_{0};
+    unsigned mumo_accessibility_{0};
+    std::string mumo_type_;
+
+    // public transport
     std::string name_;
     std::string category_name_;
     unsigned category_id_{0};
     unsigned clasz_{0};
     unsigned train_nr_{0};
     std::string line_identifier_;
-    unsigned duration_{0};
-    int mumo_id_{0};
     std::string direction_;
     std::string provider_;
-    unsigned mumo_price_{0};
-    unsigned mumo_accessibility_{0};
-    std::string mumo_type_;
-    uint16_t from_leg_{100};
-    uint16_t to_leg_{100};
+
+    // ridesharing
+    bool is_ridesharing_{false};
+    uint16_t from_leg_{std::numeric_limits<uint16_t>::max()};
+    uint16_t to_leg_{std::numeric_limits<uint16_t>::max()};
     geo::latlng from_loc_{};
     geo::latlng to_loc_{};
   };

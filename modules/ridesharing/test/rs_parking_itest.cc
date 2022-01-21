@@ -44,7 +44,9 @@ struct rs_parking_itest : public motis_instance_test {
   }
 };
 
-TEST_F(rs_parking_itest, edges_multiple_lift) {
+TEST_F(rs_parking_itest, DISABLED_edges_multiple_lift) {
+  // TODO(root) not working because initialization of ppr requires OSM file
+  // and parking requires pppr
   message_creator mc;
 
   // close-station-radius = 50000

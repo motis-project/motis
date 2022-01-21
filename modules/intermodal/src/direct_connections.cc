@@ -323,7 +323,6 @@ void add_direct_connections(std::vector<journey>& journeys,
     transport.duration_ = d.duration_;
     transport.mumo_accessibility_ = d.accessibility_;
     transport.mumo_type_ = to_string(d.type_);
-    transport.is_walk_ = true;
     if (d.type_ == mumo_type::RIDESHARING) {
       auto const dep_time = d.dep_time_;
       auto const arr_time = dep_time + d.duration_ * 60;
@@ -332,24 +331,14 @@ void add_direct_connections(std::vector<journey>& journeys,
       dest.arrival_.timestamp_ = arr_time;
       dest.arrival_.schedule_timestamp_ = arr_time;
       auto const rs_data = d.rs_data_.value();
+      transport.is_ridesharing_ = true;
+      transport.is_walk_ = false;
       transport.mumo_price_ = rs_data.price_;
       transport.provider_ = rs_data.lift_key_;
       transport.from_leg_ = rs_data.from_leg_;
       transport.to_leg_ = rs_data.to_leg_;
       transport.from_loc_ = {rs_data.from_loc_.lat_, rs_data.from_loc_.lng_};
       transport.to_loc_ = {rs_data.to_loc_.lat_, rs_data.to_loc_.lng_};
-    } else {
-      auto const dep_time =
-          fwd ? q_start.time_
-              : static_cast<std::time_t>(q_start.time_ - d.duration_ * 60);
-      auto const arr_time =
-          fwd ? static_cast<std::time_t>(q_start.time_ + d.duration_ * 60)
-              : q_start.time_;
-      j.stops_.front().departure_.timestamp_ =
-          dep_time;  // reference start invalid by now
-      j.stops_.front().departure_.schedule_timestamp_ = dep_time;
-      dest.arrival_.timestamp_ = arr_time;
-      dest.arrival_.schedule_timestamp_ = arr_time;
     }
     j.price_ = j.transports_[0].mumo_price_;
   }
