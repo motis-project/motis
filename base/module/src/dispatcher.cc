@@ -145,6 +145,9 @@ void dispatcher::handle_no_target(msg_ptr const& msg, callback const& cb) {
   if (queue_no_target_msgs_) {
     no_target_msg_queue_.emplace(msg, cb);
   } else {
+    LOG(logging::error) << "target "
+                        << msg->get()->destination()->target()->str()
+                        << " not found";
     return cb(nullptr, error::target_not_found);
   }
 }

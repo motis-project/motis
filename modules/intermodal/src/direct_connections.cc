@@ -332,7 +332,6 @@ void add_direct_connections(std::vector<journey>& journeys,
       dest.arrival_.schedule_timestamp_ = arr_time;
       auto const rs_data = d.rs_data_.value();
       transport.is_ridesharing_ = true;
-      transport.is_walk_ = false;
       transport.mumo_price_ = rs_data.price_;
       transport.provider_ = rs_data.lift_key_;
       transport.from_leg_ = rs_data.from_leg_;
