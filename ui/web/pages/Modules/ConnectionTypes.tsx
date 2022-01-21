@@ -1,6 +1,6 @@
 export interface Connection {
     stops: Stop[],
-    transports: (TransportInfo | WalkInfo)[],
+    transports: Transport[],
     trips: Trip[],
     problems: Problem[]
 }
@@ -35,6 +35,10 @@ interface EventInfo {
     reason: 'Schedule' | 'Is' | 'Propagation' | 'Forecast'
 }
 
+export interface Transport {
+    move: (TransportInfo | WalkInfo)
+    move_type: string
+}
 
 export interface TransportInfo {
     category_id: number,
