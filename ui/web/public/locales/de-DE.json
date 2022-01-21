@@ -35,5 +35,7 @@
   "later": "Später",
   "profile": "Profil",
   "useParking": "Parkplätze verwenden",
-  "parking": "Parkplatz"
+  "parking": "Parkplatz",
+  "noDepartures": "Keine Abfahrten im gewählten Zeitraum",
+  "noInTimetable": "Zeitraum nicht im Fahrplan"
 }

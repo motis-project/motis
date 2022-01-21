@@ -15,18 +15,18 @@
             id="station-departures"
             name="station-event-types"
             checked />
-          <label
-            for="station-departures"
-            @click="getDepartures(true)">{{ $t.departure }}</label>
+          <label for="station-departures" @click="getDepartures(true)">{{
+            $t.departure
+          }}</label>
         </div>
         <div>
           <input
             type="radio"
             id="station-arrivals"
             name="station-event-types" />
-          <label
-            for="station-arrivals"
-            @click="getDepartures(false)">{{ $t.arrival }}</label>
+          <label for="station-arrivals" @click="getDepartures(false)">{{
+            $t.arrival
+          }}</label>
         </div>
       </div>
     </div>
@@ -36,16 +36,37 @@
           :class="[
             'extend-search-interval search-before',
             isUpperEnd ? 'disabled' : '',
-          ]">
+          ]"
+          v-if="!isEmptyTimetable">
           <a @click="changeTimeGap('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }} </a>
         </div>
-        <div class="event-list">
-          <div class="date-header divider">
-            <span>{{
-              getDateString(filteredEvents[0].event.time)
-            }}</span>
+        <div
+          :class="[
+            'extend-search-interval search-before',
+            isUpperEnd ? 'error' : '',
+          ]"
+          v-else>
+          <a @click="errorScreen('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }} </a>
+          <div class="error">
+            <div class v-show="isUpperEnd">
+              {{ $t.noInTimetable }}
+            </div>
           </div>
-          <div v-for="(timetable, index) in filteredEvents" :key="timetable.trips[0].id">
+        </div>
+        <div class="no-results" v-if="isEmptyTimetable">
+          <div class="date-header divider"></div>
+          <div class="msg">
+            {{ $t.noDepartures }}
+          </div>
+          <div class="divider footer"></div>
+        </div>
+        <div class="event-list" v-else>
+          <div class="date-header divider">
+            <span>{{ getDateString(filteredEvents[0].event.time) }}</span>
+          </div>
+          <div
+            v-for="(timetable, index) in filteredEvents"
+            :key="timetable.trips[0].id">
             <div class="station-event" v-if="timetable">
               <div class="event-time">
                 {{ getTimeString(timetable.event.time) }}
@@ -61,22 +82,40 @@
               <div
                 class="event-direction"
                 :title="timetable.trips[0].transport.direction">
-                <i class="icon">arrow_forward</i>{{ timetable.trips[0].transport.direction }}
+                <i class="icon">arrow_forward</i> {{ timetable.trips[0].transport.direction }}
               </div>
               <div class="event-track"></div>
             </div>
-            <div class="date-header divider" v-if="separators.includes(index + 1)">
-              <span>{{ getDateString(filteredEvents[index + 1].event.time) }}</span>
+            <div
+              class="date-header divider"
+              v-if="separators.includes(index + 1)">
+              <span>{{
+                getDateString(filteredEvents[index + 1].event.time)
+              }}</span>
             </div>
             <div class="" v-else></div>
           </div>
           <div class="divider footer"></div>
-          <div
-            :class="[
-              'extend-search-interval search-after',
-              isBottomEnd ? 'disabled' : '',
-            ]">
-            <a @click="changeTimeGap('LATER')" v-show="!isBottomEnd"> {{ $t.later }} </a>
+        </div>
+        <div
+          :class="[
+            'extend-search-interval search-after',
+            isBottomEnd ? 'disabled' : '',
+          ]"
+          v-if="!isEmptyTimetable">
+          <a @click="changeTimeGap('LATER')" v-show="!isBottomEnd"> {{ $t.later }} </a>
+        </div>
+        <div
+          :class="[
+            'extend-search-interval search-after',
+            isBottomEnd ? 'error' : '',
+          ]"
+          v-else>
+          <a @click="errorScreen('LATER')" v-show="!isBottomEnd"> {{ $t.later }} </a>
+          <div class="error">
+            <div class v-show="isBottomEnd">
+              {{ $t.noInTimetable }}
+            </div>
           </div>
         </div>
       </div>
@@ -90,27 +129,27 @@ import { defineComponent, PropType } from "vue";
 import Event from "../models/DepartureTimetable";
 import TransportTypeBox from "../components/TransportTypeBox.vue";
 import { TripInfoId } from "../models/TrainGuess";
-import LoadingBar from "../components/LoadingBar.vue"
+import LoadingBar from "../components/LoadingBar.vue";
 
 export default defineComponent({
   name: "StationTimetable",
   components: {
     TransportTypeBox,
-    LoadingBar
+    LoadingBar,
   },
   props: {
     stationGuess: {
       type: Object as PropType<StationGuess>,
-      required: true
+      required: true,
     },
     tripIdGuess: {
       type: Object as PropType<TripInfoId>,
       required: false,
-    }
+    },
   },
   data() {
     return {
-      departures: [] as Event [],
+      departures: [] as Event[],
       station: {} as StationGuess,
       filteredEvents: [] as Event[],
       date: 0 as number,
@@ -119,7 +158,8 @@ export default defineComponent({
       isUpperEnd: false,
       isBottomEnd: false,
       isContentLoaded: false,
-      separators: [] as number []
+      separators: [] as number[],
+      isEmptyTimetable: false,
     };
   },
   watch: {
@@ -127,14 +167,16 @@ export default defineComponent({
       this.departures = [];
       this.isUpperEnd = false;
       this.isBottomEnd = false;
+      this.isEmptyTimetable = false;
+      this.isContentLoaded = false;
       this.getInfo(newValue, this.isDeparture);
     },
   },
   created() {
-    if(!this.tripIdGuess){
+    if (!this.tripIdGuess) {
       this.date = this.$ds.dateTimeInSeconds;
     }
-    else if(this.tripIdGuess){
+    else if (this.tripIdGuess) {
       this.date = this.tripIdGuess.time;
     }
     this.getInfo(this.stationGuess, this.isDeparture);
@@ -170,14 +212,26 @@ export default defineComponent({
       }
       this.getInfo(this.stationGuess, this.isDeparture, change === "EARLIER");
     },
-    getSeparator(events : Event []) {
+    getSeparator(events: Event[]) {
       this.separators = [];
       for (let i = 1; i < events.length; i++) {
         let earlier = new Date(events[i - 1].event.time * 1000);
         let later = new Date(events[i].event.time * 1000);
-        if (earlier.getDate() < later.getDate() || earlier.getMonth() < later.getMonth() || earlier.getFullYear() < later.getFullYear()) {
+        if (
+          earlier.getDate() < later.getDate() ||
+          earlier.getMonth() < later.getMonth() ||
+          earlier.getFullYear() < later.getFullYear()
+        ) {
           this.separators.push(i);
         }
+      }
+    },
+    errorScreen(button: string) {
+      if (button === "EARLIER") {
+        this.isUpperEnd = true;
+      }
+      else if (button === "LATER") {
+        this.isBottomEnd = true;
       }
     },
     getInfo(
@@ -198,17 +252,27 @@ export default defineComponent({
             this.departures = data.events.concat(this.departures);
           }
           if (data.events.length === 0) {
-            if (clickEarlier === false) {
-              this.isBottomEnd = true;
+            if (this.departures.length !== 0) {
+              if (clickEarlier === false) {
+                this.isBottomEnd = true;
+              }
+              else if (clickEarlier === true) {
+                this.isUpperEnd = true;
+              }
             }
-            else if (clickEarlier === true) {
-              this.isUpperEnd = true;
+            else {
+              this.station = data.station;
+              throw new Error();
             }
           }
           this.station = data.station;
           this.getDepartures(isDeparture);
           this.isContentLoaded = true;
-        }).catch(() => this.$router.back());
+        })
+        .catch(() => {
+          this.isEmptyTimetable = true;
+          this.isContentLoaded = true;
+        })
     },
   },
 });

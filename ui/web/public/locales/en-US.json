@@ -35,5 +35,7 @@
   "later": "Later",
   "profile": "Profile",
   "useParking": "Use parkings",
-  "parking": "Parking"
+  "parking": "Parking",
+  "noDepartures": "No departures in the selected time period",
+  "noInTimetable": "Time period not in the timetable"
 }

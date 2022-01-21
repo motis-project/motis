@@ -33,7 +33,9 @@ interface Translation {
   later: string,
   profile: string,
   useParking: string,
-  parking: string
+  parking: string,
+  noDepartures: string,
+  noInTimetable: string
 }
 /* eslint-enable camelcase */
 
