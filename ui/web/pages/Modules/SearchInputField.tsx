@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Station } from "./ConnectionTypes";
 import { Translations } from "./Localization";
 import { Mode, Modepicker } from "./ModePicker";
-import { Proposals } from "./Proposals";
+import { StationSuggestion, AddressSuggestion } from "./Proposals";
 import { Address, AddressSuggestionResponse, StationSuggestionResponse } from "./SuggestionTypes";
 
 
@@ -89,6 +89,7 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
         }else {
             setTopSuggestion(stationSuggestions[0]);
         }
+        console.log(topSuggestion)
     }, [fetchSuggestionsFlag]);
 
     useEffect(() => {
@@ -121,20 +122,34 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
                                 if (e.key == "Enter") {
                                     e.preventDefault();
                                     console.log("Pressed Enter in Start")
-                                    setName(topSuggestion.name)
-                                    setStation(topSuggestion)
-                                    props.setSearchQuery(!props.searchQuery)
+                                    setName(stationSuggestions.length > 0 ? stationSuggestions[0].name : addressSuggestions.length > 0 ? addressSuggestions[0].name : '')
+                                    setStation(stationSuggestions.length > 0 ? stationSuggestions[0] : addressSuggestions.length > 0 ? addressSuggestions[0] : undefined)
+                                    //props.setSearchQuery(!props.searchQuery)
                                 }
                             } }
                             onFocus={_ => {
                                 setShowSuggestions(true);
-                            } }
-                            onBlur={_ => {
-                                setShowSuggestions(false);
-                            } } /></div>
+                            } }/></div>
                 </form>
                 <div className='paper' style={showSuggestions && addressSuggestions.length > 0 ? {} : {display: 'none'}}>
-                    <Proposals addresses={addressSuggestions} stations={stationSuggestions} setName={setName} setSuggestion={setStation}/>
+                    <div className="proposals">
+                        {
+                            stationSuggestions.map((station: Station, index: number) => (
+                                <StationSuggestion  station={station} 
+                                                    key={index} 
+                                                    setName={setName} 
+                                                    setSuggestion={setStation} 
+                                                    setShowSuggestions={setShowSuggestions}/>
+                            ))}
+                        {
+                            addressSuggestions.map((address: Address, index: number) => (
+                                <AddressSuggestion  address={address} 
+                                                    key={index} 
+                                                    setName={setName} 
+                                                    setSuggestion={setStation} 
+                                                    setShowSuggestions={setShowSuggestions}/>
+                            ))}
+                    </div>
                 </div>
             </div>
             <Modepicker translation={props.translation} start={true}/>{/* modes={startModes} setModes={setStartModes}/>*/}
