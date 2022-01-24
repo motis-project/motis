@@ -29,7 +29,7 @@ const getRoutingOptions = (startType: string, startModes: Mode[], start: string,
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({  destination: {type: "Module", target: "/intermodal"}, 
                                 content_type: 'IntermodalRoutingRequest',
-                                content: {start_type: startType, start_modes: startModes, start: { station: { name: start, id: 'delfi_de:06411:4734:64:63'}, min_connection_count: 5, interval: { begin: 1640951760, end: 1640958960 }, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: {name: destination, id: 'delfi_de:06412:1204:3:3' }} })
+                                content: {start_type: startType, start_modes: startModes, start: { station: { name: start, id: 'delfi_de:06411:4734:64:63'}, min_connection_count: 5, interval: { begin: 1643017248, end: 1643020000 }, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: {name: destination, id: 'delfi_de:06412:1204:3:3' }} })
     }
 }
 
