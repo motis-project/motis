@@ -2,9 +2,21 @@ include "base/TripServiceInfo.fbs";
 
 namespace motis.paxmon;
 
-table PaxMonFilterTripsResponse {
-  filtered_trips: ulong;
-  critical_sections: ulong;
+table PaxMonFilteredTripInfo {
+  tsi: motis.TripServiceInfo;
 
-  trips: [motis.TripServiceInfo];
+  section_count: uint;
+  critical_sections: uint;
+  crowded_sections: uint;
+
+  max_excess_pax: uint;
+  cumulative_excess_pax: uint;
+}
+
+table PaxMonFilterTripsResponse {
+  total_matching_trips: ulong;
+  filtered_trips: ulong;
+  total_critical_sections: ulong;
+
+  trips: [PaxMonFilteredTripInfo];
 }

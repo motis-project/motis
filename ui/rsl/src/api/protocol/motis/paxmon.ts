@@ -77,15 +77,29 @@ export interface PaxMonFilterGroupsResponse {
 // paxmon/PaxMonFilterTripsRequest.fbs
 export interface PaxMonFilterTripsRequest {
   universe: number;
-  load_factor_possibly_ge: number;
   ignore_past_sections: boolean;
+  include_load_threshold: number;
+  max_results: number;
+  critical_load_threshold: number; // default: 1
+  crowded_load_threshold: number; // default: 0.8
+}
+
+// paxmon/PaxMonFilterTripsResponse.fbs
+export interface PaxMonFilteredTripInfo {
+  tsi: TripServiceInfo;
+  section_count: number;
+  critical_sections: number;
+  crowded_sections: number;
+  max_excess_pax: number;
+  cumulative_excess_pax: number;
 }
 
 // paxmon/PaxMonFilterTripsResponse.fbs
 export interface PaxMonFilterTripsResponse {
+  total_matching_trips: number;
   filtered_trips: number;
-  critical_sections: number;
-  trips: TripServiceInfo[];
+  total_critical_sections: number;
+  trips: PaxMonFilteredTripInfo[];
 }
 
 // paxmon/PaxMonFindTripsRequest.fbs
