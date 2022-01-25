@@ -5,7 +5,6 @@ import { App, reactive } from 'vue'
 interface Translation {
   [key: string]: string | string[]
 
-  dateFormat: string,
   start: string,
   destination: string,
   date: string,

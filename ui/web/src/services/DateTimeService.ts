@@ -1,16 +1,14 @@
 import { App, reactive } from 'vue'
 import { DateTime } from 'luxon'
-import { TranslationService } from './TranslationService';
 
 
 export class DateTimeService {
   public dateTime: number;
   private readonly timeFormat: string = "HH:mm";
-  private _ts: TranslationService;
+  private readonly dateFormat: string = "dd.MM.yyyy";
 
-  public constructor(ts: TranslationService, initialDateTime: number) {
+  public constructor(initialDateTime: number) {
     this.dateTime = initialDateTime;
-    this._ts = ts;
   }
 
   public get date(): Date {
@@ -26,7 +24,7 @@ export class DateTimeService {
       dateTime = this.dateTime;
     }
 
-    return DateTime.fromMillis(dateTime).toFormat(this._ts.t.dateFormat);
+    return DateTime.fromMillis(dateTime).toFormat(this.dateFormat);
   }
 
   public getTimeString(dateTime?: number): string {
@@ -37,7 +35,7 @@ export class DateTimeService {
   }
 
   public parseDate(dateToParse: string): Date {
-    const res = DateTime.fromFormat(dateToParse, this._ts.t.dateFormat).toJSDate();
+    const res = DateTime.fromFormat(dateToParse, this.dateFormat).toJSDate();
     const date = this.date;
     return new Date(res.getFullYear(), res.getMonth(), res.getDate(),
       date.getHours(), date.getMinutes(), date.getSeconds(), date.getMilliseconds());
@@ -63,8 +61,8 @@ declare module '@vue/runtime-core' {
 }
 
 export default {
-  install: (app: App, ts: TranslationService, initialDateTime: number): void => {
-    const service = reactive(new DateTimeService(ts, initialDateTime));
+  install: (app: App, initialDateTime: number): void => {
+    const service = reactive(new DateTimeService(initialDateTime));
     window.setTimeout(() => { service.dateTime += 1000; window.setInterval(() => service.dateTime += 1000, 1000) }, 1000 - new Date().getMilliseconds())
     app.config.globalProperties.$ds = service;
   }
