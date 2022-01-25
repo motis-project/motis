@@ -24,7 +24,7 @@
     </div>
     <div class="overlay-tabs">
       <div class="overlay-toggle">
-        <i class="icon" @click="(isOverlayHidden = !isOverlayHidden), $emit('searchHidden')">arrow_drop_down</i>
+        <i class="icon" @click="(isOverlayHidden = !isOverlayHidden)">arrow_drop_down</i>
       </div>
       <div :class="['trip-search-toggle', isTrainSubOverlayOpened ? 'enabled' : '']">
         <i class="icon" @click="openCloseTrainSearch">train</i>
@@ -68,6 +68,9 @@ export default defineComponent({
         this.isSubOverlayHidden = true;
       }
     },
+    isOverlayHidden() {
+      this.$emit('searchHidden', this.isOverlayHidden)
+    }
   },
   methods: {
     openCloseTrainSearch() {

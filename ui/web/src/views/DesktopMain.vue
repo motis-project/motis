@@ -1,6 +1,6 @@
 <template>
   <div class="app">
-    <LeftMenu @searchHidden="searchFieldHidden = !searchFieldHidden"></LeftMenu>
+    <LeftMenu @searchHidden="searchFieldHidden = $event"></LeftMenu>
     <div id="station-search" :class="['', searchFieldHidden ? 'overlay-hidden' : '']">
       <InputField
         iconType="place"
