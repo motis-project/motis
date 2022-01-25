@@ -48,7 +48,7 @@
     let langParam = params["lang"] || null;
     let language = langParam || "de";
 
-    window.app = Elm.Main.embed(document.getElementById("app-container"), {
+    window.app = /* Elm.Main.embed */(document.getElementById("app-container"), {
       apiEndpoint: apiEndpoint,
       currentTime: Date.now(),
       simulationTime: simulationTime,
@@ -62,6 +62,8 @@
       toModes: localStorage.getItem("motis.routing.to_modes"),
       intermodalPprMode: null,
     });
+    
+    window.app.ports = ownPorts;
 
     window.elmMaps = {};
 
