@@ -2,41 +2,46 @@ import React, { useEffect, useState } from "react";
 import { Station } from "./ConnectionTypes";
 import { Translations } from "./Localization";
 import { Mode, Modepicker } from "./ModePicker";
-import { StationSuggestion, AddressSuggestion } from "./Proposals";
+import { Proposals } from "./Proposals";
 import { Address, AddressSuggestionResponse, StationSuggestionResponse } from "./SuggestionTypes";
 
 
-const fetchSuggestions = (input: string, setAddresses: React.Dispatch<React.SetStateAction<Address[]>>, setStations: React.Dispatch<React.SetStateAction<Station[]>>) => {
-    let requestURL = 'https://europe.motis-project.de/?elm=AddressSuggestions';
-
+const fetchSuggestions = (input: string, setAddresses: React.Dispatch<React.SetStateAction<Address[]>>, setStations: React.Dispatch<React.SetStateAction<Station[]>>, setSuggestions: React.Dispatch<React.SetStateAction<(Station | Address)[]>>) => {
+    
+    let requestURL = 'https://europe.motis-project.de/?elm=StationSuggestions';
+    
     let body = {
-        destination: { type: 'Module', target: '/address'},
-        content_type: 'AddressRequest',
-        content: { input: input }
-    };
-
-    fetch(requestURL, getPostRequest(body))
-            .then(res => res.json())
-            .then((res: AddressSuggestionResponse) => {
-                console.log("Response came in");
-                console.log(res);
-                setAddresses(res.content.guesses);
-            });
-
-    requestURL = 'https://europe.motis-project.de/?elm=StationSuggestions';
-
-    let body2 = {
         destination: { type: 'Module', target: '/guesser'},
         content_type: 'StationGuesserRequest',
         content: { guess_count: 6, input: input }
     };
 
+    let stationRes = [];
+    
+    fetch(requestURL, getPostRequest(body))
+    .then(res => res.json())
+    .then((res: StationSuggestionResponse) => {
+        console.log("Response came in");
+        console.log(res);
+        setStations(res.content.guesses);
+        stationRes = res.content.guesses;
+    });
+
+    requestURL = 'https://europe.motis-project.de/?elm=AddressSuggestions';
+    
+    let body2 = {
+        destination: { type: 'Module', target: '/address'},
+        content_type: 'AddressRequest',
+        content: { input: input }
+    };
+
     fetch(requestURL, getPostRequest(body2))
             .then(res => res.json())
-            .then((res: StationSuggestionResponse) => {
+            .then((res: AddressSuggestionResponse) => {
                 console.log("Response came in");
                 console.log(res);
-                setStations(res.content.guesses);
+                setAddresses(res.content.guesses);
+                setSuggestions([...stationRes, ...res.content.guesses]);
             });
 };
 
@@ -50,7 +55,7 @@ const getPostRequest = (body: any) => {
 };
 
 
-export const SearchInputField: React.FC<{ 'translation': Translations, 'label': String, 'searchQuery': boolean, 'setSearchQuery': React.Dispatch<React.SetStateAction<boolean>>, 'station': Station | Address }> = (props) => {
+export const SearchInputField: React.FC<{ 'translation': Translations, 'label': String, 'searchQuery': boolean, 'setSearchQuery': React.Dispatch<React.SetStateAction<boolean>>, 'station': Station | Address, 'setSearchDisplay': React.Dispatch<React.SetStateAction<Station | Address>> }> = (props) => {
     
 
     // StartType
@@ -60,13 +65,10 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
     const [modes, setModes] = useState<Mode[]>([]);
     
     // Start Station or Position
-    const [station, setStation] = useState<Station | Address>(props.station);//<Start>({ station: { name: 'Darmstadt Hauptbahnhof', id: 'delfi_de:06411:4734:64:63'}, min_connection_count: 5, interval: { begin: 1640430180, end: 164043738 }, extend_interval_later: true, extend_interval_earlier: true });
+    const [station, setStation] = useState<Station | Address>(props.station);
 
     // StartName stores current input in the Start Input Field
     const [name, setName] = useState<string>(props.station.name);
-
-    // Start Top Suggestion
-    const [topSuggestion, setTopSuggestion] = useState<Station | Address>();
     
     // fetch Start Address Suggestions
     const [fetchSuggestionsFlag, setFetchSuggestionsFlag] = useState<boolean>(false);
@@ -76,27 +78,30 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
     
     // Start Station Suggestions
     const [stationSuggestions, setStationSuggestions] = useState<Station[]>([]);
+
+    const [suggestions, setSuggestions] = useState<(Address | Station)[]>([]);
     
     // show Start Suggestions
     const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
-    
-    
+
+    // Index, tracking which suggestion is highlighted right now
+    const [selectedSuggestion, setSelectedSuggestion] = React.useState<number>(0);
+
     //
     useEffect(() => {
-        fetchSuggestions(name, setAddressSuggestions, setStationSuggestions);
-        if (stationSuggestions.length == 0 ) {
-            setTopSuggestion(addressSuggestions[0]);
-        }else {
-            setTopSuggestion(stationSuggestions[0]);
-        }
-        console.log(topSuggestion)
+        fetchSuggestions(name, setAddressSuggestions, setStationSuggestions, setSuggestions);
     }, [fetchSuggestionsFlag]);
 
     useEffect(() => {
         setName(props.station.name)
         setStation(props.station)
-        setFetchSuggestionsFlag(!fetchSuggestionsFlag);
+        //setFetchSuggestionsFlag(!fetchSuggestionsFlag);
     }, [props.station])
+
+    useEffect(() => {
+        setFetchSuggestionsFlag(!fetchSuggestionsFlag);
+        props.setSearchDisplay(station);
+    }, [station])
     
     return (
         <div>
@@ -116,40 +121,51 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
                                 setName(e.currentTarget.value)
                                 if (e.currentTarget.value.length >= 3) {
                                     setFetchSuggestionsFlag(!fetchSuggestionsFlag);
+                                    setShowSuggestions(true);
                                 }
                             } }
-                            onKeyPress={e => {
-                                if (e.key == "Enter") {
-                                    e.preventDefault();
-                                    console.log("Pressed Enter in Start")
-                                    setName(stationSuggestions.length > 0 ? stationSuggestions[0].name : addressSuggestions.length > 0 ? addressSuggestions[0].name : '')
-                                    setStation(stationSuggestions.length > 0 ? stationSuggestions[0] : addressSuggestions.length > 0 ? addressSuggestions[0] : undefined)
-                                    //props.setSearchQuery(!props.searchQuery)
-                                }
+                            onClick={_ => {
+                                setShowSuggestions(true);
+                            }}
+                            onKeyDown={e => {
+                                switch (e.key) {
+                                    case 'Enter':
+                                        e.preventDefault();
+                                        setName(suggestions[selectedSuggestion].name);
+                                        setStation(suggestions[selectedSuggestion]);
+                                        //props.setSearchDisplay(suggestions[selectedSuggestion]);
+                                        setShowSuggestions(false);
+                                        setSelectedSuggestion(0);
+                                        //props.setSearchQuery(!props.searchQuery)
+                                        break;
+                                    case 'Escape':
+                                        e.preventDefault();
+                                        setShowSuggestions(false);
+                                        break;
+                                    case 'ArrowDown':
+                                        setSelectedSuggestion(selectedSuggestion + 1);
+                                        break;
+                                    case 'ArrowUp':
+                                        setSelectedSuggestion(selectedSuggestion - 1);
+                                        break;
+                                    default:
+                                        console.log(e.key);
+                                    }
                             } }
                             onFocus={_ => {
                                 setShowSuggestions(true);
                             } }/></div>
                 </form>
                 <div className='paper' style={showSuggestions && addressSuggestions.length > 0 ? {} : {display: 'none'}}>
-                    <div className="proposals">
-                        {
-                            stationSuggestions.map((station: Station, index: number) => (
-                                <StationSuggestion  station={station} 
-                                                    key={index} 
-                                                    setName={setName} 
-                                                    setSuggestion={setStation} 
-                                                    setShowSuggestions={setShowSuggestions}/>
-                            ))}
-                        {
-                            addressSuggestions.map((address: Address, index: number) => (
-                                <AddressSuggestion  address={address} 
-                                                    key={index} 
-                                                    setName={setName} 
-                                                    setSuggestion={setStation} 
-                                                    setShowSuggestions={setShowSuggestions}/>
-                            ))}
-                    </div>
+                    <Proposals  addresses={addressSuggestions} 
+                                stations={stationSuggestions}
+                                suggestions={suggestions}
+                                highlighted={selectedSuggestion}
+                                showSuggestions={showSuggestions}
+                                setName={setName}
+                                setSuggestion={setStation} 
+                                setShowSuggestions={setShowSuggestions}
+                                setHighlighted={setSelectedSuggestion}/>
                 </div>
             </div>
             <Modepicker translation={props.translation} start={true}/>{/* modes={startModes} setModes={setStartModes}/>*/}

@@ -60,9 +60,6 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     
     // StartModes
     const [startModes, setStartModes] = useState<Mode[]>([]);
-    
-    // StartName stores current input in the Start Input Field
-    const [startName, setStartName] = useState<string>('Darmstadt Hauptbahnhof');
 
     // Start Station or Position
     const [start, setStart] = useState<Station | Address>({ name: 'Darmstadt Hauptbahnhof', id: 'delfi_de:06411:4734:64:63'});//<Start>({ station: { name: 'Darmstadt Hauptbahnhof', id: 'delfi_de:06411:4734:64:63'}, min_connection_count: 5, interval: { begin: 1640430180, end: 164043738 }, extend_interval_later: true, extend_interval_earlier: true });
@@ -77,9 +74,6 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     
     // Destination holds the Value of 'to location' input field
     const [destination, setDestination] = useState<Station | Address>({name: 'Frankfurt (Main) Westbahnhof', id: 'delfi_de:06412:1204:3:3' });
-    
-    // DestinationName stores current input in the Destination Input Field
-    const [destinationName, setDestinationName] = useState<string>(destination.name);
     
 
     // Current Date
@@ -117,14 +111,12 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                         label={props.translation.search.start}
                                         searchQuery={searchQuery}
                                         setSearchQuery={setSearchQuery}
-                                        station={start}/>
+                                        station={start}
+                                        setSearchDisplay={setStart}/>
                     <div className='swap-locations-btn'>
                         <label className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'>
                             <input  type='checkbox' 
                                     onClick={() => {
-                                        let swapName = destinationName;
-                                        setDestinationName(startName);
-                                        setStartName(swapName);
                                         let swapStation = destination;
                                         setDestination(start);
                                         setStart(swapStation);
@@ -143,7 +135,8 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                         label={props.translation.search.destination}
                                         searchQuery={searchQuery}
                                         setSearchQuery={setSearchQuery}
-                                        station={destination}/>
+                                        station={destination}
+                                        setSearchDisplay={setDestination}/>
                 </div>
                 <div className='pure-u-1 pure-u-sm-9-24'>
                     <div>
