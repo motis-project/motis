@@ -96,7 +96,7 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
   std::sort(begin(selected_trips), end(selected_trips),
             [](trip_info const& lhs, trip_info const& rhs) {
               return std::tie(lhs.max_excess_pax_, lhs.cumulative_excess_pax_,
-                              lhs.critical_sections_, lhs.crowded_sections_) <
+                              lhs.critical_sections_, lhs.crowded_sections_) >
                      std::tie(rhs.max_excess_pax_, rhs.cumulative_excess_pax_,
                               rhs.critical_sections_, rhs.crowded_sections_);
             });
