@@ -284,6 +284,11 @@ export default defineComponent({
       this.isTooltipVisible[i] = false;
     }
   },
+  created() {
+    window.addEventListener("dragover", (event: Event) => event.preventDefault());
+    window.addEventListener("dragenter", (event: Event) => event.preventDefault());
+    window.addEventListener("drop", this.onDrop);
+  },
   methods: {
     swapStartDest() {
       let temp: string = this.start;
@@ -392,15 +397,18 @@ export default defineComponent({
             destination: destination,
             destination_modes: this.getModesArray(this.secondOptions)
           }).then((data) => {
-            this.connections = data.connections;
-            this.contentLoadingState = LoadingState.Loaded;
-            for(let i = 0; i < this.connections.length; i++) {
-              this.isTooltipVisible.push(false);
-            }
-            this.$store.state.connections = this.connections;
+            this.setConnections(data.connections)
           })
         }, 500);
       }
+    },
+    setConnections(connections: TripResponseContent[]) {
+      this.connections = connections;
+      this.contentLoadingState = LoadingState.Loaded;
+      for(let i = 0; i < this.connections.length; i++) {
+        this.isTooltipVisible.push(false);
+      }
+      this.$store.state.connections = this.connections;
     },
     getModesArray(options: OptionsButtons) {
       let res: Mode[] = [];
@@ -515,6 +523,18 @@ export default defineComponent({
       }
       return res;
     },
+    onDrop(event: DragEvent) {
+      if(event.dataTransfer !== null && event.dataTransfer.files.length > 0) {
+        event.preventDefault();
+        console.log("Drop");
+        event.dataTransfer.files[0].text().then(t => this.setConnections(
+          (JSON.parse(t) as {
+            content: {
+              connections: TripResponseContent[]
+            }
+          }).content.connections))
+      }
+    }
   },
 });
 
