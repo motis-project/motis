@@ -205,7 +205,7 @@ export default defineComponent({
     },
     getTripForTransport(transport: Transport) {
       if(!this.isTripView) {
-        return this.content.trips.filter(t => t.id.train_nr === transport.train_nr)[0].id;
+        return this.content.trips.filter(t => t.id.line_id === transport.line_id)[0].id;
       }
       return undefined;
     }

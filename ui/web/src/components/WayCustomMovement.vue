@@ -74,7 +74,6 @@ export default defineComponent({
   },
   methods: {
     getStopProgress(stop: Stop) {
-      console.log(this.stops);
       return this.getProgress(stop, this.stops[this.stops.indexOf(stop) + 1], this.$ds.dateTimeInSeconds);
     }
   }
