@@ -1,71 +1,89 @@
 #include "motis/gbfs/gbfs.h"
 
-#include "boost/algorithm/string/predicate.hpp"
+#include <mutex>
 
-#include "net/http/client/http_client.h"
-#include "net/http/client/https_client.h"
+#include "utl/concat.h"
 
 #include "geo/point_rtree.h"
 
+#include "motis/core/common/logging.h"
+#include "motis/module/context/motis_http_req.h"
+#include "motis/module/context/motis_parallel_for.h"
 #include "motis/module/event_collector.h"
 #include "motis/gbfs/free_bike.h"
 #include "motis/gbfs/station.h"
 #include "motis/gbfs/system_status.h"
 
+using namespace motis::logging;
 using namespace motis::module;
-using net::http::client::make_http;
-using net::http::client::make_https;
-using net::http::client::request;
-using net::http::client::response;
 
 namespace motis::gbfs {
 
-struct positions {
-  std::vector<station> stations_;
-  std::vector<free_bike> bikes_;
-  geo::point_rtree stations_rtree_;
-  geo::point_rtree bikes_rtree_;
-};
-
-template <typename Fn>
-void http_req(boost::asio::io_service& ios, std::string const& url_str,
-              Fn&& cb) {
-  auto http_cb = [cb = std::forward<Fn>(cb)](
-                     auto const&, response const& res,
-                     boost::system::error_code const& ec) {
-    if (ec.failed()) {
-      return cb("", ec.message());
-    } else {
-      return cb(res.body, "");
-    }
-  };
-
-  auto req = request{url_str};
-  if (boost::algorithm::starts_with(url_str, "https")) {
-    make_https(ios, req.address)->query(req, std::move(http_cb));
-  } else if (boost::algorithm::starts_with(url_str, "http")) {
-    make_http(ios, req.address)->query(req, std::move(http_cb));
-  } else {
-    throw utl::fail("unexpected URL {} (not https or http)", url_str);
-  }
-}
+struct positions {};
 
 struct gbfs::impl {
-  explicit impl(config const& c) : config_{c} {
-    boost::asio::io_service ios;
-    std::vector<std::variant<std::string /* error */, std::vector<urls>>> urls;
-    for (auto const& url : c.urls_) {
-      http_req(ios, url,
-               [&](std::string const& response, std::string const& err) {
-                 err.empty() ? urls.emplace_back(read_system_status(response))
-                             : urls.emplace_back(err);
-               });
+  explicit impl(config const& c) : config_{c} {}
+
+  void fetch_stream(std::string url) {
+    auto tag = std::string{};
+    auto const tag_pos = url.find('|');
+    if (tag_pos != std::string::npos) {
+      tag = url.substr(0, tag_pos) + "-";
+      url = url.substr(tag_pos + 1);
     }
+
+    auto const s = read_system_status(motis_http(url)->val().body);
+    if (s.empty()) {
+      l(warn, "no feeds from {}", url);
+      return;
+    }
+
+    auto const& urls = s.front();
+
+    auto f_station_info = http_future_t{};
+    auto f_station_status = http_future_t{};
+    auto f_free_bikes = http_future_t{};
+
+    if (urls.station_info_url_.has_value()) {
+      f_station_info = motis_http(*urls.station_info_url_);
+      f_station_status = motis_http(*urls.station_status_url_);
+    }
+
+    if (urls.free_bike_url_.has_value()) {
+      f_free_bikes = motis_http(*urls.free_bike_url_);
+    }
+
+    auto const lock = std::scoped_lock{mutex_};
+    if (urls.station_info_url_.has_value()) {
+      utl::concat(stations_,
+                  utl::to_vec(parse_stations(tag, f_station_info->val().body,
+                                             f_station_status->val().body),
+                              [](auto const& el) { return el.second; }));
+    }
+    if (urls.free_bike_url_.has_value()) {
+      utl::concat(free_bikes_, parse_free_bikes(tag, f_free_bikes->val().body));
+    }
+  }
+
+  void init(schedule const&) {
+    motis_parallel_for(config_.urls_, [&](auto&& url) { fetch_stream(url); });
+
+    auto const lock = std::scoped_lock{mutex_};
+    stations_rtree_ = geo::make_point_rtree(
+        utl::to_vec(stations_, [](auto&& s) { return s.pos_; }));
+    free_bikes_rtree_ = geo::make_point_rtree(
+        utl::to_vec(free_bikes_, [](auto&& s) { return s.pos_; }));
+    l(info, "loaded {} stations, {} free bikes", stations_.size(),
+      free_bikes_.size());
   }
 
   msg_ptr route(schedule const&, msg_ptr const&) { return {}; }
 
   config const& config_;
+  std::mutex mutex_;
+  std::vector<station> stations_;
+  std::vector<free_bike> free_bikes_;
+  geo::point_rtree stations_rtree_, free_bikes_rtree_;
 };
 
 gbfs::gbfs() : module("RIS", "gbfs") {
@@ -96,6 +114,7 @@ void gbfs::import(import_dispatcher& reg) {
 
 void gbfs::init(motis::module::registry& r) {
   impl_ = std::make_unique<impl>(config_);
+  r.subscribe("/init", [&]() { impl_->init(get_sched()); });
   r.register_op("/gbfs/route",
                 [&](msg_ptr const& m) { return impl_->route(get_sched(), m); });
 }

@@ -9,12 +9,11 @@
 #include "ctx/ctx.h"
 
 #include "utl/to_vec.h"
-#include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
-
 #include "motis/module/error.h"
 #include "motis/module/global_res_ids.h"
+#include "motis/module/module.h"
 
 namespace motis::module {
 

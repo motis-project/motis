@@ -9,7 +9,7 @@
 namespace motis::gbfs {
 
 struct config {
-  unsigned update_interval_minutes_;
+  unsigned update_interval_minutes_{5U};
   std::vector<std::string> urls_;
 };
 

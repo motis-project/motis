@@ -33,13 +33,13 @@ TEST(gbfs, parse_free_bikes) {
   }
 })";
 
-  auto const bikes = parse_free_bikes(in);
+  auto const bikes = parse_free_bikes("yeah-", in);
   ASSERT_EQ(2, bikes.size());
 
-  EXPECT_EQ(bikes.at(0),
-            (free_bike{
-                .id_ = "184183", .pos_ = {48.7829, 9.17978}, .type_ = "bike"}));
-  EXPECT_EQ(bikes.at(1),
-            (free_bike{
-                .id_ = "184369", .pos_ = {48.7829, 9.17978}, .type_ = "bike"}));
+  EXPECT_EQ(bikes.at(0), (free_bike{.id_ = "yeah-184183",
+                                    .pos_ = {48.7829, 9.17978},
+                                    .type_ = "bike"}));
+  EXPECT_EQ(bikes.at(1), (free_bike{.id_ = "yeah-184369",
+                                    .pos_ = {48.7829, 9.17978},
+                                    .type_ = "bike"}));
 }
