@@ -10,7 +10,7 @@ const getDisplayRegions = (regions: Region[]) => {
 }
 
 
-function useOutsideAlerter(ref: React.MutableRefObject<any>, showSuggestions: boolean, setShowSuggestions: React.Dispatch<React.SetStateAction<boolean>>) {
+function useOutsideAlerter(ref: React.MutableRefObject<any>, setShowSuggestions: React.Dispatch<React.SetStateAction<boolean>>) {
     React.useEffect(() => {
         /**
          * Alert if clicked on outside of element
@@ -18,15 +18,11 @@ function useOutsideAlerter(ref: React.MutableRefObject<any>, showSuggestions: bo
         function handleClickOutside(event) {
             if (ref.current && !ref.current.contains(event.target)) {
                 setShowSuggestions(false);
-                console.log('Clicked outside');
             }
         }
 
         // Bind the event listener
-        console.log(showSuggestions);
-        if (showSuggestions){
-            document.addEventListener("mousedown", handleClickOutside);
-        }
+        document.addEventListener("mousedown", handleClickOutside);
         return () => {
             // Unbind the event listener on clean up
             document.removeEventListener("mousedown", handleClickOutside);
@@ -85,30 +81,8 @@ const AddressSuggestion: React.FC<{'address': Address, 'setName': React.Dispatch
 export const Proposals: React.FC<{'addresses': Address[], 'stations': Station[], 'suggestions': (Address | Station) [], 'highlighted': number, 'showSuggestions': boolean, 'setName': React.Dispatch<React.SetStateAction<string>>, 'setSuggestion': React.Dispatch<React.SetStateAction<Station | Address>>, 'setShowSuggestions': React.Dispatch<React.SetStateAction<boolean>>, 'setHighlighted': React.Dispatch<React.SetStateAction<number>>}> = (props) => {
 
     const suggestionsRef = React.useRef(null);
-    useOutsideAlerter(suggestionsRef, props.showSuggestions, props.setShowSuggestions);
 
-    /*React.useEffect(() => {
-        const pageClickEvent = (e) => {
-            console.log('Clicked anywhere');
-            console.log(suggestionsRef.current);
-            console.log(suggestionsRef.current !== null);
-            console.log(!suggestionsRef.current?.contains(e.target))
-            console.log(e.target)
-            if (suggestionsRef.current !== null && !suggestionsRef.current?.contains(e.target)) {
-                props.setShowSuggestions(false);
-                console.log('Clicked outside');
-            }
-        };
-
-        if (props.showSuggestions) {
-            window.addEventListener('click', pageClickEvent);
-        };
-
-        return () => {
-            window.removeEventListener('click', pageClickEvent);
-          }
-
-    }, [props.showSuggestions])*/
+    useOutsideAlerter(suggestionsRef, props.setShowSuggestions);
 
     return (
         <div className="proposals" ref={suggestionsRef}>
