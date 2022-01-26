@@ -9,6 +9,8 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
+#include "motis/json/json.h"
+
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/common/unixtime.h"
@@ -16,8 +18,9 @@
 
 #include "motis/ris/ribasis/common.h"
 
-using namespace motis::logging;
 using namespace flatbuffers;
+using namespace motis::logging;
+using namespace motis::json;
 
 namespace motis::ris::ribasis {
 

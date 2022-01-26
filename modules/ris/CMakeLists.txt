@@ -17,5 +17,6 @@ target_link_libraries(motis-ris
   lmdb
   tar
   motis-ris-gtfsrtpb
+  motis-libjson
 )
 target_compile_options(motis-ris PRIVATE ${MOTIS_CXX_FLAGS})

@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 3.10)
+project(motis)
+
+file(GLOB_RECURSE motis-gbfs-files src/*.cc)
+add_library(motis-gbfs STATIC ${motis-gbfs-files})
+target_include_directories(motis-gbfs PUBLIC include)
+target_compile_features(motis-gbfs PUBLIC cxx_std_17)
+target_compile_definitions(motis-gbfs PUBLIC PROTOBUF_LINKED=1)
+target_link_libraries(motis-gbfs
+  motis-module
+  motis-core
+  geo
+  motis-libjson
+  http-client
+)
+target_compile_options(motis-gbfs PRIVATE ${MOTIS_CXX_FLAGS})
