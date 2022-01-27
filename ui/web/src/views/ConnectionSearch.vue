@@ -4,6 +4,7 @@
       <InputField
         :labelName="$t.start"
         iconType="place"
+        :isTimeCalendarField="false"
         :showLabel="true"
         :initInputText="start"
         @inputChanged="setStartInput"

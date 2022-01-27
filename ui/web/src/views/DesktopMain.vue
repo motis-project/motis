@@ -6,6 +6,7 @@
         iconType="place"
         :showLabel="false"
         :showAutocomplete="true"
+        :isTimeCalendarField="false"
         @autocompleteElementClicked="goToTimetable"></InputField>
     </div>
   </div>

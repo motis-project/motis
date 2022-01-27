@@ -4,6 +4,7 @@
       :showLabel="true"
       :labelName="$t.date"
       iconType="event"
+      :isTimeCalendarField="true"
       :showArrows="true"
       :initInputText="$ds.getDateString(currentDate.valueOf())"
       @inputChanged="onFieldInput"

@@ -9,6 +9,7 @@
           <i class="icon">{{ iconType }}</i>
         </div>
         <input
+          :pattern="isTimeCalendarField ? '\\d*' : ''"
           class="gb-input"
           tabindex="1"
           @input="onInput()"
@@ -63,6 +64,7 @@ export default defineComponent({
     initInputText: String,
     showArrows: Boolean,
     showAutocomplete: Boolean,
+    isTimeCalendarField: Boolean
   },
   emits: [
     "inputChanged",
@@ -72,7 +74,8 @@ export default defineComponent({
     "decreaseMouseDown",
     "increaseClick",
     "increaseMouseDown",
-    "autocompleteElementClicked"
+    "autocompleteElementClicked",
+    "isTimeCalendarField"
   ],
   data() {
     return {
