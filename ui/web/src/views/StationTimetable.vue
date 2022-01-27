@@ -24,7 +24,7 @@
             type="radio"
             id="station-arrivals"
             name="station-event-types" />
-          <label for="station-arrivals" @click="getDepartures(false), isDeparture = false">{{
+          <label for="station-arrivals" @click="getDepartures(false)">{{
             $t.arrival
           }}</label>
         </div>
@@ -173,6 +173,7 @@ export default defineComponent({
       this.isEmptyTimetable = false;
       this.isContentLoaded = false;
       this.isDeparture = true;
+      this.date = this.$ds.dateTimeInSeconds;
       this.getInfo(newValue, this.isDeparture);
     },
   },
