@@ -20,9 +20,9 @@ void add_status(std::string const& tag,
   rapidjson::Document doc;
   if (doc.Parse(s.data(), s.size()).HasParseError()) {
     doc.GetParseError();
-    throw utl::fail("GBFS station_status: Bad JSON: {} at offset {}",
+    throw utl::fail("GBFS station_status: Bad JSON: {} at offset {}, in={}",
                     rapidjson::GetParseError_En(doc.GetParseError()),
-                    doc.GetErrorOffset());
+                    doc.GetErrorOffset(), s);
   }
 
   auto const& in = get_array(get_obj(doc, "data"), "stations");
@@ -41,9 +41,10 @@ mcd::hash_map<std::string, station> parse_stations(std::string const& tag,
   rapidjson::Document doc;
   if (doc.Parse(info.data(), info.size()).HasParseError()) {
     doc.GetParseError();
-    throw utl::fail("GBFS station_information: Bad JSON: {} at offset {}",
-                    rapidjson::GetParseError_En(doc.GetParseError()),
-                    doc.GetErrorOffset());
+    throw utl::fail(
+        "GBFS station_information: Bad JSON: {} at offset {}, in={}",
+        rapidjson::GetParseError_En(doc.GetParseError()), doc.GetErrorOffset(),
+        info);
   }
 
   auto const& stations = get_array(get_obj(doc, "data"), "stations");

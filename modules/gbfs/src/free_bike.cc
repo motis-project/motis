@@ -20,9 +20,9 @@ std::vector<free_bike> parse_free_bikes(std::string const& tag,
   rapidjson::Document doc;
   if (doc.Parse(s.data(), s.size()).HasParseError()) {
     doc.GetParseError();
-    throw utl::fail("GBFS station_information: Bad JSON: {} at offset {}",
+    throw utl::fail("GBFS free_bikes: Bad JSON: {} at offset {}, json={}",
                     rapidjson::GetParseError_En(doc.GetParseError()),
-                    doc.GetErrorOffset());
+                    doc.GetErrorOffset(), s);
   }
 
   auto const& stations = get_array(get_obj(doc, "data"), "bikes");

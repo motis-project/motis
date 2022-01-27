@@ -23,6 +23,9 @@ motis_http_req_impl(char const* src_location, net::http::client::request req) {
               f->set(std::current_exception());
             }
           } else {
+            if (auto const it = res.headers.find("location");
+                it != end(res.headers)) {
+            }
             f->set(std::move(res));
           }
         };
