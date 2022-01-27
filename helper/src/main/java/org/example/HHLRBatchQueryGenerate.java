@@ -10,110 +10,115 @@ import java.util.List;
 
 public class HHLRBatchQueryGenerate {
   static String BASE_FLODER = "./batch_base/";
-  static int SPLIT_COUNT = 40000;
 
   public static void main(String[] args) throws IOException {
-    String outname = "q-hhlr-swiss-ontrip-false-";
+    String outname = "q-hhlr-hafas-ontrip-false-routing-";
     System.out.println("Writing to " + outname);
 
-    var arrayCount = 0;
-
-    var currentFileName = outname + arrayCount + ".txt";
-    var outStream = new BufferedOutputStream(new FileOutputStream(currentFileName));
-
-    for(var queryFile : config) {
-      var total_id = 0;
+    for (var queryFile : config) {
       var lines = queryFile.readQueryFile();
-      for(var config : queryFile.configs) {
-        System.out.println("...Writing queries for config " + config.toString());
-        //expecting base files to target routing and have Default as Search Type
-        for (var line : lines) {
-          ++total_id;
+      var pkgId = 0;
+      var total_id = 0;
 
-          var out_line = line
-            .replace("routing", config.targets.toString())
-            .replace("Default", config.searchType.toString());
+      for (var pack : queryFile.packages) {
+        System.out.println("...Writing queries for package " + pkgId);
 
-          var lastComma = out_line.lastIndexOf(',');
-          out_line = out_line.substring(0, lastComma) + ", \"id\": " + total_id + "}\n";
+        var currentFileName = outname + pkgId + ".txt";
+        var outStream = new BufferedOutputStream(new FileOutputStream(currentFileName));
 
-          outStream.write(out_line.getBytes(StandardCharsets.UTF_8));
+        for (var config : pack.configs) {
+          System.out.println("...Adding queries for config " + config.toString());
+          //expecting base files to target routing and have Default as Search Type
+          for (var line : lines) {
+            ++total_id;
 
-          if (total_id % SPLIT_COUNT == 0) {
-            outStream.close();
-            System.out.println("...Splitting batch to '" + currentFileName + "'");
-            ++arrayCount;
-            currentFileName = outname + arrayCount + ".txt";
-            outStream = new BufferedOutputStream(new FileOutputStream(currentFileName));
+            var out_line = line
+              .replace("routing", config.targets.toString())
+              .replace("Default", config.searchType.toString());
+
+            var lastComma = out_line.lastIndexOf(',');
+            out_line = out_line.substring(0, lastComma) + ", \"id\": " + total_id + "}\n";
+
+            outStream.write(out_line.getBytes(StandardCharsets.UTF_8));
           }
-
         }
+
+        ++pkgId;
+        outStream.close();
       }
     }
-
-    outStream.close();
   }
 
   static QueryFile[] config = new QueryFile[]{
-    new QueryFile(Dataset.swiss, QueryType.OntripStationStart, false, new Config[]{
-//      new Config(Targets.raptor_cpu, SearchType.Default),
-//      new Config(Targets.raptor_gpu, SearchType.Default),
-//      new Config(Targets.raptor_cpu, SearchType.Tso96),
-//      new Config(Targets.raptor_gpu, SearchType.Tso96),
+    new QueryFile(Dataset.hafas, QueryType.OntripStationStart, false, new Package[]{
+//      new Package(
+//        new Config[]{
+//          new Config(Targets.raptor_gpu, SearchType.Default),
+//          new Config(Targets.raptor_gpu, SearchType.MaxOccupancy),
+//          new Config(Targets.raptor_gpu, SearchType.MaxTransferClass),
+//          new Config(Targets.raptor_gpu, SearchType.Tso96),
+//          new Config(Targets.raptor_gpu, SearchType.Tso90),
+//          new Config(Targets.raptor_gpu, SearchType.Tso80),
+//          new Config(Targets.raptor_gpu, SearchType.Tso72),
+//        }),
 //
-//      new Config(Targets.raptor_cpu, SearchType.MaxOccupancy),
-//      new Config(Targets.raptor_gpu, SearchType.MaxOccupancy),
-//      new Config(Targets.raptor_cpu, SearchType.Tso90),
-//      new Config(Targets.raptor_gpu, SearchType.Tso90),
+//      new Package(new Config[]{
+//          new Config(Targets.raptor_gpu, SearchType.Tso64),
+//          new Config(Targets.raptor_gpu, SearchType.Tso45),
+//          new Config(Targets.raptor_gpu, SearchType.Tso36),
+//          new Config(Targets.raptor_gpu, SearchType.Tso32),
+//          new Config(Targets.raptor_gpu, SearchType.Tso20),
+//          new Config(Targets.raptor_gpu, SearchType.Tso16),
+//          new Config(Targets.raptor_gpu, SearchType.Tso10),
+//          new Config(Targets.raptor_gpu, SearchType.Tso06),
+//      }),
 //
-//      new Config(Targets.raptor_cpu, SearchType.Tso80),
-//      new Config(Targets.raptor_gpu, SearchType.Tso80),
-//      new Config(Targets.raptor_cpu, SearchType.Tso06),
-//      new Config(Targets.raptor_gpu, SearchType.Tso06),
-//
-//      new Config(Targets.raptor_cpu, SearchType.Tso72),
-//      new Config(Targets.raptor_gpu, SearchType.Tso72),
-//      new Config(Targets.raptor_cpu, SearchType.Tso08),
-//      new Config(Targets.raptor_gpu, SearchType.Tso08),
-//
-//      new Config(Targets.raptor_cpu, SearchType.Tso64),
-//      new Config(Targets.raptor_gpu, SearchType.Tso64),
-//      new Config(Targets.raptor_cpu, SearchType.Tso10),
-//      new Config(Targets.raptor_gpu, SearchType.Tso10),
-//
-//      new Config(Targets.raptor_cpu, SearchType.Tso60),
-//      new Config(Targets.raptor_gpu, SearchType.Tso60),
-//      new Config(Targets.raptor_cpu, SearchType.Tso12),
-//      new Config(Targets.raptor_gpu, SearchType.Tso12),
-//
-//      new Config(Targets.raptor_cpu, SearchType.Tso48),
-//      new Config(Targets.raptor_gpu, SearchType.Tso48),
-//      new Config(Targets.raptor_cpu, SearchType.Tso16),
-//      new Config(Targets.raptor_gpu, SearchType.Tso16),
-//
-//      new Config(Targets.raptor_cpu, SearchType.Tso45),
-//      new Config(Targets.raptor_gpu, SearchType.Tso45),
-//      new Config(Targets.raptor_cpu, SearchType.Tso18),
-//      new Config(Targets.raptor_gpu, SearchType.Tso18),
-//
-//      new Config(Targets.raptor_cpu, SearchType.Tso40),
-//      new Config(Targets.raptor_gpu, SearchType.Tso40),
-//      new Config(Targets.raptor_cpu, SearchType.Tso36),
-//      new Config(Targets.raptor_gpu, SearchType.Tso36),
-//
-//      new Config(Targets.raptor_cpu, SearchType.Tso32),
-//      new Config(Targets.raptor_gpu, SearchType.Tso32),
-//      new Config(Targets.raptor_cpu, SearchType.Tso20),
-//      new Config(Targets.raptor_gpu, SearchType.Tso20),
-//
-//      new Config(Targets.raptor_cpu, SearchType.Tso30),
-//      new Config(Targets.raptor_gpu, SearchType.Tso30),
-//      new Config(Targets.raptor_cpu, SearchType.Tso24),
-//      new Config(Targets.raptor_gpu, SearchType.Tso24),
+//      new Package(new Config[] {
+//          new Config(Targets.raptor_gpu, SearchType.Tso60),
+//          new Config(Targets.raptor_gpu, SearchType.Tso48),
+//          new Config(Targets.raptor_gpu, SearchType.Tso40),
+//          new Config(Targets.raptor_gpu, SearchType.Tso30),
+//          new Config(Targets.raptor_gpu, SearchType.Tso24),
+//          new Config(Targets.raptor_gpu, SearchType.Tso18),
+//          new Config(Targets.raptor_gpu, SearchType.Tso12),
+//          new Config(Targets.raptor_gpu, SearchType.Tso08),
+//      }),
 
-      new Config(Targets.routing, SearchType.Default),
-      new Config(Targets.routing, SearchType.MaxOccupancy),
-      new Config(Targets.routing, SearchType.TimeSlottedOccupancy)
+//      //duration 7h
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Default)}),
+//
+//      //duration 11h
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.MaxOccupancy)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso06)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso08)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso12)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso16)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso18)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso20)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso24)}),
+//
+//      //duration 20h
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso30)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso32)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso36)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso40)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso45)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso48)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso60)}),
+//
+//      //duration 24h
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso64)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso72)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso80)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso90)}),
+//      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso96)}),
+
+
+      new Package(new Config[]{new Config(Targets.routing, SearchType.Default),}),
+      new Package(new Config[]{new Config(Targets.routing, SearchType.MaxOccupancy),}),
+      new Package(new Config[]{new Config(Targets.routing, SearchType.TimeSlottedOccupancy),}),
+      new Package(new Config[]{new Config(Targets.routing, SearchType.MaxTransferClass)}),
+      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.MaxTransferClass)})
 
     })
 
@@ -121,18 +126,18 @@ public class HHLRBatchQueryGenerate {
 
   static class QueryFile {
 
-    public QueryFile(Dataset dataset, QueryType queryType, boolean largeStation, Config[] configs) {
+    public QueryFile(Dataset dataset, QueryType queryType, boolean largeStation, Package[] packages) {
       this.dataset = dataset;
       this.queryType = queryType;
       this.largeStation = largeStation;
-      this.configs = configs;
+      this.packages = packages;
     }
 
     Dataset dataset;
     QueryType queryType;
     boolean largeStation;
 
-    Config[] configs;
+    Package[] packages;
 
     List<String> readQueryFile() {
       var fileName = "q-" + dataset.toString().toLowerCase() + "-" + queryType.toString().toLowerCase() + "-" + largeStation + ".txt";
@@ -143,7 +148,7 @@ public class HHLRBatchQueryGenerate {
         var input = Files.readAllLines(Path.of(path));
         System.out.println("Ok");
         return input;
-      }catch(IOException ex) {
+      } catch (IOException ex) {
         System.out.println("Error!");
         ex.printStackTrace();
       }
@@ -151,6 +156,14 @@ public class HHLRBatchQueryGenerate {
       System.exit(-1);
       return null;
     }
+  }
+
+  static class Package {
+    public Package(Config[] configs) {
+      this.configs = configs;
+    }
+
+    Config[] configs;
   }
 
   static class Config {
@@ -175,9 +188,9 @@ public class HHLRBatchQueryGenerate {
 enum SearchType {
   Default,
   MaxOccupancy,
-  MaxOccupancyShfl,
-
   TimeSlottedOccupancy,
+
+  MaxTransferClass,
 
   Tso96,
   Tso90,
@@ -199,27 +212,6 @@ enum SearchType {
   Tso10,
   Tso08,
   Tso06,
-
-  Tso96Shfl,
-  Tso90Shfl,
-  Tso80Shfl,
-  Tso72Shfl,
-  Tso64Shfl,
-  Tso60Shfl,
-  Tso48Shfl,
-  Tso45Shfl,
-  Tso40Shfl,
-  Tso36Shfl,
-  Tso32Shfl,
-  Tso30Shfl,
-  Tso24Shfl,
-  Tso20Shfl,
-  Tso18Shfl,
-  Tso16Shfl,
-  Tso12Shfl,
-  Tso10Shfl,
-  Tso08Shfl,
-  Tso06Shfl
 }
 
 enum QueryType {

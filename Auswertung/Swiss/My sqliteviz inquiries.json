@@ -3,7 +3,7 @@
     "inquiries": [
         {
             "id": "i2pV-OEJL0JblYf8w8FZW",
-            "query": "WITH 'tso_cpu' (search_type, cpu_avg) as (SELECT search_type, val as 'cpu_avg' FROM \"analysis\" where search_type like 'tso%' and target like 'raptor_cpu' and stat_name like 'avg_total_calc%'),\n     'tso_gpu' (search_type, gpu_avg) as (SELECT search_type, val as 'gpu_avg' FROM \"analysis\" where search_type like 'tso%' and target like 'raptor_gpu' and stat_name like 'avg_total_calc%'),\n     'routing' (search_type, threshold) as (with 'search_types' (search_type) as (select search_type from \"analysis\" WHERE target like '%gpu' and search_type like 'tso%' and stat_name like 'avg_total_calc%')\n\t\t\t\t\t\t\t\t\t\t\tSELECT search_types.search_type, val as 'threshold' FROM \"analysis\", \"search_types\" where analysis.search_type like 'time%' and target like 'routing' and stat_name like 'avg_total_calc%')\nSELECT cpu.search_type, substr(cpu.search_type, -2, 2) as 'slot_size', cpu.cpu_avg, gpu.gpu_avg, routing.threshold from \"tso_cpu\" as 'cpu', \"tso_gpu\" as 'gpu', \"routing\" where gpu.search_type like cpu.search_type and routing.search_type like cpu.search_type",
+            "query": "WITH 'tso_cpu' (search_type, cpu_avg) as (SELECT search_type, val as 'cpu_avg' FROM \"analysis_swiss\" where search_type like 'tso%' and target like 'raptor_cpu' and stat_name like 'avg_total_calc%'),\n     'tso_gpu' (search_type, gpu_avg) as (SELECT search_type, val as 'gpu_avg' FROM \"analysis_swiss\" where search_type like 'tso%' and target like 'raptor_gpu' and stat_name like 'avg_total_calc%'),\n     'routing' (search_type, threshold) as (with 'search_types' (search_type) as (select search_type from \"analysis_swiss\" WHERE target like '%gpu' and search_type like 'tso%' and stat_name like 'avg_total_calc%')\n\t\t\t\t\t\t\t\t\t\t\tSELECT search_types.search_type, val as 'threshold' FROM \"analysis_swiss\", \"search_types\" where analysis_swiss.search_type like 'time%' and target like 'routing' and stat_name like 'avg_total_calc%')\nSELECT cpu.search_type, substr(cpu.search_type, -2, 2) as 'slot_size', cpu.cpu_avg, gpu.gpu_avg, routing.threshold from \"tso_cpu\" as 'cpu', \"tso_gpu\" as 'gpu', \"routing\" where gpu.search_type like cpu.search_type and routing.search_type like cpu.search_type",
             "viewType": "chart",
             "viewOptions": {
                 "data": [
@@ -66,8 +66,8 @@
                     },
                     "xaxis": {
                         "range": [
-                            0.7862882544024608,
-                            101.21371174559754
+                            0.820531227566403,
+                            101.1794687724336
                         ],
                         "autorange": true,
                         "showline": false,
@@ -95,8 +95,8 @@
                     },
                     "yaxis": {
                         "range": [
-                            -19.89686832767905,
-                            639.9599313276791
+                            -20.77846701644407,
+                            640.841530016444
                         ],
                         "autorange": true,
                         "title": {
@@ -111,7 +111,7 @@
                         "type": "linear"
                     },
                     "title": {
-                        "text": "Scalability in Dimensions (CPU vs GPU)"
+                        "text": "Scalability in Dimensions (CPU vs GPU) from 10k ontrip queries on the swiss dataset"
                     },
                     "hovermode": "x",
                     "shapes": []
@@ -123,7 +123,7 @@
         },
         {
             "id": "B97dst0CyWtAvoZSCuH3m",
-            "query": "WITH 'cpu' (search_type, cpu_avg) as (SELECT search_type, val as 'cpu_avg' FROM \"analysis\" where search_type not like 'tso%' and target like 'raptor_cpu' and stat_name like 'avg_total_calc%'),\n     'gpu' (search_type, gpu_avg) as (SELECT search_type, val as 'gpu_avg' FROM \"analysis\" where search_type not like 'tso%' and target like 'raptor_gpu' and stat_name like 'avg_total_calc%'),\n     'routing' (search_type, rout_avg) as (SELECT search_type, val as 'rout_avg' FROM \"analysis\" where search_type not like 'time%' and target like 'routing' and stat_name like 'avg_total_calc%')\nSELECT cpu.search_type, cpu.cpu_avg, gpu.gpu_avg, routing.rout_avg from \"cpu\", \"gpu\", \"routing\" where gpu.search_type like cpu.search_type and routing.search_type like gpu.search_type",
+            "query": "WITH 'cpu' (search_type, cpu_avg) as (SELECT search_type, val as 'cpu_avg' FROM \"analysis_swiss\" where search_type not like 'tso%' and target like 'raptor_cpu' and stat_name like 'avg_total_calc%'),\n     'gpu' (search_type, gpu_avg) as (SELECT search_type, val as 'gpu_avg' FROM \"analysis_swiss\" where search_type not like 'tso%' and target like 'raptor_gpu' and stat_name like 'avg_total_calc%'),\n     'routing' (search_type, rout_avg) as (SELECT search_type, val as 'rout_avg' FROM \"analysis_swiss\" where search_type not like 'time%' and target like 'routing' and stat_name like 'avg_total_calc%')\nSELECT cpu.search_type, cpu.cpu_avg, gpu.gpu_avg, routing.rout_avg from \"cpu\", \"gpu\", \"routing\" where gpu.search_type like cpu.search_type and routing.search_type like gpu.search_type",
             "viewType": "chart",
             "viewOptions": {
                 "data": [
@@ -245,60 +245,8 @@
             "createdAt": "2022-01-09T11:18:53.868Z"
         },
         {
-            "id": "Xjq-SHnCKapSiKRq--DLV",
-            "query": "-- Get the connection sums\n-- select search_type, val as \"gpu_sum_raptor_conns\" from \"analysis\" where search_type like 'tso%' and stat_name like 'sum_raptor_conn%' and target like '%gpu'\n\n-- Get the total calc time sums\n-- select search_type, val as \"gpu_sum_total_time\" from \"analysis\" where search_type like 'tso%' and target like '%gpu' and stat_name like 'sum_total%'\n\nwith 'gpu' (search_type, sum_connections, sum_total_time) AS (\n  WITH 'gpu_conn_sums' (search_type, gpu_sum_raptor_conns) AS (select search_type, val as \"gpu_sum_raptor_conns\" from \"analysis\" where search_type like 'tso%' and stat_name like 'sum_raptor_conn%' and target like '%gpu'),\n       'gpu_time_sums' (search_type, gpu_sum_total_time) AS (select search_type, val as \"gpu_sum_total_time\" from \"analysis\" where search_type like 'tso%' and target like '%gpu' and stat_name like 'sum_total%')\n  SELECT gpu_conn_sums.search_type, gpu_sum_raptor_conns, gpu_sum_total_time FROM \"gpu_conn_sums\", \"gpu_time_sums\" where gpu_conn_sums.search_type like gpu_time_sums.search_type)\nSELECT search_type, (sum_total_time / sum_connections) AS \"avg_time_per_conn\", sum_total_time, sum_connections FROM \"gpu\"",
-            "viewType": "chart",
-            "viewOptions": {
-                "data": [
-                    {
-                        "type": "scatter",
-                        "mode": "lines",
-                        "x": null,
-                        "xsrc": "search_type",
-                        "meta": {
-                            "columnNames": {
-                                "x": "search_type",
-                                "y": "sum_total_time"
-                            }
-                        },
-                        "y": null,
-                        "ysrc": "sum_total_time"
-                    }
-                ],
-                "layout": {
-                    "xaxis": {
-                        "range": [
-                            0,
-                            19
-                        ],
-                        "autorange": true,
-                        "type": "category"
-                    },
-                    "yaxis": {
-                        "range": [
-                            24032.944444444438,
-                            2258354.0555555555
-                        ],
-                        "autorange": true,
-                        "domain": [
-                            0,
-                            1
-                        ],
-                        "type": "linear"
-                    },
-                    "autosize": true,
-                    "mapbox": {
-                        "style": "open-street-map"
-                    }
-                },
-                "frames": []
-            },
-            "name": "Avg Time per Connection",
-            "createdAt": "2022-01-09T20:20:59.578Z"
-        },
-        {
             "id": "vtXt-KvJu3xEK290t0fwn",
-            "query": "with gpu_values (search_type, id, gpu_val) as (SELECT search_type, id, val as gpu_val FROM \"full_analysis\" WHERE search_type like 'tso%' and target like '%gpu' and stat_name like 'total_c%'),\n     cpu_values (search_type, id, cpu_val) as (SELECT search_type, id, val as cpu_val FROM \"full_analysis\" where search_type like 'tso%' and target like '%cpu' and stat_name like 'total_c%')\nselect cpu.search_type, cpu.id, gpu_val, cpu_val FROM gpu_values as gpu, cpu_values as cpu WHERE cpu.search_type like gpu.search_type and cpu.id = gpu.id",
+            "query": "with gpu_values (search_type, id, gpu_val) as (SELECT search_type, id, val as gpu_val FROM \"full_analysis_swiss\" WHERE search_type like 'tso%' and target like '%gpu' and stat_name like 'total_c%'),\n     cpu_values (search_type, id, cpu_val) as (SELECT search_type, id, val as cpu_val FROM \"full_analysis_swiss\" where search_type like 'tso%' and target like '%cpu' and stat_name like 'total_c%'),\n     mcd_values (search_type, id, mcd_val) as (with 'search_types' (search_type) as (select search_type from \"analysis_swiss\" WHERE target like '%gpu' and search_type like 'tso%' and stat_name like 'avg_total_calc%')\n\t\t\t\t\t\t\t\t\t\t\tSELECT search_types.search_type, id, val as mcd_val FROM \"full_analysis_swiss\", \"search_types\" where full_analysis_swiss.search_type like 'time%' and target like 'routing' and stat_name like 'total_c%')\nselect cpu.search_type, cpu.id, gpu_val, cpu_val, mcd_val FROM gpu_values as gpu, cpu_values as cpu, mcd_values as mcd WHERE cpu.search_type like gpu.search_type and cpu.search_type like mcd.search_type and cpu.id = gpu.id and cpu.id = mcd.id",
             "viewType": "chart",
             "viewOptions": {
                 "data": [
@@ -339,6 +287,21 @@
                         "name": "CPU",
                         "notched": false,
                         "boxmean": true
+                    },
+                    {
+                        "type": "box",
+                        "boxpoints": false,
+                        "x": null,
+                        "xsrc": "search_type",
+                        "meta": {
+                            "columnNames": {
+                                "x": "search_type",
+                                "y": "mcd_val"
+                            }
+                        },
+                        "y": null,
+                        "ysrc": "mcd_val",
+                        "name": "MCD"
                     }
                 ],
                 "layout": {
@@ -352,8 +315,8 @@
                     },
                     "yaxis": {
                         "range": [
-                            -105.44444444444444,
-                            2023.4444444444443
+                            -154.3888888888889,
+                            2953.3888888888887
                         ],
                         "autorange": true,
                         "type": "linear"
@@ -362,7 +325,10 @@
                     "mapbox": {
                         "style": "open-street-map"
                     },
-                    "boxmode": "group"
+                    "boxmode": "group",
+                    "title": {
+                        "text": "Distribution of total calculation time for 10k ontrip queries on the swiss dataset"
+                    }
                 },
                 "frames": []
             },

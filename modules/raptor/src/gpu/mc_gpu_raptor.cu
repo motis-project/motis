@@ -631,7 +631,7 @@ __device__ void mc_update_routes_dev(device_memory const& device_mem,
     if (round_k == 5)
       atomicAdd(&device_mem.stats_->scanned_routes_5_, route_count);
     if (round_k == 6)
-      atomicAdd(&device_mem.stats_->scanned_routes_5_, route_count);
+      atomicAdd(&device_mem.stats_->scanned_routes_6_, route_count);
     if (round_k == 7)
       atomicAdd(&device_mem.stats_->scanned_routes_7_, route_count);
   }
