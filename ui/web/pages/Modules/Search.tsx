@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 
 import { DatePicker } from './DatePicker';
-import { IntermodalRoutingRequest, IntermodalRoutingResponse, IntermodalPretripStartInfo, PretripStartInfo } from './IntermodalRoutingTypes';
+import { Mode, IntermodalRoutingRequest, IntermodalRoutingResponse, IntermodalPretripStartInfo, PretripStartInfo } from './IntermodalRoutingTypes';
 import { Connection, Station } from './ConnectionTypes';
-import { Mode } from './ModePicker';
 import { Interval } from './RoutingTypes';
 import { Translations } from './Localization';
 import { Address } from './SuggestionTypes';
 import { SearchInputField } from './SearchInputField';
+import { Modepicker } from './ModePicker';
 
 
 interface Destination {
@@ -31,7 +31,7 @@ const getRoutingOptions = (startType: string, startModes: Mode[], start: Station
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({  destination: {type: "Module", target: "/intermodal"}, 
                                 content_type: 'IntermodalRoutingRequest',
-                                content: {start_type: startType, start_modes: startModes, start: { station: start, min_connection_count: 5, interval: { begin: 1640951760, end: 1640958960 }, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: destination } })
+                                content: {start_type: startType, start_modes: startModes, start: { station: start, min_connection_count: 5, interval: { begin: 1642950840, end: 1642958040 }, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: destination } })
     };
 };
 
@@ -59,7 +59,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     const [startType, setStartType] = useState<string>('PretripStart');
     
     // StartModes
-    const [startModes, setStartModes] = useState<Mode[]>([]);
+    const [startModes, setStartModes] = useState<Mode[]>([{ mode_type: 'Bike', mode: { max_duration: 900 } }]);
 
     // Start Station or Position
     const [start, setStart] = useState<Station | Address>({ name: 'Darmstadt Hauptbahnhof', id: 'delfi_de:06411:4734:64:63'});//<Start>({ station: { name: 'Darmstadt Hauptbahnhof', id: 'delfi_de:06411:4734:64:63'}, min_connection_count: 5, interval: { begin: 1640430180, end: 164043738 }, extend_interval_later: true, extend_interval_earlier: true });
@@ -70,7 +70,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     const [destinationType, setDestinationType] = useState<string>('InputStation');
     
     // Destination_modes tracks the ModePicker for the Destination
-    const [destinationModes, setDestinationModes] = useState<Mode[]>([]);
+    const [destinationModes, setDestinationModes] = useState<Mode[]>([{ mode_type: 'FootPPR', mode: { search_options: { profile: 'elevation', duration_limit: 60 } }}]);
     
     // Destination holds the Value of 'to location' input field
     const [destination, setDestination] = useState<Station | Address>({name: 'Frankfurt (Main) Westbahnhof', id: 'delfi_de:06412:1204:3:3' });
@@ -101,18 +101,21 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                 props.setConnections(res.content.connections);
             });
 
-    }, [searchQuery]);
+    }, [searchQuery, startModes, destinationModes]);
     
     return (
         <div id='search'>
             <div className='pure-g gutters'>
                 <div className='pure-u-1 pure-u-sm-12-24 from-location'>
-                    <SearchInputField   translation={props.translation}
+                    <div>
+                        <SearchInputField   translation={props.translation}
                                         label={props.translation.search.start}
                                         searchQuery={searchQuery}
                                         setSearchQuery={setSearchQuery}
                                         station={start}
                                         setSearchDisplay={setStart}/>
+                        <Modepicker translation={props.translation} title={props.translation.search.startTransports} modes={startModes} setModes={setStartModes}/>
+                    </div>
                     <div className='swap-locations-btn'>
                         <label className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'>
                             <input  type='checkbox' 
@@ -131,12 +134,15 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
             </div>
             <div className='pure-g gutters'>
                 <div className='pure-u-1 pure-u-sm-12-24 to-location'>
-                    <SearchInputField   translation={props.translation}
-                                        label={props.translation.search.destination}
-                                        searchQuery={searchQuery}
-                                        setSearchQuery={setSearchQuery}
-                                        station={destination}
-                                        setSearchDisplay={setDestination}/>
+                    <div>
+                        <SearchInputField   translation={props.translation}
+                                            label={props.translation.search.destination}
+                                            searchQuery={searchQuery}
+                                            setSearchQuery={setSearchQuery}
+                                            station={destination}
+                                            setSearchDisplay={setDestination}/>
+                        <Modepicker translation={props.translation} title={props.translation.search.destinationTransports} modes={destinationModes} setModes={setDestinationModes}/>
+                    </div>
                 </div>
                 <div className='pure-u-1 pure-u-sm-9-24'>
                     <div>

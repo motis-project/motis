@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Station } from "./ConnectionTypes";
 import { Translations } from "./Localization";
-import { Mode, Modepicker } from "./ModePicker";
+import { Modepicker } from "./ModePicker";
+import { Mode } from "./IntermodalRoutingTypes";
 import { Proposals } from "./Proposals";
 import { Address, AddressSuggestionResponse, StationSuggestionResponse } from "./SuggestionTypes";
 
@@ -58,30 +59,31 @@ const getPostRequest = (body: any) => {
 export const SearchInputField: React.FC<{ 'translation': Translations, 'label': String, 'searchQuery': boolean, 'setSearchQuery': React.Dispatch<React.SetStateAction<boolean>>, 'station': Station | Address, 'setSearchDisplay': React.Dispatch<React.SetStateAction<Station | Address>> }> = (props) => {
     
 
-    // StartType
+    // Type
     const [type, setType] = useState<string>('PretripStart');
     
-    // StartModes
+    // Modes
     const [modes, setModes] = useState<Mode[]>([]);
     
-    // Start Station or Position
+    // Station or Position
     const [station, setStation] = useState<Station | Address>(props.station);
 
-    // StartName stores current input in the Start Input Field
+    // Name stores current input in the Input Field
     const [name, setName] = useState<string>(props.station.name);
     
-    // fetch Start Address Suggestions
+    // fetch Address Suggestions
     const [fetchSuggestionsFlag, setFetchSuggestionsFlag] = useState<boolean>(false);
     
-    // Start Address Suggestions
+    // Address Suggestions
     const [addressSuggestions, setAddressSuggestions] = useState<Address[]>([]);
     
-    // Start Station Suggestions
+    // Station Suggestions
     const [stationSuggestions, setStationSuggestions] = useState<Station[]>([]);
 
+    // List of all Suggestions
     const [suggestions, setSuggestions] = useState<(Address | Station)[]>([]);
     
-    // show Start Suggestions
+    // show Suggestions
     const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
 
     // Index, tracking which suggestion is highlighted right now
@@ -105,70 +107,67 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
     
     return (
         <div>
-            <div>
-                <form>
-                    <div className='label'>
-                        {props.label}
-                    </div>
-                    <div className='gb-input-group'>
-                        <div className='gb-input-icon'>
-                            <i className='icon'>place</i>
-                            </div>
-                    <input  className='gb-input' tabIndex={1} value={name} 
-                            onChange={e => {
-                                //e.preventDefault();
-                                //console.log("Start changed")
-                                setName(e.currentTarget.value)
-                                if (e.currentTarget.value.length >= 3) {
-                                    setFetchSuggestionsFlag(!fetchSuggestionsFlag);
-                                    setShowSuggestions(true);
-                                }
-                            } }
-                            onClick={_ => {
-                                setShowSuggestions(true);
-                            }}
-                            onKeyDown={e => {
-                                switch (e.key) {
-                                    case 'Enter':
-                                        e.preventDefault();
-                                        setName(suggestions[selectedSuggestion].name);
-                                        setStation(suggestions[selectedSuggestion]);
-                                        //props.setSearchDisplay(suggestions[selectedSuggestion]);
-                                        setShowSuggestions(false);
-                                        setSelectedSuggestion(0);
-                                        //props.setSearchQuery(!props.searchQuery)
-                                        break;
-                                    case 'Escape':
-                                        e.preventDefault();
-                                        setShowSuggestions(false);
-                                        break;
-                                    case 'ArrowDown':
-                                        setSelectedSuggestion(selectedSuggestion + 1);
-                                        break;
-                                    case 'ArrowUp':
-                                        setSelectedSuggestion(selectedSuggestion - 1);
-                                        break;
-                                    default:
-                                        console.log(e.key);
-                                    }
-                            } }
-                            onFocus={_ => {
-                                setShowSuggestions(true);
-                            } }/></div>
-                </form>
-                <div className='paper' style={showSuggestions && addressSuggestions.length > 0 ? {} : {display: 'none'}}>
-                    <Proposals  addresses={addressSuggestions} 
-                                stations={stationSuggestions}
-                                suggestions={suggestions}
-                                highlighted={selectedSuggestion}
-                                showSuggestions={showSuggestions}
-                                setName={setName}
-                                setSuggestion={setStation} 
-                                setShowSuggestions={setShowSuggestions}
-                                setHighlighted={setSelectedSuggestion}/>
+            <form>
+                <div className='label'>
+                    {props.label}
                 </div>
+                <div className='gb-input-group'>
+                    <div className='gb-input-icon'>
+                        <i className='icon'>place</i>
+                        </div>
+                <input  className='gb-input' tabIndex={1} value={name} 
+                        onChange={e => {
+                            //e.preventDefault();
+                            //console.log("Start changed")
+                            setName(e.currentTarget.value)
+                            if (e.currentTarget.value.length >= 3) {
+                                setFetchSuggestionsFlag(!fetchSuggestionsFlag);
+                                setShowSuggestions(true);
+                            }
+                        } }
+                        onClick={_ => {
+                            setShowSuggestions(true);
+                        }}
+                        onKeyDown={e => {
+                            switch (e.key) {
+                                case 'Enter':
+                                    e.preventDefault();
+                                    setName(suggestions[selectedSuggestion].name);
+                                    setStation(suggestions[selectedSuggestion]);
+                                    //props.setSearchDisplay(suggestions[selectedSuggestion]);
+                                    setShowSuggestions(false);
+                                    setSelectedSuggestion(0);
+                                    //props.setSearchQuery(!props.searchQuery)
+                                    break;
+                                case 'Escape':
+                                    e.preventDefault();
+                                    setShowSuggestions(false);
+                                    break;
+                                case 'ArrowDown':
+                                    setSelectedSuggestion(selectedSuggestion + 1);
+                                    break;
+                                case 'ArrowUp':
+                                    setSelectedSuggestion(selectedSuggestion - 1);
+                                    break;
+                                default:
+                                    console.log(e.key);
+                                }
+                        } }
+                        onFocus={_ => {
+                            setShowSuggestions(true);
+                        } }/></div>
+            </form>
+            <div className='paper' style={showSuggestions && addressSuggestions.length > 0 ? {} : {display: 'none'}}>
+                <Proposals  addresses={addressSuggestions} 
+                            stations={stationSuggestions}
+                            suggestions={suggestions}
+                            highlighted={selectedSuggestion}
+                            showSuggestions={showSuggestions}
+                            setName={setName}
+                            setSuggestion={setStation} 
+                            setShowSuggestions={setShowSuggestions}
+                            setHighlighted={setSelectedSuggestion}/>
             </div>
-            <Modepicker translation={props.translation} start={true}/>{/* modes={startModes} setModes={setStartModes}/>*/}
         </div>
     )
                     
