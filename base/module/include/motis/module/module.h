@@ -41,7 +41,7 @@ struct module : public conf::configuration {
 
   std::string const& module_name() const { return prefix(); }
 
-  std::string data_path(boost::filesystem::path const&);
+  std::string data_path(boost::filesystem::path const&) const;
   void set_data_directory(std::string const&);
   void set_shared_data(dispatcher*);
 

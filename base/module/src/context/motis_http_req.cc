@@ -21,7 +21,7 @@ struct http_request_executor
   http_request_executor(boost::asio::io_service& ios, ctx::op_id id)
       : ios_{ios},
         f_{std::make_shared<ctx::future<ctx_data, net::http::client::response>>(
-            id)} {}
+            std::move(id))} {}
 
   void make_request(net::http::client::request req) {
     auto cb = [self = shared_from_this()](auto&& a,

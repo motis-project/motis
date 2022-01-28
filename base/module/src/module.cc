@@ -29,7 +29,7 @@ locked_resources module::lock_resources(ctx::accesses_t access,
   }
 }
 
-std::string module::data_path(fs::path const& p) {
+std::string module::data_path(fs::path const& p) const {
   return p.parent_path() == data_directory_
              ? p.lexically_relative(data_directory_).generic_string()
              : p.generic_string();
