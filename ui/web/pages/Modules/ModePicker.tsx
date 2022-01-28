@@ -6,48 +6,49 @@ import { Mode } from './IntermodalRoutingTypes';
 export const Modepicker: React.FC<{'translation': Translations, 'title': String, 'modes': Mode[], 'setModes': React.Dispatch<React.SetStateAction<Mode[]>>}> = (props) => {
     
     // Foot
-    // FootSelected
+    // Boolean used to track if the Foot Mode is selected
     const [footSelected, setFootSelected] = useState<boolean>(false);
 
-    // FootMaxDurationSlider
+    // Current value of the Foot Mode Slider
     const [footMaxDurationSlider, setFootMaxDurationSlider] = useState<number>(30);
 
-    // Foot Mode
+    // Complete Mode Object which will be returned upon closing the Modepicker Component if not undefined
     const [footMode, setFootMode] = useState<Mode>(undefined);
     
-        // Profile-Picker Value
-        const [profilePicker, setProfilePicker] = useState<String>('default');
+    // Selected Value in the Profile Dropdown Menu in Foot Mode
+    const [profilePicker, setProfilePicker] = useState<String>('default');
 
     // Bike
-    // BikeSelected
+    // Boolean used to track if the Bike Mode is selected
     const [bikeSelected, setBikeSelected] = useState<boolean>(false);
 
-    // BikeMaxDurationSlider
+    // Current value of the Bike Mode Slider
     const [bikeMaxDurationSlider, setBikeMaxDurationSlider] = useState<number>(30);
 
-    // Bike Mode
+    // Complete Mode Object which will be returned upon closing the Modepicker Component if not undefined
     const [bikeMode, setBikeMode] = useState<Mode>(undefined);
     
     // Car
-    // CarSelected
+    // Boolean used to track if the Car Mode is selected
     const [carSelected, setCarSelected] = useState<boolean>(false);
 
-    // CarMaxDurationSlider
+    // Current value of the Car Mode Slider
     const [carMaxDurationSlider, setCarMaxDurationSlider] = useState<number>(30);
 
-    // Car Mode
+    // Complete Mode Object which will be returned upon closing the Modepicker Component if not undefined
     const [carMode, setCarMode] = useState<Mode>(undefined);
 
-    // use CarParking
+    // Boolean used to track if Parking in the Car Mode is selected
     const [useParking, setUseParking] = useState<boolean>(false);
 
     
-    // Mode-Picker-Visible
+    // Boolean used to track if the ModePicker is being displayed or not
     const [modePickerVisible, setModePickerVisible] = useState<boolean>(false);
 
-    // Fetch new Intermodal Data
+    // Boolean used to track if anything in the Modepicker changed and a new IntermodalRoutingRequest needs to be fetched
     const [newFetch, setNewFetch] = useState<boolean>(false);
 
+    // Initial load of the Component
     React.useEffect(() => {
         props.modes.forEach((mode: any) => {
             if (mode.mode_type === 'FootPPR') {
@@ -72,24 +73,23 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
         })
     }, [])
 
+    // Update return Value for Foot Mode if any part of this Mode is changed
     React.useEffect(() => {
         if (footSelected){
             setFootMode({ mode_type: 'FootPPR', mode: { search_options: { profile: profilePicker, duration_limit: footMaxDurationSlider * 60 } }})
             setNewFetch(true);
-        } else {
-            setFootMode(undefined);
         }
     }, [footMaxDurationSlider, footSelected, profilePicker]);
     
+    // Update return Value for Bike Mode if any part of this Mode is changed
     React.useEffect(() => {
         if (bikeSelected) {
             setBikeMode({ mode_type: 'Bike', mode: { max_duration: bikeMaxDurationSlider * 60 } });
             setNewFetch(true);
-        } else {
-            setBikeMode(undefined);
         }
     },[bikeMaxDurationSlider, bikeSelected]);
 
+    // Update return Value for Car Mode if any part of this Mode is changed
     React.useEffect(() => {
         if (carSelected) {
             if (useParking) {
@@ -98,23 +98,22 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
                 setCarMode({ mode_type: 'Car', mode: { max_duration: carMaxDurationSlider * 60 } });
             }
             setNewFetch(true);
-        } else {
-            setCarMode(undefined);
         }
     }, [carMaxDurationSlider, carSelected, useParking]);
 
+    // Check which Modes are selected and should be returned
     const getModeArr = () => {
         let res = []
 
-        if (footMode !== undefined) {
+        if (footSelected) {
             res = [footMode];
         }
 
-        if (bikeMode !== undefined) {
+        if (bikeSelected) {
             res = [...res, bikeMode]
         }
         
-        if (carMode !== undefined) {
+        if (carSelected) {
             res = [...res, carMode]
         }
         return res;
@@ -157,11 +156,11 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
                         <div className='option'>
                             <div className='label'>{props.translation.search.searchProfile.profile}</div>
                             <div className='profile-picker'>
-                                <select onChange={(e) => setProfilePicker(e.target.value)}>
-                                    <option value='default' selected={profilePicker === 'default'} >{props.translation.searchProfiles.default}</option>
-                                    <option value='accessibility1' selected={profilePicker === 'accessibility1'}>{props.translation.searchProfiles.accessibility1}</option>
-                                    <option value='wheelchair' selected={profilePicker === 'wheelchair'}>{props.translation.searchProfiles.wheelchair}</option>
-                                    <option value='elevation' selected={profilePicker === 'elevation'}>{props.translation.searchProfiles.elevation}</option>
+                                <select onChange={(e) => setProfilePicker(e.target.value)} defaultValue={profilePicker.toString()}>
+                                    <option value='default'>{props.translation.searchProfiles.default}</option>
+                                    <option value='accessibility1'>{props.translation.searchProfiles.accessibility1}</option>
+                                    <option value='wheelchair'>{props.translation.searchProfiles.wheelchair}</option>
+                                    <option value='elevation'>{props.translation.searchProfiles.elevation}</option>
                                 </select></div>
                         </div>
                         <div className='option'>
