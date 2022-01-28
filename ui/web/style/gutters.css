@@ -83,25 +83,25 @@
   .from-gutter{
     width: 90vw;
     height: 25px;
-    margin-top: -20px;
+    margin-top: -10px;
   }
   .to-gutter{
     width: 90vw;
     height: 25px;
-    margin-top: 56px;
+    margin-top: 66px;
   }
   .calendar-gutter{
     width: 38vw;
-    margin-top: 136px;
+    margin-top: 146px;
   }
   .time-gutter{
     width: 35vw;
     margin-left: 39vw;
-    margin-top: 136px;
+    margin-top: 146px;
   }
   .time-options-gutter{
     width: 15vw;
     margin-left: 75vw;
-    margin-top: 148px;
+    margin-top: 158px;
   }
 }

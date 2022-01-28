@@ -463,8 +463,7 @@
   }
 }
 
-#search,
-#connections {
+#search {
   padding: 24px;
 }
 
@@ -708,40 +707,6 @@ fieldset > legend {
 .time-option input:checked + label {
   background-color: #6d8dec;
   color: white;
-}
-
-#connections {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  padding-top: 0px;
-  padding-bottom: 0px;
-}
-
-.connections {
-  padding-bottom: 20px;
-}
-
-#connections .no-results,
-#connections .main-error,
-#connections .loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  height: 100%;
-  min-height: 200px;
-}
-
-#connections .main-error div {
-  text-align: center;
-}
-
-#connections .schedule-range {
-  margin-top: 1em;
-}
-
-#connections .extend-search-interval .error .schedule-range {
-  margin-top: auto;
 }
 
 .connection {
