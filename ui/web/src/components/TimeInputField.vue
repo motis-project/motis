@@ -4,7 +4,6 @@
     iconType="schedule"
     :showLabel="true"
     :initInputText="timeToDisplay"
-    class="main-gutter time-gutter"
     :isTimeCalendarField="true"
     :showArrows="true"
     @inputChanged="setTime"

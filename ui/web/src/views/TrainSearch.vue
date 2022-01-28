@@ -13,7 +13,7 @@
         </div>
         <div class="pure-g gutters">
           <Calendar class="pure-u-1 pure-u-sm-12-24 to-location" @dateChanged="setNewDate"></Calendar>
-          <TimeInputField @timeChanged="setNewTime"></TimeInputField>
+          <TimeInputField @timeChanged="setNewTime" class="pure-u-1 pure-u-sm-12-24"></TimeInputField>
         </div>
       </div>
     </div>

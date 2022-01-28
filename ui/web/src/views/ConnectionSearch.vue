@@ -53,7 +53,7 @@
         </div>
       </div>
     </div>
-    <TimeInputField @timeChanged="timeChanged"></TimeInputField>
+    <TimeInputField @timeChanged="timeChanged" class="main-gutter time-gutter"></TimeInputField>
     <div class="main-gutter time-options-gutter">
       <div>
         <input
