@@ -1,16 +1,17 @@
 import { App, reactive } from 'vue'
 import { DateTime } from 'luxon'
+import Interval from '@/models/SmallTypes/Interval';
 
 
 export class DateTimeService {
   public dateTime: number;
-  public endingTime: number;
+  public intervalFromServer: Interval;
   private readonly timeFormat: string = "HH:mm";
   private readonly dateFormat: string = "dd.MM.yyyy";
 
-  public constructor(initialDateTime: number, endingTime: number) {
+  public constructor(initialDateTime: number, intervalFromServer: Interval) {
     this.dateTime = initialDateTime;
-    this.endingTime = endingTime;
+    this.intervalFromServer = intervalFromServer;
   }
 
   public get date(): Date {
@@ -18,7 +19,7 @@ export class DateTimeService {
   }
 
   public get endDate(): string {
-    return DateTime.fromMillis(this.endingTime).toFormat(this.dateFormat);
+    return DateTime.fromMillis(this.intervalFromServer.end).toFormat(this.dateFormat);
   }
 
   public get dateTimeInSeconds(): number {
@@ -65,8 +66,8 @@ declare module '@vue/runtime-core' {
 }
 
 export default {
-  install: (app: App, initialDateTime: number, endingTime: number): void => {
-    const service = reactive(new DateTimeService(initialDateTime, endingTime));
+  install: (app: App, initialDateTime: number, intervalFromServer: Interval): void => {
+    const service = reactive(new DateTimeService(initialDateTime, intervalFromServer));
     window.setTimeout(() => { service.dateTime += 1000; window.setInterval(() => service.dateTime += 1000, 1000) }, 1000 - new Date().getMilliseconds())
     app.config.globalProperties.$ds = service;
   }
