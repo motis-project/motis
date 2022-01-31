@@ -37,5 +37,9 @@
   "parking": "Parkplatz",
   "noDepartures": "Keine Abfahrten im gewählten Zeitraum",
   "noArrivals": "Keine Ankünfte im gewählten Zeitraum",
-  "noInTimetable": "Zeitraum nicht im Fahrplan"
+  "noInTimetable": "Zeitraum nicht im Fahrplan",
+  "information": "Auskunft",
+  "from": "von",
+  "till": "bis",
+  "avaliable": "möglich"
 }

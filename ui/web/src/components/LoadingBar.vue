@@ -18,7 +18,8 @@ export default defineComponent({
 export enum LoadingState {
   NothingToShow,
   Loading,
-  Loaded
+  Loaded,
+  Error
 }
 </script>
 
