@@ -6,12 +6,14 @@
     :initInputText="timeToDisplay"
     :isTimeCalendarField="true"
     :showArrows="true"
-    @inputChanged="setTime"
+    @inputChangedNative="setTime"
     @decreaseClick="changeTime(-1)"
     @increaseClick="changeTime(1)"
     :showAutocomplete="false"
     :key="inputFieldKey"
-    @blur="inputFieldKey++"></InputField>
+    @blur="inputFieldKey++, isValid=true"
+    @keydown="onKeyDown"
+    @mouseup="onMouseUp"></InputField>
 </template>
 
 <script lang="ts">
@@ -29,18 +31,24 @@ export default defineComponent({
   data() {
     return {
       time: {} as Date,
-      inputFieldKey: 0
+      inputFieldKey: 0,
+      isValid: true,
+      prevString: ":",
     };
   },
   computed: {
     timeToDisplay: function (): string {
-      let result = this.$ds.getTimeString(this.time.valueOf());
-      return result;
+      if(this.isValid){
+        let result = this.$ds.getTimeString(this.time.valueOf());
+        return result;
+      }
+      return this.prevString;
     },
   },
   created() {
     let currentTime = this.$ds.date;
     this.time = currentTime;
+    this.prevString = this.timeToDisplay;
   },
   methods: {
     changeTime(change: number) {
@@ -53,13 +61,131 @@ export default defineComponent({
       );
       this.$emit("timeChanged", this.time);
     },
-    setTime(value: string) {
+    setTime(event: Event) {
+      let inputField = event.target as HTMLInputElement;
+      let value = inputField.value
+      if(value === this.prevString) {
+        return;
+      }
       let t = this.$ds.parseTime(value);
+
       if(t.valueOf()) {
         this.time = t;
+        this.isValid = true;
+        this.$emit("timeChanged", this.time);
       }
-      this.$emit("timeChanged", this.time);
+      else{
+        this.isValid = false;
+        if(!value.includes(":")) {
+          // let res = this.prevString;
+          // let index = res.indexOf(":");
+          // res = res.slice(0, index - 1) + res.slice(index, res.length);
+          // value = res;
+          value = this.prevString;
+          inputField.value = this.prevString;
+        }
+        else {
+
+          let arr = value.split(":");
+          let arrInt = arr.map<(number | undefined)>(s => Number.parseInt(s));
+          let reg = /^\d+$/
+          if(arr.length === 2) {
+
+            if((arr[0].length !== 0 && !arr[0].match(reg)) || arrInt[0] === undefined || arrInt[0] < 0 || arrInt[0] >= 24
+              || (arr[1].length !== 0 && !arr[1].match(reg)) || arrInt[1] === undefined || arrInt[1] < 0 || arrInt[1] >= 60
+              || arr[0].length > 2 || arr[1].length > 2) {
+              value = this.prevString;
+              inputField.value = this.prevString;
+              console.log('xyi')
+            }
+          }
+          // let arrOld = this.prevString.split(":");
+          // if(arrOld[0].length === 1 && arr[0].length === 2){
+          //   inputField.setSelectionRange(3, 3);
+          // }
+          // if((arrOld[1].length === 1 && arr[1].length === 0)){
+          //   inputField.setSelectionRange(2, 2);
+          // }
+          if(arrInt[0] !== undefined && arrInt[0] > 2 && arrInt[0] < 10){
+            arr[0] = "0" + arrInt[0];
+            value = arr[0] + ":" + arr[1];
+            inputField.value = value;
+          }
+          if(arrInt[1] !== undefined && arrInt[1] > 5 && arrInt[1] < 10){
+            arr[1] = "0" + arrInt[1];
+            value = arr[0] + ":" + arr[1];
+            inputField.value = value;
+          }
+        }
+
+      }
+      this.prevString = value;
+
     },
+    onKeyDown(event: KeyboardEvent){
+      let inputField = event.target as HTMLInputElement;
+      let value = inputField.value;
+      let arr = value.split(":");
+      let lastValidTime = this.$ds.getTimeString(this.time.valueOf());
+      let arrLastValidTime = lastValidTime.split(":");
+      if(event.key === "Backspace"){
+        if(inputField.selectionStart === 3){
+          inputField.setSelectionRange(2, 2);
+        }
+      }
+      if(!Number.isNaN(Number.parseInt(event.key)) && inputField.selectionStart === 2) {
+        inputField.setSelectionRange(3, 3);
+      }
+      if(event.key ==="ArrowRight"){
+        if(Number.parseInt(arr[0]) >= 0 && Number.parseInt(arr[0]) <=2 && inputField.selectionStart === 1){
+          arr[0] = "0" + arr[0];
+          value = arr[0] + ":" + arr[1];
+          inputField.value = value;
+        }
+        if(arr[0] === "" && inputField.selectionStart === 0){
+          value = arrLastValidTime[0] + ":" + arr[1];
+          inputField.value = value;
+          inputField.setSelectionRange(2, 2);
+        }
+      }
+      if(event.key ==="ArrowLeft" && Number.parseInt(arr[1]) >= 0 && Number.parseInt(arr[1]) <=5
+        && inputField.selectionStart === 3){
+        arr[1] = "0" + arr[1];
+        value = arr[0] + ":" + arr[1];
+        inputField.value = value;
+        inputField.setSelectionRange(3, 3);
+      }
+    },
+    onMouseUp(event: MouseEvent) {
+      if(event.button === 0){
+        let inputField = event.target as HTMLInputElement;
+        let value = inputField.value;
+        let arr = value.split(":");
+        let lastValidTime = this.$ds.getTimeString(this.time.valueOf());
+        let arrLastValidTime = lastValidTime.split(":");
+        let position = inputField.selectionStart !== null ? inputField.selectionStart : 0;
+        if(Number.parseInt(arr[0]) >= 0 && Number.parseInt(arr[0]) <=2 && inputField.selectionStart !== 1 && inputField.selectionStart !== 0){
+          if(arr[0].length === 1){
+            arr[0] = "0" + arr[0];
+            value = arr[0] + ":" + arr[1];
+            inputField.value = value;
+            inputField.setSelectionRange(position + 1, position + 1);
+          }
+        }
+        if(arr[0] === "" && inputField.selectionStart !== 0){
+          value = arrLastValidTime[0] + ":" + arr[1];
+          inputField.value = value;
+          inputField.setSelectionRange(position + 2, position + 2);
+        }
+        if(Number.parseInt(arr[1]) >= 0 && Number.parseInt(arr[1]) <=5 && inputField.selectionStart !== 3
+          && inputField.selectionStart !== 4 && arr[1].length === 1) {
+          arr[1] = "0" + arr[1];
+          value = arr[0] + ":" + arr[1];
+          inputField.value = value;
+          inputField.setSelectionRange(position, position);
+        }
+      }
+    }
   },
 });
 </script>
