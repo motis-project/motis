@@ -4,6 +4,8 @@
   let params = getQueryParameters();
   let apiEndpoint = getApiEndpoint(params);
 
+  apiEndpoint = "https://europe.motis-project.de/"; //testing purpose
+
   const mapConfigUrl = apiEndpoint + "railviz/map_config";
   let mapConfigPromise = fetch(mapConfigUrl)
     .then((r) => r.json())
@@ -62,7 +64,7 @@
       toModes: localStorage.getItem("motis.routing.to_modes"),
       intermodalPprMode: null,
     });
-    
+
     window.app.ports = ownPorts;
 
     window.elmMaps = {};

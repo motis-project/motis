@@ -27,7 +27,9 @@ const ownPorts = {
         subscribe: function(){}
     },
     "mapInit": {
-        subscribe: function(){}
+        subscribe: function(callback){
+            callback("map");
+        }
     },
     "mapUpdate": {
         send: function(){}
