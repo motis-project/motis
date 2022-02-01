@@ -5,6 +5,8 @@ import { useRouter} from 'next/router';
 
 import { Overlay } from '../Modules/Overlay';
 import { Translations, deTranslations, enTranslations } from '../Modules/Localization';
+import { StationSearch } from '../Modules/StationSearch';
+import { MapContainer } from '../Modules/MapContainer';
 
 let visible = false;
 
@@ -40,11 +42,11 @@ export const App: React.FC = () => {
     return(
         <div className='app'>
             {/* visible && <MapView />*/}
+            <MapContainer />
             <Overlay translation={getQuery()}/>
             {//<StationSearchView />
             }
-            {//<SimTimePickerView />
-            }
+            <StationSearch />
         </div>
     );
 };

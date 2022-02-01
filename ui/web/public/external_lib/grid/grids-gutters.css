@@ -1,0 +1,9 @@
+/* https://github.com/kwando */
+/* https://github.com/yahoo/pure/issues/380 */
+.pure-g.gutters{
+  margin: 0 -0.5em;
+}
+.pure-g.gutters > [class *=pure-u]{
+  box-sizing: border-box;
+  padding: 0em 0.5em;
+}
