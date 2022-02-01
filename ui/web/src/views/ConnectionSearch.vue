@@ -406,7 +406,7 @@ export default defineComponent({
         let start = {
           interval: {
             begin: this.isDeparture ? 
-            (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) : 
+            (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) - 3600 : 
             (changeGap === 'EARLIER' ? this.connections[0].stops[0].departure.time - 7200 : this.connections[this.connections.length - 1].stops[0].departure.time + 60)) : 
             (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000 - 7200) : 
             (changeGap === 'EARLIER' ? this.connections[0].stops[0].departure.time - 7200 : this.connections[this.connections.length - 1].stops[0].departure.time + 60)),
