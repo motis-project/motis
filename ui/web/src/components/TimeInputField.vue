@@ -11,7 +11,7 @@
     @increaseClick="changeTime(1)"
     :showAutocomplete="false"
     :key="inputFieldKey"
-    @blur="inputFieldKey++, isValid=true"
+    @blur="inputFieldKey++"
     @keydown="onKeyDown"
     @mouseup="onMouseUp"></InputField>
 </template>
@@ -32,17 +32,13 @@ export default defineComponent({
     return {
       time: {} as Date,
       inputFieldKey: 0,
-      isValid: true,
       prevString: ":",
     };
   },
   computed: {
     timeToDisplay: function (): string {
-      if(this.isValid){
-        let result = this.$ds.getTimeString(this.time.valueOf());
-        return result;
-      }
-      return this.prevString;
+      let result = this.$ds.getTimeString(this.time.valueOf());
+      return result;
     },
   },
   created() {
@@ -71,41 +67,25 @@ export default defineComponent({
 
       if(t.valueOf()) {
         this.time = t;
-        this.isValid = true;
         this.$emit("timeChanged", this.time);
       }
-      else{
-        this.isValid = false;
-        if(!value.includes(":")) {
-          // let res = this.prevString;
-          // let index = res.indexOf(":");
-          // res = res.slice(0, index - 1) + res.slice(index, res.length);
-          // value = res;
+      else {
+        let arr = value.split(":");
+        if(arr.length !== 2) {
           value = this.prevString;
           inputField.value = this.prevString;
         }
         else {
-
-          let arr = value.split(":");
           let arrInt = arr.map<(number | undefined)>(s => Number.parseInt(s));
           let reg = /^\d+$/
-          if(arr.length === 2) {
-
-            if((arr[0].length !== 0 && !arr[0].match(reg)) || arrInt[0] === undefined || arrInt[0] < 0 || arrInt[0] >= 24
-              || (arr[1].length !== 0 && !arr[1].match(reg)) || arrInt[1] === undefined || arrInt[1] < 0 || arrInt[1] >= 60
-              || arr[0].length > 2 || arr[1].length > 2) {
-              value = this.prevString;
-              inputField.value = this.prevString;
-              console.log('xyi')
-            }
+          if((arr[0].length !== 0 && !arr[0].match(reg)) || arrInt[0] === undefined || arrInt[0] < 0 || arrInt[0] >= 24
+            || (arr[1].length !== 0 && !arr[1].match(reg)) || arrInt[1] === undefined || arrInt[1] < 0 || arrInt[1] >= 60
+            || arr[0].length > 2 || arr[1].length > 2) {
+            value = this.prevString;
+            inputField.value = this.prevString;
           }
-          // let arrOld = this.prevString.split(":");
-          // if(arrOld[0].length === 1 && arr[0].length === 2){
-          //   inputField.setSelectionRange(3, 3);
-          // }
-          // if((arrOld[1].length === 1 && arr[1].length === 0)){
-          //   inputField.setSelectionRange(2, 2);
-          // }
+          arr = value.split(":");
+          arrInt = arr.map<(number | undefined)>(s => Number.parseInt(s));
           if(arrInt[0] !== undefined && arrInt[0] > 2 && arrInt[0] < 10){
             arr[0] = "0" + arrInt[0];
             value = arr[0] + ":" + arr[1];
@@ -155,6 +135,13 @@ export default defineComponent({
         inputField.value = value;
         inputField.setSelectionRange(3, 3);
       }
+      if((event.key === "4" || event.key === "5" || event.key === "6" || event.key === "7" || event.key === "8" || event.key === "9")
+        && arr[0] === "2" && inputField.selectionStart === 1){
+        arr[0] = "02";
+        value = arr[0] + ":" + arr[1];
+        inputField.value = value;
+      }
+      this.prevString = value;
     },
     onMouseUp(event: MouseEvent) {
       if(event.button === 0){
