@@ -209,8 +209,8 @@
       </div>
     </div>
     <div v-else-if="contentLoadingState === LoadingState.Error" class="main-error">
-      <div class=""> 
-        {{ $t.noInTimetable }} 
+      <div class="">
+        {{ $t.noInTimetable }}
       </div>
       <div class="schedule-range">
         {{ $t.information + " " + $t.from + " " + $ds.getDateString($ds.intervalFromServer.begin * 1000) + " " + $t.till + " " + $ds.getDateString($ds.intervalFromServer.end * 1000) + " " + $t.avaliable }}
@@ -298,7 +298,7 @@ export default defineComponent({
       LoadingState: LoadingState,
       isTooltipVisible: [] as boolean[],
       transportTooltipInfo: {} as TransportTooltipInfo,
-      isUpperEnd: false, 
+      isUpperEnd: false,
       isBottomEnd: false,
       separators: [] as number [],
       isDeparture: true
@@ -321,7 +321,7 @@ export default defineComponent({
       this.destination = temp;
       let tempObject: StationGuess | AddressGuess = this.startObject;
       this.startObject = this.destinationObject;
-      this.destinationObject = tempObject; 
+      this.destinationObject = tempObject;
       this.$store.state.startInput = this.startObject;
       this.$store.state.destinationInput = this.destinationObject;
       this.sendRequest();
@@ -405,16 +405,16 @@ export default defineComponent({
         }
         let start = {
           interval: {
-            begin: this.isDeparture ? 
-            (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) - 3600 : 
-            (changeGap === 'EARLIER' ? this.connections[0].stops[0].departure.time - 7200 : this.connections[this.connections.length - 1].stops[0].departure.time + 60)) : 
-            (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000 - 7200) : 
-            (changeGap === 'EARLIER' ? this.connections[0].stops[0].departure.time - 7200 : this.connections[this.connections.length - 1].stops[0].departure.time + 60)),
-            end: this.isDeparture ? 
-            (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) + 7200 :
-            (changeGap === 'LATER' ? this.connections[this.connections.length - 1].stops[0].departure.time + 7200 : this.connections[0].stops[0].departure.time - 60)) : 
-            (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) : 
-            (changeGap === 'LATER' ? this.connections[0].stops[0].departure.time + 7200 : this.connections[this.connections.length - 1].stops[0].departure.time - 60)),
+            begin: this.isDeparture ?
+              (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) - 3600 :
+                (changeGap === 'EARLIER' ? this.connections[0].stops[0].departure.time - 7200 : this.connections[this.connections.length - 1].stops[0].departure.time + 60)) :
+              (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000 - 7200) :
+                (changeGap === 'EARLIER' ? this.connections[0].stops[0].departure.time - 7200 : this.connections[this.connections.length - 1].stops[0].departure.time + 60)),
+            end: this.isDeparture ?
+              (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) + 7200 :
+                (changeGap === 'LATER' ? this.connections[this.connections.length - 1].stops[0].departure.time + 7200 : this.connections[0].stops[0].departure.time - 60)) :
+              (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) :
+                (changeGap === 'LATER' ? this.connections[0].stops[0].departure.time + 7200 : this.connections[this.connections.length - 1].stops[0].departure.time - 60)),
           },
           /* eslint-disable camelcase*/
           min_connection_count: changeGap === null ? 5 : 3,
