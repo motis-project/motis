@@ -59,7 +59,7 @@ struct rib_ctx {
   Offset<String> timestamp(time const mt,
                            char const* format = FULL_TIME_FORMAT) {
     return fbb_.CreateString(date::format(
-        format, std::chrono::system_clock::time_point{
+        format, date::sys_seconds{
                     std::chrono::seconds{motis_to_unixtime(sched_, mt)}}));
   }
 
