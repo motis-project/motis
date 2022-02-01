@@ -61,11 +61,11 @@
           id="search-forward"
           name="time-option"
           checked />
-        <label for="search-forward">{{ $t.departure }}</label>
+        <label for="search-forward" @click="isDeparture = true, sendRequest()">{{ $t.departure }}</label>
       </div>
       <div>
         <input type="radio" id="search-backward" name="time-option" />
-        <label for="search-backward">{{ $t.arrival }}</label>
+        <label for="search-backward" @click="isDeparture = false, sendRequest()">{{ $t.arrival }}</label>
       </div>
     </div>
 
@@ -216,6 +216,11 @@
         {{ $t.information + " " + $t.from + " " + $ds.getDateString($ds.intervalFromServer.begin * 1000) + " " + $t.till + " " + $ds.getDateString($ds.intervalFromServer.end * 1000) + " " + $t.avaliable }}
       </div>
     </div>
+    <div v-else-if="contentLoadingState === LoadingState.NothingToShow" class="no-results">
+      <div class="schedule-range">
+        {{ $t.information + " " + $t.from + " " + $ds.getDateString($ds.intervalFromServer.begin * 1000) + " " + $t.till + " " + $ds.getDateString($ds.intervalFromServer.end * 1000) + " " + $t.avaliable }}
+      </div>
+    </div>
   </div>
 </template>
 
@@ -295,7 +300,8 @@ export default defineComponent({
       transportTooltipInfo: {} as TransportTooltipInfo,
       isUpperEnd: false, 
       isBottomEnd: false,
-      separators: [] as number []
+      separators: [] as number [],
+      isDeparture: true
     };
   },
   activated() {
@@ -313,6 +319,12 @@ export default defineComponent({
       let temp: string = this.start;
       this.start = this.destination;
       this.destination = temp;
+      let tempObject: StationGuess | AddressGuess = this.startObject;
+      this.startObject = this.destinationObject;
+      this.destinationObject = tempObject; 
+      this.$store.state.startInput = this.startObject;
+      this.$store.state.destinationInput = this.destinationObject;
+      this.sendRequest();
     },
     setStartInput(input: string) {
       this.start = input;
@@ -393,10 +405,16 @@ export default defineComponent({
         }
         let start = {
           interval: {
-            begin: changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) : 
-                  (changeGap === 'EARLIER' ? this.connections[0].stops[0].departure.time - 7200 : this.connections[this.connections.length - 1].stops[0].departure.time + 60),
-            end: changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) + 7200 :
-                  (changeGap === 'LATER' ? this.connections[this.connections.length - 1].stops[0].departure.time + 7200 : this.connections[0].stops[0].departure.time - 60)
+            begin: this.isDeparture ? 
+            (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) : 
+            (changeGap === 'EARLIER' ? this.connections[0].stops[0].departure.time - 7200 : this.connections[this.connections.length - 1].stops[0].departure.time + 60)) : 
+            (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000 - 7200) : 
+            (changeGap === 'EARLIER' ? this.connections[0].stops[0].departure.time - 7200 : this.connections[this.connections.length - 1].stops[0].departure.time + 60)),
+            end: this.isDeparture ? 
+            (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) + 7200 :
+            (changeGap === 'LATER' ? this.connections[this.connections.length - 1].stops[0].departure.time + 7200 : this.connections[0].stops[0].departure.time - 60)) : 
+            (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) : 
+            (changeGap === 'LATER' ? this.connections[0].stops[0].departure.time + 7200 : this.connections[this.connections.length - 1].stops[0].departure.time - 60)),
           },
           /* eslint-disable camelcase*/
           min_connection_count: changeGap === null ? 5 : 3,
