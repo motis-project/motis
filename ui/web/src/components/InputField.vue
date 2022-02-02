@@ -9,7 +9,7 @@
           <i class="icon">{{ iconType }}</i>
         </div>
         <input
-          :type="isTimeCalendarField ? 'tel' : 'text'"
+          :inputmode="isTimeCalendarField ? 'numeric' : ''"
           class="gb-input"
           tabindex="1"
           @input="onInput"
