@@ -7,6 +7,7 @@ import TripResponseContent from '../models/TripResponseContent';
 import { RailVizStationResponseContent } from '../models/DepartureTimetable';
 import { TrainGuessResponseContent } from '../models/TrainGuess'
 import ConnectionResponseContent, { ConnectionRequestContent } from "../models/ConnectionContent"
+import InitialScheduleInfoResponseContent from "../models/InitRequestResponseContent"
 
 /* eslint-disable camelcase*/
 const service: MOTISPostService = {
@@ -94,6 +95,17 @@ const service: MOTISPostService = {
         },
     }
     return (await axios.post<ConnectionResponse>("https://europe.motis-project.de/", rq)).data.content;
+  },
+  async getInitialRequestScheduleInfo(){
+    const rq = {
+      content: {},
+      content_type: "MotisNoMessage",
+      destination: {
+        target: "/lookup/schedule_info",
+        type: "Module"
+      }
+    }
+    return (await axios.post<InitialScheduleInfoResponse>("https://europe.motis-project.de/", rq)).data.content;
   }
 }
 
@@ -154,6 +166,17 @@ interface ConnectionResponse {
   content_type: string,
   content: ConnectionResponseContent,
 }
+
+interface InitialScheduleInfoResponse{
+  destination: {
+    type: string,
+    target: string
+  },
+  content_type: string,
+  content: InitialScheduleInfoResponseContent,
+  id: number
+}
+
 /* eslint-enable camelcase*/
 
 interface MOTISPostService {
@@ -163,6 +186,7 @@ interface MOTISPostService {
   getDeparturesResponse(station: string, byScheduleTime: boolean, direction: string, eventCount: number, time: number) : Promise<RailVizStationResponseContent>
   getTrainGuessResponse(currentTime: number, currentTrainNum: number): Promise<TrainGuessResponseContent>
   getConnectionResponse(connectionRequest: ConnectionRequestContent): Promise<ConnectionResponseContent>
+  getInitialRequestScheduleInfo(): Promise<InitialScheduleInfoResponseContent>
 }
 
 

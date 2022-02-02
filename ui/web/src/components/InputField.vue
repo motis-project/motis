@@ -9,12 +9,15 @@
           <i class="icon">{{ iconType }}</i>
         </div>
         <input
+          :inputmode="isTimeCalendarField ? 'numeric' : ''"
           class="gb-input"
           tabindex="1"
-          @input="onInput()"
+          @input="onInput"
           v-model="inputValue"
-          @focus="$emit('focus', $event), onInput(), isFocused = true"
-          @blur="$emit('blur', $event), showStationAddress = false, isFocused = false" />
+          @focus="$emit('focus', $event), onInput, isFocused = true"
+          @blur="$emit('blur', $event), showStationAddress = false, isFocused = false"
+          @keydown="$emit('keydown', $event)"
+          @mouseup="$emit('mouseup', $event)" />
         <div class="gb-input-widget" v-if="showArrows">
           <div class="day-buttons">
             <div @mouseup="$emit('decreaseClick')" @mousedown="$emit('decreaseMouseDown')">
@@ -63,6 +66,7 @@ export default defineComponent({
     initInputText: String,
     showArrows: Boolean,
     showAutocomplete: Boolean,
+    isTimeCalendarField: Boolean
   },
   emits: [
     "inputChanged",
@@ -72,7 +76,11 @@ export default defineComponent({
     "decreaseMouseDown",
     "increaseClick",
     "increaseMouseDown",
-    "autocompleteElementClicked"
+    "autocompleteElementClicked",
+    "isTimeCalendarField",
+    "inputChangedNative",
+    "keydown",
+    "mouseup"
   ],
   data() {
     return {
@@ -93,13 +101,14 @@ export default defineComponent({
     this.inputValue = this.initInputText ? this.initInputText : '';
   },
   methods: {
-    onInput(){
+    onInput(event: Event){
       if(this.inputValue.length > 2){
         this.showStationAddress = true
       }
       else{
         this.showStationAddress = false
       }
+      this.$emit("inputChangedNative", event);
     },
     onElementClicked(element: AddressGuess | StationGuess) {
       this.inputValue = element.name;

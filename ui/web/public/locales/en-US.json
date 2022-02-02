@@ -1,5 +1,4 @@
 {
-  "dateFormat": "M/d/yyyy",
   "start": "Start",
   "destination": "Destination",
   "date": "Date",
@@ -35,5 +34,12 @@
   "later": "Later",
   "profile": "Profile",
   "useParking": "Use parkings",
-  "parking": "Parking"
+  "parking": "Parking",
+  "noDepartures": "No departures in the selected time period",
+  "noArrivals": "No arrivals in the selected time period",
+  "noInTimetable": "Time period not in the timetable",
+  "information": "Information",
+  "from": "from",
+  "till": "till",
+  "avaliable": "avaliable"
 }

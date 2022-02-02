@@ -13,7 +13,7 @@
         </div>
         <div class="pure-g gutters">
           <Calendar class="pure-u-1 pure-u-sm-12-24 to-location" @dateChanged="setNewDate"></Calendar>
-          <TimeInputField @timeChanged="setNewTime"></TimeInputField>
+          <TimeInputField @timeChanged="setNewTime" class="pure-u-1 pure-u-sm-12-24"></TimeInputField>
         </div>
       </div>
     </div>
@@ -106,7 +106,7 @@ export default defineComponent({
     },
     setDateToDisplay(value: number): string{
       let d = new Date(value * 1000);
-      return d.toLocaleString(this.$ts.currentLocale, { month: '2-digit', day: '2-digit' }).slice(0, 5);
+      return d.toLocaleString(this.$ts.availableLocales[0], { month: '2-digit', day: '2-digit' }).slice(0, 5);
     },
     goToFirstStation(trip: Trips){
       let temp: DataToRouter = { name: trip.first_station.name, id: trip.first_station.id, time: trip.trip_info.id.time}

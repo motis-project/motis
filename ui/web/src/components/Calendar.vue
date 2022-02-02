@@ -4,6 +4,7 @@
       :showLabel="true"
       :labelName="$t.date"
       iconType="event"
+      :isTimeCalendarField="true"
       :showArrows="true"
       :initInputText="$ds.getDateString(currentDate.valueOf())"
       @inputChanged="onFieldInput"
@@ -32,7 +33,7 @@
           :key="day.valueOf()"
           :class="[
             day.getMonth() === currentMonth ? 'in-month' : 'out-of-month',
-            'valid-day',
+            compareDayWithInterval(day) ? 'valid-day' : 'invalid-day',
             day.getTime() == currentDate.getTime() ? 'selected' : '',
           ]"
           @mousedown.stop="dayClick(day)">
@@ -64,7 +65,9 @@ export default defineComponent({
       calendarClicked: false,
       timeout: 0,
       interval: 0,
-      inputFieldKey: 0
+      inputFieldKey: 0,
+      beginIntervalDate: 0 as number,
+      endIntervalDate: 0 as number
     };
   },
   watch: {
@@ -92,6 +95,8 @@ export default defineComponent({
   },
   created() {
     this.currentDate = this.$ds.date;
+    this.beginIntervalDate = this.$ds.intervalFromServer.begin * 1000;
+    this.endIntervalDate = this.$ds.intervalFromServer.end * 1000;
   },
   methods: {
     changeMonth(change: number) {
@@ -141,6 +146,13 @@ export default defineComponent({
       clearInterval(this.interval);
       clearTimeout(this.timeout)
       this.changeDay(value);
+    },
+    compareDayWithInterval(date: Date) : boolean {
+      let currentDay = date.valueOf();
+      if(currentDay >= this.beginIntervalDate && currentDay < this.endIntervalDate){
+        return true;
+      }
+      return false;
     }
   },
 });

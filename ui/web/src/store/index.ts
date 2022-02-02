@@ -17,6 +17,7 @@ declare module '@vue/runtime-core' {
     connections: TripResponseContent[],
     startInput: StationGuess | AddressGuess,
     destinationInput: StationGuess | AddressGuess
+    areConnectionsDropped: boolean
   }
 
   interface ComponentCustomProperties {

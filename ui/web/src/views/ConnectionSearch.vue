@@ -4,6 +4,7 @@
       <InputField
         :labelName="$t.start"
         iconType="place"
+        :isTimeCalendarField="false"
         :showLabel="true"
         :initInputText="start"
         @inputChanged="setStartInput"
@@ -52,7 +53,7 @@
         </div>
       </div>
     </div>
-    <TimeInputField @timeChanged="timeChanged"></TimeInputField>
+    <TimeInputField @timeChanged="timeChanged" class="main-gutter time-gutter"></TimeInputField>
     <div class="main-gutter time-options-gutter">
       <div>
         <input
@@ -60,11 +61,11 @@
           id="search-forward"
           name="time-option"
           checked />
-        <label for="search-forward">{{ $t.departure }}</label>
+        <label for="search-forward" @click="isDeparture = true, sendRequest()">{{ $t.departure }}</label>
       </div>
       <div>
         <input type="radio" id="search-backward" name="time-option" />
-        <label for="search-backward">{{ $t.arrival }}</label>
+        <label for="search-backward" @click="isDeparture = false, sendRequest()">{{ $t.arrival }}</label>
       </div>
     </div>
 
@@ -130,11 +131,11 @@
       </div>
     </div>
   </div>
-  <LoadingBar v-if="contentLoadingState === LoadingState.Loading"></LoadingBar>
-  <div v-else-if="contentLoadingState === LoadingState.Loaded" id="connections">
-    <div class="connections">
+  <div id="connections">
+    <LoadingBar v-if="contentLoadingState === LoadingState.Loading"></LoadingBar>
+    <div v-else-if="contentLoadingState === LoadingState.Loaded" class="connections">
       <div class="extend-search-interval search-before">
-        <a>{{ $t.earlier }}</a>
+        <a @click="sendRequest('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }}</a>
       </div>
       <div class="connection-list">
         <div class="date-header divider">
@@ -193,11 +194,31 @@
               </div>
             </div>
           </div>
+          <div
+            class="date-header divider"
+            v-if="separators.includes(cIndex + 1)">
+            <span>
+              {{ $ds.getDateString(connections[cIndex + 1].stops[0].departure.time * 1000) }}
+            </span>
+          </div>
         </div>
       </div>
       <div class="divider footer"></div>
       <div class="extend-search-interval search-after">
-        <a>{{ $t.later }}</a>
+        <a @click="sendRequest('LATER')" v-show="!isBottomEnd">{{ $t.later }}</a>
+      </div>
+    </div>
+    <div v-else-if="contentLoadingState === LoadingState.Error" class="main-error">
+      <div class="">
+        {{ $t.noInTimetable }}
+      </div>
+      <div class="schedule-range">
+        {{ $t.information + " " + $t.from + " " + $ds.getDateString($ds.intervalFromServer.begin * 1000) + " " + $t.till + " " + $ds.getDateString($ds.intervalFromServer.end * 1000) + " " + $t.avaliable }}
+      </div>
+    </div>
+    <div v-else-if="contentLoadingState === LoadingState.NothingToShow" class="no-results">
+      <div class="schedule-range">
+        {{ $t.information + " " + $t.from + " " + $ds.getDateString($ds.intervalFromServer.begin * 1000) + " " + $t.till + " " + $ds.getDateString($ds.intervalFromServer.end * 1000) + " " + $t.avaliable }}
       </div>
     </div>
   </div>
@@ -276,7 +297,11 @@ export default defineComponent({
       contentLoadingState: LoadingState.NothingToShow,
       LoadingState: LoadingState,
       isTooltipVisible: [] as boolean[],
-      transportTooltipInfo: {} as TransportTooltipInfo
+      transportTooltipInfo: {} as TransportTooltipInfo,
+      isUpperEnd: false,
+      isBottomEnd: false,
+      separators: [] as number [],
+      isDeparture: true
     };
   },
   activated() {
@@ -284,11 +309,22 @@ export default defineComponent({
       this.isTooltipVisible[i] = false;
     }
   },
+  created() {
+    window.addEventListener("dragover", (event: Event) => event.preventDefault());
+    window.addEventListener("dragenter", (event: Event) => event.preventDefault());
+    window.addEventListener("drop", this.onDrop);
+  },
   methods: {
     swapStartDest() {
       let temp: string = this.start;
       this.start = this.destination;
       this.destination = temp;
+      let tempObject: StationGuess | AddressGuess = this.startObject;
+      this.startObject = this.destinationObject;
+      this.destinationObject = tempObject;
+      this.$store.state.startInput = this.startObject;
+      this.$store.state.destinationInput = this.destinationObject;
+      this.sendRequest();
     },
     setStartInput(input: string) {
       this.start = input;
@@ -340,22 +376,50 @@ export default defineComponent({
       this.$store.state.destinationInput = destinationObject;
       this.sendRequest();
     },
-    sendRequest() {
+    setSeparator(connections: TripResponseContent[]) {
+      this.separators = [];
+      for (let i = 1; i < connections.length; i++) {
+        let earlier = new Date(connections[i - 1].stops[0].departure.time * 1000);
+        let later = new Date(connections[i].stops[0].departure.time * 1000);
+        if (
+          earlier.getDate() < later.getDate() ||
+          earlier.getMonth() < later.getMonth() ||
+          earlier.getFullYear() < later.getFullYear()
+        ) {
+          this.separators.push(i);
+        }
+      }
+    },
+    sendRequest(
+      changeGap: string | null = null
+    ) {
+      if (changeGap === null) {
+        this.isUpperEnd = false;
+        this.isBottomEnd = false;
+      }
       if(this.start !== "" && this.destination !== "") {
-        this.contentLoadingState = LoadingState.Loading;
+        this.contentLoadingState = !changeGap ? LoadingState.Loading : LoadingState.Loaded;
         this.isTooltipVisible = []
         if(this.timeoutIndex !== -1) {
           clearTimeout(this.timeoutIndex);
         }
         let start = {
           interval: {
-            begin: Math.floor(this.dateTime.valueOf() / 1000),
-            end: Math.floor(this.dateTime.valueOf() / 1000) + 7200
+            begin: this.isDeparture ?
+              (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) - 3600 :
+                (changeGap === 'EARLIER' ? this.connections[0].stops[0].departure.time - 7200 : this.connections[this.connections.length - 1].stops[0].departure.time + 60)) :
+              (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000 - 7200) :
+                (changeGap === 'EARLIER' ? this.connections[0].stops[0].departure.time - 7200 : this.connections[this.connections.length - 1].stops[0].departure.time + 60)),
+            end: this.isDeparture ?
+              (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) + 7200 :
+                (changeGap === 'LATER' ? this.connections[this.connections.length - 1].stops[0].departure.time + 7200 : this.connections[0].stops[0].departure.time - 60)) :
+              (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) :
+                (changeGap === 'LATER' ? this.connections[0].stops[0].departure.time + 7200 : this.connections[this.connections.length - 1].stops[0].departure.time - 60)),
           },
           /* eslint-disable camelcase*/
-          min_connection_count: 5,
-          extend_interval_earlier: true,
-          extend_interval_later: true
+          min_connection_count: changeGap === null ? 5 : 3,
+          extend_interval_earlier: changeGap === null ? true : (changeGap === 'EARLIER' ? true : false),
+          extend_interval_later: changeGap === null ? true : (changeGap === 'LATER' ? true : false)
         } as Start;
         if("id" in this.startObject) {
           start = {
@@ -392,15 +456,43 @@ export default defineComponent({
             destination: destination,
             destination_modes: this.getModesArray(this.secondOptions)
           }).then((data) => {
-            this.connections = data.connections;
-            this.contentLoadingState = LoadingState.Loaded;
-            for(let i = 0; i < this.connections.length; i++) {
-              this.isTooltipVisible.push(false);
-            }
-            this.$store.state.connections = this.connections;
+            this.$store.state.areConnectionsDropped = false;
+            this.setConnections(data.connections, changeGap, start.extend_interval_earlier)
+          }).catch(() => {
+            this.contentLoadingState = LoadingState.Error;
           })
         }, 500);
       }
+    },
+    setConnections(connections: TripResponseContent[], changeGap: string | null = null, clickedEarlier: boolean | null = null) {
+      if (changeGap === null) {
+        this.connections = connections;
+      }
+      else if (changeGap === 'EARLIER') {
+        this.connections = connections.concat(this.connections);
+      }
+      else if (changeGap === 'LATER') {
+        this.connections = this.connections.concat(connections);
+      }
+      if (connections.length === 0) {
+        if (this.connections.length !== 0) {
+          if (clickedEarlier === true) {
+            this.isUpperEnd = true;
+          }
+          else if (clickedEarlier === false) {
+            this.isBottomEnd = true;
+          }
+        }
+        else {
+          throw new Error()
+        }
+      }
+      this.contentLoadingState = LoadingState.Loaded;
+      for(let i = 0; i < this.connections.length; i++) {
+        this.isTooltipVisible.push(false);
+      }
+      this.$store.state.connections = this.connections;
+      this.setSeparator(this.connections);
     },
     getModesArray(options: OptionsButtons) {
       let res: Mode[] = [];
@@ -515,6 +607,21 @@ export default defineComponent({
       }
       return res;
     },
+    onDrop(event: DragEvent) {
+      if(event.dataTransfer !== null && event.dataTransfer.files.length > 0) {
+        event.preventDefault();
+        console.log("Drop");
+        event.dataTransfer.files[0].text().then(t => {
+          this.$store.state.areConnectionsDropped = true;
+          this.setConnections(
+            (JSON.parse(t) as {
+              content: {
+                connections: TripResponseContent[]
+              }
+            }).content.connections);
+        })
+      }
+    }
   },
 });
 

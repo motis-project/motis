@@ -5,7 +5,6 @@ import { App, reactive } from 'vue'
 interface Translation {
   [key: string]: string | string[]
 
-  dateFormat: string,
   start: string,
   destination: string,
   date: string,
@@ -33,7 +32,14 @@ interface Translation {
   later: string,
   profile: string,
   useParking: string,
-  parking: string
+  parking: string,
+  noDepartures: string,
+  noArrivals: string,
+  noInTimetable: string,
+  information: string,
+  from: string,
+  till: string,
+  avaliable: string
 }
 /* eslint-enable camelcase */
 

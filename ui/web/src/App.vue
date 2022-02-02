@@ -30,4 +30,5 @@ export default defineComponent({
   @import "../style/app.css";
   @import "../style/transport-graph.css";
   @import "../style/gutters.css";
+  @import "../style/connections.css";
 </style>

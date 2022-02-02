@@ -106,3 +106,13 @@
 .today {
   border: 1px solid #4971E7;
 }
+
+@media (pointer:none), (pointer:coarse), screen and (max-width: 650px){
+  .day-buttons {
+    display: none;
+  }
+  
+  .day-buttons > * {
+    display: none;
+  }
+}

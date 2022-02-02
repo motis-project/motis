@@ -193,8 +193,10 @@ export default defineComponent({
       if(this.index !== undefined && this.$store.state.connections.length > 0
         && this.index < this.$store.state.connections.length && this.index >= 0) {
         this.content = this.$store.state.connections[this.index];
-        this.startStationName = this.$store.state.startInput.name;
-        this.endStationName = this.$store.state.destinationInput.name;
+        if(!this.$store.state.areConnectionsDropped) {
+          this.startStationName = this.$store.state.startInput.name;
+          this.endStationName = this.$store.state.destinationInput.name;
+        }
       }
       else if(this.trip !== undefined) {
         this.sendRequest();
@@ -205,7 +207,7 @@ export default defineComponent({
     },
     getTripForTransport(transport: Transport) {
       if(!this.isTripView) {
-        return this.content.trips.filter(t => t.id.train_nr === transport.train_nr)[0].id;
+        return this.content.trips.filter(t => t.id.line_id === transport.line_id)[0].id;
       }
       return undefined;
     }

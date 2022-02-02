@@ -1,11 +1,12 @@
 <template>
   <div class="app">
-    <LeftMenu @searchHidden="searchFieldHidden = !searchFieldHidden"></LeftMenu>
+    <LeftMenu @searchHidden="searchFieldHidden = $event"></LeftMenu>
     <div id="station-search" :class="['', searchFieldHidden ? 'overlay-hidden' : '']">
       <InputField
         iconType="place"
         :showLabel="false"
         :showAutocomplete="true"
+        :isTimeCalendarField="false"
         @autocompleteElementClicked="goToTimetable"></InputField>
     </div>
   </div>
