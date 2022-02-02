@@ -456,6 +456,7 @@ export default defineComponent({
             destination: destination,
             destination_modes: this.getModesArray(this.secondOptions)
           }).then((data) => {
+            this.$store.state.areConnectionsDropped = false;
             this.setConnections(data.connections, changeGap, start.extend_interval_earlier)
           }).catch(() => {
             this.contentLoadingState = LoadingState.Error;
@@ -610,12 +611,15 @@ export default defineComponent({
       if(event.dataTransfer !== null && event.dataTransfer.files.length > 0) {
         event.preventDefault();
         console.log("Drop");
-        event.dataTransfer.files[0].text().then(t => this.setConnections(
-          (JSON.parse(t) as {
-            content: {
-              connections: TripResponseContent[]
-            }
-          }).content.connections))
+        event.dataTransfer.files[0].text().then(t => {
+          this.$store.state.areConnectionsDropped = true;
+          this.setConnections(
+            (JSON.parse(t) as {
+              content: {
+                connections: TripResponseContent[]
+              }
+            }).content.connections);
+        })
       }
     }
   },
