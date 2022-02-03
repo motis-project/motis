@@ -135,15 +135,16 @@
     <LoadingBar v-if="contentLoadingState === LoadingState.Loading"></LoadingBar>
     <div v-else-if="contentLoadingState === LoadingState.Loaded" class="connections">
       <div class="extend-search-interval search-before">
-        <a @click="sendRequest('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }}</a>
+        <a v-if="upperButtonState === UpperButtonState.Loaded" @click="sendRequest('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }}</a>
+        <ButtonsLoadingBar v-else></ButtonsLoadingBar>
       </div>
       <div class="connection-list">
         <div class="date-header divider">
           <span>{{ $ds.getDateString(connections[0].stops[0].departure.time * 1000) }}</span>
         </div>
         <div
-          class="connection"
           v-for="(c, cIndex) in connections"
+          :class="['connection', !initialConnections.includes(c) ? 'new' : '']"
           :key="c"
           @click="connectionClicked(cIndex)">
           <div class="pure-g">
@@ -205,7 +206,8 @@
       </div>
       <div class="divider footer"></div>
       <div class="extend-search-interval search-after">
-        <a @click="sendRequest('LATER')" v-show="!isBottomEnd">{{ $t.later }}</a>
+        <a v-if="lowerButtonState === LowerButtonState.Loaded" @click="sendRequest('LATER')" v-show="!isBottomEnd">{{ $t.later }}</a>
+        <ButtonsLoadingBar v-else></ButtonsLoadingBar>
       </div>
     </div>
     <div v-else-if="contentLoadingState === LoadingState.Error" class="main-error">
@@ -241,6 +243,7 @@ import TransportLine from "../components/TransportLine.vue";
 import LoadingBar, { LoadingState } from "../components/LoadingBar.vue"
 import Transport from "../models/Transport";
 import CustomMovement from "../models/CustomMovement";
+import ButtonsLoadingBar, { UpperButtonState, LowerButtonState } from "../components/ButtonsLoadingBar.vue";
 
 export default defineComponent({
   name: "ConnectionSearch",
@@ -251,7 +254,8 @@ export default defineComponent({
     Calendar,
     TimeInputField,
     TransportLine,
-    LoadingBar
+    LoadingBar,
+    ButtonsLoadingBar
   },
   mixins: [ WayMixin ],
   data() {
@@ -294,8 +298,13 @@ export default defineComponent({
       dateTime: this.$ds.date,
       timeoutIndex: -1,
       connections: [] as TripResponseContent[],
+      initialConnections: [] as TripResponseContent[],
       contentLoadingState: LoadingState.NothingToShow,
+      upperButtonState: UpperButtonState.Loaded,
+      lowerButtonState: LowerButtonState.Loaded,
       LoadingState: LoadingState,
+      UpperButtonState: UpperButtonState,
+      LowerButtonState: LowerButtonState,
       isTooltipVisible: [] as boolean[],
       transportTooltipInfo: {} as TransportTooltipInfo,
       isUpperEnd: false,
@@ -399,6 +408,12 @@ export default defineComponent({
       }
       if(this.start !== "" && this.destination !== "") {
         this.contentLoadingState = !changeGap ? LoadingState.Loading : LoadingState.Loaded;
+        if (changeGap === 'EARLIER') {
+          this.upperButtonState = UpperButtonState.Loading;
+        }
+        else if (changeGap === 'LATER') {
+          this.lowerButtonState = LowerButtonState.Loading;
+        }
         this.isTooltipVisible = []
         if(this.timeoutIndex !== -1) {
           clearTimeout(this.timeoutIndex);
@@ -414,7 +429,7 @@ export default defineComponent({
               (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) + 7200 :
                 (changeGap === 'LATER' ? this.connections[this.connections.length - 1].stops[0].departure.time + 7200 : this.connections[0].stops[0].departure.time - 60)) :
               (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) :
-                (changeGap === 'LATER' ? this.connections[0].stops[0].departure.time + 7200 : this.connections[this.connections.length - 1].stops[0].departure.time - 60)),
+                (changeGap === 'LATER' ? this.connections[this.connections.length - 1].stops[0].departure.time + 7200 : this.connections[0].stops[0].departure.time - 60)),
           },
           /* eslint-disable camelcase*/
           min_connection_count: changeGap === null ? 5 : 3,
@@ -467,6 +482,7 @@ export default defineComponent({
     setConnections(connections: TripResponseContent[], changeGap: string | null = null, clickedEarlier: boolean | null = null) {
       if (changeGap === null) {
         this.connections = connections;
+        this.initialConnections = [...this.connections]
       }
       else if (changeGap === 'EARLIER') {
         this.connections = connections.concat(this.connections);
@@ -488,6 +504,8 @@ export default defineComponent({
         }
       }
       this.contentLoadingState = LoadingState.Loaded;
+      this.upperButtonState = UpperButtonState.Loaded;
+      this.lowerButtonState = LowerButtonState.Loaded;
       for(let i = 0; i < this.connections.length; i++) {
         this.isTooltipVisible.push(false);
       }
