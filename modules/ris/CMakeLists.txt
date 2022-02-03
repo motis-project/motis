@@ -7,6 +7,7 @@ target_include_directories(motis-ris PUBLIC include)
 target_compile_features(motis-ris PUBLIC cxx_std_17)
 target_compile_definitions(motis-ris PUBLIC PROTOBUF_LINKED=1)
 target_link_libraries(motis-ris
+  rabbitmq-cpp
   boost-system
   boost-filesystem
   protobuf

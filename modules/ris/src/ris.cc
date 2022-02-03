@@ -22,6 +22,8 @@
 
 #include "lmdb/lmdb.hpp"
 
+#include "rabbitmq/amqp.hpp"
+
 #include "motis/core/common/logging.h"
 #include "motis/core/common/unixtime.h"
 #include "motis/core/access/time_access.h"
@@ -153,6 +155,7 @@ struct ris::impl {
     std::string tag_;
 
     gtfsrt::knowledge_context gtfs_knowledge_;
+    std::unique_ptr<amqp::ssl_connection> con_;
   };
 
   explicit impl(config const& c) : config_{c} {}
