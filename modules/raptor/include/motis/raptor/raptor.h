@@ -14,6 +14,8 @@ namespace motis::raptor {
 struct config {
 #if defined(MOTIS_CUDA)
   int32_t queries_per_device_{1};
+  bool use_arrival_sweeping_{true};
+  bool use_stop_satisfaction{true};
 #endif
 };
 

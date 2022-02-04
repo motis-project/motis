@@ -81,6 +81,9 @@ struct raptor::impl {
     queries_per_device_ = std::max(config.queries_per_device_, int32_t{1});
     mem_store_.init(*meta_info_, *timetable_, queries_per_device_);
 
+    use_arr_sweeping_ = config.use_arrival_sweeping_;
+    use_stop_satis_ = config.use_stop_satisfaction;
+
     cudaDeviceSynchronize();
 #endif
   }
@@ -117,7 +120,8 @@ struct raptor::impl {
 
     loaned_mem loan(mem_store_);
 
-    d_query q(base_query, *meta_info_, loan.mem_, *d_gtt_);
+    d_query q(base_query, *meta_info_, loan.mem_, *d_gtt_,
+              use_arr_sweeping_, use_stop_satis_);
 
     std::vector<journey> js;
     js = search_dispatch<implementation_type::GPU>(q, stats, sched_,
@@ -139,6 +143,8 @@ struct raptor::impl {
   int32_t queries_per_device_{1};
 
   memory_store mem_store_;
+  bool use_arr_sweeping_;
+  bool use_stop_satis_;
 #endif
 };
 
@@ -146,6 +152,10 @@ raptor::raptor() : module("RAPTOR Options", "raptor") {
 #if defined(MOTIS_CUDA)
   param(config_.queries_per_device_, "queries_per_device",
         "specifies how many queries should run concurrently per device");
+  param(config_.use_arrival_sweeping_, "arrival_sweeping",
+        "generally enable arrival sweeping");
+  param(config_.use_stop_satisfaction, "stop_satisfaction",
+        "enable stop satisfaction");
 #endif
 }
 

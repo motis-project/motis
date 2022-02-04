@@ -63,8 +63,8 @@ public class UpdateCsvFromAnalysiscache {
       dataset = configComponents[3];
       queryType = configComponents[4];
       largeStations = Boolean.parseBoolean(configComponents[5]);
-      target = configComponents[8];
-      searchType = configComponents[9];
+      target = configComponents[7];
+      searchType = configComponents[8];
       stats = new ArrayList<>();
 
       var lines = Files.readAllLines(file);

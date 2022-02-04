@@ -123,7 +123,8 @@ __device__ void mc_update_route_larger32(
     route_id const r_id, gpu_route const route, trait_id const t_offset,
     time const* const prev_arrivals, time* const arrivals,
     time* const earliest_arrivals, stop_id const target_stop_id,
-    uint32_t* station_marks, device_gpu_timetable const& tt) {
+    uint32_t* station_marks, device_gpu_timetable const& tt,
+    bool use_stop_satis) {
 
   auto const t_id = threadIdx.x;
 
@@ -298,7 +299,7 @@ __device__ void mc_update_route_larger32(
       }
 
       if (leader != NO_LEADER) {
-        if (current_stage == active_stage_count - 1) {
+        if (current_stage == active_stage_count - 1 && use_stop_satis) {
           // at the last stage check the stop satisfaction and reduce asc if
           // possible
           time satisfied_ea = invalid<time>;
@@ -348,7 +349,8 @@ __device__ void mc_update_route_smaller32(
     route_id const r_id, gpu_route const route, trait_id const t_offset,
     time const* const prev_arrivals, time* const arrivals,
     time* const earliest_arrivals, stop_id const target_stop_id,
-    uint32_t* station_marks, device_gpu_timetable const& tt) {
+    uint32_t* station_marks, device_gpu_timetable const& tt,
+    bool use_stop_satis) {
 
   auto const t_id = threadIdx.x;
 
@@ -450,7 +452,7 @@ __device__ void mc_update_route_smaller32(
     }
 
     // check if stops on route are satisfied
-    if (leader != NO_LEADER) {
+    if (leader != NO_LEADER && use_stop_satis) {
       time satisfied_ea = invalid<time>;
       if ((1 << t_id) & criteria_mask) {
         auto satisfied_arr_idx =
@@ -575,7 +577,8 @@ template <typename CriteriaConfig>
 __device__ void mc_update_routes_dev(device_memory const& device_mem,
                                      raptor_round const round_k,
                                      stop_id const target_stop_id,
-                                     device_gpu_timetable const& tt) {
+                                     device_gpu_timetable const& tt,
+                                     bool use_stop_satis) {
 
   time const* const prev_arrivals = device_mem.result_[round_k - 1];
   time* const arrivals = device_mem.result_[round_k];
@@ -609,11 +612,11 @@ __device__ void mc_update_routes_dev(device_memory const& device_mem,
     if (route.stop_count_ <= 32) {
       mc_update_route_smaller32<CriteriaConfig>(
           r_id, route, t_offset, prev_arrivals, arrivals, earliest_arrivals,
-          target_stop_id, station_marks, tt);
+          target_stop_id, station_marks, tt, use_stop_satis);
     } else {
       mc_update_route_larger32<CriteriaConfig>(
           r_id, route, t_offset, prev_arrivals, arrivals, earliest_arrivals,
-          target_stop_id, station_marks, tt);
+          target_stop_id, station_marks, tt, use_stop_satis);
     }
   }
 
@@ -712,7 +715,9 @@ __device__ void mc_init_arrivals_dev(base_query const& query,
 template <typename CriteriaConfig>
 __global__ void mc_gpu_raptor_kernel(base_query const query,
                                      device_memory const device_mem,
-                                     device_gpu_timetable const tt) {
+                                     device_gpu_timetable const tt,
+                                     bool use_arr_sweep,
+                                     bool use_stop_satis) {
   auto const trait_size = CriteriaConfig::TRAITS_SIZE;
   auto const t_id = get_global_thread_id();
 
@@ -743,14 +748,16 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
     }
 
     mc_update_routes_dev<CriteriaConfig>(device_mem, round_k, query.target_,
-                                         tt);
+                                         tt, use_stop_satis);
 
     this_grid().sync();
 
-    perform_arrival_sweeping<CriteriaConfig>(
-        device_mem.stop_count_, device_mem.result_[round_k],
-        device_mem.earliest_arrivals_, device_mem.station_marks_);
-    this_grid().sync();
+    if (use_arr_sweep) {
+      perform_arrival_sweeping<CriteriaConfig>(
+          device_mem.stop_count_, device_mem.result_[round_k],
+          device_mem.earliest_arrivals_, device_mem.station_marks_);
+      this_grid().sync();
+    }
 
     mc_update_footpaths_dev<CriteriaConfig>(device_mem, round_k, query.target_,
                                             tt);
@@ -776,7 +783,9 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
 template <typename CriteriaConfig>
 void invoke_mc_gpu_raptor(d_query const& dq) {
   void* kernel_args[] = {(void*)&dq, (void*)(dq.mem_->active_device_),
-                         (void*)&dq.tt_};
+                         (void*)&dq.tt_,
+                         (void*)&dq.use_arr_sweep_, (void*)&dq.use_stop_satis_
+  };
 
   launch_kernel(mc_gpu_raptor_kernel<CriteriaConfig>, kernel_args,
                 dq.mem_->context_, dq.mem_->context_.proc_stream_,
