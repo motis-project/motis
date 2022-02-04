@@ -4,7 +4,7 @@ project(motis)
 file(GLOB_RECURSE motis-gbfs-files src/*.cc)
 add_library(motis-gbfs STATIC ${motis-gbfs-files})
 target_include_directories(motis-gbfs PUBLIC include)
-target_compile_features(motis-gbfs PUBLIC cxx_std_17)
+target_compile_features(motis-gbfs PRIVATE cxx_std_20)
 target_link_libraries(motis-gbfs
   motis-module
   motis-core
