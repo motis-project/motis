@@ -847,7 +847,7 @@ void invoke_mc_gpu_raptor(d_query const& dq) {
 #define MAKE_MC_UPDATE_ROUTES_TEMPLATE_INSTANCE(VAL, ACCESSOR) \
   template __device__ void mc_update_routes_dev<VAL>(          \
       device_memory const&, raptor_round const, stop_id const, \
-      device_gpu_timetable const&);
+      device_gpu_timetable const&, bool use_stop_satis);
 
 RAPTOR_CRITERIA_CONFIGS_WO_DEFAULT(GENERATE_LAUNCH_CONFIG_FUNCTION,
                                    raptor_criteria_config)
