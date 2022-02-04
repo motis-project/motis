@@ -66,6 +66,7 @@ struct gbfs::impl {
   }
 
   void init(schedule const&) {
+    auto const t = scoped_timer{"GBFS init"};
     motis_parallel_for(config_.urls_, [&](auto&& url) { fetch_stream(url); });
 
     auto const lock = std::scoped_lock{mutex_};
