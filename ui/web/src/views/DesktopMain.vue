@@ -9,6 +9,9 @@
         :isTimeCalendarField="false"
         @autocompleteElementClicked="goToTimetable"></InputField>
     </div>
+    <button class="sim-overlay-opener" @mousedown="simWindowOpened ? simWindowOpened = false : simWindowOpened = true">
+      Open Sim Window
+    </button>
     <div class="sim-time-picker-container" v-if="simWindowOpened">
       <div class="sim-time-picker-overlay">
         <div class="title">
@@ -45,7 +48,7 @@ export default defineComponent({
   data() {
     return {
       searchFieldHidden: false,
-      simWindowOpened: true,
+      simWindowOpened: false,
     };
   },
   methods: {
@@ -67,4 +70,22 @@ export default defineComponent({
 </script>
 
 <style>
+.sim-overlay-opener {
+  height: 20px;
+  width: 145px;
+  position: fixed;
+  bottom: 20px;
+  right: 150px;
+  cursor: pointer;
+  color: gray;
+  border-color: gray;
+  border-radius: 5px;
+  background-color: white;
+  font-family: 'Roboto', sans-serif;
+}
+
+.sim-overlay-opener:hover {
+  color: white;
+  background-color: gray;
+}
 </style>
