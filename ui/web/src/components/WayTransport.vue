@@ -6,10 +6,10 @@
       <span>{{ additionalMove + " " + $t.walk }}</span>
     </div>
     <div class="first-stop">
-      <div :class="['stop', getPastOrFuture($ds.date, stops[0].departure.time)]">
+      <div :class="['stop', getPastOrFuture($ds.simulationDate, stops[0].departure.time)]">
         <div class="timeline train-color-border"></div>
         <div class="time">
-          <span :class="getPastOrFuture($ds.date, stops[0].departure.time)">{{ $ds.getTimeString(stops[0].departure.time * 1000) }}</span>
+          <span :class="getPastOrFuture($ds.simulationDate, stops[0].departure.time)">{{ $ds.getTimeString(stops[0].departure.time * 1000) }}</span>
         </div>
         <div class="delay"></div>
         <div class="station">
@@ -17,11 +17,11 @@
         </div>
       </div>
     </div>
-    <div :class="['direction', getPastOrFuture($ds.date, stops[0].departure.time)]">
+    <div :class="['direction', getPastOrFuture($ds.simulationDate, stops[0].departure.time)]">
       <div class="timeline train-color-border"></div>
       <i class="icon">arrow_forward</i>{{ transport.direction }}
     </div>
-    <div :class="['intermediate-stops-toggle', 'clickable', getPastOrFuture($ds.date, stops[0].departure.time)]" @click="areStopsExpanded = !areStopsExpanded">
+    <div :class="['intermediate-stops-toggle', 'clickable', getPastOrFuture($ds.simulationDate, stops[0].departure.time)]" @click="areStopsExpanded = !areStopsExpanded">
       <div class="timeline-container">
         <div class="timeline train-color-border bg"></div>
         <div class="timeline train-color-border progress" :style="`height: ${getStopProgress(stops[0])}%`"></div>
@@ -32,15 +32,15 @@
       <span>{{ $ts.countTranslate("stop", stops.length - 2) }} ({{ getReadableDuration(stops[0].departure.time, stops[stops.length - 1].arrival.time, $ts) }})</span>
     </div>
     <div :class="['intermediate-stops', areStopsExpanded ? 'expanded' : '']" v-show="areStopsExpanded">
-      <div v-for="stop in getIntermediateStops(transport)" :key="stop.station" :class="['stop', getPastOrFuture($ds.date, stop.departure.time)]">
+      <div v-for="stop in getIntermediateStops(transport)" :key="stop.station" :class="['stop', getPastOrFuture($ds.simulationDate, stop.departure.time)]">
         <div class="timeline train-color-border bg"></div>
         <div class="timeline train-color-border progress" :style="`height: ${getStopProgress(stop)}%`"></div>
         <div class="time">
           <div class="arrival">
-            <span :class="getPastOrFuture($ds.date, stop.arrival.time)">{{ $ds.getTimeString(stop.arrival.time * 1000) }}</span>
+            <span :class="getPastOrFuture($ds.simulationDate, stop.arrival.time)">{{ $ds.getTimeString(stop.arrival.time * 1000) }}</span>
           </div>
           <div class="departure">
-            <span :class="getPastOrFuture($ds.date, stop.departure.time)">{{ $ds.getTimeString(stop.departure.time * 1000) }}</span>
+            <span :class="getPastOrFuture($ds.simulationDate, stop.departure.time)">{{ $ds.getTimeString(stop.departure.time * 1000) }}</span>
           </div>
         </div>
         <div class="delay">
@@ -53,10 +53,10 @@
       </div>
     </div>
     <div class="last-stop">
-      <div :class="['stop', getPastOrFuture($ds.date, stops[stops.length - 1].arrival.time)]">
+      <div :class="['stop', getPastOrFuture($ds.simulationDate, stops[stops.length - 1].arrival.time)]">
         <div class="timeline train-color-border"></div>
         <div class="time">
-          <span :class="getPastOrFuture($ds.date, stops[stops.length - 1].arrival.time)">{{ $ds.getTimeString(stops[stops.length - 1].arrival.time * 1000) }}</span>
+          <span :class="getPastOrFuture($ds.simulationDate, stops[stops.length - 1].arrival.time)">{{ $ds.getTimeString(stops[stops.length - 1].arrival.time * 1000) }}</span>
         </div>
         <div class="delay"></div>
         <div class="station">
@@ -113,7 +113,7 @@ export default defineComponent({
       return this.stops.slice(1, this.stops.length - 1);
     },
     getStopProgress(stop: Stop) {
-      return this.getProgress(stop, this.stops[this.stops.indexOf(stop) + 1], this.$ds.dateTimeInSeconds);
+      return this.getProgress(stop, this.stops[this.stops.indexOf(stop) + 1], this.$ds.simulationTimeInSeconds);
     }
   }
 })

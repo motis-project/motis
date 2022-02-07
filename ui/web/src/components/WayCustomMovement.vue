@@ -9,10 +9,10 @@
       </div>
     </div>
     <div class="first-stop">
-      <div :class="['stop', getPastOrFuture($ds.date, stops[0].departure.time)]">
+      <div :class="['stop', getPastOrFuture($ds.simulationDate, stops[0].departure.time)]">
         <div class="timeline train-color-border"></div>
         <div class="time">
-          <span :class="getPastOrFuture($ds.date, stops[0].departure.time)">{{ $ds.getTimeString(stops[0].departure.time * 1000) }}</span>
+          <span :class="getPastOrFuture($ds.simulationDate, stops[0].departure.time)">{{ $ds.getTimeString(stops[0].departure.time * 1000) }}</span>
         </div>
         <div class="delay"></div>
         <div class="station">
@@ -31,10 +31,10 @@
       <span>{{ (customMovement.mumo_type === "foot" ? $t.walk : $t[customMovement.mumo_type]) + " (" + getReadableDuration(stops[0].departure.time, stops[1].arrival.time, $ts) + ")" }}</span>
     </div>
     <div class="last-stop">
-      <div :class="['stop', getPastOrFuture($ds.date, stops[1].arrival.time)]">
+      <div :class="['stop', getPastOrFuture($ds.simulationDate, stops[1].arrival.time)]">
         <div class="timeline train-color-border"></div>
         <div class="time">
-          <span :class="getPastOrFuture($ds.date, stops[1].arrival.time)">{{ $ds.getTimeString(stops[1].arrival.time * 1000) }}</span>
+          <span :class="getPastOrFuture($ds.simulationDate, stops[1].arrival.time)">{{ $ds.getTimeString(stops[1].arrival.time * 1000) }}</span>
         </div>
         <div class="delay"></div>
         <div class="station">
@@ -74,7 +74,7 @@ export default defineComponent({
   },
   methods: {
     getStopProgress(stop: Stop) {
-      return this.getProgress(stop, this.stops[this.stops.indexOf(stop) + 1], this.$ds.dateTimeInSeconds);
+      return this.getProgress(stop, this.stops[this.stops.indexOf(stop) + 1], this.$ds.simulationTimeInSeconds);
     }
   }
 });

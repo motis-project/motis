@@ -5,6 +5,8 @@ import Interval from '@/models/SmallTypes/Interval';
 
 export class DateTimeService {
   public dateTime: number;
+  public simulationTime: number;
+  public cachedSimulationTime: number;
   public intervalFromServer: Interval;
   private readonly timeFormat: string = "HH:mm";
   private readonly dateFormat: string = "dd.MM.yyyy";
@@ -12,10 +14,16 @@ export class DateTimeService {
   public constructor(initialDateTime: number, intervalFromServer: Interval) {
     this.dateTime = initialDateTime;
     this.intervalFromServer = intervalFromServer;
+    this.simulationTime = this.dateTime;
+    this.cachedSimulationTime = 0;
   }
 
   public get date(): Date {
     return new Date(this.dateTime);
+  }
+
+  public get simulationDate(): Date {
+    return new Date(this.simulationTime);
   }
 
   public get endDate(): string {
@@ -24,6 +32,10 @@ export class DateTimeService {
 
   public get dateTimeInSeconds(): number {
     return Math.floor(this.dateTime / 1000);
+  }
+
+  public get simulationTimeInSeconds(): number {
+    return Math.floor(this.simulationTime / 1000);
   }
 
   public getDateString(dateTime?: number): string {

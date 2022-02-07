@@ -15,11 +15,16 @@
     <div class="sim-time-picker-container" v-if="simWindowOpened">
       <div class="sim-time-picker-overlay">
         <div class="title">
-          <input id="sim-mode-checkbox" type="checkbox" name="sim-mode-checkbox" />
+          <input
+            id="sim-mode-checkbox"
+            type="checkbox"
+            name="sim-mode-checkbox"
+            @click="startDisableSimulation()"
+            checked />
           <label for="sim-mode-checkbox">Simulationsmodus</label>
         </div>
-        <Calendar class="date"></Calendar>
-        <TimeInputField class="time"></TimeInputField>
+        <Calendar class="date" @dateChanged="changeDate"></Calendar>
+        <TimeInputField class="time" @timeChanged="changeTime"></TimeInputField>
         <div class="close" @mousedown="simWindowOpened=false">
           <i class="icon">close</i>
         </div>
@@ -49,6 +54,7 @@ export default defineComponent({
     return {
       searchFieldHidden: false,
       simWindowOpened: false,
+      isSimulationEnabled: true,
     };
   },
   methods: {
@@ -64,6 +70,30 @@ export default defineComponent({
           params: t,
         });
       }
+    },
+    startDisableSimulation() {
+      if(this.isSimulationEnabled) {
+        this.$ds.cachedSimulationTime = this.$ds.simulationTime;
+        this.$ds.simulationTime = new Date().valueOf();
+      }
+      else {
+        this.$ds.simulationTime = this.$ds.cachedSimulationTime;
+        this.$ds.cachedSimulationTime = 0;
+      }
+      this.isSimulationEnabled ? this.isSimulationEnabled = false : this.isSimulationEnabled = true;
+    },
+    changeDate(newDate: Date) {
+      let t: Date = new Date(this.$ds.simulationTime)
+      t.setDate(newDate.getDate());
+      t.setMonth(newDate.getMonth());
+      t.setFullYear(newDate.getFullYear());
+      this.$ds.simulationTime = t.valueOf();
+    },
+    changeTime(newTime: Date) {
+      let t: Date = new Date(this.$ds.simulationTime)
+      t.setHours(newTime.getHours());
+      t.setMinutes(newTime.getMinutes());
+      this.$ds.simulationTime = t.valueOf();
     }
   }
 });
