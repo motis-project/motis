@@ -23,8 +23,8 @@
             checked />
           <label for="sim-mode-checkbox">Simulationsmodus</label>
         </div>
-        <Calendar class="date" @dateChanged="changeDate"></Calendar>
-        <TimeInputField class="time" @timeChanged="changeTime"></TimeInputField>
+        <Calendar :class="[isSimulationEnabled ? 'date' : 'date disabled']" @dateChanged="changeDate"></Calendar>
+        <TimeInputField :class="[isSimulationEnabled ? 'time' : 'time disabled']" @timeChanged="changeTime"></TimeInputField>
         <div class="close" @mousedown="simWindowOpened=false">
           <i class="icon">close</i>
         </div>
