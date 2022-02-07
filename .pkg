@@ -93,4 +93,4 @@
 [rabbitmq-c]
   url=git@github.com:motis-project/rabbitmq-c.git
   branch=master
-  commit=96c708751604dec23dd7fd812b6242eac193edf2
+  commit=19ba772845dd2dfa18accf3cdfdf270b97f90a3d
