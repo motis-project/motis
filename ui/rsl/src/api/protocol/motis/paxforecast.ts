@@ -3,6 +3,7 @@
 import { TripId } from "../motis";
 import { RISContentType } from "./ris";
 import {
+  PaxMonTrackedUpdates,
   PaxMonCompactJourney,
   PaxMonGroup,
   PaxMonLocalization,
@@ -69,6 +70,23 @@ export interface PaxForecastApplyMeasuresRequest {
   measures: MeasureWrapper[];
   replace_existing: boolean;
   preparation_time: number;
+  include_before_trip_load_info: boolean;
+  include_after_trip_load_info: boolean;
+}
+
+// paxforecast/PaxForecastApplyMeasuresResponse.fbs
+export interface PaxForecastApplyMeasuresStatistics {
+  measure_time_points: number;
+  total_measures_applied: number;
+  total_affected_groups: number;
+  total_alternative_routings: number;
+  total_alternatives_found: number;
+}
+
+// paxforecast/PaxForecastApplyMeasuresResponse.fbs
+export interface PaxForecastApplyMeasuresResponse {
+  stats: PaxForecastApplyMeasuresStatistics;
+  updates: PaxMonTrackedUpdates;
 }
 
 // paxforecast/PaxForecastUpdate.fbs

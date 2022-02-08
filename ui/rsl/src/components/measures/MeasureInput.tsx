@@ -71,6 +71,8 @@ function MeasureInput(): JSX.Element {
         measures,
         replace_existing: true,
         preparation_time: 0,
+        include_before_trip_load_info: true,
+        include_after_trip_load_info: true,
       }),
     {
       onSuccess: async () => {

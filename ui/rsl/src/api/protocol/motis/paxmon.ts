@@ -313,6 +313,37 @@ export interface PaxMonStatusResponse {
   trip_count: number;
 }
 
+// paxmon/PaxMonTrackedUpdates.fbs
+export interface PaxMonReusedGroupBaseInfo {
+  id: number;
+  passenger_count: number;
+  probability: number;
+  previous_probability: number;
+}
+
+// paxmon/PaxMonTrackedUpdates.fbs
+export interface PaxMonUpdatedTrip {
+  tsi: TripServiceInfo;
+  removed_max_pax: number;
+  removed_mean_pax: number;
+  added_max_pax: number;
+  added_mean_pax: number;
+  removed_groups: PaxMonGroupBaseInfo[];
+  added_groups: PaxMonGroupBaseInfo[];
+  reused_groups: PaxMonReusedGroupBaseInfo[];
+  before_edges: PaxMonEdgeLoadInfo[];
+  after_edges: PaxMonEdgeLoadInfo[];
+}
+
+// paxmon/PaxMonTrackedUpdates.fbs
+export interface PaxMonTrackedUpdates {
+  added_group_count: number;
+  reused_group_count: number;
+  removed_group_count: number;
+  updated_trip_count: number;
+  updated_trips: PaxMonUpdatedTrip[];
+}
+
 // paxmon/PaxMonTripLoadInfo.fbs
 export interface PaxMonCdfEntry {
   passengers: number;

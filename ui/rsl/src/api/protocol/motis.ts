@@ -52,6 +52,7 @@ import {
 import {
   PaxForecastUpdate,
   PaxForecastApplyMeasuresRequest,
+  PaxForecastApplyMeasuresResponse,
 } from "./motis/paxforecast";
 
 // base/Connection.fbs
@@ -359,7 +360,8 @@ export type MsgContent =
   | PaxMonGetInterchangesResponse
   | PaxMonStatusRequest
   | LookupRiBasisRequest
-  | LookupRiBasisResponse;
+  | LookupRiBasisResponse
+  | PaxForecastApplyMeasuresResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -418,7 +420,8 @@ export type MsgContentType =
   | "PaxMonGetInterchangesResponse"
   | "PaxMonStatusRequest"
   | "LookupRiBasisRequest"
-  | "LookupRiBasisResponse";
+  | "LookupRiBasisResponse"
+  | "PaxForecastApplyMeasuresResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

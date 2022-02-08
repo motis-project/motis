@@ -30,6 +30,7 @@
 #include "motis/paxmon/rt_update_context.h"
 #include "motis/paxmon/statistics.h"
 #include "motis/paxmon/trip_data_container.h"
+#include "motis/paxmon/update_tracker.h"
 
 namespace motis::paxmon {
 
@@ -175,6 +176,7 @@ struct universe {
   system_statistics system_stats_;
   tick_statistics tick_stats_;
   tick_statistics last_tick_stats_;
+  update_tracker update_tracker_;
 };
 
 }  // namespace motis::paxmon

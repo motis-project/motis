@@ -182,7 +182,7 @@ trip_data_index add_trip(schedule const& sched, capacity_maps const& caps,
 
 trip_data_index get_or_add_trip(schedule const& sched,
                                 capacity_maps const& caps, universe& uv,
-                                trip_idx_t trip_idx) {
+                                trip_idx_t const trip_idx) {
   if (auto const idx = uv.trip_data_.find_index(trip_idx);
       idx != INVALID_TRIP_DATA_INDEX) {
     return idx;
@@ -206,6 +206,10 @@ trip_data_index get_or_add_trip(schedule const& sched,
                                 capacity_maps const& caps, universe& uv,
                                 extern_trip const& et) {
   return get_or_add_trip(sched, caps, uv, get_trip(sched, et));
+}
+
+trip_data_index get_trip(universe const& uv, trip_idx_t const trip_idx) {
+  return uv.trip_data_.find_index(trip_idx);
 }
 
 void add_interchange_edges(event_node* evn,
