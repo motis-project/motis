@@ -6,7 +6,6 @@
     "start": "next start"
   },
   "dependencies": {
-    "@types/mapbox-gl": "^2.6.1",
     "@types/react": "^17.0.37",
     "next": "latest",
     "react": "17.0.2",
