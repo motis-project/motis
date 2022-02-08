@@ -132,10 +132,10 @@
     </div>
   </div>
   <div id="connections">
-    <LoadingBar v-if="contentLoadingState === LoadingState.Loading"></LoadingBar>
-    <div v-else-if="contentLoadingState === LoadingState.Loaded" class="connections">
+    <LoadingBar v-if="loadingStates.content === LoadingState.Loading"></LoadingBar>
+    <div v-else-if="loadingStates.content === LoadingState.Loaded" class="connections">
       <div class="extend-search-interval search-before">
-        <a v-if="upperButtonState === UpperButtonState.Loaded" @click="sendRequest('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }}</a>
+        <a v-if="loadingStates.upperButton === LoadingState.Loaded" @click="sendRequest('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }}</a>
         <ButtonsLoadingBar v-else></ButtonsLoadingBar>
       </div>
       <div class="connection-list">
@@ -206,11 +206,11 @@
       </div>
       <div class="divider footer"></div>
       <div class="extend-search-interval search-after">
-        <a v-if="lowerButtonState === LowerButtonState.Loaded" @click="sendRequest('LATER')" v-show="!isBottomEnd">{{ $t.later }}</a>
+        <a v-if="loadingStates.lowerButton === LoadingState.Loaded" @click="sendRequest('LATER')" v-show="!isBottomEnd">{{ $t.later }}</a>
         <ButtonsLoadingBar v-else></ButtonsLoadingBar>
       </div>
     </div>
-    <div v-else-if="contentLoadingState === LoadingState.Error" class="main-error">
+    <div v-else-if="loadingStates.content === LoadingState.Error" class="main-error">
       <div class="">
         {{ $t.noInTimetable }}
       </div>
@@ -218,7 +218,7 @@
         {{ $t.information + " " + $t.from + " " + $ds.getDateString($ds.intervalFromServer.begin * 1000) + " " + $t.till + " " + $ds.getDateString($ds.intervalFromServer.end * 1000) + " " + $t.avaliable }}
       </div>
     </div>
-    <div v-else-if="contentLoadingState === LoadingState.NothingToShow" class="no-results">
+    <div v-else-if="loadingStates.content === LoadingState.NothingToShow" class="no-results">
       <div class="schedule-range">
         {{ $t.information + " " + $t.from + " " + $ds.getDateString($ds.intervalFromServer.begin * 1000) + " " + $t.till + " " + $ds.getDateString($ds.intervalFromServer.end * 1000) + " " + $t.avaliable }}
       </div>
@@ -243,7 +243,7 @@ import TransportLine from "../components/TransportLine.vue";
 import LoadingBar, { LoadingState } from "../components/LoadingBar.vue"
 import Transport from "../models/Transport";
 import CustomMovement from "../models/CustomMovement";
-import ButtonsLoadingBar, { UpperButtonState, LowerButtonState } from "../components/ButtonsLoadingBar.vue";
+import ButtonsLoadingBar from "../components/ButtonsLoadingBar.vue";
 
 export default defineComponent({
   name: "ConnectionSearch",
@@ -299,12 +299,12 @@ export default defineComponent({
       timeoutIndex: -1,
       connections: [] as TripResponseContent[],
       initialConnections: [] as TripResponseContent[],
-      contentLoadingState: LoadingState.NothingToShow,
-      upperButtonState: UpperButtonState.Loaded,
-      lowerButtonState: LowerButtonState.Loaded,
+      loadingStates: {
+        content: LoadingState.NothingToShow,
+        upperButton: LoadingState.Loaded,
+        lowerButton: LoadingState.Loaded
+      } as LoadingStates,
       LoadingState: LoadingState,
-      UpperButtonState: UpperButtonState,
-      LowerButtonState: LowerButtonState,
       isTooltipVisible: [] as boolean[],
       transportTooltipInfo: {} as TransportTooltipInfo,
       isUpperEnd: false,
@@ -407,12 +407,12 @@ export default defineComponent({
         this.isBottomEnd = false;
       }
       if(this.start !== "" && this.destination !== "") {
-        this.contentLoadingState = !changeGap ? LoadingState.Loading : LoadingState.Loaded;
+        this.loadingStates.content = !changeGap ? LoadingState.Loading : LoadingState.Loaded;
         if (changeGap === 'EARLIER') {
-          this.upperButtonState = UpperButtonState.Loading;
+          this.loadingStates.upperButton = LoadingState.Loading;
         }
         else if (changeGap === 'LATER') {
-          this.lowerButtonState = LowerButtonState.Loading;
+          this.loadingStates.lowerButton = LoadingState.Loading;
         }
         this.isTooltipVisible = []
         if(this.timeoutIndex !== -1) {
@@ -474,7 +474,7 @@ export default defineComponent({
             this.$store.state.areConnectionsDropped = false;
             this.setConnections(data.connections, changeGap, start.extend_interval_earlier)
           }).catch(() => {
-            this.contentLoadingState = LoadingState.Error;
+            this.loadingStates.content = LoadingState.Error;
           })
         }, 500);
       }
@@ -503,9 +503,9 @@ export default defineComponent({
           throw new Error()
         }
       }
-      this.contentLoadingState = LoadingState.Loaded;
-      this.upperButtonState = UpperButtonState.Loaded;
-      this.lowerButtonState = LowerButtonState.Loaded;
+      this.loadingStates.content = LoadingState.Loaded;
+      this.loadingStates.upperButton = LoadingState.Loaded;
+      this.loadingStates.lowerButton = LoadingState.Loaded;
       for(let i = 0; i < this.connections.length; i++) {
         this.isTooltipVisible.push(false);
       }
@@ -599,7 +599,7 @@ export default defineComponent({
           destination: destination,
           departure: this.$ds.getTimeString(stops[0].departure.time * 1000),
           arrival: this.$ds.getTimeString(stops[stops.length - 1].arrival.time * 1000),
-          transportName: t.mumo_type === "foot" ? this.$t.walk : this.$t[t.mumo_type],
+          transportName: t.mumo_type === "foot" ? this.$t.walk : (this.$t[t.mumo_type] as string),
           x: event.x
         }
       }
@@ -666,5 +666,11 @@ interface TransportTooltipInfo {
   arrival: string,
   transportName: string,
   x: number
+}
+
+interface LoadingStates {
+  content: LoadingState,
+  upperButton: LoadingState,
+  lowerButton: LoadingState
 }
 </script>
