@@ -197,6 +197,12 @@ class RailVizCustomLayer {
   }
 }
 
+function localStorageSet(key, value) {
+  try {
+  localStorage.setItem(key, value);
+  } catch (ex) {}
+}
+
 function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
   app.ports.mapInit.subscribe(function (id) {
     let settings = localStorage.getItem("motis.map");
