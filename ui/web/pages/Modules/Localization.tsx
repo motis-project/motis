@@ -134,239 +134,359 @@ const deDateConfig = (date: Date) => {
 
 export const deTranslations: Translations = {
         search:
-            { search : "Suchen"
-            , start : "Start"
-            , destination : "Ziel"
-            , date : "Datum"
-            , time : "Uhrzeit"
-            , startTransports : "Verkehrsmittel am Start"
-            , destinationTransports : "Verkehrsmittel am Ziel"
-            , departure : "Abfahrt"
-            , arrival : "Ankunft"
-            , trainNr : "Zugnummer"
-            , maxDuration : "Maximale Dauer (Minuten)"
+            { search : 'Suchen'
+            , start : 'Start'
+            , destination : 'Ziel'
+            , date : 'Datum'
+            , time : 'Uhrzeit'
+            , startTransports : 'Verkehrsmittel am Start'
+            , destinationTransports : 'Verkehrsmittel am Ziel'
+            , departure : 'Abfahrt'
+            , arrival : 'Ankunft'
+            , trainNr : 'Zugnummer'
+            , maxDuration : 'Maximale Dauer (Minuten)'
             , searchProfile :
-                { profile : "Profil"
-                , walkingSpeed : "Laufgeschwindigkeit (m/s)"
-                , stairsUp : "Treppen (aufwärts)"
-                , stairsDown : "Treppen (abwärts)"
-                , stairsWithHandrailUp : "Treppen mit Geländer (aufwärts)"
-                , stairsWithHandrailDown : "Treppen mit Geländer (abwärts)"
-                , timeCost : "Zeitaufwand"
-                , accessibilityCost : "Beschwerlichkeit"
-                , streetCrossings : "Straßenüberquerungen"
-                , signals : "Ampeln"
-                , marked : "Zebrastreifen"
-                , island : "Verkehrsinseln"
-                , unmarked : "Unmarkiert"
-                , primary : "Primary"
-                , secondary : "Secondary"
-                , tertiary : "Tertiary"
-                , residential : "Residential"
-                , elevationUp : "Höhenunterschiede (aufwärts)"
-                , elevationDown : "Höhenunterschiede (abwärts)"
-                , roundAccessibility : "Rundung Beweglichkeit"
-                , elevators : "Aufzüge"
-                , escalators : "Rolltreppen"
-                , movingWalkways : "Fahrsteige"
+                { profile : 'Profil'
+                , walkingSpeed : 'Laufgeschwindigkeit (m/s)'
+                , stairsUp : 'Treppen (aufwärts)'
+                , stairsDown : 'Treppen (abwärts)'
+                , stairsWithHandrailUp : 'Treppen mit Geländer (aufwärts)'
+                , stairsWithHandrailDown : 'Treppen mit Geländer (abwärts)'
+                , timeCost : 'Zeitaufwand'
+                , accessibilityCost : 'Beschwerlichkeit'
+                , streetCrossings : 'Straßenüberquerungen'
+                , signals : 'Ampeln'
+                , marked : 'Zebrastreifen'
+                , island : 'Verkehrsinseln'
+                , unmarked : 'Unmarkiert'
+                , primary : 'Primary'
+                , secondary : 'Secondary'
+                , tertiary : 'Tertiary'
+                , residential : 'Residential'
+                , elevationUp : 'Höhenunterschiede (aufwärts)'
+                , elevationDown : 'Höhenunterschiede (abwärts)'
+                , roundAccessibility : 'Rundung Beweglichkeit'
+                , elevators : 'Aufzüge'
+                , escalators : 'Rolltreppen'
+                , movingWalkways : 'Fahrsteige'
                 }
-            , useParking : "Parkplätze verwenden"
+            , useParking : 'Parkplätze verwenden'
             }
         , connections :
-            { timeHeader : "Zeit"
-            , durationHeader : "Dauer"
-            , transportsHeader : "Verkehrsmittel"
+            { timeHeader : 'Zeit'
+            , durationHeader : 'Dauer'
+            , transportsHeader : 'Verkehrsmittel'
             , scheduleRange :
                 (begin: Date, end: Date) => 'Auskunft von ' 
                                 + deDateConfig(begin) 
                                 + ' bis ' 
                                 + deDateConfig(end) 
                                 + ' möglich'
-            , loading : "Verbindungen suchen..."
-            , noResults : "Keine Verbindungen gefunden"
-            , extendBefore : "Früher"
-            , extendAfter : "Später"
+            , loading : 'Verbindungen suchen...'
+            , noResults : 'Keine Verbindungen gefunden'
+            , extendBefore : 'Früher'
+            , extendAfter : 'Später'
             , interchanges :
                 (count: number) => count == 0 ? 'Keine Umstiege' : count == 1 ? '1 Umstieg' : count + 'Umstiege'
             , walkDuration : (duration: string) => duration + 'Fußweg'
             , interchangeDuration : (duration: string) => duration + 'Umstieg'
             , arrivalTrack : (track: string) => 'Ankunft Gleis' + track
-            , track : "Gleis"
+            , track : 'Gleis'
             , tripIntermediateStops :
                 (count: number) => count == 0 ? 'Fahrt ohne Zwischenhalt' : count == 1 ? 'Fahrt 1 Station' : 'Fahrt ' + count + ' Stationen'
             , tripWalk : (duration: string) => 'Fußweg (' + duration + ')'
             , tripBike : (duration: string) => 'Fahrrad (' + duration + ')'
             , tripCar : (duration: string) => 'Auto (' + duration + ')'
-            , provider : "Betreiber"
-            , walk : "Fußweg"
-            , bike : "Fahrrad"
-            , car : "Auto"
-            , trainNr : "Zugnummer"
-            , lineId : "Linie"
-            , parking : "Parkplatz"
+            , provider : 'Betreiber'
+            , walk : 'Fußweg'
+            , bike : 'Fahrrad'
+            , car : 'Auto'
+            , trainNr : 'Zugnummer'
+            , lineId : 'Linie'
+            , parking : 'Parkplatz'
             }
         , station :
-            { direction : "Richtung"
-            , noDepartures : "Keine Abfahrten im gewählten Zeitraum"
-            , noArrivals : "Keine Ankünfte im gewählten Zeitraum"
-            , loading : "Laden..."
-            , trackAbbr : "Gl."
+            { direction : 'Richtung'
+            , noDepartures : 'Keine Abfahrten im gewählten Zeitraum'
+            , noArrivals : 'Keine Ankünfte im gewählten Zeitraum'
+            , loading : 'Laden...'
+            , trackAbbr : 'Gl.'
             }
         , railViz :
-            { noTrains : "Keine Züge"
-            , delayColors : "Nach Verspätung"
-            , classColors : "Nach Kategorie"
-            , simActive : "Simulationsmodus aktiv"
+            { noTrains : 'Keine Züge'
+            , delayColors : 'Nach Verspätung'
+            , classColors : 'Nach Kategorie'
+            , simActive : 'Simulationsmodus aktiv'
             }
         , mapContextMenu :
-            { routeFromHere : "Routen von hier"
-            , routeToHere : "Routen hierher"
+            { routeFromHere : 'Routen von hier'
+            , routeToHere : 'Routen hierher'
             }
         , errors :
-            { journeyDateNotInSchedule : "Zeitraum nicht im Fahrplan"
-            , internalError : (msg: string) => "Interner Fehler (" + msg + ")"
-            , timeout : "Zeitüberschreitung"
-            , network : "Netzwerkfehler"
-            , http : (code: number) => "HTTP-Fehler " + code
-            , decode : (msg: string) => "Ungültige Antwort (" + msg + ")"
-            , moduleNotFound : "Modul nicht geladen"
-            , osrmProfileNotAvailable : "OSRM: Profil nicht verfügbar"
-            , osrmNoRoutingResponse : "OSRM: Keine Routing-Antwort"
-            , pprProfileNotAvailable : "PPR: Profil nicht verfügbar"
+            { journeyDateNotInSchedule : 'Zeitraum nicht im Fahrplan'
+            , internalError : (msg: string) => 'Interner Fehler (' + msg + ')'
+            , timeout : 'Zeitüberschreitung'
+            , network : 'Netzwerkfehler'
+            , http : (code: number) => 'HTTP-Fehler ' + code
+            , decode : (msg: string) => 'Ungültige Antwort (' + msg + ')'
+            , moduleNotFound : 'Modul nicht geladen'
+            , osrmProfileNotAvailable : 'OSRM: Profil nicht verfügbar'
+            , osrmNoRoutingResponse : 'OSRM: Keine Routing-Antwort'
+            , pprProfileNotAvailable : 'PPR: Profil nicht verfügbar'
             }
         , trips :
-            { noResults : "Keine passenden Züge gefunden"
+            { noResults : 'Keine passenden Züge gefunden'
             }
         , misc :
-            { permalink : "Permalink" }
+            { permalink : 'Permalink' }
         , simTime :
-            { simMode : "Simulationsmodus"
+            { simMode : 'Simulationsmodus'
             }
         , searchProfiles :
-            { default : "Standard"
-            , accessibility1 : "Auch nach leichten Wegen suchen"
-            , wheelchair : "Rollstuhl"
-            , elevation : "Weniger Steigung"
-            , custom : "Benutzerdefiniert"
+            { default : 'Standard'
+            , accessibility1 : 'Auch nach leichten Wegen suchen'
+            , wheelchair : 'Rollstuhl'
+            , elevation : 'Weniger Steigung'
+            , custom : 'Benutzerdefiniert'
             }
         };
 
 
 export const enTranslations: Translations = {
         search :
-            { search : "Search"
-            , start : "Start"
-            , destination : "Destination"
-            , date : "Date"
-            , time : "Time"
-            , startTransports : "Transports at the start"
-            , destinationTransports : "Transports at the destination"
-            , departure : "Departure"
-            , arrival : "Arrival"
-            , trainNr : "Train Number"
-            , maxDuration : "Max. duration (minutes)"
+            { search : 'Search'
+            , start : 'Start'
+            , destination : 'Destination'
+            , date : 'Date'
+            , time : 'Time'
+            , startTransports : 'Transports at the start'
+            , destinationTransports : 'Transports at the destination'
+            , departure : 'Departure'
+            , arrival : 'Arrival'
+            , trainNr : 'Train Number'
+            , maxDuration : 'Max. duration (minutes)'
             , searchProfile :
-                { profile : "Profil"
-                , walkingSpeed : "Walking speed (m/s)"
-                , stairsUp : "Stairs (up)"
-                , stairsDown : "Stairs (down)"
-                , stairsWithHandrailUp : "Stairs with handrail (up)"
-                , stairsWithHandrailDown : "Stairs with handrail (down)"
-                , timeCost : "Time cost"
-                , accessibilityCost : "Accessibility cost"
-                , streetCrossings : "Street crossings"
-                , signals : "Traffic signals"
-                , marked : "Marked (zebra crossings)"
-                , island : "Traffic islands"
-                , unmarked : "Unmarked"
-                , primary : "Primary"
-                , secondary : "Secondary"
-                , tertiary : "Tertiary"
-                , residential : "Residential"
-                , elevationUp : "Elevation difference (up)"
-                , elevationDown : "Elevation difference (down)"
-                , roundAccessibility : "Round accessibility"
-                , elevators : "Elevators"
-                , escalators : "Escalators"
-                , movingWalkways : "Moving walkways"
+                { profile : 'Profil'
+                , walkingSpeed : 'Walking speed (m/s)'
+                , stairsUp : 'Stairs (up)'
+                , stairsDown : 'Stairs (down)'
+                , stairsWithHandrailUp : 'Stairs with handrail (up)'
+                , stairsWithHandrailDown : 'Stairs with handrail (down)'
+                , timeCost : 'Time cost'
+                , accessibilityCost : 'Accessibility cost'
+                , streetCrossings : 'Street crossings'
+                , signals : 'Traffic signals'
+                , marked : 'Marked (zebra crossings)'
+                , island : 'Traffic islands'
+                , unmarked : 'Unmarked'
+                , primary : 'Primary'
+                , secondary : 'Secondary'
+                , tertiary : 'Tertiary'
+                , residential : 'Residential'
+                , elevationUp : 'Elevation difference (up)'
+                , elevationDown : 'Elevation difference (down)'
+                , roundAccessibility : 'Round accessibility'
+                , elevators : 'Elevators'
+                , escalators : 'Escalators'
+                , movingWalkways : 'Moving walkways'
                 }
-            , useParking : "Use parkings"
+            , useParking : 'Use parkings'
             }
         , connections :
-            { timeHeader : "Time"
-            , durationHeader : "Duration"
-            , transportsHeader : "Transports"
+            { timeHeader : 'Time'
+            , durationHeader : 'Duration'
+            , transportsHeader : 'Transports'
             , scheduleRange :
                 (begin: Date, end: Date) => 
                     'Possible dates: '
                     + enDateConfig(begin)
                     + ' - '
                     + enDateConfig(end)
-            , loading : "Searching..."
-            , noResults : "No connections found"
-            , extendBefore : "Earlier"
-            , extendAfter : "Later"
+            , loading : 'Searching...'
+            , noResults : 'No connections found'
+            , extendBefore : 'Earlier'
+            , extendAfter : 'Later'
             , interchanges :
                 (count: number) => count == 0 ? 'No interchanges' : count == 1 ? '1 Interchange' : count + ' interchanges'
-            , walkDuration : (duration: string) => duration + " walk"
-            , interchangeDuration : (duration: string) => duration + " interchange"
-            , arrivalTrack : (track: string) => "Arrival track " + track
-            , track : "Track"
+            , walkDuration : (duration: string) => duration + ' walk'
+            , interchangeDuration : (duration: string) => duration + ' interchange'
+            , arrivalTrack : (track: string) => 'Arrival track ' + track
+            , track : 'Track'
             , tripIntermediateStops :
                 (count: number) => count == 0 ? 'No intermediate stops' : count == 1 ? '1 intermediate stop' : count + ' intermediate stops'
-            , tripWalk : (duration: string) => "Walk (" + duration + ")"
-            , tripBike : (duration: string) => "Bike (" + duration + ")"
-            , tripCar : (duration: string) => "Car (" + duration + ")"
-            , provider : "Provider"
-            , walk : "Walk"
-            , bike : "Bike"
-            , car : "Car"
-            , trainNr : "Train number"
-            , lineId : "Line"
-            , parking : "Parking"
+            , tripWalk : (duration: string) => 'Walk (' + duration + ')'
+            , tripBike : (duration: string) => 'Bike (' + duration + ')'
+            , tripCar : (duration: string) => 'Car (' + duration + ')'
+            , provider : 'Provider'
+            , walk : 'Walk'
+            , bike : 'Bike'
+            , car : 'Car'
+            , trainNr : 'Train number'
+            , lineId : 'Line'
+            , parking : 'Parking'
             }
         , station :
-            { direction : "Direction"
-            , noDepartures : "No departures"
-            , noArrivals : "No arrivals"
-            , loading : "Loading..."
-            , trackAbbr : "Tr."
+            { direction : 'Direction'
+            , noDepartures : 'No departures'
+            , noArrivals : 'No arrivals'
+            , loading : 'Loading...'
+            , trackAbbr : 'Tr.'
             }
         , railViz :
-            { noTrains : "No trains"
-            , delayColors : "By delay"
-            , classColors : "By category"
-            , simActive : "Simulation mode active"
+            { noTrains : 'No trains'
+            , delayColors : 'By delay'
+            , classColors : 'By category'
+            , simActive : 'Simulation mode active'
             }
         , mapContextMenu :
-            { routeFromHere : "Directions from here"
-            , routeToHere : "Directions to here"
+            { routeFromHere : 'Directions from here'
+            , routeToHere : 'Directions to here'
             }
         , errors :
-            { journeyDateNotInSchedule : "Date not in schedule"
-            , internalError : (msg: string) => "Internal error (" + msg + ")"
-            , timeout : "Timeout"
-            , network : "Network error"
-            , http : (code: number) => "HTTP error " + code
-            , decode : (msg: string) => "Invalid response (" + msg + ")"
-            , moduleNotFound : "Module not found"
-            , osrmProfileNotAvailable : "OSRM: Profile not available"
-            , osrmNoRoutingResponse : "OSRM: No routing response"
-            , pprProfileNotAvailable : "PPR: Profile not available"
+            { journeyDateNotInSchedule : 'Date not in schedule'
+            , internalError : (msg: string) => 'Internal error (' + msg + ')'
+            , timeout : 'Timeout'
+            , network : 'Network error'
+            , http : (code: number) => 'HTTP error ' + code
+            , decode : (msg: string) => 'Invalid response (' + msg + ')'
+            , moduleNotFound : 'Module not found'
+            , osrmProfileNotAvailable : 'OSRM: Profile not available'
+            , osrmNoRoutingResponse : 'OSRM: No routing response'
+            , pprProfileNotAvailable : 'PPR: Profile not available'
             }
         , trips :
-            { noResults : "No matching trains found"
+            { noResults : 'No matching trains found'
             }
         , misc :
-            { permalink : "Permalink" }
+            { permalink : 'Permalink' }
         , simTime :
-            { simMode : "Simulation mode"
+            { simMode : 'Simulation mode'
             }
         , searchProfiles :
-            { default : "Default"
-            , accessibility1 : "Include accessible routes"
-            , wheelchair : "Wheelchair"
-            , elevation : "Avoid elevation changes"
-            , custom : "Custom"
+            { default : 'Default'
+            , accessibility1 : 'Include accessible routes'
+            , wheelchair : 'Wheelchair'
+            , elevation : 'Avoid elevation changes'
+            , custom : 'Custom'
             }
         };
+
+export const plTranslations: Translations = {
+     search :
+        { search : 'Szukaj'
+        , start : 'Początek'
+        , destination : 'Koniec'
+        , date : 'Data'
+        , time : 'Godzina'
+        , startTransports : 'Środki transportu na początku'
+        , destinationTransports : 'Środki transportu na końcu'
+        , departure : 'Odjazd'
+        , arrival : 'Przyjazd'
+        , trainNr : 'Numer kursu'
+        , maxDuration : 'Max. czas trwania (w min.)'
+        , searchProfile :
+            { profile : 'Profil'
+            , walkingSpeed : 'Prędkość marszu (m/s)'
+            , stairsUp : 'Schody (w górę)'
+            , stairsDown : 'Schody (w dół)'
+            , stairsWithHandrailUp : 'Schody z poręczą (w górę)'
+            , stairsWithHandrailDown : 'Schody z poręczą (w gół)'
+            , timeCost : 'Nakład czasu'
+            , accessibilityCost : 'uciążliwość'
+            , streetCrossings : 'przejście przez ulicę'
+            , signals : 'lampy'
+            , marked : 'Przejście dla pieszych'
+            , island : 'Wysepka'
+            , unmarked : 'Nieoznaczone'
+            , primary : 'Primary'
+            , secondary : 'Secondary'
+            , tertiary : 'Tertiary'
+            , residential : 'Residential'
+            , elevationUp : 'Różnica wysokości (w górę)'
+            , elevationDown : 'Różnice wysokości (w dół)'
+            , roundAccessibility : 'Zdolność do zaokrąglania'
+            , elevators : 'Windy'
+            , escalators : 'Schody ruchome'
+            , movingWalkways : 'Chodniki ruchome'
+            }
+        , useParking : 'Korzystaj z parkingów'
+        }
+    , connections :
+        { timeHeader : 'Czas'
+        , durationHeader : 'Czas trwania'
+        , transportsHeader : 'środki transportu'
+        , scheduleRange :
+            (begin: Date, end: Date) =>
+                'Informacja od '
+                    + deDateConfig(begin)
+                    + ' do '
+                    + deDateConfig(end)
+                    + ' możliwa'
+        , loading : 'Szukam połączeń...'
+        , noResults : 'Nie znaleziono połączeń'
+        , extendBefore : 'Wcześniej'
+        , extendAfter : 'Później'
+        , interchanges :
+            (count: number) => count == 0  ? 'Bez przesiadek' : count == 1 ? '1 przesiadka' : count + ' przesiadek'
+        , walkDuration : (duration: string) => duration + ' Spacer'
+        , interchangeDuration : (duration: string) => duration + ' przesiadka'
+        , arrivalTrack : (track: string) => 'peron przyjazdu ' + track
+        , track : 'Peron'
+        , tripIntermediateStops :
+            (count: number) => count == 0 ? 'Podróż bez zatrzymywania się' : count == 1 ? 'Podróż 1 przystanek' : 'Podróż ' + count + ' przystanków'
+        , tripWalk : (duration: string) => 'Spacer (' + duration + ')'
+        , tripBike : (duration: string) => 'Rower (' + duration + ')'
+        , tripCar : (duration: string) => 'Samochód (' + duration + ')'
+        , provider : 'Operator'
+        , walk : 'Spacer'
+        , bike : 'Rower'
+        , car : 'Samochód'
+        , trainNr : 'Numer kursu'
+        , lineId : 'Linia'
+        , parking : 'Parking'
+        }
+    , station :
+        { direction : 'Kierunek'
+        , noDepartures : 'Brak odjazdów w wybranym okresie'
+        , noArrivals : 'Brak przyjazdów w wybranym okresie'
+        , loading : 'Ładuję...'
+        , trackAbbr : 'Per.'
+        }
+    , railViz :
+        { noTrains : 'Brak kursów'
+        , delayColors : 'Według opóźnień'
+        , classColors : 'Według kategorii'
+        , simActive : 'Tryb symulacji aktywny'
+        }
+    , mapContextMenu :
+        { routeFromHere : 'Początek podróży tutaj'
+        , routeToHere : 'Koniec podróży tutaj'
+        }
+    , errors :
+        { journeyDateNotInSchedule : 'Okres poza harmonogramem'
+        , internalError : (msg: string) => 'Błąd wewnętrzny (' + msg + ')'
+        , timeout : 'Przekroczono limit czasu'
+        , network : 'Błąd sieci'
+        , http : (code: number) => 'Błąd HTTP ' + code
+        , decode : (msg: string) => 'Nieprawidłowa odpowiedź (' + msg + ')'
+        , moduleNotFound : 'Moduł nie załadowany'
+        , osrmProfileNotAvailable : 'OSRM: Profil niedostępny'
+        , osrmNoRoutingResponse : 'OSRM: brak odpowiedzi nawigacji'
+        , pprProfileNotAvailable : 'PPR: Profil niedostępny'
+        }
+    , trips :
+        { noResults : 'Nie znaleziono pasujących kursów'
+        }
+    , misc :
+        { permalink : 'Permalink' }
+    , simTime :
+        { simMode : 'Tryb symulacji'
+        }
+    , searchProfiles :
+        { default : 'Domyślny'
+        , accessibility1 : 'Poszukaj też łatwej trasy'
+        , wheelchair : 'wózek inwalidzki'
+        , elevation : 'Mniej wzniesień'
+        , custom : 'Użytkownika'
+        }
+    }

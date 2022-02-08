@@ -3,7 +3,7 @@ import React from 'react';
 import { useRouter} from 'next/router';
 
 import { Overlay } from '../Modules/Overlay';
-import { Translations, deTranslations, enTranslations } from '../Modules/Localization';
+import { Translations, deTranslations, enTranslations, plTranslations } from '../Modules/Localization';
 import { StationSearch } from '../Modules/StationSearch';
 import { MapContainer } from '../Modules/MapContainer';
 //import { ownPorts } from '../../public/ports';
@@ -36,10 +36,12 @@ interface GlobalParameters {
 const getQuery = (): Translations => {
     let router = useRouter();
     let { locale } = router.query;
-    if (locale === 'en') {
-        return enTranslations
+    if (locale === 'de') {
+        return deTranslations;
+    } else if (locale === 'pl') {
+        return plTranslations;
     }
-    return deTranslations
+    return enTranslations;
 }
 
 
