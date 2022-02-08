@@ -132,11 +132,11 @@
     </div>
   </div>
   <div id="connections">
-    <LoadingBar v-if="loadingStates.content === LoadingState.Loading"></LoadingBar>
+    <LoadingBar :isButton="false" v-if="loadingStates.content === LoadingState.Loading"></LoadingBar>
     <div v-else-if="loadingStates.content === LoadingState.Loaded" class="connections">
       <div class="extend-search-interval search-before">
         <a v-if="loadingStates.upperButton === LoadingState.Loaded" @click="sendRequest('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }}</a>
-        <ButtonsLoadingBar v-else></ButtonsLoadingBar>
+        <LoadingBar :isButton="true" v-else></LoadingBar>
       </div>
       <div class="connection-list">
         <div class="date-header divider">
@@ -207,7 +207,7 @@
       <div class="divider footer"></div>
       <div class="extend-search-interval search-after">
         <a v-if="loadingStates.lowerButton === LoadingState.Loaded" @click="sendRequest('LATER')" v-show="!isBottomEnd">{{ $t.later }}</a>
-        <ButtonsLoadingBar v-else></ButtonsLoadingBar>
+        <LoadingBar :isButton="true" v-else></LoadingBar>
       </div>
     </div>
     <div v-else-if="loadingStates.content === LoadingState.Error" class="main-error">
@@ -215,12 +215,12 @@
         {{ $t.noInTimetable }}
       </div>
       <div class="schedule-range">
-        {{ $t.information + " " + $t.from + " " + $ds.getDateString($ds.intervalFromServer.begin * 1000) + " " + $t.till + " " + $ds.getDateString($ds.intervalFromServer.end * 1000) + " " + $t.avaliable }}
+        {{ $ts.formatTranslate("information", $ds.getDateString($ds.intervalFromServer.begin * 1000), $ds.getDateString($ds.intervalFromServer.end * 1000)) }}
       </div>
     </div>
     <div v-else-if="loadingStates.content === LoadingState.NothingToShow" class="no-results">
       <div class="schedule-range">
-        {{ $t.information + " " + $t.from + " " + $ds.getDateString($ds.intervalFromServer.begin * 1000) + " " + $t.till + " " + $ds.getDateString($ds.intervalFromServer.end * 1000) + " " + $t.avaliable }}
+        {{ $ts.formatTranslate("information", $ds.getDateString($ds.intervalFromServer.begin * 1000), $ds.getDateString($ds.intervalFromServer.end * 1000)) }}
       </div>
     </div>
   </div>
@@ -243,7 +243,6 @@ import TransportLine from "../components/TransportLine.vue";
 import LoadingBar, { LoadingState } from "../components/LoadingBar.vue"
 import Transport from "../models/Transport";
 import CustomMovement from "../models/CustomMovement";
-import ButtonsLoadingBar from "../components/ButtonsLoadingBar.vue";
 
 export default defineComponent({
   name: "ConnectionSearch",
@@ -254,8 +253,7 @@ export default defineComponent({
     Calendar,
     TimeInputField,
     TransportLine,
-    LoadingBar,
-    ButtonsLoadingBar
+    LoadingBar
   },
   mixins: [ WayMixin ],
   data() {

@@ -17,7 +17,7 @@
         </div>
       </div>
     </div>
-    <LoadingBar v-if="contentLoadingState === LoadingState.Loading"></LoadingBar>
+    <LoadingBar :isButton="false" v-if="contentLoadingState === LoadingState.Loading"></LoadingBar>
     <div class="trips" v-else-if="contentLoadingState === LoadingState.Loaded">
       <ul style="list-style-type: none; margin-left: -40px" v-show="areGuessesDisplayed">
         <li class="trip" v-for="trip in trainGuesses" :key="trip">

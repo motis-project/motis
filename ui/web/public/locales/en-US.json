@@ -38,8 +38,5 @@
   "noDepartures": "No departures in the selected time period",
   "noArrivals": "No arrivals in the selected time period",
   "noInTimetable": "Time period not in the timetable",
-  "information": "Information",
-  "from": "from",
-  "till": "till",
-  "avaliable": "avaliable"
+  "information": "Information from {0} till {1} avaliable"
 }

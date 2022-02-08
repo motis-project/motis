@@ -1,5 +1,5 @@
 <template>
-  <LoadingBar v-if="!isContentLoaded"></LoadingBar>
+  <LoadingBar :isButton="false" v-if="!isContentLoaded"></LoadingBar>
   <div v-else :class="['connection-details', isTripView ? 'trip-view' : '']">
     <div class="connection-info">
       <div class="header">

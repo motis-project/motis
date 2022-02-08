@@ -30,7 +30,7 @@
       </div>
     </div>
     <div class="events">
-      <LoadingBar v-if="contentLoadingState !== LoadingState.Loaded"></LoadingBar>
+      <LoadingBar :isButton="false" v-if="loadingStates.content !== LoadingState.Loaded"></LoadingBar>
       <div v-else class="">
         <div
           :class="[
@@ -38,8 +38,8 @@
             isUpperEnd ? 'disabled' : '',
           ]"
           v-if="!isEmptyTimetable">
-          <a v-if="upperButtonState === UpperButtonState.Loaded" @click="changeTimeGap('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }} </a>
-          <ButtonsLoadingBar v-else></ButtonsLoadingBar>
+          <a v-if="loadingStates.upperButton === LoadingState.Loaded" @click="changeTimeGap('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }} </a>
+          <LoadingBar :isButton="true" v-else></LoadingBar>
         </div>
         <div
           :class="[
@@ -47,8 +47,8 @@
             isUpperEnd ? 'error' : '',
           ]"
           v-else>
-          <a v-if="upperButtonState === UpperButtonState.Loaded" @click="errorScreen('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }} </a>
-          <ButtonsLoadingBar v-else></ButtonsLoadingBar>
+          <a v-if="loadingStates.upperButton === LoadingState.Loaded" @click="errorScreen('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }} </a>
+          <LoadingBar :isButton="true" v-else></LoadingBar>
           <div class="error">
             <div class v-show="isUpperEnd">
               {{ $t.noInTimetable }}
@@ -108,8 +108,8 @@
             isBottomEnd ? 'disabled' : '',
           ]"
           v-if="!isEmptyTimetable">
-          <a v-if="lowerButtonState === LowerButtonState.Loaded" @click="changeTimeGap('LATER')" v-show="!isBottomEnd"> {{ $t.later }} </a>
-          <ButtonsLoadingBar v-else></ButtonsLoadingBar>
+          <a v-if="loadingStates.lowerButton === LoadingState.Loaded" @click="changeTimeGap('LATER')" v-show="!isBottomEnd"> {{ $t.later }} </a>
+          <LoadingBar :isButton="true" v-else></LoadingBar>
         </div>
         <div
           :class="[
@@ -117,8 +117,8 @@
             isBottomEnd ? 'error' : '',
           ]"
           v-else>
-          <a v-if="lowerButtonState === LowerButtonState.Loaded" @click="errorScreen('LATER')" v-show="!isBottomEnd"> {{ $t.later }} </a>
-          <ButtonsLoadingBar v-else></ButtonsLoadingBar>
+          <a v-if="loadingStates.lowerButton === LoadingState.Loaded" @click="errorScreen('LATER')" v-show="!isBottomEnd"> {{ $t.later }} </a>
+          <LoadingBar :isButton="true" v-else></LoadingBar>
           <div class="error">
             <div class v-show="isBottomEnd">
               {{ $t.noInTimetable }}
@@ -137,14 +137,12 @@ import Event from "../models/DepartureTimetable";
 import TransportTypeBox from "../components/TransportTypeBox.vue";
 import { TripInfoId } from "../models/TrainGuess";
 import LoadingBar, { LoadingState } from "../components/LoadingBar.vue"
-import ButtonsLoadingBar, { UpperButtonState, LowerButtonState } from "../components/ButtonsLoadingBar.vue";
 
 export default defineComponent({
   name: "StationTimetable",
   components: {
     TransportTypeBox,
     LoadingBar,
-    ButtonsLoadingBar
   },
   props: {
     stationGuess: {
@@ -168,12 +166,12 @@ export default defineComponent({
       isBottomEnd: false,
       separators: [] as number[],
       isEmptyTimetable: false,
-      upperButtonState: UpperButtonState.Loaded,
-      lowerButtonState: LowerButtonState.Loaded,
-      UpperButtonState: UpperButtonState,
-      LowerButtonState: LowerButtonState,
+      loadingStates: {
+        content: LoadingState.NothingToShow,
+        upperButton: LoadingState.Loaded,
+        lowerButton: LoadingState.Loaded
+      } as LoadingStates,
       LoadingState: LoadingState,
-      contentLoadingState: LoadingState.NothingToShow
     };
   },
   watch: {
@@ -182,7 +180,7 @@ export default defineComponent({
       this.isUpperEnd = false;
       this.isBottomEnd = false;
       this.isEmptyTimetable = false;
-      this.contentLoadingState = LoadingState.Loading;
+      this.loadingStates.content = LoadingState.Loading;
       this.isDeparture = true;
       this.date = this.$ds.dateTimeInSeconds;
       this.getInfo(newValue, this.isDeparture);
@@ -256,10 +254,10 @@ export default defineComponent({
       clickEarlier: boolean | null = null
     ) {
       if (clickEarlier === true) {
-        this.upperButtonState = UpperButtonState.Loading;
+        this.loadingStates.upperButton = LoadingState.Loading;
       }
       else if (clickEarlier === false) {
-        this.lowerButtonState = LowerButtonState.Loading;
+        this.loadingStates.lowerButton = LoadingState.Loading;
       }
       this.$postService
         .getDeparturesResponse(newValue.id, true, this.direction, 20, this.date)
@@ -289,17 +287,23 @@ export default defineComponent({
           }
           this.station = data.station;
           this.getDepartures(isDeparture);
-          this.contentLoadingState = LoadingState.Loaded;
-          this.upperButtonState = UpperButtonState.Loaded;
-          this.lowerButtonState = LowerButtonState.Loaded;
+          this.loadingStates.content = LoadingState.Loaded;
+          this.loadingStates.upperButton = LoadingState.Loaded;
+          this.loadingStates.lowerButton = LoadingState.Loaded;
         })
         .catch(() => {
           this.isEmptyTimetable = true;
-          this.contentLoadingState = LoadingState.Loaded;
-          this.upperButtonState = UpperButtonState.Loaded;
-          this.lowerButtonState = LowerButtonState.Loaded;
+          this.loadingStates.content = LoadingState.Loaded;
+          this.loadingStates.upperButton = LoadingState.Loaded;
+          this.loadingStates.lowerButton = LoadingState.Loaded;
         })
     },
   },
 });
+
+interface LoadingStates {
+  content: LoadingState,
+  upperButton: LoadingState,
+  lowerButton: LoadingState
+}
 </script>
