@@ -1,25 +1,27 @@
-import { useRef } from "react";
-import { useQuery, useQueryClient } from "react-query";
 import { DownloadIcon } from "@heroicons/react/solid";
 import { useAtom } from "jotai";
+import { useRef } from "react";
+import { useQuery, useQueryClient } from "react-query";
 
-import {
-  formatLongDateTime,
-  formatFileNameTime,
-  formatTime,
-} from "../util/dateFormat";
-import {
-  PaxMonEdgeLoadInfoWithStats,
-  PaxMonTripLoadInfoWithStats,
-} from "../data/loadInfo";
-import { TripId } from "../api/protocol/motis";
 import {
   queryKeys,
   sendPaxMonTripLoadInfosRequest,
   usePaxMonStatusQuery,
 } from "../api/paxmon";
-import { addEdgeStatistics } from "../util/statistics";
+import { TripId } from "../api/protocol/motis";
+
+import {
+  PaxMonEdgeLoadInfoWithStats,
+  PaxMonTripLoadInfoWithStats,
+} from "../data/loadInfo";
 import { universeAtom } from "../data/simulation";
+
+import {
+  formatFileNameTime,
+  formatLongDateTime,
+  formatTime,
+} from "../util/dateFormat";
+import { addEdgeStatistics } from "../util/statistics";
 
 function getSvgLinePath(
   edges: PaxMonEdgeLoadInfoWithStats[],
@@ -304,14 +306,16 @@ function TripLoadForecastChart({
 
   const names = [
     ...new Set(
-      data.tsi.service_infos.map((si) =>
-        si.line ? `${si.train_nr} [${si.name}]` : si.name
+      data.tsi.service_infos.map(
+        (si) =>
+          `${si.category} ${si.train_nr}` +
+          (si.line ? ` [Linie ${si.line}]` : "")
       )
     ),
   ];
-  const title = `${names.join(", ")} (${data.tsi.primary_station.name} - ${
-    data.tsi.secondary_station.name
-  }), Vorhersage vom ${formatLongDateTime(systemTime)}`;
+  const title = `${names.join(", ")}, Vorhersage vom ${formatLongDateTime(
+    systemTime
+  )}`;
 
   const baseFileName = getBaseFileName(data, systemTime);
 

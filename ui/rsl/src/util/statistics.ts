@@ -2,6 +2,7 @@ import {
   PaxMonCdfEntry,
   PaxMonTripLoadInfo,
 } from "../api/protocol/motis/paxmon";
+
 import {
   PaxMonEdgeLoadInfoWithStats,
   PaxMonTripLoadInfoWithStats,

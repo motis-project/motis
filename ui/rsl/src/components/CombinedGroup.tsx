@@ -1,16 +1,18 @@
-import { useQuery } from "react-query";
-import { useAtom } from "jotai";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { useAtom } from "jotai";
+import { useQuery } from "react-query";
 
 import { Station, TripId } from "../api/protocol/motis";
 import { GroupedPassengerGroups } from "../api/protocol/motis/paxmon";
 import { sendRoutingRequest } from "../api/routing";
-import { connectionToJourney, Journey } from "../data/journey";
-import { formatTime } from "../util/dateFormat";
+
+import { Journey, connectionToJourney } from "../data/journey";
 import { scheduleAtom } from "../data/simulation";
 
-import TripLoadForecastChart from "./TripLoadForecastChart";
+import { formatTime } from "../util/dateFormat";
+
 import JourneyTripNameView from "./JourneyTripNameView";
+import TripLoadForecastChart from "./TripLoadForecastChart";
 import TripServiceInfoView from "./TripServiceInfoView";
 
 export type GroupByDirection = "Origin" | "Destination";

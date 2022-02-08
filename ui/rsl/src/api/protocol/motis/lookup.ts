@@ -1,12 +1,11 @@
 // generated file - do not modify - run update-protocol to update
-
 import {
+  Connection,
+  EventType,
+  Interval,
   Position,
   Station,
   TripId,
-  Connection,
-  Interval,
-  EventType,
 } from "../motis";
 import { RiBasisFahrt } from "./ribasis";
 

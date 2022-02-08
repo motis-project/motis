@@ -1,12 +1,13 @@
+import { useAtom } from "jotai";
 import { useState } from "react";
 import { useIsMutating, useMutation } from "react-query";
-import { useAtom } from "jotai";
 
-import { scheduleAtom, universeAtom } from "../data/simulation";
 import {
   sendPaxMonDestroyUniverseRequest,
   sendPaxMonForkUniverseRequest,
 } from "../api/paxmon";
+
+import { scheduleAtom, universeAtom } from "../data/simulation";
 
 type Universe = {
   universe: number;
@@ -35,7 +36,10 @@ function UniverseControl(): JSX.Element {
     {
       onSuccess: (data) => {
         const newUv = { universe: data.universe, schedule: data.schedule };
-        setUniverses([...new Set([...universes, newUv])]);
+        setUniverses([
+          ...universes.filter((uv) => uv.universe !== data.universe),
+          newUv,
+        ]);
         switchTo(newUv);
       },
     }
@@ -43,7 +47,13 @@ function UniverseControl(): JSX.Element {
   const destroyMutation = useMutation(
     (uv: number) => sendPaxMonDestroyUniverseRequest({ universe: uv }),
     {
-      onSuccess: (data, variables) => {
+      onSettled: (data, error, variables) => {
+        if (error) {
+          console.log(
+            `error while trying to destroy universe ${variables}:`,
+            error
+          );
+        }
         setUniverses(universes.filter((u) => u.universe != variables));
         switchTo(universes[0]);
       },

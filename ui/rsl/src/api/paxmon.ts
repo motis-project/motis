@@ -1,4 +1,5 @@
-import { sendRequest } from "./request";
+import { UseQueryResult, useQuery } from "react-query";
+
 import { verifyContentType } from "./protocol/checks";
 import { MotisSuccess, TripId } from "./protocol/motis";
 import {
@@ -18,7 +19,7 @@ import {
   PaxMonStatusRequest,
   PaxMonStatusResponse,
 } from "./protocol/motis/paxmon";
-import { useQuery, UseQueryResult } from "react-query";
+import { sendRequest } from "./request";
 
 export async function sendPaxMonStatusRequest(
   content: PaxMonStatusRequest

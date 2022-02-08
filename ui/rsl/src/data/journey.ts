@@ -1,10 +1,10 @@
 import {
   Connection,
+  Range,
   Stop,
   Transport,
   Trip,
   Walk,
-  Range,
 } from "../api/protocol/motis";
 
 export interface JourneyTransport {

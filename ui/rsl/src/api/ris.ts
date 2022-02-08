@@ -1,6 +1,6 @@
-import { sendRequest } from "./request";
 import { verifyContentType } from "./protocol/checks";
 import { Message } from "./protocol/motis";
+import { sendRequest } from "./request";
 
 export function sendRISForwardTimeRequest(
   newTime: number | Date,

@@ -1,5 +1,4 @@
 // generated file - do not modify - run update-protocol to update
-
 import { Station } from "../motis";
 
 // guesser/StationGuesserRequest.fbs

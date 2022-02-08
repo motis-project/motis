@@ -1,15 +1,14 @@
 // generated file - do not modify - run update-protocol to update
-
 import { TripId } from "../motis";
-import { RISContentType } from "./ris";
 import {
-  PaxMonTrackedUpdates,
   PaxMonCompactJourney,
   PaxMonGroup,
   PaxMonLocalization,
   PaxMonLocalizationType,
+  PaxMonTrackedUpdates,
   PaxMonTripLoadInfo,
 } from "./paxmon";
+import { RISContentType } from "./ris";
 
 // paxforecast/Measures.fbs
 export interface MeasureRecipients {

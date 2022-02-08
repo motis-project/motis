@@ -1,11 +1,10 @@
 // generated file - do not modify - run update-protocol to update
-
 import {
-  Interval,
-  TripId,
-  Statistics,
   Connection,
   DirectConnection,
+  Interval,
+  Statistics,
+  TripId,
 } from "../motis";
 
 // routing/RoutingRequest.fbs

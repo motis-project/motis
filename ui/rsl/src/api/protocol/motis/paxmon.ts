@@ -1,6 +1,5 @@
 // generated file - do not modify - run update-protocol to update
-
-import { TripServiceInfo, Station, TripId } from "../motis";
+import { Station, TripId, TripServiceInfo } from "../motis";
 
 // paxmon/PaxMonAddGroupsRequest.fbs
 export interface PaxMonAddGroupsRequest {

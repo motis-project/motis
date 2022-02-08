@@ -1,15 +1,16 @@
-import { useState } from "react";
-import { useCombobox } from "downshift";
 import { ChevronDownIcon, XIcon } from "@heroicons/react/solid";
+import { useCombobox } from "downshift";
+import { useAtom } from "jotai";
+import { useState } from "react";
 
-import { PaxMonTripInfo } from "../api/protocol/motis/paxmon";
-import { TripServiceInfo } from "../api/protocol/motis";
 import { ServiceClass } from "../api/constants";
 import { usePaxMonFindTripsQuery } from "../api/paxmon";
+import { TripServiceInfo } from "../api/protocol/motis";
+import { PaxMonTripInfo } from "../api/protocol/motis/paxmon";
+
+import { universeAtom } from "../data/simulation";
 
 import TripServiceInfoView from "./TripServiceInfoView";
-import { useAtom } from "jotai";
-import { universeAtom } from "../data/simulation";
 
 function filterTrips(trips: PaxMonTripInfo[]) {
   return trips.filter((trip) =>
@@ -38,6 +39,7 @@ type TripPickerProps = {
   clearOnPick: boolean;
   longDistanceOnly: boolean;
   className?: string;
+  initialTrip?: TripServiceInfo | undefined;
 };
 
 function TripPicker({
@@ -45,6 +47,7 @@ function TripPicker({
   clearOnPick,
   longDistanceOnly,
   className,
+  initialTrip,
 }: TripPickerProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
   const [trainNr, setTrainNr] = useState<number>();
@@ -52,6 +55,15 @@ function TripPicker({
   const tripList = longDistanceOnly
     ? filterTrips(data?.trips || [])
     : data?.trips || [];
+
+  const initialSelectedItem = initialTrip
+    ? {
+        tsi: initialTrip,
+        has_paxmon_data: true,
+        all_edges_have_capacity_info: true,
+        has_passengers: true,
+      }
+    : null;
 
   const {
     isOpen,
@@ -67,6 +79,7 @@ function TripPicker({
     items: tripList,
     itemToString: (item: PaxMonTripInfo | null) =>
       item !== null ? shortTripName(item.tsi) : "",
+    initialSelectedItem,
     onInputValueChange: ({ inputValue }) => {
       if (inputValue != undefined) {
         const parsed = parseInt(inputValue);

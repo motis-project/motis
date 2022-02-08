@@ -1,9 +1,9 @@
-import { sendRequest } from "./request";
 import { verifyContentType } from "./protocol/checks";
 import {
   PaxForecastApplyMeasuresRequest,
   PaxForecastApplyMeasuresResponse,
 } from "./protocol/motis/paxforecast";
+import { sendRequest } from "./request";
 
 export async function sendPaxForecastApplyMeasuresRequest(
   content: PaxForecastApplyMeasuresRequest
