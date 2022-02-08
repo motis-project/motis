@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Translations } from './Localization';
 import { Mode } from './IntermodalRoutingTypes';
+import { getFromLocalStorage, ModeLocalStorage, setLocalStorage } from './LocalStorage';
 
 
-export const Modepicker: React.FC<{'translation': Translations, 'title': String, 'modes': Mode[], 'setModes': React.Dispatch<React.SetStateAction<Mode[]>>}> = (props) => {
+export const Modepicker: React.FC<{'translation': Translations, 'title': String, 'setModes': React.Dispatch<React.SetStateAction<Mode[]>>, 'localStorageModes': string}> = (props) => {
     
     // Foot
     // Boolean used to track if the Foot Mode is selected
@@ -48,29 +49,21 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
     // Boolean used to track if anything in the Modepicker changed and a new IntermodalRoutingRequest needs to be fetched
     const [newFetch, setNewFetch] = useState<boolean>(false);
 
-    // Initial load of the Component
+    // Initial load of the Component from LocalStorage
     React.useEffect(() => {
-        props.modes.forEach((mode: any) => {
-            if (mode.mode_type === 'FootPPR') {
-                setFootMode(mode);
-                setFootMaxDurationSlider(mode.mode.search_options.duration_limit / 60);
-                setFootSelected(true);
-                setProfilePicker(mode.mode.search_options.profile);
-            } else if (mode.mode_type === 'Bike') {
-                setBikeMode(mode);
-                setBikeMaxDurationSlider(mode.mode.max_duration / 60);
-                setBikeSelected(true);
-            } else {
-                if (mode.mode_type === 'CarParking') {
-                    setUseParking(true);
-                    setCarMaxDurationSlider(mode.mode.max_car_duration / 60);
-                }else {
-                    setCarMaxDurationSlider(mode.mode.max_duration / 60);
-                }
-                setCarMode(mode);
-                setCarSelected(true);
-            }
-        })
+        let modes: ModeLocalStorage = getFromLocalStorage(props.localStorageModes);
+
+        // If LocalStorage is empty, dont try to access it
+        if (modes !== null) {
+            setFootSelected(modes.walk.enabled);
+            setFootMaxDurationSlider(modes.walk.search_profile.max_duration);
+            setProfilePicker(modes.walk.search_profile.profile);
+            setBikeSelected(modes.bike.enabled);
+            setBikeMaxDurationSlider(modes.bike.max_duration);
+            setCarSelected(modes.car.enabled);
+            setCarMaxDurationSlider(modes.car.max_duration);
+            setUseParking(modes.car.use_parking);
+        };
     }, [])
 
     // Update return Value for Foot Mode if any part of this Mode is changed
@@ -132,6 +125,7 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
                             onClick={() => {
                                 if (newFetch) {
                                     props.setModes(getModeArr());
+                                    setLocalStorage(props.localStorageModes, {walk: {enabled: footSelected, search_profile: {profile: profilePicker, max_duration: footMaxDurationSlider}}, bike: {enabled: bikeSelected, max_duration: bikeMaxDurationSlider}, car: {enabled: carSelected, max_duration: carMaxDurationSlider, use_parking: useParking}});
                                     setNewFetch(false);
                                 }
                                 setModePickerVisible(false);

@@ -1,7 +1,8 @@
 import React from "react";
 import { DatePicker } from "./DatePicker";
+import { Translations } from "./Localization";
 
-export const MapContainer: React.FC = () => {
+export const MapContainer: React.FC<{'translation': Translations}> = (props) => {
 
     const [simTimePickerSelected, setSimTimePickerSelected] = React.useState<Boolean>(false);
 
@@ -50,7 +51,7 @@ export const MapContainer: React.FC = () => {
                     </div>
                     <div className="date">
                         <div>
-                            <DatePicker />
+                            <DatePicker translation={props.translation}/>
                         </div>
                     </div>
                     <div className="time">

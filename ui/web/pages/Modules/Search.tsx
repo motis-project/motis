@@ -3,26 +3,11 @@ import React, { useEffect, useState } from 'react';
 import { DatePicker } from './DatePicker';
 import { Mode, IntermodalRoutingRequest, IntermodalRoutingResponse, IntermodalPretripStartInfo, PretripStartInfo } from './IntermodalRoutingTypes';
 import { Connection, Station } from './ConnectionTypes';
-import { Interval } from './RoutingTypes';
 import { Translations } from './Localization';
 import { Address } from './SuggestionTypes';
 import { SearchInputField } from './SearchInputField';
 import { Modepicker } from './ModePicker';
-
-
-interface Destination {
-    name: string,
-    id: string
-};
-
-
-interface Start {
-    station: Station,
-    min_connection_count: number,
-    interval: Interval,
-    extend_interval_later: boolean,
-    extend_interval_earlier: boolean
-};
+import { getFromLocalStorage } from './LocalStorage'
 
 
 const getRoutingOptions = (startType: string, startModes: Mode[], start: Station | Address, searchType: string, searchDirection: string, destinationType: string, destinationModes: Mode[], destination: Station | Address ) => {
@@ -31,13 +16,8 @@ const getRoutingOptions = (startType: string, startModes: Mode[], start: Station
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({  destination: {type: "Module", target: "/intermodal"}, 
                                 content_type: 'IntermodalRoutingRequest',
-                                content: {start_type: startType, start_modes: startModes, start: { station: start, min_connection_count: 5, interval: { begin: 1642950840, end: 1642958040 }, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: destination } })
+                                content: {start_type: startType, start_modes: startModes, start: { station: start, min_connection_count: 5, interval: { begin: 1644335520, end: 1644342720 }, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: destination } })
     };
-};
-
-
-const getDefaultMode = () => {
-    return {mode_type: '', mode: { search_options: { profile: 'default', duration_limit: 30 } } };
 };
 
 
@@ -59,10 +39,10 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     const [startType, setStartType] = useState<string>('PretripStart');
     
     // StartModes
-    const [startModes, setStartModes] = useState<Mode[]>([{ mode_type: 'Bike', mode: { max_duration: 900 } }]);
+    const [startModes, setStartModes] = useState<Mode[]>([]);
 
     // Start Station or Position
-    const [start, setStart] = useState<Station | Address>({ name: 'Darmstadt Hauptbahnhof', id: 'delfi_de:06411:4734:64:63'});//<Start>({ station: { name: 'Darmstadt Hauptbahnhof', id: 'delfi_de:06411:4734:64:63'}, min_connection_count: 5, interval: { begin: 1640430180, end: 164043738 }, extend_interval_later: true, extend_interval_earlier: true });
+    const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
     
     
     // Destination
@@ -70,10 +50,10 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     const [destinationType, setDestinationType] = useState<string>('InputStation');
     
     // Destination_modes tracks the ModePicker for the Destination
-    const [destinationModes, setDestinationModes] = useState<Mode[]>([{ mode_type: 'FootPPR', mode: { search_options: { profile: 'elevation', duration_limit: 60 } }}]);
+    const [destinationModes, setDestinationModes] = useState<Mode[]>([]);
     
     // Destination holds the Value of 'to location' input field
-    const [destination, setDestination] = useState<Station | Address>({name: 'Frankfurt (Main) Westbahnhof', id: 'delfi_de:06412:1204:3:3' });
+    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
     
 
     // Current Date
@@ -90,17 +70,18 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
 
     
     useEffect(() => {
-        let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
-        //console.log('Fire searchQuery')
+        if (start !== null && destination !== null) {
+            let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
+            //console.log('Fire searchQuery')
 
-        fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination))
-            .then(res => res.json())
-            .then((res: IntermodalRoutingResponse) => {
-                console.log("Response came in");
-                console.log(res);
-                props.setConnections(res.content.connections);
-            });
-
+            fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination))
+                .then(res => res.json())
+                .then((res: IntermodalRoutingResponse) => {
+                    console.log("Response came in");
+                    console.log(res);
+                    props.setConnections(res.content.connections);
+                });
+        }
     }, [searchQuery, startModes, destinationModes]);
     
     return (
@@ -113,8 +94,12 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                         searchQuery={searchQuery}
                                         setSearchQuery={setSearchQuery}
                                         station={start}
-                                        setSearchDisplay={setStart}/>
-                        <Modepicker translation={props.translation} title={props.translation.search.startTransports} modes={startModes} setModes={setStartModes}/>
+                                        setSearchDisplay={setStart}
+                                        localStorageStation='motis.routing.from_location'/>
+                        <Modepicker translation={props.translation} 
+                                    title={props.translation.search.startTransports} 
+                                    setModes={setStartModes}
+                                    localStorageModes='motis.routing.from_modes'/>
                     </div>
                     <div className='swap-locations-btn'>
                         <label className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'>
@@ -140,8 +125,12 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                             searchQuery={searchQuery}
                                             setSearchQuery={setSearchQuery}
                                             station={destination}
-                                            setSearchDisplay={setDestination}/>
-                        <Modepicker translation={props.translation} title={props.translation.search.destinationTransports} modes={destinationModes} setModes={setDestinationModes}/>
+                                            setSearchDisplay={setDestination}
+                                            localStorageStation='motis.routing.to_location'/>
+                        <Modepicker translation={props.translation} 
+                                    title={props.translation.search.destinationTransports} 
+                                    setModes={setDestinationModes}
+                                    localStorageModes='motis.routing.from_modes'/>
                     </div>
                 </div>
                 <div className='pure-u-1 pure-u-sm-9-24'>

@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Station } from './ConnectionTypes';
+import { setLocalStorage } from './LocalStorage';
 import { Address, Region } from './SuggestionTypes';
 
 
@@ -31,7 +32,7 @@ function useOutsideAlerter(ref: React.MutableRefObject<any>, setShowSuggestions:
 }
 
 
-const StationSuggestion: React.FC<{'station': Station, 'setName': React.Dispatch<React.SetStateAction<string>>, 'setSuggestion': React.Dispatch<React.SetStateAction<Station | Address>>, 'setShowSuggestions': React.Dispatch<React.SetStateAction<boolean>>, 'listID': number, 'selectedSuggestion': number, 'setSelectedSuggestion': React.Dispatch<React.SetStateAction<number>>}> = (props) => {
+const StationSuggestion: React.FC<{'station': Station, 'setName': React.Dispatch<React.SetStateAction<string>>, 'setSuggestion': React.Dispatch<React.SetStateAction<Station | Address>>, 'setShowSuggestions': React.Dispatch<React.SetStateAction<boolean>>, 'listID': number, 'selectedSuggestion': number, 'setSelectedSuggestion': React.Dispatch<React.SetStateAction<number>>, 'localStorageStation': string}> = (props) => {
 
     return (
         <li className={props.listID == props.selectedSuggestion ? 'selected' : ''} 
@@ -42,6 +43,7 @@ const StationSuggestion: React.FC<{'station': Station, 'setName': React.Dispatch
                     props.setSuggestion(props.station); 
                     props.setShowSuggestions(false);
                     props.setSelectedSuggestion(0);
+                    setLocalStorage(props.localStorageStation, props.station);
                 }
             }}
             onMouseOver={() => {
@@ -55,7 +57,7 @@ const StationSuggestion: React.FC<{'station': Station, 'setName': React.Dispatch
 }
 
 
-const AddressSuggestion: React.FC<{'address': Address, 'setName': React.Dispatch<React.SetStateAction<string>>, 'setSuggestion': React.Dispatch<React.SetStateAction<Station | Address>>, 'setShowSuggestions': React.Dispatch<React.SetStateAction<boolean>>, 'listID': number, 'selectedSuggestion': number, 'setSelectedSuggestion': React.Dispatch<React.SetStateAction<number>>}> = (props) => {
+const AddressSuggestion: React.FC<{'address': Address, 'setName': React.Dispatch<React.SetStateAction<string>>, 'setSuggestion': React.Dispatch<React.SetStateAction<Station | Address>>, 'setShowSuggestions': React.Dispatch<React.SetStateAction<boolean>>, 'listID': number, 'selectedSuggestion': number, 'setSelectedSuggestion': React.Dispatch<React.SetStateAction<number>>, 'localStorageStation': string}> = (props) => {
 
     return (
         <li className={props.listID == props.selectedSuggestion ? 'selected' : ''}
@@ -64,7 +66,8 @@ const AddressSuggestion: React.FC<{'address': Address, 'setName': React.Dispatch
                 props.setName(props.address.name); 
                 props.setSuggestion(props.address);
                 props.setShowSuggestions(false);
-                props.setSelectedSuggestion(0) 
+                props.setSelectedSuggestion(0);
+                setLocalStorage(props.localStorageStation, props.address);
             }}
             onMouseOver={() => {
                 props.setSelectedSuggestion(props.listID)
@@ -78,7 +81,7 @@ const AddressSuggestion: React.FC<{'address': Address, 'setName': React.Dispatch
 }
 
 
-export const Proposals: React.FC<{'addresses': Address[], 'stations': Station[], 'suggestions': (Address | Station) [], 'highlighted': number, 'showSuggestions': boolean, 'setName': React.Dispatch<React.SetStateAction<string>>, 'setSuggestion': React.Dispatch<React.SetStateAction<Station | Address>>, 'setShowSuggestions': React.Dispatch<React.SetStateAction<boolean>>, 'setHighlighted': React.Dispatch<React.SetStateAction<number>>}> = (props) => {
+export const Proposals: React.FC<{'addresses': Address[], 'stations': Station[], 'suggestions': (Address | Station) [], 'highlighted': number, 'showSuggestions': boolean, 'setName': React.Dispatch<React.SetStateAction<string>>, 'setSuggestion': React.Dispatch<React.SetStateAction<Station | Address>>, 'setShowSuggestions': React.Dispatch<React.SetStateAction<boolean>>, 'setHighlighted': React.Dispatch<React.SetStateAction<number>>, 'localStorageStation': string}> = (props) => {
 
     const suggestionsRef = React.useRef(null);
 
@@ -95,7 +98,8 @@ export const Proposals: React.FC<{'addresses': Address[], 'stations': Station[],
                                         setName={props.setName} 
                                         setSuggestion={props.setSuggestion} 
                                         setShowSuggestions={props.setShowSuggestions}
-                                        setSelectedSuggestion={props.setHighlighted}/>
+                                        setSelectedSuggestion={props.setHighlighted}
+                                        localStorageStation={props.localStorageStation}/>
                 ))
             }
             {
@@ -107,7 +111,8 @@ export const Proposals: React.FC<{'addresses': Address[], 'stations': Station[],
                                         setName={props.setName} 
                                         setSuggestion={props.setSuggestion} 
                                         setShowSuggestions={props.setShowSuggestions}
-                                        setSelectedSuggestion={props.setHighlighted}/>
+                                        setSelectedSuggestion={props.setHighlighted}
+                                        localStorageStation={props.localStorageStation}/>
                 ))}
         </div>
     )

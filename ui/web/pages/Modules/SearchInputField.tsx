@@ -1,49 +1,52 @@
-import React, { useEffect, useState } from "react";
-import { Station } from "./ConnectionTypes";
-import { Translations } from "./Localization";
-import { Modepicker } from "./ModePicker";
-import { Mode } from "./IntermodalRoutingTypes";
-import { Proposals } from "./Proposals";
-import { Address, AddressSuggestionResponse, StationSuggestionResponse } from "./SuggestionTypes";
+import React, { useEffect, useState } from 'react';
+import { Station } from './ConnectionTypes';
+import { Translations } from './Localization';
+import { Modepicker } from './ModePicker';
+import { Mode } from './IntermodalRoutingTypes';
+import { Proposals } from './Proposals';
+import { Address, AddressSuggestionResponse, StationSuggestionResponse } from './SuggestionTypes';
+import { setLocalStorage } from './LocalStorage';
 
 
 const fetchSuggestions = (input: string, setAddresses: React.Dispatch<React.SetStateAction<Address[]>>, setStations: React.Dispatch<React.SetStateAction<Station[]>>, setSuggestions: React.Dispatch<React.SetStateAction<(Station | Address)[]>>) => {
-    
-    let requestURL = 'https://europe.motis-project.de/?elm=StationSuggestions';
-    
-    let body = {
-        destination: { type: 'Module', target: '/guesser'},
-        content_type: 'StationGuesserRequest',
-        content: { guess_count: 6, input: input }
-    };
+    if (input !== '') {
+        console.log(input);
+        let requestURL = 'https://europe.motis-project.de/?elm=StationSuggestions';
+        
+        let body = {
+            destination: { type: 'Module', target: '/guesser'},
+            content_type: 'StationGuesserRequest',
+            content: { guess_count: 6, input: input }
+        };
 
-    let stationRes = [];
-    
-    fetch(requestURL, getPostRequest(body))
-    .then(res => res.json())
-    .then((res: StationSuggestionResponse) => {
-        console.log("Response came in");
-        console.log(res);
-        setStations(res.content.guesses);
-        stationRes = res.content.guesses;
-    });
+        let stationRes = [];
+        
+        fetch(requestURL, getPostRequest(body))
+        .then(res => res.json())
+        .then((res: StationSuggestionResponse) => {
+            console.log('Response came in');
+            console.log(res);
+            setStations(res.content.guesses);
+            stationRes = res.content.guesses;
+        });
 
-    requestURL = 'https://europe.motis-project.de/?elm=AddressSuggestions';
-    
-    let body2 = {
-        destination: { type: 'Module', target: '/address'},
-        content_type: 'AddressRequest',
-        content: { input: input }
-    };
+        requestURL = 'https://europe.motis-project.de/?elm=AddressSuggestions';
+        
+        let body2 = {
+            destination: { type: 'Module', target: '/address'},
+            content_type: 'AddressRequest',
+            content: { input: input }
+        };
 
-    fetch(requestURL, getPostRequest(body2))
-            .then(res => res.json())
-            .then((res: AddressSuggestionResponse) => {
-                console.log("Response came in");
-                console.log(res);
-                setAddresses(res.content.guesses);
-                setSuggestions([...stationRes, ...res.content.guesses]);
-            });
+        fetch(requestURL, getPostRequest(body2))
+                .then(res => res.json())
+                .then((res: AddressSuggestionResponse) => {
+                    console.log('Response came in');
+                    console.log(res);
+                    setAddresses(res.content.guesses);
+                    setSuggestions([...stationRes, ...res.content.guesses]);
+                });
+        }
 };
 
 
@@ -56,20 +59,17 @@ const getPostRequest = (body: any) => {
 };
 
 
-export const SearchInputField: React.FC<{ 'translation': Translations, 'label': String, 'searchQuery': boolean, 'setSearchQuery': React.Dispatch<React.SetStateAction<boolean>>, 'station': Station | Address, 'setSearchDisplay': React.Dispatch<React.SetStateAction<Station | Address>> }> = (props) => {
+export const SearchInputField: React.FC<{ 'translation': Translations, 'label': String, 'searchQuery': boolean, 'setSearchQuery': React.Dispatch<React.SetStateAction<boolean>>, 'station': Station | Address, 'setSearchDisplay': React.Dispatch<React.SetStateAction<Station | Address>>, 'localStorageStation': string }> = (props) => {
     
 
     // Type
     const [type, setType] = useState<string>('PretripStart');
     
-    // Modes
-    const [modes, setModes] = useState<Mode[]>([]);
-    
     // Station or Position
     const [station, setStation] = useState<Station | Address>(props.station);
 
     // Name stores current input in the Input Field
-    const [name, setName] = useState<string>(props.station.name);
+    const [name, setName] = useState<string>('');
     
     // fetch Address Suggestions
     const [fetchSuggestionsFlag, setFetchSuggestionsFlag] = useState<boolean>(false);
@@ -95,7 +95,7 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
     }, [fetchSuggestionsFlag]);
 
     useEffect(() => {
-        setName(props.station.name)
+        setName(props.station == null ? '' : props.station.name)
         setStation(props.station)
         //setFetchSuggestionsFlag(!fetchSuggestionsFlag);
     }, [props.station])
@@ -118,7 +118,6 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
                 <input  className='gb-input' tabIndex={1} value={name} 
                         onChange={e => {
                             //e.preventDefault();
-                            //console.log("Start changed")
                             setName(e.currentTarget.value)
                             if (e.currentTarget.value.length >= 3) {
                                 setFetchSuggestionsFlag(!fetchSuggestionsFlag);
@@ -138,6 +137,7 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
                                     setShowSuggestions(false);
                                     setSelectedSuggestion(0);
                                     //props.setSearchQuery(!props.searchQuery)
+                                    setLocalStorage(props.localStorageStation, suggestions[selectedSuggestion]);
                                     break;
                                 case 'Escape':
                                     e.preventDefault();
@@ -166,7 +166,8 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
                             setName={setName}
                             setSuggestion={setStation} 
                             setShowSuggestions={setShowSuggestions}
-                            setHighlighted={setSelectedSuggestion}/>
+                            setHighlighted={setSelectedSuggestion}
+                            localStorageStation={props.localStorageStation}/>
             </div>
         </div>
     )

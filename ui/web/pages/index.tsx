@@ -10,7 +10,7 @@ export default function Index() {
         <Head>
             <title>MOTIS</title>
             <script type="text/javascript" src="js/ports.js"></script>
-            <script type="text/javascript" src="js/main.js"></script>
+            {/*<script type="text/javascript" src="js/main.js"></script>*/}
             <script type="text/javascript" src="external_lib/mapbox-gl.js"></script>
             <script type="text/javascript" src="external_lib/gl-matrix-min.js"></script>
             <script type="text/javascript" src="external_lib/deep-equal.js"></script>

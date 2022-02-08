@@ -22,8 +22,9 @@
   "include": [
     "next-env.d.ts",
     "**/*.ts",
-    "**/*.tsx"
-  ],
+    "**/*.tsx",
+    "public/js/map.js",
+    "public/js/ports.js"  ],
   "exclude": [
     "node_modules"
   ]
