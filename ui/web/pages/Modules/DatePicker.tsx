@@ -1,5 +1,7 @@
 import React from 'react';
 
+import moment from 'moment';
+
 import { Translations } from './Localization';
 
 
@@ -41,7 +43,17 @@ export const DatePicker: React.FC<{'translation': Translations}> = (props) => {
                 </div>
             </div>
             <div className={datePickerSelected ? 'paper calendar' : 'paper calendar hide'}>
-                <div className='month'>
+                {moment.weekdaysShort().map(day => (
+                    <th key={day} className='week-day'>
+                        {day}
+                    </th>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+/*<div className='month'>
                     <i className='icon'>chevron_left</i>
                     <span className='month-name'>Oktober 2020</span>
                     <i className='icon'>chevron_right</i>
@@ -98,8 +110,4 @@ export const DatePicker: React.FC<{'translation': Translations}> = (props) => {
                     <li className='out-of-month invalid-day'>6</li>
                     <li className='out-of-month invalid-day'>7</li>
                     <li className='out-of-month invalid-day'>8</li>
-                </ul>
-            </div>
-        </div>
-    )
-}
+                </ul>*/
