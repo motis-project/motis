@@ -3,15 +3,11 @@ import { mount, VueWrapper } from '@vue/test-utils'
 import flushPromises from 'flush-promises';
 import Calendar from '../../src/components/Calendar.vue'
 import { DateTimeService } from '../../src/services/DateTimeService'
-import { getRandomInt, prepareGlobals } from "./TestHelpers"
+import { getRandomInt } from "./TestHelpers"
 
 describe('Test Calendar.vue', () => {
   let wrapper: VueWrapper;
   let dateService: DateTimeService;
-
-  beforeAll(done => {
-    prepareGlobals(done);
-  });
 
   beforeEach(() => {
     wrapper = mount(Calendar)
