@@ -69,7 +69,7 @@
       </div>
     </div>
 
-    <div class="mode-picker-editor visible" v-show="isOptionsWindowOpened">
+    <div class="mode-picker-editor" v-show="isOptionsWindowOpened">
       <div class="header">
         <div class="sub-overlay-close">
           <i class="icon" @click="optionsWindowCloseClick">close</i>
@@ -89,7 +89,7 @@
               {{ $t.profile }}
             </div>
             <div class="profile-picker">
-              <select v-model="pressedOptions.footProfile">
+              <select class="select" v-model="pressedOptions.footProfile">
                 <option value="default">
                   {{ $t.searchProfile_default }}
                 </option>
