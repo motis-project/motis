@@ -797,6 +797,12 @@ struct ris::impl {
     }
   }
 
+  void stop_io() {
+    if (ribasis_receiver_ != nullptr) {
+      ribasis_receiver_->stop();
+    }
+  }
+
   std::unique_ptr<amqp::ssl_connection> ribasis_receiver_;
 
   db::env env_;
@@ -830,6 +836,8 @@ ris::ris() : module("RIS", "ris") {
 }
 
 ris::~ris() = default;
+
+void ris::stop_io() { impl_->stop_io(); }
 
 void ris::reg_subc(motis::module::subc_reg& r) {
   r.register_cmd(

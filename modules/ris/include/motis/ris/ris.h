@@ -35,6 +35,7 @@ struct ris : public motis::module::module {
 
   void reg_subc(motis::module::subc_reg&) override;
   void init(motis::module::registry&) override;
+  void stop_io() override;
 
 private:
   struct impl;
