@@ -797,6 +797,8 @@ struct ris::impl {
     }
   }
 
+  std::unique_ptr<amqp::ssl_connection> ribasis_receiver_;
+
   db::env env_;
   std::mutex min_max_mutex_;
   std::mutex merge_mutex_;
@@ -819,6 +821,12 @@ ris::ris() : module("RIS", "ris") {
         "automatically forward after every file during read");
   param(config_.gtfs_is_addition_skip_allowed_,
         "gtfsrt.is_addition_skip_allowed", "allow skips on additional trips");
+  param(config_.rabbitmq_.host_, "rabbitmq.host", "RabbitMQ remote host");
+  param(config_.rabbitmq_.port_, "rabbitmq.port", "RabbitMQ remote port");
+  param(config_.rabbitmq_.user_, "rabbitmq.user", "RabbitMQ username");
+  param(config_.rabbitmq_.pw_, "rabbitmq.pw", "RabbitMQ password");
+  param(config_.rabbitmq_.cert_, "rabbitmq.cert", "path to client certificate");
+  param(config_.rabbitmq_.key_, "rabbitmq.key", "path to client key file");
 }
 
 ris::~ris() = default;
