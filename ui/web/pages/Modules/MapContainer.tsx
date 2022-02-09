@@ -3,6 +3,7 @@ import moment from "moment";
 
 import { DatePicker } from "./DatePicker";
 import { Translations } from "./Localization";
+import { RailvizContextMenu } from "./RailvizContextMenu";
 
 export const MapContainer: React.FC<{'translation': Translations}> = (props) => {
 
@@ -43,10 +44,7 @@ export const MapContainer: React.FC<{'translation': Translations}> = (props) => 
                         htmlFor="train-color-picker-delay">Nach Verspätung</label></div>
                 </div>
             </div>
-            <div className="railviz-contextmenu hidden" style={{ top: "0px", left: "0px" }}>
-                <div className="item">Routen von hier</div>
-                <div className="item">Routen hierher</div>
-            </div>
+            <RailvizContextMenu />
             <div className={simTimePickerSelected ? "sim-time-picker-container" : "sim-time-picker-container hide"}>
                 <div className="sim-time-picker-overlay">
                     <div className="title">
