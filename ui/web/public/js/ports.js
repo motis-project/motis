@@ -1,3 +1,29 @@
+window.portEvents = {
+    events : {},
+    sub : function (portName, callback){
+        this.events[portName] = this.events[portName] || [];
+        this.events[portName].push(callback);
+    },
+    unsub : function (portName, callback){
+        if(this.events[portName]){
+            for(let i = 0; i < this.events[portName].length; i++){
+                if(this.events[portName][i] === callback){
+                    this.events[portName].splice(i, 1);
+                    break;
+                }
+            }
+        }
+    },
+
+    pub : function (portName, data){
+        if(this.events[portName]){
+            this.events[portName].forEach(function (fn){
+                fn(data);
+            });
+        }
+    }
+};
+
 const ownPorts = {
     "setRoutingResponses": {
         send: function(){}
@@ -28,7 +54,9 @@ const ownPorts = {
     },
     "mapInit": {
         subscribe: function(callback){
-            callback("map");
+            console.log('now subbing map');
+            window.portEvents.sub('mapInit', callback);
+            window.portEvents.pub('mapInit', 'map');
         }
     },
     "mapUpdate": {
@@ -56,10 +84,14 @@ const ownPorts = {
         subscribe: function(){}
     },
     "mapShowContextMenu": {
-        send: function(){}
+        send: function(callback){
+            window.portEvents.pub('mapShowContextMenu', callback);
+        }
     },
     "mapCloseContextMenu": {
-        send: function(){}
+        send: function(callback){
+            window.portEvents.pub('mapCloseContextMenu', callback);
+        }
     },
     "mapSetMarkers": {
         subscribe: function(){}

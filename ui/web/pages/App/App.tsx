@@ -8,6 +8,11 @@ import { MapContainer } from '../Modules/MapContainer';
 
 let visible = false;
 
+declare global{
+    interface Window {
+        portEvents : any;
+    }
+}  
 
 export const Main: React.FC = () => {
     
