@@ -78,7 +78,7 @@ struct gbfs::impl {
       free_bikes_.size());
   }
 
-  msg_ptr route(schedule const&, msg_ptr const&) { return {}; }
+  static msg_ptr route(schedule const&, msg_ptr const&) { return {}; }
 
   config const& config_;
   std::mutex mutex_;

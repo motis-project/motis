@@ -834,7 +834,7 @@ struct ris::impl {
     }
   }
 
-  void stop_io() {
+  void stop_io() const {
     if (ribasis_receiver_ != nullptr) {
       ribasis_receiver_->stop();
     }

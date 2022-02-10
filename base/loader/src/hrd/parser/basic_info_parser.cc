@@ -28,7 +28,7 @@ std::tuple<int, int, int> yyyymmdd(cstr ddmmyyyy) {
                          parse<int>(ddmmyyyy.substr(0, size(2))));
 }
 
-time_t str_to_unixtime(cstr s) {
+unixtime str_to_unixtime(cstr s) {
   int year = 0, month = 0, day = 0;
   std::tie(year, month, day) = yyyymmdd(s);
   return to_unix_time(year, month, day);
@@ -62,13 +62,13 @@ Interval parse_interval(loaded_file const& basic_info_file) {
   cstr first_date;
   cstr last_date;
   std::tie(first_date, last_date) = mask_dates(basic_info_file.content());
-  return Interval(str_to_unixtime(first_date), str_to_unixtime(last_date));
+  return {str_to_unixtime(first_date), str_to_unixtime(last_date)};
 }
 
 boost::gregorian::date get_first_schedule_date(loaded_file const& lf) {
   int year = 0, month = 0, day = 0;
   std::tie(year, month, day) = yyyymmdd(mask_dates(lf.content()).first);
-  return boost::gregorian::date(year, month, day);
+  return {year, month, day};
 }
 
 std::string parse_schedule_name(loaded_file const& basic_info_file) {

@@ -1,6 +1,10 @@
 Checks: "*,\
 -llvmlibc-*,\
 -abseil-*,\
+-altera-unroll-loops,\
+-altera-id-dependent-backward-branch,\
+-bugprone-easily-swappable-parameters,\
+-bugprone-implicit-widening-of-multiplication-result,\
 -llvm-else-after-return,\
 -hicpp-named-parameter,\
 -cert-err60-cpp,\
@@ -339,22 +343,8 @@ CheckOptions:
     value:           ''
   - key:             readability-identifier-naming.TemplateParameterCase
     value:           CamelCase
-  - key:             readability-identifier-naming.TemplateParameterPrefix
-    value:           ''
-  - key:             readability-identifier-naming.TemplateParameterSuffix
-    value:           ''
   - key:             readability-identifier-naming.TemplateTemplateParameterCase
     value:           CamelCase
-  - key:             readability-identifier-naming.TemplateTemplateParameterPrefix
-    value:           ''
-  - key:             readability-identifier-naming.TemplateTemplateParameterSuffix
-    value:           ''
-  - key:             readability-identifier-naming.TypeTemplateParameterCase
-    value:           CamelCase
-  - key:             readability-identifier-naming.TypeTemplateParameterPrefix
-    value:           ''
-  - key:             readability-identifier-naming.TypeTemplateParameterSuffix
-    value:           ''
   - key:             readability-identifier-naming.TypedefCase
     value:           lower_case
   - key:             readability-identifier-naming.TypedefPrefix
