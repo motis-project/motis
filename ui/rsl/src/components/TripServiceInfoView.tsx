@@ -14,9 +14,8 @@ function TripServiceInfoView({
   const names = [
     ...new Set(
       tsi.service_infos.map(
-        (si) =>
-          `${si.category} ${si.train_nr}` +
-          (si.line ? ` [Linie ${si.line}]` : "")
+        (si) => `${si.category} ${si.train_nr}`
+        //+ (si.line ? ` [Linie ${si.line}]` : "")
       )
     ),
   ];

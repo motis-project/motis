@@ -60,6 +60,7 @@ function MiniTripLoadGraph({ edges }: MiniTripLoadGraphProps): JSX.Element {
                   width={sectionWidth}
                   height={hRed}
                   fill="#FFCACA"
+                  key="red"
                 />
               );
             }
@@ -71,6 +72,7 @@ function MiniTripLoadGraph({ edges }: MiniTripLoadGraphProps): JSX.Element {
                   width={sectionWidth}
                   height={hYellow}
                   fill="#FFF3CA"
+                  key="yellow"
                 />
               );
             }
@@ -82,6 +84,7 @@ function MiniTripLoadGraph({ edges }: MiniTripLoadGraphProps): JSX.Element {
                   width={sectionWidth}
                   height={hGreen}
                   fill="#D4FFCA"
+                  key="green"
                 />
               );
             }
@@ -93,6 +96,7 @@ function MiniTripLoadGraph({ edges }: MiniTripLoadGraphProps): JSX.Element {
                 width={sectionWidth}
                 height={graphHeight}
                 fill="white"
+                key="white"
               />
             );
           }

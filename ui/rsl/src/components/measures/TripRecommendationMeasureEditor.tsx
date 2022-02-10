@@ -14,12 +14,14 @@ import TripPicker from "../TripPicker";
 
 export type TripRecommendationMeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;
+  closeEditor: () => void;
 };
 
 const labelClass = "font-semibold";
 
 function TripRecommendationMeasureEditor({
   measureAtom,
+  closeEditor,
 }: TripRecommendationMeasureEditorProps): JSX.Element {
   const dataAtom = useMemo(
     () =>
@@ -50,8 +52,7 @@ function TripRecommendationMeasureEditor({
     });
 
   return (
-    <div>
-      {/*<div className="font-semibold mt-2">Alternativenempfehlung</div>*/}
+    <div className="flex flex-col gap-4">
       <div>
         <div className={labelClass}>Reisende Richtung</div>
         <StationPicker
@@ -77,6 +78,12 @@ function TripRecommendationMeasureEditor({
           initialTrip={data.recommended_trip}
         />
       </div>
+      <button
+        onClick={() => closeEditor()}
+        className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white rounded"
+      >
+        Maßnahme speichern
+      </button>
     </div>
   );
 }

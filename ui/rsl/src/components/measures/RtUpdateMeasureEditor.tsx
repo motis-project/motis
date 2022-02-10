@@ -1,7 +1,7 @@
 import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
 import { cloneDeep } from "lodash-es";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Control,
   Controller,
@@ -35,12 +35,15 @@ import {
 } from "../../data/rtMeasureFormData";
 import { scheduleAtom } from "../../data/simulation";
 
+import useRenderCount from "../../util/useRenderCount";
+
 import StationPicker from "../StationPicker";
 import TripPicker from "../TripPicker";
 import TimeInput from "./TimeInput";
 
 export type RtUpdateMeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;
+  closeEditor: () => void;
 };
 
 const labelClass = "font-semibold";
@@ -53,6 +56,7 @@ const rtReasons: Array<{ reason: RiBasisZeitstatus; label: string }> = [
 
 function RtUpdateMeasureEditor({
   measureAtom,
+  closeEditor,
 }: RtUpdateMeasureEditorProps): JSX.Element {
   const dataAtom = useMemo(
     () =>
@@ -64,7 +68,7 @@ function RtUpdateMeasureEditor({
   const [data, setData] = useAtom(dataAtom);
   const queryClient = useQueryClient();
   const [schedule] = useAtom(scheduleAtom); // TODO: rerender...
-  const renderCount = useRef(0);
+  const renderCount = useRenderCount();
   const [selectedTrip, setSelectedTrip] = useState<string>();
   const [allowReroute, setAllowReroute] = useState(true);
 
@@ -115,7 +119,7 @@ function RtUpdateMeasureEditor({
   return (
     <div>
       <div>
-        <div>RtUpdateMeasureEditor Render Count: {++renderCount.current}</div>
+        <div>RtUpdateMeasureEditor Render Count: {renderCount}</div>
         <div className={labelClass}>Trip</div>
         <div>
           <TripPicker
@@ -133,6 +137,7 @@ function RtUpdateMeasureEditor({
             key={selectedTrip}
             onSetData={setRiBasis}
             allowReroute={allowReroute}
+            closeEditor={closeEditor}
           />
         </div>
       ) : null}
@@ -144,6 +149,7 @@ type TripSectionEditorProps = {
   ribasis: RiBasisFahrtData;
   onSetData: (data: RiBasisFahrtData) => void;
   allowReroute: boolean;
+  closeEditor: () => void;
 };
 
 type FormInputs = { stops: StopFormData[] };
@@ -152,6 +158,7 @@ function TripSectionEditor({
   ribasis,
   onSetData,
   allowReroute,
+  closeEditor,
 }: TripSectionEditorProps): JSX.Element {
   const defaultValues = useMemo(() => {
     return { stops: toFormData(ribasis) };
@@ -163,7 +170,7 @@ function TripSectionEditor({
     name: "stops",
     control,
   });
-  const renderCount = useRef(0);
+  const renderCount = useRenderCount();
   const queryClient = useQueryClient();
 
   const onSubmit = (data: FormInputs) => {
@@ -171,6 +178,7 @@ function TripSectionEditor({
     const newRiBasis = toRiBasis(ribasis, data.stops);
     console.log("ri basis:", newRiBasis, JSON.stringify(newRiBasis, null, 2));
     onSetData(newRiBasis);
+    closeEditor();
   };
 
   const insertStop = (index: number) => {
@@ -203,7 +211,7 @@ function TripSectionEditor({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div>TripSectionEditor Render Count: {++renderCount.current}</div>
+      <div>TripSectionEditor Render Count: {renderCount}</div>
       <div className="flex flex-col gap-4">
         {allowReroute ? (
           <div>
@@ -360,14 +368,12 @@ function TripSectionEditor({
             </div>
           );
         })}
-        <div>
-          <button
-            type="submit"
-            className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
-          >
-            Änderungen speichern
-          </button>
-        </div>
+        <button
+          type="submit"
+          className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white rounded"
+        >
+          Maßnahme speichern
+        </button>
       </div>
     </form>
   );

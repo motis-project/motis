@@ -1,16 +1,19 @@
 import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 import { TripServiceInfo } from "../../api/protocol/motis";
 import { LoadLevel } from "../../api/protocol/motis/paxforecast";
 
 import { MeasureUnion, isTripLoadInfoMeasureU } from "../../data/measures";
 
+import useRenderCount from "../../util/useRenderCount";
+
 import TripPicker from "../TripPicker";
 
 export type TripLoadInfoMeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;
+  closeEditor: () => void;
 };
 
 const labelClass = "font-semibold";
@@ -24,33 +27,43 @@ const loadLevels: Array<{ level: LoadLevel; label: string }> = [
 
 function TripLoadInfoMeasureEditor({
   measureAtom,
+  closeEditor,
 }: TripLoadInfoMeasureEditorProps): JSX.Element {
-  const dataAtom = useMemo(
-    () =>
-      focusAtom(measureAtom, (optic) =>
-        optic.guard(isTripLoadInfoMeasureU).prop("data")
-      ),
-    [measureAtom]
-  );
+  console.log("TripLoadInfoMeasureEditor()");
+  const dataAtom = useMemo(() => {
+    console.log("TripLoadInfoMeasureEditor: creating dataAtom");
+    return focusAtom(measureAtom, (optic) =>
+      optic.guard(isTripLoadInfoMeasureU).prop("data")
+    );
+  }, [measureAtom]);
   const [data, setData] = useAtom(dataAtom);
+  const renderCount = useRenderCount();
+
+  console.log("TripLoadInfoMeasureEditor render", renderCount);
 
   if (!data) {
     throw new Error("invalid measure editor");
   }
 
-  const setLoadInfoTrip = (tsi: TripServiceInfo | undefined) =>
-    setData((d) => {
-      return { ...d, trip: tsi };
-    });
+  const setLoadInfoTrip = useCallback(
+    (tsi: TripServiceInfo | undefined) =>
+      setData((d) => {
+        return { ...d, trip: tsi };
+      }),
+    [setData]
+  );
 
-  const setLoadInfoLevel = (level: LoadLevel) =>
-    setData((d) => {
-      return { ...d, level };
-    });
+  const setLoadInfoLevel = useCallback(
+    (level: LoadLevel) =>
+      setData((d) => {
+        return { ...d, level };
+      }),
+    [setData]
+  );
 
   return (
-    <div>
-      {/*<div className="font-semibold mt-2">Auslastungsinformation</div>*/}
+    <div className="flex flex-col gap-4">
+      <div>TripLoadInfoMeasureEditor Render Count: {renderCount}</div>
       <div>
         <div className={labelClass}>Trip</div>
         <div>
@@ -79,6 +92,12 @@ function TripLoadInfoMeasureEditor({
           ))}
         </div>
       </div>
+      <button
+        onClick={() => closeEditor()}
+        className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white rounded"
+      >
+        Maßnahme speichern
+      </button>
     </div>
   );
 }

@@ -26,8 +26,10 @@ function filterTrips(trips: PaxMonTripInfo[]) {
 function shortTripName(tsi: TripServiceInfo) {
   const names = [
     ...new Set(
-      tsi.service_infos.map((si) =>
-        si.line ? `${si.train_nr} [${si.name}]` : si.name
+      tsi.service_infos.map(
+        (si) =>
+          `${si.category} ${si.train_nr}` +
+          (si.line ? ` [Linie ${si.line}]` : "")
       )
     ),
   ];

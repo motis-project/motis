@@ -1,7 +1,11 @@
 import { PrimitiveAtom, useAtom } from "jotai";
+import { focusAtom } from "jotai/optics";
 import { useUpdateAtom } from "jotai/utils";
+import { useMemo } from "react";
 
 import { MeasureUnion } from "../../data/measures";
+
+import useRenderCount from "../../util/useRenderCount";
 
 import RtUpdateMeasureEditor from "./RtUpdateMeasureEditor";
 import SharedDataEditor from "./SharedDataEditor";
@@ -10,24 +14,36 @@ import TripRecommendationMeasureEditor from "./TripRecommendationMeasureEditor";
 
 export type MeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;
+  deleteMeasure: (measureAtom: PrimitiveAtom<MeasureUnion>) => void;
+  closeEditor: () => void;
 };
 
-function MeasureEditor({ measureAtom }: MeasureEditorProps): JSX.Element {
-  const [measure, setMeasure] = useAtom(measureAtom);
+function MeasureEditor({
+  measureAtom,
+  deleteMeasure,
+  closeEditor,
+}: MeasureEditorProps): JSX.Element {
+  const typeAtom = useMemo(
+    () => focusAtom(measureAtom, (optic) => optic.prop("type")),
+    [measureAtom]
+  );
+  const [measureType] = useAtom(typeAtom);
+  const setMeasure = useUpdateAtom(measureAtom);
+  const renderCount = useRenderCount();
 
   const measureEditor = (e: JSX.Element) => (
     <div>
-      Editor for {`${measureAtom}`}:
-      <div>
+      <div className="flex justify-between">
+        <span className="text-xl">Maßnahme bearbeiten [RC: {renderCount}]</span>
         <button
           onClick={() =>
             setMeasure((m) => {
               return { type: "Empty", shared: m.shared };
             })
           }
-          className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
+          className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"
         >
-          Maßnahmentyp ändern
+          Typ ändern
         </button>
       </div>
       <SharedDataEditor measureAtom={measureAtom} />
@@ -35,11 +51,13 @@ function MeasureEditor({ measureAtom }: MeasureEditorProps): JSX.Element {
     </div>
   );
 
-  switch (measure.type) {
+  switch (measureType) {
     case "Empty":
       return (
         <EmptyMeasureEditor
           measureAtom={measureAtom}
+          deleteMeasure={deleteMeasure}
+          closeEditor={closeEditor}
           key={measureAtom.toString()}
         />
       );
@@ -47,6 +65,7 @@ function MeasureEditor({ measureAtom }: MeasureEditorProps): JSX.Element {
       return measureEditor(
         <TripLoadInfoMeasureEditor
           measureAtom={measureAtom}
+          closeEditor={closeEditor}
           key={measureAtom.toString()}
         />
       );
@@ -54,6 +73,7 @@ function MeasureEditor({ measureAtom }: MeasureEditorProps): JSX.Element {
       return measureEditor(
         <TripRecommendationMeasureEditor
           measureAtom={measureAtom}
+          closeEditor={closeEditor}
           key={measureAtom.toString()}
         />
       );
@@ -61,13 +81,43 @@ function MeasureEditor({ measureAtom }: MeasureEditorProps): JSX.Element {
       return measureEditor(
         <RtUpdateMeasureEditor
           measureAtom={measureAtom}
+          closeEditor={closeEditor}
           key={measureAtom.toString()}
         />
       );
   }
 }
 
-function EmptyMeasureEditor({ measureAtom }: MeasureEditorProps) {
+interface MeasureTypeOptionProps {
+  title: string;
+  children: React.ReactNode;
+  onClick: () => void;
+}
+
+function MeasureTypeOption({
+  title,
+  children,
+  onClick,
+}: MeasureTypeOptionProps) {
+  return (
+    <div
+      className="group bg-white hover:bg-db-red-700 rounded-lg shadow-md px-5 py-4 cursor-pointer"
+      onClick={onClick}
+    >
+      <div className="font-medium text-gray-900 group-hover:text-white">
+        {title}
+      </div>
+      <div className="text-gray-500 group-hover:text-db-red-100">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function EmptyMeasureEditor({
+  measureAtom,
+  deleteMeasure,
+}: MeasureEditorProps) {
   const setMeasure = useUpdateAtom(measureAtom);
 
   const setTripLoadInfo = () => {
@@ -106,25 +156,29 @@ function EmptyMeasureEditor({ measureAtom }: MeasureEditorProps) {
 
   return (
     <div>
-      Maßnahmentyp wählen:
-      <div>
-        <button
+      <div>Maßnahmentyp wählen:</div>
+      <div className="flex flex-col gap-3 py-3">
+        <MeasureTypeOption
+          title="Auslastungsinformation"
           onClick={setTripLoadInfo}
-          className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
         >
-          Auslastungsinformation
-        </button>
-        <button
+          Ansage oder Anzeige der erwarteten Zugauslastung
+        </MeasureTypeOption>
+        <MeasureTypeOption
+          title="Alternativenempfehlung"
           onClick={setTripRecommendation}
-          className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
         >
-          Alternativenempfehlung
-        </button>
+          Empfehlung an Reisende in einem Zug oder an einer Station,
+          Verbindungen mit einem empfohlenen Zug zu verwenden
+        </MeasureTypeOption>
+        <MeasureTypeOption title="Echtzeitupdate" onClick={setRtUpdate}>
+          Zugverlauf bearbeiten (Verspätungen, Umleitungen, Gleisänderungen)
+        </MeasureTypeOption>
         <button
-          onClick={setRtUpdate}
-          className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
+          onClick={() => deleteMeasure(measureAtom)}
+          className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"
         >
-          Echtzeitupdate
+          Abbrechen
         </button>
       </div>
     </div>
