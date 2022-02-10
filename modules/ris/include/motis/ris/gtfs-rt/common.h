@@ -45,11 +45,11 @@ struct evt {
   int stop_idx_{std::numeric_limits<int>::max()};
   int seq_no_{std::numeric_limits<int>::max()};
   std::string stop_id_;
-  unixtime orig_sched_time_{0};
-  unixtime new_sched_time_{0};
   uint64_t train_nr_{0};
   std::string line_id_;
   event_type type_{event_type::ARR};
+  unixtime orig_sched_time_{0};
+  unixtime new_sched_time_{0};
 };
 
 struct message_context {
