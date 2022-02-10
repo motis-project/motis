@@ -158,9 +158,44 @@ struct ris::impl {
     std::unique_ptr<amqp::ssl_connection> con_;
   };
 
-  explicit impl(config const& c) : config_{c} {}
+  explicit impl(config& c) : config_{c} {}
 
-  void init(schedule& sched) {
+  void init_ribasis_receiver(dispatcher* d, schedule* sched) {
+    utl::verify(config_.rabbitmq_.valid(), "invalid rabbitmq configuration");
+    if (config_.rabbitmq_.empty()) {
+      return;
+    }
+
+    ribasis_receiver_ = std::make_unique<amqp::ssl_connection>(
+        &config_.rabbitmq_, [](std::string const& log_msg) {
+          LOG(info) << "rabbitmq: " << log_msg;
+        });
+    ribasis_receiver_->run([this, d, sched](amqp::msg const& m) {
+      d->enqueue(
+          ctx_data{d},
+          [this, content = m.content_, sched]() {
+            std::cerr << "." << std::flush;
+
+            publisher pub;
+            pub.schedule_res_id_ =
+                to_res_id(::motis::module::global_res_id::SCHEDULE);
+
+            parse_str_and_write_to_db(*file_upload_,
+                                      {content.c_str(), content.size()},
+                                      file_type::JSON, pub);
+
+            sched->system_time_ = pub.max_timestamp_;
+            sched->last_update_timestamp_ = std::time(nullptr);
+            publish_system_time_changed(pub.schedule_res_id_);
+          },
+          ctx::op_id{"ribasis_receive", CTX_LOCATION, 0U}, ctx::op_type_t::IO,
+          ctx::accesses_t{ctx::access_request{
+              to_res_id(::motis::module::global_res_id::SCHEDULE),
+              ctx::access_t::WRITE}});
+    });
+  }
+
+  void init(dispatcher& d, schedule& sched) {
     inputs_ = utl::to_vec(config_.input_, [&](std::string const& in) {
       return input{sched, in};
     });
@@ -206,6 +241,8 @@ struct ris::impl {
     if (config_.init_time_.unix_time_ != 0) {
       forward(sched, 0U, config_.init_time_.unix_time_);
     }
+
+    init_ribasis_receiver(&d, &sched);
   }
 
   static std::string_view get_content_type(HTTPRequest const* req) {
@@ -809,7 +846,7 @@ struct ris::impl {
   std::mutex min_max_mutex_;
   std::mutex merge_mutex_;
 
-  config const& config_;
+  config& config_;
 
   std::unique_ptr<input> file_upload_;
   std::vector<input> inputs_;
@@ -831,8 +868,16 @@ ris::ris() : module("RIS", "ris") {
   param(config_.rabbitmq_.port_, "rabbitmq.port", "RabbitMQ remote port");
   param(config_.rabbitmq_.user_, "rabbitmq.user", "RabbitMQ username");
   param(config_.rabbitmq_.pw_, "rabbitmq.pw", "RabbitMQ password");
-  param(config_.rabbitmq_.cert_, "rabbitmq.cert", "path to client certificate");
-  param(config_.rabbitmq_.key_, "rabbitmq.key", "path to client key file");
+  param(config_.rabbitmq_.vhost_, "rabbitmq.vhost", "RabbitMQ vhost");
+  param(config_.rabbitmq_.exchange_, "rabbitmq.exchange", "RabbitMQ exchange");
+  param(config_.rabbitmq_.routing_key_, "rabbitmq.routing_key",
+        "RabbitMQ routing key");
+  param(config_.rabbitmq_.queue_, "rabbitmq.queue", "RabbitMQ queue name");
+  param(config_.rabbitmq_.ca_, "rabbitmq.ca", "RabbitMQ path to CA file");
+  param(config_.rabbitmq_.cert_, "rabbitmq.cert",
+        "RabbitMQ path to client certificate");
+  param(config_.rabbitmq_.key_, "rabbitmq.key",
+        "RabbitMQ path to client key file");
 }
 
 ris::~ris() = default;
@@ -882,7 +927,8 @@ void ris::init(motis::module::registry& r) {
   r.subscribe(
       "/init",
       [this]() {
-        impl_->init(const_cast<schedule&>(get_sched()));  // NOLINT
+        impl_->init(*shared_data_,
+                    const_cast<schedule&>(get_sched()));  // NOLINT
       },
       ctx::accesses_t{ctx::access_request{
           to_res_id(::motis::module::global_res_id::SCHEDULE),
