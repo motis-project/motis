@@ -1,10 +1,14 @@
 import { differenceInMilliseconds } from "date-fns";
 import { PrimitiveAtom, useAtom } from "jotai";
-import { useState } from "react";
+import { memo, useState } from "react";
+import { Virtuoso } from "react-virtuoso";
+
+import { PaxMonUpdatedTrip } from "../api/protocol/motis/paxmon";
 
 import { SimulationResult, simResultsAtom } from "../data/simulation";
 
 import { formatDateTime } from "../util/dateFormat";
+import useRenderCount from "../util/useRenderCount";
 
 import MiniTripLoadGraph from "./MiniTripLoadGraph";
 import TripServiceInfoView from "./TripServiceInfoView";
@@ -56,6 +60,7 @@ function SimResultDetails({
   simResultAtom,
 }: SimResultDetailsProps): JSX.Element {
   const [simResult] = useAtom(simResultAtom);
+  const renderCount = useRenderCount();
 
   const r = simResult.response;
   const duration = differenceInMilliseconds(
@@ -65,9 +70,18 @@ function SimResultDetails({
 
   // TODO(pablo): sort updated trips (by number of changes, critical sections...?)
 
+  const MemoizedUpdatedTrip = memo(function MemoizedUpdatedTripWrapper({
+    index,
+  }: {
+    index: number;
+  }) {
+    return <UpdatedTrip ut={r.updates.updated_trips[index]} />;
+  });
+
   return (
     <div>
       <div>
+        <div>SimResultDetails Render Count: {renderCount}</div>
         <div className="my-4 text-lg font-semibold">Statistiken:</div>
         <ul>
           <li>
@@ -88,23 +102,34 @@ function SimResultDetails({
       </div>
       <div>
         <div className="my-4 text-lg font-semibold">Betroffene Trips:</div>
-        <div className="flex flex-col gap-4">
-          {r.updates.updated_trips.map((ut) => (
-            <div key={JSON.stringify(ut.tsi)} className="flex flex-col gap-2">
-              <TripServiceInfoView tsi={ut.tsi} format="Long" />
-              <div>
-                Entfernt: {Math.round(ut.removed_mean_pax)} avg /{" "}
-                {ut.removed_max_pax} max Reisende
-                <br />
-                Hinzugefügt: {Math.round(ut.added_mean_pax)} avg /{" "}
-                {ut.added_max_pax} max Reisende
-              </div>
-              <MiniTripLoadGraph edges={ut.before_edges} />
-              <MiniTripLoadGraph edges={ut.after_edges} />
-            </div>
-          ))}
-        </div>
+        <Virtuoso
+          style={{ height: 600 }}
+          data={r.updates.updated_trips}
+          overscan={200}
+          itemContent={(index) => <MemoizedUpdatedTrip index={index} />}
+        />
       </div>
+    </div>
+  );
+}
+
+type UpdatedTripProps = {
+  ut: PaxMonUpdatedTrip;
+};
+
+function UpdatedTrip({ ut }: UpdatedTripProps) {
+  return (
+    <div className="flex flex-col gap-2 py-3">
+      <TripServiceInfoView tsi={ut.tsi} format="Long" />
+      <div>
+        Entfernt: {Math.round(ut.removed_mean_pax)} avg / {ut.removed_max_pax}{" "}
+        max Reisende
+        <br />
+        Hinzugefügt: {Math.round(ut.added_mean_pax)} avg / {ut.added_max_pax}{" "}
+        max Reisende
+      </div>
+      <MiniTripLoadGraph edges={ut.before_edges} />
+      <MiniTripLoadGraph edges={ut.after_edges} />
     </div>
   );
 }
