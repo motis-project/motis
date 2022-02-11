@@ -35,7 +35,6 @@ export interface TripRecommendationMeasure {
   planned_destinations: string[];
   planned_long_distance_destinations: string[];
   recommended_trip: TripId;
-  interchange_station: string;
 }
 
 // paxforecast/Measures.fbs

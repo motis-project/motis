@@ -25,7 +25,6 @@ export interface TripLoadInfoMeasureData {
 export interface TripRecommendationMeasureData {
   planned_destination: Station | undefined;
   recommended_trip: TripServiceInfo | undefined;
-  interchange_station: Station | undefined;
 }
 
 export interface RtUpdateMeasureData {
@@ -103,11 +102,7 @@ export function toMeasureWrapper(mu: MeasureUnion): MeasureWrapper | null {
     }
     case "TripRecommendationMeasure": {
       const d = mu.data;
-      if (
-        !d.planned_destination ||
-        !d.recommended_trip ||
-        !d.interchange_station
-      ) {
+      if (!d.planned_destination || !d.recommended_trip) {
         return null;
       }
       return {
@@ -118,7 +113,6 @@ export function toMeasureWrapper(mu: MeasureUnion): MeasureWrapper | null {
           planned_destinations: [d.planned_destination.id],
           planned_long_distance_destinations: [],
           recommended_trip: d.recommended_trip.trip,
-          interchange_station: d.interchange_station.id,
         },
       };
     }

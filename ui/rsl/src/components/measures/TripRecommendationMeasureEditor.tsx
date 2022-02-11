@@ -41,11 +41,6 @@ function TripRecommendationMeasureEditor({
       return { ...d, planned_destination: station };
     });
 
-  const setTripRecInterchange = (station: Station | undefined) =>
-    setData((d) => {
-      return { ...d, interchange_station: station };
-    });
-
   const setTripRecTrip = (tsi: TripServiceInfo | undefined) =>
     setData((d) => {
       return { ...d, recommended_trip: tsi };
@@ -62,15 +57,7 @@ function TripRecommendationMeasureEditor({
         />
       </div>
       <div>
-        <div className={labelClass}>Umsteigen an Station</div>
-        <StationPicker
-          onStationPicked={setTripRecInterchange}
-          clearOnPick={false}
-          initialStation={data.interchange_station}
-        />
-      </div>
-      <div>
-        <div className={labelClass}>in Trip</div>
+        <div className={labelClass}>Umsteigen in Trip</div>
         <TripPicker
           onTripPicked={setTripRecTrip}
           clearOnPick={false}
