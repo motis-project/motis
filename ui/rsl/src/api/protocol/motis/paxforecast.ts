@@ -80,6 +80,12 @@ export interface PaxForecastApplyMeasuresStatistics {
   total_affected_groups: number;
   total_alternative_routings: number;
   total_alternatives_found: number;
+  t_rt_updates: number;
+  t_get_affected_groups: number;
+  t_find_alternatives: number;
+  t_add_alternatives_to_graph: number;
+  t_behavior_simulation: number;
+  t_update_groups: number;
 }
 
 // paxforecast/PaxForecastApplyMeasuresResponse.fbs

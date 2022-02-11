@@ -606,6 +606,13 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
   auto total_affected_groups = 0ULL;
   auto total_alternative_routings = 0ULL;
   auto total_alternatives_found = 0ULL;
+  // timings (ms)
+  auto t_rt_updates = 0.;
+  auto t_get_affected_groups = 0.;
+  auto t_find_alternatives = 0.;
+  auto t_add_alternatives_to_graph = 0.;
+  auto t_behavior_simulation = 0.;
+  auto t_update_groups = 0.;
 
   // simulate passenger behavior with measures
   for (auto const& [t, ms] : measures) {
@@ -623,7 +630,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
               << ", schedule_begin=" << sched.schedule_begin_;
 
     if (contains_rt_updates) {
-      scoped_timer rt_timer{"applying rt updates"};
+      manual_timer rt_timer{"applying rt updates"};
       auto rt_lock =
           lock_resources({{uv.schedule_res_id_, ctx::access_t::WRITE}});
       message_creator mc;
@@ -642,6 +649,8 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
               .Union(),
           "/ris/apply");
       motis_call(make_msg(mc))->val();
+      rt_timer.stop_and_print();
+      t_rt_updates += rt_timer.duration_ms();
     }
 
     auto const loc_time = t + req->preparation_time();
@@ -649,6 +658,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
     auto const affected_groups =
         measures::get_affected_groups(sched, uv, loc_time, ms);
     get_affected_groups_timer.stop_and_print();
+    t_get_affected_groups += get_affected_groups_timer.duration_ms();
 
     total_affected_groups += affected_groups.measures_.size();
     LOG(info) << "affected groups: " << affected_groups.measures_.size();
@@ -695,10 +705,11 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
     ctx::await_all(futures);
     routing_cache_.sync();
     alternatives_timer.stop_and_print();
+    t_find_alternatives += alternatives_timer.duration_ms();
     total_alternative_routings += combined.size();
 
     {
-      scoped_timer alt_trips_timer{"add alternatives to graph"};
+      manual_timer alt_trips_timer{"add alternatives to graph"};
       for (auto& [grp_key, cpg] : combined) {
         total_alternatives_found += cpg.alternatives_.size();
         for (auto const& alt : cpg.alternatives_) {
@@ -707,6 +718,8 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
           }
         }
       }
+      alt_trips_timer.stop_and_print();
+      t_add_alternatives_to_graph += alt_trips_timer.duration_ms();
     }
 
     manual_timer sim_timer{"passenger behavior simulation"};
@@ -714,11 +727,13 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
     auto const sim_result =
         simulate_behavior(sched, caps, uv, combined, pb.pb_);
     sim_timer.stop_and_print();
+    t_behavior_simulation += sim_timer.duration_ms();
 
     manual_timer update_groups_timer{"update groups"};
     tick_statistics tick_stats;
     update_tracked_groups(sched, uv, sim_result, {}, tick_stats);
     update_groups_timer.stop_and_print();
+    t_update_groups += update_groups_timer.duration_ms();
   }
 
   auto [mc, fb_updates] = uv.update_tracker_.finish_updates();
@@ -729,7 +744,9 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
           CreatePaxForecastApplyMeasuresStatistics(
               mc, measure_time_points, total_measures_applied,
               total_affected_groups, total_alternative_routings,
-              total_alternatives_found),
+              total_alternatives_found, t_rt_updates, t_get_affected_groups,
+              t_find_alternatives, t_add_alternatives_to_graph,
+              t_behavior_simulation, t_update_groups),
           fb_updates)
           .Union());
   return make_msg(mc);

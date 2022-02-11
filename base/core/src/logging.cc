@@ -36,10 +36,14 @@ manual_timer::manual_timer(std::string name)
 
 void manual_timer::stop_and_print() {
   using namespace std::chrono;
-  auto stop = steady_clock::now();
-  double t = duration_cast<microseconds>(stop - start_).count() / 1000.0;
+  stop_ = steady_clock::now();
   LOG(info) << "[" << name_ << "] finished"
-            << " (" << t << "ms)";
+            << " (" << duration_ms() << "ms)";
+}
+
+double manual_timer::duration_ms() const {
+  using namespace std::chrono;
+  return duration_cast<microseconds>(stop_ - start_).count() / 1000.0;
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
