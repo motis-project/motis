@@ -18,6 +18,10 @@
 #include "motis/path/prepare/db_builder.h"
 #include "geo/polyline_format.h"
 
+#ifdef _MSC_VER
+#pragma optimize("", off)
+#endif
+
 namespace m = motis;
 namespace mp = m::path;
 namespace mm = m::module;
