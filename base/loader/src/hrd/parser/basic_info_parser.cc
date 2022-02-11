@@ -22,7 +22,8 @@ void verify_line_format(cstr s) {
       "interval boundary [{}] invalid", s.view());
 }
 
-std::tuple<int, int, int> yyyymmdd(cstr ddmmyyyy) {
+std::tuple<std::uint16_t, std::uint16_t, std::uint16_t> yyyymmdd(
+    cstr ddmmyyyy) {
   return std::make_tuple(parse<int>(ddmmyyyy.substr(6, size(4))),
                          parse<int>(ddmmyyyy.substr(3, size(2))),
                          parse<int>(ddmmyyyy.substr(0, size(2))));
@@ -66,7 +67,7 @@ Interval parse_interval(loaded_file const& basic_info_file) {
 }
 
 boost::gregorian::date get_first_schedule_date(loaded_file const& lf) {
-  int year = 0, month = 0, day = 0;
+  std::uint16_t year = 0, month = 0, day = 0;
   std::tie(year, month, day) = yyyymmdd(mask_dates(lf.content()).first);
   return {year, month, day};
 }

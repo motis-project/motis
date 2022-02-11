@@ -5,22 +5,24 @@
 #include <utility>
 #include <vector>
 
+#include "motis/core/common/unixtime.h"
+
 namespace motis::paxmon::tools::generator {
 
 struct search_interval_generator {
-  search_interval_generator(std::time_t start_time, std::time_t end_time)
+  search_interval_generator(unixtime start_time, unixtime end_time)
       : start_time_(start_time),
         rng_(std::random_device{}()),
         d_(generate_distribution(start_time, end_time)) {}
 
-  std::pair<std::time_t, std::time_t> random_interval() {
+  std::pair<unixtime, unixtime> random_interval() {
     auto start = start_time_ + d_(rng_) * 3600;
     return {start, start + 3600};
   }
 
 private:
-  static std::discrete_distribution<int> generate_distribution(
-      std::time_t begin, std::time_t end) {
+  static std::discrete_distribution<int> generate_distribution(unixtime begin,
+                                                               unixtime end) {
     auto constexpr k_two_hours = 2 * 3600;
     static const int prob[] = {
         1,  // 01: 00:00 - 01:00
@@ -49,14 +51,14 @@ private:
         1  // 24: 23:00 - 24:00
     };
     std::vector<int> v;
-    for (std::time_t t = begin, hour = 0; t < end - k_two_hours;
+    for (unixtime t = begin, hour = 0; t < end - k_two_hours;
          t += 3600, ++hour) {
       v.push_back(prob[hour % 24]);  // NOLINT
     }
     return std::discrete_distribution<int>(std::begin(v), std::end(v));
   }
 
-  std::time_t start_time_;
+  unixtime start_time_;
   std::mt19937 rng_;
   std::discrete_distribution<int> d_;
 };
