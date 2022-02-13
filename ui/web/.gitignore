@@ -22,4 +22,4 @@ pnpm-debug.log*
 *.sw?
 
 /tests/unit/__snapshots__
-.DS_Store
+*.DS_Store
