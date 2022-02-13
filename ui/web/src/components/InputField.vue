@@ -34,7 +34,7 @@
     </div>
     <StationAddressAutocomplete
       :input="inputValue"
-      v-show="showStationAddress"
+      :showList="showStationAddress"
       v-if="showAutocomplete"
       @elementClicked="onElementClicked">
     </StationAddressAutocomplete>

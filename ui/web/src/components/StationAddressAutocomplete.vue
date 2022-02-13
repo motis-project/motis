@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="paper" v-show="stationGuesses.length > 0 || addressGuesses.length > 0">
+    <div class="paper" v-show="(stationGuesses.length > 0 || addressGuesses.length > 0) && showList">
       <ul class="proposals">
         <li
           @mouseenter="focusElement(gIndex)"
@@ -37,6 +37,7 @@ export default defineComponent({
   name: "StationAddressAutocomplete",
   props: {
     input: String,
+    showList: Boolean
   },
   emits: ["elementClicked"],
   data() {
@@ -73,9 +74,14 @@ export default defineComponent({
         }
       );
     },
-  },
-  created() {
-    window.addEventListener('keydown', this.keyDown);
+    showList() {
+      if(this.showList) {
+        window.addEventListener('keydown', this.keyDown);
+      }
+      else {
+        window.removeEventListener('keydown', this.keyDown);
+      }
+    }
   },
   methods: {
     getRegion(g: AddressGuess) {
