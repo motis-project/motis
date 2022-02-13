@@ -9,7 +9,8 @@
         :initInputText="start"
         @inputChanged="setStartInput"
         :showAutocomplete="true"
-        @autocompleteElementClicked="startObjectClicked"></InputField>
+        @autocompleteElementClicked="startObjectClicked"
+        :tabIndex="1"></InputField>
 
       <div class="mode-picker-btn" @click="optinsButton1Click">
         <div :class="['mode', firstOptions.foot ? 'enabled' : '']">
@@ -23,7 +24,7 @@
         </div>
       </div>
 
-      <button class="swap-locations-btn">
+      <button class="swap-locations-btn" tabindex="-1">
         <label class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select">
           <input type="checkbox" @click="swapStartDest" />
           <i class="icon">swap_vert</i>
@@ -40,7 +41,8 @@
         :initInputText="destination"
         @inputChanged="setDestInput"
         :showAutocomplete="true"
-        @autocompleteElementClicked="endObjectClicked"></InputField>
+        @autocompleteElementClicked="endObjectClicked"
+        :tabIndex="2"></InputField>
       <div class="mode-picker-btn" @click="optinsButton2Click">
         <div :class="['mode', secondOptions.foot ? 'enabled' : '']">
           <i class="icon">directions_walk</i>

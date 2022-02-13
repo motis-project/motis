@@ -11,7 +11,7 @@
         <input
           :inputmode="isTimeCalendarField ? 'numeric' : ''"
           class="gb-input"
-          tabindex="1"
+          :tabindex="tabIndex"
           @input="onInput"
           v-model="inputValue"
           @focus="$emit('focus', $event), onInput, isFocused = true"
@@ -66,7 +66,12 @@ export default defineComponent({
     initInputText: String,
     showArrows: Boolean,
     showAutocomplete: Boolean,
-    isTimeCalendarField: Boolean
+    isTimeCalendarField: Boolean,
+    tabIndex: {
+      type: Number,
+      requiered: false,
+      default: 0
+    }
   },
   emits: [
     "inputChanged",
