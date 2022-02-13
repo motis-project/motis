@@ -65,7 +65,7 @@
 
 .connections-info-gutter {
   width: 17%;
-  height: 100%;
+  height: 2em;
   display: inline-flex;
   vertical-align: top;
   flex-wrap: wrap;
@@ -79,6 +79,10 @@
 .coonections-line-gutter {
   width: 66%;
   display: inline-flex;
+}
+
+.connection-duration-inner {
+  align-self: center;
 }
 
 /*dealing with small screen size*/

@@ -159,7 +159,9 @@
               </div>
             </div>
             <div class="connections-info-gutter connection-duration">
-              <div>{{ getReadableDuration(c.stops[0].departure.time, c.stops[c.stops.length - 1].arrival.time, $ts) }}</div>
+              <div class="connection-duration-inner">
+                {{ getReadableDuration(c.stops[0].departure.time, c.stops[c.stops.length - 1].arrival.time, $ts) }}
+              </div>
             </div>
             <div ref="linesDiv" class="coonections-line-gutter connection-trains">
               <div class="transport-graph">
