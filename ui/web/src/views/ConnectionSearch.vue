@@ -147,8 +147,8 @@
           :class="['connection', !initialConnections.includes(c) ? 'new' : '']"
           :key="c"
           @click="connectionClicked(cIndex)">
-          <div class="pure-g">
-            <div class="pure-u-4-24 connection-times">
+          <div>
+            <div class="connections-info-gutter connection-times">
               <div class="connection-departure">
                 {{ $ds.getTimeString(c.stops[0].departure.time * 1000) }}
               </div>
@@ -156,25 +156,24 @@
                 {{ $ds.getTimeString(c.stops[c.stops.length - 1].arrival.time * 1000) }}
               </div>
             </div>
-            <div class="pure-u-4-24 connection-duration">
+            <div class="connections-info-gutter connection-duration">
               <div>{{ getReadableDuration(c.stops[0].departure.time, c.stops[c.stops.length - 1].arrival.time, $ts) }}</div>
             </div>
-            <div class="pure-u-16-24 connection-trains">
+            <div ref="linesDiv" class="coonections-line-gutter connection-trains">
               <div class="transport-graph">
-                <svg width="335" height="40" viewBox="0 0 335 40">
-                  <g>
+                <svg :width="linesDivWidth" height="40" :viewBox="`0 0 ${linesDivWidth} 40`">
+                  <g class="lineG">
                     <TransportLine
-                      v-for="(t, tIndex) in getNonEmptyTransports(c.transports)"
-                      :key="t.range"
-                      :move="t"
-                      :allStops="c.stops"
-                      :lineIndex="tIndex"
-                      :lineCount="getNonEmptyTransports(c.transports).length"
+                      v-for="t in fillMovesWithLineData(getNonEmptyTransports(c.transports), c)"
+                      :key="t.move.range"
+                      :move="t.move"
+                      :lineStart="t.lineStart"
+                      :lineEnd="t.lineEnd"
                       @mouseEnter="showTooltip($event, cIndex)"
                       @mouseLeave="isTooltipVisible[cIndex] = false"></TransportLine>
                   </g>
                   <g class="destination">
-                    <circle cx="329" cy="12" r="6"></circle>
+                    <circle :cx="linesDivWidth - 6" cy="12" r="6"></circle>
                   </g>
                 </svg>
                 <div
@@ -227,7 +226,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent, ref } from "vue";
 import InputField from "../components/InputField.vue";
 import BlockWithCheckbox from "../components/BlockWithCheckbox.vue";
 import Slider from "../components/Slider.vue";
@@ -243,6 +242,7 @@ import TransportLine from "../components/TransportLine.vue";
 import LoadingBar, { LoadingState } from "../components/LoadingBar.vue"
 import Transport from "../models/Transport";
 import CustomMovement from "../models/CustomMovement";
+import ResizeObserver from "resize-observer-polyfill"
 
 export default defineComponent({
   name: "ConnectionSearch",
@@ -256,6 +256,12 @@ export default defineComponent({
     LoadingBar
   },
   mixins: [ WayMixin ],
+  setup() {
+    const linesDiv = ref<HTMLDivElement>();
+    return {
+      linesDiv
+    }
+  },
   data() {
     return {
       start: "",
@@ -308,8 +314,28 @@ export default defineComponent({
       isUpperEnd: false,
       isBottomEnd: false,
       separators: [] as number [],
-      isDeparture: true
+      isDeparture: true,
+      linesDivWidth: 0,
+      textMeasureCanvas: null as CanvasRenderingContext2D | null
     };
+  },
+  watch: {
+    linesDiv() {
+      if(this.linesDiv){
+        if(!this.textMeasureCanvas) {
+          let canvas = document.createElement("canvas").getContext("2d");
+          if(canvas) {
+            const fontWeight = window.getComputedStyle(this.linesDiv, null).getPropertyValue("font-weight");
+            const fontSize = window.getComputedStyle(this.linesDiv, null).getPropertyValue("font-size");
+            const fontFamily = window.getComputedStyle(this.linesDiv, null).getPropertyValue("font-family");
+            canvas.font = `${fontWeight} ${fontSize} ${fontFamily}`;
+            this.textMeasureCanvas = canvas;
+          }
+        }
+        this.linesDivWidth = this.linesDiv.clientWidth;
+        new ResizeObserver(() => this.linesDivWidth = !this.linesDiv ? 0 : this.linesDiv.clientWidth).observe(this.linesDiv);
+      }
+    }
   },
   activated() {
     for(let i = 0; i < this.isTooltipVisible.length; i++) {
@@ -320,6 +346,7 @@ export default defineComponent({
     window.addEventListener("dragover", (event: Event) => event.preventDefault());
     window.addEventListener("dragenter", (event: Event) => event.preventDefault());
     window.addEventListener("drop", this.onDrop);
+
   },
   methods: {
     swapStartDest() {
@@ -623,10 +650,58 @@ export default defineComponent({
       }
       return res;
     },
+    fillMovesWithLineData(moves: Move[], connection: TripResponseContent): MoveForLine[] {
+      const minWidth = 26;
+      let prevLastPoint = 0;
+      const divWidth = this.linesDivWidth;
+      const overallStart = connection.stops[0].departure.time;
+      const res = [] as MoveForLine[];
+
+      for(let i = 0; i < moves.length; i++) {
+        const move = moves[i];
+        let textWidth = minWidth;
+        if(this.textMeasureCanvas && "name" in move.move) {
+          const measuredTextWidth = this.textMeasureCanvas.measureText(move.move.name).width;
+          if(measuredTextWidth > textWidth) {
+            textWidth = measuredTextWidth;
+          }
+        }
+        const start = connection.stops[move.move.range.from].departure.time - overallStart;
+        let end = textWidth;
+        if(move.move.range.to === connection.stops.length - 1) {
+          end = connection.stops[move.move.range.to].arrival.time - overallStart
+        }
+        else {
+          end = connection.stops[move.move.range.to].departure.time - overallStart
+        }
+        const overallDuration = connection.stops[connection.stops.length - 1].arrival.time - overallStart;
+        let lineStart = divWidth * (start / overallDuration);
+        let lineStartPoint = divWidth - minWidth * (moves.length - i) - 10;
+        if(lineStart < prevLastPoint) {
+          lineStart = prevLastPoint;
+        }
+        if(lineStart > lineStartPoint) {
+          lineStart = lineStartPoint;
+        }
+        let lineEnd = divWidth * (end / overallDuration);
+        if(lineEnd < lineStart + textWidth) {
+          lineEnd = lineStart + textWidth;
+        }
+        if(lineEnd > divWidth || i === moves.length - 1) {
+          lineEnd = divWidth;
+        }
+        res.push({
+          move,
+          lineStart,
+          lineEnd
+        });
+        prevLastPoint = lineEnd;
+      }
+      return res;
+    },
     onDrop(event: DragEvent) {
       if(event.dataTransfer !== null && event.dataTransfer.files.length > 0) {
         event.preventDefault();
-        console.log("Drop");
         event.dataTransfer.files[0].text().then(t => {
           this.$store.state.areConnectionsDropped = true;
           this.setConnections(
@@ -670,5 +745,11 @@ interface LoadingStates {
   content: LoadingState,
   upperButton: LoadingState,
   lowerButton: LoadingState
+}
+
+interface MoveForLine {
+  move: Move,
+  lineStart: number,
+  lineEnd: number
 }
 </script>

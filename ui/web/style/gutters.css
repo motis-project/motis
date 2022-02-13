@@ -63,6 +63,24 @@
 }
 
 
+.connections-info-gutter {
+  width: 17%;
+  height: 100%;
+  display: inline-flex;
+  vertical-align: top;
+  flex-wrap: wrap;
+}
+
+.connections-info-gutter .connection-departure,
+.connections-info-gutter .connection-arrival {
+  width: 100%;
+}
+
+.coonections-line-gutter {
+  width: 66%;
+  display: inline-flex;
+}
+
 /*dealing with small screen size*/
 
 
