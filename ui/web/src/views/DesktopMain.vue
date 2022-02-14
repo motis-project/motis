@@ -10,7 +10,7 @@
         @autocompleteElementClicked="goToTimetable"></InputField>
     </div>
     <button class="sim-overlay-opener" @mousedown="simWindowOpened ? simWindowOpened = false : simWindowOpened = true">
-      Open Sim Window
+      {{ showSimTime() }}
     </button>
     <div class="sim-time-picker-container" v-if="simWindowOpened">
       <div class="sim-time-picker-overlay">
@@ -55,7 +55,13 @@ export default defineComponent({
       searchFieldHidden: false,
       simWindowOpened: false,
       isSimulationEnabled: true,
+      simTimerInterval: 0,
+      cachedSimulationTime: 0,
     };
+  },
+  created() {
+    this.simTimerInterval = window.setInterval(() => this.$ds.simulationTime += 1000, 1000);
+    this.cachedSimulationTime = this.$ds.simulationTime;
   },
   methods: {
     isStation(element: AddressGuess | StationGuess): element is StationGuess {
@@ -73,27 +79,48 @@ export default defineComponent({
     },
     startDisableSimulation() {
       if(this.isSimulationEnabled) {
-        this.$ds.cachedSimulationTime = this.$ds.simulationTime;
+        this.cachedSimulationTime = this.formatSimTime(this.cachedSimulationTime, this.$ds.simulationDate, "time");
         this.$ds.simulationTime = new Date().valueOf();
+        clearInterval(this.simTimerInterval);
       }
       else {
-        this.$ds.simulationTime = this.$ds.cachedSimulationTime;
-        this.$ds.cachedSimulationTime = 0;
+        this.$ds.simulationTime = this.cachedSimulationTime;
+        this.simTimerInterval = window.setInterval(() => this.$ds.simulationTime += 1000, 1000);
       }
       this.isSimulationEnabled ? this.isSimulationEnabled = false : this.isSimulationEnabled = true;
     },
     changeDate(newDate: Date) {
-      let t: Date = new Date(this.$ds.simulationTime)
-      t.setDate(newDate.getDate());
-      t.setMonth(newDate.getMonth());
-      t.setFullYear(newDate.getFullYear());
-      this.$ds.simulationTime = t.valueOf();
+      this.$ds.simulationTime = this.formatSimTime(this.$ds.simulationTime, newDate, "date");
+      this.cachedSimulationTime = this.formatSimTime(this.cachedSimulationTime, newDate, "date");
     },
     changeTime(newTime: Date) {
-      let t: Date = new Date(this.$ds.simulationTime)
-      t.setHours(newTime.getHours());
-      t.setMinutes(newTime.getMinutes());
-      this.$ds.simulationTime = t.valueOf();
+      this.$ds.simulationTime = this.formatSimTime(this.$ds.simulationTime, newTime, "time");
+      this.cachedSimulationTime = this.formatSimTime(this.cachedSimulationTime, newTime, "time");
+    },
+    showSimTime(): string {
+      if(this.isSimulationEnabled) {
+        return this.$ds.getTimeString(this.$ds.simulationTime, true);
+      }
+      else {
+        return this.$ds.getTimeString(undefined, true);
+      }
+    },
+    formatSimTime(time: number, newTime: Date, option: string): number {
+      let t: Date = new Date(time);
+      if(option === "time") {
+        t.setHours(newTime.getHours());
+        t.setMinutes(newTime.getMinutes());
+        t.setSeconds(0);
+      }
+      else if(option === "date") {
+        t.setDate(newTime.getDate());
+        t.setMonth(newTime.getMonth());
+        t.setFullYear(newTime.getFullYear());
+      }
+      else {
+        return -1;
+      }
+      return t.valueOf();
     }
   }
 });

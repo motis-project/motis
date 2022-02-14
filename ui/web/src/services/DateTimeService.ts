@@ -6,16 +6,15 @@ import Interval from '@/models/SmallTypes/Interval';
 export class DateTimeService {
   public dateTime: number;
   public simulationTime: number;
-  public cachedSimulationTime: number;
   public intervalFromServer: Interval;
   private readonly timeFormat: string = "HH:mm";
   private readonly dateFormat: string = "dd.MM.yyyy";
+  private readonly simulationTimeFormat: string = "HH:mm:ss";
 
   public constructor(initialDateTime: number, intervalFromServer: Interval) {
     this.dateTime = initialDateTime;
     this.intervalFromServer = intervalFromServer;
     this.simulationTime = this.dateTime;
-    this.cachedSimulationTime = 0;
   }
 
   public get date(): Date {
@@ -45,11 +44,16 @@ export class DateTimeService {
     return DateTime.fromMillis(dateTime).toFormat(this.dateFormat);
   }
 
-  public getTimeString(dateTime?: number): string {
+  public getTimeString(dateTime?: number, seconds?: boolean): string {
     if(!dateTime) {
       dateTime = this.dateTime;
     }
-    return DateTime.fromMillis(dateTime).toFormat(this.timeFormat)
+    if(seconds) {
+      return DateTime.fromMillis(dateTime).toFormat(this.simulationTimeFormat)
+    }
+    else {
+      return DateTime.fromMillis(dateTime).toFormat(this.timeFormat)
+    }
   }
 
   public parseDate(dateToParse: string): Date {

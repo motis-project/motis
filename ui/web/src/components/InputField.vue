@@ -42,12 +42,6 @@
 </template>
 
 
-<!-- How to use this component:
-    <InputField :showLabel=true labelName="Start" iconType="place"/>
-    to not display the labelName set :showLabel to false
--->
-
-
 <script lang="ts">
 import { defineComponent } from "vue";
 import StationAddressAutocomplete from "./StationAddressAutocomplete.vue";
