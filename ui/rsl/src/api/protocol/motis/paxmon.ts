@@ -211,6 +211,7 @@ export interface PaxMonTripStopInfo {
   schedule_time: number;
   current_time: number;
   trips: TripServiceInfo[];
+  station: Station;
 }
 
 // paxmon/PaxMonGetInterchangesResponse.fbs
