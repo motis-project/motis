@@ -69,7 +69,8 @@ msg_ptr get_interchanges(schedule const& sched, paxmon_data& data,
       res.emplace_back(CreatePaxMonTripStopInfo(
           mc, motis_to_unixtime(sched, ev->schedule_time()),
           motis_to_unixtime(sched, ev->current_time()),
-          mc.CreateVector(fbs_trips)));
+          mc.CreateVector(fbs_trips),
+          to_fbs(mc, *sched.stations_.at(ev->station_idx()))));
     }
     return mc.CreateVector(res);
   };
