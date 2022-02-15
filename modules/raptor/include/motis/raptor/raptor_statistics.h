@@ -26,6 +26,7 @@ struct raptor_statistics {
   uint32_t scanned_trips_5_{0};
   uint32_t scanned_trips_6_{0};
   uint32_t scanned_trips_7_{0};
+  uint64_t total_scanned_trips_{0};
 
   uint64_t number_of_rounds_{0};
 };
