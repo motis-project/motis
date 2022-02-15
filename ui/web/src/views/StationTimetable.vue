@@ -32,24 +32,10 @@
     <div class="events">
       <LoadingBar :isButton="false" v-if="loadingStates.content !== LoadingState.Loaded"></LoadingBar>
       <div v-else class="">
-        <div
-          :class="[
-            'extend-search-interval search-before',
-            isUpperEnd ? 'disabled' : '',
-          ]"
-          v-if="!isEmptyTimetable">
-          <a v-if="loadingStates.upperButton === LoadingState.Loaded" @click="changeTimeGap('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }} </a>
+        <div :class="['extend-search-interval search-before', isUpperEnd ? (!isEmptyTimetable ? 'disabled' : 'error') : '']">
+          <a v-if="loadingStates.upperButton === LoadingState.Loaded" @click="!isEmptyTimetable ? changeTimeGap('EARLIER') : errorScreen('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }} </a>
           <LoadingBar :isButton="true" v-else></LoadingBar>
-        </div>
-        <div
-          :class="[
-            'extend-search-interval search-before',
-            isUpperEnd ? 'error' : '',
-          ]"
-          v-else>
-          <a v-if="loadingStates.upperButton === LoadingState.Loaded" @click="errorScreen('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }} </a>
-          <LoadingBar :isButton="true" v-else></LoadingBar>
-          <div class="error">
+          <div class="error" v-if="isEmptyTimetable">
             <div class v-show="isUpperEnd">
               {{ $t.noInTimetable }}
             </div>
@@ -57,11 +43,8 @@
         </div>
         <div class="no-results" v-if="isEmptyTimetable">
           <div class="date-header divider"></div>
-          <div class="msg" v-if="isDeparture">
-            {{ $t.noDepartures }}
-          </div>
-          <div class="msg" v-else>
-            {{ $t.noArrivals }}
+          <div class="msg">
+            {{ isDeparture ? $t.noDepartures : $t.noArrivals }}
           </div>
           <div class="divider footer"></div>
         </div>
@@ -102,24 +85,10 @@
           </div>
           <div class="divider footer"></div>
         </div>
-        <div
-          :class="[
-            'extend-search-interval search-after',
-            isBottomEnd ? 'disabled' : '',
-          ]"
-          v-if="!isEmptyTimetable">
-          <a v-if="loadingStates.lowerButton === LoadingState.Loaded" @click="changeTimeGap('LATER')" v-show="!isBottomEnd"> {{ $t.later }} </a>
+        <div :class="['extend-search-interval search-after', isBottomEnd ? (!isEmptyTimetable ? 'disabled' : 'error') : '']">
+          <a v-if="loadingStates.lowerButton === LoadingState.Loaded" @click="!isEmptyTimetable ? changeTimeGap('LATER') : errorScreen('LATER')" v-show="!isBottomEnd"> {{ $t.later }} </a>
           <LoadingBar :isButton="true" v-else></LoadingBar>
-        </div>
-        <div
-          :class="[
-            'extend-search-interval search-after',
-            isBottomEnd ? 'error' : '',
-          ]"
-          v-else>
-          <a v-if="loadingStates.lowerButton === LoadingState.Loaded" @click="errorScreen('LATER')" v-show="!isBottomEnd"> {{ $t.later }} </a>
-          <LoadingBar :isButton="true" v-else></LoadingBar>
-          <div class="error">
+          <div class="error" v-if="isEmptyTimetable">
             <div class v-show="isBottomEnd">
               {{ $t.noInTimetable }}
             </div>
