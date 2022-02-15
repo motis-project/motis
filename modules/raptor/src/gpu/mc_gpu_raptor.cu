@@ -779,17 +779,6 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
       device_mem.stats_->number_of_rounds_ = round_k;
     }
   }
-
-  if(t_id == 0) {
-    device_mem.stats_->total_scanned_trips_ =
-        device_mem.stats_->scanned_trips_1_ +
-        device_mem.stats_->scanned_trips_2_ +
-        device_mem.stats_->scanned_trips_3_ +
-        device_mem.stats_->scanned_trips_4_ +
-        device_mem.stats_->scanned_trips_5_ +
-        device_mem.stats_->scanned_trips_6_ +
-        device_mem.stats_->scanned_trips_7_;
-  }
 }
 
 template <typename CriteriaConfig>
