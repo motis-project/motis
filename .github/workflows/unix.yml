@@ -106,7 +106,7 @@ jobs:
             cxx: clang++
             cc: clang
             mode: Release
-            cross: -DCMAKE_OSX_ARCHITECTURES="arm64"
+            cross: -DCMAKE_OSX_ARCHITECTURES="arm64" -DBOOST_CONTEXT_ARCHITECTURE="arm64"
             cxxflags: -stdlib=libc++
             os: macos-latest
             artifact: macos-noavx2
