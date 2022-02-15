@@ -19,14 +19,13 @@ struct raptor_statistics {
   uint64_t raptor_queries_{0};
   uint64_t raptor_connections_{0};
 
-  uint64_t scanned_trips_1_{0};
-  uint64_t scanned_trips_2_{0};
-  uint64_t scanned_trips_3_{0};
-  uint64_t scanned_trips_4_{0};
-  uint64_t scanned_trips_5_{0};
-  uint64_t scanned_trips_6_{0};
-  uint64_t scanned_trips_7_{0};
-  uint64_t total_scanned_trips_{0};
+  uint32_t scanned_trips_1_{0};
+  uint32_t scanned_trips_2_{0};
+  uint32_t scanned_trips_3_{0};
+  uint32_t scanned_trips_4_{0};
+  uint32_t scanned_trips_5_{0};
+  uint32_t scanned_trips_6_{0};
+  uint32_t scanned_trips_7_{0};
 
   uint64_t number_of_rounds_{0};
 };
@@ -55,7 +54,6 @@ inline stats_category to_stats_category(char const* name,
            {"scanned_trips_r5", s.scanned_trips_5_},
            {"scanned_trips_r6", s.scanned_trips_6_},
            {"scanned_trips_r7", s.scanned_trips_7_},
-           {"total_trips_scanned", s.total_scanned_trips_},
           }};
 }
 
