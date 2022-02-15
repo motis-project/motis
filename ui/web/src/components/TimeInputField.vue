@@ -10,8 +10,7 @@
     @decreaseClick="changeTime(-1)"
     @increaseClick="changeTime(1)"
     :showAutocomplete="false"
-    :key="inputFieldKey"
-    @blur="inputFieldKey++"
+    @blur="setTimeFromString(prevString, true)"
     @keydown="onKeyDown"
     @mouseup="onMouseUp"></InputField>
 </template>
@@ -31,7 +30,6 @@ export default defineComponent({
   data() {
     return {
       time: {} as Date,
-      inputFieldKey: 0,
       prevString: ":",
       timeToDisplay: ""
     };
@@ -61,13 +59,7 @@ export default defineComponent({
       if(value === this.prevString) {
         return;
       }
-      let t = this.$ds.parseTime(value);
-
-      if(t.valueOf()) {
-        this.time = t;
-        this.$emit("timeChanged", this.time);
-      }
-      else {
+      if(!this.setTimeFromString(value)) {
         let arr = value.split(":");
         if(arr.length !== 2) {
           value = this.prevString;
@@ -169,10 +161,23 @@ export default defineComponent({
       this.timeToDisplay = "";
       this.$nextTick(() => {
         this.timeToDisplay = value;
+        this.setTimeFromString(value);
         if(inputField && cursorPosition) {
           this.$nextTick(() => inputField.setSelectionRange(cursorPosition, cursorPosition));
         }
       });
+    },
+    setTimeFromString(value: string, setTimeStringOthervise?: boolean): boolean {
+      let t = this.$ds.parseTime(value);
+      if(t.valueOf()) {
+        this.time = t;
+        this.$emit("timeChanged", this.time);
+      }
+      else if(setTimeStringOthervise) {
+        console.log(this.$ds.getTimeString(this.time.valueOf()))
+        this.setTimeToDisplay(this.$ds.getTimeString(this.time.valueOf()));
+      }
+      return !!t.valueOf();
     }
   },
 });
