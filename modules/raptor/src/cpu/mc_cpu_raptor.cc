@@ -479,28 +479,17 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics& stats) {
     station_marks.reset();
 
     MOTIS_START_TIMING(route_update);
-    auto routes_scanned = 0;
     for (uint32_t t_offset = 0; t_offset < trait_size; ++t_offset) {
       for (route_id r_id = 0; r_id < tt.route_count(); ++r_id) {
         if (!route_marks.marked(r_id * trait_size + t_offset)) {
           continue;
         }
 
-        ++routes_scanned;
-
         update_route_for_trait_offset_forward_project<CriteriaConfig>(
             tt, t_offset, r_id, result[round_k - 1], result[round_k], ea,
             station_marks, target_s_id);
       }
     }
-    stats.total_scanned_routes_ += routes_scanned;
-    if (round_k == 1) stats.scanned_routes_1_ = routes_scanned;
-    if (round_k == 2) stats.scanned_routes_2_ = routes_scanned;
-    if (round_k == 3) stats.scanned_routes_3_ = routes_scanned;
-    if (round_k == 4) stats.scanned_routes_4_ = routes_scanned;
-    if (round_k == 5) stats.scanned_routes_5_ = routes_scanned;
-    if (round_k == 6) stats.scanned_routes_6_ = routes_scanned;
-    if (round_k == 7) stats.scanned_routes_7_ = routes_scanned;
     auto const route_time = MOTIS_GET_TIMING_US(route_update);
     stats.cpu_time_routes_ += route_time;
 

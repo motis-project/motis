@@ -19,14 +19,14 @@ struct raptor_statistics {
   uint64_t raptor_queries_{0};
   uint64_t raptor_connections_{0};
 
-  uint32_t total_scanned_routes_{0};
-  uint32_t scanned_routes_1_{0};
-  uint32_t scanned_routes_2_{0};
-  uint32_t scanned_routes_3_{0};
-  uint32_t scanned_routes_4_{0};
-  uint32_t scanned_routes_5_{0};
-  uint32_t scanned_routes_6_{0};
-  uint32_t scanned_routes_7_{0};
+  uint64_t scanned_trips_1_{0};
+  uint64_t scanned_trips_2_{0};
+  uint64_t scanned_trips_3_{0};
+  uint64_t scanned_trips_4_{0};
+  uint64_t scanned_trips_5_{0};
+  uint64_t scanned_trips_6_{0};
+  uint64_t scanned_trips_7_{0};
+  uint64_t total_scanned_trips_{0};
 
   uint64_t number_of_rounds_{0};
 };
@@ -46,15 +46,16 @@ inline stats_category to_stats_category(char const* name,
            {"raptor_queries", s.raptor_queries_},
 
            {"raptor_connections", s.raptor_connections_},
-           {"total_routes_scanned", s.total_scanned_routes_},
-           {"scanned_routes_r1", s.scanned_routes_1_},
-           {"scanned_routes_r2", s.scanned_routes_2_},
-           {"scanned_routes_r3", s.scanned_routes_3_},
-           {"scanned_routes_r4", s.scanned_routes_4_},
-           {"scanned_routes_r5", s.scanned_routes_5_},
-           {"scanned_routes_r6", s.scanned_routes_6_},
-           {"scanned_routes_r7", s.scanned_routes_7_},
-           {"number_of_rounds", s.number_of_rounds_}
+           {"number_of_rounds", s.number_of_rounds_},
+
+           {"scanned_trips_r1", s.scanned_trips_1_},
+           {"scanned_trips_r2", s.scanned_trips_2_},
+           {"scanned_trips_r3", s.scanned_trips_3_},
+           {"scanned_trips_r4", s.scanned_trips_4_},
+           {"scanned_trips_r5", s.scanned_trips_5_},
+           {"scanned_trips_r6", s.scanned_trips_6_},
+           {"scanned_trips_r7", s.scanned_trips_7_},
+           {"total_trips_scanned", s.total_scanned_trips_},
           }};
 }
 

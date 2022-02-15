@@ -124,7 +124,8 @@ __device__ void mc_update_route_larger32(
     time const* const prev_arrivals, time* const arrivals,
     time* const earliest_arrivals, stop_id const target_stop_id,
     uint32_t* station_marks, device_gpu_timetable const& tt,
-    bool use_stop_satis) {
+    bool use_stop_satis,
+    raptor_statistics* stats) {
 
   auto const t_id = threadIdx.x;
 
@@ -147,6 +148,7 @@ __device__ void mc_update_route_larger32(
   unsigned int criteria_mask = 0;
 
   for (int trip_offset = 0; trip_offset < route.trip_count_; ++trip_offset) {
+    if (t_id == 0) atomicAdd(&stats->total_scanned_trips_, 1);
     if (CriteriaConfig::USES_SHFL_CALC) aggregate.reset(trip_offset, t_offset);
 
     for (uint32_t current_stage = 0; current_stage < active_stage_count;
@@ -350,7 +352,8 @@ __device__ void mc_update_route_smaller32(
     time const* const prev_arrivals, time* const arrivals,
     time* const earliest_arrivals, stop_id const target_stop_id,
     uint32_t* station_marks, device_gpu_timetable const& tt,
-    bool use_stop_satis) {
+    bool use_stop_satis,
+    raptor_statistics* stats) {
 
   auto const t_id = threadIdx.x;
 
@@ -378,6 +381,9 @@ __device__ void mc_update_route_smaller32(
 
   for (trip_id trip_offset = 0; trip_offset < route.trip_count_;
        ++trip_offset) {
+    if (t_id == 0)
+      atomicAdd(&stats->total_scanned_trips_, 1);
+
     aggregate.reset(trip_offset, t_offset);
 
     bool departure_feasible = false;
@@ -592,17 +598,11 @@ __device__ void mc_update_routes_dev(device_memory const& device_mem,
   // threadIdx.y = 1..32 + (blockDim.y = 32 * blockIdx.x = 1..6)
   auto const start_idx = threadIdx.y + (blockDim.y * blockIdx.x);
 
-  uint32_t route_count = 0;
-
   auto const trait_size = CriteriaConfig::TRAITS_SIZE;
   auto const max_idx = tt.route_count_ * trait_size;
   for (auto idx = start_idx; idx < max_idx; idx += stride) {
     if (!marked(route_marks, idx)) {
       continue;
-    }
-
-    if (threadIdx.x == 0) {
-      ++route_count;
     }
 
     auto const r_id = idx / trait_size;
@@ -612,31 +612,43 @@ __device__ void mc_update_routes_dev(device_memory const& device_mem,
     if (route.stop_count_ <= 32) {
       mc_update_route_smaller32<CriteriaConfig>(
           r_id, route, t_offset, prev_arrivals, arrivals, earliest_arrivals,
-          target_stop_id, station_marks, tt, use_stop_satis);
+          target_stop_id, station_marks, tt, use_stop_satis, device_mem.stats_);
     } else {
       mc_update_route_larger32<CriteriaConfig>(
           r_id, route, t_offset, prev_arrivals, arrivals, earliest_arrivals,
-          target_stop_id, station_marks, tt, use_stop_satis);
+          target_stop_id, station_marks, tt, use_stop_satis, device_mem.stats_);
     }
   }
 
   this_grid().sync();
 
-  if (threadIdx.x == 0) {
-    if (round_k == 1)
-      atomicAdd(&device_mem.stats_->scanned_routes_1_, route_count);
-    if (round_k == 2)
-      atomicAdd(&device_mem.stats_->scanned_routes_2_, route_count);
-    if (round_k == 3)
-      atomicAdd(&device_mem.stats_->scanned_routes_3_, route_count);
-    if (round_k == 4)
-      atomicAdd(&device_mem.stats_->scanned_routes_4_, route_count);
-    if (round_k == 5)
-      atomicAdd(&device_mem.stats_->scanned_routes_5_, route_count);
-    if (round_k == 6)
-      atomicAdd(&device_mem.stats_->scanned_routes_6_, route_count);
-    if (round_k == 7)
-      atomicAdd(&device_mem.stats_->scanned_routes_7_, route_count);
+  if (get_global_thread_id() == 0) {
+    if (round_k == 1) {
+      atomicAdd(&device_mem.stats_->scanned_trips_1_, device_mem.stats_->total_scanned_trips_);
+    }
+    if (round_k == 2) {
+      atomicAdd(&device_mem.stats_->scanned_trips_2_, device_mem.stats_->total_scanned_trips_);
+    }
+    if (round_k == 3) {
+      atomicAdd(&device_mem.stats_->scanned_trips_3_, device_mem.stats_->total_scanned_trips_);
+    }
+    if (round_k == 4) {
+      atomicAdd(&device_mem.stats_->scanned_trips_4_, device_mem.stats_->total_scanned_trips_);
+    }
+    if (round_k == 5) {
+      atomicAdd(&device_mem.stats_->scanned_trips_5_, device_mem.stats_->total_scanned_trips_);
+    }
+    if (round_k == 6) {
+      atomicAdd(&device_mem.stats_->scanned_trips_6_, device_mem.stats_->total_scanned_trips_);
+    }
+    if (round_k == 7) {
+      atomicAdd(&device_mem.stats_->scanned_trips_7_, device_mem.stats_->total_scanned_trips_);
+    }
+  }
+
+  this_grid().sync();
+  if (get_global_thread_id() == 0) {
+    device_mem.stats_->total_scanned_trips_ = 0;
   }
 
   auto const store_size = (max_idx / 32) + 1;
@@ -769,14 +781,14 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
   }
 
   if(t_id == 0) {
-    device_mem.stats_->total_scanned_routes_ =
-        device_mem.stats_->scanned_routes_1_ +
-        device_mem.stats_->scanned_routes_2_ +
-        device_mem.stats_->scanned_routes_3_ +
-        device_mem.stats_->scanned_routes_4_ +
-        device_mem.stats_->scanned_routes_5_ +
-        device_mem.stats_->scanned_routes_6_ +
-        device_mem.stats_->scanned_routes_7_;
+    device_mem.stats_->total_scanned_trips_ =
+        device_mem.stats_->scanned_trips_1_ +
+        device_mem.stats_->scanned_trips_2_ +
+        device_mem.stats_->scanned_trips_3_ +
+        device_mem.stats_->scanned_trips_4_ +
+        device_mem.stats_->scanned_trips_5_ +
+        device_mem.stats_->scanned_trips_6_ +
+        device_mem.stats_->scanned_trips_7_;
   }
 }
 
