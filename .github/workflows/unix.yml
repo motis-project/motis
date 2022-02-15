@@ -110,7 +110,7 @@ jobs:
             cxxflags: -stdlib=libc++
             os: macos-latest
             artifact: macos-noavx2
-            avx: On
+            avx: Off
             avx2: Off
             webui: On
             tests: On
