@@ -82,6 +82,7 @@ jobs:
             mode: Release
             cxxflags: -stdlib=libc++
             os: macos-latest
+            cross: -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
             artifact: macos
             avx: On
             avx2: On
@@ -94,6 +95,7 @@ jobs:
             mode: Release
             cxxflags: -stdlib=libc++
             os: macos-latest
+            cross: -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
             artifact: macos-noavx2
             avx: On
             avx2: Off
