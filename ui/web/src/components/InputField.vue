@@ -20,14 +20,18 @@
           @mouseup="$emit('mouseup', $event)" />
         <div class="gb-input-widget" v-if="showArrows">
           <div class="day-buttons">
-            <div @mouseup="$emit('decreaseClick')" @mousedown="$emit('decreaseMouseDown')">
-              <a
-                class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"><i class="icon">chevron_left</i></a>
-            </div>
-            <div @mouseup="$emit('increaseClick')" @mousedown="$emit('increaseMouseDown')">
-              <a
-                class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"><i class="icon">chevron_right</i></a>
-            </div>
+            <button
+              @mouseup="$emit('decreaseClick')"
+              @mousedown="$emit('decreaseMouseDown')"
+              class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select">
+              <i class="icon">chevron_left</i>
+            </button>
+            <button
+              @mouseup="$emit('increaseClick')"
+              @mousedown="$emit('increaseMouseDown')"
+              class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select">
+              <i class="icon">chevron_right</i>
+            </button>
           </div>
         </div>
       </div>
@@ -94,6 +98,11 @@ export default defineComponent({
     },
     inputValue(newValue: string) {
       this.$emit('inputChanged', newValue)
+    },
+    isFocused() {
+      if(this.isFocused) {
+        this.setShowStationAddress();
+      }
     }
   },
   created() {
@@ -101,13 +110,16 @@ export default defineComponent({
   },
   methods: {
     onInput(event: Event){
+      this.setShowStationAddress()
+      this.$emit("inputChangedNative", event);
+    },
+    setShowStationAddress() {
       if(this.inputValue.length > 2){
         this.showStationAddress = true
       }
       else{
         this.showStationAddress = false
       }
-      this.$emit("inputChangedNative", event);
     },
     onElementClicked(element: AddressGuess | StationGuess) {
       this.inputValue = element.name;

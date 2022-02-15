@@ -35,7 +35,7 @@
   height: 50px;
   line-height: 15px;
   margin-top: 15px;
-  padding: 0 !important;
+  padding-left: 3px;
 }
 
 .time-options-gutter label {

@@ -69,6 +69,7 @@
   background: #fff;
   padding: 5px;
   cursor: pointer;
+  border-style: none;
 }
 
 .mode-picker-btn .mode {

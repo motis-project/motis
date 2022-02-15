@@ -23,12 +23,12 @@
       </div>
     </div>
     <div class="overlay-tabs">
-      <div class="overlay-toggle">
-        <i class="icon" @click="(isOverlayHidden = !isOverlayHidden)">arrow_drop_down</i>
-      </div>
-      <div :class="['trip-search-toggle', isTrainSubOverlayOpened ? 'enabled' : '']">
-        <i class="icon" @click="openCloseTrainSearch">train</i>
-      </div>
+      <button class="overlay-toggle" @click="(isOverlayHidden = !isOverlayHidden)">
+        <i class="icon">arrow_drop_down</i>
+      </button>
+      <button :class="['trip-search-toggle', isTrainSubOverlayOpened ? 'enabled' : '']" @click="openCloseTrainSearch">
+        <i class="icon">train</i>
+      </button>
     </div>
   </div>
 </template>

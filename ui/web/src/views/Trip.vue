@@ -3,9 +3,9 @@
   <div v-else :class="['connection-details', isTripView ? 'trip-view' : '']">
     <div class="connection-info">
       <div class="header">
-        <div class="back" @click="$router.back()">
+        <button class="back" @click="$router.back()">
           <i class="icon">arrow_back</i>
-        </div>
+        </button>
         <div class="details">
           <div class="date">
             {{ date }}

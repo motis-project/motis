@@ -49,7 +49,7 @@ const service: MOTISPostService = {
     };
     return (await axios.post<TripResponce>("https://europe.motis-project.de/", rq)).data.content;
   },
-  async getDeparturesResponse(station: string, byScheduleTime: boolean, direction: string, eventCount: number, time: number) {
+  async getDeparturesResponse(station: string, byScheduleTime: boolean, direction: ("BOTH" | "EARLIER" | "LATER"), eventCount: number, time: number) {
     const rq = {
       destination: {
         type: "Module",

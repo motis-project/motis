@@ -25,9 +25,9 @@
         </div>
         <Calendar :class="[isSimulationEnabled ? 'date' : 'date disabled']" @dateChanged="changeDate"></Calendar>
         <TimeInputField :class="[isSimulationEnabled ? 'time' : 'time disabled']" @timeChanged="changeTime"></TimeInputField>
-        <div class="close" @mousedown="simWindowOpened=false">
+        <button class="close" @mousedown="simWindowOpened=false">
           <i class="icon">close</i>
-        </div>
+        </button>
       </div>
     </div>
   </div>
@@ -105,7 +105,7 @@ export default defineComponent({
         return this.$ds.getTimeString(undefined, true);
       }
     },
-    formatSimTime(time: number, newTime: Date, option: string): number {
+    formatSimTime(time: number, newTime: Date, option: ("time" | "date")): number {
       let t: Date = new Date(time);
       if(option === "time") {
         t.setHours(newTime.getHours());

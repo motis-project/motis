@@ -83,6 +83,8 @@
   right: 18px;
   cursor: pointer;
   color: #4971E7;
+  background: none;
+  border: none;
 }
 
 .sub-overlay-close i {
@@ -107,6 +109,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
 }
 
 .overlay-toggle i {
@@ -132,6 +135,7 @@
   justify-content: center;
   opacity: 1;
   transition: all 0.2s ease;
+  border: none;
 }
 
 .trip-search-toggle.enabled {
@@ -696,7 +700,7 @@ fieldset > legend {
   z-index: 15;
 }
 
-.extend-search-interval a {
+.extend-search-interval button {
   cursor: pointer;
   background: #4971E7;
   display: inline;
@@ -711,6 +715,7 @@ fieldset > legend {
   border-radius: .25em;
   margin: 0 40px 0 0;
   box-shadow: 4px 0px 0px 0px #fff, -4px 0px 0px 0px #fff;
+  border-color: transparent;
 }
 
 .extend-search-interval .spinner {
@@ -1395,6 +1400,7 @@ fieldset > legend {
   margin-right: 16px;
   justify-content: center;
   align-items: center;
+  background-color: transparent;
 }
 
 .back i {

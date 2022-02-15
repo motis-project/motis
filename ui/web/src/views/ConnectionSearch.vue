@@ -12,7 +12,7 @@
         @autocompleteElementClicked="startObjectClicked"
         :tabIndex="1"></InputField>
 
-      <div class="mode-picker-btn" @click="optinsButton1Click">
+      <button class="mode-picker-btn" @click="optinsButton1Click" tabindex="-1">
         <div :class="['mode', firstOptions.foot ? 'enabled' : '']">
           <i class="icon">directions_walk</i>
         </div>
@@ -22,7 +22,7 @@
         <div :class="['mode', firstOptions.car ? 'enabled' : '']">
           <i class="icon">directions_car</i>
         </div>
-      </div>
+      </button>
 
       <button class="swap-locations-btn" tabindex="-1">
         <label class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select">
@@ -43,7 +43,7 @@
         :showAutocomplete="true"
         @autocompleteElementClicked="endObjectClicked"
         :tabIndex="2"></InputField>
-      <div class="mode-picker-btn" @click="optinsButton2Click">
+      <button class="mode-picker-btn" @click="optinsButton2Click" tabindex="-1">
         <div :class="['mode', secondOptions.foot ? 'enabled' : '']">
           <i class="icon">directions_walk</i>
         </div>
@@ -53,7 +53,7 @@
         <div :class="['mode', secondOptions.car ? 'enabled' : '']">
           <i class="icon">directions_car</i>
         </div>
-      </div>
+      </button>
     </div>
     <TimeInputField @timeChanged="timeChanged" class="main-gutter time-gutter"></TimeInputField>
     <div class="main-gutter time-options-gutter">
@@ -73,9 +73,9 @@
 
     <div class="mode-picker-editor" v-show="isOptionsWindowOpened">
       <div class="header">
-        <div class="sub-overlay-close">
-          <i class="icon" @click="optionsWindowCloseClick">close</i>
-        </div>
+        <button class="sub-overlay-close" @click="optionsWindowCloseClick">
+          <i class="icon">close</i>
+        </button>
         <div class="title">
           {{
             pressedOptions == firstOptions
@@ -137,7 +137,9 @@
     <LoadingBar :isButton="false" v-if="loadingStates.content === LoadingState.Loading"></LoadingBar>
     <div v-else-if="loadingStates.content === LoadingState.Loaded" class="connections">
       <div class="extend-search-interval search-before">
-        <a v-if="loadingStates.upperButton === LoadingState.Loaded" @click="sendRequest('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }}</a>
+        <button v-if="loadingStates.upperButton === LoadingState.Loaded" @click="sendRequest(TimeGap.Earlier)" v-show="!isUpperEnd">
+          {{ $t.earlier }}
+        </button>
         <LoadingBar :isButton="true" v-else></LoadingBar>
       </div>
       <div class="connection-list">
@@ -209,7 +211,9 @@
       </div>
       <div class="divider footer"></div>
       <div class="extend-search-interval search-after">
-        <a v-if="loadingStates.lowerButton === LoadingState.Loaded" @click="sendRequest('LATER')" v-show="!isBottomEnd">{{ $t.later }}</a>
+        <button v-if="loadingStates.lowerButton === LoadingState.Loaded" @click="sendRequest(TimeGap.Later)" v-show="!isBottomEnd">
+          {{ $t.later }}
+        </button>
         <LoadingBar :isButton="true" v-else></LoadingBar>
       </div>
     </div>
@@ -320,7 +324,8 @@ export default defineComponent({
       separators: [] as number [],
       isDeparture: true,
       linesDivWidth: 0,
-      textMeasureCanvas: null as CanvasRenderingContext2D | null
+      textMeasureCanvas: null as CanvasRenderingContext2D | null,
+      TimeGap: TimeGap
     };
   },
   watch: {
@@ -429,7 +434,7 @@ export default defineComponent({
       }
     },
     sendRequest(
-      changeGap: string | null = null
+      changeGap: TimeGap | null = null
     ) {
       if (changeGap === null) {
         this.isUpperEnd = false;
@@ -437,10 +442,10 @@ export default defineComponent({
       }
       if(this.start !== "" && this.destination !== "") {
         this.loadingStates.content = !changeGap ? LoadingState.Loading : LoadingState.Loaded;
-        if (changeGap === 'EARLIER') {
+        if (changeGap === TimeGap.Earlier) {
           this.loadingStates.upperButton = LoadingState.Loading;
         }
-        else if (changeGap === 'LATER') {
+        else if (changeGap === TimeGap.Later) {
           this.loadingStates.lowerButton = LoadingState.Loading;
         }
         this.isTooltipVisible = []
@@ -449,21 +454,15 @@ export default defineComponent({
         }
         let start = {
           interval: {
-            begin: this.isDeparture ?
-              (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) - 3600 :
-                (changeGap === 'EARLIER' ? this.connections[0].stops[0].departure.time - 7200 : this.connections[this.connections.length - 1].stops[0].departure.time + 60)) :
-              (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000 - 7200) :
-                (changeGap === 'EARLIER' ? this.connections[0].stops[0].departure.time - 7200 : this.connections[this.connections.length - 1].stops[0].departure.time + 60)),
-            end: this.isDeparture ?
-              (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) + 7200 :
-                (changeGap === 'LATER' ? this.connections[this.connections.length - 1].stops[0].departure.time + 7200 : this.connections[0].stops[0].departure.time - 60)) :
-              (changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) :
-                (changeGap === 'LATER' ? this.connections[this.connections.length - 1].stops[0].departure.time + 7200 : this.connections[0].stops[0].departure.time - 60)),
+            begin: changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) - (this.isDeparture ? 3600 : 7200) :
+              (changeGap === TimeGap.Earlier ? this.connections[0].stops[0].departure.time - 7200 : this.connections[this.connections.length - 1].stops[0].departure.time + 60),
+            end: changeGap === null ? Math.floor(this.dateTime.valueOf() / 1000) + (this.isDeparture ? 3600 : 0) :
+              (changeGap === TimeGap.Later ? this.connections[this.connections.length - 1].stops[0].departure.time + 7200 : this.connections[0].stops[0].departure.time - 60)
           },
           /* eslint-disable camelcase*/
           min_connection_count: changeGap === null ? 5 : 3,
-          extend_interval_earlier: changeGap === null ? true : (changeGap === 'EARLIER' ? true : false),
-          extend_interval_later: changeGap === null ? true : (changeGap === 'LATER' ? true : false)
+          extend_interval_earlier: changeGap === null ? true : (changeGap === TimeGap.Earlier ? true : false),
+          extend_interval_later: changeGap === null ? true : (changeGap === TimeGap.Later ? true : false)
         } as Start;
         if("id" in this.startObject) {
           start = {
@@ -508,15 +507,15 @@ export default defineComponent({
         }, 500);
       }
     },
-    setConnections(connections: TripResponseContent[], changeGap: string | null = null, clickedEarlier: boolean | null = null) {
+    setConnections(connections: TripResponseContent[], changeGap: TimeGap | null = null, clickedEarlier: boolean | null = null) {
       if (changeGap === null) {
         this.connections = connections;
         this.initialConnections = [...this.connections]
       }
-      else if (changeGap === 'EARLIER') {
+      else if (changeGap === TimeGap.Earlier) {
         this.connections = connections.concat(this.connections);
       }
-      else if (changeGap === 'LATER') {
+      else if (changeGap === TimeGap.Later) {
         this.connections = this.connections.concat(connections);
       }
       if (connections.length === 0) {
@@ -755,5 +754,10 @@ interface MoveForLine {
   move: Move,
   lineStart: number,
   lineEnd: number
+}
+
+enum TimeGap {
+  Earlier = 1,
+  Later = 2
 }
 </script>
