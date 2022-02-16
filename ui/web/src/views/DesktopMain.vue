@@ -80,7 +80,7 @@ export default defineComponent({
       else {
         this.$ds.dateTime = this.cachedSimulationTime;
       }
-      this.isSimulationEnabled ? this.isSimulationEnabled = false : this.isSimulationEnabled = true;
+      this.isSimulationEnabled = !this.isSimulationEnabled;
     },
     changeDate(newDate: Date) {
       this.$ds.dateTime = this.formatSimTime(this.$ds.dateTime, newDate, "date");
