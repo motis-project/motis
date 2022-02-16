@@ -1,5 +1,5 @@
-import { createApp } from 'vue'
-import App from './App.vue'
+import { App, createApp } from 'vue'
+import AppComponent from './App.vue'
 import router from './router'
 import DateTimeService from './services/DateTimeService';
 import MOTISPostService from './services/MOTISPostService';
@@ -8,7 +8,7 @@ import store from './store';
 import Interval from './models/SmallTypes/Interval';
 import InitialScheduleInfoResponseContent from './models/InitRequestResponseContent';
 
-const app = createApp(App)
+const app = createApp(AppComponent)
 app.use(store);
 app.use(TranslationService, "de-DE");
 app.use(MOTISPostService);
@@ -29,3 +29,10 @@ const interval = setInterval(() => {
         clearInterval(interval);
     }
 }, 10);
+
+declare global {
+    interface Window {
+        VueInstance: App<Element>
+    }
+}
+window.VueInstance = app;
