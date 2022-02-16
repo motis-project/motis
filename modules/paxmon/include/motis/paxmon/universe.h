@@ -75,7 +75,13 @@ struct event_node {
   std::uint32_t station_{0};
 };
 
-enum class edge_type : std::uint8_t { TRIP, INTERCHANGE, WAIT, THROUGH };
+enum class edge_type : std::uint8_t {
+  TRIP,
+  INTERCHANGE,
+  WAIT,
+  THROUGH,
+  DISABLED
+};
 
 inline std::ostream& operator<<(std::ostream& out, edge_type const et) {
   switch (et) {
@@ -83,17 +89,18 @@ inline std::ostream& operator<<(std::ostream& out, edge_type const et) {
     case edge_type::INTERCHANGE: return out << "INTERCHANGE";
     case edge_type::WAIT: return out << "WAIT";
     case edge_type::THROUGH: return out << "THROUGH";
+    case edge_type::DISABLED: return out << "DISABLED";
   }
   return out;
 }
 
 struct edge {
   inline bool is_valid(universe const& u) const {
-    return from(u)->is_valid() && to(u)->is_valid();
+    return !is_disabled() && from(u)->is_valid() && to(u)->is_valid();
   }
 
   inline bool is_canceled(universe const& u) const {
-    return from(u)->is_canceled() || to(u)->is_canceled();
+    return is_disabled() || from(u)->is_canceled() || to(u)->is_canceled();
   }
 
   inline bool is_trip() const { return type() == edge_type::TRIP; }
@@ -103,6 +110,8 @@ struct edge {
   }
 
   inline bool is_wait() const { return type() == edge_type::WAIT; }
+
+  inline bool is_disabled() const { return type() == edge_type::DISABLED; }
 
   event_node const* from(universe const&) const;
   event_node* from(universe&) const;

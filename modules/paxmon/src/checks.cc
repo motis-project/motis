@@ -49,6 +49,26 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
         }
       }
     }
+
+    if (!n.is_enter_exit_node() && n.is_valid()) {
+      auto const in_trip_edges =
+          std::count_if(begin(n.incoming_edges(uv)), end(n.incoming_edges(uv)),
+                        [&](edge const& e) {
+                          return e.is_trip() && e.is_valid(uv) &&
+                                 !e.from(uv)->is_enter_exit_node();
+                        });
+      auto const out_trip_edges =
+          std::count_if(begin(n.outgoing_edges(uv)), end(n.outgoing_edges(uv)),
+                        [&](edge const& e) {
+                          return e.is_trip() && e.is_valid(uv) &&
+                                 !e.to(uv)->is_enter_exit_node();
+                        });
+      if (in_trip_edges > 1 || out_trip_edges > 1) {
+        std::cout << "!! " << in_trip_edges << " incoming + " << out_trip_edges
+                  << " outgoing trip/wait edges\n";
+        ok = false;
+      }
+    }
   }
 
   for (auto const& [trp_idx, tdi] : uv.trip_data_.mapping_) {
@@ -78,6 +98,9 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
     }
   }
 
+  if (!ok) {
+    std::cout << "check_graph_integrity failed" << std::endl;
+  }
   return ok;
 }
 
