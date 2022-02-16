@@ -105,7 +105,7 @@
   }
 }
 
-@media screen and (max-device-height: 400px) {
+@media screen and (max-device-height: 510px) {
   .mode-picker-editor {
     margin-left: 130px;
     height: 33vw;
