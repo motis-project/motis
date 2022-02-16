@@ -10,7 +10,7 @@
         @autocompleteElementClicked="goToTimetable"></InputField>
     </div>
     <button class="sim-overlay-opener" @mousedown="simWindowOpened ? simWindowOpened = false : simWindowOpened = true">
-      {{ showSimTime() }}
+      {{ $ds.getTimeString(undefined, true) }}
     </button>
     <div class="sim-time-picker-container" v-if="simWindowOpened">
       <div class="sim-time-picker-overlay">
@@ -55,13 +55,8 @@ export default defineComponent({
       searchFieldHidden: false,
       simWindowOpened: false,
       isSimulationEnabled: true,
-      simTimerInterval: 0,
       cachedSimulationTime: 0,
     };
-  },
-  created() {
-    this.simTimerInterval = window.setInterval(() => this.$ds.simulationTime += 1000, 1000);
-    this.cachedSimulationTime = this.$ds.simulationTime;
   },
   methods: {
     isStation(element: AddressGuess | StationGuess): element is StationGuess {
@@ -79,31 +74,21 @@ export default defineComponent({
     },
     startDisableSimulation() {
       if(this.isSimulationEnabled) {
-        this.cachedSimulationTime = this.formatSimTime(this.cachedSimulationTime, this.$ds.simulationDate, "time");
-        this.$ds.simulationTime = new Date().valueOf();
-        clearInterval(this.simTimerInterval);
+        this.cachedSimulationTime = this.formatSimTime(this.cachedSimulationTime, this.$ds.date, "time");
+        this.$ds.dateTime = new Date().valueOf();
       }
       else {
-        this.$ds.simulationTime = this.cachedSimulationTime;
-        this.simTimerInterval = window.setInterval(() => this.$ds.simulationTime += 1000, 1000);
+        this.$ds.dateTime = this.cachedSimulationTime;
       }
       this.isSimulationEnabled ? this.isSimulationEnabled = false : this.isSimulationEnabled = true;
     },
     changeDate(newDate: Date) {
-      this.$ds.simulationTime = this.formatSimTime(this.$ds.simulationTime, newDate, "date");
+      this.$ds.dateTime = this.formatSimTime(this.$ds.dateTime, newDate, "date");
       this.cachedSimulationTime = this.formatSimTime(this.cachedSimulationTime, newDate, "date");
     },
     changeTime(newTime: Date) {
-      this.$ds.simulationTime = this.formatSimTime(this.$ds.simulationTime, newTime, "time");
+      this.$ds.dateTime = this.formatSimTime(this.$ds.dateTime, newTime, "time");
       this.cachedSimulationTime = this.formatSimTime(this.cachedSimulationTime, newTime, "time");
-    },
-    showSimTime(): string {
-      if(this.isSimulationEnabled) {
-        return this.$ds.getTimeString(this.$ds.simulationTime, true);
-      }
-      else {
-        return this.$ds.getTimeString(undefined, true);
-      }
     },
     formatSimTime(time: number, newTime: Date, option: ("time" | "date")): number {
       let t: Date = new Date(time);
