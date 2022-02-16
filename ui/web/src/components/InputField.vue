@@ -15,7 +15,7 @@
           @input="onInput"
           v-model="inputValue"
           @focus="$emit('focus', $event), onInput, isFocused = true"
-          @blur="$emit('blur', $event), showStationAddress = false, isFocused = false"
+          @blur="onBlur"
           @keydown="$emit('keydown', $event)"
           @mouseup="$emit('mouseup', $event)" />
         <div class="gb-input-widget" v-if="showArrows">
@@ -89,15 +89,13 @@ export default defineComponent({
     return {
       showStationAddress: false,
       inputValue: "",
-      isFocused: false
+      isFocused: false,
+      savedInputValue: ""
     }
   },
   watch: {
     initInputText(newValue: string) {
       this.inputValue = newValue
-    },
-    inputValue(newValue: string) {
-      this.$emit('inputChanged', newValue)
     },
     isFocused() {
       if(this.isFocused) {
@@ -111,6 +109,7 @@ export default defineComponent({
   methods: {
     onInput(event: Event){
       this.setShowStationAddress()
+      this.$emit('inputChanged', (event.target as HTMLInputElement).value)
       this.$emit("inputChangedNative", event);
     },
     setShowStationAddress() {
@@ -123,9 +122,16 @@ export default defineComponent({
     },
     onElementClicked(element: AddressGuess | StationGuess) {
       this.inputValue = element.name;
+      this.savedInputValue = element.name;
       this.showStationAddress = false;
       this.$emit('autocompleteElementClicked', element);
     },
+    onBlur(event: Event) {
+      this.inputValue = this.savedInputValue;
+      this.$emit('blur', event);
+      this.showStationAddress = false;
+      this.isFocused = false
+    }
   },
 });
 </script>
