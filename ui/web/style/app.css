@@ -366,6 +366,8 @@
   right: 10px;
   cursor: pointer;
   color: #4971E7;
+  background: none;
+  border: none;
 }
 
 .sim-time-picker-overlay .close i {
