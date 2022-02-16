@@ -6,7 +6,7 @@
     :initInputText="timeToDisplay"
     :isTimeCalendarField="true"
     :showArrows="true"
-    @inputChanged="setTime"
+    @inputChangedNative="setTime"
     @decreaseClick="changeTime(-1)"
     @increaseClick="changeTime(1)"
     :showAutocomplete="false"
@@ -55,7 +55,15 @@ export default defineComponent({
       );
       this.$emit("timeChanged", this.time);
     },
-    setTime(value: string) {
+    setTime(event: Event) {
+      const inputField = event.target as HTMLInputElement;
+      let value = inputField.value;
+      if (value === ""){
+        value = ":";
+        this.setTimeToDisplay(value, inputField, 0);
+        this.prevString = value;
+        return;
+      }
       if(value === this.prevString) {
         return;
       }
@@ -138,12 +146,10 @@ export default defineComponent({
         let lastValidTime = this.$ds.getTimeString(this.time.valueOf());
         let arrLastValidTime = lastValidTime.split(":");
         let position = inputField.selectionStart !== null ? inputField.selectionStart : 0;
-        if(Number.parseInt(arr[0]) >= 0 && Number.parseInt(arr[0]) <=2 && inputField.selectionStart !== 1 && inputField.selectionStart !== 0){
-          if(arr[0].length === 1){
-            arr[0] = "0" + arr[0];
-            value = arr[0] + ":" + arr[1];
-            this.setTimeToDisplay(value, inputField, position + 1);
-          }
+        if(Number.parseInt(arr[0]) >= 0 && Number.parseInt(arr[0]) <=2 && inputField.selectionStart !== 1 && inputField.selectionStart !== 0 && arr[0].length === 1){
+          arr[0] = "0" + arr[0];
+          value = arr[0] + ":" + arr[1];
+          this.setTimeToDisplay(value, inputField, position + 1);
         }
         if(arr[0] === "" && inputField.selectionStart !== 0){
           value = arrLastValidTime[0] + ":" + arr[1];
@@ -162,7 +168,7 @@ export default defineComponent({
       this.$nextTick(() => {
         this.timeToDisplay = value;
         this.setTimeFromString(value);
-        if(inputField && cursorPosition) {
+        if(inputField && cursorPosition !== undefined) {
           this.$nextTick(() => inputField.setSelectionRange(cursorPosition, cursorPosition));
         }
       });
@@ -174,7 +180,6 @@ export default defineComponent({
         this.$emit("timeChanged", this.time);
       }
       else if(setTimeStringOthervise) {
-        console.log(this.$ds.getTimeString(this.time.valueOf()))
         this.setTimeToDisplay(this.$ds.getTimeString(this.time.valueOf()));
       }
       return !!t.valueOf();
