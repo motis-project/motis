@@ -97,8 +97,11 @@ edge* get_connecting_edge(event_node const* from, event_node const* to,
   return nullptr;
 }
 
+// the following functions are split because otherwise clang-tidy complains
+// that begin(from->outgoing_edges(uv)) allegedly returns nullptr
+
 void disable_outgoing_edges(universe& uv, event_node* from,
-                            edge const* except = nullptr) {
+                            edge const* except) {
   for (auto& e : from->outgoing_edges(uv)) {
     if (&e != except && (e.is_trip() || e.is_wait())) {
       e.type_ = edge_type::DISABLED;
@@ -106,10 +109,25 @@ void disable_outgoing_edges(universe& uv, event_node* from,
   }
 }
 
-void disable_incoming_edges(universe& uv, event_node* to,
-                            edge const* except = nullptr) {
+void disable_outgoing_edges(universe& uv, event_node* from) {
+  for (auto& e : from->outgoing_edges(uv)) {
+    if (e.is_trip() || e.is_wait()) {
+      e.type_ = edge_type::DISABLED;
+    }
+  }
+}
+
+void disable_incoming_edges(universe& uv, event_node* to, edge const* except) {
   for (auto& e : to->incoming_edges(uv)) {
     if (&e != except && (e.is_trip() || e.is_wait())) {
+      e.type_ = edge_type::DISABLED;
+    }
+  }
+}
+
+void disable_incoming_edges(universe& uv, event_node* to) {
+  for (auto& e : to->incoming_edges(uv)) {
+    if (e.is_trip() || e.is_wait()) {
       e.type_ = edge_type::DISABLED;
     }
   }
