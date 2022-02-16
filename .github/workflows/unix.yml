@@ -96,7 +96,7 @@ jobs:
             cross: -DCMAKE_OSX_ARCHITECTURES="x86_64"
             cxxflags: -stdlib=libc++
             os: macos-latest
-            artifact: macos-x86_64-noavx
+            artifact: macos-x86_64-noavx2
             avx: On
             avx2: Off
             webui: On
@@ -413,7 +413,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - artifact: macos-noavx2
+          - artifact: macos-x86_64-noavx2
             os: macos-latest
           - artifact: linux-amd64
             os: ubuntu-20.04
