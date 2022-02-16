@@ -113,7 +113,7 @@ jobs:
             avx: Off
             avx2: Off
             webui: On
-            tests: On
+            tests: Off
             mimalloc: Off
           - name: linux-amd64-debug
             cxx: g++-10
