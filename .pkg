@@ -57,7 +57,7 @@
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
-  commit=c48de3aceaf483eae25aafcde32a62c1b48d89ce
+  commit=297171ade5e9bd01d823ffe8b203a5443ec03f15
 [pugixml]
   url=git@github.com:motis-project/pugixml.git
   branch=master
