@@ -83,7 +83,7 @@ jobs:
             cxxflags: -stdlib=libc++
             os: macos-latest
             cross: -DCMAKE_OSX_ARCHITECTURES="x86_64"
-            artifact: macos
+            artifact: macos-x86_64
             avx: On
             avx2: On
             webui: On
@@ -96,7 +96,7 @@ jobs:
             cross: -DCMAKE_OSX_ARCHITECTURES="x86_64"
             cxxflags: -stdlib=libc++
             os: macos-latest
-            artifact: macos-noavx2
+            artifact: macos-x86_64-noavx
             avx: On
             avx2: Off
             webui: On
@@ -109,7 +109,7 @@ jobs:
             cross: -DCMAKE_OSX_ARCHITECTURES="arm64" -DBOOST_CONTEXT_ARCHITECTURE="arm64" -DBOOST_CONTEXT_ABI="aapcs"
             cxxflags: -stdlib=libc++
             os: macos-latest
-            artifact: macos-noavx2
+            artifact: macos-arm64
             avx: Off
             avx2: Off
             webui: On
