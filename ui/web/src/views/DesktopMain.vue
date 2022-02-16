@@ -1,5 +1,6 @@
 <template>
   <div class="app">
+    <Map></Map>
     <LeftMenu @searchHidden="searchFieldHidden = $event"></LeftMenu>
     <div id="station-search" :class="['', searchFieldHidden ? 'overlay-hidden' : '']">
       <InputField
@@ -41,6 +42,7 @@ import AddressGuess from "../models/AddressGuess";
 import StationGuess from "../models/StationGuess";
 import Calendar from "../components/Calendar.vue";
 import TimeInputField from "../components/TimeInputField.vue"
+import Map from "../components/Map.vue"
 
 export default defineComponent({
   name: "DesktopMain",
@@ -48,7 +50,8 @@ export default defineComponent({
     LeftMenu,
     InputField,
     Calendar,
-    TimeInputField
+    TimeInputField,
+    Map
   },
   data() {
     return {

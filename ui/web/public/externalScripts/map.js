@@ -197,8 +197,8 @@ class RailVizCustomLayer {
   }
 }
 
-function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
-  app.ports.mapInit.subscribe(function (id) {
+function initPorts(apiEndpoint, tilesEndpoint, initialPermalink) {
+  mapService.mapInit = (function (id) {
     let settings = localStorage.getItem("motis.map");
     if (settings) {
       settings = JSON.parse(settings);
@@ -260,15 +260,15 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
 
     syncMaps(map_bg, map_fg);
 
-    map_fg.on("load", () => {
-      RailViz.Path.Base.init(map_fg, apiEndpoint);
+    // map_fg.on("load", () => {
+    //   RailViz.Path.Base.init(map_fg, apiEndpoint);
 
-      map_fg.addLayer(new RailVizCustomLayer());
+    //   map_fg.addLayer(new RailVizCustomLayer());
 
-      RailViz.Path.Extra.init(map_fg, "railviz-base-stations");
-      RailViz.Path.Detail.init(map_fg, "railviz-base-stations");
-      RailViz.Path.Connections.init(map_fg, "railviz-base-stations");
-    });
+    //   RailViz.Path.Extra.init(map_fg, "railviz-base-stations");
+    //   RailViz.Path.Detail.init(map_fg, "railviz-base-stations");
+    //   RailViz.Path.Connections.init(map_fg, "railviz-base-stations");
+    // });
 
     ["click", "mousemove", "mouseout"].forEach((t) =>
       map_fg.on(t, (e) => RailViz.Render.handleMouseEvent(t, e.originalEvent))
@@ -276,7 +276,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
 
     map_fg.on("contextmenu", (e) => {
       console.log("Context menu:", e);
-      app.ports.mapShowContextMenu.send({
+      mapService.mapShowContextMenu({
         mouseX: Math.round(e.point.x),
         mouseY: Math.round(e.point.y),
         lat: Math.round(e.lngLat.lat * 1e6) * 1e-6,
@@ -286,7 +286,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
 
     const padding = { top: 96, right: 32, bottom: 96, left: 640 };
 
-    app.ports.mapFlyTo.subscribe(function (opt) {
+    mapService.mapFlyTo = (function (opt) {
       var map = window.elmMaps[opt.mapId];
 
       const camOptions = opt.animate
@@ -310,47 +310,48 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
       }
     });
 
-    app.ports.mapFitBounds.subscribe(function (opt) {
-      const bounds = opt.coords.reduce(
-        (b, c) => b.extend([c[1], c[0]]),
-        new mapboxgl.LngLatBounds()
-      );
-      if (!bounds.isEmpty()) {
-        window.elmMaps[opt.mapId].fitBounds(bounds, { padding, pitch: 0 });
-      }
-    });
+    // app.ports.mapFitBounds.subscribe(function (opt) {
+    //   const bounds = opt.coords.reduce(
+    //     (b, c) => b.extend([c[1], c[0]]),
+    //     new mapboxgl.LngLatBounds()
+    //   );
+    //   if (!bounds.isEmpty()) {
+    //     window.elmMaps[opt.mapId].fitBounds(bounds, { padding, pitch: 0 });
+    //   }
+    // });
 
-    app.ports.mapSetConnections.subscribe(function (opt) {
-      const bounds = opt.connections.reduce(
-        (b, conn) =>
-          conn.stations.reduce((sb, s) => sb.extend([s.pos.lng, s.pos.lat]), b),
-        new mapboxgl.LngLatBounds()
-      );
-      if (!bounds.isEmpty()) {
-        window.elmMaps[opt.mapId].fitBounds(bounds, { padding, pitch: 0 });
-      }
-    });
+    // app.ports.mapSetConnections.subscribe(function (opt) {
+    //   const bounds = opt.connections.reduce(
+    //     (b, conn) =>
+    //       conn.stations.reduce((sb, s) => sb.extend([s.pos.lng, s.pos.lat]), b),
+    //     new mapboxgl.LngLatBounds()
+    //   );
+    //   if (!bounds.isEmpty()) {
+    //     window.elmMaps[opt.mapId].fitBounds(bounds, { padding, pitch: 0 });
+    //   }
+    // });
 
     RailViz.Main.init(apiEndpoint, app.ports);
 
     RailViz.Markers.init(map_fg);
-    app.ports.mapSetMarkers.subscribe(RailViz.Markers.setMarkers);
+    // app.ports.mapSetMarkers.subscribe(RailViz.Markers.setMarkers);
 
-    app.ports.mapSetDetailFilter.subscribe(RailViz.Main.setDetailFilter);
-    app.ports.mapUpdateWalks.subscribe(RailViz.Main.setDetailWalks);
+    // app.ports.mapSetDetailFilter.subscribe(RailViz.Main.setDetailFilter);
+    // app.ports.mapUpdateWalks.subscribe(RailViz.Main.setDetailWalks);
 
-    app.ports.mapSetConnections.subscribe(RailViz.Main.setConnections);
-    app.ports.mapHighlightConnections.subscribe(
-      RailViz.Main.highlightConnections
-    );
+    // app.ports.mapSetConnections.subscribe(RailViz.Main.setConnections);
+    // app.ports.mapHighlightConnections.subscribe(
+    //   RailViz.Main.highlightConnections
+    // );
 
-    app.ports.setTimeOffset.subscribe(RailViz.Main.setTimeOffset);
-    app.ports.setPPRSearchOptions.subscribe(RailViz.Main.setPPRSearchOptions);
+    // app.ports.setTimeOffset.subscribe(RailViz.Main.setTimeOffset);
+    // app.ports.setPPRSearchOptions.subscribe(RailViz.Main.setPPRSearchOptions);
 
-    app.ports.mapUseTrainClassColors.subscribe(
-      RailViz.Trains.setUseCategoryColor
-    );
-    app.ports.mapShowTrains.subscribe(RailViz.Main.showTrains);
-    app.ports.mapSetLocale.subscribe(RailViz.Markers.setLocale);
+    // app.ports.mapUseTrainClassColors.subscribe(
+    //   RailViz.Trains.setUseCategoryColor
+    // );
+    // app.ports.mapShowTrains.subscribe(RailViz.Main.showTrains);
+    // app.ports.mapSetLocale.subscribe(RailViz.Markers.setLocale);
   });
+  mapService.initialized = true
 }

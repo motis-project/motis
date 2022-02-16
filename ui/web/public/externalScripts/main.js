@@ -66,7 +66,7 @@
 
     window.elmMaps = {};
 
-    initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink);
+    initPorts(apiEndpoint, tilesEndpoint, initialPermalink);
     // handleDrop(document.getElementById("app-container"));
     // app.ports.localStorageSet.subscribe(function (kv) {
     //   localStorageSet(kv[0], kv[1]);
@@ -92,7 +92,7 @@ function handleDrop(element) {
           for (var j = 0; j < files.length; j++) {
             data[j] = [files[j].name, contents[j]];
           }
-          app.ports.setRoutingResponses.send(data);
+          // app.ports.setRoutingResponses.send(data);
         }
       };
     }
