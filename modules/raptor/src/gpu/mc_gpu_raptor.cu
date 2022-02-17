@@ -77,6 +77,14 @@ __device__ __forceinline__ unsigned get_last_departure_stop(
   return last;
 }
 
+__device__ __forceinline__ void reset_ea(time* ea, size_t const size) {
+  auto const t_id = get_global_thread_id();
+  auto const stride = get_global_stride();
+  for (auto idx = t_id; idx < size; idx += stride) {
+    ea[idx] = invalid<time>;
+  }
+}
+
 __device__ __forceinline__ stop_offset get_closest_departure_sti(
     unsigned const ballot, stop_offset const arr_offset,
     uint32_t current_stage = 0,
@@ -124,6 +132,7 @@ __device__ void mc_update_route_larger32(
     time const* const prev_arrivals, time* const arrivals,
     time* const earliest_arrivals, stop_id const target_stop_id,
     uint32_t* station_marks, device_gpu_timetable const& tt,
+    uint32_t* fp_marks, uint32_t const fp_offset,
     bool use_stop_satis,
     raptor_statistics* stats) {
 
@@ -294,6 +303,7 @@ __device__ void mc_update_route_larger32(
                 update_arrival(earliest_arrivals, write_to_arr_idx,
                                stop_arrival);
                 mark(station_marks, write_to_arr_idx);
+                unmark(fp_marks, fp_offset + write_to_arr_idx);
               }
             }
           }
@@ -352,6 +362,7 @@ __device__ void mc_update_route_smaller32(
     time const* const prev_arrivals, time* const arrivals,
     time* const earliest_arrivals, stop_id const target_stop_id,
     uint32_t* station_marks, device_gpu_timetable const& tt,
+    uint32_t* fp_marks, uint32_t const fp_offset,
     bool use_stop_satis,
     raptor_statistics* stats) {
 
@@ -452,6 +463,7 @@ __device__ void mc_update_route_smaller32(
 
             update_arrival(earliest_arrivals, write_to_idx, stop_arrival);
             mark(station_marks, write_to_idx);
+            unmark(fp_marks, fp_offset + write_to_idx);
           }
         }
       }
@@ -496,7 +508,8 @@ template <typename CriteriaConfig>
 __device__ void mc_update_footpaths_dev_scratch(
     time const* const read_arrivals, time* const write_arrivals,
     time* const earliest_arrivals, stop_id const target_stop_id,
-    uint32_t* station_marks, device_gpu_timetable const& tt) {
+    uint32_t* station_marks, device_gpu_timetable const& tt,
+    uint32_t* fp_marks, uint32_t const fp_offset) {
 
   auto const global_stride = get_global_stride();
 
@@ -517,7 +530,8 @@ __device__ void mc_update_footpaths_dev_scratch(
         CriteriaConfig::get_arrival_idx(footpath.to_, t_offset);
 
     time const from_arrival = read_arrivals[from_arrival_idx];
-    if (valid(from_arrival)) {
+    if (valid(from_arrival)
+        && !marked(fp_marks, fp_offset + from_arrival_idx)) {
       time const new_arrival = from_arrival + footpath.duration_;
 
       // this give potentially just an upper bound and not the real
@@ -533,6 +547,7 @@ __device__ void mc_update_footpaths_dev_scratch(
         if (updated) {
           update_arrival(earliest_arrivals, to_arrival_idx, new_arrival);
           mark(station_marks, to_arrival_idx);
+          mark(fp_marks, fp_offset + to_arrival_idx);
         }
       }
     }
@@ -599,6 +614,9 @@ __device__ void mc_update_routes_dev(device_memory const& device_mem,
   auto const start_idx = threadIdx.y + (blockDim.y * blockIdx.x);
 
   auto const trait_size = CriteriaConfig::TRAITS_SIZE;
+
+  auto const fp_offset = (round_k - 1) * trait_size * tt.stop_count_;
+
   auto const max_idx = tt.route_count_ * trait_size;
   for (auto idx = start_idx; idx < max_idx; idx += stride) {
     if (!marked(route_marks, idx)) {
@@ -612,11 +630,15 @@ __device__ void mc_update_routes_dev(device_memory const& device_mem,
     if (route.stop_count_ <= 32) {
       mc_update_route_smaller32<CriteriaConfig>(
           r_id, route, t_offset, prev_arrivals, arrivals, earliest_arrivals,
-          target_stop_id, station_marks, tt, use_stop_satis, device_mem.stats_);
+          target_stop_id, station_marks, tt,
+          device_mem.fp_marks_, fp_offset,
+          use_stop_satis, device_mem.stats_);
     } else {
       mc_update_route_larger32<CriteriaConfig>(
           r_id, route, t_offset, prev_arrivals, arrivals, earliest_arrivals,
-          target_stop_id, station_marks, tt, use_stop_satis, device_mem.stats_);
+          target_stop_id, station_marks, tt,
+          device_mem.fp_marks_, fp_offset,
+          use_stop_satis, device_mem.stats_);
     }
   }
 
@@ -671,9 +693,14 @@ __device__ void mc_update_footpaths_dev(device_memory const& device_mem,
                                           tt);
   this_grid().sync();
 
+  auto const fp_offset = (round_k - 1)
+                         * CriteriaConfig::TRAITS_SIZE
+                         * tt.stop_count_;
+
   mc_update_footpaths_dev_scratch<CriteriaConfig>(
       device_mem.footpaths_scratchpad_, arrivals, device_mem.earliest_arrivals_,
-      target_stop_id, device_mem.station_marks_, tt);
+      target_stop_id, device_mem.station_marks_, tt,
+      device_mem.fp_marks_, fp_offset);
   this_grid().sync();
 }
 
@@ -730,6 +757,11 @@ __global__ void mc_gpu_raptor_kernel(base_query const query,
                                      device_gpu_timetable const tt,
                                      bool use_arr_sweep,
                                      bool use_stop_satis) {
+  if(!query.ontrip_) {
+    reset_ea(device_mem.earliest_arrivals_, device_mem.arrival_times_count_);
+    this_grid().sync();
+  }
+
   auto const trait_size = CriteriaConfig::TRAITS_SIZE;
   auto const t_id = get_global_thread_id();
 
@@ -792,7 +824,6 @@ void invoke_mc_gpu_raptor(d_query const& dq) {
                 dq.mem_->context_, dq.mem_->context_.proc_stream_,
                 dq.criteria_config_);
   cuda_check();
-  fflush(stdout);
 
   cuda_sync_stream(dq.mem_->context_.proc_stream_);
   cuda_check();

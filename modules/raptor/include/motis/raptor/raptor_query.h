@@ -5,6 +5,7 @@
 #include "motis/raptor/criteria/configs.h"
 
 #include "motis/raptor/additional_start.h"
+#include "motis/raptor/cpu/mark_store.h"
 #include "motis/raptor/raptor_result.h"
 
 #if defined(MOTIS_CUDA)
@@ -54,7 +55,10 @@ struct raptor_query : public base_query {
         add_starts_{get_add_starts(meta_info, source_, use_start_footpaths_,
                                    use_start_metas_)},
         result_{std::make_unique<raptor_result>(tt_.stop_count(),
-                                                bq.criteria_config_)} {}
+                                                bq.criteria_config_)},
+        fp_times_(std::make_unique<cpu_mark_store>(
+            tt.stop_count() * (max_raptor_round - 1) *
+            get_trait_size_for_criteria_config(bq.criteria_config_))) {}
 
   ~raptor_query() = default;
 
@@ -63,14 +67,20 @@ struct raptor_query : public base_query {
   raptor_timetable const& tt_;
   std::vector<additional_start> add_starts_;
   std::unique_ptr<raptor_result> result_;
+
+  std::unique_ptr<cpu_mark_store> fp_times_;
 };
 
 #if defined(MOTIS_CUDA)
 struct d_query : public base_query {
   d_query() = delete;
   d_query(base_query const& bq, raptor_meta_info const& meta_info, mem* mem,
-          device_gpu_timetable const tt, bool use_arr_sweep, bool use_stop_satis)
-      : base_query{bq}, mem_{mem}, tt_{tt}, use_arr_sweep_{use_arr_sweep},
+          device_gpu_timetable const tt, bool use_arr_sweep,
+          bool use_stop_satis)
+      : base_query{bq},
+        mem_{mem},
+        tt_{tt},
+        use_arr_sweep_{use_arr_sweep},
         use_stop_satis_{use_stop_satis} {
 
     mem_->require_active(bq.criteria_config_);

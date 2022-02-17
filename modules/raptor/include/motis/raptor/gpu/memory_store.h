@@ -76,6 +76,7 @@ struct device_memory {
   size_t get_route_mark_bytes() const;
   size_t get_scratchpad_bytes() const;
   size_t get_additional_starts_bytes() const;
+  size_t get_fp_mark_bytes() const;
 
   void reset_async(cudaStream_t s);
 
@@ -96,6 +97,7 @@ struct device_memory {
   time* earliest_arrivals_{nullptr};
   additional_start* additional_starts_{nullptr};
   raptor_statistics* stats_{nullptr};
+  uint32_t* fp_marks_{nullptr};
 };
 
 struct mem {

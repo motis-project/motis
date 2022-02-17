@@ -16,4 +16,8 @@ void cpu_mark_store::reset() {
   std::fill(std::begin(marks_), std::end(marks_), false);
 }
 
+size_t cpu_mark_store::size() {
+  return marks_.size();
+}
+
 }  // namespace motis::raptor

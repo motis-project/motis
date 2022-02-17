@@ -14,6 +14,7 @@ struct cpu_mark_store {
   void unmark(mark_index index);
   bool marked(mark_index index) const;
   void reset();
+  size_t size();
 
 private:
   std::vector<bool> marks_;

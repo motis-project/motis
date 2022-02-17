@@ -131,6 +131,7 @@ device_memory::device_memory(stop_id const stop_count,
   cudaMalloc(&overall_station_marked_, sizeof(bool));
   cudaMalloc(&additional_starts_, get_additional_starts_bytes());
   cudaMalloc(&stats_, sizeof(raptor_statistics));
+  cudaMalloc(&fp_marks_, get_fp_mark_bytes());
   cuda_check();
 
   this->reset_async(nullptr);
@@ -146,6 +147,7 @@ void device_memory::destroy() {
   cudaFree(overall_station_marked_);
   cudaFree(additional_starts_);
   cudaFree(stats_);
+  cudaFree(fp_marks_);
 }
 
 size_t device_memory::get_result_bytes() const {
@@ -168,6 +170,10 @@ size_t device_memory::get_additional_starts_bytes() const {
   return max_add_starts_ * sizeof(additional_start);
 }
 
+size_t device_memory::get_fp_mark_bytes() const {
+  return (((arrival_times_count_ * (max_raptor_round-1)) / 32) + 1) * 4;
+}
+
 void device_memory::reset_async(cudaStream_t s) {
   cudaMemsetAsync(result_.front(), 0xFF, get_result_bytes(), s);
   cudaMemsetAsync(footpaths_scratchpad_, 0xFF, get_scratchpad_bytes(), s);
@@ -178,6 +184,7 @@ void device_memory::reset_async(cudaStream_t s) {
   cudaMemsetAsync(overall_station_marked_, 0, sizeof(bool), s);
   cudaMemsetAsync(additional_starts_, 0xFF, get_additional_starts_bytes(), s);
   cudaMemsetAsync(stats_, 0, sizeof(raptor_statistics), s);
+  cudaMemsetAsync(fp_marks_, 0, get_fp_mark_bytes(), s);
   additional_start_count_ = invalid<decltype(additional_start_count_)>;
 }
 

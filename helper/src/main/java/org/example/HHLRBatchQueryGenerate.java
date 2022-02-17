@@ -161,7 +161,8 @@ public class HHLRBatchQueryGenerate {
     Package[] packages;
 
     List<String> readQueryFile() {
-      var fileName = "q-" + dataset.toString().toLowerCase() + "-" + queryType.toString().toLowerCase() + "-" + largeStation + ".txt";
+//      var fileName = "q-" + dataset.toString().toLowerCase() + "-" + queryType.toString().toLowerCase() + "-" + largeStation + ".txt";
+      var fileName = "queries-set-mix-raptor_gpu-3.txt";
       var path = BASE_FLODER + fileName;
 
       System.out.print("Reading file '" + path + "' ...");
