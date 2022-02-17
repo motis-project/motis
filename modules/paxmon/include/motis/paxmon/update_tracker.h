@@ -34,6 +34,7 @@ struct update_tracker {
   void before_group_reused(passenger_group const*);
   void after_group_reused(passenger_group const*);
   void before_group_removed(passenger_group const*);
+  void before_trip_rerouted(trip const*);
 
 private:
   struct impl;

@@ -88,6 +88,10 @@ struct update_tracker::impl {
     }
   }
 
+  void before_trip_rerouted(trip const* trp) {
+    get_or_create_updated_trip_info(trp->trip_idx_);
+  }
+
   std::pair<motis::module::message_creator&, Offset<PaxMonTrackedUpdates>>
   finish_updates() {
     finish_trips();
@@ -350,6 +354,12 @@ void update_tracker::after_group_reused(passenger_group const* pg) {
 void update_tracker::before_group_removed(passenger_group const* pg) {
   if (impl_) {
     impl_->before_group_removed(pg);
+  }
+}
+
+void update_tracker::before_trip_rerouted(trip const* trp) {
+  if (impl_) {
+    impl_->before_trip_rerouted(trp);
   }
 }
 

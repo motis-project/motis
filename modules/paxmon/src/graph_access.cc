@@ -284,6 +284,7 @@ void update_trip_route(schedule const& sched, capacity_maps const& caps,
     return;
   }
   ++uv.system_stats_.update_trip_route_trip_edges_found_;
+  uv.update_tracker_.before_trip_rerouted(trp);
 
   auto const current_teks = to_trip_ev_keys(tdi, uv);
   auto const new_teks = to_trip_ev_keys(sched, *ru->new_route());
