@@ -1,6 +1,9 @@
 #include "motis/paxmon/update_tracker.h"
 
+#include <cmath>
 #include <cstdint>
+#include <algorithm>
+#include <tuple>
 #include <vector>
 
 #include "utl/get_or_create.h"
@@ -28,11 +31,22 @@ struct update_tracker::impl {
     float previous_probability_{};
   };
 
+  struct critical_trip_info {
+    int critical_sections_{};
+    int max_excess_pax_{};
+    int cumulative_excess_pax_{};
+  };
+
   struct updated_trip_info {
     Offset<Vector<Offset<PaxMonEdgeLoadInfo>>> before_edges_{};
     mcd::hash_set<passenger_group_index> added_groups_;
     mcd::hash_set<passenger_group_index> removed_groups_;
     mcd::hash_set<passenger_group_index> reused_groups_;
+    critical_trip_info before_cti_;
+    critical_trip_info after_cti_;
+    int critical_sections_diff_{};
+    int max_excess_pax_diff_{};
+    int cumulative_excess_pax_diff_{};
   };
 
   impl(universe const& uv, schedule const& sched,
@@ -76,11 +90,35 @@ struct update_tracker::impl {
 
   std::pair<motis::module::message_creator&, Offset<PaxMonTrackedUpdates>>
   finish_updates() {
+    finish_trips();
+
+    auto sorted_trips = utl::to_vec(updated_trip_infos_, [](auto const& entry) {
+      return std::pair{entry.first, &entry.second};
+    });
+
+    std::sort(begin(sorted_trips), end(sorted_trips),
+              [](auto const& lhs, auto const& rhs) {
+                updated_trip_info const* l = lhs.second;
+                updated_trip_info const* r = rhs.second;
+                return std::tie(l->max_excess_pax_diff_,
+                                l->cumulative_excess_pax_diff_,
+                                l->critical_sections_diff_,
+                                l->after_cti_.max_excess_pax_,
+                                l->after_cti_.cumulative_excess_pax_,
+                                l->after_cti_.critical_sections_) >
+                       std::tie(r->max_excess_pax_diff_,
+                                r->cumulative_excess_pax_diff_,
+                                r->critical_sections_diff_,
+                                r->after_cti_.max_excess_pax_,
+                                r->after_cti_.cumulative_excess_pax_,
+                                r->after_cti_.critical_sections_);
+              });
+
     auto const fb_updates = CreatePaxMonTrackedUpdates(
         mc_, added_groups_.size(), reused_groups_.size(),
         removed_groups_.size(), updated_trip_infos_.size(),
-        mc_.CreateVector(utl::to_vec(updated_trip_infos_, [&](auto& entry) {
-          return get_fbs_updated_trip(entry.first, entry.second);
+        mc_.CreateVector(utl::to_vec(sorted_trips, [&](auto& entry) {
+          return get_fbs_updated_trip(entry.first, *entry.second);
         })));
     return {mc_, fb_updates};
   }
@@ -89,9 +127,11 @@ private:
   updated_trip_info& get_or_create_updated_trip_info(trip_idx_t const ti) {
     return utl::get_or_create(updated_trip_infos_, ti, [&]() {
       auto uti = updated_trip_info{};
+      auto const tli = calc_trip_load_info(uv_, get_trip(sched_, ti));
       uti.before_edges_ = include_before_trip_load_info_
-                              ? get_fbs_trip_load_info(ti)
+                              ? get_fbs_trip_load_info(tli)
                               : get_empty_fbs_trip_load_info();
+      uti.before_cti_ = get_critical_trip_info(tli);
       return uti;
     });
   }
@@ -106,9 +146,52 @@ private:
     }
   }
 
+  void finish_trips() {
+    for (auto& [ti, uti] : updated_trip_infos_) {
+      uti.after_cti_ = get_critical_trip_info(
+          calc_trip_load_info(uv_, get_trip(sched_, ti)));
+      uti.critical_sections_diff_ =
+          std::abs(uti.before_cti_.critical_sections_ -
+                   uti.after_cti_.critical_sections_);
+      uti.max_excess_pax_diff_ = std::abs(uti.before_cti_.max_excess_pax_ -
+                                          uti.after_cti_.max_excess_pax_);
+      uti.cumulative_excess_pax_diff_ =
+          std::abs(uti.before_cti_.cumulative_excess_pax_ -
+                   uti.after_cti_.cumulative_excess_pax_);
+    }
+  }
+
+  critical_trip_info get_critical_trip_info(trip_load_info const& tli) {
+    critical_trip_info cti;
+    cti.critical_sections_ = 0;
+    cti.cumulative_excess_pax_ = 0;
+    cti.max_excess_pax_ = 0;
+    for (auto const& eli : tli.edges_) {
+      if (!eli.edge_->has_capacity()) {
+        continue;
+      }
+      if (eli.possibly_over_capacity_) {
+        ++cti.critical_sections_;
+      }
+      auto const capacity = eli.edge_->capacity();
+      auto const max_pax = eli.forecast_cdf_.data_.size();
+      if (max_pax > capacity) {
+        auto const excess_pax = static_cast<int>(max_pax - capacity);
+        cti.cumulative_excess_pax_ += excess_pax;
+        cti.max_excess_pax_ = std::max(cti.max_excess_pax_, excess_pax);
+      }
+    }
+    return cti;
+  }
+
   Offset<Vector<Offset<PaxMonEdgeLoadInfo>>> get_fbs_trip_load_info(
       trip_idx_t const ti) {
-    auto const tli = calc_trip_load_info(uv_, get_trip(sched_, ti));
+    return get_fbs_trip_load_info(
+        calc_trip_load_info(uv_, get_trip(sched_, ti)));
+  }
+
+  Offset<Vector<Offset<PaxMonEdgeLoadInfo>>> get_fbs_trip_load_info(
+      trip_load_info const& tli) {
     return mc_.CreateVector(utl::to_vec(tli.edges_, [&](auto const& eli) {
       return to_fbs(mc_, sched_, uv_, eli);
     }));
@@ -154,6 +237,8 @@ private:
     return CreatePaxMonUpdatedTrip(
         mc_, to_fbs_trip_service_info(mc_, sched_, trp), removed_max_pax,
         removed_mean_pax, added_max_pax, added_mean_pax,
+        get_fbs_critical_trip_info(uti.before_cti_),
+        get_fbs_critical_trip_info(uti.after_cti_),
         mc_.CreateVectorOfStructs(
             utl::to_vec(uti.removed_groups_,
                         [&](passenger_group_index const pgi) {
@@ -184,6 +269,13 @@ private:
     auto const& pgbi = group_infos_.at(pgi);
     return PaxMonReusedGroupBaseInfo{pgi, pgbi.pax_, pgbi.probability_,
                                      pgbi.previous_probability_};
+  }
+
+  Offset<PaxMonCriticalTripInfo> get_fbs_critical_trip_info(
+      critical_trip_info const& cti) {
+    return CreatePaxMonCriticalTripInfo(mc_, cti.critical_sections_,
+                                        cti.max_excess_pax_,
+                                        cti.cumulative_excess_pax_);
   }
 
   universe const& uv_;

@@ -21,6 +21,12 @@ table PaxMonUpdatedGroup {
 }
 */
 
+table PaxMonCriticalTripInfo {
+  critical_sections: uint;
+  max_excess_pax: uint;
+  cumulative_excess_pax: uint;
+}
+
 table PaxMonUpdatedTrip {
   tsi: motis.TripServiceInfo;
 
@@ -28,6 +34,9 @@ table PaxMonUpdatedTrip {
   removed_mean_pax: float;
   added_max_pax: uint;
   added_mean_pax: float;
+
+  critical_info_before: PaxMonCriticalTripInfo;
+  critical_info_after: PaxMonCriticalTripInfo;
 
   removed_groups: [PaxMonGroupBaseInfo];
   added_groups: [PaxMonGroupBaseInfo];

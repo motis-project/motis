@@ -322,12 +322,21 @@ export interface PaxMonReusedGroupBaseInfo {
 }
 
 // paxmon/PaxMonTrackedUpdates.fbs
+export interface PaxMonCriticalTripInfo {
+  critical_sections: number;
+  max_excess_pax: number;
+  cumulative_excess_pax: number;
+}
+
+// paxmon/PaxMonTrackedUpdates.fbs
 export interface PaxMonUpdatedTrip {
   tsi: TripServiceInfo;
   removed_max_pax: number;
   removed_mean_pax: number;
   added_max_pax: number;
   added_mean_pax: number;
+  critical_info_before: PaxMonCriticalTripInfo;
+  critical_info_after: PaxMonCriticalTripInfo;
   removed_groups: PaxMonGroupBaseInfo[];
   added_groups: PaxMonGroupBaseInfo[];
   reused_groups: PaxMonReusedGroupBaseInfo[];

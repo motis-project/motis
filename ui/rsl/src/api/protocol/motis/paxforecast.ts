@@ -85,6 +85,7 @@ export interface PaxForecastApplyMeasuresStatistics {
   t_add_alternatives_to_graph: number;
   t_behavior_simulation: number;
   t_update_groups: number;
+  t_update_tracker: number;
 }
 
 // paxforecast/PaxForecastApplyMeasuresResponse.fbs

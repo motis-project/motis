@@ -613,6 +613,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
   auto t_add_alternatives_to_graph = 0.;
   auto t_behavior_simulation = 0.;
   auto t_update_groups = 0.;
+  auto t_update_tracker = 0.;
 
   // simulate passenger behavior with measures
   for (auto const& [t, ms] : measures) {
@@ -736,7 +737,11 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
     t_update_groups += update_groups_timer.duration_ms();
   }
 
+  manual_timer update_tracker_timer{"update tracker"};
   auto [mc, fb_updates] = uv.update_tracker_.finish_updates();
+  update_tracker_timer.stop_and_print();
+  t_update_tracker = update_tracker_timer.duration_ms();
+
   mc.create_and_finish(
       MsgContent_PaxForecastApplyMeasuresResponse,
       CreatePaxForecastApplyMeasuresResponse(
@@ -746,7 +751,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
               total_affected_groups, total_alternative_routings,
               total_alternatives_found, t_rt_updates, t_get_affected_groups,
               t_find_alternatives, t_add_alternatives_to_graph,
-              t_behavior_simulation, t_update_groups),
+              t_behavior_simulation, t_update_groups, t_update_tracker),
           fb_updates)
           .Union());
   return make_msg(mc);
