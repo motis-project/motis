@@ -1,5 +1,7 @@
 #include "motis/paxmon/api/add_groups.h"
 
+#include <algorithm>
+
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
@@ -31,6 +33,10 @@ msg_ptr add_groups(paxmon_data& data, bool const allow_reuse,
         utl::verify(pg_fbs->planned_journey()->legs()->size() != 0,
                     "trying to add empty passenger group");
         auto input_pg = from_fbs(sched, pg_fbs);
+        input_pg.probability_ = std::clamp(input_pg.probability_, 0.F, 1.F);
+        if (input_pg.probability_ == 0.F) {
+          LOG(warn) << "adding passenger group with 0 probability";
+        }
         if (allow_reuse) {
           if (auto it =
                   uv.passenger_groups_.groups_by_source_.find(input_pg.source_);
@@ -40,7 +46,8 @@ msg_ptr add_groups(paxmon_data& data, bool const allow_reuse,
               if (existing_pg != nullptr && existing_pg->valid() &&
                   existing_pg->compact_planned_journey_ ==
                       input_pg.compact_planned_journey_) {
-                existing_pg->probability_ += input_pg.probability_;
+                existing_pg->probability_ = std::min(
+                    1.F, existing_pg->probability_ + input_pg.probability_);
                 ++reused_groups;
                 return existing_pg;
               }

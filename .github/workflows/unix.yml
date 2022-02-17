@@ -76,29 +76,44 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - name: macos-avx2
+          - name: macos-x86_64
             cxx: clang++
             cc: clang
             mode: Release
             cxxflags: -stdlib=libc++
             os: macos-latest
-            artifact: macos
+            cross: -DCMAKE_OSX_ARCHITECTURES="x86_64"
+            artifact: macos-x86_64
             avx: On
             avx2: On
             webui: On
             tests: Off
             mimalloc: Off
-          - name: macos-noavx2
+          - name: macos-x86_64-noavx
             cxx: clang++
             cc: clang
             mode: Release
+            cross: -DCMAKE_OSX_ARCHITECTURES="x86_64"
             cxxflags: -stdlib=libc++
             os: macos-latest
-            artifact: macos-noavx2
+            artifact: macos-x86_64-noavx2
             avx: On
             avx2: Off
             webui: On
             tests: On
+            mimalloc: Off
+          - name: macos-arm64
+            cxx: clang++
+            cc: clang
+            mode: Release
+            cross: -DCMAKE_OSX_ARCHITECTURES="arm64" -DBOOST_CONTEXT_ARCHITECTURE="arm64" -DBOOST_CONTEXT_ABI="aapcs" -DENABLE_ASM=Off
+            cxxflags: -stdlib=libc++
+            os: macos-latest
+            artifact: macos-arm64
+            avx: Off
+            avx2: Off
+            webui: On
+            tests: Off
             mimalloc: Off
           - name: linux-amd64-debug
             cxx: g++-10
@@ -398,7 +413,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - artifact: macos-noavx2
+          - artifact: macos-x86_64-noavx2
             os: macos-latest
           - artifact: linux-amd64
             os: ubuntu-20.04
