@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
+import moment from 'moment';
+
 import { DatePicker } from './DatePicker';
 import { Mode, IntermodalRoutingRequest, IntermodalRoutingResponse, IntermodalPretripStartInfo, PretripStartInfo } from './IntermodalRoutingTypes';
 import { Connection, Station } from './ConnectionTypes';
@@ -7,7 +9,7 @@ import { Translations } from './Localization';
 import { Address } from './SuggestionTypes';
 import { SearchInputField } from './SearchInputField';
 import { Modepicker } from './ModePicker';
-import { getFromLocalStorage } from './LocalStorage'
+import { getFromLocalStorage } from './LocalStorage';
 
 
 const getRoutingOptions = (startType: string, startModes: Mode[], start: Station | Address, searchType: string, searchDirection: string, destinationType: string, destinationModes: Mode[], destination: Station | Address ) => {
@@ -57,10 +59,10 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     
 
     // Current Date
-    const [currentDate, setCurrentDate] = useState<Date>(new Date());
+    const [currentDate, setCurrentDate] = useState(moment());
     
     // SearchTime
-    const [searchTime, setSearchTime] = useState<Date>(new Date());
+    const [searchTime, setSearchTime] = useState<string>(currentDate.format('HH:mm'));
     
     // SearchType
     const [searchType, setSearchType] = useState<string>('Accessibility');
@@ -139,14 +141,19 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                         <div className='gb-input-group'>
                             <div className='gb-input-icon'><i className='icon'>schedule</i></div>
                             <input
-                                className='gb-input' tabIndex={4} /> {/*value={searchTime.getHours() + ':' + ('0' + searchTime.getMinutes()).slice(-2)} />*/}
+                                className='gb-input' 
+                                tabIndex={4} 
+                                value={searchTime}
+                                onChange={(e) => {
+                                    setSearchTime(e.currentTarget.value);
+                                }}/>
                             <div className='gb-input-widget'>
                                 <div className='hour-buttons'>
                                     <div><a
-                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => setSearchTime(addHours(searchTime, -1))}><i
+                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => {setCurrentDate(currentDate.subtract(1, 'h')); setSearchTime(currentDate.format('HH:mm'))}}><i
                                                 className='icon'>chevron_left</i></a></div>
                                     <div><a
-                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => setSearchTime(addHours(searchTime, 1))}><i
+                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => {setCurrentDate(currentDate.add(1, 'h')); setSearchTime(currentDate.format('HH:mm'))}}><i
                                                 className='icon'>chevron_right</i></a></div>
                                 </div>
                             </div>

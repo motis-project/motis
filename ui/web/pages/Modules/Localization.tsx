@@ -12,6 +12,8 @@ export interface Translations {
         , start : String
         , destination : String
         , date : String
+        , weekDays : String[]
+        , months : String[]
         , time : String
         , startTransports : String
         , destinationTransports : String
@@ -138,6 +140,8 @@ export const deTranslations: Translations = {
             , start : 'Start'
             , destination : 'Ziel'
             , date : 'Datum'
+            , weekDays : ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+            , months : ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
             , time : 'Uhrzeit'
             , startTransports : 'Verkehrsmittel am Start'
             , destinationTransports : 'Verkehrsmittel am Ziel'
@@ -258,6 +262,8 @@ export const enTranslations: Translations = {
             , start : 'Start'
             , destination : 'Destination'
             , date : 'Date'
+            , weekDays : ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+            , months : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
             , time : 'Time'
             , startTransports : 'Transports at the start'
             , destinationTransports : 'Transports at the destination'
@@ -377,6 +383,8 @@ export const plTranslations: Translations = {
         , start : 'Początek'
         , destination : 'Koniec'
         , date : 'Data'
+        , weekDays : ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nie']
+        , months : ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień']
         , time : 'Godzina'
         , startTransports : 'Środki transportu na początku'
         , destinationTransports : 'Środki transportu na końcu'

@@ -50,9 +50,7 @@ export const MapContainer: React.FC<{'translation': Translations}> = (props) => 
                         <label htmlFor="sim-mode-checkbox">Simulationsmodus</label>
                     </div>
                     <div className="date">
-                        <div>
-                            <DatePicker translation={props.translation}/>
-                        </div>
+                        <DatePicker translation={props.translation}/>
                     </div>
                     <div className="time">
                         <div>

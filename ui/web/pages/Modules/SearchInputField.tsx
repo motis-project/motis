@@ -61,6 +61,7 @@ const getPostRequest = (body: any) => {
 
 export const SearchInputField: React.FC<{ 'translation': Translations, 'label': String, 'searchQuery': boolean, 'setSearchQuery': React.Dispatch<React.SetStateAction<boolean>>, 'station': Station | Address, 'setSearchDisplay': React.Dispatch<React.SetStateAction<Station | Address>>, 'localStorageStation': string }> = (props) => {
     
+    const inputFieldRef = React.useRef(null);
 
     // Type
     const [type, setType] = useState<string>('PretripStart');
@@ -115,7 +116,7 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
                     <div className='gb-input-icon'>
                         <i className='icon'>place</i>
                         </div>
-                <input  className='gb-input' tabIndex={1} value={name} 
+                <input  className='gb-input' tabIndex={1} value={name} ref={inputFieldRef} 
                         onChange={e => {
                             //e.preventDefault();
                             setName(e.currentTarget.value)
@@ -124,9 +125,6 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
                                 setShowSuggestions(true);
                             }
                         } }
-                        onClick={_ => {
-                            setShowSuggestions(true);
-                        }}
                         onKeyDown={e => {
                             switch (e.key) {
                                 case 'Enter':
@@ -167,7 +165,8 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
                             setSuggestion={setStation} 
                             setShowSuggestions={setShowSuggestions}
                             setHighlighted={setSelectedSuggestion}
-                            localStorageStation={props.localStorageStation}/>
+                            localStorageStation={props.localStorageStation}
+                            inputFieldRef={inputFieldRef}/>
             </div>
         </div>
     )

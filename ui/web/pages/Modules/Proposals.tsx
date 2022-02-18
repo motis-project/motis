@@ -11,13 +11,14 @@ const getDisplayRegions = (regions: Region[]) => {
 }
 
 
-function useOutsideAlerter(ref: React.MutableRefObject<any>, setShowSuggestions: React.Dispatch<React.SetStateAction<boolean>>) {
+function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: React.MutableRefObject<any>, setShowSuggestions: React.Dispatch<React.SetStateAction<boolean>>) {
     React.useEffect(() => {
         /**
          * Alert if clicked on outside of element
          */
         function handleClickOutside(event) {
-            if (ref.current && !ref.current.contains(event.target)) {
+            if (ref.current && !ref.current.contains(event.target) && 
+                inputFieldRef.current && !inputFieldRef.current.contains(event.target)) {
                 setShowSuggestions(false);
             }
         }
@@ -81,11 +82,11 @@ const AddressSuggestion: React.FC<{'address': Address, 'setName': React.Dispatch
 }
 
 
-export const Proposals: React.FC<{'addresses': Address[], 'stations': Station[], 'suggestions': (Address | Station) [], 'highlighted': number, 'showSuggestions': boolean, 'setName': React.Dispatch<React.SetStateAction<string>>, 'setSuggestion': React.Dispatch<React.SetStateAction<Station | Address>>, 'setShowSuggestions': React.Dispatch<React.SetStateAction<boolean>>, 'setHighlighted': React.Dispatch<React.SetStateAction<number>>, 'localStorageStation': string}> = (props) => {
+export const Proposals: React.FC<{'addresses': Address[], 'stations': Station[], 'suggestions': (Address | Station) [], 'highlighted': number, 'showSuggestions': boolean, 'setName': React.Dispatch<React.SetStateAction<string>>, 'setSuggestion': React.Dispatch<React.SetStateAction<Station | Address>>, 'setShowSuggestions': React.Dispatch<React.SetStateAction<boolean>>, 'setHighlighted': React.Dispatch<React.SetStateAction<number>>, 'localStorageStation': string, 'inputFieldRef': React.MutableRefObject<any>}> = (props) => {
 
     const suggestionsRef = React.useRef(null);
 
-    useOutsideAlerter(suggestionsRef, props.setShowSuggestions);
+    useOutsideAlerter(suggestionsRef, props.inputFieldRef, props.setShowSuggestions);
 
     return (
         <div className="proposals" ref={suggestionsRef}>
