@@ -19,6 +19,7 @@ import {
 } from "@/data/measures";
 import {
   SimulationResult,
+  selectedSimResultAtom,
   simResultsAtom,
   universeAtom,
 } from "@/data/simulation";
@@ -187,6 +188,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
     currentEditorMeasureAtom
   );
   const setSimResults = useUpdateAtom(simResultsAtom);
+  const setSelectedSimResult = useUpdateAtom(selectedSimResultAtom);
   const renderCount = useRenderCount();
 
   const applyMeasuresMutation = useMutation(
@@ -212,9 +214,11 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
           measures: variables,
           response: data,
         };
+        const resultAtom = atom(result);
         setSimResults((prev) => {
-          return [...prev, atom(result)];
+          return [...prev, resultAtom];
         });
+        setSelectedSimResult(resultAtom);
         await queryClient.invalidateQueries(queryKeys.trip());
         onSimulationFinished();
       },

@@ -2,12 +2,16 @@ import { Listbox, Transition } from "@headlessui/react";
 import { CheckIcon, SelectorIcon } from "@heroicons/react/solid";
 import { differenceInMilliseconds } from "date-fns";
 import { PrimitiveAtom, useAtom } from "jotai";
-import { Fragment, memo, useState } from "react";
+import { Fragment, memo } from "react";
 import { Virtuoso } from "react-virtuoso";
 
 import { PaxMonUpdatedTrip } from "@/api/protocol/motis/paxmon";
 
-import { SimulationResult, simResultsAtom } from "@/data/simulation";
+import {
+  SimulationResult,
+  selectedSimResultAtom,
+  simResultsAtom,
+} from "@/data/simulation";
 
 import classNames from "@/util/classNames";
 import { formatDateTime } from "@/util/dateFormat";
@@ -33,26 +37,25 @@ function SimResultsListEntry({
   );
 }
 
-type SimResultsListProps = {
-  selectedSim: PrimitiveAtom<SimulationResult> | undefined;
-  onSelectSim: (sim: PrimitiveAtom<SimulationResult>) => void;
-};
-
-function SimResultsList({
-  selectedSim,
-  onSelectSim,
-}: SimResultsListProps): JSX.Element {
+function SimResultsList(): JSX.Element {
   const [simResultsList] = useAtom(simResultsAtom);
+  const [selectedSimResult, setSelectedSimResult] = useAtom(
+    selectedSimResultAtom
+  );
 
   return (
     <div>
       <div className="">
-        <Listbox value={selectedSim} onChange={onSelectSim}>
+        <Listbox value={selectedSimResult} onChange={setSelectedSimResult}>
           <div className="relative mt-1">
             <Listbox.Button className="relative w-full py-2 pl-3 pr-10 text-left bg-white rounded-lg shadow-md cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-opacity-75 focus-visible:ring-white focus-visible:ring-offset-orange-300 focus-visible:ring-offset-2 focus-visible:border-indigo-500 sm:text-sm">
               <span className="block truncate">
-                {selectedSim && (
-                  <SimResultsListEntry simResultAtom={selectedSim} />
+                {selectedSimResult ? (
+                  <SimResultsListEntry simResultAtom={selectedSimResult} />
+                ) : (
+                  <span className="text-db-cool-gray-700">
+                    Simulation auswählen...
+                  </span>
                 )}
               </span>
               <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
@@ -206,13 +209,14 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
 }
 
 function SimResultsPanel(): JSX.Element {
-  const [selectedSim, setSelectedSim] =
-    useState<PrimitiveAtom<SimulationResult>>();
+  const [selectedSimResult] = useAtom(selectedSimResultAtom);
 
   return (
     <div className="h-full flex flex-col">
-      <SimResultsList selectedSim={selectedSim} onSelectSim={setSelectedSim} />
-      {selectedSim ? <SimResultDetails simResultAtom={selectedSim} /> : null}
+      <SimResultsList />
+      {selectedSimResult ? (
+        <SimResultDetails simResultAtom={selectedSimResult} />
+      ) : null}
     </div>
   );
 }
