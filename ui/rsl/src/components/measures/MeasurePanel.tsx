@@ -40,7 +40,7 @@ function MeasurePanel({
   );
 
   return (
-    <div className="pb-5">
+    <div className="pb-5 pr-2">
       <div>MeasurePanel Render Count: {renderCount}</div>
       {currentMeasureAtom ? (
         <MeasureEditor

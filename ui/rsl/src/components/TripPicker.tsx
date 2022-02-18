@@ -134,7 +134,7 @@ function TripPicker({
         {...getMenuProps()}
         className={`${
           isOpen && tripList.length > 0 ? "" : "hidden"
-        } absolute w-96 z-50 top-12 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none p-2`}
+        } absolute w-64 z-50 top-12 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none p-2`}
       >
         {isOpen &&
           tripList.map((item, index) => (

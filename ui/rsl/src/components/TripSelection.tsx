@@ -28,7 +28,7 @@ function TripSelection({ onTripSelected }: TripSelectionProps): JSX.Element {
           onTripPicked={addTrip}
           clearOnPick={true}
           longDistanceOnly={false}
-          className="w-96"
+          className="w-64"
         />
       </div>
       <div className="flex flex-col gap-4">
