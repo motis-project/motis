@@ -213,9 +213,9 @@ function TripSectionEditor({
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div>TripSectionEditor Render Count: {renderCount}</div>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 divide-y-2 divide-db-cool-gray-300 divide-dashed">
         {allowReroute ? (
-          <div>
+          <div className="py-1 flex justify-center">
             <button
               type="button"
               className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
@@ -237,9 +237,9 @@ function TripSectionEditor({
           const hasDeparture = !isLastStop || fields.length === 1;
 
           return (
-            <div key={field.id} className="bg-db-cool-gray-300">
+            <div key={field.id} className="pt-4">
               <label>
-                <span>Station:</span>
+                <span className="text-lg">Station:</span>
                 {allowReroute ? (
                   <Controller
                     control={control}
@@ -286,8 +286,8 @@ function TripSectionEditor({
                 )}
               </fieldset>
               {hasArrival && (
-                <div>
-                  <div>Ankunft:</div>
+                <div className="mt-3">
+                  <div className="text-lg">Ankunft:</div>
                   <EventEditor
                     register={register}
                     control={control}
@@ -298,8 +298,8 @@ function TripSectionEditor({
                 </div>
               )}
               {hasDeparture && (
-                <div>
-                  <div>Abfahrt:</div>
+                <div className="mt-3">
+                  <div className="text-lg">Abfahrt:</div>
                   <EventEditor
                     register={register}
                     control={control}
@@ -310,7 +310,7 @@ function TripSectionEditor({
                 </div>
               )}
               {hasDeparture && (
-                <div className="flex flex-row gap-2">
+                <div className="mt-3 flex flex-row gap-2">
                   <label>
                     <span>Gattung:</span>
                     <input
@@ -344,7 +344,7 @@ function TripSectionEditor({
               )}
               {allowReroute && (
                 <>
-                  <div>
+                  <div className="py-4 flex justify-center gap-4">
                     <button
                       type="button"
                       className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
@@ -352,8 +352,6 @@ function TripSectionEditor({
                     >
                       Halt entfernen
                     </button>
-                  </div>
-                  <div>
                     <button
                       type="button"
                       className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
@@ -369,12 +367,14 @@ function TripSectionEditor({
             </div>
           );
         })}
-        <button
-          type="submit"
-          className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white rounded"
-        >
-          Maßnahme speichern
-        </button>
+        <div className="pt-5 flex flex-col">
+          <button
+            type="submit"
+            className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white rounded"
+          >
+            Maßnahme speichern
+          </button>
+        </div>
       </div>
     </form>
   );
@@ -399,7 +399,7 @@ function EventEditor({
     <>
       <div>
         <span>Planmäßig:</span>
-        <div className="flex gap-2">
+        <div className="ml-3 flex gap-2">
           <label className="flex-1">
             <span>
               {eventType == "arrival" ? "Abfahrtszeit" : "Ankunftszeit"}
@@ -431,46 +431,50 @@ function EventEditor({
       </div>
       <div>
         <span>Echtzeit:</span>
-        <div>
-          <select
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-            {...register(`stops.${index}.${eventType}.reason` as const, {
-              required: true,
-            })}
-          >
-            {rtReasons.map((r) => (
-              <option key={r.reason} value={r.reason}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex gap-2">
-          <label className="flex-1">
-            <span>
-              {eventType == "arrival" ? "Abfahrtszeit" : "Ankunftszeit"}
-            </span>
-            <Controller
-              control={control}
-              name={`stops.${index}.${eventType}.currentTime` as const}
-              render={({ field }) => (
-                <TimeInput
-                  {...field}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                />
-              )}
-              rules={{ required: true }}
-            />
-          </label>
-          <label className="flex-1">
-            <span>Gleis</span>
-            <input
-              type="text"
+        <div className="ml-3">
+          <div>
+            <select
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-              readOnly={!allowReroute}
-              {...register(`stops.${index}.${eventType}.currentTrack` as const)}
-            />
-          </label>
+              {...register(`stops.${index}.${eventType}.reason` as const, {
+                required: true,
+              })}
+            >
+              {rtReasons.map((r) => (
+                <option key={r.reason} value={r.reason}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <label className="flex-1">
+              <span>
+                {eventType == "arrival" ? "Abfahrtszeit" : "Ankunftszeit"}
+              </span>
+              <Controller
+                control={control}
+                name={`stops.${index}.${eventType}.currentTime` as const}
+                render={({ field }) => (
+                  <TimeInput
+                    {...field}
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                  />
+                )}
+                rules={{ required: true }}
+              />
+            </label>
+            <label className="flex-1">
+              <span>Gleis</span>
+              <input
+                type="text"
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                readOnly={!allowReroute}
+                {...register(
+                  `stops.${index}.${eventType}.currentTrack` as const
+                )}
+              />
+            </label>
+          </div>
         </div>
       </div>
     </>

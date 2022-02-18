@@ -46,7 +46,7 @@ function CriticalTripList({
                 Kritische Abschnitte: {ti.critical_sections}/{ti.section_count}{" "}
               </div>
               <div>
-                Reisende über Kapazität: {ti.max_excess_pax} maximal,{" "}
+                Reisende über Kapazität: {ti.max_excess_pax} max.,{" "}
                 {ti.cumulative_excess_pax} gesamt
               </div>
             </div>
