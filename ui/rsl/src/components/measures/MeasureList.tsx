@@ -304,6 +304,13 @@ function MeasureList() {
           Noch keine Maßnahmen hinzugefügt.
         </div>
       )}
+      {universe === 0 && (
+        <div>
+          Für die Simulation von Maßnahmen muss zuerst ein Paralleluniversum
+          angelegt und ausgewählt werden. Die Simulation von Maßnahmen im
+          Hauptuniversum ist nicht möglich.
+        </div>
+      )}
       <div>
         <button
           onClick={applyMeasures}

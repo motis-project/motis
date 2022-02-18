@@ -1,7 +1,7 @@
 import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
 import { useUpdateAtom } from "jotai/utils";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { MeasureUnion } from "@/data/measures";
 
@@ -11,6 +11,7 @@ import RtUpdateMeasureEditor from "@/components/measures/RtUpdateMeasureEditor";
 import SharedDataEditor from "@/components/measures/SharedDataEditor";
 import TripLoadInfoMeasureEditor from "@/components/measures/TripLoadInfoMeasureEditor";
 import TripRecommendationMeasureEditor from "@/components/measures/TripRecommendationMeasureEditor";
+import ModalDialog from "@/components/util/ModalDialog";
 
 export type MeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;
@@ -29,18 +30,24 @@ function MeasureEditor({
   );
   const [measureType] = useAtom(typeAtom);
   const setMeasure = useUpdateAtom(measureAtom);
+  const [changeTypeDialogOpen, setChangeTypeDialogOpen] = useState(false);
   const renderCount = useRenderCount();
+
+  const onChangeTypeDialogClose = (cancel: boolean) => {
+    if (!cancel) {
+      setMeasure((m) => {
+        return { type: "Empty", shared: m.shared };
+      });
+    }
+    setChangeTypeDialogOpen(false);
+  };
 
   const measureEditor = (e: JSX.Element) => (
     <div>
       <div className="flex justify-between">
         <span className="text-xl">Maßnahme bearbeiten [RC: {renderCount}]</span>
         <button
-          onClick={() =>
-            setMeasure((m) => {
-              return { type: "Empty", shared: m.shared };
-            })
-          }
+          onClick={() => setChangeTypeDialogOpen(true)}
           className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"
         >
           Typ ändern
@@ -48,6 +55,16 @@ function MeasureEditor({
       </div>
       <SharedDataEditor measureAtom={measureAtom} />
       {e}
+      <ModalDialog
+        isOpen={changeTypeDialogOpen}
+        onClose={onChangeTypeDialogClose}
+        title={"Maßnahmentyp ändern"}
+        cancelButton={"Abbrechen"}
+        okButton={"OK"}
+      >
+        Wirklich den Maßnahmentyp ändern? Dabei gehen alle bisherigen
+        Einstellungen der Maßnahme verloren.
+      </ModalDialog>
     </div>
   );
 

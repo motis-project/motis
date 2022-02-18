@@ -36,7 +36,7 @@ function App(): JSX.Element {
         </div>
 
         <div className="flex justify-between items-stretch overflow-y-auto grow">
-          <div className="bg-db-cool-gray-200 w-[32rem] overflow-y-auto p-2">
+          <div className="bg-db-cool-gray-200 w-[24rem] overflow-y-auto p-2">
             <TripSelection onTripSelected={setSelectedTrip} />
           </div>
           <div className="overflow-y-auto grow p-2">
