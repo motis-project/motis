@@ -21,6 +21,7 @@ struct config {
   bool instant_forward_{false};
   bool gtfs_is_addition_skip_allowed_{true};
   amqp::login rabbitmq_;
+  unsigned update_interval_{60};
 };
 
 struct ris : public motis::module::module {
