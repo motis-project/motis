@@ -8,8 +8,6 @@ import {
   measuresAtom,
 } from "@/data/measures";
 
-import useRenderCount from "@/util/useRenderCount";
-
 import MeasureEditor from "@/components/measures/MeasureEditor";
 import MeasureList from "@/components/measures/MeasureList";
 
@@ -24,7 +22,6 @@ function MeasurePanel({
   const [currentMeasureAtom, setCurrentMeasureAtom] = useAtom(
     currentEditorMeasureAtom
   );
-  const renderCount = useRenderCount();
 
   const deleteMeasure = useCallback(
     (measureAtom: PrimitiveAtom<MeasureUnion>) => {
@@ -41,7 +38,6 @@ function MeasurePanel({
 
   return (
     <div className="pb-5 pr-2">
-      <div>MeasurePanel Render Count: {renderCount}</div>
       {currentMeasureAtom ? (
         <MeasureEditor
           measureAtom={currentMeasureAtom}

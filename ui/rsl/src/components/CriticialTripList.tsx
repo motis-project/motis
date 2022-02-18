@@ -4,6 +4,7 @@ import { TripId } from "@/api/protocol/motis";
 
 import { usePaxMonFilterTripsRequest } from "@/api/paxmon";
 
+import { formatNumber } from "@/data/numberFormat";
 import { universeAtom } from "@/data/simulation";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
@@ -46,8 +47,8 @@ function CriticalTripList({
                 Kritische Abschnitte: {ti.critical_sections}/{ti.section_count}{" "}
               </div>
               <div>
-                Reisende über Kapazität: {ti.max_excess_pax} max.,{" "}
-                {ti.cumulative_excess_pax} gesamt
+                Reisende über Kapazität: {formatNumber(ti.max_excess_pax)} max.,{" "}
+                {formatNumber(ti.cumulative_excess_pax)} gesamt
               </div>
             </div>
           </div>
@@ -55,8 +56,9 @@ function CriticalTripList({
       </div>
       {data.total_matching_trips > data.filtered_trips ? (
         <div>
-          ...und {data.total_matching_trips - data.filtered_trips} weitere
-          kritische Züge ({data.total_matching_trips} insgesamt)
+          ...und {formatNumber(data.total_matching_trips - data.filtered_trips)}{" "}
+          weitere kritische Züge ({formatNumber(data.total_matching_trips)}{" "}
+          insgesamt)
         </div>
       ) : null}
     </div>

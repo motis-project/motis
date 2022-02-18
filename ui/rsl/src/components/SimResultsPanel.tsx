@@ -7,6 +7,7 @@ import { Virtuoso } from "react-virtuoso";
 
 import { PaxMonUpdatedTrip } from "@/api/protocol/motis/paxmon";
 
+import { formatMiliseconds, formatNumber } from "@/data/numberFormat";
 import {
   SimulationResult,
   selectedSimResultAtom,
@@ -137,21 +138,20 @@ function SimResultDetails({
   });
 
   const runtimeStats = [
-    [r.stats.t_rt_updates, "Einspielen der Echtzeitupdates"],
-    [r.stats.t_get_affected_groups, "Bestimmung betroffener Gruppen"],
-    [r.stats.t_find_alternatives, "Alternativensuche"],
-    [r.stats.t_behavior_simulation, "Verhaltenssimulation"],
-    [r.stats.t_update_groups, "Aktualisierung der Reisendengruppen"],
-    [r.stats.t_update_tracker, "Statistiken zu Änderungen"],
+    { duration: r.stats.t_rt_updates, label: "Einspielen der Echtzeitupdates" },
+    {
+      duration: r.stats.t_get_affected_groups,
+      label: "Bestimmung betroffener Gruppen",
+    },
+    { duration: r.stats.t_find_alternatives, label: "Alternativensuche" },
+    { duration: r.stats.t_behavior_simulation, label: "Verhaltenssimulation" },
+    {
+      duration: r.stats.t_update_groups,
+      label: "Aktualisierung der Reisendengruppen",
+    },
+    { duration: r.stats.t_update_tracker, label: "Statistiken zu Änderungen" },
   ]
-    .map(
-      ([duration, label]) =>
-        `${duration.toLocaleString("de-DE", {
-          style: "unit",
-          unit: "millisecond",
-          maximumFractionDigits: 0,
-        })} ${label}`
-    )
+    .map(({ duration, label }) => `${formatMiliseconds(duration)} ${label}`)
     .join("\n");
 
   return (
@@ -161,32 +161,20 @@ function SimResultDetails({
         <ul>
           <li>
             Betroffene Reisendengruppen:{" "}
-            {r.stats.total_affected_groups.toLocaleString("de-DE")}
+            {formatNumber(r.stats.total_affected_groups)}
           </li>
           <li>
             Alternativensuchen:{" "}
-            {r.stats.total_alternative_routings.toLocaleString("de-DE")} (
-            {r.stats.total_alternatives_found.toLocaleString("de-DE")}{" "}
-            Ergebnisse,{" "}
-            {r.stats.t_find_alternatives.toLocaleString("de-DE", {
-              style: "unit",
-              unit: "millisecond",
-              maximumFractionDigits: 0,
-            })}
-            )
+            {formatNumber(r.stats.total_alternative_routings)} (
+            {formatNumber(r.stats.total_alternatives_found)} Ergebnisse,{" "}
+            {formatMiliseconds(r.stats.t_find_alternatives)})
           </li>
           <li title={runtimeStats}>
-            Simulationsdauer insgesamt:{" "}
-            {duration.toLocaleString("de-DE", {
-              style: "unit",
-              unit: "millisecond",
-              maximumFractionDigits: 0,
-            })}
+            Simulationsdauer insgesamt: {formatMiliseconds(duration)}
           </li>
         </ul>
         <div className="my-3 text-lg font-semibold">
-          {r.updates.updated_trip_count.toLocaleString("de-DE")} betroffene
-          Züge:
+          {formatNumber(r.updates.updated_trip_count)} betroffene Züge:
         </div>
       </div>
       <div className="grow">
