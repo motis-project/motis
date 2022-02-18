@@ -15,7 +15,6 @@ import {
 
 import classNames from "@/util/classNames";
 import { formatDateTime } from "@/util/dateFormat";
-import useRenderCount from "@/util/useRenderCount";
 
 import MiniTripLoadGraph from "@/components/MiniTripLoadGraph";
 import TripServiceInfoView from "@/components/TripServiceInfoView";
@@ -45,73 +44,71 @@ function SimResultsList(): JSX.Element {
 
   return (
     <div>
-      <div className="">
-        <Listbox value={selectedSimResult} onChange={setSelectedSimResult}>
-          <div className="relative mt-1">
-            <Listbox.Button className="relative w-full py-2 pl-3 pr-10 text-left bg-white rounded-lg shadow-md cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-opacity-75 focus-visible:ring-white focus-visible:ring-offset-orange-300 focus-visible:ring-offset-2 focus-visible:border-indigo-500 sm:text-sm">
-              <span className="block truncate">
-                {selectedSimResult ? (
-                  <SimResultsListEntry simResultAtom={selectedSimResult} />
-                ) : (
-                  <span className="text-db-cool-gray-700">
-                    Simulation auswählen...
-                  </span>
-                )}
-              </span>
-              <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                <SelectorIcon
-                  className="w-5 h-5 text-gray-400"
-                  aria-hidden="true"
-                />
-              </span>
-            </Listbox.Button>
-            <Transition
-              as={Fragment}
-              leave="transition ease-in duration-100"
-              leaveFrom="opacity-100"
-              leaveTo="opacity-0"
-            >
-              <Listbox.Options className="absolute w-full py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg max-h-60 ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                {simResultsList.map((resultAtom, resultIdx) => (
-                  <Listbox.Option
-                    key={resultIdx}
-                    className={({ active }) =>
-                      classNames(
-                        "cursor-default select-none relative py-2 pl-10 pr-4",
-                        active ? "text-amber-900 bg-amber-100" : "text-gray-900"
-                      )
-                    }
-                    value={resultAtom}
-                  >
-                    {({ selected, active }) => (
-                      <>
+      <Listbox value={selectedSimResult} onChange={setSelectedSimResult}>
+        <div className="relative mt-1">
+          <Listbox.Button className="relative w-full py-2 pl-3 pr-10 text-left bg-white rounded-lg shadow-md cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-opacity-75 focus-visible:ring-white focus-visible:ring-offset-orange-300 focus-visible:ring-offset-2 focus-visible:border-indigo-500 sm:text-sm">
+            <span className="block truncate">
+              {selectedSimResult ? (
+                <SimResultsListEntry simResultAtom={selectedSimResult} />
+              ) : (
+                <span className="text-db-cool-gray-700">
+                  Simulation auswählen...
+                </span>
+              )}
+            </span>
+            <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+              <SelectorIcon
+                className="w-5 h-5 text-gray-400"
+                aria-hidden="true"
+              />
+            </span>
+          </Listbox.Button>
+          <Transition
+            as={Fragment}
+            leave="transition ease-in duration-100"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <Listbox.Options className="absolute w-full py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg max-h-60 ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+              {simResultsList.map((resultAtom, resultIdx) => (
+                <Listbox.Option
+                  key={resultIdx}
+                  className={({ active }) =>
+                    classNames(
+                      "cursor-default select-none relative py-2 pl-10 pr-4",
+                      active ? "text-amber-900 bg-amber-100" : "text-gray-900"
+                    )
+                  }
+                  value={resultAtom}
+                >
+                  {({ selected, active }) => (
+                    <>
+                      <span
+                        className={classNames(
+                          "block truncate",
+                          selected ? "font-medium" : "font-normal"
+                        )}
+                      >
+                        <SimResultsListEntry simResultAtom={resultAtom} />
+                      </span>
+                      {selected ? (
                         <span
                           className={classNames(
-                            "block truncate",
-                            selected ? "font-medium" : "font-normal"
+                            "absolute inset-y-0 left-0 flex items-center pl-3",
+                            active ? "text-amber-600" : "text-amber-600"
                           )}
                         >
-                          <SimResultsListEntry simResultAtom={resultAtom} />
+                          <CheckIcon className="w-5 h-5" aria-hidden="true" />
                         </span>
-                        {selected ? (
-                          <span
-                            className={classNames(
-                              "absolute inset-y-0 left-0 flex items-center pl-3",
-                              active ? "text-amber-600" : "text-amber-600"
-                            )}
-                          >
-                            <CheckIcon className="w-5 h-5" aria-hidden="true" />
-                          </span>
-                        ) : null}
-                      </>
-                    )}
-                  </Listbox.Option>
-                ))}
-              </Listbox.Options>
-            </Transition>
-          </div>
-        </Listbox>
-      </div>
+                      ) : null}
+                    </>
+                  )}
+                </Listbox.Option>
+              ))}
+            </Listbox.Options>
+          </Transition>
+        </div>
+      </Listbox>
     </div>
   );
 }
@@ -124,7 +121,6 @@ function SimResultDetails({
   simResultAtom,
 }: SimResultDetailsProps): JSX.Element {
   const [simResult] = useAtom(simResultAtom);
-  const renderCount = useRenderCount();
 
   const r = simResult.response;
   const duration = differenceInMilliseconds(
@@ -140,28 +136,58 @@ function SimResultDetails({
     return <UpdatedTrip ut={r.updates.updated_trips[index]} />;
   });
 
+  const runtimeStats = [
+    [r.stats.t_rt_updates, "Einspielen der Echtzeitupdates"],
+    [r.stats.t_get_affected_groups, "Bestimmung betroffener Gruppen"],
+    [r.stats.t_find_alternatives, "Alternativensuche"],
+    [r.stats.t_behavior_simulation, "Verhaltenssimulation"],
+    [r.stats.t_update_groups, "Aktualisierung der Reisendengruppen"],
+    [r.stats.t_update_tracker, "Statistiken zu Änderungen"],
+  ]
+    .map(
+      ([duration, label]) =>
+        `${duration.toLocaleString("de-DE", {
+          style: "unit",
+          unit: "millisecond",
+          maximumFractionDigits: 0,
+        })} ${label}`
+    )
+    .join("\n");
+
   return (
     <>
       <div>
-        <div>SimResultDetails Render Count: {renderCount}</div>
-        <div className="my-4 text-lg font-semibold">Statistiken:</div>
+        <div className="my-3 text-lg font-semibold">Statistiken:</div>
         <ul>
           <li>
-            Anzahl Maßnahmen: {r.stats.total_measures_applied} (
-            {r.stats.measure_time_points} Zeitpunkte)
+            Betroffene Reisendengruppen:{" "}
+            {r.stats.total_affected_groups.toLocaleString("de-DE")}
           </li>
-          <li>Betroffene Gruppen: {r.stats.total_affected_groups}</li>
           <li>
-            Alternativensuchen: {r.stats.total_alternative_routings} (
-            {r.stats.total_alternatives_found} Ergebnisse)
+            Alternativensuchen:{" "}
+            {r.stats.total_alternative_routings.toLocaleString("de-DE")} (
+            {r.stats.total_alternatives_found.toLocaleString("de-DE")}{" "}
+            Ergebnisse,{" "}
+            {r.stats.t_find_alternatives.toLocaleString("de-DE", {
+              style: "unit",
+              unit: "millisecond",
+              maximumFractionDigits: 0,
+            })}
+            )
           </li>
-          <li>Simulationsdauer: {duration} ms</li>
-          <li>Gruppen entfernt: {r.updates.removed_group_count}</li>
-          <li>Gruppen hinzugefügt: {r.updates.added_group_count}</li>
-          <li>Gruppen wiederverwendet: {r.updates.reused_group_count}</li>
-          <li>Trips aktualisiert: {r.updates.updated_trip_count}</li>
+          <li title={runtimeStats}>
+            Simulationsdauer insgesamt:{" "}
+            {duration.toLocaleString("de-DE", {
+              style: "unit",
+              unit: "millisecond",
+              maximumFractionDigits: 0,
+            })}
+          </li>
         </ul>
-        <div className="my-4 text-lg font-semibold">Betroffene Züge:</div>
+        <div className="my-3 text-lg font-semibold">
+          {r.updates.updated_trip_count.toLocaleString("de-DE")} betroffene
+          Züge:
+        </div>
       </div>
       <div className="grow">
         <Virtuoso
@@ -182,26 +208,25 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
   return (
     <div className="flex flex-col gap-2 py-3 pr-2">
       <TripServiceInfoView tsi={ut.tsi} format="Long" />
-      <div>
-        Entfernt: {Math.round(ut.removed_mean_pax)} avg / {ut.removed_max_pax}{" "}
-        max Reisende
-        <br />
-        Hinzugefügt: {Math.round(ut.added_mean_pax)} avg / {ut.added_max_pax}{" "}
-        max Reisende
-        <br />
-        Kritische Abschnitte: {ut.critical_info_before.critical_sections}
-        {" → "}
-        {ut.critical_info_after.critical_sections}
-        <br />
-        Max. Reisende über Kapazität: {ut.critical_info_before.max_excess_pax}
-        {" → "}
-        {ut.critical_info_after.max_excess_pax}
-        <br />
-        Kum. Reisende über Kapazität:{" "}
-        {ut.critical_info_before.cumulative_excess_pax} {" → "}
-        {ut.critical_info_after.cumulative_excess_pax}
-        <br />
-      </div>
+      <ul>
+        <li>
+          Reisende über Kapazität: {ut.critical_info_before.max_excess_pax}
+          {" → "}
+          {ut.critical_info_after.max_excess_pax} max. /{" "}
+          {ut.critical_info_before.cumulative_excess_pax} {" → "}
+          {ut.critical_info_after.cumulative_excess_pax} gesamt
+        </li>
+        <li>
+          Kritische Abschnitte: {ut.critical_info_before.critical_sections}
+          {" → "}
+          {ut.critical_info_after.critical_sections}
+        </li>
+        <li>
+          Reisende: Avg: -{Math.round(ut.removed_mean_pax)} +
+          {Math.round(ut.added_mean_pax)} / Max: -{ut.removed_max_pax} +
+          {ut.added_max_pax}
+        </li>
+      </ul>
       <MiniTripLoadGraph edges={ut.before_edges} />
       <MiniTripLoadGraph edges={ut.after_edges} />
     </div>
