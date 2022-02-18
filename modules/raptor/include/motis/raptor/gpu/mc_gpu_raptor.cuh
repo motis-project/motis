@@ -22,8 +22,7 @@ template <typename CriteriaConfig>
 __device__ void mc_update_routes_dev(device_memory const&,
                                      raptor_round,
                                      stop_id,
-                                     device_gpu_timetable const&,
-                                     bool use_stop_satis);
+                                     device_gpu_timetable const&);
 
 template <typename CriteriaConfig>
 __device__ void mc_update_footpaths_dev(device_memory const&,

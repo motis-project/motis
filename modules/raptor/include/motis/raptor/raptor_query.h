@@ -75,13 +75,10 @@ struct raptor_query : public base_query {
 struct d_query : public base_query {
   d_query() = delete;
   d_query(base_query const& bq, raptor_meta_info const& meta_info, mem* mem,
-          device_gpu_timetable const tt, bool use_arr_sweep,
-          bool use_stop_satis)
+          device_gpu_timetable const tt)
       : base_query{bq},
         mem_{mem},
-        tt_{tt},
-        use_arr_sweep_{use_arr_sweep},
-        use_stop_satis_{use_stop_satis} {
+        tt_{tt} {
 
     mem_->require_active(bq.criteria_config_);
 
@@ -102,9 +99,6 @@ struct d_query : public base_query {
 
   mem* mem_;
   device_gpu_timetable tt_;
-
-  bool use_arr_sweep_;
-  bool use_stop_satis_;
 };
 #endif
 

@@ -12,7 +12,7 @@ public class HHLRBatchQueryGenerate {
   static String BASE_FLODER = "./batch_base/";
 
   public static void main(String[] args) throws IOException {
-    String outname = "q-hhlr-swiss-ontrip-false-repeat-";
+    String outname = "q-hhlr-hafas-pretrip-true-";
     System.out.println("Writing to " + outname);
 
     for (var queryFile : config) {
@@ -50,7 +50,7 @@ public class HHLRBatchQueryGenerate {
   }
 
   static QueryFile[] config = new QueryFile[]{
-    new QueryFile(Dataset.swiss, QueryType.OntripStationStart, false, new Package[]{
+//    new QueryFile(Dataset.swiss, QueryType.OntripStationStart, false, new Package[]{
 //      new Package(
 //        new Config[]{
 //          new Config(Targets.raptor_gpu, SearchType.Default),
@@ -114,36 +114,113 @@ public class HHLRBatchQueryGenerate {
 //      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.Tso96)}),
 
 
-      //HAFAS CPU
+    //HAFAS CPU
 //      new Package(new Config[]{new Config(Targets.routing, SearchType.Default),}),
 //      new Package(new Config[]{new Config(Targets.routing, SearchType.MaxOccupancy),}),
 //      new Package(new Config[]{new Config(Targets.routing, SearchType.TimeSlottedOccupancy),}),
 //      new Package(new Config[]{new Config(Targets.routing, SearchType.MaxTransferClass)}),
 //      new Package(new Config[]{new Config(Targets.raptor_cpu, SearchType.MaxTransferClass)})
 
-      //SWISS GPU continuity runs
+    //SWISS GPU continuity runs
+//      new Package(
+//        new Config[] {
+//          new Config(Targets.raptor_gpu, SearchType.Tso20),
+//          new Config(Targets.raptor_gpu, SearchType.Tso24),
+//          new Config(Targets.raptor_gpu, SearchType.Tso30),
+//          new Config(Targets.raptor_gpu, SearchType.Tso32),
+//          new Config(Targets.raptor_gpu, SearchType.Tso36),
+//          new Config(Targets.raptor_gpu, SearchType.Tso40),
+//          new Config(Targets.raptor_gpu, SearchType.Tso45),
+//          new Config(Targets.raptor_gpu, SearchType.Tso48),
+//          new Config(Targets.raptor_gpu, SearchType.Tso60),
+//          new Config(Targets.raptor_gpu, SearchType.Tso64),
+//          new Config(Targets.raptor_gpu, SearchType.Tso72),
+//          new Config(Targets.raptor_gpu, SearchType.Tso80),
+//          new Config(Targets.raptor_gpu, SearchType.Tso90),
+//          new Config(Targets.raptor_gpu, SearchType.Tso96),
+//        }
+//      )
+
+//    });
+
+    new QueryFile(Dataset.hafas, QueryType.PretripStart, true, new Package[]{
       new Package(
-        new Config[] {
+        new Config[]{
+          new Config(Targets.raptor_cpu, SearchType.Default),
+          new Config(Targets.raptor_cpu, SearchType.MaxOccupancy),
+          new Config(Targets.raptor_cpu, SearchType.MaxTransferClass),
+          new Config(Targets.raptor_cpu, SearchType.Tso20),
+          new Config(Targets.raptor_cpu, SearchType.Tso24),
+          new Config(Targets.raptor_cpu, SearchType.Tso30),
+          new Config(Targets.raptor_cpu, SearchType.Tso32),
+          new Config(Targets.raptor_cpu, SearchType.Tso36),
+        }),
+      new Package(
+        new Config[]{
+          new Config(Targets.raptor_cpu, SearchType.Tso96),
+          new Config(Targets.raptor_cpu, SearchType.Tso60),
+          new Config(Targets.raptor_cpu, SearchType.Tso40),
+        }
+      ),
+      new Package(
+        new Config[]{
+          new Config(Targets.raptor_cpu, SearchType.Tso90),
+          new Config(Targets.raptor_cpu, SearchType.Tso64),
+          new Config(Targets.raptor_cpu, SearchType.Tso45),
+        }
+      ),
+      new Package(
+        new Config[]{
+          new Config(Targets.raptor_cpu, SearchType.Tso80),
+          new Config(Targets.raptor_cpu, SearchType.Tso72),
+          new Config(Targets.raptor_cpu, SearchType.Tso48),
+        }
+      ),
+
+      new Package(
+        new Config[]{
+          new Config(Targets.raptor_gpu, SearchType.Default),
+          new Config(Targets.raptor_gpu, SearchType.MaxOccupancy),
+          new Config(Targets.raptor_gpu, SearchType.MaxTransferClass),
           new Config(Targets.raptor_gpu, SearchType.Tso20),
           new Config(Targets.raptor_gpu, SearchType.Tso24),
           new Config(Targets.raptor_gpu, SearchType.Tso30),
           new Config(Targets.raptor_gpu, SearchType.Tso32),
           new Config(Targets.raptor_gpu, SearchType.Tso36),
-          new Config(Targets.raptor_gpu, SearchType.Tso40),
-          new Config(Targets.raptor_gpu, SearchType.Tso45),
-          new Config(Targets.raptor_gpu, SearchType.Tso48),
-          new Config(Targets.raptor_gpu, SearchType.Tso60),
-          new Config(Targets.raptor_gpu, SearchType.Tso64),
-          new Config(Targets.raptor_gpu, SearchType.Tso72),
-          new Config(Targets.raptor_gpu, SearchType.Tso80),
-          new Config(Targets.raptor_gpu, SearchType.Tso90),
+        }),
+      new Package(
+        new Config[]{
           new Config(Targets.raptor_gpu, SearchType.Tso96),
+          new Config(Targets.raptor_gpu, SearchType.Tso60),
+          new Config(Targets.raptor_gpu, SearchType.Tso40),
+        }
+      ),
+      new Package(
+        new Config[]{
+          new Config(Targets.raptor_gpu, SearchType.Tso90),
+          new Config(Targets.raptor_gpu, SearchType.Tso64),
+          new Config(Targets.raptor_gpu, SearchType.Tso45),
+        }
+      ),
+      new Package(
+        new Config[]{
+          new Config(Targets.raptor_gpu, SearchType.Tso80),
+          new Config(Targets.raptor_gpu, SearchType.Tso72),
+          new Config(Targets.raptor_gpu, SearchType.Tso48),
+        }
+      ),
+
+      new Package(
+        new Config[]{
+          new Config(Targets.routing, SearchType.Default),
+          new Config(Targets.routing, SearchType.MaxOccupancy),
+          new Config(Targets.routing, SearchType.MaxTransferClass),
+          new Config(Targets.routing, SearchType.TimeSlottedOccupancy),
         }
       )
-
     })
-
   };
+
 
   static class QueryFile {
 
@@ -161,8 +238,8 @@ public class HHLRBatchQueryGenerate {
     Package[] packages;
 
     List<String> readQueryFile() {
-//      var fileName = "q-" + dataset.toString().toLowerCase() + "-" + queryType.toString().toLowerCase() + "-" + largeStation + ".txt";
-      var fileName = "queries-set-mix-raptor_gpu-3.txt";
+      var fileName = "q-" + dataset.toString().toLowerCase() + "-" + queryType.toString().toLowerCase() + "-" + largeStation + ".txt";
+//      var fileName = "queries-set-mix-raptor_gpu-3.txt";
       var path = BASE_FLODER + fileName;
 
       System.out.print("Reading file '" + path + "' ...");

@@ -24,8 +24,7 @@ __global__ void mc_update_routes_kernel(device_memory const device_mem,
                                         raptor_round round_k,
                                         stop_id const target_stop_id,
                                         device_gpu_timetable const tt) {
-  mc_update_routes_dev<CriteriaConfig>(device_mem, round_k, target_stop_id, tt,
-                                       true);
+  mc_update_routes_dev<CriteriaConfig>(device_mem, round_k, target_stop_id, tt);
 }
 
 template <typename CriteriaConfig>
