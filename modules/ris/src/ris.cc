@@ -174,34 +174,37 @@ struct ris::impl {
                             buffer = std::vector<amqp::msg>{}](
                                amqp::msg const& m) mutable {
       buffer.emplace_back(m);
+
       if (auto const n = now(); (n - last) > config_.update_interval_) {
         return;
+      } else {
+        last = n;
+
+        auto msgs_copy = buffer;
+        buffer.clear();
+
+        d->enqueue(
+            ctx_data{d},
+            [this, sched, msgs = std::move(msgs_copy)]() {
+              publisher pub;
+              pub.schedule_res_id_ =
+                  to_res_id(::motis::module::global_res_id::SCHEDULE);
+
+              for (auto const& m : msgs) {
+                parse_str_and_write_to_db(
+                    *file_upload_, {m.content_.c_str(), m.content_.size()},
+                    file_type::JSON, pub);
+              }
+
+              sched->system_time_ = pub.max_timestamp_;
+              sched->last_update_timestamp_ = std::time(nullptr);
+              publish_system_time_changed(pub.schedule_res_id_);
+            },
+            ctx::op_id{"ribasis_receive", CTX_LOCATION, 0U}, ctx::op_type_t::IO,
+            ctx::accesses_t{ctx::access_request{
+                to_res_id(::motis::module::global_res_id::SCHEDULE),
+                ctx::access_t::WRITE}});
       }
-
-      auto msgs_copy = buffer;
-      buffer.clear();
-
-      d->enqueue(
-          ctx_data{d},
-          [this, sched, msgs = std::move(msgs_copy)]() {
-            publisher pub;
-            pub.schedule_res_id_ =
-                to_res_id(::motis::module::global_res_id::SCHEDULE);
-
-            for (auto const& m : msgs) {
-              parse_str_and_write_to_db(*file_upload_,
-                                        {m.content_.c_str(), m.content_.size()},
-                                        file_type::JSON, pub);
-            }
-
-            sched->system_time_ = pub.max_timestamp_;
-            sched->last_update_timestamp_ = std::time(nullptr);
-            publish_system_time_changed(pub.schedule_res_id_);
-          },
-          ctx::op_id{"ribasis_receive", CTX_LOCATION, 0U}, ctx::op_type_t::IO,
-          ctx::accesses_t{ctx::access_request{
-              to_res_id(::motis::module::global_res_id::SCHEDULE),
-              ctx::access_t::WRITE}});
     });
   }
 
@@ -875,7 +878,7 @@ ris::ris() : module("RIS", "ris") {
   param(config_.gtfs_is_addition_skip_allowed_,
         "gtfsrt.is_addition_skip_allowed", "allow skips on additional trips");
   param(config_.update_interval_, "update_interval",
-        "RT update interval (RabbitMQ messages get buffered)");
+        "RT update interval in seconds (RabbitMQ messages get buffered)");
   param(config_.rabbitmq_.host_, "rabbitmq.host", "RabbitMQ remote host");
   param(config_.rabbitmq_.port_, "rabbitmq.port", "RabbitMQ remote port");
   param(config_.rabbitmq_.user_, "rabbitmq.user", "RabbitMQ username");
