@@ -165,7 +165,7 @@ private:
     }
   }
 
-  critical_trip_info get_critical_trip_info(trip_load_info const& tli) {
+  static critical_trip_info get_critical_trip_info(trip_load_info const& tli) {
     critical_trip_info cti;
     cti.critical_sections_ = 0;
     cti.cumulative_excess_pax_ = 0;
