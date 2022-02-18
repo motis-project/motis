@@ -3,25 +3,26 @@ import { useAtom } from "jotai";
 import { useRef } from "react";
 import { useQuery, useQueryClient } from "react-query";
 
+import { TripId } from "@/api/protocol/motis";
+
 import {
   queryKeys,
   sendPaxMonTripLoadInfosRequest,
   usePaxMonStatusQuery,
-} from "../api/paxmon";
-import { TripId } from "../api/protocol/motis";
+} from "@/api/paxmon";
 
 import {
   PaxMonEdgeLoadInfoWithStats,
   PaxMonTripLoadInfoWithStats,
-} from "../data/loadInfo";
-import { universeAtom } from "../data/simulation";
+} from "@/data/loadInfo";
+import { universeAtom } from "@/data/simulation";
 
 import {
   formatFileNameTime,
   formatLongDateTime,
   formatTime,
-} from "../util/dateFormat";
-import { addEdgeStatistics } from "../util/statistics";
+} from "@/util/dateFormat";
+import { addEdgeStatistics } from "@/util/statistics";
 
 function getSvgLinePath(
   edges: PaxMonEdgeLoadInfoWithStats[],

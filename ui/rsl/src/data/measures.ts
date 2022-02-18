@@ -1,11 +1,11 @@
 import { PrimitiveAtom, atom } from "jotai";
 import { v4 as uuidv4 } from "uuid";
 
-import { Station, TripServiceInfo } from "../api/protocol/motis";
-import { LoadLevel, MeasureWrapper } from "../api/protocol/motis/paxforecast";
-import { RiBasisFahrt, RiBasisFahrtData } from "../api/protocol/motis/ribasis";
+import { Station, TripServiceInfo } from "@/api/protocol/motis";
+import { LoadLevel, MeasureWrapper } from "@/api/protocol/motis/paxforecast";
+import { RiBasisFahrt, RiBasisFahrtData } from "@/api/protocol/motis/ribasis";
 
-import { formatRiBasisDateTime } from "../util/dateFormat";
+import { formatRiBasisDateTime } from "@/util/dateFormat";
 
 export interface MeasureRecipientsData {
   trips: TripServiceInfo[];

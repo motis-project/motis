@@ -3,15 +3,15 @@ import { PrimitiveAtom, useAtom } from "jotai";
 import { memo, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
 
-import { PaxMonUpdatedTrip } from "../api/protocol/motis/paxmon";
+import { PaxMonUpdatedTrip } from "@/api/protocol/motis/paxmon";
 
-import { SimulationResult, simResultsAtom } from "../data/simulation";
+import { SimulationResult, simResultsAtom } from "@/data/simulation";
 
-import { formatDateTime } from "../util/dateFormat";
-import useRenderCount from "../util/useRenderCount";
+import { formatDateTime } from "@/util/dateFormat";
+import useRenderCount from "@/util/useRenderCount";
 
-import MiniTripLoadGraph from "./MiniTripLoadGraph";
-import TripServiceInfoView from "./TripServiceInfoView";
+import MiniTripLoadGraph from "@/components/MiniTripLoadGraph";
+import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 type SimResultsListEntryProps = {
   simResultAtom: PrimitiveAtom<SimulationResult>;

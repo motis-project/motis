@@ -6,12 +6,12 @@ import {
   MeasureUnion,
   currentEditorMeasureAtom,
   measuresAtom,
-} from "../../data/measures";
+} from "@/data/measures";
 
-import useRenderCount from "../../util/useRenderCount";
+import useRenderCount from "@/util/useRenderCount";
 
-import MeasureEditor from "./MeasureEditor";
-import MeasureList from "./MeasureList";
+import MeasureEditor from "@/components/measures/MeasureEditor";
+import MeasureList from "@/components/measures/MeasureList";
 
 function MeasurePanel(): JSX.Element {
   const setMeasureAtoms = useUpdateAtom(measuresAtom);

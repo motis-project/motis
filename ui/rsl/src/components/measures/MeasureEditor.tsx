@@ -3,14 +3,14 @@ import { focusAtom } from "jotai/optics";
 import { useUpdateAtom } from "jotai/utils";
 import { useMemo } from "react";
 
-import { MeasureUnion } from "../../data/measures";
+import { MeasureUnion } from "@/data/measures";
 
-import useRenderCount from "../../util/useRenderCount";
+import useRenderCount from "@/util/useRenderCount";
 
-import RtUpdateMeasureEditor from "./RtUpdateMeasureEditor";
-import SharedDataEditor from "./SharedDataEditor";
-import TripLoadInfoMeasureEditor from "./TripLoadInfoMeasureEditor";
-import TripRecommendationMeasureEditor from "./TripRecommendationMeasureEditor";
+import RtUpdateMeasureEditor from "@/components/measures/RtUpdateMeasureEditor";
+import SharedDataEditor from "@/components/measures/SharedDataEditor";
+import TripLoadInfoMeasureEditor from "@/components/measures/TripLoadInfoMeasureEditor";
+import TripRecommendationMeasureEditor from "@/components/measures/TripRecommendationMeasureEditor";
 
 export type MeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;

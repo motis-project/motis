@@ -5,9 +5,9 @@ import { useIsMutating, useMutation } from "react-query";
 import {
   sendPaxMonDestroyUniverseRequest,
   sendPaxMonForkUniverseRequest,
-} from "../api/paxmon";
+} from "@/api/paxmon";
 
-import { scheduleAtom, universeAtom } from "../data/simulation";
+import { scheduleAtom, universeAtom } from "@/data/simulation";
 
 type Universe = {
   universe: number;

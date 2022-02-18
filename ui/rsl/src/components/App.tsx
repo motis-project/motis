@@ -2,16 +2,16 @@ import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { ReactQueryDevtools } from "react-query/devtools";
 
-import { TripId } from "../api/protocol/motis";
+import { TripId } from "@/api/protocol/motis";
 
-import getQueryParameters from "../util/queryParameters";
+import getQueryParameters from "@/util/queryParameters";
 
-import SimResultsPanel from "./SimResultsPanel";
-import TimeControl from "./TimeControl";
-import TripDetails from "./TripDetails";
-import TripSelection from "./TripSelection";
-import UniverseControl from "./UniverseControl";
-import MeasurePanel from "./measures/MeasurePanel";
+import SimResultsPanel from "@/components/SimResultsPanel";
+import TimeControl from "@/components/TimeControl";
+import TripDetails from "@/components/TripDetails";
+import TripSelection from "@/components/TripSelection";
+import UniverseControl from "@/components/UniverseControl";
+import MeasurePanel from "@/components/measures/MeasurePanel";
 
 const queryClient = new QueryClient({
   defaultOptions: {

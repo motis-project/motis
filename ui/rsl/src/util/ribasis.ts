@@ -1,13 +1,13 @@
 import { v4 as uuidv4 } from "uuid";
 
-import { Station } from "../api/protocol/motis";
+import { Station } from "@/api/protocol/motis";
 import {
   RiBasisFahrtData,
   RiBasisGattung,
   RiBasisHaltestelle,
   RiBasisLinie,
   RiBasisVerwaltung,
-} from "../api/protocol/motis/ribasis";
+} from "@/api/protocol/motis/ribasis";
 
 export function getRiBasisGattung(
   data: RiBasisFahrtData,

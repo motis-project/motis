@@ -1,4 +1,4 @@
-import { Message, MsgContentType } from "./motis";
+import { Message, MsgContentType } from "@/api/protocol/motis";
 
 export function verifyContentType(
   msg: Message,

@@ -1,6 +1,6 @@
-import { PaxMonEdgeLoadInfo } from "../api/protocol/motis/paxmon";
+import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
 
-import { paxQuantile } from "../util/statistics";
+import { paxQuantile } from "@/util/statistics";
 
 export type MiniTripLoadGraphProps = {
   edges: PaxMonEdgeLoadInfo[];

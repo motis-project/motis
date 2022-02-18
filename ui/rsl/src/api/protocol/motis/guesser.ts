@@ -1,5 +1,5 @@
 // generated file - do not modify - run update-protocol to update
-import { Station } from "../motis";
+import { Station } from "@/api/protocol/motis";
 
 // guesser/StationGuesserRequest.fbs
 export interface StationGuesserRequest {

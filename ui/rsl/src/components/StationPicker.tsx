@@ -2,8 +2,9 @@ import { ChevronDownIcon } from "@heroicons/react/solid";
 import { useCombobox } from "downshift";
 import { useState } from "react";
 
-import { useStationGuesserQuery } from "../api/guesser";
-import { Station } from "../api/protocol/motis";
+import { Station } from "@/api/protocol/motis";
+
+import { useStationGuesserQuery } from "@/api/guesser";
 
 type StationPickerProps = {
   onStationPicked: (station: Station | undefined) => void;

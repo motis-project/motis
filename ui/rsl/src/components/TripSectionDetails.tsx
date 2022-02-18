@@ -1,18 +1,19 @@
 import { useAtom } from "jotai";
 import { useState } from "react";
 
-import { usePaxMonGroupsInTripQuery } from "../api/paxmon";
-import { TripId } from "../api/protocol/motis";
+import { TripId } from "@/api/protocol/motis";
 import {
   GroupsInTripSection,
   PaxMonGroupByStation,
   PaxMonGroupFilter,
-} from "../api/protocol/motis/paxmon";
+} from "@/api/protocol/motis/paxmon";
 
-import { PaxMonEdgeLoadInfoWithStats } from "../data/loadInfo";
-import { universeAtom } from "../data/simulation";
+import { usePaxMonGroupsInTripQuery } from "@/api/paxmon";
 
-import CombinedGroup from "./CombinedGroup";
+import { PaxMonEdgeLoadInfoWithStats } from "@/data/loadInfo";
+import { universeAtom } from "@/data/simulation";
+
+import CombinedGroup from "@/components/CombinedGroup";
 
 function isSameSection(
   sec: GroupsInTripSection,

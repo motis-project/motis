@@ -1,6 +1,6 @@
-import { TripServiceInfo } from "../api/protocol/motis";
+import { TripServiceInfo } from "@/api/protocol/motis";
 
-import { formatDateTime } from "../util/dateFormat";
+import { formatDateTime } from "@/util/dateFormat";
 
 type TripServiceInfoViewProps = {
   tsi: TripServiceInfo;

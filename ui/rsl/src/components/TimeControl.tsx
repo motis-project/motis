@@ -1,12 +1,12 @@
 import { useAtom } from "jotai";
 import { QueryClient, useMutation, useQueryClient } from "react-query";
 
-import { usePaxMonStatusQuery } from "../api/paxmon";
-import { sendRISForwardTimeRequest } from "../api/ris";
+import { usePaxMonStatusQuery } from "@/api/paxmon";
+import { sendRISForwardTimeRequest } from "@/api/ris";
 
-import { scheduleAtom, universeAtom } from "../data/simulation";
+import { scheduleAtom, universeAtom } from "@/data/simulation";
 
-import { formatDate, formatTime } from "../util/dateFormat";
+import { formatDate, formatTime } from "@/util/dateFormat";
 
 async function forwardTimeByStepped(
   queryClient: QueryClient,

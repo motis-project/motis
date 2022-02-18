@@ -1,10 +1,10 @@
 import { useState } from "react";
 
-import { TripId, TripServiceInfo } from "../api/protocol/motis";
+import { TripId, TripServiceInfo } from "@/api/protocol/motis";
 
-import CriticalTripList from "./CriticialTripList";
-import TripPicker from "./TripPicker";
-import TripServiceInfoView from "./TripServiceInfoView";
+import CriticalTripList from "@/components/CriticialTripList";
+import TripPicker from "@/components/TripPicker";
+import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 export type TripSelectionProps = {
   onTripSelected: (trip: TripId | undefined) => void;

@@ -1,19 +1,16 @@
 import { addMinutes, differenceInMinutes, subMinutes } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 
-import { Station } from "../api/protocol/motis";
+import { Station } from "@/api/protocol/motis";
 import {
   RiBasisFahrtAbschnitt,
   RiBasisFahrtData,
   RiBasisHaltestelle,
   RiBasisOrt,
   RiBasisZeitstatus,
-} from "../api/protocol/motis/ribasis";
+} from "@/api/protocol/motis/ribasis";
 
-import {
-  formatRiBasisDateTime,
-  parseRiBasisDateTime,
-} from "../util/dateFormat";
+import { formatRiBasisDateTime, parseRiBasisDateTime } from "@/util/dateFormat";
 import {
   getOrAddRiBasisGattung,
   getOrAddRiBasisLinie,
@@ -22,7 +19,7 @@ import {
   getRiBasisLinie,
   motisStationToRiBasisHaltestelle,
   riBasisHaltestelleToMotisStation,
-} from "../util/ribasis";
+} from "@/util/ribasis";
 
 export interface StopFormData {
   station: Station;

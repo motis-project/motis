@@ -2,14 +2,14 @@ import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
 import { useCallback, useMemo } from "react";
 
-import { TripServiceInfo } from "../../api/protocol/motis";
-import { LoadLevel } from "../../api/protocol/motis/paxforecast";
+import { TripServiceInfo } from "@/api/protocol/motis";
+import { LoadLevel } from "@/api/protocol/motis/paxforecast";
 
-import { MeasureUnion, isTripLoadInfoMeasureU } from "../../data/measures";
+import { MeasureUnion, isTripLoadInfoMeasureU } from "@/data/measures";
 
-import useRenderCount from "../../util/useRenderCount";
+import useRenderCount from "@/util/useRenderCount";
 
-import TripPicker from "../TripPicker";
+import TripPicker from "@/components/TripPicker";
 
 export type TripLoadInfoMeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;

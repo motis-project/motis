@@ -2,16 +2,16 @@ import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
 import { useMemo } from "react";
 
-import { Station, TripServiceInfo } from "../../api/protocol/motis";
+import { Station, TripServiceInfo } from "@/api/protocol/motis";
 
-import { MeasureUnion } from "../../data/measures";
+import { MeasureUnion } from "@/data/measures";
 
-import useRenderCount from "../../util/useRenderCount";
+import useRenderCount from "@/util/useRenderCount";
 
-import StationPicker from "../StationPicker";
-import TripPicker from "../TripPicker";
-import TripServiceInfoView from "../TripServiceInfoView";
-import TimeInput from "./TimeInput";
+import StationPicker from "@/components/StationPicker";
+import TripPicker from "@/components/TripPicker";
+import TripServiceInfoView from "@/components/TripServiceInfoView";
+import TimeInput from "@/components/measures/TimeInput";
 
 export type SharedDataEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;

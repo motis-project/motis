@@ -2,15 +2,12 @@ import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
 import { useMemo } from "react";
 
-import { Station, TripServiceInfo } from "../../api/protocol/motis";
+import { Station, TripServiceInfo } from "@/api/protocol/motis";
 
-import {
-  MeasureUnion,
-  isTripRecommendationMeasureU,
-} from "../../data/measures";
+import { MeasureUnion, isTripRecommendationMeasureU } from "@/data/measures";
 
-import StationPicker from "../StationPicker";
-import TripPicker from "../TripPicker";
+import StationPicker from "@/components/StationPicker";
+import TripPicker from "@/components/TripPicker";
 
 export type TripRecommendationMeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;

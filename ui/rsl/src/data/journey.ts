@@ -5,7 +5,7 @@ import {
   Transport,
   Trip,
   Walk,
-} from "../api/protocol/motis";
+} from "@/api/protocol/motis";
 
 export interface JourneyTransport {
   transport: Transport;

@@ -4,13 +4,11 @@ import { useAtomCallback, useUpdateAtom } from "jotai/utils";
 import { useCallback } from "react";
 import { useMutation, useQueryClient } from "react-query";
 
-import { sendPaxForecastApplyMeasuresRequest } from "../../api/paxforecast";
-import { queryKeys } from "../../api/paxmon";
-import {
-  LoadLevel,
-  MeasureWrapper,
-} from "../../api/protocol/motis/paxforecast";
-import { PaxMonStatusResponse } from "../../api/protocol/motis/paxmon";
+import { LoadLevel, MeasureWrapper } from "@/api/protocol/motis/paxforecast";
+import { PaxMonStatusResponse } from "@/api/protocol/motis/paxmon";
+
+import { sendPaxForecastApplyMeasuresRequest } from "@/api/paxforecast";
+import { queryKeys } from "@/api/paxmon";
 
 import {
   MeasureUnion,
@@ -18,18 +16,18 @@ import {
   measuresAtom,
   newEmptyMeasure,
   toMeasureWrapper,
-} from "../../data/measures";
+} from "@/data/measures";
 import {
   SimulationResult,
   simResultsAtom,
   universeAtom,
-} from "../../data/simulation";
+} from "@/data/simulation";
 
-import { formatDateTime } from "../../util/dateFormat";
-import { isNonNull } from "../../util/typeGuards";
-import useRenderCount from "../../util/useRenderCount";
+import { formatDateTime } from "@/util/dateFormat";
+import { isNonNull } from "@/util/typeGuards";
+import useRenderCount from "@/util/useRenderCount";
 
-import TripServiceInfoView from "../TripServiceInfoView";
+import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 type RemoveFn = (ma: PrimitiveAtom<MeasureUnion>) => void;
 type SelectFn = (ma: PrimitiveAtom<MeasureUnion>) => void;

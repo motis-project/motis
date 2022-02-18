@@ -11,19 +11,20 @@ import {
 } from "react-hook-form";
 import { useQueryClient } from "react-query";
 
-import {
-  queryKeys as lookupQueryKeys,
-  sendLookupRiBasisRequest,
-} from "../../api/lookup";
-import { queryKeys } from "../../api/paxmon";
-import { TripServiceInfo } from "../../api/protocol/motis";
-import { PaxMonStatusResponse } from "../../api/protocol/motis/paxmon";
+import { TripServiceInfo } from "@/api/protocol/motis";
+import { PaxMonStatusResponse } from "@/api/protocol/motis/paxmon";
 import {
   RiBasisFahrtData,
   RiBasisZeitstatus,
-} from "../../api/protocol/motis/ribasis";
+} from "@/api/protocol/motis/ribasis";
 
-import { MeasureUnion, isRtUpdateMeasureU } from "../../data/measures";
+import {
+  queryKeys as lookupQueryKeys,
+  sendLookupRiBasisRequest,
+} from "@/api/lookup";
+import { queryKeys } from "@/api/paxmon";
+
+import { MeasureUnion, isRtUpdateMeasureU } from "@/data/measures";
 import {
   StopFormData,
   getEmptySectionFormData,
@@ -32,14 +33,14 @@ import {
   getNewStopTimes,
   toFormData,
   toRiBasis,
-} from "../../data/rtMeasureFormData";
-import { scheduleAtom } from "../../data/simulation";
+} from "@/data/rtMeasureFormData";
+import { scheduleAtom } from "@/data/simulation";
 
-import useRenderCount from "../../util/useRenderCount";
+import useRenderCount from "@/util/useRenderCount";
 
-import StationPicker from "../StationPicker";
-import TripPicker from "../TripPicker";
-import TimeInput from "./TimeInput";
+import StationPicker from "@/components/StationPicker";
+import TripPicker from "@/components/TripPicker";
+import TimeInput from "@/components/measures/TimeInput";
 
 export type RtUpdateMeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;

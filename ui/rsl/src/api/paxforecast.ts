@@ -1,9 +1,10 @@
-import { verifyContentType } from "./protocol/checks";
+import { verifyContentType } from "@/api/protocol/checks";
 import {
   PaxForecastApplyMeasuresRequest,
   PaxForecastApplyMeasuresResponse,
-} from "./protocol/motis/paxforecast";
-import { sendRequest } from "./request";
+} from "@/api/protocol/motis/paxforecast";
+
+import { sendRequest } from "@/api/request";
 
 export async function sendPaxForecastApplyMeasuresRequest(
   content: PaxForecastApplyMeasuresRequest

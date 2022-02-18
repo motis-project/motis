@@ -3,14 +3,15 @@ import { useCombobox } from "downshift";
 import { useAtom } from "jotai";
 import { useState } from "react";
 
-import { ServiceClass } from "../api/constants";
-import { usePaxMonFindTripsQuery } from "../api/paxmon";
-import { TripServiceInfo } from "../api/protocol/motis";
-import { PaxMonTripInfo } from "../api/protocol/motis/paxmon";
+import { TripServiceInfo } from "@/api/protocol/motis";
+import { PaxMonTripInfo } from "@/api/protocol/motis/paxmon";
 
-import { universeAtom } from "../data/simulation";
+import { ServiceClass } from "@/api/constants";
+import { usePaxMonFindTripsQuery } from "@/api/paxmon";
 
-import TripServiceInfoView from "./TripServiceInfoView";
+import { universeAtom } from "@/data/simulation";
+
+import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 function filterTrips(trips: PaxMonTripInfo[]) {
   return trips.filter((trip) =>

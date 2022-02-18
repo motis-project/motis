@@ -1,7 +1,7 @@
 import { UseQueryResult, useQuery } from "react-query";
 
-import { verifyContentType } from "./protocol/checks";
-import { MotisSuccess, TripId } from "./protocol/motis";
+import { verifyContentType } from "@/api/protocol/checks";
+import { MotisSuccess, TripId } from "@/api/protocol/motis";
 import {
   PaxMonDestroyUniverseRequest,
   PaxMonFilterTripsRequest,
@@ -18,8 +18,9 @@ import {
   PaxMonGetTripLoadInfosResponse,
   PaxMonStatusRequest,
   PaxMonStatusResponse,
-} from "./protocol/motis/paxmon";
-import { sendRequest } from "./request";
+} from "@/api/protocol/motis/paxmon";
+
+import { sendRequest } from "@/api/request";
 
 export async function sendPaxMonStatusRequest(
   content: PaxMonStatusRequest

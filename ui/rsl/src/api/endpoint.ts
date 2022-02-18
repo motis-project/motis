@@ -1,4 +1,4 @@
-import getQueryParameters from "../util/queryParameters";
+import getQueryParameters from "@/util/queryParameters";
 
 function getApiEndpoint(params: Record<string, string>) {
   const defaultProtocol = window.location.protocol;

@@ -1,6 +1,7 @@
-import { verifyContentType } from "./protocol/checks";
-import { Message } from "./protocol/motis";
-import { sendRequest } from "./request";
+import { verifyContentType } from "@/api/protocol/checks";
+import { Message } from "@/api/protocol/motis";
+
+import { sendRequest } from "@/api/request";
 
 export function sendRISForwardTimeRequest(
   newTime: number | Date,

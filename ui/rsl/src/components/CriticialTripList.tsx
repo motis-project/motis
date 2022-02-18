@@ -1,11 +1,12 @@
 import { useAtom } from "jotai";
 
-import { usePaxMonFilterTripsRequest } from "../api/paxmon";
-import { TripId } from "../api/protocol/motis";
+import { TripId } from "@/api/protocol/motis";
 
-import { universeAtom } from "../data/simulation";
+import { usePaxMonFilterTripsRequest } from "@/api/paxmon";
 
-import TripServiceInfoView from "./TripServiceInfoView";
+import { universeAtom } from "@/data/simulation";
+
+import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 export type CriticalTripListProps = {
   onTripSelected: (trip: TripId | undefined) => void;
