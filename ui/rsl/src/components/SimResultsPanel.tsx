@@ -40,7 +40,7 @@ function SimResultsList({ onSelectSim }: SimResultsListProps): JSX.Element {
 
   return (
     <div>
-      <div className="my-4 text-lg font-semibold">Simulationsergebnisse:</div>
+      <div className="mb-4 text-lg font-semibold">Simulationsergebnisse:</div>
       {simResultsList.map((a) => (
         <SimResultsListEntry
           key={a.toString()}
@@ -68,8 +68,6 @@ function SimResultDetails({
     simResult.startedAt
   );
 
-  // TODO(pablo): sort updated trips (by number of changes, critical sections...?)
-
   const MemoizedUpdatedTrip = memo(function MemoizedUpdatedTripWrapper({
     index,
   }: {
@@ -79,7 +77,7 @@ function SimResultDetails({
   });
 
   return (
-    <div>
+    <>
       <div>
         <div>SimResultDetails Render Count: {renderCount}</div>
         <div className="my-4 text-lg font-semibold">Statistiken:</div>
@@ -99,17 +97,16 @@ function SimResultDetails({
           <li>Gruppen wiederverwendet: {r.updates.reused_group_count}</li>
           <li>Trips aktualisiert: {r.updates.updated_trip_count}</li>
         </ul>
+        <div className="my-4 text-lg font-semibold">Betroffene Züge:</div>
       </div>
-      <div>
-        <div className="my-4 text-lg font-semibold">Betroffene Trips:</div>
+      <div className="grow">
         <Virtuoso
-          style={{ height: 600 }}
           data={r.updates.updated_trips}
           overscan={200}
           itemContent={(index) => <MemoizedUpdatedTrip index={index} />}
         />
       </div>
-    </div>
+    </>
   );
 }
 
@@ -119,7 +116,7 @@ type UpdatedTripProps = {
 
 function UpdatedTrip({ ut }: UpdatedTripProps) {
   return (
-    <div className="flex flex-col gap-2 py-3">
+    <div className="flex flex-col gap-2 py-3 pr-2">
       <TripServiceInfoView tsi={ut.tsi} format="Long" />
       <div>
         Entfernt: {Math.round(ut.removed_mean_pax)} avg / {ut.removed_max_pax}{" "}
@@ -127,6 +124,19 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
         <br />
         Hinzugefügt: {Math.round(ut.added_mean_pax)} avg / {ut.added_max_pax}{" "}
         max Reisende
+        <br />
+        Kritische Abschnitte: {ut.critical_info_before.critical_sections}
+        {" → "}
+        {ut.critical_info_after.critical_sections}
+        <br />
+        Max. Reisende über Kapazität: {ut.critical_info_before.max_excess_pax}
+        {" → "}
+        {ut.critical_info_after.max_excess_pax}
+        <br />
+        Kum. Reisende über Kapazität:{" "}
+        {ut.critical_info_before.cumulative_excess_pax} {" → "}
+        {ut.critical_info_after.cumulative_excess_pax}
+        <br />
       </div>
       <MiniTripLoadGraph edges={ut.before_edges} />
       <MiniTripLoadGraph edges={ut.after_edges} />
@@ -139,7 +149,7 @@ function SimResultsPanel(): JSX.Element {
     useState<PrimitiveAtom<SimulationResult>>();
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       <SimResultsList onSelectSim={setSelectedSim} />
       {selectedSim ? <SimResultDetails simResultAtom={selectedSim} /> : null}
     </div>

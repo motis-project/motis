@@ -6,12 +6,11 @@ import { TripId } from "@/api/protocol/motis";
 
 import getQueryParameters from "@/util/queryParameters";
 
-import SimResultsPanel from "@/components/SimResultsPanel";
+import SimPanel from "@/components/SimPanel";
 import TimeControl from "@/components/TimeControl";
 import TripDetails from "@/components/TripDetails";
 import TripSelection from "@/components/TripSelection";
 import UniverseControl from "@/components/UniverseControl";
-import MeasurePanel from "@/components/measures/MeasurePanel";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,10 +44,7 @@ function App(): JSX.Element {
             ) : null}
           </div>
           <div className="bg-db-cool-gray-200 overflow-y-auto grow max-w-xl p-2">
-            <div className="flex flex-col w-full">
-              <MeasurePanel />
-              <SimResultsPanel />
-            </div>
+            <SimPanel />
           </div>
         </div>
       </div>

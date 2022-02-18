@@ -17,3 +17,6 @@ export interface SimulationResult {
 }
 
 export const simResultsAtom = atom<PrimitiveAtom<SimulationResult>[]>([]);
+export const hasSimResultsAtom = atom(
+  (get) => get(simResultsAtom).length !== 0
+);

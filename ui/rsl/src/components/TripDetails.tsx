@@ -1,12 +1,8 @@
-import { useAtom } from "jotai";
 import { useState } from "react";
 
 import { TripId } from "@/api/protocol/motis";
 
-import { useLookupRiBasisQuery } from "@/api/lookup";
-
 import { PaxMonEdgeLoadInfoWithStats } from "@/data/loadInfo";
-import { scheduleAtom } from "@/data/simulation";
 
 import TripLoadForecastChart from "@/components/TripLoadForecastChart";
 import TripSectionDetails from "@/components/TripSectionDetails";
@@ -18,7 +14,6 @@ type TripDetailsProps = {
 function TripDetails({ tripId }: TripDetailsProps): JSX.Element {
   const [selectedSection, setSelectedSection] =
     useState<PaxMonEdgeLoadInfoWithStats>();
-  const [schedule] = useAtom(scheduleAtom);
 
   return (
     <div>

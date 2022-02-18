@@ -13,7 +13,13 @@ import useRenderCount from "@/util/useRenderCount";
 import MeasureEditor from "@/components/measures/MeasureEditor";
 import MeasureList from "@/components/measures/MeasureList";
 
-function MeasurePanel(): JSX.Element {
+export type MeasurePanelProps = {
+  onSimulationFinished: () => void;
+};
+
+function MeasurePanel({
+  onSimulationFinished,
+}: MeasurePanelProps): JSX.Element {
   const setMeasureAtoms = useUpdateAtom(measuresAtom);
   const [currentMeasureAtom, setCurrentMeasureAtom] = useAtom(
     currentEditorMeasureAtom
@@ -34,7 +40,7 @@ function MeasurePanel(): JSX.Element {
   );
 
   return (
-    <div>
+    <div className="pb-5">
       <div>MeasurePanel Render Count: {renderCount}</div>
       {currentMeasureAtom ? (
         <MeasureEditor
@@ -43,7 +49,7 @@ function MeasurePanel(): JSX.Element {
           closeEditor={closeEditor}
         />
       ) : (
-        <MeasureList />
+        <MeasureList onSimulationFinished={onSimulationFinished} />
       )}
     </div>
   );

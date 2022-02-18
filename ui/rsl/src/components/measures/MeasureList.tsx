@@ -175,7 +175,11 @@ function MeasureListEntry({
   );
 }
 
-function MeasureList() {
+export type MeasureListProps = {
+  onSimulationFinished: () => void;
+};
+
+function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
   const queryClient = useQueryClient();
   const [universe] = useAtom(universeAtom);
   const [measureAtoms, setMeasureAtoms] = useAtom(measuresAtom);
@@ -212,6 +216,7 @@ function MeasureList() {
           return [...prev, atom(result)];
         });
         await queryClient.invalidateQueries(queryKeys.trip());
+        onSimulationFinished();
       },
       retry: false,
     }
@@ -252,7 +257,10 @@ function MeasureList() {
     }
   };
 
-  const applyEnabled = universe != 0 && measureAtoms.length > 0;
+  const applyEnabled =
+    universe != 0 &&
+    measureAtoms.length > 0 &&
+    !applyMeasuresMutation.isLoading;
 
   return (
     <div className="flex flex-col gap-2">
