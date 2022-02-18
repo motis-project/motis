@@ -10,15 +10,10 @@
 namespace motis::module {
 
 inline future motis_call_impl(msg_ptr const& msg, ctx::op_id id) {
-  if (dispatcher::direct_mode_dispatcher_ != nullptr) {
-    ctx_data d{dispatcher::direct_mode_dispatcher_};
-    return dispatcher::direct_mode_dispatcher_->req(msg, d, id);
-  } else {
-    auto const op = ctx::current_op<ctx_data>();
-    auto& data = op->data_;
-    id.parent_index = op->id_.index;
-    return data.dispatcher_->req(msg, data, id);
-  }
+  auto const op = ctx::current_op<ctx_data>();
+  auto& data = op->data_;
+  id.parent_index = op->id_.index;
+  return data.dispatcher_->req(msg, data, id);
 }
 
 #define motis_call(msg) \

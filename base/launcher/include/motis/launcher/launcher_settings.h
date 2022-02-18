@@ -50,7 +50,6 @@ public:
     param(batch_output_file_, "batch_output_file", "response file");
     param(init_, "init", "init operation");
     param(num_threads_, "num_threads", "number of worker threads");
-    param(direct_mode_, "direct", "no ctx/multi-threading");
   }
 
   motis_mode_t mode_{launcher_settings::motis_mode_t::SERVER};
@@ -58,7 +57,6 @@ public:
   std::string batch_output_file_{"responses.txt"};
   std::string init_;
   unsigned num_threads_{std::thread::hardware_concurrency()};
-  bool direct_mode_{sizeof(void*) >= 8 ? false : true};
 };
 
 }  // namespace motis::launcher

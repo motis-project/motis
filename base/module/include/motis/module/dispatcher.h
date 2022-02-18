@@ -50,14 +50,6 @@ struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
   bool queue_no_target_msgs_{false};
   std::queue<std::pair<msg_ptr, callback>> no_target_msg_queue_;
   std::vector<std::unique_ptr<module>> modules_;
-
-  // If this is set to a value != nullptr, it indicates direct mode is on.
-  // This implies that in direct mode there can only be one global dispatcher.
-  // Direct mode means that
-  //   - no code will be executed in ctx::operations.
-  //   - no calls to ctx::current_op<Data>() will be made
-  //   - everything runs sequentially (no interleaving for motis_call/publish)
-  static dispatcher* direct_mode_dispatcher_;  // NOLINT
 };
 
 }  // namespace motis::module

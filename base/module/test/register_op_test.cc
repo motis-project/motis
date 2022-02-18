@@ -73,10 +73,6 @@ auto const route = [](msg_ptr const&) -> msg_ptr {
 
 TEST(module_op, launch) {
   controller c({});
-  if constexpr (sizeof(void*) < 8) {
-    dispatcher::direct_mode_dispatcher_ = &c;
-  }
-
   c.register_op("/guesser", guess, {});
   c.register_op("/routing", route, {});
 

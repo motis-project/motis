@@ -18,8 +18,6 @@
 
 namespace motis::module {
 
-dispatcher* dispatcher::direct_mode_dispatcher_ = nullptr;  // NOLINT
-
 dispatcher::dispatcher(registry& reg,
                        std::vector<std::unique_ptr<module>>&& modules)
     : ctx::access_scheduler<ctx_data>(
@@ -54,14 +52,8 @@ std::vector<future> dispatcher::publish(msg_ptr const& msg,
   }
 
   return utl::to_vec(it->second, [&](auto&& op) {
-    if (direct_mode_dispatcher_ != nullptr) {
-      auto f = std::make_shared<ctx::future<ctx_data, msg_ptr>>(id);
-      f->set(op.fn_(msg));
-      return f;
-    } else {
-      return post_work(
-          data, [&, msg] { return op.fn_(msg); }, id);
-    }
+    return post_work(
+        data, [&, msg] { return op.fn_(msg); }, id);
   });
 }
 
@@ -114,18 +106,14 @@ void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
     }
   };
 
-  if (direct_mode_dispatcher_ != nullptr) {
-    run();
-  } else {
-    auto access = ctx::accesses_t{};
-    if (auto const op = registry_.get_operation(id.name); op) {
-      access = op->access_;
-    }
-
-    enqueue(
-        data != nullptr ? ctx_data{*data} : ctx_data{this}, [run]() { run(); },
-        id, op_type, std::move(access));
+  auto access = ctx::accesses_t{};
+  if (auto const op = registry_.get_operation(id.name); op) {
+    access = op->access_;
   }
+
+  enqueue(
+      data != nullptr ? ctx_data{*data} : ctx_data{this}, [run]() { run(); },
+      id, op_type, std::move(access));
 }
 
 msg_ptr dispatcher::api_desc(int const id) const {

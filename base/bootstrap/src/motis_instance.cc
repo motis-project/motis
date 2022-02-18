@@ -157,31 +157,26 @@ msg_ptr motis_instance::call(std::string const& target, unsigned num_threads) {
 }
 
 msg_ptr motis_instance::call(msg_ptr const& msg, unsigned num_threads) {
-  if (direct_mode_dispatcher_ != nullptr) {
-    ctx_data data{dispatcher::direct_mode_dispatcher_};
-    return static_cast<dispatcher*>(this)->req(msg, data, ctx::op_id{})->val();
-  } else {
-    std::exception_ptr e;
-    msg_ptr response;
+  std::exception_ptr e;
+  msg_ptr response;
 
-    run(
-        [&]() {
-          try {
-            response = motis_call(msg)->val();
-          } catch (...) {
-            e = std::current_exception();
-          }
-        },
-        {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
-                             ctx::access_t::READ}},
-        num_threads);
+  run(
+      [&]() {
+        try {
+          response = motis_call(msg)->val();
+        } catch (...) {
+          e = std::current_exception();
+        }
+      },
+      {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
+                           ctx::access_t::READ}},
+      num_threads);
 
-    if (e) {
-      std::rethrow_exception(e);
-    }
-
-    return response;
+  if (e) {
+    std::rethrow_exception(e);
   }
+
+  return response;
 }
 
 void motis_instance::publish(std::string const& target, unsigned num_threads) {
@@ -189,27 +184,22 @@ void motis_instance::publish(std::string const& target, unsigned num_threads) {
 }
 
 void motis_instance::publish(msg_ptr const& msg, unsigned num_threads) {
-  if (direct_mode_dispatcher_ != nullptr) {
-    ctx_data data{dispatcher::direct_mode_dispatcher_};
-    static_cast<dispatcher*>(this)->publish(msg, data, ctx::op_id{});
-  } else {
-    std::exception_ptr e;
+  std::exception_ptr e;
 
-    run(
-        [&]() {
-          try {
-            ctx::await_all(motis_publish(msg));
-          } catch (...) {
-            e = std::current_exception();
-          }
-        },
-        {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
-                             ctx::access_t::READ}},
-        num_threads);
+  run(
+      [&]() {
+        try {
+          ctx::await_all(motis_publish(msg));
+        } catch (...) {
+          e = std::current_exception();
+        }
+      },
+      {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
+                           ctx::access_t::READ}},
+      num_threads);
 
-    if (e) {
-      std::rethrow_exception(e);
-    }
+  if (e) {
+    std::rethrow_exception(e);
   }
 }
 
