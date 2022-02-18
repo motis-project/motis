@@ -49,7 +49,7 @@ const displayDuration = (posixTime) => {
 export const Overlay: React.FC<{'translation': Translations}> = (props) => {
 
     // Boolean used to decide if the Overlay is being displayed
-    const [overlayHidden, setOverlayHidden] = useState<Boolean>(false);
+    const [overlayHidden, setOverlayHidden] = useState<Boolean>(true);
 
     // Boolean used to decide if the SubOverlay is being displayed
     const [subOverlayHidden, setSubOverlayHidden] = useState<Boolean>(true);
