@@ -31,6 +31,7 @@ target_compile_features(motis-module PUBLIC cxx_std_17)
 add_dependencies(motis-module generated-protocol-headers)
 target_link_libraries(motis-module
   motis-core
+  http-client
   flatbuffers32
   rapidjson
   ctx

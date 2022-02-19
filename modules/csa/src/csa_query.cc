@@ -48,8 +48,9 @@ std::vector<station_id> get_metas(schedule const& sched,
                    : std::vector<station_id>({node->id_});
 }
 
-csa_query::csa_query(schedule const& sched,
-                     routing::RoutingRequest const* req) {
+csa_query::csa_query(schedule const& sched, routing::RoutingRequest const* req)
+    : dir_{dir_ = req->search_dir() == SearchDir_Forward ? search_dir::FWD
+                                                         : search_dir::BWD} {
   utl::verify_ex(req->search_type() == SearchType_Default ||
                      req->search_type() == SearchType_Accessibility ||
                      req->search_type() == SearchType_DefaultPrice ||
@@ -63,9 +64,6 @@ csa_query::csa_query(schedule const& sched,
                  std::system_error{error::additional_edges_not_supported});
   utl::verify_ex(req->schedule() == 0U,
                  std::system_error{error::schedule_not_supported});
-
-  dir_ = req->search_dir() == SearchDir_Forward ? search_dir::FWD
-                                                : search_dir::BWD;
 
   switch (req->start_type()) {
     case Start_OntripStationStart: {

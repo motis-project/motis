@@ -152,9 +152,11 @@ int main(int argc, char const** argv) {
         ? start_batch()
         : instance.on_remotes_registered(start_batch);
   } else if (launcher_opt.mode_ == launcher_settings::motis_mode_t::SERVER) {
+    instance.init_io(module_opt);
     stop = std::make_unique<net::stop_handler>(instance.runner_.ios(), [&]() {
       server.stop();
       instance.runner_.ios().stop();
+      instance.stop_io();
       instance.stop_remotes();
     });
   }

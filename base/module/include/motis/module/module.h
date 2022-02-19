@@ -12,6 +12,7 @@
 #include "conf/configuration.h"
 
 #include "motis/module/ctx_data.h"
+#include "motis/module/dispatcher.h"
 #include "motis/module/import_dispatcher.h"
 #include "motis/module/locked_resources.h"
 #include "motis/module/message.h"
@@ -40,14 +41,17 @@ struct module : public conf::configuration {
 
   std::string const& module_name() const { return prefix(); }
 
-  std::string data_path(boost::filesystem::path const&);
+  std::string data_path(boost::filesystem::path const&) const;
   void set_data_directory(std::string const&);
-  void set_shared_data(ctx::access_scheduler<ctx_data>*);
+  void set_shared_data(dispatcher*);
 
   virtual void import(import_dispatcher&) {}
   virtual void init(registry&) {}
 
   virtual bool import_successful() const { return true; }
+
+  virtual void init_io(boost::asio::io_context&) {}
+  virtual void stop_io() {}
 
   schedule const& get_sched() const;
 
@@ -80,8 +84,7 @@ struct module : public conf::configuration {
 
   boost::filesystem::path const& get_data_directory() const;
 
-private:
-  ctx::access_scheduler<ctx_data>* shared_data_{nullptr};
+  dispatcher* shared_data_{nullptr};
   boost::filesystem::path data_directory_;
 };
 

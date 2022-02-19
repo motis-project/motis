@@ -6,6 +6,7 @@
 #include "motis/module/controller.h"
 #include "motis/module/dispatcher.h"
 #include "motis/module/message.h"
+#include "motis/module/module.h"
 
 using namespace motis;
 using namespace motis::module;

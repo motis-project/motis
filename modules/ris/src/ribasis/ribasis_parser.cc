@@ -9,6 +9,8 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
+#include "motis/json/json.h"
+
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/common/unixtime.h"
@@ -16,8 +18,9 @@
 
 #include "motis/ris/ribasis/common.h"
 
-using namespace motis::logging;
 using namespace flatbuffers;
+using namespace motis::logging;
+using namespace motis::json;
 
 namespace motis::ris::ribasis {
 
@@ -46,7 +49,7 @@ Offset<FullTripId> parse_trip_id(context& ctx, rapidjson::Value const& data) {
   auto const dest_si = parse_station(ctx, dest_stop);
 
   auto const start_time = get_schedule_timestamp(ctx, rel, "startzeit");
-  auto const dest_time = get_schedule_timestamp(ctx, rel, "zielzeit");
+  auto const target_time = get_schedule_timestamp(ctx, rel, "zielzeit");
 
   return CreateFullTripId(
       ctx.b_,
@@ -56,7 +59,7 @@ Offset<FullTripId> parse_trip_id(context& ctx, rapidjson::Value const& data) {
                    train_nr, start_time,
                    ctx.b_.CreateSharedString(dest_station_eva.data(),
                                              dest_station_eva.size()),
-                   dest_time, ctx.b_.CreateString(line)),
+                   target_time, ctx.b_.CreateString(line)),
       start_si, dest_si);
 }
 

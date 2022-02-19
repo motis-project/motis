@@ -30,7 +30,7 @@ std::string parse_name(cstr s) {
     ++i;
   }
   auto region = s.substr(start_is_quote ? 1 : 0, size(i - 1));
-  return std::string(region.str, region.len);
+  return {region.str, region.len};
 }
 
 provider_info read_provider_names(cstr line, char const* filename,
