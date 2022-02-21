@@ -59,12 +59,9 @@ const getPostRequest = (body: any) => {
 };
 
 
-export const SearchInputField: React.FC<{ 'translation': Translations, 'label': String, 'searchQuery': boolean, 'setSearchQuery': React.Dispatch<React.SetStateAction<boolean>>, 'station': Station | Address, 'setSearchDisplay': React.Dispatch<React.SetStateAction<Station | Address>>, 'localStorageStation': string }> = (props) => {
+export const SearchInputField: React.FC<{ 'translation': Translations, 'label': String, 'station': Station | Address, 'setSearchDisplay': React.Dispatch<React.SetStateAction<Station | Address>>, 'localStorageStation': string }> = (props) => {
     
     const inputFieldRef = React.useRef(null);
-
-    // Type
-    const [type, setType] = useState<string>('PretripStart');
     
     // Station or Position
     const [station, setStation] = useState<Station | Address>(props.station);
@@ -98,7 +95,6 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
     useEffect(() => {
         setName(props.station == null ? '' : props.station.name)
         setStation(props.station)
-        //setFetchSuggestionsFlag(!fetchSuggestionsFlag);
     }, [props.station])
 
     useEffect(() => {

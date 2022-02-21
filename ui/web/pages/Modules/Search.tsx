@@ -31,11 +31,7 @@ function addHours(date: Date, hours: number): Date {
 
 
 export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations}> = (props) => {
-
-    // Boolean used as Communication between Inputfield and API Fetch
-    const [searchQuery, setSearchQuery] = useState<boolean>(true);
-    
-
+ 
     // Start
     // StartType
     const [startType, setStartType] = useState<string>('PretripStart');
@@ -73,6 +69,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     
     useEffect(() => {
         if (start !== null && destination !== null) {
+            props.setConnections(null);
             let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
             //console.log('Fire searchQuery')
 
@@ -84,7 +81,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                     props.setConnections(res.content.connections);
                 });
         }
-    }, [searchQuery, startModes, destinationModes]);
+    }, [start, startModes, destination, destinationModes, searchDirection]);
     
     return (
         <div id='search'>
@@ -93,8 +90,6 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                     <div>
                         <SearchInputField   translation={props.translation}
                                         label={props.translation.search.start}
-                                        searchQuery={searchQuery}
-                                        setSearchQuery={setSearchQuery}
                                         station={start}
                                         setSearchDisplay={setStart}
                                         localStorageStation='motis.routing.from_location'/>
@@ -124,8 +119,6 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                     <div>
                         <SearchInputField   translation={props.translation}
                                             label={props.translation.search.destination}
-                                            searchQuery={searchQuery}
-                                            setSearchQuery={setSearchQuery}
                                             station={destination}
                                             setSearchDisplay={setDestination}
                                             localStorageStation='motis.routing.to_location'/>

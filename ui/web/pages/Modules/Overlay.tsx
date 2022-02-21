@@ -55,13 +55,19 @@ export const Overlay: React.FC<{'translation': Translations}> = (props) => {
     const [subOverlayHidden, setSubOverlayHidden] = useState<Boolean>(true);
 
     // Connections
-    const [connections, setConnections] = useState<Connection[]>([]);
+    const [connections, setConnections] = useState<Connection[]>(null);
 
     return (
         <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden'}>
             <div className='overlay'>
                 <div id='overlay-content'>
                     <Search setConnections={setConnections} translation={props.translation}/>
+                    {!connections ? 
+                    <div className='spinner'>
+                        <div className='bounce1'></div>
+                        <div className='bounce2'></div>
+                        <div className='bounce3'></div>
+                    </div> : 
                     <div id='connections'>
                         {connections.map((connectionElem: Connection, index) => (
                             <div className='connection' key={index}>
@@ -94,7 +100,7 @@ export const Overlay: React.FC<{'translation': Translations}> = (props) => {
                                 </div>
                             </div>
                         ))}
-                    </div>
+                    </div>}
                 </div>
                 <SubOverlay subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} translation={props.translation}/>
             </div>
