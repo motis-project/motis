@@ -451,8 +451,18 @@ get_raptor_timetable(schedule const& sched) {
   LOG(log::info) << "RAPTOR Stations: " << ttt.stations_.size();
   LOG(log::info) << "RAPTOR Routes: " << ttt.routes_.size();
 
+  auto trips = 0UL;
+  for(auto& t : ttt.routes_)
+    trips += t.trips_.size();
+  LOG(log::info) << "RAPTOR Trips: " << trips;
+
   auto meta_info = transformable_to_meta_info(ttt);
   auto tt = create_raptor_timetable(ttt);
+
+  auto dep_events = 0UL;
+  for(auto& s : meta_info->departure_events_)
+    dep_events += s.size();
+  LOG(log::info) << "RAPTOR Departure Events: " << dep_events;
 
   return {std::move(meta_info), std::move(tt)};
 }
