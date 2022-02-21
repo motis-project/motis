@@ -1,6 +1,6 @@
 import { App } from "vue";
 
-interface MapPostion {
+interface MapClickInfo {
   mouseX: number,
   mouseY: number,
   lat: number,
@@ -8,38 +8,18 @@ interface MapPostion {
 }
 
 interface MapFlyToOptions {
-  mapId: number,
-  animate: boolean,
+  mapId: string,
   lng: number,
   lat: number,
-  zoom?: boolean,
-  pitch?: number,
+  zoom?: number,
   bearing?: number,
+  pitch?: number,
+  animate: boolean
 }
 
 interface MapFitBoundsOptions {
-  mapId: number,
-  coords: number[] //FIX
-}
-
-interface MapInitDelegate {
-  (id: string): void
-}
-
-interface MapShowContextMenuDelegate {
-  (mapPostion: MapPostion): void
-}
-
-interface MapFlyToDelegate {
-  (options: MapFlyToOptions): void
-}
-
-interface MapFitBoundsDelegate {
-  (options: MapFitBoundsOptions): void
-}
-
-interface VoidDelegate {
-  (): void
+  mapId: string,
+  coords: number[][]
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -49,12 +29,12 @@ export class MotisMapService {
   public initialized = false;
 
   //assigned in map
-  public mapInit: MapInitDelegate = defaultDelegateValue;
-  public mapFlyTo: MapFlyToDelegate = defaultDelegateValue;
-  public mapFitBounds: MapFitBoundsDelegate = defaultDelegateValue;
+  public mapInit: (id: string) => void = defaultDelegateValue;
+  public mapFlyTo: (options: MapFlyToOptions) => void = defaultDelegateValue;
+  public mapFitBounds: (options: MapFitBoundsOptions) => void = defaultDelegateValue;
 
   //called in map
-  public mapShowContextMenu: MapShowContextMenuDelegate = defaultDelegateValue;
+  public mapShowContextMenu: (mapPostion: MapClickInfo) => void = defaultDelegateValue;
 }
 
 

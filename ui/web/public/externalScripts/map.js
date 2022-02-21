@@ -310,15 +310,15 @@ function initPorts(apiEndpoint, tilesEndpoint, initialPermalink) {
       }
     });
 
-    // app.ports.mapFitBounds.subscribe(function (opt) {
-    //   const bounds = opt.coords.reduce(
-    //     (b, c) => b.extend([c[1], c[0]]),
-    //     new mapboxgl.LngLatBounds()
-    //   );
-    //   if (!bounds.isEmpty()) {
-    //     window.elmMaps[opt.mapId].fitBounds(bounds, { padding, pitch: 0 });
-    //   }
-    // });
+    mapService.mapFitBounds = (function (opt) {
+      const bounds = opt.coords.reduce(
+        (b, c) => b.extend([c[1], c[0]]),
+        new mapboxgl.LngLatBounds()
+      );
+      if (!bounds.isEmpty()) {
+        window.elmMaps[opt.mapId].fitBounds(bounds, { padding, pitch: 0 });
+      }
+    });
 
     // app.ports.mapSetConnections.subscribe(function (opt) {
     //   const bounds = opt.connections.reduce(
