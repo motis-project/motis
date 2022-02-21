@@ -15,11 +15,10 @@ evt::evt(trip const& trip, stop_context const& s, event_type const type)
       stop_id_(s.station_id_),
       train_nr_(trip.id_.primary_.train_nr_),
       line_id_(trip.id_.secondary_.line_id_),
-      type_(type) {
-  orig_sched_time_ =
-      type_ == event_type::ARR ? s.stop_arrival_ : s.stop_departure_;
-  new_sched_time_ = orig_sched_time_;
-}
+      type_(type),
+      orig_sched_time_{type_ == event_type::ARR ? s.stop_arrival_
+                                                : s.stop_departure_},
+      new_sched_time_{orig_sched_time_} {}
 
 known_addition_trip const& knowledge_context::find_additional(
     gtfs_trip_id const& trip_id) const {

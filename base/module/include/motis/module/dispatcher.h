@@ -9,11 +9,12 @@
 #include "motis/module/ctx_data.h"
 #include "motis/module/future.h"
 #include "motis/module/message.h"
-#include "motis/module/module.h"
 #include "motis/module/receiver.h"
 #include "motis/module/registry.h"
 
 namespace motis::module {
+
+struct module;
 
 struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
   explicit dispatcher(registry&, std::vector<std::unique_ptr<module>>&&);

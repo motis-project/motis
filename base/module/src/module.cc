@@ -17,9 +17,7 @@ schedule const& module::get_sched() const {
 
 void module::set_data_directory(std::string const& d) { data_directory_ = d; }
 
-void module::set_shared_data(ctx::access_scheduler<ctx_data>* d) {
-  shared_data_ = d;
-}
+void module::set_shared_data(dispatcher* d) { shared_data_ = d; }
 
 locked_resources module::lock_resources(ctx::accesses_t access,
                                         ctx::op_type_t op_type) {
@@ -31,7 +29,7 @@ locked_resources module::lock_resources(ctx::accesses_t access,
   }
 }
 
-std::string module::data_path(fs::path const& p) {
+std::string module::data_path(fs::path const& p) const {
   return p.parent_path() == data_directory_
              ? p.lexically_relative(data_directory_).generic_string()
              : p.generic_string();

@@ -32,6 +32,9 @@ struct motis_instance : public motis::module::controller {
 
   void stop_remotes();
 
+  void stop_io();
+  void init_io(module_settings const&);
+
   void on_remotes_registered(std::function<void()> fn) {
     on_remotes_registered_ = std::move(fn);
   }
