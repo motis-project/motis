@@ -132,7 +132,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                         <Modepicker translation={props.translation} 
                                     title={props.translation.search.destinationTransports} 
                                     setModes={setDestinationModes}
-                                    localStorageModes='motis.routing.from_modes'/>
+                                    localStorageModes='motis.routing.to_modes'/>
                     </div>
                 </div>
                 <div className='pure-u-1 pure-u-sm-9-24'>
