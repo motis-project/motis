@@ -1,4 +1,5 @@
 import { App } from "vue";
+import Position from "../models/SmallTypes/Position"
 
 interface MapClickInfo {
   mouseX: number,
@@ -22,6 +23,13 @@ interface MapFitBoundsOptions {
   coords: number[][]
 }
 
+interface MapSetMarkersOptions {
+  startPosition?: Position,
+  destinationPosition?: Position,
+  startName?: string,
+  destinationName?: string
+}
+
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const defaultDelegateValue = (): void => {}
 
@@ -32,6 +40,7 @@ export class MotisMapService {
   public mapInit: (id: string) => void = defaultDelegateValue;
   public mapFlyTo: (options: MapFlyToOptions) => void = defaultDelegateValue;
   public mapFitBounds: (options: MapFitBoundsOptions) => void = defaultDelegateValue;
+  public mapSetMarkers: (options: MapSetMarkersOptions) => void = defaultDelegateValue;
 
   //called in map
   public mapShowContextMenu: (mapPostion: MapClickInfo) => void = defaultDelegateValue;

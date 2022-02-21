@@ -334,7 +334,7 @@ function initPorts(apiEndpoint, tilesEndpoint, initialPermalink) {
     RailViz.Main.init(apiEndpoint, app.ports);
 
     RailViz.Markers.init(map_fg);
-    // app.ports.mapSetMarkers.subscribe(RailViz.Markers.setMarkers);
+    mapService.mapSetMarkers = (RailViz.Markers.setMarkers);
 
     // app.ports.mapSetDetailFilter.subscribe(RailViz.Main.setDetailFilter);
     // app.ports.mapUpdateWalks.subscribe(RailViz.Main.setDetailWalks);
