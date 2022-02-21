@@ -37,6 +37,23 @@ std::pair<std::uint32_t /*station*/, time> get_group_entry(
   return {0, 0};
 }
 
+trip const* get_trip_before_entry(schedule const& sched,
+                                  passenger_group const* pg,
+                                  trip_idx_t const ti) {
+  for (auto const& [leg_idx, leg] :
+       utl::enumerate(pg->compact_planned_journey_.legs_)) {
+    if (leg.trip_idx_ == ti) {
+      if (leg_idx > 0) {
+        return get_trip(
+            sched, pg->compact_planned_journey_.legs_[leg_idx - 1].trip_idx_);
+      } else {
+        break;
+      }
+    }
+  }
+  return nullptr;
+}
+
 motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
                                           motis::module::msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGetGroupsInTripRequest, msg);
@@ -159,6 +176,11 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
         } else {
           continue;
         }
+      }
+
+      if (grp_by_other_trip &&
+          grp_by_station == PaxMonGroupByStation_EntryAndLast) {
+        other_trp = get_trip_before_entry(sched, pg, trp->trip_idx_);
       }
 
       auto const key = get_key(pg, other_trp);

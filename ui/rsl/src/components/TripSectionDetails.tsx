@@ -160,7 +160,7 @@ function TripSectionDetails({
                 {label}
               </label>
             ))}
-            {groupFilter !== "All" ? (
+            {groupFilter !== "All" || groupByStation === "EntryAndLast" ? (
               <label className="inline-flex items-center gap-1">
                 <input
                   type="checkbox"
@@ -168,7 +168,9 @@ function TripSectionDetails({
                   checked={groupByOtherTrip}
                   onChange={() => setGroupByOtherTrip((val) => !val)}
                 />
-                {groupFilter === "Entering" ? "Zubringer" : "Abbringer"}
+                {groupFilter === "Entering" || groupByStation === "EntryAndLast"
+                  ? "Zubringer"
+                  : "Abbringer"}
               </label>
             ) : null}
           </div>
