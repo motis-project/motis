@@ -7,8 +7,6 @@ import { Translations, deTranslations, enTranslations, plTranslations } from '..
 import { StationSearch } from '../Modules/StationSearch';
 import { MapContainer } from '../Modules/MapContainer';
 
-let visible = false;
-
 
 const getQuery = (): Translations => {
     let router = useRouter();

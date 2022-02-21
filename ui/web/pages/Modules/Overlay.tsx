@@ -1,38 +1,11 @@
 import React, { useState } from 'react';
 
-import Maybe, { nothing } from 'true-myth/maybe';
-
 import { Search } from './Search';
 import { SubOverlay } from './SubOverlay';
-import { Connection, TransportInfo, WalkInfo } from './ConnectionTypes';
+import { Connection } from './ConnectionTypes';
 import { Translations } from './Localization';
 import { ConnectionRender } from './ConnectionRender';
 
-//interface Model {
-//routing : Routing.Model,
-//railViz : RailViz.Model,
-//connectionDetails : Maybe<ConnectionDetails.State>,
-//tripDetails : Maybe<ConnectionDetails.State>,
-//stationEvents : Maybe StationEvents.Model,
-//tripSearch : TripSearch.Model,
-//subView : Maybe<SubView>,
-//selectedConnectionIdx : Maybe<number>,
-//scheduleInfo : Maybe ScheduleInfo,
-//locale : Localization,
-//apiEndpoint : String,
-//currentTime : Date,
-//timeOffset : number,
-//overlayVisible : Boolean,
-//stationSearch : Typeahead.Model,
-//programFlags : ProgramFlags,
-//simTimePicker : SimTimePicker.Model,
-//updateSearchTime : Boolean
-//}
-
-interface SubView {
-    //TODO: Das muss ein maybe mit TripDetailsView, StationEventsView und TripSearchView sein
-    TripSearchView: any
-}
 
 const displayTime = (posixTime) => {
     let today = new Date(posixTime * 1000);
@@ -41,10 +14,12 @@ const displayTime = (posixTime) => {
     return h + ':' + m;
 }
 
+
 const displayDuration = (posixTime) => {
     let dur = String(posixTime + ' min');
     return dur;
 }
+
 
 export const Overlay: React.FC<{'translation': Translations}> = (props) => {
 

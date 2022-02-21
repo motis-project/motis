@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import moment from 'moment';
 
 import { DatePicker } from './DatePicker';
-import { Mode, IntermodalRoutingRequest, IntermodalRoutingResponse, IntermodalPretripStartInfo, PretripStartInfo } from './IntermodalRoutingTypes';
+import { Mode, IntermodalRoutingResponse } from './IntermodalRoutingTypes';
 import { Connection, Station } from './ConnectionTypes';
 import { Translations } from './Localization';
 import { Address } from './SuggestionTypes';
@@ -20,13 +20,6 @@ const getRoutingOptions = (startType: string, startModes: Mode[], start: Station
                                 content_type: 'IntermodalRoutingRequest',
                                 content: {start_type: startType, start_modes: startModes, start: { station: start, min_connection_count: 5, interval: { begin: 1644335520, end: 1644342720 }, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: destination } })
     };
-};
-
-
-function addHours(date: Date, hours: number): Date {
-    let res = new Date(date);
-    res.setHours(res.getHours() + hours);
-    return res;
 };
 
 

@@ -5,6 +5,45 @@ import { setLocalStorage } from './LocalStorage';
 import { Address, Region } from './SuggestionTypes';
 
 
+interface Proposals {
+    addresses: Address[], 
+    stations: Station[], 
+    suggestions: (Address | Station) [], 
+    showSuggestions: boolean, 
+    highlighted: number, 
+    localStorageStation: string, 
+    inputFieldRef: React.MutableRefObject<any>
+    setName: React.Dispatch<React.SetStateAction<string>>, 
+    setSuggestion: React.Dispatch<React.SetStateAction<Station | Address>>, 
+    setShowSuggestions: React.Dispatch<React.SetStateAction<boolean>>, 
+    setHighlighted: React.Dispatch<React.SetStateAction<number>>, 
+}
+
+
+interface AddressSuggestions {
+    address: Address, 
+    listID: number, 
+    selectedSuggestion: number, 
+    localStorageStation: string
+    setName: React.Dispatch<React.SetStateAction<string>>, 
+    setSuggestion: React.Dispatch<React.SetStateAction<Station | Address>>, 
+    setShowSuggestions: React.Dispatch<React.SetStateAction<boolean>>, 
+    setSelectedSuggestion: React.Dispatch<React.SetStateAction<number>>, 
+}
+
+
+interface StationSuggestions {
+    station: Station, 
+    listID: number, 
+    selectedSuggestion: number, 
+    localStorageStation: string
+    setName: React.Dispatch<React.SetStateAction<string>>, 
+    setSuggestion: React.Dispatch<React.SetStateAction<Station | Address>>, 
+    setShowSuggestions: React.Dispatch<React.SetStateAction<boolean>>, 
+    setSelectedSuggestion: React.Dispatch<React.SetStateAction<number>>, 
+}
+
+
 const getDisplayRegions = (regions: Region[]) => {
     let res = regions.filter((r: Region) => r.admin_level <= 8 && r.admin_level >= 2);
     return res[0].name + ', ' + res[res.length - 1].name;
@@ -33,7 +72,7 @@ function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: Reac
 }
 
 
-const StationSuggestion: React.FC<{'station': Station, 'setName': React.Dispatch<React.SetStateAction<string>>, 'setSuggestion': React.Dispatch<React.SetStateAction<Station | Address>>, 'setShowSuggestions': React.Dispatch<React.SetStateAction<boolean>>, 'listID': number, 'selectedSuggestion': number, 'setSelectedSuggestion': React.Dispatch<React.SetStateAction<number>>, 'localStorageStation': string}> = (props) => {
+const StationSuggestion: React.FC<StationSuggestions> = (props) => {
 
     return (
         <li className={props.listID == props.selectedSuggestion ? 'selected' : ''} 
@@ -58,7 +97,7 @@ const StationSuggestion: React.FC<{'station': Station, 'setName': React.Dispatch
 }
 
 
-const AddressSuggestion: React.FC<{'address': Address, 'setName': React.Dispatch<React.SetStateAction<string>>, 'setSuggestion': React.Dispatch<React.SetStateAction<Station | Address>>, 'setShowSuggestions': React.Dispatch<React.SetStateAction<boolean>>, 'listID': number, 'selectedSuggestion': number, 'setSelectedSuggestion': React.Dispatch<React.SetStateAction<number>>, 'localStorageStation': string}> = (props) => {
+const AddressSuggestion: React.FC<AddressSuggestions> = (props) => {
 
     return (
         <li className={props.listID == props.selectedSuggestion ? 'selected' : ''}
@@ -82,7 +121,7 @@ const AddressSuggestion: React.FC<{'address': Address, 'setName': React.Dispatch
 }
 
 
-export const Proposals: React.FC<{'addresses': Address[], 'stations': Station[], 'suggestions': (Address | Station) [], 'highlighted': number, 'showSuggestions': boolean, 'setName': React.Dispatch<React.SetStateAction<string>>, 'setSuggestion': React.Dispatch<React.SetStateAction<Station | Address>>, 'setShowSuggestions': React.Dispatch<React.SetStateAction<boolean>>, 'setHighlighted': React.Dispatch<React.SetStateAction<number>>, 'localStorageStation': string, 'inputFieldRef': React.MutableRefObject<any>}> = (props) => {
+export const Proposals: React.FC<Proposals> = (props) => {
 
     const suggestionsRef = React.useRef(null);
 

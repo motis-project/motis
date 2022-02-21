@@ -1,16 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Station } from './ConnectionTypes';
 import { Translations } from './Localization';
-import { Modepicker } from './ModePicker';
-import { Mode } from './IntermodalRoutingTypes';
 import { Proposals } from './Proposals';
 import { Address, AddressSuggestionResponse, StationSuggestionResponse } from './SuggestionTypes';
 import { setLocalStorage } from './LocalStorage';
 
 
+interface SearchInputField {
+    translation: Translations, 
+    label: String, 
+    station: Station | Address, 
+    localStorageStation: string
+    setSearchDisplay: React.Dispatch<React.SetStateAction<Station | Address>>, 
+}
+
+
 const fetchSuggestions = (input: string, setAddresses: React.Dispatch<React.SetStateAction<Address[]>>, setStations: React.Dispatch<React.SetStateAction<Station[]>>, setSuggestions: React.Dispatch<React.SetStateAction<(Station | Address)[]>>) => {
     if (input !== '') {
-        console.log(input);
         let requestURL = 'https://europe.motis-project.de/?elm=StationSuggestions';
         
         let body = {
@@ -59,7 +65,7 @@ const getPostRequest = (body: any) => {
 };
 
 
-export const SearchInputField: React.FC<{ 'translation': Translations, 'label': String, 'station': Station | Address, 'setSearchDisplay': React.Dispatch<React.SetStateAction<Station | Address>>, 'localStorageStation': string }> = (props) => {
+export const SearchInputField: React.FC<SearchInputField> = (props) => {
     
     const inputFieldRef = React.useRef(null);
     
@@ -127,10 +133,8 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
                                     e.preventDefault();
                                     setName(suggestions[selectedSuggestion].name);
                                     setStation(suggestions[selectedSuggestion]);
-                                    //props.setSearchDisplay(suggestions[selectedSuggestion]);
                                     setShowSuggestions(false);
                                     setSelectedSuggestion(0);
-                                    //props.setSearchQuery(!props.searchQuery)
                                     setLocalStorage(props.localStorageStation, suggestions[selectedSuggestion]);
                                     break;
                                 case 'Escape':
@@ -144,7 +148,6 @@ export const SearchInputField: React.FC<{ 'translation': Translations, 'label': 
                                     setSelectedSuggestion(selectedSuggestion - 1);
                                     break;
                                 default:
-                                    console.log(e.key);
                                 }
                         } }
                         onFocus={_ => {

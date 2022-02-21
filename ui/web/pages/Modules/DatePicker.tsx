@@ -117,7 +117,6 @@ export const DatePicker: React.FC<{'translation': Translations}> = (props) => {
                     setCurrMoment(currMoment.date(i));
                     setDateDisplay(currMoment.format('D.M.YYYY'));
                     setDatePickerSelected(false);
-                    console.log(currMoment.format('D.M.YYYY'));
                 }}>
                 {i}    
             </td>
