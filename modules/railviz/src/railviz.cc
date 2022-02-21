@@ -255,8 +255,9 @@ msg_ptr railviz::get_station(msg_ptr const& msg) {
   };
 
   auto const is_filtered = [&](ev_info const& ev) {
-    return (req->direction() == Direction_LATER && ev.t_ <= t) ||
-           (req->direction() == Direction_EARLIER && ev.t_ >= t);
+    return ev.k_.lcon()->valid_ == 0U ||
+           ((req->direction() == Direction_LATER && ev.t_ <= t) ||
+            (req->direction() == Direction_EARLIER && ev.t_ >= t));
   };
 
   auto const cmp = [&](ev_info const& a, ev_info const& b) {
