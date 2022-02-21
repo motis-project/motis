@@ -162,11 +162,21 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                 </div>
                 <div className='pure-u-1 pure-u-sm-3-24 time-option'>
                     <form>
-                        <input type='radio' id='search-forward' name='time-option' defaultChecked={searchDirection === 'Forward'} onClick={() => setSearchDirection('Forward')}/>
+                        <input  type='radio' 
+                                id='search-forward' 
+                                name='time-option' 
+                                value='Forward'
+                                checked={searchDirection === 'Forward'} 
+                                onChange={() => setSearchDirection('Forward')}/>
                         <label htmlFor='search-forward'>{props.translation.search.departure}</label>
                     </form>
                     <form>
-                        <input type='radio' id='search-backward' name='time-option' defaultChecked={searchDirection === 'Backward'} onClick={() => setSearchDirection('Backward')}/>
+                        <input  type='radio' 
+                                id='search-backward' 
+                                name='time-option' 
+                                value='Backward' 
+                                checked={searchDirection === 'Backward'} 
+                                onChange={() => setSearchDirection('Backward')}/>
                         <label htmlFor='search-backward'>{props.translation.search.arrival}</label>
                     </form>
                 </div>
