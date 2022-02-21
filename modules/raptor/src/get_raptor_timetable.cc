@@ -451,6 +451,11 @@ get_raptor_timetable(schedule const& sched) {
   LOG(log::info) << "RAPTOR Stations: " << ttt.stations_.size();
   LOG(log::info) << "RAPTOR Routes: " << ttt.routes_.size();
 
+  auto footpaths = 0UL;
+  for(auto& s : ttt.stations_)
+    footpaths += s.incoming_footpaths_.size();
+  LOG(log::info) << "RAPTOR Footpaths: " << footpaths;
+
   auto trips = 0UL;
   for(auto& t : ttt.routes_)
     trips += t.trips_.size();
