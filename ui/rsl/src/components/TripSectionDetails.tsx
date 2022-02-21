@@ -39,9 +39,10 @@ const groupByStationOptions: Array<{
   label: string;
 }> = [
   { groupBy: "Last", label: "Letzter Halt" },
-  { groupBy: "LastLongDistance", label: "Letzter Fernverkehrshalt" },
+  { groupBy: "LastLongDistance", label: "Letzter FV-Halt" },
   { groupBy: "First", label: "Erster Halt" },
-  { groupBy: "FirstLongDistance", label: "Erster Fernverkehrshalt" },
+  { groupBy: "FirstLongDistance", label: "Erster FV-Halt" },
+  { groupBy: "EntryAndLast", label: "Einstiegshalt und Ziel" },
 ];
 
 type TripSectionDetailsProps = {

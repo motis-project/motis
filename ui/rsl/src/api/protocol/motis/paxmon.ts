@@ -144,7 +144,8 @@ export type PaxMonGroupByStation =
   | "First"
   | "Last"
   | "FirstLongDistance"
-  | "LastLongDistance";
+  | "LastLongDistance"
+  | "EntryAndLast";
 
 // paxmon/PaxMonGetGroupsInTripRequest.fbs
 export interface PaxMonGetGroupsInTripRequest {
@@ -160,6 +161,8 @@ export interface PaxMonGetGroupsInTripRequest {
 export interface GroupedPassengerGroups {
   grouped_by_station: Station[];
   grouped_by_trip: TripServiceInfo[];
+  entry_station: Station[];
+  entry_time: number;
   info: PaxMonCombinedGroups;
 }
 
