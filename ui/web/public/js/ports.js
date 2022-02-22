@@ -25,84 +25,85 @@ window.portEvents = {
 };
 
 const ownPorts = {
-    "setRoutingResponses": {
+    'setRoutingResponses': {
         send: function(){}
     },
-    "showStationDetails": {
+    'showStationDetails': {
         send: function(){}
     },
-    "showTripDetails": {
+    'showTripDetails': {
         send: function(){}
     },
-    "setTimeOffset": {
+    'setTimeOffset': {
         subscribe: function(){}
     },
-    "setSimulationTime": {
+    'setSimulationTime': {
         send: function(){}
     },
-    "handleRailVizError": {
+    'handleRailVizError': {
         send: function(){}
     },
-    "clearRailVizError": {
+    'clearRailVizError': {
         send: function(){}
     },
-    "localStorageSet": {
+    'localStorageSet': {
         subscribe: function(){}
     },
-    "setPPRSearchOptions": {
+    'setPPRSearchOptions': {
         subscribe: function(){}
     },
-    "mapInit": {
+    'mapInit': {
         subscribe: function(callback){
-            console.log('now subbing map');
             window.portEvents.sub('mapInit', callback);
-            window.portEvents.pub('mapInit', 'map');
+            window.portEvents.pub('mapInit', 'map'); //sollte wo anders hin
         }
     },
-    "mapUpdate": {
+    'mapUpdate': {
         send: function(){}
     },
-    "mapSetTooltip": {
+    'mapSetTooltip': {
         send: function(){}
     },
-    "mapFlyTo": {
+    'mapFlyTo': {
         subscribe: function(){}
     },
-    "mapFitBounds": {
+    'mapFitBounds': {
         subscribe: function(){}
     },
-    "mapUseTrainClassColors": {
+    'mapUseTrainClassColors': {
         subscribe: function(){}
     },
-    "mapShowTrains": {
+    'mapShowTrains': {
         subscribe: function(){}
     },
-    "mapSetDetailFilter": {
+    'mapSetDetailFilter': {
         subscribe: function(){}
     },
-    "mapUpdateWalks": {
+    'mapUpdateWalks': {
         subscribe: function(){}
     },
-    "mapShowContextMenu": {
+    'mapShowContextMenu': {
         send: function(callback){
             window.portEvents.pub('mapShowContextMenu', callback);
         }
     },
-    "mapCloseContextMenu": {
+    'mapCloseContextMenu': {
         send: function(callback){
             window.portEvents.pub('mapCloseContextMenu', callback);
         }
     },
-    "mapSetMarkers": {
+    'mapSetMarkers': {
+        subscribe: function(callback){
+            window.portEvents.sub('mapSetMarkers', callback);
+        }
+    },
+    'mapSetLocale': {
         subscribe: function(){}
     },
-    "mapSetLocale": {
+    'mapSetConnections': {
         subscribe: function(){}
     },
-    "mapSetConnections": {
-        subscribe: function(){}
-    },
-    "mapHighlightConnections": {
+    'mapHighlightConnections': {
         subscribe: function(){}
     }
 }
