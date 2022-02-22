@@ -90,7 +90,7 @@ export default defineComponent({
       showStationAddress: false,
       inputValue: "",
       isFocused: false,
-      savedInputValue: ""
+      savedInputValue: "" as (string | null)
     }
   },
   watch: {
@@ -127,7 +127,10 @@ export default defineComponent({
       this.$emit('autocompleteElementClicked', element);
     },
     onBlur(event: Event) {
-      this.inputValue = this.savedInputValue;
+      if(this.savedInputValue) {
+        this.inputValue = this.savedInputValue;
+        this.savedInputValue = null;
+      }
       this.$emit('blur', event);
       this.showStationAddress = false;
       this.isFocused = false
