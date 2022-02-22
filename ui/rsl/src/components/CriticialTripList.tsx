@@ -25,6 +25,8 @@ function CriticalTripList({
     max_results: 100,
     critical_load_threshold: 1.0,
     crowded_load_threshold: 0.8,
+    include_edges: false,
+    sort_by: "MostCritical",
   });
 
   if (!data) {

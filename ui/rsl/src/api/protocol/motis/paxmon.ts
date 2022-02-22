@@ -74,6 +74,12 @@ export interface PaxMonFilterGroupsResponse {
 }
 
 // paxmon/PaxMonFilterTripsRequest.fbs
+export type PaxMonFilterTripsSortOrder =
+  | "MostCritical"
+  | "FirstDeparture"
+  | "ExpectedPax";
+
+// paxmon/PaxMonFilterTripsRequest.fbs
 export interface PaxMonFilterTripsRequest {
   universe: number;
   ignore_past_sections: boolean;
@@ -81,6 +87,8 @@ export interface PaxMonFilterTripsRequest {
   max_results: number;
   critical_load_threshold: number; // default: 1
   crowded_load_threshold: number; // default: 0.8
+  include_edges: boolean;
+  sort_by: PaxMonFilterTripsSortOrder;
 }
 
 // paxmon/PaxMonFilterTripsResponse.fbs
@@ -91,6 +99,8 @@ export interface PaxMonFilteredTripInfo {
   crowded_sections: number;
   max_excess_pax: number;
   cumulative_excess_pax: number;
+  max_expected_pax: number;
+  edges: PaxMonEdgeLoadInfo[];
 }
 
 // paxmon/PaxMonFilterTripsResponse.fbs

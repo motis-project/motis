@@ -1,5 +1,11 @@
 namespace motis.paxmon;
 
+enum PaxMonFilterTripsSortOrder : byte {
+  MostCritical, // most critical trip first
+  FirstDeparture, // earliest trip first
+  ExpectedPax // trip with most expected passengers first
+}
+
 table PaxMonFilterTripsRequest {
   universe: uint;
 
@@ -9,4 +15,7 @@ table PaxMonFilterTripsRequest {
 
   critical_load_threshold: float = 1.0;
   crowded_load_threshold: float = 0.8; // must be <= critical_load_threshold
+
+  include_edges: bool;
+  sort_by: PaxMonFilterTripsSortOrder;
 }
