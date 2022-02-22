@@ -20,7 +20,7 @@ app.config.globalProperties.$postService.getInitialRequestScheduleInfo().then((r
   intervalFromServer = { begin: resp.begin, end: resp.end };
 });
 
-const interval = setInterval(() => {
+let interval = setInterval(() => {
   if (TranslationService.service !== null && TranslationService.service.isLoaded && intervalFromServer.begin > 0) {
     app.use(router(TranslationService.service));
     const initDate = new Date(intervalFromServer.begin * 1000);
@@ -29,6 +29,7 @@ const interval = setInterval(() => {
     app.use(DateTimeService, initialDateTime, intervalFromServer);
     app.mount('#app');
     clearInterval(interval);
+    interval = -1;
   }
 }, 10);
 
@@ -40,7 +41,7 @@ declare global {
 window.mapService = MOTISMapServicePlugin.service;
 
 const intervalMap = setInterval(() => {
-  if (MOTISMapServicePlugin.service.initialized) {
+  if (MOTISMapServicePlugin.service.initialized && interval === -1) {
     MOTISMapServicePlugin.service.mapInit("map");
     clearInterval(intervalMap);
   }
