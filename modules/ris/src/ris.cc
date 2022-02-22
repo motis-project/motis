@@ -295,19 +295,20 @@ struct ris::impl {
 
     std::vector<input> urls;
     for (auto& in : inputs_) {
-      if (in.source_type() == input::source_type::path) {
-        if (fs::exists(in.get_path())) {
-          LOG(warn) << "parsing " << in.get_path();
-          if (config_.instant_forward_) {
-            publisher pub;
-            parse_sequential(sched, in, pub);
-          } else {
-            parse_sequential(sched, in, null_pub_);
-          }
+      if (in.source_type() != input::source_type::path) {
+        continue;
+      }
+
+      if (fs::exists(in.get_path())) {
+        LOG(warn) << "parsing " << in.get_path();
+        if (config_.instant_forward_) {
+          publisher pub;
+          parse_sequential(sched, in, pub);
         } else {
-          LOG(warn) << in.get_path() << " does not exist";
+          parse_sequential(sched, in, null_pub_);
         }
-        break;
+      } else {
+        LOG(warn) << in.get_path() << " does not exist";
       }
     }
 
