@@ -12,12 +12,15 @@
 #include "utl/parser/file.h"
 #include "utl/read_file.h"
 
+#include "net/http/client/url.h"
+
 #include "conf/date_time.h"
 
 #include "tar/file_reader.h"
 #include "tar/tar_reader.h"
 #include "tar/zstd_reader.h"
 
+#include "utl/overloaded.h"
 #include "utl/verify.h"
 
 #include "lmdb/lmdb.hpp"
@@ -29,6 +32,7 @@
 #include "motis/core/access/time_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/print_trip.h"
+#include "motis/module/context/motis_http_req.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
 #include "motis/ris/gtfs-rt/common.h"
@@ -126,17 +130,48 @@ struct ris::impl {
    * In single-timetable mode, the tag should be omitted.
    */
   struct input {
+    using source_t = std::variant<net::http::client::url, fs::path>;
+    enum class source_type { path, url };
+
     input(schedule const& sched, std::string const& in)
         : input{sched, split(in)} {}
 
-    fs::path const& path() const { return path_; }
+    std::string str() const {
+      return std::visit(utl::overloaded{[](fs::path const& p) {
+                                          return "path: " + p.generic_string();
+                                        },
+                                        [](net::http::client::url const& u) {
+                                          return "url: " + u.str();
+                                        }},
+                        src_);
+    }
+
+    source_type source_type() const {
+      return std::visit(
+          utl::overloaded{
+              [](fs::path const&) { return source_type::path; },
+              [](net::http::client::url const&) { return source_type::url; }},
+          src_);
+    }
+
+    fs::path get_path() const {
+      utl::verify(std::holds_alternative<fs::path>(src_), "no path {}", str());
+      return std::get<fs::path>(src_);
+    }
+
+    net::http::client::url get_url() const {
+      utl::verify(std::holds_alternative<fs::path>(src_), "no url {}", str());
+      return std::get<net::http::client::url>(src_);
+    }
+
     std::string const& tag() const { return tag_; }
+
     gtfsrt::knowledge_context& gtfs_knowledge() { return gtfs_knowledge_; }
 
   private:
     input(schedule const& sched,
-          std::pair<fs::path, std::string>&& path_and_tag)
-        : path_{std::move(path_and_tag.first)},
+          std::pair<source_t, std::string>&& path_and_tag)
+        : src_{std::move(path_and_tag.first)},
           tag_{path_and_tag.second},
           gtfs_knowledge_{path_and_tag.second, sched} {}
 
@@ -151,7 +186,7 @@ struct ris::impl {
       }
     }
 
-    fs::path path_;
+    source_t src_;
     std::string tag_;
 
     gtfsrt::knowledge_context gtfs_knowledge_;
@@ -208,6 +243,27 @@ struct ris::impl {
     });
   }
 
+  void update_gtfs_rt(schedule& sched) {
+    auto futures = std::vector<http_future_t>{};
+    for (auto const& in : inputs_) {
+      if (in.source_type() == input::source_type::url) {
+        futures.emplace_back(motis_http(in.get_url()));
+      }
+    }
+
+    publisher pub;
+    pub.schedule_res_id_ = to_res_id(::motis::module::global_res_id::SCHEDULE);
+
+    for (auto const& f : futures) {
+      parse_str_and_write_to_db(*file_upload_, f->val().body,
+                                file_type::PROTOBUF, pub);
+    }
+
+    sched.system_time_ = pub.max_timestamp_;
+    sched.last_update_timestamp_ = std::time(nullptr);
+    publish_system_time_changed(pub.schedule_res_id_);
+  }
+
   void init(dispatcher& d, schedule& sched) {
     inputs_ = utl::to_vec(config_.input_, [&](std::string const& in) {
       return input{sched, in};
@@ -237,18 +293,35 @@ struct ris::impl {
     t.dbi_open(MAX_DAY_DB, db::dbi_flags::CREATE | db::dbi_flags::INTEGERKEY);
     t.commit();
 
+    std::vector<input> urls;
     for (auto& in : inputs_) {
-      if (fs::exists(in.path())) {
-        LOG(warn) << "parsing " << in.path();
-        if (config_.instant_forward_) {
-          publisher pub;
-          parse_sequential(sched, in, pub);
+      if (in.source_type() == input::source_type::path) {
+        if (fs::exists(in.get_path())) {
+          LOG(warn) << "parsing " << in.get_path();
+          if (config_.instant_forward_) {
+            publisher pub;
+            parse_sequential(sched, in, pub);
+          } else {
+            parse_sequential(sched, in, null_pub_);
+          }
         } else {
-          parse_sequential(sched, in, null_pub_);
+          LOG(warn) << in.get_path() << " does not exist";
         }
-      } else {
-        LOG(warn) << in.path() << " does not exist";
+        break;
       }
+    }
+
+    auto const has_urls = std::any_of(
+        begin(inputs_), end(inputs_),
+        [](auto&& in) { return in.source_type() == input::source_type::url; });
+    if (has_urls) {
+      d.register_timer(
+          "RIS GTFS-RT Update",
+          boost::posix_time::seconds{config_.update_interval_},
+          [this, &sched]() { update_gtfs_rt(sched); },
+          ctx::accesses_t{ctx::access_request{
+              to_res_id(::motis::module::global_res_id::SCHEDULE),
+              ctx::access_t::WRITE}});
     }
 
     if (config_.init_time_.unix_time_ != 0) {
@@ -288,7 +361,9 @@ struct ris::impl {
   msg_ptr read(schedule& sched, msg_ptr const&) {
     publisher pub;
     for (auto& in : inputs_) {
-      parse_sequential(sched, in, pub);
+      if (in.source_type() == input::source_type::path) {
+        parse_sequential(sched, in, pub);
+      }
     }
     sched.system_time_ = pub.max_timestamp_;
     sched.last_update_timestamp_ = std::time(nullptr);
@@ -588,13 +663,13 @@ struct ris::impl {
 
   template <typename Publisher>
   void parse_sequential(schedule& sched, input& in, Publisher& pub) {
-    if (!fs::exists(in.path())) {
-      l(logging::error, "ris input path {} does not exist", in.path());
+    if (!fs::exists(in.get_path())) {
+      l(logging::error, "ris input path {} does not exist", in.get_path());
       return;
     }
 
-    for (auto const& [t, path, type] :
-         collect_files(fs::canonical(in.path(), in.path().root_path()))) {
+    for (auto const& [t, path, type] : collect_files(
+             fs::canonical(in.get_path(), in.get_path().root_path()))) {
       try {
         parse_file_and_write_to_db(in, path, type, pub);
         if (config_.instant_forward_) {

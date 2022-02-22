@@ -77,7 +77,7 @@ struct http_request_executor
     }
 
     ++redirect_count_;
-    make_request(target);
+    make_request(url(target));
   }
 
   unsigned redirect_count_{0U};
