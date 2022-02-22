@@ -1,6 +1,6 @@
 <template>
   <div class="app">
-    <Map></Map>
+    <Map @openSimWindow="simWindowOpened = !simWindowOpened" :isSimulationEnabled="isSimulationEnabled"></Map>
     <LeftMenu @searchHidden="searchFieldHidden = $event"></LeftMenu>
     <div id="station-search" :class="['', searchFieldHidden ? 'overlay-hidden' : '']">
       <InputField
@@ -10,9 +10,6 @@
         :isTimeCalendarField="false"
         @autocompleteElementClicked="goToTimetable"></InputField>
     </div>
-    <button class="sim-overlay-opener" @mousedown="simWindowOpened ? simWindowOpened = false : simWindowOpened = true">
-      {{ $ds.getTimeString(undefined, true) }}
-    </button>
     <div class="sim-time-picker-container" v-if="simWindowOpened">
       <div class="sim-time-picker-overlay">
         <div class="title">
@@ -21,7 +18,7 @@
             type="checkbox"
             name="sim-mode-checkbox"
             @click="startDisableSimulation()"
-            checked />
+            :checked="isSimulationEnabled" />
           <label for="sim-mode-checkbox">Simulationsmodus</label>
         </div>
         <Calendar :class="[isSimulationEnabled ? 'date' : 'date disabled']" @dateChanged="changeDate"></Calendar>
@@ -77,7 +74,7 @@ export default defineComponent({
     },
     startDisableSimulation() {
       if(this.isSimulationEnabled) {
-        this.cachedSimulationTime = this.formatSimTime(this.cachedSimulationTime, this.$ds.date, "time");
+        this.cachedSimulationTime = this.$ds.date.setSeconds(0).valueOf();
         this.$ds.dateTime = new Date().valueOf();
       }
       else {
@@ -87,23 +84,21 @@ export default defineComponent({
     },
     changeDate(newDate: Date) {
       this.$ds.dateTime = this.formatSimTime(this.$ds.dateTime, newDate, "date");
-      this.cachedSimulationTime = this.formatSimTime(this.cachedSimulationTime, newDate, "date");
     },
     changeTime(newTime: Date) {
       this.$ds.dateTime = this.formatSimTime(this.$ds.dateTime, newTime, "time");
-      this.cachedSimulationTime = this.formatSimTime(this.cachedSimulationTime, newTime, "time");
     },
-    formatSimTime(time: number, newTime: Date, option: ("time" | "date")): number {
+    formatSimTime(time: number, newTime: Date, option: string): number {
       let t: Date = new Date(time);
-      if(option === "time") {
-        t.setHours(newTime.getHours());
-        t.setMinutes(newTime.getMinutes());
-        t.setSeconds(0);
-      }
-      else if(option === "date") {
+      t.setSeconds(0);
+      if(option === "date") {
         t.setDate(newTime.getDate());
         t.setMonth(newTime.getMonth());
         t.setFullYear(newTime.getFullYear());
+      }
+      else if(option === "time") {
+        t.setHours(newTime.getHours());
+        t.setMinutes(newTime.getMinutes());
       }
       else {
         return -1;
@@ -113,24 +108,3 @@ export default defineComponent({
   }
 });
 </script>
-
-<style>
-.sim-overlay-opener {
-  height: 20px;
-  width: 145px;
-  position: fixed;
-  bottom: 20px;
-  right: 150px;
-  cursor: pointer;
-  color: gray;
-  border-color: gray;
-  border-radius: 5px;
-  background-color: white;
-  font-family: 'Roboto', sans-serif;
-}
-
-.sim-overlay-opener:hover {
-  color: white;
-  background-color: gray;
-}
-</style>

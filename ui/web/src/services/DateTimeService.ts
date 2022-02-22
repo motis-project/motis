@@ -8,7 +8,7 @@ export class DateTimeService {
   public intervalFromServer: Interval;
   private readonly timeFormat: string = "HH:mm";
   private readonly dateFormat: string = "dd.MM.yyyy";
-  private readonly simulationTimeFormat: string = "HH:mm:ss";
+  private readonly simulationTimeFormat: string = "dd.MM.yyyy HH:mm:ss";
 
   public constructor(initialDateTime: number, intervalFromServer: Interval) {
     this.dateTime = initialDateTime;
