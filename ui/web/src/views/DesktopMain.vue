@@ -88,7 +88,7 @@ export default defineComponent({
     changeTime(newTime: Date) {
       this.$ds.dateTime = this.formatSimTime(this.$ds.dateTime, newTime, "time");
     },
-    formatSimTime(time: number, newTime: Date, option: string): number {
+    formatSimTime(time: number, newTime: Date, option: ("date" | "time")): number {
       let t: Date = new Date(time);
       t.setSeconds(0);
       if(option === "date") {
