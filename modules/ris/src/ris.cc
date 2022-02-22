@@ -175,14 +175,24 @@ struct ris::impl {
           tag_{path_and_tag.second},
           gtfs_knowledge_{path_and_tag.second, sched} {}
 
-    static std::pair<fs::path, std::string> split(std::string const& in) {
+    static std::pair<source_t, std::string> split(std::string const& in) {
+      auto const is_url = [](auto&& s) {
+        return boost::starts_with(s, "http://") ||
+               boost::starts_with(s, "https://");
+      };
+
       std::string tag;
       if (auto const colon_pos = in.find(':'); colon_pos != std::string::npos) {
         tag = in.substr(0, colon_pos);
         tag = tag.empty() ? "" : tag + "_";
-        return std::pair{fs::path{in.substr(colon_pos + 1)}, tag};
+        auto const src = in.substr(colon_pos + 1);
+        return {is_url(src) ? source_t{net::http::client::url{src}}
+                            : source_t{fs::path{src}},
+                tag};
       } else {
-        return std::pair{fs::path{in}, tag};
+        return {is_url(in) ? source_t{net::http::client::url{in}}
+                           : source_t{fs::path{in}},
+                tag};
       }
     }
 
