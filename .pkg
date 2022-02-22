@@ -45,7 +45,7 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=libressl-3.4.2
-  commit=7375f8a0304e7c485c59fcd7618d7ea496d7c384
+  commit=70253106746f83c1d092c78f6e4c1e1ab3f43b99
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
