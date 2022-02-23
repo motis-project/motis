@@ -29,7 +29,7 @@ function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: Reac
 }
 
 
-export const DatePicker: React.FC<{'translation': Translations}> = (props) => {
+export const DatePicker: React.FC<{'translation': Translations, 'currentDate': moment.Moment, 'setCurrentDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
     
     const datePickerRef = React.useRef(null);
 
@@ -41,11 +41,20 @@ export const DatePicker: React.FC<{'translation': Translations}> = (props) => {
 
     const[datePickerSelected, setDatePickerSelected] = React.useState<Boolean>(false);
     
-    const[currMoment, setCurrMoment] = React.useState(moment());
+    const[currentDate, setcurrentDate] = React.useState<moment.Moment>(props.currentDate);
     
-    const[dateDisplay, setDateDisplay] = React.useState<string>(currMoment.format('D.M.YYYY'));
+    const[dateDisplay, setDateDisplay] = React.useState<string>(currentDate.format('D.M.YYYY'));
     
     useOutsideAlerter(datePickerRef, inputFieldRef, dayButtonPrevious, dayButtonNext, setDatePickerSelected);
+
+    React.useEffect(() => {
+        setcurrentDate(props.currentDate);
+    }, [props.currentDate]);
+
+    React.useEffect(() => {
+        props.setCurrentDate(currentDate);
+        console.log('dateDisplay triggers in Datepicker');
+    }, [dateDisplay]);
 
     const weekdayshortname = props.translation.search.weekDays.map(day => {
         return (
@@ -56,20 +65,20 @@ export const DatePicker: React.FC<{'translation': Translations}> = (props) => {
      });
 
     const firstDayOfMonth = () => {
-        return moment(currMoment).startOf('month').format('d') as unknown as number;
+        return moment(currentDate).startOf('month').format('d') as unknown as number;
     };
 
     let blanks = [];
-    let previousMonthDays = moment(currMoment).subtract(1, 'month').daysInMonth();
+    let previousMonthDays = moment(currentDate).subtract(1, 'month').daysInMonth();
     for (let i = 0; i < firstDayOfMonth()-1; i++) {
         blanks.push(
             <td className='out-of-month' 
                 key={'previous-month' + i.toString()}
                 onClick={() => {
                     let firstDay = firstDayOfMonth();
-                    setCurrMoment(currMoment.subtract(1, 'month'));
-                    setCurrMoment(currMoment.date(currMoment.daysInMonth() - firstDay + 2 + i));
-                    setDateDisplay(currMoment.format('D.M.YYYY'));
+                    setcurrentDate(currentDate.subtract(1, 'month'));
+                    setcurrentDate(currentDate.date(currentDate.daysInMonth() - firstDay + 2 + i));
+                    setDateDisplay(currentDate.format('D.M.YYYY'));
                     setDatePickerSelected(false);
                 }}>
                 {previousMonthDays - firstDayOfMonth() + 2 + i}
@@ -82,15 +91,15 @@ export const DatePicker: React.FC<{'translation': Translations}> = (props) => {
     };
 
     let isToday = (d: number) => {
-        return moment().format('D.M.YYYY') === moment(currMoment).date(d).format('D.M.YYYY');
+        return moment().format('D.M.YYYY') === moment(currentDate).date(d).format('D.M.YYYY');
     }
 
     let selectedDay = () => {
-        return currMoment.format('D') as unknown as number;
+        return currentDate.format('D') as unknown as number;
     };
         
     let daysInMonth = [];
-    for (let d = 1; d <= currMoment.daysInMonth(); d++) {
+    for (let d = 1; d <= currentDate.daysInMonth(); d++) {
         let currentDay = isToday(d) ? ' today' : '';
         let selected = d == selectedDay() ? ' selected' : '';
         let validDay = d >= today() ? ' valid-day' : ' invalid-day';
@@ -98,8 +107,8 @@ export const DatePicker: React.FC<{'translation': Translations}> = (props) => {
             <td key={d} 
                 className={`in-month${currentDay}${selected}${validDay}`}
                 onClick={() => {
-                    setCurrMoment(currMoment.date(d));
-                    setDateDisplay(currMoment.format('D.M.YYYY'));
+                    setcurrentDate(currentDate.date(d));
+                    setDateDisplay(currentDate.format('D.M.YYYY'));
                     setDatePickerSelected(false);
                 }}>
                 {d}
@@ -113,9 +122,9 @@ export const DatePicker: React.FC<{'translation': Translations}> = (props) => {
             <td key={'next-month' + i.toString()}
                 className='out-of-month invalid-day'
                 onClick={() => {
-                    setCurrMoment(currMoment.add(1, 'month'));
-                    setCurrMoment(currMoment.date(i));
-                    setDateDisplay(currMoment.format('D.M.YYYY'));
+                    setcurrentDate(currentDate.add(1, 'month'));
+                    setcurrentDate(currentDate.date(i));
+                    setDateDisplay(currentDate.format('D.M.YYYY'));
                     setDatePickerSelected(false);
                 }}>
                 {i}    
@@ -129,13 +138,13 @@ export const DatePicker: React.FC<{'translation': Translations}> = (props) => {
 
     totalSlots.forEach((row, i) => {
         if (i % 7 !== 0) {
-            cells.push(row); // if index not equal 7 that means not go to next week
+            cells.push(row); // if index is not equal to 7 dont go to next week
         } else {
-            rows.push(cells); // when reach next week we contain all td in last week to rows 
+            rows.push(cells); // when we reach next week we push all td in last week to rows 
             cells = []; // empty container 
             cells.push(row); // in current loop we still push current row to new container
         }
-        if (i === totalSlots.length - 1) { // when end loop we add remain date
+        if (i === totalSlots.length - 1) { // when loop ends we add remain date
             rows.push(cells);
         }
     });
@@ -165,8 +174,8 @@ export const DatePicker: React.FC<{'translation': Translations}> = (props) => {
                                 <a  className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' 
                                     ref={dayButtonPrevious}
                                     onClick={() => {
-                                        setCurrMoment(currMoment.subtract(1, 'd')); 
-                                        setDateDisplay(currMoment.format('D.M.YYYY'));
+                                        setcurrentDate(currentDate.subtract(1, 'd')); 
+                                        setDateDisplay(currentDate.format('D.M.YYYY'));
                                         }}>
                                     <i className='icon'>chevron_left</i>
                                 </a>
@@ -175,8 +184,8 @@ export const DatePicker: React.FC<{'translation': Translations}> = (props) => {
                                 <a  className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' 
                                     ref={dayButtonNext}
                                     onClick={() => {
-                                        setCurrMoment(currMoment.add(1, 'd')); 
-                                        setDateDisplay(currMoment.format('D.M.YYYY'));
+                                        setcurrentDate(currentDate.add(1, 'd')); 
+                                        setDateDisplay(currentDate.format('D.M.YYYY'));
                                         }}>
                                     <i className='icon'>chevron_right</i>
                                 </a>
@@ -187,9 +196,9 @@ export const DatePicker: React.FC<{'translation': Translations}> = (props) => {
             </div>
             <div ref={datePickerRef} className={datePickerSelected ? 'paper calendar' : 'paper calendar hide'}>
                 <div className='month'>
-                    <i className='icon' onClick={() => {setCurrMoment(currMoment.subtract(1, 'month')); setDateDisplay(currMoment.format('D.M.YYYY'))}}>chevron_left</i>
-                    <span className='month-name'>{props.translation.search.months[currMoment.month()] + ' ' + currMoment.year()}</span>
-                    <i className='icon' onClick={() => {setCurrMoment(currMoment.add(1, 'month')); setDateDisplay(currMoment.format('D.M.YYYY'))}}>chevron_right</i>
+                    <i className='icon' onClick={() => {setcurrentDate(currentDate.subtract(1, 'month')); setDateDisplay(currentDate.format('D.M.YYYY'))}}>chevron_left</i>
+                    <span className='month-name'>{props.translation.search.months[currentDate.month()] + ' ' + currentDate.year()}</span>
+                    <i className='icon' onClick={() => {setcurrentDate(currentDate.add(1, 'month')); setDateDisplay(currentDate.format('D.M.YYYY'))}}>chevron_right</i>
                 </div>
                 <table className='calendar-day'>
                     <thead className='weekdays'>

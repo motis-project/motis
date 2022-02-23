@@ -2,8 +2,13 @@ import React from 'react';
 
 import { Translations } from './Localization';
 import { DatePicker } from './DatePicker';
+import moment from 'moment';
 
 export const SubOverlay: React.FC<{'translation': Translations, 'subOverlayHidden' : Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>}> = (props) => {
+    
+    // Current Date
+    const [searchDate, setSearchDate] = React.useState<moment.Moment>(moment());
+    
     return (
         <div className={props.subOverlayHidden ? 'sub-overlay hidden' : 'sub-overlay'}>
             <div id='sub-overlay-content'>
@@ -27,7 +32,9 @@ export const SubOverlay: React.FC<{'translation': Translations, 'subOverlayHidde
                             </div>
                             <div className='pure-g gutters'>
                                 <div className='pure-u-1 pure-u-sm-12-24 to-location'>
-                                    <DatePicker translation={props.translation}/>
+                                <DatePicker translation={props.translation}
+                                            currentDate={searchDate}
+                                            setCurrentDate={setSearchDate}/>
                                 </div>
                                 <div className='pure-u-1 pure-u-sm-12-24'>
                                     <div>

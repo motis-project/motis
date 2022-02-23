@@ -10,15 +10,16 @@ import { Address } from './SuggestionTypes';
 import { SearchInputField } from './SearchInputField';
 import { Modepicker } from './ModePicker';
 import { getFromLocalStorage } from './LocalStorage';
+import { Interval } from './RoutingTypes';
 
 
-const getRoutingOptions = (startType: string, startModes: Mode[], start: Station | Address, searchType: string, searchDirection: string, destinationType: string, destinationModes: Mode[], destination: Station | Address ) => {
+const getRoutingOptions = (startType: string, startModes: Mode[], start: Station | Address, searchType: string, searchDirection: string, destinationType: string, destinationModes: Mode[], destination: Station | Address, interval: Interval ) => {
     return {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({  destination: {type: "Module", target: "/intermodal"}, 
                                 content_type: 'IntermodalRoutingRequest',
-                                content: {start_type: startType, start_modes: startModes, start: { station: start, min_connection_count: 5, interval: { begin: 1644335520, end: 1644342720 }, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: destination } })
+                                content: {start_type: startType, start_modes: startModes, start: { station: start, min_connection_count: 5, interval: interval, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: destination } })
     };
 };
 
@@ -48,17 +49,16 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     
 
     // Current Date
-    const [currentDate, setCurrentDate] = useState(moment());
+    const [searchDate, setSearchDate] = useState<moment.Moment>(moment());
     
     // SearchTime
-    const [searchTime, setSearchTime] = useState<string>(currentDate.format('HH:mm'));
+    const [searchTime, setSearchTime] = useState<string>(moment().format('HH:mm'));
     
     // SearchType
     const [searchType, setSearchType] = useState<string>('Accessibility');
     
     // SearchDirection
     const [searchDirection, setSearchDirection] = useState<string>('Forward');
-
     
     useEffect(() => {
         if (start !== null && destination !== null) {
@@ -66,7 +66,10 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
             let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
             //console.log('Fire searchQuery')
 
-            fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination))
+            //let interval = {begin: searchDate.unix(), end: searchDate.unix() + 7200};
+            //console.log(searchDate.format('LLLL'))
+
+            fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination, {begin: searchDate.unix(), end: searchDate.unix() + 7200}))
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
                     console.log("Response came in");
@@ -75,7 +78,13 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                 });
         }
     }, [start, startModes, destination, destinationModes, searchDirection]);
-    
+
+
+    useEffect(() => {
+        console.log("UseEffect Trigger on searchDate. WARUM TRIGGERST DU NICHT??? >:V")
+    }, [searchDate]);
+
+
     return (
         <div id='search'>
             <div className='pure-g gutters'>
@@ -104,7 +113,9 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                     </div>
                 </div>
                 <div className='pure-u-1 pure-u-sm-12-24'>
-                    <DatePicker translation={props.translation}/>
+                    <DatePicker translation={props.translation}
+                                currentDate={searchDate}
+                                setCurrentDate={setSearchDate}/>
                 </div>
             </div>
             <div className='pure-g gutters'>
@@ -132,14 +143,20 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                 value={searchTime}
                                 onChange={(e) => {
                                     setSearchTime(e.currentTarget.value);
-                                }}/>
+                                    /* Wie sollen wir mit fehlerhfatem Input umgehen?
+                                    if (e.currentTarget.value.split(':').length == 2) {
+                                        let [hour, minute] = e.currentTarget.value.split(':');
+                                        if (!isNaN(+hour) && !isNaN(+minute)){
+                                            setSearchHours(moment(searchHours.hour(hour as unknown as number > 23 ? 23 : hour as unknown as number)));
+                                            setSearchHours(moment(searchHours.minute(minute as unknown as number > 59 ? 59 : hour as unknown as number)));
+                                }}*/}}/>
                             <div className='gb-input-widget'>
                                 <div className='hour-buttons'>
                                     <div><a
-                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => {setCurrentDate(currentDate.subtract(1, 'h')); setSearchTime(currentDate.format('HH:mm'))}}><i
+                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => {setSearchDate(searchDate.subtract(1, 'h')); setSearchTime(searchDate.format('HH:mm'))}}><i
                                                 className='icon'>chevron_left</i></a></div>
                                     <div><a
-                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => {setCurrentDate(currentDate.add(1, 'h')); setSearchTime(currentDate.format('HH:mm'))}}><i
+                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => {setSearchDate(searchDate.add(1, 'h')); setSearchTime(searchDate.format('HH:mm'))}}><i
                                                 className='icon'>chevron_right</i></a></div>
                                 </div>
                             </div>

@@ -1,10 +1,14 @@
 import React from "react";
+import moment from "moment";
+
 import { DatePicker } from "./DatePicker";
 import { Translations } from "./Localization";
 
 export const MapContainer: React.FC<{'translation': Translations}> = (props) => {
 
     const [simTimePickerSelected, setSimTimePickerSelected] = React.useState<Boolean>(false);
+    
+    const[currMoment, setCurrMoment] = React.useState<moment.Moment>(moment());
 
     return (
         <div className="map-container">
@@ -50,23 +54,23 @@ export const MapContainer: React.FC<{'translation': Translations}> = (props) => 
                         <label htmlFor="sim-mode-checkbox">Simulationsmodus</label>
                     </div>
                     <div className="date">
-                        <DatePicker translation={props.translation}/>
+                        <DatePicker translation={props.translation}
+                                    currentDate={currMoment}
+                                    setCurrentDate={setCurrMoment}/>
                     </div>
                     <div className="time">
-                        <div>
-                            <div className="label">Uhrzeit</div>
-                            <div className="gb-input-group">
-                                <div className="gb-input-icon"><i className="icon">schedule</i></div>
-                                <input className="gb-input" tabIndex={21} />
-                                <div className="gb-input-widget">
-                                    <div className="hour-buttons">
-                                        <div><a
-                                            className="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"><i
-                                                className="icon">chevron_left</i></a></div>
-                                        <div><a
-                                            className="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"><i
-                                                className="icon">chevron_right</i></a></div>
-                                    </div>
+                        <div className="label">Uhrzeit</div>
+                        <div className="gb-input-group">
+                            <div className="gb-input-icon"><i className="icon">schedule</i></div>
+                            <input className="gb-input" tabIndex={21} />
+                            <div className="gb-input-widget">
+                                <div className="hour-buttons">
+                                    <div><a
+                                        className="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"><i
+                                            className="icon">chevron_left</i></a></div>
+                                    <div><a
+                                        className="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"><i
+                                            className="icon">chevron_right</i></a></div>
                                 </div>
                             </div>
                         </div>

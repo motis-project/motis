@@ -152,6 +152,9 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
                         } }
                         onFocus={_ => {
                             setShowSuggestions(true);
+                        } }
+                        onClick={_ => {
+                            setShowSuggestions(true);
                         } }/></div>
             </form>
             <div className='paper' style={showSuggestions && addressSuggestions.length > 0 ? {} : {display: 'none'}}>
