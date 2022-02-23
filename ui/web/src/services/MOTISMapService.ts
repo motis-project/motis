@@ -46,8 +46,8 @@ interface RVConnectionTrain{
 interface RVConnectionSection {
   departureStation: StationGuess,
   arrivalStation: StationGuess,
-  scheduledDepartureTime: Date, // Time in elm equal to Date in ts???
-  scheduledArrivalTime: Date
+  scheduledDepartureTime: number,
+  scheduledArrivalTime: number
 }
 
 interface RVConnectionWalkOptions {
@@ -88,10 +88,10 @@ interface MapTooltipOptions {
 
 interface RVTrain {
   names: string[],
-  departureTime: Date,
-  arrivalTime: Date,
-  scheduledDepartureTime: Date,
-  scheduledArrivalTime: Date,
+  departureTime: number,
+  arrivalTime: number,
+  scheduledDepartureTime: number,
+  scheduledArrivalTime: number,
   hasDepartureDelayInfo: boolean,
   hasArrivalDelayInfo: boolean,
   departureStation: string,
