@@ -45,7 +45,7 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=libressl-3.4.2
-  commit=ffc7217a4570b586825a11643d3baed72a7ad9fd
+  commit=bc445c36b9776041aabdb98921d56b5024347c73
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
@@ -84,8 +84,8 @@
   commit=5acaeaacca154bd20987806f9626be5e3b87e1c5
 [boost]
   url=git@github.com:motis-project/boost.git
-  branch=boost-1.78.0
-  commit=7fe0d568499c05811db803e4122c9e07b7412e04
+  branch=master
+  commit=c90d53bdcd7ff741a416ae122b33c9c2a96e8be7
 [mimalloc]
   url=git@github.com:motis-project/mimalloc.git
   branch=master
