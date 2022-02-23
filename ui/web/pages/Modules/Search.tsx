@@ -1,63 +1,43 @@
 import React, { useEffect, useState } from 'react';
 
-import { Modepicker } from './ModePicker';
+import moment from 'moment';
+
 import { DatePicker } from './DatePicker';
-import { IntermodalRoutingRequest, IntermodalRoutingResponse, IntermodalPretripStartInfo, PretripStartInfo } from './IntermodalRoutingTypes';
+import { Mode, IntermodalRoutingResponse } from './IntermodalRoutingTypes';
 import { Connection, Station } from './ConnectionTypes';
-import { Mode } from './ModePicker';
+import { Translations } from './Localization';
+import { Address } from './SuggestionTypes';
+import { SearchInputField } from './SearchInputField';
+import { Modepicker } from './ModePicker';
+import { getFromLocalStorage } from './LocalStorage';
 import { Interval } from './RoutingTypes';
 
 
-interface Destination {
-    name: string,
-    id: string
-}
-
-
-interface Start {
-    station: Station,
-    min_connection_count: number,
-    interval: Interval,
-    extend_interval_later: boolean,
-    extend_interval_earlier: boolean
-}
-
-
-const getRoutingOptions = (startType: string, startModes: Mode[], start: string, searchType: string, searchDirection: string, destinationType: string, destinationModes: Mode[], destination: string ) => {
+const getRoutingOptions = (startType: string, startModes: Mode[], start: Station | Address, searchType: string, searchDirection: string, destinationType: string, destinationModes: Mode[], destination: Station | Address, interval: Interval ) => {
     return {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({  destination: {type: "Module", target: "/intermodal"}, 
                                 content_type: 'IntermodalRoutingRequest',
-                                content: {start_type: startType, start_modes: startModes, start: { station: { name: start, id: 'delfi_de:06411:4734:64:63'}, min_connection_count: 5, interval: { begin: 1643017248, end: 1643020000 }, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: {name: destination, id: 'delfi_de:06412:1204:3:3' }} })
-    }
-}
+                                content: {start_type: startType, start_modes: startModes, start: { station: start, min_connection_count: 5, interval: interval, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: destination } })
+    };
+};
 
 
-const getDefaultMode = () => {
-    return {mode_type: '', mode: { search_options: { profile: 'default', duration_limit: 30 } } }
-}
-
-
-export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>}> = (props) => {
-
-    const [searchQuery, setSearchQuery] = useState<boolean>(true);
-    
+export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations}> = (props) => {
+ 
+    // Start
     // StartType
     const [startType, setStartType] = useState<string>('PretripStart');
     
     // StartModes
     const [startModes, setStartModes] = useState<Mode[]>([]);
+
+    // Start Station or Position
+    const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
     
-    // Start
-    const [start, setStart] = useState<string>('Darmstadt Hauptbahnhof')//<Start>({ station: { name: 'Darmstadt Hauptbahnhof', id: 'delfi_de:06411:4734:64:63'}, min_connection_count: 5, interval: { begin: 1640430180, end: 164043738 }, extend_interval_later: true, extend_interval_earlier: true });
     
-    // SearchType
-    const [searchType, setSearchType] = useState<string>('Accessibility');
-    
-    // SearchDirection
-    const [searchDirection, setSearchDirection] = useState<string>('Forward');
-    
+    // Destination
     // DestinationType
     const [destinationType, setDestinationType] = useState<string>('InputStation');
     
@@ -65,112 +45,118 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     const [destinationModes, setDestinationModes] = useState<Mode[]>([]);
     
     // Destination holds the Value of 'to location' input field
-    const [destination, setDestination] = useState<string>("Frankfurt (Main) Westbahnhof")//<Destination>({name: 'Frankfurt (Main) Westbahnhof', id: 'delfi_D_de:06412:1204' });
+    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
+    
 
+    // Current Date
+    const [searchDate, setSearchDate] = useState<moment.Moment>(moment());
+    
+    // SearchTime
+    const [searchTime, setSearchTime] = useState<string>(moment().format('HH:mm'));
+    
+    // SearchType
+    const [searchType, setSearchType] = useState<string>('Accessibility');
+    
+    // SearchDirection
+    const [searchDirection, setSearchDirection] = useState<string>('Forward');
     
     useEffect(() => {
-        let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest'
-        //console.log('Fire searchQuery')
+        if (start !== null && destination !== null) {
+            props.setConnections(null);
+            let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
+            //console.log('Fire searchQuery')
 
-        fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination))
-            .then(res => res.json())
-            .then((res: IntermodalRoutingResponse) => {
-                console.log("Response came in");
-                console.log(res)
-                props.setConnections(res.content.connections)
-            })
+            //let interval = {begin: searchDate.unix(), end: searchDate.unix() + 7200};
+            //console.log(searchDate.format('LLLL'))
 
-    }, [searchQuery]);
-    
+            fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination, {begin: searchDate.unix(), end: searchDate.unix() + 7200}))
+                .then(res => res.json())
+                .then((res: IntermodalRoutingResponse) => {
+                    console.log("Response came in");
+                    console.log(res);
+                    props.setConnections(res.content.connections);
+                });
+        }
+    }, [start, startModes, destination, destinationModes, searchDirection]);
+
+
+    useEffect(() => {
+        console.log("UseEffect Trigger on searchDate. WARUM TRIGGERST DU NICHT??? >:V")
+    }, [searchDate]);
+
+
     return (
         <div id='search'>
             <div className='pure-g gutters'>
                 <div className='pure-u-1 pure-u-sm-12-24 from-location'>
                     <div>
-                        <form>
-                            <div className='label'>
-                                Start
-                            </div>
-                            <div className='gb-input-group'>
-                                <div className='gb-input-icon'>
-                                    <i className='icon'>place</i>
-                                    </div>
-                            <input  className='gb-input' tabIndex={1} value={start} 
-                                    onChange={e => {
-                                        //e.preventDefault();
-                                        //console.log("Start changed")
-                                        setStart(e.currentTarget.value)
-                                    } }
-                                    onKeyPress={e => {
-                                        if (e.key == "Enter") {
-                                            e.preventDefault();
-                                            console.log("Pressed Enter in Start")
-                                            setSearchQuery(!searchQuery)
-                                        }
-                                    } } /></div>
-                        </form>
-                        <div className='paper hide'>
-                            <ul className='proposals'></ul>
-                        </div>
+                        <SearchInputField   translation={props.translation}
+                                        label={props.translation.search.start}
+                                        station={start}
+                                        setSearchDisplay={setStart}
+                                        localStorageStation='motis.routing.from_location'/>
+                        <Modepicker translation={props.translation} 
+                                    title={props.translation.search.startTransports} 
+                                    setModes={setStartModes}
+                                    localStorageModes='motis.routing.from_modes'/>
                     </div>
-                    <Modepicker start={true}/>{/* modes={startModes} setModes={setStartModes}/>*/}
                     <div className='swap-locations-btn'>
                         <label className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'>
                             <input  type='checkbox' 
                                     onClick={() => {
-                                        let tmp = destination;
+                                        let swapStation = destination;
                                         setDestination(start);
-                                        setStart(tmp);
+                                        setStart(swapStation);
                             }}/>
                             <i className='icon'>swap_vert</i>
                         </label>
                     </div>
                 </div>
                 <div className='pure-u-1 pure-u-sm-12-24'>
-                    <DatePicker />
+                    <DatePicker translation={props.translation}
+                                currentDate={searchDate}
+                                setCurrentDate={setSearchDate}/>
                 </div>
             </div>
             <div className='pure-g gutters'>
                 <div className='pure-u-1 pure-u-sm-12-24 to-location'>
                     <div>
-                        <div>
-                            <div className='label'>Ziel</div>
-                            <div className='gb-input-group'>
-                                <div className='gb-input-icon'><i className='icon'>place</i></div>
-                                <input  className='gb-input' tabIndex={2} value={destination}
-                                        onChange={e => {
-                                            //e.preventDefault();
-                                            //console.log("Start changed")
-                                            setDestination(e.currentTarget.value)
-                                        } }
-                                        onKeyPress={e => {
-                                            if (e.key == "Enter") {
-                                                e.preventDefault();
-                                                console.log("Pressed Enter in Destination")
-                                                setSearchQuery(!searchQuery)
-                                            }
-                                        } }/>
-                            </div>
-                        </div>
-                        <div className='paper hide'>
-                            <ul className='proposals'></ul>
-                        </div>
+                        <SearchInputField   translation={props.translation}
+                                            label={props.translation.search.destination}
+                                            station={destination}
+                                            setSearchDisplay={setDestination}
+                                            localStorageStation='motis.routing.to_location'/>
+                        <Modepicker translation={props.translation} 
+                                    title={props.translation.search.destinationTransports} 
+                                    setModes={setDestinationModes}
+                                    localStorageModes='motis.routing.to_modes'/>
                     </div>
-                    <Modepicker start={false}/>{/*} modes={destinationModes} setModes={setDestinationModes}/>*/}
-                </div> 
+                </div>
                 <div className='pure-u-1 pure-u-sm-9-24'>
                     <div>
-                        <div className='label'>Uhrzeit</div>
+                        <div className='label'>{props.translation.search.time}</div>
                         <div className='gb-input-group'>
-                            <div className='gb-input-icon'><i className='icon'>schedule</i></div><input
-                                className='gb-input' tabIndex={4} />
+                            <div className='gb-input-icon'><i className='icon'>schedule</i></div>
+                            <input
+                                className='gb-input' 
+                                tabIndex={4} 
+                                value={searchTime}
+                                onChange={(e) => {
+                                    setSearchTime(e.currentTarget.value);
+                                    /* Wie sollen wir mit fehlerhfatem Input umgehen?
+                                    if (e.currentTarget.value.split(':').length == 2) {
+                                        let [hour, minute] = e.currentTarget.value.split(':');
+                                        if (!isNaN(+hour) && !isNaN(+minute)){
+                                            setSearchHours(moment(searchHours.hour(hour as unknown as number > 23 ? 23 : hour as unknown as number)));
+                                            setSearchHours(moment(searchHours.minute(minute as unknown as number > 59 ? 59 : hour as unknown as number)));
+                                }}*/}}/>
                             <div className='gb-input-widget'>
                                 <div className='hour-buttons'>
                                     <div><a
-                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'><i
+                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => {setSearchDate(searchDate.subtract(1, 'h')); setSearchTime(searchDate.format('HH:mm'))}}><i
                                                 className='icon'>chevron_left</i></a></div>
                                     <div><a
-                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'><i
+                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => {setSearchDate(searchDate.add(1, 'h')); setSearchTime(searchDate.format('HH:mm'))}}><i
                                                 className='icon'>chevron_right</i></a></div>
                                 </div>
                             </div>
@@ -179,15 +165,25 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                 </div>
                 <div className='pure-u-1 pure-u-sm-3-24 time-option'>
                     <form>
-                        <input type='radio' id='search-forward' name='time-option' defaultChecked={searchDirection === 'Forward'} onClick={() => setSearchDirection('Forward')}/>
-                        <label htmlFor='search-forward'>Abfahrt</label>
+                        <input  type='radio' 
+                                id='search-forward' 
+                                name='time-option' 
+                                value='Forward'
+                                checked={searchDirection === 'Forward'} 
+                                onChange={() => setSearchDirection('Forward')}/>
+                        <label htmlFor='search-forward'>{props.translation.search.departure}</label>
                     </form>
                     <form>
-                        <input type='radio' id='search-backward' name='time-option' defaultChecked={searchDirection === 'Backward'} onClick={() => setSearchDirection('Backward')}/>
-                        <label htmlFor='search-backward'>Ankunft</label>
+                        <input  type='radio' 
+                                id='search-backward' 
+                                name='time-option' 
+                                value='Backward' 
+                                checked={searchDirection === 'Backward'} 
+                                onChange={() => setSearchDirection('Backward')}/>
+                        <label htmlFor='search-backward'>{props.translation.search.arrival}</label>
                     </form>
                 </div>
             </div>
         </div>
     )
-}
+};

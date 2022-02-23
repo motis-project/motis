@@ -1,4 +1,4 @@
 export interface SearchOptions {
-    profile: string,
+    profile: String,
     duration_limit: number
 }

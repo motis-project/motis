@@ -1,39 +1,11 @@
 import React, { useState } from 'react';
 
-import Maybe, { nothing } from 'true-myth/maybe';
-
 import { Search } from './Search';
 import { SubOverlay } from './SubOverlay';
 import { Connection } from './ConnectionTypes';
-import { TransportInfo } from './ConnectionTypes';
-import { WalkInfo } from './ConnectionTypes';
+import { Translations } from './Localization';
 import { ConnectionRender } from './ConnectionRender';
 
-//interface Model {
-//routing : Routing.Model,
-//railViz : RailViz.Model,
-//connectionDetails : Maybe<ConnectionDetails.State>,
-//tripDetails : Maybe<ConnectionDetails.State>,
-//stationEvents : Maybe StationEvents.Model,
-//tripSearch : TripSearch.Model,
-//subView : Maybe<SubView>,
-//selectedConnectionIdx : Maybe<number>,
-//scheduleInfo : Maybe ScheduleInfo,
-//locale : Localization,
-//apiEndpoint : String,
-//currentTime : Date,
-//timeOffset : number,
-//overlayVisible : Boolean,
-//stationSearch : Typeahead.Model,
-//programFlags : ProgramFlags,
-//simTimePicker : SimTimePicker.Model,
-//updateSearchTime : Boolean
-//}
-
-interface SubView {
-    //TODO: Das muss ein maybe mit TripDetailsView, StationEventsView und TripSearchView sein
-    TripSearchView: any
-}
 
 const displayTime = (posixTime) => {
     let today = new Date(posixTime * 1000);
@@ -42,27 +14,35 @@ const displayTime = (posixTime) => {
     return h + ':' + m;
 }
 
+
 const displayDuration = (posixTime) => {
     let dur = String(posixTime + ' min');
     return dur;
 }
 
-export const Overlay: React.FC = (props) => {
+
+export const Overlay: React.FC<{'translation': Translations}> = (props) => {
 
     // Boolean used to decide if the Overlay is being displayed
-    const [overlayHidden, setOverlayHidden] = useState<Boolean>(false);
+    const [overlayHidden, setOverlayHidden] = useState<Boolean>(true);
 
     // Boolean used to decide if the SubOverlay is being displayed
     const [subOverlayHidden, setSubOverlayHidden] = useState<Boolean>(true);
 
     // Connections
-    const [connections, setConnections] = useState<Connection[]>([]);
+    const [connections, setConnections] = useState<Connection[]>(null);
 
     return (
         <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden'}>
             <div className='overlay'>
                 <div id='overlay-content'>
-                    <Search setConnections={setConnections} />
+                    <Search setConnections={setConnections} translation={props.translation}/>
+                    {!connections ? 
+                    <div className='spinner'>
+                        <div className='bounce1'></div>
+                        <div className='bounce2'></div>
+                        <div className='bounce3'></div>
+                    </div> : 
                     <div id='connections'>
                         {connections.map((connectionElem: Connection, index) => (
                             <div className='connection' key={index}>
@@ -95,9 +75,9 @@ export const Overlay: React.FC = (props) => {
                                 </div>
                             </div>
                         ))}
-                    </div>
+                    </div>}
                 </div>
-                <SubOverlay subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} />
+                <SubOverlay subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} translation={props.translation}/>
             </div>
             <div className='overlay-tabs'>
                 <div className='overlay-toggle' onClick={() => setOverlayHidden(!overlayHidden)}>

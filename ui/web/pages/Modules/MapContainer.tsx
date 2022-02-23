@@ -1,54 +1,22 @@
 import React from "react";
-import { DatePicker } from "./DatePicker";
+import moment from "moment";
 
-export const MapContainer: React.FC = () => {
+import { DatePicker } from "./DatePicker";
+import { Translations } from "./Localization";
+
+export const MapContainer: React.FC<{'translation': Translations}> = (props) => {
 
     const [simTimePickerSelected, setSimTimePickerSelected] = React.useState<Boolean>(false);
+    
+    const[currMoment, setCurrMoment] = React.useState<moment.Moment>(moment());
 
     return (
         <div className="map-container">
             <div id="map-background" className="mapboxgl-map">
-                <div className="mapboxgl-canary" style={{ visibility: "hidden" }}></div>
-                <div
-                    className="mapboxgl-canvas-container mapboxgl-interactive mapboxgl-touch-drag-pan mapboxgl-touch-zoom-rotate">
-                    <canvas className="mapboxgl-canvas" tabIndex={0} aria-label="Map" width="1180" height="937"
-                        style={{ width: "1180px", height: "937px" }}></canvas></div>
-                <div className="mapboxgl-control-container">
-                    <div className="mapboxgl-ctrl-top-left"></div>
-                    <div className="mapboxgl-ctrl-top-right"></div>
-                    <div className="mapboxgl-ctrl-bottom-left">
-                        <div className="mapboxgl-ctrl" style={{ display: "none" }}><a className="mapboxgl-ctrl-logo" target="_blank"
-                            rel="noopener nofollow" href="https://www.mapbox.com/" aria-label="Mapbox logo"></a>
-                        </div>
-                    </div>
-                    <div className="mapboxgl-ctrl-bottom-right">
-                        <div className="mapboxgl-ctrl mapboxgl-ctrl-attrib mapboxgl-attrib-empty">
-                            <div className="mapboxgl-ctrl-attrib-inner"></div>
-                        </div>
-                    </div>
-                </div>
+                
             </div>
             <div id="map-foreground" className="mapboxgl-map">
-                <div className="mapboxgl-canary" style={{ visibility: "hidden" }}></div>
-                <div
-                    className="mapboxgl-canvas-container mapboxgl-interactive mapboxgl-touch-drag-pan mapboxgl-touch-zoom-rotate">
-                    <canvas className="mapboxgl-canvas" tabIndex={0} aria-label="Map" width="1180" height="937"
-                        style={{ width: "1180px", height: "937px", cursor: "default" }}></canvas></div>
-                <div className="mapboxgl-control-container">
-                    <div className="mapboxgl-ctrl-top-left"></div>
-                    <div className="mapboxgl-ctrl-top-right"></div>
-                    <div className="mapboxgl-ctrl-bottom-left">
-                        <div className="mapboxgl-ctrl" style={{ display: "none" }}><a className="mapboxgl-ctrl-logo" target="_blank"
-                            rel="noopener nofollow" href="https://www.mapbox.com/" aria-label="Mapbox logo"></a>
-                        </div>
-                    </div>
-                    <div className="mapboxgl-ctrl-bottom-right">
-                        <div className="mapboxgl-ctrl mapboxgl-ctrl-attrib">
-                            <div className="mapboxgl-ctrl-attrib-inner"><a href="https://www.openstreetmap.org/">©
-                                OpenStreetMap contributors</a></div>
-                        </div>
-                    </div>
-                </div>
+            
             </div>
             <div className="railviz-tooltip hidden"></div>
             <div className="map-bottom-overlay">
@@ -86,25 +54,23 @@ export const MapContainer: React.FC = () => {
                         <label htmlFor="sim-mode-checkbox">Simulationsmodus</label>
                     </div>
                     <div className="date">
-                        <div>
-                            <DatePicker />
-                        </div>
+                        <DatePicker translation={props.translation}
+                                    currentDate={currMoment}
+                                    setCurrentDate={setCurrMoment}/>
                     </div>
                     <div className="time">
-                        <div>
-                            <div className="label">Uhrzeit</div>
-                            <div className="gb-input-group">
-                                <div className="gb-input-icon"><i className="icon">schedule</i></div>
-                                <input className="gb-input" tabIndex={21} />
-                                <div className="gb-input-widget">
-                                    <div className="hour-buttons">
-                                        <div><a
-                                            className="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"><i
-                                                className="icon">chevron_left</i></a></div>
-                                        <div><a
-                                            className="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"><i
-                                                className="icon">chevron_right</i></a></div>
-                                    </div>
+                        <div className="label">Uhrzeit</div>
+                        <div className="gb-input-group">
+                            <div className="gb-input-icon"><i className="icon">schedule</i></div>
+                            <input className="gb-input" tabIndex={21} />
+                            <div className="gb-input-widget">
+                                <div className="hour-buttons">
+                                    <div><a
+                                        className="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"><i
+                                            className="icon">chevron_left</i></a></div>
+                                    <div><a
+                                        className="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"><i
+                                            className="icon">chevron_right</i></a></div>
                                 </div>
                             </div>
                         </div>

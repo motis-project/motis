@@ -1,36 +1,32 @@
 import React from 'react';
 
-import Maybe, { nothing } from 'true-myth/maybe';
+import { useRouter} from 'next/router';
 
 import { Overlay } from '../Modules/Overlay';
+import { Translations, deTranslations, enTranslations, plTranslations } from '../Modules/Localization';
 import { StationSearch } from '../Modules/StationSearch';
 import { MapContainer } from '../Modules/MapContainer';
 
-let visible = false;
+
+const getQuery = (): Translations => {
+    let router = useRouter();
+    let { locale } = router.query;
+    if (locale === 'de') {
+        return deTranslations;
+    } else if (locale === 'pl') {
+        return plTranslations;
+    }
+    return enTranslations;
+}
 
 
-export const Main: React.FC = () => {
+export const App: React.FC = () => {
     
-    /*let Model: Boolean = true;
-
-    const [showMap, setShowMap] = React.useState(false);
-
-    // Switch between Dark and Light Mode
-    const [darkMode, setDarkMode] = React.useState(true);
-
-    React.useEffect(() =>{
-        console.log("Hello World")
-        visible = !visible
-    }, [showMap])
-
-    React.useEffect(() =>{
-        Model = darkMode
-    }, [darkMode])*/
-    
-    return(
+    return (
         <div className='app'>
-            <MapContainer />
-            <Overlay />
+            {/* visible && <MapView />*/}
+            <MapContainer translation={getQuery()}/>
+            <Overlay translation={getQuery()}/>
             {//<StationSearchView />
             }
             <StationSearch />
