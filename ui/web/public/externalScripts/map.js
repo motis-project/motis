@@ -181,7 +181,7 @@ class RailVizCustomLayer {
       pitch: pitch,
     };
 
-    mapService.mapUpdate.send(mapInfo);
+    mapService.mapUpdate(mapInfo);
     RailViz.Main.mapUpdate(mapInfo);
 
     localStorageSet(
