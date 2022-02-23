@@ -155,7 +155,7 @@ RailViz.Main = (function () {
 
   function handleApiError(response) {
     setLoading(-1);
-    // elmPorts.handleRailVizError.send(response);
+    mapService.handleRailVizError.send(response);
   }
 
   function dataReceived(response, onlyFilteredTrips, callId, duration) {
@@ -181,7 +181,7 @@ RailViz.Main = (function () {
         showFullData();
       }
     }
-    // elmPorts.clearRailVizError.send(null);
+    mapService.clearRailVizError.send(null);
   }
 
   function showFullData() {
@@ -281,13 +281,13 @@ RailViz.Main = (function () {
     if (eventType == "click") {
       if (pickedTrain) {
         if (pickedTrain.trip && pickedTrain.trip.length > 0) {
-          // elmPorts.showTripDetails.send(pickedTrain.trip[0]);
+          mapService.showTripDetails.send(pickedTrain.trip[0]);
         }
       } else if (pickedStation) {
-        // elmPorts.showStationDetails.send("" + pickedStation.id);
+        mapService.showStationDetails.send("" + pickedStation.id);
       }
       if (button == 0) {
-        // elmPorts.mapCloseContextMenu.send(null);
+        mapService.mapCloseContextMenu.send(null);
       }
     } else {
       if (eventType != "mouseout") {
@@ -367,14 +367,14 @@ RailViz.Main = (function () {
       RailViz.Main.highlightConnections(highlightedConnections);
     }
 
-    // elmPorts.mapSetTooltip.send({
-    //   mouseX: x,
-    //   mouseY: y,
-    //   hoveredTrain: rvTrain,
-    //   hoveredStation: rvStation,
-    //   hoveredTripSegments: hoveredTripSegments,
-    //   hoveredWalkSegment: hoveredWalkSegment,
-    // });
+    mapService.mapSetTooltip.send({
+      mouseX: x,
+      mouseY: y,
+      hoveredTrain: rvTrain,
+      hoveredStation: rvStation,
+      hoveredTripSegments: hoveredTripSegments,
+      hoveredWalkSegment: hoveredWalkSegment,
+    });
   }
 
   function debounce(f, t) {

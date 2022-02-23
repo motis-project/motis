@@ -181,7 +181,7 @@ class RailVizCustomLayer {
       pitch: pitch,
     };
 
-    // app.ports.mapUpdate.send(mapInfo);
+    mapService.mapUpdate.send(mapInfo);
     RailViz.Main.mapUpdate(mapInfo);
 
     localStorageSet(
@@ -320,38 +320,34 @@ function initPorts(apiEndpoint, tilesEndpoint, initialPermalink) {
       }
     });
 
-    // app.ports.mapSetConnections.subscribe(function (opt) {
-    //   const bounds = opt.connections.reduce(
-    //     (b, conn) =>
-    //       conn.stations.reduce((sb, s) => sb.extend([s.pos.lng, s.pos.lat]), b),
-    //     new mapboxgl.LngLatBounds()
-    //   );
-    //   if (!bounds.isEmpty()) {
-    //     window.elmMaps[opt.mapId].fitBounds(bounds, { padding, pitch: 0 });
-    //   }
-    // });
+    mapService.mapSetConnections = (function (opt) {
+      const bounds = opt.connections.reduce(
+        (b, conn) =>
+          conn.stations.reduce((sb, s) => sb.extend([s.pos.lng, s.pos.lat]), b),
+        new mapboxgl.LngLatBounds()
+      );
+      if (!bounds.isEmpty()) {
+        window.elmMaps[opt.mapId].fitBounds(bounds, { padding, pitch: 0 });
+      }
+    });
 
     RailViz.Main.init(apiEndpoint, app.ports);
 
     RailViz.Markers.init(map_fg);
     mapService.mapSetMarkers = (RailViz.Markers.setMarkers);
 
-    // app.ports.mapSetDetailFilter.subscribe(RailViz.Main.setDetailFilter);
-    // app.ports.mapUpdateWalks.subscribe(RailViz.Main.setDetailWalks);
+    mapService.mapSetDetailFilter = (RailViz.Main.setDetailFilter);
+    mapService.mapUpdateWalks = (RailViz.Main.setDetailWalks);
 
-    // app.ports.mapSetConnections.subscribe(RailViz.Main.setConnections);
-    // app.ports.mapHighlightConnections.subscribe(
-    //   RailViz.Main.highlightConnections
-    // );
+    mapService.mapSetConnections = (RailViz.Main.setConnections);
+    mapService.mapHighlightConnections = (RailViz.Main.highlightConnections)
 
-    // app.ports.setTimeOffset.subscribe(RailViz.Main.setTimeOffset);
-    // app.ports.setPPRSearchOptions.subscribe(RailViz.Main.setPPRSearchOptions);
+    mapService.setTimeOffset = (RailViz.Main.setTimeOffset);
+    mapService.setPPRSearchOptions = (RailViz.Main.setPPRSearchOptions);
 
-    // app.ports.mapUseTrainClassColors.subscribe(
-    //   RailViz.Trains.setUseCategoryColor
-    // );
-    // app.ports.mapShowTrains.subscribe(RailViz.Main.showTrains);
-    // app.ports.mapSetLocale.subscribe(RailViz.Markers.setLocale);
+    mapService.mapUseTrainClassColors = (RailViz.Trains.setUseCategoryColor);
+    mapService.mapShowTrains = (RailViz.Main.showTrains);
+    mapService.mapSetLocale = (RailViz.Markers.setLocale);
   });
   mapService.initialized = true
 }

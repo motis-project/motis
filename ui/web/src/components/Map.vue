@@ -59,6 +59,6 @@ export default defineComponent({
   },
   emits: [
     'openSimWindow'
-  ],
+  ]
 })
 </script>
