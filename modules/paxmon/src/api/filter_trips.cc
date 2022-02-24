@@ -32,7 +32,7 @@ struct trip_info {
 
   std::uint16_t max_expected_pax_{};
 
-  std::vector<edge_load_info> edge_load_infos_;
+  std::vector<edge_load_info> edge_load_infos_{};
 };
 
 }  // namespace
@@ -81,8 +81,8 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
       auto const expected_pax = get_expected_load(uv, e->pci_);
       if (include_edges) {
         ti.edge_load_infos_.emplace_back(edge_load_info{
-            e, std::move(cdf), false,
-            load_factor_possibly_ge(cdf, capacity, 1.0F), expected_pax});
+            e, cdf, false, load_factor_possibly_ge(cdf, capacity, 1.0F),
+            expected_pax});
         if (ignore_section) {
           continue;
         }

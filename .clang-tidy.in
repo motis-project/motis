@@ -48,7 +48,7 @@ Checks: "*,\
 -cppcoreguidelines-pro-bounds-constant-array-index,\
 -*-avoid-c-arrays,\
 -*-narrowing-conversions,\
--*-avoid-goto,
+-*-avoid-goto,\
 -hicpp-multiway-paths-covered,\
 -clang-analyzer-cplusplus.NewDeleteLeaks,\
 -clang-analyzer-cplusplus.NewDelete,\
@@ -73,6 +73,7 @@ Checks: "*,\
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^${RELATIVE_SOURCE_DIR}(base|modules|test)/'
 AnalyzeTemporaryDtors: false
+UseColor: true
 User:            root
 CheckOptions:
   - key:             cert-err61-cpp.CheckThrowTemporaries
