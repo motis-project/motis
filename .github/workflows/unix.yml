@@ -348,7 +348,7 @@ jobs:
       - name: Compile Web Interface
         if: matrix.config.webui == 'On'
         run: |
-          cmake --build build --target motis-web-ui
+          cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
           rm -r ui/web/elm-stuff
           rm -r ui/web/src
 
