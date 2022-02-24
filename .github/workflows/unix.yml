@@ -168,7 +168,7 @@ jobs:
             tests: On
             mimalloc: Off
             install: ninja-build
-          - name: linux-amd64-release
+          - name: linux-amd64-avx-release
             os: ubuntu-20.04
             toolchain: x86_64-multilib-linux-musl
             cross: -DCMAKE_TOOLCHAIN_FILE=/opt/x86_64-multilib-linux-musl/toolchain-amd64.cmake
