@@ -56,6 +56,7 @@ const ownPorts = {
         subscribe: function(callback){
             window.portEvents.sub('mapInit', callback);
             window.portEvents.pub('mapInit', 'map'); //sollte wo anders hin
+            window.portEvents.pub('mapInitFinished', true);
         }
     },
     'mapUpdate': {
@@ -98,7 +99,10 @@ const ownPorts = {
         }
     },
     'mapSetLocale': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('mapSetLocale', callback);
+            console.log('sub');
+        }
     },
     'mapSetConnections': {
         subscribe: function(){}

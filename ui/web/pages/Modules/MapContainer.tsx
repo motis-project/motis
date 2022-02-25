@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import moment from "moment";
 
 import { DatePicker } from "./DatePicker";
@@ -10,6 +10,13 @@ export const MapContainer: React.FC<{'translation': Translations}> = (props) => 
     const [simTimePickerSelected, setSimTimePickerSelected] = React.useState<Boolean>(false);
     
     const[currMoment, setCurrMoment] = React.useState<moment.Moment>(moment());
+
+    useEffect(() => {
+        window.portEvents.sub('mapInitFinished', function(){
+            window.portEvents.pub('mapSetLocale', props.translation.search);
+            console.log('pub');
+        });
+    });
 
     return (
         <div className="map-container">
