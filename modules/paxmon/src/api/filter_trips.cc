@@ -44,9 +44,9 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
   auto& uv = uv_access.uv_;
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
-  utl::verify(current_time != INVALID_TIME, "invalid current system time");
 
-  auto const ignore_past_sections = req->ignore_past_sections();
+  auto const ignore_past_sections =
+      req->ignore_past_sections() && current_time != INVALID_TIME;
   auto const include_load_threshold = req->include_load_threshold();
   auto const max_results = req->max_results();
   auto const critical_load_threshold = req->critical_load_threshold();
