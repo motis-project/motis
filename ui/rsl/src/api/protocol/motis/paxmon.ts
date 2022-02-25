@@ -84,11 +84,12 @@ export interface PaxMonFilterTripsRequest {
   universe: number;
   ignore_past_sections: boolean;
   include_load_threshold: number;
-  max_results: number;
   critical_load_threshold: number; // default: 1
   crowded_load_threshold: number; // default: 0.8
   include_edges: boolean;
   sort_by: PaxMonFilterTripsSortOrder;
+  max_results: number;
+  skip_first: number;
 }
 
 // paxmon/PaxMonFilterTripsResponse.fbs
@@ -107,6 +108,7 @@ export interface PaxMonFilteredTripInfo {
 export interface PaxMonFilterTripsResponse {
   total_matching_trips: number;
   filtered_trips: number;
+  remaining_trips: number;
   total_critical_sections: number;
   trips: PaxMonFilteredTripInfo[];
 }

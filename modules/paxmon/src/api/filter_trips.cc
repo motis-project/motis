@@ -1,6 +1,7 @@
 #include "motis/paxmon/api/filter_trips.h"
 
 #include <algorithm>
+#include <iterator>
 #include <tuple>
 
 #include "utl/to_vec.h"
@@ -49,6 +50,7 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
       req->ignore_past_sections() && current_time != INVALID_TIME;
   auto const include_load_threshold = req->include_load_threshold();
   auto const max_results = req->max_results();
+  auto const skip_first = req->skip_first();
   auto const critical_load_threshold = req->critical_load_threshold();
   auto const crowded_load_threshold = req->crowded_load_threshold();
   auto const include_edges = req->include_edges();
@@ -117,7 +119,7 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
 
   switch (req->sort_by()) {
     case PaxMonFilterTripsSortOrder_MostCritical:
-      std::sort(
+      std::stable_sort(
           begin(selected_trips), end(selected_trips),
           [](trip_info const& lhs, trip_info const& rhs) {
             return std::tie(lhs.max_excess_pax_, lhs.cumulative_excess_pax_,
@@ -127,22 +129,32 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
           });
       break;
     case PaxMonFilterTripsSortOrder_FirstDeparture:
-      std::sort(begin(selected_trips), end(selected_trips),
-                [](trip_info const& lhs, trip_info const& rhs) {
-                  return lhs.first_departure_ < rhs.first_departure_;
-                });
+      std::stable_sort(begin(selected_trips), end(selected_trips),
+                       [](trip_info const& lhs, trip_info const& rhs) {
+                         return lhs.first_departure_ < rhs.first_departure_;
+                       });
       break;
     case PaxMonFilterTripsSortOrder_ExpectedPax:
-      std::sort(begin(selected_trips), end(selected_trips),
-                [](trip_info const& lhs, trip_info const& rhs) {
-                  return lhs.max_expected_pax_ > rhs.max_expected_pax_;
-                });
+      std::stable_sort(begin(selected_trips), end(selected_trips),
+                       [](trip_info const& lhs, trip_info const& rhs) {
+                         return lhs.max_expected_pax_ > rhs.max_expected_pax_;
+                       });
       break;
     default: break;
   }
 
   auto const total_matching_trips = selected_trips.size();
+  if (skip_first > 0) {
+    selected_trips.erase(
+        begin(selected_trips),
+        std::next(begin(selected_trips),
+                  std::min(static_cast<std::size_t>(skip_first),
+                           selected_trips.size())));
+  }
+
+  auto remaining_trips = 0ULL;
   if (max_results != 0 && selected_trips.size() > max_results) {
+    remaining_trips = selected_trips.size() - max_results;
     selected_trips.resize(max_results);
   }
 
@@ -150,7 +162,7 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
   mc.create_and_finish(
       MsgContent_PaxMonFilterTripsResponse,
       CreatePaxMonFilterTripsResponse(
-          mc, total_matching_trips, selected_trips.size(),
+          mc, total_matching_trips, selected_trips.size(), remaining_trips,
           total_critical_sections,
           mc.CreateVector(utl::to_vec(
               selected_trips,

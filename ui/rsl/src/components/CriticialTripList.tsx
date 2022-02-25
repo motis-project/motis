@@ -22,11 +22,12 @@ function CriticalTripList({
     universe,
     ignore_past_sections: true,
     include_load_threshold: 1.0,
-    max_results: 100,
     critical_load_threshold: 1.0,
     crowded_load_threshold: 0.8,
     include_edges: false,
     sort_by: "MostCritical",
+    max_results: 100,
+    skip_first: 0,
   });
 
   if (!data) {
@@ -56,11 +57,10 @@ function CriticalTripList({
           </div>
         ))}
       </div>
-      {data.total_matching_trips > data.filtered_trips ? (
+      {data.remaining_trips > 0 ? (
         <div>
-          ...und {formatNumber(data.total_matching_trips - data.filtered_trips)}{" "}
-          weitere kritische Züge ({formatNumber(data.total_matching_trips)}{" "}
-          insgesamt)
+          ...und {formatNumber(data.remaining_trips)} weitere kritische Züge (
+          {formatNumber(data.total_matching_trips)} insgesamt)
         </div>
       ) : null}
     </div>
