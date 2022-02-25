@@ -175,7 +175,7 @@ function TripLoadForecastChart({
   onSectionClick,
 }: TripLoadForecastChartProps): JSX.Element | null {
   const [universe] = useAtom(universeAtom);
-  const { data: status } = usePaxMonStatusQuery();
+  const { data: status } = usePaxMonStatusQuery(universe);
 
   const queryClient = useQueryClient();
   const { data /*, isLoading, error*/ } = useQuery(

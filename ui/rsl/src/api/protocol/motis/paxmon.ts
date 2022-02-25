@@ -75,17 +75,43 @@ export interface PaxMonFilterGroupsResponse {
 }
 
 // paxmon/PaxMonFilterTripsRequest.fbs
+export type PaxMonFilterTripsSortOrder =
+  | "MostCritical"
+  | "FirstDeparture"
+  | "ExpectedPax";
+
+// paxmon/PaxMonFilterTripsRequest.fbs
 export interface PaxMonFilterTripsRequest {
   universe: number;
-  load_factor_possibly_ge: number;
   ignore_past_sections: boolean;
+  include_load_threshold: number;
+  critical_load_threshold: number; // default: 1
+  crowded_load_threshold: number; // default: 0.8
+  include_edges: boolean;
+  sort_by: PaxMonFilterTripsSortOrder;
+  max_results: number;
+  skip_first: number;
+}
+
+// paxmon/PaxMonFilterTripsResponse.fbs
+export interface PaxMonFilteredTripInfo {
+  tsi: TripServiceInfo;
+  section_count: number;
+  critical_sections: number;
+  crowded_sections: number;
+  max_excess_pax: number;
+  cumulative_excess_pax: number;
+  max_expected_pax: number;
+  edges: PaxMonEdgeLoadInfo[];
 }
 
 // paxmon/PaxMonFilterTripsResponse.fbs
 export interface PaxMonFilterTripsResponse {
+  total_matching_trips: number;
   filtered_trips: number;
-  critical_sections: number;
-  trips: TripServiceInfo[];
+  remaining_trips: number;
+  total_critical_sections: number;
+  trips: PaxMonFilteredTripInfo[];
 }
 
 // paxmon/PaxMonFindTripsRequest.fbs
@@ -286,14 +312,16 @@ export interface PaxMonRemoveGroupsRequest {
   ids: number[];
 }
 
+// paxmon/PaxMonStatusRequest.fbs
+export interface PaxMonStatusRequest {
+  universe: number;
+}
+
 // paxmon/PaxMonStatusResponse.fbs
 export interface PaxMonStatusResponse {
   system_time: number;
-  tracked_groups: number;
-  last_update_affected_groups: number;
-  last_update_affected_passengers: number;
-  last_update_broken_groups: number;
-  last_update_broken_passengers: number;
+  active_groups: number;
+  trip_count: number;
 }
 
 // paxmon/PaxMonTripLoadInfo.fbs

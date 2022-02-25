@@ -1,6 +1,8 @@
 import React from "react";
+import { useAtom } from "jotai";
 import { QueryClient, useMutation, useQueryClient } from "react-query";
 
+import { universeAtom } from "../data/simulation";
 import { formatDate, formatTime } from "../util/dateFormat";
 import { usePaxMonStatusQuery } from "../api/paxmon";
 import { sendRISForwardTimeRequest } from "../api/ris";
@@ -26,8 +28,8 @@ type TimeControlProps = {
 
 function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
   const queryClient = useQueryClient();
-
-  const { data: status, isLoading, error } = usePaxMonStatusQuery();
+  const [universe] = useAtom(universeAtom);
+  const { data: status, isLoading, error } = usePaxMonStatusQuery(universe);
 
   const forwardMutation = useMutation((forwardBy: number) => {
     return forwardTimeByStepped(
