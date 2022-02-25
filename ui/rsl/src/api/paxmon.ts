@@ -167,7 +167,9 @@ export async function sendPaxMonFilterTripsRequest(
   return msg.content as PaxMonFilterTripsResponse;
 }
 
-export function usePaxMonFilterTripsRequest(content: PaxMonFilterTripsRequest) {
+export function usePaxMonFilterTripsRequest(
+  content: PaxMonFilterTripsRequest
+): UseQueryResult<PaxMonFilterTripsResponse> {
   return useQuery(queryKeys.filterTrips(content), () =>
     sendPaxMonFilterTripsRequest(content)
   );
