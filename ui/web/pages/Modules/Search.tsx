@@ -4,12 +4,12 @@ import moment from 'moment';
 
 import { DatePicker } from './DatePicker';
 import { Mode, IntermodalRoutingResponse } from './IntermodalRoutingTypes';
-import { Connection, Station } from './ConnectionTypes';
+import { Connection, Position, Station } from './ConnectionTypes';
 import { Translations } from './Localization';
 import { Address } from './SuggestionTypes';
 import { SearchInputField } from './SearchInputField';
 import { Modepicker } from './ModePicker';
-import { getFromLocalStorage } from './LocalStorage';
+import { getFromLocalStorage, setLocalStorage } from './LocalStorage';
 import { Interval } from './RoutingTypes';
 
 
@@ -75,6 +75,10 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                     console.log("Response came in");
                     console.log(res);
                     props.setConnections(res.content.connections);
+                    window.portEvents.pub('mapSetMarkers', {'startPosition': getFromLocalStorage("motis.routing.from_location").pos,
+                                                            'startName': getFromLocalStorage("motis.routing.from_location").name,
+                                                            'destinationPosition': getFromLocalStorage("motis.routing.to_location").pos,
+                                                            'destinationName': getFromLocalStorage("motis.routing.to_location").name})
                 });
         }
     }, [start, startModes, destination, destinationModes, searchDirection]);

@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+import { getFromLocalStorage, setLocalStorage } from './LocalStorage';
 
 export const RailvizContextMenu: React.FC = () => {
 
@@ -8,7 +10,7 @@ export const RailvizContextMenu: React.FC = () => {
     const [lng, setLng] = useState(0);
     const [contextMenuHidden, setContextMenuHidden] = useState<Boolean>(true);
 
-    React.useEffect(() => {
+    useEffect(() => {
         window.portEvents.sub('mapShowContextMenu', function(data){
             setX(data.mouseX);
             setY(data.mouseY);
@@ -21,15 +23,22 @@ export const RailvizContextMenu: React.FC = () => {
         })
     })
     return (
-        //wir brauchen hier start und Ziel positionen aus der Suche
         <div className={contextMenuHidden ? 'railviz-contextmenu hidden': 'railviz-contextmenu'} style={{ top: y+'px', left: x+'px' }}>
             <div className='item' onClick={() => {
                 setContextMenuHidden(true);
-                window.portEvents.pub('mapSetMarkers', {'startPosition':{'lat': lat,'lng': lng}, 'startName': lat+';'+lng, 'destinationPosition': null, 'destinationName': null});
+                setLocalStorage("motis.routing.from_location", {'name': lat+';'+lng, 'pos':{'lat': lat, 'lng': lng}, 'type_': '', 'regions': {}});
+                window.portEvents.pub('mapSetMarkers', { 'startPosition':{'lat': lat,'lng': lng},
+                                                         'startName': lat+';'+lng,
+                                                         'destinationPosition': getFromLocalStorage("motis.routing.to_location").pos,
+                                                         'destinationName': getFromLocalStorage("motis.routing.to_location").name});
             }}>Routen von hier</div>
             <div className='item' onClick={() => {
                 setContextMenuHidden(true);
-                window.portEvents.pub('mapSetMarkers', {'startPosition': null, 'startName': null, 'destinationPosition':{'lat': lat, 'lng': lng}, 'destinationName':lat+';'+lng});
+                setLocalStorage("motis.routing.to_location", {'name': lat+';'+lng, 'pos':{'lat': lat, 'lng': lng}, 'type_': '', 'regions': {}})
+                window.portEvents.pub('mapSetMarkers', {'startPosition': getFromLocalStorage("motis.routing.from_location").pos,
+                                                        'startName': getFromLocalStorage("motis.routing.from_location").name,
+                                                        'destinationPosition':{'lat': lat, 'lng': lng},
+                                                        'destinationName':lat+';'+lng});
             }}>Routen hierher</div>
         </div>);
 };

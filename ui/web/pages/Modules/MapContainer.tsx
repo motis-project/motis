@@ -14,7 +14,6 @@ export const MapContainer: React.FC<{'translation': Translations}> = (props) => 
     useEffect(() => {
         window.portEvents.sub('mapInitFinished', function(){
             window.portEvents.pub('mapSetLocale', props.translation.search);
-            console.log('pub');
         });
     });
 

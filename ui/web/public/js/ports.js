@@ -101,7 +101,6 @@ const ownPorts = {
     'mapSetLocale': {
         subscribe: function(callback){
             window.portEvents.sub('mapSetLocale', callback);
-            console.log('sub');
         }
     },
     'mapSetConnections': {
