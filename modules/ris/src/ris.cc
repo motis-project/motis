@@ -967,8 +967,8 @@ ris::ris() : module("RIS", "ris") {
         "RT update interval in seconds (RabbitMQ messages get buffered)");
   param(config_.rabbitmq_.host_, "rabbitmq.host", "RabbitMQ remote host");
   param(config_.rabbitmq_.port_, "rabbitmq.port", "RabbitMQ remote port");
-  param(config_.rabbitmq_.user_, "rabbitmq.user", "RabbitMQ username");
-  param(config_.rabbitmq_.pw_, "rabbitmq.pw", "RabbitMQ password");
+  param(config_.rabbitmq_.user_, "rabbitmq.username", "RabbitMQ username");
+  param(config_.rabbitmq_.pw_, "rabbitmq.password", "RabbitMQ password");
   param(config_.rabbitmq_.vhost_, "rabbitmq.vhost", "RabbitMQ vhost");
   param(config_.rabbitmq_.exchange_, "rabbitmq.exchange", "RabbitMQ exchange");
   param(config_.rabbitmq_.routing_key_, "rabbitmq.routing_key",
