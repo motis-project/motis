@@ -11,6 +11,7 @@ import { SearchInputField } from './SearchInputField';
 import { Modepicker } from './ModePicker';
 import { getFromLocalStorage, setLocalStorage } from './LocalStorage';
 import { Interval } from './RoutingTypes';
+import { markerSearch } from './RailvizContextMenu';
 
 
 const getRoutingOptions = (startType: string, startModes: Mode[], start: Station | Address, searchType: string, searchDirection: string, destinationType: string, destinationModes: Mode[], destination: Station | Address, interval: Interval ) => {
@@ -83,6 +84,17 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
         }
     }, [start, startModes, destination, destinationModes, searchDirection]);
 
+    useEffect(() => {
+        window.portEvents.sub('mapSetMarkers', function(){
+            if(markerSearch){
+                if(markerSearch[0]){
+                    setStart(markerSearch[1]);
+                }else{
+                    setDestination(markerSearch[1]);
+                }
+            }
+        });
+    });
 
     useEffect(() => {
         console.log("UseEffect Trigger on searchDate. WARUM TRIGGERST DU NICHT??? >:V")
