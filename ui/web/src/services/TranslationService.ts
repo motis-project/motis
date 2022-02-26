@@ -53,6 +53,8 @@ export class TranslationService {
   }
   public currentLocale = "";
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  public updateMapLocale: (t: Translation) => void = () => {}
   public constructor(locale: string) {
     this.changeLocale(locale);
   }
@@ -62,6 +64,7 @@ export class TranslationService {
     this.loadLocale(locale).then(t => {
       Object.assign(this._t, t);
       this.isLoaded = true;
+      this.updateMapLocale(t);
     });
   }
 

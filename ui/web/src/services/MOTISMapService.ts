@@ -137,10 +137,17 @@ interface MapGeoBounds {
   east: number
 }
 
+interface PPRSearchOptions{
+  profile: "default" | "accessibility1" | "wheelchair" | "elevation",
+  // eslint-disable-next-line camelcase
+  duration_limit: number
+}
+
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const defaultDelegateValue = (): void => {}
 
 export class MotisMapService {
+  public created = false;
   public initialized = false;
 
   //assigned in map
@@ -153,8 +160,7 @@ export class MotisMapService {
   public mapSetConnections: (options: RVConnectionsOptions) => void = defaultDelegateValue;
   public mapHighlightConnections: (options: number[]) => void = defaultDelegateValue;
   public setTimeOffset: (options: number) => void = defaultDelegateValue;
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  public setPPRSearchOptions: (options: object) => void = defaultDelegateValue; // JSON.Encode.Value equals to object in ts???
+  public setPPRSearchOptions: (options: PPRSearchOptions) => void = defaultDelegateValue;
   public mapSetLocale: (options: MapLocaleOptions) => void = defaultDelegateValue;
   // public localStorageSet: (options: StringTuples) => void = defaultDelegateValue;
   // eslint-disable-next-line @typescript-eslint/ban-types

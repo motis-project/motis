@@ -41,8 +41,10 @@ declare global {
 window.mapService = MOTISMapServicePlugin.service;
 
 const intervalMap = setInterval(() => {
-  if (MOTISMapServicePlugin.service.initialized && interval === -1) {
+  if (MOTISMapServicePlugin.service.created && interval === -1 && TranslationService.service !== null) {
     MOTISMapServicePlugin.service.mapInit("map");
+    MOTISMapServicePlugin.service.mapSetLocale(TranslationService.service.t)
+    TranslationService.service.updateMapLocale = MOTISMapServicePlugin.service.mapSetLocale
     clearInterval(intervalMap);
   }
 }, 10);

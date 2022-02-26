@@ -260,15 +260,15 @@ function initPorts(apiEndpoint, tilesEndpoint, initialPermalink) {
 
     syncMaps(map_bg, map_fg);
 
-    // map_fg.on("load", () => {
-    //   RailViz.Path.Base.init(map_fg, apiEndpoint);
+    map_fg.on("load", () => {
+      RailViz.Path.Base.init(map_fg, apiEndpoint);
 
-    //   map_fg.addLayer(new RailVizCustomLayer());
+      map_fg.addLayer(new RailVizCustomLayer());
 
-    //   RailViz.Path.Extra.init(map_fg, "railviz-base-stations");
-    //   RailViz.Path.Detail.init(map_fg, "railviz-base-stations");
-    //   RailViz.Path.Connections.init(map_fg, "railviz-base-stations");
-    // });
+      RailViz.Path.Extra.init(map_fg, "railviz-base-stations");
+      RailViz.Path.Detail.init(map_fg, "railviz-base-stations");
+      RailViz.Path.Connections.init(map_fg, "railviz-base-stations");
+    });
 
     ["click", "mousemove", "mouseout"].forEach((t) =>
       map_fg.on(t, (e) => RailViz.Render.handleMouseEvent(t, e.originalEvent))
@@ -348,6 +348,7 @@ function initPorts(apiEndpoint, tilesEndpoint, initialPermalink) {
     mapService.mapUseTrainClassColors = (RailViz.Trains.setUseCategoryColor);
     mapService.mapShowTrains = (RailViz.Main.showTrains);
     mapService.mapSetLocale = (RailViz.Markers.setLocale);
+    mapService.initialized = true
   });
-  mapService.initialized = true
+  mapService.created = true
 }
