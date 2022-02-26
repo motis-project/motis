@@ -75,7 +75,7 @@ interface Range {
 }
 
 
-interface TripId {
+export interface TripId {
     station_id: string,
     train_nr: number,
     time: number,

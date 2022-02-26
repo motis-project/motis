@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Index from '..';
-import { Transport, TransportInfo, Connection, Stop } from './ConnectionTypes';
+import { Transport, TransportInfo, Connection, Stop, TripId } from './ConnectionTypes';
 
 const isTransportInfo = (transport: Transport) => {
     return transport.move_type === 'Transport';
@@ -17,11 +17,12 @@ const transportForLoop = (connection: Transport[], setDetailViewHidden: React.Di
     var elements = [];
     var percentage = 0;
     var rangeMax = connection[connection.length - 1].move.range.to;
+    var walk = 0;
     var prevLength = 0;
     for (let index = 0; index < connection.length; index++) {
-        percentage = (connection[index].move.range.to - connection[index].move.range.from) / rangeMax;
-        elements.push(
-            isTransportInfo(connection[index]) ?
+        percentage = (connection[index].move.range.to - connection[index].move.range.from + walk) / rangeMax;
+        isTransportInfo(connection[index]) ?
+            elements.push(
                 <g className={'part train-class-' + (connection[index].move as TransportInfo).category_id + ' acc-0'} key={index}>
                     <line x1={prevLength} y1='12' x2={(percentage * 326 + prevLength)} y2='12' className='train-line'></line>
                     <circle cx={prevLength + 4} cy='12' r='12' className='train-circle'></circle>
@@ -29,16 +30,11 @@ const transportForLoop = (connection: Transport[], setDetailViewHidden: React.Di
                     <text x={prevLength - 6} y='40' textAnchor='start' className='train-name'>{(connection[index].move as TransportInfo).name}</text>
                     <rect x={prevLength} y='0' width={(percentage * 326 + prevLength)} height='24' className='tooltipTrigger' onClick={() => setDetailViewHidden(false)}></rect>
                 </g>
-                :
-                <g className='part train-class-walk acc-0' key={index}>
-                    <line x1={prevLength} y1='12' x2={(percentage * 326 + prevLength)} y2='12' className='train-line'></line>
-                    <circle cx={prevLength + 4} cy='12' r='12' className='train-circle'></circle>
-                    <use xlinkHref='#walk' className='train-icon' x={prevLength - 4} y='4' width='16' height='16'></use>
-                    <text x={prevLength - 6} y='40' textAnchor='start' className='train-name'></text>
-                    <rect x={prevLength} y='0' width={(percentage * 326 + prevLength)} height='24' className='tooltipTrigger' onClick={() => setDetailViewHidden(false)}></rect>
-                </g>
-        );
-        prevLength = prevLength + (percentage * 326);
+            ) :
+            walk = 1;
+        if (isTransportInfo(connection[index])) {
+            prevLength = prevLength + (percentage * 326);
+        }
     }
     return elements;
 }
@@ -67,7 +63,7 @@ const getTransferTime = (stops: Stop[], rangeTransport1: number, rangeTransport2
     return displayDuration(new Date(stops[rangeTransport2].departure.time).getTime() - new Date(stops[rangeTransport1].arrival.time).getTime());
 }
 
-const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSetter: React.Dispatch<React.SetStateAction<Boolean>>) => {
+const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSetter: React.Dispatch<React.SetStateAction<Boolean>>, setSubOverlayHidden: React.Dispatch<React.SetStateAction<Boolean>>, setTrainSelected: React.Dispatch<React.SetStateAction<TripId>>) => {
     let transDivs = [];
     for (let index = 0; index < connection.transports.length; index++) {
         if (isTransportInfo(connection.transports[index])) {
@@ -76,14 +72,18 @@ const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSet
                     <div className='top-border'></div>
                     <div>
                         <div className={'train-box train-class-' + (connection.transports[index].move as TransportInfo).category_id + ' with-tooltip'}
-                            data-tooltip={'Betreiber: DB Regio AG S-Bahn Rhein-Main \nZugnummer: ' + (connection.transports[index].move as TransportInfo).train_nr}>
-                            <svg className='train-icon'>
+                            data-tooltip={'Betreiber: DB Regio AG S-Bahn Rhein-Main \nZugnummer: ' + (connection.transports[index].move as TransportInfo).train_nr} onClick={() => { setSubOverlayHidden(false); setTrainSelected(connection.trips[index].id) }}>
+                            <svg className='train-icon' onClick={() => { setSubOverlayHidden(false); setTrainSelected(connection.trips[index].id) }}>
                                 <use xlinkHref={classToId((connection.transports[index].move as TransportInfo).category_id)}></use>
                             </svg>
                             <span className='train-name'>{(connection.transports[index].move as TransportInfo).name}</span>
                         </div>
                     </div>
-                    {/* {(index !== 0) ? <div className='train-top-line'><span>{getTransferTime(connection.stops, (connection.transports[index - 1].move as TransportInfo).range.to, (connection.transports[index].move as TransportInfo).range.from) + ' Fußweg'}</span></div> : <></>} */}
+                    {(index !== 0) ?
+                        <div className='train-top-line'>
+                            <span>{getTransferTime(connection.stops, (connection.transports[index - 1].move as TransportInfo).range.to, (connection.transports[index].move as TransportInfo).range.from) + ' Fußweg'}</span>
+                        </div> :
+                        <></>}
                     <div className='first-stop'>
                         <div className='stop past'>
                             <div className='timeline train-color-border'></div>
@@ -122,48 +122,6 @@ const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSet
                             <div className="delay"></div>
                             <div className="station">
                                 <span className="virtual">{connection.stops[(connection.transports[index].move as TransportInfo).range.to].station.name}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>)
-        } else {
-            transDivs.push(
-                <div className={'train-detail train-class-walk initial-walk'} key={index}>
-                    <div className='top-border'></div>
-                    <div>
-                        <div className='train-box train-class-walk'>
-                            <svg className="train-icon">
-                                <use xlinkHref="#walk"></use>
-                            </svg>
-                        </div>
-                    </div>
-                    <div className='first-stop'>
-                        <div className='stop past'>
-                            <div className='timeline train-color-border'></div>
-                            <div className='time'>
-                                <span className='past'>{displayTime(connection.stops[connection.transports[index].move.range.from].departure.time)}</span>
-                            </div>
-                            <div className='delay'></div>
-                            <div className='station'>{connection.stops[index].station.name}</div>
-                        </div>
-                    </div>
-                    <div className="intermediate-stops-toggle">
-                        <div className="timeline-container">
-                            <div className="timeline train-color-border bg"></div>
-                            <div className="timeline train-color-border progress" style={{ height: '100%' }}></div>
-                        </div>
-                        <div className="expand-icon"></div>
-                        <span>{'Fußweg (' + displayDuration(new Date(connection.stops[connection.transports[index].move.range.to].arrival.time).getTime() - new Date(connection.stops[connection.transports[index].move.range.from].departure.time).getTime()) + ')'}</span>
-                    </div>
-                    <div className="last-stop">
-                        <div className="stop past">
-                            <div className="timeline train-color-border"></div>
-                            <div className="time">
-                                <span className="past">{displayTime(connection.stops[connection.transports[index].move.range.to].arrival.time)}</span>
-                            </div>
-                            <div className="delay"></div>
-                            <div className="station">
-                                <span className="virtual">{connection.stops[connection.transports[index].move.range.to].station.name}</span>
                             </div>
                         </div>
                     </div>
@@ -266,7 +224,7 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
     );
 };
 
-export const JourneyRender: React.FC<{ 'connection': Connection }> = (props) => {
+export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>> }> = (props) => {
 
     const [isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed] = useState<Boolean>(true);
 
@@ -277,7 +235,7 @@ export const JourneyRender: React.FC<{ 'connection': Connection }> = (props) => 
                     <div className='top-border'></div>
                     <div>
                         <div className={'train-box train-class-' + (props.connection.transports[0].move as TransportInfo).category_id + ' with-tooltip'}
-                            data-tooltip={'Betreiber: DB Regio AG S-Bahn Rhein-Main \nZugnummer: ' + (props.connection.transports[0].move as TransportInfo).train_nr}>
+                            data-tooltip={'Betreiber: DB Regio AG S-Bahn Rhein-Main \nZugnummer: ' + (props.connection.transports[0].move as TransportInfo).train_nr} onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(props.connection.trips[0].id) }}>
                             <svg className='train-icon'>
                                 <use xlinkHref={classToId((props.connection.transports[0].move as TransportInfo).category_id)}></use>
                             </svg>
@@ -332,7 +290,7 @@ export const JourneyRender: React.FC<{ 'connection': Connection }> = (props) => 
                     </div>
                 </div>
                 :
-                transportDivs(props.connection, isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed)}
+                transportDivs(props.connection, isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed, props.setSubOverlayHidden, props.setTrainSelected)}
         </>
     );
 };
