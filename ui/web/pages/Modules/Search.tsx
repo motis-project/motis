@@ -24,6 +24,19 @@ const getRoutingOptions = (startType: string, startModes: Mode[], start: Station
     };
 };
 
+const mapConnections = (connections: Connection[]) => {
+    let cons = [];
+    if(connections){
+        for(let i = 0; i < connections.length; i++){
+            let stations = [];
+            for(let k = 0; k < connections[i].stops.length; k++){
+                stations.push(connections[i].stops[k].station);
+            }
+            cons.push({'id': i, 'stations': stations, 'trains': [], 'walks': []});
+        }
+    }
+    return cons;
+};
 
 export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations}> = (props) => {
  
@@ -79,7 +92,9 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                     window.portEvents.pub('mapSetMarkers', {'startPosition': getFromLocalStorage("motis.routing.from_location").pos,
                                                             'startName': getFromLocalStorage("motis.routing.from_location").name,
                                                             'destinationPosition': getFromLocalStorage("motis.routing.to_location").pos,
-                                                            'destinationName': getFromLocalStorage("motis.routing.to_location").name})
+                                                            'destinationName': getFromLocalStorage("motis.routing.to_location").name});
+                    
+                    window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections(res.content.connections), 'lowestId': 0});
                 });
         }
     }, [start, startModes, destination, destinationModes, searchDirection]);

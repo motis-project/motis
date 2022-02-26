@@ -42,11 +42,19 @@ export const MapContainer: React.FC<{'translation': Translations}> = (props) => 
                     <div className="time" id="sim-time-overlay">19.10.2020 16:47:01</div>
                 </div>
                 <div className="train-color-picker-overlay">
-                    <div><input type="radio" id="train-color-picker-none" name="train-color-picker" /><label
+                    <div><input type="radio" id="train-color-picker-none" name="train-color-picker" onClick={() => {
+                        window.portEvents.pub('mapShowTrains', false);
+                    }}/><label
                         htmlFor="train-color-picker-none">Keine Züge</label></div>
-                    <div><input type="radio" id="train-color-picker-className" name="train-color-picker" /><label
+                    <div><input type="radio" id="train-color-picker-className" name="train-color-picker" checked onClick={() => {
+                        window.portEvents.pub('mapSetUseTrainClassColor', true);
+                        window.portEvents.pub('mapShowTrains', true);
+                    }}/><label
                         htmlFor="train-color-picker-className">Nach Kategorie</label></div>
-                    <div><input type="radio" id="train-color-picker-delay" name="train-color-picker" /><label
+                    <div><input type="radio" id="train-color-picker-delay" name="train-color-picker" onClick={() => {
+                        window.portEvents.pub('mapSetUseTrainClassColor', false);
+                        window.portEvents.pub('mapShowTrains', true);
+                    }}/><label
                         htmlFor="train-color-picker-delay">Nach Verspätung</label></div>
                 </div>
             </div>

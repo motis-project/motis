@@ -72,10 +72,14 @@ const ownPorts = {
         subscribe: function(){}
     },
     'mapUseTrainClassColors': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('mapUseTrainClassColors', callback);
+        }
     },
     'mapShowTrains': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('mapShowTrains', callback);
+        }
     },
     'mapSetDetailFilter': {
         subscribe: function(){}
@@ -104,7 +108,9 @@ const ownPorts = {
         }
     },
     'mapSetConnections': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('mapSetConnections', callback);
+        }
     },
     'mapHighlightConnections': {
         subscribe: function(){}
