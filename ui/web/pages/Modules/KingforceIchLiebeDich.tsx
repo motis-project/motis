@@ -2,6 +2,24 @@ import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 import { Connection, Station, TripId } from './ConnectionTypes';
 
+const displayTime = (posixTime) => {
+    let today = new Date(posixTime * 1000);
+    let h = String(today.getHours());
+    let m = String(today.getMinutes()).padStart(2, '0');
+    return h + ':' + m;
+}
+
+const displayDuration = (posixTime) => {
+    let today = new Date(posixTime * 1000);
+    let h = String(today.getUTCHours());
+    let m = String(today.getUTCMinutes()).padStart(2, '0');
+    if (h === '0') {
+        return m + 'min';
+    } else {
+        return h + 'h ' + m + 'min';
+    }
+}
+
 const getTrainConnection = (lineId: string, stationId: string, targetStationId: string, targetTime: number, time: number, trainNr: number) => {
     return {
         method: 'POST',
@@ -31,7 +49,7 @@ export const FetchTrainData: React.FC<{ 'setSubOverlayHidden': React.Dispatch<Re
     const [trainConnection, setTrainConnection] = useState<Connection>();
 
     useEffect(() => {
-        if (!props.trainSelected) {
+        if (props.trainSelected !== undefined) {
             let requestURL = 'https://europe.motis-project.de/?elm=tripRequest';
             fetch(requestURL, getTrainConnection(lineId, stationId, targetStationId, targetTime, time, train.train_nr))
                 .then(res => res.json())
@@ -41,7 +59,7 @@ export const FetchTrainData: React.FC<{ 'setSubOverlayHidden': React.Dispatch<Re
                     setTrainConnection(res);
                 });
         }
-    });
+    }, [props.trainSelected]);
 
     return (
         <div className='connection-details trip-view'>
@@ -52,11 +70,11 @@ export const FetchTrainData: React.FC<{ 'setSubOverlayHidden': React.Dispatch<Re
                         <div className='date'>22.1.2022</div>
                         <div className='connection-times'>
                             <div className='times'>
-                                <div className='connection-departure'>23:37</div>
-                                <div className='connection-arrival'>00:15</div>
+                                <div className='connection-departure'>{displayTime(time)}</div>
+                                <div className='connection-arrival'>{displayTime(targetTime)}</div>
                             </div>
                             <div className='locations'>
-                                <div>Pratteln, Schlossstrasse</div>
+                                <div>{}</div>
                                 <div>Basel, Dreirosenbrücke</div>
                             </div>
                         </div>
