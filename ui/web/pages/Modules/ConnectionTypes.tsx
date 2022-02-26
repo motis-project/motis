@@ -6,7 +6,7 @@ export interface Connection {
 }
 
 
-interface Stop {
+export interface Stop {
     station: Station,
     arrival: EventInfo,
     departure: EventInfo,
