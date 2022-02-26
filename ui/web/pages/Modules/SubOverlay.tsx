@@ -3,7 +3,7 @@ import { Translations } from './Localization';
 import { DatePicker } from './DatePicker';
 import moment from 'moment';
 import { TripId } from './ConnectionTypes';
-import { FetchTrainData } from './FetchTrainData';
+import { FetchTrainData } from './KingforceIchLiebeDich';
 
 export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>> }> = (props) => {
 
