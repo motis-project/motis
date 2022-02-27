@@ -33,7 +33,7 @@ function StationPicker({
   } = useCombobox({
     items: stationList,
     itemToString: (item: Station | null) => (item !== null ? item.name : ""),
-    initialSelectedItem: initialStation,
+    initialSelectedItem: initialStation ?? null,
     onInputValueChange: ({ inputValue }) => {
       if (inputValue != undefined) {
         setInput(inputValue);
