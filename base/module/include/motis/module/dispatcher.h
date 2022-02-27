@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <memory>
 #include <queue>
 #include <string_view>
@@ -11,6 +12,7 @@
 #include "motis/module/message.h"
 #include "motis/module/receiver.h"
 #include "motis/module/registry.h"
+#include "motis/module/timer.h"
 
 namespace motis::module {
 
@@ -29,6 +31,12 @@ struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
     }
     return *reinterpret_cast<Module*>(it->get());
   }
+
+  void register_timer(char const* name,
+                      boost::posix_time::time_duration interval,
+                      std::function<void()>&& fn, ctx::accesses_t&& access);
+
+  void start_timers();
 
   std::vector<future> publish(msg_ptr const& msg, ctx_data const& data,
                               ctx::op_id id);
@@ -51,6 +59,7 @@ struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
   bool queue_no_target_msgs_{false};
   std::queue<std::pair<msg_ptr, callback>> no_target_msg_queue_;
   std::vector<std::unique_ptr<module>> modules_;
+  std::map<std::string, std::shared_ptr<timer>> timers_;
 
   // If this is set to a value != nullptr, it indicates direct mode is on.
   // This implies that in direct mode there can only be one global dispatcher.

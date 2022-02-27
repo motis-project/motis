@@ -49,8 +49,8 @@ std::vector<station_id> get_metas(schedule const& sched,
 }
 
 csa_query::csa_query(schedule const& sched, routing::RoutingRequest const* req)
-    : dir_{dir_ = req->search_dir() == SearchDir_Forward ? search_dir::FWD
-                                                         : search_dir::BWD} {
+    : dir_{req->search_dir() == SearchDir_Forward ? search_dir::FWD
+                                                  : search_dir::BWD} {
   utl::verify_ex(req->search_type() == SearchType_Default ||
                      req->search_type() == SearchType_Accessibility ||
                      req->search_type() == SearchType_DefaultPrice ||

@@ -22,9 +22,9 @@ struct ris_gtfsrt_multi_schedule_delay_message_itest_t0 : public gtfsrt_itest {
       : gtfsrt_itest(gtfsrt_multi_schedule_dataset_opt,
                      {"--ris.instant_forward=true",
                       "--ris.gtfsrt.is_addition_skip_allowed=true",
-                      "--ris.input=sroda:test/schedule/multi_schedule_poznan/"
+                      "--ris.input=sroda|test/schedule/multi_schedule_poznan/"
                       "gtfsrt/pb/sroda",
-                      "--ris.input=ztm:test/schedule/multi_schedule_poznan/"
+                      "--ris.input=ztm|test/schedule/multi_schedule_poznan/"
                       "gtfsrt/pb/ztm"}) {}
 };
 
