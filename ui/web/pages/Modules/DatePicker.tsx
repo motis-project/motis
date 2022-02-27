@@ -52,8 +52,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
     }, [props.currentDate]);
 
     React.useEffect(() => {
-        props.setCurrentDate(currentDate);
-        console.log('dateDisplay triggers in Datepicker');
+        props.setCurrentDate(currentDate.clone());
     }, [dateDisplay]);
 
     const weekdayshortname = props.translation.search.weekDays.map(day => {
