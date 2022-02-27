@@ -14,9 +14,7 @@ timer::timer(char const* name, dispatcher* d,
       timer_{d->runner_.ios()},
       fn_{std::move(fn)},
       dispatcher_{d},
-      access_{access} {
-  schedule();
-}
+      access_{access} {}
 
 void timer::stop() {
   stopped_ = true;
@@ -28,11 +26,11 @@ void timer::schedule() {
     return;
   }
 
+  timer_.expires_from_now(interval_);
   timer_.async_wait(
       [self = shared_from_this()](boost::system::error_code const& ec) {
         self->exec(ec);
       });
-  timer_.expires_from_now(interval_);
 }
 
 void timer::exec(boost::system::error_code const& ec) {

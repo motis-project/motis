@@ -160,7 +160,8 @@ struct ris::impl {
     }
 
     net::http::client::url get_url() const {
-      utl::verify(std::holds_alternative<fs::path>(src_), "no url {}", str());
+      utl::verify(std::holds_alternative<net::http::client::url>(src_),
+                  "no url {}", str());
       return std::get<net::http::client::url>(src_);
     }
 
@@ -182,10 +183,11 @@ struct ris::impl {
       };
 
       std::string tag;
-      if (auto const colon_pos = in.find(':'); colon_pos != std::string::npos) {
-        tag = in.substr(0, colon_pos);
+      if (auto const delimiter_pos = in.find('|');
+          delimiter_pos != std::string::npos) {
+        tag = in.substr(0, delimiter_pos);
         tag = tag.empty() ? "" : tag + "_";
-        auto const src = in.substr(colon_pos + 1);
+        auto const src = in.substr(delimiter_pos + 1);
         return {is_url(src) ? source_t{net::http::client::url{src}}
                             : source_t{fs::path{src}},
                 tag};
