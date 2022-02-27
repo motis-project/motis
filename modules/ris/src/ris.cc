@@ -130,27 +130,30 @@ struct ris::impl {
    * In single-timetable mode, the tag should be omitted.
    */
   struct input {
-    using source_t = std::variant<net::http::client::url, fs::path>;
+    using source_t = std::variant<net::http::client::request, fs::path>;
     enum class source_type { path, url };
 
     input(schedule const& sched, std::string const& in)
         : input{sched, split(in)} {}
 
     std::string str() const {
-      return std::visit(utl::overloaded{[](fs::path const& p) {
-                                          return "path: " + p.generic_string();
-                                        },
-                                        [](net::http::client::url const& u) {
-                                          return "url: " + u.str();
-                                        }},
-                        src_);
+      return std::visit(
+          utl::overloaded{
+              [](fs::path const& p) { return "path: " + p.generic_string(); },
+              [](net::http::client::request const& u) {
+                auto const auth_it = u.headers.find("Authorization");
+                return "url: " + u.address.str() + ", auth: " +
+                       (auth_it == end(u.headers) ? "none" : auth_it->second);
+              }},
+          src_);
     }
 
     source_type source_type() const {
       return std::visit(
-          utl::overloaded{
-              [](fs::path const&) { return source_type::path; },
-              [](net::http::client::url const&) { return source_type::url; }},
+          utl::overloaded{[](fs::path const&) { return source_type::path; },
+                          [](net::http::client::request const&) {
+                            return source_type::url;
+                          }},
           src_);
     }
 
@@ -159,10 +162,10 @@ struct ris::impl {
       return std::get<fs::path>(src_);
     }
 
-    net::http::client::url get_url() const {
-      utl::verify(std::holds_alternative<net::http::client::url>(src_),
+    net::http::client::request get_request() const {
+      utl::verify(std::holds_alternative<net::http::client::request>(src_),
                   "no url {}", str());
-      return std::get<net::http::client::url>(src_);
+      return std::get<net::http::client::request>(src_);
     }
 
     std::string const& tag() const { return tag_; }
@@ -177,9 +180,20 @@ struct ris::impl {
           gtfs_knowledge_{path_and_tag.second, sched} {}
 
     static std::pair<source_t, std::string> split(std::string const& in) {
-      auto const is_url = [](auto&& s) {
+      auto const is_url = [](std::string const& s) {
         return boost::starts_with(s, "http://") ||
                boost::starts_with(s, "https://");
+      };
+
+      auto const parse_req = [](std::string const& s) {
+        if (auto const delimiter_pos = s.find('|');
+            delimiter_pos != std::string::npos) {
+          auto req = net::http::client::request{s.substr(0, delimiter_pos)};
+          req.headers.emplace("Authorization", s.substr(delimiter_pos + 1));
+          return req;
+        } else {
+          return net::http::client::request{s};
+        }
       };
 
       std::string tag;
@@ -188,12 +202,11 @@ struct ris::impl {
         tag = in.substr(0, delimiter_pos);
         tag = tag.empty() ? "" : tag + "_";
         auto const src = in.substr(delimiter_pos + 1);
-        return {is_url(src) ? source_t{net::http::client::url{src}}
-                            : source_t{fs::path{src}},
-                tag};
+        return {
+            is_url(src) ? source_t{parse_req(src)} : source_t{fs::path{src}},
+            tag};
       } else {
-        return {is_url(in) ? source_t{net::http::client::url{in}}
-                           : source_t{fs::path{in}},
+        return {is_url(in) ? source_t{parse_req(in)} : source_t{fs::path{in}},
                 tag};
       }
     }
@@ -259,7 +272,7 @@ struct ris::impl {
     auto futures = std::vector<http_future_t>{};
     for (auto const& in : inputs_) {
       if (in.source_type() == input::source_type::url) {
-        futures.emplace_back(motis_http(in.get_url()));
+        futures.emplace_back(motis_http(in.get_request()));
       }
     }
 
