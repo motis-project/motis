@@ -26,6 +26,24 @@ dispatcher::dispatcher(registry& reg,
       registry_{reg},
       modules_{std::move(modules)} {}
 
+void dispatcher::register_timer(char const* name,
+                                boost::posix_time::time_duration interval,
+                                std::function<void()>&& fn,
+                                ctx::accesses_t&& access) {
+  auto const inserted =
+      timers_
+          .emplace(name, std::make_shared<timer>(name, this, interval, fn,
+                                                 std::move(access)))
+          .second;
+  utl::verify(inserted, "register_timer: {} already registered", name);
+}
+
+void dispatcher::start_timers() {
+  for (auto const& [name, t] : timers_) {
+    t->exec(boost::system::error_code{});
+  }
+}
+
 void dispatcher::on_msg(msg_ptr const& msg, callback const& cb) {
   dispatch(msg, cb, ctx::op_id("dispatcher::on_msg"), ctx::op_type_t::IO);
 }

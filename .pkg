@@ -9,7 +9,7 @@
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
-  commit=4c809244b10de534f4423ce4b27aa1a371610e96
+  commit=7c19000f4e424607931a50f611dbf3e44d6357fd
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -45,7 +45,7 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=1ac1a8a665dceddd45801a6cda570a8ae303cb4e
+  commit=9ea612ff034accbd01825959496ee03a3fece1ef
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis

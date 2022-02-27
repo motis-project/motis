@@ -69,6 +69,7 @@ int main(int argc, char const** argv) {
 
   try {
     conf::options_parser parser(confs);
+    parser.read_environment("MOTIS_");
     parser.read_command_line_args(argc, argv, false);
 
     if (parser.help()) {
