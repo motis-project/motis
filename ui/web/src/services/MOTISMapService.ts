@@ -159,22 +159,23 @@ export class MotisMapService {
   public mapUpdateWalks: (options: RVConnectionWalkOptions) => void = defaultDelegateValue;
   public mapSetConnections: (options: RVConnectionsOptions) => void = defaultDelegateValue;
   public mapHighlightConnections: (options: number[]) => void = defaultDelegateValue;
-  public setTimeOffset: (options: number) => void = defaultDelegateValue;
+  public setTimeOffset: (offset: number) => void = defaultDelegateValue;
   public setPPRSearchOptions: (options: PPRSearchOptions) => void = defaultDelegateValue;
   public mapSetLocale: (options: MapLocaleOptions) => void = defaultDelegateValue;
   // public localStorageSet: (options: StringTuples) => void = defaultDelegateValue;
+  public mapUseTrainClassColors: (options: boolean) => void = defaultDelegateValue;
+  public mapShowTrains: (showTrains: boolean) => void = defaultDelegateValue;
+
+
+
+  //called in map
+  public mapShowContextMenu: (mapPostion: MapClickInfo) => void = defaultDelegateValue;
   // eslint-disable-next-line @typescript-eslint/ban-types
   public handleRailVizError: (options: object) => void = defaultDelegateValue;
   public clearRailVizError: () => void = defaultDelegateValue;
   public showTripDetails: (options: Trip) => void = defaultDelegateValue;
   public showStationDetails: (options: string) => void = defaultDelegateValue;
   public mapUpdate: (options: MapInfoOptions) => void = defaultDelegateValue;
-
-
-  //called in map
-  public mapShowContextMenu: (mapPostion: MapClickInfo) => void = defaultDelegateValue;
-  public mapUseTrainClassColors: (options: boolean) => void = defaultDelegateValue;
-  public mapShowTrains: (options: boolean) => void = defaultDelegateValue;
   public mapCloseContextMenu: () => void = defaultDelegateValue;
   public mapSetTooltip: (options: MapTooltipOptions) => void = defaultDelegateValue;
 }

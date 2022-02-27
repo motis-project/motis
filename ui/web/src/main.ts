@@ -41,10 +41,19 @@ declare global {
 window.mapService = MOTISMapServicePlugin.service;
 
 const intervalMap = setInterval(() => {
-  if (MOTISMapServicePlugin.service.created && interval === -1 && TranslationService.service !== null) {
+  if (MOTISMapServicePlugin.service.created && interval === -1) {
     MOTISMapServicePlugin.service.mapInit("map");
-    MOTISMapServicePlugin.service.mapSetLocale(TranslationService.service.t)
-    TranslationService.service.updateMapLocale = MOTISMapServicePlugin.service.mapSetLocale
+    const intervalMapInit = setInterval(() => {
+      if(MOTISMapServicePlugin.service.initialized && TranslationService.service !== null) {
+        MOTISMapServicePlugin.service.mapSetLocale(TranslationService.service.t)
+        TranslationService.service.updateMapLocale = MOTISMapServicePlugin.service.mapSetLocale
+
+        MOTISMapServicePlugin.service.setTimeOffset(DateTimeService.service.dateTime - Date.now().valueOf());
+        DateTimeService.service.mapSetTimeOffset = MOTISMapServicePlugin.service.setTimeOffset;
+        MOTISMapServicePlugin.service.mapShowTrains(true);
+        clearInterval(intervalMapInit)
+      }
+    })
     clearInterval(intervalMap);
   }
 }, 10);
