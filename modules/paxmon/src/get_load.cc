@@ -188,8 +188,10 @@ pax_cdf get_cdf(pax_pdf const& pdf) {
   cdf.data_.resize(pdf.data_.size());
   auto cumulative_prob = 0.0F;
   for (auto const& [size, prob] : utl::enumerate(pdf.data_)) {
-    cumulative_prob += prob;
-    cdf.data_[size] = cumulative_prob;
+    if (prob != 0.0F) {
+      cumulative_prob += prob;
+      cdf.data_[size] = cumulative_prob;
+    }
   }
   return cdf;
 }
