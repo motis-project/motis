@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Index from '..';
-import { Transport, TransportInfo, Connection, Stop, TripId } from './ConnectionTypes';
+import { Transport, TransportInfo, Connection, Stop, TripId, LatLng, FootRouting } from './ConnectionTypes';
 
 const isTransportInfo = (transport: Transport) => {
     return transport.move_type === 'Transport';
@@ -59,11 +59,19 @@ const stopGenerator = (stops: Stop[]) => {
     return stopDivs;
 }
 
-const getTransferTime = (stops: Stop[], rangeTransport1: number, rangeTransport2: number) => {
-    return displayDuration(new Date(stops[rangeTransport2].departure.time).getTime() - new Date(stops[rangeTransport1].arrival.time).getTime());
+const getWalkTime = (start: LatLng, destination: LatLng, durationLimit: number, profile: string, includeEdges: boolean, includePath: boolean, includeSteps: boolean) => {
+    return {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            destination: { type: "Module", target: "/ppr/route" },
+            content_type: 'FootRoutingRequest',
+            content: { start: start, destination: destination, search_options: { duration_limit: durationLimit, profile: profile }, include_edges: includeEdges, include_path: includePath, include_steps: includeSteps }
+        })
+    }
 }
 
-const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSetter: React.Dispatch<React.SetStateAction<Boolean>>, setSubOverlayHidden: React.Dispatch<React.SetStateAction<Boolean>>, setTrainSelected: React.Dispatch<React.SetStateAction<TripId>>) => {
+const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSetter: React.Dispatch<React.SetStateAction<Boolean>>, setSubOverlayHidden: React.Dispatch<React.SetStateAction<Boolean>>, setTrainSelected: React.Dispatch<React.SetStateAction<TripId>>, walkTime: number) => {
     let transDivs = [];
     for (let index = 0; index < connection.transports.length; index++) {
         if (isTransportInfo(connection.transports[index])) {
@@ -81,7 +89,7 @@ const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSet
                     </div>
                     {(index !== 0) ?
                         <div className='train-top-line'>
-                            <span>{getTransferTime(connection.stops, (connection.transports[index - 1].move as TransportInfo).range.to, (connection.transports[index].move as TransportInfo).range.from) + ' Fußweg'}</span>
+                            <span>{' Fußweg'}</span>
                         </div> :
                         <></>}
                     <div className='first-stop'>
@@ -111,7 +119,7 @@ const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSet
                                 - new Date(connection.stops[(connection.transports[index].move as TransportInfo).range.from].departure.time).getTime()) + ')'}</span>
                     </div>
                     <div className={isCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
-                            {stopGenerator(connection.stops)}
+                        {stopGenerator(connection.stops)}
                     </div>
                     <div className="last-stop">
                         <div className="stop past">
@@ -228,6 +236,33 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
 
     const [isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed] = useState<Boolean>(true);
 
+    const [walkTime, setWalkTime] = useState<number>(0);
+
+    const [start, setStart] = useState<LatLng>(undefined);
+
+    const [destination, setDestination] = useState<LatLng>(undefined);;
+
+    const [durationLimit, setDurationLimit] = useState<number>(0);
+
+    const [profile, setProfile] = useState<string>('');
+
+    const [includeEdges, setIncludeEdges] = useState<boolean>(false);
+
+    const [includePath, setIncludePath] = useState<boolean>(false);
+
+    const [includeSteps, setIncludeSteps] = useState<boolean>(false);
+
+    useEffect(() => {
+        let requestURL = 'https://europe.motis-project.de/?elm=FootRoutingRequest';
+        fetch(requestURL, getWalkTime(start, destination, durationLimit, profile, includeEdges, includePath, includeSteps))
+            .then(res => res.json())
+            .then((res: FootRouting) => {
+                console.log('Foot Request successful');
+                console.log(res);
+                setWalkTime(res.content[0].routes[0].duration);
+            });
+    }, []);
+
     return (
         (props.connection === undefined) ?
             <></> :
@@ -237,7 +272,7 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
                         <div className='top-border'></div>
                         <div>
                             <div className={'train-box train-class-' + (props.connection.transports[0].move as TransportInfo).category_id + ' with-tooltip'}
-                                data-tooltip={'Betreiber: DB Regio AG S-Bahn Rhein-Main \nZugnummer: ' + (props.connection.transports[0].move as TransportInfo).train_nr} onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(props.connection.trips[0].id);}}>
+                                data-tooltip={'Betreiber: DB Regio AG S-Bahn Rhein-Main \nZugnummer: ' + (props.connection.transports[0].move as TransportInfo).train_nr} onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(props.connection.trips[0].id); }}>
                                 <svg className='train-icon'>
                                     <use xlinkHref={classToId((props.connection.transports[0].move as TransportInfo).category_id)}></use>
                                 </svg>
@@ -276,7 +311,7 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
                                 'Fahrt ' + ((props.connection.transports[0].move as TransportInfo).range.to - (props.connection.transports[0].move as TransportInfo).range.from) + ' Stationen (' + displayDuration(new Date(props.connection.stops[props.connection.stops.length - 1].arrival.time).getTime() - new Date(props.connection.stops[0].departure.time).getTime()) + ')'}</span>
                         </div>
                         <div className={isIntermediateStopsCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
-                                {stopGenerator(props.connection.stops)}
+                            {stopGenerator(props.connection.stops)}
                         </div>
                         <div className='last-stop'>
                             <div className='stop past'>
@@ -292,7 +327,7 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
                         </div>
                     </div>
                     :
-                    transportDivs(props.connection, isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed, props.setSubOverlayHidden, props.setTrainSelected)}
+                    transportDivs(props.connection, isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed, props.setSubOverlayHidden, props.setTrainSelected, walkTime)}
             </>
     );
 };

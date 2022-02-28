@@ -7,8 +7,55 @@ export interface Connection {
 
 export interface TripViewConnection {
     content: Connection,
-    destination: {type: string, target: string},
+    destination: { type: string, target: string },
     id: number
+}
+
+export interface FootRouting {
+    content: Routes[],
+    content_type: string,
+    destination: { type: string, target: string },
+    id: number
+}
+
+interface Routes {
+    routes: Route[]
+}
+
+interface Route {
+    distance: number,
+    duration: number,
+    duration_exact: number,
+    duration_division: number,
+    accessibility: number,
+    accessibility_exact: number,
+    accessibility_division: number,
+    elevation_up: number,
+    elevation_down: number,
+    start: LatLng,
+    destination: LatLng,
+    steps: Step[],
+    path: number[]
+}
+
+export interface LatLng{
+    lat: number,
+    lng: number
+}
+
+interface Step {
+    step_type: string,
+    street_name: string,
+    street_type: string,
+    crossing_type: string,
+    distance: number,
+    duration: number,
+    accessibility: number,
+    path: number[],
+    elevation_up: number,
+    elevation_down: number,
+    incline_up: boolean,
+    handrail: string
 }
 
 export interface Stop {
