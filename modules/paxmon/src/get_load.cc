@@ -102,7 +102,7 @@ pax_pdf get_load_pdf_base(passenger_group_container const& pgc,
   pdf.data_[limits.min_] = 1.0F;
   for (auto const grp_id : groups) {
     auto const* grp = pgc[grp_id];
-    if (grp->probability_ != 1.0F) {
+    if (grp->probability_ != 1.0F && grp->probability_ != 0.0F) {
       convolve_base(pdf, grp->passengers_, grp->probability_);
     }
   }
@@ -164,7 +164,7 @@ pax_pdf get_load_pdf_avx(passenger_group_container const& pgc,
 
   for (auto const grp_id : groups) {
     auto const* grp = pgc[grp_id];
-    if (grp->probability_ != 1.0F) {
+    if (grp->probability_ != 1.0F && grp->probability_ != 0.0F) {
       convolve_avx(pdf, grp->passengers_, grp->probability_, limits, buf);
     }
   }
