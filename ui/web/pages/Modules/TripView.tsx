@@ -1,7 +1,7 @@
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 import { JourneyRender } from './ConnectionRender';
-import { Connection, Station, TripId } from './ConnectionTypes';
+import { Connection, Station, TripId, TripViewConnection } from './ConnectionTypes';
 
 const displayTime = (posixTime) => {
     let today = new Date(posixTime * 1000);
@@ -54,13 +54,13 @@ export const FetchTrainData: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOver
             let requestURL = 'https://europe.motis-project.de/?elm=tripRequest';
             fetch(requestURL, getTrainConnection(lineId, stationId, targetStationId, targetTime, time, train.train_nr))
                 .then(res => res.json())
-                .then((res: Connection) => {
+                .then((res: TripViewConnection) => {
                     console.log('Trip Request successful');
                     console.log(res);
-                    setTrainConnection(res);
+                    setTrainConnection(res.content);
                 });
         }
-    }, [trainConnection]);
+    }, [props.subOverlayHidden]);
 
     return (
         <div className='connection-details trip-view'>
@@ -75,8 +75,8 @@ export const FetchTrainData: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOver
                                 <div className='connection-arrival'>{displayTime(targetTime)}</div>
                             </div>
                             <div className='locations'>
-                                <div>{stationId}</div>
-                                <div>{targetStationId}</div>
+                                <div>{trainConnection.stops[0].station.name}</div>
+                                <div>{trainConnection.stops[trainConnection.stops.length - 1].station.name}</div>
                             </div>
                         </div>
                         <div className='summary'><span className='duration'><i className='icon'>schedule</i>{displayDuration(targetTime - time)}</span><span
@@ -85,7 +85,9 @@ export const FetchTrainData: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOver
                     <div className='actions'></div>
                 </div>
             </div>
-            <JourneyRender connection={trainConnection} setSubOverlayHidden={props.setSubOverlayHidden} setTrainSelected={props.setTrainSelected} />
+            <div className='connection-journey' id='sub-connection-journey'>
+                <JourneyRender connection={trainConnection} setSubOverlayHidden={props.setSubOverlayHidden} setTrainSelected={props.setTrainSelected} />
+            </div>
         </div>
     )
 

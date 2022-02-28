@@ -5,6 +5,11 @@ export interface Connection {
     problems: Problem[]
 }
 
+export interface TripViewConnection {
+    content: Connection,
+    destination: {type: string, target: string},
+    id: number
+}
 
 export interface Stop {
     station: Station,
