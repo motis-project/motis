@@ -3,7 +3,7 @@ import { Translations } from './Localization';
 import { DatePicker } from './DatePicker';
 import moment from 'moment';
 import { TripId } from './ConnectionTypes';
-import { FetchTrainData } from './KingforceIchLiebeDich';
+import { FetchTrainData } from './TripView';
 
 export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>> }> = (props) => {
 
@@ -67,7 +67,7 @@ export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidd
                         <div className='trips'></div>
                     </div>
                     :
-                    <FetchTrainData setSubOverlayHidden={props.setSubOverlayHidden} trainSelected={props.trainSelected} setTrainSelected={props.setTrainSelected} />}
+                    <FetchTrainData subOverlayHidden={props.subOverlayHidden} setSubOverlayHidden={props.setSubOverlayHidden} trainSelected={props.trainSelected} setTrainSelected={props.setTrainSelected} />}
             </div>
             <div className='sub-overlay-close' onClick={() => props.setSubOverlayHidden(true)}><i className='icon'>close</i></div>
         </div>
