@@ -219,7 +219,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
           return [...prev, resultAtom];
         });
         setSelectedSimResult(resultAtom);
-        await queryClient.invalidateQueries(queryKeys.trip());
+        await queryClient.invalidateQueries(queryKeys.all);
         onSimulationFinished();
       },
       retry: false,
