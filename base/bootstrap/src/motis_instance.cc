@@ -144,6 +144,10 @@ void motis_instance::init_io(module_settings const& module_opt) {
     }
     module->init_io(runner_.ios());
   }
+
+  for (auto const& [name, t] : timers_) {
+    t->exec(boost::system::error_code{});
+  }
 }
 
 void motis_instance::init_remotes(

@@ -49,7 +49,7 @@ Offset<FullTripId> parse_trip_id(context& ctx, rapidjson::Value const& data) {
   auto const dest_si = parse_station(ctx, dest_stop);
 
   auto const start_time = get_schedule_timestamp(ctx, rel, "startzeit");
-  auto const dest_time = get_schedule_timestamp(ctx, rel, "zielzeit");
+  auto const target_time = get_schedule_timestamp(ctx, rel, "zielzeit");
 
   return CreateFullTripId(
       ctx.b_,
@@ -59,7 +59,7 @@ Offset<FullTripId> parse_trip_id(context& ctx, rapidjson::Value const& data) {
                    train_nr, start_time,
                    ctx.b_.CreateSharedString(dest_station_eva.data(),
                                              dest_station_eva.size()),
-                   dest_time, ctx.b_.CreateString(line)),
+                   target_time, ctx.b_.CreateString(line)),
       start_si, dest_si);
 }
 

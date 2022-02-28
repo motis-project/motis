@@ -12,21 +12,27 @@
 #include "utl/parser/file.h"
 #include "utl/read_file.h"
 
+#include "net/http/client/url.h"
+
 #include "conf/date_time.h"
 
 #include "tar/file_reader.h"
 #include "tar/tar_reader.h"
 #include "tar/zstd_reader.h"
 
+#include "utl/overloaded.h"
 #include "utl/verify.h"
 
 #include "lmdb/lmdb.hpp"
+
+#include "rabbitmq/amqp.hpp"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/common/unixtime.h"
 #include "motis/core/access/time_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/print_trip.h"
+#include "motis/module/context/motis_http_req.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
 #include "motis/ris/gtfs-rt/common.h"
@@ -124,40 +130,166 @@ struct ris::impl {
    * In single-timetable mode, the tag should be omitted.
    */
   struct input {
+    using source_t = std::variant<net::http::client::request, fs::path>;
+    enum class source_type { path, url };
+
     input(schedule const& sched, std::string const& in)
         : input{sched, split(in)} {}
 
-    fs::path const& path() const { return path_; }
+    std::string str() const {
+      return std::visit(
+          utl::overloaded{
+              [](fs::path const& p) { return "path: " + p.generic_string(); },
+              [](net::http::client::request const& u) {
+                auto const auth_it = u.headers.find("Authorization");
+                return "url: " + u.address.str() + ", auth: " +
+                       (auth_it == end(u.headers) ? "none" : auth_it->second);
+              }},
+          src_);
+    }
+
+    source_type source_type() const {
+      return std::visit(
+          utl::overloaded{[](fs::path const&) { return source_type::path; },
+                          [](net::http::client::request const&) {
+                            return source_type::url;
+                          }},
+          src_);
+    }
+
+    fs::path get_path() const {
+      utl::verify(std::holds_alternative<fs::path>(src_), "no path {}", str());
+      return std::get<fs::path>(src_);
+    }
+
+    net::http::client::request get_request() const {
+      utl::verify(std::holds_alternative<net::http::client::request>(src_),
+                  "no url {}", str());
+      return std::get<net::http::client::request>(src_);
+    }
+
     std::string const& tag() const { return tag_; }
+
     gtfsrt::knowledge_context& gtfs_knowledge() { return gtfs_knowledge_; }
 
   private:
     input(schedule const& sched,
-          std::pair<fs::path, std::string>&& path_and_tag)
-        : path_{std::move(path_and_tag.first)},
+          std::pair<source_t, std::string>&& path_and_tag)
+        : src_{std::move(path_and_tag.first)},
           tag_{path_and_tag.second},
           gtfs_knowledge_{path_and_tag.second, sched} {}
 
-    static std::pair<fs::path, std::string> split(std::string const& in) {
+    static std::pair<source_t, std::string> split(std::string const& in) {
+      auto const is_url = [](std::string const& s) {
+        return boost::starts_with(s, "http://") ||
+               boost::starts_with(s, "https://");
+      };
+
+      auto const parse_req = [](std::string const& s) {
+        if (auto const delimiter_pos = s.find('|');
+            delimiter_pos != std::string::npos) {
+          auto req = net::http::client::request{s.substr(0, delimiter_pos)};
+          req.headers.emplace("Authorization", s.substr(delimiter_pos + 1));
+          return req;
+        } else {
+          return net::http::client::request{s};
+        }
+      };
+
       std::string tag;
-      if (auto const colon_pos = in.find(':'); colon_pos != std::string::npos) {
-        tag = in.substr(0, colon_pos);
+      if (auto const delimiter_pos = in.find('|');
+          delimiter_pos != std::string::npos) {
+        tag = in.substr(0, delimiter_pos);
         tag = tag.empty() ? "" : tag + "_";
-        return std::pair{fs::path{in.substr(colon_pos + 1)}, tag};
+        auto const src = in.substr(delimiter_pos + 1);
+        return {
+            is_url(src) ? source_t{parse_req(src)} : source_t{fs::path{src}},
+            tag};
       } else {
-        return std::pair{fs::path{in}, tag};
+        return {is_url(in) ? source_t{parse_req(in)} : source_t{fs::path{in}},
+                tag};
       }
     }
 
-    fs::path path_;
+    source_t src_;
     std::string tag_;
 
     gtfsrt::knowledge_context gtfs_knowledge_;
+    std::unique_ptr<amqp::ssl_connection> con_;
   };
 
-  explicit impl(config const& c) : config_{c} {}
+  explicit impl(config& c) : config_{c} {}
 
-  void init(schedule& sched) {
+  void init_ribasis_receiver(dispatcher* d, schedule* sched) {
+    utl::verify(config_.rabbitmq_.valid(), "invalid rabbitmq configuration");
+    if (config_.rabbitmq_.empty()) {
+      return;
+    }
+
+    ribasis_receiver_ = std::make_unique<amqp::ssl_connection>(
+        &config_.rabbitmq_, [](std::string const& log_msg) {
+          LOG(info) << "rabbitmq: " << log_msg;
+        });
+    ribasis_receiver_->run([this, d, sched, last = now(),
+                            buffer = std::vector<amqp::msg>{}](
+                               amqp::msg const& m) mutable {
+      buffer.emplace_back(m);
+
+      if (auto const n = now(); (n - last) > config_.update_interval_) {
+        return;
+      } else {
+        last = n;
+
+        auto msgs_copy = buffer;
+        buffer.clear();
+
+        d->enqueue(
+            ctx_data{d},
+            [this, sched, msgs = std::move(msgs_copy)]() {
+              publisher pub;
+              pub.schedule_res_id_ =
+                  to_res_id(::motis::module::global_res_id::SCHEDULE);
+
+              for (auto const& m : msgs) {
+                parse_str_and_write_to_db(
+                    *file_upload_, {m.content_.c_str(), m.content_.size()},
+                    file_type::JSON, pub);
+              }
+
+              sched->system_time_ = pub.max_timestamp_;
+              sched->last_update_timestamp_ = std::time(nullptr);
+              publish_system_time_changed(pub.schedule_res_id_);
+            },
+            ctx::op_id{"ribasis_receive", CTX_LOCATION, 0U}, ctx::op_type_t::IO,
+            ctx::accesses_t{ctx::access_request{
+                to_res_id(::motis::module::global_res_id::SCHEDULE),
+                ctx::access_t::WRITE}});
+      }
+    });
+  }
+
+  void update_gtfs_rt(schedule& sched) {
+    auto futures = std::vector<http_future_t>{};
+    for (auto const& in : inputs_) {
+      if (in.source_type() == input::source_type::url) {
+        futures.emplace_back(motis_http(in.get_request()));
+      }
+    }
+
+    publisher pub;
+    pub.schedule_res_id_ = to_res_id(::motis::module::global_res_id::SCHEDULE);
+
+    for (auto const& f : futures) {
+      parse_str_and_write_to_db(*file_upload_, f->val().body,
+                                file_type::PROTOBUF, pub);
+    }
+
+    sched.system_time_ = pub.max_timestamp_;
+    sched.last_update_timestamp_ = std::time(nullptr);
+    publish_system_time_changed(pub.schedule_res_id_);
+  }
+
+  void init(dispatcher& d, schedule& sched) {
     inputs_ = utl::to_vec(config_.input_, [&](std::string const& in) {
       return input{sched, in};
     });
@@ -186,9 +318,14 @@ struct ris::impl {
     t.dbi_open(MAX_DAY_DB, db::dbi_flags::CREATE | db::dbi_flags::INTEGERKEY);
     t.commit();
 
+    std::vector<input> urls;
     for (auto& in : inputs_) {
-      if (fs::exists(in.path())) {
-        LOG(warn) << "parsing " << in.path();
+      if (in.source_type() != input::source_type::path) {
+        continue;
+      }
+
+      if (fs::exists(in.get_path())) {
+        LOG(warn) << "parsing " << in.get_path();
         if (config_.instant_forward_) {
           publisher pub;
           parse_sequential(sched, in, pub);
@@ -196,13 +333,28 @@ struct ris::impl {
           parse_sequential(sched, in, null_pub_);
         }
       } else {
-        LOG(warn) << in.path() << " does not exist";
+        LOG(warn) << in.get_path() << " does not exist";
       }
+    }
+
+    auto const has_urls = std::any_of(
+        begin(inputs_), end(inputs_),
+        [](auto&& in) { return in.source_type() == input::source_type::url; });
+    if (has_urls) {
+      d.register_timer(
+          "RIS GTFS-RT Update",
+          boost::posix_time::seconds{config_.update_interval_},
+          [this, &sched]() { update_gtfs_rt(sched); },
+          ctx::accesses_t{ctx::access_request{
+              to_res_id(::motis::module::global_res_id::SCHEDULE),
+              ctx::access_t::WRITE}});
     }
 
     if (config_.init_time_.unix_time_ != 0) {
       forward(sched, 0U, config_.init_time_.unix_time_);
     }
+
+    init_ribasis_receiver(&d, &sched);
   }
 
   static std::string_view get_content_type(HTTPRequest const* req) {
@@ -235,7 +387,9 @@ struct ris::impl {
   msg_ptr read(schedule& sched, msg_ptr const&) {
     publisher pub;
     for (auto& in : inputs_) {
-      parse_sequential(sched, in, pub);
+      if (in.source_type() == input::source_type::path) {
+        parse_sequential(sched, in, pub);
+      }
     }
     sched.system_time_ = pub.max_timestamp_;
     sched.last_update_timestamp_ = std::time(nullptr);
@@ -535,13 +689,13 @@ struct ris::impl {
 
   template <typename Publisher>
   void parse_sequential(schedule& sched, input& in, Publisher& pub) {
-    if (!fs::exists(in.path())) {
-      l(logging::error, "ris input path {} does not exist", in.path());
+    if (!fs::exists(in.get_path())) {
+      l(logging::error, "ris input path {} does not exist", in.get_path());
       return;
     }
 
-    for (auto const& [t, path, type] :
-         collect_files(fs::canonical(in.path(), in.path().root_path()))) {
+    for (auto const& [t, path, type] : collect_files(
+             fs::canonical(in.get_path(), in.get_path().root_path()))) {
       try {
         parse_file_and_write_to_db(in, path, type, pub);
         if (config_.instant_forward_) {
@@ -794,11 +948,19 @@ struct ris::impl {
     }
   }
 
+  void stop_io() const {
+    if (ribasis_receiver_ != nullptr) {
+      ribasis_receiver_->stop();
+    }
+  }
+
+  std::unique_ptr<amqp::ssl_connection> ribasis_receiver_;
+
   db::env env_;
   std::mutex min_max_mutex_;
   std::mutex merge_mutex_;
 
-  config const& config_;
+  config& config_;
 
   std::unique_ptr<input> file_upload_;
   std::vector<input> inputs_;
@@ -816,9 +978,27 @@ ris::ris() : module("RIS", "ris") {
         "automatically forward after every file during read");
   param(config_.gtfs_is_addition_skip_allowed_,
         "gtfsrt.is_addition_skip_allowed", "allow skips on additional trips");
+  param(config_.update_interval_, "update_interval",
+        "RT update interval in seconds (RabbitMQ messages get buffered)");
+  param(config_.rabbitmq_.host_, "rabbitmq.host", "RabbitMQ remote host");
+  param(config_.rabbitmq_.port_, "rabbitmq.port", "RabbitMQ remote port");
+  param(config_.rabbitmq_.user_, "rabbitmq.username", "RabbitMQ username");
+  param(config_.rabbitmq_.pw_, "rabbitmq.password", "RabbitMQ password");
+  param(config_.rabbitmq_.vhost_, "rabbitmq.vhost", "RabbitMQ vhost");
+  param(config_.rabbitmq_.exchange_, "rabbitmq.exchange", "RabbitMQ exchange");
+  param(config_.rabbitmq_.routing_key_, "rabbitmq.routing_key",
+        "RabbitMQ routing key");
+  param(config_.rabbitmq_.queue_, "rabbitmq.queue", "RabbitMQ queue name");
+  param(config_.rabbitmq_.ca_, "rabbitmq.ca", "RabbitMQ path to CA file");
+  param(config_.rabbitmq_.cert_, "rabbitmq.cert",
+        "RabbitMQ path to client certificate");
+  param(config_.rabbitmq_.key_, "rabbitmq.key",
+        "RabbitMQ path to client key file");
 }
 
 ris::~ris() = default;
+
+void ris::stop_io() { impl_->stop_io(); }
 
 void ris::reg_subc(motis::module::subc_reg& r) {
   r.register_cmd(
@@ -863,7 +1043,8 @@ void ris::init(motis::module::registry& r) {
   r.subscribe(
       "/init",
       [this]() {
-        impl_->init(const_cast<schedule&>(get_sched()));  // NOLINT
+        impl_->init(*shared_data_,
+                    const_cast<schedule&>(get_sched()));  // NOLINT
       },
       ctx::accesses_t{ctx::access_request{
           to_res_id(::motis::module::global_res_id::SCHEDULE),

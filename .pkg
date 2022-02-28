@@ -9,7 +9,7 @@
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
-  commit=4c809244b10de534f4423ce4b27aa1a371610e96
+  commit=7c19000f4e424607931a50f611dbf3e44d6357fd
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -45,7 +45,7 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=5ce38f41196857026b0421666da9742710328c43
+  commit=9ea612ff034accbd01825959496ee03a3fece1ef
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
@@ -85,8 +85,12 @@
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=master
-  commit=abaa6c8a7552650761e7db29a8c68709d9ee1303
+  commit=c90d53bdcd7ff741a416ae122b33c9c2a96e8be7
 [mimalloc]
   url=git@github.com:motis-project/mimalloc.git
   branch=master
   commit=076f815cece59e0a0ee08237c8fbba75465452b6
+[rabbitmq-c]
+  url=git@github.com:motis-project/rabbitmq-c.git
+  branch=master
+  commit=087417f9a05212a61eb73c1691316898ceebfb46

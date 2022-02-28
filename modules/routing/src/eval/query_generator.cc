@@ -119,7 +119,7 @@ private:
       int h = hour % 24;
       v.push_back(prob[h]);  // NOLINT
     }
-    return std::discrete_distribution<int>(std::begin(v), std::end(v));
+    return {std::begin(v), std::end(v)};
   }
 
   unixtime begin_;
