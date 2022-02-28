@@ -118,6 +118,7 @@ void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
                           [op = remote_op.value(), msg, cb]() { op(msg, cb); });
         return;
       } else {
+        LOG(logging::warn) << "target not found: " << id.name;
         return handle_no_target(msg, cb);
       }
     } catch (std::system_error const& e) {
