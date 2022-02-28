@@ -63,32 +63,34 @@ export const FetchTrainData: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOver
     }, [props.subOverlayHidden]);
 
     return (
-        <div className='connection-details trip-view'>
-            <div className='connection-info'>
-                <div className='header'>
-                    <div className='back'><i className='icon' onClick={() => props.setSubOverlayHidden(true)}>arrow_back</i></div>
-                    <div className='details'>
-                        <div className='date'>22.1.2022</div>
-                        <div className='connection-times'>
-                            <div className='times'>
-                                <div className='connection-departure'>{displayTime(time)}</div>
-                                <div className='connection-arrival'>{displayTime(targetTime)}</div>
+        (trainConnection === undefined) ?
+            <></> :
+            <div className='connection-details trip-view'>
+                <div className='connection-info'>
+                    <div className='header'>
+                        <div className='back'><i className='icon' onClick={() => props.setSubOverlayHidden(true)}>arrow_back</i></div>
+                        <div className='details'>
+                            <div className='date'>22.1.2022</div>
+                            <div className='connection-times'>
+                                <div className='times'>
+                                    <div className='connection-departure'>{displayTime(time)}</div>
+                                    <div className='connection-arrival'>{displayTime(targetTime)}</div>
+                                </div>
+                                <div className='locations'>
+                                    <div>{trainConnection.stops[0].station.name}</div>
+                                    <div>{trainConnection.stops[trainConnection.stops.length - 1].station.name}</div>
+                                </div>
                             </div>
-                            <div className='locations'>
-                                <div>{trainConnection.stops[0].station.name}</div>
-                                <div>{trainConnection.stops[trainConnection.stops.length - 1].station.name}</div>
-                            </div>
+                            <div className='summary'><span className='duration'><i className='icon'>schedule</i>{displayDuration(targetTime - time)}</span><span
+                                className='interchanges'><i className='icon'>transfer_within_a_station</i>Keine Umstiege</span></div>
                         </div>
-                        <div className='summary'><span className='duration'><i className='icon'>schedule</i>{displayDuration(targetTime - time)}</span><span
-                            className='interchanges'><i className='icon'>transfer_within_a_station</i>Keine Umstiege</span></div>
+                        <div className='actions'></div>
                     </div>
-                    <div className='actions'></div>
+                </div>
+                <div className='connection-journey' id='sub-connection-journey'>
+                    <JourneyRender connection={trainConnection} setSubOverlayHidden={props.setSubOverlayHidden} setTrainSelected={props.setTrainSelected} />
                 </div>
             </div>
-            <div className='connection-journey' id='sub-connection-journey'>
-                <JourneyRender connection={trainConnection} setSubOverlayHidden={props.setSubOverlayHidden} setTrainSelected={props.setTrainSelected} />
-            </div>
-        </div>
     )
 
 }

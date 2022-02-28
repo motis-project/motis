@@ -237,7 +237,7 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
                         <div className='top-border'></div>
                         <div>
                             <div className={'train-box train-class-' + (props.connection.transports[0].move as TransportInfo).category_id + ' with-tooltip'}
-                                data-tooltip={'Betreiber: DB Regio AG S-Bahn Rhein-Main \nZugnummer: ' + (props.connection.transports[0].move as TransportInfo).train_nr} onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(props.connection.trips[0].id) }}>
+                                data-tooltip={'Betreiber: DB Regio AG S-Bahn Rhein-Main \nZugnummer: ' + (props.connection.transports[0].move as TransportInfo).train_nr} onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(props.connection.trips[0].id);}}>
                                 <svg className='train-icon'>
                                     <use xlinkHref={classToId((props.connection.transports[0].move as TransportInfo).category_id)}></use>
                                 </svg>

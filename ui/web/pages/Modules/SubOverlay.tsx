@@ -67,7 +67,8 @@ export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidd
                         <div className='trips'></div>
                     </div>
                     :
-                    <FetchTrainData subOverlayHidden={props.subOverlayHidden} setSubOverlayHidden={props.setSubOverlayHidden} trainSelected={props.trainSelected} setTrainSelected={props.setTrainSelected} />}
+                    <FetchTrainData subOverlayHidden={props.subOverlayHidden} setSubOverlayHidden={props.setSubOverlayHidden} trainSelected={props.trainSelected} setTrainSelected={props.setTrainSelected} />
+                }
             </div>
             <div className='sub-overlay-close' onClick={() => props.setSubOverlayHidden(true)}><i className='icon'>close</i></div>
         </div>
