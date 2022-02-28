@@ -41,13 +41,13 @@ const transportForLoop = (connection: Transport[], setDetailViewHidden: React.Di
 
 const stopGenerator = (stops: Stop[]) => {
     let stopDivs = [];
-    for (let index = 0; index < stops.length; index++) {
+    for (let index = 1; index < stops.length - 1; index++) {
         stopDivs.push(
             <div className='stop past' key={index}>
                 <div className='timeline train-color-border bg'></div>
                 <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
                 <div className='time'>
-                    <span className='past'>{stops[index].arrival}</span>
+                    <span className='past'>{displayTime(stops[index].arrival.time)}</span>
                 </div>
                 <div className='delay'></div>
                 <div className='station'>
@@ -111,7 +111,7 @@ const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSet
                                 - new Date(connection.stops[(connection.transports[index].move as TransportInfo).range.from].departure.time).getTime()) + ')'}</span>
                     </div>
                     <div className={isCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
-
+                            {stopGenerator(connection.stops)}
                     </div>
                     <div className="last-stop">
                         <div className="stop past">
@@ -276,7 +276,7 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
                                 'Fahrt ' + ((props.connection.transports[0].move as TransportInfo).range.to - (props.connection.transports[0].move as TransportInfo).range.from) + ' Stationen (' + displayDuration(new Date(props.connection.stops[props.connection.stops.length - 1].arrival.time).getTime() - new Date(props.connection.stops[0].departure.time).getTime()) + ')'}</span>
                         </div>
                         <div className={isIntermediateStopsCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
-
+                                {stopGenerator(props.connection.stops)}
                         </div>
                         <div className='last-stop'>
                             <div className='stop past'>
