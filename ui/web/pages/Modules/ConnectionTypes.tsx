@@ -12,10 +12,14 @@ export interface TripViewConnection {
 }
 
 export interface FootRouting {
-    content: Routes[],
+    content: Routess,
     content_type: string,
     destination: { type: string, target: string },
     id: number
+}
+
+interface Routess {
+    routes: Routes[]
 }
 
 interface Routes {
@@ -32,15 +36,10 @@ interface Route {
     accessibility_division: number,
     elevation_up: number,
     elevation_down: number,
-    start: LatLng,
-    destination: LatLng,
+    start: {lat: number, lng: number},
+    destination: {lat: number, lng: number},
     steps: Step[],
     path: number[]
-}
-
-export interface LatLng{
-    lat: number,
-    lng: number
 }
 
 interface Step {

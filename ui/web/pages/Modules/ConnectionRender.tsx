@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Index from '..';
-import { Transport, TransportInfo, Connection, Stop, TripId, LatLng, FootRouting } from './ConnectionTypes';
+import { Transport, TransportInfo, Connection, Stop, TripId, FootRouting} from './ConnectionTypes';
 
 const isTransportInfo = (transport: Transport) => {
     return transport.move_type === 'Transport';
@@ -59,14 +59,14 @@ const stopGenerator = (stops: Stop[]) => {
     return stopDivs;
 }
 
-const getWalkTime = (start: LatLng, destination: LatLng, durationLimit: number, profile: string, includeEdges: boolean, includePath: boolean, includeSteps: boolean) => {
+const getWalkTime = (latStart: number, lngStart: number, latDest: number, lngDest: number, durationLimit: number, profile: string, includeEdges: boolean, includePath: boolean, includeSteps: boolean) => {
     return {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             destination: { type: "Module", target: "/ppr/route" },
             content_type: 'FootRoutingRequest',
-            content: { start: start, destination: destination, search_options: { duration_limit: durationLimit, profile: profile }, include_edges: includeEdges, include_path: includePath, include_steps: includeSteps }
+            content: { start: { lat: latStart, lng: lngStart }, destinations: [{ lat: latDest, lng: lngDest }, { lat: latDest, lng: lngDest }], search_options: { duration_limit: durationLimit, profile: profile }, include_edges: includeEdges, include_path: includePath, include_steps: includeSteps }
         })
     }
 }
@@ -89,7 +89,7 @@ const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSet
                     </div>
                     {(index !== 0) ?
                         <div className='train-top-line'>
-                            <span>{' Fußweg'}</span>
+                            <span>{walkTime + ' Fußweg'}</span>
                         </div> :
                         <></>}
                     <div className='first-stop'>
@@ -238,28 +238,32 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
 
     const [walkTime, setWalkTime] = useState<number>(0);
 
-    const [start, setStart] = useState<LatLng>(undefined);
+    const [latStart, setLatStart] = useState<number>(50);
 
-    const [destination, setDestination] = useState<LatLng>(undefined);;
+    const [lngStart, setLngStart] = useState<number>(10);
 
-    const [durationLimit, setDurationLimit] = useState<number>(0);
+    const [latDest, setLatDest] = useState<number>(50);
 
-    const [profile, setProfile] = useState<string>('');
+    const [lngDest, setLngDest] = useState<number>(10);
+
+    const [durationLimit, setDurationLimit] = useState<number>(900);
+
+    const [profile, setProfile] = useState<string>('default');
 
     const [includeEdges, setIncludeEdges] = useState<boolean>(false);
 
-    const [includePath, setIncludePath] = useState<boolean>(false);
+    const [includePath, setIncludePath] = useState<boolean>(true);
 
-    const [includeSteps, setIncludeSteps] = useState<boolean>(false);
+    const [includeSteps, setIncludeSteps] = useState<boolean>(true);
 
     useEffect(() => {
         let requestURL = 'https://europe.motis-project.de/?elm=FootRoutingRequest';
-        fetch(requestURL, getWalkTime(start, destination, durationLimit, profile, includeEdges, includePath, includeSteps))
+        fetch(requestURL, getWalkTime(latStart, lngStart, latDest, lngDest, durationLimit, profile, includeEdges, includePath, includeSteps))
             .then(res => res.json())
             .then((res: FootRouting) => {
                 console.log('Foot Request successful');
                 console.log(res);
-                setWalkTime(res.content[0].routes[0].duration);
+                setWalkTime(res.content.routes[0].routes[0].duration);
             });
     }, []);
 
