@@ -45,17 +45,17 @@ export const MapContainer: React.FC<{'translation': Translations}> = (props) => 
                     <div><input type="radio" id="train-color-picker-none" name="train-color-picker" onClick={() => {
                         window.portEvents.pub('mapShowTrains', false);
                     }}/><label
-                        htmlFor="train-color-picker-none">Keine Züge</label></div>
+                        htmlFor="train-color-picker-none">{props.translation.railViz.noTrains}</label></div>
                     <div><input type="radio" id="train-color-picker-className" name="train-color-picker" checked onClick={() => {
                         window.portEvents.pub('mapSetUseTrainClassColor', true);
                         window.portEvents.pub('mapShowTrains', true);
                     }}/><label
-                        htmlFor="train-color-picker-className">Nach Kategorie</label></div>
+                        htmlFor="train-color-picker-className">{props.translation.railViz.classColors}</label></div>
                     <div><input type="radio" id="train-color-picker-delay" name="train-color-picker" onClick={() => {
                         window.portEvents.pub('mapSetUseTrainClassColor', false);
                         window.portEvents.pub('mapShowTrains', true);
                     }}/><label
-                        htmlFor="train-color-picker-delay">Nach Verspätung</label></div>
+                        htmlFor="train-color-picker-delay">{props.translation.railViz.delayColors}</label></div>
                 </div>
             </div>
             <RailvizContextMenu translation={props.translation}/>
