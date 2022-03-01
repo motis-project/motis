@@ -32,7 +32,21 @@ const mapConnections = (connections: Connection[]) => {
             for(let k = 0; k < connections[i].stops.length; k++){
                 stations.push(connections[i].stops[k].station);
             }
-            cons.push({'id': i, 'stations': stations, 'trains': [], 'walks': []});
+            let trains = [];
+            for(let k = 0; k < connections[i].trips.length; k++){
+                let trip = connections[i].trips[k].id;
+                let sections = [];
+                for(let l = connections[i].trips[k].range.from; l < connections[i].trips[k].range.to - 1; l++){
+                    sections.push({ 'arrivalStation': connections[i].stops[l+1].station,
+                                    'departureStation': connections[i].stops[l].station,
+                                    'scheduledArrivalTime': connections[i].stops[l+1].arrival.schedule_time,
+                                    'scheduledDepartureTime': connections[i].stops[l].departure.schedule_time});
+                }
+                trains.push({'sections': sections, 'trip': trip});
+            }
+            let walks = [];
+            //Todo: fill walks
+            cons.push({'id': i, 'stations': stations, 'trains': trains, 'walks': walks});
         }
     }
     return cons;
