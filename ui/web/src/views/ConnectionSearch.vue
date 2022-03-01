@@ -361,6 +361,7 @@ export default defineComponent({
     window.addEventListener("dragover", (event: Event) => event.preventDefault());
     window.addEventListener("dragenter", (event: Event) => event.preventDefault());
     window.addEventListener("drop", this.onDrop);
+    this.$mapService.mapSetTooltipDelegates.push(this.mapConnectionHovered);
     const interval = setInterval(() => {
       if(this.$mapService.initialized) {
         this.$mapService.setPPRSearchOptions({
@@ -368,7 +369,6 @@ export default defineComponent({
           // eslint-disable-next-line camelcase
           duration_limit: this.firstOptions.footDuration * 60
         })
-        this.$mapService.mapSetTooltipDelegates.push(this.mapConnectionHovered);
         clearInterval(interval);
       }
     });

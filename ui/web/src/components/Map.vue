@@ -2,7 +2,32 @@
   <div class="map-container">
     <div id="map-background" class="mapboxgl-map"></div>
     <div id="map-foreground" class="mapboxgl-map"></div>
-    <!-- <div class="railviz-tooltip hidden" style=""></div> -->
+    <div
+      :class="['railviz-tooltip',
+               tooltipState === TooltipState.Station ? 'station' : (tooltipState === TooltipState.Train ? 'train' : ''),
+               tooltipState ? 'visible' : 'hidden']"
+      :style="`top: ${tooltipPosition.y}px; left: ${tooltipPosition.x}px;`">
+      <div v-if="tooltipState === TooltipState.Station" class="station-name">
+        {{ tooltipStationName }}
+      </div>
+      <template v-else-if="tooltipState === TooltipState.Train">
+        <div class="transport-name">
+          {{ tooltipTransportInfo.name }}
+        </div>
+        <div class="departure">
+          <span class="station">{{ tooltipTransportInfo.departureStation }}</span>
+          <div class="time no-delay-infos">
+            <span class="schedule">{{ tooltipTransportInfo.departureTime }}</span>
+          </div>
+        </div>
+        <div class="arrival">
+          <span class="station">{{ tooltipTransportInfo.arrivalStation }}</span>
+          <div class="time no-delay-infos">
+            <span class="schedule">{{ tooltipTransportInfo.arrivalTime }}</span>
+          </div>
+        </div>
+      </template>
+    </div>
     <div class="map-bottom-overlay">
       <div class="sim-time-overlay">
         <div class="permalink" title="Permalink">
@@ -51,6 +76,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
+import { MapTooltipOptions } from "../services/MOTISMapService"
 
 export default defineComponent({
   name: "Map",
@@ -59,6 +85,60 @@ export default defineComponent({
   },
   emits: [
     'openSimWindow'
-  ]
+  ],
+  data() {
+    return {
+      TooltipState: TooltipState,
+      tooltipState: TooltipState.Hidden,
+      tooltipPosition: {
+        x: 0,
+        y: 0
+      },
+      tooltipStationName: "",
+      tooltipTransportInfo: {} as TooltipTransportInfo,
+    }
+  },
+  created() {
+    this.$mapService.mapSetTooltipDelegates.push(this.mapTrainOrStationHovered);
+  },
+  methods: {
+    mapTrainOrStationHovered(options: MapTooltipOptions) {
+      this.tooltipState = options.hoveredTrain ? TooltipState.Train : (options.hoveredStation ? TooltipState.Station : TooltipState.Hidden);
+      if(this.tooltipState === TooltipState.Hidden) {
+        return;
+      }
+
+      this.tooltipPosition = {
+        x: options.mouseX - 120,
+        y: options.mouseY + 20
+      }
+      if(options.hoveredTrain) {
+        this.tooltipTransportInfo = {
+          name: options.hoveredTrain.names[0],
+          departureStation: options.hoveredTrain.departureStation,
+          departureTime: this.$ds.getTimeString(options.hoveredTrain.departureTime),
+          arrivalStation: options.hoveredTrain.arrivalStation,
+          arrivalTime: this.$ds.getTimeString(options.hoveredTrain.arrivalTime)
+        };
+      }
+      else if(options.hoveredStation) {
+        this.tooltipStationName = options.hoveredStation;
+      }
+    },
+  }
 })
+
+interface TooltipTransportInfo {
+  name: string,
+  departureStation: string,
+  departureTime: string,
+  arrivalStation: string,
+  arrivalTime: string
+}
+
+enum TooltipState {
+  Hidden,
+  Train,
+  Station
+}
 </script>
