@@ -2,7 +2,8 @@ export interface Connection {
     stops: Stop[],
     transports: Transport[],
     trips: Trip[],
-    problems: Problem[]
+    problems: Problem[],
+    dummyDay?: string
 }
 
 
@@ -29,8 +30,8 @@ export interface Position {
 
 
 interface EventInfo {
-    time?: Date
-    schedule_time?: Date
+    time?: number
+    schedule_time?: number
     track: string,
     reason: 'Schedule' | 'Is' | 'Propagation' | 'Forecast'
 }
