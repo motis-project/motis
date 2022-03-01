@@ -20,7 +20,7 @@ export const MapContainer: React.FC<{'translation': Translations}> = (props) => 
             </div>
             <div className="railviz-tooltip hidden"></div>
             <div className="map-bottom-overlay">
-                <div className="sim-time-overlay" onClick={() => simTimePickerSelected ? setSimTimePickerSelected(false) : setSimTimePickerSelected(true)}>
+                <div className="sim-time-overlay" onClick={() => setSimTimePickerSelected(!simTimePickerSelected)}>
                     <div id="railviz-loading-spinner" className="">
                         <div className="spinner">
                             <div className="bounce1"></div>

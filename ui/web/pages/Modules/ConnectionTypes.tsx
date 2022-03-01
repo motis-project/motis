@@ -5,8 +5,59 @@ export interface Connection {
     problems: Problem[]
 }
 
+export interface TripViewConnection {
+    content: Connection,
+    destination: { type: string, target: string },
+    id: number
+}
 
-interface Stop {
+export interface FootRouting {
+    content: Routess,
+    content_type: string,
+    destination: { type: string, target: string },
+    id: number
+}
+
+interface Routess {
+    routes: Routes[]
+}
+
+interface Routes {
+    routes: Route[]
+}
+
+interface Route {
+    distance: number,
+    duration: number,
+    duration_exact: number,
+    duration_division: number,
+    accessibility: number,
+    accessibility_exact: number,
+    accessibility_division: number,
+    elevation_up: number,
+    elevation_down: number,
+    start: {lat: number, lng: number},
+    destination: {lat: number, lng: number},
+    steps: Step[],
+    path: number[]
+}
+
+interface Step {
+    step_type: string,
+    street_name: string,
+    street_type: string,
+    crossing_type: string,
+    distance: number,
+    duration: number,
+    accessibility: number,
+    path: number[],
+    elevation_up: number,
+    elevation_down: number,
+    incline_up: boolean,
+    handrail: string
+}
+
+export interface Stop {
     station: Station,
     arrival: EventInfo,
     departure: EventInfo,
@@ -75,7 +126,7 @@ interface Range {
 }
 
 
-interface TripId {
+export interface TripId {
     station_id: string,
     train_nr: number,
     time: number,
