@@ -18,6 +18,11 @@ const getQuery = (): Translations => {
     }
     return enTranslations;
 }
+declare global{
+    interface Window {
+        portEvents : any;
+    }
+}  
 
 
 export const App: React.FC = () => {

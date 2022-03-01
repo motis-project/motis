@@ -4,13 +4,14 @@ import moment from 'moment';
 
 import { DatePicker } from './DatePicker';
 import { Mode, IntermodalRoutingResponse } from './IntermodalRoutingTypes';
-import { Connection, Station } from './ConnectionTypes';
+import { Connection, Position, Station } from './ConnectionTypes';
 import { Translations } from './Localization';
 import { Address } from './SuggestionTypes';
 import { SearchInputField } from './SearchInputField';
 import { Modepicker } from './ModePicker';
-import { getFromLocalStorage } from './LocalStorage';
+import { getFromLocalStorage, setLocalStorage } from './LocalStorage';
 import { Interval } from './RoutingTypes';
+import { markerSearch } from './RailvizContextMenu';
 
 
 const getRoutingOptions = (startType: string, startModes: Mode[], start: Station | Address, searchType: string, searchDirection: string, destinationType: string, destinationModes: Mode[], destination: Station | Address, interval: Interval ) => {
@@ -23,6 +24,33 @@ const getRoutingOptions = (startType: string, startModes: Mode[], start: Station
     };
 };
 
+const mapConnections = (connections: Connection[]) => {
+    let cons = [];
+    if(connections){
+        for(let i = 0; i < connections.length; i++){
+            let stations = [];
+            for(let k = 0; k < connections[i].stops.length; k++){
+                stations.push(connections[i].stops[k].station);
+            }
+            let trains = [];
+            for(let k = 0; k < connections[i].trips.length; k++){
+                let trip = connections[i].trips[k].id;
+                let sections = [];
+                for(let l = connections[i].trips[k].range.from; l < connections[i].trips[k].range.to - 1; l++){
+                    sections.push({ 'arrivalStation': connections[i].stops[l+1].station,
+                                    'departureStation': connections[i].stops[l].station,
+                                    'scheduledArrivalTime': connections[i].stops[l+1].arrival.schedule_time,
+                                    'scheduledDepartureTime': connections[i].stops[l].departure.schedule_time});
+                }
+                trains.push({'sections': sections, 'trip': trip});
+            }
+            let walks = [];
+            //Todo: fill walks
+            cons.push({'id': i, 'stations': stations, 'trains': trains, 'walks': walks});
+        }
+    }
+    return cons;
+};
 
 export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations}> = (props) => {
  
@@ -75,9 +103,27 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                     console.log("Response came in");
                     console.log(res);
                     props.setConnections(res.content.connections);
+                    window.portEvents.pub('mapSetMarkers', {'startPosition': getFromLocalStorage("motis.routing.from_location").pos,
+                                                            'startName': getFromLocalStorage("motis.routing.from_location").name,
+                                                            'destinationPosition': getFromLocalStorage("motis.routing.to_location").pos,
+                                                            'destinationName': getFromLocalStorage("motis.routing.to_location").name});
+                    
+                    window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections(res.content.connections), 'lowestId': 0});
                 });
         }
-    }, [start, startModes, destination, destinationModes, searchDirection, searchDate]);
+    }, [start, startModes, destination, destinationModes, searchDirection]);
+
+    useEffect(() => {
+        window.portEvents.sub('mapSetMarkers', function(){
+            if(markerSearch){
+                if(markerSearch[0]){
+                    setStart(markerSearch[1]);
+                }else{
+                    setDestination(markerSearch[1]);
+                }
+            }
+        });
+    });
 
 
     return (

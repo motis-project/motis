@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="32"
+   height="48"
+   viewBox="0 0 113.38583 0"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.91 r13725"
+   sodipodi:docname="marker_destination.svg"
+   inkscape:export-filename="/home/sebastian/algo/img/marker_destination.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90">
+  <defs
+     id="defs4">
+    <filter
+       inkscape:collect="always"
+       style="color-interpolation-filters:sRGB"
+       id="filter4525"
+       x="-0.075"
+       width="1.15"
+       y="-0.3"
+       height="1.6">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="0.625"
+         id="feGaussianBlur4527" />
+    </filter>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="22.627417"
+     inkscape:cx="14.716394"
+     inkscape:cy="7.9007155"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="true"
+     units="px"
+     inkscape:object-nodes="true"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:snap-bbox="true"
+     inkscape:window-width="1280"
+     inkscape:window-height="1376"
+     inkscape:window-x="1280"
+     inkscape:window-y="27"
+     inkscape:window-maximized="0">
+    <inkscape:grid
+       type="xygrid"
+       id="grid4136"
+       originx="1" />
+    <sodipodi:guide
+       position="16,0"
+       orientation="1,0"
+       id="guide4145"
+       inkscape:label=""
+       inkscape:color="rgb(0,0,255)" />
+    <sodipodi:guide
+       position="0,32"
+       orientation="0,1"
+       id="guide4147" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-1104.3622)">
+    <ellipse
+       style="fill:#4e4e4e;fill-opacity:0.50196081;stroke:none;stroke-width:1.77165353;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:7.08661413, 7.08661413000000007;stroke-dashoffset:0;stroke-opacity:1;filter:url(#filter4525)"
+       id="path4255"
+       cx="16"
+       cy="1146.8622"
+       rx="10"
+       ry="2.5" />
+    <path
+       style="fill:#1e88e5;fill-opacity:1;stroke:#1565c0;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="M 16 2 A 14 14 0 0 0 2 16 C 2 16.323677 2.0127518 16.654731 2.0351562 16.990234 C 2.7049364 27.020095 13.097103 42 16 42 C 18.858638 42 28.974265 27.476129 29.921875 17.455078 A 14 14 0 0 0 29.933594 17.328125 C 29.972925 16.876686 30 16.430916 30 16 A 14 14 0 0 0 16 2 z "
+       transform="translate(0,1104.3622)"
+       id="path4138" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:21.27614212px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;"
+       x="9.0277777"
+       y="1129.3622"
+       id="text5191"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan5193"
+         x="9.0277777"
+         y="1129.3622"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:22.5px;font-family:Roboto;-inkscape-font-specification:'Roboto Bold';fill:#ffffff;fill-opacity:1;">B</tspan></text>
+  </g>
+</svg>
