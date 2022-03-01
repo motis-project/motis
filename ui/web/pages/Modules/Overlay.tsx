@@ -48,6 +48,12 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
     // Connections
     const [connections, setConnections] = useState<Connection[]>(null);
 
+    // Boolean used to signal <Search> that extendForward was clicked
+    const [extendForwardFlag, setExtendForwardFlag] = useState<boolean>(true);
+
+    // Boolean used to signal <Search> that extendBackward was clicked
+    const [extendBackwardFlag, setExtendBackwardFlag] = useState<boolean>(true);
+    
     const [detailViewHidden, setDetailViewHidden] = useState<Boolean>(true);
 
     const [indexOfConnection, setIndexOfConnection] = useState<number>(0);
@@ -62,24 +68,33 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
         <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden'}>
             <div className='overlay'>
                 <div id='overlay-content'>
-                    {detailViewHidden ?
+        {detailViewHidden ?
                         <>
-                            <Search setConnections={setConnections} translation={props.translation} />
-                            {!connections ?
-                                <div className='spinner'>
-                                    <div className='bounce1'></div>
-                                    <div className='bounce2'></div>
-                                    <div className='bounce3'></div>
-                                </div> :
-                                <div id='connections'>
-                                    {connections.map((connectionElem: Connection, index) => (
-                                        <div className='connection' key={index} onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}>
+                    <Search setConnections={setConnections} 
+                            translation={props.translation} 
+                            extendForwardFlag={extendForwardFlag}
+                            extendBackwardFlag={extendBackwardFlag}/>
+                    {!connections ? 
+                    <div className='spinner'>
+                        <div className='bounce1'></div>
+                        <div className='bounce2'></div>
+                        <div className='bounce3'></div>
+                    </div> : 
+                    <div id='connections'>
+                        <div className='connections'>
+                            <div className='extend-search-interval search-before' onClick={() => setExtendBackwardFlag(!extendBackwardFlag)}><a>{props.translation.connections.extendBefore}</a></div>
+                            <div className='connection-list'>
+                                {connections.map((connectionElem: Connection, index) => (
+                                    connectionElem.dummyDay ?
+                                    <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
+                                    :
+                                    <div className='connection' key={index} onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}>
                                             <div className='pure-g'>
                                                 <div className='pure-u-4-24 connection-times'>
                                                     <div className='connection-departure'>
                                                         {displayTime(connectionElem.stops[0].departure.time)}
                                                     </div>
-                                                    <div className='connection-arrivial'>
+                                                    <div className='connection-arrival'>
                                                         {displayTime(connectionElem.stops[connectionElem.stops.length - 1].arrival.time)}
                                                     </div>
                                                 </div>
@@ -89,6 +104,8 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
                                                 <div className='pure-u-16-24 connection-trains'>
                                                     <div className='transport-graph'>
                                                         <ConnectionRender connection={connectionElem} setDetailViewHidden={setDetailViewHidden} />
+                                                        {/* Was ist tooltip? Es ist unsichtbar und hat keine Funktion meiner Meinung nach.*/ }
+
                                                         <div className='tooltip' style={{ position: 'absolute', left: '0px', top: '23px' }}>
                                                             <div className='stations'>
                                                                 <div className='departure'><span className='station'>Frankfurt (Main) Hauptbahnhof</span><span
@@ -102,8 +119,12 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>}
+                                ))}
+                                <div className='divider footer'></div>
+                                <div className='extend-search-interval search-after' onClick={() => setExtendForwardFlag(!extendForwardFlag)}><a>{props.translation.connections.extendAfter}</a></div>
+                            </div>
+                        </div>
+                    </div>}
                         </> :
                         <div className="connection-details">
                             <div className="connection-info">
