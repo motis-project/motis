@@ -58,7 +58,7 @@ export const MapContainer: React.FC<{'translation': Translations}> = (props) => 
                         htmlFor="train-color-picker-delay">Nach Verspätung</label></div>
                 </div>
             </div>
-            <RailvizContextMenu />
+            <RailvizContextMenu translation={props.translation}/>
             <div className={simTimePickerSelected ? "sim-time-picker-container" : "sim-time-picker-container hide"}>
                 <div className="sim-time-picker-overlay">
                     <div className="title">

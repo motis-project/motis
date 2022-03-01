@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
 import { getFromLocalStorage, setLocalStorage } from './LocalStorage';
+import {Translations} from './Localization';
 
 export let markerSearch = null;
 
-export const RailvizContextMenu: React.FC = () => {
+export const RailvizContextMenu: React.FC<{'translation': Translations}> = (props) => {
 
     const [x, setX] = useState(0);
     const [y, setY] = useState(0);
@@ -35,7 +36,7 @@ export const RailvizContextMenu: React.FC = () => {
                                                          'destinationPosition': getFromLocalStorage("motis.routing.to_location").pos,
                                                          'destinationName': getFromLocalStorage("motis.routing.to_location").name});
                 markerSearch = null;
-            }}>Routen von hier</div>
+            }}>{props.translation.mapContextMenu.routeFromHere}</div>
             <div className='item' onClick={() => {
                 setContextMenuHidden(true);
                 setLocalStorage("motis.routing.to_location", {'name': lat+';'+lng, 'pos':{'lat': lat, 'lng': lng}, 'type_': '', 'regions': {}})
@@ -45,6 +46,6 @@ export const RailvizContextMenu: React.FC = () => {
                                                         'destinationPosition':{'lat': lat, 'lng': lng},
                                                         'destinationName':lat+';'+lng});
                 markerSearch = null;
-            }}>Routen hierher</div>
+            }}>{props.translation.mapContextMenu.routeToHere}</div>
         </div>);
 };
