@@ -125,10 +125,6 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
         });
     });
 
-    useEffect(() => {
-        console.log("UseEffect Trigger on searchDate. WARUM TRIGGERST DU NICHT??? >:V")
-    }, [searchDate]);
-
 
     return (
         <div id='search'>
@@ -198,10 +194,10 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                             <div className='gb-input-widget'>
                                 <div className='hour-buttons'>
                                     <div><a
-                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => {setSearchDate(searchDate.subtract(1, 'h')); setSearchTime(searchDate.format('HH:mm'))}}><i
+                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => {setSearchDate(searchDate.clone().subtract(1, 'h')); setSearchTime(searchDate.format('HH:mm'))}}><i
                                                 className='icon'>chevron_left</i></a></div>
                                     <div><a
-                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => {setSearchDate(searchDate.add(1, 'h')); setSearchTime(searchDate.format('HH:mm'))}}><i
+                                            className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' onClick={() => {setSearchDate(searchDate.clone().add(1, 'h')); setSearchTime(searchDate.format('HH:mm'))}}><i
                                                 className='icon'>chevron_right</i></a></div>
                                 </div>
                             </div>
