@@ -18,6 +18,6 @@ struct free_bike {
 };
 
 std::vector<free_bike> parse_free_bikes(std::string const& tag,
-                                        std::string_view b);
+                                        std::string_view);
 
 }  // namespace motis::gbfs
