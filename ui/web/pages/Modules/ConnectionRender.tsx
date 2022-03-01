@@ -173,11 +173,8 @@ const classToId = (classz: Number) => {
         case 9:
             return '#tram';
             break;
-        case 10:
-            return '#ship';
-            break;
         case 11:
-            return '#bus';
+            return '#ship';
             break;
         default:
             return '#bus';
