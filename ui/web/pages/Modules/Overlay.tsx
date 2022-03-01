@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 
 import { Search } from './Search';
 import { SubOverlay } from './SubOverlay';
-import { Connection, Transport, TripId } from './ConnectionTypes';
+import { Connection, Station, Transport, TripId } from './ConnectionTypes';
 import { Translations } from './Localization';
 import { ConnectionRender, JourneyRender } from './ConnectionRender';
+import { getFromLocalStorage } from './LocalStorage';
+import { Address } from './SuggestionTypes';
 
 
 const displayTime = (posixTime) => {
@@ -28,7 +30,7 @@ const displayDuration = (posixTime) => {
 const getTransportCountString = (transports: Transport[]) => {
     let count = 0;
     for (let index = 0; index < transports.length; index++) {
-        if (transports[index].move_type === 'Transport') {
+        if (transports[index].move_type === 'Transport' && index > 0) {
             count++
         }
     }
@@ -51,6 +53,10 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
     const [indexOfConnection, setIndexOfConnection] = useState<number>(0);
 
     const [trainSelected, setTrainSelected] = useState<TripId>(undefined);
+    
+    const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
+
+    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
 
     return (
         <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden'}>
@@ -111,8 +117,8 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
                                                 <div className="connection-arrival">{displayTime(connections[indexOfConnection].stops[connections[indexOfConnection].stops.length - 1].arrival.time)}</div>
                                             </div>
                                             <div className="locations">
-                                                <div>{connections[indexOfConnection].stops[0].station.name}</div>
-                                                <div>{connections[indexOfConnection].stops[connections[indexOfConnection].stops.length - 1].station.name}</div>
+                                                <div>{start.name}</div>
+                                                <div>{destination.name}</div>
                                             </div>
                                         </div>
                                         <div className="summary">
