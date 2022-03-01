@@ -25,10 +25,10 @@ const transportForLoop = (connection: Transport[], setDetailViewHidden: React.Di
         percentage = (connection[index].move.range.to - connection[index].move.range.from + walk) / rangeMax;
         isTransportInfo(connection[index]) ?
             elements.push(
-                <g className={'part train-class-' + (connection[index].move as TransportInfo).category_id + ' acc-0'} key={index}>
+                <g className={'part train-class-' + (connection[index].move as TransportInfo).clasz + ' acc-0'} key={index}>
                     <line x1={prevLength} y1='12' x2={(percentage * 326 + prevLength)} y2='12' className='train-line'></line>
                     <circle cx={prevLength + 4} cy='12' r='12' className='train-circle'></circle>
-                    <use xlinkHref={classToId((connection[0].move as TransportInfo).category_id)} className='train-icon' x={prevLength - 4} y='4' width='16' height='16'></use>
+                    <use xlinkHref={classToId((connection[index].move as TransportInfo).clasz)} className='train-icon' x={prevLength - 4} y='4' width='16' height='16'></use>
                     <text x={prevLength - 6} y='40' textAnchor='start' className='train-name'>{(connection[index].move as TransportInfo).name}</text>
                     <rect x={prevLength} y='0' width={(percentage * 326 + prevLength)} height='24' className='tooltipTrigger' onClick={() => setDetailViewHidden(false)}></rect>
                 </g>
@@ -78,13 +78,13 @@ const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSet
     for (let index = 0; index < connection.transports.length; index++) {
         if (isTransportInfo(connection.transports[index])) {
             transDivs.push(
-                <div className={'train-detail train-class-' + (connection.transports[index].move as TransportInfo).category_id} key={index}>
+                <div className={'train-detail train-class-' + (connection.transports[index].move as TransportInfo).clasz} key={index}>
                     <div className='top-border'></div>
                     <div>
-                        <div className={'train-box train-class-' + (connection.transports[index].move as TransportInfo).category_id + ' with-tooltip'}
+                        <div className={'train-box train-class-' + (connection.transports[index].move as TransportInfo).clasz + ' with-tooltip'}
                             data-tooltip={'Betreiber: DB Regio AG S-Bahn Rhein-Main \nZugnummer: ' + (connection.transports[index].move as TransportInfo).train_nr} onClick={() => { setSubOverlayHidden(false); setTrainSelected(connection.trips[index].id) }}>
                             <svg className='train-icon' onClick={() => { setSubOverlayHidden(false); setTrainSelected(connection.trips[index].id) }}>
-                                <use xlinkHref={classToId((connection.transports[index].move as TransportInfo).category_id)}></use>
+                                <use xlinkHref={classToId((connection.transports[index].move as TransportInfo).clasz)}></use>
                             </svg>
                             <span className='train-name'>{(connection.transports[index].move as TransportInfo).name}</span>
                         </div>
@@ -207,10 +207,10 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
             <g>
                 {isArrLengthOne(props.connection.transports) ?
                     isTransportInfo(props.connection.transports[0]) ?
-                        <g className={'part train-class-' + (props.connection.transports[0].move as TransportInfo).category_id + ' acc-0'}>
+                        <g className={'part train-class-' + (props.connection.transports[0].move as TransportInfo).clasz + ' acc-0'}>
                             <line x1='0' y1='12' x2='326' y2='12' className='train-line'></line>
                             <circle cx='4' cy='12' r='12' className='train-circle'></circle>
-                            <use xlinkHref={classToId((props.connection.transports[0].move as TransportInfo).category_id)} className='train-icon' x='-4' y='4' width='16' height='16'></use>
+                            <use xlinkHref={classToId((props.connection.transports[0].move as TransportInfo).clasz)} className='train-icon' x='-4' y='4' width='16' height='16'></use>
                             <text x='-6' y='40' textAnchor='start' className='train-name'>{(props.connection.transports[0].move as TransportInfo).name}</text>
                             <rect x='0' y='0' width='323' height='24' className='tooltipTrigger'></rect>
                         </g>
@@ -268,13 +268,13 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
             <>
                 {isArrLengthOne(props.connection.transports) ?
                     (props.connection.transports[0].move_type !== 'Walk') ?
-                        <div className={'train-detail train-class-' + (props.connection.transports[0].move as TransportInfo).category_id}>
+                        <div className={'train-detail train-class-' + (props.connection.transports[0].move as TransportInfo).clasz}>
                             <div className='top-border'></div>
                             <div>
-                                <div className={'train-box train-class-' + (props.connection.transports[0].move as TransportInfo).category_id + ' with-tooltip'}
+                                <div className={'train-box train-class-' + (props.connection.transports[0].move as TransportInfo).clasz + ' with-tooltip'}
                                     data-tooltip={'Betreiber: DB Regio AG S-Bahn Rhein-Main \nZugnummer: ' + (props.connection.transports[0].move as TransportInfo).train_nr} onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(props.connection.trips[0].id); }}>
                                     <svg className='train-icon'>
-                                        <use xlinkHref={classToId((props.connection.transports[0].move as TransportInfo).category_id)}></use>
+                                        <use xlinkHref={classToId((props.connection.transports[0].move as TransportInfo).clasz)}></use>
                                     </svg>
                                     <span className='train-name'>{(props.connection.transports[0].move as TransportInfo).name}</span>
                                 </div>

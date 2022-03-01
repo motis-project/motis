@@ -96,7 +96,7 @@ export interface TransportInfo {
     category_id: number,
     range: Range,
     category_name: string,
-    class: number,
+    clasz: number,
     train_nr?: number,
     line_id: string,
     name: string,
