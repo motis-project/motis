@@ -1,14 +1,21 @@
-import React from "react";
+import React, { useEffect } from "react";
 import moment from "moment";
 
 import { DatePicker } from "./DatePicker";
 import { Translations } from "./Localization";
+import { RailvizContextMenu } from "./RailvizContextMenu";
 
 export const MapContainer: React.FC<{'translation': Translations}> = (props) => {
 
     const [simTimePickerSelected, setSimTimePickerSelected] = React.useState<Boolean>(false);
     
     const[currMoment, setCurrMoment] = React.useState<moment.Moment>(moment());
+
+    useEffect(() => {
+        window.portEvents.sub('mapInitFinished', function(){
+            window.portEvents.pub('mapSetLocale', props.translation.search);
+        });
+    });
 
     return (
         <div className="map-container">
@@ -20,7 +27,7 @@ export const MapContainer: React.FC<{'translation': Translations}> = (props) => 
             </div>
             <div className="railviz-tooltip hidden"></div>
             <div className="map-bottom-overlay">
-                <div className="sim-time-overlay" onClick={() => simTimePickerSelected ? setSimTimePickerSelected(false) : setSimTimePickerSelected(true)}>
+                <div className="sim-time-overlay" onClick={() => setSimTimePickerSelected(!simTimePickerSelected)}>
                     <div id="railviz-loading-spinner" className="">
                         <div className="spinner">
                             <div className="bounce1"></div>
@@ -35,18 +42,23 @@ export const MapContainer: React.FC<{'translation': Translations}> = (props) => 
                     <div className="time" id="sim-time-overlay">19.10.2020 16:47:01</div>
                 </div>
                 <div className="train-color-picker-overlay">
-                    <div><input type="radio" id="train-color-picker-none" name="train-color-picker" /><label
-                        htmlFor="train-color-picker-none">Keine Züge</label></div>
-                    <div><input type="radio" id="train-color-picker-className" name="train-color-picker" /><label
-                        htmlFor="train-color-picker-className">Nach Kategorie</label></div>
-                    <div><input type="radio" id="train-color-picker-delay" name="train-color-picker" /><label
-                        htmlFor="train-color-picker-delay">Nach Verspätung</label></div>
+                    <div><input type="radio" id="train-color-picker-none" name="train-color-picker" onClick={() => {
+                        window.portEvents.pub('mapShowTrains', false);
+                    }}/><label
+                        htmlFor="train-color-picker-none">{props.translation.railViz.noTrains}</label></div>
+                    <div><input type="radio" id="train-color-picker-className" name="train-color-picker" checked onClick={() => {
+                        window.portEvents.pub('mapSetUseTrainClassColor', true);
+                        window.portEvents.pub('mapShowTrains', true);
+                    }}/><label
+                        htmlFor="train-color-picker-className">{props.translation.railViz.classColors}</label></div>
+                    <div><input type="radio" id="train-color-picker-delay" name="train-color-picker" onClick={() => {
+                        window.portEvents.pub('mapSetUseTrainClassColor', false);
+                        window.portEvents.pub('mapShowTrains', true);
+                    }}/><label
+                        htmlFor="train-color-picker-delay">{props.translation.railViz.delayColors}</label></div>
                 </div>
             </div>
-            <div className="railviz-contextmenu hidden" style={{ top: "0px", left: "0px" }}>
-                <div className="item">Routen von hier</div>
-                <div className="item">Routen hierher</div>
-            </div>
+            <RailvizContextMenu translation={props.translation}/>
             <div className={simTimePickerSelected ? "sim-time-picker-container" : "sim-time-picker-container hide"}>
                 <div className="sim-time-picker-overlay">
                     <div className="title">
