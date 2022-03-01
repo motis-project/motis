@@ -1,0 +1,25 @@
+include "paxmon/PaxMonTrackedUpdates.fbs";
+
+namespace motis.paxforecast;
+
+table PaxForecastApplyMeasuresStatistics {
+  measure_time_points: ulong;
+  total_measures_applied: ulong;
+  total_affected_groups: ulong;
+  total_alternative_routings: ulong;
+  total_alternatives_found: ulong;
+
+  // timings (ms)
+  t_rt_updates: double;
+  t_get_affected_groups: double;
+  t_find_alternatives: double;
+  t_add_alternatives_to_graph: double;
+  t_behavior_simulation: double;
+  t_update_groups: double;
+  t_update_tracker: double;
+}
+
+table PaxForecastApplyMeasuresResponse {
+  stats: PaxForecastApplyMeasuresStatistics;
+  updates: motis.paxmon.PaxMonTrackedUpdates;
+}

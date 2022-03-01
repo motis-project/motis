@@ -33,6 +33,7 @@ msg_ptr remove_groups(paxmon_data& data, bool const keep_group_history,
       continue;
     }
     ++removed_groups;
+    uv.update_tracker_.before_group_removed(pg);
     remove_passenger_group_from_graph(uv, pg);
     if (!keep_group_history) {
       uv.passenger_groups_.release(pg->id_);

@@ -1,6 +1,7 @@
-import { sendRequest } from "./request";
-import { verifyContentType } from "./protocol/checks";
-import { RoutingRequest, RoutingResponse } from "./protocol/motis/routing";
+import { verifyContentType } from "@/api/protocol/checks";
+import { RoutingRequest, RoutingResponse } from "@/api/protocol/motis/routing";
+
+import { sendRequest } from "@/api/request";
 
 export async function sendRoutingRequest(
   content: RoutingRequest

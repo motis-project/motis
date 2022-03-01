@@ -1,5 +1,5 @@
-import { PaxMonEdgeLoadInfo } from "../api/protocol/motis/paxmon";
-import { TripServiceInfo } from "../api/protocol/motis";
+import { TripServiceInfo } from "@/api/protocol/motis";
+import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
 
 export interface PaxMonEdgeLoadInfoWithStats extends PaxMonEdgeLoadInfo {
   p_load_gt_100: number;

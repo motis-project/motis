@@ -55,9 +55,9 @@ jobs:
             pnpm-${{ runner.os }}-
 
       - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v2.0.1
+        uses: pnpm/action-setup@v2.2.0
         with:
-          version: 6.25.1
+          version: ^6.32.2
           run_install: |
             - cwd: ui/rsl
 
@@ -348,7 +348,7 @@ jobs:
       - name: Compile Web Interface
         if: matrix.config.webui == 'On'
         run: |
-          cmake --build build --target motis-web-ui
+          cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
           rm -r ui/web/elm-stuff
           rm -r ui/web/src
 
@@ -362,10 +362,10 @@ jobs:
             pnpm-${{ runner.os }}-
 
       - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v2.0.1
+        uses: pnpm/action-setup@v2.2.0
         if: matrix.config.webui == 'On'
         with:
-          version: 6.20.1
+          version: ^6.32.2
           run_install: |
             - cwd: ./ui/rsl
 
@@ -379,9 +379,11 @@ jobs:
         if: matrix.config.artifact
         run: |
           mkdir motis
-          mv ui/web motis
-          mv ui/rsl/dist motis/rsl
-          mv build/motis motis
+          mkdir motis/web
+          mv ui/web/{external_lib,img,js,style} motis/web/
+          mv ui/web/{*.html,*.js,*.ico} motis/web/
+          mv ui/rsl/dist motis/web/rsl
+          mv build/motis motis/
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
           cp -r deps/ppr/profiles motis/ppr-profiles
           cp -r deps/tiles/profile motis/tiles-profiles

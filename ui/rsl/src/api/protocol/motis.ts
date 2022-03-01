@@ -1,58 +1,61 @@
 // generated file - do not modify - run update-protocol to update
-
-import { StationGuesserRequest, StationGuesserResponse } from "./motis/guesser";
 import {
+  StationGuesserRequest,
+  StationGuesserResponse,
+} from "@/api/protocol/motis/guesser";
+import {
+  LookupBatchGeoStationRequest,
+  LookupBatchGeoStationResponse,
+  LookupBatchMetaStationRequest,
+  LookupBatchMetaStationResponse,
   LookupGeoStationIdRequest,
   LookupGeoStationRequest,
   LookupGeoStationResponse,
-  LookupBatchGeoStationRequest,
-  LookupBatchGeoStationResponse,
-  LookupStationEventsRequest,
-  LookupStationEventsResponse,
-  LookupScheduleInfoResponse,
-  LookupMetaStationRequest,
-  LookupMetaStationResponse,
-  LookupBatchMetaStationRequest,
-  LookupBatchMetaStationResponse,
   LookupIdTrainRequest,
   LookupIdTrainResponse,
+  LookupMetaStationRequest,
+  LookupMetaStationResponse,
   LookupRiBasisRequest,
   LookupRiBasisResponse,
-} from "./motis/lookup";
-import { RISForwardTimeRequest } from "./motis/ris";
-import { RoutingRequest, RoutingResponse } from "./motis/routing";
+  LookupScheduleInfoResponse,
+  LookupStationEventsRequest,
+  LookupStationEventsResponse,
+} from "@/api/protocol/motis/lookup";
 import {
-  PaxMonUpdate,
+  PaxForecastApplyMeasuresRequest,
+  PaxForecastApplyMeasuresResponse,
+  PaxForecastUpdate,
+} from "@/api/protocol/motis/paxforecast";
+import {
   PaxMonAddGroupsRequest,
   PaxMonAddGroupsResponse,
-  PaxMonRemoveGroupsRequest,
-  PaxMonTripLoadInfo,
-  PaxMonFindTripsRequest,
-  PaxMonFindTripsResponse,
-  PaxMonStatusResponse,
-  PaxMonGetGroupsRequest,
-  PaxMonGetGroupsResponse,
+  PaxMonDestroyUniverseRequest,
   PaxMonFilterGroupsRequest,
   PaxMonFilterGroupsResponse,
   PaxMonFilterTripsRequest,
   PaxMonFilterTripsResponse,
-  PaxMonGetTripLoadInfosRequest,
-  PaxMonGetTripLoadInfosResponse,
+  PaxMonFindTripsRequest,
+  PaxMonFindTripsResponse,
   PaxMonForkUniverseRequest,
   PaxMonForkUniverseResponse,
-  PaxMonDestroyUniverseRequest,
   PaxMonGetGroupsInTripRequest,
   PaxMonGetGroupsInTripResponse,
-  PaxMonUniverseForked,
-  PaxMonUniverseDestroyed,
+  PaxMonGetGroupsRequest,
+  PaxMonGetGroupsResponse,
   PaxMonGetInterchangesRequest,
   PaxMonGetInterchangesResponse,
+  PaxMonGetTripLoadInfosRequest,
+  PaxMonGetTripLoadInfosResponse,
+  PaxMonRemoveGroupsRequest,
   PaxMonStatusRequest,
-} from "./motis/paxmon";
-import {
-  PaxForecastUpdate,
-  PaxForecastApplyMeasuresRequest,
-} from "./motis/paxforecast";
+  PaxMonStatusResponse,
+  PaxMonTripLoadInfo,
+  PaxMonUniverseDestroyed,
+  PaxMonUniverseForked,
+  PaxMonUpdate,
+} from "@/api/protocol/motis/paxmon";
+import { RISForwardTimeRequest } from "@/api/protocol/motis/ris";
+import { RoutingRequest, RoutingResponse } from "@/api/protocol/motis/routing";
 
 // base/Connection.fbs
 export interface EventInfo {
@@ -359,7 +362,8 @@ export type MsgContent =
   | PaxMonGetInterchangesResponse
   | PaxMonStatusRequest
   | LookupRiBasisRequest
-  | LookupRiBasisResponse;
+  | LookupRiBasisResponse
+  | PaxForecastApplyMeasuresResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -418,7 +422,8 @@ export type MsgContentType =
   | "PaxMonGetInterchangesResponse"
   | "PaxMonStatusRequest"
   | "LookupRiBasisRequest"
-  | "LookupRiBasisResponse";
+  | "LookupRiBasisResponse"
+  | "PaxForecastApplyMeasuresResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

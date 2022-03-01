@@ -600,8 +600,7 @@ void paxmon::rt_updates_applied(universe& uv, schedule const& sched) {
 
   LOG(info) << "affected by last rt update: "
             << uv.rt_update_ctx_.groups_affected_by_last_update_.size()
-            << " passenger groups, "
-            << " passengers";
+            << " passenger groups";
 
   uv.rt_update_ctx_.groups_affected_by_last_update_.clear();
   LOG(info) << "passenger groups: " << uv.tick_stats_.ok_groups_ << " ok, "

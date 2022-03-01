@@ -1,15 +1,17 @@
-import { useState } from "react";
-import { useCombobox } from "downshift";
 import { ChevronDownIcon, XIcon } from "@heroicons/react/solid";
-
-import { PaxMonTripInfo } from "../api/protocol/motis/paxmon";
-import { TripServiceInfo } from "../api/protocol/motis";
-import { ServiceClass } from "../api/constants";
-import { usePaxMonFindTripsQuery } from "../api/paxmon";
-
-import TripServiceInfoView from "./TripServiceInfoView";
+import { useCombobox } from "downshift";
 import { useAtom } from "jotai";
-import { universeAtom } from "../data/simulation";
+import { useState } from "react";
+
+import { TripServiceInfo } from "@/api/protocol/motis";
+import { PaxMonTripInfo } from "@/api/protocol/motis/paxmon";
+
+import { ServiceClass } from "@/api/constants";
+import { usePaxMonFindTripsQuery } from "@/api/paxmon";
+
+import { universeAtom } from "@/data/simulation";
+
+import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 function filterTrips(trips: PaxMonTripInfo[]) {
   return trips.filter((trip) =>
@@ -25,8 +27,10 @@ function filterTrips(trips: PaxMonTripInfo[]) {
 function shortTripName(tsi: TripServiceInfo) {
   const names = [
     ...new Set(
-      tsi.service_infos.map((si) =>
-        si.line ? `${si.train_nr} [${si.name}]` : si.name
+      tsi.service_infos.map(
+        (si) =>
+          `${si.category} ${si.train_nr}` +
+          (si.line ? ` [Linie ${si.line}]` : "")
       )
     ),
   ];
@@ -38,6 +42,7 @@ type TripPickerProps = {
   clearOnPick: boolean;
   longDistanceOnly: boolean;
   className?: string;
+  initialTrip?: TripServiceInfo | undefined;
 };
 
 function TripPicker({
@@ -45,6 +50,7 @@ function TripPicker({
   clearOnPick,
   longDistanceOnly,
   className,
+  initialTrip,
 }: TripPickerProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
   const [trainNr, setTrainNr] = useState<number>();
@@ -52,6 +58,15 @@ function TripPicker({
   const tripList = longDistanceOnly
     ? filterTrips(data?.trips || [])
     : data?.trips || [];
+
+  const initialSelectedItem = initialTrip
+    ? {
+        tsi: initialTrip,
+        has_paxmon_data: true,
+        all_edges_have_capacity_info: true,
+        has_passengers: true,
+      }
+    : null;
 
   const {
     isOpen,
@@ -67,6 +82,7 @@ function TripPicker({
     items: tripList,
     itemToString: (item: PaxMonTripInfo | null) =>
       item !== null ? shortTripName(item.tsi) : "",
+    initialSelectedItem,
     onInputValueChange: ({ inputValue }) => {
       if (inputValue != undefined) {
         const parsed = parseInt(inputValue);
@@ -118,7 +134,7 @@ function TripPicker({
         {...getMenuProps()}
         className={`${
           isOpen && tripList.length > 0 ? "" : "hidden"
-        } absolute w-96 z-50 top-12 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none p-2`}
+        } absolute w-64 z-50 top-12 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none p-2`}
       >
         {isOpen &&
           tripList.map((item, index) => (

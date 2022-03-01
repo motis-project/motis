@@ -1,11 +1,12 @@
 import {
   PaxMonCdfEntry,
   PaxMonTripLoadInfo,
-} from "../api/protocol/motis/paxmon";
+} from "@/api/protocol/motis/paxmon";
+
 import {
   PaxMonEdgeLoadInfoWithStats,
   PaxMonTripLoadInfoWithStats,
-} from "../data/loadInfo";
+} from "@/data/loadInfo";
 
 export function probPaxLE(cdf: PaxMonCdfEntry[], limit: number): number {
   let prob = 0.0;

@@ -1,8 +1,24 @@
 namespace motis.paxmon;
 
+enum PaxMonFilterTripsSortOrder : byte {
+  MostCritical, // most critical trip first
+  FirstDeparture, // earliest trip first
+  ExpectedPax // trip with most expected passengers first
+}
+
 table PaxMonFilterTripsRequest {
   universe: uint;
 
-  load_factor_possibly_ge: float;
-  ignore_past_sections: bool;
+  ignore_past_sections: bool; // sections in the past don't count
+  include_load_threshold: float; // only include trips with load >= this
+
+  // used for critical/crowded section counts:
+  critical_load_threshold: float = 1.0;
+  crowded_load_threshold: float = 0.8; // must be <= critical_load_threshold
+
+  include_edges: bool;
+
+  sort_by: PaxMonFilterTripsSortOrder;
+  max_results: uint; // 0 = unlimited
+  skip_first: uint;
 }

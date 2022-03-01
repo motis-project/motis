@@ -85,9 +85,11 @@ struct scoped_timer final {
 struct manual_timer final {
   explicit manual_timer(std::string name);
   void stop_and_print();
+  double duration_ms() const;
 
   std::string name_;
   std::chrono::time_point<std::chrono::steady_clock> start_;
+  std::chrono::time_point<std::chrono::steady_clock> stop_;
 };
 
 }  // namespace motis::logging

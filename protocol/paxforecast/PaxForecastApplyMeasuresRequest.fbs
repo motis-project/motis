@@ -8,4 +8,7 @@ table PaxForecastApplyMeasuresRequest {
   measures: [MeasureWrapper];
   replace_existing: bool;
   preparation_time: short; // min
+
+  include_before_trip_load_info: bool;
+  include_after_trip_load_info: bool;
 }

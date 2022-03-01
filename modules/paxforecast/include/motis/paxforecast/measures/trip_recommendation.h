@@ -16,7 +16,6 @@ struct trip_recommendation {
   std::vector<extern_trip> planned_trips_;
   std::vector<std::uint32_t> planned_destinations_;
   extern_trip recommended_trip_{};
-  std::uint32_t interchange_station_{};
 };
 
 }  // namespace motis::paxforecast::measures

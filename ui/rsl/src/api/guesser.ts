@@ -1,10 +1,12 @@
-import { sendRequest } from "./request";
-import { verifyContentType } from "./protocol/checks";
+import { UseQueryResult, useQuery } from "react-query";
+
+import { verifyContentType } from "@/api/protocol/checks";
 import {
   StationGuesserRequest,
   StationGuesserResponse,
-} from "./protocol/motis/guesser";
-import { useQuery, UseQueryResult } from "react-query";
+} from "@/api/protocol/motis/guesser";
+
+import { sendRequest } from "@/api/request";
 
 export async function sendStationGuesserRequest(
   content: StationGuesserRequest

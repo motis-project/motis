@@ -1,12 +1,11 @@
 // generated file - do not modify - run update-protocol to update
-
 import {
-  Interval,
-  TripId,
-  Statistics,
   Connection,
   DirectConnection,
-} from "../motis";
+  Interval,
+  Statistics,
+  TripId,
+} from "@/api/protocol/motis";
 
 // routing/RoutingRequest.fbs
 export interface InputStation {

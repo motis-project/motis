@@ -44,11 +44,12 @@ struct multiverse {
       universe_id const id,
       ctx::access_t const universe_access = ctx::access_t::READ,
       ctx::access_t const schedule_access = ctx::access_t::READ) {
-    std::lock_guard lock{mutex_};
+    std::unique_lock lock{mutex_};
     if (auto const it = universe_res_map_.find(id);
         it != end(universe_res_map_)) {
       auto const uv_res_id = it->second;
       auto const schedule_res_id = schedule_res_map_.at(id);
+      lock.unlock();
       auto res_lock = mod_.lock_resources(
           {{uv_res_id, universe_access}, {schedule_res_id, schedule_access}});
       auto const& sched =

@@ -81,8 +81,7 @@ measures::trip_recommendation from_fbs(schedule const& sched,
           utl::to_vec(
               *m->planned_destinations(),
               [&](String const* eva) { return get_station_index(sched, eva); }),
-          to_extern_trip(m->recommended_trip()),
-          get_station_index(sched, m->interchange_station())};
+          to_extern_trip(m->recommended_trip())};
 }
 
 measures::trip_load_information from_fbs(schedule const& sched,
