@@ -26,7 +26,6 @@ import {
 
 import { formatDateTime } from "@/util/dateFormat";
 import { isNonNull } from "@/util/typeGuards";
-import useRenderCount from "@/util/useRenderCount";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 
@@ -189,7 +188,6 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
   );
   const setSimResults = useUpdateAtom(simResultsAtom);
   const setSelectedSimResult = useUpdateAtom(selectedSimResultAtom);
-  const renderCount = useRenderCount();
 
   const applyMeasuresMutation = useMutation(
     (measures: MeasureWrapper[]) =>
@@ -269,7 +267,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex justify-between">
-        <span className="text-xl">Maßnahmen [RC: {renderCount}]</span>
+        <span className="text-xl">Maßnahmen</span>
         <button
           onClick={add}
           className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"

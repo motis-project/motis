@@ -5,8 +5,6 @@ import { useMemo, useState } from "react";
 
 import { MeasureUnion } from "@/data/measures";
 
-import useRenderCount from "@/util/useRenderCount";
-
 import RtUpdateMeasureEditor from "@/components/measures/RtUpdateMeasureEditor";
 import SharedDataEditor from "@/components/measures/SharedDataEditor";
 import TripLoadInfoMeasureEditor from "@/components/measures/TripLoadInfoMeasureEditor";
@@ -31,7 +29,6 @@ function MeasureEditor({
   const [measureType] = useAtom(typeAtom);
   const setMeasure = useUpdateAtom(measureAtom);
   const [changeTypeDialogOpen, setChangeTypeDialogOpen] = useState(false);
-  const renderCount = useRenderCount();
 
   const onChangeTypeDialogClose = (cancel: boolean) => {
     if (!cancel) {
@@ -45,7 +42,7 @@ function MeasureEditor({
   const measureEditor = (e: JSX.Element) => (
     <div>
       <div className="flex justify-between">
-        <span className="text-xl">Maßnahme bearbeiten [RC: {renderCount}]</span>
+        <span className="text-xl">Maßnahme bearbeiten</span>
         <button
           onClick={() => setChangeTypeDialogOpen(true)}
           className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"

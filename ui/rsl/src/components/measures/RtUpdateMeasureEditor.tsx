@@ -36,8 +36,6 @@ import {
 } from "@/data/rtMeasureFormData";
 import { scheduleAtom } from "@/data/simulation";
 
-import useRenderCount from "@/util/useRenderCount";
-
 import StationPicker from "@/components/StationPicker";
 import TripPicker from "@/components/TripPicker";
 import TimeInput from "@/components/measures/TimeInput";
@@ -69,7 +67,6 @@ function RtUpdateMeasureEditor({
   const [data, setData] = useAtom(dataAtom);
   const queryClient = useQueryClient();
   const [schedule] = useAtom(scheduleAtom); // TODO: rerender...
-  const renderCount = useRenderCount();
   const [selectedTrip, setSelectedTrip] = useState<string>();
   const [allowReroute, setAllowReroute] = useState(true);
 
@@ -120,7 +117,6 @@ function RtUpdateMeasureEditor({
   return (
     <div>
       <div>
-        <div>RtUpdateMeasureEditor Render Count: {renderCount}</div>
         <div className={labelClass}>Trip</div>
         <div>
           <TripPicker
@@ -171,7 +167,6 @@ function TripSectionEditor({
     name: "stops",
     control,
   });
-  const renderCount = useRenderCount();
   const queryClient = useQueryClient();
 
   const onSubmit = (data: FormInputs) => {
@@ -212,7 +207,6 @@ function TripSectionEditor({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div>TripSectionEditor Render Count: {renderCount}</div>
       <div className="flex flex-col gap-4 divide-y-2 divide-db-cool-gray-300 divide-dashed">
         {allowReroute ? (
           <div className="py-1 flex justify-center">

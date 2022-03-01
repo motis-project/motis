@@ -7,8 +7,6 @@ import { LoadLevel } from "@/api/protocol/motis/paxforecast";
 
 import { MeasureUnion, isTripLoadInfoMeasureU } from "@/data/measures";
 
-import useRenderCount from "@/util/useRenderCount";
-
 import TripPicker from "@/components/TripPicker";
 
 export type TripLoadInfoMeasureEditorProps = {
@@ -37,9 +35,6 @@ function TripLoadInfoMeasureEditor({
     );
   }, [measureAtom]);
   const [data, setData] = useAtom(dataAtom);
-  const renderCount = useRenderCount();
-
-  console.log("TripLoadInfoMeasureEditor render", renderCount);
 
   if (!data) {
     throw new Error("invalid measure editor");
@@ -63,7 +58,6 @@ function TripLoadInfoMeasureEditor({
 
   return (
     <div className="flex flex-col gap-4">
-      <div>TripLoadInfoMeasureEditor Render Count: {renderCount}</div>
       <div>
         <div className={labelClass}>Trip</div>
         <div>

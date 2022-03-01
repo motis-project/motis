@@ -6,8 +6,6 @@ import { Station, TripServiceInfo } from "@/api/protocol/motis";
 
 import { MeasureUnion } from "@/data/measures";
 
-import useRenderCount from "@/util/useRenderCount";
-
 import StationPicker from "@/components/StationPicker";
 import TripPicker from "@/components/TripPicker";
 import TripServiceInfoView from "@/components/TripServiceInfoView";
@@ -25,7 +23,6 @@ function SharedDataEditor({ measureAtom }: SharedDataEditorProps): JSX.Element {
     return focusAtom(measureAtom, (optic) => optic.prop("shared"));
   }, [measureAtom]);
   const [shared, setShared] = useAtom(sharedAtom);
-  const renderCount = useRenderCount();
 
   const addTrip = (trip: TripServiceInfo | undefined) => {
     if (trip) {
@@ -86,7 +83,6 @@ function SharedDataEditor({ measureAtom }: SharedDataEditorProps): JSX.Element {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <div>SharedDataEditor Render Count: {renderCount}</div>
         <div className={labelClass}>Zeitpunkt der Maßnahme</div>
         <div>
           <TimeInput
