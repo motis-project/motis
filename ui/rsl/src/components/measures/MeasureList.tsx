@@ -37,7 +37,7 @@ const loadLevels: Record<LoadLevel, string> = {
   Unknown: "unbekannt",
   Low: "gering",
   NoSeats: "keine Sitzplätze",
-  Full: "voll",
+  Full: "keine Mitfahrmöglichkeit",
 };
 
 function MeasureTypeDetailColumn({

@@ -22,7 +22,7 @@ const loadLevels: Array<{ level: LoadLevel; label: string }> = [
   { level: "Unknown", label: "unbekannt" },
   { level: "Low", label: "gering" },
   { level: "NoSeats", label: "keine Sitzplätze mehr" },
-  { level: "Full", label: "voll" },
+  { level: "Full", label: "keine Mitfahrmöglichkeit mehr" },
 ];
 
 function TripLoadInfoMeasureEditor({
