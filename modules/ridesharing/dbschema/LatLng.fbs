@@ -1,0 +1,6 @@
+namespace motis.ridesharing;
+
+struct LatLng {
+  lat : double;
+  lng : double;
+}

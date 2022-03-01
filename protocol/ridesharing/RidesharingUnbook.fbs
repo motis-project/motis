@@ -1,0 +1,9 @@
+include "base/Position.fbs";
+
+namespace motis.ridesharing;
+
+table RidesharingUnbook {
+  driver : int;
+  time_lift_start : long;
+  passenger : int;
+}

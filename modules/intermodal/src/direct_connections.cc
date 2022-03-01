@@ -188,8 +188,9 @@ msg_ptr make_direct_osrm_request(geo::latlng const& start,
 
 std::vector<direct_connection> get_direct_connections(
     query_start const& q_start, query_dest const& q_dest,
-    IntermodalRoutingRequest const* req, ppr_profiles const& profiles) {
-  auto direct = std::vector<direct_connection>{};
+    IntermodalRoutingRequest const* req, ppr_profiles const& profiles,
+    std::vector<direct_connection> const& ridesharing_direct_edges) {
+  auto direct = ridesharing_direct_edges;
   auto const beeline = distance(q_start.pos_, q_dest.pos_);
 
   auto direct_mutex = std::mutex{};
@@ -263,14 +264,22 @@ std::vector<direct_connection> get_direct_connections(
 
 std::size_t remove_dominated_journeys(
     std::vector<journey>& journeys,
-    std::vector<direct_connection> const& direct) {
+    std::vector<direct_connection> const& direct, query_start const& q_start) {
   auto const before = journeys.size();
   utl::erase_if(journeys, [&](journey const& j) {
     auto const jd = static_cast<unsigned>(1.2 * j.duration_);
     return std::any_of(
         begin(direct), end(direct), [&](direct_connection const& d) {
-          return (d.duration_ < jd && d.accessibility_ <= j.accessibility_) ||
-                 (d.duration_ <= jd && d.accessibility_ < j.accessibility_);
+          auto const dur = d.dep_time_ > q_start.time_
+                               ? d.dep_time_ - q_start.time_ + d.duration_
+                               : d.duration_;
+          auto const dominates_at_least_one_criterion =
+              dur <= jd || d.accessibility_ <= j.accessibility_ ||
+              d.price_ <= j.price_;
+          auto const not_worse_in_all_criteria =
+              jd >= dur && j.accessibility_ >= d.accessibility_ &&
+              j.price_ >= d.price_;
+          return dominates_at_least_one_criterion && not_worse_in_all_criteria;
         });
   });
   return before - journeys.size();
@@ -314,13 +323,31 @@ void add_direct_connections(std::vector<journey>& journeys,
     transport.duration_ = d.duration_;
     transport.mumo_accessibility_ = d.accessibility_;
     transport.mumo_type_ = to_string(d.type_);
+    if (d.type_ == mumo_type::RIDESHARING) {
+      auto const dep_time = d.dep_time_;
+      auto const arr_time = dep_time + d.duration_ * 60;
+      j.stops_.front().departure_.timestamp_ = q_start.time_;
+      j.stops_.front().departure_.schedule_timestamp_ = q_start.time_;
+      dest.arrival_.timestamp_ = arr_time;
+      dest.arrival_.schedule_timestamp_ = arr_time;
+      auto const rs_data = d.rs_data_.value();
+      transport.is_ridesharing_ = true;
+      transport.mumo_price_ = rs_data.price_;
+      transport.provider_ = rs_data.lift_key_;
+      transport.from_leg_ = rs_data.from_leg_;
+      transport.to_leg_ = rs_data.to_leg_;
+      transport.from_loc_ = {rs_data.from_loc_.lat_, rs_data.from_loc_.lng_};
+      transport.to_loc_ = {rs_data.to_loc_.lat_, rs_data.to_loc_.lng_};
+    }
+    j.price_ = j.transports_[0].mumo_price_;
   }
 }
 
 Offset<DirectConnection> to_fbs(FlatBufferBuilder& fbb,
                                 direct_connection const& c) {
   return CreateDirectConnection(fbb, c.duration_, c.accessibility_,
-                                fbb.CreateString(to_string(c.type_)));
+                                fbb.CreateString(to_string(c.type_)), c.price_,
+                                c.dep_time_);
 }
 
 }  // namespace motis::intermodal

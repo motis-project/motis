@@ -1,0 +1,11 @@
+namespace motis.parking;
+
+table ParkingPprResponse {
+  duration: ushort;
+  accessibility: ushort;
+  distance: double;
+  db: bool;
+  request_duration: ulong;
+}
+
+root_type ParkingPprResponse;

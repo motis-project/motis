@@ -1,0 +1,7 @@
+include "base/Position.fbs";
+
+namespace motis.ridesharing;
+
+table RidesharingGetLiftsRequest {
+  id : int;
+}

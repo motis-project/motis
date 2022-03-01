@@ -1,4 +1,5 @@
 include "base/Station.fbs";
+include "base/Position.fbs";
 include "base/TripId.fbs";
 include "base/TimestampReason.fbs";
 include "base/ConnectionStatus.fbs";
@@ -47,6 +48,11 @@ table Walk {
   price:uint;
   accessibility:uint;
   mumo_type:string;
+  lift_key:string;
+  from_leg:ushort;
+  to_leg:ushort;
+  from_loc:motis.Position;
+  to_loc:motis.Position;
 }
 
 union Move { Transport, Walk }
@@ -88,5 +94,6 @@ table Connection {
   problems:[Problem];
   night_penalty:ushort;
   db_costs:ushort;
+  price:ushort;
   status:ConnectionStatus;
 }

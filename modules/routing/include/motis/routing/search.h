@@ -152,8 +152,7 @@ struct search {
     }
 
     pareto_dijkstra<Dir, Label, lower_bounds> pd(
-        q.sched_->next_node_id_, q.sched_->stations_.size(), is_goal,
-        std::move(additional_edges), lbs, *q.mem_);
+        *q.sched_, is_goal, std::move(additional_edges), lbs, *q.mem_);
 
     auto const add_start_labels = [&](time interval_begin, time interval_end) {
       pd.add_start_labels(StartLabelGenerator::generate(
@@ -193,6 +192,7 @@ struct search {
 
     auto search_iterations = 0UL;
 
+    std::cerr << "queue size before start: " << pd.queue_.size() << "\n";
     while (!max_interval_reached) {
       max_interval_reached =
           (!q.extend_interval_earlier_ || interval_begin == schedule_begin) &&
@@ -234,12 +234,14 @@ struct search {
     stats.interval_extensions_ = search_iterations - 1;
 
     auto filtered = pd.get_results();
+    std::cerr << "before interval filter: " << filtered.size() << "\n";
     filtered.erase(std::remove_if(begin(filtered), end(filtered),
                                   [&](Label const* l) {
                                     return !departs_in_interval(
                                         l, interval_begin, interval_end);
                                   }),
                    end(filtered));
+    std::cerr << "after interval filter: " << filtered.size() << "\n";
 
     return search_result(stats,
                          utl::to_vec(filtered,

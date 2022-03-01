@@ -21,10 +21,10 @@ struct edge_cost {
         transfer_(false),
         accessibility_(0) {}
 
-  edge_cost(duration time, light_connection const* c)
+  edge_cost(duration time, light_connection const* c, uint16_t price = 0)
       : connection_(c),
         time_(time),
-        price_(0),
+        price_(price),
         transfer_(false),
         accessibility_(0) {}
 
@@ -300,7 +300,7 @@ public:
                ? NO_EDGE
                : edge_cost((Dir == search_dir::FWD) ? c->a_time_ - start_time
                                                     : start_time - c->d_time_,
-                           c);
+                           c, c->full_con_->price_);
   }
 
   template <search_dir Dir = search_dir::FWD>

@@ -5,6 +5,17 @@
 
 namespace motis::routing {
 
+enum class create_label_result {
+  CREATED,
+  CYCLE,
+  AFTER_EXIT,
+  FILTERED,
+  NO_EDGE
+};
+
+constexpr char const* create_label_result_str[] = {
+    "CREATED", "CYCLE", "AFTER_EXIT", "FILTERED", "NO_EDGE"};
+
 template <typename... DataClass>
 struct label_data : public DataClass... {};
 
@@ -14,6 +25,7 @@ template <search_dir Dir, std::size_t MaxBucket,
           typename PostSearchDominance, typename Comparator>
 struct label : public Data {  // NOLINT
   enum : std::size_t { MAX_BUCKET = MaxBucket };
+  static constexpr auto dir = Dir;
 
   label() = default;  // NOLINT
 
@@ -31,20 +43,20 @@ struct label : public Data {  // NOLINT
   node const* get_node() const { return edge_->get_destination<Dir>(); }
 
   template <typename Edge, typename LowerBounds>
-  bool create_label(label& l, Edge const& e, LowerBounds& lb, bool no_cost,
-                    int additional_time_cost = 0) {
+  create_label_result create_label(label& l, Edge const& e, LowerBounds& lb,
+                                   bool no_cost, int additional_time_cost = 0) {
     if (pred_ && e.template get_destination<Dir>() == pred_->get_node()) {
-      return false;
+      return create_label_result::CYCLE;
     }
     if ((e.type() == edge::BWD_EDGE ||
          e.type() == edge::AFTER_TRAIN_BWD_EDGE) &&
         edge_->type() == edge::EXIT_EDGE) {
-      return false;
+      return create_label_result::AFTER_EXIT;
     }
 
     auto ec = e.template get_edge_cost<Dir>(now_, connection_);
     if (!ec.is_valid()) {
-      return false;
+      return create_label_result::NO_EDGE;
     }
     if (no_cost) {
       ec.time_ = 0;
@@ -59,7 +71,8 @@ struct label : public Data {  // NOLINT
     l.now_ += (Dir == search_dir::FWD) ? ec.time_ : -ec.time_;
 
     Updater::update(l, ec, lb);
-    return !l.is_filtered();
+    return l.is_filtered() ? create_label_result::FILTERED
+                           : create_label_result::CREATED;
   }
 
   inline bool is_filtered() { return Filter::is_filtered(*this); }

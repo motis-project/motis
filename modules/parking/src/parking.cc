@@ -107,32 +107,41 @@ msg_ptr make_osrm_via_request(geo::latlng const& start,
   return make_msg(mc);
 }
 
+Route const* find_best_route(FootRoutingResponse const* ppr_resp,
+                             int const target_duration,
+                             int const target_accessibility) {
+  Route const* best_match = nullptr;
+  if (ppr_resp->routes()->size() == 0) {
+    return best_match;
+  }
+  auto const routes = ppr_resp->routes()->Get(0);
+  for (Route const* route : *routes->routes()) {
+    auto const accessibility_diff =
+        abs(static_cast<int>(route->accessibility()) - target_accessibility);
+    auto const duration_diff =
+        abs(static_cast<int>(route->duration()) - target_duration);
+    if (best_match == nullptr ||
+        accessibility_diff < abs(static_cast<int>(best_match->accessibility()) -
+                                 target_accessibility) ||
+        (accessibility_diff ==
+             abs(static_cast<int>(best_match->accessibility()) -
+                 target_accessibility) &&
+         duration_diff <
+             abs(static_cast<int>(best_match->duration()) - target_duration))) {
+      best_match = route;
+    }
+  }
+  return best_match;
+}
+
 Offset<Route> find_matching_ppr_route(FootRoutingResponse const* ppr_resp,
                                       int const target_duration,
                                       int const target_accessibility,
                                       message_creator& fbb) {
   Offset<Route> ppr_route = 0;
   if (ppr_resp->routes()->size() == 1) {
-    Route const* best_match = nullptr;
-
-    auto const routes = ppr_resp->routes()->Get(0);
-    for (Route const* route : *routes->routes()) {
-      auto const accessibility_diff =
-          abs(static_cast<int>(route->accessibility()) - target_accessibility);
-      auto const duration_diff =
-          abs(static_cast<int>(route->duration()) - target_duration);
-      if (best_match == nullptr ||
-          accessibility_diff <
-              abs(static_cast<int>(best_match->accessibility()) -
-                  target_accessibility) ||
-          (accessibility_diff ==
-               abs(static_cast<int>(best_match->accessibility()) -
-                   target_accessibility) &&
-           duration_diff < abs(static_cast<int>(best_match->duration()) -
-                               target_duration))) {
-        best_match = route;
-      }
-    }
+    Route const* best_match =
+        find_best_route(ppr_resp, target_duration, target_accessibility);
 
     if (best_match != nullptr) {
       auto const route = best_match;
@@ -181,6 +190,69 @@ struct parking::impl {
                 parkings_.get_parkings(to_latlng(req->pos()), req->radius()),
                 [&](auto const& p) { return create_parking(fbb, p); })))
             .Union());
+    return make_msg(fbb);
+  }
+
+  msg_ptr ppr_lookup(msg_ptr const& msg) {
+    MOTIS_START_TIMING(ppr_lookup_time);
+    auto const req = motis_content(ParkingPprRequest, msg);
+    auto const db_ppr =
+        db_.get(req->parking_id(), req->search_profile()->str());
+    message_creator fbb;
+    if (db_ppr.has_value()) {
+      auto const ppr = db_ppr.value().get();
+      auto const it = req->to_station()
+                          ? std::find_if(std::begin(*ppr->outward_edges()),
+                                         std::end(*ppr->outward_edges()),
+                                         [&](auto const& e) {
+                                           return req->station_id()->str() ==
+                                                  e->station_id()->str();
+                                         })
+                          : std::find_if(std::begin(*ppr->return_edges()),
+                                         std::end(*ppr->return_edges()),
+                                         [&](auto const& e) {
+                                           return req->station_id()->str() ==
+                                                  e->station_id()->str();
+                                         });
+      if (it != std::end(*ppr->outward_edges()) &&
+          it != std::end(*ppr->return_edges())) {
+        MOTIS_STOP_TIMING(ppr_lookup_time);
+        auto const ppr_time = MOTIS_TIMING_US(ppr_lookup_time);
+        fbb.create_and_finish(
+            MsgContent_ParkingPprResponse,
+            CreateParkingPprResponse(fbb, (*it)->duration(),
+                                     (*it)->accessibility(), (*it)->distance(),
+                                     true, ppr_time)
+                .Union());
+        return make_msg(fbb);
+      }
+    }
+    auto const ppr_req = make_ppr_request(
+        to_latlng(req->parking_position()), {*req->station_position()},
+        req->ppr_search_options(),
+        req->to_station() ? motis::ppr::SearchDirection_Forward
+                          : motis::ppr::SearchDirection_Backward,
+        false, false, false);
+    auto const ppr_msg = motis_call(ppr_req)->val();
+    auto const ppr_resp = motis_content(FootRoutingResponse, ppr_msg);
+    auto const ppr_route = find_best_route(ppr_resp, 0, 0);
+    MOTIS_STOP_TIMING(ppr_lookup_time);
+    auto const ppr_time = MOTIS_TIMING_US(ppr_lookup_time);
+    if (ppr_route) {
+      fbb.create_and_finish(
+          MsgContent_ParkingPprResponse,
+          CreateParkingPprResponse(fbb, ppr_route->duration(),
+                                   ppr_route->accessibility(),
+                                   ppr_route->distance(), false, ppr_time)
+              .Union());
+    } else {
+      fbb.create_and_finish(
+          MsgContent_ParkingPprResponse,
+          CreateParkingPprResponse(
+              fbb, req->ppr_search_options()->duration_limit() / 60, 0,
+              req->ppr_search_options()->duration_limit() / 40, false, ppr_time)
+              .Union());
+    }
     return make_msg(fbb);
   }
 
@@ -460,6 +532,8 @@ void parking::init(motis::module::registry& reg) {
                     [this](auto&& m) { return impl_->parking_edge(m); });
     reg.register_op("/parking/edges",
                     [this](auto&& m) { return impl_->parking_edges_req(m); });
+    reg.register_op("/parking/ppr_lookup",
+                    [this](auto&& m) { return impl_->ppr_lookup(m); });
     reg.subscribe("/init", [this]() { impl_->update_ppr_profiles(); });
   } catch (std::exception const& e) {
     LOG(logging::warn) << "parking module not initialized (" << e.what() << ")";

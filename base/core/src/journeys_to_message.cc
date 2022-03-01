@@ -67,10 +67,13 @@ std::vector<Offset<MoveWrapper>> convert_moves(
   for (auto const& t : transports) {
     Range r(t.from_, t.to_);
     if (t.is_walk_) {
+      Position from_loc{t.from_loc_.lat_, t.from_loc_.lng_};
+      Position to_loc{t.to_loc_.lat_, t.to_loc_.lng_};
       moves.push_back(CreateMoveWrapper(
           b, Move_Walk,
           CreateWalk(b, &r, t.mumo_id_, t.mumo_price_, t.mumo_accessibility_,
-                     b.CreateString(t.mumo_type_))
+                     b.CreateString(t.mumo_type_), b.CreateString(t.provider_),
+                     t.from_leg_, t.to_leg_, &from_loc, &to_loc)
               .Union()));
     } else {
       moves.push_back(CreateMoveWrapper(
@@ -146,7 +149,7 @@ Offset<Connection> to_connection(FlatBufferBuilder& b, journey const& j) {
                           b.CreateVector(convert_attributes(b, j.attributes_)),
                           b.CreateVector(convert_free_texts(b, j.free_texts_)),
                           b.CreateVector(convert_problems(b, j.problems_)),
-                          j.night_penalty_, j.db_costs_,
+                          j.night_penalty_, j.db_costs_, j.price_,
                           status_to_fbs(j.status_));
 }
 

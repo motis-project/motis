@@ -1,0 +1,48 @@
+include "LatLng.fbs";
+
+namespace motis.ridesharing;
+
+table DBAcceptableStationsMapEntry {
+  key:  uint;
+  from_leg: ushort;
+  to_leg: ushort;
+  values: [uint];
+}
+
+table DBRoutingResult {
+  duration: double;
+  distance: double;
+}
+
+table DBRoutingEntry {
+  station: uint;
+  duration: double;
+  distance: double;
+}
+
+table DBPassenger {
+  passenger_id: int;
+  from: LatLng;
+  to: LatLng;
+  price: ushort;
+  required_arrival: long;
+  passenger_count: ushort;
+}
+
+table DBStationRouting {
+  routings: [DBRoutingEntry];
+}
+
+table DBLift {
+  driver_id: int;
+  waypoints:  [LatLng];
+  routing_results: [DBRoutingResult];
+  passengers: [DBPassenger];
+  to_routings: [DBStationRouting];
+  from_routings: [DBStationRouting];
+  max_total_time: double;
+  max_passengers: ushort;
+  lift_start_time: long;  
+}
+
+root_type DBLift;

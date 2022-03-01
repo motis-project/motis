@@ -45,22 +45,22 @@ journey::transport generate_journey_transport(
     name = get_service_name(sched, con_info);
   }
 
-  return {from,
-          to,
-          is_walk,
-          name.str(),
-          cat_name.str(),
-          cat_id,
-          clasz,
-          train_nr,
-          line_identifier.str(),
-          duration,
-          mumo_id,
-          direction.str(),
-          provider.str(),
-          mumo_price,
-          mumo_accessibility,
-          ""};
+  return {.from_ = from,
+          .to_ = to,
+          .duration_ = duration,
+          .is_walk_ = is_walk,
+          .mumo_id_ = mumo_id,
+          .mumo_price_ = mumo_price,
+          .mumo_accessibility_ = mumo_accessibility,
+          .mumo_type_ = "",
+          .name_ = name.str(),
+          .category_name_ = cat_name.str(),
+          .category_id_ = cat_id,
+          .clasz_ = clasz,
+          .train_nr_ = train_nr,
+          .line_identifier_ = line_identifier.str(),
+          .direction_ = direction.str(),
+          .provider_ = provider.str()};
 }
 
 }  // namespace motis

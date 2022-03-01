@@ -1,0 +1,8 @@
+include "base/Position.fbs";
+
+namespace motis.ridesharing;
+
+table RidesharingRemove {
+  driver : int;
+  time : long;
+}

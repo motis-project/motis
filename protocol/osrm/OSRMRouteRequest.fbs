@@ -1,0 +1,8 @@
+include "base/Position.fbs";
+
+namespace motis.osrm;
+
+table OSRMRouteRequest {
+  profile: string;
+  coordinates : [motis.Position];
+}

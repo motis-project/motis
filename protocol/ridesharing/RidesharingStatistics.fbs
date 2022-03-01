@@ -1,0 +1,7 @@
+include "base/Statistics.fbs";
+
+namespace motis.ridesharing;
+
+table RidesharingStatistics {
+  stats: Statistics;
+}
