@@ -46,7 +46,7 @@ export const MapContainer: React.FC<{'translation': Translations}> = (props) => 
                         window.portEvents.pub('mapShowTrains', false);
                     }}/><label
                         htmlFor="train-color-picker-none">{props.translation.railViz.noTrains}</label></div>
-                    <div><input type="radio" id="train-color-picker-className" name="train-color-picker" checked onClick={() => {
+                    <div><input type="radio" id="train-color-picker-className" name="train-color-picker" defaultChecked onClick={() => {
                         window.portEvents.pub('mapSetUseTrainClassColor', true);
                         window.portEvents.pub('mapShowTrains', true);
                     }}/><label

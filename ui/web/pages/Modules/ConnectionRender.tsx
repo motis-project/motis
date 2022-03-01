@@ -68,7 +68,7 @@ const getWalkTime = (latStart: number, lngStart: number, latDest: number, lngDes
         body: JSON.stringify({
             destination: { type: "Module", target: "/ppr/route" },
             content_type: 'FootRoutingRequest',
-            content: { start: { lat: latStart, lng: lngStart }, destinations: [{ lat: latDest, lng: lngDest }, { lat: latDest, lng: lngDest }], search_options: { duration_limit: durationLimit, profile: profile }, include_edges: includeEdges, include_path: includePath, include_steps: includeSteps }
+            content: { start: { lat: latStart, lng: lngStart }, destinations: [{ lat: latDest, lng: lngDest }], search_options: { duration_limit: durationLimit*2, profile: profile }, include_edges: includeEdges, include_path: includePath, include_steps: includeSteps }
         })
     }
 }
@@ -253,13 +253,15 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
     
     useEffect(() => {
         let requestURL = 'https://europe.motis-project.de/?elm=FootRoutingRequest';
-        fetch(requestURL, getWalkTime(start.pos.lat, start.pos.lng, destination.pos.lat, destination.pos.lng, durationLimit, profile, includeEdges, includePath, includeSteps))
+        if (!(isTransportInfo(props.connection.transports[0]) && isArrLengthOne(props.connection.transports))) {
+            fetch(requestURL, getWalkTime(start.pos.lat, start.pos.lng, destination.pos.lat, destination.pos.lng, durationLimit, profile, includeEdges, includePath, includeSteps))
             .then(res => res.json())
             .then((res: FootRouting) => {
                 console.log('Foot Request successful');
                 console.log(res);
                 setWalkTime(res.content.routes[0].routes[0].duration);
             });
+        }
     }, []);
 
     return (

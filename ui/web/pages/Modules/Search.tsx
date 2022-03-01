@@ -94,7 +94,7 @@ const handleErrors = (response) => {
 }
 
 
-export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations, 'extendForwardFlag': boolean, 'extendBackwardFlag': boolean}> = (props) => {
+export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations, 'extendForwardFlag': boolean, 'extendBackwardFlag': boolean, 'displayDate': moment.Moment, 'setDisplayDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
  
     // Start
     // StartType
@@ -119,10 +119,10 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     
 
     // Current Date
-    const [searchDate, setSearchDate] = useState<moment.Moment>(moment());
+    const [searchDate, setSearchDate] = useState<moment.Moment>(props.displayDate);
     
     // SearchTime
-    const [searchTime, setSearchTime] = useState<string>(moment().format('HH:mm'));
+    const [searchTime, setSearchTime] = useState<string>(props.displayDate.format('HH:mm'));
     
     // SearchType
     const [searchType, setSearchType] = useState<string>('Accessibility');
@@ -199,6 +199,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     useEffect(() => {
         setAllConnectionsWithoutDummies([]);
         setSearchInterval({begin: searchDate.unix(), end: searchDate.unix() + 3600 * 2});
+        props.setDisplayDate(searchDate);
     }, [searchDate]);
 
 
