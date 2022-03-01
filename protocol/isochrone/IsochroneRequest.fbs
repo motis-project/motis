@@ -1,0 +1,11 @@
+include "routing/RoutingRequest.fbs";
+include "base/Position.fbs";
+
+namespace motis.isochrone;
+
+table IsochroneRequest {
+    position:  motis.Position;
+    departure_time: long;
+    max_travel_time: long;
+    foot_travel_time: long;
+}

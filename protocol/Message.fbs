@@ -76,6 +76,8 @@ include "rt/RtUpdate.fbs";
 include "rt/RtWriteGraphRequest.fbs";
 include "tripbased/TripBasedTripDebugRequest.fbs";
 include "tripbased/TripBasedTripDebugResponse.fbs";
+include "isochrone/IsochroneRequest.fbs";
+include "isochrone/IsochroneResponse.fbs";
 include "paxmon/PaxMonUpdate.fbs";
 include "paxmon/PaxMonAddGroupsRequest.fbs";
 include "paxmon/PaxMonAddGroupsResponse.fbs";
@@ -276,7 +278,9 @@ union MsgContent {
   motis.ris.RISSystemTimeChanged                                          = 125,
   motis.rt.RtGraphUpdated                                                 = 126,
   motis.lookup.LookupRiBasisRequest                                       = 127,
-  motis.lookup.LookupRiBasisResponse                                      = 128
+  motis.lookup.LookupRiBasisResponse                                      = 128,
+  motis.isochrone.IsochroneRequest                                        = 129,
+  motis.isochrone.IsochroneResponse                                       = 130
 }
 
 // Destination Examples:

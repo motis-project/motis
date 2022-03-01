@@ -22,6 +22,7 @@ type Route
     | SimulationTime Date
     | TripSearchRoute
     | RailVizPermalink Float Float Float Float Float Date
+    | IsochroneSearch
 
 
 urlParser : Parser (Route -> a) a
@@ -35,6 +36,7 @@ urlParser =
         , map SimulationTime (s "time" </> date)
         , map TripSearchRoute (s "trips")
         , map RailVizPermalink (s "railviz" </> float </> float </> float </> float </> float </> date)
+        , map IsochroneSearch (s "isochrone")
         ]
 
 
@@ -105,6 +107,9 @@ toUrl route =
 
         TripSearchRoute ->
             "#/trips/"
+
+        IsochroneSearch ->
+            "#/isochrone/"
 
         RailVizPermalink lat lng zoom bearing pitch date ->
             "#/railviz/"
