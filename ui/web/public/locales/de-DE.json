@@ -41,5 +41,7 @@
   "information": "Auskunft von {0} bis {1} möglich",
   "noTrains": "Keine Züge",
   "byDelay": "Nach Verspätung",
-  "byCategory": "Nach Kategorie"
+  "byCategory": "Nach Kategorie",
+  "routeFromHere": "Routen von hier",
+  "routeHere": "Routen hierher"
 }

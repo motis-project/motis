@@ -39,7 +39,9 @@ interface Translation {
   information: string,
   noTrains: string,
   byDelay: string,
-  byCategory: string
+  byCategory: string,
+  routeFromHere: string,
+  routeHere: string
 }
 /* eslint-enable camelcase */
 

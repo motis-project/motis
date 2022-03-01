@@ -41,7 +41,7 @@
         :initInputText="destination"
         @inputChanged="setDestInput"
         :showAutocomplete="true"
-        @autocompleteElementClicked="endObjectClicked"
+        @autocompleteElementClicked="destinationObjectClicked"
         :tabIndex="2"></InputField>
       <button class="mode-picker-btn" @click="optinsButton2Click" tabindex="-1">
         <div :class="['mode', secondOptions.foot ? 'enabled' : '']">
@@ -372,6 +372,22 @@ export default defineComponent({
         clearInterval(interval);
       }
     });
+    this.$store.state.setStart = (pos: Position) => {
+      this.startObjectClicked({
+        pos,
+        name: `${pos.lat}; ${pos.lng}`,
+        type: '',
+        regions: []
+      })
+    };
+    this.$store.state.setDestination = (pos: Position) => {
+      this.destinationObjectClicked({
+        pos,
+        name: `${pos.lat}; ${pos.lng}`,
+        type: '',
+        regions: []
+      })
+    };
   },
   methods: {
     swapStartDest() {
@@ -435,12 +451,14 @@ export default defineComponent({
       this.setStartInput(startObject.name)
       this.$store.state.startInput = startObject;
       this.sendRequest();
+      this.mapSetMarkers();
     },
-    endObjectClicked(destinationObject: StationGuess | AddressGuess) {
+    destinationObjectClicked(destinationObject: StationGuess | AddressGuess) {
       this.destinationObject = destinationObject;
       this.setDestInput(destinationObject.name)
       this.$store.state.destinationInput = destinationObject;
       this.sendRequest();
+      this.mapSetMarkers()
     },
     setSeparator(connections: TripResponseContent[]) {
       this.separators = [];
@@ -563,13 +581,7 @@ export default defineComponent({
       }
       this.$store.state.connections = this.connections;
       this.setSeparator(this.connections);
-
-      this.$mapService.mapSetMarkers({
-        startPosition: this.startObject.pos,
-        startName: this.startObject.name,
-        destinationPosition: this.destinationObject.pos,
-        destinationName: this.destinationObject.name
-      })
+      this.mapSetMarkers();
       this.$mapService.mapSetConnections({
         mapId: "map",
         connections: this.connections.map((c, index) => ({
@@ -803,6 +815,14 @@ export default defineComponent({
           arrivalStation: options.hoveredWalkSegment.walk.arrivalStation
         }
       }
+    },
+    mapSetMarkers() {
+      this.$mapService.mapSetMarkers({
+        startPosition: this.startObject.pos,
+        startName: this.startObject.name,
+        destinationPosition: this.destinationObject.pos,
+        destinationName: this.destinationObject.name
+      })
     }
   },
 });

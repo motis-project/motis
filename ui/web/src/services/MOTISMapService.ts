@@ -3,7 +3,7 @@ import Position from "../models/SmallTypes/Position"
 import StationGuess from "../models/StationGuess";
 import Trip from "../models/Trip";
 
-interface MapClickInfo {
+export interface MapClickInfo {
   mouseX: number,
   mouseY: number,
   lat: number,

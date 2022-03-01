@@ -71,12 +71,14 @@
         </div>
       </div>
     </div>
-    <div class="railviz-contextmenu hidden" style="top: 286px; left: 760px;">
-      <div class="item">
-        Routen von hier
+    <div
+      :class="['railviz-contextmenu', contextMenuVisible ? 'visible' : 'hidden']"
+      :style="`top: ${mapClickInfo.mouseY}px; left: ${mapClickInfo.mouseX}px;`">
+      <div class="item" @click="setStart">
+        {{ $t.routeFromHere }}
       </div>
-      <div class="item">
-        Routen hierher
+      <div class="item" @click="setDestination">
+        {{ $t.routeHere }}
       </div>
     </div>
   </div>
@@ -84,7 +86,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import { MapTooltipOptions } from "../services/MOTISMapService"
+import { MapTooltipOptions, MapClickInfo } from "../services/MOTISMapService"
 
 export default defineComponent({
   name: "Map",
@@ -105,7 +107,9 @@ export default defineComponent({
       tooltipStationName: "",
       tooltipTransportInfo: {} as TooltipTransportInfo,
       RadioState: RadioState,
-      radioState: RadioState.Class
+      radioState: RadioState.Class,
+      mapClickInfo: {} as MapClickInfo,
+      contextMenuVisible: false
     }
   },
   watch: {
@@ -119,6 +123,8 @@ export default defineComponent({
   },
   created() {
     this.$mapService.mapSetTooltipDelegates.push(this.mapTrainOrStationHovered);
+    this.$mapService.mapShowContextMenu = this.mapShowContextMenu;
+    this.$mapService.mapCloseContextMenu = this.mapCloseContextMenu;
   },
   methods: {
     mapTrainOrStationHovered(options: MapTooltipOptions) {
@@ -144,6 +150,27 @@ export default defineComponent({
         this.tooltipStationName = options.hoveredStation;
       }
     },
+    mapShowContextMenu(options: MapClickInfo) {
+      this.contextMenuVisible = true;
+      this.mapClickInfo = options;
+    },
+    mapCloseContextMenu() {
+      this.contextMenuVisible = false;
+    },
+    setStart() {
+      this.$store.state.setStart({
+        lat: this.mapClickInfo.lat,
+        lng: this.mapClickInfo.lng
+      })
+      this.contextMenuVisible = false;
+    },
+    setDestination() {
+      this.$store.state.setDestination({
+        lat: this.mapClickInfo.lat,
+        lng: this.mapClickInfo.lng
+      })
+      this.contextMenuVisible = false;
+    }
   }
 })
 
