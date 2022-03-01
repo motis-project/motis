@@ -36,7 +36,10 @@ interface Translation {
   noDepartures: string,
   noArrivals: string,
   noInTimetable: string,
-  information: string
+  information: string,
+  noTrains: string,
+  byDelay: string,
+  byCategory: string
 }
 /* eslint-enable camelcase */
 

@@ -38,5 +38,8 @@
   "noDepartures": "No departures in the selected time period",
   "noArrivals": "No arrivals in the selected time period",
   "noInTimetable": "Time period not in the timetable",
-  "information": "Information from {0} till {1} avaliable"
+  "information": "Information from {0} till {1} avaliable",
+  "noTrains": "No trains",
+  "byDelay": "By delay",
+  "byCategory": "By category"
 }

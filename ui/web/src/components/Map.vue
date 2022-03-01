@@ -46,20 +46,28 @@
       </div>
       <div class="train-color-picker-overlay">
         <div>
-          <input type="radio" id="train-color-picker-none" name="train-color-picker" />
-          <label for="train-color-picker-none">Keine Züge</label>
+          <input
+            type="radio"
+            id="train-color-picker-none"
+            :value="RadioState.None"
+            v-model="radioState" />
+          <label for="train-color-picker-none">{{ $t.noTrains }}</label>
         </div>
         <div>
           <input
             type="radio"
             id="train-color-picker-class"
-            name="train-color-picker"
-            checked />
-          <label for="train-color-picker-class">Nach Kategorie</label>
+            :value="RadioState.Class"
+            v-model="radioState" />
+          <label for="train-color-picker-class">{{ $t.byCategory }}</label>
         </div>
         <div>
-          <input type="radio" id="train-color-picker-delay" name="train-color-picker" />
-          <label for="train-color-picker-delay">Nach Verspätung</label>
+          <input
+            type="radio"
+            id="train-color-picker-delay"
+            :value="RadioState.Delay"
+            v-model="radioState" />
+          <label for="train-color-picker-delay">{{ $t.byDelay }}</label>
         </div>
       </div>
     </div>
@@ -96,6 +104,17 @@ export default defineComponent({
       },
       tooltipStationName: "",
       tooltipTransportInfo: {} as TooltipTransportInfo,
+      RadioState: RadioState,
+      radioState: RadioState.Class
+    }
+  },
+  watch: {
+    radioState() {
+      console.log(this.radioState);
+      this.$mapService.mapShowTrains(this.radioState !== RadioState.None);
+      if(this.radioState !== RadioState.None) {
+        this.$mapService.mapUseTrainClassColors(this.radioState === RadioState.Class);
+      }
     }
   },
   created() {
@@ -140,5 +159,11 @@ enum TooltipState {
   Hidden,
   Train,
   Station
+}
+
+enum RadioState {
+  None,
+  Class,
+  Delay
 }
 </script>
