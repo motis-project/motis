@@ -1,5 +1,5 @@
 <template>
-  <g :class="`part train-class-${transportClass} acc-0`">
+  <g :class="['part', `train-class-${transportClass}`, 'acc-0', highlightClass]">
     <line
       :x1="lineStart"
       y1="12"
@@ -41,6 +41,8 @@
 import { defineComponent, PropType } from 'vue'
 import { Move } from "../models/TripResponseContent"
 import ClassZConverter from "../mixins/ClassZConverter"
+import { MapHoverOptions } from "../views/ConnectionSearch.vue"
+import Stop from '../models/Stop'
 
 export default defineComponent({
   name: "TransportLine",
@@ -57,12 +59,30 @@ export default defineComponent({
     lineEnd: {
       type: Number as PropType<number>,
       required: true
+    },
+    connectionIndex: {
+      type: Number as PropType<number>,
+      required: true
+    },
+    stops: {
+      type: Array as PropType<Stop[]>,
+      required: false
+    },
+    mapHoverOptions: {
+      type: Object as PropType<MapHoverOptions>,
+      required: false,
+      default: null
     }
   },
   emits: [
     "mouseEnter",
     "mouseLeave"
   ],
+  data() {
+    return {
+      highlightClass: ""
+    }
+  },
   computed: {
     rectWidth() {
       return this.lineEnd - this.lineStart;
@@ -100,17 +120,40 @@ export default defineComponent({
       else {
         return this.move.move.mumo_type;
       }
-    },
+    }
+  },
+  watch: {
+    mapHoverOptions() {
+      this.highlightClass = this.getHighlightClass();
+    }
   },
   methods: {
     onMouseEnter() {
+      this.$mapService.mapHighlightConnections([this.connectionIndex]);
       this.$emit("mouseEnter", {
         x: this.lineStart > 95 ? 95 : this.lineStart,
         transport: this.move.move
       })
     },
     onMouseLeave() {
+      this.$mapService.mapHighlightConnections([]);
       this.$emit("mouseLeave");
+    },
+    getHighlightClass() {
+      if(!this.mapHoverOptions || !this.mapHoverOptions.connectionIds.includes(this.connectionIndex) || !this.stops) {
+        this.$emit("mouseLeave");
+        return "";
+      }
+      const stopIds = this.stops.map(s => s.station.id);
+      if((this.mapHoverOptions.stationIds.some(s => stopIds.includes(s.departure) && stopIds.includes(s.arrival)))
+        || (this.stops[0].station === this.mapHoverOptions.departureStation && this.stops[this.stops.length - 1].station === this.mapHoverOptions.arrivalStation)) {
+        this.$emit("mouseEnter", {
+          x: this.lineStart > 95 ? 95 : this.lineStart,
+          transport: this.move.move
+        })
+        return "highlighted";
+      }
+      return "faded";
     }
   }
 })

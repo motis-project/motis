@@ -77,7 +77,7 @@ interface MapLocaleOptions {
   destination: string
 }
 
-interface MapTooltipOptions {
+export interface MapTooltipOptions {
   mouseX: number,
   mouseY: number,
   hoveredTrain?: RVTrain,
@@ -108,7 +108,7 @@ interface RVConnectionSegmentTrip {
 }
 
 interface RVConnectionSegmentWalk {
-  connectionIds: number,
+  connectionIds: number[],
   walk : RVConnectionWalkOptions
 }
 
@@ -177,7 +177,10 @@ export class MotisMapService {
   public showStationDetails: (options: string) => void = defaultDelegateValue;
   public mapUpdate: (options: MapInfoOptions) => void = defaultDelegateValue;
   public mapCloseContextMenu: () => void = defaultDelegateValue;
-  public mapSetTooltip: (options: MapTooltipOptions) => void = defaultDelegateValue;
+  public mapSetTooltip(options: MapTooltipOptions): void {
+    this.mapSetTooltipDelegates.forEach(d => d(options));
+  }
+  public mapSetTooltipDelegates: ((options: MapTooltipOptions) => void)[] = [];
 }
 
 

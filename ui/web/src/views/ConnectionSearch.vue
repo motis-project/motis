@@ -148,7 +148,8 @@
         </div>
         <div
           v-for="(c, cIndex) in connections"
-          :class="['connection', !initialConnections.includes(c) ? 'new' : '']"
+          :class="['connection', !initialConnections.includes(c) ? 'new' : '',
+                   mapHoverOptions ? (mapHoverOptions.connectionIds.includes(cIndex) ? 'highlighted' : 'faded') : '']"
           :key="c"
           @click="connectionClicked(cIndex)">
           <div>
@@ -166,15 +167,18 @@
               </div>
             </div>
             <div ref="linesDiv" class="coonections-line-gutter connection-trains">
-              <div class="transport-graph">
+              <div :class="['transport-graph', mapHoverOptions ? 'highlighting' : '']">
                 <svg :width="linesDivWidth" height="40" :viewBox="`0 0 ${linesDivWidth} 40`">
                   <g class="lineG">
                     <TransportLine
                       v-for="t in fillMovesWithLineData(getNonEmptyTransports(c.transports), c)"
-                      :key="t.move.range"
+                      :key="t.move.move.range"
                       :move="t.move"
                       :lineStart="t.lineStart"
                       :lineEnd="t.lineEnd"
+                      :mapHoverOptions="mapHoverOptions"
+                      :connectionIndex="cIndex"
+                      :stops="c.stops.slice(t.originalMove.move.range.from, t.originalMove.move.range.to + 1)"
                       @mouseEnter="showTooltip($event, cIndex)"
                       @mouseLeave="isTooltipVisible[cIndex] = false"></TransportLine>
                   </g>
@@ -184,17 +188,17 @@
                 </svg>
                 <div
                   :class="['tooltip', isTooltipVisible[cIndex] ? 'visible' : '']"
-                  :style="`position: absolute; left: ${transportTooltipInfo.x}px; top: 23px`">
+                  :style="`position: absolute; left: ${transportTooltipInfo[cIndex].x}px; top: 23px`">
                   <div class="stations">
                     <div class="departure">
-                      <span class="station">{{ transportTooltipInfo.start }}</span><span class="time">{{ transportTooltipInfo.departure }}</span>
+                      <span class="station">{{ transportTooltipInfo[cIndex].start }}</span><span class="time">{{ transportTooltipInfo[cIndex].departure }}</span>
                     </div>
                     <div class="arrival">
-                      <span class="station">{{ transportTooltipInfo.destination }}</span><span class="time">{{ transportTooltipInfo.arrival }}</span>
+                      <span class="station">{{ transportTooltipInfo[cIndex].destination }}</span><span class="time">{{ transportTooltipInfo[cIndex].arrival }}</span>
                     </div>
                   </div>
                   <div class="transport-name">
-                    <span>{{ transportTooltipInfo.transportName }}</span>
+                    <span>{{ transportTooltipInfo[cIndex].transportName }}</span>
                   </div>
                 </div>
               </div>
@@ -251,6 +255,7 @@ import LoadingBar, { LoadingState } from "../components/LoadingBar.vue"
 import Transport from "../models/Transport";
 import CustomMovement from "../models/CustomMovement";
 import ResizeObserver from "resize-observer-polyfill"
+import { MapTooltipOptions } from "../services/MOTISMapService"
 
 export default defineComponent({
   name: "ConnectionSearch",
@@ -318,14 +323,15 @@ export default defineComponent({
       } as LoadingStates,
       LoadingState: LoadingState,
       isTooltipVisible: [] as boolean[],
-      transportTooltipInfo: {} as TransportTooltipInfo,
+      transportTooltipInfo: [] as TransportTooltipInfo[],
       isUpperEnd: false,
       isBottomEnd: false,
       separators: [] as number [],
       isDeparture: true,
       linesDivWidth: 0,
       textMeasureCanvas: null as CanvasRenderingContext2D | null,
-      TimeGap: TimeGap
+      TimeGap: TimeGap,
+      mapHoverOptions: null as (null | MapHoverOptions)
     };
   },
   watch: {
@@ -362,6 +368,7 @@ export default defineComponent({
           // eslint-disable-next-line camelcase
           duration_limit: this.firstOptions.footDuration * 60
         })
+        this.$mapService.mapSetTooltipDelegates.push(this.mapConnectionHovered);
         clearInterval(interval);
       }
     });
@@ -552,6 +559,7 @@ export default defineComponent({
       this.loadingStates.lowerButton = LoadingState.Loaded;
       for(let i = 0; i < this.connections.length; i++) {
         this.isTooltipVisible.push(false);
+        this.transportTooltipInfo.push({} as TransportTooltipInfo)
       }
       this.$store.state.connections = this.connections;
       this.setSeparator(this.connections);
@@ -642,7 +650,7 @@ export default defineComponent({
       const t = event.transport;
       const stops = this.connections[index].stops.slice(t.range.from, t.range.to + 1);
       if("clasz" in t) {
-        this.transportTooltipInfo = {
+        this.transportTooltipInfo[index] = {
           start: stops[0].station.name,
           destination: stops[stops.length - 1].station.name,
           departure: this.$ds.getTimeString(stops[0].departure.time * 1000),
@@ -673,7 +681,7 @@ export default defineComponent({
           destination = this.$t.parking
         }
 
-        this.transportTooltipInfo = {
+        this.transportTooltipInfo[index] = {
           start: start,
           destination: destination,
           departure: this.$ds.getTimeString(stops[0].departure.time * 1000),
@@ -710,6 +718,7 @@ export default defineComponent({
       const divWidth = this.linesDivWidth;
       const overallStart = connection.stops[0].departure.time;
       const res = [] as MoveForLine[];
+      const originalMoves = connection.transports.filter(t => !("mumo_id" in t.move) || t.move.mumo_id !== -1);
 
       for(let i = 0; i < moves.length; i++) {
         const move = moves[i];
@@ -746,6 +755,7 @@ export default defineComponent({
         }
         res.push({
           move,
+          originalMove: originalMoves[i],
           lineStart,
           lineEnd
         });
@@ -765,6 +775,33 @@ export default defineComponent({
               }
             }).content.connections);
         })
+      }
+    },
+    mapConnectionHovered(options: MapTooltipOptions) {
+      if(!this.connections) {
+        return;
+      }
+
+      this.mapHoverOptions = null;
+      if(options.hoveredTripSegments && options.hoveredTripSegments.length > 0) {
+        this.mapHoverOptions = {
+          connectionIds: options.hoveredTripSegments.map(s => s.connectionIds).reduce((s1, s2) => s1.concat(s2), []),
+          stationIds: options.hoveredTripSegments.map(s => ({
+            departure: s.d_station_id,
+            arrival: s.a_station_id
+          }))
+        }
+      }
+      else if(options.hoveredWalkSegment) {
+        this.mapHoverOptions = {
+          connectionIds: options.hoveredWalkSegment.connectionIds,
+          stationIds: [{
+            departure: options.hoveredWalkSegment.walk.departureStation.id,
+            arrival: options.hoveredWalkSegment.walk.arrivalStation.id
+          }],
+          departureStation: options.hoveredWalkSegment.walk.departureStation,
+          arrivalStation: options.hoveredWalkSegment.walk.arrivalStation
+        }
       }
     }
   },
@@ -803,8 +840,19 @@ interface LoadingStates {
 
 interface MoveForLine {
   move: Move,
+  originalMove: Move,
   lineStart: number,
   lineEnd: number
+}
+
+export interface MapHoverOptions {
+  connectionIds: number[],
+  stationIds: {
+    arrival: string,
+    departure: string,
+  }[],
+  departureStation?: StationGuess,
+  arrivalStation?: StationGuess
 }
 
 enum TimeGap {
