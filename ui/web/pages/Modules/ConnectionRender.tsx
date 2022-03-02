@@ -68,13 +68,25 @@ const getWalkTime = (latStart: number, lngStart: number, latDest: number, lngDes
         body: JSON.stringify({
             destination: { type: "Module", target: "/ppr/route" },
             content_type: 'FootRoutingRequest',
-            content: { start: { lat: latStart, lng: lngStart }, destinations: [{ lat: latDest, lng: lngDest }], search_options: { duration_limit: durationLimit*2, profile: profile }, include_edges: includeEdges, include_path: includePath, include_steps: includeSteps }
+            content: { start: { lat: latStart, lng: lngStart }, destinations: [{ lat: latDest, lng: lngDest }], search_options: { duration_limit: durationLimit * 2, profile: profile }, include_edges: includeEdges, include_path: includePath, include_steps: includeSteps }
         })
     }
 }
 
-const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSetter: React.Dispatch<React.SetStateAction<Boolean>>, setSubOverlayHidden: React.Dispatch<React.SetStateAction<Boolean>>, setTrainSelected: React.Dispatch<React.SetStateAction<TripId>>, walkTime: number) => {
+const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSetter: React.Dispatch<React.SetStateAction<Boolean>>, setSubOverlayHidden: React.Dispatch<React.SetStateAction<Boolean>>, setTrainSelected: React.Dispatch<React.SetStateAction<TripId>>, walkTime: number, setWalkTime: React.Dispatch<React.SetStateAction<number>>) => {
+    const [durationLimit, setDurationLimit] = useState<number>(900);
+
+    const [profile, setProfile] = useState<string>('default');
+
+    const [includeEdges, setIncludeEdges] = useState<boolean>(false);
+
+    const [includePath, setIncludePath] = useState<boolean>(true);
+
+    const [includeSteps, setIncludeSteps] = useState<boolean>(true);
+
+    let hasWalk = false;
     let transDivs = [];
+
     for (let index = 0; index < connection.transports.length; index++) {
         if (isTransportInfo(connection.transports[index])) {
             transDivs.push(
@@ -89,11 +101,16 @@ const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSet
                             <span className='train-name'>{(connection.transports[index].move as TransportInfo).name}</span>
                         </div>
                     </div>
-                    {(index !== 0) ?
+                    {(index > 0 && hasWalk) ?
                         <div className='train-top-line'>
-                            <span>{walkTime + ' Fußweg'}</span>
+                            <span>{walkTime + 'min Fußweg'}</span>
                         </div> :
-                        <></>}
+                        (index === 0) ?
+                            <></> :
+                            <div>
+                                <span>{'min Umstieg'}</span>
+                            </div>
+                    }
                     <div className='first-stop'>
                         <div className='stop past'>
                             <div className='timeline train-color-border'></div>
@@ -136,9 +153,36 @@ const transportDivs = (connection: Connection, isCollapsed: Boolean, collapseSet
                         </div>
                     </div>
                 </div>)
+            hasWalk = false;
+            console.log(walkTime, hasWalk);
+        } else {
+            hasWalk = true;
+            fetchFoot(
+                connection.stops[connection.transports[index].move.range.from].station.pos.lat,
+                connection.stops[connection.transports[index].move.range.from].station.pos.lng,
+                connection.stops[connection.transports[index].move.range.to].station.pos.lat,
+                connection.stops[connection.transports[index].move.range.to].station.pos.lng,
+                durationLimit,
+                profile,
+                includeEdges,
+                includePath,
+                includeSteps,
+                setWalkTime)
+            console.log(walkTime, hasWalk);
         }
     }
     return transDivs;
+}
+
+const fetchFoot = (startLat: number, startLng: number, destLat: number, destLng: number, durationLimit: number, profile: string, includeEdges: boolean, includePath: boolean, includeSteps: boolean, setWalkTime: React.Dispatch<React.SetStateAction<number>>) => {
+    let requestURL = 'https://europe.motis-project.de/?elm=FootRoutingRequest';
+    fetch(requestURL, getWalkTime(startLat, startLng, destLat, destLng, durationLimit, profile, includeEdges, includePath, includeSteps))
+        .then(res => res.json())
+        .then((res: FootRouting) => {
+            console.log('Foot Request successful');
+            console.log(res);
+            setWalkTime(res.content.routes[0].routes[0].duration);
+        });
 }
 
 const classToId = (classz: Number) => {
@@ -200,7 +244,7 @@ const displayDuration = (posixTime) => {
     }
 }
 
-export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>> }> = (props) => {
+export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setWalkTime': React.Dispatch<React.SetStateAction<number>> }> = (props) => {
 
     return (
         <svg width='335' height='40' viewBox='0 0 335 40'>
@@ -215,7 +259,17 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
                             <rect x='0' y='0' width='323' height='24' className='tooltipTrigger'></rect>
                         </g>
                         :
-                        <g className='part train-class-walk acc-0'>
+                        <g className='part train-class-walk acc-0' onClick={() => fetchFoot(
+                            props.connection.stops[props.connection.transports[0].move.range.from].station.pos.lat,
+                            props.connection.stops[props.connection.transports[0].move.range.from].station.pos.lng,
+                            props.connection.stops[props.connection.transports[0].move.range.to].station.pos.lat,
+                            props.connection.stops[props.connection.transports[0].move.range.to].station.pos.lng,
+                            900,
+                            'default',
+                            false,
+                            true,
+                            true,
+                            props.setWalkTime)}>
                             <line x1='0' y1='12' x2='326' y2='12' className='train-line'></line>
                             <circle cx='4' cy='12' r='12' className='train-circle'></circle>
                             <use xlinkHref='#walk' className='train-icon' x='-4' y='4' width='16' height='16'></use>
@@ -231,38 +285,13 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
     );
 };
 
-export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>> }> = (props) => {
+export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'walkTime': number, 'setWalkTime': React.Dispatch<React.SetStateAction<number>> }> = (props) => {
 
     const [isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed] = useState<Boolean>(true);
-
-    const [walkTime, setWalkTime] = useState<number>(0);
-
-    const [durationLimit, setDurationLimit] = useState<number>(900);
-
-    const [profile, setProfile] = useState<string>('default');
-
-    const [includeEdges, setIncludeEdges] = useState<boolean>(false);
-
-    const [includePath, setIncludePath] = useState<boolean>(true);
-
-    const [includeSteps, setIncludeSteps] = useState<boolean>(true);
 
     const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
 
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
-    
-    useEffect(() => {
-        let requestURL = 'https://europe.motis-project.de/?elm=FootRoutingRequest';
-        if (!(isTransportInfo(props.connection.transports[0]) && isArrLengthOne(props.connection.transports))) {
-            fetch(requestURL, getWalkTime(start.pos.lat, start.pos.lng, destination.pos.lat, destination.pos.lng, durationLimit, profile, includeEdges, includePath, includeSteps))
-            .then(res => res.json())
-            .then((res: FootRouting) => {
-                console.log('Foot Request successful');
-                console.log(res);
-                setWalkTime(res.content.routes[0].routes[0].duration);
-            });
-        }
-    }, []);
 
     return (
         (props.connection === undefined) ?
@@ -356,7 +385,7 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
                                     <div className="timeline train-color-border progress" style={{ height: '100%' }}></div>
                                 </div>
                                 <div className="expand-icon"></div>
-                                <span>{'Fußweg (' + walkTime + ' min)'}</span>
+                                <span>{'Fußweg (' + props.walkTime + ' min)'}</span>
                             </div>
                             <div className="last-stop">
                                 <div className="stop past">
@@ -372,7 +401,7 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
                             </div>
                         </div>
                     :
-                    transportDivs(props.connection, isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed, props.setSubOverlayHidden, props.setTrainSelected, walkTime)}
+                    transportDivs(props.connection, isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed, props.setSubOverlayHidden, props.setTrainSelected, props.walkTime, props.setWalkTime)}
             </>
     );
 };
