@@ -40,6 +40,10 @@ export function paxQuantile(cdf: PaxMonCdfEntry[], q: number): number {
   throw new Error("invalid cdf");
 }
 
+export function getMaxPax(cdf: PaxMonCdfEntry[]): number {
+  return cdf[cdf.length - 1]?.passengers ?? 0;
+}
+
 export function processEdgeForecast(
   ef: PaxMonEdgeLoadInfoWithStats
 ): PaxMonEdgeLoadInfoWithStats {
