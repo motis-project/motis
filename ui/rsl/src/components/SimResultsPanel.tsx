@@ -199,7 +199,7 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
 
   return (
     <div
-      className="flex flex-col gap-2 py-3 pr-2"
+      className="flex flex-col gap-2 py-3 pr-2 cursor-pointer"
       onClick={() => setSelectedTrip(ut.tsi.trip)}
     >
       <TripServiceInfoView tsi={ut.tsi} format="Long" />
