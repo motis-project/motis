@@ -28,6 +28,8 @@ function CriticalTripList({
     sort_by: "MostCritical",
     max_results: 100,
     skip_first: 0,
+    filter_by_time: "NoFilter",
+    filter_interval: { begin: 0, end: 0 },
   });
 
   if (!data) {

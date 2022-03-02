@@ -54,6 +54,11 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
   auto const critical_load_threshold = req->critical_load_threshold();
   auto const crowded_load_threshold = req->crowded_load_threshold();
   auto const include_edges = req->include_edges();
+  auto const filter_by_time = req->filter_by_time();
+  auto const filter_interval_begin =
+      unix_to_motistime(sched.schedule_begin_, req->filter_interval()->begin());
+  auto const filter_interval_end =
+      unix_to_motistime(sched.schedule_begin_, req->filter_interval()->end());
 
   auto total_critical_sections = 0ULL;
   std::vector<trip_info> selected_trips;
@@ -61,6 +66,24 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
   for (auto const& [trp_idx, tdi] : uv.trip_data_.mapping_) {
     auto ti = trip_info{trp_idx};
     auto include = false;
+
+    if (filter_by_time != PaxMonFilterTripsTimeFilter_NoFilter) {
+      auto const* trp = get_trip(sched, trp_idx);
+      auto const dep = trp->id_.primary_.get_time();
+      if (filter_by_time == PaxMonFilterTripsTimeFilter_DepartureTime) {
+        if (dep < filter_interval_begin || dep >= filter_interval_end) {
+          continue;
+        }
+      } else /* if (filter_by_time ==
+                PaxMonFilterTripsTimeFilter_DepartureOrArrivalTime) */
+      {
+        auto const arr = trp->id_.secondary_.target_time_;
+        if ((dep < filter_interval_begin || dep >= filter_interval_end) &&
+            (arr < filter_interval_begin || arr >= filter_interval_end)) {
+          continue;
+        }
+      }
+    }
 
     for (auto const& ei : uv.trip_data_.edges(tdi)) {
       auto const* e = ei.get(uv);

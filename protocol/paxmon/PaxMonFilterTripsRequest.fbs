@@ -1,3 +1,5 @@
+include "base/Interval.fbs";
+
 namespace motis.paxmon;
 
 enum PaxMonFilterTripsSortOrder : byte {
@@ -5,6 +7,12 @@ enum PaxMonFilterTripsSortOrder : byte {
   FirstDeparture, // earliest trip first
   ExpectedPax, // trip with most expected passengers first
   TrainNr // lowest train number first
+}
+
+enum PaxMonFilterTripsTimeFilter : byte {
+  NoFilter, // don't filter based on time
+  DepartureTime, // trip id departure must be in interval
+  DepartureOrArrivalTime // trip id departure or arrival must be in interval
 }
 
 table PaxMonFilterTripsRequest {
@@ -21,5 +29,9 @@ table PaxMonFilterTripsRequest {
 
   sort_by: PaxMonFilterTripsSortOrder;
   max_results: uint; // 0 = unlimited
-  skip_first: uint;
+  skip_first: uint; // skip the first x results (for subsequent calls)
+
+  // filter trips by time
+  filter_by_time: PaxMonFilterTripsTimeFilter;
+  filter_interval: Interval;
 }

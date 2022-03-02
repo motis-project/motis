@@ -1,5 +1,10 @@
 // generated file - do not modify - run update-protocol to update
-import { Station, TripId, TripServiceInfo } from "@/api/protocol/motis";
+import {
+  Interval,
+  Station,
+  TripId,
+  TripServiceInfo,
+} from "@/api/protocol/motis";
 
 // paxmon/PaxMonAddGroupsRequest.fbs
 export interface PaxMonAddGroupsRequest {
@@ -81,6 +86,12 @@ export type PaxMonFilterTripsSortOrder =
   | "TrainNr";
 
 // paxmon/PaxMonFilterTripsRequest.fbs
+export type PaxMonFilterTripsTimeFilter =
+  | "NoFilter"
+  | "DepartureTime"
+  | "DepartureOrArrivalTime";
+
+// paxmon/PaxMonFilterTripsRequest.fbs
 export interface PaxMonFilterTripsRequest {
   universe: number;
   ignore_past_sections: boolean;
@@ -91,6 +102,8 @@ export interface PaxMonFilterTripsRequest {
   sort_by: PaxMonFilterTripsSortOrder;
   max_results: number;
   skip_first: number;
+  filter_by_time: PaxMonFilterTripsTimeFilter;
+  filter_interval: Interval;
 }
 
 // paxmon/PaxMonFilterTripsResponse.fbs
