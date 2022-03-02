@@ -82,7 +82,6 @@ const sendConnectionsToOverlay = (setConnections: React.Dispatch<React.SetStateA
         connectionsWithDummies.splice(val + idx, 0, dummyConnection(dummyDays[idx]));
     })
     setConnections(connectionsWithDummies);
-    console.log(connectionsWithDummies);
 };
 
 

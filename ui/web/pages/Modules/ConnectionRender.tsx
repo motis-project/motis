@@ -137,16 +137,29 @@ const displayDuration = (posixTime) => {
 }
 
 
-const fetchFoot = (startLat: number, startLng: number, destLat: number, destLng: number, durationLimit: number, profile: string, includeEdges: boolean, includePath: boolean, includeSteps: boolean, setWalkTime: React.Dispatch<React.SetStateAction<number>>, setWalk: React.Dispatch<React.SetStateAction<number>>) => {
-    let requestURL = 'https://europe.motis-project.de/?elm=FootRoutingRequest';
-    fetch(requestURL, getWalkTime(startLat, startLng, destLat, destLng, durationLimit, profile, includeEdges, includePath, includeSteps))
-        .then(res => res.json())
-        .then((res: FootRouting) => {
-            console.log('Foot Request successful');
-            console.log(res);
-            setWalkTime(res.content.routes[0].routes[0].duration);
-            setWalk(res.content.routes[0].routes[0].duration);
-        });
+const fetchFoot = async(connection: Connection, toModes: ModeLocalStorage, setWalkTimes: React.Dispatch<React.SetStateAction<number[]>>) => {
+    let walks = [];
+    const promises = connection.transports.map((transport: Transport) => {
+        if (transport.move_type === 'Walk'){
+            let requestURL = 'https://europe.motis-project.de/?elm=FootRoutingRequest';
+            return fetch(requestURL, getWalkTime(
+                connection.stops[transport.move.range.from].station.pos.lat,
+                connection.stops[transport.move.range.from].station.pos.lng,
+                connection.stops[transport.move.range.to].station.pos.lat,
+                connection.stops[transport.move.range.to].station.pos.lng, toModes.walk.search_profile.max_duration*60, toModes.walk.search_profile.profile, false, true, true))
+                .then(res => res.json())
+                .then((res: FootRouting) => {
+                    console.log('Foot Request successful');
+                    console.log(res);
+                    walks.push(res.content.routes[0].routes[0].duration);
+                });
+            }
+        })
+    Promise.all(promises).then(results => {
+        setWalkTimes(walks);
+        console.log("Promise.all")
+        console.log(walks);
+    })
 }
 
 
@@ -207,25 +220,7 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
 
     useEffect(() => {
         if (props.connection.transports.length !== props.connection.trips.length){
-            let walks = [];
-            for (let index = 0; index < props.connection.transports.length; index++){
-                if (props.connection.transports[index].move_type === 'Walk'){
-                    let requestURL = 'https://europe.motis-project.de/?elm=FootRoutingRequest';
-                    fetch(requestURL, getWalkTime(
-                        props.connection.stops[props.connection.transports[index].move.range.from].station.pos.lat,
-                        props.connection.stops[props.connection.transports[index].move.range.from].station.pos.lng,
-                        props.connection. stops[props.connection.transports[index].move.range.to].station.pos.lat,
-                        props.connection.stops[props.connection.transports[index].move.range.to].station.pos.lng, toModes.walk.search_profile.max_duration*60, toModes.walk.search_profile.profile, false, true, true))
-                        .then(res => res.json())
-                        .then((res: FootRouting) => {
-                            console.log('Foot Request successful');
-                            console.log(res);
-                            walks.push(res.content.routes[0].routes[0].duration);
-                        });
-                    }
-                }
-            setWalkTimes(walks);
-            console.log(walks);
+            fetchFoot(props.connection, toModes, setWalkTimes)
             }
     }, [props.connection]);
 
@@ -376,14 +371,14 @@ const TransportDivs: React.FC<{'connection': Connection, 'isCollapsed': Boolean,
             }
         })
         setTransports(t);
-    }, []);
+    }, [props.walkTimes]);
 
     console.log('WalkTimes');
     console.log(props.walkTimes);
 
     return(
         <>
-            {props.walkTimes.length !== 0 ? 
+            {props.walkTimes.length === 0 ? 
                 <></>
                 :
                 <>
@@ -416,7 +411,7 @@ const TransportDivs: React.FC<{'connection': Connection, 'isCollapsed': Boolean,
                                         <span className='past'>{moment.unix(props.connection.stops[(transport.transport.move as TransportInfo).range.from].departure.time).format('HH:mm')}</span>
                                     </div>
                                     <div className='delay'></div>
-                                    <div className='station'>{props.connection.stops[index].station.name}</div>
+                                    <div className='station'>{props.connection.stops[(transport.transport.move as TransportInfo).range.from].station.name}</div>
                                 </div>
                             </div>
                             <div className='intermediate-stops-toggle clickable past' onClick={() => props.collapseSetter(!props.isCollapsed)}>
