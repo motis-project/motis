@@ -3,6 +3,7 @@ import TripResponseContent from '../models/TripResponseContent'
 import StationGuess from '../models/StationGuess'
 import AddressGuess from '../models/AddressGuess'
 import Position from '../models/SmallTypes/Position'
+import { RVConnection } from '../services/MOTISMapService'
 
 export default createStore({
   state: {
@@ -13,6 +14,7 @@ export default createStore({
     setStart: () => {},
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     setDestination: () => {},
+    mapConnections: [] as RVConnection[]
   },
 })
 
@@ -25,6 +27,7 @@ declare module '@vue/runtime-core' {
     areConnectionsDropped: boolean,
     setStart: (pos: Position) => void,
     setDestination: (pos: Position) => void,
+    mapConnections: RVConnection[]
   }
 
   interface ComponentCustomProperties {

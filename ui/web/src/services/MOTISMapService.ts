@@ -65,7 +65,7 @@ interface RVConnectionsOptions {
   lowestId: number
 }
 
-interface RVConnection {
+export interface RVConnection {
   id: number,
   stations: StationGuess[],
   trains: RVConnectionTrain[],
@@ -155,8 +155,8 @@ export class MotisMapService {
   public mapFlyTo: (options: MapFlyToOptions) => void = defaultDelegateValue;
   public mapFitBounds: (options: MapFitBoundsOptions) => void = defaultDelegateValue;
   public mapSetMarkers: (options: MapSetMarkersOptions) => void = defaultDelegateValue;
-  public mapSetDetailFilter: (options: RVDeatilFilterOptions) => void = defaultDelegateValue;
-  public mapUpdateWalks: (options: RVConnectionWalkOptions) => void = defaultDelegateValue;
+  public mapSetDetailFilter: (options: RVDeatilFilterOptions | null) => void = defaultDelegateValue;
+  public mapUpdateWalks: (options: RVConnectionWalkOptions[]) => void = defaultDelegateValue;
   public mapSetConnections: (options: RVConnectionsOptions) => void = defaultDelegateValue;
   public mapHighlightConnections: (options: number[]) => void = defaultDelegateValue;
   public setTimeOffset: (offset: number) => void = defaultDelegateValue;

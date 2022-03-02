@@ -320,17 +320,6 @@ function initPorts(apiEndpoint, tilesEndpoint, initialPermalink) {
       }
     });
 
-    mapService.mapSetConnections = (function (opt) {
-      const bounds = opt.connections.reduce(
-        (b, conn) =>
-          conn.stations.reduce((sb, s) => sb.extend([s.pos.lng, s.pos.lat]), b),
-        new mapboxgl.LngLatBounds()
-      );
-      if (!bounds.isEmpty()) {
-        window.elmMaps[opt.mapId].fitBounds(bounds, { padding, pitch: 0 });
-      }
-    });
-
     RailViz.Main.init(apiEndpoint, app.ports);
 
     RailViz.Markers.init(map_fg);

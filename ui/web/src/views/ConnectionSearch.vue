@@ -396,8 +396,6 @@ export default defineComponent({
       this.destinationObject = tempObject;
       this.$store.state.startInput = this.startObject;
       this.$store.state.destinationInput = this.destinationObject;
-      this.start = this.startObject.name;
-      this.destination = this.destinationObject.name;
       this.sendRequest();
     },
     setStartInput(input: string) {
@@ -548,14 +546,6 @@ export default defineComponent({
       }
     },
     setConnections(connections: TripResponseContent[], changeGap: TimeGap | null = null, clickedEarlier: boolean | null = null) {
-      this.$mapService.mapSetMarkers({
-        startPosition: this.startObject.pos,
-        destinationPosition: this.destinationObject.pos
-      }),
-      this.$mapService.mapFitBounds({
-        mapId: "map",
-        coords: [[this.startObject.pos.lat, this.startObject.pos.lng], [this.destinationObject.pos.lat, this.destinationObject.pos.lng]]
-      })
       if (changeGap === null) {
         this.connections = connections;
         this.initialConnections = [...this.connections]
@@ -589,30 +579,32 @@ export default defineComponent({
       this.$store.state.connections = this.connections;
       this.setSeparator(this.connections);
       this.mapSetMarkers();
-      this.$mapService.mapSetConnections({
-        mapId: "map",
-        connections: this.connections.map((c, index) => ({
-          id: index,
-          stations: c.stops.map(s => s.station),
-          trains: c.trips.map(t => ({
-            trip: t.id,
-            sections: c.stops.slice(t.range.from, t.range.to).map((st, stIndex) => ({
-              departureStation: st.station,
-              arrivalStation: c.stops[t.range.from + stIndex + 1].station,
-              scheduledDepartureTime: st.departure.schedule_time,
-              scheduledArrivalTime: c.stops[t.range.from + stIndex + 1].arrival.schedule_time
-            }))
-          })),
-          walks: c.transports.filter(tr => ("mumo_type" in tr.move)).map(w => w.move as CustomMovement).map(w => ({
-            departureStation: c.stops[w.range.from].station,
-            arrivalStation: c.stops[w.range.to].station,
-            mumoType: w.mumo_type,
-            accessibility: w.accessibility,
-            duration: c.stops[w.range.to].arrival.time - c.stops[w.range.from].departure.time
+      const cns = this.connections.map((c, index) => ({
+        id: index,
+        stations: c.stops.map(s => s.station),
+        trains: c.trips.map(t => ({
+          trip: t.id,
+          sections: c.stops.slice(t.range.from, t.range.to).map((st, stIndex) => ({
+            departureStation: st.station,
+            arrivalStation: c.stops[t.range.from + stIndex + 1].station,
+            scheduledDepartureTime: st.departure.schedule_time,
+            scheduledArrivalTime: c.stops[t.range.from + stIndex + 1].arrival.schedule_time
           }))
         })),
+        walks: c.transports.filter(tr => ("mumo_type" in tr.move)).map(w => w.move as CustomMovement).map(w => ({
+          departureStation: c.stops[w.range.from].station,
+          arrivalStation: c.stops[w.range.to].station,
+          mumoType: w.mumo_type,
+          accessibility: w.accessibility,
+          duration: c.stops[w.range.to].arrival.time - c.stops[w.range.from].departure.time
+        }))
+      }));
+      this.$mapService.mapSetConnections({
+        mapId: "map",
+        connections: cns,
         lowestId: 0
       });
+      this.$store.state.mapConnections = cns;
       this.$mapService.mapFitBounds({
         mapId: "map",
         coords: this.connections.map(cn => cn.stops).reduce((st1, st2) => st1.concat(st2), []).map(s => [s.station.pos.lat, s.station.pos.lng])
