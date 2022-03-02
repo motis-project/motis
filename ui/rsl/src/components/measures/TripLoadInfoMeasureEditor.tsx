@@ -59,7 +59,7 @@ function TripLoadInfoMeasureEditor({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <div className={labelClass}>Trip</div>
+        <div className={labelClass}>Auslastung für Zug</div>
         <div>
           <TripPicker
             onTripPicked={setLoadInfoTrip}
