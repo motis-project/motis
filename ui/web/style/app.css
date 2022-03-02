@@ -1665,7 +1665,7 @@ fieldset > legend {
   margin-top: -4px;
 }
 
-@media (pointer:none), (pointer:coarse), screen and (max-width: 650px){
+@media screen and (max-width: 650px), (max-height: 450px){
   .overlay-container {
     display: flex;
     align-items: flex-start;

@@ -107,7 +107,7 @@
   border: 1px solid #4971E7;
 }
 
-@media (pointer:none), (pointer:coarse), screen and (max-width: 650px){
+@media screen and (max-width: 650px), (max-height: 450px){
   .day-buttons {
     display: none;
   }
