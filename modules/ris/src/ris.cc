@@ -230,15 +230,15 @@ struct ris::impl {
         &config_.rabbitmq_, [](std::string const& log_msg) {
           LOG(info) << "rabbitmq: " << log_msg;
         });
-    ribasis_receiver_->run([this, d, sched, last = now(),
-                            buffer = std::vector<amqp::msg>{}](
+    ribasis_receiver_->run([this, d, sched, buffer = std::vector<amqp::msg>{}](
                                amqp::msg const& m) mutable {
       buffer.emplace_back(m);
 
-      if (auto const n = now(); (n - last) < config_.update_interval_) {
+      if (auto const n = now();
+          (n - ribasis_receiver_last_update_) < config_.update_interval_) {
         return;
       } else {
-        last = n;
+        ribasis_receiver_last_update_ = n;
 
         auto msgs_copy = buffer;
         buffer.clear();
@@ -955,6 +955,7 @@ struct ris::impl {
   }
 
   std::unique_ptr<amqp::ssl_connection> ribasis_receiver_;
+  unixtime ribasis_receiver_last_update_{now()};
 
   db::env env_;
   std::mutex min_max_mutex_;
