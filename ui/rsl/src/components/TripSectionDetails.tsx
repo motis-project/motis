@@ -38,10 +38,11 @@ const groupByStationOptions: Array<{
   groupBy: PaxMonGroupByStation;
   label: string;
 }> = [
+  { groupBy: "None", label: "Keine" },
   { groupBy: "Last", label: "Letzter Halt" },
-  { groupBy: "LastLongDistance", label: "Letzter FV-Halt" },
+  //{ groupBy: "LastLongDistance", label: "Letzter FV-Halt" },
   { groupBy: "First", label: "Erster Halt" },
-  { groupBy: "FirstLongDistance", label: "Erster FV-Halt" },
+  //{ groupBy: "FirstLongDistance", label: "Erster FV-Halt" },
   { groupBy: "EntryAndLast", label: "Einstiegshalt und Ziel" },
 ];
 
@@ -59,7 +60,7 @@ function TripSectionDetails({
   const [universe] = useAtom(universeAtom);
   const [groupFilter, setGroupFilter] = useState<PaxMonGroupFilter>("Entering");
   const [groupByStation, setGroupByStation] =
-    useState<PaxMonGroupByStation>("LastLongDistance");
+    useState<PaxMonGroupByStation>("Last");
   const [groupByOtherTrip, setGroupByOtherTrip] = useState(true);
 
   const {
@@ -78,6 +79,8 @@ function TripSectionDetails({
   const groupByDirection =
     groupByStation === "First" || groupByStation === "FirstLongDistance"
       ? "Origin"
+      : groupByStation === "None"
+      ? "None"
       : "Destination";
 
   const content = isLoading ? (

@@ -21,7 +21,7 @@ import JourneyTripNameView from "@/components/JourneyTripNameView";
 import TripLoadForecastChart from "@/components/TripLoadForecastChart";
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 
-export type GroupByDirection = "Origin" | "Destination";
+export type GroupByDirection = "Origin" | "Destination" | "None";
 
 export type CombinedGroupProps = {
   plannedTrip: TripId;
@@ -61,7 +61,7 @@ function CombinedGroup({
       "alternatives",
       {
         from: startStation.id,
-        to: destinationStation.id,
+        to: destinationStation?.id,
         earliestDeparture: earliestDeparture,
         intervalDuration: SEARCH_INTERVAL,
       },
@@ -105,8 +105,12 @@ function CombinedGroup({
       <span className="font-bold">
         {combinedGroup.info.min_passenger_count}-
         {combinedGroup.info.max_passenger_count} Reisende
-        {groupByDirection === "Origin" ? " aus " : " in "}Richtung{" "}
-        {destinationStation.name}
+        {groupByDirection !== "None" && (
+          <>
+            {groupByDirection === "Origin" ? " aus " : " in "}Richtung{" "}
+            {destinationStation.name}
+          </>
+        )}
         {combinedGroup.entry_station.length === 1
           ? `, Einstieg in ${combinedGroup.entry_station[0].name}`
           : null}
