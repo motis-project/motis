@@ -235,7 +235,7 @@ struct ris::impl {
                                amqp::msg const& m) mutable {
       buffer.emplace_back(m);
 
-      if (auto const n = now(); (n - last) > config_.update_interval_) {
+      if (auto const n = now(); (n - last) < config_.update_interval_) {
         return;
       } else {
         last = n;
