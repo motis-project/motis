@@ -8,6 +8,7 @@ import store from './store';
 import Interval from './models/SmallTypes/Interval';
 import InitialScheduleInfoResponseContent from './models/InitRequestResponseContent';
 import MOTISMapServicePlugin, { MotisMapService } from './services/MOTISMapService';
+import { Router } from 'vue-router';
 
 const app = createApp(AppComponent)
 app.use(store);
@@ -19,10 +20,11 @@ let intervalFromServer: Interval = { begin: 0, end: 0 };
 app.config.globalProperties.$postService.getInitialRequestScheduleInfo().then((resp: InitialScheduleInfoResponseContent) => {
   intervalFromServer = { begin: resp.begin, end: resp.end };
 });
-
+let routerObject = {} as Router;
 let interval = setInterval(() => {
   if (TranslationService.service !== null && TranslationService.service.isLoaded && intervalFromServer.begin > 0) {
-    app.use(router(TranslationService.service));
+    routerObject = router(TranslationService.service)
+    app.use(routerObject);
     const initDate = new Date(intervalFromServer.begin * 1000);
     const now = new Date();
     const initialDateTime = new Date(initDate.getFullYear(), initDate.getMonth(), initDate.getDate(), now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()).valueOf();
@@ -51,6 +53,23 @@ const intervalMap = setInterval(() => {
         MOTISMapServicePlugin.service.setTimeOffset(DateTimeService.service.dateTime - Date.now().valueOf());
         DateTimeService.service.mapSetTimeOffset = MOTISMapServicePlugin.service.setTimeOffset;
         MOTISMapServicePlugin.service.mapShowTrains(true);
+
+        MOTISMapServicePlugin.service.showTripDetails = (trip) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const t = trip as { [key: string]: any };
+          routerObject.push({
+            name: "Trip",
+            params: t,
+          });
+        }
+        MOTISMapServicePlugin.service.showStationDetails = (stationID) => {
+          routerObject.push({
+            name: "StationTimetable",
+            params: {
+              id: stationID
+            },
+          });
+        }
         clearInterval(intervalMapInit)
       }
     })
