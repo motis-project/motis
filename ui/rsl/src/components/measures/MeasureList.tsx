@@ -259,61 +259,76 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
     }
   };
 
+  const clear = () => {
+    setMeasureAtoms([]);
+    setSelectedMeasure(null);
+  };
+
   const applyEnabled =
     universe != 0 &&
     measureAtoms.length > 0 &&
     !applyMeasuresMutation.isLoading;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 h-full overflow-hidden">
       <div className="flex justify-between">
         <span className="text-xl">Maßnahmen</span>
-        <button
-          onClick={add}
-          className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"
-        >
-          Maßnahme hinzufügen
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={add}
+            className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"
+          >
+            Maßnahme hinzufügen
+          </button>
+          <button
+            onClick={clear}
+            className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"
+          >
+            Alle löschen
+          </button>
+        </div>
       </div>
-      {measureAtoms.length > 0 ? (
-        <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th
-                  scope="col"
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Maßnahme
-                </th>
-                <th
-                  scope="col"
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Zeit &amp; Ort
-                </th>
-                <th scope="col" className="relative px-4 py-3">
-                  <span className="sr-only">Bearbeiten</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {measureAtoms.map((ma) => (
-                <MeasureListEntry
-                  key={`${ma}`}
-                  measureAtom={ma}
-                  remove={remove}
-                  select={setSelectedMeasure}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="text-db-cool-gray-600">
-          Noch keine Maßnahmen hinzugefügt.
-        </div>
-      )}
+      <div className="overflow-y-auto grow pr-2">
+        {measureAtoms.length > 0 ? (
+          <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Maßnahme
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Zeit &amp; Ort
+                  </th>
+                  <th scope="col" className="relative px-4 py-3">
+                    <span className="sr-only">Bearbeiten</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {measureAtoms.map((ma) => (
+                  <MeasureListEntry
+                    key={`${ma}`}
+                    measureAtom={ma}
+                    remove={remove}
+                    select={setSelectedMeasure}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-db-cool-gray-600">
+            Noch keine Maßnahmen hinzugefügt.
+          </div>
+        )}
+      </div>
       {universe === 0 && (
         <div>
           Für die Simulation von Maßnahmen muss zuerst ein Paralleluniversum
