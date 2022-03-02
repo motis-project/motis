@@ -1,23 +1,23 @@
+import { useAtom } from "jotai";
 import { useState } from "react";
 
-import { TripId, TripServiceInfo } from "@/api/protocol/motis";
+import { TripServiceInfo } from "@/api/protocol/motis";
 
-import CriticalTripList from "@/components/CriticialTripList";
+import { selectedTripAtom } from "@/data/selectedTrip";
+
+import TripList from "@/components/TripList";
 import TripPicker from "@/components/TripPicker";
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 
-export type TripSelectionProps = {
-  onTripSelected: (trip: TripId | undefined) => void;
-};
-
-function TripSelection({ onTripSelected }: TripSelectionProps): JSX.Element {
+function TripSelection(): JSX.Element {
+  const [selectedTrip, setSelectedTrip] = useAtom(selectedTripAtom);
   const [trips, setTrips] = useState<TripServiceInfo[]>([]);
 
   function addTrip(tsi: TripServiceInfo | undefined) {
     if (tsi) {
       setTrips((ts) => [tsi, ...ts]);
     }
-    onTripSelected(tsi?.trip);
+    setSelectedTrip(tsi?.trip);
   }
 
   return (
@@ -36,14 +36,14 @@ function TripSelection({ onTripSelected }: TripSelectionProps): JSX.Element {
           <div
             key={JSON.stringify(trip.trip)}
             className="cursor-pointer"
-            onClick={() => onTripSelected(trip.trip)}
+            onClick={() => setSelectedTrip(trip.trip)}
           >
             <TripServiceInfoView tsi={trip} format="Long" />
           </div>
         ))}
       </div>
       <div className="mt-10">
-        <CriticalTripList onTripSelected={onTripSelected} />
+        <TripList />
       </div>
     </div>
   );

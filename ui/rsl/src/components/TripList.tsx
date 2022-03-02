@@ -1,22 +1,16 @@
 import { useAtom } from "jotai";
 
-import { TripId } from "@/api/protocol/motis";
-
 import { usePaxMonFilterTripsRequest } from "@/api/paxmon";
 
 import { formatNumber } from "@/data/numberFormat";
+import { selectedTripAtom } from "@/data/selectedTrip";
 import { universeAtom } from "@/data/simulation";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 
-export type CriticalTripListProps = {
-  onTripSelected: (trip: TripId | undefined) => void;
-};
-
-function CriticalTripList({
-  onTripSelected,
-}: CriticalTripListProps): JSX.Element {
+function TripList(): JSX.Element {
   const [universe] = useAtom(universeAtom);
+  const [selectedTrip, setSelectedTrip] = useAtom(selectedTripAtom);
 
   const { data /*, isLoading, error */ } = usePaxMonFilterTripsRequest({
     universe,
@@ -44,7 +38,7 @@ function CriticalTripList({
           <div
             key={JSON.stringify(ti.tsi.trip)}
             className="cursor-pointer"
-            onClick={() => onTripSelected(ti.tsi.trip)}
+            onClick={() => setSelectedTrip(ti.tsi.trip)}
           >
             <TripServiceInfoView tsi={ti.tsi} format="Long" />
             <div>
@@ -69,4 +63,4 @@ function CriticalTripList({
   );
 }
 
-export default CriticalTripList;
+export default TripList;
