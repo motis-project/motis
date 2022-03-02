@@ -140,6 +140,15 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
                          return lhs.max_expected_pax_ > rhs.max_expected_pax_;
                        });
       break;
+    case PaxMonFilterTripsSortOrder_TrainNr:
+      std::stable_sort(begin(selected_trips), end(selected_trips),
+                       [&](trip_info const& lhs, trip_info const& rhs) {
+                         auto const* lhs_trp = get_trip(sched, lhs.trip_idx_);
+                         auto const* rhs_trp = get_trip(sched, rhs.trip_idx_);
+                         return lhs_trp->id_.primary_.train_nr_ <
+                                rhs_trp->id_.primary_.train_nr_;
+                       });
+      break;
     default: break;
   }
 

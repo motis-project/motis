@@ -77,7 +77,8 @@ export interface PaxMonFilterGroupsResponse {
 export type PaxMonFilterTripsSortOrder =
   | "MostCritical"
   | "FirstDeparture"
-  | "ExpectedPax";
+  | "ExpectedPax"
+  | "TrainNr";
 
 // paxmon/PaxMonFilterTripsRequest.fbs
 export interface PaxMonFilterTripsRequest {

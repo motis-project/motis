@@ -3,7 +3,8 @@ namespace motis.paxmon;
 enum PaxMonFilterTripsSortOrder : byte {
   MostCritical, // most critical trip first
   FirstDeparture, // earliest trip first
-  ExpectedPax // trip with most expected passengers first
+  ExpectedPax, // trip with most expected passengers first
+  TrainNr // lowest train number first
 }
 
 table PaxMonFilterTripsRequest {
