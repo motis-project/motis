@@ -1,17 +1,19 @@
+import { useAtom } from "jotai";
 import { useState } from "react";
 
-import { TripId } from "../api/protocol/motis";
-import { usePaxMonGroupsInTripQuery } from "../api/paxmon";
-import { PaxMonEdgeLoadInfoWithStats } from "../data/loadInfo";
+import { TripId } from "@/api/protocol/motis";
 import {
   GroupsInTripSection,
   PaxMonGroupByStation,
   PaxMonGroupFilter,
-} from "../api/protocol/motis/paxmon";
+} from "@/api/protocol/motis/paxmon";
 
-import CombinedGroup from "./CombinedGroup";
-import { useAtom } from "jotai";
-import { universeAtom } from "../data/simulation";
+import { usePaxMonGroupsInTripQuery } from "@/api/paxmon";
+
+import { PaxMonEdgeLoadInfoWithStats } from "@/data/loadInfo";
+import { universeAtom } from "@/data/simulation";
+
+import CombinedGroup from "@/components/CombinedGroup";
 
 function isSameSection(
   sec: GroupsInTripSection,
@@ -37,9 +39,10 @@ const groupByStationOptions: Array<{
   label: string;
 }> = [
   { groupBy: "Last", label: "Letzter Halt" },
-  { groupBy: "LastLongDistance", label: "Letzter Fernverkehrshalt" },
+  { groupBy: "LastLongDistance", label: "Letzter FV-Halt" },
   { groupBy: "First", label: "Erster Halt" },
-  { groupBy: "FirstLongDistance", label: "Erster Fernverkehrshalt" },
+  { groupBy: "FirstLongDistance", label: "Erster FV-Halt" },
+  { groupBy: "EntryAndLast", label: "Einstiegshalt und Ziel" },
 ];
 
 type TripSectionDetailsProps = {
@@ -157,7 +160,7 @@ function TripSectionDetails({
                 {label}
               </label>
             ))}
-            {groupFilter !== "All" ? (
+            {groupFilter !== "All" || groupByStation === "EntryAndLast" ? (
               <label className="inline-flex items-center gap-1">
                 <input
                   type="checkbox"
@@ -165,7 +168,9 @@ function TripSectionDetails({
                   checked={groupByOtherTrip}
                   onChange={() => setGroupByOtherTrip((val) => !val)}
                 />
-                {groupFilter === "Entering" ? "Zubringer" : "Abbringer"}
+                {groupFilter === "Entering" || groupByStation === "EntryAndLast"
+                  ? "Zubringer"
+                  : "Abbringer"}
               </label>
             ) : null}
           </div>

@@ -1,10 +1,11 @@
 import { useState } from "react";
 
-import { TripId } from "../api/protocol/motis";
-import { PaxMonEdgeLoadInfoWithStats } from "../data/loadInfo";
+import { TripId } from "@/api/protocol/motis";
 
-import TripLoadForecastChart from "./TripLoadForecastChart";
-import TripSectionDetails from "./TripSectionDetails";
+import { PaxMonEdgeLoadInfoWithStats } from "@/data/loadInfo";
+
+import TripLoadForecastChart from "@/components/TripLoadForecastChart";
+import TripSectionDetails from "@/components/TripSectionDetails";
 
 type TripDetailsProps = {
   tripId: TripId;

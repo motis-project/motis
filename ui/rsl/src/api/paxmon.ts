@@ -1,8 +1,11 @@
-import { sendRequest } from "./request";
-import { verifyContentType } from "./protocol/checks";
-import { MotisSuccess, TripId } from "./protocol/motis";
+import { UseQueryResult, useQuery } from "react-query";
+
+import { verifyContentType } from "@/api/protocol/checks";
+import { MotisSuccess, TripId } from "@/api/protocol/motis";
 import {
   PaxMonDestroyUniverseRequest,
+  PaxMonFilterTripsRequest,
+  PaxMonFilterTripsResponse,
   PaxMonFindTripsRequest,
   PaxMonFindTripsResponse,
   PaxMonForkUniverseRequest,
@@ -15,8 +18,9 @@ import {
   PaxMonGetTripLoadInfosResponse,
   PaxMonStatusRequest,
   PaxMonStatusResponse,
-} from "./protocol/motis/paxmon";
-import { useQuery, UseQueryResult } from "react-query";
+} from "@/api/protocol/motis/paxmon";
+
+import { sendRequest } from "@/api/request";
 
 export async function sendPaxMonStatusRequest(
   content: PaxMonStatusRequest
@@ -151,6 +155,26 @@ export function usePaxMonGetInterchangesQuery(
   );
 }
 
+export async function sendPaxMonFilterTripsRequest(
+  content: PaxMonFilterTripsRequest
+): Promise<PaxMonFilterTripsResponse> {
+  const msg = await sendRequest(
+    "/paxmon/filter_trips",
+    "PaxMonFilterTripsRequest",
+    content
+  );
+  verifyContentType(msg, "PaxMonFilterTripsResponse");
+  return msg.content as PaxMonFilterTripsResponse;
+}
+
+export function usePaxMonFilterTripsRequest(
+  content: PaxMonFilterTripsRequest
+): UseQueryResult<PaxMonFilterTripsResponse> {
+  return useQuery(queryKeys.filterTrips(content), () =>
+    sendPaxMonFilterTripsRequest(content)
+  );
+}
+
 export const queryKeys = {
   all: ["paxmon"] as const,
   status: (universe: number) => [...queryKeys.all, "status", universe] as const,
@@ -163,4 +187,6 @@ export const queryKeys = {
     [...queryKeys.trip(), "groups", req] as const,
   interchanges: (req: PaxMonGetInterchangesRequest) =>
     [...queryKeys.all, "interchanges", req] as const,
+  filterTrips: (req: PaxMonFilterTripsRequest) =>
+    [...queryKeys.all, "filter_trips", req] as const,
 };

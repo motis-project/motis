@@ -8,6 +8,7 @@ table PaxMonTripStopInfo {
   schedule_time: ulong;
   current_time: ulong;
   trips: [TripServiceInfo];
+  station: Station;
 }
 
 table PaxMonInterchangeInfo {

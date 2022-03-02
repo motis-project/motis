@@ -2,14 +2,15 @@ import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { ReactQueryDevtools } from "react-query/devtools";
 
-import { TripId } from "../api/protocol/motis";
-import getQueryParameters from "../util/queryParameters";
+import { TripId } from "@/api/protocol/motis";
 
-import TimeControl from "./TimeControl";
-import TripPicker from "./TripPicker";
-import TripDetails from "./TripDetails";
-import MeasureInput from "./measures/MeasureInput";
-import UniverseControl from "./UniverseControl";
+import getQueryParameters from "@/util/queryParameters";
+
+import SimPanel from "@/components/SimPanel";
+import TimeControl from "@/components/TimeControl";
+import TripDetails from "@/components/TripDetails";
+import TripSelection from "@/components/TripSelection";
+import UniverseControl from "@/components/UniverseControl";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,51 +22,29 @@ const allowForwarding = getQueryParameters()["allowForwarding"] === "yes";
 
 function App(): JSX.Element {
   const [selectedTrip, setSelectedTrip] = useState<TripId>();
-  const [simActive, setSimActive] = useState(false);
-
-  const tripDisplay =
-    selectedTrip !== undefined ? <TripDetails tripId={selectedTrip} /> : null;
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div>
+      <div className="w-full h-screen flex flex-col">
         <div
-          className="fixed top-0 w-full z-20 flex justify-center items-baseline space-x-4 p-2
+          className="flex justify-center items-baseline space-x-4 p-2
             bg-db-cool-gray-200 text-black divide-x-2 divide-db-cool-gray-400"
         >
           <TimeControl allowForwarding={allowForwarding} />
           <UniverseControl />
-          <div className="flex pl-4">
-            <button
-              type="button"
-              className="bg-db-red-500 px-3 py-1 rounded text-white text-sm hover:bg-db-red-600"
-              onClick={() => setSimActive((active) => !active)}
-            >
-              Maßnahmensimulation
-            </button>
-          </div>
         </div>
 
-        <div className="flex justify-between w-full mt-10">
-          {simActive && (
-            <div
-              className="h-screen sticky top-0 pt-10 flex flex-col w-full bg-db-cool-gray-200
-              w-80 p-2 shadow-md overflow-visible"
-            >
-              <MeasureInput />
-            </div>
-          )}
-          <div className="flex-grow">
-            <div className="mt-6 flex items-center justify-center gap-2">
-              <span>Trip:</span>
-              <TripPicker
-                onTripPicked={(tsi) => setSelectedTrip(tsi?.trip)}
-                clearOnPick={false}
-                longDistanceOnly={true}
-                className="w-96"
-              />
-            </div>
-            {tripDisplay}
+        <div className="flex justify-between items-stretch overflow-y-auto grow">
+          <div className="bg-db-cool-gray-200 w-[24rem] overflow-y-auto p-2">
+            <TripSelection onTripSelected={setSelectedTrip} />
+          </div>
+          <div className="overflow-y-auto grow p-2">
+            {selectedTrip !== undefined ? (
+              <TripDetails tripId={selectedTrip} />
+            ) : null}
+          </div>
+          <div className="bg-db-cool-gray-200 overflow-y-auto grow max-w-xl p-2">
+            <SimPanel />
           </div>
         </div>
       </div>

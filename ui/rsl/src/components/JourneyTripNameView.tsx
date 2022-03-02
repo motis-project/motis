@@ -1,4 +1,4 @@
-import { JourneyTrip } from "../data/journey";
+import { JourneyTrip } from "@/data/journey";
 
 type JourneyTripNameViewProps = {
   jt: JourneyTrip;

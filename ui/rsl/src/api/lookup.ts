@@ -1,11 +1,13 @@
+import { UseQueryResult, useQuery } from "react-query";
+
+import { verifyContentType } from "@/api/protocol/checks";
 import {
   LookupRiBasisRequest,
   LookupRiBasisResponse,
   LookupScheduleInfoResponse,
-} from "./protocol/motis/lookup";
-import { sendRequest } from "./request";
-import { verifyContentType } from "./protocol/checks";
-import { useQuery, UseQueryResult } from "react-query";
+} from "@/api/protocol/motis/lookup";
+
+import { sendRequest } from "@/api/request";
 
 export async function sendLookupScheduleInfoRequest(): Promise<LookupScheduleInfoResponse> {
   const msg = await sendRequest("/lookup/schedule_info");

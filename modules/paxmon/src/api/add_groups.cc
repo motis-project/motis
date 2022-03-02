@@ -46,15 +46,18 @@ msg_ptr add_groups(paxmon_data& data, bool const allow_reuse,
               if (existing_pg != nullptr && existing_pg->valid() &&
                   existing_pg->compact_planned_journey_ ==
                       input_pg.compact_planned_journey_) {
+                uv.update_tracker_.before_group_reused(existing_pg);
                 existing_pg->probability_ = std::min(
                     1.F, existing_pg->probability_ + input_pg.probability_);
                 ++reused_groups;
+                uv.update_tracker_.after_group_reused(existing_pg);
                 return existing_pg;
               }
             }
           }
         }
         auto pg = uv.passenger_groups_.add(std::move(input_pg));
+        uv.update_tracker_.before_group_added(pg);
         add_passenger_group_to_graph(sched, data.capacity_maps_, uv, *pg);
         return pg;
       });

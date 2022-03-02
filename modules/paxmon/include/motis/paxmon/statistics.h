@@ -85,6 +85,7 @@ struct graph_statistics {
   std::uint64_t interchange_edges_{};
   std::uint64_t wait_edges_{};
   std::uint64_t through_edges_{};
+  std::uint64_t disabled_edges_{};
   std::uint64_t canceled_edges_{};
   std::uint64_t broken_edges_{};
   std::uint64_t trips_{};

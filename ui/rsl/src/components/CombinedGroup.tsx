@@ -1,17 +1,20 @@
-import { useQuery } from "react-query";
-import { useAtom } from "jotai";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { useAtom } from "jotai";
+import { useQuery } from "react-query";
 
-import { Station, TripId } from "../api/protocol/motis";
-import { GroupedPassengerGroups } from "../api/protocol/motis/paxmon";
-import { sendRoutingRequest } from "../api/routing";
-import { connectionToJourney, Journey } from "../data/journey";
-import { formatTime } from "../util/dateFormat";
-import { scheduleAtom } from "../data/simulation";
+import { Station, TripId } from "@/api/protocol/motis";
+import { GroupedPassengerGroups } from "@/api/protocol/motis/paxmon";
 
-import TripLoadForecastChart from "./TripLoadForecastChart";
-import JourneyTripNameView from "./JourneyTripNameView";
-import TripServiceInfoView from "./TripServiceInfoView";
+import { sendRoutingRequest } from "@/api/routing";
+
+import { Journey, connectionToJourney } from "@/data/journey";
+import { scheduleAtom } from "@/data/simulation";
+
+import { formatTime } from "@/util/dateFormat";
+
+import JourneyTripNameView from "@/components/JourneyTripNameView";
+import TripLoadForecastChart from "@/components/TripLoadForecastChart";
+import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 export type GroupByDirection = "Origin" | "Destination";
 
@@ -45,10 +48,26 @@ function getDepartureTime(j: Journey): number {
   }
 }
 
-function CombinedGroup(props: CombinedGroupProps): JSX.Element {
-  const destinationStation = props.combinedGroup.grouped_by_station[0];
-  const previousTrip = props.combinedGroup.grouped_by_trip[0];
-  const findAlternatives = props.groupByDirection === "Destination";
+/*
+export type CombinedGroupProps = {
+  plannedTrip: TripId;
+  combinedGroup: GroupedPassengerGroups;
+  startStation: Station;
+  earliestDeparture: number;
+  groupByDirection: GroupByDirection;
+};
+ */
+
+function CombinedGroup({
+  plannedTrip,
+  combinedGroup,
+  startStation,
+  earliestDeparture,
+  groupByDirection,
+}: CombinedGroupProps): JSX.Element {
+  const destinationStation = combinedGroup.grouped_by_station[0];
+  const previousTrip = combinedGroup.grouped_by_trip[0];
+  const findAlternatives = groupByDirection === "Destination";
 
   const [schedule] = useAtom(scheduleAtom);
 
@@ -56,9 +75,9 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
     [
       "alternatives",
       {
-        from: props.startStation.id,
+        from: startStation.id,
         to: destinationStation.id,
-        earliestDeparture: props.earliestDeparture,
+        earliestDeparture: earliestDeparture,
         intervalDuration: SEARCH_INTERVAL,
       },
     ],
@@ -66,10 +85,10 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
       sendRoutingRequest({
         start_type: "PretripStart",
         start: {
-          station: { id: props.startStation.id, name: "" },
+          station: { id: startStation.id, name: "" },
           interval: {
-            begin: props.earliestDeparture,
-            end: props.earliestDeparture + SEARCH_INTERVAL * 60,
+            begin: earliestDeparture,
+            end: earliestDeparture + SEARCH_INTERVAL * 60,
           },
           min_connection_count: 0,
           extend_interval_earlier: false,
@@ -88,7 +107,7 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
     { enabled: findAlternatives }
   );
 
-  const plannedTripId = JSON.stringify(props.plannedTrip);
+  const plannedTripId = JSON.stringify(plannedTrip);
   const containsCurrentTrip = (j: Journey) =>
     j.tripLegs.find((leg) =>
       leg.trips.find((t) => JSON.stringify(t.trip.id) === plannedTripId)
@@ -99,10 +118,13 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
   const groupInfo = (
     <div>
       <span className="font-bold">
-        {props.combinedGroup.info.min_passenger_count}-
-        {props.combinedGroup.info.max_passenger_count} Reisende
-        {props.groupByDirection === "Origin" ? " aus " : " in "}Richtung{" "}
+        {combinedGroup.info.min_passenger_count}-
+        {combinedGroup.info.max_passenger_count} Reisende
+        {groupByDirection === "Origin" ? " aus " : " in "}Richtung{" "}
         {destinationStation.name}
+        {combinedGroup.entry_station.length === 1
+          ? `, Einstieg in ${combinedGroup.entry_station[0].name}`
+          : null}
       </span>
       {previousTrip && (
         <div>
@@ -117,7 +139,7 @@ function CombinedGroup(props: CombinedGroupProps): JSX.Element {
   const alternativesInfo = journeys ? (
     <div>
       {journeys.length} Mögliche Verbindungen (ab{" "}
-      {formatTime(props.earliestDeparture)}):
+      {formatTime(earliestDeparture)}):
       <ul>
         {journeys.map((j, idx) => (
           <li

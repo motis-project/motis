@@ -1,17 +1,21 @@
-import { useState } from "react";
-import { useCombobox } from "downshift";
 import { ChevronDownIcon } from "@heroicons/react/solid";
-import { Station } from "../api/protocol/motis";
-import { useStationGuesserQuery } from "../api/guesser";
+import { useCombobox } from "downshift";
+import { useState } from "react";
+
+import { Station } from "@/api/protocol/motis";
+
+import { useStationGuesserQuery } from "@/api/guesser";
 
 type StationPickerProps = {
   onStationPicked: (station: Station | undefined) => void;
   clearOnPick: boolean;
+  initialStation?: Station | undefined;
 };
 
 function StationPicker({
   onStationPicked,
   clearOnPick,
+  initialStation,
 }: StationPickerProps): JSX.Element {
   const [input, setInput] = useState("");
   const { data } = useStationGuesserQuery({ input, guess_count: 10 });
@@ -29,6 +33,7 @@ function StationPicker({
   } = useCombobox({
     items: stationList,
     itemToString: (item: Station | null) => (item !== null ? item.name : ""),
+    initialSelectedItem: initialStation ?? null,
     onInputValueChange: ({ inputValue }) => {
       if (inputValue != undefined) {
         setInput(inputValue);
@@ -46,7 +51,6 @@ function StationPicker({
 
   return (
     <div className="relative flex">
-      {/* <label {...getLabelProps()}>Station:</label> */}
       <div {...getComboboxProps()} className="relative w-full">
         <input
           {...getInputProps()}

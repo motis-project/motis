@@ -1,16 +1,19 @@
-import { sendRequest } from "./request";
-import { verifyContentType } from "./protocol/checks";
-import { PaxForecastApplyMeasuresRequest } from "./protocol/motis/paxforecast";
-import { MotisSuccess } from "./protocol/motis";
+import { verifyContentType } from "@/api/protocol/checks";
+import {
+  PaxForecastApplyMeasuresRequest,
+  PaxForecastApplyMeasuresResponse,
+} from "@/api/protocol/motis/paxforecast";
+
+import { sendRequest } from "@/api/request";
 
 export async function sendPaxForecastApplyMeasuresRequest(
   content: PaxForecastApplyMeasuresRequest
-): Promise<MotisSuccess> {
+): Promise<PaxForecastApplyMeasuresResponse> {
   const msg = await sendRequest(
     "/paxforecast/apply_measures",
     "PaxForecastApplyMeasuresRequest",
     content
   );
-  verifyContentType(msg, "MotisSuccess");
-  return msg.content as MotisSuccess;
+  verifyContentType(msg, "PaxForecastApplyMeasuresResponse");
+  return msg.content as PaxForecastApplyMeasuresResponse;
 }

@@ -202,11 +202,14 @@ Offset<Vector<PaxMonCdfEntry const*>> cdf_to_fbs(FlatBufferBuilder& fbb,
                                                  pax_cdf const& cdf) {
   auto entries = std::vector<PaxMonCdfEntry>{};
   entries.reserve(cdf.data_.size());
-  auto last_prob = 0.0F;
-  for (auto const& [pax, prob] : utl::enumerate(cdf.data_)) {
-    if (prob != last_prob) {
-      entries.emplace_back(static_cast<std::uint32_t>(pax), prob);
-      last_prob = prob;
+  if (!cdf.data_.empty()) {
+    auto last_prob = 0.0F;
+    auto const last_index = cdf.data_.size() - 1;
+    for (auto const& [pax, prob] : utl::enumerate(cdf.data_)) {
+      if (prob != last_prob || pax == last_index) {
+        entries.emplace_back(static_cast<std::uint32_t>(pax), prob);
+        last_prob = prob;
+      }
     }
   }
   return fbb.CreateVectorOfStructs(entries);

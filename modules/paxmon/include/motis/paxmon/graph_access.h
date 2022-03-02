@@ -27,6 +27,8 @@ trip_data_index get_or_add_trip(schedule const& sched,
                                 capacity_maps const& caps, universe& uv,
                                 extern_trip const& et);
 
+trip_data_index get_trip(universe const& uv, trip_idx_t trip_idx);
+
 void update_event_times(schedule const& sched, universe& uv,
                         motis::rt::RtDelayUpdate const* du,
                         std::vector<edge_index>& updated_interchange_edges);

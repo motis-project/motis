@@ -1,5 +1,6 @@
-import { Message, MsgContent, MsgContentType } from "./protocol/motis";
-import apiEndpoint from "./endpoint";
+import { Message, MsgContent, MsgContentType } from "@/api/protocol/motis";
+
+import apiEndpoint from "@/api/endpoint";
 
 export function makeMessage(
   target: string,
