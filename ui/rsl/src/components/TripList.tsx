@@ -26,14 +26,19 @@ import { getMaxPax } from "@/util/statistics";
 
 import MiniTripLoadGraph from "@/components/MiniTripLoadGraph";
 
-type FilterOption = "MostCritical" | "ByTrainNr" | "ByDeparture";
+type FilterOption =
+  | "MostCritical"
+  | "ByTrainNr"
+  | "ByDeparture"
+  | "ByExpectedPax";
 
 type LabeledFilterOption = { option: FilterOption; label: string };
 
 const filterOptions: Array<LabeledFilterOption> = [
   { option: "MostCritical", label: "Kritische Züge" },
-  { option: "ByTrainNr", label: "Alle Züge (nach Zugnummer)" },
   { option: "ByDeparture", label: "Alle Züge (nach Abfahrtszeit)" },
+  { option: "ByTrainNr", label: "Alle Züge (nach Zugnummer)" },
+  { option: "ByExpectedPax", label: "Alle Züge (nach Buchungen)" },
 ];
 
 function getFilterTripsRequest(
@@ -63,6 +68,9 @@ function getFilterTripsRequest(
       break;
     case "ByDeparture":
       req.sort_by = "FirstDeparture";
+      break;
+    case "ByExpectedPax":
+      req.sort_by = "ExpectedPax";
       break;
   }
 

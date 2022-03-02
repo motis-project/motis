@@ -1,4 +1,4 @@
-import { useAtom } from "jotai";
+import { useUpdateAtom } from "jotai/utils";
 import { useState } from "react";
 
 import { TripServiceInfo } from "@/api/protocol/motis";
@@ -10,20 +10,22 @@ import TripPicker from "@/components/TripPicker";
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 function TripSelection(): JSX.Element {
-  const [selectedTrip, setSelectedTrip] = useAtom(selectedTripAtom);
+  const setSelectedTrip = useUpdateAtom(selectedTripAtom);
   const [trips, setTrips] = useState<TripServiceInfo[]>([]);
 
   function addTrip(tsi: TripServiceInfo | undefined) {
+    /*
     if (tsi) {
       setTrips((ts) => [tsi, ...ts]);
     }
+     */
     setSelectedTrip(tsi?.trip);
   }
 
   return (
     <div className="h-full flex flex-col ">
       <div className="flex items-center justify-center gap-2">
-        <span>Zugnummer:</span>
+        <span>Zug suchen:</span>
         <TripPicker
           onTripPicked={addTrip}
           clearOnPick={true}
@@ -42,7 +44,7 @@ function TripSelection(): JSX.Element {
           </div>
         ))}
       </div>
-      <div className="mt-10 grow">
+      <div className="mt-5 grow">
         <TripList />
       </div>
     </div>
