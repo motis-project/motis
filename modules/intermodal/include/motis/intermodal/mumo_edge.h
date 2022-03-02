@@ -72,8 +72,7 @@ void make_dests(IntermodalRoutingRequest const*, geo::latlng const&,
 void remove_intersection(std::vector<mumo_edge>& starts,
                          std::vector<mumo_edge>& destinations,
                          geo::latlng const& query_start,
-                         geo::latlng const& query_destination,
-                         routing::SearchDir);
+                         geo::latlng const& query_destination, SearchDir);
 
 std::vector<flatbuffers::Offset<routing::AdditionalEdgeWrapper>> write_edges(
     flatbuffers::FlatBufferBuilder& fbb,  //

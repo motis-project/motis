@@ -38,7 +38,7 @@ public:
 
   msg_ptr one_to_many(OSRMOneToManyRequest const* req) const {
     MultiTargetParameters params;
-    params.forward = req->direction() == Direction_Forward;
+    params.forward = req->direction() == SearchDir_Forward;
 
     params.coordinates.reserve(req->many()->size() + 1);
     params.coordinates.emplace_back(

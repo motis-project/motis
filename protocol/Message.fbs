@@ -1,9 +1,7 @@
 include "address/AddressRequest.fbs";
 include "address/AddressResponse.fbs";
-include "bikesharing/BikesharingGeoTerminalsRequest.fbs";
-include "bikesharing/BikesharingGeoTerminalsResponse.fbs";
-include "bikesharing/BikesharingRequest.fbs";
-include "bikesharing/BikesharingResponse.fbs";
+include "gbfs/GBFSRoutingRequest.fbs";
+include "gbfs/GBFSRoutingResponse.fbs";
 include "guesser/StationGuesserRequest.fbs";
 include "guesser/StationGuesserResponse.fbs";
 include "import/CoastlineEvent.fbs";
@@ -168,10 +166,8 @@ union MsgContent {
   motis.TripId                                                            = 015,
   motis.address.AddressRequest                                            = 016,
   motis.address.AddressResponse                                           = 017,
-  motis.bikesharing.BikesharingRequest                                    = 018,
-  motis.bikesharing.BikesharingResponse                                   = 019,
-  motis.bikesharing.BikesharingGeoTerminalsRequest                        = 020,
-  motis.bikesharing.BikesharingGeoTerminalsResponse                       = 022,
+  motis.gbfs.GBFSRoutingRequest                                           = 018,
+  motis.gbfs.GBFSRoutingResponse                                          = 019,
   motis.guesser.StationGuesserRequest                                     = 023,
   motis.guesser.StationGuesserResponse                                    = 024,
   motis.intermodal.IntermodalRoutingRequest                               = 025,
@@ -278,7 +274,7 @@ union MsgContent {
   motis.rt.RtGraphUpdated                                                 = 126,
   motis.lookup.LookupRiBasisRequest                                       = 127,
   motis.lookup.LookupRiBasisResponse                                      = 128,
-  motis.paxforecast.PaxForecastApplyMeasuresResponse                      = 129
+  motis.paxforecast.PaxForecastApplyMeasuresResponse                      = 129,
 }
 
 // Destination Examples:

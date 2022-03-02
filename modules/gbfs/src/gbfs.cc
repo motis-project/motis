@@ -1,12 +1,15 @@
 #include "motis/gbfs/gbfs.h"
 
 #include <mutex>
+#include <numeric>
 
 #include "utl/concat.h"
 
 #include "geo/point_rtree.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/schedule/schedule.h"
+#include "motis/core/conv/position_conv.h"
 #include "motis/module/context/motis_http_req.h"
 #include "motis/module/context/motis_parallel_for.h"
 #include "motis/module/event_collector.h"
@@ -14,6 +17,7 @@
 #include "motis/gbfs/station.h"
 #include "motis/gbfs/system_status.h"
 
+namespace fbs = flatbuffers;
 using namespace motis::logging;
 using namespace motis::module;
 
@@ -22,7 +26,8 @@ namespace motis::gbfs {
 struct positions {};
 
 struct gbfs::impl {
-  explicit impl(config const& c) : config_{c} {}
+  explicit impl(config const& c, schedule const& sched)
+      : config_{c}, sched_{sched} {}
 
   void fetch_stream(std::string url) {
     auto tag = std::string{};
@@ -65,7 +70,7 @@ struct gbfs::impl {
     }
   }
 
-  void init(schedule const&) {
+  void init(schedule const& sched) {
     auto const t = scoped_timer{"GBFS init"};
     motis_parallel_for(config_.urls_, [&](auto&& url) { fetch_stream(url); });
 
@@ -74,17 +79,86 @@ struct gbfs::impl {
         utl::to_vec(stations_, [](auto&& s) { return s.pos_; }));
     free_bikes_rtree_ = geo::make_point_rtree(
         utl::to_vec(free_bikes_, [](auto&& s) { return s.pos_; }));
+    pt_stations_rtree_ =
+        geo::make_point_rtree(sched.stations_, [](auto const& s) {
+          return geo::latlng{s->lat(), s->lng()};
+        });
     l(info, "loaded {} stations, {} free bikes", stations_.size(),
       free_bikes_.size());
   }
 
-  msg_ptr route(schedule const&, msg_ptr const&) { return {}; }
+  msg_ptr make_ppr_request(geo::latlng const& one,
+                           std::vector<geo::latlng> const& many,
+                           ppr::SearchOptions const* search_options,
+                           SearchDir dir) {
+    assert(search_options != nullptr);
+    Position const fbs_position{pos.lat_, pos.lng_};
+
+    message_creator mc;
+    mc.create_and_finish(
+        MsgContent_FootRoutingRequest,
+        CreateFootRoutingRequest(
+            mc, &fbs_position,
+            mc.CreateVectorOfStructs(utl::to_vec(
+                *stations, [](auto&& station) { return *station->pos(); })),
+            motis_copy_table(SearchOptions, mc, search_options), dir, false,
+            false, false)
+            .Union(),
+        "/ppr/route");
+    return make_msg(mc);
+  }
+
+  msg_ptr route(schedule const&, msg_ptr const& m) {
+    constexpr auto const max_walk_speed = 1.1;  // m/s 4km/h
+    constexpr auto const max_bike_speed = 7.0;  // m/s 25km/h
+
+    auto const req = motis_content(GBFSRoutingRequest, m);
+
+    auto const max_walk_dist = req->max_foot_duration() * 60 * max_walk_speed;
+    auto const max_bike_dist = req->max_bike_duration() * 60 * max_bike_speed;
+    auto const max_total_dist = max_walk_dist + max_bike_dist;
+
+    auto const x = from_fbs(req->x());
+    auto const p = pt_stations_rtree_.in_radius(x, max_total_dist);
+    auto const sx = stations_rtree_.in_radius(x, max_walk_dist);
+    auto const sp = std::accumulate(
+        begin(p), end(p), std::vector<size_t>{},
+        [&](std::vector<size_t> acc, size_t const idx) {
+          auto const* s = sched_.stations_.at(idx).get();
+          return utl::concat(acc, stations_rtree_.in_radius(
+                                      {s->lat(), s->lng()}, max_walk_dist));
+        });
+    auto const b = [&]() {
+      if (req->dir() == SearchDir_Forward) {
+        return free_bikes_rtree_.in_radius(x, max_walk_dist);
+      } else {
+        return std::accumulate(
+            begin(p), end(p), std::vector<size_t>{},
+            [&](std::vector<size_t> acc, size_t const idx) {
+              auto const* s = sched_.stations_.at(idx).get();
+              return utl::concat(acc, stations_rtree_.in_radius(
+                                          {s->lat(), s->lng()}, max_walk_dist));
+            });
+      }
+    }();
+
+    // FWD
+    //   free-float FWD: x --walk--> [b] --bike--> [p]
+    //   station FWD: x --walk--> [sx] --bike--> [sp] --walk--> [p]
+
+    // BWD
+    //   free-float BWD: [p] --walk--> [b] --bike--> x
+    //   station BWD: [p] --walk--> [sp] --bike--> [sx] --walk--> x
+
+    auto const
+  }
 
   config const& config_;
+  schedule const& sched_;
   std::mutex mutex_;
   std::vector<station> stations_;
   std::vector<free_bike> free_bikes_;
-  geo::point_rtree stations_rtree_, free_bikes_rtree_;
+  geo::point_rtree stations_rtree_, free_bikes_rtree_, pt_stations_rtree_;
 };
 
 gbfs::gbfs() : module("RIS", "gbfs") {
@@ -114,7 +188,7 @@ void gbfs::import(import_dispatcher& reg) {
 }
 
 void gbfs::init(motis::module::registry& r) {
-  impl_ = std::make_unique<impl>(config_);
+  impl_ = std::make_unique<impl>(config_, get_sched());
   r.subscribe("/init", [&]() { impl_->init(get_sched()); });
   r.register_op("/gbfs/route",
                 [&](msg_ptr const& m) { return impl_->route(get_sched(), m); });

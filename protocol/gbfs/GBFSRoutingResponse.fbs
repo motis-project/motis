@@ -1,0 +1,52 @@
+include "base/Position.fbs";
+include "base/Station.fbs";
+
+namespace motis.gbfs;
+
+// ----------------------------------------------------------------------------
+// Free Floating Bike
+// ----------------------------------------------------------------------------
+table FreeBikeRoute {
+  bike_id: string;
+
+  // x = user provided start (FWD) / destination (BWD)
+  // dir=FWD: x --walk--> b --bike--> p
+  // dir=BWD: p --walk--> b --bike--> x
+  b: Position;  // free bike position
+  p: Station;  // public transport station
+}
+
+
+// ----------------------------------------------------------------------------
+// Station Bike
+// ----------------------------------------------------------------------------
+table GBFSStation {
+  pos: Position;
+  id: string;
+}
+
+table StationBikeRoute {
+  sx: GBFSStation;
+  sp: GBFSStation;
+  p: Station;
+}
+
+// ----------------------------------------------------------------------------
+// Routes
+// ----------------------------------------------------------------------------
+union BikeRoute { FreeBikeRoute, StationBikeRoute }
+
+table RouteInfo {
+  route: BikeRoute;
+  duration: uint;
+  walk_duration: uint;
+  walk_distance: double;
+  bike_duration: uint;
+  bike_distance: double;
+}
+
+// ----------------------------------------------------------------------------
+
+table GBFSRoutingResponse {
+  routes: [RouteInfo];
+}
