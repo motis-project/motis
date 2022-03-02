@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Station } from './ConnectionTypes';
-import { Translations } from './Localization';
+import { Station } from '../Types/ConnectionTypes';
+import { Translations } from '../App/Localization';
 import { Proposals } from './Proposals';
-import { Address, AddressSuggestionResponse, StationSuggestionResponse } from './SuggestionTypes';
-import { setLocalStorage } from './LocalStorage';
+import { Address, AddressSuggestionResponse, StationSuggestionResponse } from '../Types/SuggestionTypes';
+import { setLocalStorage } from '../App/LocalStorage';
 
 
 interface SearchInputField {

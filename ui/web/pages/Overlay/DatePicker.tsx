@@ -2,7 +2,7 @@ import React from 'react';
 
 import moment from 'moment';
 
-import { Translations } from './Localization';
+import { Translations } from '../App/Localization';
 
 
 function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: React.MutableRefObject<any>, dayButtonPrevious: React.MutableRefObject<any>, dayButtonNext: React.MutableRefObject<any>, setShowDatePicker: React.Dispatch<React.SetStateAction<boolean>>) {
@@ -52,8 +52,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
     }, [props.currentDate]);
 
     React.useEffect(() => {
-        props.setCurrentDate(currentDate);
-        console.log('dateDisplay triggers in Datepicker');
+        props.setCurrentDate(currentDate.clone());
     }, [dateDisplay]);
 
     const weekdayshortname = props.translation.search.weekDays.map(day => {

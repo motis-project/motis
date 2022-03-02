@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Translations } from './Localization';
-import { Mode } from './IntermodalRoutingTypes';
-import { getFromLocalStorage, ModeLocalStorage, setLocalStorage } from './LocalStorage';
+import { Translations } from '../App/Localization';
+import { Mode } from '../Types/IntermodalRoutingTypes';
+import { getFromLocalStorage, ModeLocalStorage, setLocalStorage } from '../App/LocalStorage';
 
 
 export const Modepicker: React.FC<{'translation': Translations, 'title': String, 'setModes': React.Dispatch<React.SetStateAction<Mode[]>>, 'localStorageModes': string}> = (props) => {

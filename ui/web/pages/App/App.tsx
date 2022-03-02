@@ -2,10 +2,10 @@ import React from 'react';
 
 import { useRouter} from 'next/router';
 
-import { Overlay } from '../Modules/Overlay';
-import { Translations, deTranslations, enTranslations, plTranslations } from '../Modules/Localization';
-import { StationSearch } from '../Modules/StationSearch';
-import { MapContainer } from '../Modules/MapContainer';
+import { Overlay } from '../Overlay/Overlay';
+import { Translations, deTranslations, enTranslations, plTranslations } from './Localization';
+import { StationSearch } from '../StationSearch/StationSearch';
+import { MapContainer } from '../Map/MapContainer';
 
 
 const getQuery = (): Translations => {
@@ -18,18 +18,34 @@ const getQuery = (): Translations => {
     }
     return enTranslations;
 }
+declare global{
+    interface Window {
+        portEvents : any;
+    }
+}  
 
 
 export const App: React.FC = () => {
+
+    let isMobile = false;
+
+    React.useEffect(() => {
+        isMobile = window.matchMedia("only screen and (max-width: 500px)").matches;
+    });
     
     return (
         <div className='app'>
-            {/* visible && <MapView />*/}
-            <MapContainer translation={getQuery()}/>
-            <Overlay translation={getQuery()}/>
-            {//<StationSearchView />
+            {isMobile ?
+                <Overlay translation={getQuery()}/>
+                :
+                <div>
+                    {/* visible && <MapView />*/}
+                    <MapContainer translation={getQuery()}/>
+                    <Overlay translation={getQuery()}/>
+                    {//<StationSearchView />}
+                    }<StationSearch translation={getQuery()}/>
+                </div>
             }
-            <StationSearch />
         </div>
     );
 };

@@ -1,8 +1,8 @@
 import React from 'react';
 
-import { Station } from './ConnectionTypes';
-import { setLocalStorage } from './LocalStorage';
-import { Address, Region } from './SuggestionTypes';
+import { Station } from '../Types/ConnectionTypes';
+import { setLocalStorage } from '../App/LocalStorage';
+import { Address, Region } from '../Types/SuggestionTypes';
 
 
 interface Proposals {
