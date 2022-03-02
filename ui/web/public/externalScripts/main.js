@@ -49,21 +49,6 @@
     let langParam = params["lang"] || null;
     let language = langParam || "de";
 
-    // window.app = Elm.Main.embed(document.getElementById("app-container"), {
-    //   apiEndpoint: apiEndpoint,
-    //   currentTime: Date.now(),
-    //   simulationTime: simulationTime,
-    //   language: language,
-    //   motisParam: params["motis"] || null,
-    //   timeParam: timeParam,
-    //   langParam: langParam,
-    //   fromLocation: localStorage.getItem("motis.routing.from_location"),
-    //   toLocation: localStorage.getItem("motis.routing.to_location"),
-    //   fromModes: localStorage.getItem("motis.routing.from_modes"),
-    //   toModes: localStorage.getItem("motis.routing.to_modes"),
-    //   intermodalPprMode: null,
-    // });
-
     window.elmMaps = {};
 
     initPorts(apiEndpoint, tilesEndpoint, initialPermalink);

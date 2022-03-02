@@ -94,7 +94,7 @@ export default defineComponent({
     sendRequest(){
       this.contentLoadingState = LoadingState.Loading;
       if(this.currentTrainInput !== -1){
-        this.$postService.getTrainGuessResponse(this.currentDate.valueOf() / 1000, this.currentTrainInput).then((resp) => {
+        this.$postService.getTrainGuessResponse(Math.floor(this.currentDate.valueOf() / 1000), this.currentTrainInput).then((resp) => {
           this.trainGuesses = resp.trips;
           this.contentLoadingState = LoadingState.Loaded;
         });
