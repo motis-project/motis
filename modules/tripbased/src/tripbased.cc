@@ -421,6 +421,8 @@ struct tripbased::impl {
         return !in_interval(j, q.interval_begin_, q.interval_end_);
       });
       results_outside_of_interval = results_before - res.journeys_.size();
+      res.interval_begin_ = q.interval_begin_;
+      res.interval_end_ = q.interval_end_;
     }
 
     for (auto& tbs : tb_stats) {
