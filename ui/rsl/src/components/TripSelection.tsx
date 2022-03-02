@@ -21,7 +21,7 @@ function TripSelection(): JSX.Element {
   }
 
   return (
-    <div>
+    <div className="h-full flex flex-col ">
       <div className="flex items-center justify-center gap-2">
         <span>Zugnummer:</span>
         <TripPicker
@@ -42,7 +42,7 @@ function TripSelection(): JSX.Element {
           </div>
         ))}
       </div>
-      <div className="mt-10">
+      <div className="mt-10 grow">
         <TripList />
       </div>
     </div>

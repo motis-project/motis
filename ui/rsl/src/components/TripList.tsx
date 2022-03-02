@@ -1,4 +1,5 @@
 import { useAtom } from "jotai";
+import { Virtuoso } from "react-virtuoso";
 
 import { TripId } from "@/api/protocol/motis";
 import { PaxMonFilteredTripInfo } from "@/api/protocol/motis/paxmon";
@@ -32,30 +33,27 @@ function TripList(): JSX.Element {
   });
 
   if (!data) {
-    return <div>Kritische Züge werden geladen...</div>;
+    return <div>Züge werden geladen...</div>;
   }
 
   const selectedTripId = JSON.stringify(selectedTrip);
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       <div className="mb-4 text-lg font-semibold">Kritische Züge:</div>
-      <div className="flex flex-col gap-4">
-        {data.trips.map((ti) => (
-          <TripListEntry
-            key={JSON.stringify(ti.tsi.trip)}
-            ti={ti}
-            selectedTripId={selectedTripId}
-            setSelectedTrip={setSelectedTrip}
-          />
-        ))}
+      <div className="grow">
+        <Virtuoso
+          data={data.trips}
+          overscan={200}
+          itemContent={(index, ti) => (
+            <TripListEntry
+              ti={ti}
+              selectedTripId={selectedTripId}
+              setSelectedTrip={setSelectedTrip}
+            />
+          )}
+        />
       </div>
-      {data.remaining_trips > 0 ? (
-        <div>
-          ...und {formatNumber(data.remaining_trips)} weitere kritische Züge (
-          {formatNumber(data.total_matching_trips)} insgesamt)
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -74,21 +72,23 @@ function TripListEntry({
   const isSelected = selectedTripId === JSON.stringify(ti.tsi.trip);
 
   return (
-    <div
-      className={classNames(
-        "cursor-pointer",
-        isSelected && "bg-db-cool-gray-300"
-      )}
-      onClick={() => setSelectedTrip(ti.tsi.trip)}
-    >
-      <TripServiceInfoView tsi={ti.tsi} format="Long" />
-      <div>
+    <div className="pr-1 pb-4">
+      <div
+        className={classNames(
+          "cursor-pointer p-1",
+          isSelected && "bg-db-cool-gray-300"
+        )}
+        onClick={() => setSelectedTrip(ti.tsi.trip)}
+      >
+        <TripServiceInfoView tsi={ti.tsi} format="Long" />
         <div>
-          Kritische Abschnitte: {ti.critical_sections}/{ti.section_count}{" "}
-        </div>
-        <div>
-          Reisende über Kapazität: {formatNumber(ti.max_excess_pax)} max.,{" "}
-          {formatNumber(ti.cumulative_excess_pax)} gesamt
+          <div>
+            Kritische Abschnitte: {ti.critical_sections}/{ti.section_count}{" "}
+          </div>
+          <div>
+            Reisende über Kapazität: {formatNumber(ti.max_excess_pax)} max.,{" "}
+            {formatNumber(ti.cumulative_excess_pax)} gesamt
+          </div>
         </div>
       </div>
     </div>
