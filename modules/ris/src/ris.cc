@@ -230,15 +230,15 @@ struct ris::impl {
         &config_.rabbitmq_, [](std::string const& log_msg) {
           LOG(info) << "rabbitmq: " << log_msg;
         });
-    ribasis_receiver_->run([this, d, sched, last = now(),
-                            buffer = std::vector<amqp::msg>{}](
+    ribasis_receiver_->run([this, d, sched, buffer = std::vector<amqp::msg>{}](
                                amqp::msg const& m) mutable {
       buffer.emplace_back(m);
 
-      if (auto const n = now(); (n - last) > config_.update_interval_) {
+      if (auto const n = now();
+          (n - ribasis_receiver_last_update_) < config_.update_interval_) {
         return;
       } else {
-        last = n;
+        ribasis_receiver_last_update_ = n;
 
         auto msgs_copy = buffer;
         buffer.clear();
@@ -955,6 +955,7 @@ struct ris::impl {
   }
 
   std::unique_ptr<amqp::ssl_connection> ribasis_receiver_;
+  unixtime ribasis_receiver_last_update_{now()};
 
   db::env env_;
   std::mutex min_max_mutex_;
@@ -985,9 +986,6 @@ ris::ris() : module("RIS", "ris") {
   param(config_.rabbitmq_.user_, "rabbitmq.username", "RabbitMQ username");
   param(config_.rabbitmq_.pw_, "rabbitmq.password", "RabbitMQ password");
   param(config_.rabbitmq_.vhost_, "rabbitmq.vhost", "RabbitMQ vhost");
-  param(config_.rabbitmq_.exchange_, "rabbitmq.exchange", "RabbitMQ exchange");
-  param(config_.rabbitmq_.routing_key_, "rabbitmq.routing_key",
-        "RabbitMQ routing key");
   param(config_.rabbitmq_.queue_, "rabbitmq.queue", "RabbitMQ queue name");
   param(config_.rabbitmq_.ca_, "rabbitmq.ca", "RabbitMQ path to CA file");
   param(config_.rabbitmq_.cert_, "rabbitmq.cert",
