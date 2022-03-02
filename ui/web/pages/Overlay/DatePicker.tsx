@@ -2,7 +2,7 @@ import React from 'react';
 
 import moment from 'moment';
 
-import { Translations } from './Localization';
+import { Translations } from '../App/Localization';
 
 
 function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: React.MutableRefObject<any>, dayButtonPrevious: React.MutableRefObject<any>, dayButtonNext: React.MutableRefObject<any>, setShowDatePicker: React.Dispatch<React.SetStateAction<boolean>>) {

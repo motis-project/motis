@@ -1,11 +1,11 @@
 import React from 'react';
-import { Translations } from './Localization';
+import { Translations } from '../App/Localization';
 import { DatePicker } from './DatePicker';
 import moment from 'moment';
-import { TripId } from './ConnectionTypes';
-import { FetchTrainData } from './TripView';
+import { TripId } from '../Types/ConnectionTypes';
+import { TripView } from './TripView';
 
-export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>> }> = (props) => {
+export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean }> = (props) => {
 
     // Current Date
     const [searchDate, setSearchDate] = React.useState<moment.Moment>(moment());
@@ -67,7 +67,7 @@ export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidd
                         <div className='trips'></div>
                     </div>
                     :
-                    <FetchTrainData subOverlayHidden={props.subOverlayHidden} setSubOverlayHidden={props.setSubOverlayHidden} trainSelected={props.trainSelected} setTrainSelected={props.setTrainSelected} />
+                    <TripView subOverlayHidden={props.subOverlayHidden} setSubOverlayHidden={props.setSubOverlayHidden} trainSelected={props.trainSelected} setTrainSelected={props.setTrainSelected} detailViewHidden={props.detailViewHidden}/>
                 }
             </div>
             <div className='sub-overlay-close' onClick={() => props.setSubOverlayHidden(true)}><i className='icon'>close</i></div>

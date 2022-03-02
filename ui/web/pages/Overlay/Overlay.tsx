@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 
 import { Search } from './Search';
 import { SubOverlay } from './SubOverlay';
-import { Connection, Station, Transport, TripId } from './ConnectionTypes';
-import { Translations } from './Localization';
+import { Connection, Station, Transport, TripId } from '../Types/ConnectionTypes';
+import { Translations } from '../App/Localization';
 import { ConnectionRender, JourneyRender } from './ConnectionRender';
-import { getFromLocalStorage } from './LocalStorage';
-import { Address } from './SuggestionTypes';
+import { getFromLocalStorage } from '../App/LocalStorage';
+import { Address } from '../Types/SuggestionTypes';
 import moment from 'moment';
 
 
@@ -170,7 +170,7 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
                         </div>
                     }
                 </div>
-                <SubOverlay subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} trainSelected={trainSelected} setTrainSelected={setTrainSelected} translation={props.translation}/>
+                <SubOverlay subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} trainSelected={trainSelected} setTrainSelected={setTrainSelected} translation={props.translation} detailViewHidden={detailViewHidden}/>
             </div>
             <div className='overlay-tabs'>
                 <div className='overlay-toggle' onClick={() => setOverlayHidden(!overlayHidden)}>

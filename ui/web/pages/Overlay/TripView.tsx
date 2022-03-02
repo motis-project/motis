@@ -1,7 +1,7 @@
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 import { JourneyRender } from './ConnectionRender';
-import { Connection, Station, TripId, TripViewConnection } from './ConnectionTypes';
+import { Connection, Station, TripId, TripViewConnection } from '../Types/ConnectionTypes';
 
 const displayTime = (posixTime) => {
     let today = new Date(posixTime * 1000);
@@ -33,7 +33,7 @@ const getTrainConnection = (lineId: string, stationId: string, targetStationId: 
     };
 };
 
-export const FetchTrainData: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>> }> = (props) => {
+export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean }> = (props) => {
 
     const [lineId, setLineId] = useState<string>(props.trainSelected.line_id);
 
@@ -88,7 +88,7 @@ export const FetchTrainData: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOver
                     </div>
                 </div>
                 <div className='connection-journey' id='sub-connection-journey'>
-                    <JourneyRender connection={trainConnection} setSubOverlayHidden={props.setSubOverlayHidden} setTrainSelected={props.setTrainSelected} />
+                    <JourneyRender connection={trainConnection} setSubOverlayHidden={props.setSubOverlayHidden} setTrainSelected={props.setTrainSelected} detailViewHidden={props.detailViewHidden}/>
                 </div>
             </div>
     )

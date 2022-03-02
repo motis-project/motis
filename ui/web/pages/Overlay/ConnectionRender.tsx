@@ -1,10 +1,10 @@
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 import Index from '..';
-import { Transport, TransportInfo, Connection, Stop, TripId, FootRouting, Station } from './ConnectionTypes';
-import { Mode } from './IntermodalRoutingTypes';
-import { getFromLocalStorage, ModeLocalStorage } from './LocalStorage';
-import { Address } from './SuggestionTypes';
+import { Transport, TransportInfo, Connection, Stop, TripId, FootRouting, Station } from '../Types/ConnectionTypes';
+import { Mode } from '../Types/IntermodalRoutingTypes';
+import { getFromLocalStorage, ModeLocalStorage } from '../App/LocalStorage';
+import { Address } from '../Types/SuggestionTypes';
 
 const isTransportInfo = (transport: Transport) => {
     return transport.move_type === 'Transport';
@@ -424,7 +424,8 @@ const TransportDivs: React.FC<{'connection': Connection, 'isCollapsed': Boolean,
                                     <i className='icon'>expand_more</i>
                                 </div>
                                 <span>{((transport.transport.move as TransportInfo).range.to - (transport.transport.move as TransportInfo).range.from) === 1 ?
-                                    'Fahrt ohne Zwischenhalt (' + displayDuration(new Date(props.connection.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).getTime() - new Date(props.connection.stops[(transport.transport.move as TransportInfo).range.from].departure.time).getTime()) + ')'
+                                    'Fahrt ohne Zwischenhalt (' + moment.unix(props.connection.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).from(moment.unix(props.connection.stops[(transport.transport.move as TransportInfo).range.from].departure.time)) + ')'
+                                    //'Fahrt ohne Zwischenhalt (' + displayDuration(new Date(props.connection.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).getTime() - new Date(props.connection.stops[(transport.transport.move as TransportInfo).range.from].departure.time).getTime()) + ')'
                                     :
                                     'Fahrt ' + ((transport.transport.move as TransportInfo).range.to - (transport.transport.move as TransportInfo).range.from - 1) + ((((transport.transport.move as TransportInfo).range.to - (transport.transport.move as TransportInfo).range.from - 1) === 1) ? ' Station (' : ' Stationen (')
                                     + displayDuration(new Date(props.connection.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).getTime()

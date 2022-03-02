@@ -3,15 +3,15 @@ import React, { useEffect, useState } from 'react';
 import moment from 'moment';
 
 import { DatePicker } from './DatePicker';
-import { Mode, IntermodalRoutingResponse } from './IntermodalRoutingTypes';
-import { Connection, Position, Station } from './ConnectionTypes';
-import { Translations } from './Localization';
-import { Address } from './SuggestionTypes';
+import { Mode, IntermodalRoutingResponse } from '../Types/IntermodalRoutingTypes';
+import { Connection, Position, Station } from '../Types/ConnectionTypes';
+import { Translations } from '../App/Localization';
+import { Address } from '../Types/SuggestionTypes';
 import { SearchInputField } from './SearchInputField';
 import { Modepicker } from './ModePicker';
-import { getFromLocalStorage, setLocalStorage } from './LocalStorage';
-import { Interval } from './RoutingTypes';
-import { markerSearch } from './RailvizContextMenu';
+import { getFromLocalStorage, setLocalStorage } from '../App/LocalStorage';
+import { Interval } from '../Types/RoutingTypes';
+import { markerSearch } from '../Map/RailvizContextMenu';
 
 
 const getRoutingOptions = (startType: string, startModes: Mode[], start: Station | Address, searchType: string, searchDirection: string, destinationType: string, destinationModes: Mode[], destination: Station | Address, interval: Interval ) => {

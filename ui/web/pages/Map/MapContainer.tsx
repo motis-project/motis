@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
 import moment from "moment";
 
-import { DatePicker } from "./DatePicker";
-import { Translations } from "./Localization";
+import { DatePicker } from "../Overlay/DatePicker";
+import { Translations } from "../App/Localization";
 import { RailvizContextMenu } from "./RailvizContextMenu";
 
 export const MapContainer: React.FC<{'translation': Translations}> = (props) => {

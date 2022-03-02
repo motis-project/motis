@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
-import { getFromLocalStorage, setLocalStorage } from './LocalStorage';
-import {Translations} from './Localization';
+import { getFromLocalStorage, setLocalStorage } from '../App/LocalStorage';
+import {Translations} from '../App/Localization';
 
 export let markerSearch = null;
 
