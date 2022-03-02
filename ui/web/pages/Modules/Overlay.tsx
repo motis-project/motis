@@ -68,8 +68,6 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
 
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
 
-    const [walkTime, setWalkTime] = useState<number>(0);
-
     return (
         <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden'}>
             <div className='overlay'>
@@ -112,7 +110,7 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
                                                         </div>
                                                         <div className='pure-u-16-24 connection-trains'>
                                                             <div className='transport-graph'>
-                                                                <ConnectionRender connection={connectionElem} setDetailViewHidden={setDetailViewHidden} setWalkTime={setWalkTime}/>
+                                                                <ConnectionRender connection={connectionElem} setDetailViewHidden={setDetailViewHidden}/>
                                                                 {/* Was ist tooltip? Es ist unsichtbar und hat keine Funktion meiner Meinung nach.*/ }
 
                                                                 <div className='tooltip' style={{ position: 'absolute', left: '0px', top: '23px' }}>
@@ -167,7 +165,7 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
                                 </div>
                             </div>
                             <div className="connection-journey" id="connection-journey">
-                                <JourneyRender connection={connections[indexOfConnection]} setSubOverlayHidden={setSubOverlayHidden} setTrainSelected={setTrainSelected} detailViewHidden={detailViewHidden} walkTime={walkTime} setWalkTime={setWalkTime}/>
+                                <JourneyRender connection={connections[indexOfConnection]} setSubOverlayHidden={setSubOverlayHidden} setTrainSelected={setTrainSelected} detailViewHidden={detailViewHidden}/>
                             </div>
                         </div>
                     }
