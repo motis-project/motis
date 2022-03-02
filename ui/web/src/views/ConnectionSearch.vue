@@ -391,6 +391,9 @@ export default defineComponent({
   },
   methods: {
     swapStartDest() {
+      let temp: string = this.start;
+      this.start = this.destination;
+      this.destination = temp;
       let tempObject: StationGuess | AddressGuess = this.startObject;
       this.startObject = this.destinationObject;
       this.destinationObject = tempObject;
