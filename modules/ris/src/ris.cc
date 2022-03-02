@@ -985,9 +985,6 @@ ris::ris() : module("RIS", "ris") {
   param(config_.rabbitmq_.user_, "rabbitmq.username", "RabbitMQ username");
   param(config_.rabbitmq_.pw_, "rabbitmq.password", "RabbitMQ password");
   param(config_.rabbitmq_.vhost_, "rabbitmq.vhost", "RabbitMQ vhost");
-  param(config_.rabbitmq_.exchange_, "rabbitmq.exchange", "RabbitMQ exchange");
-  param(config_.rabbitmq_.routing_key_, "rabbitmq.routing_key",
-        "RabbitMQ routing key");
   param(config_.rabbitmq_.queue_, "rabbitmq.queue", "RabbitMQ queue name");
   param(config_.rabbitmq_.ca_, "rabbitmq.ca", "RabbitMQ path to CA file");
   param(config_.rabbitmq_.cert_, "rabbitmq.cert",
