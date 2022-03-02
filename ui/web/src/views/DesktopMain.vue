@@ -71,6 +71,13 @@ export default defineComponent({
           params: t,
         });
       }
+      else {
+        this.$mapService.mapFlyTo( {
+          mapId: "map",
+          lng: element.pos.lng,
+          lat: element.pos.lat,
+          animate: true } );
+      }
     },
     startDisableSimulation() {
       if(this.isSimulationEnabled) {

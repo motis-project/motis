@@ -234,6 +234,11 @@ export default defineComponent({
       this.$postService
         .getDeparturesResponse(newValue.id, true, clickEarlier === null ? "BOTH" : (clickEarlier ? "EARLIER" : "LATER"), 20, this.date)
         .then((data) => {
+          this.$mapService.mapFlyTo( {
+            mapId: "map",
+            lng: data.station.pos.lng,
+            lat: data.station.pos.lat,
+            animate: true } );
           if (clickEarlier === null) {
             this.departures = data.events;
           }

@@ -391,14 +391,13 @@ export default defineComponent({
   },
   methods: {
     swapStartDest() {
-      let temp: string = this.start;
-      this.start = this.destination;
-      this.destination = temp;
       let tempObject: StationGuess | AddressGuess = this.startObject;
       this.startObject = this.destinationObject;
       this.destinationObject = tempObject;
       this.$store.state.startInput = this.startObject;
       this.$store.state.destinationInput = this.destinationObject;
+      this.start = this.startObject.name;
+      this.destination = this.destinationObject.name;
       this.sendRequest();
     },
     setStartInput(input: string) {
@@ -549,6 +548,14 @@ export default defineComponent({
       }
     },
     setConnections(connections: TripResponseContent[], changeGap: TimeGap | null = null, clickedEarlier: boolean | null = null) {
+      this.$mapService.mapSetMarkers({
+        startPosition: this.startObject.pos,
+        destinationPosition: this.destinationObject.pos
+      }),
+      this.$mapService.mapFitBounds({
+        mapId: "map",
+        coords: [[this.startObject.pos.lat, this.startObject.pos.lng], [this.destinationObject.pos.lat, this.destinationObject.pos.lng]]
+      })
       if (changeGap === null) {
         this.connections = connections;
         this.initialConnections = [...this.connections]
