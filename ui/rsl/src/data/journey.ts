@@ -173,3 +173,23 @@ export function connectionToJourney(con: Connection): Journey {
 
   return j;
 }
+
+export function getArrivalTime(j: Journey): number {
+  const finalLeg = j.legs[j.legs.length - 1];
+  switch (finalLeg.type) {
+    case "trip":
+      return finalLeg.stops[finalLeg.stops.length - 1].arrival.time;
+    case "walk":
+      return finalLeg.to.arrival.time;
+  }
+}
+
+export function getDepartureTime(j: Journey): number {
+  const firstLeg = j.legs[0];
+  switch (firstLeg.type) {
+    case "trip":
+      return firstLeg.stops[0].departure.time;
+    case "walk":
+      return firstLeg.from.departure.time;
+  }
+}

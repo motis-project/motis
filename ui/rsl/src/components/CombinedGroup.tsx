@@ -7,7 +7,12 @@ import { GroupedPassengerGroups } from "@/api/protocol/motis/paxmon";
 
 import { sendRoutingRequest } from "@/api/routing";
 
-import { Journey, connectionToJourney } from "@/data/journey";
+import {
+  Journey,
+  connectionToJourney,
+  getArrivalTime,
+  getDepartureTime,
+} from "@/data/journey";
 import { scheduleAtom } from "@/data/simulation";
 
 import { formatTime } from "@/util/dateFormat";
@@ -27,26 +32,6 @@ export type CombinedGroupProps = {
 };
 
 const SEARCH_INTERVAL = 61;
-
-function getArrivalTime(j: Journey): number {
-  const finalLeg = j.legs[j.legs.length - 1];
-  switch (finalLeg.type) {
-    case "trip":
-      return finalLeg.stops[finalLeg.stops.length - 1].arrival.time;
-    case "walk":
-      return finalLeg.to.arrival.time;
-  }
-}
-
-function getDepartureTime(j: Journey): number {
-  const firstLeg = j.legs[0];
-  switch (firstLeg.type) {
-    case "trip":
-      return firstLeg.stops[0].departure.time;
-    case "walk":
-      return firstLeg.from.departure.time;
-  }
-}
 
 /*
 export type CombinedGroupProps = {
