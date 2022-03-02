@@ -1,7 +1,8 @@
 import { Listbox, Transition } from "@headlessui/react";
 import { CheckIcon, SelectorIcon } from "@heroicons/react/solid";
 import { useAtom } from "jotai";
-import { Fragment, useState } from "react";
+import { Fragment, useCallback, useState } from "react";
+import { useInfiniteQuery } from "react-query";
 import { Virtuoso } from "react-virtuoso";
 
 import { TripId } from "@/api/protocol/motis";
@@ -10,7 +11,10 @@ import {
   PaxMonFilteredTripInfo,
 } from "@/api/protocol/motis/paxmon";
 
-import { usePaxMonFilterTripsRequest } from "@/api/paxmon";
+import {
+  sendPaxMonFilterTripsRequest,
+  usePaxMonFilterTripsRequest,
+} from "@/api/paxmon";
 
 import { formatPercent } from "@/data/numberFormat";
 import { selectedTripAtom } from "@/data/selectedTrip";
@@ -71,9 +75,38 @@ function TripList(): JSX.Element {
 
   const [selectedFilter, setSelectedFilter] = useState(filterOptions[0]);
 
-  const { data /*, isLoading, error */ } = usePaxMonFilterTripsRequest(
-    getFilterTripsRequest(universe, selectedFilter.option)
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    /*
+    error,
+    isFetching,
+    isFetchingNextPage,
+    status,
+    */
+  } = useInfiniteQuery(
+    ["tripList", selectedFilter.option],
+    ({ pageParam = 0 }) => {
+      const req = getFilterTripsRequest(universe, selectedFilter.option);
+      req.skip_first = pageParam;
+      return sendPaxMonFilterTripsRequest(req);
+    },
+    {
+      getNextPageParam: (lastPage) =>
+        lastPage.remaining_trips > 0 ? lastPage.next_skip : undefined,
+    }
   );
+
+  const loadMore = useCallback(() => {
+    if (hasNextPage) {
+      return fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage]);
+
+  const allTrips: PaxMonFilteredTripInfo[] = data
+    ? data.pages.flatMap((p) => p.trips)
+    : [];
 
   const selectedTripId = JSON.stringify(selectedTrip);
 
@@ -141,8 +174,9 @@ function TripList(): JSX.Element {
       <div className="grow">
         {data ? (
           <Virtuoso
-            data={data.trips}
+            data={allTrips}
             overscan={200}
+            endReached={loadMore}
             itemContent={(index, ti) => (
               <TripListEntry
                 ti={ti}

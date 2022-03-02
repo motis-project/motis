@@ -195,7 +195,7 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
       MsgContent_PaxMonFilterTripsResponse,
       CreatePaxMonFilterTripsResponse(
           mc, total_matching_trips, selected_trips.size(), remaining_trips,
-          total_critical_sections,
+          skip_first + selected_trips.size(), total_critical_sections,
           mc.CreateVector(utl::to_vec(
               selected_trips,
               [&](trip_info const& ti) {

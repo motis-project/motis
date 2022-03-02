@@ -123,6 +123,7 @@ export interface PaxMonFilterTripsResponse {
   total_matching_trips: number;
   filtered_trips: number;
   remaining_trips: number;
+  next_skip: number;
   total_critical_sections: number;
   trips: PaxMonFilteredTripInfo[];
 }
