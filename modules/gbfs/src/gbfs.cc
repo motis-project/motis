@@ -10,6 +10,7 @@
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/conv/position_conv.h"
+#include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_http_req.h"
 #include "motis/module/context/motis_parallel_for.h"
 #include "motis/module/event_collector.h"
@@ -89,22 +90,34 @@ struct gbfs::impl {
 
   msg_ptr make_ppr_request(geo::latlng const& one,
                            std::vector<geo::latlng> const& many,
-                           ppr::SearchOptions const* search_options,
-                           SearchDir dir) {
-    assert(search_options != nullptr);
-    Position const fbs_position{pos.lat_, pos.lng_};
-
+                           SearchDir const dir, double const max_duration) {
+    auto const fbs_pos = to_fbs(one);
     message_creator mc;
-    mc.create_and_finish(
-        MsgContent_FootRoutingRequest,
-        CreateFootRoutingRequest(
-            mc, &fbs_position,
-            mc.CreateVectorOfStructs(utl::to_vec(
-                *stations, [](auto&& station) { return *station->pos(); })),
-            motis_copy_table(SearchOptions, mc, search_options), dir, false,
-            false, false)
-            .Union(),
-        "/ppr/route");
+    mc.create_and_finish(MsgContent_FootRoutingRequest,
+                         CreateFootRoutingRequest(
+                             mc, &fbs_pos,
+                             mc.CreateVectorOfStructs(utl::to_vec(
+                                 many, [](auto&& p) { return to_fbs(p); })),
+                             ppr::CreateSearchOptions(
+                                 mc, mc.CreateString("default"), max_duration),
+                             dir, false, false, false)
+                             .Union(),
+                         "/ppr/route");
+    return make_msg(mc);
+  }
+
+  msg_ptr make_osrm_request(geo::latlng const& one,
+                            std::vector<geo::latlng> const& many,
+                            SearchDir direction) {
+    auto const fbs_pos = to_fbs(one);
+    message_creator mc;
+    mc.create_and_finish(MsgContent_OSRMOneToManyRequest,
+                         osrm::CreateOSRMOneToManyRequest(
+                             mc, mc.CreateString("bike"), direction, &fbs_pos,
+                             mc.CreateVectorOfStructs(utl::to_vec(
+                                 many, [](auto&& p) { return to_fbs(p); })))
+                             .Union(),
+                         "/osrm/one_to_many");
     return make_msg(mc);
   }
 
@@ -119,15 +132,22 @@ struct gbfs::impl {
     auto const max_total_dist = max_walk_dist + max_bike_dist;
 
     auto const x = from_fbs(req->x());
+
     auto const p = pt_stations_rtree_.in_radius(x, max_total_dist);
+    auto const p_pos = utl::to_vec(p, [&](auto const idx) {
+      auto const& s = *sched_.stations_.at(idx);
+      return geo::latlng{s.lat(), s.lng()};
+    });
+
     auto const sx = stations_rtree_.in_radius(x, max_walk_dist);
     auto const sp = std::accumulate(
-        begin(p), end(p), std::vector<size_t>{},
-        [&](std::vector<size_t> acc, size_t const idx) {
-          auto const* s = sched_.stations_.at(idx).get();
-          return utl::concat(acc, stations_rtree_.in_radius(
-                                      {s->lat(), s->lng()}, max_walk_dist));
+        begin(p_pos), end(p_pos), std::vector<size_t>{},
+        [&](std::vector<size_t> acc, geo::latlng const& pt_station_pos) {
+          return utl::concat(
+              acc, stations_rtree_.in_radius(pt_station_pos, max_walk_dist));
         });
+    auto const sp_pos =
+        utl::to_vec(sp, [&](auto const idx) { return stations_.at(idx).pos_; });
     auto const b = [&]() {
       if (req->dir() == SearchDir_Forward) {
         return free_bikes_rtree_.in_radius(x, max_walk_dist);
@@ -145,12 +165,34 @@ struct gbfs::impl {
     // FWD
     //   free-float FWD: x --walk--> [b] --bike--> [p]
     //   station FWD: x --walk--> [sx] --bike--> [sp] --walk--> [p]
+    auto b_and_sx = utl::to_vec(
+        b, [&](auto const idx) { return free_bikes_.at(idx).pos_; });
+    utl::concat(b_and_sx, utl::to_vec(sx, [&](auto const idx) {
+                  return stations_.at(idx).pos_;
+                }));
+
+    auto const f_first_mile_walks = motis_call(make_ppr_request(
+        x, b_and_sx, SearchDir_Forward, req->max_foot_duration()));
+    auto const f_freefloat_bike_rides =
+        utl::to_vec(b, [&](auto const& free_bike_idx) {
+          return motis_call(make_osrm_request(
+              free_bikes_.at(free_bike_idx).pos_, p_pos, SearchDir_Forward));
+        });
+    auto const f_sx_to_sp_bike_rides =
+        utl::to_vec(sx, [&](auto const& sx_index) {
+          return motis_call(make_osrm_request(stations_.at(sx_index).pos_,
+                                              sp_pos, SearchDir_Forward));
+        });
+    auto const f_last_mile_walks = utl::to_vec(sp_pos, [&](auto const& pos) {
+      return motis_call(make_ppr_request(pos, p_pos, SearchDir_Forward,
+                                         req->max_foot_duration()));
+    });
 
     // BWD
     //   free-float BWD: [p] --walk--> [b] --bike--> x
     //   station BWD: [p] --walk--> [sp] --bike--> [sx] --walk--> x
 
-    auto const
+    return {};
   }
 
   config const& config_;
