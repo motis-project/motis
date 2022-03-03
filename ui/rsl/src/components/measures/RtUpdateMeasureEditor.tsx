@@ -116,7 +116,7 @@ function RtUpdateMeasureEditor({
 
   return (
     <div>
-      <div>
+      <div className="mb-4">
         <div className={labelClass}>Zug</div>
         <div>
           <TripPicker

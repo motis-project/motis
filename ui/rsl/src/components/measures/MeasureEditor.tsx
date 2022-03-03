@@ -4,6 +4,7 @@ import { useUpdateAtom } from "jotai/utils";
 import { useMemo, useState } from "react";
 
 import { MeasureUnion } from "@/data/measures";
+import { selectedTripAtom } from "@/data/selectedTrip";
 
 import RtUpdateMeasureEditor from "@/components/measures/RtUpdateMeasureEditor";
 import SharedDataEditor from "@/components/measures/SharedDataEditor";
@@ -133,13 +134,14 @@ function EmptyMeasureEditor({
   deleteMeasure,
 }: MeasureEditorProps) {
   const setMeasure = useUpdateAtom(measureAtom);
+  const [selectedTrip] = useAtom(selectedTripAtom);
 
   const setTripLoadInfo = () => {
     setMeasure((m) => {
       return {
         type: "TripLoadInfoMeasure",
         shared: m.shared,
-        data: { trip: undefined, level: "Unknown" },
+        data: { trip: selectedTrip, level: "Unknown" },
       };
     });
   };
@@ -151,7 +153,7 @@ function EmptyMeasureEditor({
         shared: m.shared,
         data: {
           planned_destination: undefined,
-          recommended_trip: undefined,
+          recommended_trip: selectedTrip,
           interchange_station: undefined,
         },
       };

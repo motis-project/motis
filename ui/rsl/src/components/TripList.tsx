@@ -5,7 +5,7 @@ import { Fragment, useCallback, useState } from "react";
 import { useInfiniteQuery } from "react-query";
 import { Virtuoso } from "react-virtuoso";
 
-import { TripId } from "@/api/protocol/motis";
+import { TripId, TripServiceInfo } from "@/api/protocol/motis";
 import {
   PaxMonFilterTripsRequest,
   PaxMonFilteredTripInfo,
@@ -116,7 +116,7 @@ function TripList(): JSX.Element {
     ? data.pages.flatMap((p) => p.trips)
     : [];
 
-  const selectedTripId = JSON.stringify(selectedTrip);
+  const selectedTripId = JSON.stringify(selectedTrip?.trip);
 
   return (
     <div className="h-full flex flex-col">
@@ -204,7 +204,7 @@ function TripList(): JSX.Element {
 type TripListEntryProps = {
   ti: PaxMonFilteredTripInfo;
   selectedTripId: string | undefined;
-  setSelectedTrip: (tripId: TripId) => void;
+  setSelectedTrip: (tsi: TripServiceInfo) => void;
 };
 
 function TripListEntry({
@@ -271,7 +271,7 @@ function TripListEntry({
           "cursor-pointer p-1 rounded",
           isSelected ? "bg-db-cool-gray-300 shadow-md" : "bg-db-cool-gray-100"
         )}
-        onClick={() => setSelectedTrip(ti.tsi.trip)}
+        onClick={() => setSelectedTrip(ti.tsi)}
       >
         <div className="flex gap-4 pb-1">
           <div className="flex flex-col">

@@ -10,7 +10,7 @@ function MainSection(): JSX.Element {
   return (
     <>
       {selectedTrip !== undefined ? (
-        <TripDetails tripId={selectedTrip} />
+        <TripDetails tripId={selectedTrip.trip} />
       ) : null}
     </>
   );
