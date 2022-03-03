@@ -220,6 +220,7 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
                                 std::tie(rhs.max_load_, rhs.max_excess_pax_,
                                          rhs.cumulative_excess_pax_);
                        });
+      break;
     case PaxMonFilterTripsSortOrder_EarliestCritical:
       std::stable_sort(
           begin(selected_trips), end(selected_trips),
