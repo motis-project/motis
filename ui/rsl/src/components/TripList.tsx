@@ -12,6 +12,7 @@ import {
 } from "@/api/protocol/motis/paxmon";
 
 import { sendPaxMonFilterTripsRequest } from "@/api/paxmon";
+import { ServiceClasses } from "@/api/serviceClasses";
 
 import { formatPercent } from "@/data/numberFormat";
 import { selectedTripAtom } from "@/data/selectedTrip";
@@ -25,7 +26,8 @@ import MiniTripLoadGraph from "@/components/MiniTripLoadGraph";
 
 type FilterOption =
   | "MostCritical"
-  | "ByMostCritical"
+  | "ByMaxLoad"
+  | "ByEarliestCritical"
   | "ByTrainNr"
   | "ByDeparture"
   | "ByExpectedPax";
@@ -34,7 +36,11 @@ type LabeledFilterOption = { option: FilterOption; label: string };
 
 const filterOptions: Array<LabeledFilterOption> = [
   { option: "MostCritical", label: "Kritische Züge" },
-  { option: "ByMostCritical", label: "Alle Züge (nach Auslastung)" },
+  { option: "ByMaxLoad", label: "Alle Züge (nach Auslastung)" },
+  {
+    option: "ByEarliestCritical",
+    label: "Alle Züge (nach erstem kritischen Abschnitt)",
+  },
   { option: "ByDeparture", label: "Alle Züge (nach Abfahrtszeit)" },
   { option: "ByTrainNr", label: "Alle Züge (nach Zugnummer)" },
   { option: "ByExpectedPax", label: "Alle Züge (nach Buchungen)" },
@@ -58,15 +64,19 @@ function getFilterTripsRequest(
     filter_interval: { begin: 0, end: 0 },
     filter_by_train_nr: false,
     filter_train_nr: 0,
-    filter_by_service_class: false,
-    filter_service_classes: [],
+    filter_by_service_class: true,
+    filter_service_classes: [ServiceClasses.ICE, ServiceClasses.ICE],
   };
 
   switch (filterOption) {
     case "MostCritical":
       req.include_load_threshold = 1.0;
       break;
-    case "ByMostCritical":
+    case "ByMaxLoad":
+      req.sort_by = "MaxLoad";
+      break;
+    case "ByEarliestCritical":
+      req.sort_by = "EarliestCritical";
       break;
     case "ByTrainNr":
       req.sort_by = "TrainNr";
