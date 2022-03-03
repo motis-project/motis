@@ -287,27 +287,30 @@ function initPorts(apiEndpoint, tilesEndpoint, initialPermalink) {
     const padding = { top: 96, right: 32, bottom: 96, left: 640 };
 
     mapService.mapFlyTo = (function (opt) {
-      var map = window.elmMaps[opt.mapId];
+      try {
+        var map = window.elmMaps[opt.mapId];
 
-      const camOptions = opt.animate
-        ? { maxZoom: 12, padding }
-        : { maxZoom: 12 };
+        const camOptions = opt.animate
+          ? { maxZoom: 12, padding }
+          : { maxZoom: 12 };
 
-      const options = map.cameraForBounds(
-        new mapboxgl.LngLatBounds([opt.lng, opt.lat], [opt.lng, opt.lat]),
-        camOptions
-      );
-      if (opt.zoom) {
-        options.zoom = opt.zoom;
+        const options = map.cameraForBounds(
+          new mapboxgl.LngLatBounds([opt.lng, opt.lat], [opt.lng, opt.lat]),
+          camOptions
+        );
+        if (opt.zoom) {
+          options.zoom = opt.zoom;
+        }
+        options.pitch = opt.pitch ? opt.pitch : 0;
+        options.bearing = opt.bearing ? opt.bearing : 0;
+
+        if (opt.animate) {
+          map.flyTo(options);
+        } else {
+          map.jumpTo(options);
+        }
       }
-      options.pitch = opt.pitch ? opt.pitch : 0;
-      options.bearing = opt.bearing ? opt.bearing : 0;
-
-      if (opt.animate) {
-        map.flyTo(options);
-      } else {
-        map.jumpTo(options);
-      }
+      catch(e) {}
     });
 
     mapService.mapFitBounds = (function (opt) {

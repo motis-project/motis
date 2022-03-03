@@ -150,7 +150,6 @@ export default defineComponent({
             });
           }
           else {
-            console.log(this.$store.state.mapConnections[this.index].walks);
             this.$mapService.mapSetDetailFilter({
               interchangeStations: this.$store.state.mapConnections[this.index].stations,
               trains: this.$store.state.mapConnections[this.index].trains,

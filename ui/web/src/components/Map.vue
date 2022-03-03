@@ -114,7 +114,6 @@ export default defineComponent({
   },
   watch: {
     radioState() {
-      console.log(this.radioState);
       this.$mapService.mapShowTrains(this.radioState !== RadioState.None);
       if(this.radioState !== RadioState.None) {
         this.$mapService.mapUseTrainClassColors(this.radioState === RadioState.Class);
