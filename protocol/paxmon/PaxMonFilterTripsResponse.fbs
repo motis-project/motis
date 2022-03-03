@@ -12,6 +12,7 @@ table PaxMonFilteredTripInfo {
 
   max_excess_pax: uint;
   cumulative_excess_pax: uint;
+  max_load: float;
 
   max_expected_pax: uint;
 

@@ -83,7 +83,9 @@ export type PaxMonFilterTripsSortOrder =
   | "MostCritical"
   | "FirstDeparture"
   | "ExpectedPax"
-  | "TrainNr";
+  | "TrainNr"
+  | "MaxLoad"
+  | "EarliestCritical";
 
 // paxmon/PaxMonFilterTripsRequest.fbs
 export type PaxMonFilterTripsTimeFilter =
@@ -104,6 +106,10 @@ export interface PaxMonFilterTripsRequest {
   skip_first: number;
   filter_by_time: PaxMonFilterTripsTimeFilter;
   filter_interval: Interval;
+  filter_by_train_nr: boolean;
+  filter_train_nr: number;
+  filter_by_service_class: boolean;
+  filter_service_classes: number[];
 }
 
 // paxmon/PaxMonFilterTripsResponse.fbs
@@ -114,6 +120,7 @@ export interface PaxMonFilteredTripInfo {
   crowded_sections: number;
   max_excess_pax: number;
   cumulative_excess_pax: number;
+  max_load: number;
   max_expected_pax: number;
   edges: PaxMonEdgeLoadInfo[];
 }

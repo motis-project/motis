@@ -6,7 +6,9 @@ enum PaxMonFilterTripsSortOrder : byte {
   MostCritical, // most critical trip first
   FirstDeparture, // earliest trip first
   ExpectedPax, // trip with most expected passengers first
-  TrainNr // lowest train number first
+  TrainNr, // lowest train number first
+  MaxLoad, // trips with highest load first
+  EarliestCritical // earliest critical trip first
 }
 
 enum PaxMonFilterTripsTimeFilter : byte {
@@ -34,4 +36,12 @@ table PaxMonFilterTripsRequest {
   // filter trips by time
   filter_by_time: PaxMonFilterTripsTimeFilter;
   filter_interval: Interval;
+
+  // filter by train nr
+  filter_by_train_nr: bool;
+  filter_train_nr: uint;
+
+  // filter by service class
+  filter_by_service_class: bool;
+  filter_service_classes: [uint];
 }

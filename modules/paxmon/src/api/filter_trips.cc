@@ -31,6 +31,10 @@ struct trip_info {
   unsigned max_excess_pax_{};
   unsigned cumulative_excess_pax_{};
 
+  float max_load_{};
+  float first_critical_load_{};
+  time first_critical_time_{INVALID_TIME};
+
   std::uint16_t max_expected_pax_{};
 
   std::vector<edge_load_info> edge_load_infos_{};
@@ -59,33 +63,62 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
       unix_to_motistime(sched.schedule_begin_, req->filter_interval()->begin());
   auto const filter_interval_end =
       unix_to_motistime(sched.schedule_begin_, req->filter_interval()->end());
+  auto const filter_by_train_nr = req->filter_by_train_nr();
+  auto const filter_train_nr = req->filter_train_nr();
+  auto const filter_by_service_class = req->filter_by_service_class();
+  auto const filter_service_classes = utl::to_vec(
+      *req->filter_service_classes(),
+      [](auto const& sc) { return static_cast<service_class>(sc); });
+
+  auto const trip_filters_active =
+      (filter_by_time != PaxMonFilterTripsTimeFilter_NoFilter) ||
+      filter_by_train_nr || filter_by_service_class;
 
   auto total_critical_sections = 0ULL;
   std::vector<trip_info> selected_trips;
 
   for (auto const& [trp_idx, tdi] : uv.trip_data_.mapping_) {
     auto ti = trip_info{trp_idx};
+    auto const trip_edges = uv.trip_data_.edges(tdi);
     auto include = false;
 
-    if (filter_by_time != PaxMonFilterTripsTimeFilter_NoFilter) {
+    if (trip_edges.empty()) {
+      continue;
+    }
+
+    if (trip_filters_active) {
       auto const* trp = get_trip(sched, trp_idx);
       auto const dep = trp->id_.primary_.get_time();
+
+      if (filter_by_train_nr &&
+          trp->id_.primary_.get_train_nr() != filter_train_nr) {
+        continue;
+      }
+
       if (filter_by_time == PaxMonFilterTripsTimeFilter_DepartureTime) {
         if (dep < filter_interval_begin || dep >= filter_interval_end) {
           continue;
         }
-      } else /* if (filter_by_time ==
-                PaxMonFilterTripsTimeFilter_DepartureOrArrivalTime) */
-      {
+      } else if (filter_by_time ==
+                 PaxMonFilterTripsTimeFilter_DepartureOrArrivalTime) {
         auto const arr = trp->id_.secondary_.target_time_;
         if ((dep < filter_interval_begin || dep >= filter_interval_end) &&
             (arr < filter_interval_begin || arr >= filter_interval_end)) {
           continue;
         }
       }
+
+      if (filter_by_service_class) {
+        auto const trip_class = trip_edges[0].get(uv)->clasz_;
+        if (std::find(begin(filter_service_classes),
+                      end(filter_service_classes),
+                      trip_class) == end(filter_service_classes)) {
+          continue;
+        }
+      }
     }
 
-    for (auto const& ei : uv.trip_data_.edges(tdi)) {
+    for (auto const& ei : trip_edges) {
       auto const* e = ei.get(uv);
       if (!e->is_trip()) {
         continue;
@@ -121,9 +154,16 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
           load_factor_possibly_ge(cdf, capacity, include_load_threshold)) {
         include = true;
       }
+      auto const load =
+          static_cast<float>(pax_limits.max_) / static_cast<float>(capacity);
+      ti.max_load_ = std::max(ti.max_load_, load);
       if (load_factor_possibly_ge(cdf, capacity, critical_load_threshold)) {
         ++ti.critical_sections_;
         ++total_critical_sections;
+        if (ti.first_critical_time_ == INVALID_TIME) {
+          ti.first_critical_load_ = load;
+          ti.first_critical_time_ = e->from(uv)->current_time();
+        }
       } else if (load_factor_possibly_ge(cdf, capacity,
                                          crowded_load_threshold)) {
         ++ti.crowded_sections_;
@@ -172,6 +212,28 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
                                 rhs_trp->id_.primary_.train_nr_;
                        });
       break;
+    case PaxMonFilterTripsSortOrder_MaxLoad:
+      std::stable_sort(begin(selected_trips), end(selected_trips),
+                       [](trip_info const& lhs, trip_info const& rhs) {
+                         return std::tie(lhs.max_load_, lhs.max_excess_pax_,
+                                         lhs.cumulative_excess_pax_) >
+                                std::tie(rhs.max_load_, rhs.max_excess_pax_,
+                                         rhs.cumulative_excess_pax_);
+                       });
+    case PaxMonFilterTripsSortOrder_EarliestCritical:
+      std::stable_sort(
+          begin(selected_trips), end(selected_trips),
+          [](trip_info const& lhs, trip_info const& rhs) {
+            if (lhs.first_critical_time_ < rhs.first_critical_time_) {
+              return true;
+            } else {
+              return std::tie(lhs.first_critical_load_, lhs.max_load_,
+                              lhs.max_excess_pax_, lhs.cumulative_excess_pax_) >
+                     std::tie(rhs.first_critical_load_, rhs.max_load_,
+                              rhs.max_excess_pax_, rhs.cumulative_excess_pax_);
+            }
+          });
+      break;
     default: break;
   }
 
@@ -205,7 +267,8 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
                                              get_trip(sched, ti.trip_idx_)),
                     ti.section_count_, ti.critical_sections_,
                     ti.crowded_sections_, ti.max_excess_pax_,
-                    ti.cumulative_excess_pax_, ti.max_expected_pax_,
+                    ti.cumulative_excess_pax_, ti.max_load_,
+                    ti.max_expected_pax_,
                     mc.CreateVector(utl::to_vec(
                         ti.edge_load_infos_, [&](edge_load_info const& eli) {
                           return to_fbs(mc, sched, uv, eli);

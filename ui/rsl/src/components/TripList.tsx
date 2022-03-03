@@ -5,16 +5,13 @@ import { Fragment, useCallback, useState } from "react";
 import { useInfiniteQuery } from "react-query";
 import { Virtuoso } from "react-virtuoso";
 
-import { TripId, TripServiceInfo } from "@/api/protocol/motis";
+import { TripServiceInfo } from "@/api/protocol/motis";
 import {
   PaxMonFilterTripsRequest,
   PaxMonFilteredTripInfo,
 } from "@/api/protocol/motis/paxmon";
 
-import {
-  sendPaxMonFilterTripsRequest,
-  usePaxMonFilterTripsRequest,
-} from "@/api/paxmon";
+import { sendPaxMonFilterTripsRequest } from "@/api/paxmon";
 
 import { formatPercent } from "@/data/numberFormat";
 import { selectedTripAtom } from "@/data/selectedTrip";
@@ -28,6 +25,7 @@ import MiniTripLoadGraph from "@/components/MiniTripLoadGraph";
 
 type FilterOption =
   | "MostCritical"
+  | "ByMostCritical"
   | "ByTrainNr"
   | "ByDeparture"
   | "ByExpectedPax";
@@ -36,6 +34,7 @@ type LabeledFilterOption = { option: FilterOption; label: string };
 
 const filterOptions: Array<LabeledFilterOption> = [
   { option: "MostCritical", label: "Kritische Züge" },
+  { option: "ByMostCritical", label: "Alle Züge (nach Auslastung)" },
   { option: "ByDeparture", label: "Alle Züge (nach Abfahrtszeit)" },
   { option: "ByTrainNr", label: "Alle Züge (nach Zugnummer)" },
   { option: "ByExpectedPax", label: "Alle Züge (nach Buchungen)" },
@@ -57,11 +56,17 @@ function getFilterTripsRequest(
     skip_first: 0,
     filter_by_time: "NoFilter",
     filter_interval: { begin: 0, end: 0 },
+    filter_by_train_nr: false,
+    filter_train_nr: 0,
+    filter_by_service_class: false,
+    filter_service_classes: [],
   };
 
   switch (filterOption) {
     case "MostCritical":
       req.include_load_threshold = 1.0;
+      break;
+    case "ByMostCritical":
       break;
     case "ByTrainNr":
       req.sort_by = "TrainNr";
