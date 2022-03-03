@@ -1,8 +1,6 @@
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
-import Index from '..';
 import { Transport, TransportInfo, Connection, Stop, TripId, FootRouting, Station } from '../Types/ConnectionTypes';
-import { Mode } from '../Types/IntermodalRoutingTypes';
 import { getFromLocalStorage, ModeLocalStorage } from '../App/LocalStorage';
 import { Address } from '../Types/SuggestionTypes';
 
@@ -11,6 +9,15 @@ const isTransportInfo = (transport: Transport) => {
 }
 
 let arrLength = 0;
+
+export const duration = (start: number, dest: number) => {
+    let difference = moment.unix(dest).diff(moment.unix(start), 'minutes')
+    let hours = Math.floor(difference / 60)
+    let minutes = difference % 60
+    let returnString = (hours > 0) ? hours + 'h ' + minutes + 'min' : minutes + 'min'
+
+    return returnString
+}
 
 const isArrLengthOne = (connection: Transport[]) => {
     arrLength = connection.length;
@@ -51,7 +58,7 @@ const stopGenerator = (stops: Stop[]) => {
                 <div className='timeline train-color-border bg'></div>
                 <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
                 <div className='time'>
-                    <span className='past'>{displayTime(stops[index].arrival.time)}</span>
+                    <span className='past'>{moment.unix(stops[index].arrival.time).format('HH:mm')}</span>
                 </div>
                 <div className='delay'></div>
                 <div className='station'>
@@ -74,7 +81,6 @@ const getWalkTime = (latStart: number, lngStart: number, latDest: number, lngDes
         })
     }
 }
-
 
 const classToId = (classz: Number) => {
     switch (classz) {
@@ -117,51 +123,30 @@ const classToId = (classz: Number) => {
     }
 }
 
-
-const displayTime = (posixTime) => {
-    let today = new Date(posixTime * 1000);
-    let h = String(today.getHours());
-    let m = String(today.getMinutes()).padStart(2, '0');
-    return h + ':' + m;
-}
-
-const displayDuration = (posixTime) => {
-    let today = new Date(posixTime * 1000);
-    let h = String(today.getUTCHours());
-    let m = String(today.getUTCMinutes()).padStart(2, '0');
-    if (h === '0') {
-        return m + 'min';
-    } else {
-        return h + 'h ' + m + 'min';
-    }
-}
-
-
-const fetchFoot = async(connection: Connection, toModes: ModeLocalStorage, setWalkTimes: React.Dispatch<React.SetStateAction<number[]>>) => {
+const fetchFoot = async (connection: Connection, toModes: ModeLocalStorage, setWalkTimes: React.Dispatch<React.SetStateAction<number[]>>) => {
     let walks = [];
     const promises = connection.transports.map((transport: Transport) => {
-        if (transport.move_type === 'Walk'){
+        if (transport.move_type === 'Walk') {
             let requestURL = 'https://europe.motis-project.de/?elm=FootRoutingRequest';
             return fetch(requestURL, getWalkTime(
                 connection.stops[transport.move.range.from].station.pos.lat,
                 connection.stops[transport.move.range.from].station.pos.lng,
                 connection.stops[transport.move.range.to].station.pos.lat,
-                connection.stops[transport.move.range.to].station.pos.lng, toModes.walk.search_profile.max_duration*60, toModes.walk.search_profile.profile, false, true, true))
+                connection.stops[transport.move.range.to].station.pos.lng, toModes.walk.search_profile.max_duration * 60, toModes.walk.search_profile.profile, false, true, true))
                 .then(res => res.json())
                 .then((res: FootRouting) => {
                     console.log('Foot Request successful');
                     console.log(res);
                     walks.push(res.content.routes[0].routes[0].duration);
                 });
-            }
-        })
+        }
+    })
     Promise.all(promises).then(results => {
         setWalkTimes(walks);
         console.log("Promise.all")
         console.log(walks);
     })
 }
-
 
 export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>> }> = (props) => {
 
@@ -204,7 +189,7 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
     );
 };
 
-export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean}> = (props) => {
+export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean }> = (props) => {
 
     const [isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed] = useState<Boolean>(true);
 
@@ -219,130 +204,129 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
     console.log(props.detailViewHidden);
 
     useEffect(() => {
-        if (props.connection.transports.length !== props.connection.trips.length){
+        if (props.connection.transports.length !== props.connection.trips.length) {
             fetchFoot(props.connection, toModes, setWalkTimes)
-            }
+        }
     }, [props.connection]);
 
     return (
-            <>
-                {isArrLengthOne(props.connection.transports) ?
-                    (props.connection.transports[0].move_type !== 'Walk') ?
-                        <div className={'train-detail train-class-' + (props.connection.transports[0].move as TransportInfo).clasz}>
-                            <div className='top-border'></div>
-                            <div>
-                                <div className={'train-box train-class-' + (props.connection.transports[0].move as TransportInfo).clasz + ' with-tooltip'}
-                                    data-tooltip={'Betreiber: DB Regio AG S-Bahn Rhein-Main \nZugnummer: ' + (props.connection.transports[0].move as TransportInfo).train_nr} onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(props.connection.trips[0].id); }}>
-                                    <svg className='train-icon'>
-                                        <use xlinkHref={classToId((props.connection.transports[0].move as TransportInfo).clasz)}></use>
-                                    </svg>
-                                    <span className='train-name'>{(props.connection.transports[0].move as TransportInfo).name}</span>
-                                </div>
+        <>
+            {isArrLengthOne(props.connection.transports) ?
+                (props.connection.transports[0].move_type !== 'Walk') ?
+                    <div className={'train-detail train-class-' + (props.connection.transports[0].move as TransportInfo).clasz}>
+                        <div className='top-border'></div>
+                        <div>
+                            <div className={'train-box train-class-' + (props.connection.transports[0].move as TransportInfo).clasz + ' with-tooltip'}
+                                data-tooltip={'Betreiber: DB Regio AG S-Bahn Rhein-Main \nZugnummer: ' + (props.connection.transports[0].move as TransportInfo).train_nr} onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(props.connection.trips[0].id); }}>
+                                <svg className='train-icon'>
+                                    <use xlinkHref={classToId((props.connection.transports[0].move as TransportInfo).clasz)}></use>
+                                </svg>
+                                <span className='train-name'>{(props.connection.transports[0].move as TransportInfo).name}</span>
                             </div>
-                            <div className='first-stop'>
-                                <div className='stop past'>
-                                    <div className='timeline train-color-border'></div>
-                                    <div className='time'>
-                                        <span className='past'>{displayTime(props.connection.stops[0].departure.time)}</span>
-                                    </div>
-                                    <div className='delay'></div>
-                                    <div className='station'>
-                                        <span>{props.connection.stops[0].station.name}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className='direction past'>
+                        </div>
+                        <div className='first-stop'>
+                            <div className='stop past'>
                                 <div className='timeline train-color-border'></div>
-                                <i className='icon'>arrow_forward</i>
-                                {(props.connection.transports[0].move as TransportInfo).direction}
-                            </div>
-                            <div className='intermediate-stops-toggle clickable past' onClick={() => setIsIntermediateStopsCollapsed(!isIntermediateStopsCollapsed)}>
-                                <div className='timeline-container'>
-                                    <div className='timeline train-color-border bg'></div>
-                                    <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
+                                <div className='time'>
+                                    <span className='past'>{moment.unix(props.connection.stops[0].departure.time).format('HH:mm')}</span>
                                 </div>
-                                <div className='expand-icon'>
-                                    <i className='icon'>expand_less</i>
-                                    <i className='icon'>expand_more</i>
-                                </div>
-                                <span>{((props.connection.transports[0].move as TransportInfo).range.to - (props.connection.transports[0].move as TransportInfo).range.from) === 1 ?
-                                    'Fahrt ohne Zwischenhalt (' + displayDuration(new Date(props.connection.stops[props.connection.stops.length - 1].arrival.time).getTime() - new Date(props.connection.stops[0].departure.time).getTime()) + ')'
-                                    :
-                                    'Fahrt ' + ((props.connection.transports[0].move as TransportInfo).range.to - (props.connection.transports[0].move as TransportInfo).range.from) + ' Stationen (' + displayDuration(new Date(props.connection.stops[props.connection.stops.length - 1].arrival.time).getTime() - new Date(props.connection.stops[0].departure.time).getTime()) + ')'}</span>
-                            </div>
-                            <div className={isIntermediateStopsCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
-                                {stopGenerator(props.connection.stops)}
-                            </div>
-                            <div className='last-stop'>
-                                <div className='stop past'>
-                                    <div className='timeline train-color-border'></div>
-                                    <div className='time'>
-                                        <span className='past'>{displayTime(props.connection.stops[props.connection.stops.length - 1].arrival.time)}</span>
-                                    </div>
-                                    <div className='delay'></div>
-                                    <div className='station'>
-                                        <span>{props.connection.stops[props.connection.stops.length - 1].station.name}</span>
-                                    </div>
+                                <div className='delay'></div>
+                                <div className='station'>
+                                    <span>{props.connection.stops[0].station.name}</span>
                                 </div>
                             </div>
                         </div>
-                        :
-                        <div className="train-detail train-class-walk initial-walk">
-                            <div className="top-border"></div>
-                            <div>
-                                <div className="train-box train-class-walk">
-                                    <svg className="train-icon">
-                                        <use xlinkHref="#walk"></use>
-                                    </svg>
-                                </div>
+                        <div className='direction past'>
+                            <div className='timeline train-color-border'></div>
+                            <i className='icon'>arrow_forward</i>
+                            {(props.connection.transports[0].move as TransportInfo).direction}
+                        </div>
+                        <div className='intermediate-stops-toggle clickable past' onClick={() => setIsIntermediateStopsCollapsed(!isIntermediateStopsCollapsed)}>
+                            <div className='timeline-container'>
+                                <div className='timeline train-color-border bg'></div>
+                                <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
                             </div>
-                            <div className="first-stop">
-                                <div className="stop past">
-                                    <div className="timeline train-color-border"></div>
-                                    <div className="time">
-                                        <span className="past">{displayTime(props.connection.stops[0].departure.time)}</span>
-                                    </div>
-                                    <div className="delay"></div>
-                                    <div className="station">
-                                        <span className="virtual">{start.name}</span>
-                                    </div>
-                                </div>
+                            <div className='expand-icon'>
+                                <i className='icon'>expand_less</i>
+                                <i className='icon'>expand_more</i>
                             </div>
-                            <div className="intermediate-stops-toggle">
-                                <div className="timeline-container">
-                                    <div className="timeline train-color-border bg"></div>
-                                    <div className="timeline train-color-border progress" style={{ height: '100%' }}></div>
+                            <span>{((props.connection.transports[0].move as TransportInfo).range.to - (props.connection.transports[0].move as TransportInfo).range.from) === 1 ?
+                                'Fahrt ohne Zwischenhalt (' + duration(props.connection.stops[0].departure.time, props.connection.stops[props.connection.stops.length - 1].arrival.time) + ')'
+                                :
+                                'Fahrt ' + ((props.connection.transports[0].move as TransportInfo).range.to - (props.connection.transports[0].move as TransportInfo).range.from) + ' Stationen (' + duration(props.connection.stops[0].departure.time, props.connection.stops[props.connection.stops.length - 1].arrival.time) + ')'}</span>
+                        </div>
+                        <div className={isIntermediateStopsCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
+                            {stopGenerator(props.connection.stops)}
+                        </div>
+                        <div className='last-stop'>
+                            <div className='stop past'>
+                                <div className='timeline train-color-border'></div>
+                                <div className='time'>
+                                    <span className='past'>{moment.unix(props.connection.stops[props.connection.stops.length - 1].arrival.time).format('HH:mm')}</span>
                                 </div>
-                                <div className="expand-icon"></div>
-                                <span>{'Fußweg (' + moment.unix(props.connection.stops[1].arrival.time).from(moment.unix(props.connection.stops[0].departure.time)) + ' min)'}</span>
-                            </div>
-                            <div className="last-stop">
-                                <div className="stop past">
-                                    <div className="timeline train-color-border"></div>
-                                    <div className="time">
-                                        <span className="past">{displayTime(props.connection.stops[props.connection.stops.length - 1].arrival.time)}</span>
-                                    </div>
-                                    <div className="delay"></div>
-                                    <div className="station">
-                                        <span className="virtual">{destination.name}</span>
-                                    </div>
+                                <div className='delay'></div>
+                                <div className='station'>
+                                    <span>{props.connection.stops[props.connection.stops.length - 1].station.name}</span>
                                 </div>
                             </div>
                         </div>
+                    </div>
                     :
-                    <TransportDivs
-                        connection={props.connection}
-                        isCollapsed={isIntermediateStopsCollapsed}
-                        collapseSetter={setIsIntermediateStopsCollapsed}
-                        setSubOverlayHidden={props.setSubOverlayHidden}
-                        setTrainSelected={props.setTrainSelected}
-                        walkTimes={walkTimes}
-                         />
-                        }           
-            </>
+                    <div className="train-detail train-class-walk initial-walk">
+                        <div className="top-border"></div>
+                        <div>
+                            <div className="train-box train-class-walk">
+                                <svg className="train-icon">
+                                    <use xlinkHref="#walk"></use>
+                                </svg>
+                            </div>
+                        </div>
+                        <div className="first-stop">
+                            <div className="stop past">
+                                <div className="timeline train-color-border"></div>
+                                <div className="time">
+                                    <span className="past">{moment.unix(props.connection.stops[0].departure.time).format('HH:mm')}</span>
+                                </div>
+                                <div className="delay"></div>
+                                <div className="station">
+                                    <span className="virtual">{start.name}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="intermediate-stops-toggle">
+                            <div className="timeline-container">
+                                <div className="timeline train-color-border bg"></div>
+                                <div className="timeline train-color-border progress" style={{ height: '100%' }}></div>
+                            </div>
+                            <div className="expand-icon"></div>
+                            <span>{'Fußweg (' + duration(props.connection.stops[0].departure.time, props.connection.stops[1].arrival.time) + ' min)'}</span>
+                        </div>
+                        <div className="last-stop">
+                            <div className="stop past">
+                                <div className="timeline train-color-border"></div>
+                                <div className="time">
+                                    <span className="past">{moment.unix(props.connection.stops[props.connection.stops.length - 1].arrival.time).format('HH:mm')}</span>
+                                </div>
+                                <div className="delay"></div>
+                                <div className="station">
+                                    <span className="virtual">{destination.name}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                :
+                <TransportDivs
+                    connection={props.connection}
+                    isCollapsed={isIntermediateStopsCollapsed}
+                    collapseSetter={setIsIntermediateStopsCollapsed}
+                    setSubOverlayHidden={props.setSubOverlayHidden}
+                    setTrainSelected={props.setTrainSelected}
+                    walkTimes={walkTimes}
+                />
+            }
+        </>
     );
 };
-
 
 interface temp {
     hasWalk: boolean,
@@ -350,8 +334,7 @@ interface temp {
     transport: Transport,
 }
 
-
-const TransportDivs: React.FC<{'connection': Connection, 'isCollapsed': Boolean, 'collapseSetter': React.Dispatch<React.SetStateAction<Boolean>>, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'walkTimes': number[]}> = (props) => {
+const TransportDivs: React.FC<{ 'connection': Connection, 'isCollapsed': Boolean, 'collapseSetter': React.Dispatch<React.SetStateAction<Boolean>>, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'walkTimes': number[] }> = (props) => {
 
     const [transports, setTransports] = useState<temp[]>([]);
 
@@ -361,11 +344,11 @@ const TransportDivs: React.FC<{'connection': Connection, 'isCollapsed': Boolean,
         let walkCounter = 0;
         props.connection.transports.map((transport: Transport, index) => {
             if (isTransportInfo(transport) && hasWalk) {
-                t.push({hasWalk: true, walkTime: props.walkTimes[walkCounter], transport: transport});
+                t.push({ hasWalk: true, walkTime: props.walkTimes[walkCounter], transport: transport });
                 hasWalk = false;
                 walkCounter += 1;
             } else if (isTransportInfo(transport)) {
-                t.push({hasWalk: false, walkTime: 0, transport: transport});
+                t.push({ hasWalk: false, walkTime: 0, transport: transport });
             } else {
                 hasWalk = true;
             }
@@ -376,9 +359,9 @@ const TransportDivs: React.FC<{'connection': Connection, 'isCollapsed': Boolean,
     console.log('WalkTimes');
     console.log(props.walkTimes);
 
-    return(
+    return (
         <>
-            {props.walkTimes.length === 0 ? 
+            {props.walkTimes.length === 0 ?
                 <></>
                 :
                 <>
@@ -424,12 +407,11 @@ const TransportDivs: React.FC<{'connection': Connection, 'isCollapsed': Boolean,
                                     <i className='icon'>expand_more</i>
                                 </div>
                                 <span>{((transport.transport.move as TransportInfo).range.to - (transport.transport.move as TransportInfo).range.from) === 1 ?
-                                    'Fahrt ohne Zwischenhalt (' + moment.unix(props.connection.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).from(moment.unix(props.connection.stops[(transport.transport.move as TransportInfo).range.from].departure.time)) + ')'
+                                    'Fahrt ohne Zwischenhalt (' + duration(props.connection.stops[(transport.transport.move as TransportInfo).range.from].departure.time, props.connection.stops[(transport.transport.move as TransportInfo).range.to].arrival.time) + ')'
                                     //'Fahrt ohne Zwischenhalt (' + displayDuration(new Date(props.connection.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).getTime() - new Date(props.connection.stops[(transport.transport.move as TransportInfo).range.from].departure.time).getTime()) + ')'
                                     :
                                     'Fahrt ' + ((transport.transport.move as TransportInfo).range.to - (transport.transport.move as TransportInfo).range.from - 1) + ((((transport.transport.move as TransportInfo).range.to - (transport.transport.move as TransportInfo).range.from - 1) === 1) ? ' Station (' : ' Stationen (')
-                                    + displayDuration(new Date(props.connection.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).getTime()
-                                        - new Date(props.connection.stops[(transport.transport.move as TransportInfo).range.from].departure.time).getTime()) + ')'}</span>
+                                    + duration(props.connection.stops[(transport.transport.move as TransportInfo).range.from].departure.time, props.connection.stops[(transport.transport.move as TransportInfo).range.to].arrival.time) + ')'}</span>
                             </div>
                             <div className={props.isCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
                                 {stopGenerator(props.connection.stops)}
@@ -438,7 +420,7 @@ const TransportDivs: React.FC<{'connection': Connection, 'isCollapsed': Boolean,
                                 <div className="stop past">
                                     <div className="timeline train-color-border"></div>
                                     <div className="time">
-                                        <span className="past">{displayTime(props.connection.stops[(transport.transport.move as TransportInfo).range.to].arrival.time)}</span>
+                                        <span className="past">{moment.unix(props.connection.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).format('HH:mm')}</span>
                                     </div>
                                     <div className="delay"></div>
                                     <div className="station">
