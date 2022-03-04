@@ -1,5 +1,6 @@
 import { Listbox, Transition } from "@headlessui/react";
 import { CheckIcon, SelectorIcon } from "@heroicons/react/solid";
+import { add, fromUnixTime, getUnixTime } from "date-fns";
 import { useAtom } from "jotai";
 import { Fragment, useCallback, useState } from "react";
 import { useInfiniteQuery } from "react-query";
@@ -8,9 +9,11 @@ import { Virtuoso } from "react-virtuoso";
 import { TripServiceInfo } from "@/api/protocol/motis";
 import {
   PaxMonFilterTripsRequest,
+  PaxMonFilterTripsSortOrder,
   PaxMonFilteredTripInfo,
 } from "@/api/protocol/motis/paxmon";
 
+import { useLookupScheduleInfoQuery } from "@/api/lookup";
 import { sendPaxMonFilterTripsRequest } from "@/api/paxmon";
 import { ServiceClasses } from "@/api/serviceClasses";
 
@@ -19,97 +22,76 @@ import { selectedTripAtom } from "@/data/selectedTrip";
 import { universeAtom } from "@/data/simulation";
 
 import classNames from "@/util/classNames";
-import { formatTime } from "@/util/dateFormat";
+import { formatISODate, formatTime } from "@/util/dateFormat";
 import { getMaxPax } from "@/util/statistics";
 
 import MiniTripLoadGraph from "@/components/MiniTripLoadGraph";
 
-type FilterOption =
-  | "MostCritical"
-  | "ByMaxLoad"
-  | "ByEarliestCritical"
-  | "ByTrainNr"
-  | "ByDeparture"
-  | "ByExpectedPax";
+type LabeledFilterOption = {
+  option: PaxMonFilterTripsSortOrder;
+  label: string;
+};
 
-type LabeledFilterOption = { option: FilterOption; label: string };
-
-const filterOptions: Array<LabeledFilterOption> = [
-  { option: "ByMaxLoad", label: "Züge sortiert nach Auslastung (prozentual)" },
+const sortOptions: Array<LabeledFilterOption> = [
+  { option: "MaxLoad", label: "Züge sortiert nach Auslastung (prozentual)" },
   {
     option: "MostCritical",
     label: "Züge sortiert nach Anzahl Reisender über Kapazität",
   },
   {
-    option: "ByEarliestCritical",
+    option: "EarliestCritical",
     label: "Züge sortiert nach erstem kritischen Abschnitt",
   },
   {
-    option: "ByDeparture",
+    option: "FirstDeparture",
     label: "Züge sortiert nach Abfahrtszeit am ersten Halt",
   },
-  { option: "ByTrainNr", label: "Züge sortiert nach Zugnummer" },
-  { option: "ByExpectedPax", label: "Züge sortiert nach Buchungen" },
+  { option: "TrainNr", label: "Züge sortiert nach Zugnummer" },
+  { option: "ExpectedPax", label: "Züge sortiert nach Buchungen" },
 ];
 
 function getFilterTripsRequest(
   universe: number,
-  filterOption: FilterOption,
+  sortOrder: PaxMonFilterTripsSortOrder,
+  selectedDate: Date | undefined,
   filterTrainNrs: number[],
   pageParam: number
 ): PaxMonFilterTripsRequest {
-  const req: PaxMonFilterTripsRequest = {
+  return {
     universe,
     ignore_past_sections: false,
     include_load_threshold: 0.0,
     critical_load_threshold: 1.0,
     crowded_load_threshold: 0.8,
     include_edges: true,
-    sort_by: "MostCritical",
+    sort_by: sortOrder,
     max_results: 100,
     skip_first: pageParam,
-    filter_by_time: "NoFilter",
-    filter_interval: { begin: 0, end: 0 },
+    filter_by_time: selectedDate ? "DepartureOrArrivalTime" : "NoFilter",
+    filter_interval: {
+      begin: selectedDate ? getUnixTime(selectedDate) : 0,
+      end: selectedDate ? getUnixTime(add(selectedDate, { days: 1 })) : 0,
+    },
     filter_by_train_nr: filterTrainNrs.length > 0,
     filter_train_nrs: filterTrainNrs,
     filter_by_service_class: true,
     filter_service_classes: [ServiceClasses.ICE, ServiceClasses.IC],
   };
-
-  switch (filterOption) {
-    case "MostCritical":
-      req.sort_by = "MostCritical";
-      break;
-    case "ByMaxLoad":
-      req.sort_by = "MaxLoad";
-      break;
-    case "ByEarliestCritical":
-      req.sort_by = "EarliestCritical";
-      break;
-    case "ByTrainNr":
-      req.sort_by = "TrainNr";
-      break;
-    case "ByDeparture":
-      req.sort_by = "FirstDeparture";
-      break;
-    case "ByExpectedPax":
-      req.sort_by = "ExpectedPax";
-      break;
-  }
-
-  return req;
 }
 
 function TripList(): JSX.Element {
   const [universe] = useAtom(universeAtom);
   const [selectedTrip, setSelectedTrip] = useAtom(selectedTripAtom);
 
-  const [selectedFilter, setSelectedFilter] = useState(filterOptions[0]);
+  const [selectedSort, setSelectedSort] = useState(sortOptions[0]);
+  const [selectedDate, setSelectedDate] = useState<Date>();
   const [trainNrFilter, setTrainNrFilter] = useState("");
 
   const filterTrainNrs = [...trainNrFilter.matchAll(/\d+/g)].map((m) =>
     parseInt(m[0])
   );
+
+  const { data: scheduleInfo } = useLookupScheduleInfoQuery();
 
   const {
     data,
@@ -127,12 +109,18 @@ function TripList(): JSX.Element {
   } = useInfiniteQuery(
     [
       "tripList",
-      { universe, filterOption: selectedFilter.option, filterTrainNrs },
+      {
+        universe,
+        sortOrder: selectedSort.option,
+        selectedDate,
+        filterTrainNrs,
+      },
     ],
     ({ pageParam = 0 }) => {
       const req = getFilterTripsRequest(
         universe,
-        selectedFilter.option,
+        selectedSort.option,
+        selectedDate,
         filterTrainNrs,
         pageParam
       );
@@ -144,8 +132,13 @@ function TripList(): JSX.Element {
       refetchOnWindowFocus: false,
       keepPreviousData: true,
       staleTime: 60000,
+      enabled: selectedDate != undefined,
     }
   );
+
+  if (selectedDate == undefined && scheduleInfo) {
+    setSelectedDate(fromUnixTime(scheduleInfo.begin));
+  }
 
   const loadMore = useCallback(() => {
     if (hasNextPage) {
@@ -162,10 +155,10 @@ function TripList(): JSX.Element {
 
   return (
     <div className="h-full flex flex-col">
-      <Listbox value={selectedFilter} onChange={setSelectedFilter}>
+      <Listbox value={selectedSort} onChange={setSelectedSort}>
         <div className="relative mb-2">
           <Listbox.Button className="relative w-full py-2 pl-3 pr-10 text-left bg-white rounded-lg shadow-md cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-opacity-75 focus-visible:ring-white focus-visible:ring-offset-orange-300 focus-visible:ring-offset-2 focus-visible:border-indigo-500 sm:text-sm">
-            <span className="block truncate">{selectedFilter.label}</span>
+            <span className="block truncate">{selectedSort.label}</span>
             <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
               <SelectorIcon
                 className="w-5 h-5 text-gray-400"
@@ -180,7 +173,7 @@ function TripList(): JSX.Element {
             leaveTo="opacity-0"
           >
             <Listbox.Options className="absolute z-20 w-full py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg max-h-60 ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-              {filterOptions.map((opt) => (
+              {sortOptions.map((opt) => (
                 <Listbox.Option
                   key={opt.option}
                   value={opt}
@@ -219,14 +212,33 @@ function TripList(): JSX.Element {
           </Transition>
         </div>
       </Listbox>
-      <div className="flex items-center gap-2 mb-4">
-        <div className="text-sm">Zugnummer(n):</div>
-        <input
-          type="text"
-          className="block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-          value={trainNrFilter}
-          onChange={(e) => setTrainNrFilter(e.target.value)}
-        />
+      <div className="flex justify-between pb-2">
+        <div className="w-1/2 pr-1">
+          <label>
+            <span className="text-sm">Datum</span>
+            <input
+              type="date"
+              min={scheduleInfo ? formatISODate(scheduleInfo.begin) : undefined}
+              max={scheduleInfo ? formatISODate(scheduleInfo.end) : undefined}
+              value={selectedDate ? formatISODate(selectedDate) : ""}
+              onChange={(e) =>
+                setSelectedDate(e.target.valueAsDate ?? undefined)
+              }
+              className="block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+            />
+          </label>
+        </div>
+        <div className="w-1/2 pl-1">
+          <label>
+            <span className="text-sm">Zugnummer(n)</span>
+            <input
+              type="text"
+              className="block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              value={trainNrFilter}
+              onChange={(e) => setTrainNrFilter(e.target.value)}
+            />
+          </label>
+        </div>
       </div>
       {totalNumberOfTrips !== undefined && (
         <div className="pb-2 text-lg">

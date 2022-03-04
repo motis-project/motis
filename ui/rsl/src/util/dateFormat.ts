@@ -1,4 +1,4 @@
-import { format, fromUnixTime, parse } from "date-fns";
+import { format, formatISO, fromUnixTime, parse } from "date-fns";
 import { de } from "date-fns/locale";
 
 function getDate(ts: Date | number): Date {
@@ -21,6 +21,10 @@ export function formatDate(ts: Date | number): string {
   return format(getDate(ts), "EEEE, dd.MM.yyyy", {
     locale: de,
   });
+}
+
+export function formatISODate(ts: Date | number): string {
+  return formatISO(getDate(ts), { representation: "date" });
 }
 
 export function formatTime(ts: Date | number): string {
