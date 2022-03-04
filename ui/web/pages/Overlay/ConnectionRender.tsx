@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Transport, TransportInfo, Connection, Stop, TripId, FootRouting, Station } from '../Types/ConnectionTypes';
 import { getFromLocalStorage, ModeLocalStorage } from '../App/LocalStorage';
 import { Address } from '../Types/SuggestionTypes';
+import { Translations } from '../App/Localization';
 
 const isTransportInfo = (transport: Transport) => {
     return transport.move_type === 'Transport';
@@ -189,7 +190,7 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
     );
 };
 
-export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean }> = (props) => {
+export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'translation': Translations }> = (props) => {
 
     const [isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed] = useState<Boolean>(true);
 
@@ -209,6 +210,8 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
         }
     }, [props.connection]);
 
+    let numberIntermediateStops = (props.connection.transports[0].move as TransportInfo).range.to - (props.connection.transports[0].move as TransportInfo).range.from;
+
     return (
         <>
             {isArrLengthOne(props.connection.transports) ?
@@ -217,7 +220,19 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
                         <div className='top-border'></div>
                         <div>
                             <div className={'train-box train-class-' + (props.connection.transports[0].move as TransportInfo).clasz + ' with-tooltip'}
-                                data-tooltip={'Betreiber: DB Regio AG S-Bahn Rhein-Main \nZugnummer: ' + (props.connection.transports[0].move as TransportInfo).train_nr} onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(props.connection.trips[0].id); }}>
+                                data-tooltip={
+                                    props.translation.connections.provider +
+                                    ': woher bekommen die den zugbetreiber her' +
+                                    '\n' +
+                                    ((true) ?
+                                        props.translation.connections.trainNr +
+                                        ': ' +
+                                        props.connection.trips[0].id.train_nr
+                                        :
+                                        props.translation.connections.lineId +
+                                        ': ' +
+                                        props.connection.trips[0].id.line_id)}
+                                onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(props.connection.trips[0].id); }}>
                                 <svg className='train-icon'>
                                     <use xlinkHref={classToId((props.connection.transports[0].move as TransportInfo).clasz)}></use>
                                 </svg>
@@ -241,19 +256,27 @@ export const JourneyRender: React.FC<{ 'connection': Connection, 'setSubOverlayH
                             <i className='icon'>arrow_forward</i>
                             {(props.connection.transports[0].move as TransportInfo).direction}
                         </div>
-                        <div className='intermediate-stops-toggle clickable past' onClick={() => setIsIntermediateStopsCollapsed(!isIntermediateStopsCollapsed)}>
+                        <div className={
+                            (numberIntermediateStops === 1) ?
+                                'intermediate-stops-toggle past' :
+                                'intermediate-stops-toggle clickable past'}
+                            onClick={() => setIsIntermediateStopsCollapsed(!isIntermediateStopsCollapsed)}>
                             <div className='timeline-container'>
                                 <div className='timeline train-color-border bg'></div>
                                 <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
                             </div>
-                            <div className='expand-icon'>
-                                <i className='icon'>expand_less</i>
-                                <i className='icon'>expand_more</i>
-                            </div>
-                            <span>{((props.connection.transports[0].move as TransportInfo).range.to - (props.connection.transports[0].move as TransportInfo).range.from) === 1 ?
-                                'Fahrt ohne Zwischenhalt (' + duration(props.connection.stops[0].departure.time, props.connection.stops[props.connection.stops.length - 1].arrival.time) + ')'
-                                :
-                                'Fahrt ' + ((props.connection.transports[0].move as TransportInfo).range.to - (props.connection.transports[0].move as TransportInfo).range.from) + ' Stationen (' + duration(props.connection.stops[0].departure.time, props.connection.stops[props.connection.stops.length - 1].arrival.time) + ')'}</span>
+                            {(numberIntermediateStops === 1) ?
+                                <></> :
+                                <div className='expand-icon'>
+                                    <i className='icon'>expand_less</i>
+                                    <i className='icon'>expand_more</i>
+                                </div>
+                            }
+                            <span>
+                                {(numberIntermediateStops === 1) ?
+                                    props.translation.connections.tripIntermediateStops(0) + ' (' + duration(props.connection.stops[0].departure.time, props.connection.stops[props.connection.stops.length - 1].arrival.time) + ')'
+                                    :
+                                    'Fahrt ' + ((props.connection.transports[0].move as TransportInfo).range.to - (props.connection.transports[0].move as TransportInfo).range.from) + ' Stationen (' + duration(props.connection.stops[0].departure.time, props.connection.stops[props.connection.stops.length - 1].arrival.time) + ')'}</span>
                         </div>
                         <div className={isIntermediateStopsCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
                             {stopGenerator(props.connection.stops)}
