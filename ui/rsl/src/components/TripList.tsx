@@ -63,7 +63,7 @@ function getFilterTripsRequest(
     filter_by_time: "NoFilter",
     filter_interval: { begin: 0, end: 0 },
     filter_by_train_nr: false,
-    filter_train_nr: 0,
+    filter_train_nrs: [],
     filter_by_service_class: true,
     filter_service_classes: [ServiceClasses.ICE, ServiceClasses.ICE],
   };

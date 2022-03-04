@@ -39,7 +39,7 @@ table PaxMonFilterTripsRequest {
 
   // filter by train nr
   filter_by_train_nr: bool;
-  filter_train_nr: uint;
+  filter_train_nrs: [uint];
 
   // filter by service class
   filter_by_service_class: bool;

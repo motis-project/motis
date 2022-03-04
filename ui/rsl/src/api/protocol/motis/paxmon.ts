@@ -107,7 +107,7 @@ export interface PaxMonFilterTripsRequest {
   filter_by_time: PaxMonFilterTripsTimeFilter;
   filter_interval: Interval;
   filter_by_train_nr: boolean;
-  filter_train_nr: number;
+  filter_train_nrs: number[];
   filter_by_service_class: boolean;
   filter_service_classes: number[];
 }

@@ -64,7 +64,7 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
   auto const filter_interval_end =
       unix_to_motistime(sched.schedule_begin_, req->filter_interval()->end());
   auto const filter_by_train_nr = req->filter_by_train_nr();
-  auto const filter_train_nr = req->filter_train_nr();
+  auto const filter_train_nrs = utl::to_vec(*req->filter_train_nrs());
   auto const filter_by_service_class = req->filter_by_service_class();
   auto const filter_service_classes = utl::to_vec(
       *req->filter_service_classes(),
@@ -88,13 +88,16 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
 
     if (trip_filters_active) {
       auto const* trp = get_trip(sched, trp_idx);
-      auto const dep = trp->id_.primary_.get_time();
 
-      if (filter_by_train_nr &&
-          trp->id_.primary_.get_train_nr() != filter_train_nr) {
-        continue;
+      if (filter_by_train_nr) {
+        auto const train_nr = trp->id_.primary_.get_train_nr();
+        if (std::find(begin(filter_train_nrs), end(filter_train_nrs),
+                      train_nr) == end(filter_train_nrs)) {
+          continue;
+        }
       }
 
+      auto const dep = trp->id_.primary_.get_time();
       if (filter_by_time == PaxMonFilterTripsTimeFilter_DepartureTime) {
         if (dep < filter_interval_begin || dep >= filter_interval_end) {
           continue;
