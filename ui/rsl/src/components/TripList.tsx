@@ -35,7 +35,11 @@ type FilterOption =
 type LabeledFilterOption = { option: FilterOption; label: string };
 
 const filterOptions: Array<LabeledFilterOption> = [
-  { option: "ByMaxLoad", label: "Züge sortiert nach Auslastung" },
+  { option: "ByMaxLoad", label: "Züge sortiert nach Auslastung (prozentual)" },
+  {
+    option: "MostCritical",
+    label: "Züge sortiert nach Anzahl Reisender über Kapazität",
+  },
   {
     option: "ByEarliestCritical",
     label: "Züge sortiert nach erstem kritischen Abschnitt",
@@ -74,7 +78,7 @@ function getFilterTripsRequest(
 
   switch (filterOption) {
     case "MostCritical":
-      req.include_load_threshold = 1.0;
+      req.sort_by = "MostCritical";
       break;
     case "ByMaxLoad":
       req.sort_by = "MaxLoad";
@@ -291,22 +295,36 @@ function TripListEntry({
         <div>
           <div className="text-xs">Kritisch ab:</div>
           <div className="flex justify-between">
-            <div className="truncate">
-              {firstCritSection.edge.from.name} (
-              {formatTime(firstCritSection.edge.departure_schedule_time)})
+            <div className="space-x-1 truncate">
+              <span>
+                {formatTime(firstCritSection.edge.departure_schedule_time)}
+              </span>
+              <span>{firstCritSection.edge.from.name}</span>
             </div>
-            <div>{formatPercent(firstCritSection.maxPercent)}</div>
+            <div className="space-x-1 whitespace-nowrap">
+              <span className="text-db-cool-gray-700">
+                (+{firstCritSection.maxOverCap})
+              </span>
+              <span>{formatPercent(firstCritSection.maxPercent)}</span>
+            </div>
           </div>
         </div>
         {mostCritSection != firstCritSection && (
           <div>
             <div className="text-xs">Kritischster Abschnitt ab:</div>
             <div className="flex justify-between">
-              <div className="truncate">
-                {mostCritSection.edge.from.name} (
-                {formatTime(mostCritSection.edge.departure_schedule_time)})
+              <div className="space-x-1 truncate">
+                <span>
+                  {formatTime(mostCritSection.edge.departure_schedule_time)}
+                </span>
+                <span>{mostCritSection.edge.from.name}</span>
               </div>
-              <div>{formatPercent(mostCritSection.maxPercent)}</div>
+              <div className="space-x-1 whitespace-nowrap">
+                <span className="text-db-cool-gray-700">
+                  (+{mostCritSection.maxOverCap})
+                </span>
+                <span>{formatPercent(mostCritSection.maxPercent)}</span>
+              </div>
             </div>
           </div>
         )}
