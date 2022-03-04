@@ -6,7 +6,7 @@ import getQueryParameters from "@/util/queryParameters";
 import MainSection from "@/components/MainSection";
 import SimPanel from "@/components/SimPanel";
 import TimeControl from "@/components/TimeControl";
-import TripSelection from "@/components/TripSelection";
+import TripList from "@/components/TripList";
 import UniverseControl from "@/components/UniverseControl";
 
 const queryClient = new QueryClient({
@@ -31,7 +31,7 @@ function App(): JSX.Element {
 
         <div className="flex justify-between items-stretch overflow-y-auto grow">
           <div className="bg-db-cool-gray-200 w-[24rem] overflow-y-auto p-2">
-            <TripSelection />
+            <TripList />
           </div>
           <div className="overflow-y-auto grow p-2">
             <MainSection />
