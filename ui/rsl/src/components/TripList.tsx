@@ -293,7 +293,12 @@ function TripListEntry({
     criticalInfo = (
       <div className="pt-1 flex flex-col gap-1">
         <div>
-          <div className="text-xs">Kritisch ab:</div>
+          <div className="flex justify-between">
+            <div className="text-xs">Kritisch ab:</div>
+            <div className="text-xs">
+              {firstCritSection.maxOverCap} über Kapazität
+            </div>
+          </div>
           <div className="flex justify-between">
             <div className="space-x-1 truncate">
               <span>
@@ -301,17 +306,19 @@ function TripListEntry({
               </span>
               <span>{firstCritSection.edge.from.name}</span>
             </div>
-            <div className="space-x-1 whitespace-nowrap">
-              <span className="text-db-cool-gray-700">
-                (+{firstCritSection.maxOverCap})
-              </span>
-              <span>{formatPercent(firstCritSection.maxPercent)}</span>
+            <div className="whitespace-nowrap">
+              {formatPercent(firstCritSection.maxPercent)}
             </div>
           </div>
         </div>
         {mostCritSection != firstCritSection && (
           <div>
-            <div className="text-xs">Kritischster Abschnitt ab:</div>
+            <div className="flex justify-between">
+              <div className="text-xs">Kritischster Abschnitt ab:</div>
+              <div className="text-xs">
+                {mostCritSection.maxOverCap} über Kapazität
+              </div>
+            </div>
             <div className="flex justify-between">
               <div className="space-x-1 truncate">
                 <span>
@@ -319,11 +326,8 @@ function TripListEntry({
                 </span>
                 <span>{mostCritSection.edge.from.name}</span>
               </div>
-              <div className="space-x-1 whitespace-nowrap">
-                <span className="text-db-cool-gray-700">
-                  (+{mostCritSection.maxOverCap})
-                </span>
-                <span>{formatPercent(mostCritSection.maxPercent)}</span>
+              <div className="whitespace-nowrap">
+                {formatPercent(mostCritSection.maxPercent)}
               </div>
             </div>
           </div>
