@@ -48,7 +48,8 @@ const filterOptions: Array<LabeledFilterOption> = [
 
 function getFilterTripsRequest(
   universe: number,
-  filterOption: FilterOption
+  filterOption: FilterOption,
+  pageParam: number
 ): PaxMonFilterTripsRequest {
   const req: PaxMonFilterTripsRequest = {
     universe,
@@ -59,7 +60,7 @@ function getFilterTripsRequest(
     include_edges: true,
     sort_by: "MostCritical",
     max_results: 100,
-    skip_first: 0,
+    skip_first: pageParam,
     filter_by_time: "NoFilter",
     filter_interval: { begin: 0, end: 0 },
     filter_by_train_nr: false,
@@ -109,15 +110,21 @@ function TripList(): JSX.Element {
     status,
     */
   } = useInfiniteQuery(
-    ["tripList", selectedFilter.option],
+    ["tripList", { universe, filterOption: selectedFilter.option }],
     ({ pageParam = 0 }) => {
-      const req = getFilterTripsRequest(universe, selectedFilter.option);
-      req.skip_first = pageParam;
+      const req = getFilterTripsRequest(
+        universe,
+        selectedFilter.option,
+        pageParam
+      );
       return sendPaxMonFilterTripsRequest(req);
     },
     {
       getNextPageParam: (lastPage) =>
         lastPage.remaining_trips > 0 ? lastPage.next_skip : undefined,
+      refetchOnWindowFocus: false,
+      keepPreviousData: true,
+      staleTime: 60000,
     }
   );
 
@@ -198,7 +205,7 @@ function TripList(): JSX.Element {
         {data ? (
           <Virtuoso
             data={allTrips}
-            overscan={200}
+            increaseViewportBy={500}
             endReached={loadMore}
             itemContent={(index, ti) => (
               <TripListEntry

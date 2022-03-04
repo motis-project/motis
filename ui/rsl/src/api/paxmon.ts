@@ -1,4 +1,4 @@
-import { UseQueryResult, useQuery } from "react-query";
+import { UseQueryOptions, UseQueryResult, useQuery } from "react-query";
 
 import { verifyContentType } from "@/api/protocol/checks";
 import { MotisSuccess, TripId } from "@/api/protocol/motis";
@@ -75,7 +75,8 @@ export async function sendPaxMonFindTripsRequest(
 
 export function usePaxMonFindTripsQuery(
   universe: number,
-  trainNr?: number
+  trainNr: number | undefined,
+  options?: Pick<UseQueryOptions, "keepPreviousData">
 ): UseQueryResult<PaxMonFindTripsResponse> {
   return useQuery(
     queryKeys.findTrips(universe, trainNr),
@@ -87,7 +88,7 @@ export function usePaxMonFindTripsQuery(
         filter_class: false,
         max_class: 0,
       }),
-    { enabled: trainNr != undefined && !isNaN(trainNr) }
+    { ...options, enabled: trainNr != undefined && !isNaN(trainNr) }
   );
 }
 

@@ -218,6 +218,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
         });
         setSelectedSimResult(resultAtom);
         await queryClient.invalidateQueries(queryKeys.all);
+        await queryClient.invalidateQueries(["tripList"]);
         onSimulationFinished();
       },
       retry: false,
