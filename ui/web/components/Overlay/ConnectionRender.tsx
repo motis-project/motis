@@ -1,8 +1,6 @@
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
-import Index from '..';
 import { Transport, TransportInfo, Connection, Stop, TripId, FootRouting, Station } from '../Types/ConnectionTypes';
-import { Mode } from '../Types/IntermodalRoutingTypes';
 import { getFromLocalStorage, ModeLocalStorage } from '../App/LocalStorage';
 import { Address } from '../Types/SuggestionTypes';
 

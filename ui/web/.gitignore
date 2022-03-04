@@ -14,6 +14,7 @@
 
 # production
 /build
+/ghPagesRepo
 
 # misc
 .DS_Store
