@@ -211,8 +211,10 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
                        [&](trip_info const& lhs, trip_info const& rhs) {
                          auto const* lhs_trp = get_trip(sched, lhs.trip_idx_);
                          auto const* rhs_trp = get_trip(sched, rhs.trip_idx_);
-                         return lhs_trp->id_.primary_.train_nr_ <
-                                rhs_trp->id_.primary_.train_nr_;
+                         return std::tie(lhs_trp->id_.primary_.train_nr_,
+                                         lhs.first_departure_) <
+                                std::tie(rhs_trp->id_.primary_.train_nr_,
+                                         rhs.first_departure_);
                        });
       break;
     case PaxMonFilterTripsSortOrder_MaxLoad:
