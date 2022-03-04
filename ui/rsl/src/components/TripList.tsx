@@ -1,6 +1,6 @@
 import { Listbox, Transition } from "@headlessui/react";
 import { CheckIcon, SelectorIcon } from "@heroicons/react/solid";
-import { add, fromUnixTime, getUnixTime } from "date-fns";
+import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
 import { useAtom } from "jotai";
 import { Fragment, useCallback, useState } from "react";
 import { useInfiniteQuery } from "react-query";
@@ -139,6 +139,11 @@ function TripList(): JSX.Element {
   if (selectedDate == undefined && scheduleInfo) {
     setSelectedDate(fromUnixTime(scheduleInfo.begin));
   }
+  const minDate = scheduleInfo ? fromUnixTime(scheduleInfo.begin) : undefined;
+  const maxDate =
+    scheduleInfo && minDate
+      ? max([minDate, sub(fromUnixTime(scheduleInfo.end), { days: 1 })])
+      : undefined;
 
   const loadMore = useCallback(() => {
     if (hasNextPage) {
@@ -218,8 +223,8 @@ function TripList(): JSX.Element {
             <span className="text-sm">Datum</span>
             <input
               type="date"
-              min={scheduleInfo ? formatISODate(scheduleInfo.begin) : undefined}
-              max={scheduleInfo ? formatISODate(scheduleInfo.end) : undefined}
+              min={minDate ? formatISODate(minDate) : undefined}
+              max={maxDate ? formatISODate(maxDate) : undefined}
               value={selectedDate ? formatISODate(selectedDate) : ""}
               onChange={(e) =>
                 setSelectedDate(e.target.valueAsDate ?? undefined)
