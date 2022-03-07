@@ -22,6 +22,7 @@
 
 #include "utl/overloaded.h"
 #include "utl/verify.h"
+#include "utl/zip.h"
 
 #include "lmdb/lmdb.hpp"
 
@@ -230,15 +231,15 @@ struct ris::impl {
         &config_.rabbitmq_, [](std::string const& log_msg) {
           LOG(info) << "rabbitmq: " << log_msg;
         });
-    ribasis_receiver_->run([this, d, sched, last = now(),
-                            buffer = std::vector<amqp::msg>{}](
+    ribasis_receiver_->run([this, d, sched, buffer = std::vector<amqp::msg>{}](
                                amqp::msg const& m) mutable {
       buffer.emplace_back(m);
 
-      if (auto const n = now(); (n - last) > config_.update_interval_) {
+      if (auto const n = now();
+          (n - ribasis_receiver_last_update_) < config_.update_interval_) {
         return;
       } else {
-        last = n;
+        ribasis_receiver_last_update_ = n;
 
         auto msgs_copy = buffer;
         buffer.clear();
@@ -270,18 +271,19 @@ struct ris::impl {
 
   void update_gtfs_rt(schedule& sched) {
     auto futures = std::vector<http_future_t>{};
-    for (auto const& in : inputs_) {
+    auto inputs = std::vector<input*>{};
+    for (auto& in : inputs_) {
       if (in.source_type() == input::source_type::url) {
         futures.emplace_back(motis_http(in.get_request()));
+        inputs.emplace_back(&in);
       }
     }
 
     publisher pub;
     pub.schedule_res_id_ = to_res_id(::motis::module::global_res_id::SCHEDULE);
 
-    for (auto const& f : futures) {
-      parse_str_and_write_to_db(*file_upload_, f->val().body,
-                                file_type::PROTOBUF, pub);
+    for (auto const& [f, in] : utl::zip(futures, inputs)) {
+      parse_str_and_write_to_db(*in, f->val().body, file_type::PROTOBUF, pub);
     }
 
     sched.system_time_ = pub.max_timestamp_;
@@ -955,6 +957,7 @@ struct ris::impl {
   }
 
   std::unique_ptr<amqp::ssl_connection> ribasis_receiver_;
+  unixtime ribasis_receiver_last_update_{now()};
 
   db::env env_;
   std::mutex min_max_mutex_;
@@ -985,9 +988,6 @@ ris::ris() : module("RIS", "ris") {
   param(config_.rabbitmq_.user_, "rabbitmq.username", "RabbitMQ username");
   param(config_.rabbitmq_.pw_, "rabbitmq.password", "RabbitMQ password");
   param(config_.rabbitmq_.vhost_, "rabbitmq.vhost", "RabbitMQ vhost");
-  param(config_.rabbitmq_.exchange_, "rabbitmq.exchange", "RabbitMQ exchange");
-  param(config_.rabbitmq_.routing_key_, "rabbitmq.routing_key",
-        "RabbitMQ routing key");
   param(config_.rabbitmq_.queue_, "rabbitmq.queue", "RabbitMQ queue name");
   param(config_.rabbitmq_.ca_, "rabbitmq.ca", "RabbitMQ path to CA file");
   param(config_.rabbitmq_.cert_, "rabbitmq.cert",

@@ -33,10 +33,10 @@ struct http_request_executor
       self->on_response(a, std::move(res), ec);
     };
 
-    if (boost::algorithm::starts_with(req.address.port(), "https") ||
+    if (boost::algorithm::starts_with(req.address.prot(), "https") ||
         req.address.port() == "443") {
       make_https(ios_, req.address)->query(req, std::move(cb));
-    } else if (boost::algorithm::starts_with(req.address.port(), "http") ||
+    } else if (boost::algorithm::starts_with(req.address.prot(), "http") ||
                req.address.port() == "80") {
       make_http(ios_, req.address)->query(req, std::move(cb));
     } else {

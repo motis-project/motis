@@ -42,7 +42,17 @@ void timer::exec(boost::system::error_code const& ec) {
 
   auto access_copy = access_;
   dispatcher_->enqueue(
-      ctx_data{dispatcher_}, [self = shared_from_this()]() { self->fn_(); },
+      ctx_data{dispatcher_},
+      [self = shared_from_this()]() {
+        try {
+          self->fn_();
+        } catch (std::exception const& e) {
+          LOG(logging::error)
+              << "error in timer " << self->name_ << ": " << e.what();
+        } catch (...) {
+          LOG(logging::error) << "unknown error in timer " << self->name_;
+        }
+      },
       ctx::op_id{name_, CTX_LOCATION, 0U}, ctx::op_type_t::IO,
       std::move(access_copy));
 

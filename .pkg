@@ -45,7 +45,7 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=126869fa3a2ea5c3024c44c180daf4031f802853
+  commit=0e635db330364eb121899cd1e124ed20cc2210f6
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
@@ -93,4 +93,4 @@
 [rabbitmq-c]
   url=git@github.com:motis-project/rabbitmq-c.git
   branch=master
-  commit=087417f9a05212a61eb73c1691316898ceebfb46
+  commit=5e6efe17f52a66da36994d1c6ae28e1280e0bc4f
