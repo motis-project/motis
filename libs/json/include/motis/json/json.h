@@ -1,6 +1,7 @@
 #pragma once
 
 #include <charconv>
+#include <cstdint>
 #include <string_view>
 
 #include "rapidjson/document.h"
@@ -23,6 +24,16 @@ std::string_view get_str(rapidjson::Value const& obj, char const* key);
 std::string_view get_optional_str(rapidjson::Value const& obj, char const* key);
 
 bool get_bool(rapidjson::Value const& obj, char const* key);
+
+int get_int(rapidjson::Value const& obj, char const* key);
+
+unsigned get_uint(rapidjson::Value const& obj, char const* key);
+
+std::int64_t get_int64(rapidjson::Value const& obj, char const* key);
+
+std::uint64_t get_uint64(rapidjson::Value const& obj, char const* key);
+
+double get_double(rapidjson::Value const& obj, char const* key);
 
 template <typename T>
 T get_parsed_number(rapidjson::Value const& obj, char const* key) {
