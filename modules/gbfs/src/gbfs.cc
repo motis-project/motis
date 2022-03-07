@@ -4,6 +4,7 @@
 #include <numeric>
 
 #include "utl/concat.h"
+#include "utl/enumerate.h"
 
 #include "geo/point_rtree.h"
 
@@ -166,7 +167,7 @@ struct gbfs::impl {
     auto const b_pos = utl::to_vec(
         b, [&](auto const idx) { return free_bikes_.at(idx).pos_; });
 
-    if (req->search_dir() == SearchDir_Forward) {
+    if (req->dir() == SearchDir_Forward) {
       // FWD
       //   free-float FWD: x --walk--> [b] --bike--> [p]
       auto const f_x_to_b_walks = motis_call(make_ppr_request(
@@ -189,11 +190,19 @@ struct gbfs::impl {
                                            req->max_foot_duration()));
       });
 
-      for (auto const& [sx_idx, x_to_sx_res] : f_x_to_sx_walks) {
-        if (x_to_sx_res->)
-        for (auto const& [sp_idx, sx_to_sp_res] : f_sx_to_sp_rides.at(sx_idx)) {
-          for (auto const& [sp_idx, f_sp] : sp_to_p_walks.at(sp_idx)) {
+      using ppr::FootRoutingResponse;
+      for (auto const [sx_idx, routes] : utl::enumerate(
+               *motis_content(FootRoutingResponse, f_x_to_sx_walks->val())
+                    ->routes())) {
+        if (routes->routes()->size() == 0) {
+          continue;
+        }
+        auto const r = routes->routes()->Get(0);
+        auto const walk_distance = r->distance();
+        auto const walk_duration = r->duration();
 
+        for (auto const& [sp_idx, sx_to_sp_res] : f_sx_to_sp_rides.at(sx_idx)) {
+          for (auto const& [sp_idx, f_sp] : f_sp_to_p_walks.at(sp_idx)) {
           }
         }
       }
