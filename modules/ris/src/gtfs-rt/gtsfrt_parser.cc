@@ -77,16 +77,17 @@ void to_ris_message(knowledge_context& knowledge,
       reinterpret_cast<void const*>(s.data()), s.size());
 
   if (!success) {
-    LOG(logging::error) << "GTFS-RT unable to parse protobuf message";
+    LOG(logging::error) << "GTFS-RT unable to parse protobuf message " << tag;
     return;
   }
 
   if (!feed_message.has_header()) {
-    LOG(logging::error) << "GTFS-RT: skipping message without header";
+    LOG(logging::error) << "GTFS-RT: skipping message without header" << tag;
     return;
   }
 
-  LOG(info) << "parsing " << feed_message.entity().size() << " GTFS-RT updates";
+  LOG(info) << (tag.empty() ? "" : tag + ": ") << "parsing "
+            << feed_message.entity().size() << " GTFS-RT updates";
 
   auto const message_time =
       static_cast<unixtime>(feed_message.header().timestamp());

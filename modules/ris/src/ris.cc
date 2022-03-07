@@ -22,6 +22,7 @@
 
 #include "utl/overloaded.h"
 #include "utl/verify.h"
+#include "utl/zip.h"
 
 #include "lmdb/lmdb.hpp"
 
@@ -270,18 +271,19 @@ struct ris::impl {
 
   void update_gtfs_rt(schedule& sched) {
     auto futures = std::vector<http_future_t>{};
-    for (auto const& in : inputs_) {
+    auto inputs = std::vector<input*>{};
+    for (auto& in : inputs_) {
       if (in.source_type() == input::source_type::url) {
         futures.emplace_back(motis_http(in.get_request()));
+        inputs.emplace_back(&in);
       }
     }
 
     publisher pub;
     pub.schedule_res_id_ = to_res_id(::motis::module::global_res_id::SCHEDULE);
 
-    for (auto const& f : futures) {
-      parse_str_and_write_to_db(*file_upload_, f->val().body,
-                                file_type::PROTOBUF, pub);
+    for (auto const& [f, in] : utl::zip(futures, inputs)) {
+      parse_str_and_write_to_db(*in, f->val().body, file_type::PROTOBUF, pub);
     }
 
     sched.system_time_ = pub.max_timestamp_;
