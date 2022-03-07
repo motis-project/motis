@@ -25,7 +25,7 @@ import classNames from "@/util/classNames";
 import { formatISODate, formatTime } from "@/util/dateFormat";
 import { getMaxPax } from "@/util/statistics";
 
-import MiniTripLoadGraph from "@/components/MiniTripLoadGraph";
+import MiniTripLoadGraph2 from "@/components/MiniTripLoadGraph2";
 
 type LabeledFilterOption = {
   option: PaxMonFilterTripsSortOrder;
@@ -378,7 +378,10 @@ function TripListEntry({
             </div>
           </div>
         </div>
-        <MiniTripLoadGraph edges={ti.edges} />
+        <div className="space-y-2">
+          {/*<MiniTripLoadGraph edges={ti.edges} />*/}
+          <MiniTripLoadGraph2 edges={ti.edges} />
+        </div>
         {criticalInfo}
       </div>
     </div>
