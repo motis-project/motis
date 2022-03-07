@@ -17,12 +17,14 @@
 #include "motis/core/conv/station_conv.h"
 #include "motis/core/statistics/statistics.h"
 #include "motis/module/context/motis_call.h"
+#include "motis/module/context/motis_http_req.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
 #include "motis/parking/database.h"
 #include "motis/parking/error.h"
 #include "motis/parking/mumo_edges.h"
+#include "motis/parking/parkendd.h"
 #include "motis/parking/parking_edges.h"
 #include "motis/parking/parkings.h"
 #include "motis/parking/ppr_profiles.h"
@@ -176,9 +178,33 @@ struct parking::impl {
 
   void init(dispatcher& d) {
     update_ppr_profiles();
+    if (!parkendd_endpoints_.empty()) {
+      d.register_timer(
+          "ParkenDD Update",
+          boost::posix_time::seconds{parkendd_update_interval_},
+          [this]() { update_parkendd(); },
+          ctx::accesses_t{ctx::access_request{
+              to_res_id(::motis::module::global_res_id::SCHEDULE),
+              ctx::access_t::READ}});
+    }
   }
 
   void update_ppr_profiles() { ppr_profiles_.update(); }
+
+  void update_parkendd() {
+    LOG(info) << "ParkenDD update";
+    for (auto const& endpoint : parkendd_endpoints_) {
+      auto const req = motis_http(endpoint);
+      auto const res = req->val();
+      auto const lots = parkendd::parse(res.body);
+      for (auto const& lot : lots) {
+        LOG(info) << "parking lot " << lot.id_ << " @(" << lot.location_.lat_
+                  << "," << lot.location_.lng_ << "): " << lot.free_ << "/"
+                  << lot.total_
+                  << " free, state=" << static_cast<int>(lot.state_);
+      }
+    }
+  }
 
   msg_ptr geo_lookup(msg_ptr const& msg) {
     auto const req = motis_content(ParkingGeoRequest, msg);
