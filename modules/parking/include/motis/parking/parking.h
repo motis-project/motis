@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include "boost/filesystem.hpp"
 
 #include "motis/module/module.h"
@@ -32,8 +35,12 @@ private:
   std::size_t edge_rtree_max_size_{1024UL * 1024 * 1024 * 3};
   std::size_t area_rtree_max_size_{1024UL * 1024 * 1024};
   bool lock_rtrees_{false};
+  bool import_osm_{true};
 
   std::size_t db_max_size_{static_cast<std::size_t>(1024) * 1024 * 1024 * 512};
+
+  std::vector<std::string> parkendd_endpoints_;
+  unsigned parkendd_update_interval_{300};  // seconds
 
   struct impl;
   std::unique_ptr<impl> impl_;
