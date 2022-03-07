@@ -38,5 +38,6 @@ target_link_libraries(motis-parking
   protozero
   zlibstatic
   expat
+  motis-libjson
 )
 target_compile_options(motis-parking PRIVATE ${MOTIS_CXX_FLAGS})
