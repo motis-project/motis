@@ -140,6 +140,8 @@ struct gbfs::impl {
     });
 
     auto const sx = stations_rtree_.in_radius(x, max_walk_dist);
+    auto const sx_pos =
+        utl::to_vec(sx, [&](auto const idx) { return stations_.at(idx).pos_; });
     auto const sp = std::accumulate(
         begin(p_pos), end(p_pos), std::vector<size_t>{},
         [&](std::vector<size_t> acc, geo::latlng const& pt_station_pos) {
@@ -161,36 +163,46 @@ struct gbfs::impl {
             });
       }
     }();
-
-    // FWD
-    //   free-float FWD: x --walk--> [b] --bike--> [p]
-    //   station FWD: x --walk--> [sx] --bike--> [sp] --walk--> [p]
-    auto b_and_sx = utl::to_vec(
+    auto const b_pos = utl::to_vec(
         b, [&](auto const idx) { return free_bikes_.at(idx).pos_; });
-    utl::concat(b_and_sx, utl::to_vec(sx, [&](auto const idx) {
-                  return stations_.at(idx).pos_;
-                }));
 
-    auto const f_first_mile_walks = motis_call(make_ppr_request(
-        x, b_and_sx, SearchDir_Forward, req->max_foot_duration()));
-    auto const f_freefloat_bike_rides =
-        utl::to_vec(b, [&](auto const& free_bike_idx) {
-          return motis_call(make_osrm_request(
-              free_bikes_.at(free_bike_idx).pos_, p_pos, SearchDir_Forward));
-        });
-    auto const f_sx_to_sp_bike_rides =
-        utl::to_vec(sx, [&](auto const& sx_index) {
-          return motis_call(make_osrm_request(stations_.at(sx_index).pos_,
-                                              sp_pos, SearchDir_Forward));
-        });
-    auto const f_last_mile_walks = utl::to_vec(sp_pos, [&](auto const& pos) {
-      return motis_call(make_ppr_request(pos, p_pos, SearchDir_Forward,
-                                         req->max_foot_duration()));
-    });
+    if (req->search_dir() == SearchDir_Forward) {
+      // FWD
+      //   free-float FWD: x --walk--> [b] --bike--> [p]
+      auto const f_x_to_b_walks = motis_call(make_ppr_request(
+          x, b_pos, SearchDir_Forward, req->max_foot_duration()));
+      auto const f_b_rides = utl::to_vec(b, [&](auto const& free_bike_idx) {
+        return motis_call(make_osrm_request(free_bikes_.at(free_bike_idx).pos_,
+                                            p_pos, SearchDir_Forward));
+      });
 
-    // BWD
-    //   free-float BWD: [p] --walk--> [b] --bike--> x
-    //   station BWD: [p] --walk--> [sp] --bike--> [sx] --walk--> x
+      // FWD
+      //   station FWD: x --walk--> [sx] --bike--> [sp] --walk--> [p]
+      auto const f_x_to_sx_walks = motis_call(make_ppr_request(
+          x, sx_pos, SearchDir_Forward, req->max_foot_duration()));
+      auto const f_sx_to_sp_rides = utl::to_vec(sx, [&](auto const& sx_index) {
+        return motis_call(make_osrm_request(stations_.at(sx_index).pos_, sp_pos,
+                                            SearchDir_Forward));
+      });
+      auto const f_sp_to_p_walks = utl::to_vec(sp_pos, [&](auto const& pos) {
+        return motis_call(make_ppr_request(pos, p_pos, SearchDir_Forward,
+                                           req->max_foot_duration()));
+      });
+
+      for (auto const& [sx_idx, x_to_sx_res] : f_x_to_sx_walks) {
+        if (x_to_sx_res->)
+        for (auto const& [sp_idx, sx_to_sp_res] : f_sx_to_sp_rides.at(sx_idx)) {
+          for (auto const& [sp_idx, f_sp] : sp_to_p_walks.at(sp_idx)) {
+
+          }
+        }
+      }
+    } else {
+      // TODO(felix)
+      // BWD
+      //   free-float BWD: [p] --walk--> [b] --bike--> x
+      //   station BWD: [p] --walk--> [sp] --bike--> [sx] --walk--> x
+    }
 
     return {};
   }
