@@ -1,13 +1,18 @@
 #pragma once
 
+#include <map>
 #include <string>
 #include <vector>
 
 #include "boost/filesystem.hpp"
 
+#include "motis/ppr/profile_info.h"
+
 #include "motis/module/module.h"
 
 namespace motis::parking {
+
+struct stations;
 
 struct parking : public motis::module::module {
   parking();
@@ -44,6 +49,8 @@ private:
   struct impl;
   std::unique_ptr<impl> impl_;
   bool import_successful_{false};
+  std::map<std::string, ::motis::ppr::profile_info> ppr_profiles_;
+  std::unique_ptr<stations> stations_;
 };
 
 }  // namespace motis::parking

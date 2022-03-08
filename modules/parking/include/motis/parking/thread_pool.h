@@ -7,7 +7,7 @@
 #include "boost/asio/io_service.hpp"
 #include "boost/bind.hpp"
 
-namespace motis::parking::prepare {
+namespace motis::parking {
 
 struct thread_pool {
   explicit thread_pool(
@@ -37,4 +37,4 @@ private:
   std::vector<std::thread> threads_;
 };
 
-}  // namespace motis::parking::prepare
+}  // namespace motis::parking

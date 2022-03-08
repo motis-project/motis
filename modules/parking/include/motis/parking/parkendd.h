@@ -32,4 +32,6 @@ struct api_parking_lot {
 
 std::vector<api_parking_lot> parse(std::string const& json);
 
+parking_lot to_parking_lot(api_parking_lot const& apl);
+
 }  // namespace motis::parking::parkendd

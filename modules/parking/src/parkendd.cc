@@ -52,4 +52,10 @@ std::vector<api_parking_lot> parse(std::string const& json) {
   return utl::to_vec(lots, [](auto const& lot) { return parse_lot(lot); });
 }
 
+parking_lot to_parking_lot(api_parking_lot const& apl) {
+  return {0, apl.location_,
+          parking_lot::info_t{parkendd_parking_lot_info{
+              apl.id_, apl.name_, apl.lot_type_, apl.address_}}};
+}
+
 }  // namespace motis::parking::parkendd

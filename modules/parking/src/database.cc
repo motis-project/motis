@@ -6,6 +6,8 @@
 
 #include "cista/serialization.h"
 
+#include "utl/enumerate.h"
+
 #include "fmt/core.h"
 
 #include "motis/core/common/logging.h"
@@ -22,6 +24,11 @@ constexpr auto const FOOTEDGES_DB = "footedges";
 
 inline std::string_view view(cista::byte_buf const& b) {
   return std::string_view{reinterpret_cast<char const*>(b.data()), b.size()};
+}
+
+template <typename T>
+inline std::string_view int_view(T const& val) {
+  return std::string_view{reinterpret_cast<char const*>(&val), sizeof(val)};
 }
 
 inline std::string get_footedges_db_key(int32_t parking_id,
@@ -43,8 +50,13 @@ inline std::string get_osm_parking_lot_key(parking_lot const& lot) {
   return fmt::format("{}:{}", get_osm_str_type(info.osm_type_), info.osm_id_);
 }
 
+inline std::string_view get_parkendd_parking_lot_key(parking_lot const& lot) {
+  auto const& info = std::get<parkendd_parking_lot_info>(lot.info_);
+  return info.id_;
+}
+
 inline std::string serialize_reachable_stations(
-    std::vector<std::pair<prepare::station, double>> const& st) {
+    std::vector<std::pair<station_info, double>> const& st) {
   std::stringstream ss;
   for (auto const& s : st) {
     ss << s.first.id_ << "|";
@@ -84,8 +96,7 @@ void database::init() {
 
 void database::put_footedges(
     const persistable_foot_edges& fe,
-    std::vector<std::pair<prepare::station, double>> const&
-        reachable_stations) {
+    std::vector<std::pair<station_info, double>> const& reachable_stations) {
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_};
   auto reachable_stations_db = reachable_stations_dbi(txn);
@@ -111,26 +122,47 @@ std::optional<persistable_foot_edges> database::get_footedges(
   }
 }
 
-void database::add_osm_parking_lots(std::vector<parking_lot>& parking_lots) {
+std::vector<std::size_t> database::add_parking_lots(
+    std::vector<parking_lot>& parking_lots) {
+  auto added_indices = std::vector<std::size_t>{};
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_};
   auto parking_lots_db = parking_lots_dbi(txn);
   auto osm_parking_lots_db = osm_parking_lots_dbi(txn);
+  auto parkendd_parking_lots_db = parkendd_parking_lots_dbi(txn);
 
-  for (auto& lot : parking_lots) {
-    auto const osm_key = get_osm_parking_lot_key(lot);
-    if (auto const r = txn.get(osm_parking_lots_db, osm_key); r.has_value()) {
-      // lot.id_ = *cista::deserialize<std::int32_t>(r.value());
-      lot.id_ = lmdb::as_int(r.value());
-    } else {
-      lot.id_ = ++highest_parking_lot_id_;
-      auto const serialized_id = cista::serialize(lot.id_);  // TODO(pablo): fix
-      auto const serialized_lot = cista::serialize(lot);
-      txn.put(parking_lots_db, lot.id_, view(serialized_lot));
-      txn.put(osm_parking_lots_db, osm_key, view(serialized_id));
+  auto const store_parking_lot = [&](parking_lot const& lot) {
+    auto const serialized_lot = cista::serialize(lot);
+    txn.put(parking_lots_db, lot.id_, view(serialized_lot));
+  };
+
+  for (auto const& [idx, lot] : utl::enumerate(parking_lots)) {
+    if (lot.is_from_osm()) {
+      auto const osm_key = get_osm_parking_lot_key(lot);
+      if (auto const r = txn.get(osm_parking_lots_db, osm_key); r.has_value()) {
+        lot.id_ = lmdb::as_int(r.value());
+      } else {
+        lot.id_ = ++highest_parking_lot_id_;
+        store_parking_lot(lot);
+        txn.put(osm_parking_lots_db, osm_key, int_view(lot.id_));
+        added_indices.emplace_back(idx);
+      }
+    } else if (lot.is_from_parkendd()) {
+      auto const parkendd_key = get_parkendd_parking_lot_key(lot);
+      if (auto const r = txn.get(parkendd_parking_lots_db, parkendd_key);
+          r.has_value()) {
+        lot.id_ = lmdb::as_int(r.value());
+      } else {
+        lot.id_ = ++highest_parking_lot_id_;
+        store_parking_lot(lot);
+        txn.put(parkendd_parking_lots_db, parkendd_key, int_view(lot.id_));
+        added_indices.emplace_back(idx);
+      }
     }
   }
+
   txn.commit();
+  return added_indices;
 }
 
 std::vector<parking_lot> database::get_parking_lots() {
@@ -151,7 +183,7 @@ std::vector<parking_lot> database::get_parking_lots() {
 }
 
 std::vector<foot_edge_task> database::get_foot_edge_tasks(
-    prepare::stations const& st, std::vector<parking_lot> const& parking_lots,
+    stations const& st, std::vector<parking_lot> const& parking_lots,
     std::map<std::string, motis::ppr::profile_info> const& ppr_profiles) {
   auto tasks = std::vector<foot_edge_task>{};
   auto lock = std::lock_guard{mutex_};

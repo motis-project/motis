@@ -67,6 +67,32 @@ msg_ptr make_ppr_request(latlng const& pos,
   return make_msg(mc);
 }
 
+msg_ptr make_ppr_request(::ppr::location const& start,
+                         std::vector<::ppr::location> const& destinations,
+                         std::string const& profile_name,
+                         double const duration_limit, SearchDirection dir,
+                         bool include_steps, bool include_edges,
+                         bool include_path) {
+  Position const fbs_position{start.lat(), start.lon()};
+
+  message_creator mc;
+  mc.create_and_finish(
+      MsgContent_FootRoutingRequest,
+      CreateFootRoutingRequest(
+          mc, &fbs_position,
+          mc.CreateVectorOfStructs(
+              utl::to_vec(destinations,
+                          [](auto const& loc) {
+                            return Position{loc.lat(), loc.lon()};
+                          })),
+          CreateSearchOptions(mc, mc.CreateString(profile_name),
+                              duration_limit),
+          dir, include_steps, include_edges, include_path)
+          .Union(),
+      "/ppr/route");
+  return make_msg(mc);
+}
+
 msg_ptr make_ppr_request(geo::latlng const& pos,
                          Vector<Offset<Station>> const* stations,
                          SearchOptions const* search_options,

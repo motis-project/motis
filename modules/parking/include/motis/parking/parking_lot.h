@@ -35,6 +35,14 @@ struct parking_lot {
 
   inline bool valid() const { return id_ != 0; }
 
+  inline bool is_from_osm() const {
+    return cista::holds_alternative<osm_parking_lot_info>(info_);
+  }
+
+  inline bool is_from_parkendd() const {
+    return cista::holds_alternative<parkendd_parking_lot_info>(info_);
+  }
+
   std::int32_t id_{};
   geo::latlng location_{};
 

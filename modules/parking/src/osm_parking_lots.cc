@@ -2,8 +2,6 @@
 #include <iostream>
 #include <string_view>
 
-#include "boost/filesystem.hpp"
-
 #include "osmium/area/assembler.hpp"
 #include "osmium/area/multipolygon_manager.hpp"
 #include "osmium/geom/coordinates.hpp"
@@ -14,16 +12,15 @@
 
 #include "motis/core/common/logging.h"
 
-#include "motis/parking/prepare/osm_parking_lots.h"
+#include "motis/parking/osm_parking_lots.h"
 
-namespace fs = boost::filesystem;
 using namespace motis::logging;
 
 using index_type = osmium::index::map::FlexMem<osmium::unsigned_object_id_type,
                                                osmium::Location>;
 using location_handler_type = osmium::handler::NodeLocationsForWays<index_type>;
 
-namespace motis::parking::prepare {
+namespace motis::parking {
 
 osmium::geom::Coordinates calc_center(osmium::NodeRefList const& nr_list) {
   osmium::geom::Coordinates c{0.0, 0.0};
@@ -131,4 +128,4 @@ std::vector<parking_lot> extract_osm_parking_lots(std::string const& osm_file) {
   return parking_lots;
 }
 
-}  // namespace motis::parking::prepare
+}  // namespace motis::parking
