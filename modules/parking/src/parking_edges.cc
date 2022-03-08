@@ -227,7 +227,7 @@ std::vector<parking_edges> get_custom_parking_edges(
 std::vector<parking_edges> get_cached_parking_edges(
     std::vector<parking_lot> const& parkings, geo::latlng const& start_pos,
     Vector<Offset<Station>> const* dest_stations, int max_car_duration,
-    motis::ppr::SearchOptions const* ppr_search_options, database const& db,
+    motis::ppr::SearchOptions const* ppr_search_options, database& db,
     parking_edge_stats& pe_stats, bool include_outward, bool include_return,
     double walking_speed) {
   std::vector<parking_edges> edges;
@@ -267,7 +267,7 @@ std::vector<parking_edges> get_cached_parking_edges(
     }
 
     auto const foot_edges =
-        db.get(parking.id_, ppr_search_options->profile()->str());
+        db.get_footedges(parking.id_, ppr_search_options->profile()->str());
     if (foot_edges) {
       std::vector<parking_edge_costs> outward_costs;
       std::vector<parking_edge_costs> return_costs;
@@ -316,7 +316,7 @@ std::vector<parking_edges> get_cached_parking_edges(
 std::vector<parking_edges> get_parking_edges(
     std::vector<parking_lot> const& parkings, geo::latlng const& start_pos,
     Vector<Offset<Station>> const* dest_stations, int max_car_duration,
-    motis::ppr::SearchOptions const* ppr_search_options, database const& db,
+    motis::ppr::SearchOptions const* ppr_search_options, database& db,
     parking_edge_stats& pe_stats, bool include_outward, bool include_return,
     double walking_speed) {
   return get_cached_parking_edges(

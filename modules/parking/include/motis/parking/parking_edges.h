@@ -98,7 +98,7 @@ std::vector<parking_edges> get_parking_edges(
     std::vector<parking_lot> const& parkings, geo::latlng const& start_pos,
     flatbuffers::Vector<flatbuffers::Offset<Station>> const* dest_stations,
     int max_car_duration, motis::ppr::SearchOptions const* ppr_search_options,
-    database const& db, parking_edge_stats& pe_stats, bool include_outward,
+    database& db, parking_edge_stats& pe_stats, bool include_outward,
     bool include_return, double walking_speed);
 
 unsigned add_nocar_parking_edges(

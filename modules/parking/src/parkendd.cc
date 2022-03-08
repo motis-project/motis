@@ -30,9 +30,14 @@ parkendd_state parse_state(std::string_view const str) {
 
 api_parking_lot parse_lot(rapidjson::Value const& lot) {
   return api_parking_lot{std::string{get_str(lot, "id")},
+                         std::string{get_str(lot, "name")},
+                         std::string{get_str(lot, "lot_type")},
+                         std::string{get_str(lot, "address")},
                          parse_coords(get_obj(lot, "coords")),
-                         get_int(lot, "free"), get_int(lot, "total"),
-                         parse_state(get_str(lot, "state"))};
+                         get_int(lot, "free"),
+                         get_int(lot, "total"),
+                         parse_state(get_str(lot, "state")),
+                         0};
 }
 
 std::vector<api_parking_lot> parse(std::string const& json) {

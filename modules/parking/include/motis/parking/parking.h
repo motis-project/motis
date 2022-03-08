@@ -26,9 +26,7 @@ struct parking : public motis::module::module {
 
 private:
   boost::filesystem::path module_data_dir() const;
-  std::string parking_file() const;
-  std::string footedges_db_file() const;
-  std::string stations_per_parking_file() const;
+  std::string db_file() const;
 
   // import
   int max_walk_duration_{10};

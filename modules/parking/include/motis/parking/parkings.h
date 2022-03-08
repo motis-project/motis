@@ -7,14 +7,13 @@
 
 #include "geo/point_rtree.h"
 
+#include "motis/parking/database.h"
 #include "motis/parking/parking_lot.h"
 
 namespace motis::parking {
 
 struct parkings {
-  parkings() = default;
-  explicit parkings(std::string const& filename);
-  explicit parkings(std::vector<parking_lot>&& parkings);
+  explicit parkings(database& db);
 
   std::vector<parking_lot> get_parkings(geo::latlng const& center,
                                         double radius) const;
@@ -24,6 +23,7 @@ struct parkings {
 
 private:
   geo::point_rtree rtree_;
+  database& db_;
 };
 
 }  // namespace motis::parking

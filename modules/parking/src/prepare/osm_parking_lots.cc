@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <string_view>
 
 #include "boost/filesystem.hpp"
 
@@ -12,7 +13,8 @@
 #include "osmium/visitor.hpp"
 
 #include "motis/core/common/logging.h"
-#include "motis/parking/prepare/parking.h"
+
+#include "motis/parking/prepare/osm_parking_lots.h"
 
 namespace fs = boost::filesystem;
 using namespace motis::logging;
@@ -39,36 +41,48 @@ osmium::geom::Coordinates calc_center(osmium::NodeRefList const& nr_list) {
 
 class parking_handler : public osmium::handler::Handler {
 public:
-  explicit parking_handler(std::string const& parking_file,
-                           std::vector<parking_lot>& parkings)
-      : out_(parking_file), parkings_(parkings) {
-    out_.precision(12);
-    out_ << "lat,lng,fee\n";
-  }
+  explicit parking_handler(std::vector<parking_lot>& parking_lots)
+      : parking_lots_{parking_lots} {}
 
   void node(osmium::Node const& node) {
     auto const& tags = node.tags();
     if (tags.has_tag("amenity", "parking")) {
-      add_parking(node.location(), tags);
+      add_parking(osm_type::NODE, node.id(), node.location(), tags);
     }
   }
 
   void area(osmium::Area const& area) {
     auto const& tags = area.tags();
     if (tags.has_tag("amenity", "parking")) {
-      add_parking(calc_center(*area.cbegin<osmium::OuterRing>()), tags);
+      add_parking(area.from_way() ? osm_type::WAY : osm_type::RELATION,
+                  area.orig_id(),
+                  calc_center(*area.cbegin<osmium::OuterRing>()), tags);
     }
   }
 
 private:
-  void add_parking(osmium::geom::Coordinates const& coord,
+  void add_parking(osm_type const ot, osmium::object_id_type const id,
+                   osmium::geom::Coordinates const& coord,
                    osmium::TagList const& tags) {
     if (!access_allowed(tags)) {
       return;
     }
-    auto const fee = tags.has_key("fee") && !tags.has_tag("fee", "no");
-    out_ << coord.y << "," << coord.x << "," << (fee ? "1" : "0") << "\n";
-    parkings_.emplace_back(++id_, geo::latlng{coord.y, coord.x}, fee);
+    parking_lots_.emplace_back(parking_lot{
+        0, geo::latlng{coord.y, coord.x},
+        parking_lot::info_t{osm_parking_lot_info{id, ot, get_fee_type(tags)}}});
+  }
+
+  inline fee_type get_fee_type(osmium::TagList const& tags) {
+    using namespace std::literals;
+    if (tags.has_key("fee")) {
+      auto const val = tags["fee"];
+      if (val == "yes"sv) {
+        return fee_type::YES;
+      } else if (val == "no"sv) {
+        return fee_type::NO;
+      }
+    }
+    return fee_type::UNKNOWN;
   }
 
   static inline bool access_allowed(osmium::TagList const& tags) {
@@ -80,20 +94,11 @@ private:
            strcmp(access, "public") == 0;
   }
 
-  std::ofstream out_;
-  std::vector<parking_lot>& parkings_;
-  int32_t id_{0};
+  std::vector<parking_lot>& parking_lots_;
 };
 
-bool extract_parkings(std::string const& osm_file,
-                      std::string const& parking_file,
-                      std::vector<parking_lot>& parkings) {
-  auto const out_dir = fs::path{parking_file}.parent_path();
-  if (!out_dir.empty()) {
-    fs::create_directories(out_dir);
-  }
-
-  scoped_timer timer("Extracting parking data");
+std::vector<parking_lot> extract_osm_parking_lots(std::string const& osm_file) {
+  scoped_timer timer("Extracting OSM parking lot data");
 
   osmium::io::File const input_file{osm_file};
 
@@ -102,14 +107,15 @@ bool extract_parkings(std::string const& osm_file,
   osmium::area::MultipolygonManager<osmium::area::Assembler> mp_manager{
       assembler_config};
 
-  std::clog << "Extract Parkings: Pass 1..." << std::endl;
+  std::clog << "Extract OSM parking lots: Pass 1..." << std::endl;
   osmium::relations::read_relations(input_file, mp_manager);
 
   index_type index;
   location_handler_type location_handler{index};
-  parking_handler data_handler{parking_file, parkings};
+  std::vector<parking_lot> parking_lots;
+  parking_handler data_handler{parking_lots};
 
-  std::clog << "Extract Parkings: Pass 2..." << std::endl;
+  std::clog << "Extract OSM parking lots: Pass 2..." << std::endl;
   osmium::io::Reader reader{input_file, osmium::io::read_meta::no};
   osmium::apply(reader, location_handler, data_handler,
                 mp_manager.handler(
@@ -119,7 +125,10 @@ bool extract_parkings(std::string const& osm_file,
 
   reader.close();
 
-  return true;
+  std::clog << "Extracted " << parking_lots.size() << " parking lots from OSM"
+            << std::endl;
+
+  return parking_lots;
 }
 
 }  // namespace motis::parking::prepare

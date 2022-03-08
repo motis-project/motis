@@ -95,7 +95,7 @@ void compute_edges(
     fbb.Finish(CreateFootEdges(fbb, p.id_, fbb.CreateString(profile_name),
                                fbb.CreateVector(outward_edges),
                                fbb.CreateVector(return_edges)));
-    db.put(persistable_foot_edges(std::move(fbb)));
+    db.put_footedges(persistable_foot_edges(std::move(fbb)));
   }
 }
 
@@ -107,11 +107,7 @@ void compute_foot_edges(
     std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
     int threads, std::string const& stations_per_parking_file) {
   std::clog << "Computing foot edges..." << std::endl;
-  database db{footedges_db_file,
-              sizeof(void*) >= 8
-                  ? static_cast<std::size_t>(1024) * 1024 * 1024 * 512
-                  : 256 * 1024 * 1024,
-              false};
+  database db{footedges_db_file};
 
   routing_graph rg;
   {
