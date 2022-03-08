@@ -61,7 +61,6 @@ private:
   void init();
 
   lmdb::env mutable env_;
-  bool open_;
   std::mutex mutex_;
   std::int32_t highest_parking_lot_id_{};
 };

@@ -63,14 +63,11 @@ database::database(std::string const& path, bool const read_only,
   if (read_only) {
     flags = flags | lmdb::env_open_flags::NOLOCK | lmdb::env_open_flags::NOTLS;
   }
-  if ((path != "-" && fs::exists(path)) || !read_only) {
-    env_.open(path.c_str(), flags);
-    open_ = true;
-    init();
-  } else {
-    open_ = false;
-    LOG(warn) << "Database not found: " << path;
+  if (read_only && !fs::exists(path)) {
+    LOG(error) << "Parking database not found: " << path;
   }
+  env_.open(path.c_str(), flags);
+  init();
 }
 
 void database::init() {
@@ -113,9 +110,6 @@ void database::put_footedges(
 
 std::optional<persistable_foot_edges> database::get_footedges(
     int32_t parking_id, std::string const& search_profile) {
-  if (!open_) {
-    return {};
-  }
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
   auto db = footedges_dbi(txn);
@@ -128,12 +122,6 @@ std::optional<persistable_foot_edges> database::get_footedges(
 }
 
 void database::add_osm_parking_lots(std::vector<parking_lot>& parking_lots) {
-  LOG(info) << "add_osm_parking_lots: " << parking_lots.size()
-            << " parking lots";
-  if (!open_) {
-    // TODO(pablo): support case without db or require db
-    return;
-  }
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_};
   auto parking_lots_db = parking_lots_dbi(txn);

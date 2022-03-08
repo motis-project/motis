@@ -171,7 +171,7 @@ struct parking::impl {
                 std::vector<std::string>& parkendd_endpoints,
                 unsigned parkendd_update_interval)
       : sched_{sched},
-        db_{db_file, false, db_max_size},  // TODO(pablo): read-only support
+        db_{db_file, false, db_max_size},  // TODO(pablo): read-only support?
         parkings_{db_},
         parkendd_endpoints_{parkendd_endpoints},
         parkendd_update_interval_{parkendd_update_interval} {}
@@ -454,7 +454,7 @@ void parking::import(import_dispatcher& reg) {
 
             progress_tracker->status("Store Parking Lots");
             LOG(info) << "Initializing parking DB...";
-            auto db = database{db_file()};
+            auto db = database{db_file(), false, db_max_size_};
             LOG(info) << "Writing OSM parking lots to DB...";
             db.add_osm_parking_lots(osm_parking_lots);
 
