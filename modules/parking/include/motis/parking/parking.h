@@ -34,6 +34,7 @@ private:
   std::size_t area_rtree_max_size_{1024UL * 1024 * 1024};
   bool lock_rtrees_{false};
   bool import_osm_{true};
+  bool ppr_exact_{true};
 
   std::size_t db_max_size_{static_cast<std::size_t>(1024) * 1024 * 1024 * 512};
 

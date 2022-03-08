@@ -394,6 +394,9 @@ parking::parking() : module("Parking", "parking") {
         "Maximum size for ppr area r-tree file");
   param(lock_rtrees_, "import.lock_rtrees", "Lock ppr r-trees in memory");
   param(import_osm_, "import_osm", "Import parking lots from OSM");
+  param(ppr_exact_, "ppr_exact",
+        "Calculate foot edges for both directions separately (otherwise assume "
+        "routes in both directions are the same)");
   param(parkendd_endpoints_, "parkendd_endpoints", "ParkenDD endpoints");
   param(parkendd_update_interval_, "parkendd_update_interval",
         "ParkenDD update interval (seconds)");
@@ -474,7 +477,7 @@ void parking::import(import_dispatcher& reg) {
             compute_foot_edges(
                 db, foot_edge_tasks, ppr_profiles, ppr_ev->graph_path()->str(),
                 edge_rtree_max_size_, area_rtree_max_size_, lock_rtrees_,
-                std::thread::hardware_concurrency());
+                std::thread::hardware_concurrency(), ppr_exact_);
           } else {
             std::clog << "OSM import disabled, not importing parking lots"
                       << std::endl;

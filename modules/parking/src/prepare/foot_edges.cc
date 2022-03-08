@@ -1,9 +1,6 @@
 #include <cmath>
 #include <algorithm>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <mutex>
+#include <optional>
 #include <string>
 
 #include "utl/enumerate.h"
@@ -44,7 +41,8 @@ inline uint16_t get_accessibility(route const& r) {
 
 void compute_edges(
     foot_edge_task const& task, database& db, routing_graph const& rg,
-    std::map<std::string, motis::ppr::profile_info> const& ppr_profiles) {
+    std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
+    bool const ppr_exact) {
   auto const* lot = task.parking_lot_;
   auto const& profile = ppr_profiles.at(*task.ppr_profile_).profile_;
   FlatBufferBuilder fbb;
@@ -55,18 +53,22 @@ void compute_edges(
     auto const station_locs = utl::to_vec(
         task.stations_in_radius_,
         [](auto const& s) { return to_location(std::get<0>(s).pos_); });
+
     auto const fwd_result = find_routes(rg, parking_loc, station_locs, profile,
                                         search_direction::FWD);
-    auto const bwd_result = find_routes(rg, parking_loc, station_locs, profile,
-                                        search_direction::BWD);
-
     assert(fwd_result.routes_.size() == parking_stations.size());
-    assert(bwd_result.routes_.size() == parking_stations.size());
+    std::optional<::ppr::routing::search_result> bwd_result;
+    if (ppr_exact) {
+      bwd_result = find_routes(rg, parking_loc, station_locs, profile,
+                               search_direction::BWD);
+      assert(bwd_result->routes_.size() == parking_stations.size());
+    }
+
     for (auto station_idx = 0U; station_idx < task.stations_in_radius_.size();
          ++station_idx) {
-      auto const fwd_routes = fwd_result.routes_[station_idx];
-      auto const bwd_routes = bwd_result.routes_[station_idx];
-      if (fwd_routes.empty() && bwd_routes.empty()) {
+      auto const& fwd_routes = fwd_result.routes_[station_idx];
+      if (fwd_routes.empty() && (!bwd_result.has_value() ||
+                                 bwd_result->routes_[station_idx].empty())) {
         continue;
       }
       auto const station_id = fbb.CreateString(
@@ -78,16 +80,22 @@ void compute_edges(
             CreateFootEdge(fbb, station_id, station_dist, get_duration(r),
                            get_accessibility(r), r.distance_));
       }
-      for (auto const& r : bwd_routes) {
-        return_edges.emplace_back(
-            CreateFootEdge(fbb, station_id, station_dist, get_duration(r),
-                           get_accessibility(r), r.distance_));
+      if (bwd_result.has_value()) {
+        auto const bwd_routes = bwd_result->routes_[station_idx];
+        for (auto const& r : bwd_routes) {
+          return_edges.emplace_back(
+              CreateFootEdge(fbb, station_id, station_dist, get_duration(r),
+                             get_accessibility(r), r.distance_));
+        }
       }
     }
   }
-  fbb.Finish(CreateFootEdges(
-      fbb, lot->id_, fbb.CreateString(*task.ppr_profile_),
-      fbb.CreateVector(outward_edges), fbb.CreateVector(return_edges)));
+  auto const fbs_outward_edges = fbb.CreateVector(outward_edges);
+  auto const fbs_return_edges =
+      ppr_exact ? fbb.CreateVector(return_edges) : fbs_outward_edges;
+  fbb.Finish(CreateFootEdges(fbb, lot->id_,
+                             fbb.CreateString(*task.ppr_profile_),
+                             fbs_outward_edges, fbs_return_edges));
   db.put_footedges(persistable_foot_edges(std::move(fbb)),
                    task.stations_in_radius_);
 }
@@ -96,7 +104,8 @@ void compute_foot_edges(
     database& db, std::vector<foot_edge_task> const& tasks,
     std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
     std::string const& ppr_graph, std::size_t edge_rtree_max_size,
-    std::size_t area_rtree_max_size, bool lock_rtrees, int threads) {
+    std::size_t area_rtree_max_size, bool lock_rtrees, int threads,
+    bool ppr_exact) {
   LOG(info) << "Computing foot edges (" << tasks.size() << " tasks)...";
 
   routing_graph rg;
@@ -119,7 +128,7 @@ void compute_foot_edges(
   for (auto const& [i, t] : utl::enumerate(tasks)) {
     pool.post([&, i = i, &t = t] {
       progress_tracker->increment();
-      compute_edges(t, db, rg, ppr_profiles);
+      compute_edges(t, db, rg, ppr_profiles, ppr_exact);
     });
   }
   pool.join();
