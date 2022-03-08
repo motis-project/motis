@@ -309,7 +309,7 @@ struct parking::impl {
     }
   }
 
-  msg_ptr parking_edges_req(msg_ptr const& msg) {
+  msg_ptr parking_edges_req(msg_ptr const& msg, schedule const& sched) {
     auto const req = motis_content(ParkingEdgesRequest, msg);
     auto const pos = to_latlng(req->pos());
 
@@ -332,7 +332,7 @@ struct parking::impl {
     auto const walking_speed = ppr_profiles_.get_walking_speed(
         req->ppr_search_options()->profile()->str());
     auto edges = get_parking_edges(
-        parkings, pos, req->filtered_stations(), req->max_car_duration(),
+        sched, parkings, pos, req->filtered_stations(), req->max_car_duration(),
         req->ppr_search_options(), db_, pe_stats, req->include_outward(),
         req->include_return(), walking_speed);
     MOTIS_STOP_TIMING(parking_edges_timing);
@@ -514,8 +514,9 @@ void parking::init(motis::module::registry& reg) {
                     [this](auto&& m) { return impl_->id_lookup(m); });
     reg.register_op("/parking/edge",
                     [this](auto&& m) { return impl_->parking_edge(m); });
-    reg.register_op("/parking/edges",
-                    [this](auto&& m) { return impl_->parking_edges_req(m); });
+    reg.register_op("/parking/edges", [this](auto&& m) {
+      return impl_->parking_edges_req(m, get_sched());
+    });
     reg.subscribe("/init", [this]() { impl_->init(*shared_data_); });
   } catch (std::exception const& e) {
     LOG(logging::warn) << "parking module not initialized (" << e.what() << ")";

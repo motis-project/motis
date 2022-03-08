@@ -4,15 +4,12 @@
 #include <string_view>
 #include <variant>
 
-#include "boost/filesystem.hpp"
-
 #include "cista/serialization.h"
 
 #include "fmt/core.h"
 
 #include "motis/core/common/logging.h"
 
-namespace fs = boost::filesystem;
 using namespace motis::logging;
 
 namespace motis::parking {
@@ -56,7 +53,7 @@ inline std::string serialize_reachable_stations(
 }
 
 database::database(std::string const& path, std::size_t const max_size) {
-  env_.set_maxdbs(8);
+  env_.set_maxdbs(10);
   env_.set_mapsize(max_size);
   auto flags = lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOSYNC;
   env_.open(path.c_str(), flags);
@@ -72,7 +69,7 @@ void database::init() {
   reachable_stations_dbi(txn, lmdb::dbi_flags::CREATE);
   footedges_dbi(txn, lmdb::dbi_flags::CREATE);
 
-  // find highest existing parking lot
+  // find highest existing parking lot id
   auto parking_cur = lmdb::cursor{txn, parking_lots_db};
   auto const entry = parking_cur.get(lmdb::cursor_op::LAST);
   if (entry.has_value()) {
