@@ -25,7 +25,7 @@ namespace motis::parking {
 using persistable_foot_edges = typed_flatbuffer<FootEdges>;
 
 struct database {
-  explicit database(std::string const& path, bool read_only = false,
+  explicit database(std::string const& path,
                     std::size_t max_size =
                         sizeof(void*) >= 8
                             ? static_cast<std::size_t>(1024) * 1024 * 1024 * 512

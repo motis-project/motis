@@ -55,17 +55,10 @@ inline std::string serialize_reachable_stations(
   return ss.str();
 }
 
-database::database(std::string const& path, bool const read_only,
-                   std::size_t const max_size) {
+database::database(std::string const& path, std::size_t const max_size) {
   env_.set_maxdbs(8);
   env_.set_mapsize(max_size);
   auto flags = lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOSYNC;
-  if (read_only) {
-    flags = flags | lmdb::env_open_flags::NOLOCK | lmdb::env_open_flags::NOTLS;
-  }
-  if (read_only && !fs::exists(path)) {
-    LOG(error) << "Parking database not found: " << path;
-  }
   env_.open(path.c_str(), flags);
   init();
 }
