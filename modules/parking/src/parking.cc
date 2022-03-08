@@ -453,23 +453,28 @@ void parking::import(import_dispatcher& reg) {
                 extract_osm_parking_lots(osm_ev->path()->str());
 
             progress_tracker->status("Store Parking Lots");
-            std::clog << "Initializing parking DB..." << std::endl;
+            LOG(info) << "Initializing parking DB...";
             auto db = database{db_file()};
-            std::clog << "Writing OSM parking lots to DB..." << std::endl;
+            LOG(info) << "Writing OSM parking lots to DB...";
             db.add_osm_parking_lots(osm_parking_lots);
 
-            // auto park = parkings{std::move(parking_data)};
-            std::clog << "Extracting stations from schedule..." << std::endl;
+            LOG(info) << "Extracting stations from schedule...";
             auto st = stations{get_sched()};
 
-            /*
+            LOG(info) << "Creating foot edge tasks...";
+            progress_tracker->status("Check Foot Edges");
+            auto foot_edge_tasks =
+                db.get_foot_edge_tasks(st, osm_parking_lots, ppr_profiles);
+            LOG(info) << "Created " << foot_edge_tasks.size()
+                      << " foot edge tasks (" << osm_parking_lots.size()
+                      << " parking lots, " << ppr_profiles.size()
+                      << " ppr profiles, " << st.size() << " stations)";
+
             progress_tracker->status("Compute Foot Edges");
             compute_foot_edges(
-                st, park, footedges_db_file(), ppr_ev->graph_path()->str(),
+                db, foot_edge_tasks, ppr_profiles, ppr_ev->graph_path()->str(),
                 edge_rtree_max_size_, area_rtree_max_size_, lock_rtrees_,
-                ppr_profiles, std::thread::hardware_concurrency(),
-                stations_per_parking_file());
-                */
+                std::thread::hardware_concurrency());
           } else {
             std::clog << "OSM import disabled, not importing parking lots"
                       << std::endl;

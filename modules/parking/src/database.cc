@@ -1,5 +1,6 @@
 #include "motis/parking/database.h"
 
+#include <sstream>
 #include <string_view>
 #include <variant>
 
@@ -26,11 +27,39 @@ inline std::string_view view(cista::byte_buf const& b) {
   return std::string_view{reinterpret_cast<char const*>(b.data()), b.size()};
 }
 
+inline std::string get_footedges_db_key(int32_t parking_id,
+                                        std::string const& profile) {
+  return fmt::format("{}:{}", parking_id, profile);
+}
+
+inline char get_osm_str_type(osm_type const ot) {
+  switch (ot) {
+    case osm_type::NODE: return 'n';
+    case osm_type::WAY: return 'w';
+    case osm_type::RELATION: return 'r';
+    default: return '?';
+  }
+}
+
+inline std::string get_osm_parking_lot_key(parking_lot const& lot) {
+  auto const& info = std::get<osm_parking_lot_info>(lot.info_);
+  return fmt::format("{}:{}", get_osm_str_type(info.osm_type_), info.osm_id_);
+}
+
+inline std::string serialize_reachable_stations(
+    std::vector<std::pair<prepare::station, double>> const& st) {
+  std::stringstream ss;
+  for (auto const& s : st) {
+    ss << s.first.id_ << "|";
+  }
+  return ss.str();
+}
+
 database::database(std::string const& path, bool const read_only,
                    std::size_t const max_size) {
   env_.set_maxdbs(8);
   env_.set_mapsize(max_size);
-  auto flags = lmdb::env_open_flags::NOSUBDIR;
+  auto flags = lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOSYNC;
   if (read_only) {
     flags = flags | lmdb::env_open_flags::NOLOCK | lmdb::env_open_flags::NOTLS;
   }
@@ -66,18 +95,19 @@ void database::init() {
   txn.commit();
 }
 
-inline std::string get_footedges_db_key(int32_t parking_id,
-                                        std::string const& profile) {
-  return fmt::format("{}:{}", parking_id, profile);
-}
-
-void database::put_footedges(const persistable_foot_edges& fe) {
+void database::put_footedges(
+    const persistable_foot_edges& fe,
+    std::vector<std::pair<prepare::station, double>> const&
+        reachable_stations) {
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_};
-  auto db = footedges_dbi(txn);
+  auto reachable_stations_db = reachable_stations_dbi(txn);
+  auto footedges_db = footedges_dbi(txn);
   auto const key = get_footedges_db_key(fe.get()->parking_id(),
                                         fe.get()->search_profile()->str());
-  txn.put(db, key, fe.to_string());
+  txn.put(footedges_db, key, fe.to_string());
+  txn.put(reachable_stations_db, key,
+          serialize_reachable_stations(reachable_stations));
   txn.commit();
 }
 
@@ -95,20 +125,6 @@ std::optional<persistable_foot_edges> database::get_footedges(
   } else {
     return {persistable_foot_edges(*r)};
   }
-}
-
-inline char get_osm_str_type(osm_type const ot) {
-  switch (ot) {
-    case osm_type::NODE: return 'n';
-    case osm_type::WAY: return 'w';
-    case osm_type::RELATION: return 'r';
-    default: return '?';
-  }
-}
-
-inline std::string get_osm_parking_lot_key(parking_lot const& lot) {
-  auto const& info = std::get<osm_parking_lot_info>(lot.info_);
-  return fmt::format("{}:{}", get_osm_str_type(info.osm_type_), info.osm_id_);
 }
 
 void database::add_osm_parking_lots(std::vector<parking_lot>& parking_lots) {
@@ -140,8 +156,8 @@ void database::add_osm_parking_lots(std::vector<parking_lot>& parking_lots) {
 }
 
 std::vector<parking_lot> database::get_parking_lots() {
-  auto lock = std::lock_guard{mutex_};
   auto parking_lots = std::vector<parking_lot>{};
+  auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
   auto parking_lots_db = parking_lots_dbi(txn);
   auto cur = lmdb::cursor{txn, parking_lots_db};
@@ -154,6 +170,40 @@ std::vector<parking_lot> database::get_parking_lots() {
   }
   cur.reset();
   return parking_lots;
+}
+
+std::vector<foot_edge_task> database::get_foot_edge_tasks(
+    prepare::stations const& st, std::vector<parking_lot> const& parking_lots,
+    std::map<std::string, motis::ppr::profile_info> const& ppr_profiles) {
+  auto tasks = std::vector<foot_edge_task>{};
+  auto lock = std::lock_guard{mutex_};
+  auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
+  auto reachable_stations_db = reachable_stations_dbi(txn);
+  auto footedges_db = footedges_dbi(txn);
+
+  for (auto const& [profile_name, pi] : ppr_profiles) {
+    auto const& profile = pi.profile_;
+    auto const walk_radius = static_cast<int>(
+        std::ceil(profile.duration_limit_ * profile.walking_speed_));
+    for (auto const& pl : parking_lots) {
+      auto const key = get_footedges_db_key(pl.id_, profile_name);
+      auto task = foot_edge_task{
+          &pl, st.get_in_radius(pl.location_, walk_radius), &profile_name};
+      if (auto const sr = txn.get(reachable_stations_db, key); sr.has_value()) {
+        auto const reachable_stations =
+            serialize_reachable_stations(task.stations_in_radius_);
+        if (sr.value() == reachable_stations) {
+          if (auto const sf = txn.get(footedges_db, key); sf.has_value()) {
+            // already in db
+            continue;
+          }
+        }
+      }
+      tasks.emplace_back(std::move(task));
+    }
+  }
+
+  return tasks;
 }
 
 lmdb::txn::dbi database::parking_lots_dbi(lmdb::txn& txn,
