@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 
 import { Search } from './Search';
 import { SubOverlay } from './SubOverlay';
-import { Connection, Station, Transport, TripId } from '../Types/ConnectionTypes';
+import { JourneyRender, duration } from './Journey';
+import { ConnectionRender } from './ConnectionRender';
 import { Translations } from '../App/Localization';
-import { ConnectionRender, JourneyRender, duration } from './ConnectionRender';
 import { getFromLocalStorage } from '../App/LocalStorage';
+import { Connection, Station, Transport, TripId } from '../Types/ConnectionTypes';
 import { Address } from '../Types/SuggestionTypes';
 import moment from 'moment';
 
@@ -91,9 +92,7 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
                                                         </div>
                                                         <div className='pure-u-16-24 connection-trains'>
                                                             <div className='transport-graph'>
-                                                                <ConnectionRender connection={connectionElem} setDetailViewHidden={setDetailViewHidden}/>
-                                                                {/* Was ist tooltip? Es ist unsichtbar und hat keine Funktion meiner Meinung nach.*/ }
-
+                                                                <ConnectionRender connection={connectionElem} setDetailViewHidden={setDetailViewHidden} translation={props.translation}/>
                                                                 <div className='tooltip' style={{ position: 'absolute', left: '0px', top: '23px' }}>
                                                                     <div className='stations'>
                                                                         <div className='departure'><span className='station'>{props.translation.search.departure}</span><span
@@ -120,7 +119,7 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
                                 <div className="header">
                                     <div className="back"><i className="icon" onClick={() => setDetailViewHidden(true)}>arrow_back</i></div>
                                     <div className="details">
-                                        <div className="date">{displayDate.unix()}</div>
+                                        <div className="date">{displayDate.format('D.M.YYYY')}</div>
                                         <div className="connection-times">
                                             <div className="times">
                                                 <div className="connection-departure">{moment.unix(connections[indexOfConnection].stops[0].departure.time).format('HH:mm')}</div>
