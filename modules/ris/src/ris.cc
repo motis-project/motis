@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <atomic>
+#include <fstream>
 #include <limits>
 #include <optional>
 
@@ -219,7 +220,15 @@ struct ris::impl {
     std::unique_ptr<amqp::ssl_connection> con_;
   };
 
-  explicit impl(config& c) : config_{c} {}
+  explicit impl(config& c)
+      : config_{c}, rabbitmq_log_enabled_{!config_.rabbitmq_log_.empty()} {
+    if (rabbitmq_log_enabled_) {
+      LOG(info) << "Logging RabbitMQ messages to: " << config_.rabbitmq_log_;
+      rabbitmq_log_file_.exceptions(std::ios_base::failbit |
+                                    std::ios_base::badbit);
+      rabbitmq_log_file_.open(config_.rabbitmq_log_, std::ios_base::app);
+    }
+  }
 
   void init_ribasis_receiver(dispatcher* d, schedule* sched) {
     utl::verify(config_.rabbitmq_.valid(), "invalid rabbitmq configuration");
@@ -252,6 +261,13 @@ struct ris::impl {
                   to_res_id(::motis::module::global_res_id::SCHEDULE);
 
               for (auto const& m : msgs) {
+                if (rabbitmq_log_enabled_) {
+                  rabbitmq_log_file_ << "[" << motis::logging::time()
+                                     << "] msg size=" << m.content_.size()
+                                     << "\n"
+                                     << m.content_ << "\n"
+                                     << std::endl;
+                }
                 parse_str_and_write_to_db(
                     *file_upload_, {m.content_.c_str(), m.content_.size()},
                     file_type::JSON, pub);
@@ -259,6 +275,16 @@ struct ris::impl {
 
               sched->system_time_ = pub.max_timestamp_;
               sched->last_update_timestamp_ = std::time(nullptr);
+
+              if (rabbitmq_log_enabled_) {
+                rabbitmq_log_file_
+                    << "[" << motis::logging::time() << "] published "
+                    << msgs.size()
+                    << " messages, system_time=" << sched->system_time_ << " ("
+                    << format_unix_time(sched->system_time_) << ")"
+                    << std::endl;
+              }
+
               publish_system_time_changed(pub.schedule_res_id_);
             },
             ctx::op_id{"ribasis_receive", CTX_LOCATION, 0U}, ctx::op_type_t::IO,
@@ -967,6 +993,9 @@ struct ris::impl {
 
   std::unique_ptr<input> file_upload_;
   std::vector<input> inputs_;
+
+  bool rabbitmq_log_enabled_{false};
+  std::ofstream rabbitmq_log_file_;
 };
 
 ris::ris() : module("RIS", "ris") {
@@ -994,6 +1023,9 @@ ris::ris() : module("RIS", "ris") {
         "RabbitMQ path to client certificate");
   param(config_.rabbitmq_.key_, "rabbitmq.key",
         "RabbitMQ path to client key file");
+  param(config_.rabbitmq_log_, "rabbitmq.log",
+        "Path to log file for RabbitMQ messages (set to empty string to "
+        "disable logging)");
 }
 
 ris::~ris() = default;
