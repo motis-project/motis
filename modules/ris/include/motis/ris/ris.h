@@ -22,6 +22,7 @@ struct config {
   bool gtfs_is_addition_skip_allowed_{true};
   amqp::login rabbitmq_;
   unsigned update_interval_{60};
+  std::string rabbitmq_log_{};
 };
 
 struct ris : public motis::module::module {
