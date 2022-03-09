@@ -5,6 +5,8 @@
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/trip_access.h"
 
+#include "motis/core/debug/trip.h"
+
 namespace motis::paxmon {
 
 void print_trip(schedule const& sched, trip const* trp) {
@@ -98,6 +100,8 @@ void print_trip_sections(universe const& uv, schedule const& sched,
   for (auto const& sec : motis::access::sections(trp)) {
     print_trip_section(sched, sec);
   }
+  std::cout << "trip debug:\n";
+  std::cout << debug::trip_with_sections{sched, trp};
 }
 
 void print_trip_sections(universe const& uv, schedule const& sched,

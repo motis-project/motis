@@ -200,7 +200,7 @@ void paxmon::init(motis::module::registry& reg) {
                           CreateRISForwardTimeRequest(fbb, time).Union(),
                           "/ris/forward");
     LOG(info) << "paxmon: forwarding time to: " << format_unix_time(time)
-              << " =========================================";
+              << " (" << time << ") =========================================";
     return motis_call(make_msg(fbb))->val();
   };
 
