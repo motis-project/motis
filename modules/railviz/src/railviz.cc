@@ -366,7 +366,7 @@ msg_ptr railviz::get_station(msg_ptr const& msg) {
 }
 
 msg_ptr railviz::get_trains(msg_ptr const& msg) const {
-  logging::scoped_timer timer("get_trains");
+  // logging::scoped_timer timer("get_trains");
 
   auto const req = motis_content(RailVizTrainsRequest, msg);
   auto const& sched = get_sched();
