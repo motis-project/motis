@@ -84,7 +84,10 @@ struct statistics {
     return o;
   }
 
-  void print() const { std::cout << *this << "\n"; }
+  void print() const {
+    std::clog.flush();
+    std::cout << *this << std::endl;
+  }
 
   void log_sched_time_mismatch(int diff) {
     if (diff != 0) {
