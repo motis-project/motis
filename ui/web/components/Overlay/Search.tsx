@@ -118,10 +118,10 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     
 
     // Current Date
-    const [searchDate, setSearchDate] = useState<moment.Moment>(props.displayDate);
+    const [searchDate, setSearchDate] = useState<moment.Moment>(null);
     
     // SearchTime
-    const [searchTime, setSearchTime] = useState<string>(props.displayDate.format('HH:mm'));
+    const [searchTime, setSearchTime] = useState<string>(moment().format('HH:mm'));
     
     // SearchType
     const [searchType, setSearchType] = useState<string>('Accessibility');
@@ -130,7 +130,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     const [searchDirection, setSearchDirection] = useState<string>('Forward');
 
     // SearchInterval
-    const [searchInterval, setSearchInterval] = useState<Interval>({begin: searchDate.unix(), end: searchDate.unix() + 7200});
+    const [searchInterval, setSearchInterval] = useState<Interval>(null);
 
     // Save currently displayed List of Connections. Will be extended with every fetch.
     const [allConnectionsWithoutDummies, setAllConnectionsWithoutDummies] = useState<Connection[]>([]);
@@ -142,7 +142,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     // This Effect is one of 2 IntermodalConnectionRequest API Calls.
     // If this one is triggered, then we want to discard the currently shown Connections and load a new list
     useEffect(() => {
-        if (start !== null && destination !== null) {
+        if (start !== null && destination !== null && searchInterval !== null) {
             props.setConnections(null); // Only when connections=null will the Loading animation be shown
             let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
             //console.log('Fire searchQuery')
@@ -170,7 +170,10 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     // This Effect is one of 2 IntermodalConnectionRequest API Calls.
     // If this one is triggered, then we want to keep the currently shown Connections and add the newly fetched ones to this list
     useEffect(() => {
-        if (start !== null && destination !== null) {
+        //console.log('Run1');
+        //console.log (start, destination, searchInterval)
+        if (start !== null && destination !== null && searchInterval !== null) {
+            //console.log('Run2');
             props.setConnections(null); // Only when connections=null will the Loading animation be shown
             let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
             //console.log('Fire searchQuery')
@@ -196,24 +199,35 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
 
     // On searchDate change, discard currently displayed Connections and compute new Interval for the IntermodalConnectionRequest
     useEffect(() => {
-        setAllConnectionsWithoutDummies([]);
-        setSearchInterval({begin: searchDate.unix(), end: searchDate.unix() + 3600 * 2});
-        props.setDisplayDate(searchDate);
+        if (searchDate) {
+            setAllConnectionsWithoutDummies([]);
+            setSearchInterval({begin: searchDate.unix(), end: searchDate.unix() + 3600 * 2});
+            props.setDisplayDate(searchDate);
+        }
     }, [searchDate]);
+
+    // On initial render searchDate will be null, waiting for the ScheduleInfoResponse. This useEffect should fire only once.
+    useEffect(() => {
+        setSearchDate(props.displayDate);
+    }, [props.displayDate]);
 
 
     // Handle Interval change after extend-search-interval search-backward Button in Overlay was clicked
     useEffect(() => {
-        setSearchInterval({begin: searchInterval.begin - 3600 * 4, end: searchInterval.end - 3600 * 4});
-        setExtendBackward(true);
-    }, [props.extendBackwardFlag])
+        if (searchInterval) {
+            setSearchInterval({begin: searchInterval.begin - 3600 * 4, end: searchInterval.end - 3600 * 4});
+            setExtendBackward(true);
+        }
+    }, [props.extendBackwardFlag]);
 
 
     // Handle Interval change after extend-search-interval search-forwad Button in Overlay was clicked
     useEffect(() => {
-        setSearchInterval({begin: searchInterval.begin + 3600 * 4, end: searchInterval.end + 3600 * 4});
-        setExtendBackward(false);
-    }, [props.extendForwardFlag])
+        if (searchInterval) {
+            setSearchInterval({begin: searchInterval.begin + 3600 * 4, end: searchInterval.end + 3600 * 4});
+            setExtendBackward(false);
+        }
+    }, [props.extendForwardFlag]);
 
 
     useEffect(() => {
@@ -287,13 +301,21 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                 value={searchTime}
                                 onChange={(e) => {
                                     setSearchTime(e.currentTarget.value);
-                                    /* Wie sollen wir mit fehlerhfatem Input umgehen?
                                     if (e.currentTarget.value.split(':').length == 2) {
                                         let [hour, minute] = e.currentTarget.value.split(':');
                                         if (!isNaN(+hour) && !isNaN(+minute)){
-                                            setSearchHours(moment(searchHours.hour(hour as unknown as number > 23 ? 23 : hour as unknown as number)));
-                                            setSearchHours(moment(searchHours.minute(minute as unknown as number > 59 ? 59 : hour as unknown as number)));
-                                }}*/}}/>
+                                            let newSearchTime = moment(searchDate);
+                                            newSearchTime.hour(hour as unknown as number > 23 ? 23 : hour as unknown as number);
+                                            newSearchTime.minute(minute as unknown as number > 59 ? 59 : minute as unknown as number);
+                                            setSearchDate(newSearchTime);
+                                            console.log(newSearchTime)
+                                }}}}
+                                onKeyDown={(e) => {
+                                    if (e.key == 'Enter'){
+                                        console.log(searchDate)
+                                        setSearchTime(searchDate.format('HH:mm'));
+                                    }
+                                }}/>
                             <div className='gb-input-widget'>
                                 <div className='hour-buttons'>
                                     <div><a
@@ -301,14 +323,14 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                             onClick={() => {
                                                 let newSearchDate = searchDate.clone().subtract(1, 'h')
                                                 setSearchDate(newSearchDate); 
-                                                setSearchTime(newSearchDate.format('HH:mm'))}}>
+                                                setSearchTime(newSearchDate.format('HH:mm'));}}>
                                             <i className='icon'>chevron_left</i></a></div>
                                     <div><a
                                             className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' 
                                             onClick={() => {
                                                 let newSearchDate = searchDate.clone().add(1, 'h')
                                                 setSearchDate(newSearchDate);
-                                                setSearchTime(newSearchDate.format('HH:mm'))}}>
+                                                setSearchTime(newSearchDate.format('HH:mm'));}}>
                                             <i className='icon'>chevron_right</i></a></div>
                                 </div>
                             </div>

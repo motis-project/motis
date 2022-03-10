@@ -41,20 +41,23 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
 
     const[datePickerSelected, setDatePickerSelected] = React.useState<Boolean>(false);
     
-    const[currentDate, setcurrentDate] = React.useState<moment.Moment>(props.currentDate);
+    const[currentDate, setcurrentDate] = React.useState<moment.Moment>(moment());
     
-    const[dateDisplay, setDateDisplay] = React.useState<string>(currentDate.format('D.M.YYYY'));
+    const[dateDisplay, setDateDisplay] = React.useState<string>(null);
     
     useOutsideAlerter(datePickerRef, inputFieldRef, dayButtonPrevious, dayButtonNext, setDatePickerSelected);
 
     React.useEffect(() => {
-        setcurrentDate(props.currentDate);
+        if (props.currentDate) {
+            setcurrentDate(props.currentDate);
+            setDateDisplay(props.currentDate.format('D.M.YYYY'))
+        }
     }, [props.currentDate]);
 
     React.useEffect(() => {
         props.setCurrentDate(currentDate.clone());
     }, [dateDisplay]);
-
+    
     const weekdayshortname = props.translation.search.weekDays.map(day => {
         return (
             <th key={day.toString()} className='week-day'>
@@ -162,7 +165,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                     <input  className='gb-input' 
                             ref={inputFieldRef}
                             tabIndex={3} 
-                            value={dateDisplay}
+                            value={dateDisplay ? dateDisplay : ''}
                             onChange={(e) => {
                                 setDateDisplay(e.currentTarget.value);
                             }} 
@@ -196,7 +199,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
             <div ref={datePickerRef} className={datePickerSelected ? 'paper calendar' : 'paper calendar hide'}>
                 <div className='month'>
                     <i className='icon' onClick={() => {setcurrentDate(currentDate.subtract(1, 'month')); setDateDisplay(currentDate.format('D.M.YYYY'))}}>chevron_left</i>
-                    <span className='month-name'>{props.translation.search.months[currentDate.month()] + ' ' + currentDate.year()}</span>
+                    <span className='month-name'>{currentDate ? props.translation.search.months[currentDate.month()] + ' ' + currentDate.year() : ''}</span>
                     <i className='icon' onClick={() => {setcurrentDate(currentDate.add(1, 'month')); setDateDisplay(currentDate.format('D.M.YYYY'))}}>chevron_right</i>
                 </div>
                 <table className='calendar-day'>

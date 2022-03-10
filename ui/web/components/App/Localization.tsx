@@ -1,3 +1,5 @@
+import moment from "moment"
+
 interface SearchProfileNames {
       default : String
     , accessibility1 : String
@@ -52,7 +54,7 @@ export interface Translations {
         { timeHeader : String
         , durationHeader : String
         , transportsHeader : String
-        , scheduleRange(begin: Date, end: Date) : String
+        , scheduleRange(begin: number, end: number) : String
         , loading : String
         , noResults : String
         , extendBefore : String
@@ -116,21 +118,15 @@ export interface Translations {
 }
 
 
-const enDateConfig = (date: Date) => {
-    let res = new Date(date);
-    let dd = String(res.getDate()).padStart(2, '0');
-    let mm = String(res.getMonth() + 1).padStart(2, '0'); //January is 0!
-    let yy = String(res.getFullYear()).substring(-2);
-    return dd + '/' + mm + '/' + yy
+const enDateConfig = (date: number) => {
+    let res = moment.unix(date);
+    return res.format('DD/MM/YYYY');
 }
 
 
-const deDateConfig = (date: Date) => {
-    let res = new Date(date);
-    let dd = String(res.getDate()).padStart(2, '0');
-    let mm = String(res.getMonth() + 1).padStart(2, '0'); //January is 0!
-    let yy = String(res.getFullYear()).substring(-2);
-    return dd + '.' + mm + '.' + yy
+const deDateConfig = (date: number) => {
+    let res = moment.unix(date);
+    return res.format('DD.MM.YYYY');
 }
 
 
@@ -181,7 +177,7 @@ export const deTranslations: Translations = {
             , durationHeader : 'Dauer'
             , transportsHeader : 'Verkehrsmittel'
             , scheduleRange :
-                (begin: Date, end: Date) => 'Auskunft von ' 
+                (begin: number, end: number) => 'Auskunft von ' 
                                 + deDateConfig(begin) 
                                 + ' bis ' 
                                 + deDateConfig(end) 
@@ -303,7 +299,7 @@ export const enTranslations: Translations = {
             , durationHeader : 'Duration'
             , transportsHeader : 'Transports'
             , scheduleRange :
-                (begin: Date, end: Date) => 
+                (begin: number, end: number) => 
                     'Possible dates: '
                     + enDateConfig(begin)
                     + ' - '
@@ -424,7 +420,7 @@ export const plTranslations: Translations = {
         , durationHeader : 'Czas trwania'
         , transportsHeader : 'środki transportu'
         , scheduleRange :
-            (begin: Date, end: Date) =>
+            (begin: number, end: number) =>
                 'Informacja od '
                     + deDateConfig(begin)
                     + ' do '

@@ -7,6 +7,12 @@ import { Translations, deTranslations, enTranslations, plTranslations } from './
 import { StationSearch } from '../StationSearch/StationSearch';
 import { MapContainer } from '../Map/MapContainer';
 
+declare global{
+    interface Window {
+        portEvents : any;
+    }
+}  
+
 
 const getQuery = (): Translations => {
     let router = useRouter();
@@ -18,11 +24,6 @@ const getQuery = (): Translations => {
     }
     return enTranslations;
 }
-declare global{
-    interface Window {
-        portEvents : any;
-    }
-}  
 
 
 export const App: React.FC = () => {
@@ -31,7 +32,8 @@ export const App: React.FC = () => {
 
     React.useEffect(() => {
         isMobile = window.matchMedia("only screen and (max-width: 500px)").matches;
-    });
+    }, []);
+
     
     return (
         <div className='app'>
