@@ -74,8 +74,8 @@ function getFilterTripsRequest(
     },
     filter_by_train_nr: filterTrainNrs.length > 0,
     filter_train_nrs: filterTrainNrs,
-    filter_by_service_class: true,
-    filter_service_classes: [ServiceClasses.ICE, ServiceClasses.IC],
+    filter_by_service_class: false,
+    filter_service_classes: [],
   };
 }
 
