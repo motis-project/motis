@@ -93,7 +93,7 @@ const handleErrors = (response) => {
 }
 
 
-export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations, 'extendForwardFlag': boolean, 'extendBackwardFlag': boolean, 'displayDate': moment.Moment, 'setDisplayDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
+export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations, 'extendForwardFlag': boolean, 'extendBackwardFlag': boolean, 'displayDate': moment.Moment, 'setDisplayDate': React.Dispatch<React.SetStateAction<moment.Moment>>, 'scheduleInfo': Interval}> = (props) => {
  
     // Start
     // StartType
@@ -273,7 +273,8 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                 <div className='pure-u-1 pure-u-sm-12-24'>
                     <DatePicker translation={props.translation}
                                 currentDate={searchDate}
-                                setCurrentDate={setSearchDate}/>
+                                setCurrentDate={setSearchDate}
+                                scheduleInfo={props.scheduleInfo}/>
                 </div>
             </div>
             <div className='pure-g gutters'>

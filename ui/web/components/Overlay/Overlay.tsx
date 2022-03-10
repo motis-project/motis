@@ -33,10 +33,7 @@ const displayDuration = (posixTime) => {
 }
 
 
-export const Overlay: React.FC<{ 'translation': Translations}> = (props) => {
-
-    // Hold the available Interval for Scheduling Information
-    const [scheduleInfo, setScheduleInfo] = useState<Interval>(null);
+export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval}> = (props) => {
 
     // Hold the currently displayed Date
     const [displayDate, setDisplayDate] = useState<moment.Moment>(null);
@@ -67,23 +64,14 @@ export const Overlay: React.FC<{ 'translation': Translations}> = (props) => {
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
 
     React.useEffect(() => {
-        let requestURL = 'https://europe.motis-project.de/?elm=requestScheduleInfo';
-
-        fetch(requestURL, { method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({content: {}, content_type: 'MotisNoMessage', destination: { target: '/lookup/schedule_info', type: 'Module' }})})
-        .then(res => res.json())
-        .then((res: elmAPIResponse) => {
-            console.log("Response came in");
-            console.log(res);
-            let intv = {begin: (res.content as ScheduleInfoResponse).begin, end: (res.content as ScheduleInfoResponse).end}
-            let intvBegin = moment.unix(intv.begin);
-            intvBegin.hour(moment().hour())
-            intvBegin.minute(moment().minute())
-            setDisplayDate(intvBegin);
-            setScheduleInfo(intv);
-        })
-    }, []);
+        if (props.scheduleInfo !== null) {
+            let currentTime = moment();
+            let adjustedDisplayDate = moment.unix(props.scheduleInfo.begin);
+            adjustedDisplayDate.hour(currentTime.hour());
+            adjustedDisplayDate.minute(currentTime.minute());
+            setDisplayDate(adjustedDisplayDate);
+        }
+    }, [props.scheduleInfo])
 
     return (
         <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden'}>
@@ -96,13 +84,14 @@ export const Overlay: React.FC<{ 'translation': Translations}> = (props) => {
                                     extendForwardFlag={extendForwardFlag}
                                     extendBackwardFlag={extendBackwardFlag}
                                     displayDate={displayDate}
-                                    setDisplayDate={setDisplayDate}/>
+                                    setDisplayDate={setDisplayDate}
+                                    scheduleInfo={props.scheduleInfo}/>
                             {!connections ?
-                                scheduleInfo && (displayDate.unix() < scheduleInfo.begin || displayDate.unix() > scheduleInfo.end) ?
+                                props.scheduleInfo && displayDate && (displayDate.unix() < props.scheduleInfo.begin || displayDate.unix() > props.scheduleInfo.end) ?
                                     <div id='connections'>
                                         <div className="main-error">
                                             <div className="">{props.translation.errors.journeyDateNotInSchedule}</div>
-                                            <div className="schedule-range">{props.translation.connections.scheduleRange(scheduleInfo.begin, scheduleInfo.end - 3600 * 24)}</div>
+                                            <div className="schedule-range">{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
                                         </div>
                                     </div>
                                     :
@@ -193,7 +182,13 @@ export const Overlay: React.FC<{ 'translation': Translations}> = (props) => {
                         </div>
                     }
                 </div>
-                <SubOverlay subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} trainSelected={trainSelected} setTrainSelected={setTrainSelected} translation={props.translation} detailViewHidden={detailViewHidden}/>
+                <SubOverlay subOverlayHidden={subOverlayHidden} 
+                            setSubOverlayHidden={setSubOverlayHidden} 
+                            trainSelected={trainSelected} 
+                            setTrainSelected={setTrainSelected} 
+                            translation={props.translation} 
+                            detailViewHidden={detailViewHidden} 
+                            scheduleInfo={props.scheduleInfo}/>
             </div>
             <div className='overlay-tabs'>
                 <div className='overlay-toggle' onClick={() => setOverlayHidden(!overlayHidden)}>

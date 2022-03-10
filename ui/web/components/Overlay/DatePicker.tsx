@@ -3,6 +3,7 @@ import React from 'react';
 import moment from 'moment';
 
 import { Translations } from '../App/Localization';
+import { Interval } from '../Types/RoutingTypes';
 
 
 function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: React.MutableRefObject<any>, dayButtonPrevious: React.MutableRefObject<any>, dayButtonNext: React.MutableRefObject<any>, setShowDatePicker: React.Dispatch<React.SetStateAction<boolean>>) {
@@ -29,7 +30,7 @@ function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: Reac
 }
 
 
-export const DatePicker: React.FC<{'translation': Translations, 'currentDate': moment.Moment, 'setCurrentDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
+export const DatePicker: React.FC<{'translation': Translations, 'currentDate': moment.Moment, 'setCurrentDate': React.Dispatch<React.SetStateAction<moment.Moment>>, 'scheduleInfo': Interval}> = (props) => {
     
     const datePickerRef = React.useRef(null);
 
@@ -44,6 +45,8 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
     const[currentDate, setcurrentDate] = React.useState<moment.Moment>(moment());
     
     const[dateDisplay, setDateDisplay] = React.useState<string>(null);
+
+    const[scheduleInterval, setScheduleInterval] = React.useState<Interval>(null);
     
     useOutsideAlerter(datePickerRef, inputFieldRef, dayButtonPrevious, dayButtonNext, setDatePickerSelected);
 
@@ -53,6 +56,10 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
             setDateDisplay(props.currentDate.format('D.M.YYYY'))
         }
     }, [props.currentDate]);
+
+    React.useEffect(() => {
+        setScheduleInterval(props.scheduleInfo);
+    }, [props.scheduleInfo]);
 
     React.useEffect(() => {
         props.setCurrentDate(currentDate.clone());

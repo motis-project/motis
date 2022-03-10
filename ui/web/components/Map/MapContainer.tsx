@@ -4,8 +4,9 @@ import moment from "moment";
 import { DatePicker } from "../Overlay/DatePicker";
 import { Translations } from "../App/Localization";
 import { RailvizContextMenu } from "./RailvizContextMenu";
+import { Interval } from "../Types/RoutingTypes";
 
-export const MapContainer: React.FC<{'translation': Translations}> = (props) => {
+export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo': Interval}> = (props) => {
 
     const [simTimePickerSelected, setSimTimePickerSelected] = React.useState<Boolean>(false);
     
@@ -68,7 +69,8 @@ export const MapContainer: React.FC<{'translation': Translations}> = (props) => 
                     <div className="date">
                         <DatePicker translation={props.translation}
                                     currentDate={currMoment}
-                                    setCurrentDate={setCurrMoment}/>
+                                    setCurrentDate={setCurrMoment}
+                                    scheduleInfo={props.scheduleInfo}/>
                     </div>
                     <div className="time">
                         <div className="label">Uhrzeit</div>
