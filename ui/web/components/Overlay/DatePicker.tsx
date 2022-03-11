@@ -196,7 +196,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                                 setDateDisplay(e.currentTarget.value);
                                 if (e.currentTarget.value.split('.').length == 3) {
                                     let [day, month, year] = e.currentTarget.value.split('.');
-                                    if (!isNaN(+day) && !isNaN(+month) && !isNaN(+year)){
+                                    if (day !== '' && !isNaN(+day) && month !== '' && !isNaN(+month) && year !== '' && !isNaN(+year)){
                                         let newDate = moment(currentDate);
                                         newDate.year(year as unknown as number);
                                         newDate.month(month as unknown as number - 1);
