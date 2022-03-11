@@ -1,6 +1,6 @@
 import { DownloadIcon } from "@heroicons/react/solid";
 import { useAtom } from "jotai";
-import { useRef } from "react";
+import { CSSProperties, useRef } from "react";
 import { useQuery, useQueryClient } from "react-query";
 
 import { TripId } from "@/api/protocol/motis";
@@ -92,11 +92,7 @@ function getCurrentTimePosition(
 
 function getSvgBlob(svgEl: SVGSVGElement) {
   const serializer = new XMLSerializer();
-  let source = serializer.serializeToString(svgEl);
-  const css = document.getElementById("svgStyle")?.outerHTML;
-  if (css) {
-    source = source.replace("<g", css + "<g");
-  }
+  const source = serializer.serializeToString(svgEl);
   return new Blob([source], { type: "image/svg+xml;charset=utf-8" });
 }
 
@@ -284,12 +280,12 @@ function TripLoadForecastChart({
   ));
 
   const overCapProbs = edges.map((e, idx) => {
-    const classes = ["over-cap-prob"];
+    const style: CSSProperties = { fontSize: "8px", fill: "#000" };
     let text = "";
     if (e.capacity != 0) {
       text = `${(e.p_load_gt_100 * 100).toFixed(0)}%`;
       if (text === "0%") {
-        classes.push("zero");
+        style.fill = "#999";
       }
     }
     return (
@@ -298,7 +294,7 @@ function TripLoadForecastChart({
         x={idx * 50 + 25}
         y="8"
         textAnchor="middle"
-        className={classes.join(" ")}
+        style={style}
       >
         {text}
       </text>
@@ -337,21 +333,21 @@ function TripLoadForecastChart({
   const spreadPath = (
     <path
       d={`M${spreadTopPoints.join(" ")} ${spreadBottomPoints.join(" ")}z`}
-      className="spread"
+      style={{ fill: "#B2B5FE", fillOpacity: 0.4, stroke: "#797EFF" }}
     />
   );
 
   const expectedPath = (
     <path
       d={getSvgLinePath(edges, maxVal, (ef) => ef.expected_passengers || 0)}
-      className="planned"
+      style={{ stroke: "#333", strokeDasharray: 2, fill: "none" }}
     />
   );
 
   const medianPath = (
     <path
       d={getSvgLinePath(edges, maxVal, (ef) => ef.q_50 || 0)}
-      className="median"
+      style={{ stroke: " #3038FF", strokeWidth: 2, fill: "none" }}
     />
   );
 
@@ -360,7 +356,7 @@ function TripLoadForecastChart({
       x="-2"
       y={label.y + 4}
       textAnchor="end"
-      className="legend"
+      style={{ fontSize: "8px", fill: "#333" }}
       key={label.pax}
     >
       {label.pax}
@@ -394,7 +390,7 @@ function TripLoadForecastChart({
         x="0"
         y="0"
         textAnchor="end"
-        className="legend station"
+        style={{ fontSize: "8px", fill: "#000" }}
         transform={`translate(${x} 210) rotate(-60 0 0)`}
         key={idx}
       >
@@ -410,7 +406,7 @@ function TripLoadForecastChart({
             x={x - 2}
             y="190"
             textAnchor="end"
-            className="time schedule"
+            style={{ fontSize: "6px", fill: "#777" }}
             key={`${idx}.sched.arr`}
           >
             {formatTime(arrivalScheduleTime)}
@@ -422,7 +418,10 @@ function TripLoadForecastChart({
           x={x - 2}
           y="198"
           textAnchor="end"
-          className={`time current${arrivalDelayed ? " delayed" : ""}`}
+          style={{
+            fontSize: "6px",
+            fill: arrivalDelayed ? "#d60000" : "#008600",
+          }}
           key={`${idx}.curr.arr`}
         >
           {formatTime(arrivalCurrentTime)}
@@ -436,7 +435,7 @@ function TripLoadForecastChart({
             x={x + 2}
             y="190"
             textAnchor="start"
-            className="time schedule"
+            style={{ fontSize: "6px", fill: "#777" }}
             key={`${idx}.sched.dep`}
           >
             {formatTime(departureScheduleTime)}
@@ -448,7 +447,10 @@ function TripLoadForecastChart({
           x={x + 2}
           y="198"
           textAnchor="start"
-          className={`time current${departureDelayed ? " delayed" : ""}`}
+          style={{
+            fontSize: "6px",
+            fill: departureDelayed ? "#d60000" : "#008600",
+          }}
           key={`${idx}.curr.dep`}
         >
           {formatTime(departureCurrentTime)}
@@ -472,7 +474,7 @@ function TripLoadForecastChart({
   const currentTimeIndicator = (
     <path
       d={`M${currentTimePosition} 201 l2 4 l-4 0 z`}
-      className="current-time-indicator"
+      style={{ fill: "#777" }}
     />
   );
 
@@ -501,27 +503,34 @@ function TripLoadForecastChart({
       viewBox={`-100 -15 ${120 + graphWidth} 335`}
       className="max-h-[42rem] mx-auto mt-2"
     >
-      <g>{background}</g>
-      <g>{sectionDividers}</g>
-      <g>
-        <path stroke="#DDD" d={`M0 10h${graphWidth}`} />
-        {overCapProbs}
+      <g style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
+        <g>{background}</g>
+        <g>{sectionDividers}</g>
+        <g>
+          <path stroke="#DDD" d={`M0 10h${graphWidth}`} />
+          {overCapProbs}
+        </g>
+        {spreadPath}
+        {expectedPath}
+        {medianPath}
+        {outerBorder}
+        <text
+          x={graphWidth / 2}
+          y="-5"
+          textAnchor="middle"
+          style={{ fontSize: "8px", fill: "#333" }}
+        >
+          {title}
+        </text>
+        <g>{yLabels}</g>
+        <g>
+          {stationNameLabels}
+          {scheduleTimeLabels}
+          {currentTimeLabels}
+        </g>
+        {currentTimeIndicator}
+        <g>{clickRegions}</g>
       </g>
-      {spreadPath}
-      {expectedPath}
-      {medianPath}
-      {outerBorder}
-      <text x={graphWidth / 2} y="-5" textAnchor="middle" className="legend">
-        {title}
-      </text>
-      <g>{yLabels}</g>
-      <g>
-        {stationNameLabels}
-        {scheduleTimeLabels}
-        {currentTimeLabels}
-      </g>
-      {currentTimeIndicator}
-      <g>{clickRegions}</g>
     </svg>
   );
 
