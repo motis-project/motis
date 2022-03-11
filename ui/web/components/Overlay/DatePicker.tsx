@@ -30,6 +30,21 @@ function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: Reac
 }
 
 
+// Check if day is in the interval.
+const isValidDay = (day: moment.Moment, interval: Interval) => {
+    if (interval == null) {
+        return '';
+    } else {
+        if (day.unix() >= interval.begin && day.unix() < interval.end) {
+            //console.log(day.unix(), interval.begin, interval.end)
+            return 'valid-day';
+        }else {
+            return 'invalid-day';
+        };
+    }
+}
+
+
 export const DatePicker: React.FC<{'translation': Translations, 'currentDate': moment.Moment, 'setCurrentDate': React.Dispatch<React.SetStateAction<moment.Moment>>, 'scheduleInfo': Interval}> = (props) => {
     
     const datePickerRef = React.useRef(null);
@@ -40,31 +55,29 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
 
     const dayButtonNext = React.useRef(null);
 
+    // Boolean used to decide if the datepicker is visible or not
     const[datePickerSelected, setDatePickerSelected] = React.useState<Boolean>(false);
     
-    const[currentDate, setcurrentDate] = React.useState<moment.Moment>(moment());
+    // Holds the currently displayed Date as moment.Moment Object
+    const[currentDate, setCurrentDate] = React.useState<moment.Moment>(moment());
     
+    // Holds the currently displayed Date as String. This additional State is needed to handle the onChange Event for custom Input
     const[dateDisplay, setDateDisplay] = React.useState<string>(null);
-
-    const[scheduleInterval, setScheduleInterval] = React.useState<Interval>(null);
     
     useOutsideAlerter(datePickerRef, inputFieldRef, dayButtonPrevious, dayButtonNext, setDatePickerSelected);
 
     React.useEffect(() => {
         if (props.currentDate) {
-            setcurrentDate(props.currentDate);
+            setCurrentDate(props.currentDate);
             setDateDisplay(props.currentDate.format('D.M.YYYY'))
         }
     }, [props.currentDate]);
 
-    React.useEffect(() => {
-        setScheduleInterval(props.scheduleInfo);
-    }, [props.scheduleInfo]);
-
-    React.useEffect(() => {
+    /*React.useEffect(() => {
         props.setCurrentDate(currentDate.clone());
-    }, [dateDisplay]);
+    }, [dateDisplay]);*/
     
+    // Create weekday name elements.
     const weekdayshortname = props.translation.search.weekDays.map(day => {
         return (
             <th key={day.toString()} className='week-day'>
@@ -72,51 +85,53 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
             </th>
         );
      });
-
+    
+    // Get weekday number for first Day in current month.
     const firstDayOfMonth = () => {
-        return moment(currentDate).startOf('month').format('d') as unknown as number;
+        let fd = moment(currentDate).startOf('month').format('d') as unknown as number;
+        return fd == 0 ? 7 : fd;
     };
+    
+        // Used for setting className of td correctly. Returns 'today' if this td is representing today.
+        let isToday = (d: number, date: moment.Moment) => {
+            return moment().format('D.M.YYYY') === moment(date).date(d).format('D.M.YYYY') ? 'today ' : '';
+        }
+    
+        // Used for setting className of td correctly. Returns 'selected' if this td is currently displayed in the search.
+        let selectedDay = (d: number) => {
+            return currentDate.format('D') as unknown as number == d ? 'selected ' : '';
+        };
 
-    let blanks = [];
-    let previousMonthDays = moment(currentDate).subtract(1, 'month').daysInMonth();
-    for (let i = 0; i < firstDayOfMonth()-1; i++) {
-        blanks.push(
-            <td className='out-of-month' 
-                key={'previous-month' + i.toString()}
+    // daysInPreviousMonth contains all days of the previous Month that have to be shown if the 1. doesnt fall on a monday.
+    let daysInPreviousMonth = [];
+    let dayToAdd = moment(currentDate).utc().startOf('month').subtract(firstDayOfMonth(), 'd');
+    for (let d = 0; d < firstDayOfMonth()-1; d++) {
+        dayToAdd.add(1, 'd');
+        daysInPreviousMonth.push(
+            <td className={`out-of-month ${isToday(d, dayToAdd)}${isValidDay(dayToAdd, props.scheduleInfo)}`} 
+                key={'previous-month' + d.toString()}
                 onClick={() => {
                     let firstDay = firstDayOfMonth();
-                    setcurrentDate(currentDate.subtract(1, 'month'));
-                    setcurrentDate(currentDate.date(currentDate.daysInMonth() - firstDay + 2 + i));
+                    setCurrentDate(currentDate.subtract(1, 'month'));
+                    setCurrentDate(currentDate.date(currentDate.daysInMonth() - firstDay + 2 + d));
                     setDateDisplay(currentDate.format('D.M.YYYY'));
                     setDatePickerSelected(false);
                 }}>
-                {previousMonthDays - firstDayOfMonth() + 2 + i}
+                {dayToAdd.date()}
             </td>
         );
     };
-
-    let today = () => {  
-        return moment().format('D') as unknown as number;
-    };
-
-    let isToday = (d: number) => {
-        return moment().format('D.M.YYYY') === moment(currentDate).date(d).format('D.M.YYYY');
-    }
-
-    let selectedDay = () => {
-        return currentDate.format('D') as unknown as number;
-    };
-        
+    
+    // daysInMonth contains all days of this Month.
     let daysInMonth = [];
+    dayToAdd = moment(currentDate).utc().startOf('month').subtract(1, 'd');
     for (let d = 1; d <= currentDate.daysInMonth(); d++) {
-        let currentDay = isToday(d) ? ' today' : '';
-        let selected = d == selectedDay() ? ' selected' : '';
-        let validDay = d >= today() ? ' valid-day' : ' invalid-day';
+        dayToAdd.add(1, 'd');
         daysInMonth.push(
             <td key={d} 
-                className={`in-month${currentDay}${selected}${validDay}`}
+                className={`in-month ${isToday(d, dayToAdd)}${selectedDay(d)}${isValidDay(dayToAdd, props.scheduleInfo)}`}
                 onClick={() => {
-                    setcurrentDate(currentDate.date(d));
+                    setCurrentDate(currentDate.date(d));
                     setDateDisplay(currentDate.format('D.M.YYYY'));
                     setDatePickerSelected(false);
                 }}>
@@ -125,23 +140,27 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
         );
     };
 
+    // fillRemainingDays contains all days of the next month that are needed to display 42 Days in total.
     let fillRemainingDays = [];
-    for (let i = 1; i <= 42 - [...blanks, ...daysInMonth].length; i++) {
+    dayToAdd = moment(currentDate).utc().startOf('month').add(1, 'M').subtract(1, 'd');
+    for (let d = 1; d <= 42 - [...daysInPreviousMonth, ...daysInMonth].length; d++) {
+        dayToAdd.add(1, 'd');
         fillRemainingDays.push(
-            <td key={'next-month' + i.toString()}
-                className='out-of-month invalid-day'
+            <td key={'next-month' + d.toString()}
+                className={`out-of-month ${isToday(d, dayToAdd)}${isValidDay(dayToAdd, props.scheduleInfo)}`}
                 onClick={() => {
-                    setcurrentDate(currentDate.add(1, 'month'));
-                    setcurrentDate(currentDate.date(i));
+                    setCurrentDate(currentDate.add(1, 'month'));
+                    setCurrentDate(currentDate.date(d));
                     setDateDisplay(currentDate.format('D.M.YYYY'));
                     setDatePickerSelected(false);
                 }}>
-                {i}    
+                {d}    
             </td>
         )
     }
 
-    let totalSlots = [...blanks, ...daysInMonth, ...fillRemainingDays];
+    // Combine all 3 arrays into 1 total array. For every element an entry in the datepicker will be created
+    let totalSlots = [...daysInPreviousMonth, ...daysInMonth, ...fillRemainingDays];
     let rows = [];
     let cells = [];
 
@@ -175,7 +194,23 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                             value={dateDisplay ? dateDisplay : ''}
                             onChange={(e) => {
                                 setDateDisplay(e.currentTarget.value);
-                            }} 
+                                if (e.currentTarget.value.split('.').length == 3) {
+                                    let [day, month, year] = e.currentTarget.value.split('.');
+                                    if (!isNaN(+day) && !isNaN(+month) && !isNaN(+year)){
+                                        let newDate = moment(currentDate);
+                                        newDate.year(year as unknown as number);
+                                        newDate.month(month as unknown as number - 1);
+                                        newDate.date(day as unknown as number);
+                                        setCurrentDate(newDate);
+                                    }
+                                }
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key == 'Enter'){
+                                    //console.log(searchDate)
+                                    setDateDisplay(currentDate.format('D.M.YYYY'));
+                                }
+                            }}
                             onFocus={() => setDatePickerSelected(true)}/>
                     <div className='gb-input-widget'>
                         <div className='day-buttons'>
@@ -183,7 +218,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                                 <a  className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' 
                                     ref={dayButtonPrevious}
                                     onClick={() => {
-                                        setcurrentDate(currentDate.subtract(1, 'd')); 
+                                        setCurrentDate(currentDate.subtract(1, 'd')); 
                                         setDateDisplay(currentDate.format('D.M.YYYY'));
                                         }}>
                                     <i className='icon'>chevron_left</i>
@@ -193,7 +228,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                                 <a  className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' 
                                     ref={dayButtonNext}
                                     onClick={() => {
-                                        setcurrentDate(currentDate.add(1, 'd')); 
+                                        setCurrentDate(currentDate.add(1, 'd')); 
                                         setDateDisplay(currentDate.format('D.M.YYYY'));
                                         }}>
                                     <i className='icon'>chevron_right</i>
@@ -205,9 +240,9 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
             </div>
             <div ref={datePickerRef} className={datePickerSelected ? 'paper calendar' : 'paper calendar hide'}>
                 <div className='month'>
-                    <i className='icon' onClick={() => {setcurrentDate(currentDate.subtract(1, 'month')); setDateDisplay(currentDate.format('D.M.YYYY'))}}>chevron_left</i>
+                    <i className='icon' onClick={() => {setCurrentDate(currentDate.subtract(1, 'month')); setDateDisplay(currentDate.format('D.M.YYYY'))}}>chevron_left</i>
                     <span className='month-name'>{currentDate ? props.translation.search.months[currentDate.month()] + ' ' + currentDate.year() : ''}</span>
-                    <i className='icon' onClick={() => {setcurrentDate(currentDate.add(1, 'month')); setDateDisplay(currentDate.format('D.M.YYYY'))}}>chevron_right</i>
+                    <i className='icon' onClick={() => {setCurrentDate(currentDate.add(1, 'month')); setDateDisplay(currentDate.format('D.M.YYYY'))}}>chevron_right</i>
                 </div>
                 <table className='calendar-day'>
                     <thead className='weekdays'>
