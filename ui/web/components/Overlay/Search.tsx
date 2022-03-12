@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import moment from 'moment';
+import equal from 'deep-equal';
 
 import { DatePicker } from './DatePicker';
 import { Mode, IntermodalRoutingResponse } from '../Types/IntermodalRoutingTypes';
@@ -23,6 +24,7 @@ const getRoutingOptions = (startType: string, startModes: Mode[], start: Station
                                 content: {start_type: startType, start_modes: startModes, start: { station: start, min_connection_count: 5, interval: interval, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: destination } })
     };
 };
+
 
 const mapConnections = (connections: Connection[]) => {
     let cons = [];
@@ -51,6 +53,7 @@ const mapConnections = (connections: Connection[]) => {
     }
     return cons;
 };
+
 
 // This Dummy Object will be used to Identify Day Changes in the Connections List which will be swaped against Dividers
 const dummyConnection = (dummyDate: string) => {
@@ -93,7 +96,7 @@ const handleErrors = (response) => {
 }
 
 
-export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations, 'extendForwardFlag': boolean, 'extendBackwardFlag': boolean, 'displayDate': moment.Moment, 'setDisplayDate': React.Dispatch<React.SetStateAction<moment.Moment>>, 'scheduleInfo': Interval}> = (props) => {
+export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations, 'extendForwardFlag': boolean, 'extendBackwardFlag': boolean, 'displayDate': moment.Moment, 'setDisplayDate': React.Dispatch<React.SetStateAction<moment.Moment>>, 'scheduleInfo': Interval, 'setExtendForwardFlag' : React.Dispatch<React.SetStateAction<boolean>>, 'setExtendBackwardFlag': React.Dispatch<React.SetStateAction<boolean>>}> = (props) => {
  
     // Start
     // StartType
@@ -128,9 +131,12 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     
     // SearchDirection
     const [searchDirection, setSearchDirection] = useState<string>('Forward');
+    
+    // Interval used to request earlier Connections
+    const [searchBackward, setSearchBackward] = useState<Interval>(null);
 
-    // SearchInterval
-    const [searchInterval, setSearchInterval] = useState<Interval>(null);
+    // Interval used to request later Connections
+    const [searchForward, setSearchForward] = useState<Interval>(null);
 
     // Save currently displayed List of Connections. Will be extended with every fetch.
     const [allConnectionsWithoutDummies, setAllConnectionsWithoutDummies] = useState<Connection[]>([]);
@@ -142,18 +148,18 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     // This Effect is one of 2 IntermodalConnectionRequest API Calls.
     // If this one is triggered, then we want to discard the currently shown Connections and load a new list
     useEffect(() => {
-        if (start !== null && destination !== null && searchInterval !== null) {
-            props.setConnections(null); // Only when connections=null will the Loading animation be shown
+        if (start !== null && destination !== null && searchForward !== null) {
             let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
             //console.log('Fire searchQuery')
 
-            fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination, searchInterval))
+            fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination, searchForward))
                 .then(handleErrors)
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
                     console.log("Response came in");
                     console.log(res);
                     //props.setConnections(res.content.connections);
+                    props.setConnections(null); // Only when connections=null will the Loading animation be shown
                     sendConnectionsToOverlay(props.setConnections, res.content.connections, setAllConnectionsWithoutDummies);
                     window.portEvents.pub('mapSetMarkers', {'startPosition': getFromLocalStorage("motis.routing.from_location").pos,
                                                             'startName': getFromLocalStorage("motis.routing.from_location").name,
@@ -171,14 +177,12 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     // If this one is triggered, then we want to keep the currently shown Connections and add the newly fetched ones to this list
     useEffect(() => {
         //console.log('Run1');
-        //console.log (start, destination, searchInterval)
-        if (start !== null && destination !== null && searchInterval !== null) {
+        //console.log (start, destination, searchForward)
+        if (start !== null && destination !== null && searchForward !== null && searchBackward !== null) {
             //console.log('Run2');
-            props.setConnections(null); // Only when connections=null will the Loading animation be shown
             let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
-            //console.log('Fire searchQuery')
-
-            fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination, searchInterval))
+            let searchIntv = extendBackward ? searchBackward : searchForward;
+            fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination, searchIntv))
                 .then(handleErrors)
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
@@ -186,22 +190,31 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                     console.log(res);
                     //props.setConnections(res.content.connections);
                     if(extendBackward){
-                        sendConnectionsToOverlay(props.setConnections, [...res.content.connections, ...allConnectionsWithoutDummies], setAllConnectionsWithoutDummies);
+                        if(!equal(res.content.connections[0], allConnectionsWithoutDummies[0])) {
+                            props.setConnections(null); // Only when connections=null will the Loading animation be shown
+                            sendConnectionsToOverlay(props.setConnections, [...res.content.connections, ...allConnectionsWithoutDummies], setAllConnectionsWithoutDummies);
+                        }
+                        props.setExtendBackwardFlag(false);
                     } else {
-                        sendConnectionsToOverlay(props.setConnections, [...allConnectionsWithoutDummies, ...res.content.connections], setAllConnectionsWithoutDummies);
+                        if(!equal(res.content.connections[res.content.connections.length-1], allConnectionsWithoutDummies[allConnectionsWithoutDummies.length-1])) {
+                            props.setConnections(null); // Only when connections=null will the Loading animation be shown
+                            sendConnectionsToOverlay(props.setConnections, [...allConnectionsWithoutDummies, ...res.content.connections], setAllConnectionsWithoutDummies);
+                        }
+                        props.setExtendForwardFlag(false);
                     }
                     window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections(res.content.connections), 'lowestId': 0});
                 })
                 .catch(error => {});
         }
-    }, [searchInterval]);
+    }, [searchForward, searchBackward]);
 
 
     // On searchDate change, discard currently displayed Connections and compute new Interval for the IntermodalConnectionRequest
     useEffect(() => {
         if (searchDate) {
             setAllConnectionsWithoutDummies([]);
-            setSearchInterval({begin: searchDate.unix(), end: searchDate.unix() + 3600 * 2});
+            setSearchForward({begin: searchDate.unix(), end: searchDate.unix() + 3600 * 2});
+            setSearchBackward({begin: searchDate.unix(), end: searchDate.unix() + 3600 * 2});
             props.setDisplayDate(searchDate);
         }
     }, [searchDate]);
@@ -214,17 +227,17 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
 
     // Handle Interval change after extend-search-interval search-backward Button in Overlay was clicked
     useEffect(() => {
-        if (searchInterval) {
-            setSearchInterval({begin: searchInterval.begin - 3600 * 4, end: searchInterval.end - 3600 * 4});
+        if (searchBackward && props.extendBackwardFlag) {
+            setSearchBackward({begin: searchBackward.begin - 3600 * 4, end: searchBackward.end - 3600 * 4});
             setExtendBackward(true);
         }
     }, [props.extendBackwardFlag]);
 
 
-    // Handle Interval change after extend-search-interval search-forwad Button in Overlay was clicked
+    // Handle Interval change after extend-search-interval search-forward Button in Overlay was clicked
     useEffect(() => {
-        if (searchInterval) {
-            setSearchInterval({begin: searchInterval.begin + 3600 * 4, end: searchInterval.end + 3600 * 4});
+        if (searchForward && props.extendForwardFlag) {
+            setSearchForward({begin: searchForward.begin + 3600 * 4, end: searchForward.end + 3600 * 4});
             setExtendBackward(false);
         }
     }, [props.extendForwardFlag]);

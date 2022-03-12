@@ -4,14 +4,13 @@ import moment from 'moment';
 
 import { Search } from './Search';
 import { SubOverlay } from './SubOverlay';
-import { Connection, Station, Transport, TripId } from '../Types/ConnectionTypes';
-import { Translations } from '../App/Localization';
+import { Spinner } from './LoadingSpinner';
 import { ConnectionRender, JourneyRender } from './ConnectionRender';
+import { Translations } from '../App/Localization';
 import { getFromLocalStorage } from '../App/LocalStorage';
+import { Connection, Station, Transport, TripId } from '../Types/ConnectionTypes';
 import { Address } from '../Types/SuggestionTypes';
 import { Interval } from '../Types/RoutingTypes';
-import { elmAPIResponse } from '../Types/IntermodalRoutingTypes';
-import { ScheduleInfoResponse } from '../Types/ScheduleInfo';
 
 
 const displayTime = (posixTime) => {
@@ -48,10 +47,10 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
     const [connections, setConnections] = useState<Connection[]>(null);
 
     // Boolean used to signal <Search> that extendForward was clicked
-    const [extendForwardFlag, setExtendForwardFlag] = useState<boolean>(true);
+    const [extendForwardFlag, setExtendForwardFlag] = useState<boolean>(false);
 
     // Boolean used to signal <Search> that extendBackward was clicked
-    const [extendBackwardFlag, setExtendBackwardFlag] = useState<boolean>(true);
+    const [extendBackwardFlag, setExtendBackwardFlag] = useState<boolean>(false);
     
     const [detailViewHidden, setDetailViewHidden] = useState<Boolean>(true);
 
@@ -71,7 +70,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
             adjustedDisplayDate.minute(currentTime.minute());
             setDisplayDate(adjustedDisplayDate);
         }
-    }, [props.scheduleInfo])
+    }, [props.scheduleInfo]);
 
     return (
         <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden'}>
@@ -85,7 +84,9 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                     extendBackwardFlag={extendBackwardFlag}
                                     displayDate={displayDate}
                                     setDisplayDate={setDisplayDate}
-                                    scheduleInfo={props.scheduleInfo}/>
+                                    scheduleInfo={props.scheduleInfo}
+                                    setExtendForwardFlag={setExtendForwardFlag}
+                                    setExtendBackwardFlag={setExtendBackwardFlag}/>
                             {!connections ?
                                 props.scheduleInfo && displayDate && (displayDate.unix() < props.scheduleInfo.begin || displayDate.unix() > props.scheduleInfo.end) ?
                                     <div id='connections'>
@@ -95,15 +96,17 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                         </div>
                                     </div>
                                     :
-                                    <div className='spinner'>
-                                        <div className='bounce1'></div>
-                                        <div className='bounce2'></div>
-                                        <div className='bounce3'></div>
-                                    </div> 
+                                    <Spinner />
                                 : 
                                 <div id='connections'>
                                 <div className='connections'>
-                                    <div className='extend-search-interval search-before' onClick={() => setExtendBackwardFlag(!extendBackwardFlag)}><a>{props.translation.connections.extendBefore}</a></div>
+                                    <div className='extend-search-interval search-before' onClick={() => setExtendBackwardFlag(true)}>
+                                        {extendBackwardFlag ?
+                                            <Spinner />
+                                            :
+                                            <a>{props.translation.connections.extendBefore}</a>
+                                        }
+                                    </div>
                                     <div className='connection-list'>
                                         {connections.map((connectionElem: Connection, index) => (
                                             connectionElem.dummyDay ?
@@ -140,7 +143,13 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                             </div>
                                         ))}
                                         <div className='divider footer'></div>
-                                        <div className='extend-search-interval search-after' onClick={() => setExtendForwardFlag(!extendForwardFlag)}><a>{props.translation.connections.extendAfter}</a></div>
+                                        <div className='extend-search-interval search-after' onClick={() => setExtendForwardFlag(true)}>
+                                            {extendForwardFlag ?
+                                                <Spinner />
+                                                :
+                                                <a>{props.translation.connections.extendAfter}</a>
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                             </div>
