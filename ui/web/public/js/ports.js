@@ -50,7 +50,10 @@ const ownPorts = {
         subscribe: function(){}
     },
     'setPPRSearchOptions': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('setPPRSearchOptions', callback);
+            console.log('sub');
+        }
     },
     'mapInit': {
         subscribe: function(callback){
