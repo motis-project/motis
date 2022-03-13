@@ -1,0 +1,216 @@
+name: Linux Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  release:
+    types:
+      - published
+
+jobs:
+  build:
+    runs-on: [ self-hosted, linux, x64, fast ]
+    strategy:
+      matrix:
+        config:
+          - preset: linux-amd64-avx2-release
+          - preset: clang-tidy
+    env:
+      DOCKER_BUILDKIT: 0
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Get deps
+        run: mkdir -p ~/deps && mv ~/deps .
+
+      - name: Build Docker Build Image
+        run: docker build -f Dockerfile.build -t motis-build .
+
+      - name: CMake
+        run: |
+          docker run --rm -v `pwd`:/src -v `pwd`/build:/build motis-build /bin/bash \
+              -c "cmake -G Ninja -S /src -B /build --preset=${{ matrix.config.preset }} && \
+                  cmake --build /build --target motis motis-test motis-itest"
+
+      - name: Save deps
+        run: mv deps ~
+
+      - name: Run Tests
+        run: ${{ matrix.config.emulator }} ./build/motis-test
+
+      - name: Run Integration Tests
+        run: ${{ matrix.config.emulator }} ./build/motis-itest
+
+      # ==== WEB INTERFACE ====
+      - name: Compile Web Interface
+        if: matrix.config.webui == 'On'
+        run: |
+          cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
+          rm -r ui/web/elm-stuff
+          rm -r ui/web/src
+
+      - name: pnpm Cache
+        if: matrix.config.webui == 'On'
+        uses: actions/cache@v2
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Install RSL Web Interface Dependencies
+        uses: pnpm/action-setup@v2.2.0
+        if: matrix.config.webui == 'On'
+        with:
+          version: ^6.32.2
+          run_install: |
+            - cwd: ./ui/rsl
+
+      - name: Compile RSL Web Interface
+        if: matrix.config.webui == 'On'
+        run: pnpm run build
+        working-directory: ./ui/rsl
+
+      # ==== DISTRIBUTION ====
+      - name: Create Distribution
+        if: matrix.config.artifact
+        run: |
+          mkdir motis
+          mkdir motis/web
+          mv ui/web/{external_lib,img,js,style} motis/web/
+          mv ui/web/{*.html,*.js,*.ico} motis/web/
+          mv ui/rsl/dist motis/web/rsl
+          mv build/motis motis/
+          cp -r deps/osrm-backend/profiles motis/osrm-profiles
+          cp -r deps/ppr/profiles motis/ppr-profiles
+          cp -r deps/tiles/profile motis/tiles-profiles
+          tar cjf motis-${{ matrix.config.artifact }}.tar.bz2 motis
+
+      - name: Upload Distribution
+        if: matrix.config.artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: motis-${{ matrix.config.artifact }}
+          path: motis-${{ matrix.config.artifact }}.tar.bz2
+
+      # ==== RELEASE ====
+      - name: Upload Release
+        if: github.event.action == 'published' && matrix.config.artifact
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./motis-${{ matrix.config.artifact }}.tar.bz2
+          asset_name: motis-${{ matrix.config.artifact }}.tar.bz2
+          asset_content_type: application/x-tar
+
+  full-data-set-test:
+    runs-on: ${{ matrix.config.os }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - artifact: macos-x86_64-noavx2
+            os: macos-latest
+          - artifact: linux-amd64
+            os: ubuntu-20.04
+          - artifact: linux-x86
+            os: ubuntu-20.04
+          - artifact: linux-arm
+            os: ubuntu-20.04
+            emulator: qemu-arm-static -L /usr/arm-linux-gnueabihf
+            packages: bzip2 unzip qemu-user-static
+          - artifact: linux-arm64
+            os: ubuntu-20.04
+            emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
+            packages: bzip2 unzip qemu-user-static
+
+    steps:
+      - name: Install packages
+        if: matrix.config.packages != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ${{ matrix.config.packages }}
+
+      - name: Download timetable and OSM dataset
+        uses: actions/checkout@v2
+        with:
+          repository: motis-project/test-data
+          ref: aachen
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: motis-${{ matrix.config.artifact }}
+
+      - name: Unpack distribution and data
+        run: |
+          mkdir -p data/hrd
+          unzip AVV_HAFAS_520.zip -d data/hrd
+          mv zeitvs data/hrd
+          mv aachen.osm.pbf data
+          tar xf motis-${{ matrix.config.artifact }}.tar.bz2
+
+      - name: Start MOTIS
+        run: |
+          ${{ matrix.config.emulator }} ./motis/motis \
+            --mode test \
+            --modules routing lookup guesser ppr address intermodal osrm railviz tiles \
+            --server.static_path motis/web \
+            --import.data_dir data \
+            --import.paths schedule:data/hrd osm:data/aachen.osm.pbf \
+            --dataset.begin 20210809 \
+            --osrm.profiles motis/osrm-profiles/car.lua \
+            --osrm.profiles motis/osrm-profiles/bike.lua \
+            --ppr.profile motis/ppr-profiles/default.json \
+            --tiles.profile motis/tiles-profiles/background.lua \
+            --tiles.import.flush_threshold 100000 \
+            --tiles.db_size 268435456
+
+  docker:
+    runs-on: ubuntu-20.04
+    needs: full-data-set-test
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+
+      - name: Docker setup-buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          install: true
+
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=edge
+
+      - name: Docker build and push
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: .
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm/v7,linux/arm64

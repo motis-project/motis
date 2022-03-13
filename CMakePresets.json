@@ -1,0 +1,54 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "linux-amd64-avx2-release",
+      "displayName": "Linux AMD64 AVX2 Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/amd64-avx2-release",
+      "toolchainFile": "/opt/x86_64-multilib-linux-musl/toolchain-amd64.cmake",
+      "cacheVariables": {
+        "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOTIS_MIMALLOC": "ON",
+        "MOTIS_WITH_WEBUI": "ON"
+      },
+      "environment": {
+        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      }
+    },
+    {
+      "name": "clang-tidy",
+      "displayName": "Clang Tidy",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/clang-tidy",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang-14",
+        "CMAKE_CXX_COMPILER": "clang++-14",
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+        "CMAKE_EXE_LINKER_FLAGS": "-lc++abi",
+        "MOTIS_LINT": "ON",
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "environment": {
+        "BUILDCACHE_LUA_PATH": "/opt/buildcache/share/lua-examples",
+        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-amd64-avx2-release",
+      "configurePreset": "linux-amd64-avx2-release"
+    },
+    {
+      "name": "clang-tidy",
+      "configurePreset": "clang-tidy"
+    }
+  ]
+}

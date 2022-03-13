@@ -40,7 +40,7 @@ void write_json_value(Value const& v, Writer<StringBuffer>& writer,
         }
 
         auto const it = v.GetObject().FindMember(
-            Value(union_key.data(), SizeType(union_key.size())));
+            Value(union_key.data(), static_cast<SizeType>(union_key.size())));
         if (it == v.MemberEnd()) {
           continue;  // Could be a union key but no union found.
         }
