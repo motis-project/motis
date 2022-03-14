@@ -116,6 +116,8 @@ const ownPorts = {
         }
     },
     'mapHighlightConnections': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('mapHighlightConnections', callback);
+        }
     }
 }

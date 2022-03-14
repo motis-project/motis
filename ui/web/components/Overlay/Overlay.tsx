@@ -95,7 +95,10 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
                                                 connectionElem.dummyDay ?
                                                 <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
                                                 :
-                                                <div className='connection' key={index} onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}>
+                                                <div className='connection' key={index} onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}
+                                                                                        // index-1 maybe neccessary because dummyday? without highlighting is shifted
+                                                                                        onMouseEnter={() => { /** set tooltip visible */ let ids = []; ids.push(index-1); window.portEvents.pub('mapHighlightConnections', ids);}}
+                                                                                        onMouseLeave={() => { /** set tooltip hidden */ window.portEvents.pub('mapHighlightConnections', []); }}>
                                                     <div className='pure-g'>
                                                         <div className='pure-u-4-24 connection-times'>
                                                             <div className='connection-departure'>
