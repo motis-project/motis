@@ -32,20 +32,20 @@ jobs:
         run: ln -s /deps deps
 
       - name: CMake
-        run: cmake -G Ninja -S . -B /build --preset=${{ matrix.config.preset }}
+        run: cmake -G Ninja -S . -B build --preset=${{ matrix.config.preset }}
 
       - name: Build
         run: |
           printenv
           buildcache -z
-          cmake --build /build --target motis motis-test motis-itest
+          cmake --build build --target motis motis-test motis-itest
           buildcache -s
 
       - name: Run Tests
-        run: ${{ matrix.config.emulator }} /build/motis-test
+        run: ${{ matrix.config.emulator }} build/motis-test
 
       - name: Run Integration Tests
-        run: ${{ matrix.config.emulator }} /build/motis-itest
+        run: ${{ matrix.config.emulator }} build/motis-itest
 
       # ==== WEB INTERFACE ====
       - name: Compile Web Interface
