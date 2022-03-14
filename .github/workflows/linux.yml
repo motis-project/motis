@@ -12,36 +12,32 @@ on:
 jobs:
   build:
     runs-on: [ self-hosted, linux, x64, fast ]
+    container:
+      image: ghcr.io/motis-project/docker-cpp-build
+      volumes:
+        - deps:/deps
     strategy:
       matrix:
         config:
           - preset: linux-amd64-avx2-release
           - preset: clang-tidy
-    env:
-      DOCKER_BUILDKIT: 0
     steps:
       - uses: actions/checkout@v2
 
       - name: Get deps
-        run: mkdir -p ~/deps && mv ~/deps .
-
-      - name: Build Docker Build Image
-        run: docker build -f Dockerfile.build -t motis-build .
+        run: ln -s /deps deps
 
       - name: CMake
-        run: |
-          docker run --rm -v `pwd`:/src -v `pwd`/build:/build motis-build /bin/bash \
-              -c "cmake -G Ninja -S /src -B /build --preset=${{ matrix.config.preset }} && \
-                  cmake --build /build --target motis motis-test motis-itest"
+        run: cmake -G Ninja -S /src -B /build --preset=${{ matrix.config.preset }} && \
 
-      - name: Save deps
-        run: mv deps ~
+      - name: Build
+        run: cmake --build build --target motis motis-test motis-itest"
 
       - name: Run Tests
-        run: docker run --rm -v `pwd`:/src -v `pwd`/build:/build motis-build /bin/bash -c "${{ matrix.config.emulator }} /build/motis-test"
+        run: ${{ matrix.config.emulator }} ./build/motis-test
 
       - name: Run Integration Tests
-        run: docker run --rm -v `pwd`:/src -v `pwd`/build:/build motis-build /bin/bash -c "${{ matrix.config.emulator }} /build/motis-itest"
+        run: ${{ matrix.config.emulator }} ./build/motis-itest
 
       # ==== WEB INTERFACE ====
       - name: Compile Web Interface
