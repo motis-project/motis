@@ -1,0 +1,55 @@
+FROM ubuntu:20.04 AS build-env
+
+ENV ASAN_SYMBOLIZER_PATH="/usr/lib/llvm-14/bin/llvm-symbolizer"
+ENV ASAN_OPTIONS="alloc_dealloc_mismatch=0"
+ENV UBSAN_OPTIONS="halt_on_error=1:abort_on_error=1"
+ENV DEBIAN_FRONTEND="noninteractive"
+ENV BUILDCACHE_COMPRESS="true"
+ENV BUILDCACHE_DIRECT_MODE="true"
+ENV BUILDCACHE_ACCURACY="SLOPPY"
+ENV PATH="/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends apt-utils && \
+    apt-get install -y --no-install-recommends software-properties-common xz-utils wget gnupg2 ca-certificates software-properties-common && \
+    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
+    add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main" && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        git wget gnupg2 \
+        valgrind \
+        g++-10 gcc-10 \
+        ninja-build qemu-user-static \
+        clang-14 lldb-14 lld-14 clangd-14 clang-tidy-14 clang-format-14 clang-tools-14 llvm-14-dev llvm-14-tools libomp-14-dev libc++-14-dev libc++abi-14-dev libclang-common-14-dev libclang-14-dev libclang-cpp14-dev libunwind-14-dev &&\
+    \
+    echo "INSTALLING MOLD LINKER" && \
+    wget https://github.com/motis-project/mold/releases/download/v1.0.0-musl-strip/mold-linux-amd64 && \
+    mkdir -p /opt/mold && \
+    mv mold-linux-amd64 /opt/mold/ld && \
+    chmod +x /opt/mold/ld && \
+    \
+    echo "INSTALLING TOOLCHAINS" && \
+    wget https://github.com/motis-project/musl-toolchains/releases/latest/download/aarch64-unknown-linux-musl.tar.xz && \
+    tar xf aarch64-unknown-linux-musl.tar.xz -C /opt && \
+    rm -rf aarch64-unknown-linux-musl.tar.xz && \
+    wget https://github.com/motis-project/musl-toolchains/releases/latest/download/arm-unknown-linux-musleabihf.tar.xz && \
+    tar xf arm-unknown-linux-musleabihf.tar.xz -C /opt && \
+    rm -rf arm-unknown-linux-musleabihf.tar.xz && \
+    wget https://github.com/motis-project/musl-toolchains/releases/latest/download/x86_64-multilib-linux-musl.tar.xz && \
+    tar xf x86_64-multilib-linux-musl.tar.xz -C /opt && \
+    rm -rf x86_64-multilib-linux-musl.tar.xz && \
+    \
+    echo "INSTALLING CMAKE" && \
+    wget https://github.com/Kitware/CMake/releases/download/v3.23.0-rc3/cmake-3.23.0-rc3-linux-x86_64.tar.gz &&\
+    tar xf cmake-3.23.0-rc3-linux-x86_64.tar.gz -C /opt && \
+    \
+    echo "INSTALLING ELM" && \
+    wget https://github.com/elm-lang/elm-platform/releases/download/0.18.0-exp/elm-platform-linux-64bit.tar.gz && \
+    tar xf elm-platform-linux-64bit.tar.gz -C /opt && \
+    \
+    echo "INSTALLING PKG" && \
+    wget https://github.com/motis-project/pkg/releases/latest/download/pkg -O /opt/pkg && \
+    chmod +x /opt/pkg && \
+    echo "INSTALLING BUILDCACHE" && \
+    wget https://github.com/mbitsnbites/buildcache/releases/download/v0.27.6/buildcache-linux.tar.gz && \
+    tar xf buildcache-linux.tar.gz -C /opt
