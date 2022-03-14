@@ -38,10 +38,10 @@ jobs:
         run: mv deps ~
 
       - name: Run Tests
-        run: ${{ matrix.config.emulator }} ./build/motis-test
+        run: docker run --rm -v `pwd`:/src -v `pwd`/build:/build motis-build /bin/bash -c "${{ matrix.config.emulator }} /build/motis-test"
 
       - name: Run Integration Tests
-        run: ${{ matrix.config.emulator }} ./build/motis-itest
+        run: docker run --rm -v `pwd`:/src -v `pwd`/build:/build motis-build /bin/bash -c "${{ matrix.config.emulator }} /build/motis-itest"
 
       # ==== WEB INTERFACE ====
       - name: Compile Web Interface
