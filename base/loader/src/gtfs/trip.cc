@@ -31,7 +31,7 @@ std::vector<std::pair<std::vector<trip*>, bitfield>> block::rule_services() {
                    [](trip const* t) { return t->stop_times_.empty(); });
   utl::verify(no_stop_times_t == end(trips_),
               "invalid trip \"{}\" with no stop times",
-              (*no_stop_times_t)->id_);
+              no_stop_times_t == end(trips_) ? "" : (*no_stop_times_t)->id_);
   std::sort(begin(trips_), end(trips_), [](trip const* a, trip const* b) {
     return a->stop_times_.front().dep_.time_ <
            b->stop_times_.front().dep_.time_;
