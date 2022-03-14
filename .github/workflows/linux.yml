@@ -35,7 +35,11 @@ jobs:
         run: cmake -G Ninja -S . -B /build --preset=${{ matrix.config.preset }}
 
       - name: Build
-        run: cmake --build /build --target motis motis-test motis-itest
+        run: |
+          printenv
+          buildcache -z
+          cmake --build /build --target motis motis-test motis-itest
+          buildcache -s
 
       - name: Run Tests
         run: ${{ matrix.config.emulator }} /build/motis-test
