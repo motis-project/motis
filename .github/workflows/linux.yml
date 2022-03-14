@@ -16,11 +16,15 @@ jobs:
       image: ghcr.io/motis-project/docker-cpp-build
       volumes:
         - deps:/deps
+        - buildcache:/buildcache
     strategy:
       matrix:
         config:
           - preset: linux-amd64-avx2-release
           - preset: clang-tidy
+            skipui: true
+    env:
+      BUILDCACHE_DIR: /buildcache
     steps:
       - uses: actions/checkout@v2
 
@@ -31,24 +35,24 @@ jobs:
         run: cmake -G Ninja -S . -B /build --preset=${{ matrix.config.preset }}
 
       - name: Build
-        run: cmake --build build --target motis motis-test motis-itest"
+        run: cmake --build /build --target motis motis-test motis-itest
 
       - name: Run Tests
-        run: ${{ matrix.config.emulator }} ./build/motis-test
+        run: ${{ matrix.config.emulator }} /build/motis-test
 
       - name: Run Integration Tests
-        run: ${{ matrix.config.emulator }} ./build/motis-itest
+        run: ${{ matrix.config.emulator }} /build/motis-itest
 
       # ==== WEB INTERFACE ====
       - name: Compile Web Interface
-        if: matrix.config.webui == 'On'
+        if: ${{ !matrix.config.skipui }}
         run: |
           cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
           rm -r ui/web/elm-stuff
           rm -r ui/web/src
 
       - name: pnpm Cache
-        if: matrix.config.webui == 'On'
+        if: ${{ !matrix.config.skipui }}
         uses: actions/cache@v2
         with:
           path: ~/.pnpm-store
@@ -58,14 +62,14 @@ jobs:
 
       - name: Install RSL Web Interface Dependencies
         uses: pnpm/action-setup@v2.2.0
-        if: matrix.config.webui == 'On'
+        if: ${{ !matrix.config.skipui }}
         with:
           version: ^6.32.2
           run_install: |
             - cwd: ./ui/rsl
 
       - name: Compile RSL Web Interface
-        if: matrix.config.webui == 'On'
+        if: ${{ !matrix.config.skipui }}
         run: pnpm run build
         working-directory: ./ui/rsl
 
