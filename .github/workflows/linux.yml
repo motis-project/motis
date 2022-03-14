@@ -28,7 +28,7 @@ jobs:
         run: ln -s /deps deps
 
       - name: CMake
-        run: cmake -G Ninja -S /src -B /build --preset=${{ matrix.config.preset }} && \
+        run: cmake -G Ninja -S . -B /build --preset=${{ matrix.config.preset }}
 
       - name: Build
         run: cmake --build build --target motis motis-test motis-itest"
