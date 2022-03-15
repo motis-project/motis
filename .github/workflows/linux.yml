@@ -87,12 +87,12 @@ jobs:
       - name: Create Distribution
         if: matrix.config.artifact
         run: |
-          mkdir motis
-          mkdir motis/web
+          cd ${{ github.workspace }}
+          mkdir -p motis/web
           mv ui/web/{external_lib,img,js,style} motis/web/
           mv ui/web/{*.html,*.js,*.ico} motis/web/
           mv ui/rsl/dist motis/web/rsl
-          mv build/motis motis/
+          mv build/motis motis/motis
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
           cp -r deps/ppr/profiles motis/ppr-profiles
           cp -r deps/tiles/profile motis/tiles-profiles
