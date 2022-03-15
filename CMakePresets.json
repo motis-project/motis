@@ -173,8 +173,8 @@
       "configurePreset": "macos-x86_64"
     },
     {
-      "name": "macos-x86_64-noavx",
-      "configurePreset": "macos-x86_64-noavx"
+      "name": "macos-x86_64-noavx2",
+      "configurePreset": "macos-x86_64-noavx2"
     },
     {
       "name": "macos-arm64",
