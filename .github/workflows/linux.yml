@@ -51,6 +51,7 @@ jobs:
 
       - name: Build
         run: |
+          pwd
           printenv
           buildcache -z
           cmake --build build --target motis motis-test motis-itest
@@ -87,7 +88,7 @@ jobs:
       - name: Create Distribution
         if: matrix.config.artifact
         run: |
-          cd ${{ github.workspace }}
+          pwd
           tree .
           mkdir -p motis/web
           mv ui/web/{external_lib,img,js,style} motis/web/
