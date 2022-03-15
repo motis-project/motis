@@ -1,4 +1,4 @@
-name: Linux Build
+name: Linux+MacOS Build
 
 on:
   push:
@@ -13,6 +13,7 @@ jobs:
   macos:
     runs-on: macos-latest
     strategy:
+      fail-fast: false
       matrix:
         config:
           - preset: macos-x86_64
@@ -151,6 +152,7 @@ jobs:
         - pnpstore:/root/.pnpm-store
         - elm:/elm
     strategy:
+      fail-fast: false
       matrix:
         config:
           - preset: linux-amd64-avx2-release
