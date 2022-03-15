@@ -32,7 +32,7 @@ jobs:
             artifact: linux-arm
             emulator: qemu-arm-static
           - preset: linux-arm64-release
-            artifact: linux-amd64
+            artifact: linux-arm64
             emulator: qemu-aarch64-static
           - preset: clang-tidy
             skipui: true
@@ -130,8 +130,6 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - artifact: macos-x86_64-noavx2
-            os: macos-latest
           - artifact: linux-amd64
             os: ubuntu-20.04
           - artifact: linux-x86
