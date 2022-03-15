@@ -56,7 +56,7 @@ import TimeInputField from "../components/TimeInputField.vue";
 import InputField from "../components/InputField.vue";
 import Trips from "../models/TrainGuess";
 import TransportTypeBox from "../components/TransportTypeBox.vue";
-import LoadingBar, {LoadingState} from "../components/LoadingBar.vue"
+import LoadingBar, { LoadingState } from "../components/LoadingBar.vue";
 
 export default defineComponent({
   name: "TrainSearch",
