@@ -18,6 +18,7 @@ jobs:
         - deps:/deps
         - buildcache:/buildcache
         - pnpstore:/root/.pnpm-store
+        - elm:/elm
     strategy:
       matrix:
         config:
@@ -67,6 +68,8 @@ jobs:
       - name: Compile Web Interface
         if: ${{ !matrix.config.skipui }}
         run: |
+          mkdir -p ui/web/elm-stuff
+          ln -s /elm ui/web/elm-stuff/packages
           cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
 
       - name: Install RSL Web Interface Dependencies
@@ -86,8 +89,6 @@ jobs:
       - name: Create Distribution
         if: matrix.config.artifact
         run: |
-          pwd
-          tree .
           mkdir -p motis/web
           mv ui/web/external_lib motis/web/
           mv ui/web/img motis/web/
