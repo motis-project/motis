@@ -39,7 +39,6 @@ jobs:
       BUILDCACHE_DIR: /buildcache
       BUILDCACHE_DIRECT_MODE: true
       BUILDCACHE_MAX_CACHE_SIZE: 26843545600
-      BUILDCACHE_DEBUG: 1
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
     steps:
       - uses: actions/checkout@v2
