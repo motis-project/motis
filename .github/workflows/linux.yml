@@ -68,8 +68,6 @@ jobs:
         if: ${{ !matrix.config.skipui }}
         run: |
           cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
-          rm -r ui/web/elm-stuff
-          rm -r ui/web/src
 
       - name: Install RSL Web Interface Dependencies
         uses: pnpm/action-setup@v2.2.0
@@ -91,8 +89,13 @@ jobs:
           pwd
           tree .
           mkdir -p motis/web
-          mv ui/web/{external_lib,img,js,style} motis/web/
-          mv ui/web/{*.html,*.js,*.ico} motis/web/
+          mv ui/web/external_lib motis/web/
+          mv ui/web/img motis/web/
+          mv ui/web/js motis/web/
+          mv ui/web/style motis/web/
+          mv ui/web/*.html motis/web/
+          mv ui/web/*.js motis/web/
+          mv ui/web/*.ico motis/web/
           mv ui/rsl/dist motis/web/rsl
           mv build/motis motis/motis
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
