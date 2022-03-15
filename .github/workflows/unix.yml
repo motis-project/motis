@@ -18,12 +18,11 @@ jobs:
         config:
           - preset: macos-x86_64
             artifact: macos-x86_64
-            skipttests: true
           - preset: macos-x86_64-noavx2
             artifact: macos-x86_64-noavx2
+            tests: On
           - preset: macos-arm64
             artifact: macos-arm64
-            skipttests: true
     env:
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
@@ -66,7 +65,7 @@ jobs:
 
       # ==== TESTS ====
       - name: Run Test Mode
-        if: ${{ !matrix.config.skiptests }}
+        if: matrix.config.tests == 'On'
         run: |
           ./build/motis --mode test \
             --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
@@ -76,11 +75,11 @@ jobs:
             --exclude_modules address osrm parking path ppr tiles tripbased
 
       - name: Run Tests
-        if: ${{ !matrix.config.skiptests }}
+        if: matrix.config.tests == 'On'
         run: build/motis-test
 
       - name: Run Integration Tests
-        if: ${{ !matrix.config.skiptests }}
+        if: matrix.config.tests == 'On'
         run: build/motis-itest
 
       # ==== WEB INTERFACE ====
