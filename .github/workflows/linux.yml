@@ -88,6 +88,7 @@ jobs:
         if: matrix.config.artifact
         run: |
           cd ${{ github.workspace }}
+          tree .
           mkdir -p motis/web
           mv ui/web/{external_lib,img,js,style} motis/web/
           mv ui/web/{*.html,*.js,*.ico} motis/web/
