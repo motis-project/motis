@@ -135,17 +135,37 @@
       }
     },
     {
+      "name": "linux-sanitizer",
+      "displayName": "Linux Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/sanitizer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-B/opt",
+        "CTX_ASAN": "ON"
+      },
+      "environment": {
+        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "CXX": "/usr/bin/g++-10",
+        "CC": "/usr/bin/gcc-10"
+      }
+    },
+    {
       "name": "linux-debug",
       "displayName": "Linux Debug",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/debug",
-      "toolchainFile": "/opt/x86_64-multilib-linux-musl/toolchain-amd64.cmake",
       "cacheVariables": {
-        "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXE_LINKER_FLAGS": "-B/opt",
+        "CTX_VALGRIND": "ON"
       },
       "environment": {
-        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "CXX": "/usr/bin/g++-10",
+        "CC": "/usr/bin/gcc-10"
       }
     },
     {
@@ -207,6 +227,10 @@
     {
       "name": "linux-debug",
       "configurePreset": "linux-debug"
+    },
+    {
+      "name": "linux-sanitizer",
+      "configurePreset": "linux-sanitizer"
     }
   ]
 }
