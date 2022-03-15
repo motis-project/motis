@@ -92,7 +92,7 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
                                                         </div>
                                                         <div className='pure-u-16-24 connection-trains'>
                                                             <div className='transport-graph'>
-                                                                <ConnectionRender connection={connectionElem} setDetailViewHidden={setDetailViewHidden} translation={props.translation}/>
+                                                                <ConnectionRender connection={connectionElem} setDetailViewHidden={setDetailViewHidden} />
                                                                 <div className='tooltip' style={{ position: 'absolute', left: '0px', top: '23px' }}>
                                                                     <div className='stations'>
                                                                         <div className='departure'><span className='station'>{props.translation.search.departure}</span><span
@@ -150,7 +150,7 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
                         </div>
                     }
                 </div>
-                <SubOverlay subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} trainSelected={trainSelected} setTrainSelected={setTrainSelected} translation={props.translation} detailViewHidden={detailViewHidden}/>
+                <SubOverlay subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} trainSelected={trainSelected} setTrainSelected={setTrainSelected} translation={props.translation} detailViewHidden={detailViewHidden} displayDate={displayDate}/>
             </div>
             <div className='overlay-tabs'>
                 <div className='overlay-toggle' onClick={() => setOverlayHidden(!overlayHidden)}>

@@ -43,7 +43,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
     
     const[currentDate, setcurrentDate] = React.useState<moment.Moment>(props.currentDate);
     
-    const[dateDisplay, setDateDisplay] = React.useState<string>(currentDate.format('D.M.YYYY'));
+    const[dateDisplay, setDateDisplay] = React.useState<string>(currentDate.format(props.translation.dateFormat));
     
     useOutsideAlerter(datePickerRef, inputFieldRef, dayButtonPrevious, dayButtonNext, setDatePickerSelected);
 
@@ -77,7 +77,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                     let firstDay = firstDayOfMonth();
                     setcurrentDate(currentDate.subtract(1, 'month'));
                     setcurrentDate(currentDate.date(currentDate.daysInMonth() - firstDay + 2 + i));
-                    setDateDisplay(currentDate.format('D.M.YYYY'));
+                    setDateDisplay(currentDate.format(props.translation.dateFormat));
                     setDatePickerSelected(false);
                 }}>
                 {previousMonthDays - firstDayOfMonth() + 2 + i}
@@ -90,7 +90,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
     };
 
     let isToday = (d: number) => {
-        return moment().format('D.M.YYYY') === moment(currentDate).date(d).format('D.M.YYYY');
+        return moment().format(props.translation.dateFormat) === moment(currentDate).date(d).format(props.translation.dateFormat);
     }
 
     let selectedDay = () => {
@@ -107,7 +107,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                 className={`in-month${currentDay}${selected}${validDay}`}
                 onClick={() => {
                     setcurrentDate(currentDate.date(d));
-                    setDateDisplay(currentDate.format('D.M.YYYY'));
+                    setDateDisplay(currentDate.format(props.translation.dateFormat));
                     setDatePickerSelected(false);
                 }}>
                 {d}
@@ -123,7 +123,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                 onClick={() => {
                     setcurrentDate(currentDate.add(1, 'month'));
                     setcurrentDate(currentDate.date(i));
-                    setDateDisplay(currentDate.format('D.M.YYYY'));
+                    setDateDisplay(currentDate.format(props.translation.dateFormat));
                     setDatePickerSelected(false);
                 }}>
                 {i}    
@@ -174,7 +174,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                                     ref={dayButtonPrevious}
                                     onClick={() => {
                                         setcurrentDate(currentDate.subtract(1, 'd')); 
-                                        setDateDisplay(currentDate.format('D.M.YYYY'));
+                                        setDateDisplay(currentDate.format(props.translation.dateFormat));
                                         }}>
                                     <i className='icon'>chevron_left</i>
                                 </a>
@@ -184,7 +184,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                                     ref={dayButtonNext}
                                     onClick={() => {
                                         setcurrentDate(currentDate.add(1, 'd')); 
-                                        setDateDisplay(currentDate.format('D.M.YYYY'));
+                                        setDateDisplay(currentDate.format(props.translation.dateFormat));
                                         }}>
                                     <i className='icon'>chevron_right</i>
                                 </a>
@@ -195,9 +195,9 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
             </div>
             <div ref={datePickerRef} className={datePickerSelected ? 'paper calendar' : 'paper calendar hide'}>
                 <div className='month'>
-                    <i className='icon' onClick={() => {setcurrentDate(currentDate.subtract(1, 'month')); setDateDisplay(currentDate.format('D.M.YYYY'))}}>chevron_left</i>
+                    <i className='icon' onClick={() => {setcurrentDate(currentDate.subtract(1, 'month')); setDateDisplay(currentDate.format(props.translation.dateFormat))}}>chevron_left</i>
                     <span className='month-name'>{props.translation.search.months[currentDate.month()] + ' ' + currentDate.year()}</span>
-                    <i className='icon' onClick={() => {setcurrentDate(currentDate.add(1, 'month')); setDateDisplay(currentDate.format('D.M.YYYY'))}}>chevron_right</i>
+                    <i className='icon' onClick={() => {setcurrentDate(currentDate.add(1, 'month')); setDateDisplay(currentDate.format(props.translation.dateFormat))}}>chevron_right</i>
                 </div>
                 <table className='calendar-day'>
                     <thead className='weekdays'>

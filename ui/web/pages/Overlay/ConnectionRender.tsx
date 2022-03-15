@@ -78,7 +78,7 @@ const transportForLoop = (connection: Transport[], setDetailViewHidden: React.Di
 }
 
 
-export const ConnectionRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>> }> = (props) => {
+export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>> }> = (props) => {
 
     return (
         <svg width='335' height='40' viewBox='0 0 335 40'>
