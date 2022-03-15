@@ -63,6 +63,7 @@
       "binaryDir": "${sourceDir}/build/arm-release",
       "toolchainFile": "/opt/arm-unknown-linux-musleabihf/toolchain-arm.cmake",
       "cacheVariables": {
+        "CMAKE_CROSSCOMPILING_EMULATOR": "qemu-arm-static",
         "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
         "CMAKE_BUILD_TYPE": "Release",
         "MOTIS_WITH_WEBUI": "ON",
@@ -80,6 +81,7 @@
       "binaryDir": "${sourceDir}/build/arm64-release",
       "toolchainFile": "/opt/aarch64-unknown-linux-musl/toolchain-arm64.cmake",
       "cacheVariables": {
+        "CMAKE_CROSSCOMPILING_EMULATOR": "qemu-aarch64-static",
         "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
         "CMAKE_BUILD_TYPE": "Release",
         "MOTIS_WITH_WEBUI": "ON",
