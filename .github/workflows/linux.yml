@@ -17,6 +17,7 @@ jobs:
       volumes:
         - deps:/deps
         - buildcache:/buildcache
+        - pnpstore:/root/.pnpm-store
     strategy:
       matrix:
         config:
@@ -55,15 +56,6 @@ jobs:
           cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
           rm -r ui/web/elm-stuff
           rm -r ui/web/src
-
-      - name: pnpm Cache
-        if: ${{ !matrix.config.skipui }}
-        uses: actions/cache@v2
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
 
       - name: Install RSL Web Interface Dependencies
         uses: pnpm/action-setup@v2.2.0
