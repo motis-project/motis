@@ -40,7 +40,7 @@
         "CMAKE_OSX_ARCHITECTURES": "arm64",
         "CMAKE_CXX_FLAGS": "-stdlib=libc++",
         "BOOST_CONTEXT_ARCHITECTURE": "arm64",
-        "DBOOST_CONTEXT_ABI": "aapcs",
+        "BOOST_CONTEXT_ABI": "aapcs",
         "ENABLE_ASM": "OFF",
         "CMAKE_BUILD_TYPE": "Release",
         "MOTIS_WITH_WEBUI": "ON",
