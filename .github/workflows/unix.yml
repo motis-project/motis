@@ -10,7 +10,138 @@ on:
       - published
 
 jobs:
-  build:
+  macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        config:
+          - preset: macos-x86_64
+            artifact: macos-x86_64
+            skipttests: true
+          - preset: macos-x86_64-noavx2
+            artifact: macos-x86_64-noavx2
+          - preset: macos-arm64
+            artifact: macos-arm64
+            skipttests: true
+    env:
+      BUILDCACHE_COMPRESS: true
+      BUILDCACHE_DIRECT_MODE: true
+      BUILDCACHE_ACCURACY: SLOPPY
+      BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
+      BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
+      UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
+      ASAN_OPTIONS: alloc_dealloc_mismatch=0
+    steps:
+      - uses: actions/checkout@v2
+
+      # ==== CACHE ====
+      - name: buildcache Cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ github.workspace }}/.buildcache
+          key: buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          restore-keys: |
+            buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-
+            buildcache-${{ matrix.config.name }}-
+
+      - name: Dependencies Cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ github.workspace }}/deps
+          key: deps-${{ hashFiles('.pkg') }}
+          restore-keys: deps-
+
+      # ==== BUILD ====
+      - name: CMake
+        run: cmake -G Ninja -S . -B build --preset=${{ matrix.config.preset }}
+
+      - name: Build
+        run: |
+          buildcache -z
+          cmake --build build --target motis motis-test motis-itest
+          buildcache -s
+
+      # ==== TESTS ====
+      - name: Run Test Mode
+        if: ${{ !matrix.config.skiptests }}
+        run: |
+          ./build/motis --mode test \
+            --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
+            --dataset.begin 20151004 \
+            --dataset.write_serialized false \
+            --ris.db_max_size 1048576 \
+            --exclude_modules address osrm parking path ppr tiles tripbased
+
+      - name: Run Tests
+        if: ${{ !matrix.config.skiptests }}
+        run: build/motis-test
+
+      - name: Run Integration Tests
+        if: ${{ !matrix.config.skiptests }}
+        run: build/motis-itest
+
+      # ==== WEB INTERFACE ====
+      - name: Compile Web Interface
+        if: matrix.config.webui == 'On'
+        run: |
+          cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
+          rm -r ui/web/elm-stuff
+          rm -r ui/web/src
+      - name: pnpm Cache
+        if: matrix.config.webui == 'On'
+        uses: actions/cache@v2
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+      - name: Install RSL Web Interface Dependencies
+        uses: pnpm/action-setup@v2.2.0
+        if: matrix.config.webui == 'On'
+        with:
+          version: ^6.32.2
+          run_install: |
+            - cwd: ./ui/rsl
+      - name: Compile RSL Web Interface
+        if: matrix.config.webui == 'On'
+        run: pnpm run build
+        working-directory: ./ui/rsl
+
+      # ==== DISTRIBUTION ====
+      - name: Create Distribution
+        if: matrix.config.artifact
+        run: |
+          mkdir motis
+          mkdir motis/web
+          mv ui/web/{external_lib,img,js,style} motis/web/
+          mv ui/web/{*.html,*.js,*.ico} motis/web/
+          mv ui/rsl/dist motis/web/rsl
+          mv build/motis motis/
+          cp -r deps/osrm-backend/profiles motis/osrm-profiles
+          cp -r deps/ppr/profiles motis/ppr-profiles
+          cp -r deps/tiles/profile motis/tiles-profiles
+          tar cjf motis-${{ matrix.config.artifact }}.tar.bz2 motis
+      - name: Upload Distribution
+        if: matrix.config.artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: motis-${{ matrix.config.artifact }}
+          path: motis-${{ matrix.config.artifact }}.tar.bz2
+
+      # ==== RELEASE ====
+      - name: Upload Release
+        if: github.event.action == 'published' && matrix.config.artifact
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./motis-${{ matrix.config.artifact }}.tar.bz2
+          asset_name: motis-${{ matrix.config.artifact }}.tar.bz2
+          asset_content_type: application/x-tar
+
+  linux:
     runs-on: [ self-hosted, linux, x64, fast ]
     container:
       image: ghcr.io/motis-project/docker-cpp-build
@@ -50,13 +181,22 @@ jobs:
       - name: CMake
         run: cmake -G Ninja -S . -B build --preset=${{ matrix.config.preset }}
 
+      # ==== BUILD ====
       - name: Build
         run: |
-          pwd
-          printenv
           buildcache -z
           cmake --build build --target motis motis-test motis-itest
           buildcache -s
+
+      # ==== TESTS ====
+      - name: Run Test Mode
+        run: |
+          ${{ matrix.config.emulator }} ./build/motis --mode test \
+            --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
+            --dataset.begin 20151004 \
+            --dataset.write_serialized false \
+            --ris.db_max_size 1048576 \
+            --exclude_modules address osrm parking path ppr tiles tripbased
 
       - name: Run Tests
         run: ${{ matrix.config.emulator }} build/motis-test
@@ -125,11 +265,13 @@ jobs:
 
   full-data-set-test:
     runs-on: ${{ matrix.config.os }}
-    needs: build
+    needs: [ linux, macos ]
     strategy:
       fail-fast: false
       matrix:
         config:
+          - artifact: macos-x86_64-noavx2
+            os: macos-latest
           - artifact: linux-amd64
             os: ubuntu-20.04
           - artifact: linux-x86
