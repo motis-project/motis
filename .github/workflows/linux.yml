@@ -25,6 +25,7 @@ jobs:
             skipui: true
     env:
       BUILDCACHE_DIR: /buildcache
+      BUILDCACHE_DIRECT_MODE: true
     steps:
       - uses: actions/checkout@v2
 
