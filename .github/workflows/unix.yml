@@ -60,9 +60,9 @@ jobs:
 
       - name: Build
         run: |
-          buildcache -z
+          ./build/buildcache/bin/buildcache -z
           cmake --build build --target motis motis-test motis-itest
-          buildcache -s
+          ./build/buildcache/bin/buildcache -s
 
       # ==== TESTS ====
       - name: Run Test Mode
