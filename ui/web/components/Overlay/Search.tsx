@@ -5,12 +5,12 @@ import equal from 'deep-equal';
 
 import { DatePicker } from './DatePicker';
 import { Mode, IntermodalRoutingResponse } from '../Types/IntermodalRoutingTypes';
-import { Connection, Position, Station } from '../Types/ConnectionTypes';
+import { Connection, Station } from '../Types/Connection';
 import { Translations } from '../App/Localization';
 import { Address } from '../Types/SuggestionTypes';
 import { SearchInputField } from './SearchInputField';
 import { Modepicker } from './ModePicker';
-import { getFromLocalStorage, setLocalStorage } from '../App/LocalStorage';
+import { getFromLocalStorage } from '../App/LocalStorage';
 import { Interval } from '../Types/RoutingTypes';
 import { markerSearch } from '../Map/RailvizContextMenu';
 

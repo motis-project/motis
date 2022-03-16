@@ -4,7 +4,7 @@ import moment from 'moment';
 
 import { Translations } from '../App/Localization';
 import { DatePicker } from './DatePicker';
-import { TripId } from '../Types/ConnectionTypes';
+import { TripId } from '../Types/Connection';
 import { TripView } from './TripView';
 import { Interval } from '../Types/RoutingTypes';
 

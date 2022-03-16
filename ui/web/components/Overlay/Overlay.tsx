@@ -9,7 +9,7 @@ import { ConnectionRender } from './ConnectionRender';
 import { JourneyRender, duration } from './Journey';
 import { Translations } from '../App/Localization';
 import { getFromLocalStorage } from '../App/LocalStorage';
-import { Connection, Station, Transport, TransportInfo, TripId } from '../Types/ConnectionTypes';
+import { Connection, Station, Transport, TransportInfo, TripId } from '../Types/Connection';
 import { Address } from '../Types/SuggestionTypes';
 import { Interval } from '../Types/RoutingTypes';
 

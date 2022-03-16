@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Station } from '../Types/ConnectionTypes';
+import { Station } from '../Types/Connection';
 import { Translations } from '../App/Localization';
 import { Proposals } from './Proposals';
 import { Address, AddressSuggestionResponse, StationSuggestionResponse } from '../Types/SuggestionTypes';

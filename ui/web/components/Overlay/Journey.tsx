@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 
-import { Transport, TransportInfo, Connection, Stop, TripId, FootRouting, Station, Trip } from '../Types/ConnectionTypes';
+import moment from 'moment';
+
+import { Transport, TransportInfo, Connection, Stop, TripId, FootRouting, Station, Trip } from '../Types/Connection';
 import { getFromLocalStorage, ModeLocalStorage } from '../App/LocalStorage';
 import { Address } from '../Types/SuggestionTypes';
 import { Translations } from '../App/Localization';
 import { classToId } from './ConnectionRender';
 
-import moment from 'moment';
-
 const isTransportInfo = (transport: Transport) => {
     return transport.move_type === 'Transport';
 }
+
 
 export const duration = (start: number, dest: number) => {
     let difference = moment.unix(dest).diff(moment.unix(start), 'minutes')
@@ -41,6 +42,7 @@ const stopGenerator = (stops: Stop[]) => {
     }
     return stopDivs;
 }
+
 
 const getWalkTime = (latStart: number, lngStart: number, latDest: number, lngDest: number, durationLimit: number, profile: string, includeEdges: boolean, includePath: boolean, includeSteps: boolean) => {
     return {
@@ -256,6 +258,7 @@ interface JourneyElem {
     stops: Stop[],
     trip: Trip
 }
+
 
 const TransportDivs: React.FC<{ 'connection': Connection, 'isCollapsed': Boolean, 'collapseSetter': React.Dispatch<React.SetStateAction<Boolean>>, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'walkTimes': number[], 'translation': Translations }> = (props) => {
 

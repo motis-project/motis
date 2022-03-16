@@ -1,7 +1,7 @@
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 import { JourneyRender, duration} from './Journey';
-import { Connection, Station, TripId, TripViewConnection } from '../Types/ConnectionTypes';
+import { Connection, Station, TripId, TripViewConnection } from '../Types/Connection';
 import { Translations } from '../App/Localization';
 
 const getTrainConnection = (lineId: string, stationId: string, targetStationId: string, targetTime: number, time: number, trainNr: number) => {

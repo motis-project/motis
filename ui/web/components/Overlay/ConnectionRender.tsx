@@ -1,11 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 
-import moment from 'moment';
-
-import { Translations } from "../App/Localization";
-import { getFromLocalStorage, ModeLocalStorage } from '../App/LocalStorage';
-import { Address } from '../Types/SuggestionTypes';
-import { Transport, TransportInfo, Connection, Stop, TripId, FootRouting, Station } from '../Types/ConnectionTypes';
+import { Transport, TransportInfo, Connection } from '../Types/Connection';
 
 
 const isTransportInfo = (transport: Transport) => {
@@ -17,40 +12,28 @@ export const classToId = (classz: Number) => {
     switch (classz) {
         case 0:
             return '#plane';
-            break;
         case 1:
             return '#train';
-            break;
         case 2:
             return '#train';
-            break;
         case 3:
             return '#bus';
-            break;
         case 4:
             return '#train';
-            break;
         case 5:
             return '#train';
-            break;
         case 6:
             return '#train';
-            break;
         case 7:
             return '#sbahn';
-            break;
         case 8:
             return '#ubahn';
-            break;
         case 9:
             return '#tram';
-            break;
         case 11:
             return '#ship';
-            break;
         default:
             return '#bus';
-            break;
     }
 }
 
