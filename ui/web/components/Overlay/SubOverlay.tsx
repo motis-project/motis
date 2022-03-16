@@ -1,11 +1,14 @@
 import React from 'react';
+
+import moment from 'moment';
+
 import { Translations } from '../App/Localization';
 import { DatePicker } from './DatePicker';
-import moment from 'moment';
 import { TripId } from '../Types/ConnectionTypes';
 import { TripView } from './TripView';
+import { Interval } from '../Types/RoutingTypes';
 
-export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean }> = (props) => {
+export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'scheduleInfo': Interval }> = (props) => {
 
     // Current Date
     const [searchDate, setSearchDate] = React.useState<moment.Moment>(moment());
@@ -37,7 +40,8 @@ export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidd
                                         <div>
                                             <DatePicker translation={props.translation}
                                                 currentDate={searchDate}
-                                                setCurrentDate={setSearchDate} />
+                                                setCurrentDate={setSearchDate}
+                                                scheduleInfo={props.scheduleInfo} />
                                         </div>
                                     </div>
                                     <div className='pure-u-1 pure-u-sm-12-24'>
