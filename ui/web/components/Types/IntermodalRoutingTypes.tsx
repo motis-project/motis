@@ -1,4 +1,4 @@
-import { Connection, Position, Station } from './ConnectionTypes'
+import { Connection, Position, Station } from './Connection'
 import { SearchOptions } from './PPRTypes';
 import { Interval } from './RoutingTypes';
 import { ScheduleInfoResponse } from './ScheduleInfo';

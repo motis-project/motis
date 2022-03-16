@@ -1,4 +1,4 @@
-import { Position, Station } from "./ConnectionTypes";
+import { Position, Station } from "./Connection";
 
 export interface AddressSuggestionResponse {
     content:
