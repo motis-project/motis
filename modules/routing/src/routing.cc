@@ -127,7 +127,7 @@ msg_ptr routing::trip_to_connection(msg_ptr const& msg) {
 
   auto labels = std::vector<label>{trp->edges_->size() + 3};
   labels[0] = make_label(nullptr, &e_0, nullptr, dep_time);
-  labels[1] = make_label(&labels[0], &e_1, nullptr, dep_time);
+  labels[1] = make_label(&labels.front(), &e_1, nullptr, dep_time);
 
   int i = 2;
   for (auto const& e : *trp->edges_) {

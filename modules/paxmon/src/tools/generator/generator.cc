@@ -253,7 +253,7 @@ private:
 
 int generate(int argc, char const** argv) {
   auto const routers = std::vector<std::string>{"tripbased", "csa", "routing"};
-  auto const default_router_module = routers.front();
+  auto const& default_router_module = routers.front();
   auto const default_router_target = std::string{"/"} + default_router_module;
 
   generator_settings generator_opt;

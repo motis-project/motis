@@ -1,6 +1,7 @@
 Checks: "*,\
 -llvmlibc-*,\
 -abseil-*,\
+-readability-identifier-length,\
 -altera-unroll-loops,\
 -altera-id-dependent-backward-branch,\
 -bugprone-easily-swappable-parameters,\

@@ -6,13 +6,15 @@ std::string time(time_t const t) {
   char buf[sizeof "2011-10-08t07:07:09z-0430"];
   struct tm result {};
   MOTIS_GMT(&t, &result);
-  strftime(static_cast<char*>(buf), sizeof buf, "%FT%TZ%z", &result);
+  auto const written =
+      strftime(static_cast<char*>(buf), sizeof buf, "%FT%TZ%z", &result);
+  (void)written;
   return buf;
 }
 
 std::string time() {
   time_t now = 0;
-  std::time(&now);
+  (void)std::time(&now);
   return time(now);
 }
 
