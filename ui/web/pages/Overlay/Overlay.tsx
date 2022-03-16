@@ -6,7 +6,7 @@ import { JourneyRender, duration } from './Journey';
 import { ConnectionRender } from './ConnectionRender';
 import { Translations } from '../App/Localization';
 import { getFromLocalStorage } from '../App/LocalStorage';
-import { Connection, Station, Transport, TripId } from '../Types/ConnectionTypes';
+import { Connection, Station, Transport, TransportInfo, TripId } from '../Types/ConnectionTypes';
 import { Address } from '../Types/SuggestionTypes';
 import moment from 'moment';
 
@@ -95,12 +95,12 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
                                                                 <ConnectionRender connection={connectionElem} setDetailViewHidden={setDetailViewHidden} />
                                                                 <div className='tooltip' style={{ position: 'absolute', left: '0px', top: '23px' }}>
                                                                     <div className='stations'>
-                                                                        <div className='departure'><span className='station'>{props.translation.search.departure}</span><span
-                                                                            className='time'>14:20</span></div>
-                                                                        <div className='arrival'><span className='station'>{props.translation.search.arrival}</span><span
-                                                                            className='time'>14:35</span></div>
+                                                                        <div className='departure'><span className='station'>{connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.from].station.name}</span><span
+                                                                            className='time'>{moment.unix(connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.from].departure.time).format('HH:mm')}</span></div>
+                                                                        <div className='arrival'><span className='station'>{connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.to].station.name}</span><span
+                                                                            className='time'>{moment.unix(connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.to].arrival.time).format('HH:mm')}</span></div>
                                                                     </div>
-                                                                    <div className='transport-name'><span>IC 117</span></div>
+                                                                    <div className='transport-name'><span>{(connectionElem.transports[0].move as TransportInfo).name}</span></div>
                                                                 </div>
                                                             </div>
                                                         </div>
