@@ -118,7 +118,7 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                             <div className={'train-box train-class-' + (props.connection.transports[0].move as TransportInfo).clasz + ' with-tooltip'}
                                 data-tooltip={
                                     props.translation.connections.provider +
-                                    ': woher bekommen die den zugbetreiber her' +
+                                    ': ' + (props.connection.transports[0].move as TransportInfo).provider +
                                     '\n' +
                                     ((true) ?
                                         props.translation.connections.trainNr +
@@ -295,7 +295,7 @@ const TransportDivs: React.FC<{ 'connection': Connection, 'isCollapsed': Boolean
                                 <div className={'train-box train-class-' + (transport.transport.move as TransportInfo).clasz + ' with-tooltip'}
                                     data-tooltip={
                                         props.translation.connections.provider +
-                                        ': woher bekommen die den zugbetreiber her' +
+                                        ': ' + (transport.transport.move as TransportInfo).provider +
                                         '\n' +
                                         ((true) ?
                                             props.translation.connections.trainNr +

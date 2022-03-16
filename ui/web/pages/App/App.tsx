@@ -38,13 +38,13 @@ export const App: React.FC = () => {
             {isMobile ?
                 <Overlay translation={getQuery()}/>
                 :
-                <div>
+                <>
                     {/* visible && <MapView />*/}
                     <MapContainer translation={getQuery()}/>
                     <Overlay translation={getQuery()}/>
                     {//<StationSearchView />}
                     }<StationSearch translation={getQuery()}/>
-                </div>
+                </>
             }
         </div>
     );
