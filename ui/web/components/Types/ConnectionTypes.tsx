@@ -137,7 +137,7 @@ export interface TripId {
 }
 
 
-interface Trip {
+export interface Trip {
     range: Range,
     id: TripId
 }

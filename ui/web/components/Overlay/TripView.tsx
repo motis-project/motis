@@ -1,25 +1,8 @@
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
-import { JourneyRender } from './ConnectionRender';
+import { JourneyRender, duration} from './Journey';
 import { Connection, Station, TripId, TripViewConnection } from '../Types/ConnectionTypes';
-
-const displayTime = (posixTime) => {
-    let today = new Date(posixTime * 1000);
-    let h = String(today.getHours());
-    let m = String(today.getMinutes()).padStart(2, '0');
-    return h + ':' + m;
-}
-
-const displayDuration = (posixTime) => {
-    let today = new Date(posixTime * 1000);
-    let h = String(today.getUTCHours());
-    let m = String(today.getUTCMinutes()).padStart(2, '0');
-    if (h === '0') {
-        return m + 'min';
-    } else {
-        return h + 'h ' + m + 'min';
-    }
-}
+import { Translations } from '../App/Localization';
 
 const getTrainConnection = (lineId: string, stationId: string, targetStationId: string, targetTime: number, time: number, trainNr: number) => {
     return {
@@ -33,7 +16,9 @@ const getTrainConnection = (lineId: string, stationId: string, targetStationId: 
     };
 };
 
-export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean }> = (props) => {
+
+
+export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'translation': Translations }> = (props) => {
 
     const [lineId, setLineId] = useState<string>(props.trainSelected.line_id);
 
@@ -73,22 +58,22 @@ export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHid
                             <div className='date'>22.1.2022</div>
                             <div className='connection-times'>
                                 <div className='times'>
-                                    <div className='connection-departure'>{displayTime(time)}</div>
-                                    <div className='connection-arrival'>{displayTime(targetTime)}</div>
+                                    <div className='connection-departure'>{moment.unix(time).format('HH:mm')}</div>
+                                    <div className='connection-arrival'>{moment.unix(targetTime).format('HH:mm')}</div>
                                 </div>
                                 <div className='locations'>
                                     <div>{trainConnection.stops[0].station.name}</div>
                                     <div>{trainConnection.stops[trainConnection.stops.length - 1].station.name}</div>
                                 </div>
                             </div>
-                            <div className='summary'><span className='duration'><i className='icon'>schedule</i>{displayDuration(targetTime - time)}</span><span
-                                className='interchanges'><i className='icon'>transfer_within_a_station</i>Keine Umstiege</span></div>
+                            <div className='summary'><span className='duration'><i className='icon'>schedule</i>{duration(time, targetTime)}</span>
+                            <span className='interchanges'><i className='icon'>transfer_within_a_station</i>Keine Umstiege</span></div>
                         </div>
                         <div className='actions'></div>
                     </div>
                 </div>
                 <div className='connection-journey' id='sub-connection-journey'>
-                    <JourneyRender connection={trainConnection} setSubOverlayHidden={props.setSubOverlayHidden} setTrainSelected={props.setTrainSelected} detailViewHidden={props.detailViewHidden}/>
+                    <JourneyRender connection={trainConnection} setSubOverlayHidden={props.setSubOverlayHidden} setTrainSelected={props.setTrainSelected} detailViewHidden={props.detailViewHidden} translation={props.translation}/>
                 </div>
             </div>
     )
