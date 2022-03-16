@@ -20,10 +20,10 @@ declare global{
 
 const getQuery = (): Translations => {
     let router = useRouter();
-    let { locale } = router.query;
-    if (locale === 'de') {
+    let { lang } = router.query;
+    if (lang === 'de') {
         return deTranslations;
-    } else if (locale === 'pl') {
+    } else if (lang === 'pl') {
         return plTranslations;
     }
     return enTranslations;

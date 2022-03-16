@@ -69,7 +69,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
     React.useEffect(() => {
         if (props.currentDate) {
             setCurrentDate(props.currentDate);
-            setDateDisplay(props.currentDate.format('D.M.YYYY'))
+            setDateDisplay(props.currentDate.format(props.translation.dateFormat))
         }
     }, [props.currentDate]);
 
@@ -94,7 +94,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
     
         // Used for setting className of td correctly. Returns 'today' if this td is representing today.
         let isToday = (d: number, date: moment.Moment) => {
-            return moment().format('D.M.YYYY') === moment(date).date(d).format('D.M.YYYY') ? 'today ' : '';
+            return moment().format(props.translation.dateFormat) === moment(date).date(d).format(props.translation.dateFormat) ? 'today ' : '';
         }
     
         // Used for setting className of td correctly. Returns 'selected' if this td is currently displayed in the search.
@@ -113,7 +113,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                 onClick={() => {
                     let firstDay = firstDayOfMonth();
                     setCurrentDate(currentDate.subtract(1, 'month').date(currentDate.daysInMonth() - firstDay + 2 + d));
-                    setDateDisplay(currentDate.format('D.M.YYYY'));
+                    setDateDisplay(currentDate.format(props.translation.dateFormat));
                     props.setCurrentDate(currentDate.clone());
                     setDatePickerSelected(false);
                 }}>
@@ -132,7 +132,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                 className={`in-month ${isToday(d, dayToAdd)}${selectedDay(d)}${isValidDay(dayToAdd, props.scheduleInfo)}`}
                 onClick={() => {
                     setCurrentDate(currentDate.date(d));
-                    setDateDisplay(currentDate.format('D.M.YYYY'));
+                    setDateDisplay(currentDate.format(props.translation.dateFormat));
                     props.setCurrentDate(currentDate.clone());
                     setDatePickerSelected(false);
                 }}>
@@ -151,7 +151,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                 className={`out-of-month ${isToday(d, dayToAdd)}${isValidDay(dayToAdd, props.scheduleInfo)}`}
                 onClick={() => {
                     setCurrentDate(currentDate.add(1, 'month').date(d));
-                    setDateDisplay(currentDate.format('D.M.YYYY'));
+                    setDateDisplay(currentDate.format(props.translation.dateFormat));
                     props.setCurrentDate(currentDate.clone());
                     setDatePickerSelected(false);
                 }}>
@@ -209,7 +209,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                             onKeyDown={(e) => {
                                 if (e.key == 'Enter'){
                                     //console.log(searchDate)
-                                    setDateDisplay(currentDate.format('D.M.YYYY'));
+                                    setDateDisplay(currentDate.format(props.translation.dateFormat));
                                     props.setCurrentDate(currentDate.clone());
                                 }
                             }}
@@ -221,7 +221,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                                     ref={dayButtonPrevious}
                                     onClick={() => {
                                         setCurrentDate(currentDate.subtract(1, 'd')); 
-                                        setDateDisplay(currentDate.format('D.M.YYYY'));
+                                        setDateDisplay(currentDate.format(props.translation.dateFormat));
                                         props.setCurrentDate(currentDate.clone());
                                         }}>
                                     <i className='icon'>chevron_left</i>
@@ -232,7 +232,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                                     ref={dayButtonNext}
                                     onClick={() => {
                                         setCurrentDate(currentDate.add(1, 'd')); 
-                                        setDateDisplay(currentDate.format('D.M.YYYY'));
+                                        setDateDisplay(currentDate.format(props.translation.dateFormat));
                                         props.setCurrentDate(currentDate.clone());
                                         }}>
                                     <i className='icon'>chevron_right</i>
@@ -247,7 +247,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                     <i  className='icon' 
                         onClick={() => {
                             setCurrentDate(currentDate.subtract(1, 'month')); 
-                            setDateDisplay(currentDate.format('D.M.YYYY'));
+                            setDateDisplay(currentDate.format(props.translation.dateFormat));
                             props.setCurrentDate(currentDate.clone());
                             }}
                         >chevron_left</i>
@@ -255,7 +255,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                     <i  className='icon' 
                         onClick={() => {
                             setCurrentDate(currentDate.add(1, 'month')); 
-                            setDateDisplay(currentDate.format('D.M.YYYY'));
+                            setDateDisplay(currentDate.format(props.translation.dateFormat));
                             props.setCurrentDate(currentDate.clone());
                             }}
                         >chevron_right</i>
