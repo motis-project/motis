@@ -114,7 +114,8 @@ export interface Translations {
         { simMode : String
         },
     searchProfiles :
-        SearchProfileNames
+        SearchProfileNames,
+    dateFormat: string
 }
 
 
@@ -249,6 +250,7 @@ export const deTranslations: Translations = {
             , elevation : 'Weniger Steigung'
             , custom : 'Benutzerdefiniert'
             }
+        , dateFormat: 'D.M.YYYY'
         };
 
 
@@ -371,6 +373,7 @@ export const enTranslations: Translations = {
             , elevation : 'Avoid elevation changes'
             , custom : 'Custom'
             }
+        , dateFormat: 'YYYY/M/D'
         };
 
 export const plTranslations: Translations = {
@@ -493,4 +496,5 @@ export const plTranslations: Translations = {
         , elevation : 'Mniej wzniesień'
         , custom : 'Użytkownika'
         }
+    , dateFormat: 'D.M.YYYY'
     }

@@ -81,6 +81,11 @@ const fetchFoot = async (connection: Connection, toModes: ModeLocalStorage, setW
 }
 
 
+const getIntermediateStopsCount = (transport: Transport) => {
+    return transport.move.range.to - transport.move.range.from - 1;
+}
+
+
 export const JourneyRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean}> = (props) => {
 
     const [isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed] = useState<Boolean>(true);
@@ -113,7 +118,7 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                             <div className={'train-box train-class-' + (props.connection.transports[0].move as TransportInfo).clasz + ' with-tooltip'}
                                 data-tooltip={
                                     props.translation.connections.provider +
-                                    ': woher bekommen die den zugbetreiber her' +
+                                    ': ' + (props.connection.transports[0].move as TransportInfo).provider +
                                     '\n' +
                                     ((true) ?
                                         props.translation.connections.trainNr +
@@ -164,10 +169,8 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                                 </div>
                             }
                             <span>
-                                {(numberIntermediateStops === 1) ?
-                                    props.translation.connections.tripIntermediateStops(0) + ' (' + duration(props.connection.stops[0].departure.time, props.connection.stops[props.connection.stops.length - 1].arrival.time) + ')'
-                                    :
-                                    'Fahrt ' + ((props.connection.transports[0].move as TransportInfo).range.to - (props.connection.transports[0].move as TransportInfo).range.from) + ' Stationen (' + duration(props.connection.stops[0].departure.time, props.connection.stops[props.connection.stops.length - 1].arrival.time) + ')'}</span>
+                                {props.translation.connections.tripIntermediateStops(numberIntermediateStops - 1) + ' (' + duration(props.connection.stops[0].departure.time, props.connection.stops[props.connection.stops.length - 1].arrival.time) + ')'}
+                            </span>
                         </div>
                         <div className={isIntermediateStopsCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
                             {stopGenerator(props.connection.stops)}
@@ -214,7 +217,7 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                                 <div className="timeline train-color-border progress" style={{ height: '100%' }}></div>
                             </div>
                             <div className="expand-icon"></div>
-                            <span>{'Fußweg (' + duration(props.connection.stops[0].departure.time, props.connection.stops[1].arrival.time) + ')'}</span>
+                            <span>{props.translation.connections.tripWalk(duration(props.connection.stops[0].departure.time, props.connection.stops[1].arrival.time))}</span>
                         </div>
                         <div className="last-stop">
                             <div className="stop past">
@@ -238,6 +241,7 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                     setSubOverlayHidden={props.setSubOverlayHidden}
                     setTrainSelected={props.setTrainSelected}
                     walkTimes={walkTimes}
+                    translation={props.translation}
                 />
             }
         </>
@@ -253,7 +257,7 @@ interface JourneyElem {
     trip: Trip
 }
 
-const TransportDivs: React.FC<{ 'connection': Connection, 'isCollapsed': Boolean, 'collapseSetter': React.Dispatch<React.SetStateAction<Boolean>>, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'walkTimes': number[] }> = (props) => {
+const TransportDivs: React.FC<{ 'connection': Connection, 'isCollapsed': Boolean, 'collapseSetter': React.Dispatch<React.SetStateAction<Boolean>>, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'walkTimes': number[], 'translation': Translations }> = (props) => {
 
     const [transports, setTransports] = useState<JourneyElem[]>([]);
 
@@ -289,7 +293,19 @@ const TransportDivs: React.FC<{ 'connection': Connection, 'isCollapsed': Boolean
                             <div className='top-border'></div>
                             <div>
                                 <div className={'train-box train-class-' + (transport.transport.move as TransportInfo).clasz + ' with-tooltip'}
-                                    data-tooltip={'Betreiber: DB Regio AG S-Bahn Rhein-Main \nZugnummer: ' + (transport.transport.move as TransportInfo).train_nr} onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(transport.trip.id) }}>
+                                    data-tooltip={
+                                        props.translation.connections.provider +
+                                        ': ' + (transport.transport.move as TransportInfo).provider +
+                                        '\n' +
+                                        ((true) ?
+                                            props.translation.connections.trainNr +
+                                            ': ' +
+                                            props.connection.trips[0].id.train_nr
+                                            :
+                                            props.translation.connections.lineId +
+                                            ': ' +
+                                            props.connection.trips[0].id.line_id)}
+                                    onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(transport.trip.id) }}>
                                     <svg className='train-icon' onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(transport.trip.id) }}>
                                         <use xlinkHref={classToId((transport.transport.move as TransportInfo).clasz)}></use>
                                     </svg>
@@ -322,12 +338,7 @@ const TransportDivs: React.FC<{ 'connection': Connection, 'isCollapsed': Boolean
                                     <i className='icon'>expand_less</i>
                                     <i className='icon'>expand_more</i>
                                 </div>
-                                <span>{((transport.transport.move as TransportInfo).range.to - (transport.transport.move as TransportInfo).range.from) === 1 ?
-                                    'Fahrt ohne Zwischenhalt (' + duration(transport.stops[(transport.transport.move as TransportInfo).range.from].departure.time, transport.stops[(transport.transport.move as TransportInfo).range.to].arrival.time) + ')'
-                                    //'Fahrt ohne Zwischenhalt (' + displayDuration(new Date(transport.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).getTime() - new Date(transport.stops[(transport.transport.move as TransportInfo).range.from].departure.time).getTime()) + ')'
-                                    :
-                                    'Fahrt ' + ((transport.transport.move as TransportInfo).range.to - (transport.transport.move as TransportInfo).range.from - 1) + ((((transport.transport.move as TransportInfo).range.to - (transport.transport.move as TransportInfo).range.from - 1) === 1) ? ' Station (' : ' Stationen (')
-                                    + duration(transport.stops[(transport.transport.move as TransportInfo).range.from].departure.time, transport.stops[(transport.transport.move as TransportInfo).range.to].arrival.time) + ')'}</span>
+                                <span>{props.translation.connections.tripIntermediateStops(getIntermediateStopsCount(transport.transport)) + ' (' + duration(props.connection.stops[(transport.transport.move as TransportInfo).range.from].departure.time, props.connection.stops[(transport.transport.move as TransportInfo).range.to].arrival.time) + ')'}</span>
                             </div>
                             <div className={props.isCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
                                 {stopGenerator(transport.stops)}

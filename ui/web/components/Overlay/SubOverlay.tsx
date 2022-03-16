@@ -8,7 +8,7 @@ import { TripId } from '../Types/ConnectionTypes';
 import { TripView } from './TripView';
 import { Interval } from '../Types/RoutingTypes';
 
-export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'scheduleInfo': Interval }> = (props) => {
+export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'scheduleInfo': Interval, 'displayDate': moment.Moment }> = (props) => {
 
     // Current Date
     const [searchDate, setSearchDate] = React.useState<moment.Moment>(moment());
@@ -23,7 +23,7 @@ export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidd
                                 <div className='pure-g gutters'>
                                     <div className='pure-u-1 pure-u-sm-1-2 train-nr'>
                                         <div>
-                                            <div className='label'>Zugnummer</div>
+                                            <div className='label'>{props.translation.search.trainNr}</div>
                                             <div className='gb-input-group'>
                                                 <div className='gb-input-icon'>
                                                     <i className='icon'>train</i>
@@ -46,7 +46,7 @@ export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidd
                                     </div>
                                     <div className='pure-u-1 pure-u-sm-12-24'>
                                         <div>
-                                            <div className='label'>Uhrzeit</div>
+                                            <div className='label'>{props.translation.search.time}</div>
                                             <div className='gb-input-group'>
                                                 <div className='gb-input-icon'>
                                                     <i className='icon'>schedule</i>
@@ -71,7 +71,7 @@ export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidd
                         <div className='trips'></div>
                     </div>
                     :
-                    <TripView subOverlayHidden={props.subOverlayHidden} setSubOverlayHidden={props.setSubOverlayHidden} trainSelected={props.trainSelected} setTrainSelected={props.setTrainSelected} detailViewHidden={props.detailViewHidden} translation={props.translation}/>
+                    <TripView subOverlayHidden={props.subOverlayHidden} setSubOverlayHidden={props.setSubOverlayHidden} trainSelected={props.trainSelected} setTrainSelected={props.setTrainSelected} detailViewHidden={props.detailViewHidden} translation={props.translation} displayDate={props.displayDate}/>
                 }
             </div>
             <div className='sub-overlay-close' onClick={() => props.setSubOverlayHidden(true)}><i className='icon'>close</i></div>

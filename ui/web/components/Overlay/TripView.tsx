@@ -18,7 +18,7 @@ const getTrainConnection = (lineId: string, stationId: string, targetStationId: 
 
 
 
-export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'translation': Translations }> = (props) => {
+export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'translation': Translations, 'displayDate': moment.Moment}> = (props) => {
 
     const [lineId, setLineId] = useState<string>(props.trainSelected.line_id);
 
@@ -55,7 +55,7 @@ export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHid
                     <div className='header'>
                         <div className='back'><i className='icon' onClick={() => props.setSubOverlayHidden(true)}>arrow_back</i></div>
                         <div className='details'>
-                            <div className='date'>22.1.2022</div>
+                            <div className='date'>{moment.unix(props.displayDate.unix()).format(props.translation.dateFormat)}</div>
                             <div className='connection-times'>
                                 <div className='times'>
                                     <div className='connection-departure'>{moment.unix(time).format('HH:mm')}</div>
@@ -67,7 +67,7 @@ export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHid
                                 </div>
                             </div>
                             <div className='summary'><span className='duration'><i className='icon'>schedule</i>{duration(time, targetTime)}</span>
-                            <span className='interchanges'><i className='icon'>transfer_within_a_station</i>Keine Umstiege</span></div>
+                            <span className='interchanges'><i className='icon'>transfer_within_a_station</i>{props.translation.connections.interchanges(0)}</span></div>
                         </div>
                         <div className='actions'></div>
                     </div>

@@ -64,13 +64,13 @@ export const App: React.FC = () => {
             {isMobile ?
                 <Overlay translation={getQuery()} scheduleInfo={scheduleInfo}/>
                 :
-                <div>
+                <>
                     {/* visible && <MapView />*/}
                     <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo}/>
                     <Overlay translation={getQuery()} scheduleInfo={scheduleInfo}/>
                     {//<StationSearchView />}
                     }<StationSearch translation={getQuery()}/>
-                </div>
+                </>
             }
         </div>
     );
