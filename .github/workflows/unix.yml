@@ -135,14 +135,14 @@ jobs:
           asset_content_type: application/x-tar
 
   linux:
-    runs-on: [ self-hosted, linux, x64, fast ]
+    runs-on: [ self-hosted, linux, x64, '${{ matrix.config.preset }}' ]
     container:
       image: ghcr.io/motis-project/docker-cpp-build
       volumes:
-        - deps:/deps
-        - buildcache:/buildcache
-        - pnpstore:/root/.pnpm-store
-        - elm:/elm
+        - ${{ matrix.config.preset }}-deps:/deps
+        - ${{ matrix.config.preset }}-buildcache:/buildcache
+        - ${{ matrix.config.preset }}-pnpstore:/root/.pnpm-store
+        - ${{ matrix.config.preset }}-elm:/elm
     strategy:
       fail-fast: false
       matrix:
