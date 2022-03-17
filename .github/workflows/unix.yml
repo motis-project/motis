@@ -10,6 +10,53 @@ on:
       - published
 
 jobs:
+  formatting:
+    runs-on: ubuntu-latest
+    container: ghcr.io/motis-project/docker-cpp-build
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Format files
+        run: |
+          find base libs modules test \
+            -type f -a \( -name "*.cc" -o -name "*.h" -o -name ".cuh" -o -name ".cu" \) \
+            -print0 | xargs -0 clang-format-14 -i
+
+      - name: Check for differences
+        run: |
+          git status --porcelain
+          git status --porcelain | xargs -I {} -0 test -z \"{}\"
+
+  rsl-ui-checks:
+    runs-on: ubuntu-20.04
+    defaults:
+      run:
+        working-directory: ui/rsl
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: pnpm Cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+      - name: Install RSL Web Interface Dependencies
+        uses: pnpm/action-setup@v2.2.0
+        with:
+          version: ^6.32.2
+          run_install: |
+            - cwd: ui/rsl
+      - name: Formatting
+        run: pnpm run format-check
+
+      - name: ESLint
+        run: pnpm run lint
+
+      - name: TypeScript
+        run: pnpm run ts-check
+
   macos:
     runs-on: macos-latest
     strategy:
@@ -135,14 +182,14 @@ jobs:
           asset_content_type: application/x-tar
 
   linux:
-    runs-on: [ self-hosted, linux, x64, fast ]
+    runs-on: [ self-hosted, linux, x64, '${{ matrix.config.preset }}' ]
     container:
       image: ghcr.io/motis-project/docker-cpp-build
       volumes:
-        - deps:/deps
-        - buildcache:/buildcache
-        - pnpstore:/root/.pnpm-store
-        - elm:/elm
+        - ${{ matrix.config.preset }}-deps:/deps
+        - ${{ matrix.config.preset }}-buildcache:/buildcache
+        - ${{ matrix.config.preset }}-pnpstore:/root/.pnpm-store
+        - ${{ matrix.config.preset }}-elm:/elm
     strategy:
       fail-fast: false
       matrix:
