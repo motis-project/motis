@@ -38,16 +38,16 @@ let toolTipID = 0;
 const transportForLoop = (connection: Connection, setToolTipSelected: React.Dispatch<React.SetStateAction<number>>) => {
     let elements = [];
     let percentage = 0;
-    let durationWalk = (connection.transports.length > 1 && connection.transports[1].move_type === 'Walk') ? 
+    let durationWalk = (connection.transports.length > 1 && connection.transports[1].move_type === 'Walk') ?
         moment.unix(connection.stops[connection.transports[1].move.range.to].arrival.time).diff(moment.unix(connection.stops[connection.transports[1].move.range.from].departure.time)) :
         0;
     let durationTransportPartial = 0;
     let durationTransportFull = moment.unix(connection.stops[connection.stops.length - 1].arrival.time).diff(moment.unix(connection.stops[0].departure.time));
     let prevLength = 0;
     for (let index = 0; index < connection.transports.length; index++) {
-        if (connection.transports[index].move_type === 'Transport'){
+        if (connection.transports[index].move_type === 'Transport') {
             durationTransportPartial = moment.unix(connection.stops[connection.transports[index].move.range.to].arrival.time)
-            .diff(moment.unix(connection.stops[connection.transports[index].move.range.from].departure.time));
+                .diff(moment.unix(connection.stops[connection.transports[index].move.range.from].departure.time));
             percentage = (durationTransportPartial + durationWalk) / durationTransportFull;
             elements.push(
                 <g className={'part train-class-' + (connection.transports[index].move as TransportInfo).clasz + ' acc-0'} key={toolTipID}>
@@ -55,19 +55,15 @@ const transportForLoop = (connection: Connection, setToolTipSelected: React.Disp
                     <circle cx={prevLength + 4} cy='12' r='12' className='train-circle'></circle>
                     <use xlinkHref={classToId((connection.transports[index].move as TransportInfo).clasz)} className='train-icon' x={prevLength - 4} y='4' width='16' height='16'></use>
                     <text x={prevLength - 6} y='40' textAnchor='start' className='train-name'>{(connection.transports[index].move as TransportInfo).name}</text>
-                    <rect x={prevLength} y='0' width={(percentage * 326 + prevLength)} height='24' className='tooltipTrigger' onMouseOver={() => { setToolTipSelected(toolTipID); console.log(toolTipID) }} onMouseOut={() => { setToolTipSelected(-1); console.log(toolTipID) }}></rect>
+                    <rect x={prevLength} y='0' width={(percentage * 326 + prevLength)} height='24' className='tooltipTrigger' onMouseOver={() => { setToolTipSelected((index > 1) ? index - 1 : index)}} onMouseOut={() => { setToolTipSelected(-1)}}></rect>
                 </g>
-            )}
-        else{
-            if(index > 1){
+            );
+            prevLength = prevLength + (percentage * 326);
+            toolTipID += 1;
+        } else {
+            if (index > 1) {
                 durationWalk = moment.unix(connection.stops[connection.transports[index].move.range.to].arrival.time).diff(moment.unix(connection.stops[connection.transports[index].move.range.from].departure.time))
             }
-        }
-        console.log('transportForLoop');
-        console.log(toolTipID);
-        toolTipID += 1;
-        if (connection.transports[index].move_type === 'Transport') {
-            prevLength = prevLength + (percentage * 326);
         }
     }
     toolTipID = 0;
@@ -99,8 +95,6 @@ const toolTipGenerator = (connection: Connection, toolTipSelected: number) => {
                 </div>
             );
             offset += 50
-            console.log('toolTipGenerator');
-            console.log(toolTipID);
             toolTipID += 1
         }
     }
