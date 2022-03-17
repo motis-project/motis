@@ -1,12 +1,7 @@
 import moment from 'moment';
 import React, { useState } from 'react';
 
-import { Transport, TransportInfo, Connection } from '../Types/Connection';
-
-
-const isTransportInfo = (transport: Transport) => {
-    return transport.move_type === 'Transport';
-}
+import { TransportInfo, Connection } from '../Types/Connection';
 
 
 export const classToId = (classz: Number) => {
@@ -40,29 +35,38 @@ export const classToId = (classz: Number) => {
 
 let toolTipID = 0;
 
-const transportForLoop = (connection: Transport[], setToolTipSelected: React.Dispatch<React.SetStateAction<number>>) => {
+const transportForLoop = (connection: Connection, setToolTipSelected: React.Dispatch<React.SetStateAction<number>>) => {
     let elements = [];
     let percentage = 0;
-    let rangeMax = connection[connection.length - 1].move.range.to;
-    let walk = 0;
+    let durationWalk = (connection.transports.length > 1 && connection.transports[1].move_type === 'Walk') ? 
+        moment.unix(connection.stops[connection.transports[1].move.range.to].arrival.time).diff(moment.unix(connection.stops[connection.transports[1].move.range.from].departure.time)) :
+        0;
+    let durationTransportPartial = 0;
+    let durationTransportFull = moment.unix(connection.stops[connection.stops.length - 1].arrival.time).diff(moment.unix(connection.stops[0].departure.time));
     let prevLength = 0;
-    for (let index = 0; index < connection.length; index++) {
-        percentage = (connection[index].move.range.to - connection[index].move.range.from + walk) / rangeMax;
-        isTransportInfo(connection[index]) ?
+    for (let index = 0; index < connection.transports.length; index++) {
+        if (connection.transports[index].move_type === 'Transport'){
+            durationTransportPartial = moment.unix(connection.stops[connection.transports[index].move.range.to].arrival.time)
+            .diff(moment.unix(connection.stops[connection.transports[index].move.range.from].departure.time));
+            percentage = (durationTransportPartial + durationWalk) / durationTransportFull;
             elements.push(
-                <g className={'part train-class-' + (connection[index].move as TransportInfo).clasz + ' acc-0'} key={toolTipID}>
-                    <line x1={prevLength} y1='12' x2={(percentage * 326 + prevLength)} y2='12' className='train-line'></line>
+                <g className={'part train-class-' + (connection.transports[index].move as TransportInfo).clasz + ' acc-0'} key={toolTipID}>
+                    <line x1={prevLength} y1='12' x2={((percentage * 326 + prevLength) > 326) ? 326 : (percentage * 326 + prevLength)} y2='12' className='train-line'></line>
                     <circle cx={prevLength + 4} cy='12' r='12' className='train-circle'></circle>
-                    <use xlinkHref={classToId((connection[index].move as TransportInfo).clasz)} className='train-icon' x={prevLength - 4} y='4' width='16' height='16'></use>
-                    <text x={prevLength - 6} y='40' textAnchor='start' className='train-name'>{(connection[index].move as TransportInfo).name}</text>
+                    <use xlinkHref={classToId((connection.transports[index].move as TransportInfo).clasz)} className='train-icon' x={prevLength - 4} y='4' width='16' height='16'></use>
+                    <text x={prevLength - 6} y='40' textAnchor='start' className='train-name'>{(connection.transports[index].move as TransportInfo).name}</text>
                     <rect x={prevLength} y='0' width={(percentage * 326 + prevLength)} height='24' className='tooltipTrigger' onMouseOver={() => { setToolTipSelected(toolTipID); console.log(toolTipID) }} onMouseOut={() => { setToolTipSelected(-1); console.log(toolTipID) }}></rect>
                 </g>
-            ) :
-            walk = 1;
+            )}
+        else{
+            if(index > 1){
+                durationWalk = moment.unix(connection.stops[connection.transports[index].move.range.to].arrival.time).diff(moment.unix(connection.stops[connection.transports[index].move.range.from].departure.time))
+            }
+        }
         console.log('transportForLoop');
         console.log(toolTipID);
         toolTipID += 1;
-        if (isTransportInfo(connection[index])) {
+        if (connection.transports[index].move_type === 'Transport') {
             prevLength = prevLength + (percentage * 326);
         }
     }
@@ -76,7 +80,7 @@ const toolTipGenerator = (connection: Connection, toolTipSelected: number) => {
     let offset = 0;
 
     for (let index = 0; index < connection.transports.length; index++) {
-        if (isTransportInfo(connection.transports[index])) {
+        if (connection.transports[index].move_type === 'Transport') {
             toolTips.push(
                 <div className={(toolTipID === toolTipSelected) ? 'tooltip visible' : 'tooltip'} style={{ position: 'absolute', left: offset + 'px', top: '23px' }} key={toolTipID}>
                     <div className='stations'>
@@ -113,8 +117,8 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
         <>
             <svg width='335' height='40' viewBox='0 0 335 40'>
                 <g>
-                    {isTransportInfo(props.connection.transports[0]) ?
-                        transportForLoop(props.connection.transports, setToolTipSelected)
+                    {(props.connection.transports[0].move_type === 'Transport') ?
+                        transportForLoop(props.connection, setToolTipSelected)
                         :
                         <g className='part train-class-walk acc-0'>
                             <line x1='0' y1='12' x2='326' y2='12' className='train-line'></line>
