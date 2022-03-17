@@ -34,6 +34,7 @@ export const classToId = (classz: Number) => {
 }
 
 let toolTipID = 0;
+let xPos = [];
 
 const transportForLoop = (connection: Connection, setToolTipSelected: React.Dispatch<React.SetStateAction<number>>) => {
     let elements = [];
@@ -58,6 +59,7 @@ const transportForLoop = (connection: Connection, setToolTipSelected: React.Disp
                     <rect x={prevLength} y='0' width={(percentage * 326 + prevLength)} height='24' className='tooltipTrigger' onMouseOver={() => { setToolTipSelected(index)}} onMouseOut={() => { setToolTipSelected(-1)}}></rect>
                 </g>
             );
+            xPos.push(prevLength);
             prevLength = prevLength + (percentage * 326);
             toolTipID += 1;
         } else {
@@ -73,10 +75,11 @@ const transportForLoop = (connection: Connection, setToolTipSelected: React.Disp
 
 const toolTipGenerator = (connection: Connection, toolTipSelected: number) => {
     let toolTips = [];
-    let offset = 0;
-
+    let counter = 0;
     for (let index = 0; index < connection.transports.length; index++) {
         if (connection.transports[index].move_type === 'Transport') {
+            let offset = ((Number(xPos[counter]) + 240) > 335) ? 95 : xPos[counter];
+            counter += 1;
             toolTips.push(
                 <div className={(index === toolTipSelected) ? 'tooltip visible' : 'tooltip'} style={{ position: 'absolute', left: offset + 'px', top: '23px' }} key={index}>
                     <div className='stations'>
@@ -94,11 +97,11 @@ const toolTipGenerator = (connection: Connection, toolTipSelected: number) => {
                     </div>
                 </div>
             );
-            offset += 50
             toolTipID += 1
         }
     }
     toolTipID = 0;
+    xPos = [];
     return toolTips;
 }
 
