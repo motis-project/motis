@@ -119,20 +119,11 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                         <div className='pure-u-16-24 connection-trains'>
                                                             <div className='transport-graph'>
                                                                 <ConnectionRender connection={connectionElem} setDetailViewHidden={setDetailViewHidden} />
-                                                                <div className='tooltip' style={{ position: 'absolute', left: '0px', top: '23px' }}>
-                                                                    <div className='stations'>
-                                                                        <div className='departure'><span className='station'>{connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.from].station.name}</span><span
-                                                                            className='time'>{moment.unix(connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.from].departure.time).format('HH:mm')}</span></div>
-                                                                        <div className='arrival'><span className='station'>{connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.to].station.name}</span><span
-                                                                            className='time'>{moment.unix(connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.to].arrival.time).format('HH:mm')}</span></div>
-                                                                    </div>
-                                                                    <div className='transport-name'><span>{(connectionElem.transports[0].move as TransportInfo).name}</span></div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
                                         <div className='divider footer'></div>
                                         <div className='extend-search-interval search-after' onClick={() => setExtendForwardFlag(true)}>
                                             {extendForwardFlag ?
