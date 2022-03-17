@@ -55,7 +55,7 @@ const transportForLoop = (connection: Connection, setToolTipSelected: React.Disp
                     <circle cx={prevLength + 4} cy='12' r='12' className='train-circle'></circle>
                     <use xlinkHref={classToId((connection.transports[index].move as TransportInfo).clasz)} className='train-icon' x={prevLength - 4} y='4' width='16' height='16'></use>
                     <text x={prevLength - 6} y='40' textAnchor='start' className='train-name'>{(connection.transports[index].move as TransportInfo).name}</text>
-                    <rect x={prevLength} y='0' width={(percentage * 326 + prevLength)} height='24' className='tooltipTrigger' onMouseOver={() => { setToolTipSelected((index > 1) ? index - 1 : index)}} onMouseOut={() => { setToolTipSelected(-1)}}></rect>
+                    <rect x={prevLength} y='0' width={(percentage * 326 + prevLength)} height='24' className='tooltipTrigger' onMouseOver={() => { setToolTipSelected(index)}} onMouseOut={() => { setToolTipSelected(-1)}}></rect>
                 </g>
             );
             prevLength = prevLength + (percentage * 326);
@@ -78,7 +78,7 @@ const toolTipGenerator = (connection: Connection, toolTipSelected: number) => {
     for (let index = 0; index < connection.transports.length; index++) {
         if (connection.transports[index].move_type === 'Transport') {
             toolTips.push(
-                <div className={(toolTipID === toolTipSelected) ? 'tooltip visible' : 'tooltip'} style={{ position: 'absolute', left: offset + 'px', top: '23px' }} key={toolTipID}>
+                <div className={(index === toolTipSelected) ? 'tooltip visible' : 'tooltip'} style={{ position: 'absolute', left: offset + 'px', top: '23px' }} key={index}>
                     <div className='stations'>
                         <div className='departure'>
                             <span className='station'>{connection.stops[connection.transports[index].move.range.from].station.name}</span>
