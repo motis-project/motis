@@ -226,7 +226,7 @@ void paxmon::init(motis::module::registry& reg) {
         return {};
       },
       {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
-                           ctx::access_t::READ},
+                           ctx::access_t::WRITE},
        ctx::access_request{to_res_id(global_res_id::PAX_DEFAULT_UNIVERSE),
                            ctx::access_t::WRITE}});
 
