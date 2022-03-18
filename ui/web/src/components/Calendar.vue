@@ -75,6 +75,7 @@ export default defineComponent({
   watch: {
     currentDate: function (date: Date) {
       this.dateToDisplay = this.$ds.getDateString(this.currentDate.valueOf());
+      this.prevString = this.dateToDisplay;
       this.daysToDisplay = [];
       this.weekDayNames = [];
       this.currentMonthToDisplay = `${date.toLocaleString(this.$ts.currentLocale, { month: "long" })} ${date.getFullYear()}`;
