@@ -85,7 +85,8 @@ export type PaxMonFilterTripsSortOrder =
   | "ExpectedPax"
   | "TrainNr"
   | "MaxLoad"
-  | "EarliestCritical";
+  | "EarliestCritical"
+  | "MaxPaxRange";
 
 // paxmon/PaxMonFilterTripsRequest.fbs
 export type PaxMonFilterTripsTimeFilter =

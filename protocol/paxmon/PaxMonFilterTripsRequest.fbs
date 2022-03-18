@@ -8,7 +8,8 @@ enum PaxMonFilterTripsSortOrder : byte {
   ExpectedPax, // trip with most expected passengers first
   TrainNr, // lowest train number first
   MaxLoad, // trips with highest load first
-  EarliestCritical // earliest critical trip first
+  EarliestCritical, // earliest critical trip first
+  MaxPaxRange, // trips with highest max - min pax first
 }
 
 enum PaxMonFilterTripsTimeFilter : byte {

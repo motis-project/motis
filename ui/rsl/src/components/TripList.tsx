@@ -46,7 +46,8 @@ const sortOptions: Array<LabeledFilterOption> = [
     label: "Züge sortiert nach Abfahrtszeit am ersten Halt",
   },
   { option: "TrainNr", label: "Züge sortiert nach Zugnummer" },
-  { option: "ExpectedPax", label: "Züge sortiert nach Buchungen" },
+  //{ option: "ExpectedPax", label: "Züge sortiert nach Buchungen" },
+  { option: "MaxPaxRange", label: "Züge sortiert nach Unsicherheit" },
 ];
 
 function getFilterTripsRequest(
