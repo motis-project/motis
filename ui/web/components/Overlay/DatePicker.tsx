@@ -6,7 +6,7 @@ import { Translations } from '../App/Localization';
 import { Interval } from '../Types/RoutingTypes';
 
 
-function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: React.MutableRefObject<any>, dayButtonPrevious: React.MutableRefObject<any>, dayButtonNext: React.MutableRefObject<any>, setShowDatePicker: React.Dispatch<React.SetStateAction<boolean>>) {
+function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: React.MutableRefObject<any>, dayButtonPrevious: React.MutableRefObject<any>, dayButtonNext: React.MutableRefObject<any>, setShowDatePicker: React.Dispatch<React.SetStateAction<boolean>>, setSelected: React.Dispatch<React.SetStateAction<string>>) {
     React.useEffect(() => {
         /**
          * Alert if clicked on outside of element
@@ -17,6 +17,7 @@ function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: Reac
                 dayButtonPrevious.current && !dayButtonPrevious.current.contains(event.target) &&
                 dayButtonNext.current && !dayButtonNext.current.contains(event.target)) {
                 setShowDatePicker(false);
+                setSelected('')
             }
         }
 
@@ -36,7 +37,6 @@ const isValidDay = (day: moment.Moment, interval: Interval) => {
         return '';
     } else {
         if (day.unix() >= interval.begin && day.unix() < interval.end) {
-            //console.log(day.unix(), interval.begin, interval.end)
             return 'valid-day';
         }else {
             return 'invalid-day';
@@ -55,6 +55,9 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
 
     const dayButtonNext = React.useRef(null);
 
+    // Selected manipulates the div "gb-input-group" to highlight it if focused
+    const [selected, setSelected] = React.useState<string>('');
+
     // Boolean used to decide if the datepicker is visible or not
     const[datePickerSelected, setDatePickerSelected] = React.useState<Boolean>(false);
     
@@ -64,7 +67,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
     // Holds the currently displayed Date as String. This additional State is needed to handle the onChange Event for custom Input
     const[dateDisplay, setDateDisplay] = React.useState<string>(null);
     
-    useOutsideAlerter(datePickerRef, inputFieldRef, dayButtonPrevious, dayButtonNext, setDatePickerSelected);
+    useOutsideAlerter(datePickerRef, inputFieldRef, dayButtonPrevious, dayButtonNext, setDatePickerSelected, setSelected);
 
     React.useEffect(() => {
         if (props.currentDate) {
@@ -73,9 +76,6 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
         }
     }, [props.currentDate]);
 
-    /*React.useEffect(() => {
-        props.setCurrentDate(currentDate.clone());
-    }, [dateDisplay]);*/
     
     // Create weekday name elements.
     const weekdayshortname = props.translation.search.weekDays.map(day => {
@@ -186,7 +186,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
         <div>
             <div>
                 <div className='label'>{props.translation.search.date}</div>
-                <div className='gb-input-group'>
+                <div className={`gb-input-group ${selected}`}>
                     <div className='gb-input-icon'>
                         <i className='icon'>event</i></div>
                     <input  className='gb-input' 
@@ -195,16 +195,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                             value={dateDisplay ? dateDisplay : ''}
                             onChange={(e) => {
                                 setDateDisplay(e.currentTarget.value);
-                                if (e.currentTarget.value.split('.').length == 3) {
-                                    let [day, month, year] = e.currentTarget.value.split('.');
-                                    if (day !== '' && !isNaN(+day) && month !== '' && !isNaN(+month) && year !== '' && !isNaN(+year)){
-                                        let newDate = moment(currentDate);
-                                        newDate.year(year as unknown as number);
-                                        newDate.month(month as unknown as number - 1);
-                                        newDate.date(day as unknown as number);
-                                        setCurrentDate(newDate);
-                                    }
-                                }
+                                props.translation.search.dateInputHandler(e.currentTarget.value, currentDate, setCurrentDate);
                             }}
                             onKeyDown={(e) => {
                                 if (e.key == 'Enter'){
@@ -213,7 +204,10 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                                     props.setCurrentDate(currentDate.clone());
                                 }
                             }}
-                            onFocus={() => setDatePickerSelected(true)}/>
+                            onFocus={() => {
+                                setDatePickerSelected(true);
+                                setSelected('gb-input-group-selected');
+                            }}/>
                     <div className='gb-input-widget'>
                         <div className='day-buttons'>
                             <div>

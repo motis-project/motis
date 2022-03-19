@@ -84,17 +84,17 @@ const dummyConnection = (dummyDate: string) => {
 }
 
 
-const sendConnectionsToOverlay = (setConnections: React.Dispatch<React.SetStateAction<Connection[]>>, connections: Connection[], setAllConnectionsWithoutDummies: React.Dispatch<React.SetStateAction<Connection[]>>) => {
+const sendConnectionsToOverlay = (setConnections: React.Dispatch<React.SetStateAction<Connection[]>>, connections: Connection[], setAllConnectionsWithoutDummies: React.Dispatch<React.SetStateAction<Connection[]>>, dateFormat: string) => {
     let dummyIndexes = [0];
     let connectionsWithDummies = [...connections];
     let previousConnectionDay = moment.unix(connections[0].stops[0].departure.schedule_time);
-    let dummyDays = [previousConnectionDay.format('D.M.YYYY')];
+    let dummyDays = [previousConnectionDay.format(dateFormat)];
     setAllConnectionsWithoutDummies(connections);
 
     for (let i = 1; i < connections.length; i++){
         if (moment.unix(connections[i].stops[0].departure.schedule_time).day() != previousConnectionDay.day()){
             dummyIndexes.push(i);
-            dummyDays.push(moment.unix(connections[i].stops[0].departure.schedule_time).format('D.M.YYYY'));
+            dummyDays.push(moment.unix(connections[i].stops[0].departure.schedule_time).format(dateFormat));
             previousConnectionDay.add(1, 'day');
         }
     };
@@ -110,6 +110,27 @@ const handleErrors = (response) => {
         throw Error(response.statusText);
     }
     return response;
+}
+
+
+function useOutsideAlerter(ref: React.MutableRefObject<any>, setSelected : React.Dispatch<React.SetStateAction<string>>) {
+    React.useEffect(() => {
+        /**
+         * Alert if clicked on outside of element
+         */
+        function handleClickOutside(event) {
+            if (ref.current && !ref.current.contains(event.target)) {
+                setSelected('');
+            }
+        }
+
+        // Bind the event listener
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            // Unbind the event listener on clean up
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [ref]);
 }
 
 
@@ -131,11 +152,19 @@ export const Search: React.FC<SearchTypes> = (props) => {
     const [destinationModes, setDestinationModes] = useState<Mode[]>([]);
     
 
+    // Date
     // Current Date
     const [searchDate, setSearchDate] = useState<moment.Moment>(null);
     
-    // SearchTime
+    // searchTime
+    // SearchTime stores the currently displayed Time
     const [searchTime, setSearchTime] = useState<string>(moment().format('HH:mm'));
+    
+    // searchTimeSelected manipulates the div "gb-input-group" to highlight it if focused
+    const [searchTimeSelected, setSearchTimeSelected] = useState<string>('');
+
+    // Ref tracking if the searchTime Inputfield is focused
+    const searchTimeRef = React.useRef(null);
     
     // SearchType
     const [searchType, setSearchType] = useState<string>('Accessibility');
@@ -171,7 +200,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
                     console.log(res);
                     //props.setConnections(res.content.connections);
                     props.setConnections(null); // Only when connections=null will the Loading animation be shown
-                    sendConnectionsToOverlay(props.setConnections, res.content.connections, setAllConnectionsWithoutDummies);
+                    sendConnectionsToOverlay(props.setConnections, res.content.connections, setAllConnectionsWithoutDummies, props.translation.dateFormat);
                     window.portEvents.pub('mapSetMarkers', {'startPosition': getFromLocalStorage("motis.routing.from_location").pos,
                                                             'startName': getFromLocalStorage("motis.routing.from_location").name,
                                                             'destinationPosition': getFromLocalStorage("motis.routing.to_location").pos,
@@ -203,13 +232,13 @@ export const Search: React.FC<SearchTypes> = (props) => {
                     if(extendBackward){
                         if(!equal(res.content.connections[0], allConnectionsWithoutDummies[0])) {
                             props.setConnections(null); // Only when connections=null will the Loading animation be shown
-                            sendConnectionsToOverlay(props.setConnections, [...res.content.connections, ...allConnectionsWithoutDummies], setAllConnectionsWithoutDummies);
+                            sendConnectionsToOverlay(props.setConnections, [...res.content.connections, ...allConnectionsWithoutDummies], setAllConnectionsWithoutDummies, props.translation.dateFormat);
                         }
                         props.setExtendBackwardFlag(false);
                     } else {
                         if(!equal(res.content.connections[res.content.connections.length-1], allConnectionsWithoutDummies[allConnectionsWithoutDummies.length-1])) {
                             props.setConnections(null); // Only when connections=null will the Loading animation be shown
-                            sendConnectionsToOverlay(props.setConnections, [...allConnectionsWithoutDummies, ...res.content.connections], setAllConnectionsWithoutDummies);
+                            sendConnectionsToOverlay(props.setConnections, [...allConnectionsWithoutDummies, ...res.content.connections], setAllConnectionsWithoutDummies, props.translation.dateFormat);
                         }
                         props.setExtendForwardFlag(false);
                     }
@@ -267,6 +296,9 @@ export const Search: React.FC<SearchTypes> = (props) => {
     });
 
 
+    useOutsideAlerter(searchTimeRef, setSearchTimeSelected);
+
+
     return (
         <div id='search'>
             <div className='pure-g gutters'>
@@ -318,10 +350,11 @@ export const Search: React.FC<SearchTypes> = (props) => {
                 <div className='pure-u-1 pure-u-sm-9-24'>
                     <div>
                         <div className='label'>{props.translation.search.time}</div>
-                        <div className='gb-input-group'>
+                        <div className={`gb-input-group ${searchTimeSelected}`}>
                             <div className='gb-input-icon'><i className='icon'>schedule</i></div>
                             <input
-                                className='gb-input' 
+                                className='gb-input'
+                                ref={searchTimeRef}
                                 tabIndex={4} 
                                 value={searchTime}
                                 onChange={(e) => {
@@ -340,7 +373,8 @@ export const Search: React.FC<SearchTypes> = (props) => {
                                         console.log(searchDate)
                                         setSearchTime(searchDate.format('HH:mm'));
                                     }
-                                }}/>
+                                }}
+                                onFocus={() => setSearchTimeSelected('gb-input-group-selected')}/>
                             <div className='gb-input-widget'>
                                 <div className='hour-buttons'>
                                     <div><a
