@@ -53,7 +53,7 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
     React.useEffect(() => {
         let modes: ModeLocalStorage = getFromLocalStorage(props.localStorageModes);
 
-        // If LocalStorage is empty, dont try to access it
+        // If LocalStorage is empty, initialize it
         if (modes !== null) {
             setFootSelected(modes.walk.enabled);
             setFootMaxDurationSlider(modes.walk.search_profile.max_duration);
@@ -63,6 +63,8 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
             setCarSelected(modes.car.enabled);
             setCarMaxDurationSlider(modes.car.max_duration);
             setUseParking(modes.car.use_parking);
+        } else {
+            setLocalStorage(props.localStorageModes, {walk: {enabled: false, search_profile: {profile: 'default', max_duration: 30}}, bike: {enabled: false, max_duration: 30}, car: {enabled: false, max_duration: 30, use_parking: false}});
         };
     }, [])
 

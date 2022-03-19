@@ -69,15 +69,20 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                 <div id='overlay-content'>
                     {detailViewHidden ?
                         <>
-                            <Search setConnections={setConnections} 
-                                    translation={props.translation} 
+                            <Search translation={props.translation} 
+                                    scheduleInfo={props.scheduleInfo}
+                                    start={start}
+                                    destination={destination}
+                                    displayDate={displayDate}
                                     extendForwardFlag={extendForwardFlag}
                                     extendBackwardFlag={extendBackwardFlag}
-                                    displayDate={displayDate}
+                                    setStart={setStart}
+                                    setDestination={setDestination}
+                                    setConnections={setConnections} 
                                     setDisplayDate={setDisplayDate}
-                                    scheduleInfo={props.scheduleInfo}
                                     setExtendForwardFlag={setExtendForwardFlag}
-                                    setExtendBackwardFlag={setExtendBackwardFlag}/>
+                                    setExtendBackwardFlag={setExtendBackwardFlag}
+                                    />
                             {!connections ?
                                 props.scheduleInfo && displayDate && (displayDate.unix() < props.scheduleInfo.begin || displayDate.unix() > props.scheduleInfo.end) ?
                                     <div id='connections'>

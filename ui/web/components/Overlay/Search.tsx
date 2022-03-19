@@ -4,15 +4,32 @@ import moment from 'moment';
 import equal from 'deep-equal';
 
 import { DatePicker } from './DatePicker';
-import { Mode, IntermodalRoutingResponse } from '../Types/IntermodalRoutingTypes';
-import { Connection, Station } from '../Types/Connection';
-import { Translations } from '../App/Localization';
-import { Address } from '../Types/SuggestionTypes';
-import { SearchInputField } from './SearchInputField';
 import { Modepicker } from './ModePicker';
+import { SearchInputField } from './SearchInputField';
+import { Translations } from '../App/Localization';
 import { getFromLocalStorage } from '../App/LocalStorage';
 import { Interval } from '../Types/RoutingTypes';
+import { Address } from '../Types/SuggestionTypes';
+import { Connection, Station } from '../Types/Connection';
+import { Mode, IntermodalRoutingResponse } from '../Types/IntermodalRoutingTypes';
 import { markerSearch } from '../Map/RailvizContextMenu';
+
+
+interface SearchTypes {
+    'translation': Translations, 
+    'scheduleInfo': Interval,
+    'start': Station | Address,
+    'destination': Station | Address, 
+    'displayDate': moment.Moment, 
+    'extendForwardFlag': boolean, 
+    'extendBackwardFlag': boolean, 
+    'setStart': React.Dispatch<React.SetStateAction<Station | Address>>, 
+    'setDestination': React.Dispatch<React.SetStateAction<Station | Address>>, 
+    'setDisplayDate': React.Dispatch<React.SetStateAction<moment.Moment>>, 
+    'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 
+    'setExtendForwardFlag' : React.Dispatch<React.SetStateAction<boolean>>, 
+    'setExtendBackwardFlag': React.Dispatch<React.SetStateAction<boolean>>
+}
 
 
 const getRoutingOptions = (startType: string, startModes: Mode[], start: Station | Address, searchType: string, searchDirection: string, destinationType: string, destinationModes: Mode[], destination: Station | Address, interval: Interval ) => {
@@ -96,7 +113,7 @@ const handleErrors = (response) => {
 }
 
 
-export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations, 'extendForwardFlag': boolean, 'extendBackwardFlag': boolean, 'displayDate': moment.Moment, 'setDisplayDate': React.Dispatch<React.SetStateAction<moment.Moment>>, 'scheduleInfo': Interval, 'setExtendForwardFlag' : React.Dispatch<React.SetStateAction<boolean>>, 'setExtendBackwardFlag': React.Dispatch<React.SetStateAction<boolean>>}> = (props) => {
+export const Search: React.FC<SearchTypes> = (props) => {
  
     // Start
     // StartType
@@ -104,9 +121,6 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     
     // StartModes
     const [startModes, setStartModes] = useState<Mode[]>([]);
-
-    // Start Station or Position
-    const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
     
     
     // Destination
@@ -115,9 +129,6 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     
     // Destination_modes tracks the ModePicker for the Destination
     const [destinationModes, setDestinationModes] = useState<Mode[]>([]);
-    
-    // Destination holds the Value of 'to location' input field
-    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
     
 
     // Current Date
@@ -148,11 +159,11 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     // This Effect is one of 2 IntermodalConnectionRequest API Calls.
     // If this one is triggered, then we want to discard the currently shown Connections and load a new list
     useEffect(() => {
-        if (start !== null && destination !== null && searchForward !== null) {
+        if (props.start !== null && props.destination !== null && searchForward !== null) {
             let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
             //console.log('Fire searchQuery')
 
-            fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination, searchForward))
+            fetch(requestURL, getRoutingOptions(startType, startModes, props.start, searchType, searchDirection, destinationType, destinationModes, props.destination, searchForward))
                 .then(handleErrors)
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
@@ -170,7 +181,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                 })
                 .catch(error => {});
         }
-    }, [start, startModes, destination, destinationModes, searchDirection]);
+    }, [props.start, startModes, props.destination, destinationModes, searchDirection]);
 
 
     // This Effect is one of 2 IntermodalConnectionRequest API Calls.
@@ -178,11 +189,11 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     useEffect(() => {
         //console.log('Run1');
         //console.log (start, destination, searchForward)
-        if (start !== null && destination !== null && searchForward !== null && searchBackward !== null) {
+        if (props.start !== null && props.destination !== null && searchForward !== null && searchBackward !== null) {
             //console.log('Run2');
             let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
             let searchIntv = extendBackward ? searchBackward : searchForward;
-            fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination, searchIntv))
+            fetch(requestURL, getRoutingOptions(startType, startModes, props.start, searchType, searchDirection, destinationType, destinationModes, props.destination, searchIntv))
                 .then(handleErrors)
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
@@ -247,9 +258,9 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
         window.portEvents.sub('mapSetMarkers', function(){
             if(markerSearch){
                 if(markerSearch[0]){
-                    setStart(markerSearch[1]);
+                    props.setStart(markerSearch[1]);
                 }else{
-                    setDestination(markerSearch[1]);
+                    props.setDestination(markerSearch[1]);
                 }
             }
         });
@@ -263,8 +274,8 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                     <div>
                         <SearchInputField   translation={props.translation}
                                         label={props.translation.search.start}
-                                        station={start}
-                                        setSearchDisplay={setStart}
+                                        station={props.start}
+                                        setSearchDisplay={props.setStart}
                                         localStorageStation='motis.routing.from_location'/>
                         <Modepicker translation={props.translation} 
                                     title={props.translation.search.startTransports} 
@@ -275,9 +286,9 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                         <label className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'>
                             <input  type='checkbox' 
                                     onClick={() => {
-                                        let swapStation = destination;
-                                        setDestination(start);
-                                        setStart(swapStation);
+                                        let swapStation = props.destination;
+                                        props.setDestination(props.start);
+                                        props.setStart(swapStation);
                             }}/>
                             <i className='icon'>swap_vert</i>
                         </label>
@@ -295,8 +306,8 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                     <div>
                         <SearchInputField   translation={props.translation}
                                             label={props.translation.search.destination}
-                                            station={destination}
-                                            setSearchDisplay={setDestination}
+                                            station={props.destination}
+                                            setSearchDisplay={props.setDestination}
                                             localStorageStation='motis.routing.to_location'/>
                         <Modepicker translation={props.translation} 
                                     title={props.translation.search.destinationTransports} 
