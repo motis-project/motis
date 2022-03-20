@@ -23,16 +23,13 @@ const getTransportCountString = (transports: Transport[], translation: Translati
     return translation.connections.interchanges(count);
 }
 
-export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval}> = (props) => {
+export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address)}> = (props) => {
 
     // Hold the currently displayed Date
     const [displayDate, setDisplayDate] = useState<moment.Moment>(null);
     
     // Boolean used to decide if the Overlay is being displayed
     const [overlayHidden, setOverlayHidden] = useState<Boolean>(true);
-
-    // Boolean used to decide if the SubOverlay is being displayed
-    const [subOverlayHidden, setSubOverlayHidden] = useState<Boolean>(true);
 
     // Connections
     const [connections, setConnections] = useState<Connection[]>(null);
@@ -177,25 +174,28 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                 </div>
                             </div>
                             <div className="connection-journey" id="connection-journey">
-                                <JourneyRender connection={connections[indexOfConnection]} setSubOverlayHidden={setSubOverlayHidden} setTrainSelected={setTrainSelected} detailViewHidden={detailViewHidden} translation={props.translation}/>
+                                <JourneyRender connection={connections[indexOfConnection]} setSubOverlayHidden={props.setSubOverlayHidden} setTrainSelected={setTrainSelected} detailViewHidden={detailViewHidden} translation={props.translation}/>
                             </div>
                         </div>
                     }
                 </div>
-                <SubOverlay subOverlayHidden={subOverlayHidden} 
-                            setSubOverlayHidden={setSubOverlayHidden} 
+                <SubOverlay subOverlayHidden={props.subOverlayHidden} 
+                            setSubOverlayHidden={props.setSubOverlayHidden} 
                             trainSelected={trainSelected} 
                             setTrainSelected={setTrainSelected} 
                             translation={props.translation} 
                             detailViewHidden={detailViewHidden} 
                             scheduleInfo={props.scheduleInfo}
-                            displayDate={displayDate}/>
+                            displayDate={displayDate}
+                            stationEventTrigger={props.stationEventTrigger}
+                            setStationEventTrigger={props.setStationEventTrigger}
+                            station={props.station}/>
             </div>
             <div className='overlay-tabs'>
                 <div className='overlay-toggle' onClick={() => setOverlayHidden(!overlayHidden)}>
                     <i className='icon'>arrow_drop_down</i>
                 </div>
-                <div className={subOverlayHidden ? 'trip-search-toggle' : 'trip-search-toggle enabled'} onClick={() => {setSubOverlayHidden(!subOverlayHidden), setTrainSelected(undefined)}}>
+                <div className={props.subOverlayHidden ? 'trip-search-toggle' : 'trip-search-toggle enabled'} onClick={() => {props.setSubOverlayHidden(!props.subOverlayHidden), setTrainSelected(undefined)}}>
                     <i className='icon'>train</i>
                 </div>
             </div>

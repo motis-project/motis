@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { useRouter} from 'next/router';
+import { useRouter } from 'next/router';
 import moment from 'moment';
 
 import { Overlay } from '../Overlay/Overlay';
@@ -10,12 +10,14 @@ import { MapContainer } from '../Map/MapContainer';
 import { Interval } from '../Types/RoutingTypes';
 import { elmAPIResponse } from '../Types/IntermodalRoutingTypes';
 import { ScheduleInfoResponse } from '../Types/ScheduleInfo';
+import { Station } from '../Types/Connection';
+import { Address } from '../Types/SuggestionTypes';
 
-declare global{
+declare global {
     interface Window {
-        portEvents : any;
+        portEvents: any;
     }
-}  
+}
 
 
 const getQuery = (): Translations => {
@@ -34,7 +36,14 @@ export const App: React.FC = () => {
 
     // Hold the available Interval for Scheduling Information
     const [scheduleInfo, setScheduleInfo] = React.useState<Interval>(null);
-    
+
+    const [stationEventTrigger, setStationEventTrigger] = React.useState<boolean>(false)
+
+    const [station, setStation] = React.useState<Station | Address>({ id: '', name: '' });
+
+    // Boolean used to decide if the SubOverlay is being displayed
+    const [subOverlayHidden, setSubOverlayHidden] = React.useState<boolean>(true);
+
     let isMobile = false;
 
     React.useEffect(() => {
@@ -44,32 +53,40 @@ export const App: React.FC = () => {
     React.useEffect(() => {
         let requestURL = 'https://europe.motis-project.de/?elm=requestScheduleInfo';
 
-        fetch(requestURL, { method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({content: {}, content_type: 'MotisNoMessage', destination: { target: '/lookup/schedule_info', type: 'Module' }})})
-        .then(res => res.json())
-        .then((res: elmAPIResponse) => {
-            console.log("Response came in");
-            console.log(res);
-            let intv = {begin: (res.content as ScheduleInfoResponse).begin, end: (res.content as ScheduleInfoResponse).end}
-            let intvBegin = moment.unix(intv.begin);
-            intvBegin.hour(moment().hour());
-            intvBegin.minute(moment().minute());
-            setScheduleInfo(intv);
+        fetch(requestURL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: {}, content_type: 'MotisNoMessage', destination: { target: '/lookup/schedule_info', type: 'Module' } })
         })
+            .then(res => res.json())
+            .then((res: elmAPIResponse) => {
+                console.log("Response came in");
+                console.log(res);
+                let intv = { begin: (res.content as ScheduleInfoResponse).begin, end: (res.content as ScheduleInfoResponse).end }
+                let intvBegin = moment.unix(intv.begin);
+                intvBegin.hour(moment().hour());
+                intvBegin.minute(moment().minute());
+                setScheduleInfo(intv);
+            })
     }, []);
-    
+
+    React.useEffect(() => {
+        setStationEventTrigger(true);
+        setSubOverlayHidden(false);
+        console.log('whytrigger')
+    }, [station]);
+
     return (
         <div className='app'>
             {isMobile ?
-                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo}/>
+                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} />
                 :
                 <>
                     {/* visible && <MapView />*/}
-                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo}/>
-                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo}/>
+                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} />
+                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} />
                     {//<StationSearchView />}
-                    }<StationSearch translation={getQuery()}/>
+                    }<StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} />
                 </>
             }
         </div>
