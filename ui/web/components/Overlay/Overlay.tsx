@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { Search } from './Search';
 import { SubOverlay } from './SubOverlay';
@@ -68,6 +68,15 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
 
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
 
+    //Highlight connections when map hover
+    useEffect( () => {
+        window.portEvents.sub('mapSetTooltip', function(connectionIds){
+            for(let i = 0; i < connectionIds.length; i++){
+                /** set tooltip for connection index connectionsIds[i] visible */
+            }
+        });
+    });
+
     return (
         <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden'}>
             <div className='overlay'>
@@ -96,9 +105,8 @@ export const Overlay: React.FC<{ 'translation': Translations }> = (props) => {
                                                 <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
                                                 :
                                                 <div className='connection' key={index} onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}
-                                                                                        // index-1 maybe neccessary because dummyday? without highlighting is shifted
-                                                                                        onMouseEnter={() => { /** set tooltip visible */ let ids = []; ids.push(index-1); window.portEvents.pub('mapHighlightConnections', ids);}}
-                                                                                        onMouseLeave={() => { /** set tooltip hidden */ window.portEvents.pub('mapHighlightConnections', []); }}>
+                                                                                        onMouseEnter={() => { let ids = []; ids.push(index-1); window.portEvents.pub('mapHighlightConnections', ids);}}
+                                                                                        onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', []); }}>
                                                     <div className='pure-g'>
                                                         <div className='pure-u-4-24 connection-times'>
                                                             <div className='connection-departure'>

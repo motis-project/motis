@@ -66,7 +66,9 @@ const ownPorts = {
         send: function(){}
     },
     'mapSetTooltip': {
-        send: function(){}
+        send: function(callback){
+            window.portEvents.pub('mapSetTooltip', callback);
+        }
     },
     'mapFlyTo': {
         subscribe: function(){}
