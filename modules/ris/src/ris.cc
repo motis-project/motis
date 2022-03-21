@@ -865,7 +865,7 @@ struct ris::impl {
             v && v->first == timestamp) {
           entry.insert(end(entry), begin(v->second), end(v->second));
         }
-        c.put(timestamp, std::string_view{&entry[0], entry.size()});
+        c.put(timestamp, std::string_view{entry.data(), entry.size()});
       }
 
       c.commit();
@@ -885,8 +885,8 @@ struct ris::impl {
       buf_val.resize(buf_val.size() + SIZE_TYPE_SIZE + m.size());
 
       auto const msg_size = static_cast<size_type>(m.size());
-      std::memcpy(&buf_val[0] + base, &msg_size, SIZE_TYPE_SIZE);
-      std::memcpy(&buf_val[0] + base + SIZE_TYPE_SIZE, m.data(), m.size());
+      std::memcpy(buf_val.data() + base, &msg_size, SIZE_TYPE_SIZE);
+      std::memcpy(buf_val.data() + base + SIZE_TYPE_SIZE, m.data(), m.size());
 
       pub.add(m.data(), m.size());
 
@@ -1047,7 +1047,7 @@ void ris::reg_subc(motis::module::subc_reg& r) {
         }
 
         auto const out = gtfsrt::json_to_protobuf(*file);
-        utl::file{argv[2], "w"}.write(&out[0], out.size());
+        utl::file{argv[2], "w"}.write(out.data(), out.size());
 
         return 0;
       });
