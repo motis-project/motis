@@ -15,6 +15,7 @@ import {
 
 import { useLookupScheduleInfoQuery } from "@/api/lookup";
 import { sendPaxMonFilterTripsRequest } from "@/api/paxmon";
+import { ServiceClasses } from "@/api/serviceClasses";
 
 import { formatPercent } from "@/data/numberFormat";
 import { selectedTripAtom } from "@/data/selectedTrip";
