@@ -19,16 +19,15 @@ const getStationEvent = (byScheduleTime: boolean, direction: string, eventCount:
     };
 };
 
-
-const stationEventDivGenerator = (eventStations: StationEvents, translation: Translations, direction: string) => {
+const stationEventDivGenerator = (eventStations: StationEvents, translation: Translations, displayDirection: string, direction: string) => {
 
     let events = eventStations.events;
-    let divs = []
+    let divs = [];
 
     for (let index = 0; index < events.length; index++) {
-        if(events[index].type === direction){
+        if(events[index].type === displayDirection){
             divs.push(
-                <div className='station-event'>
+                <div className='station-event' key={index}>
                     <div className='event-time'>{moment.unix(events[index].event.time).format('HH:mm')}</div>
                     <div className='event-train'><span>
                         <div className={'train-box train-class-' + events[index].trips[0].transport.clasz + ' with-tooltip'} data-tooltip={translation.connections.provider + ': ' + events[index].trips[0].transport.provider + '\n' + translation.connections.trainNr + ': ' + events[index].trips[0].transport.train_nr}><svg className='train-icon'>
@@ -45,16 +44,16 @@ const stationEventDivGenerator = (eventStations: StationEvents, translation: Tra
     return divs;
 }
 
-export const StationEvent: React.FC<{ 'translation': Translations, 'station': (Station | Address), 'stationEventTrigger': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>> }> = (props) => {
+export const StationEvent: React.FC<{ 'translation': Translations, 'station': (Station | Address), 'stationEventTrigger': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'searchDate': moment.Moment}> = (props) => {
 
     const [eventStations, setEventStations] = useState<StationEvents>({ station: {id: '', name: ''}, events: []});
     
     let byScheduleTime = true;
-    let direction = 'BOTH';
     let eventCount = 20;
     let stationID = (props.station as Station).id;
-    let time = 1646226000;
+    let time = (props.searchDate === null) ? 0 : props.searchDate.unix();
     const [displayDirection, setDisplayDirection] = useState<string>('DEP');
+    const [direction, setDirection] = useState<string>('BOTH');
 
     useEffect(() => {
         if (props.stationEventTrigger && stationID !== '') {
@@ -67,7 +66,7 @@ export const StationEvent: React.FC<{ 'translation': Translations, 'station': (S
                     setEventStations(res.content);
                 });
         }
-    }, [props.stationEventTrigger]);
+    }, [props.stationEventTrigger, direction]);
 
     return (
         <div className='station-events'>
@@ -89,8 +88,8 @@ export const StationEvent: React.FC<{ 'translation': Translations, 'station': (S
                 <div className=''>
                     <div className='extend-search-interval search-before'><a>{props.translation.connections.extendBefore}</a></div>
                     <div className='event-list'>
-                        <div className='date-header divider'><span>2.3.2022</span></div>
-                        {(eventStations.station.id === '') ? <></> : stationEventDivGenerator(eventStations, props.translation, displayDirection)}
+                        <div className='date-header divider'><span>{(props.searchDate !== null) ? moment.unix(props.searchDate.unix()).format(props.translation.dateFormat) : 0}</span></div>
+                        {(eventStations.station.id === '') ? <></> : stationEventDivGenerator(eventStations, props.translation, displayDirection, direction)}
                     </div>
                     <div className='divider footer'></div>
                     <div className='extend-search-interval search-after'><a>{props.translation.connections.extendAfter}</a></div>

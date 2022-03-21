@@ -44,6 +44,9 @@ export const App: React.FC = () => {
     // Boolean used to decide if the SubOverlay is being displayed
     const [subOverlayHidden, setSubOverlayHidden] = React.useState<boolean>(true);
 
+    // Current Date
+    const [searchDate, setSearchDate] = React.useState<moment.Moment>(null);
+
     let isMobile = false;
 
     React.useEffect(() => {
@@ -79,12 +82,12 @@ export const App: React.FC = () => {
     return (
         <div className='app'>
             {isMobile ?
-                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} />
+                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate} setSearchDate={setSearchDate}/>
                 :
                 <>
                     {/* visible && <MapView />*/}
                     <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} />
-                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} />
+                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate} setSearchDate={setSearchDate}/>
                     {//<StationSearchView />}
                     }<StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} />
                 </>

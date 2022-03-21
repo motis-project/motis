@@ -23,7 +23,7 @@ const getTransportCountString = (transports: Transport[], translation: Translati
     return translation.connections.interchanges(count);
 }
 
-export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address)}> = (props) => {
+export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment, 'setSearchDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
 
     // Hold the currently displayed Date
     const [displayDate, setDisplayDate] = useState<moment.Moment>(null);
@@ -74,7 +74,9 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                     setDisplayDate={setDisplayDate}
                                     scheduleInfo={props.scheduleInfo}
                                     setExtendForwardFlag={setExtendForwardFlag}
-                                    setExtendBackwardFlag={setExtendBackwardFlag}/>
+                                    setExtendBackwardFlag={setExtendBackwardFlag}
+                                    searchDate={props.searchDate}
+                                    setSearchDate={props.setSearchDate}/>
                             {!connections ?
                                 props.scheduleInfo && displayDate && (displayDate.unix() < props.scheduleInfo.begin || displayDate.unix() > props.scheduleInfo.end) ?
                                     <div id='connections'>
@@ -189,7 +191,8 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                             displayDate={displayDate}
                             stationEventTrigger={props.stationEventTrigger}
                             setStationEventTrigger={props.setStationEventTrigger}
-                            station={props.station}/>
+                            station={props.station}
+                            searchDate={props.searchDate}/>
             </div>
             <div className='overlay-tabs'>
                 <div className='overlay-toggle' onClick={() => setOverlayHidden(!overlayHidden)}>

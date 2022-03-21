@@ -10,7 +10,7 @@ import { Interval } from '../Types/RoutingTypes';
 import { StationEvent } from '../StationSearch/StationEvent';
 import { Address } from '../Types/SuggestionTypes';
 
-export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'scheduleInfo': Interval, 'displayDate': moment.Moment, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address)}> = (props) => {
+export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'scheduleInfo': Interval, 'displayDate': moment.Moment, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment}> = (props) => {
 
     // Current Date
     const [searchDate, setSearchDate] = React.useState<moment.Moment>(moment());
@@ -19,7 +19,7 @@ export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidd
         <div className={props.subOverlayHidden ? 'sub-overlay hidden' : 'sub-overlay'}>
             <div id='sub-overlay-content'>
                 {(props.stationEventTrigger) ?
-                    <StationEvent translation={props.translation} station={props.station} stationEventTrigger={props.stationEventTrigger} setSubOverlayHidden={props.setSubOverlayHidden} setStationEventTrigger={props.setStationEventTrigger}/> :
+                    <StationEvent translation={props.translation} station={props.station} stationEventTrigger={props.stationEventTrigger} setSubOverlayHidden={props.setSubOverlayHidden} setStationEventTrigger={props.setStationEventTrigger} searchDate={props.searchDate}/> :
                     (props.trainSelected === undefined) ?
                         <div className='trip-search'>
                             <div className='header'>

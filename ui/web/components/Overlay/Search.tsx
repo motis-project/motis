@@ -96,7 +96,7 @@ const handleErrors = (response) => {
 }
 
 
-export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations, 'extendForwardFlag': boolean, 'extendBackwardFlag': boolean, 'displayDate': moment.Moment, 'setDisplayDate': React.Dispatch<React.SetStateAction<moment.Moment>>, 'scheduleInfo': Interval, 'setExtendForwardFlag' : React.Dispatch<React.SetStateAction<boolean>>, 'setExtendBackwardFlag': React.Dispatch<React.SetStateAction<boolean>>}> = (props) => {
+export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations, 'extendForwardFlag': boolean, 'extendBackwardFlag': boolean, 'displayDate': moment.Moment, 'setDisplayDate': React.Dispatch<React.SetStateAction<moment.Moment>>, 'scheduleInfo': Interval, 'setExtendForwardFlag' : React.Dispatch<React.SetStateAction<boolean>>, 'setExtendBackwardFlag': React.Dispatch<React.SetStateAction<boolean>>, 'searchDate': moment.Moment, 'setSearchDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
  
     // Start
     // StartType
@@ -120,9 +120,6 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
     
 
-    // Current Date
-    const [searchDate, setSearchDate] = useState<moment.Moment>(null);
-    
     // SearchTime
     const [searchTime, setSearchTime] = useState<string>(moment().format('HH:mm'));
     
@@ -211,17 +208,17 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
 
     // On searchDate change, discard currently displayed Connections and compute new Interval for the IntermodalConnectionRequest
     useEffect(() => {
-        if (searchDate) {
+        if (props.searchDate) {
             setAllConnectionsWithoutDummies([]);
-            setSearchForward({begin: searchDate.unix(), end: searchDate.unix() + 3600 * 2});
-            setSearchBackward({begin: searchDate.unix(), end: searchDate.unix() + 3600 * 2});
-            props.setDisplayDate(searchDate);
+            setSearchForward({begin: props.searchDate.unix(), end: props.searchDate.unix() + 3600 * 2});
+            setSearchBackward({begin: props.searchDate.unix(), end: props.searchDate.unix() + 3600 * 2});
+            props.setDisplayDate(props.searchDate);
         }
-    }, [searchDate]);
+    }, [props.searchDate]);
 
     // On initial render searchDate will be null, waiting for the ScheduleInfoResponse. This useEffect should fire only once.
     useEffect(() => {
-        setSearchDate(props.displayDate);
+        props.setSearchDate(props.displayDate);
     }, [props.displayDate]);
 
 
@@ -285,8 +282,8 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                 </div>
                 <div className='pure-u-1 pure-u-sm-12-24'>
                     <DatePicker translation={props.translation}
-                                currentDate={searchDate}
-                                setCurrentDate={setSearchDate}
+                                currentDate={props.searchDate}
+                                setCurrentDate={props.setSearchDate}
                                 scheduleInfo={props.scheduleInfo}/>
                 </div>
             </div>
@@ -318,16 +315,16 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                     if (e.currentTarget.value.split(':').length == 2) {
                                         let [hour, minute] = e.currentTarget.value.split(':');
                                         if (!isNaN(+hour) && !isNaN(+minute)){
-                                            let newSearchTime = moment(searchDate);
+                                            let newSearchTime = moment(props.searchDate);
                                             newSearchTime.hour(hour as unknown as number > 23 ? 23 : hour as unknown as number);
                                             newSearchTime.minute(minute as unknown as number > 59 ? 59 : minute as unknown as number);
-                                            setSearchDate(newSearchTime);
+                                            props.setSearchDate(newSearchTime);
                                             //console.log(newSearchTime)
                                 }}}}
                                 onKeyDown={(e) => {
                                     if (e.key == 'Enter'){
-                                        console.log(searchDate)
-                                        setSearchTime(searchDate.format('HH:mm'));
+                                        console.log(props.searchDate)
+                                        setSearchTime(props.searchDate.format('HH:mm'));
                                     }
                                 }}/>
                             <div className='gb-input-widget'>
@@ -335,15 +332,15 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                     <div><a
                                             className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' 
                                             onClick={() => {
-                                                let newSearchDate = searchDate.clone().subtract(1, 'h')
-                                                setSearchDate(newSearchDate); 
+                                                let newSearchDate = props.searchDate.clone().subtract(1, 'h')
+                                                props.setSearchDate(newSearchDate); 
                                                 setSearchTime(newSearchDate.format('HH:mm'));}}>
                                             <i className='icon'>chevron_left</i></a></div>
                                     <div><a
                                             className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' 
                                             onClick={() => {
-                                                let newSearchDate = searchDate.clone().add(1, 'h')
-                                                setSearchDate(newSearchDate);
+                                                let newSearchDate = props.searchDate.clone().add(1, 'h')
+                                                props.setSearchDate(newSearchDate);
                                                 setSearchTime(newSearchDate.format('HH:mm'));}}>
                                             <i className='icon'>chevron_right</i></a></div>
                                 </div>

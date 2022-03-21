@@ -13,7 +13,7 @@ export const StationSearch: React.FC<{'translation': Translations, 'setStationEv
                                             label={props.translation.search.destination}
                                             station={props.station}
                                             setSearchDisplay={props.setStation}
-                                            localStorageStation='motis.routing.to_location'/>
+                                            localStorageStation='stationEvent'/>
         </div>
     );
 };
