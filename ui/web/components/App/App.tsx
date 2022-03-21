@@ -74,9 +74,11 @@ export const App: React.FC = () => {
     }, []);
 
     React.useEffect(() => {
-        setStationEventTrigger(true);
-        setSubOverlayHidden(false);
-        console.log('whytrigger')
+        if((station as Station).id !== ''){
+            setStationEventTrigger(true);
+            setSubOverlayHidden(false);
+            console.log(station);
+        }
     }, [station]);
 
     return (

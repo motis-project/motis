@@ -12,7 +12,7 @@ export interface StationEvents{
     events: Events[]
 }
 
-interface Events{
+export interface Events{
     trips: Trip[],
     type: string,
     event: {
@@ -22,7 +22,8 @@ interface Events{
         schedule_track: string,
         valid: boolean,
         reason: string
-    }
+    },
+    dummyEvent?: number
 }
 
 interface Trip{
