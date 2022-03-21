@@ -8,6 +8,7 @@ import { Virtuoso } from "react-virtuoso";
 
 import { TripServiceInfo } from "@/api/protocol/motis";
 import {
+  PaxMonEdgeLoadInfo,
   PaxMonFilterTripsRequest,
   PaxMonFilterTripsSortOrder,
   PaxMonFilteredTripInfo,
@@ -310,45 +311,12 @@ function TripListEntry({
 
     criticalInfo = (
       <div className="pt-1 flex flex-col gap-1">
-        <div>
-          <div className="flex justify-between">
-            <div className="text-xs">Kritisch ab:</div>
-            <div className="text-xs">
-              {firstCritSection.maxOverCap} über Kapazität
-            </div>
-          </div>
-          <div className="flex justify-between">
-            <div className="space-x-1 truncate">
-              <span>
-                {formatTime(firstCritSection.edge.departure_schedule_time)}
-              </span>
-              <span>{firstCritSection.edge.from.name}</span>
-            </div>
-            <div className="whitespace-nowrap">
-              {formatPercent(firstCritSection.maxPercent)}
-            </div>
-          </div>
-        </div>
+        <SectionOverCap label="Kritisch ab:" section={firstCritSection} />
         {mostCritSection != firstCritSection && (
-          <div>
-            <div className="flex justify-between">
-              <div className="text-xs">Kritischster Abschnitt ab:</div>
-              <div className="text-xs">
-                {mostCritSection.maxOverCap} über Kapazität
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <div className="space-x-1 truncate">
-                <span>
-                  {formatTime(mostCritSection.edge.departure_schedule_time)}
-                </span>
-                <span>{mostCritSection.edge.from.name}</span>
-              </div>
-              <div className="whitespace-nowrap">
-                {formatPercent(mostCritSection.maxPercent)}
-              </div>
-            </div>
-          </div>
+          <SectionOverCap
+            label="Kritischster Abschnitt ab:"
+            section={mostCritSection}
+          />
         )}
       </div>
     );
@@ -384,6 +352,49 @@ function TripListEntry({
           <MiniTripLoadGraph2 edges={ti.edges} />
         </div>
         {criticalInfo}
+      </div>
+    </div>
+  );
+}
+
+type SectionOverCapInfo = {
+  edge: PaxMonEdgeLoadInfo;
+  maxPax: number;
+  maxPercent: number;
+  maxOverCap: number;
+};
+
+type SectionOverCapProps = {
+  label: string;
+  section: SectionOverCapInfo;
+};
+
+function SectionOverCap({ label, section }: SectionOverCapProps) {
+  return (
+    <div>
+      <div className="flex justify-between">
+        <div className="text-xs">{label}</div>
+        <div className="text-xs space-x-1">
+          <span>
+            {section.maxPax}/{section.edge.capacity}
+          </span>
+          <span>
+            ({section.maxOverCap}{" "}
+            <abbr title="Reisende über Kapazität" className="no-underline">
+              ü.K.
+            </abbr>
+            )
+          </span>
+        </div>
+      </div>
+      <div className="flex justify-between">
+        <div className="space-x-1 truncate">
+          <span>{formatTime(section.edge.departure_schedule_time)}</span>
+          <span>{section.edge.from.name}</span>
+        </div>
+        <div className="whitespace-nowrap">
+          {formatPercent(section.maxPercent)}
+        </div>
       </div>
     </div>
   );
