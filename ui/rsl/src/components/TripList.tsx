@@ -1,8 +1,13 @@
 import { Listbox, Transition } from "@headlessui/react";
-import { CheckIcon, SelectorIcon } from "@heroicons/react/solid";
+import {
+  AdjustmentsIcon,
+  CheckIcon,
+  SelectorIcon,
+} from "@heroicons/react/solid";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
 import { useAtom } from "jotai";
-import { Fragment, useCallback, useState } from "react";
+import React, { Fragment, useCallback, useState } from "react";
 import { useInfiniteQuery } from "react-query";
 import { Virtuoso } from "react-virtuoso";
 
@@ -48,7 +53,6 @@ const sortOptions: Array<LabeledFilterOption> = [
     label: "Züge sortiert nach Abfahrtszeit am ersten Halt",
   },
   { option: "TrainNr", label: "Züge sortiert nach Zugnummer" },
-  //{ option: "ExpectedPax", label: "Züge sortiert nach Buchungen" },
   { option: "MaxPaxRange", label: "Züge sortiert nach Unsicherheit" },
 ];
 
@@ -57,7 +61,8 @@ function getFilterTripsRequest(
   sortOrder: PaxMonFilterTripsSortOrder,
   selectedDate: Date | undefined,
   filterTrainNrs: number[],
-  pageParam: number
+  pageParam: number,
+  serviceClassFilter: number[]
 ): PaxMonFilterTripsRequest {
   return {
     universe,
@@ -77,7 +82,7 @@ function getFilterTripsRequest(
     filter_by_train_nr: filterTrainNrs.length > 0,
     filter_train_nrs: filterTrainNrs,
     filter_by_service_class: true,
-    filter_service_classes: [ServiceClasses.ICE, ServiceClasses.IC],
+    filter_service_classes: serviceClassFilter,
   };
 }
 
@@ -88,6 +93,10 @@ function TripList(): JSX.Element {
   const [selectedSort, setSelectedSort] = useState(sortOptions[0]);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [trainNrFilter, setTrainNrFilter] = useState("");
+  const [serviceClassFilter, setServiceClassFilter] = useState([
+    ServiceClasses.ICE,
+    ServiceClasses.IC,
+  ]);
 
   const filterTrainNrs = [...trainNrFilter.matchAll(/\d+/g)].map((m) =>
     parseInt(m[0])
@@ -116,6 +125,7 @@ function TripList(): JSX.Element {
         sortOrder: selectedSort.option,
         selectedDate,
         filterTrainNrs,
+        serviceClassFilter,
       },
     ],
     ({ pageParam = 0 }) => {
@@ -124,7 +134,8 @@ function TripList(): JSX.Element {
         selectedSort.option,
         selectedDate,
         filterTrainNrs,
-        pageParam
+        pageParam,
+        serviceClassFilter
       );
       return sendPaxMonFilterTripsRequest(req);
     },
@@ -219,8 +230,8 @@ function TripList(): JSX.Element {
           </Transition>
         </div>
       </Listbox>
-      <div className="flex justify-between pb-2">
-        <div className="w-1/2 pr-1">
+      <div className="flex justify-between pb-2 gap-1">
+        <div className="">
           <label>
             <span className="text-sm">Datum</span>
             <input
@@ -235,7 +246,7 @@ function TripList(): JSX.Element {
             />
           </label>
         </div>
-        <div className="w-1/2 pl-1">
+        <div className="">
           <label>
             <span className="text-sm">Zugnummer(n)</span>
             <input
@@ -245,6 +256,12 @@ function TripList(): JSX.Element {
               onChange={(e) => setTrainNrFilter(e.target.value)}
             />
           </label>
+        </div>
+        <div className="flex flex-col justify-end">
+          <TripListOptions
+            serviceClassFilter={serviceClassFilter}
+            setServiceClassFilter={setServiceClassFilter}
+          />
         </div>
       </div>
       {totalNumberOfTrips !== undefined && (
@@ -271,6 +288,87 @@ function TripList(): JSX.Element {
         )}
       </div>
     </div>
+  );
+}
+
+type LabeledServiceClass = {
+  sc: ServiceClasses;
+  label: string;
+};
+
+const serviceClassOptions: Array<LabeledServiceClass> = [
+  {
+    sc: ServiceClasses.ICE,
+    label: "Hochgeschwindigkeitszüge",
+  },
+  { sc: ServiceClasses.IC, label: "Fernzüge" },
+  { sc: ServiceClasses.COACH, label: "Fernbusse" },
+  { sc: ServiceClasses.N, label: "Nachtzüge" },
+  { sc: ServiceClasses.RE, label: "Regional-Express" },
+  { sc: ServiceClasses.RB, label: "Regionalbahnen" },
+  { sc: ServiceClasses.S, label: "S-Bahnen" },
+  { sc: ServiceClasses.U, label: "U-Bahnen" },
+  { sc: ServiceClasses.STR, label: "Straßenbahnen" },
+  { sc: ServiceClasses.BUS, label: "Busse" },
+  { sc: ServiceClasses.SHIP, label: "Schiffe" },
+  { sc: ServiceClasses.AIR, label: "Flugzeuge" },
+  { sc: ServiceClasses.OTHER, label: "Sonstige" },
+];
+
+type TripListOptionsProps = {
+  serviceClassFilter: number[];
+  setServiceClassFilter: React.Dispatch<React.SetStateAction<number[]>>;
+};
+
+function TripListOptions({
+  serviceClassFilter,
+  setServiceClassFilter,
+}: TripListOptionsProps) {
+  const toggleClass = useCallback(
+    (sc: ServiceClasses, checked: boolean) => {
+      if (checked) {
+        setServiceClassFilter((classes) => [...classes, sc]);
+      } else {
+        setServiceClassFilter((classes) => classes.filter((c) => c != sc));
+      }
+    },
+    [setServiceClassFilter]
+  );
+
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild={true}>
+        <button
+          type="button"
+          className="p-2 mb-1 flex justify-center align-center bg-white rounded-full shadow-sm outline-0"
+        >
+          <AdjustmentsIcon className="w-4 h-4" aria-hidden="true" />
+        </button>
+      </DropdownMenu.Trigger>
+
+      <DropdownMenu.Content
+        sideOffset={5}
+        className="bg-white rounded-md shadow-lg py-1 px-1"
+      >
+        {serviceClassOptions.map((opt) => (
+          <DropdownMenu.CheckboxItem
+            key={opt.sc}
+            checked={serviceClassFilter.includes(opt.sc)}
+            onCheckedChange={(b) => toggleClass(opt.sc, b)}
+            className="relative py-2 pl-10 pr-4 text-gray-900 select-none focus:text-amber-900 focus:bg-amber-100 outline-0 rounded-md"
+          >
+            <DropdownMenu.ItemIndicator asChild={true}>
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-amber-600">
+                <CheckIcon className="w-5 h-5" aria-hidden="true" />
+              </span>
+            </DropdownMenu.ItemIndicator>
+            {opt.label}
+          </DropdownMenu.CheckboxItem>
+        ))}
+
+        <DropdownMenu.Arrow className="fill-white" />
+      </DropdownMenu.Content>
+    </DropdownMenu.Root>
   );
 }
 
