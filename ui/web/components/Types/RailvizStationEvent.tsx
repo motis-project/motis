@@ -23,7 +23,7 @@ export interface Events{
         valid: boolean,
         reason: string
     },
-    dummyEvent?: number
+    dummyEvent?: string
 }
 
 interface Trip{

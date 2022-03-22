@@ -19,38 +19,38 @@ const getStationEvent = (byScheduleTime: boolean, direction: string, eventCount:
     };
 };
 
-const stationEventDivGenerator = (eventStations: Events[], translation: Translations, displayDirection: string, direction: string) => {
+const stationEventDivGenerator = (eventsToDisplay: Events[], translation: Translations, displayDirection: string, direction: string) => {
 
-    let events = eventStations;
     let divs = [];
-    for (let index = 0; index < events.length; index++) {
-        if (events[index].type === displayDirection || events[index].type === '') {
-            (events[index].dummyEvent) ?
+    for (let index = 0; index < eventsToDisplay.length; index++) {
+        if (eventsToDisplay[index].type === displayDirection || eventsToDisplay[index].type === '') {
+            (eventsToDisplay[index].dummyEvent) ?
                 divs.push(
                     <div className="date-header divider" key={index}>
-                        <span>{moment.unix(events[index].dummyEvent).format(translation.dateFormat)}</span>
+                        <span>{eventsToDisplay[index].dummyEvent}</span>
                     </div>
                 ):
                 divs.push(
                     <div className='station-event' key={index}>
-                        <div className='event-time'>{moment.unix(events[index].event.time).format('HH:mm')}</div>
+                        <div className='event-time'>{moment.unix(eventsToDisplay[index].event.time).format('HH:mm')}</div>
                         <div className='event-train'><span>
-                            <div className={'train-box train-class-' + events[index].trips[0].transport.clasz + ' with-tooltip'} data-tooltip={translation.connections.provider + ': ' + events[index].trips[0].transport.provider + '\n' + translation.connections.trainNr + ': ' + events[index].trips[0].transport.train_nr}><svg className='train-icon'>
-                                <use xlinkHref={classToId(events[index].trips[0].transport.clasz)}></use>
-                            </svg><span className='train-name'>{events[index].trips[0].transport.name}</span></div>
+                            <div className={'train-box train-class-' + eventsToDisplay[index].trips[0].transport.clasz + ' with-tooltip'} data-tooltip={translation.connections.provider + ': ' + eventsToDisplay[index].trips[0].transport.provider + '\n' + translation.connections.trainNr + ': ' + eventsToDisplay[index].trips[0].transport.train_nr}><svg className='train-icon'>
+                                <use xlinkHref={classToId(eventsToDisplay[index].trips[0].transport.clasz)}></use>
+                            </svg><span className='train-name'>{eventsToDisplay[index].trips[0].transport.name}</span></div>
                         </span></div>
-                        <div className='event-direction' title={events[index].trips[0].transport.direction}><i className='icon'>arrow_forward</i>{events[index].trips[0].transport.direction}</div>
+                        <div className='event-direction' title={eventsToDisplay[index].trips[0].transport.direction}><i className='icon'>arrow_forward</i>{eventsToDisplay[index].trips[0].transport.direction}</div>
                         <div className='event-track'></div>
                     </div>
                 );
         }
-    }
+    }  
+    console.log(divs[divs.length-1].props.className);
 
     return divs;
 }
 
 
-const onClickHandler = (byScheduleTime: boolean, direction: string, eventCount: number, stationID: string, time: number, setEventStations: React.Dispatch<React.SetStateAction<Events[]>>, eventStations: Events[], setMinTime: React.Dispatch<React.SetStateAction<number>>, setMaxTime: React.Dispatch<React.SetStateAction<number>>, translation: Translations) => {
+const onClickHandler = (byScheduleTime: boolean, direction: string, eventCount: number, stationID: string, time: number, eventStations: Events[], setEventStations: React.Dispatch<React.SetStateAction<Events[]>>, setMinTime: React.Dispatch<React.SetStateAction<number>>, setMaxTime: React.Dispatch<React.SetStateAction<number>>, setEventsToDisplay: React.Dispatch<React.SetStateAction<Events[]>>, translation: Translations) => {
     let requestURL = 'https://europe.motis-project.de/?elm=StationEvents';
     fetch(requestURL, getStationEvent(byScheduleTime, direction, eventCount, stationID, time))
         .then(res => res.json())
@@ -58,46 +58,46 @@ const onClickHandler = (byScheduleTime: boolean, direction: string, eventCount: 
             console.log('StationEvents brrrrr');
             console.log(res);
             if (direction === 'EARLIER') {
-                insertDateHeader(setEventStations, [...res.content.events, ...eventStations], translation);
+                insertDateHeader(setEventsToDisplay, [...res.content.events, ...eventStations], translation);
+                setEventStations([...res.content.events, ...eventStations]);
                 setMinTime(Math.floor(res.content.events[0].event.time / 1000) * 1000);
             } else {
-                let newArray = eventStations.splice(1, eventStations.length);
-                insertDateHeader(setEventStations, [...newArray, ...res.content.events], translation);
+                insertDateHeader(setEventsToDisplay, [...eventStations, ...res.content.events], translation);
+                setEventStations([...eventStations, ...res.content.events]);
                 setMaxTime(Math.floor(res.content.events[res.content.events.length - 1].event.time / 1000) * 1000);
             }
         });
 }
 
-const insertDateHeader = (setEventStations: React.Dispatch<React.SetStateAction<Events[]>>, events: Events[], translation: Translations) => {
+
+const insertDateHeader = (setEventsToDisplay: React.Dispatch<React.SetStateAction<Events[]>>, events: Events[], translation: Translations) => {
     let dummyIndexes = [0];
     let eventsWithDummies = [...events];
     let previousConnectionDay = moment.unix(events[0].event.time);
-    let dummyDays = [previousConnectionDay]; //.format(translation.dateFormat)
-    //setAlleventsWithoutDummies(events);
+    let dummyDays = [previousConnectionDay.format(translation.dateFormat)];
 
     for (let i = 1; i < events.length; i++) {
-        console.log(events[i].dummyEvent === null && moment.unix(events[i].event.time).day() !== previousConnectionDay.day())
-        if ( events[i].dummyEvent === null && moment.unix(events[i].event.time).day() !== previousConnectionDay.day()) {
+        if ( moment.unix(events[i].event.time).day() !== previousConnectionDay.day()) {
             dummyIndexes.push(i);
-            dummyDays.push(previousConnectionDay); //moment.unix(events[i].event.time).format(translation.dateFormat)
             previousConnectionDay.add(1, 'day');
+            dummyDays.push(previousConnectionDay.format(translation.dateFormat));
         }
     };
     dummyIndexes.map((val, idx) => {
-        eventsWithDummies.splice(val + idx, 0, dummyEvent(dummyDays[idx].unix()));
+        eventsWithDummies.splice(val + idx, 0, dummyEvent(dummyDays[idx]));
     })
-    console.log('Eventswithdummies');
-    console.log(eventsWithDummies)
-    setEventStations(eventsWithDummies);
+    setEventsToDisplay(eventsWithDummies);
 };
 
-const dummyEvent = (time: number): Events => {
+const dummyEvent = (time: string): Events => {
     return { trips: [], type: '', event: { time: 0, schedule_time: 0, track: '', schedule_track: '', valid: false, reason: '' }, dummyEvent: time }
 }
 
 export const StationEvent: React.FC<{ 'translation': Translations, 'station': (Station | Address), 'stationEventTrigger': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'searchDate': moment.Moment }> = (props) => {
 
     const [eventStations, setEventStations] = useState<Events[]>(null);
+
+    const [eventsToDisplay, setEventsToDisplay] = useState<Events[]>(null);
 
     let byScheduleTime = true;
     let eventCount = 20;
@@ -116,12 +116,13 @@ export const StationEvent: React.FC<{ 'translation': Translations, 'station': (S
                 .then((res: RailVizStationRequest) => {
                     console.log('StationEvents brrrrr');
                     console.log(res);
-                    insertDateHeader(setEventStations, res.content.events, props.translation);
+                    insertDateHeader(setEventsToDisplay, res.content.events, props.translation);
+                    setEventStations(res.content.events);
                     setMinTime(res.content.events[0].event.time);
                     setMaxTime(res.content.events[res.content.events.length - 1].event.time);
                 });
         }
-    }, [props.stationEventTrigger, direction]);
+    }, [props.stationEventTrigger, direction, props.station]);
 
     return (
         <div className='station-events'>
@@ -141,12 +142,12 @@ export const StationEvent: React.FC<{ 'translation': Translations, 'station': (S
             </div>
             <div className='events'>
                 <div className=''>
-                    <div className='extend-search-interval search-before' onClick={() => { onClickHandler(byScheduleTime, 'EARLIER', eventCount, stationID, minTime, setEventStations, eventStations, setMinTime, setMaxTime, props.translation) }}><a>{props.translation.connections.extendBefore}</a></div>
+                    <div className='extend-search-interval search-before' onClick={() => { onClickHandler(byScheduleTime, 'EARLIER', eventCount, stationID, minTime, eventStations, setEventStations, setMinTime, setMaxTime, setEventsToDisplay, props.translation) }}><a>{props.translation.connections.extendBefore}</a></div>
                     <div className='event-list'>
-                        {(eventStations) ? stationEventDivGenerator(eventStations, props.translation, displayDirection, direction) : <></>}
+                        {(eventsToDisplay) ? stationEventDivGenerator(eventsToDisplay, props.translation, displayDirection, direction) : <></>}
                     </div>
                     <div className='divider footer'></div>
-                    <div className='extend-search-interval search-after' onClick={() => { onClickHandler(byScheduleTime, 'LATER', eventCount, stationID, maxTime, setEventStations, eventStations, setMinTime, setMaxTime, props.translation) }}><a>{props.translation.connections.extendAfter}</a></div>
+                    <div className='extend-search-interval search-after' onClick={() => { onClickHandler(byScheduleTime, 'LATER', eventCount, stationID, maxTime, eventStations, setEventStations, setMinTime, setMaxTime, setEventsToDisplay, props.translation) }}><a>{props.translation.connections.extendAfter}</a></div>
                 </div>
             </div>
         </div>
