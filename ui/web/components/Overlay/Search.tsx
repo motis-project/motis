@@ -355,7 +355,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                 name='time-option' 
                                 value='Forward'
                                 checked={searchDirection === 'Forward'} 
-                                onChange={() => setSearchDirection('Forward')}/>
+                                onChange={(e) => setSearchDirection(e.currentTarget.value)}/>
                         <label htmlFor='search-forward'>{props.translation.search.departure}</label>
                     </form>
                     <form>
@@ -364,7 +364,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                 name='time-option' 
                                 value='Backward' 
                                 checked={searchDirection === 'Backward'} 
-                                onChange={() => setSearchDirection('Backward')}/>
+                                onChange={(e) => setSearchDirection(e.currentTarget.value)}/>
                         <label htmlFor='search-backward'>{props.translation.search.arrival}</label>
                     </form>
                 </div>
