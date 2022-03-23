@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import moment from 'moment';
 
@@ -49,6 +49,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
     const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
 
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
+
 
     React.useEffect(() => {
         if (props.scheduleInfo !== null) {
@@ -102,7 +103,9 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                 connectionElem.dummyDay ?
                                                 <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
                                                 :
-                                                <div className='connection' key={index} onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}>
+                                                <div className='connection' key={index} onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}
+                                                                                        onMouseEnter={() => { let ids = []; ids.push(index-1); window.portEvents.pub('mapHighlightConnections', ids);}}
+                                                                                        onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', []); }}>
                                                     <div className='pure-g'>
                                                         <div className='pure-u-4-24 connection-times'>
                                                             <div className='connection-departure'>

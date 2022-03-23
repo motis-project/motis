@@ -63,6 +63,12 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
             setCarSelected(modes.car.enabled);
             setCarMaxDurationSlider(modes.car.max_duration);
             setUseParking(modes.car.use_parking);
+            // set ppr options for the map
+            window.portEvents.sub('mapInitFinished', () => {
+                console.log('pub init');
+                window.portEvents.pub('setPPRSearchOptions', {'duration_limit': footMaxDurationSlider*60, 'profile': profilePicker});
+            });
+
         };
     }, [])
 
@@ -71,6 +77,8 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
         if (footSelected){
             setFootMode({ mode_type: 'FootPPR', mode: { search_options: { profile: profilePicker, duration_limit: footMaxDurationSlider * 60 } }})
             setNewFetch(true);
+            //set ppr options for the map
+            window.portEvents.pub('setPPRSearchOptions', {'duration_limit': footMaxDurationSlider*60, 'profile': profilePicker});
         }
     }, [footMaxDurationSlider, footSelected, profilePicker]);
     

@@ -5,7 +5,7 @@ import equal from 'deep-equal';
 
 import { DatePicker } from './DatePicker';
 import { Mode, IntermodalRoutingResponse } from '../Types/IntermodalRoutingTypes';
-import { Connection, Station } from '../Types/Connection';
+import { Connection, Poition, Station, WalkInfo } from '../Types/Connection';
 import { Translations } from '../App/Localization';
 import { Address } from '../Types/SuggestionTypes';
 import { SearchInputField } from './SearchInputField';
@@ -38,7 +38,7 @@ const mapConnections = (connections: Connection[]) => {
             for(let k = 0; k < connections[i].trips.length; k++){
                 let trip = connections[i].trips[k].id;
                 let sections = [];
-                for(let l = connections[i].trips[k].range.from; l < connections[i].trips[k].range.to - 1; l++){
+                for(let l = connections[i].trips[k].range.from; l < connections[i].trips[k].range.to; l++){
                     sections.push({ 'arrivalStation': connections[i].stops[l+1].station,
                                     'departureStation': connections[i].stops[l].station,
                                     'scheduledArrivalTime': connections[i].stops[l+1].arrival.schedule_time,
@@ -47,7 +47,15 @@ const mapConnections = (connections: Connection[]) => {
                 trains.push({'sections': sections, 'trip': trip});
             }
             let walks = [];
-            //Todo: fill walks
+            for(let k = 0; k < connections[i].transports.length; k++){
+                if(connections[i].transports[k].move_type === 'Walk'){
+                    let walk = connections[i].transports[k].move as WalkInfo;
+                    walks.push({'arrivalStation': connections[i].stops[walk.range.to].station,
+                                'departureStation': connections[i].stops[walk.range.from].station,
+                                'accessibility': walk.accessibility,
+                                'mumoType': walk.mumo_type})
+                }
+            }
             cons.push({'id': i, 'stations': stations, 'trains': trains, 'walks': walks});
         }
     }
@@ -199,6 +207,10 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                         }
                         props.setExtendForwardFlag(false);
                     }
+                    window.portEvents.pub('mapSetMarkers', {'startPosition': getFromLocalStorage("motis.routing.from_location").pos,
+                                                            'startName': getFromLocalStorage("motis.routing.from_location").name,
+                                                            'destinationPosition': getFromLocalStorage("motis.routing.to_location").pos,
+                                                            'destinationName': getFromLocalStorage("motis.routing.to_location").name});
                     window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections(res.content.connections), 'lowestId': 0});
                 })
                 .catch(error => {});

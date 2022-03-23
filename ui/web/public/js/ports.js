@@ -50,7 +50,10 @@ const ownPorts = {
         subscribe: function(){}
     },
     'setPPRSearchOptions': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('setPPRSearchOptions', callback);
+            console.log('sub');
+        }
     },
     'mapInit': {
         subscribe: function(callback){
@@ -63,7 +66,9 @@ const ownPorts = {
         send: function(){}
     },
     'mapSetTooltip': {
-        send: function(){}
+        send: function(callback){
+            window.portEvents.pub('mapSetTooltip', callback);
+        }
     },
     'mapFlyTo': {
         subscribe: function(){}
@@ -113,6 +118,8 @@ const ownPorts = {
         }
     },
     'mapHighlightConnections': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('mapHighlightConnections', callback);
+        }
     }
 }
