@@ -48,13 +48,16 @@ export const MapContainer: React.FC<{ 'translation': Translations, 'scheduleInfo
     }, [simulationDate, simTimeCheckbox]);
 
     useEffect(() => {
+        let lmao = 0;
         const interval = setInterval(() => {
-            if(simulationDate){
-                setClockString(moment(simulationDate).format('HH:mm:ss'));
+            if(simTimeCheckbox){
+                setClockString( moment(simulationDate).format(props.translation.dateFormat) + ' ' + moment(simulationDate).add(lmao++, 'seconds').format('HH:mm:ss'));
+            }else{
+                setClockString( moment().format(props.translation.dateFormat + ' HH:mm:ss'));
             }
         }, 1000);
         return () => clearInterval(interval);
-    }, []);
+    }, [simTimeCheckbox, simulationDate]);
 
     return (
         <div className='map-container'>
@@ -79,7 +82,7 @@ export const MapContainer: React.FC<{ 'translation': Translations, 'scheduleInfo
                             className='icon'>link</i></a></div>
                     <div className='sim-icon' title='Simulationsmodus aktiv'><i className='icon'>warning</i></div>
                     <div className='time' id='sim-time-overlay'>
-                        {(simulationDate !== null) ? moment.unix(simulationDate.unix()).format(props.translation.dateFormat) + ' ' + clockString : ''}
+                        {(simulationDate !== null) ? clockString : ''}
                     </div>
                 </div>
                 <div className='train-color-picker-overlay'>
