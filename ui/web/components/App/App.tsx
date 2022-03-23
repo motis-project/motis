@@ -2,6 +2,7 @@ import React from 'react';
 
 import { useRouter } from 'next/router';
 import moment from 'moment';
+import { isMobile } from "react-device-detect";
 
 import { Overlay } from '../Overlay/Overlay';
 import { Translations, deTranslations, enTranslations, plTranslations } from './Localization';
@@ -46,12 +47,6 @@ export const App: React.FC = () => {
 
     // Current Date
     const [searchDate, setSearchDate] = React.useState<moment.Moment>(null);
-
-    let isMobile = false;
-
-    React.useEffect(() => {
-        isMobile = window.matchMedia("only screen and (max-width: 500px)").matches;
-    }, []);
 
     React.useEffect(() => {
         let requestURL = 'https://europe.motis-project.de/?elm=requestScheduleInfo';
