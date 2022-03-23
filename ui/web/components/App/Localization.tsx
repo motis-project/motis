@@ -123,13 +123,13 @@ export interface Translations {
 
 const enDateConfig = (date: number) => {
     let res = moment.unix(date);
-    return res.format('DD/MM/YYYY');
+    return res.format('D/M/YYYY');
 }
 
 
 const deDateConfig = (date: number) => {
     let res = moment.unix(date);
-    return res.format('DD.MM.YYYY');
+    return res.format('D.M.YYYY');
 }
 
 

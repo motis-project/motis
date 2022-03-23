@@ -20,13 +20,11 @@ interface SearchTypes {
     'scheduleInfo': Interval,
     'start': Station | Address,
     'destination': Station | Address, 
-    'displayDate': moment.Moment, 
     'extendForwardFlag': boolean, 
     'extendBackwardFlag': boolean, 
     'searchDate': moment.Moment, 
     'setStart': React.Dispatch<React.SetStateAction<Station | Address>>, 
     'setDestination': React.Dispatch<React.SetStateAction<Station | Address>>, 
-    'setDisplayDate': React.Dispatch<React.SetStateAction<moment.Moment>>, 
     'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 
     'setExtendForwardFlag' : React.Dispatch<React.SetStateAction<boolean>>, 
     'setExtendBackwardFlag': React.Dispatch<React.SetStateAction<boolean>>,
@@ -263,16 +261,12 @@ export const Search: React.FC<SearchTypes> = (props) => {
     useEffect(() => {
         if (props.searchDate) {
             setAllConnectionsWithoutDummies([]);
-            setSearchForward({begin: props.searchDate.unix(), end: props.searchDate.unix() + 3600 * 2});
-            setSearchBackward({begin: props.searchDate.unix(), end: props.searchDate.unix() + 3600 * 2});
-            props.setDisplayDate(props.searchDate);
+            let currDate = props.searchDate.unix();
+            setSearchForward({begin: currDate, end: currDate + 3600 * 2});
+            setSearchBackward({begin: currDate, end: currDate + 3600 * 2});
+            props.setSearchDate(props.searchDate);
         }
     }, [props.searchDate]);
-
-    // On initial render searchDate will be null, waiting for the ScheduleInfoResponse. This useEffect should fire only once.
-    useEffect(() => {
-        props.setSearchDate(props.displayDate);
-    }, [props.displayDate]);
 
 
     // Handle Interval change after extend-search-interval search-backward Button in Overlay was clicked

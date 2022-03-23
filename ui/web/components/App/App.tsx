@@ -65,6 +65,11 @@ export const App: React.FC = () => {
                 intvBegin.hour(moment().hour());
                 intvBegin.minute(moment().minute());
                 setScheduleInfo(intv);
+                let currentTime = moment();
+                let adjustedDisplayDate = intvBegin;
+                adjustedDisplayDate.hour(currentTime.hour());
+                adjustedDisplayDate.minute(currentTime.minute());
+                setSearchDate(adjustedDisplayDate);
             })
     }, []);
 
@@ -79,12 +84,12 @@ export const App: React.FC = () => {
     return (
         <div className='app'>
             {isMobile ?
-                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate} setSearchDate={setSearchDate}/>
+                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate}/>
                 :
                 <>
                     {/* visible && <MapView />*/}
                     <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} />
-                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate} setSearchDate={setSearchDate}/>
+                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate}/>
                     {//<StationSearchView />}
                     }<StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} />
                 </>

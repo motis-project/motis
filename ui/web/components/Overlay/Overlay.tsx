@@ -23,13 +23,13 @@ const getTransportCountString = (transports: Transport[], translation: Translati
     return translation.connections.interchanges(count);
 }
 
-export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment, 'setSearchDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
-
-    // Hold the currently displayed Date
-    const [displayDate, setDisplayDate] = useState<moment.Moment>(null);
+export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment}> = (props) => {
     
     // Boolean used to decide if the Overlay is being displayed
     const [overlayHidden, setOverlayHidden] = useState<Boolean>(true);
+
+    // searchDate manages the currently used Time for IntermodalRoutingRequests
+    const [searchDate, setSearchDate] = useState<moment.Moment>(null);
 
     // Connections
     const [connections, setConnections] = useState<Connection[]>(null);
@@ -50,16 +50,11 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
 
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
 
-
-    React.useEffect(() => {
-        if (props.scheduleInfo !== null) {
-            let currentTime = moment();
-            let adjustedDisplayDate = moment.unix(props.scheduleInfo.begin);
-            adjustedDisplayDate.hour(currentTime.hour());
-            adjustedDisplayDate.minute(currentTime.minute());
-            setDisplayDate(adjustedDisplayDate);
-        }
-    }, [props.scheduleInfo]);
+    
+    // On initial render searchDate will be null, waiting for the ScheduleInfoResponse. This useEffect should fire only once.
+    useEffect(() => {
+        setSearchDate(props.searchDate);
+    }, [props.searchDate]);
 
     return (
         <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden'}>
@@ -71,24 +66,28 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                     scheduleInfo={props.scheduleInfo}
                                     start={start}
                                     destination={destination}
-                                    displayDate={displayDate}
                                     extendForwardFlag={extendForwardFlag}
                                     extendBackwardFlag={extendBackwardFlag}
+                                    searchDate={searchDate}
                                     setStart={setStart}
                                     setDestination={setDestination}
                                     setConnections={setConnections} 
-                                    setDisplayDate={setDisplayDate}
                                     setExtendForwardFlag={setExtendForwardFlag}
                                     setExtendBackwardFlag={setExtendBackwardFlag}
-                                    searchDate={props.searchDate}
-                                    setSearchDate={props.setSearchDate}/>
+                                    setSearchDate={setSearchDate}/>
                             {!connections ?
-                                props.scheduleInfo && displayDate && (displayDate.unix() < props.scheduleInfo.begin || displayDate.unix() > props.scheduleInfo.end) ?
+                                props.scheduleInfo ?    
                                     <div id='connections'>
+                                        {props.searchDate && (props.searchDate.unix() < props.scheduleInfo.begin || props.searchDate.unix() > props.scheduleInfo.end) ?
                                         <div className="main-error">
                                             <div className="">{props.translation.errors.journeyDateNotInSchedule}</div>
                                             <div className="schedule-range">{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
                                         </div>
+                                        :
+                                        <div className='no-results'>
+                                            <div className="schedule-range">{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
+                                        </div> 
+                                        }
                                     </div>
                                     :
                                     <Spinner />
@@ -157,7 +156,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                 <div className="header">
                                     <div className="back"><i className="icon" onClick={() => setDetailViewHidden(true)}>arrow_back</i></div>
                                     <div className="details">
-                                        <div className="date">{displayDate.format(props.translation.dateFormat)}</div>
+                                        <div className="date">{props.searchDate.format(props.translation.dateFormat)}</div>
                                         <div className="connection-times">
                                             <div className="times">
                                                 <div className="connection-departure">{moment.unix(connections[indexOfConnection].stops[0].departure.time).format('HH:mm')}</div>
@@ -188,18 +187,18 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                         </div>
                     }
                 </div>
-                <SubOverlay subOverlayHidden={props.subOverlayHidden} 
-                            setSubOverlayHidden={props.setSubOverlayHidden} 
-                            trainSelected={trainSelected} 
-                            setTrainSelected={setTrainSelected} 
-                            translation={props.translation} 
-                            detailViewHidden={detailViewHidden} 
+                <SubOverlay translation={props.translation} 
                             scheduleInfo={props.scheduleInfo}
-                            displayDate={displayDate}
-                            stationEventTrigger={props.stationEventTrigger}
-                            setStationEventTrigger={props.setStationEventTrigger}
+                            searchDate={props.searchDate}
                             station={props.station}
-                            searchDate={props.searchDate}/>
+                            stationEventTrigger={props.stationEventTrigger}
+                            subOverlayHidden={props.subOverlayHidden} 
+                            trainSelected={trainSelected} 
+                            detailViewHidden={detailViewHidden}
+                            setTrainSelected={setTrainSelected} 
+                            setStationEventTrigger={props.setStationEventTrigger}
+                            setSubOverlayHidden={props.setSubOverlayHidden} 
+                            />
             </div>
             <div className='overlay-tabs'>
                 <div className='overlay-toggle' onClick={() => setOverlayHidden(!overlayHidden)}>
