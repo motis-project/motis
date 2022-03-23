@@ -1,4 +1,5 @@
 import moment from "moment"
+import React from "react"
 
 interface SearchProfileNames {
       default : String
@@ -16,6 +17,7 @@ export interface Translations {
         , date : String
         , weekDays : String[]
         , months : String[]
+        , dateInputHandler(input: String, oldDate: moment.Moment, setDate: React.Dispatch<React.SetStateAction<moment.Moment>>) : void
         , time : String
         , startTransports : String
         , destinationTransports : String
@@ -139,6 +141,19 @@ export const deTranslations: Translations = {
             , date : 'Datum'
             , weekDays : ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
             , months : ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+            , dateInputHandler : 
+                (input: String, oldDate: moment.Moment, setDate: React.Dispatch<React.SetStateAction<moment.Moment>>) => {
+                    if (input.split('.').length == 3) {
+                        let [day, month, year] = input.split('.');
+                        if (day !== '' && !isNaN(+day) && month !== '' && !isNaN(+month) && year !== '' && !isNaN(+year)){
+                            let newDate = moment(oldDate);
+                            newDate.year(year as unknown as number);
+                            newDate.month(month as unknown as number - 1);
+                            newDate.date(day as unknown as number);
+                            setDate(newDate);
+                        }
+                    }
+                    }
             , time : 'Uhrzeit'
             , startTransports : 'Verkehrsmittel am Start'
             , destinationTransports : 'Verkehrsmittel am Ziel'
@@ -262,6 +277,19 @@ export const enTranslations: Translations = {
             , date : 'Date'
             , weekDays : ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
             , months : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+            , dateInputHandler : 
+                (input: String, oldDate: moment.Moment, setDate: React.Dispatch<React.SetStateAction<moment.Moment>>) => {
+                    if (input.split('/').length == 3) {
+                        let [year, month, day] = input.split('/');
+                        if (day !== '' && !isNaN(+day) && month !== '' && !isNaN(+month) && year !== '' && !isNaN(+year)){
+                            let newDate = moment(oldDate);
+                            newDate.year(year as unknown as number);
+                            newDate.month(month as unknown as number - 1);
+                            newDate.date(day as unknown as number);
+                            setDate(newDate);
+                        }
+                    }
+                    }
             , time : 'Time'
             , startTransports : 'Transports at the start'
             , destinationTransports : 'Transports at the destination'
@@ -384,6 +412,19 @@ export const plTranslations: Translations = {
         , date : 'Data'
         , weekDays : ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nie']
         , months : ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień']
+        , dateInputHandler : 
+        (input: String, oldDate: moment.Moment, setDate: React.Dispatch<React.SetStateAction<moment.Moment>>) => {
+            if (input.split('.').length == 3) {
+                let [day, month, year] = input.split('.');
+                if (day !== '' && !isNaN(+day) && month !== '' && !isNaN(+month) && year !== '' && !isNaN(+year)){
+                    let newDate = moment(oldDate);
+                    newDate.year(year as unknown as number);
+                    newDate.month(month as unknown as number - 1);
+                    newDate.date(day as unknown as number);
+                    setDate(newDate);
+                }
+            }
+            }        
         , time : 'Godzina'
         , startTransports : 'Środki transportu na początku'
         , destinationTransports : 'Środki transportu na końcu'

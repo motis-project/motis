@@ -22,7 +22,9 @@ export interface ModeLocalStorage {
 // Safe a value in LocalStorage
 export const setLocalStorage = (key: string, value: any) => {
     try {
-        localStorage.setItem(key, JSON.stringify(value));   
+        if(key !== 'stationEvent'){
+            localStorage.setItem(key, JSON.stringify(value));   
+        }
     } catch (ex) {}
 }
 
