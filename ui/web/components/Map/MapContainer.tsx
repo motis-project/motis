@@ -77,12 +77,12 @@ export const MapContainer: React.FC<{ 'translation': Translations, 'scheduleInfo
                     }} /><label
                         htmlFor='train-color-picker-none'>{props.translation.railViz.noTrains}</label></div>
                     <div><input type='radio' id='train-color-picker-className' name='train-color-picker' defaultChecked onClick={() => {
-                        window.portEvents.pub('mapSetUseTrainClassColor', true);
+                        window.portEvents.pub('mapUseTrainClassColors', true);
                         window.portEvents.pub('mapShowTrains', true);
                     }} /><label
                         htmlFor='train-color-picker-className'>{props.translation.railViz.classColors}</label></div>
                     <div><input type='radio' id='train-color-picker-delay' name='train-color-picker' onClick={() => {
-                        window.portEvents.pub('mapSetUseTrainClassColor', false);
+                        window.portEvents.pub('mapUseTrainClassColors', false);
                         window.portEvents.pub('mapShowTrains', true);
                     }} /><label
                         htmlFor='train-color-picker-delay'>{props.translation.railViz.delayColors}</label></div>
