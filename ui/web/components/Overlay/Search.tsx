@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 
 import moment from 'moment';
+import equal from 'deep-equal';
 
 import { DatePicker } from './DatePicker';
 import { Mode, IntermodalRoutingResponse } from '../Types/IntermodalRoutingTypes';
-import { Connection, Position, Station, WalkInfo } from '../Types/ConnectionTypes';
+import { Connection, Poition, Station, WalkInfo } from '../Types/Connection';
 import { Translations } from '../App/Localization';
 import { Address } from '../Types/SuggestionTypes';
 import { SearchInputField } from './SearchInputField';
 import { Modepicker } from './ModePicker';
-import { getFromLocalStorage, setLocalStorage } from '../App/LocalStorage';
+import { getFromLocalStorage } from '../App/LocalStorage';
 import { Interval } from '../Types/RoutingTypes';
 import { markerSearch } from '../Map/RailvizContextMenu';
 
@@ -23,6 +24,7 @@ const getRoutingOptions = (startType: string, startModes: Mode[], start: Station
                                 content: {start_type: startType, start_modes: startModes, start: { station: start, min_connection_count: 5, interval: interval, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: destination } })
     };
 };
+
 
 const mapConnections = (connections: Connection[]) => {
     let cons = [];
@@ -59,6 +61,7 @@ const mapConnections = (connections: Connection[]) => {
     }
     return cons;
 };
+
 
 // This Dummy Object will be used to Identify Day Changes in the Connections List which will be swaped against Dividers
 const dummyConnection = (dummyDate: string) => {
@@ -101,7 +104,7 @@ const handleErrors = (response) => {
 }
 
 
-export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations, 'extendForwardFlag': boolean, 'extendBackwardFlag': boolean, 'displayDate': moment.Moment, 'setDisplayDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
+export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 'translation': Translations, 'extendForwardFlag': boolean, 'extendBackwardFlag': boolean, 'displayDate': moment.Moment, 'setDisplayDate': React.Dispatch<React.SetStateAction<moment.Moment>>, 'scheduleInfo': Interval, 'setExtendForwardFlag' : React.Dispatch<React.SetStateAction<boolean>>, 'setExtendBackwardFlag': React.Dispatch<React.SetStateAction<boolean>>, 'searchDate': moment.Moment, 'setSearchDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
  
     // Start
     // StartType
@@ -125,20 +128,20 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
     
 
-    // Current Date
-    const [searchDate, setSearchDate] = useState<moment.Moment>(props.displayDate);
-    
     // SearchTime
-    const [searchTime, setSearchTime] = useState<string>(props.displayDate.format('HH:mm'));
+    const [searchTime, setSearchTime] = useState<string>(moment().format('HH:mm'));
     
     // SearchType
     const [searchType, setSearchType] = useState<string>('Accessibility');
     
     // SearchDirection
     const [searchDirection, setSearchDirection] = useState<string>('Forward');
+    
+    // Interval used to request earlier Connections
+    const [searchBackward, setSearchBackward] = useState<Interval>(null);
 
-    // SearchInterval
-    const [searchInterval, setSearchInterval] = useState<Interval>({begin: searchDate.unix(), end: searchDate.unix() + 7200});
+    // Interval used to request later Connections
+    const [searchForward, setSearchForward] = useState<Interval>(null);
 
     // Save currently displayed List of Connections. Will be extended with every fetch.
     const [allConnectionsWithoutDummies, setAllConnectionsWithoutDummies] = useState<Connection[]>([]);
@@ -150,18 +153,18 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     // This Effect is one of 2 IntermodalConnectionRequest API Calls.
     // If this one is triggered, then we want to discard the currently shown Connections and load a new list
     useEffect(() => {
-        if (start !== null && destination !== null) {
-            props.setConnections(null); // Only when connections=null will the Loading animation be shown
+        if (start !== null && destination !== null && searchForward !== null) {
             let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
             //console.log('Fire searchQuery')
 
-            fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination, searchInterval))
+            fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination, searchForward))
                 .then(handleErrors)
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
                     console.log("Response came in");
                     console.log(res);
                     //props.setConnections(res.content.connections);
+                    props.setConnections(null); // Only when connections=null will the Loading animation be shown
                     sendConnectionsToOverlay(props.setConnections, res.content.connections, setAllConnectionsWithoutDummies);
                     window.portEvents.pub('mapSetMarkers', {'startPosition': getFromLocalStorage("motis.routing.from_location").pos,
                                                             'startName': getFromLocalStorage("motis.routing.from_location").name,
@@ -178,12 +181,13 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
     // This Effect is one of 2 IntermodalConnectionRequest API Calls.
     // If this one is triggered, then we want to keep the currently shown Connections and add the newly fetched ones to this list
     useEffect(() => {
-        if (start !== null && destination !== null) {
-            props.setConnections(null); // Only when connections=null will the Loading animation be shown
+        //console.log('Run1');
+        //console.log (start, destination, searchForward)
+        if (start !== null && destination !== null && searchForward !== null && searchBackward !== null) {
+            //console.log('Run2');
             let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
-            //console.log('Fire searchQuery')
-
-            fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination, searchInterval))
+            let searchIntv = extendBackward ? searchBackward : searchForward;
+            fetch(requestURL, getRoutingOptions(startType, startModes, start, searchType, searchDirection, destinationType, destinationModes, destination, searchIntv))
                 .then(handleErrors)
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
@@ -191,9 +195,17 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                     console.log(res);
                     //props.setConnections(res.content.connections);
                     if(extendBackward){
-                        sendConnectionsToOverlay(props.setConnections, [...res.content.connections, ...allConnectionsWithoutDummies], setAllConnectionsWithoutDummies);
+                        if(!equal(res.content.connections[0], allConnectionsWithoutDummies[0])) {
+                            props.setConnections(null); // Only when connections=null will the Loading animation be shown
+                            sendConnectionsToOverlay(props.setConnections, [...res.content.connections, ...allConnectionsWithoutDummies], setAllConnectionsWithoutDummies);
+                        }
+                        props.setExtendBackwardFlag(false);
                     } else {
-                        sendConnectionsToOverlay(props.setConnections, [...allConnectionsWithoutDummies, ...res.content.connections], setAllConnectionsWithoutDummies);
+                        if(!equal(res.content.connections[res.content.connections.length-1], allConnectionsWithoutDummies[allConnectionsWithoutDummies.length-1])) {
+                            props.setConnections(null); // Only when connections=null will the Loading animation be shown
+                            sendConnectionsToOverlay(props.setConnections, [...allConnectionsWithoutDummies, ...res.content.connections], setAllConnectionsWithoutDummies);
+                        }
+                        props.setExtendForwardFlag(false);
                     }
                     window.portEvents.pub('mapSetMarkers', {'startPosition': getFromLocalStorage("motis.routing.from_location").pos,
                                                             'startName': getFromLocalStorage("motis.routing.from_location").name,
@@ -203,29 +215,41 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                 })
                 .catch(error => {});
         }
-    }, [searchInterval]);
+    }, [searchForward, searchBackward]);
 
 
     // On searchDate change, discard currently displayed Connections and compute new Interval for the IntermodalConnectionRequest
     useEffect(() => {
-        setAllConnectionsWithoutDummies([]);
-        setSearchInterval({begin: searchDate.unix(), end: searchDate.unix() + 3600 * 2});
-        props.setDisplayDate(searchDate);
-    }, [searchDate]);
+        if (props.searchDate) {
+            setAllConnectionsWithoutDummies([]);
+            setSearchForward({begin: props.searchDate.unix(), end: props.searchDate.unix() + 3600 * 2});
+            setSearchBackward({begin: props.searchDate.unix(), end: props.searchDate.unix() + 3600 * 2});
+            props.setDisplayDate(props.searchDate);
+        }
+    }, [props.searchDate]);
+
+    // On initial render searchDate will be null, waiting for the ScheduleInfoResponse. This useEffect should fire only once.
+    useEffect(() => {
+        props.setSearchDate(props.displayDate);
+    }, [props.displayDate]);
 
 
     // Handle Interval change after extend-search-interval search-backward Button in Overlay was clicked
     useEffect(() => {
-        setSearchInterval({begin: searchInterval.begin - 3600 * 4, end: searchInterval.end - 3600 * 4});
-        setExtendBackward(true);
-    }, [props.extendBackwardFlag])
+        if (searchBackward && props.extendBackwardFlag) {
+            setSearchBackward({begin: searchBackward.begin - 3600 * 4, end: searchBackward.end - 3600 * 4});
+            setExtendBackward(true);
+        }
+    }, [props.extendBackwardFlag]);
 
 
-    // Handle Interval change after extend-search-interval search-forwad Button in Overlay was clicked
+    // Handle Interval change after extend-search-interval search-forward Button in Overlay was clicked
     useEffect(() => {
-        setSearchInterval({begin: searchInterval.begin + 3600 * 4, end: searchInterval.end + 3600 * 4});
-        setExtendBackward(false);
-    }, [props.extendForwardFlag])
+        if (searchForward && props.extendForwardFlag) {
+            setSearchForward({begin: searchForward.begin + 3600 * 4, end: searchForward.end + 3600 * 4});
+            setExtendBackward(false);
+        }
+    }, [props.extendForwardFlag]);
 
 
     useEffect(() => {
@@ -270,8 +294,9 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                 </div>
                 <div className='pure-u-1 pure-u-sm-12-24'>
                     <DatePicker translation={props.translation}
-                                currentDate={searchDate}
-                                setCurrentDate={setSearchDate}/>
+                                currentDate={props.searchDate}
+                                setCurrentDate={props.setSearchDate}
+                                scheduleInfo={props.scheduleInfo}/>
                 </div>
             </div>
             <div className='pure-g gutters'>
@@ -299,28 +324,36 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                 value={searchTime}
                                 onChange={(e) => {
                                     setSearchTime(e.currentTarget.value);
-                                    /* Wie sollen wir mit fehlerhfatem Input umgehen?
                                     if (e.currentTarget.value.split(':').length == 2) {
                                         let [hour, minute] = e.currentTarget.value.split(':');
                                         if (!isNaN(+hour) && !isNaN(+minute)){
-                                            setSearchHours(moment(searchHours.hour(hour as unknown as number > 23 ? 23 : hour as unknown as number)));
-                                            setSearchHours(moment(searchHours.minute(minute as unknown as number > 59 ? 59 : hour as unknown as number)));
-                                }}*/}}/>
+                                            let newSearchTime = moment(props.searchDate);
+                                            newSearchTime.hour(hour as unknown as number > 23 ? 23 : hour as unknown as number);
+                                            newSearchTime.minute(minute as unknown as number > 59 ? 59 : minute as unknown as number);
+                                            props.setSearchDate(newSearchTime);
+                                            //console.log(newSearchTime)
+                                }}}}
+                                onKeyDown={(e) => {
+                                    if (e.key == 'Enter'){
+                                        console.log(props.searchDate)
+                                        setSearchTime(props.searchDate.format('HH:mm'));
+                                    }
+                                }}/>
                             <div className='gb-input-widget'>
                                 <div className='hour-buttons'>
                                     <div><a
                                             className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' 
                                             onClick={() => {
-                                                let newSearchDate = searchDate.clone().subtract(1, 'h')
-                                                setSearchDate(newSearchDate); 
-                                                setSearchTime(newSearchDate.format('HH:mm'))}}>
+                                                let newSearchDate = props.searchDate.clone().subtract(1, 'h')
+                                                props.setSearchDate(newSearchDate); 
+                                                setSearchTime(newSearchDate.format('HH:mm'));}}>
                                             <i className='icon'>chevron_left</i></a></div>
                                     <div><a
                                             className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select' 
                                             onClick={() => {
-                                                let newSearchDate = searchDate.clone().add(1, 'h')
-                                                setSearchDate(newSearchDate);
-                                                setSearchTime(newSearchDate.format('HH:mm'))}}>
+                                                let newSearchDate = props.searchDate.clone().add(1, 'h')
+                                                props.setSearchDate(newSearchDate);
+                                                setSearchTime(newSearchDate.format('HH:mm'));}}>
                                             <i className='icon'>chevron_right</i></a></div>
                                 </div>
                             </div>
@@ -334,7 +367,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                 name='time-option' 
                                 value='Forward'
                                 checked={searchDirection === 'Forward'} 
-                                onChange={() => setSearchDirection('Forward')}/>
+                                onChange={(e) => setSearchDirection(e.currentTarget.value)}/>
                         <label htmlFor='search-forward'>{props.translation.search.departure}</label>
                     </form>
                     <form>
@@ -343,7 +376,7 @@ export const Search: React.FC<{'setConnections': React.Dispatch<React.SetStateAc
                                 name='time-option' 
                                 value='Backward' 
                                 checked={searchDirection === 'Backward'} 
-                                onChange={() => setSearchDirection('Backward')}/>
+                                onChange={(e) => setSearchDirection(e.currentTarget.value)}/>
                         <label htmlFor='search-backward'>{props.translation.search.arrival}</label>
                     </form>
                 </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Station } from '../Types/ConnectionTypes';
+import { Station } from '../Types/Connection';
 import { setLocalStorage } from '../App/LocalStorage';
 import { Address, Region } from '../Types/SuggestionTypes';
 

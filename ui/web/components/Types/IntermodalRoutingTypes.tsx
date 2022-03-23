@@ -1,6 +1,7 @@
-import { Connection, Position, Station } from './ConnectionTypes'
+import { Connection, Position, Station } from './Connection'
 import { SearchOptions } from './PPRTypes';
 import { Interval } from './RoutingTypes';
+import { ScheduleInfoResponse } from './ScheduleInfo';
 
 export interface IntermodalRoutingRequest {
     start_type: string,
@@ -8,7 +9,7 @@ export interface IntermodalRoutingRequest {
     start_modes: Mode[],
     destination: Station | Position,
     destination_modes: Mode[],
-    search_type: 'DeafaultSearch' | 'SingleCriterion' | 'SingleCriterionNoIntercity' | 'LateConnections' | 'LateConnectionsTest' | 'Accessibility',
+    search_type: 'DefaultSearch' | 'SingleCriterion' | 'SingleCriterionNoIntercity' | 'LateConnections' | 'LateConnectionsTest' | 'Accessibility',
     search_dir: 'Forward' | 'Backward'
 }
 
@@ -77,6 +78,26 @@ export interface IntermodalRoutingResponse {
         type: string
     }
     id: number
+}
+
+
+interface IntermodalRoutingR {
+    connections: Connection[],
+    interval_begin: number,
+    interval_end: number,
+    direct_connections: Connection[]
+    statistics: Statistic[]
+}
+
+
+export interface elmAPIResponse {
+    content: ScheduleInfoResponse | IntermodalRoutingR
+    content_type: string,
+    destination: {
+        target: string,
+        type: string
+    }
+    id : number
 }
 
 
