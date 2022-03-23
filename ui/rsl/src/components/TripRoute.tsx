@@ -1,4 +1,8 @@
-import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/solid";
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ExclamationIcon,
+} from "@heroicons/react/solid";
 import { useAtom } from "jotai";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "react-query";
@@ -8,6 +12,7 @@ import { TripId } from "@/api/protocol/motis";
 import { queryKeys, usePaxMonStatusQuery } from "@/api/paxmon";
 
 import { PaxMonEdgeLoadInfoWithStats } from "@/data/loadInfo";
+import { formatPercent } from "@/data/numberFormat";
 import { universeAtom } from "@/data/simulation";
 
 import classNames from "@/util/classNames";
@@ -154,6 +159,23 @@ function TripSection({ tripId, section, maxVal }: TripSectionProps) {
               {section.to.name}
             </div>
           </div>
+        </div>
+        <div
+          className="w-10 pt-1 flex flex-col items-center"
+          title={`Überlastungswahrscheinlichkeit: ${formatPercent(
+            section.p_load_gt_100
+          )}`}
+        >
+          {section.p_load_gt_100 >= 0.01 ? (
+            <>
+              <span>
+                <ExclamationIcon className="w-5 h-5 fill-db-red-500" />
+              </span>
+              <span className="text-xs text-db-red-500">
+                {formatPercent(section.p_load_gt_100)}
+              </span>
+            </>
+          ) : null}
         </div>
         <div className="flex-grow">
           <div className="w-full h-16">
