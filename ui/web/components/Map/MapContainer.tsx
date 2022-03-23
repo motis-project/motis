@@ -6,7 +6,7 @@ import { Translations } from "../App/Localization";
 import { RailvizContextMenu } from "./RailvizContextMenu";
 import { Interval } from "../Types/RoutingTypes";
 
-export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo': Interval}> = (props) => {
+export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo': Interval, 'searchDate': moment.Moment}> = (props) => {
 
     const [simTimePickerSelected, setSimTimePickerSelected] = React.useState<Boolean>(false);
     
@@ -17,6 +17,14 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
             window.portEvents.pub('mapSetLocale', props.translation.search);
         });
     });
+
+    useEffect(() => {
+        if(props.searchDate !== null){
+            let newOffset = props.searchDate.diff(moment());
+            console.log(newOffset);
+            window.portEvents.pub('setTimeOffset', newOffset);
+        }
+    }, [currMoment])
 
     return (
         <div className="map-container">

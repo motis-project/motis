@@ -70,6 +70,11 @@ export const App: React.FC = () => {
                 intvBegin.hour(moment().hour());
                 intvBegin.minute(moment().minute());
                 setScheduleInfo(intv);
+                let currentTime = moment();
+                let adjustedDisplayDate = intvBegin;
+                adjustedDisplayDate.hour(currentTime.hour());
+                adjustedDisplayDate.minute(currentTime.minute());
+                setSearchDate(adjustedDisplayDate);
             })
     }, []);
 
@@ -88,7 +93,7 @@ export const App: React.FC = () => {
                 :
                 <>
                     {/* visible && <MapView />*/}
-                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} />
+                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} searchDate={searchDate}/>
                     <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate} setSearchDate={setSearchDate}/>
                     {//<StationSearchView />}
                     }<StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} />
