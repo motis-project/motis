@@ -175,7 +175,7 @@ function TripList(): JSX.Element {
     <div className="h-full flex flex-col">
       <Listbox value={selectedSort} onChange={setSelectedSort}>
         <div className="relative mb-2">
-          <Listbox.Button className="relative w-full py-2 pl-3 pr-10 text-left bg-white rounded-lg shadow-md cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-opacity-75 focus-visible:ring-white focus-visible:ring-offset-orange-300 focus-visible:ring-offset-2 focus-visible:border-indigo-500 sm:text-sm">
+          <Listbox.Button className="relative w-full py-2 pl-3 pr-10 text-left bg-white dark:bg-gray-700 rounded-lg shadow-md cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-opacity-75 focus-visible:ring-white focus-visible:ring-offset-orange-300 focus-visible:ring-offset-2 focus-visible:border-indigo-500 sm:text-sm">
             <span className="block truncate">{selectedSort.label}</span>
             <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
               <SelectorIcon
@@ -242,7 +242,7 @@ function TripList(): JSX.Element {
               onChange={(e) =>
                 setSelectedDate(e.target.valueAsDate ?? undefined)
               }
-              className="block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
             />
           </label>
         </div>
@@ -251,7 +251,7 @@ function TripList(): JSX.Element {
             <span className="text-sm">Zugnummer(n)</span>
             <input
               type="text"
-              className="block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
               value={trainNrFilter}
               onChange={(e) => setTrainNrFilter(e.target.value)}
             />
@@ -340,7 +340,7 @@ function TripListOptions({
       <DropdownMenu.Trigger asChild={true}>
         <button
           type="button"
-          className="p-2 mb-1 flex justify-center align-center bg-white rounded-full shadow-sm outline-0"
+          className="p-2 mb-1 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0"
         >
           <AdjustmentsIcon className="w-4 h-4" aria-hidden="true" />
         </button>
@@ -425,7 +425,9 @@ function TripListEntry({
       <div
         className={classNames(
           "cursor-pointer p-1 rounded",
-          isSelected ? "bg-db-cool-gray-300 shadow-md" : "bg-db-cool-gray-100"
+          isSelected
+            ? "bg-db-cool-gray-300 dark:bg-gray-500 dark:text-gray-100 shadow-md"
+            : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300"
         )}
         onClick={() => setSelectedTrip(ti.tsi)}
       >

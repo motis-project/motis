@@ -5,11 +5,7 @@ import { useQuery, useQueryClient } from "react-query";
 
 import { TripId } from "@/api/protocol/motis";
 
-import {
-  queryKeys,
-  sendPaxMonTripLoadInfosRequest,
-  usePaxMonStatusQuery,
-} from "@/api/paxmon";
+import { queryKeys, usePaxMonStatusQuery } from "@/api/paxmon";
 
 import {
   PaxMonEdgeLoadInfoWithStats,
@@ -22,7 +18,7 @@ import {
   formatLongDateTime,
   formatTime,
 } from "@/util/dateFormat";
-import { addEdgeStatistics } from "@/util/statistics";
+import { loadAndProcessTripInfo } from "@/util/tripInfo";
 
 function getSvgLinePath(
   edges: PaxMonEdgeLoadInfoWithStats[],
@@ -151,15 +147,6 @@ function getBaseFileName(
     }
   }
   return parts.join("_");
-}
-
-async function loadAndProcessTripInfo(universe: number, trip: TripId) {
-  const res = await sendPaxMonTripLoadInfosRequest({
-    universe,
-    trips: [trip],
-  });
-  const tli = res.load_infos[0];
-  return addEdgeStatistics(tli);
 }
 
 type TripLoadForecastChartProps = {
@@ -347,7 +334,7 @@ function TripLoadForecastChart({
   const medianPath = (
     <path
       d={getSvgLinePath(edges, maxVal, (ef) => ef.q_50 || 0)}
-      style={{ stroke: " #3038FF", strokeWidth: 2, fill: "none" }}
+      style={{ stroke: "#3038FF", strokeWidth: 2, fill: "none" }}
     />
   );
 

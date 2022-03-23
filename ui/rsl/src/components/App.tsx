@@ -23,20 +23,20 @@ function App(): JSX.Element {
       <div className="w-full h-screen flex flex-col">
         <div
           className="flex justify-center items-baseline space-x-4 p-2
-            bg-db-cool-gray-200 text-black divide-x-2 divide-db-cool-gray-400"
+            bg-db-cool-gray-200 dark:bg-gray-800 text-black dark:text-neutral-300 divide-x-2 divide-db-cool-gray-400"
         >
           <TimeControl allowForwarding={allowForwarding} />
           <UniverseControl />
         </div>
 
         <div className="flex justify-between items-stretch overflow-y-auto grow">
-          <div className="bg-db-cool-gray-200 w-[25rem] overflow-y-auto p-2">
+          <div className="bg-db-cool-gray-200 dark:bg-gray-800 w-[25rem] overflow-y-auto p-2 shrink-0">
             <TripList />
           </div>
           <div className="overflow-y-auto grow p-2">
             <MainSection />
           </div>
-          <div className="bg-db-cool-gray-200 overflow-y-auto grow max-w-xl p-2">
+          <div className="bg-db-cool-gray-200 dark:bg-gray-800 overflow-y-auto p-2 w-[32rem] shrink-0">
             <SimPanel />
           </div>
         </div>
