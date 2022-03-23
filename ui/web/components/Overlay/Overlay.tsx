@@ -108,7 +108,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                 <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
                                                 :
                                                 <div className='connection' key={index} onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}
-                                                                                        onMouseEnter={() => { let ids = []; ids.push(index-1); window.portEvents.pub('mapHighlightConnections', ids);}}
+                                                                                        onMouseEnter={() => { let ids = []; ids.push(connectionElem.id); window.portEvents.pub('mapHighlightConnections', ids);}}
                                                                                         onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', []); }}>
                                                     <div className='pure-g'>
                                                         <div className='pure-u-4-24 connection-times'>

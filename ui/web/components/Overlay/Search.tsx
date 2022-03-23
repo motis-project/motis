@@ -100,8 +100,9 @@ const sendConnectionsToOverlay = (setConnections: React.Dispatch<React.SetStateA
     let previousConnectionDay = moment.unix(connections[0].stops[0].departure.schedule_time);
     let dummyDays = [previousConnectionDay.format(dateFormat)];
     setAllConnectionsWithoutDummies(connections);
-
+    connectionsWithDummies[0].id = 0;
     for (let i = 1; i < connections.length; i++){
+        connectionsWithDummies[i].id = i;
         if (moment.unix(connections[i].stops[0].departure.schedule_time).day() != previousConnectionDay.day()){
             dummyIndexes.push(i);
             dummyDays.push(moment.unix(connections[i].stops[0].departure.schedule_time).format(dateFormat));
