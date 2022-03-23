@@ -10,7 +10,10 @@ function MainSection(): JSX.Element {
   return (
     <>
       {selectedTrip !== undefined ? (
-        <TripDetails tripId={selectedTrip.trip} />
+        <TripDetails
+          tripId={selectedTrip.trip}
+          key={JSON.stringify(selectedTrip.trip)}
+        />
       ) : null}
     </>
   );

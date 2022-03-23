@@ -109,18 +109,16 @@ function TripSection({ tripId, section, maxVal }: TripSectionProps) {
   const arrivalDelayed =
     section.arrival_current_time > section.arrival_schedule_time;
 
+  const ChevronIcon = expanded ? ChevronDownIcon : ChevronRightIcon;
+
   return (
     <>
       <div
-        className="flex gap-1 cursor-pointer"
+        className="flex gap-1 cursor-pointer group"
         onClick={() => setExpanded((val) => !val)}
       >
         <div>
-          {expanded ? (
-            <ChevronDownIcon className="w-5 h-5 mt-0.5" />
-          ) : (
-            <ChevronRightIcon className="w-5 h-5 mt-0.5" />
-          )}
+          <ChevronIcon className="w-5 h-5 mt-0.5 group-hover:fill-db-red-500" />
         </div>
         <div className="w-80">
           <div className="flex gap-1">
