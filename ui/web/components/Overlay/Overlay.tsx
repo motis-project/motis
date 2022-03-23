@@ -67,13 +67,17 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                 <div id='overlay-content'>
                     {detailViewHidden ?
                         <>
-                            <Search setConnections={setConnections} 
-                                    translation={props.translation} 
+                            <Search translation={props.translation} 
+                                    scheduleInfo={props.scheduleInfo}
+                                    start={start}
+                                    destination={destination}
+                                    displayDate={displayDate}
                                     extendForwardFlag={extendForwardFlag}
                                     extendBackwardFlag={extendBackwardFlag}
-                                    displayDate={displayDate}
+                                    setStart={setStart}
+                                    setDestination={setDestination}
+                                    setConnections={setConnections} 
                                     setDisplayDate={setDisplayDate}
-                                    scheduleInfo={props.scheduleInfo}
                                     setExtendForwardFlag={setExtendForwardFlag}
                                     setExtendBackwardFlag={setExtendBackwardFlag}
                                     searchDate={props.searchDate}
@@ -153,7 +157,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                 <div className="header">
                                     <div className="back"><i className="icon" onClick={() => setDetailViewHidden(true)}>arrow_back</i></div>
                                     <div className="details">
-                                        <div className="date">{displayDate.format('D.M.YYYY')}</div>
+                                        <div className="date">{displayDate.format(props.translation.dateFormat)}</div>
                                         <div className="connection-times">
                                             <div className="times">
                                                 <div className="connection-departure">{moment.unix(connections[indexOfConnection].stops[0].departure.time).format('HH:mm')}</div>

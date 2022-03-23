@@ -69,6 +69,9 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
     
     const inputFieldRef = React.useRef(null);
     
+    // Selected manipulates the div "gb-input-group" to highlight it if focused
+    const [selected, setSelected] = useState<string>('');
+
     // Station or Position
     const [station, setStation] = useState<Station | Address>(props.station);
 
@@ -114,7 +117,7 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
                 <div className='label'>
                     {props.label}
                 </div>
-                <div className='gb-input-group'>
+                <div className={`gb-input-group ${selected}`}>
                     <div className='gb-input-icon'>
                         <i className='icon'>place</i>
                         </div>
@@ -152,6 +155,7 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
                         } }
                         onFocus={_ => {
                             setShowSuggestions(true);
+                            setSelected('gb-input-group-selected');
                         } }
                         onClick={_ => {
                             setShowSuggestions(true);
@@ -165,8 +169,9 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
                             showSuggestions={showSuggestions}
                             setName={setName}
                             setSuggestion={setStation} 
+                            setSelectedSuggestion={setSelectedSuggestion}
                             setShowSuggestions={setShowSuggestions}
-                            setHighlighted={setSelectedSuggestion}
+                            setSelected={setSelected}
                             localStorageStation={props.localStorageStation}
                             inputFieldRef={inputFieldRef}/>
             </div>

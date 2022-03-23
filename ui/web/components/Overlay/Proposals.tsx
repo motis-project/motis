@@ -16,7 +16,8 @@ interface Proposals {
     setName: React.Dispatch<React.SetStateAction<string>>, 
     setSuggestion: React.Dispatch<React.SetStateAction<Station | Address>>, 
     setShowSuggestions: React.Dispatch<React.SetStateAction<boolean>>, 
-    setHighlighted: React.Dispatch<React.SetStateAction<number>>, 
+    setSelectedSuggestion: React.Dispatch<React.SetStateAction<number>>,
+    setSelected: React.Dispatch<React.SetStateAction<string>>, 
 }
 
 
@@ -50,7 +51,7 @@ const getDisplayRegions = (regions: Region[]) => {
 }
 
 
-function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: React.MutableRefObject<any>, setShowSuggestions: React.Dispatch<React.SetStateAction<boolean>>) {
+function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: React.MutableRefObject<any>, setShowSuggestions: React.Dispatch<React.SetStateAction<boolean>>, setSelected : React.Dispatch<React.SetStateAction<string>>) {
     React.useEffect(() => {
         /**
          * Alert if clicked on outside of element
@@ -59,6 +60,7 @@ function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: Reac
             if (ref.current && !ref.current.contains(event.target) && 
                 inputFieldRef.current && !inputFieldRef.current.contains(event.target)) {
                 setShowSuggestions(false);
+                setSelected('');
             }
         }
 
@@ -125,7 +127,7 @@ export const Proposals: React.FC<Proposals> = (props) => {
 
     const suggestionsRef = React.useRef(null);
 
-    useOutsideAlerter(suggestionsRef, props.inputFieldRef, props.setShowSuggestions);
+    useOutsideAlerter(suggestionsRef, props.inputFieldRef, props.setShowSuggestions, props.setSelected);
 
     return (
         <div className="proposals" ref={suggestionsRef}>
@@ -138,7 +140,7 @@ export const Proposals: React.FC<Proposals> = (props) => {
                                         setName={props.setName} 
                                         setSuggestion={props.setSuggestion} 
                                         setShowSuggestions={props.setShowSuggestions}
-                                        setSelectedSuggestion={props.setHighlighted}
+                                        setSelectedSuggestion={props.setSelectedSuggestion}
                                         localStorageStation={props.localStorageStation}/>
                 ))
             }
@@ -151,7 +153,7 @@ export const Proposals: React.FC<Proposals> = (props) => {
                                         setName={props.setName} 
                                         setSuggestion={props.setSuggestion} 
                                         setShowSuggestions={props.setShowSuggestions}
-                                        setSelectedSuggestion={props.setHighlighted}
+                                        setSelectedSuggestion={props.setSelectedSuggestion}
                                         localStorageStation={props.localStorageStation}/>
                 ))}
         </div>

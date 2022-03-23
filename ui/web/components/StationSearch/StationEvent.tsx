@@ -29,6 +29,9 @@ const stationEventDivGenerator = (eventsToDisplay: Events[], translation: Transl
     if (filteredEvents[filteredEvents.length - 1].dummyEvent){
         filteredEvents.pop();
     }
+    if (filteredEvents[1].dummyEvent) {
+        filteredEvents.shift();
+    }
     console.log(filteredEvents)
 
     let divs = [];
