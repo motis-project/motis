@@ -26,6 +26,8 @@ export const MapContainer: React.FC<{ 'translation': Translations, 'scheduleInfo
 
     const [simTimeCheckbox, setSimTimeCheckbox] = React.useState<boolean>(true);
 
+    const [clockString, setClockString] = React.useState<string>('');
+
     // On initial render searchDate will be null, waiting for the ScheduleInfoResponse. This useEffect should fire only once.
     useEffect(() => {
         setSimulationDate(props.searchDate);
@@ -39,11 +41,20 @@ export const MapContainer: React.FC<{ 'translation': Translations, 'scheduleInfo
 
     useEffect(() => {
         if (props.searchDate !== null) {
-            let newOffset = (simTimeCheckbox) ? simulationDate.diff(moment()) : systemDate.diff(moment()); 
+            let newOffset = (simTimeCheckbox) ? simulationDate.diff(moment()) : systemDate.diff(moment());
             console.log(newOffset);
             window.portEvents.pub('setTimeOffset', newOffset);
         }
     }, [simulationDate, simTimeCheckbox]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if(simulationDate){
+                setClockString(moment(simulationDate).format('HH:mm:ss'));
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
 
     return (
         <div className='map-container'>
@@ -68,7 +79,7 @@ export const MapContainer: React.FC<{ 'translation': Translations, 'scheduleInfo
                             className='icon'>link</i></a></div>
                     <div className='sim-icon' title='Simulationsmodus aktiv'><i className='icon'>warning</i></div>
                     <div className='time' id='sim-time-overlay'>
-                        {(simulationDate !== null) ? moment.unix(simulationDate.unix()).format(props.translation.dateFormat) + ' ' + moment().format('HH:mm:ss') : ''}
+                        {(simulationDate !== null) ? moment.unix(simulationDate.unix()).format(props.translation.dateFormat) + ' ' + clockString : ''}
                     </div>
                 </div>
                 <div className='train-color-picker-overlay'>
@@ -92,7 +103,7 @@ export const MapContainer: React.FC<{ 'translation': Translations, 'scheduleInfo
             <div className={simTimePickerSelected ? 'sim-time-picker-container' : 'sim-time-picker-container hide'}>
                 <div className='sim-time-picker-overlay'>
                     <div className='title'>
-                        <input type='checkbox' id='sim-mode-checkbox' name='sim-mode-checkbox' defaultChecked onClick={() => {setSimTimeCheckbox(!simTimeCheckbox)}}/>
+                        <input type='checkbox' id='sim-mode-checkbox' name='sim-mode-checkbox' defaultChecked onClick={() => { setSimTimeCheckbox(!simTimeCheckbox) }} />
                         <label htmlFor='sim-mode-checkbox'>{props.translation.simTime.simMode}</label>
                     </div>
                     <div className={simTimeCheckbox ? 'date' : 'date disabled'}>
