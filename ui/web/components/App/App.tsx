@@ -70,11 +70,6 @@ export const App: React.FC = () => {
                 intvBegin.hour(moment().hour());
                 intvBegin.minute(moment().minute());
                 setScheduleInfo(intv);
-                let currentTime = moment();
-                let adjustedDisplayDate = intvBegin;
-                adjustedDisplayDate.hour(currentTime.hour());
-                adjustedDisplayDate.minute(currentTime.minute());
-                setSearchDate(adjustedDisplayDate);
             })
     }, []);
 
