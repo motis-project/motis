@@ -78,7 +78,7 @@ const onClickHandler = (byScheduleTime: boolean, direction: string, eventCount: 
                 if(res.content.events.length !== 0 && !equal(res.content.events[res.content.events.length - 1], eventStations[eventStations.length - 1])) {
                     insertDateHeader(setEventsToDisplay, [...eventStations, ...res.content.events], translation);
                     setEventStations([...eventStations, ...res.content.events]);
-                    setMaxTime(Math.floor(res.content.events[res.content.events.length - 1].event.time / 1000) * 1000);
+                    setMaxTime((Math.floor(res.content.events[res.content.events.length - 1].event.time / 1000) + 1) * 1000);
                 }
             }
             setLoader(false);
