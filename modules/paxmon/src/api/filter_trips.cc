@@ -146,7 +146,7 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
           static_cast<std::uint16_t>(pax_limits.max_ - pax_limits.min_));
       if (include_edges) {
         ti.edge_load_infos_.emplace_back(edge_load_info{
-            e, cdf, false, load_factor_possibly_ge(cdf, capacity, 1.0F),
+            e, pdf, cdf, false, load_factor_possibly_ge(cdf, capacity, 1.0F),
             expected_pax});
         if (ignore_section) {
           continue;

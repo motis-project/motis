@@ -198,6 +198,17 @@ Offset<PaxMonEvent> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
       to_fbs_time(sched, me.expected_arrival_time_));
 }
 
+Offset<Vector<PaxMonPdfEntry const*>> pdf_to_fbs(FlatBufferBuilder& fbb,
+                                                 pax_pdf const& pdf) {
+  auto entries = std::vector<PaxMonPdfEntry>{};
+  for (auto const& [pax, prob] : utl::enumerate(pdf.data_)) {
+    if (prob != 0.F) {
+      entries.emplace_back(static_cast<std::uint32_t>(pax), prob);
+    }
+  }
+  return fbb.CreateVectorOfStructs(entries);
+}
+
 Offset<Vector<PaxMonCdfEntry const*>> cdf_to_fbs(FlatBufferBuilder& fbb,
                                                  pax_cdf const& cdf) {
   auto entries = std::vector<PaxMonCdfEntry>{};
@@ -271,8 +282,8 @@ Offset<PaxMonEdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
       motis_to_unixtime(sched, to->schedule_time()),
       motis_to_unixtime(sched, to->current_time()),
       get_capacity_type(eli.edge_), eli.edge_->capacity(),
-      cdf_to_fbs(fbb, eli.forecast_cdf_), eli.updated_,
-      eli.possibly_over_capacity_, eli.expected_passengers_);
+      pdf_to_fbs(fbb, eli.forecast_pdf_), cdf_to_fbs(fbb, eli.forecast_cdf_),
+      eli.updated_, eli.possibly_over_capacity_, eli.expected_passengers_);
 }
 
 Offset<PaxMonTripLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,

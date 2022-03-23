@@ -12,6 +12,7 @@ namespace motis::paxmon {
 
 struct edge_load_info {
   edge const* edge_{};
+  pax_pdf forecast_pdf_;
   pax_cdf forecast_cdf_;
   bool updated_{};
   bool possibly_over_capacity_{};

@@ -3,6 +3,11 @@ include "base/Station.fbs";
 
 namespace motis.paxmon;
 
+struct PaxMonPdfEntry {
+  n: uint;  // passengers
+  p: float; // probability
+}
+
 struct PaxMonCdfEntry {
   passengers: uint;
   probability: float;
@@ -19,6 +24,7 @@ table PaxMonEdgeLoadInfo {
   arrival_current_time: ulong;
   capacity_type: PaxMonCapacityType;
   capacity: uint;
+  passenger_pdf: [PaxMonPdfEntry];
   passenger_cdf: [PaxMonCdfEntry];
   updated: bool;
   possibly_over_capacity: bool;

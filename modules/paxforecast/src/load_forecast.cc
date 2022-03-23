@@ -44,8 +44,8 @@ load_forecast calc_load_forecast(schedule const& sched, universe const& uv,
     auto const expected_pax = get_expected_load(uv, e->pci_);
 
     std::lock_guard guard{mutex};
-    edges.emplace(
-        e, edge_load_info{e, cdf, true, possibly_over_capacity, expected_pax});
+    edges.emplace(e, edge_load_info{e, pdf, cdf, true, possibly_over_capacity,
+                                    expected_pax});
     for (auto const& trp : e->get_trips(sched)) {
       trips.emplace(trp);
     }
@@ -63,15 +63,16 @@ load_forecast calc_load_forecast(schedule const& sched, universe const& uv,
                 if (it != end(edges)) {
                   return it->second;
                 } else {
-                  auto const cdf =
-                      get_load_cdf(uv.passenger_groups_,
+                  auto const pdf =
+                      get_load_pdf(uv.passenger_groups_,
                                    uv.pax_connection_info_.groups_[e->pci_]);
+                  auto const cdf = get_cdf(pdf);
                   auto const possibly_over_capacity =
                       e->has_capacity() &&
                       load_factor_possibly_ge(cdf, e->capacity(), 1.0F);
                   auto const expected_pax = get_expected_load(uv, e->pci_);
-                  return edge_load_info{e, cdf, false, possibly_over_capacity,
-                                        expected_pax};
+                  return edge_load_info{
+                      e, pdf, cdf, false, possibly_over_capacity, expected_pax};
                 }
               })  //
             | utl::vec()};

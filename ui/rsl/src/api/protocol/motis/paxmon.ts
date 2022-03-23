@@ -392,6 +392,12 @@ export interface PaxMonTrackedUpdates {
 }
 
 // paxmon/PaxMonTripLoadInfo.fbs
+export interface PaxMonPdfEntry {
+  n: number;
+  p: number;
+}
+
+// paxmon/PaxMonTripLoadInfo.fbs
 export interface PaxMonCdfEntry {
   passengers: number;
   probability: number;
@@ -410,6 +416,7 @@ export interface PaxMonEdgeLoadInfo {
   arrival_current_time: number;
   capacity_type: PaxMonCapacityType;
   capacity: number;
+  passenger_pdf: PaxMonPdfEntry[];
   passenger_cdf: PaxMonCdfEntry[];
   updated: boolean;
   possibly_over_capacity: boolean;
