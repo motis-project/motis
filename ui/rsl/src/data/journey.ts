@@ -59,7 +59,7 @@ function getWalk(con: Connection, fromIdx: number, toIdx: number): Walk {
 }
 
 function overlapsRange(range: Range, fromIdx: number, toIdx: number): boolean {
-  return range.from <= toIdx && range.to >= fromIdx;
+  return range.from < toIdx && range.to > fromIdx;
 }
 
 function rangeSort<T extends Ranged>(a: T, b: T): number {
