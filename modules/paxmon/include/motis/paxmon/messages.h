@@ -73,6 +73,10 @@ flatbuffers::Offset<TripServiceInfo> to_fbs_trip_service_info(
     flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
     journey_leg const& leg);
 
+flatbuffers::Offset<PaxMonDistribution> to_fbs_distribution(
+    flatbuffers::FlatBufferBuilder& fbb, pax_pdf const& pdf,
+    pax_cdf const& cdf);
+
 flatbuffers::Offset<PaxMonEdgeLoadInfo> to_fbs(
     flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
     universe const& uv, edge_load_info const& eli);

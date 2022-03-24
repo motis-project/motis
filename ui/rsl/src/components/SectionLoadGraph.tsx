@@ -125,7 +125,7 @@ function SectionLoadGraph({
         numTicks={paxLimit / 10}
       />
       <ViolinPlot
-        data={section.passenger_pdf}
+        data={section.dist.pdf}
         stroke="#3038FF"
         strokeWidth={2}
         fill="#B2B5FE"

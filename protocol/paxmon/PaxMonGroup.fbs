@@ -23,6 +23,6 @@ table PaxMonGroup {
 
 struct PaxMonGroupBaseInfo {
   id: ulong;
-  passenger_count: uint;
-  probability: float;
+  n: uint; // passengers
+  p: float; // probability
 }

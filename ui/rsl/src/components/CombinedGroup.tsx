@@ -103,8 +103,7 @@ function CombinedGroup({
   const groupInfo = (
     <div>
       <span className="font-bold">
-        {combinedGroup.info.min_passenger_count}-
-        {combinedGroup.info.max_passenger_count} Reisende
+        {combinedGroup.info.dist.min}-{combinedGroup.info.dist.max} Reisende
         {groupByDirection !== "None" && (
           <>
             {groupByDirection === "Origin" ? " aus " : " in "}Richtung{" "}

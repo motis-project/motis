@@ -101,15 +101,9 @@ function TripSectionDetails({
             </div>
             <div>
               {sec.groups.length} Gruppen (
-              {sec.groups.reduce(
-                (sum, g) => sum + g.info.min_passenger_count,
-                0
-              )}
+              {sec.groups.reduce((sum, g) => sum + g.info.dist.min, 0)}
               {" - "}
-              {sec.groups.reduce(
-                (sum, g) => sum + g.info.max_passenger_count,
-                0
-              )}{" "}
+              {sec.groups.reduce((sum, g) => sum + g.info.dist.max, 0)}{" "}
               Reisende)
             </div>
             <ul>

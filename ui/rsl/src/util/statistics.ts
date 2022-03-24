@@ -11,10 +11,10 @@ import {
 export function probPaxLE(cdf: PaxMonCdfEntry[], limit: number): number {
   let prob = 0.0;
   for (const e of cdf) {
-    if (e.passengers > limit) {
+    if (e.n > limit) {
       break;
     }
-    prob = e.probability;
+    prob = e.p;
   }
   return prob;
 }
@@ -26,13 +26,13 @@ export function probPaxGT(cdf: PaxMonCdfEntry[], limit: number): number {
 export function paxQuantile(cdf: PaxMonCdfEntry[], q: number): number {
   let last = null;
   for (const e of cdf) {
-    if (e.probability === q) {
-      return e.passengers;
-    } else if (e.probability > q) {
+    if (e.p === q) {
+      return e.n;
+    } else if (e.p > q) {
       if (last !== null) {
-        return (last.passengers + e.passengers) / 2;
+        return (last.n + e.n) / 2;
       } else {
-        return e.passengers;
+        return e.n;
       }
     }
     last = e;
@@ -41,24 +41,30 @@ export function paxQuantile(cdf: PaxMonCdfEntry[], q: number): number {
 }
 
 export function getMaxPax(cdf: PaxMonCdfEntry[]): number {
-  return cdf[cdf.length - 1]?.passengers ?? 0;
+  return cdf[cdf.length - 1]?.n ?? 0;
 }
 
 export function processEdgeForecast(
   ef: PaxMonEdgeLoadInfoWithStats
 ): PaxMonEdgeLoadInfoWithStats {
-  ef.p_load_gt_100 =
-    ef.capacity == 0 ? 0 : probPaxGT(ef.passenger_cdf, ef.capacity);
-  ef.q_20 = paxQuantile(ef.passenger_cdf, 0.2);
-  ef.q_50 = paxQuantile(ef.passenger_cdf, 0.5);
-  ef.q_80 = paxQuantile(ef.passenger_cdf, 0.8);
-  ef.q_5 = paxQuantile(ef.passenger_cdf, 0.05);
-  ef.q_95 = paxQuantile(ef.passenger_cdf, 0.95);
-  ef.min_pax = ef.passenger_cdf.length > 0 ? ef.passenger_cdf[0].passengers : 0;
+  // TODO: REMOVE
+
+  /*
+  ef.p_load_gt_100 = ef.capacity == 0 ? 0 : probPaxGT(ef.dist.cdf, ef.capacity);
+  ef.q_50 = paxQuantile(ef.dist.cdf, 0.5);
+  ef.q_5 = paxQuantile(ef.dist.cdf, 0.05);
+  ef.q_95 = paxQuantile(ef.dist.cdf, 0.95);
+  ef.min_pax = ef.dist.cdf.length > 0 ? ef.dist.cdf[0].n : 0;
   ef.max_pax =
-    ef.passenger_cdf.length > 0
-      ? ef.passenger_cdf[ef.passenger_cdf.length - 1].passengers
-      : 0;
+    ef.dist.cdf.length > 0 ? ef.dist.cdf[ef.dist.cdf.length - 1].n : 0;
+   */
+
+  ef.p_load_gt_100 = ef.prob_over_capacity;
+  ef.q_50 = ef.dist.q50;
+  ef.q_5 = ef.dist.q5;
+  ef.q_95 = ef.dist.q95;
+  ef.min_pax = ef.dist.min;
+  ef.max_pax = ef.dist.max;
   return ef;
 }
 

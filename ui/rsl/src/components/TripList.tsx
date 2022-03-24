@@ -29,7 +29,6 @@ import { universeAtom } from "@/data/simulation";
 
 import classNames from "@/util/classNames";
 import { formatISODate, formatTime } from "@/util/dateFormat";
-import { getMaxPax } from "@/util/statistics";
 
 import MiniTripLoadGraph2 from "@/components/MiniTripLoadGraph2";
 
@@ -391,12 +390,11 @@ function TripListEntry({
   const critSections = ti.edges
     .filter((e) => e.possibly_over_capacity && e.capacity_type === "Known")
     .map((e) => {
-      const maxPax = getMaxPax(e.passenger_cdf);
       return {
         edge: e,
-        maxPax,
-        maxPercent: maxPax / e.capacity,
-        maxOverCap: Math.max(0, maxPax - e.capacity),
+        maxPax: e.dist.max,
+        maxPercent: e.dist.max / e.capacity,
+        maxOverCap: Math.max(0, e.dist.max - e.capacity),
       };
     });
   let criticalInfo = null;

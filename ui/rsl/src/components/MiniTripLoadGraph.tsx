@@ -1,7 +1,5 @@
 import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
 
-import { paxQuantile } from "@/util/statistics";
-
 export type MiniTripLoadGraphProps = {
   edges: PaxMonEdgeLoadInfo[];
 };
@@ -9,15 +7,9 @@ export type MiniTripLoadGraphProps = {
 function MiniTripLoadGraph({ edges }: MiniTripLoadGraphProps): JSX.Element {
   const graphWidth = 1000;
   const graphHeight = 100;
-
-  const minEdgeLoad = (eli: PaxMonEdgeLoadInfo) =>
-    eli.passenger_cdf.length > 0 ? eli.passenger_cdf[0].passengers : 0;
-  const maxEdgeLoad = (eli: PaxMonEdgeLoadInfo) =>
-    eli.passenger_cdf.length > 0
-      ? eli.passenger_cdf[eli.passenger_cdf.length - 1].passengers
-      : 0;
-  const avgEdgeLoad = (eli: PaxMonEdgeLoadInfo) =>
-    eli.passenger_cdf.length > 0 ? paxQuantile(eli.passenger_cdf, 0.5) : 0;
+  const minEdgeLoad = (eli: PaxMonEdgeLoadInfo) => eli.dist.min;
+  const maxEdgeLoad = (eli: PaxMonEdgeLoadInfo) => eli.dist.max;
+  const avgEdgeLoad = (eli: PaxMonEdgeLoadInfo) => eli.dist.q50;
 
   const maxCapacity = edges.reduce(
     (max, eli) => (eli.capacity ? Math.max(max, eli.capacity) : max),

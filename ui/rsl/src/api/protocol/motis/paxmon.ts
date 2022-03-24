@@ -20,8 +20,7 @@ export interface PaxMonAddGroupsResponse {
 // paxmon/PaxMonCombinedGroups.fbs
 export interface PaxMonCombinedGroups {
   groups: PaxMonGroupBaseInfo[];
-  min_passenger_count: number;
-  max_passenger_count: number;
+  dist: PaxMonDistribution;
 }
 
 // paxmon/PaxMonCompactJourney.fbs
@@ -51,6 +50,29 @@ export interface PaxMonCompactJourney {
 // paxmon/PaxMonDestroyUniverseRequest.fbs
 export interface PaxMonDestroyUniverseRequest {
   universe: number;
+}
+
+// paxmon/PaxMonDistribution.fbs
+export interface PaxMonPdfEntry {
+  n: number;
+  p: number;
+}
+
+// paxmon/PaxMonDistribution.fbs
+export interface PaxMonCdfEntry {
+  n: number;
+  p: number;
+}
+
+// paxmon/PaxMonDistribution.fbs
+export interface PaxMonDistribution {
+  min: number;
+  max: number;
+  q5: number;
+  q50: number;
+  q95: number;
+  pdf: PaxMonPdfEntry[];
+  cdf: PaxMonCdfEntry[];
 }
 
 // paxmon/PaxMonFilterGroupsRequest.fbs
@@ -302,8 +324,8 @@ export interface PaxMonGroup {
 // paxmon/PaxMonGroup.fbs
 export interface PaxMonGroupBaseInfo {
   id: number;
-  passenger_count: number;
-  probability: number;
+  n: number;
+  p: number;
 }
 
 // paxmon/PaxMonLocalization.fbs
@@ -392,18 +414,6 @@ export interface PaxMonTrackedUpdates {
 }
 
 // paxmon/PaxMonTripLoadInfo.fbs
-export interface PaxMonPdfEntry {
-  n: number;
-  p: number;
-}
-
-// paxmon/PaxMonTripLoadInfo.fbs
-export interface PaxMonCdfEntry {
-  passengers: number;
-  probability: number;
-}
-
-// paxmon/PaxMonTripLoadInfo.fbs
 export type PaxMonCapacityType = "Known" | "Unknown" | "Unlimited";
 
 // paxmon/PaxMonTripLoadInfo.fbs
@@ -416,10 +426,10 @@ export interface PaxMonEdgeLoadInfo {
   arrival_current_time: number;
   capacity_type: PaxMonCapacityType;
   capacity: number;
-  passenger_pdf: PaxMonPdfEntry[];
-  passenger_cdf: PaxMonCdfEntry[];
+  dist: PaxMonDistribution;
   updated: boolean;
   possibly_over_capacity: boolean;
+  prob_over_capacity: number;
   expected_passengers: number;
 }
 

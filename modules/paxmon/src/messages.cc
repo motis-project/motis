@@ -269,6 +269,15 @@ Offset<TripServiceInfo> to_fbs_trip_service_info(FlatBufferBuilder& fbb,
                                   get_service_infos_for_leg(sched, leg));
 }
 
+Offset<PaxMonDistribution> to_fbs_distribution(FlatBufferBuilder& fbb,
+                                               pax_pdf const& pdf,
+                                               pax_cdf const& cdf) {
+  auto const stats = get_pax_stats(cdf);
+  return CreatePaxMonDistribution(fbb, stats.limits_.min_, stats.limits_.max_,
+                                  stats.q5_, stats.q50_, stats.q95_,
+                                  pdf_to_fbs(fbb, pdf), cdf_to_fbs(fbb, cdf));
+}
+
 Offset<PaxMonEdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
                                   universe const& uv,
                                   edge_load_info const& eli) {
@@ -282,8 +291,9 @@ Offset<PaxMonEdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
       motis_to_unixtime(sched, to->schedule_time()),
       motis_to_unixtime(sched, to->current_time()),
       get_capacity_type(eli.edge_), eli.edge_->capacity(),
-      pdf_to_fbs(fbb, eli.forecast_pdf_), cdf_to_fbs(fbb, eli.forecast_cdf_),
-      eli.updated_, eli.possibly_over_capacity_, eli.expected_passengers_);
+      to_fbs_distribution(fbb, eli.forecast_pdf_, eli.forecast_cdf_),
+      eli.updated_, eli.possibly_over_capacity_, eli.probability_over_capacity_,
+      eli.expected_passengers_);
 }
 
 Offset<PaxMonTripLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
