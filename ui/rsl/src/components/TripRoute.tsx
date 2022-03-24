@@ -8,10 +8,10 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "react-query";
 
 import { TripId } from "@/api/protocol/motis";
+import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
 
 import { queryKeys, usePaxMonStatusQuery } from "@/api/paxmon";
 
-import { PaxMonEdgeLoadInfoWithStats } from "@/data/loadInfo";
 import { formatPercent } from "@/data/numberFormat";
 import { universeAtom } from "@/data/simulation";
 
@@ -50,7 +50,7 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
 
   const sectionCount = data.edges.length;
 
-  const maxPax = data.edges.reduce((max, ef) => Math.max(max, ef.max_pax), 0);
+  const maxPax = data.edges.reduce((max, ef) => Math.max(max, ef.dist.max), 0);
   const maxExpected = data.edges.reduce(
     (max, ef) => Math.max(max, ef.expected_passengers),
     0
@@ -95,7 +95,7 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
 
 type TripSectionProps = {
   tripId: TripId;
-  section: PaxMonEdgeLoadInfoWithStats;
+  section: PaxMonEdgeLoadInfo;
   index: number;
   sectionCount: number;
   maxVal: number;
@@ -161,16 +161,16 @@ function TripSection({ tripId, section, maxVal }: TripSectionProps) {
         <div
           className="w-10 pt-1 flex flex-col items-center"
           title={`Überlastungswahrscheinlichkeit: ${formatPercent(
-            section.p_load_gt_100
+            section.prob_over_capacity
           )}`}
         >
-          {section.p_load_gt_100 >= 0.01 ? (
+          {section.prob_over_capacity >= 0.01 ? (
             <>
               <span>
                 <ExclamationIcon className="w-5 h-5 fill-db-red-500" />
               </span>
               <span className="text-xs text-db-red-500">
-                {formatPercent(section.p_load_gt_100)}
+                {formatPercent(section.prob_over_capacity)}
               </span>
             </>
           ) : null}

@@ -4,13 +4,13 @@ import { CSSProperties, useRef } from "react";
 import { useQuery, useQueryClient } from "react-query";
 
 import { TripId } from "@/api/protocol/motis";
+import {
+  PaxMonEdgeLoadInfo,
+  PaxMonTripLoadInfo,
+} from "@/api/protocol/motis/paxmon";
 
 import { queryKeys, usePaxMonStatusQuery } from "@/api/paxmon";
 
-import {
-  PaxMonEdgeLoadInfoWithStats,
-  PaxMonTripLoadInfoWithStats,
-} from "@/data/loadInfo";
 import { universeAtom } from "@/data/simulation";
 
 import {
@@ -21,9 +21,9 @@ import {
 import { loadAndProcessTripInfo } from "@/util/tripInfo";
 
 function getSvgLinePath(
-  edges: PaxMonEdgeLoadInfoWithStats[],
+  edges: PaxMonEdgeLoadInfo[],
   maxVal: number,
-  getProp: (ef: PaxMonEdgeLoadInfoWithStats) => number
+  getProp: (ef: PaxMonEdgeLoadInfo) => number
 ) {
   const points = [];
   let x = 0;
@@ -66,7 +66,7 @@ function getYLabels(maxVal: number) {
 }
 
 function getCurrentTimePosition(
-  edges: PaxMonEdgeLoadInfoWithStats[],
+  edges: PaxMonEdgeLoadInfo[],
   currentTime: number
 ) {
   if (currentTime < edges[0].departure_current_time) {
@@ -134,10 +134,7 @@ function saveAsPNG(svgEl: SVGSVGElement | null, baseFileName: string) {
   img.src = svgUrl;
 }
 
-function getBaseFileName(
-  data: PaxMonTripLoadInfoWithStats,
-  systemTime: number
-) {
+function getBaseFileName(data: PaxMonTripLoadInfo, systemTime: number) {
   const parts = ["forecast", formatFileNameTime(systemTime)];
   for (const si of data.tsi.service_infos) {
     if (si.line) {
@@ -152,7 +149,7 @@ function getBaseFileName(
 type TripLoadForecastChartProps = {
   tripId: TripId;
   mode: "Interactive" | "Tooltip";
-  onSectionClick?: (e: PaxMonEdgeLoadInfoWithStats) => void;
+  onSectionClick?: (e: PaxMonEdgeLoadInfo) => void;
 };
 
 function TripLoadForecastChart({
@@ -187,7 +184,7 @@ function TripLoadForecastChart({
   const edges = data.edges;
   const graphWidth = edges.length * 50;
 
-  const maxPax = edges.reduce((max, ef) => Math.max(max, ef.max_pax || 0), 0);
+  const maxPax = edges.reduce((max, ef) => Math.max(max, ef.dist.max), 0);
   const maxCapacity = edges.reduce(
     (max, ef) => (ef.capacity ? Math.max(max, ef.capacity) : max),
     0
@@ -270,7 +267,7 @@ function TripLoadForecastChart({
     const style: CSSProperties = { fontSize: "8px", fill: "#000" };
     let text = "";
     if (e.capacity != 0) {
-      text = `${(e.p_load_gt_100 * 100).toFixed(0)}%`;
+      text = `${(e.prob_over_capacity * 100).toFixed(0)}%`;
       if (text === "0%") {
         style.fill = "#999";
       }
@@ -307,8 +304,8 @@ function TripLoadForecastChart({
   const spreadBottomPoints = [];
   let x = 0;
   for (const ef of edges) {
-    const topLoad = ef.q_95 || 0;
-    const bottomLoad = ef.q_5 || 0;
+    const topLoad = ef.dist.q95;
+    const bottomLoad = ef.dist.q5;
     const topY = 200 - Math.round((topLoad / maxVal) * 200);
     const bottomY = 200 - Math.round((bottomLoad / maxVal) * 200);
     spreadTopPoints.push(`${x} ${topY}`);
@@ -326,14 +323,14 @@ function TripLoadForecastChart({
 
   const expectedPath = (
     <path
-      d={getSvgLinePath(edges, maxVal, (ef) => ef.expected_passengers || 0)}
+      d={getSvgLinePath(edges, maxVal, (ef) => ef.expected_passengers)}
       style={{ stroke: "#333", strokeDasharray: 2, fill: "none" }}
     />
   );
 
   const medianPath = (
     <path
-      d={getSvgLinePath(edges, maxVal, (ef) => ef.q_50 || 0)}
+      d={getSvgLinePath(edges, maxVal, (ef) => ef.dist.q50)}
       style={{ stroke: "#3038FF", strokeWidth: 2, fill: "none" }}
     />
   );

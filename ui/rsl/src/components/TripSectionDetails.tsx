@@ -4,20 +4,20 @@ import { useState } from "react";
 import { TripId } from "@/api/protocol/motis";
 import {
   GroupsInTripSection,
+  PaxMonEdgeLoadInfo,
   PaxMonGroupByStation,
   PaxMonGroupFilter,
 } from "@/api/protocol/motis/paxmon";
 
 import { usePaxMonGroupsInTripQuery } from "@/api/paxmon";
 
-import { PaxMonEdgeLoadInfoWithStats } from "@/data/loadInfo";
 import { universeAtom } from "@/data/simulation";
 
 import CombinedGroup from "@/components/CombinedGroup";
 
 function isSameSection(
   sec: GroupsInTripSection,
-  selected: PaxMonEdgeLoadInfoWithStats | undefined
+  selected: PaxMonEdgeLoadInfo | undefined
 ) {
   return (
     selected != undefined &&
@@ -48,7 +48,7 @@ const groupByStationOptions: Array<{
 
 type TripSectionDetailsProps = {
   tripId: TripId;
-  selectedSection: PaxMonEdgeLoadInfoWithStats | undefined;
+  selectedSection: PaxMonEdgeLoadInfo | undefined;
   onClose: () => void;
 };
 

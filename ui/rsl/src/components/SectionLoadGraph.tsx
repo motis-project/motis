@@ -4,9 +4,10 @@ import { ParentSize } from "@visx/responsive";
 import { scaleLinear } from "@visx/scale";
 import { ViolinPlot } from "@visx/stats";
 
-import { PaxMonPdfEntry } from "@/api/protocol/motis/paxmon";
-
-import { PaxMonEdgeLoadInfoWithStats } from "@/data/loadInfo";
+import {
+  PaxMonEdgeLoadInfo,
+  PaxMonPdfEntry,
+} from "@/api/protocol/motis/paxmon";
 
 const defaultMargin = {
   top: 0,
@@ -16,7 +17,7 @@ const defaultMargin = {
 };
 
 type SectionLoadGraphProps = {
-  section: PaxMonEdgeLoadInfoWithStats;
+  section: PaxMonEdgeLoadInfo;
   width: number;
   height: number;
   maxVal?: number | undefined;
@@ -37,7 +38,7 @@ function SectionLoadGraph({
   const count = (e: PaxMonPdfEntry) => e.p;
   const value = (e: PaxMonPdfEntry) => e.n;
 
-  const paxLimit = maxVal ?? section.max_pax;
+  const paxLimit = maxVal ?? section.dist.max;
   const paxScale = scaleLinear<number>({
     domain: [0, paxLimit],
     range: [margin.left, margin.left + innerWidth],

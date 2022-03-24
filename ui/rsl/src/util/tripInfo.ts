@@ -1,25 +1,24 @@
 import { TripId } from "@/api/protocol/motis";
+import { PaxMonTripLoadInfo } from "@/api/protocol/motis/paxmon";
 
 import { sendPaxMonTripLoadInfosRequest } from "@/api/paxmon";
 
-import { PaxMonTripLoadInfoWithStats } from "@/data/loadInfo";
-
-import { addEdgeStatistics } from "@/util/statistics";
+// TODO: REMOVE
 
 export async function loadAndProcessTripInfos(
   universe: number,
   trips: TripId[]
-): Promise<PaxMonTripLoadInfoWithStats[]> {
+): Promise<PaxMonTripLoadInfo[]> {
   const res = await sendPaxMonTripLoadInfosRequest({
     universe,
     trips,
   });
-  return res.load_infos.map(addEdgeStatistics);
+  return res.load_infos;
 }
 
 export async function loadAndProcessTripInfo(
   universe: number,
   trip: TripId
-): Promise<PaxMonTripLoadInfoWithStats> {
+): Promise<PaxMonTripLoadInfo> {
   return (await loadAndProcessTripInfos(universe, [trip]))[0];
 }
