@@ -5,18 +5,41 @@ import { DatePicker } from "../Overlay/DatePicker";
 import { Translations } from "../App/Localization";
 import { RailvizContextMenu } from "./RailvizContextMenu";
 import { Interval } from "../Types/RoutingTypes";
+import { RailvizTooltipTrain } from "./RailvizTooltipTrain";
+import { RailvizTooltipStation } from "./RailvizTooltipStation";
 
-export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo': Interval}> = (props) => {
+export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo': Interval, 'mapData': any}> = (props) => {
 
     const [simTimePickerSelected, setSimTimePickerSelected] = React.useState<Boolean>(false);
     
     const[currMoment, setCurrMoment] = React.useState<moment.Moment>(moment());
+
+    const[railvizTooltipClass, setRailvizTooltipClass] = React.useState<string>('railviz-tooltip hidden');
+    const[isTrainTooltip, setIsTrainTooltip] = React.useState<boolean>(null);
 
     useEffect(() => {
         window.portEvents.sub('mapInitFinished', function(){
             window.portEvents.pub('mapSetLocale', props.translation.search);
         });
     });
+
+    useEffect(() => {
+        if(props.mapData){
+            if(props.mapData.hoveredTrain){
+                /**train stuff */
+                setRailvizTooltipClass('railviz-tooltip train visible');
+                setIsTrainTooltip(true);
+                return;
+            }
+            if(props.mapData.hoveredStation){
+                /**station stuff */
+                setRailvizTooltipClass('railviz-tooltip station visible');
+                setIsTrainTooltip(false);
+                return;
+            }
+        }
+        setRailvizTooltipClass('railviz-tooltip hidden');
+    }, [props.mapData]);
 
     return (
         <div className="map-container">
@@ -26,7 +49,15 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
             <div id="map-foreground" className="mapboxgl-map">
             
             </div>
-            <div className="railviz-tooltip hidden"></div>
+            <div className={railvizTooltipClass} style={{ top: props.mapData ? props.mapData.mouseY : 0+'px', left: props.mapData ? props.mapData.mouseX : 0+'px'}}>
+                {props.mapData ?
+                  isTrainTooltip ? 
+                    <RailvizTooltipTrain train={props.mapData.hoveredTrain}/>
+                  :
+                  <RailvizTooltipStation station={props.mapData.hoveredStation}/>
+                : 
+                  <></>}
+            </div>
             <div className="map-bottom-overlay">
                 <div className="sim-time-overlay" onClick={() => setSimTimePickerSelected(!simTimePickerSelected)}>
                     <div id="railviz-loading-spinner" className="">

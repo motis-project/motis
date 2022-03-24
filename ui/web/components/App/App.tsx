@@ -47,7 +47,16 @@ export const App: React.FC = () => {
     // Current Date
     const [searchDate, setSearchDate] = React.useState<moment.Moment>(null);
 
+    // Current hovered map Data
+    const [mapData, setMapData] = React.useState<any>();
+
     let isMobile = false;
+
+    React.useEffect(() => {
+        window.portEvents.sub('mapSetTooltip', function(data){
+            setMapData(data);
+        });
+    });
 
     React.useEffect(() => {
         isMobile = window.matchMedia("only screen and (max-width: 500px)").matches;
@@ -88,7 +97,7 @@ export const App: React.FC = () => {
                 :
                 <>
                     {/* visible && <MapView />*/}
-                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} />
+                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} mapData={mapData}/>
                     <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate} setSearchDate={setSearchDate}/>
                     {//<StationSearchView />}
                     }<StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} />
