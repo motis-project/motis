@@ -49,7 +49,7 @@ export function usePaxMonStatusQuery(
   );
 }
 
-export async function sendPaxMonTripLoadInfosRequest(
+export async function sendPaxMonGetTripLoadInfosRequest(
   content: PaxMonGetTripLoadInfosRequest
 ): Promise<PaxMonGetTripLoadInfosResponse> {
   const msg = await sendRequest(

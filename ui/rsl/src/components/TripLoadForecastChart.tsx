@@ -9,7 +9,11 @@ import {
   PaxMonTripLoadInfo,
 } from "@/api/protocol/motis/paxmon";
 
-import { queryKeys, usePaxMonStatusQuery } from "@/api/paxmon";
+import {
+  queryKeys,
+  sendPaxMonGetTripLoadInfosRequest,
+  usePaxMonStatusQuery,
+} from "@/api/paxmon";
 
 import { universeAtom } from "@/data/simulation";
 
@@ -18,7 +22,6 @@ import {
   formatLongDateTime,
   formatTime,
 } from "@/util/dateFormat";
-import { loadAndProcessTripInfo } from "@/util/tripInfo";
 
 function getSvgLinePath(
   edges: PaxMonEdgeLoadInfo[],
@@ -163,7 +166,7 @@ function TripLoadForecastChart({
   const queryClient = useQueryClient();
   const { data /*, isLoading, error*/ } = useQuery(
     queryKeys.tripLoad(universe, tripId),
-    async () => loadAndProcessTripInfo(universe, tripId),
+    () => sendPaxMonGetTripLoadInfosRequest({ universe, trips: [tripId] }),
     {
       enabled: !!status,
       placeholderData: () => {
@@ -181,7 +184,8 @@ function TripLoadForecastChart({
   }
 
   const systemTime = status.system_time;
-  const edges = data.edges;
+  const tripData = data.load_infos[0];
+  const edges = tripData.edges;
   const graphWidth = edges.length * 50;
 
   const maxPax = edges.reduce((max, ef) => Math.max(max, ef.dist.max), 0);
@@ -287,7 +291,7 @@ function TripLoadForecastChart({
 
   const names = [
     ...new Set(
-      data.tsi.service_infos.map(
+      tripData.tsi.service_infos.map(
         (si) =>
           `${si.category} ${si.train_nr}` +
           (si.line ? ` [Linie ${si.line}]` : "")
@@ -298,7 +302,7 @@ function TripLoadForecastChart({
     systemTime
   )}`;
 
-  const baseFileName = getBaseFileName(data, systemTime);
+  const baseFileName = getBaseFileName(tripData, systemTime);
 
   const spreadTopPoints = [];
   const spreadBottomPoints = [];

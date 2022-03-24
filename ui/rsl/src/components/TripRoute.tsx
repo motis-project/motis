@@ -10,14 +10,17 @@ import { useQuery, useQueryClient } from "react-query";
 import { TripId } from "@/api/protocol/motis";
 import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
 
-import { queryKeys, usePaxMonStatusQuery } from "@/api/paxmon";
+import {
+  queryKeys,
+  sendPaxMonGetTripLoadInfosRequest,
+  usePaxMonStatusQuery,
+} from "@/api/paxmon";
 
 import { formatPercent } from "@/data/numberFormat";
 import { universeAtom } from "@/data/simulation";
 
 import classNames from "@/util/classNames";
 import { formatDate, formatTime } from "@/util/dateFormat";
-import { loadAndProcessTripInfo } from "@/util/tripInfo";
 
 import SectionLoadGraph from "@/components/SectionLoadGraph";
 import TripSectionDetails from "@/components/TripSectionDetails";
@@ -33,7 +36,7 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
   const queryClient = useQueryClient();
   const { data /*, isLoading, error*/ } = useQuery(
     queryKeys.tripLoad(universe, tripId),
-    async () => loadAndProcessTripInfo(universe, tripId),
+    () => sendPaxMonGetTripLoadInfosRequest({ universe, trips: [tripId] }),
     {
       enabled: !!status,
       placeholderData: () => {
@@ -48,22 +51,25 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
     return <div className="w-full text-center">Zugverlauf wird geladen...</div>;
   }
 
-  const sectionCount = data.edges.length;
+  const tripData = data.load_infos[0];
+  const edges = tripData.edges;
+  const sectionCount = tripData.edges.length;
 
-  const maxPax = data.edges.reduce((max, ef) => Math.max(max, ef.dist.max), 0);
-  const maxExpected = data.edges.reduce(
+  const maxPax = edges.reduce((max, ef) => Math.max(max, ef.dist.max), 0);
+  const maxExpected = edges.reduce(
     (max, ef) => Math.max(max, ef.expected_passengers),
     0
   );
-  const maxCapacity = data.edges.reduce(
+  const maxCapacity = edges.reduce(
     (max, ef) => (ef.capacity ? Math.max(max, ef.capacity) : max),
     0
   );
   const maxVal = Math.max(maxPax, maxExpected, maxCapacity);
 
-  const category = data.tsi.service_infos[0]?.category ?? "";
-  const trainNr = data.tsi.service_infos[0]?.train_nr ?? data.tsi.trip.train_nr;
-  const line = data.tsi.service_infos[0]?.line;
+  const category = tripData.tsi.service_infos[0]?.category ?? "";
+  const trainNr =
+    tripData.tsi.service_infos[0]?.train_nr ?? tripData.tsi.trip.train_nr;
+  const line = tripData.tsi.service_infos[0]?.line;
 
   return (
     <div className="">
@@ -72,13 +78,14 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
           {category} {trainNr}
         </span>
         {line && <span>Linie {line}</span>}
-        <span>{formatDate(data.tsi.trip.time)}</span>
+        <span>{formatDate(tripData.tsi.trip.time)}</span>
         <span>
-          {data.tsi.primary_station.name} → {data.tsi.secondary_station.name}
+          {tripData.tsi.primary_station.name} →{" "}
+          {tripData.tsi.secondary_station.name}
         </span>
       </div>
       <div className="flex flex-col gap-2">
-        {data.edges.map((section, idx) => (
+        {edges.map((section, idx) => (
           <TripSection
             key={idx}
             tripId={tripId}
