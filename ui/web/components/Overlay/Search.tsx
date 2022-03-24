@@ -7,7 +7,7 @@ import { DatePicker } from './DatePicker';
 import { Modepicker } from './ModePicker';
 import { SearchInputField } from './SearchInputField';
 import { Translations } from '../App/Localization';
-import { getFromLocalStorage } from '../App/LocalStorage';
+import { getFromLocalStorage, ModeLocalStorage } from '../App/LocalStorage';
 import { Interval } from '../Types/RoutingTypes';
 import { Address } from '../Types/SuggestionTypes';
 import { Connection, Position, Station, WalkInfo } from '../Types/Connection';
@@ -58,7 +58,7 @@ const getDestinationType = (destination: Station | Address) => {
 
 const parseStationOrAddress = (s: Station | Address) => {
     if (isStation(s)) {
-        return { id: s.id, name: s.name };
+        return { name: s.name, id: s.id, };
     }else {
         return { position: s.pos };
     }
@@ -83,6 +83,30 @@ const getRoutingOptions = (startModes: Mode[], start: Station | Address, searchT
                                 content: {start_type: getStartType(start), start_modes: startModes, start: getStart(start, min_connection_count, interval, extend_interval_later, extend_interval_earlier) , search_type: searchType, search_dir: searchDirection, destination_type: getDestinationType(destination), destination_modes: destinationModes, destination: parseStationOrAddress(destination) } })
     };
 };
+
+
+const getModes = (key: string) => {
+    let modes: ModeLocalStorage = getFromLocalStorage(key);
+    let res = [];
+
+    if (modes) {
+        if (modes.walk.enabled) {
+            res.push({ mode_type: 'FootPPR', mode: { search_options: { profile: modes.walk.search_profile.profile, duration_limit: modes.walk.search_profile.max_duration * 60 } }})
+        }
+        if (modes.bike.enabled) {
+            res.push({ mode_type: 'Bike', mode: { max_duration: modes.bike.max_duration * 60 } })
+        }
+        if (modes.car.enabled) {
+            if (modes.car.use_parking) {
+                res.push({ mode_type: 'CarParking', mode: { max_car_duration: modes.car.max_duration * 60, ppr_search_options: { profile: 'default', duration_limit: 300 } } })
+            }else {
+                res.push({ mode_type: 'Car', mode: { max_duration: modes.car.max_duration * 60 } })
+            }
+        }
+    }
+
+    return res;
+}
 
 
 const mapConnections = (connections: Connection[]) => {
@@ -192,22 +216,12 @@ function useOutsideAlerter(ref: React.MutableRefObject<any>, setSelected : React
 
 
 export const Search: React.FC<SearchTypes> = (props) => {
- 
-    // Start
-    // StartType
-    const [startType, setStartType] = useState<string>('PretripStart');
     
     // StartModes
-    const [startModes, setStartModes] = useState<Mode[]>([]);
-    
-    
-    // Destination
-    // DestinationType
-    const [destinationType, setDestinationType] = useState<string>('InputStation');
+    const [startModes, setStartModes] = useState<Mode[]>(getModes('motis.routing.from_modes'));
     
     // Destination_modes tracks the ModePicker for the Destination
-    const [destinationModes, setDestinationModes] = useState<Mode[]>([]);
-    
+    const [destinationModes, setDestinationModes] = useState<Mode[]>(getModes('motis.routing.to_modes'));
     
     // searchTime
     // SearchTime stores the currently displayed Time
@@ -246,7 +260,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
             setSearchForward({begin: currDate, end: currDate + 3600 * 2});
             setSearchBackward({begin: currDate, end: currDate + 3600 * 2});
         }
-        if (props.start !== null && props.destination !== null && props.searchDate) {
+        if (props.start !== null && props.destination !== null && props.searchDate && startModes && destinationModes) {
             let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
             props.setLoading(true);
 
@@ -346,9 +360,10 @@ export const Search: React.FC<SearchTypes> = (props) => {
                                         setSearchDisplay={props.setStart}
                                         localStorageStation='motis.routing.from_location'/>
                         <Modepicker translation={props.translation} 
-                                    title={props.translation.search.startTransports} 
+                                    title={props.translation.search.startTransports}
                                     setModes={setStartModes}
-                                    localStorageModes='motis.routing.from_modes'/>
+                                    localStorageModes='motis.routing.from_modes'
+                                    modes={startModes}/>
                     </div>
                     <div className='swap-locations-btn'>
                         <label className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'>
@@ -380,7 +395,8 @@ export const Search: React.FC<SearchTypes> = (props) => {
                         <Modepicker translation={props.translation} 
                                     title={props.translation.search.destinationTransports} 
                                     setModes={setDestinationModes}
-                                    localStorageModes='motis.routing.to_modes'/>
+                                    localStorageModes='motis.routing.to_modes'
+                                    modes={destinationModes} />
                     </div>
                 </div>
                 <div className='pure-u-1 pure-u-sm-9-24'>
