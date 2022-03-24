@@ -13,6 +13,7 @@ import { Connection, Station, Transport, TransportInfo, TripId } from '../Types/
 import { Address } from '../Types/SuggestionTypes';
 import { Interval } from '../Types/RoutingTypes';
 
+
 const getTransportCountString = (transports: Transport[], translation: Translations) => {
     let count = 0;
     for (let index = 0; index < transports.length; index++) {
@@ -22,6 +23,7 @@ const getTransportCountString = (transports: Transport[], translation: Translati
     }
     return translation.connections.interchanges(count);
 }
+
 
 export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment}> = (props) => {
     
@@ -50,6 +52,9 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
 
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
 
+    // If true, renders the Loading animation for the connectionList
+    const [loading, setLoading] = useState<boolean>(false);
+
     
     // On initial render searchDate will be null, waiting for the ScheduleInfoResponse. This useEffect should fire only once.
     useEffect(() => {
@@ -74,83 +79,98 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                     setConnections={setConnections} 
                                     setExtendForwardFlag={setExtendForwardFlag}
                                     setExtendBackwardFlag={setExtendBackwardFlag}
-                                    setSearchDate={setSearchDate}/>
-                            {!connections ?
-                                props.scheduleInfo ?    
-                                    <div id='connections'>
-                                        {props.searchDate && (props.searchDate.unix() < props.scheduleInfo.begin || props.searchDate.unix() > props.scheduleInfo.end) ?
-                                        <div className="main-error">
-                                            <div className="">{props.translation.errors.journeyDateNotInSchedule}</div>
-                                            <div className="schedule-range">{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
-                                        </div>
-                                        :
-                                        <div className='no-results'>
-                                            <div className="schedule-range">{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
-                                        </div> 
-                                        }
-                                    </div>
-                                    :
+                                    setSearchDate={setSearchDate}
+                                    setLoading={setLoading}/>
+                            {props.scheduleInfo ?
+                                loading ?
                                     <Spinner />
-                                : 
-                                <div id='connections'>
-                                    <div className='connections'>
-                                        <div className='extend-search-interval search-before' onClick={() => setExtendBackwardFlag(true)}>
-                                            {extendBackwardFlag ?
-                                                <Spinner />
-                                                :
-                                                <a>{props.translation.connections.extendBefore}</a>
-                                            }
-                                        </div>
-                                        <div className='connection-list'>
-                                            {connections.map((connectionElem: Connection, index) => (
-                                                connectionElem.dummyDay ?
-                                                <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
-                                                :
-                                                <div className='connection' key={index} onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}
-                                                                                        onMouseEnter={() => { let ids = []; ids.push(index-1); window.portEvents.pub('mapHighlightConnections', ids);}}
-                                                                                        onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', []); }}>
-                                                    <div className='pure-g'>
-                                                        <div className='pure-u-4-24 connection-times'>
-                                                            <div className='connection-departure'>
-                                                                {moment.unix(connectionElem.stops[0].departure.time).format('HH:mm')}
-                                                            </div>
-                                                            <div className='connection-arrival'>
-                                                                {moment.unix(connectionElem.stops[connectionElem.stops.length - 1].arrival.time).format('HH:mm')}
-                                                            </div>
-                                                        </div>
-                                                        <div className='pure-u-4-24 connection-duration'>
-                                                            {duration(connectionElem.stops[0].departure.time, connectionElem.stops[connectionElem.stops.length - 1].arrival.time)}
-                                                        </div>
-                                                        <div className='pure-u-16-24 connection-trains'>
-                                                            <div className='transport-graph'>
-                                                                <ConnectionRender connection={connectionElem} setDetailViewHidden={setDetailViewHidden} />
-                                                                <div className='tooltip' style={{ position: 'absolute', left: '0px', top: '23px' }}>
-                                                                    <div className='stations'>
-                                                                        <div className='departure'><span className='station'>{connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.from].station.name}</span><span
-                                                                            className='time'>{moment.unix(connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.from].departure.time).format('HH:mm')}</span></div>
-                                                                        <div className='arrival'><span className='station'>{connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.to].station.name}</span><span
-                                                                            className='time'>{moment.unix(connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.to].arrival.time).format('HH:mm')}</span></div>
+                                    :
+                                    connections ? 
+                                        connections.length !== 0 ?   
+                                            <div id='connections'>
+                                                <div className='connections'>
+                                                    <div className='extend-search-interval search-before' onClick={() => setExtendBackwardFlag(true)}>
+                                                        {extendBackwardFlag ?
+                                                            <Spinner />
+                                                            :
+                                                            <a>{props.translation.connections.extendBefore}</a>
+                                                        }
+                                                    </div>
+                                                    <div className='connection-list'>
+                                                        {connections.map((connectionElem: Connection, index) => (
+                                                            connectionElem.dummyDay ?
+                                                            <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
+                                                            :
+                                                            <div className={`connection ${connectionElem.new}`} key={index} onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}
+                                                                                                    onMouseEnter={() => { let ids = []; ids.push(index-1); window.portEvents.pub('mapHighlightConnections', ids);}}
+                                                                                                    onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', []); }}>
+                                                                <div className='pure-g'>
+                                                                    <div className='pure-u-4-24 connection-times'>
+                                                                        <div className='connection-departure'>
+                                                                            {moment.unix(connectionElem.stops[0].departure.time).format('HH:mm')}
+                                                                        </div>
+                                                                        <div className='connection-arrival'>
+                                                                            {moment.unix(connectionElem.stops[connectionElem.stops.length - 1].arrival.time).format('HH:mm')}
+                                                                        </div>
                                                                     </div>
-                                                                    <div className='transport-name'><span>{(connectionElem.transports[0].move as TransportInfo).name}</span></div>
+                                                                    <div className='pure-u-4-24 connection-duration'>
+                                                                        {duration(connectionElem.stops[0].departure.time, connectionElem.stops[connectionElem.stops.length - 1].arrival.time)}
+                                                                    </div>
+                                                                    <div className='pure-u-16-24 connection-trains'>
+                                                                        <div className='transport-graph'>
+                                                                            <ConnectionRender connection={connectionElem} setDetailViewHidden={setDetailViewHidden} />
+                                                                            <div className='tooltip' style={{ position: 'absolute', left: '0px', top: '23px' }}>
+                                                                                <div className='stations'>
+                                                                                    <div className='departure'><span className='station'>{connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.from].station.name}</span><span
+                                                                                        className='time'>{moment.unix(connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.from].departure.time).format('HH:mm')}</span></div>
+                                                                                    <div className='arrival'><span className='station'>{connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.to].station.name}</span><span
+                                                                                        className='time'>{moment.unix(connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.to].arrival.time).format('HH:mm')}</span></div>
+                                                                                </div>
+                                                                                <div className='transport-name'><span>{(connectionElem.transports[0].move as TransportInfo).name}</span></div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
                                                             </div>
+                                                        </div>
+                                                    ))}
+                                                    <div className='divider footer'></div>
+                                                    <div className='extend-search-interval search-after' onClick={() => setExtendForwardFlag(true)}>
+                                                        {extendForwardFlag ?
+                                                            <Spinner />
+                                                            :
+                                                            <a>{props.translation.connections.extendAfter}</a>
+                                                        }
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        ))}
-                                        <div className='divider footer'></div>
-                                        <div className='extend-search-interval search-after' onClick={() => setExtendForwardFlag(true)}>
-                                            {extendForwardFlag ?
-                                                <Spinner />
-                                                :
-                                                <a>{props.translation.connections.extendAfter}</a>
-                                            }
+                                            :
+                                            <div id='connections'>
+                                                {props.searchDate && (props.searchDate.unix() < props.scheduleInfo.begin || props.searchDate.unix() > props.scheduleInfo.end) ?
+                                                    <div className="main-error">
+                                                        <div className="">{props.translation.errors.journeyDateNotInSchedule}</div>
+                                                        <div className="schedule-range">{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
+                                                    </div>
+                                                    :
+                                                    <div className='no-results'>
+                                                        <div>{props.translation.connections.noResults}</div>
+                                                        <div className="schedule-range">{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        :
+                                        <div id='connections'>
+                                            <div className='no-results'>
+                                                <div className="schedule-range">{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
+                                            </div>
                                         </div>
-                                    </div>
+                                :
+                                <div className='no-results'>
+                                    {''}
                                 </div>
-                            </div>
                             }
-                        </> :
+                        </> 
+                        :
                         <div className="connection-details">
                             <div className="connection-info">
                                 <div className="header">
