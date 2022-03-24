@@ -186,8 +186,10 @@ const sendConnectionsToOverlay = (setConnections: React.Dispatch<React.SetStateA
 };
 
 
-const handleErrors = (response) => {
+const handleErrors = (response, setLoading: React.Dispatch<React.SetStateAction<boolean>>, setConnections: React.Dispatch<React.SetStateAction<Connection[]>>) => {
     if (!response.ok) {
+        setLoading(false);
+        setConnections([]);
         throw Error(response.statusText);
     }
     return response;
@@ -265,7 +267,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
             props.setLoading(true);
 
             fetch(requestURL, getRoutingOptions(startModes, props.start, searchType, searchDirection, destinationModes, props.destination, {begin: props.searchDate.unix(), end: props.searchDate.unix() + 3600 * 2}, 5, true, true))
-                .then(handleErrors)
+                .then(res => handleErrors(res, props.setLoading, props.setConnections))
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
                     console.log("Response came in");
@@ -294,7 +296,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
             let searchIntv = props.extendBackwardFlag ? searchBackward : searchForward;
 
             fetch(requestURL, getRoutingOptions(startModes, props.start, searchType, searchDirection, destinationModes, props.destination, searchIntv, 3, props.extendForwardFlag, props.extendBackwardFlag))
-                .then(handleErrors)
+                .then(res => handleErrors(res, props.setLoading, props.setConnections))
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
                     console.log("Response came in");
