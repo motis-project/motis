@@ -102,6 +102,8 @@ include "paxmon/PaxMonUniverseForked.fbs";
 include "paxmon/PaxMonUniverseDestroyed.fbs";
 include "paxmon/PaxMonGetInterchangesRequest.fbs";
 include "paxmon/PaxMonGetInterchangesResponse.fbs";
+include "paxmon/PaxMonGetAddressableGroupsRequest.fbs";
+include "paxmon/PaxMonGetAddressableGroupsResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 include "paxforecast/PaxForecastApplyMeasuresResponse.fbs";
@@ -278,7 +280,9 @@ union MsgContent {
   motis.rt.RtGraphUpdated                                                 = 126,
   motis.lookup.LookupRiBasisRequest                                       = 127,
   motis.lookup.LookupRiBasisResponse                                      = 128,
-  motis.paxforecast.PaxForecastApplyMeasuresResponse                      = 129
+  motis.paxforecast.PaxForecastApplyMeasuresResponse                      = 129,
+  motis.paxmon.PaxMonGetAddressableGroupsRequest                          = 130,
+  motis.paxmon.PaxMonGetAddressableGroupsResponse                         = 131
 }
 
 // Destination Examples:

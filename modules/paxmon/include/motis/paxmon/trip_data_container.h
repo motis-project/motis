@@ -53,11 +53,11 @@ struct trip_data_container {
 
   dynamic_fws_multimap<edge_index>::const_bucket edges(
       trip_data_index tdi) const {
-    return edges_[tdi];
+    return edges_.at(tdi);
   }
 
   dynamic_fws_multimap<edge_index>::mutable_bucket edges(trip_data_index tdi) {
-    return edges_[tdi];
+    return edges_.at(tdi);
   }
 
   dynamic_fws_multimap<event_node_index>::const_bucket canceled_nodes(

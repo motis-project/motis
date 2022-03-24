@@ -271,11 +271,17 @@ Offset<TripServiceInfo> to_fbs_trip_service_info(FlatBufferBuilder& fbb,
 
 Offset<PaxMonDistribution> to_fbs_distribution(FlatBufferBuilder& fbb,
                                                pax_pdf const& pdf,
-                                               pax_cdf const& cdf) {
-  auto const stats = get_pax_stats(cdf);
+                                               pax_cdf const& cdf,
+                                               pax_stats const& stats) {
   return CreatePaxMonDistribution(fbb, stats.limits_.min_, stats.limits_.max_,
                                   stats.q5_, stats.q50_, stats.q95_,
                                   pdf_to_fbs(fbb, pdf), cdf_to_fbs(fbb, cdf));
+}
+
+Offset<PaxMonDistribution> to_fbs_distribution(FlatBufferBuilder& fbb,
+                                               pax_pdf const& pdf,
+                                               pax_cdf const& cdf) {
+  return to_fbs_distribution(fbb, pdf, cdf, get_pax_stats(cdf));
 }
 
 Offset<PaxMonEdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,

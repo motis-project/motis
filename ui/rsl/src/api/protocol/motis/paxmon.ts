@@ -192,6 +192,50 @@ export interface PaxMonForkUniverseResponse {
   schedule: number;
 }
 
+// paxmon/PaxMonGetAddressableGroupsRequest.fbs
+export interface PaxMonGetAddressableGroupsRequest {
+  universe: number;
+  trip: TripId;
+}
+
+// paxmon/PaxMonGetAddressableGroupsResponse.fbs
+export interface PaxMonAddressableGroupsByFeeder {
+  trip: TripServiceInfo;
+  cgs: PaxMonCombinedGroups;
+}
+
+// paxmon/PaxMonGetAddressableGroupsResponse.fbs
+export interface PaxMonAddressableGroupsByEntry {
+  entry_station: Station;
+  departure_schedule_time: number;
+  cgs: PaxMonCombinedGroups;
+  by_feeder: PaxMonAddressableGroupsByFeeder[];
+  entering_here: PaxMonCombinedGroups;
+}
+
+// paxmon/PaxMonGetAddressableGroupsResponse.fbs
+export interface PaxMonAddressableGroupsByInterchange {
+  future_interchange: Station;
+  cgs: PaxMonCombinedGroups;
+  by_entry: PaxMonAddressableGroupsByEntry[];
+}
+
+// paxmon/PaxMonGetAddressableGroupsResponse.fbs
+export interface PaxMonAddressableGroupsSection {
+  from: Station;
+  to: Station;
+  departure_schedule_time: number;
+  departure_current_time: number;
+  arrival_schedule_time: number;
+  arrival_current_time: number;
+  by_future_interchange: PaxMonAddressableGroupsByInterchange[];
+}
+
+// paxmon/PaxMonGetAddressableGroupsResponse.fbs
+export interface PaxMonGetAddressableGroupsResponse {
+  sections: PaxMonAddressableGroupsSection[];
+}
+
 // paxmon/PaxMonGetGroupsInTripRequest.fbs
 export type PaxMonGroupFilter = "All" | "Entering" | "Exiting";
 
