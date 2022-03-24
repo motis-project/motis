@@ -97,7 +97,7 @@ export const App: React.FC = () => {
                 :
                 <>
                     {/* visible && <MapView />*/}
-                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} mapData={mapData}/>
+                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} searchDate={searchDate} mapData={mapData}/>
                     <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate} setSearchDate={setSearchDate}/>
                     {//<StationSearchView />}
                     }<StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} />

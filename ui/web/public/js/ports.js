@@ -35,7 +35,10 @@ const ownPorts = {
         send: function(){}
     },
     'setTimeOffset': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('setTimeOffset', callback);
+            console.log('SETTIMEOFFSET')
+        }
     },
     'setSimulationTime': {
         send: function(){}
