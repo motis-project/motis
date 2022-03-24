@@ -23,11 +23,11 @@ const getTransportCountString = (transports: Transport[], translation: Translati
     return translation.connections.interchanges(count);
 }
 
-export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment, 'setSearchDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
+export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment, 'setSearchDate': React.Dispatch<React.SetStateAction<moment.Moment>> }> = (props) => {
 
     // Hold the currently displayed Date
     const [displayDate, setDisplayDate] = useState<moment.Moment>(null);
-    
+
     // Boolean used to decide if the Overlay is being displayed
     const [overlayHidden, setOverlayHidden] = useState<Boolean>(true);
 
@@ -39,16 +39,20 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
 
     // Boolean used to signal <Search> that extendBackward was clicked
     const [extendBackwardFlag, setExtendBackwardFlag] = useState<boolean>(false);
-    
+
     const [detailViewHidden, setDetailViewHidden] = useState<Boolean>(true);
 
     const [indexOfConnection, setIndexOfConnection] = useState<number>(0);
 
     const [trainSelected, setTrainSelected] = useState<TripId>(undefined);
-    
+
     const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
 
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
+
+    const [connectionHighlighted, setConnectionHighlighted] = useState<boolean>(false);
+
+    const [connectionDoNothing, setConnectionDoNothing] = useState<boolean>(true);
 
 
     React.useEffect(() => {
@@ -67,21 +71,21 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                 <div id='overlay-content'>
                     {detailViewHidden ?
                         <>
-                            <Search translation={props.translation} 
-                                    scheduleInfo={props.scheduleInfo}
-                                    start={start}
-                                    destination={destination}
-                                    displayDate={displayDate}
-                                    extendForwardFlag={extendForwardFlag}
-                                    extendBackwardFlag={extendBackwardFlag}
-                                    setStart={setStart}
-                                    setDestination={setDestination}
-                                    setConnections={setConnections} 
-                                    setDisplayDate={setDisplayDate}
-                                    setExtendForwardFlag={setExtendForwardFlag}
-                                    setExtendBackwardFlag={setExtendBackwardFlag}
-                                    searchDate={props.searchDate}
-                                    setSearchDate={props.setSearchDate}/>
+                            <Search translation={props.translation}
+                                scheduleInfo={props.scheduleInfo}
+                                start={start}
+                                destination={destination}
+                                displayDate={displayDate}
+                                extendForwardFlag={extendForwardFlag}
+                                extendBackwardFlag={extendBackwardFlag}
+                                setStart={setStart}
+                                setDestination={setDestination}
+                                setConnections={setConnections}
+                                setDisplayDate={setDisplayDate}
+                                setExtendForwardFlag={setExtendForwardFlag}
+                                setExtendBackwardFlag={setExtendBackwardFlag}
+                                searchDate={props.searchDate}
+                                setSearchDate={props.setSearchDate} />
                             {!connections ?
                                 props.scheduleInfo && displayDate && (displayDate.unix() < props.scheduleInfo.begin || displayDate.unix() > props.scheduleInfo.end) ?
                                     <div id='connections'>
@@ -92,7 +96,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                     </div>
                                     :
                                     <Spinner />
-                                : 
+                                :
                                 <div id='connections'>
                                     <div className='connections'>
                                         <div className='extend-search-interval search-before' onClick={() => setExtendBackwardFlag(true)}>
@@ -105,42 +109,48 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                         <div className='connection-list'>
                                             {connections.map((connectionElem: Connection, index) => (
                                                 connectionElem.dummyDay ?
-                                                <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
-                                                :
-                                                <div className='connection' key={index} onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}
-                                                                                        onMouseEnter={() => { let ids = []; ids.push(index-1); window.portEvents.pub('mapHighlightConnections', ids);}}
-                                                                                        onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', []); }}>
-                                                    <div className='pure-g'>
-                                                        <div className='pure-u-4-24 connection-times'>
-                                                            <div className='connection-departure'>
-                                                                {moment.unix(connectionElem.stops[0].departure.time).format('HH:mm')}
+                                                    <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
+                                                    :
+                                                    <div className={(connectionDoNothing) ? 'connection' : `connection ${(connectionHighlighted) ? 'highlighted' : 'faded'}`}
+                                                        key={index}
+                                                        onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}
+                                                        onMouseEnter={() => { let ids = []; ids.push(index - 1); window.portEvents.pub('mapHighlightConnections', ids); setConnectionHighlighted(true)}}
+                                                        onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', []); setConnectionHighlighted(false)}}>
+                                                        <div className='pure-g'>
+                                                            <div className='pure-u-4-24 connection-times'>
+                                                                <div className='connection-departure'>
+                                                                    {moment.unix(connectionElem.stops[0].departure.time).format('HH:mm')}
+                                                                </div>
+                                                                <div className='connection-arrival'>
+                                                                    {moment.unix(connectionElem.stops[connectionElem.stops.length - 1].arrival.time).format('HH:mm')}
+                                                                </div>
                                                             </div>
-                                                            <div className='connection-arrival'>
-                                                                {moment.unix(connectionElem.stops[connectionElem.stops.length - 1].arrival.time).format('HH:mm')}
+                                                            <div className='pure-u-4-24 connection-duration'>
+                                                                {duration(connectionElem.stops[0].departure.time, connectionElem.stops[connectionElem.stops.length - 1].arrival.time)}
                                                             </div>
-                                                        </div>
-                                                        <div className='pure-u-4-24 connection-duration'>
-                                                            {duration(connectionElem.stops[0].departure.time, connectionElem.stops[connectionElem.stops.length - 1].arrival.time)}
-                                                        </div>
-                                                        <div className='pure-u-16-24 connection-trains'>
-                                                            <div className='transport-graph'>
-                                                                <ConnectionRender connection={connectionElem} setDetailViewHidden={setDetailViewHidden} />
+                                                            <div className='pure-u-16-24 connection-trains'>
+                                                                <div className={(connectionHighlighted ? 'transport-graph highlighting' : 'transport-graph')}>
+                                                                    <ConnectionRender   connection={connectionElem}
+                                                                                        setDetailViewHidden={setDetailViewHidden}
+                                                                                        setConnectionHighlighted={setConnectionHighlighted}
+                                                                                        connectionDoNothing={connectionDoNothing}
+                                                                                        connectionHighlighted={connectionHighlighted}/>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
                                             ))}
-                                        <div className='divider footer'></div>
-                                        <div className='extend-search-interval search-after' onClick={() => setExtendForwardFlag(true)}>
-                                            {extendForwardFlag ?
-                                                <Spinner />
-                                                :
-                                                <a>{props.translation.connections.extendAfter}</a>
-                                            }
+                                            <div className='divider footer'></div>
+                                            <div className='extend-search-interval search-after' onClick={() => setExtendForwardFlag(true)}>
+                                                {extendForwardFlag ?
+                                                    <Spinner />
+                                                    :
+                                                    <a>{props.translation.connections.extendAfter}</a>
+                                                }
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
                             }
                         </> :
                         <div className="connection-details">
@@ -174,29 +184,29 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                 </div>
                             </div>
                             <div className="connection-journey" id="connection-journey">
-                                <JourneyRender connection={connections[indexOfConnection]} setSubOverlayHidden={props.setSubOverlayHidden} setTrainSelected={setTrainSelected} detailViewHidden={detailViewHidden} translation={props.translation}/>
+                                <JourneyRender connection={connections[indexOfConnection]} setSubOverlayHidden={props.setSubOverlayHidden} setTrainSelected={setTrainSelected} detailViewHidden={detailViewHidden} translation={props.translation} />
                             </div>
                         </div>
                     }
                 </div>
-                <SubOverlay subOverlayHidden={props.subOverlayHidden} 
-                            setSubOverlayHidden={props.setSubOverlayHidden} 
-                            trainSelected={trainSelected} 
-                            setTrainSelected={setTrainSelected} 
-                            translation={props.translation} 
-                            detailViewHidden={detailViewHidden} 
-                            scheduleInfo={props.scheduleInfo}
-                            displayDate={displayDate}
-                            stationEventTrigger={props.stationEventTrigger}
-                            setStationEventTrigger={props.setStationEventTrigger}
-                            station={props.station}
-                            searchDate={props.searchDate}/>
+                <SubOverlay subOverlayHidden={props.subOverlayHidden}
+                    setSubOverlayHidden={props.setSubOverlayHidden}
+                    trainSelected={trainSelected}
+                    setTrainSelected={setTrainSelected}
+                    translation={props.translation}
+                    detailViewHidden={detailViewHidden}
+                    scheduleInfo={props.scheduleInfo}
+                    displayDate={displayDate}
+                    stationEventTrigger={props.stationEventTrigger}
+                    setStationEventTrigger={props.setStationEventTrigger}
+                    station={props.station}
+                    searchDate={props.searchDate} />
             </div>
             <div className='overlay-tabs'>
                 <div className='overlay-toggle' onClick={() => setOverlayHidden(!overlayHidden)}>
                     <i className='icon'>arrow_drop_down</i>
                 </div>
-                <div className={props.subOverlayHidden ? 'trip-search-toggle' : 'trip-search-toggle enabled'} onClick={() => {props.setSubOverlayHidden(!props.subOverlayHidden), setTrainSelected(undefined)}}>
+                <div className={props.subOverlayHidden ? 'trip-search-toggle' : 'trip-search-toggle enabled'} onClick={() => { props.setSubOverlayHidden(!props.subOverlayHidden), setTrainSelected(undefined) }}>
                     <i className='icon'>train</i>
                 </div>
             </div>

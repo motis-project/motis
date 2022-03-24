@@ -132,7 +132,7 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                                         props.connection.trips[0].id.line_id)}
                                 onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(props.connection.trips[0].id); }}>
                                 <svg className='train-icon'>
-                                    <use xlinkHref={classToId((props.connection.transports[0].move as TransportInfo).clasz)}></use>
+                                    <use xlinkHref={classToId(props.connection.transports[0])}></use>
                                 </svg>
                                 <span className='train-name'>{(props.connection.transports[0].move as TransportInfo).name}</span>
                             </div>
@@ -310,7 +310,7 @@ const TransportDivs: React.FC<{ 'connection': Connection, 'isCollapsed': Boolean
                                             props.connection.trips[0].id.line_id)}
                                     onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(transport.trip.id) }}>
                                     <svg className='train-icon' onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(transport.trip.id) }}>
-                                        <use xlinkHref={classToId((transport.transport.move as TransportInfo).clasz)}></use>
+                                        <use xlinkHref={classToId(transport.transport)}></use>
                                     </svg>
                                     <span className='train-name'>{(transport.transport.move as TransportInfo).name}</span>
                                 </div>
