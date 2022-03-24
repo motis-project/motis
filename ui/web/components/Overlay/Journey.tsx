@@ -77,8 +77,6 @@ const fetchFoot = async (connection: Connection, toModes: ModeLocalStorage, setW
     })
     Promise.all(promises).then(results => {
         setWalkTimes(walks);
-        console.log("Promise.all")
-        console.log(walks);
     })
 }
 
@@ -99,8 +97,6 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
     const [toModes, setToModes] = useState<ModeLocalStorage>(getFromLocalStorage('motis.routing.from_modes'));
 
     const [walkTimes, setWalkTimes] = useState<number[]>([]);
-
-    console.log(props.detailViewHidden);
 
     useEffect(() => {
         if (props.connection.transports.length !== props.connection.trips.length) {
@@ -281,9 +277,6 @@ const TransportDivs: React.FC<{ 'connection': Connection, 'isCollapsed': Boolean
         })
         setTransports(t);
     }, [props.walkTimes]);
-
-    console.log('WalkTimes');
-    console.log(props.walkTimes);
 
     return (
         <>
