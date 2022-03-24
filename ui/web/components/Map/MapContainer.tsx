@@ -90,7 +90,7 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
             <div id='map-foreground' className='mapboxgl-map'>
 
             </div>
-            <div className={railvizTooltipClass} style={{ top: props.mapData ? props.mapData.mouseY : 0+'px', left: props.mapData ? props.mapData.mouseX : 0+'px'}}>
+            <div className={railvizTooltipClass} style={{ top: (props.mapData ? props.mapData.mouseY + 20 : 0) +'px', left: (props.mapData ? props.mapData.mouseX - 114 : 0) +'px'}}>
                 {props.mapData ?
                   isTrainTooltip ? 
                     <RailvizTooltipTrain train={props.mapData.hoveredTrain}/>
