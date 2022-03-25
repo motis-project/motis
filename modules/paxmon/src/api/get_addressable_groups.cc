@@ -1,6 +1,7 @@
 #include "motis/paxmon/api/get_addressable_groups.h"
 
 #include <algorithm>
+#include <set>
 
 #include "utl/pipes.h"
 #include "utl/to_vec.h"
@@ -34,15 +35,11 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
   auto const trp = from_fbs(sched, req->trip());
 
   message_creator mc;
+  std::set<passenger_group_index> all_groups;
 
-  auto const to_combined_groups_fbs = [&](combined_group_info const& cg) {
-    return CreatePaxMonCombinedGroups(
-        mc,
-        mc.CreateVectorOfStructs(utl::to_vec(
-            cg.groups_,
-            [&](passenger_group_index const pgi) {
-              return to_fbs_base_info(mc, *uv.passenger_groups_[pgi]);
-            })),
+  auto const to_combined_group_ids_fbs = [&](combined_group_info const& cg) {
+    return CreatePaxMonCombinedGroupIds(
+        mc, mc.CreateVector(cg.groups_),
         to_fbs_distribution(mc, cg.pdf_, cg.cdf_, cg.stats_));
   };
 
@@ -68,10 +65,12 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
           }
         }
         by_interchange[leg.exit_station_id_].groups_.emplace_back(pgi);
+        all_groups.insert(pgi);
       }
     }
 
     for (auto& [ic_station, cg] : by_interchange) {
+      std::sort(begin(cg.groups_), end(cg.groups_));
       cg.pdf_ = get_load_pdf(uv.passenger_groups_, cg.groups_);
       cg.cdf_ = get_cdf(cg.pdf_);
       cg.stats_ = get_pax_stats(cg.cdf_);
@@ -96,24 +95,29 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
             by_interchange_sorted, [&](std::uint32_t const ic_station_idx) {
               return CreatePaxMonAddressableGroupsByInterchange(
                   mc, to_fbs(mc, *sched.stations_[ic_station_idx]),
-                  to_combined_groups_fbs(by_interchange[ic_station_idx]),
+                  to_combined_group_ids_fbs(by_interchange[ic_station_idx]),
                   mc.CreateVector(std::vector<flatbuffers::Offset<
                                       PaxMonAddressableGroupsByEntry>>{}));
             })));
   };
 
-  mc.create_and_finish(
-      MsgContent_PaxMonGetAddressableGroupsResponse,
-      CreatePaxMonGetAddressableGroupsResponse(
-          mc,
-          mc.CreateVector(
-              utl::all(uv.trip_data_.edges(trp))  //
-              | utl::transform([&](auto const e) { return e.get(uv); })  //
-              | utl::remove_if([](auto const* e) { return !e->is_trip(); })  //
-              | utl::transform(
-                    [&](auto const* e) { return make_section_info(e); })  //
-              | utl::vec()))
-          .Union());
+  auto const sections =
+      utl::all(uv.trip_data_.edges(trp))  //
+      | utl::transform([&](auto const e) { return e.get(uv); })  //
+      | utl::remove_if([](auto const* e) { return !e->is_trip(); })  //
+      | utl::transform([&](auto const* e) { return make_section_info(e); })  //
+      | utl::vec();
+
+  mc.create_and_finish(MsgContent_PaxMonGetAddressableGroupsResponse,
+                       CreatePaxMonGetAddressableGroupsResponse(
+                           mc, mc.CreateVector(sections),
+                           mc.CreateVectorOfStructs(utl::to_vec(
+                               all_groups,
+                               [&](auto const pgi) {
+                                 return to_fbs_base_info(
+                                     mc, *uv.passenger_groups_[pgi]);
+                               })))
+                           .Union());
   return make_msg(mc);
 }
 

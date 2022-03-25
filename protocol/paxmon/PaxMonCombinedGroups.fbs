@@ -7,3 +7,8 @@ table PaxMonCombinedGroups {
   groups: [PaxMonGroupBaseInfo];
   dist: PaxMonDistribution;
 }
+
+table PaxMonCombinedGroupIds {
+  groups: [ulong];
+  dist: PaxMonDistribution;
+}

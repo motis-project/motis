@@ -23,6 +23,12 @@ export interface PaxMonCombinedGroups {
   dist: PaxMonDistribution;
 }
 
+// paxmon/PaxMonCombinedGroups.fbs
+export interface PaxMonCombinedGroupIds {
+  groups: number[];
+  dist: PaxMonDistribution;
+}
+
 // paxmon/PaxMonCompactJourney.fbs
 export type PaxMonTransferType = "NONE" | "SAME_STATION" | "FOOTPATH";
 
@@ -201,22 +207,22 @@ export interface PaxMonGetAddressableGroupsRequest {
 // paxmon/PaxMonGetAddressableGroupsResponse.fbs
 export interface PaxMonAddressableGroupsByFeeder {
   trip: TripServiceInfo;
-  cgs: PaxMonCombinedGroups;
+  cgs: PaxMonCombinedGroupIds;
 }
 
 // paxmon/PaxMonGetAddressableGroupsResponse.fbs
 export interface PaxMonAddressableGroupsByEntry {
   entry_station: Station;
   departure_schedule_time: number;
-  cgs: PaxMonCombinedGroups;
+  cgs: PaxMonCombinedGroupIds;
   by_feeder: PaxMonAddressableGroupsByFeeder[];
-  entering_here: PaxMonCombinedGroups;
+  entering_here: PaxMonCombinedGroupIds;
 }
 
 // paxmon/PaxMonGetAddressableGroupsResponse.fbs
 export interface PaxMonAddressableGroupsByInterchange {
   future_interchange: Station;
-  cgs: PaxMonCombinedGroups;
+  cgs: PaxMonCombinedGroupIds;
   by_entry: PaxMonAddressableGroupsByEntry[];
 }
 
@@ -234,6 +240,7 @@ export interface PaxMonAddressableGroupsSection {
 // paxmon/PaxMonGetAddressableGroupsResponse.fbs
 export interface PaxMonGetAddressableGroupsResponse {
   sections: PaxMonAddressableGroupsSection[];
+  groups: PaxMonGroupBaseInfo[];
 }
 
 // paxmon/PaxMonGetGroupsInTripRequest.fbs
@@ -367,7 +374,7 @@ export interface PaxMonGroup {
 
 // paxmon/PaxMonGroup.fbs
 export interface PaxMonGroupBaseInfo {
-  id: number;
+  id: number; // key
   n: number;
   p: number;
 }

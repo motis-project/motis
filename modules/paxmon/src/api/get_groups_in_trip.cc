@@ -1,5 +1,7 @@
 #include "motis/paxmon/api/get_interchanges.h"
 
+#include <algorithm>
+
 #include "utl/enumerate.h"
 #include "utl/pipes.h"
 #include "utl/to_vec.h"
@@ -201,7 +203,7 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
                 return grouped[a].max_pax_ > grouped[b].max_pax_;
               });
     for (auto const& key : sorted_keys) {
-      auto const& gbd = grouped[key];
+      auto& gbd = grouped[key];
       auto const grouped_by_station =
           key.group_station_ != 0
               ? mc.CreateVector(std::vector<flatbuffers::Offset<Station>>{
@@ -227,6 +229,10 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
 
       auto const pdf = get_load_pdf(uv.passenger_groups_, gbd.groups_);
       auto const cdf = get_cdf(pdf);
+
+      if (include_group_infos) {
+        std::sort(begin(gbd.groups_), end(gbd.groups_));
+      }
 
       grouped_pgs_vec.emplace_back(CreateGroupedPassengerGroups(
           mc, grouped_by_station, grouped_by_trip, entry_station, entry_time,

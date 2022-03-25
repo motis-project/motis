@@ -7,20 +7,20 @@ namespace motis.paxmon;
 
 table PaxMonAddressableGroupsByFeeder {
   trip: motis.TripServiceInfo;
-  cgs: PaxMonCombinedGroups;
+  cgs: PaxMonCombinedGroupIds;
 }
 
 table PaxMonAddressableGroupsByEntry {
   entry_station: motis.Station;
   departure_schedule_time: long;
-  cgs: PaxMonCombinedGroups;
+  cgs: PaxMonCombinedGroupIds;
   by_feeder: [PaxMonAddressableGroupsByFeeder];
-  entering_here: PaxMonCombinedGroups;
+  entering_here: PaxMonCombinedGroupIds;
 }
 
 table PaxMonAddressableGroupsByInterchange {
   future_interchange: motis.Station;
-  cgs: PaxMonCombinedGroups;
+  cgs: PaxMonCombinedGroupIds;
   by_entry: [PaxMonAddressableGroupsByEntry];
 }
 
@@ -36,4 +36,5 @@ table PaxMonAddressableGroupsSection {
 
 table PaxMonGetAddressableGroupsResponse {
   sections: [PaxMonAddressableGroupsSection];
+  groups: [PaxMonGroupBaseInfo];
 }

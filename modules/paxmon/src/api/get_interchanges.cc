@@ -1,5 +1,7 @@
 #include "motis/paxmon/api/get_interchanges.h"
 
+#include <algorithm>
+
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/time_access.h"
 #include "motis/core/conv/station_conv.h"
@@ -100,6 +102,9 @@ msg_ptr get_interchanges(paxmon_data& data, msg_ptr const& msg) {
             group_infos.emplace_back(to_fbs_base_info(mc, *pg));
           }
         }
+        std::sort(begin(group_infos), end(group_infos),
+                  [](PaxMonGroupBaseInfo const& a,
+                     PaxMonGroupBaseInfo const& b) { return a.id() < b.id(); });
       }
       auto const pdf = get_load_pdf(
           uv.passenger_groups_, uv.pax_connection_info_.groups_[ic_edge->pci_]);
