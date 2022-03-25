@@ -119,9 +119,12 @@ export const StationEvent: React.FC<{ 'translation': Translations, 'station': (S
 
     const [loadLater, setLoadLater] = useState<boolean>(false);
 
+    const [localStation, setLocalStation] = useState<Station | Address>(props.station);
+    const [stationID, setStationID] = useState<string>((props.station as Station).id);
+
     let byScheduleTime = true;
     let eventCount = 20;
-    let stationID = (props.station as Station).id;
+   // let stationID = (props.station as Station).id;
     const [time, setTime] = useState<number>((props.searchDate === null) ? 0 : props.searchDate.unix());
     const [minTime, setMinTime] = useState<number>(0);
     const [maxTime, setMaxTime] = useState<number>(Number.MAX_VALUE);
@@ -141,15 +144,25 @@ export const StationEvent: React.FC<{ 'translation': Translations, 'station': (S
                     setMinTime(res.content.events[0].event.time);
                     setMaxTime(res.content.events[res.content.events.length - 1].event.time);
                     setDisplayDirection('DEP');
+                    setLocalStation(res.content.station);
                 });
         }
     }, [props.stationEventTrigger, direction, props.station]);
+
+    useEffect(() =>{
+        window.portEvents.sub('showStationDetails', function(data){
+           // setMapFilter(null); muss übegeben werden
+            window.portEvents.pub('mapSetDetailFilter', null);
+            setStationID(data);
+            props.setStationEventTrigger(true);
+        })
+    })
 
     return (
         <div className='station-events'>
             <div className='header'>
                 <div className='back' onClick={() => { props.setSubOverlayHidden(true); props.setStationEventTrigger(false) }}><i className='icon'>arrow_back</i></div>
-                <div className='station'>{props.station.name}</div>
+                <div className='station'>{localStation.name}</div>
                 <div className='event-type-picker'>
                     <div>
                         <input  type='radio' 

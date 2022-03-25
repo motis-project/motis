@@ -29,7 +29,9 @@ const ownPorts = {
         send: function(){}
     },
     'showStationDetails': {
-        send: function(){}
+        send: function(callback){
+            window.portEvents.pub('showStationDetails', callback);
+        }
     },
     'showTripDetails': {
         send: function(callback){
