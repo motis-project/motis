@@ -8,6 +8,7 @@ import { Modepicker } from './ModePicker';
 import { SearchInputField } from './SearchInputField';
 import { Translations } from '../App/Localization';
 import { getFromLocalStorage, ModeLocalStorage } from '../App/LocalStorage';
+import useFetchPreventionOnDoubleClick from '../App/CancelablePromises';
 import { Interval } from '../Types/RoutingTypes';
 import { Address } from '../Types/SuggestionTypes';
 import { Connection, Position, Station, WalkInfo } from '../Types/Connection';
@@ -214,7 +215,7 @@ function useOutsideAlerter(ref: React.MutableRefObject<any>, setSelected : React
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [ref]);
-}
+};
 
 
 export const Search: React.FC<SearchTypes> = (props) => {
@@ -250,23 +251,11 @@ export const Search: React.FC<SearchTypes> = (props) => {
     // Save currently displayed List of Connections. Will be extended with every fetch.
     const [allConnectionsWithoutDummies, setAllConnectionsWithoutDummies] = useState<Connection[]>([]);
 
-    // Boolean used to determine if allConnectionsWithoutDummies needs to be expanded at the head or at the tail
-    const [extendConnections, setExtendConnections] = useState<boolean>(true);
+    // This fetch is used to get a new set of connection data. Previous Connections will be discarded.
+    const fetchNewRoutingData = () => {
+        let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
 
-
-    // This Effect is one of 2 IntermodalConnectionRequest API Calls.
-    // If this one is triggered, then we want to discard the currently shown Connections and load a new list
-    useEffect(() => {
-        if (props.searchDate) {
-            let currDate = props.searchDate.unix();
-            setSearchForward({begin: currDate, end: currDate + 3600 * 2});
-            setSearchBackward({begin: currDate, end: currDate + 3600 * 2});
-        }
-        if (props.start !== null && props.destination !== null && props.searchDate && startModes && destinationModes) {
-            let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
-            props.setLoading(true);
-
-            fetch(requestURL, getRoutingOptions(startModes, props.start, searchType, searchDirection, destinationModes, props.destination, {begin: props.searchDate.unix(), end: props.searchDate.unix() + 3600 * 2}, 5, true, true))
+        fetch(requestURL, getRoutingOptions(startModes, props.start, searchType, searchDirection, destinationModes, props.destination, {begin: props.searchDate.unix(), end: props.searchDate.unix() + 3600 * 2}, 5, true, true))
                 .then(res => handleErrors(res, props.setLoading, props.setConnections))
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
@@ -283,7 +272,24 @@ export const Search: React.FC<SearchTypes> = (props) => {
                     
                     window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections(res.content.connections), 'lowestId': 0});
                 })
-                .catch(error => {});
+                .catch(_error => {})
+    };
+
+    const handleFetch = useFetchPreventionOnDoubleClick(fetchNewRoutingData);
+
+
+    // This Effect is one of 2 IntermodalConnectionRequest API Calls.
+    // If this one is triggered, then we want to discard the currently shown Connections and load a new list
+    useEffect(() => {
+        if (props.searchDate) {
+            let currDate = props.searchDate.unix();
+            setSearchForward({begin: currDate, end: currDate + 3600 * 2});
+            setSearchBackward({begin: currDate, end: currDate + 3600 * 2});
+        }
+        if (props.start !== null && props.destination !== null && props.searchDate && startModes && destinationModes) {
+            props.setLoading(true);
+
+            handleFetch();
         }
     }, [props.start, startModes, props.destination, destinationModes, searchDirection, props.searchDate]);
 
@@ -291,11 +297,11 @@ export const Search: React.FC<SearchTypes> = (props) => {
     // This Effect is one of 2 IntermodalConnectionRequest API Calls.
     // If this one is triggered, then we want to keep the currently shown Connections and add the newly fetched ones to this list
     useEffect(() => {
-        if (props.start !== null && props.destination !== null && searchForward !== null && searchBackward !== null) {
+        if (props.start !== null && props.destination !== null && searchForward !== null && searchBackward !== null && (props.extendBackwardFlag || props.extendForwardFlag)) {
             let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
             let searchIntv = props.extendBackwardFlag ? searchBackward : searchForward;
 
-            fetch(requestURL, getRoutingOptions(startModes, props.start, searchType, searchDirection, destinationModes, props.destination, searchIntv, 3, props.extendForwardFlag, props.extendBackwardFlag))
+            fetch(requestURL, getRoutingOptions(startModes, props.start, searchType, searchDirection, destinationModes, props.destination, searchIntv, 3, props.extendBackwardFlag, props.extendForwardFlag))
                 .then(res => handleErrors(res, props.setLoading, props.setConnections))
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
@@ -323,14 +329,6 @@ export const Search: React.FC<SearchTypes> = (props) => {
                     window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections(res.content.connections), 'lowestId': 0});
                 })
                 .catch(error => {});
-        }
-    }, [extendConnections]);
-
-
-    // Handle Interval change after extend-search-interval search-forward Button in Overlay was clicked
-    useEffect(() => {
-        if (searchForward && searchBackward && (props.extendBackwardFlag || props.extendForwardFlag)) {
-            setExtendConnections(!extendConnections);
         }
     }, [props.extendForwardFlag, props.extendBackwardFlag]);
 
