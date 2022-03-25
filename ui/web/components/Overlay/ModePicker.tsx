@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+
+import equal from 'deep-equal';
+
 import { Translations } from '../App/Localization';
 import { Mode } from '../Types/IntermodalRoutingTypes';
 import { getFromLocalStorage, ModeLocalStorage, setLocalStorage } from '../App/LocalStorage';
 
 
-export const Modepicker: React.FC<{'translation': Translations, 'title': String, 'setModes': React.Dispatch<React.SetStateAction<Mode[]>>, 'localStorageModes': string}> = (props) => {
+export const Modepicker: React.FC<{'translation': Translations, 'title': String, 'modes': Mode[], 'setModes': React.Dispatch<React.SetStateAction<Mode[]>>, 'localStorageModes': string}> = (props) => {
     
     // Foot
     // Boolean used to track if the Foot Mode is selected
@@ -46,13 +49,9 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
     // Boolean used to track if the ModePicker is being displayed or not
     const [modePickerVisible, setModePickerVisible] = useState<boolean>(false);
 
-    // Boolean used to track if anything in the Modepicker changed and a new IntermodalRoutingRequest needs to be fetched
-    const [newFetch, setNewFetch] = useState<boolean>(false);
-
     // Initial load of the Component from LocalStorage
     React.useEffect(() => {
         let modes: ModeLocalStorage = getFromLocalStorage(props.localStorageModes);
-
         // If LocalStorage is empty, initialize it
         if (modes !== null) {
             setFootSelected(modes.walk.enabled);
@@ -62,7 +61,7 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
             setBikeMaxDurationSlider(modes.bike.max_duration);
             setCarSelected(modes.car.enabled);
             setCarMaxDurationSlider(modes.car.max_duration);
-            setUseParking(modes.car.use_parking); 
+            setUseParking(modes.car.use_parking);
         } else {
             setLocalStorage(props.localStorageModes, {walk: {enabled: false, search_profile: {profile: 'default', max_duration: 30}}, bike: {enabled: false, max_duration: 30}, car: {enabled: false, max_duration: 30, use_parking: false}});
         };
@@ -70,13 +69,12 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
         window.portEvents.sub('mapInitFinished', () => {
             window.portEvents.pub('setPPRSearchOptions', {'duration_limit': footMaxDurationSlider*60, 'profile': profilePicker});
         });
-    }, [])
+    }, []);
 
     // Update return Value for Foot Mode if any part of this Mode is changed
     React.useEffect(() => {
         if (footSelected){
-            setFootMode({ mode_type: 'FootPPR', mode: { search_options: { profile: profilePicker, duration_limit: footMaxDurationSlider * 60 } }})
-            setNewFetch(true);
+            setFootMode({ mode_type: 'FootPPR', mode: { search_options: { profile: profilePicker, duration_limit: footMaxDurationSlider * 60 } }});
             //set ppr options for the map
             window.portEvents.pub('setPPRSearchOptions', {'duration_limit': footMaxDurationSlider*60, 'profile': profilePicker});
         }
@@ -86,7 +84,6 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
     React.useEffect(() => {
         if (bikeSelected) {
             setBikeMode({ mode_type: 'Bike', mode: { max_duration: bikeMaxDurationSlider * 60 } });
-            setNewFetch(true);
         }
     },[bikeMaxDurationSlider, bikeSelected]);
 
@@ -98,7 +95,6 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
             } else {
                 setCarMode({ mode_type: 'Car', mode: { max_duration: carMaxDurationSlider * 60 } });
             }
-            setNewFetch(true);
         }
     }, [carMaxDurationSlider, carSelected, useParking]);
 
@@ -131,10 +127,10 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
                 <div className='header'>
                     <div    className='sub-overlay-close' 
                             onClick={() => {
-                                if (newFetch) {
+                                let modes = getModeArr();
+                                if (!equal(modes, props.modes)) {
                                     props.setModes(getModeArr());
                                     setLocalStorage(props.localStorageModes, {walk: {enabled: footSelected, search_profile: {profile: profilePicker, max_duration: footMaxDurationSlider}}, bike: {enabled: bikeSelected, max_duration: bikeMaxDurationSlider}, car: {enabled: carSelected, max_duration: carMaxDurationSlider, use_parking: useParking}});
-                                    setNewFetch(false);
                                 }
                                 setModePickerVisible(false);
                                 }}>
@@ -147,10 +143,9 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
                         <legend className='mode-header'>
                             <label>
                                 <input  type='checkbox' 
-                                        defaultChecked={footSelected} 
-                                        onClick={() => {
+                                        checked={footSelected} 
+                                        onChange={() => {
                                             setFootSelected(!footSelected)
-                                            setNewFetch(true);
                                         }}/>
                                 {props.translation.connections.walk}
                             </label>
@@ -184,10 +179,9 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
                         <legend className='mode-header'>
                             <label>
                                 <input  type='checkbox' 
-                                        defaultChecked={bikeSelected}  
-                                        onClick={() => {
+                                        checked={bikeSelected}  
+                                        onChange={() => {
                                             setBikeSelected(!bikeSelected);
-                                            setNewFetch(true);
                                         }}/>
                                 {props.translation.connections.bike}
                             </label>
@@ -202,10 +196,9 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
                         <legend className='mode-header'>
                             <label>
                                 <input  type='checkbox' 
-                                        defaultChecked={carSelected} 
-                                        onClick={() => {
+                                        checked={carSelected} 
+                                        onChange={() => {
                                             setCarSelected(!carSelected);
-                                            setNewFetch(true);
                                         }}/>
                                 {props.translation.connections.car}
                             </label>
@@ -218,8 +211,8 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
                         <div className='option'>
                             <label>
                                 <input  type='checkbox' 
-                                        defaultChecked={useParking}
-                                        onClick={() => {
+                                        checked={useParking}
+                                        onChange={() => {
                                             setUseParking(!useParking);
                                         }}/>
                                 {props.translation.search.useParking}

@@ -4,6 +4,7 @@ export interface Connection {
     trips: Trip[],
     problems: Problem[],
     dummyDay?: string,
+    new: string,
     id?: number
 }
 

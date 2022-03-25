@@ -7,7 +7,8 @@ import { DatePicker } from './DatePicker';
 import { Modepicker } from './ModePicker';
 import { SearchInputField } from './SearchInputField';
 import { Translations } from '../App/Localization';
-import { getFromLocalStorage } from '../App/LocalStorage';
+import { getFromLocalStorage, ModeLocalStorage } from '../App/LocalStorage';
+import useFetchPreventionOnDoubleClick from '../App/CancelablePromises';
 import { Interval } from '../Types/RoutingTypes';
 import { Address } from '../Types/SuggestionTypes';
 import { Connection, Position, Station, WalkInfo } from '../Types/Connection';
@@ -20,29 +21,93 @@ interface SearchTypes {
     'scheduleInfo': Interval,
     'start': Station | Address,
     'destination': Station | Address, 
-    'displayDate': moment.Moment, 
     'extendForwardFlag': boolean, 
     'extendBackwardFlag': boolean, 
     'searchDate': moment.Moment, 
     'setStart': React.Dispatch<React.SetStateAction<Station | Address>>, 
     'setDestination': React.Dispatch<React.SetStateAction<Station | Address>>, 
-    'setDisplayDate': React.Dispatch<React.SetStateAction<moment.Moment>>, 
     'setConnections': React.Dispatch<React.SetStateAction<Connection[]>>, 
     'setExtendForwardFlag' : React.Dispatch<React.SetStateAction<boolean>>, 
     'setExtendBackwardFlag': React.Dispatch<React.SetStateAction<boolean>>,
-    'setSearchDate': React.Dispatch<React.SetStateAction<moment.Moment>>
+    'setSearchDate': React.Dispatch<React.SetStateAction<moment.Moment>>,
+    'setLoading': React.Dispatch<React.SetStateAction<boolean>>
 }
 
 
-const getRoutingOptions = (startType: string, startModes: Mode[], start: Station | Address, searchType: string, searchDirection: string, destinationType: string, destinationModes: Mode[], destination: Station | Address, interval: Interval ) => {
+const isStation = (f: Station | Address): f is Station => {
+    return (f as Station).id !== undefined
+}
+
+
+const getStartType = (start: Station | Address) => {
+    if (isStation(start)) {
+        return 'PretripStart';
+    }else {
+        return 'IntermodalPretripStart';
+    }
+}
+
+
+const getDestinationType = (destination: Station | Address) => {
+    if (isStation(destination)) {
+        return 'InputStation';
+    }else {
+        return 'InputPosition';
+    }
+}
+
+
+const parseStationOrAddress = (s: Station | Address) => {
+    if (isStation(s)) {
+        return { name: s.name, id: s.id, };
+    }else {
+        return { position: s.pos };
+    }
+}
+
+
+const getStart = (start: Station | Address, min_connection_count: number, interval: Interval, extend_interval_earlier: boolean, extend_interval_later: boolean) => {
+    if (isStation(start)) {
+        return { station: parseStationOrAddress(start), min_connection_count: min_connection_count, interval: interval, extend_interval_later: extend_interval_later, extend_interval_earlier: extend_interval_earlier}
+    } else {
+        return { position: start.pos, min_connection_count: min_connection_count, interval: interval, extend_interval_later: extend_interval_later, extend_interval_earlier: extend_interval_earlier}
+    }
+}
+
+
+const getRoutingOptions = (startModes: Mode[], start: Station | Address, searchType: string, searchDirection: string, destinationModes: Mode[], destination: Station | Address, interval: Interval , min_connection_count: number, extend_interval_later: boolean, extend_interval_earlier: boolean) => {
     return {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({  destination: {type: "Module", target: "/intermodal"}, 
                                 content_type: 'IntermodalRoutingRequest',
-                                content: {start_type: startType, start_modes: startModes, start: { station: start, min_connection_count: 5, interval: interval, extend_interval_later: true, extend_interval_earlier: true }, search_type: searchType, search_dir: searchDirection, destination_type: destinationType, destination_modes: destinationModes, destination: destination } })
+                                content: {start_type: getStartType(start), start_modes: startModes, start: getStart(start, min_connection_count, interval, extend_interval_later, extend_interval_earlier) , search_type: searchType, search_dir: searchDirection, destination_type: getDestinationType(destination), destination_modes: destinationModes, destination: parseStationOrAddress(destination) } })
     };
 };
+
+
+const getModes = (key: string) => {
+    let modes: ModeLocalStorage = getFromLocalStorage(key);
+    let res = [];
+
+    if (modes) {
+        if (modes.walk.enabled) {
+            res.push({ mode_type: 'FootPPR', mode: { search_options: { profile: modes.walk.search_profile.profile, duration_limit: modes.walk.search_profile.max_duration * 60 } }})
+        }
+        if (modes.bike.enabled) {
+            res.push({ mode_type: 'Bike', mode: { max_duration: modes.bike.max_duration * 60 } })
+        }
+        if (modes.car.enabled) {
+            if (modes.car.use_parking) {
+                res.push({ mode_type: 'CarParking', mode: { max_car_duration: modes.car.max_duration * 60, ppr_search_options: { profile: 'default', duration_limit: 300 } } })
+            }else {
+                res.push({ mode_type: 'Car', mode: { max_duration: modes.car.max_duration * 60 } })
+            }
+        }
+    }
+
+    return res;
+}
 
 
 const mapConnections = (connections: Connection[]) => {
@@ -89,12 +154,18 @@ const dummyConnection = (dummyDate: string) => {
         transports: [],
         trips: [],
         problems: [],
-        dummyDay: dummyDate
+        dummyDay: dummyDate,
+        new: ''
     };
 }
 
 
-const sendConnectionsToOverlay = (setConnections: React.Dispatch<React.SetStateAction<Connection[]>>, connections: Connection[], setAllConnectionsWithoutDummies: React.Dispatch<React.SetStateAction<Connection[]>>, dateFormat: string) => {
+const sendConnectionsToOverlay = (setConnections: React.Dispatch<React.SetStateAction<Connection[]>>, connections: Connection[], setAllConnectionsWithoutDummies: React.Dispatch<React.SetStateAction<Connection[]>>, dateFormat: string, setLoading: React.Dispatch<React.SetStateAction<boolean>>) => {
+    if(connections.length === 0){
+        setLoading(false);
+        setConnections([]);
+        return;
+    }
     let dummyIndexes = [0];
     let connectionsWithDummies = [...connections];
     let previousConnectionDay = moment.unix(connections[0].stops[0].departure.schedule_time);
@@ -111,13 +182,16 @@ const sendConnectionsToOverlay = (setConnections: React.Dispatch<React.SetStateA
     };
     dummyIndexes.map((val, idx) => {
         connectionsWithDummies.splice(val + idx, 0, dummyConnection(dummyDays[idx]));
-    })
+    });
     setConnections(connectionsWithDummies);
+    setLoading(false);
 };
 
 
-const handleErrors = (response) => {
+const handleErrors = (response, setLoading: React.Dispatch<React.SetStateAction<boolean>>, setConnections: React.Dispatch<React.SetStateAction<Connection[]>>) => {
     if (!response.ok) {
+        setLoading(false);
+        setConnections([]);
         throw Error(response.statusText);
     }
     return response;
@@ -142,26 +216,16 @@ function useOutsideAlerter(ref: React.MutableRefObject<any>, setSelected : React
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [ref]);
-}
+};
 
 
 export const Search: React.FC<SearchTypes> = (props) => {
- 
-    // Start
-    // StartType
-    const [startType, setStartType] = useState<string>('PretripStart');
     
     // StartModes
-    const [startModes, setStartModes] = useState<Mode[]>([]);
-    
-    
-    // Destination
-    // DestinationType
-    const [destinationType, setDestinationType] = useState<string>('InputStation');
+    const [startModes, setStartModes] = useState<Mode[]>(getModes('motis.routing.from_modes'));
     
     // Destination_modes tracks the ModePicker for the Destination
-    const [destinationModes, setDestinationModes] = useState<Mode[]>([]);
-    
+    const [destinationModes, setDestinationModes] = useState<Mode[]>(getModes('motis.routing.to_modes'));
     
     // searchTime
     // SearchTime stores the currently displayed Time
@@ -188,26 +252,20 @@ export const Search: React.FC<SearchTypes> = (props) => {
     // Save currently displayed List of Connections. Will be extended with every fetch.
     const [allConnectionsWithoutDummies, setAllConnectionsWithoutDummies] = useState<Connection[]>([]);
 
-    // Boolean used to determine if allConnectionsWithoutDummies needs to be expanded at the head or at the tail
-    const [extendBackward, setExtendBackward] = useState<boolean>(true);
+    // This fetch is used to get a new set of connection data. Previous Connections will be discarded.
+    const fetchNewRoutingData = () => {
+        let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
 
-
-    // This Effect is one of 2 IntermodalConnectionRequest API Calls.
-    // If this one is triggered, then we want to discard the currently shown Connections and load a new list
-    useEffect(() => {
-        if (props.start !== null && props.destination !== null && searchForward !== null) {
-            let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
-            //console.log('Fire searchQuery')
-
-            fetch(requestURL, getRoutingOptions(startType, startModes, props.start, searchType, searchDirection, destinationType, destinationModes, props.destination, searchForward))
-                .then(handleErrors)
+        fetch(requestURL, getRoutingOptions(startModes, props.start, searchType, searchDirection, destinationModes, props.destination, {begin: props.searchDate.unix(), end: props.searchDate.unix() + 3600 * 2}, 5, true, true))
+                .then(res => handleErrors(res, props.setLoading, props.setConnections))
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
                     console.log("Response came in");
                     console.log(res);
-                    //props.setConnections(res.content.connections);
-                    props.setConnections(null); // Only when connections=null will the Loading animation be shown
-                    sendConnectionsToOverlay(props.setConnections, res.content.connections, setAllConnectionsWithoutDummies, props.translation.dateFormat);
+                    res.content.connections.map((c: Connection) => c.new = '');
+                    sendConnectionsToOverlay(props.setConnections, res.content.connections, setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
+                    setSearchBackward({begin: res.content.interval_begin - 3600 * 2, end: res.content.interval_begin - 1});
+                    setSearchForward({begin: res.content.interval_end + 1, end: res.content.interval_end + 3600 * 2});
                     window.portEvents.pub('mapSetMarkers', {'startPosition': getFromLocalStorage("motis.routing.from_location").pos,
                                                             'startName': getFromLocalStorage("motis.routing.from_location").name,
                                                             'destinationPosition': getFromLocalStorage("motis.routing.to_location").pos,
@@ -215,38 +273,54 @@ export const Search: React.FC<SearchTypes> = (props) => {
                     
                     window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections(res.content.connections), 'lowestId': 0});
                 })
-                .catch(error => {});
+                .catch(_error => {})
+    };
+
+    const handleFetch = useFetchPreventionOnDoubleClick(fetchNewRoutingData);
+
+
+    // This Effect is one of 2 IntermodalConnectionRequest API Calls.
+    // If this one is triggered, then we want to discard the currently shown Connections and load a new list
+    useEffect(() => {
+        if (props.searchDate) {
+            let currDate = props.searchDate.unix();
+            setSearchForward({begin: currDate, end: currDate + 3600 * 2});
+            setSearchBackward({begin: currDate, end: currDate + 3600 * 2});
         }
-    }, [props.start, startModes, props.destination, destinationModes, searchDirection]);
+        if (props.start !== null && props.destination !== null && props.searchDate && startModes && destinationModes) {
+            props.setLoading(true);
+
+            handleFetch();
+        }
+    }, [props.start, startModes, props.destination, destinationModes, searchDirection, props.searchDate]);
 
 
     // This Effect is one of 2 IntermodalConnectionRequest API Calls.
     // If this one is triggered, then we want to keep the currently shown Connections and add the newly fetched ones to this list
     useEffect(() => {
-        //console.log('Run1');
-        //console.log (start, destination, searchForward)
-        if (props.start !== null && props.destination !== null && searchForward !== null && searchBackward !== null) {
-            //console.log('Run2');
+        if (props.start !== null && props.destination !== null && searchForward !== null && searchBackward !== null && (props.extendBackwardFlag || props.extendForwardFlag)) {
             let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
-            let searchIntv = extendBackward ? searchBackward : searchForward;
-            fetch(requestURL, getRoutingOptions(startType, startModes, props.start, searchType, searchDirection, destinationType, destinationModes, props.destination, searchIntv))
-                .then(handleErrors)
+            let searchIntv = props.extendBackwardFlag ? searchBackward : searchForward;
+
+            fetch(requestURL, getRoutingOptions(startModes, props.start, searchType, searchDirection, destinationModes, props.destination, searchIntv, 3, props.extendBackwardFlag, props.extendForwardFlag))
+                .then(res => handleErrors(res, props.setLoading, props.setConnections))
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
                     console.log("Response came in");
                     console.log(res);
-                    //props.setConnections(res.content.connections);
-                    if(extendBackward){
+                    res.content.connections.map((c: Connection) => c.new = 'new');
+                    allConnectionsWithoutDummies.map((c: Connection) => c.new = '');
+                    if(props.extendBackwardFlag){
                         if(!equal(res.content.connections[0], allConnectionsWithoutDummies[0])) {
-                            props.setConnections(null); // Only when connections=null will the Loading animation be shown
-                            sendConnectionsToOverlay(props.setConnections, [...res.content.connections, ...allConnectionsWithoutDummies], setAllConnectionsWithoutDummies, props.translation.dateFormat);
+                            sendConnectionsToOverlay(props.setConnections, [...res.content.connections, ...allConnectionsWithoutDummies], setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
+                            setSearchBackward({begin: res.content.interval_begin - 3600 * 2, end: res.content.interval_begin - 1});
                             window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections([...res.content.connections, ...allConnectionsWithoutDummies]), 'lowestId': 0});
                         }
                         props.setExtendBackwardFlag(false);
                     } else {
                         if(!equal(res.content.connections[res.content.connections.length-1], allConnectionsWithoutDummies[allConnectionsWithoutDummies.length-1])) {
-                            props.setConnections(null); // Only when connections=null will the Loading animation be shown
-                            sendConnectionsToOverlay(props.setConnections, [...allConnectionsWithoutDummies, ...res.content.connections], setAllConnectionsWithoutDummies, props.translation.dateFormat);
+                            sendConnectionsToOverlay(props.setConnections, [...allConnectionsWithoutDummies, ...res.content.connections], setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
+                            setSearchForward({begin: res.content.interval_end + 1, end: res.content.interval_end + 3600 * 2});
                             window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections([...allConnectionsWithoutDummies, ...res.content.connections]), 'lowestId': 0});
                         }
                         props.setExtendForwardFlag(false);
@@ -259,41 +333,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
                 })
                 .catch(error => {});
         }
-    }, [searchForward, searchBackward]);
-
-
-    // On searchDate change, discard currently displayed Connections and compute new Interval for the IntermodalConnectionRequest
-    useEffect(() => {
-        if (props.searchDate) {
-            setAllConnectionsWithoutDummies([]);
-            setSearchForward({begin: props.searchDate.unix(), end: props.searchDate.unix() + 3600 * 2});
-            setSearchBackward({begin: props.searchDate.unix(), end: props.searchDate.unix() + 3600 * 2});
-            props.setDisplayDate(props.searchDate);
-        }
-    }, [props.searchDate]);
-
-    // On initial render searchDate will be null, waiting for the ScheduleInfoResponse. This useEffect should fire only once.
-    useEffect(() => {
-        props.setSearchDate(props.displayDate);
-    }, [props.displayDate]);
-
-
-    // Handle Interval change after extend-search-interval search-backward Button in Overlay was clicked
-    useEffect(() => {
-        if (searchBackward && props.extendBackwardFlag) {
-            setSearchBackward({begin: searchBackward.begin - 3600 * 4, end: searchBackward.end - 3600 * 4});
-            setExtendBackward(true);
-        }
-    }, [props.extendBackwardFlag]);
-
-
-    // Handle Interval change after extend-search-interval search-forward Button in Overlay was clicked
-    useEffect(() => {
-        if (searchForward && props.extendForwardFlag) {
-            setSearchForward({begin: searchForward.begin + 3600 * 4, end: searchForward.end + 3600 * 4});
-            setExtendBackward(false);
-        }
-    }, [props.extendForwardFlag]);
+    }, [props.extendForwardFlag, props.extendBackwardFlag]);
 
 
     useEffect(() => {
@@ -323,9 +363,10 @@ export const Search: React.FC<SearchTypes> = (props) => {
                                         setSearchDisplay={props.setStart}
                                         localStorageStation='motis.routing.from_location'/>
                         <Modepicker translation={props.translation} 
-                                    title={props.translation.search.startTransports} 
+                                    title={props.translation.search.startTransports}
                                     setModes={setStartModes}
-                                    localStorageModes='motis.routing.from_modes'/>
+                                    localStorageModes='motis.routing.from_modes'
+                                    modes={startModes}/>
                     </div>
                     <div className='swap-locations-btn'>
                         <label className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'>
@@ -357,7 +398,8 @@ export const Search: React.FC<SearchTypes> = (props) => {
                         <Modepicker translation={props.translation} 
                                     title={props.translation.search.destinationTransports} 
                                     setModes={setDestinationModes}
-                                    localStorageModes='motis.routing.to_modes'/>
+                                    localStorageModes='motis.routing.to_modes'
+                                    modes={destinationModes} />
                     </div>
                 </div>
                 <div className='pure-u-1 pure-u-sm-9-24'>
