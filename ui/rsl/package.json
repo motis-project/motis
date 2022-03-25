@@ -35,15 +35,15 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-hook-form": "^7.28.1",
-    "react-query": "^3.34.16",
-    "react-virtuoso": "^2.8.3",
+    "react-query": "^3.34.17",
+    "react-virtuoso": "^2.8.4",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.0",
     "@trivago/prettier-plugin-sort-imports": "^3.2.0",
     "@types/lodash-es": "^4.17.6",
-    "@types/react": "^17.0.42",
+    "@types/react": "^17.0.43",
     "@types/react-dom": "^17.0.14",
     "@types/uuid": "^8.3.4",
     "@typescript-eslint/eslint-plugin": "^5.16.0",
@@ -55,10 +55,10 @@
     "eslint-plugin-react": "^7.29.4",
     "eslint-plugin-react-hooks": "^4.3.0",
     "postcss": "^8.4.12",
-    "prettier": "^2.6.0",
+    "prettier": "^2.6.1",
     "prettier-plugin-alias-imports": "^0.1.6",
     "tailwindcss": "^3.0.23",
-    "typescript": "^4.6.2",
+    "typescript": "^4.6.3",
     "vite": "^2.8.6"
   }
 }
