@@ -56,7 +56,7 @@ export const getMapFilter = (connection: Connection) => {
     return filter
 }
 
-export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment, 'setSearchDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
+export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'setStation': React.Dispatch<React.SetStateAction<(Station | Address)>>, 'searchDate': moment.Moment, 'setSearchDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
 
     // Hold the currently displayed Date
     const [displayDate, setDisplayDate] = useState<moment.Moment>(null);
@@ -92,6 +92,14 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
             props.setSubOverlayHidden(false);
         });
     });
+
+    React.useEffect(() =>{
+        window.portEvents.sub('showStationDetails', function(data){
+            setMapFilter(null); 
+            window.portEvents.pub('mapSetDetailFilter', null);
+            props.setStation({id: data, name: ''});
+        })
+    })    
 
     React.useEffect(() => {
         if(detailViewHidden){

@@ -93,12 +93,12 @@ export const App: React.FC = () => {
     return (
         <div className='app'>
             {isMobile ?
-                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate} setSearchDate={setSearchDate}/>
+                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} searchDate={searchDate} setSearchDate={setSearchDate}/>
                 :
                 <>
                     {/* visible && <MapView />*/}
                     <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} searchDate={searchDate} mapData={mapData}/>
-                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate} setSearchDate={setSearchDate}/>
+                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} searchDate={searchDate} setSearchDate={setSearchDate}/>
                     {//<StationSearchView />}
                     }<StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} />
                 </>
