@@ -32,7 +32,9 @@ const ownPorts = {
         send: function(){}
     },
     'showTripDetails': {
-        send: function(){}
+        send: function(callback){
+            window.portEvents.pub('showTripDetails', callback);
+        }
     },
     'setTimeOffset': {
         subscribe: function(callback){
@@ -90,7 +92,9 @@ const ownPorts = {
         }
     },
     'mapSetDetailFilter': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('mapSetDetailFilter', callback);
+        }
     },
     'mapUpdateWalks': {
         subscribe: function(){}

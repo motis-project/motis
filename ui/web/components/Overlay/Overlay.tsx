@@ -9,7 +9,7 @@ import { ConnectionRender } from './ConnectionRender';
 import { JourneyRender, duration } from './Journey';
 import { Translations } from '../App/Localization';
 import { getFromLocalStorage } from '../App/LocalStorage';
-import { Connection, Station, Transport, TransportInfo, TripId } from '../Types/Connection';
+import { Connection, Station, Transport, TransportInfo, TripId, WalkInfo } from '../Types/Connection';
 import { Address } from '../Types/SuggestionTypes';
 import { Interval } from '../Types/RoutingTypes';
 
@@ -21,6 +21,39 @@ const getTransportCountString = (transports: Transport[], translation: Translati
         }
     }
     return translation.connections.interchanges(count);
+}
+
+export const getMapFilter = (connection: Connection) => {
+    let filter;
+    let trains = [];
+    for(let k = 0; k < connection.trips.length; k++){
+        let trip = connection.trips[k].id;
+        let sections = [];
+        for(let l = connection.trips[k].range.from; l < connection.trips[k].range.to; l++){
+            sections.push({ 'arrivalStation': connection.stops[l+1].station,
+                            'departureStation': connection.stops[l].station,
+                            'scheduledArrivalTime': connection.stops[l+1].arrival.schedule_time,
+                            'scheduledDepartureTime': connection.stops[l].departure.schedule_time});
+        }
+        trains.push({'sections': sections, 'trip': trip});
+    }
+    let walks = [];
+    for(let k = 0; k < connection.transports.length; k++){
+        if(connection.transports[k].move_type === 'Walk'){
+            let walk = connection.transports[k].move as WalkInfo;
+            walks.push({'arrivalStation': connection.stops[walk.range.to].station,
+                        'departureStation': connection.stops[walk.range.from].station,
+                        'accessibility': walk.accessibility,
+                        'mumoType': walk.mumo_type})
+        }
+    }
+    let interchanges = [];
+    for(let i = 0; i < trains.length; i++){
+        interchanges.push(trains[i].sections[0].departureStation);
+        interchanges.push(trains[i].sections[trains[i].sections.length-1].arrivalStation);
+    }
+    filter = {'interchangeStations': interchanges, 'trains': trains, 'walks': walks};
+    return filter
 }
 
 export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment, 'setSearchDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
@@ -50,6 +83,22 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
 
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
 
+    const [mapFilter, setMapFilter] = useState<any>(null);
+
+    //when clicking on train in the map
+    React.useEffect(() => {
+        window.portEvents.sub('showTripDetails', function(data){
+            setTrainSelected(data);
+            props.setSubOverlayHidden(false);
+        });
+    });
+
+    React.useEffect(() => {
+        if(detailViewHidden){
+            setMapFilter(null);
+            window.portEvents.pub('mapSetDetailFilter', null);
+        }
+    }, [detailViewHidden]);
 
     React.useEffect(() => {
         if (props.scheduleInfo !== null) {
@@ -107,8 +156,15 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                 connectionElem.dummyDay ?
                                                 <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
                                                 :
-                                                <div className='connection' key={index} onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}
-                                                                                        onMouseEnter={() => { let ids = []; ids.push(index-1); window.portEvents.pub('mapHighlightConnections', ids);}}
+                                                <div className='connection' key={index} onClick={() => { setDetailViewHidden(false);
+                                                                                                         setIndexOfConnection(index);
+                                                                                                         setMapFilter(getMapFilter(connectionElem));
+                                                                                                         window.portEvents.pub('mapSetDetailFilter', getMapFilter(connectionElem)); 
+                                                                                                        }}
+                                                                                        onMouseEnter={() => {   let ids = [];
+                                                                                                                ids.push(index-1);
+                                                                                                                window.portEvents.pub('mapHighlightConnections', ids);
+                                                                                                            }}
                                                                                         onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', []); }}>
                                                     <div className='pure-g'>
                                                         <div className='pure-u-4-24 connection-times'>
@@ -199,7 +255,8 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                             stationEventTrigger={props.stationEventTrigger}
                             setStationEventTrigger={props.setStationEventTrigger}
                             station={props.station}
-                            searchDate={props.searchDate}/>
+                            searchDate={props.searchDate}
+                            mapFilter={mapFilter}/>
             </div>
             <div className='overlay-tabs'>
                 <div className='overlay-toggle' onClick={() => setOverlayHidden(!overlayHidden)}>
