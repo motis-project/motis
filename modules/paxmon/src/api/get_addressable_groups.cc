@@ -40,7 +40,7 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
   auto const to_combined_group_ids_fbs = [&](combined_group_info const& cg) {
     return CreatePaxMonCombinedGroupIds(
         mc, mc.CreateVector(cg.groups_),
-        to_fbs_distribution(mc, cg.pdf_, cg.cdf_, cg.stats_));
+        to_fbs_distribution(mc, cg.pdf_, cg.stats_));
   };
 
   auto const make_section_info = [&](edge const* e) {

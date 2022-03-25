@@ -17,5 +17,4 @@ table PaxMonDistribution {
   q50: uint; // median
   q95: uint; // 95% quantile
   pdf: [PaxMonPdfEntry];
-  cdf: [PaxMonCdfEntry];
 }

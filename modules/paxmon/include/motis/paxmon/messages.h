@@ -74,7 +74,7 @@ flatbuffers::Offset<TripServiceInfo> to_fbs_trip_service_info(
     journey_leg const& leg);
 
 flatbuffers::Offset<PaxMonDistribution> to_fbs_distribution(
-    flatbuffers::FlatBufferBuilder& fbb, pax_pdf const& pdf, pax_cdf const& cdf,
+    flatbuffers::FlatBufferBuilder& fbb, pax_pdf const& pdf,
     pax_stats const& stats);
 
 flatbuffers::Offset<PaxMonDistribution> to_fbs_distribution(

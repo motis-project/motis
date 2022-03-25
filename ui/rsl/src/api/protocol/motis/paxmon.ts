@@ -78,7 +78,6 @@ export interface PaxMonDistribution {
   q50: number;
   q95: number;
   pdf: PaxMonPdfEntry[];
-  cdf: PaxMonCdfEntry[];
 }
 
 // paxmon/PaxMonFilterGroupsRequest.fbs
