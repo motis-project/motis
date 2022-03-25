@@ -123,7 +123,8 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                                 </div>
                                                                 <div className='pure-u-16-24 connection-trains'>
                                                                     <div className={(connectionHighlighted ? 'transport-graph highlighting' : 'transport-graph')}>
-                                                                        <ConnectionRender   connection={connectionElem}
+                                                                        <ConnectionRender   translation={props.translation}
+                                                                                            connection={connectionElem}
                                                                                             setDetailViewHidden={setDetailViewHidden}
                                                                                             setConnectionHighlighted={setConnectionHighlighted}
                                                                                             connectionDoNothing={connectionDoNothing}

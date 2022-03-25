@@ -1,5 +1,6 @@
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
+import { Translations } from '../App/Localization';
 
 import { TransportInfo, Connection, Transport, WalkInfo, Stop } from '../Types/Connection';
 
@@ -28,7 +29,7 @@ export const classToId = (transport: Transport) => {
             return '#tram';
         case 11:
             return '#ship';
-        case 'walk':
+        case 'walk' || 'foot':
             return '#walk';
         case 'bike':
             return '#bike';
@@ -60,7 +61,7 @@ const getClasz = (transport: Transport) => {
             return (transport.move as TransportInfo).clasz;
             break;
         case 'Walk':
-            if((transport.move as WalkInfo).mumo_type === ''){
+            if((transport.move as WalkInfo).mumo_type === '' || (transport.move as WalkInfo).mumo_type === 'foot'){
                 return 'walk'
             }
             return (transport.move as WalkInfo).mumo_type;
@@ -97,11 +98,12 @@ interface PartElem {
     lineEnd: number,
     classId: string,
     trainName?: string,
+    transportName?: string,
     clasz: (string | number),
     acc: string
 }
 
-export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setConnectionHighlighted': React.Dispatch<React.SetStateAction<boolean>>, 'connectionDoNothing': boolean, 'connectionHighlighted': boolean, 'key': number }> = (props) => {
+export const ConnectionRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setConnectionHighlighted': React.Dispatch<React.SetStateAction<boolean>>, 'connectionDoNothing': boolean, 'connectionHighlighted': boolean, 'key': number }> = (props) => {
 
     const [toolTipSelected, setToolTipSelected] = useState<string>('');
     const [parts, setParts] = useState<PartElem[]>([]);
@@ -119,14 +121,29 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
             let classId = classToId(transport);
             let clasz = getClasz(transport);
             let acc = getAccNumber(transport);
-            console.log(`transport ${transport}`)
+            let trainName = '';
+            let transportName = '';
+            if(transport.move_type === 'Transport'){
+                trainName = (transport.move as TransportInfo).name;
+            }else{
+                switch((transport.move as WalkInfo).mumo_type){
+                    case 'car':
+                        transportName = props.translation.connections.car.toString();
+                        break;
+                    case 'bike':
+                        transportName = props.translation.connections.bike.toString();
+                        break;
+                    default:
+                        transportName = props.translation.connections.walk.toString();
+                        break;
+                }
+            }
 
             if (transport.move_type === 'Transport') {
-                let trainName = (transport.move as TransportInfo).name;
                 p.push({ transport: transport, position: position, partWidth: partWidth, lineEnd: lineEnd, classId: classId, trainName: trainName, clasz: clasz, acc: acc });
                 position += partWidth;
             } else if ((index === 0 || index === props.connection.transports.length - 1) && (transport.move_type === 'Walk')) {
-                p.push({ transport: transport, position: position, partWidth: partWidth, lineEnd: lineEnd, classId: classId, clasz: clasz, acc: acc });
+                p.push({ transport: transport, position: position, partWidth: partWidth, lineEnd: lineEnd, classId: classId, transportName: transportName, clasz: clasz, acc: acc });
                 position += partWidth;
             }
         })
@@ -186,7 +203,7 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
                         </div>
                     </div>
                     <div className='transport-name'>
-                        {partElem.trainName}
+                        {(partElem.transport.move_type === 'Transport') ? partElem.trainName : partElem.transportName}
                     </div>
                 </div>
             ))}
