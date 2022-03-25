@@ -124,10 +124,10 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
             if (transport.move_type === 'Transport') {
                 let trainName = (transport.move as TransportInfo).name;
                 p.push({ transport: transport, position: position, partWidth: partWidth, lineEnd: lineEnd, classId: classId, trainName: trainName, clasz: clasz, acc: acc });
-                position = lineEnd;
+                position += partWidth;
             } else if ((index === 0 || index === props.connection.transports.length - 1) && (transport.move_type === 'Walk')) {
                 p.push({ transport: transport, position: position, partWidth: partWidth, lineEnd: lineEnd, classId: classId, clasz: clasz, acc: acc });
-                position = lineEnd;
+                position += partWidth;
             }
         })
         setParts(p);
