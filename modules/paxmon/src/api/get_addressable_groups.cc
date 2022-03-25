@@ -2,12 +2,14 @@
 
 #include <algorithm>
 #include <set>
+#include <utility>
 
 #include "utl/pipes.h"
 #include "utl/to_vec.h"
 
 #include "motis/hash_map.h"
 
+#include "motis/core/schedule/time.h"
 #include "motis/core/conv/station_conv.h"
 #include "motis/core/conv/trip_conv.h"
 
@@ -27,6 +29,20 @@ struct combined_group_info {
   pax_stats stats_;
 };
 
+template <typename Key>
+std::vector<Key> get_sorted_combined_group_infos(
+    mcd::hash_map<Key, combined_group_info> const& cgis) {
+  auto sorted =
+      utl::to_vec(cgis, [](auto const& entry) { return entry.first; });
+  std::sort(begin(sorted), end(sorted),
+            [&](auto const& a_idx, auto const& b_idx) {
+              auto const& a = cgis.at(a_idx);
+              auto const& b = cgis.at(b_idx);
+              return a.stats_.q95_ > b.stats_.q95_;
+            });
+  return sorted;
+}
+
 msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGetAddressableGroupsRequest, msg);
   auto const uv_access = get_universe_and_schedule(data, req->universe());
@@ -41,6 +57,45 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
     return CreatePaxMonCombinedGroupIds(
         mc, mc.CreateVector(cg.groups_),
         to_fbs_distribution(mc, cg.pdf_, cg.stats_));
+  };
+
+  auto const make_grouped_by_entry = [&](combined_group_info const&
+                                             by_interchange) {
+    mcd::hash_map<
+        std::pair<std::uint32_t /* station idx */, time /* enter_time */>,
+        combined_group_info>
+        by_entry;
+
+    for (auto const pgi : by_interchange.groups_) {
+      auto const* pg = uv.passenger_groups_[pgi];
+      for (auto const& leg : pg->compact_planned_journey_.legs_) {
+        if (leg.trip_idx_ == trp->trip_idx_) {
+          by_entry[{leg.enter_station_id_, leg.enter_time_}]
+              .groups_.emplace_back(pgi);
+          break;
+        }
+      }
+    }
+
+    for (auto& [key, cg] : by_entry) {
+      std::sort(begin(cg.groups_), end(cg.groups_));
+      cg.pdf_ = get_load_pdf(uv.passenger_groups_, cg.groups_);
+      cg.cdf_ = get_cdf(cg.pdf_);
+      cg.stats_ = get_pax_stats(cg.cdf_);
+    }
+
+    auto const by_entry_sorted = get_sorted_combined_group_infos(by_entry);
+
+    return mc.CreateVector(utl::to_vec(by_entry_sorted, [&](auto const& key) {
+      auto const& cgi = by_entry[key];
+      return CreatePaxMonAddressableGroupsByEntry(
+          mc, to_fbs(mc, *sched.stations_[key.first]),
+          motis_to_unixtime(sched, key.second), to_combined_group_ids_fbs(cgi),
+          mc.CreateVector(
+              std::vector<
+                  flatbuffers::Offset<PaxMonAddressableGroupsByFeeder>>{}),
+          to_combined_group_ids_fbs(combined_group_info{}));
+    }));
   };
 
   auto const make_section_info = [&](edge const* e) {
@@ -75,14 +130,9 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
       cg.cdf_ = get_cdf(cg.pdf_);
       cg.stats_ = get_pax_stats(cg.cdf_);
     }
-    auto by_interchange_sorted = utl::to_vec(
-        by_interchange, [](auto const& entry) { return entry.first; });
-    std::sort(begin(by_interchange_sorted), end(by_interchange_sorted),
-              [&](std::uint32_t const a_idx, std::uint32_t const b_idx) {
-                auto const& a = by_interchange[a_idx];
-                auto const& b = by_interchange[b_idx];
-                return a.stats_.q95_ > b.stats_.q95_;
-              });
+
+    auto const by_interchange_sorted =
+        get_sorted_combined_group_infos(by_interchange);
 
     return CreatePaxMonAddressableGroupsSection(
         mc, to_fbs(mc, from->get_station(sched)),
@@ -93,11 +143,10 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
         motis_to_unixtime(sched, to->current_time()),
         mc.CreateVector(utl::to_vec(
             by_interchange_sorted, [&](std::uint32_t const ic_station_idx) {
+              auto const& cgi = by_interchange[ic_station_idx];
               return CreatePaxMonAddressableGroupsByInterchange(
                   mc, to_fbs(mc, *sched.stations_[ic_station_idx]),
-                  to_combined_group_ids_fbs(by_interchange[ic_station_idx]),
-                  mc.CreateVector(std::vector<flatbuffers::Offset<
-                                      PaxMonAddressableGroupsByEntry>>{}));
+                  to_combined_group_ids_fbs(cgi), make_grouped_by_entry(cgi));
             })));
   };
 
