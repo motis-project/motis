@@ -141,21 +141,39 @@ const getClasz = (transport: Transport) => {
 }
 
 const calcPartWidth = (transport: Transport, totalDurationInMill: number, stops: Stop[], totalWidth: number) => {
+    let baseBarLength = 2;
     let avgCharLength = 7;
     let trainNameLength = (transport.move_type === 'Transport') ? ((transport.move as TransportInfo).name.length * avgCharLength) : 0;
     let transportTimeInMill = moment.unix(stops[transport.move.range.to].arrival.time).diff(moment.unix(stops[transport.move.range.from].departure.time));
+    console.log(`transportTimeInMill ${transportTimeInMill}`)
     let percentage = transportTimeInMill / totalDurationInMill;
-    let partWidth = (percentage >= 1) ? 323 : (percentage * totalWidth); //noch nicht sicher wie die auf den Wert 323 kommen
-
+    let partWidth = (percentage >= 1) ? totalWidth : ((percentage * totalWidth) + baseBarLength);
+    console.log(`partWidth ${partWidth}`);
     return Math.max(trainNameLength, partWidth);
+}
+
+const getTransportTime = (transport: Transport, stops: Stop[]) => {
+    if(transport.move_type === 'Transport'){
+        return moment.unix(stops[transport.move.range.to].arrival.time).diff(moment.unix(stops[transport.move.range.from].departure.time));
+    }
+    
+    return 0;
+}
+
+interface partElem {
+    
 }
 
 export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setConnectionHighlighted': React.Dispatch<React.SetStateAction<boolean>>, 'connectionDoNothing': boolean, 'connectionHighlighted': boolean }> = (props) => {
 
     const [toolTipSelected, setToolTipSelected] = useState<string>('');
 
-    let totalDurationInMill = moment.unix(props.connection.stops[props.connection.stops.length - 1].arrival.time).diff(moment.unix(props.connection.stops[0].departure.time));
+    const [position, setPosition] = useState
 
+    let initialValue = 0;
+    
+    let totalDurationInMill = props.connection.transports.reduce( (previousValue, currentValue) => previousValue + getTransportTime(currentValue, props.connection.stops), initialValue);
+    console.log(`totalDuration ${totalDurationInMill}`);
     //Variablen die im originalen auch verwendet wurden, teilweise weggelassen
     let iconSize = 16;
     let circleRadius = 12;
@@ -168,7 +186,7 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
     let totalWidth = 335; //transportListViewWidth aus Connections.elm
     let tooltipWidth = 240;
     let position = 0;
-    let partWidth = calcPartWidth(props.connection.transports[0], totalDurationInMill, props.connection.stops, totalWidth);
+    let partWidth = calcPartWidth(props.connection.transports[0], totalDurationInMill, props.connection.stops, totalWidth - (destinationRadius * 2));
     let lineEnd = position + partWidth + (destinationRadius / 2);
 
     return (
@@ -182,12 +200,12 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
                                 <g className={`part train-class-${getClasz(transportElem)} ${getAccNumber(transportElem)}${(props.connectionDoNothing) ? '' : (props.connectionHighlighted) ? 'highlighted' : 'faded'}`} key={index}> {/*Die Abfrage nach dem highlight muss anders sein iwas mit line id*/}
                                     <line x1={position} y1={circleRadius} x2={lineEnd} y2={circleRadius} className='train-line'></line>
                                     <circle cx={position + circleRadius} cy={circleRadius} r={circleRadius} className='train-circle' ></circle>
-                                    <use xlinkHref={classToId(transportElem)} x={position + iconOffset} y={iconOffset} width={iconSize} height={iconSize} className='train-icon' ></use>
+                                    <use xlinkHref={classToId(transportElem)}  className='train-icon' x={position + iconOffset} y={iconOffset} width={iconSize} height={iconSize} ></use>
                                     <text x={position} y={textOffset + textHeight} textAnchor='start' className='train-name'>{(transportElem.move_type === 'Transport') ? (transportElem.move as TransportInfo).name : ''}</text>
                                     <rect x={position} y='0' width={position + partWidth} height={basePartSize} className='tooltipTrigger'
                                         onMouseOver={() => { setToolTipSelected((transportElem.move as TransportInfo).line_id) }}
                                         onMouseOut={() => { setToolTipSelected('') }}></rect>
-                                    {position = position + calcPartWidth(transportElem, totalDurationInMill, props.connection.stops, totalWidth)}
+                                    {position = position + calcPartWidth(transportElem, totalDurationInMill, props.connection.stops, totalWidth - (destinationRadius * 2))}
                                 </g>
                         )
                     })}
@@ -222,19 +240,3 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
         </>
     );
 };
-
-/*
-{(props.connection.transports[0].move_type === 'Transport') ?
-                        props.connection.transports.map((transportElem: Transport, index) => {
-
-                        })
-                        :
-                        <g className={`part train-class-walk ${getAccNumber(props.connection.transports[0])}` }>
-                            <line x1='0' y1='12' x2='326' y2='12' className='train-line'></line>
-                            <circle cx='4' cy='12' r='12' className='train-circle'></circle>
-                            <use xlinkHref='#walk' className='train-icon' x='-4' y='4' width='16' height='16'></use>
-                            <text x={position} y={textOffset + textHeight} textAnchor='start' className='train-name'></text>
-                            <rect x='0' y='0' width='323' height='24' className='tooltipTrigger'></rect>
-                        </g>
-                    }
-*/
