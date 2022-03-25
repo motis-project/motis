@@ -15,7 +15,7 @@ table PaxMonAddressableGroupsByEntry {
   departure_schedule_time: long;
   cgs: PaxMonCombinedGroupIds;
   by_feeder: [PaxMonAddressableGroupsByFeeder];
-  entering_here: PaxMonCombinedGroupIds;
+  starting_here: PaxMonCombinedGroupIds;
 }
 
 table PaxMonAddressableGroupsByInterchange {

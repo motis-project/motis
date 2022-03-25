@@ -4,12 +4,14 @@
 #include <set>
 #include <utility>
 
+#include "utl/enumerate.h"
 #include "utl/pipes.h"
 #include "utl/to_vec.h"
 
 #include "motis/hash_map.h"
 
 #include "motis/core/schedule/time.h"
+#include "motis/core/access/trip_access.h"
 #include "motis/core/conv/station_conv.h"
 #include "motis/core/conv/trip_conv.h"
 
@@ -28,6 +30,13 @@ struct combined_group_info {
   pax_cdf cdf_;
   pax_stats stats_;
 };
+
+void finish_combined_group_info(universe const& uv, combined_group_info& cgi) {
+  std::sort(begin(cgi.groups_), end(cgi.groups_));
+  cgi.pdf_ = get_load_pdf(uv.passenger_groups_, cgi.groups_);
+  cgi.cdf_ = get_cdf(cgi.pdf_);
+  cgi.stats_ = get_pax_stats(cgi.cdf_);
+}
 
 template <typename Key>
 std::vector<Key> get_sorted_combined_group_infos(
@@ -59,44 +68,82 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
         to_fbs_distribution(mc, cg.pdf_, cg.stats_));
   };
 
-  auto const make_grouped_by_entry = [&](combined_group_info const&
-                                             by_interchange) {
-    mcd::hash_map<
-        std::pair<std::uint32_t /* station idx */, time /* enter_time */>,
-        combined_group_info>
-        by_entry;
+  auto const make_grouped_by_feeder = [&](combined_group_info const& by_entry) {
+    mcd::hash_map<trip_idx_t, combined_group_info> by_feeder;
+    combined_group_info starting_here;
 
-    for (auto const pgi : by_interchange.groups_) {
+    for (auto const pgi : by_entry.groups_) {
       auto const* pg = uv.passenger_groups_[pgi];
-      for (auto const& leg : pg->compact_planned_journey_.legs_) {
+      for (auto const& [leg_idx, leg] :
+           utl::enumerate(pg->compact_planned_journey_.legs_)) {
         if (leg.trip_idx_ == trp->trip_idx_) {
-          by_entry[{leg.enter_station_id_, leg.enter_time_}]
-              .groups_.emplace_back(pgi);
+          if (leg_idx == 0) {
+            starting_here.groups_.emplace_back(pgi);
+          } else {
+            auto const& prev_leg =
+                pg->compact_planned_journey_.legs_.at(leg_idx - 1);
+            by_feeder[prev_leg.trip_idx_].groups_.emplace_back(pgi);
+          }
           break;
         }
       }
     }
 
-    for (auto& [key, cg] : by_entry) {
-      std::sort(begin(cg.groups_), end(cg.groups_));
-      cg.pdf_ = get_load_pdf(uv.passenger_groups_, cg.groups_);
-      cg.cdf_ = get_cdf(cg.pdf_);
-      cg.stats_ = get_pax_stats(cg.cdf_);
+    for (auto& [feeder, cg] : by_feeder) {
+      finish_combined_group_info(uv, cg);
     }
+    finish_combined_group_info(uv, starting_here);
 
-    auto const by_entry_sorted = get_sorted_combined_group_infos(by_entry);
+    auto const by_feeder_sorted = get_sorted_combined_group_infos(by_feeder);
 
-    return mc.CreateVector(utl::to_vec(by_entry_sorted, [&](auto const& key) {
-      auto const& cgi = by_entry[key];
-      return CreatePaxMonAddressableGroupsByEntry(
-          mc, to_fbs(mc, *sched.stations_[key.first]),
-          motis_to_unixtime(sched, key.second), to_combined_group_ids_fbs(cgi),
-          mc.CreateVector(
-              std::vector<
-                  flatbuffers::Offset<PaxMonAddressableGroupsByFeeder>>{}),
-          to_combined_group_ids_fbs(combined_group_info{}));
-    }));
+    return std::pair{
+        mc.CreateVector(utl::to_vec(
+            by_feeder_sorted,
+            [&](auto const feeder) {
+              auto const& cgi = by_feeder[feeder];
+              return CreatePaxMonAddressableGroupsByFeeder(
+                  mc,
+                  to_fbs_trip_service_info(mc, sched, get_trip(sched, feeder)),
+                  to_combined_group_ids_fbs(cgi));
+            })),
+        to_combined_group_ids_fbs(starting_here)};
   };
+
+  auto const make_grouped_by_entry =
+      [&](combined_group_info const& by_interchange) {
+        mcd::hash_map<
+            std::pair<std::uint32_t /* station idx */, time /* enter_time */>,
+            combined_group_info>
+            by_entry;
+
+        for (auto const pgi : by_interchange.groups_) {
+          auto const* pg = uv.passenger_groups_[pgi];
+          for (auto const& leg : pg->compact_planned_journey_.legs_) {
+            if (leg.trip_idx_ == trp->trip_idx_) {
+              by_entry[{leg.enter_station_id_, leg.enter_time_}]
+                  .groups_.emplace_back(pgi);
+              break;
+            }
+          }
+        }
+
+        for (auto& [key, cg] : by_entry) {
+          finish_combined_group_info(uv, cg);
+        }
+
+        auto const by_entry_sorted = get_sorted_combined_group_infos(by_entry);
+
+        return mc.CreateVector(
+            utl::to_vec(by_entry_sorted, [&](auto const& key) {
+              auto const& cgi = by_entry[key];
+              auto const by_feeder = make_grouped_by_feeder(cgi);
+              return CreatePaxMonAddressableGroupsByEntry(
+                  mc, to_fbs(mc, *sched.stations_[key.first]),
+                  motis_to_unixtime(sched, key.second),
+                  to_combined_group_ids_fbs(cgi), by_feeder.first,
+                  by_feeder.second);
+            }));
+      };
 
   auto const make_section_info = [&](edge const* e) {
     auto const* from = e->from(uv);
@@ -125,10 +172,7 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
     }
 
     for (auto& [ic_station, cg] : by_interchange) {
-      std::sort(begin(cg.groups_), end(cg.groups_));
-      cg.pdf_ = get_load_pdf(uv.passenger_groups_, cg.groups_);
-      cg.cdf_ = get_cdf(cg.pdf_);
-      cg.stats_ = get_pax_stats(cg.cdf_);
+      finish_combined_group_info(uv, cg);
     }
 
     auto const by_interchange_sorted =

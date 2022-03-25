@@ -215,7 +215,7 @@ export interface PaxMonAddressableGroupsByEntry {
   departure_schedule_time: number;
   cgs: PaxMonCombinedGroupIds;
   by_feeder: PaxMonAddressableGroupsByFeeder[];
-  entering_here: PaxMonCombinedGroupIds;
+  starting_here: PaxMonCombinedGroupIds;
 }
 
 // paxmon/PaxMonGetAddressableGroupsResponse.fbs
