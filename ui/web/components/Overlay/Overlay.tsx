@@ -88,47 +88,46 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                 loading ?
                                     <Spinner />
                                     :
-                                    connections ? 
-                                        connections.length !== 0 ?   
+                                    connections ?
+                                        connections.length !== 0 ? 
                                             <div id='connections'>
                                                 <div className='connections'>
-                                                    <div className='extend-search-interval search-before' onClick={() => setExtendBackwardFlag(true)}>
-                                                        {extendBackwardFlag ?
-                                                            <Spinner />
-                                                            :
-                                                            <a>{props.translation.connections.extendBefore}</a>
-                                                        }
-                                                    </div>
-                                                    <div className='connection-list'>
-                                                        {connections.map((connectionElem: Connection, index) => (
-                                                            connectionElem.dummyDay ?
-                                                            <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
-                                                            :
-                                                            <div  className={(connectionDoNothing) ? 'connection' : `connection ${(connectionHighlighted) ? 'highlighted' : 'faded'}`}
-                                                                  key={index}
-                                                                  onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}
-                                                                  onMouseEnter={() => { let ids = []; ids.push(connectionElem.id); window.portEvents.pub('mapHighlightConnections', ids); setConnectionHighlighted(true)}}
-                                                                  onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', []); setConnectionHighlighted(false)}}>
-                                                                <div className='pure-g'>
-                                                                    <div className='pure-u-4-24 connection-times'>
-                                                                        <div className='connection-departure'>
-                                                                            {moment.unix(connectionElem.stops[0].departure.time).format('HH:mm')}
-                                                                        </div>
-                                                                        <div className='connection-arrival'>
-                                                                            {moment.unix(connectionElem.stops[connectionElem.stops.length - 1].arrival.time).format('HH:mm')}
-                                                                        </div>
+                                                <div className='extend-search-interval search-before' onClick={() => setExtendBackwardFlag(true)}>
+                                                    {extendBackwardFlag ?
+                                                        <Spinner />
+                                                        :
+                                                        <a>{props.translation.connections.extendBefore}</a>
+                                                    }
+                                                </div>
+                                                <div className='connection-list'>
+                                                    {connections.map((connectionElem: Connection, index) => (
+                                                        connectionElem.dummyDay ?
+                                                        <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
+                                                        :
+                                                        <div  className={(connectionDoNothing) ? `connection ${connectionElem.new}` : `connection ${connectionElem.new} ${(connectionHighlighted) ? 'highlighted' : 'faded'}`}
+                                                            key={index}
+                                                            onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}
+                                                            onMouseEnter={() => { let ids = []; ids.push(connectionElem.id); window.portEvents.pub('mapHighlightConnections', ids); setConnectionHighlighted(true)}}
+                                                            onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', []); setConnectionHighlighted(false)}}>
+                                                            <div className='pure-g'>
+                                                                <div className='pure-u-4-24 connection-times'>
+                                                                    <div className='connection-departure'>
+                                                                        {moment.unix(connectionElem.stops[0].departure.time).format('HH:mm')}
                                                                     </div>
-                                                                    <div className='pure-u-4-24 connection-duration'>
-                                                                        {duration(connectionElem.stops[0].departure.time, connectionElem.stops[connectionElem.stops.length - 1].arrival.time)}
+                                                                    <div className='connection-arrival'>
+                                                                        {moment.unix(connectionElem.stops[connectionElem.stops.length - 1].arrival.time).format('HH:mm')}
                                                                     </div>
-                                                                    <div className='pure-u-16-24 connection-trains'>
-                                                                        <div className={(connectionHighlighted ? 'transport-graph highlighting' : 'transport-graph')}>
-                                                                            <ConnectionRender   connection={connectionElem}
-                                                                                                setDetailViewHidden={setDetailViewHidden}
-                                                                                                setConnectionHighlighted={setConnectionHighlighted}
-                                                                                                connectionDoNothing={connectionDoNothing}
-                                                                                                connectionHighlighted={connectionHighlighted}/>
-                                                                        </div>
+                                                                </div>
+                                                                <div className='pure-u-4-24 connection-duration'>
+                                                                    {duration(connectionElem.stops[0].departure.time, connectionElem.stops[connectionElem.stops.length - 1].arrival.time)}
+                                                                </div>
+                                                                <div className='pure-u-16-24 connection-trains'>
+                                                                    <div className={(connectionHighlighted ? 'transport-graph highlighting' : 'transport-graph')}>
+                                                                        <ConnectionRender   connection={connectionElem}
+                                                                                            setDetailViewHidden={setDetailViewHidden}
+                                                                                            setConnectionHighlighted={setConnectionHighlighted}
+                                                                                            connectionDoNothing={connectionDoNothing}
+                                                                                            connectionHighlighted={connectionHighlighted}/>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -141,16 +140,9 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                             :
                                                             <a>{props.translation.connections.extendAfter}</a>
                                                         }
-                                                        </div>
                                                     </div>
-                                            ))}
-                                            <div className='divider footer'></div>
-                                            <div className='extend-search-interval search-after' onClick={() => setExtendForwardFlag(true)}>
-                                                {extendForwardFlag ?
-                                                    <Spinner />
-                                                    :
-                                                    <a>{props.translation.connections.extendAfter}</a>
-                                                }
+                                                </div>
+                                                </div>
                                             </div>
                                             :
                                             <div id='connections'>

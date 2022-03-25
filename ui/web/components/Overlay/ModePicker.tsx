@@ -129,7 +129,7 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
                             onClick={() => {
                                 let modes = getModeArr();
                                 if (!equal(modes, props.modes)) {
-                                    props.setModes(getModeArr());
+                                    props.setModes(modes);
                                     setLocalStorage(props.localStorageModes, {walk: {enabled: footSelected, search_profile: {profile: profilePicker, max_duration: footMaxDurationSlider}}, bike: {enabled: bikeSelected, max_duration: bikeMaxDurationSlider}, car: {enabled: carSelected, max_duration: carMaxDurationSlider, use_parking: useParking}});
                                 }
                                 setModePickerVisible(false);
