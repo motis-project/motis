@@ -1,5 +1,5 @@
 import moment from 'moment';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { TransportInfo, Connection, Transport, WalkInfo, Stop } from '../Types/Connection';
 
@@ -145,35 +145,64 @@ const calcPartWidth = (transport: Transport, totalDurationInMill: number, stops:
     let avgCharLength = 7;
     let trainNameLength = (transport.move_type === 'Transport') ? ((transport.move as TransportInfo).name.length * avgCharLength) : 0;
     let transportTimeInMill = moment.unix(stops[transport.move.range.to].arrival.time).diff(moment.unix(stops[transport.move.range.from].departure.time));
-    console.log(`transportTimeInMill ${transportTimeInMill}`)
     let percentage = transportTimeInMill / totalDurationInMill;
     let partWidth = (percentage >= 1) ? totalWidth : ((percentage * totalWidth) + baseBarLength);
-    console.log(`partWidth ${partWidth}`);
     return Math.max(trainNameLength, partWidth);
 }
 
 const getTransportTime = (transport: Transport, stops: Stop[]) => {
-    if(transport.move_type === 'Transport'){
+    if (transport.move_type === 'Transport') {
         return moment.unix(stops[transport.move.range.to].arrival.time).diff(moment.unix(stops[transport.move.range.from].departure.time));
     }
-    
+
     return 0;
 }
 
-interface partElem {
-    
+interface PartElem {
+    transport: Transport,
+    position: number,
+    partWidth: number,
+    lineEnd: number,
+    classId: string,
+    trainName?: string,
+    clasz: (string | number),
+    acc: string
 }
 
 export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setConnectionHighlighted': React.Dispatch<React.SetStateAction<boolean>>, 'connectionDoNothing': boolean, 'connectionHighlighted': boolean }> = (props) => {
 
     const [toolTipSelected, setToolTipSelected] = useState<string>('');
+    const [parts, setParts] = useState<PartElem[]>([]);
 
-    const [position, setPosition] = useState
+    useEffect(() => {
+        let p: PartElem[] = [];
+        let position = 0;
+
+        props.connection.transports.map((transport: Transport, index) => {
+            let partWidth = calcPartWidth(transport, totalDurationInMill, props.connection.stops, totalWidth - (destinationRadius * 2));
+            let lineEnd = position + partWidth + (destinationRadius / 2);
+            if(lineEnd > 323){
+                lineEnd = 323;
+            }
+            let classId = classToId(transport);
+            let clasz = getClasz(transport);
+            let acc = getAccNumber(transport);
+            console.log(`position ${position};lineEnd ${lineEnd}`)
+
+            if (transport.move_type === 'Transport') {
+                let trainName = (transport.move as TransportInfo).name;
+                p.push({ transport: transport, position: position, partWidth: partWidth, lineEnd: lineEnd, classId: classId, trainName: trainName, clasz: clasz, acc: acc });
+                position = lineEnd;
+            } else if ((index === 0 || index === props.connection.transports.length - 1) && (transport.move_type === 'Walk')) {
+                p.push({ transport: transport, position: position, partWidth: partWidth, lineEnd: lineEnd, classId: classId, clasz: clasz, acc: acc });
+                position = lineEnd;
+            }
+        })
+        setParts(p);
+    }, [])
 
     let initialValue = 0;
-    
-    let totalDurationInMill = props.connection.transports.reduce( (previousValue, currentValue) => previousValue + getTransportTime(currentValue, props.connection.stops), initialValue);
-    console.log(`totalDuration ${totalDurationInMill}`);
+    let totalDurationInMill = props.connection.transports.reduce((previousValue, currentValue) => previousValue + getTransportTime(currentValue, props.connection.stops), initialValue);
     //Variablen die im originalen auch verwendet wurden, teilweise weggelassen
     let iconSize = 16;
     let circleRadius = 12;
@@ -185,55 +214,47 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
     let totalHeight = textOffset + textHeight;
     let totalWidth = 335; //transportListViewWidth aus Connections.elm
     let tooltipWidth = 240;
-    let position = 0;
-    let partWidth = calcPartWidth(props.connection.transports[0], totalDurationInMill, props.connection.stops, totalWidth - (destinationRadius * 2));
-    let lineEnd = position + partWidth + (destinationRadius / 2);
 
     return (
         <>
             <svg width={totalWidth} height={totalHeight} viewBox={`0 0 ${totalWidth} ${totalHeight}`}>
                 <g>
-                    {props.connection.transports.map((transportElem: Transport, index) => {
-                        return (
-                            (index > 0 && index < props.connection.transports.length - 1 && (transportElem.move_type === 'Walk')) ?
-                                <></> :
-                                <g className={`part train-class-${getClasz(transportElem)} ${getAccNumber(transportElem)}${(props.connectionDoNothing) ? '' : (props.connectionHighlighted) ? 'highlighted' : 'faded'}`} key={index}> {/*Die Abfrage nach dem highlight muss anders sein iwas mit line id*/}
-                                    <line x1={position} y1={circleRadius} x2={lineEnd} y2={circleRadius} className='train-line'></line>
-                                    <circle cx={position + circleRadius} cy={circleRadius} r={circleRadius} className='train-circle' ></circle>
-                                    <use xlinkHref={classToId(transportElem)}  className='train-icon' x={position + iconOffset} y={iconOffset} width={iconSize} height={iconSize} ></use>
-                                    <text x={position} y={textOffset + textHeight} textAnchor='start' className='train-name'>{(transportElem.move_type === 'Transport') ? (transportElem.move as TransportInfo).name : ''}</text>
-                                    <rect x={position} y='0' width={position + partWidth} height={basePartSize} className='tooltipTrigger'
-                                        onMouseOver={() => { setToolTipSelected((transportElem.move as TransportInfo).line_id) }}
-                                        onMouseOut={() => { setToolTipSelected('') }}></rect>
-                                    {position = position + calcPartWidth(transportElem, totalDurationInMill, props.connection.stops, totalWidth - (destinationRadius * 2))}
-                                </g>
-                        )
-                    })}
+                    {parts.map((partElem: PartElem, index) => (
+                        <g className={`part train-class-${partElem.clasz} ${partElem.acc}${(props.connectionDoNothing) ? '' : (props.connectionHighlighted) ? 'highlighted' : 'faded'}`} key={index}> {/*Die Abfrage nach dem highlight muss anders sein iwas mit line id*/}
+                            <line x1={partElem.position} y1={circleRadius} x2={partElem.lineEnd} y2={circleRadius} className='train-line'></line>
+                            <circle cx={partElem.position + circleRadius} cy={circleRadius} r={circleRadius} className='train-circle' ></circle>
+                            <use xlinkHref={partElem.classId} className='train-icon' x={partElem.position + iconOffset} y={iconOffset} width={iconSize} height={iconSize} ></use>
+                            <text x={partElem.position} y={textOffset + textHeight} textAnchor='start' className='train-name'>{partElem.trainName}</text>
+                            <rect x={partElem.position} y='0' width={partElem.position + partElem.partWidth} height={basePartSize} className='tooltipTrigger'
+                                onMouseOver={() => { setToolTipSelected((partElem.transport.move as TransportInfo).line_id) }}
+                                onMouseOut={() => { setToolTipSelected('') }}></rect>
+                        </g>
+                    ))}
                 </g>
                 <g className='destination'><circle cx={totalWidth - destinationRadius} cy={circleRadius} r={destinationRadius}></circle></g>
             </svg>
-            {props.connection.transports.map((transportElem: Transport, index) => (
-                <div className={`tooltip ${(toolTipSelected === (transportElem.move as TransportInfo).line_id) ? 'visible' : ''}`} style={{ position: 'absolute', left: `${(Math.min(position, (totalWidth - tooltipWidth)))}px`, top: `${(textOffset - 5)}px` }} key={index}>
+            {parts.map((partElem: PartElem, index) => (
+                <div className={`tooltip ${(toolTipSelected === (partElem.transport.move as TransportInfo).line_id) ? 'visible' : ''}`} style={{ position: 'absolute', left: `${(Math.min(partElem.position, (totalWidth - tooltipWidth)))}px`, top: `${(textOffset - 5)}px` }} key={(partElem.transport.move as TransportInfo).line_id}>
                     <div className='stations'>
                         <div className='departure'>
                             <div className='station'>
-                                {props.connection.stops[transportElem.move.range.from].station.name}
+                                {props.connection.stops[partElem.transport.move.range.from].station.name}
                             </div>
                             <div className='time'>
-                                {moment.unix(props.connection.stops[transportElem.move.range.from].departure.time).format('HH:mm')}
+                                {moment.unix(props.connection.stops[partElem.transport.move.range.from].departure.time).format('HH:mm')}
                             </div>
                         </div>
                         <div className='arrival'>
                             <div className='station'>
-                                {props.connection.stops[transportElem.move.range.to].station.name}
+                                {props.connection.stops[partElem.transport.move.range.to].station.name}
                             </div>
                             <div className='time'>
-                                {moment.unix(props.connection.stops[transportElem.move.range.to].arrival.time).format('HH:mm')}
+                                {moment.unix(props.connection.stops[partElem.transport.move.range.to].arrival.time).format('HH:mm')}
                             </div>
                         </div>
                     </div>
                     <div className='transport-name'>
-                        {(transportElem.move as TransportInfo).name}
+                        {partElem.trainName}
                     </div>
                 </div>
             ))}
