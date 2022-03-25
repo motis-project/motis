@@ -140,18 +140,14 @@ const getClasz = (transport: Transport) => {
     }
 }
 
-const setPosition = () => {
-
-}
-
-const calcPartWidth = (transport: Transport, totalDurationInMill: number, stops: Stop[]) => {
-    let baseBarLength = 2;
+const calcPartWidth = (transport: Transport, totalDurationInMill: number, stops: Stop[], totalWidth: number) => {
     let avgCharLength = 7;
     let trainNameLength = (transport.move_type === 'Transport') ? ((transport.move as TransportInfo).name.length * avgCharLength) : 0;
     let transportTimeInMill = moment.unix(stops[transport.move.range.to].arrival.time).diff(moment.unix(stops[transport.move.range.from].departure.time));
     let percentage = transportTimeInMill / totalDurationInMill;
+    let partWidth = (percentage >= 1) ? 323 : (percentage * totalWidth); //noch nicht sicher wie die auf den Wert 323 kommen
 
-    return Math.max(trainNameLength, percentage);
+    return Math.max(trainNameLength, partWidth);
 }
 
 export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setConnectionHighlighted': React.Dispatch<React.SetStateAction<boolean>>, 'connectionDoNothing': boolean, 'connectionHighlighted': boolean }> = (props) => {
@@ -160,6 +156,7 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
 
     let totalDurationInMill = moment.unix(props.connection.stops[props.connection.stops.length - 1].arrival.time).diff(moment.unix(props.connection.stops[0].departure.time));
 
+    //Variablen die im originalen auch verwendet wurden, teilweise weggelassen
     let iconSize = 16;
     let circleRadius = 12;
     let basePartSize = circleRadius * 2;
@@ -171,27 +168,29 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
     let totalWidth = 335; //transportListViewWidth aus Connections.elm
     let tooltipWidth = 240;
     let position = 0;
-    let partWidth = calcPartWidth(props.connection.transports[0], totalDurationInMill, props.connection.stops);
+    let partWidth = calcPartWidth(props.connection.transports[0], totalDurationInMill, props.connection.stops, totalWidth);
     let lineEnd = position + partWidth + (destinationRadius / 2);
 
     return (
         <>
             <svg width={totalWidth} height={totalHeight} viewBox={`0 0 ${totalWidth} ${totalHeight}`}>
                 <g>
-                    {props.connection.transports.map((transportElem: Transport, index) => (
-                        (index > 0 && index < props.connection.transports.length - 1 && (transportElem.move_type === 'Walk')) ?
-                        <></> :
-                        <g className={`part train-class-${getClasz(transportElem)} ${getAccNumber(transportElem)}${(props.connectionDoNothing) ? '' : (props.connectionHighlighted) ? 'highlighted' : 'faded'}`} key={index}> {/*Die Abfrage nach dem highlight muss anders sein iwas mit line id*/}
-                            <line x1={position} y1={circleRadius} x2={lineEnd} y2={circleRadius} className='train-line'></line>
-                            <circle cx={position + circleRadius} cy={circleRadius} r={circleRadius} className='train-circle' ></circle>
-                            <use xlinkHref={classToId(transportElem)} x={position + iconOffset} y={iconOffset} width={iconSize} height={iconSize} className='train-icon' ></use>
-                            <text x={position} y={textOffset + textHeight} textAnchor='start' className='train-name'>{(transportElem.move_type === 'Transport') ? (transportElem.move as TransportInfo).name : ''}</text>
-                            <rect x={position} y='0' width={position + partWidth} height={basePartSize} className='tooltipTrigger'
-                                onMouseOver={() => { setToolTipSelected((transportElem.move as TransportInfo).line_id) }}
-                                onMouseOut={() => { setToolTipSelected('') }}></rect>
-                            {position = position + calcPartWidth(transportElem, totalDurationInMill, props.connection.stops)}
-                        </g>
-                    ))}
+                    {props.connection.transports.map((transportElem: Transport, index) => {
+                        return (
+                            (index > 0 && index < props.connection.transports.length - 1 && (transportElem.move_type === 'Walk')) ?
+                                <></> :
+                                <g className={`part train-class-${getClasz(transportElem)} ${getAccNumber(transportElem)}${(props.connectionDoNothing) ? '' : (props.connectionHighlighted) ? 'highlighted' : 'faded'}`} key={index}> {/*Die Abfrage nach dem highlight muss anders sein iwas mit line id*/}
+                                    <line x1={position} y1={circleRadius} x2={lineEnd} y2={circleRadius} className='train-line'></line>
+                                    <circle cx={position + circleRadius} cy={circleRadius} r={circleRadius} className='train-circle' ></circle>
+                                    <use xlinkHref={classToId(transportElem)} x={position + iconOffset} y={iconOffset} width={iconSize} height={iconSize} className='train-icon' ></use>
+                                    <text x={position} y={textOffset + textHeight} textAnchor='start' className='train-name'>{(transportElem.move_type === 'Transport') ? (transportElem.move as TransportInfo).name : ''}</text>
+                                    <rect x={position} y='0' width={position + partWidth} height={basePartSize} className='tooltipTrigger'
+                                        onMouseOver={() => { setToolTipSelected((transportElem.move as TransportInfo).line_id) }}
+                                        onMouseOut={() => { setToolTipSelected('') }}></rect>
+                                    {position = position + calcPartWidth(transportElem, totalDurationInMill, props.connection.stops, totalWidth)}
+                                </g>
+                        )
+                    })}
                 </g>
                 <g className='destination'><circle cx={totalWidth - destinationRadius} cy={circleRadius} r={destinationRadius}></circle></g>
             </svg>
