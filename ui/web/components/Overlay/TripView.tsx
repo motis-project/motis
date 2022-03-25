@@ -53,7 +53,7 @@ export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHid
             <div className='connection-details trip-view'>
                 <div className='connection-info'>
                     <div className='header'>
-                        <div className='back'><i className='icon' onClick={() => props.setSubOverlayHidden(true)}>arrow_back</i></div>
+                        <div className='back' onClick={() => props.setSubOverlayHidden(true)}><i className='icon'>arrow_back</i></div>
                         <div className='details'>
                             <div className='date'>{moment.unix(props.displayDate.unix()).format(props.translation.dateFormat)}</div>
                             <div className='connection-times'>

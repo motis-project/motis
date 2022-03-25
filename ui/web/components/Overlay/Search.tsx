@@ -329,7 +329,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
 
     // Handle Interval change after extend-search-interval search-forward Button in Overlay was clicked
     useEffect(() => {
-        if (searchForward && searchBackward) {
+        if (searchForward && searchBackward && (props.extendBackwardFlag || props.extendForwardFlag)) {
             setExtendConnections(!extendConnections);
         }
     }, [props.extendForwardFlag, props.extendBackwardFlag]);

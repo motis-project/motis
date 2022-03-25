@@ -174,7 +174,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                         <div className="connection-details">
                             <div className="connection-info">
                                 <div className="header">
-                                    <div className="back"><i className="icon" onClick={() => setDetailViewHidden(true)}>arrow_back</i></div>
+                                    <div className="back" onClick={() => setDetailViewHidden(true)}><i className="icon">arrow_back</i></div>
                                     <div className="details">
                                         <div className="date">{props.searchDate.format(props.translation.dateFormat)}</div>
                                         <div className="connection-times">
