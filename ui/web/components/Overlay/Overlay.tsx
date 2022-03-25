@@ -127,7 +127,8 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                                                             setDetailViewHidden={setDetailViewHidden}
                                                                                             setConnectionHighlighted={setConnectionHighlighted}
                                                                                             connectionDoNothing={connectionDoNothing}
-                                                                                            connectionHighlighted={connectionHighlighted}/>
+                                                                                            connectionHighlighted={connectionHighlighted}
+                                                                                            key={index}/>
                                                                     </div>
                                                                 </div>
                                                             </div>

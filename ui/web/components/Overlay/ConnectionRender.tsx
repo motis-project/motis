@@ -101,7 +101,7 @@ interface PartElem {
     acc: string
 }
 
-export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setConnectionHighlighted': React.Dispatch<React.SetStateAction<boolean>>, 'connectionDoNothing': boolean, 'connectionHighlighted': boolean }> = (props) => {
+export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setConnectionHighlighted': React.Dispatch<React.SetStateAction<boolean>>, 'connectionDoNothing': boolean, 'connectionHighlighted': boolean, 'key': number }> = (props) => {
 
     const [toolTipSelected, setToolTipSelected] = useState<string>('');
     const [parts, setParts] = useState<PartElem[]>([]);
@@ -152,7 +152,7 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
             <svg width={totalWidth} height={totalHeight} viewBox={`0 0 ${totalWidth} ${totalHeight}`}>
                 <g>
                     {parts.map((partElem: PartElem, index) => (
-                        <g className={`part train-class-${partElem.clasz} ${partElem.acc}${(props.connectionDoNothing) ? '' : (props.connectionHighlighted) ? 'highlighted' : 'faded'}`} key={index}> {/*Die Abfrage nach dem highlight muss anders sein iwas mit line id*/}
+                        <g className={`part train-class-${partElem.clasz} ${partElem.acc}${(props.connectionDoNothing) ? '' : (props.connectionHighlighted) ? 'highlighted' : 'faded'}`} key={`part${props.key}${index}`}> {/*Die Abfrage nach dem highlight muss anders sein iwas mit line id*/}
                             <line x1={partElem.position} y1={circleRadius} x2={partElem.lineEnd} y2={circleRadius} className='train-line'></line>
                             <circle cx={partElem.position + circleRadius} cy={circleRadius} r={circleRadius} className='train-circle' ></circle>
                             <use xlinkHref={partElem.classId} className='train-icon' x={partElem.position + iconOffset} y={iconOffset} width={iconSize} height={iconSize} ></use>
@@ -166,7 +166,7 @@ export const ConnectionRender: React.FC<{ 'connection': Connection, 'setDetailVi
                 <g className='destination'><circle cx={totalWidth - destinationRadius} cy={circleRadius} r={destinationRadius}></circle></g>
             </svg>
             {parts.map((partElem: PartElem, index) => (
-                <div className={`tooltip ${(toolTipSelected === (partElem.transport.move as TransportInfo).line_id) ? 'visible' : ''}`} style={{ position: 'absolute', left: `${(Math.min(partElem.position, (totalWidth - tooltipWidth)))}px`, top: `${(textOffset - 5)}px` }} key={(partElem.transport.move as TransportInfo).line_id}>
+                <div className={`tooltip ${(toolTipSelected === (partElem.transport.move as TransportInfo).line_id) ? 'visible' : ''}`} style={{ position: 'absolute', left: `${(Math.min(partElem.position, (totalWidth - tooltipWidth)))}px`, top: `${(textOffset - 5)}px` }} key={`tooltip${props.key}${index}`}>
                     <div className='stations'>
                         <div className='departure'>
                             <div className='station'>
