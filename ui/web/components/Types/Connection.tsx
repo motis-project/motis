@@ -3,7 +3,8 @@ export interface Connection {
     transports: Transport[],
     trips: Trip[],
     problems: Problem[],
-    dummyDay?: string
+    dummyDay?: string,
+    id?: number
 }
 
 export interface TripViewConnection {

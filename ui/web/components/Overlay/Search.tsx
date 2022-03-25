@@ -100,8 +100,9 @@ const sendConnectionsToOverlay = (setConnections: React.Dispatch<React.SetStateA
     let previousConnectionDay = moment.unix(connections[0].stops[0].departure.schedule_time);
     let dummyDays = [previousConnectionDay.format(dateFormat)];
     setAllConnectionsWithoutDummies(connections);
-
+    connectionsWithDummies[0].id = 0;
     for (let i = 1; i < connections.length; i++){
+        connectionsWithDummies[i].id = i;
         if (moment.unix(connections[i].stops[0].departure.schedule_time).day() != previousConnectionDay.day()){
             dummyIndexes.push(i);
             dummyDays.push(moment.unix(connections[i].stops[0].departure.schedule_time).format(dateFormat));
@@ -239,12 +240,14 @@ export const Search: React.FC<SearchTypes> = (props) => {
                         if(!equal(res.content.connections[0], allConnectionsWithoutDummies[0])) {
                             props.setConnections(null); // Only when connections=null will the Loading animation be shown
                             sendConnectionsToOverlay(props.setConnections, [...res.content.connections, ...allConnectionsWithoutDummies], setAllConnectionsWithoutDummies, props.translation.dateFormat);
+                            window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections([...res.content.connections, ...allConnectionsWithoutDummies]), 'lowestId': 0});
                         }
                         props.setExtendBackwardFlag(false);
                     } else {
                         if(!equal(res.content.connections[res.content.connections.length-1], allConnectionsWithoutDummies[allConnectionsWithoutDummies.length-1])) {
                             props.setConnections(null); // Only when connections=null will the Loading animation be shown
                             sendConnectionsToOverlay(props.setConnections, [...allConnectionsWithoutDummies, ...res.content.connections], setAllConnectionsWithoutDummies, props.translation.dateFormat);
+                            window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections([...allConnectionsWithoutDummies, ...res.content.connections]), 'lowestId': 0});
                         }
                         props.setExtendForwardFlag(false);
                     }
@@ -252,7 +255,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
                                                             'startName': getFromLocalStorage("motis.routing.from_location").name,
                                                             'destinationPosition': getFromLocalStorage("motis.routing.to_location").pos,
                                                             'destinationName': getFromLocalStorage("motis.routing.to_location").name});
-                    window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections(res.content.connections), 'lowestId': 0});
+                    
                 })
                 .catch(error => {});
         }
