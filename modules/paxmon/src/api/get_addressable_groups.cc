@@ -4,14 +4,19 @@
 #include <set>
 #include <utility>
 
+#include "cista/reflection/comparable.h"
+
 #include "utl/enumerate.h"
 #include "utl/pipes.h"
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "motis/hash_map.h"
 
 #include "motis/core/schedule/time.h"
+#include "motis/core/access/realtime_access.h"
 #include "motis/core/access/trip_access.h"
+#include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/station_conv.h"
 #include "motis/core/conv/trip_conv.h"
 
@@ -24,6 +29,8 @@ using namespace motis::paxmon;
 
 namespace motis::paxmon::api {
 
+namespace {
+
 struct combined_group_info {
   std::vector<passenger_group_index> groups_{};
   pax_pdf pdf_;
@@ -31,11 +38,35 @@ struct combined_group_info {
   pax_stats stats_;
 };
 
+struct feeder_key {
+  CISTA_COMPARABLE()
+  trip_idx_t trip_idx_{};
+  std::uint32_t arrival_station_{};
+  time schedule_arrival_{};
+};
+
+}  // namespace
+
 void finish_combined_group_info(universe const& uv, combined_group_info& cgi) {
   std::sort(begin(cgi.groups_), end(cgi.groups_));
   cgi.pdf_ = get_load_pdf(uv.passenger_groups_, cgi.groups_);
   cgi.cdf_ = get_cdf(cgi.pdf_);
   cgi.stats_ = get_pax_stats(cgi.cdf_);
+}
+
+time get_current_arrival_time(schedule const& sched, trip const* trp,
+                              std::uint32_t const station_id,
+                              time const schedule_time) {
+  for (auto const& sec : access::sections{trp}) {
+    if (sec.to_station_id() == station_id) {
+      auto const key = sec.ev_key_to();
+      if (get_schedule_time(sched, key) == schedule_time) {
+        return key.get_time();
+      }
+    }
+  }
+  throw utl::fail(
+      "paxmon::api::get_addressable_groups: trip arrival event not found");
 }
 
 template <typename Key>
@@ -69,7 +100,7 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
   };
 
   auto const make_grouped_by_feeder = [&](combined_group_info const& by_entry) {
-    mcd::hash_map<trip_idx_t, combined_group_info> by_feeder;
+    mcd::hash_map<feeder_key, combined_group_info> by_feeder;
     combined_group_info starting_here;
 
     for (auto const pgi : by_entry.groups_) {
@@ -82,7 +113,9 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
           } else {
             auto const& prev_leg =
                 pg->compact_planned_journey_.legs_.at(leg_idx - 1);
-            by_feeder[prev_leg.trip_idx_].groups_.emplace_back(pgi);
+            by_feeder[{prev_leg.trip_idx_, prev_leg.exit_station_id_,
+                       prev_leg.exit_time_}]
+                .groups_.emplace_back(pgi);
           }
           break;
         }
@@ -99,11 +132,17 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
     return std::pair{
         mc.CreateVector(utl::to_vec(
             by_feeder_sorted,
-            [&](auto const feeder) {
+            [&](auto const& feeder) {
               auto const& cgi = by_feeder[feeder];
+              auto const* feeder_trp = get_trip(sched, feeder.trip_idx_);
               return CreatePaxMonAddressableGroupsByFeeder(
-                  mc,
-                  to_fbs_trip_service_info(mc, sched, get_trip(sched, feeder)),
+                  mc, to_fbs_trip_service_info(mc, sched, feeder_trp),
+                  to_fbs(mc, *sched.stations_[feeder.arrival_station_]),
+                  motis_to_unixtime(sched, feeder.schedule_arrival_),
+                  motis_to_unixtime(
+                      sched, get_current_arrival_time(
+                                 sched, feeder_trp, feeder.arrival_station_,
+                                 feeder.schedule_arrival_)),
                   to_combined_group_ids_fbs(cgi));
             })),
         to_combined_group_ids_fbs(starting_here)};

@@ -7,6 +7,9 @@ namespace motis.paxmon;
 
 table PaxMonAddressableGroupsByFeeder {
   trip: motis.TripServiceInfo;
+  arrival_station: motis.Station;
+  arrival_schedule_time: ulong;
+  arrival_current_time: ulong;
   cgs: PaxMonCombinedGroupIds;
 }
 

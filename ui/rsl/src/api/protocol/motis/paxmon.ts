@@ -206,6 +206,9 @@ export interface PaxMonGetAddressableGroupsRequest {
 // paxmon/PaxMonGetAddressableGroupsResponse.fbs
 export interface PaxMonAddressableGroupsByFeeder {
   trip: TripServiceInfo;
+  arrival_station: Station;
+  arrival_schedule_time: number;
+  arrival_current_time: number;
   cgs: PaxMonCombinedGroupIds;
 }
 
