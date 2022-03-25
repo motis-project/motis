@@ -107,7 +107,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                             <div  className={(connectionDoNothing) ? 'connection' : `connection ${(connectionHighlighted) ? 'highlighted' : 'faded'}`}
                                                                   key={index}
                                                                   onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index) }}
-                                                                  onMouseEnter={() => { let ids = []; ids.push(index - 1); window.portEvents.pub('mapHighlightConnections', ids); setConnectionHighlighted(true)}}
+                                                                  onMouseEnter={() => { let ids = []; ids.push(connectionElem.id); window.portEvents.pub('mapHighlightConnections', ids); setConnectionHighlighted(true)}}
                                                                   onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', []); setConnectionHighlighted(false)}}>
                                                                 <div className='pure-g'>
                                                                     <div className='pure-u-4-24 connection-times'>
