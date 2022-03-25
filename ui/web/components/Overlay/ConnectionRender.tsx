@@ -60,6 +60,9 @@ const getClasz = (transport: Transport) => {
             return (transport.move as TransportInfo).clasz;
             break;
         case 'Walk':
+            if((transport.move as WalkInfo).mumo_type === ''){
+                return 'walk'
+            }
             return (transport.move as WalkInfo).mumo_type;
             break;
         default:
