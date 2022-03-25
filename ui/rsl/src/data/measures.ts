@@ -111,7 +111,6 @@ export function toMeasureWrapper(mu: MeasureUnion): MeasureWrapper | null {
           ...shared,
           planned_trips: [],
           planned_destinations: [d.planned_destination.id],
-          planned_long_distance_destinations: [],
           recommended_trip: d.recommended_trip.trip,
         },
       };

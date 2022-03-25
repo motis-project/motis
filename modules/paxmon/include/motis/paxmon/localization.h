@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstdint>
 #include <tuple>
+#include <vector>
 
 #include "cista/hashing.h"
 
@@ -16,6 +18,8 @@ struct passenger_localization {
   time schedule_arrival_time_{INVALID_TIME};
   time current_arrival_time_{INVALID_TIME};
   bool first_station_{false};
+  std::vector<std::uint32_t>
+      remaining_interchanges_;  // including final destination
 
   inline friend bool operator==(passenger_localization const& lhs,
                                 passenger_localization const& rhs) {

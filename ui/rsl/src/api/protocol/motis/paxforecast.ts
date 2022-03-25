@@ -33,7 +33,6 @@ export interface TripRecommendationMeasure {
   time: number;
   planned_trips: TripId[];
   planned_destinations: string[];
-  planned_long_distance_destinations: string[];
   recommended_trip: TripId;
 }
 
