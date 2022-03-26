@@ -270,21 +270,35 @@ void check_measures(
     alternative& alt,
     mcd::vector<measures::measure_variant const*> const& group_measures) {
   for (auto const* mv : group_measures) {
-    std::visit(utl::overloaded{//
-                               [&](measures::trip_recommendation const& m) {
-                                 if (is_recommended(alt, m)) {
-                                   alt.is_recommended_ = true;
-                                 }
-                               },
-                               [&](measures::trip_load_information const& m) {
-                                 // TODO(pablo): handle case where load
-                                 // information for multiple trips in the
-                                 // journey is available
-                                 if (contains_trip(alt, m.trip_)) {
-                                   alt.load_info_ = m.level_;
-                                 }
-                               }},
-               *mv);
+    std::visit(
+        utl::overloaded{//
+                        [&](measures::trip_recommendation const& m) {
+                          if (is_recommended(alt, m)) {
+                            alt.is_recommended_ = true;
+                          }
+                        },
+                        [&](measures::trip_load_information const& m) {
+                          // TODO(pablo): handle case where load
+                          // information for multiple trips in the
+                          // journey is available
+                          if (contains_trip(alt, m.trip_)) {
+                            alt.load_info_ = m.level_;
+                          }
+                        },
+                        [&](measures::trip_load_recommendation const& m) {
+                          for (auto const& tll : m.full_trips_) {
+                            if (contains_trip(alt, tll.trip_)) {
+                              alt.load_info_ = tll.level_;
+                            }
+                          }
+                          for (auto const& tll : m.recommended_trips_) {
+                            if (contains_trip(alt, tll.trip_)) {
+                              alt.load_info_ = tll.level_;
+                              alt.is_recommended_ = true;
+                            }
+                          }
+                        }},
+        *mv);
   }
 }
 

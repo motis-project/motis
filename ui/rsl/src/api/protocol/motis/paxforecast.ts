@@ -37,6 +37,21 @@ export interface TripRecommendationMeasure {
 }
 
 // paxforecast/Measures.fbs
+export interface TripWithLoadLevel {
+  trip: TripId;
+  level: LoadLevel;
+}
+
+// paxforecast/Measures.fbs
+export interface TripLoadRecommendationMeasure {
+  recipients: MeasureRecipients;
+  time: number;
+  planned_destinations: string[];
+  full_trips: TripWithLoadLevel[];
+  recommended_trips: TripWithLoadLevel[];
+}
+
+// paxforecast/Measures.fbs
 export interface RtUpdateMeasure {
   recipients: MeasureRecipients;
   time: number;
@@ -48,11 +63,13 @@ export interface RtUpdateMeasure {
 export type Measure =
   | TripLoadInfoMeasure
   | TripRecommendationMeasure
+  | TripLoadRecommendationMeasure
   | RtUpdateMeasure;
 
 export type MeasureType =
   | "TripLoadInfoMeasure"
   | "TripRecommendationMeasure"
+  | "TripLoadRecommendationMeasure"
   | "RtUpdateMeasure";
 
 // paxforecast/Measures.fbs
