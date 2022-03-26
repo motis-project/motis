@@ -366,7 +366,7 @@ struct parking::impl {
 
   void update_parking_places() {
     using namespace net::http::client;
-    auto const resp = motis_http("https://api.parkendd.de/")->val();
+    //    auto const resp = motis_http("https://api.parkendd.de/")->val();
 
     // TODO(root) update db
     (void)parkings_;

@@ -1,5 +1,6 @@
 include "base/Position.fbs";
 include "base/Station.fbs";
+include "base/SearchDir.fbs";
 
 namespace motis.gbfs;
 
@@ -38,6 +39,7 @@ union BikeRoute { FreeBikeRoute, StationBikeRoute }
 
 table RouteInfo {
   route: BikeRoute;
+  distance: double;
   duration: uint;
   walk_duration: uint;
   walk_distance: double;
@@ -48,5 +50,6 @@ table RouteInfo {
 // ----------------------------------------------------------------------------
 
 table GBFSRoutingResponse {
+  dir: SearchDir;
   routes: [RouteInfo];
 }

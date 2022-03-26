@@ -3,6 +3,24 @@ include "base/SearchDir.fbs";
 
 namespace motis.gbfs;
 
+// JSON example:
+// --
+// {
+//   "destination": {
+//     "type": "Module",
+//     "target": "/gbfs/route"
+//   },
+//   "content_type": "GBFSRoutingResponse",
+//   "content": {
+//     "dir": "Forward",
+//     "x": {
+//       "lat": 48.77541,
+//       "lng": 9.158932
+//     },
+//     "max_foot_duration": 15,
+//     "max_bike_duration": 15
+//   }
+// }
 table GBFSRoutingRequest {
   dir: SearchDir;
   x: motis.Position;
