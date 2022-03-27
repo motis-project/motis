@@ -128,6 +128,7 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
                     <div    className='sub-overlay-close' 
                             onClick={() => {
                                 let modes = getModeArr();
+                                // If the mode objects in the datepicker differ from the ones displayed and used in Search.tsx, then update those when closing the modepicker
                                 if (!equal(modes, props.modes)) {
                                     props.setModes(modes);
                                     setLocalStorage(props.localStorageModes, {walk: {enabled: footSelected, search_profile: {profile: profilePicker, max_duration: footMaxDurationSlider}}, bike: {enabled: bikeSelected, max_duration: bikeMaxDurationSlider}, car: {enabled: carSelected, max_duration: carMaxDurationSlider, use_parking: useParking}});

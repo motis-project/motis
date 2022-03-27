@@ -15,6 +15,7 @@ interface SearchInputField {
 }
 
 
+// Handles suggestions fetch
 const fetchSuggestions = (input: string, setAddresses: React.Dispatch<React.SetStateAction<Address[]>>, setStations: React.Dispatch<React.SetStateAction<Station[]>>, setSuggestions: React.Dispatch<React.SetStateAction<(Station | Address)[]>>) => {
     if (input !== '') {
         let requestURL = 'https://europe.motis-project.de/?elm=StationSuggestions';
@@ -156,9 +157,6 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
                         onFocus={_ => {
                             setShowSuggestions(true);
                             setSelected('gb-input-group-selected');
-                        } }
-                        onClick={_ => {
-                            setShowSuggestions(true);
                         } }/></div>
             </form>
             <div className='paper' style={showSuggestions && addressSuggestions.length > 0 ? {} : {display: 'none'}}>

@@ -41,8 +41,10 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
     // Boolean used to signal <Search> that extendBackward was clicked
     const [extendBackwardFlag, setExtendBackwardFlag] = useState<boolean>(false);
 
+    // True: Display connections as List. False: Show detailed Information for one Connection
     const [detailViewHidden, setDetailViewHidden] = useState<Boolean>(true);
 
+    //
     const [indexOfConnection, setIndexOfConnection] = useState<number>(0);
 
     const [trainSelected, setTrainSelected] = useState<TripId>(undefined);
@@ -84,12 +86,12 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                     setExtendBackwardFlag={setExtendBackwardFlag}
                                     setSearchDate={setSearchDate}
                                     setLoading={setLoading}/>
-                            {props.scheduleInfo ?
-                                loading ?
+                            {props.scheduleInfo ? // As long as the scheduleInfo Fetch hasnt returned a schedule Info, we display nothing
+                                loading ? // If any action needs a loading animation, display Spinner
                                     <Spinner />
                                     :
-                                    connections ?
-                                        connections.length !== 0 ? 
+                                    connections ? // If connections is not null anymore, display connections
+                                        connections.length !== 0 ?  //Only display connections if any are presesnt
                                             <div id='connections'>
                                                 <div className='connections'>
                                                 <div className='extend-search-interval search-before' onClick={() => setExtendBackwardFlag(true)}>

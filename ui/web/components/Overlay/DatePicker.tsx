@@ -69,6 +69,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
     
     useOutsideAlerter(datePickerRef, inputFieldRef, dayButtonPrevious, dayButtonNext, setDatePickerSelected, setSelected);
 
+    // If currentDate is manipulated outside of the Datepicker Component, rerender Datepicker with the new date
     React.useEffect(() => {
         if (props.currentDate) {
             setCurrentDate(props.currentDate);
@@ -92,19 +93,19 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
         return fd == 0 ? 7 : fd;
     };
     
-        // Used for setting className of td correctly. Returns 'today' if this td is representing today. If today is out of schedule Range, choose first day within schedule Range instead
-        let isToday = (d: number, date: moment.Moment) => {
-            let today = moment();
-            if (props.scheduleInfo && isValidDay(today, props.scheduleInfo) === 'invalid-day' ) {
-                today = moment.unix(props.scheduleInfo.begin);
-            }
-            return today.format(props.translation.dateFormat) === moment(date).date(d).format(props.translation.dateFormat) ? 'today ' : '';
+    // Used for setting className of td correctly. Returns 'today' if this td is representing today. If today is out of schedule Range, choose first day within schedule Range instead
+    let isToday = (d: number, date: moment.Moment) => {
+        let today = moment();
+        if (props.scheduleInfo && isValidDay(today, props.scheduleInfo) === 'invalid-day' ) {
+            today = moment.unix(props.scheduleInfo.begin);
         }
-    
-        // Used for setting className of td correctly. Returns 'selected' if this td is currently displayed in the search.
-        let selectedDay = (d: number) => {
-            return currentDate.format('D') as unknown as number == d ? 'selected ' : '';
-        };
+        return today.format(props.translation.dateFormat) === moment(date).date(d).format(props.translation.dateFormat) ? 'today ' : '';
+    };
+
+    // Used for setting className of td correctly. Returns 'selected' if this td is currently displayed in the search.
+    let selectedDay = (d: number) => {
+        return currentDate.format('D') as unknown as number == d ? 'selected ' : '';
+    };
 
     // daysInPreviousMonth contains all days of the previous Month that have to be shown if the 1. doesnt fall on a monday.
     let daysInPreviousMonth = [];
@@ -161,8 +162,8 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                 }}>
                 {d}    
             </td>
-        )
-    }
+        );
+    };
 
     // Combine all 3 arrays into 1 total array. For every element an entry in the datepicker will be created
     let totalSlots = [...daysInPreviousMonth, ...daysInMonth, ...fillRemainingDays];
@@ -203,7 +204,6 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
                             }}
                             onKeyDown={(e) => {
                                 if (e.key == 'Enter'){
-                                    //console.log(searchDate)
                                     setDateDisplay(currentDate.format(props.translation.dateFormat));
                                     props.setCurrentDate(currentDate.clone());
                                 }
