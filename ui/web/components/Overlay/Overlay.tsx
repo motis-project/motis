@@ -56,7 +56,7 @@ export const getMapFilter = (connection: Connection) => {
     return filter
 }
 
-export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'setStation': React.Dispatch<React.SetStateAction<(Station | Address)>>, 'searchDate': moment.Moment, 'setSearchDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
+export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'setStation': React.Dispatch<React.SetStateAction<(Station | Address)>>, 'searchDate': moment.Moment, 'setSearchDate': React.Dispatch<React.SetStateAction<moment.Moment>>, 'mapData': any}> = (props) => {
 
     // Hold the currently displayed Date
     const [displayDate, setDisplayDate] = useState<moment.Moment>(null);
@@ -78,12 +78,16 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
     const [indexOfConnection, setIndexOfConnection] = useState<number>(0);
 
     const [trainSelected, setTrainSelected] = useState<TripId>(undefined);
-    
+
+    const [connectionHighlighted, setConnectionHighlighted] = useState<boolean>(false);
+
     const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
 
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
 
     const [mapFilter, setMapFilter] = useState<any>(null);
+
+    const [selectedConnectionIds, setSelectedConnectionIds] = useState<number[]>([]);
 
     //when clicking on train in the map
     React.useEffect(() => {
@@ -117,6 +121,24 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
             setDisplayDate(adjustedDisplayDate);
         }
     }, [props.scheduleInfo]);
+
+    React.useEffect(() => {
+        let connectionIds = [];
+        if(props.mapData !== undefined && props.mapData.hoveredTripSegments !== null){
+            props.mapData.hoveredTripSegments.map((elem: any) => {
+                connectionIds.push(elem.connectionIds[0] + 1);
+            });
+            setSelectedConnectionIds(connectionIds);
+            setConnectionHighlighted(true);
+        }else if(props.mapData !== undefined && props.mapData.hoveredWalkSegment !== null){
+            connectionIds.push(props.mapData.hoveredWalkSegment.connectionIds + 1);
+            setSelectedConnectionIds(connectionIds);
+            setConnectionHighlighted(true);
+        }else{
+            setConnectionHighlighted(false);
+        }
+        console.log(props.mapData);
+    }, [props.mapData]);
 
     return (
         <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden'}>
@@ -164,7 +186,8 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                 connectionElem.dummyDay ?
                                                 <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
                                                 :
-                                                <div className='connection' key={index} onClick={() => { setDetailViewHidden(false);
+                                                <div className={(connectionHighlighted) ? `connection ${(selectedConnectionIds.includes(index)) ? 'highlighted' : 'faded'}` : 'connection'}
+                                                                                        key={index} onClick={() => { setDetailViewHidden(false);
                                                                                                          setIndexOfConnection(index);
                                                                                                          setMapFilter(getMapFilter(connectionElem));
                                                                                                          window.portEvents.pub('mapSetDetailFilter', getMapFilter(connectionElem)); 
@@ -187,22 +210,19 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                             {duration(connectionElem.stops[0].departure.time, connectionElem.stops[connectionElem.stops.length - 1].arrival.time)}
                                                         </div>
                                                         <div className='pure-u-16-24 connection-trains'>
-                                                            <div className='transport-graph'>
-                                                                <ConnectionRender connection={connectionElem} setDetailViewHidden={setDetailViewHidden} />
-                                                                <div className='tooltip' style={{ position: 'absolute', left: '0px', top: '23px' }}>
-                                                                    <div className='stations'>
-                                                                        <div className='departure'><span className='station'>{connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.from].station.name}</span><span
-                                                                            className='time'>{moment.unix(connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.from].departure.time).format('HH:mm')}</span></div>
-                                                                        <div className='arrival'><span className='station'>{connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.to].station.name}</span><span
-                                                                            className='time'>{moment.unix(connectionElem.stops[(connectionElem.transports[0].move as TransportInfo).range.to].arrival.time).format('HH:mm')}</span></div>
-                                                                    </div>
-                                                                    <div className='transport-name'><span>{(connectionElem.transports[0].move as TransportInfo).name}</span></div>
+                                                            <div className={(connectionHighlighted ? 'transport-graph highlighting' : 'transport-graph')}>
+                                                                <ConnectionRender   translation={props.translation}
+                                                                                    connection={connectionElem}
+                                                                                    setDetailViewHidden={setDetailViewHidden}
+                                                                                    setConnectionHighlighted={setConnectionHighlighted}
+                                                                                    connectionHighlighted={connectionHighlighted}
+                                                                                    mapData={props.mapData}
+                                                                                    key={index}/>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
                                         <div className='divider footer'></div>
                                         <div className='extend-search-interval search-after' onClick={() => setExtendForwardFlag(true)}>
                                             {extendForwardFlag ?
