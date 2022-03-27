@@ -204,7 +204,11 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                 </div>
                             </div>
                             <div className="connection-journey" id="connection-journey">
-                                <JourneyRender connection={connections[indexOfConnection]} setSubOverlayHidden={props.setSubOverlayHidden} setTrainSelected={setTrainSelected} detailViewHidden={detailViewHidden} translation={props.translation} />
+                                <JourneyRender  connection={connections[indexOfConnection]}
+                                                setSubOverlayHidden={props.setSubOverlayHidden}
+                                                setTrainSelected={setTrainSelected}
+                                                detailViewHidden={detailViewHidden}
+                                                translation={props.translation} />
                             </div>
                         </div>
                     }

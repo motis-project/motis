@@ -55,7 +55,7 @@ const getAccNumber = (transport: Transport) => {
     }
 }
 
-const getClasz = (transport: Transport) => {
+export const getClasz = (transport: Transport) => {
     switch (transport.move_type) {
         case 'Transport':
             return (transport.move as TransportInfo).clasz;
