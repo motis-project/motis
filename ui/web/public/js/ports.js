@@ -2,6 +2,11 @@ window.portEvents = {
     events : {},
     sub : function (portName, callback){
         this.events[portName] = this.events[portName] || [];
+        for(let i = 0; i < this.events[portName].length; i++){
+            if(this.events[portName][i].toString() === callback.toString()){
+                return;
+            }
+        }
         this.events[portName].push(callback);
     },
     unsub : function (portName, callback){
@@ -29,13 +34,20 @@ const ownPorts = {
         send: function(){}
     },
     'showStationDetails': {
-        send: function(){}
+        send: function(callback){
+            window.portEvents.pub('showStationDetails', callback);
+        }
     },
     'showTripDetails': {
-        send: function(){}
+        send: function(callback){
+            window.portEvents.pub('showTripDetails', callback);
+        }
     },
     'setTimeOffset': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('setTimeOffset', callback);
+            console.log('SETTIMEOFFSET')
+        }
     },
     'setSimulationTime': {
         send: function(){}
@@ -86,7 +98,9 @@ const ownPorts = {
         }
     },
     'mapSetDetailFilter': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('mapSetDetailFilter', callback);
+        }
     },
     'mapUpdateWalks': {
         subscribe: function(){}

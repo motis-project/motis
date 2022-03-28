@@ -1,8 +1,10 @@
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
+
 import { JourneyRender, duration} from './Journey';
 import { Connection, Station, TripId, TripViewConnection } from '../Types/Connection';
 import { Translations } from '../App/Localization';
+import { getMapFilter } from './Overlay';
 
 const getTrainConnection = (lineId: string, stationId: string, targetStationId: string, targetTime: number, time: number, trainNr: number) => {
     return {
@@ -18,7 +20,7 @@ const getTrainConnection = (lineId: string, stationId: string, targetStationId: 
 
 
 
-export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'translation': Translations, 'displayDate': moment.Moment}> = (props) => {
+export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'translation': Translations, 'displayDate': moment.Moment, 'mapFilter': any}> = (props) => {
 
     const [lineId, setLineId] = useState<string>(props.trainSelected.line_id);
 
@@ -43,9 +45,12 @@ export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHid
                     console.log('Trip Request successful');
                     console.log(res);
                     setTrainConnection(res.content);
+                    window.portEvents.pub('mapSetDetailFilter', getMapFilter(res.content));
                 });
         }
     }, [props.subOverlayHidden]);
+
+
 
     return (
         (trainConnection === undefined) ?
@@ -53,7 +58,7 @@ export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHid
             <div className='connection-details trip-view'>
                 <div className='connection-info'>
                     <div className='header'>
-                        <div className='back' onClick={() => props.setSubOverlayHidden(true)}><i className='icon'>arrow_back</i></div>
+                        <div className='back' onClick={() => {props.setTrainSelected(undefined); window.portEvents.pub('mapSetDetailFilter', props.mapFilter)}}><i className='icon'>arrow_back</i></div>
                         <div className='details'>
                             <div className='date'>{moment.unix(props.displayDate.unix()).format(props.translation.dateFormat)}</div>
                             <div className='connection-times'>

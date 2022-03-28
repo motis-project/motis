@@ -48,6 +48,22 @@ export const App: React.FC = () => {
     // Current Date
     const [searchDate, setSearchDate] = React.useState<moment.Moment>(null);
 
+
+    // Current hovered map Data
+    const [mapData, setMapData] = React.useState<any>();
+
+    let isMobile = false;
+
+    React.useEffect(() => {
+        window.portEvents.sub('mapSetTooltip', function(data){
+            setMapData(data);
+        });
+    });
+
+    React.useEffect(() => {
+        isMobile = window.matchMedia("only screen and (max-width: 500px)").matches;
+    }, []);
+
     React.useEffect(() => {
         let requestURL = 'https://europe.motis-project.de/?elm=requestScheduleInfo';
 
@@ -84,13 +100,11 @@ export const App: React.FC = () => {
     return (
         <div className='app'>
             {isMobile ?
-                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate}/>
+                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} searchDate={searchDate} mapData={mapData}/>
                 :
                 <>
-                    {/* visible && <MapView />*/}
-                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} />
-                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate}/>
-                    {//<StationSearchView />}
+                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} searchDate={searchDate} mapData={mapData}/>
+                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} searchDate={searchDate}  mapData={mapData}/>
                     }<StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} />
                 </>
             }

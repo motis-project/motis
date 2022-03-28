@@ -2,7 +2,7 @@ import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 import { Translations } from '../App/Localization';
 
-import { TransportInfo, Connection, Transport, WalkInfo, Stop } from '../Types/Connection';
+import { TransportInfo, Connection, Transport, WalkInfo, Stop, Trip, TripId } from '../Types/Connection';
 
 
 export const classToId = (transport: Transport) => {
@@ -100,13 +100,16 @@ interface PartElem {
     trainName?: string,
     transportName?: string,
     clasz: (string | number),
-    acc: string
+    acc: string,
+    trainNumber?: number
 }
 
-export const ConnectionRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setConnectionHighlighted': React.Dispatch<React.SetStateAction<boolean>>, 'connectionDoNothing': boolean, 'connectionHighlighted': boolean, 'key': number }> = (props) => {
 
-    const [toolTipSelected, setToolTipSelected] = useState<string>('');
+export const ConnectionRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setConnectionHighlighted': React.Dispatch<React.SetStateAction<boolean>>, 'connectionHighlighted': boolean, 'mapData': any, 'key': number }> = (props) => {
+
+    const [toolTipSelected, setToolTipSelected] = useState<number>(-1);
     const [parts, setParts] = useState<PartElem[]>([]);
+    const [partsHighlighted, setPartsHighlighted] = useState<number[]>([]);
 
     useEffect(() => {
         let p: PartElem[] = [];
@@ -140,7 +143,8 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
             }
 
             if (transport.move_type === 'Transport') {
-                p.push({ transport: transport, position: position, partWidth: partWidth, lineEnd: lineEnd, classId: classId, trainName: trainName, clasz: clasz, acc: acc });
+
+                p.push({ transport: transport, position: position, partWidth: partWidth, lineEnd: lineEnd, classId: classId, trainName: trainName, clasz: clasz, acc: acc, trainNumber: (transport.move as TransportInfo).train_nr });
                 position += partWidth;
             } else if ((index === 0 || index === props.connection.transports.length - 1) && (transport.move_type === 'Walk')) {
                 p.push({ transport: transport, position: position, partWidth: partWidth, lineEnd: lineEnd, classId: classId, transportName: transportName, clasz: clasz, acc: acc });
@@ -149,6 +153,16 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
         })
         setParts(p);
     }, [])
+
+    useEffect(() => {
+        let tmp = [];
+        if(props.mapData !== undefined && props.mapData.hoveredTripSegments !== null){
+            props.mapData.hoveredTripSegments.map((elem: any) => {
+                tmp.push(elem.trip[0].train_nr);
+            });
+        }
+        setPartsHighlighted(tmp);
+    }, [props.mapData])
 
     let initialValue = 0;
     let totalDurationInMill = props.connection.transports.reduce((previousValue, currentValue) => previousValue + getTransportTime(currentValue, props.connection.stops), initialValue);
@@ -163,27 +177,28 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
     let totalHeight = textOffset + textHeight;
     let totalWidth = 335; //transportListViewWidth aus Connections.elm
     let tooltipWidth = 240;
-
     return (
         <>
             <svg width={totalWidth} height={totalHeight} viewBox={`0 0 ${totalWidth} ${totalHeight}`}>
                 <g>
                     {parts.map((partElem: PartElem, index) => (
-                        <g className={`part train-class-${partElem.clasz} ${partElem.acc}${(props.connectionDoNothing) ? '' : (props.connectionHighlighted) ? 'highlighted' : 'faded'}`} key={`part${props.key}${index}`}> {/*Die Abfrage nach dem highlight muss anders sein iwas mit line id*/}
+                        <g className={`part train-class-${partElem.clasz} ${partElem.acc} ${(props.connectionHighlighted) ? ((partsHighlighted.includes(partElem.trainNumber)) ? 'highlighted' : 'faded') : ''}`} key={`part${props.key}${index}`}> {console.log(partsHighlighted.includes(partElem.trainNumber))}
                             <line x1={partElem.position} y1={circleRadius} x2={partElem.lineEnd} y2={circleRadius} className='train-line'></line>
                             <circle cx={partElem.position + circleRadius} cy={circleRadius} r={circleRadius} className='train-circle' ></circle>
                             <use xlinkHref={partElem.classId} className='train-icon' x={partElem.position + iconOffset} y={iconOffset} width={iconSize} height={iconSize} ></use>
                             <text x={partElem.position} y={textOffset + textHeight} textAnchor='start' className='train-name'>{partElem.trainName}</text>
                             <rect x={partElem.position} y='0' width={partElem.position + partElem.partWidth} height={basePartSize} className='tooltipTrigger'
-                                onMouseOver={() => { setToolTipSelected((partElem.transport.move as TransportInfo).line_id) }}
-                                onMouseOut={() => { setToolTipSelected('') }}></rect>
+                                onMouseOver={() => { setToolTipSelected(partElem.trainNumber) }}
+                                onMouseOut={() => { setToolTipSelected(-1) }}></rect>
                         </g>
                     ))}
                 </g>
                 <g className='destination'><circle cx={totalWidth - destinationRadius} cy={circleRadius} r={destinationRadius}></circle></g>
             </svg>
             {parts.map((partElem: PartElem, index) => (
-                <div className={`tooltip ${(toolTipSelected === (partElem.transport.move as TransportInfo).line_id) ? 'visible' : ''}`} style={{ position: 'absolute', left: `${(Math.min(partElem.position, (totalWidth - tooltipWidth)))}px`, top: `${(textOffset - 5)}px` }} key={`tooltip${props.key}${index}`}>
+
+                <div className={`tooltip ${((toolTipSelected === partElem.trainNumber) || (partsHighlighted.includes(partElem.trainNumber))) ? 'visible' : ''}`} style={{ position: 'absolute', left: `${(Math.min(partElem.position, (totalWidth - tooltipWidth)))}px`, top: `${(textOffset - 5)}px` }} key={`tooltip${props.key}${index}`}>
+
                     <div className='stations'>
                         <div className='departure'>
                             <div className='station'>
