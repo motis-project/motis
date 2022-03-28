@@ -169,6 +169,20 @@
       }
     },
     {
+      "name": "linux-relwithdebinfo",
+      "displayName": "Linux RelWithDebInfo",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/relwithdebinfo",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      },
+      "environment": {
+        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "CXX": "/usr/bin/g++-10",
+        "CC": "/usr/bin/gcc-10"
+      }
+    },
+    {
       "name": "clang-tidy",
       "displayName": "Clang Tidy",
       "generator": "Ninja",
@@ -227,6 +241,10 @@
     {
       "name": "linux-debug",
       "configurePreset": "linux-debug"
+    },
+    {
+      "name": "linux-relwithdebinfo",
+      "configurePreset": "linux-relwithdebinfo"
     },
     {
       "name": "linux-sanitizer",
