@@ -103,14 +103,14 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
 
     useEffect(() => {
         setName(props.station == null ? '' : props.station.name)
-        setStation(props.station)
+        setFetchSuggestionsFlag(!fetchSuggestionsFlag);
+        //setStation(props.station)
     }, [props.station])
 
-    useEffect(() => {
-        setFetchSuggestionsFlag(!fetchSuggestionsFlag);
-        props.setSearchDisplay(station);
-    }, [station])
-    
+    //useEffect(() => {
+    //    props.setSearchDisplay(station);
+    //}, [station])
+
     return (
         <div>
             <form>

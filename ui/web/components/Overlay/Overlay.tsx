@@ -99,11 +99,11 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
 
     React.useEffect(() =>{
         window.portEvents.sub('showStationDetails', function(data){
-            setMapFilter(null); 
+            setMapFilter(null);
             window.portEvents.pub('mapSetDetailFilter', null);
             props.setStation({id: data, name: ''});
-        })
-    })    
+        });
+    });    
 
     React.useEffect(() => {
         if(detailViewHidden){
