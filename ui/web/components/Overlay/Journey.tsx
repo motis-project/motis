@@ -177,13 +177,13 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                             {(transport.transport.move as TransportInfo).direction}
                         </div>
                     }
-                    <div className='intermediate-stops-toggle clickable past' onClick={() => setIsIntermediateStopsCollapsed(!isIntermediateStopsCollapsed)}>
+                    <div className={`intermediate-stops-toggle ${(getIntermediateStopsCount(transport.transport) > 0) ? 'clickable' : ''}past`} onClick={() => setIsIntermediateStopsCollapsed(!isIntermediateStopsCollapsed)}>
                         <div className='timeline-container'>
                             <div className='timeline train-color-border bg'></div>
                             <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
                         </div>
-                        {(transport.walkInfo) ?
-                            <></> :
+                        {(transport.walkInfo || getIntermediateStopsCount(transport.transport) === 0) ?
+                            <div className='expand-icon'></div> :
                             <div className='expand-icon'>
                                 <i className='icon'>expand_less</i>
                                 <i className='icon'>expand_more</i>
