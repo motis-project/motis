@@ -45,6 +45,7 @@ interface StationSuggestions {
 }
 
 
+// Every Address Suggestions display 2 extra Pieces of regional Information. The first one above admin_level 1 and the first one below admin_level 9
 const getDisplayRegions = (regions: Region[]) => {
     let res = regions.filter((r: Region) => r.admin_level <= 8 && r.admin_level >= 2);
     return res[0].name + ', ' + res[res.length - 1].name;

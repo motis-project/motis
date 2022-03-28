@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import moment from 'moment';
 import equal from 'deep-equal';
 
-import { Events, RailVizStationRequest, StationEvents } from '../Types/RailvizStationEvent';
+import { Events, RailVizStationResponse, StationEvents } from '../Types/RailvizStationEvent';
 import { Station } from '../Types/Connection';
 import { Address } from '../Types/SuggestionTypes';
 import { Translations } from '../App/Localization';
@@ -46,7 +46,7 @@ const stationEventDivGenerator = (eventsToDisplay: Events[], translation: Transl
                     <div className='event-time'>{moment.unix(filteredEvents[index].event.time).format('HH:mm')}</div>
                     <div className='event-train'><span>
                         <div className={'train-box train-class-' + filteredEvents[index].trips[0].transport.clasz + ' with-tooltip'} data-tooltip={translation.connections.provider + ': ' + filteredEvents[index].trips[0].transport.provider + '\n' + translation.connections.trainNr + ': ' + filteredEvents[index].trips[0].transport.train_nr}><svg className='train-icon'>
-                            <use xlinkHref={classToId(filteredEvents[index].trips[0].transport.clasz)}></use>
+                            <use xlinkHref={classToId({move: filteredEvents[index].trips[0].transport, move_type: 'Transport'})}></use>
                         </svg><span className='train-name'>{filteredEvents[index].trips[0].transport.name}</span></div>
                     </span></div>
                     <div className='event-direction' title={filteredEvents[index].trips[0].transport.direction}><i className='icon'>arrow_forward</i>{filteredEvents[index].trips[0].transport.direction}</div>
@@ -64,7 +64,7 @@ const onClickHandler = (byScheduleTime: boolean, direction: string, eventCount: 
     let requestURL = 'https://europe.motis-project.de/?elm=StationEvents';
     fetch(requestURL, getStationEvent(byScheduleTime, direction, eventCount, stationID, time))
         .then(res => res.json())
-        .then((res: RailVizStationRequest) => {
+        .then((res: RailVizStationResponse) => {
             console.log('StationEvents brrrrr');
             console.log(res);
             if (direction === 'EARLIER') {
@@ -133,7 +133,7 @@ export const StationEvent: React.FC<{ 'translation': Translations, 'station': (S
             let requestURL = 'https://europe.motis-project.de/?elm=StationEvents';
             fetch(requestURL, getStationEvent(byScheduleTime, direction, eventCount, stationID, time))
                 .then(res => res.json())
-                .then((res: RailVizStationRequest) => {
+                .then((res: RailVizStationResponse) => {
                     console.log('StationEvents brrrrr');
                     console.log(res);
                     insertDateHeader(setEventsToDisplay, res.content.events, props.translation);
@@ -148,7 +148,7 @@ export const StationEvent: React.FC<{ 'translation': Translations, 'station': (S
     return (
         <div className='station-events'>
             <div className='header'>
-                <div className='back' onClick={() => { props.setSubOverlayHidden(true); props.setStationEventTrigger(false) }}><i className='icon'>arrow_back</i></div>
+                <div className='back' onClick={() => { props.setStationEventTrigger(false) }}><i className='icon'>arrow_back</i></div>
                 <div className='station'>{props.station.name}</div>
                 <div className='event-type-picker'>
                     <div>
