@@ -2,12 +2,14 @@ import { AxisBottom } from "@visx/axis";
 import { GridColumns } from "@visx/grid";
 import { ParentSize } from "@visx/responsive";
 import { scaleLinear } from "@visx/scale";
-import { ViolinPlot } from "@visx/stats";
+import { BoxPlot, ViolinPlot } from "@visx/stats";
 
 import {
   PaxMonEdgeLoadInfo,
   PaxMonPdfEntry,
 } from "@/api/protocol/motis/paxmon";
+
+export type SectionLoadGraphPlotType = "SimpleBox" | "Violin" | "Box";
 
 const defaultMargin = {
   top: 0,
@@ -22,6 +24,7 @@ type SectionLoadGraphProps = {
   height: number;
   maxVal?: number | undefined;
   margin?: typeof defaultMargin;
+  plotType?: SectionLoadGraphPlotType;
 };
 
 function SectionLoadGraph({
@@ -30,6 +33,7 @@ function SectionLoadGraph({
   height,
   maxVal,
   margin = defaultMargin,
+  plotType = "SimpleBox",
 }: SectionLoadGraphProps): JSX.Element {
   margin ??= defaultMargin;
   const innerWidth = width - margin.left - margin.right;
@@ -114,6 +118,72 @@ function SectionLoadGraph({
     );
   }
 
+  let plot: JSX.Element | null = null;
+  switch (plotType) {
+    case "SimpleBox": {
+      const lo = paxScale(section.dist.q5);
+      const hi = paxScale(section.dist.q95);
+      plot = (
+        <g>
+          <path
+            d={`M${lo} ${margin.top} H${hi} V${
+              margin.top + innerHeight
+            } H${lo} Z`}
+            style={{
+              fill: "#B2B5FE",
+              fillOpacity: 0.4,
+              stroke: "#797EFF",
+              strokeOpacity: 0.4,
+            }}
+          />
+          <path
+            d={`M${paxScale(section.dist.q50)} ${margin.top} V${
+              margin.top + innerHeight
+            }`}
+            style={{ stroke: "#3038FF", strokeWidth: 2, fill: "none" }}
+          />
+        </g>
+      );
+      break;
+    }
+    case "Violin": {
+      plot = (
+        <ViolinPlot
+          data={section.dist.pdf}
+          stroke="#3038FF"
+          strokeWidth={2}
+          fill="#B2B5FE"
+          valueScale={paxScale}
+          count={count}
+          value={value}
+          top={margin.top + 4}
+          width={innerHeight - 8}
+          horizontal={true}
+        />
+      );
+      break;
+    }
+    case "Box": {
+      plot = (
+        <BoxPlot
+          min={section.dist.min}
+          max={section.dist.max}
+          firstQuartile={section.dist.q5}
+          thirdQuartile={section.dist.q95}
+          median={section.dist.q50}
+          stroke="#3038FF"
+          strokeWidth={2}
+          fill="#B2B5FE"
+          valueScale={paxScale}
+          top={margin.top + 4}
+          boxWidth={innerHeight - 8}
+          horizontal={true}
+        />
+      );
+      break;
+    }
+  }
+
   return (
     <svg width={width} height={height}>
       <g>{bgSections}</g>
@@ -125,18 +195,7 @@ function SectionLoadGraph({
         strokeOpacity={0.5}
         numTicks={paxLimit / 10}
       />
-      <ViolinPlot
-        data={section.dist.pdf}
-        stroke="#3038FF"
-        strokeWidth={2}
-        fill="#B2B5FE"
-        valueScale={paxScale}
-        count={count}
-        value={value}
-        top={margin.top + 4}
-        width={innerHeight - 8}
-        horizontal={true}
-      />
+      {plot}
       <path
         d={`M${paxScale(section.expected_passengers)} ${
           margin.top
