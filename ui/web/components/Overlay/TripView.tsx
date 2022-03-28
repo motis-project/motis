@@ -1,10 +1,12 @@
-import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 
+import moment from 'moment';
+
 import { JourneyRender, duration} from './Journey';
-import { Connection, Station, TripId, TripViewConnection } from '../Types/Connection';
+import { Connection, TripId, TripViewConnection } from '../Types/Connection';
 import { Translations } from '../App/Localization';
 import { getMapFilter } from './Overlay';
+
 
 const getTrainConnection = (lineId: string, stationId: string, targetStationId: string, targetTime: number, time: number, trainNr: number) => {
     return {
@@ -17,7 +19,6 @@ const getTrainConnection = (lineId: string, stationId: string, targetStationId: 
         })
     };
 };
-
 
 
 export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'translation': Translations, 'displayDate': moment.Moment, 'mapFilter': any}> = (props) => {
@@ -50,11 +51,10 @@ export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHid
         }
     }, [props.subOverlayHidden]);
 
-
-
     return (
         (trainConnection === undefined) ?
-            <></> :
+            <></> 
+            :
             <div className='connection-details trip-view'>
                 <div className='connection-info'>
                     <div className='header'>
@@ -82,5 +82,4 @@ export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHid
                 </div>
             </div>
     )
-
 }
