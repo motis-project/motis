@@ -13,25 +13,42 @@ import { TripSearch } from './TripSearch';
 import { Trip } from '../Types/RailvizStationEvent';
 
 
-export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'scheduleInfo': Interval, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment}> = (props) => {
+export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'scheduleInfo': Interval, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment, 'setStationSearch': React.Dispatch<React.SetStateAction<Station | Address>>}> = (props) => {
 
     const [trips, setTrips] = React.useState<{first_station: Station, trip_info: Trip}[]>(null);
+
+    const [subOverlayDate, setSubOverlayDate] = React.useState<moment.Moment>(moment());
+
+    const [trainNumber, setTrainNumber] = React.useState<string>('');
+
+    React.useEffect(() => {
+        if(props.searchDate) {
+            setSubOverlayDate(props.searchDate);
+        }
+    }, [props.searchDate]);
 
     return (
         <div className={props.subOverlayHidden ? 'sub-overlay hidden' : 'sub-overlay'}>
             <div id='sub-overlay-content'>
                 {(props.stationEventTrigger) ?
-                    <StationEvent translation={props.translation} station={props.station} stationEventTrigger={props.stationEventTrigger} setSubOverlayHidden={props.setSubOverlayHidden} setStationEventTrigger={props.setStationEventTrigger} searchDate={props.searchDate}/> 
+                    <StationEvent translation={props.translation} station={props.station} stationEventTrigger={props.stationEventTrigger} setSubOverlayHidden={props.setSubOverlayHidden} setStationEventTrigger={props.setStationEventTrigger} searchDate={subOverlayDate}/> 
                     :
                     (props.trainSelected === undefined) ?
                         <div className='trip-search'>
                             <TripSearchHeader   translation={props.translation}
                                                 searchDate={props.searchDate}
                                                 scheduleInfo={props.scheduleInfo}
-                                                setTrips={setTrips}/>
+                                                trainNumber={trainNumber}
+                                                setTrips={setTrips}
+                                                setTrainNumber={setTrainNumber}/>
                             <div className='trips'>
                             {trips ? 
-                                trips.map((trip: {first_station: Station, trip_info: Trip}) => <TripSearch translation={props.translation} trip={trip}/>)
+                                trips.map((trip: {first_station: Station, trip_info: Trip}) => 
+                                    <TripSearch translation={props.translation} 
+                                                trip={trip} 
+                                                setTrainSelected={props.setTrainSelected}
+                                                setStationSearch={props.setStationSearch}
+                                                setSubOverlayDate={setSubOverlayDate}/>)
                                 :
                                 <></>
                             }

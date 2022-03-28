@@ -148,7 +148,7 @@ export const StationEvent: React.FC<{ 'translation': Translations, 'station': (S
     return (
         <div className='station-events'>
             <div className='header'>
-                <div className='back' onClick={() => { props.setSubOverlayHidden(true); props.setStationEventTrigger(false) }}><i className='icon'>arrow_back</i></div>
+                <div className='back' onClick={() => { props.setStationEventTrigger(false) }}><i className='icon'>arrow_back</i></div>
                 <div className='station'>{props.station.name}</div>
                 <div className='event-type-picker'>
                     <div>

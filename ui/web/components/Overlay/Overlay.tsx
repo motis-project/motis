@@ -24,7 +24,7 @@ const getTransportCountString = (transports: Transport[], translation: Translati
     return translation.connections.interchanges(count);
 }
 
-export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment}> = (props) => {
+export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment, 'setStationSearch': React.Dispatch<React.SetStateAction<Station | Address>>}> = (props) => {
 
     // Boolean used to decide if the Overlay is being displayed
     const [overlayHidden, setOverlayHidden] = useState<Boolean>(true);
@@ -222,6 +222,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                             setTrainSelected={setTrainSelected} 
                             setStationEventTrigger={props.setStationEventTrigger}
                             setSubOverlayHidden={props.setSubOverlayHidden} 
+                            setStationSearch={props.setStationSearch}
                             />
             </div>
             <div className='overlay-tabs'>

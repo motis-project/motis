@@ -21,15 +21,13 @@ const getRoutingOptions = (time: moment.Moment, train_num: string) => {
 }
 
 
-export const TripSearchHeader: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'searchDate': moment.Moment, 'setTrips': React.Dispatch<React.SetStateAction<{first_station: Station, trip_info: Trip}[]>> }> = (props) => {
+export const TripSearchHeader: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'searchDate': moment.Moment, 'trainNumber': string, 'setTrainNumber': React.Dispatch<React.SetStateAction<string>>, 'setTrips': React.Dispatch<React.SetStateAction<{first_station: Station, trip_info: Trip}[]>> }> = (props) => {
 
     // Ref tracking if the time Inputfield is focused
     const timeRef = React.useRef(null);
 
     // Ref tracking if the searchTrain Inputfield is focused
     const trainSearchRef = React.useRef(null);
-
-    const [trainNumber, setTrainNumber] = React.useState<string>('');
 
     // Current Date
     const [subOverlayDate, setSubOverlayDate] = React.useState<moment.Moment>(null);
@@ -41,7 +39,7 @@ export const TripSearchHeader: React.FC<{ 'translation': Translations, 'schedule
     const [timeSelected, setTimeSelected] = React.useState<string>('');
 
     // trainSearchSelect tracks if the trainnumber input is focused
-    const [trainSearchSelected, setTrainSearchSelected] = React.useState<string>('');
+    const [trainSearchSelected, setTrainSearchSelected] = React.useState<string>('gb-input-group-selected');
     
     // On initial render searchDate will be null, waiting for the ScheduleInfoResponse. This useEffect should fire only once.
     React.useEffect(() => {
@@ -52,10 +50,10 @@ export const TripSearchHeader: React.FC<{ 'translation': Translations, 'schedule
     }, [props.searchDate]);
 
     React.useEffect(() => {
-        if (subOverlayDate && trainNumber !== ''){
+        if (subOverlayDate && props.trainNumber !== ''){
             let requestURL = 'https://europe.motis-project.de/?elm=TripSearch';
 
-            fetch(requestURL, getRoutingOptions(subOverlayDate, trainNumber))
+            fetch(requestURL, getRoutingOptions(subOverlayDate, props.trainNumber))
                 .then(res => res.json())
                 .then((res: RailVizTripGuessResponse) => {
                     console.log('Response came in');
@@ -65,7 +63,7 @@ export const TripSearchHeader: React.FC<{ 'translation': Translations, 'schedule
                 .catch(_error => {})
         }
 
-    }, [subOverlayDate, subOverlayTime, trainNumber]);
+    }, [subOverlayDate, subOverlayTime, props.trainNumber]);
 
     useOutsideAlerter(timeRef, setTimeSelected);
     useOutsideAlerter(trainSearchRef, setTrainSearchSelected);
@@ -87,10 +85,11 @@ export const TripSearchHeader: React.FC<{ 'translation': Translations, 'schedule
                                     type='number'
                                     pattern='[0-9]+' 
                                     id='trip-search-trainnr-input'
-                                    value={trainNumber}
+                                    value={props.trainNumber}
                                     ref={trainSearchRef}
+                                    autoFocus
                                     onChange={(e) => {
-                                        setTrainNumber(e.currentTarget.value);
+                                        props.setTrainNumber(e.currentTarget.value);
                                     }} 
                                     onFocus={() => setTrainSearchSelected('gb-input-group-selected')}/>
                             </div>

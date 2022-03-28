@@ -40,6 +40,7 @@ export const App: React.FC = () => {
 
     const [stationEventTrigger, setStationEventTrigger] = React.useState<boolean>(false)
 
+    // Overlay and StationSearch communicate via this State
     const [station, setStation] = React.useState<Station | Address>({ id: '', name: '' });
 
     // Boolean used to decide if the SubOverlay is being displayed
@@ -84,12 +85,12 @@ export const App: React.FC = () => {
     return (
         <div className='app'>
             {isMobile ?
-                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate}/>
+                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate} setStationSearch={setStation}/>
                 :
                 <>
                     {/* visible && <MapView />*/}
                     <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} />
-                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate}/>
+                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate} setStationSearch={setStation}/>
                     {//<StationSearchView />}
                     }<StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} />
                 </>

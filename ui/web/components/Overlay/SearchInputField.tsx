@@ -73,9 +73,6 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
     // Selected manipulates the div "gb-input-group" to highlight it if focused
     const [selected, setSelected] = useState<string>('');
 
-    // Station or Position
-    const [station, setStation] = useState<Station | Address>(props.station);
-
     // Name stores current input in the Input Field
     const [name, setName] = useState<string>('');
     
@@ -104,13 +101,9 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
 
     useEffect(() => {
         setName(props.station == null ? '' : props.station.name)
-        setStation(props.station)
+        setFetchSuggestionsFlag(!fetchSuggestionsFlag);
     }, [props.station])
 
-    useEffect(() => {
-        setFetchSuggestionsFlag(!fetchSuggestionsFlag);
-        props.setSearchDisplay(station);
-    }, [station])
     
     return (
         <div>
@@ -136,7 +129,7 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
                                 case 'Enter':
                                     e.preventDefault();
                                     setName(suggestions[selectedSuggestion].name);
-                                    setStation(suggestions[selectedSuggestion]);
+                                    props.setSearchDisplay(suggestions[selectedSuggestion]);
                                     setShowSuggestions(false);
                                     setSelectedSuggestion(0);
                                     setLocalStorage(props.localStorageStation, suggestions[selectedSuggestion]);
@@ -166,7 +159,7 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
                             highlighted={selectedSuggestion}
                             showSuggestions={showSuggestions}
                             setName={setName}
-                            setSuggestion={setStation} 
+                            setSuggestion={props.setSearchDisplay} 
                             setSelectedSuggestion={setSelectedSuggestion}
                             setShowSuggestions={setShowSuggestions}
                             setSelected={setSelected}
