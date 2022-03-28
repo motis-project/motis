@@ -39,6 +39,10 @@ function SectionLoadGraph({
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
+  if (innerWidth < 0 || innerHeight < 0) {
+    return <></>;
+  }
+
   const count = (e: PaxMonPdfEntry) => e.p;
   const value = (e: PaxMonPdfEntry) => e.n;
 
