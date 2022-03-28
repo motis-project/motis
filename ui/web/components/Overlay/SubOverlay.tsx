@@ -12,8 +12,7 @@ import { TripSearchHeader } from './TripSearchHeader';
 import { TripSearch } from './TripSearch';
 import { Trip } from '../Types/RailvizStationEvent';
 
-
-export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'scheduleInfo': Interval, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment, 'setStationSearch': React.Dispatch<React.SetStateAction<Station | Address>>}> = (props) => {
+export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'scheduleInfo': Interval, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'searchDate': moment.Moment, 'setStationSearch': React.Dispatch<React.SetStateAction<Station | Address>>, 'mapFilter': any}> = (props) => {
 
     const [trips, setTrips] = React.useState<{first_station: Station, trip_info: Trip}[]>(null);
 
@@ -55,10 +54,10 @@ export const SubOverlay: React.FC<{ 'translation': Translations, 'subOverlayHidd
                             </div>
                         </div>
                         :
-                        <TripView subOverlayHidden={props.subOverlayHidden} setSubOverlayHidden={props.setSubOverlayHidden} trainSelected={props.trainSelected} setTrainSelected={props.setTrainSelected} detailViewHidden={props.detailViewHidden} translation={props.translation} displayDate={props.searchDate} />
+                        <TripView subOverlayHidden={props.subOverlayHidden} setSubOverlayHidden={props.setSubOverlayHidden} trainSelected={props.trainSelected} setTrainSelected={props.setTrainSelected} detailViewHidden={props.detailViewHidden} translation={props.translation} displayDate={props.searchDate} mapFilter={props.mapFilter}/>
                 }
             </div>
-            <div className='sub-overlay-close' onClick={() => {props.setSubOverlayHidden(true); props.setStationEventTrigger(false)}}><i className='icon'>close</i></div>
+            <div className='sub-overlay-close' onClick={() => {props.setTrainSelected(undefined); window.portEvents.pub('mapSetDetailFilter', props.mapFilter); props.setSubOverlayHidden(true); props.setStationEventTrigger(false)}}><i className='icon'>close</i></div>
         </div>
     )
 }

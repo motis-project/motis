@@ -104,7 +104,6 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
         setFetchSuggestionsFlag(!fetchSuggestionsFlag);
     }, [props.station])
 
-    
     return (
         <div>
             <form>

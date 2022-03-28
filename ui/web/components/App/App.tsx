@@ -41,13 +41,29 @@ export const App: React.FC = () => {
     const [stationEventTrigger, setStationEventTrigger] = React.useState<boolean>(false)
 
     // Overlay and StationSearch communicate via this State
-    const [station, setStation] = React.useState<Station | Address>({ id: '', name: '' });
+    const [stationSearch, setStationSearch] = React.useState<Station | Address>({ id: '', name: '' });
 
     // Boolean used to decide if the SubOverlay is being displayed
     const [subOverlayHidden, setSubOverlayHidden] = React.useState<boolean>(true);
 
     // Current Date
     const [searchDate, setSearchDate] = React.useState<moment.Moment>(null);
+
+
+    // Current hovered map Data
+    const [mapData, setMapData] = React.useState<any>();
+
+    let isMobile = false;
+
+    React.useEffect(() => {
+        window.portEvents.sub('mapSetTooltip', function(data){
+            setMapData(data);
+        });
+    });
+
+    React.useEffect(() => {
+        isMobile = window.matchMedia("only screen and (max-width: 500px)").matches;
+    }, []);
 
     React.useEffect(() => {
         let requestURL = 'https://europe.motis-project.de/?elm=requestScheduleInfo';
@@ -75,24 +91,21 @@ export const App: React.FC = () => {
     }, []);
 
     React.useEffect(() => {
-        if((station as Station).id !== ''){
+        if((stationSearch as Station).id !== ''){
             setStationEventTrigger(true);
             setSubOverlayHidden(false);
-            console.log(station);
         }
-    }, [station]);
+    }, [stationSearch]);
 
     return (
         <div className='app'>
             {isMobile ?
-                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate} setStationSearch={setStation}/>
+                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} searchDate={searchDate} mapData={mapData} setStationSearch={setStationSearch}/>
                 :
                 <>
-                    {/* visible && <MapView />*/}
-                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} />
-                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate} setStationSearch={setStation}/>
-                    {//<StationSearchView />}
-                    }<StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} />
+                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} searchDate={searchDate} mapData={mapData}/>
+                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} searchDate={searchDate} mapData={mapData} setStationSearch={setStationSearch}/>
+                    <StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={station} setStationSearch={setStationSearch} />
                 </>
             }
         </div>
