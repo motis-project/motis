@@ -17,6 +17,7 @@ import {
 } from "@/api/paxmon";
 
 import { formatPercent } from "@/data/numberFormat";
+import { sectionGraphPlotTypeAtom } from "@/data/settings";
 import { universeAtom } from "@/data/simulation";
 
 import classNames from "@/util/classNames";
@@ -110,6 +111,7 @@ type TripSectionProps = {
 
 function TripSection({ tripId, section, maxVal }: TripSectionProps) {
   const [expanded, setExpanded] = useState(false);
+  const [sectionGraphPlotType] = useAtom(sectionGraphPlotTypeAtom);
 
   const departureDelayed =
     section.departure_current_time > section.departure_schedule_time;
@@ -184,7 +186,11 @@ function TripSection({ tripId, section, maxVal }: TripSectionProps) {
         </div>
         <div className="flex-grow">
           <div className="w-full h-16">
-            <SectionLoadGraph section={section} maxVal={maxVal} />
+            <SectionLoadGraph
+              section={section}
+              maxVal={maxVal}
+              plotType={sectionGraphPlotType}
+            />
           </div>
         </div>
       </div>

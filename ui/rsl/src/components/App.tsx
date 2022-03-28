@@ -4,6 +4,7 @@ import { ReactQueryDevtools } from "react-query/devtools";
 import getQueryParameters from "@/util/queryParameters";
 
 import MainSection from "@/components/MainSection";
+import Settings from "@/components/Settings";
 import SimPanel from "@/components/SimPanel";
 import TimeControl from "@/components/TimeControl";
 import TripList from "@/components/TripList";
@@ -28,6 +29,7 @@ function App(): JSX.Element {
           <TimeControl allowForwarding={allowForwarding} />
           <UniverseControl />
         </div>
+        <Settings />
 
         <div className="flex justify-between items-stretch overflow-y-auto grow">
           <div className="bg-db-cool-gray-200 dark:bg-gray-800 w-[25rem] overflow-y-auto p-2 shrink-0">
