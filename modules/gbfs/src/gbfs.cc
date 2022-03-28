@@ -397,56 +397,108 @@ struct gbfs::impl {
     auto sb = rapidjson::StringBuffer{};
     auto w = rapidjson::Writer<rapidjson::StringBuffer>{sb};
 
-    //    w.StartObject();
-    //
-    //    w.String("type");
-    //    w.String("FeatureCollection");
-    //
-    //    w.String("features");
-    //    {
-    //      w.StartArray();
-    //
-    //      {
-    //        w.StartObject();
-    //
-    //        w.String("type");
-    //        w.String("feature");
-    //
-    //        w.String("geometry");
-    //        {
     w.StartObject();
 
     w.String("type");
-    w.String("MultiPoint");
+    w.String("FeatureCollection");
 
-    w.String("coordinates");
+    w.String("features");
     {
       w.StartArray();
 
-      for (auto const& s : stations_) {
-        w.StartArray();
-        w.Double(s.pos_.lng_);
-        w.Double(s.pos_.lat_);
-        w.EndArray();
+      {
+        w.StartObject();
+
+        w.String("type");
+        w.String("Feature");
+
+        w.String("geometry");
+        {
+          w.StartObject();
+
+          w.String("type");
+          w.String("MultiPoint");
+
+          w.String("coordinates");
+          {
+            w.StartArray();
+
+            for (auto const& s : stations_) {
+              w.StartArray();
+              w.Double(s.pos_.lng_);
+              w.Double(s.pos_.lat_);
+              w.EndArray();
+            }
+
+            w.EndArray();
+          }
+
+          w.EndObject();
+        }
+
+        w.String("properties");
+        {
+          w.StartObject();
+
+          w.String("marker-color");
+          w.String("red");
+
+          w.String("name");
+          w.String("");
+
+          w.EndObject();
+        }
+
+        w.EndObject();
+      }
+
+      {
+        w.StartObject();
+
+        w.String("type");
+        w.String("Feature");
+
+        w.String("geometry");
+        {
+          w.StartObject();
+
+          w.String("type");
+          w.String("MultiPoint");
+
+          w.String("coordinates");
+          {
+            w.StartArray();
+
+            for (auto const& s : stations_) {
+              w.StartArray();
+              w.Double(s.pos_.lng_);
+              w.Double(s.pos_.lat_);
+              w.EndArray();
+            }
+
+            w.EndArray();
+          }
+
+          w.EndObject();
+        }
+
+        w.String("properties");
+        {
+          w.StartObject();
+
+          w.String("marker-color");
+          w.String("red");
+
+          w.EndObject();
+        }
+
+        w.EndObject();
       }
 
       w.EndArray();
     }
 
     w.EndObject();
-    //        }
-    //
-    //        w.String("properties");
-    //        w.StartArray();
-    //        w.EndArray();
-    //
-    //        w.EndObject();
-    //      }
-    //
-    //      w.EndArray();
-    //    }
-    //
-    //    w.EndObject();
 
     message_creator fbb;
     fbb.create_and_finish(
