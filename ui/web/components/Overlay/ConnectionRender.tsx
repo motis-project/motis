@@ -105,7 +105,7 @@ interface PartElem {
 }
 
 
-export const ConnectionRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setConnectionHighlighted': React.Dispatch<React.SetStateAction<boolean>>, 'connectionHighlighted': boolean, 'mapData': any, 'key': number }> = (props) => {
+export const ConnectionRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'connectionHighlighted': boolean, 'mapData': any, 'key': number }> = (props) => {
 
     const [toolTipSelected, setToolTipSelected] = useState<number>(-1);
     const [parts, setParts] = useState<PartElem[]>([]);
@@ -158,7 +158,7 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
         let tmp = [];
         if(props.mapData !== undefined && props.mapData.hoveredTripSegments !== null){
             props.mapData.hoveredTripSegments.map((elem: any) => {
-                tmp.push(elem.trip[0].train_nr);
+                tmp.push(elem.trip[0].train_nr); //walkinfos werden nicht beachtet!
             });
         }
         setPartsHighlighted(tmp);
@@ -181,8 +181,8 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
         <>
             <svg width={totalWidth} height={totalHeight} viewBox={`0 0 ${totalWidth} ${totalHeight}`}>
                 <g>
-                    {parts.map((partElem: PartElem, index) => (
-                        <g className={`part train-class-${partElem.clasz} ${partElem.acc} ${(props.connectionHighlighted) ? ((partsHighlighted.includes(partElem.trainNumber)) ? 'highlighted' : 'faded') : ''}`} key={`part${props.key}${index}`}> {console.log(partsHighlighted.includes(partElem.trainNumber))}
+                    {parts.map((partElem: PartElem) => (
+                        <g className={`part train-class-${partElem.clasz} ${partElem.acc} ${(props.connectionHighlighted) ? ((partsHighlighted.includes(partElem.trainNumber)) ? 'highlighted' : 'faded') : ''}`} key={`${props.key}_${partElem.trainNumber}`}>
                             <line x1={partElem.position} y1={circleRadius} x2={partElem.lineEnd} y2={circleRadius} className='train-line'></line>
                             <circle cx={partElem.position + circleRadius} cy={circleRadius} r={circleRadius} className='train-circle' ></circle>
                             <use xlinkHref={partElem.classId} className='train-icon' x={partElem.position + iconOffset} y={iconOffset} width={iconSize} height={iconSize} ></use>

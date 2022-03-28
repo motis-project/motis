@@ -139,7 +139,6 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
         }else{
             setConnectionHighlighted(false);
         }
-        console.log(props.mapData);
     }, [props.mapData]);
 
     return (
@@ -185,8 +184,8 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                         <div className={(connectionHighlighted) ? `connection ${(selectedConnectionIds.includes(index)) ? 'highlighted' : 'faded'}` : 'connection'}
                                                             key={index}
                                                             onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index); setMapFilter(getMapFilter(connectionElem)); window.portEvents.pub('mapSetDetailFilter', getMapFilter(connectionElem));}}
-                                                            onMouseEnter={() => { let ids = []; ids.push(connectionElem.id); window.portEvents.pub('mapHighlightConnections', ids); setConnectionHighlighted(true)}}
-                                                            onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', []); setConnectionHighlighted(false)}}>
+                                                            onMouseEnter={() => { let ids = []; ids.push(connectionElem.id); window.portEvents.pub('mapHighlightConnections', ids)}}
+                                                            onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', [])}}>
                                                             <div className='pure-g'>
                                                                 <div className='pure-u-4-24 connection-times'>
                                                                     <div className='connection-departure'>
@@ -204,7 +203,6 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                                         <ConnectionRender   translation={props.translation}
                                                                                             connection={connectionElem}
                                                                                             setDetailViewHidden={setDetailViewHidden}
-                                                                                            setConnectionHighlighted={setConnectionHighlighted}
                                                                                             connectionHighlighted={connectionHighlighted}
                                                                                             mapData={props.mapData}
                                                                                             key={index}/>
