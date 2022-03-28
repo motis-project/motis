@@ -92,8 +92,6 @@ interface JourneyElem {
 
 export const JourneyRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean }> = (props) => {
 
-    const [isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed] = useState<boolean>(true);
-
     const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
 
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
@@ -133,7 +131,6 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
         }
     }, [props.connection]);
 
-    let expandedIndex = [];
     return (
         <>
             {transports.map((transport: JourneyElem, index) => (
@@ -177,35 +174,9 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                             {(transport.transport.move as TransportInfo).direction}
                         </div>
                     }
-                    <div className={`intermediate-stops-toggle ${(getIntermediateStopsCount(transport.transport) > 0) ? 'clickable' : ''}past`} onClick={() => setIsIntermediateStopsCollapsed(!isIntermediateStopsCollapsed)}>
-                        <div className='timeline-container'>
-                            <div className='timeline train-color-border bg'></div>
-                            <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
-                        </div>
-                        {(transport.walkInfo || getIntermediateStopsCount(transport.transport) === 0) ?
-                            <div className='expand-icon'></div> :
-                            <div className='expand-icon'>
-                                <i className='icon'>expand_less</i>
-                                <i className='icon'>expand_more</i>
-                            </div>
-                        }
-                        <span>{`${(transport.walkInfo) ? transport.expandString : props.translation.connections.tripIntermediateStops(getIntermediateStopsCount(transport.transport))} (${duration(props.connection.stops[(transport.transport.move as TransportInfo).range.from].departure.time, props.connection.stops[(transport.transport.move as TransportInfo).range.to].arrival.time)})`}</span>
-                    </div>
-                    <div className={isIntermediateStopsCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
-                        {transport.stopsToRender.map((stop: Stop, index) => (
-                            <div className='stop past' key={index}>
-                                <div className='timeline train-color-border bg'></div>
-                                <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
-                                <div className='time'>
-                                    <span className='past'>{moment.unix(stop.departure.time).format('HH:mm')}</span>
-                                </div>
-                                <div className='delay'></div>
-                                <div className='station'>
-                                    <span>{stop.station.name}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <IntermediateStops  transport={transport}
+                                        connection={props.connection}
+                                        translation={props.translation}/>
                     <div className="last-stop">
                         <div className="stop past">
                             <div className="timeline train-color-border"></div>
@@ -220,6 +191,45 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                     </div>
                 </div>
             ))}
+        </>
+    );
+};
+
+const IntermediateStops: React.FC<{'transport': JourneyElem, 'connection': Connection, 'translation': Translations}> = (props) => {
+
+    const [isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed] = useState<boolean>(true);
+
+    return (
+        <>
+            <div className={`intermediate-stops-toggle ${(getIntermediateStopsCount(props.transport.transport) > 0) ? 'clickable' : ''}past`} onClick={() => setIsIntermediateStopsCollapsed(!isIntermediateStopsCollapsed)}>
+                <div className='timeline-container'>
+                    <div className='timeline train-color-border bg'></div>
+                    <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
+                </div>
+                {(props.transport.walkInfo || getIntermediateStopsCount(props.transport.transport) === 0) ?
+                    <div className='expand-icon'></div> :
+                    <div className='expand-icon'>
+                        <i className='icon'>expand_less</i>
+                        <i className='icon'>expand_more</i>
+                    </div>
+                }
+                <span>{`${(props.transport.walkInfo) ? props.transport.expandString : props.translation.connections.tripIntermediateStops(getIntermediateStopsCount(props.transport.transport))} (${duration(props.connection.stops[(props.transport.transport.move as TransportInfo).range.from].departure.time, props.connection.stops[(props.transport.transport.move as TransportInfo).range.to].arrival.time)})`}</span>
+            </div>
+            <div className={isIntermediateStopsCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
+                {props.transport.stopsToRender.map((stop: Stop, index) => (
+                    <div className='stop past' key={index}>
+                        <div className='timeline train-color-border bg'></div>
+                        <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
+                        <div className='time'>
+                            <span className='past'>{moment.unix(stop.departure.time).format('HH:mm')}</span>
+                        </div>
+                        <div className='delay'></div>
+                        <div className='station'>
+                            <span>{stop.station.name}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </>
     );
 };
