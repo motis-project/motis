@@ -106,7 +106,9 @@ function CombinedGroup({
         {combinedGroup.info.dist.min}-{combinedGroup.info.dist.max} Reisende
         {groupByDirection !== "None" && (
           <>
-            {groupByDirection === "Origin" ? " aus " : " in "}Richtung{" "}
+            {groupByDirection === "Origin"
+              ? " mit Reisebeginn in "
+              : " mit Ziel "}
             {destinationStation.name}
           </>
         )}
@@ -126,7 +128,7 @@ function CombinedGroup({
 
   const alternativesInfo = journeys ? (
     <div>
-      {journeys.length} Mögliche Verbindungen (ab{" "}
+      {journeys.length} Mögliche Alternativen (ab{" "}
       {formatTime(earliestDeparture)}):
       <ul>
         {journeys.map((j, idx) => (
