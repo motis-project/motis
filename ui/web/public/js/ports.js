@@ -2,6 +2,11 @@ window.portEvents = {
     events : {},
     sub : function (portName, callback){
         this.events[portName] = this.events[portName] || [];
+        for(let i = 0; i < this.events[portName].length; i++){
+            if(this.events[portName][i].toString() === callback.toString()){
+                return;
+            }
+        }
         this.events[portName].push(callback);
     },
     unsub : function (portName, callback){
