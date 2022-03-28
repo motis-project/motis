@@ -2,6 +2,7 @@ import React from 'react';
 
 import { useRouter } from 'next/router';
 import moment from 'moment';
+import { isMobile } from "react-device-detect";
 
 import { Overlay } from '../Overlay/Overlay';
 import { Translations, deTranslations, enTranslations, plTranslations } from './Localization';
@@ -47,6 +48,7 @@ export const App: React.FC = () => {
     // Current Date
     const [searchDate, setSearchDate] = React.useState<moment.Moment>(null);
 
+
     // Current hovered map Data
     const [mapData, setMapData] = React.useState<any>();
 
@@ -79,6 +81,11 @@ export const App: React.FC = () => {
                 intvBegin.hour(moment().hour());
                 intvBegin.minute(moment().minute());
                 setScheduleInfo(intv);
+                let currentTime = moment();
+                let adjustedDisplayDate = intvBegin;
+                adjustedDisplayDate.hour(currentTime.hour());
+                adjustedDisplayDate.minute(currentTime.minute());
+                setSearchDate(adjustedDisplayDate);
             })
     }, []);
 
@@ -93,13 +100,11 @@ export const App: React.FC = () => {
     return (
         <div className='app'>
             {isMobile ?
-                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} searchDate={searchDate} setSearchDate={setSearchDate} mapData={mapData}/>
+                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} searchDate={searchDate} mapData={mapData}/>
                 :
                 <>
-                    {/* visible && <MapView />*/}
                     <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} searchDate={searchDate} mapData={mapData}/>
-                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} searchDate={searchDate} setSearchDate={setSearchDate} mapData={mapData}/>
-                    {//<StationSearchView />}
+                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} searchDate={searchDate}  mapData={mapData}/>
                     }<StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} />
                 </>
             }

@@ -55,7 +55,7 @@ const getAccNumber = (transport: Transport) => {
     }
 }
 
-const getClasz = (transport: Transport) => {
+export const getClasz = (transport: Transport) => {
     switch (transport.move_type) {
         case 'Transport':
             return (transport.move as TransportInfo).clasz;
@@ -104,6 +104,7 @@ interface PartElem {
     trainNumber?: number
 }
 
+
 export const ConnectionRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setConnectionHighlighted': React.Dispatch<React.SetStateAction<boolean>>, 'connectionHighlighted': boolean, 'mapData': any, 'key': number }> = (props) => {
 
     const [toolTipSelected, setToolTipSelected] = useState<number>(-1);
@@ -142,6 +143,7 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
             }
 
             if (transport.move_type === 'Transport') {
+
                 p.push({ transport: transport, position: position, partWidth: partWidth, lineEnd: lineEnd, classId: classId, trainName: trainName, clasz: clasz, acc: acc, trainNumber: (transport.move as TransportInfo).train_nr });
                 position += partWidth;
             } else if ((index === 0 || index === props.connection.transports.length - 1) && (transport.move_type === 'Walk')) {
@@ -194,7 +196,9 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
                 <g className='destination'><circle cx={totalWidth - destinationRadius} cy={circleRadius} r={destinationRadius}></circle></g>
             </svg>
             {parts.map((partElem: PartElem, index) => (
+
                 <div className={`tooltip ${((toolTipSelected === partElem.trainNumber) || (partsHighlighted.includes(partElem.trainNumber))) ? 'visible' : ''}`} style={{ position: 'absolute', left: `${(Math.min(partElem.position, (totalWidth - tooltipWidth)))}px`, top: `${(textOffset - 5)}px` }} key={`tooltip${props.key}${index}`}>
+
                     <div className='stations'>
                         <div className='departure'>
                             <div className='station'>

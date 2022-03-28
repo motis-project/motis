@@ -64,7 +64,6 @@ const ownPorts = {
     'setPPRSearchOptions': {
         subscribe: function(callback){
             window.portEvents.sub('setPPRSearchOptions', callback);
-            console.log('sub');
         }
     },
     'mapInit': {

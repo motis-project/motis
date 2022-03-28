@@ -59,13 +59,13 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
     const [selected, setSelected] = React.useState<string>('');
 
     // Boolean used to decide if the datepicker is visible or not
-    const[datePickerSelected, setDatePickerSelected] = React.useState<Boolean>(false);
+    const [datePickerSelected, setDatePickerSelected] = React.useState<Boolean>(false);
     
     // Holds the currently displayed Date as moment.Moment Object
-    const[currentDate, setCurrentDate] = React.useState<moment.Moment>(moment());
+    const [currentDate, setCurrentDate] = React.useState<moment.Moment>(moment());
     
     // Holds the currently displayed Date as String. This additional State is needed to handle the onChange Event for custom Input
-    const[dateDisplay, setDateDisplay] = React.useState<string>(null);
+    const [dateDisplay, setDateDisplay] = React.useState<string>(null);
     
     useOutsideAlerter(datePickerRef, inputFieldRef, dayButtonPrevious, dayButtonNext, setDatePickerSelected, setSelected);
 
@@ -92,9 +92,13 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
         return fd == 0 ? 7 : fd;
     };
     
-        // Used for setting className of td correctly. Returns 'today' if this td is representing today.
+        // Used for setting className of td correctly. Returns 'today' if this td is representing today. If today is out of schedule Range, choose first day within schedule Range instead
         let isToday = (d: number, date: moment.Moment) => {
-            return moment().format(props.translation.dateFormat) === moment(date).date(d).format(props.translation.dateFormat) ? 'today ' : '';
+            let today = moment();
+            if (props.scheduleInfo && isValidDay(today, props.scheduleInfo) === 'invalid-day' ) {
+                today = moment.unix(props.scheduleInfo.begin);
+            }
+            return today.format(props.translation.dateFormat) === moment(date).date(d).format(props.translation.dateFormat) ? 'today ' : '';
         }
     
         // Used for setting className of td correctly. Returns 'selected' if this td is currently displayed in the search.
@@ -108,7 +112,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
     for (let d = 0; d < firstDayOfMonth()-1; d++) {
         dayToAdd.add(1, 'd');
         daysInPreviousMonth.push(
-            <td className={`out-of-month ${isToday(d, dayToAdd)}${isValidDay(dayToAdd, props.scheduleInfo)}`} 
+            <td className={`out-of-month ${isToday(currentDate.daysInMonth() - firstDayOfMonth() + 2 + d, dayToAdd)}${isValidDay(dayToAdd, props.scheduleInfo)}`} 
                 key={'previous-month' + d.toString()}
                 onClick={() => {
                     let firstDay = firstDayOfMonth();
