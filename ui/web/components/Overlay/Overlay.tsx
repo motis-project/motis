@@ -96,8 +96,6 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
       // If true, renders the Loading animation for the connectionList
     const [loading, setLoading] = useState<boolean>(false);
 
-    const [connectionHighighted, setConnectionHighlighted] = useState<boolean>(false);
-
     //when clicking on train in the map
     React.useEffect(() => {
         window.portEvents.sub('showTripDetails', function(data){
@@ -110,7 +108,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
         window.portEvents.sub('showStationDetails', function(data){
             setMapFilter(null);
             window.portEvents.pub('mapSetDetailFilter', null);
-            props.setStation({id: data, name: ''});
+            props.setStationSearch({id: data, name: ''});
         });
     });    
 
@@ -250,7 +248,6 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                 <div className='no-results'>
                                     {''}
                                 </div>
-                            </div>
                             }
                         </> 
                         :

@@ -100,12 +100,12 @@ export const App: React.FC = () => {
     return (
         <div className='app'>
             {isMobile ?
-                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} searchDate={searchDate} mapData={mapData} setStationSearch={setStationSearch}/>
+                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={stationSearch} setStationSearch={setStationSearch} searchDate={searchDate} mapData={mapData} />
                 :
                 <>
                     <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} searchDate={searchDate} mapData={mapData}/>
-                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} searchDate={searchDate} mapData={mapData} setStationSearch={setStationSearch}/>
-                    <StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={station} setStationSearch={setStationSearch} />
+                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={stationSearch} searchDate={searchDate} mapData={mapData} setStationSearch={setStationSearch}/>
+                    <StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={stationSearch} setStationSearch={setStationSearch} />
                 </>
             }
         </div>
