@@ -23,27 +23,6 @@ export const duration = (start: number, dest: number) => {
 }
 
 
-const stopGenerator = (stops: Stop[]) => {
-    let stopDivs = [];
-    for (let index = 1; index < stops.length - 1; index++) {
-        stopDivs.push(
-            <div className='stop past' key={index}>
-                <div className='timeline train-color-border bg'></div>
-                <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
-                <div className='time'>
-                    <span className='past'>{moment.unix(stops[index].arrival.time).format('HH:mm')}</span>
-                </div>
-                <div className='delay'></div>
-                <div className='station'>
-                    <span>{stops[index].station.name}</span>
-                </div>
-            </div>
-        );
-    }
-    return stopDivs;
-}
-
-
 const getWalkTime = (latStart: number, lngStart: number, latDest: number, lngDest: number, durationLimit: number, profile: string, includeEdges: boolean, includePath: boolean, includeSteps: boolean) => {
     return {
         method: 'POST',
@@ -86,7 +65,7 @@ const getIntermediateStopsCount = (transport: Transport) => {
 }
 
 const getMumoString = (mumoType: string, translation: Translations) => {
-    switch(mumoType){
+    switch (mumoType) {
         case 'walk' || 'foot':
             return translation.connections.walk;
         case 'bike':
@@ -103,15 +82,17 @@ interface JourneyElem {
     walkTime: number,
     transport: Transport,
     stops: Stop[],
+    stopsToRender?: Stop[],
     trip?: Trip,
     walkInfo: boolean,
-    expandString?: string
+    expandString?: string,
+    index: number
 }
 
 
 export const JourneyRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean }> = (props) => {
 
-    const [isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed] = useState<Boolean>(true);
+    const [isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed] = useState<boolean>(true);
 
     const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
 
@@ -128,18 +109,17 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
         let walkCounter = 0;
         props.connection.transports.map((transport: Transport, index) => {
             if (isTransportInfo(transport) && hasWalk) {
-                t.push({ hasWalk: true, walkTime: walkTimes[walkCounter], transport: transport, stops: props.connection.stops, trip: props.connection.trips[index - walkCounter], walkInfo: false });
+                t.push({ hasWalk: true, walkTime: walkTimes[walkCounter], transport: transport, stops: props.connection.stops, stopsToRender: props.connection.stops.slice(transport.move.range.from + 1, transport.move.range.to), trip: props.connection.trips[index - walkCounter], walkInfo: false, index: index });
                 hasWalk = false;
                 walkCounter += 1;
             } else if (isTransportInfo(transport)) {
-                t.push({ hasWalk: false, walkTime: 0, transport: transport, stops: props.connection.stops, trip: props.connection.trips[index - walkCounter], walkInfo: false });
-            } else if(!isTransportInfo(transport) && (index == 0 || index == props.connection.transports.length - 1)) {
-                t.push({ hasWalk: false, walkTime: 0, transport: transport, stops: props.connection.stops, walkInfo: true, expandString: getMumoString(getClasz(transport).toString(), props.translation).toString() });
+                t.push({ hasWalk: false, walkTime: 0, transport: transport, stops: props.connection.stops, stopsToRender: props.connection.stops.slice(transport.move.range.from + 1, transport.move.range.to), trip: props.connection.trips[index - walkCounter], walkInfo: false, index: index });
+            } else if (!isTransportInfo(transport) && (index == 0 || index == props.connection.transports.length - 1)) {
+                t.push({ hasWalk: false, walkTime: 0, transport: transport, stops: props.connection.stops, stopsToRender: props.connection.stops.slice(transport.move.range.from + 1, transport.move.range.to), walkInfo: true, expandString: getMumoString(getClasz(transport).toString(), props.translation).toString(), index: index });
             } else {
                 hasWalk = true;
             }
         })
-        console.log(t);
         setTransports(t);
     }, [walkTimes]);
 
@@ -153,17 +133,17 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
         }
     }, [props.connection]);
 
-    let numberIntermediateStops = (props.connection.transports[0].move as TransportInfo).range.to - (props.connection.transports[0].move as TransportInfo).range.from;
+    let expandedIndex = [];
     return (
         <>
             {transports.map((transport: JourneyElem, index) => (
                 <div className={`train-detail train-class-${getClasz(transport.transport)} ${(transport.walkInfo) ? 'initial-walk' : ''}`} key={index}>
                     <div className='top-border'></div>
                     <div>
-                        <div className={`train-box train-class-${getClasz(transport.transport)} ${(transport.walkInfo) ? '' : 'with-tooltip' }`}
-                            data-tooltip={ `${(transport.walkInfo) ?
-                                                '' :
-                                                `${props.translation.connections.provider}: ${(transport.transport.move as TransportInfo).provider}\n${props.translation.connections.trainNr}: ${(transport.trip !== undefined) ? transport.trip.id.train_nr : ''}` }`}
+                        <div className={`train-box train-class-${getClasz(transport.transport)} ${(transport.walkInfo) ? '' : 'with-tooltip'}`}
+                            data-tooltip={`${(transport.walkInfo) ?
+                                '' :
+                                `${props.translation.connections.provider}: ${(transport.transport.move as TransportInfo).provider}\n${props.translation.connections.trainNr}: ${(transport.trip !== undefined) ? transport.trip.id.train_nr : ''}`}`}
                             onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(transport.trip.id) }}>
                             <svg className='train-icon'>
                                 <use xlinkHref={classToId(transport.transport)}></use>
@@ -171,11 +151,11 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                             {(transport.walkInfo) ? <></> : <span className='train-name'>{(transport.transport.move as TransportInfo).name}</span>}
                         </div>
                     </div>
-                    {index === 0 ?
+                    {(index === 0 || (index > 0 && transports[index - 1].walkInfo)) ?
                         <></>
                         :
                         <div className='train-top-line'>
-                            <span>{transport.hasWalk ? transport.walkTime + 'min Fußweg' : duration(transport.stops[(transport.transport.move as TransportInfo).range.from].arrival.time, transport.stops[(transport.transport.move as TransportInfo).range.from].departure.time) + ' Umstieg'}</span>
+                            <span>{(transport.hasWalk) ? `${props.translation.connections.walkDuration(`${transport.walkTime}min`)}` : props.translation.connections.interchangeDuration(`${duration(transport.stops[(transport.transport.move as TransportInfo).range.from].arrival.time, transport.stops[(transport.transport.move as TransportInfo).range.from].departure.time)}`)}</span>
                         </div>
                     }
                     <div className='first-stop'>
@@ -185,7 +165,7 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                                 <span className='past'>{moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.from].departure.time).format('HH:mm')}</span>
                             </div>
                             <div className='delay'></div>
-                            <div className='station'>{(transport.walkInfo) ? (start as Station).name : transport.stops[transport.transport.move.range.from].station.name}</div>
+                            <div className='station'>{(transport.stops[transport.transport.move.range.from].station.name === 'START') ? (start as Station).name : transport.stops[transport.transport.move.range.from].station.name}</div>
                         </div>
                     </div>
                     {transport.walkInfo ?
@@ -202,7 +182,7 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                             <div className='timeline train-color-border bg'></div>
                             <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
                         </div>
-                        {(transport.walkInfo) ? 
+                        {(transport.walkInfo) ?
                             <></> :
                             <div className='expand-icon'>
                                 <i className='icon'>expand_less</i>
@@ -212,7 +192,19 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                         <span>{`${(transport.walkInfo) ? transport.expandString : props.translation.connections.tripIntermediateStops(getIntermediateStopsCount(transport.transport))} (${duration(props.connection.stops[(transport.transport.move as TransportInfo).range.from].departure.time, props.connection.stops[(transport.transport.move as TransportInfo).range.to].arrival.time)})`}</span>
                     </div>
                     <div className={isIntermediateStopsCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
-                        {stopGenerator(transport.stops)}
+                        {transport.stopsToRender.map((stop: Stop, index) => (
+                            <div className='stop past' key={index}>
+                                <div className='timeline train-color-border bg'></div>
+                                <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
+                                <div className='time'>
+                                    <span className='past'>{moment.unix(stop.departure.time).format('HH:mm')}</span>
+                                </div>
+                                <div className='delay'></div>
+                                <div className='station'>
+                                    <span>{stop.station.name}</span>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                     <div className="last-stop">
                         <div className="stop past">
@@ -222,7 +214,7 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                             </div>
                             <div className="delay"></div>
                             <div className="station">
-                                <span className="virtual">{(transport.walkInfo) ? (destination as Station).name : transport.stops[transport.transport.move.range.to].station.name}</span>
+                                <span className="virtual">{(transport.stops[transport.transport.move.range.to].station.name === 'END') ? (destination as Station).name : transport.stops[transport.transport.move.range.to].station.name}</span>
                             </div>
                         </div>
                     </div>
