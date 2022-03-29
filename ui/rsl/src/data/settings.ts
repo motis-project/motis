@@ -7,3 +7,8 @@ export const sectionGraphPlotTypeAtom =
     "sectionLoadGraphPlotType",
     "SimpleBox"
   );
+
+export const showLegacyLoadForecastChartAtom = atomWithStorage<boolean>(
+  "showLegacyLoadForecastChart",
+  false
+);

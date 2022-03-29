@@ -3,7 +3,10 @@ import { AdjustmentsIcon } from "@heroicons/react/solid";
 import { useAtom } from "jotai";
 import { Fragment } from "react";
 
-import { sectionGraphPlotTypeAtom } from "@/data/settings";
+import {
+  sectionGraphPlotTypeAtom,
+  showLegacyLoadForecastChartAtom,
+} from "@/data/settings";
 
 import classNames from "@/util/classNames";
 
@@ -22,6 +25,9 @@ function SectionGraphPlotSettings() {
   const [selectedPlotType, setSelectedPlotType] = useAtom(
     sectionGraphPlotTypeAtom
   );
+  const [showLegacyLoadForecastChart, setShowLegacyLoadForecastChart] = useAtom(
+    showLegacyLoadForecastChartAtom
+  );
 
   return (
     <div className="bg-white p-7">
@@ -39,6 +45,16 @@ function SectionGraphPlotSettings() {
             {label}
           </label>
         ))}
+        <label className="inline-flex items-center gap-2">
+          <input
+            type="checkbox"
+            name="legacy-load-forecast-chart"
+            checked={showLegacyLoadForecastChart}
+            onChange={() => setShowLegacyLoadForecastChart((c) => !c)}
+            className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
+          />
+          Alte Auslastungsgrafik anzeigen
+        </label>
       </div>
     </div>
   );

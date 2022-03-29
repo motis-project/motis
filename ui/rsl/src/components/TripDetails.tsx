@@ -1,4 +1,8 @@
+import { useAtom } from "jotai";
+
 import { TripId } from "@/api/protocol/motis";
+
+import { showLegacyLoadForecastChartAtom } from "@/data/settings";
 
 import TripLoadForecastChart from "@/components/TripLoadForecastChart";
 import TripRoute from "@/components/TripRoute";
@@ -8,10 +12,16 @@ type TripDetailsProps = {
 };
 
 function TripDetails({ tripId }: TripDetailsProps): JSX.Element {
+  const [showLegacyLoadForecastChart] = useAtom(
+    showLegacyLoadForecastChartAtom
+  );
+
   return (
     <div>
       <TripRoute tripId={tripId} />
-      <TripLoadForecastChart tripId={tripId} mode="Interactive" />
+      {showLegacyLoadForecastChart && (
+        <TripLoadForecastChart tripId={tripId} mode="Interactive" />
+      )}
     </div>
   );
 }
