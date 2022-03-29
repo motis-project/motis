@@ -19,9 +19,9 @@ import {
   PaxMonFilteredTripInfo,
 } from "@/api/protocol/motis/paxmon";
 
+import { ServiceClass } from "@/api/constants";
 import { useLookupScheduleInfoQuery } from "@/api/lookup";
 import { sendPaxMonFilterTripsRequest } from "@/api/paxmon";
-import { ServiceClasses } from "@/api/serviceClasses";
 
 import { formatPercent } from "@/data/numberFormat";
 import { selectedTripAtom } from "@/data/selectedTrip";
@@ -93,8 +93,8 @@ function TripList(): JSX.Element {
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [trainNrFilter, setTrainNrFilter] = useState("");
   const [serviceClassFilter, setServiceClassFilter] = useState([
-    ServiceClasses.ICE,
-    ServiceClasses.IC,
+    ServiceClass.ICE,
+    ServiceClass.IC,
   ]);
 
   const filterTrainNrs = [...trainNrFilter.matchAll(/\d+/g)].map((m) =>
@@ -291,27 +291,27 @@ function TripList(): JSX.Element {
 }
 
 type LabeledServiceClass = {
-  sc: ServiceClasses;
+  sc: ServiceClass;
   label: string;
 };
 
 const serviceClassOptions: Array<LabeledServiceClass> = [
   {
-    sc: ServiceClasses.ICE,
+    sc: ServiceClass.ICE,
     label: "Hochgeschwindigkeitszüge",
   },
-  { sc: ServiceClasses.IC, label: "Fernzüge" },
-  { sc: ServiceClasses.COACH, label: "Fernbusse" },
-  { sc: ServiceClasses.N, label: "Nachtzüge" },
-  { sc: ServiceClasses.RE, label: "Regional-Express" },
-  { sc: ServiceClasses.RB, label: "Regionalbahnen" },
-  { sc: ServiceClasses.S, label: "S-Bahnen" },
-  { sc: ServiceClasses.U, label: "U-Bahnen" },
-  { sc: ServiceClasses.STR, label: "Straßenbahnen" },
-  { sc: ServiceClasses.BUS, label: "Busse" },
-  { sc: ServiceClasses.SHIP, label: "Schiffe" },
-  { sc: ServiceClasses.AIR, label: "Flugzeuge" },
-  { sc: ServiceClasses.OTHER, label: "Sonstige" },
+  { sc: ServiceClass.IC, label: "Fernzüge" },
+  { sc: ServiceClass.COACH, label: "Fernbusse" },
+  { sc: ServiceClass.N, label: "Nachtzüge" },
+  { sc: ServiceClass.RE, label: "Regional-Express" },
+  { sc: ServiceClass.RB, label: "Regionalbahnen" },
+  { sc: ServiceClass.S, label: "S-Bahnen" },
+  { sc: ServiceClass.U, label: "U-Bahnen" },
+  { sc: ServiceClass.STR, label: "Straßenbahnen" },
+  { sc: ServiceClass.BUS, label: "Busse" },
+  { sc: ServiceClass.SHIP, label: "Schiffe" },
+  { sc: ServiceClass.AIR, label: "Flugzeuge" },
+  { sc: ServiceClass.OTHER, label: "Sonstige" },
 ];
 
 type TripListOptionsProps = {
@@ -324,7 +324,7 @@ function TripListOptions({
   setServiceClassFilter,
 }: TripListOptionsProps) {
   const toggleClass = useCallback(
-    (sc: ServiceClasses, checked: boolean) => {
+    (sc: ServiceClass, checked: boolean) => {
       if (checked) {
         setServiceClassFilter((classes) => [...classes, sc]);
       } else {
