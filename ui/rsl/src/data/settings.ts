@@ -12,3 +12,8 @@ export const showLegacyLoadForecastChartAtom = atomWithStorage<boolean>(
   "showLegacyLoadForecastChart",
   false
 );
+
+export const showLegacyMeasureTypesAtom = atomWithStorage<boolean>(
+  "showLegacyMeasureTypes",
+  false
+);

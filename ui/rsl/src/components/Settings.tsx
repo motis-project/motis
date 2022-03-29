@@ -6,6 +6,7 @@ import { Fragment } from "react";
 import {
   sectionGraphPlotTypeAtom,
   showLegacyLoadForecastChartAtom,
+  showLegacyMeasureTypesAtom,
 } from "@/data/settings";
 
 import classNames from "@/util/classNames";
@@ -51,9 +52,31 @@ function SectionGraphPlotSettings() {
             name="legacy-load-forecast-chart"
             checked={showLegacyLoadForecastChart}
             onChange={() => setShowLegacyLoadForecastChart((c) => !c)}
-            className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
           />
           Alte Auslastungsgrafik anzeigen
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function MeasureSettings() {
+  const [showLegacyMeasureTypes, setShowLegacyMeasureTypes] = useAtom(
+    showLegacyMeasureTypesAtom
+  );
+
+  return (
+    <div className="bg-white p-7 pt-0">
+      Maßnahmen:
+      <div className="flex flex-col pl-3 pt-2 gap-2">
+        <label className="inline-flex items-center gap-2">
+          <input
+            type="checkbox"
+            name="legacy-load-forecast-chart"
+            checked={showLegacyMeasureTypes}
+            onChange={() => setShowLegacyMeasureTypes((c) => !c)}
+          />
+          Alte Maßnahmentypen anzeigen
         </label>
       </div>
     </div>
@@ -86,6 +109,7 @@ function Settings(): JSX.Element {
               <Popover.Panel className="absolute z-10 w-screen px-4 mt-1 right-0 max-w-sm">
                 <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
                   <SectionGraphPlotSettings />
+                  <MeasureSettings />
                 </div>
               </Popover.Panel>
             </Transition>

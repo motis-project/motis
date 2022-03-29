@@ -5,6 +5,7 @@ import { ReactNode, useMemo, useState } from "react";
 
 import { MeasureUnion } from "@/data/measures";
 import { selectedTripAtom } from "@/data/selectedTrip";
+import { showLegacyMeasureTypesAtom } from "@/data/settings";
 
 import RtUpdateMeasureEditor from "@/components/measures/RtUpdateMeasureEditor";
 import SharedDataEditor from "@/components/measures/SharedDataEditor";
@@ -144,6 +145,7 @@ function EmptyMeasureEditor({
 }: MeasureEditorProps) {
   const setMeasure = useUpdateAtom(measureAtom);
   const [selectedTrip] = useAtom(selectedTripAtom);
+  const [showLegacyMeasureTypes] = useAtom(showLegacyMeasureTypesAtom);
 
   const setTripLoadInfo = () => {
     setMeasure((m) => {
@@ -204,19 +206,23 @@ function EmptyMeasureEditor({
           Empfehlung an Reisende in einem Zug oder an einer Station, statt einem
           überfüllten Zug eine weniger ausgelastete Alternative zu verwenden
         </MeasureTypeOption>
-        <MeasureTypeOption
-          title="Auslastungsinformation"
-          onClick={setTripLoadInfo}
-        >
-          Ansage oder Anzeige der erwarteten Zugauslastung
-        </MeasureTypeOption>
-        <MeasureTypeOption
-          title="Zugempfehlung"
-          onClick={setTripRecommendation}
-        >
-          Empfehlung an Reisende in einem Zug oder an einer Station,
-          Verbindungen mit einem empfohlenen Zug zu verwenden
-        </MeasureTypeOption>
+        {showLegacyMeasureTypes && (
+          <>
+            <MeasureTypeOption
+              title="Auslastungsinformation"
+              onClick={setTripLoadInfo}
+            >
+              Ansage oder Anzeige der erwarteten Zugauslastung
+            </MeasureTypeOption>
+            <MeasureTypeOption
+              title="Zugempfehlung"
+              onClick={setTripRecommendation}
+            >
+              Empfehlung an Reisende in einem Zug oder an einer Station,
+              Verbindungen mit einem empfohlenen Zug zu verwenden
+            </MeasureTypeOption>
+          </>
+        )}
         <MeasureTypeOption title="Echtzeitupdate" onClick={setRtUpdate}>
           Zugverlauf bearbeiten (Verspätungen, Umleitungen, Gleisänderungen)
         </MeasureTypeOption>
