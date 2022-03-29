@@ -4,6 +4,7 @@ import moment from 'moment';
 
 import { Search } from './Search';
 import { SubOverlay } from './SubOverlay';
+import { getStationCoords } from './TripView';
 import { Spinner } from './LoadingSpinner';
 import { ConnectionRender } from './ConnectionRender';
 import { JourneyRender, duration } from './Journey';
@@ -99,7 +100,6 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
     //when clicking on train in the map
     React.useEffect(() => {
         window.portEvents.sub('showTripDetails', function(data){
-            console.log(data);
             setTrainSelected(data);
             props.setSubOverlayHidden(false);
         });
@@ -184,7 +184,11 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                         :
                                                         <div className={(connectionHighlighted) ? `connection ${(selectedConnectionIds.includes(index)) ? 'highlighted' : 'faded'}` : 'connection'}
                                                             key={index}
-                                                            onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index); setMapFilter(getMapFilter(connectionElem)); window.portEvents.pub('mapSetDetailFilter', getMapFilter(connectionElem));}}
+                                                            onClick={() => { setDetailViewHidden(false);
+                                                                             setIndexOfConnection(index);
+                                                                             setMapFilter(getMapFilter(connectionElem));
+                                                                             window.portEvents.pub('mapSetDetailFilter', getMapFilter(connectionElem));
+                                                                             window.portEvents.pub('mapFitBounds', getStationCoords(connectionElem));}}
                                                             onMouseEnter={() => { let ids = []; ids.push(connectionElem.id); window.portEvents.pub('mapHighlightConnections', ids)}}
                                                             onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', [])}}>
                                                             <div className='pure-g'>

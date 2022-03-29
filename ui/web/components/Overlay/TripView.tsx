@@ -20,7 +20,7 @@ const getTrainConnection = (lineId: string, stationId: string, targetStationId: 
     };
 };
 
-const getStationCoords = (connection: Connection) => {
+export const getStationCoords = (connection: Connection) => {
     let coords = [];
     for(let i = 0; i < connection.stops.length; i++){
         let pos = [];
