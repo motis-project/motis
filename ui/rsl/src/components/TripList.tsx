@@ -30,7 +30,7 @@ import { universeAtom } from "@/data/simulation";
 import classNames from "@/util/classNames";
 import { formatISODate, formatTime } from "@/util/dateFormat";
 
-import MiniTripLoadGraph2 from "@/components/MiniTripLoadGraph2";
+import MiniTripLoadGraph from "@/components/MiniTripLoadGraph";
 
 type LabeledFilterOption = {
   option: PaxMonFilterTripsSortOrder;
@@ -446,8 +446,7 @@ function TripListEntry({
           </div>
         </div>
         <div className="space-y-2">
-          {/*<MiniTripLoadGraph edges={ti.edges} />*/}
-          <MiniTripLoadGraph2 edges={ti.edges} />
+          <MiniTripLoadGraph edges={ti.edges} />
         </div>
         {criticalInfo}
       </div>

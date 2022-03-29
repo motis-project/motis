@@ -18,7 +18,7 @@ import { scheduleAtom } from "@/data/simulation";
 import { formatTime } from "@/util/dateFormat";
 
 import JourneyTripNameView from "@/components/JourneyTripNameView";
-import TripLoadForecastChart from "@/components/TripLoadForecastChart";
+import { MiniTripLoadGraphForTrip } from "@/components/MiniTripLoadGraph";
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 export type GroupByDirection = "Origin" | "Destination" | "None";
@@ -146,10 +146,7 @@ function CombinedGroup({
                   </Tooltip.Trigger>
                   <Tooltip.Content>
                     <div className="w-96 bg-white p-2 rounded-md shadow-lg flex justify-center">
-                      <TripLoadForecastChart
-                        tripId={leg.trips[0].trip.id}
-                        mode="Tooltip"
-                      />
+                      <MiniTripLoadGraphForTrip tripId={leg.trips[0].trip.id} />
                     </div>
                     <Tooltip.Arrow className="text-white fill-current" />
                   </Tooltip.Content>
