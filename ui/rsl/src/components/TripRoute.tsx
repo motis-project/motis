@@ -199,11 +199,7 @@ function TripSection({ tripId, section, maxVal }: TripSectionProps) {
         </div>
       </div>
       {expanded ? (
-        <TripSectionDetails
-          tripId={tripId}
-          selectedSection={section}
-          onClose={() => setExpanded(false)}
-        />
+        <TripSectionDetails tripId={tripId} selectedSection={section} />
       ) : null}
     </>
   );

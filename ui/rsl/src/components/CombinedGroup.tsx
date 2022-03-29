@@ -33,16 +33,6 @@ export type CombinedGroupProps = {
 
 const SEARCH_INTERVAL = 61;
 
-/*
-export type CombinedGroupProps = {
-  plannedTrip: TripId;
-  combinedGroup: GroupedPassengerGroups;
-  startStation: Station;
-  earliestDeparture: number;
-  groupByDirection: GroupByDirection;
-};
- */
-
 function CombinedGroup({
   plannedTrip,
   combinedGroup,
@@ -103,7 +93,9 @@ function CombinedGroup({
   const groupInfo = (
     <div>
       <span className="font-bold">
-        {combinedGroup.info.dist.min}-{combinedGroup.info.dist.max} Reisende
+        {combinedGroup.info.dist.q5 == combinedGroup.info.dist.q95
+          ? `${combinedGroup.info.dist.q5} Reisende`
+          : `${combinedGroup.info.dist.q5} - ${combinedGroup.info.dist.q95} Reisende`}
         {groupByDirection !== "None" && (
           <>
             {groupByDirection === "Origin"
@@ -115,12 +107,14 @@ function CombinedGroup({
         {combinedGroup.entry_station.length === 1
           ? `, Einstieg in ${combinedGroup.entry_station[0].name}`
           : null}
+        {previousTrip &&
+          ` und Ankunft mit ${
+            previousTrip.service_infos[0]?.category ?? "Zug"
+          } ${
+            previousTrip.service_infos[0]?.train_nr ??
+            previousTrip.trip.train_nr
+          }`}
       </span>
-      {previousTrip && (
-        <div>
-          Ankunft mit: <TripServiceInfoView tsi={previousTrip} format="Long" />
-        </div>
-      )}
     </div>
   );
 
@@ -128,8 +122,9 @@ function CombinedGroup({
 
   const alternativesInfo = journeys ? (
     <div>
-      {journeys.length} Mögliche Alternativen (ab{" "}
-      {formatTime(earliestDeparture)}):
+      {`${journeys.length} Mögliche Alternative(n) (ab ${formatTime(
+        earliestDeparture
+      )}):`}
       <ul>
         {journeys.map((j, idx) => (
           <li
