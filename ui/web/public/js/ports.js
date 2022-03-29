@@ -85,7 +85,9 @@ const ownPorts = {
         subscribe: function(){}
     },
     'mapFitBounds': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('mapFitBounds', callback);
+        }
     },
     'mapUseTrainClassColors': {
         subscribe: function(callback){

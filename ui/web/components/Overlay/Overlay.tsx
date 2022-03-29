@@ -99,6 +99,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
     //when clicking on train in the map
     React.useEffect(() => {
         window.portEvents.sub('showTripDetails', function(data){
+            console.log(data);
             setTrainSelected(data);
             props.setSubOverlayHidden(false);
         });

@@ -20,6 +20,16 @@ const getTrainConnection = (lineId: string, stationId: string, targetStationId: 
     };
 };
 
+const getStationCoords = (connection: Connection) => {
+    let coords = [];
+    for(let i = 0; i < connection.stops.length; i++){
+        let pos = [];
+        pos.push(connection.stops[i].station.pos.lat);
+        pos.push(connection.stops[i].station.pos.lng);
+        coords.push(pos);
+    }
+    return {mapId: 'map', coords};
+};
 
 export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'trainSelected': TripId, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean, 'translation': Translations, 'displayDate': moment.Moment, 'mapFilter': any}> = (props) => {
 
@@ -47,6 +57,7 @@ export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHid
                     console.log(res);
                     setTrainConnection(res.content);
                     window.portEvents.pub('mapSetDetailFilter', getMapFilter(res.content));
+                    window.portEvents.pub('mapFitBounds', getStationCoords(res.content));
                 });
         }
     }, [props.subOverlayHidden]);
