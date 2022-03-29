@@ -10,6 +10,8 @@ import {
   PaxMonFindTripsResponse,
   PaxMonForkUniverseRequest,
   PaxMonForkUniverseResponse,
+  PaxMonGetAddressableGroupsRequest,
+  PaxMonGetAddressableGroupsResponse,
   PaxMonGetGroupsInTripRequest,
   PaxMonGetGroupsInTripResponse,
   PaxMonGetInterchangesRequest,
@@ -112,6 +114,26 @@ export function usePaxMonGroupsInTripQuery(
   );
 }
 
+export async function sendPaxMonAddressableGroupsRequest(
+  content: PaxMonGetAddressableGroupsRequest
+): Promise<PaxMonGetAddressableGroupsResponse> {
+  const msg = await sendRequest(
+    "/paxmon/addressable_groups",
+    "PaxMonGetAddressableGroupsRequest",
+    content
+  );
+  verifyContentType(msg, "PaxMonGetAddressableGroupsResponse");
+  return msg.content as PaxMonGetAddressableGroupsResponse;
+}
+
+export function usePaxMonAddressableGroupsQuery(
+  content: PaxMonGetAddressableGroupsRequest
+): UseQueryResult<PaxMonGetAddressableGroupsResponse> {
+  return useQuery(queryKeys.addressableGroups(content), () =>
+    sendPaxMonAddressableGroupsRequest(content)
+  );
+}
+
 export async function sendPaxMonForkUniverseRequest(
   content: PaxMonForkUniverseRequest
 ): Promise<PaxMonForkUniverseResponse> {
@@ -190,4 +212,6 @@ export const queryKeys = {
     [...queryKeys.all, "interchanges", req] as const,
   filterTrips: (req: PaxMonFilterTripsRequest) =>
     [...queryKeys.all, "filter_trips", req] as const,
+  addressableGroups: (req: PaxMonGetAddressableGroupsRequest) =>
+    [...queryKeys.all, "addressable_groups", req] as const,
 };
