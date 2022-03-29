@@ -141,6 +141,13 @@ export const StationEvent: React.FC<{ 'translation': Translations, 'station': (S
                     setMinTime(res.content.events[0].event.time);
                     setMaxTime(res.content.events[res.content.events.length - 1].event.time);
                     setDisplayDirection('DEP');
+                    window.portEvents.pub('mapFlyTo', { animate: true,
+                                                        bearing: null,
+                                                        lat: res.content.station.pos.lat,
+                                                        lng: res.content.station.pos.lng,
+                                                        mapId: 'map',
+                                                        ptich: null,
+                                                        zoom: null});
                 });
         }
     }, [props.stationEventTrigger, direction, props.station]);

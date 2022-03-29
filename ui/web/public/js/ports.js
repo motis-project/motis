@@ -82,7 +82,9 @@ const ownPorts = {
         }
     },
     'mapFlyTo': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('mapFlyTo', callback);
+        }
     },
     'mapFitBounds': {
         subscribe: function(callback){
