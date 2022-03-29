@@ -3,7 +3,7 @@ import moment from 'moment';
 
 export const RailvizTooltipTrain: React.FC<{'train': any}> = (props) => {
 
-    const [train, setTrain] = useState<any>(props.train);
+    const [train, setTrain] = useState<any>(props.train || {names: [''], departureTime: 0, departureStation: '', arrivalTime: 0, arrivalStation: ''});
 
     useEffect(() => {
         if(props.train){
