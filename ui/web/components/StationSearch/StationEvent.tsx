@@ -3,12 +3,24 @@ import React, { useEffect, useState } from 'react';
 import moment from 'moment';
 import equal from 'deep-equal';
 
-import { Events, RailVizStationResponse, StationEvents } from '../Types/RailvizStationEvent';
-import { Station } from '../Types/Connection';
+import { Events, RailVizStationResponse } from '../Types/RailvizStationEvent';
+import { Station, TripId } from '../Types/Connection';
 import { Address } from '../Types/SuggestionTypes';
 import { Translations } from '../App/Localization';
 import { classToId } from '../Overlay/ConnectionRender';
 import { Spinner } from '../Overlay/LoadingSpinner';
+import { SubOverlayEvent } from '../Types/EventHistory';
+
+
+interface StationEvent {
+    'translation': Translations,
+    'station': (Station | Address),
+    'searchDate': moment.Moment,
+    'subOverlayContent': SubOverlayEvent[],
+    'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>,
+    'setSubOverlayContent': React.Dispatch<React.SetStateAction<SubOverlayEvent[]>> 
+}
+
 
 const getStationEvent = (byScheduleTime: boolean, direction: string, eventCount: number, stationID: string, time: number) => {
     return {
@@ -22,7 +34,16 @@ const getStationEvent = (byScheduleTime: boolean, direction: string, eventCount:
     };
 };
 
-const stationEventDivGenerator = (eventsToDisplay: Events[], translation: Translations, displayDirection: string, direction: string) => {
+const stationEventDivGenerator = (eventsToDisplay: Events[], translation: Translations, displayDirection: string, subOverlayContent: SubOverlayEvent[], setSubOverlayContent: React.Dispatch<React.SetStateAction<SubOverlayEvent[]>>, setTrainSelected: React.Dispatch<React.SetStateAction<TripId>>) => {
+
+    if(eventsToDisplay.length === 0) {
+        return (
+            <div className="no-results">
+                <div className="divider"></div>
+                <div className="msg">{displayDirection === 'DEP' ? translation.station.noDepartures : translation.station.noArrivals}</div>
+            </div>
+        )
+    }
 
     console.log("stationEventGenerator ausgeführt")
     let filteredEvents = eventsToDisplay.filter(x => x.type !== (displayDirection === 'ARR' ? 'DEP' : 'ARR'));
@@ -45,7 +66,13 @@ const stationEventDivGenerator = (eventsToDisplay: Events[], translation: Transl
                 <div className='station-event' key={index}>
                     <div className='event-time'>{moment.unix(filteredEvents[index].event.time).format('HH:mm')}</div>
                     <div className='event-train'><span>
-                        <div className={'train-box train-class-' + filteredEvents[index].trips[0].transport.clasz + ' with-tooltip'} data-tooltip={translation.connections.provider + ': ' + filteredEvents[index].trips[0].transport.provider + '\n' + translation.connections.trainNr + ': ' + filteredEvents[index].trips[0].transport.train_nr}><svg className='train-icon'>
+                        <div    className={'train-box train-class-' + filteredEvents[index].trips[0].transport.clasz + ' with-tooltip'} 
+                                data-tooltip={translation.connections.provider + ': ' + filteredEvents[index].trips[0].transport.provider + '\n' + translation.connections.trainNr + ': ' + filteredEvents[index].trips[0].transport.train_nr}
+                                onClick={() => {
+                                    setTrainSelected(filteredEvents[index].trips[0].id);
+                                    setSubOverlayContent([...subOverlayContent, {id: 'tripView', train: filteredEvents[index].trips[0].id}]);
+                                }}>
+                            <svg className='train-icon'>
                             <use xlinkHref={classToId({move: filteredEvents[index].trips[0].transport, move_type: 'Transport'})}></use>
                         </svg><span className='train-name'>{filteredEvents[index].trips[0].transport.name}</span></div>
                     </span></div>
@@ -109,7 +136,7 @@ const dummyEvent = (time: string): Events => {
     return { trips: [], type: '', event: { time: 0, schedule_time: 0, track: '', schedule_track: '', valid: false, reason: '' }, dummyEvent: time }
 }
 
-export const StationEvent: React.FC<{ 'translation': Translations, 'station': (Station | Address), 'stationEventTrigger': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'searchDate': moment.Moment }> = (props) => {
+export const StationEvent: React.FC<StationEvent> = (props) => {
 
     const [eventStations, setEventStations] = useState<Events[]>(null);
 
@@ -118,6 +145,8 @@ export const StationEvent: React.FC<{ 'translation': Translations, 'station': (S
     const [loadEarlier, setLoadEarlier] = useState<boolean>(false);
 
     const [loadLater, setLoadLater] = useState<boolean>(false);
+
+    const [stationName, setStationName] = useState<string>('');
 
     let byScheduleTime = true;
     let eventCount = 20;
@@ -129,27 +158,38 @@ export const StationEvent: React.FC<{ 'translation': Translations, 'station': (S
     const [direction, setDirection] = useState<string>('BOTH');
 
     useEffect(() => {
-        if (props.stationEventTrigger && stationID !== '') {
+        if (stationID !== '') {
             let requestURL = 'https://europe.motis-project.de/?elm=StationEvents';
             fetch(requestURL, getStationEvent(byScheduleTime, direction, eventCount, stationID, time))
                 .then(res => res.json())
                 .then((res: RailVizStationResponse) => {
                     console.log('StationEvents brrrrr');
                     console.log(res);
-                    insertDateHeader(setEventsToDisplay, res.content.events, props.translation);
-                    setEventStations(res.content.events);
-                    setMinTime(res.content.events[0].event.time);
-                    setMaxTime(res.content.events[res.content.events.length - 1].event.time);
+                    if (res.content.events.length === 0) {
+                        setEventStations([]);
+                        setEventsToDisplay([]);
+                    } else {
+                        setStationName(res.content.station.name);
+                        insertDateHeader(setEventsToDisplay, res.content.events, props.translation);
+                        setEventStations(res.content.events);
+                        setMinTime(res.content.events[0].event.time);
+                        setMaxTime(res.content.events[res.content.events.length - 1].event.time);
+                    }
                     setDisplayDirection('DEP');
                 });
         }
-    }, [props.stationEventTrigger, direction, props.station]);
+    }, [direction, props.station]);
 
     return (
         <div className='station-events'>
             <div className='header'>
-                <div className='back' onClick={() => { props.setStationEventTrigger(false) }}><i className='icon'>arrow_back</i></div>
-                <div className='station'>{props.station.name}</div>
+                <div className='back' onClick={() => {
+                                            let tmp = [...props.subOverlayContent]; 
+                                            tmp.pop(); 
+                                            props.setSubOverlayContent(tmp);
+                                        }}>
+                    <i className='icon'>arrow_back</i></div>
+                <div className='station'>{stationName}</div>
                 <div className='event-type-picker'>
                     <div>
                         <input  type='radio' 
@@ -181,7 +221,7 @@ export const StationEvent: React.FC<{ 'translation': Translations, 'station': (S
                         }
                     </div>
                     <div className='event-list'>
-                        {(eventsToDisplay) ? stationEventDivGenerator(eventsToDisplay, props.translation, displayDirection, direction) : <></>}
+                        {(eventsToDisplay) ? stationEventDivGenerator(eventsToDisplay, props.translation, displayDirection, props.subOverlayContent, props.setSubOverlayContent, props.setTrainSelected) : <></>}
                     </div>
                     <div className='divider footer'></div>
                     <div className='extend-search-interval search-after' onClick={() => { onClickHandler(byScheduleTime, 'LATER', eventCount, stationID, maxTime, eventStations, setEventStations, setMinTime, setMaxTime, setEventsToDisplay, props.translation, setLoadLater); setLoadLater(true)}}>

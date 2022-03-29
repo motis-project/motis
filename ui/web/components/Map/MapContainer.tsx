@@ -7,8 +7,9 @@ import { RailvizContextMenu } from "./RailvizContextMenu";
 import { Interval } from "../Types/RoutingTypes";
 import { RailvizTooltipTrain } from "./RailvizTooltipTrain";
 import { RailvizTooltipStation } from "./RailvizTooltipStation";
+import { SubOverlayEvent } from '../Types/EventHistory';
 
-export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo': Interval, 'searchDate': moment.Moment, 'mapData': any}> = (props) => {
+export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo': Interval, 'searchDate': moment.Moment, 'mapData': any, 'subOverlayContent': SubOverlayEvent[], 'setSubOverlayContent': React.Dispatch<React.SetStateAction<SubOverlayEvent[]>>}> = (props) => {
     
     // searchTime
     // SearchTime stores the currently displayed Time
@@ -43,6 +44,14 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
             window.portEvents.pub('mapSetLocale', props.translation.search);
         });
     });
+
+    useEffect(() =>{
+        window.portEvents.sub('showStationDetails', function(data){
+            console.log(clockString);
+            console.log(moment(clockString, props.translation.dateFormat));
+            props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: {id: data, name: ''}, stationTime: moment(clockString, props.translation.dateFormat + ' HH:mm:ss')}]);
+        });
+    }); 
 
     useEffect(() => {
         if(props.mapData){

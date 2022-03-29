@@ -6,18 +6,29 @@ import { Station, TripId } from '../Types/Connection';
 import { classToId } from './ConnectionRender';
 import { Trip } from '../Types/RailvizStationEvent';
 import { Translations } from '../App/Localization';
-import { Address } from '../Types/SuggestionTypes';
+import { SubOverlayEvent } from '../Types/EventHistory';
 
-export const TripSearch: React.FC<{'translation': Translations, 'trip': {first_station: Station, trip_info: Trip}, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'setStationSearch': React.Dispatch<React.SetStateAction<Station | Address>>, 'setSubOverlayDate': React.Dispatch<React.SetStateAction<moment.Moment>>}> = (props) => {
+
+interface TripSearch {
+    'translation': Translations,
+    'trip': {first_station: Station, trip_info: Trip},
+    'subOverlayContent': SubOverlayEvent[],
+    'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>,
+    'setSubOverlayContent': React.Dispatch<React.SetStateAction<SubOverlayEvent[]>>
+}
+
+
+export const TripSearch: React.FC<TripSearch> = (props) => {
 
     return (
-        <div className='trip'>
+        <div className='trip' key={`tripSearch ${props.trip.trip_info.id.time}`}>
             <div className='trip-train'>
                 <span>
                     <div    className={`train-box train-class-${props.trip.trip_info.transport.clasz} with-tooltip`} 
                             data-tooltip={`${props.translation.connections.provider}: ${props.trip.trip_info.transport.provider} ${props.translation.search.trainNr}: ${props.trip.trip_info.id.train_nr}`}
                             onClick={() => {
                                 props.setTrainSelected(props.trip.trip_info.id);
+                                props.setSubOverlayContent([...props.subOverlayContent, {id: 'tripView', train: props.trip.trip_info.id}]);
                             }}>
                         <svg className='train-icon'>
                             <use xlinkHref={classToId({move: props.trip.trip_info.transport, move_type: 'Transport'})}></use>
@@ -34,9 +45,7 @@ export const TripSearch: React.FC<{'translation': Translations, 'trip': {first_s
                 <div    className='station' 
                         title={props.trip.first_station.name}
                         onClick={() => {
-                            props.setStationSearch(null);
-                            props.setStationSearch(props.trip.first_station);
-                            props.setSubOverlayDate(moment.unix(props.trip.trip_info.id.time));
+                            props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: props.trip.first_station, stationTime: moment.unix(props.trip.trip_info.id.time)}]);
                         }}>
                     {props.trip.first_station.name}
                 </div>

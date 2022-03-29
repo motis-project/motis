@@ -11,8 +11,9 @@ import { MapContainer } from '../Map/MapContainer';
 import { Interval } from '../Types/RoutingTypes';
 import { elmAPIResponse } from '../Types/IntermodalRoutingTypes';
 import { ScheduleInfoResponse } from '../Types/ScheduleInfo';
-import { Station } from '../Types/Connection';
+import { Connection, Station, TripId } from '../Types/Connection';
 import { Address } from '../Types/SuggestionTypes';
+import { SubOverlayEvent } from '../Types/EventHistory';
 
 declare global {
     interface Window {
@@ -38,32 +39,23 @@ export const App: React.FC = () => {
     // Hold the available Interval for Scheduling Information
     const [scheduleInfo, setScheduleInfo] = React.useState<Interval>(null);
 
-    const [stationEventTrigger, setStationEventTrigger] = React.useState<boolean>(false)
-
     // Overlay and StationSearch communicate via this State
     const [stationSearch, setStationSearch] = React.useState<Station | Address>({ id: '', name: '' });
-
-    // Boolean used to decide if the SubOverlay is being displayed
-    const [subOverlayHidden, setSubOverlayHidden] = React.useState<boolean>(true);
 
     // Current Date
     const [searchDate, setSearchDate] = React.useState<moment.Moment>(null);
 
+    // Store identifier for currently displayed SubOverlay Content. Will be used as a stack to realize a history of content.
+    const [subOverlayContent, setSubOverlayContent] = React.useState<SubOverlayEvent[]>([]);
 
     // Current hovered map Data
     const [mapData, setMapData] = React.useState<any>();
-
-    let isMobile = false;
 
     React.useEffect(() => {
         window.portEvents.sub('mapSetTooltip', function(data){
             setMapData(data);
         });
     });
-
-    React.useEffect(() => {
-        isMobile = window.matchMedia("only screen and (max-width: 500px)").matches;
-    }, []);
 
     React.useEffect(() => {
         let requestURL = 'https://europe.motis-project.de/?elm=requestScheduleInfo';
@@ -92,20 +84,19 @@ export const App: React.FC = () => {
 
     React.useEffect(() => {
         if((stationSearch as Station).id !== ''){
-            setStationEventTrigger(true);
-            setSubOverlayHidden(false);
+            setSubOverlayContent([...subOverlayContent, {id: 'stationEvent', station: stationSearch, stationTime: moment()}]);
         }
     }, [stationSearch]);
 
     return (
         <div className='app'>
             {isMobile ?
-                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={stationSearch} setStationSearch={setStationSearch} searchDate={searchDate} mapData={mapData} />
+                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} searchDate={searchDate} mapData={mapData} subOverlayContent={subOverlayContent} setSubOverlayContent={setSubOverlayContent} />
                 :
                 <>
-                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} searchDate={searchDate} mapData={mapData}/>
-                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={stationSearch} searchDate={searchDate} mapData={mapData} setStationSearch={setStationSearch}/>
-                    <StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={stationSearch} setStationSearch={setStationSearch} />
+                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} searchDate={searchDate} mapData={mapData} subOverlayContent={subOverlayContent} setSubOverlayContent={setSubOverlayContent}/>
+                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} searchDate={searchDate} mapData={mapData} subOverlayContent={subOverlayContent} setSubOverlayContent={setSubOverlayContent}/>
+                    <StationSearch translation={getQuery()} station={stationSearch} setStationSearch={setStationSearch} />
                 </>
             }
         </div>

@@ -6,23 +6,14 @@ import { Search } from './Search';
 import { SubOverlay } from './SubOverlay';
 import { Spinner } from './LoadingSpinner';
 import { ConnectionRender } from './ConnectionRender';
-import { JourneyRender, duration } from './Journey';
+import { duration } from './Journey';
 import { Translations } from '../App/Localization';
 import { getFromLocalStorage } from '../App/LocalStorage';
-import { Connection, Station, Transport, TransportInfo, TripId, WalkInfo } from '../Types/Connection';
+import { Connection, Station, Transport, TripId, WalkInfo } from '../Types/Connection';
 import { Address } from '../Types/SuggestionTypes';
 import { Interval } from '../Types/RoutingTypes';
-
-
-const getTransportCountString = (transports: Transport[], translation: Translations) => {
-    let count = 0;
-    for (let index = 0; index < transports.length; index++) {
-        if (transports[index].move_type === 'Transport' && index > 0) {
-            count++
-        }
-    }
-    return translation.connections.interchanges(count);
-}
+import { TripView } from './TripView';
+import { SubOverlayEvent } from '../Types/EventHistory';
 
 
 export const getMapFilter = (connection: Connection) => {
@@ -58,10 +49,10 @@ export const getMapFilter = (connection: Connection) => {
     return filter
 }
 
-export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'subOverlayHidden': boolean, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<boolean>>, 'stationEventTrigger': boolean, 'setStationEventTrigger': React.Dispatch<React.SetStateAction<boolean>>, 'station': (Station | Address), 'setStationSearch': React.Dispatch<React.SetStateAction<(Station | Address)>>, 'searchDate': moment.Moment, 'mapData': any}> = (props) => {
+export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'searchDate': moment.Moment, 'mapData': any, 'subOverlayContent': SubOverlayEvent[], 'setSubOverlayContent': React.Dispatch<React.SetStateAction<SubOverlayEvent[]>>}> = (props) => {
 
     // Boolean used to decide if the Overlay is being displayed
-    const [overlayHidden, setOverlayHidden] = useState<Boolean>(true);
+    const [overlayHidden, setOverlayHidden] = useState<boolean>(true);
 
     // searchDate manages the currently used Time for IntermodalRoutingRequests
     const [searchDate, setSearchDate] = useState<moment.Moment>(null);
@@ -76,7 +67,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
     const [extendBackwardFlag, setExtendBackwardFlag] = useState<boolean>(false);
 
     // True: Display connections as List. False: Show detailed Information for one Connection
-    const [detailViewHidden, setDetailViewHidden] = useState<Boolean>(true);
+    const [tripViewHidden, setTripViewHidden] = useState<boolean>(true);
 
     //
     const [indexOfConnection, setIndexOfConnection] = useState<number>(0);
@@ -93,14 +84,16 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
 
     const [selectedConnectionIds, setSelectedConnectionIds] = useState<number[]>([]);
   
-      // If true, renders the Loading animation for the connectionList
+    // If true, renders the Loading animation for the connectionList
     const [loading, setLoading] = useState<boolean>(false);
+
+    const [subOverlayToggle, setSubOverlayToggle] = useState<boolean>(false);
 
     //when clicking on train in the map
     React.useEffect(() => {
         window.portEvents.sub('showTripDetails', function(data){
+            props.setSubOverlayContent([...props.subOverlayContent, {id: 'tripView', train: data}])
             setTrainSelected(data);
-            props.setSubOverlayHidden(false);
         });
     });
 
@@ -108,16 +101,15 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
         window.portEvents.sub('showStationDetails', function(data){
             setMapFilter(null);
             window.portEvents.pub('mapSetDetailFilter', null);
-            props.setStationSearch({id: data, name: ''});
         });
     });    
 
     React.useEffect(() => {
-        if(detailViewHidden){
+        if(tripViewHidden){
             setMapFilter(null);
             window.portEvents.pub('mapSetDetailFilter', null);
         }
-    }, [detailViewHidden])
+    }, [tripViewHidden])
 
     // On initial render searchDate will be null, waiting for the ScheduleInfoResponse. This useEffect should fire only once.
     React.useEffect(() => {
@@ -145,7 +137,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
         <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden'}>
             <div className='overlay'>
                 <div id='overlay-content'>
-                    {detailViewHidden ?
+                    {tripViewHidden ?
                         <>
                             <Search translation={props.translation} 
                                     scheduleInfo={props.scheduleInfo}
@@ -181,9 +173,9 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                         connectionElem.dummyDay ?
                                                         <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
                                                         :
-                                                        <div className={(connectionHighlighted) ? `connection ${(selectedConnectionIds.includes(index)) ? 'highlighted' : 'faded'}` : 'connection'}
+                                                        <div className={ `connection ${connectionElem.new} ${(connectionHighlighted) ? `${(selectedConnectionIds.includes(index)) ? 'highlighted' : 'faded'}` : ''}`}
                                                             key={index}
-                                                            onClick={() => { setDetailViewHidden(false); setIndexOfConnection(index); setMapFilter(getMapFilter(connectionElem)); window.portEvents.pub('mapSetDetailFilter', getMapFilter(connectionElem));}}
+                                                            onClick={() => { setTripViewHidden(false); setIndexOfConnection(index); setMapFilter(getMapFilter(connectionElem)); window.portEvents.pub('mapSetDetailFilter', getMapFilter(connectionElem));}}
                                                             onMouseEnter={() => { let ids = []; ids.push(connectionElem.id); window.portEvents.pub('mapHighlightConnections', ids)}}
                                                             onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', [])}}>
                                                             <div className='pure-g'>
@@ -202,10 +194,9 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                                     <div className={(connectionHighlighted ? 'transport-graph highlighting' : 'transport-graph')}>
                                                                         <ConnectionRender   translation={props.translation}
                                                                                             connection={connectionElem}
-                                                                                            setDetailViewHidden={setDetailViewHidden}
                                                                                             connectionHighlighted={connectionHighlighted}
                                                                                             mapData={props.mapData}
-                                                                                            key={index}/>
+                                                                                            parentIndex={index}/>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -249,66 +240,39 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                             }
                         </> 
                         :
-                        <div className="connection-details">
-                            <div className="connection-info">
-                                <div className="header">
-                                    <div className="back" onClick={() => setDetailViewHidden(true)}><i className="icon">arrow_back</i></div>
-                                    <div className="details">
-                                        <div className="date">{props.searchDate.format(props.translation.dateFormat)}</div>
-                                        <div className="connection-times">
-                                            <div className="times">
-                                                <div className="connection-departure">{moment.unix(connections[indexOfConnection].stops[0].departure.time).format('HH:mm')}</div>
-                                                <div className="connection-arrival">{moment.unix(connections[indexOfConnection].stops[connections[indexOfConnection].stops.length - 1].arrival.time).format('HH:mm')}</div>
-                                            </div>
-                                            <div className="locations">
-                                                <div>{start.name}</div>
-                                                <div>{destination.name}</div>
-                                            </div>
-                                        </div>
-                                        <div className="summary">
-                                            <span className="duration">
-                                                <i className="icon">schedule</i>
-                                                {duration(connections[indexOfConnection].stops[0].departure.time, connections[indexOfConnection].stops[connections[indexOfConnection].stops.length - 1].arrival.time)}
-                                            </span>
-                                            <span className="interchanges">
-                                                <i className="icon">transfer_within_a_station</i>
-                                                {getTransportCountString(connections[indexOfConnection].transports, props.translation)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="actions"><i className="icon">save</i><i className="icon">share</i></div>
-                                </div>
-                            </div>
-                            <div className="connection-journey" id="connection-journey">
-                                <JourneyRender  connection={connections[indexOfConnection]}
-                                                setSubOverlayHidden={props.setSubOverlayHidden}
-                                                setTrainSelected={setTrainSelected}
-                                                detailViewHidden={detailViewHidden}
-                                                translation={props.translation} />
-                            </div>
-                        </div>
+                        <TripView   translation={props.translation}
+                                    trainSelected={connections[indexOfConnection]}
+                                    setTrainSelected={setTrainSelected}
+                                    setTripViewHidden={setTripViewHidden}
+                                    mapFilter={props.mapData}
+                                    subOverlayContent={props.subOverlayContent} 
+                                    setSubOverlayContent={props.setSubOverlayContent}/>
                     }
                 </div>
-                <SubOverlay translation={props.translation} 
+                <SubOverlay translation={props.translation}
                             scheduleInfo={props.scheduleInfo}
                             searchDate={props.searchDate}
-                            station={props.station}
-                            stationEventTrigger={props.stationEventTrigger}
-                            subOverlayHidden={props.subOverlayHidden} 
-                            trainSelected={trainSelected} 
-                            detailViewHidden={detailViewHidden}
+                            trainSelected={trainSelected}
                             mapFilter={mapFilter}
-                            setTrainSelected={setTrainSelected} 
-                            setStationEventTrigger={props.setStationEventTrigger}
-                            setSubOverlayHidden={props.setSubOverlayHidden} 
-                            setStationSearch={props.setStationSearch}
+                            setTrainSelected={setTrainSelected}
+                            subOverlayContent={props.subOverlayContent}
+                            setSubOverlayContent={props.setSubOverlayContent}
+                            setSubOverlayToggle={setSubOverlayToggle}
                             />
             </div>
             <div className='overlay-tabs'>
                 <div className='overlay-toggle' onClick={() => setOverlayHidden(!overlayHidden)}>
                     <i className='icon'>arrow_drop_down</i>
                 </div>
-                <div className={props.subOverlayHidden ? 'trip-search-toggle' : 'trip-search-toggle enabled'} onClick={() => {props.setSubOverlayHidden(!props.subOverlayHidden), setTrainSelected(undefined)}}>
+                <div    className={ `trip-search-toggle ${subOverlayToggle ? 'enabled': ''}`} 
+                        onClick={() => {
+                            if (subOverlayToggle) {
+                                props.setSubOverlayContent([]);
+                                setSubOverlayToggle(false);
+                            }else {
+                                props.setSubOverlayContent([{id: 'tripSearch'}]);
+                                setSubOverlayToggle(true);
+                            }}}>
                     <i className='icon'>train</i>
                 </div>
             </div>

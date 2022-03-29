@@ -105,7 +105,7 @@ interface PartElem {
 }
 
 
-export const ConnectionRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'setDetailViewHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'connectionHighlighted': boolean, 'mapData': any, 'key': number }> = (props) => {
+export const ConnectionRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'connectionHighlighted': boolean, 'mapData': any, 'parentIndex': number }> = (props) => {
 
     const [toolTipSelected, setToolTipSelected] = useState<number>(-1);
     const [parts, setParts] = useState<PartElem[]>([]);
@@ -182,7 +182,7 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
             <svg width={totalWidth} height={totalHeight} viewBox={`0 0 ${totalWidth} ${totalHeight}`}>
                 <g>
                     {parts.map((partElem: PartElem) => (
-                        <g className={`part train-class-${partElem.clasz} ${partElem.acc} ${(props.connectionHighlighted) ? ((partsHighlighted.includes(partElem.trainNumber)) ? 'highlighted' : 'faded') : ''}`} key={`${props.key}_${partElem.trainNumber}`}>
+                        <g className={`part train-class-${partElem.clasz} ${partElem.acc} ${(props.connectionHighlighted) ? ((partsHighlighted.includes(partElem.trainNumber)) ? 'highlighted' : 'faded') : ''}`} key={`${props.parentIndex}_${partElem.trainNumber}`}>
                             <line x1={partElem.position} y1={circleRadius} x2={partElem.lineEnd} y2={circleRadius} className='train-line'></line>
                             <circle cx={partElem.position + circleRadius} cy={circleRadius} r={circleRadius} className='train-circle' ></circle>
                             <use xlinkHref={partElem.classId} className='train-icon' x={partElem.position + iconOffset} y={iconOffset} width={iconSize} height={iconSize} ></use>
@@ -197,7 +197,7 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
             </svg>
             {parts.map((partElem: PartElem, index) => (
 
-                <div className={`tooltip ${((toolTipSelected === partElem.trainNumber) || (partsHighlighted.includes(partElem.trainNumber))) ? 'visible' : ''}`} style={{ position: 'absolute', left: `${(Math.min(partElem.position, (totalWidth - tooltipWidth)))}px`, top: `${(textOffset - 5)}px` }} key={`tooltip${props.key}${index}`}>
+                <div className={`tooltip ${((toolTipSelected === partElem.trainNumber) || (partsHighlighted.includes(partElem.trainNumber))) ? 'visible' : ''}`} style={{ position: 'absolute', left: `${(Math.min(partElem.position, (totalWidth - tooltipWidth)))}px`, top: `${(textOffset - 5)}px` }} key={`tooltip${props.parentIndex}${index}`}>
 
                     <div className='stations'>
                         <div className='departure'>

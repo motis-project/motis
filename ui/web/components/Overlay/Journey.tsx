@@ -7,6 +7,17 @@ import { getFromLocalStorage, ModeLocalStorage } from '../App/LocalStorage';
 import { Address } from '../Types/SuggestionTypes';
 import { Translations } from '../App/Localization';
 import { classToId, getClasz } from './ConnectionRender';
+import { SubOverlayEvent } from '../Types/EventHistory';
+
+
+interface Journey {
+    'translation': Translations,
+    'connection': Connection,
+    'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>,
+    'subOverlayContent': SubOverlayEvent[],
+    'setSubOverlayContent': React.Dispatch<React.SetStateAction<SubOverlayEvent[]>>,
+}
+
 
 const isTransportInfo = (transport: Transport) => {
     return transport.move_type === 'Transport';
@@ -90,7 +101,7 @@ interface JourneyElem {
 }
 
 
-export const JourneyRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'setSubOverlayHidden': React.Dispatch<React.SetStateAction<Boolean>>, 'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>, 'detailViewHidden': Boolean }> = (props) => {
+export const JourneyRender: React.FC<Journey> = (props) => {
 
     const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
 
@@ -141,7 +152,10 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                             data-tooltip={`${(transport.walkInfo) ?
                                 '' :
                                 `${props.translation.connections.provider}: ${(transport.transport.move as TransportInfo).provider}\n${props.translation.connections.trainNr}: ${(transport.trip !== undefined) ? transport.trip.id.train_nr : ''}`}`}
-                            onClick={() => { props.setSubOverlayHidden(false); props.setTrainSelected(transport.trip.id) }}>
+                            onClick={() => {
+                                    props.setTrainSelected(transport.trip.id);
+                                    props.setSubOverlayContent([...props.subOverlayContent, {id: 'tripView', train: transport.trip.id}]);
+                                }}>
                             <svg className='train-icon'>
                                 <use xlinkHref={classToId(transport.transport)}></use>
                             </svg>
@@ -162,7 +176,14 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                                 <span className='past'>{moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.from].departure.time).format('HH:mm')}</span>
                             </div>
                             <div className='delay'></div>
-                            <div className='station'>{(transport.stops[transport.transport.move.range.from].station.name === 'START') ? (start as Station).name : transport.stops[transport.transport.move.range.from].station.name}</div>
+                            <div    className='station'
+                                    onClick={() => {
+                                        props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: (transport.stops[transport.transport.move.range.from].station.name === 'START') ? start : transport.stops[transport.transport.move.range.from].station, stationTime: moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.from].departure.time)}]);
+                                    }}>
+                                <span>
+                                    {(transport.stops[transport.transport.move.range.from].station.name === 'START') ? (start as Station).name : transport.stops[transport.transport.move.range.from].station.name}
+                                </span>
+                            </div>
                         </div>
                     </div>
                     {transport.walkInfo ?
@@ -176,7 +197,9 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                     }
                     <IntermediateStops  transport={transport}
                                         connection={props.connection}
-                                        translation={props.translation}/>
+                                        translation={props.translation}
+                                        subOverlayContent={props.subOverlayContent}
+                                        setSubOverlayContent={props.setSubOverlayContent}/>
                     <div className="last-stop">
                         <div className="stop past">
                             <div className="timeline train-color-border"></div>
@@ -184,8 +207,13 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
                                 <span className="past">{moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).format('HH:mm')}</span>
                             </div>
                             <div className="delay"></div>
-                            <div className="station">
-                                <span className="virtual">{(transport.stops[transport.transport.move.range.to].station.name === 'END') ? (destination as Station).name : transport.stops[transport.transport.move.range.to].station.name}</span>
+                            <div    className="station"
+                                    onClick={() => {
+                                        props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: (transport.stops[transport.transport.move.range.to].station.name === 'END') ? destination : transport.stops[transport.transport.move.range.to].station, stationTime: moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.to].arrival.time)}]);
+                                    }}>
+                                <span>
+                                    {(transport.stops[transport.transport.move.range.to].station.name === 'END') ? (destination as Station).name : transport.stops[transport.transport.move.range.to].station.name}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -195,7 +223,7 @@ export const JourneyRender: React.FC<{ 'translation': Translations, 'connection'
     );
 };
 
-const IntermediateStops: React.FC<{'transport': JourneyElem, 'connection': Connection, 'translation': Translations}> = (props) => {
+const IntermediateStops: React.FC<{'transport': JourneyElem, 'connection': Connection, 'translation': Translations, 'subOverlayContent': SubOverlayEvent[], 'setSubOverlayContent': React.Dispatch<React.SetStateAction<SubOverlayEvent[]>>}> = (props) => {
 
     const [isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed] = useState<boolean>(true);
 
@@ -217,7 +245,11 @@ const IntermediateStops: React.FC<{'transport': JourneyElem, 'connection': Conne
             </div>
             <div className={isIntermediateStopsCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
                 {props.transport.stopsToRender.map((stop: Stop, index) => (
-                    <div className='stop past' key={index}>
+                    <div    className='stop past' 
+                            key={index}
+                            onClick={() => {
+                                props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: stop.station, stationTime: moment.unix(stop.departure.time)}]);
+                            }}>
                         <div className='timeline train-color-border bg'></div>
                         <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
                         <div className='time'>
