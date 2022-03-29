@@ -52,7 +52,7 @@ function Settings(): JSX.Element {
           <>
             <Popover.Button
               className={classNames(
-                open ? "opacity-100" : "opacity-50",
+                open ? "opacity-100" : "opacity-30 hover:opacity-100",
                 "p-2 mb-1 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0"
               )}
             >
@@ -67,7 +67,7 @@ function Settings(): JSX.Element {
               leaveFrom="opacity-100 translate-y-0"
               leaveTo="opacity-0 translate-y-1"
             >
-              <Popover.Panel className="absolute z-10 w-screen px-4 mt-1 right-0 sm:px-0 max-w-sm lg:max-w-md">
+              <Popover.Panel className="absolute z-10 w-screen px-4 mt-1 right-0 max-w-sm">
                 <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
                   <SectionGraphPlotSettings />
                 </div>

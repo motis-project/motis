@@ -9,6 +9,8 @@ import {
   PaxMonPdfEntry,
 } from "@/api/protocol/motis/paxmon";
 
+import { SectionLoadColors } from "@/util/colors";
+
 export type SectionLoadGraphPlotType = "SimpleBox" | "Violin" | "Box";
 
 const defaultMargin = {
@@ -70,7 +72,7 @@ function SectionLoadGraph({
         y={y}
         width={x80 - x0}
         height={h}
-        fill="#C9EB9E"
+        fill={SectionLoadColors.Bg_0_80}
       />,
       <rect
         key="80-100"
@@ -78,7 +80,7 @@ function SectionLoadGraph({
         y={y}
         width={x100 - x80}
         height={h}
-        fill="#FFFFAF"
+        fill={SectionLoadColors.Bg_80_100}
       />,
       <rect
         key="100-120"
@@ -86,7 +88,7 @@ function SectionLoadGraph({
         y={y}
         width={x120 - x100}
         height={h}
-        fill="#FCE3B4"
+        fill={SectionLoadColors.Bg_100_120}
       />,
       <rect
         key="120-200"
@@ -94,7 +96,7 @@ function SectionLoadGraph({
         y={y}
         width={x200 - x120}
         height={h}
-        fill="#FCC8C3"
+        fill={SectionLoadColors.Bg_120_200}
       />
     );
     if (x200 < width) {
@@ -105,7 +107,7 @@ function SectionLoadGraph({
           y={y}
           width={Math.max(0, margin.left + innerWidth - x200)}
           height={h}
-          fill="#FA9090"
+          fill={SectionLoadColors.Bg_200_plus}
         />
       );
     }
@@ -117,7 +119,7 @@ function SectionLoadGraph({
         y={margin.top}
         width={innerWidth}
         height={innerHeight}
-        fill="white"
+        fill={SectionLoadColors.Bg_unknown}
       />
     );
   }
@@ -134,9 +136,9 @@ function SectionLoadGraph({
               margin.top + innerHeight
             } H${lo} Z`}
             style={{
-              fill: "#B2B5FE",
-              fillOpacity: 0.4,
-              stroke: "#797EFF",
+              fill: SectionLoadColors.Fill_Range,
+              fillOpacity: 0.5,
+              stroke: SectionLoadColors.Stroke_Range,
               strokeOpacity: 0.4,
             }}
           />
@@ -144,7 +146,11 @@ function SectionLoadGraph({
             d={`M${paxScale(section.dist.q50)} ${margin.top} V${
               margin.top + innerHeight
             }`}
-            style={{ stroke: "#3038FF", strokeWidth: 2, fill: "none" }}
+            style={{
+              stroke: SectionLoadColors.Stroke_Median,
+              strokeWidth: 3,
+              fill: "none",
+            }}
           />
         </g>
       );
@@ -154,9 +160,9 @@ function SectionLoadGraph({
       plot = (
         <ViolinPlot
           data={section.dist.pdf}
-          stroke="#3038FF"
+          stroke={SectionLoadColors.Stroke_BoxViolin}
           strokeWidth={2}
-          fill="#B2B5FE"
+          fill={SectionLoadColors.Fill_BoxViolin}
           valueScale={paxScale}
           count={count}
           value={value}
@@ -175,9 +181,9 @@ function SectionLoadGraph({
           firstQuartile={section.dist.q5}
           thirdQuartile={section.dist.q95}
           median={section.dist.q50}
-          stroke="#3038FF"
+          stroke={SectionLoadColors.Stroke_BoxViolin}
           strokeWidth={2}
-          fill="#B2B5FE"
+          fill={SectionLoadColors.Fill_BoxViolin}
           valueScale={paxScale}
           top={margin.top + 4}
           boxWidth={innerHeight - 8}
@@ -204,7 +210,7 @@ function SectionLoadGraph({
         d={`M${paxScale(section.expected_passengers)} ${
           margin.top
         } v${innerHeight}`}
-        stroke="#333"
+        stroke={SectionLoadColors.Stroke_Expected}
         strokeDasharray={2}
         strokeWidth={2}
       />

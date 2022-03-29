@@ -21,9 +21,12 @@ import { sectionGraphPlotTypeAtom } from "@/data/settings";
 import { universeAtom } from "@/data/simulation";
 
 import classNames from "@/util/classNames";
+import { SectionLoadColors } from "@/util/colors";
 import { formatDate, formatTime } from "@/util/dateFormat";
 
-import SectionLoadGraph from "@/components/SectionLoadGraph";
+import SectionLoadGraph, {
+  SectionLoadGraphPlotType,
+} from "@/components/SectionLoadGraph";
 import TripSectionDetails from "@/components/TripSectionDetails";
 
 type TripRouteProps = {
@@ -96,6 +99,7 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
             maxVal={maxVal}
           />
         ))}
+        <Legend />
       </div>
     </div>
   );
@@ -202,6 +206,121 @@ function TripSection({ tripId, section, maxVal }: TripSectionProps) {
         />
       ) : null}
     </>
+  );
+}
+
+function Legend() {
+  const [sectionGraphPlotType] = useAtom(sectionGraphPlotTypeAtom);
+
+  return (
+    <div>
+      <div className="flex flex-wrap justify-end gap-x-5 gap-y-2 pr-2 pt-2 pb-2 text-sm">
+        <div>Auslastungsstufen:</div>
+        <div className="flex items-center gap-1">
+          <span
+            className="inline-block w-5 h-5 rounded-md"
+            style={{ backgroundColor: SectionLoadColors.Bg_0_80 }}
+          />
+          &lt;80%
+        </div>
+        <div className="flex items-center gap-1">
+          <span
+            className="inline-block w-5 h-5 rounded-md"
+            style={{ backgroundColor: SectionLoadColors.Bg_80_100 }}
+          />
+          80-100%
+        </div>
+        <div className="flex items-center gap-1">
+          <span
+            className="inline-block w-5 h-5 rounded-md"
+            style={{ backgroundColor: SectionLoadColors.Bg_100_120 }}
+          />
+          100-120%
+        </div>
+        <div className="flex items-center gap-1">
+          <span
+            className="inline-block w-5 h-5 rounded-md"
+            style={{ backgroundColor: SectionLoadColors.Bg_120_200 }}
+          />
+          120-200%
+        </div>
+        <div className="flex items-center gap-1">
+          <span
+            className="inline-block w-5 h-5 rounded-md"
+            style={{ backgroundColor: SectionLoadColors.Bg_200_plus }}
+          />
+          &gt;200%
+        </div>
+      </div>
+      <div className="flex flex-wrap justify-end gap-x-5 gap-y-2 pr-2 pt-2 pb-4 text-sm">
+        {sectionGraphPlotType == "SimpleBox" ? (
+          <div className="flex items-center gap-1">
+            <svg width={20} height={20} viewBox="0 0 20 20">
+              <rect
+                x={0}
+                y={0}
+                width={20}
+                height={20}
+                rx={5}
+                fill={SectionLoadColors.Fill_Range}
+              />
+              <path
+                d="M10 0 V20"
+                stroke={SectionLoadColors.Stroke_Median}
+                strokeWidth={3}
+                fill="none"
+              />
+            </svg>
+            Prognostizierte Auslastung (Spannbreite und Median)
+          </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            <svg width={20} height={20} viewBox="0 0 20 20">
+              <rect
+                x={0}
+                y={0}
+                width={20}
+                height={20}
+                rx={6}
+                className="fill-db-cool-gray-200"
+              />
+              <rect
+                x={4}
+                y={4}
+                width={12}
+                height={12}
+                rx={4}
+                fill={SectionLoadColors.Fill_BoxViolin}
+                stroke={SectionLoadColors.Stroke_BoxViolin}
+                strokeWidth={2}
+              />
+            </svg>
+            Prognostizierte Auslastung (
+            {sectionGraphPlotType == "Box" ? "Box-Plot" : "Violin-Plot"})
+          </div>
+        )}
+        <div className="flex items-center gap-1">
+          <svg width={20} height={20} viewBox="0 0 20 20">
+            <rect
+              x={0}
+              y={0}
+              width={20}
+              height={20}
+              rx={6}
+              className="fill-db-cool-gray-200"
+            />
+            <path
+              d="M10 0 V20"
+              stroke={SectionLoadColors.Stroke_Expected}
+              strokeDasharray={2}
+              strokeWidth={2}
+              fill="none"
+            />
+          </svg>
+          Planmäßige Auslastung
+        </div>
+      </div>
+    </div>
   );
 }
 
