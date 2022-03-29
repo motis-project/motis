@@ -1,7 +1,7 @@
 import { TrashIcon } from "@heroicons/react/solid";
 import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
-import React, { ReactNode, useCallback, useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 
 import { Station, TripServiceInfo } from "@/api/protocol/motis";
 import { LoadLevel } from "@/api/protocol/motis/paxforecast";
@@ -12,12 +12,8 @@ import {
 } from "@/data/measures";
 
 import StationPicker from "@/components/StationPicker";
-import TripPicker from "@/components/TripPicker";
-import LoadInput, {
-  allLoadLevels,
-  highLoadLevels,
-  lowLoadLevels,
-} from "@/components/measures/LoadInput";
+import { highLoadLevels, lowLoadLevels } from "@/components/measures/LoadInput";
+import TripAndLoadInput from "@/components/measures/TripAndLoadInput";
 
 export type TripLoadRecommendationMeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;
@@ -170,44 +166,6 @@ function TripLoadRecommendationMeasureEditor({
       >
         Maßnahme speichern
       </button>
-    </div>
-  );
-}
-
-type TripAndLoadInputProps = {
-  selectedTrip: TripServiceInfo | undefined;
-  selectedLevel: LoadLevel;
-  onTripSelected: (tsi: TripServiceInfo | undefined) => void;
-  onLevelSelected: (level: LoadLevel) => void;
-  loadLevels?: LoadLevel[];
-  children?: ReactNode;
-};
-
-function TripAndLoadInput({
-  selectedTrip,
-  selectedLevel,
-  onTripSelected,
-  onLevelSelected,
-  loadLevels = allLoadLevels,
-  children,
-}: TripAndLoadInputProps) {
-  return (
-    <div className="flex justify-between items-center gap-2">
-      <TripPicker
-        onTripPicked={onTripSelected}
-        clearOnPick={false}
-        longDistanceOnly={false}
-        initialTrip={selectedTrip}
-        key={JSON.stringify(selectedTrip)}
-        className="w-32 flex-shrink-0"
-      />
-      <LoadInput
-        loadLevels={loadLevels}
-        selectedLevel={selectedLevel}
-        onLevelSelected={onLevelSelected}
-        className="flex-grow"
-      />
-      {children}
     </div>
   );
 }

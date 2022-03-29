@@ -7,7 +7,8 @@ import { LoadLevel } from "@/api/protocol/motis/paxforecast";
 
 import { MeasureUnion, isTripLoadInfoMeasureU } from "@/data/measures";
 
-import TripPicker from "@/components/TripPicker";
+import { allLoadLevels } from "@/components/measures/LoadInput";
+import TripAndLoadInput from "@/components/measures/TripAndLoadInput";
 
 export type TripLoadInfoMeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;
@@ -15,13 +16,6 @@ export type TripLoadInfoMeasureEditorProps = {
 };
 
 const labelClass = "font-semibold";
-
-const loadLevels: Array<{ level: LoadLevel; label: string }> = [
-  { level: "Unknown", label: "unbekannt" },
-  { level: "Low", label: "gering" },
-  { level: "NoSeats", label: "keine Sitzplätze mehr" },
-  { level: "Full", label: "keine Mitfahrmöglichkeit mehr" },
-];
 
 function TripLoadInfoMeasureEditor({
   measureAtom,
@@ -60,31 +54,13 @@ function TripLoadInfoMeasureEditor({
     <div className="flex flex-col gap-4">
       <div>
         <div className={labelClass}>Auslastung für Zug</div>
-        <div>
-          <TripPicker
-            onTripPicked={setLoadInfoTrip}
-            clearOnPick={false}
-            longDistanceOnly={false}
-            initialTrip={data.trip}
-          />
-        </div>
-      </div>
-      <div>
-        <div className={labelClass}>Auslastungsstufe</div>
-        <div className="flex flex-col pl-2">
-          {loadLevels.map(({ level, label }) => (
-            <label key={level} className="inline-flex items-center gap-1">
-              <input
-                type="radio"
-                name="load-level"
-                value={level}
-                checked={data.level == level}
-                onChange={() => setLoadInfoLevel(level)}
-              />
-              {label}
-            </label>
-          ))}
-        </div>
+        <TripAndLoadInput
+          selectedTrip={data.trip}
+          selectedLevel={data.level}
+          onTripSelected={setLoadInfoTrip}
+          onLevelSelected={setLoadInfoLevel}
+          loadLevels={allLoadLevels}
+        />
       </div>
       <button
         onClick={() => closeEditor()}
