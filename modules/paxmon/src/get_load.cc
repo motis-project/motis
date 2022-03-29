@@ -62,23 +62,6 @@ pax_stats get_pax_stats(pax_cdf const& cdf) {
   return stats;
 }
 
-inline void convolve_base(pax_pdf& pdf, std::uint16_t const grp_size,
-                          float grp_prob) {
-  auto old_pdf = pdf;
-  auto const inv_grp_prob = 1.0F - grp_prob;
-  for (auto& e : pdf.data_) {
-    e *= inv_grp_prob;
-  }
-  for (auto const& [old_size, old_prob] : utl::enumerate(old_pdf.data_)) {
-    if (old_prob == 0.0F) {
-      continue;
-    }
-    auto const added_size = old_size + grp_size;
-    utl::verify(pdf.data_.size() > added_size, "convolve: invalid pdf size");
-    pdf.data_[added_size] += grp_prob * old_prob;
-  }
-}
-
 pax_cdf get_cdf(pax_pdf const& pdf) {
   auto cdf = pax_cdf{};
   cdf.data_.resize(pdf.data_.size());

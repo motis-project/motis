@@ -84,7 +84,22 @@ inline std::uint16_t get_base_load(passenger_group_container const& pgc,
 std::uint16_t get_expected_load(pci_container const& pcis, pci_index idx);
 std::uint16_t get_expected_load(universe const& uv, pci_index idx);
 
-void convolve_base(pax_pdf& pdf, std::uint16_t const grp_size, float grp_prob);
+inline void convolve_base(pax_pdf& pdf, std::uint16_t const grp_size,
+                          float grp_prob) {
+  auto old_pdf = pdf;
+  auto const inv_grp_prob = 1.0F - grp_prob;
+  for (auto& e : pdf.data_) {
+    e *= inv_grp_prob;
+  }
+  for (auto const& [old_size, old_prob] : utl::enumerate(old_pdf.data_)) {
+    if (old_prob == 0.0F) {
+      continue;
+    }
+    auto const added_size = old_size + grp_size;
+    utl::verify(pdf.data_.size() > added_size, "convolve: invalid pdf size");
+    pdf.data_[added_size] += grp_prob * old_prob;
+  }
+}
 
 template <typename Groups>
 inline pax_pdf get_load_pdf_base(passenger_group_container const& pgc,
