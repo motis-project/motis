@@ -204,8 +204,8 @@ export const deTranslations: Translations = {
             , extendAfter : 'Später'
             , interchanges :
                 (count: number) => count == 0 ? 'Keine Umstiege' : count == 1 ? '1 Umstieg' : count + 'Umstiege'
-            , walkDuration : (duration: string) => duration + 'Fußweg'
-            , interchangeDuration : (duration: string) => duration + 'Umstieg'
+            , walkDuration : (duration: string) => duration + ' Fußweg'
+            , interchangeDuration : (duration: string) => duration + ' Umstieg'
             , arrivalTrack : (track: string) => 'Ankunft Gleis' + track
             , track : 'Gleis'
             , tripIntermediateStops :

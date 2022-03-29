@@ -78,7 +78,7 @@ export const TripView: React.FC<{ 'subOverlayHidden': Boolean, 'setSubOverlayHid
                     </div>
                 </div>
                 <div className='connection-journey' id='sub-connection-journey'>
-                    <JourneyRender connection={trainConnection} setSubOverlayHidden={props.setSubOverlayHidden} setTrainSelected={props.setTrainSelected} detailViewHidden={props.detailViewHidden} translation={props.translation}/>
+                    <JourneyRender connection={trainConnection} setSubOverlayHidden={props.setSubOverlayHidden} setTrainSelected={props.setTrainSelected} detailViewHidden={props.detailViewHidden} translation={props.translation} comingFromTripView={true}/>
                 </div>
             </div>
     )

@@ -284,7 +284,8 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                 setSubOverlayHidden={props.setSubOverlayHidden}
                                                 setTrainSelected={setTrainSelected}
                                                 detailViewHidden={detailViewHidden}
-                                                translation={props.translation} />
+                                                translation={props.translation}
+                                                comingFromTripView={false} />
                             </div>
                         </div>
                     }
