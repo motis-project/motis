@@ -4,11 +4,7 @@ import { useQuery, useQueryClient } from "react-query";
 import { TripId } from "@/api/protocol/motis";
 import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
 
-import {
-  queryKeys,
-  sendPaxMonGetTripLoadInfosRequest,
-  usePaxMonStatusQuery,
-} from "@/api/paxmon";
+import { queryKeys, sendPaxMonGetTripLoadInfosRequest } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/simulation";
 

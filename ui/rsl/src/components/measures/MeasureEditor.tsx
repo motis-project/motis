@@ -1,7 +1,7 @@
 import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
 import { useUpdateAtom } from "jotai/utils";
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 
 import { MeasureUnion } from "@/data/measures";
 import { selectedTripAtom } from "@/data/selectedTrip";
@@ -9,6 +9,7 @@ import { selectedTripAtom } from "@/data/selectedTrip";
 import RtUpdateMeasureEditor from "@/components/measures/RtUpdateMeasureEditor";
 import SharedDataEditor from "@/components/measures/SharedDataEditor";
 import TripLoadInfoMeasureEditor from "@/components/measures/TripLoadInfoMeasureEditor";
+import TripLoadRecommendationMeasureEditor from "@/components/measures/TripLoadRecommendationMeasureEditor";
 import TripRecommendationMeasureEditor from "@/components/measures/TripRecommendationMeasureEditor";
 import ModalDialog from "@/components/util/ModalDialog";
 
@@ -92,6 +93,14 @@ function MeasureEditor({
           key={measureAtom.toString()}
         />
       );
+    case "TripLoadRecommendationMeasure":
+      return measureEditor(
+        <TripLoadRecommendationMeasureEditor
+          measureAtom={measureAtom}
+          closeEditor={closeEditor}
+          key={measureAtom.toString()}
+        />
+      );
     case "RtUpdateMeasure":
       return measureEditor(
         <RtUpdateMeasureEditor
@@ -105,7 +114,7 @@ function MeasureEditor({
 
 interface MeasureTypeOptionProps {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
   onClick: () => void;
 }
 
@@ -160,6 +169,20 @@ function EmptyMeasureEditor({
     });
   };
 
+  const setTripLoadRecommendation = () => {
+    setMeasure((m) => {
+      return {
+        type: "TripLoadRecommendationMeasure",
+        shared: m.shared,
+        data: {
+          planned_destination: undefined,
+          full_trip: { trip: selectedTrip, level: "Full" },
+          recommended_trips: [{ trip: undefined, level: "Low" }],
+        },
+      };
+    });
+  };
+
   const setRtUpdate = () => {
     setMeasure((m) => {
       return {
@@ -175,13 +198,20 @@ function EmptyMeasureEditor({
       <div>Maßnahmentyp wählen:</div>
       <div className="flex flex-col gap-3 py-3">
         <MeasureTypeOption
+          title="Alternativenempfehlung mit Auslastungsinformation"
+          onClick={setTripLoadRecommendation}
+        >
+          Empfehlung an Reisende in einem Zug oder an einer Station, statt einem
+          überfüllten Zug eine weniger ausgelastete Alternative zu verwenden
+        </MeasureTypeOption>
+        <MeasureTypeOption
           title="Auslastungsinformation"
           onClick={setTripLoadInfo}
         >
           Ansage oder Anzeige der erwarteten Zugauslastung
         </MeasureTypeOption>
         <MeasureTypeOption
-          title="Alternativenempfehlung"
+          title="Zugempfehlung"
           onClick={setTripRecommendation}
         >
           Empfehlung an Reisende in einem Zug oder an einer Station,

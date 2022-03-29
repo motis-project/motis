@@ -71,7 +71,7 @@ function TripLoadInfoMeasureEditor({
       </div>
       <div>
         <div className={labelClass}>Auslastungsstufe</div>
-        <div className="flex flex-col">
+        <div className="flex flex-col pl-2">
           {loadLevels.map(({ level, label }) => (
             <label key={level} className="inline-flex items-center gap-1">
               <input

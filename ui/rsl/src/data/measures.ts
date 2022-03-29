@@ -27,6 +27,12 @@ export interface TripRecommendationMeasureData {
   recommended_trip: TripServiceInfo | undefined;
 }
 
+export interface TripLoadRecommendationMeasureData {
+  planned_destination: Station | undefined;
+  full_trip: TripLoadInfoMeasureData;
+  recommended_trips: TripLoadInfoMeasureData[];
+}
+
 export interface RtUpdateMeasureData {
   trip: TripServiceInfo | undefined;
   ribasis: RiBasisFahrtData | undefined;
@@ -46,6 +52,12 @@ export type TripRecommendationMeasureU = {
   data: TripRecommendationMeasureData;
 };
 
+export type TripLoadRecommendationMeasureU = {
+  type: "TripLoadRecommendationMeasure";
+  shared: SharedMeasureData;
+  data: TripLoadRecommendationMeasureData;
+};
+
 export type RtUpdateMeasureU = {
   type: "RtUpdateMeasure";
   shared: SharedMeasureData;
@@ -56,6 +68,7 @@ export type MeasureUnion =
   | EmptyMeasureU
   | TripLoadInfoMeasureU
   | TripRecommendationMeasureU
+  | TripLoadRecommendationMeasureU
   | RtUpdateMeasureU;
 
 export function isEmptyMeasureU(mu: MeasureUnion): mu is EmptyMeasureU {
@@ -72,6 +85,12 @@ export function isTripRecommendationMeasureU(
   mu: MeasureUnion
 ): mu is TripRecommendationMeasureU {
   return mu.type === "TripRecommendationMeasure";
+}
+
+export function isTripLoadRecommendationMeasureU(
+  mu: MeasureUnion
+): mu is TripLoadRecommendationMeasureU {
+  return mu.type === "TripLoadRecommendationMeasure";
 }
 
 export function isRtUpdateMeasureU(mu: MeasureUnion): mu is RtUpdateMeasureU {
@@ -112,6 +131,35 @@ export function toMeasureWrapper(mu: MeasureUnion): MeasureWrapper | null {
           planned_trips: [],
           planned_destinations: [d.planned_destination.id],
           recommended_trip: d.recommended_trip.trip,
+        },
+      };
+    }
+    case "TripLoadRecommendationMeasure": {
+      const d = mu.data;
+      const recommendedTrips = d.recommended_trips
+        .filter(
+          (tll): tll is { trip: TripServiceInfo; level: LoadLevel } =>
+            tll.trip != undefined
+        )
+        .map((tll) => {
+          return { trip: tll.trip.trip, level: tll.level };
+        });
+      if (
+        !d.planned_destination ||
+        !d.full_trip.trip ||
+        recommendedTrips.length == 0
+      ) {
+        return null;
+      }
+      return {
+        measure_type: "TripLoadRecommendationMeasure",
+        measure: {
+          ...shared,
+          planned_destinations: [d.planned_destination.id],
+          full_trips: [
+            { trip: d.full_trip.trip.trip, level: d.full_trip.level },
+          ],
+          recommended_trips: recommendedTrips,
         },
       };
     }

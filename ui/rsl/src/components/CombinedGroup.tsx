@@ -19,7 +19,6 @@ import { formatTime } from "@/util/dateFormat";
 
 import JourneyTripNameView from "@/components/JourneyTripNameView";
 import { MiniTripLoadGraphForTrip } from "@/components/MiniTripLoadGraph";
-import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 export type GroupByDirection = "Origin" | "Destination" | "None";
 

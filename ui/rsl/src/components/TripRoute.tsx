@@ -24,9 +24,7 @@ import classNames from "@/util/classNames";
 import { SectionLoadColors } from "@/util/colors";
 import { formatDate, formatTime } from "@/util/dateFormat";
 
-import SectionLoadGraph, {
-  SectionLoadGraphPlotType,
-} from "@/components/SectionLoadGraph";
+import SectionLoadGraph from "@/components/SectionLoadGraph";
 import TripSectionDetails from "@/components/TripSectionDetails";
 
 type TripRouteProps = {

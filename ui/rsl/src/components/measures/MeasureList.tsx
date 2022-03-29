@@ -1,9 +1,10 @@
 import { PencilIcon, TrashIcon } from "@heroicons/react/solid";
 import { PrimitiveAtom, atom, useAtom } from "jotai";
 import { useAtomCallback, useUpdateAtom } from "jotai/utils";
-import { useCallback } from "react";
+import React, { useCallback } from "react";
 import { useMutation, useQueryClient } from "react-query";
 
+import { TripServiceInfo } from "@/api/protocol/motis";
 import { LoadLevel, MeasureWrapper } from "@/api/protocol/motis/paxforecast";
 import { PaxMonStatusResponse } from "@/api/protocol/motis/paxmon";
 
@@ -25,19 +26,13 @@ import {
 } from "@/data/simulation";
 
 import { formatDateTime } from "@/util/dateFormat";
+import { loadLevelInfos } from "@/util/loadLevelInfos";
 import { isNonNull } from "@/util/typeGuards";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 type RemoveFn = (ma: PrimitiveAtom<MeasureUnion>) => void;
 type SelectFn = (ma: PrimitiveAtom<MeasureUnion>) => void;
-
-const loadLevels: Record<LoadLevel, string> = {
-  Unknown: "unbekannt",
-  Low: "gering",
-  NoSeats: "keine Sitzplätze",
-  Full: "keine Mitfahrmöglichkeit",
-};
 
 function MeasureTypeDetailColumn({
   measure,
@@ -52,17 +47,11 @@ function MeasureTypeDetailColumn({
             Auslastungsinformation
           </div>
           <div className="text-sm text-gray-500">
-            {measure.data.trip ? (
-              <>
-                <TripServiceInfoView tsi={measure.data.trip} format="Short" />
-                <span>
-                  {": "}
-                  {loadLevels[measure.data.level]}
-                </span>
-              </>
-            ) : (
-              <span className="text-db-red-500">Kein Trip gewählt</span>
-            )}
+            <TripWithLoadLevel
+              tsi={measure.data.trip}
+              level={measure.data.level}
+              placeholder="Kein Zug ausgewählt"
+            />
           </div>
         </>
       );
@@ -80,6 +69,25 @@ function MeasureTypeDetailColumn({
             ) : (
               <span className="text-db-red-500">Kein Trip gewählt</span>
             )}
+          </div>
+        </>
+      );
+    }
+    case "TripLoadRecommendationMeasure": {
+      return (
+        <>
+          <div className="text-sm font-medium text-gray-900">
+            Alternativenempfehlung
+          </div>
+          <div className="text-sm text-gray-500">
+            <TripWithLoadLevel
+              tsi={measure.data.full_trip.trip}
+              level={measure.data.full_trip.level}
+              placeholder="Kein überfüllter Zug ausgewählt"
+            />
+            {measure.data.recommended_trips.map((tll, idx) => (
+              <TripWithLoadLevel key={idx} tsi={tll.trip} level={tll.level} />
+            ))}
           </div>
         </>
       );
@@ -137,6 +145,33 @@ function MeasureSharedDataColumn({
         </div>
       )}
     </>
+  );
+}
+
+type TripWithLoadLevelProps = {
+  tsi: TripServiceInfo | undefined;
+  level: LoadLevel;
+  placeholder?: string | undefined;
+};
+
+function TripWithLoadLevel({
+  tsi,
+  level,
+  placeholder,
+}: TripWithLoadLevelProps) {
+  if (!tsi) {
+    if (placeholder) {
+      return <div className="text-db-red-500">{placeholder}</div>;
+    } else {
+      return null;
+    }
+  }
+  const lli = loadLevelInfos[level];
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`inline-block w-4 h-4 rounded-full ${lli.bgColor}`} />
+      <TripServiceInfoView tsi={tsi} format="Short" />
+    </div>
   );
 }
 

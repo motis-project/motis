@@ -11,6 +11,8 @@ import { usePaxMonFindTripsQuery } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/simulation";
 
+import classNames from "@/util/classNames";
+
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 function filterTrips(trips: PaxMonTripInfo[]) {
@@ -26,13 +28,7 @@ function filterTrips(trips: PaxMonTripInfo[]) {
 
 function shortTripName(tsi: TripServiceInfo) {
   const names = [
-    ...new Set(
-      tsi.service_infos.map(
-        (si) =>
-          `${si.category} ${si.train_nr}` +
-          (si.line ? ` [Linie ${si.line}]` : "")
-      )
-    ),
+    ...new Set(tsi.service_infos.map((si) => `${si.category} ${si.train_nr}`)),
   ];
   return names.join(", ");
 }
@@ -49,7 +45,7 @@ function TripPicker({
   onTripPicked,
   clearOnPick,
   longDistanceOnly,
-  className,
+  className = "",
   initialTrip,
 }: TripPickerProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
@@ -104,7 +100,7 @@ function TripPicker({
   });
 
   return (
-    <div className={`relative flex ${className ?? ""}`}>
+    <div className={classNames("relative flex", className)}>
       {/* <label {...getLabelProps()}>Trip:</label> */}
       <div {...getComboboxProps()} className="relative w-full">
         <input
