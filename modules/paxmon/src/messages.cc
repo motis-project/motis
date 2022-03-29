@@ -150,20 +150,25 @@ Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
 passenger_localization from_fbs(schedule const& sched,
                                 PaxMonLocalization const loc_type,
                                 void const* loc_ptr) {
+  // NOTE: remaining_interchanges_ is currently not included in messages
   switch (loc_type) {
     case PaxMonLocalization_PaxMonInTrip: {
       auto const loc = reinterpret_cast<PaxMonInTrip const*>(loc_ptr);
       return {from_fbs(sched, loc->trip()),
               get_station(sched, loc->next_station()->id()->str()),
               unix_to_motistime(sched, loc->schedule_arrival_time()),
-              unix_to_motistime(sched, loc->current_arrival_time()), false};
+              unix_to_motistime(sched, loc->current_arrival_time()),
+              false,
+              {}};
     }
     case PaxMonLocalization_PaxMonAtStation: {
       auto const loc = reinterpret_cast<PaxMonAtStation const*>(loc_ptr);
-      return {nullptr, get_station(sched, loc->station()->id()->str()),
+      return {nullptr,
+              get_station(sched, loc->station()->id()->str()),
               unix_to_motistime(sched, loc->schedule_arrival_time()),
               unix_to_motistime(sched, loc->current_arrival_time()),
-              loc->first_station()};
+              loc->first_station(),
+              {}};
     }
     default:
       throw utl::fail("invalid passenger localization type: {}", loc_type);
