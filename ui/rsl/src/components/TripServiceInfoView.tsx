@@ -12,15 +12,10 @@ function TripServiceInfoView({
   format,
 }: TripServiceInfoViewProps): JSX.Element {
   const names = [
-    ...new Set(
-      tsi.service_infos.map(
-        (si) => `${si.category} ${si.train_nr}`
-        //+ (si.line ? ` [Linie ${si.line}]` : "")
-      )
-    ),
+    ...new Set(tsi.service_infos.map((si) => `${si.category} ${si.train_nr}`)),
   ];
   if (format === "Short") {
-    return <span>{names.join(", ")}</span>;
+    return <span>{names[0] ?? "?"}</span>;
   } else {
     return (
       <div className="w-full">
