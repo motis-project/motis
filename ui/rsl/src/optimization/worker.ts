@@ -158,6 +158,11 @@ async function optimizeTripEdgeV1(
     const entryTime = groups.entry_time;
     const previousTrip: TripServiceInfo | undefined = groups.grouped_by_trip[0];
 
+    // TODO: workaround for groups_in_trip api bug
+    if (!entryStation) {
+      continue;
+    }
+
     const groupSize = (groups.info.dist.min + groups.info.dist.max) / 2;
 
     const routingResponse = await sendRoutingRequest({
