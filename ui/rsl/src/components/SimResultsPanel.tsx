@@ -19,7 +19,7 @@ import {
 import classNames from "@/util/classNames";
 import { formatDateTime } from "@/util/dateFormat";
 
-import LegacyMiniTripLoadGraph from "@/components/LegacyMiniTripLoadGraph";
+import MiniTripLoadGraph from "@/components/MiniTripLoadGraph";
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 type SimResultsListEntryProps = {
@@ -222,8 +222,8 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
           {ut.added_max_pax}
         </li>
       </ul>
-      <LegacyMiniTripLoadGraph edges={ut.before_edges} />
-      <LegacyMiniTripLoadGraph edges={ut.after_edges} />
+      <MiniTripLoadGraph edges={ut.before_edges} />
+      <MiniTripLoadGraph edges={ut.after_edges} />
     </div>
   );
 }
