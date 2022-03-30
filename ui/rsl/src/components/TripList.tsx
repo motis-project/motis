@@ -245,7 +245,7 @@ function TripList(): JSX.Element {
             />
           </label>
         </div>
-        <div className="">
+        <div className="grow">
           <label>
             <span className="text-sm">Zugnummer(n)</span>
             <input
