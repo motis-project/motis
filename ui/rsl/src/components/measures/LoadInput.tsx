@@ -11,6 +11,11 @@ export const allLoadLevels: LoadLevel[] = ["Unknown", "Low", "NoSeats", "Full"];
 export const knownLoadLevels: LoadLevel[] = ["Low", "NoSeats", "Full"];
 export const highLoadLevels: LoadLevel[] = ["NoSeats", "Full"];
 export const lowLoadLevels: LoadLevel[] = ["Low", "NoSeats"];
+export const lowOrUnknownLoadLevels: LoadLevel[] = [
+  "Unknown",
+  "Low",
+  "NoSeats",
+];
 
 export type LoadInputProps = {
   loadLevels?: LoadLevel[];

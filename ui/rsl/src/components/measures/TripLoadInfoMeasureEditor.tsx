@@ -7,7 +7,7 @@ import { LoadLevel } from "@/api/protocol/motis/paxforecast";
 
 import { MeasureUnion, isTripLoadInfoMeasureU } from "@/data/measures";
 
-import { allLoadLevels } from "@/components/measures/LoadInput";
+import { knownLoadLevels } from "@/components/measures/LoadInput";
 import TripAndLoadInput from "@/components/measures/TripAndLoadInput";
 
 export type TripLoadInfoMeasureEditorProps = {
@@ -59,7 +59,7 @@ function TripLoadInfoMeasureEditor({
           selectedLevel={data.level}
           onTripSelected={setLoadInfoTrip}
           onLevelSelected={setLoadInfoLevel}
-          loadLevels={allLoadLevels}
+          loadLevels={knownLoadLevels}
         />
       </div>
       <button

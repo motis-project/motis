@@ -152,7 +152,7 @@ function EmptyMeasureEditor({
       return {
         type: "TripLoadInfoMeasure",
         shared: m.shared,
-        data: { trip: selectedTrip, level: "Unknown" },
+        data: { trip: selectedTrip, level: "Full" },
       };
     });
   };

@@ -12,7 +12,10 @@ import {
 } from "@/data/measures";
 
 import StationPicker from "@/components/StationPicker";
-import { highLoadLevels, lowLoadLevels } from "@/components/measures/LoadInput";
+import {
+  highLoadLevels,
+  lowOrUnknownLoadLevels,
+} from "@/components/measures/LoadInput";
 import TripAndLoadInput from "@/components/measures/TripAndLoadInput";
 
 export type TripLoadRecommendationMeasureEditorProps = {
@@ -138,7 +141,7 @@ function TripLoadRecommendationMeasureEditor({
                 selectedLevel={tll.level}
                 onTripSelected={(tsi) => setAlternativeTrip(idx, tsi)}
                 onLevelSelected={(level) => setAlternativeTripLevel(idx, level)}
-                loadLevels={lowLoadLevels}
+                loadLevels={lowOrUnknownLoadLevels}
               >
                 <button
                   type="button"
