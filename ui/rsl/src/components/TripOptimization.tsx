@@ -111,12 +111,12 @@ function TripOptimization({
   }, []);
 
   const toggleOptimization = useCallback(() => {
-    if (worker.current) {
+    if (worker.current && running) {
       stopOptimization().catch(console.error);
     } else {
       startOptimization();
     }
-  }, [startOptimization, stopOptimization]);
+  }, [startOptimization, stopOptimization, running]);
 
   // cancel on onmount
   useEffect(() => {
