@@ -35,7 +35,7 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
 
     const [systemDate, setSystemDate] = React.useState<moment.Moment>(moment());
 
-    const [isActive, setisActive] = React.useState<boolean>(true);
+    const [isActive, setisActive] = React.useState<boolean>(false);
 
     const [seconds, setSeconds] = React.useState<number>(0);
 
