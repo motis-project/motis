@@ -306,7 +306,12 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
     !applyMeasuresMutation.isLoading;
 
   return (
-    <div className="flex flex-col gap-2 h-full overflow-hidden">
+    <div
+      className={classNames(
+        "flex flex-col gap-2 h-full overflow-hidden",
+        applyMeasuresMutation.isLoading && "cursor-wait"
+      )}
+    >
       <div className="flex justify-between">
         <span className="text-xl">Maßnahmen</span>
         <div className="flex gap-2">
