@@ -313,7 +313,11 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
       )}
     >
       <div className="flex justify-between">
-        <span className="text-xl">Maßnahmen</span>
+        <span className="text-xl">
+          {`${measureAtoms.length} ${
+            measureAtoms.length === 1 ? "Maßnahme" : "Maßnahmen"
+          }`}
+        </span>
         <div className="flex gap-2">
           <button
             onClick={add}
