@@ -67,8 +67,6 @@ export const App: React.FC = () => {
         })
             .then(res => res.json())
             .then((res: elmAPIResponse) => {
-                console.log("Response came in");
-                console.log(res);
                 let intv = { begin: (res.content as ScheduleInfoResponse).begin, end: (res.content as ScheduleInfoResponse).end }
                 let intvBegin = moment.unix(intv.begin);
                 intvBegin.hour(moment().hour());

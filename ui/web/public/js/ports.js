@@ -46,7 +46,6 @@ const ownPorts = {
     'setTimeOffset': {
         subscribe: function(callback){
             window.portEvents.sub('setTimeOffset', callback);
-            console.log('SETTIMEOFFSET')
         }
     },
     'setSimulationTime': {

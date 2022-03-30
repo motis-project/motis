@@ -75,8 +75,6 @@ export const TripView: React.FC<TripView> = (props) => {
             fetch(requestURL, getTrainConnection(props.trainSelected.line_id, props.trainSelected.station_id, props.trainSelected.target_station_id, props.trainSelected.target_time, props.trainSelected.time, props.trainSelected.train_nr))
                 .then(res => res.json())
                 .then((res: TripViewConnection) => {
-                    console.log('Trip Request successful');
-                    console.log(res);
                     setTrainConnection(res.content);
                     window.portEvents.pub('mapSetDetailFilter', getMapFilter(res.content));
                     window.portEvents.pub('mapFitBounds', getStationCoords(res.content));
@@ -136,7 +134,7 @@ export const TripView: React.FC<TripView> = (props) => {
                         }  
                     </div>
                 </div>
-                <div className='connection-journey' id='sub-connection-journey'>
+                <div className='connection-journey' id={`${ isTripId(props.trainSelected) ? 'sub-' : ''}connection-journey`}>
                     <JourneyRender connection={trainConnection} setTrainSelected={props.setTrainSelected} translation={props.translation} subOverlayContent={props.subOverlayContent} setSubOverlayContent={props.setSubOverlayContent}/>
                 </div>
             </div>

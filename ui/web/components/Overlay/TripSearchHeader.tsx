@@ -56,8 +56,6 @@ export const TripSearchHeader: React.FC<{ 'translation': Translations, 'schedule
             fetch(requestURL, getRoutingOptions(subOverlayDate, props.trainNumber))
                 .then(res => res.json())
                 .then((res: RailVizTripGuessResponse) => {
-                    console.log('Response came in');
-                    console.log(res);
                     props.setTrips(res.content.trips);
                     })
                 .catch(_error => {})
@@ -82,8 +80,7 @@ export const TripSearchHeader: React.FC<{ 'translation': Translations, 'schedule
                                 <input
                                     className='gb-input' 
                                     tabIndex={1} 
-                                    type='number'
-                                    pattern='[0-9]+' 
+                                    type='text'
                                     id='trip-search-trainnr-input'
                                     value={props.trainNumber}
                                     ref={trainSearchRef}

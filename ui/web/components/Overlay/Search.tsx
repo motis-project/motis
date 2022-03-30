@@ -254,8 +254,6 @@ export const Search: React.FC<SearchTypes> = (props) => {
                 .then(res => handleErrors(res, props.setLoading, props.setConnections))
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
-                    console.log("Response came in");
-                    console.log(res);
                     res.content.connections.map((c: Connection) => c.new = '');
                     sendConnectionsToOverlay(props.setConnections, res.content.connections, setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
                     setSearchBackward({begin: res.content.interval_begin - 3600 * 2, end: res.content.interval_begin - 1});
@@ -300,8 +298,6 @@ export const Search: React.FC<SearchTypes> = (props) => {
                 .then(res => handleErrors(res, props.setLoading, props.setConnections))
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
-                    console.log("Response came in");
-                    console.log(res);
                     // All newly fetched Connections have a different classname than the rest
                     res.content.connections.map((c: Connection) => c.new = 'new');
                     allConnectionsWithoutDummies.map((c: Connection) => c.new = '');
@@ -423,11 +419,9 @@ export const Search: React.FC<SearchTypes> = (props) => {
                                             newSearchTime.hour(hour as unknown as number > 23 ? 23 : hour as unknown as number);
                                             newSearchTime.minute(minute as unknown as number > 59 ? 59 : minute as unknown as number);
                                             props.setSearchDate(newSearchTime);
-                                            //console.log(newSearchTime)
                                 }}}}
                                 onKeyDown={(e) => {
                                     if (e.key == 'Enter'){
-                                        console.log(props.searchDate)
                                         setSearchTime(props.searchDate.format('HH:mm'));
                                     }
                                 }}

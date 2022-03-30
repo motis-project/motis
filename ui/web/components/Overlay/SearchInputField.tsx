@@ -31,8 +31,6 @@ const fetchSuggestions = (input: string, setAddresses: React.Dispatch<React.SetS
         fetch(requestURL, getPostRequest(body))
         .then(res => res.json())
         .then((res: StationSuggestionResponse) => {
-            console.log('Response came in');
-            console.log(res);
             setStations(res.content.guesses);
             stationRes = res.content.guesses;
         });
@@ -48,8 +46,6 @@ const fetchSuggestions = (input: string, setAddresses: React.Dispatch<React.SetS
         fetch(requestURL, getPostRequest(body2))
                 .then(res => res.json())
                 .then((res: AddressSuggestionResponse) => {
-                    console.log('Response came in');
-                    console.log(res);
                     setAddresses(res.content.guesses);
                     setSuggestions([...stationRes, ...res.content.guesses]);
                 });

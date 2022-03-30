@@ -59,8 +59,6 @@ const fetchFoot = async (connection: Connection, toModes: ModeLocalStorage, setW
                 connection.stops[transport.move.range.to].station.pos.lng, toModes.walk.search_profile.max_duration * 60, toModes.walk.search_profile.profile, false, true, true))
                 .then(res => res.json())
                 .then((res: FootRouting) => {
-                    console.log('Foot Request successful');
-                    console.log(res);
                     walks.push(res.content.routes[0].routes[0].duration);
                 });
         }
@@ -173,10 +171,10 @@ export const JourneyRender: React.FC<Journey> = (props) => {
                         </div>
                     }
                     <div className='first-stop'>
-                        <div className='stop past'>
+                        <div className='stop future'>
                             <div className='timeline train-color-border'></div>
                             <div className='time'>
-                                <span className='past'>{moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.from].departure.time).format('HH:mm')}</span>
+                                <span className='future'>{moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.from].departure.time).format('HH:mm')}</span>
                             </div>
                             <div className='delay'></div>
                             <div    className='station'
@@ -192,7 +190,7 @@ export const JourneyRender: React.FC<Journey> = (props) => {
                     {transport.walkInfo ?
                         <></>
                         :
-                        <div className="direction past">
+                        <div className="direction future">
                             <div className="timeline train-color-border"></div>
                             <i className="icon">arrow_forward</i>
                             {(transport.transport.move as TransportInfo).direction}
@@ -204,10 +202,10 @@ export const JourneyRender: React.FC<Journey> = (props) => {
                                         subOverlayContent={props.subOverlayContent}
                                         setSubOverlayContent={props.setSubOverlayContent}/>
                     <div className="last-stop">
-                        <div className="stop past">
+                        <div className="stop future">
                             <div className="timeline train-color-border"></div>
                             <div className="time">
-                                <span className="past">{moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).format('HH:mm')}</span>
+                                <span className="future">{moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).format('HH:mm')}</span>
                             </div>
                             <div className="delay"></div>
                             <div    className="station"
@@ -232,41 +230,48 @@ const IntermediateStops: React.FC<{'transport': JourneyElem, 'connection': Conne
 
     return (
         <>
-            <div className={`intermediate-stops-toggle ${(getIntermediateStopsCount(props.transport.transport) > 0) ? 'clickable' : ''}past`} onClick={() => setIsIntermediateStopsCollapsed(!isIntermediateStopsCollapsed)}>
+            <div className={`intermediate-stops-toggle ${(getIntermediateStopsCount(props.transport.transport) > 0) ? 'clickable' : ''} future`} onClick={() => setIsIntermediateStopsCollapsed(!isIntermediateStopsCollapsed)}>
                 <div className='timeline-container'>
                     <div className='timeline train-color-border bg'></div>
-                    <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
+                    <div className='timeline train-color-border progress' style={{ height: '0%' }}></div>
                 </div>
                 {(props.transport.walkInfo || getIntermediateStopsCount(props.transport.transport) === 0) ?
-                    <div className='expand-icon'></div> :
+                    <div className='expand-icon'></div> 
+                    :
+                    isIntermediateStopsCollapsed ?
                     <div className='expand-icon'>
                         <i className='icon'>expand_less</i>
                         <i className='icon'>expand_more</i>
+                    </div>
+                    :
+                    <div className='expand-icon'>
+                        <i className='icon'>expand_more</i>
+                        <i className='icon'>expand_less</i>
                     </div>
                 }
                 <span>{`${(props.transport.walkInfo) ? props.transport.expandString : props.translation.connections.tripIntermediateStops(getIntermediateStopsCount(props.transport.transport))} (${duration(props.connection.stops[(props.transport.transport.move as TransportInfo).range.from].departure.time, props.connection.stops[(props.transport.transport.move as TransportInfo).range.to].arrival.time)})`}</span>
             </div>
             <div className={isIntermediateStopsCollapsed ? 'intermediate-stops collapsed' : 'intermediate-stops expanded'}>
                 {props.transport.stopsToRender.map((stop: Stop, index) => (
-                    <div    className='stop past' 
+                    <div    className='stop future' 
                             key={index}
                             onClick={() => {
                                 props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: stop.station, stationTime: moment.unix(stop.departure.time)}]);
                             }}>
                         <div className='timeline train-color-border bg'></div>
-                        <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
+                        <div className='timeline train-color-border progress' style={{ height: '0%' }}></div>
                         {props.subOverlayContent.length !== 0 ?
                             <div className='time'>
                                 <div className="arrival">
-                                    <span className="past">{moment.unix(stop.arrival.time).format('HH:mm')}</span>
+                                    <span className="future">{moment.unix(stop.arrival.time).format('HH:mm')}</span>
                                 </div>
                                 <div className="departure">
-                                    <span className="past">{moment.unix(stop.departure.time).format('HH:mm')}</span>
+                                    <span className="future">{moment.unix(stop.departure.time).format('HH:mm')}</span>
                                 </div> 
                             </div>
                             :
                             <div className='time'>
-                                <span className='past'>{moment.unix(stop.departure.time).format('HH:mm')}</span>
+                                <span className='future'>{moment.unix(stop.departure.time).format('HH:mm')}</span>
                             </div>
                         }
                         <div className='delay'></div>

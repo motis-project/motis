@@ -44,8 +44,6 @@ const stationEventDivGenerator = (eventsToDisplay: Events[], translation: Transl
             </div>
         )
     }
-
-    console.log("stationEventGenerator ausgeführt")
     let filteredEvents = eventsToDisplay.filter(x => x.type !== (displayDirection === 'ARR' ? 'DEP' : 'ARR'));
     if (filteredEvents[filteredEvents.length - 1].dummyEvent){
         filteredEvents.pop();
@@ -53,7 +51,6 @@ const stationEventDivGenerator = (eventsToDisplay: Events[], translation: Transl
     if (filteredEvents[1].dummyEvent) {
         filteredEvents.shift();
     }
-    console.log(filteredEvents)
 
     let divs = [];
     for (let index = 0; index < filteredEvents.length; index++) {
@@ -92,8 +89,6 @@ const onClickHandler = (byScheduleTime: boolean, direction: string, eventCount: 
     fetch(requestURL, getStationEvent(byScheduleTime, direction, eventCount, stationID, time))
         .then(res => res.json())
         .then((res: RailVizStationResponse) => {
-            console.log('StationEvents brrrrr');
-            console.log(res);
             if (direction === 'EARLIER') {
                 if(res.content.events.length !== 0) {
                     insertDateHeader(setEventsToDisplay, [...res.content.events, ...eventStations], translation);
@@ -101,7 +96,6 @@ const onClickHandler = (byScheduleTime: boolean, direction: string, eventCount: 
                     setMinTime(Math.floor(res.content.events[0].event.time / 1000) * 1000);
                 }
             } else {
-                console.log(res.content.events.length !== 0);
                 if(res.content.events.length !== 0 && !equal(res.content.events[res.content.events.length - 1], eventStations[eventStations.length - 1])) {
                     insertDateHeader(setEventsToDisplay, [...eventStations, ...res.content.events], translation);
                     setEventStations([...eventStations, ...res.content.events]);
@@ -163,8 +157,6 @@ export const StationEvent: React.FC<StationEvent> = (props) => {
             fetch(requestURL, getStationEvent(byScheduleTime, direction, eventCount, stationID, time))
                 .then(res => res.json())
                 .then((res: RailVizStationResponse) => {
-                    console.log('StationEvents brrrrr');
-                    console.log(res);
                     if (res.content.events.length === 0) {
                         setEventStations([]);
                         setEventsToDisplay([]);

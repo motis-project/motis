@@ -111,8 +111,6 @@ const calcPartWidths = (transports: Transport[], totalDurationInMill: number, st
     });
 
     if (totalWidth < requiredWidth) {
-        console.log(transports);
-        console.log(partWidths);
         return calcFinalPartWidths(partWidths, availableWidth);
     } else if (totalWidth > requiredWidth) {
         let remainingWidth = totalWidth - requiredWidth;
@@ -168,7 +166,6 @@ const calcFinalPartWidths = (partWidths: GraphData[], totalWidth: number) => {
         if(requiredWidth <= 323){
             break;
         }
-        console.log(newPartWidths);
         partWidthCopy = newPartWidths;
     }
     if (requiredWidth < 323) {

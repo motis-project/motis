@@ -25,7 +25,7 @@ export const TripSearch: React.FC<TripSearch> = (props) => {
             <div className='trip-train'>
                 <span>
                     <div    className={`train-box train-class-${props.trip.trip_info.transport.clasz} with-tooltip`} 
-                            data-tooltip={`${props.translation.connections.provider}: ${props.trip.trip_info.transport.provider} ${props.translation.search.trainNr}: ${props.trip.trip_info.id.train_nr}`}
+                            data-tooltip={`${props.translation.connections.provider}: ${props.trip.trip_info.transport.provider}\n${props.translation.search.trainNr}: ${props.trip.trip_info.id.train_nr}`}
                             onClick={() => {
                                 props.setTrainSelected(props.trip.trip_info.id);
                                 props.setSubOverlayContent([...props.subOverlayContent, {id: 'tripView', train: props.trip.trip_info.id}]);
