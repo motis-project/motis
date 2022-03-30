@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 import { Translations } from "../App/Localization";
 import { SearchInputField } from "../Overlay/SearchInputField";

@@ -8,6 +8,7 @@ import { Translations } from '../App/Localization';
 import { getMapFilter } from './Overlay';
 import { Address } from '../Types/SuggestionTypes';
 import { SubOverlayEvent } from '../Types/EventHistory';
+import { getFromLocalStorage } from '../App/LocalStorage';
 
 
 interface TripView {
@@ -69,6 +70,10 @@ export const TripView: React.FC<TripView> = (props) => {
 
     const targetTime = isTripId(props.trainSelected) ? props.trainSelected.target_time : props.trainSelected.stops.at(-1).arrival.time;
 
+    const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
+
+    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
+
     useEffect(() => {
         if (props.trainSelected && isTripId(props.trainSelected)) {
             let requestURL = 'https://europe.motis-project.de/?elm=tripRequest';
@@ -109,8 +114,8 @@ export const TripView: React.FC<TripView> = (props) => {
                                     <div className='connection-arrival'>{moment.unix(targetTime).format('HH:mm')}</div>
                                 </div>
                                 <div className='locations'>
-                                    <div>{trainConnection.stops[0].station.name}</div>
-                                    <div>{trainConnection.stops[trainConnection.stops.length - 1].station.name}</div>
+                                    <div>{(trainConnection.stops[0].station.name === 'START') ? (start as Station).name : trainConnection.stops[0].station.name}</div>
+                                    <div>{(trainConnection.stops[trainConnection.stops.length - 1].station.name === 'END') ? (destination as Station).name : trainConnection.stops[trainConnection.stops.length - 1].station.name}</div>
                                 </div>
                             </div>
                             <div className='summary'>

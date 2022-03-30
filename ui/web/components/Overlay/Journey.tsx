@@ -9,7 +9,7 @@ import { Translations } from '../App/Localization';
 import { classToId, getClasz } from './ConnectionRender';
 import { SubOverlayEvent } from '../Types/EventHistory';
 
-
+// all props declared in interface for better readability
 interface Journey {
     'translation': Translations,
     'connection': Connection,
@@ -23,7 +23,7 @@ const isTransportInfo = (transport: Transport) => {
     return transport.move_type === 'Transport';
 }
 
-
+// returns the duration of to unix timestamps as string
 export const duration = (start: number, dest: number) => {
     let difference = moment.unix(dest).diff(moment.unix(start), 'minutes')
     let hours = Math.floor(difference / 60)
@@ -33,7 +33,7 @@ export const duration = (start: number, dest: number) => {
     return returnString
 }
 
-
+// function to fetch the footroutingRequest
 const getWalkTime = (latStart: number, lngStart: number, latDest: number, lngDest: number, durationLimit: number, profile: string, includeEdges: boolean, includePath: boolean, includeSteps: boolean) => {
     return {
         method: 'POST',
@@ -73,6 +73,7 @@ const getIntermediateStopsCount = (transport: Transport) => {
     return transport.move.range.to - transport.move.range.from - 1;
 }
 
+// returns the translated string of given mumoType
 const getMumoString = (mumoType: string, translation: Translations) => {
     switch (mumoType) {
         case 'walk' || 'foot':
@@ -110,6 +111,7 @@ export const JourneyRender: React.FC<Journey> = (props) => {
     const [walkTimes, setWalkTimes] = useState<number[]>([]);
     const [transports, setTransports] = useState<JourneyElem[]>([]);
 
+    // calculation and determination of all journey elements with their attributes, listens to walkTimes, all walkInfos and interchange walks are there when setting all journey elements
     useEffect(() => {
         let t: JourneyElem[] = []
         let hasWalk = false;
@@ -133,6 +135,7 @@ export const JourneyRender: React.FC<Journey> = (props) => {
         setTransports(t);
     }, [walkTimes]);
 
+    // fetching walkTimes if new connection is selected by the overlay, triggers useEffect above after fetching new walkTimes
     useEffect(() => {
         if ((props.connection.transports.length !== props.connection.trips.length)
             ||
@@ -224,8 +227,10 @@ export const JourneyRender: React.FC<Journey> = (props) => {
     );
 };
 
+// each transport element of a journey has their own intermediateStops, so it was extracted to a component to manage the state of ones expanded or collapsed intermediate stops
 const IntermediateStops: React.FC<{'transport': JourneyElem, 'connection': Connection, 'translation': Translations, 'subOverlayContent': SubOverlayEvent[], 'setSubOverlayContent': React.Dispatch<React.SetStateAction<SubOverlayEvent[]>>}> = (props) => {
 
+    // depending if this component is being loaded by the suboverlay the intermediate stops need to be expanded or collapsed by default
     const [isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed] = useState<boolean>(props.subOverlayContent.length === 0);
 
     return (
