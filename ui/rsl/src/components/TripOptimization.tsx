@@ -19,9 +19,13 @@ import { WorkerRequest, WorkerUpdate } from "@/optimization/workerMessages";
 
 export type TripOptimizationProps = {
   tripId: TripId;
+  optimizationAvailable: boolean;
 };
 
-function TripOptimization({ tripId }: TripOptimizationProps): JSX.Element {
+function TripOptimization({
+  tripId,
+  optimizationAvailable,
+}: TripOptimizationProps): JSX.Element {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const worker = useRef<Worker | null>(null);
   const simUniverses = useRef<number[]>([]);
@@ -122,7 +126,12 @@ function TripOptimization({ tripId }: TripOptimizationProps): JSX.Element {
   }, [stopOptimization]);
 
   return (
-    <div className="max-w-7xl mx-auto pb-3">
+    <div
+      className={classNames(
+        "max-w-7xl mx-auto pb-2",
+        optimizationAvailable ? "visible" : "invisible"
+      )}
+    >
       <div className="flex justify-center my-2 gap-2">
         <button
           type="button"

@@ -69,7 +69,7 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
   );
   const maxVal = Math.max(maxPax, maxExpected, maxCapacity);
 
-  const showOptimization = edges.some((e) => e.possibly_over_capacity);
+  const optimizationAvailable = edges.some((e) => e.possibly_over_capacity);
 
   const category = tripData.tsi.service_infos[0]?.category ?? "";
   const trainNr =
@@ -78,7 +78,7 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
 
   return (
     <div className="">
-      <div className="mb-4 flex gap-6 items-center text-lg justify-center">
+      <div className="flex gap-6 items-center text-lg justify-center">
         <span className="font-medium text-2xl">
           {category} {trainNr}
         </span>
@@ -89,7 +89,10 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
           {tripData.tsi.secondary_station.name}
         </span>
       </div>
-      {showOptimization && <TripOptimization tripId={tripId} />}
+      <TripOptimization
+        tripId={tripId}
+        optimizationAvailable={optimizationAvailable}
+      />
       <div className="flex flex-col gap-2">
         {edges.map((section, idx) => (
           <TripSection
