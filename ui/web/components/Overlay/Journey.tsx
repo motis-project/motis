@@ -116,13 +116,16 @@ export const JourneyRender: React.FC<Journey> = (props) => {
         let t: JourneyElem[] = []
         let hasWalk = false;
         let walkCounter = 0;
+        let tripCounter = 0;
         props.connection.transports.map((transport: Transport, index) => {
             if (isTransportInfo(transport) && hasWalk) {
-                t.push({ hasWalk: true, walkTime: walkTimes[walkCounter], transport: transport, stops: props.connection.stops, stopsToRender: props.connection.stops.slice(transport.move.range.from + 1, transport.move.range.to), trip: props.connection.trips[index - walkCounter], walkInfo: false, index: index });
+                t.push({ hasWalk: true, walkTime: walkTimes[walkCounter], transport: transport, stops: props.connection.stops, stopsToRender: props.connection.stops.slice(transport.move.range.from + 1, transport.move.range.to), trip: props.connection.trips[tripCounter], walkInfo: false, index: index });
                 hasWalk = false;
                 walkCounter += 1;
+                tripCounter += 1;
             } else if (isTransportInfo(transport)) {
-                t.push({ hasWalk: false, walkTime: 0, transport: transport, stops: props.connection.stops, stopsToRender: props.connection.stops.slice(transport.move.range.from + 1, transport.move.range.to), trip: props.connection.trips[index - walkCounter], walkInfo: false, index: index });
+                t.push({ hasWalk: false, walkTime: 0, transport: transport, stops: props.connection.stops, stopsToRender: props.connection.stops.slice(transport.move.range.from + 1, transport.move.range.to), trip: props.connection.trips[tripCounter], walkInfo: false, index: index });
+                tripCounter += 1;
             } else if (!isTransportInfo(transport) && (index == 0 || index == props.connection.transports.length - 1)) {
                 t.push({ hasWalk: false, walkTime: 0, transport: transport, stops: props.connection.stops, stopsToRender: props.connection.stops.slice(transport.move.range.from + 1, transport.move.range.to), walkInfo: true, expandString: getMumoString(getClasz(transport).toString(), props.translation).toString(), index: index });
             } else {
@@ -225,7 +228,7 @@ export const JourneyRender: React.FC<Journey> = (props) => {
 
 const IntermediateStops: React.FC<{'transport': JourneyElem, 'connection': Connection, 'translation': Translations, 'subOverlayContent': SubOverlayEvent[], 'setSubOverlayContent': React.Dispatch<React.SetStateAction<SubOverlayEvent[]>>}> = (props) => {
 
-    const [isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed] = useState<boolean>(true);
+    const [isIntermediateStopsCollapsed, setIsIntermediateStopsCollapsed] = useState<boolean>(props.subOverlayContent.length === 0);
 
     return (
         <>
@@ -252,9 +255,20 @@ const IntermediateStops: React.FC<{'transport': JourneyElem, 'connection': Conne
                             }}>
                         <div className='timeline train-color-border bg'></div>
                         <div className='timeline train-color-border progress' style={{ height: '100%' }}></div>
-                        <div className='time'>
-                            <span className='past'>{moment.unix(stop.departure.time).format('HH:mm')}</span>
-                        </div>
+                        {props.subOverlayContent.length !== 0 ?
+                            <div className='time'>
+                                <div className="arrival">
+                                    <span className="past">{moment.unix(stop.arrival.time).format('HH:mm')}</span>
+                                </div>
+                                <div className="departure">
+                                    <span className="past">{moment.unix(stop.departure.time).format('HH:mm')}</span>
+                                </div> 
+                            </div>
+                            :
+                            <div className='time'>
+                                <span className='past'>{moment.unix(stop.departure.time).format('HH:mm')}</span>
+                            </div>
+                        }
                         <div className='delay'></div>
                         <div className='station'>
                             <span>{stop.station.name}</span>
