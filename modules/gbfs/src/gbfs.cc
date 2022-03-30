@@ -203,6 +203,7 @@ struct gbfs::impl {
     p_best_journeys.resize(p.size());
 
     if (req->dir() == SearchDir_Forward) {
+      // REQUESTS
       // free-float FWD: x --walk--> [b] --bike--> [p]
       auto const f_x_to_b_walks = motis_call(make_ppr_request(
           x, b_pos, SearchDir_Forward, req->max_foot_duration()));
@@ -211,12 +212,29 @@ struct gbfs::impl {
             return motis_call(make_osrm_request(
                 free_bikes_.at(free_bike_idx).pos_, p_pos, SearchDir_Forward));
           });
+
+      // REQUESTS
+      // station FWD: x --walk--> [sx] --bike--> [sp] --walk--> [p]
+      auto const f_x_to_sx_walks = motis_call(make_ppr_request(
+          x, sx_pos, SearchDir_Forward, req->max_foot_duration()));
+      auto const f_sx_to_sp_rides = utl::to_vec(sx, [&](auto const& sx_index) {
+        return motis_call(make_osrm_request(stations_.at(sx_index).pos_, sp_pos,
+                                            SearchDir_Forward));
+      });
+      auto const f_sp_to_p_walks = utl::to_vec(sp_pos, [&](auto const& pos) {
+        return motis_call(make_ppr_request(pos, p_pos, SearchDir_Forward,
+                                           req->max_foot_duration()));
+      });
+
+      // BUILD JOURNEYS
+      // free-float FWD: x --walk--> [b] --bike--> [p]
       for (auto const& [b_idx, x_to_b_res] : utl::enumerate(
                *motis_content(FootRoutingResponse, f_x_to_b_walks->val())
                     ->routes())) {
         if (x_to_b_res->routes()->size() == 0) {
-          l(logging::info, "b_idx={}/{} nothing found from x={} to b={}", b_idx,
-            b.size(), x, b_pos.at(b_idx));
+          //  l(logging::info, "b_idx={}/{} nothing found from x={} to
+          //  b={}", b_idx,
+          //    b.size(), x, b_pos.at(b_idx));
           continue;
         }
 
@@ -224,10 +242,10 @@ struct gbfs::impl {
         auto const x_to_b_distance = x_to_b_route->distance();
         auto const x_to_b_walk_duration = x_to_b_route->duration();
         if (x_to_b_walk_duration > max_walk_duration) {
-          l(logging::info,
-            "b_idx={}/{} from x={} to b={}: duration={} > max_duration={}",
-            b_idx, b.size(), x, b_pos.at(b_idx), x_to_b_walk_duration,
-            max_walk_duration);
+          //  l(logging::info,
+          //    "b_idx={}/{} from x={} to b={}: duration={} >
+          //    max_duration={}", b_idx, b.size(), x, b_pos.at(b_idx),
+          //    x_to_b_walk_duration, max_walk_duration);
           continue;
         }
 
@@ -238,11 +256,12 @@ struct gbfs::impl {
           auto const b_to_p_duration = b_to_p_res->duration() / 60.0;
           auto const b_to_p_distance = b_to_p_res->distance();
           if (b_to_p_duration > max_bike_duration) {
-            l(logging::info,
-              "b_idx={}/{}, p_idx={}/{} from b={} to p={}: duration={:.3} > "
-              "max_duration={}",
-              b_idx, b.size(), p_idx, p.size(), b_pos.at(b_idx),
-              p_pos.at(p_idx), b_to_p_duration, max_bike_duration);
+            //  l(logging::info,
+            //    "b_idx={}/{}, p_idx={}/{} from b={} to p={}:
+            //    duration={:.3} > " "max_duration={}", b_idx,
+            //    b.size(), p_idx, p.size(), b_pos.at(b_idx),
+            //    p_pos.at(p_idx), b_to_p_duration,
+            //    max_bike_duration);
             continue;
           }
 
@@ -261,85 +280,67 @@ struct gbfs::impl {
         }
       }
 
-      //      // station FWD: x --walk--> [sx] --bike--> [sp] --walk--> [p]
-      //      auto const f_x_to_sx_walks = motis_call(make_ppr_request(
-      //          x, sx_pos, SearchDir_Forward, req->max_foot_duration()));
-      //      auto const f_sx_to_sp_rides = utl::to_vec(sx, [&](auto const&
-      //      sx_index) {
-      //        return motis_call(make_osrm_request(stations_.at(sx_index).pos_,
-      //        sp_pos,
-      //                                            SearchDir_Forward));
-      //      });
-      //      auto const f_sp_to_p_walks = utl::to_vec(sp_pos, [&](auto const&
-      //      pos) {
-      //        return motis_call(make_ppr_request(pos, p_pos,
-      //        SearchDir_Forward,
-      //                                           req->max_foot_duration()));
-      //      });
-      //
-      //      for (auto const [sx_idx, x_to_sx_res] : utl::enumerate(
-      //               *motis_content(FootRoutingResponse,
-      //               f_x_to_sx_walks->val())
-      //                    ->routes())) {
-      //        if (x_to_sx_res->routes()->size() == 0) {
-      //          continue;
-      //        }
-      //        auto const x_to_sx_route = x_to_sx_res->routes()->Get(0);
-      //        auto const x_to_sx_distance = x_to_sx_route->distance();
-      //        auto const x_to_sx_walk_duration = x_to_sx_route->duration();
-      //        if (x_to_sx_walk_duration > max_walk_duration) {
-      //          continue;
-      //        }
-      //
-      //        for (auto const& [sp_idx, sx_to_sp_res] :
-      //             utl::enumerate(*motis_content(OSRMOneToManyResponse,
-      //                                           f_sx_to_sp_rides.at(sx_idx)->val())
-      //                                 ->costs())) {
-      //          auto const sx_to_sp_duration = sx_to_sp_res->duration()
-      //          / 60.0; auto const sx_to_sp_distance =
-      //          sx_to_sp_res->distance(); if (sx_to_sp_duration >
-      //          max_bike_duration) {
-      //            continue;
-      //          }
-      //
-      //          for (auto const& [p_idx, sp_to_p_res] :
-      //               utl::enumerate(*motis_content(FootRoutingResponse,
-      //                                             f_sp_to_p_walks.at(sp_idx)->val())
-      //                                   ->routes())) {
-      //            if (sp_to_p_res->routes()->size() == 0) {
-      //              continue;
-      //            }
-      //            auto const sp_to_p_route = x_to_sx_res->routes()->Get(0);
-      //            auto const sp_to_p_distance = sp_to_p_route->distance();
-      //            auto const sp_to_p_walk_duration =
-      //            sp_to_p_route->duration(); if (sp_to_p_walk_duration >
-      //            max_walk_duration ||
-      //                x_to_sx_walk_duration + sp_to_p_walk_duration >
-      //                    max_walk_duration) {
-      //              continue;
-      //            }
-      //
-      //            auto const total_duration = x_to_sx_walk_duration +
-      //                                        sx_to_sp_duration +
-      //                                        sp_to_p_walk_duration;
-      //            if (auto& best = p_best_journeys[p_idx];
-      //                best.total_duration_ > total_duration) {
-      //              best.total_duration_ = total_duration;
-      //              best.total_distance_ =
-      //                  x_to_sx_distance + sx_to_sp_distance +
-      //                  sp_to_p_distance;
-      //              best.walk_distance_ = x_to_sx_distance + sp_to_p_distance;
-      //              best.bike_distance_ = sx_to_sp_distance;
-      //              best.walk_duration_ =
-      //                  x_to_sx_walk_duration + sp_to_p_walk_duration;
-      //              best.bike_duration_ = sx_to_sp_duration;
-      //              best.info_ = journey::s{static_cast<uint32_t>(sx_idx),
-      //                                      static_cast<uint32_t>(sp_idx),
-      //                                      static_cast<uint32_t>(p_idx)};
-      //            }
-      //          }
-      //        }
-      //      }
+      // BUILD JOURNEYS
+      // station FWD: x --walk--> [sx] --bike--> [sp] --walk--> [p]
+      for (auto const [sx_idx, x_to_sx_res] : utl::enumerate(
+               *motis_content(FootRoutingResponse, f_x_to_sx_walks->val())
+                    ->routes())) {
+        if (x_to_sx_res->routes()->size() == 0) {
+          continue;
+        }
+        auto const x_to_sx_route = x_to_sx_res->routes()->Get(0);
+        auto const x_to_sx_distance = x_to_sx_route->distance();
+        auto const x_to_sx_walk_duration = x_to_sx_route->duration();
+        if (x_to_sx_walk_duration > max_walk_duration) {
+          continue;
+        }
+
+        for (auto const& [sp_idx, sx_to_sp_res] :
+             utl::enumerate(*motis_content(OSRMOneToManyResponse,
+                                           f_sx_to_sp_rides.at(sx_idx)->val())
+                                 ->costs())) {
+          auto const sx_to_sp_duration = sx_to_sp_res->duration() / 60.0;
+          auto const sx_to_sp_distance = sx_to_sp_res->distance();
+          if (sx_to_sp_duration > max_bike_duration) {
+            continue;
+          }
+
+          for (auto const& [p_idx, sp_to_p_res] :
+               utl::enumerate(*motis_content(FootRoutingResponse,
+                                             f_sp_to_p_walks.at(sp_idx)->val())
+                                   ->routes())) {
+            if (sp_to_p_res->routes()->size() == 0) {
+              continue;
+            }
+            auto const sp_to_p_route = x_to_sx_res->routes()->Get(0);
+            auto const sp_to_p_distance = sp_to_p_route->distance();
+            auto const sp_to_p_walk_duration = sp_to_p_route->duration();
+            if (sp_to_p_walk_duration > max_walk_duration ||
+                x_to_sx_walk_duration + sp_to_p_walk_duration >
+                    max_walk_duration) {
+              continue;
+            }
+
+            auto const total_duration = x_to_sx_walk_duration +
+                                        sx_to_sp_duration +
+                                        sp_to_p_walk_duration;
+            if (auto& best = p_best_journeys[p_idx];
+                best.total_duration_ > total_duration) {
+              best.total_duration_ = total_duration;
+              best.total_distance_ =
+                  x_to_sx_distance + sx_to_sp_distance + sp_to_p_distance;
+              best.walk_distance_ = x_to_sx_distance + sp_to_p_distance;
+              best.bike_distance_ = sx_to_sp_distance;
+              best.walk_duration_ =
+                  x_to_sx_walk_duration + sp_to_p_walk_duration;
+              best.bike_duration_ = sx_to_sp_duration;
+              best.info_ = journey::s{static_cast<uint32_t>(sx_idx),
+                                      static_cast<uint32_t>(sp_idx),
+                                      static_cast<uint32_t>(p_idx)};
+            }
+          }
+        }
+      }
     } else {
       // TODO(felix)
       // BWD
