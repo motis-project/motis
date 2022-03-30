@@ -50,6 +50,16 @@ const getTrainConnection = (lineId: string, stationId: string, targetStationId: 
     };
 };
 
+export const getStationCoords = (connection: Connection) => {
+    let coords = [];
+    for(let i = 0; i < connection.stops.length; i++){
+        let pos = [];
+        pos.push(connection.stops[i].station.pos.lat);
+        pos.push(connection.stops[i].station.pos.lng);
+        coords.push(pos);
+    }
+    return {mapId: 'map', coords};
+};
 
 export const TripView: React.FC<TripView> = (props) => {
 
@@ -69,6 +79,7 @@ export const TripView: React.FC<TripView> = (props) => {
                     console.log(res);
                     setTrainConnection(res.content);
                     window.portEvents.pub('mapSetDetailFilter', getMapFilter(res.content));
+                    window.portEvents.pub('mapFitBounds', getStationCoords(res.content));
                 });
         }
     }, [props.trainSelected]);

@@ -176,6 +176,13 @@ export const StationEvent: React.FC<StationEvent> = (props) => {
                         setMaxTime(res.content.events[res.content.events.length - 1].event.time);
                     }
                     setDisplayDirection('DEP');
+                    window.portEvents.pub('mapFlyTo', { animate: true,
+                                                        bearing: null,
+                                                        lat: res.content.station.pos.lat,
+                                                        lng: res.content.station.pos.lng,
+                                                        mapId: 'map',
+                                                        ptich: null,
+                                                        zoom: null});
                 });
         }
     }, [direction, props.station]);

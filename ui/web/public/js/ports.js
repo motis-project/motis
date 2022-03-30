@@ -82,10 +82,14 @@ const ownPorts = {
         }
     },
     'mapFlyTo': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('mapFlyTo', callback);
+        }
     },
     'mapFitBounds': {
-        subscribe: function(){}
+        subscribe: function(callback){
+            window.portEvents.sub('mapFitBounds', callback);
+        }
     },
     'mapUseTrainClassColors': {
         subscribe: function(callback){

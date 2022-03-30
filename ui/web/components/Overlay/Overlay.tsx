@@ -4,6 +4,7 @@ import moment from 'moment';
 
 import { Search } from './Search';
 import { SubOverlay } from './SubOverlay';
+import { getStationCoords } from './TripView';
 import { Spinner } from './LoadingSpinner';
 import { ConnectionRender } from './ConnectionRender';
 import { duration } from './Journey';
@@ -175,7 +176,11 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                         :
                                                         <div className={ `connection ${connectionElem.new} ${(connectionHighlighted) ? `${(selectedConnectionIds.includes(index)) ? 'highlighted' : 'faded'}` : ''}`}
                                                             key={index}
-                                                            onClick={() => { setTripViewHidden(false); setIndexOfConnection(index); setMapFilter(getMapFilter(connectionElem)); window.portEvents.pub('mapSetDetailFilter', getMapFilter(connectionElem));}}
+                                                            onClick={() => { setTripViewHidden(false);
+                                                                             setIndexOfConnection(index);
+                                                                             setMapFilter(getMapFilter(connectionElem));
+                                                                             window.portEvents.pub('mapSetDetailFilter', getMapFilter(connectionElem));
+                                                                             window.portEvents.pub('mapFitBounds', getStationCoords(connectionElem));}}
                                                             onMouseEnter={() => { let ids = []; ids.push(connectionElem.id); window.portEvents.pub('mapHighlightConnections', ids)}}
                                                             onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', [])}}>
                                                             <div className='pure-g'>
