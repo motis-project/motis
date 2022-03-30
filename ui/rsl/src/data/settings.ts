@@ -8,12 +8,17 @@ export const sectionGraphPlotTypeAtom =
     "SimpleBox"
   );
 
-export const showLegacyLoadForecastChartAtom = atomWithStorage<boolean>(
+export const showLegacyLoadForecastChartAtom = atomWithStorage(
   "showLegacyLoadForecastChart",
   false
 );
 
-export const showLegacyMeasureTypesAtom = atomWithStorage<boolean>(
+export const showLegacyMeasureTypesAtom = atomWithStorage(
   "showLegacyMeasureTypes",
+  false
+);
+
+export const showOptimizationDebugLogAtom = atomWithStorage(
+  "showOptimizationDebugLog",
   false
 );

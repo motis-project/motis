@@ -25,6 +25,7 @@ import { SectionLoadColors } from "@/util/colors";
 import { formatDate, formatTime } from "@/util/dateFormat";
 
 import SectionLoadGraph from "@/components/SectionLoadGraph";
+import TripOptimization from "@/components/TripOptimization";
 import TripSectionDetails from "@/components/TripSectionDetails";
 
 type TripRouteProps = {
@@ -68,6 +69,8 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
   );
   const maxVal = Math.max(maxPax, maxExpected, maxCapacity);
 
+  const showOptimization = edges.some((e) => e.possibly_over_capacity);
+
   const category = tripData.tsi.service_infos[0]?.category ?? "";
   const trainNr =
     tripData.tsi.service_infos[0]?.train_nr ?? tripData.tsi.trip.train_nr;
@@ -86,6 +89,7 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
           {tripData.tsi.secondary_station.name}
         </span>
       </div>
+      {showOptimization && <TripOptimization tripId={tripId} />}
       <div className="flex flex-col gap-2">
         {edges.map((section, idx) => (
           <TripSection

@@ -1,5 +1,5 @@
 import { Popover, Transition } from "@headlessui/react";
-import { AdjustmentsIcon } from "@heroicons/react/solid";
+import { CogIcon } from "@heroicons/react/solid";
 import { useAtom } from "jotai";
 import { Fragment } from "react";
 
@@ -7,6 +7,7 @@ import {
   sectionGraphPlotTypeAtom,
   showLegacyLoadForecastChartAtom,
   showLegacyMeasureTypesAtom,
+  showOptimizationDebugLogAtom,
 } from "@/data/settings";
 
 import classNames from "@/util/classNames";
@@ -83,6 +84,29 @@ function MeasureSettings() {
   );
 }
 
+function OptimizationSettings() {
+  const [showOptimizationDebugLog, setShowOptimizationDebugLog] = useAtom(
+    showOptimizationDebugLogAtom
+  );
+
+  return (
+    <div className="bg-white p-7 pt-0">
+      Maßnahmenoptimierung:
+      <div className="flex flex-col pl-3 pt-2 gap-2">
+        <label className="inline-flex items-center gap-2">
+          <input
+            type="checkbox"
+            name="legacy-load-forecast-chart"
+            checked={showOptimizationDebugLog}
+            onChange={() => setShowOptimizationDebugLog((c) => !c)}
+          />
+          Debug-Ausgabe anzeigen
+        </label>
+      </div>
+    </div>
+  );
+}
+
 function Settings(): JSX.Element {
   return (
     <div className="absolute top-2 right-2">
@@ -95,7 +119,7 @@ function Settings(): JSX.Element {
                 "p-2 mb-1 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0"
               )}
             >
-              <AdjustmentsIcon className="w-4 h-4" aria-hidden="true" />
+              <CogIcon className="w-4 h-4" aria-hidden="true" />
             </Popover.Button>
             <Transition
               as={Fragment}
@@ -110,6 +134,7 @@ function Settings(): JSX.Element {
                 <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
                   <SectionGraphPlotSettings />
                   <MeasureSettings />
+                  <OptimizationSettings />
                 </div>
               </Popover.Panel>
             </Transition>
