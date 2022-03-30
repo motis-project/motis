@@ -1,4 +1,4 @@
-import { UseQueryResult, useQuery } from "react-query";
+import { UseQueryOptions, UseQueryResult, useQuery } from "react-query";
 
 import { verifyContentType } from "@/api/protocol/checks";
 import {
@@ -17,12 +17,13 @@ export async function sendStationGuesserRequest(
 }
 
 export function useStationGuesserQuery(
-  content: StationGuesserRequest
+  content: StationGuesserRequest,
+  options?: Pick<UseQueryOptions, "keepPreviousData">
 ): UseQueryResult<StationGuesserResponse> {
   return useQuery(
     queryKeys.stationGuess(content),
     () => sendStationGuesserRequest(content),
-    { enabled: content.input.length >= 3 }
+    { ...options, enabled: content.input.length >= 3 }
   );
 }
 

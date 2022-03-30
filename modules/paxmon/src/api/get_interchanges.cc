@@ -1,9 +1,12 @@
 #include "motis/paxmon/api/get_interchanges.h"
 
+#include <algorithm>
+
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/time_access.h"
 #include "motis/core/conv/station_conv.h"
 
+#include "motis/paxmon/get_load.h"
 #include "motis/paxmon/get_universe.h"
 #include "motis/paxmon/messages.h"
 
@@ -92,27 +95,26 @@ msg_ptr get_interchanges(paxmon_data& data, msg_ptr const& msg) {
       }
 
       std::vector<PaxMonGroupBaseInfo> group_infos;
-      auto min_pax = 0U;
-      auto max_pax = 0U;
-      for (auto const pgi : uv.pax_connection_info_.groups_[ic_edge->pci_]) {
-        auto const* pg = uv.passenger_groups_.at(pgi);
-        if (pg->probability_ == 0.0F) {
-          continue;
+      if (include_group_infos) {
+        for (auto const pgi : uv.pax_connection_info_.groups_[ic_edge->pci_]) {
+          auto const* pg = uv.passenger_groups_.at(pgi);
+          if (pg->probability_ != 0.0F) {
+            group_infos.emplace_back(to_fbs_base_info(mc, *pg));
+          }
         }
-        max_pax += pg->passengers_;
-        if (pg->probability_ == 1.0F) {
-          min_pax += pg->passengers_;
-        }
-        if (include_group_infos) {
-          group_infos.emplace_back(to_fbs_base_info(mc, *pg));
-        }
+        std::sort(begin(group_infos), end(group_infos),
+                  [](PaxMonGroupBaseInfo const& a,
+                     PaxMonGroupBaseInfo const& b) { return a.id() < b.id(); });
       }
+      auto const pdf = get_load_pdf(
+          uv.passenger_groups_, uv.pax_connection_info_.groups_[ic_edge->pci_]);
+      auto const cdf = get_cdf(pdf);
 
       interchange_infos.emplace_back(CreatePaxMonInterchangeInfo(
           mc, make_fbs_event(ic_edge->from(uv), true),
           make_fbs_event(ic_edge->to(uv), false),
           CreatePaxMonCombinedGroups(mc, mc.CreateVectorOfStructs(group_infos),
-                                     min_pax, max_pax),
+                                     to_fbs_distribution(mc, pdf, cdf)),
           ic_edge->transfer_time()));
 
       if (max_count != 0 && interchange_infos.size() >= max_count) {

@@ -1,9 +1,14 @@
 include "paxmon/PaxMonGroup.fbs";
+include "paxmon/PaxMonDistribution.fbs";
 
 namespace motis.paxmon;
 
 table PaxMonCombinedGroups {
   groups: [PaxMonGroupBaseInfo];
-  min_passenger_count: uint;
-  max_passenger_count: uint;
+  dist: PaxMonDistribution;
+}
+
+table PaxMonCombinedGroupIds {
+  groups: [ulong];
+  dist: PaxMonDistribution;
 }

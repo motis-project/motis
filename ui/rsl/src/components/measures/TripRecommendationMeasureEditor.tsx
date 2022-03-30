@@ -54,7 +54,7 @@ function TripRecommendationMeasureEditor({
         />
       </div>
       <div>
-        <div className={labelClass}>Umsteigen in Trip</div>
+        <div className={labelClass}>Umsteigen in Zug</div>
         <TripPicker
           onTripPicked={setTripRecTrip}
           clearOnPick={false}

@@ -1,13 +1,16 @@
 import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
 import { useUpdateAtom } from "jotai/utils";
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 
 import { MeasureUnion } from "@/data/measures";
+import { selectedTripAtom } from "@/data/selectedTrip";
+import { showLegacyMeasureTypesAtom } from "@/data/settings";
 
 import RtUpdateMeasureEditor from "@/components/measures/RtUpdateMeasureEditor";
 import SharedDataEditor from "@/components/measures/SharedDataEditor";
 import TripLoadInfoMeasureEditor from "@/components/measures/TripLoadInfoMeasureEditor";
+import TripLoadRecommendationMeasureEditor from "@/components/measures/TripLoadRecommendationMeasureEditor";
 import TripRecommendationMeasureEditor from "@/components/measures/TripRecommendationMeasureEditor";
 import ModalDialog from "@/components/util/ModalDialog";
 
@@ -91,6 +94,14 @@ function MeasureEditor({
           key={measureAtom.toString()}
         />
       );
+    case "TripLoadRecommendationMeasure":
+      return measureEditor(
+        <TripLoadRecommendationMeasureEditor
+          measureAtom={measureAtom}
+          closeEditor={closeEditor}
+          key={measureAtom.toString()}
+        />
+      );
     case "RtUpdateMeasure":
       return measureEditor(
         <RtUpdateMeasureEditor
@@ -104,7 +115,7 @@ function MeasureEditor({
 
 interface MeasureTypeOptionProps {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
   onClick: () => void;
 }
 
@@ -133,13 +144,15 @@ function EmptyMeasureEditor({
   deleteMeasure,
 }: MeasureEditorProps) {
   const setMeasure = useUpdateAtom(measureAtom);
+  const [selectedTrip] = useAtom(selectedTripAtom);
+  const [showLegacyMeasureTypes] = useAtom(showLegacyMeasureTypesAtom);
 
   const setTripLoadInfo = () => {
     setMeasure((m) => {
       return {
         type: "TripLoadInfoMeasure",
         shared: m.shared,
-        data: { trip: undefined, level: "Unknown" },
+        data: { trip: selectedTrip, level: "Full" },
       };
     });
   };
@@ -151,8 +164,22 @@ function EmptyMeasureEditor({
         shared: m.shared,
         data: {
           planned_destination: undefined,
-          recommended_trip: undefined,
+          recommended_trip: selectedTrip,
           interchange_station: undefined,
+        },
+      };
+    });
+  };
+
+  const setTripLoadRecommendation = () => {
+    setMeasure((m) => {
+      return {
+        type: "TripLoadRecommendationMeasure",
+        shared: m.shared,
+        data: {
+          planned_destination: undefined,
+          full_trip: { trip: selectedTrip, level: "Full" },
+          recommended_trips: [{ trip: undefined, level: "Low" }],
         },
       };
     });
@@ -173,18 +200,29 @@ function EmptyMeasureEditor({
       <div>Maßnahmentyp wählen:</div>
       <div className="flex flex-col gap-3 py-3">
         <MeasureTypeOption
-          title="Auslastungsinformation"
-          onClick={setTripLoadInfo}
+          title="Alternativenempfehlung mit Auslastungsinformation"
+          onClick={setTripLoadRecommendation}
         >
-          Ansage oder Anzeige der erwarteten Zugauslastung
+          Empfehlung an Reisende in einem Zug oder an einer Station, statt einem
+          überfüllten Zug eine weniger ausgelastete Alternative zu verwenden
         </MeasureTypeOption>
-        <MeasureTypeOption
-          title="Alternativenempfehlung"
-          onClick={setTripRecommendation}
-        >
-          Empfehlung an Reisende in einem Zug oder an einer Station,
-          Verbindungen mit einem empfohlenen Zug zu verwenden
-        </MeasureTypeOption>
+        {showLegacyMeasureTypes && (
+          <>
+            <MeasureTypeOption
+              title="Auslastungsinformation"
+              onClick={setTripLoadInfo}
+            >
+              Ansage oder Anzeige der erwarteten Zugauslastung
+            </MeasureTypeOption>
+            <MeasureTypeOption
+              title="Zugempfehlung"
+              onClick={setTripRecommendation}
+            >
+              Empfehlung an Reisende in einem Zug oder an einer Station,
+              Verbindungen mit einem empfohlenen Zug zu verwenden
+            </MeasureTypeOption>
+          </>
+        )}
         <MeasureTypeOption title="Echtzeitupdate" onClick={setRtUpdate}>
           Zugverlauf bearbeiten (Verspätungen, Umleitungen, Gleisänderungen)
         </MeasureTypeOption>

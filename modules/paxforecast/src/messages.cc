@@ -92,6 +92,26 @@ measures::trip_load_information from_fbs(schedule const& sched,
           static_cast<measures::load_level>(m->level())};
 }
 
+measures::trip_with_load_level from_fbs(TripWithLoadLevel const* tll) {
+  return {to_extern_trip(tll->trip()),
+          static_cast<measures::load_level>(tll->level())};
+}
+
+measures::trip_load_recommendation from_fbs(
+    schedule const& sched, TripLoadRecommendationMeasure const* m) {
+  return {
+      from_fbs(sched, m->recipients()),
+      unix_to_motistime(sched.schedule_begin_, m->time()),
+      utl::to_vec(
+          *m->planned_destinations(),
+          [&](String const* eva) { return get_station_index(sched, eva); }),
+      utl::to_vec(*m->full_trips(),
+                  [&](TripWithLoadLevel const* tll) { return from_fbs(tll); }),
+      utl::to_vec(*m->recommended_trips(),
+                  [&](TripWithLoadLevel const* tll) { return from_fbs(tll); }),
+  };
+}
+
 measures::rt_update from_fbs(schedule const& sched, RtUpdateMeasure const* m) {
   return {from_fbs(sched, m->recipients()),
           unix_to_motistime(sched.schedule_begin_, m->time()), m->type(),
@@ -113,6 +133,13 @@ measures::measure_collection from_fbs(
       case Measure_TripLoadInfoMeasure: {
         auto const m = from_fbs(
             sched, reinterpret_cast<TripLoadInfoMeasure const*>(fm->measure()));
+        res[m.time_].emplace_back(m);
+        break;
+      }
+      case Measure_TripLoadRecommendationMeasure: {
+        auto const m = from_fbs(
+            sched, reinterpret_cast<TripLoadRecommendationMeasure const*>(
+                       fm->measure()));
         res[m.time_].emplace_back(m);
         break;
       }

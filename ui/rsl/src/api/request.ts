@@ -1,6 +1,6 @@
 import { Message, MsgContent, MsgContentType } from "@/api/protocol/motis";
 
-import apiEndpoint from "@/api/endpoint";
+import { getApiEndpoint } from "@/api/endpoint";
 
 export function makeMessage(
   target: string,
@@ -17,7 +17,7 @@ export function makeMessage(
 }
 
 export function sendMessage(msg: Message): Promise<Message> {
-  return fetch(`${apiEndpoint}?${msg.destination.target}`, {
+  return fetch(`${getApiEndpoint()}?${msg.destination.target}`, {
     method: "POST",
     headers: {
       Accept: "application/json",
