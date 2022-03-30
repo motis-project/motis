@@ -73,12 +73,9 @@ export const App: React.FC = () => {
                 let intvBegin = moment.unix(intv.begin);
                 intvBegin.hour(moment().hour());
                 intvBegin.minute(moment().minute());
+                intvBegin.second(moment().second());
                 setScheduleInfo(intv);
-                let currentTime = moment();
-                let adjustedDisplayDate = intvBegin;
-                adjustedDisplayDate.hour(currentTime.hour());
-                adjustedDisplayDate.minute(currentTime.minute());
-                setSearchDate(adjustedDisplayDate);
+                setSearchDate(intvBegin);
             })
     }, []);
 

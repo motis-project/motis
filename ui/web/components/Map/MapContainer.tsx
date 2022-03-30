@@ -9,11 +9,19 @@ import { RailvizTooltipTrain } from "./RailvizTooltipTrain";
 import { RailvizTooltipStation } from "./RailvizTooltipStation";
 import { SubOverlayEvent } from '../Types/EventHistory';
 
+
+const getDisplay = (base: moment.Moment, increase: number, format: string) => {
+    let result = base.unix();
+    result = result + increase;
+    return moment.unix(result).format(format + ' HH:mm:ss')
+}
+
+
 export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo': Interval, 'searchDate': moment.Moment, 'mapData': any, 'subOverlayContent': SubOverlayEvent[], 'setSubOverlayContent': React.Dispatch<React.SetStateAction<SubOverlayEvent[]>>}> = (props) => {
     
     // searchTime
     // SearchTime stores the currently displayed Time
-    const [searchTime, setSearchTime] = React.useState<string>(moment().format('HH:mm'));
+    const [searchTime, setSearchTime] = React.useState<string>(moment().format('HH:mm:ss'));
 
     // searchTimeSelected manipulates the div 'gb-input-group' to highlight it if focused
     const [searchTimeSelected, setSearchTimeSelected] = React.useState<string>('');
@@ -27,13 +35,18 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
 
     const [systemDate, setSystemDate] = React.useState<moment.Moment>(moment());
 
-    const [simTimeCheckbox, setSimTimeCheckbox] = React.useState<boolean>(true);
+    const [isActive, setisActive] = React.useState<boolean>(true);
 
-    const [clockString, setClockString] = React.useState<string>('');
+    const [seconds, setSeconds] = React.useState<number>(0);
+
+    const [stationData, setStationData] = React.useState<string>(null);
 
     // On initial render searchDate will be null, waiting for the ScheduleInfoResponse. This useEffect should fire only once.
     useEffect(() => {
-        setSimulationDate(props.searchDate);
+        if (props.searchDate) {
+            setSimulationDate(props.searchDate);
+            setSearchTime(props.searchDate.format('HH:mm:ss'));
+        }
     }, [props.searchDate]);
 
     const[railvizTooltipClass, setRailvizTooltipClass] = React.useState<string>('railviz-tooltip hidden');
@@ -44,14 +57,6 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
             window.portEvents.pub('mapSetLocale', props.translation.search);
         });
     });
-
-    useEffect(() =>{
-        window.portEvents.sub('showStationDetails', function(data){
-            console.log(clockString);
-            console.log(moment(clockString, props.translation.dateFormat));
-            props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: {id: data, name: ''}, stationTime: moment(clockString, props.translation.dateFormat + ' HH:mm:ss')}]);
-        });
-    }); 
 
     useEffect(() => {
         if(props.mapData){
@@ -72,24 +77,52 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
     }, [props.mapData]);
 
     useEffect(() => {
-        if (props.searchDate !== null) {
-            let newOffset = (simTimeCheckbox) ? simulationDate.diff(moment()) : systemDate.diff(moment());
-            console.log(newOffset);
+        if (simulationDate !== null) {
+            let newOffset = (isActive) ? simulationDate.diff(moment()) : systemDate.diff(moment());
             window.portEvents.pub('setTimeOffset', newOffset);
         }
-    }, [simulationDate, simTimeCheckbox]);
+    }, [simulationDate, isActive]);
 
     useEffect(() => {
-        let lmao = 0;
-        const interval = setInterval(() => {
-            if(simTimeCheckbox){
-                setClockString( moment(simulationDate).format(props.translation.dateFormat) + ' ' + moment(simulationDate).add(lmao++, 'seconds').format('HH:mm:ss'));
-            }else{
-                setClockString( moment().format(props.translation.dateFormat + ' HH:mm:ss'));
+        let intervalSimulation = null;
+        if (isActive) {
+          intervalSimulation = setInterval(() => {
+            setSeconds(seconds => seconds + 1);
+          }, 1000);
+        } else if (!isActive && seconds !== 0) {
+          clearInterval(intervalSimulation);
+        }
+        let intervalReality = null;
+        if (!isActive) {
+            intervalReality = setInterval(() => {
+              setSeconds(seconds => seconds + 1);
+            }, 1000);
+        } else if (isActive && seconds !== 0) {
+            clearInterval(intervalReality);
+        }
+        return () => {clearInterval(intervalSimulation); clearInterval(intervalReality)}
+    }, [isActive, seconds]);
+
+    useEffect(() => {
+        setSystemDate(moment());
+        setSeconds(0);
+    }, [isActive, searchTime]);
+
+    useEffect(() =>{
+        window.portEvents.sub('showStationDetails', function(data: string){
+            setStationData(data);
+        });
+    });
+
+    useEffect(() => {
+        if ( isActive ) {
+            if (simulationDate) {
+                props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: {id: stationData, name: ''}, stationTime: moment.unix(simulationDate.unix() + seconds)}]);
             }
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [simTimeCheckbox, simulationDate]);
+        } else {
+            props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: {id: stationData, name: ''}, stationTime: moment()}]);
+        }
+    }, [stationData]);
 
     return (
         <div className='map-container'>
@@ -122,7 +155,13 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
                             className='icon'>link</i></a></div>
                     <div className='sim-icon' title='Simulationsmodus aktiv'><i className='icon'>warning</i></div>
                     <div className='time' id='sim-time-overlay'>
-                        {(simulationDate !== null) ? clockString : ''}
+                        {(isActive) ? 
+                            simulationDate ?
+                                getDisplay(simulationDate, seconds, props.translation.dateFormat)
+                                :
+                                ''
+                            : 
+                            moment().format(props.translation.dateFormat + ' HH:mm:ss')}
                     </div>
                 </div>
                 <div className='train-color-picker-overlay'>
@@ -146,16 +185,16 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
             <div className={simTimePickerSelected ? 'sim-time-picker-container' : 'sim-time-picker-container hide'}>
                 <div className='sim-time-picker-overlay'>
                     <div className='title'>
-                        <input type='checkbox' id='sim-mode-checkbox' name='sim-mode-checkbox' defaultChecked onClick={() => { setSimTimeCheckbox(!simTimeCheckbox) }} />
+                        <input type='checkbox' id='sim-mode-checkbox' name='sim-mode-checkbox' defaultChecked onClick={() => { setisActive(!isActive) }} />
                         <label htmlFor='sim-mode-checkbox'>{props.translation.simTime.simMode}</label>
                     </div>
-                    <div className={simTimeCheckbox ? 'date' : 'date disabled'}>
+                    <div className={isActive ? 'date' : 'date disabled'}>
                         <DatePicker translation={props.translation}
                             currentDate={simulationDate}
                             setCurrentDate={setSimulationDate}
                             scheduleInfo={props.scheduleInfo} />
                     </div>
-                    <div className={simTimeCheckbox ? 'time' : 'time disabled'}>
+                    <div className={isActive ? 'time' : 'time disabled'}>
                         <div className='label'>{props.translation.search.time}</div>
                         <div className={`gb-input-group ${searchTimeSelected}`}>
                             <div className='gb-input-icon'><i className='icon'>schedule</i></div>
@@ -166,21 +205,20 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
                                 value={searchTime}
                                 onChange={(e) => {
                                     setSearchTime(e.currentTarget.value);
-                                    if (e.currentTarget.value.split(':').length == 2) {
-                                        let [hour, minute] = e.currentTarget.value.split(':');
-                                        if (!isNaN(+hour) && !isNaN(+minute)) {
+                                    if (e.currentTarget.value.split(':').length == 3) {
+                                        let [hour, minute, seconds] = e.currentTarget.value.split(':');
+                                        if (!isNaN(+hour) && !isNaN(+minute) && !isNaN(+seconds)) {
                                             let newSearchTime = moment(simulationDate);
                                             newSearchTime.hour(hour as unknown as number > 23 ? 23 : hour as unknown as number);
                                             newSearchTime.minute(minute as unknown as number > 59 ? 59 : minute as unknown as number);
+                                            newSearchTime.seconds(seconds as unknown as number > 59 ? 59 : seconds as unknown as number);
                                             setSimulationDate(newSearchTime);
-                                            //console.log(newSearchTime)
                                         }
                                     }
                                 }}
                                 onKeyDown={(e) => {
                                     if (e.key == 'Enter') {
-                                        console.log(simulationDate)
-                                        setSearchTime(simulationDate.format('HH:mm'));
+                                        setSearchTime(simulationDate.format('HH:mm:ss'));
                                     }
                                 }}
                                 onFocus={() => setSearchTimeSelected('gb-input-group-selected')} />
@@ -191,15 +229,15 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
                                         onClick={() => {
                                             let newSearchDate = simulationDate.clone().subtract(1, 'h')
                                             setSimulationDate(newSearchDate);
-                                            setSearchTime(newSearchDate.format('HH:mm'));
+                                            setSearchTime(newSearchDate.format('HH:mm:ss'));
                                         }}>
                                         <i className='icon'>chevron_left</i></a></div>
                                     <div><a
                                         className='gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select'
                                         onClick={() => {
-                                            let newSearchDate = simulationDate.clone().add(1, 'h')
+                                            let newSearchDate = simulationDate.clone().add(1, 'h');
                                             setSimulationDate(newSearchDate);
-                                            setSearchTime(newSearchDate.format('HH:mm'));
+                                            setSearchTime(newSearchDate.format('HH:mm:ss'));
                                         }}>
                                         <i className='icon'>chevron_right</i></a></div>
                                 </div>
