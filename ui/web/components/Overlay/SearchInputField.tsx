@@ -15,6 +15,7 @@ interface SearchInputField {
 }
 
 
+// Handles suggestions fetch
 const fetchSuggestions = (input: string, setAddresses: React.Dispatch<React.SetStateAction<Address[]>>, setStations: React.Dispatch<React.SetStateAction<Station[]>>, setSuggestions: React.Dispatch<React.SetStateAction<(Station | Address)[]>>) => {
     if (input !== '') {
         let requestURL = 'https://europe.motis-project.de/?elm=StationSuggestions';
@@ -30,8 +31,6 @@ const fetchSuggestions = (input: string, setAddresses: React.Dispatch<React.SetS
         fetch(requestURL, getPostRequest(body))
         .then(res => res.json())
         .then((res: StationSuggestionResponse) => {
-            console.log('Response came in');
-            console.log(res);
             setStations(res.content.guesses);
             stationRes = res.content.guesses;
         });
@@ -47,8 +46,6 @@ const fetchSuggestions = (input: string, setAddresses: React.Dispatch<React.SetS
         fetch(requestURL, getPostRequest(body2))
                 .then(res => res.json())
                 .then((res: AddressSuggestionResponse) => {
-                    console.log('Response came in');
-                    console.log(res);
                     setAddresses(res.content.guesses);
                     setSuggestions([...stationRes, ...res.content.guesses]);
                 });
@@ -71,9 +68,6 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
     
     // Selected manipulates the div "gb-input-group" to highlight it if focused
     const [selected, setSelected] = useState<string>('');
-
-    // Station or Position
-    const [station, setStation] = useState<Station | Address>(props.station);
 
     // Name stores current input in the Input Field
     const [name, setName] = useState<string>('');
@@ -103,14 +97,9 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
 
     useEffect(() => {
         setName(props.station == null ? '' : props.station.name)
-        setStation(props.station)
+        setFetchSuggestionsFlag(!fetchSuggestionsFlag);
     }, [props.station])
 
-    useEffect(() => {
-        setFetchSuggestionsFlag(!fetchSuggestionsFlag);
-        props.setSearchDisplay(station);
-    }, [station])
-    
     return (
         <div>
             <form>
@@ -135,7 +124,7 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
                                 case 'Enter':
                                     e.preventDefault();
                                     setName(suggestions[selectedSuggestion].name);
-                                    setStation(suggestions[selectedSuggestion]);
+                                    props.setSearchDisplay(suggestions[selectedSuggestion]);
                                     setShowSuggestions(false);
                                     setSelectedSuggestion(0);
                                     setLocalStorage(props.localStorageStation, suggestions[selectedSuggestion]);
@@ -156,9 +145,6 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
                         onFocus={_ => {
                             setShowSuggestions(true);
                             setSelected('gb-input-group-selected');
-                        } }
-                        onClick={_ => {
-                            setShowSuggestions(true);
                         } }/></div>
             </form>
             <div className='paper' style={showSuggestions && addressSuggestions.length > 0 ? {} : {display: 'none'}}>
@@ -168,7 +154,7 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
                             highlighted={selectedSuggestion}
                             showSuggestions={showSuggestions}
                             setName={setName}
-                            setSuggestion={setStation} 
+                            setSuggestion={props.setSearchDisplay} 
                             setSelectedSuggestion={setSelectedSuggestion}
                             setShowSuggestions={setShowSuggestions}
                             setSelected={setSelected}

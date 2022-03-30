@@ -9,9 +9,10 @@ import { SearchInputField } from './SearchInputField';
 import { Translations } from '../App/Localization';
 import { getFromLocalStorage, ModeLocalStorage } from '../App/LocalStorage';
 import useFetchPreventionOnDoubleClick from '../App/CancelablePromises';
+import { useOutsideAlerter } from '../App/OutsideAlerter';
 import { Interval } from '../Types/RoutingTypes';
 import { Address } from '../Types/SuggestionTypes';
-import { Connection, Position, Station, WalkInfo } from '../Types/Connection';
+import { Connection, Station, WalkInfo } from '../Types/Connection';
 import { Mode, IntermodalRoutingResponse } from '../Types/IntermodalRoutingTypes';
 import { markerSearch } from '../Map/RailvizContextMenu';
 
@@ -34,11 +35,13 @@ interface SearchTypes {
 }
 
 
+// Helperfunction to differentiate objects that can be either a Station or an Address
 const isStation = (f: Station | Address): f is Station => {
     return (f as Station).id !== undefined
 }
 
 
+// Get StartType for IntermodalRoutingRequests depending on start being a Station or an Address
 const getStartType = (start: Station | Address) => {
     if (isStation(start)) {
         return 'PretripStart';
@@ -47,7 +50,7 @@ const getStartType = (start: Station | Address) => {
     }
 }
 
-
+// Get DestinationType for IntermodalRoutingRequests depending on destination being a Station or an Address
 const getDestinationType = (destination: Station | Address) => {
     if (isStation(destination)) {
         return 'InputStation';
@@ -57,6 +60,7 @@ const getDestinationType = (destination: Station | Address) => {
 }
 
 
+// return name and id for a Station and Position for an Address
 const parseStationOrAddress = (s: Station | Address) => {
     if (isStation(s)) {
         return { name: s.name, id: s.id, };
@@ -66,6 +70,7 @@ const parseStationOrAddress = (s: Station | Address) => {
 }
 
 
+// Returns a properly formatted start Object for IntermodalRoutingRequests
 const getStart = (start: Station | Address, min_connection_count: number, interval: Interval, extend_interval_earlier: boolean, extend_interval_later: boolean) => {
     if (isStation(start)) {
         return { station: parseStationOrAddress(start), min_connection_count: min_connection_count, interval: interval, extend_interval_later: extend_interval_later, extend_interval_earlier: extend_interval_earlier}
@@ -75,6 +80,7 @@ const getStart = (start: Station | Address, min_connection_count: number, interv
 }
 
 
+// Return payload for IntermodalRoutingRequests
 const getRoutingOptions = (startModes: Mode[], start: Station | Address, searchType: string, searchDirection: string, destinationModes: Mode[], destination: Station | Address, interval: Interval , min_connection_count: number, extend_interval_later: boolean, extend_interval_earlier: boolean) => {
     return {
         method: 'POST',
@@ -86,6 +92,7 @@ const getRoutingOptions = (startModes: Mode[], start: Station | Address, searchT
 };
 
 
+// Helperfunction for Initialization of startModes and destinationModes State
 const getModes = (key: string) => {
     let modes: ModeLocalStorage = getFromLocalStorage(key);
     let res = [];
@@ -160,7 +167,9 @@ const dummyConnection = (dummyDate: string) => {
 }
 
 
+// Helperfunction to manage IntermodalRoutingResponse. Appends dummyEntries which will be used during ConnectionList rendering to determine daychanges.
 const sendConnectionsToOverlay = (setConnections: React.Dispatch<React.SetStateAction<Connection[]>>, connections: Connection[], setAllConnectionsWithoutDummies: React.Dispatch<React.SetStateAction<Connection[]>>, dateFormat: string, setLoading: React.Dispatch<React.SetStateAction<boolean>>) => {
+    // If IntermodalRoutingResponse is empty, stop Loadinganimation and set connections to []
     if(connections.length === 0){
         setLoading(false);
         setConnections([]);
@@ -172,6 +181,7 @@ const sendConnectionsToOverlay = (setConnections: React.Dispatch<React.SetStateA
     let dummyDays = [previousConnectionDay.format(dateFormat)];
     setAllConnectionsWithoutDummies(connections);
     connectionsWithDummies[0].id = 0;
+    // Find all pairs of entries that start on different days.
     for (let i = 1; i < connections.length; i++){
         connectionsWithDummies[i].id = i;
         if (moment.unix(connections[i].stops[0].departure.schedule_time).day() != previousConnectionDay.day()){
@@ -180,15 +190,19 @@ const sendConnectionsToOverlay = (setConnections: React.Dispatch<React.SetStateA
             previousConnectionDay.add(1, 'day');
         }
     };
+    // For every Day change, expand list of connections at the right index
     dummyIndexes.map((val, idx) => {
         connectionsWithDummies.splice(val + idx, 0, dummyConnection(dummyDays[idx]));
     });
+    // Reset connections before sending new ones. This fixes a lot of bugs in Connectionrender where deprecated data would be used during rerendering
     setConnections([]);
+    // Send new connections to Overlay
     setConnections(connectionsWithDummies);
     setLoading(false);
 };
 
 
+// If IntermodalRouting fails, set Connections to []
 const handleErrors = (response, setLoading: React.Dispatch<React.SetStateAction<boolean>>, setConnections: React.Dispatch<React.SetStateAction<Connection[]>>) => {
     if (!response.ok) {
         setLoading(false);
@@ -197,27 +211,6 @@ const handleErrors = (response, setLoading: React.Dispatch<React.SetStateAction<
     }
     return response;
 }
-
-
-function useOutsideAlerter(ref: React.MutableRefObject<any>, setSelected : React.Dispatch<React.SetStateAction<string>>) {
-    React.useEffect(() => {
-        /**
-         * Alert if clicked on outside of element
-         */
-        function handleClickOutside(event) {
-            if (ref.current && !ref.current.contains(event.target)) {
-                setSelected('');
-            }
-        }
-
-        // Bind the event listener
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            // Unbind the event listener on clean up
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [ref]);
-};
 
 
 export const Search: React.FC<SearchTypes> = (props) => {
@@ -261,8 +254,6 @@ export const Search: React.FC<SearchTypes> = (props) => {
                 .then(res => handleErrors(res, props.setLoading, props.setConnections))
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
-                    console.log("Response came in");
-                    console.log(res);
                     res.content.connections.map((c: Connection) => c.new = '');
                     sendConnectionsToOverlay(props.setConnections, res.content.connections, setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
                     setSearchBackward({begin: res.content.interval_begin - 3600 * 2, end: res.content.interval_begin - 1});
@@ -307,20 +298,26 @@ export const Search: React.FC<SearchTypes> = (props) => {
                 .then(res => handleErrors(res, props.setLoading, props.setConnections))
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
-                    console.log("Response came in");
-                    console.log(res);
+                    // All newly fetched Connections have a different classname than the rest
                     res.content.connections.map((c: Connection) => c.new = 'new');
                     allConnectionsWithoutDummies.map((c: Connection) => c.new = '');
+                    // Earlier Button was clicked
                     if(props.extendBackwardFlag){
+                        // Update the connection list only if new connections were fetched
                         if(!equal(res.content.connections[0], allConnectionsWithoutDummies[0])) {
                             sendConnectionsToOverlay(props.setConnections, [...res.content.connections, ...allConnectionsWithoutDummies], setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
+                            // New Interval for searching even earlier connections
                             setSearchBackward({begin: res.content.interval_begin - 3600 * 2, end: res.content.interval_begin - 1});
                             window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections([...res.content.connections, ...allConnectionsWithoutDummies]), 'lowestId': 0});
                         }
                         props.setExtendBackwardFlag(false);
-                    } else {
+                    } 
+                    // Later Button was clicked
+                    else {
+                        // Update the connection list only if new connections were fetched
                         if(!equal(res.content.connections[res.content.connections.length-1], allConnectionsWithoutDummies[allConnectionsWithoutDummies.length-1])) {
                             sendConnectionsToOverlay(props.setConnections, [...allConnectionsWithoutDummies, ...res.content.connections], setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
+                            // New Interval for searching even later connections
                             setSearchForward({begin: res.content.interval_end + 1, end: res.content.interval_end + 3600 * 2});
                             window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections([...allConnectionsWithoutDummies, ...res.content.connections]), 'lowestId': 0});
                         }
@@ -332,7 +329,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
                                                             'destinationName': getFromLocalStorage("motis.routing.to_location").name});
                     
                 })
-                .catch(error => {});
+                .catch(_error => {});
         }
     }, [props.extendForwardFlag, props.extendBackwardFlag]);
 
@@ -422,11 +419,9 @@ export const Search: React.FC<SearchTypes> = (props) => {
                                             newSearchTime.hour(hour as unknown as number > 23 ? 23 : hour as unknown as number);
                                             newSearchTime.minute(minute as unknown as number > 59 ? 59 : minute as unknown as number);
                                             props.setSearchDate(newSearchTime);
-                                            //console.log(newSearchTime)
                                 }}}}
                                 onKeyDown={(e) => {
                                     if (e.key == 'Enter'){
-                                        console.log(props.searchDate)
                                         setSearchTime(props.searchDate.format('HH:mm'));
                                     }
                                 }}

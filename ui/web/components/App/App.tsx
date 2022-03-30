@@ -11,8 +11,9 @@ import { MapContainer } from '../Map/MapContainer';
 import { Interval } from '../Types/RoutingTypes';
 import { elmAPIResponse } from '../Types/IntermodalRoutingTypes';
 import { ScheduleInfoResponse } from '../Types/ScheduleInfo';
-import { Station } from '../Types/Connection';
+import { Connection, Station, TripId } from '../Types/Connection';
 import { Address } from '../Types/SuggestionTypes';
+import { SubOverlayEvent } from '../Types/EventHistory';
 
 declare global {
     interface Window {
@@ -38,15 +39,23 @@ export const App: React.FC = () => {
     // Hold the available Interval for Scheduling Information
     const [scheduleInfo, setScheduleInfo] = React.useState<Interval>(null);
 
-    const [stationEventTrigger, setStationEventTrigger] = React.useState<boolean>(false)
-
-    const [station, setStation] = React.useState<Station | Address>({ id: '', name: '' });
-
-    // Boolean used to decide if the SubOverlay is being displayed
-    const [subOverlayHidden, setSubOverlayHidden] = React.useState<boolean>(true);
+    // Overlay and StationSearch communicate via this State
+    const [stationSearch, setStationSearch] = React.useState<Station | Address>({ id: '', name: '' });
 
     // Current Date
     const [searchDate, setSearchDate] = React.useState<moment.Moment>(null);
+
+    // Store identifier for currently displayed SubOverlay Content. Will be used as a stack to realize a history of content.
+    const [subOverlayContent, setSubOverlayContent] = React.useState<SubOverlayEvent[]>([]);
+
+    // Current hovered map Data
+    const [mapData, setMapData] = React.useState<any>();
+
+    React.useEffect(() => {
+        window.portEvents.sub('mapSetTooltip', function(data){
+            setMapData(data);
+        });
+    });
 
     React.useEffect(() => {
         let requestURL = 'https://europe.motis-project.de/?elm=requestScheduleInfo';
@@ -58,40 +67,31 @@ export const App: React.FC = () => {
         })
             .then(res => res.json())
             .then((res: elmAPIResponse) => {
-                console.log("Response came in");
-                console.log(res);
                 let intv = { begin: (res.content as ScheduleInfoResponse).begin, end: (res.content as ScheduleInfoResponse).end }
                 let intvBegin = moment.unix(intv.begin);
                 intvBegin.hour(moment().hour());
                 intvBegin.minute(moment().minute());
+                intvBegin.second(moment().second());
                 setScheduleInfo(intv);
-                let currentTime = moment();
-                let adjustedDisplayDate = intvBegin;
-                adjustedDisplayDate.hour(currentTime.hour());
-                adjustedDisplayDate.minute(currentTime.minute());
-                setSearchDate(adjustedDisplayDate);
+                setSearchDate(intvBegin);
             })
     }, []);
 
     React.useEffect(() => {
-        if((station as Station).id !== ''){
-            setStationEventTrigger(true);
-            setSubOverlayHidden(false);
-            console.log(station);
+        if((stationSearch as Station).id !== ''){
+            setSubOverlayContent([...subOverlayContent, {id: 'stationEvent', station: stationSearch, stationTime: moment()}]);
         }
-    }, [station]);
+    }, [stationSearch]);
 
     return (
         <div className='app'>
             {isMobile ?
-                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate}/>
+                <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} searchDate={searchDate} mapData={mapData} subOverlayContent={subOverlayContent} setSubOverlayContent={setSubOverlayContent} />
                 :
                 <>
-                    {/* visible && <MapView />*/}
-                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} />
-                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} subOverlayHidden={subOverlayHidden} setSubOverlayHidden={setSubOverlayHidden} stationEventTrigger={stationEventTrigger} setStationEventTrigger={setStationEventTrigger} station={station} searchDate={searchDate}/>
-                    {//<StationSearchView />}
-                    }<StationSearch translation={getQuery()} setStationEventTrigger={setStationEventTrigger} station={station} setStation={setStation} />
+                    <MapContainer translation={getQuery()} scheduleInfo={scheduleInfo} searchDate={searchDate} mapData={mapData} subOverlayContent={subOverlayContent} setSubOverlayContent={setSubOverlayContent}/>
+                    <Overlay translation={getQuery()} scheduleInfo={scheduleInfo} searchDate={searchDate} mapData={mapData} subOverlayContent={subOverlayContent} setSubOverlayContent={setSubOverlayContent}/>
+                    <StationSearch translation={getQuery()} station={stationSearch} setStationSearch={setStationSearch} />
                 </>
             }
         </div>

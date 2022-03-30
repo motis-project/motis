@@ -1,11 +1,20 @@
 import { TransportInfo, Station } from "./Connection"
 
-export interface RailVizStationRequest {
+export interface RailVizStationResponse {
     content_type: string,
     content: StationEvents,
     destination: { type: string, target: string },
     id: number
 }
+
+
+export interface RailVizTripGuessResponse {
+    content_type: string,
+    content: {trips: {first_station: Station, trip_info: Trip}[]}
+    destination: { type: string, target: string },
+    id: number
+}
+
 
 export interface StationEvents{
     station: Station,
@@ -26,7 +35,7 @@ export interface Events{
     dummyEvent?: string
 }
 
-interface Trip{
+export interface Trip{
     id: {
         station_id: string,
         train_nr: number,
