@@ -111,6 +111,8 @@ const calcPartWidths = (transports: Transport[], totalDurationInMill: number, st
     });
 
     if (totalWidth < requiredWidth) {
+        console.log(transports);
+        console.log(partWidths);
         return calcFinalPartWidths(partWidths, availableWidth);
     } else if (totalWidth > requiredWidth) {
         let remainingWidth = totalWidth - requiredWidth;
@@ -134,17 +136,21 @@ const calcPartWidths = (transports: Transport[], totalDurationInMill: number, st
 
 const calcFinalPartWidths = (partWidths: GraphData[], totalWidth: number) => {
     let newPartWidths: GraphData[] = [];
+    let partWidthCopy = [...partWidths];
     let availableWidth = totalWidth;
+    let requiredWidth = 0;
     let newPosition = 0;
     let allFinal = false;
 
     while (allFinal === false) {
-        console.log(allFinal, newPartWidths);
         allFinal = true;
-        partWidths.map((g: GraphData) => {
+        newPartWidths = [];
+        newPosition = 0;
+        partWidthCopy.map((g: GraphData) => {
             if (g.final) {
                 newPartWidths.push({ position: newPosition, partWidth: g.partWidth, lineEnd: (newPosition + g.partWidth + 3), percentage: g.percentage, final: true });
                 newPosition += g.partWidth;
+                requiredWidth += g.partWidth;
             } else {
                 let newWidth = g.percentage * availableWidth;
                 let final = false;
@@ -156,10 +162,30 @@ const calcFinalPartWidths = (partWidths: GraphData[], totalWidth: number) => {
                 }
                 newPartWidths.push({ position: newPosition, partWidth: newWidth, lineEnd: (newPosition + newWidth + 3), percentage: g.percentage, final: final });
                 newPosition += newWidth;
+                requiredWidth += newWidth;
             }
         });
+        if(requiredWidth <= 323){
+            break;
+        }
+        console.log(newPartWidths);
+        partWidthCopy = newPartWidths;
     }
-    console.log(partWidths, newPartWidths);
+    if (requiredWidth < 323) {
+        let remainingWidth = 323 - requiredWidth;
+        let tmp: GraphData[] = [];
+        let newPosition = 0;
+        newPartWidths.map((g: GraphData, index) => {
+            let newWidth = g.partWidth + Math.ceil(g.percentage * remainingWidth); //adds the remaining width proportionally to the existing partWidth
+            let newLineEnd = (newPosition + newWidth + 3);
+            if (index == partWidths.length - 1 && newLineEnd !== 323) {
+                newLineEnd = 323;
+            }
+            tmp.push({ position: newPosition, partWidth: newWidth, lineEnd: newLineEnd, percentage: g.percentage, final: true });
+            newPosition += newWidth;
+        });
+        newPartWidths = tmp;
+    }
     return newPartWidths;
 }
 
