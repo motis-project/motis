@@ -10,7 +10,7 @@ namespace motis.gbfs;
 //     "type": "Module",
 //     "target": "/gbfs/route"
 //   },
-//   "content_type": "GBFSRoutingResponse",
+//   "content_type": "GBFSRoutingRequest",
 //   "content": {
 //     "dir": "Forward",
 //     "x": {
@@ -21,6 +21,24 @@ namespace motis.gbfs;
 //     "max_bike_duration": 15
 //   }
 // }
+
+// curl -XPOST -H "Content-type: application/json" -d '{
+//   "destination": {
+//     "type": "Module",
+//     "target": "/gbfs/route"
+//   },
+//   "content_type": "GBFSRoutingRequest",
+//   "content": {
+//     "dir": "Forward",
+//     "x": {
+//       "lat": 48.77541,
+//       "lng": 9.158932
+//     },
+//     "max_foot_duration": 15,
+//     "max_bike_duration": 20
+//   }
+// }' 'http://localhost:8080'
+
 table GBFSRoutingRequest {
   dir: SearchDir;
   x: motis.Position;
