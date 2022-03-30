@@ -247,6 +247,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                         :
                         <TripView   translation={props.translation}
                                     trainSelected={connections[indexOfConnection]}
+                                    overlayTripView={null} // Only needed when calling TripView from SubOverlay
                                     setTrainSelected={setTrainSelected}
                                     setTripViewHidden={setTripViewHidden}
                                     mapFilter={props.mapData}
@@ -258,6 +259,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                             scheduleInfo={props.scheduleInfo}
                             searchDate={props.searchDate}
                             trainSelected={trainSelected}
+                            displayedConnection={connections ? connections[indexOfConnection] : null}
                             mapFilter={mapFilter}
                             setTrainSelected={setTrainSelected}
                             subOverlayContent={props.subOverlayContent}

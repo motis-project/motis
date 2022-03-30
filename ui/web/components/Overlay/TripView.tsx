@@ -12,6 +12,7 @@ import { SubOverlayEvent } from '../Types/EventHistory';
 
 interface TripView {
     'trainSelected': TripId | Connection,
+    'overlayTripView': Connection,
     'translation': Translations,
     'mapFilter': any
     'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>,
@@ -95,6 +96,7 @@ export const TripView: React.FC<TripView> = (props) => {
                                                     tmp.pop();
                                                     props.setSubOverlayContent(tmp);
                                                     window.portEvents.pub('mapSetDetailFilter', props.mapFilter);
+                                                    window.portEvents.pub('mapFitBounds', getStationCoords(props.overlayTripView));
                                                 } else {
                                                     props.setTripViewHidden(true);
                                                 }

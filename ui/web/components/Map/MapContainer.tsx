@@ -115,12 +115,14 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
     });
 
     useEffect(() => {
-        if ( isActive ) {
-            if (simulationDate) {
-                props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: {id: stationData, name: ''}, stationTime: moment.unix(simulationDate.unix() + seconds)}]);
+        if (stationData) {
+            if ( isActive ) {
+                if (simulationDate) {
+                    props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: {id: stationData, name: ''}, stationTime: moment.unix(simulationDate.unix() + seconds)}]);
+                }
+            } else {
+                props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: {id: stationData, name: ''}, stationTime: moment()}]);
             }
-        } else {
-            props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: {id: stationData, name: ''}, stationTime: moment()}]);
         }
     }, [stationData]);
 
