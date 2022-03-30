@@ -25,6 +25,7 @@ import {
   universeAtom,
 } from "@/data/simulation";
 
+import classNames from "@/util/classNames";
 import { formatDateTime } from "@/util/dateFormat";
 import { loadLevelInfos } from "@/util/loadLevelInfos";
 import { isNonNull } from "@/util/typeGuards";
@@ -80,6 +81,16 @@ function MeasureTypeDetailColumn({
             Alternativenempfehlung
           </div>
           <div className="text-sm text-gray-500">
+            <div
+              className={classNames(
+                "truncate",
+                measure.data.planned_destination && "text-db-red-500"
+              )}
+            >
+              {measure.data.planned_destination
+                ? `→ ${measure.data.planned_destination.name}`
+                : "Keine Richtung ausgewählt"}
+            </div>
             <TripWithLoadLevel
               tsi={measure.data.full_trip.trip}
               level={measure.data.full_trip.level}
@@ -190,13 +201,13 @@ function MeasureListEntry({
 
   return (
     <tr>
-      <td className="px-4 py-3 whitespace-nowrap">
+      <td className="px-4 py-3 whitespace-nowrap align-top">
         <MeasureTypeDetailColumn measure={measure} />
       </td>
-      <td className="px-4 py-3 whitespace-nowrap">
+      <td className="px-4 py-3 whitespace-nowrap align-top">
         <MeasureSharedDataColumn measure={measure} />
       </td>
-      <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+      <td className="px-4 py-3 whitespace-nowrap align-top text-right text-sm font-medium">
         <button onClick={() => select(measureAtom)} className="p-1">
           <PencilIcon className="h-4 w-4 text-gray-900 hover:text-gray-600" />
           <span className="sr-only">Bearbeiten</span>
