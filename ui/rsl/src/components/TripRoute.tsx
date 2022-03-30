@@ -76,6 +76,8 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
     tripData.tsi.service_infos[0]?.train_nr ?? tripData.tsi.trip.train_nr;
   const line = tripData.tsi.service_infos[0]?.line;
 
+  const [, ...secondaryServices] = tripData.tsi.service_infos;
+
   return (
     <div className="">
       <div className="flex gap-6 items-center text-lg justify-center">
@@ -89,6 +91,14 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
           {tripData.tsi.secondary_station.name}
         </span>
       </div>
+      {secondaryServices.length > 0 && (
+        <div className="flex gap-3 items-center justify-center">
+          <span>Fährt teilweise auch als:</span>
+          {secondaryServices.map((si, idx) => (
+            <span key={idx}>{`${si.category} ${si.train_nr}`}</span>
+          ))}
+        </div>
+      )}
       <TripOptimization
         tripId={tripId}
         optimizationAvailable={optimizationAvailable}
