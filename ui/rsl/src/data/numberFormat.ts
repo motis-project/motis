@@ -14,3 +14,7 @@ export function formatMiliseconds(n: number): string {
     maximumFractionDigits: 0,
   });
 }
+
+export function formatPercent(n: number): string {
+  return formatNumber(n, { style: "percent" });
+}

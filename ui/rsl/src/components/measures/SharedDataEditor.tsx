@@ -81,9 +81,9 @@ function SharedDataEditor({ measureAtom }: SharedDataEditorProps): JSX.Element {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 mt-2 mb-8 pb-4">
       <div>
-        <div className={labelClass}>Zeitpunkt der Maßnahme</div>
+        <div className={labelClass}>Durchführung der Maßnahme</div>
         <div>
           <TimeInput
             value={shared.time}

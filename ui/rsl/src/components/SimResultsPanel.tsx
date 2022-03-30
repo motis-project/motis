@@ -2,12 +2,14 @@ import { Listbox, Transition } from "@headlessui/react";
 import { CheckIcon, SelectorIcon } from "@heroicons/react/solid";
 import { differenceInMilliseconds } from "date-fns";
 import { PrimitiveAtom, useAtom } from "jotai";
+import { useUpdateAtom } from "jotai/utils";
 import { Fragment, memo } from "react";
 import { Virtuoso } from "react-virtuoso";
 
 import { PaxMonUpdatedTrip } from "@/api/protocol/motis/paxmon";
 
 import { formatMiliseconds, formatNumber } from "@/data/numberFormat";
+import { selectedTripAtom } from "@/data/selectedTrip";
 import {
   SimulationResult,
   selectedSimResultAtom,
@@ -193,8 +195,13 @@ type UpdatedTripProps = {
 };
 
 function UpdatedTrip({ ut }: UpdatedTripProps) {
+  const setSelectedTrip = useUpdateAtom(selectedTripAtom);
+
   return (
-    <div className="flex flex-col gap-2 py-3 pr-2">
+    <div
+      className="flex flex-col gap-2 py-3 pr-2 cursor-pointer"
+      onClick={() => setSelectedTrip(ut.tsi)}
+    >
       <TripServiceInfoView tsi={ut.tsi} format="Long" />
       <ul>
         <li>

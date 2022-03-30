@@ -18,7 +18,10 @@ function StationPicker({
   initialStation,
 }: StationPickerProps): JSX.Element {
   const [input, setInput] = useState("");
-  const { data } = useStationGuesserQuery({ input, guess_count: 10 });
+  const { data } = useStationGuesserQuery(
+    { input, guess_count: 10 },
+    { keepPreviousData: true }
+  );
   const stationList = data?.guesses || [];
 
   const {

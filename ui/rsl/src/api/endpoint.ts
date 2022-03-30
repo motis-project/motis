@@ -1,6 +1,9 @@
 import getQueryParameters from "@/util/queryParameters";
 
-function getApiEndpoint(params: Record<string, string>) {
+function getApiEndpointFromUrl(params: Record<string, string>) {
+  if (typeof window === "undefined") {
+    return "";
+  }
   const defaultProtocol = window.location.protocol;
   const defaultHost = window.location.hostname;
   const defaultPort = "8080";
@@ -27,6 +30,12 @@ function getApiEndpoint(params: Record<string, string>) {
   return apiEndpoint;
 }
 
-const apiEndpoint = getApiEndpoint(getQueryParameters());
+let apiEndpoint = getApiEndpointFromUrl(getQueryParameters());
 
-export default apiEndpoint;
+export function getApiEndpoint(): string {
+  return apiEndpoint;
+}
+
+export function setApiEndpoint(url: string) {
+  apiEndpoint = url;
+}
