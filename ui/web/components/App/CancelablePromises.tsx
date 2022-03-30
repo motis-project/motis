@@ -49,7 +49,7 @@ const useFetchPreventionOnDoubleClick = (fetch) => {
   
     const handleFetch = () => {
       api.clearPendingPromises();
-      const waitForClick = cancelablePromise(delay(1000));
+      const waitForClick = cancelablePromise(delay(700));
       api.appendPendingPromise(waitForClick);
   
       return waitForClick.promise
