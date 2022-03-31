@@ -16,7 +16,7 @@ import { Interval } from '../Types/RoutingTypes';
 import { TripView } from './TripView';
 import { SubOverlayEvent } from '../Types/EventHistory';
 
-
+//generates the filter for the map out of a connection
 export const getMapFilter = (connection: Connection) => {
     let filter;
     let trains = [];
@@ -81,6 +81,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
 
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
 
+    //the current filter of the map
     const [mapFilter, setMapFilter] = useState<any>(null);
 
     const [selectedConnectionIds, setSelectedConnectionIds] = useState<number[]>([]);
@@ -98,6 +99,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
         });
     });
 
+    //when clicking on station in the map it updates the filter
     React.useEffect(() =>{
         window.portEvents.sub('showStationDetails', function(data){
             setMapFilter(null);
