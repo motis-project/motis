@@ -210,7 +210,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                                 <div className={(connectionHighlighted ? 'transport-graph highlighting' : 'transport-graph')}>
                                                                     <ConnectionRender   translation={props.translation}
                                                                                         connection={connectionElem}
-                                                                                        connectionHighlighted={connectionHighlighted}
+                                                                                        connectionHighlighted={(selectedConnectionIds.includes(connectionElem.id))}
                                                                                         mapData={props.mapData}
                                                                                         parentIndex={connectionElem.id}/>
                                                                 </div>

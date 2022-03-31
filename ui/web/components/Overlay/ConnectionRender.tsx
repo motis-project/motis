@@ -189,6 +189,19 @@ const calcFinalPartWidths = (partWidths: GraphData[], totalWidth: number) => {
     }
     return newPartWidths;
 }
+// helperfunction get set highlightedpart based on mumoType from mapData
+const convertedWalkNumber = (mumoType: string) => {
+    switch (mumoType) {
+        case 'car':
+            return -1;
+        case 'bike':
+            return -2;
+        case 'foot' || '':
+            return -3;
+        default:
+            return -4;
+    }
+}
 
 interface PartElem {
     transport: Transport,
@@ -212,7 +225,7 @@ interface GraphData {
 
 export const ConnectionRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'connectionHighlighted': boolean, 'mapData': any, 'parentIndex': number }> = (props) => {
 
-    const [toolTipSelected, setToolTipSelected] = useState<number>(-1);
+    const [toolTipSelected, setToolTipSelected] = useState<number | string>(undefined);
     const [parts, setParts] = useState<PartElem[]>([]);
     // partsHighlighted stores all trainNumbers of highlighted parts coming from mapData
     const [partsHighlighted, setPartsHighlighted] = useState<number[]>([]);
@@ -276,8 +289,11 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
         let tmp = [];
         if (props.mapData !== undefined && props.mapData.hoveredTripSegments !== null) {
             props.mapData.hoveredTripSegments.map((elem: any) => {
-                tmp.push(elem.trip[0].train_nr); //walkinfos werden nicht beachtet!
+                tmp.push(elem.trip[0].train_nr);
             });
+        }
+        if (props.mapData !== undefined && props.connectionHighlighted && props.mapData.hoveredWalkSegment !== null) {
+            tmp.push(convertedWalkNumber(props.mapData.hoveredWalkSegment.walk.mumoType));
         }
         setPartsHighlighted(tmp);
     }, [props.mapData])
@@ -288,23 +304,21 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
             <svg width={totalWidth} height={totalHeight} viewBox={`0 0 ${totalWidth} ${totalHeight}`}>
                 <g>
                     {parts.map((partElem: PartElem) => (
-                        <g className={`part train-class-${partElem.clasz} ${partElem.acc} ${(props.connectionHighlighted) ? ((partsHighlighted.includes(partElem.trainNumber)) ? 'highlighted' : 'faded') : ''}`} key={`${props.parentIndex}_${props.connection.stops[partElem.transport.move.range.from].departure.time}`}>
+                        <g className={`part train-class-${partElem.clasz} ${partElem.acc} ${(props.connectionHighlighted) ? ((partsHighlighted.includes(partElem.trainNumber) || partsHighlighted.includes(convertedWalkNumber((partElem.transport.move as WalkInfo).mumo_type))) ? 'highlighted' : 'faded') : ''}`} key={`${props.parentIndex}_${props.connection.stops[partElem.transport.move.range.from].departure.time}`}>
                             <line x1={partElem.graphData.position} y1={circleRadius} x2={partElem.graphData.lineEnd} y2={circleRadius} className='train-line'></line>
                             <circle cx={partElem.graphData.position + circleRadius} cy={circleRadius} r={circleRadius} className='train-circle' ></circle>
                             <use xlinkHref={partElem.classId} className='train-icon' x={partElem.graphData.position + iconOffset} y={iconOffset} width={iconSize} height={iconSize} ></use>
                             <text x={partElem.graphData.position} y={textOffset + textHeight} textAnchor='start' className='train-name'>{partElem.trainName}</text>
                             <rect x={partElem.graphData.position} y='0' width={partElem.graphData.position + partElem.graphData.partWidth} height={basePartSize} className='tooltipTrigger'
-                                onMouseOver={() => { setToolTipSelected(partElem.trainNumber) }}
-                                onMouseOut={() => { setToolTipSelected(-1) }}></rect>
+                                onMouseOver={() => { (partElem.trainNumber === undefined) ? setToolTipSelected(partElem.transportName) : setToolTipSelected(partElem.trainNumber) }}
+                                onMouseOut={() => { setToolTipSelected(undefined) }}></rect>
                         </g>
                     ))}
                 </g>
                 <g className='destination'><circle cx={totalWidth - destinationRadius} cy={circleRadius} r={destinationRadius}></circle></g>
             </svg>
             {parts.map((partElem: PartElem, index) => (
-
-                <div className={`tooltip ${((toolTipSelected === partElem.trainNumber) || (partsHighlighted.includes(partElem.trainNumber))) ? 'visible' : ''}`} style={{ position: 'absolute', left: `${(Math.min(partElem.graphData.position, (totalWidth - tooltipWidth)))}px`, top: `${(textOffset - 5)}px` }} key={`tooltip${props.parentIndex}${index}`}>
-
+                <div className={`tooltip ${(toolTipSelected !== undefined &&(((toolTipSelected as number) === partElem.trainNumber) || ((toolTipSelected as string) === partElem.transportName)) || ((partsHighlighted.includes(partElem.trainNumber)) || partsHighlighted.includes(convertedWalkNumber((partElem.transport.move as WalkInfo).mumo_type)))) ? 'visible' : ''}`} style={{ position: 'absolute', left: `${(Math.min(partElem.graphData.position, (totalWidth - tooltipWidth)))}px`, top: `${(textOffset - 5)}px` }} key={`tooltip${props.parentIndex}${index}`}>
                     <div className='stations'>
                         <div className='departure'>
                             <div className='station'>
