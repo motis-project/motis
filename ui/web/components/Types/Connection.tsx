@@ -82,7 +82,7 @@ export interface Position {
 }
 
 
-interface EventInfo {
+export interface EventInfo {
     time?: number
     schedule_time?: number
     track: string,

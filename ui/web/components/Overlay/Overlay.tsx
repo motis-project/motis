@@ -15,8 +15,9 @@ import { Address } from '../Types/SuggestionTypes';
 import { Interval } from '../Types/RoutingTypes';
 import { TripView } from './TripView';
 import { SubOverlayEvent } from '../Types/EventHistory';
+import { Delay } from './Delay';
 
-
+//generates the filter for the map out of a connection
 export const getMapFilter = (connection: Connection) => {
     let filter;
     let trains = [];
@@ -81,6 +82,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
 
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage('motis.routing.to_location'));
 
+    //the current filter of the map
     const [mapFilter, setMapFilter] = useState<any>(null);
     // stores all connection Ids being highlighted by the segtion hovered in map
     const [selectedConnectionIds, setSelectedConnectionIds] = useState<number[]>([]);
@@ -98,6 +100,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
         });
     });
 
+    //when clicking on station in the map it updates the filter
     React.useEffect(() =>{
         window.portEvents.sub('showStationDetails', function(data){
             setMapFilter(null);
@@ -188,9 +191,11 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                                 <div className='pure-u-4-24 connection-times'>
                                                                     <div className='connection-departure'>
                                                                         {moment.unix(connectionElem.stops[0].departure.time).format('HH:mm')}
+                                                                        <Delay event={connectionElem.stops[0].departure}/>
                                                                     </div>
                                                                     <div className='connection-arrival'>
                                                                         {moment.unix(connectionElem.stops[connectionElem.stops.length - 1].arrival.time).format('HH:mm')}
+                                                                        <Delay event={connectionElem.stops[connectionElem.stops.length - 1].arrival}/>
                                                                     </div>
                                                                 </div>
                                                                 <div className='pure-u-4-24 connection-duration'>

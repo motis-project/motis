@@ -51,7 +51,7 @@ const getTrainConnection = (lineId: string, stationId: string, targetStationId: 
     };
 };
 
-// helperfunction to get the lat and lng of a station
+// helperfunction to get the coords for each stop of a connection
 export const getStationCoords = (connection: Connection) => {
     let coords = [];
     for(let i = 0; i < connection.stops.length; i++){
