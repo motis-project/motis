@@ -21,7 +21,7 @@ interface TripView {
     'setSubOverlayContent': React.Dispatch<React.SetStateAction<SubOverlayEvent[]>>,
 }
 
-
+// helperfunction to get number of Interchanges in this trip
 const getTransportCountString = (transports: Transport[], translation: Translations) => {
     let count = 0;
     for (let index = 0; index < transports.length; index++) {
@@ -51,6 +51,7 @@ const getTrainConnection = (lineId: string, stationId: string, targetStationId: 
     };
 };
 
+// helperfunction to get the lat and lng of a station
 export const getStationCoords = (connection: Connection) => {
     let coords = [];
     for(let i = 0; i < connection.stops.length; i++){
@@ -74,6 +75,7 @@ export const TripView: React.FC<TripView> = (props) => {
 
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
 
+    // everytime a new train is selected via trainbox, a tripRequest fetches the data needed to be displayed
     useEffect(() => {
         if (props.trainSelected && isTripId(props.trainSelected)) {
             let requestURL = 'https://europe.motis-project.de/?elm=tripRequest';
