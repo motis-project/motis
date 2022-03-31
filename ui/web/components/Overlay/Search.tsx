@@ -67,7 +67,7 @@ const parseStationOrAddress = (s: Station | Address) => {
     if (isStation(s)) {
         return { name: s.name, id: s.id, };
     }else {
-        return { position: s.pos };
+        return s.pos ;
     }
 }
 

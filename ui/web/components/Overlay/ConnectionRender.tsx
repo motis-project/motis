@@ -288,7 +288,7 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
             <svg width={totalWidth} height={totalHeight} viewBox={`0 0 ${totalWidth} ${totalHeight}`}>
                 <g>
                     {parts.map((partElem: PartElem) => (
-                        <g className={`part train-class-${partElem.clasz} ${partElem.acc} ${(props.connectionHighlighted) ? ((partsHighlighted.includes(partElem.trainNumber)) ? 'highlighted' : 'faded') : ''}`} key={`${props.parentIndex}_${partElem.trainNumber}`}>
+                        <g className={`part train-class-${partElem.clasz} ${partElem.acc} ${(props.connectionHighlighted) ? ((partsHighlighted.includes(partElem.trainNumber)) ? 'highlighted' : 'faded') : ''}`} key={`${props.parentIndex}_${props.connection.stops[partElem.transport.move.range.from].departure.time}`}>
                             <line x1={partElem.graphData.position} y1={circleRadius} x2={partElem.graphData.lineEnd} y2={circleRadius} className='train-line'></line>
                             <circle cx={partElem.graphData.position + circleRadius} cy={circleRadius} r={circleRadius} className='train-circle' ></circle>
                             <use xlinkHref={partElem.classId} className='train-icon' x={partElem.graphData.position + iconOffset} y={iconOffset} width={iconSize} height={iconSize} ></use>
