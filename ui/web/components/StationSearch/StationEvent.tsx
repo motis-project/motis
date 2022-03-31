@@ -38,9 +38,9 @@ const stationEventDivGenerator = (eventsToDisplay: Events[], translation: Transl
 
     if(eventsToDisplay.length === 0) {
         return (
-            <div className="no-results">
-                <div className="divider"></div>
-                <div className="msg">{displayDirection === 'DEP' ? translation.station.noDepartures : translation.station.noArrivals}</div>
+            <div className='no-results'>
+                <div className='divider'></div>
+                <div className='msg'>{displayDirection === 'DEP' ? translation.station.noDepartures : translation.station.noArrivals}</div>
             </div>
         )
     }
@@ -57,7 +57,7 @@ const stationEventDivGenerator = (eventsToDisplay: Events[], translation: Transl
     for (let index = 0; index < filteredEvents.length; index++) {
         if ( filteredEvents[index].dummyEvent ) {
             divs.push(
-                <div className="date-header divider" key={index}><span>{filteredEvents[index].dummyEvent}</span></div>
+                <div className='date-header divider' key={index}><span>{filteredEvents[index].dummyEvent}</span></div>
             )
         }else {
             divs.push(

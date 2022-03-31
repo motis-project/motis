@@ -71,9 +71,9 @@ export const TripView: React.FC<TripView> = (props) => {
 
     const targetTime = isTripId(props.trainSelected) ? props.trainSelected.target_time : props.trainSelected.stops.at(-1).arrival.time;
 
-    const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
+    const [start, setStart] = useState<Station | Address>(getFromLocalStorage('motis.routing.from_location'));
 
-    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
+    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage('motis.routing.to_location'));
 
     // everytime a new train is selected via trainbox, a tripRequest fetches the data needed to be displayed
     useEffect(() => {
@@ -134,9 +134,9 @@ export const TripView: React.FC<TripView> = (props) => {
                         {isTripId(props.trainSelected) ? 
                             <div className='actions' />
                             :
-                            <div className="actions">
-                                <i className="icon">save</i>
-                                <i className="icon">share</i>
+                            <div className='actions'>
+                                <i className='icon'>save</i>
+                                <i className='icon'>share</i>
                             </div>
                         }  
                     </div>

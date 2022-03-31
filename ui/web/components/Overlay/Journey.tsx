@@ -102,9 +102,9 @@ interface JourneyElem {
 
 export const JourneyRender: React.FC<Journey> = (props) => {
 
-    const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
+    const [start, setStart] = useState<Station | Address>(getFromLocalStorage('motis.routing.from_location'));
 
-    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
+    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage('motis.routing.to_location'));
 
     const [toModes, setToModes] = useState<ModeLocalStorage>(getFromLocalStorage('motis.routing.from_modes'));
 
@@ -193,9 +193,9 @@ export const JourneyRender: React.FC<Journey> = (props) => {
                     {transport.walkInfo ?
                         <></>
                         :
-                        <div className="direction future">
-                            <div className="timeline train-color-border"></div>
-                            <i className="icon">arrow_forward</i>
+                        <div className='direction future'>
+                            <div className='timeline train-color-border'></div>
+                            <i className='icon'>arrow_forward</i>
                             {(transport.transport.move as TransportInfo).direction}
                         </div>
                     }
@@ -204,14 +204,14 @@ export const JourneyRender: React.FC<Journey> = (props) => {
                                         translation={props.translation}
                                         subOverlayContent={props.subOverlayContent}
                                         setSubOverlayContent={props.setSubOverlayContent}/>
-                    <div className="last-stop">
-                        <div className="stop future">
-                            <div className="timeline train-color-border"></div>
-                            <div className="time">
-                                <span className="future">{moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).format('HH:mm')}</span>
+                    <div className='last-stop'>
+                        <div className='stop future'>
+                            <div className='timeline train-color-border'></div>
+                            <div className='time'>
+                                <span className='future'>{moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).format('HH:mm')}</span>
                             </div>
-                            <div className="delay"></div>
-                            <div    className="station"
+                            <div className='delay'></div>
+                            <div    className='station'
                                     onClick={() => {
                                         props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: (transport.stops[transport.transport.move.range.to].station.name === 'END') ? destination : transport.stops[transport.transport.move.range.to].station, stationTime: moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.to].arrival.time)}]);
                                     }}>
@@ -267,11 +267,11 @@ const IntermediateStops: React.FC<{'transport': JourneyElem, 'connection': Conne
                         <div className='timeline train-color-border progress' style={{ height: '0%' }}></div>
                         {props.subOverlayContent.length !== 0 ?
                             <div className='time'>
-                                <div className="arrival">
-                                    <span className="future">{moment.unix(stop.arrival.time).format('HH:mm')}</span>
+                                <div className='arrival'>
+                                    <span className='future'>{moment.unix(stop.arrival.time).format('HH:mm')}</span>
                                 </div>
-                                <div className="departure">
-                                    <span className="future">{moment.unix(stop.departure.time).format('HH:mm')}</span>
+                                <div className='departure'>
+                                    <span className='future'>{moment.unix(stop.departure.time).format('HH:mm')}</span>
                                 </div> 
                             </div>
                             :

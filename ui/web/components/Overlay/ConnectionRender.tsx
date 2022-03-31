@@ -216,8 +216,8 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
     const [parts, setParts] = useState<PartElem[]>([]);
     // partsHighlighted stores all trainNumbers of highlighted parts coming from mapData
     const [partsHighlighted, setPartsHighlighted] = useState<number[]>([]);
-    const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
-    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
+    const [start, setStart] = useState<Station | Address>(getFromLocalStorage('motis.routing.from_location'));
+    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage('motis.routing.to_location'));
     // total Duration of this connection in Milliseconds
     let totalDurationInMill = moment.unix(props.connection.stops[props.connection.stops.length - 1].arrival.time).diff(moment.unix(props.connection.stops[0].departure.time));
     // variables from motis-project, not used ones are left out
