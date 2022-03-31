@@ -56,7 +56,7 @@ function TripSectionDetails({
   selectedSection,
 }: TripSectionDetailsProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
-  const [groupFilter, setGroupFilter] = useState<PaxMonGroupFilter>("Entering");
+  const [groupFilter, setGroupFilter] = useState<PaxMonGroupFilter>("All");
   const [groupByStation, setGroupByStation] =
     useState<PaxMonGroupByStation>("Last");
   const [groupByOtherTrip, setGroupByOtherTrip] = useState(true);
