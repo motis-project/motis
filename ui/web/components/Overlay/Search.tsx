@@ -22,6 +22,7 @@ interface SearchTypes {
     'scheduleInfo': Interval,
     'start': Station | Address,
     'destination': Station | Address, 
+    'connections': Connection[],
     'extendForwardFlag': boolean, 
     'extendBackwardFlag': boolean,
     'tripViewHidden': boolean,
@@ -168,14 +169,66 @@ const dummyConnection = (dummyDate: string) => {
 }
 
 
+// Helperfunction to manage IntermodalRoutingResponse when extend-earlier Button was clicked. Appends dummyEntries which will be used during ConnectionList rendering to determine daychanges.
+const appendConnectionsAtHead = (setConnections: React.Dispatch<React.SetStateAction<Connection[]>>, allConnectionsWithoutDummies: Connection[], newConnections: Connection[], oldConnections: Connection[], setAllConnectionsWithoutDummies: React.Dispatch<React.SetStateAction<Connection[]>>, dateFormat: string, setLoading: React.Dispatch<React.SetStateAction<boolean>>) => {
+    let dummyIndexes = [0];
+    let newConnectionsWithDummies = [...newConnections];
+    let followingConnectionDay = moment.unix(allConnectionsWithoutDummies[0].stops[0].departure.schedule_time);
+    let dummyDays = [moment.unix(newConnections[0].stops[0].departure.schedule_time).format(dateFormat)];
+    let connectionID = allConnectionsWithoutDummies.at(0).id - 1;
+    setAllConnectionsWithoutDummies([...newConnections, ...allConnectionsWithoutDummies]);
+
+    // Find all pairs of entries that start on different days.
+    for (let i = 0; i < newConnections.length; i++){
+        newConnectionsWithDummies[newConnections.length - 1 - i].id = connectionID - i;
+        if (moment.unix(newConnections[newConnections.length - 1 - i].stops[0].departure.schedule_time).day() != followingConnectionDay.day()){
+            dummyIndexes.push(newConnections.length - 1 - i);
+            dummyDays.push(followingConnectionDay.format(dateFormat));
+            followingConnectionDay.subtract(1, 'day');
+        }
+    };
+    dummyIndexes.map((val, idx) => {
+        newConnectionsWithDummies.splice(val + idx, 0, dummyConnection(dummyDays[idx]));
+    });
+
+    let tmp = oldConnections;
+    tmp.splice(0, 1);
+
+    console.log([...newConnectionsWithDummies, ...tmp]);
+    setConnections([...newConnectionsWithDummies, ...tmp]);
+    setLoading(false);
+}
+
+
+// Helperfunction to manage IntermodalRoutingResponse when extend-later Button was clicked. Appends dummyEntries which will be used during ConnectionList rendering to determine daychanges.
+const appendConnectionsAtTail = (setConnections: React.Dispatch<React.SetStateAction<Connection[]>>, allConnectionsWithoutDummies: Connection[], newConnections: Connection[], oldConnections: Connection[], setAllConnectionsWithoutDummies: React.Dispatch<React.SetStateAction<Connection[]>>, dateFormat: string, setLoading: React.Dispatch<React.SetStateAction<boolean>>) => {
+    let dummyIndexes = [];
+    let newConnectionsWithDummies = [...newConnections];
+    let previousConnectionDay = moment.unix(allConnectionsWithoutDummies.at(-1).stops[0].departure.schedule_time);
+    let dummyDays = [];
+    let connectionID = allConnectionsWithoutDummies.at(-1).id + 1;
+    setAllConnectionsWithoutDummies([...allConnectionsWithoutDummies, ...newConnections]);
+
+    // Find all pairs of entries that start on different days.
+    for (let i = 0; i < newConnections.length; i++){
+        newConnectionsWithDummies[i].id = connectionID + i;
+        if (moment.unix(newConnections[i].stops[0].departure.schedule_time).day() != previousConnectionDay.day()){
+            dummyIndexes.push(i);
+            dummyDays.push(moment.unix(newConnections[i].stops[0].departure.schedule_time).format(dateFormat));
+            previousConnectionDay.add(1, 'day');
+        }
+    };
+    dummyIndexes.map((val, idx) => {
+        newConnectionsWithDummies.splice(val + idx, 0, dummyConnection(dummyDays[idx]));
+    });
+
+    setConnections([...oldConnections, ...newConnectionsWithDummies]);
+    setLoading(false);
+}
+
+
 // Helperfunction to manage IntermodalRoutingResponse. Appends dummyEntries which will be used during ConnectionList rendering to determine daychanges.
 const sendConnectionsToOverlay = (setConnections: React.Dispatch<React.SetStateAction<Connection[]>>, connections: Connection[], setAllConnectionsWithoutDummies: React.Dispatch<React.SetStateAction<Connection[]>>, dateFormat: string, setLoading: React.Dispatch<React.SetStateAction<boolean>>) => {
-    // If IntermodalRoutingResponse is empty, stop Loadinganimation and set connections to []
-    if(connections.length === 0){
-        setLoading(false);
-        setConnections([]);
-        return;
-    }
     let dummyIndexes = [0];
     let connectionsWithDummies = [...connections];
     let previousConnectionDay = moment.unix(connections[0].stops[0].departure.schedule_time);
@@ -255,6 +308,12 @@ export const Search: React.FC<SearchTypes> = (props) => {
                 .then(res => handleErrors(res, props.setLoading, props.setConnections))
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
+                    // If IntermodalRoutingResponse is empty, stop Loadinganimation and show no-results
+                    if(res.content.connections.length === 0){
+                        props.setLoading(false);
+                        props.setConnections(null)
+                        return;
+                    }
                     res.content.connections.map((c: Connection) => c.new = '');
                     sendConnectionsToOverlay(props.setConnections, res.content.connections, setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
                     setSearchBackward({begin: res.content.interval_begin - 3600 * 2, end: res.content.interval_begin - 1});
@@ -299,14 +358,20 @@ export const Search: React.FC<SearchTypes> = (props) => {
                 .then(res => handleErrors(res, props.setLoading, props.setConnections))
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
-                    // All newly fetched Connections have a different classname than the rest
-                    res.content.connections.map((c: Connection) => c.new = ' new');
-                    allConnectionsWithoutDummies.map((c: Connection) => c.new = '');
+                    // If IntermodalRoutingResponse is empty, stop Loadinganimation and keep oldConnections
+                    if(res.content.connections.length === 0){
+                        props.setExtendBackwardFlag(false);
+                        props.setExtendForwardFlag(false);
+                        return;
+                    }
                     // Earlier Button was clicked
                     if(props.extendBackwardFlag){
-                        // Update the connection list only if new connections were fetched
-                        if(!equal(res.content.connections[0], allConnectionsWithoutDummies[0])) {
-                            sendConnectionsToOverlay(props.setConnections, [...res.content.connections, ...allConnectionsWithoutDummies], setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
+                        // Update the connection list only if new connections were fetched. If the newly fetched data is identical to the currently displayed data, dont expand the displayed list
+                        if(!equal(res.content.connections[0].stops, allConnectionsWithoutDummies[0].stops)) {
+                            // All newly fetched Connections have a different classname than the rest
+                            res.content.connections.map((c: Connection) => c.new = ' new');
+                            allConnectionsWithoutDummies.map((c: Connection) => c.new = '');
+                            appendConnectionsAtHead(props.setConnections, allConnectionsWithoutDummies, res.content.connections, props.connections, setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
                             // New Interval for searching even earlier connections
                             setSearchBackward({begin: res.content.interval_begin - 3600 * 2, end: res.content.interval_begin - 1});
                             window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections([...res.content.connections, ...allConnectionsWithoutDummies]), 'lowestId': 0});
@@ -315,9 +380,12 @@ export const Search: React.FC<SearchTypes> = (props) => {
                     } 
                     // Later Button was clicked
                     else {
-                        // Update the connection list only if new connections were fetched
-                        if(!equal(res.content.connections[res.content.connections.length-1], allConnectionsWithoutDummies[allConnectionsWithoutDummies.length-1])) {
-                            sendConnectionsToOverlay(props.setConnections, [...allConnectionsWithoutDummies, ...res.content.connections], setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
+                        // Update the connection list only if new connections were fetched. If the newly fetched data is identical to the currently displayed data, dont expand the displayed list
+                        if(!equal(res.content.connections.at(-1).stops, allConnectionsWithoutDummies.at(-1).stops)) {
+                            // All newly fetched Connections have a different classname than the rest
+                            res.content.connections.map((c: Connection) => c.new = ' new');
+                            allConnectionsWithoutDummies.map((c: Connection) => c.new = '');
+                            appendConnectionsAtTail(props.setConnections, allConnectionsWithoutDummies, res.content.connections, props.connections, setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
                             // New Interval for searching even later connections
                             setSearchForward({begin: res.content.interval_end + 1, end: res.content.interval_end + 3600 * 2});
                             window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections([...allConnectionsWithoutDummies, ...res.content.connections]), 'lowestId': 0});

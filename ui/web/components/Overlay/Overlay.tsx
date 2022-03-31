@@ -142,6 +142,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                             scheduleInfo={props.scheduleInfo}
                             start={start}
                             destination={destination}
+                            connections={connections}
                             extendForwardFlag={extendForwardFlag}
                             extendBackwardFlag={extendBackwardFlag}
                             tripViewHidden={tripViewHidden}
@@ -171,10 +172,10 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                         <div className='connection-list'>
                                             {connections.map((connectionElem: Connection, index) => (
                                                 connectionElem.dummyDay ?
-                                                <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
+                                                <div className='date-header divider' key={'divider'+connectionElem.dummyDay}><span>{connectionElem.dummyDay}</span></div>
                                                 :
                                                 <div className={ `connection${connectionElem.new}${(connectionHighlighted) ? `${(selectedConnectionIds.includes(index)) ? ' highlighted' : ' faded'}` : ''}`}
-                                                    key={index}
+                                                    key={'connection'+connectionElem.id}
                                                     onClick={() => { setTripViewHidden(false);
                                                                         setIndexOfConnection(index);
                                                                         setConnections(connections.map((c: Connection) => {
@@ -204,7 +205,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                                                     connection={connectionElem}
                                                                                     connectionHighlighted={connectionHighlighted}
                                                                                     mapData={props.mapData}
-                                                                                    parentIndex={index}/>
+                                                                                    parentIndex={connectionElem.id}/>
                                                             </div>
                                                         </div>
                                                     </div>
