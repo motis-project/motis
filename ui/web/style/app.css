@@ -467,6 +467,11 @@
   padding: 24px;
 }
 
+#search-hidden,
+#connections-hidden {
+  display: none;
+}
+
 #search {
   height: 200px;
   flex: 0 0 auto;
@@ -566,7 +571,7 @@
 }
 
 .swap-locations-btn .icon {
-  font-size: 22px;
+  font-size: 22px !important;
   transition: all 0.2s ease;
 }
 
@@ -1548,6 +1553,10 @@ fieldset > legend {
 
 .connection-details .connection-journey.empty {
   padding-top: 100px;
+}
+
+.connection-details.overlay-trip-view {
+  z-index: 1;
 }
 
 .connection-details .train-box {

@@ -1,16 +1,25 @@
 {
-  "name": "web",
-  "version": "1.0.0",
-  "description": "npm install -g elm@0.18.0",
-  "main": "elm.js",
-  "dependencies": {
-    "elm": "^0.18.0"
-  },
-  "devDependencies": {},
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "export": "next export"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "dependencies": {
+    "@types/react": "^17.0.37",
+    "deep-equal": "^2.0.5",
+    "moment": "^2.29.1",
+    "next": "latest",
+    "react": "17.0.2",
+    "react-datepicker": "^4.6.0",
+    "react-device-detect": "^2.1.2",
+    "react-dom": "17.0.2",
+    "true-myth": "^5.0.0",
+    "typescript": "^4.5.2"
+  },
+  "homepage": ".",
+  "devDependencies": {
+    "gh-pages": "^3.2.3"
+  }
 }
