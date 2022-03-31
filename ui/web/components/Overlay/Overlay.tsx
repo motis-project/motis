@@ -84,7 +84,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
 
     //the current filter of the map
     const [mapFilter, setMapFilter] = useState<any>(null);
-    // stores all connection Ids being highlighted by the segtion hovered in map
+    // stores all connection Ids being highlighted by the section hovered in map
     const [selectedConnectionIds, setSelectedConnectionIds] = useState<number[]>([]);
   
     // If true, renders the Loading animation for the connectionList
@@ -113,7 +113,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
             setMapFilter(null);
             window.portEvents.pub('mapSetDetailFilter', null);
         }
-    }, [tripViewHidden])
+    }, [tripViewHidden]);
 
     // On initial render searchDate will be null, waiting for the ScheduleInfoResponse. This useEffect should fire only once.
     React.useEffect(() => {
@@ -125,15 +125,16 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
         let connectionIds = [];
         if(props.mapData !== undefined && props.mapData.hoveredTripSegments !== null){
             props.mapData.hoveredTripSegments.map((elem: any) => {
-                connectionIds.push(elem.connectionIds[0] + 1);
+                connectionIds.push(elem.connectionIds[0]);
             });
             setSelectedConnectionIds(connectionIds);
             setConnectionHighlighted(true);
-        }else if(props.mapData !== undefined && props.mapData.hoveredWalkSegment !== null){
-            connectionIds.push(props.mapData.hoveredWalkSegment.connectionIds + 1);
-            setSelectedConnectionIds(connectionIds);
+        }
+        if(props.mapData !== undefined && props.mapData.hoveredWalkSegment !== null){
+            setSelectedConnectionIds([...props.mapData.hoveredWalkSegment.connectionIds]);
             setConnectionHighlighted(true);
-        }else{
+        }
+        if (props.mapData && props.mapData.hoveredTripSegments === null && props.mapData.hoveredWalkSegment === null) {
             setConnectionHighlighted(false);
         }
     }, [props.mapData]);
@@ -166,64 +167,65 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                 connections.length !== 0 ?  //Only display connections if any are presesnt
                                     <div id={`connections${tripViewHidden ? '' : '-hidden'}`}>
                                         <div className='connections'>
-                                        <div className='extend-search-interval search-before' onClick={() => setExtendBackwardFlag(true)}>
-                                            {extendBackwardFlag ?
-                                                <Spinner />
-                                                :
-                                                <a>{props.translation.connections.extendBefore}</a>
-                                            }
-                                        </div>
-                                        <div className='connection-list'>
-                                            {connections.map((connectionElem: Connection, index) => (
-                                                connectionElem.dummyDay ?
-                                                <div className='date-header divider' key={'divider'+connectionElem.dummyDay}><span>{connectionElem.dummyDay}</span></div>
-                                                :
-                                                <div className={ `connection${connectionElem.new}${(connectionHighlighted) ? `${(selectedConnectionIds.includes(index)) ? ' highlighted' : ' faded'}` : ''}`}
-                                                    key={'connection'+connectionElem.id}
-                                                    onClick={() => { setTripViewHidden(false);
-                                                                        setIndexOfConnection(index);
-                                                                        setConnections(connections.map((c: Connection) => {
-                                                                            c.new = '';
-                                                                            return c;
-                                                                        }));
-                                                                        setMapFilter(getMapFilter(connectionElem));
-                                                                        window.portEvents.pub('mapSetDetailFilter', getMapFilter(connectionElem));
-                                                                        window.portEvents.pub('mapFitBounds', getStationCoords(connectionElem));}}
-                                                    onMouseEnter={() => { let ids = []; ids.push(connectionElem.id); window.portEvents.pub('mapHighlightConnections', ids)}}
-                                                    onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', [])}}>
-                                                    <div className='pure-g'>
-                                                        <div className='pure-u-4-24 connection-times'>
-                                                            <div className='connection-departure'>
-                                                                {moment.unix(connectionElem.stops[0].departure.time).format('HH:mm')}
-                                                                <Delay event={connectionElem.stops[0].departure}/>
+                                            <div className='extend-search-interval search-before' onClick={() => setExtendBackwardFlag(true)}>
+                                                {extendBackwardFlag ?
+                                                    <Spinner />
+                                                    :
+                                                    <a>{props.translation.connections.extendBefore}</a>
+                                                }
+                                            </div>
+                                            <div className='connection-list'>
+                                                {connections.map((connectionElem: Connection, index) => (
+                                                    connectionElem.dummyDay ?
+                                                    <div className='date-header divider' key={'divider'+connectionElem.dummyDay}><span>{connectionElem.dummyDay}</span></div>
+                                                    :
+                                                    <div className={ `connection${connectionElem.new}${(connectionHighlighted) ? `${(selectedConnectionIds.includes(connectionElem.id)) ? ' highlighted' : ' faded'}` : ''}`}
+                                                        key={'connection'+connectionElem.id}
+                                                        onClick={() => { setTripViewHidden(false);
+                                                                            setIndexOfConnection(index);
+                                                                            setConnections(connections.map((c: Connection) => {
+                                                                                c.new = '';
+                                                                                return c;
+                                                                            }));
+                                                                            setMapFilter(getMapFilter(connectionElem));
+                                                                            window.portEvents.pub('mapSetDetailFilter', getMapFilter(connectionElem));
+                                                                            window.portEvents.pub('mapFitBounds', getStationCoords(connectionElem));}}
+                                                        onMouseEnter={() => { let ids = []; ids.push(connectionElem.id); window.portEvents.pub('mapHighlightConnections', ids)}}
+                                                        onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', [])}}>
+                                                        <div className='pure-g'>
+                                                            <div className='pure-u-4-24 connection-times'>
+                                                                <div className='connection-departure'>
+                                                                    {moment.unix(connectionElem.stops[0].departure.time).format('HH:mm')}
+                                                                    <Delay event={connectionElem.stops[0].departure}/>
+                                                                </div>
+                                                                <div className='connection-arrival'>
+                                                                    {moment.unix(connectionElem.stops[connectionElem.stops.length - 1].arrival.time).format('HH:mm')}
+                                                                    <Delay event={connectionElem.stops[connectionElem.stops.length - 1].arrival}/>
+                                                                </div>
                                                             </div>
-                                                            <div className='connection-arrival'>
-                                                                {moment.unix(connectionElem.stops[connectionElem.stops.length - 1].arrival.time).format('HH:mm')}
-                                                                <Delay event={connectionElem.stops[connectionElem.stops.length - 1].arrival}/>
+                                                            <div className='pure-u-4-24 connection-duration'>
+                                                                {duration(connectionElem.stops[0].departure.time, connectionElem.stops[connectionElem.stops.length - 1].arrival.time)}
                                                             </div>
-                                                        </div>
-                                                        <div className='pure-u-4-24 connection-duration'>
-                                                            {duration(connectionElem.stops[0].departure.time, connectionElem.stops[connectionElem.stops.length - 1].arrival.time)}
-                                                        </div>
-                                                        <div className='pure-u-16-24 connection-trains'>
-                                                            <div className={(connectionHighlighted ? 'transport-graph highlighting' : 'transport-graph')}>
-                                                                <ConnectionRender   translation={props.translation}
-                                                                                    connection={connectionElem}
-                                                                                    connectionHighlighted={connectionHighlighted}
-                                                                                    mapData={props.mapData}
-                                                                                    parentIndex={connectionElem.id}/>
+                                                            <div className='pure-u-16-24 connection-trains'>
+                                                                <div className={(connectionHighlighted ? 'transport-graph highlighting' : 'transport-graph')}>
+                                                                    <ConnectionRender   translation={props.translation}
+                                                                                        connection={connectionElem}
+                                                                                        connectionHighlighted={connectionHighlighted}
+                                                                                        mapData={props.mapData}
+                                                                                        parentIndex={connectionElem.id}/>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
+                                                ))}
+                                                <div className='divider footer'></div>
+                                                <div className='extend-search-interval search-after' onClick={() => setExtendForwardFlag(true)}>
+                                                    {extendForwardFlag ?
+                                                        <Spinner />
+                                                        :
+                                                        <a>{props.translation.connections.extendAfter}</a>
+                                                    }
                                                 </div>
-                                            ))}
-                                            <div className='divider footer'></div>
-                                            <div className='extend-search-interval search-after' onClick={() => setExtendForwardFlag(true)}>
-                                                {extendForwardFlag ?
-                                                    <Spinner />
-                                                    :
-                                                    <a>{props.translation.connections.extendAfter}</a>
-                                                }
                                             </div>
                                         </div>
                                     </div>

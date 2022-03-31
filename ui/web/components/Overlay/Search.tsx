@@ -119,7 +119,7 @@ const getModes = (key: string) => {
 }
 
 // Helperfunction that rearranges the connection data for all connections 
-const mapConnections = (connections: Connection[]) => {
+const mapConnections = (connections: Connection[], lowestId: number) => {
     let cons = [];
     if(connections){
         for(let i = 0; i < connections.length; i++){
@@ -149,7 +149,7 @@ const mapConnections = (connections: Connection[]) => {
                                 'mumoType': walk.mumo_type})
                 }
             }
-            cons.push({'id': i, 'stations': stations, 'trains': trains, 'walks': walks});
+            cons.push({'id': lowestId + i, 'stations': stations, 'trains': trains, 'walks': walks});
         }
     }
     return cons;
@@ -304,7 +304,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
     const fetchNewRoutingData = () => {
         let requestURL = 'https://europe.motis-project.de/?elm=IntermodalConnectionRequest';
 
-        fetch(requestURL, getRoutingOptions(startModes, props.start, searchType, searchDirection, destinationModes, props.destination, {begin: props.searchDate.unix(), end: props.searchDate.unix() + 3600 * 2}, 5, true, true))
+        fetch(requestURL, getRoutingOptions(startModes, props.start, searchType, searchDirection, destinationModes, props.destination, {begin: props.searchDate.unix() - 3600, end: props.searchDate.unix() + 3600}, 5, true, true))
                 .then(res => handleErrors(res, props.setLoading, props.setConnections))
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
@@ -323,7 +323,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
                                                             'destinationPosition': getFromLocalStorage('motis.routing.to_location').pos,
                                                             'destinationName': getFromLocalStorage('motis.routing.to_location').name});
                     
-                    window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections(res.content.connections), 'lowestId': 0});
+                    window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections(res.content.connections, 0), 'lowestId': 0});
                 })
                 .catch(_error => {})
     };
@@ -374,7 +374,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
                             appendConnectionsAtHead(props.setConnections, allConnectionsWithoutDummies, res.content.connections, props.connections, setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
                             // New Interval for searching even earlier connections
                             setSearchBackward({begin: res.content.interval_begin - 3600 * 2, end: res.content.interval_begin - 1});
-                            window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections([...res.content.connections, ...allConnectionsWithoutDummies]), 'lowestId': 0});
+                            window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections([...res.content.connections, ...allConnectionsWithoutDummies], allConnectionsWithoutDummies[0].id - res.content.connections.length), 'lowestId': allConnectionsWithoutDummies[0].id - res.content.connections.length});
                         }
                         props.setExtendBackwardFlag(false);
                     } 
@@ -388,7 +388,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
                             appendConnectionsAtTail(props.setConnections, allConnectionsWithoutDummies, res.content.connections, props.connections, setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
                             // New Interval for searching even later connections
                             setSearchForward({begin: res.content.interval_end + 1, end: res.content.interval_end + 3600 * 2});
-                            window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections([...allConnectionsWithoutDummies, ...res.content.connections]), 'lowestId': 0});
+                            window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections([...allConnectionsWithoutDummies, ...res.content.connections], allConnectionsWithoutDummies[0].id - res.content.connections.length), 'lowestId': allConnectionsWithoutDummies[0].id - res.content.connections.length});
                         }
                         props.setExtendForwardFlag(false);
                     }
