@@ -8,6 +8,7 @@ import { Address } from '../Types/SuggestionTypes';
 import { Translations } from '../App/Localization';
 import { classToId, getClasz } from './ConnectionRender';
 import { SubOverlayEvent } from '../Types/EventHistory';
+import { Delay } from './Delay';
 
 
 interface Journey {
@@ -176,18 +177,7 @@ export const JourneyRender: React.FC<Journey> = (props) => {
                             <div className='time'>
                                 <span className='future'>{moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.from].departure.time).format('HH:mm')}</span>
                             </div>
-                            {console.log(transport)}
-                            <div className={(transport.stops[0].departure.schedule_time - transport.stops[0].departure.time === 0) ?
-                                                'delay' 
-                                            :
-                                                (transport.stops[0].departure.schedule_time - transport.stops[0].departure.time < 0) ?
-                                                    'delay neg-delay'
-                                                :
-                                                    'delay pos-delay'
-                                            }>{(transport.stops[0].departure.schedule_time - transport.stops[0].departure.time === 0) ?
-                                                    ''
-                                                :
-                                                    '(' + moment.unix(transport.stops[0].departure.schedule_time - transport.stops[0].departure.time).format('m') + 'min)'}</div>
+                            <Delay event={transport.stops[0].departure}/>
                             <div    className='station'
                                     onClick={() => {
                                         props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: (transport.stops[transport.transport.move.range.from].station.name === 'START') ? start : transport.stops[transport.transport.move.range.from].station, stationTime: moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.from].departure.time)}]);
@@ -218,17 +208,7 @@ export const JourneyRender: React.FC<Journey> = (props) => {
                             <div className="time">
                                 <span className="future">{moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.to].arrival.time).format('HH:mm')}</span>
                             </div>
-                            <div className={(transport.stops[transport.stopsToRender.length-1].departure.schedule_time - transport.stops[transport.stopsToRender.length-1].departure.time === 0) ?
-                                                'delay' 
-                                            :
-                                                (transport.stops[transport.stopsToRender.length-1].departure.schedule_time - transport.stops[transport.stopsToRender.length-1].departure.time < 0) ?
-                                                    'delay neg-delay'
-                                                :
-                                                    'delay pos-delay'
-                                            }>{(transport.stops[transport.stopsToRender.length-1].departure.schedule_time - transport.stops[transport.stopsToRender.length-1].departure.time === 0) ?
-                                                    ''
-                                                :
-                                                    '(' + moment.unix(transport.stops[transport.stopsToRender.length-1].departure.schedule_time - transport.stops[transport.stopsToRender.length-1].departure.time).format('m') + 'min)'}</div>
+                            <Delay event={transport.stops[transport.stops.length - 1].departure}/>
                             <div    className="station"
                                     onClick={() => {
                                         props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: (transport.stops[transport.transport.move.range.to].station.name === 'END') ? destination : transport.stops[transport.transport.move.range.to].station, stationTime: moment.unix(transport.stops[(transport.transport.move as TransportInfo).range.to].arrival.time)}]);
@@ -295,17 +275,7 @@ const IntermediateStops: React.FC<{'transport': JourneyElem, 'connection': Conne
                                 <span className='future'>{moment.unix(stop.departure.time).format('HH:mm')}</span>
                             </div>
                         }
-                        <div className={(props.transport.stops[index].departure.schedule_time - props.transport.stops[index].departure.time === 0) ?
-                                                'delay' 
-                                            :
-                                                (props.transport.stops[index].departure.schedule_time - props.transport.stops[index].departure.time < 0) ?
-                                                    'delay neg-delay'
-                                                :
-                                                    'delay pos-delay'
-                                            }>{(props.transport.stops[index].departure.schedule_time - props.transport.stops[index].departure.time === 0) ?
-                                                    ''
-                                                :
-                                                    '(' + moment.unix(props.transport.stops[index].departure.schedule_time - props.transport.stops[index].departure.time).format('m') + 'min)'}</div>
+                        <Delay event={props.transport.stops[index].departure}/>
                         <div className='station'>
                             <span>{stop.station.name}</span>
                         </div>
