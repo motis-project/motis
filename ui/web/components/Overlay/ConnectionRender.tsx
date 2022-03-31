@@ -209,15 +209,19 @@ const convertedWalkNumber = (mumoType: string) => {
 
 // Helperfunction used to identify Connections in ConnectionList when hovering Connection on Map or hovering in the list
 const showTooltip = (toolTipSelected: number | {dep: Position, arr: Position}, trainNumber: number, partsHighlighted: (number | {dep: Position, arr: Position})[], depArr: {dep: Position, arr: Position}) => {
-    if ((toolTipSelected !== undefined && 
-            // Hovering ConnectionList sets Tooltip. If either trainNumber or departure and arrival are equal, then this connection has to show its tooltip
-            (((toolTipSelected as number) === trainNumber) || equal((toolTipSelected as {dep: Position, arr: Position}), depArr))) 
-        ||
+    if (trainNumber === undefined) {
+        if (partsHighlighted.reduce((prev, cur) => equal(depArr, cur) || prev, false) || (toolTipSelected !== undefined && equal((toolTipSelected as {dep: Position, arr: Position}), depArr))) {
+            return 'visible';
+        }
+    }
+    if (
         // partsHighlighted contains all trainNumbers and Position tuples of Connections that are hovered right now.
-        // If either trainNumber or this parts departure Arrival Tuple is in this list, show this tooltip.
+        // If trainNumber is in this list, show this tooltip.
         (partsHighlighted.includes(trainNumber)) 
         || 
-        partsHighlighted.reduce((prev, cur) => equal(depArr, cur) || prev, false)) {
+        (toolTipSelected !== undefined && 
+            // Hovering ConnectionList sets Tooltip. If trainNumber is equal, then this connection has to show its tooltip
+            (((toolTipSelected as number) === trainNumber)))) {
         return 'visible' 
     }
     return '';
