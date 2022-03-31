@@ -74,7 +74,9 @@ const ownPorts = {
         }
     },
     'mapUpdate': {
-        send: function(){}
+        send: function(callback){
+            window.portEvents.pub('mapUpdate', callback);
+        }
     },
     'mapSetTooltip': {
         send: function(callback){
