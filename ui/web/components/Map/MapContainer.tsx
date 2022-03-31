@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
 import moment from 'moment';
 
-import { DatePicker } from "../Overlay/DatePicker";
-import { Translations } from "../App/Localization";
-import { RailvizContextMenu } from "./RailvizContextMenu";
-import { Interval } from "../Types/RoutingTypes";
-import { RailvizTooltipTrain } from "./RailvizTooltipTrain";
-import { RailvizTooltipStation } from "./RailvizTooltipStation";
+import { DatePicker } from '../Overlay/DatePicker';
+import { Translations } from '../App/Localization';
+import { RailvizContextMenu } from './RailvizContextMenu';
+import { Interval } from '../Types/RoutingTypes';
+import { RailvizTooltipTrain } from './RailvizTooltipTrain';
+import { RailvizTooltipStation } from './RailvizTooltipStation';
 import { SubOverlayEvent } from '../Types/EventHistory';
 
 
@@ -17,8 +17,8 @@ const getDisplay = (base: moment.Moment, increase: number, format: string) => {
 }
 
 
-export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo': Interval, 'searchDate': moment.Moment, 'mapData': any, 'subOverlayContent': SubOverlayEvent[], 'setSubOverlayContent': React.Dispatch<React.SetStateAction<SubOverlayEvent[]>>}> = (props) => {
-    
+export const MapContainer: React.FC<{ 'translation': Translations, 'scheduleInfo': Interval, 'searchDate': moment.Moment, 'mapData': any, 'subOverlayContent': SubOverlayEvent[], 'setSubOverlayContent': React.Dispatch<React.SetStateAction<SubOverlayEvent[]>> }> = (props) => {
+
     // searchTime
     // SearchTime stores the currently displayed Time
     const [searchTime, setSearchTime] = React.useState<string>(moment().format('HH:mm:ss'));
@@ -41,6 +41,13 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
 
     const [stationData, setStationData] = React.useState<string>(null);
 
+    // collects all data needed for permalink
+    const [permalinkData, setPermalinkData] = React.useState<any>();
+    // trigger boolean for setting the new permalink
+    const [permalinkTrigger, setPermalinkTrigger] = React.useState<boolean>(false);
+    // actual permalink string
+    const [permalink, setPermalink] = React.useState<string>('');
+
     // On initial render searchDate will be null, waiting for the ScheduleInfoResponse. This useEffect should fire only once.
     useEffect(() => {
         if (props.searchDate) {
@@ -49,8 +56,8 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
         }
     }, [props.searchDate]);
 
-    const[railvizTooltipClass, setRailvizTooltipClass] = React.useState<string>('railviz-tooltip hidden');
-    const[isTrainTooltip, setIsTrainTooltip] = React.useState<boolean>(null);
+    const [railvizTooltipClass, setRailvizTooltipClass] = React.useState<string>('railviz-tooltip hidden');
+    const [isTrainTooltip, setIsTrainTooltip] = React.useState<boolean>(null);
 
     useEffect(() => {
         window.portEvents.sub('mapInitFinished', function () {
@@ -59,14 +66,14 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
     });
 
     useEffect(() => {
-        if(props.mapData){
-            if(props.mapData.hoveredTrain){
+        if (props.mapData) {
+            if (props.mapData.hoveredTrain) {
                 /**train stuff */
                 setRailvizTooltipClass('railviz-tooltip train visible');
                 setIsTrainTooltip(true);
                 return;
             }
-            if(props.mapData.hoveredStation){
+            if (props.mapData.hoveredStation) {
                 /**station stuff */
                 setRailvizTooltipClass('railviz-tooltip station visible');
                 setIsTrainTooltip(false);
@@ -86,21 +93,21 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
     useEffect(() => {
         let intervalSimulation = null;
         if (isActive) {
-          intervalSimulation = setInterval(() => {
-            setSeconds(seconds => seconds + 1);
-          }, 1000);
+            intervalSimulation = setInterval(() => {
+                setSeconds(seconds => seconds + 1);
+            }, 1000);
         } else if (!isActive && seconds !== 0) {
-          clearInterval(intervalSimulation);
+            clearInterval(intervalSimulation);
         }
         let intervalReality = null;
         if (!isActive) {
             intervalReality = setInterval(() => {
-              setSeconds(seconds => seconds + 1);
+                setSeconds(seconds => seconds + 1);
             }, 1000);
         } else if (isActive && seconds !== 0) {
             clearInterval(intervalReality);
         }
-        return () => {clearInterval(intervalSimulation); clearInterval(intervalReality)}
+        return () => { clearInterval(intervalSimulation); clearInterval(intervalReality) }
     }, [isActive, seconds]);
 
     useEffect(() => {
@@ -108,21 +115,39 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
         setSeconds(0);
     }, [isActive, searchTime]);
 
-    useEffect(() =>{
-        window.portEvents.sub('showStationDetails', function(data: string){
+    useEffect(() => {
+        window.portEvents.sub('showStationDetails', function (data: string) {
             setStationData(data);
         });
     });
 
     useEffect(() => {
-        if ( isActive ) {
+        if (isActive) {
             if (simulationDate) {
-                props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: {id: stationData, name: ''}, stationTime: moment.unix(simulationDate.unix() + seconds)}]);
+                props.setSubOverlayContent([...props.subOverlayContent, { id: 'stationEvent', station: { id: stationData, name: '' }, stationTime: moment.unix(simulationDate.unix() + seconds) }]);
             }
         } else {
-            props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: {id: stationData, name: ''}, stationTime: moment()}]);
+            props.setSubOverlayContent([...props.subOverlayContent, { id: 'stationEvent', station: { id: stationData, name: '' }, stationTime: moment() }]);
         }
     }, [stationData]);
+    // collects permalink data everytime mapInfo changes
+    useEffect(() => {
+        window.portEvents.sub('mapUpdate', function (data) {
+            setPermalinkData(data);
+        });
+    });
+    // everytime permalink data changes, it sets the permlink, but only if permalink div is clicked, the string loads into the html
+    useEffect(() => {
+        if(permalinkData !== undefined && simulationDate !== null){
+            let simDate = simulationDate.clone().add(seconds, 'seconds');
+            let pos = permalinkData.center;
+            let zoom = permalinkData.zoom;
+            let bearing = permalinkData.bearing;
+            let pitch = permalinkData.pitch;
+    
+            setPermalink(`#/railviz/${pos.lat}/${pos.lng}/${zoom}/${bearing}/${pitch}/${simDate.unix()}`);
+        }
+    }, [permalinkData, permalinkTrigger]);
 
     return (
         <div className='map-container'>
@@ -132,35 +157,37 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
             <div id='map-foreground' className='mapboxgl-map'>
 
             </div>
-            <div className={railvizTooltipClass} style={{ top: (props.mapData ? props.mapData.mouseY + 20 : 0) +'px', left: (props.mapData ? props.mapData.mouseX - 114 : 0) +'px'}}>
+            <div className={railvizTooltipClass} style={{ top: (props.mapData ? props.mapData.mouseY + 20 : 0) + 'px', left: (props.mapData ? props.mapData.mouseX - 114 : 0) + 'px' }}>
                 {props.mapData ?
-                  isTrainTooltip ? 
-                    <RailvizTooltipTrain train={props.mapData.hoveredTrain}/>
-                  :
-                  <RailvizTooltipStation station={props.mapData.hoveredStation}/>
-                : 
-                  <></>}
+                    isTrainTooltip ?
+                        <RailvizTooltipTrain train={props.mapData.hoveredTrain} />
+                        :
+                        <RailvizTooltipStation station={props.mapData.hoveredStation} />
+                    :
+                    <></>}
             </div>
-            <div className="map-bottom-overlay">
-                <div className="sim-time-overlay" onClick={() => setSimTimePickerSelected(!simTimePickerSelected)}>
-                    <div id="railviz-loading-spinner" className="">
-                        <div className="spinner">
-                            <div className="bounce1"></div>
-                            <div className="bounce2"></div>
-                            <div className="bounce3"></div>
+            <div className='map-bottom-overlay'>
+                <div className='sim-time-overlay'>
+                    <div id='railviz-loading-spinner' className=''>
+                        <div className='spinner'>
+                            <div className='bounce1'></div>
+                            <div className='bounce2'></div>
+                            <div className='bounce3'></div>
                         </div>
                     </div>
-                    <div className='permalink' title='Permalink'><a
-                        href='#/railviz/49.89335526028776/8.606607315730798/11/0/0/1603118821'><i
-                            className='icon'>link</i></a></div>
+                    <div className='permalink' title='Permalink' onClick={() => setPermalinkTrigger(!permalinkTrigger)}>
+                        <a href={permalink}>
+                            <i className='icon'>link</i>
+                        </a>
+                    </div>
                     <div className='sim-icon' title='Simulationsmodus aktiv'><i className='icon'>warning</i></div>
-                    <div className='time' id='sim-time-overlay'>
-                        {(isActive) ? 
+                    <div className='time' id='sim-time-overlay' onClick={() => setSimTimePickerSelected(!simTimePickerSelected)}>
+                        {(isActive) ?
                             simulationDate ?
                                 getDisplay(simulationDate, seconds, props.translation.dateFormat)
                                 :
                                 ''
-                            : 
+                            :
                             moment().format(props.translation.dateFormat + ' HH:mm:ss')}
                     </div>
                 </div>
