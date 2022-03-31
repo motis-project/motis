@@ -1,0 +1,25 @@
+include "base/Position.fbs";
+include "base/SearchDir.fbs";
+
+namespace motis.osrm;
+
+// JSON Example:
+// --
+// {
+//   "destination": {
+//     "type": "Module",
+//     "target": "/osrm/one_to_many"
+//   },
+//   "content_type": "OSRMManyToManyRequest",
+//   "content": {
+//     "profile": "car",
+//     "many": [
+//       { "lat": 50.11485439, "lng": 8.65791321 },
+//       { "lat": 49.39444062, "lng": 8.6743927 }
+//     ]
+//   }
+// }
+table OSRMManyToManyRequest {
+  profile: string;
+  many : [motis.Position];
+}

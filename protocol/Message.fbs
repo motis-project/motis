@@ -25,6 +25,8 @@ include "lookup/LookupRiBasisResponse.fbs";
 include "lookup/LookupScheduleInfoResponse.fbs";
 include "lookup/LookupStationEventsRequest.fbs";
 include "lookup/LookupStationEventsResponse.fbs";
+include "osrm/OSRMManyToManyRequest.fbs";
+include "osrm/OSRMManyToManyResponse.fbs";
 include "osrm/OSRMOneToManyRequest.fbs";
 include "osrm/OSRMOneToManyResponse.fbs";
 include "osrm/OSRMSmoothViaRouteRequest.fbs";

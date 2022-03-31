@@ -5,6 +5,7 @@
 #include "osrm/osrm.hpp"
 #include "osrm/route_parameters.hpp"
 #include "osrm/smooth_via_parameters.hpp"
+#include "osrm/table_parameters.hpp"
 #include "util/coordinate.hpp"
 #include "util/json_container.hpp"
 #include "util/json_util.hpp"
@@ -34,6 +35,20 @@ public:
 
   static FloatCoordinate make_coord(double lat, double lng) {
     return FloatCoordinate{FloatLongitude{lng}, FloatLatitude{lat}};
+  }
+
+  msg_ptr many_to_many(OSRMManyToManyRequest const* req) const {
+    TableParameters params;
+
+    Object result;
+    osrm_->Table(params, result);
+
+    message_creator fbb;
+    fbb.create_and_finish(
+        MsgContent_OSRMOneToManyResponse,
+        CreateOSRMOneToManyResponse(fbb, fbb.CreateVectorOfStructs(costs))
+            .Union());
+    return make_msg(fbb);
   }
 
   msg_ptr one_to_many(OSRMOneToManyRequest const* req) const {
