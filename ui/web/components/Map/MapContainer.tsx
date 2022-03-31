@@ -152,10 +152,14 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
                             <div className="bounce3"></div>
                         </div>
                     </div>
-                    <div className='permalink' title='Permalink'><a
+                    <div className='permalink' title={props.translation.misc.permalink.toString()}><a
                         href='#/railviz/49.89335526028776/8.606607315730798/11/0/0/1603118821'><i
                             className='icon'>link</i></a></div>
-                    <div className='sim-icon' title='Simulationsmodus aktiv'><i className='icon'>warning</i></div>
+                    {isActive ? 
+                        <div className='sim-icon' title={props.translation.railViz.simActive.toString()}><i className='icon'>warning</i></div>
+                        :
+                        <></>
+                    }
                     <div className='time' id='sim-time-overlay'>
                         {(isActive) ? 
                             simulationDate ?
@@ -187,7 +191,7 @@ export const MapContainer: React.FC<{'translation': Translations, 'scheduleInfo'
             <div className={simTimePickerSelected ? 'sim-time-picker-container' : 'sim-time-picker-container hide'}>
                 <div className='sim-time-picker-overlay'>
                     <div className='title'>
-                        <input type='checkbox' id='sim-mode-checkbox' name='sim-mode-checkbox' defaultChecked onClick={() => { setisActive(!isActive) }} />
+                        <input type='checkbox' id='sim-mode-checkbox' name='sim-mode-checkbox' onClick={() => { setisActive(!isActive) }} />
                         <label htmlFor='sim-mode-checkbox'>{props.translation.simTime.simMode}</label>
                     </div>
                     <div className={isActive ? 'date' : 'date disabled'}>
