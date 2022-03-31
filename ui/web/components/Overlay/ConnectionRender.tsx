@@ -1,10 +1,12 @@
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 import { Translations } from '../App/Localization';
+import { getFromLocalStorage } from '../App/LocalStorage';
 
-import { TransportInfo, Connection, Transport, WalkInfo, Stop, Trip, TripId } from '../Types/Connection';
+import { TransportInfo, Connection, Transport, WalkInfo, Stop, Trip, TripId, Station } from '../Types/Connection';
+import { Address } from '../Types/SuggestionTypes';
 
-
+// returns the ID of given transport to determine the needed svg
 export const classToId = (transport: Transport) => {
     switch (getClasz(transport)) {
         case 0:
@@ -39,7 +41,7 @@ export const classToId = (transport: Transport) => {
             return '#bus';
     }
 }
-
+// returns the accessibility number of given transport
 const getAccNumber = (transport: Transport) => {
     if (transport.move_type === 'Walk') {
         let walkInfo = transport.move as WalkInfo;
@@ -54,7 +56,7 @@ const getAccNumber = (transport: Transport) => {
         return 'acc-0';
     }
 }
-
+// returns the clasz value of given transport to determine the class of connection
 export const getClasz = (transport: Transport) => {
     switch (transport.move_type) {
         case 'Transport':
@@ -71,14 +73,14 @@ export const getClasz = (transport: Transport) => {
             break;
     }
 }
-
+// calculates all valid parts of a connection, calculated positions, lineEnds and partWidths are stored as GraphData objects
 const calcPartWidths = (transports: Transport[], totalDurationInMill: number, stops: Stop[], totalWidth: number, destinationRadius: number) => {
     let partWidths: GraphData[] = [];
-    //constants from motis-project
+    //---constants from motis-project---
     let baseBarLength = 2;
     let avgCharLength = 7;
     let minWidth = 26;
-
+    //----------------------------------
     let percentage = 0;
     let finalWidth = 0;
     let requiredWidth = 0;
@@ -88,31 +90,33 @@ const calcPartWidths = (transports: Transport[], totalDurationInMill: number, st
     let final = false;
 
     transports.map((t: Transport, index) => {
-        if ((t.move_type === 'Transport') || ((index === 0 || index === transports.length - 1) && (t.move_type === 'Walk'))) {
+        if ((t.move_type === 'Transport') || ((index === 0 || index === transports.length - 1) && (t.move_type === 'Walk'))) { // valid parts are only TransportInfos or WalkInfos at the begining or ending
             let trainNameLength = (t.move_type === 'Transport') ? ((t.move as TransportInfo).name.length * avgCharLength) : 0;
 
             let transportTimeInMill = moment.unix(stops[t.move.range.to].arrival.time).diff(moment.unix(stops[t.move.range.from].departure.time));
             percentage = transportTimeInMill / totalDurationInMill;
 
-            let partWidth = (percentage >= 1) ? totalWidth : ((percentage * totalWidth) + baseBarLength);
+            let partWidth = (percentage >= 1) ? totalWidth : ((percentage * totalWidth) + baseBarLength); // if percentage >= 1, it has to be a single connection, so the width is automatically the totalWidth, if not the partWidth is the proportion of the totalWidth
 
-            finalWidth = Math.max(Math.max(trainNameLength, partWidth), minWidth);
+            finalWidth = Math.max(Math.max(trainNameLength, partWidth), minWidth); // in case the proportion is too short, there might be overlappings of trainName or icons so it has to be determined which is greatest of all three
             requiredWidth += finalWidth;
-            if (finalWidth == minWidth) {
+            if (finalWidth == minWidth) { // if either minWidth or trainNameLength was selected as finalWidth, the partWidth must be not changed further
                 final = true;
                 availableWidth -= minWidth;
+            } else if (finalWidth == trainNameLength) {
+                final = true;
+                availableWidth -= trainNameLength;
             }
             lineEnd = position + finalWidth + (destinationRadius / 2);
-
             partWidths.push({ position: position, partWidth: finalWidth, lineEnd: lineEnd, percentage: percentage, final: final });
             position += finalWidth;
             final = false;
         }
     });
 
-    if (totalWidth < requiredWidth) {
+    if (totalWidth < requiredWidth) { // if the requiredWidth is wider, the parts have to be reduced, except the finals
         return calcFinalPartWidths(partWidths, availableWidth);
-    } else if (totalWidth > requiredWidth) {
+    } else if (totalWidth > requiredWidth) { // if requiredWidth is shorter, than each component has to be widened so it fills the graph
         let remainingWidth = totalWidth - requiredWidth;
         let tmp: GraphData[] = [];
         let newPosition = 0;
@@ -131,7 +135,7 @@ const calcPartWidths = (transports: Transport[], totalDurationInMill: number, st
     }
     return [];
 }
-
+// reduce all parts that are not final, so it wont overflow the bound of transportgraph
 const calcFinalPartWidths = (partWidths: GraphData[], totalWidth: number) => {
     let newPartWidths: GraphData[] = [];
     let partWidthCopy = [...partWidths];
@@ -140,35 +144,35 @@ const calcFinalPartWidths = (partWidths: GraphData[], totalWidth: number) => {
     let newPosition = 0;
     let allFinal = false;
 
-    while (allFinal === false) {
+    while (allFinal === false) { // while all parts are not final, repeat the calculation
         allFinal = true;
         newPartWidths = [];
         newPosition = 0;
         partWidthCopy.map((g: GraphData) => {
-            if (g.final) {
+            if (g.final) { // if partWidth is final, do not modify and save as is
                 newPartWidths.push({ position: newPosition, partWidth: g.partWidth, lineEnd: (newPosition + g.partWidth + 3), percentage: g.percentage, final: true });
                 newPosition += g.partWidth;
                 requiredWidth += g.partWidth;
             } else {
                 let newWidth = g.percentage * availableWidth;
                 let final = false;
-                if (newWidth < 26) {
+                if (newWidth < 26) { // if the new width falls below the minWidth, set it to minWidth and final
                     newWidth = 26;
                     availableWidth -= 26;
                     final = true;
-                    allFinal = false;
+                    allFinal = false; // calculation has to be repeated
                 }
                 newPartWidths.push({ position: newPosition, partWidth: newWidth, lineEnd: (newPosition + newWidth + 3), percentage: g.percentage, final: final });
                 newPosition += newWidth;
                 requiredWidth += newWidth;
             }
         });
-        if(requiredWidth <= 323){
+        if (requiredWidth <= 323) { // in case requiredWidth of newParts is less or equal to totalWidth of transportgraph break the while loop
             break;
         }
         partWidthCopy = newPartWidths;
     }
-    if (requiredWidth < 323) {
+    if (requiredWidth < 323) { // if requiredWidth was reduced too much, widen it again proportionally
         let remainingWidth = 323 - requiredWidth;
         let tmp: GraphData[] = [];
         let newPosition = 0;
@@ -197,6 +201,7 @@ interface PartElem {
     trainNumber?: number
 }
 
+//stores the data needed for the transportgraph
 interface GraphData {
     position: number,
     partWidth: number,
@@ -209,10 +214,13 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
 
     const [toolTipSelected, setToolTipSelected] = useState<number>(-1);
     const [parts, setParts] = useState<PartElem[]>([]);
+    // partsHighlighted stores all trainNumbers of highlighted parts coming from mapData
     const [partsHighlighted, setPartsHighlighted] = useState<number[]>([]);
-
+    const [start, setStart] = useState<Station | Address>(getFromLocalStorage('motis.routing.from_location'));
+    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage('motis.routing.to_location'));
+    // total Duration of this connection in Milliseconds
     let totalDurationInMill = moment.unix(props.connection.stops[props.connection.stops.length - 1].arrival.time).diff(moment.unix(props.connection.stops[0].departure.time));
-    //Variablen die im originalen auch verwendet wurden, teilweise weggelassen
+    // variables from motis-project, not used ones are left out
     let iconSize = 16;
     let circleRadius = 12;
     let basePartSize = circleRadius * 2;
@@ -221,9 +229,10 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
     let textOffset = circleRadius * 2 + 4;
     let textHeight = 12;
     let totalHeight = textOffset + textHeight;
-    let totalWidth = 335; //transportListViewWidth aus Connections.elm
+    let totalWidth = 335; // transportListViewWidth from Connections.elm
     let tooltipWidth = 240;
 
+    // initial calculation for all needed part elements and graphdatas
     useEffect(() => {
         let p: PartElem[] = [];
         let g: GraphData[] = calcPartWidths(props.connection.transports, totalDurationInMill, props.connection.stops, totalWidth - (destinationRadius * 2), destinationRadius);
@@ -262,6 +271,7 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
         setParts(p);
     }, [])
 
+    // everytime mapData changes its value and hovers over a connection line, all trainnumbers in the hovered segment will be stored 
     useEffect(() => {
         let tmp = [];
         if (props.mapData !== undefined && props.mapData.hoveredTripSegments !== null) {
@@ -298,7 +308,7 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
                     <div className='stations'>
                         <div className='departure'>
                             <div className='station'>
-                                {props.connection.stops[partElem.transport.move.range.from].station.name}
+                                {(props.connection.stops[partElem.transport.move.range.from].station.name === 'START') ? (start as Station).name : props.connection.stops[partElem.transport.move.range.from].station.name}
                             </div>
                             <div className='time'>
                                 {moment.unix(props.connection.stops[partElem.transport.move.range.from].departure.time).format('HH:mm')}
@@ -306,7 +316,7 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
                         </div>
                         <div className='arrival'>
                             <div className='station'>
-                                {props.connection.stops[partElem.transport.move.range.to].station.name}
+                                {(props.connection.stops[partElem.transport.move.range.to].station.name === 'END') ? (destination as Station).name : props.connection.stops[partElem.transport.move.range.to].station.name}
                             </div>
                             <div className='time'>
                                 {moment.unix(props.connection.stops[partElem.transport.move.range.to].arrival.time).format('HH:mm')}

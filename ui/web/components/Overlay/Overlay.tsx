@@ -70,19 +70,19 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
     // True: Display connections as List. False: Show detailed Information for one Connection
     const [tripViewHidden, setTripViewHidden] = useState<boolean>(true);
 
-    //
+    // stores the index of selected connection to be rendered in TripView
     const [indexOfConnection, setIndexOfConnection] = useState<number>(0);
-
+    // stores the tripID of selected Train via trainbox
     const [trainSelected, setTrainSelected] = useState<TripId>(undefined);
-
+    // is true if connection line in map is being hovered
     const [connectionHighlighted, setConnectionHighlighted] = useState<boolean>(false);
 
-    const [start, setStart] = useState<Station | Address>(getFromLocalStorage("motis.routing.from_location"));
+    const [start, setStart] = useState<Station | Address>(getFromLocalStorage('motis.routing.from_location'));
 
-    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage("motis.routing.to_location"));
+    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage('motis.routing.to_location'));
 
     const [mapFilter, setMapFilter] = useState<any>(null);
-
+    // stores all connection Ids being highlighted by the segtion hovered in map
     const [selectedConnectionIds, setSelectedConnectionIds] = useState<number[]>([]);
   
     // If true, renders the Loading animation for the connectionList
@@ -117,6 +117,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
         setSearchDate(props.searchDate);
     }, [props.searchDate]);
 
+    // if connection line on map is being hovered, collect all ids of connections to be highlighted
     React.useEffect(() => {
         let connectionIds = [];
         if(props.mapData !== undefined && props.mapData.hoveredTripSegments !== null){
@@ -221,21 +222,21 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                             :
                                             <div id='connections'>
                                                 {props.searchDate && (props.searchDate.unix() < props.scheduleInfo.begin || props.searchDate.unix() > props.scheduleInfo.end) ?
-                                                    <div className="main-error">
-                                                        <div className="">{props.translation.errors.journeyDateNotInSchedule}</div>
-                                                        <div className="schedule-range">{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
+                                                    <div className='main-error'>
+                                                        <div className=''>{props.translation.errors.journeyDateNotInSchedule}</div>
+                                                        <div className='schedule-range'>{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
                                                     </div>
                                                     :
                                                     <div className='no-results'>
                                                         <div>{props.translation.connections.noResults}</div>
-                                                        <div className="schedule-range">{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
+                                                        <div className='schedule-range'>{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
                                                     </div>
                                                 }
                                             </div>
                                         :
                                         <div id='connections'>
                                             <div className='no-results'>
-                                                <div className="schedule-range">{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
+                                                <div className='schedule-range'>{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
                                             </div>
                                         </div>
                                 :
