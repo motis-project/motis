@@ -38,12 +38,13 @@ const stationEventDivGenerator = (eventsToDisplay: Events[], translation: Transl
 
     if(eventsToDisplay.length === 0) {
         return (
-            <div className="no-results">
-                <div className="divider"></div>
-                <div className="msg">{displayDirection === 'DEP' ? translation.station.noDepartures : translation.station.noArrivals}</div>
+            <div className='no-results'>
+                <div className='divider'></div>
+                <div className='msg'>{displayDirection === 'DEP' ? translation.station.noDepartures : translation.station.noArrivals}</div>
             </div>
         )
     }
+    // stationEvents response has events in both directions so it has to be filtered before rendering
     let filteredEvents = eventsToDisplay.filter(x => x.type !== (displayDirection === 'ARR' ? 'DEP' : 'ARR'));
     if (filteredEvents[filteredEvents.length - 1].dummyEvent){
         filteredEvents.pop();
@@ -56,7 +57,7 @@ const stationEventDivGenerator = (eventsToDisplay: Events[], translation: Transl
     for (let index = 0; index < filteredEvents.length; index++) {
         if ( filteredEvents[index].dummyEvent ) {
             divs.push(
-                <div className="date-header divider" key={index}><span>{filteredEvents[index].dummyEvent}</span></div>
+                <div className='date-header divider' key={index}><span>{filteredEvents[index].dummyEvent}</span></div>
             )
         }else {
             divs.push(
@@ -106,7 +107,7 @@ const onClickHandler = (byScheduleTime: boolean, direction: string, eventCount: 
         });
 }
 
-
+// if events of next or previos date are loaded, date header has to be inserted
 const insertDateHeader = (setEventsToDisplay: React.Dispatch<React.SetStateAction<Events[]>>, events: Events[], translation: Translations) => {
     let dummyIndexes = [0];
     let eventsWithDummies = [...events];
@@ -142,6 +143,7 @@ export const StationEvent: React.FC<StationEvent> = (props) => {
 
     const [stationName, setStationName] = useState<string>('');
 
+    // var and constants from motis-project
     let byScheduleTime = true;
     let eventCount = 20;
     let stationID = (props.station as Station).id;
@@ -151,6 +153,7 @@ export const StationEvent: React.FC<StationEvent> = (props) => {
     const [displayDirection, setDisplayDirection] = useState<string>('DEP');
     const [direction, setDirection] = useState<string>('BOTH');
 
+    // everytime a different staion or direction changed, fetch and store events
     useEffect(() => {
         if (stationID !== '') {
             let requestURL = 'https://europe.motis-project.de/?elm=StationEvents';
