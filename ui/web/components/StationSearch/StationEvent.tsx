@@ -4,17 +4,19 @@ import moment from 'moment';
 import equal from 'deep-equal';
 
 import { Events, RailVizStationResponse } from '../Types/RailvizStationEvent';
-import { Station, TripId } from '../Types/Connection';
+import { Connection, Station, TripId } from '../Types/Connection';
 import { Address } from '../Types/SuggestionTypes';
 import { Translations } from '../App/Localization';
 import { classToId } from '../Overlay/ConnectionRender';
 import { Spinner } from '../Overlay/LoadingSpinner';
 import { SubOverlayEvent } from '../Types/EventHistory';
+import { getStationCoords } from '../Overlay/TripView';
 
 
 interface StationEvent {
     'translation': Translations,
     'station': (Station | Address),
+    'displayedConnection': Connection,
     'searchDate': moment.Moment,
     'subOverlayContent': SubOverlayEvent[],
     'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>,
@@ -189,6 +191,7 @@ export const StationEvent: React.FC<StationEvent> = (props) => {
                                             let tmp = [...props.subOverlayContent]; 
                                             tmp.pop(); 
                                             props.setSubOverlayContent(tmp);
+                                            window.portEvents.pub('mapFitBounds', getStationCoords(props.displayedConnection));
                                         }}>
                     <i className='icon'>arrow_back</i></div>
                 <div className='station'>{stationName}</div>

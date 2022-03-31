@@ -51,7 +51,7 @@ const getWalkTime = (latStart: number, lngStart: number, latDest: number, lngDes
 const fetchFoot = async (connection: Connection, toModes: ModeLocalStorage, setWalkTimes: React.Dispatch<React.SetStateAction<number[]>>) => {
     let walks = [];
     const promises = connection.transports.map((transport: Transport) => {
-        if (transport.move_type === 'Walk') {
+        if (transport.move_type === 'Walk' && getClasz(transport) === 'walk') {
             let requestURL = 'https://europe.motis-project.de/?elm=FootRoutingRequest';
             return fetch(requestURL, getWalkTime(
                 connection.stops[transport.move.range.from].station.pos.lat,

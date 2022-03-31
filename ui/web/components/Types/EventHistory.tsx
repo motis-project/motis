@@ -1,7 +1,7 @@
-import moment from "moment";
+import moment from 'moment';
 
-import { Connection, Station, TripId } from "./Connection";
-import { Address } from "./SuggestionTypes";
+import { Connection, Station, TripId } from './Connection';
+import { Address } from './SuggestionTypes';
 
 export interface SubOverlayEvent {
     id: string,

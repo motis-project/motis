@@ -22,10 +22,10 @@ function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: Reac
         }
 
         // Bind the event listener
-        document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener('mousedown', handleClickOutside);
         return () => {
             // Unbind the event listener on clean up
-            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [ref]);
 }
@@ -55,7 +55,7 @@ export const DatePicker: React.FC<{'translation': Translations, 'currentDate': m
 
     const dayButtonNext = React.useRef(null);
 
-    // Selected manipulates the div "gb-input-group" to highlight it if focused
+    // Selected manipulates the div 'gb-input-group' to highlight it if focused
     const [selected, setSelected] = React.useState<string>('');
 
     // Boolean used to decide if the datepicker is visible or not

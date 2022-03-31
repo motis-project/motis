@@ -66,10 +66,10 @@ function useOutsideAlerter(ref: React.MutableRefObject<any>, inputFieldRef: Reac
         }
 
         // Bind the event listener
-        document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener('mousedown', handleClickOutside);
         return () => {
             // Unbind the event listener on clean up
-            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [ref]);
 }
@@ -131,7 +131,7 @@ export const Proposals: React.FC<Proposals> = (props) => {
     useOutsideAlerter(suggestionsRef, props.inputFieldRef, props.setShowSuggestions, props.setSelected);
 
     return (
-        <div className="proposals" ref={suggestionsRef}>
+        <div className='proposals' ref={suggestionsRef}>
             {
                 props.suggestions.slice(0,6).map((station: Station, index: number) => (
                     <StationSuggestion  station={station} 

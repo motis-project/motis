@@ -14,7 +14,7 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
     const [footSelected, setFootSelected] = useState<boolean>(false);
 
     // Current value of the Foot Mode Slider
-    const [footMaxDurationSlider, setFootMaxDurationSlider] = useState<number>(30);
+    const [footMaxDurationSlider, setFootMaxDurationSlider] = useState<number>(15);
 
     // Complete Mode Object which will be returned upon closing the Modepicker Component if not undefined
     const [footMode, setFootMode] = useState<Mode>(undefined);
@@ -27,7 +27,7 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
     const [bikeSelected, setBikeSelected] = useState<boolean>(false);
 
     // Current value of the Bike Mode Slider
-    const [bikeMaxDurationSlider, setBikeMaxDurationSlider] = useState<number>(30);
+    const [bikeMaxDurationSlider, setBikeMaxDurationSlider] = useState<number>(15);
 
     // Complete Mode Object which will be returned upon closing the Modepicker Component if not undefined
     const [bikeMode, setBikeMode] = useState<Mode>(undefined);
@@ -37,7 +37,7 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
     const [carSelected, setCarSelected] = useState<boolean>(false);
 
     // Current value of the Car Mode Slider
-    const [carMaxDurationSlider, setCarMaxDurationSlider] = useState<number>(30);
+    const [carMaxDurationSlider, setCarMaxDurationSlider] = useState<number>(15);
 
     // Complete Mode Object which will be returned upon closing the Modepicker Component if not undefined
     const [carMode, setCarMode] = useState<Mode>(undefined);
@@ -63,7 +63,7 @@ export const Modepicker: React.FC<{'translation': Translations, 'title': String,
             setCarMaxDurationSlider(modes.car.max_duration);
             setUseParking(modes.car.use_parking);
         } else {
-            setLocalStorage(props.localStorageModes, {walk: {enabled: false, search_profile: {profile: 'default', max_duration: 30}}, bike: {enabled: false, max_duration: 30}, car: {enabled: false, max_duration: 30, use_parking: false}});
+            setLocalStorage(props.localStorageModes, {walk: {enabled: false, search_profile: {profile: 'default', max_duration: 15}}, bike: {enabled: false, max_duration: 15}, car: {enabled: false, max_duration: 15, use_parking: false}});
         };
         // set ppr options for the map
         window.portEvents.sub('mapInitFinished', () => {

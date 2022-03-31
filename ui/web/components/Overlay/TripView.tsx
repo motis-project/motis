@@ -13,6 +13,7 @@ import { getFromLocalStorage } from '../App/LocalStorage';
 
 interface TripView {
     'trainSelected': TripId | Connection,
+    'overlayTripView': Connection,
     'translation': Translations,
     'mapFilter': any
     'setTrainSelected': React.Dispatch<React.SetStateAction<TripId>>,
@@ -44,7 +45,7 @@ const getTrainConnection = (lineId: string, stationId: string, targetStationId: 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            destination: { type: "Module", target: "/trip_to_connection" },
+            destination: { type: 'Module', target: '/trip_to_connection' },
             content_type: 'TripId',
             content: { line_id: lineId, station_id: stationId, target_station_id: targetStationId, target_time: targetTime, time: time, train_nr: trainNr }
         })
@@ -102,6 +103,7 @@ export const TripView: React.FC<TripView> = (props) => {
                                                     tmp.pop();
                                                     props.setSubOverlayContent(tmp);
                                                     window.portEvents.pub('mapSetDetailFilter', props.mapFilter);
+                                                    window.portEvents.pub('mapFitBounds', getStationCoords(props.overlayTripView));
                                                 } else {
                                                     props.setTripViewHidden(true);
                                                 }

@@ -35,7 +35,7 @@ export const MapContainer: React.FC<{ 'translation': Translations, 'scheduleInfo
 
     const [systemDate, setSystemDate] = React.useState<moment.Moment>(moment());
 
-    const [isActive, setisActive] = React.useState<boolean>(true);
+    const [isActive, setisActive] = React.useState<boolean>(false);
 
     const [seconds, setSeconds] = React.useState<number>(0);
 
@@ -125,12 +125,14 @@ export const MapContainer: React.FC<{ 'translation': Translations, 'scheduleInfo
     });
 
     useEffect(() => {
-        if (isActive) {
-            if (simulationDate) {
-                props.setSubOverlayContent([...props.subOverlayContent, { id: 'stationEvent', station: { id: stationData, name: '' }, stationTime: moment.unix(simulationDate.unix() + seconds) }]);
+        if (stationData) {
+            if ( isActive ) {
+                if (simulationDate) {
+                    props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: {id: stationData, name: ''}, stationTime: moment.unix(simulationDate.unix() + seconds)}]);
+                }
+            } else {
+                props.setSubOverlayContent([...props.subOverlayContent, {id: 'stationEvent', station: {id: stationData, name: ''}, stationTime: moment()}]);
             }
-        } else {
-            props.setSubOverlayContent([...props.subOverlayContent, { id: 'stationEvent', station: { id: stationData, name: '' }, stationTime: moment() }]);
         }
     }, [stationData]);
     // collects permalink data everytime mapInfo changes
@@ -178,12 +180,16 @@ export const MapContainer: React.FC<{ 'translation': Translations, 'scheduleInfo
                             <div className='bounce3'></div>
                         </div>
                     </div>
-                    <div className='permalink' title='Permalink' onClick={() => setPermalinkTrigger(!permalinkTrigger)}>
+                    <div className='permalink' title={props.translation.misc.permalink.toString()} onClick={() => setPermalinkTrigger(!permalinkTrigger)}>
                         <a href={permalink}>
                             <i className='icon'>link</i>
                         </a>
                     </div>
-                    <div className='sim-icon' title='Simulationsmodus aktiv'><i className='icon'>warning</i></div>
+                    {isActive ? 
+                        <div className='sim-icon' title={props.translation.railViz.simActive.toString()}><i className='icon'>warning</i></div>
+                        :
+                        <></>
+                    }
                     <div className='time' id='sim-time-overlay' onClick={() => setSimTimePickerSelected(!simTimePickerSelected)}>
                         {(isActive) ?
                             simulationDate ?
@@ -215,7 +221,7 @@ export const MapContainer: React.FC<{ 'translation': Translations, 'scheduleInfo
             <div className={simTimePickerSelected ? 'sim-time-picker-container' : 'sim-time-picker-container hide'}>
                 <div className='sim-time-picker-overlay'>
                     <div className='title'>
-                        <input type='checkbox' id='sim-mode-checkbox' name='sim-mode-checkbox' defaultChecked onClick={() => { setisActive(!isActive) }} />
+                        <input type='checkbox' id='sim-mode-checkbox' name='sim-mode-checkbox' onClick={() => { setisActive(!isActive) }} />
                         <label htmlFor='sim-mode-checkbox'>{props.translation.simTime.simMode}</label>
                     </div>
                     <div className={isActive ? 'date' : 'date disabled'}>

@@ -3,8 +3,8 @@ import React from 'react';
 import moment from 'moment';
 
 import { Translations } from '../App/Localization';
-import { Station, TripId } from '../Types/Connection';
-import { TripView } from './TripView';
+import { Connection, Station, TripId } from '../Types/Connection';
+import { getStationCoords, TripView } from './TripView';
 import { Interval } from '../Types/RoutingTypes';
 import { StationEvent } from '../StationSearch/StationEvent';
 import { TripSearchHeader } from './TripSearchHeader';
@@ -16,6 +16,7 @@ import { SubOverlayEvent } from '../Types/EventHistory';
 interface SubOverlay {
     'translation': Translations,
     'trainSelected': TripId,
+    'displayedConnection': Connection,
     'scheduleInfo': Interval,
     'searchDate': moment.Moment,
     'subOverlayContent': SubOverlayEvent[], 
@@ -59,10 +60,11 @@ export const SubOverlay: React.FC<SubOverlay> = (props) => {
                                 </div>
                             </div>,
                         'stationEvent':
-                            <StationEvent translation={props.translation} station={props.subOverlayContent.at(-1).station} searchDate={props.subOverlayContent.at(-1).stationTime} setTrainSelected={props.setTrainSelected} subOverlayContent={props.subOverlayContent} setSubOverlayContent={props.setSubOverlayContent}/> ,
+                            <StationEvent translation={props.translation} station={props.subOverlayContent.at(-1).station} searchDate={props.subOverlayContent.at(-1).stationTime} setTrainSelected={props.setTrainSelected} subOverlayContent={props.subOverlayContent} setSubOverlayContent={props.setSubOverlayContent} displayedConnection={props.displayedConnection}/> ,
                         'tripView':
                             <TripView   trainSelected={props.subOverlayContent.at(-1).train}
                                         setTrainSelected={props.setTrainSelected}
+                                        overlayTripView={props.displayedConnection}
                                         setTripViewHidden={null}
                                         translation={props.translation}
                                         subOverlayContent={props.subOverlayContent} 
@@ -77,6 +79,7 @@ export const SubOverlay: React.FC<SubOverlay> = (props) => {
                                                     props.setSubOverlayContent([]);
                                                     props.setSubOverlayToggle(false);
                                                     window.portEvents.pub('mapSetDetailFilter', props.mapFilter);
+                                                    window.portEvents.pub('mapFitBounds', getStationCoords(props.displayedConnection));
                                                     }}>
                 <i className='icon'>close</i>
             </div>

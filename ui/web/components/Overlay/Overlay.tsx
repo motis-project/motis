@@ -142,117 +142,122 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
         <div className={overlayHidden ? 'overlay-container' : 'overlay-container hidden'}>
             <div className='overlay'>
                 <div id='overlay-content'>
-                    {tripViewHidden ?
-                        <>
-                            <Search translation={props.translation} 
-                                    scheduleInfo={props.scheduleInfo}
-                                    start={start}
-                                    destination={destination}
-                                    extendForwardFlag={extendForwardFlag}
-                                    extendBackwardFlag={extendBackwardFlag}
-                                    searchDate={searchDate}
-                                    setStart={setStart}
-                                    setDestination={setDestination}
-                                    setConnections={setConnections} 
-                                    setExtendForwardFlag={setExtendForwardFlag}
-                                    setExtendBackwardFlag={setExtendBackwardFlag}
-                                    setSearchDate={setSearchDate}
-                                    setLoading={setLoading}/>
-                            {props.scheduleInfo ? // As long as the scheduleInfo Fetch hasnt returned a schedule Info, we display nothing
-                                loading ? // If any action needs a loading animation, display Spinner
-                                    <Spinner />
-                                    :
-                                    connections ? // If connections is not null anymore, display connections
-                                        connections.length !== 0 ?  //Only display connections if any are presesnt
-                                            <div id='connections'>
-                                                <div className='connections'>
-                                                <div className='extend-search-interval search-before' onClick={() => setExtendBackwardFlag(true)}>
-                                                    {extendBackwardFlag ?
-                                                        <Spinner />
-                                                        :
-                                                        <a>{props.translation.connections.extendBefore}</a>
-                                                    }
-                                                </div>
-                                                <div className='connection-list'>
-                                                    {connections.map((connectionElem: Connection, index) => (
-                                                        connectionElem.dummyDay ?
-                                                        <div className='date-header divider' key={index}><span>{connectionElem.dummyDay}</span></div>
-                                                        :
-                                                        <div className={ `connection ${connectionElem.new} ${(connectionHighlighted) ? `${(selectedConnectionIds.includes(index)) ? 'highlighted' : 'faded'}` : ''}`}
-                                                            key={index}
-                                                            onClick={() => { setTripViewHidden(false);
-                                                                             setIndexOfConnection(index);
-                                                                             setMapFilter(getMapFilter(connectionElem));
-                                                                             window.portEvents.pub('mapSetDetailFilter', getMapFilter(connectionElem));
-                                                                             window.portEvents.pub('mapFitBounds', getStationCoords(connectionElem));}}
-                                                            onMouseEnter={() => { let ids = []; ids.push(connectionElem.id); window.portEvents.pub('mapHighlightConnections', ids)}}
-                                                            onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', [])}}>
-                                                            <div className='pure-g'>
-                                                                <div className='pure-u-4-24 connection-times'>
-                                                                    <div className='connection-departure'>
-                                                                        {moment.unix(connectionElem.stops[0].departure.time).format('HH:mm')}
-                                                                        <Delay event={connectionElem.stops[0].departure}/>
-                                                                    </div>
-                                                                    <div className='connection-arrival'>
-                                                                        {moment.unix(connectionElem.stops[connectionElem.stops.length - 1].arrival.time).format('HH:mm')}
-                                                                        <Delay event={connectionElem.stops[connectionElem.stops.length - 1].arrival}/>
-                                                                    </div>
-                                                                </div>
-                                                                <div className='pure-u-4-24 connection-duration'>
-                                                                    {duration(connectionElem.stops[0].departure.time, connectionElem.stops[connectionElem.stops.length - 1].arrival.time)}
-                                                                </div>
-                                                                <div className='pure-u-16-24 connection-trains'>
-                                                                    <div className={(connectionHighlighted ? 'transport-graph highlighting' : 'transport-graph')}>
-                                                                        <ConnectionRender   translation={props.translation}
-                                                                                            connection={connectionElem}
-                                                                                            connectionHighlighted={connectionHighlighted}
-                                                                                            mapData={props.mapData}
-                                                                                            parentIndex={index}/>
-                                                                    </div>
-                                                                </div>
+                    <Search translation={props.translation} 
+                            scheduleInfo={props.scheduleInfo}
+                            start={start}
+                            destination={destination}
+                            connections={connections}
+                            extendForwardFlag={extendForwardFlag}
+                            extendBackwardFlag={extendBackwardFlag}
+                            tripViewHidden={tripViewHidden}
+                            searchDate={searchDate}
+                            setStart={setStart}
+                            setDestination={setDestination}
+                            setConnections={setConnections} 
+                            setExtendForwardFlag={setExtendForwardFlag}
+                            setExtendBackwardFlag={setExtendBackwardFlag}
+                            setSearchDate={setSearchDate}
+                            setLoading={setLoading}/>
+                    {props.scheduleInfo ? // As long as the scheduleInfo Fetch hasnt returned a schedule Info, we display nothing
+                        loading ? // If any action needs a loading animation, display Spinner
+                            <Spinner />
+                            :
+                            connections ? // If connections is not null anymore, display connections
+                                connections.length !== 0 ?  //Only display connections if any are presesnt
+                                    <div id={`connections${tripViewHidden ? '' : '-hidden'}`}>
+                                        <div className='connections'>
+                                        <div className='extend-search-interval search-before' onClick={() => setExtendBackwardFlag(true)}>
+                                            {extendBackwardFlag ?
+                                                <Spinner />
+                                                :
+                                                <a>{props.translation.connections.extendBefore}</a>
+                                            }
+                                        </div>
+                                        <div className='connection-list'>
+                                            {connections.map((connectionElem: Connection, index) => (
+                                                connectionElem.dummyDay ?
+                                                <div className='date-header divider' key={'divider'+connectionElem.dummyDay}><span>{connectionElem.dummyDay}</span></div>
+                                                :
+                                                <div className={ `connection${connectionElem.new}${(connectionHighlighted) ? `${(selectedConnectionIds.includes(index)) ? ' highlighted' : ' faded'}` : ''}`}
+                                                    key={'connection'+connectionElem.id}
+                                                    onClick={() => { setTripViewHidden(false);
+                                                                        setIndexOfConnection(index);
+                                                                        setConnections(connections.map((c: Connection) => {
+                                                                            c.new = '';
+                                                                            return c;
+                                                                        }));
+                                                                        setMapFilter(getMapFilter(connectionElem));
+                                                                        window.portEvents.pub('mapSetDetailFilter', getMapFilter(connectionElem));
+                                                                        window.portEvents.pub('mapFitBounds', getStationCoords(connectionElem));}}
+                                                    onMouseEnter={() => { let ids = []; ids.push(connectionElem.id); window.portEvents.pub('mapHighlightConnections', ids)}}
+                                                    onMouseLeave={() => { window.portEvents.pub('mapHighlightConnections', [])}}>
+                                                    <div className='pure-g'>
+                                                        <div className='pure-u-4-24 connection-times'>
+                                                            <div className='connection-departure'>
+                                                                {moment.unix(connectionElem.stops[0].departure.time).format('HH:mm')}
+                                                                <Delay event={connectionElem.stops[0].departure}/>
+                                                            </div>
+                                                            <div className='connection-arrival'>
+                                                                {moment.unix(connectionElem.stops[connectionElem.stops.length - 1].arrival.time).format('HH:mm')}
+                                                                <Delay event={connectionElem.stops[connectionElem.stops.length - 1].arrival}/>
                                                             </div>
                                                         </div>
-                                                    ))}
-                                                    <div className='divider footer'></div>
-                                                    <div className='extend-search-interval search-after' onClick={() => setExtendForwardFlag(true)}>
-                                                        {extendForwardFlag ?
-                                                            <Spinner />
-                                                            :
-                                                            <a>{props.translation.connections.extendAfter}</a>
-                                                        }
+                                                        <div className='pure-u-4-24 connection-duration'>
+                                                            {duration(connectionElem.stops[0].departure.time, connectionElem.stops[connectionElem.stops.length - 1].arrival.time)}
+                                                        </div>
+                                                        <div className='pure-u-16-24 connection-trains'>
+                                                            <div className={(connectionHighlighted ? 'transport-graph highlighting' : 'transport-graph')}>
+                                                                <ConnectionRender   translation={props.translation}
+                                                                                    connection={connectionElem}
+                                                                                    connectionHighlighted={connectionHighlighted}
+                                                                                    mapData={props.mapData}
+                                                                                    parentIndex={connectionElem.id}/>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                </div>
-                                            </div>
-                                            :
-                                            <div id='connections'>
-                                                {props.searchDate && (props.searchDate.unix() < props.scheduleInfo.begin || props.searchDate.unix() > props.scheduleInfo.end) ?
-                                                    <div className='main-error'>
-                                                        <div className=''>{props.translation.errors.journeyDateNotInSchedule}</div>
-                                                        <div className='schedule-range'>{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
-                                                    </div>
+                                            ))}
+                                            <div className='divider footer'></div>
+                                            <div className='extend-search-interval search-after' onClick={() => setExtendForwardFlag(true)}>
+                                                {extendForwardFlag ?
+                                                    <Spinner />
                                                     :
-                                                    <div className='no-results'>
-                                                        <div>{props.translation.connections.noResults}</div>
-                                                        <div className='schedule-range'>{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
-                                                    </div>
+                                                    <a>{props.translation.connections.extendAfter}</a>
                                                 }
                                             </div>
-                                        :
-                                        <div id='connections'>
-                                            <div className='no-results'>
+                                        </div>
+                                    </div>
+                                    :
+                                    <div id='connections'>
+                                        {props.searchDate && (props.searchDate.unix() < props.scheduleInfo.begin || props.searchDate.unix() > props.scheduleInfo.end) ?
+                                            <div className='main-error'>
+                                                <div className=''>{props.translation.errors.journeyDateNotInSchedule}</div>
                                                 <div className='schedule-range'>{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
                                             </div>
-                                        </div>
+                                            :
+                                            <div className='no-results'>
+                                                <div>{props.translation.connections.noResults}</div>
+                                                <div className='schedule-range'>{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
+                                            </div>
+                                        }
+                                    </div>
                                 :
-                                <div className='no-results'>
-                                    {''}
+                                <div id='connections'>
+                                    <div className='no-results'>
+                                        <div className='schedule-range'>{props.translation.connections.scheduleRange(props.scheduleInfo.begin, props.scheduleInfo.end - 3600 * 24)}</div>
+                                    </div>
                                 </div>
-                            }
-                        </> 
+                        :
+                        <div className='no-results'>
+                            {''}
+                        </div>
+                    }
+                    {tripViewHidden ?
+                        <></>
                         :
                         <TripView   translation={props.translation}
                                     trainSelected={connections[indexOfConnection]}
+                                    overlayTripView={null} // Only needed when calling TripView from SubOverlay
                                     setTrainSelected={setTrainSelected}
                                     setTripViewHidden={setTripViewHidden}
                                     mapFilter={props.mapData}
@@ -264,6 +269,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                             scheduleInfo={props.scheduleInfo}
                             searchDate={props.searchDate}
                             trainSelected={trainSelected}
+                            displayedConnection={connections ? connections[indexOfConnection] : null}
                             mapFilter={mapFilter}
                             setTrainSelected={setTrainSelected}
                             subOverlayContent={props.subOverlayContent}
