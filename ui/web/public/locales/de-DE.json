@@ -38,8 +38,10 @@
   "noDepartures": "Keine Abfahrten im gewählten Zeitraum",
   "noArrivals": "Keine Ankünfte im gewählten Zeitraum",
   "noInTimetable": "Zeitraum nicht im Fahrplan",
-  "information": "Auskunft",
-  "from": "von",
-  "till": "bis",
-  "avaliable": "möglich"
+  "information": "Auskunft von {0} bis {1} möglich",
+  "noTrains": "Keine Züge",
+  "byDelay": "Nach Verspätung",
+  "byCategory": "Nach Kategorie",
+  "routeFromHere": "Routen von hier",
+  "routeHere": "Routen hierher"
 }

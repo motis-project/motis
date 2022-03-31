@@ -10,8 +10,7 @@
     @decreaseClick="changeTime(-1)"
     @increaseClick="changeTime(1)"
     :showAutocomplete="false"
-    :key="inputFieldKey"
-    @blur="inputFieldKey++"
+    @blur="setTimeFromString(prevString, true)"
     @keydown="onKeyDown"
     @mouseup="onMouseUp"></InputField>
 </template>
@@ -31,15 +30,14 @@ export default defineComponent({
   data() {
     return {
       time: {} as Date,
-      inputFieldKey: 0,
       prevString: ":",
+      timeToDisplay: ""
     };
   },
-  computed: {
-    timeToDisplay: function (): string {
-      let result = this.$ds.getTimeString(this.time.valueOf());
-      return result;
-    },
+  watch: {
+    time() {
+      this.timeToDisplay = this.$ds.getTimeString(this.time.valueOf());
+    }
   },
   created() {
     let currentTime = this.$ds.date;
@@ -58,22 +56,22 @@ export default defineComponent({
       this.$emit("timeChanged", this.time);
     },
     setTime(event: Event) {
-      let inputField = event.target as HTMLInputElement;
-      let value = inputField.value
+      const inputField = event.target as HTMLInputElement;
+      let value = inputField.value;
+      if (value === ""){
+        value = ":";
+        this.setTimeToDisplay(value, inputField, 0);
+        this.prevString = value;
+        return;
+      }
       if(value === this.prevString) {
         return;
       }
-      let t = this.$ds.parseTime(value);
-
-      if(t.valueOf()) {
-        this.time = t;
-        this.$emit("timeChanged", this.time);
-      }
-      else {
+      if(!this.setTimeFromString(value)) {
         let arr = value.split(":");
         if(arr.length !== 2) {
           value = this.prevString;
-          inputField.value = this.prevString;
+          this.setTimeToDisplay(value);
         }
         else {
           let arrInt = arr.map<(number | undefined)>(s => Number.parseInt(s));
@@ -82,19 +80,19 @@ export default defineComponent({
             || (arr[1].length !== 0 && !arr[1].match(reg)) || arrInt[1] === undefined || arrInt[1] < 0 || arrInt[1] >= 60
             || arr[0].length > 2 || arr[1].length > 2) {
             value = this.prevString;
-            inputField.value = this.prevString;
+            this.setTimeToDisplay(this.prevString);
           }
           arr = value.split(":");
           arrInt = arr.map<(number | undefined)>(s => Number.parseInt(s));
           if(arrInt[0] !== undefined && arrInt[0] > 2 && arrInt[0] < 10){
             arr[0] = "0" + arrInt[0];
             value = arr[0] + ":" + arr[1];
-            inputField.value = value;
+            this.setTimeToDisplay(value);
           }
           if(arrInt[1] !== undefined && arrInt[1] > 5 && arrInt[1] < 10){
             arr[1] = "0" + arrInt[1];
             value = arr[0] + ":" + arr[1];
-            inputField.value = value;
+            this.setTimeToDisplay(value);
           }
         }
 
@@ -117,29 +115,26 @@ export default defineComponent({
         inputField.setSelectionRange(3, 3);
       }
       if(event.key ==="ArrowRight"){
-        if(Number.parseInt(arr[0]) >= 0 && Number.parseInt(arr[0]) <=2 && inputField.selectionStart === 1){
+        if(Number.parseInt(arr[0]) >= 0 && Number.parseInt(arr[0]) <=2 && inputField.selectionStart === 1 && arr[0].length < 2){
           arr[0] = "0" + arr[0];
           value = arr[0] + ":" + arr[1];
-          inputField.value = value;
+          this.setTimeToDisplay(value);
         }
         if(arr[0] === "" && inputField.selectionStart === 0){
           value = arrLastValidTime[0] + ":" + arr[1];
-          inputField.value = value;
-          inputField.setSelectionRange(2, 2);
+          this.setTimeToDisplay(value, inputField, 2);
         }
       }
       if(event.key ==="ArrowLeft" && Number.parseInt(arr[1]) >= 0 && Number.parseInt(arr[1]) <=5
-        && inputField.selectionStart === 3){
+        && inputField.selectionStart === 3 && arr[1].length < 2){
         arr[1] = "0" + arr[1];
         value = arr[0] + ":" + arr[1];
-        inputField.value = value;
-        inputField.setSelectionRange(3, 3);
+        this.setTimeToDisplay(value, inputField, 3);
       }
-      if((event.key === "4" || event.key === "5" || event.key === "6" || event.key === "7" || event.key === "8" || event.key === "9")
-        && arr[0] === "2" && inputField.selectionStart === 1){
+      if(Number.parseInt(event.key) > 3 && arr[0] === "2" && inputField.selectionStart === 1){
         arr[0] = "02";
         value = arr[0] + ":" + arr[1];
-        inputField.value = value;
+        this.setTimeToDisplay(value);
       }
       this.prevString = value;
     },
@@ -151,27 +146,43 @@ export default defineComponent({
         let lastValidTime = this.$ds.getTimeString(this.time.valueOf());
         let arrLastValidTime = lastValidTime.split(":");
         let position = inputField.selectionStart !== null ? inputField.selectionStart : 0;
-        if(Number.parseInt(arr[0]) >= 0 && Number.parseInt(arr[0]) <=2 && inputField.selectionStart !== 1 && inputField.selectionStart !== 0){
-          if(arr[0].length === 1){
-            arr[0] = "0" + arr[0];
-            value = arr[0] + ":" + arr[1];
-            inputField.value = value;
-            inputField.setSelectionRange(position + 1, position + 1);
-          }
+        if(Number.parseInt(arr[0]) >= 0 && Number.parseInt(arr[0]) <=2 && inputField.selectionStart !== 1 && inputField.selectionStart !== 0 && arr[0].length === 1){
+          arr[0] = "0" + arr[0];
+          value = arr[0] + ":" + arr[1];
+          this.setTimeToDisplay(value, inputField, position + 1);
         }
         if(arr[0] === "" && inputField.selectionStart !== 0){
           value = arrLastValidTime[0] + ":" + arr[1];
-          inputField.value = value;
-          inputField.setSelectionRange(position + 2, position + 2);
+          this.setTimeToDisplay(value, inputField, position + 2);
         }
         if(Number.parseInt(arr[1]) >= 0 && Number.parseInt(arr[1]) <=5 && inputField.selectionStart !== 3
           && inputField.selectionStart !== 4 && arr[1].length === 1) {
           arr[1] = "0" + arr[1];
           value = arr[0] + ":" + arr[1];
-          inputField.value = value;
-          inputField.setSelectionRange(position, position);
+          this.setTimeToDisplay(value, inputField, position);
         }
       }
+    },
+    setTimeToDisplay(value: string, inputField?: HTMLInputElement, cursorPosition?: number) {
+      this.timeToDisplay = "";
+      this.$nextTick(() => {
+        this.timeToDisplay = value;
+        this.setTimeFromString(value);
+        if(inputField && cursorPosition !== undefined) {
+          this.$nextTick(() => inputField.setSelectionRange(cursorPosition, cursorPosition));
+        }
+      });
+    },
+    setTimeFromString(value: string, setTimeStringOthervise?: boolean): boolean {
+      let t = this.$ds.parseTime(value);
+      if(t.valueOf()) {
+        this.time = t;
+        this.$emit("timeChanged", this.time);
+      }
+      else if(setTimeStringOthervise) {
+        this.setTimeToDisplay(this.$ds.getTimeString(this.time.valueOf()));
+      }
+      return !!t.valueOf();
     }
   },
 });

@@ -11,41 +11,39 @@
         <input
           :inputmode="isTimeCalendarField ? 'numeric' : ''"
           class="gb-input"
-          tabindex="1"
+          :tabindex="tabIndex"
           @input="onInput"
           v-model="inputValue"
           @focus="$emit('focus', $event), onInput, isFocused = true"
-          @blur="$emit('blur', $event), showStationAddress = false, isFocused = false"
+          @blur="onBlur"
           @keydown="$emit('keydown', $event)"
           @mouseup="$emit('mouseup', $event)" />
         <div class="gb-input-widget" v-if="showArrows">
           <div class="day-buttons">
-            <div @mouseup="$emit('decreaseClick')" @mousedown="$emit('decreaseMouseDown')">
-              <a
-                class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"><i class="icon">chevron_left</i></a>
-            </div>
-            <div @mouseup="$emit('increaseClick')" @mousedown="$emit('increaseMouseDown')">
-              <a
-                class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select"><i class="icon">chevron_right</i></a>
-            </div>
+            <button
+              @mouseup="$emit('decreaseClick')"
+              @mousedown="$emit('decreaseMouseDown')"
+              class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select">
+              <i class="icon">chevron_left</i>
+            </button>
+            <button
+              @mouseup="$emit('increaseClick')"
+              @mousedown="$emit('increaseMouseDown')"
+              class="gb-button gb-button-small gb-button-circle gb-button-outline gb-button-PRIMARY_COLOR disable-select">
+              <i class="icon">chevron_right</i>
+            </button>
           </div>
         </div>
       </div>
     </div>
     <StationAddressAutocomplete
       :input="inputValue"
-      v-show="showStationAddress"
+      :showList="showStationAddress"
       v-if="showAutocomplete"
       @elementClicked="onElementClicked">
     </StationAddressAutocomplete>
   </div>
 </template>
-
-
-<!-- How to use this component:
-    <InputField :showLabel=true labelName="Start" iconType="place"/>
-    to not display the labelName set :showLabel to false
--->
 
 
 <script lang="ts">
@@ -66,7 +64,12 @@ export default defineComponent({
     initInputText: String,
     showArrows: Boolean,
     showAutocomplete: Boolean,
-    isTimeCalendarField: Boolean
+    isTimeCalendarField: Boolean,
+    tabIndex: {
+      type: Number,
+      requiered: false,
+      default: 0
+    }
   },
   emits: [
     "inputChanged",
@@ -86,15 +89,18 @@ export default defineComponent({
     return {
       showStationAddress: false,
       inputValue: "",
-      isFocused: false
+      isFocused: false,
+      savedInputValue: "" as (string | null)
     }
   },
   watch: {
     initInputText(newValue: string) {
       this.inputValue = newValue
     },
-    inputValue(newValue: string) {
-      this.$emit('inputChanged', newValue)
+    isFocused() {
+      if(this.isFocused) {
+        this.setShowStationAddress();
+      }
     }
   },
   created() {
@@ -102,19 +108,33 @@ export default defineComponent({
   },
   methods: {
     onInput(event: Event){
+      this.setShowStationAddress()
+      this.$emit('inputChanged', (event.target as HTMLInputElement).value)
+      this.$emit("inputChangedNative", event);
+    },
+    setShowStationAddress() {
       if(this.inputValue.length > 2){
         this.showStationAddress = true
       }
       else{
         this.showStationAddress = false
       }
-      this.$emit("inputChangedNative", event);
     },
     onElementClicked(element: AddressGuess | StationGuess) {
       this.inputValue = element.name;
+      this.savedInputValue = element.name;
       this.showStationAddress = false;
       this.$emit('autocompleteElementClicked', element);
     },
+    onBlur(event: Event) {
+      if(this.savedInputValue) {
+        this.inputValue = this.savedInputValue;
+        this.savedInputValue = null;
+      }
+      this.$emit('blur', event);
+      this.showStationAddress = false;
+      this.isFocused = false
+    }
   },
 });
 </script>

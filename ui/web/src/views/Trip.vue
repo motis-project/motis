@@ -1,11 +1,11 @@
 <template>
-  <LoadingBar v-if="!isContentLoaded"></LoadingBar>
+  <LoadingBar :isButton="false" v-if="!isContentLoaded"></LoadingBar>
   <div v-else :class="['connection-details', isTripView ? 'trip-view' : '']">
     <div class="connection-info">
       <div class="header">
-        <div class="back" @click="$router.back()">
+        <button class="back" @click="$router.back()">
           <i class="icon">arrow_back</i>
-        </div>
+        </button>
         <div class="details">
           <div class="date">
             {{ date }}
@@ -132,6 +132,37 @@ export default defineComponent({
           additionalMoveForNext =  this.getReadableDuration(this.content.stops[t.move.range.from].departure.time, this.content.stops[t.move.range.to].arrival.time, this.$ts);
         }
       }
+      const interval = setInterval(() => {
+        if(this.$mapService.initialized) {
+          if(this.index === undefined) {
+            this.$mapService.mapSetDetailFilter({
+              interchangeStations: this.content.stops.map(s => s.station),
+              trains: this.content.trips.map(t => ({
+                trip: t.id,
+                sections: this.content.stops.slice(t.range.from, t.range.to).map((st, stIndex) => ({
+                  departureStation: st.station,
+                  arrivalStation: this.content.stops[t.range.from + stIndex + 1].station,
+                  scheduledDepartureTime: st.departure.schedule_time,
+                  scheduledArrivalTime: this.content.stops[t.range.from + stIndex + 1].arrival.schedule_time
+                }))
+              })),
+              walks: []
+            });
+          }
+          else {
+            this.$mapService.mapSetDetailFilter({
+              interchangeStations: this.$store.state.mapConnections[this.index].stations,
+              trains: this.$store.state.mapConnections[this.index].trains,
+              walks: this.$store.state.mapConnections[this.index].walks
+            });
+          }
+          this.$mapService.mapFitBounds({
+            mapId: "map",
+            coords: this.content.stops.map(s => [s.station.pos.lat, s.station.pos.lng])
+          });
+          clearInterval(interval);
+        }
+      })
     },
     trip() {
       this.getData();
@@ -142,6 +173,9 @@ export default defineComponent({
   },
   created() {
     this.getData();
+  },
+  unmounted() {
+    this.$mapService.mapSetDetailFilter(null);
   },
   methods: {
     getTimeString(timeInSeconds: number) {

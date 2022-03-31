@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
   <link rel="icon" href="<%= BASE_URL %>favicon.ico">
   <title>
     <%= htmlWebpackPlugin.options.title %>
@@ -17,6 +17,29 @@
         Please enable it to continue.</strong>
   </noscript>
   <div id="app"></div>
+
+  <script src="externalScripts/main.js"></script>
+  <script src="externalScripts/mapbox-gl.js"></script>
+  <script src="externalScripts/gl-matrix-min.js"></script>
+  <script src="externalScripts/deep-equal.js"></script>
+  <script src="externalScripts/polyline.js"></script>
+  <script src="externalScripts/railviz/webgl.js"></script>
+  <script src="externalScripts/railviz/trains.js"></script>
+  <script src="externalScripts/railviz/model.js"></script>
+  <script src="externalScripts/railviz/render.js"></script>
+  <script src="externalScripts/railviz/textures.js"></script>
+  <script src="externalScripts/railviz/api.js"></script>
+  <script src="externalScripts/railviz/markers.js"></script>
+  <script src="externalScripts/railviz/connectionmgr.js"></script>
+  <script src="externalScripts/railviz/path_base.js"></script>
+  <script src="externalScripts/railviz/path_connections.js"></script>
+  <script src="externalScripts/railviz/path_detail.js"></script>
+  <script src="externalScripts/railviz/path_extra.js"></script>
+  <script src="externalScripts/railviz/style.js"></script>
+  <script src="externalScripts/railviz/main.js"></script>
+  <script src="externalScripts/map_style.js"></script>
+  <script src="externalScripts/map.js"></script>
+
   <!-- built files will be auto injected -->
   <svg style="display:none">
     <symbol id="train" viewBox="0 0 24 24">

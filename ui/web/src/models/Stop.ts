@@ -1,12 +1,8 @@
 /* eslint-disable camelcase */
-import Position from "./SmallTypes/Position";
+import StationGuess from "./StationGuess";
 
 export default interface Stop {
-  station: {
-    id: string,
-    name: string,
-    pos: Position
-  },
+  station: StationGuess,
   arrival: ScheduleEntry,
   departure: ScheduleEntry,
   exit: boolean,

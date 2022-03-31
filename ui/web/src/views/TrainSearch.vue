@@ -17,7 +17,7 @@
         </div>
       </div>
     </div>
-    <LoadingBar v-if="contentLoadingState === LoadingState.Loading"></LoadingBar>
+    <LoadingBar :isButton="false" v-if="contentLoadingState === LoadingState.Loading"></LoadingBar>
     <div class="trips" v-else-if="contentLoadingState === LoadingState.Loaded">
       <ul style="list-style-type: none; margin-left: -40px" v-show="areGuessesDisplayed">
         <li class="trip" v-for="trip in trainGuesses" :key="trip">
@@ -56,7 +56,7 @@ import TimeInputField from "../components/TimeInputField.vue";
 import InputField from "../components/InputField.vue";
 import Trips from "../models/TrainGuess";
 import TransportTypeBox from "../components/TransportTypeBox.vue";
-import LoadingBar, {LoadingState} from "../components/LoadingBar.vue"
+import LoadingBar, { LoadingState } from "../components/LoadingBar.vue";
 
 export default defineComponent({
   name: "TrainSearch",
@@ -94,7 +94,7 @@ export default defineComponent({
     sendRequest(){
       this.contentLoadingState = LoadingState.Loading;
       if(this.currentTrainInput !== -1){
-        this.$postService.getTrainGuessResponse(this.currentDate.valueOf() / 1000, this.currentTrainInput).then((resp) => {
+        this.$postService.getTrainGuessResponse(Math.floor(this.currentDate.valueOf() / 1000), this.currentTrainInput).then((resp) => {
           this.trainGuesses = resp.trips;
           this.contentLoadingState = LoadingState.Loaded;
         });

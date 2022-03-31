@@ -181,7 +181,7 @@ class RailVizCustomLayer {
       pitch: pitch,
     };
 
-    app.ports.mapUpdate.send(mapInfo);
+    mapService.mapUpdate(mapInfo);
     RailViz.Main.mapUpdate(mapInfo);
 
     localStorageSet(
@@ -197,8 +197,8 @@ class RailVizCustomLayer {
   }
 }
 
-function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
-  app.ports.mapInit.subscribe(function (id) {
+function initPorts(apiEndpoint, tilesEndpoint, initialPermalink) {
+  mapService.mapInit = (function (id) {
     let settings = localStorage.getItem("motis.map");
     if (settings) {
       settings = JSON.parse(settings);
@@ -276,7 +276,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
 
     map_fg.on("contextmenu", (e) => {
       console.log("Context menu:", e);
-      app.ports.mapShowContextMenu.send({
+      mapService.mapShowContextMenu({
         mouseX: Math.round(e.point.x),
         mouseY: Math.round(e.point.y),
         lat: Math.round(e.lngLat.lat * 1e6) * 1e-6,
@@ -286,44 +286,36 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
 
     const padding = { top: 96, right: 32, bottom: 96, left: 640 };
 
-    app.ports.mapFlyTo.subscribe(function (opt) {
-      var map = window.elmMaps[opt.mapId];
+    mapService.mapFlyTo = (function (opt) {
+      try {
+        var map = window.elmMaps[opt.mapId];
 
-      const camOptions = opt.animate
-        ? { maxZoom: 12, padding }
-        : { maxZoom: 12 };
+        const camOptions = opt.animate
+          ? { maxZoom: 12, padding }
+          : { maxZoom: 12 };
 
-      const options = map.cameraForBounds(
-        new mapboxgl.LngLatBounds([opt.lng, opt.lat], [opt.lng, opt.lat]),
-        camOptions
-      );
-      if (opt.zoom) {
-        options.zoom = opt.zoom;
+        const options = map.cameraForBounds(
+          new mapboxgl.LngLatBounds([opt.lng, opt.lat], [opt.lng, opt.lat]),
+          camOptions
+        );
+        if (opt.zoom) {
+          options.zoom = opt.zoom;
+        }
+        options.pitch = opt.pitch ? opt.pitch : 0;
+        options.bearing = opt.bearing ? opt.bearing : 0;
+
+        if (opt.animate) {
+          map.flyTo(options);
+        } else {
+          map.jumpTo(options);
+        }
       }
-      options.pitch = opt.pitch ? opt.pitch : 0;
-      options.bearing = opt.bearing ? opt.bearing : 0;
-
-      if (opt.animate) {
-        map.flyTo(options);
-      } else {
-        map.jumpTo(options);
-      }
+      catch(e) {}
     });
 
-    app.ports.mapFitBounds.subscribe(function (opt) {
+    mapService.mapFitBounds = (function (opt) {
       const bounds = opt.coords.reduce(
         (b, c) => b.extend([c[1], c[0]]),
-        new mapboxgl.LngLatBounds()
-      );
-      if (!bounds.isEmpty()) {
-        window.elmMaps[opt.mapId].fitBounds(bounds, { padding, pitch: 0 });
-      }
-    });
-
-    app.ports.mapSetConnections.subscribe(function (opt) {
-      const bounds = opt.connections.reduce(
-        (b, conn) =>
-          conn.stations.reduce((sb, s) => sb.extend([s.pos.lng, s.pos.lat]), b),
         new mapboxgl.LngLatBounds()
       );
       if (!bounds.isEmpty()) {
@@ -334,23 +326,21 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
     RailViz.Main.init(apiEndpoint, app.ports);
 
     RailViz.Markers.init(map_fg);
-    app.ports.mapSetMarkers.subscribe(RailViz.Markers.setMarkers);
+    mapService.mapSetMarkers = (RailViz.Markers.setMarkers);
 
-    app.ports.mapSetDetailFilter.subscribe(RailViz.Main.setDetailFilter);
-    app.ports.mapUpdateWalks.subscribe(RailViz.Main.setDetailWalks);
+    mapService.mapSetDetailFilter = (RailViz.Main.setDetailFilter);
+    mapService.mapUpdateWalks = (RailViz.Main.setDetailWalks);
 
-    app.ports.mapSetConnections.subscribe(RailViz.Main.setConnections);
-    app.ports.mapHighlightConnections.subscribe(
-      RailViz.Main.highlightConnections
-    );
+    mapService.mapSetConnections = (RailViz.Main.setConnections);
+    mapService.mapHighlightConnections = (RailViz.Main.highlightConnections)
 
-    app.ports.setTimeOffset.subscribe(RailViz.Main.setTimeOffset);
-    app.ports.setPPRSearchOptions.subscribe(RailViz.Main.setPPRSearchOptions);
+    mapService.setTimeOffset = (RailViz.Main.setTimeOffset);
+    mapService.setPPRSearchOptions = (RailViz.Main.setPPRSearchOptions);
 
-    app.ports.mapUseTrainClassColors.subscribe(
-      RailViz.Trains.setUseCategoryColor
-    );
-    app.ports.mapShowTrains.subscribe(RailViz.Main.showTrains);
-    app.ports.mapSetLocale.subscribe(RailViz.Markers.setLocale);
+    mapService.mapUseTrainClassColors = (RailViz.Trains.setUseCategoryColor);
+    mapService.mapShowTrains = (RailViz.Main.showTrains);
+    mapService.mapSetLocale = (RailViz.Markers.setLocale);
+    mapService.initialized = true
   });
+  mapService.created = true
 }

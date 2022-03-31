@@ -31,4 +31,5 @@ export default defineComponent({
   @import "../style/transport-graph.css";
   @import "../style/gutters.css";
   @import "../style/connections.css";
+  @import "../style/mode-picker-editor.css";
 </style>

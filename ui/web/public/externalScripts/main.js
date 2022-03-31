@@ -2,7 +2,8 @@
 
 (function bootstrap() {
   let params = getQueryParameters();
-  let apiEndpoint = getApiEndpoint(params);
+  // let apiEndpoint = getApiEndpoint(params);
+  let apiEndpoint = "https://europe.motis-project.de/";
 
   const mapConfigUrl = apiEndpoint + "railviz/map_config";
   let mapConfigPromise = fetch(mapConfigUrl)
@@ -48,28 +49,13 @@
     let langParam = params["lang"] || null;
     let language = langParam || "de";
 
-    window.app = Elm.Main.embed(document.getElementById("app-container"), {
-      apiEndpoint: apiEndpoint,
-      currentTime: Date.now(),
-      simulationTime: simulationTime,
-      language: language,
-      motisParam: params["motis"] || null,
-      timeParam: timeParam,
-      langParam: langParam,
-      fromLocation: localStorage.getItem("motis.routing.from_location"),
-      toLocation: localStorage.getItem("motis.routing.to_location"),
-      fromModes: localStorage.getItem("motis.routing.from_modes"),
-      toModes: localStorage.getItem("motis.routing.to_modes"),
-      intermodalPprMode: null,
-    });
-
     window.elmMaps = {};
 
-    initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink);
-    handleDrop(document.getElementById("app-container"));
-    app.ports.localStorageSet.subscribe(function (kv) {
-      localStorageSet(kv[0], kv[1]);
-    });
+    initPorts(apiEndpoint, tilesEndpoint, initialPermalink);
+    // handleDrop(document.getElementById("app-container"));
+    // app.ports.localStorageSet.subscribe(function (kv) {
+    //   localStorageSet(kv[0], kv[1]);
+    // });
   });
 })();
 
@@ -91,7 +77,7 @@ function handleDrop(element) {
           for (var j = 0; j < files.length; j++) {
             data[j] = [files[j].name, contents[j]];
           }
-          app.ports.setRoutingResponses.send(data);
+          // app.ports.setRoutingResponses.send(data);
         }
       };
     }

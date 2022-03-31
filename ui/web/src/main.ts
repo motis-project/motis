@@ -1,5 +1,5 @@
 import { createApp } from 'vue'
-import App from './App.vue'
+import AppComponent from './App.vue'
 import router from './router'
 import DateTimeService from './services/DateTimeService';
 import MOTISPostService from './services/MOTISPostService';
@@ -7,25 +7,72 @@ import TranslationService from './services/TranslationService';
 import store from './store';
 import Interval from './models/SmallTypes/Interval';
 import InitialScheduleInfoResponseContent from './models/InitRequestResponseContent';
+import MOTISMapServicePlugin, { MotisMapService } from './services/MOTISMapService';
+import { Router } from 'vue-router';
 
-const app = createApp(App)
+const app = createApp(AppComponent)
 app.use(store);
 app.use(TranslationService, "de-DE");
 app.use(MOTISPostService);
+app.use(MOTISMapServicePlugin);
 
-let intervalFromServer: Interval = {begin: 0, end: 0};
+let intervalFromServer: Interval = { begin: 0, end: 0 };
 app.config.globalProperties.$postService.getInitialRequestScheduleInfo().then((resp: InitialScheduleInfoResponseContent) => {
-    intervalFromServer = {begin: resp.begin, end: resp.end};
+  intervalFromServer = { begin: resp.begin, end: resp.end };
 });
+let routerObject = {} as Router;
+let interval = setInterval(() => {
+  if (TranslationService.service !== null && TranslationService.service.isLoaded && intervalFromServer.begin > 0) {
+    routerObject = router(TranslationService.service)
+    app.use(routerObject);
+    const initDate = new Date(intervalFromServer.begin * 1000);
+    const now = new Date();
+    const initialDateTime = new Date(initDate.getFullYear(), initDate.getMonth(), initDate.getDate(), now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()).valueOf();
+    app.use(DateTimeService, initialDateTime, intervalFromServer);
+    app.mount('#app');
+    clearInterval(interval);
+    interval = -1;
+  }
+}, 10);
 
-const interval = setInterval(() => {
-    if (TranslationService.service !== null && TranslationService.service.isLoaded && intervalFromServer.begin > 0) {
-        app.use(router(TranslationService.service));
-        const initDate = new Date(intervalFromServer.begin * 1000);
-        const now = new Date();
-        const initialDateTime = new Date(initDate.getFullYear(), initDate.getMonth(), initDate.getDate(), now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()).valueOf();
-        app.use(DateTimeService, initialDateTime, intervalFromServer);
-        app.mount('#app');
-        clearInterval(interval);
-    }
+declare global {
+  interface Window {
+    mapService: MotisMapService
+  }
+}
+window.mapService = MOTISMapServicePlugin.service;
+
+const intervalMap = setInterval(() => {
+  if (MOTISMapServicePlugin.service.created && interval === -1) {
+    MOTISMapServicePlugin.service.mapInit("map");
+    const intervalMapInit = setInterval(() => {
+      if(MOTISMapServicePlugin.service.initialized && TranslationService.service !== null) {
+        MOTISMapServicePlugin.service.mapSetLocale(TranslationService.service.t)
+        TranslationService.service.updateMapLocale = MOTISMapServicePlugin.service.mapSetLocale
+
+        MOTISMapServicePlugin.service.setTimeOffset(DateTimeService.service.dateTime - Date.now().valueOf());
+        DateTimeService.service.mapSetTimeOffset = MOTISMapServicePlugin.service.setTimeOffset;
+        MOTISMapServicePlugin.service.mapShowTrains(true);
+
+        MOTISMapServicePlugin.service.showTripDetails = (trip) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const t = trip as { [key: string]: any };
+          routerObject.push({
+            name: "Trip",
+            params: t,
+          });
+        }
+        MOTISMapServicePlugin.service.showStationDetails = (stationID) => {
+          routerObject.push({
+            name: "StationTimetable",
+            params: {
+              id: stationID
+            },
+          });
+        }
+        clearInterval(intervalMapInit)
+      }
+    })
+    clearInterval(intervalMap);
+  }
 }, 10);

@@ -6,5 +6,5 @@ export default interface CustomMovement {
   mumo_id: number,
   price: number,
   accessibility: number,
-  mumo_type: "car" | "bike" | "foot"
+  mumo_type: "car" | "bike" | "foot" | ""
 }

@@ -1,10 +1,9 @@
 <template>
-  <LoadingBar v-if="!isContentLoaded"></LoadingBar>
-  <div class="station-events" v-else>
+  <div class="station-events">
     <div class="header">
-      <div id="" class="back">
-        <i class="icon" @click="$router.go(-1)">arrow_back</i>
-      </div>
+      <button class="back" @click="$router.go(-1)">
+        <i class="icon">arrow_back</i>
+      </button>
       <div class="station">
         {{ station.name }}
       </div>
@@ -31,23 +30,14 @@
       </div>
     </div>
     <div class="events">
-      <div class="">
-        <div
-          :class="[
-            'extend-search-interval search-before',
-            isUpperEnd ? 'disabled' : '',
-          ]"
-          v-if="!isEmptyTimetable">
-          <a @click="changeTimeGap('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }} </a>
-        </div>
-        <div
-          :class="[
-            'extend-search-interval search-before',
-            isUpperEnd ? 'error' : '',
-          ]"
-          v-else>
-          <a @click="errorScreen('EARLIER')" v-show="!isUpperEnd"> {{ $t.earlier }} </a>
-          <div class="error">
+      <LoadingBar :isButton="false" v-if="loadingStates.content !== LoadingState.Loaded"></LoadingBar>
+      <div v-else class="">
+        <div :class="['extend-search-interval search-before', isUpperEnd ? (!isEmptyTimetable ? 'disabled' : 'error') : '']">
+          <button v-if="loadingStates.upperButton === LoadingState.Loaded" @click="!isEmptyTimetable ? changeTimeGap(TimeGap.Earlier) : errorScreen(TimeGap.Earlier)" v-show="!isUpperEnd">
+            {{ $t.earlier }}
+          </button>
+          <LoadingBar :isButton="true" v-else></LoadingBar>
+          <div class="error" v-if="isEmptyTimetable">
             <div class v-show="isUpperEnd">
               {{ $t.noInTimetable }}
             </div>
@@ -55,11 +45,8 @@
         </div>
         <div class="no-results" v-if="isEmptyTimetable">
           <div class="date-header divider"></div>
-          <div class="msg" v-if="isDeparture">
-            {{ $t.noDepartures }}
-          </div>
-          <div class="msg" v-else>
-            {{ $t.noArrivals }}
+          <div class="msg">
+            {{ isDeparture ? $t.noDepartures : $t.noArrivals }}
           </div>
           <div class="divider footer"></div>
         </div>
@@ -100,22 +87,12 @@
           </div>
           <div class="divider footer"></div>
         </div>
-        <div
-          :class="[
-            'extend-search-interval search-after',
-            isBottomEnd ? 'disabled' : '',
-          ]"
-          v-if="!isEmptyTimetable">
-          <a @click="changeTimeGap('LATER')" v-show="!isBottomEnd"> {{ $t.later }} </a>
-        </div>
-        <div
-          :class="[
-            'extend-search-interval search-after',
-            isBottomEnd ? 'error' : '',
-          ]"
-          v-else>
-          <a @click="errorScreen('LATER')" v-show="!isBottomEnd"> {{ $t.later }} </a>
-          <div class="error">
+        <div :class="['extend-search-interval search-after', isBottomEnd ? (!isEmptyTimetable ? 'disabled' : 'error') : '']">
+          <button v-if="loadingStates.lowerButton === LoadingState.Loaded" @click="!isEmptyTimetable ? changeTimeGap(TimeGap.Later) : errorScreen(TimeGap.Later)" v-show="!isBottomEnd">
+            {{ $t.later }}
+          </button>
+          <LoadingBar :isButton="true" v-else></LoadingBar>
+          <div class="error" v-if="isEmptyTimetable">
             <div class v-show="isBottomEnd">
               {{ $t.noInTimetable }}
             </div>
@@ -132,7 +109,7 @@ import { defineComponent, PropType } from "vue";
 import Event from "../models/DepartureTimetable";
 import TransportTypeBox from "../components/TransportTypeBox.vue";
 import { TripInfoId } from "../models/TrainGuess";
-import LoadingBar from "../components/LoadingBar.vue";
+import LoadingBar, { LoadingState } from "../components/LoadingBar.vue"
 
 export default defineComponent({
   name: "StationTimetable",
@@ -156,13 +133,18 @@ export default defineComponent({
       station: {} as StationGuess,
       filteredEvents: [] as Event[],
       date: 0 as number,
-      direction: "BOTH",
       isDeparture: true,
       isUpperEnd: false,
       isBottomEnd: false,
-      isContentLoaded: false,
       separators: [] as number[],
       isEmptyTimetable: false,
+      loadingStates: {
+        content: LoadingState.NothingToShow,
+        upperButton: LoadingState.Loaded,
+        lowerButton: LoadingState.Loaded
+      } as LoadingStates,
+      LoadingState: LoadingState,
+      TimeGap: TimeGap
     };
   },
   watch: {
@@ -171,7 +153,7 @@ export default defineComponent({
       this.isUpperEnd = false;
       this.isBottomEnd = false;
       this.isEmptyTimetable = false;
-      this.isContentLoaded = false;
+      this.loadingStates.content = LoadingState.Loading;
       this.isDeparture = true;
       this.date = this.$ds.dateTimeInSeconds;
       this.getInfo(newValue, this.isDeparture);
@@ -207,15 +189,14 @@ export default defineComponent({
       this.getSeparator(this.filteredEvents);
       this.isDeparture = isDeparture;
     },
-    changeTimeGap(change: string) {
-      this.direction = change;
-      if (change === "EARLIER") {
+    changeTimeGap(change: TimeGap) {
+      if (change === TimeGap.Earlier) {
         this.date = this.departures[0].event.time;
       }
-      else if (change === "LATER") {
+      else if (change === TimeGap.Later) {
         this.date = this.departures[this.departures.length - 1].event.time;
       }
-      this.getInfo(this.stationGuess, this.isDeparture, change === "EARLIER");
+      this.getInfo(this.stationGuess, this.isDeparture, change === TimeGap.Earlier);
     },
     getSeparator(events: Event[]) {
       this.separators = [];
@@ -231,11 +212,11 @@ export default defineComponent({
         }
       }
     },
-    errorScreen(button: string) {
-      if (button === "EARLIER") {
+    errorScreen(button: TimeGap) {
+      if (button === TimeGap.Earlier) {
         this.isUpperEnd = true;
       }
-      else if (button === "LATER") {
+      else if (button === TimeGap.Later) {
         this.isBottomEnd = true;
       }
     },
@@ -244,9 +225,20 @@ export default defineComponent({
       isDeparture: boolean,
       clickEarlier: boolean | null = null
     ) {
+      if (clickEarlier === true) {
+        this.loadingStates.upperButton = LoadingState.Loading;
+      }
+      else if (clickEarlier === false) {
+        this.loadingStates.lowerButton = LoadingState.Loading;
+      }
       this.$postService
-        .getDeparturesResponse(newValue.id, true, this.direction, 20, this.date)
+        .getDeparturesResponse(newValue.id, true, clickEarlier === null ? "BOTH" : (clickEarlier ? "EARLIER" : "LATER"), 20, this.date)
         .then((data) => {
+          this.$mapService.mapFlyTo( {
+            mapId: "map",
+            lng: data.station.pos.lng,
+            lat: data.station.pos.lat,
+            animate: true } );
           if (clickEarlier === null) {
             this.departures = data.events;
           }
@@ -272,13 +264,28 @@ export default defineComponent({
           }
           this.station = data.station;
           this.getDepartures(isDeparture);
-          this.isContentLoaded = true;
+          this.loadingStates.content = LoadingState.Loaded;
+          this.loadingStates.upperButton = LoadingState.Loaded;
+          this.loadingStates.lowerButton = LoadingState.Loaded;
         })
         .catch(() => {
           this.isEmptyTimetable = true;
-          this.isContentLoaded = true;
+          this.loadingStates.content = LoadingState.Loaded;
+          this.loadingStates.upperButton = LoadingState.Loaded;
+          this.loadingStates.lowerButton = LoadingState.Loaded;
         })
     },
   },
 });
+
+interface LoadingStates {
+  content: LoadingState,
+  upperButton: LoadingState,
+  lowerButton: LoadingState
+}
+
+enum TimeGap {
+  Earlier = 1,
+  Later = 2
+}
 </script>

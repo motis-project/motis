@@ -201,6 +201,7 @@ RailViz.ConnectionManager = (function () {
         break;
     }
 
+    w.walk.polyline = w.polyline.coordinates
     showConnections();
   }
 

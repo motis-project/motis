@@ -3,15 +3,11 @@ import { mount, VueWrapper } from '@vue/test-utils'
 import flushPromises from 'flush-promises';
 import Calendar from '../../src/components/Calendar.vue'
 import { DateTimeService } from '../../src/services/DateTimeService'
-import { getRandomInt, prepareGlobals } from "./TestHelpers"
+import { getRandomInt } from "./TestHelpers"
 
 describe('Test Calendar.vue', () => {
   let wrapper: VueWrapper;
   let dateService: DateTimeService;
-
-  beforeAll(done => {
-    prepareGlobals(done);
-  });
 
   beforeEach(() => {
     wrapper = mount(Calendar)
@@ -90,7 +86,6 @@ describe('Test Calendar.vue', () => {
   });
 
   it('Valid input in field', async () => {
-    expect(wrapper.emitted('dateChanged')).toHaveLength(1);
     const inputField = wrapper.getComponent({ name: "InputField" }).get("input");
     const date = dateService.date;
     const newDate: Date = new Date(getRandomInt(2000, 2020), getRandomInt(0, 11), getRandomInt(1, 28),
@@ -98,19 +93,18 @@ describe('Test Calendar.vue', () => {
     inputField.setValue(dateService.getDateString(newDate.valueOf()));
     await flushPromises();
     const dateChanged = wrapper.emitted('dateChanged');
-    expect(dateChanged).toHaveLength(2);
-    expect(dateChanged !== undefined ? (dateChanged[1] as Date[])[0].valueOf() : null).toBe(newDate.valueOf())
+    expect(dateChanged).toHaveLength(1);
+    expect(dateChanged !== undefined ? (dateChanged[0] as Date[])[0].valueOf() : null).toBe(newDate.valueOf())
   });
 
   it('Invalid input in field', () => {
-    expect(wrapper.emitted('dateChanged')).toHaveLength(1);
     const inputField = wrapper.getComponent({ name: "InputField" }).get("input");
     const date = dateService.date;
     const newDate: Date = new Date(getRandomInt(2000, 2020), getRandomInt(0, 11), getRandomInt(1, 28),
       date.getHours(), date.getMinutes(), date.getSeconds(), date.getMilliseconds());
     inputField.setValue(dateService.getDateString(newDate.valueOf()) + "invalid string");
     const dateChanged = wrapper.emitted('dateChanged');
-    expect(dateChanged).toHaveLength(1);
+    expect(dateChanged).toBeUndefined();
     inputField.trigger("blur");
   });
 })

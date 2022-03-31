@@ -10,6 +10,7 @@
   transition: all .3s;
   position: relative;
   padding: 0 10px;
+  margin: 0 2px;
 }
 
 .gb-button:after {

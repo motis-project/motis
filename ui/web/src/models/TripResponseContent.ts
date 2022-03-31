@@ -6,6 +6,7 @@ import Problem from "./SmallTypes/Problem";
 import Stop from "./Stop";
 import Transport from "./Transport";
 import Trip from "./Trip";
+import Range from "./SmallTypes/Range";
 
 export default interface TripResponseContent {
   stops: Stop[],

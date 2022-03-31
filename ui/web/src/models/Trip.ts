@@ -1,8 +1,6 @@
 /* eslint-disable camelcase */
-import Range from "./SmallTypes/Range";
 
 export default interface Trip {
-  range: Range
   station_id: string,
   train_nr: number,
   time: number,
