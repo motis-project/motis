@@ -59,12 +59,14 @@ export const MapContainer: React.FC<{ 'translation': Translations, 'scheduleInfo
     const [railvizTooltipClass, setRailvizTooltipClass] = React.useState<string>('railviz-tooltip hidden');
     const [isTrainTooltip, setIsTrainTooltip] = React.useState<boolean>(null);
 
+    //if the map initialization is finished the language is set
     useEffect(() => {
         window.portEvents.sub('mapInitFinished', function () {
             window.portEvents.pub('mapSetLocale', props.translation.search);
         });
     });
 
+    //displays the tooltips of trains or stations 
     useEffect(() => {
         if (props.mapData) {
             if (props.mapData.hoveredTrain) {
@@ -115,8 +117,9 @@ export const MapContainer: React.FC<{ 'translation': Translations, 'scheduleInfo
         setSeconds(0);
     }, [isActive, searchTime]);
 
-    useEffect(() => {
-        window.portEvents.sub('showStationDetails', function (data: string) {
+    //if a station on the map is clicked
+    useEffect(() =>{
+        window.portEvents.sub('showStationDetails', function(data: string) {
             setStationData(data);
         });
     });

@@ -17,7 +17,7 @@ import { SubOverlayEvent } from '../Types/EventHistory';
 
 declare global {
     interface Window {
-        portEvents: any;
+        portEvents: any; //used for communication with map libaries
     }
 }
 
@@ -51,6 +51,7 @@ export const App: React.FC = () => {
     // Current hovered map Data
     const [mapData, setMapData] = React.useState<any>();
 
+    //if the mouse is over the map the data for the hovered elements is set
     React.useEffect(() => {
         window.portEvents.sub('mapSetTooltip', function(data){
             setMapData(data);

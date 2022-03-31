@@ -14,6 +14,7 @@ export const RailvizContextMenu: React.FC<{'translation': Translations}> = (prop
     const [contextMenuHidden, setContextMenuHidden] = useState<Boolean>(true);
 
     useEffect(() => {
+        //setting the position data when right clicking on map
         window.portEvents.sub('mapShowContextMenu', function(data){
             setX(data.mouseX);
             setY(data.mouseY);
@@ -21,6 +22,7 @@ export const RailvizContextMenu: React.FC<{'translation': Translations}> = (prop
             setLng(data.lng);
             setContextMenuHidden(false);
         });
+        //closeing the context menu
         window.portEvents.sub('mapCloseContextMenu', function(data){
             setContextMenuHidden(true);
         })

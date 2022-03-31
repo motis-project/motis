@@ -29,6 +29,7 @@ window.portEvents = {
     }
 };
 
+// ports that the map useses
 const ownPorts = {
     'setRoutingResponses': {
         send: function(){}
