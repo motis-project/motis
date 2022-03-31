@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
-import moment from "moment";
+import React, { useEffect, useState } from 'react';
+import moment from 'moment';
 
-import { EventInfo } from "../Types/Connection";
+import { EventInfo } from '../Types/Connection';
 
 export const Delay: React.FC<{'event': EventInfo}> = (props) => {
     
