@@ -20,7 +20,7 @@ export interface FootRouting {
     destination: { type: string, target: string },
     id: number
 }
-
+// given the reponse, this interface structure stores the corresponding routes arrays
 interface Routess {
     routes: Routes[]
 }
@@ -114,14 +114,6 @@ export interface WalkInfo {
     accessibility: number,
     mumo_type: string
 }
-
-
-interface Attribute {
-    range: Range,
-    code: string,
-    text: string
-}
-
 
 interface Range {
     from: number,
