@@ -23,7 +23,8 @@ interface SearchTypes {
     'start': Station | Address,
     'destination': Station | Address, 
     'extendForwardFlag': boolean, 
-    'extendBackwardFlag': boolean, 
+    'extendBackwardFlag': boolean,
+    'tripViewHidden': boolean,
     'searchDate': moment.Moment, 
     'setStart': React.Dispatch<React.SetStateAction<Station | Address>>, 
     'setDestination': React.Dispatch<React.SetStateAction<Station | Address>>, 
@@ -85,7 +86,7 @@ const getRoutingOptions = (startModes: Mode[], start: Station | Address, searchT
     return {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({  destination: {type: "Module", target: "/intermodal"}, 
+        body: JSON.stringify({  destination: {type: 'Module', target: '/intermodal'}, 
                                 content_type: 'IntermodalRoutingRequest',
                                 content: {start_type: getStartType(start), start_modes: startModes, start: getStart(start, min_connection_count, interval, extend_interval_later, extend_interval_earlier) , search_type: searchType, search_dir: searchDirection, destination_type: getDestinationType(destination), destination_modes: destinationModes, destination: parseStationOrAddress(destination) } })
     };
@@ -225,7 +226,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
     // SearchTime stores the currently displayed Time
     const [searchTime, setSearchTime] = useState<string>(moment().format('HH:mm'));
     
-    // searchTimeSelected manipulates the div "gb-input-group" to highlight it if focused
+    // searchTimeSelected manipulates the div 'gb-input-group' to highlight it if focused
     const [searchTimeSelected, setSearchTimeSelected] = useState<string>('');
 
     // Ref tracking if the searchTime Inputfield is focused
@@ -258,10 +259,10 @@ export const Search: React.FC<SearchTypes> = (props) => {
                     sendConnectionsToOverlay(props.setConnections, res.content.connections, setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
                     setSearchBackward({begin: res.content.interval_begin - 3600 * 2, end: res.content.interval_begin - 1});
                     setSearchForward({begin: res.content.interval_end + 1, end: res.content.interval_end + 3600 * 2});
-                    window.portEvents.pub('mapSetMarkers', {'startPosition': getFromLocalStorage("motis.routing.from_location").pos,
-                                                            'startName': getFromLocalStorage("motis.routing.from_location").name,
-                                                            'destinationPosition': getFromLocalStorage("motis.routing.to_location").pos,
-                                                            'destinationName': getFromLocalStorage("motis.routing.to_location").name});
+                    window.portEvents.pub('mapSetMarkers', {'startPosition': getFromLocalStorage('motis.routing.from_location').pos,
+                                                            'startName': getFromLocalStorage('motis.routing.from_location').name,
+                                                            'destinationPosition': getFromLocalStorage('motis.routing.to_location').pos,
+                                                            'destinationName': getFromLocalStorage('motis.routing.to_location').name});
                     
                     window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections(res.content.connections), 'lowestId': 0});
                 })
@@ -299,7 +300,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
                 .then(res => res.json())
                 .then((res: IntermodalRoutingResponse) => {
                     // All newly fetched Connections have a different classname than the rest
-                    res.content.connections.map((c: Connection) => c.new = 'new');
+                    res.content.connections.map((c: Connection) => c.new = ' new');
                     allConnectionsWithoutDummies.map((c: Connection) => c.new = '');
                     // Earlier Button was clicked
                     if(props.extendBackwardFlag){
@@ -323,10 +324,10 @@ export const Search: React.FC<SearchTypes> = (props) => {
                         }
                         props.setExtendForwardFlag(false);
                     }
-                    window.portEvents.pub('mapSetMarkers', {'startPosition': getFromLocalStorage("motis.routing.from_location").pos,
-                                                            'startName': getFromLocalStorage("motis.routing.from_location").name,
-                                                            'destinationPosition': getFromLocalStorage("motis.routing.to_location").pos,
-                                                            'destinationName': getFromLocalStorage("motis.routing.to_location").name});
+                    window.portEvents.pub('mapSetMarkers', {'startPosition': getFromLocalStorage('motis.routing.from_location').pos,
+                                                            'startName': getFromLocalStorage('motis.routing.from_location').name,
+                                                            'destinationPosition': getFromLocalStorage('motis.routing.to_location').pos,
+                                                            'destinationName': getFromLocalStorage('motis.routing.to_location').name});
                     
                 })
                 .catch(_error => {});
@@ -351,7 +352,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
 
 
     return (
-        <div id='search'>
+        <div id={`search${props.tripViewHidden ? '' : '-hidden'}`}>
             <div className='pure-g gutters'>
                 <div className='pure-u-1 pure-u-sm-12-24 from-location'>
                     <div>

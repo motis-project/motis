@@ -66,7 +66,7 @@ export const SearchInputField: React.FC<SearchInputField> = (props) => {
     
     const inputFieldRef = React.useRef(null);
     
-    // Selected manipulates the div "gb-input-group" to highlight it if focused
+    // Selected manipulates the div 'gb-input-group' to highlight it if focused
     const [selected, setSelected] = useState<string>('');
 
     // Name stores current input in the Input Field

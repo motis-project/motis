@@ -44,7 +44,7 @@ const getTrainConnection = (lineId: string, stationId: string, targetStationId: 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            destination: { type: "Module", target: "/trip_to_connection" },
+            destination: { type: 'Module', target: '/trip_to_connection' },
             content_type: 'TripId',
             content: { line_id: lineId, station_id: stationId, target_station_id: targetStationId, target_time: targetTime, time: time, train_nr: trainNr }
         })
@@ -129,9 +129,9 @@ export const TripView: React.FC<TripView> = (props) => {
                         {isTripId(props.trainSelected) ? 
                             <div className='actions' />
                             :
-                            <div className="actions">
-                                <i className="icon">save</i>
-                                <i className="icon">share</i>
+                            <div className='actions'>
+                                <i className='icon'>save</i>
+                                <i className='icon'>share</i>
                             </div>
                         }  
                     </div>
