@@ -1,38 +1,16 @@
-# Install Elm 0.18
+# Web Frontend Rewrite
 
-https://github.com/elm-lang/elm-platform/releases
+## Install dependencies
 
-# Build
+Navigate into the `ui/web` directory and install the needed dependencies using
 
-    elm-make src/Main.elm --output elm.js
+    yarn
 
-## Run
+## Start the development Server
 
-    elm-make src/Main.elm --output elm.js && static
-
-
-# Automatic recompilation
-
-## Using [devd](https://github.com/cortesi/devd) + [modd](https://github.com/cortesi/modd) (includes live reload)
-
-    modd
-
-## Using elm-live (includes live reload)
-
-    elm-live src/Main.elm --output elm.js
-
-## Using inotify-tools
-
-    while inotifywait -r -e close_write src; do elm-make src/Main.elm --output elm.js; done
-
-## Using fswatch
-
-    fswatch -0 -or src | xargs -0 -n 1 -I {} elm-make src/Main.elm --output elm.js
-
-
+    yarn dev
 
 # URL parameters
-
 * `?motis=8082`: Connect to MOTIS on <window.location.hostname>:8082
 * `?motis=host`: Connect to MOTIS on host:8080
 * `?motis=host:8082`: Connect to MOTIS on host:8082

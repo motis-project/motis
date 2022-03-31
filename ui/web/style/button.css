@@ -73,7 +73,7 @@
 }
 
 .gb-button-small > * {
-  line-height: 28px;
+  line-height: 28px !important;
 }
 .gb-button-medium > * {
   line-height: 48px;
