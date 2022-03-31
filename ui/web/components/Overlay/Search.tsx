@@ -388,7 +388,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
                             appendConnectionsAtTail(props.setConnections, allConnectionsWithoutDummies, res.content.connections, props.connections, setAllConnectionsWithoutDummies, props.translation.dateFormat, props.setLoading);
                             // New Interval for searching even later connections
                             setSearchForward({begin: res.content.interval_end + 1, end: res.content.interval_end + 3600 * 2});
-                            window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections([...allConnectionsWithoutDummies, ...res.content.connections], allConnectionsWithoutDummies[0].id - res.content.connections.length), 'lowestId': allConnectionsWithoutDummies[0].id - res.content.connections.length});
+                            window.portEvents.pub('mapSetConnections', {'mapId': 'map', 'connections': mapConnections([...allConnectionsWithoutDummies, ...res.content.connections], 0), 'lowestId': 0});
                         }
                         props.setExtendForwardFlag(false);
                     }
