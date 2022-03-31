@@ -38,7 +38,7 @@ RailViz.Markers = (function () {
       markerSettings.startPosition,
       startText,
       markerSettings.startName,
-      "url(img/marker_origin.png)",
+      "url(images/marker_origin.png)",
       visible
     );
 
@@ -47,7 +47,7 @@ RailViz.Markers = (function () {
       markerSettings.destinationPosition,
       destinationText,
       markerSettings.destinationName,
-      "url(img/marker_destination.png)",
+      "url(images/marker_destination.png)",
       visible
     );
   }

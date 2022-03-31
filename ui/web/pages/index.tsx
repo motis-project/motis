@@ -32,6 +32,7 @@ export default function Index() {
         <script type='text/javascript' src='js/map_style.js'></script>
         <script type='text/javascript' src='js/map.js'></script>
         <link href="fonts/styles.css" rel="stylesheet"/>
+        <link rel="shortcut icon" href="favicon.ico"/>
       </Head>
       <div id='app-container'>
         <App />
