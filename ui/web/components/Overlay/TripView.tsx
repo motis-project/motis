@@ -8,6 +8,7 @@ import { Translations } from '../App/Localization';
 import { getMapFilter } from './Overlay';
 import { Address } from '../Types/SuggestionTypes';
 import { SubOverlayEvent } from '../Types/EventHistory';
+import { getFromLocalStorage } from '../App/LocalStorage';
 
 
 interface TripView {
@@ -21,7 +22,7 @@ interface TripView {
     'setSubOverlayContent': React.Dispatch<React.SetStateAction<SubOverlayEvent[]>>,
 }
 
-
+// helperfunction to get number of Interchanges in this trip
 const getTransportCountString = (transports: Transport[], translation: Translations) => {
     let count = 0;
     for (let index = 0; index < transports.length; index++) {
@@ -51,6 +52,7 @@ const getTrainConnection = (lineId: string, stationId: string, targetStationId: 
     };
 };
 
+// helperfunction to get the coords for each stop of a connection
 export const getStationCoords = (connection: Connection) => {
     let coords = [];
     for(let i = 0; i < connection.stops.length; i++){
@@ -70,6 +72,11 @@ export const TripView: React.FC<TripView> = (props) => {
 
     const targetTime = isTripId(props.trainSelected) ? props.trainSelected.target_time : props.trainSelected.stops.at(-1).arrival.time;
 
+    const [start, setStart] = useState<Station | Address>(getFromLocalStorage('motis.routing.from_location'));
+
+    const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage('motis.routing.to_location'));
+
+    // everytime a new train is selected via trainbox, a tripRequest fetches the data needed to be displayed
     useEffect(() => {
         if (props.trainSelected && isTripId(props.trainSelected)) {
             let requestURL = 'https://europe.motis-project.de/?elm=tripRequest';
@@ -111,8 +118,8 @@ export const TripView: React.FC<TripView> = (props) => {
                                     <div className='connection-arrival'>{moment.unix(targetTime).format('HH:mm')}</div>
                                 </div>
                                 <div className='locations'>
-                                    <div>{trainConnection.stops[0].station.name}</div>
-                                    <div>{trainConnection.stops[trainConnection.stops.length - 1].station.name}</div>
+                                    <div>{(trainConnection.stops[0].station.name === 'START') ? (start as Station).name : trainConnection.stops[0].station.name}</div>
+                                    <div>{(trainConnection.stops[trainConnection.stops.length - 1].station.name === 'END') ? (destination as Station).name : trainConnection.stops[trainConnection.stops.length - 1].station.name}</div>
                                 </div>
                             </div>
                             <div className='summary'>

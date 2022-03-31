@@ -118,7 +118,7 @@ const getModes = (key: string) => {
     return res;
 }
 
-
+// Helperfunction that rearranges the connection data for all connections 
 const mapConnections = (connections: Connection[]) => {
     let cons = [];
     if(connections){
@@ -403,6 +403,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
     }, [props.extendForwardFlag, props.extendBackwardFlag]);
 
 
+    // set the start / destination if the marker is placed on the map
     useEffect(() => {
         window.portEvents.sub('mapSetMarkers', function(){
             if(markerSearch){

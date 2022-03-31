@@ -15,8 +15,9 @@ import { Address } from '../Types/SuggestionTypes';
 import { Interval } from '../Types/RoutingTypes';
 import { TripView } from './TripView';
 import { SubOverlayEvent } from '../Types/EventHistory';
+import { Delay } from './Delay';
 
-
+//generates the filter for the map out of a connection
 export const getMapFilter = (connection: Connection) => {
     let filter;
     let trains = [];
@@ -70,19 +71,20 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
     // True: Display connections as List. False: Show detailed Information for one Connection
     const [tripViewHidden, setTripViewHidden] = useState<boolean>(true);
 
-    //
+    // stores the index of selected connection to be rendered in TripView
     const [indexOfConnection, setIndexOfConnection] = useState<number>(0);
-
+    // stores the tripID of selected Train via trainbox
     const [trainSelected, setTrainSelected] = useState<TripId>(undefined);
-
+    // is true if connection line in map is being hovered
     const [connectionHighlighted, setConnectionHighlighted] = useState<boolean>(false);
 
     const [start, setStart] = useState<Station | Address>(getFromLocalStorage('motis.routing.from_location'));
 
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage('motis.routing.to_location'));
 
+    //the current filter of the map
     const [mapFilter, setMapFilter] = useState<any>(null);
-
+    // stores all connection Ids being highlighted by the segtion hovered in map
     const [selectedConnectionIds, setSelectedConnectionIds] = useState<number[]>([]);
   
     // If true, renders the Loading animation for the connectionList
@@ -98,6 +100,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
         });
     });
 
+    //when clicking on station in the map it updates the filter
     React.useEffect(() =>{
         window.portEvents.sub('showStationDetails', function(data){
             setMapFilter(null);
@@ -117,6 +120,7 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
         setSearchDate(props.searchDate);
     }, [props.searchDate]);
 
+    // if connection line on map is being hovered, collect all ids of connections to be highlighted
     React.useEffect(() => {
         let connectionIds = [];
         if(props.mapData !== undefined && props.mapData.hoveredTripSegments !== null){
@@ -191,9 +195,11 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                         <div className='pure-u-4-24 connection-times'>
                                                             <div className='connection-departure'>
                                                                 {moment.unix(connectionElem.stops[0].departure.time).format('HH:mm')}
+                                                                <Delay event={connectionElem.stops[0].departure}/>
                                                             </div>
                                                             <div className='connection-arrival'>
                                                                 {moment.unix(connectionElem.stops[connectionElem.stops.length - 1].arrival.time).format('HH:mm')}
+                                                                <Delay event={connectionElem.stops[connectionElem.stops.length - 1].arrival}/>
                                                             </div>
                                                         </div>
                                                         <div className='pure-u-4-24 connection-duration'>
@@ -219,7 +225,6 @@ export const Overlay: React.FC<{ 'translation': Translations, 'scheduleInfo': In
                                                     <a>{props.translation.connections.extendAfter}</a>
                                                 }
                                             </div>
-                                        </div>
                                         </div>
                                     </div>
                                     :

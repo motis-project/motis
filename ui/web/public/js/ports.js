@@ -29,6 +29,7 @@ window.portEvents = {
     }
 };
 
+// ports that the map useses
 const ownPorts = {
     'setRoutingResponses': {
         send: function(){}
@@ -73,7 +74,9 @@ const ownPorts = {
         }
     },
     'mapUpdate': {
-        send: function(){}
+        send: function(callback){
+            window.portEvents.pub('mapUpdate', callback);
+        }
     },
     'mapSetTooltip': {
         send: function(callback){
