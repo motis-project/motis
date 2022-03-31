@@ -1,9 +1,12 @@
-import moment from 'moment';
 import React, { useEffect, useState } from 'react';
+
+import moment from 'moment';
+import equal from 'deep-equal';
+
 import { Translations } from '../App/Localization';
 import { getFromLocalStorage } from '../App/LocalStorage';
 
-import { TransportInfo, Connection, Transport, WalkInfo, Stop, Trip, TripId, Station } from '../Types/Connection';
+import { TransportInfo, Connection, Transport, WalkInfo, Stop, Trip, TripId, Station, Position } from '../Types/Connection';
 import { Address } from '../Types/SuggestionTypes';
 
 // returns the ID of given transport to determine the needed svg
@@ -203,6 +206,24 @@ const convertedWalkNumber = (mumoType: string) => {
     }
 }
 
+
+// Helperfunction used to identify Connections in ConnectionList when hovering Connection on Map or hovering in the list
+const showTooltip = (toolTipSelected: number | {dep: Position, arr: Position}, trainNumber: number, partsHighlighted: (number | {dep: Position, arr: Position})[], depArr: {dep: Position, arr: Position}) => {
+    if ((toolTipSelected !== undefined && 
+            // Hovering ConnectionList sets Tooltip. If either trainNumber or departure and arrival are equal, then this connection has to show its tooltip
+            (((toolTipSelected as number) === trainNumber) || equal((toolTipSelected as {dep: Position, arr: Position}), depArr))) 
+        ||
+        // partsHighlighted contains all trainNumbers and Position tuples of Connections that are hovered right now.
+        // If either trainNumber or this parts departure Arrival Tuple is in this list, show this tooltip.
+        (partsHighlighted.includes(trainNumber)) 
+        || 
+        partsHighlighted.reduce((prev, cur) => equal(depArr, cur) || prev, false)) {
+        return 'visible' 
+    }
+    return '';
+}
+
+
 interface PartElem {
     transport: Transport,
     graphData: GraphData,
@@ -225,10 +246,10 @@ interface GraphData {
 
 export const ConnectionRender: React.FC<{ 'translation': Translations, 'connection': Connection, 'connectionHighlighted': boolean, 'mapData': any, 'parentIndex': number }> = (props) => {
 
-    const [toolTipSelected, setToolTipSelected] = useState<number | string>(undefined);
+    const [toolTipSelected, setToolTipSelected] = useState<number | {dep: Position, arr: Position}>(undefined);
     const [parts, setParts] = useState<PartElem[]>([]);
     // partsHighlighted stores all trainNumbers of highlighted parts coming from mapData
-    const [partsHighlighted, setPartsHighlighted] = useState<number[]>([]);
+    const [partsHighlighted, setPartsHighlighted] = useState<(number | {dep: Position, arr: Position})[]>([]);
     const [start, setStart] = useState<Station | Address>(getFromLocalStorage('motis.routing.from_location'));
     const [destination, setDestination] = useState<Station | Address>(getFromLocalStorage('motis.routing.to_location'));
     // total Duration of this connection in Milliseconds
@@ -272,7 +293,6 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
                         break;
                 }
             }
-
             if (transport.move_type === 'Transport') {
                 p.push({ transport: transport, graphData: g[counter], classId: classId, trainName: trainName, clasz: clasz, acc: acc, trainNumber: (transport.move as TransportInfo).train_nr });
                 counter += 1;
@@ -293,7 +313,7 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
             });
         }
         if (props.mapData !== undefined && props.connectionHighlighted && props.mapData.hoveredWalkSegment !== null) {
-            tmp.push(convertedWalkNumber(props.mapData.hoveredWalkSegment.walk.mumoType));
+            tmp.push({dep: props.mapData.hoveredWalkSegment.walk.departureStation.pos, arr: props.mapData.hoveredWalkSegment.walk.arrivalStation.pos});
         }
         setPartsHighlighted(tmp);
     }, [props.mapData])
@@ -304,13 +324,13 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
             <svg width={totalWidth} height={totalHeight} viewBox={`0 0 ${totalWidth} ${totalHeight}`}>
                 <g>
                     {parts.map((partElem: PartElem) => (
-                        <g className={`part train-class-${partElem.clasz} ${partElem.acc} ${(props.connectionHighlighted) ? ((partsHighlighted.includes(partElem.trainNumber) || partsHighlighted.includes(convertedWalkNumber((partElem.transport.move as WalkInfo).mumo_type))) ? 'highlighted' : 'faded') : ''}`} key={`${props.parentIndex}_${props.connection.stops[partElem.transport.move.range.from].departure.time}`}>
+                        <g className={`part train-class-${partElem.clasz} ${partElem.acc} ${(props.connectionHighlighted) ? ((partsHighlighted.includes(partElem.trainNumber) || partsHighlighted.includes({dep: props.connection.stops[partElem.transport.move.range.from].station.pos, arr: props.connection.stops[partElem.transport.move.range.to].station.pos})) ? 'highlighted' : 'faded') : ''}`} key={`${props.parentIndex}_${props.connection.stops[partElem.transport.move.range.from].departure.time}`}>
                             <line x1={partElem.graphData.position} y1={circleRadius} x2={partElem.graphData.lineEnd} y2={circleRadius} className='train-line'></line>
                             <circle cx={partElem.graphData.position + circleRadius} cy={circleRadius} r={circleRadius} className='train-circle' ></circle>
                             <use xlinkHref={partElem.classId} className='train-icon' x={partElem.graphData.position + iconOffset} y={iconOffset} width={iconSize} height={iconSize} ></use>
                             <text x={partElem.graphData.position} y={textOffset + textHeight} textAnchor='start' className='train-name'>{partElem.trainName}</text>
                             <rect x={partElem.graphData.position} y='0' width={partElem.graphData.position + partElem.graphData.partWidth} height={basePartSize} className='tooltipTrigger'
-                                onMouseOver={() => { (partElem.trainNumber === undefined) ? setToolTipSelected(partElem.transportName) : setToolTipSelected(partElem.trainNumber) }}
+                                onMouseOver={() => { (partElem.trainNumber === undefined) ? setToolTipSelected({dep: props.connection.stops[partElem.transport.move.range.from].station.pos, arr: props.connection.stops[partElem.transport.move.range.to].station.pos}) : setToolTipSelected(partElem.trainNumber) }}
                                 onMouseOut={() => { setToolTipSelected(undefined) }}></rect>
                         </g>
                     ))}
@@ -318,7 +338,7 @@ export const ConnectionRender: React.FC<{ 'translation': Translations, 'connecti
                 <g className='destination'><circle cx={totalWidth - destinationRadius} cy={circleRadius} r={destinationRadius}></circle></g>
             </svg>
             {parts.map((partElem: PartElem, index) => (
-                <div className={`tooltip ${(toolTipSelected !== undefined &&(((toolTipSelected as number) === partElem.trainNumber) || ((toolTipSelected as string) === partElem.transportName)) || ((partsHighlighted.includes(partElem.trainNumber)) || partsHighlighted.includes(convertedWalkNumber((partElem.transport.move as WalkInfo).mumo_type)))) ? 'visible' : ''}`} style={{ position: 'absolute', left: `${(Math.min(partElem.graphData.position, (totalWidth - tooltipWidth)))}px`, top: `${(textOffset - 5)}px` }} key={`tooltip${props.parentIndex}${index}`}>
+                <div className={`tooltip ${showTooltip(toolTipSelected, partElem.trainNumber, partsHighlighted, {dep: props.connection.stops[partElem.transport.move.range.from].station.pos, arr: props.connection.stops[partElem.transport.move.range.to].station.pos})}`} style={{ position: 'absolute', left: `${(Math.min(partElem.graphData.position, (totalWidth - tooltipWidth)))}px`, top: `${(textOffset - 5)}px` }} key={`tooltip${props.parentIndex}${index}`}>
                     <div className='stations'>
                         <div className='departure'>
                             <div className='station'>
