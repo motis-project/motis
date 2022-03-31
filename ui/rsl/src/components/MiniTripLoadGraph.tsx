@@ -61,7 +61,7 @@ function MiniTripLoadGraph({ edges }: MiniTripLoadGraphProps): JSX.Element {
   const sectionDurations = edges.map((e) =>
     Math.max(300, e.arrival_schedule_time - e.departure_schedule_time)
   );
-  const totalDuration = sectionDurations.reduce((sum, v) => sum + v);
+  const totalDuration = sectionDurations.reduce((sum, v) => sum + v, 0);
   const sectionGeometry = edges.reduce(
     (a, eli, idx) => {
       const capacity = eli.capacity;
