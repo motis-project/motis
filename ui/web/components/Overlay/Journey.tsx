@@ -23,7 +23,7 @@ const isTransportInfo = (transport: Transport) => {
     return transport.move_type === 'Transport';
 }
 
-// returns the duration of to unix timestamps as string
+// returns the duration of journey as formatted string
 export const duration = (start: number, dest: number) => {
     let difference = moment.unix(dest).diff(moment.unix(start), 'minutes')
     let hours = Math.floor(difference / 60)
