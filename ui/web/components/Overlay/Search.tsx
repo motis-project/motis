@@ -311,7 +311,7 @@ export const Search: React.FC<SearchTypes> = (props) => {
                     // If IntermodalRoutingResponse is empty, stop Loadinganimation and show no-results
                     if(res.content.connections.length === 0){
                         props.setLoading(false);
-                        props.setConnections(null)
+                        props.setConnections(null);
                         return;
                     }
                     res.content.connections.map((c: Connection) => c.new = '');
