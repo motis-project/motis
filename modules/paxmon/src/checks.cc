@@ -32,6 +32,31 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
         if (!e.is_trip()) {
           continue;
         }
+        if (std::find_if(begin(pg->edges_), end(pg->edges_),
+                         [&](auto const& ei) { return ei.get(uv) == &e; }) ==
+            end(pg->edges_)) {
+          std::cout << "!! edge missing in pg.edges @" << e.type() << "\n";
+          ok = false;
+        }
+        auto trip_leg_found = false;
+        auto const& trips = e.get_trips(sched);
+        for (auto const& trp : trips) {
+          if (std::find_if(begin(pg->compact_planned_journey_.legs_),
+                           end(pg->compact_planned_journey_.legs_),
+                           [&](journey_leg const& leg) {
+                             return leg.trip_idx_ == trp->trip_idx_;
+                           }) != end(pg->compact_planned_journey_.legs_)) {
+            trip_leg_found = true;
+            break;
+          }
+        }
+        if (!trip_leg_found) {
+          std::cout << "!! trip leg missing in planned journey\n";
+          ok = false;
+        }
+      }
+      if (e.is_trip() && e.is_valid(uv)) {
+        auto grp_count = uv.pax_connection_info_.groups_[e.pci_].size();
         auto const& trips = e.get_trips(sched);
         for (auto const& trp : trips) {
           auto const td_edges = uv.trip_data_.edges(trp);
@@ -39,15 +64,9 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
                 return ei.get(uv) == &e;
               }) == end(td_edges)) {
             std::cout << "!! edge missing in trip_data.edges @" << e.type()
-                      << "\n";
+                      << ", grp_count=" << grp_count << "\n";
             ok = false;
           }
-        }
-        if (std::find_if(begin(pg->edges_), end(pg->edges_),
-                         [&](auto const& ei) { return ei.get(uv) == &e; }) ==
-            end(pg->edges_)) {
-          std::cout << "!! edge missing in pg.edges @" << e.type() << "\n";
-          ok = false;
         }
       }
     }
