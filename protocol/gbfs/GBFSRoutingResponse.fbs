@@ -14,7 +14,7 @@ table FreeBikeRoute {
   // dir=FWD: x --walk--> b --bike--> p
   // dir=BWD: p --walk--> b --bike--> x
   b: Position;  // free bike position
-  p: Station;  // public transport station
+  p: string;  // public transport station
 }
 
 
@@ -29,7 +29,7 @@ table GBFSStation {
 table StationBikeRoute {
   sx: GBFSStation;
   sp: GBFSStation;
-  p: Station;
+  p: string;
 }
 
 // ----------------------------------------------------------------------------
@@ -39,12 +39,9 @@ union BikeRoute { FreeBikeRoute, StationBikeRoute }
 
 table RouteInfo {
   route: BikeRoute;
-  distance: double;
   duration: uint;
   walk_duration: uint;
-  walk_distance: double;
   bike_duration: uint;
-  bike_distance: double;
 }
 
 // ----------------------------------------------------------------------------

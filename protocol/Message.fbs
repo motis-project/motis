@@ -282,7 +282,9 @@ union MsgContent {
   motis.lookup.LookupRiBasisResponse                                      = 128,
   motis.paxforecast.PaxForecastApplyMeasuresResponse                      = 129,
   motis.paxmon.PaxMonGetAddressableGroupsRequest                          = 130,
-  motis.paxmon.PaxMonGetAddressableGroupsResponse                         = 131
+  motis.paxmon.PaxMonGetAddressableGroupsResponse                         = 131,
+  motis.osrm.OSRMManyToManyRequest                                        = 132,
+  motis.osrm.OSRMManyToManyResponse                                       = 133
 }
 
 // Destination Examples:

@@ -8,18 +8,23 @@ namespace motis.osrm;
 // {
 //   "destination": {
 //     "type": "Module",
-//     "target": "/osrm/one_to_many"
+//     "target": "/osrm/many_to_many"
 //   },
 //   "content_type": "OSRMManyToManyRequest",
 //   "content": {
 //     "profile": "car",
-//     "many": [
-//       { "lat": 50.11485439, "lng": 8.65791321 },
-//       { "lat": 49.39444062, "lng": 8.6743927 }
+//     "from": [
+//       { "lat": 48.781365, "lng": 9.142052 },
+//       { "lat": 48.799358, "lng": 9.174886 }
+//     ],
+//     "to": [
+//       { "lat": 48.767326, "lng": 9.191576 },
+//       { "lat": 48.771686, "lng": 9.141020 }
 //     ]
 //   }
 // }
 table OSRMManyToManyRequest {
   profile: string;
-  many : [motis.Position];
+  from : [motis.Position];
+  to: [motis.Position];
 }
