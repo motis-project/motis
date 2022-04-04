@@ -99,16 +99,22 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
         to_fbs_distribution(mc, cg.pdf_, cg.stats_));
   };
 
-  auto const make_grouped_by_feeder = [&](combined_group_info const& by_entry) {
+  auto const make_grouped_by_feeder = [&](combined_group_info const& by_entry,
+                                          edge const* e) {
     mcd::hash_map<feeder_key, combined_group_info> by_feeder;
     combined_group_info starting_here;
 
+    auto const& merged_trips = e->get_trips(sched);
     for (auto const pgi : by_entry.groups_) {
       auto const* pg = uv.passenger_groups_[pgi];
-      // TODO(pablo): support merged trips
-      for (auto const& [leg_idx, leg] :
+      for (auto const& leg_with_index :
            utl::enumerate(pg->compact_planned_journey_.legs_)) {
-        if (leg.trip_idx_ == trp->trip_idx_) {
+        auto const leg_idx = std::get<0>(leg_with_index);
+        auto const& leg = std::get<1>(leg_with_index);
+        if (std::find_if(begin(merged_trips), end(merged_trips),
+                         [&](trip const* t) {
+                           return t->trip_idx_ == leg.trip_idx_;
+                         }) != end(merged_trips)) {
           if (leg_idx == 0) {
             starting_here.groups_.emplace_back(pgi);
           } else {
@@ -150,17 +156,20 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
   };
 
   auto const make_grouped_by_entry =
-      [&](combined_group_info const& by_interchange) {
+      [&](combined_group_info const& by_interchange, edge const* e) {
         mcd::hash_map<
             std::pair<std::uint32_t /* station idx */, time /* enter_time */>,
             combined_group_info>
             by_entry;
 
+        auto const& merged_trips = e->get_trips(sched);
         for (auto const pgi : by_interchange.groups_) {
           auto const* pg = uv.passenger_groups_[pgi];
-          // TODO(pablo): support merged trips
           for (auto const& leg : pg->compact_planned_journey_.legs_) {
-            if (leg.trip_idx_ == trp->trip_idx_) {
+            if (std::find_if(begin(merged_trips), end(merged_trips),
+                             [&](trip const* t) {
+                               return t->trip_idx_ == leg.trip_idx_;
+                             }) != end(merged_trips)) {
               by_entry[{leg.enter_station_id_, leg.enter_time_}]
                   .groups_.emplace_back(pgi);
               break;
@@ -177,7 +186,7 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
         return mc.CreateVector(
             utl::to_vec(by_entry_sorted, [&](auto const& key) {
               auto const& cgi = by_entry[key];
-              auto const by_feeder = make_grouped_by_feeder(cgi);
+              auto const by_feeder = make_grouped_by_feeder(cgi, e);
               return CreatePaxMonAddressableGroupsByEntry(
                   mc, to_fbs(mc, *sched.stations_[key.first]),
                   motis_to_unixtime(sched, key.second),
@@ -189,6 +198,7 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
   auto const make_section_info = [&](edge const* e) {
     auto const* from = e->from(uv);
     auto const* to = e->to(uv);
+    auto const& merged_trips = e->get_trips(sched);
 
     mcd::hash_map<std::uint32_t /* station idx */, combined_group_info>
         by_interchange;
@@ -199,10 +209,12 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
         continue;
       }
       auto skip = true;
-      // TODO(pablo): support merged trips
       for (auto const& leg : pg->compact_planned_journey_.legs_) {
         if (skip) {
-          if (leg.trip_idx_ == trp->trip_idx_) {
+          if (std::find_if(begin(merged_trips), end(merged_trips),
+                           [&](trip const* t) {
+                             return t->trip_idx_ == leg.trip_idx_;
+                           }) != end(merged_trips)) {
             skip = false;
           } else {
             continue;
@@ -232,7 +244,8 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
               auto const& cgi = by_interchange[ic_station_idx];
               return CreatePaxMonAddressableGroupsByInterchange(
                   mc, to_fbs(mc, *sched.stations_[ic_station_idx]),
-                  to_combined_group_ids_fbs(cgi), make_grouped_by_entry(cgi));
+                  to_combined_group_ids_fbs(cgi),
+                  make_grouped_by_entry(cgi, e));
             })));
   };
 
