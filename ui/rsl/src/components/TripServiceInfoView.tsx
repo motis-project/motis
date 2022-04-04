@@ -19,7 +19,9 @@ function TripServiceInfoView({
   } else {
     return (
       <div className="w-full">
-        <div className="text-lg">{names.join(", ")}</div>
+        <div className="text-lg">
+          {names.length > 0 ? names.join(", ") : `${tsi.trip.train_nr}`}
+        </div>
         <div className="flex justify-between text-sm">
           <div className="flex flex-col items-start">
             <div>{tsi.primary_station.name}</div>
