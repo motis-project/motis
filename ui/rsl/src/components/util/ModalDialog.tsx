@@ -1,5 +1,5 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+import { Fragment, ReactNode } from "react";
 
 export type ModalDialogProps = {
   isOpen: boolean;
@@ -7,7 +7,7 @@ export type ModalDialogProps = {
   title: string;
   cancelButton: string;
   okButton: string;
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 function ModalDialog({

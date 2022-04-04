@@ -1,5 +1,10 @@
 // generated file - do not modify - run update-protocol to update
-import { Station, TripId, TripServiceInfo } from "@/api/protocol/motis";
+import {
+  Interval,
+  Station,
+  TripId,
+  TripServiceInfo,
+} from "@/api/protocol/motis";
 
 // paxmon/PaxMonAddGroupsRequest.fbs
 export interface PaxMonAddGroupsRequest {
@@ -15,8 +20,13 @@ export interface PaxMonAddGroupsResponse {
 // paxmon/PaxMonCombinedGroups.fbs
 export interface PaxMonCombinedGroups {
   groups: PaxMonGroupBaseInfo[];
-  min_passenger_count: number;
-  max_passenger_count: number;
+  dist: PaxMonDistribution;
+}
+
+// paxmon/PaxMonCombinedGroups.fbs
+export interface PaxMonCombinedGroupIds {
+  groups: number[];
+  dist: PaxMonDistribution;
 }
 
 // paxmon/PaxMonCompactJourney.fbs
@@ -48,6 +58,28 @@ export interface PaxMonDestroyUniverseRequest {
   universe: number;
 }
 
+// paxmon/PaxMonDistribution.fbs
+export interface PaxMonPdfEntry {
+  n: number;
+  p: number;
+}
+
+// paxmon/PaxMonDistribution.fbs
+export interface PaxMonCdfEntry {
+  n: number;
+  p: number;
+}
+
+// paxmon/PaxMonDistribution.fbs
+export interface PaxMonDistribution {
+  min: number;
+  max: number;
+  q5: number;
+  q50: number;
+  q95: number;
+  pdf: PaxMonPdfEntry[];
+}
+
 // paxmon/PaxMonFilterGroupsRequest.fbs
 export interface PaxMonFilterGroupsRequest {
   universe: number;
@@ -77,7 +109,17 @@ export interface PaxMonFilterGroupsResponse {
 export type PaxMonFilterTripsSortOrder =
   | "MostCritical"
   | "FirstDeparture"
-  | "ExpectedPax";
+  | "ExpectedPax"
+  | "TrainNr"
+  | "MaxLoad"
+  | "EarliestCritical"
+  | "MaxPaxRange";
+
+// paxmon/PaxMonFilterTripsRequest.fbs
+export type PaxMonFilterTripsTimeFilter =
+  | "NoFilter"
+  | "DepartureTime"
+  | "DepartureOrArrivalTime";
 
 // paxmon/PaxMonFilterTripsRequest.fbs
 export interface PaxMonFilterTripsRequest {
@@ -90,6 +132,12 @@ export interface PaxMonFilterTripsRequest {
   sort_by: PaxMonFilterTripsSortOrder;
   max_results: number;
   skip_first: number;
+  filter_by_time: PaxMonFilterTripsTimeFilter;
+  filter_interval: Interval;
+  filter_by_train_nr: boolean;
+  filter_train_nrs: number[];
+  filter_by_service_class: boolean;
+  filter_service_classes: number[];
 }
 
 // paxmon/PaxMonFilterTripsResponse.fbs
@@ -100,6 +148,7 @@ export interface PaxMonFilteredTripInfo {
   crowded_sections: number;
   max_excess_pax: number;
   cumulative_excess_pax: number;
+  max_load: number;
   max_expected_pax: number;
   edges: PaxMonEdgeLoadInfo[];
 }
@@ -109,6 +158,7 @@ export interface PaxMonFilterTripsResponse {
   total_matching_trips: number;
   filtered_trips: number;
   remaining_trips: number;
+  next_skip: number;
   total_critical_sections: number;
   trips: PaxMonFilteredTripInfo[];
 }
@@ -145,6 +195,54 @@ export interface PaxMonForkUniverseRequest {
 export interface PaxMonForkUniverseResponse {
   universe: number;
   schedule: number;
+}
+
+// paxmon/PaxMonGetAddressableGroupsRequest.fbs
+export interface PaxMonGetAddressableGroupsRequest {
+  universe: number;
+  trip: TripId;
+}
+
+// paxmon/PaxMonGetAddressableGroupsResponse.fbs
+export interface PaxMonAddressableGroupsByFeeder {
+  trip: TripServiceInfo;
+  arrival_station: Station;
+  arrival_schedule_time: number;
+  arrival_current_time: number;
+  cgs: PaxMonCombinedGroupIds;
+}
+
+// paxmon/PaxMonGetAddressableGroupsResponse.fbs
+export interface PaxMonAddressableGroupsByEntry {
+  entry_station: Station;
+  departure_schedule_time: number;
+  cgs: PaxMonCombinedGroupIds;
+  by_feeder: PaxMonAddressableGroupsByFeeder[];
+  starting_here: PaxMonCombinedGroupIds;
+}
+
+// paxmon/PaxMonGetAddressableGroupsResponse.fbs
+export interface PaxMonAddressableGroupsByInterchange {
+  future_interchange: Station;
+  cgs: PaxMonCombinedGroupIds;
+  by_entry: PaxMonAddressableGroupsByEntry[];
+}
+
+// paxmon/PaxMonGetAddressableGroupsResponse.fbs
+export interface PaxMonAddressableGroupsSection {
+  from: Station;
+  to: Station;
+  departure_schedule_time: number;
+  departure_current_time: number;
+  arrival_schedule_time: number;
+  arrival_current_time: number;
+  by_future_interchange: PaxMonAddressableGroupsByInterchange[];
+}
+
+// paxmon/PaxMonGetAddressableGroupsResponse.fbs
+export interface PaxMonGetAddressableGroupsResponse {
+  sections: PaxMonAddressableGroupsSection[];
+  groups: PaxMonGroupBaseInfo[];
 }
 
 // paxmon/PaxMonGetGroupsInTripRequest.fbs
@@ -278,9 +376,9 @@ export interface PaxMonGroup {
 
 // paxmon/PaxMonGroup.fbs
 export interface PaxMonGroupBaseInfo {
-  id: number;
-  passenger_count: number;
-  probability: number;
+  id: number; // key
+  n: number;
+  p: number;
 }
 
 // paxmon/PaxMonLocalization.fbs
@@ -369,12 +467,6 @@ export interface PaxMonTrackedUpdates {
 }
 
 // paxmon/PaxMonTripLoadInfo.fbs
-export interface PaxMonCdfEntry {
-  passengers: number;
-  probability: number;
-}
-
-// paxmon/PaxMonTripLoadInfo.fbs
 export type PaxMonCapacityType = "Known" | "Unknown" | "Unlimited";
 
 // paxmon/PaxMonTripLoadInfo.fbs
@@ -387,9 +479,10 @@ export interface PaxMonEdgeLoadInfo {
   arrival_current_time: number;
   capacity_type: PaxMonCapacityType;
   capacity: number;
-  passenger_cdf: PaxMonCdfEntry[];
+  dist: PaxMonDistribution;
   updated: boolean;
   possibly_over_capacity: boolean;
+  prob_over_capacity: number;
   expected_passengers: number;
 }
 

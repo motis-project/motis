@@ -1,4 +1,4 @@
-import { UseQueryResult, useQuery } from "react-query";
+import { UseQueryOptions, UseQueryResult, useQuery } from "react-query";
 
 import { verifyContentType } from "@/api/protocol/checks";
 import { MotisSuccess, TripId } from "@/api/protocol/motis";
@@ -10,6 +10,8 @@ import {
   PaxMonFindTripsResponse,
   PaxMonForkUniverseRequest,
   PaxMonForkUniverseResponse,
+  PaxMonGetAddressableGroupsRequest,
+  PaxMonGetAddressableGroupsResponse,
   PaxMonGetGroupsInTripRequest,
   PaxMonGetGroupsInTripResponse,
   PaxMonGetInterchangesRequest,
@@ -49,7 +51,7 @@ export function usePaxMonStatusQuery(
   );
 }
 
-export async function sendPaxMonTripLoadInfosRequest(
+export async function sendPaxMonGetTripLoadInfosRequest(
   content: PaxMonGetTripLoadInfosRequest
 ): Promise<PaxMonGetTripLoadInfosResponse> {
   const msg = await sendRequest(
@@ -75,7 +77,8 @@ export async function sendPaxMonFindTripsRequest(
 
 export function usePaxMonFindTripsQuery(
   universe: number,
-  trainNr?: number
+  trainNr: number | undefined,
+  options?: Pick<UseQueryOptions, "keepPreviousData">
 ): UseQueryResult<PaxMonFindTripsResponse> {
   return useQuery(
     queryKeys.findTrips(universe, trainNr),
@@ -87,7 +90,7 @@ export function usePaxMonFindTripsQuery(
         filter_class: false,
         max_class: 0,
       }),
-    { enabled: trainNr != undefined && !isNaN(trainNr) }
+    { ...options, enabled: trainNr != undefined && !isNaN(trainNr) }
   );
 }
 
@@ -108,6 +111,26 @@ export function usePaxMonGroupsInTripQuery(
 ): UseQueryResult<PaxMonGetGroupsInTripResponse> {
   return useQuery(queryKeys.tripGroups(content), () =>
     sendPaxMonGroupsInTripRequest(content)
+  );
+}
+
+export async function sendPaxMonAddressableGroupsRequest(
+  content: PaxMonGetAddressableGroupsRequest
+): Promise<PaxMonGetAddressableGroupsResponse> {
+  const msg = await sendRequest(
+    "/paxmon/addressable_groups",
+    "PaxMonGetAddressableGroupsRequest",
+    content
+  );
+  verifyContentType(msg, "PaxMonGetAddressableGroupsResponse");
+  return msg.content as PaxMonGetAddressableGroupsResponse;
+}
+
+export function usePaxMonAddressableGroupsQuery(
+  content: PaxMonGetAddressableGroupsRequest
+): UseQueryResult<PaxMonGetAddressableGroupsResponse> {
+  return useQuery(queryKeys.addressableGroups(content), () =>
+    sendPaxMonAddressableGroupsRequest(content)
   );
 }
 
@@ -189,4 +212,6 @@ export const queryKeys = {
     [...queryKeys.all, "interchanges", req] as const,
   filterTrips: (req: PaxMonFilterTripsRequest) =>
     [...queryKeys.all, "filter_trips", req] as const,
+  addressableGroups: (req: PaxMonGetAddressableGroupsRequest) =>
+    [...queryKeys.all, "addressable_groups", req] as const,
 };

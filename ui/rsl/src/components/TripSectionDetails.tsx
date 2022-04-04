@@ -4,20 +4,20 @@ import { useState } from "react";
 import { TripId } from "@/api/protocol/motis";
 import {
   GroupsInTripSection,
+  PaxMonEdgeLoadInfo,
   PaxMonGroupByStation,
   PaxMonGroupFilter,
 } from "@/api/protocol/motis/paxmon";
 
 import { usePaxMonGroupsInTripQuery } from "@/api/paxmon";
 
-import { PaxMonEdgeLoadInfoWithStats } from "@/data/loadInfo";
 import { universeAtom } from "@/data/simulation";
 
 import CombinedGroup from "@/components/CombinedGroup";
 
 function isSameSection(
   sec: GroupsInTripSection,
-  selected: PaxMonEdgeLoadInfoWithStats | undefined
+  selected: PaxMonEdgeLoadInfo | undefined
 ) {
   return (
     selected != undefined &&
@@ -38,28 +38,27 @@ const groupByStationOptions: Array<{
   groupBy: PaxMonGroupByStation;
   label: string;
 }> = [
+  //{ groupBy: "None", label: "Keine" },
   { groupBy: "Last", label: "Letzter Halt" },
-  { groupBy: "LastLongDistance", label: "Letzter FV-Halt" },
+  //{ groupBy: "LastLongDistance", label: "Letzter FV-Halt" },
   { groupBy: "First", label: "Erster Halt" },
-  { groupBy: "FirstLongDistance", label: "Erster FV-Halt" },
+  //{ groupBy: "FirstLongDistance", label: "Erster FV-Halt" },
   { groupBy: "EntryAndLast", label: "Einstiegshalt und Ziel" },
 ];
 
 type TripSectionDetailsProps = {
   tripId: TripId;
-  selectedSection: PaxMonEdgeLoadInfoWithStats | undefined;
-  onClose: () => void;
+  selectedSection: PaxMonEdgeLoadInfo | undefined;
 };
 
 function TripSectionDetails({
   tripId,
   selectedSection,
-  onClose,
 }: TripSectionDetailsProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
   const [groupFilter, setGroupFilter] = useState<PaxMonGroupFilter>("Entering");
   const [groupByStation, setGroupByStation] =
-    useState<PaxMonGroupByStation>("LastLongDistance");
+    useState<PaxMonGroupByStation>("Last");
   const [groupByOtherTrip, setGroupByOtherTrip] = useState(true);
 
   const {
@@ -78,7 +77,14 @@ function TripSectionDetails({
   const groupByDirection =
     groupByStation === "First" || groupByStation === "FirstLongDistance"
       ? "Origin"
+      : groupByStation === "None"
+      ? "None"
       : "Destination";
+
+  const getMinPaxInSection = (sec: GroupsInTripSection) =>
+    sec.groups.reduce((sum, g) => sum + g.info.dist.q5, 0);
+  const getMaxPaxInSection = (sec: GroupsInTripSection) =>
+    sec.groups.reduce((sum, g) => sum + g.info.dist.q95, 0);
 
   const content = isLoading ? (
     <div>Loading trip section data..</div>
@@ -97,17 +103,12 @@ function TripSectionDetails({
               <span>{sec.from.name}</span> → <span>{sec.to.name}</span>
             </div>
             <div>
-              {sec.groups.length} Gruppen (
-              {sec.groups.reduce(
-                (sum, g) => sum + g.info.min_passenger_count,
-                0
-              )}
-              {" - "}
-              {sec.groups.reduce(
-                (sum, g) => sum + g.info.max_passenger_count,
-                0
-              )}{" "}
-              Reisende)
+              {`${sec.groups.length} Gruppen (${getMinPaxInSection(
+                sec
+              )} - ${getMaxPaxInSection(sec)} Reisende)`}
+              {groupFilter == "All" && " in dem Fahrtabschnitt"}
+              {groupFilter == "Entering" && ` mit Einstieg in ${sec.from.name}`}
+              {groupFilter == "Exiting" && ` mit Ausstieg in ${sec.to.name}`}
             </div>
             <ul>
               {sec.groups.slice(0, 30).map((gg, idx) => (
@@ -173,15 +174,6 @@ function TripSectionDetails({
                   : "Abbringer"}
               </label>
             ) : null}
-          </div>
-          <div className="flex gap-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="bg-db-red-500 px-3 py-1 rounded text-white text-sm hover:bg-db-red-600"
-            >
-              Gruppenanzeige schließen
-            </button>
           </div>
         </div>
       </form>

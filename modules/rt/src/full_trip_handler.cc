@@ -497,7 +497,8 @@ private:
                     trip_debug{}))
                 .get();
 
-      auto const trp_entry = mcd::pair{ftid.primary_, ptr<trip>(trp)};
+      auto const trp_entry =
+          mcd::pair{ftid.primary_, static_cast<ptr<trip>>(trp)};
       sched_.trips_.insert(
           std::lower_bound(begin(sched_.trips_), end(sched_.trips_), trp_entry),
           trp_entry);

@@ -156,7 +156,10 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
   scoped_timer timer{"update affected passenger groups"};
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
-  utl::verify(current_time != INVALID_TIME, "invalid current system time");
+  utl::verify(current_time != INVALID_TIME,
+              "paxmon::update_affected_groups: invalid current system time: "
+              "system_time={}, schedule_begin={}",
+              sched.system_time_, sched.schedule_begin_);
   auto const search_time = static_cast<time>(current_time + preparation_time);
 
   uv.tick_stats_.system_time_ = sched.system_time_;

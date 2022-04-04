@@ -45,20 +45,23 @@ msg_ptr find_trips(paxmon_data& data, msg_ptr const& msg) {
         continue;
       }
     }
-    auto const td_edges = uv.trip_data_.edges(tdi);
-    auto const all_edges_have_capacity_info =
-        has_paxmon_data &&
-        std::all_of(begin(td_edges), end(td_edges), [&](auto const& ei) {
-          auto const* e = ei.get(uv);
-          return !e->is_trip() || e->has_capacity();
-        });
-    auto const has_passengers =
-        has_paxmon_data &&
-        std::any_of(begin(td_edges), end(td_edges), [&](auto const& ei) {
-          auto const* e = ei.get(uv);
-          return e->is_trip() &&
-                 !uv.pax_connection_info_.groups_[e->pci_].empty();
-        });
+    auto all_edges_have_capacity_info = false;
+    auto has_passengers = false;
+    if (has_paxmon_data) {
+      auto const td_edges = uv.trip_data_.edges(tdi);
+      all_edges_have_capacity_info =
+          std::all_of(begin(td_edges), end(td_edges), [&](auto const& ei) {
+            auto const* e = ei.get(uv);
+            return !e->is_trip() || e->has_capacity();
+          });
+      has_passengers =
+          std::any_of(begin(td_edges), end(td_edges), [&](auto const& ei) {
+            auto const* e = ei.get(uv);
+            return e->is_trip() &&
+                   !uv.pax_connection_info_.groups_[e->pci_].empty();
+          });
+    }
+
     trips.emplace_back(CreatePaxMonTripInfo(
         mc, to_fbs_trip_service_info(mc, sched, trp, service_infos),
         has_paxmon_data, all_edges_have_capacity_info, has_passengers));

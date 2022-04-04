@@ -38,6 +38,8 @@ import {
   PaxMonFindTripsResponse,
   PaxMonForkUniverseRequest,
   PaxMonForkUniverseResponse,
+  PaxMonGetAddressableGroupsRequest,
+  PaxMonGetAddressableGroupsResponse,
   PaxMonGetGroupsInTripRequest,
   PaxMonGetGroupsInTripResponse,
   PaxMonGetGroupsRequest,
@@ -363,7 +365,9 @@ export type MsgContent =
   | PaxMonStatusRequest
   | LookupRiBasisRequest
   | LookupRiBasisResponse
-  | PaxForecastApplyMeasuresResponse;
+  | PaxForecastApplyMeasuresResponse
+  | PaxMonGetAddressableGroupsRequest
+  | PaxMonGetAddressableGroupsResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -423,7 +427,9 @@ export type MsgContentType =
   | "PaxMonStatusRequest"
   | "LookupRiBasisRequest"
   | "LookupRiBasisResponse"
-  | "PaxForecastApplyMeasuresResponse";
+  | "PaxForecastApplyMeasuresResponse"
+  | "PaxMonGetAddressableGroupsRequest"
+  | "PaxMonGetAddressableGroupsResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

@@ -11,6 +11,8 @@
 #include "motis/core/common/logging.h"
 #include "motis/module/context/motis_parallel_for.h"
 
+#include "motis/paxmon/load_info.h"
+
 using namespace motis::paxmon;
 using namespace motis::logging;
 
@@ -38,14 +40,11 @@ load_forecast calc_load_forecast(schedule const& sched, universe const& uv,
     auto pdf = get_load_pdf(uv.passenger_groups_,
                             uv.pax_connection_info_.groups_[e->pci_]);
     add_additional_groups(pdf, additional_groups);
-    auto const cdf = get_cdf(pdf);
-    auto const possibly_over_capacity =
-        e->has_capacity() && load_factor_possibly_ge(cdf, e->capacity(), 1.0F);
-    auto const expected_pax = get_expected_load(uv, e->pci_);
+    auto cdf = get_cdf(pdf);
 
     std::lock_guard guard{mutex};
     edges.emplace(
-        e, edge_load_info{e, cdf, true, possibly_over_capacity, expected_pax});
+        e, make_edge_load_info(uv, e, std::move(pdf), std::move(cdf), true));
     for (auto const& trp : e->get_trips(sched)) {
       trips.emplace(trp);
     }
@@ -63,15 +62,12 @@ load_forecast calc_load_forecast(schedule const& sched, universe const& uv,
                 if (it != end(edges)) {
                   return it->second;
                 } else {
-                  auto const cdf =
-                      get_load_cdf(uv.passenger_groups_,
+                  auto pdf =
+                      get_load_pdf(uv.passenger_groups_,
                                    uv.pax_connection_info_.groups_[e->pci_]);
-                  auto const possibly_over_capacity =
-                      e->has_capacity() &&
-                      load_factor_possibly_ge(cdf, e->capacity(), 1.0F);
-                  auto const expected_pax = get_expected_load(uv, e->pci_);
-                  return edge_load_info{e, cdf, false, possibly_over_capacity,
-                                        expected_pax};
+                  auto cdf = get_cdf(pdf);
+                  return make_edge_load_info(uv, e, std::move(pdf),
+                                             std::move(cdf), false);
                 }
               })  //
             | utl::vec()};

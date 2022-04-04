@@ -1,20 +1,20 @@
 import { DownloadIcon } from "@heroicons/react/solid";
 import { useAtom } from "jotai";
-import { useRef } from "react";
+import { CSSProperties, useRef } from "react";
 import { useQuery, useQueryClient } from "react-query";
 
 import { TripId } from "@/api/protocol/motis";
+import {
+  PaxMonEdgeLoadInfo,
+  PaxMonTripLoadInfo,
+} from "@/api/protocol/motis/paxmon";
 
 import {
   queryKeys,
-  sendPaxMonTripLoadInfosRequest,
+  sendPaxMonGetTripLoadInfosRequest,
   usePaxMonStatusQuery,
 } from "@/api/paxmon";
 
-import {
-  PaxMonEdgeLoadInfoWithStats,
-  PaxMonTripLoadInfoWithStats,
-} from "@/data/loadInfo";
 import { universeAtom } from "@/data/simulation";
 
 import {
@@ -22,12 +22,11 @@ import {
   formatLongDateTime,
   formatTime,
 } from "@/util/dateFormat";
-import { addEdgeStatistics } from "@/util/statistics";
 
 function getSvgLinePath(
-  edges: PaxMonEdgeLoadInfoWithStats[],
+  edges: PaxMonEdgeLoadInfo[],
   maxVal: number,
-  getProp: (ef: PaxMonEdgeLoadInfoWithStats) => number
+  getProp: (ef: PaxMonEdgeLoadInfo) => number
 ) {
   const points = [];
   let x = 0;
@@ -70,7 +69,7 @@ function getYLabels(maxVal: number) {
 }
 
 function getCurrentTimePosition(
-  edges: PaxMonEdgeLoadInfoWithStats[],
+  edges: PaxMonEdgeLoadInfo[],
   currentTime: number
 ) {
   if (currentTime < edges[0].departure_current_time) {
@@ -92,11 +91,7 @@ function getCurrentTimePosition(
 
 function getSvgBlob(svgEl: SVGSVGElement) {
   const serializer = new XMLSerializer();
-  let source = serializer.serializeToString(svgEl);
-  const css = document.getElementById("svgStyle")?.outerHTML;
-  if (css) {
-    source = source.replace("<g", css + "<g");
-  }
+  const source = serializer.serializeToString(svgEl);
   return new Blob([source], { type: "image/svg+xml;charset=utf-8" });
 }
 
@@ -142,10 +137,7 @@ function saveAsPNG(svgEl: SVGSVGElement | null, baseFileName: string) {
   img.src = svgUrl;
 }
 
-function getBaseFileName(
-  data: PaxMonTripLoadInfoWithStats,
-  systemTime: number
-) {
+function getBaseFileName(data: PaxMonTripLoadInfo, systemTime: number) {
   const parts = ["forecast", formatFileNameTime(systemTime)];
   for (const si of data.tsi.service_infos) {
     if (si.line) {
@@ -157,19 +149,10 @@ function getBaseFileName(
   return parts.join("_");
 }
 
-async function loadAndProcessTripInfo(universe: number, trip: TripId) {
-  const res = await sendPaxMonTripLoadInfosRequest({
-    universe,
-    trips: [trip],
-  });
-  const tli = res.load_infos[0];
-  return addEdgeStatistics(tli);
-}
-
 type TripLoadForecastChartProps = {
   tripId: TripId;
   mode: "Interactive" | "Tooltip";
-  onSectionClick?: (e: PaxMonEdgeLoadInfoWithStats) => void;
+  onSectionClick?: (e: PaxMonEdgeLoadInfo) => void;
 };
 
 function TripLoadForecastChart({
@@ -183,7 +166,7 @@ function TripLoadForecastChart({
   const queryClient = useQueryClient();
   const { data /*, isLoading, error*/ } = useQuery(
     queryKeys.tripLoad(universe, tripId),
-    async () => loadAndProcessTripInfo(universe, tripId),
+    () => sendPaxMonGetTripLoadInfosRequest({ universe, trips: [tripId] }),
     {
       enabled: !!status,
       placeholderData: () => {
@@ -201,10 +184,11 @@ function TripLoadForecastChart({
   }
 
   const systemTime = status.system_time;
-  const edges = data.edges;
+  const tripData = data.load_infos[0];
+  const edges = tripData.edges;
   const graphWidth = edges.length * 50;
 
-  const maxPax = edges.reduce((max, ef) => Math.max(max, ef.max_pax || 0), 0);
+  const maxPax = edges.reduce((max, ef) => Math.max(max, ef.dist.max), 0);
   const maxCapacity = edges.reduce(
     (max, ef) => (ef.capacity ? Math.max(max, ef.capacity) : max),
     0
@@ -284,12 +268,12 @@ function TripLoadForecastChart({
   ));
 
   const overCapProbs = edges.map((e, idx) => {
-    const classes = ["over-cap-prob"];
+    const style: CSSProperties = { fontSize: "8px", fill: "#000" };
     let text = "";
     if (e.capacity != 0) {
-      text = `${(e.p_load_gt_100 * 100).toFixed(0)}%`;
+      text = `${(e.prob_over_capacity * 100).toFixed(0)}%`;
       if (text === "0%") {
-        classes.push("zero");
+        style.fill = "#999";
       }
     }
     return (
@@ -298,7 +282,7 @@ function TripLoadForecastChart({
         x={idx * 50 + 25}
         y="8"
         textAnchor="middle"
-        className={classes.join(" ")}
+        style={style}
       >
         {text}
       </text>
@@ -307,7 +291,7 @@ function TripLoadForecastChart({
 
   const names = [
     ...new Set(
-      data.tsi.service_infos.map(
+      tripData.tsi.service_infos.map(
         (si) =>
           `${si.category} ${si.train_nr}` +
           (si.line ? ` [Linie ${si.line}]` : "")
@@ -318,14 +302,14 @@ function TripLoadForecastChart({
     systemTime
   )}`;
 
-  const baseFileName = getBaseFileName(data, systemTime);
+  const baseFileName = getBaseFileName(tripData, systemTime);
 
   const spreadTopPoints = [];
   const spreadBottomPoints = [];
   let x = 0;
   for (const ef of edges) {
-    const topLoad = ef.q_95 || 0;
-    const bottomLoad = ef.q_5 || 0;
+    const topLoad = ef.dist.q95;
+    const bottomLoad = ef.dist.q5;
     const topY = 200 - Math.round((topLoad / maxVal) * 200);
     const bottomY = 200 - Math.round((bottomLoad / maxVal) * 200);
     spreadTopPoints.push(`${x} ${topY}`);
@@ -337,21 +321,21 @@ function TripLoadForecastChart({
   const spreadPath = (
     <path
       d={`M${spreadTopPoints.join(" ")} ${spreadBottomPoints.join(" ")}z`}
-      className="spread"
+      style={{ fill: "#B2B5FE", fillOpacity: 0.4, stroke: "#797EFF" }}
     />
   );
 
   const expectedPath = (
     <path
-      d={getSvgLinePath(edges, maxVal, (ef) => ef.expected_passengers || 0)}
-      className="planned"
+      d={getSvgLinePath(edges, maxVal, (ef) => ef.expected_passengers)}
+      style={{ stroke: "#333", strokeDasharray: 2, fill: "none" }}
     />
   );
 
   const medianPath = (
     <path
-      d={getSvgLinePath(edges, maxVal, (ef) => ef.q_50 || 0)}
-      className="median"
+      d={getSvgLinePath(edges, maxVal, (ef) => ef.dist.q50)}
+      style={{ stroke: "#3038FF", strokeWidth: 2, fill: "none" }}
     />
   );
 
@@ -360,7 +344,7 @@ function TripLoadForecastChart({
       x="-2"
       y={label.y + 4}
       textAnchor="end"
-      className="legend"
+      style={{ fontSize: "8px", fill: "#333" }}
       key={label.pax}
     >
       {label.pax}
@@ -394,7 +378,7 @@ function TripLoadForecastChart({
         x="0"
         y="0"
         textAnchor="end"
-        className="legend station"
+        style={{ fontSize: "8px", fill: "#000" }}
         transform={`translate(${x} 210) rotate(-60 0 0)`}
         key={idx}
       >
@@ -410,7 +394,7 @@ function TripLoadForecastChart({
             x={x - 2}
             y="190"
             textAnchor="end"
-            className="time schedule"
+            style={{ fontSize: "6px", fill: "#777" }}
             key={`${idx}.sched.arr`}
           >
             {formatTime(arrivalScheduleTime)}
@@ -422,7 +406,10 @@ function TripLoadForecastChart({
           x={x - 2}
           y="198"
           textAnchor="end"
-          className={`time current${arrivalDelayed ? " delayed" : ""}`}
+          style={{
+            fontSize: "6px",
+            fill: arrivalDelayed ? "#d60000" : "#008600",
+          }}
           key={`${idx}.curr.arr`}
         >
           {formatTime(arrivalCurrentTime)}
@@ -436,7 +423,7 @@ function TripLoadForecastChart({
             x={x + 2}
             y="190"
             textAnchor="start"
-            className="time schedule"
+            style={{ fontSize: "6px", fill: "#777" }}
             key={`${idx}.sched.dep`}
           >
             {formatTime(departureScheduleTime)}
@@ -448,7 +435,10 @@ function TripLoadForecastChart({
           x={x + 2}
           y="198"
           textAnchor="start"
-          className={`time current${departureDelayed ? " delayed" : ""}`}
+          style={{
+            fontSize: "6px",
+            fill: departureDelayed ? "#d60000" : "#008600",
+          }}
           key={`${idx}.curr.dep`}
         >
           {formatTime(departureCurrentTime)}
@@ -472,7 +462,7 @@ function TripLoadForecastChart({
   const currentTimeIndicator = (
     <path
       d={`M${currentTimePosition} 201 l2 4 l-4 0 z`}
-      className="current-time-indicator"
+      style={{ fill: "#777" }}
     />
   );
 
@@ -501,27 +491,34 @@ function TripLoadForecastChart({
       viewBox={`-100 -15 ${120 + graphWidth} 335`}
       className="max-h-[42rem] mx-auto mt-2"
     >
-      <g>{background}</g>
-      <g>{sectionDividers}</g>
-      <g>
-        <path stroke="#DDD" d={`M0 10h${graphWidth}`} />
-        {overCapProbs}
+      <g style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
+        <g>{background}</g>
+        <g>{sectionDividers}</g>
+        <g>
+          <path stroke="#DDD" d={`M0 10h${graphWidth}`} />
+          {overCapProbs}
+        </g>
+        {spreadPath}
+        {expectedPath}
+        {medianPath}
+        {outerBorder}
+        <text
+          x={graphWidth / 2}
+          y="-5"
+          textAnchor="middle"
+          style={{ fontSize: "8px", fill: "#333" }}
+        >
+          {title}
+        </text>
+        <g>{yLabels}</g>
+        <g>
+          {stationNameLabels}
+          {scheduleTimeLabels}
+          {currentTimeLabels}
+        </g>
+        {currentTimeIndicator}
+        <g>{clickRegions}</g>
       </g>
-      {spreadPath}
-      {expectedPath}
-      {medianPath}
-      {outerBorder}
-      <text x={graphWidth / 2} y="-5" textAnchor="middle" className="legend">
-        {title}
-      </text>
-      <g>{yLabels}</g>
-      <g>
-        {stationNameLabels}
-        {scheduleTimeLabels}
-        {currentTimeLabels}
-      </g>
-      {currentTimeIndicator}
-      <g>{clickRegions}</g>
     </svg>
   );
 

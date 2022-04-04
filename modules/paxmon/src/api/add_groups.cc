@@ -33,6 +33,12 @@ msg_ptr add_groups(paxmon_data& data, bool const allow_reuse,
         utl::verify(pg_fbs->planned_journey()->legs()->size() != 0,
                     "trying to add empty passenger group");
         auto input_pg = from_fbs(sched, pg_fbs);
+        if (input_pg.probability_ !=
+            std::clamp(input_pg.probability_, 0.F, 1.F)) {
+          LOG(warn) << "add_groups: out of bounds probability: "
+                    << input_pg.probability_ << " => "
+                    << std::clamp(input_pg.probability_, 0.F, 1.F);
+        }
         input_pg.probability_ = std::clamp(input_pg.probability_, 0.F, 1.F);
         if (input_pg.probability_ == 0.F) {
           LOG(warn) << "adding passenger group with 0 probability";

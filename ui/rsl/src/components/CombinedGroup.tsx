@@ -7,16 +7,20 @@ import { GroupedPassengerGroups } from "@/api/protocol/motis/paxmon";
 
 import { sendRoutingRequest } from "@/api/routing";
 
-import { Journey, connectionToJourney } from "@/data/journey";
+import {
+  Journey,
+  connectionToJourney,
+  getArrivalTime,
+  getDepartureTime,
+} from "@/data/journey";
 import { scheduleAtom } from "@/data/simulation";
 
 import { formatTime } from "@/util/dateFormat";
 
 import JourneyTripNameView from "@/components/JourneyTripNameView";
-import TripLoadForecastChart from "@/components/TripLoadForecastChart";
-import TripServiceInfoView from "@/components/TripServiceInfoView";
+import { MiniTripLoadGraphForTrip } from "@/components/MiniTripLoadGraph";
 
-export type GroupByDirection = "Origin" | "Destination";
+export type GroupByDirection = "Origin" | "Destination" | "None";
 
 export type CombinedGroupProps = {
   plannedTrip: TripId;
@@ -27,36 +31,6 @@ export type CombinedGroupProps = {
 };
 
 const SEARCH_INTERVAL = 61;
-
-function getArrivalTime(j: Journey): number {
-  const finalLeg = j.legs[j.legs.length - 1];
-  switch (finalLeg.type) {
-    case "trip":
-      return finalLeg.stops[finalLeg.stops.length - 1].arrival.time;
-    case "walk":
-      return finalLeg.to.arrival.time;
-  }
-}
-
-function getDepartureTime(j: Journey): number {
-  const firstLeg = j.legs[0];
-  switch (firstLeg.type) {
-    case "trip":
-      return firstLeg.stops[0].departure.time;
-    case "walk":
-      return firstLeg.from.departure.time;
-  }
-}
-
-/*
-export type CombinedGroupProps = {
-  plannedTrip: TripId;
-  combinedGroup: GroupedPassengerGroups;
-  startStation: Station;
-  earliestDeparture: number;
-  groupByDirection: GroupByDirection;
-};
- */
 
 function CombinedGroup({
   plannedTrip,
@@ -76,7 +50,7 @@ function CombinedGroup({
       "alternatives",
       {
         from: startStation.id,
-        to: destinationStation.id,
+        to: destinationStation?.id,
         earliestDeparture: earliestDeparture,
         intervalDuration: SEARCH_INTERVAL,
       },
@@ -118,19 +92,28 @@ function CombinedGroup({
   const groupInfo = (
     <div>
       <span className="font-bold">
-        {combinedGroup.info.min_passenger_count}-
-        {combinedGroup.info.max_passenger_count} Reisende
-        {groupByDirection === "Origin" ? " aus " : " in "}Richtung{" "}
-        {destinationStation.name}
+        {combinedGroup.info.dist.q5 == combinedGroup.info.dist.q95
+          ? `${combinedGroup.info.dist.q5} Reisende`
+          : `${combinedGroup.info.dist.q5} - ${combinedGroup.info.dist.q95} Reisende`}
+        {groupByDirection !== "None" && (
+          <>
+            {groupByDirection === "Origin"
+              ? " mit Reisebeginn in "
+              : " mit Ziel "}
+            {destinationStation.name}
+          </>
+        )}
         {combinedGroup.entry_station.length === 1
           ? `, Einstieg in ${combinedGroup.entry_station[0].name}`
           : null}
+        {previousTrip &&
+          ` und Ankunft mit ${
+            previousTrip.service_infos[0]?.category ?? "Zug"
+          } ${
+            previousTrip.service_infos[0]?.train_nr ??
+            previousTrip.trip.train_nr
+          }`}
       </span>
-      {previousTrip && (
-        <div>
-          Ankunft mit: <TripServiceInfoView tsi={previousTrip} format="Long" />
-        </div>
-      )}
     </div>
   );
 
@@ -138,8 +121,9 @@ function CombinedGroup({
 
   const alternativesInfo = journeys ? (
     <div>
-      {journeys.length} Mögliche Verbindungen (ab{" "}
-      {formatTime(earliestDeparture)}):
+      {`${journeys.length} Mögliche Alternative(n) (ab ${formatTime(
+        earliestDeparture
+      )}):`}
       <ul>
         {journeys.map((j, idx) => (
           <li
@@ -156,10 +140,7 @@ function CombinedGroup({
                   </Tooltip.Trigger>
                   <Tooltip.Content>
                     <div className="w-96 bg-white p-2 rounded-md shadow-lg flex justify-center">
-                      <TripLoadForecastChart
-                        tripId={leg.trips[0].trip.id}
-                        mode="Tooltip"
-                      />
+                      <MiniTripLoadGraphForTrip tripId={leg.trips[0].trip.id} />
                     </div>
                     <Tooltip.Arrow className="text-white fill-current" />
                   </Tooltip.Content>

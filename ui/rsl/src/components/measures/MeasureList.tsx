@@ -4,7 +4,12 @@ import { useAtomCallback, useUpdateAtom } from "jotai/utils";
 import { useCallback } from "react";
 import { useMutation, useQueryClient } from "react-query";
 
-import { LoadLevel, MeasureWrapper } from "@/api/protocol/motis/paxforecast";
+import { TripServiceInfo } from "@/api/protocol/motis";
+import {
+  LoadLevel,
+  MeasureType,
+  MeasureWrapper,
+} from "@/api/protocol/motis/paxforecast";
 import { PaxMonStatusResponse } from "@/api/protocol/motis/paxmon";
 
 import { sendPaxForecastApplyMeasuresRequest } from "@/api/paxforecast";
@@ -24,7 +29,9 @@ import {
   universeAtom,
 } from "@/data/simulation";
 
+import classNames from "@/util/classNames";
 import { formatDateTime } from "@/util/dateFormat";
+import { loadLevelInfos } from "@/util/loadLevelInfos";
 import { isNonNull } from "@/util/typeGuards";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
@@ -32,14 +39,15 @@ import TripServiceInfoView from "@/components/TripServiceInfoView";
 type RemoveFn = (ma: PrimitiveAtom<MeasureUnion>) => void;
 type SelectFn = (ma: PrimitiveAtom<MeasureUnion>) => void;
 
-const loadLevels: Record<LoadLevel, string> = {
-  Unknown: "unbekannt",
-  Low: "gering",
-  NoSeats: "keine Sitzplätze",
-  Full: "keine Mitfahrmöglichkeit",
+const measureTypeTexts: Record<MeasureType | "Empty", string> = {
+  TripLoadInfoMeasure: "Auslastungsinformation",
+  TripRecommendationMeasure: "Zugempfehlung",
+  TripLoadRecommendationMeasure: "Alternativenempfehlung",
+  RtUpdateMeasure: "Echtzeitmeldung",
+  Empty: "Neue Maßnahme",
 };
 
-function MeasureTypeDetailColumn({
+function MeasureTypeDetail({
   measure,
 }: {
   measure: MeasureUnion;
@@ -47,96 +55,97 @@ function MeasureTypeDetailColumn({
   switch (measure.type) {
     case "TripLoadInfoMeasure": {
       return (
-        <>
-          <div className="text-sm font-medium text-gray-900">
-            Auslastungsinformation
-          </div>
-          <div className="text-sm text-gray-500">
-            {measure.data.trip ? (
-              <>
-                <TripServiceInfoView tsi={measure.data.trip} format="Short" />
-                <span>
-                  {": "}
-                  {loadLevels[measure.data.level]}
-                </span>
-              </>
-            ) : (
-              <span className="text-db-red-500">Kein Trip gewählt</span>
-            )}
-          </div>
-        </>
+        <div className="text-sm text-gray-500">
+          <TripWithLoadLevel
+            tsi={measure.data.trip}
+            level={measure.data.level}
+            placeholder="Kein Zug ausgewählt"
+          />
+        </div>
       );
     }
     case "TripRecommendationMeasure": {
       return (
-        <>
-          <div className="text-sm font-medium text-gray-900">Zugempfehlung</div>
-          <div className="text-sm text-gray-500">
-            {measure.data.recommended_trip ? (
-              <TripServiceInfoView
-                tsi={measure.data.recommended_trip}
-                format="Short"
-              />
-            ) : (
-              <span className="text-db-red-500">Kein Trip gewählt</span>
+        <div className="text-sm text-gray-500">
+          {measure.data.recommended_trip ? (
+            <TripServiceInfoView
+              tsi={measure.data.recommended_trip}
+              format="Short"
+            />
+          ) : (
+            <span className="text-db-red-500">Kein Trip gewählt</span>
+          )}
+        </div>
+      );
+    }
+    case "TripLoadRecommendationMeasure": {
+      return (
+        <div className="text-sm text-gray-800">
+          <div
+            className={classNames(
+              "truncate",
+              !measure.data.planned_destination && "text-db-red-500"
             )}
+          >
+            {measure.data.planned_destination
+              ? `→ ${measure.data.planned_destination.name}`
+              : "Keine Richtung ausgewählt"}
           </div>
-        </>
+          <TripWithLoadLevel
+            tsi={measure.data.full_trip.trip}
+            level={measure.data.full_trip.level}
+            placeholder="Kein überfüllter Zug ausgewählt"
+          />
+          {measure.data.recommended_trips.map((tll, idx) => (
+            <TripWithLoadLevel key={idx} tsi={tll.trip} level={tll.level} />
+          ))}
+        </div>
       );
     }
     case "RtUpdateMeasure": {
       return (
-        <>
-          <div className="text-sm font-medium text-gray-900">
-            Echtzeitmeldung
-          </div>
-          <div className="text-sm text-gray-500">
-            {measure.data.trip ? (
-              <TripServiceInfoView tsi={measure.data.trip} format="Short" />
-            ) : (
-              <span className="text-db-red-500">Kein Trip gewählt</span>
-            )}
-          </div>
-        </>
+        <div className="text-sm text-gray-500">
+          {measure.data.trip ? (
+            <TripServiceInfoView tsi={measure.data.trip} format="Short" />
+          ) : (
+            <span className="text-db-red-500">Kein Trip gewählt</span>
+          )}
+        </div>
       );
     }
     case "Empty": {
-      return (
-        <>
-          <div className="text-sm font-medium text-gray-900">Neue Maßnahme</div>
-        </>
-      );
+      return <></>;
     }
   }
 }
 
-function MeasureSharedDataColumn({
-  measure,
-}: {
-  measure: MeasureUnion;
-}): JSX.Element {
-  const shared = measure.shared;
+type TripWithLoadLevelProps = {
+  tsi: TripServiceInfo | undefined;
+  level: LoadLevel;
+  placeholder?: string | undefined;
+};
+
+function TripWithLoadLevel({
+  tsi,
+  level,
+  placeholder,
+}: TripWithLoadLevelProps) {
+  if (!tsi) {
+    if (placeholder) {
+      return <div className="text-db-red-500">{placeholder}</div>;
+    } else {
+      return null;
+    }
+  }
+  const lli = loadLevelInfos[level];
   return (
-    <>
-      <div className="text-sm text-gray-900">{formatDateTime(shared.time)}</div>
-      {shared.recipients.stations.length > 0 && (
-        <div className="text-sm text-gray-500">
-          {shared.recipients.stations[0].name}
-          {shared.recipients.stations.length > 1 &&
-            ` (+${shared.recipients.stations.length - 1})`}
-        </div>
-      )}
-      {shared.recipients.trips.length > 0 && (
-        <div className="text-sm text-gray-500">
-          <TripServiceInfoView
-            tsi={shared.recipients.trips[0]}
-            format="Short"
-          />
-          {shared.recipients.trips.length > 1 &&
-            ` (+${shared.recipients.trips.length - 1})`}
-        </div>
-      )}
-    </>
+    <div className="flex items-center gap-2">
+      <span className={`inline-block w-4 h-4 rounded-full ${lli.bgColor}`} />
+      <span>
+        <TripServiceInfoView tsi={tsi} format="Short" />
+        <span className="text-gray-500">: {lli.label}</span>
+      </span>
+    </div>
   );
 }
 
@@ -153,25 +162,51 @@ function MeasureListEntry({
 }: MeasureListEntryProps) {
   const [measure] = useAtom(measureAtom);
 
+  const hasRecipients =
+    measure.shared.recipients.stations.length > 0 ||
+    measure.shared.recipients.trips.length > 0;
+
+  const tripName = (tsi: TripServiceInfo) =>
+    tsi.service_infos.length > 0
+      ? `${tsi.service_infos[0].category} ${tsi.service_infos[0].train_nr}`
+      : `Zug ${tsi.trip.train_nr}`;
+
   return (
-    <tr>
-      <td className="px-4 py-3 whitespace-nowrap">
-        <MeasureTypeDetailColumn measure={measure} />
-      </td>
-      <td className="px-4 py-3 whitespace-nowrap">
-        <MeasureSharedDataColumn measure={measure} />
-      </td>
-      <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-        <button onClick={() => select(measureAtom)} className="p-1">
-          <PencilIcon className="h-4 w-4 text-gray-900 hover:text-gray-600" />
-          <span className="sr-only">Bearbeiten</span>
-        </button>
-        <button onClick={() => remove(measureAtom)} className="p-1 ml-2">
-          <TrashIcon className="h-4 w-4 text-gray-900 hover:text-gray-600" />
-          <span className="sr-only">Löschen</span>
-        </button>
-      </td>
-    </tr>
+    <div className="bg-db-cool-gray-100 rounded p-3">
+      <div className="flex justify-between items-center">
+        <div className="font-medium text-gray-900">
+          {measureTypeTexts[measure.type]}
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-900">
+            {formatDateTime(measure.shared.time)}
+          </div>
+          <div className="text-sm font-medium">
+            <button onClick={() => select(measureAtom)} className="p-1">
+              <PencilIcon className="h-4 w-4 text-gray-900 hover:text-gray-600" />
+              <span className="sr-only">Bearbeiten</span>
+            </button>
+            <button onClick={() => remove(measureAtom)} className="p-1 ml-1">
+              <TrashIcon className="h-4 w-4 text-gray-900 hover:text-gray-600" />
+              <span className="sr-only">Löschen</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="text-sm mb-2">
+        {hasRecipients ? (
+          <span className="text-gray-600">
+            {`Ansage in ${[
+              ...measure.shared.recipients.stations.map((s) => s.name),
+              ...measure.shared.recipients.trips.map((t) => tripName(t)),
+            ].join(", ")}`}
+          </span>
+        ) : (
+          <span className="text-db-red-500">Kein Ansageort gewählt</span>
+        )}
+      </div>
+      <MeasureTypeDetail measure={measure} />
+    </div>
   );
 }
 
@@ -218,6 +253,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
         });
         setSelectedSimResult(resultAtom);
         await queryClient.invalidateQueries(queryKeys.all);
+        await queryClient.invalidateQueries(["tripList"]);
         onSimulationFinished();
       },
       retry: false,
@@ -259,61 +295,53 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
     }
   };
 
+  const clear = () => {
+    setMeasureAtoms([]);
+    setSelectedMeasure(null);
+  };
+
   const applyEnabled =
     universe != 0 &&
     measureAtoms.length > 0 &&
     !applyMeasuresMutation.isLoading;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 h-full overflow-hidden">
       <div className="flex justify-between">
         <span className="text-xl">Maßnahmen</span>
-        <button
-          onClick={add}
-          className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"
-        >
-          Maßnahme hinzufügen
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={add}
+            className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"
+          >
+            Maßnahme hinzufügen
+          </button>
+          <button
+            onClick={clear}
+            className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"
+          >
+            Alle löschen
+          </button>
+        </div>
       </div>
-      {measureAtoms.length > 0 ? (
-        <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th
-                  scope="col"
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Maßnahme
-                </th>
-                <th
-                  scope="col"
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Zeit &amp; Ort
-                </th>
-                <th scope="col" className="relative px-4 py-3">
-                  <span className="sr-only">Bearbeiten</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {measureAtoms.map((ma) => (
-                <MeasureListEntry
-                  key={`${ma}`}
-                  measureAtom={ma}
-                  remove={remove}
-                  select={setSelectedMeasure}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="text-db-cool-gray-600">
-          Noch keine Maßnahmen hinzugefügt.
-        </div>
-      )}
+      <div className="overflow-y-auto grow pr-2">
+        {measureAtoms.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {measureAtoms.map((ma) => (
+              <MeasureListEntry
+                key={`${ma}`}
+                measureAtom={ma}
+                remove={remove}
+                select={setSelectedMeasure}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-db-cool-gray-600">
+            Noch keine Maßnahmen hinzugefügt.
+          </div>
+        )}
+      </div>
       {universe === 0 && (
         <div>
           Für die Simulation von Maßnahmen muss zuerst ein Paralleluniversum

@@ -27,6 +27,7 @@
 #include "motis/paxmon/api/filter_trips.h"
 #include "motis/paxmon/api/find_trips.h"
 #include "motis/paxmon/api/fork_universe.h"
+#include "motis/paxmon/api/get_addressable_groups.h"
 #include "motis/paxmon/api/get_groups.h"
 #include "motis/paxmon/api/get_groups_in_trip.h"
 #include "motis/paxmon/api/get_interchanges.h"
@@ -200,7 +201,7 @@ void paxmon::init(motis::module::registry& reg) {
                           CreateRISForwardTimeRequest(fbb, time).Union(),
                           "/ris/forward");
     LOG(info) << "paxmon: forwarding time to: " << format_unix_time(time)
-              << " =========================================";
+              << " (" << time << ") =========================================";
     return motis_call(make_msg(fbb))->val();
   };
 
@@ -226,7 +227,7 @@ void paxmon::init(motis::module::registry& reg) {
         return {};
       },
       {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
-                           ctx::access_t::READ},
+                           ctx::access_t::WRITE},
        ctx::access_request{to_res_id(global_res_id::PAX_DEFAULT_UNIVERSE),
                            ctx::access_t::WRITE}});
 
@@ -293,6 +294,12 @@ void paxmon::init(motis::module::registry& reg) {
   reg.register_op("/paxmon/groups_in_trip",
                   [&](msg_ptr const& msg) -> msg_ptr {
                     return api::get_groups_in_trip(data_, msg);
+                  },
+                  {});
+
+  reg.register_op("/paxmon/addressable_groups",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::get_addressable_groups(data_, msg);
                   },
                   {});
 

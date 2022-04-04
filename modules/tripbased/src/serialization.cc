@@ -26,7 +26,7 @@ struct file {
 
   ~file() {
     if (f_ != nullptr) {
-      fclose(f_);
+      (void)fclose(f_);
     }
     f_ = nullptr;
   }

@@ -51,20 +51,22 @@ void add_affected_groups(schedule const& sched, universe& uv,
       continue;
     }
     auto const loc = localize(sched, uv, result, pg, loc_time);
-    if (is_recipient(sched, uv, *pg, loc, rcpts) && check_fn(pg)) {
+    if (is_recipient(sched, uv, *pg, loc, rcpts) && check_fn(pg, loc)) {
       result.localization_[pg] = loc;
       result.measures_[pg].emplace_back(m);
     }
   }
 }
 
-bool matches_destination(passenger_group const* pg,
-                         trip_recommendation const& m) {
-  // TODO(pablo): check planned_trips
-  return !pg->compact_planned_journey_.legs_.empty() &&
-         std::find(begin(m.planned_destinations_), end(m.planned_destinations_),
-                   pg->compact_planned_journey_.destination_station_id()) !=
-             end(m.planned_destinations_);
+bool matches_destination(
+    passenger_localization const& loc,
+    std::vector<std::uint32_t> const& planned_destinations) {
+  return std::any_of(
+      begin(loc.remaining_interchanges_), end(loc.remaining_interchanges_),
+      [&](auto const station_id) {
+        return std::find(begin(planned_destinations), end(planned_destinations),
+                         station_id) != end(planned_destinations);
+      });
 }
 
 affected_groups_info get_affected_groups(schedule const& sched, universe& uv,
@@ -75,20 +77,34 @@ affected_groups_info get_affected_groups(schedule const& sched, universe& uv,
     std::visit(
         utl::overloaded{
             [&](trip_recommendation const& m) {
-              add_affected_groups(sched, uv, result, m.recipients_, loc_time,
-                                  &mv, [&m](passenger_group const* pg) {
-                                    return matches_destination(pg, m);
-                                  });
+              add_affected_groups(
+                  sched, uv, result, m.recipients_, loc_time, &mv,
+                  [&](passenger_group const*,
+                      passenger_localization const& loc) {
+                    return matches_destination(loc, m.planned_destinations_);
+                  });
             },
             [&](trip_load_information const& m) {
-              add_affected_groups(sched, uv, result, m.recipients_, loc_time,
-                                  &mv,
-                                  [](passenger_group const*) { return true; });
+              add_affected_groups(
+                  sched, uv, result, m.recipients_, loc_time, &mv,
+                  [](passenger_group const*, passenger_localization const&) {
+                    return true;
+                  });
+            },
+            [&](trip_load_recommendation const& m) {
+              add_affected_groups(
+                  sched, uv, result, m.recipients_, loc_time, &mv,
+                  [&](passenger_group const*,
+                      passenger_localization const& loc) {
+                    return matches_destination(loc, m.planned_destinations_);
+                  });
             },
             [&](rt_update const& m) {
-              add_affected_groups(sched, uv, result, m.recipients_, loc_time,
-                                  &mv,
-                                  [](passenger_group const*) { return true; });
+              add_affected_groups(
+                  sched, uv, result, m.recipients_, loc_time, &mv,
+                  [](passenger_group const*, passenger_localization const&) {
+                    return true;
+                  });
             }},
         mv);
   }

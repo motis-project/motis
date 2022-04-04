@@ -22,8 +22,20 @@ table TripRecommendationMeasure {
   time: long;
   planned_trips: [TripId];
   planned_destinations: [string]; // station ids
-  planned_long_distance_destinations: [string]; // station ids
   recommended_trip: TripId;
+}
+
+table TripWithLoadLevel {
+  trip: TripId;
+  level: LoadLevel;
+}
+
+table TripLoadRecommendationMeasure {
+  recipients: MeasureRecipients;
+  time: long;
+  planned_destinations: [string]; // station ids
+  full_trips: [TripWithLoadLevel];
+  recommended_trips: [TripWithLoadLevel];
 }
 
 table RtUpdateMeasure {
@@ -36,6 +48,7 @@ table RtUpdateMeasure {
 union Measure {
   TripLoadInfoMeasure,
   TripRecommendationMeasure,
+  TripLoadRecommendationMeasure,
   RtUpdateMeasure
 }
 
