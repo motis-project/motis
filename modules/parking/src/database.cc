@@ -173,9 +173,8 @@ std::vector<parking_lot> database::get_parking_lots() {
   auto cur = lmdb::cursor{txn, parking_lots_db};
   auto entry = cur.get(lmdb::cursor_op::FIRST);
   while (entry.has_value()) {
-    // TODO(pablo): too many copies
-    auto copy = std::string{entry->second};
-    parking_lots.emplace_back(*cista::deserialize<parking_lot>(copy));
+    parking_lots.emplace_back(
+        cista::copy_from_potentially_unaligned<parking_lot>(entry->second));
     entry = cur.get(lmdb::cursor_op::NEXT);
   }
   cur.reset();
