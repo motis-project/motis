@@ -209,14 +209,25 @@ function TripSectionEditor({
     <form onSubmit={handleSubmit(onSubmit)}>
       <div className="flex flex-col gap-4 divide-y-2 divide-db-cool-gray-300 divide-dashed">
         {allowReroute ? (
-          <div className="py-1 flex justify-center">
-            <button
-              type="button"
-              className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
-              onClick={() => insertStop(0)}
-            >
-              Neuen Halt am Anfang einfügen
-            </button>
+          <div className="space-y-3">
+            <div className="py-1 flex justify-center">
+              <button
+                type="button"
+                className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
+                onClick={() => remove()}
+              >
+                Alle Halte entfernen
+              </button>
+            </div>
+            <div className="py-1 flex justify-center">
+              <button
+                type="button"
+                className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
+                onClick={() => insertStop(0)}
+              >
+                Neuen Halt am Anfang einfügen
+              </button>
+            </div>
           </div>
         ) : (
           <div>
