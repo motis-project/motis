@@ -215,28 +215,28 @@ std::vector<foot_edge_task> database::get_foot_edge_tasks(
   return tasks;
 }
 
-lmdb::txn::dbi database::parking_lots_dbi(lmdb::txn& txn,
-                                          lmdb::dbi_flags const flags) const {
+static lmdb::txn::dbi database::parking_lots_dbi(lmdb::txn& txn,
+                                                 lmdb::dbi_flags const flags) {
   return txn.dbi_open(PARKING_LOTS_DB, flags | lmdb::dbi_flags::INTEGERKEY);
 }
 
-lmdb::txn::dbi database::osm_parking_lots_dbi(
-    lmdb::txn& txn, lmdb::dbi_flags const flags) const {
+static lmdb::txn::dbi database::osm_parking_lots_dbi(
+    lmdb::txn& txn, lmdb::dbi_flags const flags) {
   return txn.dbi_open(OSM_PARKING_LOTS_DB, flags);
 }
 
-lmdb::txn::dbi database::parkendd_parking_lots_dbi(
-    lmdb::txn& txn, lmdb::dbi_flags const flags) const {
+static lmdb::txn::dbi database::parkendd_parking_lots_dbi(
+    lmdb::txn& txn, lmdb::dbi_flags const flags) {
   return txn.dbi_open(PARKENDD_PARKING_LOTS_DB, flags);
 }
 
-lmdb::txn::dbi database::reachable_stations_dbi(
-    lmdb::txn& txn, lmdb::dbi_flags const flags) const {
+static lmdb::txn::dbi database::reachable_stations_dbi(
+    lmdb::txn& txn, lmdb::dbi_flags const flags) {
   return txn.dbi_open(REACHABLE_STATIONS_DB, flags);
 }
 
-lmdb::txn::dbi database::footedges_dbi(lmdb::txn& txn,
-                                       lmdb::dbi_flags const flags) const {
+static lmdb::txn::dbi database::footedges_dbi(lmdb::txn& txn,
+                                              lmdb::dbi_flags const flags) {
   return txn.dbi_open(FOOTEDGES_DB, flags);
 }
 

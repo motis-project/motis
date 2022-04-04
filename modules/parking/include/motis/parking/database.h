@@ -48,16 +48,16 @@ struct database {
       std::map<std::string, motis::ppr::profile_info> const& ppr_profiles);
 
 private:
-  lmdb::txn::dbi parking_lots_dbi(
-      lmdb::txn& txn, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE) const;
-  lmdb::txn::dbi osm_parking_lots_dbi(
-      lmdb::txn& txn, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE) const;
-  lmdb::txn::dbi parkendd_parking_lots_dbi(
-      lmdb::txn& txn, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE) const;
-  lmdb::txn::dbi reachable_stations_dbi(
-      lmdb::txn& txn, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE) const;
-  lmdb::txn::dbi footedges_dbi(
-      lmdb::txn& txn, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE) const;
+  static lmdb::txn::dbi parking_lots_dbi(
+      lmdb::txn& txn, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE);
+  static lmdb::txn::dbi osm_parking_lots_dbi(
+      lmdb::txn& txn, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE);
+  static lmdb::txn::dbi parkendd_parking_lots_dbi(
+      lmdb::txn& txn, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE);
+  static lmdb::txn::dbi reachable_stations_dbi(
+      lmdb::txn& txn, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE);
+  static lmdb::txn::dbi footedges_dbi(
+      lmdb::txn& txn, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE);
 
   void init();
 

@@ -177,8 +177,7 @@ void compute_foot_edges_direct(
                             std::string const& /*profile_name*/,
                             search_profile const& profile,
                             search_direction const dir) {
-    return route_ppr_direct(rg, parking_loc, station_locs, profile,
-                            search_direction::FWD);
+    return route_ppr_direct(rg, parking_loc, station_locs, profile, dir);
   };
   for (auto const& t : tasks) {
     pool.post([&, &t = t] {
