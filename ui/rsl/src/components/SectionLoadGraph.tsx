@@ -137,9 +137,9 @@ function SectionLoadGraph({
             } H${lo} Z`}
             style={{
               fill: SectionLoadColors.Fill_Range,
-              fillOpacity: 0.5,
+              fillOpacity: 0.8,
               stroke: SectionLoadColors.Stroke_Range,
-              strokeOpacity: 0.4,
+              strokeOpacity: 0.8,
             }}
           />
           <path
