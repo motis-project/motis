@@ -8,6 +8,8 @@ import { queryKeys, sendPaxMonGetTripLoadInfosRequest } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/simulation";
 
+import { SectionLoadColors } from "@/util/colors";
+
 export type MiniTripLoadGraphProps = {
   edges: PaxMonEdgeLoadInfo[];
 };
@@ -23,19 +25,19 @@ interface SectionGeometry {
 
 function getSectionColor(capacity: number, maxLoad: number) {
   if (capacity == 0) {
-    return "#3C414B";
+    return SectionLoadColors.Fg_unknown;
   } else {
     const load = maxLoad / capacity;
     if (load > 2.0) {
-      return "#C50014";
+      return SectionLoadColors.Fg_200_plus;
     } else if (load > 1.2) {
-      return "#EC0016";
+      return SectionLoadColors.Fg_120_200;
     } else if (load > 1.0) {
-      return "#F39200";
+      return SectionLoadColors.Fg_100_120;
     } else if (load > 0.8) {
-      return "#FFD800";
+      return SectionLoadColors.Fg_80_100;
     } else {
-      return "#408335";
+      return SectionLoadColors.Fg_0_80;
     }
   }
 }
