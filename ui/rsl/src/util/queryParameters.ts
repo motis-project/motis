@@ -1,13 +1,7 @@
-export default function getQueryParameters(): Record<string, string> {
-  const params: Record<string, string> = {};
+export default function getQueryParameters(): URLSearchParams {
   if (typeof window !== "undefined") {
-    window.location.search
-      .substring(1)
-      .split("&")
-      .forEach((p) => {
-        const param = p.split("=");
-        params[param[0]] = decodeURIComponent(param[1]);
-      });
+    return new URL(window.location.href).searchParams;
+  } else {
+    return new URLSearchParams();
   }
-  return params;
 }
