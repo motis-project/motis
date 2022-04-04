@@ -224,7 +224,8 @@ function EmptyMeasureEditor({
           </>
         )}
         <MeasureTypeOption title="Echtzeitupdate" onClick={setRtUpdate}>
-          Zugverlauf bearbeiten (Verspätungen, Umleitungen, Gleisänderungen)
+          Zugverlauf bearbeiten (Ausfall, Teilausfall, Verspätungen, Umleitung,
+          Gleisänderungen)
         </MeasureTypeOption>
         <button
           onClick={() => deleteMeasure(measureAtom)}
