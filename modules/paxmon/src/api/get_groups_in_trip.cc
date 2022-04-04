@@ -31,10 +31,15 @@ struct grouped_key {
 };
 
 std::pair<std::uint32_t /*station*/, time> get_group_entry(
-    passenger_group const* pg, trip_idx_t const ti) {
-  for (auto const& leg : pg->compact_planned_journey_.legs_) {
-    if (leg.trip_idx_ == ti) {
-      return {leg.enter_station_id_, leg.enter_time_};
+    universe const& uv, schedule const& sched, passenger_group const* pg,
+    trip_idx_t const ti) {
+  for (auto const& ei : pg->edges_) {
+    auto const* e = ei.get(uv);
+    for (auto const& trp : e->get_trips(sched)) {
+      if (trp->trip_idx_ == ti) {
+        auto const* from = e->from(uv);
+        return {from->station_idx(), from->schedule_time()};
+      }
     }
   }
   return {0, 0};
@@ -43,6 +48,7 @@ std::pair<std::uint32_t /*station*/, time> get_group_entry(
 trip const* get_trip_before_entry(schedule const& sched,
                                   passenger_group const* pg,
                                   trip_idx_t const ti) {
+  // TODO(pablo): support merged trips
   for (auto const& [leg_idx, leg] :
        utl::enumerate(pg->compact_planned_journey_.legs_)) {
     if (leg.trip_idx_ == ti) {
@@ -94,7 +100,7 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
       case PaxMonGroupByStation_EntryAndLast: {
         key.group_station_ = cj.destination_station_id();
         auto const [entry_station, entry_time] =
-            get_group_entry(pg, trp->trip_idx_);
+            get_group_entry(uv, sched, pg, trp->trip_idx_);
         key.entry_station_ = entry_station;
         key.entry_time_ = entry_time;
         break;
@@ -107,6 +113,7 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
   auto const group_enters_here =
       [&](event_node const* trp_node,
           passenger_group const* pg) -> std::pair<bool, trip const*> {
+    // TODO(pablo): support merged trips
     for (auto const& [leg_idx, leg] :
          utl::enumerate(pg->compact_planned_journey_.legs_)) {
       if (leg.trip_idx_ == trp->trip_idx_ &&
@@ -126,6 +133,7 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
   auto const group_exits_here =
       [&](event_node const* trp_node,
           passenger_group const* pg) -> std::pair<bool, trip const*> {
+    // TODO(pablo): support merged trips
     for (auto const& [leg_idx, leg] :
          utl::enumerate(pg->compact_planned_journey_.legs_)) {
       if (leg.trip_idx_ == trp->trip_idx_ &&

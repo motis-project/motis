@@ -105,6 +105,7 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
 
     for (auto const pgi : by_entry.groups_) {
       auto const* pg = uv.passenger_groups_[pgi];
+      // TODO(pablo): support merged trips
       for (auto const& [leg_idx, leg] :
            utl::enumerate(pg->compact_planned_journey_.legs_)) {
         if (leg.trip_idx_ == trp->trip_idx_) {
@@ -157,6 +158,7 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
 
         for (auto const pgi : by_interchange.groups_) {
           auto const* pg = uv.passenger_groups_[pgi];
+          // TODO(pablo): support merged trips
           for (auto const& leg : pg->compact_planned_journey_.legs_) {
             if (leg.trip_idx_ == trp->trip_idx_) {
               by_entry[{leg.enter_station_id_, leg.enter_time_}]
@@ -197,6 +199,7 @@ msg_ptr get_addressable_groups(paxmon_data& data, msg_ptr const& msg) {
         continue;
       }
       auto skip = true;
+      // TODO(pablo): support merged trips
       for (auto const& leg : pg->compact_planned_journey_.legs_) {
         if (skip) {
           if (leg.trip_idx_ == trp->trip_idx_) {
