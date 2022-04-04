@@ -23,6 +23,13 @@ function SharedDataEditor({ measureAtom }: SharedDataEditorProps): JSX.Element {
     return focusAtom(measureAtom, (optic) => optic.prop("shared"));
   }, [measureAtom]);
   const [shared, setShared] = useAtom(sharedAtom);
+  const typeAtom = useMemo(
+    () => focusAtom(measureAtom, (optic) => optic.prop("type")),
+    [measureAtom]
+  );
+  const [measureType] = useAtom(typeAtom);
+
+  const showRecipients = measureType !== "RtUpdateMeasure";
 
   const addTrip = (trip: TripServiceInfo | undefined) => {
     if (trip) {
@@ -81,7 +88,7 @@ function SharedDataEditor({ measureAtom }: SharedDataEditorProps): JSX.Element {
   };
 
   return (
-    <div className="flex flex-col gap-4 mt-2 mb-8 pb-4">
+    <div className="flex flex-col gap-4 mt-2 mb-8 pb-2">
       <div>
         <div className={labelClass}>Durchführung der Maßnahme</div>
         <div>
@@ -92,46 +99,50 @@ function SharedDataEditor({ measureAtom }: SharedDataEditorProps): JSX.Element {
           />
         </div>
       </div>
-      <div>
-        <div className={labelClass}>Ansage in Zug</div>
-        <ul className="leading-loose">
-          {shared.recipients.trips.map((tsi, idx) => (
-            <li key={JSON.stringify(tsi.trip)}>
-              <TripServiceInfoView tsi={tsi} format="Short" />
-              <button
-                type="button"
-                className="ml-3 px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
-                onClick={() => removeTrip(idx)}
-              >
-                Entfernen
-              </button>
-            </li>
-          ))}
-        </ul>
-        <TripPicker
-          onTripPicked={addTrip}
-          clearOnPick={true}
-          longDistanceOnly={false}
-        />
-      </div>
-      <div>
-        <div className={labelClass}>Ansage an Station</div>
-        <ul className="leading-loose">
-          {shared.recipients.stations.map((station, idx) => (
-            <li key={station.id}>
-              <span>{station.name}</span>
-              <button
-                type="button"
-                className="ml-3 px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
-                onClick={() => removeStation(idx)}
-              >
-                Entfernen
-              </button>
-            </li>
-          ))}
-        </ul>
-        <StationPicker onStationPicked={addStation} clearOnPick={true} />
-      </div>
+      {showRecipients && (
+        <>
+          <div>
+            <div className={labelClass}>Ansage in Zug</div>
+            <ul className="leading-loose">
+              {shared.recipients.trips.map((tsi, idx) => (
+                <li key={JSON.stringify(tsi.trip)}>
+                  <TripServiceInfoView tsi={tsi} format="Short" />
+                  <button
+                    type="button"
+                    className="ml-3 px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
+                    onClick={() => removeTrip(idx)}
+                  >
+                    Entfernen
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <TripPicker
+              onTripPicked={addTrip}
+              clearOnPick={true}
+              longDistanceOnly={false}
+            />
+          </div>
+          <div>
+            <div className={labelClass}>Ansage an Station</div>
+            <ul className="leading-loose">
+              {shared.recipients.stations.map((station, idx) => (
+                <li key={station.id}>
+                  <span>{station.name}</span>
+                  <button
+                    type="button"
+                    className="ml-3 px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
+                    onClick={() => removeStation(idx)}
+                  >
+                    Entfernen
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <StationPicker onStationPicked={addStation} clearOnPick={true} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -166,6 +166,8 @@ function MeasureListEntry({
     measure.shared.recipients.stations.length > 0 ||
     measure.shared.recipients.trips.length > 0;
 
+  const needsRecipients = measure.type !== "RtUpdateMeasure";
+
   const tripName = (tsi: TripServiceInfo) =>
     tsi.service_infos.length > 0
       ? `${tsi.service_infos[0].category} ${tsi.service_infos[0].train_nr}`
@@ -201,9 +203,9 @@ function MeasureListEntry({
               ...measure.shared.recipients.trips.map((t) => tripName(t)),
             ].join(", ")}`}
           </span>
-        ) : (
+        ) : needsRecipients ? (
           <span className="text-db-red-500">Kein Ansageort gewählt</span>
-        )}
+        ) : null}
       </div>
       <MeasureTypeDetail measure={measure} />
     </div>
