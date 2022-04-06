@@ -132,19 +132,20 @@ function SectionLoadGraph({
       plot = (
         <g>
           <path
-            d={`M${lo} ${margin.top} H${hi} V${
-              margin.top + innerHeight
+            d={`M${lo} ${margin.top + 2} H${hi} V${
+              margin.top + innerHeight - 2
             } H${lo} Z`}
             style={{
               fill: SectionLoadColors.Fill_Range,
-              fillOpacity: 0.8,
+              // fillOpacity: 0.8,
               stroke: SectionLoadColors.Stroke_Range,
-              strokeOpacity: 0.8,
+              // strokeOpacity: 0.8,
+              strokeWidth: 2,
             }}
           />
           <path
-            d={`M${paxScale(section.dist.q50)} ${margin.top} V${
-              margin.top + innerHeight
+            d={`M${paxScale(section.dist.q50)} ${margin.top + 2} V${
+              margin.top + innerHeight - 2
             }`}
             style={{
               stroke: SectionLoadColors.Stroke_Median,
@@ -210,7 +211,15 @@ function SectionLoadGraph({
         d={`M${paxScale(section.expected_passengers)} ${
           margin.top
         } v${innerHeight}`}
-        stroke={SectionLoadColors.Stroke_Expected}
+        stroke={SectionLoadColors.Stroke_Expected1}
+        strokeDasharray={2}
+        strokeWidth={2}
+      />
+      <path
+        d={`M${paxScale(section.expected_passengers)} ${margin.top + 2} v${
+          innerHeight - 2
+        }`}
+        stroke={SectionLoadColors.Stroke_Expected2}
         strokeDasharray={2}
         strokeWidth={2}
       />

@@ -322,7 +322,14 @@ function Legend() {
             />
             <path
               d="M10 0 V20"
-              stroke={SectionLoadColors.Stroke_Expected}
+              stroke={SectionLoadColors.Stroke_Expected1}
+              strokeDasharray={2}
+              strokeWidth={2}
+              fill="none"
+            />
+            <path
+              d="M10 2 V20"
+              stroke={SectionLoadColors.Stroke_Expected2}
               strokeDasharray={2}
               strokeWidth={2}
               fill="none"
