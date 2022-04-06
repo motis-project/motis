@@ -413,10 +413,9 @@ struct gbfs::impl {
                         *sched_.stations_.at(p.at(free_bike_info.p_));
                     auto const pos = to_fbs(free_bike.pos_);
                     return CreateRouteInfo(
-                        fbb, BikeRoute_FreeBikeRoute,
+                        fbb, to_fbs(fbb, station), BikeRoute_FreeBikeRoute,
                         CreateFreeBikeRoute(
-                            fbb, fbb.CreateString(free_bike.id_), &pos,
-                            fbb.CreateString(station.eva_nr_))
+                            fbb, fbb.CreateString(free_bike.id_), &pos)
                             .Union(),
                         j.total_duration_, j.walk_duration_, j.bike_duration_);
                   },
@@ -424,25 +423,18 @@ struct gbfs::impl {
                   [&](journey::s const& station_bike_info) {
                     auto const& sx_bike_station =
                         stations_.at(sx.at(station_bike_info.sx_));
-                    auto const sx_bike_station_pos =
-                        to_fbs(sx_bike_station.pos_);
                     auto const& sp_bike_station =
                         stations_.at(sp.at(station_bike_info.sp_));
-                    auto const sp_bike_station_pos =
-                        to_fbs(sp_bike_station.pos_);
                     auto const& station =
                         *sched_.stations_.at(p.at(station_bike_info.p_));
                     return CreateRouteInfo(
-                        fbb, BikeRoute_StationBikeRoute,
+                        fbb, to_fbs(fbb, station), BikeRoute_StationBikeRoute,
                         CreateStationBikeRoute(
                             fbb,
                             CreateGBFSStation(
-                                fbb, &sx_bike_station_pos,
-                                fbb.CreateString(sx_bike_station.id_)),
+                                fbb, fbb.CreateString(sx_bike_station.id_)),
                             CreateGBFSStation(
-                                fbb, &sp_bike_station_pos,
-                                fbb.CreateString(sp_bike_station.id_)),
-                            fbb.CreateString(station.eva_nr_))
+                                fbb, fbb.CreateString(sp_bike_station.id_)))
                             .Union(),
                         j.total_duration_, j.walk_duration_, j.bike_duration_);
                   },

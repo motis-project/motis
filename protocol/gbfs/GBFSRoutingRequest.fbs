@@ -17,6 +17,7 @@ namespace motis.gbfs;
 //       "lat": 48.77541,
 //       "lng": 9.158932
 //     },
+//     "vehicle_type": "bike",
 //     "max_foot_duration": 15,
 //     "max_bike_duration": 15
 //   }
@@ -42,6 +43,7 @@ namespace motis.gbfs;
 table GBFSRoutingRequest {
   dir: SearchDir;
   x: motis.Position;
+  vehicle_types: [string];
   max_foot_duration: uint;  // minutes
   max_bike_duration: uint;  // minutes
 }
