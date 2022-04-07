@@ -1,7 +1,8 @@
 import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
+import { useAtomCallback } from "jotai/utils";
 import { cloneDeep } from "lodash-es";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Control,
   Controller,
@@ -66,7 +67,6 @@ function RtUpdateMeasureEditor({
   );
   const [data, setData] = useAtom(dataAtom);
   const queryClient = useQueryClient();
-  const [schedule] = useAtom(scheduleAtom); // TODO: rerender...
   const [selectedTrip, setSelectedTrip] = useState<string>();
   const [allowReroute, setAllowReroute] = useState(true);
 
@@ -79,11 +79,18 @@ function RtUpdateMeasureEditor({
       return { ...d, ribasis };
     });
 
+  const getSchedule = useAtomCallback(
+    useCallback((get) => {
+      return get(scheduleAtom);
+    }, [])
+  );
+
   const setTrip = async (tsi: TripServiceInfo | undefined) => {
     setData((d) => {
       return { ...d, trip: tsi };
     });
     if (tsi) {
+      const schedule = await getSchedule();
       const lookupReq = { trip_id: tsi.trip, schedule };
       const data = await queryClient.fetchQuery(
         lookupQueryKeys.riBasis(lookupReq),
