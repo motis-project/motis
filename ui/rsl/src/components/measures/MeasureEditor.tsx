@@ -7,6 +7,7 @@ import { MeasureUnion } from "@/data/measures";
 import { selectedTripAtom } from "@/data/selectedTrip";
 import { showLegacyMeasureTypesAtom } from "@/data/settings";
 
+import RtCancelMeasureEditor from "@/components/measures/RtCancelMeasureEditor";
 import RtUpdateMeasureEditor from "@/components/measures/RtUpdateMeasureEditor";
 import SharedDataEditor from "@/components/measures/SharedDataEditor";
 import TripLoadInfoMeasureEditor from "@/components/measures/TripLoadInfoMeasureEditor";
@@ -110,6 +111,15 @@ function MeasureEditor({
           key={measureAtom.toString()}
         />
       );
+    case "RtCancelMeasure":
+      return measureEditor(
+        <RtCancelMeasureEditor
+          measureAtom={measureAtom}
+          closeEditor={closeEditor}
+          deleteMeasure={deleteMeasure}
+          key={measureAtom.toString()}
+        />
+      );
   }
 }
 
@@ -195,6 +205,21 @@ function EmptyMeasureEditor({
     });
   };
 
+  const setRtCancel = () => {
+    setMeasure((m) => {
+      return {
+        type: "RtCancelMeasure",
+        shared: m.shared,
+        data: {
+          trip: undefined,
+          original_ribasis: undefined,
+          canceled_stops: [],
+          allow_reroute: true,
+        },
+      };
+    });
+  };
+
   return (
     <div>
       <div>Maßnahmentyp wählen:</div>
@@ -223,6 +248,9 @@ function EmptyMeasureEditor({
             </MeasureTypeOption>
           </>
         )}
+        <MeasureTypeOption title="Ausfall/Teilausfall" onClick={setRtCancel}>
+          Einzelne Halte oder einen kompletten Zug ausfallen lassen
+        </MeasureTypeOption>
         <MeasureTypeOption title="Echtzeitupdate" onClick={setRtUpdate}>
           Zugverlauf bearbeiten (Ausfall, Teilausfall, Verspätungen, Umleitung,
           Gleisänderungen)

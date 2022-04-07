@@ -5,11 +5,7 @@ import { useCallback } from "react";
 import { useMutation, useQueryClient } from "react-query";
 
 import { TripServiceInfo } from "@/api/protocol/motis";
-import {
-  LoadLevel,
-  MeasureType,
-  MeasureWrapper,
-} from "@/api/protocol/motis/paxforecast";
+import { LoadLevel, MeasureWrapper } from "@/api/protocol/motis/paxforecast";
 import { PaxMonStatusResponse } from "@/api/protocol/motis/paxmon";
 
 import { sendPaxForecastApplyMeasuresRequest } from "@/api/paxforecast";
@@ -17,6 +13,7 @@ import { queryKeys } from "@/api/paxmon";
 
 import {
   MeasureUnion,
+  UiMeasureType,
   currentEditorMeasureAtom,
   measuresAtom,
   newEmptyMeasure,
@@ -39,11 +36,12 @@ import TripServiceInfoView from "@/components/TripServiceInfoView";
 type RemoveFn = (ma: PrimitiveAtom<MeasureUnion>) => void;
 type SelectFn = (ma: PrimitiveAtom<MeasureUnion>) => void;
 
-const measureTypeTexts: Record<MeasureType | "Empty", string> = {
+const measureTypeTexts: Record<UiMeasureType, string> = {
   TripLoadInfoMeasure: "Auslastungsinformation",
   TripRecommendationMeasure: "Zugempfehlung",
   TripLoadRecommendationMeasure: "Alternativenempfehlung",
   RtUpdateMeasure: "Echtzeitmeldung",
+  RtCancelMeasure: "(Teil-)Ausfall",
   Empty: "Neue Maßnahme",
 };
 
@@ -113,6 +111,26 @@ function MeasureTypeDetail({
         </div>
       );
     }
+    case "RtCancelMeasure": {
+      const canceled = measure.data.canceled_stops.filter((c) => c).length;
+      const allCanceled = canceled == measure.data.canceled_stops.length;
+      return (
+        <div className="text-sm text-gray-500">
+          {measure.data.trip ? (
+            <>
+              <TripServiceInfoView tsi={measure.data.trip} format="Short" />
+              {allCanceled
+                ? ": Komplettausfall"
+                : `: Teilausfall (${canceled} ${
+                    canceled == 1 ? "Halt" : "Halte"
+                  })`}
+            </>
+          ) : (
+            <span className="text-db-red-500">Kein Trip gewählt</span>
+          )}
+        </div>
+      );
+    }
     case "Empty": {
       return <></>;
     }
@@ -166,7 +184,8 @@ function MeasureListEntry({
     measure.shared.recipients.stations.length > 0 ||
     measure.shared.recipients.trips.length > 0;
 
-  const needsRecipients = measure.type !== "RtUpdateMeasure";
+  const needsRecipients =
+    measure.type !== "RtUpdateMeasure" && measure.type !== "RtCancelMeasure";
 
   const tripName = (tsi: TripServiceInfo) =>
     tsi.service_infos.length > 0

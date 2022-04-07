@@ -29,7 +29,8 @@ function SharedDataEditor({ measureAtom }: SharedDataEditorProps): JSX.Element {
   );
   const [measureType] = useAtom(typeAtom);
 
-  const showRecipients = measureType !== "RtUpdateMeasure";
+  const showRecipients =
+    measureType !== "RtUpdateMeasure" && measureType !== "RtCancelMeasure";
 
   const addTrip = (trip: TripServiceInfo | undefined) => {
     if (trip) {
