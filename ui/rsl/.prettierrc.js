@@ -1,8 +1,5 @@
 module.exports = {
-  plugins: [
-    require.resolve("@trivago/prettier-plugin-sort-imports"),
-    require.resolve("prettier-plugin-alias-imports"),
-  ],
+  plugins: [require.resolve("@trivago/prettier-plugin-sort-imports")],
   // https://github.com/trivago/prettier-plugin-sort-imports
   importOrder: [
     "^@/api/protocol/(.*)$",
