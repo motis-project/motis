@@ -9,6 +9,7 @@
 #include "utl/get_or_create.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
+#include "utl/zip.h"
 
 #include "motis/hash_map.h"
 #include "motis/hash_set.h"
@@ -31,10 +32,18 @@ struct update_tracker::impl {
     float previous_probability_{};
   };
 
+  struct edge_info {
+    pax_stats stats_{};
+    std::uint16_t capacity_{};
+    bool has_capacity_{};
+    bool critical_{};
+  };
+
   struct critical_trip_info {
     int critical_sections_{};
     int max_excess_pax_{};
     int cumulative_excess_pax_{};
+    std::vector<edge_info> edge_infos_;
   };
 
   struct updated_trip_info {
@@ -47,6 +56,11 @@ struct update_tracker::impl {
     int critical_sections_diff_{};
     int max_excess_pax_diff_{};
     int cumulative_excess_pax_diff_{};
+    int newly_critical_sections_{};
+    int no_longer_critical_sections_{};
+    int max_pax_increase_{};
+    int max_pax_decrease_{};
+    bool rerouted_{};
   };
 
   impl(universe const& uv, schedule const& sched,
@@ -89,7 +103,8 @@ struct update_tracker::impl {
   }
 
   void before_trip_rerouted(trip const* trp) {
-    get_or_create_updated_trip_info(trp->trip_idx_);
+    auto& uti = get_or_create_updated_trip_info(trp->trip_idx_);
+    uti.rerouted_ = true;
   }
 
   std::pair<motis::module::message_creator&, Offset<PaxMonTrackedUpdates>>
@@ -100,23 +115,23 @@ struct update_tracker::impl {
       return std::pair{entry.first, &entry.second};
     });
 
-    std::sort(begin(sorted_trips), end(sorted_trips),
-              [](auto const& lhs, auto const& rhs) {
-                updated_trip_info const* l = lhs.second;
-                updated_trip_info const* r = rhs.second;
-                return std::tie(l->max_excess_pax_diff_,
-                                l->cumulative_excess_pax_diff_,
-                                l->critical_sections_diff_,
-                                l->after_cti_.max_excess_pax_,
-                                l->after_cti_.cumulative_excess_pax_,
-                                l->after_cti_.critical_sections_) >
-                       std::tie(r->max_excess_pax_diff_,
-                                r->cumulative_excess_pax_diff_,
-                                r->critical_sections_diff_,
-                                r->after_cti_.max_excess_pax_,
-                                r->after_cti_.cumulative_excess_pax_,
-                                r->after_cti_.critical_sections_);
-              });
+    std::sort(
+        begin(sorted_trips), end(sorted_trips),
+        [](auto const& lhs, auto const& rhs) {
+          updated_trip_info const* l = lhs.second;
+          updated_trip_info const* r = rhs.second;
+          auto const crit_change_l =
+              l->newly_critical_sections_ + l->no_longer_critical_sections_;
+          auto const crit_change_r =
+              r->newly_critical_sections_ + r->no_longer_critical_sections_;
+          auto const max_change_l =
+              std::max(l->max_pax_increase_, l->max_pax_decrease_);
+          auto const max_change_r =
+              std::max(r->max_pax_increase_, r->max_pax_decrease_);
+          return std::tie(crit_change_l, max_change_l,
+                          l->max_excess_pax_diff_) >
+                 std::tie(crit_change_r, max_change_r, r->max_excess_pax_diff_);
+        });
 
     auto const fb_updates = CreatePaxMonTrackedUpdates(
         mc_, added_groups_.size(), reused_groups_.size(),
@@ -162,6 +177,29 @@ private:
       uti.cumulative_excess_pax_diff_ =
           std::abs(uti.before_cti_.cumulative_excess_pax_ -
                    uti.after_cti_.cumulative_excess_pax_);
+
+      if (!uti.rerouted_) {
+        utl::verify(uti.before_cti_.edge_infos_.size() ==
+                        uti.after_cti_.edge_infos_.size(),
+                    "paxmon::update_tracker: edge count mismatch");
+        for (auto const& [before, after] : utl::zip(
+                 uti.before_cti_.edge_infos_, uti.after_cti_.edge_infos_)) {
+          auto const pax_before = static_cast<int>(before.stats_.q95_);
+          auto const pax_after = static_cast<int>(after.stats_.q95_);
+          if (pax_before > pax_after) {
+            uti.max_pax_decrease_ =
+                std::max(uti.max_pax_decrease_, pax_before - pax_after);
+          } else if (pax_before < pax_after) {
+            uti.max_pax_increase_ =
+                std::max(uti.max_pax_increase_, pax_after - pax_before);
+          }
+          if (before.critical_ && !after.critical_) {
+            ++uti.no_longer_critical_sections_;
+          } else if (!before.critical_ && after.critical_) {
+            ++uti.newly_critical_sections_;
+          }
+        }
+      }
     }
   }
 
@@ -170,7 +208,11 @@ private:
     cti.critical_sections_ = 0;
     cti.cumulative_excess_pax_ = 0;
     cti.max_excess_pax_ = 0;
+    cti.edge_infos_.reserve(tli.edges_.size());
     for (auto const& eli : tli.edges_) {
+      cti.edge_infos_.emplace_back(
+          edge_info{get_pax_stats(eli.forecast_cdf_), eli.edge_->capacity(),
+                    eli.edge_->has_capacity(), eli.possibly_over_capacity_});
       if (!eli.edge_->has_capacity()) {
         continue;
       }
@@ -240,7 +282,9 @@ private:
 
     return CreatePaxMonUpdatedTrip(
         mc_, to_fbs_trip_service_info(mc_, sched_, trp), removed_max_pax,
-        removed_mean_pax, added_max_pax, added_mean_pax,
+        removed_mean_pax, added_max_pax, added_mean_pax, uti.rerouted_,
+        uti.newly_critical_sections_, uti.no_longer_critical_sections_,
+        uti.max_pax_increase_, uti.max_pax_decrease_,
         get_fbs_critical_trip_info(uti.before_cti_),
         get_fbs_critical_trip_info(uti.after_cti_),
         mc_.CreateVectorOfStructs(
