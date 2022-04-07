@@ -205,19 +205,19 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
       <TripServiceInfoView tsi={ut.tsi} format="Long" />
       <ul>
         {ut.rerouted && (
-          <li className="text-purple-600">
+          <li className="text-purple-700">
             Zugverlauf durch Echtzeitupdates geändert
           </li>
         )}
         {ut.newly_critical_sections > 0 && (
-          <li className="text-red-600">
+          <li className="text-red-700">
             {ut.newly_critical_sections > 1
               ? `${ut.newly_critical_sections} neue kritische Abschnitte`
               : "Ein neuer kritischer Abschnitt"}
           </li>
         )}
         {ut.no_longer_critical_sections > 0 && (
-          <li className="text-green-600">
+          <li className="text-green-700">
             {ut.no_longer_critical_sections > 1
               ? `Auslastung auf ${ut.no_longer_critical_sections} Abschnitten nicht mehr kritisch`
               : "Auslastung auf einem Abschnitt nicht mehr kritisch"}
