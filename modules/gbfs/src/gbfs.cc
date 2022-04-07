@@ -184,7 +184,7 @@ struct gbfs::impl {
         return std::accumulate(
             begin(p), end(p), std::vector<size_t>{},
             [&](std::vector<size_t> acc, size_t const idx) {
-              auto const& s = *sched_.stations_.at(idx).get();
+              auto const& s = *sched_.stations_.at(idx);
               acc.emplace_back(free_bikes_rtree_.nearest({s.lat(), s.lng()}, 1U)
                                    .at(0)
                                    .second);
