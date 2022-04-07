@@ -3,6 +3,7 @@ lockfileVersion: 5.3
 specifiers:
   '@headlessui/react': ^1.5.0
   '@heroicons/react': ^1.0.6
+  '@limegrass/eslint-plugin-import-alias': ^1.0.2
   '@radix-ui/react-dropdown-menu': ^0.1.6
   '@radix-ui/react-tooltip': ^0.1.7
   '@tailwindcss/forms': ^0.5.0
@@ -32,7 +33,6 @@ specifiers:
   optics-ts: ^2.3.0
   postcss: ^8.4.12
   prettier: ^2.6.2
-  prettier-plugin-alias-imports: ^0.1.6
   react: ^17.0.2
   react-dom: ^17.0.2
   react-hook-form: ^7.29.0
@@ -67,6 +67,7 @@ dependencies:
   uuid: 8.3.2
 
 devDependencies:
+  '@limegrass/eslint-plugin-import-alias': 1.0.2_eslint@8.12.0
   '@tailwindcss/forms': 0.5.0_tailwindcss@3.0.23
   '@trivago/prettier-plugin-sort-imports': 3.2.0_prettier@2.6.2
   '@types/lodash-es': 4.17.6
@@ -83,7 +84,6 @@ devDependencies:
   eslint-plugin-react-hooks: 4.4.0_eslint@8.12.0
   postcss: 8.4.12
   prettier: 2.6.2
-  prettier-plugin-alias-imports: 0.1.6_prettier@2.6.2
   tailwindcss: 3.0.23_autoprefixer@10.4.4
   typescript: 4.6.3
   vite: 2.9.1
@@ -502,6 +502,19 @@ packages:
   /@juggle/resize-observer/3.3.1:
     resolution: {integrity: sha512-zMM9Ds+SawiUkakS7y94Ymqx+S0ORzpG3frZirN3l+UlXUmSUR7hF4wxCVqW+ei94JzV5kt0uXBcoOEAuiydrw==}
     dev: false
+
+  /@limegrass/eslint-plugin-import-alias/1.0.2_eslint@8.12.0:
+    resolution: {integrity: sha512-VRC/GtwUNJJRKdRhooW/a8efTSq6ksBQ/Q0zJaia1fNCDuCdK3u1rvlBg1sSUBBgBvnGQp5WDdHry6r7RUzKhg==}
+    peerDependencies:
+      eslint: ^2 || ^3 || ^4 || ^5 || ^6 || ^7.2.0 || ^8
+    dependencies:
+      eslint: 8.12.0
+      find-up: 5.0.0
+      fs-extra: 10.0.1
+      micromatch: 4.0.5
+      slash: 3.0.0
+      tsconfig-paths: 3.14.1
+    dev: true
 
   /@nodelib/fs.scandir/2.1.5:
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -2211,6 +2224,15 @@ packages:
     resolution: {integrity: sha512-MhLuK+2gUcnZe8ZHlaaINnQLl0xRIGRfcGk2yl8xoQAfHrSsL3rYu6FCmBdkdbhc9EPlwyGHewaRsvwRMJtAlA==}
     dev: true
 
+  /fs-extra/10.0.1:
+    resolution: {integrity: sha512-NbdoVMZso2Lsrn/QwLXOy6rm0ufY2zEOKCDzJR/0kBsb0E6qed0P3iYK+Ath3BfvXEeu4JhEtXLgILx5psUfag==}
+    engines: {node: '>=12'}
+    dependencies:
+      graceful-fs: 4.2.10
+      jsonfile: 6.1.0
+      universalify: 2.0.0
+    dev: true
+
   /fs.realpath/1.0.0:
     resolution: {integrity: sha1-FQStJSMVjKpA20onh8sBQRmU6k8=}
 
@@ -2302,6 +2324,10 @@ packages:
       ignore: 5.2.0
       merge2: 1.4.1
       slash: 3.0.0
+    dev: true
+
+  /graceful-fs/4.2.10:
+    resolution: {integrity: sha512-9ByhssR2fPVsNZj478qUUbKfmL0+t5BDVyjShtyZZLiK7ZDAArFFfopyOTj0M05wE2tJPisA4iTnnXl2YoPvOA==}
     dev: true
 
   /has-bigints/1.0.1:
@@ -2579,6 +2605,14 @@ packages:
     resolution: {integrity: sha512-1hqLFMSrGHRHxav9q9gNjJ5EXznIxGVO09xQRrwplcS8qs28pZ8s8hupZAmqDwZUmVZ2Qb2jnyPOWcDH8m8dlA==}
     engines: {node: '>=6'}
     hasBin: true
+    dev: true
+
+  /jsonfile/6.1.0:
+    resolution: {integrity: sha512-5dgndWOriYSm5cnYaJNhalLNDKOqFwyDB/rr1E9ZsGciGvKPs8R2xYGCacuf3z6K1YKDz182fd+fY3cn3pMqXQ==}
+    dependencies:
+      universalify: 2.0.0
+    optionalDependencies:
+      graceful-fs: 4.2.10
     dev: true
 
   /jsx-ast-utils/3.2.2:
@@ -2922,25 +2956,6 @@ packages:
   /prelude-ls/1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
-    dev: true
-
-  /prettier-plugin-alias-imports/0.1.6_prettier@2.6.2:
-    resolution: {integrity: sha512-Q2hoVsdwg6ornZ02nNLO5ewggpO0Kz/WVyZuK9oMf+Ljtm7hQ47fdA2XoATky5TITRyuiBpsPn3kRr4Ppt4S/g==}
-    deprecated: Consider using the ESLint plugin @limegrass/eslint-plugin-import-alias instead
-    peerDependencies:
-      prettier: ^2.0.0
-    dependencies:
-      '@babel/generator': 7.17.9
-      '@babel/parser': 7.17.9
-      '@babel/traverse': 7.17.9
-      debug: 4.3.4
-      find-up: 5.0.0
-      micromatch: 4.0.5
-      prettier: 2.6.2
-      slash: 3.0.0
-      tsconfig-paths: 3.14.1
-    transitivePeerDependencies:
-      - supports-color
     dev: true
 
   /prettier/2.6.2:
@@ -3402,6 +3417,11 @@ packages:
       has-bigints: 1.0.1
       has-symbols: 1.0.3
       which-boxed-primitive: 1.0.2
+    dev: true
+
+  /universalify/2.0.0:
+    resolution: {integrity: sha512-hAZsKq7Yy11Zu1DE0OzWjw7nnLZmJZYTDZZyEFHZdUhV8FkH5MCfoU1XMaxXovpyW5nq5scPqq0ZDP9Zyl04oQ==}
+    engines: {node: '>= 10.0.0'}
     dev: true
 
   /unload/2.2.0:
