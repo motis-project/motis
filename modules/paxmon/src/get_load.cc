@@ -181,7 +181,13 @@ bool load_factor_possibly_ge(pax_cdf const& cdf, std::uint16_t capacity,
   if (cdf.data_.empty() || pax_threshold >= cdf.data_.size()) {
     return false;
   } else {
-    return cdf.data_.back() != 0.0;
+    // TODO(pablo): maybe switch back to max
+    // return cdf.data_.back() != 0.0;
+    if (cdf.data_[pax_threshold] <= 0.95F) {
+      return true;
+    } else {
+      return pax_threshold > 0 ? cdf.data_[pax_threshold - 1] <= 0.95F : false;
+    }
   }
 }
 
