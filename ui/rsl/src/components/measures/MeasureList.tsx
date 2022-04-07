@@ -254,6 +254,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
         preparation_time: 0,
         include_before_trip_load_info: true,
         include_after_trip_load_info: true,
+        include_trips_with_unchanged_load: false,
       }),
     {
       onMutate: () => {

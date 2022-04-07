@@ -86,6 +86,7 @@ export interface PaxForecastApplyMeasuresRequest {
   preparation_time: number;
   include_before_trip_load_info: boolean;
   include_after_trip_load_info: boolean;
+  include_trips_with_unchanged_load: boolean;
 }
 
 // paxforecast/PaxForecastApplyMeasuresResponse.fbs

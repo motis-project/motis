@@ -204,23 +204,34 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
     >
       <TripServiceInfoView tsi={ut.tsi} format="Long" />
       <ul>
-        <li>
-          Reisende über Kapazität: {ut.critical_info_before.max_excess_pax}
-          {" → "}
-          {ut.critical_info_after.max_excess_pax} max. /{" "}
-          {ut.critical_info_before.cumulative_excess_pax} {" → "}
-          {ut.critical_info_after.cumulative_excess_pax} gesamt
-        </li>
-        <li>
-          Kritische Abschnitte: {ut.critical_info_before.critical_sections}
-          {" → "}
-          {ut.critical_info_after.critical_sections}
-        </li>
-        <li>
-          Reisende: Avg: -{Math.round(ut.removed_mean_pax)} +
-          {Math.round(ut.added_mean_pax)} / Max: -{ut.removed_max_pax} +
-          {ut.added_max_pax}
-        </li>
+        {ut.rerouted && (
+          <li className="text-purple-600">
+            Zugverlauf durch Echtzeitupdates geändert
+          </li>
+        )}
+        {ut.newly_critical_sections > 0 && (
+          <li className="text-red-600">
+            {ut.newly_critical_sections > 1
+              ? `${ut.newly_critical_sections} neue kritische Abschnitte`
+              : "Ein neuer kritischer Abschnitt"}
+          </li>
+        )}
+        {ut.no_longer_critical_sections > 0 && (
+          <li className="text-green-600">
+            {ut.no_longer_critical_sections > 1
+              ? `Auslastung auf ${ut.no_longer_critical_sections} Abschnitten nicht mehr kritisch`
+              : "Auslastung auf einem Abschnitt nicht mehr kritisch"}
+          </li>
+        )}
+        {ut.max_pax_increase + ut.max_pax_decrease != 0 && (
+          <li>
+            Größte Änderung:
+            {ut.max_pax_increase > ut.max_pax_decrease
+              ? ` +${ut.max_pax_increase} `
+              : ` -${ut.max_pax_decrease} `}
+            Reisende
+          </li>
+        )}
       </ul>
       <MiniTripLoadGraph edges={ut.before_edges} />
       <MiniTripLoadGraph edges={ut.after_edges} />

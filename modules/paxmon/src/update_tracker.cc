@@ -6,6 +6,7 @@
 #include <tuple>
 #include <vector>
 
+#include "utl/erase_if.h"
 #include "utl/get_or_create.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
@@ -65,11 +66,13 @@ struct update_tracker::impl {
 
   impl(universe const& uv, schedule const& sched,
        bool const include_before_trip_load_info,
-       bool const include_after_trip_load_info)
+       bool const include_after_trip_load_info,
+       bool const include_trips_with_unchanged_load)
       : uv_{uv},
         sched_{sched},
         include_before_trip_load_info_{include_before_trip_load_info},
-        include_after_trip_load_info_{include_after_trip_load_info} {}
+        include_after_trip_load_info_{include_after_trip_load_info},
+        include_trips_with_unchanged_load_{include_trips_with_unchanged_load} {}
 
   void before_group_added(passenger_group const* pg) {
     store_group_info(pg);
@@ -115,23 +118,32 @@ struct update_tracker::impl {
       return std::pair{entry.first, &entry.second};
     });
 
-    std::sort(
-        begin(sorted_trips), end(sorted_trips),
-        [](auto const& lhs, auto const& rhs) {
-          updated_trip_info const* l = lhs.second;
-          updated_trip_info const* r = rhs.second;
-          auto const crit_change_l =
-              l->newly_critical_sections_ + l->no_longer_critical_sections_;
-          auto const crit_change_r =
-              r->newly_critical_sections_ + r->no_longer_critical_sections_;
-          auto const max_change_l =
-              std::max(l->max_pax_increase_, l->max_pax_decrease_);
-          auto const max_change_r =
-              std::max(r->max_pax_increase_, r->max_pax_decrease_);
-          return std::tie(crit_change_l, max_change_l,
-                          l->max_excess_pax_diff_) >
-                 std::tie(crit_change_r, max_change_r, r->max_excess_pax_diff_);
-        });
+    if (!include_trips_with_unchanged_load_) {
+      utl::erase_if(sorted_trips, [](auto const& entry) {
+        updated_trip_info const* uti = entry.second;
+        return !uti->rerouted_ && uti->newly_critical_sections_ == 0 &&
+               uti->no_longer_critical_sections_ == 0 &&
+               uti->max_pax_increase_ == 0 && uti->max_pax_decrease_ == 0;
+      });
+    }
+
+    std::sort(begin(sorted_trips), end(sorted_trips),
+              [](auto const& lhs, auto const& rhs) {
+                updated_trip_info const* l = lhs.second;
+                updated_trip_info const* r = rhs.second;
+                auto const crit_change_l = l->newly_critical_sections_ +
+                                           l->no_longer_critical_sections_;
+                auto const crit_change_r = r->newly_critical_sections_ +
+                                           r->no_longer_critical_sections_;
+                auto const max_change_l =
+                    std::max(l->max_pax_increase_, l->max_pax_decrease_);
+                auto const max_change_r =
+                    std::max(r->max_pax_increase_, r->max_pax_decrease_);
+                return std::tie(l->rerouted_, crit_change_l, max_change_l,
+                                l->max_excess_pax_diff_) >
+                       std::tie(r->rerouted_, crit_change_r, max_change_r,
+                                r->max_excess_pax_diff_);
+              });
 
     auto const fb_updates = CreatePaxMonTrackedUpdates(
         mc_, added_groups_.size(), reused_groups_.size(),
@@ -198,6 +210,20 @@ private:
           } else if (!before.critical_ && after.critical_) {
             ++uti.newly_critical_sections_;
           }
+        }
+      } else {
+        // just a guess (sections are not matched for rerouted trips)
+        auto const count_crit = [](std::vector<edge_info> const& eis) {
+          return std::count_if(begin(eis), end(eis), [](edge_info const& ei) {
+            return ei.critical_;
+          });
+        };
+        auto const crit_before = count_crit(uti.before_cti_.edge_infos_);
+        auto const crit_after = count_crit(uti.after_cti_.edge_infos_);
+        if (crit_before > crit_after) {
+          uti.no_longer_critical_sections_ = crit_before - crit_after;
+        } else if (crit_after > crit_before) {
+          uti.newly_critical_sections_ = crit_after - crit_before;
         }
       }
     }
@@ -331,6 +357,7 @@ private:
   motis::module::message_creator mc_;
   bool include_before_trip_load_info_{};
   bool include_after_trip_load_info_{};
+  bool include_trips_with_unchanged_load_{};
 
   mcd::hash_map<passenger_group_index, pg_base_info> group_infos_;
   std::vector<passenger_group_index> added_groups_;
@@ -359,12 +386,15 @@ update_tracker& update_tracker::operator=(update_tracker&& o) noexcept {
   return *this;
 }
 
-void update_tracker::start_tracking(universe const& uv, schedule const& sched,
-                                    bool const include_before_trip_load_info,
-                                    bool const include_after_trip_load_info) {
+void update_tracker::start_tracking(
+    universe const& uv, schedule const& sched,
+    bool const include_before_trip_load_info,
+    bool const include_after_trip_load_info,
+    bool const include_trips_with_unchanged_load) {
   utl::verify(!is_tracking(), "paxmon::update_tracker: already tracking");
   impl_ = std::make_unique<impl>(uv, sched, include_before_trip_load_info,
-                                 include_after_trip_load_info);
+                                 include_after_trip_load_info,
+                                 include_trips_with_unchanged_load);
 }
 
 std::pair<motis::module::message_creator&, Offset<PaxMonTrackedUpdates>>

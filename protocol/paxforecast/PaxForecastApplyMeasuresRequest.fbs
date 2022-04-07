@@ -11,4 +11,5 @@ table PaxForecastApplyMeasuresRequest {
 
   include_before_trip_load_info: bool;
   include_after_trip_load_info: bool;
+  include_trips_with_unchanged_load: bool;
 }
