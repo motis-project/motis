@@ -23,7 +23,8 @@ struct update_tracker {
 
   void start_tracking(universe const&, schedule const&,
                       bool include_before_trip_load_info,
-                      bool include_after_trip_load_info);
+                      bool include_after_trip_load_info,
+                      bool include_trips_with_unchanged_load);
   std::pair<motis::module::message_creator&,
             flatbuffers::Offset<PaxMonTrackedUpdates>>
   finish_updates();

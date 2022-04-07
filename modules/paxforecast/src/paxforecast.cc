@@ -597,7 +597,8 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
 
   uv.update_tracker_.start_tracking(uv, sched,
                                     req->include_before_trip_load_info(),
-                                    req->include_after_trip_load_info());
+                                    req->include_after_trip_load_info(),
+                                    req->include_trips_with_unchanged_load());
   MOTIS_FINALLY([&]() { uv.update_tracker_.stop_tracking(); });
 
   // stats
