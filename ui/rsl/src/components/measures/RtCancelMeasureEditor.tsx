@@ -2,7 +2,7 @@ import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
 import { useAtomCallback } from "jotai/utils";
 import { zip } from "lodash-es";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "react-query";
 
 import { TripServiceInfo } from "@/api/protocol/motis";
@@ -96,6 +96,14 @@ function RtCancelMeasureEditor({
       }
     }
   };
+
+  useEffect(() => {
+    if (data.trip) {
+      setTrip(data.trip).catch((err) =>
+        console.log("RtCancelMeasureEditor init failed:", err)
+      );
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div>

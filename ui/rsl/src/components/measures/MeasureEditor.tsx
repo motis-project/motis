@@ -200,7 +200,7 @@ function EmptyMeasureEditor({
       return {
         type: "RtUpdateMeasure",
         shared: m.shared,
-        data: { trip: undefined, ribasis: undefined },
+        data: { trip: selectedTrip, ribasis: undefined },
       };
     });
   };
@@ -211,7 +211,7 @@ function EmptyMeasureEditor({
         type: "RtCancelMeasure",
         shared: m.shared,
         data: {
-          trip: undefined,
+          trip: selectedTrip,
           original_ribasis: undefined,
           canceled_stops: [],
           allow_reroute: true,
@@ -222,8 +222,9 @@ function EmptyMeasureEditor({
 
   return (
     <div>
-      <div>Maßnahmentyp wählen:</div>
+      <div className="text-xl">Neue Maßnahme hinzufügen</div>
       <div className="flex flex-col gap-3 py-3">
+        <div className="text-lg">Nachfragebezogene Maßnahmen</div>
         <MeasureTypeOption
           title="Alternativenempfehlung mit Auslastungsinformation"
           onClick={setTripLoadRecommendation}
@@ -248,12 +249,13 @@ function EmptyMeasureEditor({
             </MeasureTypeOption>
           </>
         )}
+        <div className="text-lg">Angebotsbezogene Maßnahmen</div>
         <MeasureTypeOption title="Ausfall/Teilausfall" onClick={setRtCancel}>
-          Einzelne Halte oder einen kompletten Zug ausfallen lassen
+          Ausfall aller oder einzelner Halte eines Zuges simmulieren
         </MeasureTypeOption>
         <MeasureTypeOption title="Echtzeitupdate" onClick={setRtUpdate}>
-          Zugverlauf bearbeiten (Ausfall, Teilausfall, Verspätungen, Umleitung,
-          Gleisänderungen)
+          Beliebige Änderungen am Zugverlauf (Verspätungen, Umleitungen,
+          Gleisänderungen, Ausfälle) simulieren
         </MeasureTypeOption>
         <button
           onClick={() => deleteMeasure(measureAtom)}

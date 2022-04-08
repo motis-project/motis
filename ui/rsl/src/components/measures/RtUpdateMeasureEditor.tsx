@@ -115,11 +115,12 @@ function RtUpdateMeasureEditor({
   };
 
   useEffect(() => {
-    console.log("RtUpdateMeasureEditor mounted");
-    return () => {
-      console.log("RtUpdateMeasureEditor unmounted");
-    };
-  }, []);
+    if (data.trip) {
+      setTrip(data.trip).catch((err) =>
+        console.log("RtUpdateMeasureEditor init failed:", err)
+      );
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div>
