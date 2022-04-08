@@ -3,6 +3,7 @@ import { GridColumns } from "@visx/grid";
 import { ParentSize } from "@visx/responsive";
 import { scaleLinear } from "@visx/scale";
 import { BoxPlot, ViolinPlot } from "@visx/stats";
+import { CSSProperties } from "react";
 
 import {
   PaxMonEdgeLoadInfo,
@@ -124,11 +125,16 @@ function SectionLoadGraph({
     );
   }
 
+  const lo = paxScale(
+    plotType == "SimpleBox" ? section.dist.q5 : section.dist.min
+  );
+  const hi = paxScale(
+    plotType == "SimpleBox" ? section.dist.q95 : section.dist.max
+  );
+
   let plot: JSX.Element | null = null;
   switch (plotType) {
     case "SimpleBox": {
-      const lo = paxScale(section.dist.q5);
-      const hi = paxScale(section.dist.q95);
       plot = (
         <g>
           <path
@@ -195,36 +201,85 @@ function SectionLoadGraph({
     }
   }
 
+  const tooltipStyle: CSSProperties = { top: margin.top + 2 };
+  if (hi > width - 200) {
+    tooltipStyle.right = width - lo + 10;
+  } else {
+    tooltipStyle.left = hi + 10;
+  }
+
   return (
-    <svg width={width} height={height}>
-      <g>{bgSections}</g>
-      <GridColumns
-        scale={paxScale}
-        top={margin.top}
-        height={innerHeight}
-        stroke="#eee"
-        strokeOpacity={0.5}
-        numTicks={paxLimit / 10}
-      />
-      {plot}
-      <path
-        d={`M${paxScale(section.expected_passengers)} ${
-          margin.top
-        } v${innerHeight}`}
-        stroke={SectionLoadColors.Stroke_Expected1}
-        strokeDasharray={2}
-        strokeWidth={2}
-      />
-      <path
-        d={`M${paxScale(section.expected_passengers)} ${margin.top + 2} v${
-          innerHeight - 2
-        }`}
-        stroke={SectionLoadColors.Stroke_Expected2}
-        strokeDasharray={2}
-        strokeWidth={2}
-      />
-      <AxisBottom scale={paxScale} top={margin.top + innerHeight} />
-    </svg>
+    <div className="group relative">
+      <svg width={width} height={height}>
+        <g>{bgSections}</g>
+        <rect
+          x={margin.left}
+          y={margin.top}
+          width={innerWidth}
+          height={innerHeight}
+          fill="#fff"
+          className="opacity-0 group-hover:opacity-20"
+        />
+        <GridColumns
+          scale={paxScale}
+          top={margin.top}
+          height={innerHeight}
+          stroke="#eee"
+          strokeOpacity={0.5}
+          numTicks={paxLimit / 10}
+        />
+        {plot}
+        <path
+          d={`M${paxScale(section.expected_passengers)} ${
+            margin.top
+          } v${innerHeight}`}
+          stroke={SectionLoadColors.Stroke_Expected1}
+          strokeDasharray={2}
+          strokeWidth={2}
+        />
+        <path
+          d={`M${paxScale(section.expected_passengers)} ${margin.top + 2} v${
+            innerHeight - 2
+          }`}
+          stroke={SectionLoadColors.Stroke_Expected2}
+          strokeDasharray={2}
+          strokeWidth={2}
+        />
+        <AxisBottom scale={paxScale} top={margin.top + innerHeight} />
+      </svg>
+      <div
+        className="absolute hidden group-hover:block z-10 pointer-events-none w-32
+         bg-white text-black shadow-lg rounded p-1 text-xs opacity-95"
+        style={tooltipStyle}
+      >
+        <table className="w-full">
+          <tr>
+            <td>5% Quantil</td>
+            <td className="text-right pl-4">{section.dist.q5}</td>
+          </tr>
+          <tr>
+            <td>Median</td>
+            <td className="text-right pl-4">{section.dist.q50}</td>
+          </tr>
+          <tr>
+            <td>95% Quantil</td>
+            <td className="text-right pl-4">{section.dist.q95}</td>
+          </tr>
+          <tr className="border-y-2 border-gray-300">
+            <td>Planmäßig</td>
+            <td className="text-right pl-4">{section.expected_passengers}</td>
+          </tr>
+          <tr>
+            <td>Kapazität</td>
+            <td className="text-right pl-4">
+              {section.capacity_type === "Known"
+                ? section.capacity
+                : "Unbekannt"}
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
   );
 }
 
