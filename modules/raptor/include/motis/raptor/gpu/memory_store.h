@@ -88,7 +88,6 @@ struct device_memory {
   size_t additional_start_count_{0};
 
   device_result result_{};
-  // TODO(julian) move from uint32_t to char or something
   uint32_t* route_marks_{nullptr};
   uint32_t* station_marks_{nullptr};
   bool* any_station_marked_{nullptr};

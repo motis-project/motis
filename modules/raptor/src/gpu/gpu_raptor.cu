@@ -95,7 +95,6 @@ __device__ void update_route_larger32(gpu_route const& route,
       }
 
       // get the current stage leader
-      //TODO adapted for TT
       unsigned int ballot = __ballot_sync(
           FULL_MASK, (stage_id < active_stop_count) && valid(prev_arrival) &&
                          valid(stop_departure) &&
@@ -187,7 +186,6 @@ __device__ void update_route_smaller32(gpu_route const route,
     }
 
     // elect leader
-    //TODO adapted for TT
     unsigned ballot = __ballot_sync(
         FULL_MASK, (t_id < active_stop_count) && valid(prev_arrival) &&
                        valid(stop_departure) &&
@@ -266,7 +264,6 @@ __device__ void init_arrivals_dev(base_query const& query,
                                   device_gpu_timetable const& tt) {
   auto const t_id = get_global_thread_id();
 
-  //TODO adapted for TT
   auto const start_time =
       query.source_time_begin_ - tt.transfer_times_[query.source_];
 

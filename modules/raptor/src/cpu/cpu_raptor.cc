@@ -15,7 +15,6 @@ trip_count get_earliest_trip(raptor_timetable const& tt,
     return invalid<trip_count>;
   }
 
-  //TODO adapted for tt
   time const transfer_time = tt.transfer_times_[stop_id];
 
   // get first defined earliest trip for the stop in the route
@@ -47,7 +46,6 @@ void init_arrivals(raptor_result& result, raptor_query const& q,
   // in the first round will use the values in conjunction with the
   // footpath lengths without transfertime leading to invalid results.
   // Not setting the earliest arrival values should (I hope) be correct.
-  //TODO adapted for TT
   auto const start_time = q.source_time_begin_ - tt.transfer_times_[q.source_];
   result[0][q.source_] = start_time;
   station_marks.mark(q.source_);
@@ -110,7 +108,6 @@ void update_route(raptor_timetable const& tt, route_id const r_id,
     }
 
     // check if we could catch an earlier trip
-    //TODO adapted for TT
     auto const previous_k_arrival = prev_arrivals[stop_id];
     auto const transfer_time = tt.transfer_times_[stop_id];
     if (previous_k_arrival + transfer_time <= stop_time.departure_) {

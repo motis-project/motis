@@ -36,7 +36,6 @@ struct intermediate_journey {
   void add_footpath(stop_id const to, time const a_time, time const d_time,
                     time const duration, raptor_meta_info const& raptor_sched) {
     auto const motis_index = raptor_sched.station_id_to_index_[to];
-    // TODO commented because the TT is no longer pre-added to the arrival
     // a_time now has the transfer time preadded
     stops_.emplace_back(stops_.size(), motis_index, 0, 0, a_time, d_time,
                         a_time, d_time, timestamp_reason::SCHEDULE,
@@ -64,7 +63,6 @@ struct intermediate_journey {
 
       auto d_time = stop_time.departure_;
       auto a_time = stop_time.arrival_;
-      // TODO commented because the TT is no longer pre-added to the arrival
       // if (valid(a_time)) {
       //   a_time -= raptor_sched.transfer_times_[station_idx];
       // }
@@ -231,8 +229,6 @@ struct reconstructor {
     std::vector<candidate> candidates;
 
     auto add_candidates = [&](stop_id const target) {
-      // TODO commented out because tt is not longer pre-added to arrivals
-      // auto const tt = timetable_.transfer_times_[target];
 
       for (auto round_k = 1; round_k < max_raptor_round; ++round_k) {
         for (trait_id trait_offset = 0,
@@ -254,7 +250,6 @@ struct reconstructor {
                              true};
 
           // Check if the journey ends with a footpath
-          // TODO commented out because tt is not longer pre-added to arrivals
           auto const tt = CriteriaConfig::get_transfer_time(
               timetable_, trait_offset, target);
 
@@ -264,9 +259,6 @@ struct reconstructor {
               break;
             }
           }
-
-          // TODO commented out because tt is not longer pre-added to arrivals
-          // c.arrival_ -= tt;
 
           auto dominated = std::any_of(
               std::begin(candidates), std::end(candidates),
@@ -303,7 +295,6 @@ struct reconstructor {
   template <typename Query>
   void add(Query const& q) {
     for (auto& c : get_candidates(q)) {
-      // TODO commented out because transfer times are no longer added
       if (c.ends_with_footpath_) {
         // We need to add the transfer time to the arrival,
         // since all arrivals in the results are with pre-added transfer times.
@@ -360,7 +351,6 @@ struct reconstructor {
     auto station_arrival = c.arrival_;
     auto trait_offset = c.trait_offset_;
     for (auto result_idx = c.transfers_ + 1; result_idx > 0; --result_idx) {
-      // TODO(julian) possible to skip this if station arrival at index larger
       // than last departure minus transfertime,
       // same with footpath reachable stations
       auto [previous_station, used_route, used_trip, stop_offset,
@@ -423,9 +413,7 @@ struct reconstructor {
             continue;
           }
 
-          // TODO commented out because fp are not reduced by TT
-          time const first_footpath_duration =
-              f.duration_ /*+ raptor_sched_.transfer_times_[start_station]*/;
+          time const first_footpath_duration = f.duration_;
 
           return static_cast<time>(last_departure - first_footpath_duration);
         }
@@ -442,9 +430,7 @@ struct reconstructor {
           ij.add_footpath(arrival_station, last_departure, last_departure,
                           f.duration_, raptor_sched_);
 
-          // TODO commented out because fp are not longer reduced by TT
-          auto const first_footpath_duration =
-              f.duration_ /*+ raptor_sched_.transfer_times_[start_station]*/;
+          auto const first_footpath_duration = f.duration_;
           ij.add_start_station(start_station, raptor_sched_,
                                last_departure - first_footpath_duration);
         }

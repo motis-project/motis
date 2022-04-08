@@ -10,7 +10,7 @@ import java.nio.file.Path;
 
 public class SplitBatchResult {
   final static String HHLR_BASE_FOLDER = "C:\\Users\\Leon\\git\\motis\\Auswertung\\";
-  final static String DATASET = "swiss-mix-set";
+  final static String DATASET = "Hafas-Pretrip";
   final static String ARRAY_QUERIES_IN = "ArrayQueries";
   final static String ARRAY_RESULTS = "ArrayResults";
   final static String SPLIT_RESULTS = "SplitResults";

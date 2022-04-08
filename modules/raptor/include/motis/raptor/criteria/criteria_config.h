@@ -12,6 +12,7 @@ struct journey;
 
 namespace motis::raptor {
 struct raptor_route;
+struct cpu_mark_store;
 
 enum class CalcMethod { Shfl, Flat };
 
@@ -148,7 +149,19 @@ struct criteria_config : Data {
                                    stop_times_index const arr_sti) {
     Traits::calculate_aggregate(*this, tt, prev_arrivals, dep_sti, arr_sti);
   }
+
+  _mark_cuda_rel_ static inline void perform_stop_arrival_sweeping_gpu(
+      stop_id const s_id, time* const arrivals,
+      uint32_t* station_marks) {
+    Traits::perform_stop_arrival_sweeping_gpu(TRAITS_SIZE, s_id, arrivals, station_marks);
+  }
 #endif
+
+  static inline void perform_stop_arrival_sweeping_cpu(
+      stop_id const s_id, time* const arrivals,
+      cpu_mark_store& station_marks) {
+    Traits::perform_stop_arrival_sweeping_cpu(TRAITS_SIZE, s_id, arrivals, station_marks);
+  }
 
   inline std::vector<trait_id> get_feasible_traits(
       trait_id const initial_offset) {

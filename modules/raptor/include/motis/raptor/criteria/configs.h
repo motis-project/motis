@@ -23,14 +23,6 @@ using MaxOccupancyShfl =
                     traits<trait_max_occupancy>,
                     default_transfer_time_calculator, CalcMethod::Shfl>;
 
-// using TimeSlottedOccupancy =
-//     criteria_config<traits<trait_time_slotted_occupancy<60>>,
-//                     default_transfer_time_calculator, CalcMethod::Flat>;
-
-// using TimeSlottedOccupancyShfl =
-//     criteria_config<traits<trait_time_slotted_occupancy<60>>,
-//                     default_transfer_time_calculator, CalcMethod::Shfl>;
-
 using MaxTransferClass =
     criteria_config<criteria_data<data_max_transfer_class>,
                     traits<trait_max_transfer_class>,

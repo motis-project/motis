@@ -192,7 +192,6 @@ __device__ void mc_update_route_larger32(
             tt, stage_id, stop_id_t, prev_arrival, stop_departure);
       }
 
-      // TODO adapted for TT
       // get the current stage leader
       unsigned int ballot = __ballot_sync(
           FULL_MASK, (stage_id < active_stop_count) && valid(prev_arrival) &&
@@ -399,7 +398,6 @@ __device__ void mc_update_route_smaller32(
           tt, t_id, s_id, prev_arrival, stop_departure);
     }
 
-    // TODO adapted for TT
     unsigned ballot = __ballot_sync(
         FULL_MASK, (t_id < active_stop_count) && valid(prev_arrival) &&
                        valid(stop_departure) && departure_feasible);
@@ -553,37 +551,10 @@ __device__ void perform_arrival_sweeping(stop_id const stop_count,
                                          uint32_t* station_marks) {
   auto const global_stride = get_global_stride();
 
-  auto const trait_size = CriteriaConfig::TRAITS_SIZE;
-  auto const block_size = CriteriaConfig::SWEEP_BLOCK_SIZE;
-
-  if (block_size == 1) return;
-
   auto s_id = get_global_thread_id();
   // one thread scans all arrivals on one stop
   for (; s_id < stop_count; s_id += global_stride) {
-    for (trait_id t_offset = 0; t_offset < trait_size; t_offset += block_size) {
-
-      time min_at_stop = arrivals[trait_size * s_id + t_offset];
-      for (trait_id block_off = t_offset + 1; block_off < t_offset + block_size;
-           ++block_off) {
-        arrival_id const arr_idx =
-            CriteriaConfig::get_arrival_idx(s_id, block_off);
-        time const current = arrivals[arr_idx];
-        // if the value is larger or equal than the minimum we can prune it
-        //   because it is dominated by the minimum on the earliest trait offset
-        if (valid(min_at_stop) && valid(current) && min_at_stop <= current) {
-          arrivals[arr_idx] = invalid<time>;
-          unmark(station_marks, arr_idx);
-          if (min_at_stop <= ea[arr_idx]) {
-            ea[arr_idx] = invalid<time>;
-          }
-        } else if (current < min_at_stop) {
-          // a higher t_offset has a better value; remember the larger value
-          //  to again check higher t_offsets against it
-          min_at_stop = current;
-        }
-      }
-    }
+    CriteriaConfig::perform_stop_arrival_sweeping_gpu(s_id, arrivals, station_marks);
   }
 }
 
@@ -692,7 +663,6 @@ __device__ void mc_init_arrivals_dev(base_query const& query,
     }
   };
 
-  // TODO adapted for TT
   if (t_id == 0) {
     write_to_trait_blocks(device_mem.result_[0], query.source_,
                           query.source_time_begin_);

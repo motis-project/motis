@@ -242,7 +242,6 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
 
     utl::concat(tt->stop_routes_, t_stop.stop_routes_);
 
-    // TODO commented out transfer time reduction in footpaths
     for (auto const& f : t_stop.footpaths_) {
       auto const transfer_time = ttt.stations_[f.from_].transfer_time_;
       tt->footpaths_.emplace_back(f.to_, f.duration_ - transfer_time);
@@ -282,26 +281,6 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
   auto rs_idx = static_cast<route_stops_index>(tt->route_stops_.size());
 
   tt->routes_.emplace_back(0, 0, stop_times_idx, rs_idx);
-
-  // preadd the transfer times
-  // TODO comment out for TC Feature
-  //  for (auto const& route : tt->routes_) {
-  //    for (auto trip = 0; trip < route.trip_count_; ++trip) {
-  //      for (auto offset = 0; offset < route.stop_count_; ++offset) {
-  //        auto const rsi = route.index_to_route_stops_ + offset;
-  //        auto const sti =
-  //            route.index_to_stop_times_ + (trip * route.stop_count_) +
-  //            offset;
-  //
-  //        auto const s_id = tt->route_stops_[rsi];
-  //        auto const transfer_time = ttt.stations_[s_id].transfer_time_;
-  //        auto& arrival = tt->stop_times_[sti].arrival_;
-  //        if (valid(arrival)) {
-  //          arrival += transfer_time;
-  //        }
-  //      }
-  //    }
-  //  }
 
   return tt;
 }

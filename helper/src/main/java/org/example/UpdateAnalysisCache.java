@@ -156,6 +156,11 @@ public class UpdateAnalysisCache {
           var ent = cat.computeIfAbsent("raptor_connections", k -> new ArrayList<>());
           ent.add((long) connections.size());
         }
+
+        if(((String)statCat.get("category")).equals("routing")){
+          var ent = cat.computeIfAbsent("raptor_connections", k -> new ArrayList<>());
+          ent.add((long)connections.size());
+        }
       }
     }
 
@@ -195,7 +200,11 @@ public class UpdateAnalysisCache {
         values.add(new CacheEntry(catName, "q99_" + valName, "" + 0, "" + quantile(sorted, 0.99)));
         values.add(new CacheEntry(catName, "q90_" + valName, "" + 0, "" + quantile(sorted, 0.90)));
         values.add(new CacheEntry(catName, "q80_" + valName, "" + 0, "" + quantile(sorted, 0.80)));
+        values.add(new CacheEntry(catName, "q75_" + valName, "" + 0, "" + quantile(sorted, 0.75)));
         values.add(new CacheEntry(catName, "q50_" + valName, "" + 0, "" + quantile(sorted, 0.50)));
+        values.add(new CacheEntry(catName, "q25_" + valName, "" + 0, "" + quantile(sorted, 0.25)));
+        values.add(new CacheEntry(catName, "min_" + valName, "" + 0, "" + sorted.get(0)));
+        values.add(new CacheEntry(catName, "max_" + valName, "" + 0, "" + quantile(sorted, 1)));
       }
     }
 

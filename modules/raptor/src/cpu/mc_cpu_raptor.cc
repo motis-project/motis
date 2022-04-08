@@ -37,7 +37,6 @@ inline void init_arrivals(raptor_result& result, raptor_query const& q,
     }
   };
 
-  // TODO adapted for TT
   propagate_across_traits(result[0], q.source_, q.source_time_begin_);
 
   for (auto const& add_start : q.add_starts_) {
@@ -125,14 +124,11 @@ inline void update_route_for_trait_offset_forward_project(
       }
 
       // can station serve as departure station?
-      // TODO adapted for TT
       if (valid(previous_round[arrival_idx]) &&
           valid(current_stop_time.departure_) &&
           aggregate.check_and_set_departure_stop(tt, r_stop_offset, stop_id,
                                                  previous_round[arrival_idx],
                                                  current_stop_time.departure_)
-          // previous_round[arrival_idx] + transfer_time <=
-          //     current_stop_time.departure_
       ) {
         departure_offset = r_stop_offset;
         consecutive_writes = 0;
@@ -148,36 +144,9 @@ inline void update_route_for_trait_offset_forward_project(
 template <typename CriteriaConfig>
 inline void perform_arrival_sweeping(stop_id const stop_count,
                                      time* const current_round,
-                                     earliest_arrivals& ea,
                                      cpu_mark_store& station_marks) {
-  auto const trait_size = CriteriaConfig::TRAITS_SIZE;
-  auto const sweep_block_size = CriteriaConfig::SWEEP_BLOCK_SIZE;
-
-  if (sweep_block_size == 1) return;
-
   for (stop_id s_id = 0; s_id < stop_count; ++s_id) {
-    for (trait_id t_offset = 0; t_offset < trait_size;
-         t_offset += sweep_block_size) {
-
-      time min_arrival_at_stop = current_round[trait_size * s_id + t_offset];
-      for (trait_id block_offset = t_offset + 1;
-           block_offset < t_offset + sweep_block_size; ++block_offset) {
-        // if the value is larger or equal than the minimum we can prune it
-        //   because it is dominated by the minimum on the earliest trait offset
-        time const current = current_round[trait_size * s_id + block_offset];
-        if (valid(min_arrival_at_stop) && valid(current) &&
-            min_arrival_at_stop <= current) {
-          current_round[trait_size * s_id + block_offset] = invalid<time>;
-          station_marks.unmark(trait_size * s_id + block_offset);
-          if (min_arrival_at_stop < ea[trait_size * s_id + block_offset])
-            ea[trait_size * s_id + block_offset] = min_arrival_at_stop;
-        } else {
-          // a higher t_offset has a better value; remember the larger value
-          //  to again check higher t_offsets against it
-          min_arrival_at_stop = current;
-        }
-      }
-    }
+    CriteriaConfig::perform_stop_arrival_sweeping_cpu(s_id, current_round, station_marks);
   }
 }
 
@@ -301,7 +270,7 @@ void invoke_mc_cpu_raptor(const raptor_query& query, raptor_statistics& stats) {
 
     MOTIS_START_TIMING(prune_arrivals);
     perform_arrival_sweeping<CriteriaConfig>(tt.stop_count(), result[round_k],
-                                             ea, station_marks);
+                                             station_marks);
     auto const prune_time = MOTIS_GET_TIMING_US(prune_arrivals);
     stats.cpu_time_clear_arrivals_ += prune_time;
 

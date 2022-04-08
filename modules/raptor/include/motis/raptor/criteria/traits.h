@@ -6,11 +6,13 @@
 
 #include "utl/verify.h"
 
+#include "motis/raptor/cpu/mark_store.h"
 #include "motis/raptor/raptor_timetable.h"
 #include "motis/raptor/raptor_util.h"
 #include "motis/raptor/types.h"
 
 #if defined(MOTIS_CUDA)
+#include "motis/raptor/gpu/gpu_mark_store.cuh"
 #include "cooperative_groups.h"
 #endif
 
@@ -42,6 +44,88 @@ struct traits<FirstTrait, RestTraits...> {
            !traits<RestTraits...>::REQ_DIMENSION_PROPAGATION),
       "A trait without dimension propagation is not allowed on top of a trait "
       "with dimension propagation! Change the trait order accordingly.");
+
+#if defined(MOTIS_CUDA)
+  __device__ inline static void perform_stop_arrival_sweeping_gpu(
+      arrival_id const total_trait_size, stop_id const s_id,
+      time* const arrivals, uint32_t* station_marks) {
+    // start with the innermost criterion
+    traits<RestTraits...>::perform_stop_arrival_sweeping_gpu(
+        total_trait_size, s_id, arrivals, station_marks);
+
+    /**
+     * Arrival sweeping is skipped for criteria which require that their
+     * arrival times are propagated across the dimension, i.e. when influencing
+     * the departure locations
+     */
+    if (REQ_DIMENSION_PROPAGATION) return;
+
+    // now process the first trait criterion
+    auto const c_phi_max = traits<RestTraits...>::SIZE;
+    for (int offset = 0; offset < c_phi_max; ++offset) {
+      time time_min = invalid<time>;
+      arrival_id trait_offset = 0;
+      int idx = 0;
+      do {
+        auto const arrival_id = s_id * total_trait_size + trait_offset;
+        if (valid(time_min) && valid(arrivals[arrival_id]) &&
+            time_min <= arrivals[arrival_id]) {
+          arrivals[arrival_id] = invalid<time>;
+          unmark(station_marks, arrival_id);
+        } else if (valid(arrivals[arrival_id])) {
+          time_min = arrivals[arrival_id];
+        }
+
+        ++idx;
+        trait_offset = idx * c_phi_max + offset;
+
+        if (idx % FirstTrait::DIMENSION_SIZE == 0)
+          time_min = arrivals[arrival_id];
+
+      } while (trait_offset < total_trait_size);
+    }
+  }
+#endif
+
+  inline static void perform_stop_arrival_sweeping_cpu(
+      arrival_id const total_trait_size, stop_id const s_id,
+      time* const arrivals, cpu_mark_store& station_marks) {
+    // start with the innermost criterion
+    traits<RestTraits...>::perform_stop_arrival_sweeping_cpu(
+        total_trait_size, s_id, arrivals, station_marks);
+
+    /**
+     * Arrival sweeping is skipped for criteria which require that their
+     * arrival times are propagated across the dimension, i.e. when influencing
+     * the departure locations
+     */
+    if (REQ_DIMENSION_PROPAGATION) return;
+
+    // now process the first trait criterion
+    auto const c_phi_max = traits<RestTraits...>::SIZE;
+    for (int offset = 0; offset < c_phi_max; ++offset) {
+      time time_min = invalid<time>;
+      arrival_id trait_offset = 0;
+      int idx = 0;
+      do {
+        auto const arrival_id = s_id * total_trait_size + trait_offset;
+        if (valid(time_min) && valid(arrivals[arrival_id]) &&
+            time_min <= arrivals[arrival_id]) {
+          arrivals[arrival_id] = invalid<time>;
+          station_marks.unmark(arrival_id);
+        } else if (valid(arrivals[arrival_id])) {
+          time_min = arrivals[arrival_id];
+        }
+
+        ++idx;
+        trait_offset = idx * c_phi_max + offset;
+
+        if (idx % FirstTrait::DIMENSION_SIZE == 0)
+          time_min = arrivals[arrival_id];
+
+      } while (trait_offset < total_trait_size);
+    }
+  }
 
   template <typename CriteriaData>
   _mark_cuda_rel_ inline static trait_id get_write_to_trait_id(
@@ -247,6 +331,15 @@ struct traits<> {
   constexpr static trait_id SIZE = 1;
   constexpr static bool REQ_DIMENSION_PROPAGATION = false;
   constexpr static trait_id SWEEP_BLOCK_SIZE = 1;
+
+#if defined(MOTIS_CUDA)
+  __device__ inline static void perform_stop_arrival_sweeping_gpu(
+      arrival_id const, stop_id const, time* const, uint32_t*) {}
+#endif
+
+  inline static void perform_stop_arrival_sweeping_cpu(arrival_id const,
+                                                  stop_id const, time* const,
+                                                  cpu_mark_store&) {}
 
   template <typename Data>
   _mark_cuda_rel_ inline static trait_id get_write_to_trait_id(Data const&) {
