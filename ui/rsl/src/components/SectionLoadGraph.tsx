@@ -3,7 +3,7 @@ import { GridColumns } from "@visx/grid";
 import { ParentSize } from "@visx/responsive";
 import { scaleLinear } from "@visx/scale";
 import { BoxPlot, ViolinPlot } from "@visx/stats";
-import { CSSProperties } from "react";
+import { CSSProperties, HTMLAttributes, ReactNode } from "react";
 
 import {
   PaxMonEdgeLoadInfo,
@@ -126,12 +126,9 @@ function SectionLoadGraph({
     );
   }
 
-  const lo = paxScale(
-    plotType == "SimpleBox" ? section.dist.q5 : section.dist.min
-  );
-  const hi = paxScale(
-    plotType == "SimpleBox" ? section.dist.q95 : section.dist.max
-  );
+  const simpleGraph = plotType == "SimpleBox";
+  const lo = paxScale(simpleGraph ? section.dist.q5 : section.dist.min);
+  const hi = paxScale(simpleGraph ? section.dist.q95 : section.dist.max);
 
   let plot: JSX.Element | null = null;
   switch (plotType) {
@@ -254,50 +251,32 @@ function SectionLoadGraph({
         style={tooltipStyle}
       >
         <table className="w-full">
-          <tr>
-            <td>5% Quantil</td>
-            <td
-              className={classNames(
-                "text-right",
-                getTooltipTextClass(section.dist.q5, section)
-              )}
-            >
-              {section.dist.q5}
-            </td>
-          </tr>
-          <tr>
-            <td>Median</td>
-            <td
-              className={classNames(
-                "text-right",
-                getTooltipTextClass(section.dist.q50, section)
-              )}
-            >
-              {section.dist.q50}
-            </td>
-          </tr>
-          <tr>
-            <td>95% Quantil</td>
-            <td
-              className={classNames(
-                "text-right",
-                getTooltipTextClass(section.dist.q95, section)
-              )}
-            >
-              {section.dist.q95}
-            </td>
-          </tr>
-          <tr className="border-y-2 border-gray-300">
-            <td>Planmäßig</td>
-            <td
-              className={classNames(
-                "text-right",
-                getTooltipTextClass(section.expected_passengers, section)
-              )}
-            >
-              {section.expected_passengers}
-            </td>
-          </tr>
+          {!simpleGraph && (
+            <TooltipRow pax={section.dist.min} section={section}>
+              Minimum
+            </TooltipRow>
+          )}
+          <TooltipRow pax={section.dist.q5} section={section}>
+            5% Quantil
+          </TooltipRow>
+          <TooltipRow pax={section.dist.q50} section={section}>
+            Median
+          </TooltipRow>
+          <TooltipRow pax={section.dist.q95} section={section}>
+            95% Quantil
+          </TooltipRow>
+          {!simpleGraph && (
+            <TooltipRow pax={section.dist.max} section={section}>
+              Maximum
+            </TooltipRow>
+          )}
+          <TooltipRow
+            pax={section.expected_passengers}
+            section={section}
+            className="border-y-2 border-gray-300"
+          >
+            Planmäßig
+          </TooltipRow>
           <tr>
             <td>Kapazität</td>
             <td className="text-right">
@@ -309,6 +288,25 @@ function SectionLoadGraph({
         </table>
       </div>
     </div>
+  );
+}
+
+type TooltipRowProps = {
+  pax: number;
+  section: PaxMonEdgeLoadInfo;
+  children: ReactNode;
+} & HTMLAttributes<HTMLTableRowElement>;
+
+function TooltipRow({ pax, section, children, ...rest }: TooltipRowProps) {
+  return (
+    <tr {...rest}>
+      <td>{children}</td>
+      <td
+        className={classNames("text-right", getTooltipTextClass(pax, section))}
+      >
+        {pax}
+      </td>
+    </tr>
   );
 }
 
