@@ -10,6 +10,7 @@ import {
   PaxMonPdfEntry,
 } from "@/api/protocol/motis/paxmon";
 
+import classNames from "@/util/classNames";
 import { SectionLoadColors } from "@/util/colors";
 
 export type SectionLoadGraphPlotType = "SimpleBox" | "Violin" | "Box";
@@ -255,23 +256,51 @@ function SectionLoadGraph({
         <table className="w-full">
           <tr>
             <td>5% Quantil</td>
-            <td className="text-right pl-4">{section.dist.q5}</td>
+            <td
+              className={classNames(
+                "text-right",
+                getTooltipTextClass(section.dist.q5, section)
+              )}
+            >
+              {section.dist.q5}
+            </td>
           </tr>
           <tr>
             <td>Median</td>
-            <td className="text-right pl-4">{section.dist.q50}</td>
+            <td
+              className={classNames(
+                "text-right",
+                getTooltipTextClass(section.dist.q50, section)
+              )}
+            >
+              {section.dist.q50}
+            </td>
           </tr>
           <tr>
             <td>95% Quantil</td>
-            <td className="text-right pl-4">{section.dist.q95}</td>
+            <td
+              className={classNames(
+                "text-right",
+                getTooltipTextClass(section.dist.q95, section)
+              )}
+            >
+              {section.dist.q95}
+            </td>
           </tr>
           <tr className="border-y-2 border-gray-300">
             <td>Planmäßig</td>
-            <td className="text-right pl-4">{section.expected_passengers}</td>
+            <td
+              className={classNames(
+                "text-right",
+                getTooltipTextClass(section.expected_passengers, section)
+              )}
+            >
+              {section.expected_passengers}
+            </td>
           </tr>
           <tr>
             <td>Kapazität</td>
-            <td className="text-right pl-4">
+            <td className="text-right">
               {section.capacity_type === "Known"
                 ? section.capacity
                 : "Unbekannt"}
@@ -281,6 +310,25 @@ function SectionLoadGraph({
       </div>
     </div>
   );
+}
+
+function getTooltipTextClass(pax: number, section: PaxMonEdgeLoadInfo): string {
+  if (section.capacity_type == "Known") {
+    const load = pax / section.capacity;
+    if (load <= 0.8) {
+      return "text-green-800";
+    } else if (load <= 1.0) {
+      return "text-yellow-500";
+    } else if (load <= 1.2) {
+      return "text-orange-600";
+    } else if (load <= 2.0) {
+      return "text-red-600";
+    } else {
+      return "text-red-900";
+    }
+  } else {
+    return "text-black";
+  }
 }
 
 function ResponsiveSectionLoadGraph(
