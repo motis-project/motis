@@ -1,5 +1,11 @@
 import { Listbox, Transition } from "@headlessui/react";
-import { CheckIcon, SelectorIcon } from "@heroicons/react/solid";
+import {
+  ArrowSmDownIcon,
+  CheckCircleIcon,
+  CheckIcon,
+  ExclamationCircleIcon,
+  SelectorIcon,
+} from "@heroicons/react/solid";
 import { differenceInMilliseconds } from "date-fns";
 import { PrimitiveAtom, useAtom } from "jotai";
 import { useUpdateAtom } from "jotai/utils";
@@ -199,42 +205,49 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
 
   return (
     <div
-      className="flex flex-col gap-2 py-3 pr-2 cursor-pointer"
+      className="pb-3 pr-1 cursor-pointer"
       onClick={() => setSelectedTrip(ut.tsi)}
     >
-      <TripServiceInfoView tsi={ut.tsi} format="Long" />
-      <ul>
-        {ut.rerouted && (
-          <li className="text-purple-700">
-            Zugverlauf durch Echtzeitupdates geändert
-          </li>
-        )}
-        {ut.newly_critical_sections > 0 && (
-          <li className="text-red-700">
-            {ut.newly_critical_sections > 1
-              ? `${ut.newly_critical_sections} neue kritische Abschnitte`
-              : "Ein neuer kritischer Abschnitt"}
-          </li>
-        )}
-        {ut.no_longer_critical_sections > 0 && (
-          <li className="text-green-700">
-            {ut.no_longer_critical_sections > 1
-              ? `Auslastung auf ${ut.no_longer_critical_sections} Abschnitten nicht mehr kritisch`
-              : "Auslastung auf einem Abschnitt nicht mehr kritisch"}
-          </li>
-        )}
-        {ut.max_pax_increase + ut.max_pax_decrease != 0 && (
-          <li>
-            Größte Änderung:
-            {ut.max_pax_increase > ut.max_pax_decrease
-              ? ` +${ut.max_pax_increase} `
-              : ` -${ut.max_pax_decrease} `}
-            Reisende
-          </li>
-        )}
-      </ul>
-      <MiniTripLoadGraph edges={ut.before_edges} />
-      <MiniTripLoadGraph edges={ut.after_edges} />
+      <div className="p-1 flex flex-col gap-2 rounded bg-db-cool-gray-100">
+        <TripServiceInfoView tsi={ut.tsi} format="Long" />
+        <ul>
+          {ut.rerouted && (
+            <li className="text-purple-700">
+              Zugverlauf durch Echtzeitupdates geändert
+            </li>
+          )}
+          {ut.newly_critical_sections > 0 && (
+            <li className="flex items-center gap-1 text-red-700">
+              <ExclamationCircleIcon className="w-5 h-5" />
+              {ut.newly_critical_sections > 1
+                ? `${ut.newly_critical_sections} neue kritische Abschnitte`
+                : "Ein neuer kritischer Abschnitt"}
+            </li>
+          )}
+          {ut.no_longer_critical_sections > 0 && (
+            <li className="flex items-center gap-1 text-green-700">
+              <CheckCircleIcon className="w-5 h-5" />
+              {ut.no_longer_critical_sections > 1
+                ? `Auslastung auf ${ut.no_longer_critical_sections} Abschnitten nicht mehr kritisch`
+                : "Auslastung auf einem Abschnitt nicht mehr kritisch"}
+            </li>
+          )}
+          {ut.max_pax_increase + ut.max_pax_decrease != 0 && (
+            <li>
+              Größte Änderung:
+              {ut.max_pax_increase > ut.max_pax_decrease
+                ? ` +${ut.max_pax_increase} `
+                : ` -${ut.max_pax_decrease} `}
+              Reisende
+            </li>
+          )}
+        </ul>
+        <div className="flex flex-col items-center gap-1">
+          <MiniTripLoadGraph edges={ut.before_edges} />
+          <ArrowSmDownIcon className="w-5 h-5 fill-gray-500" />
+          <MiniTripLoadGraph edges={ut.after_edges} />
+        </div>
+      </div>
     </div>
   );
 }
