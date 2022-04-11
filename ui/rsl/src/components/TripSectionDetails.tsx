@@ -112,17 +112,22 @@ function TripSectionDetails({
               {groupFilter == "Exiting" && ` mit Ausstieg in ${sec.to.name}`}
             </div>
             <ul>
-              {sec.groups.slice(0, 30).map((gg, idx) => (
-                <li key={idx}>
-                  <CombinedGroup
-                    plannedTrip={tripId}
-                    combinedGroup={gg}
-                    startStation={getAlternativeFromStation(sec, gg)}
-                    earliestDeparture={getAlternativeEarliestDeparture(sec, gg)}
-                    groupByDirection={groupByDirection}
-                  />
-                </li>
-              ))}
+              {sec.groups
+                .filter((gg) => gg.info.dist.q95 >= 5)
+                .map((gg, idx) => (
+                  <li key={idx}>
+                    <CombinedGroup
+                      plannedTrip={tripId}
+                      combinedGroup={gg}
+                      startStation={getAlternativeFromStation(sec, gg)}
+                      earliestDeparture={getAlternativeEarliestDeparture(
+                        sec,
+                        gg
+                      )}
+                      groupByDirection={groupByDirection}
+                    />
+                  </li>
+                ))}
             </ul>
           </div>
         ))}
