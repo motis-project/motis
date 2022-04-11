@@ -224,7 +224,7 @@ function EmptyMeasureEditor({
     <div>
       <div className="text-xl">Neue Maßnahme hinzufügen</div>
       <div className="flex flex-col gap-3 py-3">
-        <div className="text-lg">Nachfragebezogene Maßnahmen</div>
+        <div className="text-lg">Nachfrageeinflussende Maßnahmen</div>
         <MeasureTypeOption
           title="Alternativenempfehlung mit Auslastungsinformation"
           onClick={setTripLoadRecommendation}
@@ -249,7 +249,7 @@ function EmptyMeasureEditor({
             </MeasureTypeOption>
           </>
         )}
-        <div className="text-lg">Angebotsbezogene Maßnahmen</div>
+        <div className="text-lg">Angebotsbeeinflussende Maßnahmen</div>
         <MeasureTypeOption title="Ausfall/Teilausfall" onClick={setRtCancel}>
           Ausfall aller oder einzelner Halte eines Zuges simmulieren
         </MeasureTypeOption>

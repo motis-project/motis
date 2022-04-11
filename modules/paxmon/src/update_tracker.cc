@@ -154,6 +154,10 @@ struct update_tracker::impl {
     return {mc_, fb_updates};
   }
 
+  void rt_updates_applied(tick_statistics const& tick_stats) {
+    tick_stats_.emplace_back(tick_stats);
+  }
+
 private:
   updated_trip_info& get_or_create_updated_trip_info(trip_idx_t const ti) {
     return utl::get_or_create(updated_trip_infos_, ti, [&]() {
@@ -365,6 +369,9 @@ private:
   std::vector<passenger_group_index> removed_groups_;
 
   mcd::hash_map<trip_idx_t, updated_trip_info> updated_trip_infos_;
+
+public:
+  std::vector<tick_statistics> tick_stats_;
 };
 
 update_tracker::update_tracker() = default;
@@ -407,6 +414,14 @@ void update_tracker::stop_tracking() { impl_.reset(); }
 
 bool update_tracker::is_tracking() const { return impl_ != nullptr; }
 
+std::vector<tick_statistics> update_tracker::get_tick_statistics() const {
+  if (impl_) {
+    return impl_->tick_stats_;
+  } else {
+    return {};
+  }
+}
+
 void update_tracker::before_group_added(passenger_group const* pg) {
   if (impl_) {
     impl_->before_group_added(pg);
@@ -434,6 +449,12 @@ void update_tracker::before_group_removed(passenger_group const* pg) {
 void update_tracker::before_trip_rerouted(trip const* trp) {
   if (impl_) {
     impl_->before_trip_rerouted(trp);
+  }
+}
+
+void update_tracker::rt_updates_applied(tick_statistics const& tick_stats) {
+  if (impl_) {
+    impl_->rt_updates_applied(tick_stats);
   }
 }
 

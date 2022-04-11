@@ -186,7 +186,7 @@ bool load_factor_possibly_ge(pax_cdf const& cdf, std::uint16_t capacity,
     if (cdf.data_[pax_threshold] <= 0.95F) {
       return true;
     } else {
-      return pax_threshold > 0 ? cdf.data_[pax_threshold - 1] <= 0.95F : false;
+      return pax_threshold > 0 ? cdf.data_[pax_threshold - 1] < 0.95F : false;
     }
   }
 }

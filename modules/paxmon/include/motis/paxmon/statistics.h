@@ -5,7 +5,7 @@
 
 namespace motis {
 struct schedule;
-}
+}  // namespace motis
 
 namespace motis::paxmon {
 

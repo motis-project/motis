@@ -165,22 +165,37 @@ function SimResultDetails({
   return (
     <>
       <div>
-        <div className="my-3 text-lg font-semibold">Statistiken:</div>
-        <ul>
-          <li>
-            Betroffene Reisendengruppen:{" "}
-            {formatNumber(r.stats.total_affected_groups)}
-          </li>
-          <li>
-            Alternativensuchen:{" "}
-            {formatNumber(r.stats.total_alternative_routings)} (
-            {formatNumber(r.stats.total_alternatives_found)} Ergebnisse,{" "}
-            {formatMiliseconds(r.stats.t_find_alternatives)})
-          </li>
-          <li title={runtimeStats}>
+        <div className="mt-3 mb-1 text-lg font-semibold">Statistiken:</div>
+        <div>
+          <div title={runtimeStats}>
             Simulationsdauer insgesamt: {formatMiliseconds(duration)}
-          </li>
-        </ul>
+          </div>
+          <div className="mt-1 font-semibold">
+            Nachfragebeeinflussende Maßnahmen
+          </div>
+          <div className="ml-3">
+            <div>
+              Betroffene Reisendengruppen:{" "}
+              {formatNumber(r.stats.total_affected_groups)}
+            </div>
+            <div>
+              Alternativensuchen:{" "}
+              {formatNumber(r.stats.total_alternative_routings)} (
+              {formatNumber(r.stats.total_alternatives_found)} Ergebnisse,{" "}
+              {formatMiliseconds(r.stats.t_find_alternatives)})
+            </div>
+          </div>
+        </div>
+        <div>
+          <div className="mt-1 font-semibold">
+            Angebotsbeeinflussende Maßnahmen
+          </div>
+          <div className="ml-3">
+            {`Reisendengruppen mit gebrochenen Reiseketten: ${formatNumber(
+              r.stats.groups_broken
+            )}`}
+          </div>
+        </div>
         <div className="my-3 text-lg font-semibold">
           {formatNumber(r.updates.updated_trip_count)} betroffene Züge:
         </div>

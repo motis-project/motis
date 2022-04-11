@@ -2,11 +2,13 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "motis/core/schedule/schedule.h"
 #include "motis/module/message.h"
 
 #include "motis/paxmon/passenger_group.h"
+#include "motis/paxmon/statistics.h"
 
 namespace motis::paxmon {
 
@@ -30,12 +32,14 @@ struct update_tracker {
   finish_updates();
   void stop_tracking();
   bool is_tracking() const;
+  std::vector<tick_statistics> get_tick_statistics() const;
 
   void before_group_added(passenger_group const*);
   void before_group_reused(passenger_group const*);
   void after_group_reused(passenger_group const*);
   void before_group_removed(passenger_group const*);
   void before_trip_rerouted(trip const*);
+  void rt_updates_applied(tick_statistics const& tick_stats);
 
 private:
   struct impl;
