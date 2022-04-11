@@ -164,26 +164,23 @@ function SimResultDetails({
 
   return (
     <>
-      <div>
-        <div className="mt-3 mb-1 text-lg font-semibold">Statistiken:</div>
-        <div>
-          <div title={runtimeStats}>
-            Simulationsdauer insgesamt: {formatMiliseconds(duration)}
+      <div className="mt-2">
+        <div title={runtimeStats}>
+          Simulationsdauer insgesamt: {formatMiliseconds(duration)}
+        </div>
+        <div className="mt-1 font-semibold">
+          Nachfragebeeinflussende Maßnahmen
+        </div>
+        <div className="ml-3">
+          <div>
+            Betroffene Reisendengruppen:{" "}
+            {formatNumber(r.stats.total_affected_groups)}
           </div>
-          <div className="mt-1 font-semibold">
-            Nachfragebeeinflussende Maßnahmen
-          </div>
-          <div className="ml-3">
-            <div>
-              Betroffene Reisendengruppen:{" "}
-              {formatNumber(r.stats.total_affected_groups)}
-            </div>
-            <div>
-              Alternativensuchen:{" "}
-              {formatNumber(r.stats.total_alternative_routings)} (
-              {formatNumber(r.stats.total_alternatives_found)} Ergebnisse,{" "}
-              {formatMiliseconds(r.stats.t_find_alternatives)})
-            </div>
+          <div>
+            Alternativensuchen:{" "}
+            {formatNumber(r.stats.total_alternative_routings)} (
+            {formatNumber(r.stats.total_alternatives_found)} Ergebnisse,{" "}
+            {formatMiliseconds(r.stats.t_find_alternatives)})
           </div>
         </div>
         <div>
