@@ -252,7 +252,7 @@ function StopListEditor({
       <div className="pt-5 flex flex-col">
         <button
           onClick={() => closeEditor()}
-          className="mt-4 px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white rounded"
+          className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white rounded"
         >
           Maßnahme speichern
         </button>

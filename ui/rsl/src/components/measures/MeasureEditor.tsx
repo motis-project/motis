@@ -251,7 +251,7 @@ function EmptyMeasureEditor({
         )}
         <div className="text-lg">Angebotsbeeinflussende Maßnahmen</div>
         <MeasureTypeOption title="Ausfall/Teilausfall" onClick={setRtCancel}>
-          Ausfall aller oder einzelner Halte eines Zuges simmulieren
+          Ausfall aller oder einzelner Halte eines Zuges simulieren
         </MeasureTypeOption>
         <MeasureTypeOption title="Echtzeitupdate" onClick={setRtUpdate}>
           Beliebige Änderungen am Zugverlauf (Verspätungen, Umleitungen,
