@@ -253,9 +253,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
       }
     }
 
-    if (!patches.empty()) {
-      apply_parking_patches(journey, patches);
-    }
+    apply_parking_patches(journey, patches);
   }
 
   MOTIS_START_TIMING(direct_connection_timing);

@@ -274,9 +274,8 @@ struct parking::impl {
       auto const osrm_resp = motis_content(OSRMViaRouteResponse, osrm_msg);
 
       auto const ppr_req = make_ppr_request(
-          foot_start, {foot_dest}, req->ppr_search_options(),
-          motis::ppr::SearchDirection_Forward, req->include_steps(),
-          req->include_edges(), req->include_path());
+          foot_start, {foot_dest}, req->ppr_search_options(), SearchDir_Forward,
+          req->include_steps(), req->include_edges(), req->include_path());
       auto const ppr_msg = motis_call(ppr_req)->val();
       auto const ppr_resp = motis_content(FootRoutingResponse, ppr_msg);
 
@@ -302,9 +301,8 @@ struct parking::impl {
       auto const foot_dest = *req->destination();
 
       auto const ppr_req = make_ppr_request(
-          foot_start, {foot_dest}, req->ppr_search_options(),
-          motis::ppr::SearchDirection_Forward, req->include_steps(),
-          req->include_edges(), req->include_path());
+          foot_start, {foot_dest}, req->ppr_search_options(), SearchDir_Forward,
+          req->include_steps(), req->include_edges(), req->include_path());
       auto const ppr_msg = motis_call(ppr_req)->val();
       auto const ppr_resp = motis_content(FootRoutingResponse, ppr_msg);
 

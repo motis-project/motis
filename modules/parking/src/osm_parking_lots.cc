@@ -69,7 +69,7 @@ private:
         parking_lot::info_t{osm_parking_lot_info{id, ot, get_fee_type(tags)}}});
   }
 
-  inline fee_type get_fee_type(osmium::TagList const& tags) {
+  static inline fee_type get_fee_type(osmium::TagList const& tags) {
     using namespace std::literals;
     if (tags.has_key("fee")) {
       auto const val = tags["fee"];

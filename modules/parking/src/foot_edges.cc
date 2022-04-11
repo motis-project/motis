@@ -68,8 +68,7 @@ std::vector<std::vector<foot_edge_info>> route_ppr_module(
   using namespace ppr;
   auto const req = make_ppr_request(
       parking_loc, station_locs, profile_name, profile.duration_limit_,
-      dir == search_direction::FWD ? SearchDirection_Forward
-                                   : SearchDirection_Backward);
+      dir == search_direction::FWD ? SearchDir_Forward : SearchDir_Backward);
   auto const msg = motis_call(req)->val();
   auto const ppr_res = motis_content(FootRoutingResponse, msg);
   return utl::to_vec(*ppr_res->routes(), [&](auto const& routes) {

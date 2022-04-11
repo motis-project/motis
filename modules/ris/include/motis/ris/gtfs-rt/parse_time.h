@@ -42,10 +42,8 @@ inline unixtime get_updated_time(
   unixtime updated_time = 0;
   if (time_event.has_time() && !is_addition_trip) {
     updated_time = time_event.time();
-
   } else if (time_event.has_delay() && schedule_time != 0) {
     updated_time = schedule_time + time_event.delay();
-
   } else {
     if (is_addition_trip) {
       throw std::runtime_error{
