@@ -26,7 +26,6 @@ import classNames from "@/util/classNames";
 import { formatDateTime } from "@/util/dateFormat";
 
 import MiniTripLoadGraph from "@/components/MiniTripLoadGraph";
-import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 type SimResultsListEntryProps = {
   simResultAtom: PrimitiveAtom<SimulationResult>;
@@ -227,13 +226,31 @@ type UpdatedTripProps = {
 function UpdatedTrip({ ut }: UpdatedTripProps) {
   const setSelectedTrip = useUpdateAtom(selectedTripAtom);
 
+  const category = ut.tsi.service_infos[0]?.category ?? "";
+  const trainNr = ut.tsi.service_infos[0]?.train_nr ?? ut.tsi.trip.train_nr;
+
   return (
     <div
       className="pb-3 pr-1 cursor-pointer"
       onClick={() => setSelectedTrip(ut.tsi)}
     >
       <div className="p-1 flex flex-col gap-2 rounded bg-db-cool-gray-100">
-        <TripServiceInfoView tsi={ut.tsi} format="Long" />
+        <div className="flex gap-4 pb-1">
+          <div className="flex flex-col">
+            <div className="text-sm text-center">{category}</div>
+            <div className="text-xl font-semibold">{trainNr}</div>
+          </div>
+          <div className="grow flex flex-col truncate">
+            <div className="flex justify-between">
+              <div className="truncate">{ut.tsi.primary_station.name}</div>
+              <div>{formatDateTime(ut.tsi.trip.time)}</div>
+            </div>
+            <div className="flex justify-between">
+              <div className="truncate">{ut.tsi.secondary_station.name}</div>
+              <div>{formatDateTime(ut.tsi.trip.target_time)}</div>
+            </div>
+          </div>
+        </div>
         <ul>
           {ut.rerouted && (
             <li className="text-purple-700">
