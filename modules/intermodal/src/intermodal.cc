@@ -210,7 +210,7 @@ void apply_gbfs_patches(std::vector<parking_patch> const& patches) {
     // replace: P -->walk[type:gbfs]--> X
     // to: P --walk--> (SP) --bike--> (SX) --walk--> X
     if (std::holds_alternative<gbfs_edge::station_bike>(p.e_->gbfs_->bike_)) {
-      auto const& b = std::get<gbfs_edge::station_bike>(p.e_->gbfs_->bike_);
+      // auto const& b = std::get<gbfs_edge::station_bike>(p.e_->gbfs_->bike_);
 
     }
 
@@ -220,7 +220,7 @@ void apply_gbfs_patches(std::vector<parking_patch> const& patches) {
     // replace: P -->walk[type:gbfs]--> X
     // to: P --walk--> (B) --bike--> X
     else if (std::holds_alternative<gbfs_edge::free_bike>(p.e_->gbfs_->bike_)) {
-      auto const& b = std::get<gbfs_edge::free_bike>(p.e_->gbfs_->bike_);
+      // auto const& b = std::get<gbfs_edge::free_bike>(p.e_->gbfs_->bike_);
     }
   }
 }
