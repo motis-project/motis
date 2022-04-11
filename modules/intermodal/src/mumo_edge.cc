@@ -194,7 +194,7 @@ void gbfs_edges(appender_fun const& appender, SearchDir const dir,
 }
 
 void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
-                SearchDir const osrm_direction, appender_fun const& appender,
+                SearchDir const search_dir, appender_fun const& appender,
                 mumo_stats_appender_fun const& mumo_stats_appender,
                 std::string const& mumo_stats_prefix,
                 ppr_profiles const& profiles) {
@@ -204,7 +204,7 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
         auto max_dur =
             reinterpret_cast<Foot const*>(wrapper->mode())->max_duration();
         auto max_dist = max_dur * WALK_SPEED;
-        osrm_edges(pos, max_dur, max_dist, mumo_type::FOOT, osrm_direction,
+        osrm_edges(pos, max_dur, max_dist, mumo_type::FOOT, search_dir,
                    appender);
         break;
       }
@@ -213,7 +213,7 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
         auto max_dur =
             reinterpret_cast<Bike const*>(wrapper->mode())->max_duration();
         auto max_dist = max_dur * BIKE_SPEED;
-        osrm_edges(pos, max_dur, max_dist, mumo_type::BIKE, osrm_direction,
+        osrm_edges(pos, max_dur, max_dist, mumo_type::BIKE, search_dir,
                    appender);
         break;
       }
@@ -222,7 +222,7 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
         auto max_dur =
             reinterpret_cast<Car const*>(wrapper->mode())->max_duration();
         auto max_dist = max_dur * CAR_SPEED;
-        osrm_edges(pos, max_dur, max_dist, mumo_type::CAR, osrm_direction,
+        osrm_edges(pos, max_dur, max_dist, mumo_type::CAR, search_dir,
                    appender);
         break;
       }
@@ -230,14 +230,14 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
       case Mode_FootPPR: {
         auto const options =
             reinterpret_cast<FootPPR const*>(wrapper->mode())->search_options();
-        ppr_edges(pos, options, osrm_direction, appender, profiles);
+        ppr_edges(pos, options, search_dir, appender, profiles);
         break;
       }
 
       case Mode_CarParking: {
         auto const cp = reinterpret_cast<CarParking const*>(wrapper->mode());
         car_parking_edges(pos, cp->max_car_duration(), cp->ppr_search_options(),
-                          osrm_direction, appender, mumo_stats_appender,
+                          search_dir, appender, mumo_stats_appender,
                           mumo_stats_prefix);
         break;
       }
@@ -245,10 +245,11 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
       case Mode_GBFS: {
         auto const gbfs = reinterpret_cast<GBFS const*>(wrapper->mode());
         gbfs_edges(
-            appender, osrm_direction, pos,
+            appender, search_dir, pos,
             utl::to_vec(*gbfs->vehicle_types(),
                         [](flatbuffers::String const* t) { return t->str(); }),
-            gbfs->max_walk_duration(), gbfs->max_ride_duration());
+            gbfs->max_walk_duration() / 60.0, gbfs->max_ride_duration() / 60.0);
+        break;
       }
 
       default: throw std::system_error(error::unknown_mode);
