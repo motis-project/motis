@@ -175,6 +175,8 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
       std::uint32_t min_pax_{};
       std::uint32_t max_pax_{};
       float avg_pax_{};
+      pax_pdf pdf_{};
+      pax_stats pax_stats_{};
     };
 
     mcd::hash_map<grouped_key, grouped_pgs_t> grouped;
@@ -218,11 +220,16 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
       gg.avg_pax_ += pg->passengers_ * pg->probability_;
     }
 
+    for (auto& [key, gbd] : grouped) {
+      gbd.pdf_ = get_load_pdf(uv.passenger_groups_, gbd.groups_);
+      gbd.pax_stats_ = get_pax_stats(get_cdf(gbd.pdf_));
+    }
+
     auto sorted_keys =
         utl::to_vec(grouped, [](auto const& kv) { return kv.first; });
     std::sort(begin(sorted_keys), end(sorted_keys),
               [&](auto const& a, auto const& b) {
-                return grouped[a].max_pax_ > grouped[b].max_pax_;
+                return grouped[a].pax_stats_.q50_ > grouped[b].pax_stats_.q50_;
               });
     for (auto const& key : sorted_keys) {
       auto& gbd = grouped[key];
@@ -249,9 +256,6 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
       auto const entry_time =
           key.entry_time_ != 0 ? motis_to_unixtime(sched, key.entry_time_) : 0;
 
-      auto const pdf = get_load_pdf(uv.passenger_groups_, gbd.groups_);
-      auto const cdf = get_cdf(pdf);
-
       if (include_group_infos) {
         std::sort(begin(gbd.groups_), end(gbd.groups_));
       }
@@ -268,7 +272,7 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
                                           mc, *uv.passenger_groups_[pgi]);
                                     })
                       : std::vector<PaxMonGroupBaseInfo>{}),
-              to_fbs_distribution(mc, pdf, cdf))));
+              to_fbs_distribution(mc, gbd.pdf_, gbd.pax_stats_))));
     }
 
     return CreateGroupsInTripSection(

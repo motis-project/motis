@@ -94,7 +94,7 @@ function CombinedGroup({
       <span className="font-bold">
         {combinedGroup.info.dist.q5 == combinedGroup.info.dist.q95
           ? `${combinedGroup.info.dist.q5} Reisende`
-          : `${combinedGroup.info.dist.q5}–${combinedGroup.info.dist.q95} Reisende`}
+          : `${combinedGroup.info.dist.q5}–${combinedGroup.info.dist.q95} (Median: ${combinedGroup.info.dist.q50}) Reisende`}
         {groupByDirection !== "None" && (
           <>
             {groupByDirection === "Origin"
