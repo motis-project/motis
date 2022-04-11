@@ -117,7 +117,9 @@ function CombinedGroup({
     </div>
   );
 
-  const journeys = data?.connections?.map((c) => connectionToJourney(c));
+  const journeys = data?.connections
+    ?.map((c) => connectionToJourney(c))
+    ?.sort((a, b) => getDepartureTime(a) - getDepartureTime(b));
 
   const alternativesInfo = journeys ? (
     <div>
