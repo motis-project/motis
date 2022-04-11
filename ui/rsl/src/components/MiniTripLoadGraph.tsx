@@ -101,28 +101,3 @@ function MiniTripLoadGraph({ edges }: MiniTripLoadGraphProps): JSX.Element {
 }
 
 export default MiniTripLoadGraph;
-
-export type MiniTripLoadGraphForTripProps = {
-  tripId: TripId;
-};
-
-export function MiniTripLoadGraphForTrip({
-  tripId,
-}: MiniTripLoadGraphForTripProps): JSX.Element | null {
-  const [universe] = useAtom(universeAtom);
-
-  const queryClient = useQueryClient();
-  const { data /*, isLoading, error*/ } = useQuery(
-    queryKeys.tripLoad(universe, tripId),
-    () => sendPaxMonGetTripLoadInfosRequest({ universe, trips: [tripId] }),
-    {
-      placeholderData: () => {
-        return universe != 0
-          ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
-          : undefined;
-      },
-    }
-  );
-
-  return data ? <MiniTripLoadGraph edges={data.load_infos[0].edges} /> : null;
-}
