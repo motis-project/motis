@@ -59,7 +59,7 @@ function TripSectionDetails({
   const [universe] = useAtom(universeAtom);
   const [groupFilter, setGroupFilter] = useState<PaxMonGroupFilter>("All");
   const [groupByStation, setGroupByStation] =
-    useState<PaxMonGroupByStation>("Last");
+    useState<PaxMonGroupByStation>("EntryAndLast");
   const [groupByOtherTrip, setGroupByOtherTrip] = useState(true);
 
   const {
