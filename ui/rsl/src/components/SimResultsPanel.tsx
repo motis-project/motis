@@ -9,7 +9,7 @@ import {
 import { differenceInMilliseconds } from "date-fns";
 import { PrimitiveAtom, useAtom } from "jotai";
 import { useUpdateAtom } from "jotai/utils";
-import { Fragment, memo } from "react";
+import { Fragment, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
 
 import { PaxMonUpdatedTrip } from "@/api/protocol/motis/paxmon";
@@ -122,6 +122,10 @@ function SimResultsList(): JSX.Element {
   );
 }
 
+function hasCritChange(ut: PaxMonUpdatedTrip): boolean {
+  return ut.newly_critical_sections > 0 || ut.no_longer_critical_sections > 0;
+}
+
 type SimResultDetailsProps = {
   simResultAtom: PrimitiveAtom<SimulationResult>;
 };
@@ -130,6 +134,7 @@ function SimResultDetails({
   simResultAtom,
 }: SimResultDetailsProps): JSX.Element {
   const [simResult] = useAtom(simResultAtom);
+  const [critChangeOnly, setCritChangeOnly] = useState(false);
 
   const r = simResult.response;
   const duration = differenceInMilliseconds(
@@ -137,13 +142,9 @@ function SimResultDetails({
     simResult.startedAt
   );
 
-  const MemoizedUpdatedTrip = memo(function MemoizedUpdatedTripWrapper({
-    index,
-  }: {
-    index: number;
-  }) {
-    return <UpdatedTrip ut={r.updates.updated_trips[index]} />;
-  });
+  const trips = critChangeOnly
+    ? r.updates.updated_trips.filter(hasCritChange)
+    : r.updates.updated_trips;
 
   const runtimeStats = [
     { duration: r.stats.t_rt_updates, label: "Einspielen der Echtzeitupdates" },
@@ -193,15 +194,26 @@ function SimResultDetails({
             )}`}
           </div>
         </div>
+        <label className="mt-2 flex items-center gap-2">
+          <input
+            type="checkbox"
+            className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
+            checked={critChangeOnly}
+            onChange={() => setCritChangeOnly((b) => !b)}
+          />
+          Nur Züge mit Änderungen der kritischen Abschnitte anzeigen
+        </label>
         <div className="my-3 text-lg font-semibold">
-          {formatNumber(r.updates.updated_trip_count)} betroffene Züge:
+          <span>
+            {formatNumber(r.updates.updated_trip_count)} betroffene Züge:
+          </span>
         </div>
       </div>
       <div className="grow">
         <Virtuoso
-          data={r.updates.updated_trips}
+          data={trips}
           overscan={200}
-          itemContent={(index) => <MemoizedUpdatedTrip index={index} />}
+          itemContent={(index) => <UpdatedTrip ut={trips[index]} />}
         />
       </div>
     </>
