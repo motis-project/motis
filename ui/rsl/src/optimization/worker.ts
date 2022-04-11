@@ -163,7 +163,7 @@ async function optimizeTripEdgeV1(
       continue;
     }
 
-    const groupSize = (groups.info.dist.min + groups.info.dist.max) / 2;
+    const groupSize = groups.info.dist.q50;
 
     const routingResponse = await sendRoutingRequest({
       start_type: "PretripStart",
@@ -216,15 +216,22 @@ async function optimizeTripEdgeV1(
     // TODO: trip load infos für alle trip legs abrufen (nicht nur first)
     // TODO: trip load info cache
 
+    const bestCurrentRating = Math.min(...currentJourneys.map(journeyRating));
+
     const alternatives = zipWith(
       alternativeJourneys,
       altTripLoadInfos,
       (journey, tripLoadInfo) => {
+        const rating = journeyRating(journey);
         return {
           journey,
           loadLevel: getLoadLevel(tripLoadInfo, journey.tripLegs[0]),
-          rating: journeyRating(journey),
+          rating,
           tsi: tripLoadInfo.tsi,
+          estAcceptance: estimateAcceptanceProbability(
+            bestCurrentRating,
+            rating
+          ),
         };
       }
     ).filter((a) => a.loadLevel !== "Full");
@@ -233,7 +240,6 @@ async function optimizeTripEdgeV1(
       continue;
     }
 
-    const bestCurrentRating = Math.min(...currentJourneys.map(journeyRating));
     alternatives.sort((a, b) => a.rating - b.rating);
 
     const bestAlternative = alternatives[0];
