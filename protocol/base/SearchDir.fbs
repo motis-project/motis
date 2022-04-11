@@ -1,0 +1,6 @@
+namespace motis;
+
+enum SearchDir : byte {
+  Forward,  // given time = departure time
+  Backward  // given time = arrival time
+}

@@ -385,3 +385,5 @@ CheckOptions:
     value:           'offset_ptr;ptr'
   - key:             performance-unnecessary-value-param.AllowedTypes
     value:           'offset_ptr;ptr'
+  - key:             readability-identifier-naming.TypeTemplateParameterIgnoredRegexp
+    value:           'expr-type'

@@ -1,9 +1,8 @@
 include "address/AddressRequest.fbs";
 include "address/AddressResponse.fbs";
-include "bikesharing/BikesharingGeoTerminalsRequest.fbs";
-include "bikesharing/BikesharingGeoTerminalsResponse.fbs";
-include "bikesharing/BikesharingRequest.fbs";
-include "bikesharing/BikesharingResponse.fbs";
+include "gbfs/GBFSRoutingRequest.fbs";
+include "gbfs/GBFSRoutingResponse.fbs";
+include "gbfs/GBFSGeoJSONResponse.fbs";
 include "guesser/StationGuesserRequest.fbs";
 include "guesser/StationGuesserResponse.fbs";
 include "import/CoastlineEvent.fbs";
@@ -26,6 +25,8 @@ include "lookup/LookupRiBasisResponse.fbs";
 include "lookup/LookupScheduleInfoResponse.fbs";
 include "lookup/LookupStationEventsRequest.fbs";
 include "lookup/LookupStationEventsResponse.fbs";
+include "osrm/OSRMManyToManyRequest.fbs";
+include "osrm/OSRMManyToManyResponse.fbs";
 include "osrm/OSRMOneToManyRequest.fbs";
 include "osrm/OSRMOneToManyResponse.fbs";
 include "osrm/OSRMSmoothViaRouteRequest.fbs";
@@ -170,10 +171,9 @@ union MsgContent {
   motis.TripId                                                            = 015,
   motis.address.AddressRequest                                            = 016,
   motis.address.AddressResponse                                           = 017,
-  motis.bikesharing.BikesharingRequest                                    = 018,
-  motis.bikesharing.BikesharingResponse                                   = 019,
-  motis.bikesharing.BikesharingGeoTerminalsRequest                        = 020,
-  motis.bikesharing.BikesharingGeoTerminalsResponse                       = 022,
+  motis.gbfs.GBFSRoutingRequest                                           = 018,
+  motis.gbfs.GBFSRoutingResponse                                          = 019,
+  motis.gbfs.GBFSGeoJSONResponse                                          = 020,
   motis.guesser.StationGuesserRequest                                     = 023,
   motis.guesser.StationGuesserResponse                                    = 024,
   motis.intermodal.IntermodalRoutingRequest                               = 025,
@@ -282,7 +282,9 @@ union MsgContent {
   motis.lookup.LookupRiBasisResponse                                      = 128,
   motis.paxforecast.PaxForecastApplyMeasuresResponse                      = 129,
   motis.paxmon.PaxMonGetAddressableGroupsRequest                          = 130,
-  motis.paxmon.PaxMonGetAddressableGroupsResponse                         = 131
+  motis.paxmon.PaxMonGetAddressableGroupsResponse                         = 131,
+  motis.osrm.OSRMManyToManyRequest                                        = 132,
+  motis.osrm.OSRMManyToManyResponse                                       = 133
 }
 
 // Destination Examples:
