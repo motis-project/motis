@@ -233,8 +233,30 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
       dest.lng_ = q_dest.pos_.lng_;
     }
 
-    std::vector<parking_patch> patches;
+    for (auto const& t : journey.transports_) {
+      if (!t.is_walk_ || t.mumo_id_ < 0) {
+        continue;
+      }
 
+      auto const e = edge_mapping.at(static_cast<std::size_t>(t.mumo_id_));
+      if (e->type_ != mumo_type::GBFS) {
+        continue;
+      }
+
+      // station bike:
+      // replace: X --walk[type:gbfs]--> P
+      // to: X --walk--> (SX) --bike--> (SP) --walk--> P
+      // replace: P -->walk[type:gbfs]--> X
+      // to: P --walk--> (SP) --bike--> (SX) --walk--> X
+
+      // free bike:
+      // replace: X --walk[type:gbfs]--> P
+      // to: X --walk--> (B) --bike--> P
+      // replace: P -->walk[type:gbfs]--> X
+      // to: P --walk--> (B) --bike--> X
+    }
+
+    std::vector<parking_patch> patches;
     for (auto& t : journey.transports_) {
       if (!t.is_walk_ || t.mumo_id_ < 0) {
         continue;
@@ -252,7 +274,6 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
         patches.emplace_back(e, t.from_, t.to_);
       }
     }
-
     apply_parking_patches(journey, patches);
   }
 

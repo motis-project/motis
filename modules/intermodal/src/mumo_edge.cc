@@ -5,6 +5,7 @@
 #include "utl/erase_if.h"
 
 #include "motis/core/common/constants.h"
+#include "motis/core/conv/position_conv.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/message.h"
 
@@ -188,8 +189,33 @@ void gbfs_edges(appender_fun const& appender, SearchDir const dir,
   auto const res_msg = motis_call(make_msg(mc))->val();
   auto const gbfs_res = motis_content(GBFSRoutingResponse, res_msg);
   for (auto const& r : *gbfs_res->routes()) {
-    appender(r->station()->id()->str(), to_latlng(r->station()->pos()),
-             r->total_duration(), 0, mumo_type::GBFS, 0);
+    auto& e =
+        appender(r->station()->id()->str(), to_latlng(r->station()->pos()),
+                 r->total_duration(), 0, mumo_type::GBFS, 0);
+    switch (r->route_type()) {
+      case gbfs::BikeRoute_StationBikeRoute: {
+        auto const* s =
+            reinterpret_cast<gbfs::StationBikeRoute const*>(r->route());
+        e.gbfs_ = gbfs_edge{
+            r->vehicle_type()->str(),
+            gbfs_edge::station_bike{s->sx()->id()->str(), s->sp()->id()->str(),
+                                    from_fbs(s->sx()->pos()),
+                                    from_fbs(s->sp()->pos())},
+        };
+        break;
+      }
+
+      case gbfs::BikeRoute_FreeBikeRoute: {
+        auto const* b =
+            reinterpret_cast<gbfs::FreeBikeRoute const*>(r->route());
+        e.gbfs_ = gbfs_edge{
+            r->vehicle_type()->str(),
+            gbfs_edge::free_bike{b->bike_id()->str(), from_fbs(b->b())}};
+        break;
+      }
+
+      default: throw std::runtime_error{"unknown route type"};
+    }
   }
 }
 

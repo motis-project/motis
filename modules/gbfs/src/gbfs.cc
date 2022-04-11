@@ -413,7 +413,8 @@ struct gbfs::impl {
                         *sched_.stations_.at(p.at(free_bike_info.p_));
                     auto const pos = to_fbs(free_bike.pos_);
                     return CreateRouteInfo(
-                        fbb, to_fbs(fbb, station), BikeRoute_FreeBikeRoute,
+                        fbb, fbb.CreateString("bike"), to_fbs(fbb, station),
+                        BikeRoute_FreeBikeRoute,
                         CreateFreeBikeRoute(
                             fbb, fbb.CreateString(free_bike.id_), &pos)
                             .Union(),
@@ -427,14 +428,19 @@ struct gbfs::impl {
                         stations_.at(sp.at(station_bike_info.sp_));
                     auto const& station =
                         *sched_.stations_.at(p.at(station_bike_info.p_));
+                    auto const sx_pos = to_fbs(sx_bike_station.pos_);
+                    auto const sp_pos = to_fbs(sp_bike_station.pos_);
                     return CreateRouteInfo(
-                        fbb, to_fbs(fbb, station), BikeRoute_StationBikeRoute,
+                        fbb, fbb.CreateString("bike"), to_fbs(fbb, station),
+                        BikeRoute_StationBikeRoute,
                         CreateStationBikeRoute(
                             fbb,
                             CreateGBFSStation(
-                                fbb, fbb.CreateString(sx_bike_station.id_)),
+                                fbb, fbb.CreateString(sx_bike_station.id_),
+                                &sx_pos),
                             CreateGBFSStation(
-                                fbb, fbb.CreateString(sp_bike_station.id_)))
+                                fbb, fbb.CreateString(sp_bike_station.id_),
+                                &sp_pos))
                             .Union(),
                         j.total_duration_, j.walk_duration_, j.bike_duration_);
                   },

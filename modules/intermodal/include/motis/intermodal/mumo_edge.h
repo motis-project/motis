@@ -34,6 +34,19 @@ struct car_parking_edge {
   bool uses_car_{};
 };
 
+struct gbfs_edge {
+  struct free_bike {
+    std::string id_;
+    geo::latlng pos_;
+  };
+  struct station_bike {
+    std::string from_station_, to_station_;
+    geo::latlng from_station_pos_, to_station_pos_;
+  };
+  std::string vehicle_type_;
+  std::variant<free_bike, station_bike> bike_;
+};
+
 struct mumo_edge {
   mumo_edge(std::string from, std::string to, geo::latlng const& from_pos,
             geo::latlng const& to_pos, duration const d, uint16_t accessibility,
@@ -54,6 +67,7 @@ struct mumo_edge {
   mumo_type type_;
   int id_;
   std::optional<car_parking_edge> car_parking_;
+  std::optional<gbfs_edge> gbfs_;
 };
 
 using appender_fun = std::function<mumo_edge&(

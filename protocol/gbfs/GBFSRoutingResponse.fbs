@@ -22,6 +22,7 @@ table FreeBikeRoute {
 // ----------------------------------------------------------------------------
 table GBFSStation {
   id: string;
+  pos: Position;
 }
 
 table StationBikeRoute {
@@ -35,6 +36,7 @@ table StationBikeRoute {
 union BikeRoute { FreeBikeRoute, StationBikeRoute }
 
 table RouteInfo {
+  vehicle_type: string;
   station: Station;  // public transport station
   route: BikeRoute;
   total_duration: uint;
