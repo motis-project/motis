@@ -94,7 +94,7 @@ function CombinedGroup({
       <span className="font-bold">
         {combinedGroup.info.dist.q5 == combinedGroup.info.dist.q95
           ? `${combinedGroup.info.dist.q5} Reisende`
-          : `${combinedGroup.info.dist.q5} - ${combinedGroup.info.dist.q95} Reisende`}
+          : `${combinedGroup.info.dist.q5}–${combinedGroup.info.dist.q95} Reisende`}
         {groupByDirection !== "None" && (
           <>
             {groupByDirection === "Origin"
@@ -123,9 +123,9 @@ function CombinedGroup({
 
   const alternativesInfo = journeys ? (
     <div>
-      {`${journeys.length} Mögliche Alternative(n) (ab ${formatTime(
-        earliestDeparture
-      )}):`}
+      {`${journeys.length} Mögliche Alternative(n) ab ${
+        startStation.name
+      }, ${formatTime(earliestDeparture)}:`}
       <ul>
         {journeys.map((j, idx) => (
           <li

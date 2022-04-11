@@ -1,8 +1,9 @@
 import { useAtom } from "jotai";
 import { useState } from "react";
 
-import { TripId } from "@/api/protocol/motis";
+import { Station, TripId } from "@/api/protocol/motis";
 import {
+  GroupedPassengerGroups,
   GroupsInTripSection,
   PaxMonEdgeLoadInfo,
   PaxMonGroupByStation,
@@ -116,8 +117,8 @@ function TripSectionDetails({
                   <CombinedGroup
                     plannedTrip={tripId}
                     combinedGroup={gg}
-                    startStation={sec.from}
-                    earliestDeparture={sec.departure_current_time}
+                    startStation={getAlternativeFromStation(sec, gg)}
+                    earliestDeparture={getAlternativeEarliestDeparture(sec, gg)}
                     groupByDirection={groupByDirection}
                   />
                 </li>
@@ -180,6 +181,28 @@ function TripSectionDetails({
       {content}
     </div>
   );
+}
+
+function getAlternativeFromStation(
+  sec: GroupsInTripSection,
+  gg: GroupedPassengerGroups
+): Station {
+  if (gg.entry_station.length === 1) {
+    return gg.entry_station[0];
+  } else {
+    return sec.from;
+  }
+}
+
+function getAlternativeEarliestDeparture(
+  sec: GroupsInTripSection,
+  gg: GroupedPassengerGroups
+): number {
+  if (gg.entry_station.length === 1) {
+    return gg.entry_time;
+  } else {
+    return sec.departure_current_time;
+  }
 }
 
 export default TripSectionDetails;
