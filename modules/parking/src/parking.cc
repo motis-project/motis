@@ -10,6 +10,7 @@
 #include "utl/get_or_create.h"
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/common/timing.h"
@@ -68,9 +69,22 @@ inline Position to_position(geo::latlng const& loc) {
 }
 
 inline Offset<Parking> create_parking(FlatBufferBuilder& fbb,
-                                      parking_lot const& p) {
-  auto const pos = to_position(p.location_);
-  return CreateParking(fbb, p.id_, &pos, p.get_fee_type() == fee_type::YES);
+                                      parking_lot const& lot) {
+  auto const pos = to_position(lot.location_);
+  if (lot.is_from_osm()) {
+    auto const& info = std::get<osm_parking_lot_info>(lot.info_);
+    auto const empty = fbb.CreateString("");
+    return CreateParking(fbb, lot.id_, &pos, static_cast<ParkingFee>(info.fee_),
+                         ParkingSource_OSM, empty, empty, empty);
+  } else if (lot.is_from_parkendd()) {
+    auto const& info = std::get<parkendd_parking_lot_info>(lot.info_);
+    return CreateParking(fbb, lot.id_, &pos, ParkingFee_UNKNOWN,
+                         ParkingSource_PARKENDD, fbb.CreateString(info.name_),
+                         fbb.CreateString(info.lot_type_),
+                         fbb.CreateString(info.address_));
+  } else {
+    throw utl::fail("unknown parking lot type");
+  }
 }
 
 inline std::vector<Offset<ParkingEdge>> create_parking_edges(
