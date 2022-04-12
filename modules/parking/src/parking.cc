@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 
+#include "boost/asio/deadline_timer.hpp"
 #include "boost/filesystem.hpp"
 
 #include "utl/get_or_create.h"
@@ -17,6 +18,7 @@
 #include "motis/core/conv/station_conv.h"
 #include "motis/core/statistics/statistics.h"
 #include "motis/module/context/motis_call.h"
+#include "motis/module/context/motis_http_req.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
@@ -162,11 +164,13 @@ Offset<Route> find_matching_ppr_route(FootRoutingResponse const* ppr_resp,
 }
 
 struct parking::impl {
-  explicit impl(schedule const& sched, std::string const& parking_file,
+  explicit impl(dispatcher* dispatcher, schedule const& sched,
+                std::string const& parking_file,
                 std::string const& footedges_db_file, std::size_t db_max_size)
-      : sched_(sched),
-        parkings_(parking_file),
-        db_(footedges_db_file, db_max_size, true) {}
+      : dispatcher_{dispatcher},
+        sched_{sched},
+        parkings_{parking_file},
+        db_{footedges_db_file, db_max_size, true} {}
 
   void update_ppr_profiles() { ppr_profiles_.update(); }
 
@@ -218,9 +222,8 @@ struct parking::impl {
       auto const osrm_resp = motis_content(OSRMViaRouteResponse, osrm_msg);
 
       auto const ppr_req = make_ppr_request(
-          foot_start, {foot_dest}, req->ppr_search_options(),
-          motis::ppr::SearchDirection_Forward, req->include_steps(),
-          req->include_edges(), req->include_path());
+          foot_start, {foot_dest}, req->ppr_search_options(), SearchDir_Forward,
+          req->include_steps(), req->include_edges(), req->include_path());
       auto const ppr_msg = motis_call(ppr_req)->val();
       auto const ppr_resp = motis_content(FootRoutingResponse, ppr_msg);
 
@@ -246,9 +249,8 @@ struct parking::impl {
       auto const foot_dest = *req->destination();
 
       auto const ppr_req = make_ppr_request(
-          foot_start, {foot_dest}, req->ppr_search_options(),
-          motis::ppr::SearchDirection_Forward, req->include_steps(),
-          req->include_edges(), req->include_path());
+          foot_start, {foot_dest}, req->ppr_search_options(), SearchDir_Forward,
+          req->include_steps(), req->include_edges(), req->include_path());
       auto const ppr_msg = motis_call(ppr_req)->val();
       auto const ppr_resp = motis_content(FootRoutingResponse, ppr_msg);
 
@@ -340,8 +342,41 @@ struct parking::impl {
     return make_msg(fbb);
   }
 
+  void init_io(boost::asio::io_context& ios) {
+    timer_ = std::make_unique<boost::asio::deadline_timer>(ios);
+    schedule_update_timer();
+  }
+
+  void stop_io() { timer_->cancel(); }
+
+  void schedule_update_timer() {
+    timer_->expires_from_now(boost::posix_time::seconds(5));
+    timer_->async_wait([&](boost::system::error_code const& ec) {
+      if (ec == boost::asio::error::operation_aborted) {
+        return;
+      }
+
+      dispatcher_->enqueue(
+          ctx_data{dispatcher_}, [&]() { update_parking_places(); },
+          ctx::op_id("parking::update_parking_places"), ctx::op_type_t::IO, {});
+
+      schedule_update_timer();
+    });
+  }
+
+  void update_parking_places() {
+    using namespace net::http::client;
+    //    auto const resp = motis_http("https://api.parkendd.de/")->val();
+
+    // TODO(root) update db
+    (void)parkings_;
+    (void)db_;
+  }
+
 private:
+  dispatcher* dispatcher_{nullptr};
   schedule const& sched_;
+  std::unique_ptr<boost::asio::deadline_timer> timer_;
   parkings parkings_;
   database db_;
   ppr_profiles ppr_profiles_;
@@ -449,7 +484,7 @@ void parking::import(import_dispatcher& reg) {
 
 void parking::init(motis::module::registry& reg) {
   try {
-    impl_ = std::make_unique<impl>(get_sched(), parking_file(),
+    impl_ = std::make_unique<impl>(shared_data_, get_sched(), parking_file(),
                                    footedges_db_file(), db_max_size_);
 
     reg.register_op("/parking/geo",
@@ -463,6 +498,18 @@ void parking::init(motis::module::registry& reg) {
     reg.subscribe("/init", [this]() { impl_->update_ppr_profiles(); });
   } catch (std::exception const& e) {
     LOG(logging::warn) << "parking module not initialized (" << e.what() << ")";
+  }
+}
+
+void parking::init_io(boost::asio::io_context& ios) {
+  if (impl_ != nullptr) {
+    impl_->init_io(ios);
+  }
+}
+
+void parking::stop_io() {
+  if (impl_ != nullptr) {
+    impl_->stop_io();
   }
 }
 

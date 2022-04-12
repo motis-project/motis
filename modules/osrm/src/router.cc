@@ -5,6 +5,7 @@
 #include "osrm/osrm.hpp"
 #include "osrm/route_parameters.hpp"
 #include "osrm/smooth_via_parameters.hpp"
+#include "osrm/table_parameters.hpp"
 #include "util/coordinate.hpp"
 #include "util/json_container.hpp"
 #include "util/json_util.hpp"
@@ -36,9 +37,41 @@ public:
     return FloatCoordinate{FloatLongitude{lng}, FloatLatitude{lat}};
   }
 
+  msg_ptr table(OSRMManyToManyRequest const* req) const {
+    TableParameters params;
+    for (auto const& loc : *req->from()) {
+      params.sources.emplace_back(params.sources.size());
+      params.coordinates.emplace_back(make_coord(loc->lat(), loc->lng()));
+    }
+    for (auto const& loc : *req->to()) {
+      params.destinations.emplace_back(params.sources.size() +
+                                       params.destinations.size());
+      params.coordinates.emplace_back(make_coord(loc->lat(), loc->lng()));
+    }
+
+    Object result;
+    osrm_->Table(params, result);
+
+    std::vector<double> durations;
+    for (auto const& duration_row :
+         result.values["durations"].get<Array>().values) {
+      for (auto const& d : duration_row.get<Array>().values) {
+        durations.emplace_back(d.get<Number>().value);
+      }
+    }
+
+    message_creator fbb;
+    fbb.create_and_finish(
+        MsgContent_OSRMManyToManyResponse,
+        CreateOSRMManyToManyResponse(
+            fbb, fbb.CreateVector(durations.data(), durations.size()))
+            .Union());
+    return make_msg(fbb);
+  }
+
   msg_ptr one_to_many(OSRMOneToManyRequest const* req) const {
     MultiTargetParameters params;
-    params.forward = req->direction() == Direction_Forward;
+    params.forward = req->direction() == SearchDir_Forward;
 
     params.coordinates.reserve(req->many()->size() + 1);
     params.coordinates.emplace_back(
@@ -151,6 +184,10 @@ router::router(std::string const& path)
     : impl_(std::make_unique<router::impl>(path)) {}
 
 router::~router() = default;
+
+msg_ptr router::table(OSRMManyToManyRequest const* req) const {
+  return impl_->table(req);
+}
 
 msg_ptr router::one_to_many(OSRMOneToManyRequest const* req) const {
   return impl_->one_to_many(req);

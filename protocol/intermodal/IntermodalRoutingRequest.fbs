@@ -71,12 +71,19 @@ table CarParking {
   ppr_search_options: ppr.SearchOptions;
 }
 
+table GBFS {
+  vehicle_types: [string];
+  max_walk_duration: int;
+  max_ride_duration: int;
+}
+
 union Mode {
   Foot,
   Bike,
   Car,
   FootPPR,
-  CarParking
+  CarParking,
+  GBFS
 }
 
 table ModeWrapper {
@@ -119,5 +126,5 @@ table IntermodalRoutingRequest {
   destination: IntermodalDestination;
   destination_modes: [ModeWrapper];
   search_type: routing.SearchType;
-  search_dir: routing.SearchDir;
+  search_dir: motis.SearchDir;
 }

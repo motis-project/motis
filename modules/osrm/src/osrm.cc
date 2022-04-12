@@ -111,6 +111,10 @@ bool osrm::import_successful() const {
 
 void osrm::init(motis::module::registry& reg) {
   reg.subscribe("/init", [this] { init_async(); });
+  reg.register_op("/osrm/table", [this](msg_ptr const& msg) {
+    auto const req = motis_content(OSRMManyToManyRequest, msg);
+    return get_router(req->profile()->str())->table(req);
+  });
   reg.register_op("/osrm/one_to_many", [this](msg_ptr const& msg) {
     auto const req = motis_content(OSRMOneToManyRequest, msg);
     return get_router(req->profile()->str())->one_to_many(req);
