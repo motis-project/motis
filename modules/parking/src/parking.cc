@@ -198,6 +198,7 @@ struct parking::impl {
 
   void update_parkendd() {
     LOG(info) << "ParkenDD update";
+    auto unavailable_parking_lots = mcd::hash_set<std::int32_t>{};
     for (auto const& endpoint : parkendd_endpoints_) {
       auto const req = motis_http(endpoint);
       auto const res = req->val();
@@ -223,7 +224,16 @@ struct parking::impl {
         compute_foot_edges_via_module(db_, tasks, db_ppr_profiles_, ppr_exact_);
         LOG(info) << "foot edges computed";
       }
+      for (auto const& lot : api_lots) {
+        if (!lot.is_usable()) {
+          unavailable_parking_lots.insert(
+              parkings_.get_parkendd_lot_id(lot.id_));
+        }
+      }
     }
+    LOG(info) << "marked " << unavailable_parking_lots.size()
+              << " parking lots as unavailable";
+    parkings_.set_unavailable_parking_lots(std::move(unavailable_parking_lots));
   }
 
   msg_ptr geo_lookup(msg_ptr const& msg) {
