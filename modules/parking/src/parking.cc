@@ -211,32 +211,27 @@ struct parking::impl {
   void update_ppr_profiles() { ppr_profiles_.update(); }
 
   void update_parkendd() {
-    LOG(info) << "ParkenDD update";
+    LOG(info) << "ParkenDD: Updating parking lots...";
     auto unavailable_parking_lots = mcd::hash_set<std::int32_t>{};
+    auto parking_lots_received = 0ULL;
+    auto new_parking_lots_added = 0ULL;
     for (auto const& endpoint : parkendd_endpoints_) {
       auto const req = motis_http(endpoint);
       auto const res = req->val();
       auto const api_lots = parkendd::parse(res.body);
-      for (auto const& lot : api_lots) {
-        LOG(info) << "parking lot " << lot.id_ << " @(" << lot.location_.lat_
-                  << "," << lot.location_.lng_ << "): " << lot.free_ << "/"
-                  << lot.total_
-                  << " free, state=" << static_cast<int>(lot.state_);
-      }
+      parking_lots_received += api_lots.size();
       auto parking_lots = utl::to_vec(api_lots, parkendd::to_parking_lot);
       auto const new_lot_indices = db_.add_parking_lots(parking_lots);
+      new_parking_lots_added += new_lot_indices.size();
       if (!new_lot_indices.empty()) {
-        scoped_timer new_lot_timer{"new parking lots"};
-        LOG(info) << "found " << new_lot_indices.size() << " new parking lots";
+        scoped_timer new_lot_timer{
+            "ParkenDD: Computing foot edges for new parking lots"};
         auto const new_parking_lots = utl::to_vec(
             new_lot_indices, [&](auto const idx) { return parking_lots[idx]; });
-        LOG(info) << "adding parkings to rtree...";
         parkings_.add_parkings(new_parking_lots);
         auto const tasks = db_.get_foot_edge_tasks(stations_, new_parking_lots,
                                                    db_ppr_profiles_);
-        LOG(info) << "computing foot edges: " << tasks.size() << " tasks";
         compute_foot_edges_via_module(db_, tasks, db_ppr_profiles_, ppr_exact_);
-        LOG(info) << "foot edges computed";
       }
       for (auto const& lot : api_lots) {
         if (!lot.is_usable()) {
@@ -245,8 +240,9 @@ struct parking::impl {
         }
       }
     }
-    LOG(info) << "marked " << unavailable_parking_lots.size()
-              << " parking lots as unavailable";
+    LOG(info) << "ParkenDD: Update complete: " << parking_lots_received
+              << " parking lots, " << new_parking_lots_added << " new, "
+              << unavailable_parking_lots.size() << " unavailable";
     parkings_.set_unavailable_parking_lots(std::move(unavailable_parking_lots));
   }
 
