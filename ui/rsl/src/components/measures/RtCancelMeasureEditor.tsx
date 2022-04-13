@@ -98,7 +98,7 @@ function RtCancelMeasureEditor({
   };
 
   useEffect(() => {
-    if (data.trip) {
+    if (!data.original_ribasis && data.trip) {
       setTrip(data.trip).catch((err) =>
         console.log("RtCancelMeasureEditor init failed:", err)
       );

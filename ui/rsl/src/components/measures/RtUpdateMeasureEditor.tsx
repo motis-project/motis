@@ -115,7 +115,7 @@ function RtUpdateMeasureEditor({
   };
 
   useEffect(() => {
-    if (data.trip) {
+    if (!data.ribasis && data.trip) {
       setTrip(data.trip).catch((err) =>
         console.log("RtUpdateMeasureEditor init failed:", err)
       );
