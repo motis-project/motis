@@ -251,40 +251,42 @@ function SectionLoadGraph({
         style={tooltipStyle}
       >
         <table className="w-full">
-          {!simpleGraph && (
-            <TooltipRow pax={section.dist.min} section={section}>
-              Minimum
+          <tbody>
+            {!simpleGraph && (
+              <TooltipRow pax={section.dist.min} section={section}>
+                Minimum
+              </TooltipRow>
+            )}
+            <TooltipRow pax={section.dist.q5} section={section}>
+              5% Quantil
             </TooltipRow>
-          )}
-          <TooltipRow pax={section.dist.q5} section={section}>
-            5% Quantil
-          </TooltipRow>
-          <TooltipRow pax={section.dist.q50} section={section}>
-            Median
-          </TooltipRow>
-          <TooltipRow pax={section.dist.q95} section={section}>
-            95% Quantil
-          </TooltipRow>
-          {!simpleGraph && (
-            <TooltipRow pax={section.dist.max} section={section}>
-              Maximum
+            <TooltipRow pax={section.dist.q50} section={section}>
+              Median
             </TooltipRow>
-          )}
-          <TooltipRow
-            pax={section.expected_passengers}
-            section={section}
-            className="border-y-2 border-gray-300"
-          >
-            Planmäßig
-          </TooltipRow>
-          <tr>
-            <td>Kapazität</td>
-            <td className="text-right">
-              {section.capacity_type === "Known"
-                ? section.capacity
-                : "Unbekannt"}
-            </td>
-          </tr>
+            <TooltipRow pax={section.dist.q95} section={section}>
+              95% Quantil
+            </TooltipRow>
+            {!simpleGraph && (
+              <TooltipRow pax={section.dist.max} section={section}>
+                Maximum
+              </TooltipRow>
+            )}
+            <TooltipRow
+              pax={section.expected_passengers}
+              section={section}
+              className="border-y-2 border-gray-300"
+            >
+              Planmäßig
+            </TooltipRow>
+            <tr>
+              <td>Kapazität</td>
+              <td className="text-right">
+                {section.capacity_type === "Known"
+                  ? section.capacity
+                  : "Unbekannt"}
+              </td>
+            </tr>
+          </tbody>
         </table>
       </div>
     </div>
