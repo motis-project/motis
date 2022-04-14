@@ -2,7 +2,7 @@ import { TripId } from "@/api/protocol/motis";
 
 import { MeasureUnion } from "@/data/measures";
 
-export type OptimizationType = "LoadInfo" | "LoadRecommendation";
+export type OptimizationType = "V1";
 
 // sent to worker
 export type WorkerRequest =

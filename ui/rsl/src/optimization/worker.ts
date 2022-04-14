@@ -5,15 +5,12 @@ import { TripId, TripServiceInfo } from "@/api/protocol/motis";
 import { LoadLevel } from "@/api/protocol/motis/paxforecast";
 import {
   PaxMonEdgeLoadInfo,
-  PaxMonGetAddressableGroupsResponse,
   PaxMonGetGroupsInTripResponse,
-  PaxMonGroupBaseInfo,
   PaxMonTripLoadInfo,
 } from "@/api/protocol/motis/paxmon";
 
 import { setApiEndpoint } from "@/api/endpoint";
 import {
-  sendPaxMonAddressableGroupsRequest,
   sendPaxMonDestroyUniverseRequest,
   sendPaxMonForkUniverseRequest,
   sendPaxMonGetTripLoadInfosRequest,
@@ -101,7 +98,6 @@ async function optimizeTripV1(
             type: "MeasuresAdded",
             measures: sectionMeasures,
           } as WorkerUpdate);
-          //reload = true; // TODO
           break;
         }
       }
@@ -158,7 +154,6 @@ async function optimizeTripEdgeV1(
     const entryTime = groups.entry_time;
     const previousTrip: TripServiceInfo | undefined = groups.grouped_by_trip[0];
 
-    // TODO: workaround for groups_in_trip api bug
     if (!entryStation) {
       continue;
     }
@@ -213,9 +208,6 @@ async function optimizeTripEdgeV1(
     const journeyRating = (j: Journey) =>
       (getArrivalTime(j) - entryTime) / 60 + j.transfers * 30;
 
-    // TODO: trip load infos für alle trip legs abrufen (nicht nur first)
-    // TODO: trip load info cache
-
     const bestCurrentRating = Math.min(...currentJourneys.map(journeyRating));
 
     const alternatives = zipWith(
@@ -252,8 +244,6 @@ async function optimizeTripEdgeV1(
     if (estAcceptance == 0) {
       continue;
     }
-
-    // TODO: ansagezeitpunkt (trip vs. station)
 
     const sharedData: SharedMeasureData = {
       time: fromUnixTime(entryTime - 5 * 60),
@@ -297,87 +287,6 @@ async function optimizeTripEdgeV1(
   return sectionMeasures;
 }
 
-async function optimizeTripV2(
-  baseUniverse: number,
-  schedule: number,
-  tripId: TripId
-) {
-  const forkResponse = await sendPaxMonForkUniverseRequest({
-    universe: baseUniverse,
-    fork_schedule: false,
-  });
-  const simUniverse = forkResponse.universe;
-  log(
-    `Neues Universum ${simUniverse} für Optimierung erstellt (basierend auf ${baseUniverse}).`
-  );
-  postMessage({
-    type: "UniverseForked",
-    universe: simUniverse,
-  } as WorkerUpdate);
-
-  try {
-    let reload = true;
-    let iteration = 1;
-    while (reload) {
-      log(`Optimierung (V2): Iteration ${iteration}`);
-      reload = false;
-
-      const tripLoadData = (
-        await sendPaxMonGetTripLoadInfosRequest({
-          universe: baseUniverse,
-          trips: [tripId],
-        })
-      ).load_infos[0];
-      const addressableGroups = await sendPaxMonAddressableGroupsRequest({
-        universe: simUniverse,
-        trip: tripId,
-      });
-
-      const groupMap = new Map<number, PaxMonGroupBaseInfo>();
-      for (const group of addressableGroups.groups) {
-        groupMap.set(group.id, group);
-      }
-
-      for (const [sectionIdx, edge] of tripLoadData.edges.entries()) {
-        const sectionMeasures = await optimizeTripEdgeV2(
-          simUniverse,
-          schedule,
-          tripId,
-          tripLoadData,
-          addressableGroups,
-          groupMap,
-          sectionIdx,
-          edge
-        );
-        if (sectionMeasures.length > 0) {
-          log(
-            `Optimierung für den Abschnitt: ${sectionMeasures.length} Maßnahmen`
-          );
-          postMessage({
-            type: "MeasuresAdded",
-            measures: sectionMeasures,
-          } as WorkerUpdate);
-          //reload = true; // TODO
-          break;
-        }
-      }
-      ++iteration;
-    }
-
-    log(`Optimierung abgeschlossen.`);
-  } finally {
-    log(`Universum ${simUniverse} wird freigegeben...`);
-    await sendPaxMonDestroyUniverseRequest({
-      universe: simUniverse,
-    });
-    log(`Universum ${simUniverse} freigegeben.`);
-    postMessage({
-      type: "UniverseDestroyed",
-      universe: simUniverse,
-    } as WorkerUpdate);
-  }
-}
-
 function estimateAcceptanceProbability(
   bestCurrentRating: number,
   bestAlternativeRating: number
@@ -391,65 +300,8 @@ function estimateAcceptanceProbability(
   } else {
     return (
       1.0 - Math.min(0.8, (bestAlternativeRating - bestCurrentRating) / 90)
-    ); // TODO
-  }
-}
-
-async function optimizeTripEdgeV2(
-  simUniverse: number,
-  schedule: number,
-  tripId: TripId,
-  tripLoadData: PaxMonTripLoadInfo,
-  addressableGroups: PaxMonGetAddressableGroupsResponse,
-  groupMap: Map<number, PaxMonGroupBaseInfo>,
-  sectionIdx: number,
-  edge: PaxMonEdgeLoadInfo
-): Promise<MeasureUnion[]> {
-  if (!edge.possibly_over_capacity || edge.prob_over_capacity < 0.01) {
-    return [];
-  }
-  const sectionGroupInfo = addressableGroups.sections[sectionIdx];
-  const minPax = edge.dist.min;
-  const maxPax = edge.dist.max;
-  const overCap = edge.dist.q95 - edge.capacity;
-  log(
-    `\n\nKritischer Abschnitt ${sectionIdx}: ${edge.from.name} -> ${edge.to.name}: Kapazität ${edge.capacity}, Reisende: ${minPax}-${maxPax} (Q.95: ${edge.dist.q95}), ${overCap} über Kapazität`
-  );
-
-  /*
-  const optimizedTsi = tripLoadData.tsi;
-  const plannedTripId = JSON.stringify(tripId);
-  const containsCurrentTrip = (j: Journey) =>
-    j.tripLegs.find((leg) =>
-      leg.trips.find((t) => JSON.stringify(t.trip.id) === plannedTripId)
-    ) !== undefined;
-   */
-
-  const sectionMeasures: MeasureUnion[] = [];
-
-  for (const byInterchange of sectionGroupInfo.by_future_interchange) {
-    const destStation = byInterchange.future_interchange;
-    const cgs = byInterchange.cgs;
-
-    log(
-      `\nReisende Richtung ${destStation.name}: ~${cgs.dist.q5}-${cgs.dist.q95}`
     );
-    for (const byEntry of byInterchange.by_entry) {
-      log(
-        `  Einstieg in ${byEntry.entry_station.name}: ~${byEntry.cgs.dist.q5}-${byEntry.cgs.dist.q95}`
-      );
-      log(
-        `    Reisebeginn an der Station: ~${byEntry.starting_here.dist.q5}-${byEntry.starting_here.dist.q95}`
-      );
-      for (const byFeeder of byEntry.by_feeder) {
-        log(
-          `    Umstieg von Zug #${byFeeder.trip.trip.train_nr}: ~${byFeeder.cgs.dist.q5}-${byFeeder.cgs.dist.q95}`
-        );
-      }
-    }
   }
-
-  return sectionMeasures;
 }
 
 const LOAD_LEVEL_MAPPING: LoadLevel[] = ["Low", "NoSeats", "Full"];
@@ -495,10 +347,8 @@ async function optimizeTrip(
   optType: OptimizationType
 ) {
   switch (optType) {
-    case "LoadInfo":
+    case "V1":
       return optimizeTripV1(baseUniverse, schedule, tripId);
-    case "LoadRecommendation":
-      return optimizeTripV2(baseUniverse, schedule, tripId);
   }
 }
 

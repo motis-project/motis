@@ -84,7 +84,7 @@ function TripOptimization({
       universe,
       schedule,
       tripId,
-      optType: "LoadInfo",
+      optType: "V1",
     } as WorkerRequest);
   }, [tripId, universe, schedule, setMeasureAtoms]);
 
