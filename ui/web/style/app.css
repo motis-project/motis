@@ -65,6 +65,7 @@
 
 .sub-overlay.hidden {
   left: -590px;
+  visibility: hidden;
 }
 
 #sub-overlay-content {
@@ -82,6 +83,8 @@
   right: 18px;
   cursor: pointer;
   color: #4971E7;
+  background: none;
+  border: none;
 }
 
 .sub-overlay-close i {
@@ -106,6 +109,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
 }
 
 .overlay-toggle i {
@@ -131,6 +135,7 @@
   justify-content: center;
   opacity: 1;
   transition: all 0.2s ease;
+  border: none;
 }
 
 .trip-search-toggle.enabled {
@@ -312,6 +317,12 @@
   cursor: pointer;
 }
 
+.sim-time-overlay .sim-icon {
+  border: none;
+  background: none;
+  padding-left: -25px;
+}
+
 .sim-time-overlay .sim-icon i {
   color: #999;
   font-size: 20px;
@@ -322,6 +333,9 @@
 
 .sim-time-overlay .time {
   cursor: pointer;
+  border: none;
+  background: none;
+  margin-left: -8px;
 }
 
 .sim-time-picker-container {
@@ -361,6 +375,8 @@
   right: 10px;
   cursor: pointer;
   color: #4971E7;
+  background: none;
+  border: none;
 }
 
 .sim-time-picker-overlay .close i {
@@ -462,8 +478,7 @@
   }
 }
 
-#search,
-#connections {
+#search {
   padding: 24px;
 }
 
@@ -557,8 +572,11 @@
 
 .swap-locations-btn {
   position: absolute;
-  right: 20px;
   top: 60px;
+  right: 17px;
+  z-index: 1;
+  background-color: transparent;
+  border-style: none;
 }
 
 .swap-locations-btn input {
@@ -574,29 +592,6 @@
   transform: rotate(180deg);
 }
 
-.mode-picker-btn {
-  position: absolute;
-  right: 0px;
-  top: 15px;
-  background: #fff;
-  padding: 5px;
-  cursor: pointer;
-}
-
-.mode-picker-btn .mode {
-  color: #abb7cc;
-  height: 15px;
-}
-
-.mode-picker-btn .mode.enabled {
-  color: #4971E7;
-}
-
-.mode-picker-btn i {
-  font-size: 14px;
-  cursor: pointer;
-}
-
 fieldset {
   border: 1px solid #6d8dec;
   border-radius: 4px;
@@ -606,73 +601,8 @@ fieldset > legend {
   padding: 0 5px;
 }
 
-.mode-picker-editor {
-  display: none;
-  position: absolute;
-  z-index: 10;
-  top: 0px;
-  left: 0px;
-  width: 540px;
-  height: 510px;
-  padding: 0;
-  background: #fff;
-  box-shadow: 0 6px 6px rgba(0, 0, 0, 0.23), 0 -2px 6px rgba(0, 0, 0, 0.23);
-  flex-direction: column;
-}
-
-/* https://stackoverflow.com/questions/29986977/firefox-ignores-padding-when-using-overflowscroll */
-.mode-picker-editor .content:after {
-  content: "";
-  height: 24px;
-  display: block;
-}
-
-.mode-picker-editor .header {
-  padding: 24px 24px 8px 24px;
-}
-
-.mode-picker-editor .content
-{
-  padding: 0 24px;
-  overflow-y: auto;
-}
-
 .to-location .mode-picker-editor {
   top: -89px;
-}
-
-.mode-picker-editor.visible {
-  display: flex;
-}
-
-.mode-picker-editor .mode {
-  margin-top: 15px;
-}
-
-.mode-picker-editor .mode-header input {
-  margin-right: 5px;
-}
-
-.mode-picker-editor .numeric.slider input[type="range"] {
-  width: 365px;
-  margin-right: 20px;
-}
-
-.mode-picker-editor .numeric.slider input[type="text"] {
-  width: 50px;
-}
-
-.mode-picker-editor .coefficients {
-  display: flex;
-}
-
-.mode-picker-editor .coefficients input {
-  width: 100%;
-  margin: 0 5px;
-}
-
-.mode-picker-editor .profile-picker {
-  margin-bottom: 20px;
 }
 
 .time-option {
@@ -704,40 +634,6 @@ fieldset > legend {
 .time-option input:checked + label {
   background-color: #6d8dec;
   color: white;
-}
-
-#connections {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  padding-top: 0px;
-  padding-bottom: 0px;
-}
-
-.connections {
-  padding-bottom: 20px;
-}
-
-#connections .no-results,
-#connections .main-error,
-#connections .loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  height: 100%;
-  min-height: 200px;
-}
-
-#connections .main-error div {
-  text-align: center;
-}
-
-#connections .schedule-range {
-  margin-top: 1em;
-}
-
-#connections .extend-search-interval .error .schedule-range {
-  margin-top: auto;
 }
 
 .connection {
@@ -815,7 +711,7 @@ fieldset > legend {
   z-index: 15;
 }
 
-.extend-search-interval a {
+.extend-search-interval button {
   cursor: pointer;
   background: #4971E7;
   display: inline;
@@ -830,6 +726,7 @@ fieldset > legend {
   border-radius: .25em;
   margin: 0 40px 0 0;
   box-shadow: 4px 0px 0px 0px #fff, -4px 0px 0px 0px #fff;
+  border-color: transparent;
 }
 
 .extend-search-interval .spinner {
@@ -903,10 +800,6 @@ fieldset > legend {
 
 .connection-label.label-6 {
   background: #3f51b5;
-}
-
-.connections .connection-duration {
-  padding-top: 0.5em;
 }
 
 .all-stops {
@@ -1518,6 +1411,7 @@ fieldset > legend {
   margin-right: 16px;
   justify-content: center;
   align-items: center;
+  background-color: transparent;
 }
 
 .back i {
@@ -1770,3 +1664,37 @@ fieldset > legend {
   margin-right: 2px;
   margin-top: -4px;
 }
+
+@media screen and (max-width: 650px), (max-height: 450px){
+  .overlay-container {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 0px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: all .4s ease;
+    pointer-events: none;
+  }
+
+  .overlay {
+    z-index: 10;
+    background-color: white;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+    border-radius: 0px;
+    border-top-right-radius: 0;
+    transition: all .4s ease;
+    flex: 0 0 auto;
+    order: 1;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
+  .overlay-tabs {
+    display: none;
+  }
+}
+

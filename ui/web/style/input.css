@@ -51,3 +51,8 @@
   margin-right: 10px;
   width: 1%;
 }
+
+.gb-input-button {
+  background: transparent;
+  border-style: none;
+}
