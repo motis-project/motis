@@ -14,6 +14,9 @@ table FreeBikeRoute {
   // dir=FWD: x --walk--> b --bike--> p
   // dir=BWD: p --walk--> b --bike--> x
   b: Position;  // free bike position
+
+  walk_duration: ushort;
+  bike_duration: ushort;
 }
 
 
@@ -22,12 +25,16 @@ table FreeBikeRoute {
 // ----------------------------------------------------------------------------
 table GBFSStation {
   id: string;
+  name: string;
   pos: Position;
 }
 
 table StationBikeRoute {
-  sx: GBFSStation;
-  sp: GBFSStation;
+  from: GBFSStation;
+  to: GBFSStation;
+  first_walk_duration: ushort;
+  bike_duration: ushort;
+  second_walk_duration: ushort;
 }
 
 // ----------------------------------------------------------------------------
@@ -40,8 +47,6 @@ table RouteInfo {
   station: Station;  // public transport station
   route: BikeRoute;
   total_duration: uint;
-  walk_duration: uint;
-  bike_duration: uint;
 }
 
 // ----------------------------------------------------------------------------

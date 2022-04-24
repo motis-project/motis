@@ -36,11 +36,17 @@ struct car_parking_edge {
 
 struct gbfs_edge {
   struct free_bike {
+    duration walk_duration_{std::numeric_limits<duration>::max()};
+    duration bike_duration_{std::numeric_limits<duration>::max()};
     std::string id_;
     geo::latlng pos_;
   };
   struct station_bike {
-    std::string from_station_, to_station_;
+    duration first_walk_duration_{std::numeric_limits<duration>::max()};
+    duration bike_duration_{std::numeric_limits<duration>::max()};
+    duration second_walk_duration_{std::numeric_limits<duration>::max()};
+    std::string from_station_name_, to_station_name_;
+    std::string from_station_id_, to_station_id_;
     geo::latlng from_station_pos_, to_station_pos_;
   };
   std::string vehicle_type_;

@@ -196,11 +196,15 @@ void gbfs_edges(appender_fun const& appender, SearchDir const dir,
       case gbfs::BikeRoute_StationBikeRoute: {
         auto const* s =
             reinterpret_cast<gbfs::StationBikeRoute const*>(r->route());
+        std::cout << "gbfs station duration: " << s->bike_duration() << "\n";
         e.gbfs_ = gbfs_edge{
             r->vehicle_type()->str(),
-            gbfs_edge::station_bike{s->sx()->id()->str(), s->sp()->id()->str(),
-                                    from_fbs(s->sx()->pos()),
-                                    from_fbs(s->sp()->pos())},
+            gbfs_edge::station_bike{
+                s->first_walk_duration(), s->bike_duration(),
+                s->second_walk_duration(),  //
+                s->from()->name()->str(), s->to()->name()->str(),
+                s->from()->id()->str(), s->to()->id()->str(),
+                from_fbs(s->from()->pos()), from_fbs(s->to()->pos())},
         };
         break;
       }
@@ -210,7 +214,8 @@ void gbfs_edges(appender_fun const& appender, SearchDir const dir,
             reinterpret_cast<gbfs::FreeBikeRoute const*>(r->route());
         e.gbfs_ = gbfs_edge{
             r->vehicle_type()->str(),
-            gbfs_edge::free_bike{b->bike_id()->str(), from_fbs(b->b())}};
+            gbfs_edge::free_bike{b->walk_duration(), b->bike_duration(),
+                                 b->bike_id()->str(), from_fbs(b->b())}};
         break;
       }
 
