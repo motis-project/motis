@@ -238,10 +238,6 @@ void apply_gbfs_patches(journey& j, std::vector<parking_patch>& patches) {
           j.stops_[p.from_].departure_.timestamp_reason_;
       str1.parking_stop_.departure_ = str1.parking_stop_.arrival_;
 
-      std::cout << "patching bike duration: " << s.from_station_name_ << "("
-                << s.from_station_pos_ << ") - " << s.to_station_name_ << " ("
-                << s.to_station_pos_ << "): " << s.bike_duration_ << "\n";
-
       str2.parking_stop_.eva_no_ = s.to_station_id_;
       str2.parking_stop_.name_ = s.to_station_name_;
       str2.parking_stop_.lat_ = s.to_station_pos_.lat_;

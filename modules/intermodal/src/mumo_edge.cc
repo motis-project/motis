@@ -196,7 +196,6 @@ void gbfs_edges(appender_fun const& appender, SearchDir const dir,
       case gbfs::BikeRoute_StationBikeRoute: {
         auto const* s =
             reinterpret_cast<gbfs::StationBikeRoute const*>(r->route());
-        std::cout << "gbfs station duration: " << s->bike_duration() << "\n";
         e.gbfs_ = gbfs_edge{
             r->vehicle_type()->str(),
             gbfs_edge::station_bike{

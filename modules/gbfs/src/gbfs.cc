@@ -406,13 +406,6 @@ struct gbfs::impl {
                 sp_to_sx_table->Get(sp_vec_idx * sx.size() + sx_vec_idx) /
                 60.0);
 
-            auto const& sx_station = stations_.at(sx.at(sx_vec_idx));
-            auto const& sp_station = stations_.at(sp.at(sp_vec_idx));
-            std::cout << "checking route: " << sp_vec_idx << "="
-                      << sp_station.name_ << " (" << sp_station.pos_ << ") - "
-                      << sx_vec_idx << "=" << sx_station.name_ << "("
-                      << sx_station.pos_ << "): " << sp_to_sx_duration << "\n";
-
             if (sp_to_sx_duration > max_bike_duration) {
               continue;
             }
