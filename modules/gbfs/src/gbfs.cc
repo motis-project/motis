@@ -8,6 +8,7 @@
 
 #include "utl/concat.h"
 #include "utl/enumerate.h"
+#include "utl/erase_duplicates.h"
 #include "utl/pipes.h"
 
 #include "geo/point_rtree.h"
@@ -23,7 +24,6 @@
 #include "motis/gbfs/free_bike.h"
 #include "motis/gbfs/station.h"
 #include "motis/gbfs/system_status.h"
-#include "utl/erase_duplicates.h"
 
 namespace fbs = flatbuffers;
 using namespace motis::logging;
