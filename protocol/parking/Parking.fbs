@@ -2,8 +2,18 @@ include "base/Position.fbs";
 
 namespace motis.parking;
 
+enum ParkingFee : ubyte { UNKNOWN, NO, YES }
+
+enum ParkingSource : ubyte { OSM, PARKENDD }
+
 table Parking {
   id: int;
   pos: motis.Position;
-  fee: bool;
+  fee: ParkingFee;
+  source: ParkingSource;
+
+  // ParkenDD
+  name: string;
+  lot_type: string;
+  address: string;
 }

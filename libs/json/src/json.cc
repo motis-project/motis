@@ -47,4 +47,34 @@ bool get_bool(rapidjson::Value const& obj, char const* key) {
   return value.GetBool();
 }
 
+int get_int(rapidjson::Value const& obj, char const* key) {
+  auto const& value = get_value(obj, key);
+  utl::verify(value.IsInt(), "not an int: {}", key);
+  return value.GetInt();
+}
+
+unsigned get_uint(rapidjson::Value const& obj, char const* key) {
+  auto const& value = get_value(obj, key);
+  utl::verify(value.IsUint(), "not a uint: {}", key);
+  return value.GetUint();
+}
+
+std::int64_t get_int64(rapidjson::Value const& obj, char const* key) {
+  auto const& value = get_value(obj, key);
+  utl::verify(value.IsInt64(), "not an int64: {}", key);
+  return value.GetInt64();
+}
+
+std::uint64_t get_uint64(rapidjson::Value const& obj, char const* key) {
+  auto const& value = get_value(obj, key);
+  utl::verify(value.IsUint64(), "not a uint64: {}", key);
+  return value.GetUint64();
+}
+
+double get_double(rapidjson::Value const& obj, char const* key) {
+  auto const& value = get_value(obj, key);
+  utl::verify(value.IsDouble(), "not a double: {}", key);
+  return value.GetDouble();
+}
+
 }  // namespace motis::json

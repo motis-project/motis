@@ -10,11 +10,12 @@
 
 #include "motis/core/schedule/schedule.h"
 
-namespace motis::parking::prepare {
+namespace motis::parking {
 
-struct station {
-  station() = default;
-  station(std::string id, geo::latlng pos) : id_(std::move(id)), pos_(pos) {}
+struct station_info {
+  station_info() = default;
+  station_info(std::string id, geo::latlng pos)
+      : id_(std::move(id)), pos_(pos) {}
 
   std::string id_;
   geo::latlng pos_;
@@ -23,14 +24,14 @@ struct station {
 struct stations {
   explicit stations(schedule const& sched);
 
-  std::vector<std::pair<station, double>> get_in_radius(
+  std::vector<std::pair<station_info, double>> get_in_radius(
       geo::latlng const& center, double radius) const;
 
   std::size_t size() const { return stations_.size(); }
 
 private:
-  std::vector<station> stations_;
+  std::vector<station_info> stations_;
   geo::point_rtree geo_index_;
 };
 
-}  // namespace motis::parking::prepare
+}  // namespace motis::parking
