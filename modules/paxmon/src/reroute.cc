@@ -210,6 +210,7 @@ bool update_passenger_group(trip_data_index const tdi, trip const* trp,
                             passenger_group* pg, universe& uv) {
   static constexpr auto const INVALID_INDEX =
       std::numeric_limits<std::size_t>::max();
+  // TODO(pablo): does not support merged trips
   for (auto const& leg : pg->compact_planned_journey_.legs_) {
     if (leg.trip_idx_ == trp->trip_idx_) {
       auto const edges = uv.trip_data_.edges(tdi);

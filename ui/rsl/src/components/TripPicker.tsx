@@ -30,7 +30,7 @@ function shortTripName(tsi: TripServiceInfo) {
   const names = [
     ...new Set(tsi.service_infos.map((si) => `${si.category} ${si.train_nr}`)),
   ];
-  return names.join(", ");
+  return names[0] ?? "?";
 }
 
 type TripPickerProps = {

@@ -2,8 +2,17 @@ import { PrimitiveAtom, atom } from "jotai";
 import { v4 as uuidv4 } from "uuid";
 
 import { Station, TripServiceInfo } from "@/api/protocol/motis";
-import { LoadLevel, MeasureWrapper } from "@/api/protocol/motis/paxforecast";
-import { RiBasisFahrt, RiBasisFahrtData } from "@/api/protocol/motis/ribasis";
+import {
+  LoadLevel,
+  MeasureRecipients,
+  MeasureType,
+  MeasureWrapper,
+} from "@/api/protocol/motis/paxforecast";
+import {
+  RiBasisFahrt,
+  RiBasisFahrtAbschnitt,
+  RiBasisFahrtData,
+} from "@/api/protocol/motis/ribasis";
 
 import { formatRiBasisDateTime } from "@/util/dateFormat";
 
@@ -38,6 +47,15 @@ export interface RtUpdateMeasureData {
   ribasis: RiBasisFahrtData | undefined;
 }
 
+export interface RtCancelMeasureData {
+  trip: TripServiceInfo | undefined;
+  original_ribasis: RiBasisFahrtData | undefined;
+  canceled_stops: boolean[];
+  allow_reroute: boolean;
+}
+
+export type UiMeasureType = MeasureType | "Empty" | "RtCancelMeasure";
+
 export type EmptyMeasureU = { type: "Empty"; shared: SharedMeasureData };
 
 export type TripLoadInfoMeasureU = {
@@ -64,12 +82,19 @@ export type RtUpdateMeasureU = {
   data: RtUpdateMeasureData;
 };
 
+export type RtCancelMeasureU = {
+  type: "RtCancelMeasure";
+  shared: SharedMeasureData;
+  data: RtCancelMeasureData;
+};
+
 export type MeasureUnion =
   | EmptyMeasureU
   | TripLoadInfoMeasureU
   | TripRecommendationMeasureU
   | TripLoadRecommendationMeasureU
-  | RtUpdateMeasureU;
+  | RtUpdateMeasureU
+  | RtCancelMeasureU;
 
 export function isEmptyMeasureU(mu: MeasureUnion): mu is EmptyMeasureU {
   return mu.type === "Empty";
@@ -95,6 +120,10 @@ export function isTripLoadRecommendationMeasureU(
 
 export function isRtUpdateMeasureU(mu: MeasureUnion): mu is RtUpdateMeasureU {
   return mu.type === "RtUpdateMeasure";
+}
+
+export function isRtCancelMeasureU(mu: MeasureUnion): mu is RtCancelMeasureU {
+  return mu.type === "RtCancelMeasure";
 }
 
 export function toMeasureWrapper(mu: MeasureUnion): MeasureWrapper | null {
@@ -168,28 +197,76 @@ export function toMeasureWrapper(mu: MeasureUnion): MeasureWrapper | null {
       if (!d.ribasis) {
         return null;
       }
-      const ribf: RiBasisFahrt = {
-        meta: {
-          id: uuidv4(),
-          owner: "",
-          format: "RIPL",
-          version: "v3",
-          correlation: [],
-          created: formatRiBasisDateTime(mu.shared.time),
-          sequence: mu.shared.time.getTime(),
-        },
-        data: d.ribasis,
-      };
-      return {
-        measure_type: "RtUpdateMeasure",
-        measure: {
-          ...shared,
-          type: "RIBasis",
-          content: JSON.stringify(ribf, null, 2),
-        },
-      };
+      const ribf = makeRiBasisFahrt(d.ribasis, mu.shared.time);
+      return makeRtUpdateMeasure(shared, ribf);
+    }
+    case "RtCancelMeasure": {
+      const d = mu.data;
+      if (!d.original_ribasis || d.canceled_stops.every((c) => !c)) {
+        return null;
+      }
+      const updated = cancelStops(d.original_ribasis, d.canceled_stops);
+      const ribf = makeRiBasisFahrt(updated, mu.shared.time);
+      return makeRtUpdateMeasure(shared, ribf);
     }
   }
+}
+
+function makeRiBasisFahrt(data: RiBasisFahrtData, time: Date): RiBasisFahrt {
+  return {
+    meta: {
+      id: uuidv4(),
+      owner: "",
+      format: "RIPL",
+      version: "v3",
+      correlation: [],
+      created: formatRiBasisDateTime(time),
+      sequence: time.getTime(),
+    },
+    data,
+  };
+}
+
+function makeRtUpdateMeasure(
+  shared: { recipients: MeasureRecipients; time: number },
+  ribasis: RiBasisFahrt
+): MeasureWrapper {
+  return {
+    measure_type: "RtUpdateMeasure",
+    measure: {
+      ...shared,
+      type: "RIBasis",
+      content: JSON.stringify(ribasis, null, 2),
+    },
+  };
+}
+
+function cancelStops(
+  original: RiBasisFahrtData,
+  canceledStops: boolean[]
+): RiBasisFahrtData {
+  const sections: RiBasisFahrtAbschnitt[] = [];
+  let lastDeparture: RiBasisFahrtAbschnitt | null = null;
+
+  for (const [idx, sec] of original.allFahrtabschnitt.entries()) {
+    const depCanceled = canceledStops[idx];
+    const arrCanceled = canceledStops[idx + 1];
+    if (depCanceled && arrCanceled) {
+      continue;
+    } else if (!depCanceled && !arrCanceled) {
+      sections.push(sec);
+      lastDeparture = null;
+    } else if (arrCanceled) {
+      lastDeparture = sec;
+    } else if (depCanceled) {
+      if (lastDeparture) {
+        sections.push({ ...lastDeparture, ankunft: sec.ankunft });
+        lastDeparture = null;
+      }
+    }
+  }
+
+  return { ...original, allFahrtabschnitt: sections };
 }
 
 export function newEmptyMeasure(time: Date): MeasureUnion {

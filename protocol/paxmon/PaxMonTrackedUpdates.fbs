@@ -35,6 +35,12 @@ table PaxMonUpdatedTrip {
   added_max_pax: uint;
   added_mean_pax: float;
 
+  rerouted: bool;
+  newly_critical_sections: int;
+  no_longer_critical_sections: int;
+  max_pax_increase: int;
+  max_pax_decrease: int;
+
   critical_info_before: PaxMonCriticalTripInfo;
   critical_info_after: PaxMonCriticalTripInfo;
 

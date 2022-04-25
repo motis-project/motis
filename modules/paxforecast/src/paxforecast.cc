@@ -597,7 +597,8 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
 
   uv.update_tracker_.start_tracking(uv, sched,
                                     req->include_before_trip_load_info(),
-                                    req->include_after_trip_load_info());
+                                    req->include_after_trip_load_info(),
+                                    req->include_trips_with_unchanged_load());
   MOTIS_FINALLY([&]() { uv.update_tracker_.stop_tracking(); });
 
   // stats
@@ -742,6 +743,18 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
   update_tracker_timer.stop_and_print();
   t_update_tracker = update_tracker_timer.duration_ms();
 
+  auto const paxmon_tick_stats = uv.update_tracker_.get_tick_statistics();
+  auto groups_broken = 0ULL;
+  auto pax_broken = 0ULL;
+  auto groups_with_major_delay = 0ULL;
+  auto pax_with_major_delay = 0ULL;
+  for (auto const& pmts : paxmon_tick_stats) {
+    groups_broken += pmts.broken_groups_;
+    pax_broken += pmts.broken_passengers_;
+    groups_with_major_delay += pmts.major_delay_groups_;
+    pax_with_major_delay += pmts.major_delay_passengers_;
+  }
+
   mc.create_and_finish(
       MsgContent_PaxForecastApplyMeasuresResponse,
       CreatePaxForecastApplyMeasuresResponse(
@@ -749,9 +762,11 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
           CreatePaxForecastApplyMeasuresStatistics(
               mc, measure_time_points, total_measures_applied,
               total_affected_groups, total_alternative_routings,
-              total_alternatives_found, t_rt_updates, t_get_affected_groups,
-              t_find_alternatives, t_add_alternatives_to_graph,
-              t_behavior_simulation, t_update_groups, t_update_tracker),
+              total_alternatives_found, groups_broken, pax_broken,
+              groups_with_major_delay, pax_with_major_delay, t_rt_updates,
+              t_get_affected_groups, t_find_alternatives,
+              t_add_alternatives_to_graph, t_behavior_simulation,
+              t_update_groups, t_update_tracker),
           fb_updates)
           .Union());
   return make_msg(mc);

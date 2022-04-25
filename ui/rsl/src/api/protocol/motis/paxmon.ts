@@ -448,6 +448,11 @@ export interface PaxMonUpdatedTrip {
   removed_mean_pax: number;
   added_max_pax: number;
   added_mean_pax: number;
+  rerouted: boolean;
+  newly_critical_sections: number;
+  no_longer_critical_sections: number;
+  max_pax_increase: number;
+  max_pax_decrease: number;
   critical_info_before: PaxMonCriticalTripInfo;
   critical_info_after: PaxMonCriticalTripInfo;
   removed_groups: PaxMonGroupBaseInfo[];

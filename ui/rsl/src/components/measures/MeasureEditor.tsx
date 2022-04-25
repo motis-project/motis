@@ -7,6 +7,7 @@ import { MeasureUnion } from "@/data/measures";
 import { selectedTripAtom } from "@/data/selectedTrip";
 import { showLegacyMeasureTypesAtom } from "@/data/settings";
 
+import RtCancelMeasureEditor from "@/components/measures/RtCancelMeasureEditor";
 import RtUpdateMeasureEditor from "@/components/measures/RtUpdateMeasureEditor";
 import SharedDataEditor from "@/components/measures/SharedDataEditor";
 import TripLoadInfoMeasureEditor from "@/components/measures/TripLoadInfoMeasureEditor";
@@ -110,6 +111,15 @@ function MeasureEditor({
           key={measureAtom.toString()}
         />
       );
+    case "RtCancelMeasure":
+      return measureEditor(
+        <RtCancelMeasureEditor
+          measureAtom={measureAtom}
+          closeEditor={closeEditor}
+          deleteMeasure={deleteMeasure}
+          key={measureAtom.toString()}
+        />
+      );
   }
 }
 
@@ -190,15 +200,31 @@ function EmptyMeasureEditor({
       return {
         type: "RtUpdateMeasure",
         shared: m.shared,
-        data: { trip: undefined, ribasis: undefined },
+        data: { trip: selectedTrip, ribasis: undefined },
+      };
+    });
+  };
+
+  const setRtCancel = () => {
+    setMeasure((m) => {
+      return {
+        type: "RtCancelMeasure",
+        shared: m.shared,
+        data: {
+          trip: selectedTrip,
+          original_ribasis: undefined,
+          canceled_stops: [],
+          allow_reroute: true,
+        },
       };
     });
   };
 
   return (
     <div>
-      <div>Maßnahmentyp wählen:</div>
+      <div className="text-xl">Neue Maßnahme hinzufügen</div>
       <div className="flex flex-col gap-3 py-3">
+        <div className="text-lg">Nachfrageeinflussende Maßnahmen</div>
         <MeasureTypeOption
           title="Alternativenempfehlung mit Auslastungsinformation"
           onClick={setTripLoadRecommendation}
@@ -223,8 +249,13 @@ function EmptyMeasureEditor({
             </MeasureTypeOption>
           </>
         )}
+        <div className="text-lg">Angebotsbeeinflussende Maßnahmen</div>
+        <MeasureTypeOption title="Ausfall/Teilausfall" onClick={setRtCancel}>
+          Ausfall aller oder einzelner Halte eines Zuges simulieren
+        </MeasureTypeOption>
         <MeasureTypeOption title="Echtzeitupdate" onClick={setRtUpdate}>
-          Zugverlauf bearbeiten (Verspätungen, Umleitungen, Gleisänderungen)
+          Beliebige Änderungen am Zugverlauf (Verspätungen, Umleitungen,
+          Gleisänderungen, Ausfälle) simulieren
         </MeasureTypeOption>
         <button
           onClick={() => deleteMeasure(measureAtom)}

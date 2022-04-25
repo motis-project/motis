@@ -16,7 +16,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const allowForwarding = getQueryParameters()["allowForwarding"] === "yes";
+const allowForwarding = getQueryParameters().get("allowForwarding") === "yes";
 
 function App(): JSX.Element {
   return (

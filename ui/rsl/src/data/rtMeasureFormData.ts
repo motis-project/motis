@@ -114,6 +114,9 @@ function getSection(
 export function toFormData(ribasis: RiBasisFahrtData): StopFormData[] {
   const stops: StopFormData[] = [];
   const sectionCount = ribasis.allFahrtabschnitt.length;
+  if (sectionCount == 0) {
+    return stops;
+  }
   for (let stopIdx = 0; stopIdx < sectionCount + 1; stopIdx++) {
     const depSec = getSection(ribasis, stopIdx);
     stops.push({

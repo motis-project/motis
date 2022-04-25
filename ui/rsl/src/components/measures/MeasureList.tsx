@@ -5,11 +5,7 @@ import { useCallback } from "react";
 import { useMutation, useQueryClient } from "react-query";
 
 import { TripServiceInfo } from "@/api/protocol/motis";
-import {
-  LoadLevel,
-  MeasureType,
-  MeasureWrapper,
-} from "@/api/protocol/motis/paxforecast";
+import { LoadLevel, MeasureWrapper } from "@/api/protocol/motis/paxforecast";
 import { PaxMonStatusResponse } from "@/api/protocol/motis/paxmon";
 
 import { sendPaxForecastApplyMeasuresRequest } from "@/api/paxforecast";
@@ -17,6 +13,7 @@ import { queryKeys } from "@/api/paxmon";
 
 import {
   MeasureUnion,
+  UiMeasureType,
   currentEditorMeasureAtom,
   measuresAtom,
   newEmptyMeasure,
@@ -39,11 +36,12 @@ import TripServiceInfoView from "@/components/TripServiceInfoView";
 type RemoveFn = (ma: PrimitiveAtom<MeasureUnion>) => void;
 type SelectFn = (ma: PrimitiveAtom<MeasureUnion>) => void;
 
-const measureTypeTexts: Record<MeasureType | "Empty", string> = {
+const measureTypeTexts: Record<UiMeasureType, string> = {
   TripLoadInfoMeasure: "Auslastungsinformation",
   TripRecommendationMeasure: "Zugempfehlung",
   TripLoadRecommendationMeasure: "Alternativenempfehlung",
   RtUpdateMeasure: "Echtzeitmeldung",
+  RtCancelMeasure: "(Teil-)Ausfall",
   Empty: "Neue Maßnahme",
 };
 
@@ -113,6 +111,26 @@ function MeasureTypeDetail({
         </div>
       );
     }
+    case "RtCancelMeasure": {
+      const canceled = measure.data.canceled_stops.filter((c) => c).length;
+      const allCanceled = canceled == measure.data.canceled_stops.length;
+      return (
+        <div className="text-sm text-gray-500">
+          {measure.data.trip ? (
+            <>
+              <TripServiceInfoView tsi={measure.data.trip} format="Short" />
+              {allCanceled
+                ? ": Komplettausfall"
+                : `: Teilausfall (${canceled} ${
+                    canceled == 1 ? "Halt" : "Halte"
+                  })`}
+            </>
+          ) : (
+            <span className="text-db-red-500">Kein Trip gewählt</span>
+          )}
+        </div>
+      );
+    }
     case "Empty": {
       return <></>;
     }
@@ -166,6 +184,9 @@ function MeasureListEntry({
     measure.shared.recipients.stations.length > 0 ||
     measure.shared.recipients.trips.length > 0;
 
+  const needsRecipients =
+    measure.type !== "RtUpdateMeasure" && measure.type !== "RtCancelMeasure";
+
   const tripName = (tsi: TripServiceInfo) =>
     tsi.service_infos.length > 0
       ? `${tsi.service_infos[0].category} ${tsi.service_infos[0].train_nr}`
@@ -201,9 +222,9 @@ function MeasureListEntry({
               ...measure.shared.recipients.trips.map((t) => tripName(t)),
             ].join(", ")}`}
           </span>
-        ) : (
+        ) : needsRecipients ? (
           <span className="text-db-red-500">Kein Ansageort gewählt</span>
-        )}
+        ) : null}
       </div>
       <MeasureTypeDetail measure={measure} />
     </div>
@@ -233,6 +254,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
         preparation_time: 0,
         include_before_trip_load_info: true,
         include_after_trip_load_info: true,
+        include_trips_with_unchanged_load: false,
       }),
     {
       onMutate: () => {
@@ -306,9 +328,18 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
     !applyMeasuresMutation.isLoading;
 
   return (
-    <div className="flex flex-col gap-2 h-full overflow-hidden">
+    <div
+      className={classNames(
+        "flex flex-col gap-2 h-full overflow-hidden",
+        applyMeasuresMutation.isLoading && "cursor-wait"
+      )}
+    >
       <div className="flex justify-between">
-        <span className="text-xl">Maßnahmen</span>
+        <span className="text-xl">
+          {`${measureAtoms.length} ${
+            measureAtoms.length === 1 ? "Maßnahme" : "Maßnahmen"
+          }`}
+        </span>
         <div className="flex gap-2">
           <button
             onClick={add}

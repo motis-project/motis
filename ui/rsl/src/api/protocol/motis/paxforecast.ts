@@ -86,6 +86,7 @@ export interface PaxForecastApplyMeasuresRequest {
   preparation_time: number;
   include_before_trip_load_info: boolean;
   include_after_trip_load_info: boolean;
+  include_trips_with_unchanged_load: boolean;
 }
 
 // paxforecast/PaxForecastApplyMeasuresResponse.fbs
@@ -95,6 +96,10 @@ export interface PaxForecastApplyMeasuresStatistics {
   total_affected_groups: number;
   total_alternative_routings: number;
   total_alternatives_found: number;
+  groups_broken: number;
+  pax_broken: number;
+  groups_with_major_delay: number;
+  pax_with_major_delay: number;
   t_rt_updates: number;
   t_get_affected_groups: number;
   t_find_alternatives: number;

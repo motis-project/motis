@@ -632,6 +632,7 @@ void paxmon::rt_updates_applied(universe& uv, schedule const& sched) {
   uv.tick_stats_.t_rt_updates_applied_total_ =
       static_cast<std::uint64_t>(MOTIS_TIMING_MS(total));
 
+  uv.update_tracker_.rt_updates_applied(uv.tick_stats_);
   if (uv.id_ == 0) {
     stats_writer_->write_tick(uv.tick_stats_);
     stats_writer_->flush();

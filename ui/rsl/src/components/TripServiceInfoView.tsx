@@ -12,19 +12,16 @@ function TripServiceInfoView({
   format,
 }: TripServiceInfoViewProps): JSX.Element {
   const names = [
-    ...new Set(
-      tsi.service_infos.map(
-        (si) => `${si.category} ${si.train_nr}`
-        //+ (si.line ? ` [Linie ${si.line}]` : "")
-      )
-    ),
+    ...new Set(tsi.service_infos.map((si) => `${si.category} ${si.train_nr}`)),
   ];
   if (format === "Short") {
-    return <span>{names.join(", ")}</span>;
+    return <span>{names[0] ?? "?"}</span>;
   } else {
     return (
       <div className="w-full">
-        <div className="text-lg">{names.join(", ")}</div>
+        <div className="text-lg">
+          {names.length > 0 ? names.join(", ") : `${tsi.trip.train_nr}`}
+        </div>
         <div className="flex justify-between text-sm">
           <div className="flex flex-col items-start">
             <div>{tsi.primary_station.name}</div>

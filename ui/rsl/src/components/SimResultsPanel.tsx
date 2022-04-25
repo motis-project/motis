@@ -1,9 +1,15 @@
 import { Listbox, Transition } from "@headlessui/react";
-import { CheckIcon, SelectorIcon } from "@heroicons/react/solid";
+import {
+  ArrowSmDownIcon,
+  CheckCircleIcon,
+  CheckIcon,
+  ExclamationCircleIcon,
+  SelectorIcon,
+} from "@heroicons/react/solid";
 import { differenceInMilliseconds } from "date-fns";
 import { PrimitiveAtom, useAtom } from "jotai";
 import { useUpdateAtom } from "jotai/utils";
-import { Fragment, memo } from "react";
+import { Fragment, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
 
 import { PaxMonUpdatedTrip } from "@/api/protocol/motis/paxmon";
@@ -20,7 +26,6 @@ import classNames from "@/util/classNames";
 import { formatDateTime } from "@/util/dateFormat";
 
 import MiniTripLoadGraph from "@/components/MiniTripLoadGraph";
-import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 type SimResultsListEntryProps = {
   simResultAtom: PrimitiveAtom<SimulationResult>;
@@ -116,6 +121,10 @@ function SimResultsList(): JSX.Element {
   );
 }
 
+function hasCritChange(ut: PaxMonUpdatedTrip): boolean {
+  return ut.newly_critical_sections > 0 || ut.no_longer_critical_sections > 0;
+}
+
 type SimResultDetailsProps = {
   simResultAtom: PrimitiveAtom<SimulationResult>;
 };
@@ -124,6 +133,7 @@ function SimResultDetails({
   simResultAtom,
 }: SimResultDetailsProps): JSX.Element {
   const [simResult] = useAtom(simResultAtom);
+  const [critChangeOnly, setCritChangeOnly] = useState(false);
 
   const r = simResult.response;
   const duration = differenceInMilliseconds(
@@ -131,13 +141,9 @@ function SimResultDetails({
     simResult.startedAt
   );
 
-  const MemoizedUpdatedTrip = memo(function MemoizedUpdatedTripWrapper({
-    index,
-  }: {
-    index: number;
-  }) {
-    return <UpdatedTrip ut={r.updates.updated_trips[index]} />;
-  });
+  const trips = critChangeOnly
+    ? r.updates.updated_trips.filter(hasCritChange)
+    : r.updates.updated_trips;
 
   const runtimeStats = [
     { duration: r.stats.t_rt_updates, label: "Einspielen der Echtzeitupdates" },
@@ -158,32 +164,55 @@ function SimResultDetails({
 
   return (
     <>
-      <div>
-        <div className="my-3 text-lg font-semibold">Statistiken:</div>
-        <ul>
-          <li>
+      <div className="mt-2">
+        <div title={runtimeStats}>
+          Simulationsdauer insgesamt: {formatMiliseconds(duration)}
+        </div>
+        <div className="mt-1 font-semibold">
+          Nachfragebeeinflussende Maßnahmen
+        </div>
+        <div className="ml-3">
+          <div>
             Betroffene Reisendengruppen:{" "}
             {formatNumber(r.stats.total_affected_groups)}
-          </li>
-          <li>
+          </div>
+          <div>
             Alternativensuchen:{" "}
             {formatNumber(r.stats.total_alternative_routings)} (
             {formatNumber(r.stats.total_alternatives_found)} Ergebnisse,{" "}
             {formatMiliseconds(r.stats.t_find_alternatives)})
-          </li>
-          <li title={runtimeStats}>
-            Simulationsdauer insgesamt: {formatMiliseconds(duration)}
-          </li>
-        </ul>
+          </div>
+        </div>
+        <div>
+          <div className="mt-1 font-semibold">
+            Angebotsbeeinflussende Maßnahmen
+          </div>
+          <div className="ml-3">
+            {`Reisendengruppen mit gebrochenen Reiseketten: ${formatNumber(
+              r.stats.groups_broken
+            )}`}
+          </div>
+        </div>
+        <label className="mt-2 flex items-center gap-2">
+          <input
+            type="checkbox"
+            className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
+            checked={critChangeOnly}
+            onChange={() => setCritChangeOnly((b) => !b)}
+          />
+          Nur Züge mit Änderungen der kritischen Abschnitte anzeigen
+        </label>
         <div className="my-3 text-lg font-semibold">
-          {formatNumber(r.updates.updated_trip_count)} betroffene Züge:
+          <span>
+            {formatNumber(r.updates.updated_trip_count)} betroffene Züge:
+          </span>
         </div>
       </div>
       <div className="grow">
         <Virtuoso
-          data={r.updates.updated_trips}
+          data={trips}
           overscan={200}
-          itemContent={(index) => <MemoizedUpdatedTrip index={index} />}
+          itemContent={(index) => <UpdatedTrip ut={trips[index]} />}
         />
       </div>
     </>
@@ -197,33 +226,69 @@ type UpdatedTripProps = {
 function UpdatedTrip({ ut }: UpdatedTripProps) {
   const setSelectedTrip = useUpdateAtom(selectedTripAtom);
 
+  const category = ut.tsi.service_infos[0]?.category ?? "";
+  const trainNr = ut.tsi.service_infos[0]?.train_nr ?? ut.tsi.trip.train_nr;
+
   return (
     <div
-      className="flex flex-col gap-2 py-3 pr-2 cursor-pointer"
+      className="pb-3 pr-1 cursor-pointer"
       onClick={() => setSelectedTrip(ut.tsi)}
     >
-      <TripServiceInfoView tsi={ut.tsi} format="Long" />
-      <ul>
-        <li>
-          Reisende über Kapazität: {ut.critical_info_before.max_excess_pax}
-          {" → "}
-          {ut.critical_info_after.max_excess_pax} max. /{" "}
-          {ut.critical_info_before.cumulative_excess_pax} {" → "}
-          {ut.critical_info_after.cumulative_excess_pax} gesamt
-        </li>
-        <li>
-          Kritische Abschnitte: {ut.critical_info_before.critical_sections}
-          {" → "}
-          {ut.critical_info_after.critical_sections}
-        </li>
-        <li>
-          Reisende: Avg: -{Math.round(ut.removed_mean_pax)} +
-          {Math.round(ut.added_mean_pax)} / Max: -{ut.removed_max_pax} +
-          {ut.added_max_pax}
-        </li>
-      </ul>
-      <MiniTripLoadGraph edges={ut.before_edges} />
-      <MiniTripLoadGraph edges={ut.after_edges} />
+      <div className="p-1 flex flex-col gap-2 rounded bg-db-cool-gray-100">
+        <div className="flex gap-4 pb-1">
+          <div className="flex flex-col">
+            <div className="text-sm text-center">{category}</div>
+            <div className="text-xl font-semibold">{trainNr}</div>
+          </div>
+          <div className="grow flex flex-col truncate">
+            <div className="flex justify-between">
+              <div className="truncate">{ut.tsi.primary_station.name}</div>
+              <div>{formatDateTime(ut.tsi.trip.time)}</div>
+            </div>
+            <div className="flex justify-between">
+              <div className="truncate">{ut.tsi.secondary_station.name}</div>
+              <div>{formatDateTime(ut.tsi.trip.target_time)}</div>
+            </div>
+          </div>
+        </div>
+        <ul>
+          {ut.rerouted && (
+            <li className="text-purple-700">
+              Zugverlauf durch Echtzeitupdates geändert
+            </li>
+          )}
+          {ut.newly_critical_sections > 0 && (
+            <li className="flex items-center gap-1 text-red-700">
+              <ExclamationCircleIcon className="w-5 h-5" />
+              {ut.newly_critical_sections > 1
+                ? `${ut.newly_critical_sections} neue kritische Abschnitte`
+                : "Ein neuer kritischer Abschnitt"}
+            </li>
+          )}
+          {ut.no_longer_critical_sections > 0 && (
+            <li className="flex items-center gap-1 text-green-700">
+              <CheckCircleIcon className="w-5 h-5" />
+              {ut.no_longer_critical_sections > 1
+                ? `Auslastung auf ${ut.no_longer_critical_sections} Abschnitten nicht mehr kritisch`
+                : "Auslastung auf einem Abschnitt nicht mehr kritisch"}
+            </li>
+          )}
+          {ut.max_pax_increase + ut.max_pax_decrease != 0 && (
+            <li>
+              Größte Änderung:
+              {ut.max_pax_increase > ut.max_pax_decrease
+                ? ` +${ut.max_pax_increase} `
+                : ` -${ut.max_pax_decrease} `}
+              Reisende
+            </li>
+          )}
+        </ul>
+        <div className="flex flex-col items-center gap-1">
+          <MiniTripLoadGraph edges={ut.before_edges} />
+          <ArrowSmDownIcon className="w-5 h-5 fill-gray-500" />
+          <MiniTripLoadGraph edges={ut.after_edges} />
+        </div>
+      </div>
     </div>
   );
 }

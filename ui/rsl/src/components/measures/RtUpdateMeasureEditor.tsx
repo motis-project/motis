@@ -1,7 +1,8 @@
 import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
+import { useAtomCallback } from "jotai/utils";
 import { cloneDeep } from "lodash-es";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Control,
   Controller,
@@ -66,7 +67,6 @@ function RtUpdateMeasureEditor({
   );
   const [data, setData] = useAtom(dataAtom);
   const queryClient = useQueryClient();
-  const [schedule] = useAtom(scheduleAtom); // TODO: rerender...
   const [selectedTrip, setSelectedTrip] = useState<string>();
   const [allowReroute, setAllowReroute] = useState(true);
 
@@ -79,11 +79,18 @@ function RtUpdateMeasureEditor({
       return { ...d, ribasis };
     });
 
+  const getSchedule = useAtomCallback(
+    useCallback((get) => {
+      return get(scheduleAtom);
+    }, [])
+  );
+
   const setTrip = async (tsi: TripServiceInfo | undefined) => {
     setData((d) => {
       return { ...d, trip: tsi };
     });
     if (tsi) {
+      const schedule = await getSchedule();
       const lookupReq = { trip_id: tsi.trip, schedule };
       const data = await queryClient.fetchQuery(
         lookupQueryKeys.riBasis(lookupReq),
@@ -108,11 +115,12 @@ function RtUpdateMeasureEditor({
   };
 
   useEffect(() => {
-    console.log("RtUpdateMeasureEditor mounted");
-    return () => {
-      console.log("RtUpdateMeasureEditor unmounted");
-    };
-  }, []);
+    if (!data.ribasis && data.trip) {
+      setTrip(data.trip).catch((err) =>
+        console.log("RtUpdateMeasureEditor init failed:", err)
+      );
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div>
@@ -209,14 +217,25 @@ function TripSectionEditor({
     <form onSubmit={handleSubmit(onSubmit)}>
       <div className="flex flex-col gap-4 divide-y-2 divide-db-cool-gray-300 divide-dashed">
         {allowReroute ? (
-          <div className="py-1 flex justify-center">
-            <button
-              type="button"
-              className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
-              onClick={() => insertStop(0)}
-            >
-              Neuen Halt am Anfang einfügen
-            </button>
+          <div className="space-y-3">
+            <div className="py-1 flex justify-center">
+              <button
+                type="button"
+                className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
+                onClick={() => remove()}
+              >
+                Alle Halte entfernen
+              </button>
+            </div>
+            <div className="py-1 flex justify-center">
+              <button
+                type="button"
+                className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
+                onClick={() => insertStop(0)}
+              >
+                Neuen Halt am Anfang einfügen
+              </button>
+            </div>
           </div>
         ) : (
           <div>

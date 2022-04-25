@@ -1,13 +1,13 @@
 import getQueryParameters from "@/util/queryParameters";
 
-function getApiEndpointFromUrl(params: Record<string, string>) {
+function getApiEndpointFromUrl(params: URLSearchParams) {
   if (typeof window === "undefined") {
     return "";
   }
   const defaultProtocol = window.location.protocol;
   const defaultHost = window.location.hostname;
   const defaultPort = "8080";
-  const motisParam = params["motis"] || null;
+  const motisParam = params.get("motis");
   let apiEndpoint = String(window.location.origin + window.location.pathname);
   if (motisParam) {
     if (/^[0-9]+$/.test(motisParam)) {

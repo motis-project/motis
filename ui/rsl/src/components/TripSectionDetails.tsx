@@ -1,8 +1,9 @@
 import { useAtom } from "jotai";
 import { useState } from "react";
 
-import { TripId } from "@/api/protocol/motis";
+import { Station, TripId } from "@/api/protocol/motis";
 import {
+  GroupedPassengerGroups,
   GroupsInTripSection,
   PaxMonEdgeLoadInfo,
   PaxMonGroupByStation,
@@ -56,9 +57,9 @@ function TripSectionDetails({
   selectedSection,
 }: TripSectionDetailsProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
-  const [groupFilter, setGroupFilter] = useState<PaxMonGroupFilter>("Entering");
+  const [groupFilter, setGroupFilter] = useState<PaxMonGroupFilter>("All");
   const [groupByStation, setGroupByStation] =
-    useState<PaxMonGroupByStation>("Last");
+    useState<PaxMonGroupByStation>("EntryAndLast");
   const [groupByOtherTrip, setGroupByOtherTrip] = useState(true);
 
   const {
@@ -111,17 +112,22 @@ function TripSectionDetails({
               {groupFilter == "Exiting" && ` mit Ausstieg in ${sec.to.name}`}
             </div>
             <ul>
-              {sec.groups.slice(0, 30).map((gg, idx) => (
-                <li key={idx}>
-                  <CombinedGroup
-                    plannedTrip={tripId}
-                    combinedGroup={gg}
-                    startStation={sec.from}
-                    earliestDeparture={sec.departure_current_time}
-                    groupByDirection={groupByDirection}
-                  />
-                </li>
-              ))}
+              {sec.groups
+                .filter((gg) => gg.info.dist.q95 >= 5)
+                .map((gg, idx) => (
+                  <li key={idx}>
+                    <CombinedGroup
+                      plannedTrip={tripId}
+                      combinedGroup={gg}
+                      startStation={getAlternativeFromStation(sec, gg)}
+                      earliestDeparture={getAlternativeEarliestDeparture(
+                        sec,
+                        gg
+                      )}
+                      groupByDirection={groupByDirection}
+                    />
+                  </li>
+                ))}
             </ul>
           </div>
         ))}
@@ -180,6 +186,28 @@ function TripSectionDetails({
       {content}
     </div>
   );
+}
+
+function getAlternativeFromStation(
+  sec: GroupsInTripSection,
+  gg: GroupedPassengerGroups
+): Station {
+  if (gg.entry_station.length === 1) {
+    return gg.entry_station[0];
+  } else {
+    return sec.from;
+  }
+}
+
+function getAlternativeEarliestDeparture(
+  sec: GroupsInTripSection,
+  gg: GroupedPassengerGroups
+): number {
+  if (gg.entry_station.length === 1) {
+    return gg.entry_time;
+  } else {
+    return sec.departure_current_time;
+  }
 }
 
 export default TripSectionDetails;

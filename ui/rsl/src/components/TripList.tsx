@@ -245,7 +245,7 @@ function TripList(): JSX.Element {
             />
           </label>
         </div>
-        <div className="">
+        <div className="grow">
           <label>
             <span className="text-sm">Zugnummer(n)</span>
             <input
@@ -473,14 +473,14 @@ function SectionOverCap({ label, section }: SectionOverCapProps) {
         <div className="text-xs">{label}</div>
         <div className="text-xs space-x-1">
           <span>
-            {section.maxPax}/{section.edge.capacity}
+            {section.maxOverCap}{" "}
+            <abbr title="Reisende über Kapazität" className="no-underline">
+              über Kapazität
+            </abbr>{" "}
+            &ndash;
           </span>
           <span>
-            ({section.maxOverCap}{" "}
-            <abbr title="Reisende über Kapazität" className="no-underline">
-              ü.K.
-            </abbr>
-            )
+            {section.maxPax}/{section.edge.capacity}
           </span>
         </div>
       </div>

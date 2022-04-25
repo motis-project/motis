@@ -18,7 +18,7 @@ import { scheduleAtom } from "@/data/simulation";
 import { formatTime } from "@/util/dateFormat";
 
 import JourneyTripNameView from "@/components/JourneyTripNameView";
-import { MiniTripLoadGraphForTrip } from "@/components/MiniTripLoadGraph";
+import { TripTooltip } from "@/components/TripTooltip";
 
 export type GroupByDirection = "Origin" | "Destination" | "None";
 
@@ -94,7 +94,7 @@ function CombinedGroup({
       <span className="font-bold">
         {combinedGroup.info.dist.q5 == combinedGroup.info.dist.q95
           ? `${combinedGroup.info.dist.q5} Reisende`
-          : `${combinedGroup.info.dist.q5} - ${combinedGroup.info.dist.q95} Reisende`}
+          : `${combinedGroup.info.dist.q5}–${combinedGroup.info.dist.q95} (Median: ${combinedGroup.info.dist.q50}) Reisende`}
         {groupByDirection !== "None" && (
           <>
             {groupByDirection === "Origin"
@@ -117,13 +117,15 @@ function CombinedGroup({
     </div>
   );
 
-  const journeys = data?.connections?.map((c) => connectionToJourney(c));
+  const journeys = data?.connections
+    ?.map((c) => connectionToJourney(c))
+    ?.sort((a, b) => getDepartureTime(a) - getDepartureTime(b));
 
   const alternativesInfo = journeys ? (
     <div>
-      {`${journeys.length} Mögliche Alternative(n) (ab ${formatTime(
-        earliestDeparture
-      )}):`}
+      {`${journeys.length} Mögliche Alternative(n) ab ${
+        startStation.name
+      }, ${formatTime(earliestDeparture)}:`}
       <ul>
         {journeys.map((j, idx) => (
           <li
@@ -139,9 +141,7 @@ function CombinedGroup({
                     <JourneyTripNameView jt={leg.trips[0]} />
                   </Tooltip.Trigger>
                   <Tooltip.Content>
-                    <div className="w-96 bg-white p-2 rounded-md shadow-lg flex justify-center">
-                      <MiniTripLoadGraphForTrip tripId={leg.trips[0].trip.id} />
-                    </div>
+                    <TripTooltip tripId={leg.trips[0].trip.id} />
                     <Tooltip.Arrow className="text-white fill-current" />
                   </Tooltip.Content>
                 </Tooltip.Root>

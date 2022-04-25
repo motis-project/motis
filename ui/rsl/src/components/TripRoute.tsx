@@ -25,6 +25,7 @@ import { SectionLoadColors } from "@/util/colors";
 import { formatDate, formatTime } from "@/util/dateFormat";
 
 import SectionLoadGraph from "@/components/SectionLoadGraph";
+import TripOptimization from "@/components/TripOptimization";
 import TripSectionDetails from "@/components/TripSectionDetails";
 
 type TripRouteProps = {
@@ -68,14 +69,18 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
   );
   const maxVal = Math.max(maxPax, maxExpected, maxCapacity);
 
+  const optimizationAvailable = edges.some((e) => e.possibly_over_capacity);
+
   const category = tripData.tsi.service_infos[0]?.category ?? "";
   const trainNr =
     tripData.tsi.service_infos[0]?.train_nr ?? tripData.tsi.trip.train_nr;
   const line = tripData.tsi.service_infos[0]?.line;
 
+  const [, ...secondaryServices] = tripData.tsi.service_infos;
+
   return (
     <div className="">
-      <div className="mb-4 flex gap-6 items-center text-lg justify-center">
+      <div className="flex gap-6 items-center text-lg justify-center">
         <span className="font-medium text-2xl">
           {category} {trainNr}
         </span>
@@ -86,6 +91,18 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
           {tripData.tsi.secondary_station.name}
         </span>
       </div>
+      {secondaryServices.length > 0 && (
+        <div className="flex gap-3 items-center justify-center">
+          <span>Fährt teilweise auch als:</span>
+          {secondaryServices.map((si, idx) => (
+            <span key={idx}>{`${si.category} ${si.train_nr}`}</span>
+          ))}
+        </div>
+      )}
+      <TripOptimization
+        tripId={tripId}
+        optimizationAvailable={optimizationAvailable}
+      />
       <div className="flex flex-col gap-2">
         {edges.map((section, idx) => (
           <TripSection
@@ -305,7 +322,14 @@ function Legend() {
             />
             <path
               d="M10 0 V20"
-              stroke={SectionLoadColors.Stroke_Expected}
+              stroke={SectionLoadColors.Stroke_Expected1}
+              strokeDasharray={2}
+              strokeWidth={2}
+              fill="none"
+            />
+            <path
+              d="M10 2 V20"
+              stroke={SectionLoadColors.Stroke_Expected2}
               strokeDasharray={2}
               strokeWidth={2}
               fill="none"
