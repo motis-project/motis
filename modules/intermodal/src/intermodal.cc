@@ -148,28 +148,30 @@ std::string get_parking_station(int index) {
   switch (index) {
     case 0: return STATION_VIA0;
     case 1: return STATION_VIA1;
+    case 2: return STATION_VIA2;
+    case 3: return STATION_VIA3;
     default: throw std::system_error(error::parking_edge_error);
   }
 }
 
-void apply_parking_patches(journey& j, std::vector<parking_patch>& patches) {
-  auto const get_transport = [&](unsigned const from,
-                                 unsigned const to) -> journey::transport& {
-    for (auto& t : j.transports_) {
-      if (t.from_ == from && t.to_ == to) {
-        return t;
-      }
+journey::transport& get_transport(journey& j, unsigned const from,
+                                  unsigned const to) {
+  for (auto& t : j.transports_) {
+    if (t.from_ == from && t.to_ == to) {
+      return t;
     }
-    throw std::system_error(error::parking_edge_error);
-  };
+  }
+  throw std::system_error(error::parking_edge_error);
+}
 
-  auto const is_virtual_station = [](journey::stop const& s) {
-    return s.name_ == STATION_START || s.name_ == STATION_END;
-  };
+bool is_virtual_station(journey::stop const& s) {
+  return s.name_ == STATION_START || s.name_ == STATION_END;
+};
 
+void apply_parking_patches(journey& j, std::vector<parking_patch>& patches) {
   auto parking_idx = 0;
   for (auto& p : patches) {
-    auto t = get_transport(p.from_, p.to_);
+    auto t = get_transport(j, p.from_, p.to_);
     auto const car_first = is_virtual_station(j.stops_[p.from_]);
 
     auto const first_edge_duration =
@@ -199,6 +201,89 @@ void apply_parking_patches(journey& j, std::vector<parking_patch>& patches) {
 
     car_transport.mumo_type_ = to_string(mumo_type::CAR);
     foot_transport.mumo_type_ = to_string(mumo_type::FOOT);
+  }
+}
+
+void apply_gbfs_patches(journey& j, std::vector<parking_patch>& patches) {
+  for (auto const& p : patches) {
+    // station bike:
+    // replace: X --walk[type:gbfs]--> P
+    // to: X --walk--> (SX) --bike--> (SP) --walk--> P
+    // replace: P -->walk[type:gbfs]--> X
+    // to: P --walk--> (SP) --bike--> (SX) --walk--> X
+    if (std::holds_alternative<gbfs_edge::station_bike>(p.e_->gbfs_->bike_)) {
+      auto const& s = std::get<gbfs_edge::station_bike>(p.e_->gbfs_->bike_);
+
+      auto& t = get_transport(j, p.from_, p.to_);
+      auto str1 = split_transport(j, patches, t);
+      auto str2 = split_transport(j, patches, str1.second_transport_);
+
+      str1.parking_stop_ = j.stops_.at(p.from_ + 1);
+      str2.parking_stop_ = j.stops_.at(p.from_ + 2);
+      str1.first_transport_ = get_transport(j, p.from_, p.from_ + 1);
+      str1.second_transport_ = get_transport(j, p.from_ + 1, p.from_ + 2);
+      str2.first_transport_ = get_transport(j, p.from_ + 1, p.from_ + 2);
+      str2.second_transport_ = get_transport(j, p.from_ + 2, p.from_ + 3);
+
+      str1.parking_stop_.eva_no_ = s.from_station_id_;
+      str1.parking_stop_.name_ = s.from_station_name_;
+      str1.parking_stop_.lat_ = s.from_station_pos_.lat_;
+      str1.parking_stop_.lng_ = s.from_station_pos_.lng_;
+      str1.parking_stop_.arrival_.valid_ = true;
+      str1.parking_stop_.arrival_.timestamp_ =
+          j.stops_[p.from_].departure_.timestamp_ + s.first_walk_duration_ * 60;
+      str1.parking_stop_.arrival_.schedule_timestamp_ =
+          str1.parking_stop_.arrival_.timestamp_;
+      str1.parking_stop_.arrival_.timestamp_reason_ =
+          j.stops_[p.from_].departure_.timestamp_reason_;
+      str1.parking_stop_.departure_ = str1.parking_stop_.arrival_;
+
+      str2.parking_stop_.eva_no_ = s.to_station_id_;
+      str2.parking_stop_.name_ = s.to_station_name_;
+      str2.parking_stop_.lat_ = s.to_station_pos_.lat_;
+      str2.parking_stop_.lng_ = s.to_station_pos_.lng_;
+      str2.parking_stop_.arrival_.valid_ = true;
+      str2.parking_stop_.arrival_.timestamp_ =
+          str1.parking_stop_.departure_.timestamp_ + s.bike_duration_ * 60;
+      str2.parking_stop_.arrival_.schedule_timestamp_ =
+          str2.parking_stop_.arrival_.timestamp_;
+      str2.parking_stop_.arrival_.timestamp_reason_ =
+          j.stops_[p.from_ + 1].departure_.timestamp_reason_;
+      str2.parking_stop_.departure_ = str2.parking_stop_.arrival_;
+
+      str1.first_transport_.mumo_type_ = to_string(mumo_type::FOOT);
+      str1.second_transport_.mumo_type_ = to_string(mumo_type::BIKE);
+      str2.first_transport_.mumo_type_ = to_string(mumo_type::BIKE);
+      str2.second_transport_.mumo_type_ = to_string(mumo_type::FOOT);
+    }
+
+    // free bike:
+    // replace: X --walk[type:gbfs]--> P
+    // to: X --walk--> (B) --bike--> P
+    // replace: P -->walk[type:gbfs]--> X
+    // to: P --walk--> (B) --bike--> X
+    else if (std::holds_alternative<gbfs_edge::free_bike>(p.e_->gbfs_->bike_)) {
+      auto const& b = std::get<gbfs_edge::free_bike>(p.e_->gbfs_->bike_);
+
+      auto& t = get_transport(j, p.from_, p.to_);
+      auto str = split_transport(j, patches, t);
+
+      str.parking_stop_.eva_no_ = b.id_;
+      str.parking_stop_.name_ = b.id_;
+      str.parking_stop_.lat_ = b.pos_.lat_;
+      str.parking_stop_.lng_ = b.pos_.lng_;
+      str.parking_stop_.arrival_.valid_ = true;
+      str.parking_stop_.arrival_.timestamp_ =
+          j.stops_[p.from_].departure_.timestamp_ + b.walk_duration_;
+      str.parking_stop_.arrival_.schedule_timestamp_ =
+          j.stops_[p.from_].departure_.schedule_timestamp_ + b.bike_duration_;
+      str.parking_stop_.arrival_.timestamp_reason_ =
+          j.stops_[p.from_].departure_.timestamp_reason_;
+      str.parking_stop_.departure_ = str.parking_stop_.arrival_;
+
+      str.first_transport_.mumo_type_ = to_string(mumo_type::FOOT);
+      str.second_transport_.mumo_type_ = to_string(mumo_type::BIKE);
+    }
   }
 }
 
@@ -233,8 +318,8 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
       dest.lng_ = q_dest.pos_.lng_;
     }
 
-    std::vector<parking_patch> patches;
-
+    auto gbfs_patches = std::vector<parking_patch>{};
+    auto parking_patches = std::vector<parking_patch>{};
     for (auto& t : journey.transports_) {
       if (!t.is_walk_ || t.mumo_id_ < 0) {
         continue;
@@ -249,11 +334,13 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
           t.mumo_type_ = to_string(mumo_type::FOOT);
           continue;
         }
-        patches.emplace_back(e, t.from_, t.to_);
+        parking_patches.emplace_back(e, t.from_, t.to_);
+      } else if (e->type_ == mumo_type::GBFS) {
+        gbfs_patches.emplace_back(e, t.from_, t.to_);
       }
     }
-
-    apply_parking_patches(journey, patches);
+    apply_parking_patches(journey, parking_patches);
+    apply_gbfs_patches(journey, gbfs_patches);
   }
 
   MOTIS_START_TIMING(direct_connection_timing);
