@@ -38,6 +38,15 @@ public:
   }
 
   msg_ptr table(OSRMManyToManyRequest const* req) const {
+    if (req->from()->size() == 0U || req->to()->size() == 0U) {
+      message_creator fbb;
+      fbb.create_and_finish(MsgContent_OSRMManyToManyResponse,
+                            CreateOSRMManyToManyResponse(
+                                fbb, fbb.CreateVector(std::vector<double>{}))
+                                .Union());
+      return make_msg(fbb);
+    }
+
     TableParameters params;
     for (auto const& loc : *req->from()) {
       params.sources.emplace_back(params.sources.size());
@@ -70,6 +79,16 @@ public:
   }
 
   msg_ptr one_to_many(OSRMOneToManyRequest const* req) const {
+    if (req->many()->size() == 0U) {
+      message_creator fbb;
+      fbb.create_and_finish(
+          MsgContent_OSRMOneToManyResponse,
+          CreateOSRMOneToManyResponse(
+              fbb, fbb.CreateVectorOfStructs(std::vector<Cost>{}))
+              .Union());
+      return make_msg(fbb);
+    }
+
     MultiTargetParameters params;
     params.forward = req->direction() == SearchDir_Forward;
 

@@ -72,7 +72,7 @@ table CarParking {
 }
 
 table GBFS {
-  vehicle_types: [string];
+  provider: string;
   max_walk_duration: int;
   max_ride_duration: int;
 }

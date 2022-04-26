@@ -3,6 +3,7 @@ include "address/AddressResponse.fbs";
 include "gbfs/GBFSRoutingRequest.fbs";
 include "gbfs/GBFSRoutingResponse.fbs";
 include "gbfs/GBFSGeoJSONResponse.fbs";
+include "gbfs/GBFSProvidersResponse.fbs";
 include "guesser/StationGuesserRequest.fbs";
 include "guesser/StationGuesserResponse.fbs";
 include "import/CoastlineEvent.fbs";
@@ -284,7 +285,8 @@ union MsgContent {
   motis.paxmon.PaxMonGetAddressableGroupsRequest                          = 130,
   motis.paxmon.PaxMonGetAddressableGroupsResponse                         = 131,
   motis.osrm.OSRMManyToManyRequest                                        = 132,
-  motis.osrm.OSRMManyToManyResponse                                       = 133
+  motis.osrm.OSRMManyToManyResponse                                       = 133,
+  motis.gbfs.GBFSProvidersResponse                                        = 134
 }
 
 // Destination Examples:

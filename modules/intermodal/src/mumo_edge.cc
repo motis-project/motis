@@ -169,23 +169,19 @@ void car_parking_edges(latlng const& pos, int max_car_duration,
 }
 
 void gbfs_edges(appender_fun const& appender, SearchDir const dir,
-                latlng const& pos,
-                std::vector<std::string> const& vehicle_types,
+                latlng const& pos, std::string const& provider,
                 unsigned const max_walk_duration,
                 unsigned const max_ride_duration) {
   using gbfs::GBFSRoutingResponse;
 
   Position fbs_position{pos.lat_, pos.lng_};
   message_creator mc;
-  mc.create_and_finish(
-      MsgContent_GBFSRoutingRequest,
-      gbfs::CreateGBFSRoutingRequest(
-          mc, dir, &fbs_position,
-          mc.CreateVector(utl::to_vec(
-              vehicle_types, [&](auto&& s) { return mc.CreateString(s); })),
-          max_walk_duration, max_ride_duration)
-          .Union(),
-      "/gbfs/route");
+  mc.create_and_finish(MsgContent_GBFSRoutingRequest,
+                       gbfs::CreateGBFSRoutingRequest(
+                           mc, dir, &fbs_position, mc.CreateString(provider),
+                           max_walk_duration, max_ride_duration)
+                           .Union(),
+                       "/gbfs/route");
   auto const res_msg = motis_call(make_msg(mc))->val();
   auto const gbfs_res = motis_content(GBFSRoutingResponse, res_msg);
   for (auto const& r : *gbfs_res->routes()) {
@@ -274,11 +270,9 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
 
       case Mode_GBFS: {
         auto const gbfs = reinterpret_cast<GBFS const*>(wrapper->mode());
-        gbfs_edges(
-            appender, search_dir, pos,
-            utl::to_vec(*gbfs->vehicle_types(),
-                        [](flatbuffers::String const* t) { return t->str(); }),
-            gbfs->max_walk_duration() / 60.0, gbfs->max_ride_duration() / 60.0);
+        gbfs_edges(appender, search_dir, pos, gbfs->provider()->str(),
+                   gbfs->max_walk_duration() / 60.0,
+                   gbfs->max_ride_duration() / 60.0);
         break;
       }
 

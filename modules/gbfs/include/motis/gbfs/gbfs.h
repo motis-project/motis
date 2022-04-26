@@ -25,6 +25,7 @@ struct gbfs : public motis::module::module {
 
   void init(motis::module::registry&) override;
   void import(motis::module::import_dispatcher&) override;
+  bool import_successful() const override { return import_successful_; }
 
 private:
   bool import_successful_{false};

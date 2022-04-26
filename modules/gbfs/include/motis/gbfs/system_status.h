@@ -15,6 +15,7 @@ struct urls {
   std::optional<std::string> free_bike_url_;
   std::optional<std::string> station_info_url_;
   std::optional<std::string> station_status_url_;
+  std::optional<std::string> system_information_url_;
 };
 
 std::vector<urls> read_system_status(std::string_view);
