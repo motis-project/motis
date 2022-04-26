@@ -24,6 +24,7 @@ jobs:
 
       - name: Check for differences
         run: |
+          git config --global --add safe.directory `pwd`
           git status --porcelain
           git status --porcelain | xargs -I {} -0 test -z \"{}\"
 
