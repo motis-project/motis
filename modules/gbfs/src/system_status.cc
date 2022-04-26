@@ -37,6 +37,10 @@ std::vector<urls> read_system_status(std::string_view s) {
           u.station_status_url_ = get_str(f, "url");
           break;
 
+        case cista::hash("system_information"):
+          u.system_information_url_ = get_str(f, "url");
+          break;
+
         case cista::hash("free_bike_status"):
         case cista::hash("vehicle_status"):
           u.free_bike_url_ = get_str(f, "url");

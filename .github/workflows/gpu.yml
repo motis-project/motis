@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, linux, x64, gpu]
+    runs-on: [ self-hosted, linux, x64, gpu ]
     env:
       DEBIAN_FRONTEND: noninteractive
       BUILDCACHE_COMPRESS: true
@@ -20,7 +20,7 @@ jobs:
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
       CUDACXX: /usr/local/cuda/bin/nvcc
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Get deps
         run: mkdir -p ~/deps && mv ~/deps .
