@@ -219,17 +219,12 @@ struct gbfs::impl {
     });
 
     auto const sx = stations_rtree.in_radius(x, max_walk_dist);
-    auto const sx_pos =
-        utl::to_vec(sx, [&](auto const idx) { return stations.at(idx).pos_; });
     auto sp = std::accumulate(
         begin(p_pos), end(p_pos), std::vector<size_t>{},
         [&](std::vector<size_t> acc, geo::latlng const& pt_station_pos) {
           return utl::concat(
               acc, stations_rtree.in_radius(pt_station_pos, max_walk_dist));
         });
-    utl::erase_duplicates(sp);
-    auto const sp_pos =
-        utl::to_vec(sp, [&](auto const idx) { return stations.at(idx).pos_; });
     auto b = [&]() {
       if (req->dir() == SearchDir_Forward) {
         return free_bikes_rtree.in_radius(x, max_walk_dist);
@@ -245,17 +240,27 @@ struct gbfs::impl {
             });
       }
     }();
-    utl::erase_duplicates(b);
 
     if (b.empty() && (sp.empty() || sx.empty())) {
       return empty_response(req->dir());
     }
 
+    auto const sx_pos =
+        utl::to_vec(sx, [&](auto const idx) { return stations.at(idx).pos_; });
+
+    utl::erase_duplicates(b);
     auto const b_pos =
         utl::to_vec(b, [&](auto const idx) { return free_bikes.at(idx).pos_; });
 
+    utl::erase_duplicates(sp);
+    auto const sp_pos =
+        utl::to_vec(sp, [&](auto const idx) { return stations.at(idx).pos_; });
+
     auto p_best_journeys = std::vector<journey>{};
     p_best_journeys.resize(p.size());
+
+    auto d_best_journeys = std::vector<journey>{};
+    d_best_journeys.resize(req->direct()->size());
 
     if (req->dir() == SearchDir_Forward) {
       // REQUESTS

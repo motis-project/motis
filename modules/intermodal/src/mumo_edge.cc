@@ -220,7 +220,8 @@ void gbfs_edges(appender_fun const& appender, SearchDir const dir,
 }
 
 void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
-                SearchDir const search_dir, appender_fun const& appender,
+                latlng const& other, SearchDir const search_dir,
+                appender_fun const& appender,
                 mumo_stats_appender_fun const& mumo_stats_appender,
                 std::string const& mumo_stats_prefix,
                 ppr_profiles const& profiles) {
@@ -282,7 +283,7 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
 }
 
 void make_starts(IntermodalRoutingRequest const* req, latlng const& pos,
-                 appender_fun const& appender,
+                 latlng const& dest, appender_fun const& appender,
                  mumo_stats_appender_fun const& mumo_stats_appender,
                  ppr_profiles const& profiles) {
   make_edges(req->start_modes(), pos, SearchDir_Forward, appender,
@@ -290,7 +291,7 @@ void make_starts(IntermodalRoutingRequest const* req, latlng const& pos,
 }
 
 void make_dests(IntermodalRoutingRequest const* req, latlng const& pos,
-                appender_fun const& appender,
+                latlng const& start, appender_fun const& appender,
                 mumo_stats_appender_fun const& mumo_stats_appender,
                 ppr_profiles const& profiles) {
   make_edges(req->destination_modes(), pos, SearchDir_Backward, appender,

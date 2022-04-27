@@ -166,7 +166,7 @@ journey::transport& get_transport(journey& j, unsigned const from,
 
 bool is_virtual_station(journey::stop const& s) {
   return s.name_ == STATION_START || s.name_ == STATION_END;
-};
+}
 
 void apply_parking_patches(journey& j, std::vector<parking_patch>& patches) {
   auto parking_idx = 0;
@@ -384,7 +384,6 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
               direct,
               [&mc](direct_connection const& c) { return to_fbs(mc, c); })))
           .Union());
-
   return make_msg(mc);
 }
 
@@ -404,7 +403,6 @@ msg_ptr empty_response(statistics& stats, schedule const& sched) {
           motis_to_unixtime(sched, schedule_end),
           mc.CreateVector(std::vector<Offset<DirectConnection>>{}))
           .Union());
-
   return make_msg(mc);
 }
 
@@ -446,7 +444,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
     if (start.is_intermodal_) {
       futures.emplace_back(spawn_job_void([&]() {
         make_starts(
-            req, start.pos_,
+            req, start.pos_, dest.pos_,
             std::bind(appender, std::ref(deps),  // NOLINT
                       STATION_START, _1, start.pos_, _2, _3, _4, _5, _6),
             mumo_stats_appender, ppr_profiles_);
@@ -454,7 +452,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
     }
     if (dest.is_intermodal_) {
       futures.emplace_back(spawn_job_void([&]() {
-        make_dests(req, dest.pos_,
+        make_dests(req, dest.pos_, start.pos_,
                    std::bind(appender, std::ref(arrs),  // NOLINT
                              _1, STATION_END, _2, dest.pos_, _3, _4, _5, _6),
                    mumo_stats_appender, ppr_profiles_);
@@ -464,7 +462,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
     if (start.is_intermodal_) {
       futures.emplace_back(spawn_job_void([&]() {
         make_starts(
-            req, start.pos_,
+            req, start.pos_, dest.pos_,
             std::bind(appender, std::ref(deps),  // NOLINT
                       _1, STATION_START, _2, start.pos_, _3, _4, _5, _6),
             mumo_stats_appender, ppr_profiles_);
@@ -472,7 +470,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
     }
     if (dest.is_intermodal_) {
       futures.emplace_back(spawn_job_void([&]() {
-        make_dests(req, dest.pos_,
+        make_dests(req, dest.pos_, start.pos_,
                    std::bind(appender, std::ref(arrs),  // NOLINT
                              STATION_END, _1, dest.pos_, _2, _3, _4, _5, _6),
                    mumo_stats_appender, ppr_profiles_);

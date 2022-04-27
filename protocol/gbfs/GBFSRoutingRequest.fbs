@@ -44,6 +44,7 @@ namespace motis.gbfs;
 table GBFSRoutingRequest {
   dir: SearchDir;
   x: motis.Position;
+  direct: [motis.Position];
   provider: string;
   max_foot_duration: uint;  // minutes
   max_bike_duration: uint;  // minutes

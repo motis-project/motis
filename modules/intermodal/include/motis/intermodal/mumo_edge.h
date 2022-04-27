@@ -82,12 +82,12 @@ using appender_fun = std::function<mumo_edge&(
 
 using mumo_stats_appender_fun = std::function<void(stats_category&&)>;
 
-void make_starts(IntermodalRoutingRequest const*, geo::latlng const&,
-                 appender_fun const&, mumo_stats_appender_fun const&,
-                 ppr_profiles const&);
-void make_dests(IntermodalRoutingRequest const*, geo::latlng const&,
-                appender_fun const&, mumo_stats_appender_fun const&,
-                ppr_profiles const&);
+void make_starts(IntermodalRoutingRequest const*, geo::latlng const& start,
+                 geo::latlng const& dest, appender_fun const&,
+                 mumo_stats_appender_fun const&, ppr_profiles const&);
+void make_dests(IntermodalRoutingRequest const*, geo::latlng const& dest,
+                geo::latlng const& start, appender_fun const&,
+                mumo_stats_appender_fun const&, ppr_profiles const&);
 
 void remove_intersection(std::vector<mumo_edge>& starts,
                          std::vector<mumo_edge>& destinations,
