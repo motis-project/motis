@@ -54,6 +54,9 @@ import Data.OSRM.Types exposing (..)
 import Data.PPR.Decode exposing (decodeFootRoutingResponse)
 import Data.PPR.Request exposing (encodeFootRoutingRequest)
 import Data.PPR.Types as PPR exposing (FootRoutingRequest, FootRoutingResponse, SearchOptions)
+import Data.GBFSInfo.Decode exposing (decodeGBFSInfoResponse)
+import Data.GBFSInfo.Request as GBFSInfo
+import Data.GBFSInfo.Types exposing (GBFSInfo)
 import Data.ScheduleInfo.Decode exposing (decodeScheduleInfoResponse)
 import Data.ScheduleInfo.Request as ScheduleInfo
 import Data.ScheduleInfo.Types exposing (ScheduleInfo)
@@ -201,6 +204,7 @@ init flags initialLocation =
           , Cmd.map TripSearchUpdate tripSearchCmd
           , Cmd.map SimTimePickerUpdate simTimePickerCmd
           , requestScheduleInfo remoteAddress
+          , requestGBFSInfo remoteAddress
           , Task.perform UpdateCurrentTime Time.now
           , cmd1
           , cmd2
@@ -227,6 +231,8 @@ type Msg
     | TripToConnectionError TripId ApiError
     | TripToConnectionResponse TripId Connection
     | ScheduleInfoError ApiError
+    | GBFSInfoError ApiError
+    | GBFSInfoResponse GBFSInfo
     | ScheduleInfoResponse ScheduleInfo
     | SetLocale Localization
     | NavigateTo Route
@@ -389,6 +395,12 @@ update msg model =
                 , routing = routingModel
             }
                 ! [ Cmd.map RoutingUpdate routingCmd ]
+
+        GBFSInfoError err ->
+           ( model, Cmd.none )
+
+        GBFSInfoResponse i ->
+            ( model, Cmd.none )
 
         ScheduleInfoResponse si ->
             let
@@ -1349,6 +1361,14 @@ requestScheduleInfo remoteAddress =
         ScheduleInfoResponse
         ScheduleInfo.request
 
+requestGBFSInfo : String -> Cmd Msg
+requestGBFSInfo remoteAddress =
+    Api.sendRequest
+        (remoteAddress ++ "?elm=GBFSInfo")
+        decodeGBFSInfoResponse
+        GBFSInfoError
+        GBFSInfoResponse
+        GBFSInfo.request
 
 sendTripRequest : String -> TripId -> Cmd Msg
 sendTripRequest remoteAddress tripId =

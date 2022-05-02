@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <iosfwd>
 #include <optional>
 #include <vector>
 
@@ -65,6 +66,8 @@ struct mumo_edge {
         accessibility_(accessibility),
         type_(type),
         id_(id) {}
+
+  friend std::ostream& operator<<(std::ostream&, mumo_edge const&);
 
   std::string from_, to_;
   geo::latlng from_pos_, to_pos_;

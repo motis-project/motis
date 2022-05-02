@@ -17,6 +17,7 @@ import Data.PPR.Types exposing (SearchOptions)
 import Data.Routing.Decode exposing (decodeRoutingResponse)
 import Data.Routing.Types exposing (SearchDirection(..))
 import Data.ScheduleInfo.Types exposing (ScheduleInfo)
+import Data.GBFSInfo.Types exposing (GBFSInfo)
 import Date exposing (Date)
 import Debounce
 import Dom.Scroll as Scroll
@@ -156,6 +157,8 @@ type Msg
     | Deb (Debounce.Msg Msg)
     | SetRoutingResponses (List ( String, String ))
     | NavigateTo Route
+    | GBFSInfoError ApiError
+    | GBFSInfoResponse GBFSInfo
     | ScheduleInfoError ApiError
     | ScheduleInfoResponse ScheduleInfo
     | SetSearchTime Date
@@ -324,6 +327,12 @@ update msg model =
         NavigateTo route ->
             model ! [ Navigation.newUrl (toUrl route) ]
 
+        GBFSInfoError err ->
+            ( model, Cmd.none )
+
+        GBFSInfoResponse i ->
+            ( model, Cmd.none )
+
         ScheduleInfoError err ->
             let
                 ( connections_, _ ) =
@@ -340,6 +349,7 @@ update msg model =
                 , date = newDate
             }
                 ! [ Cmd.map ConnectionsUpdate c ]
+
 
         ScheduleInfoResponse si ->
             let

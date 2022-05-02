@@ -494,6 +494,9 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   //  remove_intersection(deps, arrs, start.pos_, dest.pos_, req->search_dir());
   std::vector<mumo_edge const*> edge_mapping;
   auto edges = write_edges(mc, deps, arrs, edge_mapping);
+  for (auto const& e : edge_mapping) {
+    std::cout << *e << "\n";
+  }
 
   auto const router = ((req->search_type() == SearchType_Default ||
                         req->search_type() == SearchType_Accessibility) &&
