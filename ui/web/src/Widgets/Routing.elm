@@ -330,8 +330,10 @@ update msg model =
         GBFSInfoError err ->
             ( model, Cmd.none )
 
-        GBFSInfoResponse i ->
-            ( model, Cmd.none )
+        GBFSInfoResponse msg_ ->
+            { model | fromModes = ModePicker.update msg_ model.fromModes, toModes = ModePicker.update msg_ model.toModes }
+                ! []
+                |> checkRoutingRequest
 
         ScheduleInfoError err ->
             let

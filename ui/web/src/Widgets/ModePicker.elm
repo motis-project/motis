@@ -14,6 +14,7 @@ import Data.Intermodal.Types as Intermodal
 import Data.PPR.Decode exposing (decodeSearchOptions)
 import Data.PPR.Request exposing (encodeSearchOptions)
 import Data.PPR.Types exposing (SearchOptions)
+import Data.GBFSInfo.Types exposing (GBFSInfo)
 import Html exposing (..)
 import Html.Attributes as Attr exposing (..)
 import Html.Events exposing (onClick, onInput)
@@ -24,6 +25,7 @@ import Json.Encode as Encode
 import Localization.Base exposing (..)
 import Maybe.Extra
 import Util.Core exposing ((=>))
+import Util.Api as Api exposing (ApiError(..))
 
 
 
@@ -45,6 +47,7 @@ type alias Model =
     , carMaxDuration : Int
     , useCarParking : Bool
     , editorVisible : Bool
+    , gbfsInfo : GBFSInfo
     }
 
 
@@ -94,6 +97,7 @@ init storedSelections pprMode =
             , carMaxDuration = 15
             , useCarParking = True
             , editorVisible = False
+            , gbfsInfo = { providers = [] }
             }
 
         model =
@@ -222,6 +226,8 @@ type Msg
     | BikeMaxDurationInput String
     | CarMaxDurationInput String
     | SelectProfile String
+    | GBFSInfoError ApiError
+    | GBFSInfo
 
 
 update : Msg -> Model -> Model
@@ -282,6 +288,12 @@ update msg model =
 
         SelectProfile id ->
             selectPresetProfile model id
+
+        GBFSInfoError err ->
+            model
+
+        GBFSInfo ->
+            { model | gbfsInfo = msg }
 
 
 selectPresetProfile : Model -> String -> Model
@@ -468,6 +480,47 @@ carView locale model =
             ]
         ]
 
+gbfsView : Localization -> Model -> List (Html Msg)
+gbfsView locale model =
+    let
+        makeGbfsView (provider) =
+            fieldset
+                [ classList
+                    [ "mode" => True
+                    , "gbfs" => True
+                    , "disabled" => not model.bikeEnabled
+                    ]
+                ]
+                [ legend [ class "mode-header" ]
+                    [ label []
+                        [ input
+                            [ type_ "checkbox"
+                            , checked model.carEnabled
+                            , onClick ToggleCar
+                            ]
+                            []
+                        , text provider.name
+                        ]
+                    ]
+                , div [ class "option" ]
+                    [ div [ class "label" ] [ text locale.t.search.maxDuration ]
+                    , numericSliderView model.carMaxDuration 0 (maxCarDuration model) 1 CarMaxDurationInput
+                    ]
+                , div [ class "option" ]
+                    [ label []
+                        [ input
+                            [ type_ "checkbox"
+                            , checked model.useCarParking
+                            , onClick ToggleUseCarParking
+                            ]
+                            []
+                        , text locale.t.search.useParking
+                        ]
+                    ]
+                ]
+    in
+        model.gbfsInfo.providers
+            |> List.map makeGbfsView
 
 searchProfilePickerView : Localization -> Model -> Html Msg
 searchProfilePickerView locale model =
@@ -519,6 +572,7 @@ numericSliderView val minVal maxVal stepVal tag =
         ]
 
 
+
 editorView : Localization -> String -> Model -> Html Msg
 editorView locale label model =
     div
@@ -533,10 +587,12 @@ editorView locale label model =
             , div [ class "title" ] [ text label ]
             ]
         , div [ class "content" ]
-            [ walkView locale model
-            , bikeView locale model
-            , carView locale model
-            ]
+            (List.append
+                [ walkView locale model
+                , bikeView locale model
+                , carView locale model
+                ]
+                (gbfsView locale model))
         ]
 
 
@@ -591,6 +647,7 @@ decodeModel =
         |> requiredAt [ "car", "max_duration" ] Decode.int
         |> optionalAt [ "car", "use_parking" ] Decode.bool True
         |> hardcoded False
+        |> hardcoded ( { providers = [] } )
 
 
 saveSelections : Model -> String
