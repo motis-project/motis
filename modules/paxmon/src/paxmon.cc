@@ -374,8 +374,9 @@ loader::loader_result paxmon::load_journeys(std::string const& file) {
     result = loader::journeys::load_journeys(sched, uv, file);
   } else if (journey_path.extension() == ".csv") {
     scoped_timer journey_timer{"load csv journeys"};
-    result = loader::csv::load_journeys(
-        sched, uv, file, journey_match_log_file_, match_tolerance_);
+    result =
+        loader::csv::load_journeys(sched, uv, file, journey_match_log_file_,
+                                   match_tolerance_, journey_timezone_);
   } else {
     LOG(logging::error) << "paxmon: unknown journey file type: " << file;
   }

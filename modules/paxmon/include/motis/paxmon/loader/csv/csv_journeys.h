@@ -14,6 +14,7 @@ namespace motis::paxmon::loader::csv {
 loader_result load_journeys(schedule const& sched, universe& uv,
                             std::string const& journey_file,
                             std::string const& match_log_file,
-                            duration match_tolerance);
+                            duration match_tolerance,
+                            std::string const& timezone_name);
 
 }  // namespace motis::paxmon::loader::csv

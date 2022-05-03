@@ -46,6 +46,7 @@ private:
 
   std::vector<std::string> journey_files_;
   std::vector<std::string> capacity_files_;
+  std::string journey_timezone_;
   std::string generated_capacity_file_;
   std::string stats_file_;
   std::string capacity_match_log_file_{};
