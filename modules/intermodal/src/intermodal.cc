@@ -216,45 +216,39 @@ void apply_gbfs_patches(journey& j, std::vector<parking_patch>& patches) {
 
       auto& t = get_transport(j, p.from_, p.to_);
       auto str1 = split_transport(j, patches, t);
-      auto str2 = split_transport(j, patches, str1.second_transport_);
+      split_transport(j, patches, str1.second_transport_);
 
-      str1.parking_stop_ = j.stops_.at(p.from_ + 1);
-      str2.parking_stop_ = j.stops_.at(p.from_ + 2);
-      str1.first_transport_ = get_transport(j, p.from_, p.from_ + 1);
-      str1.second_transport_ = get_transport(j, p.from_ + 1, p.from_ + 2);
-      str2.first_transport_ = get_transport(j, p.from_ + 1, p.from_ + 2);
-      str2.second_transport_ = get_transport(j, p.from_ + 2, p.from_ + 3);
-
-      str1.parking_stop_.eva_no_ = s.from_station_id_;
-      str1.parking_stop_.name_ = s.from_station_name_;
-      str1.parking_stop_.lat_ = s.from_station_pos_.lat_;
-      str1.parking_stop_.lng_ = s.from_station_pos_.lng_;
-      str1.parking_stop_.arrival_.valid_ = true;
-      str1.parking_stop_.arrival_.timestamp_ =
+      auto& s1 = j.stops_.at(p.from_ + 1);
+      s1.eva_no_ = s.from_station_id_;
+      s1.name_ = s.from_station_name_;
+      s1.lat_ = s.from_station_pos_.lat_;
+      s1.lng_ = s.from_station_pos_.lng_;
+      s1.arrival_.valid_ = true;
+      s1.arrival_.timestamp_ =
           j.stops_[p.from_].departure_.timestamp_ + s.first_walk_duration_ * 60;
-      str1.parking_stop_.arrival_.schedule_timestamp_ =
-          str1.parking_stop_.arrival_.timestamp_;
-      str1.parking_stop_.arrival_.timestamp_reason_ =
+      s1.arrival_.schedule_timestamp_ = s1.arrival_.timestamp_;
+      s1.arrival_.timestamp_reason_ =
           j.stops_[p.from_].departure_.timestamp_reason_;
-      str1.parking_stop_.departure_ = str1.parking_stop_.arrival_;
+      s1.departure_ = s1.arrival_;
 
-      str2.parking_stop_.eva_no_ = s.to_station_id_;
-      str2.parking_stop_.name_ = s.to_station_name_;
-      str2.parking_stop_.lat_ = s.to_station_pos_.lat_;
-      str2.parking_stop_.lng_ = s.to_station_pos_.lng_;
-      str2.parking_stop_.arrival_.valid_ = true;
-      str2.parking_stop_.arrival_.timestamp_ =
-          str1.parking_stop_.departure_.timestamp_ + s.bike_duration_ * 60;
-      str2.parking_stop_.arrival_.schedule_timestamp_ =
-          str2.parking_stop_.arrival_.timestamp_;
-      str2.parking_stop_.arrival_.timestamp_reason_ =
+      auto& s2 = j.stops_.at(p.from_ + 2);
+      s2.eva_no_ = s.to_station_id_;
+      s2.name_ = s.to_station_name_;
+      s2.lat_ = s.to_station_pos_.lat_;
+      s2.lng_ = s.to_station_pos_.lng_;
+      s2.arrival_.valid_ = true;
+      s2.arrival_.timestamp_ = s1.departure_.timestamp_ + s.bike_duration_ * 60;
+      s2.arrival_.schedule_timestamp_ = s2.arrival_.timestamp_;
+      s2.arrival_.timestamp_reason_ =
           j.stops_[p.from_ + 1].departure_.timestamp_reason_;
-      str2.parking_stop_.departure_ = str2.parking_stop_.arrival_;
+      s2.departure_ = s2.arrival_;
 
-      str1.first_transport_.mumo_type_ = to_string(mumo_type::FOOT);
-      str1.second_transport_.mumo_type_ = to_string(mumo_type::BIKE);
-      str2.first_transport_.mumo_type_ = to_string(mumo_type::BIKE);
-      str2.second_transport_.mumo_type_ = to_string(mumo_type::FOOT);
+      get_transport(j, p.from_, p.from_ + 1).mumo_type_ =
+          to_string(mumo_type::FOOT);
+      get_transport(j, p.from_ + 1, p.from_ + 2).mumo_type_ =
+          p.e_->gbfs_->vehicle_type_;
+      get_transport(j, p.from_ + 2, p.from_ + 3).mumo_type_ =
+          to_string(mumo_type::FOOT);
     }
 
     // free bike:
@@ -494,9 +488,6 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   //  remove_intersection(deps, arrs, start.pos_, dest.pos_, req->search_dir());
   std::vector<mumo_edge const*> edge_mapping;
   auto edges = write_edges(mc, deps, arrs, edge_mapping);
-  for (auto const& e : edge_mapping) {
-    std::cout << *e << "\n";
-  }
 
   auto const router = ((req->search_type() == SearchType_Default ||
                         req->search_type() == SearchType_Accessibility) &&

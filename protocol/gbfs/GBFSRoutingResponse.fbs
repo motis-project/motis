@@ -58,5 +58,4 @@ table RouteInfo {
 table GBFSRoutingResponse {
   dir: SearchDir;
   routes: [RouteInfo];
-  direct: [RouteInfo];
 }

@@ -173,13 +173,17 @@ getGBFSModes : Model -> List (Maybe Intermodal.Mode)
 getGBFSModes model =
     let
         toGBFSMode gbfs =
-            Just
-                (Intermodal.GBFS
-                    { maxWalkDuration = gbfs.walkMaxDuration
-                    , maxVehicleDuration = gbfs.vehicleMaxDuration
-                    , provider = gbfs.tag
-                    }
-                )
+            if gbfs.enabled then
+                Just
+                    (Intermodal.GBFS
+                        { maxWalkDuration = gbfs.walkMaxDuration * 60
+                        , maxVehicleDuration = gbfs.vehicleMaxDuration * 60
+                        , provider = gbfs.tag
+                        }
+                    )
+
+            else
+                Nothing
     in
     model.gbfs |> Dict.values |> List.map toGBFSMode
 

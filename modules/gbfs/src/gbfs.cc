@@ -189,9 +189,11 @@ struct gbfs::impl {
     auto const req = motis_content(GBFSRoutingRequest, m);
 
     auto const provider = req->provider()->str();
+    auto const status_it = status_.find(provider);
+    utl::verify(status_it != end(status_), "provider {} not found", provider);
 
     auto const lock = std::lock_guard{mutex_};
-    auto const& info = status_.at(provider);
+    auto const& info = status_it->second;
     auto const& stations = info.stations_;
     auto const& stations_rtree = info.stations_rtree_;
     auto const& free_bikes = info.free_bikes_;
@@ -212,6 +214,8 @@ struct gbfs::impl {
 
     auto const p = pt_stations_rtree_.in_radius(x, max_total_dist);
     if (p.empty() && req->direct()->size() == 0U) {
+      l(logging::debug, "no stations found in {}km radius around {}",
+        max_total_dist / 1000.0, x);
       return empty_response(req->dir());
     }
 
@@ -234,19 +238,24 @@ struct gbfs::impl {
       if (req->dir() == SearchDir_Forward) {
         return free_bikes_rtree.in_radius(x, max_walk_dist);
       } else {
-        return std::accumulate(
-            begin(p), end(p), std::vector<size_t>{},
-            [&](std::vector<size_t> acc, size_t const idx) {
-              auto const& s = *sched_.stations_.at(idx);
-              acc.emplace_back(free_bikes_rtree.nearest({s.lat(), s.lng()}, 1U)
-                                   .at(0)
-                                   .second);
-              return acc;
-            });
+        return std::accumulate(begin(p), end(p), std::vector<size_t>{},
+                               [&](std::vector<size_t> acc, size_t const idx) {
+                                 auto const& s = *sched_.stations_.at(idx);
+                                 auto const closest = free_bikes_rtree.nearest(
+                                     {s.lat(), s.lng()}, 1U);
+                                 if (!closest.empty()) {
+                                   acc.emplace_back(closest.at(0).second);
+                                 }
+                                 return acc;
+                               });
       }
     }();
 
     if (b.empty() && (sp.empty() || sx.empty())) {
+      l(logging::debug,
+        "no free bikes found, no stations found (max_bike_dist={}), "
+        "(max_walk_dist={})",
+        max_walk_dist, max_bike_dist);
       return empty_response(req->dir());
     }
 
@@ -525,7 +534,8 @@ struct gbfs::impl {
                                               p.at(free_bike_info.p_)))
                                   .Union()
                             : CreateDirect(
-                                  fbb, req->direct()->Get(free_bike_info.p_))
+                                  fbb, req->direct()->Get(p.size() -
+                                                          free_bike_info.p_))
                                   .Union(),
                         BikeRoute_FreeBikeRoute,
                         CreateFreeBikeRoute(fbb,
@@ -557,7 +567,8 @@ struct gbfs::impl {
                                               p.at(station_bike_info.p_)))
                                   .Union()
                             : CreateDirect(
-                                  fbb, req->direct()->Get(station_bike_info.p_))
+                                  fbb, req->direct()->Get(p.size() -
+                                                          station_bike_info.p_))
                                   .Union(),
                         BikeRoute_StationBikeRoute,
                         CreateStationBikeRoute(
