@@ -15,12 +15,13 @@ import Data.Intermodal.Types as Intermodal
 import Data.PPR.Decode exposing (decodeSearchOptions)
 import Data.PPR.Request exposing (encodeSearchOptions)
 import Data.PPR.Types exposing (SearchOptions)
+import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes as Attr exposing (..)
 import Html.Events exposing (onClick, onInput)
 import Html.Lazy exposing (..)
 import Json.Decode as Decode
-import Json.Decode.Pipeline as JDP exposing (decode, hardcoded, optionalAt, requiredAt)
+import Json.Decode.Pipeline as JDP exposing (decode, hardcoded, optional, optionalAt, requiredAt)
 import Json.Encode as Encode
 import Localization.Base exposing (..)
 import Maybe.Extra
@@ -37,6 +38,15 @@ type PprProfileMode
     | PremadePprProfiles
 
 
+type alias GBFS =
+    { tag : String
+    , name : String
+    , walkMaxDuration : Int
+    , vehicleMaxDuration : Int
+    , enabled : Bool
+    }
+
+
 type alias Model =
     { pprMode : PprProfileMode
     , walkEnabled : Bool
@@ -47,7 +57,7 @@ type alias Model =
     , carMaxDuration : Int
     , useCarParking : Bool
     , editorVisible : Bool
-    , gbfsInfo : GBFSInfo
+    , gbfs : Dict String GBFS
     }
 
 
@@ -97,7 +107,7 @@ init storedSelections pprMode =
             , carMaxDuration = 15
             , useCarParking = True
             , editorVisible = False
-            , gbfsInfo = { providers = [] }
+            , gbfs = Dict.empty
             }
 
         model =
@@ -113,10 +123,13 @@ init storedSelections pprMode =
 
 getModes : Model -> List Intermodal.Mode
 getModes model =
-    [ getWalkMode model
-    , getBikeMode model
-    , getCarMode model
-    ]
+    List.concat
+        [ [ getWalkMode model
+          , getBikeMode model
+          , getCarMode model
+          ]
+        , getGBFSModes model
+        ]
         |> Maybe.Extra.values
 
 
@@ -154,6 +167,21 @@ getCarMode model =
 
     else
         Nothing
+
+
+getGBFSModes : Model -> List (Maybe Intermodal.Mode)
+getGBFSModes model =
+    let
+        toGBFSMode gbfs =
+            Just
+                (Intermodal.GBFS
+                    { maxWalkDuration = gbfs.walkMaxDuration
+                    , maxVehicleDuration = gbfs.vehicleMaxDuration
+                    , provider = gbfs.tag
+                    }
+                )
+    in
+    model.gbfs |> Dict.values |> List.map toGBFSMode
 
 
 getSearchProfile : Model -> SearchOptions
@@ -228,6 +256,9 @@ type Msg
     | SelectProfile String
     | GBFSInfoError ApiError
     | UpdateGBFSInfo GBFSInfo
+    | GBFSMaxVehicleDurationInput String String
+    | GBFSMaxWalkDurationInput String String
+    | ToggleGBFS String
 
 
 update : Msg -> Model -> Model
@@ -293,7 +324,102 @@ update msg model =
             model
 
         UpdateGBFSInfo i ->
-            { model | gbfsInfo = i }
+            let
+                getWalkMaxDurationA x =
+                    case x of
+                        Just val ->
+                            Just val.walkMaxDuration
+
+                        Nothing ->
+                            Nothing
+
+                getVehicleMaxDurationA x =
+                    case x of
+                        Just val ->
+                            Just val.vehicleMaxDuration
+
+                        Nothing ->
+                            Nothing
+
+                getEnabledA x =
+                    case x of
+                        Just val ->
+                            Just val.enabled
+
+                        Nothing ->
+                            Nothing
+
+                getVehicleMaxDuration tag =
+                    Dict.get tag model.gbfs
+                        |> getVehicleMaxDurationA
+                        |> Maybe.withDefault 20
+
+                getWalkMaxduration tag =
+                    Dict.get tag model.gbfs
+                        |> getWalkMaxDurationA
+                        |> Maybe.withDefault 15
+
+                getEnabled tag =
+                    Dict.get tag model.gbfs
+                        |> getEnabledA
+                        |> Maybe.withDefault False
+
+                createGBFS provider =
+                    ( provider.tag
+                    , { tag = provider.tag
+                      , name = provider.name
+                      , vehicleMaxDuration = getVehicleMaxDuration provider.tag
+                      , walkMaxDuration = getWalkMaxduration provider.tag
+                      , enabled = getEnabled provider.tag
+                      }
+                    )
+            in
+            { model
+                | gbfs =
+                    i.providers
+                        |> List.map createGBFS
+                        |> Dict.fromList
+            }
+
+        GBFSMaxVehicleDurationInput tag str ->
+            case String.toInt str of
+                Ok val ->
+                    let
+                        updateValue v =
+                            { v | vehicleMaxDuration = clampCarDuration model val }
+
+                        updateMaybe maybe =
+                            maybe |> Maybe.map updateValue
+                    in
+                    { model | gbfs = Dict.update tag updateMaybe model.gbfs }
+
+                _ ->
+                    model
+
+        GBFSMaxWalkDurationInput tag str ->
+            case String.toInt str of
+                Ok val ->
+                    let
+                        updateValue v =
+                            { v | walkMaxDuration = clampWalkDuration model val }
+
+                        updateMaybe maybe =
+                            maybe |> Maybe.map updateValue
+                    in
+                    { model | gbfs = Dict.update tag updateMaybe model.gbfs }
+
+                _ ->
+                    model
+
+        ToggleGBFS tag ->
+            let
+                updateValue val =
+                    { val | enabled = not val.enabled }
+
+                updateMaybe maybe =
+                    maybe |> Maybe.map updateValue
+            in
+            { model | gbfs = Dict.update tag updateMaybe model.gbfs }
 
 
 selectPresetProfile : Model -> String -> Model
@@ -484,43 +610,39 @@ carView locale model =
 gbfsView : Localization -> Model -> List (Html Msg)
 gbfsView locale model =
     let
-        makeGbfsView provider =
+        makeGbfsView gbfs =
             fieldset
                 [ classList
                     [ "mode" => True
                     , "gbfs" => True
-                    , "disabled" => not model.bikeEnabled
+                    , "disabled" => not gbfs.enabled
                     ]
                 ]
                 [ legend [ class "mode-header" ]
                     [ label []
                         [ input
                             [ type_ "checkbox"
-                            , checked model.carEnabled
-                            , onClick ToggleCar
+                            , checked gbfs.enabled
+                            , onClick (ToggleGBFS gbfs.tag)
                             ]
                             []
-                        , text provider.name
+                        , text gbfs.name
                         ]
                     ]
                 , div [ class "option" ]
-                    [ div [ class "label" ] [ text locale.t.search.maxDuration ]
-                    , numericSliderView model.carMaxDuration 0 (maxCarDuration model) 1 CarMaxDurationInput
+                    [ div [ class "label" ]
+                        [ text (String.concat [ locale.t.connections.walk, " ", locale.t.search.maxDuration ]) ]
+                    , numericSliderView gbfs.walkMaxDuration 0 (maxCarDuration model) 1 (GBFSMaxWalkDurationInput gbfs.tag)
                     ]
                 , div [ class "option" ]
-                    [ label []
-                        [ input
-                            [ type_ "checkbox"
-                            , checked model.useCarParking
-                            , onClick ToggleUseCarParking
-                            ]
-                            []
-                        , text locale.t.search.useParking
-                        ]
+                    [ div [ class "label" ]
+                        [ text (String.concat [ locale.t.connections.car, " ", locale.t.search.maxDuration ]) ]
+                    , numericSliderView gbfs.vehicleMaxDuration 0 (maxCarDuration model) 1 (GBFSMaxVehicleDurationInput gbfs.tag)
                     ]
                 ]
     in
-    model.gbfsInfo.providers
+    model.gbfs
+        |> Dict.values
         |> List.map makeGbfsView
 
 
@@ -588,12 +710,13 @@ editorView locale label model =
             , div [ class "title" ] [ text label ]
             ]
         , div [ class "content" ]
-            (List.append
-                [ walkView locale model
-                , bikeView locale model
-                , carView locale model
+            (List.concat
+                [ [ walkView locale model
+                  , bikeView locale model
+                  , carView locale model
+                  ]
+                , gbfsView locale model
                 ]
-                (gbfsView locale model)
             )
         ]
 
@@ -615,6 +738,27 @@ view locale label model =
 -- LOCAL STORAGE
 
 
+decodeGbfs : Decode.Decoder GBFS
+decodeGbfs =
+    decode GBFS
+        |> requiredAt [ "tag" ] Decode.string
+        |> requiredAt [ "name" ] Decode.string
+        |> requiredAt [ "walk_max_duration" ] Decode.int
+        |> requiredAt [ "vehicle_max_duration" ] Decode.int
+        |> requiredAt [ "enabled" ] Decode.bool
+
+
+encodeGbfs : GBFS -> Encode.Value
+encodeGbfs g =
+    Encode.object
+        [ "tag" => Encode.string g.tag
+        , "name" => Encode.string g.name
+        , "enabled" => Encode.bool g.enabled
+        , "walk_max_duration" => Encode.int g.walkMaxDuration
+        , "vehicle_max_duration" => Encode.int g.vehicleMaxDuration
+        ]
+
+
 encodeModel : Model -> Encode.Value
 encodeModel model =
     Encode.object
@@ -634,7 +778,18 @@ encodeModel model =
                 , "max_duration" => Encode.int model.carMaxDuration
                 , "use_parking" => Encode.bool model.useCarParking
                 ]
+        , "gbfs"
+            => Encode.list (model.gbfs |> Dict.values |> List.map encodeGbfs)
         ]
+
+
+gbfsToDict : List GBFS -> Dict String GBFS
+gbfsToDict list =
+    let
+        toTuple gbfs =
+            ( gbfs.tag, gbfs )
+    in
+    list |> List.map toTuple |> Dict.fromList
 
 
 decodeModel : Decode.Decoder Model
@@ -649,7 +804,7 @@ decodeModel =
         |> requiredAt [ "car", "max_duration" ] Decode.int
         |> optionalAt [ "car", "use_parking" ] Decode.bool True
         |> hardcoded False
-        |> hardcoded { providers = [] }
+        |> optional "gbfs" (Decode.map gbfsToDict (Decode.list decodeGbfs)) Dict.empty
 
 
 saveSelections : Model -> String

@@ -308,7 +308,7 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
         auto const gbfs = reinterpret_cast<GBFS const*>(wrapper->mode());
         gbfs_edges(appender, search_dir, pos, direct_target,
                    gbfs->provider()->str(), gbfs->max_walk_duration() / 60.0,
-                   gbfs->max_ride_duration() / 60.0);
+                   gbfs->max_vehicle_duration() / 60.0);
         break;
       }
 

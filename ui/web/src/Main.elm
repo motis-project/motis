@@ -45,6 +45,9 @@ module Main exposing
     )
 
 import Data.Connection.Types exposing (Connection, Position, Station, TripId)
+import Data.GBFSInfo.Decode exposing (decodeGBFSInfoResponse)
+import Data.GBFSInfo.Request as GBFSInfo
+import Data.GBFSInfo.Types exposing (GBFSInfo)
 import Data.Journey.Types exposing (Journey, JourneyWalk, toJourney, walkFallbackPolyline)
 import Data.Lookup.Decode exposing (decodeTripToConnectionResponse)
 import Data.Lookup.Request exposing (encodeTripToConnection)
@@ -54,9 +57,6 @@ import Data.OSRM.Types exposing (..)
 import Data.PPR.Decode exposing (decodeFootRoutingResponse)
 import Data.PPR.Request exposing (encodeFootRoutingRequest)
 import Data.PPR.Types as PPR exposing (FootRoutingRequest, FootRoutingResponse, SearchOptions)
-import Data.GBFSInfo.Decode exposing (decodeGBFSInfoResponse)
-import Data.GBFSInfo.Request as GBFSInfo
-import Data.GBFSInfo.Types exposing (GBFSInfo)
 import Data.ScheduleInfo.Decode exposing (decodeScheduleInfoResponse)
 import Data.ScheduleInfo.Request as ScheduleInfo
 import Data.ScheduleInfo.Types exposing (ScheduleInfo)
@@ -397,10 +397,15 @@ update msg model =
                 ! [ Cmd.map RoutingUpdate routingCmd ]
 
         GBFSInfoError err ->
-           ( model, Cmd.none )
+            ( model, Cmd.none )
 
         GBFSInfoResponse i ->
-            ( model, Cmd.none )
+            let
+                ( routingModel, routingCmd ) =
+                    Routing.update (Routing.GBFSInfoResponse i) model.routing
+            in
+            { model | routing = routingModel }
+                ! [ Cmd.map RoutingUpdate routingCmd ]
 
         ScheduleInfoResponse si ->
             let
@@ -672,7 +677,8 @@ update msg model =
                         , overlayVisible = True
                     }
 
-                cmd1 = MapDetails.setDetailFilter Nothing
+                cmd1 =
+                    MapDetails.setDetailFilter Nothing
             in
             model1
                 ! [ cmd1
@@ -803,7 +809,7 @@ selectConnection model idx =
                 , stationEvents = Nothing
                 , subView = Nothing
             }
-                ! [ MapDetails.setDetailFilter ( Just j )
+                ! [ MapDetails.setDetailFilter (Just j)
                   , requestWalkRoutes model.apiEndpoint
                         (Routing.getStartSearchProfile model.routing)
                         (Routing.getDestinationSearchProfile model.routing)
@@ -1026,8 +1032,6 @@ setFullTripConnection model tripId connection =
                             )
             }
 
-
-
         ( tripDetails, _ ) =
             case model.tripDetails of
                 Just td ->
@@ -1040,7 +1044,7 @@ setFullTripConnection model tripId connection =
         | tripDetails = Just tripDetails
         , subView = Just TripDetailsView
     }
-        ! [ MapDetails.setDetailFilter ( Just tripJourney )
+        ! [ MapDetails.setDetailFilter (Just tripJourney)
           , Task.attempt noop <| Scroll.toTop "sub-overlay-content"
           , Task.attempt noop <| Scroll.toTop "sub-connection-journey"
           ]
@@ -1361,6 +1365,7 @@ requestScheduleInfo remoteAddress =
         ScheduleInfoResponse
         ScheduleInfo.request
 
+
 requestGBFSInfo : String -> Cmd Msg
 requestGBFSInfo remoteAddress =
     Api.sendRequest
@@ -1369,6 +1374,7 @@ requestGBFSInfo remoteAddress =
         GBFSInfoError
         GBFSInfoResponse
         GBFSInfo.request
+
 
 sendTripRequest : String -> TripId -> Cmd Msg
 sendTripRequest remoteAddress tripId =
@@ -1485,7 +1491,8 @@ routeToMsg route =
 closeSelectedConnection : Model -> ( Model, Cmd Msg )
 closeSelectedConnection model =
     let
-        cmds = MapDetails.setDetailFilter Nothing
+        cmds =
+            MapDetails.setDetailFilter Nothing
     in
     { model
         | connectionDetails = Nothing
@@ -1502,7 +1509,8 @@ closeSelectedConnection model =
 closeSubOverlay : Model -> ( Model, Cmd Msg )
 closeSubOverlay model =
     let
-        cmds = MapDetails.setDetailFilter Nothing
+        cmds =
+            MapDetails.setDetailFilter Nothing
     in
     ( { model
         | tripDetails = Nothing

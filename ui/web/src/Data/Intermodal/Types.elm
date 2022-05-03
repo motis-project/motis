@@ -73,9 +73,10 @@ type alias BikeModeInfo =
 
 type alias GBFSModeInfo =
     { maxWalkDuration : Int
-    , maxBikeDuration : Int
+    , maxVehicleDuration : Int
     , provider : String
     }
+
 
 type alias CarModeInfo =
     { maxDuration : Int }

@@ -367,7 +367,7 @@ encodeMode mode =
                 , "mode"
                     => Encode.object
                         [ "max_walk_duration" => Encode.int info.maxWalkDuration
-                        , "max_bike_duration" => Encode.int info.maxBikeDuration
+                        , "max_vehicle_duration" => Encode.int info.maxVehicleDuration
                         , "provider" => Encode.string info.provider
                         ]
                 ]

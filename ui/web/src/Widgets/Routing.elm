@@ -330,10 +330,10 @@ update msg model =
         GBFSInfoError err ->
             ( model, Cmd.none )
 
-        GBFSInfoResponse msg_ ->
+        GBFSInfoResponse i ->
             { model
-                | fromModes = ModePicker.update (ModePicker.UpdateGBFSInfo msg_) model.fromModes
-                , toModes = ModePicker.update (ModePicker.UpdateGBFSInfo msg_) model.toModes
+                | fromModes = ModePicker.update (ModePicker.UpdateGBFSInfo i) model.fromModes
+                , toModes = ModePicker.update (ModePicker.UpdateGBFSInfo i) model.toModes
             }
                 ! []
                 |> checkRoutingRequest
