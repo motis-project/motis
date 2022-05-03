@@ -10,6 +10,7 @@ module Widgets.Routing exposing
     )
 
 import Data.Connection.Types exposing (Connection, Position, Station, TripId)
+import Data.GBFSInfo.Types exposing (GBFSInfo)
 import Data.Intermodal.Request as IntermodalRoutingRequest exposing (IntermodalLocation(..))
 import Data.Intermodal.Types as Intermodal exposing (IntermodalRoutingRequest)
 import Data.PPR.Request exposing (encodeSearchOptions)
@@ -17,7 +18,6 @@ import Data.PPR.Types exposing (SearchOptions)
 import Data.Routing.Decode exposing (decodeRoutingResponse)
 import Data.Routing.Types exposing (SearchDirection(..))
 import Data.ScheduleInfo.Types exposing (ScheduleInfo)
-import Data.GBFSInfo.Types exposing (GBFSInfo)
 import Date exposing (Date)
 import Debounce
 import Dom.Scroll as Scroll
@@ -331,7 +331,10 @@ update msg model =
             ( model, Cmd.none )
 
         GBFSInfoResponse msg_ ->
-            { model | fromModes = ModePicker.update msg_ model.fromModes, toModes = ModePicker.update msg_ model.toModes }
+            { model
+                | fromModes = ModePicker.update (ModePicker.UpdateGBFSInfo msg_) model.fromModes
+                , toModes = ModePicker.update (ModePicker.UpdateGBFSInfo msg_) model.toModes
+            }
                 ! []
                 |> checkRoutingRequest
 
@@ -351,7 +354,6 @@ update msg model =
                 , date = newDate
             }
                 ! [ Cmd.map ConnectionsUpdate c ]
-
 
         ScheduleInfoResponse si ->
             let
@@ -557,7 +559,6 @@ setMapMarkers model =
         destinationName =
             Typeahead.getSelectedSuggestion model.toLocation
                 |> Maybe.map Typeahead.getSuggestionName
-
     in
     RailViz.setMapMarkers startPosition destinationPosition startName destinationName
 

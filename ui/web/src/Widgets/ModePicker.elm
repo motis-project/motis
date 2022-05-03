@@ -1,6 +1,6 @@
 module Widgets.ModePicker exposing
     ( Model
-    , Msg
+    , Msg(..)
     , PprProfileMode(..)
     , getModes
     , getSearchProfile
@@ -10,11 +10,11 @@ module Widgets.ModePicker exposing
     , view
     )
 
+import Data.GBFSInfo.Types exposing (GBFSInfo)
 import Data.Intermodal.Types as Intermodal
 import Data.PPR.Decode exposing (decodeSearchOptions)
 import Data.PPR.Request exposing (encodeSearchOptions)
 import Data.PPR.Types exposing (SearchOptions)
-import Data.GBFSInfo.Types exposing (GBFSInfo)
 import Html exposing (..)
 import Html.Attributes as Attr exposing (..)
 import Html.Events exposing (onClick, onInput)
@@ -24,8 +24,8 @@ import Json.Decode.Pipeline as JDP exposing (decode, hardcoded, optionalAt, requ
 import Json.Encode as Encode
 import Localization.Base exposing (..)
 import Maybe.Extra
-import Util.Core exposing ((=>))
 import Util.Api as Api exposing (ApiError(..))
+import Util.Core exposing ((=>))
 
 
 
@@ -227,7 +227,7 @@ type Msg
     | CarMaxDurationInput String
     | SelectProfile String
     | GBFSInfoError ApiError
-    | GBFSInfo
+    | UpdateGBFSInfo GBFSInfo
 
 
 update : Msg -> Model -> Model
@@ -292,8 +292,8 @@ update msg model =
         GBFSInfoError err ->
             model
 
-        GBFSInfo ->
-            { model | gbfsInfo = msg }
+        UpdateGBFSInfo i ->
+            { model | gbfsInfo = i }
 
 
 selectPresetProfile : Model -> String -> Model
@@ -480,10 +480,11 @@ carView locale model =
             ]
         ]
 
+
 gbfsView : Localization -> Model -> List (Html Msg)
 gbfsView locale model =
     let
-        makeGbfsView (provider) =
+        makeGbfsView provider =
             fieldset
                 [ classList
                     [ "mode" => True
@@ -519,8 +520,9 @@ gbfsView locale model =
                     ]
                 ]
     in
-        model.gbfsInfo.providers
-            |> List.map makeGbfsView
+    model.gbfsInfo.providers
+        |> List.map makeGbfsView
+
 
 searchProfilePickerView : Localization -> Model -> Html Msg
 searchProfilePickerView locale model =
@@ -572,7 +574,6 @@ numericSliderView val minVal maxVal stepVal tag =
         ]
 
 
-
 editorView : Localization -> String -> Model -> Html Msg
 editorView locale label model =
     div
@@ -592,7 +593,8 @@ editorView locale label model =
                 , bikeView locale model
                 , carView locale model
                 ]
-                (gbfsView locale model))
+                (gbfsView locale model)
+            )
         ]
 
 
@@ -647,7 +649,7 @@ decodeModel =
         |> requiredAt [ "car", "max_duration" ] Decode.int
         |> optionalAt [ "car", "use_parking" ] Decode.bool True
         |> hardcoded False
-        |> hardcoded ( { providers = [] } )
+        |> hardcoded { providers = [] }
 
 
 saveSelections : Model -> String
