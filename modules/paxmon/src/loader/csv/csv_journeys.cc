@@ -348,7 +348,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
     match_log.open(match_log_file);
   }
 
-  auto current_id = std::optional<std::pair<std::uint32_t, std::uint32_t>>{};
+  auto current_id = std::optional<std::pair<std::uint64_t, std::uint64_t>>{};
   auto current_input_legs = std::vector<input_journey_leg>{};
   std::uint16_t current_passengers = 0;
 

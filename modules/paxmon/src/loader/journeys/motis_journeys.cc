@@ -29,8 +29,8 @@ loader_result load_journeys(schedule const& sched, universe& uv,
                             std::string const& journey_file) {
   auto result = loader_result{};
 
-  auto add_journey = [&](journey const& j, std::uint32_t primary_ref = 0,
-                         std::uint32_t secondary_ref = 0) {
+  auto add_journey = [&](journey const& j, std::uint64_t primary_ref = 0,
+                         std::uint64_t secondary_ref = 0) {
     load_journey(sched, uv, j, data_source{primary_ref, secondary_ref}, 1);
     ++result.loaded_journeys_;
   };

@@ -113,7 +113,7 @@ int gen_groups(int argc, char const** argv) {
   auto buf = utl::file(opt.in_path_.data(), "r").content();
   auto const file_content = utl::cstr{buf.data(), buf.size()};
 
-  auto current_id = std::pair<std::uint32_t, std::uint32_t>{0, 0};
+  auto current_id = std::pair<std::uint64_t, std::uint64_t>{0, 0};
   auto current_rows = std::vector<motis::paxmon::loader::csv::row>{};
 
   auto total_input_groups = 0ULL;

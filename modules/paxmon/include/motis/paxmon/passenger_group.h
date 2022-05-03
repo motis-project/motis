@@ -22,8 +22,8 @@ using passenger_group_index = std::uint64_t;
 struct data_source {
   CISTA_COMPARABLE()
 
-  std::uint32_t primary_ref_{};
-  std::uint32_t secondary_ref_{};
+  std::uint64_t primary_ref_{};
+  std::uint64_t secondary_ref_{};
 };
 
 enum class group_source_flags : std::uint8_t {
