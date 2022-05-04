@@ -35,11 +35,14 @@
 #include "motis/paxmon/compact_journey_util.h"
 #include "motis/paxmon/loader/csv/motis_row.h"
 #include "motis/paxmon/loader/csv/trek_row.h"
+#include "motis/paxmon/tools/groups/group_generator.h"
 #include "motis/paxmon/util/get_station_idx.h"
 #include "motis/paxmon/util/interchange_time.h"
 
 using namespace motis::logging;
 using namespace motis::paxmon::util;
+using namespace motis::paxmon::settings;
+using namespace motis::paxmon::tools::groups;
 
 template <>
 struct fmt::formatter<std::optional<std::pair<std::uint64_t, std::uint64_t>>>
@@ -418,10 +421,10 @@ time parse_trek_timestamp(std::string_view const val, date::time_zone const* tz,
 
 loader_result load_journeys(schedule const& sched, universe& uv,
                             std::string const& journey_file,
-                            std::string const& match_log_file,
-                            duration const match_tolerance,
-                            std::string const& timezone_name) {
+                            journey_input_settings const& settings) {
+  auto const match_tolerance = settings.match_tolerance_;
   auto const debug_match_tolerance = match_tolerance + 60;
+  auto const split_groups = settings.split_groups_;
   auto result = loader_result{};
   auto journeys_with_invalid_legs = 0ULL;
   auto journeys_with_no_valid_legs = 0ULL;
@@ -441,9 +444,13 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   auto const format = get_csv_format(file_content.view());
 
   std::ofstream match_log;
-  if (!match_log_file.empty()) {
-    match_log.open(match_log_file);
+  if (!settings.journey_match_log_file_.empty()) {
+    match_log.open(settings.journey_match_log_file_);
   }
+
+  auto group_gen = group_generator{settings.split_groups_size_mean_,
+                                   settings.split_groups_size_stddev_, 0, 0,
+                                   settings.split_groups_seed_};
 
   auto current_id = std::optional<std::pair<std::uint64_t, std::uint64_t>>{};
   auto current_input_legs = std::vector<input_journey_leg>{};
@@ -454,7 +461,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
     if (start_idx == end_idx) {
       return;
     }
-    auto const source =
+    auto source =
         data_source{current_id.value().first, current_id.value().second};
     auto const inexact_time = std::any_of(
         std::next(begin(current_input_legs), start_idx),
@@ -500,9 +507,24 @@ loader_result load_journeys(schedule const& sched, universe& uv,
         ++journeys_too_long;
         return;
       }
-      uv.passenger_groups_.add(make_passenger_group(
-          std::move(current_journey), source, current_passengers,
-          current_journey.scheduled_arrival_time(), source_flags));
+      if (split_groups) {
+        source.secondary_ref_ *= 100;
+        auto distributed = 0U;
+        while (distributed < current_passengers) {
+          auto const group_size =
+              group_gen.get_group_size(current_passengers - distributed);
+          ++source.secondary_ref_;
+          distributed += group_size;
+          auto cj = current_journey;
+          uv.passenger_groups_.add(make_passenger_group(
+              std::move(cj), source, group_size,
+              current_journey.scheduled_arrival_time(), source_flags));
+        }
+      } else {
+        uv.passenger_groups_.add(make_passenger_group(
+            std::move(current_journey), source, current_passengers,
+            current_journey.scheduled_arrival_time(), source_flags));
+      }
     } else {
       if (!all_trips_found) {
         ++journeys_with_missing_trips;
@@ -515,9 +537,25 @@ loader_result load_journeys(schedule const& sched, universe& uv,
       }
       auto const& first_leg = current_input_legs.at(start_idx);
       auto const& last_leg = current_input_legs.at(end_idx - 1);
-      result.unmatched_journeys_.emplace_back(unmatched_journey{
-          first_leg.from_station_idx_.value(), last_leg.to_station_idx_.value(),
-          first_leg.enter_time_, source, current_passengers});
+      if (split_groups) {
+        source.secondary_ref_ *= 100;
+        auto distributed = 0U;
+        while (distributed < current_passengers) {
+          auto const group_size =
+              group_gen.get_group_size(current_passengers - distributed);
+          ++source.secondary_ref_;
+          distributed += group_size;
+          result.unmatched_journeys_.emplace_back(
+              unmatched_journey{first_leg.from_station_idx_.value(),
+                                last_leg.to_station_idx_.value(),
+                                first_leg.enter_time_, source, group_size});
+        }
+      } else {
+        result.unmatched_journeys_.emplace_back(unmatched_journey{
+            first_leg.from_station_idx_.value(),
+            last_leg.to_station_idx_.value(), first_leg.enter_time_, source,
+            current_passengers});
+      }
     }
   };
 
@@ -585,8 +623,9 @@ loader_result load_journeys(schedule const& sched, universe& uv,
                             current_input_legs, debug_match_tolerance);
           });
   } else if (format == csv_format::TREK) {
-    auto const tz = timezone_name.empty() ? date::current_zone()
-                                          : date::locate_zone(timezone_name);
+    auto const tz = settings.journey_timezone_.empty()
+                        ? date::current_zone()
+                        : date::locate_zone(settings.journey_timezone_);
     utl::line_range<utl::buf_reader>{file_content}  //
         | utl::csv<trek_row, ';'>()  //
         | utl::for_each([&](trek_row const& row) {
