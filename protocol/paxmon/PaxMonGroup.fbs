@@ -3,8 +3,8 @@ include "paxmon/PaxMonCompactJourney.fbs";
 namespace motis.paxmon;
 
 table PaxMonDataSource {
-  primary_ref: uint;
-  secondary_ref: uint;
+  primary_ref: ulong;
+  secondary_ref: ulong;
 }
 
 table PaxMonGroup {

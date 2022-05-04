@@ -8,8 +8,9 @@ namespace motis::paxmon::tools::groups {
 
 struct group_generator {
   group_generator(double group_size_mean, double group_size_stddev,
-                  double group_count_mean, double group_count_stddev)
-      : rng_{std::random_device{}()},
+                  double group_count_mean, double group_count_stddev,
+                  unsigned seed = std::random_device{}())
+      : rng_{seed},
         group_size_dist_{group_size_mean, group_size_stddev},
         group_count_dist_{group_count_mean, group_count_stddev} {}
 

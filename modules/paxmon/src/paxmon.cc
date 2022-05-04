@@ -63,12 +63,27 @@ using namespace motis::rt;
 namespace motis::paxmon {
 
 paxmon::paxmon() : module("Passenger Monitoring", "paxmon"), data_{*this} {
+  param(journey_input_settings_.journey_timezone_, "journey_timezone",
+        "timezone for timestamps in daily trek input files (e.g. "
+        "Europe/Berlin), or empty for current system time zone");
+  param(journey_input_settings_.journey_match_log_file_, "journey_match_log",
+        "journey match log file");
+  param(journey_input_settings_.match_tolerance_, "match_tolerance",
+        "journey match time tolerance (minutes)");
+  param(journey_input_settings_.split_groups_, "split_groups",
+        "split groups from journey input files into smaller groups");
+  param(journey_input_settings_.split_groups_size_mean_, "split_groups_mean",
+        "mean size for split groups");
+  param(journey_input_settings_.split_groups_size_stddev_,
+        "split_groups_stddev", "standard deviation for split groups size");
+  param(journey_input_settings_.split_groups_seed_, "split_groups_seed",
+        "rng seed for splitting groups");
+
   param(generated_capacity_file_, "generated_capacity_file",
         "output for generated capacities");
   param(stats_file_, "stats", "statistics file");
   param(capacity_match_log_file_, "capacity_match_log",
         "capacity match log file");
-  param(journey_match_log_file_, "journey_match_log", "journey match log file");
   param(initial_over_capacity_report_file_, "over_capacity_report",
         "initial over capacity report file");
   param(initial_broken_report_file_, "broken_report",
@@ -81,8 +96,6 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon"), data_{*this} {
   param(start_time_, "start_time", "evaluation start time");
   param(end_time_, "end_time", "evaluation end time");
   param(time_step_, "time_step", "evaluation time step (seconds)");
-  param(match_tolerance_, "match_tolerance",
-        "journey match time tolerance (minutes)");
   param(arrival_delay_threshold_, "arrival_delay_threshold",
         "threshold for arrival delay at the destination (minutes, -1 to "
         "disable)");
@@ -374,8 +387,8 @@ loader::loader_result paxmon::load_journeys(std::string const& file) {
     result = loader::journeys::load_journeys(sched, uv, file);
   } else if (journey_path.extension() == ".csv") {
     scoped_timer journey_timer{"load csv journeys"};
-    result = loader::csv::load_journeys(
-        sched, uv, file, journey_match_log_file_, match_tolerance_);
+    result =
+        loader::csv::load_journeys(sched, uv, file, journey_input_settings_);
   } else {
     LOG(logging::error) << "paxmon: unknown journey file type: " << file;
   }
