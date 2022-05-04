@@ -452,7 +452,8 @@ loader_result load_journeys(schedule const& sched, universe& uv,
                                    settings.split_groups_size_stddev_, 0, 0,
                                    settings.split_groups_seed_};
 
-  auto current_id = std::optional<std::pair<std::uint64_t, std::uint64_t>>{};
+  using id_t = std::pair<std::uint64_t, std::uint64_t>;
+  auto current_id = std::optional<id_t>{};
   auto current_input_legs = std::vector<input_journey_leg>{};
   std::uint16_t current_passengers = 0;
 
@@ -592,8 +593,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
     utl::line_range<utl::buf_reader>{file_content}  //
         | utl::csv<motis_row>()  //
         | utl::for_each([&](motis_row const& row) {
-            auto const id =
-                std::make_pair(row.id_.val(), row.secondary_id_.val());
+            auto const id = id_t{row.id_.val(), row.secondary_id_.val()};
             if (id != current_id) {
               finish_journey();
               current_id = id;
@@ -629,7 +629,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
     utl::line_range<utl::buf_reader>{file_content}  //
         | utl::csv<trek_row, ';'>()  //
         | utl::for_each([&](trek_row const& row) {
-            auto const base_id = std::make_pair(row.id_.val(), 0ULL);
+            auto const base_id = id_t{row.id_.val(), 0U};
             if (base_id != current_id) {
               finish_journey();
               current_id = base_id;
