@@ -36,6 +36,10 @@ struct journey_meta_data {
                             1)),
         ontrip_start_(ontrip_start) {}
 
+  inline auto as_tuple() const {
+    return std::tuple{transfers_, get_departure_time(), duration_};
+  }
+
   inline friend bool operator==(journey_meta_data const& a,
                                 journey_meta_data const& b) {
     utl::verify(
@@ -58,10 +62,6 @@ struct journey_meta_data {
   inline time_t get_departure_time() const { return departure_time_; }
 
   inline time_t get_arrival_time() const { return arrival_time_; }
-
-  inline std::tuple<int, int, int> as_tuple() const {
-    return std::make_tuple(transfers_, get_departure_time(), duration_);
-  }
 
   inline bool dominates(journey_meta_data const& o) const {
     utl::verify(

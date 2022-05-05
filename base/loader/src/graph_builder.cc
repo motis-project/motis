@@ -931,7 +931,7 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
   auto sched = mcd::make_unique<schedule>();
   sched->string_mem_.emplace_back(
       mcd::make_unique<mcd::string>(""));  // empty string on index 0
-  sched->tracks_.emplace_back(0, 0);
+  sched->tracks_.emplace_back(uint32_t{0}, bitfield_idx_or_ptr{0});
   sched->tracks_.finish_key();  // empty track info on index 0
   sched->classes_ = class_mapping();
   sched->bitfields_.push_back({});

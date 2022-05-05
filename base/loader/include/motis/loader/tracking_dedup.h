@@ -2,7 +2,11 @@
 
 #include <vector>
 
+#ifdef _WIN32
+#include <algorithm>
+#else
 #include "boost/sort/block_indirect_sort/block_indirect_sort.hpp"
+#endif
 
 #include "motis/core/common/logging.h"
 
@@ -67,7 +71,11 @@ std::vector<size_t> tracking_dedupe(mcd::vector<T>& data, EqFn&& eq,
   // sort permutation
   mcd::vector<size_t> perm(data.size());
   std::iota(begin(perm), end(perm), 0);
+#if _WIN32
+  std::sort(begin(perm), end(perm), lt);
+#else
   boost::sort::block_indirect_sort(begin(perm), end(perm), lt);
+#endif
 
   // apply permutation to data
   apply_permutation(data, perm);
