@@ -78,7 +78,7 @@ inline bitfield create_uniform_bitfield(char val) {
   all_days_bit_str.resize(MAX_DAYS);
   std::fill(begin(all_days_bit_str), end(all_days_bit_str), val);
 
-  return {all_days_bit_str};
+  return bitfield{all_days_bit_str};
 }
 
 inline std::string serialize_bitset(bitfield const& bitset) {
