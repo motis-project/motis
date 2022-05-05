@@ -150,7 +150,7 @@ struct generic_light_connection {
   using data_t = mcd::variant<static_t, rt_t>;
 
   constexpr generic_light_connection() = default;
-  generic_light_connection(nullptr_t) {}
+  generic_light_connection(std::nullptr_t) {}
   generic_light_connection(static_t p) : data_{p} {}  // NOLINT
   generic_light_connection(rt_t lcon) : data_{lcon} {}  // NOLINT
   generic_light_connection(static_light_connection const* lcon,
