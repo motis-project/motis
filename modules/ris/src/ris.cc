@@ -1030,7 +1030,11 @@ ris::ris() : module("RIS", "ris") {
 
 ris::~ris() = default;
 
-void ris::stop_io() { impl_->stop_io(); }
+void ris::stop_io() {
+  if (impl_ != nullptr) {
+    impl_->stop_io();
+  }
+}
 
 void ris::reg_subc(motis::module::subc_reg& r) {
   r.register_cmd(
