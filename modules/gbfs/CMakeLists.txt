@@ -9,6 +9,7 @@ target_link_libraries(motis-gbfs
   motis-module
   motis-core
   geo
+  tiles
   motis-libjson
   http-client
 )

@@ -314,14 +314,15 @@ struct gbfs::impl {
                  *motis_content(OSRMOneToManyResponse, f_x_to_b_walks->val())
                       ->costs())) {
           auto const x_to_b_walk_duration =
-              static_cast<duration>(x_to_b_res->duration() / 60.0);
+              static_cast<duration>(std::ceil(x_to_b_res->duration() / 60.0));
           if (x_to_b_walk_duration > max_walk_duration) {
             continue;
           }
 
           for (auto const& [p_vec_idx, _] : utl::enumerate(p_pos)) {
-            auto const b_to_p_duration = static_cast<duration>(
-                b_to_p_table->Get(b_vec_idx * p.size() + p_vec_idx) / 60.0);
+            auto const b_to_p_duration = static_cast<duration>(std::ceil(
+                b_to_p_table->Get(b_vec_idx * p_pos.size() + p_vec_idx) /
+                60.0));
             if (b_to_p_duration > max_bike_duration) {
               continue;
             }
@@ -351,27 +352,39 @@ struct gbfs::impl {
                  *motis_content(OSRMOneToManyResponse, f_x_to_sx_walks->val())
                       ->costs())) {
           auto const x_to_sx_walk_duration =
-              static_cast<duration>(x_to_sx_res->duration() / 60.0);
+              static_cast<duration>(std::ceil(x_to_sx_res->duration() / 60.0));
           if (x_to_sx_walk_duration > max_walk_duration) {
             continue;
           }
 
           for (auto const& [sp_vec_idx, sp_id] : utl::enumerate(sp)) {
-            auto const sx_to_sp_duration = static_cast<duration>(
+            auto const sx_to_sp_duration = static_cast<duration>(std::ceil(
                 sx_to_sp_table->Get(sx_vec_idx * sp.size() + sp_vec_idx) /
-                60.0);
+                60.0));
             if (sx_to_sp_duration > max_bike_duration) {
               continue;
             }
 
             for (auto const& [p_vec_idx, _] : utl::enumerate(p_pos)) {
               auto const sp_to_p_walk_duration = static_cast<duration>(
-                  sp_to_p_table->Get(sp_vec_idx * p.size() + p_vec_idx) / 60.0);
+                  std::ceil(sp_to_p_table->Get(sp_vec_idx * p_pos.size() +
+                                               p_vec_idx) /
+                            60.0));
               if (sp_to_p_walk_duration > max_walk_duration ||
                   x_to_sx_walk_duration + sp_to_p_walk_duration >
                       max_walk_duration) {
                 continue;
               }
+
+              auto const& sx_station = stations.at(sx.at(sx_vec_idx));
+              auto const& sp_station = stations.at(sp.at(sp_vec_idx));
+              auto const& p_station = sched_.stations_.at(p.at(p_vec_idx));
+              std::cout << "x -> " << sx_station.name_ << sx_pos.at(sx_vec_idx)
+                        << " -> " << sp_station.name_ << sp_pos.at(sp_vec_idx)
+                        << " -> " << p_station->name_ << p_pos.at(p_vec_idx)
+                        << ": " << x_to_sx_walk_duration << " "
+                        << sx_to_sp_duration << " " << sp_to_p_walk_duration
+                        << "\n";
 
               auto const total_duration = x_to_sx_walk_duration +
                                           sx_to_sp_duration +
@@ -427,14 +440,14 @@ struct gbfs::impl {
                  *motis_content(OSRMOneToManyResponse, f_b_to_x_rides->val())
                       ->costs())) {
           auto const b_to_x_bike_duration =
-              static_cast<duration>(b_to_x_res->duration() / 60.0);
+              static_cast<duration>(std::ceil(b_to_x_res->duration() / 60.0));
           if (b_to_x_bike_duration > max_bike_duration) {
             continue;
           }
 
           for (auto const& [p_vec_idx, p_id] : utl::enumerate(p)) {
-            auto const p_to_b_walk_duration = static_cast<duration>(
-                p_to_b_table->Get(p_vec_idx * b.size() + b_vec_idx) / 60.0);
+            auto const p_to_b_walk_duration = static_cast<duration>(std::ceil(
+                p_to_b_table->Get(p_vec_idx * b.size() + b_vec_idx) / 60.0));
             if (p_to_b_walk_duration > max_walk_duration) {
               continue;
             }
@@ -466,24 +479,25 @@ struct gbfs::impl {
                  *motis_content(OSRMOneToManyResponse, f_sx_to_x_walks->val())
                       ->costs())) {
           auto const sx_to_x_walk_duration =
-              static_cast<duration>(sx_to_x_res->duration() / 60.0);
+              static_cast<duration>(std::ceil(sx_to_x_res->duration() / 60.0));
           if (sx_to_x_walk_duration > max_walk_duration) {
             continue;
           }
 
           for (auto const& [sp_vec_idx, sp_id] : utl::enumerate(sp)) {
-            auto const sp_to_sx_duration = static_cast<duration>(
+            auto const sp_to_sx_duration = static_cast<duration>(std::ceil(
                 sp_to_sx_table->Get(sp_vec_idx * sx.size() + sx_vec_idx) /
-                60.0);
+                60.0));
 
             if (sp_to_sx_duration > max_bike_duration) {
               continue;
             }
 
             for (auto const& [p_vec_idx, p_id] : utl::enumerate(p)) {
-              auto const p_to_sp_walk_duration = static_cast<duration>(
-                  p_to_sp_table->Get(p_vec_idx * sp.size() + sp_vec_idx) /
-                  60.0);
+              auto const p_to_sp_walk_duration =
+                  static_cast<duration>(std::ceil(
+                      p_to_sp_table->Get(p_vec_idx * sp.size() + sp_vec_idx) /
+                      60.0));
               if (p_to_sp_walk_duration > max_walk_duration ||
                   p_to_sp_walk_duration + sx_to_x_walk_duration >
                       max_walk_duration) {

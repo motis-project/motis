@@ -180,7 +180,8 @@ msg_ptr make_direct_osrm_request(geo::latlng const& start,
 
 std::vector<direct_connection> get_direct_connections(
     query_start const& q_start, query_dest const& q_dest,
-    IntermodalRoutingRequest const* req, ppr_profiles const& profiles) {
+    IntermodalRoutingRequest const* req, ppr_profiles const& profiles,
+    std::vector<mumo_edge const*> const& edge_mapping) {
   auto direct = std::vector<direct_connection>{};
   auto const beeline = distance(q_start.pos_, q_dest.pos_);
 

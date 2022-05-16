@@ -338,7 +338,8 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
   }
 
   MOTIS_START_TIMING(direct_connection_timing);
-  auto const direct = get_direct_connections(q_start, q_dest, req, profiles);
+  auto const direct =
+      get_direct_connections(q_start, q_dest, req, profiles, edge_mapping);
   stats.dominated_by_direct_connection_ =
       remove_dominated_journeys(journeys, direct);
   add_direct_connections(journeys, direct, q_start, q_dest, req);
