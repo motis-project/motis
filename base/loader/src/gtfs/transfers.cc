@@ -37,7 +37,7 @@ std::map<stop_pair, transfer> read_transfers(loaded_file f,
         transfers.insert(std::make_pair(
             std::pair{stops.at(get<from_stop_id>(t).to_str()).get(),
                       stops.at(get<to_stop_id>(t).to_str()).get()},
-            transfer(get<transfer_type>(t) == transfer::TIMED_TRANSFER
+            transfer(get<transfer_type>(t) == transfer::MIN_TRANSFER_TIME
                          ? get<min_transfer_time>(t) / 60
                          : 0,
                      get<transfer_type>(t))));
