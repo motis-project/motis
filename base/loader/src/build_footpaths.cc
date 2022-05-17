@@ -37,7 +37,6 @@ using component_it = component_vec::iterator;
 using component_range = std::pair<component_it, component_it>;
 
 struct footpath_builder {
-
   footpath_builder(
       schedule& sched, loader_options const& opt,
       mcd::hash_map<Station const*, station_node*> const& station_nodes)
@@ -209,14 +208,11 @@ struct footpath_builder {
           process_component(range.first, range.second, fgraph);
         },
         utl::parallel_error_strategy::CONTINUE_EXEC);
-    if (!errors.empty()) {
-      for (auto const& [idx, ex] : errors) {
-        try {
-          std::rethrow_exception(ex);
-        } catch (std::exception const& e) {
-          LOG(ml::error) << "footpath error: " << idx << " (" << e.what()
-                         << ")";
-        }
+    for (auto const& [idx, ex] : errors) {
+      try {
+        std::rethrow_exception(ex);
+      } catch (std::exception const& e) {
+        LOG(ml::error) << "footpath error: " << idx << " (" << e.what() << ")";
       }
     }
   }
@@ -331,7 +327,7 @@ struct footpath_builder {
       }
       return;
     }
-    utl::verify(size > 2, "invalid size");
+    utl::verify(size > 2, "invalid size {}", size);
 
     constexpr auto const kInvalidTime = std::numeric_limits<motis::time>::max();
     auto mat = make_flat_matrix<motis::time>(size, kInvalidTime);

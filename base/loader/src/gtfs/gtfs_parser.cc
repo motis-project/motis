@@ -482,10 +482,25 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
                                " (" + feed_pair.second.version_ + ")";
                       });
 
+  std::vector<std::tuple<stop const*, stop const*, transfer>>
+      missing_symmetry_transfers;
+  for (auto const& [p, t] : transfers) {
+    auto const& [from, to] = p;
+    auto const inverse_it = transfers.find({to, from});
+    if (inverse_it == end(transfers)) {
+      l(logging::warn, "adding symmetric transfer: {}({}) -> {}({}): {} min",
+        to->name_, to->id_, from->name_, from->id_, t.minutes_);
+      missing_symmetry_transfers.emplace_back(to, from, t);
+    }
+  }
+  for (auto const& [from, to, t] : missing_symmetry_transfers) {
+    transfers.emplace(stop_pair{from, to}, t);
+  }
+
   auto footpaths =
       utl::all(transfers)  //
       | utl::remove_if([](std::pair<stop_pair, transfer>&& t) {
-          return t.second.type_ != transfer::TIMED_TRANSFER ||
+          return t.second.type_ == transfer::NOT_POSSIBLE ||
                  t.first.first == t.first.second;
         })  //
       | utl::transform([&](std::pair<stop_pair, transfer>&& t) {
