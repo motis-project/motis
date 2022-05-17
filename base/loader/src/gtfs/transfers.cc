@@ -42,10 +42,11 @@ std::map<stop_pair, transfer> read_transfers(loaded_file f,
                          : 0,
                      get<transfer_type>(t))));
       }
-    } catch (...) {
+    } catch (std::exception const& e) {
       LOG(logging::warn) << "skipping transfer (" << f.name() << ":" << i
-                         << ") between unknown stop pair "
-                         << get<from_stop_id>(t) << " - " << get<to_stop_id>(t);
+                         << ") between stop pair "
+                         << get<from_stop_id>(t).to_str() << " - "
+                         << get<to_stop_id>(t).to_str() << ": " << e.what();
     }
   }
   return transfers;
