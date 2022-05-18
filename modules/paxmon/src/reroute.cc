@@ -183,8 +183,7 @@ std::pair<std::uint16_t, capacity_source> guess_trip_capacity(
     schedule const& sched, capacity_maps const& caps, trip const* trp) {
   auto const sections = access::sections(trp);
   if (begin(sections) != end(sections)) {
-    return get_capacity(sched, (*begin(sections)).lcon(),
-                        caps.trip_capacity_map_, caps.category_capacity_map_);
+    return get_capacity(sched, (*begin(sections)).lcon(), caps);
   } else {
     return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
   }

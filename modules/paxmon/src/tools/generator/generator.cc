@@ -22,7 +22,6 @@
 
 #include "motis/paxmon/build_graph.h"
 #include "motis/paxmon/capacity.h"
-#include "motis/paxmon/capacity_maps.h"
 #include "motis/paxmon/generate_capacities.h"
 #include "motis/paxmon/get_load.h"
 #include "motis/paxmon/loader/journeys/to_compact_journey.h"
@@ -334,8 +333,7 @@ int generate(int argc, char const** argv) {
       return 1;
     }
     auto const entries_loaded =
-        load_capacities(sched, generator_opt.capacity_path_,
-                        caps.trip_capacity_map_, caps.category_capacity_map_);
+        load_capacities(sched, generator_opt.capacity_path_, caps);
     std::cout << "Loaded " << entries_loaded << " capacity entries"
               << std::endl;
     if (entries_loaded == 0) {

@@ -12,7 +12,6 @@
 #include "motis/core/access/trip_section.h"
 
 #include "motis/paxmon/capacity.h"
-#include "motis/paxmon/capacity_maps.h"
 #include "motis/paxmon/get_load.h"
 #include "motis/paxmon/universe.h"
 
@@ -31,9 +30,7 @@ struct trip_section_with_load {
       capacity_ = edge_->capacity();
       capacity_source_ = edge_->get_capacity_source();
     } else {
-      auto const cap =
-          get_capacity(sched, section_.lcon(), caps.trip_capacity_map_,
-                       caps.category_capacity_map_);
+      auto const cap = get_capacity(sched, section_.lcon(), caps);
       capacity_ = cap.first;
       capacity_source_ = cap.second;
     }

@@ -47,8 +47,7 @@ struct row {
 
 std::size_t load_capacities(schedule const& sched,
                             std::string const& capacity_file,
-                            trip_capacity_map_t& trip_map,
-                            category_capacity_map_t& category_map,
+                            capacity_maps& caps,
                             std::string const& match_log_file) {
   auto buf = utl::file(capacity_file.data(), "r").content();
   auto const file_content = utl::cstr{buf.data(), buf.size()};
@@ -87,10 +86,11 @@ std::size_t load_capacities(schedule const& sched,
 
             auto const tid = cap_trip_id{row.train_nr_.val(), from_station_idx,
                                          to_station_idx, departure, arrival};
-            trip_map[tid] = row.seats_.val();
+            caps.trip_capacity_map_[tid] = row.seats_.val();
             ++entry_count;
           } else if (row.category_.val()) {
-            category_map[row.category_.val().view()] = row.seats_.val();
+            caps.category_capacity_map_[row.category_.val().view()] =
+                row.seats_.val();
             ++entry_count;
           }
         });
@@ -195,8 +195,7 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
 
 std::pair<std::uint16_t, capacity_source> get_capacity(
     schedule const& sched, light_connection const& lc,
-    trip_capacity_map_t const& trip_map,
-    category_capacity_map_t const& category_map) {
+    capacity_maps const& caps) {
   std::uint16_t capacity = 0;
   auto worst_source = capacity_source::TRIP_EXACT;
 
@@ -204,7 +203,8 @@ std::pair<std::uint16_t, capacity_source> get_capacity(
   for (auto const& trp : *sched.merged_trips_.at(lc.trips_)) {
     utl::verify(ci != nullptr, "get_capacity: missing connection_info");
 
-    auto const trip_capacity = get_trip_capacity(sched, trip_map, category_map,
+    auto const trip_capacity = get_trip_capacity(sched, caps.trip_capacity_map_,
+                                                 caps.category_capacity_map_,
                                                  trp, ci, lc.full_con_->clasz_);
     if (trip_capacity.has_value()) {
       capacity += trip_capacity->first;
