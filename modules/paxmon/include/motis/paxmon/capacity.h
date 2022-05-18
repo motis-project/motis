@@ -4,6 +4,8 @@
 #include <map>
 #include <string>
 
+#include "boost/uuid/uuid.hpp"
+
 #include "cista/reflection/comparable.h"
 
 #include "motis/data.h"
@@ -14,6 +16,7 @@
 #include "motis/core/schedule/time.h"
 
 #include "motis/paxmon/capacity_data.h"
+#include "motis/paxmon/vehicle_order.h"
 
 namespace motis::paxmon {
 
@@ -41,11 +44,14 @@ using trip_capacity_map_t = std::map<cap_trip_id, std::uint16_t>;
 using category_capacity_map_t = mcd::hash_map<mcd::string, std::uint16_t>;
 using vehicle_capacity_map_t =
     mcd::hash_map<std::uint64_t /* UIC number */, vehicle_capacity>;
+using trip_vehicle_map_t =
+    mcd::hash_map<boost::uuids::uuid, trip_vehicle_order>;
 
 struct capacity_maps {
   trip_capacity_map_t trip_capacity_map_;
   category_capacity_map_t category_capacity_map_;
   vehicle_capacity_map_t vehicle_capacity_map_;
+  trip_vehicle_map_t trip_vehicle_map_;
 };
 
 std::size_t load_capacities(schedule const& sched,
