@@ -27,12 +27,25 @@ struct cap_trip_id {
   time arrival_{};
 };
 
+struct vehicle_capacity {
+  std::uint16_t seats_{};
+  std::uint16_t standing_{};
+  std::uint16_t total_limit_{};
+
+  inline std::uint16_t limit() const {
+    return total_limit_ != 0U ? total_limit_ : seats_ + standing_;
+  }
+};
+
 using trip_capacity_map_t = std::map<cap_trip_id, std::uint16_t>;
 using category_capacity_map_t = mcd::hash_map<mcd::string, std::uint16_t>;
+using vehicle_capacity_map_t =
+    mcd::hash_map<std::uint64_t /* UIC number */, vehicle_capacity>;
 
 struct capacity_maps {
   trip_capacity_map_t trip_capacity_map_;
   category_capacity_map_t category_capacity_map_;
+  vehicle_capacity_map_t vehicle_capacity_map_;
 };
 
 std::size_t load_capacities(schedule const& sched,

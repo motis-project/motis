@@ -31,7 +31,7 @@ namespace motis::paxmon {
 
 namespace {
 
-struct row {
+struct trip_row {
   utl::csv_col<std::uint32_t, UTL_NAME("train_nr")> train_nr_;
   utl::csv_col<utl::cstr, UTL_NAME("category")> category_;
   utl::csv_col<utl::cstr, UTL_NAME("from")> from_;
@@ -43,6 +43,30 @@ struct row {
   utl::csv_col<std::uint16_t, UTL_NAME("seats")> seats_;
 };
 
+struct vehicle_row {
+  utl::csv_col<std::uint64_t, UTL_NAME("uic_number")> uic_number_;
+  utl::csv_col<utl::cstr, UTL_NAME("attribute_name")> attribute_name_;
+  utl::csv_col<std::uint16_t, UTL_NAME("attribute_value")> attribute_value_;
+};
+
+enum class csv_format { TRIP, VEHICLE };
+
+csv_format get_csv_format(std::string_view const file_content) {
+  if (auto const nl = file_content.find('\n'); nl != std::string_view::npos) {
+    auto const header = file_content.substr(0, nl);
+    utl::verify(header.find(',') != std::string_view::npos,
+                "paxmon: only ',' separator supported for capacity csv files");
+    if (header.find("seats") != std::string_view::npos) {
+      return csv_format::TRIP;
+    } else if (header.find("uic_number") != std::string_view::npos) {
+      return csv_format::VEHICLE;
+    } else {
+      throw utl::fail("paxmon: unsupported capacity csv input format");
+    }
+  }
+  throw utl::fail("paxmon: empty capacity input file");
+}
+
 };  // namespace
 
 std::size_t load_capacities(schedule const& sched,
@@ -50,15 +74,22 @@ std::size_t load_capacities(schedule const& sched,
                             capacity_maps& caps,
                             std::string const& match_log_file) {
   auto buf = utl::file(capacity_file.data(), "r").content();
-  auto const file_content = utl::cstr{buf.data(), buf.size()};
+  auto file_content = utl::cstr{buf.data(), buf.size()};
+  if (file_content.starts_with("\xEF\xBB\xBF")) {
+    // skip utf-8 byte order mark (otherwise the first column is ignored)
+    file_content = file_content.substr(3);
+  }
+  auto const format = get_csv_format(file_content.view());
   auto entry_count = 0ULL;
 
   std::set<std::pair<std::string, std::string>> stations_not_found;
 
-  utl::line_range<utl::buf_reader>{file_content}  //
-      | utl::csv<row>()  //
-      | utl::for_each([&](auto&& row) {
-          if (row.train_nr_ != 0) {
+  if (format == csv_format::TRIP) {
+    utl::line_range<utl::buf_reader>{file_content}  //
+        | utl::csv<trip_row>()  //
+        |
+        utl::for_each([&](trip_row const& row) {
+          if (row.train_nr_.val() != 0) {
             auto const from_station_idx =
                 get_station_idx(sched, row.from_.val().view()).value_or(0);
             auto const to_station_idx =
@@ -94,6 +125,22 @@ std::size_t load_capacities(schedule const& sched,
             ++entry_count;
           }
         });
+  } else if (format == csv_format::VEHICLE) {
+    utl::line_range<utl::buf_reader>{file_content}  //
+        | utl::csv<vehicle_row>()  //
+        | utl::for_each([&](vehicle_row const& row) {
+            auto& cap = caps.vehicle_capacity_map_[row.uic_number_.val()];
+            auto const& attr = row.attribute_name_.val();
+            auto const val = row.attribute_value_.val();
+            if (attr == "SITZPL_GESAMT") {
+              cap.seats_ = val;
+            } else if (attr == "ANZAHL_STEHPL") {
+              cap.standing_ = val;
+            } else if (attr == "PERS_ZUGELASSEN") {
+              cap.total_limit_ = val;
+            }
+          });
+  }
 
   if (!stations_not_found.empty()) {
     LOG(warn) << stations_not_found.size() << " stations not found";
