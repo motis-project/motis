@@ -146,6 +146,10 @@ struct rib_ctx {
     return fbb_.CreateString(uu::to_string(uuid_gen_()));
   }
 
+  Offset<String> uuid_to_string(uu::uuid const& u) {
+    return fbb_.CreateString(uu::to_string(u));
+  }
+
   FlatBufferBuilder& fbb_;
   schedule const& sched_;
   uu::random_generator uuid_gen_{};
@@ -345,7 +349,7 @@ Offset<RiBasisTrip> rib_trip(rib_ctx& rc, trip const* trp,
           rc.fbb_,
           CreateRiBasisMeta(
               rc.fbb_,
-              rc.rand_uuid(),  // id
+              rc.uuid_to_string(trp->uuid_),  // id
               rc.empty_string_,  // owner
               rc.fbb_.CreateString("RIPL"),  // format
               rc.fbb_.CreateString("v3"),  // version

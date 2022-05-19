@@ -5,6 +5,22 @@
 #include "motis/core/common/dynamic_fws_multimap.h"
 #include "motis/core/common/logging.h"
 
+namespace cista {
+
+cista::hash_t type_hash(boost::uuids::uuid const& el, cista::hash_t const h,
+                        std::map<cista::hash_t, unsigned>& done) {
+  return cista::hash_combine(cista::type_hash(el.data, h, done));
+}
+
+template <typename Ctx>
+inline void serialize(Ctx& c, boost::uuids::uuid const*,
+                      cista::offset_t const) {}
+
+template <typename Ctx>
+inline void deserialize(Ctx const& c, boost::uuids::uuid*) {}
+
+}  // namespace cista
+
 namespace motis {
 
 constexpr auto const MODE =

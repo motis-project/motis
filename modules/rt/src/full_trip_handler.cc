@@ -9,6 +9,9 @@
 #include <utility>
 #include <vector>
 
+#include "boost/uuid/nil_generator.hpp"
+#include "boost/uuid/string_generator.hpp"
+
 #include "utl/enumerate.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
@@ -43,6 +46,10 @@ inline timestamp_reason from_fbs(TimestampType const t) {
     case TimestampType_Forecast: return timestamp_reason::FORECAST;
     default: return timestamp_reason::SCHEDULE;
   }
+}
+
+inline boost::uuids::uuid parse_uuid(std::string_view const sv) {
+  return boost::uuids::string_generator{}(sv.begin(), sv.end());
 }
 
 struct full_trip_handler {
@@ -106,6 +113,7 @@ struct full_trip_handler {
     get_or_add_station(msg_->trip_id()->start_station());
     get_or_add_station(msg_->trip_id()->target_station());
     auto const ftid = get_full_trip_id();
+    auto const trip_uuid = parse_uuid(view(msg_->trip_id()->uuid()));
     result_.trp_ = find_existing_trip(ftid);
     result_.is_new_trip_ = result_.trp_ == nullptr;
 
@@ -177,6 +185,8 @@ struct full_trip_handler {
         propagator_.recalculate(cur_sec.arr_.get_ev_key());
       }
     }
+
+    update_trip_uuid(trip_uuid);
 
     if (result_.delay_updates_ > 0) {
       ++stats_.delay_msgs_;
@@ -494,7 +504,8 @@ private:
                 .emplace_back(mcd::make_unique<trip>(
                     ftid, edges, lcon_idx,
                     static_cast<trip_idx_t>(sched_.trip_mem_.size()),
-                    trip_debug{}))
+                    trip_debug{}, mcd::vector<uint32_t>{},
+                    boost::uuids::nil_uuid()))
                 .get();
 
       auto const trp_entry =
@@ -618,6 +629,13 @@ private:
                di != end(cancelled_delays_)) {
       di->second->set_ev_key(new_ev_key);
       sched_.graph_to_delay_info_[new_ev_key] = di->second;
+    }
+  }
+
+  void update_trip_uuid(boost::uuids::uuid const& trip_uuid) {
+    if (result_.trp_->uuid_ != trip_uuid) {
+      result_.trp_->uuid_ = trip_uuid;
+      sched_.uuid_to_trip_[trip_uuid] = result_.trp_;
     }
   }
 

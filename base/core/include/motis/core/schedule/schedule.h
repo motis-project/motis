@@ -2,6 +2,8 @@
 
 #include <ctime>
 
+#include "boost/uuid/uuid.hpp"
+
 #include "cista/hash.h"
 #include "cista/memory_holder.h"
 
@@ -76,6 +78,7 @@ struct schedule {
   mcd::vector<mcd::unique_ptr<mcd::vector<trip::route_edge>>> trip_edges_;
   mcd::vector<mcd::unique_ptr<mcd::vector<ptr<trip>>>> merged_trips_;
   mcd::vector<mcd::unique_ptr<mcd::string>> filenames_;
+  mcd::hash_map<boost::uuids::uuid, ptr<trip>> uuid_to_trip_;
 
   unixtime system_time_{0U}, last_update_timestamp_{0U};
   mcd::vector<mcd::unique_ptr<delay_info>> delay_mem_;
