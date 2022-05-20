@@ -30,7 +30,7 @@ using namespace motis::module;
 
 namespace motis::gbfs {
 
-struct positions {};
+constexpr auto const bike_ready_time = 3;
 
 struct gbfs::impl {
   explicit impl(config const& c, schedule const& sched)
@@ -327,7 +327,8 @@ struct gbfs::impl {
               continue;
             }
 
-            auto const total_duration = x_to_b_walk_duration + b_to_p_duration;
+            auto const total_duration =
+                bike_ready_time + x_to_b_walk_duration + b_to_p_duration;
             if (auto& best = p_best_journeys[p_vec_idx];
                 best.total_duration_ > total_duration) {
               best.total_duration_ = total_duration;
@@ -376,19 +377,9 @@ struct gbfs::impl {
                 continue;
               }
 
-              auto const& sx_station = stations.at(sx.at(sx_vec_idx));
-              auto const& sp_station = stations.at(sp.at(sp_vec_idx));
-              auto const& p_station = sched_.stations_.at(p.at(p_vec_idx));
-              std::cout << "x -> " << sx_station.name_ << sx_pos.at(sx_vec_idx)
-                        << " -> " << sp_station.name_ << sp_pos.at(sp_vec_idx)
-                        << " -> " << p_station->name_ << p_pos.at(p_vec_idx)
-                        << ": " << x_to_sx_walk_duration << " "
-                        << sx_to_sp_duration << " " << sp_to_p_walk_duration
-                        << "\n";
-
-              auto const total_duration = x_to_sx_walk_duration +
-                                          sx_to_sp_duration +
-                                          sp_to_p_walk_duration;
+              auto const total_duration =
+                  bike_ready_time + x_to_sx_walk_duration + sx_to_sp_duration +
+                  sp_to_p_walk_duration;
               if (auto& best = p_best_journeys[p_vec_idx];
                   best.total_duration_ > total_duration) {
                 best.total_duration_ = total_duration;
@@ -504,9 +495,9 @@ struct gbfs::impl {
                 continue;
               }
 
-              auto const total_duration = p_to_sp_walk_duration +
-                                          sp_to_sx_duration +
-                                          sx_to_x_walk_duration;
+              auto const total_duration =
+                  bike_ready_time + p_to_sp_walk_duration + sp_to_sx_duration +
+                  sx_to_x_walk_duration;
               if (auto& best = p_best_journeys[p_vec_idx];
                   best.total_duration_ > total_duration) {
                 best.total_duration_ = total_duration;
@@ -552,10 +543,10 @@ struct gbfs::impl {
                                                           free_bike_info.p_))
                                   .Union(),
                         BikeRoute_FreeBikeRoute,
-                        CreateFreeBikeRoute(fbb,
-                                            fbb.CreateString(free_bike.id_),
-                                            &pos, free_bike_info.walk_duration_,
-                                            free_bike_info.bike_duration_)
+                        CreateFreeBikeRoute(
+                            fbb, fbb.CreateString(free_bike.id_), &pos,
+                            free_bike_info.walk_duration_ + bike_ready_time,
+                            free_bike_info.bike_duration_)
                             .Union(),
                         j.total_duration_);
                   },
@@ -591,7 +582,8 @@ struct gbfs::impl {
                                                             : sp_gbfs_station,
                             req->dir() == SearchDir_Forward ? sp_gbfs_station
                                                             : sx_gbfs_station,
-                            station_bike_info.first_walk_duration_,
+                            station_bike_info.first_walk_duration_ +
+                                bike_ready_time,
                             station_bike_info.bike_duration_,
                             station_bike_info.second_walk_duration_)
                             .Union(),

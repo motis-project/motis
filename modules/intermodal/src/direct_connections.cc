@@ -5,17 +5,15 @@
 #include <utility>
 
 #include "cista/reflection/comparable.h"
+#include "utl/enumerate.h"
 #include "utl/erase_if.h"
 #include "utl/verify.h"
-
-#include "ppr/routing/search_profile.h"
 
 #include "motis/core/common/unixtime.h"
 #include "motis/module/context/motis_spawn.h"
 
 using namespace geo;
 using namespace flatbuffers;
-using namespace ppr::routing;
 using namespace motis::routing;
 using namespace motis::ppr;
 using namespace motis::module;
@@ -251,6 +249,13 @@ std::vector<direct_connection> get_direct_connections(
   }
 
   ctx::await_all(futures);
+
+  for (auto const& [i, e] : utl::enumerate(edge_mapping)) {
+    if (e->from_ == STATION_START && e->to_ == STATION_END) {
+      direct.emplace_back(e->type_, e->duration_, e->accessibility_, i);
+    }
+  }
+
   return direct;
 }
 
@@ -307,6 +312,7 @@ void add_direct_connections(std::vector<journey>& journeys,
     transport.duration_ = d.duration_;
     transport.mumo_accessibility_ = d.accessibility_;
     transport.mumo_type_ = to_string(d.type_);
+    transport.mumo_id_ = d.mumo_id_;
   }
 }
 

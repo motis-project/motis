@@ -293,6 +293,16 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
   auto routing_response = motis_content(RoutingResponse, response_msg);
   auto journeys = message_to_journeys(routing_response);
 
+  MOTIS_START_TIMING(direct_connection_timing);
+  auto const direct =
+      get_direct_connections(q_start, q_dest, req, profiles, edge_mapping);
+  stats.dominated_by_direct_connection_ =
+      remove_dominated_journeys(journeys, direct);
+  add_direct_connections(journeys, direct, q_start, q_dest, req);
+  MOTIS_STOP_TIMING(direct_connection_timing);
+  stats.direct_connection_duration_ =
+      static_cast<uint64_t>(MOTIS_TIMING_MS(direct_connection_timing));
+
   message_creator mc;
   for (auto& journey : journeys) {
     auto& stops = journey.stops_;
@@ -336,16 +346,6 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
     apply_parking_patches(journey, parking_patches);
     apply_gbfs_patches(journey, gbfs_patches);
   }
-
-  MOTIS_START_TIMING(direct_connection_timing);
-  auto const direct =
-      get_direct_connections(q_start, q_dest, req, profiles, edge_mapping);
-  stats.dominated_by_direct_connection_ =
-      remove_dominated_journeys(journeys, direct);
-  add_direct_connections(journeys, direct, q_start, q_dest, req);
-  MOTIS_STOP_TIMING(direct_connection_timing);
-  stats.direct_connection_duration_ =
-      static_cast<uint64_t>(MOTIS_TIMING_MS(direct_connection_timing));
 
   utl::erase_if(journeys, [](journey const& j) { return j.stops_.empty(); });
   std::sort(

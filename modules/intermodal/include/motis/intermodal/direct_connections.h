@@ -16,12 +16,17 @@ namespace motis::intermodal {
 
 struct direct_connection {
   direct_connection() = default;
-  direct_connection(mumo_type type, unsigned duration, unsigned accessibility)
-      : type_(type), duration_(duration), accessibility_(accessibility) {}
+  direct_connection(mumo_type type, unsigned duration, unsigned accessibility,
+                    int mumo_id = 0)
+      : type_{type},
+        duration_{duration},
+        accessibility_{accessibility},
+        mumo_id_{mumo_id} {}
 
   mumo_type type_{mumo_type::FOOT};
-  unsigned duration_{};  // minutes
-  unsigned accessibility_{};
+  unsigned duration_{0U};  // minutes
+  unsigned accessibility_{0U};
+  int mumo_id_{0};
 };
 
 std::vector<direct_connection> get_direct_connections(
