@@ -36,8 +36,16 @@ namespace uu = boost::uuids;
 namespace motis::lookup {
 
 /* Current limitations:
- * - All UUIDs are randomly generated for every request and can
+ * - Most UUIDs are randomly generated for every request and can
  *   only be used to parse the message (i.e. they are not stable and not stored)
+ *   Random UUIDs:
+ *   - stations
+ *   - providers
+ *   - categories
+ *   - lines
+ *   - tracks
+ *   - trips (unless a RI Basis message for the trip has been received)
+ *   - events
  * - All lines with the same name have the same UUID
  * - All tracks with the same name (even at different stations) have the same
  *   UUID
@@ -134,7 +142,9 @@ struct rib_ctx {
   }
 
   Offset<String> trip_id(trip const* trp) {
-    return utl::get_or_create(trip_ids_, trp, [&]() { return rand_uuid(); });
+    return utl::get_or_create(trip_ids_, trp, [&]() {
+      return trp->uuid_.is_nil() ? rand_uuid() : uuid_to_string(trp->uuid_);
+    });
   }
 
   Offset<String> event_key(trip const* trp, ev_key const ev) {
@@ -349,7 +359,7 @@ Offset<RiBasisTrip> rib_trip(rib_ctx& rc, trip const* trp,
           rc.fbb_,
           CreateRiBasisMeta(
               rc.fbb_,
-              rc.uuid_to_string(trp->uuid_),  // id
+              rc.rand_uuid(),  // id
               rc.empty_string_,  // owner
               rc.fbb_.CreateString("RIPL"),  // format
               rc.fbb_.CreateString("v3"),  // version
