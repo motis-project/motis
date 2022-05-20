@@ -45,7 +45,7 @@ namespace motis::lookup {
  *   - lines
  *   - tracks
  *   - trips (unless a RI Basis message for the trip has been received)
- *   - events
+ *   - events (unless a RI Basis message for the trip has been received)
  * - All lines with the same name have the same UUID
  * - All tracks with the same name (even at different stations) have the same
  *   UUID
@@ -148,8 +148,15 @@ struct rib_ctx {
   }
 
   Offset<String> event_key(trip const* trp, ev_key const ev) {
-    return utl::get_or_create(event_keys_, mcd::pair{trp, ev},
-                              [&]() { return rand_uuid(); });
+    return utl::get_or_create(event_keys_, mcd::pair{trp, ev}, [&]() {
+      if (auto const e =
+              sched_.event_to_uuid_.find(mcd::pair{ptr<trip>{trp}, ev});
+          e != end(sched_.event_to_uuid_)) {
+        return uuid_to_string(e->second);
+      } else {
+        return rand_uuid();
+      }
+    });
   }
 
   Offset<String> rand_uuid() {

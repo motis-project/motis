@@ -88,6 +88,11 @@ struct schedule {
   mcd::hash_map<ev_key, mcd::vector<ev_key>> waits_for_trains_;
   mcd::hash_map<ev_key, mcd::vector<ev_key>> trains_wait_for_;
 
+  mcd::hash_map<boost::uuids::uuid, mcd::pair<ptr<trip>, ev_key>>
+      uuid_to_event_;
+  mcd::hash_map<mcd::pair<ptr<trip>, ev_key>, boost::uuids::uuid>
+      event_to_uuid_;
+
   fws_multimap<ptr<trip>> expanded_trips_;
 };
 

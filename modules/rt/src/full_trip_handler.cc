@@ -11,6 +11,7 @@
 
 #include "boost/uuid/nil_generator.hpp"
 #include "boost/uuid/string_generator.hpp"
+#include "boost/uuid/uuid_io.hpp"
 
 #include "utl/enumerate.h"
 #include "utl/to_vec.h"
@@ -62,6 +63,7 @@ struct full_trip_handler {
     std::uint16_t schedule_track_{};
     std::uint16_t current_track_{};
     ev_key ev_key_;
+    boost::uuids::uuid uuid_{};
 
     inline bool time_updated(event_info const& o) const {
       return current_time_ != o.current_time_ ||
@@ -305,7 +307,8 @@ private:
            from_fbs(ts->departure()->current_time_type()),
            get_track(sched_, view(ts->departure()->schedule_track())),
            get_track(sched_, view(ts->departure()->current_track())),
-           {}},
+           {},
+           parse_uuid(view(ts->departure()->uuid()))},
           {to,
            ts->arrival()->interchange_allowed(),
            unix_to_motistime(sched_, ts->arrival()->schedule_time()),
@@ -313,7 +316,8 @@ private:
            from_fbs(ts->arrival()->current_time_type()),
            get_track(sched_, view(ts->arrival()->schedule_track())),
            get_track(sched_, view(ts->arrival()->current_track())),
-           {}},
+           {},
+           parse_uuid(view(ts->arrival()->uuid()))},
           nullptr};
     });
   }
@@ -333,12 +337,23 @@ private:
               {sec.from_node()->get_station(), sec.from_node()->is_in_allowed(),
                di_from.get_schedule_time(), lc.d_time_, di_from.get_reason(),
                get_schedule_track(sched_, ev_from), sec.fcon().d_track_,
-               ev_from},
+               ev_from, get_event_uuid(trp, ev_from)},
               {sec.to_node()->get_station(), sec.to_node()->is_out_allowed(),
                di_to.get_schedule_time(), lc.a_time_, di_to.get_reason(),
-               get_schedule_track(sched_, ev_to), sec.fcon().a_track_, ev_to},
+               get_schedule_track(sched_, ev_to), sec.fcon().a_track_, ev_to,
+               get_event_uuid(trp, ev_to)},
               const_cast<light_connection*>(&lc)};  // NOLINT
         });
+  }
+
+  boost::uuids::uuid get_event_uuid(trip const* trp, ev_key const& evk) const {
+    if (auto const e =
+            sched_.event_to_uuid_.find(mcd::pair{ptr<trip>{trp}, evk});
+        e != end(sched_.event_to_uuid_)) {
+      return e->second;
+    } else {
+      return boost::uuids::nil_uuid();
+    }
   }
 
   static bool is_rule_service(trip const* trp) {
@@ -559,6 +574,16 @@ private:
           evk, sched_.tracks_.at(msg_event.current_track_).str(),
           msg_event.schedule_time_);
       ++result_.track_updates_;
+    }
+    auto const uuid_changed = cur_event.uuid_ != msg_event.uuid_;
+    if (uuid_changed || is_reroute()) {
+      if (uuid_changed && !cur_event.uuid_.is_nil()) {
+        LOG(warn) << "event uuid changed: " << cur_event.uuid_ << " -> "
+                  << msg_event.uuid_;
+      }
+      auto const trip_and_ev_key = mcd::pair{ptr<trip>{result_.trp_}, evk};
+      sched_.uuid_to_event_[msg_event.uuid_] = trip_and_ev_key;
+      sched_.event_to_uuid_[trip_and_ev_key] = msg_event.uuid_;
     }
   }
 
