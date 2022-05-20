@@ -361,6 +361,17 @@ encodeMode mode =
                         [ "max_duration" => Encode.int info.maxDuration ]
                 ]
 
+        GBFS info ->
+            Encode.object
+                [ "mode_type" => Encode.string "GBFS"
+                , "mode"
+                    => Encode.object
+                        [ "max_walk_duration" => Encode.int info.maxWalkDuration
+                        , "max_vehicle_duration" => Encode.int info.maxVehicleDuration
+                        , "provider" => Encode.string info.provider
+                        ]
+                ]
+
         Car info ->
             Encode.object
                 [ "mode_type" => Encode.string "Car"

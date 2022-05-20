@@ -29,7 +29,7 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=8d1b88eb5529154e50c5e0edf6adeaf9ff2af158
+  commit=01e63436e63f38b763f47cd8cbc2475f07245e08
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
@@ -53,7 +53,7 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=0ccf7e5e950f43504dcb9f19506942209ac0f90d
+  commit=e92e23a42d9883dcc9806d7ae027fb8febd11175
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master

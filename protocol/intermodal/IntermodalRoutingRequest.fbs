@@ -74,7 +74,7 @@ table CarParking {
 table GBFS {
   provider: string;
   max_walk_duration: int;
-  max_ride_duration: int;
+  max_vehicle_duration: int;
 }
 
 union Mode {

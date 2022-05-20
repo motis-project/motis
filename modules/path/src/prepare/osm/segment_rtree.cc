@@ -1,10 +1,10 @@
 #include "motis/path/prepare/osm/segment_rtree.h"
 
-#include "boost/function_output_iterator.hpp"
 #include "boost/geometry/geometries/box.hpp"
 #include "boost/geometry/geometries/point.hpp"
 #include "boost/geometry/geometries/register/segment.hpp"
 #include "boost/geometry/index/rtree.hpp"
+#include "boost/iterator/function_output_iterator.hpp"
 
 #include "geo/detail/register_box.h"
 #include "geo/detail/register_latlng.h"
