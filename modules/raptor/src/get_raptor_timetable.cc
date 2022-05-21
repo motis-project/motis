@@ -3,10 +3,14 @@
 #include <thread>
 #include <tuple>
 
+#include "boost/dynamic_bitset.hpp"
+
 #include "utl/concat.h"
 #include "utl/enumerate.h"
 #include "utl/erase_duplicates.h"
 #include "utl/pipes.h"
+#include "utl/timer.h"
+#include "utl/zip.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/access/station_access.h"
@@ -309,7 +313,73 @@ auto get_station_departure_events(transformable_timetable const& ttt,
   return dep_events;
 }
 
+auto get_station_departure_bitset(transformable_timetable const& ttt,
+                                  stop_id const s_id,
+                                  time const first_departure,
+                                  time const range) {
+  boost::dynamic_bitset<> dep_events(range);
+
+  for (auto const r_id : ttt.stations_[s_id].stop_routes_) {
+    auto const& route = ttt.routes_[r_id];
+
+    // - 1 since you cannot enter a route at the last stop
+    for (auto offset = 0; offset < route.route_stops_.size() - 1; ++offset) {
+      if (route.route_stops_[offset] != s_id) {
+        continue;
+      }
+
+      for (auto const& trip : route.trips_) {
+        if (!trip.lcons_[offset].in_allowed_) {
+          continue;
+        }
+        dep_events.set(trip.lcons_[offset].departure_ - first_departure);
+      }
+    }
+  }
+
+  return dep_events;
+}
+
+auto get_departure_events_from_bitsets(transformable_timetable const& ttt,
+                                       time const first_departure,
+                                       time const range) {
+  utl::scoped_timer dep_events_timer("Getting departure events from bitsets.");
+
+  utl::manual_timer manual("Manual bitset timer");
+  auto station_departure_events =
+      utl::iota(0, ttt.stations_.size()) | utl::transform([&](auto&& s_id) {
+        return get_station_departure_bitset(ttt, s_id, first_departure, range);
+      }) |
+      utl::vec();
+
+  auto departure_events = station_departure_events;
+  manual.stop_and_print();
+
+  for (stop_id s_id = 0; s_id < ttt.stations_.size(); ++s_id) {
+    for (auto const& f : ttt.stations_[s_id].footpaths_) {
+      departure_events[s_id] |= station_departure_events[f.to_] << f.duration_;
+    }
+  }
+  manual.stop_and_print();
+
+  std::vector<std::vector<time>> results(ttt.stations_.size());
+  for (std::size_t i = 0; i < departure_events.size(); ++i) {
+    auto const& bitset = departure_events[i];
+    results[i].reserve(bitset.count());
+
+    auto current = bitset.find_first();
+    while (current != boost::dynamic_bitset<>::npos) {
+      results[i].emplace_back(static_cast<time>(first_departure + current));
+      current = bitset.find_next(current);
+    }
+  }
+  manual.stop_and_print();
+
+  return results;
+}
+
 auto get_departure_events(transformable_timetable const& ttt) {
+  utl::scoped_timer dep_events_timer("Getting departure events.");
   auto departure_events = utl::iota(0, ttt.stations_.size()) |
                           utl::transform([&](auto&& s_id) {
                             return get_station_departure_events(ttt, s_id);
@@ -330,7 +400,72 @@ auto get_departure_events(transformable_timetable const& ttt) {
   return departure_events;
 }
 
+auto get_meta_departure_events_from_bitsets(transformable_timetable const& ttt,
+                                            time const first_departure,
+                                            time const range) {
+  utl::scoped_timer scoped("Getting meta departure events with bitsets");
+  utl::manual_timer manual("Manual meta departures bitset timer");
+
+  auto station_departure_events =
+      utl::iota(0, ttt.stations_.size()) | utl::transform([&](auto&& s_id) {
+        return get_station_departure_bitset(ttt, s_id, first_departure, range);
+      }) |
+      utl::vec();
+
+  auto departure_events = station_departure_events;
+  manual.stop_and_print();
+
+  for (auto const [s_id, station] : utl::enumerate(ttt.stations_)) {
+    // gather all departure events from stations reachable by foot
+    for (auto const& f : station.footpaths_) {
+
+      // if the station reachable by foot is also a meta station,
+      // we do not add it here. it will be added later.
+      // this is due to the fact that we do not want to subtract the
+      // footpath duration from the departure event time stamp.
+      if (station.has_equivalent(f.to_)) {
+        continue;
+      }
+
+      departure_events[s_id] |= station_departure_events[f.to_] << f.duration_;
+    }
+  }
+  manual.stop_and_print();
+
+  for (auto const [s_id, station] : utl::enumerate(ttt.stations_)) {
+    if (!departure_events[s_id].empty()) {
+      continue;
+    }
+
+    // gather all departure events from meta stations
+    for (auto const& meta_s_id : station.equivalent_) {
+      departure_events[s_id] |= departure_events[meta_s_id];
+    }
+
+    // meta station relation is transitive, we can set them up already
+    for (auto const& meta_s_id : station.equivalent_) {
+      departure_events[meta_s_id] = departure_events[s_id];
+    }
+  }
+  manual.stop_and_print();
+
+  std::vector<std::vector<time>> results(ttt.stations_.size());
+  for (std::size_t i = 0; i < departure_events.size(); ++i) {
+    auto const& bitset = departure_events[i];
+    results[i].reserve(bitset.count());
+
+    auto current = bitset.find_first();
+    while (current != boost::dynamic_bitset<>::npos) {
+      results[i].emplace_back(static_cast<time>(first_departure + current));
+      current = bitset.find_next(current);
+    }
+  }
+  manual.stop_and_print();
+
+  return results;
+}
 auto get_meta_departure_events(transformable_timetable const& ttt) {
+  utl::scoped_timer scoped("Getting meta departure events");
   std::vector<std::vector<time>> meta_departure_events(ttt.stations_.size());
 
   auto departure_events = utl::iota(0, ttt.stations_.size()) |
@@ -392,8 +527,11 @@ auto get_initialization_footpaths(transformable_timetable const& ttt) {
 }
 
 std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
-    transformable_timetable const& ttt) {
+    transformable_timetable const& ttt, time const first_departure_ever,
+    time const last_departure_ever) {
   auto meta_info = std::make_unique<raptor_meta_info>();
+
+  auto const departure_range = last_departure_ever - first_departure_ever;
 
   // generate initialization footpaths BEFORE removing empty stations
   meta_info->initialization_footpaths_ = get_initialization_footpaths(ttt);
@@ -419,7 +557,13 @@ std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
   }
 
   meta_info->departure_events_ = get_departure_events(ttt);
+  meta_info->departure_events_ = get_departure_events_from_bitsets(
+      ttt, first_departure_ever, departure_range);
+
   meta_info->departure_events_with_metas_ = get_meta_departure_events(ttt);
+  meta_info->departure_events_with_metas_ =
+      get_meta_departure_events_from_bitsets(ttt, first_departure_ever,
+                                             departure_range);
 
   // Loop over the routes
   for (auto const& r : ttt.routes_) {
@@ -456,7 +600,12 @@ get_raptor_timetable(schedule const& sched) {
   LOG(log::info) << "RAPTOR Stations: " << ttt.stations_.size();
   LOG(log::info) << "RAPTOR Routes: " << ttt.routes_.size();
 
-  auto meta_info = transformable_to_meta_info(ttt);
+  auto const first_departure_ever = unix_to_motistime(
+      sched.schedule_begin_, sched.first_event_schedule_time_);
+  auto const last_departure_ever =
+      unix_to_motistime(sched.schedule_begin_, sched.last_event_schedule_time_);
+  auto meta_info = transformable_to_meta_info(ttt, first_departure_ever,
+                                              last_departure_ever);
   auto tt = create_raptor_timetable(ttt);
 
   return {std::move(meta_info), std::move(tt)};
