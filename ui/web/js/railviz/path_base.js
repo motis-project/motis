@@ -67,7 +67,7 @@ RailViz.Path.Base = (function () {
         id: "gbfs-stations",
         type: "symbol",
         source: "gbfs-default",
-        minzoom: 14,
+        minzoom: 13,
         "source-layer": "station",
         layout: {
           "icon-image": "icon-bike",
@@ -75,7 +75,6 @@ RailViz.Path.Base = (function () {
           "text-anchor": "top",
           "text-offset": [0, 1],
           "text-font": ["Noto Sans Display Regular"],
-          "icon-size": ['interpolate', ['linear'], ['zoom'], 14, 0.7, 16, 1]
         },
       });
     });

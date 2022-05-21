@@ -8,6 +8,7 @@
 #include "utl/concat.h"
 #include "utl/enumerate.h"
 #include "utl/erase_duplicates.h"
+#include "utl/get_or_create.h"
 #include "utl/pipes.h"
 
 #include "geo/point_rtree.h"
@@ -31,7 +32,6 @@
 #include "motis/gbfs/station.h"
 #include "motis/gbfs/system_information.h"
 #include "motis/gbfs/system_status.h"
-#include "utl/get_or_create.h"
 
 namespace fbs = flatbuffers;
 namespace fs = boost::filesystem;
@@ -151,7 +151,7 @@ struct gbfs::impl {
     }
   }
 
-  void init(schedule const& sched) {
+  void init() {
     auto const t = scoped_timer{"GBFS init"};
     if (!config_.urls_.empty()) {
       fs::create_directories(data_dir_);
@@ -161,7 +161,7 @@ struct gbfs::impl {
 
     auto const lock = std::scoped_lock{mutex_};
     pt_stations_rtree_ =
-        geo::make_point_rtree(sched.stations_, [](auto const& s) {
+        geo::make_point_rtree(sched_.stations_, [](auto const& s) {
           return geo::latlng{s->lat(), s->lng()};
         });
     for (auto const& [tag, info] : status_) {
@@ -808,12 +808,20 @@ void gbfs::import(import_dispatcher& reg) {
 void gbfs::init(motis::module::registry& r) {
   impl_ = std::make_unique<impl>(get_data_directory() / "gbfs", config_,
                                  get_sched());
-  r.subscribe("/init", [&]() { impl_->init(get_sched()); });
   r.register_op("/gbfs/route",
                 [&](msg_ptr const& m) { return impl_->route(get_sched(), m); });
   r.register_op("/gbfs/info", [&](msg_ptr const&) { return impl_->info(); });
   r.register_op("/gbfs/tiles",
                 [&](msg_ptr const& m) { return impl_->tiles(m); });
+  r.subscribe("/init", [&]() {
+    shared_data_->register_timer(
+        "GBFS Update",
+        boost::posix_time::minutes{config_.update_interval_minutes_},
+        [&]() { impl_->init(); },
+        ctx::accesses_t{ctx::access_request{
+            to_res_id(::motis::module::global_res_id::SCHEDULE),
+            ctx::access_t::READ}});
+  });
 }
 
 }  // namespace motis::gbfs
