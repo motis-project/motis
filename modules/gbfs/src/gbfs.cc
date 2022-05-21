@@ -733,6 +733,8 @@ struct gbfs::impl {
           render_ctx_{tiles::make_render_ctx(db_handle_)},
           pack_handle_{path.c_str()} {}
 
+    ~tiles_database() = default;
+
     tiles_database(tiles_database&&) = delete;
     tiles_database(tiles_database const&) = delete;
 
