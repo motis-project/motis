@@ -51,13 +51,44 @@ RailViz.Path.Base = (function () {
       },
     });
 
+
+    map.loadImage(`${tilesEndpoint}img/bike_marker.png`, (error, image) => {
+      if (error) {
+        throw error;
+      }
+
+      map.addImage("icon-bike", image);
+      map.addSource("gbfs-default", {
+        type: "vector",
+        tiles: [`${tilesEndpoint}gbfs/tiles/default/{z}/{x}/{y}.mvt`],
+        maxzoom: 20,
+      });
+      map.addLayer({
+        id: "gbfs-stations",
+        type: "symbol",
+        source: "gbfs-default",
+        minzoom: 14,
+        "source-layer": "station",
+        layout: {
+          "icon-image": "icon-bike",
+          "text-field": ['get', 'name'],
+          "text-anchor": "top",
+          "text-offset": [0, 1],
+          "text-font": ["Noto Sans Display Regular"],
+          "icon-size": ['interpolate', ['linear'], ['zoom'], 14, 0.7, 16, 1]
+        },
+      });
+    });
+
     setEnabled(enabled);
   }
 
   function setEnabled(b) {
     if (map !== null) {
-      ["railviz-base-line", "railviz-base-stations"].forEach((l) => {
-        map.setLayoutProperty(l, "visibility", b ? "visible" : "none");
+      ["railviz-base-line", "railviz-base-stations", "gbfs-stations"].forEach((l) => {
+        if (map.getLayer(l) !== 'undefined') {
+          map.setLayoutProperty(l, "visibility", b ? "visible" : "none");
+        }
       });
     }
     enabled = b;
