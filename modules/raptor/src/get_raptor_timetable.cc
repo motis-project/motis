@@ -357,7 +357,7 @@ auto get_departure_events_from_bitsets(transformable_timetable const& ttt,
 
   for (stop_id s_id = 0; s_id < ttt.stations_.size(); ++s_id) {
     for (auto const& f : ttt.stations_[s_id].footpaths_) {
-      departure_events[s_id] |= station_departure_events[f.to_] << f.duration_;
+      departure_events[s_id] |= station_departure_events[f.to_] >> f.duration_;
     }
   }
   manual.stop_and_print();
@@ -380,16 +380,18 @@ auto get_departure_events_from_bitsets(transformable_timetable const& ttt,
 
 auto get_departure_events(transformable_timetable const& ttt) {
   utl::scoped_timer dep_events_timer("Getting departure events.");
-  auto departure_events = utl::iota(0, ttt.stations_.size()) |
-                          utl::transform([&](auto&& s_id) {
-                            return get_station_departure_events(ttt, s_id);
-                          }) |
-                          utl::vec();
+  auto const station_departure_events =
+      utl::iota(0, ttt.stations_.size()) | utl::transform([&](auto&& s_id) {
+        return get_station_departure_events(ttt, s_id);
+      }) |
+      utl::vec();
+
+  auto departure_events = station_departure_events;
 
   // gather all departure events from stations reachable by foot
   for (stop_id s_id = 0; s_id < ttt.stations_.size(); ++s_id) {
     for (auto const& f : ttt.stations_[s_id].footpaths_) {
-      for (auto const& dep_event : departure_events[f.to_]) {
+      for (auto const& dep_event : station_departure_events[f.to_]) {
         departure_events[s_id].emplace_back(dep_event - f.duration_);
       }
     }
@@ -412,7 +414,7 @@ auto get_meta_departure_events_from_bitsets(transformable_timetable const& ttt,
       }) |
       utl::vec();
 
-  auto departure_events = station_departure_events;
+  auto footpath_departure_events = station_departure_events;
   manual.stop_and_print();
 
   for (auto const [s_id, station] : utl::enumerate(ttt.stations_)) {
@@ -427,31 +429,36 @@ auto get_meta_departure_events_from_bitsets(transformable_timetable const& ttt,
         continue;
       }
 
-      departure_events[s_id] |= station_departure_events[f.to_] << f.duration_;
+      footpath_departure_events[s_id] |=
+          station_departure_events[f.to_] >> f.duration_;
     }
   }
   manual.stop_and_print();
 
+  std::vector<boost::dynamic_bitset<>> meta_departure_events(
+      ttt.stations_.size());
   for (auto const [s_id, station] : utl::enumerate(ttt.stations_)) {
-    if (!departure_events[s_id].empty()) {
+    if (!meta_departure_events[s_id].empty()) {
       continue;
     }
 
-    // gather all departure events from meta stations
+    meta_departure_events[s_id] = footpath_departure_events[s_id];
+
+    //     gather all departure events from meta stations
     for (auto const& meta_s_id : station.equivalent_) {
-      departure_events[s_id] |= departure_events[meta_s_id];
+      meta_departure_events[s_id] |= footpath_departure_events[meta_s_id];
     }
 
-    // meta station relation is transitive, we can set them up already
+    //     meta station relation is transitive, we can set them up already
     for (auto const& meta_s_id : station.equivalent_) {
-      departure_events[meta_s_id] = departure_events[s_id];
+      meta_departure_events[meta_s_id] = meta_departure_events[s_id];
     }
   }
   manual.stop_and_print();
 
   std::vector<std::vector<time>> results(ttt.stations_.size());
-  for (std::size_t i = 0; i < departure_events.size(); ++i) {
-    auto const& bitset = departure_events[i];
+  for (std::size_t i = 0; i < meta_departure_events.size(); ++i) {
+    auto const& bitset = meta_departure_events[i];
     results[i].reserve(bitset.count());
 
     auto current = bitset.find_first();
@@ -466,13 +473,14 @@ auto get_meta_departure_events_from_bitsets(transformable_timetable const& ttt,
 }
 auto get_meta_departure_events(transformable_timetable const& ttt) {
   utl::scoped_timer scoped("Getting meta departure events");
-  std::vector<std::vector<time>> meta_departure_events(ttt.stations_.size());
 
-  auto departure_events = utl::iota(0, ttt.stations_.size()) |
-                          utl::transform([&](auto&& s_id) {
-                            return get_station_departure_events(ttt, s_id);
-                          }) |
-                          utl::vec();
+  auto const station_departure_events =
+      utl::iota(0, ttt.stations_.size()) | utl::transform([&](auto&& s_id) {
+        return get_station_departure_events(ttt, s_id);
+      }) |
+      utl::vec();
+
+  auto footpath_departure_events = station_departure_events;
 
   for (auto const [s_id, station] : utl::enumerate(ttt.stations_)) {
     // gather all departure events from stations reachable by foot
@@ -486,20 +494,22 @@ auto get_meta_departure_events(transformable_timetable const& ttt) {
         continue;
       }
 
-      for (auto const& dep_event : departure_events[f.to_]) {
-        departure_events[s_id].emplace_back(dep_event - f.duration_);
+      for (auto const& dep_event : station_departure_events[f.to_]) {
+        footpath_departure_events[s_id].emplace_back(dep_event - f.duration_);
       }
     }
   }
 
+  std::vector<std::vector<time>> meta_departure_events(ttt.stations_.size());
   for (auto const [s_id, station] : utl::enumerate(ttt.stations_)) {
     if (!meta_departure_events[s_id].empty()) {
       continue;
     }
-
+    //
     // gather all departure events from meta stations
     for (auto const& meta_s_id : station.equivalent_) {
-      utl::concat(meta_departure_events[s_id], departure_events[meta_s_id]);
+      utl::concat(meta_departure_events[s_id],
+                  footpath_departure_events[meta_s_id]);
     }
 
     utl::erase_duplicates(meta_departure_events[s_id]);
@@ -526,12 +536,22 @@ auto get_initialization_footpaths(transformable_timetable const& ttt) {
   return init_footpaths;
 }
 
+time get_max_footpath_duration(transformable_timetable const& ttt) {
+  time max_footpath_duration = 0;
+
+  for (auto const& s : ttt.stations_) {
+    for (auto const& f : s.footpaths_) {
+      max_footpath_duration = std::max(max_footpath_duration, f.duration_);
+    }
+  }
+
+  return max_footpath_duration;
+}
+
 std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
     transformable_timetable const& ttt, time const first_departure_ever,
     time const last_departure_ever) {
   auto meta_info = std::make_unique<raptor_meta_info>();
-
-  auto const departure_range = last_departure_ever - first_departure_ever;
 
   // generate initialization footpaths BEFORE removing empty stations
   meta_info->initialization_footpaths_ = get_initialization_footpaths(ttt);
@@ -556,14 +576,17 @@ std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
     meta_info->equivalent_stations_[s_id] = s.equivalent_;
   }
 
+  auto const max_footpath_duration = get_max_footpath_duration(ttt);
+  auto const offset = first_departure_ever - max_footpath_duration;
+  auto const departure_range = last_departure_ever - offset;
+
   meta_info->departure_events_ = get_departure_events(ttt);
-  meta_info->departure_events_ = get_departure_events_from_bitsets(
-      ttt, first_departure_ever, departure_range);
+  meta_info->departure_events_ =
+      get_departure_events_from_bitsets(ttt, offset, departure_range);
 
   meta_info->departure_events_with_metas_ = get_meta_departure_events(ttt);
   meta_info->departure_events_with_metas_ =
-      get_meta_departure_events_from_bitsets(ttt, first_departure_ever,
-                                             departure_range);
+      get_meta_departure_events_from_bitsets(ttt, offset, departure_range);
 
   // Loop over the routes
   for (auto const& r : ttt.routes_) {
