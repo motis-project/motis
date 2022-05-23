@@ -94,9 +94,13 @@ inline std::set<trip const*> route_trips(schedule const& sched,
   return trips;
 }
 
-inline void update_trips(schedule& sched, ev_key const& k,
-                         std::map<trip::route_edge, trip::route_edge>& edges) {
+inline std::map<trip const*, ptr<mcd::vector<trip::route_edge> const>>
+update_trips(schedule& sched, ev_key const& k,
+             std::map<trip::route_edge, trip::route_edge>& edges) {
+  auto old_trip_edges =
+      std::map<trip const*, ptr<mcd::vector<trip::route_edge> const>>{};
   for (auto const& t : route_trips(sched, k)) {
+    old_trip_edges[t] = t->edges_;
     sched.trip_edges_.emplace_back(
         mcd::make_unique<mcd::vector<trip::route_edge>>(
             mcd::to_vec(*t->edges_, [&](trip::route_edge const& e) {
@@ -105,6 +109,7 @@ inline void update_trips(schedule& sched, ev_key const& k,
     const_cast<trip*>(t)->edges_ = sched.trip_edges_.back().get();  // NOLINT
     const_cast<trip*>(t)->lcon_idx_ = 0;  // NOLINT
   }
+  return old_trip_edges;
 }
 
 inline void build_change_edges(
@@ -207,6 +212,39 @@ inline void update_delays(
   }
 }
 
+inline void update_event_uuids(
+    schedule& sched, ev_key const& old_first_dep,
+    std::map<trip::route_edge, trip::route_edge> const& edges,
+    std::map<trip const*, ptr<mcd::vector<trip::route_edge> const>> const&
+        old_trip_edges) {
+  auto const update_event_mapping = [&](trip const* trp, ev_key const& orig_k,
+                                        ev_key const& new_k) {
+    if (auto const e =
+            sched.event_to_uuid_.find(mcd::pair{ptr<trip>{trp}, orig_k});
+        e != end(sched.event_to_uuid_)) {
+      auto const uuid = e->second;
+      auto const trip_and_new_ev_key = mcd::pair{ptr<trip>{trp}, new_k};
+      sched.event_to_uuid_[trip_and_new_ev_key] = uuid;
+      sched.uuid_to_event_[uuid] = trip_and_new_ev_key;
+    }
+  };
+
+  auto const lcon_idx = old_first_dep.lcon_idx_;
+  for (auto const& [trp, old_edges] : old_trip_edges) {
+    for (auto const& old_edge : *old_edges) {
+      auto const& new_edge = edges.at(old_edge);
+
+      auto const orig_dep = ev_key{old_edge, lcon_idx, event_type::DEP};
+      auto const new_dep = ev_key{new_edge, 0, event_type::DEP};
+      auto const orig_arr = ev_key{old_edge, lcon_idx, event_type::ARR};
+      auto const new_arr = ev_key{new_edge, 0, event_type::ARR};
+
+      update_event_mapping(trp, orig_dep, new_dep);
+      update_event_mapping(trp, orig_arr, new_arr);
+    }
+  }
+}
+
 inline void seperate_trip(schedule& sched, ev_key const& k) {
   auto const in_out_allowed = get_route_in_out_allowed(k);
   auto const station_nodes = route_station_nodes(k);
@@ -219,11 +257,12 @@ inline void seperate_trip(schedule& sched, ev_key const& k) {
                std::pair<light_connection const*, light_connection const*>>{};
 
   copy_trip_route(sched, k, nodes, edges, lcons);
-  update_trips(sched, k, edges);
+  auto const old_trip_edges = update_trips(sched, k, edges);
   build_change_edges(sched, in_out_allowed, nodes, lcons, incoming);
   add_outgoing_edges_from_new_route(nodes, incoming);
   patch_incoming_edges(incoming);
   update_delays(k.lcon_idx_, edges, sched);
+  update_event_uuids(sched, k, edges, old_trip_edges);
 }
 
 inline void seperate_trip(schedule& sched, trip const* trp) {
