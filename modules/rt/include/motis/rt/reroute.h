@@ -5,6 +5,7 @@
 #include "motis/core/schedule/build_platform_node.h"
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/schedule/validate_graph.h"
+#include "motis/core/access/uuids.h"
 #include "motis/core/conv/event_type_conv.h"
 
 #include "motis/rt/build_route_node.h"
@@ -315,10 +316,10 @@ inline void update_delay_infos_and_event_uuids(
       sched.graph_to_delay_info_[new_ev] = ev.di_;
     }
     if (ev.k_) {
-      if (auto const it =
-              sched.event_to_uuid_.find(mcd::pair{ptr<trip>{trp}, ev.k_});
-          it != end(sched.event_to_uuid_)) {
-        auto const uuid = it->second;
+      if (auto const maybe_uuid =
+              motis::access::get_event_uuid(sched, trp, ev.k_);
+          maybe_uuid.has_value()) {
+        auto const uuid = maybe_uuid.value();
         auto const trip_and_new_ev_key = mcd::pair{ptr<trip>{trp}, new_ev};
         sched.event_to_uuid_[trip_and_new_ev_key] = uuid;
         sched.uuid_to_event_[uuid] = trip_and_new_ev_key;

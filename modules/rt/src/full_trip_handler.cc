@@ -23,6 +23,7 @@
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/trip_iterator.h"
+#include "motis/core/access/uuids.h"
 #include "motis/core/conv/trip_conv.h"
 
 #include "motis/rt/build_route_node.h"
@@ -347,13 +348,8 @@ private:
   }
 
   boost::uuids::uuid get_event_uuid(trip const* trp, ev_key const& evk) const {
-    if (auto const e =
-            sched_.event_to_uuid_.find(mcd::pair{ptr<trip>{trp}, evk});
-        e != end(sched_.event_to_uuid_)) {
-      return e->second;
-    } else {
-      return boost::uuids::nil_uuid();
-    }
+    return motis::access::get_event_uuid(sched_, trp, evk)
+        .value_or(boost::uuids::nil_uuid());
   }
 
   static bool is_rule_service(trip const* trp) {

@@ -27,6 +27,7 @@
 #include "motis/core/access/time_access.h"
 #include "motis/core/access/trip_access.h"
 #include "motis/core/access/trip_iterator.h"
+#include "motis/core/access/uuids.h"
 #include "motis/core/conv/trip_conv.h"
 
 using namespace flatbuffers;
@@ -149,10 +150,9 @@ struct rib_ctx {
 
   Offset<String> event_key(trip const* trp, ev_key const ev) {
     return utl::get_or_create(event_keys_, mcd::pair{trp, ev}, [&]() {
-      if (auto const e =
-              sched_.event_to_uuid_.find(mcd::pair{ptr<trip>{trp}, ev});
-          e != end(sched_.event_to_uuid_)) {
-        return uuid_to_string(e->second);
+      if (auto const uuid = access::get_event_uuid(sched_, trp, ev);
+          uuid.has_value()) {
+        return uuid_to_string(uuid.value());
       } else {
         return rand_uuid();
       }

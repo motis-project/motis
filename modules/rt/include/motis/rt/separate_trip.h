@@ -8,6 +8,7 @@
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/access/bfs.h"
 #include "motis/core/access/service_access.h"
+#include "motis/core/access/uuids.h"
 
 #include "motis/rt/in_out_allowed.h"
 #include "motis/rt/incoming_edges.h"
@@ -219,10 +220,10 @@ inline void update_event_uuids(
         old_trip_edges) {
   auto const update_event_mapping = [&](trip const* trp, ev_key const& orig_k,
                                         ev_key const& new_k) {
-    if (auto const it =
-            sched.event_to_uuid_.find(mcd::pair{ptr<trip>{trp}, orig_k});
-        it != end(sched.event_to_uuid_)) {
-      auto const uuid = it->second;
+    if (auto const maybe_uuid =
+            motis::access::get_event_uuid(sched, trp, orig_k);
+        maybe_uuid.has_value()) {
+      auto const uuid = maybe_uuid.value();
       auto const trip_and_new_ev_key = mcd::pair{ptr<trip>{trp}, new_k};
       sched.event_to_uuid_[trip_and_new_ev_key] = uuid;
       sched.uuid_to_event_[uuid] = trip_and_new_ev_key;
