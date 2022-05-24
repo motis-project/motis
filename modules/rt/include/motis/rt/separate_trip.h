@@ -245,7 +245,7 @@ inline void update_event_uuids(
   }
 }
 
-inline void seperate_trip(schedule& sched, ev_key const& k) {
+inline void separate_trip(schedule& sched, ev_key const& k) {
   auto const in_out_allowed = get_route_in_out_allowed(k);
   auto const station_nodes = route_station_nodes(k);
   std::vector<incoming_edge_patch> incoming;
@@ -265,10 +265,10 @@ inline void seperate_trip(schedule& sched, ev_key const& k) {
   update_event_uuids(sched, k, edges, old_trip_edges);
 }
 
-inline void seperate_trip(schedule& sched, trip const* trp) {
+inline void separate_trip(schedule& sched, trip const* trp) {
   auto const first_dep =
       ev_key{trp->edges_->front().get_edge(), trp->lcon_idx_, event_type::DEP};
-  seperate_trip(sched, first_dep);
+  separate_trip(sched, first_dep);
 }
 
 }  // namespace motis::rt
