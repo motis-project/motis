@@ -23,7 +23,8 @@ timezone_name_idx tz_cache::lookup_name(std::string_view timezone_name) {
     prev_name_ = timezone_name;
     return prev_name_idx_ =
                utl::get_or_create(timezone_name_idx_, timezone_name, [&]() {
-                 return static_cast<uint8_t>(timezone_name_idx_.size());
+                 return static_cast<timezone_name_idx>(
+                     timezone_name_idx_.size());
                });
   }
 }
