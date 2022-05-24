@@ -219,10 +219,10 @@ inline void update_event_uuids(
         old_trip_edges) {
   auto const update_event_mapping = [&](trip const* trp, ev_key const& orig_k,
                                         ev_key const& new_k) {
-    if (auto const e =
+    if (auto const it =
             sched.event_to_uuid_.find(mcd::pair{ptr<trip>{trp}, orig_k});
-        e != end(sched.event_to_uuid_)) {
-      auto const uuid = e->second;
+        it != end(sched.event_to_uuid_)) {
+      auto const uuid = it->second;
       auto const trip_and_new_ev_key = mcd::pair{ptr<trip>{trp}, new_k};
       sched.event_to_uuid_[trip_and_new_ev_key] = uuid;
       sched.uuid_to_event_[uuid] = trip_and_new_ev_key;
