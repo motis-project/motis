@@ -2,7 +2,6 @@ include "address/AddressRequest.fbs";
 include "address/AddressResponse.fbs";
 include "gbfs/GBFSRoutingRequest.fbs";
 include "gbfs/GBFSRoutingResponse.fbs";
-include "gbfs/GBFSGeoJSONResponse.fbs";
 include "gbfs/GBFSProvidersResponse.fbs";
 include "guesser/StationGuesserRequest.fbs";
 include "guesser/StationGuesserResponse.fbs";
@@ -174,7 +173,6 @@ union MsgContent {
   motis.address.AddressResponse                                           = 017,
   motis.gbfs.GBFSRoutingRequest                                           = 018,
   motis.gbfs.GBFSRoutingResponse                                          = 019,
-  motis.gbfs.GBFSGeoJSONResponse                                          = 020,
   motis.guesser.StationGuesserRequest                                     = 023,
   motis.guesser.StationGuesserResponse                                    = 024,
   motis.intermodal.IntermodalRoutingRequest                               = 025,

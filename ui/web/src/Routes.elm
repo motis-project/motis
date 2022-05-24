@@ -108,11 +108,16 @@ toUrl route =
 
         RailVizPermalink lat lng zoom bearing pitch date ->
             "#/railviz/"
-                ++ toString lat ++ "/"
-                ++ toString lng ++ "/"
-                ++ toString zoom ++ "/"
-                ++ toString bearing ++ "/"
-                ++ toString pitch ++ "/"
+                ++ toString lat
+                ++ "/"
+                ++ toString lng
+                ++ "/"
+                ++ toString zoom
+                ++ "/"
+                ++ toString bearing
+                ++ "/"
+                ++ toString pitch
+                ++ "/"
                 ++ toString (unixTime date)
 
 
