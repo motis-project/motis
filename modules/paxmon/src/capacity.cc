@@ -21,6 +21,7 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/core/access/station_access.h"
+#include "motis/core/access/uuids.h"
 
 #include "motis/paxmon/util/get_station_idx.h"
 
@@ -240,8 +241,77 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
   return {};
 }
 
+std::optional<std::uint16_t> get_vehicle_capacity(capacity_maps const& caps,
+                                                  std::uint64_t const uic) {
+  if (auto const it = caps.vehicle_capacity_map_.find(uic);
+      it != end(caps.vehicle_capacity_map_)) {
+    return {it->second.limit()};
+  } else {
+    return {};
+  }
+}
+
+std::uint16_t get_vehicles_capacity(capacity_maps const& caps,
+                                    vehicle_order const& vo) {
+  std::uint16_t cap = 0;
+  // TODO(pablo): handle missing vehicle info
+  for (auto const& uic : vo.uics_) {
+    cap += get_vehicle_capacity(caps, uic).value_or(0);
+  }
+  return cap;
+}
+
+std::optional<std::pair<std::uint16_t, capacity_source>> get_section_capacity(
+    schedule const& sched, capacity_maps const& caps, trip const* trp,
+    ev_key const& ev_key_from, ev_key const& ev_key_to) {
+  if (trp->uuid_.is_nil()) {
+    return {};
+  }
+  if (auto const vo_it = caps.trip_vehicle_map_.find(trp->uuid_);
+      vo_it != end(caps.trip_vehicle_map_)) {
+    auto const& vo = vo_it->second;
+    // try to match by event uuid
+    auto const maybe_dep_uuid =
+        motis::access::get_event_uuid(sched, trp, ev_key_from);
+    if (maybe_dep_uuid.has_value()) {
+      auto const dep_uuid = maybe_dep_uuid.value();
+      if (auto const sec_vo =
+              std::find_if(begin(vo.sections_), end(vo.sections_),
+                           [&](auto const& sec_vo) {
+                             return sec_vo.departure_uuid_ == dep_uuid;
+                           });
+          sec_vo != end(vo.sections_)) {
+        return {{get_vehicles_capacity(caps, sec_vo->vehicles_),
+                 capacity_source::TRIP_EXACT}};
+      }
+    }
+    // departure eva fallback
+    auto const dep_eva =
+        sched.stations_.at(ev_key_from.get_station_idx())->eva_nr_;
+    if (auto const sec_vo = std::find_if(begin(vo.sections_), end(vo.sections_),
+                                         [&](auto const& sec_vo) {
+                                           return sec_vo.departure_eva_ ==
+                                                  dep_eva;
+                                         });
+        sec_vo != end(vo.sections_)) {
+      return {{get_vehicles_capacity(caps, sec_vo->vehicles_),
+               capacity_source::TRIP_EXACT}};
+    }
+    // TODO(pablo): station range fallback
+  }
+  return {};
+}
+
+inline capacity_source get_worst_source(capacity_source const a,
+                                        capacity_source const b) {
+  return static_cast<capacity_source>(
+      std::max(static_cast<std::underlying_type_t<capacity_source>>(a),
+               static_cast<std::underlying_type_t<capacity_source>>(b)));
+}
+
 std::pair<std::uint16_t, capacity_source> get_capacity(
     schedule const& sched, light_connection const& lc,
+    ev_key const& ev_key_from, ev_key const& ev_key_to,
     capacity_maps const& caps) {
   std::uint16_t capacity = 0;
   auto worst_source = capacity_source::TRIP_EXACT;
@@ -250,17 +320,21 @@ std::pair<std::uint16_t, capacity_source> get_capacity(
   for (auto const& trp : *sched.merged_trips_.at(lc.trips_)) {
     utl::verify(ci != nullptr, "get_capacity: missing connection_info");
 
-    auto const trip_capacity = get_trip_capacity(sched, caps.trip_capacity_map_,
-                                                 caps.category_capacity_map_,
-                                                 trp, ci, lc.full_con_->clasz_);
-    if (trip_capacity.has_value()) {
-      capacity += trip_capacity->first;
-      worst_source = static_cast<capacity_source>(std::max(
-          static_cast<std::underlying_type_t<capacity_source>>(worst_source),
-          static_cast<std::underlying_type_t<capacity_source>>(
-              trip_capacity->second)));
+    auto const section_capacity =
+        get_section_capacity(sched, caps, trp, ev_key_from, ev_key_to);
+    if (section_capacity.has_value()) {
+      capacity += section_capacity->first;
+      worst_source = get_worst_source(worst_source, section_capacity->second);
     } else {
-      return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
+      auto const trip_capacity = get_trip_capacity(
+          sched, caps.trip_capacity_map_, caps.category_capacity_map_, trp, ci,
+          lc.full_con_->clasz_);
+      if (trip_capacity.has_value()) {
+        capacity += trip_capacity->first;
+        worst_source = get_worst_source(worst_source, trip_capacity->second);
+      } else {
+        return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
+      }
     }
 
     ci = ci->merged_with_;

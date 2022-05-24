@@ -183,7 +183,10 @@ std::pair<std::uint16_t, capacity_source> guess_trip_capacity(
     schedule const& sched, capacity_maps const& caps, trip const* trp) {
   auto const sections = access::sections(trp);
   if (begin(sections) != end(sections)) {
-    return get_capacity(sched, (*begin(sections)).lcon(), caps);
+    auto const first_section = *begin(sections);
+    return get_capacity(sched, first_section.lcon(),
+                        first_section.ev_key_from(), first_section.ev_key_to(),
+                        caps);
   } else {
     return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
   }
@@ -256,6 +259,7 @@ void apply_reroute(universe& uv, capacity_maps const& caps,
                    std::vector<trip_ev_key> const& old_route,
                    std::vector<trip_ev_key> const& new_route,
                    std::vector<edge_index>& updated_interchange_edges) {
+  // TODO(pablo): capacity for each section
   auto const encoded_capacity =
       encode_capacity(guess_trip_capacity(sched, caps, trp));
   auto const affected_passenger_groups = collect_passenger_groups(uv, tdi);

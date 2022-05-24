@@ -12,6 +12,7 @@
 #include "motis/hash_map.h"
 
 #include "motis/core/schedule/connection.h"
+#include "motis/core/schedule/event.h"
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/schedule/time.h"
 
@@ -61,6 +62,7 @@ std::size_t load_capacities(schedule const& sched,
 
 std::pair<std::uint16_t, capacity_source> get_capacity(
     schedule const& sched, light_connection const& lc,
+    ev_key const& ev_key_from, ev_key const& ev_key_to,
     capacity_maps const& caps);
 
 }  // namespace motis::paxmon

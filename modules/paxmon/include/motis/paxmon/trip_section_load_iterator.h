@@ -30,7 +30,9 @@ struct trip_section_with_load {
       capacity_ = edge_->capacity();
       capacity_source_ = edge_->get_capacity_source();
     } else {
-      auto const cap = get_capacity(sched, section_.lcon(), caps);
+      auto const cap =
+          get_capacity(sched, section_.lcon(), section_.ev_key_from(),
+                       section_.ev_key_to(), caps);
       capacity_ = cap.first;
       capacity_source_ = cap.second;
     }
