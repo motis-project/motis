@@ -115,10 +115,12 @@ void path_database_query::resolve_sequences_and_build_subqueries(
 
         for (auto j = 0ULL; j < segment->hints_rle()->Get(i + 1); ++j) {
           auto feature_id = segment->features()->Get(k);
+          auto const abs_feature_id =
+              static_cast<uint64_t>(std::abs(feature_id));
           auto* resolvable =
-              utl::get_or_create(subquery.map_, std::abs(feature_id), [&] {
+              utl::get_or_create(subquery.map_, abs_feature_id, [&] {
                 auto r = std::make_unique<resolvable_feature>();
-                r->feature_id_ = std::abs(feature_id);
+                r->feature_id_ = abs_feature_id;
                 return subquery.mem_.emplace_back(std::move(r)).get();
               });
 
