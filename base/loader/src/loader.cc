@@ -7,6 +7,10 @@
 #include <variant>
 #include <vector>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include "cista/serialization.h"
 #include "cista/targets/file.h"
 
@@ -46,9 +50,9 @@ std::vector<std::unique_ptr<format_parser>> parsers() {
 
 using dataset_mem_t = std::variant<cista::mmap, typed_flatbuffer<Schedule>>;
 
-schedule_ptr load_schedule(loader_options const& opt,
-                           cista::memory_holder& schedule_buf,
-                           std::string const& data_dir) {
+schedule_ptr load_schedule_impl(loader_options const& opt,
+                                cista::memory_holder& schedule_buf,
+                                std::string const& data_dir) {
   ml::scoped_timer time("loading schedule");
 
   // ensure there is an active progress tracker (e.g. for test cases)
@@ -158,6 +162,34 @@ schedule_ptr load_schedule(loader_options const& opt,
     write_graph(graph_path, *sched);
   }
   return sched;
+}
+
+#ifdef _WIN32
+bool load_schedule_checked(loader_options const& opt,
+                           cista::memory_holder& schedule_buf,
+                           std::string const& data_dir, schedule_ptr& ptr) {
+  __try {
+    [&]() { ptr = load_schedule_impl(opt, schedule_buf, data_dir); }();
+    return true;
+  } __except (GetExceptionCode() == EXCEPTION_IN_PAGE_ERROR
+                  ? EXCEPTION_EXECUTE_HANDLER
+                  : EXCEPTION_CONTINUE_SEARCH) {
+    return false;
+  }
+}
+#endif
+
+schedule_ptr load_schedule(loader_options const& opt,
+                           cista::memory_holder& schedule_buf,
+                           std::string const& data_dir) {
+#ifdef _WIN32
+  auto ptr = schedule_ptr{};
+  utl::verify(load_schedule_checked(opt, schedule_buf, data_dir, ptr),
+              "load_schedule: file access error: EXCEPTION_IN_PAGE_ERROR");
+  return ptr;
+#else
+  return load_schedule_impl(opt, schedule_buf, data_dir);
+#endif
 }
 
 schedule_ptr load_schedule(loader_options const& opt) {
