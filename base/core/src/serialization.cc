@@ -13,11 +13,10 @@ cista::hash_t type_hash(boost::uuids::uuid const& el, cista::hash_t const h,
 }
 
 template <typename Ctx>
-inline void serialize(Ctx& c, boost::uuids::uuid const*,
-                      cista::offset_t const) {}
+inline void serialize(Ctx&, boost::uuids::uuid const*, cista::offset_t const) {}
 
 template <typename Ctx>
-inline void deserialize(Ctx const& c, boost::uuids::uuid*) {}
+inline void deserialize(Ctx const&, boost::uuids::uuid*) {}
 
 }  // namespace cista
 
