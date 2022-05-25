@@ -1,5 +1,7 @@
 #include "motis/core/schedule/serialization.h"
 
+#include <tuple>
+
 #include "cista/serialization.h"
 
 #include "motis/core/common/dynamic_fws_multimap.h"
@@ -17,6 +19,11 @@ inline void serialize(Ctx&, boost::uuids::uuid const*, cista::offset_t const) {}
 
 template <typename Ctx>
 inline void deserialize(Ctx const&, boost::uuids::uuid*) {}
+
+template <>
+inline auto to_tuple(boost::uuids::uuid const& t) {
+  return std::tie(t.data);
+}
 
 }  // namespace cista
 
