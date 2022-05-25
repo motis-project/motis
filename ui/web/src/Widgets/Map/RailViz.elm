@@ -27,11 +27,10 @@ import Html.Events exposing (onClick)
 import List.Extra
 import Localization.Base exposing (..)
 import Maybe.Extra exposing (isJust)
-import Routes exposing (Route(RailVizPermalink), toUrl)
+import Routes exposing (Route(..), toUrl)
 import Task exposing (..)
 import Time exposing (Time)
 import Util.Api as Api exposing (ApiError)
-import Util.Core exposing ((=>))
 import Util.DateFormat exposing (formatDateTimeWithSeconds, formatTime)
 import Widgets.Helpers.ApiErrorUtil exposing (errorText)
 import Widgets.LoadingSpinner as LoadingSpinner
@@ -468,21 +467,21 @@ railVizTrainTooltip model train =
     div
         [ class "railviz-tooltip train visible"
         , style
-            [ yAnchor => (toString y ++ "px")
-            , "left" => (toString x ++ "px")
+            [ yAnchor , (toString y ++ "px")
+            , "left" , (toString x ++ "px")
             ]
         ]
         [ div [ class "transport-name" ] [ text trainName ]
         , div [ class "departure" ]
             [ span [ class "station" ] [ text train.departureStation ]
-            , div [ classList [ "time" => True, "no-delay-infos" => not hasDelayInfos ] ]
+            , div [ classList [ "time" , True, "no-delay-infos" , not hasDelayInfos ] ]
                 [ span [ class "schedule" ] [ text (formatTime schedDep) ]
                 , delayView train.hasDepartureDelayInfo depDelay
                 ]
             ]
         , div [ class "arrival" ]
             [ span [ class "station" ] [ text train.arrivalStation ]
-            , div [ classList [ "time" => True, "no-delay-infos" => not hasDelayInfos ] ]
+            , div [ classList [ "time" , True, "no-delay-infos" , not hasDelayInfos ] ]
                 [ span [ class "schedule" ] [ text (formatTime schedArr) ]
                 , delayView train.hasArrivalDelayInfo arrDelay
                 ]
@@ -558,8 +557,8 @@ railVizStationTooltip locale model stationName =
     div
         [ class "railviz-tooltip station visible"
         , style
-            [ yAnchor => (toString y ++ "px")
-            , "left" => (toString x ++ "px")
+            [ yAnchor , (toString y ++ "px")
+            , "left" , (toString x ++ "px")
             ]
         ]
         [ div [ class "station-name" ] [ text stationText ] ]
@@ -686,13 +685,13 @@ contextMenu locale model =
     in
     div
         [ classList
-            [ "railviz-contextmenu" => True
-            , "visible" => model.contextMenuVisible
-            , "hidden" => not model.contextMenuVisible
+            [ "railviz-contextmenu" , True
+            , "visible" , model.contextMenuVisible
+            , "hidden" , not model.contextMenuVisible
             ]
         , style
-            [ "top" => (toString y ++ "px")
-            , "left" => (toString x ++ "px")
+            [ "top" , (toString y ++ "px")
+            , "left" , (toString x ++ "px")
             ]
         ]
         [ div [ class "item", onClick MapContextMenuFromHere ]

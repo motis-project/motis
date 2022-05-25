@@ -13,13 +13,13 @@ decodeGBFSInfoResponse =
 
 decodeGBFSInfo : Decode.Decoder GBFSInfo
 decodeGBFSInfo =
-    decode GBFSInfo
+    Decode.succeed GBFSInfo
         |> required "providers" (list decodeGBFSProvider)
 
 
 decodeGBFSProvider : Decode.Decoder GBFSProvider
 decodeGBFSProvider =
-    decode GBFSProvider
+    Decode.succeed GBFSProvider
         |> required "name" string
         |> required "vehicle_type" string
         |> required "tag" string

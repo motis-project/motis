@@ -9,8 +9,8 @@ module Routes exposing
 import Data.Connection.Types exposing (TripId)
 import Date exposing (Date)
 import Http
-import UrlParser exposing ((</>), Parser, custom, int, map, oneOf, parseHash, s, string, top)
-import Util.Date exposing (unixTime)
+import Url.Parser exposing ((</>), Parser, custom, int, map, oneOf, parseHash, s, string, top)
+import Util.DateUtil exposing (unixTime)
 
 
 type Route

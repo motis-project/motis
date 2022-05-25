@@ -1,16 +1,12 @@
 module Widgets.Calendar exposing (Model, Msg(..), init, update, view)
 
 import Date exposing (Date, Day, day, dayOfWeek)
-import Date.Extra.Compare as Compare
-import Date.Extra.Core exposing (isoDayOfWeek, lastOfMonthDate, toFirstOfMonth)
-import Date.Extra.Duration as Duration
-import Date.Extra.Utils exposing (dayList)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
 import Html.Lazy exposing (..)
 import Task
-import Util.Date exposing (atNoon)
+import Util.DateUtil exposing (atNoon)
 import Util.DateFormat exposing (..)
 import Util.View exposing (onStopAll)
 import Widgets.Button as Button

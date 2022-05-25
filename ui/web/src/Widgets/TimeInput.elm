@@ -1,15 +1,12 @@
 module Widgets.TimeInput exposing
     ( Model
-    , Msg(InitDate)
+    , Msg(..)
     , init
     , update
     , view
     )
 
 import Date exposing (Date)
-import Date.Extra.Create exposing (dateFromFields)
-import Date.Extra.Duration as Duration
-import Date.Extra.Field exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (class, tabindex, value)
 import Html.Events exposing (onClick, onInput)
@@ -130,17 +127,17 @@ toDate h m s =
     dateFromFields 0 Date.Jan 0 h m s 0
 
 
-formatDate : Bool -> Date -> String
-formatDate withSeconds d =
+formatDate : Time.Zone -> Bool -> Time.Posix -> String
+formatDate zone withSeconds d =
     let
         h =
-            twoDigits (Date.hour d)
+            twoDigits (Time.toHour zone d)
 
         m =
-            twoDigits (Date.minute d)
+            twoDigits (Time.toMinute zone d)
 
         s =
-            twoDigits (Date.second d)
+            twoDigits (Time.toSecond zone d)
     in
     if withSeconds then
         h ++ ":" ++ m ++ ":" ++ s
@@ -151,7 +148,7 @@ formatDate withSeconds d =
 
 twoDigits : Int -> String
 twoDigits =
-    toString >> String.padLeft 2 '0'
+    String.fromInt >> String.padLeft 2 '0'
 
 
 

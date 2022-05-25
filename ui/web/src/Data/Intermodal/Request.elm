@@ -36,8 +36,7 @@ import Data.Routing.Types
         )
 import Date exposing (Date)
 import Json.Encode as Encode
-import Util.Core exposing ((=>))
-import Util.Date exposing (unixTime)
+import Util.DateUtil exposing (unixTime)
 
 
 type IntermodalLocation
@@ -266,25 +265,23 @@ encodeRequest request =
             encodeIntermodalDestination fixedDestination
     in
     Encode.object
-        [ "destination"
-            => Encode.object
-                [ "type" => Encode.string "Module"
-                , "target" => Encode.string "/intermodal"
-                ]
-        , "content_type" => Encode.string "IntermodalRoutingRequest"
-        , "content"
-            => Encode.object
-                [ "start_type" => startType
-                , "start" => start
-                , "start_modes"
-                    => Encode.list (List.map encodeMode request.startModes)
-                , "destination_type" => destinationType
-                , "destination" => destination
-                , "destination_modes"
-                    => Encode.list (List.map encodeMode request.destinationModes)
-                , "search_type" => encodeSearchType request.searchType
-                , "search_dir" => encodeSearchDirection request.searchDir
-                ]
+        [ ("destination"
+            , Encode.object
+                [ "type" , Encode.string "Module"
+                , "target" , Encode.string "/intermodal"
+                ])
+        , ("content_type" , Encode.string "IntermodalRoutingRequest")
+        , ("content"
+            , Encode.object
+                [ ("start_type" , startType)
+                , ("start" , start)
+                , ("start_modes" , Encode.list (List.map encodeMode request.startModes))
+                , ("destination_type" , destinationType)
+                , ("destination" , destination)
+                , ("destination_modes" , Encode.list (List.map encodeMode request.destinationModes))
+                , ("search_type" , encodeSearchType request.searchType)
+                , ("search_dir" , encodeSearchDirection request.searchDir)
+                ])
         ]
 
 
@@ -294,28 +291,22 @@ encodeIntermodalStart start =
         IntermodalPretripStart info ->
             ( Encode.string "IntermodalPretripStart"
             , Encode.object
-                [ "position" => encodePosition info.position
-                , "interval" => encodeInterval info.interval
-                , "min_connection_count"
-                    => Encode.int info.minConnectionCount
-                , "extend_interval_earlier"
-                    => Encode.bool info.extendIntervalEarlier
-                , "extend_interval_later"
-                    => Encode.bool info.extendIntervalLater
+                [ ("position" , encodePosition info.position)
+                , ("interval" , encodeInterval info.interval)
+                , ("min_connection_count" , Encode.int info.minConnectionCount)
+                , ("extend_interval_earlier", Encode.bool info.extendIntervalEarlier)
+                , ("extend_interval_later", Encode.bool info.extendIntervalLater)
                 ]
             )
 
         PretripStart info ->
             ( Encode.string "PretripStart"
             , Encode.object
-                [ "station" => encodeInputStation info.station
-                , "interval" => encodeInterval info.interval
-                , "min_connection_count"
-                    => Encode.int info.minConnectionCount
-                , "extend_interval_earlier"
-                    => Encode.bool info.extendIntervalEarlier
-                , "extend_interval_later"
-                    => Encode.bool info.extendIntervalLater
+                [ ("station" , encodeInputStation info.station)
+                , ("interval" , encodeInterval info.interval)
+                , ("min_connection_count", Encode.int info.minConnectionCount)
+                , ("extend_interval_earlier", Encode.bool info.extendIntervalEarlier)
+                , ("extend_interval_later", Encode.bool info.extendIntervalLater)
                 ]
             )
 
@@ -337,8 +328,8 @@ encodeIntermodalDestination start =
 encodeInterval : Interval -> Encode.Value
 encodeInterval interval =
     Encode.object
-        [ "begin" => Encode.int interval.begin
-        , "end" => Encode.int interval.end
+        [ ("begin" , Encode.int interval.begin)
+        , ("end" , Encode.int interval.end)
         ]
 
 
@@ -347,51 +338,51 @@ encodeMode mode =
     case mode of
         Foot info ->
             Encode.object
-                [ "mode_type" => Encode.string "Foot"
-                , "mode"
-                    => Encode.object
-                        [ "max_duration" => Encode.int info.maxDuration ]
+                [ ("mode_type" , Encode.string "Foot")
+                , ("mode"
+                    , Encode.object
+                        [ ("max_duration" , Encode.int info.maxDuration) ])
                 ]
 
         Bike info ->
             Encode.object
-                [ "mode_type" => Encode.string "Bike"
-                , "mode"
-                    => Encode.object
-                        [ "max_duration" => Encode.int info.maxDuration ]
+                [ ("mode_type" , Encode.string "Bike")
+                , ("mode"
+                    , Encode.object
+                        [ ("max_duration" , Encode.int info.maxDuration) ])
                 ]
 
         GBFS info ->
             Encode.object
-                [ "mode_type" => Encode.string "GBFS"
-                , "mode"
-                    => Encode.object
-                        [ "max_walk_duration" => Encode.int info.maxWalkDuration
-                        , "max_vehicle_duration" => Encode.int info.maxVehicleDuration
-                        , "provider" => Encode.string info.provider
-                        ]
+                [ ("mode_type" , Encode.string "GBFS")
+                , ("mode"
+                    , Encode.object
+                        [ ("max_walk_duration" , Encode.int info.maxWalkDuration)
+                        , ("max_vehicle_duration" , Encode.int info.maxVehicleDuration)
+                        , ("provider" , Encode.string info.provider)
+                        ])
                 ]
 
         Car info ->
             Encode.object
-                [ "mode_type" => Encode.string "Car"
-                , "mode" => Encode.object [ "max_duration" => Encode.int info.maxDuration ]
+                [ ("mode_type" , Encode.string "Car")
+                ,( "mode" , Encode.object [ "max_duration" , Encode.int info.maxDuration ])
                 ]
 
         FootPPR info ->
             Encode.object
-                [ "mode_type" => Encode.string "FootPPR"
-                , "mode"
-                    => Encode.object
-                        [ "search_options" => encodeSearchOptions info.searchOptions ]
+                [ ("mode_type" , Encode.string "FootPPR")
+                , ("mode"
+                    , Encode.object
+                        [ ("search_options" , encodeSearchOptions info.searchOptions) ])
                 ]
 
         CarParking info ->
             Encode.object
-                [ "mode_type" => Encode.string "CarParking"
-                , "mode"
-                    => Encode.object
-                        [ "max_car_duration" => Encode.int info.maxCarDuration
-                        , "ppr_search_options" => encodeSearchOptions info.pprSearchOptions
-                        ]
+                [ ("mode_type" , Encode.string "CarParking")
+                , ("mode"
+                    , Encode.object
+                        [ ("max_car_duration" , Encode.int info.maxCarDuration)
+                        , ("ppr_search_options" , encodeSearchOptions info.pprSearchOptions)
+                        ])
                 ]

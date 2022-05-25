@@ -26,13 +26,13 @@ decodeTripToConnectionResponse =
 
 decodeLookupStationEventsResponse : Decoder LookupStationEventsResponse
 decodeLookupStationEventsResponse =
-    decode LookupStationEventsResponse
+    Decode.succeed LookupStationEventsResponse
         |> requiredAt [ "content", "events" ] (list decodeStationEvent)
 
 
 decodeStationEvent : Decoder StationEvent
 decodeStationEvent =
-    decode StationEvent
+    Decode.succeed StationEvent
         |> required "trip_id" (list decodeTripId)
         |> optional "type" decodeEventType DEP
         |> optional "train_nr" int 0

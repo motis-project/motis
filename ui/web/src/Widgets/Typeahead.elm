@@ -37,8 +37,6 @@ import Maybe.Extra
 import String
 import Task
 import Util.Api as Api exposing (ApiError(..))
-import Util.Core exposing ((=>))
-import Util.List exposing ((!!), last)
 import Util.View exposing (onStopAll)
 import Widgets.Input as Input
 
@@ -173,7 +171,7 @@ update msg model =
             { model
                 | visible = False
                 , input = getEntryName model model.hoverIndex
-                , selectedSuggestion = model.suggestions !! model.hoverIndex
+                , selectedSuggestion = model.suggestions |> elementAt model.hoverIndex
             }
                 ! [ Debounce.debounceCmd debounceCfg RequestSuggestions
                   , Task.perform identity (Task.succeed ItemSelected)
@@ -184,7 +182,7 @@ update msg model =
                 | visible = False
                 , hoverIndex = 0
                 , input = getEntryName model i
-                , selectedSuggestion = model.suggestions !! i
+                , selectedSuggestion = model.suggestions |> elementAt i
             }
                 ! [ Debounce.debounceCmd debounceCfg RequestSuggestions
                   , Task.perform identity (Task.succeed ItemSelected)
@@ -264,7 +262,7 @@ updateSuggestions model =
 getEntryName : Model -> Int -> String
 getEntryName { suggestions } idx =
     suggestions
-        !! idx
+        |> elementAt idx
         |> Maybe.map getSuggestionName
         |> Maybe.withDefault ""
 
@@ -601,20 +599,20 @@ encodeSuggestion suggestion =
     case suggestion of
         StationSuggestion station ->
             Encode.object
-                [ "type" => Encode.string "Station"
-                , "station" => encodeStation station
+                [ "type" , Encode.string "Station"
+                , "station" , encodeStation station
                 ]
 
         AddressSuggestion address ->
             Encode.object
-                [ "type" => Encode.string "Address"
-                , "address" => encodeAddress address
+                [ "type" , Encode.string "Address"
+                , "address" , encodeAddress address
                 ]
 
         PositionSuggestion pos ->
             Encode.object
-                [ "type" => Encode.string "Position"
-                , "position" => encodePosition pos
+                [ "type" , Encode.string "Position"
+                , "position" , encodePosition pos
                 ]
 
 
@@ -625,15 +623,15 @@ decodeSuggestion =
         suggestion type_ =
             case type_ of
                 "Station" ->
-                    decode StationSuggestion
+                    Decode.succeed StationSuggestion
                         |> JDP.required "station" decodeStation
 
                 "Address" ->
-                    decode AddressSuggestion
+                    Decode.succeed AddressSuggestion
                         |> JDP.required "address" decodeAddress
 
                 "Position" ->
-                    decode PositionSuggestion
+                    Decode.succeed PositionSuggestion
                         |> JDP.required "position" decodePosition
 
                 _ ->

@@ -4,9 +4,10 @@
   "description": "npm install -g elm@0.18.0",
   "main": "elm.js",
   "dependencies": {
-    "elm": "^0.18.0"
+    "elm": "^0.19.1-5",
+    "elm-format": "^0.8.5",
+    "justinmimbs/date": "^4.0.1"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

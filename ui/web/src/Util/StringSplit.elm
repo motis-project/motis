@@ -13,8 +13,8 @@ nthToken pos splitToken str =
 intNthToken : Int -> String -> String -> Maybe Int
 intNthToken pos splitToken str =
     case nthToken pos splitToken str of
-        Just str ->
-            String.toInt str |> Result.toMaybe
+        Just x ->
+            String.toInt x
 
         Nothing ->
             Nothing

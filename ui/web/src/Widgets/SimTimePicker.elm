@@ -1,15 +1,6 @@
 module Widgets.SimTimePicker exposing
     ( Model
-    ,  Msg
-        ( DisableSimMode
-        , Hide
-        , SetLocale
-        , SetSimulationTime
-        , Show
-        , Toggle
-        , UpdateScheduleInfo
-        )
-
+    ,  Msg(..)
     , getSelectedSimTime
     , init
     , update
@@ -25,8 +16,7 @@ import Html.Events exposing (onClick)
 import Localization.Base exposing (..)
 import Task
 import Time exposing (Time)
-import Util.Core exposing ((=>))
-import Util.Date exposing (combineDateTime)
+import Util.DateUtil exposing (combineDateTime)
 import Widgets.Calendar as Calendar
 import Widgets.TimeInput as TimeInput
 
@@ -202,8 +192,8 @@ view : Localization -> Model -> Html Msg
 view locale model =
     div
         [ classList
-            [ "sim-time-picker-overlay" => True
-            , "hidden" => not model.visible
+            [ "sim-time-picker-overlay" , True
+            , "hidden" , not model.visible
             ]
         ]
         [ div [ class "title" ]
@@ -219,8 +209,8 @@ view locale model =
             ]
         , div
             [ classList
-                [ "date" => True
-                , "disabled" => not model.simModeActive
+                [ "date" , True
+                , "disabled" , not model.simModeActive
                 ]
             ]
             [ Html.map DateUpdate <|
@@ -228,8 +218,8 @@ view locale model =
             ]
         , div
             [ classList
-                [ "time" => True
-                , "disabled" => not model.simModeActive
+                [ "time" , True
+                , "disabled" , not model.simModeActive
                 ]
             ]
             [ Html.map TimeUpdate <|

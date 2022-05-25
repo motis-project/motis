@@ -29,7 +29,6 @@ import Data.Routing.Decode exposing (decodeRoutingResponse)
 import Data.Routing.Types exposing (Interval, RoutingResponse, SearchDirection(..))
 import Data.ScheduleInfo.Types as ScheduleInfo exposing (ScheduleInfo)
 import Date exposing (Date)
-import Date.Extra.Duration as Duration exposing (Duration(..))
 import Html exposing (Html, a, div, i, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onMouseEnter, onMouseLeave)
@@ -39,10 +38,8 @@ import List.Extra exposing (updateAt)
 import Localization.Base exposing (..)
 import Maybe.Extra exposing (isJust)
 import Util.Api as Api exposing (ApiError)
-import Util.Core exposing ((=>))
-import Util.Date exposing (unixTime)
+import Util.DateUtil exposing (unixTime)
 import Util.DateFormat exposing (..)
-import Util.List exposing ((!!))
 import Widgets.DateHeaders exposing (..)
 import Widgets.Helpers.ApiErrorUtil exposing (errorText)
 import Widgets.Helpers.ConnectionUtil exposing (..)
@@ -126,7 +123,7 @@ connectionIdxToListIdx model connectionIdx =
 getJourney : Model -> Int -> Maybe Journey
 getJourney model connectionIdx =
     model.journeys
-        !! connectionIdxToListIdx model connectionIdx
+        |> elementAt (connectionIdxToListIdx model connectionIdx)
         |> Maybe.map .journey
 
 
@@ -819,10 +816,10 @@ connectionView (Config { internalMsg, selectMsg }) locale ( hoveredTrips, hovere
     in
     div
         [ classList
-            [ "connection" => True
-            , "new" => new
-            , "highlighted" => isHighlighted
-            , "faded" => isFaded
+            [ "connection" , True
+            , "new" , new
+            , "highlighted" , isHighlighted
+            , "faded" , isFaded
             ]
         , onClick (selectMsg idx)
         , onMouseEnter (internalMsg (MouseEnterConnection idx j))
@@ -957,10 +954,10 @@ extendIntervalButton direction (Config { internalMsg }) locale model =
     in
     div
         [ classList
-            [ "extend-search-interval" => True
-            , divClass => True
-            , "disabled" => not enabled
-            , "error" => (enabled && isJust err)
+            [ "extend-search-interval" , True
+            , divClass , True
+            , "disabled" , not enabled
+            , "error" , (enabled && isJust err)
             ]
         ]
         [ if enabled then

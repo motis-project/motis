@@ -17,7 +17,7 @@ module Util.Api exposing
 
 import Http
 import Json.Decode as Decode
-import Json.Decode.Pipeline exposing (decode, required)
+import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode
 
 
@@ -138,8 +138,7 @@ sendRequest remoteAddress jsonDecoder onErr onOk value =
                 , headers = []
                 , url = remoteAddress
                 , body = value |> Http.jsonBody
-                , expect =
-                    Http.expectStringResponse (handleHttpResponse jsonDecoder)
+                , expect = Http.expectStringResponse (handleHttpResponse jsonDecoder)
                 , timeout = Nothing
                 , withCredentials = False
                 }
@@ -157,7 +156,7 @@ sendRequest remoteAddress jsonDecoder onErr onOk value =
                 Err httpErr ->
                     onErr (handleHttpError httpErr)
     in
-    Http.send toMsg request
+    Http.post toMsg request
 
 
 handleHttpResponse :
@@ -165,12 +164,17 @@ handleHttpResponse :
     -> Http.Response String
     -> Result String (ApiResult a)
 handleHttpResponse jsonDecoder response =
-    case Decode.decodeString jsonDecoder response.body of
-        Ok value ->
-            Ok (ApiSuccess value)
+    case response of
+        Http.GoodStatus_ metadata body ->
+            case Decode.decodeString jsonDecoder body of
+                Ok value ->
+                    Ok (ApiSuccess value)
 
-        Err msg ->
-            Ok (ApiFailure (DecodeError msg))
+                Err msg ->
+                    Err (Decode.errorToString msg)
+
+        _ ->
+            Err "bad response"
 
 
 handleHttpError : Http.Error -> ApiError
@@ -182,16 +186,11 @@ handleHttpError rawError =
         Http.NetworkError ->
             NetworkError
 
-        Http.BadPayload err _ ->
+        Http.BadBody err ->
             DecodeError err
 
-        Http.BadStatus res ->
-            case Decode.decodeString decodeErrorResponse res.body of
-                Ok value ->
-                    MotisError value
-
-                Err msg ->
-                    HttpError res.status.code
+        Http.BadStatus statusCode ->
+            HttpError statusCode
 
         Http.BadUrl _ ->
             HttpError 0
@@ -215,7 +214,7 @@ decodeErrorResponse =
 
 decodeMotisErrorDetail : Decode.Decoder MotisErrorDetail
 decodeMotisErrorDetail =
-    decode MotisErrorDetail
+    Decode.succeed MotisErrorDetail
         |> required "error_code" Decode.int
         |> required "category" Decode.string
         |> required "reason" Decode.string

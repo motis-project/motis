@@ -26,7 +26,6 @@ import Json.Encode as Encode
 import Localization.Base exposing (..)
 import Maybe.Extra
 import Util.Api as Api exposing (ApiError(..))
-import Util.Core exposing ((=>))
 
 
 
@@ -473,22 +472,22 @@ buttonView locale model =
     div [ class "mode-picker-btn", onClick ToggleEditor ]
         [ div
             [ classList
-                [ "mode" => True
-                , "enabled" => model.walkEnabled
+                [ "mode" , True
+                , "enabled" , model.walkEnabled
                 ]
             ]
             [ i [ class "icon" ] [ text "directions_walk" ] ]
         , div
             [ classList
-                [ "mode" => True
-                , "enabled" => model.bikeEnabled
+                [ "mode" , True
+                , "enabled" , model.bikeEnabled
                 ]
             ]
             [ i [ class "icon" ] [ text "directions_bike" ] ]
         , div
             [ classList
-                [ "mode" => True
-                , "enabled" => model.carEnabled
+                [ "mode" , True
+                , "enabled" , model.carEnabled
                 ]
             ]
             [ i [ class "icon" ] [ text "directions_car" ] ]
@@ -522,9 +521,9 @@ walkView locale model =
     in
     fieldset
         [ classList
-            [ "mode" => True
-            , "walk" => True
-            , "disabled" => not model.walkEnabled
+            [ "mode" , True
+            , "walk" , True
+            , "disabled" , not model.walkEnabled
             ]
         ]
         [ legend [ class "mode-header" ]
@@ -550,9 +549,9 @@ bikeView : Localization -> Model -> Html Msg
 bikeView locale model =
     fieldset
         [ classList
-            [ "mode" => True
-            , "bike" => True
-            , "disabled" => not model.bikeEnabled
+            [ "mode" , True
+            , "bike" , True
+            , "disabled" , not model.bikeEnabled
             ]
         ]
         [ legend [ class "mode-header" ]
@@ -577,9 +576,9 @@ carView : Localization -> Model -> Html Msg
 carView locale model =
     fieldset
         [ classList
-            [ "mode" => True
-            , "car" => True
-            , "disabled" => not model.bikeEnabled
+            [ "mode" , True
+            , "car" , True
+            , "disabled" , not model.bikeEnabled
             ]
         ]
         [ legend [ class "mode-header" ]
@@ -617,9 +616,9 @@ gbfsView locale model =
         makeGbfsView gbfs =
             fieldset
                 [ classList
-                    [ "mode" => True
-                    , "gbfs" => True
-                    , "disabled" => not gbfs.enabled
+                    [ "mode" , True
+                    , "gbfs" , True
+                    , "disabled" , not gbfs.enabled
                     ]
                 ]
                 [ legend [ class "mode-header" ]
@@ -704,8 +703,8 @@ editorView : Localization -> String -> Model -> Html Msg
 editorView locale label model =
     div
         [ classList
-            [ "mode-picker-editor" => True
-            , "visible" => model.editorVisible
+            [ "mode-picker-editor" , True
+            , "visible" , model.editorVisible
             ]
         ]
         [ div [ class "header" ]
@@ -744,7 +743,7 @@ view locale label model =
 
 decodeGbfs : Decode.Decoder GBFS
 decodeGbfs =
-    decode GBFS
+    Decode.succeed GBFS
         |> requiredAt [ "tag" ] Decode.string
         |> requiredAt [ "name" ] Decode.string
         |> requiredAt [ "walk_max_duration" ] Decode.int
@@ -755,11 +754,11 @@ decodeGbfs =
 encodeGbfs : GBFS -> Encode.Value
 encodeGbfs g =
     Encode.object
-        [ "tag" => Encode.string g.tag
-        , "name" => Encode.string g.name
-        , "enabled" => Encode.bool g.enabled
-        , "walk_max_duration" => Encode.int g.walkMaxDuration
-        , "vehicle_max_duration" => Encode.int g.vehicleMaxDuration
+        [ "tag" , Encode.string g.tag
+        , "name" , Encode.string g.name
+        , "enabled" , Encode.bool g.enabled
+        , "walk_max_duration" , Encode.int g.walkMaxDuration
+        , "vehicle_max_duration" , Encode.int g.vehicleMaxDuration
         ]
 
 
@@ -767,23 +766,23 @@ encodeModel : Model -> Encode.Value
 encodeModel model =
     Encode.object
         [ "walk"
-            => Encode.object
-                [ "enabled" => Encode.bool model.walkEnabled
-                , "search_profile" => encodeSearchOptions model.pprSearchOptions
+            , Encode.object
+                [ "enabled" , Encode.bool model.walkEnabled
+                , "search_profile" , encodeSearchOptions model.pprSearchOptions
                 ]
         , "bike"
-            => Encode.object
-                [ "enabled" => Encode.bool model.bikeEnabled
-                , "max_duration" => Encode.int model.bikeMaxDuration
+            , Encode.object
+                [ "enabled" , Encode.bool model.bikeEnabled
+                , "max_duration" , Encode.int model.bikeMaxDuration
                 ]
         , "car"
-            => Encode.object
-                [ "enabled" => Encode.bool model.carEnabled
-                , "max_duration" => Encode.int model.carMaxDuration
-                , "use_parking" => Encode.bool model.useCarParking
+            , Encode.object
+                [ "enabled" , Encode.bool model.carEnabled
+                , "max_duration" , Encode.int model.carMaxDuration
+                , "use_parking" , Encode.bool model.useCarParking
                 ]
         , "gbfs"
-            => Encode.list (model.gbfs |> Dict.values |> List.map encodeGbfs)
+            , Encode.list (model.gbfs |> Dict.values |> List.map encodeGbfs)
         ]
 
 
@@ -798,7 +797,7 @@ gbfsToDict list =
 
 decodeModel : Decode.Decoder Model
 decodeModel =
-    decode Model
+    Decode.succeed Model
         |> hardcoded PremadePprProfiles
         |> requiredAt [ "walk", "enabled" ] Decode.bool
         |> requiredAt [ "bike", "enabled" ] Decode.bool

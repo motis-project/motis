@@ -13,7 +13,6 @@ module Data.Journey.Types exposing
     )
 
 import Data.Connection.Types exposing (..)
-import Date.Extra.Duration as Duration
 import Util.List exposing (..)
 
 
@@ -102,7 +101,7 @@ groupTrains connection =
     let
         indexedStops : List ( Int, Stop )
         indexedStops =
-            List.indexedMap (,) connection.stops
+            List.indexedMap Tuple.pair connection.stops
 
         add_stop : List Train -> Stop -> List Train
         add_stop trains stop =
@@ -230,10 +229,10 @@ toJourneyWalk : Connection -> WalkInfo -> Maybe JourneyWalk
 toJourneyWalk connection walkInfo =
     let
         fromStop =
-            connection.stops !! walkInfo.range.from
+            connection.stops |> elementAt walkInfo.range.from
 
         toStop =
-            connection.stops !! walkInfo.range.to
+            connection.stops |> elementAt walkInfo.range.to
 
         getWalkDuration from to =
             Maybe.map2

@@ -4,7 +4,7 @@ import Date exposing (Date)
 import Html exposing (Html, div, span, text)
 import Html.Attributes exposing (..)
 import Localization.Base exposing (..)
-import Util.Date exposing (isSameDay)
+import Util.DateUtil exposing (isSameDay)
 import Util.DateFormat exposing (..)
 
 

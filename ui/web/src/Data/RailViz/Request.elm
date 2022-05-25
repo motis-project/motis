@@ -21,26 +21,25 @@ import Data.RailViz.Types
         )
 import Date exposing (Date)
 import Json.Encode as Encode
-import Util.Core exposing ((=>))
-import Util.Date exposing (unixTime)
+import Util.DateUtil exposing (unixTime)
 
 
 encodeTrainsRequest : RailVizTrainsRequest -> Encode.Value
 encodeTrainsRequest request =
     Encode.object
         [ "destination"
-            => Encode.object
-                [ "type" => Encode.string "Module"
-                , "target" => Encode.string "/railviz/get_trains"
+            , Encode.object
+                [ "type" , Encode.string "Module"
+                , "target" , Encode.string "/railviz/get_trains"
                 ]
-        , "content_type" => Encode.string "RailVizTrainsRequest"
+        , "content_type" , Encode.string "RailVizTrainsRequest"
         , "content"
-            => Encode.object
-                [ "corner1" => encodePosition request.corner1
-                , "corner2" => encodePosition request.corner2
-                , "start_time" => encodeDate request.startTime
-                , "end_time" => encodeDate request.endTime
-                , "max_trains" => Encode.int request.maxTrains
+            , Encode.object
+                [ "corner1" , encodePosition request.corner1
+                , "corner2" , encodePosition request.corner2
+                , "start_time" , encodeDate request.startTime
+                , "end_time" , encodeDate request.endTime
+                , "max_trains" , Encode.int request.maxTrains
                 ]
         ]
 
@@ -49,22 +48,22 @@ encodeTripsRequest : RailVizTripsRequest -> Encode.Value
 encodeTripsRequest request =
     Encode.object
         [ "destination"
-            => Encode.object
-                [ "type" => Encode.string "Module"
-                , "target" => Encode.string "/railviz/get_trips"
+            , Encode.object
+                [ "type" , Encode.string "Module"
+                , "target" , Encode.string "/railviz/get_trips"
                 ]
-        , "content_type" => Encode.string "RailVizTripsRequest"
+        , "content_type" , Encode.string "RailVizTripsRequest"
         , "content"
-            => Encode.object
-                [ "trips" => Encode.list (List.map encodeTripId request.trips) ]
+            , Encode.object
+                [ "trips" , Encode.list (List.map encodeTripId request.trips) ]
         ]
 
 
 encodePosition : Position -> Encode.Value
 encodePosition pos =
     Encode.object
-        [ "lat" => Encode.float pos.lat
-        , "lng" => Encode.float pos.lng
+        [ "lat" , Encode.float pos.lat
+        , "lng" , Encode.float pos.lng
         ]
 
 
@@ -77,18 +76,18 @@ encodeStationRequest : RailVizStationRequest -> Encode.Value
 encodeStationRequest req =
     Encode.object
         [ "destination"
-            => Encode.object
-                [ "type" => Encode.string "Module"
-                , "target" => Encode.string "/railviz/get_station"
+            , Encode.object
+                [ "type" , Encode.string "Module"
+                , "target" , Encode.string "/railviz/get_station"
                 ]
-        , "content_type" => Encode.string "RailVizStationRequest"
+        , "content_type" , Encode.string "RailVizStationRequest"
         , "content"
-            => Encode.object
-                [ "station_id" => Encode.string req.stationId
-                , "time" => Encode.int req.time
-                , "event_count" => Encode.int req.eventCount
-                , "direction" => encodeDirection req.direction
-                , "by_schedule_time" => Encode.bool req.byScheduleTime
+            , Encode.object
+                [ "station_id" , Encode.string req.stationId
+                , "time" , Encode.int req.time
+                , "event_count" , Encode.int req.eventCount
+                , "direction" , encodeDirection req.direction
+                , "by_schedule_time" , Encode.bool req.byScheduleTime
                 ]
         ]
 
@@ -124,15 +123,15 @@ encodeTripGuessRequest : RailVizTripGuessRequest -> Encode.Value
 encodeTripGuessRequest req =
     Encode.object
         [ "destination"
-            => Encode.object
-                [ "type" => Encode.string "Module"
-                , "target" => Encode.string "/railviz/get_trip_guesses"
+            , Encode.object
+                [ "type" , Encode.string "Module"
+                , "target" , Encode.string "/railviz/get_trip_guesses"
                 ]
-        , "content_type" => Encode.string "RailVizTripGuessRequest"
+        , "content_type" , Encode.string "RailVizTripGuessRequest"
         , "content"
-            => Encode.object
-                [ "train_num" => Encode.int req.trainNum
-                , "time" => Encode.int req.time
-                , "guess_count" => Encode.int req.guessCount
+            , Encode.object
+                [ "train_num" , Encode.int req.trainNum
+                , "time" , Encode.int req.time
+                , "guess_count" , Encode.int req.guessCount
                 ]
         ]

@@ -1,12 +1,12 @@
 module ProgramFlags exposing (ProgramFlags)
 
-import Time exposing (Time)
+import Time exposing (Posix)
 
 
 type alias ProgramFlags =
     { apiEndpoint : String
-    , currentTime : Time
-    , simulationTime : Maybe Time
+    , currentTime : Posix
+    , simulationTime : Maybe Posix
     , language : String
     , motisParam : Maybe String
     , timeParam : Maybe String

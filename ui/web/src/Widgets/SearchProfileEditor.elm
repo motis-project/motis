@@ -6,7 +6,6 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Localization.Base exposing (..)
 import Task
-import Util.Core exposing ((=>))
 
 
 
@@ -62,8 +61,8 @@ view : Localization -> Model -> Html Msg
 view locale model =
     div
         [ classList
-            [ "search-profile-editor" => True
-            , "hidden" => not model.visible
+            [ "search-profile-editor" , True
+            , "hidden" , not model.visible
             ]
         ]
         [ div [ class "title" ]

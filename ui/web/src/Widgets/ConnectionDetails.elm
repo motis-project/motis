@@ -1,6 +1,6 @@
 module Widgets.ConnectionDetails exposing
     ( Config(..)
-    , Msg(SetApiError, SetJourney)
+    , Msg(..)
     , State
     , getJourney
     , getTripId
@@ -12,14 +12,12 @@ module Widgets.ConnectionDetails exposing
 import Data.Connection.Types as Connection exposing (..)
 import Data.Journey.Types as Journey exposing (..)
 import Date exposing (Date)
-import Date.Extra.Duration as Duration exposing (DeltaRecord)
 import Html exposing (Html, div, i, span, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Localization.Base exposing (..)
 import String
 import Util.Api exposing (ApiError)
-import Util.Core exposing ((=>))
 import Util.DateFormat exposing (..)
 import Util.List exposing (..)
 import Widgets.Helpers.ApiErrorUtil exposing (errorText)
@@ -132,8 +130,8 @@ view config locale currentTime state =
     in
     div
         [ classList
-            [ "connection-details" => True
-            , "trip-view" => isTripView
+            [ "connection-details" , True
+            , "trip-view" , isTripView
             ]
         ]
         content
@@ -381,7 +379,7 @@ stopView selectStationMsg stopViewType eventType locale currentTime progress sto
                     [ div [ class "timeline train-color-border bg" ] []
                     , div
                         [ class "timeline train-color-border progress"
-                        , style [ "height" => (toString percentage ++ "%") ]
+                        , style [ "height" , (toString percentage ++ "%") ]
                         ]
                         []
                     ]
@@ -636,7 +634,7 @@ trainDetail isTripView internalMsg selectTripMsg selectStationMsg locale current
             [ div [ class "timeline train-color-border bg" ] []
             , div
                 [ class "timeline train-color-border progress"
-                , style [ "height" => (toString progress ++ "%") ]
+                , style [ "height" , (toString progress ++ "%") ]
                 ]
                 []
             ]
@@ -691,9 +689,9 @@ trainDetail isTripView internalMsg selectTripMsg selectStationMsg locale current
                     |> Maybe.withDefault (text "")
                 , div
                     ([ classList
-                        [ "intermediate-stops-toggle" => True
-                        , "clickable" => hasIntermediateStops
-                        , intermediateToggleClass => True
+                        [ "intermediate-stops-toggle" , True
+                        , "clickable" , hasIntermediateStops
+                        , intermediateToggleClass , True
                         ]
                      ]
                         ++ intermediateToggleOnClick
@@ -704,9 +702,9 @@ trainDetail isTripView internalMsg selectTripMsg selectStationMsg locale current
                     ]
                 , div
                     [ classList
-                        [ "intermediate-stops" => True
-                        , "expanded" => expanded
-                        , "collapsed" => not expanded
+                        [ "intermediate-stops" , True
+                        , "expanded" , expanded
+                        , "collapsed" , not expanded
                         ]
                     ]
                     (intermediateStopsWithProgress selectStationMsg intermediateStopViewType locale currentTime intermediateStops arrivalStop)
@@ -805,7 +803,7 @@ walkDetail selectStationMsg selectWalkMsg locale currentTime walk =
                 [ div [ class "timeline train-color-border bg" ] []
                 , div
                     [ class "timeline train-color-border progress"
-                    , style [ "height" => (toString progress ++ "%") ]
+                    , style [ "height" , (toString progress ++ "%") ]
                     ]
                     []
                 ]

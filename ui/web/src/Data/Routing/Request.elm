@@ -10,8 +10,7 @@ import Data.Connection.Types exposing (Station)
 import Data.Routing.Types exposing (RoutingRequest, SearchDirection(..), SearchType(..))
 import Date exposing (Date)
 import Json.Encode as Encode
-import Util.Core exposing ((=>))
-import Util.Date exposing (unixTime)
+import Util.DateUtil exposing (unixTime)
 
 
 initialRequest :
@@ -47,34 +46,34 @@ encodeRequest : RoutingRequest -> Encode.Value
 encodeRequest request =
     Encode.object
         [ "destination"
-            => Encode.object
-                [ "type" => Encode.string "Module"
-                , "target" => Encode.string "/routing"
+            , Encode.object
+                [ "type" , Encode.string "Module"
+                , "target" , Encode.string "/routing"
                 ]
-        , "content_type" => Encode.string "RoutingRequest"
+        , "content_type" , Encode.string "RoutingRequest"
         , "content"
-            => Encode.object
-                [ "start_type" => Encode.string "PretripStart"
+            , Encode.object
+                [ "start_type" , Encode.string "PretripStart"
                 , "start"
-                    => Encode.object
-                        [ "station" => encodeInputStation request.from
+                    , Encode.object
+                        [ "station" , encodeInputStation request.from
                         , "interval"
-                            => Encode.object
-                                [ "begin" => Encode.int request.intervalStart
-                                , "end" => Encode.int request.intervalEnd
+                            , Encode.object
+                                [ "begin" , Encode.int request.intervalStart
+                                , "end" , Encode.int request.intervalEnd
                                 ]
                         , "min_connection_count"
-                            => Encode.int request.minConnectionCount
+                            , Encode.int request.minConnectionCount
                         , "extend_interval_earlier"
-                            => Encode.bool request.extendIntervalEarlier
+                            , Encode.bool request.extendIntervalEarlier
                         , "extend_interval_later"
-                            => Encode.bool request.extendIntervalLater
+                            , Encode.bool request.extendIntervalLater
                         ]
-                , "destination" => encodeInputStation request.to
-                , "search_type" => encodeSearchType DefaultSearchType
-                , "search_dir" => encodeSearchDirection request.searchDirection
-                , "via" => Encode.list []
-                , "additional_edges" => Encode.list []
+                , "destination" , encodeInputStation request.to
+                , "search_type" , encodeSearchType DefaultSearchType
+                , "search_dir" , encodeSearchDirection request.searchDirection
+                , "via" , Encode.list []
+                , "additional_edges" , Encode.list []
                 ]
         ]
 
@@ -82,8 +81,8 @@ encodeRequest request =
 encodeInputStation : Station -> Encode.Value
 encodeInputStation station =
     Encode.object
-        [ "name" => Encode.string station.name
-        , "id" => Encode.string station.id
+        [ "name" , Encode.string station.name
+        , "id" , Encode.string station.id
         ]
 
 

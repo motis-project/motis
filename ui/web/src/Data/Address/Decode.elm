@@ -14,13 +14,13 @@ import Json.Decode.Pipeline exposing (decode, required, requiredAt)
 
 decodeAddressResponse : Decoder AddressResponse
 decodeAddressResponse =
-    decode AddressResponse
+    Decode.succeed AddressResponse
         |> requiredAt [ "content", "guesses" ] (list decodeAddress)
 
 
 decodeAddress : Decoder Address
 decodeAddress =
-    decode Address
+    Decode.succeed Address
         |> required "pos" decodePosition
         |> required "name" string
         |> required "type" string
@@ -29,6 +29,6 @@ decodeAddress =
 
 decodeRegion : Decoder Region
 decodeRegion =
-    decode Region
+    Decode.succeed Region
         |> required "name" string
         |> required "admin_level" int

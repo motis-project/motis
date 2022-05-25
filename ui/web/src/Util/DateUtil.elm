@@ -1,9 +1,6 @@
-module Util.Date exposing (atNoon, combineDateTime, isSameDay, noon, toDate, unixTime)
+module Util.DateUtil exposing (atNoon, combineDateTime, isSameDay, noon, toDate, unixTime)
 
 import Date exposing (Date)
-import Date.Extra.Core exposing (intToMonth)
-import Date.Extra.Create exposing (dateFromFields, timeFromFields)
-
 
 unixTime : Date -> Int
 unixTime d =
@@ -26,14 +23,20 @@ noon =
     timeFromFields 12 0 0 0
 
 
-atNoon : Date.Date -> Date.Date
-atNoon date =
-    combineDateTime date noon
+atNoon : Posix.Time -> Posix.Time
+atNoon t =
+    let
+        millis = Time.posixToMillis t
+        millisPerDay = 24 * 60 * 60 * 1000
+        millisAfterMidnight = modBy millisPerDay millis
+        halfDay = millisPerDay / 2
+    in
+        Time.millisToPosix (millis - millisAfterMidnight) + halfDay
 
 
 toDate : Int -> Int -> Int -> Date
 toDate year month day =
-    dateFromFields year (intToMonth month) day 0 0 0 0
+    Date.fromCalendarDate year (Date.numberToMonth month) day
 
 
 isSameDay : Date -> Date -> Bool

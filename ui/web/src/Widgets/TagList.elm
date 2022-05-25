@@ -20,8 +20,6 @@ import Json.Encode as Encode
 import List.Extra
 import Localization.Base exposing (..)
 import Mouse
-import Util.Core exposing ((=>))
-import Util.List exposing ((!!))
 import Util.View exposing (onStopAll, onStopPropagation)
 
 
@@ -265,20 +263,20 @@ encodeTag tag =
     case tag of
         WalkTag o ->
             Encode.object
-                [ "type" => Encode.string "Walk"
-                , "max_duration" => Encode.int o.maxDuration
+                [ "type" , Encode.string "Walk"
+                , "max_duration" , Encode.int o.maxDuration
                 ]
 
         BikeTag o ->
             Encode.object
-                [ "type" => Encode.string "Bike"
-                , "max_duration" => Encode.int o.maxDuration
+                [ "type" , Encode.string "Bike"
+                , "max_duration" , Encode.int o.maxDuration
                 ]
 
         CarTag o ->
             Encode.object
-                [ "type" => Encode.string "Car"
-                , "max_duration" => Encode.int o.maxDuration
+                [ "type" , Encode.string "Car"
+                , "max_duration" , Encode.int o.maxDuration
                 ]
 
 
@@ -305,7 +303,7 @@ decodeTag =
 
         decodeOptions : Decode.Decoder TagOptions
         decodeOptions =
-            decode TagOptions
+            Decode.succeed TagOptions
                 |> JDP.required "max_duration" Decode.int
     in
     Decode.field "type" Decode.string |> Decode.andThen parseTag

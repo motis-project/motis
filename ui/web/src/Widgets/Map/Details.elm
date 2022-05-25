@@ -6,7 +6,7 @@ module Widgets.Map.Details exposing
 import Data.Journey.Types exposing (..)
 import List.Extra
 import Maybe.Extra exposing (maybeToList)
-import Util.List exposing ((!!), dropEnd, last)
+import Util.List exposing (dropEnd, last)
 import Widgets.Map.Port exposing (..)
 import Widgets.Map.RailViz exposing (buildRVTrain, buildRVWalk, mapId)
 

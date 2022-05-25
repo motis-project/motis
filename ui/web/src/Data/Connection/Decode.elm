@@ -26,7 +26,7 @@ import Util.Json exposing (decodeDate)
 
 decodeConnection : Decode.Decoder Connection
 decodeConnection =
-    decode Connection
+    Decode.succeed Connection
         |> required "stops" (list decodeStop)
         |> required "transports" (list decodeMove)
         |> required "trips" (list decodeTrip)
@@ -35,7 +35,7 @@ decodeConnection =
 
 decodeStop : Decode.Decoder Stop
 decodeStop =
-    decode Stop
+    Decode.succeed Stop
         |> required "station" decodeStation
         |> required "arrival" decodeEventInfo
         |> required "departure" decodeEventInfo
@@ -45,7 +45,7 @@ decodeStop =
 
 decodeStation : Decode.Decoder Station
 decodeStation =
-    decode Station
+    Decode.succeed Station
         |> required "id" string
         |> required "name" string
         |> required "pos" decodePosition
@@ -53,14 +53,14 @@ decodeStation =
 
 decodePosition : Decode.Decoder Position
 decodePosition =
-    decode Position
+    Decode.succeed Position
         |> required "lat" float
         |> required "lng" float
 
 
 decodeEventInfo : Decode.Decoder EventInfo
 decodeEventInfo =
-    decode EventInfo
+    Decode.succeed EventInfo
         |> optional "time" (nullable decodeDate) Nothing
         |> optional "schedule_time" (nullable decodeDate) Nothing
         |> required "track" string
@@ -74,11 +74,11 @@ decodeMove =
         move move_type =
             case move_type of
                 "Transport" ->
-                    decode Transport
+                    Decode.succeed Transport
                         |> required "move" decodeTransportInfo
 
                 "Walk" ->
-                    decode Walk
+                    Decode.succeed Walk
                         |> required "move" decodeWalkInfo
 
                 _ ->
@@ -89,7 +89,7 @@ decodeMove =
 
 decodeTransportInfo : Decode.Decoder TransportInfo
 decodeTransportInfo =
-    decode TransportInfo
+    Decode.succeed TransportInfo
         |> required "range" decodeRange
         |> required "category_name" string
         |> optional "clasz" int 0
@@ -102,7 +102,7 @@ decodeTransportInfo =
 
 decodeWalkInfo : Decode.Decoder WalkInfo
 decodeWalkInfo =
-    decode WalkInfo
+    Decode.succeed WalkInfo
         |> required "range" decodeRange
         |> optional "mumo_id" int 0
         |> optional "price" int 0
@@ -112,7 +112,7 @@ decodeWalkInfo =
 
 decodeAttribute : Decode.Decoder Attribute
 decodeAttribute =
-    decode Attribute
+    Decode.succeed Attribute
         |> required "range" decodeRange
         |> required "code" string
         |> required "text" string
@@ -120,7 +120,7 @@ decodeAttribute =
 
 decodeRange : Decode.Decoder Range
 decodeRange =
-    decode Range
+    Decode.succeed Range
         |> required "from" int
         |> required "to" int
 
@@ -153,14 +153,14 @@ decodeTimestampReason =
 
 decodeTrip : Decode.Decoder Trip
 decodeTrip =
-    decode Trip
+    Decode.succeed Trip
         |> required "range" decodeRange
         |> required "id" decodeTripId
 
 
 decodeTripId : Decode.Decoder TripId
 decodeTripId =
-    decode TripId
+    Decode.succeed TripId
         |> required "station_id" string
         |> optional "train_nr" int 0
         |> required "time" int
@@ -191,6 +191,6 @@ decodeProblemType =
 
 decodeProblem : Decode.Decoder Problem
 decodeProblem =
-    decode Problem
+    Decode.succeed Problem
         |> required "range" decodeRange
         |> optional "type" decodeProblemType NoProblem

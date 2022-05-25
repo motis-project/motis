@@ -61,9 +61,7 @@ import Data.ScheduleInfo.Decode exposing (decodeScheduleInfoResponse)
 import Data.ScheduleInfo.Request as ScheduleInfo
 import Data.ScheduleInfo.Types exposing (ScheduleInfo)
 import Date exposing (Date)
-import Date.Extra.Compare
-import Dom
-import Dom.Scroll as Scroll
+import Date
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -84,9 +82,8 @@ import Task
 import Time exposing (Time)
 import UrlParser
 import Util.Api as Api exposing (ApiError(..))
-import Util.Core exposing ((=>))
-import Util.Date exposing (combineDateTime, unixTime)
-import Util.List exposing ((!!))
+import Util.DateUtil exposing (combineDateTime, unixTime)
+import Util.Scroll as Scroll
 import Widgets.ConnectionDetails as ConnectionDetails
 import Widgets.Connections as Connections
 import Widgets.Map.Details as MapDetails
@@ -430,7 +427,7 @@ update msg model =
                     getCurrentDate model1
 
                 currentTimeInSchedule =
-                    Date.Extra.Compare.is3 Date.Extra.Compare.BetweenOpen currentDate si.begin si.end
+                    Date.isBetween si.begin si.end currentDate
 
                 ( model2, cmd1 ) =
                     if currentTimeInSchedule then
@@ -848,7 +845,7 @@ requestWalkRoutes remoteAddress spStart spDestination journey idx =
                 Nothing
     in
     journey.walks
-        |> List.indexedMap (,)
+        |> List.indexedMap Tuple.pair
         |> List.filterMap requestWalk
         |> Cmd.batch
 
@@ -980,7 +977,7 @@ selectConnectionTrip model tripIdx =
 
         trip =
             journey
-                |> Maybe.andThen (\j -> j.trains !! tripIdx)
+                |> Maybe.andThen (\j -> j.trains |> elementAt tripIdx)
                 |> Maybe.andThen .trip
     in
     case trip of
@@ -1167,8 +1164,8 @@ overlayView model =
     in
     div
         [ classList
-            [ "overlay-container" => True
-            , "hidden" => not model.overlayVisible
+            [ "overlay-container" , True
+            , "hidden" , not model.overlayVisible
             ]
         ]
         [ div [ class "overlay" ]
@@ -1181,8 +1178,8 @@ overlayView model =
                 [ i [ class "icon" ] [ text "arrow_drop_down" ] ]
             , div
                 [ classList
-                    [ "trip-search-toggle" => True
-                    , "enabled" => (model.subView == Just TripSearchView)
+                    [ "trip-search-toggle" , True
+                    , "enabled" , (model.subView == Just TripSearchView)
                     ]
                 , onClick ToggleTripSearch
                 ]
@@ -1196,7 +1193,7 @@ stationSearchView model =
     div
         [ id "station-search"
         , classList
-            [ "overlay-hidden" => not model.overlayVisible
+            [ "overlay-hidden" , not model.overlayVisible
             ]
         ]
         [ Html.map StationSearchUpdate <|
@@ -1325,12 +1322,12 @@ getBaseUrl flags date =
             unixTime date
 
         params1 =
-            [ "time" => toString timestamp ]
+            [ "time" , toString timestamp ]
 
         params2 =
             case flags.langParam of
                 Just lang ->
-                    ("lang" => lang) :: params1
+                    ("lang" , lang) :: params1
 
                 Nothing ->
                     params1
@@ -1338,7 +1335,7 @@ getBaseUrl flags date =
         params3 =
             case flags.motisParam of
                 Just motis ->
-                    ("motis" => motis) :: params2
+                    ("motis" , motis) :: params2
 
                 Nothing ->
                     params2

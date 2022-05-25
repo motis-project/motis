@@ -19,7 +19,7 @@ decodeParkingEdgeResponse =
 
 decodeParkingEdgeResponseContent : Decode.Decoder ParkingEdgeResponse
 decodeParkingEdgeResponseContent =
-    decode ParkingEdgeResponse
+    Decode.succeed ParkingEdgeResponse
         |> required "parking" decodeParking
         |> required "car" decodeOSRMViaRouteResponseContent
         |> required "walk" decodeRoute
@@ -28,7 +28,7 @@ decodeParkingEdgeResponseContent =
 
 decodeParking : Decode.Decoder Parking
 decodeParking =
-    decode Parking
+    Decode.succeed Parking
         |> optional "id" Decode.int 0
         |> required "pos" decodePosition
         |> optional "fee" Decode.bool False

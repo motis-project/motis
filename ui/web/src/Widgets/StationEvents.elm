@@ -22,7 +22,6 @@ import Maybe.Extra exposing (isJust)
 import Random exposing (maxInt)
 import Time exposing (Time)
 import Util.Api as Api exposing (ApiError)
-import Util.Core exposing ((=>))
 import Util.DateFormat exposing (..)
 import Util.List exposing (last)
 import Widgets.DateHeaders exposing (..)
@@ -578,10 +577,10 @@ extendIntervalButton direction (Config { internalMsg }) locale model =
     in
     div
         [ classList
-            [ "extend-search-interval" => True
-            , divClass => True
-            , "disabled" => not enabled
-            , "error" => (enabled && isJust err)
+            [ "extend-search-interval" , True
+            , divClass , True
+            , "disabled" , not enabled
+            , "error" , (enabled && isJust err)
             ]
         ]
         [ if enabled then

@@ -20,7 +20,7 @@ import Data.Routing.Types exposing (SearchDirection(..))
 import Data.ScheduleInfo.Types exposing (ScheduleInfo)
 import Date exposing (Date)
 import Debounce
-import Dom.Scroll as Scroll
+import Browser.Dom
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -28,14 +28,13 @@ import Html.Lazy exposing (..)
 import Json.Decode as Decode
 import Localization.Base exposing (..)
 import Maybe.Extra exposing (isJust)
-import Navigation exposing (Location)
+import Url exposing (Url)
 import Port
 import ProgramFlags exposing (..)
 import Routes exposing (..)
 import Task
 import Util.Api as Api exposing (ApiError(..))
-import Util.Core exposing ((=>))
-import Util.Date exposing (combineDateTime)
+import Util.DateUtil exposing (combineDateTime)
 import Widgets.Calendar as Calendar
 import Widgets.Connections as Connections
 import Widgets.Map.RailViz as RailViz
@@ -268,15 +267,15 @@ update msg model =
             in
             model
                 ! [ Task.attempt
-                        (\r ->
-                            case r of
+                        (\v ->
+                            case v of
                                 Ok pos ->
-                                    StoreConnectionListScrollPos selectMsg pos
+                                    StoreConnectionListScrollPos selectMsg v.viewport.y
 
                                 Err _ ->
                                     selectMsg
                         )
-                        (Scroll.y "connections")
+                        (Browser.getViewportOf "connections")
                   ]
 
         StoreConnectionListScrollPos msg_ pos ->
@@ -490,10 +489,10 @@ checkRoutingRequest ( model, cmds ) =
         model
             ! [ cmds
               , Debounce.debounceCmd debounceCfg <| SearchConnections
-              , Port.localStorageSet ("motis.routing.from_location" => fromLocation)
-              , Port.localStorageSet ("motis.routing.to_location" => toLocation)
-              , Port.localStorageSet ("motis.routing.from_modes" => fromModes)
-              , Port.localStorageSet ("motis.routing.to_modes" => toModes)
+              , Port.localStorageSet ("motis.routing.from_location" , fromLocation)
+              , Port.localStorageSet ("motis.routing.to_location" , toLocation)
+              , Port.localStorageSet ("motis.routing.from_modes" , fromModes)
+              , Port.localStorageSet ("motis.routing.to_modes" , toModes)
               , getCombinedSearchProfile model
                     |> encodeSearchOptions
                     |> Port.setPPRSearchOptions

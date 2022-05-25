@@ -14,14 +14,13 @@ module Widgets.Helpers.ConnectionUtil exposing
     )
 
 import Data.Connection.Types as Connection exposing (..)
-import Date.Extra.Duration as Duration exposing (DeltaRecord)
+import Time exposing (utc, toMillis)
 import Html exposing (Html, div, span, text)
 import Html.Attributes exposing (..)
 import Localization.Base exposing (..)
 import String
 import Svg
 import Svg.Attributes exposing (xlinkHref)
-import Util.Core exposing ((=>))
 
 
 useLineId : Int -> Bool
@@ -167,9 +166,9 @@ trainBox viewMode locale t =
     in
     div
         [ classList
-            [ "train-box" => True
-            , ("train-class-" ++ toString t.class) => True
-            , "with-tooltip" => not (String.isEmpty tooltipText)
+            [ "train-box" , True
+            , ("train-class-" ++ toString t.class) , True
+            , "with-tooltip" , not (String.isEmpty tooltipText)
             ]
         , attribute "data-tooltip" tooltipText
         ]

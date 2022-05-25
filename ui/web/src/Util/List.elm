@@ -1,8 +1,8 @@
-module Util.List exposing ((!!), dropEnd, last, padListRight)
+module Util.List exposing (elementAt, dropEnd, last, padListRight)
 
 
-(!!) : List a -> Int -> Maybe a
-(!!) list index =
+elementAt : List a -> Int -> Maybe a
+elementAt list index =
     List.drop index list |> List.head
 
 
@@ -22,10 +22,10 @@ dropEnd n list =
             else
                 ( result, n_ - 1 )
 
-        ( result, _ ) =
+        ( final, _ ) =
             List.foldr f ( [], n ) list
     in
-    result
+    final
 
 
 padListRight : Int -> a -> List a -> List a

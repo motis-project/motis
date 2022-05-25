@@ -1,9 +1,9 @@
 module Util.Json exposing (decodeDate)
 
-import Date exposing (Date)
+import Time exposing (millisToPosix, utc)
 import Json.Decode as Decode
 
 
-decodeDate : Decode.Decoder Date
+decodeDate : Decode.Decoder Time.Posix
 decodeDate =
-    Decode.int |> Decode.andThen (Decode.succeed << Date.fromTime << toFloat << (\i -> i * 1000))
+    Decode.int |> Decode.andThen (Decode.succeed << millisToPosix << (\i -> i * 1000))

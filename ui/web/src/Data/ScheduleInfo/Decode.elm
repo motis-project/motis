@@ -13,7 +13,7 @@ decodeScheduleInfoResponse =
 
 decodeScheduleInfo : Decode.Decoder ScheduleInfo
 decodeScheduleInfo =
-    decode ScheduleInfo
+    Decode.succeed ScheduleInfo
         |> required "name" string
         |> required "begin" decodeDate
         |> required "end" decodeDate

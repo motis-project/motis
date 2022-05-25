@@ -129,6 +129,8 @@ function getQueryParameters() {
 }
 
 function getApiEndpoint(params) {
+  const defaultHost = 'localhost';
+  const defaultPort = '8080';
   let apiEndpoint = String(window.location.origin + window.location.pathname);
   let motisParam = params["motis"] || null;
   if (motisParam) {

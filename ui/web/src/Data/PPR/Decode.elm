@@ -18,13 +18,13 @@ decodeFootRoutingResponse =
 
 decodeFootRoutingResponseContent : Decode.Decoder FootRoutingResponse
 decodeFootRoutingResponseContent =
-    decode FootRoutingResponse
+    Decode.succeed FootRoutingResponse
         |> optional "routes" (Decode.list decodeRoutes) []
 
 
 decodeRoutes : Decode.Decoder Routes
 decodeRoutes =
-    decode Routes
+    Decode.succeed Routes
         |> optional "routes" (Decode.list decodeRoute) []
 
 
@@ -199,7 +199,7 @@ decodeTriState =
 
 decodeEdge : Decode.Decoder Edge
 decodeEdge =
-    decode Edge
+    Decode.succeed Edge
         |> optional "distance" float 0
         |> optional "duration" float 0
         |> optional "accessibility" float 0
@@ -217,7 +217,7 @@ decodeEdge =
 
 decodeRouteStep : Decode.Decoder RouteStep
 decodeRouteStep =
-    decode RouteStep
+    Decode.succeed RouteStep
         |> optional "step_type" decodeRouteStepType InvalidStep
         |> required "street_name" string
         |> optional "street_type" decodeStreetType ST_No
@@ -234,7 +234,7 @@ decodeRouteStep =
 
 decodeRoute : Decode.Decoder Route
 decodeRoute =
-    decode Route
+    Decode.succeed Route
         |> optional "distance" float 0
         |> optional "duration" int 0
         |> optional "accessibility" int 0
@@ -249,6 +249,6 @@ decodeRoute =
 
 decodeSearchOptions : Decode.Decoder SearchOptions
 decodeSearchOptions =
-    decode SearchOptions
+    Decode.succeed SearchOptions
         |> required "profile" string
         |> required "duration_limit" float

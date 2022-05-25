@@ -29,11 +29,11 @@ module Data.Connection.Types exposing
     )
 
 import Date exposing (Date)
-import Date.Extra.Compare exposing (Compare2(..))
-import Date.Extra.Duration as Duration exposing (DeltaRecord)
+import Time
 import Maybe.Extra
 import Set exposing (Set)
 import Util.List exposing (..)
+import Util.Duration
 
 
 type alias Connection =
@@ -68,7 +68,7 @@ type alias Position =
 
 type alias EventInfo =
     { time : Maybe Date
-    , schedule_time : Maybe Date
+    , schedule_time : Maybe Time.Posix
     , track : String
     , reason : TimestampReason
     }
@@ -158,17 +158,17 @@ arrivalEvent connection =
     last connection.stops |> Maybe.map .arrival
 
 
-departureTime : Connection -> Maybe Date
+departureTime : Connection -> Maybe Time.Posix
 departureTime connection =
     departureEvent connection |> Maybe.andThen .schedule_time
 
 
-arrivalTime : Connection -> Maybe Date
+arrivalTime : Connection -> Maybe Time.Posix
 arrivalTime connection =
     arrivalEvent connection |> Maybe.andThen .schedule_time
 
 
-duration : Connection -> Maybe DeltaRecord
+duration : Connection -> Maybe Duration
 duration connection =
     Maybe.map2 Duration.diff (arrivalTime connection) (departureTime connection)
 
@@ -251,7 +251,7 @@ eventIsInThePast currentTime event =
     in
     case eventTime of
         Just t ->
-            Date.Extra.Compare.is SameOrBefore t currentTime
+            Date.compare t currentTime == LT
 
         Nothing ->
             False

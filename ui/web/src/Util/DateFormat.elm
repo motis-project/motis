@@ -19,10 +19,8 @@ module Util.DateFormat exposing
 
 import Array
 import Date exposing (Date, Day, day, dayOfWeek, month, year)
-import Date.Extra.Core exposing (isoDayOfWeek, monthToInt)
-import Date.Extra.Duration as Duration exposing (DeltaRecord)
 import String
-import Util.Date exposing (toDate)
+import Util.DateUtil exposing (toDate)
 import Util.StringSplit exposing (intNthToken)
 
 

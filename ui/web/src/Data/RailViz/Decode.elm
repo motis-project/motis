@@ -34,7 +34,7 @@ decodeRailVizTrainsResponse =
 
 decodeRailVizTrainsResponseContent : JD.Decoder RailVizTrainsResponse
 decodeRailVizTrainsResponseContent =
-    decode RailVizTrainsResponse
+    Decode.succeed RailVizTrainsResponse
         |> required "trains" (list decodeRailVizTrain)
         |> required "routes" (list decodeRailVizRoute)
         |> required "stations" (list decodeStation)
@@ -42,7 +42,7 @@ decodeRailVizTrainsResponseContent =
 
 decodeRailVizTrain : JD.Decoder RailVizTrain
 decodeRailVizTrain =
-    decode RailVizTrain
+    Decode.succeed RailVizTrain
         |> required "names" (list string)
         |> required "d_time" decodeDate
         |> required "a_time" decodeDate
@@ -55,13 +55,13 @@ decodeRailVizTrain =
 
 decodeRailVizRoute : JD.Decoder RailVizRoute
 decodeRailVizRoute =
-    decode RailVizRoute
+    Decode.succeed RailVizRoute
         |> required "segments" (list decodeRailVizSegment)
 
 
 decodeRailVizSegment : JD.Decoder RailVizSegment
 decodeRailVizSegment =
-    decode RailVizSegment
+    Decode.succeed RailVizSegment
         |> required "from_station_id" string
         |> required "to_station_id" string
         |> required "coordinates" decodePolyline
@@ -69,7 +69,7 @@ decodeRailVizSegment =
 
 decodePolyline : JD.Decoder Polyline
 decodePolyline =
-    decode Polyline
+    Decode.succeed Polyline
         |> required "coordinates" (list float)
 
 
@@ -80,14 +80,14 @@ decodeRailVizStationResponse =
 
 decodeRailVizStationResponseContent : JD.Decoder RailVizStationResponse
 decodeRailVizStationResponseContent =
-    decode RailVizStationResponse
+    Decode.succeed RailVizStationResponse
         |> required "station" decodeStation
         |> required "events" (list decodeRailVizEvent)
 
 
 decodeRailVizEvent : JD.Decoder RailVizEvent
 decodeRailVizEvent =
-    decode RailVizEvent
+    Decode.succeed RailVizEvent
         |> required "trips" (list decodeTripInfo)
         |> optional "type" decodeEventType DEP
         |> required "event" decodeEventInfo
@@ -95,14 +95,14 @@ decodeRailVizEvent =
 
 decodeTripInfo : JD.Decoder TripInfo
 decodeTripInfo =
-    decode TripInfo
+    Decode.succeed TripInfo
         |> required "id" decodeTripId
         |> required "transport" decodeTransportInfo
 
 
 decodeTrip : JD.Decoder Trip
 decodeTrip =
-    decode Trip
+    Decode.succeed Trip
         |> required "first_station" decodeStation
         |> required "trip_info" decodeTripInfo
 
@@ -131,5 +131,5 @@ decodeRailVizTripGuessResponse =
 
 decodeRailVizTripGuessResponseContent : JD.Decoder RailVizTripGuessResponse
 decodeRailVizTripGuessResponseContent =
-    decode RailVizTripGuessResponse
+    Decode.succeed RailVizTripGuessResponse
         |> required "trips" (list decodeTrip)

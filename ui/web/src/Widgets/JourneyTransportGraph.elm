@@ -10,7 +10,6 @@ module Widgets.JourneyTransportGraph exposing
 import Data.Connection.Types exposing (Station, Stop, TripId)
 import Data.Journey.Types as Journey exposing (Journey, JourneyMove(..), JourneyWalk, Train, isMumoWalk)
 import Date exposing (Date)
-import Date.Extra.Duration as Duration exposing (DeltaRecord)
 import Html exposing (Html, div)
 import Html.Attributes
 import Html.Lazy
@@ -20,7 +19,6 @@ import String
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Svg.Events exposing (..)
-import Util.Core exposing ((=>))
 import Util.DateFormat exposing (formatTime)
 import Util.List exposing (last)
 import Widgets.Helpers.ConnectionUtil exposing (..)
@@ -125,8 +123,8 @@ graphView : Localization -> ( Bool, Maybe ( List RVConnectionSegmentTrip), Maybe
 graphView locale ( useHighlighting, hoveredTrips, hoveredWalk ) model =
     div
         [ Html.Attributes.classList
-            [ "transport-graph" => True
-            , "highlighting" => useHighlighting
+            [ "transport-graph" , True
+            , "highlighting" , useHighlighting
             ]
         ]
         (transportsView locale ( useHighlighting, hoveredTrips, hoveredWalk ) model)
@@ -346,15 +344,15 @@ partView locale totalWidth tooltipVisible useHighlighting displayPart =
         tooltip =
             Html.div
                 [ Html.Attributes.classList
-                    [ "tooltip" => True
-                    , "visible" => tooltipVisible
+                    [ "tooltip" , True
+                    , "visible" , tooltipVisible
                     ]
                 , Html.Attributes.style
-                    [ "position" => "absolute"
-                    , "left" => (toString tooltipX ++ "px")
-                    , "top" => (toString (textOffset - 5) ++ "px")
-                    , "width" => toString tooltipWidth
-                    , "height" => "50"
+                    [ "position" , "absolute"
+                    , "left" , (toString tooltipX ++ "px")
+                    , "top" , (toString (textOffset - 5) ++ "px")
+                    , "width" , toString tooltipWidth
+                    , "height" , "50"
                     ]
                 ]
                 [ Html.div [ Html.Attributes.class "stations" ]

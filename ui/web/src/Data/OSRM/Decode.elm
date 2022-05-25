@@ -13,7 +13,7 @@ decodeOSRMViaRouteResponse =
 
 decodeOSRMViaRouteResponseContent : Decode.Decoder OSRMViaRouteResponse
 decodeOSRMViaRouteResponseContent =
-    decode OSRMViaRouteResponse
+    Decode.succeed OSRMViaRouteResponse
         |> optional "time" int 0
         |> optional "distance" float 0.0
         |> required "polyline" decodePolyline

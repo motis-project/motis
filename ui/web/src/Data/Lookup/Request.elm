@@ -10,54 +10,53 @@ import Data.Connection.Types exposing (TripId)
 import Data.Lookup.Types exposing (..)
 import Date exposing (Date)
 import Json.Encode as Encode exposing (int, string)
-import Util.Core exposing ((=>))
-import Util.Date exposing (unixTime)
+import Util.DateUtil exposing (unixTime)
 
 
 encodeTripToConnection : TripId -> Encode.Value
 encodeTripToConnection tripId =
     Encode.object
-        [ "destination"
-            => Encode.object
-                [ "type" => Encode.string "Module"
-                , "target" => Encode.string "/trip_to_connection"
+        [ ("destination",
+            , Encode.object
+                [ ( "type" , Encode.string "Module" )
+                , ( "target" , Encode.string "/trip_to_connection" )
                 ]
-        , "content_type" => Encode.string "TripId"
-        , "content" => encodeTripId tripId
+        , ("content_type" , Encode.string "TripId")
+        , ("content" , encodeTripId tripId)
         ]
 
 
 encodeTripId : TripId -> Encode.Value
 encodeTripId tripId =
     Encode.object
-        [ "station_id" => string tripId.station_id
-        , "train_nr" => int tripId.train_nr
-        , "time" => int tripId.time
-        , "target_station_id" => string tripId.target_station_id
-        , "target_time" => int tripId.target_time
-        , "line_id" => string tripId.line_id
+        [ ("station_id" , string tripId.station_id)
+        , ("train_nr" , int tripId.train_nr)
+        , ("time" , int tripId.time)
+        , ("target_station_id" , string tripId.target_station_id)
+        , ("target_time" , int tripId.target_time)
+        , ("line_id" , string tripId.line_id)
         ]
 
 
 encodeStationEventsRequest : LookupStationEventsRequest -> Encode.Value
 encodeStationEventsRequest req =
     Encode.object
-        [ "destination"
-            => Encode.object
-                [ "type" => Encode.string "Module"
-                , "target" => Encode.string "/lookup/station_events"
-                ]
-        , "content_type" => Encode.string "LookupStationEventsRequest"
-        , "content"
-            => Encode.object
-                [ "station_id" => Encode.string req.stationId
+        [ ("destination"
+            , Encode.object
+                [ "type" , Encode.string "Module"
+                , "target" , Encode.string "/lookup/station_events"
+                ])
+        , ("content_type" , Encode.string "LookupStationEventsRequest")
+        , ("content"
+            , Encode.object
+                [ "station_id" , Encode.string req.stationId
                 , "interval"
-                    => Encode.object
-                        [ "begin" => Encode.int req.intervalStart
-                        , "end" => Encode.int req.intervalEnd
+                    , Encode.object
+                        [ "begin" , Encode.int req.intervalStart
+                        , "end" , Encode.int req.intervalEnd
                         ]
-                , "type" => encodeTableType req.tableType
-                ]
+                , "type" , encodeTableType req.tableType
+                ])
         ]
 
 
