@@ -320,7 +320,8 @@ inline void update_delay_infos_and_event_uuids(
               motis::access::get_event_uuid(sched, trp, ev.k_);
           maybe_uuid.has_value()) {
         auto const uuid = maybe_uuid.value();
-        auto const trip_and_new_ev_key = mcd::pair{ptr<trip>{trp}, new_ev};
+        auto const trip_and_new_ev_key =
+            mcd::pair{ptr<trip const>{trp}, new_ev};
         sched.event_to_uuid_[trip_and_new_ev_key] = uuid;
         sched.uuid_to_event_[uuid] = trip_and_new_ev_key;
       }
@@ -364,7 +365,8 @@ inline void disable_trip(mcd::vector<trip::route_edge> const& edges,
 
 inline void disable_event_uuid(schedule& sched, trip const* trp,
                                ev_key const& evk) {
-  if (auto const it = sched.event_to_uuid_.find(mcd::pair{ptr<trip>{trp}, evk});
+  if (auto const it =
+          sched.event_to_uuid_.find(mcd::pair{ptr<trip const>{trp}, evk});
       it != end(sched.event_to_uuid_)) {
     auto const uuid = it->second;
     sched.event_to_uuid_.erase(it);

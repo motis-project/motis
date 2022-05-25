@@ -577,7 +577,8 @@ private:
         LOG(warn) << "event uuid changed: " << cur_event.uuid_ << " -> "
                   << msg_event.uuid_;
       }
-      auto const trip_and_ev_key = mcd::pair{ptr<trip>{result_.trp_}, evk};
+      auto const trip_and_ev_key =
+          mcd::pair{ptr<trip const>{result_.trp_}, evk};
       sched_.uuid_to_event_[msg_event.uuid_] = trip_and_ev_key;
       sched_.event_to_uuid_[trip_and_ev_key] = msg_event.uuid_;
     }

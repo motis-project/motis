@@ -224,7 +224,7 @@ inline void update_event_uuids(
             motis::access::get_event_uuid(sched, trp, orig_k);
         maybe_uuid.has_value()) {
       auto const uuid = maybe_uuid.value();
-      auto const trip_and_new_ev_key = mcd::pair{ptr<trip>{trp}, new_k};
+      auto const trip_and_new_ev_key = mcd::pair{ptr<trip const>{trp}, new_k};
       sched.event_to_uuid_[trip_and_new_ev_key] = uuid;
       sched.uuid_to_event_[uuid] = trip_and_new_ev_key;
     }
