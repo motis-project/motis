@@ -20,12 +20,14 @@ import Data.Routing.Types exposing (SearchDirection(..))
 import Data.ScheduleInfo.Types exposing (ScheduleInfo)
 import Date exposing (Date)
 import Debounce
+import Dict
 import Dom.Scroll as Scroll
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Html.Lazy exposing (..)
 import Json.Decode as Decode
+import Json.Encode as Encode
 import Localization.Base exposing (..)
 import Maybe.Extra exposing (isJust)
 import Navigation exposing (Location)
@@ -497,10 +499,35 @@ checkRoutingRequest ( model, cmds ) =
               , getCombinedSearchProfile model
                     |> encodeSearchOptions
                     |> Port.setPPRSearchOptions
+              , getGBFSOptions model
+                    |> encodeGBFSOptions
+                    |> Port.setGBFSSearchOptions
               ]
 
     else
         ( model, cmds )
+
+
+encodeGBFSOptions : List ModePicker.GBFS -> Encode.Value
+encodeGBFSOptions opt =
+    let
+        encodeGBFS gbfs =
+            Encode.object
+                [ "tag" => Encode.string gbfs.tag
+                , "name" => Encode.string gbfs.name
+                , "walk_max_duration" => Encode.int gbfs.walkMaxDuration
+                , "vehicle_max_duration" => Encode.int gbfs.vehicleMaxDuration
+                , "enabled" => Encode.bool gbfs.enabled
+                ]
+    in
+        opt |> List.map encodeGBFS |> Encode.list 
+
+
+getGBFSOptions : Model -> List ModePicker.GBFS
+getGBFSOptions model =
+    (Dict.union
+        (model.fromModes.gbfs |> Dict.filter (\k v -> v.enabled))
+        (model.toModes.gbfs |> Dict.filter (\k v -> v.enabled))) |> Dict.values
 
 
 getCombinedSearchProfile : Model -> SearchOptions

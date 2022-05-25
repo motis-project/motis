@@ -8,6 +8,7 @@ module Widgets.ModePicker exposing
     , saveSelections
     , update
     , view
+    , GBFS
     )
 
 import Data.GBFSInfo.Types exposing (GBFSInfo)

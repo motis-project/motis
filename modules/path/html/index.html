@@ -17,7 +17,7 @@ head, body, #map {
 
 <script>
 
-const url = 'https://localhost:8080'
+const url = 'http://127.0.0.1:8080'
 
 let simple = {
   "version": 8,
@@ -27,18 +27,19 @@ let simple = {
       "tiles": [`${url}/path/tiles/{z}/{x}/{y}.mvt`],
       "maxzoom": 20
     },
-    "raster": {
-      "type": "raster",
-      "tiles": ["https://tiles.motis-project.de/osm_light/{z}/{x}/{y}.png?token=862bdec137edd4e88029304609458291f0ec760b668c5816ccdd83d0beae76a4"],
+    "background": {
+      "type": "vector",
+      "tiles": ["${url}/tiles/{z}/{x}/{y}.mvt"],
       "tileSize": 256,
       "maxzoom": 18
     }
   },
   "layers": [
     {
-      "id": "raster",
-      "type": "raster",
-      "source": "raster"
+      "id": "background",
+      "type": "vector",
+      "source": "background",
+      "source-layer": "path"
     }, {
       "id": "path",
       "type": "line",

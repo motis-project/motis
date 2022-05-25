@@ -130,6 +130,7 @@ struct gbfs::impl {
       f.id_ = idx;
       f.layer_ = free_bike_layer_id;
       f.zoom_levels_ = {kMinZoomLevel, tiles::kMaxZoomLevel};
+      f.meta_.emplace_back("type", tiles::encode_string(vehicle_type));
       f.meta_.emplace_back("tag", tiles::encode_string(tag));
       f.meta_.emplace_back("id", tiles::encode_string(nfo.id_));
       f.geometry_ = tiles::fixed_point{
@@ -142,6 +143,7 @@ struct gbfs::impl {
       f.id_ = idx;
       f.layer_ = station_bike_layer_id;
       f.zoom_levels_ = {kMinZoomLevel, tiles::kMaxZoomLevel};
+      f.meta_.emplace_back("type", tiles::encode_string(vehicle_type));
       f.meta_.emplace_back("tag", tiles::encode_string(tag));
       f.meta_.emplace_back("name", tiles::encode_string(nfo.name_));
       f.meta_.emplace_back("id", tiles::encode_string(nfo.id_));
