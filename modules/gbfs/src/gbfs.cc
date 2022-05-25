@@ -3,12 +3,21 @@
 #include <mutex>
 #include <numeric>
 
+#include "boost/filesystem.hpp"
+
 #include "utl/concat.h"
 #include "utl/enumerate.h"
 #include "utl/erase_duplicates.h"
+#include "utl/get_or_create.h"
 #include "utl/pipes.h"
 
 #include "geo/point_rtree.h"
+
+#include "tiles/db/feature_inserter_mt.h"
+#include "tiles/feature/feature.h"
+#include "tiles/fixed/convert.h"
+#include "tiles/get_tile.h"
+#include "tiles/parse_tile_url.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/schedule.h"
@@ -25,6 +34,7 @@
 #include "motis/gbfs/system_status.h"
 
 namespace fbs = flatbuffers;
+namespace fs = boost::filesystem;
 using namespace motis::logging;
 using namespace motis::module;
 
@@ -33,11 +43,11 @@ namespace motis::gbfs {
 constexpr auto const bike_ready_time = 3;
 
 struct gbfs::impl {
-  explicit impl(config const& c, schedule const& sched)
-      : config_{c}, sched_{sched} {}
+  explicit impl(fs::path data_dir, config const& c, schedule const& sched)
+      : config_{c}, sched_{sched}, data_dir_{std::move(data_dir)} {}
 
   void fetch_stream(std::string url) {
-    auto tag = std::string{};
+    auto tag = std::string{"default"};
     auto vehicle_type = std::string{"bike"};
     auto const tag_pos = url.find('|');
     if (tag_pos != std::string::npos) {
@@ -79,7 +89,10 @@ struct gbfs::impl {
     }
 
     auto const lock = std::scoped_lock{mutex_};
-    auto& info = status_[tag];
+    auto& info = utl::get_or_create(status_, tag, [&]() {
+      return provider_status{std::make_unique<tiles_database>(
+          (data_dir_ / (tag + "tiles.mdb")).string(), config_.db_size_)};
+    });
     info.vehicle_type_ = vehicle_type;
     if (urls.station_info_url_.has_value()) {
       info.stations_ =
@@ -97,15 +110,58 @@ struct gbfs::impl {
     if (urls.system_information_url_.has_value()) {
       info.info_ = read_system_information(f_system_info->val().body);
     }
+
+    static constexpr auto const kMinZoomLevel = 10;
+    auto feature_inserter = tiles::feature_inserter_mt{
+        tiles::dbi_handle{info.tiles_->db_handle_,
+                          info.tiles_->db_handle_.features_dbi_opener()},
+        info.tiles_->pack_handle_};
+
+    tiles::layer_names_builder layer_names;
+    auto const free_bike_layer_id = layer_names.get_layer_idx("station");
+    auto const station_bike_layer_id = layer_names.get_layer_idx("vehicle");
+
+    auto txn = info.tiles_->db_handle_.make_txn();
+    layer_names.store(info.tiles_->db_handle_, txn);
+    txn.commit();
+
+    for (auto const& [idx, nfo] : utl::enumerate(info.free_bikes_)) {
+      tiles::feature f;
+      f.id_ = idx;
+      f.layer_ = free_bike_layer_id;
+      f.zoom_levels_ = {kMinZoomLevel, tiles::kMaxZoomLevel};
+      f.meta_.emplace_back("tag", tiles::encode_string(tag));
+      f.meta_.emplace_back("id", tiles::encode_string(nfo.id_));
+      f.geometry_ = tiles::fixed_point{
+          {tiles::latlng_to_fixed({nfo.pos_.lat_, nfo.pos_.lng_})}};
+      feature_inserter.insert(f);
+    }
+
+    for (auto const& [idx, nfo] : utl::enumerate(info.stations_)) {
+      tiles::feature f;
+      f.id_ = idx;
+      f.layer_ = station_bike_layer_id;
+      f.zoom_levels_ = {kMinZoomLevel, tiles::kMaxZoomLevel};
+      f.meta_.emplace_back("tag", tiles::encode_string(tag));
+      f.meta_.emplace_back("name", tiles::encode_string(nfo.name_));
+      f.meta_.emplace_back("id", tiles::encode_string(nfo.id_));
+      f.geometry_ = tiles::fixed_point{
+          {tiles::latlng_to_fixed({nfo.pos_.lat_, nfo.pos_.lng_})}};
+      feature_inserter.insert(f);
+    }
   }
 
-  void init(schedule const& sched) {
+  void init() {
     auto const t = scoped_timer{"GBFS init"};
+    if (!config_.urls_.empty()) {
+      fs::create_directories(data_dir_);
+    }
+
     motis_parallel_for(config_.urls_, [&](auto&& url) { fetch_stream(url); });
 
     auto const lock = std::scoped_lock{mutex_};
     pt_stations_rtree_ =
-        geo::make_point_rtree(sched.stations_, [](auto const& s) {
+        geo::make_point_rtree(sched_.stations_, [](auto const& s) {
           return geo::latlng{s->lat(), s->lng()};
         });
     for (auto const& [tag, info] : status_) {
@@ -625,12 +681,81 @@ struct gbfs::impl {
     return make_msg(fbb);
   }
 
+  msg_ptr tiles(msg_ptr const& msg) {
+    auto const split_target = [](std::string_view const target) {
+      static constexpr auto const prefix = std::string_view{"/gbfs/tiles/"};
+      auto const in = target.substr(prefix.size());
+      auto const first_slash = in.find('/');
+      utl::verify(first_slash != std::string_view::npos,
+                  "invalid gbfs tiles target {}", target);
+      return std::pair{std::string{in.substr(0, first_slash)},
+                       std::string{in.substr(first_slash)}};
+    };
+
+    auto const target = msg->get()->destination()->target();
+    auto const [tag, tile_url] =
+        split_target({target->c_str(), target->Length()});
+    auto const tile = tiles::parse_tile_url(tile_url);
+    utl::verify(tile.has_value(), "invalid tile url {}", tile_url);
+
+    tiles::null_perf_counter pc;
+    auto& data = status_.at(tag);
+    auto const rendered_tile =
+        tiles::get_tile(data.tiles_->db_handle_, data.tiles_->pack_handle_,
+                        data.tiles_->render_ctx_, *tile, pc);
+
+    message_creator mc;
+    std::vector<fbs::Offset<HTTPHeader>> headers;
+    fbs::Offset<fbs::String> payload;
+    if (rendered_tile) {
+      headers.emplace_back(CreateHTTPHeader(
+          mc, mc.CreateString("Content-Type"),
+          mc.CreateString("application/vnd.mapbox-vector-tile")));
+      headers.emplace_back(CreateHTTPHeader(
+          mc, mc.CreateString("Content-Encoding"), mc.CreateString("deflate")));
+      payload = mc.CreateString(rendered_tile->data(), rendered_tile->size());
+    } else {
+      payload = mc.CreateString("");
+    }
+
+    mc.create_and_finish(
+        MsgContent_HTTPResponse,
+        CreateHTTPResponse(mc, HTTPStatus_OK, mc.CreateVector(headers), payload)
+            .Union());
+
+    return make_msg(mc);
+  }
+
+  struct tiles_database {
+    explicit tiles_database(std::string const& path, size_t const db_size)
+        : db_env_{tiles::make_tile_database(path.c_str(), db_size)},
+          db_handle_{db_env_},
+          render_ctx_{tiles::make_render_ctx(db_handle_)},
+          pack_handle_{path.c_str()} {}
+
+    ~tiles_database() = default;
+
+    tiles_database(tiles_database&&) = delete;
+    tiles_database(tiles_database const&) = delete;
+
+    tiles_database& operator=(tiles_database&&) = delete;
+    tiles_database& operator=(tiles_database const&) = delete;
+
+    lmdb::env db_env_;
+    tiles::tile_db_handle db_handle_;
+    tiles::render_ctx render_ctx_;
+    tiles::pack_handle pack_handle_;
+  };
+
   struct provider_status {
+    explicit provider_status(std::unique_ptr<tiles_database>&& db)
+        : tiles_{std::move(db)} {}
     system_information info_;
     std::string vehicle_type_;
     std::vector<station> stations_;
     std::vector<free_bike> free_bikes_;
     geo::point_rtree free_bikes_rtree_, stations_rtree_;
+    std::unique_ptr<tiles_database> tiles_;
   };
 
   config const& config_;
@@ -638,12 +763,14 @@ struct gbfs::impl {
   std::mutex mutex_;
   std::map<std::string, provider_status> status_;
   geo::point_rtree pt_stations_rtree_;
+  fs::path data_dir_;
 };
 
 gbfs::gbfs() : module("RIS", "gbfs") {
   param(config_.update_interval_minutes_, "update_interval",
         "update interval in minutes");
   param(config_.urls_, "urls", "URLs to fetch data from");
+  param(config_.db_size_, "db_size", "database size");
 }
 
 gbfs::~gbfs() = default;
@@ -679,11 +806,22 @@ void gbfs::import(import_dispatcher& reg) {
 }
 
 void gbfs::init(motis::module::registry& r) {
-  impl_ = std::make_unique<impl>(config_, get_sched());
-  r.subscribe("/init", [&]() { impl_->init(get_sched()); });
+  impl_ = std::make_unique<impl>(get_data_directory() / "gbfs", config_,
+                                 get_sched());
   r.register_op("/gbfs/route",
                 [&](msg_ptr const& m) { return impl_->route(get_sched(), m); });
   r.register_op("/gbfs/info", [&](msg_ptr const&) { return impl_->info(); });
+  r.register_op("/gbfs/tiles",
+                [&](msg_ptr const& m) { return impl_->tiles(m); });
+  r.subscribe("/init", [&]() {
+    shared_data_->register_timer(
+        "GBFS Update",
+        boost::posix_time::minutes{config_.update_interval_minutes_},
+        [&]() { impl_->init(); },
+        ctx::accesses_t{ctx::access_request{
+            to_res_id(::motis::module::global_res_id::SCHEDULE),
+            ctx::access_t::READ}});
+  });
 }
 
 }  // namespace motis::gbfs

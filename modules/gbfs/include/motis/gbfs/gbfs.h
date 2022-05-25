@@ -11,6 +11,8 @@ namespace motis::gbfs {
 struct config {
   unsigned update_interval_minutes_{5U};
   std::vector<std::string> urls_;
+  size_t db_size_{sizeof(void*) >= 8 ? 1024ULL * 1024 * 1024 * 1024
+                                     : 256 * 1024 * 1024};
 };
 
 struct gbfs : public motis::module::module {
