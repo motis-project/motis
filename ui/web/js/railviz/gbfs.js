@@ -101,7 +101,10 @@ RailViz.GBFS = (function () {
                 "minzoom": 13,
                 "source-layer": "station",
                 "layout": {
-                    "text-field": ["get", "vehicles_available"],
+                    "text-field": ['case',
+                      ['==', ['get', 'vehicles_available'], 999], '',
+                      ["get", "vehicles_available"]
+                    ],
                     "icon-image": ['concat', 'icon-', ['get', 'type']],
                     "text-font": ["Noto Sans Display Bold"],
                     "text-offset": [0.8, -1],
