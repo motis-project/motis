@@ -111,19 +111,15 @@ struct gbfs::impl {
       info.info_ = read_system_information(f_system_info->val().body);
     }
 
+    tiles::layer_names_builder layer_names;
+    auto const free_bike_layer_id = layer_names.get_layer_idx("vehicle");
+    auto const station_bike_layer_id = layer_names.get_layer_idx("station");
+
     static constexpr auto const kMinZoomLevel = 10;
     auto feature_inserter = tiles::feature_inserter_mt{
         tiles::dbi_handle{info.tiles_->db_handle_,
                           info.tiles_->db_handle_.features_dbi_opener()},
         info.tiles_->pack_handle_};
-
-    tiles::layer_names_builder layer_names;
-    auto const free_bike_layer_id = layer_names.get_layer_idx("station");
-    auto const station_bike_layer_id = layer_names.get_layer_idx("vehicle");
-
-    auto txn = info.tiles_->db_handle_.make_txn();
-    layer_names.store(info.tiles_->db_handle_, txn);
-    txn.commit();
 
     for (auto const& [idx, nfo] : utl::enumerate(info.free_bikes_)) {
       tiles::feature f;
@@ -147,9 +143,17 @@ struct gbfs::impl {
       f.meta_.emplace_back("tag", tiles::encode_string(tag));
       f.meta_.emplace_back("name", tiles::encode_string(nfo.name_));
       f.meta_.emplace_back("id", tiles::encode_string(nfo.id_));
+      f.meta_.emplace_back("vehicles_available",
+                           tiles::encode_integer(nfo.bikes_available_));
       f.geometry_ = tiles::fixed_point{
           {tiles::latlng_to_fixed({nfo.pos_.lat_, nfo.pos_.lng_})}};
       feature_inserter.insert(f);
+    }
+
+    {
+      auto txn = info.tiles_->db_handle_.make_txn();
+      layer_names.store(info.tiles_->db_handle_, txn);
+      txn.commit();
     }
   }
 
@@ -271,12 +275,6 @@ struct gbfs::impl {
     auto const x = from_fbs(req->x());
 
     auto const p = pt_stations_rtree_.in_radius(x, max_total_dist);
-    if (p.empty() && req->direct()->size() == 0U) {
-      l(logging::debug, "no stations found in {}km radius around {}",
-        max_total_dist / 1000.0, x);
-      return empty_response(req->dir());
-    }
-
     auto p_pos = utl::to_vec(p, [&](auto const idx) {
       auto const& s = *sched_.stations_.at(idx);
       return geo::latlng{s.lat(), s.lng()};
@@ -284,6 +282,11 @@ struct gbfs::impl {
     utl::concat(p_pos, utl::to_vec(*req->direct(), [](Position const* p) {
                   return from_fbs(p);
                 }));
+    if (p_pos.empty() && req->direct()->size() == 0U) {
+      l(logging::debug, "no stations found in {}km radius around {}",
+        max_total_dist / 1000.0, x);
+      return empty_response(req->dir());
+    }
 
     auto const sx = stations_rtree.in_radius(x, max_walk_dist);
     auto sp = std::accumulate(
@@ -296,16 +299,15 @@ struct gbfs::impl {
       if (req->dir() == SearchDir_Forward) {
         return free_bikes_rtree.in_radius(x, max_walk_dist);
       } else {
-        return std::accumulate(begin(p), end(p), std::vector<size_t>{},
-                               [&](std::vector<size_t> acc, size_t const idx) {
-                                 auto const& s = *sched_.stations_.at(idx);
-                                 auto const closest = free_bikes_rtree.nearest(
-                                     {s.lat(), s.lng()}, 1U);
-                                 if (!closest.empty()) {
-                                   acc.emplace_back(closest.at(0).second);
-                                 }
-                                 return acc;
-                               });
+        return std::accumulate(
+            begin(p_pos), end(p_pos), std::vector<size_t>{},
+            [&](std::vector<size_t> acc, geo::latlng const& pos) {
+              auto const closest = free_bikes_rtree.nearest(pos, 1U);
+              if (!closest.empty()) {
+                acc.emplace_back(closest.at(0).second);
+              }
+              return acc;
+            });
       }
     }();
 
@@ -368,9 +370,12 @@ struct gbfs::impl {
         auto const b_to_p_table =
             motis_content(OSRMManyToManyResponse, f_b_to_p_rides->val())
                 ->costs();
-        for (auto const& [b_vec_idx, x_to_b_res] : utl::enumerate(
-                 *motis_content(OSRMOneToManyResponse, f_x_to_b_walks->val())
-                      ->costs())) {
+        auto const x_to_b_costs =
+            motis_content(OSRMOneToManyResponse, f_x_to_b_walks->val())
+                ->costs();
+
+        for (auto const& [b_vec_idx, x_to_b_res] :
+             utl::enumerate(*x_to_b_costs)) {
           auto const x_to_b_walk_duration =
               static_cast<duration>(std::ceil(x_to_b_res->duration() / 60.0));
           if (x_to_b_walk_duration > max_walk_duration) {
@@ -534,6 +539,10 @@ struct gbfs::impl {
           }
 
           for (auto const& [sp_vec_idx, sp_id] : utl::enumerate(sp)) {
+            if (stations.at(sp.at(sp_vec_idx)).bikes_available_ == 0) {
+              continue;
+            }
+
             auto const sp_to_sx_duration = static_cast<duration>(std::ceil(
                 sp_to_sx_table->Get(sp_vec_idx * sx.size() + sx_vec_idx) /
                 60.0));
@@ -768,7 +777,7 @@ struct gbfs::impl {
   fs::path data_dir_;
 };
 
-gbfs::gbfs() : module("RIS", "gbfs") {
+gbfs::gbfs() : module("GBFS", "gbfs") {
   param(config_.update_interval_minutes_, "update_interval",
         "update interval in minutes");
   param(config_.urls_, "urls", "URLs to fetch data from");

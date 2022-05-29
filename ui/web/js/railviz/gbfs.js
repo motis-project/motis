@@ -81,27 +81,43 @@ RailViz.GBFS = (function () {
             map.addSource(`gbfs-${opt.tag}`, {
                 type: "vector",
                 tiles: [`${tilesEndpoint}gbfs/tiles/${opt.tag}/{z}/{x}/{y}.mvt`],
-                maxzoom: 20,
+                maxzoom: 20
             });
             map.addLayer({
-                id: `gbfs-${opt.tag}-station`,
-                type: "symbol",
-                source: `gbfs-${opt.tag}`,
-                minzoom: 13,
-                "source-layer": "station",
-                layout: {
-                    "icon-image": ['concat', 'square-rgb-', ['get', 'color']]
-                },
-            });
-            map.addLayer({
-                id: `gbfs-${opt.tag}-vehicle`,
-                type: "symbol",
-                source: `gbfs-${opt.tag}`,
-                minzoom: 13,
+                "id": `gbfs-${opt.tag}-vehicle`,
+                "type": "symbol",
+                "source": `gbfs-${opt.tag}`,
+                "minzoom": 13,
                 "source-layer": "vehicle",
-                layout: {
-                    "icon-image": ['concat', 'icon-', ['get', 'type']]
+                "layout": {
+                    "icon-image": ['concat', 'icon-', ['get', 'type']],
+                    "icon-size": ['interpolate', ['linear'], ['zoom'], 13, .6, 20, .8]
                 },
+            });
+            map.addLayer({
+                "id": `gbfs-${opt.tag}-station`,
+                "type": "symbol",
+                "source": `gbfs-${opt.tag}`,
+                "minzoom": 13,
+                "source-layer": "station",
+                "layout": {
+                    "text-field": ["get", "vehicles_available"],
+                    "icon-image": ['concat', 'icon-', ['get', 'type']],
+                    "text-font": ["Noto Sans Display Bold"],
+                    "text-offset": [0.8, -1],
+                    "text-size": 12,
+                    "text-allow-overlap": true
+                },
+                "paint": {
+                  "text-color": 'white',
+                  "text-halo-color": ['case',
+                    ['>=', ['get', 'vehicles_available'], 3], '#94BD46',
+                    ['>=', ['get', 'vehicles_available'], 2], '#f8c11c',
+                    ['==', ['get', 'vehicles_available'], 1], 'orange',
+                    '#f83d11'
+                  ],
+                  "text-halo-width": 2
+                }
             });
         });
     }

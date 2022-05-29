@@ -247,6 +247,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
       bearing: bearing,
       pitch: pitch,
       style: {
+        glyphs: `${tilesEndpoint}glyphs/{fontstack}/{range}.pbf`,
         version: 8,
         sources: {},
         layers: [],
