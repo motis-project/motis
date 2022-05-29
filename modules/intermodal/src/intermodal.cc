@@ -378,7 +378,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
 
   auto interval_begin = uint64_t{};
   auto interval_end = uint64_t{};
-  if (routing_response) {
+  if (routing_response != nullptr) {
     interval_begin = routing_response->interval_begin();
     interval_end = routing_response->interval_end();
   } else {
