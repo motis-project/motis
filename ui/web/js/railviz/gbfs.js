@@ -91,7 +91,9 @@ RailViz.GBFS = (function () {
                 "source-layer": "vehicle",
                 "layout": {
                     "icon-image": ['concat', 'icon-', ['get', 'type']],
-                    "icon-size": ['interpolate', ['linear'], ['zoom'], 13, .6, 20, .8]
+                    "icon-size": ['interpolate', ['linear'], ['zoom'], 13, .6, 20, .8],
+                    "icon-allow-overlap": false,
+                    "text-allow-overlap": false
                 },
             });
             map.addLayer({
@@ -109,7 +111,8 @@ RailViz.GBFS = (function () {
                     "text-font": ["Noto Sans Display Bold"],
                     "text-offset": [0.8, -1],
                     "text-size": 12,
-                    "text-allow-overlap": true
+                    "text-allow-overlap": false,
+                    "icon-allow-overlap": false
                 },
                 "paint": {
                   "text-color": 'white',

@@ -268,9 +268,9 @@ void apply_gbfs_patches(journey& j, std::vector<parking_patch>& patches) {
       str.parking_stop_.lng_ = b.pos_.lng_;
       str.parking_stop_.arrival_.valid_ = true;
       str.parking_stop_.arrival_.timestamp_ =
-          j.stops_[p.from_].departure_.timestamp_ + b.walk_duration_;
+          j.stops_[p.from_].departure_.timestamp_ + b.walk_duration_ * 60;
       str.parking_stop_.arrival_.schedule_timestamp_ =
-          j.stops_[p.from_].departure_.schedule_timestamp_ + b.bike_duration_;
+          str.parking_stop_.arrival_.timestamp_;
       str.parking_stop_.arrival_.timestamp_reason_ =
           j.stops_[p.from_].departure_.timestamp_reason_;
       str.parking_stop_.departure_ = str.parking_stop_.arrival_;

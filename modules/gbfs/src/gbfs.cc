@@ -13,6 +13,7 @@
 
 #include "geo/point_rtree.h"
 
+#include "tiles/db/clear_database.h"
 #include "tiles/db/feature_inserter_mt.h"
 #include "tiles/feature/feature.h"
 #include "tiles/fixed/convert.h"
@@ -41,6 +42,36 @@ using namespace motis::module;
 namespace motis::gbfs {
 
 constexpr auto const bike_ready_time = 3;
+
+struct journey {
+  struct invalid {};
+  struct s {  // station bound
+    friend std::ostream& operator<<(std::ostream& out, s const& x) {
+      return out << "(STATION_BIKE: first_walk_duration="
+                 << x.first_walk_duration_
+                 << ", bike_duration=" << x.bike_duration_
+                 << ", second_walk_duration=" << x.second_walk_duration_ << ")";
+    }
+    duration first_walk_duration_{0};
+    duration bike_duration_{0};
+    duration second_walk_duration_{0};
+    uint32_t sx_, sp_, p_;
+  };
+  struct b {  // free-float
+    friend std::ostream& operator<<(std::ostream& out, b const& x) {
+      return out << "(FREE_FLOAT: first_walk_duration=" << x.walk_duration_
+                 << ", bike_duration=" << x.bike_duration_ << ")";
+    }
+    duration walk_duration_{0};
+    duration bike_duration_{0};
+    uint32_t b_, p_;
+  };
+
+  bool valid() const { return !std::holds_alternative<invalid>(info_); }
+
+  uint16_t total_duration_{std::numeric_limits<uint16_t>::max()};
+  std::variant<invalid, s, b> info_{invalid{}};
+};
 
 struct gbfs::impl {
   explicit impl(fs::path data_dir, config const& c, schedule const& sched)
@@ -111,6 +142,8 @@ struct gbfs::impl {
       info.info_ = read_system_information(f_system_info->val().body);
     }
 
+    info.tiles_->clear();
+
     tiles::layer_names_builder layer_names;
     auto const free_bike_layer_id = layer_names.get_layer_idx("vehicle");
     auto const station_bike_layer_id = layer_names.get_layer_idx("station");
@@ -155,6 +188,8 @@ struct gbfs::impl {
       layer_names.store(info.tiles_->db_handle_, txn);
       txn.commit();
     }
+
+    info.tiles_->render_ctx_ = tiles::make_render_ctx(info.tiles_->db_handle_);
   }
 
   void init() {
@@ -223,26 +258,6 @@ struct gbfs::impl {
   msg_ptr route(schedule const&, msg_ptr const& m) {
     using osrm::OSRMManyToManyResponse;
     using osrm::OSRMOneToManyResponse;
-
-    struct journey {
-      struct invalid {};
-      struct s {  // station bound
-        duration first_walk_duration_{0};
-        duration bike_duration_{0};
-        duration second_walk_duration_{0};
-        uint32_t sx_, sp_, p_;
-      };
-      struct b {  // free-float
-        duration walk_duration_{0};
-        duration bike_duration_{0};
-        uint32_t b_, p_;
-      };
-
-      bool valid() const { return !std::holds_alternative<invalid>(info_); }
-
-      uint16_t total_duration_{std::numeric_limits<uint16_t>::max()};
-      std::variant<invalid, s, b> info_{invalid{}};
-    };
 
     constexpr auto const max_walk_speed = 1.1;  // m/s 4km/h
     constexpr auto const max_bike_speed = 7.0;  // m/s 25km/h
@@ -589,9 +604,8 @@ struct gbfs::impl {
         utl::transform([&](journey const& j) {
           return std::visit(
               utl::overloaded{
-                  [&](journey::invalid const&) {
+                  [&](journey::invalid const&) -> fbs::Offset<RouteInfo> {
                     throw std::runtime_error{"unreachable"};
-                    return fbs::Offset<RouteInfo>{};
                   },
 
                   [&](journey::b const& free_bike_info) {
@@ -751,6 +765,14 @@ struct gbfs::impl {
 
     tiles_database& operator=(tiles_database&&) = delete;
     tiles_database& operator=(tiles_database const&) = delete;
+
+    void clear() {
+      lmdb::txn txn{db_handle_.env_};
+      tiles::clear_database(db_handle_, txn);
+      txn.commit();
+
+      pack_handle_.resize(0);
+    }
 
     lmdb::env db_env_;
     tiles::tile_db_handle db_handle_;
