@@ -17,6 +17,7 @@
 
 #include "motis/paxmon/capacity.h"
 #include "motis/paxmon/graph_access.h"
+#include "motis/paxmon/update_capacity.h"
 
 namespace motis::paxmon {
 
@@ -179,19 +180,6 @@ event_node* get_or_insert_node(universe& uv, trip_data_index const tdi,
       tek.schedule_time_, tek.schedule_time_, tek.type_, true, tek.station_id_);
 }
 
-std::pair<std::uint16_t, capacity_source> guess_trip_capacity(
-    schedule const& sched, capacity_maps const& caps, trip const* trp) {
-  auto const sections = access::sections(trp);
-  if (begin(sections) != end(sections)) {
-    auto const first_section = *begin(sections);
-    return get_capacity(sched, first_section.lcon(),
-                        first_section.ev_key_from(), first_section.ev_key_to(),
-                        caps);
-  } else {
-    return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
-  }
-}
-
 std::set<passenger_group*> collect_passenger_groups(universe& uv,
                                                     trip_data_index const tdi) {
   std::set<passenger_group*> affected_passenger_groups;
@@ -259,9 +247,8 @@ void apply_reroute(universe& uv, capacity_maps const& caps,
                    std::vector<trip_ev_key> const& old_route,
                    std::vector<trip_ev_key> const& new_route,
                    std::vector<edge_index>& updated_interchange_edges) {
-  // TODO(pablo): capacity for each section
-  auto const encoded_capacity =
-      encode_capacity(guess_trip_capacity(sched, caps, trp));
+  auto const unknown_capacity =
+      encode_capacity({UNKNOWN_CAPACITY, capacity_source::SPECIAL});
   auto const affected_passenger_groups = collect_passenger_groups(uv, tdi);
   auto diff = diff_route(old_route, new_route);
 
@@ -296,7 +283,7 @@ void apply_reroute(universe& uv, capacity_maps const& caps,
   if (!new_nodes.empty()) {
     auto const merged_trips = get_merged_trips(trp).value();
     for (auto const& [from, to] : utl::pairwise(new_nodes)) {
-      auto e = connect_nodes(from, to, merged_trips, encoded_capacity, uv);
+      auto e = connect_nodes(from, to, merged_trips, unknown_capacity, uv);
       if (e->is_trip()) {
         edges.emplace_back(get_edge_index(uv, e));
       }
@@ -306,6 +293,8 @@ void apply_reroute(universe& uv, capacity_maps const& caps,
   for (auto const* n : removed_nodes) {
     canceled_nodes.emplace_back(n->index(uv));
   }
+
+  update_trip_capacity(uv, sched, caps, trp, false);
 
   for (auto pg : affected_passenger_groups) {
     update_passenger_group(tdi, trp, pg, uv);

@@ -263,7 +263,7 @@ std::uint16_t get_vehicles_capacity(capacity_maps const& caps,
 
 std::optional<std::pair<std::uint16_t, capacity_source>> get_section_capacity(
     schedule const& sched, capacity_maps const& caps, trip const* trp,
-    ev_key const& ev_key_from, ev_key const& ev_key_to) {
+    ev_key const& ev_key_from, ev_key const& /*ev_key_to*/) {
   if (trp->uuid_.is_nil()) {
     return {};
   }
@@ -297,7 +297,7 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_section_capacity(
       return {{get_vehicles_capacity(caps, sec_vo->vehicles_),
                capacity_source::TRIP_EXACT}};
     }
-    // TODO(pablo): station range fallback
+    // TODO(pablo): station range fallback?
   }
   return {};
 }

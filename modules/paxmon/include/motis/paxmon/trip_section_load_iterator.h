@@ -38,7 +38,8 @@ struct trip_section_with_load {
     }
   }
 
-  inline bool has_load_info() const { return edge_ != nullptr; }
+  inline bool has_paxmon_data() const { return edge_ != nullptr; }
+  inline bool has_load_info() const { return has_paxmon_data(); }
 
   inline bool has_capacity_info() const { return capacity_ != 0; }
 
@@ -74,6 +75,13 @@ struct trip_section_with_load {
   std::uint16_t median_load() const {
     return edge_ != nullptr ? get_median_load(load_cdf()) : 0;
   }
+
+  light_connection const& lcon() const { return section_.lcon(); }
+
+  ev_key ev_key_from() const { return section_.ev_key_from(); }
+  ev_key ev_key_to() const { return section_.ev_key_to(); }
+
+  edge const* paxmon_edge() const { return edge_; }
 
   universe const& uv_;
   motis::access::trip_section section_;
@@ -225,7 +233,11 @@ struct sections_with_load {
   inline std::size_t size() const { return trip_->edges_->size(); }
   inline bool empty() const { return trip_->edges_->empty(); }
 
-  inline bool has_load_info() const { return tdi_ != INVALID_TRIP_DATA_INDEX; }
+  inline bool has_paxmon_data() const {
+    return tdi_ != INVALID_TRIP_DATA_INDEX;
+  }
+
+  inline bool has_load_info() const { return has_paxmon_data(); }
 
   iterator begin() const { return {sched_, caps_, uv_, trip_, tdi_, 0}; }
   iterator end() const {
