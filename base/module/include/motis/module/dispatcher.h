@@ -1,30 +1,23 @@
 #pragma once
 
+#include <map>
 #include <memory>
 #include <queue>
 #include <string_view>
 
-#include "ctx/access_scheduler.h"
+#include "ctx/ctx.h"
 
 #include "motis/module/ctx_data.h"
 #include "motis/module/future.h"
 #include "motis/module/message.h"
-#include "motis/module/module.h"
 #include "motis/module/receiver.h"
 #include "motis/module/registry.h"
-#include "motis/module/shared_data.h"
+#include "motis/module/timer.h"
 
 namespace motis::module {
 
-/* Concurrency model:
- *   - multiple reads or one single write at a time
- *   - parent op needs to have equal or more permissions as child
- *   - parent op may not quit until all child ops that require
- *     access permissions have finished
- *   - (internal) -> child ops do not require own access permissions
- *   - note: write ops could spawn multiple parallel write child
- *           ops which leads to (unchecked) data-races!
- */
+struct module;
+
 struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
   explicit dispatcher(registry&, std::vector<std::unique_ptr<module>>&&);
 
@@ -38,6 +31,12 @@ struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
     }
     return *reinterpret_cast<Module*>(it->get());
   }
+
+  void register_timer(char const* name,
+                      boost::posix_time::time_duration interval,
+                      std::function<void()>&& fn, ctx::accesses_t&& access);
+
+  void start_timers();
 
   std::vector<future> publish(msg_ptr const& msg, ctx_data const& data,
                               ctx::op_id id);
@@ -53,9 +52,6 @@ struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
 
   motis::module::msg_ptr api_desc(int id) const;
 
-  ctx::access_t access_of(std::string const& target);
-  ctx::access_t access_of(msg_ptr const& msg);
-
   void handle_no_target(msg_ptr const& msg, callback const& cb);
   void retry_no_target_msgs();
 
@@ -63,7 +59,7 @@ struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
   bool queue_no_target_msgs_{false};
   std::queue<std::pair<msg_ptr, callback>> no_target_msg_queue_;
   std::vector<std::unique_ptr<module>> modules_;
-  shared_data shared_data_;
+  std::map<std::string, std::shared_ptr<timer>> timers_;
 
   // If this is set to a value != nullptr, it indicates direct mode is on.
   // This implies that in direct mode there can only be one global dispatcher.
@@ -71,7 +67,7 @@ struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
   //   - no code will be executed in ctx::operations.
   //   - no calls to ctx::current_op<Data>() will be made
   //   - everything runs sequentially (no interleaving for motis_call/publish)
-  static dispatcher* direct_mode_dispatcher_;
+  static dispatcher* direct_mode_dispatcher_;  // NOLINT
 };
 
 }  // namespace motis::module

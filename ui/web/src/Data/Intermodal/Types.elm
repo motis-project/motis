@@ -57,6 +57,7 @@ type IntermodalDestination
 type Mode
     = Foot FootModeInfo
     | Bike BikeModeInfo
+    | GBFS GBFSModeInfo
     | Car CarModeInfo
     | FootPPR FootPPRInfo
     | CarParking CarParkingModeInfo
@@ -68,6 +69,13 @@ type alias FootModeInfo =
 
 type alias BikeModeInfo =
     { maxDuration : Int }
+
+
+type alias GBFSModeInfo =
+    { maxWalkDuration : Int
+    , maxVehicleDuration : Int
+    , provider : String
+    }
 
 
 type alias CarModeInfo =

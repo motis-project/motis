@@ -12,8 +12,8 @@ void convert_utf8_to_iso_8859_1(std::string& s, std::string_view filename) {
   auto line = 1;
   auto column = 1;
   auto code_point = unsigned{};
-  auto out = &s[0];
-  auto in = reinterpret_cast<unsigned char const*>(&s[0]);
+  auto out = s.data();
+  auto in = reinterpret_cast<unsigned char const*>(s.data());
 
   auto to_go = s.size();
   while (to_go != 0) {
@@ -49,7 +49,7 @@ void convert_utf8_to_iso_8859_1(std::string& s, std::string_view filename) {
     --to_go;
   }
 
-  s.resize(out - &s[0]);
+  s.resize(out - s.data());
 }
 
 loaded_file::loaded_file() = default;
@@ -78,10 +78,8 @@ loaded_file::loaded_file(boost::filesystem::path const& p, bool convert_utf8)
   }
 }
 
-loaded_file::loaded_file(loaded_file&& o) noexcept {
-  name_ = std::move(o.name_);
-  buf_ = std::move(o.buf_);
-}
+loaded_file::loaded_file(loaded_file&& o) noexcept
+    : name_{std::move(o.name_)}, buf_{std::move(o.buf_)} {}
 
 loaded_file::~loaded_file() = default;
 

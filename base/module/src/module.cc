@@ -3,21 +3,33 @@
 #include "boost/filesystem.hpp"
 
 #include "motis/core/schedule/schedule.h"
-#include "motis/core/schedule/schedule_data_key.h"
+
+#include "motis/module/dispatcher.h"
 
 namespace fs = boost::filesystem;
 
 namespace motis::module {
 
 schedule const& module::get_sched() const {
-  return *get_shared_data<schedule_data>(SCHEDULE_DATA_KEY).schedule_;
+  return *get_shared_data<schedule_data>(to_res_id(global_res_id::SCHEDULE))
+              .schedule_;
 }
 
 void module::set_data_directory(std::string const& d) { data_directory_ = d; }
 
-void module::set_shared_data(shared_data* d) { shared_data_ = d; }
+void module::set_shared_data(dispatcher* d) { shared_data_ = d; }
 
-std::string module::data_path(fs::path const& p) {
+locked_resources module::lock_resources(ctx::accesses_t access,
+                                        ctx::op_type_t op_type) {
+  if (dispatcher::direct_mode_dispatcher_ != nullptr) {
+    return {{shared_data_}};
+  } else {
+    return {{ctx::access_scheduler<ctx_data>::mutex{*shared_data_, op_type,
+                                                    std::move(access)}}};
+  }
+}
+
+std::string module::data_path(fs::path const& p) const {
   return p.parent_path() == data_directory_
              ? p.lexically_relative(data_directory_).generic_string()
              : p.generic_string();

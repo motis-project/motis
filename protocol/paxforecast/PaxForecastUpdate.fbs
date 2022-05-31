@@ -16,6 +16,7 @@ table PaxForecastGroup {
 }
 
 table PaxForecastUpdate {
+  universe: uint;
   system_time: ulong;
   groups: [PaxForecastGroup];
   trips: [motis.paxmon.PaxMonTripLoadInfo];

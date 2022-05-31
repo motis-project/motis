@@ -9,6 +9,8 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
+#include "motis/json/json.h"
+
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/common/unixtime.h"
@@ -16,8 +18,9 @@
 
 #include "motis/ris/ribasis/common.h"
 
-using namespace motis::logging;
 using namespace flatbuffers;
+using namespace motis::logging;
+using namespace motis::json;
 
 namespace motis::ris::ribasis {
 
@@ -46,7 +49,7 @@ Offset<FullTripId> parse_trip_id(context& ctx, rapidjson::Value const& data) {
   auto const dest_si = parse_station(ctx, dest_stop);
 
   auto const start_time = get_schedule_timestamp(ctx, rel, "startzeit");
-  auto const dest_time = get_schedule_timestamp(ctx, rel, "zielzeit");
+  auto const target_time = get_schedule_timestamp(ctx, rel, "zielzeit");
 
   return CreateFullTripId(
       ctx.b_,
@@ -56,7 +59,7 @@ Offset<FullTripId> parse_trip_id(context& ctx, rapidjson::Value const& data) {
                    train_nr, start_time,
                    ctx.b_.CreateSharedString(dest_station_eva.data(),
                                              dest_station_eva.size()),
-                   dest_time, ctx.b_.CreateString(line)),
+                   target_time, ctx.b_.CreateString(line)),
       start_si, dest_si);
 }
 
@@ -160,8 +163,11 @@ Offset<Vector<Offset<TripSection>>> parse_sections(
   }));
 }
 
-void ribasis_parser::to_ris_message(
-    std::string_view s, const std::function<void(ris_message&&)>& cb) {
+void to_ris_message(std::string_view s,
+                    const std::function<void(ris_message&&)>& cb,
+                    std::string const& tag) {
+  utl::verify(tag.empty(), "ribasis does not support multi-schedule");
+
   rapidjson::Document doc;
   if (doc.Parse(s.data(), s.size()).HasParseError()) {
     doc.GetParseError();
@@ -200,9 +206,11 @@ void ribasis_parser::to_ris_message(
   }
 }
 
-std::vector<ris_message> ribasis_parser::parse(std::string_view s) {
+std::vector<ris_message> parse(std::string_view s, std::string const& tag) {
+  utl::verify(tag.empty(), "ribasis does not support multi-schedule");
   std::vector<ris_message> msgs;
-  to_ris_message(s, [&](ris_message&& m) { msgs.emplace_back(std::move(m)); });
+  to_ris_message(
+      s, [&](ris_message&& m) { msgs.emplace_back(std::move(m)); }, tag);
   return msgs;
 }
 

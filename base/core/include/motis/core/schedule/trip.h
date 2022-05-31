@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cinttypes>
+#include <optional>
 #include <utility>
 
 #include "cista/hashing.h"
@@ -57,12 +58,17 @@ struct secondary_trip_id {
 };
 
 struct trip_debug {
+  friend std::ostream& operator<<(std::ostream& out, trip_debug const& dbg) {
+    return out << dbg.str();
+  }
+
   std::string str() const {
     return file_ == nullptr ? ""
                             : static_cast<std::string>(*file_) + ":" +
                                   std::to_string(line_from_) + ":" +
                                   std::to_string(line_to_);
   }
+
   mcd::string* file_{nullptr};
   int line_from_{0}, line_to_{0};
 };
@@ -83,10 +89,28 @@ struct full_trip_id {
 };
 
 struct gtfs_trip_id {
-  CISTA_COMPARABLE()
+  gtfs_trip_id() = default;
+  gtfs_trip_id(std::string const& dataset_prefix, std::string const& trip_id,
+               std::optional<unixtime> start_date)
+      : trip_id_{dataset_prefix + trip_id}, start_date_{start_date} {}
+  friend std::ostream& operator<<(std::ostream& out, gtfs_trip_id const&);
+  bool operator<(gtfs_trip_id const& o) const {
+    return std::tie(trip_id_, start_date_) <
+           std::tie(o.trip_id_, o.start_date_);
+  }
+  bool operator==(gtfs_trip_id const& o) const {
+    return std::tie(trip_id_, start_date_) ==
+           std::tie(o.trip_id_, o.start_date_);
+  }
+  bool operator!=(gtfs_trip_id const& o) const {
+    return std::tie(trip_id_, start_date_) !=
+           std::tie(o.trip_id_, o.start_date_);
+  }
   mcd::string trip_id_;
-  unixtime start_date_{0};
+  std::optional<unixtime> start_date_;
 };
+
+using trip_idx_t = uint32_t;
 
 struct trip {
   struct route_edge {
@@ -142,7 +166,9 @@ struct trip {
   full_trip_id id_;
   ptr<mcd::vector<route_edge> const> edges_{nullptr};
   lcon_idx_t lcon_idx_{0U};
+  trip_idx_t trip_idx_{0U};  // position in schedule.trip_mem_
   trip_debug dbg_;
+  mcd::vector<uint32_t> stop_seq_numbers_;
 };
 
 }  // namespace motis

@@ -21,7 +21,7 @@
 #include "utl/pipes/for_each.h"
 
 #include "motis/paxmon/csv_writer.h"
-#include "motis/paxmon/loader/csv/row.h"
+#include "motis/paxmon/loader/csv/motis_row.h"
 
 #include "motis/paxmon/tools/groups/group_generator.h"
 
@@ -113,8 +113,8 @@ int gen_groups(int argc, char const** argv) {
   auto buf = utl::file(opt.in_path_.data(), "r").content();
   auto const file_content = utl::cstr{buf.data(), buf.size()};
 
-  auto current_id = std::pair<std::uint32_t, std::uint32_t>{0, 0};
-  auto current_rows = std::vector<motis::paxmon::loader::csv::row>{};
+  auto current_id = std::pair<std::uint64_t, std::uint64_t>{0, 0};
+  auto current_rows = std::vector<motis::paxmon::loader::csv::motis_row>{};
 
   auto total_input_groups = 0ULL;
   auto total_input_pax = 0ULL;
@@ -185,9 +185,9 @@ int gen_groups(int argc, char const** argv) {
   };
 
   utl::line_range<utl::buf_reader>{file_content}  //
-      | utl::csv<loader::csv::row>()  //
+      | utl::csv<loader::csv::motis_row>()  //
       |
-      utl::for_each([&](loader::csv::row const& row) {
+      utl::for_each([&](loader::csv::motis_row const& row) {
         auto const id = std::make_pair(row.id_.val(), row.secondary_id_.val());
         if (id != current_id) {
           process_journey();

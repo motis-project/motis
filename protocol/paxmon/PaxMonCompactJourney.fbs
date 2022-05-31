@@ -1,5 +1,5 @@
 include "base/Station.fbs";
-include "base/TripId.fbs";
+include "base/TripServiceInfo.fbs";
 
 namespace motis.paxmon;
 
@@ -11,7 +11,7 @@ table PaxMonTransferInfo {
 }
 
 table PaxMonCompactJourneyLeg {
-  trip: motis.TripId;
+  trip: motis.TripServiceInfo;
   enter_station: motis.Station;
   exit_station: motis.Station;
   enter_time: long;

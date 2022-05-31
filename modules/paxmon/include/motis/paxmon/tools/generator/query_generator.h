@@ -12,12 +12,12 @@
 namespace motis::paxmon::tools::generator {
 
 struct query_generator {
-  query_generator(schedule const& sched);
+  query_generator(schedule const& sched, unsigned largest_stations);
 
   motis::module::msg_ptr get_routing_request(
       std::string const& target,
       motis::routing::Start start_type = motis::routing::Start_PretripStart,
-      motis::routing::SearchDir dir = motis::routing::SearchDir_Forward);
+      SearchDir dir = SearchDir_Forward);
 
   schedule const& sched_;
   search_interval_generator interval_gen_;

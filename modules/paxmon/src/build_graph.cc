@@ -34,6 +34,13 @@ void add_interchange(event_node_index from, event_node_index to,
       add_edge(uv, make_interchange_edge(from, to, transfer_time, pci));
   auto const ei = get_edge_index(uv, e);
   grp->edges_.emplace_back(ei);
+
+  auto const from_station = uv.graph_.nodes_[from].station_idx();
+  auto const to_station = uv.graph_.nodes_[to].station_idx();
+  uv.interchanges_at_station_[from_station].emplace_back(ei);
+  if (from_station != to_station) {
+    uv.interchanges_at_station_[to_station].emplace_back(ei);
+  }
 }
 
 };  // namespace
@@ -51,7 +58,7 @@ void add_passenger_group_to_graph(schedule const& sched,
 
     auto tdi = INVALID_TRIP_DATA_INDEX;
     try {
-      tdi = get_or_add_trip(sched, caps, uv, leg.trip_);
+      tdi = get_or_add_trip(sched, caps, uv, leg.trip_idx_);
     } catch (std::system_error const& e) {
       std::cerr << "could not add trip for passenger group " << grp.id_
                 << " (source=" << grp.source_.primary_ref_ << "."
@@ -105,7 +112,7 @@ void add_passenger_group_to_graph(schedule const& sched,
       print_leg(sched, leg);
 
       std::cout << "\ncurrent trip:\n";
-      print_trip_sections(uv, sched, leg.trip_, tdi);
+      print_trip_sections(uv, sched, leg.trip_idx_, tdi);
 
       std::cout << "\ncompact planned journey:\n";
       for (auto const& l : grp.compact_planned_journey_.legs_) {
@@ -161,6 +168,11 @@ build_graph_stats build_graph_from_journeys(schedule const& sched,
     }
     progress_tracker->increment();
   }
+
+  for (auto idx = pci_index{0}; idx < uv.pax_connection_info_.size(); ++idx) {
+    uv.pax_connection_info_.init_expected_load(uv.passenger_groups_, idx);
+  }
+
   if (stats.groups_not_added_ != 0) {
     LOG(motis::logging::error)
         << "could not add " << stats.groups_not_added_ << " passenger groups";

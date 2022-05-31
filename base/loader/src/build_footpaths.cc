@@ -14,6 +14,7 @@
 #include "motis/core/common/floyd_warshall.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/price.h"
+#include "motis/core/schedule/time.h"
 #include "motis/loader/filter/local_stations.h"
 
 #include "motis/schedule-format/Schedule_generated.h"
@@ -36,7 +37,6 @@ using component_it = component_vec::iterator;
 using component_range = std::pair<component_it, component_it>;
 
 struct footpath_builder {
-
   footpath_builder(
       schedule& sched, loader_options const& opt,
       mcd::hash_map<Station const*, station_node*> const& station_nodes)
@@ -64,7 +64,7 @@ struct footpath_builder {
       auto& to_station = sched_.stations_.at(to_node->id_);
       auto duration =
           std::max({from_station->transfer_time_, to_station->transfer_time_,
-                    static_cast<int32_t>(footpath->duration())});
+                    static_cast<motis::duration>(footpath->duration())});
 
       if (from_node == to_node) {
         LOG(ml::warn) << "Footpath loop at station " << from_station->eva_nr_
@@ -127,6 +127,7 @@ struct footpath_builder {
 
     // Create the foot node.
     auto foot_node = mcd::make_unique<node>();
+    foot_node->type_ = node_type::FOOT_NODE;
     foot_node->station_node_ = sn;
     foot_node->id_ = sched_.next_node_id_++;
 
@@ -180,7 +181,7 @@ struct footpath_builder {
                           geo::latlng{to_s->lat(), to_s->lng()});
         auto const duration =
             std::max({from_s->transfer_time_, to_s->transfer_time_,
-                      static_cast<int32_t>(std::round(
+                      static_cast<motis::duration>(std::round(
                           static_cast<double>(distance) / (60 * WALK_SPEED)))});
         add_foot_edge_pair(from_sn, to_sn, duration);
       }
@@ -207,14 +208,11 @@ struct footpath_builder {
           process_component(range.first, range.second, fgraph);
         },
         utl::parallel_error_strategy::CONTINUE_EXEC);
-    if (!errors.empty()) {
-      for (auto const& [idx, ex] : errors) {
-        try {
-          std::rethrow_exception(ex);
-        } catch (std::exception const& e) {
-          LOG(ml::error) << "footpath error: " << idx << " (" << e.what()
-                         << ")";
-        }
+    for (auto const& [idx, ex] : errors) {
+      try {
+        std::rethrow_exception(ex);
+      } catch (std::exception const& e) {
+        LOG(ml::error) << "footpath error: " << idx << " (" << e.what() << ")";
       }
     }
   }
@@ -329,7 +327,7 @@ struct footpath_builder {
       }
       return;
     }
-    utl::verify(size > 2, "invalid size");
+    utl::verify(size > 2, "invalid size {}", size);
 
     constexpr auto const kInvalidTime = std::numeric_limits<motis::time>::max();
     auto mat = make_flat_matrix<motis::time>(size, kInvalidTime);

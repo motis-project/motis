@@ -42,13 +42,15 @@ struct rule_trip_adder {
       return INVALID_TRIP_DATA_INDEX;
     }
 
-    utl::verify(!uv_.trip_data_.contains(trp), "trip data already exists");
+    utl::verify(!uv_.trip_data_.contains(trp->trip_idx_),
+                "trip data already exists");
 
     auto const enter_exit_node_idx =
         static_cast<event_node_index>(uv_.graph_.nodes_.size());
     uv_.graph_.emplace_back_node(enter_exit_node_idx);
 
-    auto const tdi = uv_.trip_data_.insert_trip(trp, enter_exit_node_idx);
+    auto const tdi =
+        uv_.trip_data_.insert_trip(trp->trip_idx_, enter_exit_node_idx);
     auto trip_edges = uv_.trip_data_.edges(tdi);
 
     auto prev_node = INVALID_EVENT_NODE_INDEX;
@@ -73,7 +75,7 @@ struct rule_trip_adder {
     if (auto td = add_trip(trp); td != INVALID_TRIP_DATA_INDEX) {
       return td;
     } else {
-      return uv_.trip_data_.get_index(trp);
+      return uv_.trip_data_.get_index(trp->trip_idx_);
     }
   }
 
@@ -180,8 +182,19 @@ trip_data_index add_trip(schedule const& sched, capacity_maps const& caps,
 
 trip_data_index get_or_add_trip(schedule const& sched,
                                 capacity_maps const& caps, universe& uv,
+                                trip_idx_t const trip_idx) {
+  if (auto const idx = uv.trip_data_.find_index(trip_idx);
+      idx != INVALID_TRIP_DATA_INDEX) {
+    return idx;
+  } else {
+    return add_trip(sched, caps, uv, get_trip(sched, trip_idx));
+  }
+}
+
+trip_data_index get_or_add_trip(schedule const& sched,
+                                capacity_maps const& caps, universe& uv,
                                 trip const* trp) {
-  if (auto const idx = uv.trip_data_.find_index(trp);
+  if (auto const idx = uv.trip_data_.find_index(trp->trip_idx_);
       idx != INVALID_TRIP_DATA_INDEX) {
     return idx;
   } else {
@@ -195,16 +208,20 @@ trip_data_index get_or_add_trip(schedule const& sched,
   return get_or_add_trip(sched, caps, uv, get_trip(sched, et));
 }
 
+trip_data_index get_trip(universe const& uv, trip_idx_t const trip_idx) {
+  return uv.trip_data_.find_index(trip_idx);
+}
+
 void add_interchange_edges(event_node* evn,
                            std::vector<edge_index>& updated_interchange_edges,
-                           universe& uv, system_statistics& system_stats) {
+                           universe& uv) {
   if (evn->type_ == event_type::ARR) {
     auto oe = evn->outgoing_edges(uv);
     return utl::all(oe)  //
            | utl::remove_if(
                  [](auto&& e) { return e.type_ != edge_type::INTERCHANGE; })  //
            | utl::for_each([&](auto&& e) {
-               ++system_stats.total_updated_interchange_edges_;
+               ++uv.system_stats_.total_updated_interchange_edges_;
                updated_interchange_edges.push_back(get_edge_index(uv, &e));
              });
   } else /*if (evn->type_ == event_type::DEP)*/ {
@@ -213,7 +230,7 @@ void add_interchange_edges(event_node* evn,
            | utl::remove_if(
                  [](auto&& e) { return e.type_ != edge_type::INTERCHANGE; })  //
            | utl::for_each([&](auto&& e) {
-               ++system_stats.total_updated_interchange_edges_;
+               ++uv.system_stats_.total_updated_interchange_edges_;
                updated_interchange_edges.push_back(get_edge_index(uv, &e));
              });
   }
@@ -221,15 +238,14 @@ void add_interchange_edges(event_node* evn,
 
 void update_event_times(schedule const& sched, universe& uv,
                         RtDelayUpdate const* du,
-                        std::vector<edge_index>& updated_interchange_edges,
-                        system_statistics& system_stats) {
+                        std::vector<edge_index>& updated_interchange_edges) {
   auto const trp = from_fbs(sched, du->trip());
-  auto const tdi = uv.trip_data_.find_index(trp);
+  auto const tdi = uv.trip_data_.find_index(trp->trip_idx_);
   if (tdi == INVALID_TRIP_DATA_INDEX) {
     return;
   }
   auto trip_edges = uv.trip_data_.edges(tdi);
-  ++system_stats.update_event_times_trip_edges_found_;
+  ++uv.system_stats_.update_event_times_trip_edges_found_;
   for (auto const& ue : *du->events()) {
     auto const station_id =
         get_station(sched, ue->base()->station_id()->str())->index_;
@@ -242,18 +258,17 @@ void update_event_times(schedule const& sched, universe& uv,
       if (ue->base()->event_type() == EventType_DEP &&
           from->type_ == event_type::DEP && from->station_ == station_id &&
           from->schedule_time_ == schedule_time) {
-        ++system_stats.update_event_times_dep_updated_;
+        ++uv.system_stats_.update_event_times_dep_updated_;
         from->time_ =
             unix_to_motistime(sched.schedule_begin_, ue->updated_time());
-        add_interchange_edges(from, updated_interchange_edges, uv,
-                              system_stats);
+        add_interchange_edges(from, updated_interchange_edges, uv);
       } else if (ue->base()->event_type() == EventType_ARR &&
                  to->type_ == event_type::ARR && to->station_ == station_id &&
                  to->schedule_time_ == schedule_time) {
-        ++system_stats.update_event_times_arr_updated_;
+        ++uv.system_stats_.update_event_times_arr_updated_;
         to->time_ =
             unix_to_motistime(sched.schedule_begin_, ue->updated_time());
-        add_interchange_edges(to, updated_interchange_edges, uv, system_stats);
+        add_interchange_edges(to, updated_interchange_edges, uv);
       }
     }
   }
@@ -261,15 +276,15 @@ void update_event_times(schedule const& sched, universe& uv,
 
 void update_trip_route(schedule const& sched, capacity_maps const& caps,
                        universe& uv, RtRerouteUpdate const* ru,
-                       std::vector<edge_index>& updated_interchange_edges,
-                       system_statistics& system_stats) {
-  ++system_stats.update_trip_route_count_;
+                       std::vector<edge_index>& updated_interchange_edges) {
+  ++uv.system_stats_.update_trip_route_count_;
   auto const trp = from_fbs(sched, ru->trip());
-  auto const tdi = uv.trip_data_.find_index(trp);
+  auto const tdi = uv.trip_data_.find_index(trp->trip_idx_);
   if (tdi == INVALID_TRIP_DATA_INDEX) {
     return;
   }
-  ++system_stats.update_trip_route_trip_edges_found_;
+  ++uv.system_stats_.update_trip_route_trip_edges_found_;
+  uv.update_tracker_.before_trip_rerouted(trp);
 
   auto const current_teks = to_trip_ev_keys(tdi, uv);
   auto const new_teks = to_trip_ev_keys(sched, *ru->new_route());
@@ -300,7 +315,7 @@ void for_each_trip(
     compact_journey const& journey,
     std::function<void(journey_leg const&, trip_data_index)> const& fn) {
   for (auto const& leg : journey.legs_) {
-    fn(leg, get_or_add_trip(sched, caps, uv, leg.trip_));
+    fn(leg, get_or_add_trip(sched, caps, uv, leg.trip_idx_));
   }
 }
 

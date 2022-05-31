@@ -119,46 +119,54 @@ constexpr auto const reroute_and_delay = R"(
     "gtfsRealtimeVersion": "1.0",
     "timestamp": "1561612800"
   },
-  "entity": [{
-    "id": "95.TA.59-100-j19-1.91.H",
-    "tripUpdate": {
-      "trip": {
-        "tripId": "95.TA.59-100-j19-1.91.H",
-        "startTime": "05:02:00",
-        "startDate": "20190627",
-        "scheduleRelationship": "SCHEDULED",
-        "routeId": "59-100-j19-1"
-      },
-      "stopTimeUpdate": [{
-        "stopSequence": 1,
-        "stopId": "8501200:0:4",
-        "scheduleRelationship": "SKIPPED"
-      },{
-		"stopSequence": 2,
-		"departure": {
-          "delay": 60
+  "entity": [
+    {
+      "id": "95.TA.59-100-j19-1.91.H",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "95.TA.59-100-j19-1.91.H",
+          "startTime": "05:02:00",
+          "startDate": "20190627",
+          "scheduleRelationship": "SCHEDULED",
+          "routeId": "59-100-j19-1"
         },
-		"stopId": "8501300:0:5",
-        "scheduleRelationship": "SCHEDULED"
-	  },{
-		"stopSequence": 3,
-        "arrival": {
-          "delay": -60
-        },
-		"departure": {
-          "delay": 120
-        }
-	  },{
-        "stopSequence": 5,
-        "stopId": "8501403:0:1",
-        "scheduleRelationship": "SKIPPED"
-      }, {
-        "stopSequence": 7,
-        "stopId": "8501506:0:2",
-        "scheduleRelationship": "SKIPPED"
-      }]
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 1,
+            "stopId": "8501200:0:4",
+            "scheduleRelationship": "SKIPPED"
+          },
+          {
+            "stopSequence": 2,
+            "departure": {
+              "delay": 60
+            },
+            "stopId": "8501300:0:5",
+            "scheduleRelationship": "SCHEDULED"
+          },
+          {
+            "stopSequence": 3,
+            "arrival": {
+              "delay": -60
+            },
+            "departure": {
+              "delay": 120
+            }
+          },
+          {
+            "stopSequence": 5,
+            "stopId": "8501403:0:1",
+            "scheduleRelationship": "SKIPPED"
+          },
+          {
+            "stopSequence": 7,
+            "stopId": "8501506:0:2",
+            "scheduleRelationship": "SKIPPED"
+          }
+        ]
+      }
     }
-  }]
+  ]
 }
 )";
 
@@ -191,7 +199,7 @@ TEST_F(gtfsrt_reroute_test, receive_reroute_and_delay) {
   ASSERT_EQ(3, events->size());
 
   auto e0 = events->Get(0)->base();
-  EXPECT_STREQ("8501300:0:5", e0->station_id()->c_str());
+  EXPECT_STREQ("8501300:0:3", e0->station_id()->c_str());
   EXPECT_EQ(1561612200 + TIMEZONE_OFFSET, e0->schedule_time());
   EXPECT_EQ(EventType_DEP, e0->type());
   EXPECT_EQ(1561612260 + TIMEZONE_OFFSET, events->Get(0)->updated_time());

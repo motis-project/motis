@@ -52,7 +52,7 @@ ev_key get_event_at(schedule const& sched, Connection const* con,
       begin(*trp->edges_), end(*trp->edges_), [&](trip::route_edge const& e) {
         auto const k = ev_key{e, trp->lcon_idx_, ev_type};
         auto const schedule_time = get_schedule_time(sched, k);
-        return (k.lcon()->valid_ != 0u) &&  //
+        return (k.lcon()->valid_ != 0U) &&  //
                ((ev_type == event_type::ARR &&
                  e->to_->get_station()->id_ == station_idx &&
                  schedule_time == ev_time) ||
@@ -122,8 +122,9 @@ void check_interchange(schedule const& sched, Connection const* con,
   auto const transfer_time = ic.enter_.get_time() - ic.exit_.get_time();
   if (ic.exit_stop_idx_ == ic.enter_stop_idx_) {
     utl::verify(
-        transfer_time >=
-            sched.stations_.at(ic.enter_.get_station_idx())->transfer_time_,
+        transfer_time >= sched.stations_.at(ic.enter_.get_station_idx())
+                             ->get_transfer_time_between_tracks(
+                                 ic.exit_.get_track(), ic.enter_.get_track()),
         "transfer time below station transfer time");
   } else {
     auto min_transfer_time = 0;

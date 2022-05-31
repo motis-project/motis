@@ -8,6 +8,7 @@
 #include "motis/core/common/interval_map.h"
 #include "motis/core/common/unixtime.h"
 #include "motis/core/access/station_access.h"
+#include "motis/core/access/track_access.h"
 
 #include "motis/revise/get_interchanges.h"
 
@@ -47,18 +48,41 @@ int get_walk_time(journey const& j, std::string const& station_id,
   }
 }
 
+bool is_same_platform(schedule const& sched, station const* st,
+                      std::string const& track1_name,
+                      std::string const& track2_name) {
+  auto const track1 = get_track_index(sched, track1_name);
+  auto const track2 = get_track_index(sched, track2_name);
+  if (track1.has_value() && track2.has_value()) {
+    auto const platform1 = st->get_platform(track1.value());
+    auto const platform2 = st->get_platform(track2.value());
+    return platform1.has_value() && platform1 == platform2;
+  } else {
+    return false;
+  }
+}
+
+int get_transfer_time(schedule const& sched, journey const& j,
+                      extern_interchange const& ic) {
+  if (get_station(sched, ic.first_stop_.eva_no_)->index_ ==
+      get_station(sched, ic.second_stop_.eva_no_)->index_) {
+    auto const station =
+        sched.stations_[get_station(sched, ic.first_stop_.eva_no_)->index_]
+            .get();
+    return is_same_platform(sched, station, ic.first_stop_.arrival_.track_,
+                            ic.second_stop_.departure_.track_)
+               ? station->platform_transfer_time_ * 60
+               : station->transfer_time_ * 60;
+  } else {
+    return get_walk_time(j, ic.first_stop_.eva_no_,
+                         ic.first_stop_.departure_.schedule_timestamp_);
+  }
+}
+
 void update_interchange_status(schedule const& sched, journey& j) {
   auto const interchanges = get_interchanges(j);
   for (auto const& ic : interchanges) {
-    auto const transfer_time =
-        get_station(sched, ic.first_stop_.eva_no_)->index_ ==
-                get_station(sched, ic.second_stop_.eva_no_)->index_
-            ? sched.stations_[get_station(sched, ic.first_stop_.eva_no_)
-                                  ->index_]
-                      ->transfer_time_ *
-                  60
-            : get_walk_time(j, ic.first_stop_.eva_no_,
-                            ic.first_stop_.departure_.schedule_timestamp_);
+    auto const transfer_time = get_transfer_time(sched, j, ic);
     if (ic.second_stop_.departure_.timestamp_ -
             ic.first_stop_.arrival_.timestamp_ <
         transfer_time) {

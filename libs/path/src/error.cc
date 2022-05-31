@@ -18,7 +18,7 @@ std::string error_category_impl::message(int ev) const noexcept {
 
 namespace error {
 std::error_code make_error_code(error_code_t e) noexcept {
-  return std::error_code(static_cast<int>(e), error_category());
+  return {static_cast<int>(e), error_category()};
 }
 }  // namespace error
 

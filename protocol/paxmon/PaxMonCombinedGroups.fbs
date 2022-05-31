@@ -1,0 +1,14 @@
+include "paxmon/PaxMonGroup.fbs";
+include "paxmon/PaxMonDistribution.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonCombinedGroups {
+  groups: [PaxMonGroupBaseInfo];
+  dist: PaxMonDistribution;
+}
+
+table PaxMonCombinedGroupIds {
+  groups: [ulong];
+  dist: PaxMonDistribution;
+}

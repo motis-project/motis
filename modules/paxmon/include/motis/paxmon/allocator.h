@@ -4,9 +4,11 @@
 #include <cstdint>
 #include <cstring>
 #include <algorithm>
+#include <bitset>
 #include <limits>
 #include <new>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -18,19 +20,37 @@ template <typename Type>
 struct allocator {
   static constexpr auto const INITIAL_BLOCK_SIZE = 10'000;
   static constexpr auto const ADDITIONAL_BLOCK_SIZE = 100'000;
+  static constexpr auto const MAX_BLOCK_SIZE =
+      std::max(INITIAL_BLOCK_SIZE, ADDITIONAL_BLOCK_SIZE);
 
   struct block {
     block() = default;
     explicit block(std::size_t size) : ptr_{operator new(size)}, size_{size} {}
 
     ~block() {
+      if constexpr (!std::is_trivially_destructible_v<Type>) {
+        for (auto i = 0ULL; i < size_ / sizeof(Type); ++i) {
+          if (in_use_[i]) {
+            get(i)->~Type();
+          }
+        }
+      }
       operator delete(ptr_);
       ptr_ = nullptr;
       size_ = 0;
     }
 
-    block(block const& o) : ptr_{operator new(o.size_)}, size_{o.size_} {
-      std::memcpy(ptr_, o.ptr_, size_);
+    block(block const& o)
+        : ptr_{operator new(o.size_)}, size_{o.size_}, in_use_{o.in_use_} {
+      if constexpr (std::is_trivially_copyable_v<Type>) {
+        std::memcpy(ptr_, o.ptr_, size_);
+      } else {
+        for (auto i = 0ULL; i < size_ / sizeof(Type); ++i) {
+          if (o.in_use_[i]) {
+            new (get(i)) Type{*o.get(i)};
+          }
+        }
+      }
     }
 
     block(block&& o) noexcept : block{} { swap(*this, o); }
@@ -49,13 +69,21 @@ struct allocator {
       using std::swap;
       swap(a.ptr_, b.ptr_);
       swap(a.size_, b.size_);
+      swap(a.in_use_, b.in_use_);
     }
 
     inline std::size_t size() const { return size_; }
     inline void* data() const { return ptr_; }
 
+    inline Type* get(std::size_t const index) const {
+      return reinterpret_cast<Type*>(  // NOLINT(performance-no-int-to-ptr)
+          reinterpret_cast<std::uintptr_t>(ptr_) +
+          static_cast<std::uintptr_t>(index * sizeof(Type)));
+    }
+
     void* ptr_{};
     std::size_t size_{};
+    std::bitset<MAX_BLOCK_SIZE> in_use_;
   };
 
   struct pointer {
@@ -66,7 +94,9 @@ struct allocator {
 
     CISTA_COMPARABLE()
 
-    operator bool() const noexcept { return block_index_ != INVALID_BLOCK; }
+    explicit operator bool() const noexcept {
+      return block_index_ != INVALID_BLOCK;
+    }
 
     std::uint32_t block_index_{INVALID_BLOCK};
     std::uint32_t block_offset_{INVALID_OFFSET};
@@ -91,7 +121,7 @@ struct allocator {
   }
 
   inline Type* get(pointer const ptr) const {
-    return reinterpret_cast<Type*>(
+    return reinterpret_cast<Type*>(  //  NOLINT
         reinterpret_cast<std::uintptr_t>(blocks_[ptr.block_index_].data()) +
         static_cast<std::uintptr_t>(ptr.block_offset_));
   }
@@ -120,7 +150,9 @@ private:
     ++allocation_count_;
     if (free_list_.next_) {
       --free_list_size_;
-      return free_list_.take(*this);
+      auto const ptr = free_list_.take(*this);
+      mark_in_use(ptr);
+      return ptr;
     }
     if (!next_ptr_ ||
         end_ptr_.block_offset_ - next_ptr_.block_offset_ < sizeof(Type)) {
@@ -131,6 +163,7 @@ private:
       bytes_allocated_ += new_block.size();
     }
     auto const ptr = next_ptr_;
+    mark_in_use(ptr);
     next_ptr_.block_offset_ += sizeof(Type);
     return ptr;
   }
@@ -139,6 +172,7 @@ private:
     --elements_allocated_;
     ++release_count_;
     ++free_list_size_;
+    mark_free(ptr);
     free_list_.push(*this, ptr);
   }
 
@@ -148,6 +182,14 @@ private:
     } else {
       return ADDITIONAL_BLOCK_SIZE * sizeof(Type);
     }
+  }
+
+  inline void mark_in_use(pointer ptr) {
+    blocks_[ptr.block_index_].in_use_.set(ptr.block_offset_ / sizeof(Type));
+  }
+
+  inline void mark_free(pointer ptr) {
+    blocks_[ptr.block_index_].in_use_.reset(ptr.block_offset_ / sizeof(Type));
   }
 
   std::vector<block> blocks_;

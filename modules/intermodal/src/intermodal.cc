@@ -148,28 +148,30 @@ std::string get_parking_station(int index) {
   switch (index) {
     case 0: return STATION_VIA0;
     case 1: return STATION_VIA1;
+    case 2: return STATION_VIA2;
+    case 3: return STATION_VIA3;
     default: throw std::system_error(error::parking_edge_error);
   }
 }
 
-void apply_parking_patches(journey& j, std::vector<parking_patch>& patches) {
-  auto const get_transport = [&](unsigned const from,
-                                 unsigned const to) -> journey::transport& {
-    for (auto& t : j.transports_) {
-      if (t.from_ == from && t.to_ == to) {
-        return t;
-      }
+journey::transport& get_transport(journey& j, unsigned const from,
+                                  unsigned const to) {
+  for (auto& t : j.transports_) {
+    if (t.from_ == from && t.to_ == to) {
+      return t;
     }
-    throw std::system_error(error::parking_edge_error);
-  };
+  }
+  throw std::system_error(error::parking_edge_error);
+}
 
-  auto const is_virtual_station = [](journey::stop const& s) {
-    return s.name_ == STATION_START || s.name_ == STATION_END;
-  };
+bool is_virtual_station(journey::stop const& s) {
+  return s.name_ == STATION_START || s.name_ == STATION_END;
+}
 
+void apply_parking_patches(journey& j, std::vector<parking_patch>& patches) {
   auto parking_idx = 0;
   for (auto& p : patches) {
-    auto t = get_transport(p.from_, p.to_);
+    auto t = get_transport(j, p.from_, p.to_);
     auto const car_first = is_virtual_station(j.stops_[p.from_]);
 
     auto const first_edge_duration =
@@ -202,6 +204,83 @@ void apply_parking_patches(journey& j, std::vector<parking_patch>& patches) {
   }
 }
 
+void apply_gbfs_patches(journey& j, std::vector<parking_patch>& patches) {
+  for (auto const& p : patches) {
+    // station bike:
+    // replace: X --walk[type:gbfs]--> P
+    // to: X --walk--> (SX) --bike--> (SP) --walk--> P
+    // replace: P -->walk[type:gbfs]--> X
+    // to: P --walk--> (SP) --bike--> (SX) --walk--> X
+    if (std::holds_alternative<gbfs_edge::station_bike>(p.e_->gbfs_->bike_)) {
+      auto const& s = std::get<gbfs_edge::station_bike>(p.e_->gbfs_->bike_);
+
+      auto& t = get_transport(j, p.from_, p.to_);
+      auto str1 = split_transport(j, patches, t);
+      split_transport(j, patches, str1.second_transport_);
+
+      auto& s1 = j.stops_.at(p.from_ + 1);
+      s1.eva_no_ = s.from_station_id_;
+      s1.name_ = s.from_station_name_;
+      s1.lat_ = s.from_station_pos_.lat_;
+      s1.lng_ = s.from_station_pos_.lng_;
+      s1.arrival_.valid_ = true;
+      s1.arrival_.timestamp_ =
+          j.stops_[p.from_].departure_.timestamp_ + s.first_walk_duration_ * 60;
+      s1.arrival_.schedule_timestamp_ = s1.arrival_.timestamp_;
+      s1.arrival_.timestamp_reason_ =
+          j.stops_[p.from_].departure_.timestamp_reason_;
+      s1.departure_ = s1.arrival_;
+
+      auto& s2 = j.stops_.at(p.from_ + 2);
+      s2.eva_no_ = s.to_station_id_;
+      s2.name_ = s.to_station_name_;
+      s2.lat_ = s.to_station_pos_.lat_;
+      s2.lng_ = s.to_station_pos_.lng_;
+      s2.arrival_.valid_ = true;
+      s2.arrival_.timestamp_ = s1.departure_.timestamp_ + s.bike_duration_ * 60;
+      s2.arrival_.schedule_timestamp_ = s2.arrival_.timestamp_;
+      s2.arrival_.timestamp_reason_ =
+          j.stops_[p.from_ + 1].departure_.timestamp_reason_;
+      s2.departure_ = s2.arrival_;
+
+      get_transport(j, p.from_, p.from_ + 1).mumo_type_ =
+          to_string(mumo_type::FOOT);
+      get_transport(j, p.from_ + 1, p.from_ + 2).mumo_type_ =
+          p.e_->gbfs_->vehicle_type_;
+      get_transport(j, p.from_ + 2, p.from_ + 3).mumo_type_ =
+          to_string(mumo_type::FOOT);
+    }
+
+    // free bike:
+    // replace: X --walk[type:gbfs]--> P
+    // to: X --walk--> (B) --bike--> P
+    // replace: P -->walk[type:gbfs]--> X
+    // to: P --walk--> (B) --bike--> X
+    else if (std::holds_alternative<gbfs_edge::free_bike>(p.e_->gbfs_->bike_)) {
+      auto const& b = std::get<gbfs_edge::free_bike>(p.e_->gbfs_->bike_);
+
+      auto& t = get_transport(j, p.from_, p.to_);
+      auto str = split_transport(j, patches, t);
+
+      str.parking_stop_.eva_no_ = b.id_;
+      str.parking_stop_.name_ = b.id_;
+      str.parking_stop_.lat_ = b.pos_.lat_;
+      str.parking_stop_.lng_ = b.pos_.lng_;
+      str.parking_stop_.arrival_.valid_ = true;
+      str.parking_stop_.arrival_.timestamp_ =
+          j.stops_[p.from_].departure_.timestamp_ + b.walk_duration_;
+      str.parking_stop_.arrival_.schedule_timestamp_ =
+          j.stops_[p.from_].departure_.schedule_timestamp_ + b.bike_duration_;
+      str.parking_stop_.arrival_.timestamp_reason_ =
+          j.stops_[p.from_].departure_.timestamp_reason_;
+      str.parking_stop_.departure_ = str.parking_stop_.arrival_;
+
+      str.first_transport_.mumo_type_ = to_string(mumo_type::FOOT);
+      str.second_transport_.mumo_type_ = to_string(mumo_type::BIKE);
+    }
+  }
+}
+
 msg_ptr postprocess_response(msg_ptr const& response_msg,
                              query_start const& q_start,
                              query_dest const& q_dest,
@@ -213,6 +292,16 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
   auto const dir = req->search_dir();
   auto routing_response = motis_content(RoutingResponse, response_msg);
   auto journeys = message_to_journeys(routing_response);
+
+  MOTIS_START_TIMING(direct_connection_timing);
+  auto const direct =
+      get_direct_connections(q_start, q_dest, req, profiles, edge_mapping);
+  stats.dominated_by_direct_connection_ =
+      remove_dominated_journeys(journeys, direct);
+  add_direct_connections(journeys, direct, q_start, q_dest, req);
+  MOTIS_STOP_TIMING(direct_connection_timing);
+  stats.direct_connection_duration_ =
+      static_cast<uint64_t>(MOTIS_TIMING_MS(direct_connection_timing));
 
   message_creator mc;
   for (auto& journey : journeys) {
@@ -233,8 +322,8 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
       dest.lng_ = q_dest.pos_.lng_;
     }
 
-    std::vector<parking_patch> patches;
-
+    auto gbfs_patches = std::vector<parking_patch>{};
+    auto parking_patches = std::vector<parking_patch>{};
     for (auto& t : journey.transports_) {
       if (!t.is_walk_ || t.mumo_id_ < 0) {
         continue;
@@ -249,23 +338,14 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
           t.mumo_type_ = to_string(mumo_type::FOOT);
           continue;
         }
-        patches.emplace_back(e, t.from_, t.to_);
+        parking_patches.emplace_back(e, t.from_, t.to_);
+      } else if (e->type_ == mumo_type::GBFS) {
+        gbfs_patches.emplace_back(e, t.from_, t.to_);
       }
     }
-
-    if (!patches.empty()) {
-      apply_parking_patches(journey, patches);
-    }
+    apply_parking_patches(journey, parking_patches);
+    apply_gbfs_patches(journey, gbfs_patches);
   }
-
-  MOTIS_START_TIMING(direct_connection_timing);
-  auto const direct = get_direct_connections(q_start, q_dest, req, profiles);
-  stats.dominated_by_direct_connection_ =
-      remove_dominated_journeys(journeys, direct);
-  add_direct_connections(journeys, direct, q_start, q_dest, req);
-  MOTIS_STOP_TIMING(direct_connection_timing);
-  stats.direct_connection_duration_ =
-      static_cast<uint64_t>(MOTIS_TIMING_MS(direct_connection_timing));
 
   utl::erase_if(journeys, [](journey const& j) { return j.stops_.empty(); });
   std::sort(
@@ -299,7 +379,6 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
               direct,
               [&mc](direct_connection const& c) { return to_fbs(mc, c); })))
           .Union());
-
   return make_msg(mc);
 }
 
@@ -319,7 +398,6 @@ msg_ptr empty_response(statistics& stats, schedule const& sched) {
           motis_to_unixtime(sched, schedule_end),
           mc.CreateVector(std::vector<Offset<DirectConnection>>{}))
           .Union());
-
   return make_msg(mc);
 }
 
@@ -361,7 +439,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
     if (start.is_intermodal_) {
       futures.emplace_back(spawn_job_void([&]() {
         make_starts(
-            req, start.pos_,
+            req, start.pos_, dest.pos_,
             std::bind(appender, std::ref(deps),  // NOLINT
                       STATION_START, _1, start.pos_, _2, _3, _4, _5, _6),
             mumo_stats_appender, ppr_profiles_);
@@ -369,7 +447,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
     }
     if (dest.is_intermodal_) {
       futures.emplace_back(spawn_job_void([&]() {
-        make_dests(req, dest.pos_,
+        make_dests(req, dest.pos_, start.pos_,
                    std::bind(appender, std::ref(arrs),  // NOLINT
                              _1, STATION_END, _2, dest.pos_, _3, _4, _5, _6),
                    mumo_stats_appender, ppr_profiles_);
@@ -379,7 +457,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
     if (start.is_intermodal_) {
       futures.emplace_back(spawn_job_void([&]() {
         make_starts(
-            req, start.pos_,
+            req, start.pos_, dest.pos_,
             std::bind(appender, std::ref(deps),  // NOLINT
                       _1, STATION_START, _2, start.pos_, _3, _4, _5, _6),
             mumo_stats_appender, ppr_profiles_);
@@ -387,7 +465,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
     }
     if (dest.is_intermodal_) {
       futures.emplace_back(spawn_job_void([&]() {
-        make_dests(req, dest.pos_,
+        make_dests(req, dest.pos_, start.pos_,
                    std::bind(appender, std::ref(arrs),  // NOLINT
                              STATION_END, _1, dest.pos_, _2, _3, _4, _5, _6),
                    mumo_stats_appender, ppr_profiles_);

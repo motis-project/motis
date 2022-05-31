@@ -1,0 +1,23 @@
+include "base/TripId.fbs";
+
+namespace motis.paxmon;
+
+enum PaxMonGroupFilter : byte { All, Entering, Exiting }
+enum PaxMonGroupByStation : byte {
+  None,
+  First,
+  Last,
+  FirstLongDistance,
+  LastLongDistance,
+  EntryAndLast
+}
+
+table PaxMonGetGroupsInTripRequest {
+  universe: uint;
+
+  trip: motis.TripId;
+  filter: PaxMonGroupFilter;
+  group_by_station: PaxMonGroupByStation;
+  group_by_other_trip: bool; // for filter = Entering/Exiting only
+  include_group_infos: bool; // include PaxMonGroupBaseInfo
+}

@@ -5,10 +5,10 @@
 #include "boost/date_time/gregorian/gregorian_types.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
 
+#include "utl/enumerate.h"
 #include "utl/verify.h"
 
 #include "motis/core/common/date_time_util.h"
-#include "motis/core/common/logging.h"
 #include "motis/core/schedule/event.h"
 #include "motis/core/schedule/event_type.h"
 #include "motis/core/access/edge_access.h"
@@ -26,20 +26,23 @@
 
 using namespace transit_realtime;
 using namespace flatbuffers;
-using namespace motis::logging;
 
 namespace motis::ris::gtfsrt {
 
 void collect_events(trip_update_context& update_ctx,
-                    std::unique_ptr<knowledge_context> const& knowledge) {
+                    knowledge_context& knowledge, std::string const& tag) {
   auto const& trip = *update_ctx.trip_;
+  if (trip.edges_->empty()) {  // trip is canceled - ignore
+    return;
+  }
+
   auto skipped_stops = update_ctx.known_stop_skips_;
   auto trip_update = update_ctx.trip_update_;
   auto& sched = update_ctx.sched_;
 
   stop_context stop_ctx;
-  for (auto const& stu : trip_update.stop_time_update()) {
-    stop_ctx.update(sched, trip, stu, skipped_stops);
+  for (auto const& [i, stu] : utl::enumerate(trip_update.stop_time_update())) {
+    stop_ctx.update(sched, trip, stu, skipped_stops, tag);
 
     if (!stu.has_schedule_relationship() ||
         stu.schedule_relationship() ==
@@ -47,17 +50,17 @@ void collect_events(trip_update_context& update_ctx,
 
       if (skipped_stops != nullptr &&
           skipped_stops->is_skipped(stop_ctx.seq_no_)) {
-        throw std::runtime_error(
-            "Stop " + stop_ctx.station_id_ +
-            " previously reported as SKIPPED is now reported as SCHEDULED. "
-            "This is not supported.");
+        throw utl::fail(
+            "stop_time_update {} for trip {}: stop seq_no={}, id={} was "
+            "SKIPPED now SCHEDULED",
+            i, trip.dbg_, stop_ctx.seq_no_, stop_ctx.station_id_);
       }
 
       auto const has_delay_for_addition =
-          [&](TripUpdate_StopTimeEvent const& time_evt) -> bool {
-        return (!update_ctx.is_addition_ ||
-                (update_ctx.is_addition_ && time_evt.has_delay()));
-      };
+          [&](TripUpdate_StopTimeEvent const& time_evt) {
+            return (!update_ctx.is_addition_ ||
+                    (update_ctx.is_addition_ && time_evt.has_delay()));
+          };
 
       if (stu.has_arrival() && has_delay_for_addition(stu.arrival()) &&
           stop_ctx.idx_ > 0) {
@@ -83,10 +86,8 @@ void collect_events(trip_update_context& update_ctx,
                TripUpdate_StopTimeUpdate_ScheduleRelationship_SKIPPED) {
       // check for already skipped stops
       if (skipped_stops == nullptr) {  // lazy initializer
-        auto start_date =
-            to_unix_time(parse_date(trip_update.trip().start_date()));
         skipped_stops =
-            knowledge->remember_stop_skips(update_ctx.trip_id_, start_date);
+            knowledge.remember_stop_skips(to_trip_id(trip_update.trip(), tag));
       }
 
       if (!skipped_stops->is_skipped(stop_ctx.seq_no_)) {
@@ -113,9 +114,9 @@ void collect_events(trip_update_context& update_ctx,
   }
 }
 
-void collect_additional_events(
-    trip_update_context& update_ctx,
-    std::unique_ptr<knowledge_context> const& knowledge) {
+void collect_additional_events(trip_update_context& update_ctx,
+                               knowledge_context& knowledge,
+                               std::string const& tag) {
   // additional trip updates always contain all stops
   auto trip_update = update_ctx.trip_update_;
 
@@ -130,7 +131,7 @@ void collect_additional_events(
 
     evt base;
     base.line_id_ = line_id;
-    base.stop_id_ = stu.stop_id();
+    base.stop_id_ = tag + stu.stop_id();
     base.seq_no_ = stu.stop_sequence();
     // all stops need to be given to create the trip
     base.stop_idx_ = stop_count;
@@ -141,7 +142,7 @@ void collect_additional_events(
 
       if (known_skips != nullptr && known_skips->is_skipped(base.seq_no_)) {
         throw std::runtime_error(
-            "Stop " + base.stop_id_ +
+            "collect_additional_events: Stop " + base.stop_id_ +
             " previously reported as SKIPPED is now reported as SCHEDULED. "
             "This is not supported.");
       }
@@ -184,8 +185,8 @@ void collect_additional_events(
       }
 
       if (known_skips == nullptr) {
-        update_ctx.known_stop_skips_ = knowledge->remember_stop_skips(
-            update_ctx.trip_id_, update_ctx.trip_start_date_);
+        update_ctx.known_stop_skips_ =
+            knowledge.remember_stop_skips(update_ctx.trip_id_);
         known_skips = update_ctx.known_stop_skips_;
       }
 
@@ -197,10 +198,8 @@ void collect_additional_events(
   }
 }
 
-void collect_canceled_events(
-    trip_update_context& update_ctx,
-    std::unique_ptr<knowledge_context> const& knowledge) {
-
+void collect_canceled_events(trip_update_context& update_ctx,
+                             knowledge_context& knowledge) {
   auto& sched = update_ctx.sched_;
   auto trip_update = update_ctx.trip_update_;
 
@@ -208,32 +207,30 @@ void collect_canceled_events(
     return;
   }
 
-  access::stops stop_it{update_ctx.trip_};
   stop_context stop_ctx;
-  std::for_each(
-      begin(stop_it), end(stop_it), [&](access::trip_stop const& stop) {
-        stop_ctx.idx_ = stop.index();
-        stop_ctx.station_id_ = stop.get_station(sched).eva_nr_;
-        stop_ctx.is_skip_known_ = true;
+  for (auto const& stop : access::stops{update_ctx.trip_}) {
+    stop_ctx.idx_ = stop.index();
+    stop_ctx.station_id_ = stop.get_station(sched).eva_nr_;
+    stop_ctx.is_skip_known_ = true;
 
-        if (stop.index() > 0) {
-          stop_ctx.stop_arrival_ = get_schedule_time(
-              *update_ctx.trip_, sched, stop.index(), event_type::ARR);
-          evt arr(*update_ctx.trip_, stop_ctx, event_type::ARR);
-          arr.verify_times(sched);
-          update_ctx.reroute_events_.emplace_back(arr);
-        }
+    if (stop.index() > 0) {
+      stop_ctx.stop_arrival_ = get_schedule_time(*update_ctx.trip_, sched,
+                                                 stop.index(), event_type::ARR);
+      evt arr(*update_ctx.trip_, stop_ctx, event_type::ARR);
+      arr.verify_times(sched);
+      update_ctx.reroute_events_.emplace_back(arr);
+    }
 
-        if (stop.index() < update_ctx.trip_->edges_->size()) {
-          stop_ctx.stop_departure_ = get_schedule_time(
-              *update_ctx.trip_, sched, stop.index(), event_type::DEP);
-          evt dep(*update_ctx.trip_, stop_ctx, event_type::DEP);
-          dep.verify_times(sched);
-          update_ctx.reroute_events_.emplace_back(dep);
-        }
-      });
+    if (stop.index() < update_ctx.trip_->edges_->size()) {
+      stop_ctx.stop_departure_ = get_schedule_time(
+          *update_ctx.trip_, sched, stop.index(), event_type::DEP);
+      evt dep(*update_ctx.trip_, stop_ctx, event_type::DEP);
+      dep.verify_times(sched);
+      update_ctx.reroute_events_.emplace_back(dep);
+    }
+  }
 
-  knowledge->remember_canceled(trip_update.trip());
+  knowledge.remember_canceled(trip_update.trip());
 }
 
 void check_and_fix_reroute(trip_update_context& update_ctx) {
@@ -294,11 +291,9 @@ void check_and_fix_addition(trip_update_context& update_ctx) {
     add_evts.erase(end(add_evts) - 1);
   }
 
-  if (add_evts.size() < 2) {
-    throw std::runtime_error(
-        "Found additional trip with only one collected event! " +
-        update_ctx.trip_id_);
-  }
+  utl::verify(add_evts.size() >= 2,
+              "found additional trip {} with only one event",
+              update_ctx.trip_id_);
 }
 
 void check_and_fix_delay_with_additional(trip_update_context& update_ctx) {
@@ -348,25 +343,23 @@ void check_and_fix_delay_with_skips(trip_update_context& update_ctx) {
   }
 }
 
-void check_and_fix_implicit_cancel(
-    trip_update_context& update_ctx,
-    std::unique_ptr<knowledge_context> const& knowledge) {
+void check_and_fix_implicit_cancel(trip_update_context& update_ctx,
+                                   knowledge_context& knowledge) {
   auto& reroute = update_ctx.reroute_events_;
   if (reroute.size() == update_ctx.trip_->edges_->size() * 2 &&
       !update_ctx.is_canceled_) {
     update_ctx.is_canceled_ = true;
     update_ctx.is_new_canceled_ = true;
-    knowledge->remember_canceled(update_ctx.trip_id_,
-                                 update_ctx.trip_start_date_);
+    knowledge.remember_canceled(update_ctx.trip_id_);
     update_ctx.is_events_.clear();
     update_ctx.additional_events_.clear();
     update_ctx.forecast_event_.clear();
   }
 }
 
-void initialize_update_context(
-    std::unique_ptr<knowledge_context> const& knowledge,
-    trip_update_context& update_ctx) {
+void initialize_update_context(knowledge_context const& knowledge,
+                               trip_update_context& update_ctx,
+                               std::string const& tag) {
   auto& sched = update_ctx.sched_;
   auto trip_update = update_ctx.trip_update_;
   update_ctx.is_addition_ = trip_update.trip().has_schedule_relationship() &&
@@ -374,29 +367,23 @@ void initialize_update_context(
                                 TripDescriptor_ScheduleRelationship_ADDED;
   update_ctx.is_new_addition_ =
       update_ctx.is_addition_ &&
-      !knowledge->is_additional_known(trip_update.trip());
+      !knowledge.is_additional_known(trip_update.trip());
 
   update_ctx.is_canceled_ = trip_update.trip().has_schedule_relationship() &&
                             trip_update.trip().schedule_relationship() ==
                                 TripDescriptor_ScheduleRelationship_CANCELED;
 
-  update_ctx.is_new_canceled_ = update_ctx.is_canceled_ &&
-                                !knowledge->is_cancel_known(trip_update.trip());
+  update_ctx.is_new_canceled_ =
+      update_ctx.is_canceled_ && !knowledge.is_cancel_known(trip_update.trip());
 
-  update_ctx.trip_id_ = trip_update.trip().trip_id();
-
-  update_ctx.trip_start_date_ =
-      to_unix_time(parse_date(trip_update.trip().start_date()));
+  update_ctx.trip_id_ = to_trip_id(trip_update.trip(), tag);
 
   if (update_ctx.is_addition_ && !update_ctx.is_new_addition_) {
     auto const prim_id =
-        knowledge
-            ->find_additional(update_ctx.trip_id_, update_ctx.trip_start_date_)
-            .primary_id_;
+        knowledge.find_additional(update_ctx.trip_id_).primary_id_;
     update_ctx.trip_ = find_trip(sched, prim_id);
   } else if (!update_ctx.is_addition_) {
-    update_ctx.trip_ =
-        get_trip(sched, update_ctx.trip_id_, update_ctx.trip_start_date_);
+    update_ctx.trip_ = get_gtfs_trip(sched, update_ctx.trip_id_);
   } else {
     return;
   }
@@ -410,9 +397,9 @@ void initialize_update_context(
           ? trip_update.stop_time_update_size()
           : update_ctx.trip_->edges_->size() + 1);
   update_ctx.known_stop_skips_ =
-      knowledge->find_trip_stop_skips(trip_update.trip());
+      knowledge.find_trip_stop_skips(trip_update.trip());
 
-  if (knowledge->is_cancel_known(trip_update.trip()) &&
+  if (knowledge.is_cancel_known(trip_update.trip()) &&
       !update_ctx.is_canceled_ && !update_ctx.is_new_canceled_) {
     throw std::runtime_error(
         "Trip was previously reported as canceled but is now reported "
@@ -421,21 +408,21 @@ void initialize_update_context(
 }
 
 void handle_trip_update(
-    trip_update_context& update_ctx,
-    std::unique_ptr<knowledge_context> const& knowledge,
+    trip_update_context& update_ctx, knowledge_context& knowledge,
     unixtime const timestamp,
     std::function<void(message_context&, flatbuffers::Offset<Message>)> const&
-        place_msg) {
+        place_msg,
+    std::string const& tag) {
   auto& sched = update_ctx.sched_;
-  initialize_update_context(knowledge, update_ctx);
+  initialize_update_context(knowledge, update_ctx, tag);
 
   if (update_ctx.is_new_addition_ ||
       (update_ctx.is_addition_ && !update_ctx.is_addition_skip_allowed_)) {
-    collect_additional_events(update_ctx, knowledge);
+    collect_additional_events(update_ctx, knowledge, tag);
   } else if (update_ctx.is_canceled_) {
     collect_canceled_events(update_ctx, knowledge);
   } else {
-    collect_events(update_ctx, knowledge);
+    collect_events(update_ctx, knowledge, tag);
   }
 
   if (!update_ctx.additional_events_.empty()) {
@@ -444,9 +431,8 @@ void handle_trip_update(
     auto const motis_start_date =
         unix_to_motistime(sched, first_evt.orig_sched_time_);
     auto const station = get_station(sched, first_evt.stop_id_);
-    knowledge->remember_additional(update_ctx.trip_id_,
-                                   update_ctx.trip_start_date_,
-                                   motis_start_date, station->index_);
+    knowledge.remember_additional(update_ctx.trip_id_, motis_start_date,
+                                  station->index_);
 
     if (!update_ctx.is_events_.empty()) {
       check_and_fix_delay_with_additional(update_ctx);
@@ -469,9 +455,8 @@ void handle_trip_update(
       }
 
       auto stop = access::trip_stop{update_ctx.trip_, first_valid_stop_idx};
-      knowledge->update_additional(
-          update_ctx.trip_id_, update_ctx.trip_start_date_,
-          stop.dep_lcon().d_time_, stop.get_station_id());
+      knowledge.update_additional(update_ctx.trip_id_, stop.dep_lcon().d_time_,
+                                  stop.get_station_id());
     }
 
     if (!update_ctx.is_events_.empty()) {
@@ -481,15 +466,13 @@ void handle_trip_update(
 
   auto const build_id_event = [&](message_context& ctx) -> Offset<IdEvent> {
     if (update_ctx.is_new_addition_) {
-      auto first_evt = update_ctx.additional_events_[0];
+      auto const first_evt = update_ctx.additional_events_[0];
       return create_id_event(ctx, first_evt.stop_id_,
                              first_evt.orig_sched_time_);
     } else if (update_ctx.is_addition_ &&
                !update_ctx.is_addition_skip_allowed_) {
-      auto const& prim_id = knowledge
-                                ->find_additional(update_ctx.trip_id_,
-                                                  update_ctx.trip_start_date_)
-                                .primary_id_;
+      auto const& prim_id =
+          knowledge.find_additional(update_ctx.trip_id_).primary_id_;
       return create_id_event(ctx, sched.stations_[prim_id.station_id_]->eva_nr_,
                              motis_to_unixtime(sched, prim_id.time_));
     } else {

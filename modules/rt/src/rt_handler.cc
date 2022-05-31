@@ -11,12 +11,14 @@
 #include "motis/core/conv/trip_conv.h"
 
 #include "motis/module/context/motis_publish.h"
+#include "motis/module/message.h"
 
 #include "motis/rt/error.h"
 #include "motis/rt/event_resolver.h"
 #include "motis/rt/full_trip_handler.h"
 #include "motis/rt/reroute.h"
 #include "motis/rt/separate_trip.h"
+#include "motis/rt/track_change.h"
 #include "motis/rt/trip_correction.h"
 #include "motis/rt/update_constant_graph.h"
 #include "motis/rt/validate_constant_graph.h"
@@ -27,11 +29,13 @@ using namespace motis::logging;
 
 namespace motis::rt {
 
-rt_handler::rt_handler(schedule& sched, bool validate_graph,
-                       bool validate_constant_graph, bool print_stats)
+rt_handler::rt_handler(schedule& sched, ctx::res_id_t schedule_res_id,
+                       bool validate_graph, bool validate_constant_graph,
+                       bool print_stats)
     : sched_(sched),
+      schedule_res_id_(schedule_res_id),
       propagator_(sched),
-      update_builder_(sched),
+      update_builder_(sched, schedule_res_id),
       validate_graph_(validate_graph),
       validate_constant_graph_(validate_constant_graph),
       print_stats_(print_stats) {}
@@ -158,16 +162,47 @@ void rt_handler::update(motis::ris::Message const* m) {
 
       stats_.total_evs_ += msg->events()->size();
 
-      auto const resolved = resolve_events(
-          stats_, sched_, msg->trip_id(),
-          utl::to_vec(*msg->events(),
-                      [](ris::UpdatedTrack const* ev) { return ev->base(); }));
+      auto const resolve = [&]() {
+        return resolve_events(
+            stats_, sched_, msg->trip_id(),
+            utl::to_vec(*msg->events(), [](ris::UpdatedTrack const* ev) {
+              return ev->base();
+            }));
+      };
+      auto resolved = resolve();
+      auto new_tracks = std::vector<uint16_t>(msg->events()->size());
+
+      trip* separate_trp = nullptr;
+      for (auto i = 0UL; i < resolved.size(); ++i) {
+        auto const& k = resolved[i];
+        if (!k) {
+          continue;
+        }
+
+        auto const ev = msg->events()->Get(i);
+        auto const new_track = static_cast<uint16_t>(
+            get_track(sched_, ev->updated_track()->str()));
+        new_tracks[i] = new_track;
+
+        if (separate_trp == nullptr && !fits_edge(sched_, *k, new_track)) {
+          separate_trp = sched_.merged_trips_[k->lcon()->trips_]->front();
+        }
+      }
+
+      if (separate_trp != nullptr) {
+        seperate_trip(sched_, separate_trp);
+        resolved = resolve();
+        stats_.track_separations_++;
+      }
 
       for (auto i = 0UL; i < resolved.size(); ++i) {
         auto const& k = resolved[i];
         if (!k) {
           continue;
         }
+
+        auto const ev = msg->events()->Get(i);
+        auto const new_track = new_tracks[i];
 
         if (auto const it = sched_.graph_to_schedule_track_index_.find(*k);
             it == sched_.graph_to_schedule_track_index_.end()) {
@@ -176,20 +211,11 @@ void rt_handler::update(motis::ris::Message const* m) {
                                              : k->lcon()->full_con_->d_track_;
         }
 
-        auto const ev = msg->events()->Get(i);
-
         track_events_.emplace_back(
             track_info{*k, ev->updated_track()->str(),
                        unix_to_motistime(sched_, ev->base()->schedule_time())});
 
-        auto fcon = *k->lcon()->full_con_;
-        (k->ev_type_ == event_type::ARR ? fcon.a_track_ : fcon.d_track_) =
-            get_track(sched_, ev->updated_track()->str());
-
-        const_cast<light_connection*>(k->lcon())->full_con_ =  // NOLINT
-            sched_.full_connections_
-                .emplace_back(mcd::make_unique<connection>(fcon))
-                .get();
+        update_track(sched_, *k, new_track);
       }
       break;
     }
@@ -295,6 +321,8 @@ void rt_handler::propagate() {
   ctx::await_all(motis_publish(update_builder_.finish()));
 
   update_builder_.reset();
+  track_events_.clear();
+  free_text_events_.clear();
 }
 
 msg_ptr rt_handler::flush(msg_ptr const&) {
@@ -320,8 +348,11 @@ msg_ptr rt_handler::flush(msg_ptr const&) {
     validate_constant_graph(sched_);
   }
 
-  ctx::await_all(
-      motis_publish(motis::module::make_no_msg("/rt/graph_updated")));
+  motis::module::message_creator mc;
+  mc.create_and_finish(MsgContent_RtGraphUpdated,
+                       CreateRtGraphUpdated(mc, schedule_res_id_).Union(),
+                       "/rt/graph_updated");
+  ctx::await_all(motis_publish(module::make_msg(mc)));
 
   if (stats_.sanity_check_fails()) {
     return motis::module::make_error_msg(error::sanity_check_failed);

@@ -1,5 +1,7 @@
 #include "motis/paxmon/statistics.h"
 
+#include "motis/core/schedule/schedule.h"
+
 #include "motis/paxmon/get_load.h"
 #include "motis/paxmon/universe.h"
 
@@ -30,6 +32,7 @@ graph_statistics calc_graph_statistics(schedule const& sched,
         case edge_type::INTERCHANGE: ++stats.interchange_edges_; break;
         case edge_type::WAIT: ++stats.wait_edges_; break;
         case edge_type::THROUGH: ++stats.through_edges_; break;
+        case edge_type::DISABLED: ++stats.disabled_edges_; break;
       }
       if (e.is_canceled(uv)) {
         ++stats.canceled_edges_;

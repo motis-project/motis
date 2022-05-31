@@ -1,7 +1,6 @@
 #include "motis/parking/parking_edges.h"
 
 #include <algorithm>
-#include <iostream>
 #include <mutex>
 
 #include "utl/to_vec.h"
@@ -9,6 +8,7 @@
 #include "ppr/routing/search_profile.h"
 
 #include "motis/core/common/timing.h"
+#include "motis/core/access/station_access.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_parallel_for.h"
 
@@ -54,11 +54,11 @@ osrm_parking_response route_osrm(geo::latlng const& start_pos,
 
   if (include_outward) {
     outward_req = motis_call(
-        make_osrm_request(start_pos, parkings, "car", Direction_Forward));
+        make_osrm_request(start_pos, parkings, "car", SearchDir_Forward));
   }
   if (include_return) {
     return_req = motis_call(
-        make_osrm_request(start_pos, parkings, "car", Direction_Backward));
+        make_osrm_request(start_pos, parkings, "car", SearchDir_Backward));
   }
 
   if (include_outward) {
@@ -93,15 +93,14 @@ ppr_parking_response route_ppr(geo::latlng const& parking_pos,
       stations, [&](Station const* station) { return *station->pos(); });
 
   if (include_outward) {
-    outward_req = motis_call(make_ppr_request(parking_pos, station_positions,
-                                              ppr_search_options,
-                                              SearchDirection_Forward));
+    outward_req = motis_call(make_ppr_request(
+        parking_pos, station_positions, ppr_search_options, SearchDir_Forward));
   }
 
   if (include_return) {
-    return_req = motis_call(make_ppr_request(parking_pos, station_positions,
-                                             ppr_search_options,
-                                             SearchDirection_Backward));
+    return_req =
+        motis_call(make_ppr_request(parking_pos, station_positions,
+                                    ppr_search_options, SearchDir_Backward));
   }
 
   if (include_outward) {
@@ -225,11 +224,11 @@ std::vector<parking_edges> get_custom_parking_edges(
 }
 
 std::vector<parking_edges> get_cached_parking_edges(
-    std::vector<parking_lot> const& parkings, geo::latlng const& start_pos,
-    Vector<Offset<Station>> const* dest_stations, int max_car_duration,
-    motis::ppr::SearchOptions const* ppr_search_options, database const& db,
-    parking_edge_stats& pe_stats, bool include_outward, bool include_return,
-    double walking_speed) {
+    schedule const& sched, std::vector<parking_lot> const& parkings,
+    geo::latlng const& start_pos, Vector<Offset<Station>> const* dest_stations,
+    int max_car_duration, motis::ppr::SearchOptions const* ppr_search_options,
+    database& db, parking_edge_stats& pe_stats, bool include_outward,
+    bool include_return, double walking_speed) {
   std::vector<parking_edges> edges;
 
   MOTIS_START_TIMING(osrm_timing);
@@ -241,12 +240,11 @@ std::vector<parking_edges> get_cached_parking_edges(
   auto const foot_duration_limit = static_cast<duration>(
       std::ceil(ppr_search_options->duration_limit() / 60));
   auto const filter_station = [&](FootEdge const* fe) {
+    auto const sid = fe->station_id()->str();
     return fe->duration() > foot_duration_limit ||
+           find_station(sched, sid) == nullptr ||
            std::any_of(dest_stations->begin(), dest_stations->end(),
-                       [&](auto const& ds) {
-                         auto const sid = fe->station_id()->str();
-                         return sid == ds->id()->str();
-                       });
+                       [&](auto const& ds) { return sid == ds->id()->str(); });
   };
 
   std::mutex mutex;
@@ -267,7 +265,7 @@ std::vector<parking_edges> get_cached_parking_edges(
     }
 
     auto const foot_edges =
-        db.get(parking.id_, ppr_search_options->profile()->str());
+        db.get_footedges(parking.id_, ppr_search_options->profile()->str());
     if (foot_edges) {
       std::vector<parking_edge_costs> outward_costs;
       std::vector<parking_edge_costs> return_costs;
@@ -314,14 +312,15 @@ std::vector<parking_edges> get_cached_parking_edges(
 }
 
 std::vector<parking_edges> get_parking_edges(
-    std::vector<parking_lot> const& parkings, geo::latlng const& start_pos,
-    Vector<Offset<Station>> const* dest_stations, int max_car_duration,
-    motis::ppr::SearchOptions const* ppr_search_options, database const& db,
-    parking_edge_stats& pe_stats, bool include_outward, bool include_return,
-    double walking_speed) {
-  return get_cached_parking_edges(
-      parkings, start_pos, dest_stations, max_car_duration, ppr_search_options,
-      db, pe_stats, include_outward, include_return, walking_speed);
+    schedule const& sched, std::vector<parking_lot> const& parkings,
+    geo::latlng const& start_pos, Vector<Offset<Station>> const* dest_stations,
+    int max_car_duration, motis::ppr::SearchOptions const* ppr_search_options,
+    database& db, parking_edge_stats& pe_stats, bool include_outward,
+    bool include_return, double walking_speed) {
+  return get_cached_parking_edges(sched, parkings, start_pos, dest_stations,
+                                  max_car_duration, ppr_search_options, db,
+                                  pe_stats, include_outward, include_return,
+                                  walking_speed);
   /*
   return get_custom_parking_edges(
       parkings, start_pos, dest_stations, max_car_duration, ppr_search_options,

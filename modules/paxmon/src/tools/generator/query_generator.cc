@@ -1,6 +1,8 @@
 #include "motis/paxmon/tools/generator/query_generator.h"
 
 #include <algorithm>
+#include <iostream>
+#include <optional>
 #include <random>
 
 #include "utl/to_vec.h"
@@ -43,17 +45,23 @@ bool has_events(station_node const& s, motis::time from, motis::time to) {
   return found;
 }
 
-int random_station_id(std::vector<station_node const*> const& station_nodes,
-                      motis::time motis_interval_start,
-                      motis::time motis_interval_end) {
-  auto first = std::next(begin(station_nodes), 2);
+station const* random_station(
+    schedule const& sched,
+    std::vector<station_node const*> const& station_nodes,
+    motis::time motis_interval_start, motis::time motis_interval_end,
+    unsigned max_attempts = 1000U) {
+  auto first = begin(station_nodes);
   auto last = end(station_nodes);
 
-  station_node const* s = nullptr;
-  do {
-    s = *rand_in(first, last);
-  } while (!has_events(*s, motis_interval_start, motis_interval_end));
-  return s->id_;
+  station_node const* sn = nullptr;
+  for (auto attempt = 0U; attempt < max_attempts; ++attempt) {
+    sn = *rand_in(first, last);
+    if (has_events(*sn, motis_interval_start, motis_interval_end)) {
+      return sched.stations_.at(sn->id_).get();
+    }
+  }
+
+  return nullptr;
 }
 
 bool is_meta(station const* a, station const* b) {
@@ -61,10 +69,10 @@ bool is_meta(station const* a, station const* b) {
          end(a->equivalent_);
 }
 
-std::pair<std::string, std::string> random_station_ids(
+std::optional<std::pair<std::string, std::string>> random_station_ids(
     schedule const& sched,
     std::vector<station_node const*> const& station_nodes,
-    std::time_t interval_start, std::time_t interval_end) {
+    unixtime const interval_start, unixtime const interval_end) {
   station const *from = nullptr, *to = nullptr;
   auto const motis_interval_start = unix_to_motistime(sched, interval_start);
   auto const motis_interval_end = unix_to_motistime(sched, interval_end);
@@ -80,22 +88,24 @@ std::pair<std::string, std::string> random_station_ids(
     std::terminate();
   }
   do {
-    from = sched.stations_
-               .at(random_station_id(station_nodes, motis_interval_start,
-                                     motis_interval_end))
-               .get();
-    to = sched.stations_
-             .at(random_station_id(station_nodes, motis_interval_start,
-                                   motis_interval_end))
-             .get();
+    from = random_station(sched, station_nodes, motis_interval_start,
+                          motis_interval_end);
+    if (from == nullptr) {
+      return {};
+    }
+    to = random_station(sched, station_nodes, motis_interval_start,
+                        motis_interval_end);
+    if (to == nullptr) {
+      return {};
+    }
   } while (from == to || is_meta(from, to));
-  return {from->eva_nr_.str(), to->eva_nr_.str()};
+  return {{from->eva_nr_.str(), to->eva_nr_.str()}};
 }
 
 msg_ptr make_routing_request(std::string const& from_eva,
                              std::string const& to_eva,
-                             std::time_t const interval_start,
-                             std::time_t const interval_end,
+                             unixtime const interval_start,
+                             unixtime const interval_end,
                              std::string const& target, Start const start_type,
                              SearchDir const dir) {
   message_creator fbb;
@@ -126,24 +136,58 @@ msg_ptr make_routing_request(std::string const& from_eva,
   return make_msg(fbb);
 }
 
-query_generator::query_generator(const schedule& sched)
+query_generator::query_generator(const schedule& sched,
+                                 unsigned const largest_stations)
     : sched_(sched),
       interval_gen_(sched.schedule_begin_ + SCHEDULE_OFFSET_MINUTES * 60,
                     sched.schedule_begin_ + SCHEDULE_OFFSET_MINUTES * 60 +
                         SECONDS_A_DAY) {
-  station_nodes_ =
-      utl::to_vec(sched.station_nodes_, [](station_node_ptr const& s) {
-        return static_cast<station_node const*>(s.get());
-      });
+  if (largest_stations > 0) {
+    auto stations = utl::to_vec(sched.stations_,
+                                [](station_ptr const& s) { return s.get(); });
+
+    std::vector<double> sizes(stations.size());
+    for (auto i = 0UL; i < stations.size(); ++i) {
+      auto& factor = sizes[i];
+      auto const& events = stations[i]->dep_class_events_;
+      for (auto j = 0UL; j < events.size(); ++j) {
+        factor +=
+            std::pow(2.0, static_cast<double>(service_class::NUM_CLASSES) - j) *
+            events.at(j);
+      }
+    }
+
+    std::sort(begin(stations), end(stations),
+              [&](station const* a, station const* b) {
+                return sizes[a->index_] > sizes[b->index_];
+              });
+
+    auto const n =
+        std::min(static_cast<size_t>(largest_stations), stations.size());
+    for (auto i = 0U; i < n; ++i) {
+      station_nodes_.push_back(
+          sched.station_nodes_.at(stations[i]->index_).get());
+    }
+  } else {
+    station_nodes_ =
+        utl::to_vec(sched.station_nodes_, [](station_node_ptr const& s) {
+          return static_cast<station_node const*>(s.get());
+        });
+  }
 }
 
 motis::module::msg_ptr query_generator::get_routing_request(
     const std::string& target, Start const start_type, SearchDir const dir) {
-  auto const interval = interval_gen_.random_interval();
-  auto const evas = random_station_ids(sched_, station_nodes_, interval.first,
-                                       interval.second);
-  return make_routing_request(evas.first, evas.second, interval.first,
-                              interval.second, target, start_type, dir);
+  while (true) {
+    auto const interval = interval_gen_.random_interval();
+    auto const stations = random_station_ids(sched_, station_nodes_,
+                                             interval.first, interval.second);
+    if (stations) {
+      auto const& evas = stations.value();
+      return make_routing_request(evas.first, evas.second, interval.first,
+                                  interval.second, target, start_type, dir);
+    }
+  }
 }
 
 }  // namespace motis::paxmon::tools::generator

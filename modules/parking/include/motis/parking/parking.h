@@ -1,10 +1,18 @@
 #pragma once
 
+#include <map>
+#include <string>
+#include <vector>
+
 #include "boost/filesystem.hpp"
+
+#include "motis/ppr/profile_info.h"
 
 #include "motis/module/module.h"
 
 namespace motis::parking {
+
+struct stations;
 
 struct parking : public motis::module::module {
   parking();
@@ -23,21 +31,26 @@ struct parking : public motis::module::module {
 
 private:
   boost::filesystem::path module_data_dir() const;
-  std::string parking_file() const;
-  std::string footedges_db_file() const;
-  std::string stations_per_parking_file() const;
+  std::string db_file() const;
 
   // import
   int max_walk_duration_{10};
   std::size_t edge_rtree_max_size_{1024UL * 1024 * 1024 * 3};
   std::size_t area_rtree_max_size_{1024UL * 1024 * 1024};
   bool lock_rtrees_{false};
+  bool import_osm_{true};
+  bool ppr_exact_{true};
 
   std::size_t db_max_size_{static_cast<std::size_t>(1024) * 1024 * 1024 * 512};
+
+  std::vector<std::string> parkendd_endpoints_;
+  unsigned parkendd_update_interval_{300};  // seconds
 
   struct impl;
   std::unique_ptr<impl> impl_;
   bool import_successful_{false};
+  std::map<std::string, ::motis::ppr::profile_info> ppr_profiles_;
+  std::unique_ptr<stations> stations_;
 };
 
 }  // namespace motis::parking

@@ -1,6 +1,10 @@
 #pragma once
 
+#include <cstdint>
 #include <tuple>
+#include <vector>
+
+#include "cista/hashing.h"
 
 #include "motis/core/schedule/schedule.h"
 
@@ -14,6 +18,8 @@ struct passenger_localization {
   time schedule_arrival_time_{INVALID_TIME};
   time current_arrival_time_{INVALID_TIME};
   bool first_station_{false};
+  std::vector<std::uint32_t>
+      remaining_interchanges_;  // including final destination
 
   inline friend bool operator==(passenger_localization const& lhs,
                                 passenger_localization const& rhs) {
@@ -32,6 +38,11 @@ struct passenger_localization {
   }
 
   bool in_trip() const { return in_trip_ != nullptr; }
+
+  cista::hash_t hash() const {
+    return cista::build_hash(in_trip_, at_station_, schedule_arrival_time_,
+                             current_arrival_time_, first_station_);
+  }
 };
 
 passenger_localization localize(schedule const& sched,

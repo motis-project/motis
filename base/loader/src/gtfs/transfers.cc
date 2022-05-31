@@ -25,6 +25,11 @@ std::map<stop_pair, transfer> read_transfers(loaded_file f,
                                              stop_map const& stops) {
   motis::logging::scoped_timer timer{"read transfers"};
   std::map<stop_pair, transfer> transfers;
+
+  if (f.empty()) {
+    return transfers;
+  }
+
   for (auto const& [i, t] :
        utl::enumerate(read<gtfs_transfer>(f.content(), columns))) {
     try {
@@ -32,12 +37,16 @@ std::map<stop_pair, transfer> read_transfers(loaded_file f,
         transfers.insert(std::make_pair(
             std::pair{stops.at(get<from_stop_id>(t).to_str()).get(),
                       stops.at(get<to_stop_id>(t).to_str()).get()},
-            transfer(get<min_transfer_time>(t) / 60, get<transfer_type>(t))));
+            transfer(get<transfer_type>(t) == transfer::MIN_TRANSFER_TIME
+                         ? get<min_transfer_time>(t) / 60
+                         : 0,
+                     get<transfer_type>(t))));
       }
-    } catch (...) {
+    } catch (std::exception const& e) {
       LOG(logging::warn) << "skipping transfer (" << f.name() << ":" << i
-                         << ") between unknown stop pair "
-                         << get<from_stop_id>(t) << " - " << get<to_stop_id>(t);
+                         << ") between stop pair "
+                         << get<from_stop_id>(t).to_str() << " - "
+                         << get<to_stop_id>(t).to_str() << ": " << e.what();
     }
   }
   return transfers;

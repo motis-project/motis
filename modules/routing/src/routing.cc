@@ -47,18 +47,22 @@ void routing::reg_subc(motis::module::subc_reg& r) {
 }
 
 void routing::init(motis::module::registry& reg) {
-  reg.register_op("/routing",
-                  [this](msg_ptr const& msg) { return route(msg); });
+  reg.register_op("/routing", [this](msg_ptr const& msg) { return route(msg); },
+                  {});
   reg.register_op("/trip_to_connection", [this](msg_ptr const& msg) {
     return trip_to_connection(msg);
   });
 }
 
 msg_ptr routing::route(msg_ptr const& msg) {
-  MOTIS_START_TIMING(routing_timing);
-
   auto const req = motis_content(RoutingRequest, msg);
-  auto const& sched = get_sched();
+  auto const schedule_res_id =
+      req->schedule() == 0U ? to_res_id(global_res_id::SCHEDULE)
+                            : static_cast<ctx::res_id_t>(req->schedule());
+  auto res_lock = lock_resources({{schedule_res_id, ctx::access_t::READ}});
+  auto const& sched = *res_lock.get<schedule_data>(schedule_res_id).schedule_;
+
+  MOTIS_START_TIMING(routing_timing);
   auto query = build_query(sched, req);
 
   mem_retriever mem(mem_pool_mutex_, mem_pool_, LABEL_STORE_START_SIZE);
@@ -123,7 +127,7 @@ msg_ptr routing::trip_to_connection(msg_ptr const& msg) {
 
   auto labels = std::vector<label>{trp->edges_->size() + 3};
   labels[0] = make_label(nullptr, &e_0, nullptr, dep_time);
-  labels[1] = make_label(&labels[0], &e_1, nullptr, dep_time);
+  labels[1] = make_label(&labels.front(), &e_1, nullptr, dep_time);
 
   int i = 2;
   for (auto const& e : *trp->edges_) {

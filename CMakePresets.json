@@ -1,0 +1,255 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "macos-x86_64",
+      "displayName": "MacOS x86_64 AVX2 Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/macos-x86_64-release",
+      "cacheVariables": {
+        "CMAKE_OSX_ARCHITECTURES": "x86_64",
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOTIS_WITH_WEBUI": "ON"
+      }
+    },
+    {
+      "name": "macos-x86_64-noavx2",
+      "displayName": "MacOS x86_64 NO-AVX2 Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/macos-x86_64-noavx2-release",
+      "cacheVariables": {
+        "CMAKE_OSX_ARCHITECTURES": "x86_64",
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOTIS_WITH_WEBUI": "ON",
+        "MOTIS_AVX2": "OFF"
+      }
+    },
+    {
+      "name": "macos-arm64",
+      "displayName": "MacOS x86_64 NO-AVX2 Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/macos-arm64-release",
+      "cacheVariables": {
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+        "BOOST_CONTEXT_ARCHITECTURE": "arm64",
+        "BOOST_CONTEXT_ABI": "aapcs",
+        "ENABLE_ASM": "OFF",
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOTIS_WITH_WEBUI": "ON",
+        "MOTIS_AVX": "OFF",
+        "MOTIS_AVX2": "OFF"
+      }
+    },
+    {
+      "name": "linux-amd64-avx2-release",
+      "displayName": "Linux AMD64 AVX2 Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/amd64-avx2-release",
+      "toolchainFile": "/opt/x86_64-multilib-linux-musl/toolchain-amd64.cmake",
+      "cacheVariables": {
+        "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOTIS_MIMALLOC": "ON",
+        "MOTIS_WITH_WEBUI": "ON"
+      },
+      "environment": {
+        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      }
+    },
+    {
+      "name": "linux-amd64-noavx-release",
+      "displayName": "Linux AMD64 NO-AVX Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/amd64-noavx-release",
+      "toolchainFile": "/opt/x86_64-multilib-linux-musl/toolchain-amd64.cmake",
+      "cacheVariables": {
+        "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOTIS_WITH_WEBUI": "ON",
+        "MOTIS_AVX": "OFF",
+        "MOTIS_AVX2": "OFF"
+      },
+      "environment": {
+        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      }
+    },
+    {
+      "name": "linux-x86-release",
+      "displayName": "Linux AMD64 NO-AVX Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/x86-release",
+      "toolchainFile": "/opt/x86_64-multilib-linux-musl/toolchain-x86.cmake",
+      "cacheVariables": {
+        "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOTIS_WITH_WEBUI": "ON",
+        "MOTIS_AVX": "OFF",
+        "MOTIS_AVX2": "OFF"
+      },
+      "environment": {
+        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      }
+    },
+    {
+      "name": "linux-arm-release",
+      "displayName": "Linux ARM Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/arm-release",
+      "toolchainFile": "/opt/arm-unknown-linux-musleabihf/toolchain-arm.cmake",
+      "cacheVariables": {
+        "CMAKE_CROSSCOMPILING_EMULATOR": "qemu-arm-static",
+        "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOTIS_WITH_WEBUI": "ON",
+        "MOTIS_AVX": "OFF",
+        "MOTIS_AVX2": "OFF"
+      },
+      "environment": {
+        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      }
+    },
+    {
+      "name": "linux-arm64-release",
+      "displayName": "Linux ARM64 Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/arm64-release",
+      "toolchainFile": "/opt/aarch64-unknown-linux-musl/toolchain-arm64.cmake",
+      "cacheVariables": {
+        "CMAKE_CROSSCOMPILING_EMULATOR": "qemu-aarch64-static",
+        "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOTIS_WITH_WEBUI": "ON",
+        "MOTIS_AVX": "OFF",
+        "MOTIS_AVX2": "OFF"
+      },
+      "environment": {
+        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      }
+    },
+    {
+      "name": "linux-sanitizer",
+      "displayName": "Linux Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/sanitizer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
+        "CTX_ASAN": "ON"
+      },
+      "environment": {
+        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "CXX": "/usr/bin/g++-10",
+        "CC": "/usr/bin/gcc-10"
+      }
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Linux Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
+        "CTX_VALGRIND": "ON"
+      },
+      "environment": {
+        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "CXX": "/usr/bin/g++-10",
+        "CC": "/usr/bin/gcc-10"
+      }
+    },
+    {
+      "name": "linux-relwithdebinfo",
+      "displayName": "Linux RelWithDebInfo",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/relwithdebinfo",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold"
+      },
+      "environment": {
+        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "CXX": "/usr/bin/g++-10",
+        "CC": "/usr/bin/gcc-10"
+      }
+    },
+    {
+      "name": "clang-tidy",
+      "displayName": "Clang Tidy",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/clang-tidy",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang-14",
+        "CMAKE_CXX_COMPILER": "clang++-14",
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+        "CMAKE_EXE_LINKER_FLAGS": "-lc++abi",
+        "MOTIS_LINT": "ON",
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "environment": {
+        "BUILDCACHE_LUA_PATH": "/opt/buildcache/share/lua-examples",
+        "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "macos-x86_64",
+      "configurePreset": "macos-x86_64"
+    },
+    {
+      "name": "macos-x86_64-noavx2",
+      "configurePreset": "macos-x86_64-noavx2"
+    },
+    {
+      "name": "macos-arm64",
+      "configurePreset": "macos-arm64"
+    },
+    {
+      "name": "linux-amd64-avx2-release",
+      "configurePreset": "linux-amd64-avx2-release"
+    },
+    {
+      "name": "linux-amd64-noavx-release",
+      "configurePreset": "linux-amd64-noavx-release"
+    },
+    {
+      "name": "linux-x86-release",
+      "configurePreset": "linux-x86-release"
+    },
+    {
+      "name": "linux-arm-release",
+      "configurePreset": "linux-arm-release"
+    },
+    {
+      "name": "linux-arm64-release",
+      "configurePreset": "linux-arm64-release"
+    },
+    {
+      "name": "clang-tidy",
+      "configurePreset": "clang-tidy"
+    },
+    {
+      "name": "linux-debug",
+      "configurePreset": "linux-debug"
+    },
+    {
+      "name": "linux-relwithdebinfo",
+      "configurePreset": "linux-relwithdebinfo"
+    },
+    {
+      "name": "linux-sanitizer",
+      "configurePreset": "linux-sanitizer"
+    }
+  ]
+}

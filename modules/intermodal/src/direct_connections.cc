@@ -5,17 +5,15 @@
 #include <utility>
 
 #include "cista/reflection/comparable.h"
+#include "utl/enumerate.h"
 #include "utl/erase_if.h"
 #include "utl/verify.h"
-
-#include "ppr/routing/search_profile.h"
 
 #include "motis/core/common/unixtime.h"
 #include "motis/module/context/motis_spawn.h"
 
 using namespace geo;
 using namespace flatbuffers;
-using namespace ppr::routing;
 using namespace motis::routing;
 using namespace motis::ppr;
 using namespace motis::module;
@@ -72,14 +70,10 @@ ppr_settings get_direct_ppr_settings(IntermodalRoutingRequest const* req,
 msg_ptr make_direct_ppr_request(geo::latlng const& start,
                                 geo::latlng const& dest,
                                 std::string const& ppr_profile,
-                                double ppr_duration_limit,
-                                SearchDir direction) {
+                                double ppr_duration_limit, SearchDir dir) {
   Position const start_pos{start.lat_, start.lng_};
   Position const dest_pos{dest.lat_, dest.lng_};
   message_creator mc;
-
-  auto const dir = direction == SearchDir_Forward ? SearchDirection_Forward
-                                                  : SearchDirection_Backward;
 
   mc.create_and_finish(
       MsgContent_FootRoutingRequest,
@@ -167,14 +161,10 @@ osrm_settings get_direct_osrm_car_settings(
 
 msg_ptr make_direct_osrm_request(geo::latlng const& start,
                                  geo::latlng const& dest,
-                                 std::string const& profile,
-                                 SearchDir direction) {
+                                 std::string const& profile, SearchDir dir) {
   Position const start_pos{start.lat_, start.lng_};
   Position const dest_pos{dest.lat_, dest.lng_};
   message_creator mc;
-
-  auto const dir =
-      direction == SearchDir_Forward ? Direction_Forward : Direction_Backward;
 
   mc.create_and_finish(
       MsgContent_OSRMOneToManyRequest,
@@ -188,7 +178,8 @@ msg_ptr make_direct_osrm_request(geo::latlng const& start,
 
 std::vector<direct_connection> get_direct_connections(
     query_start const& q_start, query_dest const& q_dest,
-    IntermodalRoutingRequest const* req, ppr_profiles const& profiles) {
+    IntermodalRoutingRequest const* req, ppr_profiles const& profiles,
+    std::vector<mumo_edge const*> const& edge_mapping) {
   auto direct = std::vector<direct_connection>{};
   auto const beeline = distance(q_start.pos_, q_dest.pos_);
 
@@ -258,6 +249,13 @@ std::vector<direct_connection> get_direct_connections(
   }
 
   ctx::await_all(futures);
+
+  for (auto const& [i, e] : utl::enumerate(edge_mapping)) {
+    if (e->from_ == STATION_START && e->to_ == STATION_END) {
+      direct.emplace_back(e->type_, e->duration_, e->accessibility_, i);
+    }
+  }
+
   return direct;
 }
 
@@ -314,6 +312,7 @@ void add_direct_connections(std::vector<journey>& journeys,
     transport.duration_ = d.duration_;
     transport.mumo_accessibility_ = d.accessibility_;
     transport.mumo_type_ = to_string(d.type_);
+    transport.mumo_id_ = d.mumo_id_;
   }
 }
 

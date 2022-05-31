@@ -3,7 +3,9 @@
 #include "motis/protocol/RISMessage_generated.h"
 #include "motis/ris/risml/risml_parser.h"
 
-namespace motis::ris::risml {
+using namespace motis;
+using namespace motis::ris;
+using namespace motis::ris::risml;
 
 auto const free_text_fixture_1 = R"(<?xml version="1.0"?>
 <Paket Version="1.2" SpezVer="1" TOut="20151007070635992" KNr="124264761">
@@ -78,8 +80,8 @@ constexpr auto const free_text_fixture_2 = R"(<?xml version="1.0"?>
 </Paket>
 )";
 
-TEST(ris_free_text_message, DISABLED_free_text_test) {
-  auto const messages = risml_parser::parse(free_text_fixture_1);
+TEST(ris_free_text_message, free_text_test) {
+  auto const messages = parse(free_text_fixture_1);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
@@ -87,7 +89,7 @@ TEST(ris_free_text_message, DISABLED_free_text_test) {
   EXPECT_EQ(1444195800, message.earliest_);
   EXPECT_EQ(1444197420, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
+  auto outer_msg = motis::ris::GetMessage(message.data());
   ASSERT_EQ(MessageUnion_FreeTextMessage, outer_msg->content_type());
   auto inner_msg =
       reinterpret_cast<FreeTextMessage const*>(outer_msg->content());
@@ -118,8 +120,8 @@ TEST(ris_free_text_message, DISABLED_free_text_test) {
   EXPECT_EQ("Intern", free_text->type()->str());
 }
 
-TEST(ris_free_text_message, DISABLED_free_text_test2) {
-  auto const messages = risml_parser::parse(free_text_fixture_2);
+TEST(ris_free_text_message, free_text_test2) {
+  auto const messages = parse(free_text_fixture_2);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
@@ -127,7 +129,7 @@ TEST(ris_free_text_message, DISABLED_free_text_test2) {
   EXPECT_EQ(1460277480, message.earliest_);
   EXPECT_EQ(1460288460, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
+  auto outer_msg = motis::ris::GetMessage(message.data());
   ASSERT_EQ(MessageUnion_FreeTextMessage, outer_msg->content_type());
   auto inner_msg =
       reinterpret_cast<FreeTextMessage const*>(outer_msg->content());
@@ -157,5 +159,3 @@ TEST(ris_free_text_message, DISABLED_free_text_test2) {
   EXPECT_EQ("Wartet auf IC 2371 in Hannover Hbf.", free_text->text()->str());
   EXPECT_EQ("Intern", free_text->type()->str());
 }
-
-}  // namespace motis::ris::risml

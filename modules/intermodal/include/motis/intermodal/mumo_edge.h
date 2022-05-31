@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <iosfwd>
 #include <optional>
 #include <vector>
 
@@ -13,14 +14,14 @@
 
 namespace motis::intermodal {
 
-enum class mumo_type : int { FOOT, BIKE, CAR, CAR_PARKING };
+enum class mumo_type : int { FOOT, BIKE, CAR, CAR_PARKING, GBFS };
 
 inline int to_int(mumo_type const type) {
   return static_cast<typename std::underlying_type<mumo_type>::type>(type);
 }
 
 inline std::string to_string(mumo_type const type) {
-  static char const* strs[] = {"foot", "bike", "car", "car_parking"};
+  static char const* strs[] = {"foot", "bike", "car", "car_parking", "gbfs"};
   return strs[to_int(type)];  // NOLINT
 }
 
@@ -32,6 +33,25 @@ struct car_parking_edge {
   uint16_t foot_accessibility_{};
   uint16_t total_duration_{};
   bool uses_car_{};
+};
+
+struct gbfs_edge {
+  struct free_bike {
+    duration walk_duration_{std::numeric_limits<duration>::max()};
+    duration bike_duration_{std::numeric_limits<duration>::max()};
+    std::string id_;
+    geo::latlng pos_;
+  };
+  struct station_bike {
+    duration first_walk_duration_{std::numeric_limits<duration>::max()};
+    duration bike_duration_{std::numeric_limits<duration>::max()};
+    duration second_walk_duration_{std::numeric_limits<duration>::max()};
+    std::string from_station_name_, to_station_name_;
+    std::string from_station_id_, to_station_id_;
+    geo::latlng from_station_pos_, to_station_pos_;
+  };
+  std::string vehicle_type_;
+  std::variant<free_bike, station_bike> bike_;
 };
 
 struct mumo_edge {
@@ -47,6 +67,8 @@ struct mumo_edge {
         type_(type),
         id_(id) {}
 
+  friend std::ostream& operator<<(std::ostream&, mumo_edge const&);
+
   std::string from_, to_;
   geo::latlng from_pos_, to_pos_;
   duration duration_;
@@ -54,6 +76,7 @@ struct mumo_edge {
   mumo_type type_;
   int id_;
   std::optional<car_parking_edge> car_parking_;
+  std::optional<gbfs_edge> gbfs_;
 };
 
 using appender_fun = std::function<mumo_edge&(
@@ -62,18 +85,17 @@ using appender_fun = std::function<mumo_edge&(
 
 using mumo_stats_appender_fun = std::function<void(stats_category&&)>;
 
-void make_starts(IntermodalRoutingRequest const*, geo::latlng const&,
-                 appender_fun const&, mumo_stats_appender_fun const&,
-                 ppr_profiles const&);
-void make_dests(IntermodalRoutingRequest const*, geo::latlng const&,
-                appender_fun const&, mumo_stats_appender_fun const&,
-                ppr_profiles const&);
+void make_starts(IntermodalRoutingRequest const*, geo::latlng const& pos,
+                 geo::latlng const& direct_target, appender_fun const&,
+                 mumo_stats_appender_fun const&, ppr_profiles const&);
+void make_dests(IntermodalRoutingRequest const*, geo::latlng const& pos,
+                geo::latlng const& direct_target, appender_fun const&,
+                mumo_stats_appender_fun const&, ppr_profiles const&);
 
 void remove_intersection(std::vector<mumo_edge>& starts,
                          std::vector<mumo_edge>& destinations,
                          geo::latlng const& query_start,
-                         geo::latlng const& query_destination,
-                         routing::SearchDir);
+                         geo::latlng const& query_destination, SearchDir);
 
 std::vector<flatbuffers::Offset<routing::AdditionalEdgeWrapper>> write_edges(
     flatbuffers::FlatBufferBuilder& fbb,  //

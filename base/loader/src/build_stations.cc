@@ -23,8 +23,9 @@ namespace motis::loader {
 constexpr auto const kLinkNearbyMaxDistance = 300;  // [m];
 
 struct stations_builder {
-  explicit stations_builder(schedule& sched, bool no_local_stations)
-      : sched_{sched}, no_local_stations_{no_local_stations} {}
+  explicit stations_builder(schedule& sched, std::map<std::string, int>& tracks,
+                            bool no_local_stations)
+      : sched_{sched}, tracks_{tracks}, no_local_stations_{no_local_stations} {}
 
   void add_dummy_node(std::string const& name) {
     auto const station_idx = sched_.station_nodes_.size();
@@ -44,7 +45,8 @@ struct stations_builder {
     sched_.stations_.emplace_back(std::move(s));
   }
 
-  void add_station(uint32_t const source_schedule, Station const* fbs_station) {
+  void add_station(uint32_t const source_schedule, Station const* fbs_station,
+                   bool const use_platforms) {
     if (skip_station(fbs_station)) {
       return;
     }
@@ -65,12 +67,35 @@ struct stations_builder {
     s->length_ = fbs_station->lng();
     s->eva_nr_ = std::string{sched_.prefixes_[source_schedule]} +
                  fbs_station->id()->str();
-    s->transfer_time_ = std::max(1, fbs_station->interchange_time());
+    s->transfer_time_ =
+        static_cast<duration>(std::max(1, fbs_station->interchange_time()));
+    s->platform_transfer_time_ =
+        static_cast<duration>(fbs_station->platform_interchange_time());
+    if (s->platform_transfer_time_ == 0 ||
+        s->platform_transfer_time_ > s->transfer_time_) {
+      s->platform_transfer_time_ = s->transfer_time_;
+    }
     s->timez_ = fbs_station->timezone() != nullptr
                     ? get_or_create_timezone(fbs_station->timezone())
                     : nullptr;
     s->equivalent_.push_back(s.get());
     s->source_schedule_ = source_schedule;
+
+    if (use_platforms && s->platform_transfer_time_ != 0 &&
+        s->platform_transfer_time_ != s->transfer_time_ &&
+        fbs_station->platforms() != nullptr &&
+        fbs_station->platforms()->size() > 0) {
+      auto platform_id = 1;
+      for (auto const& platform : *fbs_station->platforms()) {
+        for (auto const& track : *platform->tracks()) {
+          s->track_to_platform_[get_or_create_track(track->str())] =
+              platform_id;
+        }
+        ++platform_id;
+      }
+      station_nodes_[fbs_station]->platform_nodes_.resize(platform_id);
+      ++stations_with_platforms_;
+    }
 
     // Store DS100.
     if (fbs_station->external_ids() != nullptr) {
@@ -161,6 +186,17 @@ struct stations_builder {
     }
   }
 
+  int get_or_create_track(std::string const& name) {
+    if (sched_.tracks_.empty()) {
+      sched_.tracks_.emplace_back("");
+    }
+    return utl::get_or_create(tracks_, name, [&]() {
+      int index = sched_.tracks_.size();
+      sched_.tracks_.emplace_back(name);
+      return index;
+    });
+  }
+
   inline bool skip_station(Station const* station) const {
     return no_local_stations_ && is_local_station(station);
   }
@@ -169,13 +205,16 @@ struct stations_builder {
   int first_day_{0}, last_day_{0};
   mcd::hash_map<Station const*, station_node*> station_nodes_;
   mcd::hash_map<Timezone const*, timezone const*> timezones_;
+  std::map<std::string, int>& tracks_;
   bool no_local_stations_{false};
+  std::size_t stations_with_platforms_{};
 };
 
 mcd::hash_map<Station const*, station_node*> build_stations(
     schedule& sched, std::vector<Schedule const*> const& fbs_schedules,
+    std::map<std::string, int>& tracks, bool const use_platforms,
     bool no_local_stations) {
-  stations_builder b{sched, no_local_stations};
+  stations_builder b{sched, tracks, no_local_stations};
 
   // Add dummy stations.
   b.add_dummy_node(STATION_START);
@@ -194,15 +233,20 @@ mcd::hash_map<Station const*, station_node*> build_stations(
   // Add actual stations.
   for (auto const& [src_index, fbs_schedule] : utl::enumerate(fbs_schedules)) {
     std::tie(b.first_day_, b.last_day_) =
-        first_last_days(sched, fbs_schedule->interval());
+        first_last_days(sched, src_index, fbs_schedule->interval());
 
     for (auto const* fbs_station : *fbs_schedule->stations()) {
-      b.add_station(src_index, fbs_station);
+      b.add_station(src_index, fbs_station, use_platforms);
     }
 
     if (fbs_schedule->meta_stations() != nullptr) {
       b.link_meta_stations(fbs_schedule->meta_stations());
     }
+  }
+
+  if (use_platforms) {
+    utl::verify(b.stations_with_platforms_ > 0,
+                "use_platforms set, but no platform information available");
   }
 
   if (fbs_schedules.size() > 1) {

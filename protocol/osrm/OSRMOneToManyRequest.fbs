@@ -1,8 +1,7 @@
 include "base/Position.fbs";
+include "base/SearchDir.fbs";
 
 namespace motis.osrm;
-
-enum Direction : byte { Forward, Backward }
 
 // JSON Example:
 // --
@@ -24,7 +23,7 @@ enum Direction : byte { Forward, Backward }
 // }
 table OSRMOneToManyRequest {
   profile: string;
-  direction: Direction;
+  direction: motis.SearchDir;
   one : motis.Position;
   many : [motis.Position];
 }

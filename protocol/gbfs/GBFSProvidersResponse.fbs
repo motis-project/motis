@@ -1,0 +1,16 @@
+namespace motis.gbfs;
+
+table GBFSProvider {
+  tag: string;
+  name: string;
+  name_short: string;
+  op: string;
+  url: string;
+  purchase_url: string;
+  mail: string;
+  vehicle_type: string;
+}
+
+table GBFSProvidersResponse {
+  providers: [GBFSProvider];
+}
