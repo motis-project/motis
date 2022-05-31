@@ -17,7 +17,7 @@ namespace motis::intermodal {
 struct direct_connection {
   direct_connection() = default;
   direct_connection(mumo_type type, unsigned duration, unsigned accessibility,
-                    int mumo_id = 0)
+                    int mumo_id = -1)
       : type_{type},
         duration_{duration},
         accessibility_{accessibility},
