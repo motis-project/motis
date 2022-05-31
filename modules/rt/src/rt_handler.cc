@@ -190,7 +190,7 @@ void rt_handler::update(motis::ris::Message const* m) {
       }
 
       if (separate_trp != nullptr) {
-        seperate_trip(sched_, separate_trp);
+        separate_trip(sched_, separate_trp);
         resolved = resolve();
         stats_.track_separations_++;
       }
