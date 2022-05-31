@@ -8,6 +8,7 @@ port module Port exposing
     , setTimeOffset
     , showStationDetails
     , showTripDetails
+    , setGBFSSearchOptions
     )
 
 import Data.Connection.Types exposing (TripId)
@@ -43,3 +44,6 @@ port localStorageSet : ( String, String ) -> Cmd msg
 
 
 port setPPRSearchOptions : Json.Encode.Value -> Cmd msg
+
+
+port setGBFSSearchOptions : Json.Encode.Value -> Cmd msg
