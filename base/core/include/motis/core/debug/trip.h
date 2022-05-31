@@ -3,8 +3,11 @@
 #include <iomanip>
 #include <iostream>
 
+#include "motis/hash_set.h"
+
 #include "motis/core/schedule/schedule.h"
 
+#include "motis/core/access/bfs.h"
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/trip_iterator.h"
 
@@ -161,6 +164,44 @@ struct trip_with_sections {
 
   schedule const& sched_;
   motis::trip const* trp_;
+};
+
+struct rule_service_trip_with_sections {
+  friend std::ostream& operator<<(std::ostream& out,
+                                  rule_service_trip_with_sections const& t) {
+    auto const& sched = t.sched_;
+    auto const* main_trp = t.main_trp_;
+    auto const lcon_idx = main_trp->lcon_idx_;
+
+    if (main_trp->edges_->empty()) {
+      out << "trip " << trip{sched, main_trp} << ": <no sections>\n";
+      return out;
+    }
+
+    mcd::hash_set<::motis::trip const*> trips;
+    auto const first_dep =
+        ev_key{main_trp->edges_->front().get_edge(), lcon_idx, event_type::DEP};
+
+    for (auto const& e : route_bfs(first_dep, bfs_direction::BOTH)) {
+      auto const& lcon = e->m_.route_edge_.conns_.at(lcon_idx);
+      for (auto const& trp : *sched.merged_trips_.at(lcon.trips_)) {
+        trips.insert(cista::ptr_cast(trp));
+      }
+    }
+
+    out << trip_with_sections{sched, main_trp};
+
+    for (auto const* trp : trips) {
+      if (trp != main_trp) {
+        out << "related " << trip_with_sections{sched, trp};
+      }
+    }
+
+    return out;
+  }
+
+  schedule const& sched_;
+  motis::trip const* main_trp_;
 };
 
 }  // namespace motis::debug
