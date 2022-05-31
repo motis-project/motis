@@ -52,7 +52,8 @@ struct trip {
     auto const& sched = t.sched_;
     auto const* trp = t.trp_;
     out << "{"
-        << "ptr=" << trp << ", id=" << trip_id{sched, trp->id_}
+        << "ptr=" << trp << ", idx=" << trp->trip_idx_
+        << ", id=" << trip_id{sched, trp->id_}
         << ", edges=" << trp->edges_->size() << ", lcon_idx=" << trp->lcon_idx_
         << ", dbg=" << trp->dbg_.str() << "}";
     return out;
@@ -94,7 +95,7 @@ struct trip_with_sections {
           << ", route=" << kd.get_node()->route_
           << ", merged_trips=" << sec.lcon().trips_ << " [ ";
       for (auto const& mt : *sched.merged_trips_[sec.lcon().trips_]) {
-        out << cista::ptr_cast(mt) << " ";
+        out << cista::ptr_cast(mt) << "/" << mt->trip_idx_ << " ";
       }
       out << "]";
       if (sec_idx != 0U && last_merged_trips != sec.lcon().trips_) {
