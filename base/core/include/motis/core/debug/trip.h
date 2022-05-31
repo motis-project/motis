@@ -113,8 +113,44 @@ struct trip_with_sections {
       if (ka.get_time() < kd.get_time()) {
         out << "    !!! time < previous departure time !!!";
       }
-      out << "\n\n";
+      out << "\n";
 
+      for (auto const& te : sec.from_node()->incoming_edges_) {
+        if (te->type() == edge::THROUGH_EDGE) {
+          out << "    incoming through edge from:\n";
+          for (auto const& re : te->from_->incoming_edges_) {
+            if (!re->empty()) {
+              auto const& through_lc =
+                  re->m_.route_edge_.conns_.at(trp->lcon_idx_);
+              out << "      merged_trips=" << through_lc.trips_ << " [ ";
+              for (auto const& mt : *sched.merged_trips_[through_lc.trips_]) {
+                out << cista::ptr_cast(mt) << "/" << mt->trip_idx_ << " ";
+              }
+              out << "] arriving from "
+                  << station{sched, re->from_->get_station()->id_} << "\n";
+            }
+          }
+        }
+      }
+      for (auto const& te : sec.to_node()->edges_) {
+        if (te.type() == edge::THROUGH_EDGE) {
+          out << "    outgoing through edge to:\n";
+          for (auto const& re : te.to_->edges_) {
+            if (!re.empty()) {
+              auto const& through_lc =
+                  re.m_.route_edge_.conns_.at(trp->lcon_idx_);
+              out << "      merged_trips=" << through_lc.trips_ << " [ ";
+              for (auto const& mt : *sched.merged_trips_[through_lc.trips_]) {
+                out << cista::ptr_cast(mt) << "/" << mt->trip_idx_ << " ";
+              }
+              out << "] departing to "
+                  << station{sched, re.to_->get_station()->id_} << "\n";
+            }
+          }
+        }
+      }
+
+      out << "\n";
       ++sec_idx;
       last_time = ka.get_time();
       last_merged_trips = sec.lcon().trips_;
