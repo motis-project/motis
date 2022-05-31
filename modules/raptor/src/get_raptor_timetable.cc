@@ -138,6 +138,9 @@ void init_routes(schedule const& sched, std::vector<transformable_route>& rs) {
 
   route_id r_id = 0;
   for (auto const route_trips : sched.expanded_trips_) {
+    if (route_trips.empty()) {
+      continue;
+    }
     auto& t_route = rs[r_id];
 
     t_route.trips_.resize(route_trips.size());
@@ -178,6 +181,8 @@ void init_routes(schedule const& sched, std::vector<transformable_route>& rs) {
 
     ++r_id;
   }
+
+  rs.resize(r_id);
 }
 
 void add_footpaths(schedule const& sched, std::vector<transformable_stop>& s) {
