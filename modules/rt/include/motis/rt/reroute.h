@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "utl/erase.h"
 #include "utl/to_vec.h"
 
@@ -324,9 +326,8 @@ inline void update_delay_infos(
   }
 }
 
-inline void update_expanded_trip(
-    schedule& sched, trip* trp,
-    mcd::vector<trip::route_edge> const& trip_edges) {
+inline void update_expanded_routes_map(schedule& sched, trip* trp,
+                                       std::optional<uint32_t> new_route_id) {
   if (!trp->edges_->empty()) {
     auto const old_route_id = trp->edges_->front()->from_->route_;
     for (auto const old_exp_route_id :
@@ -334,18 +335,18 @@ inline void update_expanded_trip(
       utl::erase(sched.expanded_trips_.at(old_exp_route_id), trp);
     }
   }
-  if (!trip_edges.empty()) {
-    auto const new_route_id = trip_edges.front()->from_->route_;
+  if (new_route_id.has_value()) {
     auto new_exp_route = sched.expanded_trips_.emplace_back();
     new_exp_route.emplace_back(trp);
-    sched.route_to_expanded_routes_[new_route_id].emplace_back(
+    sched.route_to_expanded_routes_[*new_route_id].emplace_back(
         new_exp_route.index());
   }
 }
 
 inline void update_trip(schedule& sched, trip* trp,
                         mcd::vector<trip::route_edge> const& trip_edges) {
-  update_expanded_trip(sched, trp, trip_edges);
+  update_expanded_routes_map(
+      sched, trp, static_cast<uint32_t>(trip_edges.front()->from_->route_));
   for (auto const& trp_e : *trp->edges_) {
     auto const e = trp_e.get_edge();
     e->m_.route_edge_.conns_[trp->lcon_idx_].valid_ = 0U;
@@ -405,8 +406,8 @@ inline std::pair<reroute_result, trip const*> reroute(
   add_additional_events(stats, sched, cancelled_delays, trp, additional, evs);
   add_not_deleted_trip_events(sched, del_evs, trp, evs);
   if (evs.empty()) {
+    update_expanded_routes_map(sched, trp, {});
     disable_trip(*old_trip, old_lcon_idx);
-    update_expanded_trip(sched, trp, {});
     trp->edges_ =
         sched.trip_edges_
             .emplace_back(mcd::make_unique<mcd::vector<trip::route_edge>>())
