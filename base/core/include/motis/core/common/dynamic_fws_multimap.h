@@ -189,6 +189,7 @@ struct dynamic_fws_multimap_base {
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
     iterator erase(iterator pos) {
+      auto const idx = std::distance(begin(), pos);
       auto last = std::prev(end());
       while (pos < last) {
         std::swap(*pos, *std::next(pos));
@@ -197,7 +198,7 @@ struct dynamic_fws_multimap_base {
       (*pos).~T();
       get_index().size_--;
       mutable_mm().element_count_--;
-      return end();
+      return idx < size() ? std::next(begin(), idx) : end();
     }
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
