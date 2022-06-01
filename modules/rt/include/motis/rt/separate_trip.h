@@ -126,15 +126,15 @@ inline void update_expanded_trips(
                                  });
                it != end(old_exp_route)) {
       // rule service trip
+      auto exp_trip = *it;
       auto const new_trp_edges =
           sched.trip_edges_
               .emplace_back(mcd::make_unique<mcd::vector<trip::route_edge>>(
-                  mcd::to_vec(*trp->edges_,
+                  mcd::to_vec(*exp_trip->edges_,
                               [&](trip::route_edge const& e) {
                                 return edges.at(e.get_edge());
                               })))
               .get();
-      auto exp_trip = *it;
       exp_trip->edges_ = new_trp_edges;
       exp_trip->lcon_idx_ = 0;
       old_exp_route.erase(it);
