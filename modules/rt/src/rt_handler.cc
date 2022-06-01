@@ -47,9 +47,9 @@ msg_ptr rt_handler::update(msg_ptr const& msg) {
     try {
       update(m->message_nested_root());
     } catch (std::exception const& e) {
-      printf("rt::on_message: UNEXPECTED ERROR: %s\n", e.what());
+      LOG(logging::error) << "rt::on_message: UNEXPECTED ERROR: " << e.what();
     } catch (...) {
-      printf("rt::on_message: UNEXPECTED UNKNOWN ERROR\n");
+      LOG(logging::error) << "rt::on_message: UNEXPECTED UNKNOWN ERROR";
     }
   }
   return nullptr;
