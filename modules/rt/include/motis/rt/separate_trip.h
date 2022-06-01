@@ -17,6 +17,7 @@
 #include "motis/rt/in_out_allowed.h"
 #include "motis/rt/incoming_edges.h"
 #include "motis/rt/update_constant_graph.h"
+#include "motis/rt/update_msg_builder.h"
 
 namespace motis::rt {
 
