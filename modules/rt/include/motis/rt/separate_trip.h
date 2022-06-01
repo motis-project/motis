@@ -102,43 +102,51 @@ inline std::set<trip const*> route_trips(schedule const& sched,
 }
 
 inline void update_expanded_trips(
-    schedule& sched, ev_key const& k, trip const* trp,
+    schedule& sched, std::set<trip const*> const& trips,
     std::map<trip::route_edge, trip::route_edge>& edges, int32_t old_route_id,
     int32_t new_route_id) {
+  auto const is_matching_trip = [&](trip const* trp) {
+    if (trp->edges_->empty()) {
+      return false;
+    }
+    auto const& merged_trips =
+        *sched.merged_trips_.at(trp->edges_->front()
+                                    .get_edge()
+                                    ->m_.route_edge_.conns_.at(trp->lcon_idx_)
+                                    .trips_);
+    return std::any_of(
+        begin(merged_trips), end(merged_trips), [&](auto const& merged_trp) {
+          return trips.find(cista::ptr_cast(merged_trp)) != end(trips);
+        });
+  };
+
   std::vector<trip*> new_trips;
   for (auto const old_exp_route_id :
        sched.route_to_expanded_routes_.at(old_route_id)) {
     auto old_exp_route = sched.expanded_trips_.at(old_exp_route_id);
-    if (auto it = std::find(begin(old_exp_route), end(old_exp_route), trp);
-        it != end(old_exp_route)) {
-      // non rule service trip
-      old_exp_route.erase(it);
-      new_trips.emplace_back(const_cast<trip*>(trp));  // NOLINT
-    } else if (it = std::find_if(begin(old_exp_route), end(old_exp_route),
-                                 [&](auto const& ex_trp) {
-                                   return std::any_of(
-                                       begin(access::sections{ex_trp}),
-                                       end(access::sections{ex_trp}),
-                                       [&](auto const& sec) {
-                                         return sec.ev_key_from() == k ||
-                                                sec.ev_key_to() == k;
-                                       });
-                                 });
-               it != end(old_exp_route)) {
-      // rule service trip
-      auto exp_trip = *it;
-      auto const new_trp_edges =
-          sched.trip_edges_
-              .emplace_back(mcd::make_unique<mcd::vector<trip::route_edge>>(
-                  mcd::to_vec(*exp_trip->edges_,
-                              [&](trip::route_edge const& e) {
-                                return edges.at(e.get_edge());
-                              })))
-              .get();
-      exp_trip->edges_ = new_trp_edges;
-      exp_trip->lcon_idx_ = 0;
-      old_exp_route.erase(it);
-      new_trips.emplace_back(exp_trip);
+    for (auto it = begin(old_exp_route); it != end(old_exp_route);) {
+      auto* exp_trip = cista::ptr_cast(*it);
+      if (trips.find(exp_trip) != end(trips)) {
+        // non rule service trip
+        it = old_exp_route.erase(it);
+        new_trips.emplace_back(exp_trip);
+      } else if (is_matching_trip(exp_trip)) {
+        // rule service trip
+        auto const new_trp_edges =
+            sched.trip_edges_
+                .emplace_back(mcd::make_unique<mcd::vector<trip::route_edge>>(
+                    mcd::to_vec(*exp_trip->edges_,
+                                [&](trip::route_edge const& e) {
+                                  return edges.at(e.get_edge());
+                                })))
+                .get();
+        exp_trip->edges_ = new_trp_edges;
+        exp_trip->lcon_idx_ = 0;
+        it = old_exp_route.erase(it);
+        new_trips.emplace_back(exp_trip);
+      } else {
+        it = std::next(it);
+      }
     }
   }
 
@@ -153,8 +161,9 @@ inline void update_expanded_trips(
 inline void update_trips(schedule& sched, ev_key const& k,
                          std::map<trip::route_edge, trip::route_edge>& edges,
                          int32_t old_route_id, int32_t new_route_id) {
-  for (auto const& t : route_trips(sched, k)) {
-    update_expanded_trips(sched, k, t, edges, old_route_id, new_route_id);
+  update_expanded_trips(sched, trips, edges, old_route_id, new_route_id);
+
+  for (auto const& t : trips) {
     sched.trip_edges_.emplace_back(
         mcd::make_unique<mcd::vector<trip::route_edge>>(
             mcd::to_vec(*t->edges_, [&](trip::route_edge const& e) {
