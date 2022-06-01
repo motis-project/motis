@@ -160,7 +160,9 @@ inline void update_expanded_trips(
 
 inline void update_trips(schedule& sched, ev_key const& k,
                          std::map<trip::route_edge, trip::route_edge>& edges,
-                         int32_t old_route_id, int32_t new_route_id) {
+                         int32_t old_route_id, int32_t new_route_id,
+                         update_msg_builder& update_builder) {
+  auto const trips = route_trips(sched, k);
   update_expanded_trips(sched, trips, edges, old_route_id, new_route_id);
 
   for (auto const& t : trips) {
@@ -171,6 +173,7 @@ inline void update_trips(schedule& sched, ev_key const& k,
             })));
     const_cast<trip*>(t)->edges_ = sched.trip_edges_.back().get();  // NOLINT
     const_cast<trip*>(t)->lcon_idx_ = 0;  // NOLINT
+    update_builder.trip_separated(t);
   }
 }
 
@@ -274,7 +277,8 @@ inline void update_delays(
   }
 }
 
-inline void separate_trip(schedule& sched, ev_key const& k) {
+inline void separate_trip(schedule& sched, ev_key const& k,
+                          update_msg_builder& update_builder) {
   auto const in_out_allowed = get_route_in_out_allowed(k);
   auto const station_nodes = route_station_nodes(k);
   std::vector<incoming_edge_patch> incoming;
@@ -288,18 +292,19 @@ inline void separate_trip(schedule& sched, ev_key const& k) {
   auto const old_route_id = k.get_node()->route_;
   auto const new_route_id = copy_trip_route(sched, k, nodes, edges, lcons);
   update_trips(sched, k, edges, old_route_id,
-               static_cast<int32_t>(new_route_id));
+               static_cast<int32_t>(new_route_id), update_builder);
   build_change_edges(sched, in_out_allowed, nodes, lcons, incoming);
   add_outgoing_edges_from_new_route(nodes, incoming);
   patch_incoming_edges(incoming);
   update_delays(k.lcon_idx_, edges, sched);
 }
 
-inline void separate_trip(schedule& sched, trip const* trp) {
+inline void separate_trip(schedule& sched, trip const* trp,
+                          update_msg_builder& update_builder) {
   assert(!trp->edges_->empty());
   auto const first_dep =
       ev_key{trp->edges_->front().get_edge(), trp->lcon_idx_, event_type::DEP};
-  separate_trip(sched, first_dep);
+  separate_trip(sched, first_dep, update_builder);
 }
 
 }  // namespace motis::rt
