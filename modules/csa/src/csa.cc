@@ -64,6 +64,18 @@ void csa::init(motis::module::registry& reg) {
     return route(msg, implementation_type::GPU);
   });
 #endif
+
+  reg.register_op(
+      "/csa/update_timetable",
+      [&](msg_ptr const&) -> msg_ptr {
+        timetable_ =
+            build_csa_timetable(get_sched(), bridge_zero_duration_connections_,
+                                add_footpath_connections_);
+        return {};
+      },
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
 }
 
 csa_timetable const* csa::get_timetable() const { return timetable_.get(); }
