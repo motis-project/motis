@@ -68,7 +68,11 @@ msg_ptr make_response(schedule const& sched, std::vector<journey> const& js,
 struct raptor::impl {
   impl(schedule const& sched, [[maybe_unused]] config const& config)
       : sched_{sched} {
-    std::tie(meta_info_, timetable_) = get_raptor_timetable(sched);
+    init_timetable();
+  }
+
+  void init_timetable() {
+    std::tie(meta_info_, timetable_) = get_raptor_timetable(sched_);
 
 #if defined(MOTIS_CUDA)
     h_gtt_ = get_host_gpu_timetable(*timetable_);
@@ -151,6 +155,16 @@ void raptor::init(motis::module::registry& reg) {
   impl_ = std::make_unique<impl>(get_sched(), config_);
 
   reg.register_op("/raptor_cpu", [&](auto&& m) { return impl_->route_cpu(m); });
+
+  reg.register_op(
+      "/raptor/update_timetable",
+      [&](auto&&) -> msg_ptr {
+        impl_->init_timetable();
+        return {};
+      },
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
 
 #if defined(MOTIS_CUDA)
   reg.register_op("/raptor", [&](auto&& m) { return impl_->route_gpu(m); });
