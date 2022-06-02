@@ -689,6 +689,16 @@ void tripbased::init(motis::module::registry& reg) {
     reg.register_op("/tripbased/debug",
                     [this](msg_ptr const& m) { return impl_->debug(m); });
 
+    reg.register_op(
+        "/tripbased/update_timetable",
+        [&](msg_ptr const&) -> msg_ptr {
+          impl_->tb_data_ = build_data(get_sched());
+          return {};
+        },
+        ctx::accesses_t{ctx::access_request{
+            to_res_id(::motis::module::global_res_id::SCHEDULE),
+            ctx::access_t::WRITE}});
+
   } catch (std::exception const& e) {
     LOG(logging::warn) << "tripbased module not initialized (" << e.what()
                        << ")";
