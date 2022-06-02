@@ -68,6 +68,9 @@ msg_ptr make_response(schedule const& sched, std::vector<journey> const& js,
 struct raptor::impl {
   impl(schedule const& sched, [[maybe_unused]] config const& config)
       : sched_{sched} {
+#if defined(MOTIS_CUDA)
+    queries_per_device_ = std::max(config.queries_per_device_, int32_t{1});
+#endif
     init_timetable();
   }
 
@@ -78,7 +81,6 @@ struct raptor::impl {
     h_gtt_ = get_host_gpu_timetable(*timetable_);
     d_gtt_ = get_device_gpu_timetable(*h_gtt_);
 
-    queries_per_device_ = std::max(config.queries_per_device_, int32_t{1});
     mem_store_.init(*meta_info_, *timetable_, queries_per_device_);
 #endif
   }
