@@ -152,6 +152,66 @@ static It rand_in(It begin, It end) {
   return std::next(begin, rand_in(0, std::distance(begin, end) - 1));
 }
 
+std::string msg_ptr_to_json(msg_ptr msg) {
+  auto json = msg->to_json();
+  utl::erase(json, '\n');
+  return json;
+}
+
+std::string query_pretrip(std::string const& target, int id,
+                          unixtime interval_start, unixtime interval_end,
+                          std::string const& from_eva,
+                          std::string const& to_eva, SearchDir const dir) {
+  message_creator fbb;
+  auto const interval = Interval(interval_start, interval_end);
+
+  fbb.create_and_finish(
+      MsgContent_RoutingRequest,
+      CreateRoutingRequest(
+          fbb, Start_PretripStart,
+          CreatePretripStart(fbb,
+                             CreateInputStation(fbb, fbb.CreateString(from_eva),
+                                                fbb.CreateString("")),
+                             &interval)
+              .Union(),
+          CreateInputStation(fbb, fbb.CreateString(to_eva),
+                             fbb.CreateString("")),
+          SearchType_Default, dir, fbb.CreateVector(std::vector<Offset<Via>>()),
+          fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()))
+          .Union(),
+      target, DestinationType_Module, id);
+
+  return msg_ptr_to_json(make_msg(fbb));
+}
+
+std::string query_ontrip_station(std::string const& target, int id,
+                                 unixtime interval_start,
+                                 std::string const& from_eva,
+                                 std::string const& to_eva,
+                                 SearchDir const dir) {
+  message_creator fbb;
+
+  fbb.create_and_finish(
+      MsgContent_RoutingRequest,
+      CreateRoutingRequest(
+          fbb, Start_OntripStationStart,
+          CreateOntripStationStart(
+              fbb,
+              CreateInputStation(fbb, fbb.CreateString(from_eva),
+                                 fbb.CreateString("")),
+              interval_start)
+              .Union(),
+
+          CreateInputStation(fbb, fbb.CreateString(to_eva),
+                             fbb.CreateString("")),
+          SearchType_Default, dir, fbb.CreateVector(std::vector<Offset<Via>>()),
+          fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()))
+          .Union(),
+      target, DestinationType_Module, id);
+
+  return msg_ptr_to_json(make_msg(fbb));
+}
+
 std::string query_ontrip_train(std::string const& target,
                                std::string const& to_eva,
                                access::trip_stop const trip_stop, int id,
@@ -159,12 +219,12 @@ std::string query_ontrip_train(std::string const& target,
                                schedule const& sched) {
   message_creator fbb;
 
-  auto const primary = trip->id_.primary_;
-  auto const secondary = trip->id_.secondary_;
+  auto const& primary = trip->id_.primary_;
+  auto const& secondary = trip->id_.secondary_;
 
-  auto const primary_station_eva =
+  auto const& primary_station_eva =
       sched.stations_[primary.get_station_id()]->eva_nr_;
-  auto const target_station_eva =
+  auto const& target_station_eva =
       sched.stations_[secondary.target_station_id_]->eva_nr_;
   auto const start =
       CreateOntripTrainStart(
@@ -190,63 +250,9 @@ std::string query_ontrip_train(std::string const& target,
           SearchType_Default, dir, fbb.CreateVector(std::vector<Offset<Via>>()),
           fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()))
           .Union(),
-      target);
-  auto msg = make_msg(fbb);
-  msg->get()->mutate_id(id);
+      target, DestinationType_Module, id);
 
-  auto json = msg->to_json();
-  utl::erase(json, '\n');
-  return json;
-}
-
-std::string query(std::string const& target, Start const start_type, int id,
-                  unixtime interval_start, unixtime interval_end,
-                  std::string const& from_eva, std::string const& to_eva,
-                  SearchDir const dir) {
-  message_creator fbb;
-  auto const interval = Interval(interval_start, interval_end);
-
-  auto const get_start = [&]() {
-    switch (start_type) {
-      case Start_PretripStart: {
-        return CreatePretripStart(
-                   fbb,
-                   CreateInputStation(fbb, fbb.CreateString(from_eva),
-                                      fbb.CreateString("")),
-                   &interval)
-            .Union();
-      }
-      case Start_OntripStationStart: {
-        return CreateOntripStationStart(
-                   fbb,
-                   CreateInputStation(fbb, fbb.CreateString(from_eva),
-                                      fbb.CreateString("")),
-                   interval_start)
-            .Union();
-      }
-
-      default: {
-        throw utl::fail("Starttype not supported.");
-      }
-    }
-  };
-
-  fbb.create_and_finish(
-      MsgContent_RoutingRequest,
-      CreateRoutingRequest(
-          fbb, start_type, get_start(),
-          CreateInputStation(fbb, fbb.CreateString(to_eva),
-                             fbb.CreateString("")),
-          SearchType_Default, dir, fbb.CreateVector(std::vector<Offset<Via>>()),
-          fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()))
-          .Union(),
-      target);
-  auto msg = make_msg(fbb);
-  msg->get()->mutate_id(id);
-
-  auto json = msg->to_json();
-  utl::erase(json, '\n');
-  return json;
+  return msg_ptr_to_json(make_msg(fbb));
 }
 
 bool has_events(edge const& e, motis::time from, motis::time to) {
@@ -316,11 +322,11 @@ std::pair<std::string, std::string> random_station_ids(
 }
 
 auto random_trip_and_station(schedule const& sched) {
-  auto const [_, random_trip] =
+  auto const& [_, random_trip] =
       *rand_in(std::cbegin(sched.trips_), std::cend(sched.trips_));
 
   auto const stops = motis::access::stops(random_trip);
-  auto const random_stop = *rand_in(stops.begin() + 1, stops.end());
+  auto const& random_stop = *rand_in(stops.begin() + 1, stops.end());
 
   return std::pair{random_trip, random_stop};
 };
@@ -438,6 +444,7 @@ int generate(int argc, char const** argv) {
     auto interval = interval_gen.random_interval();
     auto evas = random_station_ids(sched, station_nodes, interval.first,
                                    interval.second);
+    auto const [trip, trip_stop] = random_trip_and_station(sched);
 
     for (auto f_idx = 0; f_idx < generator_opt.targets_.size(); ++f_idx) {
       auto const& target = generator_opt.targets_[f_idx];
@@ -446,29 +453,31 @@ int generate(int argc, char const** argv) {
 
       switch (start_type) {
         case Start_PretripStart: {
-          out_fwd << query(target, start_type, i, interval.first,
-                           interval.second, evas.first, evas.second,
-                           SearchDir_Forward)
+          out_fwd << query_pretrip(target, i, interval.first, interval.second,
+                                   evas.first, evas.second, SearchDir_Forward)
                   << "\n";
-          out_bwd << query(target, start_type, i, interval.first,
-                           interval.second, evas.first, evas.second,
-                           SearchDir_Backward)
+          out_bwd << query_pretrip(target, i, interval.first, interval.second,
+                                   evas.first, evas.second, SearchDir_Backward)
                   << "\n";
-        }
+        } break;
         case Start_OntripStationStart: {
-        }
+          out_fwd << query_ontrip_station(target, i, interval.first, evas.first,
+                                          evas.second, SearchDir_Forward)
+                  << "\n";
+          out_bwd << query_ontrip_station(target, i, interval.first, evas.first,
+                                          evas.second, SearchDir_Backward)
+                  << "\n";
+        } break;
         case Start_OntripTrainStart: {
-
-          auto const [trip, trip_stop] = random_trip_and_station(sched);
           out_fwd << query_ontrip_train(target, evas.second, trip_stop, i, trip,
                                         SearchDir_Forward, sched)
                   << '\n';
           out_bwd << query_ontrip_train(target, evas.second, trip_stop, i, trip,
                                         SearchDir_Backward, sched)
                   << '\n';
-        }
-
-        default: {
+        } break;
+        case Start_NONE: {
+          throw utl::fail("No start_type specified.");
         }
       }
     }
