@@ -11,12 +11,15 @@
 
 #include "utl/erase.h"
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "conf/options_parser.h"
 
 #include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/time.h"
+#include "motis/core/access/station_access.h"
 #include "motis/core/access/time_access.h"
+#include "motis/core/access/trip_iterator.h"
 #include "motis/module/message.h"
 #include "motis/bootstrap/dataset_settings.h"
 #include "motis/bootstrap/motis_instance.h"
@@ -42,7 +45,8 @@ struct generator_settings : public conf::configuration {
           "replaced by the target url");
     param(large_stations_, "large_stations",
           "use only large stations as start/destination");
-    param(query_type_, "query_type", "query type: pretrip|ontrip_station");
+    param(query_type_, "query_type",
+          "query type: pretrip|ontrip_station|ontrip_train");
     param(targets_, "targets",
           "message target urls. for every url query files will be generated");
   }
@@ -59,6 +63,8 @@ struct generator_settings : public conf::configuration {
       return Start_PretripStart;
     } else if (query_type_ == "ontrip_station") {
       return Start_OntripStationStart;
+    } else if (query_type_ == "ontrip_train") {
+      return Start_OntripTrainStart;
     } else {
       throw std::runtime_error{"start type not supported"};
     }
@@ -149,26 +155,59 @@ static It rand_in(It begin, It end) {
 std::string query(std::string const& target, Start const start_type, int id,
                   unixtime interval_start, unixtime interval_end,
                   std::string const& from_eva, std::string const& to_eva,
-                  SearchDir const dir) {
+                  ptr<trip> trip, SearchDir const dir) {
   message_creator fbb;
   auto const interval = Interval(interval_start, interval_end);
+
+  auto const get_start = [&]() {
+    switch (start_type) {
+      case Start_PretripStart: {
+        return CreatePretripStart(
+                   fbb,
+                   CreateInputStation(fbb, fbb.CreateString(from_eva),
+                                      fbb.CreateString("")),
+                   &interval)
+            .Union();
+      }
+      case Start_OntripStationStart: {
+        return CreateOntripStationStart(
+                   fbb,
+                   CreateInputStation(fbb, fbb.CreateString(from_eva),
+                                      fbb.CreateString("")),
+                   interval_start)
+            .Union();
+      }
+
+      case Start_OntripTrainStart: {
+        auto const primary = trip->id_.primary_;
+        auto const secondary = trip->id_.secondary_;
+        return CreateOntripTrainStart(
+                   fbb,
+                   CreateTripId(fbb,
+                                fbb.CreateString(
+                                    std::to_string(primary.get_station_id())),
+                                primary.get_train_nr(), primary.get_time(),
+                                fbb.CreateString(std::to_string(
+                                    secondary.target_station_id_)),
+                                secondary.target_time_,
+                                fbb.CreateString(secondary.line_id_)),
+                   CreateInputStation(fbb, fbb.CreateString(from_eva),
+                                      fbb.CreateString(""))
+
+                       )
+            .Union();
+      }
+
+      default: {
+        throw utl::fail("Starttype not supported.");
+      }
+    }
+  };
+
   fbb.create_and_finish(
       MsgContent_RoutingRequest,
       CreateRoutingRequest(
-          fbb, start_type,
-          start_type == Start_PretripStart
-              ? CreatePretripStart(
-                    fbb,
-                    CreateInputStation(fbb, fbb.CreateString(from_eva),
-                                       fbb.CreateString("")),
-                    &interval)
-                    .Union()
-              : CreateOntripStationStart(
-                    fbb,
-                    CreateInputStation(fbb, fbb.CreateString(from_eva),
-                                       fbb.CreateString("")),
-                    interval_start)
-                    .Union(),
+          fbb, start_type, get_start(),
           CreateInputStation(fbb, fbb.CreateString(to_eva),
                              fbb.CreateString("")),
           SearchType_Default, dir, fbb.CreateVector(std::vector<Offset<Via>>()),
@@ -248,6 +287,17 @@ std::pair<std::string, std::string> random_station_ids(
   } while (from == to || is_meta(from, to));
   return {from->eva_nr_.str(), to->eva_nr_.str()};
 }
+
+auto random_trip_and_station(schedule const& sched) {
+  auto const [_, random_trip] =
+      *rand_in(std::cbegin(sched.trips_), std::cend(sched.trips_));
+
+  auto const stops = motis::access::stops(random_trip);
+  auto const random_stop = *rand_in(stops.begin(), stops.end());
+  auto const random_eva = random_stop.get_station(sched).eva_nr_;
+
+  return std::pair{random_trip, random_eva};
+};
 
 std::string replace_target_escape(std::string const& str,
                                   std::string const& target) {
@@ -363,16 +413,21 @@ int generate(int argc, char const** argv) {
     auto evas = random_station_ids(sched, station_nodes, interval.first,
                                    interval.second);
 
+    ptr<trip> trip = nullptr;
+    if (start_type == Start_OntripTrainStart) {
+      std::tie(trip, evas.first) = random_trip_and_station(sched);
+    }
+
     for (auto f_idx = 0; f_idx < generator_opt.targets_.size(); ++f_idx) {
       auto const& target = generator_opt.targets_[f_idx];
       auto& out_fwd = fwd_ofstreams[f_idx];
       auto& out_bwd = bwd_ofstreams[f_idx];
 
       out_fwd << query(target, start_type, i, interval.first, interval.second,
-                       evas.first, evas.second, SearchDir_Forward)
+                       evas.first, evas.second, trip, SearchDir_Forward)
               << "\n";
       out_bwd << query(target, start_type, i, interval.first, interval.second,
-                       evas.first, evas.second, SearchDir_Backward)
+                       evas.first, evas.second, trip, SearchDir_Backward)
               << "\n";
     }
   }
