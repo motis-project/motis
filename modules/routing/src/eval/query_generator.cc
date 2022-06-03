@@ -152,10 +152,57 @@ static It rand_in(It begin, It end) {
   return std::next(begin, rand_in(0, std::distance(begin, end) - 1));
 }
 
+std::string query_ontrip_train(std::string const& target,
+                               std::string const& to_eva,
+                               access::trip_stop const trip_stop, int id,
+                               ptr<trip> trip, SearchDir const dir,
+                               schedule const& sched) {
+  message_creator fbb;
+
+  auto const primary = trip->id_.primary_;
+  auto const secondary = trip->id_.secondary_;
+
+  auto const primary_station_eva =
+      sched.stations_[primary.get_station_id()]->eva_nr_;
+  auto const target_station_eva =
+      sched.stations_[secondary.target_station_id_]->eva_nr_;
+  auto const start =
+      CreateOntripTrainStart(
+          fbb,
+          CreateTripId(fbb, fbb.CreateString(primary_station_eva),
+                       primary.get_train_nr(),
+                       motis_to_unixtime(sched, primary.get_time()),
+                       fbb.CreateString(target_station_eva),
+                       motis_to_unixtime(sched, secondary.target_time_),
+                       fbb.CreateString(secondary.line_id_)),
+          CreateInputStation(
+              fbb, fbb.CreateString(trip_stop.get_station(sched).eva_nr_),
+              fbb.CreateString("")),
+          motis_to_unixtime(sched, trip_stop.arr_lcon().a_time_))
+          .Union();
+
+  fbb.create_and_finish(
+      MsgContent_RoutingRequest,
+      CreateRoutingRequest(
+          fbb, Start_OntripTrainStart, start,
+          CreateInputStation(fbb, fbb.CreateString(to_eva),
+                             fbb.CreateString("")),
+          SearchType_Default, dir, fbb.CreateVector(std::vector<Offset<Via>>()),
+          fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()))
+          .Union(),
+      target);
+  auto msg = make_msg(fbb);
+  msg->get()->mutate_id(id);
+
+  auto json = msg->to_json();
+  utl::erase(json, '\n');
+  return json;
+}
+
 std::string query(std::string const& target, Start const start_type, int id,
                   unixtime interval_start, unixtime interval_end,
                   std::string const& from_eva, std::string const& to_eva,
-                  ptr<trip> trip, SearchDir const dir) {
+                  SearchDir const dir) {
   message_creator fbb;
   auto const interval = Interval(interval_start, interval_end);
 
@@ -175,26 +222,6 @@ std::string query(std::string const& target, Start const start_type, int id,
                    CreateInputStation(fbb, fbb.CreateString(from_eva),
                                       fbb.CreateString("")),
                    interval_start)
-            .Union();
-      }
-
-      case Start_OntripTrainStart: {
-        auto const primary = trip->id_.primary_;
-        auto const secondary = trip->id_.secondary_;
-        return CreateOntripTrainStart(
-                   fbb,
-                   CreateTripId(fbb,
-                                fbb.CreateString(
-                                    std::to_string(primary.get_station_id())),
-                                primary.get_train_nr(), primary.get_time(),
-                                fbb.CreateString(std::to_string(
-                                    secondary.target_station_id_)),
-                                secondary.target_time_,
-                                fbb.CreateString(secondary.line_id_)),
-                   CreateInputStation(fbb, fbb.CreateString(from_eva),
-                                      fbb.CreateString(""))
-
-                       )
             .Union();
       }
 
@@ -293,10 +320,9 @@ auto random_trip_and_station(schedule const& sched) {
       *rand_in(std::cbegin(sched.trips_), std::cend(sched.trips_));
 
   auto const stops = motis::access::stops(random_trip);
-  auto const random_stop = *rand_in(stops.begin(), stops.end());
-  auto const random_eva = random_stop.get_station(sched).eva_nr_;
+  auto const random_stop = *rand_in(stops.begin() + 1, stops.end());
 
-  return std::pair{random_trip, random_eva};
+  return std::pair{random_trip, random_stop};
 };
 
 std::string replace_target_escape(std::string const& str,
@@ -413,22 +439,38 @@ int generate(int argc, char const** argv) {
     auto evas = random_station_ids(sched, station_nodes, interval.first,
                                    interval.second);
 
-    ptr<trip> trip = nullptr;
-    if (start_type == Start_OntripTrainStart) {
-      std::tie(trip, evas.first) = random_trip_and_station(sched);
-    }
-
     for (auto f_idx = 0; f_idx < generator_opt.targets_.size(); ++f_idx) {
       auto const& target = generator_opt.targets_[f_idx];
       auto& out_fwd = fwd_ofstreams[f_idx];
       auto& out_bwd = bwd_ofstreams[f_idx];
 
-      out_fwd << query(target, start_type, i, interval.first, interval.second,
-                       evas.first, evas.second, trip, SearchDir_Forward)
-              << "\n";
-      out_bwd << query(target, start_type, i, interval.first, interval.second,
-                       evas.first, evas.second, trip, SearchDir_Backward)
-              << "\n";
+      switch (start_type) {
+        case Start_PretripStart: {
+          out_fwd << query(target, start_type, i, interval.first,
+                           interval.second, evas.first, evas.second,
+                           SearchDir_Forward)
+                  << "\n";
+          out_bwd << query(target, start_type, i, interval.first,
+                           interval.second, evas.first, evas.second,
+                           SearchDir_Backward)
+                  << "\n";
+        }
+        case Start_OntripStationStart: {
+        }
+        case Start_OntripTrainStart: {
+
+          auto const [trip, trip_stop] = random_trip_and_station(sched);
+          out_fwd << query_ontrip_train(target, evas.second, trip_stop, i, trip,
+                                        SearchDir_Forward, sched)
+                  << '\n';
+          out_bwd << query_ontrip_train(target, evas.second, trip_stop, i, trip,
+                                        SearchDir_Backward, sched)
+                  << '\n';
+        }
+
+        default: {
+        }
+      }
     }
   }
 
