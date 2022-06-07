@@ -20,6 +20,7 @@
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
+#include "motis/core/debug/trip.h"
 
 #include "motis/rt/build_route_node.h"
 #include "motis/rt/connection_builder.h"
@@ -481,6 +482,9 @@ private:
 
   trip* create_or_update_trip(trip* trp, full_trip_id const& ftid,
                               mcd::vector<trip::route_edge> const& trip_edges) {
+    std::optional<expanded_trip_index> old_eti;
+    std::optional<expanded_trip_index> new_eti;
+
     auto const edges =
         sched_.trip_edges_
             .emplace_back(
@@ -503,7 +507,7 @@ private:
           std::lower_bound(begin(sched_.trips_), end(sched_.trips_), trp_entry),
           trp_entry);
     } else {
-      remove_expanded_trip(trp);
+      old_eti = remove_expanded_trip(trp);
       for (auto const& e : *trp->edges_) {
         e.get_edge()->m_.route_edge_.conns_[trp->lcon_idx_].valid_ = 0U;
       }
@@ -523,15 +527,17 @@ private:
             new_trps_id;
       }
 
-      add_expanded_trip(trp);
+      new_eti = add_expanded_trip(trp);
     }
+
+    update_builder_.expanded_trip_moved(trp, old_eti, new_eti);
 
     return trp;
   }
 
-  void remove_expanded_trip(trip const* trp) {
+  std::optional<expanded_trip_index> remove_expanded_trip(trip const* trp) {
     if (trp->edges_->empty()) {
-      return;
+      return {};
     }
     auto const old_route_id = trp->edges_->front()->from_->route_;
     for (auto const old_exp_route_id :
@@ -539,13 +545,19 @@ private:
       auto exp_route = sched_.expanded_trips_.at(old_exp_route_id);
       if (auto it = std::find(begin(exp_route), end(exp_route), trp);
           it != end(exp_route)) {
+        auto const eti = expanded_trip_index{
+            old_exp_route_id,
+            static_cast<uint32_t>(std::distance(begin(exp_route), it))};
         exp_route.erase(it);
-        break;
+        return eti;
       }
     }
+    LOG(warn) << "rt::full_trip_handler: expanded trip not found: "
+              << debug::trip{sched_, trp};
+    return {};
   }
 
-  void add_expanded_trip(trip const* trp) {
+  expanded_trip_index add_expanded_trip(trip const* trp) {
     assert(!trp->edges_->empty());
     auto const route_id = static_cast<uint32_t>(
         trp->edges_->front().get_edge()->get_source()->route_);
@@ -553,6 +565,7 @@ private:
     new_exp_route.emplace_back(trp);
     sched_.route_to_expanded_routes_[route_id].emplace_back(
         new_exp_route.index());
+    return {new_exp_route.index(), 0};
   }
 
   void update_event(event_info const& cur_event, event_info const& msg_event,

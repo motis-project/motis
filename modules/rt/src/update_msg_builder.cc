@@ -30,6 +30,8 @@ void update_msg_builder::add_delay(delay_info const* di) {
     return;
   }
 
+  // TODO(pablo): store for all merged trips?
+  // TODO(pablo): remove duplicates?
   auto const trp =
       sched_.merged_trips_[get_lcon(k.route_edge_, k.lcon_idx_).trips_]->at(0);
   delays_[trp].emplace_back(di);
@@ -100,6 +102,33 @@ void update_msg_builder::add_station(node_id_t const station_idx) {
       CreateRtStationAdded(fbb_, fbb_.CreateString(station->eva_nr_),
                            fbb_.CreateString(station->name_))
           .Union()));
+}
+
+void update_msg_builder::expanded_trip_added(trip const* trp,
+                                             expanded_trip_index const eti) {
+  return expanded_trip_moved(trp, {}, eti);
+}
+
+void update_msg_builder::expanded_trip_moved(
+    trip const* trp, std::optional<expanded_trip_index> const old_eti,
+    std::optional<expanded_trip_index> const new_eti) {
+  if (!old_eti && !new_eti) {
+    return;
+  }
+  auto [etui, inserted] = get_or_insert_expanded_trip(trp);
+  if (inserted) {
+    etui.old_route_ = old_eti;
+  }
+  etui.new_route_ = new_eti;
+}
+
+std::pair<expanded_trip_update_info&, bool>
+update_msg_builder::get_or_insert_expanded_trip(trip const* trp) {
+  if (auto it = expanded_trips_.find(trp); it != end(expanded_trips_)) {
+    return {it->second, false};
+  } else {
+    return {expanded_trips_[trp], true};
+  }
 }
 
 void update_msg_builder::reset() {
@@ -175,8 +204,49 @@ void update_msg_builder::build_delay_updates() {
   delays_.clear();
 }
 
+inline RtExpandedTripIndex to_fbs(
+    std::optional<expanded_trip_index> const& eti) {
+  if (eti) {
+    return {eti->route_index_, eti->index_in_route_};
+  } else {
+    return {0, 0};
+  }
+}
+
+inline RtExpandedTripUpdateType get_expanded_trip_update_type(
+    expanded_trip_update_info const& etui) {
+  if (etui.old_route_ && etui.new_route_) {
+    return RtExpandedTripUpdateType_TripUpdated;
+  } else if (etui.old_route_) {
+    return RtExpandedTripUpdateType_TripRemoved;
+  } else if (etui.new_route_) {
+    return RtExpandedTripUpdateType_TripAdded;
+  } else {
+    // should be handled before this point is reached
+    throw utl::fail("update_msg_builder: invalid expanded trip update type");
+  }
+}
+
+void update_msg_builder::build_expanded_trip_updates() {
+  updates_.reserve(updates_.size() + expanded_trips_.size());
+  for (auto const& [trp, etui] : expanded_trips_) {
+    if (!etui.old_route_ && !etui.new_route_) {
+      continue;
+    }
+    auto const update_type = get_expanded_trip_update_type(etui);
+    auto const old_route = to_fbs(etui.old_route_);
+    auto const new_route = to_fbs(etui.new_route_);
+    updates_.emplace_back(CreateRtUpdate(
+        fbb_, Content_RtExpandedTripUpdate,
+        CreateRtExpandedTripUpdate(fbb_, trp->trip_idx_, update_type,
+                                   &old_route, &new_route)
+            .Union()));
+  }
+}
+
 msg_ptr update_msg_builder::finish() {
   build_delay_updates();
+  build_expanded_trip_updates();
   fbb_.create_and_finish(
       MsgContent_RtUpdates,
       CreateRtUpdates(fbb_, fbb_.CreateVector(updates_), schedule_res_id_)

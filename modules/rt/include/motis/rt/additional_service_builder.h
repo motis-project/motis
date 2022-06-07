@@ -255,6 +255,7 @@ struct additional_service_builder {
     new_exp_route.emplace_back(trp);
     sched_.route_to_expanded_routes_[new_route_id].emplace_back(
         new_exp_route.index());
+    update_builder_.expanded_trip_added(trp, {new_exp_route.index(), 0});
 
     return trp;
   }

@@ -105,7 +105,7 @@ inline std::set<trip const*> route_trips(schedule const& sched,
 inline void update_expanded_trips(
     schedule& sched, std::set<trip const*> const& trips,
     std::map<trip::route_edge, trip::route_edge>& edges, int32_t old_route_id,
-    int32_t new_route_id) {
+    int32_t new_route_id, update_msg_builder& update_builder) {
   auto const is_matching_trip = [&](trip const* trp) {
     if (trp->edges_->empty()) {
       return false;
@@ -121,16 +121,19 @@ inline void update_expanded_trips(
         });
   };
 
-  std::vector<trip*> new_trips;
+  std::vector<std::pair<trip*, expanded_trip_index /* old index */>> new_trips;
   for (auto const old_exp_route_id :
        sched.route_to_expanded_routes_.at(old_route_id)) {
     auto old_exp_route = sched.expanded_trips_.at(old_exp_route_id);
     for (auto it = begin(old_exp_route); it != end(old_exp_route);) {
       auto* exp_trip = cista::ptr_cast(*it);
+      auto const index_in_route =
+          static_cast<uint32_t>(std::distance(begin(old_exp_route), it));
       if (trips.find(exp_trip) != end(trips)) {
         // non rule service trip
         it = old_exp_route.erase(it);
-        new_trips.emplace_back(exp_trip);
+        new_trips.emplace_back(
+            exp_trip, expanded_trip_index{old_exp_route_id, index_in_route});
       } else if (is_matching_trip(exp_trip)) {
         // rule service trip
         auto const new_trp_edges =
@@ -144,7 +147,8 @@ inline void update_expanded_trips(
         exp_trip->edges_ = new_trp_edges;
         exp_trip->lcon_idx_ = 0;
         it = old_exp_route.erase(it);
-        new_trips.emplace_back(exp_trip);
+        new_trips.emplace_back(
+            exp_trip, expanded_trip_index{old_exp_route_id, index_in_route});
       } else {
         it = std::next(it);
       }
@@ -152,10 +156,12 @@ inline void update_expanded_trips(
   }
 
   auto new_exp_routes = sched.route_to_expanded_routes_[new_route_id];
-  for (auto const new_trip : new_trips) {
+  for (auto const& [new_trip, old_eti] : new_trips) {
     auto new_exp_route = sched.expanded_trips_.emplace_back();
     new_exp_route.emplace_back(new_trip);
     new_exp_routes.emplace_back(new_exp_route.index());
+    update_builder.expanded_trip_moved(new_trip, old_eti,
+                                       {{new_exp_route.index(), 0}});
   }
 }
 
@@ -164,7 +170,8 @@ inline void update_trips(schedule& sched, ev_key const& k,
                          int32_t old_route_id, int32_t new_route_id,
                          update_msg_builder& update_builder) {
   auto const trips = route_trips(sched, k);
-  update_expanded_trips(sched, trips, edges, old_route_id, new_route_id);
+  update_expanded_trips(sched, trips, edges, old_route_id, new_route_id,
+                        update_builder);
 
   for (auto const& t : trips) {
     sched.trip_edges_.emplace_back(
