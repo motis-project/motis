@@ -503,6 +503,7 @@ private:
           std::lower_bound(begin(sched_.trips_), end(sched_.trips_), trp_entry),
           trp_entry);
     } else {
+      remove_expanded_trip(trp);
       for (auto const& e : *trp->edges_) {
         e.get_edge()->m_.route_edge_.conns_[trp->lcon_idx_].valid_ = 0U;
       }
@@ -510,17 +511,48 @@ private:
       trp->lcon_idx_ = lcon_idx;
     }
 
-    // TODO(pablo): reuse existing
-    auto const new_trps_id = sched_.merged_trips_.size();
-    sched_.merged_trips_.emplace_back(
-        mcd::make_unique<mcd::vector<ptr<trip>>,
-                         std::initializer_list<ptr<trip>>>({trp}));
+    if (!trip_edges.empty()) {
+      // TODO(pablo): reuse existing
+      auto const new_trps_id = sched_.merged_trips_.size();
+      sched_.merged_trips_.emplace_back(
+          mcd::make_unique<mcd::vector<ptr<trip>>,
+                           std::initializer_list<ptr<trip>>>({trp}));
 
-    for (auto const& trp_edge : trip_edges) {
-      trp_edge.get_edge()->m_.route_edge_.conns_[lcon_idx].trips_ = new_trps_id;
+      for (auto const& trp_edge : trip_edges) {
+        trp_edge.get_edge()->m_.route_edge_.conns_[lcon_idx].trips_ =
+            new_trps_id;
+      }
+
+      add_expanded_trip(trp);
     }
 
     return trp;
+  }
+
+  void remove_expanded_trip(trip const* trp) {
+    if (trp->edges_->empty()) {
+      return;
+    }
+    auto const old_route_id = trp->edges_->front()->from_->route_;
+    for (auto const old_exp_route_id :
+         sched_.route_to_expanded_routes_.at(old_route_id)) {
+      auto exp_route = sched_.expanded_trips_.at(old_exp_route_id);
+      if (auto it = std::find(begin(exp_route), end(exp_route), trp);
+          it != end(exp_route)) {
+        exp_route.erase(it);
+        break;
+      }
+    }
+  }
+
+  void add_expanded_trip(trip const* trp) {
+    assert(!trp->edges_->empty());
+    auto const route_id = static_cast<uint32_t>(
+        trp->edges_->front().get_edge()->get_source()->route_);
+    auto new_exp_route = sched_.expanded_trips_.emplace_back();
+    new_exp_route.emplace_back(trp);
+    sched_.route_to_expanded_routes_[route_id].emplace_back(
+        new_exp_route.index());
   }
 
   void update_event(event_info const& cur_event, event_info const& msg_event,
