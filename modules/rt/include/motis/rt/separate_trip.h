@@ -7,6 +7,7 @@
 #include "utl/erase.h"
 #include "utl/get_or_create.h"
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "motis/core/schedule/build_platform_node.h"
 #include "motis/core/schedule/edges.h"
@@ -106,55 +107,45 @@ inline std::set<trip const*> route_trips(schedule const& sched,
 inline void update_expanded_trips(
     schedule& sched, std::set<trip const*> const& trips,
     std::map<trip::route_edge, trip::route_edge>& edges, int32_t old_route_id,
-    int32_t new_route_id, update_msg_builder& update_builder) {
-  auto const is_matching_trip = [&](trip const* trp) {
-    if (trp->edges_->empty()) {
-      return false;
-    }
-    auto const& merged_trips =
-        *sched.merged_trips_.at(trp->edges_->front()
-                                    .get_edge()
-                                    ->m_.route_edge_.conns_.at(trp->lcon_idx_)
-                                    .trips_);
-    return std::any_of(
-        begin(merged_trips), end(merged_trips), [&](auto const& merged_trp) {
-          return trips.find(cista::ptr_cast(merged_trp)) != end(trips);
-        });
-  };
-
+    int32_t new_route_id, ev_key const& k, update_msg_builder& update_builder) {
+  auto const lcon_idx = k.lcon_idx_;
   std::vector<std::pair<trip*, expanded_trip_index /* old index */>> new_trips;
   std::vector<uint32_t> empty_expanded_routes;
+
   for (auto const old_exp_route_id :
        sched.route_to_expanded_routes_.at(old_route_id)) {
     auto old_exp_route = sched.expanded_trips_.at(old_exp_route_id);
-    for (auto it = begin(old_exp_route); it != end(old_exp_route);) {
-      auto* exp_trip = cista::ptr_cast(*it);
-      auto const index_in_route =
-          static_cast<uint32_t>(std::distance(begin(old_exp_route), it));
-      if (trips.find(exp_trip) != end(trips)) {
-        // non rule service trip
-        it = old_exp_route.erase(it);
-        new_trips.emplace_back(
-            exp_trip, expanded_trip_index{old_exp_route_id, index_in_route});
-      } else if (is_matching_trip(exp_trip)) {
-        // rule service trip
-        auto const new_trp_edges =
-            sched.trip_edges_
-                .emplace_back(mcd::make_unique<mcd::vector<trip::route_edge>>(
-                    mcd::to_vec(*exp_trip->edges_,
-                                [&](trip::route_edge const& e) {
-                                  return edges.at(e.get_edge());
-                                })))
-                .get();
-        exp_trip->edges_ = new_trp_edges;
-        exp_trip->lcon_idx_ = 0;
-        it = old_exp_route.erase(it);
-        new_trips.emplace_back(
-            exp_trip, expanded_trip_index{old_exp_route_id, index_in_route});
-      } else {
-        it = std::next(it);
-      }
+
+    auto it = std::find_if(
+        begin(old_exp_route), end(old_exp_route),
+        [&](auto const& trp) { return trp->lcon_idx_ == lcon_idx; });
+
+    utl::verify(it != end(old_exp_route),
+                "separate_trip: expanded trip not found in expanded route");
+
+    auto* exp_trip = cista::ptr_cast(*it);
+    if (trips.find(exp_trip) == end(trips)) {
+      // rule service trip
+      auto const new_trp_edges =
+          sched.trip_edges_
+              .emplace_back(mcd::make_unique<mcd::vector<trip::route_edge>>(
+                  mcd::to_vec(*exp_trip->edges_,
+                              [&](trip::route_edge const& e) {
+                                return edges.at(e.get_edge());
+                              })))
+              .get();
+      exp_trip->edges_ = new_trp_edges;
+      exp_trip->lcon_idx_ = 0;
     }
+    // (non rule service trips are updated later in update_trips)
+
+    auto const index_in_route =
+        static_cast<uint32_t>(std::distance(begin(old_exp_route), it));
+    new_trips.emplace_back(
+        exp_trip, expanded_trip_index{old_exp_route_id, index_in_route});
+
+    old_exp_route.erase(it);
+
     if (old_exp_route.empty()) {
       empty_expanded_routes.emplace_back(old_exp_route_id);
     }
@@ -179,7 +170,7 @@ inline void update_trips(schedule& sched, ev_key const& k,
                          int32_t old_route_id, int32_t new_route_id,
                          update_msg_builder& update_builder) {
   auto const trips = route_trips(sched, k);
-  update_expanded_trips(sched, trips, edges, old_route_id, new_route_id,
+  update_expanded_trips(sched, trips, edges, old_route_id, new_route_id, k,
                         update_builder);
 
   for (auto const& t : trips) {
