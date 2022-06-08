@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "utl/enumerate.h"
+#include "utl/erase.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 #include "utl/zip.h"
@@ -549,6 +550,10 @@ private:
             old_exp_route_id,
             static_cast<uint32_t>(std::distance(begin(exp_route), it))};
         exp_route.erase(it);
+        if (exp_route.empty()) {
+          utl::erase(sched_.route_to_expanded_routes_.at(old_route_id),
+                     old_exp_route_id);
+        }
         return eti;
       }
     }

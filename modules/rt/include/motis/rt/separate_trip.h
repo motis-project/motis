@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "utl/erase.h"
 #include "utl/get_or_create.h"
 #include "utl/to_vec.h"
 
@@ -122,6 +123,7 @@ inline void update_expanded_trips(
   };
 
   std::vector<std::pair<trip*, expanded_trip_index /* old index */>> new_trips;
+  std::vector<uint32_t> empty_expanded_routes;
   for (auto const old_exp_route_id :
        sched.route_to_expanded_routes_.at(old_route_id)) {
     auto old_exp_route = sched.expanded_trips_.at(old_exp_route_id);
@@ -153,6 +155,13 @@ inline void update_expanded_trips(
         it = std::next(it);
       }
     }
+    if (old_exp_route.empty()) {
+      empty_expanded_routes.emplace_back(old_exp_route_id);
+    }
+  }
+
+  for (auto const exp_route_id : empty_expanded_routes) {
+    utl::erase(sched.route_to_expanded_routes_.at(old_route_id), exp_route_id);
   }
 
   auto new_exp_routes = sched.route_to_expanded_routes_[new_route_id];

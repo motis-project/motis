@@ -342,6 +342,10 @@ inline void update_expanded_routes_map(schedule& sched, trip* trp,
         old_eti = {old_exp_route_id,
                    static_cast<uint32_t>(std::distance(begin(exp_route), it))};
         exp_route.erase(it);
+        if (exp_route.empty()) {
+          utl::erase(sched.route_to_expanded_routes_.at(old_route_id),
+                     old_exp_route_id);
+        }
         break;
       }
     }

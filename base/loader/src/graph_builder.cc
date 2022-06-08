@@ -324,8 +324,6 @@ void graph_builder::add_expanded_trips(route const& r) {
   if (re != nullptr) {
     auto const route_id = re->from_->route_;
     auto route_trips = sched_.expanded_trips_.emplace_back();
-    sched_.route_to_expanded_routes_[route_id].emplace_back(
-        route_trips.index());
     for (auto const& lc : re->m_.route_edge_.conns_) {
       auto const& merged_trips = sched_.merged_trips_[lc.trips_];
       assert(merged_trips != nullptr);
@@ -334,6 +332,10 @@ void graph_builder::add_expanded_trips(route const& r) {
       if (check_trip(trp)) {
         route_trips.push_back(trp);
       }
+    }
+    if (!route_trips.empty()) {
+      sched_.route_to_expanded_routes_[route_id].emplace_back(
+          route_trips.index());
     }
   }
 }

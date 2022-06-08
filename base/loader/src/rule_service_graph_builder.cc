@@ -620,8 +620,6 @@ struct rule_service_route_builder {
     auto const edges_ptr = gb_.sched_.trip_edges_.back().get();
 
     auto route_trips = gb_.sched_.expanded_trips_.emplace_back();
-    gb_.sched_.route_to_expanded_routes_[route_id_].emplace_back(
-        route_trips.index());
     for (auto lcon_idx = 0U; lcon_idx < lc_count; ++lcon_idx) {
       full_trip_id ftid;
       push_mem(gb_.sched_.trip_mem_, ftid, edges_ptr, lcon_idx,
@@ -631,6 +629,10 @@ struct rule_service_route_builder {
       if (gb_.check_trip(trip_ptr)) {
         route_trips.push_back(trip_ptr);
       }
+    }
+    if (!route_trips.empty()) {
+      gb_.sched_.route_to_expanded_routes_[route_id_].emplace_back(
+          route_trips.index());
     }
   }
 
