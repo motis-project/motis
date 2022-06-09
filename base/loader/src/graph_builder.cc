@@ -24,6 +24,7 @@
 #include "motis/core/schedule/validate_graph.h"
 #include "motis/core/access/time_access.h"
 #include "motis/core/access/trip_iterator.h"
+#include "motis/core/debug/route_graph.h"
 #include "motis/core/debug/trip.h"
 
 #include "motis/loader/build_footpaths.h"
@@ -50,7 +51,8 @@ graph_builder::graph_builder(schedule& sched, loader_options const& opt)
     : sched_{sched},
       apply_rules_{opt.apply_rules_},
       expand_trips_{opt.expand_trips_},
-      no_local_transport_{opt.no_local_transport_} {}
+      no_local_transport_{opt.no_local_transport_},
+      debug_broken_trips_{opt.debug_broken_trips_} {}
 
 full_trip_id graph_builder::get_full_trip_id(Service const* s, int day,
                                              int section_idx) {
@@ -352,11 +354,15 @@ bool graph_builder::check_trip(trip const* trp) {
     auto const section_times_ok = lc.d_time_ <= lc.a_time_;
     auto const stop_times_ok = last_time <= lc.d_time_;
     if (!section_times_ok || !stop_times_ok) {
-      LOG(info) << "broken trip: " << debug::trip{sched_, trp}
-                << ": lc={dep=" << format_time(lc.d_time_)
-                << ", arr=" << format_time(lc.a_time_)
-                << "}, last_time=" << format_time(last_time) << ":\n"
-                << debug::rule_service_trip_with_sections{sched_, trp};
+      if (debug_broken_trips_) {
+        LOG(info) << "broken trip: " << debug::trip{sched_, trp}
+                  << ": lc={dep=" << format_time(lc.d_time_)
+                  << ", arr=" << format_time(lc.a_time_)
+                  << "}, last_time=" << format_time(last_time) << ":\n"
+                  << debug::rule_service_trip_with_sections{sched_, trp}
+                  << "\nroute graph:\n\n"
+                  << debug::route_graph{sched_, trp} << "\n";
+      }
       ++broken_trips_;
       return false;
     }
