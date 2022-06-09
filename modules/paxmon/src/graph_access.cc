@@ -251,6 +251,8 @@ void update_event_times(schedule const& sched, universe& uv,
         get_station(sched, ue->base()->station_id()->str())->index_;
     auto const schedule_time =
         unix_to_motistime(sched, ue->base()->schedule_time());
+    auto const new_time =
+        unix_to_motistime(sched.schedule_begin_, ue->updated_time());
     for (auto tei : trip_edges) {
       auto const* te = tei.get(uv);
       auto const from = te->from(uv);
@@ -258,17 +260,21 @@ void update_event_times(schedule const& sched, universe& uv,
       if (ue->base()->event_type() == EventType_DEP &&
           from->type_ == event_type::DEP && from->station_ == station_id &&
           from->schedule_time_ == schedule_time) {
-        ++uv.system_stats_.update_event_times_dep_updated_;
-        from->time_ =
-            unix_to_motistime(sched.schedule_begin_, ue->updated_time());
-        add_interchange_edges(from, updated_interchange_edges, uv);
+        if (from->time_ != new_time) {
+          ++uv.system_stats_.update_event_times_dep_updated_;
+          from->time_ = new_time;
+          add_interchange_edges(from, updated_interchange_edges, uv);
+        }
+        break;
       } else if (ue->base()->event_type() == EventType_ARR &&
                  to->type_ == event_type::ARR && to->station_ == station_id &&
                  to->schedule_time_ == schedule_time) {
-        ++uv.system_stats_.update_event_times_arr_updated_;
-        to->time_ =
-            unix_to_motistime(sched.schedule_begin_, ue->updated_time());
-        add_interchange_edges(to, updated_interchange_edges, uv);
+        if (to->time_ != new_time) {
+          ++uv.system_stats_.update_event_times_arr_updated_;
+          to->time_ = new_time;
+          add_interchange_edges(to, updated_interchange_edges, uv);
+        }
+        break;
       }
     }
   }
