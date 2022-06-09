@@ -351,15 +351,16 @@ bool graph_builder::check_trip(trip const* trp) {
     auto const& lc = sec.lcon();
     auto const section_times_ok = lc.d_time_ <= lc.a_time_;
     auto const stop_times_ok = last_time <= lc.d_time_;
-    last_time = lc.a_time_;
     if (!section_times_ok || !stop_times_ok) {
       LOG(info) << "broken trip: " << debug::trip{sched_, trp}
                 << ": lc={dep=" << format_time(lc.d_time_)
                 << ", arr=" << format_time(lc.a_time_)
-                << "}, last_time=" << format_time(last_time);
+                << "}, last_time=" << format_time(last_time) << ":\n"
+                << debug::rule_service_trip_with_sections{sched_, trp};
       ++broken_trips_;
       return false;
     }
+    last_time = lc.a_time_;
   }
   return true;
 }
