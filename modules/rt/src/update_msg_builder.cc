@@ -30,11 +30,10 @@ void update_msg_builder::add_delay(delay_info const* di) {
     return;
   }
 
-  // TODO(pablo): store for all merged trips?
-  // TODO(pablo): remove duplicates?
-  auto const trp =
-      sched_.merged_trips_[get_lcon(k.route_edge_, k.lcon_idx_).trips_]->at(0);
-  delays_[trp].emplace_back(di);
+  for (auto const& trp :
+       *sched_.merged_trips_[get_lcon(k.route_edge_, k.lcon_idx_).trips_]) {
+    delays_[trp].emplace_back(di);
+  }
 }
 
 void update_msg_builder::trip_separated(trip const* trp) {
