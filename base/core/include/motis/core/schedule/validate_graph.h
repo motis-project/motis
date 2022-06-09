@@ -121,7 +121,7 @@ inline void validate_graph(schedule const& sched) {
           auto route_trip_idx = 0U;
           for (auto const& tp : route) {
             time last_time = 0;
-            for (auto const sec : access::sections{tp.get()}) {
+            for (auto const sec : access::sections{tp}) {
               auto const& lc = sec.lcon();
               auto const section_times_ok = lc.d_time_ <= lc.a_time_;
               auto const stop_times_ok = last_time <= lc.d_time_;
@@ -133,7 +133,7 @@ inline void validate_graph(schedule const& sched) {
                           << route.data_index(route_trip_idx) << ", "
                           << route_trip_idx << "/" << route.size()
                           << " in route):\n"
-                          << debug::trip_with_sections{sched, tp.get()} << "\n";
+                          << debug::trip_with_sections{sched, tp} << "\n";
                 return false;
               }
             }
