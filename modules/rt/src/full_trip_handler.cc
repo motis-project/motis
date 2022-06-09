@@ -562,7 +562,7 @@ private:
     return {};
   }
 
-  expanded_trip_index add_expanded_trip(trip const* trp) {
+  expanded_trip_index add_expanded_trip(trip* trp) {
     assert(!trp->edges_->empty());
     auto const route_id = static_cast<uint32_t>(
         trp->edges_->front().get_edge()->get_source()->route_);
