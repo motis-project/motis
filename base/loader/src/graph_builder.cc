@@ -50,7 +50,6 @@ char const* c_str(flatbuffers64::String const* str) {
 graph_builder::graph_builder(schedule& sched, loader_options const& opt)
     : sched_{sched},
       apply_rules_{opt.apply_rules_},
-      expand_trips_{opt.expand_trips_},
       no_local_transport_{opt.no_local_transport_},
       debug_broken_trips_{opt.debug_broken_trips_} {}
 
@@ -242,9 +241,7 @@ void graph_builder::add_route_services(
     auto r = create_route(services[0].first->route(), route, route_id);
     index_first_route_node(*r);
     write_trip_info(*r);
-    if (expand_trips_) {
-      add_expanded_trips(*r);
-    }
+    add_expanded_trips(*r);
   }
 }
 
@@ -911,11 +908,9 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
   LOG(info) << builder.lcon_count_ << " light connections";
   LOG(info) << builder.next_route_index_ << " routes";
   LOG(info) << sched->trip_mem_.size() << " trips";
-  if (opt.expand_trips_) {
-    LOG(info) << sched->expanded_trips_.index_size() << " expanded routes";
-    LOG(info) << sched->expanded_trips_.element_count() << " expanded trips";
-    LOG(info) << builder.broken_trips_ << " broken trips ignored";
-  }
+  LOG(info) << sched->expanded_trips_.index_size() << " expanded routes";
+  LOG(info) << sched->expanded_trips_.element_count() << " expanded trips";
+  LOG(info) << builder.broken_trips_ << " broken trips ignored";
 
   validate_graph(*sched);
   utl::verify(

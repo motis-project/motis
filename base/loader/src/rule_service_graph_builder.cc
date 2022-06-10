@@ -668,9 +668,7 @@ void rule_service_graph_builder::add_rule_services(
     route_builder.build_routes();
     route_builder.connect_through_services(rule_service);
 
-    if (gb_.expand_trips_) {
-      route_builder.expand_trips();
-    }
+    route_builder.expand_trips();
   }
 }
 
