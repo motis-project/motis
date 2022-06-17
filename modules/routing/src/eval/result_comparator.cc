@@ -262,8 +262,10 @@ bool analyze_result(int i, std::tuple<msg_ptr, msg_ptr, msg_ptr> const& res,
   auto const& r1 = std::get<1>(res);
   auto const& r2 = std::get<2>(res);
 
-  auto const ontrip_start = motis_content(RoutingRequest, q)->start_type() ==
-                            Start_OntripStationStart;
+  auto const ontrip_start =
+      motis_content(RoutingRequest, q)->start_type() ==
+          Start_OntripStationStart ||
+      motis_content(RoutingRequest, q)->start_type() == Start_OntripTrainStart;
 
   if (print_differences(
           response(motis_content(RoutingResponse, r1), ontrip_start),
