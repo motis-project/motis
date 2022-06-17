@@ -118,7 +118,13 @@ int initial_state(LabelIt& it) {
       ++it;
       return WALK;
     } else {
-      return ONTRIP_TRAIN_START;
+      // ONTRIP_TRAIN CASE:
+      // fast forward until the we leave the train at the station
+      while (!(get_node(*it)->is_station_node() ||
+               get_node(*it)->is_platform_node())) {
+        ++it;
+      }
+      return AT_STATION;
     }
   } else if (get_node(*std::next(it))->is_station_node()) {
     return WALK;
