@@ -5,6 +5,7 @@
 
 #include "motis/mcraptor/additional_start.h"
 #include "motis/mcraptor/raptor_result.h"
+#include "Rounds.h"
 
 #if defined(MOTIS_CUDA)
 #include "motis/mcraptor/raptor_util.h"
@@ -50,15 +51,15 @@ struct raptor_query : public base_query {
         tt_{tt},
         add_starts_{get_add_starts(meta_info, source_, use_start_footpaths_,
                                    use_start_metas_)},
-        result_{std::make_unique<raptor_result>(tt_.stop_count())} {}
+        result_{std::make_unique<Rounds>(tt_.stop_count())} {}
 
   ~raptor_query() = default;
 
-  raptor_result_base const& result() const { return *result_; }
+  Rounds& result() const { return *result_; }
 
   raptor_timetable const& tt_;
   std::vector<additional_start> add_starts_;
-  std::unique_ptr<raptor_result> result_;
+  std::unique_ptr<Rounds> result_;
 };
 
 #if defined(MOTIS_CUDA)
