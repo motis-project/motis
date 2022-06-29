@@ -124,7 +124,8 @@ TimestampType parse_timestamp_type(rapidjson::Value const& ev,
 
 Offset<TripEvent> parse_event(context& ctx, rapidjson::Value const& ev,
                               event_type const ev_type) {
-  auto const uuid = ev_type == event_type::DEP ? "abfahrtid" : "ankunftid";
+  auto const uuid =
+      get_str(ev, ev_type == event_type::DEP ? "abfahrtid" : "ankunftid");
   auto const station = parse_station(ctx, get_obj(ev, "haltestelle"));
   auto const schedule_time = get_schedule_timestamp(
       ctx, ev,
