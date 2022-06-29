@@ -53,6 +53,10 @@ struct Bag {
   }
 
   bool dominates(Bag& other) {
+    if(!other.isValid() && this->isValid()) {
+      return true;
+    }
+
     for(Label& otherLabel : other.labels) {
       if(!dominates(otherLabel)) {
         return false;
@@ -62,7 +66,7 @@ struct Bag {
   }
 
   inline bool isValid() const {
-    return size() == 0;
+    return size() != 0;
   }
 };
 

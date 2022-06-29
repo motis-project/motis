@@ -45,7 +45,7 @@ trip_count get_earliest_trip(raptor_timetable const& tt,
 
 void updateRouteBag(raptor_timetable const& tt,
                 raptor_route const& route,
-                stop_times_index const r_stop_offset, Bag routeBag) {
+                stop_times_index const r_stop_offset, Bag& routeBag) {
 
   auto const first_trip_stop_idx = route.index_to_stop_times_ + r_stop_offset;
   auto const last_trip_stop_idx =
