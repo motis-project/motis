@@ -13,6 +13,7 @@
 
 #include "geo/point_rtree.h"
 
+#include "tiles/db/clear_database.h"
 #include "tiles/db/feature_inserter_mt.h"
 #include "tiles/feature/feature.h"
 #include "tiles/fixed/convert.h"
@@ -41,6 +42,36 @@ using namespace motis::module;
 namespace motis::gbfs {
 
 constexpr auto const bike_ready_time = 3;
+
+struct journey {
+  struct invalid {};
+  struct s {  // station bound
+    friend std::ostream& operator<<(std::ostream& out, s const& x) {
+      return out << "(STATION_BIKE: first_walk_duration="
+                 << x.first_walk_duration_
+                 << ", bike_duration=" << x.bike_duration_
+                 << ", second_walk_duration=" << x.second_walk_duration_ << ")";
+    }
+    duration first_walk_duration_{0};
+    duration bike_duration_{0};
+    duration second_walk_duration_{0};
+    uint32_t sx_, sp_, p_;
+  };
+  struct b {  // free-float
+    friend std::ostream& operator<<(std::ostream& out, b const& x) {
+      return out << "(FREE_FLOAT: first_walk_duration=" << x.walk_duration_
+                 << ", bike_duration=" << x.bike_duration_ << ")";
+    }
+    duration walk_duration_{0};
+    duration bike_duration_{0};
+    uint32_t b_, p_;
+  };
+
+  bool valid() const { return !std::holds_alternative<invalid>(info_); }
+
+  uint16_t total_duration_{std::numeric_limits<uint16_t>::max()};
+  std::variant<invalid, s, b> info_{invalid{}};
+};
 
 struct gbfs::impl {
   explicit impl(fs::path data_dir, config const& c, schedule const& sched)
@@ -111,25 +142,24 @@ struct gbfs::impl {
       info.info_ = read_system_information(f_system_info->val().body);
     }
 
+    info.tiles_->clear();
+
+    tiles::layer_names_builder layer_names;
+    auto const free_bike_layer_id = layer_names.get_layer_idx("vehicle");
+    auto const station_bike_layer_id = layer_names.get_layer_idx("station");
+
     static constexpr auto const kMinZoomLevel = 10;
     auto feature_inserter = tiles::feature_inserter_mt{
         tiles::dbi_handle{info.tiles_->db_handle_,
                           info.tiles_->db_handle_.features_dbi_opener()},
         info.tiles_->pack_handle_};
 
-    tiles::layer_names_builder layer_names;
-    auto const free_bike_layer_id = layer_names.get_layer_idx("station");
-    auto const station_bike_layer_id = layer_names.get_layer_idx("vehicle");
-
-    auto txn = info.tiles_->db_handle_.make_txn();
-    layer_names.store(info.tiles_->db_handle_, txn);
-    txn.commit();
-
     for (auto const& [idx, nfo] : utl::enumerate(info.free_bikes_)) {
       tiles::feature f;
       f.id_ = idx;
       f.layer_ = free_bike_layer_id;
       f.zoom_levels_ = {kMinZoomLevel, tiles::kMaxZoomLevel};
+      f.meta_.emplace_back("type", tiles::encode_string(vehicle_type));
       f.meta_.emplace_back("tag", tiles::encode_string(tag));
       f.meta_.emplace_back("id", tiles::encode_string(nfo.id_));
       f.geometry_ = tiles::fixed_point{
@@ -142,13 +172,24 @@ struct gbfs::impl {
       f.id_ = idx;
       f.layer_ = station_bike_layer_id;
       f.zoom_levels_ = {kMinZoomLevel, tiles::kMaxZoomLevel};
+      f.meta_.emplace_back("type", tiles::encode_string(vehicle_type));
       f.meta_.emplace_back("tag", tiles::encode_string(tag));
       f.meta_.emplace_back("name", tiles::encode_string(nfo.name_));
       f.meta_.emplace_back("id", tiles::encode_string(nfo.id_));
+      f.meta_.emplace_back("vehicles_available",
+                           tiles::encode_integer(nfo.bikes_available_));
       f.geometry_ = tiles::fixed_point{
           {tiles::latlng_to_fixed({nfo.pos_.lat_, nfo.pos_.lng_})}};
       feature_inserter.insert(f);
     }
+
+    {
+      auto txn = info.tiles_->db_handle_.make_txn();
+      layer_names.store(info.tiles_->db_handle_, txn);
+      txn.commit();
+    }
+
+    info.tiles_->render_ctx_ = tiles::make_render_ctx(info.tiles_->db_handle_);
   }
 
   void init() {
@@ -218,26 +259,6 @@ struct gbfs::impl {
     using osrm::OSRMManyToManyResponse;
     using osrm::OSRMOneToManyResponse;
 
-    struct journey {
-      struct invalid {};
-      struct s {  // station bound
-        duration first_walk_duration_{0};
-        duration bike_duration_{0};
-        duration second_walk_duration_{0};
-        uint32_t sx_, sp_, p_;
-      };
-      struct b {  // free-float
-        duration walk_duration_{0};
-        duration bike_duration_{0};
-        uint32_t b_, p_;
-      };
-
-      bool valid() const { return !std::holds_alternative<invalid>(info_); }
-
-      uint16_t total_duration_{std::numeric_limits<uint16_t>::max()};
-      std::variant<invalid, s, b> info_{invalid{}};
-    };
-
     constexpr auto const max_walk_speed = 1.1;  // m/s 4km/h
     constexpr auto const max_bike_speed = 7.0;  // m/s 25km/h
     constexpr auto const max_car_speed = 27.8;  // m/s 100km/h
@@ -269,12 +290,6 @@ struct gbfs::impl {
     auto const x = from_fbs(req->x());
 
     auto const p = pt_stations_rtree_.in_radius(x, max_total_dist);
-    if (p.empty() && req->direct()->size() == 0U) {
-      l(logging::debug, "no stations found in {}km radius around {}",
-        max_total_dist / 1000.0, x);
-      return empty_response(req->dir());
-    }
-
     auto p_pos = utl::to_vec(p, [&](auto const idx) {
       auto const& s = *sched_.stations_.at(idx);
       return geo::latlng{s.lat(), s.lng()};
@@ -282,6 +297,11 @@ struct gbfs::impl {
     utl::concat(p_pos, utl::to_vec(*req->direct(), [](Position const* p) {
                   return from_fbs(p);
                 }));
+    if (p_pos.empty() && req->direct()->size() == 0U) {
+      l(logging::debug, "no stations found in {}km radius around {}",
+        max_total_dist / 1000.0, x);
+      return empty_response(req->dir());
+    }
 
     auto const sx = stations_rtree.in_radius(x, max_walk_dist);
     auto sp = std::accumulate(
@@ -294,16 +314,15 @@ struct gbfs::impl {
       if (req->dir() == SearchDir_Forward) {
         return free_bikes_rtree.in_radius(x, max_walk_dist);
       } else {
-        return std::accumulate(begin(p), end(p), std::vector<size_t>{},
-                               [&](std::vector<size_t> acc, size_t const idx) {
-                                 auto const& s = *sched_.stations_.at(idx);
-                                 auto const closest = free_bikes_rtree.nearest(
-                                     {s.lat(), s.lng()}, 1U);
-                                 if (!closest.empty()) {
-                                   acc.emplace_back(closest.at(0).second);
-                                 }
-                                 return acc;
-                               });
+        return std::accumulate(
+            begin(p_pos), end(p_pos), std::vector<size_t>{},
+            [&](std::vector<size_t> acc, geo::latlng const& pos) {
+              auto const closest = free_bikes_rtree.nearest(pos, 1U);
+              if (!closest.empty()) {
+                acc.emplace_back(closest.at(0).second);
+              }
+              return acc;
+            });
       }
     }();
 
@@ -366,9 +385,12 @@ struct gbfs::impl {
         auto const b_to_p_table =
             motis_content(OSRMManyToManyResponse, f_b_to_p_rides->val())
                 ->costs();
-        for (auto const& [b_vec_idx, x_to_b_res] : utl::enumerate(
-                 *motis_content(OSRMOneToManyResponse, f_x_to_b_walks->val())
-                      ->costs())) {
+        auto const x_to_b_costs =
+            motis_content(OSRMOneToManyResponse, f_x_to_b_walks->val())
+                ->costs();
+
+        for (auto const& [b_vec_idx, x_to_b_res] :
+             utl::enumerate(*x_to_b_costs)) {
           auto const x_to_b_walk_duration =
               static_cast<duration>(std::ceil(x_to_b_res->duration() / 60.0));
           if (x_to_b_walk_duration > max_walk_duration) {
@@ -532,6 +554,10 @@ struct gbfs::impl {
           }
 
           for (auto const& [sp_vec_idx, sp_id] : utl::enumerate(sp)) {
+            if (stations.at(sp.at(sp_vec_idx)).bikes_available_ == 0) {
+              continue;
+            }
+
             auto const sp_to_sx_duration = static_cast<duration>(std::ceil(
                 sp_to_sx_table->Get(sp_vec_idx * sx.size() + sx_vec_idx) /
                 60.0));
@@ -578,9 +604,8 @@ struct gbfs::impl {
         utl::transform([&](journey const& j) {
           return std::visit(
               utl::overloaded{
-                  [&](journey::invalid const&) {
+                  [&](journey::invalid const&) -> fbs::Offset<RouteInfo> {
                     throw std::runtime_error{"unreachable"};
-                    return fbs::Offset<RouteInfo>{};
                   },
 
                   [&](journey::b const& free_bike_info) {
@@ -741,6 +766,14 @@ struct gbfs::impl {
     tiles_database& operator=(tiles_database&&) = delete;
     tiles_database& operator=(tiles_database const&) = delete;
 
+    void clear() {
+      lmdb::txn txn{db_handle_.env_};
+      tiles::clear_database(db_handle_, txn);
+      txn.commit();
+
+      pack_handle_.resize(0);
+    }
+
     lmdb::env db_env_;
     tiles::tile_db_handle db_handle_;
     tiles::render_ctx render_ctx_;
@@ -766,7 +799,7 @@ struct gbfs::impl {
   fs::path data_dir_;
 };
 
-gbfs::gbfs() : module("RIS", "gbfs") {
+gbfs::gbfs() : module("GBFS", "gbfs") {
   param(config_.update_interval_minutes_, "update_interval",
         "update interval in minutes");
   param(config_.urls_, "urls", "URLs to fetch data from");
