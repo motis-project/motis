@@ -5,7 +5,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=3e6c6cec9593ae253a258a13c915677c19cab29e
+  commit=2a7afe921a5d1b244bf243b3f0eb44026eda2493
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
@@ -45,7 +45,7 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=3c8c8724e6ec886666aab134774ea143c4808838
+  commit=008b52239a0d0f12e7cb1aabdb72bbe6d188f667
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
@@ -85,7 +85,7 @@
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=master
-  commit=c90d53bdcd7ff741a416ae122b33c9c2a96e8be7
+  commit=ad6cbb38470efd74265715e0972cb5ae44527fb1
 [mimalloc]
   url=git@github.com:motis-project/mimalloc.git
   branch=master
