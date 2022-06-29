@@ -37,7 +37,10 @@ public:
 
   void reset() const {
     size_t const number_of_entries = byte_size() / sizeof(Bag);
-    std::fill(bags, bags + number_of_entries, Bag());
+//    std::fill(bags, bags + number_of_entries, Bag());
+    for(int i = 0; i < number_of_entries; i++) {
+      bags[i] = Bag();
+    }
   }
 
   Bag* data() const { return bags; }

@@ -7,21 +7,22 @@ namespace motis::mcraptor {
 
 
 class Label {
-  typedef bool (*rule)(Label& label, Label& other);
-  static bool arrivalTimeRule(Label& label, Label& other) {
-    return label.arrivalTime <= other.arrivalTime;
-  }
+//  typedef bool (*rule)(Label& label, Label& other);
+//
+//  static bool arrivalTimeRule(Label& label, Label& other) {
+//    return label.arrivalTime <= other.arrivalTime;
+//  }
+//
+//  static bool departureTimeRule(Label& label, Label& other) {
+//    return label.departureTime >= other.departureTime;
+//  }
+//
+//  static bool changesCountRule(Label& label, Label& other) {
+//    return label.changesCount <= other.changesCount;
+//  }
 
-  static bool departureTimeRule(Label& label, Label& other) {
-    return label.departureTime >= other.departureTime;
-  }
 
-  static bool changesCountRule(Label& label, Label& other) {
-    return label.changesCount <= other.changesCount;
-  }
-
-
-  std::vector<rule> rules;
+//  std::vector<rule> rules;
 
 public:
   // Parameters
@@ -31,7 +32,7 @@ public:
 
   // Constructor with rules
   Label() {
-    rules.push_back(arrivalTimeRule);
+//    rules.push_back(arrivalTimeRule);
 //    rules.push_back(departureTimeRule);
 //    rules.push_back(changesCountRule);
   }
@@ -40,30 +41,24 @@ public:
     departureTime(departureTime), arrivalTime(arrivalTime), changesCount(changesCount) { }
 
   bool dominates(Label& other) {
-    bool d = true;
-    for (rule& r : rules) {
-      d &= r(*this, other);
-    }
-    return d;
+//    for (rule& r : rules) {
+//      if(!r(*this, other)) {
+//        return false;
+//      }
+//    }
+//    return true;
+
+  return arrivalTime <= other.arrivalTime;
   }
 
   bool dominatesAll(std::vector<Label> labels) {
-    bool d = true;
     for (Label& l : labels) {
-      d &= dominates(l);
+      if(!dominates(l)) {
+        return false;
+      }
     }
-    return d;
+    return true;
   }
-
-  bool dominatesAny(std::vector<Label> labels) {
-    bool d = false;
-    for (Label& l : labels) {
-      d |= dominates(l);
-    }
-    return d;
-  }
-
-
 
 };
 

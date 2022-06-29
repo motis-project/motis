@@ -68,6 +68,14 @@ struct Bag {
   inline bool isValid() const {
     return size() != 0;
   }
+
+  time getEarliestArrivalTime() {
+    time res = invalid<time>;
+    for(Label& label : labels) {
+      res = std::min(res, label.arrivalTime);
+    }
+    return res;
+  }
 };
 
 using BestBags = std::vector<Bag>;

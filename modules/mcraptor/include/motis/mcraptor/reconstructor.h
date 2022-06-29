@@ -201,7 +201,7 @@ struct reconstructor {
   }
 
   template <typename Query>
-  std::vector<candidate> get_candidates(Query& q) {
+  std::vector<candidate> get_candidates(Query const& q) {
     Rounds& result = q.result();
 
     std::vector<candidate> candidates;
@@ -217,12 +217,12 @@ struct reconstructor {
         auto c = candidate{q.source_,
                            t,
                            q.source_time_begin_,
-                           result[round_k][t][0].arrivalTime,
+                           result[round_k][t].getEarliestArrivalTime(),
                            static_cast<transfers>(round_k - 1),
                            true};
 
         // Check if the journey ends with a footpath
-        for (; c.arrival_ < result[round_k][t][0].arrivalTime + tt; c.arrival_++) {
+        for (; c.arrival_ < result[round_k][t].getEarliestArrivalTime() + tt; c.arrival_++) {
           c.ends_with_footpath_ = journey_ends_with_footpath(c, result);
           if (!c.ends_with_footpath_) {
             break;
@@ -262,7 +262,7 @@ struct reconstructor {
   }
 
   template <typename Query>
-  void add(Query& q) {
+  void add(Query const& q) {
     for (auto& c : get_candidates(q)) {
       if (!c.ends_with_footpath_) {
         // We need to add the transfer time to the arrival,
@@ -346,7 +346,7 @@ struct reconstructor {
       }
 
       arrival_station = previous_station;
-      station_arrival = result[result_idx - 1][arrival_station][0].arrivalTime;
+      station_arrival = result[result_idx - 1][arrival_station].getEarliestArrivalTime();
     }
 
     bool can_be_start = false;
@@ -483,7 +483,7 @@ struct reconstructor {
       auto const sti = first_stop_times_index + stop_offset;
       auto const departure = timetable_.stop_times_[sti].departure_;
 
-      if (valid(departure) && result[result_idx][stop_id][0].arrivalTime <= departure) {
+      if (valid(departure) && result[result_idx][stop_id].getEarliestArrivalTime() <= departure) {
         return stop_id;
       }
     }
