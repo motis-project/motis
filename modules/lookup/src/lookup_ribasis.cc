@@ -339,6 +339,7 @@ Offset<RiBasisTrip> rib_trip(rib_ctx& rc, trip const* trp,
     }
   }
 
+  auto const sections = trip_sections(rc, trp);
   return CreateRiBasisTrip(
       rc.fbb_, to_fbs(rc.sched_, rc.fbb_, trp),
       CreateRiBasisFahrt(
@@ -368,7 +369,7 @@ Offset<RiBasisTrip> rib_trip(rib_ctx& rc, trip const* trp,
               rc.fbb_.CreateVector(rc.providers_),  // allVerwaltung
               rc.fbb_.CreateVector(rc.categories_),  // allGattung
               rc.fbb_.CreateVector(rc.lines_),  // allLinie
-              trip_sections(rc, trp),  // allFahrtabschnitt
+              sections,  // allFahrtabschnitt
               rc.fbb_.CreateVector(through_in),  // allZubringerfahrtzuordnung
               rc.fbb_.CreateVector(  // allAbbringerfahrtzuordnung
                   through_out))));
