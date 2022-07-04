@@ -1,52 +1,273 @@
 #include "motis/mcraptor/cpu/cpu_raptor.h"
+#include "motis/mcraptor/Bag.h"
+#include <map>
 
 namespace motis::mcraptor {
 
-trip_count get_earliest_trip(raptor_timetable const& tt,
+// TODO: implement mcRaptor
+
+void McRaptor::init_arrivals() {
+  startNewRound();
+  Label newLabel(0, query.source_time_begin_, 0);
+  arrival_by_route(query.source_, newLabel);
+  startNewRound();
+}
+
+void McRaptor::arrival_by_route(stop_id stop, Label& newLabel) {
+  // ??? checking for empty
+  // check if this label may be dominated by other existing labels
+  if(transferLabels[query.target_].dominates(newLabel)) {
+    return;
+  }
+  if(!routeLabels[stop].merge(newLabel)) {
+    return;
+  }
+  // add indominated label to the bags
+  transferLabels[stop].merge(newLabel);
+  currentRound()[stop].mergeUndominated(newLabel);
+  // mark the station
+  stopsForRoutes.mark(stop);
+}
+
+void McRaptor::arrival_by_transfer(stop_id stop, Label& newLabel) {
+  // checking for empty??
+  // check if this label may be dominated by other existing labels
+  if(transferLabels[query.target_].dominates(newLabel)) {
+    return;
+  }
+  if(!transferLabels[stop].merge(newLabel)) {
+    return;
+  }
+  // addd indominated label to the bag
+  currentRound()[stop].mergeUndominated(newLabel);
+  // mark current station
+  stopsForTransfers.mark(stop);
+}
+
+void McRaptor::relax_transfers() {
+  stopsForTransfers.reset();
+  routesServingUpdatedStops.clear();
+  // iterate through all station and find marked
+  for(stop_id stop = 0; stop < query.tt_.stop_count(); stop++) {
+    if(!stopsForRoutes.marked(stop)) {
+      continue;
+    }
+    stopsForTransfers.mark(stop);
+    Bag& bag = previousRound()[stop];
+    for(size_t i = 0; i < bag.size(); i++) {
+      currentRound()[stop][i] = Label(bag[i], stop, i);
+    }
+  }
+
+  for(stop_id stop = 0; stop < query.tt_.stop_count(); stop++) {
+    if (!stopsForRoutes.marked(stop)) {
+      continue;
+    }
+    Bag& bag = previousRound()[stop];
+    // iterate through footpaths - coming from the update_footpath()
+    // TODO: check for correctness
+    auto index_into_transfers = query.tt_.stops_[stop].index_to_transfers_;
+    auto next_index_into_transfers = query.tt_.stops_[stop + 1].index_to_transfers_;
+    for (auto current_index = index_into_transfers;
+         current_index < next_index_into_transfers; ++current_index) {
+      auto const& to_stop = query.tt_.footpaths_[current_index].to_;
+      auto const& duration = query.tt_.footpaths_[current_index].duration_;
+      for(size_t i = 0; i < bag.size(); i++) {
+        Label newLabel;
+        newLabel.arrivalTime = bag[i].arrivalTime + duration;
+        newLabel.parentStation = stop;
+        newLabel.parentIndex = i;
+        newLabel.parentDepartureTime = bag[i].arrivalTime;
+        arrival_by_transfer(to_stop, newLabel);
+      }
+    }
+  }
+}
+
+void McRaptor::collect_routes_serving_updated_stops() {
+  // find marked stations
+  for(stop_id stop = 0; stop < query.tt_.stop_count(); stop++) {
+    if (!stopsForTransfers.marked(stop)) {
+      continue;
+    }
+    // find the offset in form of stop_id where the route stops by current station (getRoutesTimeForStops method)
+    for(std::pair<route_id , stop_id> s : getRoutesTimesForStop(stop)) {
+      // id of this route
+      const route_id routeId = s.first;
+      // route object itself
+      const raptor_route route = query.tt_.routes_[routeId];
+      // this offset where the route stops on this station
+      const stop_id route_stop = s.second;
+      // if it is the last station
+      if(route_stop == route.index_to_route_stops_ + route.stop_count_ - 1) {
+        continue;
+      }
+      // if route with this id is already in map
+      // write to this route the earliest stop from both
+      if(routesServingUpdatedStops.count(routeId)) {
+        routesServingUpdatedStops[routeId] = std::min(routesServingUpdatedStops[routeId], route_stop);
+      } else {
+        // else just add it into map
+        routesServingUpdatedStops.insert(std::make_pair(routeId, route_stop));
+      }
+    }
+  }
+}
+
+// TODO: implement
+void McRaptor::scan_routes() {
+
+}
+
+Bag* McRaptor::currentRound() {
+  return result[round];
+}
+
+Bag* McRaptor::previousRound() {
+  return result[round - 1];
+}
+
+void McRaptor::startNewRound() {
+  round += 1;
+}
+
+// searches through all routes in station
+//
+// returns vector of pairs with route itself and index to the given station
+inline std::vector<std::pair<route_id , stop_id>> McRaptor::getRoutesTimesForStop(stop_id stop) {
+  std::vector<std::pair<route_id, stop_id>> result = std::vector<std::pair<route_id, stop_id>>();
+  // go through all routes for the given station using the first route as base
+  // and adding offset to this base until the base + offset = count of routes in current station
+  for(route_id routeId = query.tt_.stop_routes_[stop]; routeId < query.tt_.stops_[stop].route_count_; routeId++) {
+    // extract this route form timetable using its id
+    raptor_route route = query.tt_.routes_[routeId];
+    // go through stops of this route
+    for (stop_id r_stop_offset = route.index_to_route_stops_; r_stop_offset < route.stop_count_;
+         r_stop_offset++) {
+      // add the station and the founded station to the result
+      if(query.tt_.route_stops_[r_stop_offset] == stop) {
+        result.emplace_back(std::make_pair(routeId, r_stop_offset));
+      }
+    }
+  }
+  return result;
+}
+
+void McRaptor::invoke_cpu_raptor() {
+  //auto const& tt = McRaptor::query.tt_;
+
+  /*Rounds& result = query.result();
+  cpu_mark_store* stopsForTransfers = new cpu_mark_store(tt.stop_count());
+  stopsUpdatedByTransfers = stopsForTransfers;
+  cpu_mark_store* stopsForRoutes = new cpu_mark_store(tt.route_count());
+  stopsUpdatedByRoute = stopsForRoutes;*/
+
+  //cpu_mark_store route_marks(tt.route_count());
+
+  init_arrivals();
+  relax_transfers();
+
+  for (auto i = 0; i < max_raptor_round; i++) {
+    startNewRound();
+    collect_routes_serving_updated_stops();
+    scan_routes();
+    if(stopsForRoutes.empty()) {
+      break;
+    }
+    startNewRound();
+    relax_transfers();
+  }
+
+  /*for (raptor_round round_k = 1; round_k < max_raptor_round; ++round_k) {
+    bool any_marked = false;
+
+    for (auto s_id = 0; s_id < tt.stop_count(); ++s_id) {
+
+      if (!station_marks.marked(s_id)) {
+        continue;
+      }
+
+      if (!any_marked) {
+        any_marked = true;
+      }
+
+      auto const& stop = tt.stops_[s_id];
+      for (auto sri = stop.index_to_stop_routes_;
+           sri < stop.index_to_stop_routes_ + stop.route_count_; ++sri) {
+        route_marks.mark(tt.stop_routes_[sri]);
+      }
+    }
+
+    if (!any_marked) {
+      break;
+    }
+
+    station_marks.reset();
+
+    for (route_id r_id = 0; r_id < tt.route_count(); ++r_id) {
+      if (!route_marks.marked(r_id)) {
+        continue;
+      }
+
+      update_route(tt, r_id, result[round_k - 1], result[round_k], ea,
+                   station_marks);
+    }
+
+    route_marks.reset();
+
+    update_footpaths(tt, result[round_k], ea, station_marks);
+  }*/
+}
+
+/*trip_count get_earliest_trip(raptor_timetable const& tt,
                              raptor_route const& route,
                              Bag* prev_round,
                              stop_times_index const r_stop_offset) {
 
-  stop_id const stop_id =
-      tt.route_stops_[route.index_to_route_stops_ + r_stop_offset];
+stop_id const stop_id =
+    tt.route_stops_[route.index_to_route_stops_ + r_stop_offset];
 
-  // station was never visited, there can't be a earliest trip
-  if (!prev_round[stop_id].isValid()) {
-    return invalid<trip_count>;
-  }
-
-  // get first defined earliest trip for the stop in the route
-  auto const first_trip_stop_idx = route.index_to_stop_times_ + r_stop_offset;
-  auto const last_trip_stop_idx =
-      first_trip_stop_idx + ((route.trip_count_ - 1) * route.stop_count_);
-
-  trip_count current_trip = 0;
-  for (auto stop_time_idx = first_trip_stop_idx;
-       stop_time_idx <= last_trip_stop_idx;
-       stop_time_idx += route.stop_count_) {
-
-    auto const stop_time = tt.stop_times_[stop_time_idx];
-    if (valid(stop_time.departure_) &&
-        prev_round[stop_id].getEarliestArrivalTime() <= stop_time.departure_) {
-      return current_trip;
-    }
-
-    ++current_trip;
-  }
-
+// station was never visited, there can't be a earliest trip
+if (!prev_round[stop_id].isValid()) {
   return invalid<trip_count>;
 }
 
-void init_arrivals(Rounds& result, raptor_query const& q,
-                   cpu_mark_store& station_marks) {
+// get first defined earliest trip for the stop in the route
+auto const first_trip_stop_idx = route.index_to_stop_times_ + r_stop_offset;
+auto const last_trip_stop_idx =
+    first_trip_stop_idx + ((route.trip_count_ - 1) * route.stop_count_);
 
-  // Don't set the values for the earliest arrival, as the footpath update
-  // in the first round will use the values in conjunction with the
-  // footpath lengths without transfertime leading to invalid results.
-  // Not setting the earliest arrival values should (I hope) be correct.
-  Label newLabel(0, q.source_time_begin_, 0);
-  result[0][q.source_].merge(newLabel);
-  station_marks.mark(q.source_);
+trip_count current_trip = 0;
+for (auto stop_time_idx = first_trip_stop_idx;
+     stop_time_idx <= last_trip_stop_idx;
+     stop_time_idx += route.stop_count_) {
+
+  auto const stop_time = tt.stop_times_[stop_time_idx];
+  if (valid(stop_time.departure_) &&
+      prev_round[stop_id].getEarliestArrivalTime() <= stop_time.departure_) {
+    return current_trip;
+  }
+
+  ++current_trip;
+}
+
+return invalid<trip_count>;
+}
+
+*//*void McRaptor::init_arrivals() {
+
+    // Don't set the values for the earliest arrival, as the footpath update
+    // in the first round will use the values in conjunction with the
+    // footpath lengths without transfertime leading to invalid results.
+    // Not setting the earliest arrival values should (I hope) be correct.
+
+    startNewRound();
+Label newLabel(0, query.source_time_begin_, 0);
+arrival_by_route(query.source_, newLabel);
+startNewRound();
+
+//result[0][q.source_].merge(newLabel);
+//station_marks.mark(q.source_);
 
 //  for (auto const& add_start : q.add_starts_) {
 //    time const add_start_time = q.source_time_begin_ + add_start.offset_;
@@ -54,11 +275,12 @@ void init_arrivals(Rounds& result, raptor_query const& q,
 //    result[0][add_start.s_id_].merge(addStartLabel);
 //    station_marks.mark(add_start.s_id_);
 //  }
-}
+}*//*
 
-void update_route(raptor_timetable const& tt, route_id const r_id,
-                  Bag* prev_round, Bag* current_round,
-                  BestBags& ea, cpu_mark_store& station_marks) {
+
+    void update_route(raptor_timetable const& tt, route_id const r_id,
+                 Bag* prev_round, Bag* current_round,
+                 BestBags& ea, cpu_mark_store& station_marks) {
   auto const& route = tt.routes_[r_id];
 
   trip_count earliest_trip_id = invalid<trip_count>;
@@ -89,7 +311,7 @@ void update_route(raptor_timetable const& tt, route_id const r_id,
       current_round[stop_id].merge(stopTimeLabel);
     }
 
-    /*
+    *//*
      * The reason for the split in the update process for the current_round
      * and the earliest arrivals is that we might have some results in
      * current_round from former runs of the algorithm, but the earliest
@@ -100,7 +322,7 @@ void update_route(raptor_timetable const& tt, route_id const r_id,
      *
      * We cannot carry over the earliest arrivals from former runs, since
      * then we would skip on updates to the curren_round results.
-     */
+     *//*
 
     if (stopTimeLabel.dominatesAll(ea[stop_id].labels)) {
       ea[stop_id].merge(stopTimeLabel);
@@ -154,62 +376,7 @@ void update_footpaths(raptor_timetable const& tt, Bag* current_round,
       }
     }
   }
-}
-
-void invoke_cpu_raptor(raptor_query const& query, raptor_statistics&) {
-  auto const& tt = query.tt_;
-
-  Rounds& result = query.result();
-
-  BestBags ea;
-  for(int i = 0; i < tt.stop_count(); i++) {
-    ea.push_back(Bag());
-  }
-
-  cpu_mark_store station_marks(tt.stop_count());
-  cpu_mark_store route_marks(tt.route_count());
-
-  init_arrivals(result, query, station_marks);
-
-  for (raptor_round round_k = 1; round_k < max_raptor_round; ++round_k) {
-    bool any_marked = false;
-
-    for (auto s_id = 0; s_id < tt.stop_count(); ++s_id) {
-
-      if (!station_marks.marked(s_id)) {
-        continue;
-      }
-
-      if (!any_marked) {
-        any_marked = true;
-      }
-
-      auto const& stop = tt.stops_[s_id];
-      for (auto sri = stop.index_to_stop_routes_;
-           sri < stop.index_to_stop_routes_ + stop.route_count_; ++sri) {
-        route_marks.mark(tt.stop_routes_[sri]);
-      }
-    }
-
-    if (!any_marked) {
-      break;
-    }
-
-    station_marks.reset();
-
-    for (route_id r_id = 0; r_id < tt.route_count(); ++r_id) {
-      if (!route_marks.marked(r_id)) {
-        continue;
-      }
-
-      update_route(tt, r_id, result[round_k - 1], result[round_k], ea,
-                   station_marks);
-    }
-
-    route_marks.reset();
-
-    update_footpaths(tt, result[round_k], ea, station_marks);
-  }
-}
+}*/
 
 }  // namespace motis::mcraptor
+

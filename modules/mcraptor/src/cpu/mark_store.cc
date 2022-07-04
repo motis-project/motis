@@ -14,4 +14,8 @@ void cpu_mark_store::reset() {
   std::fill(std::begin(marks_), std::end(marks_), false);
 }
 
+bool cpu_mark_store::empty() {
+  return marks_.empty();
+}
+
 }  // namespace motis::mcraptor

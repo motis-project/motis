@@ -27,8 +27,14 @@ class Label {
 public:
   // Parameters
   time departureTime = invalid<time>;
-  time arrivalTime = invalid<time>;
   size_t changesCount = invalid<size_t>;
+  time arrivalTime = invalid<time>;
+
+  // Parent info
+  stop_id parentStation = invalid<stop_id>;
+  time parentDepartureTime = invalid<time>;
+  size_t parentIndex = invalid<size_t>;
+
 
   // Constructor with rules
   Label() {
@@ -37,8 +43,15 @@ public:
 //    rules.push_back(changesCountRule);
   }
 
-  Label(time departureTime, time arrivalTime, size_t changesCount) :
-    departureTime(departureTime), arrivalTime(arrivalTime), changesCount(changesCount) { }
+  Label(time departureTime, time arrivalTime, size_t changesCount) : departureTime(departureTime),
+                                                                     arrivalTime(arrivalTime),
+                                                                     changesCount(changesCount) { }
+
+  // to create labels for current round from labels from previous round for certain station
+  Label(Label& parentLabel, stop_id parentStation, size_t parentIndex) : arrivalTime(parentLabel.arrivalTime),
+                                                                         parentStation(parentStation),
+                                                                         parentIndex(parentIndex),
+                                                                         parentDepartureTime(parentLabel.arrivalTime) { }
 
   bool dominates(Label& other) {
 //    for (rule& r : rules) {
@@ -47,7 +60,6 @@ public:
 //      }
 //    }
 //    return true;
-
   return arrivalTime <= other.arrivalTime;
   }
 
@@ -59,7 +71,6 @@ public:
     }
     return true;
   }
-
 };
 
 

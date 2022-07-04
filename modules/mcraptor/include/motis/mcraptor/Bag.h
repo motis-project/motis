@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include "Label.h"
 
 namespace motis::mcraptor {
@@ -19,46 +20,61 @@ struct Bag {
 
   inline size_t size() const { return labels.size(); }
 
-  void merge(Label& other) {
-    if(dominates(other)) {
-      return;
-    }
-
+  bool merge(Label& otherLabel) noexcept {
     size_t removedLabels = 0;
     for (size_t i = 0; i < labels.size(); i++) {
-      if (other.dominates(labels[i])) {
+      if (labels[i].dominates(otherLabel)) return false;
+      if (otherLabel.dominates(labels[i])) {
         removedLabels++;
         continue;
       }
       labels[i - removedLabels] = labels[i];
     }
     labels.resize(labels.size() - removedLabels + 1);
-    labels.back() = other;
-    return;
+    labels.back() = otherLabel;
+    return true;
   }
 
-  void merge(Bag& other) {
-    for(Label& otherLabel : other.labels) {
+  void mergeUndominated(Label& otherLabel) noexcept {
+    if(!dominates(otherLabel)){
+      std::cout << "mergeUndominated returns";
+      return;
+    }
+    size_t removedLabels = 0;
+    for (size_t i = 0; i < labels.size(); i++) {
+      if (otherLabel.dominates(labels[i])) {
+        removedLabels++;
+        continue;
+      }
+      labels[i - removedLabels] = labels[i];
+    }
+    labels.resize(labels.size() - removedLabels + 1);
+    labels.back() = otherLabel;
+  }
+
+  // possibly delete
+  void merge(Bag& otherBag) {
+    for(Label& otherLabel : otherBag.labels) {
       merge(otherLabel);
     }
   }
 
-  bool dominates(Label& other) {
+  bool dominates(Label& otherLabel) {
     for(Label& label : labels) {
-      if(label.dominates(other)) {
+      if(label.dominates(otherLabel)) {
         return true;
       }
     }
     return false;
   }
 
-  bool dominates(Bag& other) {
-    if(!other.isValid() && this->isValid()) {
+  bool dominates(Bag& otherBag) {
+    if(!otherBag.isValid() && this->isValid()) {
       return true;
     }
 
-    for(Label& otherLabel : other.labels) {
-      if(!dominates(otherLabel)) {
+    for(Label& label : otherBag.labels) {
+      if(!dominates(label)) {
         return false;
       }
     }
@@ -78,6 +94,35 @@ struct Bag {
   }
 };
 
-using BestBags = std::vector<Bag>;
+//using BestBags = std::vector<Bag>;
+//using bestRouteLabels = std::vector<Bag>;
+//using bestTransferLabels = std::vector<Bag>;
+
+/*struct TypesCollection {
+
+  TypesCollection() {
+    bestRouteLabels = std::vector<Bag>();
+    bestTransferLabels = std::vector<Bag>();
+    routesServingUpdatedStops = std::map<route_id, route_stops_index>();
+    stopsUpdatedByRoute = std::vector<stop_id>();
+    stopsUpdatedByTransfers = std::vector<stop_id>();
+  }
+
+  TypesCollection(stop_id stopCount, route_id routeCount) : bestRouteLabels(stopCount),
+                                                            bestTransferLabels(stopCount),
+                                                            stopsUpdatedByRoute(stopCount),
+                                                            stopsUpdatedByTransfers(stopCount),
+                                                            routesServingUpdatedStops() { };
+
+public:
+  std::vector<Bag> bestRouteLabels;
+  std::vector<Bag> bestTransferLabels;
+
+  // adapt to our parameters:
+  // route_id and route_stop_index
+  std::map<route_id, route_stops_index> routesServingUpdatedStops;
+  std::vector<stop_id> stopsUpdatedByTransfers;
+  std::vector<stop_id> stopsUpdatedByRoute;
+};*/
 
 } // namespace motis::mcraptor
