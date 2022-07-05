@@ -78,6 +78,7 @@ struct RouteLabel {
 
   RouteLabel() = default;
 
+  // TODO: check
   const stop_time* trip = nullptr;
 
   route_stops_index parentStop = invalid<route_stops_index>;

@@ -19,23 +19,6 @@ struct McRaptor {
                                     stopsForRoutes(* new cpu_mark_store(q.tt_.stop_count())),
                                     round(0) {};
 
-/*
-  trip_count get_earliest_trip(raptor_timetable const& tt,
-                               raptor_route const& route,
-                               time const* prev_arrivals,
-                               stop_times_index r_stop_offset);
-*/
-/*
-  void update_route(raptor_timetable const& tt, route_id r_id,
-                    time const* prev_arrivals, time* current_round,
-                    earliest_arrivals& ea, cpu_mark_store& station_marks);
-
-  void update_footpaths(raptor_timetable const& tt, time* current_round,
-                        earliest_arrivals const& ea,
-                        cpu_mark_store& station_marks);*/
-
-  //void invoke_cpu_raptor(raptor_query const& query, raptor_statistics&);
-
   void invoke_cpu_raptor();
 
   Bag* currentRound();

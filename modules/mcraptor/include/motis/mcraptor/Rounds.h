@@ -9,8 +9,6 @@ namespace motis::mcraptor {
 class Rounds {
 public:
   Bag* bags{nullptr};
-
-public:
   stop_id stop_count_{invalid<stop_id>};
 
   explicit Rounds(stop_id const stop_count)
