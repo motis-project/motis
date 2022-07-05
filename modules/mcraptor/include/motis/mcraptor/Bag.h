@@ -94,6 +94,35 @@ struct Bag {
   }
 };
 
+struct RouteBag {
+
+  inline size_t size() const { return labels.size(); }
+
+  void merge(RouteLabel& otherLabel) noexcept {
+    size_t removedLabels = 0;
+    for (size_t i = 0; i < labels.size(); i++) {
+      if (labels[i].dominates(otherLabel)) {
+        return;
+      }
+      if (otherLabel.dominates(labels[i])) {
+        removedLabels++;
+        continue;
+      }
+      labels[i - removedLabels] = labels[i];
+    }
+    labels.resize(labels.size() - removedLabels + 1);
+    labels.push_back(otherLabel);
+  }
+
+  inline RouteLabel& operator[](const size_t index) { return labels[index]; }
+
+  inline const RouteLabel& operator[](const size_t i) const {
+    return labels[i];
+  }
+
+  std::vector<RouteLabel> labels;
+};
+
 //using BestBags = std::vector<Bag>;
 //using bestRouteLabels = std::vector<Bag>;
 //using bestTransferLabels = std::vector<Bag>;

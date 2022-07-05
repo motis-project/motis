@@ -34,6 +34,7 @@ public:
   stop_id parentStation = invalid<stop_id>;
   time parentDepartureTime = invalid<time>;
   size_t parentIndex = invalid<size_t>;
+  route_id routeId = invalid<route_id>;
 
 
   // Constructor with rules
@@ -70,6 +71,21 @@ public:
       }
     }
     return true;
+  }
+};
+
+struct RouteLabel {
+
+  RouteLabel() = default;
+
+  const stop_time* trip = nullptr;
+
+  route_stops_index parentStop = invalid<route_stops_index>;
+  size_t parentIndex = invalid<size_t>;
+
+  bool dominates(RouteLabel& otherLabel) {
+    return trip -> arrival_ <= otherLabel.trip -> arrival_ &&
+           trip -> departure_ <= otherLabel.trip -> departure_;
   }
 };
 

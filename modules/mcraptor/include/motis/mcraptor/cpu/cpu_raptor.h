@@ -13,8 +13,8 @@ struct McRaptor {
 
   McRaptor(raptor_query const& q) : query(q),
                                     result(q.result()),
-                                    bestRouteLabels(std::vector<Bag>()),
-                                    bestTransferLabels(std::vector<Bag>()),
+                                    routeLabels(std::vector<Bag>()),
+                                    transferLabels(std::vector<Bag>()),
                                     stopsForTransfers(* new cpu_mark_store(q.tt_.stop_count())),
                                     stopsForRoutes(* new cpu_mark_store(q.tt_.stop_count())),
                                     round(0) {};
@@ -25,8 +25,6 @@ struct McRaptor {
                                time const* prev_arrivals,
                                stop_times_index r_stop_offset);
 */
-
-  void init_arrivals();
 /*
   void update_route(raptor_timetable const& tt, route_id r_id,
                     time const* prev_arrivals, time* current_round,
@@ -44,13 +42,14 @@ struct McRaptor {
   Bag* previousRound();
   void startNewRound();
 
+  void init_arrivals();
   void arrival_by_route(stop_id stop, Label& newLabel);
   void arrival_by_transfer(stop_id stop, Label& label);
   void relax_transfers();
   void collect_routes_serving_updated_stops();
   void scan_routes();
 
-  inline std::vector<std::pair<route_id, stop_id>> getRoutesTimesForStop(stop_id stop);
+  inline std::vector<std::pair<route_id, route_stops_index>> getRoutesTimesForStop(stop_id stop);
 
 
 public:
@@ -61,7 +60,7 @@ public:
 
   std::vector<Bag> routeLabels;
   std::vector<Bag> transferLabels;
-  std::map<route_id, stop_id> routesServingUpdatedStops;
+  std::map<route_id, route_stops_index> routesServingUpdatedStops;
   cpu_mark_store& stopsForTransfers;
   cpu_mark_store& stopsForRoutes;
 
