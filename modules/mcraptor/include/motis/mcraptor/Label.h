@@ -85,8 +85,8 @@ struct RouteLabel {
   size_t parentIndex = invalid<size_t>;
 
   bool dominates(RouteLabel& otherLabel) {
-    return trip -> arrival_ <= otherLabel.trip -> arrival_ &&
-           trip -> departure_ <= otherLabel.trip -> departure_;
+    return trip->arrival_ <= otherLabel.trip->arrival_ &&
+           trip->departure_ <= otherLabel.trip->departure_;
   }
 };
 

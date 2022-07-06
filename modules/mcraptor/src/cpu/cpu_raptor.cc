@@ -7,6 +7,7 @@ namespace motis::mcraptor {
 void McRaptor::init_arrivals() {
   startNewRound();
   Label newLabel(0, query.source_time_begin_, 0);
+  newLabel.parentStation = query.source_;
   arrival_by_route(query.source_, newLabel);
   startNewRound();
 }
@@ -52,6 +53,7 @@ void McRaptor::relax_transfers() {
     }
     stopsForTransfers.mark(stop);
     Bag& bag = previousRound()[stop];
+    currentRound()[stop].labels.resize(bag.size());
     for(size_t i = 0; i < bag.size(); i++) {
       currentRound()[stop][i] = Label(bag[i], stop, i);
     }
@@ -115,13 +117,10 @@ void McRaptor::collect_routes_serving_updated_stops() {
 void McRaptor::scan_routes() {
   stopsForRoutes.reset();
   for(auto i = routesServingUpdatedStops.begin(); i != routesServingUpdatedStops.end(); i++) {
-    route_id routeId = i -> first;
-    route_stops_index stopOffset = i -> second;
+    route_id routeId = i->first;
+    route_stops_index stopOffset = i->second;
     raptor_route route = query.tt_.routes_[routeId];
-    auto routeSize = route.stop_count_;
-
-    route_stops_index routeStopsBegin = route.index_to_route_stops_;
-    stop_id stop = query.tt_.route_stops_[stopOffset];
+    stop_id stop = query.tt_.route_stops_[route.index_to_route_stops_ + stopOffset];
 
     // event represents the arrival and departure times of route in its single station
     const stop_time* firstTrip = &query.tt_.stop_times_[route.index_to_stop_times_];
@@ -129,10 +128,10 @@ void McRaptor::scan_routes() {
 
     RouteBag newRouteBag;
 
-    const auto tripSize = routeStopsBegin + routeSize;
+    const auto tripSize = route.stop_count_;
 
     // TODO: check
-    while(stopOffset < tripSize) {
+    while(stopOffset < tripSize - 1) {
       for(size_t j = 0; j < previousRound()[stop].size(); j++) {
         const Label& label = previousRound()[stop][j];
         const stop_time* trip = firstTrip;
@@ -144,14 +143,15 @@ void McRaptor::scan_routes() {
         RouteLabel newLabel;
         newLabel.trip = trip;
         newLabel.parentIndex = j;
+        newLabel.parentStop = stop;
         newRouteBag.merge(newLabel);
       }
       stopOffset++;
-      stop = query.tt_.route_stops_[stopOffset];
+      stop = query.tt_.route_stops_[route.index_to_route_stops_ + stopOffset];
       for(RouteLabel& label : newRouteBag.labels) {
         Label newLabel;
         newLabel.arrivalTime = label.trip[stopOffset].arrival_;
-        newLabel.parentStation = query.tt_.route_stops_[label.parentStop];
+        newLabel.parentStation = label.parentStop;
         newLabel.parentIndex = label.parentIndex;
         newLabel.parentDepartureTime = label.trip[label.parentStop].departure_;
         newLabel.routeId = routeId;
@@ -173,24 +173,50 @@ Bag* McRaptor::previousRound() {
 
 void McRaptor::startNewRound() {
   round += 1;
+
+
+
+  //test output
+
+  std::cout << std::endl << std::endl << std::endl << "Round: " << round - 2 << std::endl;
+
+  int r_k = round - 2;
+  if(r_k >= 0) {
+    Bag& targetBag = result[r_k][query.target_];
+    if (targetBag.isValid()) {
+      stop_id currentStation = query.target_;
+      size_t label = 0;
+      while (valid(currentStation) && r_k >= 0 && result[r_k][currentStation].isValid()) {
+        std::cout << currentStation << "("
+                  << result[r_k][currentStation][label].arrivalTime << ") <- ";
+        stop_id parentStation =
+            result[r_k][currentStation][label].parentStation;
+        label = result[r_k][currentStation][label].parentIndex;
+        currentStation = parentStation;
+        r_k--;
+      }
+    }
+  }
 }
 
 // searches through all routes in station
 //
 // returns vector of pairs with route itself and index to the given station
-inline std::vector<std::pair<route_id, route_stops_index>> McRaptor::getRoutesTimesForStop(stop_id stop) {
+inline std::vector<std::pair<route_id, route_stops_index>> McRaptor::getRoutesTimesForStop(stop_id stopId) {
   std::vector<std::pair<route_id, route_stops_index>> result = std::vector<std::pair<route_id, route_stops_index>>();
   // go through all routes for the given station using the first route as base
   // and adding offset to this base until the base + offset = count of routes in current station
-  for(route_id routeId = query.tt_.stop_routes_[stop]; routeId < query.tt_.stops_[stop].route_count_; routeId++) {
+  raptor_stop stop = query.tt_.stops_[stopId];
+  for(stop_routes_index stopRouteId = stop.index_to_stop_routes_; stopRouteId < stop.index_to_stop_routes_ + stop.route_count_; stopRouteId++) {
     // extract this route form timetable using its id
+    route_id routeId = query.tt_.stop_routes_[stopRouteId];
     raptor_route route = query.tt_.routes_[routeId];
     // go through stops of this route
-    for (route_stops_index r_stop_offset = route.index_to_route_stops_; r_stop_offset < route.stop_count_;
-         r_stop_offset++) {
+    for (route_stops_index stopOffset = 0; stopOffset < route.stop_count_;
+         stopOffset++) {
       // add the station and the founded station to the result
-      if(query.tt_.route_stops_[r_stop_offset] == stop) {
-        result.emplace_back(std::make_pair(routeId, r_stop_offset));
+      if(query.tt_.route_stops_[stopOffset + route.index_to_route_stops_] == stopId) {
+        result.emplace_back(std::make_pair(routeId, stopOffset));
       }
     }
   }
@@ -198,6 +224,11 @@ inline std::vector<std::pair<route_id, route_stops_index>> McRaptor::getRoutesTi
 }
 
 void McRaptor::invoke_cpu_raptor() {
+  std::cout << "Target: " << query.target_ << std::endl;
+  std::cout << "Source: " << query.source_ << std::endl;
+
+
+
   init_arrivals();
   relax_transfers();
 

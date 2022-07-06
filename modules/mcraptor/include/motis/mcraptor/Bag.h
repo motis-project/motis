@@ -36,8 +36,8 @@ struct Bag {
   }
 
   void mergeUndominated(Label& otherLabel) noexcept {
-    if(!dominates(otherLabel)){
-      std::cout << "mergeUndominated returns";
+    if(dominates(otherLabel)){
+      std::cout << "mergeUndominated returns" << std::endl;
       return;
     }
     size_t removedLabels = 0;
@@ -96,6 +96,12 @@ struct Bag {
 
 struct RouteBag {
 
+  std::vector<RouteLabel> labels;
+
+  RouteBag() {
+    labels = std::vector<RouteLabel>();
+  }
+
   inline size_t size() const { return labels.size(); }
 
   void merge(RouteLabel& otherLabel) noexcept {
@@ -111,7 +117,7 @@ struct RouteBag {
       labels[i - removedLabels] = labels[i];
     }
     labels.resize(labels.size() - removedLabels + 1);
-    labels.push_back(otherLabel);
+    labels.back() = otherLabel;
   }
 
   inline RouteLabel& operator[](const size_t index) { return labels[index]; }
@@ -120,7 +126,6 @@ struct RouteBag {
     return labels[i];
   }
 
-  std::vector<RouteLabel> labels;
 };
 
 //using BestBags = std::vector<Bag>;

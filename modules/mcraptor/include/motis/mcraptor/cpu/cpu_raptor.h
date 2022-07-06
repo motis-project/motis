@@ -13,11 +13,11 @@ struct McRaptor {
 
   McRaptor(raptor_query const& q) : query(q),
                                     result(q.result()),
-                                    routeLabels(std::vector<Bag>()),
-                                    transferLabels(std::vector<Bag>()),
+                                    routeLabels(q.tt_.stop_count()),
+                                    transferLabels(q.tt_.stop_count()),
                                     stopsForTransfers(* new cpu_mark_store(q.tt_.stop_count())),
                                     stopsForRoutes(* new cpu_mark_store(q.tt_.stop_count())),
-                                    round(0) {};
+                                    round(-1) {};
 
   void invoke_cpu_raptor();
 
