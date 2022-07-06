@@ -33,7 +33,7 @@ public:
   // Parent info
   stop_id parentStation = invalid<stop_id>;
   time parentDepartureTime = invalid<time>;
-  size_t parentIndex = invalid<size_t>;
+  size_t parentLabelIndex = invalid<size_t>;
   route_id routeId = invalid<route_id>;
 
 
@@ -51,7 +51,7 @@ public:
   // to create labels for current round from labels from previous round for certain station
   Label(Label& parentLabel, stop_id parentStation, size_t parentIndex) : arrivalTime(parentLabel.arrivalTime),
                                                                          parentStation(parentStation),
-                                                                         parentIndex(parentIndex),
+                                                                         parentLabelIndex(parentIndex),
                                                                          parentDepartureTime(parentLabel.arrivalTime) { }
 
   bool dominates(Label& other) {
@@ -82,7 +82,7 @@ struct RouteLabel {
   const stop_time* trip = nullptr;
 
   route_stops_index parentStop = invalid<route_stops_index>;
-  size_t parentIndex = invalid<size_t>;
+  size_t parentLabelIndex = invalid<size_t>;
 
   bool dominates(RouteLabel& otherLabel) {
     return trip->arrival_ <= otherLabel.trip->arrival_ &&

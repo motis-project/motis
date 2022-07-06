@@ -76,7 +76,7 @@ void McRaptor::relax_transfers() {
         Label newLabel;
         newLabel.arrivalTime = bag[i].arrivalTime + duration;
         newLabel.parentStation = stop;
-        newLabel.parentIndex = i;
+        newLabel.parentLabelIndex = i;
         newLabel.parentDepartureTime = bag[i].arrivalTime;
         arrival_by_transfer(to_stop, newLabel);
       }
@@ -99,7 +99,7 @@ void McRaptor::collect_routes_serving_updated_stops() {
       // this offset where the route stops on this station
       const route_stops_index stop_offset = s.second;
       // if it is the last station
-      if(stop_offset == route.index_to_route_stops_ + route.stop_count_ - 1) {
+      if(stop_offset == route.stop_count_ - 1) {
         continue;
       }
       // if route with this id is already in map
@@ -124,7 +124,7 @@ void McRaptor::scan_routes() {
 
     // event represents the arrival and departure times of route in its single station
     const stop_time* firstTrip = &query.tt_.stop_times_[route.index_to_stop_times_];
-    const stop_time* lastTrip = &query.tt_.stop_times_[route.index_to_stop_times_ + route.stop_count_ - 1];
+    const stop_time* lastTrip = &query.tt_.stop_times_[route.index_to_stop_times_ + route.stop_count_ * (route.trip_count_ - 1)];
 
     RouteBag newRouteBag;
 
@@ -142,7 +142,7 @@ void McRaptor::scan_routes() {
 
         RouteLabel newLabel;
         newLabel.trip = trip;
-        newLabel.parentIndex = j;
+        newLabel.parentLabelIndex = j;
         newLabel.parentStop = stop;
         newRouteBag.merge(newLabel);
       }
@@ -152,7 +152,7 @@ void McRaptor::scan_routes() {
         Label newLabel;
         newLabel.arrivalTime = label.trip[stopOffset].arrival_;
         newLabel.parentStation = label.parentStop;
-        newLabel.parentIndex = label.parentIndex;
+        newLabel.parentLabelIndex = label.parentLabelIndex;
         newLabel.parentDepartureTime = label.trip[label.parentStop].departure_;
         newLabel.routeId = routeId;
         arrival_by_route(stop, newLabel);
@@ -191,7 +191,7 @@ void McRaptor::startNewRound() {
                   << result[r_k][currentStation][label].arrivalTime << ") <- ";
         stop_id parentStation =
             result[r_k][currentStation][label].parentStation;
-        label = result[r_k][currentStation][label].parentIndex;
+        label = result[r_k][currentStation][label].parentLabelIndex;
         currentStation = parentStation;
         r_k--;
       }
