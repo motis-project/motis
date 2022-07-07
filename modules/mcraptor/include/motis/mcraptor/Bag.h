@@ -36,8 +36,8 @@ struct Bag {
   }
 
   void mergeUndominated(Label& otherLabel) noexcept {
-    if(dominates(otherLabel)){
-      std::cout << "mergeUndominated returns" << std::endl;
+    if(dominates(otherLabel)){ //TODO why is it asserted in original?
+//      std::cout << "mergeUndominated returns" << std::endl;
       return;
     }
     size_t removedLabels = 0;

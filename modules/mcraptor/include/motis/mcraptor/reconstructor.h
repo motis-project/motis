@@ -345,6 +345,10 @@ struct reconstructor {
         }
       }
 
+      if(!valid(previous_station)) {
+        break;
+      }
+
       arrival_station = previous_station;
       station_arrival = result[result_idx - 1][arrival_station].getEarliestArrivalTime();
     }
