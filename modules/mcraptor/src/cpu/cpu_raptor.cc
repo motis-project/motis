@@ -65,7 +65,6 @@ void McRaptor::relax_transfers() {
     }
     Bag& bag = previousRound()[stop];
     // iterate through footpaths - coming from the update_footpath()
-    // TODO: check
     auto index_into_transfers = query.tt_.stops_[stop].index_to_transfers_;
     auto next_index_into_transfers = query.tt_.stops_[stop + 1].index_to_transfers_;
     for (auto current_index = index_into_transfers;
@@ -121,16 +120,13 @@ void McRaptor::scan_routes() {
     route_stops_index stopOffset = i->second;
     raptor_route route = query.tt_.routes_[routeId];
     stop_id stop = query.tt_.route_stops_[route.index_to_route_stops_ + stopOffset];
+    const stop_count tripSize = route.stop_count_;
 
     // event represents the arrival and departure times of route in its single station
     const stop_time* firstTrip = &query.tt_.stop_times_[route.index_to_stop_times_];
-    const stop_time* lastTrip = &query.tt_.stop_times_[route.index_to_stop_times_ + route.stop_count_ * (route.trip_count_ - 1)];
+    const stop_time* lastTrip = &query.tt_.stop_times_[route.index_to_stop_times_ + tripSize * (route.trip_count_ - 1)];
 
     RouteBag newRouteBag;
-
-    const auto tripSize = route.stop_count_;
-
-    // TODO: check
     while(stopOffset < tripSize - 1) {
       for(size_t j = 0; j < previousRound()[stop].size(); j++) {
         const Label& label = previousRound()[stop][j];
@@ -138,7 +134,11 @@ void McRaptor::scan_routes() {
         while((trip < lastTrip) && (trip[stopOffset].departure_ < label.arrivalTime)) {
           trip += tripSize;
         }
-        if(trip[stopOffset].departure_ < label.arrivalTime) continue;
+
+        time tripDeparture = trip[stopOffset].departure_;
+        if(!valid(tripDeparture) || tripDeparture < label.arrivalTime) {
+          continue;
+        }
 
         RouteLabel newLabel;
         newLabel.trip = trip;
