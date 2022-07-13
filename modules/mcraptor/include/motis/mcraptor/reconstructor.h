@@ -10,6 +10,7 @@
 #include "motis/routing/output/stop.h"
 #include "motis/routing/output/to_journey.h"
 #include "motis/routing/output/transport.h"
+#include "Label.h"
 
 namespace motis::mcraptor {
 
@@ -263,16 +264,34 @@ struct reconstructor {
 
   template <typename Query>
   void add(Query const& q) {
-    for (auto& c : get_candidates(q)) {
-      if (!c.ends_with_footpath_) {
-        // We need to add the transfer time to the arrival,
-        // since all arrivals in the results are with pre-added transfer times.
-        // But only if the journey does not end with a footpath,
-        // since footpaths have no pre-added transfer times.
-        c.arrival_ += raptor_sched_.transfer_times_[c.target_];
-      }
+//    for (auto& c : get_candidates(q)) {
+//      if (!c.ends_with_footpath_) {
+//        // We need to add the transfer time to the arrival,
+//        // since all arrivals in the results are with pre-added transfer times.
+//        // But only if the journey does not end with a footpath,
+//        // since footpaths have no pre-added transfer times.
+//        c.arrival_ += raptor_sched_.transfer_times_[c.target_];
+//      }
+//
+//      journeys_.push_back(reconstruct_journey(c, q));
+//    }
 
-      journeys_.push_back(reconstruct_journey(c, q));
+    Rounds& result = q.result();
+    for(Label& l : result.getAllLabelsForStop(q.target_, max_raptor_round)) {
+      intermediate_journey ij = intermediate_journey(l.changesCount, q.ontrip_, q.source_time_begin_);
+
+      raptor_round r_k = l.changesCount;
+      stop_id currentStation = q.target_;
+      size_t label = l.parentLabelIndex;
+      stop_id parentStation = l.parentStation;
+      while (valid(currentStation) && r_k >= 0 && result[r_k][currentStation].isValid()) {
+//        std::cout << currentStation << "("
+//                  << result[r_k][currentStation][label].arrivalTime << ") <- ";
+        parentStation = result[r_k][currentStation][label].parentStation;
+        label = result[r_k][currentStation][label].parentLabelIndex;
+        currentStation = parentStation;
+        r_k--;
+      }
     }
   }
 

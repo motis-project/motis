@@ -3,6 +3,7 @@
 #include "Bag.h"
 #include "Label.h"
 #include "motis/mcraptor/raptor_timetable.h"
+#include "motis/mcraptor/raptor_query.h"
 
 namespace motis::mcraptor {
 
@@ -50,6 +51,18 @@ public:
   Bag const* operator[](raptor_round const index) const {
     return &bags[static_cast<ptrdiff_t>(index) * stop_count_];
   };
+
+  std::vector<Label> getAllLabelsForStop(stop_id stopId, raptor_round maxRound) {
+    std::vector<Label> res = std::vector<Label>();
+    for(int i = 0; i < maxRound; i++) {
+      Bag& bag = bags[i];
+      if(bag.isValid()) {
+        for(Label& l : bag.labels) {
+          res.push_back(l);
+        }
+      }
+    }
+  }
 };
 
 } // namespace motis::mcraptor

@@ -7,22 +7,22 @@ namespace motis::mcraptor {
 
 
 class Label {
-//  typedef bool (*rule)(Label& label, Label& other);
-//
-//  static bool arrivalTimeRule(Label& label, Label& other) {
-//    return label.arrivalTime <= other.arrivalTime;
-//  }
-//
-//  static bool departureTimeRule(Label& label, Label& other) {
-//    return label.departureTime >= other.departureTime;
-//  }
-//
-//  static bool changesCountRule(Label& label, Label& other) {
-//    return label.changesCount <= other.changesCount;
-//  }
 
+  inline bool arrivalTimeRule(Label& other) {
+    return arrivalTime <= other.arrivalTime;
+  }
 
-//  std::vector<rule> rules;
+  inline bool departureTimeRule(Label& other) {
+    return departureTime >= other.departureTime;
+  }
+
+  inline bool changesCountRule(Label& other) {
+    return changesCount <= other.changesCount;
+  }
+
+  inline bool travelDurationRule(Label& other) {
+    return (arrivalTime - departureTime) <= (other.arrivalTime - other.departureTime);
+  }
 
 public:
   // Parameters
@@ -36,12 +36,7 @@ public:
   size_t parentLabelIndex = invalid<size_t>;
   route_id routeId = invalid<route_id>;
 
-
-  // Constructor with rules
   Label() {
-//    rules.push_back(arrivalTimeRule);
-//    rules.push_back(departureTimeRule);
-//    rules.push_back(changesCountRule);
   }
 
   Label(time departureTime, time arrivalTime, size_t changesCount) : departureTime(departureTime),
@@ -55,14 +50,9 @@ public:
                                                                          parentDepartureTime(parentLabel.arrivalTime) { }
 
   bool dominates(Label& other) {
-//    for (rule& r : rules) {
-//      if(!r(*this, other)) {
-//        return false;
-//      }
-//    }
-//    return true;
-  return arrivalTime <= other.arrivalTime;
+    return arrivalTimeRule(other);
   }
+
 
   bool dominatesAll(std::vector<Label> labels) {
     for (Label& l : labels) {
