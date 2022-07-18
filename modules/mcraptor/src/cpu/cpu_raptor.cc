@@ -6,7 +6,7 @@ namespace motis::mcraptor {
 
 void McRaptor::init_arrivals() {
   startNewRound();
-  Label newLabel(0, query.source_time_begin_, 0);
+  Label newLabel(0, query.source_time_begin_, round);
   newLabel.parentStation = query.source_;
   arrival_by_route(query.source_, newLabel);
   startNewRound();
@@ -77,6 +77,8 @@ void McRaptor::relax_transfers() {
         newLabel.parentStation = stop;
         newLabel.parentLabelIndex = i;
         newLabel.parentDepartureTime = bag[i].arrivalTime;
+        newLabel.changesCount = round;
+        newLabel.footPathDuration = duration;
         arrival_by_transfer(to_stop, newLabel);
       }
     }
@@ -131,8 +133,10 @@ void McRaptor::scan_routes() {
       for(size_t j = 0; j < previousRound()[stop].size(); j++) {
         const Label& label = previousRound()[stop][j];
         const stop_time* trip = firstTrip;
+        trip_id current_trip_id = 0;
         while((trip < lastTrip) && (trip[stopOffset].departure_ < label.arrivalTime)) {
           trip += tripSize;
+          current_trip_id++;
         }
 
         time tripDeparture = trip[stopOffset].departure_;
@@ -144,6 +148,7 @@ void McRaptor::scan_routes() {
         newLabel.trip = trip;
         newLabel.parentLabelIndex = j;
         newLabel.parentStop = stop;
+        newLabel.current_trip_id = tripId;
         newRouteBag.merge(newLabel);
       }
       stopOffset++;
@@ -155,6 +160,9 @@ void McRaptor::scan_routes() {
         newLabel.parentLabelIndex = label.parentLabelIndex;
         newLabel.parentDepartureTime = label.trip[label.parentStop].departure_;
         newLabel.routeId = routeId;
+        newLabel.stop_offset = stopOffset;
+        newLabel.current_trip_id = label.current_trip_id;
+        newLabel.changesCount = round;
         arrival_by_route(stop, newLabel);
 
       }

@@ -70,20 +70,21 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
   reconstructor.add(q);
   stats.rec_time_ += MOTIS_GET_TIMING_US(plus_one_rec_time);
 
-  for (auto dep_idx = upper; dep_idx != lower; --dep_idx) {
-    stats.raptor_queries_ += 1;
-    q.source_time_begin_ = dep_events[q.source_][dep_idx];
+//  for (auto dep_idx = upper; dep_idx != lower; --dep_idx) {
+//    stats.raptor_queries_ += 1;
+//    q.source_time_begin_ = dep_events[q.source_][dep_idx];
+//
+//    MOTIS_START_TIMING(raptor_time);
+//    raptor_search(q);
+//    stats.raptor_time_ += MOTIS_GET_TIMING_US(raptor_time);
+//
+//    MOTIS_START_TIMING(rec_timing);
+//    reconstructor.add(q);
+//    stats.rec_time_ += MOTIS_GET_TIMING_US(rec_timing);
+//  }
 
-    MOTIS_START_TIMING(raptor_time);
-    raptor_search(q);
-    stats.raptor_time_ += MOTIS_GET_TIMING_US(raptor_time);
-
-    MOTIS_START_TIMING(rec_timing);
-    reconstructor.add(q);
-    stats.rec_time_ += MOTIS_GET_TIMING_US(rec_timing);
-  }
-
-  return reconstructor.get_journeys(q.source_time_end_);
+  //return reconstructor.get_journeys(q.source_time_end_);
+  return reconstructor.get_journeys();
 }
 
 inline std::vector<journey> cpu_raptor(raptor_query& q,

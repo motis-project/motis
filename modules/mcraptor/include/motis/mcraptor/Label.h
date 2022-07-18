@@ -34,7 +34,12 @@ public:
   stop_id parentStation = invalid<stop_id>;
   time parentDepartureTime = invalid<time>;
   size_t parentLabelIndex = invalid<size_t>;
+
+  // Current trip info
   route_id routeId = invalid<route_id>;
+  trip_id current_trip_id = invalid<trip_id>;
+  route_stops_index stop_offset = invalid<route_stops_index>;
+  time foot_path_duration = invalid<time>;
 
   Label() {
   }
@@ -45,6 +50,8 @@ public:
 
   // to create labels for current round from labels from previous round for certain station
   Label(Label& parentLabel, stop_id parentStation, size_t parentIndex) : arrivalTime(parentLabel.arrivalTime),
+                                                                         changesCount(parentLabel.changesCount + 1),
+                                                                         departureTime(parentLabel.departureTime),
                                                                          parentStation(parentStation),
                                                                          parentLabelIndex(parentIndex),
                                                                          parentDepartureTime(parentLabel.arrivalTime) { }
@@ -70,6 +77,8 @@ struct RouteLabel {
 
   // TODO: check
   const stop_time* trip = nullptr;
+  trip_id current_trip_id = invalid<trip_id>;
+  route_stops_index stop_offset = invalid<route_stops_index>;
 
   route_stops_index parentStop = invalid<route_stops_index>;
   size_t parentLabelIndex = invalid<size_t>;

@@ -276,22 +276,37 @@ struct reconstructor {
 //      journeys_.push_back(reconstruct_journey(c, q));
 //    }
 
+
+//TODO reproduce another ij assignments from reconstruct_journey, fix bugs
     Rounds& result = q.result();
     for(Label& l : result.getAllLabelsForStop(q.target_, max_raptor_round)) {
       intermediate_journey ij = intermediate_journey(l.changesCount, q.ontrip_, q.source_time_begin_);
 
-      raptor_round r_k = l.changesCount;
-      stop_id currentStation = q.target_;
-      size_t label = l.parentLabelIndex;
-      stop_id parentStation = l.parentStation;
-      while (valid(currentStation) && r_k >= 0 && result[r_k][currentStation].isValid()) {
-//        std::cout << currentStation << "("
-//                  << result[r_k][currentStation][label].arrivalTime << ") <- ";
-        parentStation = result[r_k][currentStation][label].parentStation;
-        label = result[r_k][currentStation][label].parentLabelIndex;
-        currentStation = parentStation;
+      Label& current_station_label = l;
+      raptor_round r_k = current_station_label.changesCount;
+      stop_id current_station = q.target_;
+      size_t parent_label_index = current_station_label.parentLabelIndex;
+      stop_id parent_station = current_station_label.parentStation;
+      time last_departure = invalid<time>;
+      while(r_k > 0) {
+        if(current_station != parent_station) {
+          last_departure = ij.add_route(parent_station, current_station_label.routeId, current_station_label.current_trip_id,
+                                        current_station_label.stop_offset, raptor_sched_, timetable_);
+        }
+        else {
+          ij.add_footpath(current_station, current_station_label.arrivalTime, current_station_label.parentDepartureTime,
+                          current_station_label.foot_path_duration, raptor_sched_);
+        }
+
         r_k--;
+        current_station_label = result[r_k][parent_station][parent_label_index];
+        current_station = parent_station;
+        parent_label_index = current_station_label.parentLabelIndex;
+        parent_station = current_station_label.parentStation;
       }
+
+      ij.add_start_station(current_station, raptor_sched_, last_departure);
+      journeys_.push_back(ij);
     }
   }
 

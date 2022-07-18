@@ -55,13 +55,14 @@ public:
   std::vector<Label> getAllLabelsForStop(stop_id stopId, raptor_round maxRound) {
     std::vector<Label> res = std::vector<Label>();
     for(int i = 0; i < maxRound; i++) {
-      Bag& bag = bags[i];
+      Bag& bag = (*this)[i][stopId];
       if(bag.isValid()) {
         for(Label& l : bag.labels) {
           res.push_back(l);
         }
       }
     }
+    return res;
   }
 };
 
