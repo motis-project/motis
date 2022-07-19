@@ -16,6 +16,7 @@
 #include "motis/core/access/service_access.h"
 #include "motis/core/access/trip_iterator.h"
 
+#include "motis/rt/expanded_trips.h"
 #include "motis/rt/in_out_allowed.h"
 #include "motis/rt/incoming_edges.h"
 #include "motis/rt/update_constant_graph.h"
@@ -155,13 +156,10 @@ inline void update_expanded_trips(
     utl::erase(sched.route_to_expanded_routes_.at(old_route_id), exp_route_id);
   }
 
-  auto new_exp_routes = sched.route_to_expanded_routes_[new_route_id];
   for (auto const& [new_trip, old_eti] : new_trips) {
-    auto new_exp_route = sched.expanded_trips_.emplace_back();
-    new_exp_route.emplace_back(new_trip);
-    new_exp_routes.emplace_back(new_exp_route.index());
-    update_builder.expanded_trip_moved(new_trip, old_eti,
-                                       {{new_exp_route.index(), 0}});
+    auto const new_eti =
+        add_trip_to_new_expanded_route(sched, new_trip, new_route_id);
+    update_builder.expanded_trip_moved(new_trip, old_eti, new_eti);
   }
 }
 

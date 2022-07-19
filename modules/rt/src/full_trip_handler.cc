@@ -25,6 +25,7 @@
 
 #include "motis/rt/build_route_node.h"
 #include "motis/rt/connection_builder.h"
+#include "motis/rt/expanded_trips.h"
 #include "motis/rt/incoming_edges.h"
 #include "motis/rt/update_constant_graph.h"
 
@@ -566,11 +567,7 @@ private:
     assert(!trp->edges_->empty());
     auto const route_id = static_cast<uint32_t>(
         trp->edges_->front().get_edge()->get_source()->route_);
-    auto new_exp_route = sched_.expanded_trips_.emplace_back();
-    new_exp_route.emplace_back(trp);
-    sched_.route_to_expanded_routes_[route_id].emplace_back(
-        new_exp_route.index());
-    return {new_exp_route.index(), 0};
+    return add_trip_to_new_expanded_route(sched_, trp, route_id);
   }
 
   void update_event(event_info const& cur_event, event_info const& msg_event,

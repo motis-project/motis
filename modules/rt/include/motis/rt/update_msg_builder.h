@@ -12,12 +12,9 @@
 #include "motis/hash_map.h"
 #include "motis/hash_set.h"
 
-namespace motis::rt {
+#include "motis/rt/expanded_trips.h"
 
-struct expanded_trip_index {
-  uint32_t route_index_{};
-  uint32_t index_in_route_{};
-};
+namespace motis::rt {
 
 struct expanded_trip_update_info {
   std::optional<expanded_trip_index> old_route_{};

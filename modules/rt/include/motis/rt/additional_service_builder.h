@@ -19,6 +19,7 @@
 
 #include "motis/rt/build_route_node.h"
 #include "motis/rt/connection_builder.h"
+#include "motis/rt/expanded_trips.h"
 #include "motis/rt/incoming_edges.h"
 #include "motis/rt/update_constant_graph.h"
 #include "motis/rt/update_msg_builder.h"
@@ -251,11 +252,9 @@ struct additional_service_builder {
     }
 
     auto const new_route_id = first_edge->from_->route_;
-    auto new_exp_route = sched_.expanded_trips_.emplace_back();
-    new_exp_route.emplace_back(trp);
-    sched_.route_to_expanded_routes_[new_route_id].emplace_back(
-        new_exp_route.index());
-    update_builder_.expanded_trip_added(trp, {new_exp_route.index(), 0});
+    auto const new_eti =
+        add_trip_to_new_expanded_route(sched_, trp, new_route_id);
+    update_builder_.expanded_trip_added(trp, new_eti);
 
     return trp;
   }

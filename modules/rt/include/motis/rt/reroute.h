@@ -13,6 +13,7 @@
 #include "motis/rt/build_route_node.h"
 #include "motis/rt/connection_builder.h"
 #include "motis/rt/event_resolver.h"
+#include "motis/rt/expanded_trips.h"
 #include "motis/rt/find_trip_fuzzy.h"
 #include "motis/rt/in_out_allowed.h"
 #include "motis/rt/incoming_edges.h"
@@ -351,11 +352,7 @@ inline void update_expanded_routes_map(schedule& sched, trip* trp,
     }
   }
   if (new_route_id.has_value()) {
-    auto new_exp_route = sched.expanded_trips_.emplace_back();
-    new_exp_route.emplace_back(trp);
-    sched.route_to_expanded_routes_[*new_route_id].emplace_back(
-        new_exp_route.index());
-    new_eti = {new_exp_route.index(), 0};
+    new_eti = add_trip_to_new_expanded_route(sched, trp, *new_route_id);
   }
 
   update_builder.expanded_trip_moved(trp, old_eti, new_eti);
