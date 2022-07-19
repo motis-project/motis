@@ -18,7 +18,14 @@ msg_ptr fork_universe(paxmon_data& data, msg_ptr const& msg) {
   auto const& base_sched = uv_access.sched_;
   auto const fork_schedule = req->fork_schedule();
   scoped_timer timer{"paxmon: fork universe"};
-  auto* new_uv = data.multiverse_.fork(base_uv, base_sched, fork_schedule);
+
+  auto ttl = std::chrono::seconds{req->ttl()};
+  if ((ttl.count() == 0 && !data.allow_infinite_universe_ttl_) ||
+      (ttl > data.max_universe_ttl_)) {
+    ttl = data.max_universe_ttl_;
+  }
+
+  auto* new_uv = data.multiverse_.fork(base_uv, base_sched, fork_schedule, ttl);
 
   // broadcast
   {
@@ -34,10 +41,11 @@ msg_ptr fork_universe(paxmon_data& data, msg_ptr const& msg) {
   }
 
   message_creator mc;
-  mc.create_and_finish(MsgContent_PaxMonForkUniverseResponse,
-                       CreatePaxMonForkUniverseResponse(
-                           mc, new_uv->id_, new_uv->schedule_res_id_)
-                           .Union());
+  mc.create_and_finish(
+      MsgContent_PaxMonForkUniverseResponse,
+      CreatePaxMonForkUniverseResponse(mc, new_uv->id_,
+                                       new_uv->schedule_res_id_, ttl.count())
+          .Union());
   return make_msg(mc);
 }
 
