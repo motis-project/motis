@@ -13,6 +13,7 @@
 #include "motis/pair.h"
 #include "motis/vector.h"
 
+#include "motis/core/common/dynamic_fws_multimap.h"
 #include "motis/core/common/fws_multimap.h"
 #include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/attribute.h"
@@ -93,7 +94,8 @@ struct schedule {
   mcd::hash_map<mcd::pair<ptr<trip const>, ev_key>, boost::uuids::uuid>
       event_to_uuid_;
 
-  fws_multimap<ptr<trip>> expanded_trips_;
+  dynamic_fws_multimap<ptr<trip>> expanded_trips_;
+  dynamic_fws_multimap<uint32_t> route_to_expanded_routes_;
 };
 
 using schedule_ptr = mcd::unique_ptr<schedule>;

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <optional>
+
+#include "utl/erase.h"
 #include "utl/to_vec.h"
 
 #include "motis/core/schedule/build_platform_node.h"
@@ -11,6 +14,7 @@
 #include "motis/rt/build_route_node.h"
 #include "motis/rt/connection_builder.h"
 #include "motis/rt/event_resolver.h"
+#include "motis/rt/expanded_trips.h"
 #include "motis/rt/find_trip_fuzzy.h"
 #include "motis/rt/in_out_allowed.h"
 #include "motis/rt/incoming_edges.h"
@@ -335,8 +339,43 @@ inline void update_delay_infos_and_event_uuids(
   }
 }
 
+inline void update_expanded_routes_map(schedule& sched, trip* trp,
+                                       std::optional<uint32_t> new_route_id,
+                                       update_msg_builder& update_builder) {
+  std::optional<expanded_trip_index> old_eti;
+  std::optional<expanded_trip_index> new_eti;
+
+  if (!trp->edges_->empty()) {
+    auto const old_route_id = trp->edges_->front()->from_->route_;
+    for (auto const old_exp_route_id :
+         sched.route_to_expanded_routes_.at(old_route_id)) {
+      auto exp_route = sched.expanded_trips_.at(old_exp_route_id);
+      if (auto it = std::find(begin(exp_route), end(exp_route), trp);
+          it != end(exp_route)) {
+        old_eti = {old_exp_route_id,
+                   static_cast<uint32_t>(std::distance(begin(exp_route), it))};
+        exp_route.erase(it);
+        if (exp_route.empty()) {
+          utl::erase(sched.route_to_expanded_routes_.at(old_route_id),
+                     old_exp_route_id);
+        }
+        break;
+      }
+    }
+  }
+  if (new_route_id.has_value()) {
+    new_eti = add_trip_to_new_expanded_route(sched, trp, *new_route_id);
+  }
+
+  update_builder.expanded_trip_moved(trp, old_eti, new_eti);
+}
+
 inline void update_trip(schedule& sched, trip* trp,
-                        mcd::vector<trip::route_edge> const& trip_edges) {
+                        mcd::vector<trip::route_edge> const& trip_edges,
+                        update_msg_builder& update_builder) {
+  update_expanded_routes_map(
+      sched, trp, static_cast<uint32_t>(trip_edges.front()->from_->route_),
+      update_builder);
   for (auto const& trp_e : *trp->edges_) {
     auto const e = trp_e.get_edge();
     e->m_.route_edge_.conns_[trp->lcon_idx_].valid_ = 0U;
@@ -418,6 +457,7 @@ inline std::pair<reroute_result, trip const*> reroute(
   add_not_deleted_trip_events(sched, del_evs, trp, evs);
   if (evs.empty()) {
     disable_event_uuids(sched, trp, del_evs);
+    update_expanded_routes_map(sched, trp, {}, update_builder);
     disable_trip(*old_trip, old_lcon_idx);
     trp->edges_ =
         sched.trip_edges_
@@ -443,7 +483,7 @@ inline std::pair<reroute_result, trip const*> reroute(
   auto const trip_edges = build_route(sched, sections, incoming);
   patch_incoming_edges(incoming);
   update_delay_infos_and_event_uuids(sched, evs, trip_edges, trp);
-  update_trip(sched, trp, trip_edges);
+  update_trip(sched, trp, trip_edges, update_builder);
   store_cancelled_delays(sched, trp, del_evs, cancelled_delays, cancelled_evs);
   disable_trip(*old_trip, old_lcon_idx);
 

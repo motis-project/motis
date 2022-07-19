@@ -74,6 +74,7 @@ import Json.Encode
 import Localization.Base exposing (..)
 import Localization.De exposing (..)
 import Localization.En exposing (..)
+import Localization.Fr exposing (..)
 import Localization.Pl exposing (..)
 import Maybe.Extra exposing (isJust, isNothing, orElse)
 import Navigation exposing (Location)
@@ -1082,6 +1083,9 @@ getLocale language =
 
         "en" ->
             enLocalization
+
+        "fr" ->
+            frLocalization
 
         "pl" ->
             plLocalization

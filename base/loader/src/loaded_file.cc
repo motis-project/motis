@@ -2,6 +2,7 @@
 
 #include "motis/core/common/logging.h"
 
+#include "utl/parser/file.h"
 #include "utl/verify.h"
 
 namespace motis::loader {

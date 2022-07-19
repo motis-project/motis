@@ -47,9 +47,9 @@ msg_ptr rt_handler::update(msg_ptr const& msg) {
     try {
       update(m->message_nested_root());
     } catch (std::exception const& e) {
-      printf("rt::on_message: UNEXPECTED ERROR: %s\n", e.what());
+      LOG(logging::error) << "rt::on_message: UNEXPECTED ERROR: " << e.what();
     } catch (...) {
-      printf("rt::on_message: UNEXPECTED UNKNOWN ERROR\n");
+      LOG(logging::error) << "rt::on_message: UNEXPECTED UNKNOWN ERROR";
     }
   }
   return nullptr;
@@ -190,7 +190,7 @@ void rt_handler::update(motis::ris::Message const* m) {
       }
 
       if (separate_trp != nullptr) {
-        separate_trip(sched_, separate_trp);
+        separate_trip(sched_, separate_trp, update_builder_);
         resolved = resolve();
         stats_.track_separations_++;
       }
@@ -273,7 +273,7 @@ void rt_handler::propagate() {
     auto const trip_fit = fits_trip(sched_, k, t);
     if (!edge_fit || !trip_fit) {
       auto const trp = sched_.merged_trips_[k.lcon()->trips_]->front();
-      separate_trip(sched_, trp);
+      separate_trip(sched_, trp, update_builder_);
 
       if (!trip_fit) {
         trips_to_correct.insert(trp);

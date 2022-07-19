@@ -117,21 +117,18 @@ inline void serialize(Ctx& c, dynamic_fws_multimap<T, SizeType> const* origin,
   using Type = dynamic_fws_multimap<T, SizeType>;
   cista::serialize(c, &origin->index_, offset + offsetof(Type, index_));
   cista::serialize(c, &origin->data_, offset + offsetof(Type, data_));
+  cista::serialize(c, &origin->free_buckets_,
+                   offset + offsetof(Type, free_buckets_));
   cista::serialize(c, &origin->element_count_,
                    offset + offsetof(Type, element_count_));
-  cista::serialize(c, &origin->initial_capacity_,
-                   offset + offsetof(Type, initial_capacity_));
-  cista::serialize(c, &origin->growth_factor_,
-                   offset + offsetof(Type, growth_factor_));
 }
 
 template <typename Ctx, typename T, typename SizeType>
 inline void deserialize(Ctx const& c, dynamic_fws_multimap<T, SizeType>* el) {
   cista::deserialize(c, &el->index_);
   cista::deserialize(c, &el->data_);
+  cista::deserialize(c, &el->free_buckets_);
   cista::deserialize(c, &el->element_count_);
-  cista::deserialize(c, &el->initial_capacity_);
-  cista::deserialize(c, &el->growth_factor_);
 }
 
 template <typename T, typename SizeType>
@@ -140,9 +137,8 @@ cista::hash_t type_hash(dynamic_fws_multimap<T, SizeType> const& el,
                         std::map<cista::hash_t, unsigned>& done) {
   return cista::hash_combine(cista::type_hash(el.index_, h, done),
                              cista::type_hash(el.data_, h, done),
-                             cista::type_hash(el.element_count_, h, done),
-                             cista::type_hash(el.initial_capacity_, h, done),
-                             cista::type_hash(el.growth_factor_, h, done));
+                             cista::type_hash(el.free_buckets_, h, done),
+                             cista::type_hash(el.element_count_, h, done));
 }
 
 template <class... Ts>

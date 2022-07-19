@@ -10,7 +10,9 @@
 
 #include "boost/sort/sort.hpp"
 
+#include "utl/enumerate.h"
 #include "utl/pipes/range.h"
+#include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
@@ -35,23 +37,37 @@ inline bool is_same_bucket(time const a, time const b) {
   return get_bucket(a) == get_bucket(b);
 };
 
-void init_trip_to_connections(csa_timetable& tt) {
+void init_trip_to_connections(csa_timetable& tt,
+                              utl::progress_tracker_ptr& progress_tracker) {
   scoped_timer timer("csa: trip to connections");
+  progress_tracker->status("Trip to Connections")
+      .out_bounds(40.F, 60.F)
+      .in_high(tt.fwd_connections_.size());
   tt.trip_to_connections_.resize(tt.trip_count_);
-  for (auto const& con : tt.fwd_connections_) {
+  for (auto const& [i, con] : utl::enumerate(tt.fwd_connections_)) {
     if (con.light_con_ != nullptr) {
       assert(tt.trip_to_connections_[con.trip_].size() == con.trip_con_idx_);
       tt.trip_to_connections_[con.trip_].emplace_back(&con);
     }
+    if ((i % 10000) == 0) {
+      progress_tracker->update(i);
+    }
   }
 }
 
-void init_stop_to_connections(csa_timetable& tt) {
+void init_stop_to_connections(csa_timetable& tt,
+                              utl::progress_tracker_ptr& progress_tracker) {
   scoped_timer timer("csa: stop to connections");
-  for (auto const& con : tt.fwd_connections_) {
+  progress_tracker->status("Stop to Connections")
+      .out_bounds(60.F, 100.F)
+      .in_high(tt.fwd_connections_.size());
+  for (auto const& [i, con] : utl::enumerate(tt.fwd_connections_)) {
     if (con.light_con_ != nullptr) {
       tt.stations_[con.from_station_].outgoing_connections_.emplace_back(&con);
       tt.stations_[con.to_station_].incoming_connections_.emplace_back(&con);
+    }
+    if ((i % 10000) == 0) {
+      progress_tracker->update(i);
     }
   }
 }
@@ -128,7 +144,8 @@ std::vector<uint32_t> get_bucket_starts(
 
 trip_id get_connections_from_expanded_trips(
     csa_timetable& tt, schedule const& sched,
-    bool bridge_zero_duration_connections, bool add_footpath_connections) {
+    bool bridge_zero_duration_connections, bool add_footpath_connections,
+    utl::progress_tracker_ptr& progress_tracker) {
   scoped_timer build_timer{"csa: get connections"};
   trip_id trip_idx = 0;
   auto bridged_count = 0U;
@@ -136,8 +153,17 @@ trip_id get_connections_from_expanded_trips(
   auto footpath_connections_count = 0U;
   {
     scoped_timer connections_timer{"csa: build connections"};
+    progress_tracker->status("Build Connections")
+        .out_bounds(0.F, 15.F)
+        .in_high(sched.expanded_trips_.index_size());
+    auto route_idx = 0U;
     for (auto const& route_trips : sched.expanded_trips_) {
-      utl::verify(!route_trips.empty(), "empty route");
+      if ((++route_idx % 1000) == 0) {
+        progress_tracker->update(route_idx);
+      }
+      if (route_trips.empty()) {
+        continue;
+      }
       auto const first_trip = route_trips[0];
       auto const in_allowed =
           utl::to_vec(stops(first_trip), [](trip_stop const& ts) {
@@ -225,12 +251,14 @@ trip_id get_connections_from_expanded_trips(
 
   {
     scoped_timer sort_timer{"csa: sort connections"};
+    progress_tracker->status("Sort Connections").out_bounds(15.F, 35.F);
     boost::sort::parallel_stable_sort(
         std::begin(tt.fwd_connections_), std::end(tt.fwd_connections_),
         [&](csa_connection const& c1, csa_connection const& c2) -> bool {
           return c1.departure_ < c2.departure_;
         });
 
+    progress_tracker->update(50);
     tt.bwd_connections_ = tt.fwd_connections_;
     std::reverse(std::begin(tt.bwd_connections_),
                  std::end(tt.bwd_connections_));
@@ -243,15 +271,17 @@ trip_id get_connections_from_expanded_trips(
 
   {
     scoped_timer sort_timer{"csa: compute buckets"};
+    progress_tracker->status("Compute Buckets").out_bounds(35.F, 40.F);
     tt.fwd_bucket_starts_ =
         get_bucket_starts(begin(tt.fwd_connections_), end(tt.fwd_connections_),
                           search_dir::FWD, bridge_zero_duration_connections);
+    progress_tracker->update(50);
     tt.bwd_bucket_starts_ =
         get_bucket_starts(begin(tt.bwd_connections_), end(tt.bwd_connections_),
                           search_dir::BWD, bridge_zero_duration_connections);
   }
 
-  assert(trip_idx == sched.expanded_trips_.data_size());
+  assert(trip_idx == sched.expanded_trips_.element_count());
   return trip_idx;
 }
 
@@ -273,6 +303,8 @@ std::unique_ptr<csa_timetable> build_csa_timetable(
     bool const add_footpath_connections) {
   scoped_timer timer("building csa timetable");
 
+  auto progress_tracker = utl::get_active_progress_tracker_or_activate("csa");
+
   auto tt = std::make_unique<csa_timetable>();
 
   // Create stations
@@ -282,14 +314,16 @@ std::unique_ptr<csa_timetable> build_csa_timetable(
 
   LOG(info) << "Creating CSA Connections";
   tt->trip_count_ = get_connections_from_expanded_trips(
-      *tt, sched, bridge_zero_duration_connections, add_footpath_connections);
+      *tt, sched, bridge_zero_duration_connections, add_footpath_connections,
+      progress_tracker);
 
-  init_trip_to_connections(*tt);
-  init_stop_to_connections(*tt);
+  init_trip_to_connections(*tt, progress_tracker);
+  init_stop_to_connections(*tt, progress_tracker);
 
 #ifdef MOTIS_CUDA
   {
     scoped_timer gpu_timer("building csa gpu timetable");
+    progress_tracker->status("GPU Timetable");
     tt->gpu_timetable_ = gpu_timetable(*tt);
   }
 #endif

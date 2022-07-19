@@ -14,6 +14,7 @@
 #include "boost/uuid/uuid_io.hpp"
 
 #include "utl/enumerate.h"
+#include "utl/erase.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 #include "utl/zip.h"
@@ -25,9 +26,11 @@
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/access/uuids.h"
 #include "motis/core/conv/trip_conv.h"
+#include "motis/core/debug/trip.h"
 
 #include "motis/rt/build_route_node.h"
 #include "motis/rt/connection_builder.h"
+#include "motis/rt/expanded_trips.h"
 #include "motis/rt/incoming_edges.h"
 #include "motis/rt/update_constant_graph.h"
 
@@ -502,6 +505,9 @@ private:
 
   trip* create_or_update_trip(trip* trp, full_trip_id const& ftid,
                               mcd::vector<trip::route_edge> const& trip_edges) {
+    std::optional<expanded_trip_index> old_eti;
+    std::optional<expanded_trip_index> new_eti;
+
     auto const edges =
         sched_.trip_edges_
             .emplace_back(
@@ -525,6 +531,7 @@ private:
           std::lower_bound(begin(sched_.trips_), end(sched_.trips_), trp_entry),
           trp_entry);
     } else {
+      old_eti = remove_expanded_trip(trp);
       for (auto const& e : *trp->edges_) {
         e.get_edge()->m_.route_edge_.conns_[trp->lcon_idx_].valid_ = 0U;
       }
@@ -532,17 +539,57 @@ private:
       trp->lcon_idx_ = lcon_idx;
     }
 
-    // TODO(pablo): reuse existing
-    auto const new_trps_id = sched_.merged_trips_.size();
-    sched_.merged_trips_.emplace_back(
-        mcd::make_unique<mcd::vector<ptr<trip>>,
-                         std::initializer_list<ptr<trip>>>({trp}));
+    if (!trip_edges.empty()) {
+      // TODO(pablo): reuse existing
+      auto const new_trps_id = sched_.merged_trips_.size();
+      sched_.merged_trips_.emplace_back(
+          mcd::make_unique<mcd::vector<ptr<trip>>,
+                           std::initializer_list<ptr<trip>>>({trp}));
 
-    for (auto const& trp_edge : trip_edges) {
-      trp_edge.get_edge()->m_.route_edge_.conns_[lcon_idx].trips_ = new_trps_id;
+      for (auto const& trp_edge : trip_edges) {
+        trp_edge.get_edge()->m_.route_edge_.conns_[lcon_idx].trips_ =
+            new_trps_id;
+      }
+
+      new_eti = add_expanded_trip(trp);
     }
 
+    update_builder_.expanded_trip_moved(trp, old_eti, new_eti);
+
     return trp;
+  }
+
+  std::optional<expanded_trip_index> remove_expanded_trip(trip const* trp) {
+    if (trp->edges_->empty()) {
+      return {};
+    }
+    auto const old_route_id = trp->edges_->front()->from_->route_;
+    for (auto const old_exp_route_id :
+         sched_.route_to_expanded_routes_.at(old_route_id)) {
+      auto exp_route = sched_.expanded_trips_.at(old_exp_route_id);
+      if (auto it = std::find(begin(exp_route), end(exp_route), trp);
+          it != end(exp_route)) {
+        auto const eti = expanded_trip_index{
+            old_exp_route_id,
+            static_cast<uint32_t>(std::distance(begin(exp_route), it))};
+        exp_route.erase(it);
+        if (exp_route.empty()) {
+          utl::erase(sched_.route_to_expanded_routes_.at(old_route_id),
+                     old_exp_route_id);
+        }
+        return eti;
+      }
+    }
+    LOG(warn) << "rt::full_trip_handler: expanded trip not found: "
+              << debug::trip{sched_, trp};
+    return {};
+  }
+
+  expanded_trip_index add_expanded_trip(trip* trp) {
+    assert(!trp->edges_->empty());
+    auto const route_id = static_cast<uint32_t>(
+        trp->edges_->front().get_edge()->get_source()->route_);
+    return add_trip_to_new_expanded_route(sched_, trp, route_id);
   }
 
   void update_event(event_info const& cur_event, event_info const& msg_event,

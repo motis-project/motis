@@ -35,9 +35,7 @@ bool check_journey(journey const& j,
 
   for (auto i = 1UL; i < j.stops_.size(); ++i) {
     if (j.stops_[i].arrival_.timestamp_ <
-            j.stops_[i - 1].departure_.timestamp_ ||
-        j.stops_[i].arrival_.schedule_timestamp_ <
-            j.stops_[i - 1].departure_.schedule_timestamp_) {
+        j.stops_[i - 1].departure_.timestamp_) {
       raise_error() << "  Stops broken: " << (i - 1) << "/" << i
                     << ": Arrival before departure" << std::endl;
     }
@@ -45,9 +43,7 @@ bool check_journey(journey const& j,
 
   for (auto const& stop : j.stops_) {
     if (stop.arrival_.valid_ && stop.departure_.valid_) {
-      if (stop.departure_.timestamp_ < stop.arrival_.timestamp_ ||
-          stop.departure_.schedule_timestamp_ <
-              stop.arrival_.schedule_timestamp_) {
+      if (stop.departure_.timestamp_ < stop.arrival_.timestamp_) {
         raise_error() << "  Stop broken: " << stop.name_
                       << ": Departure before arrival" << std::endl;
       }
