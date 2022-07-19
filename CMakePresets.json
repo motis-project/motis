@@ -148,8 +148,8 @@
       },
       "environment": {
         "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-        "CXX": "/usr/bin/g++-10",
-        "CC": "/usr/bin/gcc-10"
+        "CXX": "/usr/bin/g++-11",
+        "CC": "/usr/bin/gcc-11"
       }
     },
     {
@@ -164,8 +164,8 @@
       },
       "environment": {
         "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-        "CXX": "/usr/bin/g++-10",
-        "CC": "/usr/bin/gcc-10"
+        "CXX": "/usr/bin/g++-11",
+        "CC": "/usr/bin/gcc-11"
       }
     },
     {
@@ -179,8 +179,8 @@
       },
       "environment": {
         "PATH": "/opt:/opt/cmake-3.23.0-rc3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-        "CXX": "/usr/bin/g++-10",
-        "CC": "/usr/bin/gcc-10"
+        "CXX": "/usr/bin/g++-11",
+        "CC": "/usr/bin/gcc-11"
       }
     },
     {
