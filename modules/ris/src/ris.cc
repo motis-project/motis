@@ -492,9 +492,12 @@ struct ris::impl {
     ~publisher() { flush(); }
 
     void flush() {
-      if (offsets_.empty()) {
+      if (offsets_.empty() || skip_flush_) {
         return;
       }
+      // prevent the destructor from running flush() again if an exception
+      // occurs inside flush()
+      skip_flush_ = true;
 
       fbb_.create_and_finish(
           MsgContent_RISBatch,
@@ -507,6 +510,7 @@ struct ris::impl {
       offsets_.clear();
 
       ctx::await_all(motis_publish(msg));
+      skip_flush_ = false;
     }
 
     void add(uint8_t const* ptr, size_t const size) {
@@ -524,6 +528,7 @@ struct ris::impl {
     message_creator fbb_;
     std::vector<flatbuffers::Offset<MessageHolder>> offsets_;
     unixtime max_timestamp_ = 0;
+    bool skip_flush_{};
     ctx::res_id_t schedule_res_id_{};
   };
 

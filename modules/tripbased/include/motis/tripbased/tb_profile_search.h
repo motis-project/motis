@@ -62,7 +62,7 @@ struct tb_profile_search {
         total_earliest_arrival_(
             array_maker<time, MAX_TRANSFERS + 1>::make_array(INVALID)),
         first_reachable_stop_(
-            data.trip_count_,
+            data.trip_idx_end_,
             array_maker<stop_idx_t, MAX_TRANSFERS + 1>::make_array(
                 Dir == search_dir::FWD
                     ? std::numeric_limits<stop_idx_t>::max()
@@ -372,7 +372,7 @@ private:
 
       auto const line = data_.trip_to_line_[trip];
       for (trip_id t = trip;
-           t < data_.trip_count_ && data_.trip_to_line_[t] == line; ++t) {
+           t < data_.trip_idx_end_ && data_.trip_to_line_[t] == line; ++t) {
         for (auto trfs = transfers; trfs <= MAX_TRANSFERS; ++trfs) {
           first_reachable_stop_[t][trfs] =
               std::min(first_reachable_stop_[t][trfs], stop_index);

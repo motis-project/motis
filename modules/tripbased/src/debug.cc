@@ -22,9 +22,11 @@ trip_id find_trip(tb_data const& data, schedule const& sched,
     case TripSelector_TripId: {
       auto const id = reinterpret_cast<TripId const*>(selector->selector());
       auto const motis_trip = from_fbs(sched, id);
-      auto const expanded_trip = std::find_if(
-          begin(sched.expanded_trips_.data_), end(sched.expanded_trips_.data_),
-          [&](trip const* t) { return t->id_ == motis_trip->id_; });
+      auto const expanded_trip =
+          std::find_if(begin(sched.expanded_trips_.data_),
+                       end(sched.expanded_trips_.data_), [&](trip const* t) {
+                         return t != nullptr && t->id_ == motis_trip->id_;
+                       });
       if (expanded_trip == end(sched.expanded_trips_.data_)) {
         throw std::system_error(error::trip_not_found);
       }
@@ -35,7 +37,7 @@ trip_id find_trip(tb_data const& data, schedule const& sched,
       auto const index =
           reinterpret_cast<ExpandedTripId const*>(selector->selector())
               ->index();
-      if (index < data.trip_count_) {
+      if (index < data.trip_idx_end_) {
         return index;
       } else {
         throw std::system_error(error::trip_not_found);
@@ -225,7 +227,7 @@ Offset<TripDebugInfo> get_trip_debug_info(FlatBufferBuilder& fbb,
                                           schedule const& sched,
                                           TripSelectorWrapper const* selector) {
   auto const trp = find_trip(data, sched, selector);
-  utl::verify(trp < data.trip_count_, "get_trip_debug_info: invalid trip id");
+  utl::verify(trp < data.trip_idx_end_, "get_trip_debug_info: invalid trip id");
   auto const line = data.trip_to_line_[trp];
   return CreateTripDebugInfo(
       fbb, fbs_tb_trip_id(fbb, sched, trp),
@@ -242,17 +244,21 @@ Offset<Vector<Offset<TripAtStopDebugInfo>>> get_trips_at_stop_debug_info(
   };
   std::vector<Offset<TripAtStopDebugInfo>> trips;
   for (auto const& ls : data.lines_at_stop_[station]) {
-    for (auto trp = data.line_to_first_trip_[ls.line_];
-         trp <= data.line_to_last_trip_[ls.line_]; ++trp) {
-      auto const [arrival_transports, departure_transports] =  // NOLINT
-          get_transport_debug_infos(fbb, sched, trp, ls.stop_idx_);
-      trips.push_back(CreateTripAtStopDebugInfo(
-          fbb, fbs_tb_trip_id(fbb, sched, trp), ls.stop_idx_,
-          ts(data.arrival_times_[trp][ls.stop_idx_]),
-          ts(data.departure_times_[trp][ls.stop_idx_]),
-          data.in_allowed_[ls.line_][ls.stop_idx_] != 0,
-          data.out_allowed_[ls.line_][ls.stop_idx_] != 0, arrival_transports,
-          departure_transports));
+    auto const first_trip_in_line = data.line_to_first_trip_[ls.line_];
+    auto const last_trip_in_line = data.line_to_last_trip_[ls.line_];
+    if (first_trip_in_line < data.trip_idx_end_ &&
+        data.trip_to_line_[first_trip_in_line] == ls.line_) {
+      for (auto trp = first_trip_in_line; trp <= last_trip_in_line; ++trp) {
+        auto const [arrival_transports, departure_transports] =  // NOLINT
+            get_transport_debug_infos(fbb, sched, trp, ls.stop_idx_);
+        trips.push_back(CreateTripAtStopDebugInfo(
+            fbb, fbs_tb_trip_id(fbb, sched, trp), ls.stop_idx_,
+            ts(data.arrival_times_[trp][ls.stop_idx_]),
+            ts(data.departure_times_[trp][ls.stop_idx_]),
+            data.in_allowed_[ls.line_][ls.stop_idx_] != 0,
+            data.out_allowed_[ls.line_][ls.stop_idx_] != 0, arrival_transports,
+            departure_transports));
+      }
     }
   }
   return fbb.CreateVector(trips);

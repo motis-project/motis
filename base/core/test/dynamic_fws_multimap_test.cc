@@ -1,3 +1,5 @@
+#include <iterator>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -225,6 +227,47 @@ TEST(dynamic_fws_multimap_test, int_erase_2) {
   EXPECT_THAT(mm[0], ElementsAreArray({4, 8}));
   EXPECT_THAT(mm[1], ElementsAreArray({15, 16, 23, 42}));
   EXPECT_THAT(mm[2], ElementsAreArray({250, 350}));
+}
+
+TEST(dynamic_fws_multimap_test, int_erase_3) {
+  auto mm = build_test_map_1();
+
+  EXPECT_THAT(mm[1], ElementsAreArray({15, 16, 23, 42}));
+  auto const it1 = mm[1].erase(std::next(mm[1].begin(), 1));
+  ASSERT_EQ(it1, std::next(mm[1].begin(), 1));
+
+  ASSERT_EQ(3, mm.index_size());
+  EXPECT_EQ(11, mm.element_count());
+  EXPECT_THAT(mm[0], ElementsAreArray({4, 8}));
+  EXPECT_THAT(mm[1], ElementsAreArray({15, 23, 42}));
+  EXPECT_THAT(mm[2], ElementsAreArray({100, 200, 250, 300, 350, 400}));
+
+  auto const it2 = mm[2].erase(mm[2].begin());
+  ASSERT_EQ(it2, mm[2].begin());
+
+  ASSERT_EQ(3, mm.index_size());
+  EXPECT_EQ(10, mm.element_count());
+  EXPECT_THAT(mm[0], ElementsAreArray({4, 8}));
+  EXPECT_THAT(mm[1], ElementsAreArray({15, 23, 42}));
+  EXPECT_THAT(mm[2], ElementsAreArray({200, 250, 300, 350, 400}));
+
+  auto const it3 = mm[2].erase(std::next(mm[2].begin(), 4));
+  ASSERT_EQ(it3, mm[2].end());
+
+  ASSERT_EQ(3, mm.index_size());
+  EXPECT_EQ(9, mm.element_count());
+  EXPECT_THAT(mm[0], ElementsAreArray({4, 8}));
+  EXPECT_THAT(mm[1], ElementsAreArray({15, 23, 42}));
+  EXPECT_THAT(mm[2], ElementsAreArray({200, 250, 300, 350}));
+
+  auto const it4 = mm[2].erase(std::next(mm[2].begin(), 1));
+  ASSERT_EQ(it4, std::next(mm[2].begin(), 1));
+
+  ASSERT_EQ(3, mm.index_size());
+  EXPECT_EQ(8, mm.element_count());
+  EXPECT_THAT(mm[0], ElementsAreArray({4, 8}));
+  EXPECT_THAT(mm[1], ElementsAreArray({15, 23, 42}));
+  EXPECT_THAT(mm[2], ElementsAreArray({200, 300, 350}));
 }
 
 TEST(dynamic_fws_multimap_test, int_resize_1) {

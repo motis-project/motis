@@ -1,17 +1,26 @@
 #pragma once
 
+#include <cassert>
+#include <algorithm>
+#include <vector>
+
+#include "utl/erase.h"
 #include "utl/get_or_create.h"
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "motis/core/schedule/build_platform_node.h"
 #include "motis/core/schedule/edges.h"
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/access/bfs.h"
 #include "motis/core/access/service_access.h"
+#include "motis/core/access/trip_iterator.h"
 
+#include "motis/rt/expanded_trips.h"
 #include "motis/rt/in_out_allowed.h"
 #include "motis/rt/incoming_edges.h"
 #include "motis/rt/update_constant_graph.h"
+#include "motis/rt/update_msg_builder.h"
 
 namespace motis::rt {
 
@@ -42,7 +51,7 @@ inline edge copy_edge(edge const& original, node* from, node* to,
   return e;
 }
 
-inline void copy_trip_route(
+inline uint32_t copy_trip_route(
     schedule& sched, ev_key const& k, std::map<node const*, node*>& nodes,
     std::map<trip::route_edge, trip::route_edge>& edges,
     std::map<node const*,
@@ -77,6 +86,8 @@ inline void copy_trip_route(
       lcons[to].first = &new_lcon;
     }
   }
+
+  return route_id;
 }
 
 inline std::set<trip const*> route_trips(schedule const& sched,
@@ -94,9 +105,73 @@ inline std::set<trip const*> route_trips(schedule const& sched,
   return trips;
 }
 
+inline void update_expanded_trips(
+    schedule& sched, std::set<trip const*> const& trips,
+    std::map<trip::route_edge, trip::route_edge>& edges, int32_t old_route_id,
+    int32_t new_route_id, ev_key const& k, update_msg_builder& update_builder) {
+  auto const lcon_idx = k.lcon_idx_;
+  std::vector<std::pair<trip*, expanded_trip_index /* old index */>> new_trips;
+  std::vector<uint32_t> empty_expanded_routes;
+
+  for (auto const old_exp_route_id :
+       sched.route_to_expanded_routes_.at(old_route_id)) {
+    auto old_exp_route = sched.expanded_trips_.at(old_exp_route_id);
+
+    auto it = std::find_if(
+        begin(old_exp_route), end(old_exp_route),
+        [&](auto const& trp) { return trp->lcon_idx_ == lcon_idx; });
+
+    utl::verify(it != end(old_exp_route),
+                "separate_trip: expanded trip not found in expanded route");
+
+    auto* exp_trip = cista::ptr_cast(*it);
+    if (trips.find(exp_trip) == end(trips)) {
+      // rule service trip
+      auto const new_trp_edges =
+          sched.trip_edges_
+              .emplace_back(mcd::make_unique<mcd::vector<trip::route_edge>>(
+                  mcd::to_vec(*exp_trip->edges_,
+                              [&](trip::route_edge const& e) {
+                                return edges.at(e.get_edge());
+                              })))
+              .get();
+      exp_trip->edges_ = new_trp_edges;
+      exp_trip->lcon_idx_ = 0;
+    }
+    // (non rule service trips are updated later in update_trips)
+
+    auto const index_in_route =
+        static_cast<uint32_t>(std::distance(begin(old_exp_route), it));
+    new_trips.emplace_back(
+        exp_trip, expanded_trip_index{old_exp_route_id, index_in_route});
+
+    old_exp_route.erase(it);
+
+    if (old_exp_route.empty()) {
+      empty_expanded_routes.emplace_back(old_exp_route_id);
+    }
+  }
+
+  for (auto const exp_route_id : empty_expanded_routes) {
+    utl::erase(sched.route_to_expanded_routes_.at(old_route_id), exp_route_id);
+  }
+
+  for (auto const& [new_trip, old_eti] : new_trips) {
+    auto const new_eti =
+        add_trip_to_new_expanded_route(sched, new_trip, new_route_id);
+    update_builder.expanded_trip_moved(new_trip, old_eti, new_eti);
+  }
+}
+
 inline void update_trips(schedule& sched, ev_key const& k,
-                         std::map<trip::route_edge, trip::route_edge>& edges) {
-  for (auto const& t : route_trips(sched, k)) {
+                         std::map<trip::route_edge, trip::route_edge>& edges,
+                         int32_t old_route_id, int32_t new_route_id,
+                         update_msg_builder& update_builder) {
+  auto const trips = route_trips(sched, k);
+  update_expanded_trips(sched, trips, edges, old_route_id, new_route_id, k,
+                        update_builder);
+
+  for (auto const& t : trips) {
     sched.trip_edges_.emplace_back(
         mcd::make_unique<mcd::vector<trip::route_edge>>(
             mcd::to_vec(*t->edges_, [&](trip::route_edge const& e) {
@@ -104,6 +179,7 @@ inline void update_trips(schedule& sched, ev_key const& k,
             })));
     const_cast<trip*>(t)->edges_ = sched.trip_edges_.back().get();  // NOLINT
     const_cast<trip*>(t)->lcon_idx_ = 0;  // NOLINT
+    update_builder.trip_separated(t);
   }
 }
 
@@ -207,7 +283,8 @@ inline void update_delays(
   }
 }
 
-inline void seperate_trip(schedule& sched, ev_key const& k) {
+inline void separate_trip(schedule& sched, ev_key const& k,
+                          update_msg_builder& update_builder) {
   auto const in_out_allowed = get_route_in_out_allowed(k);
   auto const station_nodes = route_station_nodes(k);
   std::vector<incoming_edge_patch> incoming;
@@ -218,18 +295,22 @@ inline void seperate_trip(schedule& sched, ev_key const& k) {
       std::map<node const*,
                std::pair<light_connection const*, light_connection const*>>{};
 
-  copy_trip_route(sched, k, nodes, edges, lcons);
-  update_trips(sched, k, edges);
+  auto const old_route_id = k.get_node()->route_;
+  auto const new_route_id = copy_trip_route(sched, k, nodes, edges, lcons);
+  update_trips(sched, k, edges, old_route_id,
+               static_cast<int32_t>(new_route_id), update_builder);
   build_change_edges(sched, in_out_allowed, nodes, lcons, incoming);
   add_outgoing_edges_from_new_route(nodes, incoming);
   patch_incoming_edges(incoming);
   update_delays(k.lcon_idx_, edges, sched);
 }
 
-inline void seperate_trip(schedule& sched, trip const* trp) {
+inline void separate_trip(schedule& sched, trip const* trp,
+                          update_msg_builder& update_builder) {
+  assert(!trp->edges_->empty());
   auto const first_dep =
       ev_key{trp->edges_->front().get_edge(), trp->lcon_idx_, event_type::DEP};
-  seperate_trip(sched, first_dep);
+  separate_trip(sched, first_dep, update_builder);
 }
 
 }  // namespace motis::rt

@@ -241,8 +241,8 @@ struct graph_builder {
   schedule& sched_;
   int first_day_{0}, last_day_{0};
   bool apply_rules_{false};
-  bool expand_trips_{false};
   bool no_local_transport_{false};
+  bool debug_broken_trips_{false};
 
   connection_info con_info_;
   connection con_;

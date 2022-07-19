@@ -22,7 +22,10 @@ struct csa : public motis::module::module {
   csa(csa&&) = delete;
   csa& operator=(csa&&) = delete;
 
+  void import(motis::module::import_dispatcher&) override;
   void init(motis::module::registry&) override;
+
+  bool import_successful() const override { return import_successful_; }
 
   csa_timetable const* get_timetable() const;
 
@@ -37,6 +40,7 @@ struct csa : public motis::module::module {
   bool add_footpath_connections_{false};
 #endif
   std::unique_ptr<csa_timetable> timetable_;
+  bool import_successful_{false};
 };
 
 }  // namespace motis::csa

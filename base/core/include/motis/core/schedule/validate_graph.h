@@ -6,6 +6,7 @@
 
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/access/trip_iterator.h"
+#include "motis/core/debug/trip.h"
 
 namespace motis {
 
@@ -112,6 +113,36 @@ inline void validate_graph(schedule const& sched) {
             });
       }(),
       "edge from pointer correct");
+
+  utl::verify(
+      [&] {
+        for (auto const route : sched.expanded_trips_) {
+          auto const route_idx = route.index();
+          auto route_trip_idx = 0U;
+          for (auto const& tp : route) {
+            time last_time = 0;
+            for (auto const sec : access::sections{tp}) {
+              auto const& lc = sec.lcon();
+              auto const section_times_ok = lc.d_time_ <= lc.a_time_;
+              auto const stop_times_ok = last_time <= lc.d_time_;
+              last_time = lc.a_time_;
+              if (!section_times_ok || !stop_times_ok) {
+                std::cout << "\nvalidate_graph: expanded trip times "
+                             "inconsistent (expanded route "
+                          << route_idx << ", expanded trip "
+                          << route.data_index(route_trip_idx) << ", "
+                          << route_trip_idx << "/" << route.size()
+                          << " in route):\n"
+                          << debug::trip_with_sections{sched, tp} << "\n";
+                return false;
+              }
+            }
+            ++route_trip_idx;
+          }
+        }
+        return true;
+      }(),
+      "expanded trip times consistent");
 }
 
 inline void print_graph(schedule const& sched) {

@@ -84,10 +84,6 @@ int main(int argc, char const** argv) {
 
     parser.read_configuration_file(false);
 
-    if (!launcher_opt.init_.empty()) {
-      launcher_opt.mode_ = launcher_settings::motis_mode_t::INIT;
-    }
-
     parser.print_used(std::cout);
   } catch (std::exception const& e) {
     std::cout << "options error: " << e.what() << "\n";
@@ -103,6 +99,10 @@ int main(int argc, char const** argv) {
     instance.init_modules(module_opt, launcher_opt.num_threads_);
     instance.init_remotes(remote_opt.get_remotes());
 
+    if (!launcher_opt.init_.empty()) {
+      instance.call(launcher_opt.init_, launcher_opt.num_threads_);
+    }
+
     if (launcher_opt.mode_ == launcher_settings::motis_mode_t::SERVER) {
       boost::system::error_code ec;
       server.listen(server_opt.host_, server_opt.port_,
@@ -115,23 +115,15 @@ int main(int argc, char const** argv) {
         std::cout << "unable to start server: " << ec.message() << "\n";
         return 1;
       }
+    } else if (launcher_opt.mode_ == launcher_settings::motis_mode_t::INIT) {
+      return 0;
     }
   } catch (std::exception const& e) {
     std::cout << "\ninitialization error: " << e.what() << "\n";
     return 1;
-  }
-
-  if (launcher_opt.mode_ == launcher_settings::motis_mode_t::INIT) {
-    try {
-      instance.call(launcher_opt.init_, launcher_opt.num_threads_);
-      return 0;
-    } catch (std::exception const& e) {
-      std::cout << "\ninit error: " << e.what() << "\n";
-      return 1;
-    } catch (...) {
-      std::cout << "\ninit error\n";
-      return 1;
-    }
+  } catch (...) {
+    std::cout << "\ninitialization error\n";
+    return 1;
   }
 
   std::unique_ptr<boost::asio::deadline_timer> timer;

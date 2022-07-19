@@ -46,6 +46,8 @@ struct dataset_settings : public conf::configuration,
     param(wzr_matrix_path_, "wzr_matrix_path", "waiting time matrix");
     param(no_local_transport_, "no_local_transport",
           "don't load local transport");
+    param(debug_broken_trips_, "debug_broken_trips",
+          "print debug information for broken trips");
   }
 };
 
