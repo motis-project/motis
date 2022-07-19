@@ -7,7 +7,7 @@ import Util.DateFormat exposing (..)
 frLocalization : Localization
 frLocalization =
     { t = frTranslations
-    , dateConfig = frDateConfig
+    , dateConfig = deDateConfig
     }
 
 
@@ -59,9 +59,9 @@ frTranslations =
         , scheduleRange =
             \begin end ->
                 "Possible dates: "
-                    ++ formatDate frDateConfig begin
+                    ++ formatDate deDateConfig begin
                     ++ " – "
-                    ++ formatDate frDateConfig end
+                    ++ formatDate deDateConfig end
         , loading = "Recherche en cours..."
         , noResults = "Aucun trajet trouvé"
         , extendBefore = "Plus tôt"
