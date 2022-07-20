@@ -264,7 +264,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
         console.log("measures applied");
         const result: SimulationResult = {
           universe,
-          startedAt: context.startedAt,
+          startedAt: context?.startedAt ?? new Date(),
           finishedAt: new Date(),
           measures: variables,
           response: data,
