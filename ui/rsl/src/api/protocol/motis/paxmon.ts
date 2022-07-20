@@ -1,10 +1,5 @@
 // generated file - do not modify - run update-protocol to update
-import {
-  Interval,
-  Station,
-  TripId,
-  TripServiceInfo,
-} from "@/api/protocol/motis";
+import { Interval, Station, TripId, TripServiceInfo } from "../motis";
 
 // paxmon/PaxMonAddGroupsRequest.fbs
 export interface PaxMonAddGroupsRequest {
@@ -189,12 +184,14 @@ export interface PaxMonFindTripsResponse {
 export interface PaxMonForkUniverseRequest {
   universe: number;
   fork_schedule: boolean;
+  ttl: number;
 }
 
 // paxmon/PaxMonForkUniverseResponse.fbs
 export interface PaxMonForkUniverseResponse {
   universe: number;
   schedule: number;
+  ttl: number;
 }
 
 // paxmon/PaxMonGetAddressableGroupsRequest.fbs
@@ -379,6 +376,24 @@ export interface PaxMonGroupBaseInfo {
   id: number; // key
   n: number;
   p: number;
+}
+
+// paxmon/PaxMonKeepAliveRequest.fbs
+export interface PaxMonKeepAliveRequest {
+  universes: number[];
+}
+
+// paxmon/PaxMonKeepAliveResponse.fbs
+export interface PaxMonUniverseKeepAliveInfo {
+  universe: number;
+  schedule: number;
+  expires_in: number;
+}
+
+// paxmon/PaxMonKeepAliveResponse.fbs
+export interface PaxMonKeepAliveResponse {
+  alive: PaxMonUniverseKeepAliveInfo[];
+  expired: number[];
 }
 
 // paxmon/PaxMonLocalization.fbs

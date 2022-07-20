@@ -1,8 +1,5 @@
 // generated file - do not modify - run update-protocol to update
-import {
-  StationGuesserRequest,
-  StationGuesserResponse,
-} from "@/api/protocol/motis/guesser";
+import { StationGuesserRequest, StationGuesserResponse } from "./motis/guesser";
 import {
   LookupBatchGeoStationRequest,
   LookupBatchGeoStationResponse,
@@ -20,12 +17,12 @@ import {
   LookupScheduleInfoResponse,
   LookupStationEventsRequest,
   LookupStationEventsResponse,
-} from "@/api/protocol/motis/lookup";
+} from "./motis/lookup";
 import {
   PaxForecastApplyMeasuresRequest,
   PaxForecastApplyMeasuresResponse,
   PaxForecastUpdate,
-} from "@/api/protocol/motis/paxforecast";
+} from "./motis/paxforecast";
 import {
   PaxMonAddGroupsRequest,
   PaxMonAddGroupsResponse,
@@ -48,6 +45,8 @@ import {
   PaxMonGetInterchangesResponse,
   PaxMonGetTripLoadInfosRequest,
   PaxMonGetTripLoadInfosResponse,
+  PaxMonKeepAliveRequest,
+  PaxMonKeepAliveResponse,
   PaxMonRemoveGroupsRequest,
   PaxMonStatusRequest,
   PaxMonStatusResponse,
@@ -55,9 +54,9 @@ import {
   PaxMonUniverseDestroyed,
   PaxMonUniverseForked,
   PaxMonUpdate,
-} from "@/api/protocol/motis/paxmon";
-import { RISForwardTimeRequest } from "@/api/protocol/motis/ris";
-import { RoutingRequest, RoutingResponse } from "@/api/protocol/motis/routing";
+} from "./motis/paxmon";
+import { RISForwardTimeRequest } from "./motis/ris";
+import { RoutingRequest, RoutingResponse } from "./motis/routing";
 
 // base/Connection.fbs
 export interface EventInfo {
@@ -197,6 +196,9 @@ export type ProblemType =
   | "NO_PROBLEM"
   | "INTERCHANGE_TIME_VIOLATED"
   | "CANCELED_TRAIN";
+
+// base/SearchDir.fbs
+export type SearchDir = "Forward" | "Backward";
 
 // base/ServiceInfo.fbs
 export interface ServiceInfo {
@@ -367,7 +369,9 @@ export type MsgContent =
   | LookupRiBasisResponse
   | PaxForecastApplyMeasuresResponse
   | PaxMonGetAddressableGroupsRequest
-  | PaxMonGetAddressableGroupsResponse;
+  | PaxMonGetAddressableGroupsResponse
+  | PaxMonKeepAliveRequest
+  | PaxMonKeepAliveResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -429,7 +433,9 @@ export type MsgContentType =
   | "LookupRiBasisResponse"
   | "PaxForecastApplyMeasuresResponse"
   | "PaxMonGetAddressableGroupsRequest"
-  | "PaxMonGetAddressableGroupsResponse";
+  | "PaxMonGetAddressableGroupsResponse"
+  | "PaxMonKeepAliveRequest"
+  | "PaxMonKeepAliveResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

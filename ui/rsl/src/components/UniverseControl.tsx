@@ -32,6 +32,7 @@ function UniverseControl(): JSX.Element {
       sendPaxMonForkUniverseRequest({
         universe: baseUniverse,
         fork_schedule: true,
+        ttl: 0,
       }),
     {
       onSuccess: (data) => {
