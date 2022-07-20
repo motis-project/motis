@@ -1,4 +1,8 @@
-import { UseQueryOptions, UseQueryResult, useQuery } from "react-query";
+import {
+  UseQueryOptions,
+  UseQueryResult,
+  useQuery,
+} from "@tanstack/react-query";
 
 import { verifyContentType } from "@/api/protocol/checks";
 import {

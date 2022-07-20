@@ -1,6 +1,6 @@
+import { useIsMutating, useMutation } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { useState } from "react";
-import { useIsMutating, useMutation } from "react-query";
 
 import {
   sendPaxMonDestroyUniverseRequest,

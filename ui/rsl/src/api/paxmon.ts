@@ -1,4 +1,8 @@
-import { UseQueryOptions, UseQueryResult, useQuery } from "react-query";
+import {
+  UseQueryOptions,
+  UseQueryResult,
+  useQuery,
+} from "@tanstack/react-query";
 
 import { verifyContentType } from "@/api/protocol/checks";
 import { MotisSuccess, TripId } from "@/api/protocol/motis";
@@ -46,7 +50,6 @@ export function usePaxMonStatusQuery(
       refetchInterval: 30 * 1000,
       refetchOnWindowFocus: true,
       staleTime: 0,
-      notifyOnChangeProps: "tracked",
     }
   );
 }

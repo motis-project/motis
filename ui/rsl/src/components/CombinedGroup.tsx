@@ -1,6 +1,6 @@
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { useQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
-import { useQuery } from "react-query";
 
 import { Station, TripId } from "@/api/protocol/motis";
 import { GroupedPassengerGroups } from "@/api/protocol/motis/paxmon";

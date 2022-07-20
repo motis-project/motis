@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
 import { useAtomCallback } from "jotai/utils";
@@ -10,7 +11,6 @@ import {
   useFieldArray,
   useForm,
 } from "react-hook-form";
-import { useQueryClient } from "react-query";
 
 import { TripServiceInfo } from "@/api/protocol/motis";
 import { PaxMonStatusResponse } from "@/api/protocol/motis/paxmon";

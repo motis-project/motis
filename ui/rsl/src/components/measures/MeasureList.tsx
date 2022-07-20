@@ -1,8 +1,8 @@
 import { PencilIcon, TrashIcon } from "@heroicons/react/solid";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PrimitiveAtom, atom, useAtom } from "jotai";
 import { useAtomCallback, useUpdateAtom } from "jotai/utils";
 import { useCallback } from "react";
-import { useMutation, useQueryClient } from "react-query";
 
 import { TripServiceInfo } from "@/api/protocol/motis";
 import { LoadLevel, MeasureWrapper } from "@/api/protocol/motis/paxforecast";

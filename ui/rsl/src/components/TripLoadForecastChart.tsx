@@ -1,7 +1,7 @@
 import { DownloadIcon } from "@heroicons/react/solid";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { CSSProperties, useRef } from "react";
-import { useQuery, useQueryClient } from "react-query";
 
 import { TripId } from "@/api/protocol/motis";
 import {

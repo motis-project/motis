@@ -5,10 +5,10 @@ import {
   SelectorIcon,
 } from "@heroicons/react/solid";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
 import { useAtom } from "jotai";
 import React, { Fragment, useCallback, useState } from "react";
-import { useInfiniteQuery } from "react-query";
 import { Virtuoso } from "react-virtuoso";
 
 import { TripServiceInfo } from "@/api/protocol/motis";

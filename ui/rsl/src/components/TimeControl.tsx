@@ -1,5 +1,9 @@
+import {
+  QueryClient,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useAtom } from "jotai";
-import { QueryClient, useMutation, useQueryClient } from "react-query";
 
 import { usePaxMonStatusQuery } from "@/api/paxmon";
 import { sendRISForwardTimeRequest } from "@/api/ris";
