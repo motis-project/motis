@@ -154,7 +154,7 @@ function CombinedGroup({
   ) : isLoading ? (
     <div>Suche nach Alternativverbindungen...</div>
   ) : (
-    <div>Fehler: {error instanceof Error ? error.message : error}</div>
+    <div>Fehler: {error instanceof Error ? error.message : `${error}`}</div>
   );
 
   return (

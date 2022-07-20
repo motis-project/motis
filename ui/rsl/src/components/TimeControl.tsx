@@ -93,7 +93,7 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
       ) : isLoading ? (
         <div>Verbindung zu MOTIS wird aufgebaut...</div>
       ) : (
-        <div>Fehler: {error instanceof Error ? error.message : error}</div>
+        <div>Fehler: {error instanceof Error ? error.message : `${error}`}</div>
       )}
     </div>
   );
