@@ -4,7 +4,6 @@ import {
   CheckIcon,
   SelectorIcon,
 } from "@heroicons/react/solid";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
 import { useAtom } from "jotai";
@@ -323,51 +322,62 @@ function TripListOptions({
   serviceClassFilter,
   setServiceClassFilter,
 }: TripListOptionsProps) {
-  const toggleClass = useCallback(
-    (sc: ServiceClass, checked: boolean) => {
-      if (checked) {
-        setServiceClassFilter((classes) => [...classes, sc]);
-      } else {
-        setServiceClassFilter((classes) => classes.filter((c) => c != sc));
-      }
-    },
-    [setServiceClassFilter]
-  );
-
   return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger asChild={true}>
-        <button
-          type="button"
-          className="p-2 mb-1 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0"
-        >
+    <Listbox
+      value={serviceClassFilter}
+      onChange={setServiceClassFilter}
+      multiple
+    >
+      <div className="relative">
+        <Listbox.Button className="p-2 mb-1 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0">
           <AdjustmentsIcon className="w-4 h-4" aria-hidden="true" />
-        </button>
-      </DropdownMenu.Trigger>
-
-      <DropdownMenu.Content
-        sideOffset={5}
-        className="bg-white rounded-md shadow-lg py-1 px-1"
-      >
-        {serviceClassOptions.map((opt) => (
-          <DropdownMenu.CheckboxItem
-            key={opt.sc}
-            checked={serviceClassFilter.includes(opt.sc)}
-            onCheckedChange={(b) => toggleClass(opt.sc, b)}
-            className="relative py-2 pl-10 pr-4 text-gray-900 select-none focus:text-amber-900 focus:bg-amber-100 outline-0 rounded-md"
-          >
-            <DropdownMenu.ItemIndicator asChild={true}>
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-amber-600">
-                <CheckIcon className="w-5 h-5" aria-hidden="true" />
-              </span>
-            </DropdownMenu.ItemIndicator>
-            {opt.label}
-          </DropdownMenu.CheckboxItem>
-        ))}
-
-        <DropdownMenu.Arrow className="fill-white" />
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
+        </Listbox.Button>
+        <Transition
+          as={Fragment}
+          leave="transition ease-in duration-100"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <Listbox.Options className="absolute right-0 z-20 py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+            {serviceClassOptions.map((opt) => (
+              <Listbox.Option
+                key={opt.sc}
+                value={opt.sc}
+                className={({ active }) =>
+                  classNames(
+                    "cursor-default select-none relative py-2 pl-10 pr-4",
+                    active ? "text-amber-900 bg-amber-100" : "text-gray-900"
+                  )
+                }
+              >
+                {({ selected, active }) => (
+                  <>
+                    <span
+                      className={classNames(
+                        "block truncate",
+                        selected ? "font-medium" : "font-normal"
+                      )}
+                    >
+                      {opt.label}
+                    </span>
+                    {selected ? (
+                      <span
+                        className={classNames(
+                          "absolute inset-y-0 left-0 flex items-center pl-3",
+                          active ? "text-amber-600" : "text-amber-600"
+                        )}
+                      >
+                        <CheckIcon className="w-5 h-5" aria-hidden="true" />
+                      </span>
+                    ) : null}
+                  </>
+                )}
+              </Listbox.Option>
+            ))}
+          </Listbox.Options>
+        </Transition>
+      </div>
+    </Listbox>
   );
 }
 
