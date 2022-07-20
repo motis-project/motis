@@ -135,17 +135,19 @@ function CombinedGroup({
             {formatTime(getDepartureTime(j))} &rarr;{" "}
             {formatTime(getArrivalTime(j))}, {j.transfers} Umstiege:
             <span className="inline-flex gap-3 pl-2">
-              {j.tripLegs.map((leg, legIdx) => (
-                <Tooltip.Root key={legIdx}>
-                  <Tooltip.Trigger className="cursor-default">
-                    <JourneyTripNameView jt={leg.trips[0]} />
-                  </Tooltip.Trigger>
-                  <Tooltip.Content>
-                    <TripTooltip tripId={leg.trips[0].trip.id} />
-                    <Tooltip.Arrow className="text-white fill-current" />
-                  </Tooltip.Content>
-                </Tooltip.Root>
-              ))}
+              <Tooltip.Provider>
+                {j.tripLegs.map((leg, legIdx) => (
+                  <Tooltip.Root key={legIdx}>
+                    <Tooltip.Trigger className="cursor-default">
+                      <JourneyTripNameView jt={leg.trips[0]} />
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                      <TripTooltip tripId={leg.trips[0].trip.id} />
+                      <Tooltip.Arrow className="text-white fill-current" />
+                    </Tooltip.Content>
+                  </Tooltip.Root>
+                ))}
+              </Tooltip.Provider>
             </span>
           </li>
         ))}
