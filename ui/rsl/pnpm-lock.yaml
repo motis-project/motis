@@ -6,8 +6,8 @@ specifiers:
   '@limegrass/eslint-plugin-import-alias': ^1.0.5
   '@radix-ui/react-tooltip': 0.1.8-rc.51
   '@tailwindcss/forms': ^0.5.2
-  '@tanstack/react-query': ^4.0.5
-  '@tanstack/react-query-devtools': ^4.0.6
+  '@tanstack/react-query': ^4.0.10
+  '@tanstack/react-query-devtools': ^4.0.10
   '@trivago/prettier-plugin-sort-imports': ^3.3.0
   '@types/lodash-es': ^4.17.6
   '@types/react': ^18.0.15
@@ -47,8 +47,8 @@ dependencies:
   '@headlessui/react': 1.6.6_biqbaboplfbrettd7655fr4n2y
   '@heroicons/react': 1.0.6_react@18.2.0
   '@radix-ui/react-tooltip': 0.1.8-rc.51_bb2bxwco6ptpubzwpazr52qf6i
-  '@tanstack/react-query': 4.0.5_biqbaboplfbrettd7655fr4n2y
-  '@tanstack/react-query-devtools': 4.0.6_react@18.2.0
+  '@tanstack/react-query': 4.0.10_biqbaboplfbrettd7655fr4n2y
+  '@tanstack/react-query-devtools': 4.0.10_react@18.2.0
   '@visx/axis': 2.11.1_react@18.2.0
   '@visx/grid': 2.11.1_react@18.2.0
   '@visx/responsive': 2.10.0_react@18.2.0
@@ -444,7 +444,7 @@ packages:
       ajv: 6.12.6
       debug: 4.3.4
       espree: 9.3.2
-      globals: 13.16.0
+      globals: 13.17.0
       ignore: 5.2.0
       import-fresh: 3.3.0
       js-yaml: 4.1.0
@@ -836,12 +836,12 @@ packages:
       remove-accents: 0.4.2
     dev: false
 
-  /@tanstack/query-core/4.0.5:
-    resolution: {integrity: sha512-QOJ2gLbwlf8p0487pMey6vv8EF5X2ib1zINayaD7mb9/LibUtXmZ12uJgTqcnjgNY/4tWZn5qJnEk2ePG5AVGA==}
+  /@tanstack/query-core/4.0.10:
+    resolution: {integrity: sha512-9LsABpZXkWZHi4P1ozRETEDXQocLAxVzQaIhganxbNuz/uA3PsCAJxJTiQrknG5htLMzOF5MqM9G10e6DCxV1A==}
     dev: false
 
-  /@tanstack/react-query-devtools/4.0.6_react@18.2.0:
-    resolution: {integrity: sha512-IJgOB+3Jk/ypR/7eUPkoo4AJ+Ot/awGHO9vgLh0Yjo7BkfbXL7AbvDf8r9TPMWcuQZ2WkV/Q2YlZutAsxpyBxA==}
+  /@tanstack/react-query-devtools/4.0.10_react@18.2.0:
+    resolution: {integrity: sha512-3J7LLYQjfjTI0DbPo0bA+M3l4kdvYSWAqihpeG1u93WVyZj0OEFviUv+4cK7+k2AVgQJAPMZ5xvtewKxOOFVrw==}
     dependencies:
       '@tanstack/match-sorter-utils': 8.1.1
       '@types/use-sync-external-store': 0.0.3
@@ -850,8 +850,8 @@ packages:
       - react
     dev: false
 
-  /@tanstack/react-query/4.0.5_biqbaboplfbrettd7655fr4n2y:
-    resolution: {integrity: sha512-tIggVlhoFevVpY/LkZroPmrERFHN8tw4aZLtgwSArzHmMJ03WQcaNvbbHy6GERidXtaMdUz+IeQryrE7cO7WPQ==}
+  /@tanstack/react-query/4.0.10_biqbaboplfbrettd7655fr4n2y:
+    resolution: {integrity: sha512-Wn5QhZUE5wvr6rGClV7KeQIUsdTmYR9mgmMZen7DSRWauHW2UTynFg3Kkf6pw+XlxxOLsyLWwz/Q6q1lSpM3TQ==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0
@@ -862,7 +862,7 @@ packages:
       react-native:
         optional: true
     dependencies:
-      '@tanstack/query-core': 4.0.5
+      '@tanstack/query-core': 4.0.10
       '@types/use-sync-external-store': 0.0.3
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
@@ -1245,12 +1245,12 @@ packages:
       - supports-color
     dev: true
 
-  /acorn-jsx/5.3.2_acorn@8.7.1:
+  /acorn-jsx/5.3.2_acorn@8.8.0:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
     peerDependencies:
       acorn: ^6.0.0 || ^7.0.0 || ^8.0.0
     dependencies:
-      acorn: 8.7.1
+      acorn: 8.8.0
     dev: true
 
   /acorn-node/1.8.2:
@@ -1272,8 +1272,8 @@ packages:
     hasBin: true
     dev: true
 
-  /acorn/8.7.1:
-    resolution: {integrity: sha512-Xx54uLJQZ19lKygFXOWsscKUbsBZW0CPykPhVQdhIeIwrbPmJzqeASDInc8nKBnp/JT6igTs82qPXz069H8I/A==}
+  /acorn/8.8.0:
+    resolution: {integrity: sha512-QOxyigPVrpZ2GXT+PFyZTl6TtOFc5egxHIP9IlQ+RbupQuX4RkT/Bee4/kQuC02Xkzg84JcT7oLYtDIQxp+v7w==}
     engines: {node: '>=0.4.0'}
     hasBin: true
     dev: true
@@ -1356,7 +1356,7 @@ packages:
       postcss: ^8.1.0
     dependencies:
       browserslist: 4.21.2
-      caniuse-lite: 1.0.30001367
+      caniuse-lite: 1.0.30001368
       fraction.js: 4.2.0
       normalize-range: 0.1.2
       picocolors: 1.0.0
@@ -1395,8 +1395,8 @@ packages:
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
     hasBin: true
     dependencies:
-      caniuse-lite: 1.0.30001367
-      electron-to-chromium: 1.4.195
+      caniuse-lite: 1.0.30001368
+      electron-to-chromium: 1.4.196
       node-releases: 2.0.6
       update-browserslist-db: 1.0.5_browserslist@4.21.2
     dev: true
@@ -1418,8 +1418,8 @@ packages:
     engines: {node: '>= 6'}
     dev: true
 
-  /caniuse-lite/1.0.30001367:
-    resolution: {integrity: sha512-XDgbeOHfifWV3GEES2B8rtsrADx4Jf+juKX2SICJcaUhjYBO3bR96kvEIHa15VU6ohtOhBZuPGGYGbXMRn0NCw==}
+  /caniuse-lite/1.0.30001368:
+    resolution: {integrity: sha512-wgfRYa9DenEomLG/SdWgQxpIyvdtH3NW8Vq+tB6AwR9e56iOIcu1im5F/wNdDf04XlKHXqIx4N8Jo0PemeBenQ==}
     dev: true
 
   /chalk/2.4.2:
@@ -1648,8 +1648,8 @@ packages:
       tslib: 2.4.0
     dev: false
 
-  /electron-to-chromium/1.4.195:
-    resolution: {integrity: sha512-vefjEh0sk871xNmR5whJf9TEngX+KTKS3hOHpjoMpauKkwlGwtMz1H8IaIjAT/GNnX0TbGwAdmVoXCAzXf+PPg==}
+  /electron-to-chromium/1.4.196:
+    resolution: {integrity: sha512-uxMa/Dt7PQsLBVXwH+t6JvpHJnrsYBaxWKi/J6HE+/nBtoHENhwBoNkgkm226/Kfxeg0z1eMQLBRPPKcDH8xWA==}
     dev: true
 
   /es-abstract/1.20.1:
@@ -2019,7 +2019,7 @@ packages:
       file-entry-cache: 6.0.1
       functional-red-black-tree: 1.0.1
       glob-parent: 6.0.2
-      globals: 13.16.0
+      globals: 13.17.0
       ignore: 5.2.0
       import-fresh: 3.3.0
       imurmurhash: 0.1.4
@@ -2044,8 +2044,8 @@ packages:
     resolution: {integrity: sha512-D211tC7ZwouTIuY5x9XnS0E9sWNChB7IYKX/Xp5eQj3nFXhqmiUDB9q27y76oFl8jTg3pXcQx/bpxMfs3CIZbA==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dependencies:
-      acorn: 8.7.1
-      acorn-jsx: 5.3.2_acorn@8.7.1
+      acorn: 8.8.0
+      acorn-jsx: 5.3.2_acorn@8.8.0
       eslint-visitor-keys: 3.3.0
     dev: true
 
@@ -2239,8 +2239,8 @@ packages:
     engines: {node: '>=4'}
     dev: true
 
-  /globals/13.16.0:
-    resolution: {integrity: sha512-A1lrQfpNF+McdPOnnFqY3kSN0AFTy485bTi1bkLk4mVPODIUEcSfhHgRqA+QdXPksrSTTztYXx37NFV+GpGk3Q==}
+  /globals/13.17.0:
+    resolution: {integrity: sha512-1C+6nQRb1GwGMKm2dH/E7enFAMxGTmGI7/dEdhy/DNelv85w9B72t3uc5frtMNXIbzrarJJ/lTCjcaZwbLJmyw==}
     engines: {node: '>=8'}
     dependencies:
       type-fest: 0.20.2
