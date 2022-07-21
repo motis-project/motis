@@ -15,7 +15,7 @@ import {
   usePaxMonStatusQuery,
 } from "@/api/paxmon";
 
-import { universeAtom } from "@/data/simulation";
+import { universeAtom } from "@/data/multiverse";
 
 import {
   formatFileNameTime,

@@ -16,9 +16,9 @@ import {
   usePaxMonStatusQuery,
 } from "@/api/paxmon";
 
+import { universeAtom } from "@/data/multiverse";
 import { formatPercent } from "@/data/numberFormat";
 import { sectionGraphPlotTypeAtom } from "@/data/settings";
-import { universeAtom } from "@/data/simulation";
 
 import classNames from "@/util/classNames";
 import { SectionLoadColors } from "@/util/colors";

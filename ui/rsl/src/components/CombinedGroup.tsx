@@ -13,7 +13,7 @@ import {
   getArrivalTime,
   getDepartureTime,
 } from "@/data/journey";
-import { scheduleAtom } from "@/data/simulation";
+import { scheduleAtom } from "@/data/multiverse";
 
 import { formatTime } from "@/util/dateFormat";
 

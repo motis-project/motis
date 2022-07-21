@@ -6,9 +6,13 @@ import App from "@/components/App";
 import "@/index.css";
 
 const container = document.getElementById("root");
-const root = createRoot(container!);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+if (container) {
+  const root = createRoot(container);
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+} else {
+  console.log("Root element not found!");
+}

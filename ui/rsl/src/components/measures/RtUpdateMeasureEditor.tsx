@@ -26,6 +26,7 @@ import {
 import { queryKeys } from "@/api/paxmon";
 
 import { MeasureUnion, isRtUpdateMeasureU } from "@/data/measures";
+import { scheduleAtom } from "@/data/multiverse";
 import {
   StopFormData,
   getEmptySectionFormData,
@@ -35,7 +36,6 @@ import {
   toFormData,
   toRiBasis,
 } from "@/data/rtMeasureFormData";
-import { scheduleAtom } from "@/data/simulation";
 
 import StationPicker from "@/components/StationPicker";
 import TripPicker from "@/components/TripPicker";

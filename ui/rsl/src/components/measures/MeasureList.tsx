@@ -19,11 +19,11 @@ import {
   newEmptyMeasure,
   toMeasureWrapper,
 } from "@/data/measures";
+import { universeAtom } from "@/data/multiverse";
 import {
   SimulationResult,
   selectedSimResultAtom,
   simResultsAtom,
-  universeAtom,
 } from "@/data/simulation";
 
 import classNames from "@/util/classNames";

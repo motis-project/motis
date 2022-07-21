@@ -1,14 +1,23 @@
 import {
   QueryClient,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useAtom } from "jotai";
+import { useAtomCallback } from "jotai/utils";
+import { useCallback } from "react";
 
-import { usePaxMonStatusQuery } from "@/api/paxmon";
+import { queryKeys, sendPaxMonStatusRequest } from "@/api/paxmon";
 import { sendRISForwardTimeRequest } from "@/api/ris";
 
-import { scheduleAtom, universeAtom } from "@/data/simulation";
+import {
+  defaultUniverse,
+  multiverseIdAtom,
+  scheduleAtom,
+  universeAtom,
+  universesAtom,
+} from "@/data/multiverse";
 
 import { formatDate, formatTime } from "@/util/dateFormat";
 
@@ -36,7 +45,40 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
   const queryClient = useQueryClient();
   const [universe] = useAtom(universeAtom);
   const [schedule] = useAtom(scheduleAtom);
-  const { data: status, isLoading, error } = usePaxMonStatusQuery(universe);
+
+  const updateMultiverseId = useAtomCallback(
+    useCallback((get, set, arg: number) => {
+      const currentMultiverseId = get(multiverseIdAtom);
+      if (currentMultiverseId != arg) {
+        set(multiverseIdAtom, arg);
+        if (currentMultiverseId != 0) {
+          // multiverse id changed = server restarted -> reset universes
+          console.log(
+            `multiverse id changed: ${currentMultiverseId} -> ${arg}`
+          );
+          set(universeAtom, 0);
+          set(scheduleAtom, 0);
+          set(universesAtom, [defaultUniverse]);
+        }
+      }
+    }, [])
+  );
+  const {
+    data: status,
+    isLoading,
+    error,
+  } = useQuery(
+    queryKeys.status(universe),
+    () => sendPaxMonStatusRequest({ universe }),
+    {
+      refetchInterval: 30 * 1000,
+      refetchOnWindowFocus: true,
+      staleTime: 0,
+      onSuccess: (data) => {
+        updateMultiverseId(data.multiverse_id);
+      },
+    }
+  );
 
   const forwardMutation = useMutation((forwardBy: number) => {
     return forwardTimeByStepped(

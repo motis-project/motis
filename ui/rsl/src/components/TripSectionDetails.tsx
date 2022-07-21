@@ -12,7 +12,7 @@ import {
 
 import { usePaxMonGroupsInTripQuery } from "@/api/paxmon";
 
-import { universeAtom } from "@/data/simulation";
+import { universeAtom } from "@/data/multiverse";
 
 import CombinedGroup from "@/components/CombinedGroup";
 

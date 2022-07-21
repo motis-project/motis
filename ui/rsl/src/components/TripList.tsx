@@ -22,9 +22,9 @@ import { ServiceClass } from "@/api/constants";
 import { useLookupScheduleInfoQuery } from "@/api/lookup";
 import { sendPaxMonFilterTripsRequest } from "@/api/paxmon";
 
+import { universeAtom } from "@/data/multiverse";
 import { formatPercent } from "@/data/numberFormat";
 import { selectedTripAtom } from "@/data/selectedTrip";
-import { universeAtom } from "@/data/simulation";
 
 import classNames from "@/util/classNames";
 import { formatISODate, formatTime } from "@/util/dateFormat";

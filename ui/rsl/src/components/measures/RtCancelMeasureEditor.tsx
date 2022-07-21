@@ -21,7 +21,7 @@ import {
   RtCancelMeasureData,
   isRtCancelMeasureU,
 } from "@/data/measures";
-import { scheduleAtom } from "@/data/simulation";
+import { scheduleAtom } from "@/data/multiverse";
 
 import classNames from "@/util/classNames";
 

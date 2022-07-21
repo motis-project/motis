@@ -1,50 +1,98 @@
-import { useIsMutating, useMutation } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
-import { useState } from "react";
+import { useAtomCallback } from "jotai/utils";
+import { useCallback } from "react";
 
 import {
+  PaxMonKeepAliveRequest,
+  PaxMonKeepAliveResponse,
+} from "@/api/protocol/motis/paxmon";
+
+import {
+  queryKeys,
   sendPaxMonDestroyUniverseRequest,
   sendPaxMonForkUniverseRequest,
+  sendPaxMonKeepAliveRequest,
 } from "@/api/paxmon";
 
-import { scheduleAtom, universeAtom } from "@/data/simulation";
-
-type Universe = {
-  universe: number;
-  schedule: number;
-};
+import {
+  UniverseInfo,
+  multiverseIdAtom,
+  scheduleAtom,
+  universeAtom,
+  universesAtom,
+} from "@/data/multiverse";
 
 function UniverseControl(): JSX.Element {
   const [universe, setUniverse] = useAtom(universeAtom);
   const [schedule, setSchedule] = useAtom(scheduleAtom);
-  const [universes, setUniverses] = useState<Universe[]>([
-    { universe: 0, schedule: 0 },
-  ]);
+  const [multiverseId] = useAtom(multiverseIdAtom);
+  const [universes, setUniverses] = useAtom(universesAtom);
   const isMutating = useIsMutating() != 0;
 
-  function switchTo(uv: Universe) {
-    setUniverse(uv.universe);
-    setSchedule(uv.schedule);
-  }
+  const switchTo = useCallback(
+    (uv: UniverseInfo) => {
+      setUniverse(uv.id);
+      setSchedule(uv.schedule);
+    },
+    [setUniverse, setSchedule]
+  );
+
+  const keepAliveRequest: PaxMonKeepAliveRequest = {
+    multiverse_id: multiverseId,
+    universes: universes.map((uv) => uv.id),
+  };
+  const keepAliveHandler = useAtomCallback(
+    useCallback((get, set, data: PaxMonKeepAliveResponse) => {
+      if (data.expired.length > 0) {
+        console.log(`universes expired: ${data.expired.join(", ")}`);
+        const currentUniverse = get(universeAtom);
+        const newUniverses = get(universesAtom).filter(
+          (uv) => uv.id === 0 || !data.expired.includes(uv.id)
+        );
+        if (currentUniverse !== 0 && data.expired.includes(currentUniverse)) {
+          set(universeAtom, 0);
+          set(scheduleAtom, 0);
+        }
+        set(universesAtom, newUniverses);
+      }
+    }, [])
+  );
+  useQuery(
+    queryKeys.keepAlive(keepAliveRequest),
+    () => sendPaxMonKeepAliveRequest(keepAliveRequest),
+    {
+      refetchInterval: 30 * 1000,
+      refetchOnWindowFocus: true,
+      refetchIntervalInBackground: true,
+      notifyOnChangeProps: [],
+      onSuccess: keepAliveHandler,
+    }
+  );
 
   const forkMutation = useMutation(
     (baseUniverse: number) =>
       sendPaxMonForkUniverseRequest({
         universe: baseUniverse,
         fork_schedule: true,
-        ttl: 0,
+        ttl: 120,
       }),
     {
       onSuccess: (data) => {
-        const newUv = { universe: data.universe, schedule: data.schedule };
+        const newUv: UniverseInfo = {
+          id: data.universe,
+          schedule: data.schedule,
+          ttl: data.ttl,
+        };
         setUniverses([
-          ...universes.filter((uv) => uv.universe !== data.universe),
+          ...universes.filter((uv) => uv.id !== data.universe),
           newUv,
         ]);
         switchTo(newUv);
       },
     }
   );
+
   const destroyMutation = useMutation(
     (uv: number) => sendPaxMonDestroyUniverseRequest({ universe: uv }),
     {
@@ -55,7 +103,7 @@ function UniverseControl(): JSX.Element {
             error
           );
         }
-        setUniverses(universes.filter((u) => u.universe != variables));
+        setUniverses(universes.filter((u) => u.id != variables));
         switchTo(universes[0]);
       },
     }
@@ -98,22 +146,22 @@ function UniverseControl(): JSX.Element {
       </button>
       {universes.map((uv) => (
         <button
-          key={uv.universe}
+          key={uv.id}
           type="button"
           className={`px-3 py-1 rounded text-white text-sm ${
             isMutating
-              ? uv.universe == universe
+              ? uv.id == universe
                 ? "bg-db-red-300 text-db-red-100 ring ring-db-red-800 cursor-default"
                 : "bg-db-red-300 text-db-red-100 cursor-default"
-              : uv.universe == universe
+              : uv.id == universe
               ? "bg-db-red-500 ring ring-db-red-800"
               : "bg-db-red-500 hover:bg-db-red-600"
           }`}
           onClick={() => switchTo(uv)}
           disabled={isMutating}
-          title={`Universum ${uv.universe} (Fahrplan ${uv.schedule})`}
+          title={`Universum ${uv.id} (Fahrplan ${uv.schedule})`}
         >
-          #{uv.universe}
+          #{uv.id}
         </button>
       ))}
     </div>
