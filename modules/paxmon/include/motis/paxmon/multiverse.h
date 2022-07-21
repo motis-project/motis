@@ -68,7 +68,7 @@ private:
 
   std::optional<std::chrono::seconds> keep_alive(universe_info& uv_info);
 
-  std::optional<std::chrono::seconds> keep_alive(
+  static std::optional<std::chrono::seconds> keep_alive(
       universe_info& uv_info,
       std::chrono::time_point<std::chrono::steady_clock> now);
 
