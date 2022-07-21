@@ -1,7 +1,7 @@
 [address-typeahead]
   url=git@github.com:motis-project/address-typeahead.git
   branch=master
-  commit=9b33a191c05ee3f489492ea9a89253eaa26b91d4
+  commit=d16126b3fea13f18263e58c0f680807d68d315cf
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
