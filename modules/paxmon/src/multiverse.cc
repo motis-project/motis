@@ -1,5 +1,7 @@
 #include "motis/paxmon/multiverse.h"
 
+#include "ctx/operation.h"
+
 #include "utl/erase.h"
 #include "utl/verify.h"
 
@@ -192,20 +194,21 @@ void multiverse::release_universe(universe_info& uv_info) {
   mod_.remove_shared_data(uv_res_id);
   auto& sched_refs = universes_using_schedule_[schedule_res_id];
   utl::erase(sched_refs, uv_id);
-  if (sched_refs.empty()) {
-    utl::verify(schedule_res_id != motis::module::to_res_id(
-                                       motis::module::global_res_id::SCHEDULE),
-                "paxmon::multiverse.destroy: default schedule");
+  if (sched_refs.empty() &&
+      schedule_res_id !=
+          motis::module::to_res_id(motis::module::global_res_id::SCHEDULE)) {
     mod_.remove_shared_data(schedule_res_id);
   }
   lock.unlock();
 
-  message_creator mc;
-  mc.create_and_finish(MsgContent_PaxMonUniverseDestroyed,
-                       CreatePaxMonUniverseDestroyed(mc, uv_id).Union(),
-                       "/paxmon/universe_destroyed");
-  auto const msg = make_msg(mc);
-  ctx::await_all(motis_publish(msg));
+  if (ctx::current_op<ctx_data>() != nullptr) {
+    message_creator mc;
+    mc.create_and_finish(MsgContent_PaxMonUniverseDestroyed,
+                         CreatePaxMonUniverseDestroyed(mc, uv_id).Union(),
+                         "/paxmon/universe_destroyed");
+    auto const msg = make_msg(mc);
+    ctx::await_all(motis_publish(msg));
+  }
 }
 
 }  // namespace motis::paxmon
