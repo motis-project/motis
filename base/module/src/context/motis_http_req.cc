@@ -33,12 +33,10 @@ struct http_request_executor
       self->on_response(a, std::move(res), ec);
     };
 
-    if (boost::algorithm::starts_with(req.address.prot(), "https") ||
-        req.address.port() == "443") {
-      make_https(ios_, req.address)->query(req, std::move(cb));
-    } else if (boost::algorithm::starts_with(req.address.prot(), "http") ||
-               req.address.port() == "80") {
-      make_http(ios_, req.address)->query(req, std::move(cb));
+    if (req.use_https()) {
+      make_https(ios_, req.peer())->query(req, std::move(cb));
+    } else if (req.use_http()) {
+      make_http(ios_, req.peer())->query(req, std::move(cb));
     } else {
       try {
         throw utl::fail("unexpected port {} (not https or http)",

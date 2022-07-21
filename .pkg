@@ -45,7 +45,7 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=008b52239a0d0f12e7cb1aabdb72bbe6d188f667
+  commit=d9b566e020a9729272e7a756eb06e5b69d5c4b67
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis

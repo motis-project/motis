@@ -135,8 +135,8 @@ struct ris::impl {
     using source_t = std::variant<net::http::client::request, fs::path>;
     enum class source_type { path, url };
 
-    input(schedule const& sched, std::string const& in)
-        : input{sched, split(in)} {}
+    input(schedule const& sched, config const& c, std::string const& in)
+        : input{sched, c, split(in)} {}
 
     std::string str() const {
       return std::visit(
@@ -167,7 +167,9 @@ struct ris::impl {
     net::http::client::request get_request() const {
       utl::verify(std::holds_alternative<net::http::client::request>(src_),
                   "no url {}", str());
-      return std::get<net::http::client::request>(src_);
+      auto req = std::get<net::http::client::request>(src_);
+      return config_.http_proxy_.empty() ? req
+                                         : req.set_proxy(config_.http_proxy_);
     }
 
     std::string const& tag() const { return tag_; }
@@ -175,9 +177,10 @@ struct ris::impl {
     gtfsrt::knowledge_context& gtfs_knowledge() { return gtfs_knowledge_; }
 
   private:
-    input(schedule const& sched,
+    input(schedule const& sched, config const& c,
           std::pair<source_t, std::string>&& path_and_tag)
-        : src_{std::move(path_and_tag.first)},
+        : config_{c},
+          src_{std::move(path_and_tag.first)},
           tag_{path_and_tag.second},
           gtfs_knowledge_{path_and_tag.second, sched} {}
 
@@ -212,6 +215,8 @@ struct ris::impl {
                 tag};
       }
     }
+
+    config const& config_;
 
     source_t src_;
     std::string tag_;
@@ -309,7 +314,12 @@ struct ris::impl {
     pub.schedule_res_id_ = to_res_id(::motis::module::global_res_id::SCHEDULE);
 
     for (auto const& [f, in] : utl::zip(futures, inputs)) {
-      parse_str_and_write_to_db(*in, f->val().body, file_type::PROTOBUF, pub);
+      try {
+        parse_str_and_write_to_db(*in, f->val().body, file_type::PROTOBUF, pub);
+      } catch (std::exception const& e) {
+        LOG(logging::error)
+            << "input source \"" << in->str() << "\": " << e.what();
+      }
     }
 
     sched.system_time_ = pub.max_timestamp_;
@@ -319,9 +329,9 @@ struct ris::impl {
 
   void init(dispatcher& d, schedule& sched) {
     inputs_ = utl::to_vec(config_.input_, [&](std::string const& in) {
-      return input{sched, in};
+      return input{sched, config_, in};
     });
-    file_upload_ = std::make_unique<input>(sched, "");
+    file_upload_ = std::make_unique<input>(sched, config_, "");
 
     if (config_.clear_db_ && fs::exists(config_.db_path_)) {
       LOG(info) << "clearing database path " << config_.db_path_;
@@ -1015,6 +1025,7 @@ ris::ris() : module("RIS", "ris") {
         "automatically forward after every file during read");
   param(config_.gtfs_is_addition_skip_allowed_,
         "gtfsrt.is_addition_skip_allowed", "allow skips on additional trips");
+  param(config_.http_proxy_, "http_proxy", "proxy for HTTP requests");
   param(config_.update_interval_, "update_interval",
         "RT update interval in seconds (RabbitMQ messages get buffered)");
   param(config_.rabbitmq_.host_, "rabbitmq.host", "RabbitMQ remote host");
@@ -1035,7 +1046,11 @@ ris::ris() : module("RIS", "ris") {
 
 ris::~ris() = default;
 
-void ris::stop_io() { impl_->stop_io(); }
+void ris::stop_io() {
+  if (impl_) {
+    impl_->stop_io();
+  }
+}
 
 void ris::reg_subc(motis::module::subc_reg& r) {
   r.register_cmd(

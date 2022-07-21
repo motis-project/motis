@@ -23,6 +23,7 @@ struct config {
   amqp::login rabbitmq_;
   unsigned update_interval_{60};
   std::string rabbitmq_log_{};
+  std::string http_proxy_;
 };
 
 struct ris : public motis::module::module {
