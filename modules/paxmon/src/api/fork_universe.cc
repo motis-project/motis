@@ -27,19 +27,6 @@ msg_ptr fork_universe(paxmon_data& data, msg_ptr const& msg) {
 
   auto* new_uv = data.multiverse_.fork(base_uv, base_sched, fork_schedule, ttl);
 
-  // broadcast
-  {
-    message_creator bmc;
-    bmc.create_and_finish(
-        MsgContent_PaxMonUniverseForked,
-        CreatePaxMonUniverseForked(bmc, base_uv.id_, new_uv->id_,
-                                   new_uv->schedule_res_id_, fork_schedule)
-            .Union(),
-        "/paxmon/universe_forked");
-    auto const bmsg = make_msg(bmc);
-    motis_publish(bmsg);
-  }
-
   message_creator mc;
   mc.create_and_finish(
       MsgContent_PaxMonForkUniverseResponse,

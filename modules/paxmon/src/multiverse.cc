@@ -3,6 +3,12 @@
 #include "utl/erase.h"
 #include "utl/verify.h"
 
+#include "motis/core/common/logging.h"
+#include "motis/module/context/motis_publish.h"
+
+using namespace motis::logging;
+using namespace motis::module;
+
 namespace motis::paxmon {
 
 void multiverse::create_default_universe() {
@@ -44,7 +50,7 @@ universe_access multiverse::get(universe_id const id,
 universe* multiverse::fork(universe const& base_uv, schedule const& base_sched,
                            bool fork_schedule,
                            std::optional<std::chrono::seconds> ttl) {
-  std::lock_guard lock{mutex_};
+  std::unique_lock lock{mutex_};
   auto const new_id = ++last_id_;
   auto const new_uv_res_id = mod_.generate_res_id();
   auto new_schedule_res_id = base_uv.schedule_res_id_;
@@ -66,6 +72,18 @@ universe* multiverse::fork(universe const& base_uv, schedule const& base_sched,
   universe_info_map_[new_id] = uv_info;
   universe_info_storage_[new_id] = std::move(uv_info);
   universes_using_schedule_[new_schedule_res_id].emplace_back(new_id);
+
+  lock.unlock();
+  message_creator mc;
+  mc.create_and_finish(
+      MsgContent_PaxMonUniverseForked,
+      CreatePaxMonUniverseForked(mc, base_uv.id_, new_uv->id_,
+                                 new_uv->schedule_res_id_, fork_schedule)
+          .Union(),
+      "/paxmon/universe_forked");
+  auto const msg = make_msg(mc);
+  ctx::await_all(motis_publish(msg));
+
   return new_uv;
 }
 
@@ -144,30 +162,33 @@ std::optional<std::chrono::seconds> multiverse::keep_alive(
 void multiverse::destroy_expired_universes() {
   std::lock_guard lock{mutex_};
   auto const now = std::chrono::steady_clock::now();
-  for (auto it = begin(universe_info_map_); it != end(universe_info_map_);
-       ++it) {
+  for (auto it = begin(universe_info_map_); it != end(universe_info_map_);) {
     auto const uv_id = it->first;
     auto uv_info = it->second.lock();
     if (!uv_info) {
+      // clean up expired universes (already released)
+      it = universe_info_map_.erase(it);
       continue;
     }
     if (uv_info->keep_alive_until_ &&
         uv_info->keep_alive_until_.value() < now) {
       // destroy universe (after last usage)
       universe_info_storage_.erase(uv_id);
+      LOG(info) << "paxmon: universe " << uv_id << " expired";
     }
+    ++it;
   }
 }
 
 void multiverse::release_universe(universe_info& uv_info) {
   // called from universe_info destructor
-  // entry already removed from universe_info_storage
+  // entry already removed from universe_info_storage_
+  // universe_info_map_ entry will be removed in destroy_expired_universes later
   auto const uv_id = uv_info.uv_id_;
   auto const uv_res_id = uv_info.universe_res_;
   auto const schedule_res_id = uv_info.schedule_res_;
 
-  universe_info_map_.erase(uv_id);
-
+  std::unique_lock lock{mutex_};
   mod_.remove_shared_data(uv_res_id);
   auto& sched_refs = universes_using_schedule_[schedule_res_id];
   utl::erase(sched_refs, uv_id);
@@ -177,6 +198,14 @@ void multiverse::release_universe(universe_info& uv_info) {
                 "paxmon::multiverse.destroy: default schedule");
     mod_.remove_shared_data(schedule_res_id);
   }
+  lock.unlock();
+
+  message_creator mc;
+  mc.create_and_finish(MsgContent_PaxMonUniverseDestroyed,
+                       CreatePaxMonUniverseDestroyed(mc, uv_id).Union(),
+                       "/paxmon/universe_destroyed");
+  auto const msg = make_msg(mc);
+  ctx::await_all(motis_publish(msg));
 }
 
 }  // namespace motis::paxmon
