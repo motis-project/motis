@@ -6,8 +6,8 @@ import {
   Position,
   Station,
   TripId,
-} from "../motis";
-import { RiBasisFahrt } from "./ribasis";
+} from "@/api/protocol/motis";
+import { RiBasisFahrt } from "@/api/protocol/motis/ribasis";
 
 // lookup/LookupGeoStationIdRequest.fbs
 export interface LookupGeoStationIdRequest {

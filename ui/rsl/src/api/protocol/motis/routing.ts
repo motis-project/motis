@@ -6,7 +6,7 @@ import {
   SearchDir,
   Statistics,
   TripId,
-} from "../motis";
+} from "@/api/protocol/motis";
 
 // routing/RoutingRequest.fbs
 export interface InputStation {

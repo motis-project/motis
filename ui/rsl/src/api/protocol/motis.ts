@@ -1,5 +1,5 @@
 // generated file - do not modify - run update-protocol to update
-import { StationGuesserRequest, StationGuesserResponse } from "./motis/guesser";
+import { StationGuesserRequest, StationGuesserResponse } from "@/api/protocol/motis/guesser";
 import {
   LookupBatchGeoStationRequest,
   LookupBatchGeoStationResponse,
@@ -17,12 +17,12 @@ import {
   LookupScheduleInfoResponse,
   LookupStationEventsRequest,
   LookupStationEventsResponse,
-} from "./motis/lookup";
+} from "@/api/protocol/motis/lookup";
 import {
   PaxForecastApplyMeasuresRequest,
   PaxForecastApplyMeasuresResponse,
   PaxForecastUpdate,
-} from "./motis/paxforecast";
+} from "@/api/protocol/motis/paxforecast";
 import {
   PaxMonAddGroupsRequest,
   PaxMonAddGroupsResponse,
@@ -54,9 +54,9 @@ import {
   PaxMonUniverseDestroyed,
   PaxMonUniverseForked,
   PaxMonUpdate,
-} from "./motis/paxmon";
-import { RISForwardTimeRequest } from "./motis/ris";
-import { RoutingRequest, RoutingResponse } from "./motis/routing";
+} from "@/api/protocol/motis/paxmon";
+import { RISForwardTimeRequest } from "@/api/protocol/motis/ris";
+import { RoutingRequest, RoutingResponse } from "@/api/protocol/motis/routing";
 
 // base/Connection.fbs
 export interface EventInfo {
