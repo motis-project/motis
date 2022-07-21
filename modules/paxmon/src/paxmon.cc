@@ -672,9 +672,7 @@ void paxmon::rt_updates_applied(universe& uv, schedule const& sched) {
   }
 }
 
-void paxmon::universe_gc() {
-  data_.multiverse_.destroy_expired_universes();
-}
+void paxmon::universe_gc() { data_.multiverse_.destroy_expired_universes(); }
 
 universe& paxmon::primary_universe() {
   return *get_shared_data<std::unique_ptr<universe>>(motis::module::to_res_id(
