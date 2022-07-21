@@ -380,6 +380,7 @@ export interface PaxMonGroupBaseInfo {
 
 // paxmon/PaxMonKeepAliveRequest.fbs
 export interface PaxMonKeepAliveRequest {
+  multiverse_id: number;
   universes: number[];
 }
 
@@ -392,6 +393,7 @@ export interface PaxMonUniverseKeepAliveInfo {
 
 // paxmon/PaxMonKeepAliveResponse.fbs
 export interface PaxMonKeepAliveResponse {
+  multiverse_id: number;
   alive: PaxMonUniverseKeepAliveInfo[];
   expired: number[];
 }
@@ -437,6 +439,7 @@ export interface PaxMonStatusRequest {
 // paxmon/PaxMonStatusResponse.fbs
 export interface PaxMonStatusResponse {
   system_time: number;
+  multiverse_id: number;
   active_groups: number;
   trip_count: number;
 }

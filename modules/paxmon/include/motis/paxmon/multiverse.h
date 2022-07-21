@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -34,9 +35,15 @@ struct keep_alive_response {
 };
 
 struct multiverse {
-  explicit multiverse(motis::module::module& mod) : mod_{mod} {}
+  explicit multiverse(motis::module::module& mod)
+      : mod_{mod},
+        id_{std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch())
+                .count()} {}
 
   void create_default_universe();
+
+  std::int64_t id() const { return id_; }
 
   universe_access get(universe_id id,
                       ctx::access_t universe_access = ctx::access_t::READ,
@@ -69,6 +76,7 @@ private:
 
   std::recursive_mutex mutex_;
   motis::module::module& mod_;
+  std::int64_t const id_;
   std::map<universe_id, std::shared_ptr<universe_info>> universe_info_storage_;
   std::map<universe_id, std::weak_ptr<universe_info>> universe_info_map_;
   std::map<ctx::res_id_t, std::vector<universe_id>> universes_using_schedule_;
