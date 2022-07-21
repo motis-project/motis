@@ -1,5 +1,8 @@
 // generated file - do not modify - run update-protocol to update
-import { StationGuesserRequest, StationGuesserResponse } from "@/api/protocol/motis/guesser";
+import {
+  StationGuesserRequest,
+  StationGuesserResponse,
+} from "@/api/protocol/motis/guesser";
 import {
   LookupBatchGeoStationRequest,
   LookupBatchGeoStationResponse,
