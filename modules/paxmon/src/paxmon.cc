@@ -129,7 +129,7 @@ void paxmon::reg_subc(motis::module::subc_reg& r) {
 
 void paxmon::import(motis::module::import_dispatcher& reg) {
   add_shared_data(to_res_id(global_res_id::PAX_DATA), &data_);
-  data_.multiverse_.create_default_universe();
+  data_.multiverse_->create_default_universe();
 
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "paxmon", reg,
@@ -554,7 +554,7 @@ msg_ptr paxmon::rt_update(msg_ptr const& msg) {
   auto const update = motis_content(RtUpdates, msg);
   auto const schedule_res_id = update->schedule();
   auto const uv_ids =
-      data_.multiverse_.universes_using_schedule(schedule_res_id);
+      data_.multiverse_->universes_using_schedule(schedule_res_id);
   for (auto const uv_id : uv_ids) {
     auto const uv_access =
         get_universe_and_schedule(data_, uv_id, ctx::access_t::WRITE);
@@ -569,7 +569,7 @@ void paxmon::rt_updates_applied(msg_ptr const& msg) {
   auto const rgu = motis_content(RtGraphUpdated, msg);
   auto const schedule_res_id = rgu->schedule();
   auto const uv_ids =
-      data_.multiverse_.universes_using_schedule(schedule_res_id);
+      data_.multiverse_->universes_using_schedule(schedule_res_id);
   for (auto const uv_id : uv_ids) {
     auto const uv_access =
         get_universe_and_schedule(data_, uv_id, ctx::access_t::WRITE);
@@ -672,7 +672,7 @@ void paxmon::rt_updates_applied(universe& uv, schedule const& sched) {
   }
 }
 
-void paxmon::universe_gc() { data_.multiverse_.destroy_expired_universes(); }
+void paxmon::universe_gc() { data_.multiverse_->destroy_expired_universes(); }
 
 universe& paxmon::primary_universe() {
   return *get_shared_data<std::unique_ptr<universe>>(motis::module::to_res_id(

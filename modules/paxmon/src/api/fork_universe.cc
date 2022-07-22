@@ -25,7 +25,8 @@ msg_ptr fork_universe(paxmon_data& data, msg_ptr const& msg) {
     ttl = data.max_universe_ttl_;
   }
 
-  auto* new_uv = data.multiverse_.fork(base_uv, base_sched, fork_schedule, ttl);
+  auto* new_uv =
+      data.multiverse_->fork(base_uv, base_sched, fork_schedule, ttl);
 
   message_creator mc;
   mc.create_and_finish(

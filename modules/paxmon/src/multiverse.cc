@@ -25,7 +25,7 @@ void multiverse::create_default_universe() {
   uvp->schedule_res_id_ = default_schedule_res_id;
   mod_.add_shared_data(default_uv_res_id, std::move(uvp));
   universe_info_storage_[0] = std::make_shared<universe_info>(
-      *this, 0, default_uv_res_id, default_schedule_res_id);
+      shared_from_this(), 0, default_uv_res_id, default_schedule_res_id);
   universe_info_map_[0] = universe_info_storage_[0];
   universes_using_schedule_[default_schedule_res_id].emplace_back(0);
 }
@@ -65,8 +65,8 @@ universe* multiverse::fork(universe const& base_uv, schedule const& base_sched,
   new_uvp->schedule_res_id_ = new_schedule_res_id;
   auto const new_uv = new_uvp.get();
   mod_.add_shared_data(new_uv_res_id, std::move(new_uvp));
-  auto uv_info = std::make_shared<universe_info>(*this, new_id, new_uv_res_id,
-                                                 new_schedule_res_id);
+  auto uv_info = std::make_shared<universe_info>(
+      shared_from_this(), new_id, new_uv_res_id, new_schedule_res_id);
   if (ttl.has_value() && ttl.value().count() != 0) {
     uv_info->ttl_ = ttl;
     uv_info->keep_alive_until_ = std::chrono::steady_clock::now() + ttl.value();

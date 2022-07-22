@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <memory>
 #include <optional>
 
 #include "ctx/res_id_t.h"
@@ -12,7 +13,7 @@ namespace motis::paxmon {
 struct multiverse;
 
 struct universe_info {
-  universe_info(multiverse& mv, universe_id const uv_id,
+  universe_info(std::shared_ptr<multiverse>& mv, universe_id const uv_id,
                 ctx::res_id_t const universe_res,
                 ctx::res_id_t const schedule_res)
       : uv_id_{uv_id},
@@ -31,7 +32,7 @@ struct universe_info {
   std::optional<std::chrono::seconds> ttl_{};
   std::optional<std::chrono::time_point<std::chrono::steady_clock>>
       keep_alive_until_{};
-  multiverse& multiverse_;
+  std::weak_ptr<multiverse> multiverse_;
 };
 
 }  // namespace motis::paxmon

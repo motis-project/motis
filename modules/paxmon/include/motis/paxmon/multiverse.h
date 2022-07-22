@@ -34,7 +34,7 @@ struct keep_alive_response {
   std::vector<universe_id> not_found_;
 };
 
-struct multiverse {
+struct multiverse : std::enable_shared_from_this<multiverse> {
   explicit multiverse(motis::module::module& mod)
       : mod_{mod},
         id_{std::chrono::duration_cast<std::chrono::milliseconds>(

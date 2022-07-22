@@ -11,7 +11,7 @@ namespace motis::paxmon::api {
 
 msg_ptr destroy_universe(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonDestroyUniverseRequest, msg);
-  if (data.multiverse_.destroy(req->universe())) {
+  if (data.multiverse_->destroy(req->universe())) {
     return make_success_msg();
   } else {
     throw std::system_error{error::universe_destruction_failed};

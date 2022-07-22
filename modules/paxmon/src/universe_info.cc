@@ -4,6 +4,10 @@
 
 namespace motis::paxmon {
 
-universe_info::~universe_info() { multiverse_.release_universe(*this); }
+universe_info::~universe_info() {
+  if (auto mv = multiverse_.lock(); mv) {
+    mv->release_universe(*this);
+  }
+}
 
 }  // namespace motis::paxmon
