@@ -28,7 +28,7 @@
     "@visx/scale": "^2.2.2",
     "@visx/shape": "^2.11.1",
     "@visx/stats": "^2.10.0",
-    "date-fns": "^2.29.0",
+    "date-fns": "^2.29.1",
     "downshift": "^6.1.7",
     "jotai": "^1.7.6",
     "lodash-es": "^4.17.21",
@@ -40,7 +40,7 @@
     "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "@limegrass/eslint-plugin-import-alias": "^1.0.5",
+    "@limegrass/eslint-plugin-import-alias": "1.0.3",
     "@tailwindcss/forms": "^0.5.2",
     "@trivago/prettier-plugin-sort-imports": "^3.3.0",
     "@types/lodash-es": "^4.17.6",

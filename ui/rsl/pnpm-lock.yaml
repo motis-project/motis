@@ -3,7 +3,7 @@ lockfileVersion: 5.4
 specifiers:
   '@headlessui/react': ^1.6.6
   '@heroicons/react': ^1.0.6
-  '@limegrass/eslint-plugin-import-alias': ^1.0.5
+  '@limegrass/eslint-plugin-import-alias': 1.0.3
   '@radix-ui/react-tooltip': ^1.0.0
   '@tailwindcss/forms': ^0.5.2
   '@tanstack/react-query': ^4.0.10
@@ -23,7 +23,7 @@ specifiers:
   '@visx/stats': ^2.10.0
   '@vitejs/plugin-react': ^2.0.0
   autoprefixer: ^10.4.7
-  date-fns: ^2.29.0
+  date-fns: ^2.29.1
   downshift: ^6.1.7
   eslint: ^8.20.0
   eslint-config-prettier: ^8.5.0
@@ -55,7 +55,7 @@ dependencies:
   '@visx/scale': 2.2.2
   '@visx/shape': 2.11.1_react@18.2.0
   '@visx/stats': 2.10.0_react@18.2.0
-  date-fns: 2.29.0
+  date-fns: 2.29.1
   downshift: 6.1.7_react@18.2.0
   jotai: 1.7.6_2yzh62hri3ykjpmbaacku5bnuq
   lodash-es: 4.17.21
@@ -67,7 +67,7 @@ dependencies:
   uuid: 8.3.2
 
 devDependencies:
-  '@limegrass/eslint-plugin-import-alias': 1.0.5_eslint@8.20.0
+  '@limegrass/eslint-plugin-import-alias': 1.0.3_eslint@8.20.0
   '@tailwindcss/forms': 0.5.2_tailwindcss@3.1.6
   '@trivago/prettier-plugin-sort-imports': 3.3.0_prettier@2.7.1
   '@types/lodash-es': 4.17.6
@@ -554,8 +554,8 @@ packages:
     resolution: {integrity: sha512-zMM9Ds+SawiUkakS7y94Ymqx+S0ORzpG3frZirN3l+UlXUmSUR7hF4wxCVqW+ei94JzV5kt0uXBcoOEAuiydrw==}
     dev: false
 
-  /@limegrass/eslint-plugin-import-alias/1.0.5_eslint@8.20.0:
-    resolution: {integrity: sha512-qHVqKs8osMK0e76F2A6d1m/UkV2LV5rPKeX0r0JlxSmEU/Io0XiLUXzKh6v+KZTCpp42cyHvYKsQARv1YllZFA==}
+  /@limegrass/eslint-plugin-import-alias/1.0.3_eslint@8.20.0:
+    resolution: {integrity: sha512-+I59Aa3U3mXHUppsZHI6e6BBFC02zYYTXiVSCFY+wLRsx0I8APSqfg3XsLbRyikCNqK6Xryy2C4BFEy2s7s+jw==}
     peerDependencies:
       eslint: ^2 || ^3 || ^4 || ^5 || ^6 || ^7.2.0 || ^8
     dependencies:
@@ -1563,8 +1563,8 @@ packages:
       d3-array: 2.12.1
     dev: false
 
-  /date-fns/2.29.0:
-    resolution: {integrity: sha512-itxguwZHwBR0ats0VpYAVyY65dq1DEsDsfsGxFG11Rrho+zQJTCcjKbxQ7LiU5M2omLJ272bnn63yYFk/YGuVw==}
+  /date-fns/2.29.1:
+    resolution: {integrity: sha512-dlLD5rKaKxpFdnjrs+5azHDFOPEu4ANy/LTh04A1DTzMM7qoajmKCBc8pkKRFT41CNzw+4gQh79X5C+Jq27HAw==}
     engines: {node: '>=0.11'}
     dev: false
 
