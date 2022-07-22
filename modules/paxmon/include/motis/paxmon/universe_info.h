@@ -13,7 +13,7 @@ namespace motis::paxmon {
 struct multiverse;
 
 struct universe_info {
-  universe_info(std::shared_ptr<multiverse>& mv, universe_id const uv_id,
+  universe_info(std::shared_ptr<multiverse> const& mv, universe_id const uv_id,
                 ctx::res_id_t const universe_res,
                 ctx::res_id_t const schedule_res)
       : uv_id_{uv_id},
