@@ -23,7 +23,7 @@ specifiers:
   '@visx/stats': ^2.10.0
   '@vitejs/plugin-react': ^2.0.0
   autoprefixer: ^10.4.7
-  date-fns: ^2.28.0
+  date-fns: ^2.29.0
   downshift: ^6.1.7
   eslint: ^8.20.0
   eslint-config-prettier: ^8.5.0
@@ -55,7 +55,7 @@ dependencies:
   '@visx/scale': 2.2.2
   '@visx/shape': 2.11.1_react@18.2.0
   '@visx/stats': 2.10.0_react@18.2.0
-  date-fns: 2.28.0
+  date-fns: 2.29.0
   downshift: 6.1.7_react@18.2.0
   jotai: 1.7.6_2yzh62hri3ykjpmbaacku5bnuq
   lodash-es: 4.17.21
@@ -1396,7 +1396,7 @@ packages:
     hasBin: true
     dependencies:
       caniuse-lite: 1.0.30001368
-      electron-to-chromium: 1.4.196
+      electron-to-chromium: 1.4.198
       node-releases: 2.0.6
       update-browserslist-db: 1.0.5_browserslist@4.21.2
     dev: true
@@ -1563,8 +1563,8 @@ packages:
       d3-array: 2.12.1
     dev: false
 
-  /date-fns/2.28.0:
-    resolution: {integrity: sha512-8d35hViGYx/QH0icHYCeLmsLmMUheMmTyV9Fcm6gvNwdw31yXXH+O85sOBJ+OLnLQMKZowvpKb6FgMIQjcpvQw==}
+  /date-fns/2.29.0:
+    resolution: {integrity: sha512-itxguwZHwBR0ats0VpYAVyY65dq1DEsDsfsGxFG11Rrho+zQJTCcjKbxQ7LiU5M2omLJ272bnn63yYFk/YGuVw==}
     engines: {node: '>=0.11'}
     dev: false
 
@@ -1648,8 +1648,8 @@ packages:
       tslib: 2.4.0
     dev: false
 
-  /electron-to-chromium/1.4.196:
-    resolution: {integrity: sha512-uxMa/Dt7PQsLBVXwH+t6JvpHJnrsYBaxWKi/J6HE+/nBtoHENhwBoNkgkm226/Kfxeg0z1eMQLBRPPKcDH8xWA==}
+  /electron-to-chromium/1.4.198:
+    resolution: {integrity: sha512-jwqQPdKGeAslcq8L+1SZZgL6uDiIDmTe9Gq4brsdWAH27y7MJ2g9Ue6MyST3ogmSM49EAQP7bype1V5hsuNrmQ==}
     dev: true
 
   /es-abstract/1.20.1:

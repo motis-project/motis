@@ -28,7 +28,7 @@
     "@visx/scale": "^2.2.2",
     "@visx/shape": "^2.11.1",
     "@visx/stats": "^2.10.0",
-    "date-fns": "^2.28.0",
+    "date-fns": "^2.29.0",
     "downshift": "^6.1.7",
     "jotai": "^1.7.6",
     "lodash-es": "^4.17.21",
