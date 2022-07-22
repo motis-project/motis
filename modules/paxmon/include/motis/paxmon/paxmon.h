@@ -42,7 +42,7 @@ private:
   motis::module::msg_ptr rt_update(motis::module::msg_ptr const& msg);
   void rt_updates_applied(motis::module::msg_ptr const& msg);
   void rt_updates_applied(universe& uv, schedule const& sched);
-  void universe_gc();
+  void universe_gc() const;
 
   universe& primary_universe();
 
