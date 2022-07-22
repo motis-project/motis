@@ -66,7 +66,7 @@ struct multiverse {
 private:
   std::shared_ptr<universe_info> get_universe_info(universe_id id);
 
-  std::optional<std::chrono::seconds> keep_alive(universe_info& uv_info);
+  static std::optional<std::chrono::seconds> keep_alive(universe_info& uv_info);
 
   static std::optional<std::chrono::seconds> keep_alive(
       universe_info& uv_info,
