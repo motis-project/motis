@@ -6,63 +6,63 @@
 namespace motis::mcraptor {
 
 
-class Label {
+struct label {
 
-  inline bool arrivalTimeRule(Label& other) {
-    return arrivalTime <= other.arrivalTime;
+  inline bool arrival_time_rule(label& other) {
+    return arrival_time_ <= other.arrival_time_;
   }
 
-  inline bool departureTimeRule(Label& other) {
-    return departureTime >= other.departureTime;
+  inline bool departure_time_rule(label& other) {
+    return departure_time_ >= other.departure_time_;
   }
 
-  inline bool changesCountRule(Label& other) {
-    return changesCount <= other.changesCount;
+  inline bool changes_count_rule(label& other) {
+    return changes_count_ <= other.changes_count_;
   }
 
-  inline bool travelDurationRule(Label& other) {
-    return (arrivalTime - departureTime) <= (other.arrivalTime - other.departureTime);
+  inline bool travel_duration_rule(label& other) {
+    return (arrival_time_ - departure_time_) <= (other.arrival_time_ - other.departure_time_);
   }
 
 public:
   // Parameters
-  time departureTime = invalid<time>;
-  size_t changesCount = invalid<size_t>;
-  time arrivalTime = invalid<time>;
+  time departure_time_ = invalid<time>;
+  size_t changes_count_ = invalid<size_t>;
+  time arrival_time_ = invalid<time>;
 
   // Parent info
-  stop_id parentStation = invalid<stop_id>;
-  time parentDepartureTime = invalid<time>;
-  size_t parentLabelIndex = invalid<size_t>;
+  stop_id parent_station_ = invalid<stop_id>;
+  time parent_departure_time_ = invalid<time>;
+  size_t parent_label_index_ = invalid<size_t>;
 
   // Current trip info
-  route_id routeId = invalid<route_id>;
-  trip_id current_trip_id = invalid<trip_id>;
-  route_stops_index stop_offset = invalid<route_stops_index>;
-  time foot_path_duration = invalid<time>;
+  route_id route_id_ = invalid<route_id>;
+  trip_id current_trip_id_ = invalid<trip_id>;
+  route_stops_index stop_offset_ = invalid<route_stops_index>;
+  time footpath_duration_ = invalid<time>;
 
-  Label() {
+  label() {
   }
 
-  Label(time departureTime, time arrivalTime, size_t changesCount) : departureTime(departureTime),
-                                                                     arrivalTime(arrivalTime),
-                                                                     changesCount(changesCount) { }
+  label(time departure_time, time arrival_time, size_t changes_count) : departure_time_(departure_time),
+                                                                     arrival_time_(arrival_time),
+                                                                     changes_count_(changes_count) { }
 
   // to create labels for current round from labels from previous round for certain station
-  Label(Label& parentLabel, stop_id parentStation, size_t parentIndex) : arrivalTime(parentLabel.arrivalTime),
-                                                                         changesCount(parentLabel.changesCount + 1),
-                                                                         departureTime(parentLabel.departureTime),
-                                                                         parentStation(parentStation),
-                                                                         parentLabelIndex(parentIndex),
-                                                                         parentDepartureTime(parentLabel.arrivalTime) { }
+  label(label& parent_label, stop_id parent_station, size_t parent_index) : arrival_time_(parent_label.arrival_time_),
+                                                                            changes_count_(parent_label.changes_count_ + 1),
+                                                                            departure_time_(parent_label.departure_time_),
+                                                                            parent_station_(parent_station),
+                                                                            parent_label_index_(parent_index),
+                                                                            parent_departure_time_(parent_label.arrival_time_) { }
 
-  bool dominates(Label& other) {
-    return arrivalTimeRule(other);
+  bool dominates(label& other) {
+    return arrival_time_rule(other);
   }
 
 
-  bool dominatesAll(std::vector<Label> labels) {
-    for (Label& l : labels) {
+  bool dominates_all(std::vector<label> labels) {
+    for (label& l : labels) {
       if(!dominates(l)) {
         return false;
       }
@@ -71,20 +71,20 @@ public:
   }
 };
 
-struct RouteLabel {
+struct route_label {
 
-  RouteLabel() = default;
+  route_label() = default;
 
   // TODO: check
-  const stop_time* trip = nullptr;
-  trip_id current_trip_id = invalid<trip_id>;
-  route_stops_index stop_offset = invalid<route_stops_index>;
+  const stop_time* trip_ = nullptr;
+  trip_id current_trip_id_ = invalid<trip_id>;
+  route_stops_index stop_offset_ = invalid<route_stops_index>;
 
-  route_stops_index parentStop = invalid<route_stops_index>;
-  size_t parentLabelIndex = invalid<size_t>;
+  route_stops_index parent_stop_ = invalid<route_stops_index>;
+  size_t parent_label_index_ = invalid<size_t>;
 
-  bool dominates(RouteLabel& otherLabel) {
-    return trip <= otherLabel.trip;
+  bool dominates(route_label& other_label) {
+    return trip_ <= other_label.trip_;
   }
 };
 

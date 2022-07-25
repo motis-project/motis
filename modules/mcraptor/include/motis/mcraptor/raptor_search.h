@@ -93,8 +93,8 @@ inline std::vector<journey> cpu_raptor(raptor_query& q,
                                        raptor_meta_info const& raptor_sched,
                                        raptor_timetable const& tt) {
   return raptor_gen(q, stats, sched, raptor_sched, tt, [&](raptor_query& q) {
-    McRaptor mcRaptor = McRaptor(q);
-    return mcRaptor.invoke_cpu_raptor();
+    mc_raptor mcraptor = mc_raptor(q);
+    return mcraptor.invoke_cpu_raptor();
   });
 }
 

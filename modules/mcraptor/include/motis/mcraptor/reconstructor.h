@@ -203,7 +203,7 @@ struct reconstructor {
 
   template <typename Query>
   std::vector<candidate> get_candidates(Query const& q) {
-    Rounds& result = q.result();
+    rounds& result = q.result();
 
     std::vector<candidate> candidates;
 
@@ -211,19 +211,19 @@ struct reconstructor {
       auto const tt = raptor_sched_.transfer_times_[t];
 
       for (auto round_k = 1; round_k < max_raptor_round; ++round_k) {
-        if (!result[round_k][t].isValid()) {
+        if (!result[round_k][t].is_valid()) {
           continue;
         }
 
         auto c = candidate{q.source_,
                            t,
                            q.source_time_begin_,
-                           result[round_k][t].getEarliestArrivalTime(),
+                           result[round_k][t].get_earliest_arrival_time(),
                            static_cast<transfers>(round_k - 1),
                            true};
 
         // Check if the journey ends with a footpath
-        for (; c.arrival_ < result[round_k][t].getEarliestArrivalTime() + tt; c.arrival_++) {
+        for (; c.arrival_ < result[round_k][t].get_earliest_arrival_time() + tt; c.arrival_++) {
           c.ends_with_footpath_ = journey_ends_with_footpath(c, result);
           if (!c.ends_with_footpath_) {
             break;
@@ -278,31 +278,31 @@ struct reconstructor {
 
 
 //TODO reproduce another ij assignments from reconstruct_journey, fix bugs
-    Rounds& result = q.result();
-    for(Label& l : result.getAllLabelsForStop(q.target_, max_raptor_round)) {
-      intermediate_journey ij = intermediate_journey(l.changesCount, q.ontrip_, q.source_time_begin_);
+    rounds& result = q.result();
+    for(label& l : result.getAllLabelsForStop(q.target_, max_raptor_round)) {
+      intermediate_journey ij = intermediate_journey(l.changes_count_, q.ontrip_, q.source_time_begin_);
 
-      Label& current_station_label = l;
-      raptor_round r_k = current_station_label.changesCount;
+      label& current_station_label = l;
+      raptor_round r_k = current_station_label.changes_count_;
       stop_id current_station = q.target_;
-      size_t parent_label_index = current_station_label.parentLabelIndex;
-      stop_id parent_station = current_station_label.parentStation;
+      size_t parent_label_index = current_station_label.parent_label_index_;
+      stop_id parent_station = current_station_label.parent_station_;
       time last_departure = invalid<time>;
       while(r_k > 0) {
         if(current_station != parent_station) {
-          last_departure = ij.add_route(parent_station, current_station_label.routeId, current_station_label.current_trip_id,
-                                        current_station_label.stop_offset, raptor_sched_, timetable_);
+          last_departure = ij.add_route(parent_station, current_station_label.route_id_, current_station_label.current_trip_id_,
+                                        current_station_label.stop_offset_, raptor_sched_, timetable_);
         }
         else {
-          ij.add_footpath(current_station, current_station_label.arrivalTime, current_station_label.parentDepartureTime,
-                          current_station_label.foot_path_duration, raptor_sched_);
+          ij.add_footpath(current_station, current_station_label.arrival_time_, current_station_label.parent_departure_time_,
+                          current_station_label.footpath_duration_, raptor_sched_);
         }
 
         r_k--;
         current_station_label = result[r_k][parent_station][parent_label_index];
         current_station = parent_station;
-        parent_label_index = current_station_label.parentLabelIndex;
-        parent_station = current_station_label.parentStation;
+        parent_label_index = current_station_label.parent_label_index_;
+        parent_station = current_station_label.parent_station_;
       }
 
       ij.add_start_station(current_station, raptor_sched_, last_departure);
@@ -334,14 +334,14 @@ struct reconstructor {
   }
 
   bool journey_ends_with_footpath(candidate const c,
-                                  Rounds& result) {
+                                  rounds& result) {
     return !valid(std::get<stop_id>(
         get_previous_station(c.target_, c.arrival_, c.transfers_ + 1, result)));
   }
 
   template <typename Query>
   intermediate_journey reconstruct_journey(candidate const c, Query const& q) {
-    Rounds& result = q.result();
+    rounds& result = q.result();
 
     auto ij =
         intermediate_journey{c.transfers_, q.ontrip_, q.source_time_begin_};
@@ -384,7 +384,7 @@ struct reconstructor {
       }
 
       arrival_station = previous_station;
-      station_arrival = result[result_idx - 1][arrival_station].getEarliestArrivalTime();
+      station_arrival = result[result_idx - 1][arrival_station].get_earliest_arrival_time();
     }
 
     bool can_be_start = false;
@@ -451,7 +451,7 @@ struct reconstructor {
 
   std::tuple<stop_id, route_id, trip_id, stop_offset> get_previous_station(
       stop_id const arrival_station, time const stop_arrival,
-      uint8_t const result_idx, Rounds& result) {
+      uint8_t const result_idx, rounds& result) {
     auto const arrival_stop = timetable_.stops_[arrival_station];
 
     auto const route_count = arrival_stop.route_count_;
@@ -503,7 +503,7 @@ struct reconstructor {
   }
 
   stop_id get_board_station_for_trip(route_id const r_id, trip_id const t_id,
-                                     Rounds& result,
+                                     rounds& result,
                                      raptor_round const result_idx,
                                      stop_offset const arrival_offset) {
     auto const& r = timetable_.routes_[r_id];
@@ -521,7 +521,7 @@ struct reconstructor {
       auto const sti = first_stop_times_index + stop_offset;
       auto const departure = timetable_.stop_times_[sti].departure_;
 
-      if (valid(departure) && result[result_idx][stop_id].getEarliestArrivalTime() <= departure) {
+      if (valid(departure) && result[result_idx][stop_id].get_earliest_arrival_time() <= departure) {
         return stop_id;
       }
     }

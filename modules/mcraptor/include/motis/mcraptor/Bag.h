@@ -5,75 +5,75 @@
 
 namespace motis::mcraptor {
 
-struct Bag {
-  std::vector<Label> labels;
+struct bag {
+  std::vector<label> labels_;
 
-  Bag() {
-    labels = std::vector<Label>();
+  bag() {
+    labels_ = std::vector<label>();
   }
 
-  inline Label& operator[](const size_t index) { return labels[index]; }
+  inline label& operator[](const size_t index) { return labels_[index]; }
 
-  inline const Label& operator[](const size_t i) const {
-    return labels[i];
+  inline const label& operator[](const size_t i) const {
+    return labels_[i];
   }
 
-  inline size_t size() const { return labels.size(); }
+  inline size_t size() const { return labels_.size(); }
 
-  bool merge(Label& otherLabel) noexcept {
-    size_t removedLabels = 0;
-    for (size_t i = 0; i < labels.size(); i++) {
-      if (labels[i].dominates(otherLabel)) return false;
-      if (otherLabel.dominates(labels[i])) {
-        removedLabels++;
+  bool merge(label& other_label) noexcept {
+    size_t removed_labels = 0;
+    for (size_t i = 0; i < labels_.size(); i++) {
+      if (labels_[i].dominates(other_label)) return false;
+      if (other_label.dominates(labels_[i])) {
+        removed_labels++;
         continue;
       }
-      labels[i - removedLabels] = labels[i];
+      labels_[i - removed_labels] = labels_[i];
     }
-    labels.resize(labels.size() - removedLabels + 1);
-    labels.back() = otherLabel;
+    labels_.resize(labels_.size() - removed_labels + 1);
+    labels_.back() = other_label;
     return true;
   }
 
-  void mergeUndominated(Label& otherLabel) noexcept {
-    if(dominates(otherLabel)){ //TODO why is it asserted in original?
+  void merge_undominated(label& other_label) noexcept {
+    if(dominates(other_label)){ //TODO why is it asserted in original?
 //      std::cout << "mergeUndominated returns" << std::endl;
       return;
     }
-    size_t removedLabels = 0;
-    for (size_t i = 0; i < labels.size(); i++) {
-      if (otherLabel.dominates(labels[i])) {
-        removedLabels++;
+    size_t removed_labels = 0;
+    for (size_t i = 0; i < labels_.size(); i++) {
+      if (other_label.dominates(labels_[i])) {
+        removed_labels++;
         continue;
       }
-      labels[i - removedLabels] = labels[i];
+      labels_[i - removed_labels] = labels_[i];
     }
-    labels.resize(labels.size() - removedLabels + 1);
-    labels.back() = otherLabel;
+    labels_.resize(labels_.size() - removed_labels + 1);
+    labels_.back() = other_label;
   }
 
   // possibly delete
-  void merge(Bag& otherBag) {
-    for(Label& otherLabel : otherBag.labels) {
-      merge(otherLabel);
+  void merge(bag& other_bag) {
+    for(label& other_label : other_bag.labels_) {
+      merge(other_label);
     }
   }
 
-  bool dominates(Label& otherLabel) {
-    for(Label& label : labels) {
-      if(label.dominates(otherLabel)) {
+  bool dominates(label& other_label) {
+    for(label& label : labels_) {
+      if(label.dominates(other_label)) {
         return true;
       }
     }
     return false;
   }
 
-  bool dominates(Bag& otherBag) {
-    if(!otherBag.isValid() && this->isValid()) {
+  bool dominates(bag& other_bag) {
+    if(!other_bag.is_valid() && this->is_valid()) {
       return true;
     }
 
-    for(Label& label : otherBag.labels) {
+    for(label& label : other_bag.labels_) {
       if(!dominates(label)) {
         return false;
       }
@@ -81,49 +81,49 @@ struct Bag {
     return true;
   }
 
-  inline bool isValid() const {
+  inline bool is_valid() const {
     return size() != 0;
   }
 
-  time getEarliestArrivalTime() {
+  time get_earliest_arrival_time() {
     time res = invalid<time>;
-    for(Label& label : labels) {
-      res = std::min(res, label.arrivalTime);
+    for(label& label : labels_) {
+      res = std::min(res, label.arrival_time_);
     }
     return res;
   }
 };
 
-struct RouteBag {
+struct route_bag {
 
-  std::vector<RouteLabel> labels;
+  std::vector<route_label> labels_;
 
-  RouteBag() {
-    labels = std::vector<RouteLabel>();
+  route_bag() {
+    labels_ = std::vector<route_label>();
   }
 
-  inline size_t size() const { return labels.size(); }
+  inline size_t size() const { return labels_.size(); }
 
-  void merge(RouteLabel& otherLabel) noexcept {
-    size_t removedLabels = 0;
-    for (size_t i = 0; i < labels.size(); i++) {
-      if (labels[i].dominates(otherLabel)) {
+  void merge(route_label& other_label) noexcept {
+    size_t removed_labels = 0;
+    for (size_t i = 0; i < labels_.size(); i++) {
+      if (labels_[i].dominates(other_label)) {
         return;
       }
-      if (otherLabel.dominates(labels[i])) {
-        removedLabels++;
+      if (other_label.dominates(labels_[i])) {
+        removed_labels++;
         continue;
       }
-      labels[i - removedLabels] = labels[i];
+      labels_[i - removed_labels] = labels_[i];
     }
-    labels.resize(labels.size() - removedLabels + 1);
-    labels.back() = otherLabel;
+    labels_.resize(labels_.size() - removed_labels + 1);
+    labels_.back() = other_label;
   }
 
-  inline RouteLabel& operator[](const size_t index) { return labels[index]; }
+  inline route_label& operator[](const size_t index) { return labels_[index]; }
 
-  inline const RouteLabel& operator[](const size_t i) const {
-    return labels[i];
+  inline const route_label& operator[](const size_t i) const {
+    return labels_[i];
   }
 
 };

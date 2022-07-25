@@ -7,57 +7,57 @@
 
 namespace motis::mcraptor {
 
-class Rounds {
+struct rounds {
 public:
-  Bag* bags{nullptr};
+  bag* bags_{nullptr};
   stop_id stop_count_{invalid<stop_id>};
 
-  explicit Rounds(stop_id const stop_count)
+  explicit rounds(stop_id const stop_count)
       : stop_count_{stop_count} {
-    bags = new Bag[this->byte_size()];
+    bags_ = new bag[this->byte_size()];
     this->reset();
   }
 
-  Rounds() = delete;
-  Rounds(Rounds const&) = delete;
-  Rounds(Rounds const&&) = delete;
-  Rounds& operator=(Rounds const&) = delete;
-  Rounds& operator=(Rounds const&&) = delete;
-  ~Rounds() {
-    delete[] bags;
+  rounds() = delete;
+  rounds(rounds const&) = delete;
+  rounds(rounds const&&) = delete;
+  rounds& operator=(rounds const&) = delete;
+  rounds& operator=(rounds const&&) = delete;
+  ~rounds() {
+    delete[] bags_;
   }
 
   size_t byte_size() const {
     size_t const number_of_entries =
         static_cast<size_t>(max_raptor_round) * stop_count_;
-    size_t const size_in_bytes = sizeof(Bag) * number_of_entries;
+    size_t const size_in_bytes = sizeof(bag) * number_of_entries;
     return size_in_bytes;
   }
 
   void reset() const {
-    size_t const number_of_entries = byte_size() / sizeof(Bag);
+    size_t const number_of_entries = byte_size() / sizeof(bag);
     //    std::fill(bags, bags + number_of_entries, Bag());
-    for(int i = 0; i < number_of_entries; i++) {
-      bags[i] = Bag();
+    for(int i = 0; i < number_of_entries; ++i) {
+      bags_[i] = bag();
     }
   }
 
-  Bag* data() const { return bags; }
+  bag* data() const { return bags_; }
 
-  Bag* operator[](raptor_round const index) {  // NOLINT
-    return &bags[static_cast<ptrdiff_t>(index) * stop_count_];
+  bag* operator[](raptor_round const index) {  // NOLINT
+    return &bags_[static_cast<ptrdiff_t>(index) * stop_count_];
   };
 
-  Bag const* operator[](raptor_round const index) const {
-    return &bags[static_cast<ptrdiff_t>(index) * stop_count_];
+  bag const* operator[](raptor_round const index) const {
+    return &bags_[static_cast<ptrdiff_t>(index) * stop_count_];
   };
 
-  std::vector<Label> getAllLabelsForStop(stop_id stopId, raptor_round maxRound) {
-    std::vector<Label> res = std::vector<Label>();
-    for(int i = 0; i < maxRound; i++) {
-      Bag& bag = (*this)[i][stopId];
-      if(bag.isValid()) {
-        for(Label& l : bag.labels) {
+  std::vector<label> getAllLabelsForStop(stop_id stop_id, raptor_round max_round) {
+    std::vector<label> res = std::vector<label>();
+    for(int i = 0; i < max_round; i++) {
+      bag& bag = (*this)[i][stop_id];
+      if(bag.is_valid()) {
+        for(label& l : bag.labels_) {
           res.push_back(l);
         }
       }

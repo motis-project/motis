@@ -9,43 +9,43 @@
 
 namespace motis::mcraptor {
 
-struct McRaptor {
+struct mc_raptor {
 
-  McRaptor(raptor_query const& q) : query(q),
-                                    result(q.result()),
-                                    routeLabels(q.tt_.stop_count()),
-                                    transferLabels(q.tt_.stop_count()),
-                                    stopsForTransfers(* new cpu_mark_store(q.tt_.stop_count())),
-                                    stopsForRoutes(* new cpu_mark_store(q.tt_.stop_count())),
-                                    round(-1) {};
+  mc_raptor(raptor_query const& q) : query_(q),
+                                    result_(q.result()),
+                                    route_labels_(q.tt_.stop_count()),
+                                    transfer_labels_(q.tt_.stop_count()),
+                                    stops_for_transfers_(* new cpu_mark_store(q.tt_.stop_count())),
+                                    stops_for_routes_(* new cpu_mark_store(q.tt_.stop_count())),
+                                    round_(-1) {};
 
   void invoke_cpu_raptor();
 
-  Bag* currentRound();
-  Bag* previousRound();
-  void startNewRound();
+  bag* current_round();
+  bag* previous_round();
+  void start_new_round();
 
   void init_arrivals();
-  void arrival_by_route(stop_id stop, Label& newLabel);
-  void arrival_by_transfer(stop_id stop, Label& label);
+  void arrival_by_route(stop_id stop, label& new_label);
+  void arrival_by_transfer(stop_id stop, label& label);
   void relax_transfers();
   void collect_routes_serving_updated_stops();
   void scan_routes();
 
-  inline std::vector<std::pair<route_id, route_stops_index>> getRoutesTimesForStop(stop_id stop);
+  inline std::vector<std::pair<route_id, route_stops_index>> get_routes_times_for_stop(stop_id stop);
 
 
 public:
 
-  raptor_query const& query;
-  Rounds& result;
-  int round;
+  raptor_query const& query_;
+  rounds& result_;
+  int round_;
 
-  std::vector<Bag> routeLabels;
-  std::vector<Bag> transferLabels;
-  std::map<route_id, route_stops_index> routesServingUpdatedStops;
-  cpu_mark_store& stopsForTransfers;
-  cpu_mark_store& stopsForRoutes;
+  std::vector<bag> route_labels_;
+  std::vector<bag> transfer_labels_;
+  std::map<route_id, route_stops_index> routes_serving_updated_stops_;
+  cpu_mark_store& stops_for_transfers_;
+  cpu_mark_store& stops_for_routes_;
 
 };
 
