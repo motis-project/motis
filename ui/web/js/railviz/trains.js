@@ -354,6 +354,9 @@ RailViz.Trains = (function () {
 
     getDelayColor(train) {
       const delay = (train.d_time - train.sched_d_time) / 60;
+      if (train.d_time_reason == 'SCHEDULE') {
+        return [100, 100, 100];
+      }
       if (delay <= 3) {
         return [69, 209, 74];
       } else if (delay <= 5) {

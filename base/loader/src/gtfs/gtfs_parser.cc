@@ -434,6 +434,10 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
           }
           return stop_count < 2;
         })  //
+      | utl::remove_if([&](auto const& entry) {
+          // Rule services are written separately.
+          return entry.second->block_ != nullptr;
+        })  //
       | utl::transform([&](auto const& entry) {
           auto const t = entry.second.get();
           return create_service(
