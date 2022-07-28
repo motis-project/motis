@@ -16,6 +16,9 @@ public:
   light_connection const& arr_lcon() const;
   light_connection const& dep_lcon() const;
 
+  ev_key arr() const;
+  ev_key dep() const;
+
   connection_info const& arr_info(schedule const& sched) const;
   connection_info const& dep_info(schedule const& sched) const;
   station const& get_station(schedule const& sched) const;
