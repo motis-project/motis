@@ -294,7 +294,7 @@ struct ris::impl {
             },
             ctx::op_id{"ribasis_receive", CTX_LOCATION, 0U}, ctx::op_type_t::IO,
             ctx::accesses_t{ctx::access_request{
-                to_res_id(::motis::module::global_res_id::SCHEDULE),
+                to_res_id(::motis::module::global_res_id::RIS_DATA),
                 ctx::access_t::WRITE}});
       }
     });
@@ -384,7 +384,7 @@ struct ris::impl {
           boost::posix_time::seconds{config_.update_interval_},
           [this, &sched]() { update_gtfs_rt(sched); },
           ctx::accesses_t{ctx::access_request{
-              to_res_id(::motis::module::global_res_id::SCHEDULE),
+              to_res_id(::motis::module::global_res_id::RIS_DATA),
               ctx::access_t::WRITE}});
     }
 
@@ -538,8 +538,8 @@ struct ris::impl {
     message_creator fbb_;
     std::vector<flatbuffers::Offset<MessageHolder>> offsets_;
     unixtime max_timestamp_ = 0;
-    bool skip_flush_{};
-    ctx::res_id_t schedule_res_id_{};
+    bool skip_flush_{false};
+    ctx::res_id_t schedule_res_id_{0U};
   };
 
   struct null_publisher {
@@ -1092,6 +1092,7 @@ void ris::reg_subc(motis::module::subc_reg& r) {
 
 void ris::init(motis::module::registry& r) {
   impl_ = std::make_unique<impl>(config_);
+  add_shared_data(to_res_id(global_res_id::RIS_DATA), 0);
   r.subscribe(
       "/init",
       [this]() {
@@ -1099,7 +1100,7 @@ void ris::init(motis::module::registry& r) {
                     const_cast<schedule&>(get_sched()));  // NOLINT
       },
       ctx::accesses_t{ctx::access_request{
-          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          to_res_id(::motis::module::global_res_id::RIS_DATA),
           ctx::access_t::WRITE}});
   r.register_op(
       "/ris/upload",
@@ -1107,7 +1108,7 @@ void ris::init(motis::module::registry& r) {
         return impl_->upload(const_cast<schedule&>(get_sched()), m);  // NOLINT
       },
       ctx::accesses_t{ctx::access_request{
-          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          to_res_id(::motis::module::global_res_id::RIS_DATA),
           ctx::access_t::WRITE}});
   r.register_op("/ris/forward",
                 [this](auto&& m) { return impl_->forward(*this, m); }, {});
@@ -1117,12 +1118,12 @@ void ris::init(motis::module::registry& r) {
         return impl_->read(const_cast<schedule&>(get_sched()), m);  // NOLINT
       },
       ctx::accesses_t{ctx::access_request{
-          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          to_res_id(::motis::module::global_res_id::RIS_DATA),
           ctx::access_t::WRITE}});
   r.register_op(
       "/ris/purge", [this](auto&& m) { return impl_->purge(m); },
       ctx::accesses_t{ctx::access_request{
-          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          to_res_id(::motis::module::global_res_id::RIS_DATA),
           ctx::access_t::WRITE}});
   r.register_op("/ris/apply",
                 [this](auto&& m) { return impl_->apply(*this, m); }, {});

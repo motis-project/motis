@@ -27,21 +27,29 @@ void lookup::init(registry& r) {
       }));
 
   r.register_op("/lookup/geo_station_id",
-                [&](msg_ptr const& m) { return lookup_station_id(m); });
+                [&](msg_ptr const& m) { return lookup_station_id(m); },
+                {kScheduleReadAccess});
   r.register_op("/lookup/geo_station",
-                [&](msg_ptr const& m) { return lookup_station(m); });
+                [&](msg_ptr const& m) { return lookup_station(m); },
+                {kScheduleReadAccess});
   r.register_op("/lookup/geo_station_batch",
-                [&](msg_ptr const& m) { return lookup_stations(m); });
+                [&](msg_ptr const& m) { return lookup_stations(m); },
+                {kScheduleReadAccess});
   r.register_op("/lookup/station_events",
-                [&](msg_ptr const& m) { return lookup_station_events(m); });
+                [&](msg_ptr const& m) { return lookup_station_events(m); },
+                {kScheduleReadAccess});
   r.register_op("/lookup/schedule_info",
-                [&](msg_ptr const&) { return lookup_schedule_info(); });
+                [&](msg_ptr const&) { return lookup_schedule_info(); },
+                {kScheduleReadAccess});
   r.register_op("/lookup/id_train",
-                [&](msg_ptr const& m) { return lookup_id_train(m); });
+                [&](msg_ptr const& m) { return lookup_id_train(m); },
+                {kScheduleReadAccess});
   r.register_op("/lookup/meta_station",
-                [&](msg_ptr const& m) { return lookup_meta_station(m); });
+                [&](msg_ptr const& m) { return lookup_meta_station(m); },
+                {kScheduleReadAccess});
   r.register_op("/lookup/meta_station_batch",
-                [&](msg_ptr const& m) { return lookup_meta_stations(m); });
+                [&](msg_ptr const& m) { return lookup_meta_stations(m); },
+                {kScheduleReadAccess});
   r.register_op("/lookup/ribasis",
                 [&](msg_ptr const& m) { return lookup_ribasis(m); }, {});
 }

@@ -22,7 +22,7 @@ struct motis_instance_test : public ::testing::Test {
 
   template <typename F>
   void subscribe(std::string const& topic, F&& func) {
-    instance_->subscribe(topic, std::forward<F>(func));
+    instance_->subscribe(topic, std::forward<F>(func), {});
   }
 
   template <typename Fn>

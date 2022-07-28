@@ -11,6 +11,9 @@ enum class global_res_id {
   PAX_DATA,
   PAX_DEFAULT_UNIVERSE,
   PATH_DATA,
+  RIS_DATA,
+  GBFS_DATA,
+  GUESSER_DATA,
   FIRST_FREE_RES_ID
 };
 

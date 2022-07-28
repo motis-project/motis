@@ -122,37 +122,47 @@ std::string estimate_initial_permalink(schedule const& sched) {
 }
 
 void railviz::init(motis::module::registry& reg) {
-  reg.subscribe("/init", [&](auto const&) {
-    auto const& s = get_sched();
-    train_retriever_ = std::make_unique<train_retriever>(s, bounding_boxes(s));
+  reg.subscribe("/init",
+                [&](auto const&) {
+                  auto const& s = get_sched();
+                  train_retriever_ =
+                      std::make_unique<train_retriever>(s, bounding_boxes(s));
 
-    if (initial_permalink_.empty()) {
-      initial_permalink_ = estimate_initial_permalink(s);
-      LOG(logging::info) << "est. initial_permalink: " << initial_permalink_;
-    }
+                  if (initial_permalink_.empty()) {
+                    initial_permalink_ = estimate_initial_permalink(s);
+                    LOG(logging::info)
+                        << "est. initial_permalink: " << initial_permalink_;
+                  }
 
-    return make_no_msg();
-  });
+                  return make_no_msg();
+                },
+                {kScheduleReadAccess});
   reg.register_op("/railviz/map_config",
-                  [this](auto const& msg) { return get_map_config(msg); });
+                  [this](auto const& msg) { return get_map_config(msg); }, {});
   reg.register_op("/railviz/get_trip_guesses",
-                  [this](msg_ptr const& msg) { return get_trip_guesses(msg); });
+                  [this](msg_ptr const& msg) { return get_trip_guesses(msg); },
+                  {kScheduleReadAccess});
   reg.register_op("/railviz/get_station",
-                  [this](msg_ptr const& msg) { return get_station(msg); });
+                  [this](msg_ptr const& msg) { return get_station(msg); },
+                  {kScheduleReadAccess});
   reg.register_op("/railviz/get_trains",
-                  [this](msg_ptr const& msg) { return get_trains(msg); });
+                  [this](msg_ptr const& msg) { return get_trains(msg); },
+                  {kScheduleReadAccess});
   reg.register_op("/railviz/get_trips",
-                  [this](msg_ptr const& msg) { return get_trips(msg); });
-  reg.subscribe("/rt/update", [this](msg_ptr const& msg) {
-    using rt::RtUpdates;
-    if (train_retriever_) {
-      auto const rtu = motis_content(RtUpdates, msg);
-      if (rtu->schedule() == 0U) {
-        train_retriever_->update(rtu);
-      }
-    }
-    return nullptr;
-  });
+                  [this](msg_ptr const& msg) { return get_trips(msg); },
+                  {kScheduleReadAccess});
+  reg.subscribe("/rt/update",
+                [this](msg_ptr const& msg) {
+                  using rt::RtUpdates;
+                  if (train_retriever_) {
+                    auto const rtu = motis_content(RtUpdates, msg);
+                    if (rtu->schedule() == 0U) {
+                      train_retriever_->update(rtu);
+                    }
+                  }
+                  return nullptr;
+                },
+                {{to_res_id(global_res_id::SCHEDULE), ctx::access_t::WRITE}});
 }
 
 msg_ptr railviz::get_map_config(msg_ptr const&) {

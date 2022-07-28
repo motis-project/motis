@@ -187,10 +187,12 @@ void paxmon::init(motis::module::registry& reg) {
        ctx::access_request{to_res_id(global_res_id::PAX_DEFAULT_UNIVERSE),
                            ctx::access_t::READ}});
 
-  reg.register_op("/paxmon/flush", [&](msg_ptr const&) -> msg_ptr {
-    stats_writer_->flush();
-    return {};
-  });
+  reg.register_op("/paxmon/flush",
+                  [&](msg_ptr const&) -> msg_ptr {
+                    stats_writer_->flush();
+                    return {};
+                  },
+                  {});
 
   reg.subscribe("/rt/update",
                 [&](msg_ptr const& msg) { return rt_update(msg); }, {});

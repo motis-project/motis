@@ -125,6 +125,8 @@ struct stops {
             t->edges_->empty() ? 0 : static_cast<int>(t->edges_->size()) + 1};
   }
 
+  size_t size() const { return t_->edges_->size() + 1; }
+
   trip const* t_;
 };
 
