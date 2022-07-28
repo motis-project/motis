@@ -78,7 +78,9 @@ void to_ris_message(knowledge_context& knowledge,
 
   if (!success) {
     LOG(logging::error) << "GTFS-RT unable to parse protobuf message " << tag
-                        << ": \"" << s << "\"";
+                        << ": \""
+                        << s.substr(0, std::min(s.size(), size_t{1000U}))
+                        << (s.size() > 1000U ? "..." : "") << "\"";
     return;
   }
 
