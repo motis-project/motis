@@ -399,9 +399,11 @@ void ppr::init(motis::module::registry& reg) {
         std::make_unique<impl>(graph_file(), profiles_, edge_rtree_max_size_,
                                area_rtree_max_size_, rtree_opt, verify_graph_);
     reg.register_op("/ppr/route",
-                    [this](msg_ptr const& msg) { return impl_->route(msg); });
+                    [this](msg_ptr const& msg) { return impl_->route(msg); },
+                    {});
     reg.register_op("/ppr/profiles",
-                    [this](msg_ptr const&) { return impl_->get_profiles(); });
+                    [this](msg_ptr const&) { return impl_->get_profiles(); },
+                    {});
   } catch (std::exception const& e) {
     LOG(logging::error) << "ppr module not initialized (" << e.what() << ")";
   }

@@ -685,9 +685,11 @@ void tripbased::import(motis::module::import_dispatcher& reg) {
 void tripbased::init(motis::module::registry& reg) {
   try {
     reg.register_op("/tripbased",
-                    [this](msg_ptr const& m) { return impl_->route(m); });
+                    [this](msg_ptr const& m) { return impl_->route(m); },
+                    {kScheduleReadAccess});
     reg.register_op("/tripbased/debug",
-                    [this](msg_ptr const& m) { return impl_->debug(m); });
+                    [this](msg_ptr const& m) { return impl_->debug(m); },
+                    {kScheduleReadAccess});
 
     reg.register_op(
         "/tripbased/update_timetable",

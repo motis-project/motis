@@ -50,13 +50,14 @@ void intermodal::reg_subc(motis::module::subc_reg& r) {
 }
 
 void intermodal::init(motis::module::registry& r) {
-  r.register_op("/intermodal", [this](msg_ptr const& m) { return route(m); });
+  r.register_op("/intermodal", [this](msg_ptr const& m) { return route(m); },
+                {kScheduleReadAccess});
   if (router_.empty()) {
     router_ = "/routing";
   } else if (router_[0] != '/') {
     router_ = "/" + router_;
   }
-  r.subscribe("/init", [this]() { ppr_profiles_.update(); });
+  r.subscribe("/init", [this]() { ppr_profiles_.update(); }, {});
 }
 
 std::vector<Offset<Connection>> revise_connections(
