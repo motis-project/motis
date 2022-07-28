@@ -37,13 +37,11 @@ inline gtfs_trip_id to_trip_id(transit_realtime::TripDescriptor const& d,
 
 inline unixtime get_updated_time(
     transit_realtime::TripUpdate_StopTimeEvent const& time_event,
-    unixtime schedule_time, const bool is_addition_trip) {
-
-  unixtime updated_time = 0;
+    unixtime const schedule_time, bool const is_addition_trip) {
   if (time_event.has_time() && !is_addition_trip) {
-    updated_time = time_event.time();
+    return time_event.time();
   } else if (time_event.has_delay() && schedule_time != 0) {
-    updated_time = schedule_time + time_event.delay();
+    return schedule_time + time_event.delay();
   } else {
     if (is_addition_trip) {
       throw std::runtime_error{
@@ -54,8 +52,6 @@ inline unixtime get_updated_time(
           "Neither absolute new time or schedule time and delay are given."};
     }
   }
-
-  return updated_time;
 };
 
 inline unixtime get_schedule_time(trip const& trip, schedule const& sched,
