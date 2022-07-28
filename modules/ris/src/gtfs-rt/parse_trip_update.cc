@@ -107,6 +107,11 @@ void collect_events(trip_update_context& update_ctx,
           update_ctx.reroute_events_.emplace_back(evt_dep);
         }
       }
+    } else if (stu.schedule_relationship() ==
+               transit_realtime::
+                   TripUpdate_StopTimeUpdate_ScheduleRelationship_NO_DATA) {
+      LOG(logging::warn) << "skipping NO_DATA schedule relationship trip="
+                         << trip_update.trip().trip_id() << " index=" << i;
     } else {
       throw std::runtime_error(
           "Encountered unhandable stop time update schedule relationship!");
