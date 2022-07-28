@@ -271,7 +271,14 @@ void rt_handler::propagate() {
 
     auto const edge_fit = fits_edge(k, t);
     auto const trip_fit = fits_trip(sched_, k, t);
+
+    stats_.edge_fit_ += !edge_fit ? 1 : 0;
+    stats_.trip_fit_ += !trip_fit ? 1 : 0;
+    stats_.edge_fit_and_trip_fit_ += (!edge_fit && !trip_fit) ? 1 : 0;
+    ++stats_.total_;
+
     if (!edge_fit || !trip_fit) {
+      stats_.edge_fit_or_trip_fit_ += (!edge_fit || !trip_fit) ? 1 : 0;
       auto const trp = sched_.merged_trips_[k.lcon()->trips_]->front();
       separate_trip(sched_, trp, update_builder_);
 
