@@ -562,8 +562,13 @@ checkTypeaheadUpdate msg ( model, cmds ) =
                     in
                     { model | connections = m }
 
-                _ ->
-                    model
+                Typeahead.Empty ->
+                    let
+                        m = Connections.reset model.connections
+                    in
+                    { model | connections = m }
+
+                _ -> model
     in
     checkRoutingRequest ( model_, Cmd.batch [ cmds, setMapMarkers model_ ] )
 
