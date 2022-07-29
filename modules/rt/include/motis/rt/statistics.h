@@ -30,6 +30,7 @@ struct statistics {
     c("trip fit", s.trip_fit_);
     c("edge fit | trip fit", s.edge_fit_or_trip_fit_);
     c("edge fit & trip fit", s.edge_fit_and_trip_fit_);
+    c("edge fit 1", s.edge_fit_1_);
     c("total", s.total_);
 
     o << "\nevs:\n";
@@ -196,6 +197,7 @@ struct statistics {
   unsigned trip_fit_ = 0;
   unsigned edge_fit_and_trip_fit_ = 0;
   unsigned edge_fit_or_trip_fit_ = 0;
+  unsigned edge_fit_1_ = 0;
   unsigned total_ = 0;
 
   unsigned delay_msgs_ = 0;
