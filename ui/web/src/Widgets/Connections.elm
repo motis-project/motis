@@ -75,7 +75,7 @@ type alias Model =
     , fromName : Maybe String
     , toName : Maybe String
     , lastRequestId : Int
-    , hoveredTripSegments : Maybe ( List RVConnectionSegmentTrip )
+    , hoveredTripSegments : Maybe (List RVConnectionSegmentTrip)
     , hoveredWalkSegment : Maybe RVConnectionSegmentWalk
     }
 
@@ -1006,7 +1006,7 @@ extendIntervalButton direction (Config { internalMsg }) locale model =
         ]
 
 
-journeyIsHighlighted : Int -> Maybe ( List RVConnectionSegmentTrip ) -> Maybe RVConnectionSegmentWalk -> Bool
+journeyIsHighlighted : Int -> Maybe (List RVConnectionSegmentTrip) -> Maybe RVConnectionSegmentWalk -> Bool
 journeyIsHighlighted idx mbTripSegs mbWalkSeg =
     let
         checkTrip tripSeg =

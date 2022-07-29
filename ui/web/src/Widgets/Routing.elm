@@ -520,14 +520,15 @@ encodeGBFSOptions opt =
                 , "enabled" => Encode.bool gbfs.enabled
                 ]
     in
-        opt |> List.map encodeGBFS |> Encode.list
+    opt |> List.map encodeGBFS |> Encode.list
 
 
 getGBFSOptions : Model -> List ModePicker.GBFS
 getGBFSOptions model =
-    (Dict.union
+    Dict.union
         (model.fromModes.gbfs |> Dict.filter (\k v -> v.enabled))
-        (model.toModes.gbfs |> Dict.filter (\k v -> v.enabled))) |> Dict.values
+        (model.toModes.gbfs |> Dict.filter (\k v -> v.enabled))
+        |> Dict.values
 
 
 getCombinedSearchProfile : Model -> SearchOptions

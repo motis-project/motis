@@ -226,12 +226,12 @@ update msg model =
                             { model | visible = False, hoverIndex = 0 }
             in
             { updated | inputWidget = Input.update msg_ model.inputWidget }
-                    ! [ if not updated.visible && String.isEmpty updated.input then
-                            Task.perform identity (Task.succeed Empty)
+                ! [ if not updated.visible && String.isEmpty updated.input then
+                        Task.perform identity (Task.succeed Empty)
 
-                        else
-                            Cmd.none
-                      ]
+                    else
+                        Cmd.none
+                  ]
 
         Deb a ->
             Debounce.update debounceCfg a model

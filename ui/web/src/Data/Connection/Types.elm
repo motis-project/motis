@@ -217,7 +217,7 @@ tripsForRange connection from to =
                 Nothing
     in
     List.filterMap checkTrip connection.trips
-        |> List.sortBy (\t -> (t.range.from, -t.range.to, t.id.train_nr))
+        |> List.sortBy (\t -> ( t.range.from, -t.range.to, t.id.train_nr ))
         |> List.map .id
 
 
