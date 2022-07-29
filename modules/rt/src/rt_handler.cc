@@ -281,7 +281,6 @@ void rt_handler::propagate() {
       stats_.edge_fit_or_trip_fit_ += (!edge_fit || !trip_fit) ? 1 : 0;
       auto const trp = sched_.merged_trips_[k.lcon()->trips_]->front();
 
-
       if (!edge_fit) {
         separate_trip(sched_, trp, update_builder_);
       }
