@@ -36,7 +36,7 @@
     let initialPermalink = parseInitialPermalink(mapConfig.initial_permalink);
 
     let simulationTime = null;
-    let timeParam = params["time"] || null;
+    let timeParam = params.get("time");
     if (timeParam) {
       simulationTime = parseTimestamp(timeParam);
     }
@@ -45,7 +45,7 @@
       simulationTime = initialPermalink.timestamp;
     }
 
-    let langParam = params["lang"] || null;
+    let langParam = params.get("lang");
     let language = langParam || "de";
 
     window.app = Elm.Main.embed(document.getElementById("app-container"), {
@@ -53,7 +53,7 @@
       currentTime: Date.now(),
       simulationTime: simulationTime,
       language: language,
-      motisParam: params["motis"] || null,
+      motisParam: params.get("motis"),
       timeParam: timeParam,
       langParam: langParam,
       fromLocation: localStorage.getItem("motis.routing.from_location"),
