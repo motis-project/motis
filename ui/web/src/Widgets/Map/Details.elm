@@ -20,7 +20,7 @@ setDetailFilter journey =
                     buildDetailFilter journey
             in
             Cmd.batch
-                [ mapSetDetailFilter ( Just detailFilter ) 
+                [ mapSetDetailFilter (Just detailFilter)
                 , mapFitBounds bounds
                 ]
 
