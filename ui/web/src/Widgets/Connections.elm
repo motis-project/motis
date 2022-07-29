@@ -11,6 +11,7 @@ module Widgets.Connections exposing
     , updateJourney
     , updateJourneys
     , view
+    , reset
     )
 
 import Data.Connection.Types as Connection exposing (Connection, Stop, hasNoProblems)
@@ -117,6 +118,29 @@ init remoteAddress =
     , hoveredWalkSegment = Nothing
     }
 
+
+reset : Model -> Model
+reset model =
+    { model | loading = False
+            , loadingBefore = False
+            , loadingAfter = False
+            , journeys = []
+            , journeyTransportGraphs = []
+            , indexOffset = 0
+            , errorMessage = Nothing
+            , errorBefore = Nothing
+            , errorAfter = Nothing
+            , scheduleInfo = Nothing
+            , routingRequest = Nothing
+            , newJourneys = []
+            , allowExtend = True
+            , labels = []
+            , fromName = Nothing
+            , toName = Nothing
+            , lastRequestId = 0
+            , hoveredTripSegments = Nothing
+            , hoveredWalkSegment = Nothing
+    }
 
 connectionIdxToListIdx : Model -> Int -> Int
 connectionIdxToListIdx model connectionIdx =
