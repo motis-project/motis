@@ -117,30 +117,25 @@ function localStorageSet(key, value) {
 }
 
 function getQueryParameters() {
-  var params = {};
-  window.location.search
-    .substr(1)
-    .split("&")
-    .forEach((p) => {
-      var param = p.split("=");
-      params[param[0]] = decodeURIComponent(param[1]);
-    });
-  return params;
+  return new URL(window.location.href).searchParams;
 }
 
 function getApiEndpoint(params) {
+  const defaultProtocol = window.location.protocol;
+  const defaultHost = window.location.hostname;
+  const defaultPort = "8080";
+  const motisParam = params.get("motis");
   let apiEndpoint = String(window.location.origin + window.location.pathname);
-  let motisParam = params["motis"] || null;
   if (motisParam) {
     if (/^[0-9]+$/.test(motisParam)) {
-      apiEndpoint = "https://" + defaultHost + ":" + motisParam;
+      apiEndpoint = defaultProtocol + "//" + defaultHost + ":" + motisParam;
     } else if (!motisParam.includes(":")) {
-      apiEndpoint = "https://" + motisParam + ":" + defaultPort;
+      apiEndpoint = defaultProtocol + "//" + motisParam + ":" + defaultPort;
     } else if (
       !motisParam.startsWith("http:") &&
       !motisParam.startsWith("https:")
     ) {
-      apiEndpoint = "https://" + motisParam;
+      apiEndpoint = defaultProtocol + "//" + motisParam;
     } else {
       apiEndpoint = motisParam;
     }
