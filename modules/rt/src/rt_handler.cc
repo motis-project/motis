@@ -280,7 +280,11 @@ void rt_handler::propagate() {
     if (!edge_fit || !trip_fit) {
       stats_.edge_fit_or_trip_fit_ += (!edge_fit || !trip_fit) ? 1 : 0;
       auto const trp = sched_.merged_trips_[k.lcon()->trips_]->front();
-      separate_trip(sched_, trp, update_builder_);
+
+
+      if (!edge_fit) {
+        separate_trip(sched_, trp, update_builder_);
+      }
 
       if (!trip_fit) {
         trips_to_correct.insert(trp);
@@ -300,11 +304,14 @@ void rt_handler::propagate() {
   }
 
   for (auto const& trp : trips_to_correct) {
-    assert(trp->lcon_idx_ == 0 &&
-           trp->edges_->front()->m_.route_edge_.conns_.size() == 1);
     for (auto const& di : trip_corrector(sched_, trp).fix_times()) {
       update_builder_.add_delay(di);
       updated_route_edges.insert(di->get_ev_key().route_edge_);
+
+      if (!fits_edge(di->get_ev_key(), di->get_current_time())) {
+        ++stats_.edge_fit_1_;
+        separate_trip(sched_, di->get_ev_key(), update_builder_);
+      }
     }
   }
 
