@@ -226,7 +226,9 @@ jobs:
         run: ln -s /deps deps
 
       - name: CMake
-        run: cmake -G Ninja -S . -B build --preset=${{ matrix.config.preset }}
+        run: |
+          git config --global --add safe.directory `pwd`
+          cmake -G Ninja -S . -B build --preset=${{ matrix.config.preset }}
 
       # ==== BUILD ====
       - name: Build
@@ -246,17 +248,15 @@ jobs:
             --exclude_modules address osrm parking path ppr tiles tripbased gbfs
 
       - name: Run Tests
-        run: ${{ matrix.config.emulator }} build/motis-test
-
-      - name: Run Integration Tests
-        run: ${{ matrix.config.emulator }} build/motis-itest
+        run: |
+          ${{ matrix.config.emulator }} build/motis-test & \
+          ${{ matrix.config.emulator }} build/motis-itest
 
       # ==== WEB INTERFACE ====
       - name: Compile Web Interface
         if: ${{ !matrix.config.skipui }}
         run: |
-          mkdir -p ui/web/elm-stuff
-          ln -s /elm ui/web/elm-stuff/packages
+          ln -s /elm ui/web/elm-stuff
           cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
 
       - name: Install RSL Web Interface Dependencies
