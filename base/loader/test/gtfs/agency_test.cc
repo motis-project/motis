@@ -10,7 +10,7 @@ using namespace motis::loader;
 
 namespace motis::loader::gtfs {
 
-TEST(loader_gtfs_stop, read_stations_example_data) {
+TEST(loader_gtfs_stop, read_agency_example_data) {
   auto agencies =
       read_agencies(loaded_file{SCHEDULES / "example" / AGENCY_FILE});
 
