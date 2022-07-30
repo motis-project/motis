@@ -65,9 +65,12 @@ jobs:
       matrix:
         config:
           - preset: macos-x86_64
+            cache: macos-x86_64-avx
           - preset: macos-x86_64-noavx2
+            cache: macos-x86_64-noavx
             tests: On
           - preset: macos-arm64
+            cache: macos-arm64
     env:
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
@@ -87,9 +90,9 @@ jobs:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-${{ matrix.config.preset }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
-            buildcache-${{ matrix.config.preset }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
-            buildcache-${{ matrix.config.preset }}-${{ hashFiles('.pkg') }}-
-            buildcache-${{ matrix.config.preset }}-
+            buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-
+            buildcache-${{ matrix.config.cache }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v2
@@ -226,7 +229,9 @@ jobs:
         run: ln -s /deps deps
 
       - name: CMake
-        run: cmake -G Ninja -S . -B build --preset=${{ matrix.config.preset }}
+        run: |
+          git config --global --add safe.directory `pwd`
+          cmake -G Ninja -S . -B build --preset=${{ matrix.config.preset }}
 
       # ==== BUILD ====
       - name: Build
@@ -246,17 +251,15 @@ jobs:
             --exclude_modules address osrm parking path ppr tiles tripbased gbfs
 
       - name: Run Tests
-        run: ${{ matrix.config.emulator }} build/motis-test
-
-      - name: Run Integration Tests
-        run: ${{ matrix.config.emulator }} build/motis-itest
+        run: |
+          ${{ matrix.config.emulator }} build/motis-test & \
+          ${{ matrix.config.emulator }} build/motis-itest
 
       # ==== WEB INTERFACE ====
       - name: Compile Web Interface
         if: ${{ !matrix.config.skipui }}
         run: |
-          mkdir -p ui/web/elm-stuff
-          ln -s /elm ui/web/elm-stuff/packages
+          ln -s /elm ui/web/elm-stuff
           cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
 
       - name: Install RSL Web Interface Dependencies
