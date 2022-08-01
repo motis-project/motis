@@ -169,16 +169,6 @@ void raptor::init(motis::module::registry& reg) {
           to_res_id(::motis::module::global_res_id::SCHEDULE),
           ctx::access_t::WRITE}});
 
-  reg.register_op(
-      "/raptor/update_timetable",
-      [&](auto&&) -> msg_ptr {
-        impl_->init_timetable();
-        return {};
-      },
-      ctx::accesses_t{ctx::access_request{
-          to_res_id(::motis::module::global_res_id::SCHEDULE),
-          ctx::access_t::WRITE}});
-
 #if defined(MOTIS_CUDA)
   reg.register_op("/raptor", [&](auto&& m) { return impl_->route_gpu(m); },
                   {kScheduleReadAccess});
